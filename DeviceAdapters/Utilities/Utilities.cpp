@@ -2560,6 +2560,9 @@ int DAZStage::Initialize()
    if (DADevice_ != 0)
       DADevice_->GetLimits(minDAVolt_, maxDAVolt_);
 
+   if (minStageVolt_ < minDAVolt_)
+      return ERR_VOLT_OUT_OF_RANGE;
+
    originPos_ = minStagePos_;
 
    initialized_ = true;
@@ -2753,7 +2756,6 @@ int DAZStage::OnDADevice(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
-
 int DAZStage::OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -2772,7 +2774,6 @@ int DAZStage::OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
-
 int DAZStage::OnStageMinVolt(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -2781,7 +2782,12 @@ int DAZStage::OnStageMinVolt(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      pProp->Get(minStageVolt_);
+      double minStageVolt;
+      pProp->Get(minStageVolt);
+      if (minStageVolt >= minDAVolt_ && minStageVolt < maxDAVolt_)
+         minStageVolt_ = minStageVolt;
+      else
+         return ERR_VOLT_OUT_OF_RANGE;
    }
    return DEVICE_OK;
 }
@@ -2794,7 +2800,12 @@ int DAZStage::OnStageMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      pProp->Get(maxStageVolt_);
+      double maxStageVolt;
+      pProp->Get(maxStageVolt);
+      if (maxStageVolt > minDAVolt_ && maxStageVolt <= maxDAVolt_)
+         maxStageVolt_ = maxStageVolt;
+      else
+         return ERR_VOLT_OUT_OF_RANGE;
    }
    return DEVICE_OK;
 }

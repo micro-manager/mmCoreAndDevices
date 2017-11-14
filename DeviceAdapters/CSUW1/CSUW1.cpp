@@ -559,7 +559,7 @@ int Dichroic::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 Shutter::Shutter () :
    initialized_ (false),
    name_ (g_CSUW1Shutter),
-   isOpen_ (false)
+   isOpen_ (0)
 {
    InitializeDefaultErrorMessages();
 }
@@ -594,7 +594,7 @@ int Shutter::Initialize()
 
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &Shutter::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, isOpen_ ? "Open" : "Closed", MM::String, false, pAct);
+   ret = CreateProperty(MM::g_Keyword_State, (isOpen_ == 1) ? "Open" : "Closed", MM::String, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -635,10 +635,10 @@ int Shutter::Shutdown()
 int Shutter::SetOpen(bool open)
 {
    changedTime_ = GetCurrentMMTime();
-   int ret = g_hub.SetShutterPosition(*this, *GetCoreCallback(), open);
+   int ret = g_hub.SetShutterPosition(*this, *GetCoreCallback(), open ? 1 : 0);
    if (ret != DEVICE_OK)
       return ret;
-   isOpen_ = open;
+   isOpen_ = open ? 1 : 0;
    return DEVICE_OK;
 }
 
@@ -649,7 +649,7 @@ int Shutter::GetOpen(bool &open)
    int ret = g_hub.GetShutterPosition(*this, *GetCoreCallback(), isOpen_);
    if (DEVICE_OK != ret)
       return ret;
-   open = isOpen_;
+   open = (isOpen_ == 1);
    return DEVICE_OK;
 }
 
@@ -1413,7 +1413,7 @@ int Magnifier::OnMagnifierNr(MM::PropertyBase* pProp, MM::ActionType eAct)
 NIRShutter::NIRShutter () :
    initialized_ (false),
    name_ (g_CSUW1NIRShutter),
-   isOpen_ (false)
+   isOpen_ (0)
 {
    InitializeDefaultErrorMessages();
 }
@@ -1448,7 +1448,7 @@ int NIRShutter::Initialize()
 
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &NIRShutter::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, isOpen_ ? "Open" : "Closed", MM::String, false, pAct);
+   ret = CreateProperty(MM::g_Keyword_State, (isOpen_ == 1) ? "Open" : "Closed", MM::String, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -1489,10 +1489,10 @@ int NIRShutter::Shutdown()
 int NIRShutter::SetOpen(bool open)
 {
    changedTime_ = GetCurrentMMTime();
-   int ret = g_hub.SetNIRShutterPosition(*this, *GetCoreCallback(), open);
+   int ret = g_hub.SetNIRShutterPosition(*this, *GetCoreCallback(), open ? 1 : 0);
    if (ret != DEVICE_OK)
       return ret;
-   isOpen_ = open;
+   isOpen_ = open ? 1 : 0;
    return DEVICE_OK;
 }
 
@@ -1503,7 +1503,7 @@ int NIRShutter::GetOpen(bool &open)
    int ret = g_hub.GetNIRShutterPosition(*this, *GetCoreCallback(), isOpen_);
    if (DEVICE_OK != ret)
       return ret;
-   open = isOpen_;
+   open = (isOpen_ == 1);
    return DEVICE_OK;
 }
 
@@ -1520,7 +1520,7 @@ int NIRShutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(isOpen_ ? "Open" : "Closed");
+      pProp->Set(isOpen_ == 1 ? "Open" : "Closed");
    }
    else if (eAct == MM::AfterSet)
    {

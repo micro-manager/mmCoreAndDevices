@@ -416,34 +416,23 @@ int CAndorSDK3Camera::Initialize()
             LogMessage(e.what());
             continue;
          }
-
-         try
+         IString * cameraFamilyString = cameraDevice->GetString(L"CameraFamily");
+         std::wstring temp_ws = cameraFamilyString->Get();
+         cameraDevice->Release(cameraFamilyString);
+         if (temp_ws.compare(L"Andor sCMOS") == 0)
          {
-            IString * cameraFamilyString = cameraDevice->GetString(L"CameraFamily");
-            std::wstring temp_ws = cameraFamilyString->Get();
-            cameraDevice->Release(cameraFamilyString);
-            if (temp_ws.compare(L"Andor sCMOS") == 0)
-            {
-               b_cameraPresent_ = true;
-               DEVICE_IN_USE[i] = true;
-               deviceInUseIndex_ = i;
-               break;
-            }
-            else
-            {
-               deviceManager->CloseDevice(cameraDevice);
-               cameraDevice = NULL;
-               if (temp_ws.compare(L"Andor Apogee") == 0) {
-                  return DEVICE_NOT_SUPPORTED;
-               }
-            }
+            b_cameraPresent_ = true;
+            DEVICE_IN_USE[i] = true;
+            deviceInUseIndex_ = i;
+            break;
          }
-         catch (NotImplementedException & e)
+         else
          {
-            LogMessage(e.what());
             deviceManager->CloseDevice(cameraDevice);
             cameraDevice = NULL;
-            continue;
+            if (temp_ws.compare(L"Andor Apogee") == 0) {
+              return DEVICE_NOT_SUPPORTED;
+            }
          }
       }
    }
