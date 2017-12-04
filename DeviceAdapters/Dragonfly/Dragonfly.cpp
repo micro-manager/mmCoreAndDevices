@@ -6,6 +6,8 @@
 
 #include "../../MMDevice/ModuleInterface.h"
 #include "Dragonfly.h"
+#include "DichroicMirror.h"
+
 #include "ASDWrapper.h"
 #include "ASDInterface.h"
 
@@ -18,6 +20,8 @@ using namespace std;
 const char * const g_DeviceName = "Dragonfly";
 const char * const g_DeviceDescription = "Andor Dragonfly Device Adapter";
 const char * const g_DeviceSerialNumber = "Serial Number";
+const char * const g_DeviceProductID = "Product ID";
+const char * const g_DeviceSoftwareVersion = "Software Version";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -60,16 +64,21 @@ CDragonfly::CDragonfly()
   : Initialized_( false ),
   ASDWrapper_( nullptr ),
   ASDLoader_( nullptr ),
-  ASDLibraryConnected_( false )
+  ASDLibraryConnected_( false ),
+  DichroicMirror_( nullptr ),
+  DeviceConnected_( false )
 {
   InitializeDefaultErrorMessages();
 
+  string vContactSupportMessage( "Please contact Andor support and send the latest file present in the Micro-Manager CoreLogs directory." );
 #ifdef _M_X64
   SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the ASD library. Make sure AB_ASDx64.dll is present in the Micro-Manager root directory." );
 #else
   SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the ASD library. Make sure AB_ASD.dll is present in the Micro-Manager root directory." );
 #endif
   SetErrorText( ERR_LIBRARY_INIT, "ASD Library initialisation failed. Make sure the device is connected." );
+  string vMessage = "Dichroic Mirror initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_DICHROICMIRROR_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -79,7 +88,7 @@ CDragonfly::CDragonfly()
   }
   catch ( exception& vException )
   {
-    string vMessage( "Error loading the ASD library. Caught Exception with message: " );
+    vMessage = "Error loading the ASD library. Caught Exception with message: ";
     vMessage += vException.what();
     LogMessage( vMessage );
   }
@@ -143,6 +152,7 @@ int CDragonfly::Shutdown()
     Initialized_ = false;
   }
 
+  delete DichroicMirror_;
   Disconnect();
 
   return DEVICE_OK;
@@ -165,35 +175,31 @@ bool CDragonfly::Busy()
 
 int CDragonfly::OnPort( MM::PropertyBase* Prop, MM::ActionType Act )
 {
+  int vRet = DEVICE_OK;
   if ( Act == MM::BeforeGet )
   {
     Prop->Set( Port_.c_str() );
   }
   else if ( Act == MM::AfterSet )
   {
-    bool vPortChanged = false;
-    string vNewPort;
-    Prop->Get( vNewPort );
-    if ( vNewPort != Port_ )
+    if ( !DeviceConnected_ )
     {
-      if ( Disconnect() == DEVICE_OK )
+      string vNewPort;
+      Prop->Get( vNewPort );
+      // remove the leading space from the port name if there's any before connecting
+      size_t vFirstValidCharacter = vNewPort.find_first_not_of( " " );
+      if ( Connect( vNewPort.substr( vFirstValidCharacter ) ) == DEVICE_OK )
       {
-        // remove the leading space from the port name if there's any before connecting
-        size_t vFirstValidCharacter = vNewPort.find_first_not_of( " " );
-        if ( Connect( vNewPort.substr( vFirstValidCharacter ) ) == DEVICE_OK )
-        {
-          Port_ = vNewPort;
-          vPortChanged = true;
-          InitializeComponents();
-        }
+        Port_ = vNewPort;
+        vRet = InitializeComponents();
       }
     }
-    if ( !vPortChanged )
+    else
     {
       Prop->Set( Port_.c_str() );
     }
   }
-  return DEVICE_OK;
+  return vRet;
 }
 
 int CDragonfly::Connect( const string& Port )
@@ -207,6 +213,7 @@ int CDragonfly::Connect( const string& Port )
     LogMessage( vMessage );
     return ERR_LIBRARY_INIT;
   }
+  DeviceConnected_ = true;
 
   return DEVICE_OK;
 }
@@ -218,18 +225,62 @@ int CDragonfly::Disconnect()
     ASDWrapper_->DeleteASDLoader( ASDLoader_ );
     ASDLoader_ = nullptr;
   }
+  DeviceConnected_ = false;
   return DEVICE_OK;
 }
 
 int CDragonfly::InitializeComponents()
 {
+  IASDInterface* vASDInterface = ASDLoader_->GetASDInterface();
+
   // Serial number property
-  string vSerialNumber = mASDLoader->GetASDInterface()->GetSerialNumber();
+  string vSerialNumber = vASDInterface->GetSerialNumber();
   int vRet = CreateProperty( g_DeviceSerialNumber, vSerialNumber.c_str(), MM::String, true );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
   }
 
+  // Product ID property
+  string vProductID = vASDInterface->GetProductID();
+  vRet = CreateProperty( g_DeviceProductID, vProductID.c_str(), MM::String, true );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  // Software version property
+  string vSoftwareVersion = vASDInterface->GetSoftwareVersion();
+  vRet = CreateProperty( g_DeviceSoftwareVersion, vSoftwareVersion.c_str(), MM::String, true );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  try
+  {
+    IDichroicMirrorInterface* vASDDichroicMirror = vASDInterface->GetDichroicMirror();
+    if ( vASDDichroicMirror != nullptr )
+    {
+      DichroicMirror_ = new CDichroicMirror( vASDDichroicMirror, this );
+    }
+    else
+    {
+      LogMessage( "Dichroic mirror not detected" );
+    }
+  }
+  catch( exception& vException )
+  {
+    string vMessage( "Error loading the dichroic mirror. Caught Exception with message: " );
+    vMessage += vException.what();
+    LogMessage( vMessage );
+    return ERR_DICHROICMIRROR_INIT;
+  }
+  
   return DEVICE_OK;
+}
+
+void CDragonfly::LogComponentMessage( const std::string& Message )
+{
+  LogMessage( Message );
 }

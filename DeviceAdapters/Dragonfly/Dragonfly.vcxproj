@@ -191,6 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ASDWrapper.cpp" />
+    <ClCompile Include="DichroicMirror.cpp" />
     <ClCompile Include="Dragonfly.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
