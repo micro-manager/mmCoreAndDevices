@@ -8,6 +8,7 @@
 
 #include "../../MMDevice/DeviceBase.h"
 //#include "../../MMDevice/DeviceThreads.h"
+#include "ComponentInterface.h"
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -16,12 +17,16 @@
 
 class CASDWrapper;
 class CDichroicMirror;
+class CFilterWheel;
 
 class IASDLoader;
+class IASDInterface;
 
 #define ERR_LIBRARY_LOAD 101
 #define ERR_LIBRARY_INIT 102
 #define ERR_DICHROICMIRROR_INIT 103
+#define ERR_FILTERWHEEL1_INIT 104
+#define ERR_FILTERWHEEL2_INIT 105
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -35,12 +40,9 @@ public:
   void GetName( char * Name ) const;
   bool Busy();
 
-  int Connect( const std::string& Port );
-  int Disconnect();
-  int InitializeComponents();
-  void LogComponentMessage( const std::string& Message );
-  
   int OnPort( MM::PropertyBase* Prop, MM::ActionType Act );
+
+  void LogComponentMessage( const std::string& Message );
 
 private:
   bool ASDLibraryConnected_;
@@ -50,8 +52,17 @@ private:
 
   CASDWrapper* ASDWrapper_;
   CDichroicMirror* DichroicMirror_;
+  CFilterWheel* FilterWheel1_;
+  CFilterWheel* FilterWheel2_;
 
   IASDLoader* ASDLoader_;
+
+  int Connect( const std::string& Port );
+  int Disconnect();
+  int InitializeComponents();
+  
+  int CreateDichroicMirror( IASDInterface* ASDInterface );
+  int CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode );
 };
 
 #endif

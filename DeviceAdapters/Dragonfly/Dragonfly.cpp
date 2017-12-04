@@ -7,8 +7,9 @@
 #include "../../MMDevice/ModuleInterface.h"
 #include "Dragonfly.h"
 #include "DichroicMirror.h"
-
+#include "FilterWheel.h"
 #include "ASDWrapper.h"
+
 #include "ASDInterface.h"
 
 #include <string>
@@ -17,11 +18,11 @@
 
 using namespace std;
 
-const char * const g_DeviceName = "Dragonfly";
-const char * const g_DeviceDescription = "Andor Dragonfly Device Adapter";
-const char * const g_DeviceSerialNumber = "Serial Number";
-const char * const g_DeviceProductID = "Product ID";
-const char * const g_DeviceSoftwareVersion = "Software Version";
+const char* const g_DeviceName = "Dragonfly";
+const char* const g_DeviceDescription = "Andor Dragonfly Device Adapter";
+const char* const g_DeviceSerialNumber = "Serial Number";
+const char* const g_DeviceProductID = "Product ID";
+const char* const g_DeviceSoftwareVersion = "Software Version";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -65,8 +66,10 @@ CDragonfly::CDragonfly()
   ASDWrapper_( nullptr ),
   ASDLoader_( nullptr ),
   ASDLibraryConnected_( false ),
+  DeviceConnected_( false ),
   DichroicMirror_( nullptr ),
-  DeviceConnected_( false )
+  FilterWheel1_( nullptr ),
+  FilterWheel2_( nullptr )
 {
   InitializeDefaultErrorMessages();
 
@@ -77,8 +80,12 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the ASD library. Make sure AB_ASD.dll is present in the Micro-Manager root directory." );
 #endif
   SetErrorText( ERR_LIBRARY_INIT, "ASD Library initialisation failed. Make sure the device is connected." );
-  string vMessage = "Dichroic Mirror initialisation failed. " + vContactSupportMessage;
+  string vMessage = "Dichroic mirror initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_DICHROICMIRROR_INIT, vMessage.c_str() );
+  vMessage = "Filter wheel 1 initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_FILTERWHEEL1_INIT, vMessage.c_str() );
+  vMessage = "Filter wheel 2 initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_FILTERWHEEL2_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -153,6 +160,8 @@ int CDragonfly::Shutdown()
   }
 
   delete DichroicMirror_;
+  delete FilterWheel1_;
+  delete FilterWheel2_;
   Disconnect();
 
   return DEVICE_OK;
@@ -257,9 +266,35 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  // Dichroic mirror component
+  vRet = CreateDichroicMirror( vASDInterface );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  // Filter wheel 1 component
+  CreateFilterWheel( vASDInterface, FilterWheel1_, WheelIndex1, ERR_FILTERWHEEL1_INIT );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  // Filter wheel 2 component
+  CreateFilterWheel( vASDInterface, FilterWheel2_, WheelIndex2, ERR_FILTERWHEEL2_INIT );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreateDichroicMirror( IASDInterface* ASDInterface )
+{
   try
   {
-    IDichroicMirrorInterface* vASDDichroicMirror = vASDInterface->GetDichroicMirror();
+    IDichroicMirrorInterface* vASDDichroicMirror = ASDInterface->GetDichroicMirror();
     if ( vASDDichroicMirror != nullptr )
     {
       DichroicMirror_ = new CDichroicMirror( vASDDichroicMirror, this );
@@ -269,14 +304,37 @@ int CDragonfly::InitializeComponents()
       LogMessage( "Dichroic mirror not detected" );
     }
   }
-  catch( exception& vException )
+  catch ( exception& vException )
   {
-    string vMessage( "Error loading the dichroic mirror. Caught Exception with message: " );
+    string vMessage( "Error loading the Dichroic mirror. Caught Exception with message: " );
     vMessage += vException.what();
     LogMessage( vMessage );
     return ERR_DICHROICMIRROR_INIT;
   }
-  
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode )
+{
+  try
+  {
+    IFilterWheelInterface* vASDFilterWheel = ASDInterface->GetFilterWheel( WheelIndex );
+    if ( vASDFilterWheel != nullptr )
+    {
+      FilterWheel = new CFilterWheel( WheelIndex, vASDFilterWheel, this );
+    }
+    else
+    {
+      LogMessage( "Filter wheel " + to_string( WheelIndex ) + " not detected" );
+    }
+  }
+  catch ( exception& vException )
+  {
+    string vMessage( "Error loading the filter wheel " + to_string( WheelIndex ) + ". Caught Exception with message: " );
+    vMessage += vException.what();
+    LogMessage( vMessage );
+    return ErrorCode;
+  }
   return DEVICE_OK;
 }
 

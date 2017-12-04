@@ -9,28 +9,27 @@
 #include "MMDeviceConstants.h"
 #include "Property.h"
 
+#include "FilterWheelDeviceInterface.h"
+
 class IDichroicMirrorInterface;
 class CDragonfly;
+class CFilterWheelProperty;
 
-class CDichroicMirror
+class CDichroicMirror : public IFilterWheelDeviceInterface
 {
 public:
   CDichroicMirror( IDichroicMirrorInterface* DichroicMirrorInterface, CDragonfly* MMDragonfly );
   ~CDichroicMirror();
 
-  int OnPositionChange( MM::PropertyBase * Prop, MM::ActionType Act );
-  typedef MM::Action<CDichroicMirror> CPropertyAction;
+  bool GetPosition( unsigned int& Position );
+  bool SetPosition( unsigned int Position );
+  bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
+  IFilterConfigInterface* GetFilterConfigInterface();
 
 private:
   IDichroicMirrorInterface* DichroicMirrorInterface_;
   CDragonfly* MMDragonfly_;
-
-  typedef std::map<unsigned int, std::string> TPositionNameMap;
-  TPositionNameMap PositionNames_;
-
-  bool RetrievePositionsFromFilterConfig();
-  bool RetrievePositionsWithoutDescriptions();
-  bool SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop );
+  CFilterWheelProperty* FilterWheelProperty_;
 };
 
 #endif

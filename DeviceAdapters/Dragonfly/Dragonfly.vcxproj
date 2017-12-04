@@ -193,6 +193,8 @@
     <ClCompile Include="ASDWrapper.cpp" />
     <ClCompile Include="DichroicMirror.cpp" />
     <ClCompile Include="Dragonfly.cpp" />
+    <ClCompile Include="FilterWheel.cpp" />
+    <ClCompile Include="FilterWheelProperty.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
