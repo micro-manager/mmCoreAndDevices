@@ -9,6 +9,7 @@
 #include "DichroicMirror.h"
 #include "FilterWheel.h"
 #include "ASDWrapper.h"
+#include "DragonflyStatus.h"
 
 #include "ASDInterface.h"
 
@@ -69,7 +70,8 @@ CDragonfly::CDragonfly()
   DeviceConnected_( false ),
   DichroicMirror_( nullptr ),
   FilterWheel1_( nullptr ),
-  FilterWheel2_( nullptr )
+  FilterWheel2_( nullptr ),
+  DragonflyStatus_( nullptr )
 {
   InitializeDefaultErrorMessages();
 
@@ -86,6 +88,10 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_FILTERWHEEL1_INIT, vMessage.c_str() );
   vMessage = "Filter wheel 2 initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_FILTERWHEEL2_INIT, vMessage.c_str() );
+  vMessage = "ASD Status class not accessible. " + vContactSupportMessage;
+  SetErrorText( ERR_DRAGONFLYSTATUS_INVALID_POINTER, vMessage.c_str() );
+  vMessage = "ASD Status initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_DRAGONFLYSTATUS_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -162,6 +168,7 @@ int CDragonfly::Shutdown()
   delete DichroicMirror_;
   delete FilterWheel1_;
   delete FilterWheel2_;
+  delete DragonflyStatus_;
   Disconnect();
 
   return DEVICE_OK;
@@ -241,6 +248,7 @@ int CDragonfly::Disconnect()
 int CDragonfly::InitializeComponents()
 {
   IASDInterface* vASDInterface = ASDLoader_->GetASDInterface();
+  IASDInterface3* vASDInterface3 = ASDLoader_->GetASDInterface3();
 
   // Serial number property
   string vSerialNumber = vASDInterface->GetSerialNumber();
@@ -261,6 +269,12 @@ int CDragonfly::InitializeComponents()
   // Software version property
   string vSoftwareVersion = vASDInterface->GetSoftwareVersion();
   vRet = CreateProperty( g_DeviceSoftwareVersion, vSoftwareVersion.c_str(), MM::String, true );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  vRet = CreateDragonflyStatus( vASDInterface3 );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -288,6 +302,31 @@ int CDragonfly::InitializeComponents()
   }
 
   return DEVICE_OK;
+}
+
+int CDragonfly::CreateDragonflyStatus( IASDInterface3* ASDInterface3 )
+{
+  int vErrorCode = DEVICE_OK;
+  try
+  {
+    IStatusInterface* vASDStatus = ASDInterface3->GetStatus();
+    if ( vASDStatus != nullptr )
+    {
+      DragonflyStatus_ = new CDragonflyStatus( vASDStatus, this );
+    }
+    else
+    {
+      vErrorCode = ERR_DRAGONFLYSTATUS_INVALID_POINTER;
+    }
+  }
+  catch ( exception& vException )
+  {
+    string vMessage( "Error loading the ASD Status. Caught Exception with message: " );
+    vMessage += vException.what();
+    LogMessage( vMessage );
+    vErrorCode = ERR_DRAGONFLYSTATUS_INIT;
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateDichroicMirror( IASDInterface* ASDInterface )
@@ -321,7 +360,7 @@ int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& F
     IFilterWheelInterface* vASDFilterWheel = ASDInterface->GetFilterWheel( WheelIndex );
     if ( vASDFilterWheel != nullptr )
     {
-      FilterWheel = new CFilterWheel( WheelIndex, vASDFilterWheel, this );
+      FilterWheel = new CFilterWheel( WheelIndex, vASDFilterWheel, DragonflyStatus_, this );
     }
     else
     {

@@ -18,15 +18,19 @@
 class CASDWrapper;
 class CDichroicMirror;
 class CFilterWheel;
+class CDragonflyStatus;
 
 class IASDLoader;
 class IASDInterface;
+class IASDInterface3;
 
 #define ERR_LIBRARY_LOAD 101
 #define ERR_LIBRARY_INIT 102
 #define ERR_DICHROICMIRROR_INIT 103
 #define ERR_FILTERWHEEL1_INIT 104
 #define ERR_FILTERWHEEL2_INIT 105
+#define ERR_DRAGONFLYSTATUS_INVALID_POINTER 106
+#define ERR_DRAGONFLYSTATUS_INIT 107
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -54,6 +58,7 @@ private:
   CDichroicMirror* DichroicMirror_;
   CFilterWheel* FilterWheel1_;
   CFilterWheel* FilterWheel2_;
+  CDragonflyStatus* DragonflyStatus_;
 
   IASDLoader* ASDLoader_;
 
@@ -61,6 +66,7 @@ private:
   int Disconnect();
   int InitializeComponents();
   
+  int CreateDragonflyStatus( IASDInterface3* ASDInterface );
   int CreateDichroicMirror( IASDInterface* ASDInterface );
   int CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode );
 };

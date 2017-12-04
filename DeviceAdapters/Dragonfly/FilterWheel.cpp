@@ -1,6 +1,7 @@
 #include "FilterWheel.h"
 #include "Dragonfly.h"
 #include "FilterWheelProperty.h"
+#include "DragonflyStatus.h"
 
 #include <stdexcept>
 
@@ -11,13 +12,32 @@ const char* const g_HighSpeedMode = "High Speed";
 const char* const g_HighQualityMode = "High Quality";
 const char* const g_LowVibrationMode = "Low Vibration";
 
-CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* FilterWheelInterface, CDragonfly* MMDragonfly )
+CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* FilterWheelInterface, const CDragonflyStatus* DragonflyStatus, CDragonfly* MMDragonfly )
   : WheelIndex_( WheelIndex ),
   FilterWheelInterface_( FilterWheelInterface ),
   FilterWheelMode_( nullptr ),
+  DragonflyStatus_( DragonflyStatus ),
   MMDragonfly_( MMDragonfly ),
   ComponentName_( "Filter Wheel " + to_string( WheelIndex ) ),
-  FilterModeProperty_( ComponentName_ + " mode" )
+  FilterModeProperty_( ComponentName_ + " mode" ),
+  RFIDStatusProperty_( ComponentName_ + " RFID status")
+{
+  // Create and initialise the filter wheel property
+  FilterWheelProperty_ = new CFilterWheelProperty( this, MMDragonfly_, ComponentName_ + " position", ComponentName_ );
+
+  // Create and initialise the mode property
+  CreateModeProperty();
+  
+  // Create and initialise the RFID status property
+  CreateRFIDStatusProperty();
+}
+
+CFilterWheel::~CFilterWheel()
+{
+  delete FilterWheelProperty_;
+}
+
+void CFilterWheel::CreateModeProperty()
 {
   // Retrieve the current mode
   FilterWheelMode_ = FilterWheelInterface_->GetFilterWheelModeInterface();
@@ -30,9 +50,6 @@ CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* Filte
   {
     throw std::runtime_error( "Failed to retrieve the mode of " + ComponentName_ );
   }
-
-  // Create and initialise the filter wheel property
-  FilterWheelProperty_ = new CFilterWheelProperty( this, MMDragonfly_, ComponentName_ + " position", ComponentName_ );
 
   // Create the MM mode property
   CPropertyAction* vAct = new CPropertyAction( this, &CFilterWheel::OnModeChange );
@@ -48,9 +65,32 @@ CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* Filte
   MMDragonfly_->SetProperty( FilterModeProperty_.c_str(), GetStringFromMode( vMode ) );
 }
 
-CFilterWheel::~CFilterWheel()
+void CFilterWheel::CreateRFIDStatusProperty()
 {
-  delete FilterWheelProperty_;
+  if ( DragonflyStatus_ != nullptr )
+  {
+    char vPropertyValue[32];
+    if ( !DragonflyStatus_->IsRFIDPresentForWheel( WheelIndex_ ) )
+    {
+      strncpy( vPropertyValue, "Not present", 32 );
+    }
+    else
+    {
+      if ( DragonflyStatus_->IsRFIDReadForWheel( WheelIndex_ ) )
+      {
+        strncpy( vPropertyValue, "Present and Read", 32 );
+      }
+      else
+      {
+        strncpy( vPropertyValue, "Present but Read failed", 32 );
+      }
+    }
+    MMDragonfly_->CreateProperty( RFIDStatusProperty_.c_str(), vPropertyValue, MM::String, true );
+  }
+  else
+  {
+    throw std::logic_error( "Dragonfly status not initialised before " + ComponentName_ );
+  }
 }
 
 bool CFilterWheel::GetPosition( unsigned int& Position )
