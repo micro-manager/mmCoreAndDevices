@@ -162,7 +162,7 @@ bool CFilterWheelProperty::SetPropertyValueFromDevicePosition( MM::PropertyBase*
     }
     else
     {
-      MMDragonfly_->LogComponentMessage( "Current " + ComponentName_ + " position invalid" );
+      MMDragonfly_->LogComponentMessage( "Current " + ComponentName_ + " position invalid [ " + to_string(vPosition) + " ]" );
     }
   }
   else

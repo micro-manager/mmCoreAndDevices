@@ -190,8 +190,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ASDWrapper.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapper.cpp" />
     <ClCompile Include="DichroicMirror.cpp" />
+    <ClCompile Include="Disk.cpp" />
     <ClCompile Include="Dragonfly.cpp" />
     <ClCompile Include="DragonflyStatus.cpp" />
     <ClCompile Include="FilterWheel.cpp" />

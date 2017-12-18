@@ -8,8 +8,9 @@
 #include "Dragonfly.h"
 #include "DichroicMirror.h"
 #include "FilterWheel.h"
-#include "ASDWrapper.h"
+#include "ASDWrapper/ASDWrapper.h"
 #include "DragonflyStatus.h"
+#include "Disk.h"
 
 #include "ASDInterface.h"
 
@@ -71,7 +72,8 @@ CDragonfly::CDragonfly()
   DichroicMirror_( nullptr ),
   FilterWheel1_( nullptr ),
   FilterWheel2_( nullptr ),
-  DragonflyStatus_( nullptr )
+  DragonflyStatus_( nullptr ),
+  Disk_( nullptr )
 {
   InitializeDefaultErrorMessages();
 
@@ -92,6 +94,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_DRAGONFLYSTATUS_INVALID_POINTER, vMessage.c_str() );
   vMessage = "ASD Status initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_DRAGONFLYSTATUS_INIT, vMessage.c_str() );
+  vMessage = "Disk speed initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_DISK_INIT , vMessage.c_str());
 
   // Connect to ASD wrapper
   try
@@ -169,6 +173,7 @@ int CDragonfly::Shutdown()
   delete FilterWheel1_;
   delete FilterWheel2_;
   delete DragonflyStatus_;
+  delete Disk_;
   Disconnect();
 
   return DEVICE_OK;
@@ -288,14 +293,21 @@ int CDragonfly::InitializeComponents()
   }
 
   // Filter wheel 1 component
-  CreateFilterWheel( vASDInterface, FilterWheel1_, WheelIndex1, ERR_FILTERWHEEL1_INIT );
+  vRet = CreateFilterWheel( vASDInterface, FilterWheel1_, WheelIndex1, ERR_FILTERWHEEL1_INIT );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
   }
 
   // Filter wheel 2 component
-  CreateFilterWheel( vASDInterface, FilterWheel2_, WheelIndex2, ERR_FILTERWHEEL2_INIT );
+  vRet = CreateFilterWheel( vASDInterface, FilterWheel2_, WheelIndex2, ERR_FILTERWHEEL2_INIT );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  // Disk component
+  vRet = CreateDisk( vASDInterface );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -373,6 +385,30 @@ int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& F
     vMessage += vException.what();
     LogMessage( vMessage );
     return ErrorCode;
+  }
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
+{
+  try
+  {
+    IDiskInterface2* vASDDisk = ASDInterface->GetDisk_v2();
+    if ( vASDDisk != nullptr )
+    {
+      Disk_ = new CDisk( vASDDisk, this );
+    }
+    else
+    {
+      LogMessage( "Spinning disk not detected" );
+    }
+  }
+  catch ( exception& vException )
+  {
+    string vMessage( "Error loading the Spinning disk. Caught Exception with message: " );
+    vMessage += vException.what();
+    LogMessage( vMessage );
+    return ERR_DISK_INIT;
   }
   return DEVICE_OK;
 }

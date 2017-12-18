@@ -19,6 +19,7 @@ class CASDWrapper;
 class CDichroicMirror;
 class CFilterWheel;
 class CDragonflyStatus;
+class CDisk;
 
 class IASDLoader;
 class IASDInterface;
@@ -31,6 +32,7 @@ class IASDInterface3;
 #define ERR_FILTERWHEEL2_INIT 105
 #define ERR_DRAGONFLYSTATUS_INVALID_POINTER 106
 #define ERR_DRAGONFLYSTATUS_INIT 107
+#define ERR_DISK_INIT 108
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -59,7 +61,8 @@ private:
   CFilterWheel* FilterWheel1_;
   CFilterWheel* FilterWheel2_;
   CDragonflyStatus* DragonflyStatus_;
-
+  CDisk* Disk_;
+  
   IASDLoader* ASDLoader_;
 
   int Connect( const std::string& Port );
@@ -69,6 +72,7 @@ private:
   int CreateDragonflyStatus( IASDInterface3* ASDInterface );
   int CreateDichroicMirror( IASDInterface* ASDInterface );
   int CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode );
+  int CreateDisk( IASDInterface* ASDInterface );
 };
 
 #endif
