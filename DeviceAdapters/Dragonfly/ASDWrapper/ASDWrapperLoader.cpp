@@ -31,3 +31,8 @@ IASDInterface3* CASDWrapperLoader::GetASDInterface3()
 {
   return ASDInterface_;
 }
+
+IASDLoader* CASDWrapperLoader::GetASDLoader()
+{
+  return ASDLoader_;
+}

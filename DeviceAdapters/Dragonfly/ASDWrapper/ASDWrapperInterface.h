@@ -13,6 +13,7 @@ class CASDWrapperDichroicMirror;
 class CASDWrapperFilterWheel;
 class CASDWrapperDisk;
 class CASDWrapperStatus;
+class CASDWrapperConfocalMode;
 
 class CASDWrapperInterface : public IASDInterface3
 {
@@ -68,6 +69,7 @@ private:
   std::map<TWheelIndex, CASDWrapperFilterWheel*> FilterWheelWrappers_;
   CASDWrapperDisk* DiskWrapper_;
   CASDWrapperStatus* StatusWrapper_;
+  CASDWrapperConfocalMode* ConfocalModeWrapper_;
 };
 
 #endif

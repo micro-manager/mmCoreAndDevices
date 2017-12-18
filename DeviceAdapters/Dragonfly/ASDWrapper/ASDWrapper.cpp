@@ -32,7 +32,7 @@ CASDWrapper::CASDWrapper()
 
 CASDWrapper::~CASDWrapper()
 {
-  std::vector<CASDWrapperLoader*>::iterator vLoaderIt = ASDWrapperLoaders_.begin();
+  std::list<CASDWrapperLoader*>::iterator vLoaderIt = ASDWrapperLoaders_.begin();
   while ( vLoaderIt != ASDWrapperLoaders_.end() )
   {
     delete *vLoaderIt;
@@ -55,5 +55,20 @@ bool CASDWrapper::CreateASDLoader( const char *Port, TASDType ASDType, IASDLoade
 
 bool CASDWrapper::DeleteASDLoader( IASDLoader *ASDLoader )
 {
-  return mDeleteASDLoader( ASDLoader );
+  std::list<CASDWrapperLoader*>::iterator vLoaderIt = ASDWrapperLoaders_.begin();
+  while ( vLoaderIt != ASDWrapperLoaders_.end() )
+  {
+    if ( *vLoaderIt == ASDLoader )
+    {
+      bool vDeleteSuccessful = mDeleteASDLoader( ( *vLoaderIt )->GetASDLoader() );
+      if ( vDeleteSuccessful )
+      {
+        delete *vLoaderIt;
+        ASDWrapperLoaders_.erase( vLoaderIt );
+      }
+      return vDeleteSuccessful;
+    }
+    vLoaderIt++;
+  }
+  return false;
 }

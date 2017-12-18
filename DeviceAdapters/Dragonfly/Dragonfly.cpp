@@ -11,6 +11,7 @@
 #include "ASDWrapper/ASDWrapper.h"
 #include "DragonflyStatus.h"
 #include "Disk.h"
+#include "ConfocalMode.h"
 
 #include "ASDInterface.h"
 
@@ -73,7 +74,8 @@ CDragonfly::CDragonfly()
   FilterWheel1_( nullptr ),
   FilterWheel2_( nullptr ),
   DragonflyStatus_( nullptr ),
-  Disk_( nullptr )
+  Disk_( nullptr ),
+  ConfocalMode_( nullptr )
 {
   InitializeDefaultErrorMessages();
 
@@ -96,6 +98,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_DRAGONFLYSTATUS_INIT, vMessage.c_str() );
   vMessage = "Disk speed initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_DISK_INIT , vMessage.c_str());
+  vMessage = "Confocal mode initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_CONFOCALMODE_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -174,6 +178,7 @@ int CDragonfly::Shutdown()
   delete FilterWheel2_;
   delete DragonflyStatus_;
   delete Disk_;
+  delete ConfocalMode_;
   Disconnect();
 
   return DEVICE_OK;
@@ -313,6 +318,13 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  // Confocal mode component
+  vRet = CreateConfocalMode( vASDInterface3 );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
   return DEVICE_OK;
 }
 
@@ -409,6 +421,30 @@ int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
     vMessage += vException.what();
     LogMessage( vMessage );
     return ERR_DISK_INIT;
+  }
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
+{
+  try
+  {
+    IConfocalModeInterface3* vASDConfocalMode = ASDInterface->GetImagingMode();
+    if ( vASDConfocalMode != nullptr )
+    {
+      ConfocalMode_ = new CConfocalMode( vASDConfocalMode, this );
+    }
+    else
+    {
+      LogMessage( "Confocal mode not detected" );
+    }
+  }
+  catch ( exception& vException )
+  {
+    string vMessage( "Error loading the Confocal mode. Caught Exception with message: " );
+    vMessage += vException.what();
+    LogMessage( vMessage );
+    return ERR_CONFOCALMODE_INIT;
   }
   return DEVICE_OK;
 }

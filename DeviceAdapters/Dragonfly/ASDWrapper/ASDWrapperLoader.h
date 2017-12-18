@@ -20,6 +20,8 @@ public:
   IASDInterface* GetASDInterface();
   IASDInterface2* GetASDInterface2();
   IASDInterface3* GetASDInterface3();
+
+  IASDLoader* GetASDLoader();
   
 private:
   IASDLoader* ASDLoader_;

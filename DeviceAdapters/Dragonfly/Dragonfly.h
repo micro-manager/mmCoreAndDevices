@@ -20,6 +20,7 @@ class CDichroicMirror;
 class CFilterWheel;
 class CDragonflyStatus;
 class CDisk;
+class CConfocalMode;
 
 class IASDLoader;
 class IASDInterface;
@@ -33,6 +34,7 @@ class IASDInterface3;
 #define ERR_DRAGONFLYSTATUS_INVALID_POINTER 106
 #define ERR_DRAGONFLYSTATUS_INIT 107
 #define ERR_DISK_INIT 108
+#define ERR_CONFOCALMODE_INIT 109
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -62,6 +64,7 @@ private:
   CFilterWheel* FilterWheel2_;
   CDragonflyStatus* DragonflyStatus_;
   CDisk* Disk_;
+  CConfocalMode* ConfocalMode_;
   
   IASDLoader* ASDLoader_;
 
@@ -73,6 +76,7 @@ private:
   int CreateDichroicMirror( IASDInterface* ASDInterface );
   int CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode );
   int CreateDisk( IASDInterface* ASDInterface );
+  int CreateConfocalMode( IASDInterface3* ASDInterface );
 };
 
 #endif

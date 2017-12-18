@@ -8,7 +8,7 @@
 
 #include "ASDLoader.h"
 #include "Windows.h"
-#include <vector>
+#include <list>
 
 class CASDWrapperLoader;
 
@@ -23,7 +23,7 @@ public:
 
 private:
   HMODULE DLL_;
-  std::vector<CASDWrapperLoader*> ASDWrapperLoaders_;
+  std::list<CASDWrapperLoader*> ASDWrapperLoaders_;
 
   typedef bool( __stdcall *tCreateASDLoader )( const char *Port, TASDType ASDType, IASDLoader **ASDLoader );
   tCreateASDLoader mCreateASDLoader;

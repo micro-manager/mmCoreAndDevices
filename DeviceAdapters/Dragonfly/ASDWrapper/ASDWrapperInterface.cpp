@@ -4,12 +4,14 @@
 #include "ASDWrapperFilterWheel.h"
 #include "ASDWrapperDisk.h"
 #include "ASDWrapperStatus.h"
+#include "ASDWrapperConfocalMode.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
   : ASDInterface_( ASDInterface),
   DichroicMirrorWrapper_( nullptr ),
   DiskWrapper_( nullptr ),
-  StatusWrapper_( nullptr )
+  StatusWrapper_( nullptr ),
+  ConfocalModeWrapper_( nullptr )
 {
   if ( ASDInterface_ == nullptr )
   {
@@ -28,6 +30,7 @@ CASDWrapperInterface::~CASDWrapperInterface()
   }
   delete DiskWrapper_;
   delete StatusWrapper_;
+  delete ConfocalModeWrapper_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -115,7 +118,12 @@ bool CASDWrapperInterface::IsBrightFieldPortAvailable()
 
 IConfocalModeInterface2* CASDWrapperInterface::GetBrightFieldPort()
 {
-  throw std::logic_error( "GetBrightFieldPort() wrapper function not implemented" );
+  if ( ConfocalModeWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    ConfocalModeWrapper_ = new CASDWrapperConfocalMode( ASDInterface_->GetImagingMode() );
+  }
+  return ConfocalModeWrapper_;
 }
 
 IDiskInterface2* CASDWrapperInterface::GetDisk_v2()
@@ -238,7 +246,12 @@ bool CASDWrapperInterface::IsImagingModeAvailable()
 
 IConfocalModeInterface3* CASDWrapperInterface::GetImagingMode()
 {
-  throw std::logic_error( "GetImagingMode() wrapper function not implemented" );
+  if ( ConfocalModeWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    ConfocalModeWrapper_ = new CASDWrapperConfocalMode( ASDInterface_->GetImagingMode() );
+  }
+  return ConfocalModeWrapper_;
 }
 
 bool CASDWrapperInterface::IsTIRFAvailable()

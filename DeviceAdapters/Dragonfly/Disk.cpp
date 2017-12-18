@@ -25,7 +25,8 @@ const char* const g_DiskStatusUndefined = "Undefined";
 CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   : DiskInterface_( DiskSpeedInterface ),
   MMDragonfly_( MMDragonfly ),
-  CurrentRequestedSpeed_( 0 )
+  CurrentRequestedSpeed_( 0 ),
+  DiskStatusMonitor_( nullptr )
 {
   unsigned int vMin, vMax, vSpeed, vScansPerRevolution;
   bool vValueRetrieved = DiskInterface_->GetLimits( vMin, vMax );
@@ -63,7 +64,9 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   // Create the MM properties for Disk status monitor
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
   MMDragonfly_->CreateProperty( g_DiskSpeedMonitorPropertyName, g_DiskStatusUndefined, MM::String, false, vAct );
+  vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
   MMDragonfly_->CreateProperty( g_DiskStatusMonitorPropertyName, g_DiskStatusUndefined, MM::String, false, vAct );
+  vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
   MMDragonfly_->CreateProperty( g_FrameScanTime, to_string( CalculateFrameScanTime( vSpeed, vScansPerRevolution )).c_str(), MM::String, false, vAct );
   DiskStatusMonitor_ = new CDiskStatusMonitor( MMDragonfly_ );
   DiskStatusMonitor_->activate();
@@ -251,6 +254,5 @@ int CDiskStatusMonitor::svc()
     MMDragonfly_->UpdateProperty( g_FrameScanTime );
     Sleep( 250 );
   }
-
   return 0;
 }
