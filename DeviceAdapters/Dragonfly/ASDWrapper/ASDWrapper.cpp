@@ -1,27 +1,29 @@
 #include "ASDWrapper.h"
+#include "ASDWrapperLoader.h"
 #include <stdexcept>
 
 CASDWrapper::CASDWrapper()
-  : mDLL( nullptr ),
-  mCreateASDLoader( nullptr )
+  : DLL_( nullptr ),
+  mCreateASDLoader( nullptr ),
+  mDeleteASDLoader( nullptr )
 {
 #ifdef _M_X64
-  HMODULE mDLL = LoadLibraryA( "AB_ASDx64.dll" );
+  DLL_ = LoadLibraryA( "AB_ASDx64.dll" );
 #else
-  HMODULE mDLL = LoadLibraryA( "AB_ASD.dll" );
+  DLL_ = LoadLibraryA( "AB_ASD.dll" );
 #endif
-  if ( !mDLL )
+  if ( !DLL_ )
   {
     throw std::runtime_error( "LoadLibrary failed" );
   }
 
-  mCreateASDLoader = (tCreateASDLoader)GetProcAddress( mDLL, "CreateASDLoader" );
+  mCreateASDLoader = (tCreateASDLoader)GetProcAddress( DLL_, "CreateASDLoader" );
   if ( !mCreateASDLoader )
   {
     throw std::runtime_error( "GetProcAddress failed for CreateASDLoader" );
   }
 
-  mDeleteASDLoader = (tDeleteASDLoader)GetProcAddress( mDLL, "DeleteASDLoader" );
+  mDeleteASDLoader = (tDeleteASDLoader)GetProcAddress( DLL_, "DeleteASDLoader" );
   if ( !mDeleteASDLoader )
   {
     throw std::runtime_error( "GetProcAddress failed for DeleteASDLoader" );
@@ -30,12 +32,25 @@ CASDWrapper::CASDWrapper()
 
 CASDWrapper::~CASDWrapper()
 {
-  FreeLibrary( mDLL );
+  std::vector<CASDWrapperLoader*>::iterator vLoaderIt = ASDWrapperLoaders_.begin();
+  while ( vLoaderIt != ASDWrapperLoaders_.end() )
+  {
+    delete *vLoaderIt;
+    vLoaderIt++;
+  }
+  FreeLibrary( DLL_ );
 }
 
 bool CASDWrapper::CreateASDLoader( const char *Port, TASDType ASDType, IASDLoader **ASDLoader )
 {
-  return mCreateASDLoader( Port, ASDType, ASDLoader );
+  bool vRet = mCreateASDLoader( Port, ASDType, ASDLoader );
+  if ( vRet )
+  {
+    CASDWrapperLoader* vLoader = new CASDWrapperLoader( *ASDLoader );
+    ASDWrapperLoaders_.push_back( vLoader );
+    *ASDLoader = vLoader;
+  }
+  return vRet;
 }
 
 bool CASDWrapper::DeleteASDLoader( IASDLoader *ASDLoader )

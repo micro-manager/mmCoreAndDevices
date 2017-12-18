@@ -1,8 +1,16 @@
+///////////////////////////////////////////////////////////////////////////////
+// FILE:          ASDWrapper.h
+// PROJECT:       Micro-Manager
+// SUBSYSTEM:     DeviceAdapters
+//-----------------------------------------------------------------------------
 #ifndef _ASDWRAPPER_H_
 #define _ASDWRAPPER_H_
 
 #include "ASDLoader.h"
 #include "Windows.h"
+#include <vector>
+
+class CASDWrapperLoader;
 
 class CASDWrapper 
 {
@@ -14,7 +22,8 @@ public:
   bool DeleteASDLoader( IASDLoader *ASDLoader );
 
 private:
-  HMODULE mDLL;
+  HMODULE DLL_;
+  std::vector<CASDWrapperLoader*> ASDWrapperLoaders_;
 
   typedef bool( __stdcall *tCreateASDLoader )( const char *Port, TASDType ASDType, IASDLoader **ASDLoader );
   tCreateASDLoader mCreateASDLoader;
@@ -22,4 +31,5 @@ private:
   typedef bool( __stdcall *tDeleteASDLoader )( IASDLoader *ASDLoader );
   tDeleteASDLoader mDeleteASDLoader;
 };
+
 #endif
