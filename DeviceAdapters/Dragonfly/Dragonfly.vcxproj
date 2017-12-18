@@ -190,7 +190,17 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ASDWrapper\ASDSDKLock.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapper.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperDichroicMirror.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperDisk.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterConfig.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterSet.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterWheel.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterWheelMode.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperInterface.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperLoader.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperStatus.cpp" />
     <ClCompile Include="DichroicMirror.cpp" />
     <ClCompile Include="Disk.cpp" />
     <ClCompile Include="Dragonfly.cpp" />

@@ -58,7 +58,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
   MMDragonfly_->CreateProperty( g_DiskSpeedMonitorPropertyName, g_DiskStatusUndefined, MM::String, false, vAct );
   MMDragonfly_->CreateProperty( g_DiskStatusMonitorPropertyName, g_DiskStatusUndefined, MM::String, false, vAct );
-  DiskStatusMonitor_ = new CDiskStatusMonitor( this, DiskInterface_, MMDragonfly_ );
+  DiskStatusMonitor_ = new CDiskStatusMonitor( MMDragonfly_ );
   DiskStatusMonitor_->activate();
 }
 
