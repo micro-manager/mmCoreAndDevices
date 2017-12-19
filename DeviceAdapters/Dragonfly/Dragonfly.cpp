@@ -13,6 +13,7 @@
 #include "Disk.h"
 #include "ConfocalMode.h"
 #include "Aperture.h"
+#include "CameraPortMirror.h"
 
 #include "ASDInterface.h"
 
@@ -77,7 +78,8 @@ CDragonfly::CDragonfly()
   DragonflyStatus_( nullptr ),
   Disk_( nullptr ),
   ConfocalMode_( nullptr ),
-  Aperture_( nullptr )
+  Aperture_( nullptr ),
+  CameraPortMirror_( nullptr )
 {
   InitializeDefaultErrorMessages();
 
@@ -104,6 +106,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_CONFOCALMODE_INIT, vMessage.c_str() );
   vMessage = "Aperture initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_APERTURE_INIT, vMessage.c_str() );
+  vMessage = "Camera port mirror initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_CAMERAPORTMIRROR_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -184,6 +188,7 @@ int CDragonfly::Shutdown()
   delete Disk_;
   delete ConfocalMode_;
   delete Aperture_;
+  delete CameraPortMirror_;
   Disconnect();
 
   return DEVICE_OK;
@@ -338,6 +343,13 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  // Camera port mirror component
+  vRet = CreateCameraPortMirror( vASDInterface2 );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
   return DEVICE_OK;
 }
 
@@ -482,6 +494,30 @@ int CDragonfly::CreateAperture( IASDInterface2* ASDInterface )
     vMessage += vException.what();
     LogMessage( vMessage );
     return ERR_APERTURE_INIT;
+  }
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreateCameraPortMirror( IASDInterface2* ASDInterface )
+{
+  try
+  {
+    ICameraPortMirrorInterface* vCameraPortMirror = ASDInterface->GetCameraPortMirror();
+    if ( vCameraPortMirror != nullptr )
+    {
+      CameraPortMirror_ = new CCameraPortMirror( vCameraPortMirror, this );
+    }
+    else
+    {
+      LogMessage( "Camera port mirror not detected" );
+    }
+  }
+  catch ( exception& vException )
+  {
+    string vMessage( "Error loading the Camera port mirror. Caught Exception with message: " );
+    vMessage += vException.what();
+    LogMessage( vMessage );
+    return ERR_CAMERAPORTMIRROR_INIT;
   }
   return DEVICE_OK;
 }

@@ -22,6 +22,7 @@ class CDragonflyStatus;
 class CDisk;
 class CConfocalMode;
 class CAperture;
+class CCameraPortMirror;
 
 class IASDLoader;
 class IASDInterface;
@@ -38,6 +39,7 @@ class IASDInterface3;
 #define ERR_DISK_INIT 108
 #define ERR_CONFOCALMODE_INIT 109
 #define ERR_APERTURE_INIT 110
+#define ERR_CAMERAPORTMIRROR_INIT 111
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -69,6 +71,7 @@ private:
   CDisk* Disk_;
   CConfocalMode* ConfocalMode_;
   CAperture* Aperture_;
+  CCameraPortMirror* CameraPortMirror_;
   
   IASDLoader* ASDLoader_;
 
@@ -82,6 +85,7 @@ private:
   int CreateDisk( IASDInterface* ASDInterface );
   int CreateConfocalMode( IASDInterface3* ASDInterface );
   int CreateAperture( IASDInterface2* ASDInterface );
+  int CreateCameraPortMirror( IASDInterface2* ASDInterface );
 };
 
 #endif

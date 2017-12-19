@@ -6,13 +6,16 @@
 #include "ASDWrapperStatus.h"
 #include "ASDWrapperConfocalMode.h"
 #include "ASDWrapperAperture.h"
+#include "ASDWrapperCameraPortMirror.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
   : ASDInterface_( ASDInterface),
   DichroicMirrorWrapper_( nullptr ),
   DiskWrapper_( nullptr ),
   StatusWrapper_( nullptr ),
-  ConfocalModeWrapper_( nullptr )
+  ConfocalModeWrapper_( nullptr ),
+  ApertureWrapper_( nullptr ),
+  CameraPortMirrorWrapper_( nullptr )
 {
   if ( ASDInterface_ == nullptr )
   {
@@ -32,6 +35,8 @@ CASDWrapperInterface::~CASDWrapperInterface()
   delete DiskWrapper_;
   delete StatusWrapper_;
   delete ConfocalModeWrapper_;
+  delete ApertureWrapper_;
+  delete CameraPortMirrorWrapper_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -165,7 +170,12 @@ bool CASDWrapperInterface::IsCameraPortMirrorAvailable()
 
 ICameraPortMirrorInterface* CASDWrapperInterface::GetCameraPortMirror()
 {
-  throw std::logic_error( "GetCameraPortMirror() wrapper function not implemented" );
+  if ( CameraPortMirrorWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    CameraPortMirrorWrapper_ = new CASDWrapperCameraPortMirror( ASDInterface_->GetCameraPortMirror() );
+  }
+  return CameraPortMirrorWrapper_;
 }
 
 bool CASDWrapperInterface::IsLensAvailable( TLensType LensIndex )

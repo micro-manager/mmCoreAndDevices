@@ -15,6 +15,7 @@ class CASDWrapperDisk;
 class CASDWrapperStatus;
 class CASDWrapperConfocalMode;
 class CASDWrapperAperture;
+class CASDWrapperCameraPortMirror;
 
 class CASDWrapperInterface : public IASDInterface3
 {
@@ -72,6 +73,7 @@ private:
   CASDWrapperStatus* StatusWrapper_;
   CASDWrapperConfocalMode* ConfocalModeWrapper_;
   CASDWrapperAperture* ApertureWrapper_;
+  CASDWrapperCameraPortMirror* CameraPortMirrorWrapper_;
 };
 
 #endif
