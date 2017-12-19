@@ -21,9 +21,11 @@ class CFilterWheel;
 class CDragonflyStatus;
 class CDisk;
 class CConfocalMode;
+class CAperture;
 
 class IASDLoader;
 class IASDInterface;
+class IASDInterface2;
 class IASDInterface3;
 
 #define ERR_LIBRARY_LOAD 101
@@ -35,6 +37,7 @@ class IASDInterface3;
 #define ERR_DRAGONFLYSTATUS_INIT 107
 #define ERR_DISK_INIT 108
 #define ERR_CONFOCALMODE_INIT 109
+#define ERR_APERTURE_INIT 110
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -65,6 +68,7 @@ private:
   CDragonflyStatus* DragonflyStatus_;
   CDisk* Disk_;
   CConfocalMode* ConfocalMode_;
+  CAperture* Aperture_;
   
   IASDLoader* ASDLoader_;
 
@@ -77,6 +81,7 @@ private:
   int CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode );
   int CreateDisk( IASDInterface* ASDInterface );
   int CreateConfocalMode( IASDInterface3* ASDInterface );
+  int CreateAperture( IASDInterface2* ASDInterface );
 };
 
 #endif

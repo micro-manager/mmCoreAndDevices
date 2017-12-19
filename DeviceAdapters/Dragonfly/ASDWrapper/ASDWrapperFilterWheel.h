@@ -17,7 +17,7 @@ public:
   CASDWrapperFilterWheel( IFilterWheelInterface* FilterWheelInterface );
   ~CASDWrapperFilterWheel();
 
-  // IDichroicMirrorInterface
+  // IFilterWheelInterface
   bool GetPosition( unsigned int& Position );
   bool SetPosition( unsigned int Position );
   bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );

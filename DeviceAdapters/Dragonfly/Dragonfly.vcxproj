@@ -190,8 +190,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Aperture.cpp" />
     <ClCompile Include="ASDWrapper\ASDSDKLock.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapper.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperAperture.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperConfocalMode.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperDichroicMirror.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperDisk.cpp" />

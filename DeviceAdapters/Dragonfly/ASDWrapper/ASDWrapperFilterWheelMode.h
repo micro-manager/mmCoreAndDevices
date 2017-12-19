@@ -15,7 +15,7 @@ public:
   CASDWrapperFilterWheelMode( IFilterWheelModeInterface* FilterWheelModeInterface );
   ~CASDWrapperFilterWheelMode();
 
-  // IDichroicMirrorInterface
+  // IFilterWheelModeInterface
   bool GetMode( TFilterWheelMode& FilterWheelMode );
   bool SetMode( TFilterWheelMode FilterWheelMode );
 

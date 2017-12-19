@@ -5,6 +5,7 @@
 #include "ASDWrapperDisk.h"
 #include "ASDWrapperStatus.h"
 #include "ASDWrapperConfocalMode.h"
+#include "ASDWrapperAperture.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
   : ASDInterface_( ASDInterface),
@@ -148,7 +149,12 @@ bool CASDWrapperInterface::IsApertureAvailable()
 
 IApertureInterface* CASDWrapperInterface::GetAperture()
 {
-  throw std::logic_error( "GetAperture() wrapper function not implemented" );
+  if ( ApertureWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    ApertureWrapper_ = new CASDWrapperAperture( ASDInterface_->GetAperture() );
+  }
+  return ApertureWrapper_;
 }
 
 bool CASDWrapperInterface::IsCameraPortMirrorAvailable()

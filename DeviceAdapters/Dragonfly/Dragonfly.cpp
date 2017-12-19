@@ -12,6 +12,7 @@
 #include "DragonflyStatus.h"
 #include "Disk.h"
 #include "ConfocalMode.h"
+#include "Aperture.h"
 
 #include "ASDInterface.h"
 
@@ -75,7 +76,8 @@ CDragonfly::CDragonfly()
   FilterWheel2_( nullptr ),
   DragonflyStatus_( nullptr ),
   Disk_( nullptr ),
-  ConfocalMode_( nullptr )
+  ConfocalMode_( nullptr ),
+  Aperture_( nullptr )
 {
   InitializeDefaultErrorMessages();
 
@@ -100,6 +102,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_DISK_INIT , vMessage.c_str());
   vMessage = "Confocal mode initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_CONFOCALMODE_INIT, vMessage.c_str() );
+  vMessage = "Aperture initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_APERTURE_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -179,6 +183,7 @@ int CDragonfly::Shutdown()
   delete DragonflyStatus_;
   delete Disk_;
   delete ConfocalMode_;
+  delete Aperture_;
   Disconnect();
 
   return DEVICE_OK;
@@ -258,6 +263,7 @@ int CDragonfly::Disconnect()
 int CDragonfly::InitializeComponents()
 {
   IASDInterface* vASDInterface = ASDLoader_->GetASDInterface();
+  IASDInterface2* vASDInterface2 = ASDLoader_->GetASDInterface2();
   IASDInterface3* vASDInterface3 = ASDLoader_->GetASDInterface3();
 
   // Serial number property
@@ -320,6 +326,13 @@ int CDragonfly::InitializeComponents()
 
   // Confocal mode component
   vRet = CreateConfocalMode( vASDInterface3 );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  // Aperture component
+  vRet = CreateAperture( vASDInterface2 );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -445,6 +458,30 @@ int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
     vMessage += vException.what();
     LogMessage( vMessage );
     return ERR_CONFOCALMODE_INIT;
+  }
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreateAperture( IASDInterface2* ASDInterface )
+{
+  try
+  {
+    IApertureInterface* vAperture = ASDInterface->GetAperture();
+    if ( vAperture != nullptr )
+    {
+      Aperture_ = new CAperture( vAperture, this );
+    }
+    else
+    {
+      LogMessage( "Aperture not detected" );
+    }
+  }
+  catch ( exception& vException )
+  {
+    string vMessage( "Error loading the Aperture. Caught Exception with message: " );
+    vMessage += vException.what();
+    LogMessage( vMessage );
+    return ERR_APERTURE_INIT;
   }
   return DEVICE_OK;
 }

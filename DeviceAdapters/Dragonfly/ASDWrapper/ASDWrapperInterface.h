@@ -14,6 +14,7 @@ class CASDWrapperFilterWheel;
 class CASDWrapperDisk;
 class CASDWrapperStatus;
 class CASDWrapperConfocalMode;
+class CASDWrapperAperture;
 
 class CASDWrapperInterface : public IASDInterface3
 {
@@ -70,6 +71,7 @@ private:
   CASDWrapperDisk* DiskWrapper_;
   CASDWrapperStatus* StatusWrapper_;
   CASDWrapperConfocalMode* ConfocalModeWrapper_;
+  CASDWrapperAperture* ApertureWrapper_;
 };
 
 #endif
