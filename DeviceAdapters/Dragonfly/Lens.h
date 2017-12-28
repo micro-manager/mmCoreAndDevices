@@ -1,24 +1,23 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          CameraPortMirror.h
+// FILE:          Lens.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-#ifndef _CAMERAPORTMIRROR_H_
-#define _CAMERAPORTMIRROR_H_
+#ifndef _LENS_H_
+#define _LENS_H_
 
 #include "MMDeviceConstants.h"
 #include "Property.h"
 
 #include "PositionComponentInterface.h"
 
-class CDragonfly;
-class ICameraPortMirrorInterface;
+class ILensInterface;
 
-class CCameraPortMirror : public IPositionComponentInterface
+class CLens : public IPositionComponentInterface
 {
 public:
-  CCameraPortMirror( ICameraPortMirrorInterface* CameraPortMirrorInterface, CDragonfly* MMDragonfly );
-  ~CCameraPortMirror();
+  CLens( ILensInterface* LensInterface, int LensIndex, CDragonfly* MMDragonfly );
+  ~CLens();
 
 protected:
   virtual bool GetPosition( unsigned int& Position );
@@ -27,7 +26,7 @@ protected:
   IFilterSet* GetFilterSet();
 
 private:
-  ICameraPortMirrorInterface* CameraPortMirrorInterface_;
+  ILensInterface* LensInterface_;
   CDragonfly* MMDragonfly_;
 };
 

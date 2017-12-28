@@ -14,6 +14,7 @@
 #include "ConfocalMode.h"
 #include "Aperture.h"
 #include "CameraPortMirror.h"
+#include "Lens.h"
 
 #include "ASDInterface.h"
 
@@ -108,6 +109,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_APERTURE_INIT, vMessage.c_str() );
   vMessage = "Camera port mirror initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_CAMERAPORTMIRROR_INIT, vMessage.c_str() );
+  vMessage = "Lens initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_LENS_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -189,6 +192,12 @@ int CDragonfly::Shutdown()
   delete ConfocalMode_;
   delete Aperture_;
   delete CameraPortMirror_;
+  vector<CLens*>::iterator vLensIt = Lens_.begin();
+  while ( vLensIt != Lens_.end() )
+  {
+    delete *vLensIt;
+    vLensIt++;
+  }  
   Disconnect();
 
   return DEVICE_OK;
@@ -348,6 +357,16 @@ int CDragonfly::InitializeComponents()
   if ( vRet != DEVICE_OK )
   {
     return vRet;
+  }
+
+  // Lens components
+  for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax; ++vLensIndex )
+  {
+    vRet = CreateLens( vASDInterface2, vLensIndex );
+    if ( vRet != DEVICE_OK )
+    {
+      return vRet;
+    }
   }
 
   return DEVICE_OK;
@@ -518,6 +537,37 @@ int CDragonfly::CreateCameraPortMirror( IASDInterface2* ASDInterface )
     vMessage += vException.what();
     LogMessage( vMessage );
     return ERR_CAMERAPORTMIRROR_INIT;
+  }
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
+{
+  if ( ASDInterface->IsLensAvailable( (TLensType)LensIndex ) )
+  {
+    try
+    {
+      ILensInterface* vLensInterface = ASDInterface->GetLens( (TLensType)LensIndex );
+      if ( vLensInterface != nullptr )
+      {
+        CLens* vLens = new CLens( vLensInterface, LensIndex, this );
+        if ( vLens != nullptr )
+        {
+          Lens_.push_back( vLens );
+        }
+      }
+      else
+      {
+        LogMessage( "Lens " + to_string( LensIndex ) + " not detected" );
+      }
+    }
+    catch ( exception& vException )
+    {
+      string vMessage( "Error loading the Lens " + to_string( LensIndex ) + ". Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_LENS_INIT;
+    }
   }
   return DEVICE_OK;
 }

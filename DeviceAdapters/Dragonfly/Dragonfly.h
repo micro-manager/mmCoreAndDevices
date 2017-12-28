@@ -23,6 +23,7 @@ class CDisk;
 class CConfocalMode;
 class CAperture;
 class CCameraPortMirror;
+class CLens;
 
 class IASDLoader;
 class IASDInterface;
@@ -40,6 +41,7 @@ class IASDInterface3;
 #define ERR_CONFOCALMODE_INIT 109
 #define ERR_APERTURE_INIT 110
 #define ERR_CAMERAPORTMIRROR_INIT 111
+#define ERR_LENS_INIT 112
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -72,6 +74,7 @@ private:
   CConfocalMode* ConfocalMode_;
   CAperture* Aperture_;
   CCameraPortMirror* CameraPortMirror_;
+  std::vector<CLens*> Lens_;
   
   IASDLoader* ASDLoader_;
 
@@ -86,6 +89,7 @@ private:
   int CreateConfocalMode( IASDInterface3* ASDInterface );
   int CreateAperture( IASDInterface2* ASDInterface );
   int CreateCameraPortMirror( IASDInterface2* ASDInterface );
+  int CreateLens( IASDInterface2* ASDInterface, int LensIndex );
 };
 
 #endif

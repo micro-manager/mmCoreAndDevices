@@ -9,28 +9,26 @@
 #include "MMDeviceConstants.h"
 #include "Property.h"
 
+#include "PositionComponentInterface.h"
+
 class CDragonfly;
 class IApertureInterface;
 
-class CAperture
+class CAperture : public IPositionComponentInterface
 {
 public:
   CAperture( IApertureInterface* ApertureInterface, CDragonfly* MMDragonfly );
   ~CAperture();
 
-  int OnPositionChange( MM::PropertyBase * Prop, MM::ActionType Act );
-  typedef MM::Action<CAperture> CPropertyAction;
+protected:
+  virtual bool GetPosition( unsigned int& Position );
+  bool SetPosition( unsigned int Position );
+  bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
+  IFilterSet* GetFilterSet();
 
 private:
   IApertureInterface* ApertureInterface_;
   CDragonfly* MMDragonfly_;
-
-  typedef std::map<unsigned int, std::string> TPositionNameMap;
-  TPositionNameMap PositionNames_;
-
-  bool RetrievePositionsFromFilterSet();
-  bool RetrievePositionsWithoutDescriptions();
-  bool SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop );
 };
 
 #endif

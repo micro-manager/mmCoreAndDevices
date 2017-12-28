@@ -16,6 +16,7 @@ class CASDWrapperStatus;
 class CASDWrapperConfocalMode;
 class CASDWrapperAperture;
 class CASDWrapperCameraPortMirror;
+class CASDWrapperLens;
 
 class CASDWrapperInterface : public IASDInterface3
 {
@@ -74,6 +75,7 @@ private:
   CASDWrapperConfocalMode* ConfocalModeWrapper_;
   CASDWrapperAperture* ApertureWrapper_;
   CASDWrapperCameraPortMirror* CameraPortMirrorWrapper_;
+  std::map<TLensType, CASDWrapperLens*> LensWrappers_;
 };
 
 #endif

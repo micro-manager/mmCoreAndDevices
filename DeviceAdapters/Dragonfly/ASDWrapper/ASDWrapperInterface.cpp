@@ -7,6 +7,7 @@
 #include "ASDWrapperConfocalMode.h"
 #include "ASDWrapperAperture.h"
 #include "ASDWrapperCameraPortMirror.h"
+#include "ASDWrapperLens.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
   : ASDInterface_( ASDInterface),
@@ -37,6 +38,12 @@ CASDWrapperInterface::~CASDWrapperInterface()
   delete ConfocalModeWrapper_;
   delete ApertureWrapper_;
   delete CameraPortMirrorWrapper_;
+  std::map<TLensType, CASDWrapperLens*>::iterator vLensIt = LensWrappers_.begin();
+  while ( vLensIt != LensWrappers_.end() )
+  {
+    delete vLensIt->second;
+    vLensIt++;
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -184,9 +191,15 @@ bool CASDWrapperInterface::IsLensAvailable( TLensType LensIndex )
   return ASDInterface_->IsLensAvailable( LensIndex );
 }
 
-ILensInterface* CASDWrapperInterface::GetLens( TLensType /*LensIndex*/ )
+ILensInterface* CASDWrapperInterface::GetLens( TLensType LensIndex )
 {
-  throw std::logic_error( "GetLens() wrapper function not implemented" );
+  if ( LensWrappers_.find( LensIndex ) == LensWrappers_.end() )
+  {
+    CASDSDKLock vSDKLock;
+    CASDWrapperLens* vLensWrapper_ = new CASDWrapperLens( ASDInterface_->GetLens( LensIndex ) );
+    LensWrappers_[LensIndex] = vLensWrapper_;
+  }
+  return LensWrappers_[LensIndex];
 }
 
 int CASDWrapperInterface::GetModelID()
