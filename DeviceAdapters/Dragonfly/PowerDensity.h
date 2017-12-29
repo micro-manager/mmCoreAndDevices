@@ -13,6 +13,7 @@
 
 class CDragonfly;
 class IIllLensInterface;
+class INotify;
 
 class CPowerDensity : public IPositionComponentInterface
 {
@@ -20,15 +21,20 @@ public:
   CPowerDensity( IIllLensInterface* IllLensInterface, int LensIndex, CDragonfly* MMDragonfly );
   ~CPowerDensity();
 
+  void RestrictionNotification();
+
 protected:
   virtual bool GetPosition( unsigned int& Position );
   bool SetPosition( unsigned int Position );
   bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
   IFilterSet* GetFilterSet();
+  void UpdateAllowedValues();
 
 private:
   IIllLensInterface* IllLensInterface_;
   CDragonfly* MMDragonfly_;
+  INotify *RestrictionNotification_;
+  bool RestrictionStatusChangeNotified_;
 };
 
 #endif

@@ -30,12 +30,16 @@ protected:
   virtual bool SetPosition( unsigned int Position ) = 0;
   virtual bool GetLimits( unsigned int& MinPosition, unsigned int&MaxPosition ) = 0;
   virtual IFilterSet* GetFilterSet() = 0;
+  
+  virtual void UpdateAllowedValues() {}
+
+  typedef std::map<unsigned int, std::string> TPositionNameMap;
+  const TPositionNameMap& GetPositionNameMap() const { return PositionNames_; }
 
 private:
   CDragonfly* MMDragonfly_;
   bool Initialised_;
 
-  typedef std::map<unsigned int, std::string> TPositionNameMap;
   TPositionNameMap PositionNames_;
 
   bool RetrievePositionsFromFilterSet();

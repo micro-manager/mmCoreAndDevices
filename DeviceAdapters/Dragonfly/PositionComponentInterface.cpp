@@ -119,6 +119,7 @@ int IPositionComponentInterface::OnPositionChange( MM::PropertyBase* Prop, MM::A
 
   if ( Act == MM::BeforeGet )
   {
+    UpdateAllowedValues();
     SetPropertyValueFromDevicePosition( Prop );
   }
   else if ( Act == MM::AfterSet )
