@@ -8,6 +8,7 @@
 #include "ASDWrapperAperture.h"
 #include "ASDWrapperCameraPortMirror.h"
 #include "ASDWrapperLens.h"
+#include "ASDWrapperIllLens.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
   : ASDInterface_( ASDInterface),
@@ -43,6 +44,12 @@ CASDWrapperInterface::~CASDWrapperInterface()
   {
     delete vLensIt->second;
     vLensIt++;
+  }
+  std::map<TLensType, CASDWrapperIllLens*>::iterator vIllLensIt = IllLensWrappers_.begin();
+  while ( vIllLensIt != IllLensWrappers_.end() )
+  {
+    delete vIllLensIt->second;
+    vIllLensIt++;
   }
 }
 
@@ -218,9 +225,15 @@ bool CASDWrapperInterface::IsIllLensAvailable( TLensType LensIndex )
   return ASDInterface_->IsIllLensAvailable( LensIndex );
 }
 
-IIllLensInterface* CASDWrapperInterface::GetIllLens( TLensType /*LensIndex*/ )
+IIllLensInterface* CASDWrapperInterface::GetIllLens( TLensType LensIndex )
 {
-  throw std::logic_error( "GetIllLens() wrapper function not implemented" );
+  if ( IllLensWrappers_.find( LensIndex ) == IllLensWrappers_.end() )
+  {
+    CASDSDKLock vSDKLock;
+    CASDWrapperIllLens* vIllLensWrapper_ = new CASDWrapperIllLens( ASDInterface_->GetIllLens( LensIndex ) );
+    IllLensWrappers_[LensIndex] = vIllLensWrapper_;
+  }
+  return IllLensWrappers_[LensIndex];
 }
 
 bool CASDWrapperInterface::IsEPIPolariserAvailable()

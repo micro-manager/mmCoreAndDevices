@@ -15,6 +15,7 @@
 #include "Aperture.h"
 #include "CameraPortMirror.h"
 #include "Lens.h"
+#include "PowerDensity.h"
 
 #include "ASDInterface.h"
 
@@ -111,6 +112,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_CAMERAPORTMIRROR_INIT, vMessage.c_str() );
   vMessage = "Lens initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_LENS_INIT, vMessage.c_str() );
+  vMessage = "Power density initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_POWERDENSITY_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -197,7 +200,13 @@ int CDragonfly::Shutdown()
   {
     delete *vLensIt;
     vLensIt++;
-  }  
+  }
+  vector<CPowerDensity*>::iterator vPowerDensityIt = PowerDensity_.begin();
+  while ( vPowerDensityIt != PowerDensity_.end() )
+  {
+    delete *vPowerDensityIt;
+    vPowerDensityIt++;
+  }
   Disconnect();
 
   return DEVICE_OK;
@@ -363,6 +372,16 @@ int CDragonfly::InitializeComponents()
   for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax; ++vLensIndex )
   {
     vRet = CreateLens( vASDInterface2, vLensIndex );
+    if ( vRet != DEVICE_OK )
+    {
+      return vRet;
+    }
+  }
+
+  // Power density components
+  for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax; ++vLensIndex )
+  {
+    vRet = CreatePowerDensity( vASDInterface3, vLensIndex );
     if ( vRet != DEVICE_OK )
     {
       return vRet;
@@ -567,6 +586,37 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
       vMessage += vException.what();
       LogMessage( vMessage );
       return ERR_LENS_INIT;
+    }
+  }
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex )
+{
+  if ( ASDInterface->IsIllLensAvailable( (TLensType)LensIndex ) )
+  {
+    try
+    {
+      IIllLensInterface* vIllLensInterface = ASDInterface->GetIllLens( (TLensType)LensIndex );
+      if ( vIllLensInterface != nullptr )
+      {
+        CPowerDensity* vPowerDensity = new CPowerDensity( vIllLensInterface, LensIndex, this );
+        if ( vPowerDensity != nullptr )
+        {
+          PowerDensity_.push_back( vPowerDensity );
+        }
+      }
+      else
+      {
+        LogMessage( "Power Density " + to_string( LensIndex ) + " not detected" );
+      }
+    }
+    catch ( exception& vException )
+    {
+      string vMessage( "Error loading the Power Density " + to_string( LensIndex ) + ". Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_POWERDENSITY_INIT;
     }
   }
   return DEVICE_OK;

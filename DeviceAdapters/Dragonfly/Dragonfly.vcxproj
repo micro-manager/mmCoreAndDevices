@@ -202,6 +202,7 @@
     <ClCompile Include="ASDWrapper\ASDWrapperFilterSet.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperFilterWheel.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperFilterWheelMode.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperIllLens.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperLens.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperInterface.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperLoader.cpp" />
@@ -216,6 +217,7 @@
     <ClCompile Include="FilterWheelProperty.cpp" />
     <ClCompile Include="Lens.cpp" />
     <ClCompile Include="PositionComponentInterface.cpp" />
+    <ClCompile Include="PowerDensity.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
