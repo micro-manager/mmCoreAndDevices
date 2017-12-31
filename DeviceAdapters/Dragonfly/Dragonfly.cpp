@@ -289,6 +289,7 @@ int CDragonfly::InitializeComponents()
   IASDInterface2* vASDInterface2 = ASDLoader_->GetASDInterface2();
   IASDInterface3* vASDInterface3 = ASDLoader_->GetASDInterface3();
 
+  LogMessage( "Getting Serial Number" );
   // Serial number property
   string vSerialNumber = vASDInterface->GetSerialNumber();
   int vRet = CreateProperty( g_DeviceSerialNumber, vSerialNumber.c_str(), MM::String, true );
@@ -297,6 +298,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Getting Product ID" );
   // Product ID property
   string vProductID = vASDInterface->GetProductID();
   vRet = CreateProperty( g_DeviceProductID, vProductID.c_str(), MM::String, true );
@@ -305,6 +307,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Getting Software Version" );
   // Software version property
   string vSoftwareVersion = vASDInterface->GetSoftwareVersion();
   vRet = CreateProperty( g_DeviceSoftwareVersion, vSoftwareVersion.c_str(), MM::String, true );
@@ -313,12 +316,14 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Creating Dragonfly Status" );
   vRet = CreateDragonflyStatus( vASDInterface3 );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
   }
 
+  LogMessage( "Creating Dichroic Mirror" );
   // Dichroic mirror component
   vRet = CreateDichroicMirror( vASDInterface );
   if ( vRet != DEVICE_OK )
@@ -326,6 +331,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Creating Filter Wheel 1" );
   // Filter wheel 1 component
   vRet = CreateFilterWheel( vASDInterface, FilterWheel1_, WheelIndex1, ERR_FILTERWHEEL1_INIT );
   if ( vRet != DEVICE_OK )
@@ -333,6 +339,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Creating Filter Wheel 2" );
   // Filter wheel 2 component
   vRet = CreateFilterWheel( vASDInterface, FilterWheel2_, WheelIndex2, ERR_FILTERWHEEL2_INIT );
   if ( vRet != DEVICE_OK )
@@ -340,6 +347,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Creating Disk" );
   // Disk component
   vRet = CreateDisk( vASDInterface );
   if ( vRet != DEVICE_OK )
@@ -347,6 +355,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Creating Confocal Mode" );
   // Confocal mode component
   vRet = CreateConfocalMode( vASDInterface3 );
   if ( vRet != DEVICE_OK )
@@ -354,6 +363,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Creating Aperture" );
   // Aperture component
   vRet = CreateAperture( vASDInterface2 );
   if ( vRet != DEVICE_OK )
@@ -361,6 +371,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Creating Camera Port Mirror" );
   // Camera port mirror component
   vRet = CreateCameraPortMirror( vASDInterface2 );
   if ( vRet != DEVICE_OK )
@@ -368,6 +379,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  LogMessage( "Creating Lenses" );
   // Lens components
   for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax; ++vLensIndex )
   {
@@ -378,6 +390,7 @@ int CDragonfly::InitializeComponents()
     }
   }
 
+  LogMessage( "Creating Power Density" );
   // Power density components
   for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax; ++vLensIndex )
   {

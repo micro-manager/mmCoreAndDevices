@@ -9,7 +9,7 @@ const char* const g_DiskSpeedPropertyName = "Disk Speed";
 const char* const g_DiskStatusPropertyName = "Disk Start/Stop";
 const char* const g_DiskSpeedMonitorPropertyName = "Disk Speed Status";
 const char* const g_DiskStatusMonitorPropertyName = "Disk Status";
-const char* const g_FrameScanTime = "Recommended exposure time (ms)";
+const char* const g_FrameScanTime = "Disk Frame Scan Time (ms)";
 
 const char* const g_DiskSpeedLimitsReadError = "Failed to retrieve Disk speed limits";
 const char* const g_DiskSpeedValueReadError = "Failed to retrieve the current Disk speed";
@@ -63,11 +63,11 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
 
   // Create the MM properties for Disk status monitor
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
-  MMDragonfly_->CreateProperty( g_DiskSpeedMonitorPropertyName, g_DiskStatusUndefined, MM::String, false, vAct );
+  MMDragonfly_->CreateProperty( g_DiskSpeedMonitorPropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
-  MMDragonfly_->CreateProperty( g_DiskStatusMonitorPropertyName, g_DiskStatusUndefined, MM::String, false, vAct );
+  MMDragonfly_->CreateProperty( g_DiskStatusMonitorPropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
-  MMDragonfly_->CreateProperty( g_FrameScanTime, to_string( CalculateFrameScanTime( vSpeed, vScansPerRevolution )).c_str(), MM::String, false, vAct );
+  MMDragonfly_->CreateProperty( g_FrameScanTime, to_string( CalculateFrameScanTime( vSpeed, vScansPerRevolution )).c_str(), MM::String, true, vAct );
   DiskStatusMonitor_ = new CDiskStatusMonitor( MMDragonfly_ );
   DiskStatusMonitor_->activate();
 }
@@ -226,6 +226,10 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
 
 double CDisk::CalculateFrameScanTime(unsigned int Speed, unsigned int ScansPerRevolution )
 {
+  if ( Speed == 0 || ScansPerRevolution == 0 )
+  {
+    return 0;
+  }
   return 60.0 * 1000.0 / (double)( Speed * ScansPerRevolution );
 }
 

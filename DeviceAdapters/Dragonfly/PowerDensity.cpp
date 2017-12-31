@@ -22,7 +22,8 @@ CPowerDensity::CPowerDensity( IIllLensInterface* IllLensInterface, int LensIndex
   : IPositionComponentInterface( MMDragonfly, "Power Density " + std::to_string( LensIndex ) ),
   IllLensInterface_( IllLensInterface ),
   MMDragonfly_( MMDragonfly ),
-  RestrictionStatusChangeNotified_( true )
+  RestrictionStatusChangeNotified_( true ),
+  RestrictionNotification_( nullptr )
 {
   Initialise();
   RestrictionNotification_ = new TPowerDensityNotification( this );
