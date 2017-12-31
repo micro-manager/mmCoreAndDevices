@@ -22,6 +22,7 @@ void IPositionComponentInterface::Initialise()
 {
   if ( Initialised_ ) return;
 
+  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Retrieve values" );
   // Retrieve values from the device
   if ( !RetrievePositionsFromFilterSet() )
   {
@@ -31,6 +32,7 @@ void IPositionComponentInterface::Initialise()
     }
   }
 
+  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetPosition" );
   // Retrieve the current position from the device
   unsigned int vPosition;
   if ( !GetPosition( vPosition ) )
@@ -38,10 +40,12 @@ void IPositionComponentInterface::Initialise()
     throw runtime_error( "Failed to read the current " + PropertyName_ + " position" );
   }
 
+  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Create Property" );
   // Create the MM property
   CPropertyAction* vAct = new CPropertyAction( this, &IPositionComponentInterface::OnPositionChange );
   MMDragonfly_->CreateProperty( PropertyName_.c_str(), "Undefined", MM::String, false, vAct );
 
+  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Populate allowed values" );
   // Populate the possible positions
   TPositionNameMap::const_iterator vIt = PositionNames_.begin();
   while ( vIt != PositionNames_.end() )
@@ -50,6 +54,7 @@ void IPositionComponentInterface::Initialise()
     vIt++;
   }
 
+  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Initialise property" );
   // Initialise the position
   if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
   {

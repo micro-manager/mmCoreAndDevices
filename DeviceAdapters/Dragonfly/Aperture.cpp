@@ -4,8 +4,7 @@
 
 CAperture::CAperture( IApertureInterface* ApertureInterface, CDragonfly* MMDragonfly )
   : IPositionComponentInterface( MMDragonfly, "Aperture" ),
-  ApertureInterface_( ApertureInterface ),
-  MMDragonfly_( MMDragonfly )
+  ApertureInterface_( ApertureInterface )
 {
   Initialise();
 }

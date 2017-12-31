@@ -27,7 +27,6 @@ protected:
 
 private:
   ILensInterface* LensInterface_;
-  CDragonfly* MMDragonfly_;
 };
 
 #endif

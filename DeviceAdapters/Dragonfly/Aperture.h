@@ -28,7 +28,6 @@ protected:
 
 private:
   IApertureInterface* ApertureInterface_;
-  CDragonfly* MMDragonfly_;
 };
 
 #endif

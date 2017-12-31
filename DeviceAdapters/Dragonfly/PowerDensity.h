@@ -32,7 +32,6 @@ protected:
 
 private:
   IIllLensInterface* IllLensInterface_;
-  CDragonfly* MMDragonfly_;
   INotify *RestrictionNotification_;
   bool RestrictionStatusChangeNotified_;
 };

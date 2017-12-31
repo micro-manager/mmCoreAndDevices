@@ -19,14 +19,16 @@ public:
 };
 
 CPowerDensity::CPowerDensity( IIllLensInterface* IllLensInterface, int LensIndex, CDragonfly* MMDragonfly )
-  : IPositionComponentInterface( MMDragonfly, "Power Density " + std::to_string( LensIndex ) ),
+  : IPositionComponentInterface( MMDragonfly, (LensIndex == 0) ? "Power Density" : "Power Density " + std::to_string( LensIndex + 1 ) ),
   IllLensInterface_( IllLensInterface ),
-  MMDragonfly_( MMDragonfly ),
   RestrictionStatusChangeNotified_( true ),
   RestrictionNotification_( nullptr )
 {
+  MMDragonfly_->LogComponentMessage( "POWER DENSITY: Initialise" );
   Initialise();
+  MMDragonfly_->LogComponentMessage( "POWER DENSITY: Create notification" );
   RestrictionNotification_ = new TPowerDensityNotification( this );
+  MMDragonfly_->LogComponentMessage( "POWER DENSITY: Register notification" );
   IllLensInterface_->RegisterForNotificationOnRangeRestriction( RestrictionNotification_ );
 }
 

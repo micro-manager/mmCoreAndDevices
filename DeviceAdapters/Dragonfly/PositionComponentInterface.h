@@ -23,7 +23,8 @@ public:
 
 protected:
   std::string PropertyName_;
-  
+  CDragonfly* MMDragonfly_;
+
   void Initialise();
 
   virtual bool GetPosition( unsigned int& Position ) = 0;
@@ -37,7 +38,6 @@ protected:
   const TPositionNameMap& GetPositionNameMap() const { return PositionNames_; }
 
 private:
-  CDragonfly* MMDragonfly_;
   bool Initialised_;
 
   TPositionNameMap PositionNames_;

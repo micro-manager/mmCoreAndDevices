@@ -3,9 +3,8 @@
 #include "ASDInterface.h"
 
 CLens::CLens( ILensInterface* LensInterface, int LensIndex, CDragonfly* MMDragonfly )
-  : IPositionComponentInterface( MMDragonfly, "Lens " + std::to_string( LensIndex ) ),
-  LensInterface_( LensInterface ),
-  MMDragonfly_( MMDragonfly )
+  : IPositionComponentInterface( MMDragonfly, "Lens " + std::to_string( LensIndex + 1 ) ),
+  LensInterface_( LensInterface )
 {
   Initialise();
 }
