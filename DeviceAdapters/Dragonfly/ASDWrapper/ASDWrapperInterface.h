@@ -18,6 +18,7 @@ class CASDWrapperAperture;
 class CASDWrapperCameraPortMirror;
 class CASDWrapperLens;
 class CASDWrapperIllLens;
+class CASDWrapperSuperRes;
 
 class CASDWrapperInterface : public IASDInterface3
 {
@@ -78,6 +79,7 @@ private:
   CASDWrapperCameraPortMirror* CameraPortMirrorWrapper_;
   std::map<TLensType, CASDWrapperLens*> LensWrappers_;
   std::map<TLensType, CASDWrapperIllLens*> IllLensWrappers_;
+  CASDWrapperSuperRes* SuperResWrapper_;
 };
 
 #endif

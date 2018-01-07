@@ -207,6 +207,7 @@
     <ClCompile Include="ASDWrapper\ASDWrapperInterface.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperLoader.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperStatus.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperSuperRes.cpp" />
     <ClCompile Include="CameraPortMirror.cpp" />
     <ClCompile Include="ConfocalMode.cpp" />
     <ClCompile Include="DichroicMirror.cpp" />
@@ -218,6 +219,7 @@
     <ClCompile Include="Lens.cpp" />
     <ClCompile Include="PositionComponentInterface.cpp" />
     <ClCompile Include="PowerDensity.cpp" />
+    <ClCompile Include="SuperRes.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

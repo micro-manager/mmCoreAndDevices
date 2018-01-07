@@ -72,10 +72,12 @@ bool IPositionComponentInterface::RetrievePositionsFromFilterSet()
 {
   const static unsigned int vStringLength = 64;
   bool vPositionsRetrieved = false;
+  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetFitlerSet" );
   IFilterSet* vFilterSet = GetFilterSet();
   if ( vFilterSet != nullptr )
   {
     unsigned int vMinPos, vMaxPos;
+    MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetLimits" );
     if ( vFilterSet->GetLimits( vMinPos, vMaxPos ) )
     {
       char vDescription[vStringLength];
@@ -83,6 +85,7 @@ bool IPositionComponentInterface::RetrievePositionsFromFilterSet()
       for ( unsigned int vIndex = vMinPos; vIndex <= vMaxPos; vIndex++ )
       {
         string vPositionName;
+        MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetFilterDescription" );
         if ( vFilterSet->GetFilterDescription( vIndex, vDescription, vStringLength ) == false )
         {
           vPositionName += "Undefined Position " + to_string(vUndefinedIndex);
@@ -92,11 +95,16 @@ bool IPositionComponentInterface::RetrievePositionsFromFilterSet()
         {
           vPositionName += vDescription;
         }
+        MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Adding new position [" + vPositionName + "]" );
         PositionNames_[vIndex] = vPositionName;
       }
 
       vPositionsRetrieved = true;
     }
+  }
+  else
+  {
+    MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetLimits NOT valid" );
   }
   return vPositionsRetrieved;
 }

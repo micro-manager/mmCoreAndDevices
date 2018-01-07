@@ -16,6 +16,7 @@
 #include "CameraPortMirror.h"
 #include "Lens.h"
 #include "PowerDensity.h"
+#include "SuperRes.h"
 
 #include "ASDInterface.h"
 
@@ -114,6 +115,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_LENS_INIT, vMessage.c_str() );
   vMessage = "Power density initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_POWERDENSITY_INIT, vMessage.c_str() );
+  vMessage = "Super Resolution initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_SUPERRES_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -207,6 +210,7 @@ int CDragonfly::Shutdown()
     delete *vPowerDensityIt;
     vPowerDensityIt++;
   }
+  delete SuperRes_;
   Disconnect();
 
   return DEVICE_OK;
@@ -399,6 +403,14 @@ int CDragonfly::InitializeComponents()
     {
       return vRet;
     }
+  }
+
+  LogMessage( "Creating Super Resolution" );
+  // Super Resolution component
+  vRet = CreateSuperRes( vASDInterface3 );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
   }
 
   return DEVICE_OK;
@@ -606,13 +618,16 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
 
 int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex )
 {
+  LogMessage( "CREATE POWER DENSITY: Is Ill Lens Available for Lens " + to_string(LensIndex) );
   if ( ASDInterface->IsIllLensAvailable( (TLensType)LensIndex ) )
   {
     try
     {
+      LogMessage( "CREATE POWER DENSITY: GetIllLens" );
       IIllLensInterface* vIllLensInterface = ASDInterface->GetIllLens( (TLensType)LensIndex );
       if ( vIllLensInterface != nullptr )
       {
+        LogMessage( "CREATE POWER DENSITY: New CPowerDensity" );
         CPowerDensity* vPowerDensity = new CPowerDensity( vIllLensInterface, LensIndex, this );
         if ( vPowerDensity != nullptr )
         {
@@ -621,15 +636,46 @@ int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex 
       }
       else
       {
-        LogMessage( "Power Density " + to_string( LensIndex ) + " not detected" );
+        LogMessage( "Power density " + to_string( LensIndex ) + " not detected" );
       }
     }
     catch ( exception& vException )
     {
-      string vMessage( "Error loading the Power Density " + to_string( LensIndex ) + ". Caught Exception with message: " );
+      string vMessage( "Error loading the Power density " + to_string( LensIndex ) + ". Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
       return ERR_POWERDENSITY_INIT;
+    }
+  }
+  else
+  {
+    LogMessage( "CREATE POWER DENSITY: Ill Lens NOT Available" );
+  }
+  return DEVICE_OK;
+}
+
+int CDragonfly::CreateSuperRes( IASDInterface3* ASDInterface )
+{
+  if ( ASDInterface->IsSuperResAvailable() )
+  {
+    try
+    {
+      ISuperResInterface* vSuperRes = ASDInterface->GetSuperRes();
+      if ( vSuperRes != nullptr )
+      {
+        SuperRes_ = new CSuperRes( vSuperRes, this );
+      }
+      else
+      {
+        LogMessage( "Super resolution not detected" );
+      }
+    }
+    catch ( exception& vException )
+    {
+      string vMessage( "Error loading the Super resolution. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_SUPERRES_INIT;
     }
   }
   return DEVICE_OK;

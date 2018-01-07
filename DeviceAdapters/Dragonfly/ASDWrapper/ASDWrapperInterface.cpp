@@ -9,6 +9,7 @@
 #include "ASDWrapperCameraPortMirror.h"
 #include "ASDWrapperLens.h"
 #include "ASDWrapperIllLens.h"
+#include "ASDWrapperSuperRes.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
   : ASDInterface_( ASDInterface),
@@ -17,7 +18,8 @@ CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
   StatusWrapper_( nullptr ),
   ConfocalModeWrapper_( nullptr ),
   ApertureWrapper_( nullptr ),
-  CameraPortMirrorWrapper_( nullptr )
+  CameraPortMirrorWrapper_( nullptr ),
+  SuperResWrapper_( nullptr )
 {
   if ( ASDInterface_ == nullptr )
   {
@@ -51,6 +53,7 @@ CASDWrapperInterface::~CASDWrapperInterface()
     delete vIllLensIt->second;
     vIllLensIt++;
   }
+  delete SuperResWrapper_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -277,7 +280,12 @@ bool CASDWrapperInterface::IsSuperResAvailable()
 
 ISuperResInterface* CASDWrapperInterface::GetSuperRes()
 {
-  throw std::logic_error( "GetSuperRes() wrapper function not implemented" );
+  if ( SuperResWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    SuperResWrapper_ = new CASDWrapperSuperRes( ASDInterface_->GetSuperRes() );
+  }
+  return SuperResWrapper_;
 }
 
 bool CASDWrapperInterface::IsImagingModeAvailable()

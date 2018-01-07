@@ -25,6 +25,7 @@ class CAperture;
 class CCameraPortMirror;
 class CLens;
 class CPowerDensity;
+class CSuperRes;
 
 class IASDLoader;
 class IASDInterface;
@@ -44,6 +45,7 @@ class IASDInterface3;
 #define ERR_CAMERAPORTMIRROR_INIT 111
 #define ERR_LENS_INIT 112
 #define ERR_POWERDENSITY_INIT 113
+#define ERR_SUPERRES_INIT 114
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -78,6 +80,7 @@ private:
   CCameraPortMirror* CameraPortMirror_;
   std::vector<CLens*> Lens_;
   std::vector<CPowerDensity*> PowerDensity_;
+  CSuperRes* SuperRes_;
   
   IASDLoader* ASDLoader_;
 
@@ -94,6 +97,7 @@ private:
   int CreateCameraPortMirror( IASDInterface2* ASDInterface );
   int CreateLens( IASDInterface2* ASDInterface, int LensIndex );
   int CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex );
+  int CreateSuperRes( IASDInterface3* ASDInterface );
 };
 
 #endif
