@@ -86,16 +86,9 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   }
   
   // Create MM properties for optical pathway
-  //vAct = new CPropertyAction( this, &CTIRF::OnOpticalPathwayChange );
   MMDragonfly_->CreateIntegerProperty( g_MagnificationPropertyName, Magnification_, true );
-
-  //vAct = new CPropertyAction( this, &CTIRF::OnOpticalPathwayChange );
   MMDragonfly_->CreateFloatProperty( g_NumericalAperturePropertyName, NumericalAperture_, true );
-
-  //vAct = new CPropertyAction( this, &CTIRF::OnOpticalPathwayChange );
   MMDragonfly_->CreateFloatProperty( g_RefractiveIndexPropertyName, RefractiveIndex_, true );
-  
-  //vAct = new CPropertyAction( this, &CTIRF::OnOpticalPathwayChange );
   const char* vScopeName;
   if ( GetScopeNameFromIndex( ScopeID_, &vScopeName ) )
   {
@@ -112,13 +105,8 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   MMDragonfly_->AddAllowedValue( g_ScopePropertyName, g_ScopeZeiss );
 
   // Create MM properties for bandwidths
-  //vAct = new CPropertyAction( this, &CTIRF::OnBandwidthChange );
   MMDragonfly_->CreateIntegerProperty( g_MinBandwidthPropertyName, vMinBandwidth, true );
-  //MMDragonfly_->SetPropertyLimits( g_MinBandwidthPropertyName, vBandwidthMinLimit, vBandwidthMaxLimit );
-
-  //vAct = new CPropertyAction( this, &CTIRF::OnBandwidthChange );
   MMDragonfly_->CreateIntegerProperty( g_MaxBandwidthPropertyName, vMaxBandwidth, true );
-  //MMDragonfly_->SetPropertyLimits( g_MaxBandwidthPropertyName, vBandwidthMinLimit, vBandwidthMaxLimit );
 }
 
 CTIRF::~CTIRF()
@@ -150,63 +138,6 @@ int CTIRF::OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act )
     {
       MMDragonfly_->LogComponentMessage( "Requested TIRF Mode is invalid. Ignoring request." );
     }
-  }
-  return DEVICE_OK;
-}
-
-int CTIRF::OnOpticalPathwayChange( MM::PropertyBase * Prop, MM::ActionType Act )
-{
-  if ( Act == MM::BeforeGet )
-  {
-  }
-  else if ( Act == MM::AfterSet )
-  {
-    bool vUpdateDevice = false;
-    if ( Prop->GetName() == g_MagnificationPropertyName )
-    {
-      Prop->Get( (long&) Magnification_ );
-      vUpdateDevice = true;
-    }
-    else if ( Prop->GetName() == g_NumericalAperturePropertyName )
-    {
-      Prop->Get( NumericalAperture_ );
-      vUpdateDevice = true;
-    }
-    else if ( Prop->GetName() == g_RefractiveIndexPropertyName )
-    {
-      Prop->Get( RefractiveIndex_ );
-      vUpdateDevice = true;
-    }
-    else if ( Prop->GetName() == g_ScopePropertyName )
-    {
-      string vRequestedScope;
-      Prop->Get( vRequestedScope );
-      int vScopeIndex;
-      if ( GetScopeIndexFromName( vRequestedScope, &vScopeIndex ) )
-      {
-        ScopeID_ = vScopeIndex;
-        vUpdateDevice = true;
-      }
-      else
-      {
-        MMDragonfly_->LogComponentMessage( "Requested Scope Mode is invalid. Ignoring request." );
-      }
-    }
-    if ( vUpdateDevice )
-    {
-      TIRFInterface_->SetOpticalPathway( Magnification_, NumericalAperture_, RefractiveIndex_, ScopeID_ );
-    }
-  }
-  return DEVICE_OK;
-}
-
-int CTIRF::OnBandwidthChange( MM::PropertyBase * Prop, MM::ActionType Act )
-{
-  if ( Act == MM::BeforeGet )
-  {
-  }
-  else if ( Act == MM::AfterSet )
-  {
   }
   return DEVICE_OK;
 }
