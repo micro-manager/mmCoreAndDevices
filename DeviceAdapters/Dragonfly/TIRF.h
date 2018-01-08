@@ -13,7 +13,7 @@ class CDragonfly;
 class ITIRFInterface;
 class CTIRFModeSubProperty;
 class CPenetrationWrapper;
-class CObliqueAngleWrapper;
+class CHILOObliqueAngleWrapper;
 class COffsetWrapper;
 
 class CTIRF
@@ -31,12 +31,12 @@ private:
   ITIRFInterface* TIRFInterface_;
   int Magnification_, ScopeID_;
   double NumericalAperture_, RefractiveIndex_;
-  CTIRFModeSubProperty* Penetration_;
+  CTIRFModeSubProperty* PenetrationProperty_;
   CPenetrationWrapper* PenetrationWrapper_;
-  CTIRFModeSubProperty* ObliqueAngle_;
-  CObliqueAngleWrapper* ObliqueAngleWrapper_;
-  CTIRFModeSubProperty* Offset_;
-  COffsetWrapper* OffsetWrapper_;
+  CTIRFModeSubProperty* HILOObliqueAngleProperty_;
+  CHILOObliqueAngleWrapper* HILOObliqueAngleWrapper_;
+  CTIRFModeSubProperty* CriticalAngleOffsetProperty_;
+  COffsetWrapper* CriticalAngleOffsetWrapper_;
 
   bool GetTIRFModeNameFromIndex( int TIRFModeIndex, const char** TIRFModeName );
   bool GetTIFRModeIndexFromName( const std::string& TIRFModeName, int* TIRFModeIndex );

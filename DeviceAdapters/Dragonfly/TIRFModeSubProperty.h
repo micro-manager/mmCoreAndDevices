@@ -40,10 +40,10 @@ private:
   ITIRFInterface* TIRFInterface_;
 };
 
-class CObliqueAngleWrapper : public CDeviceWrapper
+class CHILOObliqueAngleWrapper : public CDeviceWrapper
 {
 public:
-  CObliqueAngleWrapper( ITIRFInterface* TIRFInterface ) : TIRFInterface_( TIRFInterface ) {}
+  CHILOObliqueAngleWrapper( ITIRFInterface* TIRFInterface ) : TIRFInterface_( TIRFInterface ) {}
   bool GetLimits( int* Min, int* Max )
   {
     return TIRFInterface_->GetObliqueAngleLimit( Min, Max );
@@ -87,11 +87,13 @@ public:
   ~CTIRFModeSubProperty();
   typedef MM::Action<CTIRFModeSubProperty> CPropertyAction;
   int OnChange( MM::PropertyBase * Prop, MM::ActionType Act );
+  void SetReadOnly( bool ReadOnly );
 
 private:
   CDragonfly* MMDragonfly_;
   CDeviceWrapper* DeviceWrapper_;
   std::string PropertyName_;
+  MM::Property* MMProp_;
 
   bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
 };

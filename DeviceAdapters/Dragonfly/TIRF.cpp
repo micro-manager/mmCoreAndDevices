@@ -28,12 +28,12 @@ const char* const g_MaxBandwidthPropertyName = "TIRF | Max Wavelength";
 CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   : MMDragonfly_( MMDragonfly ),
   TIRFInterface_( TIRFInterface ),
-  Penetration_( nullptr ),
+  PenetrationProperty_( nullptr ),
   PenetrationWrapper_( nullptr ),
-  ObliqueAngle_( nullptr ),
-  ObliqueAngleWrapper_( nullptr ),
-  Offset_( nullptr ),
-  OffsetWrapper_( nullptr )
+  HILOObliqueAngleProperty_( nullptr ),
+  HILOObliqueAngleWrapper_( nullptr ),
+  CriticalAngleOffsetProperty_( nullptr ),
+  CriticalAngleOffsetWrapper_( nullptr )
 {
   // Retrieve current values from the device
   if ( !TIRFInterface_->GetOpticalPathway( &Magnification_, &NumericalAperture_, &RefractiveIndex_, &ScopeID_ ) )
@@ -61,13 +61,13 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   
   // Property for Penetration
   PenetrationWrapper_ = new CPenetrationWrapper( TIRFInterface_ );
-  Penetration_ = new CTIRFModeSubProperty( PenetrationWrapper_, MMDragonfly_, "TIRF | Penetration (nm)" );
+  PenetrationProperty_ = new CTIRFModeSubProperty( PenetrationWrapper_, MMDragonfly_, "TIRF | Penetration (nm)" );
   // Property for Oblique Angle
-  ObliqueAngleWrapper_ = new CObliqueAngleWrapper( TIRFInterface_ );
-  ObliqueAngle_ = new CTIRFModeSubProperty( ObliqueAngleWrapper_, MMDragonfly_, "TIRF | HiLo (deg)" );
+  HILOObliqueAngleWrapper_ = new CHILOObliqueAngleWrapper( TIRFInterface_ );
+  HILOObliqueAngleProperty_ = new CTIRFModeSubProperty( HILOObliqueAngleWrapper_, MMDragonfly_, "TIRF | HiLo Oblique Angle (deg)" );
   // Property for Offset
-  OffsetWrapper_ = new COffsetWrapper( TIRFInterface_ );
-  Offset_ = new CTIRFModeSubProperty( OffsetWrapper_, MMDragonfly_, "TIRF | Critical Angle Offset" );
+  CriticalAngleOffsetWrapper_ = new COffsetWrapper( TIRFInterface_ );
+  CriticalAngleOffsetProperty_ = new CTIRFModeSubProperty( CriticalAngleOffsetWrapper_, MMDragonfly_, "TIRF | Critical Angle Offset" );
   
   // Create MM property for TIRF mode
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRF::OnTIRFModeChange );
@@ -111,12 +111,12 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
 
 CTIRF::~CTIRF()
 {
-  delete Penetration_;
+  delete PenetrationProperty_;
   delete PenetrationWrapper_;
-  delete ObliqueAngle_;
-  delete ObliqueAngleWrapper_;
-  delete Offset_;
-  delete OffsetWrapper_;
+  delete HILOObliqueAngleProperty_;
+  delete HILOObliqueAngleWrapper_;
+  delete CriticalAngleOffsetProperty_;
+  delete CriticalAngleOffsetWrapper_;
 }
 
 int CTIRF::OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act )
@@ -133,6 +133,21 @@ int CTIRF::OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act )
     if ( GetTIFRModeIndexFromName( vRequestedMode, &vTIRFModeIndex ) )
     {
       TIRFInterface_->SetTIRFMode( vTIRFModeIndex );
+      PenetrationProperty_->SetReadOnly( true );
+      HILOObliqueAngleProperty_->SetReadOnly( true );
+      CriticalAngleOffsetProperty_->SetReadOnly( true );
+      if ( vRequestedMode == g_TIRFModePenetration )
+      {
+        PenetrationProperty_->SetReadOnly( false );
+      }
+      else if ( vRequestedMode == g_TIRFModeHILO )
+      {
+        HILOObliqueAngleProperty_->SetReadOnly( false );
+      }
+      else if ( vRequestedMode == g_TIRFModeCritical )
+      {
+        CriticalAngleOffsetProperty_->SetReadOnly( false );
+      }
     }
     else
     {

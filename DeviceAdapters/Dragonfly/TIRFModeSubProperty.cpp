@@ -8,7 +8,8 @@ using namespace std;
 CTIRFModeSubProperty::CTIRFModeSubProperty( CDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const string& PropertyName )
   : MMDragonfly_( MMDragonfly ),
   DeviceWrapper_( DeviceWrapper ),
-  PropertyName_( PropertyName )
+  PropertyName_( PropertyName ),
+  MMProp_( nullptr )
 {
   int vMin, vMax, vValue;
   bool vValueRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
@@ -32,8 +33,20 @@ CTIRFModeSubProperty::~CTIRFModeSubProperty()
 {
 }
 
+void CTIRFModeSubProperty::SetReadOnly( bool ReadOnly )
+{
+  if ( MMProp_ )
+  {
+    MMProp_->SetReadOnly( ReadOnly );
+  }
+}
+
 int CTIRFModeSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  if ( MMProp_ == nullptr )
+  {
+    MMProp_ = dynamic_cast<MM::Property *>(Prop);
+  }
   if ( Act == MM::BeforeGet )
   {
     if ( !SetPropertyValueFromDeviceValue( Prop ) )
