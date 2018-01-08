@@ -19,6 +19,8 @@ class CASDWrapperCameraPortMirror;
 class CASDWrapperLens;
 class CASDWrapperIllLens;
 class CASDWrapperSuperRes;
+class CASDWrapperTIRF;
+class CASDWrapperTIRFPolariser;
 
 class CASDWrapperInterface : public IASDInterface3
 {
@@ -80,6 +82,8 @@ private:
   std::map<TLensType, CASDWrapperLens*> LensWrappers_;
   std::map<TLensType, CASDWrapperIllLens*> IllLensWrappers_;
   CASDWrapperSuperRes* SuperResWrapper_;
+  CASDWrapperTIRF* TIRFWrapper_;
+  CASDWrapperTIRFPolariser* TIRFPolariserWrapper_;
 };
 
 #endif

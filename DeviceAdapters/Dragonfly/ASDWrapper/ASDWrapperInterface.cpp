@@ -10,16 +10,20 @@
 #include "ASDWrapperLens.h"
 #include "ASDWrapperIllLens.h"
 #include "ASDWrapperSuperRes.h"
+#include "ASDWrapperTIRF.h"
+#include "ASDWrapperTIRFPolariser.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
-  : ASDInterface_( ASDInterface),
+  : ASDInterface_( ASDInterface ),
   DichroicMirrorWrapper_( nullptr ),
   DiskWrapper_( nullptr ),
   StatusWrapper_( nullptr ),
   ConfocalModeWrapper_( nullptr ),
   ApertureWrapper_( nullptr ),
   CameraPortMirrorWrapper_( nullptr ),
-  SuperResWrapper_( nullptr )
+  SuperResWrapper_( nullptr ),
+  TIRFWrapper_( nullptr ),
+  TIRFPolariserWrapper_( nullptr )
 {
   if ( ASDInterface_ == nullptr )
   {
@@ -54,6 +58,8 @@ CASDWrapperInterface::~CASDWrapperInterface()
     vIllLensIt++;
   }
   delete SuperResWrapper_;
+  delete TIRFWrapper_;
+  delete TIRFPolariserWrapper_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -258,7 +264,12 @@ bool CASDWrapperInterface::IsTIRFPolariserAvailable()
 
 ITIRFPolariserInterface* CASDWrapperInterface::GetTIRFPolariser()
 {
-  throw std::logic_error( "GetTIRFPolariser() wrapper function not implemented" );
+  if ( TIRFPolariserWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    TIRFPolariserWrapper_ = new CASDWrapperTIRFPolariser( ASDInterface_->GetTIRFPolariser() );
+  }
+  return TIRFPolariserWrapper_;
 }
 
 bool CASDWrapperInterface::IsEmissionIrisAvailable()
@@ -312,7 +323,12 @@ bool CASDWrapperInterface::IsTIRFAvailable()
 
 ITIRFInterface* CASDWrapperInterface::GetTIRF()
 {
-  throw std::logic_error( "GetTIRF() wrapper function not implemented" );
+  if ( TIRFWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    TIRFWrapper_ = new CASDWrapperTIRF( ASDInterface_->GetTIRF() );
+  }
+  return TIRFWrapper_;
 }
 
 IStatusInterface* CASDWrapperInterface::GetStatus()

@@ -1,6 +1,5 @@
 #include "ASDWrapperSuperRes.h"
 #include "ASDSDKLock.h"
-#include "ASDWrapperFilterSet.h"
 
 CASDWrapperSuperRes::CASDWrapperSuperRes( ISuperResInterface* SuperResInterface )
   : SuperResInterface_( SuperResInterface )

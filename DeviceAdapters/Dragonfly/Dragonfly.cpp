@@ -17,6 +17,7 @@
 #include "Lens.h"
 #include "PowerDensity.h"
 #include "SuperRes.h"
+#include "TIRF.h"
 
 #include "ASDInterface.h"
 
@@ -82,7 +83,9 @@ CDragonfly::CDragonfly()
   Disk_( nullptr ),
   ConfocalMode_( nullptr ),
   Aperture_( nullptr ),
-  CameraPortMirror_( nullptr )
+  CameraPortMirror_( nullptr ),
+  SuperRes_( nullptr ),
+  TIRF_( nullptr )
 {
   InitializeDefaultErrorMessages();
 
@@ -117,6 +120,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_POWERDENSITY_INIT, vMessage.c_str() );
   vMessage = "Super Resolution initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_SUPERRES_INIT, vMessage.c_str() );
+  vMessage = "TIRF initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_TIRF_INIT, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -211,6 +216,7 @@ int CDragonfly::Shutdown()
     vPowerDensityIt++;
   }
   delete SuperRes_;
+  delete TIRF_;
   Disconnect();
 
   return DEVICE_OK;
@@ -408,6 +414,14 @@ int CDragonfly::InitializeComponents()
   LogMessage( "Creating Super Resolution" );
   // Super Resolution component
   vRet = CreateSuperRes( vASDInterface3 );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  LogMessage( "Creating TIRF" );
+  // TIRF component
+  vRet = CreateTIRF( vASDInterface3 );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -681,6 +695,32 @@ int CDragonfly::CreateSuperRes( IASDInterface3* ASDInterface )
   return DEVICE_OK;
 }
 
+int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
+{
+  if ( ASDInterface->IsTIRFAvailable() )
+  {
+    try
+    {
+      ITIRFInterface* vTIRF = ASDInterface->GetTIRF();
+      if ( vTIRF != nullptr )
+      {
+        TIRF_ = new CTIRF( vTIRF, this );
+      }
+      else
+      {
+        LogMessage( "TIRF not detected" );
+      }
+    }
+    catch ( exception& vException )
+    {
+      string vMessage( "Error loading TIRF. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_TIRF_INIT;
+    }
+  }
+  return DEVICE_OK;
+}
 void CDragonfly::LogComponentMessage( const std::string& Message )
 {
   LogMessage( Message );
