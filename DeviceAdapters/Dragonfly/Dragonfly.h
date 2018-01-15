@@ -69,7 +69,6 @@ private:
   bool ASDLibraryConnected_;
   bool Initialized_;
   std::string Port_;
-  bool DeviceConnected_;
 
   CASDWrapper* ASDWrapper_;
   CDichroicMirror* DichroicMirror_;

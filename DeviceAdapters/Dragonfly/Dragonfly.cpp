@@ -76,7 +76,6 @@ CDragonfly::CDragonfly()
   ASDWrapper_( nullptr ),
   ASDLoader_( nullptr ),
   ASDLibraryConnected_( false ),
-  DeviceConnected_( false ),
   DichroicMirror_( nullptr ),
   FilterWheel1_( nullptr ),
   FilterWheel2_( nullptr ),
@@ -139,7 +138,6 @@ CDragonfly::CDragonfly()
   }
 
   // COM Port property
-  //int vRet = CreatePropertyWithHandler( MM::g_Keyword_Port, "Undefined", MM::String, false, &CDragonfly::OnPort, true );
   int vRet = CreatePropertyWithHandler( g_DevicePort, "Undefined", MM::String, false, &CDragonfly::OnPort, true );
   if ( vRet == DEVICE_OK )
   {
@@ -185,25 +183,15 @@ int CDragonfly::Initialize()
     return vRet;
   }
      
-  if ( !DeviceConnected_ )
+  // remove the leading space from the port name if there's any before connecting
+  size_t vFirstValidCharacter = Port_.find_first_not_of( " " );
+  if ( Connect( Port_.substr( vFirstValidCharacter ) ) == DEVICE_OK )
   {
-    // Shutting down the serial port opened by Micro-Manager to give us access to it ourselves
-    //Device* vPort = GetCoreCallback()->GetDevice( this, Port_.c_str() );
-    //if ( vPort )
-    //{
-    //  vPort->Shutdown();
-    //}
-
-    // remove the leading space from the port name if there's any before connecting
-    size_t vFirstValidCharacter = Port_.find_first_not_of( " " );
-    if ( Connect( Port_.substr( vFirstValidCharacter ) ) == DEVICE_OK )
-    {
-      vRet = InitializeComponents();
-    }
-    else
-    {
-      return ERR_LIBRARY_INIT;
-    }
+    vRet = InitializeComponents();
+  }
+  else
+  {
+    return ERR_LIBRARY_INIT;
   }
 
   Initialized_ = true;
@@ -271,25 +259,6 @@ int CDragonfly::OnPort( MM::PropertyBase* Prop, MM::ActionType Act )
   else if ( Act == MM::AfterSet )
   {
     Prop->Get( Port_ );
-/*
-    if ( !DeviceConnected_ )
-    {
-      string vNewPort;
-      Prop->Get( vNewPort );
-      Port_ = vNewPort;
-      // remove the leading space from the port name if there's any before connecting
-      size_t vFirstValidCharacter = vNewPort.find_first_not_of( " " );
-      if ( Connect( vNewPort.substr( vFirstValidCharacter ) ) == DEVICE_OK )
-      {
-        Port_ = vNewPort;
-        vRet = InitializeComponents();
-      }
-    }
-    else
-    {
-      Prop->Set( Port_.c_str() );
-    }
-*/
   }
   return vRet;
 }
@@ -305,7 +274,6 @@ int CDragonfly::Connect( const string& Port )
     LogMessage( vMessage );
     return ERR_LIBRARY_INIT;
   }
-  //DeviceConnected_ = true;
 
   return DEVICE_OK;
 }
@@ -317,7 +285,7 @@ int CDragonfly::Disconnect()
     ASDWrapper_->DeleteASDLoader( ASDLoader_ );
     ASDLoader_ = nullptr;
   }
-  //DeviceConnected_ = false;
+
   return DEVICE_OK;
 }
 
