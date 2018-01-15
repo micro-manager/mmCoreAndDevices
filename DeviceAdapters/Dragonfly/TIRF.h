@@ -42,6 +42,7 @@ private:
   bool GetTIFRModeIndexFromName( const std::string& TIRFModeName, int* TIRFModeIndex );
   bool GetScopeNameFromIndex( int ScopeID, const char** ScopeName );
   bool GetScopeIndexFromName( const std::string& ScopeName, int* ScopeIndex );
+  void UpdateTIRFModeReadOnlyStatus( const std::string& TIRFModeIndex );
 };
 
 #endif

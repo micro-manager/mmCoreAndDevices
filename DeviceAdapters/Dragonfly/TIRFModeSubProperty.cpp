@@ -27,6 +27,8 @@ CTIRFModeSubProperty::CTIRFModeSubProperty( CDeviceWrapper* DeviceWrapper, CDrag
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRFModeSubProperty::OnChange );
   MMDragonfly_->CreateIntegerProperty( PropertyName.c_str(), vValue, false, vAct );
   MMDragonfly_->SetPropertyLimits( PropertyName.c_str(), vMin, vMax );
+  // Enforce call to the action method to initialise MMProp_
+  MMDragonfly_->SetProperty( PropertyName.c_str(), to_string(vValue).c_str() );
 }
 
 CTIRFModeSubProperty::~CTIRFModeSubProperty()

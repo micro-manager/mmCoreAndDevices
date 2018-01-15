@@ -61,13 +61,13 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   
   // Property for Penetration
   PenetrationWrapper_ = new CPenetrationWrapper( TIRFInterface_ );
-  PenetrationProperty_ = new CTIRFModeSubProperty( PenetrationWrapper_, MMDragonfly_, "TIRF | Penetration (nm)" );
+  PenetrationProperty_ = new CTIRFModeSubProperty( PenetrationWrapper_, MMDragonfly_, "TIRF |  Penetration (nm)" );
   // Property for Oblique Angle
   HILOObliqueAngleWrapper_ = new CHILOObliqueAngleWrapper( TIRFInterface_ );
-  HILOObliqueAngleProperty_ = new CTIRFModeSubProperty( HILOObliqueAngleWrapper_, MMDragonfly_, "TIRF | HiLo Oblique Angle (deg)" );
+  HILOObliqueAngleProperty_ = new CTIRFModeSubProperty( HILOObliqueAngleWrapper_, MMDragonfly_, "TIRF |  HiLo Oblique Angle (deg)" );
   // Property for Offset
   CriticalAngleOffsetWrapper_ = new COffsetWrapper( TIRFInterface_ );
-  CriticalAngleOffsetProperty_ = new CTIRFModeSubProperty( CriticalAngleOffsetWrapper_, MMDragonfly_, "TIRF | Critical Angle Offset" );
+  CriticalAngleOffsetProperty_ = new CTIRFModeSubProperty( CriticalAngleOffsetWrapper_, MMDragonfly_, "TIRF |  Critical Angle Offset" );
   
   // Create MM property for TIRF mode
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRF::OnTIRFModeChange );
@@ -79,6 +79,7 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   if ( GetTIRFModeNameFromIndex( vTIRFMode, &vTIRFModeName ) )
   {
     MMDragonfly_->SetProperty( g_TIRFModePropertyName, vTIRFModeName );
+    UpdateTIRFModeReadOnlyStatus( vTIRFModeName );
   }
   else
   {
@@ -133,21 +134,7 @@ int CTIRF::OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act )
     if ( GetTIFRModeIndexFromName( vRequestedMode, &vTIRFModeIndex ) )
     {
       TIRFInterface_->SetTIRFMode( vTIRFModeIndex );
-      PenetrationProperty_->SetReadOnly( true );
-      HILOObliqueAngleProperty_->SetReadOnly( true );
-      CriticalAngleOffsetProperty_->SetReadOnly( true );
-      if ( vRequestedMode == g_TIRFModePenetration )
-      {
-        PenetrationProperty_->SetReadOnly( false );
-      }
-      else if ( vRequestedMode == g_TIRFModeHILO )
-      {
-        HILOObliqueAngleProperty_->SetReadOnly( false );
-      }
-      else if ( vRequestedMode == g_TIRFModeCritical )
-      {
-        CriticalAngleOffsetProperty_->SetReadOnly( false );
-      }
+      UpdateTIRFModeReadOnlyStatus( vRequestedMode );
     }
     else
     {
@@ -248,4 +235,23 @@ bool CTIRF::GetScopeIndexFromName( const string& ScopeName, int* ScopeIndex )
     vScopeFound = true;
   }
   return vScopeFound;
+}
+
+void CTIRF::UpdateTIRFModeReadOnlyStatus( const string& TIRFModeName )
+{
+  PenetrationProperty_->SetReadOnly( true );
+  HILOObliqueAngleProperty_->SetReadOnly( true );
+  CriticalAngleOffsetProperty_->SetReadOnly( true );
+  if ( TIRFModeName == g_TIRFModePenetration )
+  {
+    PenetrationProperty_->SetReadOnly( false );
+  }
+  else if ( TIRFModeName == g_TIRFModeHILO )
+  {
+    HILOObliqueAngleProperty_->SetReadOnly( false );
+  }
+  else if ( TIRFModeName == g_TIRFModeCritical )
+  {
+    CriticalAngleOffsetProperty_->SetReadOnly( false );
+  }
 }

@@ -29,6 +29,7 @@ using namespace std;
 
 const char* const g_DeviceName = "Dragonfly";
 const char* const g_DeviceDescription = "Andor Dragonfly Device Adapter";
+const char* const g_DevicePort = "COM Port";
 const char* const g_DeviceSerialNumber = "Serial Number";
 const char* const g_DeviceProductID = "Product ID";
 const char* const g_DeviceSoftwareVersion = "Software Version";
@@ -95,7 +96,7 @@ CDragonfly::CDragonfly()
 #else
   SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the ASD library. Make sure AB_ASD.dll is present in the Micro-Manager root directory." );
 #endif
-  SetErrorText( ERR_LIBRARY_INIT, "ASD Library initialisation failed. Make sure the device is connected." );
+  SetErrorText( ERR_LIBRARY_INIT, "ASD Library initialisation failed. Make sure the device is connected and you selected the correct COM port." );
   string vMessage = "Dichroic mirror initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_DICHROICMIRROR_INIT, vMessage.c_str() );
   vMessage = "Filter wheel 1 initialisation failed. " + vContactSupportMessage;
@@ -131,10 +132,33 @@ CDragonfly::CDragonfly()
   }
   catch ( exception& vException )
   {
+    ASDWrapper_ = nullptr;
     vMessage = "Error loading the ASD library. Caught Exception with message: ";
     vMessage += vException.what();
     LogMessage( vMessage );
   }
+
+  // COM Port property
+  //int vRet = CreatePropertyWithHandler( MM::g_Keyword_Port, "Undefined", MM::String, false, &CDragonfly::OnPort, true );
+  int vRet = CreatePropertyWithHandler( g_DevicePort, "Undefined", MM::String, false, &CDragonfly::OnPort, true );
+  if ( vRet == DEVICE_OK )
+  {
+    for ( int i = 1;i <= 20;++i )
+    {
+      string vCOMPort;
+      if ( i < 10 )
+      {
+        vCOMPort = " ";
+      }
+      vCOMPort += "COM" + to_string( i );
+      AddAllowedValue( g_DevicePort, vCOMPort.c_str() );
+    }
+  }
+  else
+  {
+    LogMessage( "Error creating " + string( g_DevicePort ) + " property" );
+  }
+
 }
 
 CDragonfly::~CDragonfly()
@@ -160,25 +184,28 @@ int CDragonfly::Initialize()
   {
     return vRet;
   }
-
-  // COM Port property
-  vRet = CreatePropertyWithHandler( MM::g_Keyword_Port, "Undefined", MM::String, false, &CDragonfly::OnPort );
-  if ( vRet != DEVICE_OK )
+     
+  if ( !DeviceConnected_ )
   {
-    return vRet;
-  }
+    // Shutting down the serial port opened by Micro-Manager to give us access to it ourselves
+    //Device* vPort = GetCoreCallback()->GetDevice( this, Port_.c_str() );
+    //if ( vPort )
+    //{
+    //  vPort->Shutdown();
+    //}
 
-  for ( int i = 1;i <= 20;++i )
-  {
-    string vCOMPort;
-    if ( i < 10 )
+    // remove the leading space from the port name if there's any before connecting
+    size_t vFirstValidCharacter = Port_.find_first_not_of( " " );
+    if ( Connect( Port_.substr( vFirstValidCharacter ) ) == DEVICE_OK )
     {
-      vCOMPort = " ";
+      vRet = InitializeComponents();
     }
-    vCOMPort += "COM" + to_string( i );
-    AddAllowedValue( MM::g_Keyword_Port, vCOMPort.c_str() );
+    else
+    {
+      return ERR_LIBRARY_INIT;
+    }
   }
-   
+
   Initialized_ = true;
   return DEVICE_OK;
 }
@@ -188,11 +215,6 @@ int CDragonfly::Shutdown()
   if ( !ASDLibraryConnected_ )
   {
     return ERR_LIBRARY_LOAD;
-  }
-
-  if ( Initialized_ )
-  {
-    Initialized_ = false;
   }
 
   delete DichroicMirror_;
@@ -218,6 +240,8 @@ int CDragonfly::Shutdown()
   delete SuperRes_;
   delete TIRF_;
   Disconnect();
+
+  Initialized_ = false;
 
   return DEVICE_OK;
 }
@@ -246,10 +270,13 @@ int CDragonfly::OnPort( MM::PropertyBase* Prop, MM::ActionType Act )
   }
   else if ( Act == MM::AfterSet )
   {
+    Prop->Get( Port_ );
+/*
     if ( !DeviceConnected_ )
     {
       string vNewPort;
       Prop->Get( vNewPort );
+      Port_ = vNewPort;
       // remove the leading space from the port name if there's any before connecting
       size_t vFirstValidCharacter = vNewPort.find_first_not_of( " " );
       if ( Connect( vNewPort.substr( vFirstValidCharacter ) ) == DEVICE_OK )
@@ -262,6 +289,7 @@ int CDragonfly::OnPort( MM::PropertyBase* Prop, MM::ActionType Act )
     {
       Prop->Set( Port_.c_str() );
     }
+*/
   }
   return vRet;
 }
@@ -277,7 +305,7 @@ int CDragonfly::Connect( const string& Port )
     LogMessage( vMessage );
     return ERR_LIBRARY_INIT;
   }
-  DeviceConnected_ = true;
+  //DeviceConnected_ = true;
 
   return DEVICE_OK;
 }
@@ -289,7 +317,7 @@ int CDragonfly::Disconnect()
     ASDWrapper_->DeleteASDLoader( ASDLoader_ );
     ASDLoader_ = nullptr;
   }
-  DeviceConnected_ = false;
+  //DeviceConnected_ = false;
   return DEVICE_OK;
 }
 
@@ -721,6 +749,7 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
   }
   return DEVICE_OK;
 }
+
 void CDragonfly::LogComponentMessage( const std::string& Message )
 {
   LogMessage( Message );
