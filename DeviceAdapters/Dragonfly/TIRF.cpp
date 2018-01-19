@@ -1,6 +1,7 @@
 #include "TIRF.h"
 #include "Dragonfly.h"
-#include "TIRFModeSubProperty.h"
+#include "TIRFModeIntSubProperty.h"
+#include "TIRFModeFloatSubProperty.h"
 
 #include <stdexcept>
 
@@ -61,13 +62,13 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   
   // Property for Penetration
   PenetrationWrapper_ = new CPenetrationWrapper( TIRFInterface_ );
-  PenetrationProperty_ = new CTIRFModeSubProperty( PenetrationWrapper_, MMDragonfly_, "TIRF |  Penetration (nm)" );
+  PenetrationProperty_ = new CTIRFModeIntSubProperty( PenetrationWrapper_, MMDragonfly_, "TIRF |  Penetration (nm)" );
   // Property for Oblique Angle
   HILOObliqueAngleWrapper_ = new CHILOObliqueAngleWrapper( TIRFInterface_ );
-  HILOObliqueAngleProperty_ = new CTIRFModeSubProperty( HILOObliqueAngleWrapper_, MMDragonfly_, "TIRF |  HiLo Oblique Angle (deg)" );
+  HILOObliqueAngleProperty_ = new CTIRFModeFloatSubProperty( HILOObliqueAngleWrapper_, MMDragonfly_, "TIRF |  HiLo Oblique Angle (deg)" );
   // Property for Offset
   CriticalAngleOffsetWrapper_ = new COffsetWrapper( TIRFInterface_ );
-  CriticalAngleOffsetProperty_ = new CTIRFModeSubProperty( CriticalAngleOffsetWrapper_, MMDragonfly_, "TIRF |  Critical Angle Offset" );
+  CriticalAngleOffsetProperty_ = new CTIRFModeIntSubProperty( CriticalAngleOffsetWrapper_, MMDragonfly_, "TIRF |  Critical Angle Offset" );
   
   // Create MM property for TIRF mode
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRF::OnTIRFModeChange );

@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          TIRFModeSubProperty.h
+// FILE:          TIRFModeIntSubProperty.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-#ifndef _TIRFMODESUBPROPERTY_H_
-#define _TIRFMODESUBPROPERTY_H_
+#ifndef _TIRFMODEINTSUBPROPERTY_H_
+#define _TIRFMODEINTSUBPROPERTY_H_
 
 #include "MMDeviceConstants.h"
 #include "Property.h"
@@ -12,7 +12,8 @@
 
 class CDragonfly;
 
-class CDeviceWrapper
+
+class CIntDeviceWrapper
 {
 public:
   virtual bool GetLimits( int* Min, int* Max ) = 0;
@@ -20,7 +21,7 @@ public:
   virtual bool Set( int Value ) = 0;
 };
 
-class CPenetrationWrapper : public CDeviceWrapper
+class CPenetrationWrapper : public CIntDeviceWrapper
 {
 public:
   CPenetrationWrapper( ITIRFInterface* TIRFInterface ) : TIRFInterface_( TIRFInterface ) {}
@@ -40,27 +41,7 @@ private:
   ITIRFInterface* TIRFInterface_;
 };
 
-class CHILOObliqueAngleWrapper : public CDeviceWrapper
-{
-public:
-  CHILOObliqueAngleWrapper( ITIRFInterface* TIRFInterface ) : TIRFInterface_( TIRFInterface ) {}
-  bool GetLimits( int* Min, int* Max )
-  {
-    return TIRFInterface_->GetObliqueAngleLimit( Min, Max );
-  }
-  bool Get( int* Value )
-  {
-    return TIRFInterface_->GetObliqueAngle_mdeg( Value );
-  }
-  bool Set( int Value )
-  {
-    return TIRFInterface_->SetObliqueAngle_mdeg( Value );
-  }
-private:
-  ITIRFInterface* TIRFInterface_;
-};
-
-class COffsetWrapper : public CDeviceWrapper
+class COffsetWrapper : public CIntDeviceWrapper
 {
 public:
   COffsetWrapper( ITIRFInterface* TIRFInterface ) : TIRFInterface_( TIRFInterface ) {}
@@ -80,18 +61,18 @@ private:
   ITIRFInterface* TIRFInterface_;
 };
 
-class CTIRFModeSubProperty
+class CTIRFModeIntSubProperty
 {
 public:
-  CTIRFModeSubProperty( CDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const std::string& PropertyName );
-  ~CTIRFModeSubProperty();
-  typedef MM::Action<CTIRFModeSubProperty> CPropertyAction;
+  CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const std::string& PropertyName );
+  ~CTIRFModeIntSubProperty();
+  typedef MM::Action<CTIRFModeIntSubProperty> CPropertyAction;
   int OnChange( MM::PropertyBase * Prop, MM::ActionType Act );
   void SetReadOnly( bool ReadOnly );
 
 private:
   CDragonfly* MMDragonfly_;
-  CDeviceWrapper* DeviceWrapper_;
+  CIntDeviceWrapper* DeviceWrapper_;
   std::string PropertyName_;
   MM::Property* MMProp_;
 

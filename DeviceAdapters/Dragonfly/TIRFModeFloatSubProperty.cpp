@@ -1,17 +1,17 @@
-#include "TIRFModeSubProperty.h"
+#include "TIRFModeFloatSubProperty.h"
 #include "Dragonfly.h"
 
 #include <stdexcept>
 
 using namespace std;
 
-CTIRFModeSubProperty::CTIRFModeSubProperty( CDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const string& PropertyName )
+CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const string& PropertyName )
   : MMDragonfly_( MMDragonfly ),
   DeviceWrapper_( DeviceWrapper ),
   PropertyName_( PropertyName ),
   MMProp_( nullptr )
 {
-  int vMin, vMax, vValue;
+  float vMin, vMax, vValue;
   bool vValueRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
   if ( !vValueRetrieved )
   {
@@ -24,26 +24,26 @@ CTIRFModeSubProperty::CTIRFModeSubProperty( CDeviceWrapper* DeviceWrapper, CDrag
   }
 
   // Create the MM property for Disk speed
-  CPropertyAction* vAct = new CPropertyAction( this, &CTIRFModeSubProperty::OnChange );
-  MMDragonfly_->CreateIntegerProperty( PropertyName.c_str(), vValue, false, vAct );
+  CPropertyAction* vAct = new CPropertyAction( this, &CTIRFModeFloatSubProperty::OnChange );
+  MMDragonfly_->CreateFloatProperty( PropertyName.c_str(), vValue, false, vAct );
   MMDragonfly_->SetPropertyLimits( PropertyName.c_str(), vMin, vMax );
   // Enforce call to the action method to initialise MMProp_
   MMDragonfly_->SetProperty( PropertyName.c_str(), to_string(vValue).c_str() );
 }
 
-CTIRFModeSubProperty::~CTIRFModeSubProperty()
+CTIRFModeFloatSubProperty::~CTIRFModeFloatSubProperty()
 {
 }
 
-void CTIRFModeSubProperty::SetReadOnly( bool ReadOnly )
+void CTIRFModeFloatSubProperty::SetReadOnly( bool ReadOnly )
 {
   if ( MMProp_ )
   {
-    MMProp_->SetReadOnly( ReadOnly );
+    //MMProp_->SetReadOnly( ReadOnly );
   }
 }
 
-int CTIRFModeSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType Act )
+int CTIRFModeFloatSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   if ( MMProp_ == nullptr )
   {
@@ -58,15 +58,20 @@ int CTIRFModeSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType Act 
   }
   else if ( Act == MM::AfterSet )
   {
-    long vRequestedValue;
+    double vRequestedValue;
     Prop->Get( vRequestedValue );
-    int vMin, vMax;
+    float vMin, vMax;
     bool vLimitsRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
     if ( vLimitsRetrieved )
     {
-      if ( vRequestedValue >= (long)vMin && vRequestedValue <= (long)vMax )
+      if ( vRequestedValue >= (double)vMin && vRequestedValue <= (double)vMax )
       {
-        DeviceWrapper_->Set( vRequestedValue );
+        if ( !DeviceWrapper_->Set( vRequestedValue ) )
+        {
+          float vDeviceValue;
+          DeviceWrapper_->Get( &vDeviceValue );
+          Prop->Set( (double)vDeviceValue );
+        }
       }
       else
       {
@@ -82,18 +87,18 @@ int CTIRFModeSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType Act 
   return DEVICE_OK;
 }
 
-bool CTIRFModeSubProperty::SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop )
+bool CTIRFModeFloatSubProperty::SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop )
 {
   bool vValueSet = false;
-  int vMin, vMax;
+  float vMin, vMax;
   bool vLimitsRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
   if ( vLimitsRetrieved )
   {
     Prop->SetLimits( vMin, vMax );
-    int vValue;
+    float vValue;
     if ( DeviceWrapper_->Get( &vValue ) )
     {
-      Prop->Set( (long)vValue );
+      Prop->Set( (double)vValue );
       vValueSet = true;
     }
     else

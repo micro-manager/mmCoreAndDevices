@@ -26,10 +26,12 @@ public:
   int OnModeChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CFilterWheel> CPropertyAction;
 
+  // inherited from IFilterWheelDeviceInterface
   bool GetPosition( unsigned int& Position );
   bool SetPosition( unsigned int Position );
   bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
   IFilterConfigInterface* GetFilterConfigInterface();
+  std::string ParseDescription( const std::string& Description );
 
 private:
   TWheelIndex WheelIndex_;

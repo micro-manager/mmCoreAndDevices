@@ -223,7 +223,8 @@
     <ClCompile Include="PowerDensity.cpp" />
     <ClCompile Include="SuperRes.cpp" />
     <ClCompile Include="TIRF.cpp" />
-    <ClCompile Include="TIRFModeSubProperty.cpp" />
+    <ClCompile Include="TIRFModeFloatSubProperty.cpp" />
+    <ClCompile Include="TIRFModeIntSubProperty.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

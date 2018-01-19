@@ -81,7 +81,7 @@ bool CFilterWheelProperty::RetrievePositionsFromFilterConfig()
           }
           else
           {
-            vPositionName += vDescription;
+            vPositionName += FilterWheelDevice_->ParseDescription( vDescription );
           }
           PositionNames_[vIndex] = vPositionName;
         }

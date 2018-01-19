@@ -61,8 +61,8 @@ void CFilterWheel::CreateModeProperty()
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighQuality ) );
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMLowVibration ) );
 
-  // Initialise the mode property
-  MMDragonfly_->SetProperty( FilterModeProperty_.c_str(), GetStringFromMode( vMode ) );
+  // Initialise the mode property (enforcing selection to HQ since the one retrieved from the device is Unknown)
+  MMDragonfly_->SetProperty( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighQuality ) );
 }
 
 void CFilterWheel::CreateRFIDStatusProperty()
@@ -108,6 +108,38 @@ bool CFilterWheel::GetLimits( unsigned int& MinPosition, unsigned int& MaxPositi
 IFilterConfigInterface* CFilterWheel::GetFilterConfigInterface()
 {
   return FilterWheelInterface_->GetFilterConfigInterface();
+}
+string CFilterWheel::ParseDescription( const string& Description )
+{
+  // input format:  Name;WavelengthBandwidth1[/WavelengthBandwidth2][/WavelengthBandwidth3] with WavelengthBandwidth in format wavelength-bandwidth
+  // output format: wavelength1/wavelength2/wavelength3
+  string vOutputDescription;  
+  size_t vWavelengthPos = Description.find_first_of( ";" );
+  while ( vWavelengthPos != string::npos )
+  {
+    size_t vBandwidthPos = Description.find_first_of( "-", vWavelengthPos + 1 );
+    size_t vNextWavelengthPos = Description.find_first_of( "/", vWavelengthPos + 1 );
+    size_t vEndOfWavelength = vBandwidthPos - 1;
+    if ( vEndOfWavelength == string::npos )
+    {
+      vEndOfWavelength = vNextWavelengthPos - 1;
+      if ( vEndOfWavelength == string::npos )
+      {
+        vEndOfWavelength = Description.size();
+      }
+    }
+    if ( !vOutputDescription.empty() )
+    {
+      vOutputDescription += "/";
+    }
+    vOutputDescription += Description.substr( vWavelengthPos + 1, vEndOfWavelength - vWavelengthPos );
+    vWavelengthPos = vNextWavelengthPos;
+  }
+  if ( vOutputDescription.empty() )
+  {
+    vOutputDescription = Description;
+  }
+  return vOutputDescription;
 }
 
 int CFilterWheel::OnModeChange( MM::PropertyBase* Prop, MM::ActionType Act )

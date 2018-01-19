@@ -11,7 +11,8 @@
 
 class CDragonfly;
 class ITIRFInterface;
-class CTIRFModeSubProperty;
+class CTIRFModeIntSubProperty;
+class CTIRFModeFloatSubProperty;
 class CPenetrationWrapper;
 class CHILOObliqueAngleWrapper;
 class COffsetWrapper;
@@ -31,11 +32,11 @@ private:
   ITIRFInterface* TIRFInterface_;
   int Magnification_, ScopeID_;
   double NumericalAperture_, RefractiveIndex_;
-  CTIRFModeSubProperty* PenetrationProperty_;
+  CTIRFModeIntSubProperty* PenetrationProperty_;
   CPenetrationWrapper* PenetrationWrapper_;
-  CTIRFModeSubProperty* HILOObliqueAngleProperty_;
+  CTIRFModeFloatSubProperty* HILOObliqueAngleProperty_;
   CHILOObliqueAngleWrapper* HILOObliqueAngleWrapper_;
-  CTIRFModeSubProperty* CriticalAngleOffsetProperty_;
+  CTIRFModeIntSubProperty* CriticalAngleOffsetProperty_;
   COffsetWrapper* CriticalAngleOffsetWrapper_;
 
   bool GetTIRFModeNameFromIndex( int TIRFModeIndex, const char** TIRFModeName );

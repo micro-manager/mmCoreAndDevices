@@ -295,7 +295,6 @@ int CDragonfly::InitializeComponents()
   IASDInterface2* vASDInterface2 = ASDLoader_->GetASDInterface2();
   IASDInterface3* vASDInterface3 = ASDLoader_->GetASDInterface3();
 
-  LogMessage( "Getting Serial Number" );
   // Serial number property
   string vSerialNumber = vASDInterface->GetSerialNumber();
   int vRet = CreateProperty( g_DeviceSerialNumber, vSerialNumber.c_str(), MM::String, true );
@@ -304,7 +303,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Getting Product ID" );
   // Product ID property
   string vProductID = vASDInterface->GetProductID();
   vRet = CreateProperty( g_DeviceProductID, vProductID.c_str(), MM::String, true );
@@ -313,7 +311,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Getting Software Version" );
   // Software version property
   string vSoftwareVersion = vASDInterface->GetSoftwareVersion();
   vRet = CreateProperty( g_DeviceSoftwareVersion, vSoftwareVersion.c_str(), MM::String, true );
@@ -322,14 +319,13 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating Dragonfly Status" );
+  // Status
   vRet = CreateDragonflyStatus( vASDInterface3 );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
   }
 
-  LogMessage( "Creating Dichroic Mirror" );
   // Dichroic mirror component
   vRet = CreateDichroicMirror( vASDInterface );
   if ( vRet != DEVICE_OK )
@@ -337,7 +333,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating Filter Wheel 1" );
   // Filter wheel 1 component
   vRet = CreateFilterWheel( vASDInterface, FilterWheel1_, WheelIndex1, ERR_FILTERWHEEL1_INIT );
   if ( vRet != DEVICE_OK )
@@ -345,7 +340,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating Filter Wheel 2" );
   // Filter wheel 2 component
   vRet = CreateFilterWheel( vASDInterface, FilterWheel2_, WheelIndex2, ERR_FILTERWHEEL2_INIT );
   if ( vRet != DEVICE_OK )
@@ -353,7 +347,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating Disk" );
   // Disk component
   vRet = CreateDisk( vASDInterface );
   if ( vRet != DEVICE_OK )
@@ -361,7 +354,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating Confocal Mode" );
   // Confocal mode component
   vRet = CreateConfocalMode( vASDInterface3 );
   if ( vRet != DEVICE_OK )
@@ -369,7 +361,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating Aperture" );
   // Aperture component
   vRet = CreateAperture( vASDInterface2 );
   if ( vRet != DEVICE_OK )
@@ -377,7 +368,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating Camera Port Mirror" );
   // Camera port mirror component
   vRet = CreateCameraPortMirror( vASDInterface2 );
   if ( vRet != DEVICE_OK )
@@ -385,7 +375,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating Lenses" );
   // Lens components
   for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax; ++vLensIndex )
   {
@@ -396,7 +385,6 @@ int CDragonfly::InitializeComponents()
     }
   }
 
-  LogMessage( "Creating Power Density" );
   // Power density components
   for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax; ++vLensIndex )
   {
@@ -407,7 +395,6 @@ int CDragonfly::InitializeComponents()
     }
   }
 
-  LogMessage( "Creating Super Resolution" );
   // Super Resolution component
   vRet = CreateSuperRes( vASDInterface3 );
   if ( vRet != DEVICE_OK )
@@ -415,7 +402,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  LogMessage( "Creating TIRF" );
   // TIRF component
   vRet = CreateTIRF( vASDInterface3 );
   if ( vRet != DEVICE_OK )
@@ -453,144 +439,162 @@ int CDragonfly::CreateDragonflyStatus( IASDInterface3* ASDInterface3 )
 
 int CDragonfly::CreateDichroicMirror( IASDInterface* ASDInterface )
 {
-  try
+  if ( ASDInterface->IsDichroicAvailable() )
   {
-    IDichroicMirrorInterface* vASDDichroicMirror = ASDInterface->GetDichroicMirror();
-    if ( vASDDichroicMirror != nullptr )
+    try
     {
-      DichroicMirror_ = new CDichroicMirror( vASDDichroicMirror, this );
+      IDichroicMirrorInterface* vASDDichroicMirror = ASDInterface->GetDichroicMirror();
+      if ( vASDDichroicMirror != nullptr )
+      {
+        DichroicMirror_ = new CDichroicMirror( vASDDichroicMirror, this );
+      }
+      else
+      {
+        LogMessage( "Dichroic mirror not detected" );
+      }
     }
-    else
+    catch ( exception& vException )
     {
-      LogMessage( "Dichroic mirror not detected" );
+      string vMessage( "Error loading the Dichroic mirror. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_DICHROICMIRROR_INIT;
     }
-  }
-  catch ( exception& vException )
-  {
-    string vMessage( "Error loading the Dichroic mirror. Caught Exception with message: " );
-    vMessage += vException.what();
-    LogMessage( vMessage );
-    return ERR_DICHROICMIRROR_INIT;
   }
   return DEVICE_OK;
 }
 
 int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode )
 {
-  try
+  if ( ASDInterface->IsFilterWheelAvailable( WheelIndex ) )
   {
-    IFilterWheelInterface* vASDFilterWheel = ASDInterface->GetFilterWheel( WheelIndex );
-    if ( vASDFilterWheel != nullptr )
+    try
     {
-      FilterWheel = new CFilterWheel( WheelIndex, vASDFilterWheel, DragonflyStatus_, this );
+      IFilterWheelInterface* vASDFilterWheel = ASDInterface->GetFilterWheel( WheelIndex );
+      if ( vASDFilterWheel != nullptr )
+      {
+        FilterWheel = new CFilterWheel( WheelIndex, vASDFilterWheel, DragonflyStatus_, this );
+      }
+      else
+      {
+        LogMessage( "Filter wheel " + to_string( WheelIndex ) + " not detected" );
+      }
     }
-    else
+    catch ( exception& vException )
     {
-      LogMessage( "Filter wheel " + to_string( WheelIndex ) + " not detected" );
+      string vMessage( "Error loading the filter wheel " + to_string( WheelIndex ) + ". Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ErrorCode;
     }
-  }
-  catch ( exception& vException )
-  {
-    string vMessage( "Error loading the filter wheel " + to_string( WheelIndex ) + ". Caught Exception with message: " );
-    vMessage += vException.what();
-    LogMessage( vMessage );
-    return ErrorCode;
   }
   return DEVICE_OK;
 }
 
 int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
 {
-  try
+  if ( ASDInterface->IsDiskAvailable() )
   {
-    IDiskInterface2* vASDDisk = ASDInterface->GetDisk_v2();
-    if ( vASDDisk != nullptr )
+    try
     {
-      Disk_ = new CDisk( vASDDisk, this );
+      IDiskInterface2* vASDDisk = ASDInterface->GetDisk_v2();
+      if ( vASDDisk != nullptr )
+      {
+        Disk_ = new CDisk( vASDDisk, this );
+      }
+      else
+      {
+        LogMessage( "Spinning disk not detected" );
+      }
     }
-    else
+    catch ( exception& vException )
     {
-      LogMessage( "Spinning disk not detected" );
+      string vMessage( "Error loading the Spinning disk. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_DISK_INIT;
     }
-  }
-  catch ( exception& vException )
-  {
-    string vMessage( "Error loading the Spinning disk. Caught Exception with message: " );
-    vMessage += vException.what();
-    LogMessage( vMessage );
-    return ERR_DISK_INIT;
   }
   return DEVICE_OK;
 }
 
 int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
 {
-  try
+  if ( ASDInterface->IsImagingModeAvailable() )
   {
-    IConfocalModeInterface3* vASDConfocalMode = ASDInterface->GetImagingMode();
-    if ( vASDConfocalMode != nullptr )
+    try
     {
-      ConfocalMode_ = new CConfocalMode( vASDConfocalMode, this );
+      IConfocalModeInterface3* vASDConfocalMode = ASDInterface->GetImagingMode();
+      if ( vASDConfocalMode != nullptr )
+      {
+        ConfocalMode_ = new CConfocalMode( vASDConfocalMode, this );
+      }
+      else
+      {
+        LogMessage( "Confocal mode not detected" );
+      }
     }
-    else
+    catch ( exception& vException )
     {
-      LogMessage( "Confocal mode not detected" );
+      string vMessage( "Error loading the Confocal mode. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_CONFOCALMODE_INIT;
     }
-  }
-  catch ( exception& vException )
-  {
-    string vMessage( "Error loading the Confocal mode. Caught Exception with message: " );
-    vMessage += vException.what();
-    LogMessage( vMessage );
-    return ERR_CONFOCALMODE_INIT;
   }
   return DEVICE_OK;
 }
 
 int CDragonfly::CreateAperture( IASDInterface2* ASDInterface )
 {
-  try
+  if ( ASDInterface->IsApertureAvailable() )
   {
-    IApertureInterface* vAperture = ASDInterface->GetAperture();
-    if ( vAperture != nullptr )
+    try
     {
-      Aperture_ = new CAperture( vAperture, this );
+      IApertureInterface* vAperture = ASDInterface->GetAperture();
+      if ( vAperture != nullptr )
+      {
+        Aperture_ = new CAperture( vAperture, this );
+      }
+      else
+      {
+        LogMessage( "Aperture not detected" );
+      }
     }
-    else
+    catch ( exception& vException )
     {
-      LogMessage( "Aperture not detected" );
+      string vMessage( "Error loading the Aperture. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_APERTURE_INIT;
     }
-  }
-  catch ( exception& vException )
-  {
-    string vMessage( "Error loading the Aperture. Caught Exception with message: " );
-    vMessage += vException.what();
-    LogMessage( vMessage );
-    return ERR_APERTURE_INIT;
   }
   return DEVICE_OK;
 }
 
 int CDragonfly::CreateCameraPortMirror( IASDInterface2* ASDInterface )
 {
-  try
+  if ( ASDInterface->IsCameraPortMirrorAvailable() )
   {
-    ICameraPortMirrorInterface* vCameraPortMirror = ASDInterface->GetCameraPortMirror();
-    if ( vCameraPortMirror != nullptr )
+    try
     {
-      CameraPortMirror_ = new CCameraPortMirror( vCameraPortMirror, this );
+      ICameraPortMirrorInterface* vCameraPortMirror = ASDInterface->GetCameraPortMirror();
+      if ( vCameraPortMirror != nullptr )
+      {
+        CameraPortMirror_ = new CCameraPortMirror( vCameraPortMirror, this );
+      }
+      else
+      {
+        LogMessage( "Camera port mirror not detected" );
+      }
     }
-    else
+    catch ( exception& vException )
     {
-      LogMessage( "Camera port mirror not detected" );
+      string vMessage( "Error loading the Camera port mirror. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_CAMERAPORTMIRROR_INIT;
     }
-  }
-  catch ( exception& vException )
-  {
-    string vMessage( "Error loading the Camera port mirror. Caught Exception with message: " );
-    vMessage += vException.what();
-    LogMessage( vMessage );
-    return ERR_CAMERAPORTMIRROR_INIT;
   }
   return DEVICE_OK;
 }
@@ -628,16 +632,14 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
 
 int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex )
 {
-  LogMessage( "CREATE POWER DENSITY: Is Ill Lens Available for Lens " + to_string(LensIndex) );
   if ( ASDInterface->IsIllLensAvailable( (TLensType)LensIndex ) )
   {
+    LogMessage( "Power density " + to_string( LensIndex ) + " available" );
     try
     {
-      LogMessage( "CREATE POWER DENSITY: GetIllLens" );
       IIllLensInterface* vIllLensInterface = ASDInterface->GetIllLens( (TLensType)LensIndex );
       if ( vIllLensInterface != nullptr )
       {
-        LogMessage( "CREATE POWER DENSITY: New CPowerDensity" );
         CPowerDensity* vPowerDensity = new CPowerDensity( vIllLensInterface, LensIndex, this );
         if ( vPowerDensity != nullptr )
         {
@@ -656,10 +658,6 @@ int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex 
       LogMessage( vMessage );
       return ERR_POWERDENSITY_INIT;
     }
-  }
-  else
-  {
-    LogMessage( "CREATE POWER DENSITY: Ill Lens NOT Available" );
   }
   return DEVICE_OK;
 }

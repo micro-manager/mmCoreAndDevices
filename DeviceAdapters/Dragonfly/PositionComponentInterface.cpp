@@ -22,7 +22,6 @@ void IPositionComponentInterface::Initialise()
 {
   if ( Initialised_ ) return;
 
-  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Retrieve values" );
   // Retrieve values from the device
   if ( !RetrievePositionsFromFilterSet() )
   {
@@ -32,7 +31,6 @@ void IPositionComponentInterface::Initialise()
     }
   }
 
-  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetPosition" );
   // Retrieve the current position from the device
   unsigned int vPosition;
   if ( !GetPosition( vPosition ) )
@@ -40,12 +38,10 @@ void IPositionComponentInterface::Initialise()
     throw runtime_error( "Failed to read the current " + PropertyName_ + " position" );
   }
 
-  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Create Property" );
   // Create the MM property
   CPropertyAction* vAct = new CPropertyAction( this, &IPositionComponentInterface::OnPositionChange );
   MMDragonfly_->CreateProperty( PropertyName_.c_str(), "Undefined", MM::String, false, vAct );
 
-  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Populate allowed values" );
   // Populate the possible positions
   TPositionNameMap::const_iterator vIt = PositionNames_.begin();
   while ( vIt != PositionNames_.end() )
@@ -54,7 +50,6 @@ void IPositionComponentInterface::Initialise()
     vIt++;
   }
 
-  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Initialise property" );
   // Initialise the position
   if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
   {
@@ -72,12 +67,10 @@ bool IPositionComponentInterface::RetrievePositionsFromFilterSet()
 {
   const static unsigned int vStringLength = 64;
   bool vPositionsRetrieved = false;
-  MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetFitlerSet" );
   IFilterSet* vFilterSet = GetFilterSet();
   if ( vFilterSet != nullptr )
   {
     unsigned int vMinPos, vMaxPos;
-    MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetLimits" );
     if ( vFilterSet->GetLimits( vMinPos, vMaxPos ) )
     {
       char vDescription[vStringLength];
@@ -85,7 +78,6 @@ bool IPositionComponentInterface::RetrievePositionsFromFilterSet()
       for ( unsigned int vIndex = vMinPos; vIndex <= vMaxPos; vIndex++ )
       {
         string vPositionName;
-        MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetFilterDescription" );
         if ( vFilterSet->GetFilterDescription( vIndex, vDescription, vStringLength ) == false )
         {
           vPositionName += "Undefined Position " + to_string(vUndefinedIndex);
@@ -95,7 +87,6 @@ bool IPositionComponentInterface::RetrievePositionsFromFilterSet()
         {
           vPositionName += vDescription;
         }
-        MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: Adding new position [" + vPositionName + "]" );
         PositionNames_[vIndex] = vPositionName;
       }
 
@@ -104,7 +95,7 @@ bool IPositionComponentInterface::RetrievePositionsFromFilterSet()
   }
   else
   {
-    MMDragonfly_->LogComponentMessage( "POSITION COMPONENT INTERFACE: GetLimits NOT valid" );
+    MMDragonfly_->LogComponentMessage( "Invalid FilterSet pointer for " + PropertyName_ );
   }
   return vPositionsRetrieved;
 }
