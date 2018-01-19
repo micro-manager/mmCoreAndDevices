@@ -23,7 +23,6 @@
 
 #include <string>
 #include <stdexcept>
-#include <vector>
 
 using namespace std;
 
@@ -188,6 +187,12 @@ int CDragonfly::Initialize()
   if ( Connect( Port_.substr( vFirstValidCharacter ) ) == DEVICE_OK )
   {
     vRet = InitializeComponents();
+    //char vConfigName[64];
+    //GetCoreCallback()->GetCurrentConfig( MM::g_CFGGroup_System, 64, vConfigName );
+    //if ( strcmp( vConfigName, MM::g_CFGGroup_System_Startup ) == 0 )
+    //{
+    //  GetCoreCallback()->getSystemState();
+    //}
   }
   else
   {
@@ -213,13 +218,13 @@ int CDragonfly::Shutdown()
   delete ConfocalMode_;
   delete Aperture_;
   delete CameraPortMirror_;
-  vector<CLens*>::iterator vLensIt = Lens_.begin();
+  list<CLens*>::iterator vLensIt = Lens_.begin();
   while ( vLensIt != Lens_.end() )
   {
     delete *vLensIt;
     vLensIt++;
   }
-  vector<CPowerDensity*>::iterator vPowerDensityIt = PowerDensity_.begin();
+  list<CPowerDensity*>::iterator vPowerDensityIt = PowerDensity_.begin();
   while ( vPowerDensityIt != PowerDensity_.end() )
   {
     delete *vPowerDensityIt;

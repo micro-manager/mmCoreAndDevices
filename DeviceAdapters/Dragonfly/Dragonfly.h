@@ -7,8 +7,8 @@
 #define _DRAGONFLY_H_
 
 #include "../../MMDevice/DeviceBase.h"
-//#include "../../MMDevice/DeviceThreads.h"
 #include "ComponentInterface.h"
+#include <list>
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -79,8 +79,8 @@ private:
   CConfocalMode* ConfocalMode_;
   CAperture* Aperture_;
   CCameraPortMirror* CameraPortMirror_;
-  std::vector<CLens*> Lens_;
-  std::vector<CPowerDensity*> PowerDensity_;
+  std::list<CLens*> Lens_;
+  std::list<CPowerDensity*> PowerDensity_;
   CSuperRes* SuperRes_;
   CTIRF* TIRF_;
   

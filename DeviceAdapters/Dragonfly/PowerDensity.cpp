@@ -24,11 +24,8 @@ CPowerDensity::CPowerDensity( IIllLensInterface* IllLensInterface, int LensIndex
   RestrictionStatusChangeNotified_( true ),
   RestrictionNotification_( nullptr )
 {
-  MMDragonfly_->LogComponentMessage( "POWER DENSITY: Initialise" );
   Initialise();
-  MMDragonfly_->LogComponentMessage( "POWER DENSITY: Create notification" );
   RestrictionNotification_ = new TPowerDensityNotification( this );
-  MMDragonfly_->LogComponentMessage( "POWER DENSITY: Register notification" );
   IllLensInterface_->RegisterForNotificationOnRangeRestriction( RestrictionNotification_ );
 }
 
@@ -59,9 +56,9 @@ void CPowerDensity::RestrictionNotification()
   RestrictionStatusChangeNotified_ = true;
 }
 
-void CPowerDensity::UpdateAllowedValues()
+bool CPowerDensity::UpdateAllowedValues()
 {
-  if ( !RestrictionStatusChangeNotified_ ) return;
+  if ( !RestrictionStatusChangeNotified_ ) return false;
   RestrictionStatusChangeNotified_ = false;
 
   if ( IllLensInterface_->IsRestrictionEnabled() )
@@ -93,4 +90,5 @@ void CPowerDensity::UpdateAllowedValues()
       vPositionIt++;
     }
   }
+  return true;
 }

@@ -30,7 +30,6 @@ private:
   CDiskStatusMonitor* DiskStatusMonitor_;
   unsigned int CurrentRequestedSpeed_;
 
-  bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
   double CalculateFrameScanTime( unsigned int Speed, unsigned int ScansPerRevolution );
 };
 

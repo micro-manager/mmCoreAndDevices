@@ -29,20 +29,20 @@ public:
   {
     int vMin, vMax;
     bool vRet = TIRFInterface_->GetObliqueAngleLimit( &vMin, &vMax );
-    *Min = vMin / 1000.;
-    *Max = vMax / 1000.;
+    *Min =  vMin / 1000.f;
+    *Max =  vMax / 1000.f;
     return vRet;
   }
   bool Get( float* Value )
   {
     int vValue;
     bool vRet = TIRFInterface_->GetObliqueAngle_mdeg( &vValue );
-    *Value = vValue / 1000.;
+    *Value = vValue / 1000.f;
     return vRet;
   }
   bool Set( float Value )
   {
-    return TIRFInterface_->SetObliqueAngle_mdeg( Value*1000 );
+    return TIRFInterface_->SetObliqueAngle_mdeg( (int)(Value*1000) );
   }
 private:
   ITIRFInterface* TIRFInterface_;

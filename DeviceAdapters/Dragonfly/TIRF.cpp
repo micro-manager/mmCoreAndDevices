@@ -123,11 +123,7 @@ CTIRF::~CTIRF()
 
 int CTIRF::OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
-  if ( Act == MM::BeforeGet )
-  {
-
-  }
-  else if ( Act == MM::AfterSet )
+  if ( Act == MM::AfterSet )
   {
     string vRequestedMode;
     Prop->Get( vRequestedMode );

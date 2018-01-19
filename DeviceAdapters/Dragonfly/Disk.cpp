@@ -39,6 +39,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   {
     throw std::runtime_error( g_DiskSpeedValueReadError );
   }
+  CurrentRequestedSpeed_ = vSpeed;
   vValueRetrieved = DiskInterface_->GetScansPerRevolution( &vScansPerRevolution );
   if ( !vValueRetrieved )
   {
@@ -51,15 +52,16 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   MMDragonfly_->SetPropertyLimits( g_DiskSpeedPropertyName, vMin, vMax );
 
   // Create the MM property for Disk status
-  vAct = new CPropertyAction( this, &CDisk::OnStatusChange );
-  MMDragonfly_->CreateProperty( g_DiskStatusPropertyName, g_DiskStatusStop, MM::String, false, vAct );
-  MMDragonfly_->AddAllowedValue( g_DiskStatusPropertyName, g_DiskStatusStop );
-  MMDragonfly_->AddAllowedValue( g_DiskStatusPropertyName, g_DiskStatusStart );
   // if the disk is spinning, display start as the currently selected option
+  string vStatusValue = g_DiskStatusStop;
   if ( DiskInterface_->IsSpinning() )
   {
-    MMDragonfly_->SetProperty( g_DiskStatusPropertyName, g_DiskStatusStart );
+    vStatusValue = g_DiskStatusStart;
   }
+  vAct = new CPropertyAction( this, &CDisk::OnStatusChange );
+  MMDragonfly_->CreateProperty( g_DiskStatusPropertyName, vStatusValue.c_str(), MM::String, false, vAct );
+  MMDragonfly_->AddAllowedValue( g_DiskStatusPropertyName, g_DiskStatusStop );
+  MMDragonfly_->AddAllowedValue( g_DiskStatusPropertyName, g_DiskStatusStart );
 
   // Create the MM properties for Disk status monitor
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
@@ -79,14 +81,7 @@ CDisk::~CDisk()
 
 int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
-  if ( Act == MM::BeforeGet )
-  {
-    if ( !SetPropertyValueFromDeviceValue( Prop ) )
-    {
-      return DEVICE_ERR;
-    }
-  }
-  else if ( Act == MM::AfterSet )
+  if ( Act == MM::AfterSet )
   {
     long vRequestedSpeed;
     Prop->Get( vRequestedSpeed );
@@ -99,6 +94,7 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
         if ( vRequestedSpeed >= (long)vMin && vRequestedSpeed <= (long)vMax )
         {
           DiskInterface_->SetSpeed( vRequestedSpeed );
+          CurrentRequestedSpeed_ = vRequestedSpeed;
         }
         else
         {
@@ -119,41 +115,9 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
   return DEVICE_OK;
 }
 
-bool CDisk::SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop )
-{
-  bool vValueSet = false;
-  unsigned int vMin, vMax;
-  bool vLimitsRetrieved = DiskInterface_->GetLimits( vMin, vMax );
-  if ( vLimitsRetrieved )
-  {
-    Prop->SetLimits( vMin, vMax );
-    unsigned int vSpeed;
-    if ( DiskInterface_->GetSpeed( vSpeed ) )
-    {
-      Prop->Set( (long)vSpeed );
-      CurrentRequestedSpeed_ = vSpeed;
-      vValueSet = true;
-    }
-    else
-    {
-      MMDragonfly_->LogComponentMessage( g_DiskSpeedValueReadError );
-    }
-  }
-  else
-  {
-    MMDragonfly_->LogComponentMessage( g_DiskSpeedLimitsReadError );
-  }
-
-  return vValueSet;
-}
-
-
 int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
-  if ( Act == MM::BeforeGet )
-  {
-  }
-  else if ( Act == MM::AfterSet )
+  if ( Act == MM::AfterSet )
   {
     string vRequest;
     Prop->Get( vRequest );

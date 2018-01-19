@@ -28,7 +28,7 @@ protected:
   bool SetPosition( unsigned int Position );
   bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
   IFilterSet* GetFilterSet();
-  void UpdateAllowedValues();
+  bool UpdateAllowedValues();
 
 private:
   IIllLensInterface* IllLensInterface_;

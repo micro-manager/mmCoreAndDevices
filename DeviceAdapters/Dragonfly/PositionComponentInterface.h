@@ -22,6 +22,8 @@ public:
   typedef MM::Action<IPositionComponentInterface> CPropertyAction;
 
 protected:
+  typedef std::map<unsigned int, std::string> TPositionNameMap;
+  TPositionNameMap PositionNames_;
   std::string PropertyName_;
   CDragonfly* MMDragonfly_;
 
@@ -32,15 +34,13 @@ protected:
   virtual bool GetLimits( unsigned int& MinPosition, unsigned int&MaxPosition ) = 0;
   virtual IFilterSet* GetFilterSet() = 0;
   
-  virtual void UpdateAllowedValues() {}
+  virtual bool UpdateAllowedValues() { return false; } // return true if allowed values have been updated
 
-  typedef std::map<unsigned int, std::string> TPositionNameMap;
   const TPositionNameMap& GetPositionNameMap() const { return PositionNames_; }
 
 private:
   bool Initialised_;
 
-  TPositionNameMap PositionNames_;
 
   bool RetrievePositionsFromFilterSet();
   bool RetrievePositionsWithoutDescriptions();

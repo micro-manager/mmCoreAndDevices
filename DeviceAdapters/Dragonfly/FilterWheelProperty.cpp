@@ -30,9 +30,20 @@ CFilterWheelProperty::CFilterWheelProperty( IFilterWheelDeviceInterface* FilterW
     throw std::runtime_error( "Failed to read the current " + ComponentName_ + " position" );
   }
 
+  // Retrieve the position name
+  string vCurrentPositionName = "Undefined";
+  if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
+  {
+    vCurrentPositionName = PositionNames_[vPosition];
+  }
+  else
+  {
+    MMDragonfly_->LogComponentMessage( "Current " + ComponentName_ + " position invalid" );
+  }
+
   // Create the MM property
   CPropertyAction* vAct = new CPropertyAction( this, &CFilterWheelProperty::OnPositionChange );
-  MMDragonfly_->CreateProperty( PropertyName_.c_str(), "Undefined", MM::String, false, vAct );
+  MMDragonfly_->CreateProperty( PropertyName_.c_str(), vCurrentPositionName.c_str(), MM::String, false, vAct );
 
   // Populate the possible positions
   TPositionNameMap::const_iterator vIt = PositionNames_.begin();
@@ -42,15 +53,6 @@ CFilterWheelProperty::CFilterWheelProperty( IFilterWheelDeviceInterface* FilterW
     vIt++;
   }
 
-  // Initialise the position
-  if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
-  {
-    MMDragonfly_->SetProperty( PropertyName_.c_str(), PositionNames_[vPosition].c_str() );
-  }
-  else
-  {
-    MMDragonfly_->LogComponentMessage( "Current " + ComponentName_ + " position invalid" );
-  }
 }
 
 CFilterWheelProperty::~CFilterWheelProperty()
@@ -112,11 +114,7 @@ bool CFilterWheelProperty::RetrievePositionsWithoutDescriptions()
 
 int CFilterWheelProperty::OnPositionChange( MM::PropertyBase* Prop, MM::ActionType Act )
 {
-  if ( Act == MM::BeforeGet )
-  {
-    SetPropertyValueFromDevicePosition( Prop );
-  }
-  else if ( Act == MM::AfterSet )
+  if ( Act == MM::AfterSet )
   {
     // Search the requested position in the map of existing positions
     string vRequestedPosition;

@@ -66,7 +66,7 @@ int CTIRFModeFloatSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType
     {
       if ( vRequestedValue >= (double)vMin && vRequestedValue <= (double)vMax )
       {
-        if ( !DeviceWrapper_->Set( vRequestedValue ) )
+        if ( !DeviceWrapper_->Set( (float)vRequestedValue ) )
         {
           float vDeviceValue;
           DeviceWrapper_->Get( &vDeviceValue );

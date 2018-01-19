@@ -21,9 +21,11 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, CD
     throw std::runtime_error( g_ConfocalModeReadError );
   }
 
+  // Create property
   CPropertyAction* vAct = new CPropertyAction( this, &CConfocalMode::OnValueChange );
   MMDragonfly_->CreateProperty( g_ConfocalModePropertyName, "Undefined", MM::String, false, vAct );
 
+  // Populate the possible positions
   if ( ConfocalModeInterface_->IsConfocalModeAvailable( bfmWideField ) )
   {
     MMDragonfly_->AddAllowedValue( g_ConfocalModePropertyName, g_Widefield );
@@ -56,13 +58,14 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, CD
     MMDragonfly_->AddAllowedValue( g_ConfocalModePropertyName, ConfocalHSName_.c_str() );
   }
 
+  // Initialise the mode
   switch ( vCurrentMode )
   {
-  case bfmWideField: MMDragonfly_->SetProperty( g_ConfocalModePropertyName, g_Widefield ); break;
-  case bfmTIRF: MMDragonfly_->SetProperty( g_ConfocalModePropertyName, g_TIRF ); break;
+  case bfmWideField:  MMDragonfly_->SetProperty( g_ConfocalModePropertyName, g_Widefield );             break;
+  case bfmTIRF:       MMDragonfly_->SetProperty( g_ConfocalModePropertyName, g_TIRF );                  break;
   case bfmConfocalHC: MMDragonfly_->SetProperty( g_ConfocalModePropertyName, ConfocalHCName_.c_str() ); break;
   case bfmConfocalHS: MMDragonfly_->SetProperty( g_ConfocalModePropertyName, ConfocalHSName_.c_str() ); break;
-  default: MMDragonfly_->SetProperty( g_ConfocalModePropertyName, "Undefined" ); break;
+  default:            MMDragonfly_->SetProperty( g_ConfocalModePropertyName, "Undefined" );             break;
   }
 
 }

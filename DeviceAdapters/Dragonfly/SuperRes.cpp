@@ -26,10 +26,21 @@ CSuperRes::CSuperRes( ISuperResInterface* SuperResInterface, CDragonfly* MMDrago
   {
     throw runtime_error( "Failed to read the current Super Resolution position" );
   }
+  
+  // Retrieve the current position name
+  string vCurrentPositionName = "Undefined";
+  if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
+  {
+    vCurrentPositionName = PositionNames_[vPosition];
+  }
+  else
+  {
+    MMDragonfly_->LogComponentMessage( "Current Super Resolution position invalid" );
+  }
 
   // Create the MM property
   CPropertyAction* vAct = new CPropertyAction( this, &CSuperRes::OnPositionChange );
-  MMDragonfly_->CreateProperty( g_SuperResPropertyName, "Undefined", MM::String, false, vAct );
+  MMDragonfly_->CreateProperty( g_SuperResPropertyName, vCurrentPositionName.c_str(), MM::String, false, vAct );
 
   // Populate the possible positions
   TPositionNameMap::const_iterator vIt = PositionNames_.begin();
@@ -37,16 +48,6 @@ CSuperRes::CSuperRes( ISuperResInterface* SuperResInterface, CDragonfly* MMDrago
   {
     MMDragonfly_->AddAllowedValue( g_SuperResPropertyName, vIt->second.c_str() );
     vIt++;
-  }
-
-  // Initialise the position
-  if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
-  {
-    MMDragonfly_->SetProperty( g_SuperResPropertyName, PositionNames_[vPosition].c_str() );
-  }
-  else
-  {
-    MMDragonfly_->LogComponentMessage( "Current Super Resolution position invalid" );
   }
 }
 
@@ -86,11 +87,7 @@ bool CSuperRes::RetrievePositions()
 
 int CSuperRes::OnPositionChange( MM::PropertyBase* Prop, MM::ActionType Act )
 {
-  if ( Act == MM::BeforeGet )
-  {
-    SetPropertyValueFromDevicePosition( Prop );
-  }
-  else if ( Act == MM::AfterSet )
+  if ( Act == MM::AfterSet )
   {
     // Search the requested position in the map of existing positions
     string vRequestedPosition;

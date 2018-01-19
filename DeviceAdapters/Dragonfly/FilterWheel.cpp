@@ -53,16 +53,13 @@ void CFilterWheel::CreateModeProperty()
 
   // Create the MM mode property
   CPropertyAction* vAct = new CPropertyAction( this, &CFilterWheel::OnModeChange );
-  MMDragonfly_->CreateProperty( FilterModeProperty_.c_str(), "Undefined", MM::String, false, vAct );
+  MMDragonfly_->CreateProperty( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighQuality ), MM::String, false, vAct );
 
   // Populate the possible modes
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMUnknown ) );
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighSpeed ) );
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighQuality ) );
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMLowVibration ) );
-
-  // Initialise the mode property (enforcing selection to HQ since the one retrieved from the device is Unknown)
-  MMDragonfly_->SetProperty( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighQuality ) );
 }
 
 void CFilterWheel::CreateRFIDStatusProperty()
@@ -144,19 +141,7 @@ string CFilterWheel::ParseDescription( const string& Description )
 
 int CFilterWheel::OnModeChange( MM::PropertyBase* Prop, MM::ActionType Act )
 {
-  if ( Act == MM::BeforeGet )
-  {
-    TFilterWheelMode vMode;
-    if ( FilterWheelMode_->GetMode( vMode ) )
-    {
-      Prop->Set( GetStringFromMode( vMode ) );
-    }
-    else
-    {
-      MMDragonfly_->LogComponentMessage( "Failed to read the current " + FilterModeProperty_ );
-    }
-  }
-  else if ( Act == MM::AfterSet )
+  if ( Act == MM::AfterSet )
   {
     string vNewMode;
     Prop->Get( vNewMode );

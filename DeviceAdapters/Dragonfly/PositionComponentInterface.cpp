@@ -38,9 +38,21 @@ void IPositionComponentInterface::Initialise()
     throw runtime_error( "Failed to read the current " + PropertyName_ + " position" );
   }
 
+
+  // Retrieve the current position name
+  string vCurrentPositionName = "Undefined";
+  if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
+  {
+    vCurrentPositionName = PositionNames_[vPosition];
+  }
+  else
+  {
+    MMDragonfly_->LogComponentMessage( "Current " + PropertyName_ + " position invalid" );
+  }
+
   // Create the MM property
   CPropertyAction* vAct = new CPropertyAction( this, &IPositionComponentInterface::OnPositionChange );
-  MMDragonfly_->CreateProperty( PropertyName_.c_str(), "Undefined", MM::String, false, vAct );
+  MMDragonfly_->CreateProperty( PropertyName_.c_str(), vCurrentPositionName.c_str(), MM::String, false, vAct );
 
   // Populate the possible positions
   TPositionNameMap::const_iterator vIt = PositionNames_.begin();
@@ -48,16 +60,6 @@ void IPositionComponentInterface::Initialise()
   {
     MMDragonfly_->AddAllowedValue( PropertyName_.c_str(), vIt->second.c_str() );
     vIt++;
-  }
-
-  // Initialise the position
-  if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
-  {
-    MMDragonfly_->SetProperty( PropertyName_.c_str(), PositionNames_[vPosition].c_str() );
-  }
-  else
-  {
-    MMDragonfly_->LogComponentMessage( "Current " + PropertyName_ + " position invalid" );
   }
 
   Initialised_ = true;
@@ -123,8 +125,11 @@ int IPositionComponentInterface::OnPositionChange( MM::PropertyBase* Prop, MM::A
 
   if ( Act == MM::BeforeGet )
   {
-    UpdateAllowedValues();
-    SetPropertyValueFromDevicePosition( Prop );
+    if ( UpdateAllowedValues() )
+    {
+      // If allowed values have been updated, read the current property from the device
+      SetPropertyValueFromDevicePosition( Prop );
+    }
   }
   else if ( Act == MM::AfterSet )
   {
