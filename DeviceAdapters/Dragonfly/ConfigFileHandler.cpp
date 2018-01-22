@@ -21,8 +21,7 @@ CConfigFileHandler::CConfigFileHandler( CDragonfly* MMDragonfly )
 {
   FileName_ = "Undefined";
 
-  //TCHAR vPathName[MAX_PATH];
-  //if ( GetTempPath( MAX_PATH, vPathName ) != 0 )
+  // Create property with a default path set to My Documents
   WCHAR vWPathName[MAX_PATH];
   if ( SUCCEEDED( SHGetFolderPathW( NULL, CSIDL_PERSONAL, NULL, 0, vWPathName ) ) ) // CSIDL_PROFILE for users path - CSIDL_PERSONAL for my documents
   {
@@ -32,7 +31,6 @@ CConfigFileHandler::CConfigFileHandler( CDragonfly* MMDragonfly )
   }
   CPropertyAction* vAct = new CPropertyAction( this, &CConfigFileHandler::OnConfigFileChange );
   MMDragonfly_->CreateProperty( g_ConfigFile, FileName_.c_str(), MM::String, false, vAct, true );
-  //RequestedFileName_ = FileName_;
 }
 
 CConfigFileHandler::~CConfigFileHandler()
@@ -46,15 +44,10 @@ int CConfigFileHandler::OnConfigFileChange( MM::PropertyBase* Prop, MM::ActionTy
   if ( Act == MM::BeforeGet )
   {
     Prop->Set( FileName_.c_str() );
-    MMDragonfly_->LogComponentMessage( "Before Get: " + FileName_ );
   }
   else if ( Act == MM::AfterSet )
   {
-    string vNewFileName;
-    Prop->Get( vNewFileName );
-    FileName_ = vNewFileName;
-    //SetFileName( vNewFileName );
-    MMDragonfly_->LogComponentMessage( "After Set: " + vNewFileName );
+    Prop->Get( FileName_ );
   }
   return vRet;
 }
@@ -75,13 +68,7 @@ void CConfigFileHandler::SavePropertyValue( const std::string& PropertyName, con
   SaveConfig();
 }
 
-
-void CConfigFileHandler::SetFileName( const std::string& FileName )
-{
-  RequestedFileName_ = FileName;
-}
-
-int CConfigFileHandler::TestFileName( const std::string& FileName ) const
+int CConfigFileHandler::TestFileAccess( const std::string& FileName ) const
 {
   // Try to write a test section to the file
   if ( !WritePrivateProfileSection( "test", "test=test", FileName.c_str() ) )
@@ -93,54 +80,9 @@ int CConfigFileHandler::TestFileName( const std::string& FileName ) const
   return DEVICE_OK;
 }
 
-int CConfigFileHandler::UpdateFileName()
-{
-  return UpdateFileName( RequestedFileName_ );
-}
-
-int CConfigFileHandler::UpdateFileName( const std::string& FileName )
-{
-  MMDragonfly_->LogComponentMessage( "ConfigFileHandler: Updating file name [ " + FileName + " ]" );
-  bool vNewFileExists = false;
-  bool vNewFileReadWriteAcccess = false;
-  fstream vNewFile( FileName, ios_base::in );
-  if ( vNewFile.is_open() )
-  {
-    vNewFile.close();
-    vNewFileExists = true;
-  }
-  vNewFile.open( FileName, ios_base::app );
-  if ( vNewFile.is_open() )
-  {
-    vNewFile.close();
-    vNewFileReadWriteAcccess = true;
-  }
-  vNewFileReadWriteAcccess = true;
-  if ( !vNewFileReadWriteAcccess )
-  {
-    return ERR_CONFIGFILEIO_ERROR;
-  }
-
-  FileName_ = FileName;
-  if (vNewFileExists )
-  {
-    MMDragonfly_->LogComponentMessage( "ConfigFileHandler: Loading newly set config file since it exists already" );
-    // If new file exists => load configuration from new file
-    LoadConfig();
-  }
-  else
-  {
-    // If new file doesn't exists => save current configuration in the new file
-    MMDragonfly_->LogComponentMessage( "ConfigFileHandler: Saving current config in newly selected file since it doesn't exist" );
-    SaveConfig();
-  }
-
-  return DEVICE_OK;
-}
-
 int CConfigFileHandler::LoadConfig()
 {
-  int vRet = TestFileName( FileName_ );
+  int vRet = TestFileAccess( FileName_ );
   if ( vRet == DEVICE_OK )
   {
     Config_.clear();
@@ -151,27 +93,20 @@ int CConfigFileHandler::LoadConfig()
     vCharsRead = GetPrivateProfileSection( g_SectionName, vBuffer, vBufferSize, FileName_.c_str() );
     if ( ( vCharsRead > 0 ) && ( vCharsRead < ( vBufferSize - 2 ) ) )
     {
-      // buffer contains of format: key1=value1\0key2=value2
-      // walk the buffer extracting values
+      // Buffer contains string of format: key1=value1\0key2=value2
       const char* vSubstr = vBuffer;
-      while ( '\0' != *vSubstr )
+      while ( *vSubstr != '\0' )
       {
-        // length of key-value pair substring
         size_t vSubstrLen = strlen( vSubstr );
-
-        // split substring on '=' char
         const char* vValuePos = strchr( vSubstr, '=' );
-        if ( NULL != vValuePos )
+        if ( vValuePos != nullptr )
         {
-          // todo: remove "magic number" for buffer size 
           char vKey[256] = "";
           char vValue[256] = "";
           strncpy( vKey, vSubstr, vValuePos - vSubstr );
           strncpy( vValue, vValuePos + 1, vSubstrLen - ( vValuePos - vSubstr ) );
           Config_[vKey] = vValue;
         }
-
-        // jump over the current substring plus its null
         vSubstr += ( vSubstrLen + 1 );
       }
     }
@@ -188,7 +123,6 @@ void CConfigFileHandler::SaveConfig()
   map<string, string>::const_iterator vConfigIt = Config_.begin();
   while ( vConfigIt != Config_.end() )
   {
-    //WritePrivateProfileString( _T( "Section 2" ), _T( "Key 2" ), _T( "Hello World" ), _T( "C:\\test.ini" ) );
     if ( !WritePrivateProfileString( g_SectionName, vConfigIt->first.c_str(), vConfigIt->second.c_str(), FileName_.c_str() ) )
     {
       MMDragonfly_->LogComponentMessage( "Failed to write data to Dragonfly ini file. Error returned: " + to_string( GetLastError() ) );
