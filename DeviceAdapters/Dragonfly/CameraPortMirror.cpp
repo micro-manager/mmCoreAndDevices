@@ -1,17 +1,52 @@
 #include "CameraPortMirror.h"
+#include "Dragonfly.h"
+#include "DragonflyStatus.h"
 
 #include "ASDInterface.h"
 
-CCameraPortMirror::CCameraPortMirror( ICameraPortMirrorInterface* CameraPortMirrorInterface, CDragonfly* MMDragonfly )
+const char* const g_RFIDStatusPropertyName = "Camera Port Mirror RFID status";
+
+CCameraPortMirror::CCameraPortMirror( ICameraPortMirrorInterface* CameraPortMirrorInterface, const CDragonflyStatus* DragonflyStatus, CDragonfly* MMDragonfly )
   : IPositionComponentInterface( MMDragonfly, "Camera Port Mirror" ),
   CameraPortMirrorInterface_( CameraPortMirrorInterface ),
-  MMDragonfly_( MMDragonfly )
+  MMDragonfly_( MMDragonfly ),
+  DragonflyStatus_( DragonflyStatus )
 {
   Initialise();
+  // Create and initialise the RFID status property
+  CreateRFIDStatusProperty();
 }
 
 CCameraPortMirror::~CCameraPortMirror()
 {
+}
+
+void CCameraPortMirror::CreateRFIDStatusProperty()
+{
+  if ( DragonflyStatus_ != nullptr )
+  {
+    char vPropertyValue[32];
+    if ( !DragonflyStatus_->IsRFIDPresentForCameraPortMirror() )
+    {
+      strncpy( vPropertyValue, "Not present", 32 );
+    }
+    else
+    {
+      if ( DragonflyStatus_->IsRFIDReadForCameraPortMirror() )
+      {
+        strncpy( vPropertyValue, "Present and Read", 32 );
+      }
+      else
+      {
+        strncpy( vPropertyValue, "Present but Read failed", 32 );
+      }
+    }
+    MMDragonfly_->CreateProperty( g_RFIDStatusPropertyName, vPropertyValue, MM::String, true );
+  }
+  else
+  {
+    throw std::logic_error( "Dragonfly status not initialised before " + PropertyName_ );
+  }
 }
 
 bool CCameraPortMirror::GetPosition( unsigned int& Position )

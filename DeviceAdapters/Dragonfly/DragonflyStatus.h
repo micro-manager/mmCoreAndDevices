@@ -19,6 +19,9 @@ public:
 
   bool IsRFIDPresentForWheel( TWheelIndex WheelIndex ) const;
   bool IsRFIDReadForWheel( TWheelIndex WheelIndex ) const;
+  bool IsRFIDPresentForCameraPortMirror() const;
+  bool IsRFIDReadForCameraPortMirror() const;
+  bool IsExternalDiskSync() const;
 
 private:
   IStatusInterface* StatusInterface_;

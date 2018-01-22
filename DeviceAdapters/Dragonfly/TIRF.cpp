@@ -59,7 +59,20 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   {
     throw runtime_error( "Failed to read the current TIRF bandwidths limits" );
   }
-  
+
+  const char* vTIRFModeName;
+  if ( !GetTIRFModeNameFromIndex( vTIRFMode, &vTIRFModeName ) )
+  {
+    throw runtime_error( "Invalid TIRF mode found on initialisation" );
+  }
+
+  // Create MM property for TIRF mode
+  CPropertyAction* vAct = new CPropertyAction( this, &CTIRF::OnTIRFModeChange );
+  MMDragonfly_->CreateStringProperty( g_TIRFModePropertyName, vTIRFModeName, false, vAct );
+  MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModePenetration );
+  MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModeHILO );
+  MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModeCritical );
+
   // Property for Penetration
   PenetrationWrapper_ = new CPenetrationWrapper( TIRFInterface_ );
   PenetrationProperty_ = new CTIRFModeIntSubProperty( PenetrationWrapper_, MMDragonfly_, "TIRF |  Penetration (nm)" );
@@ -70,23 +83,9 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
   CriticalAngleOffsetWrapper_ = new COffsetWrapper( TIRFInterface_ );
   CriticalAngleOffsetProperty_ = new CTIRFModeIntSubProperty( CriticalAngleOffsetWrapper_, MMDragonfly_, "TIRF |  Critical Angle Offset" );
   
-  // Create MM property for TIRF mode
-  CPropertyAction* vAct = new CPropertyAction( this, &CTIRF::OnTIRFModeChange );
-  MMDragonfly_->CreateStringProperty( g_TIRFModePropertyName, "undefined", false, vAct );
-  MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModePenetration );
-  MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModeHILO );
-  MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModeCritical );
-  const char* vTIRFModeName;
-  if ( GetTIRFModeNameFromIndex( vTIRFMode, &vTIRFModeName ) )
-  {
-    MMDragonfly_->SetProperty( g_TIRFModePropertyName, vTIRFModeName );
-    UpdateTIRFModeReadOnlyStatus( vTIRFModeName );
-  }
-  else
-  {
-    MMDragonfly_->LogComponentMessage( "Current TIRF mode value invalid" );
-  }
-  
+  // Set TIRF sub properties read/write status based on TIRF mode
+  UpdateTIRFModeReadOnlyStatus( vTIRFModeName );
+
   // Create MM properties for optical pathway
   MMDragonfly_->CreateIntegerProperty( g_MagnificationPropertyName, Magnification_, true );
   MMDragonfly_->CreateFloatProperty( g_NumericalAperturePropertyName, NumericalAperture_, true );

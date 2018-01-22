@@ -43,3 +43,30 @@ bool CDragonflyStatus::IsRFIDReadForWheel( TWheelIndex WheelIndex ) const
   }
   return vStatus;
 }
+
+bool CDragonflyStatus::IsRFIDPresentForCameraPortMirror() const
+{
+  bool vStatus = false;
+  unsigned int vStatusCode;
+  StatusInterface_->GetStatusCode( &vStatusCode );
+  vStatus = ( vStatusCode & 0x100 ) != 0;
+  return vStatus;
+}
+
+bool CDragonflyStatus::IsRFIDReadForCameraPortMirror() const
+{
+  bool vStatus = false;
+  unsigned int vStatusCode;
+  StatusInterface_->GetStatusCode( &vStatusCode );
+  vStatus = !( vStatusCode & 0x200 );
+  return vStatus;
+}
+
+bool CDragonflyStatus::IsExternalDiskSync() const
+{
+  bool vStatus = false;
+  unsigned int vStatusCode;
+  StatusInterface_->GetStatusCode( &vStatusCode );
+  vStatus = ( vStatusCode & 0x1 );
+  return vStatus;
+}

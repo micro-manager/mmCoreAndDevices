@@ -11,13 +11,14 @@
 
 #include "PositionComponentInterface.h"
 
+class CDragonflyStatus;
 class CDragonfly;
 class ICameraPortMirrorInterface;
 
 class CCameraPortMirror : public IPositionComponentInterface
 {
 public:
-  CCameraPortMirror( ICameraPortMirrorInterface* CameraPortMirrorInterface, CDragonfly* MMDragonfly );
+  CCameraPortMirror( ICameraPortMirrorInterface* CameraPortMirrorInterface, const CDragonflyStatus* DragonflyStatus, CDragonfly* MMDragonfly );
   ~CCameraPortMirror();
 
 protected:
@@ -29,6 +30,10 @@ protected:
 private:
   ICameraPortMirrorInterface* CameraPortMirrorInterface_;
   CDragonfly* MMDragonfly_;
+  const CDragonflyStatus* DragonflyStatus_;
+  const std::string RFIDStatusProperty_;
+
+  void CreateRFIDStatusProperty();
 };
 
 #endif

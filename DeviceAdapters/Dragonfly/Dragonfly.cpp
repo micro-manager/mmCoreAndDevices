@@ -32,6 +32,7 @@ const char* const g_DevicePort = "COM Port";
 const char* const g_DeviceSerialNumber = "Serial Number";
 const char* const g_DeviceProductID = "Product ID";
 const char* const g_DeviceSoftwareVersion = "Software Version";
+const char* const g_ExternalDiskStatus = "External Disk Sync status";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -331,6 +332,26 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
+  // External Disk Sync status
+  if ( DragonflyStatus_ != nullptr )
+  {
+    char vPropertyValue[32];
+    if ( DragonflyStatus_->IsExternalDiskSync() )
+    {
+      strncpy( vPropertyValue, "Synchronised", 32 );
+    }
+    else
+    {
+      strncpy( vPropertyValue, "Not synchronised", 32 );
+    }
+    CreateProperty( g_ExternalDiskStatus, vPropertyValue, MM::String, true );
+  }
+  else
+  {
+    throw std::logic_error( "Dragonfly status not initialised before External Disk Status" );
+  }
+
+
   // Dichroic mirror component
   vRet = CreateDichroicMirror( vASDInterface );
   if ( vRet != DEVICE_OK )
@@ -586,7 +607,7 @@ int CDragonfly::CreateCameraPortMirror( IASDInterface2* ASDInterface )
       ICameraPortMirrorInterface* vCameraPortMirror = ASDInterface->GetCameraPortMirror();
       if ( vCameraPortMirror != nullptr )
       {
-        CameraPortMirror_ = new CCameraPortMirror( vCameraPortMirror, this );
+        CameraPortMirror_ = new CCameraPortMirror( vCameraPortMirror, DragonflyStatus_, this );
       }
       else
       {
