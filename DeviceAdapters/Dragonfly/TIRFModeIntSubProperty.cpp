@@ -1,15 +1,18 @@
 #include "TIRFModeIntSubProperty.h"
 #include "Dragonfly.h"
+#include "ConfigFileHandlerInterface.h"
 
 #include <stdexcept>
 
 using namespace std;
 
-CTIRFModeIntSubProperty::CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const string& PropertyName )
+CTIRFModeIntSubProperty::CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapper, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly, const string& PropertyName )
   : MMDragonfly_( MMDragonfly ),
+  ConfigFileHandler_( ConfigFileHandler ),
   DeviceWrapper_( DeviceWrapper ),
   PropertyName_( PropertyName ),
-  MMProp_( nullptr )
+  MMProp_( nullptr ),
+  BufferedValue_( 0 )
 {
   int vMin, vMax, vValue;
   bool vValueRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
@@ -17,11 +20,30 @@ CTIRFModeIntSubProperty::CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapp
   {
     throw std::runtime_error( "Failed to retrieve " + PropertyName_ + " limits" );
   }
-  vValueRetrieved = DeviceWrapper_->Get( &vValue );
+  string vValueFromConfigFile;
+  vValueRetrieved = ConfigFileHandler_->LoadPropertyValue( PropertyName_, vValueFromConfigFile );
+  if ( vValueRetrieved )
+  {
+    try
+    {
+      vValue = stoi( vValueFromConfigFile );
+    }
+    catch ( exception& e )
+    {
+      MMDragonfly_->LogComponentMessage( "Error raised from stoi() when reading value from config file for " + PropertyName_ + ". Loading value from device instead. Exception raised: " + e.what() );
+      vValueRetrieved = false;
+    }
+  }
   if ( !vValueRetrieved )
   {
-    throw std::runtime_error( "Failed to retrieve the current value for " + PropertyName_ );
+    vValueRetrieved = DeviceWrapper_->Get( &vValue );
+    if ( !vValueRetrieved )
+    {
+      throw std::runtime_error( "Failed to retrieve the current value for " + PropertyName_ );
+    }
+    ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vValue ) );
   }
+  BufferedValue_ = vValue;
 
   // Create the MM property for Disk speed
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRFModeIntSubProperty::OnChange );
@@ -72,6 +94,12 @@ int CTIRFModeIntSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType A
           DeviceWrapper_->Get( &vDeviceValue );
           Prop->Set( (long)vDeviceValue );
         }
+        else
+        {
+          BufferedValue_ = vRequestedValue;
+          // Save the value requested by the user to the config file
+          ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vRequestedValue ) );
+        }
       }
       else
       {
@@ -112,4 +140,18 @@ bool CTIRFModeIntSubProperty::SetPropertyValueFromDeviceValue( MM::PropertyBase*
   }
 
   return vValueSet;
+}
+
+void CTIRFModeIntSubProperty::ModeSelected()
+{
+  if ( MMProp_ )
+  {
+    long vCurrentValue;
+    MMProp_->Get( vCurrentValue );
+    if ( BufferedValue_ != vCurrentValue )
+    {
+      MMProp_->Set( (long)BufferedValue_ );
+      DeviceWrapper_->Set( BufferedValue_ );
+    }
+  }
 }

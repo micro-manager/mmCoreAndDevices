@@ -27,6 +27,7 @@ class CLens;
 class CPowerDensity;
 class CSuperRes;
 class CTIRF;
+class CConfigFileHandler;
 
 class IASDLoader;
 class IASDInterface;
@@ -48,6 +49,7 @@ class IASDInterface3;
 #define ERR_POWERDENSITY_INIT 113
 #define ERR_SUPERRES_INIT 114
 #define ERR_TIRF_INIT 115
+#define ERR_CONFIGFILEIO_ERROR 116
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -83,6 +85,7 @@ private:
   std::list<CPowerDensity*> PowerDensity_;
   CSuperRes* SuperRes_;
   CTIRF* TIRF_;
+  CConfigFileHandler* ConfigFile_;
   
   IASDLoader* ASDLoader_;
 

@@ -1,12 +1,14 @@
 #include "TIRFModeFloatSubProperty.h"
 #include "Dragonfly.h"
+#include "ConfigFileHandlerInterface.h"
 
 #include <stdexcept>
 
 using namespace std;
 
-CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const string& PropertyName )
+CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* DeviceWrapper, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly, const string& PropertyName )
   : MMDragonfly_( MMDragonfly ),
+  ConfigFileHandler_( ConfigFileHandler ),
   DeviceWrapper_( DeviceWrapper ),
   PropertyName_( PropertyName ),
   MMProp_( nullptr )
@@ -17,11 +19,30 @@ CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* Devic
   {
     throw std::runtime_error( "Failed to retrieve " + PropertyName_ + " limits" );
   }
-  vValueRetrieved = DeviceWrapper_->Get( &vValue );
+  string vValueFromConfigFile;
+  vValueRetrieved = ConfigFileHandler_->LoadPropertyValue( PropertyName_, vValueFromConfigFile );
+  if ( vValueRetrieved )
+  {
+    try
+    {
+      vValue = stof( vValueFromConfigFile );
+    }
+    catch ( exception& e )
+    {
+      MMDragonfly_->LogComponentMessage( "Error raised from stof() when reading value from config file for " + PropertyName_ + ". Loading value from device instead. Exception raised: " + e.what() );
+      vValueRetrieved = false;
+    }
+  }
   if ( !vValueRetrieved )
   {
-    throw std::runtime_error( "Failed to retrieve the current value for " + PropertyName_ );
+    vValueRetrieved = DeviceWrapper_->Get( &vValue );
+    if ( !vValueRetrieved )
+    {
+      throw std::runtime_error( "Failed to retrieve the current value for " + PropertyName_ );
+    }
+    ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vValue ) );
   }
+  BufferedValue_ = vValue;
 
   // Create the MM property for Disk speed
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRFModeFloatSubProperty::OnChange );
@@ -72,6 +93,12 @@ int CTIRFModeFloatSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType
           DeviceWrapper_->Get( &vDeviceValue );
           Prop->Set( (double)vDeviceValue );
         }
+        else
+        {
+          BufferedValue_ = (float) vRequestedValue;
+          // Save the value requested by the user to the config file
+          ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vRequestedValue ) );
+        }
       }
       else
       {
@@ -112,4 +139,18 @@ bool CTIRFModeFloatSubProperty::SetPropertyValueFromDeviceValue( MM::PropertyBas
   }
 
   return vValueSet;
+}
+
+void CTIRFModeFloatSubProperty::ModeSelected()
+{
+  if ( MMProp_ )
+  {
+    double vCurrentValue;
+    MMProp_->Get( vCurrentValue );
+    if ( BufferedValue_ != vCurrentValue )
+    {
+      MMProp_->Set( (double)BufferedValue_ );
+      DeviceWrapper_->Set( BufferedValue_ );
+    }
+  }
 }

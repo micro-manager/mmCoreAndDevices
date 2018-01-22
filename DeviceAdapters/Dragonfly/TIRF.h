@@ -16,11 +16,12 @@ class CTIRFModeFloatSubProperty;
 class CPenetrationWrapper;
 class CHILOObliqueAngleWrapper;
 class COffsetWrapper;
+class IConfigFileHandler;
 
 class CTIRF
 {
 public:
-  CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly );
+  CTIRF( ITIRFInterface* TIRFInterface, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly );
   ~CTIRF();
   typedef MM::Action<CTIRF> CPropertyAction;
   int OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act );
@@ -29,6 +30,7 @@ public:
 
 private:
   CDragonfly* MMDragonfly_;
+  IConfigFileHandler* ConfigFileHandler_;
   ITIRFInterface* TIRFInterface_;
   int Magnification_, ScopeID_;
   double NumericalAperture_, RefractiveIndex_;

@@ -2,6 +2,7 @@
 #include "Dragonfly.h"
 #include "FilterWheelProperty.h"
 #include "DragonflyStatus.h"
+#include "ConfigFileHandlerInterface.h"
 
 #include <stdexcept>
 
@@ -12,11 +13,12 @@ const char* const g_HighSpeedMode = "High Speed";
 const char* const g_HighQualityMode = "High Quality";
 const char* const g_LowVibrationMode = "Low Vibration";
 
-CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* FilterWheelInterface, const CDragonflyStatus* DragonflyStatus, CDragonfly* MMDragonfly )
+CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* FilterWheelInterface, const CDragonflyStatus* DragonflyStatus, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly )
   : WheelIndex_( WheelIndex ),
   FilterWheelInterface_( FilterWheelInterface ),
   FilterWheelMode_( nullptr ),
   DragonflyStatus_( DragonflyStatus ),
+  ConfigFileHandler_( ConfigFileHandler ),
   MMDragonfly_( MMDragonfly ),
   ComponentName_( "Filter Wheel " + to_string( WheelIndex ) ),
   FilterModeProperty_( ComponentName_ + " mode" ),
@@ -45,18 +47,31 @@ void CFilterWheel::CreateModeProperty()
   {
     throw std::runtime_error( "Failed to retrieve the mode's interface for " + ComponentName_ );
   }
-  TFilterWheelMode vMode;
-  if ( !FilterWheelMode_->GetMode( vMode ) )
+
+  string vMode;
+  bool vModeLoadedFromFile = ConfigFileHandler_->LoadPropertyValue( FilterModeProperty_, vMode );
+  if ( vModeLoadedFromFile )
   {
-    throw std::runtime_error( "Failed to retrieve the mode of " + ComponentName_ );
+    // Test the validity of the loaded value
+    int vModeInteger = GetModeFromString( vMode );
+    if ( vModeInteger == FWMUnknown )
+    {
+      vModeLoadedFromFile = false;
+      MMDragonfly_->LogComponentMessage( "Value loaded from config ini file for " + FilterModeProperty_ + " is invalid. Initialising value with default." );
+      MMDragonfly_->LogComponentMessage( "Value loaded [" + vMode + "]" ); // Logging the loaded value in a separate call in case the string is garbage
+    }
+  }
+  if ( !vModeLoadedFromFile )
+  {
+    vMode = GetStringFromMode( FWMHighQuality );
+    ConfigFileHandler_->SavePropertyValue( FilterModeProperty_, vMode );
   }
 
   // Create the MM mode property
   CPropertyAction* vAct = new CPropertyAction( this, &CFilterWheel::OnModeChange );
-  MMDragonfly_->CreateProperty( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighQuality ), MM::String, false, vAct );
+  MMDragonfly_->CreateProperty( FilterModeProperty_.c_str(), vMode.c_str(), MM::String, false, vAct );
 
   // Populate the possible modes
-  MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMUnknown ) );
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighSpeed ) );
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighQuality ) );
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMLowVibration ) );
@@ -146,6 +161,7 @@ int CFilterWheel::OnModeChange( MM::PropertyBase* Prop, MM::ActionType Act )
     string vNewMode;
     Prop->Get( vNewMode );
     FilterWheelMode_->SetMode( GetModeFromString( vNewMode ) );
+    ConfigFileHandler_->SavePropertyValue( FilterModeProperty_, vNewMode );
   }
   return DEVICE_OK;
 }

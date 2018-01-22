@@ -11,6 +11,7 @@
 #include "ComponentInterface.h"
 
 class CDragonfly;
+class IConfigFileHandler;
 
 
 class CFloatDeviceWrapper
@@ -52,17 +53,20 @@ private:
 class CTIRFModeFloatSubProperty
 {
 public:
-  CTIRFModeFloatSubProperty( CFloatDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const std::string& PropertyName );
+  CTIRFModeFloatSubProperty( CFloatDeviceWrapper* DeviceWrapper, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly, const std::string& PropertyName );
   ~CTIRFModeFloatSubProperty();
   typedef MM::Action<CTIRFModeFloatSubProperty> CPropertyAction;
   int OnChange( MM::PropertyBase * Prop, MM::ActionType Act );
   void SetReadOnly( bool ReadOnly );
+  void ModeSelected();
 
 private:
   CDragonfly* MMDragonfly_;
+  IConfigFileHandler* ConfigFileHandler_;
   CFloatDeviceWrapper* DeviceWrapper_;
   std::string PropertyName_;
   MM::Property* MMProp_;
+  float BufferedValue_;
 
   bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
 };

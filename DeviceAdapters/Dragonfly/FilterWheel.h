@@ -16,11 +16,12 @@
 class CDragonflyStatus;
 class CDragonfly;
 class CFilterWheelProperty;
+class IConfigFileHandler;
 
 class CFilterWheel : public IFilterWheelDeviceInterface
 {
 public:
-  CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* FilterWheelInterface, const CDragonflyStatus* DragonflyStatus, CDragonfly* MMDragonfly );
+  CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* FilterWheelInterface, const CDragonflyStatus* DragonflyStatus, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly );
   ~CFilterWheel();
 
   int OnModeChange( MM::PropertyBase * Prop, MM::ActionType Act );
@@ -39,6 +40,7 @@ private:
   IFilterWheelModeInterface* FilterWheelMode_;
   const CDragonflyStatus* DragonflyStatus_;
   CDragonfly* MMDragonfly_;
+  IConfigFileHandler* ConfigFileHandler_;
   CFilterWheelProperty* FilterWheelProperty_;
 
   const std::string ComponentName_;

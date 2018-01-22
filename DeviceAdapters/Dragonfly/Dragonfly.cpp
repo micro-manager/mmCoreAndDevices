@@ -18,6 +18,7 @@
 #include "PowerDensity.h"
 #include "SuperRes.h"
 #include "TIRF.h"
+#include "ConfigFileHandler.h"
 
 #include "ASDInterface.h"
 
@@ -85,7 +86,8 @@ CDragonfly::CDragonfly()
   Aperture_( nullptr ),
   CameraPortMirror_( nullptr ),
   SuperRes_( nullptr ),
-  TIRF_( nullptr )
+  TIRF_( nullptr ),
+  ConfigFile_( nullptr )
 {
   InitializeDefaultErrorMessages();
 
@@ -122,6 +124,8 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_SUPERRES_INIT, vMessage.c_str() );
   vMessage = "TIRF initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_TIRF_INIT, vMessage.c_str() );
+  vMessage = "Can't write to Dragonfly configuration file. Please select a file for which you have read and write access.";
+  SetErrorText( ERR_CONFIGFILEIO_ERROR, vMessage.c_str() );
 
   // Connect to ASD wrapper
   try
@@ -157,10 +161,13 @@ CDragonfly::CDragonfly()
     LogMessage( "Error creating " + string( g_DevicePort ) + " property" );
   }
 
+  // Config file property
+  ConfigFile_ = new CConfigFileHandler( this );
 }
 
 CDragonfly::~CDragonfly()
 {
+  delete ConfigFile_;
   delete ASDWrapper_;
 }
 
@@ -176,8 +183,15 @@ int CDragonfly::Initialize()
     return DEVICE_OK;
   }
 
+  // Load Config file
+  int vRet = ConfigFile_->LoadConfig();
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
   // Description property
-  int vRet = CreateProperty( MM::g_Keyword_Description, g_DeviceDescription, MM::String, true );
+  vRet = CreateProperty( MM::g_Keyword_Description, g_DeviceDescription, MM::String, true );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -434,7 +448,7 @@ int CDragonfly::InitializeComponents()
   {
     return vRet;
   }
-
+  
   return DEVICE_OK;
 }
 
@@ -499,7 +513,7 @@ int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& F
       IFilterWheelInterface* vASDFilterWheel = ASDInterface->GetFilterWheel( WheelIndex );
       if ( vASDFilterWheel != nullptr )
       {
-        FilterWheel = new CFilterWheel( WheelIndex, vASDFilterWheel, DragonflyStatus_, this );
+        FilterWheel = new CFilterWheel( WheelIndex, vASDFilterWheel, DragonflyStatus_, ConfigFile_, this );
       }
       else
       {
@@ -724,7 +738,7 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
       ITIRFInterface* vTIRF = ASDInterface->GetTIRF();
       if ( vTIRF != nullptr )
       {
-        TIRF_ = new CTIRF( vTIRF, this );
+        TIRF_ = new CTIRF( vTIRF, ConfigFile_, this );
       }
       else
       {

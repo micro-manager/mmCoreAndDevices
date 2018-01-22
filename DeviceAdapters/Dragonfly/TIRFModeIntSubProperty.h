@@ -11,6 +11,7 @@
 #include "ComponentInterface.h"
 
 class CDragonfly;
+class IConfigFileHandler;
 
 
 class CIntDeviceWrapper
@@ -64,17 +65,20 @@ private:
 class CTIRFModeIntSubProperty
 {
 public:
-  CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapper, CDragonfly* MMDragonfly, const std::string& PropertyName );
+  CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapper, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly, const std::string& PropertyName );
   ~CTIRFModeIntSubProperty();
   typedef MM::Action<CTIRFModeIntSubProperty> CPropertyAction;
   int OnChange( MM::PropertyBase * Prop, MM::ActionType Act );
   void SetReadOnly( bool ReadOnly );
+  void ModeSelected();
 
 private:
   CDragonfly* MMDragonfly_;
+  IConfigFileHandler* ConfigFileHandler_;
   CIntDeviceWrapper* DeviceWrapper_;
   std::string PropertyName_;
   MM::Property* MMProp_;
+  int BufferedValue_;
 
   bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
 };

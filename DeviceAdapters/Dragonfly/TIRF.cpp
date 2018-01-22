@@ -26,8 +26,9 @@ const char* const g_ScopeZeiss = "Zeiss";
 const char* const g_MinBandwidthPropertyName = "TIRF | Min Wavelength";
 const char* const g_MaxBandwidthPropertyName = "TIRF | Max Wavelength";
 
-CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
+CTIRF::CTIRF( ITIRFInterface* TIRFInterface, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly )
   : MMDragonfly_( MMDragonfly ),
+  ConfigFileHandler_( ConfigFileHandler ),
   TIRFInterface_( TIRFInterface ),
   PenetrationProperty_( nullptr ),
   PenetrationWrapper_( nullptr ),
@@ -75,13 +76,13 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly )
 
   // Property for Penetration
   PenetrationWrapper_ = new CPenetrationWrapper( TIRFInterface_ );
-  PenetrationProperty_ = new CTIRFModeIntSubProperty( PenetrationWrapper_, MMDragonfly_, "TIRF |  Penetration (nm)" );
+  PenetrationProperty_ = new CTIRFModeIntSubProperty( PenetrationWrapper_, ConfigFileHandler_, MMDragonfly_, "TIRF |  Penetration (nm)" );
   // Property for Oblique Angle
   HILOObliqueAngleWrapper_ = new CHILOObliqueAngleWrapper( TIRFInterface_ );
-  HILOObliqueAngleProperty_ = new CTIRFModeFloatSubProperty( HILOObliqueAngleWrapper_, MMDragonfly_, "TIRF |  HiLo Oblique Angle (deg)" );
+  HILOObliqueAngleProperty_ = new CTIRFModeFloatSubProperty( HILOObliqueAngleWrapper_, ConfigFileHandler_, MMDragonfly_, "TIRF |  HiLo Oblique Angle (deg)" );
   // Property for Offset
   CriticalAngleOffsetWrapper_ = new COffsetWrapper( TIRFInterface_ );
-  CriticalAngleOffsetProperty_ = new CTIRFModeIntSubProperty( CriticalAngleOffsetWrapper_, MMDragonfly_, "TIRF |  Critical Angle Offset" );
+  CriticalAngleOffsetProperty_ = new CTIRFModeIntSubProperty( CriticalAngleOffsetWrapper_, ConfigFileHandler_, MMDragonfly_, "TIRF |  Critical Angle Offset" );
   
   // Set TIRF sub properties read/write status based on TIRF mode
   UpdateTIRFModeReadOnlyStatus( vTIRFModeName );
@@ -241,13 +242,16 @@ void CTIRF::UpdateTIRFModeReadOnlyStatus( const string& TIRFModeName )
   if ( TIRFModeName == g_TIRFModePenetration )
   {
     PenetrationProperty_->SetReadOnly( false );
+    PenetrationProperty_->ModeSelected();
   }
   else if ( TIRFModeName == g_TIRFModeHILO )
   {
     HILOObliqueAngleProperty_->SetReadOnly( false );
+    HILOObliqueAngleProperty_->ModeSelected();
   }
   else if ( TIRFModeName == g_TIRFModeCritical )
   {
     CriticalAngleOffsetProperty_->SetReadOnly( false );
+    CriticalAngleOffsetProperty_->ModeSelected();
   }
 }
