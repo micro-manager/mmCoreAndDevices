@@ -13,7 +13,7 @@ CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* Devic
   PropertyName_( PropertyName ),
   MMProp_( nullptr )
 {
-  float vMin, vMax, vValue;
+  float vMin, vMax, vValue = 0;
   bool vValueRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
   if ( !vValueRetrieved )
   {
@@ -56,7 +56,7 @@ CTIRFModeFloatSubProperty::~CTIRFModeFloatSubProperty()
 {
 }
 
-void CTIRFModeFloatSubProperty::SetReadOnly( bool ReadOnly )
+void CTIRFModeFloatSubProperty::SetReadOnly( bool /*ReadOnly*/ )
 {
   if ( MMProp_ )
   {

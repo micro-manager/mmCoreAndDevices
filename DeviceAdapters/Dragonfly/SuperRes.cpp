@@ -40,7 +40,11 @@ CSuperRes::CSuperRes( ISuperResInterface* SuperResInterface, CDragonfly* MMDrago
 
   // Create the MM property
   CPropertyAction* vAct = new CPropertyAction( this, &CSuperRes::OnPositionChange );
-  MMDragonfly_->CreateProperty( g_SuperResPropertyName, vCurrentPositionName.c_str(), MM::String, false, vAct );
+  int vRet = MMDragonfly_->CreateProperty( g_SuperResPropertyName, vCurrentPositionName.c_str(), MM::String, false, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + string( g_SuperResPropertyName ) + " property" );
+  }
 
   // Populate the possible positions
   TPositionNameMap::const_iterator vIt = PositionNames_.begin();

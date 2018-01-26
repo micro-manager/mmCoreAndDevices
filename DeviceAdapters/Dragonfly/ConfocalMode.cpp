@@ -23,7 +23,12 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, CD
 
   // Create property
   CPropertyAction* vAct = new CPropertyAction( this, &CConfocalMode::OnValueChange );
-  MMDragonfly_->CreateProperty( g_ConfocalModePropertyName, "Undefined", MM::String, false, vAct );
+  int vRet = MMDragonfly_->CreateProperty( g_ConfocalModePropertyName, "Undefined", MM::String, false, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + string( g_ConfocalModePropertyName ) + " property" );
+  }
+
 
   // Populate the possible positions
   if ( ConfocalModeInterface_->IsConfocalModeAvailable( bfmWideField ) )

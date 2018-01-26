@@ -14,7 +14,7 @@ CTIRFModeIntSubProperty::CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapp
   MMProp_( nullptr ),
   BufferedValue_( 0 )
 {
-  int vMin, vMax, vValue;
+  int vMin, vMax, vValue = 0;
   bool vValueRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
   if ( !vValueRetrieved )
   {
@@ -57,7 +57,7 @@ CTIRFModeIntSubProperty::~CTIRFModeIntSubProperty()
 {
 }
 
-void CTIRFModeIntSubProperty::SetReadOnly( bool ReadOnly )
+void CTIRFModeIntSubProperty::SetReadOnly( bool /*ReadOnly*/ )
 {
   if ( MMProp_ )
   {

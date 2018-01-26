@@ -30,7 +30,11 @@ CConfigFileHandler::CConfigFileHandler( CDragonfly* MMDragonfly )
     FileName_ = FileName_ + PATH_SEPARATOR + string( g_DefaultConfigFileName );
   }
   CPropertyAction* vAct = new CPropertyAction( this, &CConfigFileHandler::OnConfigFileChange );
-  MMDragonfly_->CreateProperty( g_ConfigFile, FileName_.c_str(), MM::String, false, vAct, true );
+  int vRet = MMDragonfly_->CreateProperty( g_ConfigFile, FileName_.c_str(), MM::String, false, vAct, true );
+  if ( vRet != DEVICE_OK )
+  {
+    throw std::runtime_error( "Error creating Configuration File path property" );
+  }
 }
 
 CConfigFileHandler::~CConfigFileHandler()

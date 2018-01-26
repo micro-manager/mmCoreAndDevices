@@ -50,6 +50,8 @@ class IASDInterface3;
 #define ERR_SUPERRES_INIT 114
 #define ERR_TIRF_INIT 115
 #define ERR_CONFIGFILEIO_ERROR 116
+#define ERR_COMPORTPROPERTY_CREATION 117
+#define ERR_CONFIGFILEPROPERTY_CREATION 118
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -68,9 +70,9 @@ public:
   void LogComponentMessage( const std::string& Message );
 
 private:
-  bool ASDLibraryConnected_;
   bool Initialized_;
   std::string Port_;
+  int ConstructionReturnCode_;
 
   CASDWrapper* ASDWrapper_;
   CDichroicMirror* DichroicMirror_;

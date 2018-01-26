@@ -43,7 +43,11 @@ CFilterWheelProperty::CFilterWheelProperty( IFilterWheelDeviceInterface* FilterW
 
   // Create the MM property
   CPropertyAction* vAct = new CPropertyAction( this, &CFilterWheelProperty::OnPositionChange );
-  MMDragonfly_->CreateProperty( PropertyName_.c_str(), vCurrentPositionName.c_str(), MM::String, false, vAct );
+  int vRet = MMDragonfly_->CreateProperty( PropertyName_.c_str(), vCurrentPositionName.c_str(), MM::String, false, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + PropertyName_ + " property" );
+  }
 
   // Populate the possible positions
   TPositionNameMap::const_iterator vIt = PositionNames_.begin();

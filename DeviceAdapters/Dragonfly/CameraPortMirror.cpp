@@ -41,7 +41,11 @@ void CCameraPortMirror::CreateRFIDStatusProperty()
         strncpy( vPropertyValue, "Present but Read failed", 32 );
       }
     }
-    MMDragonfly_->CreateProperty( g_RFIDStatusPropertyName, vPropertyValue, MM::String, true );
+    int vRet = MMDragonfly_->CreateProperty( g_RFIDStatusPropertyName, vPropertyValue, MM::String, true );
+    if ( vRet != DEVICE_OK )
+    {
+      throw std::runtime_error( "Error creating " + std::string(g_RFIDStatusPropertyName) +  " property" );
+    }
   }
   else
   {

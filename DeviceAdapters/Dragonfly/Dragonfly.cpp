@@ -32,6 +32,7 @@ const char* const g_DeviceDescription = "Andor Dragonfly Device Adapter";
 const char* const g_DevicePort = "COM Port";
 const char* const g_DeviceSerialNumber = "Serial Number";
 const char* const g_DeviceProductID = "Product ID";
+const char* const g_DeviceModelID = "Model ID";
 const char* const g_DeviceSoftwareVersion = "Software Version";
 const char* const g_ExternalDiskStatus = "External Disk Sync status";
 
@@ -74,9 +75,9 @@ MODULE_API void DeleteDevice( MM::Device * Device )
 
 CDragonfly::CDragonfly()
   : Initialized_( false ),
+  ConstructionReturnCode_( DEVICE_OK ),
   ASDWrapper_( nullptr ),
   ASDLoader_( nullptr ),
-  ASDLibraryConnected_( false ),
   DichroicMirror_( nullptr ),
   FilterWheel1_( nullptr ),
   FilterWheel2_( nullptr ),
@@ -124,14 +125,14 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_SUPERRES_INIT, vMessage.c_str() );
   vMessage = "TIRF initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_TIRF_INIT, vMessage.c_str() );
-  vMessage = "Can't write to Dragonfly configuration file. Please select a file for which you have read and write access.";
-  SetErrorText( ERR_CONFIGFILEIO_ERROR, vMessage.c_str() );
+  SetErrorText( ERR_CONFIGFILEIO_ERROR, "Can't write to Dragonfly configuration file. Please select a file for which you have read and write access." );
+  SetErrorText( ERR_COMPORTPROPERTY_CREATION, "Error creating COM Port property" );
+  SetErrorText( ERR_CONFIGFILEPROPERTY_CREATION, "Error creating Configuration File path property" );
 
   // Connect to ASD wrapper
   try
   {
     ASDWrapper_ = new CASDWrapper();
-    ASDLibraryConnected_ = true;
   }
   catch ( exception& vException )
   {
@@ -139,6 +140,7 @@ CDragonfly::CDragonfly()
     vMessage = "Error loading the ASD library. Caught Exception with message: ";
     vMessage += vException.what();
     LogMessage( vMessage );
+    ConstructionReturnCode_ = ERR_LIBRARY_LOAD;
   }
 
   // COM Port property
@@ -158,11 +160,18 @@ CDragonfly::CDragonfly()
   }
   else
   {
-    LogMessage( "Error creating " + string( g_DevicePort ) + " property" );
+    ConstructionReturnCode_ = ERR_COMPORTPROPERTY_CREATION;
   }
 
   // Config file property
-  ConfigFile_ = new CConfigFileHandler( this );
+  try
+  {
+    ConfigFile_ = new CConfigFileHandler( this );
+  }
+  catch ( std::exception& )
+  {
+    ConstructionReturnCode_ = ERR_CONFIGFILEPROPERTY_CREATION;
+  }
 }
 
 CDragonfly::~CDragonfly()
@@ -173,9 +182,9 @@ CDragonfly::~CDragonfly()
 
 int CDragonfly::Initialize()
 {
-  if ( !ASDLibraryConnected_ )
+  if ( ConstructionReturnCode_ != DEVICE_OK )
   {
-    return ERR_LIBRARY_LOAD;
+    return ConstructionReturnCode_;
   }
 
   if ( Initialized_ )
@@ -190,28 +199,20 @@ int CDragonfly::Initialize()
     return vRet;
   }
 
-  // Description property
-  vRet = CreateProperty( MM::g_Keyword_Description, g_DeviceDescription, MM::String, true );
+  // Remove the leading space from the port name if there's any before connecting
+  size_t vFirstValidCharacter = Port_.find_first_not_of( " " );
+  vRet = Connect( Port_.substr( vFirstValidCharacter ) );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
   }
-     
-  // remove the leading space from the port name if there's any before connecting
-  size_t vFirstValidCharacter = Port_.find_first_not_of( " " );
-  if ( Connect( Port_.substr( vFirstValidCharacter ) ) == DEVICE_OK )
+
+  vRet = InitializeComponents();
+  if ( vRet != DEVICE_OK )
   {
-    vRet = InitializeComponents();
-    //char vConfigName[64];
-    //GetCoreCallback()->GetCurrentConfig( MM::g_CFGGroup_System, 64, vConfigName );
-    //if ( strcmp( vConfigName, MM::g_CFGGroup_System_Startup ) == 0 )
-    //{
-    //  GetCoreCallback()->getSystemState();
-    //}
-  }
-  else
-  {
-    return ERR_LIBRARY_INIT;
+    // MicroManager doesn't call Shutdown on initilisation fail so we do it ourselves to keep the adapter in a clean state
+    Shutdown();
+    return vRet;
   }
 
   Initialized_ = true;
@@ -220,33 +221,47 @@ int CDragonfly::Initialize()
 
 int CDragonfly::Shutdown()
 {
-  if ( !ASDLibraryConnected_ )
+  if ( ConstructionReturnCode_ != DEVICE_OK )
   {
-    return ERR_LIBRARY_LOAD;
+    return DEVICE_OK;
   }
 
+  // It's important to reset pointers and clear lists in case there's a problem in the next Initialize call
   delete DichroicMirror_;
+  DichroicMirror_ = nullptr;
   delete FilterWheel1_;
+  FilterWheel1_ = nullptr;
   delete FilterWheel2_;
+  FilterWheel2_ = nullptr;
   delete DragonflyStatus_;
+  DragonflyStatus_ = nullptr;
   delete Disk_;
+  Disk_ = nullptr;
   delete ConfocalMode_;
+  ConfocalMode_ = nullptr;
   delete Aperture_;
+  Aperture_ = nullptr;
   delete CameraPortMirror_;
+  CameraPortMirror_ = nullptr;
   list<CLens*>::iterator vLensIt = Lens_.begin();
   while ( vLensIt != Lens_.end() )
   {
     delete *vLensIt;
     vLensIt++;
   }
+  Lens_.clear();
   list<CPowerDensity*>::iterator vPowerDensityIt = PowerDensity_.begin();
   while ( vPowerDensityIt != PowerDensity_.end() )
   {
     delete *vPowerDensityIt;
     vPowerDensityIt++;
   }
+  PowerDensity_.clear();
   delete SuperRes_;
+  SuperRes_ = nullptr;
   delete TIRF_;
+  TIRF_ = nullptr;
+
   Disconnect();
 
   Initialized_ = false;
@@ -315,11 +330,20 @@ int CDragonfly::InitializeComponents()
   IASDInterface2* vASDInterface2 = ASDLoader_->GetASDInterface2();
   IASDInterface3* vASDInterface3 = ASDLoader_->GetASDInterface3();
 
-  // Serial number property
-  string vSerialNumber = vASDInterface->GetSerialNumber();
-  int vRet = CreateProperty( g_DeviceSerialNumber, vSerialNumber.c_str(), MM::String, true );
+  // Description property
+  int vRet = CreateProperty( MM::g_Keyword_Description, g_DeviceDescription, MM::String, true );
   if ( vRet != DEVICE_OK )
   {
+    LogMessage( "Error encountered when creating Description property" );
+    return vRet;
+  }
+
+  // Serial number property
+  string vSerialNumber = vASDInterface->GetSerialNumber();
+  vRet = CreateProperty( g_DeviceSerialNumber, vSerialNumber.c_str(), MM::String, true );
+  if ( vRet != DEVICE_OK )
+  {
+    LogMessage( "Error encountered when creating " + string( g_DeviceSerialNumber ) + " property" );
     return vRet;
   }
 
@@ -328,6 +352,16 @@ int CDragonfly::InitializeComponents()
   vRet = CreateProperty( g_DeviceProductID, vProductID.c_str(), MM::String, true );
   if ( vRet != DEVICE_OK )
   {
+    LogMessage( "Error encountered when creating " + string( g_DeviceProductID ) + " property" );
+    return vRet;
+  }
+
+  // Model ID property
+  int vModelID = vASDInterface2->GetModelID();
+  vRet = CreateProperty( g_DeviceModelID, to_string( vModelID ).c_str(), MM::String, true );
+  if ( vRet != DEVICE_OK )
+  {
+    LogMessage( "Error encountered when creating " + string( g_DeviceModelID ) + " property" );
     return vRet;
   }
 
@@ -336,6 +370,7 @@ int CDragonfly::InitializeComponents()
   vRet = CreateProperty( g_DeviceSoftwareVersion, vSoftwareVersion.c_str(), MM::String, true );
   if ( vRet != DEVICE_OK )
   {
+    LogMessage( "Error encountered when creating " + string( g_DeviceSoftwareVersion ) + " property" );
     return vRet;
   }
 
@@ -358,14 +393,18 @@ int CDragonfly::InitializeComponents()
     {
       strncpy( vPropertyValue, "Not synchronised", 32 );
     }
-    CreateProperty( g_ExternalDiskStatus, vPropertyValue, MM::String, true );
+    vRet = CreateProperty( g_ExternalDiskStatus, vPropertyValue, MM::String, true );
+    if ( vRet != DEVICE_OK )
+    {
+      LogMessage( "Error creating " + string( g_ExternalDiskStatus ) + " property" );
+      return vRet;
+    }
   }
   else
   {
     throw std::logic_error( "Dragonfly status not initialised before External Disk Status" );
   }
-
-
+  
   // Dichroic mirror component
   vRet = CreateDichroicMirror( vASDInterface );
   if ( vRet != DEVICE_OK )
@@ -479,6 +518,7 @@ int CDragonfly::CreateDragonflyStatus( IASDInterface3* ASDInterface3 )
 
 int CDragonfly::CreateDichroicMirror( IASDInterface* ASDInterface )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsDichroicAvailable() )
   {
     try
@@ -490,7 +530,8 @@ int CDragonfly::CreateDichroicMirror( IASDInterface* ASDInterface )
       }
       else
       {
-        LogMessage( "Dichroic mirror not detected" );
+        LogMessage( "Dichroic mirror ASD pointer invalid" );
+        vErrorCode = ERR_DICHROICMIRROR_INIT;
       }
     }
     catch ( exception& vException )
@@ -498,14 +539,19 @@ int CDragonfly::CreateDichroicMirror( IASDInterface* ASDInterface )
       string vMessage( "Error loading the Dichroic mirror. Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_DICHROICMIRROR_INIT;
+      vErrorCode = ERR_DICHROICMIRROR_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Dichroic mirror not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsFilterWheelAvailable( WheelIndex ) )
   {
     try
@@ -517,7 +563,8 @@ int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& F
       }
       else
       {
-        LogMessage( "Filter wheel " + to_string( WheelIndex ) + " not detected" );
+        LogMessage( "Filter wheel " + to_string( WheelIndex ) + " ASD pointer invalid" );
+        vErrorCode = ErrorCode;
       }
     }
     catch ( exception& vException )
@@ -525,14 +572,19 @@ int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& F
       string vMessage( "Error loading the filter wheel " + to_string( WheelIndex ) + ". Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ErrorCode;
+      vErrorCode = ErrorCode;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Filter wheel " + to_string( WheelIndex ) + " not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsDiskAvailable() )
   {
     try
@@ -544,7 +596,8 @@ int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
       }
       else
       {
-        LogMessage( "Spinning disk not detected" );
+        LogMessage( "Spinning disk ASD pointer invalid" );
+        vErrorCode = ERR_DISK_INIT;
       }
     }
     catch ( exception& vException )
@@ -552,14 +605,19 @@ int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
       string vMessage( "Error loading the Spinning disk. Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_DISK_INIT;
+      vErrorCode = ERR_DISK_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Spinning disk not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsImagingModeAvailable() )
   {
     try
@@ -571,7 +629,8 @@ int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
       }
       else
       {
-        LogMessage( "Confocal mode not detected" );
+        LogMessage( "Confocal mode ASD pointer invalid" );
+        vErrorCode = ERR_CONFOCALMODE_INIT;
       }
     }
     catch ( exception& vException )
@@ -579,14 +638,19 @@ int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
       string vMessage( "Error loading the Confocal mode. Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_CONFOCALMODE_INIT;
+      vErrorCode = ERR_CONFOCALMODE_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Confocal mode not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateAperture( IASDInterface2* ASDInterface )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsApertureAvailable() )
   {
     try
@@ -598,7 +662,8 @@ int CDragonfly::CreateAperture( IASDInterface2* ASDInterface )
       }
       else
       {
-        LogMessage( "Aperture not detected" );
+        LogMessage( "Aperture ASD pointer invalid" );
+        vErrorCode = ERR_APERTURE_INIT;
       }
     }
     catch ( exception& vException )
@@ -606,14 +671,19 @@ int CDragonfly::CreateAperture( IASDInterface2* ASDInterface )
       string vMessage( "Error loading the Aperture. Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_APERTURE_INIT;
+      vErrorCode = ERR_APERTURE_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Aperture not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateCameraPortMirror( IASDInterface2* ASDInterface )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsCameraPortMirrorAvailable() )
   {
     try
@@ -625,7 +695,8 @@ int CDragonfly::CreateCameraPortMirror( IASDInterface2* ASDInterface )
       }
       else
       {
-        LogMessage( "Camera port mirror not detected" );
+        LogMessage( "Camera port mirror ASD pointer invalid" );
+        vErrorCode = ERR_CAMERAPORTMIRROR_INIT;
       }
     }
     catch ( exception& vException )
@@ -633,14 +704,19 @@ int CDragonfly::CreateCameraPortMirror( IASDInterface2* ASDInterface )
       string vMessage( "Error loading the Camera port mirror. Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_CAMERAPORTMIRROR_INIT;
+      vErrorCode = ERR_CAMERAPORTMIRROR_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Camera port mirror not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsLensAvailable( (TLensType)LensIndex ) )
   {
     try
@@ -656,7 +732,8 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
       }
       else
       {
-        LogMessage( "Lens " + to_string( LensIndex ) + " not detected" );
+        LogMessage( "Lens " + to_string( LensIndex ) + " ASD pointer invalid" );
+        vErrorCode = ERR_LENS_INIT;
       }
     }
     catch ( exception& vException )
@@ -664,17 +741,21 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
       string vMessage( "Error loading the Lens " + to_string( LensIndex ) + ". Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_LENS_INIT;
+      vErrorCode = ERR_LENS_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Lens " + to_string( LensIndex ) + " not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsIllLensAvailable( (TLensType)LensIndex ) )
   {
-    LogMessage( "Power density " + to_string( LensIndex ) + " available" );
     try
     {
       IIllLensInterface* vIllLensInterface = ASDInterface->GetIllLens( (TLensType)LensIndex );
@@ -688,7 +769,8 @@ int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex 
       }
       else
       {
-        LogMessage( "Power density " + to_string( LensIndex ) + " not detected" );
+        LogMessage( "Power density " + to_string( LensIndex ) + " ASD pointer invalid" );
+        vErrorCode = ERR_POWERDENSITY_INIT;
       }
     }
     catch ( exception& vException )
@@ -696,14 +778,19 @@ int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex 
       string vMessage( "Error loading the Power density " + to_string( LensIndex ) + ". Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_POWERDENSITY_INIT;
+      vErrorCode = ERR_POWERDENSITY_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Power density " + to_string( LensIndex ) + " not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateSuperRes( IASDInterface3* ASDInterface )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsSuperResAvailable() )
   {
     try
@@ -715,7 +802,8 @@ int CDragonfly::CreateSuperRes( IASDInterface3* ASDInterface )
       }
       else
       {
-        LogMessage( "Super resolution not detected" );
+        LogMessage( "Super resolution ASD pointer invalid" );
+        vErrorCode = ERR_SUPERRES_INIT;
       }
     }
     catch ( exception& vException )
@@ -723,14 +811,19 @@ int CDragonfly::CreateSuperRes( IASDInterface3* ASDInterface )
       string vMessage( "Error loading the Super resolution. Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_SUPERRES_INIT;
+      vErrorCode = ERR_SUPERRES_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "Super resolution not available", true );
+  }
+  return vErrorCode;
 }
 
 int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
 {
+  int vErrorCode = DEVICE_OK;
   if ( ASDInterface->IsTIRFAvailable() )
   {
     try
@@ -742,7 +835,8 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
       }
       else
       {
-        LogMessage( "TIRF not detected" );
+        LogMessage( "TIRF ASD pointer invalid" );
+        vErrorCode = ERR_TIRF_INIT;
       }
     }
     catch ( exception& vException )
@@ -750,10 +844,14 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
       string vMessage( "Error loading TIRF. Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
-      return ERR_TIRF_INIT;
+      vErrorCode = ERR_TIRF_INIT;
     }
   }
-  return DEVICE_OK;
+  else
+  {
+    LogMessage( "TIRF not available", true );
+  }
+  return vErrorCode;
 }
 
 void CDragonfly::LogComponentMessage( const std::string& Message )

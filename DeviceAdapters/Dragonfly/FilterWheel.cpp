@@ -69,7 +69,11 @@ void CFilterWheel::CreateModeProperty()
 
   // Create the MM mode property
   CPropertyAction* vAct = new CPropertyAction( this, &CFilterWheel::OnModeChange );
-  MMDragonfly_->CreateProperty( FilterModeProperty_.c_str(), vMode.c_str(), MM::String, false, vAct );
+  int vRet = MMDragonfly_->CreateProperty( FilterModeProperty_.c_str(), vMode.c_str(), MM::String, false, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + FilterModeProperty_  + " property" );
+  }
 
   // Populate the possible modes
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighSpeed ) );
@@ -97,11 +101,15 @@ void CFilterWheel::CreateRFIDStatusProperty()
         strncpy( vPropertyValue, "Present but Read failed", 32 );
       }
     }
-    MMDragonfly_->CreateProperty( RFIDStatusProperty_.c_str(), vPropertyValue, MM::String, true );
+    int vRet = MMDragonfly_->CreateProperty( RFIDStatusProperty_.c_str(), vPropertyValue, MM::String, true );
+    if ( vRet != DEVICE_OK )
+    {
+      throw runtime_error( "Error creating " + RFIDStatusProperty_ + " property" );
+    }
   }
   else
   {
-    throw std::logic_error( "Dragonfly status not initialised before " + ComponentName_ );
+    throw logic_error( "Dragonfly status not initialised before " + ComponentName_ );
   }
 }
 

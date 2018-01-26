@@ -59,17 +59,37 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
     vStatusValue = g_DiskStatusStart;
   }
   vAct = new CPropertyAction( this, &CDisk::OnStatusChange );
-  MMDragonfly_->CreateProperty( g_DiskStatusPropertyName, vStatusValue.c_str(), MM::String, false, vAct );
+  int vRet = MMDragonfly_->CreateProperty( g_DiskStatusPropertyName, vStatusValue.c_str(), MM::String, false, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + string( g_DiskStatusPropertyName ) + " property" );
+  }
   MMDragonfly_->AddAllowedValue( g_DiskStatusPropertyName, g_DiskStatusStop );
   MMDragonfly_->AddAllowedValue( g_DiskStatusPropertyName, g_DiskStatusStart );
 
+
   // Create the MM properties for Disk status monitor
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
-  MMDragonfly_->CreateProperty( g_DiskSpeedMonitorPropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
+  vRet = MMDragonfly_->CreateProperty( g_DiskSpeedMonitorPropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " +string( g_DiskSpeedMonitorPropertyName ) + " property" );
+  }
+
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
-  MMDragonfly_->CreateProperty( g_DiskStatusMonitorPropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
+  vRet = MMDragonfly_->CreateProperty( g_DiskStatusMonitorPropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + string( g_DiskStatusMonitorPropertyName ) + " property" );
+  }
+
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
-  MMDragonfly_->CreateProperty( g_FrameScanTime, to_string( CalculateFrameScanTime( vSpeed, vScansPerRevolution )).c_str(), MM::String, true, vAct );
+  vRet = MMDragonfly_->CreateProperty( g_FrameScanTime, to_string( CalculateFrameScanTime( vSpeed, vScansPerRevolution )).c_str(), MM::String, true, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + string( g_FrameScanTime ) + " property" );
+  }
+
   DiskStatusMonitor_ = new CDiskStatusMonitor( MMDragonfly_ );
   DiskStatusMonitor_->activate();
 }
