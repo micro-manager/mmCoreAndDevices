@@ -217,6 +217,7 @@
     <ClCompile Include="Disk.cpp" />
     <ClCompile Include="Dragonfly.cpp" />
     <ClCompile Include="DragonflyStatus.cpp" />
+    <ClCompile Include="enumser.cpp" />
     <ClCompile Include="FilterWheel.cpp" />
     <ClCompile Include="FilterWheelProperty.cpp" />
     <ClCompile Include="Lens.cpp" />

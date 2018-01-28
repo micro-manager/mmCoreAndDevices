@@ -19,6 +19,8 @@
 #include "SuperRes.h"
 #include "TIRF.h"
 #include "ConfigFileHandler.h"
+#include "stdafx.h"
+#include "enumser.h"
 
 #include "ASDInterface.h"
 
@@ -144,15 +146,15 @@ CDragonfly::CDragonfly()
   int vRet = CreatePropertyWithHandler( g_DevicePort, "Undefined", MM::String, false, &CDragonfly::OnPort, true );
   if ( vRet == DEVICE_OK )
   {
-    for ( int i = 1;i <= 20;++i )
+    CEnumerateSerial::CNamesArray vCOMPorts;
+    if ( CEnumerateSerial::UsingRegistry( vCOMPorts ) )
     {
-      string vCOMPort;
-      if ( i < 10 )
+      CEnumerateSerial::CNamesArray::const_iterator vCOMPortIt = vCOMPorts.begin();
+      while ( vCOMPortIt != vCOMPorts.end() )
       {
-        vCOMPort = " ";
+        AddAllowedValue( g_DevicePort, vCOMPortIt->c_str() );
+        vCOMPortIt++;
       }
-      vCOMPort += "COM" + to_string( i );
-      AddAllowedValue( g_DevicePort, vCOMPort.c_str() );
     }
   }
   else
