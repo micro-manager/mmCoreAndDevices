@@ -4,7 +4,7 @@
 
 using namespace std;
 
-const char* const g_ConfocalModePropertyName = "Confocal Mode";
+const char* const g_ConfocalModePropertyName = "Imaging Mode";
 const char* const g_ConfocalModeReadError = "Failed to retrieve Confocal mode";
 const char* const g_Widefield = "Widefield";
 const char* const g_TIRF = "TIRF";

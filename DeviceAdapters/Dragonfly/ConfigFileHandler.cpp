@@ -22,12 +22,13 @@ CConfigFileHandler::CConfigFileHandler( CDragonfly* MMDragonfly )
   FileName_ = "Undefined";
 
   // Create property with a default path set to My Documents
-  WCHAR vWPathName[MAX_PATH];
-  if ( SUCCEEDED( SHGetFolderPathW( NULL, CSIDL_PERSONAL, NULL, 0, vWPathName ) ) ) // CSIDL_PROFILE for users path - CSIDL_PERSONAL for my documents
+  PWSTR vWPathName;
+  if ( SUCCEEDED( SHGetKnownFolderPath( FOLDERID_ProgramData, KF_FLAG_DEFAULT, NULL, &vWPathName ) ) ) // FOLDERID_PublicDocuments for Public documents path - FOLDERID_ProgramData for All users (aka ProgramData) path
   {
     wstring vWPathNameString = vWPathName;
     FileName_.assign( vWPathNameString.begin(), vWPathNameString.end() );
     FileName_ = FileName_ + PATH_SEPARATOR + string( g_DefaultConfigFileName );
+    CoTaskMemFree( vWPathName );
   }
   CPropertyAction* vAct = new CPropertyAction( this, &CConfigFileHandler::OnConfigFileChange );
   int vRet = MMDragonfly_->CreateProperty( g_ConfigFile, FileName_.c_str(), MM::String, false, vAct, true );

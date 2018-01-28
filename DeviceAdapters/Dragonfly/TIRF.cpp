@@ -23,9 +23,6 @@ const char* const g_ScopeNikon = "Nikon";
 const char* const g_ScopeOlympus = "Olympus";
 const char* const g_ScopeZeiss = "Zeiss";
 
-const char* const g_MinBandwidthPropertyName = "TIRF | Min Wavelength";
-const char* const g_MaxBandwidthPropertyName = "TIRF | Max Wavelength";
-
 CTIRF::CTIRF( ITIRFInterface* TIRFInterface, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly )
   : MMDragonfly_( MMDragonfly ),
   ConfigFileHandler_( ConfigFileHandler ),
@@ -47,18 +44,6 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, IConfigFileHandler* ConfigFileHandl
   if ( !TIRFInterface_->GetTIRFMode( &vTIRFMode ) )
   {
     throw runtime_error( "Failed to read the current TIRF mode" );
-  }
-
-  int vMinBandwidth, vMaxBandwidth;
-  if ( !TIRFInterface_->GetBandwidth( &vMinBandwidth, &vMaxBandwidth ) )
-  {
-    throw runtime_error( "Failed to read the current TIRF bandwidths" );
-  }
-
-  int vBandwidthMinLimit, vBandwidthMaxLimit;
-  if ( !TIRFInterface_->GetBandwidthLimit( &vBandwidthMinLimit, &vBandwidthMaxLimit ) )
-  {
-    throw runtime_error( "Failed to read the current TIRF bandwidths limits" );
   }
 
   const char* vTIRFModeName;
@@ -105,10 +90,6 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, IConfigFileHandler* ConfigFileHandl
   MMDragonfly_->AddAllowedValue( g_ScopePropertyName, g_ScopeNikon );
   MMDragonfly_->AddAllowedValue( g_ScopePropertyName, g_ScopeOlympus );
   MMDragonfly_->AddAllowedValue( g_ScopePropertyName, g_ScopeZeiss );
-
-  // Create MM properties for bandwidths
-  MMDragonfly_->CreateIntegerProperty( g_MinBandwidthPropertyName, vMinBandwidth, true );
-  MMDragonfly_->CreateIntegerProperty( g_MaxBandwidthPropertyName, vMaxBandwidth, true );
 }
 
 CTIRF::~CTIRF()

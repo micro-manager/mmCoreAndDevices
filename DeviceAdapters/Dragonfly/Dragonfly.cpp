@@ -28,13 +28,10 @@
 using namespace std;
 
 const char* const g_DeviceName = "Dragonfly";
-const char* const g_DeviceDescription = "Andor Dragonfly Device Adapter";
+const char* const g_DeviceDescription = "Andor Dragonfly";
 const char* const g_DevicePort = "COM Port";
 const char* const g_DeviceSerialNumber = "Serial Number";
-const char* const g_DeviceProductID = "Product ID";
-const char* const g_DeviceModelID = "Model ID";
 const char* const g_DeviceSoftwareVersion = "Software Version";
-const char* const g_ExternalDiskStatus = "External Disk Sync status";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -347,24 +344,6 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
 
-  // Product ID property
-  string vProductID = vASDInterface->GetProductID();
-  vRet = CreateProperty( g_DeviceProductID, vProductID.c_str(), MM::String, true );
-  if ( vRet != DEVICE_OK )
-  {
-    LogMessage( "Error encountered when creating " + string( g_DeviceProductID ) + " property" );
-    return vRet;
-  }
-
-  // Model ID property
-  int vModelID = vASDInterface2->GetModelID();
-  vRet = CreateProperty( g_DeviceModelID, to_string( vModelID ).c_str(), MM::String, true );
-  if ( vRet != DEVICE_OK )
-  {
-    LogMessage( "Error encountered when creating " + string( g_DeviceModelID ) + " property" );
-    return vRet;
-  }
-
   // Software version property
   string vSoftwareVersion = vASDInterface->GetSoftwareVersion();
   vRet = CreateProperty( g_DeviceSoftwareVersion, vSoftwareVersion.c_str(), MM::String, true );
@@ -379,30 +358,6 @@ int CDragonfly::InitializeComponents()
   if ( vRet != DEVICE_OK )
   {
     return vRet;
-  }
-
-  // External Disk Sync status
-  if ( DragonflyStatus_ != nullptr )
-  {
-    char vPropertyValue[32];
-    if ( DragonflyStatus_->IsExternalDiskSync() )
-    {
-      strncpy( vPropertyValue, "Synchronised", 32 );
-    }
-    else
-    {
-      strncpy( vPropertyValue, "Not synchronised", 32 );
-    }
-    vRet = CreateProperty( g_ExternalDiskStatus, vPropertyValue, MM::String, true );
-    if ( vRet != DEVICE_OK )
-    {
-      LogMessage( "Error creating " + string( g_ExternalDiskStatus ) + " property" );
-      return vRet;
-    }
-  }
-  else
-  {
-    throw std::logic_error( "Dragonfly status not initialised before External Disk Status" );
   }
   
   // Dichroic mirror component

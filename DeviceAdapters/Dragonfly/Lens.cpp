@@ -3,7 +3,7 @@
 #include "ASDInterface.h"
 
 CLens::CLens( ILensInterface* LensInterface, int LensIndex, CDragonfly* MMDragonfly )
-  : IPositionComponentInterface( MMDragonfly, "Lens " + std::to_string( LensIndex + 1 ) ),
+  : IPositionComponentInterface( MMDragonfly, "Imaging Magnification " + std::to_string( LensIndex + 1 ) ),
   LensInterface_( LensInterface )
 {
   Initialise();

@@ -6,7 +6,7 @@
 
 using namespace std;
 
-const char* const g_SuperResPropertyName = "3D Super Resolution";
+const char* const g_SuperResPropertyName = "Super Resolution 3D";
 const char* const g_SuperResInLightPath = "In light path";
 const char* const g_SuperResNotInLightPath = "Not in light path";
 
