@@ -91,6 +91,7 @@ private:
   bool SetDeviceValue( MM::PropertyBase* Prop, int RequestedValue );
   bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
   void SetPropertyValue( MM::PropertyBase* Prop, long NewValue );
+  void SetBufferedUserSelectionValue( int NewValue );
 };
 
 #endif

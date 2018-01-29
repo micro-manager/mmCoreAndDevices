@@ -95,10 +95,15 @@ int CTIRFModeIntSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType A
     Prop->Get( vRequestedValue );
     if ( !IsModeSelected() )
     {
-      // The current mode is not selected, backup the request and reset the UI to the previously set value
+      // The current mode is not selected, backup the request
       // The device will be updated with the user request next time the mode is selected
-      BufferedUserSelectionValue_ = (int)vRequestedValue;
-      SetPropertyValue( Prop, BufferedUIValue_ );
+      SetBufferedUserSelectionValue( (int)vRequestedValue );
+      if ( SelectedTIRFMode_ == ETIRFMode::CriticalAngle && DeviceWrapper_->Mode() == ETIRFMode::Penetration )
+      {
+        // Special case for when Critical Angle is selected and the Penetration is changed
+        // Since the user is really not supposed to do this we prefer reset the UI to prevent confusions
+        SetPropertyValue( Prop, BufferedUIValue_ );
+      }
     }
     else
     {
@@ -111,6 +116,13 @@ int CTIRFModeIntSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType A
   }
 
   return vRet;
+}
+
+void CTIRFModeIntSubProperty::SetBufferedUserSelectionValue( int NewValue )
+{
+  BufferedUserSelectionValue_ = NewValue;
+  // Save the new value to the config file
+  ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( BufferedUserSelectionValue_ ) );
 }
 
 bool CTIRFModeIntSubProperty::SetDeviceValue( MM::PropertyBase* Prop, int RequestedValue )
@@ -130,14 +142,12 @@ bool CTIRFModeIntSubProperty::SetDeviceValue( MM::PropertyBase* Prop, int Reques
         {
           long vNewValue;
           Prop->Get( vNewValue );
-          BufferedUserSelectionValue_ = (int)vNewValue;
+          SetBufferedUserSelectionValue( (int)vNewValue );
         }
       }
       else
       {
-        BufferedUserSelectionValue_ = RequestedValue;
-        // Save the new value to the config file
-        ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( BufferedUserSelectionValue_ ) );
+        SetBufferedUserSelectionValue( RequestedValue );
         vValueSet = true;
       }
     }

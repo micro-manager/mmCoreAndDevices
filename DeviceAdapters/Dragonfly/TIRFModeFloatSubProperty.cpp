@@ -13,7 +13,6 @@ CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* Devic
   PropertyName_( PropertyName ),
   MMProp_( nullptr ),
   BufferedUserSelectionValue_( 0.f ),
-  BufferedUIValue_( 0.f ),
   SelectedTIRFMode_( ETIRFMode::UnknownTIRFMode )
 {
   float vMin, vMax, vValue = 0;
@@ -46,7 +45,6 @@ CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* Devic
     ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vValue ) );
   }
   BufferedUserSelectionValue_ = vValue;
-  BufferedUIValue_ = vValue;
 
   // Create the MM property for Disk speed
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRFModeFloatSubProperty::OnChange );
@@ -79,14 +77,12 @@ int CTIRFModeFloatSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType
     Prop->Get( vRequestedValue );
     if ( !IsModeSelected() )
     {
-      // The current mode is not selected, backup the request and reset the UI to the previously set value
+      // The current mode is not selected, backup the request
       // The device will be updated with the user request next time the mode is selected
-      BufferedUserSelectionValue_ = (float)vRequestedValue;
-      SetPropertyValue( Prop, BufferedUIValue_ );
+      SetBufferedUserSelectionValue( (float)vRequestedValue );
     }
     else
     {
-      BufferedUIValue_ = vRequestedValue;
       if ( !SetDeviceValue( Prop, (float)vRequestedValue ) )
       {
         vRet = DEVICE_ERR;
@@ -95,6 +91,13 @@ int CTIRFModeFloatSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType
   }
 
   return DEVICE_OK;
+}
+
+void CTIRFModeFloatSubProperty::SetBufferedUserSelectionValue( float NewValue )
+{
+  BufferedUserSelectionValue_ = NewValue;
+  // Save the new value to the config file
+  ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( BufferedUserSelectionValue_ ) );
 }
 
 bool CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float RequestedValue )
@@ -114,14 +117,12 @@ bool CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float Re
         {
           double vNewValue;
           Prop->Get( vNewValue );
-          BufferedUserSelectionValue_ = (float)vNewValue;
+          SetBufferedUserSelectionValue( (float)vNewValue );
         }
       }
       else
       {
-        BufferedUserSelectionValue_ = RequestedValue;
-        // Save the new value to the config file
-        ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( BufferedUserSelectionValue_ ) );
+        SetBufferedUserSelectionValue( RequestedValue );
         vValueSet = true;
       }
     }
@@ -140,7 +141,6 @@ bool CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float Re
 void CTIRFModeFloatSubProperty::SetPropertyValue( MM::PropertyBase* Prop, double NewValue )
 {
   Prop->Set( NewValue );
-  BufferedUIValue_ = NewValue;
 }
 
 bool CTIRFModeFloatSubProperty::SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop )

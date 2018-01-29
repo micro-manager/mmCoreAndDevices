@@ -71,12 +71,12 @@ private:
   std::string PropertyName_;
   MM::Property* MMProp_;
   float BufferedUserSelectionValue_;
-  double BufferedUIValue_;
   ETIRFMode SelectedTIRFMode_;
 
   bool SetDeviceValue( MM::PropertyBase* Prop, float RequestedValue );
   bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
   void SetPropertyValue( MM::PropertyBase* Prop, double NewValue );
+  void SetBufferedUserSelectionValue( float NewValue );
 };
 
 #endif
