@@ -218,7 +218,7 @@ void CConfocalMode::AddValue( TConfocalMode ConfocalMode, const string& Confocal
 
 int CConfocalMode::SetDeviceConfocalMode( TConfocalMode ConfocalMode )
 {
-  int vRet = DEVICE_ERR;
+  int vRet = DEVICE_OK;
   bool vDeviceSuccess = true;
   switch ( ConfocalMode )
   {
