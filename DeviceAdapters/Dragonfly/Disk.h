@@ -28,7 +28,11 @@ private:
   IDiskInterface2* DiskInterface_;
   CDragonfly* MMDragonfly_;
   CDiskStatusMonitor* DiskStatusMonitor_;
-  unsigned int CurrentRequestedSpeed_;
+  unsigned int RequestedSpeed_;
+  bool RequestedSpeedAchieved_;
+  bool StopRequested_;
+  bool StopWitnessed_;
+  bool FrameScanTimeUpdated_;
 
   double CalculateFrameScanTime( unsigned int Speed, unsigned int ScansPerRevolution );
 };

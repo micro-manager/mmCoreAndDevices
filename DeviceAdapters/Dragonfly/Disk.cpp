@@ -25,8 +25,13 @@ const char* const g_DiskStatusUndefined = "Undefined";
 CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   : DiskInterface_( DiskSpeedInterface ),
   MMDragonfly_( MMDragonfly ),
-  CurrentRequestedSpeed_( 0 ),
-  DiskStatusMonitor_( nullptr )
+  RequestedSpeed_( 0 ),
+  DiskStatusMonitor_( nullptr ),
+  RequestedSpeedAchieved_( false ),
+  StopRequested_( false ),
+  StopWitnessed_( false ),
+  FrameScanTimeUpdated_( false )
+
 {
   unsigned int vMin, vMax, vSpeed, vScansPerRevolution;
   bool vValueRetrieved = DiskInterface_->GetLimits( vMin, vMax );
@@ -39,7 +44,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   {
     throw std::runtime_error( g_DiskSpeedValueReadError );
   }
-  CurrentRequestedSpeed_ = vSpeed;
+  RequestedSpeed_ = vSpeed;
   vValueRetrieved = DiskInterface_->GetScansPerRevolution( &vScansPerRevolution );
   if ( !vValueRetrieved )
   {
@@ -114,7 +119,12 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
         if ( vRequestedSpeed >= (long)vMin && vRequestedSpeed <= (long)vMax )
         {
           DiskInterface_->SetSpeed( vRequestedSpeed );
-          CurrentRequestedSpeed_ = vRequestedSpeed;
+          RequestedSpeed_ = vRequestedSpeed;
+          if ( !StopRequested_ )
+          {
+            RequestedSpeedAchieved_ = false;
+            FrameScanTimeUpdated_ = false;
+          }
         }
         else
         {
@@ -144,10 +154,17 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     if ( vRequest == g_DiskStatusStart )
     {
       DiskInterface_->Start();
+      StopRequested_ = false;
+      RequestedSpeedAchieved_ = false;
+      FrameScanTimeUpdated_ = false;
     }
     if ( vRequest == g_DiskStatusStop )
     {
       DiskInterface_->Stop();
+      StopRequested_ = true;
+      StopWitnessed_ = false;
+      RequestedSpeedAchieved_ = false;
+      FrameScanTimeUpdated_ = false;
     }
   }
 
@@ -158,51 +175,65 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   if ( Act == MM::BeforeGet )
   {
-    unsigned int vSpeed;
-    bool vValueRetrieved = DiskInterface_->GetSpeed( vSpeed );
-    if ( vValueRetrieved )
+    // Update speed
+    if ( !RequestedSpeedAchieved_ && Prop->GetName() == g_DiskSpeedMonitorPropertyName )
     {
-      // Update speed
-      if ( Prop->GetName() == g_DiskSpeedMonitorPropertyName )
+      unsigned int vDeviceSpeed;
+      bool vValueRetrieved = DiskInterface_->GetSpeed( vDeviceSpeed );
+      if ( vValueRetrieved )
       {
-        Prop->Set( (long)vSpeed );
-      }
-      if ( Prop->GetName() == g_DiskStatusMonitorPropertyName )
-      {
-        // Update status
-        if ( !DiskInterface_->IsSpinning() )
+        Prop->Set( (long)vDeviceSpeed );
+        if ( ( StopRequested_ && StopWitnessed_) || (!StopRequested_ && vDeviceSpeed == RequestedSpeed_) )
         {
-          Prop->Set( g_DiskStatusStopped );
-        }
-        else if ( vSpeed == CurrentRequestedSpeed_ )
-        {
-          Prop->Set( g_DiskStatusReady );
-        }
-        else
-        {
-          Prop->Set( g_DiskStatusChangingSpeed );
-        }
-      }
-      if ( Prop->GetName() == g_FrameScanTime )
-      {
-        if ( vSpeed == CurrentRequestedSpeed_ )
-        {
-          unsigned int vScansPerResolution;
-          vValueRetrieved = DiskInterface_->GetScansPerRevolution( &vScansPerResolution );
-          if ( vValueRetrieved )
-          {
-            Prop->Set( CalculateFrameScanTime( vSpeed, vScansPerResolution ) );
-          }
-        }
-        else
-        {
-          Prop->Set( g_DiskStatusUndefined );
+          RequestedSpeedAchieved_ = true;
         }
       }
     }
-    else
+    // Update status
+    if ( Prop->GetName() == g_DiskStatusMonitorPropertyName )
     {
-      Prop->Set( g_DiskStatusUndefined );
+      if ( !RequestedSpeedAchieved_ )
+      {
+        Prop->Set( g_DiskStatusChangingSpeed );
+      }
+      if ( ( StopRequested_ && !StopWitnessed_ ) )
+      {
+        if ( !DiskInterface_->IsSpinning() )
+        {
+          Prop->Set( g_DiskStatusStopped );
+          StopWitnessed_ = true;
+        }
+      }
+      if ( RequestedSpeedAchieved_ && !StopRequested_ )
+      {
+        Prop->Set( g_DiskStatusReady );
+      }
+    }
+    // Update frame scan time
+    if ( Prop->GetName() == g_FrameScanTime )
+    {
+      if ( RequestedSpeedAchieved_ && !StopRequested_ )
+      {
+        if ( !FrameScanTimeUpdated_ )
+        {
+          unsigned int vDeviceSpeed;
+          bool vValueRetrieved = DiskInterface_->GetSpeed( vDeviceSpeed );
+          if ( vValueRetrieved )
+          {
+            unsigned int vScansPerResolution;
+            vValueRetrieved = DiskInterface_->GetScansPerRevolution( &vScansPerResolution );
+            if ( vValueRetrieved )
+            {
+              Prop->Set( CalculateFrameScanTime( vDeviceSpeed, vScansPerResolution ) );
+              FrameScanTimeUpdated_ = true;
+            }
+          }
+        }
+      }
+      else
+      {
+        Prop->Set( g_DiskStatusUndefined );
+      }
     }
   }
   return DEVICE_OK;
@@ -240,7 +271,7 @@ int CDiskStatusMonitor::svc()
     MMDragonfly_->UpdateProperty( g_DiskSpeedMonitorPropertyName );
     MMDragonfly_->UpdateProperty( g_DiskStatusMonitorPropertyName );
     MMDragonfly_->UpdateProperty( g_FrameScanTime );
-    Sleep( 250 );
+    Sleep( 500 );
   }
   return 0;
 }
