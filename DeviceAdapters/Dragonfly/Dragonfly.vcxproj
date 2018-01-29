@@ -217,13 +217,11 @@
     <ClCompile Include="Disk.cpp" />
     <ClCompile Include="Dragonfly.cpp" />
     <ClCompile Include="DragonflyStatus.cpp" />
-    <ClCompile Include="enumser.cpp" />
     <ClCompile Include="FilterWheel.cpp" />
     <ClCompile Include="FilterWheelProperty.cpp" />
     <ClCompile Include="Lens.cpp" />
     <ClCompile Include="PositionComponentHelper.cpp" />
     <ClCompile Include="PositionComponentInterface.cpp" />
-    <ClCompile Include="PowerDensity.cpp" />
     <ClCompile Include="SuperRes.cpp" />
     <ClCompile Include="TIRF.cpp" />
     <ClCompile Include="TIRFModeFloatSubProperty.cpp" />

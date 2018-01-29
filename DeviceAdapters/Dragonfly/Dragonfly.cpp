@@ -15,12 +15,9 @@
 #include "Aperture.h"
 #include "CameraPortMirror.h"
 #include "Lens.h"
-#include "PowerDensity.h"
 #include "SuperRes.h"
 #include "TIRF.h"
 #include "ConfigFileHandler.h"
-#include "stdafx.h"
-#include "enumser.h"
 
 #include "ASDInterface.h"
 
@@ -110,11 +107,11 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_DRAGONFLYSTATUS_INIT, vMessage.c_str() );
   vMessage = "Disk speed initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_DISK_INIT , vMessage.c_str());
-  vMessage = "Confocal mode initialisation failed. " + vContactSupportMessage;
+  vMessage = "Imaging mode/Power density initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_CONFOCALMODE_INIT, vMessage.c_str() );
-  vMessage = "Aperture initialisation failed. " + vContactSupportMessage;
+  vMessage = "Field Aperture initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_APERTURE_INIT, vMessage.c_str() );
-  vMessage = "Camera port mirror initialisation failed. " + vContactSupportMessage;
+  vMessage = "Image splitter initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_CAMERAPORTMIRROR_INIT, vMessage.c_str() );
   vMessage = "Lens initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_LENS_INIT, vMessage.c_str() );
@@ -146,14 +143,20 @@ CDragonfly::CDragonfly()
   int vRet = CreatePropertyWithHandler( g_DevicePort, "Undefined", MM::String, false, &CDragonfly::OnPort, true );
   if ( vRet == DEVICE_OK )
   {
-    CEnumerateSerial::CNamesArray vCOMPorts;
-    if ( CEnumerateSerial::UsingRegistry( vCOMPorts ) )
+    string vComPortBaseName;
+    string vComPortAddress;
+    for ( int i = 1; i <= 64; i++ )
     {
-      CEnumerateSerial::CNamesArray::const_iterator vCOMPortIt = vCOMPorts.begin();
-      while ( vCOMPortIt != vCOMPorts.end() )
+      vComPortBaseName = "COM" + to_string( i );
+      vComPortAddress = "\\\\.\\" + vComPortBaseName;
+      HANDLE hCom = CreateFile( vComPortAddress.c_str(),
+        GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL, NULL );
+
+      if ( hCom != INVALID_HANDLE_VALUE )
       {
-        AddAllowedValue( g_DevicePort, vCOMPortIt->c_str() );
-        vCOMPortIt++;
+        AddAllowedValue( g_DevicePort, vComPortBaseName.c_str() );
+        CloseHandle( hCom );
       }
     }
   }
@@ -249,13 +252,6 @@ int CDragonfly::Shutdown()
     vLensIt++;
   }
   Lens_.clear();
-  list<CPowerDensity*>::iterator vPowerDensityIt = PowerDensity_.begin();
-  while ( vPowerDensityIt != PowerDensity_.end() )
-  {
-    delete *vPowerDensityIt;
-    vPowerDensityIt++;
-  }
-  PowerDensity_.clear();
   delete SuperRes_;
   SuperRes_ = nullptr;
   delete TIRF_;

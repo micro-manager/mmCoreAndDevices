@@ -24,7 +24,6 @@ class CConfocalMode;
 class CAperture;
 class CCameraPortMirror;
 class CLens;
-class CPowerDensity;
 class CSuperRes;
 class CTIRF;
 class CConfigFileHandler;
@@ -84,7 +83,6 @@ private:
   CAperture* Aperture_;
   CCameraPortMirror* CameraPortMirror_;
   std::list<CLens*> Lens_;
-  std::list<CPowerDensity*> PowerDensity_;
   CSuperRes* SuperRes_;
   CTIRF* TIRF_;
   CConfigFileHandler* ConfigFile_;
@@ -103,7 +101,6 @@ private:
   int CreateAperture( IASDInterface2* ASDInterface );
   int CreateCameraPortMirror( IASDInterface2* ASDInterface );
   int CreateLens( IASDInterface2* ASDInterface, int LensIndex );
-  int CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex );
   int CreateSuperRes( IASDInterface3* ASDInterface );
   int CreateTIRF( IASDInterface3* ASDInterface );
 };
