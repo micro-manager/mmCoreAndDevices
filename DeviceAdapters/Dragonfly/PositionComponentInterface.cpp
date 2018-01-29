@@ -23,9 +23,19 @@ void IPositionComponentInterface::Initialise()
   if ( Initialised_ ) return;
 
   // Retrieve values from the device
-  if ( !RetrievePositionsFromFilterSet() )
+  IFilterSet* vFilterSet = GetFilterSet();
+  if ( vFilterSet == nullptr )
   {
-    if ( !RetrievePositionsWithoutDescriptions() )
+    MMDragonfly_->LogComponentMessage( "Invalid FilterSet pointer for " + PropertyName_ );
+  }
+  if ( vFilterSet == nullptr || !CPositionComponentHelper::RetrievePositionsFromFilterSet( vFilterSet, PositionNames_ ) )
+  {
+    unsigned int vMinValue, vMaxValue;
+    if ( GetLimits( vMinValue, vMaxValue ) )
+    {
+      CPositionComponentHelper::RetrievePositionsWithoutDescriptions( vMinValue, vMaxValue, PositionNames_ );
+    }
+    else
     {
       throw runtime_error( "Failed to retrieve " + PropertyName_ + " positions" );
     }
@@ -37,7 +47,6 @@ void IPositionComponentInterface::Initialise()
   {
     throw runtime_error( "Failed to read the current " + PropertyName_ + " position" );
   }
-
 
   // Retrieve the current position name
   string vCurrentPositionName = "Undefined";

@@ -221,6 +221,7 @@
     <ClCompile Include="FilterWheel.cpp" />
     <ClCompile Include="FilterWheelProperty.cpp" />
     <ClCompile Include="Lens.cpp" />
+    <ClCompile Include="PositionComponentHelper.cpp" />
     <ClCompile Include="PositionComponentInterface.cpp" />
     <ClCompile Include="PowerDensity.cpp" />
     <ClCompile Include="SuperRes.cpp" />

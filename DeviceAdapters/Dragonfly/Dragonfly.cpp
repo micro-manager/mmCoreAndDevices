@@ -93,20 +93,20 @@ CDragonfly::CDragonfly()
 
   string vContactSupportMessage( "Please contact Andor support and send the latest file present in the Micro-Manager CoreLogs directory." );
 #ifdef _M_X64
-  SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the ASD library. Make sure AB_ASDx64.dll is present in the Micro-Manager root directory." );
+  SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the Dragonfly library. Make sure AB_ASDx64.dll is present in the Micro-Manager root directory." );
 #else
-  SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the ASD library. Make sure AB_ASD.dll is present in the Micro-Manager root directory." );
+  SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the Dragonfly library. Make sure AB_ASD.dll is present in the Micro-Manager root directory." );
 #endif
-  SetErrorText( ERR_LIBRARY_INIT, "ASD Library initialisation failed. Make sure the device is connected and you selected the correct COM port." );
+  SetErrorText( ERR_LIBRARY_INIT, "Dragonfly Library initialisation failed. Make sure the device is connected and you selected the correct COM port." );
   string vMessage = "Dichroic mirror initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_DICHROICMIRROR_INIT, vMessage.c_str() );
   vMessage = "Filter wheel 1 initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_FILTERWHEEL1_INIT, vMessage.c_str() );
   vMessage = "Filter wheel 2 initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_FILTERWHEEL2_INIT, vMessage.c_str() );
-  vMessage = "ASD Status class not accessible. " + vContactSupportMessage;
+  vMessage = "Dragonfly Status class not accessible. " + vContactSupportMessage;
   SetErrorText( ERR_DRAGONFLYSTATUS_INVALID_POINTER, vMessage.c_str() );
-  vMessage = "ASD Status initialisation failed. " + vContactSupportMessage;
+  vMessage = "Dragonfly Status initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_DRAGONFLYSTATUS_INIT, vMessage.c_str() );
   vMessage = "Disk speed initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_DISK_INIT , vMessage.c_str());
@@ -136,7 +136,7 @@ CDragonfly::CDragonfly()
   catch ( exception& vException )
   {
     ASDWrapper_ = nullptr;
-    vMessage = "Error loading the ASD library. Caught Exception with message: ";
+    vMessage = "Error loading the Dragonfly library. Caught Exception with message: ";
     vMessage += vException.what();
     LogMessage( vMessage );
     ConstructionReturnCode_ = ERR_LIBRARY_LOAD;
@@ -421,16 +421,6 @@ int CDragonfly::InitializeComponents()
     }
   }
 
-  // Power density components
-  for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax; ++vLensIndex )
-  {
-    vRet = CreatePowerDensity( vASDInterface3, vLensIndex );
-    if ( vRet != DEVICE_OK )
-    {
-      return vRet;
-    }
-  }
-
   // Super Resolution component
   vRet = CreateSuperRes( vASDInterface3 );
   if ( vRet != DEVICE_OK )
@@ -465,7 +455,7 @@ int CDragonfly::CreateDragonflyStatus( IASDInterface3* ASDInterface3 )
   }
   catch ( exception& vException )
   {
-    string vMessage( "Error loading the ASD Status. Caught Exception with message: " );
+    string vMessage( "Error loading the Dragonfly Status. Caught Exception with message: " );
     vMessage += vException.what();
     LogMessage( vMessage );
     vErrorCode = ERR_DRAGONFLYSTATUS_INIT;
@@ -487,7 +477,7 @@ int CDragonfly::CreateDichroicMirror( IASDInterface* ASDInterface )
       }
       else
       {
-        LogMessage( "Dichroic mirror ASD pointer invalid" );
+        LogMessage( "Dichroic mirror ASD SDK pointer invalid" );
         vErrorCode = ERR_DICHROICMIRROR_INIT;
       }
     }
@@ -520,7 +510,7 @@ int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& F
       }
       else
       {
-        LogMessage( "Filter wheel " + to_string( WheelIndex ) + " ASD pointer invalid" );
+        LogMessage( "Filter wheel " + to_string( WheelIndex ) + " ASD SDK pointer invalid" );
         vErrorCode = ErrorCode;
       }
     }
@@ -553,7 +543,7 @@ int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
       }
       else
       {
-        LogMessage( "Spinning disk ASD pointer invalid" );
+        LogMessage( "Spinning disk ASD SDK pointer invalid" );
         vErrorCode = ERR_DISK_INIT;
       }
     }
@@ -582,13 +572,26 @@ int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
       IConfocalModeInterface3* vASDConfocalMode = ASDInterface->GetImagingMode();
       if ( vASDConfocalMode != nullptr )
       {
-        ConfocalMode_ = new CConfocalMode( vASDConfocalMode, this );
+        IIllLensInterface* vIllLensInterface = nullptr;
+        for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax && vIllLensInterface == nullptr; ++vLensIndex )
+        {
+
+          if ( ASDInterface->IsIllLensAvailable( (TLensType)vLensIndex ) )
+          {
+            vIllLensInterface = ASDInterface->GetIllLens( (TLensType)vLensIndex );
+          }
+        }
+        if ( vIllLensInterface == nullptr )
+        {
+          LogMessage( "Couldn't find any valid instance of Power Density" );
+        }
+        ConfocalMode_ = new CConfocalMode( vASDConfocalMode, vIllLensInterface, this );
       }
       else
       {
-        LogMessage( "Confocal mode ASD pointer invalid" );
+        LogMessage( "Confocal mode ASD SDK pointer invalid" );
         vErrorCode = ERR_CONFOCALMODE_INIT;
-      }
+      }     
     }
     catch ( exception& vException )
     {
@@ -619,7 +622,7 @@ int CDragonfly::CreateAperture( IASDInterface2* ASDInterface )
       }
       else
       {
-        LogMessage( "Aperture ASD pointer invalid" );
+        LogMessage( "Aperture ASD SDK pointer invalid" );
         vErrorCode = ERR_APERTURE_INIT;
       }
     }
@@ -652,7 +655,7 @@ int CDragonfly::CreateCameraPortMirror( IASDInterface2* ASDInterface )
       }
       else
       {
-        LogMessage( "Camera port mirror ASD pointer invalid" );
+        LogMessage( "Camera port mirror ASD SDK pointer invalid" );
         vErrorCode = ERR_CAMERAPORTMIRROR_INIT;
       }
     }
@@ -689,7 +692,7 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
       }
       else
       {
-        LogMessage( "Lens " + to_string( LensIndex ) + " ASD pointer invalid" );
+        LogMessage( "Lens " + to_string( LensIndex ) + " ASD SDK pointer invalid" );
         vErrorCode = ERR_LENS_INIT;
       }
     }
@@ -708,43 +711,6 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
   return vErrorCode;
 }
 
-int CDragonfly::CreatePowerDensity( IASDInterface3* ASDInterface, int LensIndex )
-{
-  int vErrorCode = DEVICE_OK;
-  if ( ASDInterface->IsIllLensAvailable( (TLensType)LensIndex ) )
-  {
-    try
-    {
-      IIllLensInterface* vIllLensInterface = ASDInterface->GetIllLens( (TLensType)LensIndex );
-      if ( vIllLensInterface != nullptr )
-      {
-        CPowerDensity* vPowerDensity = new CPowerDensity( vIllLensInterface, LensIndex, this );
-        if ( vPowerDensity != nullptr )
-        {
-          PowerDensity_.push_back( vPowerDensity );
-        }
-      }
-      else
-      {
-        LogMessage( "Power density " + to_string( LensIndex ) + " ASD pointer invalid" );
-        vErrorCode = ERR_POWERDENSITY_INIT;
-      }
-    }
-    catch ( exception& vException )
-    {
-      string vMessage( "Error loading the Power density " + to_string( LensIndex ) + ". Caught Exception with message: " );
-      vMessage += vException.what();
-      LogMessage( vMessage );
-      vErrorCode = ERR_POWERDENSITY_INIT;
-    }
-  }
-  else
-  {
-    LogMessage( "Power density " + to_string( LensIndex ) + " not available", true );
-  }
-  return vErrorCode;
-}
-
 int CDragonfly::CreateSuperRes( IASDInterface3* ASDInterface )
 {
   int vErrorCode = DEVICE_OK;
@@ -759,7 +725,7 @@ int CDragonfly::CreateSuperRes( IASDInterface3* ASDInterface )
       }
       else
       {
-        LogMessage( "Super resolution ASD pointer invalid" );
+        LogMessage( "Super resolution ASD SDK pointer invalid" );
         vErrorCode = ERR_SUPERRES_INIT;
       }
     }
@@ -792,7 +758,7 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
       }
       else
       {
-        LogMessage( "TIRF ASD pointer invalid" );
+        LogMessage( "TIRF ASD SDK pointer invalid" );
         vErrorCode = ERR_TIRF_INIT;
       }
     }

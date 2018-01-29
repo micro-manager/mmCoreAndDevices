@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          PositionComponent.h
+// FILE:          PositionComponentInterface.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -8,6 +8,7 @@
 
 #include "MMDeviceConstants.h"
 #include "Property.h"
+#include "PositionComponentHelper.h"
 
 class CDragonfly;
 class IFilterSet;
@@ -22,7 +23,7 @@ public:
   typedef MM::Action<IPositionComponentInterface> CPropertyAction;
 
 protected:
-  typedef std::map<unsigned int, std::string> TPositionNameMap;
+  typedef CPositionComponentHelper::TPositionNameMap TPositionNameMap;
   TPositionNameMap PositionNames_;
   std::string PropertyName_;
   CDragonfly* MMDragonfly_;
