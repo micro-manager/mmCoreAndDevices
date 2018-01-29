@@ -9,6 +9,7 @@
 #include "MMDeviceConstants.h"
 #include "Property.h"
 #include "ComponentInterface.h"
+#include "TIRFMode.h"
 
 class CDragonfly;
 class IConfigFileHandler;
@@ -20,6 +21,7 @@ public:
   virtual bool GetLimits( int* Min, int* Max ) = 0;
   virtual bool Get( int* Value ) = 0;
   virtual bool Set( int Value ) = 0;
+  virtual ETIRFMode Mode() const = 0;
 };
 
 class CPenetrationWrapper : public CIntDeviceWrapper
@@ -38,6 +40,7 @@ public:
   {
     return TIRFInterface_->SetPenetration_nm( Value );
   }
+  ETIRFMode Mode() const { return ETIRFMode::Penetration; }
 private:
   ITIRFInterface* TIRFInterface_;
 };
@@ -58,6 +61,7 @@ public:
   {
     return TIRFInterface_->SetOffset( Value );
   }
+  ETIRFMode Mode() const { return ETIRFMode::CriticalAngle; }
 private:
   ITIRFInterface* TIRFInterface_;
 };
@@ -70,7 +74,8 @@ public:
   typedef MM::Action<CTIRFModeIntSubProperty> CPropertyAction;
   int OnChange( MM::PropertyBase * Prop, MM::ActionType Act );
   void SetReadOnly( bool ReadOnly );
-  void ModeSelected();
+  void ModeSelected( ETIRFMode SelectedTIRFMode );
+  bool IsModeSelected();
 
 private:
   CDragonfly* MMDragonfly_;
@@ -78,9 +83,14 @@ private:
   CIntDeviceWrapper* DeviceWrapper_;
   std::string PropertyName_;
   MM::Property* MMProp_;
-  int BufferedValue_;
+  int BufferedUserSelectionValue_;
+  long BufferedUIValue_;
+  ETIRFMode SelectedTIRFMode_;
+  bool SetPropertyValueFromDeviceOnce_;
 
+  bool SetDeviceValue( MM::PropertyBase* Prop, int RequestedValue );
   bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
+  void SetPropertyValue( MM::PropertyBase* Prop, long NewValue );
 };
 
 #endif

@@ -11,7 +11,10 @@ CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* Devic
   ConfigFileHandler_( ConfigFileHandler ),
   DeviceWrapper_( DeviceWrapper ),
   PropertyName_( PropertyName ),
-  MMProp_( nullptr )
+  MMProp_( nullptr ),
+  BufferedUserSelectionValue_( 0.f ),
+  BufferedUIValue_( 0.f ),
+  SelectedTIRFMode_( ETIRFMode::UnknownTIRFMode )
 {
   float vMin, vMax, vValue = 0;
   bool vValueRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
@@ -42,14 +45,13 @@ CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* Devic
     }
     ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vValue ) );
   }
-  BufferedValue_ = vValue;
+  BufferedUserSelectionValue_ = vValue;
+  BufferedUIValue_ = vValue;
 
   // Create the MM property for Disk speed
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRFModeFloatSubProperty::OnChange );
-  MMDragonfly_->CreateFloatProperty( PropertyName.c_str(), vValue, false, vAct );
-  MMDragonfly_->SetPropertyLimits( PropertyName.c_str(), vMin, vMax );
-  // Enforce call to the action method to initialise MMProp_
-  MMDragonfly_->SetProperty( PropertyName.c_str(), to_string(vValue).c_str() );
+  MMDragonfly_->CreateFloatProperty( PropertyName_.c_str(), vValue, false, vAct );
+  MMDragonfly_->SetPropertyLimits( PropertyName_.c_str(), vMin, vMax );
 }
 
 CTIRFModeFloatSubProperty::~CTIRFModeFloatSubProperty()
@@ -66,52 +68,79 @@ void CTIRFModeFloatSubProperty::SetReadOnly( bool /*ReadOnly*/ )
 
 int CTIRFModeFloatSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  int vRet = DEVICE_OK;
   if ( MMProp_ == nullptr )
   {
     MMProp_ = dynamic_cast<MM::Property *>(Prop);
   }
-  if ( Act == MM::BeforeGet )
-  {
-    if ( !SetPropertyValueFromDeviceValue( Prop ) )
-    {
-      return DEVICE_ERR;
-    }
-  }
-  else if ( Act == MM::AfterSet )
+  if ( Act == MM::AfterSet )
   {
     double vRequestedValue;
     Prop->Get( vRequestedValue );
-    float vMin, vMax;
-    bool vLimitsRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
-    if ( vLimitsRetrieved )
+    if ( !IsModeSelected() )
     {
-      if ( vRequestedValue >= (double)vMin && vRequestedValue <= (double)vMax )
-      {
-        if ( !DeviceWrapper_->Set( (float)vRequestedValue ) )
-        {
-          float vDeviceValue;
-          DeviceWrapper_->Get( &vDeviceValue );
-          Prop->Set( (double)vDeviceValue );
-        }
-        else
-        {
-          BufferedValue_ = (float) vRequestedValue;
-          // Save the value requested by the user to the config file
-          ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vRequestedValue ) );
-        }
-      }
-      else
-      {
-        MMDragonfly_->LogComponentMessage( "Requested " + PropertyName_ + " value is out of bound. Ignoring request." );
-      }
+      // The current mode is not selected, backup the request and reset the UI to the previously set value
+      // The device will be updated with the user request next time the mode is selected
+      BufferedUserSelectionValue_ = (float)vRequestedValue;
+      SetPropertyValue( Prop, BufferedUIValue_ );
     }
     else
     {
-      MMDragonfly_->LogComponentMessage( "Failed to retrieve " + PropertyName_ + " limits" );
+      BufferedUIValue_ = vRequestedValue;
+      if ( !SetDeviceValue( Prop, (float)vRequestedValue ) )
+      {
+        vRet = DEVICE_ERR;
+      }
     }
   }
 
   return DEVICE_OK;
+}
+
+bool CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float RequestedValue )
+{
+  bool vValueSet = false;
+  float vMin, vMax;
+  bool vLimitsRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
+  if ( vLimitsRetrieved )
+  {
+    if ( RequestedValue >= vMin && RequestedValue <= vMax )
+    {
+      if ( !DeviceWrapper_->Set( RequestedValue ) )
+      {
+        // Failed to set the device. Best is to refresh the UI with the device's current value.
+        vValueSet = SetPropertyValueFromDeviceValue( Prop );
+        if ( vValueSet )
+        {
+          double vNewValue;
+          Prop->Get( vNewValue );
+          BufferedUserSelectionValue_ = (float)vNewValue;
+        }
+      }
+      else
+      {
+        BufferedUserSelectionValue_ = RequestedValue;
+        // Save the new value to the config file
+        ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( BufferedUserSelectionValue_ ) );
+        vValueSet = true;
+      }
+    }
+    else
+    {
+      MMDragonfly_->LogComponentMessage( "Requested " + PropertyName_ + " value is out of bound. Ignoring request." );
+    }
+  }
+  else
+  {
+    MMDragonfly_->LogComponentMessage( "Failed to retrieve " + PropertyName_ + " limits" );
+  }
+  return vValueSet;
+}
+
+void CTIRFModeFloatSubProperty::SetPropertyValue( MM::PropertyBase* Prop, double NewValue )
+{
+  Prop->Set( NewValue );
+  BufferedUIValue_ = NewValue;
 }
 
 bool CTIRFModeFloatSubProperty::SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop )
@@ -125,7 +154,7 @@ bool CTIRFModeFloatSubProperty::SetPropertyValueFromDeviceValue( MM::PropertyBas
     float vValue;
     if ( DeviceWrapper_->Get( &vValue ) )
     {
-      Prop->Set( (double)vValue );
+      SetPropertyValue( Prop, (double)vValue );
       vValueSet = true;
     }
     else
@@ -141,16 +170,29 @@ bool CTIRFModeFloatSubProperty::SetPropertyValueFromDeviceValue( MM::PropertyBas
   return vValueSet;
 }
 
-void CTIRFModeFloatSubProperty::ModeSelected()
+void CTIRFModeFloatSubProperty::ModeSelected( ETIRFMode SelectedTIRFMode )
 {
-  if ( MMProp_ )
+  SelectedTIRFMode_ = SelectedTIRFMode;
+  if ( IsModeSelected() )
   {
-    double vCurrentValue;
-    MMProp_->Get( vCurrentValue );
-    if ( BufferedValue_ != vCurrentValue )
+    if ( MMProp_ )
     {
-      MMProp_->Set( (double)BufferedValue_ );
-      DeviceWrapper_->Set( BufferedValue_ );
+      double vCurrentValue;
+      MMProp_->Get( vCurrentValue );
+      if ( BufferedUserSelectionValue_ != vCurrentValue )
+      {
+        SetPropertyValue( MMProp_, (double)BufferedUserSelectionValue_ );
+        SetDeviceValue( MMProp_, BufferedUserSelectionValue_ );
+      }
+    }
+    else
+    {
+      MMDragonfly_->SetProperty( PropertyName_.c_str(), to_string( BufferedUserSelectionValue_ ).c_str() );
     }
   }
+}
+
+bool CTIRFModeFloatSubProperty::IsModeSelected()
+{
+  return SelectedTIRFMode_ == DeviceWrapper_->Mode();
 }

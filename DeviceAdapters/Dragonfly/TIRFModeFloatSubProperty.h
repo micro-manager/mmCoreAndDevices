@@ -9,6 +9,7 @@
 #include "MMDeviceConstants.h"
 #include "Property.h"
 #include "ComponentInterface.h"
+#include "TIRFMode.h"
 
 class CDragonfly;
 class IConfigFileHandler;
@@ -20,6 +21,7 @@ public:
   virtual bool GetLimits( float* Min, float* Max ) = 0;
   virtual bool Get( float* Value ) = 0;
   virtual bool Set( float Value ) = 0;
+  virtual ETIRFMode Mode() const = 0;
 };
 
 class CHILOObliqueAngleWrapper : public CFloatDeviceWrapper
@@ -45,6 +47,7 @@ public:
   {
     return TIRFInterface_->SetObliqueAngle_mdeg( (int)(Value*1000) );
   }
+  ETIRFMode Mode() const { return ETIRFMode::HiLoObliqueAngle; }
 private:
   ITIRFInterface* TIRFInterface_;
 };
@@ -58,7 +61,8 @@ public:
   typedef MM::Action<CTIRFModeFloatSubProperty> CPropertyAction;
   int OnChange( MM::PropertyBase * Prop, MM::ActionType Act );
   void SetReadOnly( bool ReadOnly );
-  void ModeSelected();
+  void ModeSelected( ETIRFMode SelectedTIRFMode );
+  bool IsModeSelected();
 
 private:
   CDragonfly* MMDragonfly_;
@@ -66,9 +70,13 @@ private:
   CFloatDeviceWrapper* DeviceWrapper_;
   std::string PropertyName_;
   MM::Property* MMProp_;
-  float BufferedValue_;
+  float BufferedUserSelectionValue_;
+  double BufferedUIValue_;
+  ETIRFMode SelectedTIRFMode_;
 
+  bool SetDeviceValue( MM::PropertyBase* Prop, float RequestedValue );
   bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
+  void SetPropertyValue( MM::PropertyBase* Prop, double NewValue );
 };
 
 #endif
