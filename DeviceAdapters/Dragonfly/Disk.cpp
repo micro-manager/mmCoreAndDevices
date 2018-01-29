@@ -53,7 +53,11 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
 
   // Create the MM property for Disk speed
   CPropertyAction* vAct = new CPropertyAction( this, &CDisk::OnSpeedChange );
-  MMDragonfly_->CreateIntegerProperty( g_DiskSpeedPropertyName, vSpeed, false, vAct );
+  int vRet = MMDragonfly_->CreateIntegerProperty( g_DiskSpeedPropertyName, vSpeed, false, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + string( g_DiskSpeedPropertyName ) + " property" );
+  }
   MMDragonfly_->SetPropertyLimits( g_DiskSpeedPropertyName, vMin, vMax );
 
   // Create the MM property for Disk status
@@ -64,10 +68,12 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
     vStatusValue = g_DiskStatusStart;
   }
   vAct = new CPropertyAction( this, &CDisk::OnStatusChange );
-  int vRet = MMDragonfly_->CreateProperty( g_DiskStatusPropertyName, vStatusValue.c_str(), MM::String, false, vAct );
+  vRet = MMDragonfly_->CreateProperty( g_DiskStatusPropertyName, vStatusValue.c_str(), MM::String, false, vAct );
   if ( vRet != DEVICE_OK )
   {
-    throw runtime_error( "Error creating " + string( g_DiskStatusPropertyName ) + " property" );
+    // Not throwing here since it would delete the class and mess up with the already create property
+    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_DiskStatusPropertyName ) + " property" );
+    return;
   }
   MMDragonfly_->AddAllowedValue( g_DiskStatusPropertyName, g_DiskStatusStop );
   MMDragonfly_->AddAllowedValue( g_DiskStatusPropertyName, g_DiskStatusStart );
@@ -78,21 +84,24 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   vRet = MMDragonfly_->CreateProperty( g_DiskSpeedMonitorPropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
   if ( vRet != DEVICE_OK )
   {
-    throw runtime_error( "Error creating " +string( g_DiskSpeedMonitorPropertyName ) + " property" );
+    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_DiskSpeedMonitorPropertyName ) + " property" );
+    return;
   }
 
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
   vRet = MMDragonfly_->CreateProperty( g_DiskStatusMonitorPropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
   if ( vRet != DEVICE_OK )
   {
-    throw runtime_error( "Error creating " + string( g_DiskStatusMonitorPropertyName ) + " property" );
+    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_DiskStatusMonitorPropertyName ) + " property" );
+    return;
   }
 
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
   vRet = MMDragonfly_->CreateProperty( g_FrameScanTime, to_string( CalculateFrameScanTime( vSpeed, vScansPerRevolution )).c_str(), MM::String, true, vAct );
   if ( vRet != DEVICE_OK )
   {
-    throw runtime_error( "Error creating " + string( g_FrameScanTime ) + " property" );
+    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_FrameScanTime ) + " property" );
+    return;
   }
 
   DiskStatusMonitor_ = new CDiskStatusMonitor( MMDragonfly_ );
@@ -106,6 +115,7 @@ CDisk::~CDisk()
 
 int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  int vRet = DEVICE_OK;
   if ( Act == MM::AfterSet )
   {
     long vRequestedSpeed;
@@ -118,61 +128,87 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
       {
         if ( vRequestedSpeed >= (long)vMin && vRequestedSpeed <= (long)vMax )
         {
-          DiskInterface_->SetSpeed( vRequestedSpeed );
-          RequestedSpeed_ = vRequestedSpeed;
-          if ( !StopRequested_ )
+          if ( DiskInterface_->SetSpeed( vRequestedSpeed ) )
           {
-            RequestedSpeedAchieved_ = false;
-            FrameScanTimeUpdated_ = false;
+            RequestedSpeed_ = vRequestedSpeed;
+            if ( !StopRequested_ )
+            {
+              RequestedSpeedAchieved_ = false;
+              FrameScanTimeUpdated_ = false;
+            }
+          }
+          else
+          {
+            MMDragonfly_->LogComponentMessage( "Failed to change the speed of the disk" );
+            vRet = DEVICE_CAN_NOT_SET_PROPERTY;
           }
         }
         else
         {
           MMDragonfly_->LogComponentMessage( "Requested Disk speed is out of bound. Ignoring request." );
+          vRet = DEVICE_INVALID_PROPERTY_VALUE;
         }
       }
       else
       {
         MMDragonfly_->LogComponentMessage( g_DiskSpeedLimitsReadError );
+        vRet = DEVICE_ERR;
       }
     }
     else
     {
       MMDragonfly_->LogComponentMessage( "Requested Disk speed is negavite. Ignoring request." );
+      vRet = DEVICE_INVALID_PROPERTY_VALUE;
     }
   }
 
-  return DEVICE_OK;
+  return vRet;
 }
 
 int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  int vRet = DEVICE_OK;
   if ( Act == MM::AfterSet )
   {
     string vRequest;
     Prop->Get( vRequest );
     if ( vRequest == g_DiskStatusStart )
     {
-      DiskInterface_->Start();
-      StopRequested_ = false;
-      RequestedSpeedAchieved_ = false;
-      FrameScanTimeUpdated_ = false;
+      if ( DiskInterface_->Start() )
+      {
+        StopRequested_ = false;
+        RequestedSpeedAchieved_ = false;
+        FrameScanTimeUpdated_ = false;
+      }
+      else
+      {
+        MMDragonfly_->LogComponentMessage( "Failed to start the disk" );
+        vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+      }
     }
     if ( vRequest == g_DiskStatusStop )
     {
-      DiskInterface_->Stop();
-      StopRequested_ = true;
-      StopWitnessed_ = false;
-      RequestedSpeedAchieved_ = false;
-      FrameScanTimeUpdated_ = false;
+      if ( DiskInterface_->Stop() )
+      {
+        StopRequested_ = true;
+        StopWitnessed_ = false;
+        RequestedSpeedAchieved_ = false;
+        FrameScanTimeUpdated_ = false;
+      }
+      else
+      {
+        MMDragonfly_->LogComponentMessage( "Failed to stop the disk" );
+        vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+      }
     }
   }
 
-  return DEVICE_OK;
+  return vRet;
 }
 
 int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  int vRet = DEVICE_OK;
   if ( Act == MM::BeforeGet )
   {
     // Update speed
@@ -187,6 +223,11 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
         {
           RequestedSpeedAchieved_ = true;
         }
+      }
+      else
+      {
+        MMDragonfly_->LogComponentMessage( "Failed to read the speed of the disk" );
+        vRet = DEVICE_ERR;
       }
     }
     // Update status
@@ -227,6 +268,16 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
               Prop->Set( CalculateFrameScanTime( vDeviceSpeed, vScansPerResolution ) );
               FrameScanTimeUpdated_ = true;
             }
+            else
+            {
+              MMDragonfly_->LogComponentMessage( "Error in call to GetScansPerRevolution()" );
+              vRet = DEVICE_ERR;
+            }
+          }
+          else
+          {
+            MMDragonfly_->LogComponentMessage( "Failed to read the speed of the disk" );
+            vRet = DEVICE_ERR;
           }
         }
       }
@@ -236,7 +287,7 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
       }
     }
   }
-  return DEVICE_OK;
+  return vRet;
 }
 
 double CDisk::CalculateFrameScanTime(unsigned int Speed, unsigned int ScansPerRevolution )

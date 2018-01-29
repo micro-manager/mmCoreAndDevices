@@ -78,70 +78,17 @@ void IPositionComponentInterface::Initialise()
   Initialised_ = true;
 }
 
-bool IPositionComponentInterface::RetrievePositionsFromFilterSet()
-{
-  const static unsigned int vStringLength = 64;
-  bool vPositionsRetrieved = false;
-  IFilterSet* vFilterSet = GetFilterSet();
-  if ( vFilterSet != nullptr )
-  {
-    unsigned int vMinPos, vMaxPos;
-    if ( vFilterSet->GetLimits( vMinPos, vMaxPos ) )
-    {
-      char vDescription[vStringLength];
-      unsigned int vUndefinedIndex = 1;
-      for ( unsigned int vIndex = vMinPos; vIndex <= vMaxPos; vIndex++ )
-      {
-        string vPositionName;
-        if ( vFilterSet->GetFilterDescription( vIndex, vDescription, vStringLength ) == false )
-        {
-          vPositionName += "Undefined Position " + to_string(vUndefinedIndex);
-          vUndefinedIndex++;
-        }
-        else
-        {
-          vPositionName += vDescription;
-        }
-        PositionNames_[vIndex] = vPositionName;
-      }
-
-      vPositionsRetrieved = true;
-    }
-  }
-  else
-  {
-    MMDragonfly_->LogComponentMessage( "Invalid FilterSet pointer for " + PropertyName_ );
-  }
-  return vPositionsRetrieved;
-}
-
-bool IPositionComponentInterface::RetrievePositionsWithoutDescriptions()
-{
-  bool vPositionsRetrieved = false;
-  unsigned int vMinValue, vMaxValue;
-  if ( GetLimits( vMinValue, vMaxValue ) )
-  {
-    for ( unsigned int vIndex = vMinValue; vIndex <= vMaxValue; vIndex++ )
-    {
-      string vPositionName = "Undefined Position " + to_string( vIndex );
-      PositionNames_[vIndex] = vPositionName;
-    }
-
-    vPositionsRetrieved = true;
-  }
-  return vPositionsRetrieved;
-}
-
 int IPositionComponentInterface::OnPositionChange( MM::PropertyBase* Prop, MM::ActionType Act )
 {
   if ( !Initialised_ ) return DEVICE_ERR;
 
+  int vRet = DEVICE_OK;
   if ( Act == MM::BeforeGet )
   {
     if ( UpdateAllowedValues() )
     {
       // If allowed values have been updated, read the current property from the device
-      SetPropertyValueFromDevicePosition( Prop );
+      vRet = SetPropertyValueFromDevicePosition( Prop );
     }
   }
   else if ( Act == MM::AfterSet )
@@ -165,38 +112,45 @@ int IPositionComponentInterface::OnPositionChange( MM::PropertyBase* Prop, MM::A
     if ( vFound )
     {
       // Update device position
-      SetPosition( vIt->first );
+      if ( !SetPosition( vIt->first ) )
+      {
+        MMDragonfly_->LogComponentMessage( "Failed to set the position for property " + PropertyName_ + " [" + to_string( vIt->first ) + "]" );
+        vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+      }
     }
     else
     {
       // Reset position displayed in the UI to the current device position
       MMDragonfly_->LogComponentMessage( "Unknown " + PropertyName_ + " position requested [" + vRequestedPosition + "]. Ignoring request." );
       SetPropertyValueFromDevicePosition( Prop );
+      vRet = DEVICE_INVALID_PROPERTY_VALUE;
     }
   }
-  return DEVICE_OK;
+  return vRet;
 }
 
-bool IPositionComponentInterface::SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop )
+int IPositionComponentInterface::SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop )
 {
-  bool vValueSet = false;
+  int vRet = DEVICE_ERR;
   unsigned int vPosition;
   if ( GetPosition( vPosition ) )
   {
     if ( PositionNames_.find( vPosition ) != PositionNames_.end() )
     {
       Prop->Set( PositionNames_[vPosition].c_str() );
-      vValueSet = true;
+      vRet = DEVICE_OK;
     }
     else
     {
       MMDragonfly_->LogComponentMessage( "Current " + PropertyName_ + " position invalid [ " + to_string(vPosition) + " ]" );
+      vRet = DEVICE_UNKNOWN_POSITION;
     }
   }
   else
   {
     MMDragonfly_->LogComponentMessage( "Failed to read the current " + PropertyName_ + " position" );
+    vRet = DEVICE_ERR;
   }
 
-  return vValueSet;
+  return vRet;
 }

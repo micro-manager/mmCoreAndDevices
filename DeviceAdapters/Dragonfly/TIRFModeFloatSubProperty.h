@@ -60,7 +60,6 @@ public:
   ~CTIRFModeFloatSubProperty();
   typedef MM::Action<CTIRFModeFloatSubProperty> CPropertyAction;
   int OnChange( MM::PropertyBase * Prop, MM::ActionType Act );
-  void SetReadOnly( bool ReadOnly );
   void ModeSelected( ETIRFMode SelectedTIRFMode );
   bool IsModeSelected();
 
@@ -73,8 +72,8 @@ private:
   float BufferedUserSelectionValue_;
   ETIRFMode SelectedTIRFMode_;
 
-  bool SetDeviceValue( MM::PropertyBase* Prop, float RequestedValue );
-  bool SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
+  int SetDeviceValue( MM::PropertyBase* Prop, float RequestedValue );
+  int SetPropertyValueFromDeviceValue( MM::PropertyBase* Prop );
   void SetPropertyValue( MM::PropertyBase* Prop, double NewValue );
   void SetBufferedUserSelectionValue( float NewValue );
 };

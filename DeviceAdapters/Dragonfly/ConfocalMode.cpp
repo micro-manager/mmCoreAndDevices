@@ -4,7 +4,7 @@
 using namespace std;
 
 const char* const g_ConfocalModePropertyName = "Imaging Mode [Power Density]";
-const char* const g_ConfocalModeReadError = "Failed to retrieve Confocal mode";
+const char* const g_ConfocalModeReadError = "Failed to retrieve Imaging mode";
 const char* const g_PowerDensityPositionsReadError = "Failed to retrieve Power Density positions";
 const char* const g_PowerDensityReadError = "Failed to retrieve Power Density current position";
 const char* const g_Widefield = "Widefield";
@@ -51,15 +51,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
     throw runtime_error( g_PowerDensityReadError );
   }
 
-  // Create property
-  CPropertyAction* vAct = new CPropertyAction( this, &CConfocalMode::OnValueChange );
-  int vRet = MMDragonfly_->CreateProperty( g_ConfocalModePropertyName, "Undefined", MM::String, false, vAct );
-  if ( vRet != DEVICE_OK )
-  {
-    throw runtime_error( "Error creating " + string( g_ConfocalModePropertyName ) + " property" );
-  }
-
-  // Populate the possible positions
+  // Build the map of possible positions
   string vCurrentModeBaseName;
   if ( ConfocalModeInterface_->IsConfocalModeAvailable( bfmWideField ) )
   {
@@ -72,7 +64,6 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
 
   if ( ConfocalModeInterface_->IsConfocalModeAvailable( bfmTIRF ) )
   {
-    MMDragonfly_->AddAllowedValue( g_ConfocalModePropertyName, g_TIRF );
     TDevicePosition vPosition{ bfmTIRF, 0 };
     PositionNameMap_[g_TIRF] = vPosition;
     if ( vCurrentConfocalMode == bfmTIRF )
@@ -112,8 +103,14 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
   }
 
   // Reset the confocal mode and power density to their initial value since we modified them
-  SetDeviceConfocalMode( vCurrentConfocalMode );
-  IllLensInterface_->SetPosition( vCurrentPowerDensityPosition );
+  if ( SetDeviceConfocalMode( vCurrentConfocalMode ) != DEVICE_OK )
+  {
+    MMDragonfly_->LogComponentMessage( "Failed to set Imaging mode position [" + to_string( vCurrentConfocalMode ) + "]" );
+  }
+  if ( !IllLensInterface_->SetPosition( vCurrentPowerDensityPosition ) )
+  {
+    MMDragonfly_->LogComponentMessage( "Failed to set Power density position [" + to_string( vCurrentPowerDensityPosition ) + "]" );
+  }
 
   // Initialise the property value
   string vCurrentPowerDensityName = "Undefined";
@@ -130,7 +127,22 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
   {
     vCurrentPropertyValue = BuildPropertyValueFromDeviceValue( vCurrentModeBaseName, vCurrentPowerDensityName );
   }
-  MMDragonfly_->SetProperty( g_ConfocalModePropertyName, vCurrentPropertyValue.c_str() );
+
+  // Create property
+  CPropertyAction* vAct = new CPropertyAction( this, &CConfocalMode::OnValueChange );
+  int vRet = MMDragonfly_->CreateProperty( g_ConfocalModePropertyName, vCurrentPropertyValue.c_str(), MM::String, false, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + string( g_ConfocalModePropertyName ) + " property" );
+  }
+
+  // Populate the values
+  TPositionNameMap::const_iterator PositionNameIt = PositionNameMap_.begin();
+  while ( PositionNameIt != PositionNameMap_.end() )
+  {
+    MMDragonfly_->AddAllowedValue( g_ConfocalModePropertyName, PositionNameIt->first.c_str() );
+    PositionNameIt++;
+  }
 }
 
 CConfocalMode::~CConfocalMode()
@@ -142,7 +154,7 @@ CConfocalMode::~CConfocalMode()
 void CConfocalMode::AddValuesForConfocalMode( TConfocalMode ConfocalMode, const std::string& ConfocalModeBaseName, const CPositionComponentHelper::TPositionNameMap& PowerDensityPositionNames )
 {
 #ifdef _CONFOCALMODE_HARDWARE_EXPLORATION_
-  if ( SetDeviceConfocalMode( ConfocalMode ) )
+  if ( SetDeviceConfocalMode( ConfocalMode ) == DEVICE_OK )
   {
     if ( IllLensInterface_->IsRestrictionEnabled() )
 #else
@@ -168,6 +180,10 @@ void CConfocalMode::AddValuesForConfocalMode( TConfocalMode ConfocalMode, const 
           }
 #ifdef _CONFOCALMODE_HARDWARE_EXPLORATION_
       }
+      else
+      {
+        throw runtime_error( "Failed to read Imaging mode restricted range" );
+      }
 #endif
     }
     else
@@ -181,6 +197,10 @@ void CConfocalMode::AddValuesForConfocalMode( TConfocalMode ConfocalMode, const 
     }
 #ifdef _CONFOCALMODE_HARDWARE_EXPLORATION_
   }  
+  else
+  {
+    throw runtime_error( "Failed to set Imaging mode position [" + to_string( ConfocalMode ) + "]" );
+  }
 #endif
 }
 
@@ -193,37 +213,53 @@ void CConfocalMode::AddValue( TConfocalMode ConfocalMode, const string& Confocal
 {
   TDevicePosition vPosition{ ConfocalMode, PowerDensity };
   string vPropertyValue = BuildPropertyValueFromDeviceValue( ConfocalModeBaseName, PowerDensityName );
-  MMDragonfly_->AddAllowedValue( g_ConfocalModePropertyName, vPropertyValue.c_str() );
   PositionNameMap_[vPropertyValue] = vPosition;
 }
 
-bool CConfocalMode::SetDeviceConfocalMode( TConfocalMode ConfocalMode )
+int CConfocalMode::SetDeviceConfocalMode( TConfocalMode ConfocalMode )
 {
-  bool vValueSet = true;
+  int vRet = DEVICE_ERR;
+  bool vDeviceSuccess = true;
   switch ( ConfocalMode )
   {
-  case bfmWideField:  ConfocalModeInterface_->ModeWideField();  break;
-  case bfmTIRF:       ConfocalModeInterface_->ModeTIRF();       break;
-  case bfmConfocalHC: ConfocalModeInterface_->ModeConfocalHC(); break;
-  case bfmConfocalHS: ConfocalModeInterface_->ModeConfocalHS(); break;
-  default:            vValueSet = false;                        break;
+  case bfmWideField:  vDeviceSuccess = ConfocalModeInterface_->ModeWideField();  break;
+  case bfmTIRF:       vDeviceSuccess = ConfocalModeInterface_->ModeTIRF();       break;
+  case bfmConfocalHC: vDeviceSuccess = ConfocalModeInterface_->ModeConfocalHC(); break;
+  case bfmConfocalHS: vDeviceSuccess = ConfocalModeInterface_->ModeConfocalHS(); break;
+  default:            
+    MMDragonfly_->LogComponentMessage( "Invalid Imaging mode [" + to_string( ConfocalMode ) + "]" ); 
+    vRet = DEVICE_INVALID_PROPERTY_VALUE; 
+    break;
   }
-  return vValueSet;
+  if ( !vDeviceSuccess )
+  {
+    MMDragonfly_->LogComponentMessage( "Failed to set the Imaging mode" );
+    vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+  }
+  return vRet;
 }
 
-bool CConfocalMode::SetDeviceFromPropertyValue( const std::string& PropertValue )
+int CConfocalMode::SetDeviceFromPropertyValue( const std::string& PropertValue )
 {
-  bool vPositionSet = false;
+  int vRet = DEVICE_INVALID_PROPERTY_VALUE;
   if ( PositionNameMap_.find( PropertValue ) != PositionNameMap_.end() )
   {
     TDevicePosition vPosition = PositionNameMap_[PropertValue];
-    vPositionSet = SetDeviceConfocalMode( vPosition.ConfocalMode );
-    if ( vPositionSet && vPosition.ConfocalMode != bfmTIRF )
+    vRet = SetDeviceConfocalMode( vPosition.ConfocalMode );
+    if ( vRet == DEVICE_OK && vPosition.ConfocalMode != bfmTIRF )
     {
-      vPositionSet = IllLensInterface_->SetPosition( vPosition.PowerDensity );
+      if ( !IllLensInterface_->SetPosition( vPosition.PowerDensity ) )
+      {
+        MMDragonfly_->LogComponentMessage( "Failed to set the Power density" );
+        vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+      }
+      else
+      {
+        vRet = DEVICE_OK;
+      }
     }
   }
-  return vPositionSet;
+  return vRet;
 }
 
 int CConfocalMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
@@ -233,11 +269,7 @@ int CConfocalMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
   {
     string vRequestedMode;
     Prop->Get( vRequestedMode );
-    if ( !SetDeviceFromPropertyValue( vRequestedMode ) )
-    {
-      vRet = DEVICE_INVALID_PROPERTY_VALUE;
-    }
+    vRet = SetDeviceFromPropertyValue( vRequestedMode );
   }
-
   return vRet;
 }

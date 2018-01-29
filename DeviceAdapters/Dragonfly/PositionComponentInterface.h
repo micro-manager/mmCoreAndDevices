@@ -42,10 +42,7 @@ protected:
 private:
   bool Initialised_;
 
-
-  bool RetrievePositionsFromFilterSet();
-  bool RetrievePositionsWithoutDescriptions();
-  bool SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop );
+  int SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop );
 };
 
 #endif

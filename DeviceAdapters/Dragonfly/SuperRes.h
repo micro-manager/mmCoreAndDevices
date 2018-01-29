@@ -29,7 +29,7 @@ private:
   TPositionNameMap PositionNames_;
 
   bool RetrievePositions();
-  bool SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop );
+  int SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop );
 };
 
 #endif

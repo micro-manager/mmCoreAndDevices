@@ -33,11 +33,11 @@ private:
   typedef std::map<std::string, TDevicePosition> TPositionNameMap;
   TPositionNameMap PositionNameMap_;
 
-  bool SetDeviceConfocalMode( TConfocalMode ConfocalMode );
+  int SetDeviceConfocalMode( TConfocalMode ConfocalMode );
   std::string BuildPropertyValueFromDeviceValue( const std::string& ConfocalModeBaseName, const std::string& PowerDensityName );
   void AddValuesForConfocalMode( TConfocalMode ConfocalMode, const std::string& ConfocalModeBaseName, const CPositionComponentHelper::TPositionNameMap& PowerDensityPositionNames );
   void AddValue( TConfocalMode ConfocalMode, const std::string& ConfocalModeBaseName, unsigned int PowerDensity, const std::string& PowerDensityName );
-  bool SetDeviceFromPropertyValue( const std::string& PropertValue );
+  int SetDeviceFromPropertyValue( const std::string& PropertValue );
 };
 
 #endif

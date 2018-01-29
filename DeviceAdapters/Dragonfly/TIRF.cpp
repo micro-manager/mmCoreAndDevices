@@ -54,7 +54,11 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, IConfigFileHandler* ConfigFileHandl
 
   // Create MM property for TIRF mode
   CPropertyAction* vAct = new CPropertyAction( this, &CTIRF::OnTIRFModeChange );
-  MMDragonfly_->CreateStringProperty( g_TIRFModePropertyName, vTIRFModeName, false, vAct );
+  int vRet = MMDragonfly_->CreateStringProperty( g_TIRFModePropertyName, vTIRFModeName, false, vAct );
+  if ( vRet != DEVICE_OK )
+  {
+    throw runtime_error( "Error creating " + string( g_TIRFModePropertyName ) + " property" );
+  }
   MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModePenetration );
   MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModeHILO );
   MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModeCritical );
@@ -70,20 +74,45 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, IConfigFileHandler* ConfigFileHandl
   CriticalAngleOffsetProperty_ = new CTIRFModeIntSubProperty( CriticalAngleOffsetWrapper_, ConfigFileHandler_, MMDragonfly_, "TIRF |  Critical Angle Offset" );
   
   // Set TIRF sub properties read/write status based on TIRF mode
-  UpdateTIRFModeReadOnlyStatus( vTIRFModeName );
+  UpdateTIRFModeSelection( vTIRFModeName );
 
   // Create MM properties for optical pathway
-  MMDragonfly_->CreateIntegerProperty( g_MagnificationPropertyName, Magnification_, true );
-  MMDragonfly_->CreateFloatProperty( g_NumericalAperturePropertyName, NumericalAperture_, true );
-  MMDragonfly_->CreateFloatProperty( g_RefractiveIndexPropertyName, RefractiveIndex_, true );
+  vRet = MMDragonfly_->CreateIntegerProperty( g_MagnificationPropertyName, Magnification_, true );
+  if ( vRet != DEVICE_OK )
+  {
+    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_MagnificationPropertyName ) + " property" );
+    return;
+  }
+  vRet = MMDragonfly_->CreateFloatProperty( g_NumericalAperturePropertyName, NumericalAperture_, true );
+  if ( vRet != DEVICE_OK )
+  {
+    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_NumericalAperturePropertyName ) + " property" );
+    return;
+  }
+  vRet = MMDragonfly_->CreateFloatProperty( g_RefractiveIndexPropertyName, RefractiveIndex_, true );
+  if ( vRet != DEVICE_OK )
+  {
+    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_RefractiveIndexPropertyName ) + " property" );
+    return;
+  }
   const char* vScopeName;
   if ( GetScopeNameFromIndex( ScopeID_, &vScopeName ) )
   {
-    MMDragonfly_->CreateStringProperty( g_ScopePropertyName, vScopeName, true );
+    vRet = MMDragonfly_->CreateStringProperty( g_ScopePropertyName, vScopeName, true );
+    if ( vRet != DEVICE_OK )
+    {
+      MMDragonfly_->LogComponentMessage( "Error creating " + string( g_ScopePropertyName ) + " property" );
+      return;
+    }
   }
   else
   {
-    MMDragonfly_->CreateStringProperty( g_ScopePropertyName, "undefined", true );
+    vRet = MMDragonfly_->CreateStringProperty( g_ScopePropertyName, "undefined", true );
+    if ( vRet != DEVICE_OK )
+    {
+      MMDragonfly_->LogComponentMessage( "Error creating " + string( g_ScopePropertyName ) + " property" );
+      return;
+    }
     MMDragonfly_->LogComponentMessage( "Current TIRF scope invalid" );
   }
   MMDragonfly_->AddAllowedValue( g_ScopePropertyName, g_ScopeLeica );
@@ -104,6 +133,7 @@ CTIRF::~CTIRF()
 
 int CTIRF::OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  int vRet = DEVICE_OK;
   if ( Act == MM::AfterSet )
   {
     string vRequestedMode;
@@ -111,15 +141,23 @@ int CTIRF::OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act )
     int vTIRFModeIndex;
     if ( GetTIFRModeIndexFromName( vRequestedMode, &vTIRFModeIndex ) )
     {
-      TIRFInterface_->SetTIRFMode( vTIRFModeIndex );
-      UpdateTIRFModeReadOnlyStatus( vRequestedMode );
+      if ( TIRFInterface_->SetTIRFMode( vTIRFModeIndex ) )
+      {
+        UpdateTIRFModeSelection( vRequestedMode );
+      }
+      else
+      {
+        MMDragonfly_->LogComponentMessage( "Failed to set TIRF Mode [" + vRequestedMode + "]" );
+        vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+      }
     }
     else
     {
-      MMDragonfly_->LogComponentMessage( "Requested TIRF Mode is invalid. Ignoring request." );
+      MMDragonfly_->LogComponentMessage( "Requested TIRF Mode [" + vRequestedMode + "] is invalid. Ignoring request." );
+      vRet = DEVICE_ERR;
     }
   }
-  return DEVICE_OK;
+  return vRet;
 }
 
 bool CTIRF::GetTIRFModeNameFromIndex( int TIRFModeIndex, const char** TIRFModName )
@@ -215,7 +253,7 @@ bool CTIRF::GetScopeIndexFromName( const string& ScopeName, int* ScopeIndex )
   return vScopeFound;
 }
 
-void CTIRF::UpdateTIRFModeReadOnlyStatus( const string& TIRFModeName )
+void CTIRF::UpdateTIRFModeSelection( const string& TIRFModeName )
 {
   if ( TIRFModeName == g_TIRFModePenetration )
   {

@@ -94,7 +94,19 @@ bool CFilterWheelProperty::RetrievePositionsFromFilterConfig()
 
         vPositionsRetrieved = true;
       }
+      else
+      {
+        MMDragonfly_->LogComponentMessage( "Failed to read filterset limits for property " + ComponentName_ );
+      }
     }
+    else
+    {
+      MMDragonfly_->LogComponentMessage( "Filter set pointer invalid for property " + ComponentName_ );
+    }
+  }
+  else
+  {
+    MMDragonfly_->LogComponentMessage("Filter config interface pointer invalid for property " + ComponentName_);
   }
   return vPositionsRetrieved;
 }
@@ -113,11 +125,16 @@ bool CFilterWheelProperty::RetrievePositionsWithoutDescriptions()
 
     vPositionsRetrieved = true;
   }
+  else
+  {
+    MMDragonfly_->LogComponentMessage( "Failed to read filterset limits for property " + ComponentName_ );
+  }
   return vPositionsRetrieved;
 }
 
 int CFilterWheelProperty::OnPositionChange( MM::PropertyBase* Prop, MM::ActionType Act )
 {
+  int vRet = DEVICE_OK;
   if ( Act == MM::AfterSet )
   {
     // Search the requested position in the map of existing positions
@@ -139,16 +156,21 @@ int CFilterWheelProperty::OnPositionChange( MM::PropertyBase* Prop, MM::ActionTy
     if ( vFound )
     {
       // Update device position
-      FilterWheelDevice_->SetPosition( vIt->first );
+      if ( !FilterWheelDevice_->SetPosition( vIt->first ) )
+      {
+        MMDragonfly_->LogComponentMessage( "Failed to set position for property " + ComponentName_ + " [" + to_string( vIt->first ) + "]" );
+        vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+      }
     }
     else
     {
       // Reset position displayed in the UI to the current device position
       MMDragonfly_->LogComponentMessage( "Unknown " + ComponentName_ + " position requested [" + vRequestedPosition + "]. Ignoring request." );
       SetPropertyValueFromDevicePosition( Prop );
+      vRet = DEVICE_INVALID_PROPERTY_VALUE;
     }
   }
-  return DEVICE_OK;
+  return vRet;
 }
 
 bool CFilterWheelProperty::SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop )

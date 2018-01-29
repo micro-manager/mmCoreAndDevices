@@ -218,7 +218,7 @@ int CDragonfly::Initialize()
   }
 
   Initialized_ = true;
-  return DEVICE_OK;
+  return vRet;
 }
 
 int CDragonfly::Shutdown()
@@ -431,7 +431,7 @@ int CDragonfly::InitializeComponents()
     return vRet;
   }
   
-  return DEVICE_OK;
+  return vRet;
 }
 
 int CDragonfly::CreateDragonflyStatus( IASDInterface3* ASDInterface3 )

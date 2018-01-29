@@ -44,7 +44,7 @@ void CCameraPortMirror::CreateRFIDStatusProperty()
     int vRet = MMDragonfly_->CreateProperty( g_RFIDStatusPropertyName, vPropertyValue, MM::String, true );
     if ( vRet != DEVICE_OK )
     {
-      throw std::runtime_error( "Error creating " + std::string(g_RFIDStatusPropertyName) +  " property" );
+      MMDragonfly_->LogComponentMessage( "Error creating " + std::string(g_RFIDStatusPropertyName) +  " property" );
     }
   }
   else

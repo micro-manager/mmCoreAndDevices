@@ -24,6 +24,14 @@ CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* Filte
   FilterModeProperty_( ComponentName_ + " mode" ),
   RFIDStatusProperty_( ComponentName_ + " RFID status")
 {
+  // Initialise critical values
+  FilterWheelMode_ = FilterWheelInterface_->GetFilterWheelModeInterface();
+  if ( FilterWheelMode_ == nullptr )
+  {
+    throw runtime_error( "Failed to retrieve the mode's interface for " + ComponentName_ );
+    return;
+  }
+
   // Create and initialise the filter wheel property
   FilterWheelProperty_ = new CFilterWheelProperty( this, MMDragonfly_, ComponentName_ + " position", ComponentName_ );
 
@@ -42,12 +50,6 @@ CFilterWheel::~CFilterWheel()
 void CFilterWheel::CreateModeProperty()
 {
   // Retrieve the current mode
-  FilterWheelMode_ = FilterWheelInterface_->GetFilterWheelModeInterface();
-  if ( FilterWheelMode_ == nullptr )
-  {
-    throw std::runtime_error( "Failed to retrieve the mode's interface for " + ComponentName_ );
-  }
-
   string vMode;
   bool vModeLoadedFromFile = ConfigFileHandler_->LoadPropertyValue( FilterModeProperty_, vMode );
   if ( vModeLoadedFromFile )
@@ -72,9 +74,9 @@ void CFilterWheel::CreateModeProperty()
   int vRet = MMDragonfly_->CreateProperty( FilterModeProperty_.c_str(), vMode.c_str(), MM::String, false, vAct );
   if ( vRet != DEVICE_OK )
   {
-    throw runtime_error( "Error creating " + FilterModeProperty_  + " property" );
+    MMDragonfly_->LogComponentMessage( "Error creating " + FilterModeProperty_  + " property" );
+    return;
   }
-
   // Populate the possible modes
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighSpeed ) );
   MMDragonfly_->AddAllowedValue( FilterModeProperty_.c_str(), GetStringFromMode( FWMHighQuality ) );
@@ -104,7 +106,7 @@ void CFilterWheel::CreateRFIDStatusProperty()
     int vRet = MMDragonfly_->CreateProperty( RFIDStatusProperty_.c_str(), vPropertyValue, MM::String, true );
     if ( vRet != DEVICE_OK )
     {
-      throw runtime_error( "Error creating " + RFIDStatusProperty_ + " property" );
+      MMDragonfly_->LogComponentMessage( "Error creating " + RFIDStatusProperty_ + " property" );
     }
   }
   else
@@ -164,14 +166,22 @@ string CFilterWheel::ParseDescription( const string& Description )
 
 int CFilterWheel::OnModeChange( MM::PropertyBase* Prop, MM::ActionType Act )
 {
+  int vRet = DEVICE_OK;
   if ( Act == MM::AfterSet )
   {
     string vNewMode;
     Prop->Get( vNewMode );
-    FilterWheelMode_->SetMode( GetModeFromString( vNewMode ) );
-    ConfigFileHandler_->SavePropertyValue( FilterModeProperty_, vNewMode );
+    if ( FilterWheelMode_->SetMode( GetModeFromString( vNewMode ) ) )
+    {
+      ConfigFileHandler_->SavePropertyValue( FilterModeProperty_, vNewMode );
+    }
+    else
+    {
+      MMDragonfly_->LogComponentMessage( "Failed to set Filter wheel mode for wheel " + to_string( WheelIndex_ ) + " [" + vNewMode + "]" );
+      vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+    }
   }
-  return DEVICE_OK;
+  return vRet;
 }
 
 const char* CFilterWheel::GetStringFromMode( TFilterWheelMode Mode ) const
