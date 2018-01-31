@@ -67,6 +67,11 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
   {
     vStatusValue = g_DiskStatusStart;
   }
+  else
+  {
+    StopRequested_ = true;
+    StopWitnessed_ = true;
+  }
   vAct = new CPropertyAction( this, &CDisk::OnStatusChange );
   vRet = MMDragonfly_->CreateProperty( g_DiskStatusPropertyName, vStatusValue.c_str(), MM::String, false, vAct );
   if ( vRet != DEVICE_OK )

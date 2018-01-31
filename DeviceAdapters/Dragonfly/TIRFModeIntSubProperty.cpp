@@ -209,7 +209,7 @@ void CTIRFModeIntSubProperty::ModeSelected( ETIRFMode SelectedTIRFMode )
   }
   else
   {
-    if ( SelectedTIRFMode == ETIRFMode::CriticalAngle && DeviceWrapper_->Mode() == ETIRFMode::Penetration )
+    if ( SelectedTIRFMode_ == ETIRFMode::CriticalAngle && DeviceWrapper_->Mode() == ETIRFMode::Penetration )
     {
       // Critical Angle has just been selected, get the new value from the device
       if ( MMProp_ )
