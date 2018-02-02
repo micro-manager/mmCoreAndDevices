@@ -32,6 +32,7 @@ private:
   struct TDevicePosition { TConfocalMode ConfocalMode; unsigned int PowerDensity; } ;
   typedef std::map<std::string, TDevicePosition> TPositionNameMap;
   TPositionNameMap PositionNameMap_;
+  std::string ConfocalModePropertyName_;
 
   int SetDeviceConfocalMode( TConfocalMode ConfocalMode );
   std::string BuildPropertyValueFromDeviceValue( const std::string& ConfocalModeBaseName, const std::string& PowerDensityName );
