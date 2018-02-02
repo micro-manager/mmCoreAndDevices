@@ -15,9 +15,10 @@ class IFilterSet;
 class CPositionComponentHelper
 {
 public:
+  typedef std::string( *tParseDescription )( const std::string& Description );
   typedef std::map<unsigned int, std::string> TPositionNameMap;
 
-  static bool RetrievePositionsFromFilterSet( IFilterSet* FilterSet, TPositionNameMap& PositionNames );
+  static bool RetrievePositionsFromFilterSet( IFilterSet* FilterSet, TPositionNameMap& PositionNames, tParseDescription ParseDescription );
   static void RetrievePositionsWithoutDescriptions( unsigned int MinValue, unsigned int MaxValue, TPositionNameMap& PositionNames );
 
 private:

@@ -16,7 +16,7 @@ class IFilterSet;
 class IPositionComponentInterface
 {
 public:
-  IPositionComponentInterface( CDragonfly* MMDragonfly, const std::string& PropertyName );
+  IPositionComponentInterface( CDragonfly* MMDragonfly, const std::string& PropertyName, bool ParseDescriptionRetrievedFromDevice );
   ~IPositionComponentInterface();
 
   int OnPositionChange( MM::PropertyBase * Prop, MM::ActionType Act );
@@ -41,6 +41,7 @@ protected:
 
 private:
   bool Initialised_;
+  CPositionComponentHelper::tParseDescription ParseDecription_;
 
   int SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop );
 };

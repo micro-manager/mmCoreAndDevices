@@ -5,7 +5,7 @@ using namespace std;
 
 string CPositionComponentHelper::UndefinedPositionBase_ = "Undefined Position";
 
-bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* FilterSet, TPositionNameMap& PositionNames )
+bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* FilterSet, TPositionNameMap& PositionNames, tParseDescription ParseDescription )
 {
   const static unsigned int vStringLength = 64;
   bool vPositionsRetrieved = false;
@@ -26,7 +26,14 @@ bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* Filte
         }
         else
         {
-          vPositionName += vDescription;
+          if ( ParseDescription != nullptr )
+          {
+            vPositionName += ParseDescription( vDescription );
+          }
+          else
+          {
+            vPositionName += vDescription;
+          }
         }
         PositionNames[vIndex] = vPositionName;
       }

@@ -3,7 +3,7 @@
 #include "ASDInterface.h"
 
 CAperture::CAperture( IApertureInterface* ApertureInterface, CDragonfly* MMDragonfly )
-  : IPositionComponentInterface( MMDragonfly, "Field Aperture" ),
+  : IPositionComponentInterface( MMDragonfly, "Field Aperture", true ),
   ApertureInterface_( ApertureInterface )
 {
   Initialise();

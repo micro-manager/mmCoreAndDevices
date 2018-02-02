@@ -7,7 +7,7 @@
 const char* const g_RFIDStatusPropertyName = "Image Splitter RFID status";
 
 CCameraPortMirror::CCameraPortMirror( ICameraPortMirrorInterface* CameraPortMirrorInterface, const CDragonflyStatus* DragonflyStatus, CDragonfly* MMDragonfly )
-  : IPositionComponentInterface( MMDragonfly, "Image Splitter" ),
+  : IPositionComponentInterface( MMDragonfly, "Image Splitter", false ),
   CameraPortMirrorInterface_( CameraPortMirrorInterface ),
   MMDragonfly_( MMDragonfly ),
   DragonflyStatus_( DragonflyStatus )

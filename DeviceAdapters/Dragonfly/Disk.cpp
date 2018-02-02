@@ -20,6 +20,7 @@ const char* const g_DiskStatusStart = "Start";
 const char* const g_DiskStatusStopped = "Stopped";
 const char* const g_DiskStatusReady = "Ready";
 const char* const g_DiskStatusChangingSpeed = "Changing speed";
+const char* const g_FrameScanTimeDiskChangingSpeed = "Please wait, disk changing speed";
 const char* const g_DiskStatusUndefined = "Undefined";
 
 CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly )
@@ -258,7 +259,15 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     // Update frame scan time
     if ( Prop->GetName() == g_FrameScanTime )
     {
-      if ( RequestedSpeedAchieved_ && !StopRequested_ )
+      if ( StopRequested_ )
+      {
+        Prop->Set( g_DiskStatusUndefined );
+      }
+      else if ( !RequestedSpeedAchieved_ )
+      {
+        Prop->Set( g_FrameScanTimeDiskChangingSpeed );
+      }
+      else
       {
         if ( !FrameScanTimeUpdated_ )
         {
@@ -285,10 +294,6 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
             vRet = DEVICE_ERR;
           }
         }
-      }
-      else
-      {
-        Prop->Set( g_DiskStatusUndefined );
       }
     }
   }
