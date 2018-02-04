@@ -10,10 +10,11 @@ const char* const g_DiskSpeedPropertyName = "Disk Speed";
 const char* const g_DiskStatusPropertyName = "Disk Start/Stop";
 const char* const g_DiskSpeedMonitorPropertyName = "Disk Speed Status";
 const char* const g_DiskStatusMonitorPropertyName = "Disk Status";
-const char* const g_FrameScanTime = "Disk Frame Scan Time (ms)";
+const char* const g_FrameScanTimePropertyName = "Disk Frame Scan Time (ms)";
 
 const char* const g_DiskSpeedLimitsReadError = "Failed to retrieve Disk speed limits";
 const char* const g_DiskSpeedValueReadError = "Failed to retrieve the current Disk speed";
+const char* const g_DiskSpeedScanTimeReadError = "Failed to retrieve scans per revolution";
 const char* const g_DiskStartError = "Failed starting the disk";
 const char* const g_DiskSpeedSetError = "Failed setting the speed of the disk";
 
@@ -24,7 +25,6 @@ const char* const g_DiskStatusStopped = "Stopped";
 const char* const g_DiskStatusReady = "Ready";
 const char* const g_DiskStatusChangingSpeed = "Changing speed";
 const char* const g_DiskStatusSpeedNotChanging = "Error: Disk speed not changing";
-const char* const g_FrameScanTimeDiskChangingSpeed = "Please wait, disk changing speed";
 const char* const g_DiskStatusUndefined = "Undefined";
 
 CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly )
@@ -44,6 +44,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   DiskSpeedStableTwice_( false ),
   MaxSpeedReached_( 0 ),
   MinSpeedReached_( 0 ),
+  ScansPerRevolution_( 0 ),
   DiskSimulator_( DiskInterface_, MMDragonfly_)
 {
   // Retrieve initial values
@@ -52,6 +53,12 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   if ( !vValueRetrieved )
   {
     throw std::runtime_error( g_DiskSpeedLimitsReadError );
+  }
+
+  vValueRetrieved = DiskInterface_->GetScansPerRevolution( &ScansPerRevolution_ );
+  if ( !vValueRetrieved )
+  {
+    throw std::runtime_error( g_DiskSpeedScanTimeReadError );
   }
 
   RequestedSpeed_ = vMax;
@@ -134,10 +141,10 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   }
 
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
-  vRet = MMDragonfly_->CreateProperty( g_FrameScanTime, g_DiskStatusUndefined, MM::String, true, vAct );
+  vRet = MMDragonfly_->CreateProperty( g_FrameScanTimePropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
   if ( vRet != DEVICE_OK )
   {
-    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_FrameScanTime ) + " property" );
+    MMDragonfly_->LogComponentMessage( "Error creating " + string( g_FrameScanTimePropertyName ) + " property" );
     return;
   }
 
@@ -273,18 +280,6 @@ void CDisk::UpdateSpeedRange()
 #endif
 }
 
-//bool GetSimulatedSpeed( unsigned int& vSimulatedDiskSpeed )
-//{
-//  bool vValueRetrieved = DiskInterface_->GetSpeed( vSimulatedDiskSpeed );
-//  if ( vValueRetrieved )
-//  {
-//    int vSimulatedError = rand() % 10;
-//    int vSign = ( rand() % 2 ) * 2 - 1;
-//    vSimulatedDiskSpeed = vSimulatedDiskSpeed * ( 1.f + vSimulatedError * vSign / 100.f );
-//  }
-//  return vValueRetrieved;
-//}
-
 string BoolToString( bool Value )
 {
   return ( Value ? "TRUE" : "FALSE" );
@@ -393,16 +388,24 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     {
       unsigned int vDeviceSpeed;
       //bool vValueRetrieved = DiskInterface_->GetSpeed( vDeviceSpeed );
-      //bool vValueRetrieved = GetSimulatedSpeed( vDeviceSpeed );
       bool vValueRetrieved = DiskSimulator_.GetSpeed( vDeviceSpeed );
       MMDragonfly_->LogComponentMessage( "Disk speed monitor: Speed [" + to_string( vDeviceSpeed ) + "] - value retrieved [" + BoolToString( vValueRetrieved ) + "] - Request [" + to_string( RequestedSpeed_ ) + "]" );
       if ( vValueRetrieved )
       {
-        Prop->Set( (long)vDeviceSpeed );
-        MMDragonfly_->UpdatePropertyUI( g_DiskSpeedMonitorPropertyName, to_string( vDeviceSpeed ).c_str() );
-        if ( ( StopRequested_ && StopWitnessed_ ) || ( !StopRequested_ && IsSpeedWithinMargin( vDeviceSpeed ) ) )
+        if ( ( !StopRequested_ && IsSpeedWithinMargin( vDeviceSpeed ) ) )
         {
+          Prop->Set( (long)RequestedSpeed_ );
+          MMDragonfly_->UpdatePropertyUI( g_DiskSpeedMonitorPropertyName, to_string( RequestedSpeed_ ).c_str() );
           RequestedSpeedAchieved_ = true;
+        }
+        else
+        {
+          Prop->Set( (long)vDeviceSpeed );
+          MMDragonfly_->UpdatePropertyUI( g_DiskSpeedMonitorPropertyName, to_string( vDeviceSpeed ).c_str() );
+          if ( ( StopRequested_ && StopWitnessed_ ) )
+          {
+            RequestedSpeedAchieved_ = true;
+          }
         }
       }
       else
@@ -447,54 +450,27 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
           MMDragonfly_->UpdatePropertyUI( g_DiskStatusMonitorPropertyName, g_DiskStatusReady );
         }
       }
-    }
+    }    
     // Update frame scan time
-    if ( Prop->GetName() == g_FrameScanTime )
+    if ( Prop->GetName() == g_FrameScanTimePropertyName )
     {
       MMDragonfly_->LogComponentMessage( "Disk frame scan time monitor" );
-      if ( StopRequested_ )
+      if ( !FrameScanTimeUpdated_ )
       {
-        Prop->Set( g_DiskStatusUndefined );
-        MMDragonfly_->UpdatePropertyUI( g_FrameScanTime, g_DiskStatusUndefined );
-        FrameScanTimeUpdated_ = true;
-      }
-      else if ( !RequestedSpeedAchieved_ )
-      {
-        Prop->Set( g_FrameScanTimeDiskChangingSpeed );
-        MMDragonfly_->UpdatePropertyUI( g_FrameScanTime, g_FrameScanTimeDiskChangingSpeed );
-      }
-      else
-      {
-        if ( !FrameScanTimeUpdated_ )
+        if ( StopRequested_ )
         {
-          unsigned int vDeviceSpeed;
-          //bool vValueRetrieved = DiskInterface_->GetSpeed( vDeviceSpeed );
-          bool vValueRetrieved = DiskSimulator_.GetSpeed( vDeviceSpeed );
-          if ( vValueRetrieved )
-          {
-            unsigned int vScansPerResolution;
-            vValueRetrieved = DiskInterface_->GetScansPerRevolution( &vScansPerResolution );
-            if ( vValueRetrieved )
-            {
-              double vFrameScanTime = CalculateFrameScanTime( vDeviceSpeed, vScansPerResolution );
-              Prop->Set( vFrameScanTime );
-              string vStringValue;
-              Prop->Get( vStringValue );
-              MMDragonfly_->UpdatePropertyUI( g_FrameScanTime, vStringValue.c_str() );
-              FrameScanTimeUpdated_ = true;
-            }
-            else
-            {
-              MMDragonfly_->LogComponentMessage( "Error in call to GetScansPerRevolution()" );
-              vRet = DEVICE_ERR;
-            }
-          }
-          else
-          {
-            MMDragonfly_->LogComponentMessage( "Failed to read the speed of the disk" );
-            vRet = DEVICE_ERR;
-          }
+          Prop->Set( g_DiskStatusUndefined );
+          MMDragonfly_->UpdatePropertyUI( g_FrameScanTimePropertyName, g_DiskStatusUndefined );
         }
+        else
+        {
+          double vFrameScanTime = CalculateFrameScanTime( RequestedSpeed_, ScansPerRevolution_ );
+          Prop->Set( vFrameScanTime );
+          string vStringValue;
+          Prop->Get( vStringValue );
+          MMDragonfly_->UpdatePropertyUI( g_FrameScanTimePropertyName, vStringValue.c_str() );
+        }
+        FrameScanTimeUpdated_ = true;
       }
     }
   }
@@ -532,7 +508,7 @@ int CDiskStatusMonitor::svc()
   {
     MMDragonfly_->UpdateProperty( g_DiskSpeedMonitorPropertyName );
     MMDragonfly_->UpdateProperty( g_DiskStatusMonitorPropertyName );
-    MMDragonfly_->UpdateProperty( g_FrameScanTime );
+    MMDragonfly_->UpdateProperty( g_FrameScanTimePropertyName );
     Sleep( 500 );
   }
   return 0;

@@ -25,7 +25,6 @@ public:
   int OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act );
   int OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CDisk> CPropertyAction;
-  //bool GetSimulatedSpeed( unsigned int& vSimulatedDiskSpeed );
 
 private:
   IDiskInterface2* DiskInterface_;
@@ -45,6 +44,7 @@ private:
   unsigned int PreviousSpeed_;
   unsigned int MaxSpeedReached_;
   unsigned int MinSpeedReached_;
+  unsigned int ScansPerRevolution_;
 
   CDiskSimulator DiskSimulator_;
 
