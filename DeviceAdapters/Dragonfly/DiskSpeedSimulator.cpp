@@ -98,7 +98,3 @@ bool CDiskSimulator::GetSpeed( unsigned int &Speed )
   }
   return false;
 }
-string BoolToString( bool Value )
-{
-  return ( Value ? "TRUE" : "FALSE" );
-}
