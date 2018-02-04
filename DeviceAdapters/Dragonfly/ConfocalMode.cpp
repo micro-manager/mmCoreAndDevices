@@ -28,7 +28,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
 
   // Retrieve power density values from the device
   CPositionComponentHelper::TPositionNameMap vPowerDensityPositionNames;
-  unsigned int vCurrentPowerDensityPosition;
+  unsigned int vCurrentPowerDensityPosition = 0;
   if ( IllLensInterface_ != nullptr )
   {
     IFilterSet* vFilterSet = IllLensInterface_->GetLensConfigInterface();

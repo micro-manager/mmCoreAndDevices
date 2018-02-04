@@ -182,6 +182,11 @@ CDragonfly::~CDragonfly()
   delete ASDWrapper_;
 }
 
+void CDragonfly::UpdatePropertyUI( const char* PropertyName, const char* PropertyValue )
+{
+  GetCoreCallback()->OnPropertyChanged( this, PropertyName, PropertyValue );
+}
+
 int CDragonfly::Initialize()
 {
   if ( ConstructionReturnCode_ != DEVICE_OK )
@@ -535,7 +540,7 @@ int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
       IDiskInterface2* vASDDisk = ASDInterface->GetDisk_v2();
       if ( vASDDisk != nullptr )
       {
-        Disk_ = new CDisk( vASDDisk, this );
+        Disk_ = new CDisk( vASDDisk, ConfigFile_, this );
       }
       else
       {
@@ -571,7 +576,6 @@ int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
         IIllLensInterface* vIllLensInterface = nullptr;
         for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax && vIllLensInterface == nullptr; ++vLensIndex )
         {
-
           if ( ASDInterface->IsIllLensAvailable( (TLensType)vLensIndex ) )
           {
             vIllLensInterface = ASDInterface->GetIllLens( (TLensType)vLensIndex );

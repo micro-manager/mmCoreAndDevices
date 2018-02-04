@@ -8,24 +8,28 @@
 
 #include "Property.h"
 #include "../../MMDevice/DeviceThreads.h"
+#include "DiskSpeedSimulator.h"
 
 class IDiskInterface2;
+class IConfigFileHandler;
 class CDragonfly;
 class CDiskStatusMonitor;
 
 class CDisk
 {
 public:
-  CDisk( IDiskInterface2* DiskInterface, CDragonfly* MMDragonfly );
+  CDisk( IDiskInterface2* DiskInterface, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly );
   ~CDisk();
 
   int OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act );
   int OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act );
   int OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CDisk> CPropertyAction;
+  //bool GetSimulatedSpeed( unsigned int& vSimulatedDiskSpeed );
 
 private:
   IDiskInterface2* DiskInterface_;
+  IConfigFileHandler* ConfigFileHandler_;
   CDragonfly* MMDragonfly_;
   CDiskStatusMonitor* DiskStatusMonitor_;
   unsigned int RequestedSpeed_;
@@ -33,8 +37,20 @@ private:
   bool StopRequested_;
   bool StopWitnessed_;
   bool FrameScanTimeUpdated_;
+  unsigned int TargetRangeMin_;
+  unsigned int TargetRangeMax_;
+  bool DiskSpeedIncreasing_;
+  bool DiskSpeedStableOnce_;
+  bool DiskSpeedStableTwice_;
+  unsigned int PreviousSpeed_;
+  unsigned int MaxSpeedReached_;
+  unsigned int MinSpeedReached_;
+
+  CDiskSimulator DiskSimulator_;
 
   double CalculateFrameScanTime( unsigned int Speed, unsigned int ScansPerRevolution );
+  void UpdateSpeedRange();
+  bool IsSpeedWithinMargin( unsigned int CurrentSpeed );
 };
 
 

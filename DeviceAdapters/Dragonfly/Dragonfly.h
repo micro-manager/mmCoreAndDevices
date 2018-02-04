@@ -67,6 +67,7 @@ public:
   int OnPort( MM::PropertyBase* Prop, MM::ActionType Act );
 
   void LogComponentMessage( const std::string& Message );
+  void UpdatePropertyUI( const char* PropertyName, const char* PropertyValue );
 
 private:
   bool Initialized_;
