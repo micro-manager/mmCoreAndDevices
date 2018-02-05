@@ -216,6 +216,8 @@
     <ClCompile Include="DichroicMirror.cpp" />
     <ClCompile Include="Disk.cpp" />
     <ClCompile Include="DiskSpeedSimulator.cpp" />
+    <ClCompile Include="DiskSpeedState.cpp" />
+    <ClCompile Include="DiskStatus.cpp" />
     <ClCompile Include="Dragonfly.cpp" />
     <ClCompile Include="DragonflyStatus.cpp" />
     <ClCompile Include="FilterWheel.cpp" />

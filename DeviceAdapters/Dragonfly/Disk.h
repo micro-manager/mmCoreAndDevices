@@ -14,6 +14,8 @@ class IDiskInterface2;
 class IConfigFileHandler;
 class CDragonfly;
 class CDiskStatusMonitor;
+class CDiskStatus;
+class CDiskStateChange;
 
 class CDisk
 {
@@ -31,39 +33,29 @@ private:
   IConfigFileHandler* ConfigFileHandler_;
   CDragonfly* MMDragonfly_;
   CDiskStatusMonitor* DiskStatusMonitor_;
-  unsigned int RequestedSpeed_;
-  bool RequestedSpeedAchieved_;
-  bool StopRequested_;
-  bool StopWitnessed_;
-  bool FrameScanTimeUpdated_;
-  unsigned int TargetRangeMin_;
-  unsigned int TargetRangeMax_;
-  bool DiskSpeedIncreasing_;
-  bool DiskSpeedStableOnce_;
-  bool DiskSpeedStableTwice_;
-  unsigned int PreviousSpeed_;
-  unsigned int MaxSpeedReached_;
-  unsigned int MinSpeedReached_;
   unsigned int ScansPerRevolution_;
+  CDiskStatus* DiskStatus_;
+  CDiskStateChange* SpeedMonitorStateChangeObserver_;
+  CDiskStateChange* StatusMonitorStateChangeObserver_;
+  CDiskStateChange* FrameScanTimeStateChangeObserver_;
 
   CDiskSimulator DiskSimulator_;
 
   double CalculateFrameScanTime( unsigned int Speed, unsigned int ScansPerRevolution );
-  void UpdateSpeedRange();
-  bool IsSpeedWithinMargin( unsigned int CurrentSpeed );
 };
 
 
 class CDiskStatusMonitor : public MMDeviceThreadBase
 {
 public:
-  CDiskStatusMonitor( CDragonfly* MMDragonfly );
+  CDiskStatusMonitor( CDragonfly* MMDragonfly, CDiskStatus* DiskStatus );
   virtual ~CDiskStatusMonitor();
 
   int svc();
 
 private:
   CDragonfly* MMDragonfly_;
+  CDiskStatus* DiskStatus_;
   bool KeepRunning_;
 };
 #endif
