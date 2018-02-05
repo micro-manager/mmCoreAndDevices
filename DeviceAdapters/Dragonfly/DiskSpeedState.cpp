@@ -149,7 +149,6 @@ void CChangingSpeedState::SpeedHasDecreased( unsigned int PreviousSpeed, unsigne
 
 void CChangingSpeedState::SpeedUnchanged( unsigned int CurrentSpeed )
 {
-  DiskSpeedNotChangingOnce_ = true;
   if ( DiskSpeedNotChangingOnce_ )
   {
     // The speed hasn't changed in 2 ticks
@@ -167,6 +166,7 @@ void CChangingSpeedState::SpeedUnchanged( unsigned int CurrentSpeed )
       DiskSpeedNotChangingTwice_ = true;
     }
   }
+  DiskSpeedNotChangingOnce_ = true;
 }
 
 bool CChangingSpeedState::IsSpeedStable()
