@@ -27,8 +27,8 @@ CChangingSpeedState::CChangingSpeedState( CDiskStatus* DiskStatus )
   DiskSpeedIncreasing_( true ),
   MinSpeedReached_( 0 ),
   MaxSpeedReached_( 0 ),
-  DiskSpeedStableOnce_( false ),
-  DiskSpeedStableTwice_( false )
+  DiskSpeedNotChangingOnce_( false ),
+  DiskSpeedNotChangingTwice_( false )
 { }
 
 void CChangingSpeedState::Initialise()
@@ -37,8 +37,8 @@ void CChangingSpeedState::Initialise()
   PreviousDiskStateUnknown_ = true;
   MinSpeedReached_ = 0;
   MaxSpeedReached_ = DiskStatus_->GetRequestedSpeed() + 1000;
-  DiskSpeedStableOnce_ = false;
-  DiskSpeedStableTwice_ = false;
+  DiskSpeedNotChangingOnce_ = false;
+  DiskSpeedNotChangingTwice_ = false;
 }
 
 void CChangingSpeedState::Start()
@@ -65,114 +65,129 @@ void CChangingSpeedState::UpdateFromDevice()
   }
 }
 
+void CChangingSpeedState::SpeedHasIncreased( unsigned int PreviousSpeed, unsigned int CurrentSpeed)
+{
+  DiskSpeedNotChangingOnce_ = false;
+  DiskSpeedNotChangingTwice_ = false;
+  if ( !PreviousDiskStateUnknown_ )
+  {
+    if ( !DiskSpeedIncreasing_ )
+    {
+      // The speed was previously decreasing, we may have reached a local min
+      unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
+      if ( CurrentSpeed > vRequestedSpeed )
+      {
+        // Unlikely case where we are above the requested speed
+        if ( PreviousSpeed >= vRequestedSpeed )
+        {
+          // Boolean was badly initialised previously or a new requested value has been set (?)
+        }
+        else
+        {
+          // We might be so close to the requested speed that we are looping around it between 2 ticks (unlikely though)
+          MinSpeedReached_ = PreviousSpeed;
+        }
+      }
+      else
+      {
+        // We are below the requested speed therefore we reached a local minimum
+        MinSpeedReached_ = PreviousSpeed;
+      }
+    }
+    else
+    {
+      // Speed continues to increase, we do nothing
+    }
+  }
+  else
+  {
+    PreviousDiskStateUnknown_ = false;
+  }
+  DiskSpeedIncreasing_ = true;
+}
+
+void CChangingSpeedState::SpeedHasDecreased( unsigned int PreviousSpeed, unsigned int CurrentSpeed )
+{
+  DiskSpeedNotChangingOnce_ = false;
+  DiskSpeedNotChangingTwice_ = false;
+  if ( !PreviousDiskStateUnknown_ )
+  {
+    if ( DiskSpeedIncreasing_ )
+    {
+      // The speed was previously increasing, we may have reached a local max
+      unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
+      if ( CurrentSpeed < vRequestedSpeed )
+      {
+        // Unlikely case where we are below the requested speed
+        if ( PreviousSpeed <= vRequestedSpeed )
+        {
+          // Boolean was badly initialised previously
+        }
+        else
+        {
+          // We might be so close to the requested speed that we are looping around it between 2 ticks (unlikely though)
+          MaxSpeedReached_ = PreviousSpeed;
+        }
+      }
+      else
+      {
+        // We are above the requested speed therefore we reached a local maximum
+        MaxSpeedReached_ = PreviousSpeed;
+      }
+    }
+    else
+    {
+      // Speed continues to decrease, we do nothing
+    }
+  }
+  else
+  {
+    PreviousDiskStateUnknown_ = false;
+  }
+  DiskSpeedIncreasing_ = false;
+}
+
+void CChangingSpeedState::SpeedUnchanged( unsigned int CurrentSpeed )
+{
+  DiskSpeedNotChangingOnce_ = true;
+  if ( DiskSpeedNotChangingOnce_ )
+  {
+    // The speed hasn't changed in 2 ticks
+    unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
+    if ( CurrentSpeed == vRequestedSpeed )
+    {
+      // We reached the requested speed
+      MinSpeedReached_ = vRequestedSpeed;
+      MaxSpeedReached_ = vRequestedSpeed;
+    }
+    else
+    {
+      // The disk is not changing speed even though it should
+      // Something's wrong, we report it to the user
+      DiskSpeedNotChangingTwice_ = true;
+    }
+  }
+}
+
 bool CChangingSpeedState::IsSpeedStable()
 {
   unsigned int vPreviousSpeed = DiskStatus_->GetCurrentSpeed();
   unsigned int vCurrentSpeed = DiskStatus_->ReadCurrentSpeedFromDevice();
-  unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
 
   if ( vCurrentSpeed > vPreviousSpeed )
   {
-    DiskSpeedStableOnce_ = false;
-    DiskSpeedStableTwice_ = false;
-    // Speed is increasing
-    if ( !PreviousDiskStateUnknown_ )
-    {
-      if ( !DiskSpeedIncreasing_ )
-      {
-        // The speed was previously decreasing, we may have reached a local min
-        if ( vCurrentSpeed > vRequestedSpeed )
-        {
-          // Unlikely case where we are above the requested speed
-          if ( vPreviousSpeed >= vRequestedSpeed )
-          {
-            // Boolean was badly initialised previously or a new requested value has been set (?)
-          }
-          else
-          {
-            // We might be so close to the requested speed that we are looping around it between 2 ticks (unlikely though)
-            MinSpeedReached_ = vPreviousSpeed;
-          }
-        }
-        else
-        {
-          // We are below the requested speed therefore we reached a local minimum
-          MinSpeedReached_ = vPreviousSpeed;
-        }
-      }
-      else
-      {
-        // Speed continues to increase, we do nothing
-      }
-    }
-    else
-    {
-      PreviousDiskStateUnknown_ = false;
-    }
-    DiskSpeedIncreasing_ = true;
+    SpeedHasIncreased( vPreviousSpeed, vCurrentSpeed );
   }
   else if ( vCurrentSpeed < vPreviousSpeed )
   {
-    DiskSpeedStableOnce_ = false;
-    DiskSpeedStableTwice_ = false;
-    // Speed is decreasing
-    if ( !PreviousDiskStateUnknown_ )
-    {
-      if ( DiskSpeedIncreasing_ )
-      {
-        // The speed was previously increasing, we may have reached a local max
-        if ( vCurrentSpeed < vRequestedSpeed )
-        {
-          // Unlikely case where we are below the requested speed
-          if ( vPreviousSpeed <= vRequestedSpeed )
-          {
-            // Boolean was badly initialised previously
-          }
-          else
-          {
-            // We might be so close to the requested speed that we are looping around it between 2 ticks (unlikely though)
-            MaxSpeedReached_ = vPreviousSpeed;
-          }
-        }
-        else
-        {
-          // We are above the requested speed therefore we reached a local maximum
-          MaxSpeedReached_ = vPreviousSpeed;
-        }
-      }
-      else
-      {
-        // Speed continues to decrease, we do nothing
-      }
-    }
-    else
-    {
-      PreviousDiskStateUnknown_ = false;
-    }
-    DiskSpeedIncreasing_ = false;
+    SpeedHasDecreased( vPreviousSpeed, vCurrentSpeed );
   }
   else if ( vCurrentSpeed == vPreviousSpeed )
   {
-    // Speed hasn't changed
-    if ( DiskSpeedStableOnce_ )
-    {
-      // The speed hasn't changed in 2 ticks
-      if ( vCurrentSpeed == vRequestedSpeed )
-      {
-        // We reached the requested speed
-        MinSpeedReached_ = vRequestedSpeed;
-        MaxSpeedReached_ = vRequestedSpeed;
-      }
-      else
-      {
-        // The disk is not changing speed even though it should
-        // Something's wrong, we report it to the user
-        DiskSpeedStableTwice_ = true;
-      }
-    }
-    DiskSpeedStableOnce_ = true;
+    SpeedUnchanged( vCurrentSpeed );
   }
-  vPreviousSpeed = vCurrentSpeed;
+
+  unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
   if ( MinSpeedReached_ >= GetTargetRangeMin( vRequestedSpeed ) && MaxSpeedReached_ <= GetTargetRangeMax( vRequestedSpeed ) )
   {
     return true;

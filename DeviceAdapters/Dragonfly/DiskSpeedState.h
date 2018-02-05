@@ -37,12 +37,15 @@ private:
   static const unsigned int DynamicRangePercent_ = 1;
   unsigned int MinSpeedReached_;
   unsigned int MaxSpeedReached_;
-  bool DiskSpeedStableOnce_;
-  bool DiskSpeedStableTwice_;
+  bool DiskSpeedNotChangingOnce_;
+  bool DiskSpeedNotChangingTwice_;
   bool PreviousDiskStateUnknown_;
   bool DiskSpeedIncreasing_;
 
   bool IsSpeedStable();
+  void SpeedHasIncreased( unsigned int PreviousSpeed, unsigned int CurrentSpeed );
+  void SpeedHasDecreased( unsigned int PreviousSpeed, unsigned int CurrentSpeed );
+  void SpeedUnchanged( unsigned int CurrentSpeed );
   unsigned int GetTargetRangeMin( unsigned int RequestedSpeed ) const;
   unsigned int GetTargetRangeMax( unsigned int RequestedSpeed ) const;
 };
