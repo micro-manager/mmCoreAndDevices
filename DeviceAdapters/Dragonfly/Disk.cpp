@@ -3,7 +3,7 @@
 #include "ComponentInterface.h"
 #include "ConfigFileHandler.h"
 #include "Dragonfly.h"
-#include "DiskStatus.h"
+#include "DiskStatusInterface.h"
 
 using namespace std;
 
@@ -38,7 +38,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   StatusMonitorStateChangeObserver_( nullptr ),
   FrameScanTimeStateChangeObserver_( nullptr ),
   DiskSimulator_( DiskInterface_, MMDragonfly_),
-  DiskStatus_( new CDiskStatus( DiskInterface_, MMDragonfly_, &DiskSimulator_ ) )
+  DiskStatus_( CreateDiskStatus( DiskInterface_, MMDragonfly_, &DiskSimulator_ ) )
 {
   // Retrieve initial values
   unsigned int vMin, vMax;
@@ -143,7 +143,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   DiskStatus_->RegisterObserver( FrameScanTimeStateChangeObserver_ );
 
   // Start the disk status monitor thread
-  DiskStatusMonitor_ = new CDiskStatusMonitor( MMDragonfly_, DiskStatus_ );
+  DiskStatusMonitor_ = new CDiskStatusMonitor( MMDragonfly_, DiskStatus_, DiskStatusMutex_ );
   DiskStatusMonitor_->activate();
 }
 
@@ -151,6 +151,9 @@ CDisk::~CDisk()
 {
   delete DiskStatusMonitor_;
   delete DiskStatus_;
+  delete SpeedMonitorStateChangeObserver_;
+  delete StatusMonitorStateChangeObserver_;
+  delete FrameScanTimeStateChangeObserver_;
 }
 
 int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
@@ -172,6 +175,7 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
           //if ( DiskInterface_->SetSpeed( vRequestedSpeed ) )
           {
             ConfigFileHandler_->SavePropertyValue( g_DiskSpeedPropertyName, to_string( vRequestedSpeed ) );
+            lock_guard<mutex> lock( DiskStatusMutex_ );
             DiskStatus_->ChangeSpeed( vRequestedSpeed );
           }
           else
@@ -213,6 +217,7 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     {
       if ( DiskInterface_->Start() )
       {
+        lock_guard<mutex> lock( DiskStatusMutex_ );
         DiskStatus_->Start();
       }
       else
@@ -225,6 +230,7 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     {
       if ( DiskInterface_->Stop() )
       {
+        lock_guard<mutex> lock( DiskStatusMutex_ );
         DiskStatus_->Stop();
       }
       else
@@ -242,23 +248,30 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   int vRet = DEVICE_OK;
   if ( Act == MM::BeforeGet )
-  {
-    
+  {    
     if ( Prop->GetName() == g_DiskSpeedMonitorPropertyName )
     {
       // Update speed
-      bool StateChanged = SpeedMonitorStateChangeObserver_->HasBeenNotified();
-      if ( DiskStatus_->IsChangingSpeed() )
+      string vNewPropertyValue;
       {
-        unsigned int vDeviceSpeed = DiskStatus_->GetCurrentSpeed();
-        Prop->Set( (long)vDeviceSpeed );
-        MMDragonfly_->UpdatePropertyUI( g_DiskSpeedMonitorPropertyName, to_string( vDeviceSpeed ).c_str() );
+        lock_guard<mutex> lock( DiskStatusMutex_ );
+        bool vStateChanged = SpeedMonitorStateChangeObserver_->HasBeenNotified();
+        if ( DiskStatus_->IsChangingSpeed() )
+        {
+          unsigned int vDeviceSpeed = DiskStatus_->GetCurrentSpeed();
+          Prop->Set( (long)vDeviceSpeed );
+          vNewPropertyValue = to_string( vDeviceSpeed );
+        }
+        else if ( vStateChanged && DiskStatus_->IsAtSpeed() )
+        {
+          unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
+          Prop->Set( (long)vRequestedSpeed );
+          vNewPropertyValue = to_string( vRequestedSpeed );
+        }
       }
-      else if ( StateChanged && DiskStatus_->IsAtSpeed() )
+      if ( !vNewPropertyValue.empty() )
       {
-        unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
-        Prop->Set( (long)vRequestedSpeed );
-        MMDragonfly_->UpdatePropertyUI( g_DiskSpeedMonitorPropertyName, to_string( vRequestedSpeed ).c_str() );
+        MMDragonfly_->UpdatePropertyUI( g_DiskSpeedMonitorPropertyName, vNewPropertyValue.c_str() );
       }
     }
     else if ( Prop->GetName() == g_DiskStatusMonitorPropertyName )
@@ -267,20 +280,28 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
 //NOTE: Handle error case where speed is unchanged and not at requested speed
       if ( StatusMonitorStateChangeObserver_->HasBeenNotified() )
       {
-        if ( DiskStatus_->IsChangingSpeed() || DiskStatus_->IsStopping() )
+        string vNewPropertyValue;
         {
-          Prop->Set( g_DiskStatusChangingSpeed );
-          MMDragonfly_->UpdatePropertyUI( g_DiskStatusMonitorPropertyName, g_DiskStatusChangingSpeed );
+          lock_guard<mutex> lock( DiskStatusMutex_ );
+          if ( DiskStatus_->IsChangingSpeed() || DiskStatus_->IsStopping() )
+          {
+            Prop->Set( g_DiskStatusChangingSpeed );
+            vNewPropertyValue = g_DiskStatusChangingSpeed;
+          }
+          else if ( DiskStatus_->IsAtSpeed() )
+          {
+            Prop->Set( g_DiskStatusReady );
+            vNewPropertyValue = g_DiskStatusReady;
+          }
+          else if ( DiskStatus_->IsStopped() )
+          {
+            Prop->Set( g_DiskStatusStopped );
+            vNewPropertyValue = g_DiskStatusStopped;
+          } 
         }
-        else if ( DiskStatus_->IsAtSpeed() )
+        if ( !vNewPropertyValue.empty() )
         {
-          Prop->Set( g_DiskStatusReady );
-          MMDragonfly_->UpdatePropertyUI( g_DiskStatusMonitorPropertyName, g_DiskStatusReady );
-        }
-        else if ( DiskStatus_->IsStopped() )
-        {
-          Prop->Set( g_DiskStatusStopped );
-          MMDragonfly_->UpdatePropertyUI( g_DiskStatusMonitorPropertyName, g_DiskStatusStopped );
+          MMDragonfly_->UpdatePropertyUI( g_DiskStatusMonitorPropertyName, vNewPropertyValue.c_str() );
         }
       }
     }
@@ -289,18 +310,24 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
       // Update frame scan time
       if ( FrameScanTimeStateChangeObserver_->HasBeenNotified() )
       {
-        if ( DiskStatus_->IsStopping() )
+        string vNewPropertyValue;
         {
-          Prop->Set( g_DiskStatusUndefined );
-          MMDragonfly_->UpdatePropertyUI( g_FrameScanTimePropertyName, g_DiskStatusUndefined );
+          lock_guard<mutex> lock( DiskStatusMutex_ );
+          if ( DiskStatus_->IsStopping() )
+          {
+            Prop->Set( g_DiskStatusUndefined );
+            vNewPropertyValue = g_DiskStatusUndefined;
+          }
+          else if ( DiskStatus_->IsChangingSpeed() )
+          {
+            double vFrameScanTime = CalculateFrameScanTime( DiskStatus_->GetRequestedSpeed(), ScansPerRevolution_ );
+            Prop->Set( vFrameScanTime );
+            Prop->Get( vNewPropertyValue );
+          }
         }
-        else if ( DiskStatus_->IsChangingSpeed() )
+        if ( !vNewPropertyValue.empty() )
         {
-          double vFrameScanTime = CalculateFrameScanTime( DiskStatus_->GetRequestedSpeed(), ScansPerRevolution_ );
-          Prop->Set( vFrameScanTime );
-          string vStringValue;
-          Prop->Get( vStringValue );
-          MMDragonfly_->UpdatePropertyUI( g_FrameScanTimePropertyName, vStringValue.c_str() );
+          MMDragonfly_->UpdatePropertyUI( g_FrameScanTimePropertyName, vNewPropertyValue.c_str() );
         }
       }
     }
@@ -321,9 +348,10 @@ double CDisk::CalculateFrameScanTime(unsigned int Speed, unsigned int ScansPerRe
 // Disk status monitoring thread
 ///////////////////////////////////////////////////////////////////////////////
 
-CDiskStatusMonitor::CDiskStatusMonitor( CDragonfly* MMDragonfly, CDiskStatus* DiskStatus )
+CDiskStatusMonitor::CDiskStatusMonitor( CDragonfly* MMDragonfly, IDiskStatus* DiskStatus, mutex& DiskStatusMutex )
   :MMDragonfly_( MMDragonfly ),
   DiskStatus_( DiskStatus ),
+  DiskStatusMutex_( DiskStatusMutex ),
   KeepRunning_( true )
 {
 }
@@ -338,7 +366,10 @@ int CDiskStatusMonitor::svc()
 {
   while ( KeepRunning_ )
   {
-    DiskStatus_->UpdateFromDevice();
+    {
+      lock_guard<mutex> lock( DiskStatusMutex_ );
+      DiskStatus_->UpdateFromDevice();
+    }
     MMDragonfly_->UpdateProperty( g_DiskSpeedMonitorPropertyName );
     MMDragonfly_->UpdateProperty( g_DiskStatusMonitorPropertyName );
     MMDragonfly_->UpdateProperty( g_FrameScanTimePropertyName );

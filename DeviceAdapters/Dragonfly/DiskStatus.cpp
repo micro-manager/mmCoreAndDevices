@@ -7,6 +7,11 @@
 
 using namespace std;
 
+IDiskStatus* CreateDiskStatus( IDiskInterface2* DiskInterface, CDragonfly* MMDragonfly, CDiskSimulator* DiskSimulator )
+{
+  return new CDiskStatus( DiskInterface, MMDragonfly, DiskSimulator );
+}
+
 CDiskStatus::CDiskStatus( IDiskInterface2* DiskSpeedInterface, CDragonfly* MMDragonfly, CDiskSimulator* DiskSimulator )
   : DiskInterface_( DiskSpeedInterface ),
   MMDragonfly_( MMDragonfly ),
@@ -30,22 +35,18 @@ CDiskStatus::~CDiskStatus()
   delete StoppedState_;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Inherited from IDiskStatus
+///////////////////////////////////////////////////////////////////////////////
+
 void CDiskStatus::RegisterObserver( CDiskStateChange* Observer )
 {
   Observers_.push_back( Observer );
 }
 
-void CDiskStatus::NotifyStateChange()
+void CDiskStatus::UnregisterObserver( CDiskStateChange* Observer )
 {
-  list<CDiskStateChange*>::iterator vObserverIt = Observers_.begin();
-  while ( vObserverIt != Observers_.end() )
-  {
-    if ( *vObserverIt != nullptr )
-    {
-      ( *vObserverIt )->Notify();
-    }
-    vObserverIt++;
-  }
+  Observers_.remove( Observer );
 }
 
 void CDiskStatus::Start()
@@ -69,28 +70,6 @@ void CDiskStatus::UpdateFromDevice()
   CurrentState_->UpdateFromDevice();
 }
 
-unsigned int CDiskStatus::GetCurrentSpeed() const
-{
-  return CurrentSpeed_;
-}
-
-unsigned int CDiskStatus::ReadCurrentSpeedFromDevice()
-{
-  DiskSimulator_->GetSpeed( CurrentSpeed_ );
-  //DiskInterface_->GetSpeed( CurrentSpeed_ );
-  return CurrentSpeed_;
-}
-
-bool CDiskStatus::ReadIsSpinningFromDevice() const
-{
-  return DiskInterface_->IsSpinning();
-}
-
-unsigned int CDiskStatus::GetRequestedSpeed() const
-{
-  return RequestedSpeed_;
-}
-
 bool CDiskStatus::IsChangingSpeed() const
 {
   return CurrentState_ == ChangingSpeedState_;
@@ -109,6 +88,32 @@ bool CDiskStatus::IsStopping() const
 bool CDiskStatus::IsStopped() const
 {
   return CurrentState_ == StoppedState_;
+}
+
+unsigned int CDiskStatus::GetCurrentSpeed() const
+{
+  return CurrentSpeed_;
+}
+
+unsigned int CDiskStatus::GetRequestedSpeed() const
+{
+  return RequestedSpeed_;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// CDiskStatus methods
+///////////////////////////////////////////////////////////////////////////////
+
+bool CDiskStatus::ReadIsSpinningFromDevice() const
+{
+  return DiskInterface_->IsSpinning();
+}
+
+unsigned int CDiskStatus::ReadCurrentSpeedFromDevice()
+{
+  DiskSimulator_->GetSpeed( CurrentSpeed_ );
+  //DiskInterface_->GetSpeed( CurrentSpeed_ );
+  return CurrentSpeed_;
 }
 
 CDiskSpeedState* CDiskStatus::GetChangingSpeedState()
@@ -136,4 +141,17 @@ void CDiskStatus::SetState( CDiskSpeedState* NewState )
   CurrentState_ = NewState;
   CurrentState_->Initialise();
   NotifyStateChange();
+}
+
+void CDiskStatus::NotifyStateChange()
+{
+  list<CDiskStateChange*>::iterator vObserverIt = Observers_.begin();
+  while ( vObserverIt != Observers_.end() )
+  {
+    if ( *vObserverIt != nullptr )
+    {
+      ( *vObserverIt )->Notify();
+    }
+    vObserverIt++;
+  }
 }

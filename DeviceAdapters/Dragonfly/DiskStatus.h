@@ -5,58 +5,42 @@
 //-----------------------------------------------------------------------------
 #ifndef _DISKSTATUS_H_
 #define _DISKSTATUS_H_
+#include "DiskStatusInterface.h"
 #include <list>
 
-class IDiskInterface2;
-class CDragonfly;
 class CDiskSpeedState;
 class CChangingSpeedState;
 class CAtSpeedState;
 class CStoppingState;
 class CStoppedState;
 
-class CDiskSimulator;
-
-class CDiskStateChange
-{
-public:
-  CDiskStateChange() : StateChangeNotified_( true ) {}
-  void Notify() { StateChangeNotified_ = true; }
-  bool HasBeenNotified() 
-  { 
-    if (StateChangeNotified_)
-    { 
-      StateChangeNotified_ = false;
-      return true;
-    } 
-    return false;
-  }
-private:
-  bool StateChangeNotified_;
-};
-
-class CDiskStatus
+class CDiskStatus : public IDiskStatus
 {
 public:
   CDiskStatus( IDiskInterface2* DiskInterface, CDragonfly* MMDragonfly, CDiskSimulator* DiskSimulator );
   ~CDiskStatus();
 
+  // Inherited from IDiskStatus
   void RegisterObserver( CDiskStateChange* Observer );
+  void UnregisterObserver( CDiskStateChange* Observer );
 
   void Start();
   void ChangeSpeed( unsigned int NewRequestedSpeed );
   void Stop();
   void UpdateFromDevice();
 
-  unsigned int GetCurrentSpeed() const;
-  unsigned int ReadCurrentSpeedFromDevice();
-  bool ReadIsSpinningFromDevice() const;
-  unsigned int GetRequestedSpeed() const;
-
   bool IsChangingSpeed() const;
   bool IsAtSpeed() const;
   bool IsStopping() const;
   bool IsStopped() const;
+
+  unsigned int GetCurrentSpeed() const;
+  unsigned int GetRequestedSpeed() const;
+
+  // CDiskStatus methods
+  unsigned int ReadCurrentSpeedFromDevice();
+  bool ReadIsSpinningFromDevice() const;
+
   CDiskSpeedState* GetChangingSpeedState( );
   CDiskSpeedState* GetAtSpeedState();
   CDiskSpeedState* GetStoppingState();
@@ -74,9 +58,9 @@ private:
   CStoppingState* StoppingState_;
   CStoppedState* StoppedState_;
   CDiskSpeedState* CurrentState_;
+  std::list<CDiskStateChange*> Observers_;
 
   CDiskSimulator* DiskSimulator_;
-  std::list<CDiskStateChange*> Observers_;
 
   void NotifyStateChange();
 };

@@ -9,12 +9,13 @@
 #include "Property.h"
 #include "../../MMDevice/DeviceThreads.h"
 #include "DiskSpeedSimulator.h"
+#include <mutex>
 
 class IDiskInterface2;
 class IConfigFileHandler;
 class CDragonfly;
 class CDiskStatusMonitor;
-class CDiskStatus;
+class IDiskStatus;
 class CDiskStateChange;
 
 class CDisk
@@ -34,10 +35,11 @@ private:
   CDragonfly* MMDragonfly_;
   CDiskStatusMonitor* DiskStatusMonitor_;
   unsigned int ScansPerRevolution_;
-  CDiskStatus* DiskStatus_;
+  IDiskStatus* DiskStatus_;
   CDiskStateChange* SpeedMonitorStateChangeObserver_;
   CDiskStateChange* StatusMonitorStateChangeObserver_;
   CDiskStateChange* FrameScanTimeStateChangeObserver_;
+  std::mutex DiskStatusMutex_;
 
   CDiskSimulator DiskSimulator_;
 
@@ -48,14 +50,15 @@ private:
 class CDiskStatusMonitor : public MMDeviceThreadBase
 {
 public:
-  CDiskStatusMonitor( CDragonfly* MMDragonfly, CDiskStatus* DiskStatus );
+  CDiskStatusMonitor( CDragonfly* MMDragonfly, IDiskStatus* DiskStatus, std::mutex& DiskStatusMutex );
   virtual ~CDiskStatusMonitor();
 
   int svc();
 
 private:
   CDragonfly* MMDragonfly_;
-  CDiskStatus* DiskStatus_;
+  IDiskStatus* DiskStatus_;
+  std::mutex& DiskStatusMutex_;
   bool KeepRunning_;
 };
 #endif
