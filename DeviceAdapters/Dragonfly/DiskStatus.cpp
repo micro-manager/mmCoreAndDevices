@@ -49,6 +49,16 @@ void CDiskStatus::UnregisterObserver( CDiskStateChange* Observer )
   Observers_.remove( Observer );
 }
 
+void CDiskStatus::RegisterErrorObserver( CDiskStateError* Observer )
+{
+  ErrorObservers_.push_back( Observer );
+}
+
+void CDiskStatus::UnregisterErrorObserver( CDiskStateError* Observer )
+{
+  ErrorObservers_.remove( Observer );
+}
+
 void CDiskStatus::Start()
 {
   CurrentState_->Start();
@@ -100,6 +110,11 @@ unsigned int CDiskStatus::GetRequestedSpeed() const
   return RequestedSpeed_;
 }
 
+void  CDiskStatus::ErrorEncountered( const string& ErrorMessage )
+{
+  NotifyStateError( ErrorMessage );
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // CDiskStatus methods
 ///////////////////////////////////////////////////////////////////////////////
@@ -111,8 +126,8 @@ bool CDiskStatus::ReadIsSpinningFromDevice() const
 
 unsigned int CDiskStatus::ReadCurrentSpeedFromDevice()
 {
-  DiskSimulator_->GetSpeed( CurrentSpeed_ );
-  //DiskInterface_->GetSpeed( CurrentSpeed_ );
+  //DiskSimulator_->GetSpeed( CurrentSpeed_ );
+  DiskInterface_->GetSpeed( CurrentSpeed_ );
   return CurrentSpeed_;
 }
 
@@ -151,6 +166,19 @@ void CDiskStatus::NotifyStateChange()
     if ( *vObserverIt != nullptr )
     {
       ( *vObserverIt )->Notify();
+    }
+    vObserverIt++;
+  }
+}
+
+void CDiskStatus::NotifyStateError( const string& ErrorMessage )
+{
+  list<CDiskStateError*>::iterator vObserverIt = ErrorObservers_.begin();
+  while ( vObserverIt != ErrorObservers_.end() )
+  {
+    if ( *vObserverIt != nullptr )
+    {
+      ( *vObserverIt )->Notify( ErrorMessage );
     }
     vObserverIt++;
   }

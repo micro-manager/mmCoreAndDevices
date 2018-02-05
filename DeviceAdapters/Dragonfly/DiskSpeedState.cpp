@@ -164,6 +164,7 @@ void CChangingSpeedState::SpeedUnchanged( unsigned int CurrentSpeed )
       // The disk is not changing speed even though it should
       // Something's wrong, we report it to the user
       DiskSpeedNotChangingTwice_ = true;
+      DiskStatus_->ErrorEncountered( "Error: Disk speed not changing" );
     }
   }
   DiskSpeedNotChangingOnce_ = true;

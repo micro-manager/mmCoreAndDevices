@@ -23,6 +23,8 @@ public:
   // Inherited from IDiskStatus
   void RegisterObserver( CDiskStateChange* Observer );
   void UnregisterObserver( CDiskStateChange* Observer );
+  void RegisterErrorObserver( CDiskStateError* Observer );
+  void UnregisterErrorObserver( CDiskStateError* Observer );
 
   void Start();
   void ChangeSpeed( unsigned int NewRequestedSpeed );
@@ -47,6 +49,7 @@ public:
   CDiskSpeedState* GetStoppedState();
   void SetState( CDiskSpeedState* NewState );
 
+  void ErrorEncountered( const std::string& ErrorMessage );
 
 private:
   IDiskInterface2* DiskInterface_;
@@ -59,9 +62,11 @@ private:
   CStoppedState* StoppedState_;
   CDiskSpeedState* CurrentState_;
   std::list<CDiskStateChange*> Observers_;
+  std::list<CDiskStateError*> ErrorObservers_;
 
   CDiskSimulator* DiskSimulator_;
 
   void NotifyStateChange();
+  void NotifyStateError(const std::string& ErrorMessage);
 };
 #endif

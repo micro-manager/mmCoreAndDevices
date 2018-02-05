@@ -25,7 +25,6 @@ const char* const g_DiskStatusStart = "Start";
 const char* const g_DiskStatusStopped = "Stopped";
 const char* const g_DiskStatusReady = "Ready";
 const char* const g_DiskStatusChangingSpeed = "Changing speed";
-const char* const g_DiskStatusSpeedNotChanging = "Error: Disk speed not changing";
 const char* const g_DiskStatusUndefined = "Undefined";
 
 CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFileHandler, CDragonfly* MMDragonfly )
@@ -37,6 +36,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   SpeedMonitorStateChangeObserver_( nullptr ),
   StatusMonitorStateChangeObserver_( nullptr ),
   FrameScanTimeStateChangeObserver_( nullptr ),
+  StatusMonitorStateErrorObserver_( nullptr ),
   DiskSimulator_( DiskInterface_, MMDragonfly_),
   DiskStatus_( CreateDiskStatus( DiskInterface_, MMDragonfly_, &DiskSimulator_ ) )
 {
@@ -131,6 +131,8 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   }
   StatusMonitorStateChangeObserver_ = new CDiskStateChange();
   DiskStatus_->RegisterObserver( StatusMonitorStateChangeObserver_ );
+  StatusMonitorStateErrorObserver_ = new CDiskStateError();
+  DiskStatus_->RegisterErrorObserver( StatusMonitorStateErrorObserver_ );
 
   vAct = new CPropertyAction( this, &CDisk::OnMonitorStatusChange );
   vRet = MMDragonfly_->CreateProperty( g_FrameScanTimePropertyName, g_DiskStatusUndefined, MM::String, true, vAct );
@@ -154,6 +156,7 @@ CDisk::~CDisk()
   delete SpeedMonitorStateChangeObserver_;
   delete StatusMonitorStateChangeObserver_;
   delete FrameScanTimeStateChangeObserver_;
+  delete StatusMonitorStateErrorObserver_;
 }
 
 int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
@@ -277,8 +280,13 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     else if ( Prop->GetName() == g_DiskStatusMonitorPropertyName )
     {
       // Update status
-//NOTE: Handle error case where speed is unchanged and not at requested speed
-      if ( StatusMonitorStateChangeObserver_->HasBeenNotified() )
+      string vErrorMessage;
+      if ( StatusMonitorStateErrorObserver_->GetErrorMessage( vErrorMessage ) )
+      {
+        Prop->Set( vErrorMessage.c_str() );
+        MMDragonfly_->UpdatePropertyUI( g_DiskStatusMonitorPropertyName, vErrorMessage.c_str() );
+      }
+      else if ( StatusMonitorStateChangeObserver_->HasBeenNotified() )
       {
         string vNewPropertyValue;
         {

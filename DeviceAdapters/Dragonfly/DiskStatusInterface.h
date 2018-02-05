@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------------
 #ifndef _DISKSTATUSINTERFACE_H_
 #define _DISKSTATUSINTERFACE_H_
+#include <string>
 
 class IDiskInterface2;
 class CDragonfly;
@@ -29,6 +30,25 @@ private:
   bool StateChangeNotified_;
 };
 
+class CDiskStateError
+{
+public:
+  CDiskStateError() {};
+  void Notify( const std::string& NewMessage ) { ErrorMessage_ = NewMessage; }
+  bool GetErrorMessage( std::string& ReturnedMessage )
+  {
+    if ( !ErrorMessage_.empty() )
+    {
+      ReturnedMessage = ErrorMessage_;
+      ErrorMessage_.clear();
+      return true;
+    }
+    return false;
+  }
+private:
+  std::string ErrorMessage_;
+};
+
 class IDiskStatus
 {
 public:
@@ -36,6 +56,8 @@ public:
 
   virtual void RegisterObserver( CDiskStateChange* Observer ) = 0;
   virtual void UnregisterObserver( CDiskStateChange* Observer ) = 0;
+  virtual void RegisterErrorObserver( CDiskStateError* Observer ) = 0;
+  virtual void UnregisterErrorObserver( CDiskStateError* Observer ) = 0;
 
   virtual void Start() = 0;
   virtual void ChangeSpeed( unsigned int NewRequestedSpeed ) = 0;

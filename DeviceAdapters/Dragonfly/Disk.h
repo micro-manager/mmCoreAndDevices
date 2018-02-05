@@ -17,6 +17,7 @@ class CDragonfly;
 class CDiskStatusMonitor;
 class IDiskStatus;
 class CDiskStateChange;
+class CDiskStateError;
 
 class CDisk
 {
@@ -39,6 +40,7 @@ private:
   CDiskStateChange* SpeedMonitorStateChangeObserver_;
   CDiskStateChange* StatusMonitorStateChangeObserver_;
   CDiskStateChange* FrameScanTimeStateChangeObserver_;
+  CDiskStateError* StatusMonitorStateErrorObserver_;
   std::mutex DiskStatusMutex_;
 
   CDiskSimulator DiskSimulator_;
