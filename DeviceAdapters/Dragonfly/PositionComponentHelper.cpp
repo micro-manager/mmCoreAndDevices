@@ -5,7 +5,7 @@ using namespace std;
 
 string CPositionComponentHelper::UndefinedPositionBase_ = "Undefined Position";
 
-bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* FilterSet, TPositionNameMap& PositionNames, tParseDescription ParseDescription )
+bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* FilterSet, TPositionNameMap& PositionNames, bool AddIndexToPositionNames )
 {
   const static unsigned int vStringLength = 64;
   bool vPositionsRetrieved = false;
@@ -19,6 +19,12 @@ bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* Filte
       for ( unsigned int vIndex = vMinPos; vIndex <= vMaxPos; vIndex++ )
       {
         string vPositionName;
+        if ( AddIndexToPositionNames )
+        {
+          char vIndexString[7];
+          snprintf( vIndexString, 7, "%2d", vIndex );
+          vPositionName += vIndexString + string( " - " );
+        }
         if ( FilterSet->GetFilterDescription( vIndex, vDescription, vStringLength ) == false )
         {
           vPositionName += UndefinedPositionBase_ + " " + to_string(vUndefinedIndex);
@@ -26,14 +32,7 @@ bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* Filte
         }
         else
         {
-          if ( ParseDescription != nullptr )
-          {
-            vPositionName += ParseDescription( vDescription );
-          }
-          else
-          {
-            vPositionName += vDescription;
-          }
+          vPositionName += vDescription;
         }
         PositionNames[vIndex] = vPositionName;
       }

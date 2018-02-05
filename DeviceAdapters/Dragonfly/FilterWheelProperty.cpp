@@ -80,7 +80,9 @@ bool CFilterWheelProperty::RetrievePositionsFromFilterConfig()
         char vDescription[vStringLength];
         for ( unsigned int vIndex = vMinPos; vIndex <= vMaxPos; vIndex++ )
         {
-          string vPositionName( to_string( vIndex ) + " - " );
+          char vIndexString[7];
+          snprintf( vIndexString, 7, "%2d", vIndex );
+          string vPositionName( vIndexString + string( " - " ) );
           if ( vFilterSet->GetFilterDescription( vIndex, vDescription, vStringLength ) == false )
           {
             vPositionName += "Empty";

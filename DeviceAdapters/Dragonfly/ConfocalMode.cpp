@@ -36,7 +36,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
     {
       MMDragonfly_->LogComponentMessage( "Invalid FilterSet pointer for Power Density" );
     }
-    if ( vFilterSet == nullptr || !CPositionComponentHelper::RetrievePositionsFromFilterSet( vFilterSet, vPowerDensityPositionNames, nullptr ) )
+    if ( vFilterSet == nullptr || !CPositionComponentHelper::RetrievePositionsFromFilterSet( vFilterSet, vPowerDensityPositionNames, false ) )
     {
       unsigned int vMinValue, vMaxValue;
       if ( IllLensInterface_->GetLimits( vMinValue, vMaxValue ) )

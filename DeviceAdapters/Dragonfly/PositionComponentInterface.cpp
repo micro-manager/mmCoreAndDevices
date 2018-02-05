@@ -12,55 +12,12 @@ bool IsCharacterNumerical( char Character )
   return ( Character >= 48 && Character <= 57 );
 }
 
-string ParseDescription( const string& Description )
-{
-  // Input => Output
-  // 1x => 1.0x
-  // 1.x => 1.0x
-  // 1.5x => 1.5x
-  // 4 => 4.0
-  // 3.25 => 3.25
-
-  string vNewDescription = Description;
-  string::const_iterator CharacterIt = vNewDescription.begin();
-  // Loop until we find a non-numerical character
-  while ( CharacterIt != vNewDescription.end() && IsCharacterNumerical( *CharacterIt ) )
-  {
-    CharacterIt++;
-  }
-  if ( CharacterIt != vNewDescription.begin() )
-  {
-    // We have encountered at least one numerical character
-    if ( CharacterIt != vNewDescription.end() && *CharacterIt == '.' )
-    {
-      // The first non-numerical character is a "."
-      string::const_iterator NextCharacterIt = CharacterIt + 1;
-      if ( NextCharacterIt == vNewDescription.end() || !IsCharacterNumerical( *NextCharacterIt ) )
-      {
-        // Case: "1.x" or "1." => add "0" between the "." and the second part of the string
-        vNewDescription.insert( NextCharacterIt, '0' );
-      }
-    }
-    else
-    {
-      // The first non-numerical character is not a "." or we only encountered numerical characters
-      // Case: "1" or "1x" => add ".0" between the numerical part and the rest of the string
-      vNewDescription.insert( CharacterIt - vNewDescription.begin(), ".0" );
-    }
-  }
-  return vNewDescription;
-}
-
-IPositionComponentInterface::IPositionComponentInterface( CDragonfly* MMDragonfly, const string& PropertyName, bool ParseDescriptionRetrievedFromDevice )
+IPositionComponentInterface::IPositionComponentInterface( CDragonfly* MMDragonfly, const string& PropertyName, bool AddIndexToPositionNames )
   : MMDragonfly_( MMDragonfly ),
   PropertyName_( PropertyName ),
   Initialised_( false ),
-  ParseDecription_( &ParseDescription )
+  AddIndexToPositionNames_( AddIndexToPositionNames )
 {
-  if ( !ParseDescriptionRetrievedFromDevice )
-  {
-    ParseDecription_ = nullptr;
-  }
 }
 
 IPositionComponentInterface::~IPositionComponentInterface()
@@ -77,7 +34,7 @@ void IPositionComponentInterface::Initialise()
   {
     MMDragonfly_->LogComponentMessage( "Invalid FilterSet pointer for " + PropertyName_ );
   }
-  if ( vFilterSet == nullptr || !CPositionComponentHelper::RetrievePositionsFromFilterSet( vFilterSet, PositionNames_, ParseDecription_ ) )
+  if ( vFilterSet == nullptr || !CPositionComponentHelper::RetrievePositionsFromFilterSet( vFilterSet, PositionNames_, AddIndexToPositionNames_ ) )
   {
     unsigned int vMinValue, vMaxValue;
     if ( GetLimits( vMinValue, vMaxValue ) )
