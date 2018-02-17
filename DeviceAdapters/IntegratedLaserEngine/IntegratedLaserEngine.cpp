@@ -66,7 +66,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    if ( (strcmp(deviceName, g_ControllerName) == 0) )
    {
       // create Controller
-      AndorLaserCombiner* pAndorLaserCombiner = new AndorLaserCombiner(g_ControllerName);
+      CIntegratedLaserEngine* pAndorLaserCombiner = new CIntegratedLaserEngine(g_ControllerName);
       return pAndorLaserCombiner;
    }
 
@@ -82,17 +82,15 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // Controller implementation.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-AndorLaserCombiner::AndorLaserCombiner( const char* name) :
+CIntegratedLaserEngine::CIntegratedLaserEngine( const char* name) :
 initialized_(false),
    name_(name),
    busy_( false ),
    error_(DEVICE_OK),
    changedTime_(0.0),
-   DOUT_(0),
    pImpl_(NULL),
    nLasers_(0),
    openRequest_(false),
-   multiPortUnitPresent_(false),
    laserPort_(0)
 {
   for ( int il = 0; il < MaxLasers + 1; ++il )
@@ -116,19 +114,12 @@ initialized_(false),
    // Description.
    CreateProperty(MM::g_Keyword_Description, "Integrated Laser Engine", MM::String, true);
 
-   // Multi-port unit present.
-   /*
-   CPropertyAction* pAct = new CPropertyAction (this, &AndorLaserCombiner::OnMultiPortUnitPresent);
-   CreateProperty("MultiPortUnitPresent", "0", MM::Integer, false, pAct, true);
-   AddAllowedValue("MultiPortUnitPresent", "0");
-   AddAllowedValue("MultiPortUnitPresent", "1");
-   */
    EnableDelay(); // Signals that the delay setting will be used.
    UpdateStatus();
    LogMessage(("AndorLaserCombiner ctor OK, " + std::string(name)).c_str(), true);
 }
 
-AndorLaserCombiner::~AndorLaserCombiner()
+CIntegratedLaserEngine::~CIntegratedLaserEngine()
 {
    Shutdown();
    MMThreadGuard g(ImplLock_s);
@@ -139,7 +130,7 @@ AndorLaserCombiner::~AndorLaserCombiner()
    LogMessage("AndorLaserCombiner dtor OK", true);
 }
 
-bool AndorLaserCombiner::Busy()
+bool CIntegratedLaserEngine::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
    MM::MMTime delay(GetDelayMs()*1000.0);
@@ -149,13 +140,13 @@ bool AndorLaserCombiner::Busy()
       return false;
 }
 
-void AndorLaserCombiner::GetName(char* name) const
+void CIntegratedLaserEngine::GetName(char* name) const
 {
    assert(name_.length() < CDeviceUtils::GetMaxStringLength());
    CDeviceUtils::CopyLimitedString(name, name_.c_str());
 }
 
-int AndorLaserCombiner::Initialize()
+int CIntegratedLaserEngine::Initialize()
 {
    int nRet = DEVICE_OK;
 
@@ -185,11 +176,7 @@ int AndorLaserCombiner::Initialize()
       nLasers_ = pImpl_->pALC_REVLaser2_->Initialize();
       LogMessage(("in AndorLaserCombiner::Initialize, nLasers_ ="+boost::lexical_cast<std::string,int>(nLasers_)), true);
       CDeviceUtils::SleepMs(100);
-/*
-      bool initialised = pImpl_->pALC_REV_DIO_->InitializeDIO();
-      LogMessage(("in AndorLaserCombiner::InitializeDIO() ="+boost::lexical_cast<std::string,bool>(initialised)), true);
-      CDeviceUtils::SleepMs(100);		
-*/
+
       TLaserState state[10];
       memset((void*)state, 0, 10*sizeof(state[0]));
 
@@ -261,7 +248,7 @@ int AndorLaserCombiner::Initialize()
 // Property Generators
 /////////////////////////////////////////////
 
-void AndorLaserCombiner::GenerateALCProperties()
+void CIntegratedLaserEngine::GenerateALCProperties()
 {
    std::string powerName;
    CPropertyActionEx* pAct; 
@@ -272,7 +259,7 @@ void AndorLaserCombiner::GenerateALCProperties()
    for( int il = 1; il < nLasers_+1; ++il)
    {
       buildname.str("");
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnPowerSetpoint, il);
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnPowerSetpoint, il);
       buildname << g_Keyword_PowerSetpoint << Wavelength(il);
       CreateProperty(buildname.str().c_str(), "0", MM::Float, false, pAct);
 
@@ -283,25 +270,25 @@ void AndorLaserCombiner::GenerateALCProperties()
 
       buildname.str("");
       buildname << "MaximumLaserPower" << Wavelength(il);
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnMaximumLaserPower, il );
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnMaximumLaserPower, il );
       stmp << fullScale;
       CreateProperty(buildname.str().c_str(), stmp.str().c_str(), MM::Integer, true, pAct);
 
       // Readbacks.
       buildname.str("");
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnPowerReadback, il);
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnPowerReadback, il);
       buildname <<  g_Keyword_PowerReadback << Wavelength(il);
       CreateProperty(buildname.str().c_str(), "0", MM::Float, true, pAct);
 
       // 'States'.
       buildname.str("");
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnLaserState, il);
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnLaserState, il);
       buildname <<  "LaserState" << Wavelength(il);
       CreateProperty(buildname.str().c_str(), "0", MM::Integer, true, pAct);
 
       // Enable.
       buildname.str("");
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnEnable, il);
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnEnable, il);
       buildname <<  g_Keyword_Enable << Wavelength(il);
       enableStates_[il].clear();
       enableStates_[il].push_back(g_Keyword_EnableOn);
@@ -313,7 +300,7 @@ void AndorLaserCombiner::GenerateALCProperties()
 
       // Save laser lifetime.
       buildname.str("");
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnSaveLifetime, il);
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnSaveLifetime, il);
       buildname <<  g_Keyword_SaveLifetime << Wavelength(il);
       savelifetimeStates_[il].clear();
       savelifetimeStates_[il].push_back(g_Keyword_SaveLifetimeOn);
@@ -321,69 +308,13 @@ void AndorLaserCombiner::GenerateALCProperties()
       CreateProperty(buildname.str().c_str(), savelifetimeStates_[il][0].c_str(), MM::String, false, pAct);
       SetAllowedValues(buildname.str().c_str(), savelifetimeStates_[il]);
    }
-   /*
-   CPropertyAction* pA = new CPropertyAction(this, &AndorLaserCombiner::OnDIN);
-   stmp.str("");
-   stmp << "0x" << std::hex << (unsigned short)DIN();
-   CreateProperty("DIN",  stmp.str().c_str(),  MM::String, true, pA);
-   */
-   if( multiPortUnitPresent_)  // The first two bits of DOUT are the laser output port.
-   {
-     /*
-      pA = new CPropertyAction(this, &AndorLaserCombiner::OnLaserPort);
-      CreateProperty("LaserPort",  "B",  MM::String, false, pA);
-      AddAllowedValue("LaserPort",  "A");
-      AddAllowedValue("LaserPort",  "B");
-      AddAllowedValue("LaserPort",  "C");
-      */
-   } else {
-     /*
-      // Only create TTL 1 + 2 if no MPU present.
-      pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT1);
-      CreateProperty("DOUT1", "0", MM::Integer, false, pA);
-      SetPropertyLimits("DOUT1", 0, 1);
 
-      pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT2);
-      CreateProperty("DOUT2", "0", MM::Integer, false, pA);
-      SetPropertyLimits("DOUT2", 0, 1);
-      */
-   }
-   /*
-   pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT);
-   stmp.str("");
-   stmp << "0x" << std::hex << (unsigned short)DOUT_;
-   CreateProperty("DOUT",  stmp.str().c_str(),  MM::String, false, pA);
-
-   pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT3);
-   CreateProperty("DOUT3", "0", MM::Integer, false, pA);
-   SetPropertyLimits("DOUT3", 0, 1);
-
-   pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT4);
-   CreateProperty("DOUT4", "0", MM::Integer, false, pA);
-   SetPropertyLimits("DOUT4", 0, 1);
-
-   pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT5);
-   CreateProperty("DOUT5", "0", MM::Integer, false, pA);
-   SetPropertyLimits("DOUT5", 0, 1);
-
-   pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT6);
-   CreateProperty("DOUT6", "0", MM::Integer, false, pA);
-   SetPropertyLimits("DOUT6", 0, 1);
-
-   pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT7);
-   CreateProperty("DOUT7", "0", MM::Integer, false, pA);
-   SetPropertyLimits("DOUT7", 0, 1);
-
-   pA = new CPropertyAction(this, &AndorLaserCombiner::OnDOUT8);
-   CreateProperty("DOUT8", "0", MM::Integer, false, pA);
-   SetPropertyLimits("DOUT8", 0, 1);
-   */
-   CPropertyAction* pA = new CPropertyAction(this, &AndorLaserCombiner::OnNLasers);
+   CPropertyAction* pA = new CPropertyAction(this, &CIntegratedLaserEngine::OnNLasers);
    CreateProperty("NLasers",  (boost::lexical_cast<std::string,int>(nLasers_)).c_str(),  MM::Integer, true, pA);
 }
 
 
-void AndorLaserCombiner::GenerateReadOnlyIDProperties()
+void CIntegratedLaserEngine::GenerateReadOnlyIDProperties()
 {
    CPropertyActionEx* pAct; 
    std::ostringstream buildname;
@@ -392,22 +323,22 @@ void AndorLaserCombiner::GenerateReadOnlyIDProperties()
    {
       buildname.str("");
       buildname << "Hours"  << Wavelength(il);
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnHours, il);
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnHours, il);
       CreateProperty(buildname.str().c_str(), "", MM::String, true, pAct);
 
       buildname.str("");
       buildname << "IsLinear"  << Wavelength(il);
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnIsLinear, il);
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnIsLinear, il);
       CreateProperty(buildname.str().c_str(), "", MM::String, true, pAct);
 
       buildname.str("");
       buildname << "Wavelength"  << il;
-      pAct = new CPropertyActionEx(this, &AndorLaserCombiner::OnWaveLength, il);
+      pAct = new CPropertyActionEx(this, &CIntegratedLaserEngine::OnWaveLength, il);
       CreateProperty(buildname.str().c_str(), "", MM::Float, true, pAct);
    }
 }
 
-int AndorLaserCombiner::Shutdown()
+int CIntegratedLaserEngine::Shutdown()
 {
    if (initialized_)
    {
@@ -431,7 +362,7 @@ int AndorLaserCombiner::Shutdown()
  *
  * @see OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
  */
-int AndorLaserCombiner::OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
+int CIntegratedLaserEngine::OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -453,7 +384,7 @@ int AndorLaserCombiner::OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType 
  *
  * @see OnIsLinear(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
  */
-int AndorLaserCombiner::OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long  il)
+int CIntegratedLaserEngine::OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long  il)
 {
    double powerSetpoint;
    if (eAct == MM::BeforeGet)
@@ -483,7 +414,7 @@ int AndorLaserCombiner::OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType 
  * 
  * @see OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
  */
-int AndorLaserCombiner::OnHours(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
+int CIntegratedLaserEngine::OnHours(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -508,7 +439,7 @@ int AndorLaserCombiner::OnHours(MM::PropertyBase* pProp, MM::ActionType eAct, lo
  *
  * @see OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
  */
-int AndorLaserCombiner::OnIsLinear(MM::PropertyBase* pProp, MM::ActionType eAct, long il) 
+int CIntegratedLaserEngine::OnIsLinear(MM::PropertyBase* pProp, MM::ActionType eAct, long il) 
 {
 
    if (eAct == MM::BeforeGet)
@@ -533,7 +464,7 @@ int AndorLaserCombiner::OnIsLinear(MM::PropertyBase* pProp, MM::ActionType eAct,
  *
  * @see OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
  */
-int AndorLaserCombiner::OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
+int CIntegratedLaserEngine::OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -552,7 +483,7 @@ int AndorLaserCombiner::OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionT
 /**
  * Wavelength of laser line.
  */
-int AndorLaserCombiner::OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
+int CIntegratedLaserEngine::OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -571,7 +502,7 @@ int AndorLaserCombiner::OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAc
 /**
  * Laser state.
  */
-int AndorLaserCombiner::OnLaserState(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
+int CIntegratedLaserEngine::OnLaserState(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -596,7 +527,7 @@ int AndorLaserCombiner::OnLaserState(MM::PropertyBase* pProp, MM::ActionType eAc
  * <p>
  * Requires firmware 2.
  */
-int AndorLaserCombiner::OnSaveLifetime(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
+int CIntegratedLaserEngine::OnSaveLifetime(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
 {
    // The SDK calls the laser standby feature "Enable".  Don't get
    // confused with the DeviceAdapter "enable" property, which is
@@ -651,7 +582,7 @@ int AndorLaserCombiner::OnSaveLifetime(MM::PropertyBase* pProp, MM::ActionType e
  * <p>
  * TTL mode requires firmware 2.
  */
-int AndorLaserCombiner::OnEnable(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
+int CIntegratedLaserEngine::OnEnable(MM::PropertyBase* pProp, MM::ActionType eAct, long il)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -683,289 +614,9 @@ int AndorLaserCombiner::OnEnable(MM::PropertyBase* pProp, MM::ActionType eAct, l
 
 
 /**
- * Digital 8-bit input to Precision Control Unit.
- */
-int AndorLaserCombiner::OnDIN(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      std::ostringstream s;
-      s << "0x" << std::hex << (short)DIN();
-      LogMessage("from equip. DIN = " + s.str(), true);
-      pProp->Set(s.str().c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      // This is a read-only property!
-   }   
-   return HandleErrors();
-}
-
-
-/**
- * Digital 8-bit output from Precision Control Unit.  The lowest 2
- * bits are not accessible if a multi fiber port unit is present.
- */
-int AndorLaserCombiner::OnDOUT(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   static bool recursing = false;
-   if( recursing)
-      return DEVICE_OK;
-   if (eAct == MM::BeforeGet)
-   {
-      std::ostringstream ss;
-      ss << "0x" << std::hex << (unsigned short)DOUT_;
-      pProp->Set(ss.str().c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      unsigned char valueOut;
-      std::string sv;
-      unsigned short cv; 
-      pProp->Get(sv);
-      // The string should be in range 0x00 to 0xFF.
-      size_t prefixLocation = sv.find("0x");
-      if( std::string::npos != prefixLocation)
-         sv.replace(prefixLocation,2,"");
-
-      std::stringstream stream0;
-      stream0 << std::hex << sv;
-      stream0 >> cv;
-      DOUT_ = (unsigned char)cv;
-
-      // If the multi-port box is there, don't allow user access to the
-      // first two bits.
-      if(multiPortUnitPresent_)
-      {
-         DOUT_ &= 0xFC;
-         valueOut = DOUT_;
-         recursing = true;
-         pProp->Set((long)DOUT_);
-         recursing = false;
-         valueOut |= laserPort_;
-      }
-      else
-         valueOut = DOUT_;
-
-      std::ostringstream debugValue;
-
-      debugValue << std::hex << (unsigned short)valueOut;
-
-      LogMessage("to equip. valueOut = " + debugValue.str(), true);
-      DOUT(valueOut);
-   }   
-   return HandleErrors();
-}
-
-int AndorLaserCombiner::OnDOUT1(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet) {
-      long prop;
-      prop = DOUT_ & 1;  // Get just the lowest bit of the switch state.
-      pProp->Set(prop);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long prop;
-      pProp->Get(prop);
-
-      if(prop){
-         DOUT_ |= prop;
-      } else {
-         DOUT_ &= 254;  // Clear just the lowest bit.
-      }
-      DOUT(DOUT_);
-   }
-
-   return DEVICE_OK;
-}
-
-int AndorLaserCombiner::OnDOUT2(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet) {
-      long prop;
-      prop = DOUT_ >> 1 & 1;
-      pProp->Set(prop);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long prop;
-      pProp->Get(prop);
-
-      if(prop){
-         DOUT_ |= prop << 1;
-      } else {
-         DOUT_ &= 253; 
-      }
-      DOUT(DOUT_);
-   }
-
-   return DEVICE_OK;
-}
-
-int AndorLaserCombiner::OnDOUT3(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet) {
-      long prop;
-      prop = DOUT_ >> 2 & 1;
-      pProp->Set(prop);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long prop;
-      pProp->Get(prop);
-
-      if(prop){
-         DOUT_ |= prop  << 2;
-      } else {
-         DOUT_ &= 251; 
-      }
-      if(multiPortUnitPresent_)
-      {
-         DOUT_ &= 0xFC;
-      }
-      DOUT(DOUT_);
-   }
-
-   return DEVICE_OK;
-}
-
-int AndorLaserCombiner::OnDOUT4(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet) {
-      long prop;
-      prop = DOUT_ >> 3 & 1;
-      pProp->Set(prop);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long prop;
-      pProp->Get(prop);
-
-      if(prop){
-         DOUT_ |= prop << 3;
-      } else {
-         DOUT_ &= 247; 
-      }
-      if(multiPortUnitPresent_)
-      {
-         DOUT_ &= 0xFC;
-      }
-      DOUT(DOUT_);
-   }
-
-   return DEVICE_OK;
-}
-
-int AndorLaserCombiner::OnDOUT5(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet) {
-      long prop;
-      prop = DOUT_ >> 4 & 1;
-      pProp->Set(prop);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long prop;
-      pProp->Get(prop);
-
-      if(prop){
-         DOUT_ |= prop << 4;
-      } else {
-         DOUT_ &= 239; 
-      }
-      if(multiPortUnitPresent_)
-      {
-         DOUT_ &= 0xFC;
-      }
-      DOUT(DOUT_);
-   }
-
-   return DEVICE_OK;
-}
-
-int AndorLaserCombiner::OnDOUT6(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet) {
-      long prop;
-      prop = DOUT_ >> 5 & 1;
-      pProp->Set(prop);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long prop;
-      pProp->Get(prop);
-
-      if(prop){
-         DOUT_ |= prop  << 5;
-      } else {
-         DOUT_ &= 223; 
-      }
-      if(multiPortUnitPresent_)
-      {
-         DOUT_ &= 0xFC;
-      }
-      DOUT(DOUT_);
-   }
-
-   return DEVICE_OK;
-}
-
-int AndorLaserCombiner::OnDOUT7(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet) {
-      long prop;
-      prop = DOUT_ >> 6 & 1;
-      pProp->Set(prop);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long prop;
-      pProp->Get(prop);
-
-      if(prop){
-         DOUT_ |= prop  << 6;
-      } else {
-         DOUT_ &= 191; 
-      }
-      if(multiPortUnitPresent_)
-      {
-         DOUT_ &= 0xFC;
-      }
-      DOUT(DOUT_);
-   }
-
-   return DEVICE_OK;
-}
-
-int AndorLaserCombiner::OnDOUT8(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet) {
-      long prop;
-      prop = DOUT_ >> 7 & 1;
-      pProp->Set(prop);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long prop;
-      pProp->Get(prop);
-
-      if(prop){
-         DOUT_ |= prop  << 7;
-      } else {
-         DOUT_ &= 127; 
-      }
-      DOUT(DOUT_);
-   }
-
-   return DEVICE_OK;
-}
-
-
-/**
  * Number of lasers available.
  */
-int AndorLaserCombiner::OnNLasers(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CIntegratedLaserEngine::OnNLasers(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -980,86 +631,7 @@ int AndorLaserCombiner::OnNLasers(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-/**
- * Multi fiber port unit detection.
- */
-int AndorLaserCombiner::OnMultiPortUnitPresent(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      long v = (long)multiPortUnitPresent_;
-      pProp->Set(v);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long v;
-      pProp->Get(v);
-      multiPortUnitPresent_ = (0==v?false:true);
-   }   
-   return HandleErrors();
-}
-
-/**
- * Multi fiber port unit control.
- */
-int AndorLaserCombiner::OnLaserPort(MM::PropertyBase* pProp , MM::ActionType eAct)
-{
-   if(multiPortUnitPresent_)
-   {
-      if (eAct == MM::BeforeGet)
-      {
-         char portLabel[2];
-         portLabel[1] = 0;
-         switch ( laserPort_)
-         {
-         case 0:
-            portLabel[0] = 'B';
-            break;
-         case 1:
-            portLabel[0] = 'C';
-            break;
-         case 2:
-            portLabel[0] = 'A';
-            break;
-         default:
-            portLabel[0] = 'B';
-         }
-
-         pProp->Set(portLabel);
-      }
-      else if (eAct == MM::AfterSet)
-      {  
-         std::string value;
-
-         pProp->Get(value);
-         laserPort_ = 0;
-         if( 0 < value.length())
-         {
-            switch(value.at(0))
-            {
-            case 'A':
-               laserPort_ = 2;
-               break;
-            case 'B':
-               laserPort_ = 0;
-               break;
-            case 'C':
-               laserPort_ = 1;
-               break;
-            }
-         }
-
-         // Make sure lowest two bits weren't used.
-         unsigned char tvalue = DOUT_ & 0xFC;
-         tvalue |= laserPort_;
-         DOUT(tvalue);
-      }
-   }
-   return DEVICE_OK;
-}
-
-
-int AndorLaserCombiner::HandleErrors()
+int CIntegratedLaserEngine::HandleErrors()
 {
    int lastError = error_;
    error_ = DEVICE_OK;
@@ -1071,7 +643,7 @@ int AndorLaserCombiner::HandleErrors()
 // Shutter API
 //********************
 
-int AndorLaserCombiner::SetOpen(bool open)
+int CIntegratedLaserEngine::SetOpen(bool open)
 {
    for( int il = 1; il <= this->nLasers_; ++il)
    {
@@ -1116,7 +688,7 @@ int AndorLaserCombiner::SetOpen(bool open)
 }
 
 
-int AndorLaserCombiner::GetOpen(bool& open)
+int CIntegratedLaserEngine::GetOpen(bool& open)
 {
    // todo check that all requested lasers are 'ready'.
    open = openRequest_ ; // && Ready();
@@ -1128,7 +700,7 @@ int AndorLaserCombiner::GetOpen(bool& open)
  * implement this.  Is this perhaps because this blocking call is not
  * appropriate?
  */
-int AndorLaserCombiner::Fire(double deltaT)
+int CIntegratedLaserEngine::Fire(double deltaT)
 {
    SetOpen(true);
    CDeviceUtils::SleepMs((long)(deltaT+.5));
@@ -1137,21 +709,21 @@ int AndorLaserCombiner::Fire(double deltaT)
 }
 
 
-int AndorLaserCombiner::Wavelength(const int laserIndex_a)
+int CIntegratedLaserEngine::Wavelength(const int laserIndex_a)
 {
    int wval = 0;
    pImpl_->pALC_REVLaser2_->GetWavelength(laserIndex_a, &wval);
    return wval;
 }
 
-int AndorLaserCombiner::PowerFullScale(const int laserIndex_a)
+int CIntegratedLaserEngine::PowerFullScale(const int laserIndex_a)
 {
    int val = 0;
    pImpl_->pALC_REVLaser2_->GetPower(laserIndex_a, &val);
    return val;
 }
 
-float AndorLaserCombiner::PowerReadback(const int laserIndex_a)
+float CIntegratedLaserEngine::PowerReadback(const int laserIndex_a)
 {
    double val = 0.;
    pImpl_->pALC_REVLaser2_->GetCurrentPower(laserIndex_a, &val);
@@ -1163,40 +735,26 @@ float AndorLaserCombiner::PowerReadback(const int laserIndex_a)
    return (float) val;
 }
 
-float AndorLaserCombiner::PowerSetpoint(const int laserIndex_a)
+float CIntegratedLaserEngine::PowerSetpoint(const int laserIndex_a)
 {
    return powerSetPoint_[laserIndex_a];
 }
 
-void  AndorLaserCombiner::PowerSetpoint(const int laserIndex_a, const float val_a)
+void  CIntegratedLaserEngine::PowerSetpoint(const int laserIndex_a, const float val_a)
 {
    powerSetPoint_[laserIndex_a] = val_a;
 }
 
-bool AndorLaserCombiner::AllowsExternalTTL(const int laserIndex_a)
+bool CIntegratedLaserEngine::AllowsExternalTTL(const int laserIndex_a)
 {
    int val = 0;
    pImpl_->pALC_REVLaser2_->IsControlModeAvailable(laserIndex_a, &val);
    return (val == 1);
 }
 
-bool AndorLaserCombiner::Ready(const int laserIndex_a)
+bool CIntegratedLaserEngine::Ready(const int laserIndex_a)
 {
    TLaserState state = ALC_NOT_AVAILABLE;
    bool ret =	pImpl_->pALC_REVLaser2_->GetLaserState(laserIndex_a, &state);
    return ret && ( ALC_READY == state);	
-}
-
-unsigned char AndorLaserCombiner::DIN(void)
-{
-  LogMessage( "Call to DIN!" );
-   unsigned char btmp=0;
-   pImpl_->pALC_REV_DIO_->GetDIN(&btmp);
-   return btmp;
-}
-
-void AndorLaserCombiner::DOUT(const unsigned char val)
-{
-  LogMessage( "Call to DOUT!" );
-  pImpl_->pALC_REV_DIO_->SetDOUT(val);
 }

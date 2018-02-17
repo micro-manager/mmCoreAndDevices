@@ -24,7 +24,7 @@ const int MaxLasers = 10;
 //
 class CILEWrapper;
 
-class AndorLaserCombiner : public CShutterBase<AndorLaserCombiner>
+class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
 public:
    // Power setting limits:
@@ -33,8 +33,8 @@ public:
    double maxlp(){ return maxlp_;};
    void maxlp(double v_a) { maxlp_= v_a;};
 
-   AndorLaserCombiner( const char* name);
-   ~AndorLaserCombiner();
+   CIntegratedLaserEngine( const char* name);
+   ~CIntegratedLaserEngine();
 
    // MMDevice API.
    int Initialize();
@@ -44,12 +44,9 @@ public:
    bool Busy();
 
    // Action interface.
-   int OnAddress(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnSaveLifetime(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-   int OnConnectionType(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnReceivedData(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Read-only properties.
    int OnNLasers(MM::PropertyBase* , MM::ActionType );
@@ -58,21 +55,7 @@ public:
    int OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnLaserState(MM::PropertyBase* , MM::ActionType , long );
-   int AndorLaserCombiner::OnEnable(MM::PropertyBase* pProp, MM::ActionType, long index);
-
-   // Mechanical properties.
-   int OnDIN(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDOUT(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int AndorLaserCombiner::OnDOUT1(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int AndorLaserCombiner::OnDOUT2(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int AndorLaserCombiner::OnDOUT3(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int AndorLaserCombiner::OnDOUT4(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int AndorLaserCombiner::OnDOUT5(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int AndorLaserCombiner::OnDOUT6(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int AndorLaserCombiner::OnDOUT7(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int AndorLaserCombiner::OnDOUT8(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnMultiPortUnitPresent(MM::PropertyBase* , MM::ActionType );
-   int OnLaserPort(MM::PropertyBase* , MM::ActionType );
+   int OnEnable(MM::PropertyBase* pProp, MM::ActionType, long index);
 
    // Shutter API.
    int SetOpen(bool open = true);
@@ -87,9 +70,6 @@ public:
    float PowerSetpoint(const int laserIndex_a);  // milli-Watts.
    void PowerSetpoint( const int laserIndex_a, const float);  // milli-Watts.
 
-   unsigned char DIN(void);
-   void DOUT(const unsigned char);
-
 private:   
   double minlp_;
   double maxlp_;
@@ -99,7 +79,7 @@ private:
    CILEWrapper* pImpl_;
       // todo -- can move these to the implementation
    int HandleErrors();
-   AndorLaserCombiner& operator = (AndorLaserCombiner& /*rhs*/)
+   CIntegratedLaserEngine& operator = (CIntegratedLaserEngine& /*rhs*/)
    {
       assert(false);
       return *this;
@@ -111,7 +91,6 @@ private:
    int error_;
    bool initialized_;
    std::string name_;
-   unsigned char buf_[1000];
    long armState_;
    bool busy_;
    double answerTimeoutMs_;
@@ -129,8 +108,6 @@ private:
    std::string savelifetime_[MaxLasers+1];
    std::vector<std::string> savelifetimeStates_[MaxLasers+1];
    bool openRequest_;
-   unsigned char DOUT_;
-   bool multiPortUnitPresent_;
    unsigned char laserPort_;  // First two bits of DOUT (0 or 1 or 2) IFF multiPortUnitPresent_
 };
 

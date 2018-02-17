@@ -24,8 +24,7 @@ CILEWrapper::CILEWrapper(void)
   Create_ILE_REV3_( nullptr ), 
   Delete_ILE_REV3_( nullptr ), 
   ALC_REVObject3_( nullptr ),
-  pALC_REVLaser2_( nullptr ),
-  pALC_REV_DIO_( nullptr )
+  pALC_REVLaser2_( nullptr )
 {
 #ifdef _M_X64
   std::string libraryName = "AB_ALC_REV64.dll";
@@ -87,14 +86,9 @@ CILEWrapper::CILEWrapper(void)
     throw std::runtime_error( "Create_ILE_REV3 failed" );
   }
 
-  //TODO: remove those 2
   pALC_REVLaser2_ = ALC_REVObject3_->GetLaserInterface2( );
   if ( pALC_REVLaser2_ == nullptr )
     throw std::runtime_error( "GetLaserInterface failed" );
-
-  //pALC_REV_DIO_ = ALC_REVObject3_->GetDIOInterface( );
-  //if ( pALC_REV_DIO_ == nullptr )
-  //  throw std::runtime_error( " GetDIOInterface failed!" );
 }
 
 CILEWrapper::~CILEWrapper()

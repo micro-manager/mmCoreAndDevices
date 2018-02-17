@@ -19,7 +19,6 @@ public:
   IALC_REVObject3 *ALC_REVObject3_;
 
   IALC_REV_Laser2 *pALC_REVLaser2_;
-  IALC_REV_DIO *pALC_REV_DIO_;
 
   CILEWrapper();
   ~CILEWrapper();
