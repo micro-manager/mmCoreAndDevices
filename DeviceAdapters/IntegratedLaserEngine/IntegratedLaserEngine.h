@@ -17,22 +17,17 @@
 #include "../../MMDevice/DeviceUtils.h"
 #include <string>
 #include <vector>
+#include "ILEWrapper.h"
 const int MaxLasers = 10;
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
 //
-class CILEWrapper;
+
 
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
 public:
-   // Power setting limits:
-   double minlp(){ return minlp_;};
-   void minlp(double v_a) { minlp_= v_a;};
-   double maxlp(){ return maxlp_;};
-   void maxlp(double v_a) { maxlp_= v_a;};
-
    CIntegratedLaserEngine( const char* name);
    ~CIntegratedLaserEngine();
 
@@ -44,6 +39,7 @@ public:
    bool Busy();
 
    // Action interface.
+   int OnDeviceChange( MM::PropertyBase*, MM::ActionType );
    int OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnSaveLifetime(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
@@ -71,12 +67,12 @@ public:
    void PowerSetpoint( const int laserIndex_a, const float);  // milli-Watts.
 
 private:   
-  double minlp_;
-  double maxlp_;
-
+  IALC_REVObject3 *ILEDevice_;
+  CILEWrapper::TDeviceList DeviceList_;
+  std::string DeviceName_;
 
    /** Implementation instance shared with PiezoStage. */
-   CILEWrapper* pImpl_;
+   CILEWrapper* ILEWrapper_;
       // todo -- can move these to the implementation
    int HandleErrors();
    CIntegratedLaserEngine& operator = (CIntegratedLaserEngine& /*rhs*/)

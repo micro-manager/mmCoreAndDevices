@@ -32,6 +32,7 @@ using std::isnan;
 
 // Controller.
 const char* g_ControllerName = "IntegratedLaserEngine";
+const char* g_DeviceList = "Device";
 const char* g_Keyword_PowerSetpoint = "PowerSetpoint";
 const char* g_Keyword_PowerReadback = "PowerReadback";
 const char* g_Keyword_Enable = "Enable";
@@ -82,16 +83,17 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // Controller implementation.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CIntegratedLaserEngine::CIntegratedLaserEngine( const char* name) :
-initialized_(false),
-   name_(name),
-   busy_( false ),
-   error_(DEVICE_OK),
-   changedTime_(0.0),
-   pImpl_(NULL),
-   nLasers_(0),
-   openRequest_(false),
-   laserPort_(0)
+CIntegratedLaserEngine::CIntegratedLaserEngine( const char* name ) :
+  initialized_( false ),
+  name_( name ),
+  busy_( false ),
+  error_( DEVICE_OK ),
+  changedTime_( 0.0 ),
+  ILEWrapper_( nullptr ),
+  nLasers_( 0 ),
+  openRequest_( false ),
+  laserPort_( 0 ),
+  ILEDevice_( nullptr )
 {
   for ( int il = 0; il < MaxLasers + 1; ++il )
    {
@@ -100,7 +102,6 @@ initialized_(false),
       enable_[il] = g_Keyword_EnableOn;
    }
 
-   //pDevImpl = new DevImpl(*this);
    assert(strlen(name) < (unsigned int) MM::MaxStrLength);
 
    InitializeDefaultErrorMessages();
@@ -108,13 +109,53 @@ initialized_(false),
    // Create pre-initialization properties:
    // -------------------------------------
 
-   // Name.
-   CreateProperty(MM::g_Keyword_Name, name_.c_str(), MM::String, true);
+   // Name
+   CreateStringProperty(MM::g_Keyword_Name, name_.c_str(), true);
 
-   // Description.
-   CreateProperty(MM::g_Keyword_Description, "Integrated Laser Engine", MM::String, true);
+   // Description
+   CreateStringProperty(MM::g_Keyword_Description, "Integrated Laser Engine", true);
 
-   EnableDelay(); // Signals that the delay setting will be used.
+   // Devices
+   {
+     MMThreadGuard G( ImplLock_s );
+     if ( pImplInstance_s == nullptr )
+     {
+       try
+       {
+         ILEWrapper_ = new CILEWrapper();
+       }
+       catch ( std::exception &e )
+       {
+         LogMessage( e.what() );
+         throw e;
+       }
+       CDeviceUtils::SleepMs( 100 );
+       pImplInstance_s = ILEWrapper_;
+     }
+     else
+     {
+       ILEWrapper_ = pImplInstance_s;
+     }
+   }
+   ILEWrapper_->GetListOfDevices( DeviceList_ );
+   std::string vInitialDevice = "Undefined";
+   if ( !DeviceList_.empty() )
+   {
+     vInitialDevice = DeviceList_.begin()->first;
+   }
+   CPropertyAction* pAct = new CPropertyAction( this, &CIntegratedLaserEngine::OnDeviceChange );
+   CreateStringProperty( g_DeviceList, vInitialDevice.c_str(), false, pAct, true );
+   std::vector<std::string> vDevices;
+   CILEWrapper::TDeviceList::const_iterator vDeviceIt = DeviceList_.begin();
+   while ( vDeviceIt != DeviceList_.end() )
+   {
+     vDevices.push_back( vDeviceIt->first );
+     ++vDeviceIt;
+   }
+   SetAllowedValues( g_DeviceList, vDevices );
+
+
+   EnableDelay(); // Signals that the delay setting will be used
    UpdateStatus();
    LogMessage(("AndorLaserCombiner ctor OK, " + std::string(name)).c_str(), true);
 }
@@ -125,7 +166,7 @@ CIntegratedLaserEngine::~CIntegratedLaserEngine()
    MMThreadGuard g(ImplLock_s);
 
    // the implementation is destroyed only from the Combiner, not from ~PiezoStage
-   delete pImpl_;
+   delete ILEWrapper_;
    pImplInstance_s = NULL;
    LogMessage("AndorLaserCombiner dtor OK", true);
 }
@@ -152,28 +193,13 @@ int CIntegratedLaserEngine::Initialize()
 
    try
    {
-     LogMessage( "Creating ILEWrapper" );
-     MMThreadGuard G( ImplLock_s);
-      if(  NULL == pImplInstance_s)
-      {
-        try
-        {
-          pImpl_ = new CILEWrapper();
-        }
-        catch ( std::exception &e )
-        {
-          LogMessage( e.what() );
-          throw e;
-        }
-         CDeviceUtils::SleepMs(100);
-         pImplInstance_s = pImpl_;
-      }
-      else
-      {
-        pImpl_ = pImplInstance_s;
-      }
-      LogMessage( "ILEWrapper created" );
-      nLasers_ = pImpl_->pALC_REVLaser2_->Initialize();
+     if ( !ILEWrapper_->CreateILE( &ILEDevice_, DeviceName_.c_str() ) )
+     {
+       LogMessage("CreateILE failed");
+       return DEVICE_ERR;
+     }
+
+      nLasers_ = ILEWrapper_->ALC_REVLaser2_->Initialize();
       LogMessage(("in AndorLaserCombiner::Initialize, nLasers_ ="+boost::lexical_cast<std::string,int>(nLasers_)), true);
       CDeviceUtils::SleepMs(100);
 
@@ -191,7 +217,7 @@ int CIntegratedLaserEngine::Initialize()
          {
             if ( 0 == state[il])
             {
-               pImpl_->pALC_REVLaser2_->GetLaserState(il, state + il);
+               ILEWrapper_->ALC_REVLaser2_->GetLaserState(il, state + il);
                switch( *(state + il))
                {
                case 0: // ALC_NOT_AVAILABLE ( 0) Laser is not Available
@@ -343,6 +369,7 @@ int CIntegratedLaserEngine::Shutdown()
    if (initialized_)
    {
       initialized_ = false;
+      ILEWrapper_->DeleteILE( ILEDevice_ );
    }
    return HandleErrors();
 }
@@ -350,6 +377,19 @@ int CIntegratedLaserEngine::Shutdown()
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
+
+int CIntegratedLaserEngine::OnDeviceChange( MM::PropertyBase* Prop, MM::ActionType eAct )
+{
+  if ( eAct == MM::BeforeGet )
+  {
+    Prop->Set( DeviceName_.c_str() );    
+  }
+  else if ( eAct == MM::AfterSet )
+  {
+    Prop->Get( DeviceName_ );
+  }
+  return HandleErrors();
+}
 
 /**
  * Current laser head power output.
@@ -419,7 +459,7 @@ int CIntegratedLaserEngine::OnHours(MM::PropertyBase* pProp, MM::ActionType eAct
    if (eAct == MM::BeforeGet)
    {
       int wval = 0;
-      pImpl_->pALC_REVLaser2_->GetLaserHours(il, &wval);
+      ILEWrapper_->ALC_REVLaser2_->GetLaserHours(il, &wval);
       LogMessage("Hours" + boost::lexical_cast<std::string, long>(Wavelength(il)) + "  = " + boost::lexical_cast<std::string,int>(wval), true);
       pProp->Set((long)wval);
    }
@@ -445,7 +485,7 @@ int CIntegratedLaserEngine::OnIsLinear(MM::PropertyBase* pProp, MM::ActionType e
    if (eAct == MM::BeforeGet)
    {
       int v;
-      pImpl_->pALC_REVLaser2_->IsLaserOutputLinearised(il, &v);
+      ILEWrapper_->ALC_REVLaser2_->IsLaserOutputLinearised(il, &v);
       isLinear_[il] = (v == 1);
       long lv = static_cast<long>(v);
       LogMessage("IsLinear" + boost::lexical_cast<std::string, long>(Wavelength(il)) + "  = " + boost::lexical_cast<std::string,int>(lv), true);
@@ -507,7 +547,7 @@ int CIntegratedLaserEngine::OnLaserState(MM::PropertyBase* pProp, MM::ActionType
    if (eAct == MM::BeforeGet)
    {
       TLaserState v;
-      pImpl_->pALC_REVLaser2_->GetLaserState(il,&v);
+      ILEWrapper_->ALC_REVLaser2_->GetLaserState(il,&v);
       long lv = static_cast<long>(v);
       LogMessage(" LaserState" + boost::lexical_cast<std::string, long>(Wavelength(il)) + "  = " + boost::lexical_cast<std::string,long>(lv), true);
       pProp->Set(lv);
@@ -535,7 +575,7 @@ int CIntegratedLaserEngine::OnSaveLifetime(MM::PropertyBase* pProp, MM::ActionTy
    if (eAct == MM::BeforeGet)
    {
       int v;
-      pImpl_->pALC_REVLaser2_->IsEnabled(il, &v);
+      ILEWrapper_->ALC_REVLaser2_->IsEnabled(il, &v);
       std::string savelifetime;
       if (v == 1)
       {
@@ -555,15 +595,15 @@ int CIntegratedLaserEngine::OnSaveLifetime(MM::PropertyBase* pProp, MM::ActionTy
       if( savelifetime_[il].compare(savelifetime) != 0 )
       {
          if (savelifetime == g_Keyword_SaveLifetimeOff)
-            pImpl_->pALC_REVLaser2_->Enable(il);
+            ILEWrapper_->ALC_REVLaser2_->Enable(il);
          else
          {
-            pImpl_->pALC_REVLaser2_->Disable(il);
+            ILEWrapper_->ALC_REVLaser2_->Disable(il);
             // SDK Bug: Disable returns true even if not supported.
             // So one has to confirm if it worked by checking
             // IsEnabled().
             int v;
-            pImpl_->pALC_REVLaser2_->IsEnabled(il, &v);
+            ILEWrapper_->ALC_REVLaser2_->IsEnabled(il, &v);
             if (v == 1)
                error_ = DEVICE_INVALID_PROPERTY_VALUE;
          }
@@ -599,9 +639,9 @@ int CIntegratedLaserEngine::OnEnable(MM::PropertyBase* pProp, MM::ActionType eAc
          // Update the laser control mode if we are changing to, or
          // from External TTL mode.
          if ( enable.compare(g_Keyword_EnableTTL) == 0 )
-            pImpl_->pALC_REVLaser2_->SetControlMode(il, TTL_PULSED);
+            ILEWrapper_->ALC_REVLaser2_->SetControlMode(il, TTL_PULSED);
          else if ( enable_[il].compare(g_Keyword_EnableTTL) == 0 )
-            pImpl_->pALC_REVLaser2_->SetControlMode(il, CW);
+            ILEWrapper_->ALC_REVLaser2_->SetControlMode(il, CW);
 
          enable_[il] = enable;
          LogMessage("Enable" + boost::lexical_cast<std::string, long>(Wavelength(il)) + " = " + enable_[il], true);
@@ -660,7 +700,7 @@ int CIntegratedLaserEngine::SetOpen(bool open)
          LogMessage("SetLas" + boost::lexical_cast<std::string, long>(il) + "  = " + boost::lexical_cast<std::string,double>(percentScale) + "(" + boost::lexical_cast<std::string,bool>(onn)+")" , true);
 
          TLaserState ttmp;
-         pImpl_->pALC_REVLaser2_->GetLaserState(il, &ttmp);
+         ILEWrapper_->ALC_REVLaser2_->GetLaserState(il, &ttmp);
          if( onn && ( 2 != ttmp))
          {
             std::string messg = "Laser # " + boost::lexical_cast<std::string,int>(il) + " is not ready!";
@@ -672,12 +712,12 @@ int CIntegratedLaserEngine::SetOpen(bool open)
          if( ALC_NOT_AVAILABLE < ttmp)
          {
             LogMessage("setting Laser " + boost::lexical_cast<std::string,int>(Wavelength(il)) + " to " + boost::lexical_cast<std::string, double>(percentScale) + "% full scale", true);
-            pImpl_->pALC_REVLaser2_->SetLas_I( il,percentScale, onn );
+            ILEWrapper_->ALC_REVLaser2_->SetLas_I( il,percentScale, onn );
          }
 
 		}
       LogMessage("set shutter " + boost::lexical_cast<std::string, bool>(open), true);
-      bool succ = pImpl_->pALC_REVLaser2_->SetLas_Shutter(open);
+      bool succ = ILEWrapper_->ALC_REVLaser2_->SetLas_Shutter(open);
       if( !succ)
          LogMessage("set shutter " + boost::lexical_cast<std::string, bool>(open) + " failed", false);
    }
@@ -712,21 +752,21 @@ int CIntegratedLaserEngine::Fire(double deltaT)
 int CIntegratedLaserEngine::Wavelength(const int laserIndex_a)
 {
    int wval = 0;
-   pImpl_->pALC_REVLaser2_->GetWavelength(laserIndex_a, &wval);
+   ILEWrapper_->ALC_REVLaser2_->GetWavelength(laserIndex_a, &wval);
    return wval;
 }
 
 int CIntegratedLaserEngine::PowerFullScale(const int laserIndex_a)
 {
    int val = 0;
-   pImpl_->pALC_REVLaser2_->GetPower(laserIndex_a, &val);
+   ILEWrapper_->ALC_REVLaser2_->GetPower(laserIndex_a, &val);
    return val;
 }
 
 float CIntegratedLaserEngine::PowerReadback(const int laserIndex_a)
 {
    double val = 0.;
-   pImpl_->pALC_REVLaser2_->GetCurrentPower(laserIndex_a, &val);
+   ILEWrapper_->ALC_REVLaser2_->GetCurrentPower(laserIndex_a, &val);
    if( isnan(val))
    {
       LogMessage("invalid PowerReadback on # " + boost::lexical_cast<std::string,int>(laserIndex_a), false);
@@ -748,13 +788,13 @@ void  CIntegratedLaserEngine::PowerSetpoint(const int laserIndex_a, const float 
 bool CIntegratedLaserEngine::AllowsExternalTTL(const int laserIndex_a)
 {
    int val = 0;
-   pImpl_->pALC_REVLaser2_->IsControlModeAvailable(laserIndex_a, &val);
+   ILEWrapper_->ALC_REVLaser2_->IsControlModeAvailable(laserIndex_a, &val);
    return (val == 1);
 }
 
 bool CIntegratedLaserEngine::Ready(const int laserIndex_a)
 {
    TLaserState state = ALC_NOT_AVAILABLE;
-   bool ret =	pImpl_->pALC_REVLaser2_->GetLaserState(laserIndex_a, &state);
+   bool ret =	ILEWrapper_->ALC_REVLaser2_->GetLaserState(laserIndex_a, &state);
    return ret && ( ALC_READY == state);	
 }
