@@ -33,9 +33,9 @@ CILEWrapper::CILEWrapper(void) :
   DLL_ = LoadLibraryA(libraryName.c_str());
   if ( DLL_ == nullptr )
   {
-      std::ostringstream messs;
-      messs << "failed to load library: " << libraryName << " check that the library is in your PATH ";
-      throw std::runtime_error( messs.str() );
+    std::ostringstream vMessage;
+    vMessage << "failed to load library: " << libraryName << " check that the library is in your PATH ";
+    throw std::runtime_error( vMessage.str() );
   }
 
   Create_ILE_Detection_ = (TCreate_ILE_Detection)GetProcAddress( DLL_, "Create_ILE_Detection" );
@@ -70,11 +70,15 @@ CILEWrapper::CILEWrapper(void) :
 CILEWrapper::~CILEWrapper()
 {
   if ( ILEDetection_ != nullptr )
+  {
     Delete_ILE_Detection_( ILEDetection_ );
+  }
   ILEDetection_ = nullptr;
 
-  if( DLL_ != nullptr )
-    FreeLibrary(DLL_);
+  if ( DLL_ != nullptr )
+  {
+    FreeLibrary( DLL_ );
+  }
   DLL_ = nullptr;
 }
 
@@ -98,7 +102,9 @@ bool CILEWrapper::CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID )
 
   ALC_REVLaser2_ = (*ILEDevice )->GetLaserInterface2();
   if ( ALC_REVLaser2_ == nullptr )
+  {
     throw std::runtime_error( "GetLaserInterface failed" );
+  }
 
   return vRet;
 }

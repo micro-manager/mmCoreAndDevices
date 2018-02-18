@@ -28,83 +28,76 @@ const int MaxLasers = 10;
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
 public:
-   CIntegratedLaserEngine( const char* name);
-   ~CIntegratedLaserEngine();
+  CIntegratedLaserEngine();
+  ~CIntegratedLaserEngine();
 
-   // MMDevice API.
-   int Initialize();
-   int Shutdown();
+  // MMDevice API
+  int Initialize();
+  int Shutdown();
 
-   void GetName(char* pszName) const;
-   bool Busy();
+  void GetName( char* Name ) const;
+  bool Busy();
 
-   // Action interface.
-   int OnDeviceChange( MM::PropertyBase*, MM::ActionType );
-   int OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-   int OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-   int OnSaveLifetime(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
+  // Action interface
+  int OnDeviceChange( MM::PropertyBase* Prop, MM::ActionType Act );
+  int OnPowerSetpoint( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
+  int OnPowerReadback( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
 
-   // Read-only properties.
-   int OnNLasers(MM::PropertyBase* , MM::ActionType );
-   int OnHours(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-   int OnIsLinear(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-   int OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-   int OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-   int OnLaserState(MM::PropertyBase* , MM::ActionType , long );
-   int OnEnable(MM::PropertyBase* pProp, MM::ActionType, long index);
+  // Read-only properties
+  int OnHours( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
+  int OnIsLinear( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
+  int OnMaximumLaserPower( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
+  int OnLaserState( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
+  int OnEnable( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
 
-   // Shutter API.
-   int SetOpen(bool open = true);
-   int GetOpen(bool& open);
-   int Fire(double deltaT);
-
-   int Wavelength(const int laserIndex_a);  // nano-meters.
-   int PowerFullScale(const int laserIndex_a);  // Unitless.  TODO Should be percentage IFF isLinear_.
-   bool Ready(const int laserIndex_a);
-   float PowerReadback(const int laserIndex_a);  // milli-Watts.
-   bool AllowsExternalTTL(const int laserIndex_a);
-   float PowerSetpoint(const int laserIndex_a);  // milli-Watts.
-   void PowerSetpoint( const int laserIndex_a, const float);  // milli-Watts.
+  // Shutter API
+  int SetOpen( bool Open = true );
+  int GetOpen( bool& Open );
+  int Fire( double DeltaT );
 
 private:   
   IALC_REVObject3 *ILEDevice_;
   CILEWrapper::TDeviceList DeviceList_;
   std::string DeviceName_;
 
-   /** Implementation instance shared with PiezoStage. */
-   CILEWrapper* ILEWrapper_;
-      // todo -- can move these to the implementation
-   int HandleErrors();
-   CIntegratedLaserEngine& operator = (CIntegratedLaserEngine& /*rhs*/)
-   {
-      assert(false);
-      return *this;
-   }
+  /** Implementation instance shared with PiezoStage. */
+  CILEWrapper* ILEWrapper_;
+    // todo -- can move these to the implementation
+  int HandleErrors();
+  CIntegratedLaserEngine& operator = ( CIntegratedLaserEngine& /*rhs*/ )
+  {
+    assert( false );
+    return *this;
+  }
 
-   void GenerateALCProperties();
-   void GenerateReadOnlyIDProperties();
+  void GenerateALCProperties();
+  void GenerateReadOnlyIDProperties();
 
-   int error_;
-   bool initialized_;
-   std::string name_;
-   long armState_;
-   bool busy_;
-   double answerTimeoutMs_;
-   MM::MMTime changedTime_;
-   int nLasers_;
-   float powerSetPoint_[MaxLasers+1];  // 1-based arrays therefore +1
-   bool isLinear_[MaxLasers+1];
-   std::string enable_[MaxLasers+1];
-   std::vector<std::string> enableStates_[MaxLasers+1];
-   enum EXTERNALMODE
-   {
-      CW,
-      TTL_PULSED
-   };
-   std::string savelifetime_[MaxLasers+1];
-   std::vector<std::string> savelifetimeStates_[MaxLasers+1];
-   bool openRequest_;
-   unsigned char laserPort_;  // First two bits of DOUT (0 or 1 or 2) IFF multiPortUnitPresent_
+  int Error_;
+  bool Initialized_;
+  bool Busy_;
+  MM::MMTime ChangedTime_;
+  int NumberOfLasers_;
+  float PowerSetPoint_[MaxLasers+1];  // 1-based arrays therefore +1
+  bool IsLinear_[MaxLasers+1];
+  std::string Enable_[MaxLasers+1];
+  std::vector<std::string> EnableStates_[MaxLasers+1];
+  enum EXTERNALMODE
+  {
+    CW,
+    TTL_PULSED
+  };
+  bool OpenRequest_;
+  unsigned char LaserPort_;  // First two bits of DOUT (0 or 1 or 2) IFF multiPortUnitPresent_
+
+  std::string BuildPropertyName( const std::string& BasePropertyName, int Wavelength );
+  int Wavelength( const int LaserIndex );  // nano-meters
+  int PowerFullScale( const int LaserIndex );  // Unitless - TODO Should be percentage IFF IsLinear_
+  bool Ready( const int LaserIndex );
+  float PowerReadback( const int LaserIndex );  // milli-Watts
+  bool AllowsExternalTTL( const int LaserIndex );
+  float PowerSetpoint( const int LaserIndex );  // milli-Watts
+  void PowerSetpoint( const int LaserIndex, const float Value );  // milli-Watts
 };
 
 
