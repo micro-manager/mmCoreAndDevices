@@ -12,22 +12,19 @@
 #ifndef _ILEWRAPPER_H_
 #define _ILEWRAPPER_H_
 
-#include <map>
-#include <string>
+#include "ILEWrapperInterface.h"
 
-class CILEWrapper
+class CILEWrapper : public IILEWrapperInterface
 {
 public:
+  static int NbInstances_s;
+
   CILEWrapper();
   ~CILEWrapper();
 
-  typedef std::map<std::string, int> TDeviceList;
-
-  void GetListOfDevices( TDeviceList& DeviceList);
+  void GetListOfDevices( TDeviceList& DeviceList );
   bool CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID );
   void DeleteILE( IALC_REVObject3 *ILEDevice );
-
-  IALC_REV_Laser2 *ALC_REVLaser2_;
 
 private:
   HMODULE DLL_;

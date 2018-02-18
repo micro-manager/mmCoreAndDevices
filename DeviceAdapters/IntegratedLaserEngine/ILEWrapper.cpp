@@ -14,16 +14,61 @@
 
 #include "ALC_REV.h"
 #include "ILEWrapper.h"
-#include <string>
+#include "IntegratedLaserEngine.h"
+#include "../../MMDevice/DeviceThreads.h"
 #include <sstream>
 #include <exception>
 
+///////////////////////////////////////////////////////////////////////////////
+// ILE Wrapper singleton handling
+///////////////////////////////////////////////////////////////////////////////
+
+/** This instance is shared between all ILE devices */
+static IILEWrapperInterface* ILEWrapper_s;
+MMThreadLock ILEWrapperLock_s;
+int CILEWrapper::NbInstances_s = 0;
+
+IILEWrapperInterface* LoadILEWrapper( CIntegratedLaserEngine* Caller )
+{
+  MMThreadGuard G( ILEWrapperLock_s );
+  if ( ILEWrapper_s == nullptr )
+  {
+    try
+    {
+      ILEWrapper_s = new CILEWrapper();
+    }
+    catch ( std::exception &e )
+    {
+      Caller->LogMMMessage( e.what() );
+      throw e;
+    }
+    CDeviceUtils::SleepMs( 100 );
+  }
+
+  ++CILEWrapper::NbInstances_s;
+  return ILEWrapper_s;
+}
+
+void UnloadILEWrapper()
+{
+  MMThreadGuard g( ILEWrapperLock_s );
+  --CILEWrapper::NbInstances_s;
+
+  if ( CILEWrapper::NbInstances_s == 0 )
+  {
+    delete ILEWrapper_s;
+    ILEWrapper_s = nullptr;
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// ILE Wrapper
+///////////////////////////////////////////////////////////////////////////////
 
 CILEWrapper::CILEWrapper(void) :
   DLL_( nullptr ), 
   Create_ILE_REV3_( nullptr ), 
-  Delete_ILE_REV3_( nullptr ), 
-  ALC_REVLaser2_( nullptr )
+  Delete_ILE_REV3_( nullptr )
 {
 #ifdef _M_X64
   std::string libraryName = "AB_ALC_REV64.dll";
@@ -98,15 +143,7 @@ void CILEWrapper::GetListOfDevices( TDeviceList& DeviceList )
 
 bool CILEWrapper::CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID )
 {
-  bool vRet = Create_ILE_REV3_( ILEDevice, UnitID );
-
-  ALC_REVLaser2_ = (*ILEDevice )->GetLaserInterface2();
-  if ( ALC_REVLaser2_ == nullptr )
-  {
-    throw std::runtime_error( "GetLaserInterface failed" );
-  }
-
-  return vRet;
+  return Create_ILE_REV3_( ILEDevice, UnitID );
 }
 
 void CILEWrapper::DeleteILE( IALC_REVObject3 *ILEDevice )

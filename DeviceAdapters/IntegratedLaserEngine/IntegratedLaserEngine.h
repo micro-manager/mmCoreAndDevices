@@ -17,7 +17,7 @@
 #include "../../MMDevice/DeviceUtils.h"
 #include <string>
 #include <vector>
-#include "ILEWrapper.h"
+#include "ILEWrapperInterface.h"
 const int MaxLasers = 10;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -55,13 +55,17 @@ public:
   int GetOpen( bool& Open );
   int Fire( double DeltaT );
 
+  void LogMMMessage( std::string Message );
+
 private:   
   IALC_REVObject3 *ILEDevice_;
-  CILEWrapper::TDeviceList DeviceList_;
+  IALC_REV_Laser2 *LaserInterface_;
+  IILEWrapperInterface::TDeviceList DeviceList_;
   std::string DeviceName_;
 
+
   /** Implementation instance shared with PiezoStage. */
-  CILEWrapper* ILEWrapper_;
+  IILEWrapperInterface* ILEWrapper_;
     // todo -- can move these to the implementation
   int HandleErrors();
   CIntegratedLaserEngine& operator = ( CIntegratedLaserEngine& /*rhs*/ )

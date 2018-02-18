@@ -34,9 +34,13 @@ using std::isnan;
 const char* const g_DeviceName = "IntegratedLaserEngine";
 const char* const g_DeviceDescription = "Integrated Laser Engine";
 const char* const g_DeviceListProperty = "Device";
+const char* const g_HoursProperty = "Hours";
+const char* const g_IsLinearProperty = "IsLinear";
+const char* const g_PowerReadbackProperty = "LaserPowerReadback";
+const char* const g_LaserStateProperty = "LaserState";
+const char* const g_MaximumLaserPowerProperty = "MaximumLaserPower";
+const char* const g_EnableProperty = "PowerEnable";
 const char* const g_PowerSetpointProperty = "PowerSetpoint";
-const char* const g_PowerReadbackProperty = "PowerReadback";
-const char* const g_EnableProperty = "Enable";
 
 // Enable states
 const char* const g_LaserEnableOn = "On";
@@ -52,10 +56,6 @@ const char* const g_LaserPowerError= "Power Error Detected";
 const char* const g_LaserClassIVInterlockError = "Class IV Interlock Error Detected";
 const char* const g_LaserUnknownState = "Unknown State";
 
-
-/** This instance is shared between all ILE devices */
-static CILEWrapper* ILEWrapper_s;
-MMThreadLock ILEWrapperLock_s;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -103,6 +103,9 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   LaserPort_( 0 ),
   ILEDevice_( nullptr )
 {
+  // Load the library
+  ILEWrapper_ = LoadILEWrapper( this );
+
   for ( int il = 0; il < MaxLasers + 1; ++il )
   {
     PowerSetPoint_[il] = 0;
@@ -119,27 +122,6 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   CreateStringProperty( MM::g_Keyword_Description, g_DeviceDescription, true );
 
   // Devices
-  {
-    MMThreadGuard G( ILEWrapperLock_s );
-    if ( ILEWrapper_s == nullptr )
-    {
-      try
-      {
-        ILEWrapper_ = new CILEWrapper();
-      }
-      catch ( std::exception &e )
-      {
-        LogMessage( e.what() );
-        throw e;
-      }
-      CDeviceUtils::SleepMs( 100 );
-      ILEWrapper_s = ILEWrapper_;
-    }
-    else
-    {
-      ILEWrapper_ = ILEWrapper_s;
-    }
-  }
   ILEWrapper_->GetListOfDevices( DeviceList_ );
   std::string vInitialDevice = "Undefined";
   if ( !DeviceList_.empty() )
@@ -165,11 +147,8 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
 CIntegratedLaserEngine::~CIntegratedLaserEngine()
 {
   Shutdown();
-  MMThreadGuard g( ILEWrapperLock_s );
-
-  // the implementation is destroyed only from the Combiner, not from ~PiezoStage
-  delete ILEWrapper_;
-  ILEWrapper_s = NULL;
+  // Unload the library
+  UnloadILEWrapper();
   LogMessage( std::string( g_DeviceName ) + " dtor OK", true );
 }
 
@@ -203,8 +182,13 @@ int CIntegratedLaserEngine::Initialize()
       LogMessage( "CreateILE failed" );
       return DEVICE_ERR;
     }
+    LaserInterface_ = ILEDevice_->GetLaserInterface2();
+    if ( LaserInterface_ == nullptr )
+    {
+      throw std::runtime_error( "GetLaserInterface failed" );
+    }
 
-    NumberOfLasers_ = ILEWrapper_->ALC_REVLaser2_->Initialize();
+    NumberOfLasers_ = LaserInterface_->Initialize();
     LogMessage( ( "in CIntegratedLaserEngine::Initialize, NumberOfLasers_ =" + boost::lexical_cast<std::string, int>( NumberOfLasers_ ) ), true );
     CDeviceUtils::SleepMs( 100 );
 
@@ -222,7 +206,7 @@ int CIntegratedLaserEngine::Initialize()
       {
         if ( 0 == state[vLaserIndex] )
         {
-          ILEWrapper_->ALC_REVLaser2_->GetLaserState(vLaserIndex, state + vLaserIndex);
+          LaserInterface_->GetLaserState(vLaserIndex, state + vLaserIndex);
           switch( state[vLaserIndex] )
           {
           case ELaserState::ALC_NOT_AVAILABLE: // ALC_NOT_AVAILABLE ( 0) Laser is not Available
@@ -286,46 +270,40 @@ std::string CIntegratedLaserEngine::BuildPropertyName( const std::string& BasePr
 
 void CIntegratedLaserEngine::GenerateALCProperties()
 {
-  std::string vPowerName;
   CPropertyActionEx* pAct; 
-  std::ostringstream buildname;
-  std::ostringstream stmp;
+  std::string vPropertyName;
+  int vWavelength;
 
   // 1 based index for the lasers
   for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
   {
-    buildname.str( "" );
+    vWavelength = Wavelength( vLaserIndex );
     pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnPowerSetpoint, vLaserIndex );
-    buildname << g_PowerSetpointProperty << " - " << Wavelength( vLaserIndex );
-    CreateProperty( buildname.str().c_str(), "0", MM::Float, false, pAct );
+    vPropertyName = BuildPropertyName( g_PowerSetpointProperty, vWavelength );
+    CreateProperty( vPropertyName.c_str(), "0", MM::Float, false, pAct );
 
-    float fullScale = 10.00;
+    float vFullScale = 10.00;
     // Set the limits as interrogated from the laser controller
-    LogMessage( "Range for " + buildname.str() + "= [0," + boost::lexical_cast<std::string, float>( fullScale ) + "]", true );
-    SetPropertyLimits( buildname.str().c_str(), 0, fullScale );  // Volts
+    LogMessage( "Range for " + vPropertyName + "= [0," + boost::lexical_cast<std::string, float>( vFullScale ) + "]", true );
+    SetPropertyLimits( vPropertyName.c_str(), 0, vFullScale );  // Volts
 
-    buildname.str( "" );
-    buildname << "MaximumLaserPower - " << Wavelength( vLaserIndex );
     pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnMaximumLaserPower, vLaserIndex );
-    stmp << fullScale;
-    CreateProperty( buildname.str().c_str(), stmp.str().c_str(), MM::Integer, true, pAct );
+    vPropertyName = BuildPropertyName( g_MaximumLaserPowerProperty, vWavelength );
+    CreateProperty( vPropertyName.c_str(), std::to_string( vFullScale ).c_str(), MM::Integer, true, pAct );
 
     // Readbacks
-    buildname.str( "" );
     pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnPowerReadback, vLaserIndex );
-    buildname << g_PowerReadbackProperty << " - " << Wavelength( vLaserIndex );
-    CreateProperty( buildname.str().c_str(), "0", MM::Float, true, pAct );
+    vPropertyName = BuildPropertyName( g_PowerReadbackProperty, vWavelength );
+    CreateProperty( vPropertyName.c_str(), "0", MM::Float, true, pAct );
 
     // States
-    buildname.str( "" );
     pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnLaserState, vLaserIndex );
-    buildname << "LaserState - " << Wavelength( vLaserIndex );
-    CreateStringProperty( buildname.str().c_str(), g_LaserUnknownState, true, pAct );
+    vPropertyName = BuildPropertyName( g_LaserStateProperty, vWavelength );
+    CreateStringProperty( vPropertyName.c_str(), g_LaserUnknownState, true, pAct );
 
     // Enable
-    buildname.str( "" );
     pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnEnable, vLaserIndex );
-    buildname << g_EnableProperty << " - " << Wavelength( vLaserIndex );
+    vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
     EnableStates_[vLaserIndex].clear();
     EnableStates_[vLaserIndex].push_back( g_LaserEnableOn );
     EnableStates_[vLaserIndex].push_back( g_LaserEnableOff );
@@ -333,27 +311,28 @@ void CIntegratedLaserEngine::GenerateALCProperties()
     {
       EnableStates_[vLaserIndex].push_back( g_LaserEnableTTL );
     }
-    CreateProperty( buildname.str().c_str(), EnableStates_[vLaserIndex][0].c_str(), MM::String, false, pAct );
-    SetAllowedValues( buildname.str().c_str(), EnableStates_[vLaserIndex] );
+    CreateProperty( vPropertyName.c_str(), EnableStates_[vLaserIndex][0].c_str(), MM::String, false, pAct );
+    SetAllowedValues( vPropertyName.c_str(), EnableStates_[vLaserIndex] );
   }
 }
 
 void CIntegratedLaserEngine::GenerateReadOnlyIDProperties()
 {
-  CPropertyActionEx* pAct; 
-  std::ostringstream buildname;
+  CPropertyActionEx* pAct;
+  std::string vPropertyName;
+  int vWavelength;
+
   // 1 based index
   for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
   {
-    buildname.str( "" );
-    buildname << "Hours - " << Wavelength( vLaserIndex );
+    vWavelength = Wavelength( vLaserIndex );
     pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnHours, vLaserIndex );
-    CreateProperty( buildname.str().c_str(), "", MM::String, true, pAct );
+    vPropertyName = BuildPropertyName( g_HoursProperty, vWavelength );
+    CreateProperty( vPropertyName.c_str(), "", MM::String, true, pAct );
 
-    buildname.str( "" );
-    buildname << "IsLinear - " << Wavelength( vLaserIndex );
     pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnIsLinear, vLaserIndex );
-    CreateProperty( buildname.str().c_str(), "", MM::String, true, pAct );
+    vPropertyName = BuildPropertyName( g_IsLinearProperty, vWavelength );
+    CreateProperty( vPropertyName.c_str(), "", MM::String, true, pAct );
   }
 }
 
@@ -450,7 +429,7 @@ int CIntegratedLaserEngine::OnHours(MM::PropertyBase* Prop, MM::ActionType Act, 
   if ( Act == MM::BeforeGet )
   {
     int vValue = 0;
-    ILEWrapper_->ALC_REVLaser2_->GetLaserHours( LaserIndex, &vValue );
+    LaserInterface_->GetLaserHours( LaserIndex, &vValue );
     LogMessage( "Hours" + boost::lexical_cast<std::string, long>( Wavelength( LaserIndex ) ) + "  = " + boost::lexical_cast<std::string, int>( vValue ), true );
     Prop->Set( (long)vValue );
   }
@@ -474,7 +453,7 @@ int CIntegratedLaserEngine::OnIsLinear(MM::PropertyBase* Prop, MM::ActionType Ac
   if ( Act == MM::BeforeGet )
   {
     int vValue;
-    ILEWrapper_->ALC_REVLaser2_->IsLaserOutputLinearised( LaserIndex, &vValue );
+    LaserInterface_->IsLaserOutputLinearised( LaserIndex, &vValue );
     IsLinear_[LaserIndex] = ( vValue == 1 );
     LogMessage( "IsLinear" + boost::lexical_cast<std::string, long>( Wavelength( LaserIndex ) ) + "  = " + boost::lexical_cast<std::string, int>( vValue ), true );
     Prop->Set( (long)vValue );
@@ -514,7 +493,7 @@ int CIntegratedLaserEngine::OnLaserState(MM::PropertyBase* Prop, MM::ActionType 
   if ( Act == MM::BeforeGet )
   {
     TLaserState vState;
-    ILEWrapper_->ALC_REVLaser2_->GetLaserState( LaserIndex, &vState );
+    LaserInterface_->GetLaserState( LaserIndex, &vState );
     const char* vStateString = g_LaserUnknownState;
     switch ( vState )
     {
@@ -571,11 +550,11 @@ int CIntegratedLaserEngine::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act,
       // from External TTL mode
       if ( vEnable.compare( g_LaserEnableTTL ) == 0 )
       {
-        ILEWrapper_->ALC_REVLaser2_->SetControlMode( LaserIndex, TTL_PULSED );
+        LaserInterface_->SetControlMode( LaserIndex, TTL_PULSED );
       }
       else if ( Enable_[LaserIndex].compare( g_LaserEnableTTL ) == 0 )
       {
-        ILEWrapper_->ALC_REVLaser2_->SetControlMode( LaserIndex, CW );
+        LaserInterface_->SetControlMode( LaserIndex, CW );
       }
 
       Enable_[LaserIndex] = vEnable;
@@ -621,7 +600,7 @@ int CIntegratedLaserEngine::SetOpen(bool Open)
       LogMessage( "SetLas" + boost::lexical_cast<std::string, long>( vLaserIndex ) + "  = " + boost::lexical_cast<std::string, double>( vPercentScale ) + "(" + boost::lexical_cast<std::string, bool>( vLaserOn ) + ")", true );
 
       TLaserState vLaserState;
-      ILEWrapper_->ALC_REVLaser2_->GetLaserState( vLaserIndex, &vLaserState );
+      LaserInterface_->GetLaserState( vLaserIndex, &vLaserState );
       if ( vLaserOn && ( vLaserState != ELaserState::ALC_READY ) )
       {
         std::string vMessage = "Laser # " + boost::lexical_cast<std::string, int>( vLaserIndex ) + " is not ready!";
@@ -633,11 +612,11 @@ int CIntegratedLaserEngine::SetOpen(bool Open)
       if ( vLaserState > ELaserState::ALC_NOT_AVAILABLE )
       {
         LogMessage( "setting Laser " + boost::lexical_cast<std::string, int>( Wavelength( vLaserIndex ) ) + " to " + boost::lexical_cast<std::string, double>( vPercentScale ) + "% full scale", true );
-        ILEWrapper_->ALC_REVLaser2_->SetLas_I( vLaserIndex, vPercentScale, vLaserOn );
+        LaserInterface_->SetLas_I( vLaserIndex, vPercentScale, vLaserOn );
       }
     }
     LogMessage( "set shutter " + boost::lexical_cast<std::string, bool>( Open ), true );
-    bool vSuccess = ILEWrapper_->ALC_REVLaser2_->SetLas_Shutter( Open );
+    bool vSuccess = LaserInterface_->SetLas_Shutter( Open );
     if ( !vSuccess )
     {
       LogMessage( "set shutter " + boost::lexical_cast<std::string, bool>( Open ) + " failed", false );
@@ -672,21 +651,21 @@ int CIntegratedLaserEngine::Fire(double DeltaT)
 int CIntegratedLaserEngine::Wavelength(const int LaserIndex )
 {
   int vValue = 0;
-  ILEWrapper_->ALC_REVLaser2_->GetWavelength( LaserIndex, &vValue );
+  LaserInterface_->GetWavelength( LaserIndex, &vValue );
   return vValue;
 }
 
 int CIntegratedLaserEngine::PowerFullScale(const int LaserIndex )
 {
   int vValue = 0;
-  ILEWrapper_->ALC_REVLaser2_->GetPower( LaserIndex, &vValue );
+  LaserInterface_->GetPower( LaserIndex, &vValue );
   return vValue;
 }
 
 float CIntegratedLaserEngine::PowerReadback(const int LaserIndex )
 {
   double vValue = 0.;
-  ILEWrapper_->ALC_REVLaser2_->GetCurrentPower( LaserIndex, &vValue );
+  LaserInterface_->GetCurrentPower( LaserIndex, &vValue );
   if ( isnan( vValue ) )
   {
     LogMessage( "invalid PowerReadback on # " + boost::lexical_cast<std::string, int>( LaserIndex ), false );
@@ -708,13 +687,18 @@ void  CIntegratedLaserEngine::PowerSetpoint(const int LaserIndex, const float Va
 bool CIntegratedLaserEngine::AllowsExternalTTL(const int LaserIndex )
 {
   int vValue = 0;
-  ILEWrapper_->ALC_REVLaser2_->IsControlModeAvailable( LaserIndex, &vValue);
+  LaserInterface_->IsControlModeAvailable( LaserIndex, &vValue);
   return (vValue == 1);
 }
 
 bool CIntegratedLaserEngine::Ready(const int LaserIndex )
 {
   TLaserState vState = ELaserState::ALC_NOT_AVAILABLE;
-  bool vRet = ILEWrapper_->ALC_REVLaser2_->GetLaserState( LaserIndex, &vState );
+  bool vRet = LaserInterface_->GetLaserState( LaserIndex, &vState );
   return vRet && ( ELaserState::ALC_READY == vState );
+}
+
+void CIntegratedLaserEngine::LogMMMessage( std::string Message )
+{
+  LogMessage( Message );
 }
