@@ -20,10 +20,11 @@
 #include "ILEWrapperInterface.h"
 const int MaxLasers = 10;
 
-//////////////////////////////////////////////////////////////////////////////
-// Error codes
-//
+#define ERR_PORTS_INIT 101
 
+class CPorts;
+class IALC_REVObject3;
+class IALC_REV_Laser2;
 
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
@@ -62,6 +63,7 @@ private:
   IALC_REV_Laser2 *LaserInterface_;
   IILEWrapperInterface::TDeviceList DeviceList_;
   std::string DeviceName_;
+  CPorts* Ports_;
 
 
   /** Implementation instance shared with PiezoStage. */

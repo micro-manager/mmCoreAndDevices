@@ -17,6 +17,7 @@
 #include "ALC_REV.h"
 #include "IntegratedLaserEngine.h"
 #include "ILEWrapper.h"
+#include "Ports.h"
 
 
 #ifndef _isnan
@@ -101,7 +102,8 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   NumberOfLasers_( 0 ),
   OpenRequest_( false ),
   LaserPort_( 0 ),
-  ILEDevice_( nullptr )
+  ILEDevice_( nullptr ),
+  Ports_( nullptr )
 {
   // Load the library
   ILEWrapper_ = LoadILEWrapper( this );
@@ -114,6 +116,8 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   }
 
   InitializeDefaultErrorMessages();
+
+  SetErrorText( ERR_PORTS_INIT, "Ports initialisation failed" );
 
   // Create pre-initialization properties:
   // -------------------------------------
@@ -255,6 +259,27 @@ int CIntegratedLaserEngine::Initialize()
     return vRet;
   }
 
+  // Ports
+  IALC_REV_Port* vPortInterface = ILEDevice_->GetPortInterface();
+  if ( vPortInterface != nullptr )
+  {
+    try
+    {
+      Ports_ = new CPorts( vPortInterface, this );
+    }
+    catch ( std::exception& vException )
+    {
+      std::string vMessage( "Error loading the ports. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_PORTS_INIT;
+    }
+  }
+  else
+  {
+    LogMessage( "Port interface pointer invalid" );
+  }
+
   Initialized_ = true;
   return HandleErrors();
 }
@@ -341,6 +366,7 @@ int CIntegratedLaserEngine::Shutdown()
   if ( Initialized_ )
   {
     Initialized_ = false;
+    delete Ports_;
     ILEWrapper_->DeleteILE( ILEDevice_ );
   }
   return HandleErrors();

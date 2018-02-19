@@ -172,6 +172,7 @@
   <ItemGroup>
     <ClCompile Include="ILEWrapper.cpp" />
     <ClCompile Include="IntegratedLaserEngine.cpp" />
+    <ClCompile Include="Ports.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="IntegratedLaserEngine.h" />

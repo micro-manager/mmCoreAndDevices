@@ -15,6 +15,7 @@
 #include <map>
 #include <string>
 
+class IALC_REVObject3;
 class CIntegratedLaserEngine;
 
 class IILEWrapperInterface
