@@ -16,6 +16,7 @@
 #include <string>
 
 class IALC_REVObject3;
+class IALC_REV_ILEActiveBlankingManagement;
 class CIntegratedLaserEngine;
 
 class IILEWrapperInterface
@@ -27,6 +28,7 @@ public:
   virtual void GetListOfDevices( TDeviceList& DeviceList ) = 0;
   virtual bool CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID ) = 0;
   virtual void DeleteILE( IALC_REVObject3 *ILEDevice ) = 0;
+  virtual IALC_REV_ILEActiveBlankingManagement* GetILEActiveBlankingManagementInterface( IALC_REVObject3 *ILEDevice ) = 0;
 };
 
 IILEWrapperInterface* LoadILEWrapper( CIntegratedLaserEngine* Caller);

@@ -1,0 +1,106 @@
+///////////////////////////////////////////////////////////////////////////////
+// FILE:          ActiveBlanking.cpp
+// PROJECT:       Micro-Manager
+// SUBSYSTEM:     DeviceAdapters
+//-----------------------------------------------------------------------------
+
+#include "ActiveBlanking.h"
+#include "IntegratedLaserEngine.h"
+#include "ALC_REV.h"
+#include <exception>
+
+const char* const g_PropertyBaseName = "Active Blanking";
+const char* const g_On = "On";
+const char* const g_Off = "Off";
+
+CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface, CIntegratedLaserEngine* MMILE ) :
+  ActiveBlankingInterface_( ActiveBlankingInterface ),
+  MMILE_( MMILE )
+{
+  if ( ActiveBlankingInterface_ == nullptr )
+  {
+    throw std::logic_error( "CActiveBlanking: Pointer to Port interface invalid" );
+  }
+
+  int vNbLines;
+  if ( !ActiveBlankingInterface_->GetNumberOfLines( &vNbLines ) )
+  {
+    throw std::runtime_error( "ActiveBlankingInterface GetNumberOfLines failed" );
+  }
+
+  if ( vNbLines > 0 )
+  {
+    if ( !ActiveBlankingInterface_->GetActiveBlankingState( &EnabledPattern_ ) )
+    {
+      throw std::runtime_error( "ActiveBlankingInterface GetActiveBlankingState failed" );
+    }
+
+    // Create properties
+    std::vector<std::string> vAllowedValues;
+    vAllowedValues.push_back( g_On );
+    vAllowedValues.push_back( g_Off );
+    char vLineName[2];
+    vLineName[1] = 0;
+    std::string vPropertyName;
+    for ( int vLineIndex = 0; vLineIndex < vNbLines; vLineIndex++ )
+    {
+      vLineName[0] = (char)( 65 + vLineIndex );
+      vPropertyName = "Port " + std::string( vLineName ) + "-" + g_PropertyBaseName;
+      PropertyLineIndexMap_[vPropertyName] = vLineIndex;
+      bool vEnabled = IsLineEnabled( EnabledPattern_, vLineIndex );
+      CPropertyAction* vAct = new CPropertyAction( this, &CActiveBlanking::OnValueChange );
+      MMILE_->CreateStringProperty( vPropertyName.c_str(), vEnabled ? g_On : g_Off, false, vAct );
+      MMILE_->SetAllowedValues( vPropertyName.c_str(), vAllowedValues );
+    }
+  }
+}
+
+CActiveBlanking::~CActiveBlanking()
+{
+
+}
+
+bool CActiveBlanking::IsLineEnabled( int EnabledPattern, int Line ) const
+{
+  if ( Line < PropertyLineIndexMap_.size() )
+  {
+    int vMask = 1;
+    for ( int vIt = 0; vIt < Line; vIt++ )
+    {
+      vMask <<= 1;
+    }
+    return ( EnabledPattern & vMask ) != 0;
+  }
+  return false;
+}
+
+void CActiveBlanking::UpdateEnabledPattern( int Line, bool Enabled )
+{
+  if ( Line < PropertyLineIndexMap_.size() )
+  {
+    int EnabledPattern = EnabledPattern_;
+    int vMask = 1;
+    for ( int vIt = 0; vIt < Line; vIt++ )
+    {
+      vMask <<= 1;
+    }
+    EnabledPattern_ ^= vMask;
+  }
+}
+
+int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
+{
+  if ( Act == MM::AfterSet )
+  {
+    if ( PropertyLineIndexMap_.find( Prop->GetName() ) != PropertyLineIndexMap_.end() )
+    {
+      int vLineIndex = PropertyLineIndexMap_[Prop->GetName()];
+      std::string vValue;
+      Prop->Get( vValue );
+      bool vEnabled = ( vValue == g_On );
+      UpdateEnabledPattern( vLineIndex, vEnabled );
+      ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ );
+    }
+  }
+  return DEVICE_OK;
+}

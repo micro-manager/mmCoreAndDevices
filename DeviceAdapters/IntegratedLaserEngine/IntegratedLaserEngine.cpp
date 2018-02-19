@@ -18,6 +18,7 @@
 #include "IntegratedLaserEngine.h"
 #include "ILEWrapper.h"
 #include "Ports.h"
+#include "ActiveBlanking.h"
 
 
 #ifndef _isnan
@@ -103,7 +104,8 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   OpenRequest_( false ),
   LaserPort_( 0 ),
   ILEDevice_( nullptr ),
-  Ports_( nullptr )
+  Ports_( nullptr ),
+  ActiveBlanking_( nullptr )
 {
   // Load the library
   ILEWrapper_ = LoadILEWrapper( this );
@@ -118,6 +120,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   InitializeDefaultErrorMessages();
 
   SetErrorText( ERR_PORTS_INIT, "Ports initialisation failed" );
+  SetErrorText( ERR_ACTIVEBLANKING_INIT, "Active Blanking initialisation failed" );
 
   // Create pre-initialization properties:
   // -------------------------------------
@@ -269,7 +272,7 @@ int CIntegratedLaserEngine::Initialize()
     }
     catch ( std::exception& vException )
     {
-      std::string vMessage( "Error loading the ports. Caught Exception with message: " );
+      std::string vMessage( "Error loading the Ports. Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
       return ERR_PORTS_INIT;
@@ -278,6 +281,36 @@ int CIntegratedLaserEngine::Initialize()
   else
   {
     LogMessage( "Port interface pointer invalid" );
+  }
+
+  // Active Blanking
+  IALC_REV_ILEActiveBlankingManagement* vActiveBlanking = ILEWrapper_->GetILEActiveBlankingManagementInterface( ILEDevice_ );
+  if ( vActiveBlanking != nullptr )
+  {
+    bool vActiveBlankingPresent = false;
+    if ( !vActiveBlanking->IsActiveBlankingManagementPresent( &vActiveBlankingPresent ) )
+    {
+      LogMessage( "Active Blanking IsActiveBlankingManagementPresent failed" );
+      return ERR_ACTIVEBLANKING_INIT;
+    }
+    if ( vActiveBlankingPresent )
+    {
+      try
+      {
+        ActiveBlanking_ = new CActiveBlanking( vActiveBlanking, this );
+      }
+      catch ( std::exception& vException )
+      {
+        std::string vMessage( "Error loading Active Blanking. Caught Exception with message: " );
+        vMessage += vException.what();
+        LogMessage( vMessage );
+        return ERR_ACTIVEBLANKING_INIT;
+      }
+    }
+  }
+  else
+  {
+    LogMessage( "Active Blanking interface pointer invalid" );
   }
 
   Initialized_ = true;

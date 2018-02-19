@@ -21,10 +21,12 @@
 const int MaxLasers = 10;
 
 #define ERR_PORTS_INIT 101
+#define ERR_ACTIVEBLANKING_INIT 102
 
-class CPorts;
 class IALC_REVObject3;
 class IALC_REV_Laser2;
+class CPorts;
+class CActiveBlanking;
 
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
@@ -64,6 +66,7 @@ private:
   IILEWrapperInterface::TDeviceList DeviceList_;
   std::string DeviceName_;
   CPorts* Ports_;
+  CActiveBlanking* ActiveBlanking_;
 
 
   /** Implementation instance shared with PiezoStage. */
