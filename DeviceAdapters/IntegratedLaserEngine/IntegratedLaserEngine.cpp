@@ -10,7 +10,7 @@
 
 #include "ALC_REV.h"
 #include "IntegratedLaserEngine.h"
-#include "ILEWrapper.h"
+#include "ILEWrapper/ILEWrapper.h"
 #include "Ports.h"
 #include "ActiveBlanking.h"
 #include "LowPowerMode.h"
@@ -153,7 +153,7 @@ int CIntegratedLaserEngine::Initialize()
     if ( !ILEWrapper_->CreateILE( &ILEDevice_, DeviceName_.c_str() ) )
     {
       LogMessage( "CreateILE failed" );
-      return DEVICE_ERR;
+      return DEVICE_NOT_CONNECTED;
     }
   }
   catch ( std::string& exs )

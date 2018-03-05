@@ -81,6 +81,18 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <SourcePath>$(SourcePath)</SourcePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <SourcePath>$(SourcePath)</SourcePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <SourcePath>$(SourcePath)</SourcePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <SourcePath>$(SourcePath)</SourcePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -171,7 +183,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ActiveBlanking.cpp" />
-    <ClCompile Include="ILEWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REVOject3Wrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEActiveBlankingManagementWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEPowerManagementWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_Laser2Wrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_PortWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ILESDKLock.cpp" />
+    <ClCompile Include="ILEWrapper\ILEWrapper.cpp" />
     <ClCompile Include="IntegratedLaserEngine.cpp" />
     <ClCompile Include="Lasers.cpp" />
     <ClCompile Include="LowPowerMode.cpp" />

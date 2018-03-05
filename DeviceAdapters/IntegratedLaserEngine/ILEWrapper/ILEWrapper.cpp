@@ -14,8 +14,12 @@
 
 #include "ALC_REV.h"
 #include "ILEWrapper.h"
-#include "IntegratedLaserEngine.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "ALC_REVOject3Wrapper.h"
+#include "ALC_REV_ILEActiveBlankingManagementWrapper.h"
+#include "ALC_REV_ILEPowerManagementWrapper.h"
+#include "ILESDKLock.h"
+#include "../IntegratedLaserEngine.h"
+#include "../../../MMDevice/DeviceThreads.h"
 #include <sstream>
 #include <exception>
 
@@ -65,12 +69,10 @@ void UnloadILEWrapper()
 // ILE Wrapper
 ///////////////////////////////////////////////////////////////////////////////
 
-CILEWrapper::CILEWrapper( void ) :
+CILEWrapper::CILEWrapper() :
   DLL_( nullptr ),
   Create_ILE_Detection_( nullptr ),
   Delete_ILE_Detection_( nullptr ),
-  Create_ILE_REV3_( nullptr ),
-  Delete_ILE_REV3_( nullptr ),
   GetILEActiveBlankingManagementInterface_( nullptr ),
   GetILEPowerManagementInterface_( nullptr )
 {
@@ -97,17 +99,6 @@ CILEWrapper::CILEWrapper( void ) :
   {
     throw std::runtime_error( "GetProcAddress Delete_ILE_Detection failed\n" );
   }
-
-  Create_ILE_REV3_ = (TCreate_ILE_REV3)GetProcAddress( DLL_, "Create_ILE_REV3" );
-  if( Create_ILE_REV3_ == nullptr )
-  {
-    throw std::runtime_error( "GetProcAddress Create_ILE_REV3 failed\n" );
-  }
-  Delete_ILE_REV3_ = (TDelete_ILE_REV3)GetProcAddress( DLL_, "Delete_ILE_REV3" );
-  if( Delete_ILE_REV3_ == nullptr )
-  {
-    throw std::runtime_error( "GetProcAddress Delete_ILE_REV3 failed\n" );
-  }
   
   GetILEActiveBlankingManagementInterface_ = (TGetILEActiveBlankingManagementInterface)GetProcAddress( DLL_, "GetILEActiveBlankingManagementInterface" );
   if ( GetILEActiveBlankingManagementInterface_ == nullptr )
@@ -130,6 +121,18 @@ CILEWrapper::CILEWrapper( void ) :
 
 CILEWrapper::~CILEWrapper()
 {
+  TActiveBlankingManagementMap::iterator vActiveBlankingManagementIt = ActiveBlankingManagementMap_.begin();
+  while ( vActiveBlankingManagementIt != ActiveBlankingManagementMap_.end() )
+  {
+    delete vActiveBlankingManagementIt->second;
+  }
+
+  TPowerManagementMap::iterator vPowerManagementIt = PowerManagementMap_.begin();
+  while ( vPowerManagementIt != PowerManagementMap_.end() )
+  {
+    delete vPowerManagementIt->second;
+  }
+
   if ( ILEDetection_ != nullptr )
   {
     Delete_ILE_Detection_( ILEDetection_ );
@@ -145,6 +148,7 @@ CILEWrapper::~CILEWrapper()
 
 void CILEWrapper::GetListOfDevices( TDeviceList& DeviceList )
 {
+  CILESDKLock vSDKLock;
   char vSerialNumber[64];
   int vNumberDevices = ILEDetection_->GetNumberOfDevices();
   DeviceList.push_back("Demo");
@@ -163,20 +167,88 @@ void CILEWrapper::GetListOfDevices( TDeviceList& DeviceList )
 
 bool CILEWrapper::CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID )
 {
-  return Create_ILE_REV3_( ILEDevice, UnitID );
+  bool vRet = false;
+  try
+  {
+    CALC_REVObject3Wrapper* vALC_REVObject3Wrapper = new CALC_REVObject3Wrapper( DLL_, UnitID );
+    *ILEDevice = vALC_REVObject3Wrapper;
+    vRet = true;
+  }
+  catch ( std::exception& )
+  {
+  }
+  return vRet;
 }
 
 void CILEWrapper::DeleteILE( IALC_REVObject3 *ILEDevice )
 {
-  Delete_ILE_REV3_( ILEDevice );
+  CALC_REVObject3Wrapper* vALC_REVObject3Wrapper = dynamic_cast<CALC_REVObject3Wrapper*>( ILEDevice );
+  if ( vALC_REVObject3Wrapper != nullptr )
+  {
+    delete vALC_REVObject3Wrapper;
+  }
 }
 
 IALC_REV_ILEActiveBlankingManagement* CILEWrapper::GetILEActiveBlankingManagementInterface( IALC_REVObject3 *ILEDevice )
 {
-  return GetILEActiveBlankingManagementInterface_( ILEDevice );
+  CALC_REV_ILEActiveBlankingManagementWrapper* vActiveBlankingManagementWrapper = nullptr;
+  CALC_REVObject3Wrapper* vALC_REVObjectWrapper = dynamic_cast<CALC_REVObject3Wrapper*>( ILEDevice );
+  if ( vALC_REVObjectWrapper != nullptr )
+  {
+    IALC_REVObject3* vILEObject = vALC_REVObjectWrapper->GetILEObject();
+    IALC_REV_ILEActiveBlankingManagement* vILEActiveBlankingManagement = nullptr;
+    {
+      CILESDKLock vSDKLock;
+      vILEActiveBlankingManagement = GetILEActiveBlankingManagementInterface_( vILEObject );
+    }
+    if ( vILEActiveBlankingManagement != nullptr )
+    {
+      TActiveBlankingManagementMap::iterator vActiveBlankingIt = ActiveBlankingManagementMap_.find( vILEActiveBlankingManagement );
+      if ( vActiveBlankingIt != ActiveBlankingManagementMap_.end() )
+      {
+        // Prevent creating a wrapper object every time this function is called
+        // We could assume that for a given instance of IALC_REVObject3 the same pointer to active blanking would alwasy be returned
+        // But if that behaviour was to change in the DLL then a more optimised solution would break
+        vActiveBlankingManagementWrapper = vActiveBlankingIt->second;
+      }
+      else
+      {
+        vActiveBlankingManagementWrapper = new CALC_REV_ILEActiveBlankingManagementWrapper( vILEActiveBlankingManagement );
+        ActiveBlankingManagementMap_[vILEActiveBlankingManagement] = vActiveBlankingManagementWrapper;
+      }
+    }
+  }
+  return vActiveBlankingManagementWrapper;
 }
 
 IALC_REV_ILEPowerManagement* CILEWrapper::GetILEPowerManagementInterface( IALC_REVObject3 *ILEDevice )
 {
-  return GetILEPowerManagementInterface_( ILEDevice );
+  CALC_REV_ILEPowerManagementWrapper* vPowerManagementWrapper = nullptr;
+  CALC_REVObject3Wrapper* vALC_REVObjectWrapper = dynamic_cast<CALC_REVObject3Wrapper*>( ILEDevice );
+  if ( vALC_REVObjectWrapper != nullptr )
+  {
+    IALC_REVObject3* vILEObject = vALC_REVObjectWrapper->GetILEObject();
+    IALC_REV_ILEPowerManagement* vILEPowerManagement = nullptr;
+    {
+      CILESDKLock vSDKLock;
+      vILEPowerManagement = GetILEPowerManagementInterface_( vILEObject );
+    }
+    if ( vILEPowerManagement != nullptr )
+    {
+      TPowerManagementMap::iterator vPowerManagementIt = PowerManagementMap_.find( vILEPowerManagement );
+      if ( vPowerManagementIt != PowerManagementMap_.end() )
+      {
+        // Prevent creating a wrapper object every time this function is called
+        // We could assume that for a given instance of IALC_REVObject3 the same pointer to power management would alwasy be returned
+        // But if that behaviour was to change in the DLL then a more optimised solution would break
+        vPowerManagementWrapper = vPowerManagementIt->second;
+      }
+      else
+      {
+        vPowerManagementWrapper = new CALC_REV_ILEPowerManagementWrapper( vILEPowerManagement );
+        PowerManagementMap_[vILEPowerManagement] = vPowerManagementWrapper;
+      }
+    }
+  }
+  return vPowerManagementWrapper;
 }
