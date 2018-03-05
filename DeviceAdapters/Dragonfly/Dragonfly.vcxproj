@@ -82,15 +82,19 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>..\..\..\..\ASD_SDK\ASD SDK\Include;$(IncludePath)</IncludePath>
+    <TargetName>mmgr_dal_AndorDragonfly</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>..\..\..\..\ASD_SDK\ASD SDK\Include;$(IncludePath)</IncludePath>
+    <TargetName>mmgr_dal_AndorDragonfly</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>..\..\..\..\ASD_SDK\ASD SDK\Include;$(IncludePath)</IncludePath>
+    <TargetName>mmgr_dal_AndorDragonfly</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>..\..\..\..\ASD_SDK\ASD SDK\Include;$(IncludePath)</IncludePath>
+    <TargetName>mmgr_dal_AndorDragonfly</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
