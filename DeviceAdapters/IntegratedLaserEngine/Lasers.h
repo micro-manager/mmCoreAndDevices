@@ -24,6 +24,7 @@ public:
   CLasers( IALC_REV_Laser2 *LaserInterface, CIntegratedLaserEngine* MMILE );
   ~CLasers();
 
+  // Actions
   typedef MM::ActionEx<CLasers> CPropertyActionEx;
   typedef MM::Action<CLasers> CPropertyAction;
   int OnPowerSetpoint( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );

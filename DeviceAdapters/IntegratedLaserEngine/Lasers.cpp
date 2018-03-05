@@ -32,7 +32,7 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, CIntegratedLaserEngine* MMILE
   }
 
   NumberOfLasers_ = LaserInterface_->Initialize();
-  MMILE_->LogMMMessage( ( "in CLasers::Initialize, NumberOfLasers_ =" + boost::lexical_cast<std::string, int>( NumberOfLasers_ ) ), true );
+  MMILE_->LogMMMessage( ( "in CLasers constructor, NumberOfLasers_ =" + boost::lexical_cast<std::string, int>( NumberOfLasers_ ) ), true );
   CDeviceUtils::SleepMs( 100 );
 
   TLaserState state[10];
@@ -93,6 +93,10 @@ CLasers::~CLasers()
 {
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Generate properties
+///////////////////////////////////////////////////////////////////////////////
+
 std::string CLasers::BuildPropertyName( const std::string& BasePropertyName, int Wavelength )
 {
   return "Laser " + std::to_string( Wavelength ) + "-" + BasePropertyName;
@@ -131,6 +135,10 @@ void CLasers::GenerateALCProperties()
     MMILE_->SetAllowedValues( vPropertyName.c_str(), EnableStates_[vLaserIndex] );
   }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Actions
+///////////////////////////////////////////////////////////////////////////////
 
 /**
 * AOTF intensity setting.  Actual power output may or may not be
@@ -200,9 +208,9 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
   return DEVICE_OK;
 }
 
-//********************
+///////////////////////////////////////////////////////////////////////////////
 // Shutter API
-//********************
+///////////////////////////////////////////////////////////////////////////////
 
 int CLasers::SetOpen(bool Open)
 {
@@ -263,6 +271,19 @@ int CLasers::GetOpen(bool& Open)
   return DEVICE_OK;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Update lasers
+///////////////////////////////////////////////////////////////////////////////
+
+void CLasers::CheckAndUpdateLasers()
+{
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Private functions
+///////////////////////////////////////////////////////////////////////////////
+
 int CLasers::Wavelength(const int LaserIndex )
 {
   int vValue = 0;
@@ -285,9 +306,4 @@ bool CLasers::AllowsExternalTTL(const int LaserIndex )
   int vValue = 0;
   LaserInterface_->IsControlModeAvailable( LaserIndex, &vValue);
   return (vValue == 1);
-}
-
-void CLasers::CheckAndUpdateLasers()
-{
-
 }
