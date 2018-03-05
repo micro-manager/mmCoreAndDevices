@@ -19,6 +19,7 @@
 #include "ILEWrapper.h"
 #include "Ports.h"
 #include "ActiveBlanking.h"
+#include "LowPowerMode.h"
 
 
 #ifndef _isnan
@@ -121,6 +122,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
 
   SetErrorText( ERR_PORTS_INIT, "Ports initialisation failed" );
   SetErrorText( ERR_ACTIVEBLANKING_INIT, "Active Blanking initialisation failed" );
+  SetErrorText( ERR_LOWPOWERMODE_INIT, "Low Power mode initialisation failed" );
 
   // Create pre-initialization properties:
   // -------------------------------------
@@ -311,6 +313,36 @@ int CIntegratedLaserEngine::Initialize()
   else
   {
     LogMessage( "Active Blanking interface pointer invalid" );
+  }
+
+  // Low Power Mode
+  IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
+  if ( vLowPowerMode != nullptr )
+  {
+    bool vLowPowerModePresent = false;
+    if ( !vLowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
+    {
+      LogMessage( "ILE Power IsLowPowerPresent failed" );
+      return ERR_LOWPOWERMODE_INIT;
+    }
+    if ( vLowPowerModePresent )
+    {
+      try
+      {
+        LowPowerMode_ = new CLowPowerMode( vLowPowerMode, this );
+      }
+      catch ( std::exception& vException )
+      {
+        std::string vMessage( "Error loading Low Power mode. Caught Exception with message: " );
+        vMessage += vException.what();
+        LogMessage( vMessage );
+        return ERR_LOWPOWERMODE_INIT;
+      }
+    }
+  }
+  else
+  {
+    LogMessage( "ILE Power interface pointer invalid" );
   }
 
   Initialized_ = true;
@@ -760,4 +792,9 @@ bool CIntegratedLaserEngine::Ready(const int LaserIndex )
 void CIntegratedLaserEngine::LogMMMessage( std::string Message )
 {
   LogMessage( Message );
+}
+
+void CIntegratedLaserEngine::CheckAndUpdateLasers()
+{
+
 }

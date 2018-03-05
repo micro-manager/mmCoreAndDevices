@@ -111,6 +111,12 @@ CILEWrapper::CILEWrapper(void) :
     throw std::runtime_error( "GetProcAddress GetILEActiveBlankingManagementInterface_ failed\n" );
   }
 
+  GetILEPowerManagementInterface_ = (TGetILEPowerManagementInterface)GetProcAddress( DLL_, "GetILEPowerManagementInterface" );
+  if ( GetILEPowerManagementInterface_ == nullptr )
+  {
+    throw std::runtime_error( "GetProcAddress GetILEPowerManagementInterface_ failed\n" );
+  }
+
   Create_ILE_Detection_( &ILEDetection_ );
   if ( ILEDetection_ == nullptr )
   {
@@ -160,4 +166,9 @@ void CILEWrapper::DeleteILE( IALC_REVObject3 *ILEDevice )
 IALC_REV_ILEActiveBlankingManagement* CILEWrapper::GetILEActiveBlankingManagementInterface( IALC_REVObject3 *ILEDevice )
 {
   return GetILEActiveBlankingManagementInterface_( ILEDevice );
+}
+
+IALC_REV_ILEPowerManagement* CILEWrapper::GetILEPowerManagementInterface( IALC_REVObject3 *ILEDevice )
+{
+  return GetILEPowerManagementInterface_( ILEDevice );
 }

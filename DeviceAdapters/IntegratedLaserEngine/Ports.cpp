@@ -9,7 +9,7 @@
 #include "ALC_REV.h"
 #include <exception>
 
-const char* const g_PropertyName = "Port";
+const char* const g_PropertyName = "Output Port";
 
 CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
   PortInterface_( PortInterface ),
@@ -31,7 +31,7 @@ CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
     vPortName[1] = 0;
     for ( int vPortIndex = 0; vPortIndex < NbPorts_; vPortIndex++ )
     {
-      vPortName[0] = (char)( 65 + vPortIndex );
+      vPortName[0] = PortIndexToName( vPortIndex );
       vPorts.push_back( vPortName );
     }
 
@@ -39,7 +39,7 @@ CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
     vPortName[0] = 'A';
     if ( PortInterface_->GetPortIndex( &vCurrentPortIndex ) )
     {
-      vPortName[0] = (char)( 65 + vCurrentPortIndex );
+      vPortName[0] = PortIndexToName( vCurrentPortIndex );
     }
 
     CPropertyAction* vAct = new CPropertyAction( this, &CPorts::OnPortChange );
@@ -57,6 +57,11 @@ CPorts::~CPorts()
 
 }
 
+char CPorts::PortIndexToName( int PortIndex )
+{
+  return (char)( 65 + PortIndex );
+}
+
 int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   if ( Act == MM::AfterSet )
@@ -65,6 +70,7 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
     Prop->Get( vValue );
     char vPortName = vValue[0];
     PortInterface_->SetPortIndex( vPortName - 65 );
+    MMILE_->CheckAndUpdateLasers();
   }
   return DEVICE_OK;
 }

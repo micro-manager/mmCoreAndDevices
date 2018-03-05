@@ -1,8 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          Ports.h
+// FILE:          ActiveBlanking.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
+
+#ifndef _ACTIVEBLANKING_H_
+#define _ACTIVEBLANKING_H_
 
 #include "Property.h"
 #include <map>
@@ -25,6 +28,8 @@ private:
   std::map<std::string, int> PropertyLineIndexMap_;
   int EnabledPattern_;
 
-  bool IsLineEnabled( int EnabledPattern, int Line ) const;
-  void UpdateEnabledPattern( int Line, bool Enabled );
+  bool IsLineEnabled( int Line ) const;
+  void ChangeLineState( int Line );
 };
+
+#endif

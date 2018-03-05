@@ -47,7 +47,7 @@ CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBl
       vLineName[0] = (char)( 65 + vLineIndex );
       vPropertyName = "Port " + std::string( vLineName ) + "-" + g_PropertyBaseName;
       PropertyLineIndexMap_[vPropertyName] = vLineIndex;
-      bool vEnabled = IsLineEnabled( EnabledPattern_, vLineIndex );
+      bool vEnabled = IsLineEnabled( vLineIndex );
       CPropertyAction* vAct = new CPropertyAction( this, &CActiveBlanking::OnValueChange );
       MMILE_->CreateStringProperty( vPropertyName.c_str(), vEnabled ? g_On : g_Off, false, vAct );
       MMILE_->SetAllowedValues( vPropertyName.c_str(), vAllowedValues );
@@ -60,7 +60,7 @@ CActiveBlanking::~CActiveBlanking()
 
 }
 
-bool CActiveBlanking::IsLineEnabled( int EnabledPattern, int Line ) const
+bool CActiveBlanking::IsLineEnabled( int Line ) const
 {
   if ( Line < PropertyLineIndexMap_.size() )
   {
@@ -69,16 +69,15 @@ bool CActiveBlanking::IsLineEnabled( int EnabledPattern, int Line ) const
     {
       vMask <<= 1;
     }
-    return ( EnabledPattern & vMask ) != 0;
+    return ( EnabledPattern_ & vMask ) != 0;
   }
   return false;
 }
 
-void CActiveBlanking::UpdateEnabledPattern( int Line, bool Enabled )
+void CActiveBlanking::ChangeLineState( int Line )
 {
   if ( Line < PropertyLineIndexMap_.size() )
   {
-    int EnabledPattern = EnabledPattern_;
     int vMask = 1;
     for ( int vIt = 0; vIt < Line; vIt++ )
     {
@@ -97,9 +96,13 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
       int vLineIndex = PropertyLineIndexMap_[Prop->GetName()];
       std::string vValue;
       Prop->Get( vValue );
-      bool vEnabled = ( vValue == g_On );
-      UpdateEnabledPattern( vLineIndex, vEnabled );
-      ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ );
+      bool vRequestEnabled = ( vValue == g_On );
+      bool vEnabled = IsLineEnabled( vLineIndex );
+      if ( vEnabled != vRequestEnabled )
+      {
+        ChangeLineState( vLineIndex );
+        ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ );
+      }
     }
   }
   return DEVICE_OK;

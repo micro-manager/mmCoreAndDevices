@@ -22,11 +22,13 @@ const int MaxLasers = 10;
 
 #define ERR_PORTS_INIT 101
 #define ERR_ACTIVEBLANKING_INIT 102
+#define ERR_LOWPOWERMODE_INIT 103
 
 class IALC_REVObject3;
 class IALC_REV_Laser2;
 class CPorts;
 class CActiveBlanking;
+class CLowPowerMode;
 
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
@@ -60,6 +62,8 @@ public:
 
   void LogMMMessage( std::string Message );
 
+  void CheckAndUpdateLasers();
+
 private:   
   IALC_REVObject3 *ILEDevice_;
   IALC_REV_Laser2 *LaserInterface_;
@@ -67,6 +71,7 @@ private:
   std::string DeviceName_;
   CPorts* Ports_;
   CActiveBlanking* ActiveBlanking_;
+  CLowPowerMode* LowPowerMode_;
 
 
   /** Implementation instance shared with PiezoStage. */
