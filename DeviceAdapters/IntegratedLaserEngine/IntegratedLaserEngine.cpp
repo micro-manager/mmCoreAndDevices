@@ -703,7 +703,10 @@ int CIntegratedLaserEngine::SetOpen(bool Open)
       if ( vLaserState > ELaserState::ALC_NOT_AVAILABLE )
       {
         LogMessage( "setting Laser " + boost::lexical_cast<std::string, int>( Wavelength( vLaserIndex ) ) + " to " + boost::lexical_cast<std::string, double>( vPercentScale ) + "% full scale", true );
-        LaserInterface_->SetLas_I( vLaserIndex, vPercentScale, vLaserOn );
+        if ( !LaserInterface_->SetLas_I( vLaserIndex, vPercentScale, vLaserOn ) )
+        {
+          LogMessage( std::string( "Setting Laser power for laser " + std::to_string( vLaserIndex ) + " failed with value [" ) + std::to_string( vPercentScale ) + "]" );
+        }
       }
     }
     LogMessage( "set shutter " + boost::lexical_cast<std::string, bool>( Open ), true );

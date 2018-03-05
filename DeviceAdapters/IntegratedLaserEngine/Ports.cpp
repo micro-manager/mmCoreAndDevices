@@ -29,7 +29,7 @@ CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
     std::vector<std::string> vPorts;
     char vPortName[2];
     vPortName[1] = 0;
-    for ( int vPortIndex = 0; vPortIndex < NbPorts_; vPortIndex++ )
+    for ( int vPortIndex = 1; vPortIndex < NbPorts_ + 1; vPortIndex++ )
     {
       vPortName[0] = PortIndexToName( vPortIndex );
       vPorts.push_back( vPortName );
@@ -59,7 +59,12 @@ CPorts::~CPorts()
 
 char CPorts::PortIndexToName( int PortIndex )
 {
-  return (char)( 65 + PortIndex );
+  return (char)( 'A' + PortIndex - 1 );
+}
+
+int CPorts::PortNameToIndex( char PortName )
+{
+  return PortName - 'A' + 1;
 }
 
 int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
@@ -69,8 +74,14 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
     std::string vValue;
     Prop->Get( vValue );
     char vPortName = vValue[0];
-    PortInterface_->SetPortIndex( vPortName - 65 );
-    MMILE_->CheckAndUpdateLasers();
+    if ( PortInterface_->SetPortIndex( PortNameToIndex( vPortName ) ) )
+    {
+      MMILE_->CheckAndUpdateLasers();
+    }
+    else
+    {
+      MMILE_->LogMMMessage( "Changing port to port " + vValue + " FAILED" );
+    }
   }
   return DEVICE_OK;
 }

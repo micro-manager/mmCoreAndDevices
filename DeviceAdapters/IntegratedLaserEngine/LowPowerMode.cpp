@@ -29,8 +29,7 @@ CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CInte
     throw std::runtime_error( "ILE Power GetLowPowerPort failed" );
   }
 
-  vLowPowerPortIndex--; // moving from 1-based to 0-based
-  if ( vLowPowerPortIndex < 0 )
+  if ( vLowPowerPortIndex < 1 )
   {
     throw std::runtime_error( "Low Power port index invalid [" + std::to_string( vLowPowerPortIndex ) + "]" );
   }
@@ -65,8 +64,14 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
     std::string vValue;
     Prop->Get( vValue );
     bool vEnabled = ( vValue == g_On );
-    PowerInterface_->SetLowPowerState( vEnabled );
-    MMILE_->CheckAndUpdateLasers();
+    if ( PowerInterface_->SetLowPowerState( vEnabled ) )
+    {
+      MMILE_->CheckAndUpdateLasers();
+    }
+    else
+    {
+      MMILE_->LogMMMessage( std::string( vEnabled ? "Enabling" : "Disabling" ) + " low power state FAILED" );
+    }
   }
   return DEVICE_OK;
 }

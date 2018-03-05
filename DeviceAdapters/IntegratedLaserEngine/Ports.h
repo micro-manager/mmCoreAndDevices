@@ -18,7 +18,14 @@ public:
   CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE );
   ~CPorts();
 
+  /**
+  * Transform 1-based port index to port name character
+  */
   static char PortIndexToName( int PortIndex );
+  /**
+  * Transform port name character to 1-based port index
+  */
+  static int PortNameToIndex( char PortName );
 
   int OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CPorts> CPropertyAction;
