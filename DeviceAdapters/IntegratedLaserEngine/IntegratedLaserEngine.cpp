@@ -17,7 +17,7 @@
 #include "Lasers.h"
 
 // Properties
-const char* const g_DeviceName = "IntegratedLaserEngine";
+const char* const g_DeviceName = "Andor ILE";
 const char* const g_DeviceDescription = "Integrated Laser Engine";
 const char* const g_DeviceListProperty = "Device";
 const char* const g_ResetDeviceProperty = "Reset device connection";
