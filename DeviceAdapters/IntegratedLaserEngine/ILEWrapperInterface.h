@@ -12,7 +12,7 @@
 #ifndef _ILEWRAPPERINTERFACE_H_
 #define _ILEWRAPPERINTERFACE_H_
 
-#include <map>
+#include <vector>
 #include <string>
 
 class IALC_REVObject3;
@@ -24,7 +24,7 @@ class IILEWrapperInterface
 {
 public:
 
-  typedef std::map<std::string, int> TDeviceList;
+  typedef std::vector<std::string> TDeviceList;
 
   virtual void GetListOfDevices( TDeviceList& DeviceList ) = 0;
   virtual bool CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID ) = 0;

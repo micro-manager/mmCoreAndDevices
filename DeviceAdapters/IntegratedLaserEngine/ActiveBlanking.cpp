@@ -91,6 +91,11 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
 {
   if ( Act == MM::AfterSet )
   {
+    if ( ActiveBlankingInterface_ == nullptr )
+    {
+      return ERR_DEVICE_NOT_CONNECTED;
+    }
+
     if ( PropertyLineIndexMap_.find( Prop->GetName() ) != PropertyLineIndexMap_.end() )
     {
       int vLineIndex = PropertyLineIndexMap_[Prop->GetName()];
@@ -106,4 +111,9 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
     }
   }
   return DEVICE_OK;
+}
+
+void CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface )
+{
+  ActiveBlankingInterface_ = ActiveBlankingInterface;
 }

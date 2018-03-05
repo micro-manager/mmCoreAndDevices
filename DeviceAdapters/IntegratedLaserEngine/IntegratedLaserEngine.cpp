@@ -20,6 +20,11 @@
 const char* const g_DeviceName = "IntegratedLaserEngine";
 const char* const g_DeviceDescription = "Integrated Laser Engine";
 const char* const g_DeviceListProperty = "Device";
+const char* const g_ResetDeviceProperty = "Reset device connection";
+
+// Property values
+const char* const g_PropertyOn = "On";
+const char* const g_PropertyOff = "Off";
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -65,7 +70,9 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   Ports_( nullptr ),
   ActiveBlanking_( nullptr ),
   LowPowerMode_( nullptr ),
-  Lasers_( nullptr )
+  Lasers_( nullptr ),
+  ResetDeviceProperty_( nullptr )
+
 {
   // Load the library
   ILEWrapper_ = LoadILEWrapper( this );
@@ -76,6 +83,9 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   SetErrorText( ERR_ACTIVEBLANKING_INIT, "Active Blanking initialisation failed" );
   SetErrorText( ERR_LOWPOWERMODE_INIT, "Low Power mode initialisation failed" );
   SetErrorText( ERR_LASERS_INIT, "Lasers initialisation failed" );
+  SetErrorText( ERR_INTERLOCK, "Interlock triggered" );
+  SetErrorText( ERR_CLASSIV_INTERLOCK, "Class IV interlock triggered" );
+  SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device reconnecting. Please wait." );
 
   // Create pre-initialization properties:
   // -------------------------------------
@@ -88,7 +98,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   std::string vInitialDevice = "Undefined";
   if ( !DeviceList_.empty() )
   {
-    vInitialDevice = DeviceList_.begin()->first;
+    vInitialDevice = *( DeviceList_.begin() );
   }
   CPropertyAction* pAct = new CPropertyAction( this, &CIntegratedLaserEngine::OnDeviceChange );
   CreateStringProperty( g_DeviceListProperty, vInitialDevice.c_str(), false, pAct, true );
@@ -96,7 +106,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   CILEWrapper::TDeviceList::const_iterator vDeviceIt = DeviceList_.begin();
   while ( vDeviceIt != DeviceList_.end() )
   {
-    vDevices.push_back( vDeviceIt->first );
+    vDevices.push_back( *vDeviceIt );
     ++vDeviceIt;
   }
   SetAllowedValues( g_DeviceListProperty, vDevices );
@@ -155,14 +165,24 @@ int CIntegratedLaserEngine::Initialize()
     return vRet;
   }
 
+  // Reset device
+  CPropertyAction* vAct = new CPropertyAction( this, &CIntegratedLaserEngine::OnResetDevice );
+  CreateStringProperty( g_ResetDeviceProperty, g_PropertyOff, true, vAct );
+  std::vector<std::string> vEnabledValues;
+  vEnabledValues.push_back( g_PropertyOn );
+  vEnabledValues.push_back( g_PropertyOff );
+  SetAllowedValues( g_ResetDeviceProperty, vEnabledValues );
+
+
   // Lasers
   IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
   IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
+  IALC_REV_ILE* vILE = ILEDevice_->GetILEInterface();
   if ( vLaserInterface != nullptr )
   {
     try
     {
-      Lasers_ = new CLasers( vLaserInterface, vLowPowerMode, this );
+      Lasers_ = new CLasers( vLaserInterface, vLowPowerMode, vILE, this );
     }
     catch ( std::exception& vException )
     {
@@ -292,6 +312,67 @@ int CIntegratedLaserEngine::OnDeviceChange( MM::PropertyBase* Prop, MM::ActionTy
   return DEVICE_OK;
 }
 
+int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionType Act )
+{
+  if ( ResetDeviceProperty_ == nullptr )
+  {
+    ResetDeviceProperty_ = Prop;
+  }
+  int vRet = DEVICE_OK;
+  if ( Act == MM::AfterSet )
+  {
+    std::string vValue;
+    Prop->Get( vValue );
+    if ( vValue == g_PropertyOn )
+    {
+      // Disconnect from the ILE interface
+      Ports_->UpdateILEInterface( nullptr );
+      ActiveBlanking_->UpdateILEInterface( nullptr );
+      LowPowerMode_->UpdateILEInterface( nullptr );
+      Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
+
+      // Disconnect the device
+      ILEWrapper_->DeleteILE( ILEDevice_ );
+      ILEDevice_ = nullptr;
+
+      // Reconnect the device
+      try
+      {
+        if ( !ILEWrapper_->CreateILE( &ILEDevice_, DeviceName_.c_str() ) )
+        {
+          LogMessage( "CreateILE failed" );
+          return DEVICE_ERR;
+        }
+      }
+      catch ( std::string& exs )
+      {
+        vRet = DEVICE_LOCALLY_DEFINED_ERROR;
+        LogMessage( exs.c_str() );
+        SetErrorText( DEVICE_LOCALLY_DEFINED_ERROR, exs.c_str() );
+        //CodeUtility::DebugOutput(exs.c_str());
+        return vRet;
+      }
+
+      // Reconnect to ILE interface
+      IALC_REV_Port* vPortInterface = ILEDevice_->GetPortInterface();
+      IALC_REV_ILEActiveBlankingManagement* vActiveBlanking = ILEWrapper_->GetILEActiveBlankingManagementInterface( ILEDevice_ );
+      IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
+      IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
+      IALC_REV_ILE* vILE = ILEDevice_->GetILEInterface();
+
+      Ports_->UpdateILEInterface( vPortInterface );
+      ActiveBlanking_->UpdateILEInterface( vActiveBlanking );
+      LowPowerMode_->UpdateILEInterface( vLowPowerMode );
+      Lasers_->UpdateILEInterface( vLaserInterface, vLowPowerMode, vILE );
+
+      Prop->Set( g_PropertyOff );
+      MM::Property* pChildProperty = ( MM::Property* )Prop;
+      pChildProperty->SetReadOnly( true );
+    }
+  }
+  return vRet;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Shutter API
 ///////////////////////////////////////////////////////////////////////////////
@@ -348,4 +429,18 @@ void CIntegratedLaserEngine::CheckAndUpdateLasers()
   {
     Lasers_->CheckAndUpdateLasers();
   }
+}
+
+void CIntegratedLaserEngine::ActiveClassIVInterlock()
+{
+  if ( ResetDeviceProperty_ != nullptr )
+  {
+    MM::Property* pChildProperty = ( MM::Property* )ResetDeviceProperty_;
+    pChildProperty->SetReadOnly( false );
+  }
+}
+
+void CIntegratedLaserEngine::UpdatePropertyUI( const char* PropertyName, const char* PropertyValue )
+{
+  GetCoreCallback()->OnPropertyChanged( this, PropertyName, PropertyValue );
 }

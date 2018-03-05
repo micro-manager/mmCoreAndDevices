@@ -71,6 +71,11 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   if ( Act == MM::AfterSet )
   {
+    if ( PortInterface_ == nullptr )
+    {
+      return ERR_DEVICE_NOT_CONNECTED;
+    }
+
     std::string vValue;
     Prop->Get( vValue );
     char vPortName = vValue[0];
@@ -84,4 +89,9 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
     }
   }
   return DEVICE_OK;
+}
+
+void CPorts::UpdateILEInterface( IALC_REV_Port* PortInterface )
+{
+  PortInterface_ = PortInterface;
 }

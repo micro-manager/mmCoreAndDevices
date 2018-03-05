@@ -11,20 +11,44 @@
 // Properties
 const char* const g_EnableProperty = "Power Enable";
 const char* const g_PowerSetpointProperty = "Power Setpoint";
+const char* const g_InterlockStatus = "Interlock Flag Status";
 
-// Enable states
+// Property values
 const char* const g_LaserEnableOn = "On";
 const char* const g_LaserEnableOff = "Off";
 const char* const g_LaserEnableTTL = "External TTL";
 
+const char* const g_InterlockInactive = "Inactive";
+const char* const g_InterlockActive = "Active";
+const char* const g_InterlockClassIVActive = "Class IV active. Device reset required.";
 
-CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, CIntegratedLaserEngine* MMILE ) :
+
+CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface, CIntegratedLaserEngine* MMILE ) :
   LaserInterface_( LaserInterface ),
   PowerInterface_( PowerInterface ),
+  ILEInterface_( ILEInterface ),
   MMILE_( MMILE ),
   NumberOfLasers_( 0 ),
-  OpenRequest_( false )
+  OpenRequest_( false ),
+  Interlock_( false ),
+  ClassIVInterlock_( false ),
+  InterlockTEMP_( false ),
+  ClassIVInterlockTEMP_( false ),
+  InterlockStatusMonitor_( nullptr )
 {
+  if ( LaserInterface_ == nullptr )
+  {
+    throw std::logic_error( "CLasers: Pointer to Laser interface invalid" );
+  }
+  if ( PowerInterface_ == nullptr )
+  {
+    throw std::logic_error( "CLasers: Pointer to Power interface invalid" );
+  }
+  if ( ILEInterface_ == nullptr )
+  {
+    throw std::logic_error( "CLasers: Pointer to ILE interface invalid" );
+  }
+
   for ( int vLaserIndex = 0; vLaserIndex < MaxLasers + 1; ++vLaserIndex )
   {
     PowerSetPoint_[vLaserIndex] = 0;
@@ -68,6 +92,9 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
         case ELaserState::ALC_POWER_ERROR:
           MMILE_->LogMMMessage( " laser " + std::to_string( vLaserIndex ) + " encountered power error ", false );
           break;
+        case ELaserState::ALC_CLASS_IV_INTERLOCK_ERROR:
+          MMILE_->LogMMMessage( " laser " + std::to_string( vLaserIndex ) + " encountered class IV interlock error ", false );
+          break;
         }
       }
     }
@@ -88,10 +115,14 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
   }
 
   GenerateProperties();
+
+  InterlockStatusMonitor_ = new CInterlockStatusMonitor( MMILE_ );
+  InterlockStatusMonitor_->activate();
 }
 
 CLasers::~CLasers()
 {
+  delete InterlockStatusMonitor_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -135,6 +166,21 @@ void CLasers::GenerateProperties()
     MMILE_->SetAllowedValues( vPropertyName.c_str(), EnableStates_[vLaserIndex] );
   }
 
+  CPropertyAction* vAct2 = new CPropertyAction( this, &CLasers::OnInterlockStatus );
+  MMILE_->CreateStringProperty( g_InterlockStatus, g_InterlockInactive, true, vAct2 );
+
+  // TEST PROPERTIES
+  std::vector<std::string> vEnabledValues;
+  vEnabledValues.push_back( g_LaserEnableOn );
+  vEnabledValues.push_back( g_LaserEnableOff );
+  vAct2 = new CPropertyAction( this, &CLasers::OnInterlock );
+  MMILE_->CreateStringProperty( "TEST Activate Interlock", g_LaserEnableOff, false, vAct2 );
+  MMILE_->SetAllowedValues( "TEST Activate Interlock", vEnabledValues );
+
+  vAct2 = new CPropertyAction( this, &CLasers::OnClassIVInterlock );
+  MMILE_->CreateStringProperty( "TEST Activate Class IV Interlock", g_LaserEnableOff, false, vAct2 );
+  MMILE_->SetAllowedValues( "TEST Activate Class IV Interlock", vEnabledValues );
+
   UpdateLasersRange();
 }
 
@@ -157,11 +203,26 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   }
   else if ( Act == MM::AfterSet )
   {
-    Prop->Get( vPowerSetpoint );
-    MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( Wavelength( LaserIndex ) ) + "  = " + std::to_string( vPowerSetpoint ), true );
-    PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
-    if ( OpenRequest_ )
-      SetOpen();
+    if ( !IsInterlockTriggered( LaserIndex ) )
+    {
+      Prop->Get( vPowerSetpoint );
+      MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( Wavelength( LaserIndex ) ) + "  = " + std::to_string( vPowerSetpoint ), true );
+      PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
+      if ( OpenRequest_ )
+        SetOpen();
+    }
+    else
+    {
+      if ( IsClassIVInterlockTriggered() )
+      {
+        MMILE_->ActiveClassIVInterlock();
+        return ERR_CLASSIV_INTERLOCK;
+      }
+      else
+      {
+        return ERR_INTERLOCK;
+      }
+    }
 
     //Prop->Set(achievedSetpoint);  ---- for quantization....
   }
@@ -184,26 +245,45 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
   }
   else if ( Act == MM::AfterSet )
   {
-    std::string vEnable;
-    Prop->Get( vEnable );
-    if ( Enable_[LaserIndex].compare( vEnable ) != 0 )
+    if ( LaserInterface_ == nullptr )
     {
-      // Update the laser control mode if we are changing to, or
-      // from External TTL mode
-      if ( vEnable.compare( g_LaserEnableTTL ) == 0 )
+      return ERR_DEVICE_NOT_CONNECTED;
+    }
+    if ( !IsInterlockTriggered( LaserIndex ) )
+    {
+      std::string vEnable;
+      Prop->Get( vEnable );
+      if ( Enable_[LaserIndex].compare( vEnable ) != 0 )
       {
-        LaserInterface_->SetControlMode( LaserIndex, TTL_PULSED );
-      }
-      else if ( Enable_[LaserIndex].compare( g_LaserEnableTTL ) == 0 )
-      {
-        LaserInterface_->SetControlMode( LaserIndex, CW );
-      }
+        // Update the laser control mode if we are changing to, or
+        // from External TTL mode
+        if ( vEnable.compare( g_LaserEnableTTL ) == 0 )
+        {
+          LaserInterface_->SetControlMode( LaserIndex, TTL_PULSED );
+        }
+        else if ( Enable_[LaserIndex].compare( g_LaserEnableTTL ) == 0 )
+        {
+          LaserInterface_->SetControlMode( LaserIndex, CW );
+        }
 
-      Enable_[LaserIndex] = vEnable;
-      MMILE_->LogMMMessage( "Enable" + std::to_string( Wavelength( LaserIndex ) ) + " = " + Enable_[LaserIndex], true );
-      if ( OpenRequest_ )
+        Enable_[LaserIndex] = vEnable;
+        MMILE_->LogMMMessage( "Enable" + std::to_string( Wavelength( LaserIndex ) ) + " = " + Enable_[LaserIndex], true );
+        if ( OpenRequest_ )
+        {
+          SetOpen();
+        }
+      }
+    }
+    else
+    {
+      if ( IsClassIVInterlockTriggered() )
       {
-        SetOpen();
+        MMILE_->ActiveClassIVInterlock();
+        return ERR_CLASSIV_INTERLOCK;
+      }
+      else
+      {
+        return ERR_INTERLOCK;
       }
     }
   }
@@ -216,6 +296,11 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
 
 int CLasers::SetOpen(bool Open)
 {
+  if ( LaserInterface_ == nullptr )
+  {
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
   for( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex)
   {
     if ( Open )
@@ -280,10 +365,20 @@ void CLasers::CheckAndUpdateLasers()
 
 void CLasers::UpdateLasersRange()
 {
-  for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
+  if ( PowerInterface_ != nullptr )
   {
-    PowerInterface_->GetPowerRange( vLaserIndex, &( LaserRange_[vLaserIndex].PowerMin ), &( LaserRange_[vLaserIndex].PowerMax ) );
+    for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
+    {
+      PowerInterface_->GetPowerRange( vLaserIndex, &( LaserRange_[vLaserIndex].PowerMin ), &( LaserRange_[vLaserIndex].PowerMax ) );
+    }
   }
+}
+
+void CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface )
+{
+  LaserInterface_ = LaserInterface;
+  PowerInterface_ = PowerInterface;
+  ILEInterface_ = ILEInterface;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -292,6 +387,11 @@ void CLasers::UpdateLasersRange()
 
 int CLasers::Wavelength(const int LaserIndex )
 {
+  if ( LaserInterface_ == nullptr )
+  {
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
   int vValue = 0;
   LaserInterface_->GetWavelength( LaserIndex, &vValue );
   return vValue;
@@ -309,7 +409,154 @@ void  CLasers::PowerSetpoint(const int LaserIndex, const float Value)
 
 bool CLasers::AllowsExternalTTL(const int LaserIndex )
 {
+  if ( LaserInterface_ == nullptr )
+  {
+    return false;
+  }
+
   int vValue = 0;
   LaserInterface_->IsControlModeAvailable( LaserIndex, &vValue);
   return (vValue == 1);
+}
+
+bool CLasers::IsInterlockTriggered( int LaserIndex )
+{
+  if ( LaserInterface_ == nullptr )
+  {
+    return false;
+  }
+
+  bool vInterlockError = false;
+  TLaserState vLaserState;
+  if ( LaserInterface_->GetLaserState( LaserIndex, &vLaserState ) )
+  {
+    if ( vLaserState == TLaserState::ALC_INTERLOCK_ERROR || vLaserState == TLaserState::ALC_CLASS_IV_INTERLOCK_ERROR )
+    {
+      vInterlockError = true;
+    }
+  }
+  //TEST
+  vInterlockError = InterlockTEMP_ | ClassIVInterlockTEMP_;
+  return vInterlockError;
+}
+
+bool CLasers::IsClassIVInterlockTriggered()
+{
+  if ( ILEInterface_ == nullptr )
+  {
+    return false;
+  }
+
+  bool vActive = false;
+  ILEInterface_->IsClassIVInterlockFlagActive( &vActive );
+  //TEST
+  vActive = ClassIVInterlockTEMP_;
+  return vActive;
+}
+
+//TEST
+int CLasers::OnInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
+{
+  if ( Act == MM::AfterSet )
+  {
+    std::string vValue;
+    Prop->Get( vValue );
+    if ( vValue == g_LaserEnableOn )
+    {
+      InterlockTEMP_ = true;
+    }
+    else
+    {
+      InterlockTEMP_ = false;
+    }
+  }
+  return DEVICE_OK;
+}
+
+//TEST
+int CLasers::OnClassIVInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
+{
+  if ( Act == MM::AfterSet )
+  {
+    std::string vValue;
+    Prop->Get( vValue );
+    if ( vValue == g_LaserEnableOn )
+    {
+      ClassIVInterlockTEMP_ = true;
+    }
+    else
+    {
+      ClassIVInterlockTEMP_ = false;
+    }
+  }
+  return DEVICE_OK;
+}
+
+int CLasers::OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act )
+{
+  if ( Act == MM::BeforeGet )
+  {
+    if ( IsInterlockTriggered( 1 ) )
+    {
+      if ( IsClassIVInterlockTriggered() )
+      {
+        if ( !ClassIVInterlock_ )
+        {
+          Prop->Set( g_InterlockClassIVActive );
+          MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockClassIVActive );
+          MMILE_->ActiveClassIVInterlock();
+        }
+        Interlock_ = false;
+        ClassIVInterlock_ = true;
+      }
+      else
+      {
+        if ( !Interlock_ )
+        {
+          Prop->Set( g_InterlockActive );
+          MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockActive );
+        }
+        Interlock_ = true;
+        ClassIVInterlock_ = false;
+      }
+    }
+    else
+    {
+      if ( Interlock_ || ClassIVInterlock_ )
+      {
+        Prop->Set( g_InterlockInactive );
+        MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockInactive );
+      }
+      Interlock_ = false;
+      ClassIVInterlock_ = false;
+    }
+  }
+  return DEVICE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Interlock thread
+///////////////////////////////////////////////////////////////////////////////
+
+
+CInterlockStatusMonitor::CInterlockStatusMonitor( CIntegratedLaserEngine* MMILE )
+  :MMILE_( MMILE ),
+  KeepRunning_( true )
+{
+}
+
+CInterlockStatusMonitor::~CInterlockStatusMonitor()
+{
+  KeepRunning_ = false;
+  wait();
+}
+
+int CInterlockStatusMonitor::svc()
+{
+  while ( KeepRunning_ )
+  {
+    MMILE_->UpdateProperty( g_InterlockStatus );
+    Sleep( 500 );
+  }
+  return 0;
 }

@@ -23,6 +23,9 @@
 #define ERR_ACTIVEBLANKING_INIT 102
 #define ERR_LOWPOWERMODE_INIT 103
 #define ERR_LASERS_INIT 104
+#define ERR_INTERLOCK 201
+#define ERR_CLASSIV_INTERLOCK 202
+#define ERR_DEVICE_NOT_CONNECTED 203
 
 class IALC_REVObject3;
 class IALC_REV_Laser2;
@@ -46,6 +49,7 @@ public:
 
   // Action interface
   int OnDeviceChange( MM::PropertyBase* Prop, MM::ActionType Act );
+  int OnResetDevice( MM::PropertyBase* Prop, MM::ActionType Act );
 
   // Shutter API
   int SetOpen( bool Open = true );
@@ -57,6 +61,8 @@ public:
   MM::MMTime GetCurrentTime();
 
   void CheckAndUpdateLasers();
+  void ActiveClassIVInterlock();
+  void UpdatePropertyUI( const char* PropertyName, const char* PropertyValue );
 
 private:   
   IILEWrapperInterface* ILEWrapper_;
@@ -67,6 +73,7 @@ private:
   CActiveBlanking* ActiveBlanking_;
   CLowPowerMode* LowPowerMode_;
   CLasers* Lasers_;
+  MM::PropertyBase* ResetDeviceProperty_;
 
   bool Initialized_;
   MM::MMTime ChangedTime_;

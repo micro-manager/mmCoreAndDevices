@@ -10,7 +10,7 @@
 #include "ALC_REV.h"
 #include <exception>
 
-const char* const g_PropertyBaseName = "Low Power Mode";
+const char* const g_PropertyBaseName = "Low Power Mode [X 0.1]";
 const char* const g_On = "On";
 const char* const g_Off = "Off";
 
@@ -61,6 +61,11 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   if ( Act == MM::AfterSet )
   {
+    if ( PowerInterface_ == nullptr )
+    {
+      return ERR_DEVICE_NOT_CONNECTED;
+    }
+
     std::string vValue;
     Prop->Get( vValue );
     bool vEnabled = ( vValue == g_On );
@@ -74,4 +79,9 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
     }
   }
   return DEVICE_OK;
+}
+
+void CLowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterface )
+{
+  PowerInterface_ = PowerInterface;
 }

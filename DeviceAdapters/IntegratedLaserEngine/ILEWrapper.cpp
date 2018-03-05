@@ -65,10 +65,14 @@ void UnloadILEWrapper()
 // ILE Wrapper
 ///////////////////////////////////////////////////////////////////////////////
 
-CILEWrapper::CILEWrapper(void) :
-  DLL_( nullptr ), 
-  Create_ILE_REV3_( nullptr ), 
-  Delete_ILE_REV3_( nullptr )
+CILEWrapper::CILEWrapper( void ) :
+  DLL_( nullptr ),
+  Create_ILE_Detection_( nullptr ),
+  Delete_ILE_Detection_( nullptr ),
+  Create_ILE_REV3_( nullptr ),
+  Delete_ILE_REV3_( nullptr ),
+  GetILEActiveBlankingManagementInterface_( nullptr ),
+  GetILEPowerManagementInterface_( nullptr )
 {
 #ifdef _M_X64
   std::string libraryName = "AB_ALC_REV64.dll";
@@ -143,12 +147,16 @@ void CILEWrapper::GetListOfDevices( TDeviceList& DeviceList )
 {
   char vSerialNumber[64];
   int vNumberDevices = ILEDetection_->GetNumberOfDevices();
-  DeviceList["Demo"] = 0;
+  DeviceList.push_back("Demo");
+  DeviceList.push_back( "DemoILE701" );
+  DeviceList.push_back( "DemoILE702" );
+  DeviceList.push_back( "DemoILE703 " );
+  DeviceList.push_back( "DemoILE704" );
   for (int vDeviceIndex = 1; vDeviceIndex < vNumberDevices + 1; vDeviceIndex++ )
   {
     if ( ILEDetection_->GetSerialNumber( vDeviceIndex, vSerialNumber, 64 ) )
     {
-      DeviceList[vSerialNumber] = vDeviceIndex;
+      DeviceList.push_back(vSerialNumber);
     }
   }
 }

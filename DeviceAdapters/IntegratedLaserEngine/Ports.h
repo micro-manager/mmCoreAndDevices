@@ -30,6 +30,8 @@ public:
   int OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CPorts> CPropertyAction;
 
+  void UpdateILEInterface( IALC_REV_Port* PortInterface );
+
 private:
   IALC_REV_Port* PortInterface_;
   int NbPorts_;
