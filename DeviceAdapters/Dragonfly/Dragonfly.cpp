@@ -26,7 +26,7 @@
 
 using namespace std;
 
-const char* const g_DeviceName = "Dragonfly";
+const char* const g_DeviceName = "Andor Dragonfly";
 const char* const g_DeviceDescription = "Andor Dragonfly";
 const char* const g_DevicePort = "COM Port";
 const char* const g_DeviceSerialNumber = "Description | Serial Number";

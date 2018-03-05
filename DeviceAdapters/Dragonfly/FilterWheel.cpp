@@ -21,8 +21,8 @@ CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* Filte
   ConfigFileHandler_( ConfigFileHandler ),
   MMDragonfly_( MMDragonfly ),
   ComponentName_( "Filter Wheel " + to_string( WheelIndex ) ),
-  FilterModeProperty_( ComponentName_ + " mode" ),
-  RFIDStatusProperty_( ComponentName_ + " RFID status")
+  FilterModeProperty_( ComponentName_ + " Mode" ),
+  RFIDStatusProperty_( ComponentName_ + " RFID Status")
 {
   // Initialise critical values
   FilterWheelMode_ = FilterWheelInterface_->GetFilterWheelModeInterface();
@@ -33,7 +33,7 @@ CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* Filte
   }
 
   // Create and initialise the filter wheel property
-  FilterWheelProperty_ = new CFilterWheelProperty( this, MMDragonfly_, ComponentName_ + " position", ComponentName_ );
+  FilterWheelProperty_ = new CFilterWheelProperty( this, MMDragonfly_, ComponentName_ + " Position", ComponentName_ );
 
   // Create and initialise the mode property
   CreateModeProperty();

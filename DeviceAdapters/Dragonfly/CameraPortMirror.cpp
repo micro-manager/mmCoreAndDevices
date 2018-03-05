@@ -4,7 +4,7 @@
 
 #include "ASDInterface.h"
 
-const char* const g_RFIDStatusPropertyName = "Image Splitter RFID status";
+const char* const g_RFIDStatusPropertyName = "Image Splitter RFID Status";
 
 CCameraPortMirror::CCameraPortMirror( ICameraPortMirrorInterface* CameraPortMirrorInterface, const CDragonflyStatus* DragonflyStatus, CDragonfly* MMDragonfly )
   : IPositionComponentInterface( MMDragonfly, "Image Splitter", false ),
