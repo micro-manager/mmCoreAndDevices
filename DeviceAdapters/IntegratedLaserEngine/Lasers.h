@@ -16,12 +16,13 @@
 const int MaxLasers = 10;
 
 class IALC_REV_Laser2;
+class IALC_REV_ILEPowerManagement;
 class CIntegratedLaserEngine;
 
 class CLasers
 {
 public:
-  CLasers( IALC_REV_Laser2 *LaserInterface, CIntegratedLaserEngine* MMILE );
+  CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, CIntegratedLaserEngine* MMILE );
   ~CLasers();
 
   // Actions
@@ -38,11 +39,18 @@ public:
 
 private:   
   IALC_REV_Laser2 *LaserInterface_;
+  IALC_REV_ILEPowerManagement* PowerInterface_;
   CIntegratedLaserEngine* MMILE_;
   int NumberOfLasers_;
-  float PowerSetPoint_[MaxLasers+1];  // 1-based arrays therefore +1
-  std::string Enable_[MaxLasers+1];
-  std::vector<std::string> EnableStates_[MaxLasers+1];
+  float PowerSetPoint_[MaxLasers + 1];  // 1-based arrays therefore +1
+  std::string Enable_[MaxLasers + 1];
+  std::vector<std::string> EnableStates_[MaxLasers + 1];
+  struct TLaserRange
+  {
+    double PowerMin; 
+    double PowerMax;
+  };
+  TLaserRange LaserRange_[MaxLasers + 1];
   enum EXTERNALMODE
   {
     CW,
@@ -50,12 +58,13 @@ private:
   };
   bool OpenRequest_;
 
-  void GenerateALCProperties();
+  void GenerateProperties();
   std::string BuildPropertyName( const std::string& BasePropertyName, int Wavelength );
   int Wavelength( const int LaserIndex );  // nano-meters
   bool AllowsExternalTTL( const int LaserIndex );
   float PowerSetpoint( const int LaserIndex );  // milli-Watts
   void PowerSetpoint( const int LaserIndex, const float Value );  // milli-Watts
+  void UpdateLasersRange();
 };
 
 

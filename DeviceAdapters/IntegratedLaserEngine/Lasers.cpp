@@ -4,7 +4,6 @@
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 
-#include "boost/lexical_cast.hpp"
 #include "ALC_REV.h"
 #include "Lasers.h"
 #include "IntegratedLaserEngine.h"
@@ -19,20 +18,22 @@ const char* const g_LaserEnableOff = "Off";
 const char* const g_LaserEnableTTL = "External TTL";
 
 
-CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, CIntegratedLaserEngine* MMILE ) :
+CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, CIntegratedLaserEngine* MMILE ) :
   LaserInterface_( LaserInterface ),
+  PowerInterface_( PowerInterface ),
   MMILE_( MMILE ),
   NumberOfLasers_( 0 ),
   OpenRequest_( false )
 {
-  for ( int il = 0; il < MaxLasers + 1; ++il )
+  for ( int vLaserIndex = 0; vLaserIndex < MaxLasers + 1; ++vLaserIndex )
   {
-    PowerSetPoint_[il] = 0;
-    Enable_[il] = g_LaserEnableOn;
+    PowerSetPoint_[vLaserIndex] = 0;
+    Enable_[vLaserIndex] = g_LaserEnableOn;
+    LaserRange_[vLaserIndex].PowerMin = LaserRange_[vLaserIndex].PowerMax = 0;
   }
 
   NumberOfLasers_ = LaserInterface_->Initialize();
-  MMILE_->LogMMMessage( ( "in CLasers constructor, NumberOfLasers_ =" + boost::lexical_cast<std::string, int>( NumberOfLasers_ ) ), true );
+  MMILE_->LogMMMessage( ( "in CLasers constructor, NumberOfLasers_ =" + std::to_string( NumberOfLasers_ ) ), true );
   CDeviceUtils::SleepMs( 100 );
 
   TLaserState state[10];
@@ -56,16 +57,16 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, CIntegratedLaserEngine* MMILE
           vFinishWaiting = false;
           break;
         case ELaserState::ALC_WARM_UP:
-          MMILE_->LogMMMessage( " laser " + boost::lexical_cast<std::string, int>( vLaserIndex ) + " is warming up", true );
+          MMILE_->LogMMMessage( " laser " + std::to_string( vLaserIndex ) + " is warming up", true );
           break;
         case ELaserState::ALC_READY:
-          MMILE_->LogMMMessage( " laser " + boost::lexical_cast<std::string, int>( vLaserIndex ) + " is ready ", true );
+          MMILE_->LogMMMessage( " laser " + std::to_string( vLaserIndex ) + " is ready ", true );
           break;
         case ELaserState::ALC_INTERLOCK_ERROR:
-          MMILE_->LogMMMessage( " laser " + boost::lexical_cast<std::string, int>( vLaserIndex ) + " encountered interlock error ", false );
+          MMILE_->LogMMMessage( " laser " + std::to_string( vLaserIndex ) + " encountered interlock error ", false );
           break;
         case ELaserState::ALC_POWER_ERROR:
-          MMILE_->LogMMMessage( " laser " + boost::lexical_cast<std::string, int>( vLaserIndex ) + " encountered power error ", false );
+          MMILE_->LogMMMessage( " laser " + std::to_string( vLaserIndex ) + " encountered power error ", false );
           break;
         }
       }
@@ -86,7 +87,7 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, CIntegratedLaserEngine* MMILE
     CDeviceUtils::SleepMs( 100 );
   }
 
-  GenerateALCProperties();
+  GenerateProperties();
 }
 
 CLasers::~CLasers()
@@ -102,7 +103,7 @@ std::string CLasers::BuildPropertyName( const std::string& BasePropertyName, int
   return "Laser " + std::to_string( Wavelength ) + "-" + BasePropertyName;
 }
 
-void CLasers::GenerateALCProperties()
+void CLasers::GenerateProperties()
 {
   CPropertyActionEx* vAct; 
   std::string vPropertyName;
@@ -116,10 +117,9 @@ void CLasers::GenerateALCProperties()
     vPropertyName = BuildPropertyName( g_PowerSetpointProperty, vWavelength );
     MMILE_->CreateProperty( vPropertyName.c_str(), "0", MM::Float, false, vAct );
 
-    float vFullScale = 10.00;
     // Set the limits as interrogated from the laser controller
-    MMILE_->LogMMMessage( "Range for " + vPropertyName + "= [0," + boost::lexical_cast<std::string, float>( vFullScale ) + "]", true );
-    MMILE_->SetPropertyLimits( vPropertyName.c_str(), 0, vFullScale );  // Volts
+    MMILE_->LogMMMessage( "Range for " + vPropertyName + "= [0," + std::to_string( 100 ) + "]", true );
+    MMILE_->SetPropertyLimits( vPropertyName.c_str(), 0, 100 );
 
     // Enable
     vAct = new CPropertyActionEx( this, &CLasers::OnEnable, vLaserIndex );
@@ -134,6 +134,8 @@ void CLasers::GenerateALCProperties()
     MMILE_->CreateProperty( vPropertyName.c_str(), EnableStates_[vLaserIndex][0].c_str(), MM::String, false, vAct );
     MMILE_->SetAllowedValues( vPropertyName.c_str(), EnableStates_[vLaserIndex] );
   }
+
+  UpdateLasersRange();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -150,13 +152,13 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   if ( Act == MM::BeforeGet )
   {
     vPowerSetpoint = (double)PowerSetpoint( LaserIndex );
-    MMILE_->LogMMMessage( "from equipment: PowerSetpoint" + boost::lexical_cast<std::string, long>( Wavelength( LaserIndex ) ) + "  = " + boost::lexical_cast<std::string, double>( vPowerSetpoint ), true );
+    MMILE_->LogMMMessage( "from equipment: PowerSetpoint" + std::to_string( Wavelength( LaserIndex ) ) + "  = " + std::to_string( vPowerSetpoint ), true );
     Prop->Set( vPowerSetpoint );
   }
   else if ( Act == MM::AfterSet )
   {
     Prop->Get( vPowerSetpoint );
-    MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + boost::lexical_cast<std::string, long>( Wavelength( LaserIndex ) ) + "  = " + boost::lexical_cast<std::string, double>( vPowerSetpoint ), true );
+    MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( Wavelength( LaserIndex ) ) + "  = " + std::to_string( vPowerSetpoint ), true );
     PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
     if ( OpenRequest_ )
       SetOpen();
@@ -198,7 +200,7 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
       }
 
       Enable_[LaserIndex] = vEnable;
-      MMILE_->LogMMMessage( "Enable" + boost::lexical_cast<std::string, long>( Wavelength( LaserIndex ) ) + " = " + Enable_[LaserIndex], true );
+      MMILE_->LogMMMessage( "Enable" + std::to_string( Wavelength( LaserIndex ) ) + " = " + Enable_[LaserIndex], true );
       if ( OpenRequest_ )
       {
         SetOpen();
@@ -218,25 +220,21 @@ int CLasers::SetOpen(bool Open)
   {
     if ( Open )
     {
-      double vFullScale = 10.00; // Volts instead of milliWatts, and  double instead of int
       bool vLaserOn = ( PowerSetpoint( vLaserIndex ) > 0 ) && ( Enable_[vLaserIndex].compare( g_LaserEnableOff ) != 0 );
       double vPercentScale = 0.;
       if ( vLaserOn )
       {
-        vPercentScale = 100.*PowerSetpoint( vLaserIndex ) / vFullScale;
+        vPercentScale = PowerSetpoint( vLaserIndex );
       }
+      double vPower = ( vPercentScale / 100. ) * ( LaserRange_[vLaserIndex].PowerMax - LaserRange_[vLaserIndex].PowerMin ) + LaserRange_[vLaserIndex].PowerMin;
 
-      if ( 100. < vPercentScale )
-      {
-        vPercentScale = 100.;
-      }
-      MMILE_->LogMMMessage( "SetLas" + boost::lexical_cast<std::string, long>( vLaserIndex ) + "  = " + boost::lexical_cast<std::string, double>( vPercentScale ) + "(" + boost::lexical_cast<std::string, bool>( vLaserOn ) + ")", true );
+      MMILE_->LogMMMessage( "SetLas" + std::to_string( vLaserIndex ) + "  = " + std::to_string( vPower ) + "(" + std::to_string( vLaserOn ) + ")", true );
 
       TLaserState vLaserState;
       LaserInterface_->GetLaserState( vLaserIndex, &vLaserState );
       if ( vLaserOn && ( vLaserState != ELaserState::ALC_READY ) )
       {
-        std::string vMessage = "Laser # " + boost::lexical_cast<std::string, int>( vLaserIndex ) + " is not ready!";
+        std::string vMessage = "Laser # " + std::to_string( vLaserIndex ) + " is not ready!";
         // laser is not ready!
         MMILE_->LogMMMessage( vMessage.c_str(), false );
         // GetCoreCallback()->PostError(std::make_pair<int,std::string>(DEVICE_ERR,vMessage));
@@ -244,18 +242,18 @@ int CLasers::SetOpen(bool Open)
 
       if ( vLaserState > ELaserState::ALC_NOT_AVAILABLE )
       {
-        MMILE_->LogMMMessage( "setting Laser " + boost::lexical_cast<std::string, int>( Wavelength( vLaserIndex ) ) + " to " + boost::lexical_cast<std::string, double>( vPercentScale ) + "% full scale", true );
-        if ( !LaserInterface_->SetLas_I( vLaserIndex, vPercentScale, vLaserOn ) )
+        MMILE_->LogMMMessage( "setting Laser " + std::to_string( Wavelength( vLaserIndex ) ) + " to " + std::to_string( vPower ) + "% full scale", true );
+        if ( !LaserInterface_->SetLas_I( vLaserIndex, vPower, vLaserOn ) )
         {
-          MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( vLaserIndex ) + " failed with value [" ) + std::to_string( vPercentScale ) + "]" );
+          MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( vLaserIndex ) + " failed with value [" ) + std::to_string( vPower ) + "]" );
         }
       }
     }
-    MMILE_->LogMMMessage( "set shutter " + boost::lexical_cast<std::string, bool>( Open ), true );
+    MMILE_->LogMMMessage( "set shutter " + std::to_string( Open ), true );
     bool vSuccess = LaserInterface_->SetLas_Shutter( Open );
     if ( !vSuccess )
     {
-      MMILE_->LogMMMessage( "set shutter " + boost::lexical_cast<std::string, bool>( Open ) + " failed", false );
+      MMILE_->LogMMMessage( "set shutter " + std::to_string( Open ) + " failed", false );
     }
   }
 
@@ -277,7 +275,15 @@ int CLasers::GetOpen(bool& Open)
 
 void CLasers::CheckAndUpdateLasers()
 {
+  UpdateLasersRange();
+}
 
+void CLasers::UpdateLasersRange()
+{
+  for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
+  {
+    PowerInterface_->GetPowerRange( vLaserIndex, &( LaserRange_[vLaserIndex].PowerMin ), &( LaserRange_[vLaserIndex].PowerMax ) );
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

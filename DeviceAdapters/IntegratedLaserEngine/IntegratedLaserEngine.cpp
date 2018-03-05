@@ -156,12 +156,13 @@ int CIntegratedLaserEngine::Initialize()
   }
 
   // Lasers
+  IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
   IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
   if ( vLaserInterface != nullptr )
   {
     try
     {
-      Lasers_ = new CLasers( vLaserInterface, this );
+      Lasers_ = new CLasers( vLaserInterface, vLowPowerMode, this );
     }
     catch ( std::exception& vException )
     {
@@ -228,7 +229,6 @@ int CIntegratedLaserEngine::Initialize()
   }
 
   // Low Power Mode
-  IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
   if ( vLowPowerMode != nullptr )
   {
     bool vLowPowerModePresent = false;
@@ -344,5 +344,8 @@ MM::MMTime CIntegratedLaserEngine::GetCurrentTime()
 
 void CIntegratedLaserEngine::CheckAndUpdateLasers()
 {
-
+  if ( Lasers_ != nullptr )
+  {
+    Lasers_->CheckAndUpdateLasers();
+  }
 }
