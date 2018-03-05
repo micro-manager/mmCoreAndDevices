@@ -21,6 +21,7 @@ class IALC_REV_Laser2;
 class IALC_REV_ILEPowerManagement;
 class CIntegratedLaserEngine;
 class CInterlockStatusMonitor;
+//#define _ACTIVATE_DUMMYTEST_
 
 class CLasers
 {
@@ -33,10 +34,10 @@ public:
   typedef MM::Action<CLasers> CPropertyAction;
   int OnPowerSetpoint( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
   int OnEnable( MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex );
-  //TEST
+#ifdef _ACTIVATE_DUMMYTEST_
   int OnInterlock( MM::PropertyBase* Prop, MM::ActionType Act );
-  //TEST
   int OnClassIVInterlock( MM::PropertyBase* Prop, MM::ActionType Act );
+#endif
   int OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act );
 
   // Shutter API
@@ -70,9 +71,10 @@ private:
   bool Interlock_;
   bool ClassIVInterlock_;
   CInterlockStatusMonitor* InterlockStatusMonitor_;
-  //TEST
+#ifdef _ACTIVATE_DUMMYTEST_
   bool InterlockTEMP_;
   bool ClassIVInterlockTEMP_;
+#endif
 
   void GenerateProperties();
   std::string BuildPropertyName( const std::string& BasePropertyName, int Wavelength );

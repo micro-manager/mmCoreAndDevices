@@ -22,7 +22,6 @@ const char* const g_InterlockInactive = "Inactive";
 const char* const g_InterlockActive = "Active";
 const char* const g_InterlockClassIVActive = "Class IV active. Device reset required.";
 
-
 CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface, CIntegratedLaserEngine* MMILE ) :
   LaserInterface_( LaserInterface ),
   PowerInterface_( PowerInterface ),
@@ -32,8 +31,10 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
   OpenRequest_( false ),
   Interlock_( false ),
   ClassIVInterlock_( false ),
+#ifdef _ACTIVATE_DUMMYTEST_
   InterlockTEMP_( false ),
   ClassIVInterlockTEMP_( false ),
+#endif
   InterlockStatusMonitor_( nullptr )
 {
   if ( LaserInterface_ == nullptr )
@@ -169,7 +170,7 @@ void CLasers::GenerateProperties()
   CPropertyAction* vAct2 = new CPropertyAction( this, &CLasers::OnInterlockStatus );
   MMILE_->CreateStringProperty( g_InterlockStatus, g_InterlockInactive, true, vAct2 );
 
-  // TEST PROPERTIES
+#ifdef _ACTIVATE_DUMMYTEST_
   std::vector<std::string> vEnabledValues;
   vEnabledValues.push_back( g_LaserEnableOn );
   vEnabledValues.push_back( g_LaserEnableOff );
@@ -180,7 +181,7 @@ void CLasers::GenerateProperties()
   vAct2 = new CPropertyAction( this, &CLasers::OnClassIVInterlock );
   MMILE_->CreateStringProperty( "TEST Activate Class IV Interlock", g_LaserEnableOff, false, vAct2 );
   MMILE_->SetAllowedValues( "TEST Activate Class IV Interlock", vEnabledValues );
-
+#endif
   UpdateLasersRange();
 }
 
@@ -435,8 +436,9 @@ bool CLasers::IsInterlockTriggered( int LaserIndex )
       vInterlockError = true;
     }
   }
-  //TEST
+#ifdef _ACTIVATE_DUMMYTEST_
   vInterlockError = InterlockTEMP_ | ClassIVInterlockTEMP_;
+#endif
   return vInterlockError;
 }
 
@@ -449,12 +451,13 @@ bool CLasers::IsClassIVInterlockTriggered()
 
   bool vActive = false;
   ILEInterface_->IsClassIVInterlockFlagActive( &vActive );
-  //TEST
+#ifdef _ACTIVATE_DUMMYTEST_
   vActive = ClassIVInterlockTEMP_;
+#endif
   return vActive;
 }
 
-//TEST
+#ifdef _ACTIVATE_DUMMYTEST_
 int CLasers::OnInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
 {
   if ( Act == MM::AfterSet )
@@ -473,7 +476,6 @@ int CLasers::OnInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
   return DEVICE_OK;
 }
 
-//TEST
 int CLasers::OnClassIVInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
 {
   if ( Act == MM::AfterSet )
@@ -491,6 +493,7 @@ int CLasers::OnClassIVInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
   }
   return DEVICE_OK;
 }
+#endif
 
 int CLasers::OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act )
 {
