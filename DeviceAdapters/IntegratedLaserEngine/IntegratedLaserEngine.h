@@ -18,17 +18,18 @@
 #include <string>
 #include <vector>
 #include "ILEWrapperInterface.h"
-const int MaxLasers = 10;
 
 #define ERR_PORTS_INIT 101
 #define ERR_ACTIVEBLANKING_INIT 102
 #define ERR_LOWPOWERMODE_INIT 103
+#define ERR_LASERS_INIT 104
 
 class IALC_REVObject3;
 class IALC_REV_Laser2;
 class CPorts;
 class CActiveBlanking;
 class CLowPowerMode;
+class CLasers;
 
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
@@ -60,7 +61,8 @@ public:
   int GetOpen( bool& Open );
   int Fire( double DeltaT );
 
-  void LogMMMessage( std::string Message );
+  void LogMMMessage( std::string Message, bool DebugOnly = false );
+  MM::MMTime GetCurrentTime();
 
   void CheckAndUpdateLasers();
 
@@ -72,6 +74,7 @@ private:
   CPorts* Ports_;
   CActiveBlanking* ActiveBlanking_;
   CLowPowerMode* LowPowerMode_;
+  CLasers* Lasers_;
 
 
   /** Implementation instance shared with PiezoStage. */
@@ -92,17 +95,16 @@ private:
   bool Busy_;
   MM::MMTime ChangedTime_;
   int NumberOfLasers_;
-  float PowerSetPoint_[MaxLasers+1];  // 1-based arrays therefore +1
-  bool IsLinear_[MaxLasers+1];
-  std::string Enable_[MaxLasers+1];
-  std::vector<std::string> EnableStates_[MaxLasers+1];
+  float PowerSetPoint_[10+1];  // 1-based arrays therefore +1
+  bool IsLinear_[10+1];
+  std::string Enable_[10+1];
+  std::vector<std::string> EnableStates_[10+1];
   enum EXTERNALMODE
   {
     CW,
     TTL_PULSED
   };
   bool OpenRequest_;
-  unsigned char LaserPort_;  // First two bits of DOUT (0 or 1 or 2) IFF multiPortUnitPresent_
 
   std::string BuildPropertyName( const std::string& BasePropertyName, int Wavelength );
   int Wavelength( const int LaserIndex );  // nano-meters
@@ -115,4 +117,4 @@ private:
 };
 
 
-#endif // _AndorLaserCombiner_H_
+#endif

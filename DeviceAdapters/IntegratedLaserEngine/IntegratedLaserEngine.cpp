@@ -20,6 +20,7 @@
 #include "Ports.h"
 #include "ActiveBlanking.h"
 #include "LowPowerMode.h"
+#include "Lasers.h"
 
 
 #ifndef _isnan
@@ -103,15 +104,16 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   ILEWrapper_( nullptr ),
   NumberOfLasers_( 0 ),
   OpenRequest_( false ),
-  LaserPort_( 0 ),
   ILEDevice_( nullptr ),
   Ports_( nullptr ),
-  ActiveBlanking_( nullptr )
+  ActiveBlanking_( nullptr ),
+  LowPowerMode_( nullptr ),
+  Lasers_( nullptr )
 {
   // Load the library
   ILEWrapper_ = LoadILEWrapper( this );
 
-  for ( int il = 0; il < MaxLasers + 1; ++il )
+  for ( int il = 0; il < 10 + 1; ++il )
   {
     PowerSetPoint_[il] = 0;
     IsLinear_[il] = false;
@@ -123,6 +125,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   SetErrorText( ERR_PORTS_INIT, "Ports initialisation failed" );
   SetErrorText( ERR_ACTIVEBLANKING_INIT, "Active Blanking initialisation failed" );
   SetErrorText( ERR_LOWPOWERMODE_INIT, "Low Power mode initialisation failed" );
+  SetErrorText( ERR_LASERS_INIT, "Lasers initialisation failed" );
 
   // Create pre-initialization properties:
   // -------------------------------------
@@ -191,12 +194,15 @@ int CIntegratedLaserEngine::Initialize()
       LogMessage( "CreateILE failed" );
       return DEVICE_ERR;
     }
+
+    // Lasers
     LaserInterface_ = ILEDevice_->GetLaserInterface2();
     if ( LaserInterface_ == nullptr )
     {
       throw std::runtime_error( "GetLaserInterface failed" );
     }
-
+    Lasers_ = new CLasers( LaserInterface_, this );
+    /*
     NumberOfLasers_ = LaserInterface_->Initialize();
     LogMessage( ( "in CIntegratedLaserEngine::Initialize, NumberOfLasers_ =" + boost::lexical_cast<std::string, int>( NumberOfLasers_ ) ), true );
     CDeviceUtils::SleepMs( 100 );
@@ -254,6 +260,7 @@ int CIntegratedLaserEngine::Initialize()
 
     GenerateALCProperties();
     GenerateReadOnlyIDProperties();
+    */
   }
   catch ( std::string& exs )
   {
@@ -263,7 +270,7 @@ int CIntegratedLaserEngine::Initialize()
     //CodeUtility::DebugOutput(exs.c_str());
     return vRet;
   }
-
+  
   // Ports
   IALC_REV_Port* vPortInterface = ILEDevice_->GetPortInterface();
   if ( vPortInterface != nullptr )
@@ -431,7 +438,10 @@ int CIntegratedLaserEngine::Shutdown()
   if ( Initialized_ )
   {
     Initialized_ = false;
+    delete LowPowerMode_;
+    delete ActiveBlanking_;
     delete Ports_;
+    delete Lasers_;
     ILEWrapper_->DeleteILE( ILEDevice_ );
   }
   return HandleErrors();
@@ -672,6 +682,12 @@ int CIntegratedLaserEngine::HandleErrors()
 
 int CIntegratedLaserEngine::SetOpen(bool Open)
 {
+  if ( Lasers_ != nullptr )
+  {
+    return Lasers_->SetOpen( Open );
+  }
+  return DEVICE_OK;
+  /*
   for( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex)
   {
     if ( Open )
@@ -720,13 +736,22 @@ int CIntegratedLaserEngine::SetOpen(bool Open)
   OpenRequest_ = Open;
 
   return DEVICE_OK;
+  */
 }
 
 int CIntegratedLaserEngine::GetOpen(bool& Open)
 {
+  Open = false;
+  if ( Lasers_ != nullptr )
+  {
+    Lasers_->GetOpen( Open );
+  }
+  return DEVICE_OK;
+  /*
   // todo check that all requested lasers are 'ready'
   Open = OpenRequest_; // && Ready();
   return DEVICE_OK;
+  */
 }
 
 /**
@@ -792,9 +817,14 @@ bool CIntegratedLaserEngine::Ready(const int LaserIndex )
   return vRet && ( ELaserState::ALC_READY == vState );
 }
 
-void CIntegratedLaserEngine::LogMMMessage( std::string Message )
+void CIntegratedLaserEngine::LogMMMessage( std::string Message, bool DebugOnly )
 {
-  LogMessage( Message );
+  LogMessage( Message, DebugOnly );
+}
+
+MM::MMTime CIntegratedLaserEngine::GetCurrentTime()
+{
+  return GetCurrentMMTime();
 }
 
 void CIntegratedLaserEngine::CheckAndUpdateLasers()
