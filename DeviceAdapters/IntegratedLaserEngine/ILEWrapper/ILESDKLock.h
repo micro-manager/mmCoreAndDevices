@@ -15,6 +15,6 @@ public:
   ~CILESDKLock();
 
 private:
-  static std::mutex gsSDKMutex;
+  static std::timed_mutex gsSDKMutex;
 };
 #endif
