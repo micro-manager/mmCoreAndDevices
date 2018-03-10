@@ -29,6 +29,8 @@ public:
   void GetListOfDevices( TDeviceList& DeviceList );
   bool CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID );
   void DeleteILE( IALC_REVObject3 *ILEDevice );
+  bool CreateDualILE( IALC_REVObject3 **ILEDevice, const char *UnitID1, const char *UnitID2, bool ILE700 );
+  void DeleteDualILE( IALC_REVObject3 *ILEDevice );
   IALC_REV_ILEActiveBlankingManagement* GetILEActiveBlankingManagementInterface( IALC_REVObject3 *ILEDevice );
   IALC_REV_ILEPowerManagement* GetILEPowerManagementInterface( IALC_REVObject3 *ILEDevice );
 

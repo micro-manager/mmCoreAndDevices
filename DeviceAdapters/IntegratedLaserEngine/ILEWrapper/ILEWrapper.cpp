@@ -180,6 +180,21 @@ bool CILEWrapper::CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID )
   return vRet;
 }
 
+bool CILEWrapper::CreateDualILE( IALC_REVObject3 **ILEDevice, const char *UnitID1, const char *UnitID2, bool ILE700 )
+{
+  bool vRet = false;
+  try
+  {
+    CALC_REVObject3Wrapper* vALC_REVObject3Wrapper = new CALC_REVObject3Wrapper( DLL_, UnitID1, UnitID2, ILE700 );
+    *ILEDevice = vALC_REVObject3Wrapper;
+    vRet = true;
+  }
+  catch ( std::exception& )
+  {
+  }
+  return vRet;
+}
+
 void CILEWrapper::DeleteILE( IALC_REVObject3 *ILEDevice )
 {
   CALC_REVObject3Wrapper* vALC_REVObject3Wrapper = dynamic_cast<CALC_REVObject3Wrapper*>( ILEDevice );
@@ -187,6 +202,12 @@ void CILEWrapper::DeleteILE( IALC_REVObject3 *ILEDevice )
   {
     delete vALC_REVObject3Wrapper;
   }
+}
+
+void CILEWrapper::DeleteDualILE( IALC_REVObject3 *ILEDevice )
+{
+  // Just a placeholder in case we need to split the ALC_RevObject3 wrapper into single and dual ILE
+  DeleteILE( ILEDevice );
 }
 
 IALC_REV_ILEActiveBlankingManagement* CILEWrapper::GetILEActiveBlankingManagementInterface( IALC_REVObject3 *ILEDevice )

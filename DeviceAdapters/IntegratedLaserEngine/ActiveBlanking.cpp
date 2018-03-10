@@ -106,7 +106,7 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
       if ( vEnabled != vRequestEnabled )
       {
         ChangeLineState( vLineIndex );
-        if ( ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ ) )
+        if ( !ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ ) )
         {
           if ( vRequestEnabled )
           {

@@ -18,11 +18,14 @@
 
 // Properties
 const char* const g_DeviceName = "Andor ILE";
+const char* const g_DualDeviceName = "Andor Dual ILE";
 const char* const g_DeviceDescription = "Integrated Laser Engine";
+const char* const g_DualDeviceDescription = "Dual Integrated Laser Engine";
 const char* const g_DeviceListProperty = "Device";
 const char* const g_ResetDeviceProperty = "Reset device connection";
 
 // Property values
+const char* const g_Undefined = "Undefined";
 const char* const g_PropertyOn = "On";
 const char* const g_PropertyOff = "Off";
 
@@ -34,6 +37,7 @@ const char* const g_PropertyOff = "Off";
 MODULE_API void InitializeModuleData()
 {
   RegisterDevice( g_DeviceName, MM::ShutterDevice, g_DeviceDescription );
+  RegisterDevice( g_DualDeviceName, MM::ShutterDevice, g_DualDeviceDescription );
 }
 
 MODULE_API MM::Device* CreateDevice(const char* DeviceName)
@@ -46,7 +50,14 @@ MODULE_API MM::Device* CreateDevice(const char* DeviceName)
   if ( ( strcmp( DeviceName, g_DeviceName ) == 0 ) )
   {
     // create Controller
-    CIntegratedLaserEngine* vIntegratedLaserEngine = new CIntegratedLaserEngine();
+    CSingleILE* vIntegratedLaserEngine = new CSingleILE();
+    return vIntegratedLaserEngine;
+  }
+
+  if ( ( strcmp( DeviceName, g_DualDeviceName ) == 0 ) )
+  {
+    // create Controller
+    CDualILE* vIntegratedLaserEngine = new CDualILE();
     return vIntegratedLaserEngine;
   }
 
@@ -62,7 +73,7 @@ MODULE_API void DeleteDevice(MM::Device* Device)
 // Controller implementation
 ///////////////////////////////////////////////////////////////////////////////
 
-CIntegratedLaserEngine::CIntegratedLaserEngine() :
+CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, int NbDevices ) :
   Initialized_( false ),
   ChangedTime_( 0.0 ),
   ILEWrapper_( nullptr ),
@@ -72,8 +83,12 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   LowPowerMode_( nullptr ),
   Lasers_( nullptr ),
   ResetDeviceProperty_( nullptr )
-
 {
+  if ( NbDevices <= 0 )
+  {
+    throw std::logic_error( "Number of requested ILE devices null or negative" );
+  }
+
   // Load the library
   ILEWrapper_ = LoadILEWrapper( this );
 
@@ -91,25 +106,22 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
   // -------------------------------------
 
   // Description
-  CreateStringProperty( MM::g_Keyword_Description, g_DeviceDescription, true );
-
+  CreateStringProperty( MM::g_Keyword_Description, Description.c_str(), true );
+ 
   // Devices
   ILEWrapper_->GetListOfDevices( DeviceList_ );
-  std::string vInitialDevice = "Undefined";
-  if ( !DeviceList_.empty() )
+  DevicesNames_.assign( NbDevices, g_Undefined );
+  if ( NbDevices == 1 )
   {
-    vInitialDevice = *( DeviceList_.begin() );
+    CreateDeviceSelectionProperty( 0, 0 );
   }
-  CPropertyAction* pAct = new CPropertyAction( this, &CIntegratedLaserEngine::OnDeviceChange );
-  CreateStringProperty( g_DeviceListProperty, vInitialDevice.c_str(), false, pAct, true );
-  std::vector<std::string> vDevices;
-  CILEWrapper::TDeviceList::const_iterator vDeviceIt = DeviceList_.begin();
-  while ( vDeviceIt != DeviceList_.end() )
+  else
   {
-    vDevices.push_back( *vDeviceIt );
-    ++vDeviceIt;
+    for ( int vDeviceIndex = 0; vDeviceIndex < NbDevices; ++vDeviceIndex )
+    {
+      CreateDeviceSelectionProperty( vDeviceIndex + 1, vDeviceIndex );
+    }
   }
-  SetAllowedValues( g_DeviceListProperty, vDevices );
   
   EnableDelay(); // Signals that the delay setting will be used
   UpdateStatus();
@@ -118,10 +130,39 @@ CIntegratedLaserEngine::CIntegratedLaserEngine() :
 
 CIntegratedLaserEngine::~CIntegratedLaserEngine()
 {
-  Shutdown();
   // Unload the library
   UnloadILEWrapper();
   LogMessage( std::string( g_DeviceName ) + " dtor OK", true );
+}
+
+void CIntegratedLaserEngine::CreateDeviceSelectionProperty( int DeviceID, int DeviceIndex )
+{
+  std::string vInitialDevice = g_Undefined;
+  if ( !DeviceList_.empty() )
+  {
+    vInitialDevice = *( DeviceList_.begin() );
+  }
+  std::string vPropertyName = g_DeviceListProperty;
+  if ( DeviceID > 0 )
+  {
+    vPropertyName += std::to_string( DeviceID );
+  }
+  CPropertyActionEx* pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnDeviceChange, DeviceIndex );
+  CreateStringProperty( vPropertyName.c_str(), vInitialDevice.c_str(), false, pAct, true );
+  std::vector<std::string> vDevices;
+  CILEWrapper::TDeviceList::const_iterator vDeviceIt = DeviceList_.begin();
+  while ( vDeviceIt != DeviceList_.end() )
+  {
+    vDevices.push_back( *vDeviceIt );
+    ++vDeviceIt;
+  }
+  SetAllowedValues( vPropertyName.c_str(), vDevices );
+
+  if ( DeviceIndex >= DevicesNames_.size() )
+  {
+    DevicesNames_.reserve( DeviceIndex + 1 );
+  }
+  DevicesNames_[DeviceIndex] = vInitialDevice;
 }
 
 bool CIntegratedLaserEngine::Busy()
@@ -140,17 +181,20 @@ bool CIntegratedLaserEngine::Busy()
 
 void CIntegratedLaserEngine::GetName(char* Name) const
 {
-  CDeviceUtils::CopyLimitedString( Name, g_DeviceName );
+  CDeviceUtils::CopyLimitedString( Name, GetDeviceName().c_str() );
 }
 
 int CIntegratedLaserEngine::Initialize()
 {
-  int vRet = DEVICE_OK;
-
+  if ( Initialized_ )
+  {
+    return DEVICE_OK;
+  }
+  
   // Connecting to the device
   try
   {
-    if ( !ILEWrapper_->CreateILE( &ILEDevice_, DeviceName_.c_str() ) )
+    if ( !CreateILE() )
     {
       LogMessage( "CreateILE failed" );
       return DEVICE_NOT_CONNECTED;
@@ -158,11 +202,10 @@ int CIntegratedLaserEngine::Initialize()
   }
   catch ( std::string& exs )
   {
-    vRet = DEVICE_LOCALLY_DEFINED_ERROR;
     LogMessage( exs.c_str() );
     SetErrorText( DEVICE_LOCALLY_DEFINED_ERROR, exs.c_str() );
     //CodeUtility::DebugOutput(exs.c_str());
-    return vRet;
+    return DEVICE_LOCALLY_DEFINED_ERROR;
   }
 
   // Reset device
@@ -198,83 +241,24 @@ int CIntegratedLaserEngine::Initialize()
   }
   
   // Ports
-  IALC_REV_Port* vPortInterface = ILEDevice_->GetPortInterface();
-  if ( vPortInterface != nullptr )
+  int vRet = InitializePorts();
+  if ( vRet != DEVICE_OK )
   {
-    try
-    {
-      Ports_ = new CPorts( vPortInterface, this );
-    }
-    catch ( std::exception& vException )
-    {
-      std::string vMessage( "Error loading the Ports. Caught Exception with message: " );
-      vMessage += vException.what();
-      LogMessage( vMessage );
-      return ERR_PORTS_INIT;
-    }
-  }
-  else
-  {
-    LogMessage( "Port interface pointer invalid" );
+    return vRet;
   }
 
   // Active Blanking
-  IALC_REV_ILEActiveBlankingManagement* vActiveBlanking = ILEWrapper_->GetILEActiveBlankingManagementInterface( ILEDevice_ );
-  if ( vActiveBlanking != nullptr )
+  vRet = InitializeActiveBlanking();
+  if ( vRet != DEVICE_OK )
   {
-    bool vActiveBlankingPresent = false;
-    if ( !vActiveBlanking->IsActiveBlankingManagementPresent( &vActiveBlankingPresent ) )
-    {
-      LogMessage( "Active Blanking IsActiveBlankingManagementPresent failed" );
-      return ERR_ACTIVEBLANKING_INIT;
-    }
-    if ( vActiveBlankingPresent )
-    {
-      try
-      {
-        ActiveBlanking_ = new CActiveBlanking( vActiveBlanking, this );
-      }
-      catch ( std::exception& vException )
-      {
-        std::string vMessage( "Error loading Active Blanking. Caught Exception with message: " );
-        vMessage += vException.what();
-        LogMessage( vMessage );
-        return ERR_ACTIVEBLANKING_INIT;
-      }
-    }
-  }
-  else
-  {
-    LogMessage( "Active Blanking interface pointer invalid" );
+    return vRet;
   }
 
   // Low Power Mode
-  if ( vLowPowerMode != nullptr )
+  vRet = InitializeLowPowerMode();
+  if ( vRet != DEVICE_OK )
   {
-    bool vLowPowerModePresent = false;
-    if ( !vLowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
-    {
-      LogMessage( "ILE Power IsLowPowerPresent failed" );
-      return ERR_LOWPOWERMODE_INIT;
-    }
-    if ( vLowPowerModePresent )
-    {
-      try
-      {
-        LowPowerMode_ = new CLowPowerMode( vLowPowerMode, this );
-      }
-      catch ( std::exception& vException )
-      {
-        std::string vMessage( "Error loading Low Power mode. Caught Exception with message: " );
-        vMessage += vException.what();
-        LogMessage( vMessage );
-        return ERR_LOWPOWERMODE_INIT;
-      }
-    }
-  }
-  else
-  {
-    LogMessage( "ILE Power interface pointer invalid" );
+    return vRet;
   }
 
   Initialized_ = true;
@@ -283,15 +267,17 @@ int CIntegratedLaserEngine::Initialize()
 
 int CIntegratedLaserEngine::Shutdown()
 {
-  if ( Initialized_ )
-  {
-    Initialized_ = false;
-    delete LowPowerMode_;
-    delete ActiveBlanking_;
-    delete Ports_;
-    delete Lasers_;
-    ILEWrapper_->DeleteILE( ILEDevice_ );
-  }
+  delete LowPowerMode_;
+  LowPowerMode_ = nullptr;
+  delete ActiveBlanking_;
+  ActiveBlanking_ = nullptr;
+  delete Ports_;
+  Ports_ = nullptr;
+  delete Lasers_;
+  Lasers_ = nullptr;
+  DeleteILE();
+  
+  Initialized_ = false;
   return DEVICE_OK;
 }
 
@@ -299,15 +285,19 @@ int CIntegratedLaserEngine::Shutdown()
 // Action interface
 ///////////////////////////////////////////////////////////////////////////////
 
-int CIntegratedLaserEngine::OnDeviceChange( MM::PropertyBase* Prop, MM::ActionType Act )
+int CIntegratedLaserEngine::OnDeviceChange( MM::PropertyBase* Prop, MM::ActionType Act, long DeviceIndex )
 {
+  if ( DeviceIndex >= DevicesNames_.size() )
+  {
+    return DEVICE_ERR;
+  }
   if ( Act == MM::BeforeGet )
   {
-    Prop->Set( DeviceName_.c_str() );    
+    Prop->Set( DevicesNames_[DeviceIndex].c_str() );    
   }
   else if ( Act == MM::AfterSet )
   {
-    Prop->Get( DeviceName_ );
+    Prop->Get( DevicesNames_[DeviceIndex] );
   }
   return DEVICE_OK;
 }
@@ -338,7 +328,7 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       // Reconnect the device
       try
       {
-        if ( !ILEWrapper_->CreateILE( &ILEDevice_, DeviceName_.c_str() ) )
+        if ( CreateILE() )
         {
           LogMessage( "CreateILE failed" );
           return DEVICE_ERR;
@@ -443,4 +433,199 @@ void CIntegratedLaserEngine::ActiveClassIVInterlock()
 void CIntegratedLaserEngine::UpdatePropertyUI( const char* PropertyName, const char* PropertyValue )
 {
   GetCoreCallback()->OnPropertyChanged( this, PropertyName, PropertyValue );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// SINGLE ILE
+///////////////////////////////////////////////////////////////////////////////
+
+CSingleILE::CSingleILE() :
+  CIntegratedLaserEngine( g_DeviceDescription, 1 )
+{
+
+}
+
+CSingleILE::~CSingleILE()
+{
+
+}
+
+std::string CSingleILE::GetDeviceName() const
+{
+  return g_DeviceName;
+}
+
+bool CSingleILE::CreateILE()
+{
+  bool vRet = false;
+  if ( DevicesNames_.size() > 0 )
+  {
+    vRet = ILEWrapper_->CreateILE( &ILEDevice_, DevicesNames_[0].c_str() );
+  }
+  return vRet;
+}
+
+void CSingleILE::DeleteILE()
+{
+  ILEWrapper_->DeleteILE( ILEDevice_ );
+  ILEDevice_ = nullptr;
+}
+
+int CSingleILE::InitializePorts()
+{
+  IALC_REV_Port* vPortInterface = ILEDevice_->GetPortInterface();
+  if ( vPortInterface != nullptr )
+  {
+    try
+    {
+      Ports_ = new CPorts( vPortInterface, this );
+    }
+    catch ( std::exception& vException )
+    {
+      std::string vMessage( "Error loading the Ports. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_PORTS_INIT;
+    }
+  }
+  else
+  {
+    LogMessage( "Port interface pointer invalid" );
+  }
+  return DEVICE_OK;
+}
+
+int CSingleILE::InitializeActiveBlanking()
+{
+  IALC_REV_ILEActiveBlankingManagement* vActiveBlanking = ILEWrapper_->GetILEActiveBlankingManagementInterface( ILEDevice_ );
+  if ( vActiveBlanking != nullptr )
+  {
+    bool vActiveBlankingPresent = false;
+    if ( !vActiveBlanking->IsActiveBlankingManagementPresent( &vActiveBlankingPresent ) )
+    {
+      LogMessage( "Active Blanking IsActiveBlankingManagementPresent failed" );
+      return ERR_ACTIVEBLANKING_INIT;
+    }
+    if ( vActiveBlankingPresent )
+    {
+      try
+      {
+        ActiveBlanking_ = new CActiveBlanking( vActiveBlanking, this );
+      }
+      catch ( std::exception& vException )
+      {
+        std::string vMessage( "Error loading Active Blanking. Caught Exception with message: " );
+        vMessage += vException.what();
+        LogMessage( vMessage );
+        return ERR_ACTIVEBLANKING_INIT;
+      }
+    }
+  }
+  else
+  {
+    LogMessage( "Active Blanking interface pointer invalid" );
+  }
+  return DEVICE_OK;
+}
+
+int CSingleILE::InitializeLowPowerMode()
+{
+  IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
+  if ( vLowPowerMode != nullptr )
+  {
+    bool vLowPowerModePresent = false;
+    if ( !vLowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
+    {
+      LogMessage( "ILE Power IsLowPowerPresent failed" );
+      return ERR_LOWPOWERMODE_INIT;
+    }
+    if ( vLowPowerModePresent )
+    {
+      try
+      {
+        LowPowerMode_ = new CLowPowerMode( vLowPowerMode, this );
+      }
+      catch ( std::exception& vException )
+      {
+        std::string vMessage( "Error loading Low Power mode. Caught Exception with message: " );
+        vMessage += vException.what();
+        LogMessage( vMessage );
+        return ERR_LOWPOWERMODE_INIT;
+      }
+    }
+  }
+  else
+  {
+    LogMessage( "ILE Power interface pointer invalid" );
+  }
+  return DEVICE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// DUAL ILE
+///////////////////////////////////////////////////////////////////////////////
+
+CDualILE::CDualILE() :
+  CIntegratedLaserEngine( g_DualDeviceDescription, 2 )
+{
+}
+
+CDualILE::~CDualILE()
+{
+}
+
+std::string CDualILE::GetDeviceName() const
+{
+  return g_DualDeviceName;
+}
+
+bool CDualILE::CreateILE()
+{
+  bool vRet = false;
+  if ( DevicesNames_.size() > 1 )
+  {
+    //TODO: need to handle ILE700 parameter properly
+    vRet = ILEWrapper_->CreateDualILE( &ILEDevice_, DevicesNames_[0].c_str(), DevicesNames_[1].c_str(), false );
+  }
+  return vRet;
+}
+
+void CDualILE::DeleteILE()
+{
+  ILEWrapper_->DeleteDualILE( ILEDevice_ );
+  ILEDevice_ = nullptr;
+}
+
+int CDualILE::InitializePorts()
+{
+  IALC_REV_Port* vPortInterface = ILEDevice_->GetPortInterface();
+  if ( vPortInterface != nullptr )
+  {
+    try
+    {
+      Ports_ = new CPorts( vPortInterface, this );
+    }
+    catch ( std::exception& vException )
+    {
+      std::string vMessage( "Error loading the Ports. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_PORTS_INIT;
+    }
+  }
+  else
+  {
+    LogMessage( "Port interface pointer invalid" );
+  }
+  return DEVICE_OK;
+}
+
+int CDualILE::InitializeActiveBlanking()
+{
+  return DEVICE_OK;
+}
+
+int CDualILE::InitializeLowPowerMode()
+{
+  return DEVICE_OK;
 }

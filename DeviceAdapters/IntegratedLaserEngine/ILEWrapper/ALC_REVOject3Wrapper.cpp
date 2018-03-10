@@ -16,17 +16,21 @@
 #include <exception>
 
 
-CALC_REVObject3Wrapper::CALC_REVObject3Wrapper( HMODULE DLL, const char* UnitID ) :
+CALC_REVObject3Wrapper::CALC_REVObject3Wrapper( HMODULE DLL, const char* UnitID1, const char* UnitID2, bool ILE700 ) :
   DLL_( DLL ),
   Create_ILE_REV3_( nullptr ),
   Delete_ILE_REV3_( nullptr ),
+  Create_DUALILE_REV3_( nullptr ),
+  Delete_DUALILE_REV3_( nullptr ),
   ALC_REV_ILEWrapper_( nullptr ),
   ALC_REV_Laser2Wrapper_( nullptr ),
   ALC_REV_PortWrapper_( nullptr ),
-  ALC_REVObject3_( nullptr )
+  ALC_REVObject3_( nullptr ),
+  UnitID1_( UnitID1 ),
+  UnitID2_( UnitID2 ),
+  ILE700_( ILE700 ),
+  IsDualILE_( !UnitID2_.empty() )
 {
-  UnitID_ = UnitID;
-
   Create_ILE_REV3_ = (TCreate_ILE_REV3)GetProcAddress( DLL_, "Create_ILE_REV3" );
   if( Create_ILE_REV3_ == nullptr )
   {
@@ -37,12 +41,34 @@ CALC_REVObject3Wrapper::CALC_REVObject3Wrapper( HMODULE DLL, const char* UnitID 
   {
     throw std::runtime_error( "GetProcAddress Delete_ILE_REV3 failed\n" );
   }
-
-  CILESDKLock vSDKLock;
-  bool vRet = Create_ILE_REV3_( &ALC_REVObject3_, UnitID );
-  if ( !vRet )
+  Create_DUALILE_REV3_ = (TCreate_DUALILE_REV3)GetProcAddress( DLL_, "Create_DUALILE_REV3" );
+  if ( Create_DUALILE_REV3_ == nullptr )
   {
-    throw std::runtime_error( "Create_ILE_REV3 failed" );
+    throw std::runtime_error( "GetProcAddress Create_DUALILE_REV3 failed\n" );
+  }
+  Delete_DUALILE_REV3_ = (TDelete_DUALILE_REV3)GetProcAddress( DLL_, "Delete_DUALILE_REV3" );
+  if ( Delete_DUALILE_REV3_ == nullptr )
+  {
+    throw std::runtime_error( "GetProcAddress Delete_DUALILE_REV3 failed\n" );
+  }
+
+  if ( !IsDualILE_ )
+  {
+    CILESDKLock vSDKLock;
+    bool vRet = Create_ILE_REV3_( &ALC_REVObject3_, UnitID1_.c_str() );
+    if ( !vRet )
+    {
+      throw std::runtime_error( "Create_ILE_REV3 failed" );
+    }
+  }
+  else
+  {
+    CILESDKLock vSDKLock;
+    bool vRet = Create_DUALILE_REV3_( &ALC_REVObject3_, UnitID1_.c_str(), UnitID2_.c_str(), ILE700_ );
+    if ( !vRet )
+    {
+      throw std::runtime_error( "Create_DUALILE_REV3 failed" );
+    }
   }
 }
 
@@ -52,7 +78,14 @@ CALC_REVObject3Wrapper::~CALC_REVObject3Wrapper()
   delete ALC_REV_Laser2Wrapper_;
   delete ALC_REV_PortWrapper_;
   CILESDKLock vSDKLock;
-  Delete_ILE_REV3_( ALC_REVObject3_ );
+  if ( !IsDualILE_ )
+  {
+    Delete_ILE_REV3_( ALC_REVObject3_ );
+  }
+  else
+  {
+    Delete_DUALILE_REV3_( ALC_REVObject3_ );
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

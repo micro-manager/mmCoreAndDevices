@@ -37,8 +37,8 @@ class CLasers;
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
 public:
-  CIntegratedLaserEngine();
-  ~CIntegratedLaserEngine();
+  CIntegratedLaserEngine( const std::string& Description, int NbDevices );
+  virtual ~CIntegratedLaserEngine();
 
   // MMDevice API
   int Initialize();
@@ -48,7 +48,7 @@ public:
   bool Busy();
 
   // Action interface
-  int OnDeviceChange( MM::PropertyBase* Prop, MM::ActionType Act );
+  int OnDeviceChange( MM::PropertyBase* Prop, MM::ActionType Act, long DeviceIndex );
   int OnResetDevice( MM::PropertyBase* Prop, MM::ActionType Act );
 
   // Shutter API
@@ -64,14 +64,16 @@ public:
   void ActiveClassIVInterlock();
   void UpdatePropertyUI( const char* PropertyName, const char* PropertyValue );
 
-private:   
+protected:
   IILEWrapperInterface* ILEWrapper_;
   IALC_REVObject3 *ILEDevice_;
-  IILEWrapperInterface::TDeviceList DeviceList_;
-  std::string DeviceName_;
+  std::vector<std::string> DevicesNames_;
   CPorts* Ports_;
   CActiveBlanking* ActiveBlanking_;
   CLowPowerMode* LowPowerMode_;
+
+private:   
+  IILEWrapperInterface::TDeviceList DeviceList_;
   CLasers* Lasers_;
   MM::PropertyBase* ResetDeviceProperty_;
 
@@ -83,7 +85,48 @@ private:
     assert( false );
     return *this;
   }
+
+  virtual std::string GetDeviceName() const = 0;
+  void CreateDeviceSelectionProperty( int DeviceID, int DeviceIndex );
+  virtual bool CreateILE() = 0;
+  virtual void DeleteILE() = 0;
+  virtual int InitializePorts() = 0;
+  virtual int InitializeActiveBlanking() = 0;
+  virtual int InitializeLowPowerMode() = 0;
 };
 
+class CSingleILE : public CIntegratedLaserEngine
+{
+public:
+  CSingleILE();
+  virtual ~CSingleILE();
+
+protected:
+
+private:
+  std::string GetDeviceName() const;
+  bool CreateILE();
+  void DeleteILE();
+  int InitializePorts();
+  int InitializeActiveBlanking();
+  int InitializeLowPowerMode();
+};
+
+class CDualILE : public CIntegratedLaserEngine
+{
+public:
+  CDualILE();
+  virtual ~CDualILE();
+  
+protected:
+
+private:
+  std::string GetDeviceName() const;
+  bool CreateILE();
+  void DeleteILE();
+  int InitializePorts();
+  int InitializeActiveBlanking();
+  int InitializeLowPowerMode();
+};
 
 #endif

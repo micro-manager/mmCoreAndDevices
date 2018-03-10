@@ -132,7 +132,17 @@ CLasers::~CLasers()
 
 std::string CLasers::BuildPropertyName( const std::string& BasePropertyName, int Wavelength )
 {
-  return "Laser " + std::to_string( Wavelength ) + "-" + BasePropertyName;
+  std::string vPropertyName = "Laser " + std::to_string( Wavelength ) + "-" + BasePropertyName;
+
+  int vIndex = 0;
+  char vValue[MM::MaxStrLength];
+  while ( MMILE_->GetProperty( vPropertyName.c_str(), vValue ) == DEVICE_OK )
+  {
+    // Property already exists, build a new name
+    vIndex++;
+    vPropertyName = "Laser " + std::to_string( Wavelength ) + "_" + std::to_string( vIndex ) + "-" + BasePropertyName;
+  }
+  return vPropertyName;
 }
 
 void CLasers::GenerateProperties()
