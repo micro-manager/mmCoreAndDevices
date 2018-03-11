@@ -187,6 +187,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ActiveBlanking.cpp" />
+    <ClCompile Include="DualILEPorts.cpp" />
     <ClCompile Include="ILEWrapper\ALC_REVOject3Wrapper.cpp" />
     <ClCompile Include="ILEWrapper\ALC_REV_ILEActiveBlankingManagementWrapper.cpp" />
     <ClCompile Include="ILEWrapper\ALC_REV_ILEPowerManagementWrapper.cpp" />
@@ -199,6 +200,7 @@
     <ClCompile Include="Lasers.cpp" />
     <ClCompile Include="LowPowerMode.cpp" />
     <ClCompile Include="Ports.cpp" />
+    <ClCompile Include="PortsConfiguration.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="IntegratedLaserEngine.h" />

@@ -115,12 +115,19 @@ private:
 class CDualILE : public CIntegratedLaserEngine
 {
 public:
-  CDualILE();
+  CDualILE( bool ILE700 );
   virtual ~CDualILE();
+
+  //Action interface
+  int OnPortsConfigurationChange( MM::PropertyBase* Prop, MM::ActionType Act );
+  typedef MM::Action<CDualILE> CPropertyAction;
   
 protected:
 
 private:
+  bool ILE700_;
+  std::string PortsConfiguration_;
+
   std::string GetDeviceName() const;
   bool CreateILE();
   void DeleteILE();

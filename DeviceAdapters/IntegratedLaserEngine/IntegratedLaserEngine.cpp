@@ -15,19 +15,28 @@
 #include "ActiveBlanking.h"
 #include "LowPowerMode.h"
 #include "Lasers.h"
+#include "PortsConfiguration.h"
 
 // Properties
 const char* const g_DeviceName = "Andor ILE";
 const char* const g_DualDeviceName = "Andor Dual ILE";
+const char* const g_Dual700DeviceName = "Andor Dual ILE 700";
 const char* const g_DeviceDescription = "Integrated Laser Engine";
 const char* const g_DualDeviceDescription = "Dual Integrated Laser Engine";
+const char* const g_Dual700DeviceDescription = "Dual Integrated Laser Engine 700";
 const char* const g_DeviceListProperty = "Device";
 const char* const g_ResetDeviceProperty = "Reset device connection";
+const char* const g_ILE700Property = "ILE 700 Device";
+const char* const g_PortsConfigurationProperty = "Ports configuration";
 
 // Property values
 const char* const g_Undefined = "Undefined";
 const char* const g_PropertyOn = "On";
 const char* const g_PropertyOff = "Off";
+const char* const g_PropertyYes = "Yes";
+const char* const g_PropertyNo = "No";
+const char* const g_PortConfigDragonfly = "Dragonfly";
+const char* const g_PortConfigTest = "Test";
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -38,6 +47,7 @@ MODULE_API void InitializeModuleData()
 {
   RegisterDevice( g_DeviceName, MM::ShutterDevice, g_DeviceDescription );
   RegisterDevice( g_DualDeviceName, MM::ShutterDevice, g_DualDeviceDescription );
+  RegisterDevice( g_Dual700DeviceName, MM::ShutterDevice, g_Dual700DeviceDescription );
 }
 
 MODULE_API MM::Device* CreateDevice(const char* DeviceName)
@@ -49,15 +59,22 @@ MODULE_API MM::Device* CreateDevice(const char* DeviceName)
 
   if ( ( strcmp( DeviceName, g_DeviceName ) == 0 ) )
   {
-    // create Controller
+    // Single ILE
     CSingleILE* vIntegratedLaserEngine = new CSingleILE();
     return vIntegratedLaserEngine;
   }
 
   if ( ( strcmp( DeviceName, g_DualDeviceName ) == 0 ) )
   {
-    // create Controller
-    CDualILE* vIntegratedLaserEngine = new CDualILE();
+    // Dual ILE
+    CDualILE* vIntegratedLaserEngine = new CDualILE( false );
+    return vIntegratedLaserEngine;
+  }
+
+  if ( ( strcmp( DeviceName, g_Dual700DeviceName ) == 0 ) )
+  {
+    // Dual ILE 700
+    CDualILE* vIntegratedLaserEngine = new CDualILE( true );
     return vIntegratedLaserEngine;
   }
 
@@ -157,11 +174,6 @@ void CIntegratedLaserEngine::CreateDeviceSelectionProperty( int DeviceID, int De
     ++vDeviceIt;
   }
   SetAllowedValues( vPropertyName.c_str(), vDevices );
-
-  if ( DeviceIndex >= DevicesNames_.size() )
-  {
-    DevicesNames_.reserve( DeviceIndex + 1 );
-  }
   DevicesNames_[DeviceIndex] = vInitialDevice;
 }
 
@@ -208,7 +220,7 @@ int CIntegratedLaserEngine::Initialize()
     return DEVICE_LOCALLY_DEFINED_ERROR;
   }
 
-  // Reset device
+  // Reset device property
   CPropertyAction* vAct = new CPropertyAction( this, &CIntegratedLaserEngine::OnResetDevice );
   CreateStringProperty( g_ResetDeviceProperty, g_PropertyOff, true, vAct );
   std::vector<std::string> vEnabledValues;
@@ -316,14 +328,13 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
     if ( vValue == g_PropertyOn )
     {
       // Disconnect from the ILE interface
-      Ports_->UpdateILEInterface( nullptr );
-      ActiveBlanking_->UpdateILEInterface( nullptr );
       LowPowerMode_->UpdateILEInterface( nullptr );
+      ActiveBlanking_->UpdateILEInterface( nullptr );
+      Ports_->UpdateILEInterface( nullptr );
       Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
 
       // Disconnect the device
-      ILEWrapper_->DeleteILE( ILEDevice_ );
-      ILEDevice_ = nullptr;
+      DeleteILE();
 
       // Reconnect the device
       try
@@ -350,10 +361,10 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
       IALC_REV_ILE* vILE = ILEDevice_->GetILEInterface();
 
+      Lasers_->UpdateILEInterface( vLaserInterface, vLowPowerMode, vILE );
       Ports_->UpdateILEInterface( vPortInterface );
       ActiveBlanking_->UpdateILEInterface( vActiveBlanking );
       LowPowerMode_->UpdateILEInterface( vLowPowerMode );
-      Lasers_->UpdateILEInterface( vLaserInterface, vLowPowerMode, vILE );
 
       Prop->Set( g_PropertyOff );
       MM::Property* pChildProperty = ( MM::Property* )Prop;
@@ -442,12 +453,10 @@ void CIntegratedLaserEngine::UpdatePropertyUI( const char* PropertyName, const c
 CSingleILE::CSingleILE() :
   CIntegratedLaserEngine( g_DeviceDescription, 1 )
 {
-
 }
 
 CSingleILE::~CSingleILE()
 {
-
 }
 
 std::string CSingleILE::GetDeviceName() const
@@ -565,9 +574,26 @@ int CSingleILE::InitializeLowPowerMode()
 // DUAL ILE
 ///////////////////////////////////////////////////////////////////////////////
 
-CDualILE::CDualILE() :
-  CIntegratedLaserEngine( g_DualDeviceDescription, 2 )
+CDualILE::CDualILE( bool ILE700 ) :
+  CIntegratedLaserEngine( ( ILE700 ? g_Dual700DeviceDescription : g_DualDeviceDescription ), 2 ), 
+  ILE700_( ILE700 ),
+  PortsConfiguration_( g_Undefined )
 {
+  // Create pre-initialization properties:
+  // -------------------------------------
+
+  // Ports configuration
+  std::vector<std::string> vValues;
+  std::vector<CPortsConfiguration>::const_iterator vPortsConfigurationIt = GetPortsConfigurationList().begin();
+  while ( vPortsConfigurationIt != GetPortsConfigurationList().end() )
+  {
+    vValues.push_back( vPortsConfigurationIt->GetName() );
+    ++vPortsConfigurationIt;
+  }
+  PortsConfiguration_ = vValues[0];
+  CPropertyAction* pAct = new CPropertyAction( this, &CDualILE::OnPortsConfigurationChange );
+  CreateStringProperty( g_PortsConfigurationProperty, PortsConfiguration_.c_str(), false, pAct, true );
+  SetAllowedValues( g_PortsConfigurationProperty, vValues );
 }
 
 CDualILE::~CDualILE()
@@ -576,7 +602,25 @@ CDualILE::~CDualILE()
 
 std::string CDualILE::GetDeviceName() const
 {
-  return g_DualDeviceName;
+  std::string vName = g_DualDeviceName;
+  if ( ILE700_ )
+  {
+    vName = g_Dual700DeviceName;
+  }
+  return vName;
+}
+
+int CDualILE::OnPortsConfigurationChange( MM::PropertyBase* Prop, MM::ActionType Act )
+{
+  if ( Act == MM::BeforeGet )
+  {
+    Prop->Set( PortsConfiguration_.c_str() );
+  }
+  else if ( Act == MM::AfterSet )
+  {
+    Prop->Get( PortsConfiguration_ );
+  }
+  return DEVICE_OK;
 }
 
 bool CDualILE::CreateILE()
@@ -584,8 +628,7 @@ bool CDualILE::CreateILE()
   bool vRet = false;
   if ( DevicesNames_.size() > 1 )
   {
-    //TODO: need to handle ILE700 parameter properly
-    vRet = ILEWrapper_->CreateDualILE( &ILEDevice_, DevicesNames_[0].c_str(), DevicesNames_[1].c_str(), false );
+    vRet = ILEWrapper_->CreateDualILE( &ILEDevice_, DevicesNames_[0].c_str(), DevicesNames_[1].c_str(), ILE700_ );
   }
   return vRet;
 }
