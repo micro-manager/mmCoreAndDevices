@@ -17,6 +17,7 @@
 #include "ALC_REVOject3Wrapper.h"
 #include "ALC_REV_ILEActiveBlankingManagementWrapper.h"
 #include "ALC_REV_ILEPowerManagementWrapper.h"
+#include "ALC_REV_ILE2Wrapper.h"
 #include "ILESDKLock.h"
 #include "../IntegratedLaserEngine.h"
 #include "../../../MMDevice/DeviceThreads.h"
@@ -74,7 +75,8 @@ CILEWrapper::CILEWrapper() :
   Create_ILE_Detection_( nullptr ),
   Delete_ILE_Detection_( nullptr ),
   GetILEActiveBlankingManagementInterface_( nullptr ),
-  GetILEPowerManagementInterface_( nullptr )
+  GetILEPowerManagementInterface_( nullptr ),
+  GetILEInterface2_( nullptr )
 {
 #ifdef _M_X64
   std::string libraryName = "AB_ALC_REV64.dll";
@@ -112,6 +114,12 @@ CILEWrapper::CILEWrapper() :
     throw std::runtime_error( "GetProcAddress GetILEPowerManagementInterface_ failed\n" );
   }
 
+  GetILEInterface2_ = (TGetILEInterface2)GetProcAddress( DLL_, "GetILEInterface2" );
+  if ( GetILEInterface2_ == nullptr )
+  {
+    throw std::runtime_error( "GetProcAddress GetILEInterface2_ failed\n" );
+  }
+
   Create_ILE_Detection_( &ILEDetection_ );
   if ( ILEDetection_ == nullptr )
   {
@@ -131,6 +139,12 @@ CILEWrapper::~CILEWrapper()
   while ( vPowerManagementIt != PowerManagementMap_.end() )
   {
     delete vPowerManagementIt->second;
+  }
+
+  TILE2Map::iterator vILE2It = ILE2Map_.begin();
+  while ( vILE2It != ILE2Map_.end() )
+  {
+    delete vILE2It->second;
   }
 
   if ( ILEDetection_ != nullptr )
@@ -156,7 +170,7 @@ void CILEWrapper::GetListOfDevices( TDeviceList& DeviceList )
   DeviceList.push_back( "DemoILE702" );
   DeviceList.push_back( "DemoILE703 " );
   DeviceList.push_back( "DemoILE704" );
-  for (int vDeviceIndex = 1; vDeviceIndex < vNumberDevices + 1; vDeviceIndex++ )
+  for (int vDeviceIndex = 0; vDeviceIndex < vNumberDevices; vDeviceIndex++ )
   {
     if ( ILEDetection_->GetSerialNumber( vDeviceIndex, vSerialNumber, 64 ) )
     {
@@ -228,7 +242,7 @@ IALC_REV_ILEActiveBlankingManagement* CILEWrapper::GetILEActiveBlankingManagemen
       if ( vActiveBlankingIt != ActiveBlankingManagementMap_.end() )
       {
         // Prevent creating a wrapper object every time this function is called
-        // We could assume that for a given instance of IALC_REVObject3 the same pointer to active blanking would alwasy be returned
+        // We could assume that for a given instance of IALC_REVObject3 the same pointer to active blanking would always be returned
         // But if that behaviour was to change in the DLL then a more optimised solution would break
         vActiveBlankingManagementWrapper = vActiveBlankingIt->second;
       }
@@ -260,7 +274,7 @@ IALC_REV_ILEPowerManagement* CILEWrapper::GetILEPowerManagementInterface( IALC_R
       if ( vPowerManagementIt != PowerManagementMap_.end() )
       {
         // Prevent creating a wrapper object every time this function is called
-        // We could assume that for a given instance of IALC_REVObject3 the same pointer to power management would alwasy be returned
+        // We could assume that for a given instance of IALC_REVObject3 the same pointer to power management would always be returned
         // But if that behaviour was to change in the DLL then a more optimised solution would break
         vPowerManagementWrapper = vPowerManagementIt->second;
       }
@@ -272,4 +286,36 @@ IALC_REV_ILEPowerManagement* CILEWrapper::GetILEPowerManagementInterface( IALC_R
     }
   }
   return vPowerManagementWrapper;
+}
+
+IALC_REV_ILE2* CILEWrapper::GetILEInterface2( IALC_REVObject3 *ILEDevice )
+{
+  CALC_REV_ILE2Wrapper* vILE2Wrapper = nullptr;
+  CALC_REVObject3Wrapper* vALC_REVObjectWrapper = dynamic_cast<CALC_REVObject3Wrapper*>( ILEDevice );
+  if ( vALC_REVObjectWrapper != nullptr )
+  {
+    IALC_REVObject3* vILEObject = vALC_REVObjectWrapper->GetILEObject();
+    IALC_REV_ILE2* vILE2 = nullptr;
+    {
+      CILESDKLock vSDKLock;
+      vILE2 = GetILEInterface2_( vILEObject );
+    }
+    if ( vILE2 != nullptr )
+    {
+      TILE2Map::iterator vILE2It = ILE2Map_.find( vILE2 );
+      if ( vILE2It != ILE2Map_.end() )
+      {
+        // Prevent creating a wrapper object every time this function is called
+        // We could assume that for a given instance of IALC_REVObject3 the same pointer to ILE Interface 2 would always be returned
+        // But if that behaviour was to change in the DLL then a more optimised solution would break
+        vILE2Wrapper = vILE2It->second;
+      }
+      else
+      {
+        vILE2Wrapper = new CALC_REV_ILE2Wrapper( vILE2 );
+        ILE2Map_[vILE2] = vILE2Wrapper;
+      }
+    }
+  }
+  return vILE2Wrapper;
 }

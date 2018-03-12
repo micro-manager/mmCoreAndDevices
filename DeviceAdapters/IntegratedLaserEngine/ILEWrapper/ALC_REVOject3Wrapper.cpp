@@ -72,19 +72,39 @@ CALC_REVObject3Wrapper::CALC_REVObject3Wrapper( HMODULE DLL, const char* UnitID1
   }
 }
 
+CALC_REVObject3Wrapper::CALC_REVObject3Wrapper( IALC_REVObject3* ALC_REVObject3 ):
+  ALC_REVObject3_( ALC_REVObject3 ), 
+  DLL_( nullptr ),
+  Create_ILE_REV3_( nullptr ),
+  Delete_ILE_REV3_( nullptr ),
+  Create_DUALILE_REV3_( nullptr ),
+  Delete_DUALILE_REV3_( nullptr ),
+  ALC_REV_ILEWrapper_( nullptr ),
+  ALC_REV_Laser2Wrapper_( nullptr ),
+  ALC_REV_PortWrapper_( nullptr ),
+  UnitID1_( "" ),
+  UnitID2_( "" ),
+  ILE700_( false ),
+  IsDualILE_( false )
+{
+}
+
 CALC_REVObject3Wrapper::~CALC_REVObject3Wrapper()
 {
   delete ALC_REV_ILEWrapper_;
   delete ALC_REV_Laser2Wrapper_;
   delete ALC_REV_PortWrapper_;
-  CILESDKLock vSDKLock;
-  if ( !IsDualILE_ )
+  if ( DLL_ != nullptr )
   {
-    Delete_ILE_REV3_( ALC_REVObject3_ );
-  }
-  else
-  {
-    Delete_DUALILE_REV3_( ALC_REVObject3_ );
+    CILESDKLock vSDKLock;
+    if ( !IsDualILE_ )
+    {
+      Delete_ILE_REV3_( ALC_REVObject3_ );
+    }
+    else
+    {
+      Delete_DUALILE_REV3_( ALC_REVObject3_ );
+    }
   }
 }
 

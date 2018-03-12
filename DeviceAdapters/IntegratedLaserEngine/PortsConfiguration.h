@@ -16,11 +16,12 @@ class CPortsConfiguration
 public:
   typedef std::map<std::string, std::vector<int>> TConfiguration;
   CPortsConfiguration(std::string Name, TConfiguration Configuration);
+  CPortsConfiguration( const CPortsConfiguration &Source );
   ~CPortsConfiguration();
 
   std::string GetName() const { return Name_; }
   std::vector<std::string> GetPortList() const;
-  void GetUnitPortsForMergedPort( std::string MergedPort, std::vector<int>* UnitPorts ) const;
+  void GetUnitPortsForMergedPort( const std::string& MergedPort, std::vector<int>* UnitPorts );
   std::string FindMergedPortForUnitPort( int UnitIndex, int PortIndex ) const;
 
 private:

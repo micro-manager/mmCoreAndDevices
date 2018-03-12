@@ -19,6 +19,7 @@ class IALC_REVObject3;
 class IALC_REV_ILEActiveBlankingManagement;
 class IALC_REV_ILEPowerManagement;
 class CIntegratedLaserEngine;
+class IALC_REV_ILE2;
 
 class IILEWrapperInterface
 {
@@ -33,6 +34,7 @@ public:
   virtual void DeleteDualILE( IALC_REVObject3 *ILEDevice ) = 0;
   virtual IALC_REV_ILEActiveBlankingManagement* GetILEActiveBlankingManagementInterface( IALC_REVObject3 *ILEDevice ) = 0;
   virtual IALC_REV_ILEPowerManagement* GetILEPowerManagementInterface( IALC_REVObject3 *ILEDevice ) = 0;
+  virtual IALC_REV_ILE2* GetILEInterface2( IALC_REVObject3 *ILEDevice ) = 0;
 };
 
 IILEWrapperInterface* LoadILEWrapper( CIntegratedLaserEngine* Caller);

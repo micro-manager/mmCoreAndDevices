@@ -7,26 +7,28 @@
 #include "DualILEPorts.h"
 #include "IntegratedLaserEngine.h"
 #include "ALC_REV.h"
+#include "ALC_REV_ILE2.h"
 #include "PortsConfiguration.h"
 #include <exception>
 
 const char* const g_PropertyName = "Output Port";
 
-CDualILEPorts::CDualILEPorts( IALC_REV_Port* Unit1PortInterface, IALC_REV_Port* Unit2PortInterface, CPortsConfiguration* PortsConfiguration, CIntegratedLaserEngine* MMILE ) :
-  Unit1PortInterface_( Unit1PortInterface ),
-  Unit2PortInterface_( Unit2PortInterface ),
+CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface, CPortsConfiguration* PortsConfiguration, CIntegratedLaserEngine* MMILE ) :
+  DualPortInterface_( DualPortInterface ),
+  ILE2Interface_( ILE2Interface ),
   PortsConfiguration_( PortsConfiguration ),
   MMILE_( MMILE ),
-  NbPorts_( 0 )
+  NbPortsUnit1_( 0 ),
+  NbPortsUnit2_( 0 )
 {
-  if ( Unit1PortInterface_ == nullptr )
+  if ( DualPortInterface_ == nullptr )
   {
-    throw std::logic_error( "CDualILEPorts: Pointer to the Port interface of Unit1 invalid" );
+    throw std::logic_error( "CDualILEPorts: Pointer to the dual Port interface invalid" );
   }
 
-  if ( Unit2PortInterface_ == nullptr )
+  if ( ILE2Interface_ == nullptr )
   {
-    throw std::logic_error( "CDualILEPorts: Pointer to the Port interface of Unit2 invalid" );
+    throw std::logic_error( "CDualILEPorts: Pointer to the ILE interface 2 invalid" );
   }
 
   if ( PortsConfiguration_ == nullptr )
@@ -34,8 +36,11 @@ CDualILEPorts::CDualILEPorts( IALC_REV_Port* Unit1PortInterface, IALC_REV_Port* 
     throw std::logic_error( "CDualILEPorts: Pointer to Port configuration invalid" );
   }
 
-  Unit1PortInterface_->InitializePort();
-  Unit2PortInterface_->InitializePort();
+  DualPortInterface_->InitializePort();
+  if ( !ILE2Interface_->GetNumberOfPorts( &NbPortsUnit1_, &NbPortsUnit2_ ) )
+  {
+    throw std::runtime_error( "CDualILEPorts: Get number of ports failed" );
+  }
 
   std::vector<std::string> vPortList = PortsConfiguration_->GetPortList();
 
@@ -60,7 +65,7 @@ int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   if ( Act == MM::AfterSet )
   {
-    if ( Unit1PortInterface_ == nullptr || Unit2PortInterface_ == nullptr )
+    if ( ILE2Interface_ == nullptr )
     {
       return ERR_DEVICE_NOT_CONNECTED;
     }
@@ -71,41 +76,41 @@ int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
     PortsConfiguration_->GetUnitPortsForMergedPort( vValue, &vPortIndices );
 
     if ( vPortIndices.size() >= 2 )
-    {
-      int Unit1PreviousPortIndex;
-      bool vPreviousPortRetrieved = Unit1PortInterface_->GetPortIndex( &Unit1PreviousPortIndex );
-      if ( Unit1PortInterface_->SetPortIndex( vPortIndices[0] ) )
+    {      
+      if ( vPortIndices[0] <= NbPortsUnit1_ && vPortIndices[1] <= NbPortsUnit2_ )
       {
-        if ( Unit2PortInterface_->SetPortIndex( vPortIndices[1] ) )
+        // Updating ports
+        if ( ILE2Interface_->SetPortIndex( vPortIndices[0], vPortIndices[1] ) )
         {
+          // Updating lasers
           MMILE_->CheckAndUpdateLasers();
         }
         else
         {
-          MMILE_->LogMMMessage( "Changing port of Unit2 to port " + vValue + " FAILED" );
-          if ( vPreviousPortRetrieved )
-          {
-            Unit1PortInterface_->SetPortIndex( Unit1PreviousPortIndex );
-          }
-          return DEVICE_ERR;
+          MMILE_->LogMMMessage( "Changing merged port to " + vValue + " [" + std::to_string( vPortIndices[0] ) + ", " + std::to_string( vPortIndices[1] ) + "] FAILED" );
+          return ERR_DUALPORTS_PORTCHANGEFAIL;
         }
       }
       else
       {
-        MMILE_->LogMMMessage( "Changing port of Unit1 to port " + vValue + " FAILED" );
-        return DEVICE_ERR;
+        std::string vMessage = "Changing merged port to " + vValue + " FAILED. ";
+        vMessage += "Number of ports [" + std::to_string( NbPortsUnit1_ ) + ", " + std::to_string( NbPortsUnit2_ ) + "] - ";
+        vMessage += "Requested ports [" + std::to_string( vPortIndices[0] ) + ", " + std::to_string( vPortIndices[1] ) + "]";
+        MMILE_->LogMMMessage( vMessage );
+        return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
       }
     }
     else
     {
-      return DEVICE_ERR;
+      MMILE_->LogMMMessage( "Changing merged port to " + vValue + " FAILED. The number of units in the configuration is invalid [" + std::to_string( vPortIndices.size() ) +  "]" );
+      return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
     }
   }
   return DEVICE_OK;
 }
 
-void CDualILEPorts::UpdateILEInterface( IALC_REV_Port* Unit1PortInterface, IALC_REV_Port* Unit2PortInterface )
+void CDualILEPorts::UpdateILEInterface( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface )
 {
-  Unit1PortInterface_ = Unit1PortInterface;
-  Unit2PortInterface_ = Unit2PortInterface;
+  DualPortInterface_ = DualPortInterface;
+  ILE2Interface_ = ILE2Interface;
 }

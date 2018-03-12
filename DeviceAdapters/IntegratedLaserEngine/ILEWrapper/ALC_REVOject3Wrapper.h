@@ -18,6 +18,7 @@ class CALC_REVObject3Wrapper : public IALC_REVObject3
 {
 public:
   CALC_REVObject3Wrapper( HMODULE DLL, const char* UnitID1, const char* UnitID2 = "", bool ILE700 = false );
+  CALC_REVObject3Wrapper( IALC_REVObject3* ALC_REVObject3 );
   ~CALC_REVObject3Wrapper();
 
   IALC_REVObject3* GetILEObject() { return ALC_REVObject3_; }

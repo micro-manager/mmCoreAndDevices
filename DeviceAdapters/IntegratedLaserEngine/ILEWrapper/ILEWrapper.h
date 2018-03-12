@@ -17,6 +17,7 @@
 
 class CALC_REV_ILEActiveBlankingManagementWrapper;
 class CALC_REV_ILEPowerManagementWrapper;
+class CALC_REV_ILE2Wrapper;
 
 class CILEWrapper : public IILEWrapperInterface
 {
@@ -33,6 +34,7 @@ public:
   void DeleteDualILE( IALC_REVObject3 *ILEDevice );
   IALC_REV_ILEActiveBlankingManagement* GetILEActiveBlankingManagementInterface( IALC_REVObject3 *ILEDevice );
   IALC_REV_ILEPowerManagement* GetILEPowerManagementInterface( IALC_REVObject3 *ILEDevice );
+  IALC_REV_ILE2* GetILEInterface2( IALC_REVObject3 *ILEDevice );
 
 private:
   HMODULE DLL_;
@@ -40,17 +42,21 @@ private:
   typedef bool( __stdcall *TDelete_ILE_Detection )( IILE_Detection *ILEDetection );
   typedef IALC_REV_ILEActiveBlankingManagement* ( __stdcall *TGetILEActiveBlankingManagementInterface )( IALC_REVObject3 *ALC_REVObject3 );
   typedef IALC_REV_ILEPowerManagement* ( __stdcall *TGetILEPowerManagementInterface )( IALC_REVObject3 *ALC_REVObject3 );
+  typedef IALC_REV_ILE2* ( __stdcall *TGetILEInterface2 )( IALC_REVObject3 *ILEDevice );
 
   TCreate_ILE_Detection Create_ILE_Detection_;
   TDelete_ILE_Detection Delete_ILE_Detection_;
   TGetILEActiveBlankingManagementInterface GetILEActiveBlankingManagementInterface_;
   TGetILEPowerManagementInterface GetILEPowerManagementInterface_;
+  TGetILEInterface2 GetILEInterface2_;
 
   IILE_Detection *ILEDetection_;
   typedef std::map<IALC_REV_ILEActiveBlankingManagement*, CALC_REV_ILEActiveBlankingManagementWrapper*> TActiveBlankingManagementMap;
   TActiveBlankingManagementMap ActiveBlankingManagementMap_;
   typedef std::map<IALC_REV_ILEPowerManagement*, CALC_REV_ILEPowerManagementWrapper*> TPowerManagementMap;
   TPowerManagementMap PowerManagementMap_;
+  typedef std::map<IALC_REV_ILE2*, CALC_REV_ILE2Wrapper*> TILE2Map;
+  TILE2Map ILE2Map_;
 };
 
 #endif
