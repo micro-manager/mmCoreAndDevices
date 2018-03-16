@@ -117,6 +117,11 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_INTERLOCK, "Interlock triggered" );
   SetErrorText( ERR_CLASSIV_INTERLOCK, "Class IV interlock triggered" );
   SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device reconnecting. Please wait." );
+  SetErrorText( ERR_ACTIVEBLANKING_SET, "Setting active blanking failed" );
+  SetErrorText( ERR_DEVICE_INDEXINVALID, "Device index invalid" );
+  SetErrorText( ERR_DEVICE_CONNECTIONFAILED, "Connection to the device failed" );
+  SetErrorText( ERR_LOWPOWERMODE_SET, "Setting low power mode failed" );
+  SetErrorText( ERR_PORTS_SET, "Setting port failed" );
 
   // Create pre-initialization properties:
   // -------------------------------------
@@ -294,7 +299,7 @@ int CIntegratedLaserEngine::OnDeviceChange( MM::PropertyBase* Prop, MM::ActionTy
 {
   if ( DeviceIndex >= DevicesNames_.size() )
   {
-    return DEVICE_ERR;
+    return ERR_DEVICE_INDEXINVALID;
   }
   if ( Act == MM::BeforeGet )
   {
@@ -333,7 +338,7 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
         if ( CreateILE() )
         {
           LogMessage( "CreateILE failed" );
-          return DEVICE_ERR;
+          return ERR_DEVICE_CONNECTIONFAILED;
         }
       }
       catch ( std::string& exs )
@@ -597,8 +602,6 @@ CDualILE::CDualILE( bool ILE700 ) :
   PortsConfiguration_( g_Undefined ),
   Ports_( nullptr )
 {
-  SetErrorText( ERR_DUALPORTS_PORT1CHANGEFAIL, "Changing port of unit1 failed." );
-  SetErrorText( ERR_DUALPORTS_PORT2CHANGEFAIL, "Changing port of unit2 failed." );
   SetErrorText( ERR_DUALPORTS_PORTCONFIGCORRUPTED, "Changing port failed. Port configuration is corrupted" );
   SetErrorText( ERR_DUALPORTS_PORTCHANGEFAIL, "Changing port failed." );
   
@@ -681,8 +684,6 @@ void CDualILE::ReconnectILEInterfaces()
   if ( vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
   {
     IALC_REV_Port* vDualPortInterface = ILEDevice_->GetPortInterface();
-    IALC_REV_Port* vUnit1PortInterface = vILEDevice1->GetPortInterface();
-    IALC_REV_Port* vUnit2PortInterface = vILEDevice2->GetPortInterface();
     Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
   }
 }
@@ -694,9 +695,7 @@ int CDualILE::InitializePorts()
   if ( vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
   {
     IALC_REV_Port* vDualPortInterface = ILEDevice_->GetPortInterface();
-    IALC_REV_Port* vUnit1PortInterface = vILEDevice1->GetPortInterface();
-    IALC_REV_Port* vUnit2PortInterface = vILEDevice2->GetPortInterface();
-    if ( vDualPortInterface!= nullptr && vUnit1PortInterface != nullptr && vUnit2PortInterface != nullptr )
+    if ( vDualPortInterface!= nullptr )
     {
       CPortsConfiguration *vPortsConfiguration = nullptr;
       std::vector<CPortsConfiguration>& vPortsConfigurationList = GetPortsConfigurationList();

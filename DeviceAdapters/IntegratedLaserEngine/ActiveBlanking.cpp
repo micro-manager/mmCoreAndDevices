@@ -116,7 +116,7 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
           {
             MMILE_->LogMMMessage( "Disabling Active Blanking for line " + std::to_string( vLineIndex ) + " FAILED" );
           }
-          return DEVICE_ERR;
+          return ERR_ACTIVEBLANKING_SET;
         }
       }
     }

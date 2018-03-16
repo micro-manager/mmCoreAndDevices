@@ -86,7 +86,7 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
     else
     {
       MMILE_->LogMMMessage( "Changing port to port " + vValue + " FAILED" );
-      return DEVICE_ERR;
+      return ERR_PORTS_SET;
     }
   }
   return DEVICE_OK;

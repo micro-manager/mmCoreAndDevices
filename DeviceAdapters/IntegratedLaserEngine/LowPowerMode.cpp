@@ -76,7 +76,7 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
     else
     {
       MMILE_->LogMMMessage( std::string( vEnabled ? "Enabling" : "Disabling" ) + " low power state FAILED" );
-      return DEVICE_ERR;
+      return ERR_LOWPOWERMODE_SET;
     }
   }
   return DEVICE_OK;
