@@ -147,7 +147,7 @@ CDragonfly::CDragonfly()
     string vComPortAddress;
     for ( int i = 1; i <= 64; i++ )
     {
-      vComPortBaseName = "COM" + to_string( i );
+      vComPortBaseName = "COM" + to_string( static_cast< long long >( i ) );
       vComPortAddress = "\\\\.\\" + vComPortBaseName;
       HANDLE hCom = CreateFile( vComPortAddress.c_str(),
         GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
@@ -302,7 +302,7 @@ int CDragonfly::Connect( const string& Port )
 {
   // Try connecting to the Dragonfly
   string vPort( "\\\\.\\" + Port );
-  ASDWrapper_->CreateASDLoader( vPort.c_str(), TASDType::ASD_DF, &ASDLoader_ );
+  ASDWrapper_->CreateASDLoader( vPort.c_str(), ASD_DF, &ASDLoader_ );
   if ( ASDLoader_ == nullptr )
   {
     string vMessage( "CreateASDLoader failed on port " + Port );
@@ -511,13 +511,13 @@ int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& F
       }
       else
       {
-        LogMessage( "Filter wheel " + to_string( WheelIndex ) + " ASD SDK pointer invalid" );
+        LogMessage( "Filter wheel " + to_string( static_cast< long long >( WheelIndex ) ) + " ASD SDK pointer invalid" );
         vErrorCode = ErrorCode;
       }
     }
     catch ( exception& vException )
     {
-      string vMessage( "Error loading the filter wheel " + to_string( WheelIndex ) + ". Caught Exception with message: " );
+      string vMessage( "Error loading the filter wheel " + to_string( static_cast< long long >( WheelIndex ) ) + ". Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
       vErrorCode = ErrorCode;
@@ -525,7 +525,7 @@ int CDragonfly::CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& F
   }
   else
   {
-    LogMessage( "Filter wheel " + to_string( WheelIndex ) + " not available", true );
+    LogMessage( "Filter wheel " + to_string( static_cast< long long >( WheelIndex ) ) + " not available", true );
   }
   return vErrorCode;
 }
@@ -692,13 +692,13 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
       }
       else
       {
-        LogMessage( "Lens " + to_string( LensIndex ) + " ASD SDK pointer invalid" );
+        LogMessage( "Lens " + to_string( static_cast< long long >( LensIndex ) ) + " ASD SDK pointer invalid" );
         vErrorCode = ERR_LENS_INIT;
       }
     }
     catch ( exception& vException )
     {
-      string vMessage( "Error loading the Lens " + to_string( LensIndex ) + ". Caught Exception with message: " );
+      string vMessage( "Error loading the Lens " + to_string( static_cast< long long >( LensIndex ) ) + ". Caught Exception with message: " );
       vMessage += vException.what();
       LogMessage( vMessage );
       vErrorCode = ERR_LENS_INIT;
@@ -706,7 +706,7 @@ int CDragonfly::CreateLens( IASDInterface2* ASDInterface, int LensIndex )
   }
   else
   {
-    LogMessage( "Lens " + to_string( LensIndex ) + " not available", true );
+    LogMessage( "Lens " + to_string( static_cast< long long >( LensIndex ) ) + " not available", true );
   }
   return vErrorCode;
 }

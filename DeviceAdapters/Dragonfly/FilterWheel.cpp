@@ -20,7 +20,7 @@ CFilterWheel::CFilterWheel( TWheelIndex WheelIndex, IFilterWheelInterface* Filte
   DragonflyStatus_( DragonflyStatus ),
   ConfigFileHandler_( ConfigFileHandler ),
   MMDragonfly_( MMDragonfly ),
-  ComponentName_( "Filter Wheel " + to_string( WheelIndex ) ),
+  ComponentName_( "Filter Wheel " + to_string( static_cast< long long >( WheelIndex ) ) ),
   FilterModeProperty_( ComponentName_ + " Mode" ),
   RFIDStatusProperty_( ComponentName_ + " RFID Status")
 {
@@ -177,7 +177,7 @@ int CFilterWheel::OnModeChange( MM::PropertyBase* Prop, MM::ActionType Act )
     }
     else
     {
-      MMDragonfly_->LogComponentMessage( "Failed to set Filter wheel mode for wheel " + to_string( WheelIndex_ ) + " [" + vNewMode + "]" );
+      MMDragonfly_->LogComponentMessage( "Failed to set Filter wheel mode for wheel " + to_string( static_cast< long long >( WheelIndex_ ) ) + " [" + vNewMode + "]" );
       vRet = DEVICE_CAN_NOT_SET_PROPERTY;
     }
   }
@@ -197,7 +197,7 @@ const char* CFilterWheel::GetStringFromMode( TFilterWheelMode Mode ) const
   case FWMUnknown:
     return g_UnknownMode;
   default:
-    MMDragonfly_->LogComponentMessage( "Undefined filter wheel mode [" + to_string( Mode ) + "] retrieved from device for " + ComponentName_ );
+    MMDragonfly_->LogComponentMessage( "Undefined filter wheel mode [" + to_string( static_cast< long long >( Mode ) ) + "] retrieved from device for " + ComponentName_ );
     return g_UnknownMode;
   }
 }

@@ -121,7 +121,7 @@ bool CFilterWheelProperty::RetrievePositionsWithoutDescriptions()
   {
     for ( unsigned int vIndex = vMinValue; vIndex <= vMaxValue; vIndex++ )
     {
-      string vPositionName = to_string( vIndex ) + " - Unknown";
+      string vPositionName = to_string( static_cast< long long >( vIndex ) ) + " - Unknown";
       PositionNames_[vIndex] = vPositionName;
     }
 
@@ -160,7 +160,7 @@ int CFilterWheelProperty::OnPositionChange( MM::PropertyBase* Prop, MM::ActionTy
       // Update device position
       if ( !FilterWheelDevice_->SetPosition( vIt->first ) )
       {
-        MMDragonfly_->LogComponentMessage( "Failed to set position for property " + ComponentName_ + " [" + to_string( vIt->first ) + "]" );
+        MMDragonfly_->LogComponentMessage( "Failed to set position for property " + ComponentName_ + " [" + to_string( static_cast< long long >( vIt->first ) ) + "]" );
         vRet = DEVICE_CAN_NOT_SET_PROPERTY;
       }
     }
@@ -188,7 +188,7 @@ bool CFilterWheelProperty::SetPropertyValueFromDevicePosition( MM::PropertyBase*
     }
     else
     {
-      MMDragonfly_->LogComponentMessage( "Current " + ComponentName_ + " position invalid [ " + to_string(vPosition) + " ]" );
+      MMDragonfly_->LogComponentMessage( "Current " + ComponentName_ + " position invalid [ " + to_string( static_cast< long long >( vPosition ) ) + " ]" );
     }
   }
   else

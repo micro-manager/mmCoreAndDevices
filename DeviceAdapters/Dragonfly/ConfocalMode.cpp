@@ -73,7 +73,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
 
   if ( ConfocalModeInterface_->IsConfocalModeAvailable( bfmTIRF ) )
   {
-    TDevicePosition vPosition{ bfmTIRF, 0 };
+    TDevicePosition vPosition = { bfmTIRF, 0 };
     PositionNameMap_[g_TIRF] = vPosition;
     if ( vCurrentConfocalMode == bfmTIRF )
     {
@@ -87,7 +87,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
     int vPinHoleSize;
     if ( ConfocalModeInterface_->GetPinHoleSize_um( bfmConfocalHC, &vPinHoleSize ) )
     {
-      ConfocalHCName_ = string( g_ConfocalBaseName ) + " " + to_string( vPinHoleSize ) + "mm";
+      ConfocalHCName_ = string( g_ConfocalBaseName ) + " " + to_string( static_cast< long long >( vPinHoleSize ) ) + "mm";
     }
     AddValuesForConfocalMode( bfmConfocalHC, ConfocalHCName_, vPowerDensityPositionNames );
     if ( vCurrentConfocalMode == bfmConfocalHC )
@@ -102,7 +102,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
     int vPinHoleSize;
     if ( ConfocalModeInterface_->GetPinHoleSize_um( bfmConfocalHS, &vPinHoleSize ) )
     {
-      ConfocalHSName_ = string( g_ConfocalBaseName ) + " " + to_string( vPinHoleSize ) + "mm";
+      ConfocalHSName_ = string( g_ConfocalBaseName ) + " " + to_string( static_cast< long long >( vPinHoleSize ) ) + "mm";
     }
     AddValuesForConfocalMode( bfmConfocalHS, ConfocalHSName_, vPowerDensityPositionNames );
     if ( vCurrentConfocalMode == bfmConfocalHS )
@@ -114,13 +114,13 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, II
   // Reset the confocal mode and power density to their initial value since we modified them
   if ( SetDeviceConfocalMode( vCurrentConfocalMode ) != DEVICE_OK )
   {
-    MMDragonfly_->LogComponentMessage( "Failed to set Imaging mode position [" + to_string( vCurrentConfocalMode ) + "]" );
+    MMDragonfly_->LogComponentMessage( "Failed to set Imaging mode position [" + to_string( static_cast< long long >( vCurrentConfocalMode ) ) + "]" );
   }
   if ( IllLensInterface_ != nullptr )
   {
     if ( !IllLensInterface_->SetPosition( vCurrentPowerDensityPosition ) )
     {
-      MMDragonfly_->LogComponentMessage( "Failed to set Power density position [" + to_string( vCurrentPowerDensityPosition ) + "]" );
+      MMDragonfly_->LogComponentMessage( "Failed to set Power density position [" + to_string( static_cast< long long >( vCurrentPowerDensityPosition ) ) + "]" );
     }
   }
 
@@ -170,7 +170,7 @@ void CConfocalMode::AddValuesForConfocalMode( TConfocalMode ConfocalMode, const 
 {
   if ( IllLensInterface_ == nullptr )
   {
-    TDevicePosition vPosition{ ConfocalMode, 0 };
+    TDevicePosition vPosition = { ConfocalMode, 0 };
     PositionNameMap_[ConfocalModeBaseName] = vPosition;
     return;
   }
@@ -220,7 +220,7 @@ void CConfocalMode::AddValuesForConfocalMode( TConfocalMode ConfocalMode, const 
   }  
   else
   {
-    throw runtime_error( "Failed to set Imaging mode position [" + to_string( ConfocalMode ) + "]" );
+    throw runtime_error( "Failed to set Imaging mode position [" + to_string( static_cast< long long >( ConfocalMode ) ) + "]" );
   }
 #endif
 }
@@ -232,7 +232,7 @@ string CConfocalMode::BuildPropertyValueFromDeviceValue( const string& ConfocalM
 
 void CConfocalMode::AddValue( TConfocalMode ConfocalMode, const string& ConfocalModeBaseName, unsigned int PowerDensity, const string& PowerDensityName )
 {
-  TDevicePosition vPosition{ ConfocalMode, PowerDensity };
+  TDevicePosition vPosition = { ConfocalMode, PowerDensity };
   string vPropertyValue = BuildPropertyValueFromDeviceValue( ConfocalModeBaseName, PowerDensityName );
   PositionNameMap_[vPropertyValue] = vPosition;
 }
@@ -248,7 +248,7 @@ int CConfocalMode::SetDeviceConfocalMode( TConfocalMode ConfocalMode )
   case bfmConfocalHC: vDeviceSuccess = ConfocalModeInterface_->ModeConfocalHC(); break;
   case bfmConfocalHS: vDeviceSuccess = ConfocalModeInterface_->ModeConfocalHS(); break;
   default:            
-    MMDragonfly_->LogComponentMessage( "Invalid Imaging mode [" + to_string( ConfocalMode ) + "]" ); 
+    MMDragonfly_->LogComponentMessage( "Invalid Imaging mode [" + to_string( static_cast< long long >( ConfocalMode ) ) + "]" );
     vRet = DEVICE_INVALID_PROPERTY_VALUE; 
     break;
   }

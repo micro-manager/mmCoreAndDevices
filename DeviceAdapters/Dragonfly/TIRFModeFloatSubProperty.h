@@ -47,7 +47,7 @@ public:
   {
     return TIRFInterface_->SetObliqueAngle_mdeg( (int)(Value*1000) );
   }
-  ETIRFMode Mode() const { return ETIRFMode::HiLoObliqueAngle; }
+  ETIRFMode Mode() const { return HiLoObliqueAngle; }
 private:
   ITIRFInterface* TIRFInterface_;
 };

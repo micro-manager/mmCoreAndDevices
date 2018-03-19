@@ -130,7 +130,7 @@ void CConfigFileHandler::SaveConfig()
   {
     if ( !WritePrivateProfileString( g_SectionName, vConfigIt->first.c_str(), vConfigIt->second.c_str(), FileName_.c_str() ) )
     {
-      MMDragonfly_->LogComponentMessage( "Failed to write data to Dragonfly ini file. Error returned: " + to_string( GetLastError() ) );
+      MMDragonfly_->LogComponentMessage( "Failed to write data to Dragonfly ini file. Error returned: " + to_string( static_cast< long long >( GetLastError() ) ) );
     }
     ++vConfigIt;
   }

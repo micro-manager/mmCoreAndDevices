@@ -13,7 +13,7 @@ CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* Devic
   PropertyName_( PropertyName ),
   MMProp_( nullptr ),
   BufferedUserSelectionValue_( 0.f ),
-  SelectedTIRFMode_( ETIRFMode::UnknownTIRFMode )
+  SelectedTIRFMode_( UnknownTIRFMode )
 {
   float vMin, vMax, vValue = 0;
   bool vValueRetrieved = DeviceWrapper_->GetLimits( &vMin, &vMax );
@@ -42,7 +42,7 @@ CTIRFModeFloatSubProperty::CTIRFModeFloatSubProperty( CFloatDeviceWrapper* Devic
     {
       throw std::runtime_error( "Failed to retrieve the current value for " + PropertyName_ );
     }
-    ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vValue ) );
+    ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( static_cast< long long >( vValue ) ) );
   }
   BufferedUserSelectionValue_ = vValue;
 
@@ -86,7 +86,7 @@ void CTIRFModeFloatSubProperty::SetBufferedUserSelectionValue( float NewValue )
 {
   BufferedUserSelectionValue_ = NewValue;
   // Save the new value to the config file
-  ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( BufferedUserSelectionValue_ ) );
+  ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( static_cast< long long >( BufferedUserSelectionValue_ ) ) );
 }
 
 int CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float RequestedValue )
@@ -102,7 +102,7 @@ int CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float Req
       {
         // Failed to set the device. Best is to refresh the UI with the device's current value.
         vRet = DEVICE_CAN_NOT_SET_PROPERTY;
-        MMDragonfly_->LogComponentMessage( "Failed to set " + PropertyName_ + " position [" + to_string( RequestedValue ) + "]" );
+        MMDragonfly_->LogComponentMessage( "Failed to set " + PropertyName_ + " position [" + to_string( static_cast< long long >( RequestedValue ) ) + "]" );
         if ( SetPropertyValueFromDeviceValue( Prop ) == DEVICE_OK )
         {
           double vNewValue;
@@ -181,7 +181,7 @@ void CTIRFModeFloatSubProperty::ModeSelected( ETIRFMode SelectedTIRFMode )
     }
     else
     {
-      MMDragonfly_->SetProperty( PropertyName_.c_str(), to_string( BufferedUserSelectionValue_ ).c_str() );
+      MMDragonfly_->SetProperty( PropertyName_.c_str(), to_string( static_cast< long long >( BufferedUserSelectionValue_ ) ).c_str() );
     }
   }
 }

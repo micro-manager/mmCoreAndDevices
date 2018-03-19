@@ -78,7 +78,7 @@ bool CSuperRes::RetrievePositions()
       }
       else
       {
-        vPositionName = "Undefined Position " + to_string( vIndex );
+        vPositionName = "Undefined Position " + to_string( static_cast< long long >( vIndex ) );
       }
 
       PositionNames_[vIndex] = vPositionName;
@@ -115,7 +115,7 @@ int CSuperRes::OnPositionChange( MM::PropertyBase* Prop, MM::ActionType Act )
       // Update device position
       if ( !SuperResInterface_->SetPosition( vIt->first ) )
       {
-        MMDragonfly_->LogComponentMessage( "Failed to set Super Resolution position [" + to_string( vIt->first ) + "]" );
+        MMDragonfly_->LogComponentMessage( "Failed to set Super Resolution position [" + to_string( static_cast< long long >( vIt->first ) ) + "]" );
         vRet = DEVICE_CAN_NOT_SET_PROPERTY;
       }
     }
@@ -143,7 +143,7 @@ int CSuperRes::SetPropertyValueFromDevicePosition( MM::PropertyBase* Prop )
     }
     else
     {
-      MMDragonfly_->LogComponentMessage( "Current Super Resolution position invalid [ " + to_string(vPosition) + " ]" );
+      MMDragonfly_->LogComponentMessage( "Current Super Resolution position invalid [ " + to_string( static_cast< long long >( vPosition ) ) + " ]" );
       vRet = DEVICE_UNKNOWN_POSITION;
     }
   }

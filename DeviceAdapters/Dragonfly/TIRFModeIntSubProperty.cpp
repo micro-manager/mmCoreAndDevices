@@ -15,7 +15,7 @@ CTIRFModeIntSubProperty::CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapp
   MMProp_( nullptr ),
   BufferedUserSelectionValue_( 0 ),
   BufferedUIValue_( 0 ),
-  SelectedTIRFMode_( ETIRFMode::UnknownTIRFMode ),
+  SelectedTIRFMode_( UnknownTIRFMode ),
   SetPropertyValueFromDeviceOnce_( false )
 {
   int vMin, vMax, vValue = 0;
@@ -45,7 +45,7 @@ CTIRFModeIntSubProperty::CTIRFModeIntSubProperty( CIntDeviceWrapper* DeviceWrapp
     {
       throw std::runtime_error( "Failed to retrieve the current value for " + PropertyName_ );
     }
-    ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( vValue ) );
+    ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( static_cast< long long >( vValue ) ) );
   }
   BufferedUserSelectionValue_ = vValue;
   BufferedUIValue_ = vValue;
@@ -87,7 +87,7 @@ int CTIRFModeIntSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType A
       // The current mode is not selected, backup the request
       // The device will be updated with the user request next time the mode is selected
       SetBufferedUserSelectionValue( (int)vRequestedValue );
-      if ( SelectedTIRFMode_ == ETIRFMode::CriticalAngle && DeviceWrapper_->Mode() == ETIRFMode::Penetration )
+      if ( SelectedTIRFMode_ == CriticalAngle && DeviceWrapper_->Mode() == Penetration )
       {
         // Special case for when Critical Angle is selected and the Penetration is changed
         // Since the user is really not supposed to do this we prefer reset the UI to prevent confusions
@@ -108,7 +108,7 @@ void CTIRFModeIntSubProperty::SetBufferedUserSelectionValue( int NewValue )
 {
   BufferedUserSelectionValue_ = NewValue;
   // Save the new value to the config file
-  ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( BufferedUserSelectionValue_ ) );
+  ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( static_cast< long long >( BufferedUserSelectionValue_ ) ) );
 }
 
 int CTIRFModeIntSubProperty::SetDeviceValue( MM::PropertyBase* Prop, int RequestedValue )
@@ -124,7 +124,7 @@ int CTIRFModeIntSubProperty::SetDeviceValue( MM::PropertyBase* Prop, int Request
       {
         // Failed to set the device. Best is to refresh the UI with the device's current value.
         vRet = DEVICE_CAN_NOT_SET_PROPERTY;
-        MMDragonfly_->LogComponentMessage( "Failed to set " + PropertyName_ + " position [" + to_string( RequestedValue ) + "]" );
+        MMDragonfly_->LogComponentMessage( "Failed to set " + PropertyName_ + " position [" + to_string( static_cast< long long >( RequestedValue ) ) + "]" );
         if ( SetPropertyValueFromDeviceValue( Prop ) == DEVICE_OK )
         {
           long vNewValue;
@@ -204,12 +204,12 @@ void CTIRFModeIntSubProperty::ModeSelected( ETIRFMode SelectedTIRFMode )
     }
     else
     {
-      MMDragonfly_->SetProperty( PropertyName_.c_str(), to_string( BufferedUserSelectionValue_ ).c_str() ); 
+      MMDragonfly_->SetProperty( PropertyName_.c_str(), to_string( static_cast< long long >( BufferedUserSelectionValue_ ) ).c_str() );
     }
   }
   else
   {
-    if ( SelectedTIRFMode_ == ETIRFMode::CriticalAngle && DeviceWrapper_->Mode() == ETIRFMode::Penetration )
+    if ( SelectedTIRFMode_ == CriticalAngle && DeviceWrapper_->Mode() == Penetration )
     {
       // Critical Angle has just been selected, get the new value from the device
       if ( MMProp_ )

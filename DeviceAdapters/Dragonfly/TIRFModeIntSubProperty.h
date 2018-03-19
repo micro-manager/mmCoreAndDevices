@@ -40,7 +40,7 @@ public:
   {
     return TIRFInterface_->SetPenetration_nm( Value );
   }
-  ETIRFMode Mode() const { return ETIRFMode::Penetration; }
+  ETIRFMode Mode() const { return Penetration; }
 private:
   ITIRFInterface* TIRFInterface_;
 };
@@ -61,7 +61,7 @@ public:
   {
     return TIRFInterface_->SetOffset( Value );
   }
-  ETIRFMode Mode() const { return ETIRFMode::CriticalAngle; }
+  ETIRFMode Mode() const { return CriticalAngle; }
 private:
   ITIRFInterface* TIRFInterface_;
 };

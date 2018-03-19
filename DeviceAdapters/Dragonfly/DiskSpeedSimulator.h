@@ -6,7 +6,7 @@
 #ifndef _DISKSPEEDSIMULATOR_H_
 #define _DISKSPEEDSIMULATOR_H_
 
-#include <mutex>
+#include "boost\thread.hpp"
 
 class IDiskInterface2;
 class CDragonfly;
@@ -25,7 +25,7 @@ private:
   int RequestedSpeed_;
   int TargetSpeed_;
   int ErrorRange_;
-  std::mutex Mutex_;
+  boost::mutex Mutex_;
 
   void UpdateSpeed();
 };

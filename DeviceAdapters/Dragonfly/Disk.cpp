@@ -177,8 +177,8 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
           if ( DiskSimulator_.SetSpeed( vRequestedSpeed ) )
           //if ( DiskInterface_->SetSpeed( vRequestedSpeed ) )
           {
-            ConfigFileHandler_->SavePropertyValue( g_DiskSpeedPropertyName, to_string( vRequestedSpeed ) );
-            lock_guard<mutex> lock( DiskStatusMutex_ );
+            ConfigFileHandler_->SavePropertyValue( g_DiskSpeedPropertyName, to_string( static_cast< long long >( vRequestedSpeed ) ) );
+            boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
             DiskStatus_->ChangeSpeed( vRequestedSpeed );
           }
           else
@@ -220,7 +220,7 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     {
       if ( DiskInterface_->Start() )
       {
-        lock_guard<mutex> lock( DiskStatusMutex_ );
+        boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
         DiskStatus_->Start();
       }
       else
@@ -233,7 +233,7 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     {
       if ( DiskInterface_->Stop() )
       {
-        lock_guard<mutex> lock( DiskStatusMutex_ );
+        boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
         DiskStatus_->Stop();
       }
       else
@@ -257,7 +257,7 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
       // Update speed
       string vNewPropertyValue;
       {
-        lock_guard<mutex> lock( DiskStatusMutex_ );
+        boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
         bool vStateChanged = SpeedMonitorStateChangeObserver_->HasBeenNotified();
         static unsigned int vTick = 0;
         vTick = ( vTick == 5 ? 0 : vTick + 1 );
@@ -265,14 +265,14 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
         {
           unsigned int vDeviceSpeed = DiskStatus_->GetCurrentSpeed();
           Prop->Set( (long)vDeviceSpeed );
-          vNewPropertyValue = to_string( vDeviceSpeed );
+          vNewPropertyValue = to_string( static_cast< long long >( vDeviceSpeed ) );
         }
         else if ( vStateChanged && DiskStatus_->IsAtSpeed() )
         {
           vTick = 0;
           unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
           Prop->Set( (long)vRequestedSpeed );
-          vNewPropertyValue = to_string( vRequestedSpeed );
+          vNewPropertyValue = to_string( static_cast< long long >( vRequestedSpeed ) );
         }
       }
       if ( !vNewPropertyValue.empty() )
@@ -293,7 +293,7 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
       {
         string vNewPropertyValue;
         {
-          lock_guard<mutex> lock( DiskStatusMutex_ );
+          boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
           if ( DiskStatus_->IsChangingSpeed() || DiskStatus_->IsStopping() )
           {
             Prop->Set( g_DiskStatusChangingSpeed );
@@ -323,7 +323,7 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
       {
         string vNewPropertyValue;
         {
-          lock_guard<mutex> lock( DiskStatusMutex_ );
+          boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
           if ( DiskStatus_->IsStopping() )
           {
             Prop->Set( g_DiskStatusUndefined );
@@ -359,7 +359,7 @@ double CDisk::CalculateFrameScanTime(unsigned int Speed, unsigned int ScansPerRe
 // Disk status monitoring thread
 ///////////////////////////////////////////////////////////////////////////////
 
-CDiskStatusMonitor::CDiskStatusMonitor( CDragonfly* MMDragonfly, IDiskStatus* DiskStatus, mutex& DiskStatusMutex )
+CDiskStatusMonitor::CDiskStatusMonitor( CDragonfly* MMDragonfly, IDiskStatus* DiskStatus, boost::mutex& DiskStatusMutex )
   :MMDragonfly_( MMDragonfly ),
   DiskStatus_( DiskStatus ),
   DiskStatusMutex_( DiskStatusMutex ),
@@ -378,7 +378,7 @@ int CDiskStatusMonitor::svc()
   while ( KeepRunning_ )
   {
     {
-      lock_guard<mutex> lock( DiskStatusMutex_ );
+      boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
       DiskStatus_->UpdateFromDevice();
     }
     MMDragonfly_->UpdateProperty( g_DiskSpeedMonitorPropertyName );

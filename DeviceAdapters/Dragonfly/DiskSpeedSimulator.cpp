@@ -7,7 +7,7 @@ using namespace std;
 class MutexHandler
 {
 public:
-  MutexHandler( mutex& Mutex )
+  MutexHandler( boost::mutex& Mutex )
     : Mutex_( Mutex )
   {
     Mutex_.lock();
@@ -17,7 +17,7 @@ public:
     Mutex_.unlock();
   }
 private:
-  mutex& Mutex_;
+  boost::mutex& Mutex_;
 };
 
 CDiskSimulator::CDiskSimulator( IDiskInterface2* DiskInterface, CDragonfly* MMDragonfly )

@@ -22,12 +22,12 @@ bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* Filte
         if ( AddIndexToPositionNames )
         {
           char vIndexString[7];
-          snprintf( vIndexString, 7, "%2d", vIndex );
+          sprintf( vIndexString, "%2d", vIndex );
           vPositionName += vIndexString + string( " - " );
         }
         if ( FilterSet->GetFilterDescription( vIndex, vDescription, vStringLength ) == false )
         {
-          vPositionName += UndefinedPositionBase_ + " " + to_string(vUndefinedIndex);
+          vPositionName += UndefinedPositionBase_ + " " + to_string( static_cast< long long >( vUndefinedIndex ) );
           vUndefinedIndex++;
         }
         else
@@ -47,7 +47,7 @@ void CPositionComponentHelper::RetrievePositionsWithoutDescriptions( unsigned in
 {
   for ( unsigned int vIndex = MinValue; vIndex <= MaxValue; vIndex++ )
   {
-    string vPositionName = UndefinedPositionBase_ + " " + to_string( vIndex );
+    string vPositionName = UndefinedPositionBase_ + " " + to_string( static_cast< long long >( vIndex ) );
     PositionNames[vIndex] = vPositionName;
   }
 }

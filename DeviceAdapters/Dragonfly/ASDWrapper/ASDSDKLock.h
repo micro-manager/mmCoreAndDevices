@@ -6,7 +6,7 @@
 #ifndef _ASDSDKLOCK_H_
 #define _ASDSDKLOCK_H_
 
-#include <mutex>
+#include "boost\thread.hpp"
 
 class CASDSDKLock
 {
@@ -15,6 +15,6 @@ public:
   ~CASDSDKLock();
 
 private:
-  static std::timed_mutex gsSDKMutex;
+  static boost::timed_mutex gsSDKMutex;
 };
 #endif

@@ -120,7 +120,7 @@ int IPositionComponentInterface::OnPositionChange( MM::PropertyBase* Prop, MM::A
       // Update device position
       if ( !SetPosition( vIt->first ) )
       {
-        MMDragonfly_->LogComponentMessage( "Failed to set the position for property " + PropertyName_ + " [" + to_string( vIt->first ) + "]" );
+        MMDragonfly_->LogComponentMessage( "Failed to set the position for property " + PropertyName_ + " [" + to_string( static_cast< long long >( vIt->first ) ) + "]" );
         vRet = DEVICE_CAN_NOT_SET_PROPERTY;
       }
     }
@@ -148,7 +148,7 @@ int IPositionComponentInterface::SetPropertyValueFromDevicePosition( MM::Propert
     }
     else
     {
-      MMDragonfly_->LogComponentMessage( "Current " + PropertyName_ + " position invalid [ " + to_string(vPosition) + " ]" );
+      MMDragonfly_->LogComponentMessage( "Current " + PropertyName_ + " position invalid [ " + to_string( static_cast< long long >( vPosition ) ) + " ]" );
       vRet = DEVICE_UNKNOWN_POSITION;
     }
   }

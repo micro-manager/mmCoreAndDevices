@@ -257,20 +257,20 @@ void CTIRF::UpdateTIRFModeSelection( const string& TIRFModeName )
 {
   if ( TIRFModeName == g_TIRFModePenetration )
   {
-    PenetrationProperty_->ModeSelected( ETIRFMode::Penetration );
-    HILOObliqueAngleProperty_->ModeSelected( ETIRFMode::Penetration );
-    CriticalAngleOffsetProperty_->ModeSelected( ETIRFMode::Penetration );
+    PenetrationProperty_->ModeSelected( Penetration );
+    HILOObliqueAngleProperty_->ModeSelected( Penetration );
+    CriticalAngleOffsetProperty_->ModeSelected( Penetration );
   }
   else if ( TIRFModeName == g_TIRFModeHILO )
   {
-    PenetrationProperty_->ModeSelected( ETIRFMode::HiLoObliqueAngle );
-    HILOObliqueAngleProperty_->ModeSelected( ETIRFMode::HiLoObliqueAngle );
-    CriticalAngleOffsetProperty_->ModeSelected( ETIRFMode::HiLoObliqueAngle );
+    PenetrationProperty_->ModeSelected( HiLoObliqueAngle );
+    HILOObliqueAngleProperty_->ModeSelected( HiLoObliqueAngle );
+    CriticalAngleOffsetProperty_->ModeSelected( HiLoObliqueAngle );
   }
   else if ( TIRFModeName == g_TIRFModeCritical )
   {
-    PenetrationProperty_->ModeSelected( ETIRFMode::CriticalAngle );
-    HILOObliqueAngleProperty_->ModeSelected( ETIRFMode::CriticalAngle );
-    CriticalAngleOffsetProperty_->ModeSelected( ETIRFMode::CriticalAngle );
+    PenetrationProperty_->ModeSelected( CriticalAngle );
+    HILOObliqueAngleProperty_->ModeSelected( CriticalAngle );
+    CriticalAngleOffsetProperty_->ModeSelected( CriticalAngle );
   }
 }
