@@ -110,11 +110,11 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
         {
           if ( vRequestEnabled )
           {
-            MMILE_->LogMMMessage( "Enabling Active Blanking for line " + std::to_string( vLineIndex) + " FAILED" );
+            MMILE_->LogMMMessage( "Enabling Active Blanking for line " + std::to_string( static_cast< long long >( vLineIndex ) ) + " FAILED" );
           }
           else
           {
-            MMILE_->LogMMMessage( "Disabling Active Blanking for line " + std::to_string( vLineIndex ) + " FAILED" );
+            MMILE_->LogMMMessage( "Disabling Active Blanking for line " + std::to_string( static_cast< long long >( vLineIndex ) ) + " FAILED" );
           }
           return ERR_ACTIVEBLANKING_SET;
         }

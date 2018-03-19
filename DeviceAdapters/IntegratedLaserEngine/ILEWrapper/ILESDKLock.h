@@ -6,7 +6,7 @@
 #ifndef _ILESDKLOCK_H_
 #define _ILESDKLOCK_H_
 
-#include <mutex>
+#include "boost\thread.hpp"
 
 class CILESDKLock
 {
@@ -15,6 +15,6 @@ public:
   ~CILESDKLock();
 
 private:
-  static std::timed_mutex gsSDKMutex;
+  static boost::timed_mutex gsSDKMutex;
 };
 #endif

@@ -87,15 +87,15 @@ int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
         }
         else
         {
-          MMILE_->LogMMMessage( "Changing merged port to " + vValue + " [" + std::to_string( vPortIndices[0] ) + ", " + std::to_string( vPortIndices[1] ) + "] FAILED" );
+          MMILE_->LogMMMessage( "Changing merged port to " + vValue + " [" + std::to_string( static_cast< long long >( vPortIndices[0] ) ) + ", " + std::to_string( static_cast< long long >( vPortIndices[1] ) ) + "] FAILED" );
           return ERR_DUALPORTS_PORTCHANGEFAIL;
         }
       }
       else
       {
         std::string vMessage = "Changing merged port to " + vValue + " FAILED. ";
-        vMessage += "Number of ports [" + std::to_string( NbPortsUnit1_ ) + ", " + std::to_string( NbPortsUnit2_ ) + "] - ";
-        vMessage += "Requested ports [" + std::to_string( vPortIndices[0] ) + ", " + std::to_string( vPortIndices[1] ) + "]";
+        vMessage += "Number of ports [" + std::to_string( static_cast< long long >( NbPortsUnit1_ ) ) + ", " + std::to_string( static_cast< long long >( NbPortsUnit2_ ) ) + "] - ";
+        vMessage += "Requested ports [" + std::to_string( static_cast< long long >( vPortIndices[0] ) ) + ", " + std::to_string( static_cast< long long >( vPortIndices[1] ) ) + "]";
         MMILE_->LogMMMessage( vMessage );
         return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
       }

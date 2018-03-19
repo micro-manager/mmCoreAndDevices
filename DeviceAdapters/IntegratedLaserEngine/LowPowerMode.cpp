@@ -31,7 +31,7 @@ CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CInte
 
   if ( vLowPowerPortIndex < 1 )
   {
-    throw std::runtime_error( "Low Power port index invalid [" + std::to_string( vLowPowerPortIndex ) + "]" );
+    throw std::runtime_error( "Low Power port index invalid [" + std::to_string( static_cast< long long >( vLowPowerPortIndex ) ) + "]" );
   }
 
   bool vActive;

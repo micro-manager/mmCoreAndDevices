@@ -166,7 +166,7 @@ void CIntegratedLaserEngine::CreateDeviceSelectionProperty( int DeviceID, int De
   std::string vPropertyName = g_DeviceListProperty;
   if ( DeviceID > 0 )
   {
-    vPropertyName += std::to_string( DeviceID );
+    vPropertyName += std::to_string( static_cast< long long >( DeviceID ) );
   }
   CPropertyActionEx* pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnDeviceChange, DeviceIndex );
   CreateStringProperty( vPropertyName.c_str(), vInitialDevice.c_str(), false, pAct, true );
