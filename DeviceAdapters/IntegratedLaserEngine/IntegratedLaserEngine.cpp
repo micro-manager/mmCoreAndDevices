@@ -17,6 +17,7 @@
 #include "Lasers.h"
 #include "PortsConfiguration.h"
 #include "DualILEPorts.h"
+#include "DualILEActiveBlanking.h"
 #include "ALC_REV_ILE2.h"
 
 // Properties
@@ -166,7 +167,7 @@ void CIntegratedLaserEngine::CreateDeviceSelectionProperty( int DeviceID, int De
   std::string vPropertyName = g_DeviceListProperty;
   if ( DeviceID > 0 )
   {
-    vPropertyName += std::to_string( static_cast< long long >( DeviceID ) );
+    vPropertyName += std::to_string( static_cast<long long>( DeviceID ) );
   }
   CPropertyActionEx* pAct = new CPropertyActionEx( this, &CIntegratedLaserEngine::OnDeviceChange, DeviceIndex );
   CreateStringProperty( vPropertyName.c_str(), vInitialDevice.c_str(), false, pAct, true );
@@ -617,7 +618,8 @@ CDualILE::CDualILE( bool ILE700 ) :
   CIntegratedLaserEngine( ( ILE700 ? g_Dual700DeviceDescription : g_DualDeviceDescription ), 2 ),
   ILE700_( ILE700 ),
   Ports_( nullptr ),
-  PortsConfiguration_( nullptr )
+  PortsConfiguration_( nullptr ),
+  ActiveBlanking_( nullptr )
 {
   SetErrorText( ERR_DUALPORTS_PORTCONFIGCORRUPTED, "Changing port failed. Port configuration is corrupted" );
   SetErrorText( ERR_DUALPORTS_PORTCHANGEFAIL, "Changing port failed." );
@@ -642,6 +644,8 @@ int CDualILE::Shutdown()
 {
   delete Ports_;
   Ports_ = nullptr;
+  delete ActiveBlanking_;
+  ActiveBlanking_ = nullptr;
   return CIntegratedLaserEngine::Shutdown();
 }
 
@@ -663,6 +667,10 @@ void CDualILE::DeleteILE()
 
 void CDualILE::DisconnectILEInterfaces()
 {
+  if ( ActiveBlanking_ )
+  {
+    ActiveBlanking_->UpdateILEInterface( nullptr );
+  }
   if ( Ports_ )
   {
     Ports_->UpdateILEInterface( nullptr, nullptr );
@@ -672,6 +680,7 @@ void CDualILE::DisconnectILEInterfaces()
 void CDualILE::ReconnectILEInterfaces()
 {
   IALC_REV_ILE2* vILE2 = ILEWrapper_->GetILEInterface2( ILEDevice_ );
+  IALC_REV_ILE4* vILE4 = ILEWrapper_->GetILEInterface4( ILEDevice_ );
   IALC_REVObject3 *vILEDevice1, *vILEDevice2;
   if ( vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
   {
@@ -680,6 +689,10 @@ void CDualILE::ReconnectILEInterfaces()
     {
       Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
     }
+  }
+  if ( ActiveBlanking_ )
+  {
+    ActiveBlanking_->UpdateILEInterface( vILE4 );
   }
 }
 
@@ -721,6 +734,40 @@ int CDualILE::InitializePorts()
 
 int CDualILE::InitializeActiveBlanking()
 {
+  IALC_REV_ILE4* vILE4 = ILEWrapper_->GetILEInterface4( ILEDevice_ );
+  if ( vILE4 != nullptr )
+  {
+    bool vUnit1ActiveBlankingPresent = false;
+    if ( !vILE4->IsActiveBlankingManagementPresent( 0, &vUnit1ActiveBlankingPresent ) )
+    {
+      LogMessage( "Dual Active Blanking IsActiveBlankingManagementPresent failed for unit1" );
+      return ERR_ACTIVEBLANKING_INIT;
+    }
+    bool vUnit2ActiveBlankingPresent = false;
+    if ( !vILE4->IsActiveBlankingManagementPresent( 1, &vUnit2ActiveBlankingPresent ) )
+    {
+      LogMessage( "Dual Active Blanking IsActiveBlankingManagementPresent failed for unit2" );
+      return ERR_ACTIVEBLANKING_INIT;
+    }
+    if ( vUnit1ActiveBlankingPresent || vUnit2ActiveBlankingPresent )
+    {
+      try
+      {
+        ActiveBlanking_ = new CDualILEActiveBlanking( vILE4, PortsConfiguration_, this );
+      }
+      catch ( std::exception& vException )
+      {
+        std::string vMessage( "Error loading Active Blanking. Caught Exception with message: " );
+        vMessage += vException.what();
+        LogMessage( vMessage );
+        return ERR_ACTIVEBLANKING_INIT;
+      }
+    }
+  }
+  else
+  {
+    LogMessage( "Dual Active Blanking interface pointer invalid" );
+  }
   return DEVICE_OK;
 }
 

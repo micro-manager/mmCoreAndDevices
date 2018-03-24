@@ -21,7 +21,7 @@ public:
   ~CPortsConfiguration();
 
   std::vector<std::string> GetPortList() const;
-  void GetUnitPortsForMergedPort( const std::string& MergedPort, std::vector<int>* UnitPorts );
+  void GetUnitPortsForMergedPort( const std::string& MergedPort, std::vector<int>* UnitPorts ) const;
   std::string FindMergedPortForUnitPort( int UnitIndex, int PortIndex ) const;
 
   bool LoadConfigFile( const std::string& FileName );

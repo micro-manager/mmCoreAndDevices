@@ -19,7 +19,7 @@ CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBl
 {
   if ( ActiveBlankingInterface_ == nullptr )
   {
-    throw std::logic_error( "CActiveBlanking: Pointer to Port interface invalid" );
+    throw std::logic_error( "CActiveBlanking: Pointer to Active Blanking interface invalid" );
   }
 
   int vNbLines;
@@ -110,11 +110,11 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
         {
           if ( vRequestEnabled )
           {
-            MMILE_->LogMMMessage( "Enabling Active Blanking for line " + std::to_string( static_cast< long long >( vLineIndex ) ) + " FAILED" );
+            MMILE_->LogMMMessage( "Enabling Active Blanking for line " + std::to_string( static_cast<long long>( vLineIndex ) ) + " FAILED" );
           }
           else
           {
-            MMILE_->LogMMMessage( "Disabling Active Blanking for line " + std::to_string( static_cast< long long >( vLineIndex ) ) + " FAILED" );
+            MMILE_->LogMMMessage( "Disabling Active Blanking for line " + std::to_string( static_cast<long long>( vLineIndex ) ) + " FAILED" );
           }
           return ERR_ACTIVEBLANKING_SET;
         }

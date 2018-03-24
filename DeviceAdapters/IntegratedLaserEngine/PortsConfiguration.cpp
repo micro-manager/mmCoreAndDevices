@@ -127,7 +127,7 @@ std::vector<std::string> CPortsConfiguration::GetPortList() const
   return vPortList;
 }
 
-void CPortsConfiguration::GetUnitPortsForMergedPort( const std::string& MergedPort, std::vector<int>* UnitPorts )
+void CPortsConfiguration::GetUnitPortsForMergedPort( const std::string& MergedPort, std::vector<int>* UnitPorts ) const
 {
   TConfiguration::const_iterator vMergedPortIt = Configuration_.find( MergedPort );
   if ( vMergedPortIt != Configuration_.end() )

@@ -84,6 +84,7 @@ int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
       if ( vPortIndices[0] <= NbPortsUnit1_ && vPortIndices[1] <= NbPortsUnit2_ )
       {
         // Updating ports
+        MMILE_->LogMMMessage( "Setting port indices to [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + "," + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "]", true );
         if ( ILE2Interface_->SetPortIndex( vPortIndices[0], vPortIndices[1] ) )
         {
           // Updating lasers
@@ -91,15 +92,15 @@ int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
         }
         else
         {
-          MMILE_->LogMMMessage( "Changing merged port to " + vValue + " [" + std::to_string( static_cast< long long >( vPortIndices[0] ) ) + ", " + std::to_string( static_cast< long long >( vPortIndices[1] ) ) + "] FAILED" );
+          MMILE_->LogMMMessage( "Changing merged port to " + vValue + " [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + ", " + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "] FAILED" );
           return ERR_DUALPORTS_PORTCHANGEFAIL;
         }
       }
       else
       {
         std::string vMessage = "Changing merged port to " + vValue + " FAILED. ";
-        vMessage += "Number of ports [" + std::to_string( static_cast< long long >( NbPortsUnit1_ ) ) + ", " + std::to_string( static_cast< long long >( NbPortsUnit2_ ) ) + "] - ";
-        vMessage += "Requested ports [" + std::to_string( static_cast< long long >( vPortIndices[0] ) ) + ", " + std::to_string( static_cast< long long >( vPortIndices[1] ) ) + "]";
+        vMessage += "Number of ports [" + std::to_string( static_cast<long long>( NbPortsUnit1_ ) ) + ", " + std::to_string( static_cast<long long>( NbPortsUnit2_ ) ) + "] - ";
+        vMessage += "Requested ports [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + ", " + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "]";
         MMILE_->LogMMMessage( vMessage );
         return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
       }

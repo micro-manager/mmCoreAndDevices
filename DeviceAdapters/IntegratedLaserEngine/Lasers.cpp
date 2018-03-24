@@ -58,7 +58,7 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
   }
 
   NumberOfLasers_ = LaserInterface_->Initialize();
-  MMILE_->LogMMMessage( ( "in CLasers constructor, NumberOfLasers_ =" + std::to_string( static_cast< long long >( NumberOfLasers_ ) ) ), true );
+  MMILE_->LogMMMessage( ( "in CLasers constructor, NumberOfLasers_ =" + std::to_string( static_cast<long long>( NumberOfLasers_ ) ) ), true );
   CDeviceUtils::SleepMs( 100 );
 
   TLaserState state[10];
@@ -82,19 +82,19 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
           vFinishWaiting = false;
           break;
         case ALC_WARM_UP:
-          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " is warming up", true );
+          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " is warming up", true );
           break;
         case ALC_READY:
-          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " is ready ", true );
+          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " is ready ", true );
           break;
         case ALC_INTERLOCK_ERROR:
-          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " encountered interlock error ", false );
+          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " encountered interlock error ", false );
           break;
         case ALC_POWER_ERROR:
-          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " encountered power error ", false );
+          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " encountered power error ", false );
           break;
         case ALC_CLASS_IV_INTERLOCK_ERROR:
-          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " encountered class IV interlock error ", false );
+          MMILE_->LogMMMessage( " laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " encountered class IV interlock error ", false );
           break;
         }
       }
@@ -132,7 +132,7 @@ CLasers::~CLasers()
 
 std::string CLasers::BuildPropertyName( const std::string& BasePropertyName, int Wavelength )
 {
-  std::string vPropertyName = "Laser " + std::to_string( static_cast< long long >( Wavelength ) ) + "-" + BasePropertyName;
+  std::string vPropertyName = "Laser " + std::to_string( static_cast<long long>( Wavelength ) ) + "-" + BasePropertyName;
 
   int vIndex = 0;
   char vValue[MM::MaxStrLength];
@@ -140,7 +140,7 @@ std::string CLasers::BuildPropertyName( const std::string& BasePropertyName, int
   {
     // Property already exists, build a new name
     vIndex++;
-    vPropertyName = "Laser " + std::to_string( static_cast< long long >( Wavelength ) ) + "_" + std::to_string( static_cast< long long >( vIndex ) ) + "-" + BasePropertyName;
+    vPropertyName = "Laser " + std::to_string( static_cast<long long>( Wavelength ) ) + "_" + std::to_string( static_cast<long long>( vIndex ) ) + "-" + BasePropertyName;
   }
   return vPropertyName;
 }
@@ -209,7 +209,7 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   if ( Act == MM::BeforeGet )
   {
     vPowerSetpoint = (double)PowerSetpoint( LaserIndex );
-    MMILE_->LogMMMessage( "from equipment: PowerSetpoint" + std::to_string( static_cast< long long >( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast< long long >( vPowerSetpoint ) ), true );
+    MMILE_->LogMMMessage( "from equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long long>( vPowerSetpoint ) ), true );
     Prop->Set( vPowerSetpoint );
   }
   else if ( Act == MM::AfterSet )
@@ -217,7 +217,7 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
     if ( !IsInterlockTriggered( LaserIndex ) )
     {
       Prop->Get( vPowerSetpoint );
-      MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast< long long >( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast< long long >( vPowerSetpoint ) ), true );
+      MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long long>( vPowerSetpoint ) ), true );
       PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
       if ( OpenRequest_ )
         SetOpen();
@@ -278,7 +278,7 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
         }
 
         Enable_[LaserIndex] = vEnable;
-        MMILE_->LogMMMessage( "Enable" + std::to_string( static_cast< long long >( Wavelength( LaserIndex ) ) ) + " = " + Enable_[LaserIndex], true );
+        MMILE_->LogMMMessage( "Enable" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + " = " + Enable_[LaserIndex], true );
         if ( OpenRequest_ )
         {
           SetOpen();
@@ -324,13 +324,13 @@ int CLasers::SetOpen(bool Open)
       }
       double vPower = ( vPercentScale / 100. ) * ( LaserRange_[vLaserIndex].PowerMax - LaserRange_[vLaserIndex].PowerMin ) + LaserRange_[vLaserIndex].PowerMin;
 
-      MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast< long long >( vLaserIndex ) ) + "  = " + std::to_string( static_cast< long long >( vPower ) ) + "(" + std::to_string( static_cast< long long >( vLaserOn ) ) + ")", true );
+      MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( vLaserIndex ) ) + "  = " + std::to_string( static_cast<long long>( vPower ) ) + "(" + std::to_string( static_cast<long long>( vLaserOn ) ) + ")", true );
 
       TLaserState vLaserState;
       LaserInterface_->GetLaserState( vLaserIndex, &vLaserState );
       if ( vLaserOn && ( vLaserState != ALC_READY ) )
       {
-        std::string vMessage = "Laser # " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " is not ready!";
+        std::string vMessage = "Laser # " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " is not ready!";
         // laser is not ready!
         MMILE_->LogMMMessage( vMessage.c_str(), false );
         // GetCoreCallback()->PostError(std::make_pair<int,std::string>(DEVICE_ERR,vMessage));
@@ -338,18 +338,18 @@ int CLasers::SetOpen(bool Open)
 
       if ( vLaserState > ALC_NOT_AVAILABLE )
       {
-        MMILE_->LogMMMessage( "setting Laser " + std::to_string( static_cast< long long >( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast< long long >( vPower ) ) + "% full scale", true );
+        MMILE_->LogMMMessage( "setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long long>( vPower ) ) + "% full scale", true );
         if ( !LaserInterface_->SetLas_I( vLaserIndex, vPower, vLaserOn ) )
         {
-          MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast< long long >( vPower ) ) + "]" );
+          MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long long>( vPower ) ) + "]" );
         }
       }
     }
-    MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast< long long >( Open ) ), true );
+    MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast<long long>( Open ) ), true );
     bool vSuccess = LaserInterface_->SetLas_Shutter( Open );
     if ( !vSuccess )
     {
-      MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast< long long >( Open ) ) + " failed", false );
+      MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast<long long>( Open ) ) + " failed", false );
     }
   }
 

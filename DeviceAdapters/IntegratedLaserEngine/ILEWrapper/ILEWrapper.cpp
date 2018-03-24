@@ -18,6 +18,7 @@
 #include "ALC_REV_ILEActiveBlankingManagementWrapper.h"
 #include "ALC_REV_ILEPowerManagementWrapper.h"
 #include "ALC_REV_ILE2Wrapper.h"
+#include "ALC_REV_ILE4Wrapper.h"
 #include "ILESDKLock.h"
 #include "../IntegratedLaserEngine.h"
 #include "../../../MMDevice/DeviceThreads.h"
@@ -76,7 +77,8 @@ CILEWrapper::CILEWrapper() :
   Delete_ILE_Detection_( nullptr ),
   GetILEActiveBlankingManagementInterface_( nullptr ),
   GetILEPowerManagementInterface_( nullptr ),
-  GetILEInterface2_( nullptr )
+  GetILEInterface2_( nullptr ),
+  GetILEInterface4_( nullptr )
 {
 #ifdef _M_X64
   std::string libraryName = "AB_ALC_REV64.dll";
@@ -120,6 +122,12 @@ CILEWrapper::CILEWrapper() :
     throw std::runtime_error( "GetProcAddress GetILEInterface2_ failed\n" );
   }
 
+  GetILEInterface4_ = (TGetILEInterface4)GetProcAddress( DLL_, "GetILEInterface4" );
+  if ( GetILEInterface4_ == nullptr )
+  {
+    throw std::runtime_error( "GetProcAddress GetILEInterface4_ failed\n" );
+  }
+
   Create_ILE_Detection_( &ILEDetection_ );
   if ( ILEDetection_ == nullptr )
   {
@@ -145,6 +153,12 @@ CILEWrapper::~CILEWrapper()
   while ( vILE2It != ILE2Map_.end() )
   {
     delete vILE2It->second;
+  }
+
+  TILE4Map::iterator vILE4It = ILE4Map_.begin();
+  while ( vILE4It != ILE4Map_.end() )
+  {
+    delete vILE4It->second;
   }
 
   if ( ILEDetection_ != nullptr )
@@ -318,4 +332,36 @@ IALC_REV_ILE2* CILEWrapper::GetILEInterface2( IALC_REVObject3 *ILEDevice )
     }
   }
   return vILE2Wrapper;
+}
+
+IALC_REV_ILE4* CILEWrapper::GetILEInterface4( IALC_REVObject3 *ILEDevice )
+{
+  CALC_REV_ILE4Wrapper* vILE4Wrapper = nullptr;
+  CALC_REVObject3Wrapper* vALC_REVObjectWrapper = dynamic_cast<CALC_REVObject3Wrapper*>( ILEDevice );
+  if ( vALC_REVObjectWrapper != nullptr )
+  {
+    IALC_REVObject3* vILEObject = vALC_REVObjectWrapper->GetILEObject();
+    IALC_REV_ILE4* vILE4 = nullptr;
+    {
+      CILESDKLock vSDKLock;
+      vILE4 = GetILEInterface4_( vILEObject );
+    }
+    if ( vILE4 != nullptr )
+    {
+      TILE4Map::iterator vILE4It = ILE4Map_.find( vILE4 );
+      if ( vILE4It != ILE4Map_.end() )
+      {
+        // Prevent creating a wrapper object every time this function is called
+        // We could assume that for a given instance of IALC_REVObject3 the same pointer to ILE Interface 4 would always be returned
+        // But if that behaviour was to change in the DLL then a more optimised solution would break
+        vILE4Wrapper = vILE4It->second;
+      }
+      else
+      {
+        vILE4Wrapper = new CALC_REV_ILE4Wrapper( vILE4 );
+        ILE4Map_[vILE4] = vILE4Wrapper;
+      }
+    }
+  }
+  return vILE4Wrapper;
 }
