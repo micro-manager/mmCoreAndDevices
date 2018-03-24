@@ -54,6 +54,10 @@ CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* I
     }
     MMILE_->SetAllowedValues( g_PropertyName, vPortList );
   }
+  else
+  {
+    throw std::runtime_error( "Ports configuration invalid or not found." );
+  }
 }
 
 CDualILEPorts::~CDualILEPorts()

@@ -11,23 +11,26 @@
 #include <map>
 #include <vector>
 
+class CIntegratedLaserEngine;
+
 class CPortsConfiguration
 {
 public:
   typedef std::map<std::string, std::vector<int>> TConfiguration;
-  CPortsConfiguration(std::string Name, TConfiguration Configuration);
-  CPortsConfiguration( const CPortsConfiguration &Source );
+  CPortsConfiguration( const std::string& Device1Name, const std::string& Device2Name, CIntegratedLaserEngine* MMILE );
   ~CPortsConfiguration();
 
-  std::string GetName() const { return Name_; }
   std::vector<std::string> GetPortList() const;
   void GetUnitPortsForMergedPort( const std::string& MergedPort, std::vector<int>* UnitPorts );
   std::string FindMergedPortForUnitPort( int UnitIndex, int PortIndex ) const;
 
+  bool LoadConfigFile( const std::string& FileName );
+
 private:
-  std::string Name_;
+  std::string Device1Name_;
+  std::string Device2Name_;
+  CIntegratedLaserEngine* MMILE_;
   TConfiguration Configuration_;
 };
 
-std::vector<CPortsConfiguration>& GetPortsConfigurationList();
 #endif

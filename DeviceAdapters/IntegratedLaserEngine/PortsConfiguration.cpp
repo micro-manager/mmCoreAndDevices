@@ -5,45 +5,112 @@
 //-----------------------------------------------------------------------------
 
 #include "PortsConfiguration.h"
+#include "IntegratedLaserEngine.h"
+#include <windows.h>
+#include <Shlobj.h>
+#include <fstream>
 
 
-// Default configurations
-//CPortsConfiguration DraongonflyConfiguration( "Dragonfly", { { "Dragonfly",{ 1, 1 } },{ "Microscope Side",{ 0, 2 } },{ "Microscope Rear",{ 2, 0 } },{ "TIRF",{ 3, 0 } },{ "Mosaic",{ 0, 3 } } } );
-//CPortsConfiguration DUALTESTConfiguration( "DUALTEST", { { "TEST_11",{ 1, 1 } } ,{ "TEST_12",{ 1, 2 } },{ "TEST_22",{ 2, 2 } } ,{ "TEST_21",{ 2, 1 } } ,{ "TEST_23",{ 2, 3 } },{ "TEST_32",{ 3, 2 } }, { "TEST_31",{ 3, 1 } },{ "TEST_13",{ 1, 3 } },{ "TEST_33",{ 3, 3 } },{ "TEST_14",{ 1, 4 } } } );
-//CPortsConfiguration SINGLETESTConfiguration( "SINGLETEST", { { "TEST_10",{ 1, 0 } },{ "TEST_20",{ 2, 0 } },{ "TEST_30",{ 3, 0 } },{ "TEST_01",{ 0, 1 } },{ "TEST_02",{ 0, 2 } },{ "TEST_03",{ 0, 3 } } } );
+#if defined(WIN32) || defined(_WIN32) 
+#define PATH_SEPARATOR "\\" 
+#else 
+#define PATH_SEPARATOR "/" 
+#endif 
 
-//std::vector<CPortsConfiguration> PortsConfigurationList = { DraongonflyConfiguration, DUALTESTConfiguration, SINGLETESTConfiguration };
-std::vector<CPortsConfiguration> PortsConfigurationList;
-std::vector<CPortsConfiguration>& GetPortsConfigurationList()
+CPortsConfiguration::CPortsConfiguration( const std::string& Device1Name, const std::string& Device2Name, CIntegratedLaserEngine* MMILE ) :
+  Device1Name_( Device1Name ),
+  Device2Name_( Device2Name ),
+  MMILE_( MMILE )
 {
-  return PortsConfigurationList;
-}
-
-CPortsConfiguration::CPortsConfiguration( std::string Name, TConfiguration Configuration ) :
-  Name_( Name ),
-  Configuration_( Configuration )
-{
-}
-
-CPortsConfiguration::CPortsConfiguration( const CPortsConfiguration &Source ) :
-  Name_( Source.Name_ )
-{
-  TConfiguration::const_iterator vConfigurationIt = Source.Configuration_.begin();
-  while ( vConfigurationIt != Source.Configuration_.end() )
+  std::string vBaseFileName = "DualILE - ";
+  std::string vFile1Name = vBaseFileName + Device1Name_ + ", " + Device2Name_ + ".desc";
+  std::string vFile2Name = vBaseFileName + Device2Name_ + ", " + Device1Name_ + ".desc";
+  PWSTR vWPathName;
+  if ( SUCCEEDED( SHGetKnownFolderPath( FOLDERID_PublicDocuments, KF_FLAG_DEFAULT, NULL, &vWPathName ) ) ) // FOLDERID_PublicDocuments for Public documents path - FOLDERID_ProgramData for All users (aka ProgramData) path
   {
-    Configuration_[vConfigurationIt->first] = std::vector<int>(); 
-    std::vector<int>::const_iterator vPortIt = vConfigurationIt->second.begin();
-    while ( vPortIt != vConfigurationIt->second.end() )
+    std::wstring vWPathNameString = vWPathName;
+    vBaseFileName.assign( vWPathNameString.begin(), vWPathNameString.end() );
+    CoTaskMemFree( vWPathName );
+    std::string vFullPath = vBaseFileName + PATH_SEPARATOR + "Fusion Global Data" + PATH_SEPARATOR + "Config" + PATH_SEPARATOR;
+    std::string vFileName = vFullPath + vFile1Name;
+    if ( !LoadConfigFile( vFileName ) )
     {
-      Configuration_[vConfigurationIt->first].push_back( *vPortIt );
-      ++vPortIt;
+      vFileName = vFullPath + vFile2Name;
+      if ( !LoadConfigFile( vFileName ) )
+      {
+        // Look for the config file in the MicroManager folder
+        if ( !LoadConfigFile( vFile1Name ) )
+        {
+          if ( !LoadConfigFile( vFile2Name ) )
+          {
+            // No config file found
+            MMILE_->LogMMMessage( "No config file found" );
+            //TODO: Handle this case when we know what we want to do
+          }
+        }
+      }
     }
-    ++vConfigurationIt;
   }
+
+
 }
 
 CPortsConfiguration::~CPortsConfiguration()
 {
+}
+
+bool CPortsConfiguration::LoadConfigFile(const std::string& FileName)
+{
+  static const std::string vKeyBaseName = "OutputPort";
+  TConfiguration vNewConfiguration;
+
+  std::ifstream vFile( FileName );
+  if ( !vFile.is_open() )
+  {
+    MMILE_->LogMMMessage( "Failed to open port config file: " + FileName );
+    return false;
+  }
+
+  std::string vLine;
+  while ( std::getline( vFile, vLine ) )
+  {
+    size_t vEqualPos = vLine.find( "=" );
+    if ( vEqualPos != std::string::npos )
+    {
+      if ( vLine.find( vKeyBaseName ) != std::string::npos )
+      {
+        bool vPortConfigurationRetrieved = false;
+        std::vector<std::string> vValueList;
+        std::string vValueString = vLine.substr( vEqualPos + 1 );
+        std::istringstream vIss( vValueString );
+        for ( std::string vToken; std::getline( vIss, vToken, ',' ); )
+        {
+          vValueList.push_back( vToken );
+        }
+        if ( vValueList.size() >= 3 )
+        {
+          try
+          {
+            vNewConfiguration[vValueList[0]] = { std::atoi( vValueList[1].c_str() ), std::atoi( vValueList[2].c_str() ) };
+            vPortConfigurationRetrieved = true;
+          }
+          catch ( ... )
+          {}
+        }
+        if ( !vPortConfigurationRetrieved )
+        {
+          MMILE_->LogMMMessage( "Corrupted port configuration entry. Entry: " + vValueString );
+        }
+      }
+    }
+  }
+
+  if ( !vNewConfiguration.empty() )
+  {
+    Configuration_ = vNewConfiguration;
+    return true;
+  }
+  return false;
 }
 
 std::vector<std::string> CPortsConfiguration::GetPortList() const

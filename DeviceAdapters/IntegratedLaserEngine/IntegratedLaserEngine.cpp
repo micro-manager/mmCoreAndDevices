@@ -232,7 +232,6 @@ int CIntegratedLaserEngine::Initialize()
   vEnabledValues.push_back( g_PropertyOff );
   SetAllowedValues( g_ResetDeviceProperty, vEnabledValues );
 
-
   // Lasers
   IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
   IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
@@ -487,9 +486,18 @@ void CSingleILE::DeleteILE()
 
 void CSingleILE::DisconnectILEInterfaces()
 {
-  LowPowerMode_->UpdateILEInterface( nullptr );
-  ActiveBlanking_->UpdateILEInterface( nullptr );
-  Ports_->UpdateILEInterface( nullptr );
+  if ( LowPowerMode_ )
+  {
+    LowPowerMode_->UpdateILEInterface( nullptr );
+  }
+  if ( ActiveBlanking_ )
+  {
+    ActiveBlanking_->UpdateILEInterface( nullptr );
+  }
+  if ( Ports_ )
+  {
+    Ports_->UpdateILEInterface( nullptr );
+  }
 }
 
 void CSingleILE::ReconnectILEInterfaces()
@@ -497,9 +505,18 @@ void CSingleILE::ReconnectILEInterfaces()
   IALC_REV_Port* vPortInterface = ILEDevice_->GetPortInterface();
   IALC_REV_ILEActiveBlankingManagement* vActiveBlanking = ILEWrapper_->GetILEActiveBlankingManagementInterface( ILEDevice_ );
   IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
-  Ports_->UpdateILEInterface( vPortInterface );
-  ActiveBlanking_->UpdateILEInterface( vActiveBlanking );
-  LowPowerMode_->UpdateILEInterface( vLowPowerMode );
+  if ( Ports_ )
+  {
+    Ports_->UpdateILEInterface( vPortInterface );
+  }
+  if ( ActiveBlanking_ )
+  {
+    ActiveBlanking_->UpdateILEInterface( vActiveBlanking );
+  }
+  if ( LowPowerMode_ )
+  {
+    LowPowerMode_->UpdateILEInterface( vLowPowerMode );
+  }
 }
 
 int CSingleILE::InitializePorts()
@@ -597,33 +614,18 @@ int CSingleILE::InitializeLowPowerMode()
 ///////////////////////////////////////////////////////////////////////////////
 
 CDualILE::CDualILE( bool ILE700 ) :
-  CIntegratedLaserEngine( ( ILE700 ? g_Dual700DeviceDescription : g_DualDeviceDescription ), 2 ), 
+  CIntegratedLaserEngine( ( ILE700 ? g_Dual700DeviceDescription : g_DualDeviceDescription ), 2 ),
   ILE700_( ILE700 ),
-  PortsConfiguration_( g_Undefined ),
-  Ports_( nullptr )
+  Ports_( nullptr ),
+  PortsConfiguration_( nullptr )
 {
   SetErrorText( ERR_DUALPORTS_PORTCONFIGCORRUPTED, "Changing port failed. Port configuration is corrupted" );
   SetErrorText( ERR_DUALPORTS_PORTCHANGEFAIL, "Changing port failed." );
-  
-  // Create pre-initialization properties:
-  // -------------------------------------
-
-  // Ports configuration
-  std::vector<std::string> vValues;
-  std::vector<CPortsConfiguration>::const_iterator vPortsConfigurationIt = GetPortsConfigurationList().begin();
-  while ( vPortsConfigurationIt != GetPortsConfigurationList().end() )
-  {
-    vValues.push_back( vPortsConfigurationIt->GetName() );
-    ++vPortsConfigurationIt;
-  }
-  PortsConfiguration_ = vValues[0];
-  CPropertyAction* pAct = new CPropertyAction( this, &CDualILE::OnPortsConfigurationChange );
-  CreateStringProperty( g_PortsConfigurationProperty, PortsConfiguration_.c_str(), false, pAct, true );
-  SetAllowedValues( g_PortsConfigurationProperty, vValues );
 }
 
 CDualILE::~CDualILE()
 {
+  delete PortsConfiguration_;
 }
 
 std::string CDualILE::GetDeviceName() const
@@ -641,19 +643,6 @@ int CDualILE::Shutdown()
   delete Ports_;
   Ports_ = nullptr;
   return CIntegratedLaserEngine::Shutdown();
-}
-
-int CDualILE::OnPortsConfigurationChange( MM::PropertyBase* Prop, MM::ActionType Act )
-{
-  if ( Act == MM::BeforeGet )
-  {
-    Prop->Set( PortsConfiguration_.c_str() );
-  }
-  else if ( Act == MM::AfterSet )
-  {
-    Prop->Get( PortsConfiguration_ );
-  }
-  return DEVICE_OK;
 }
 
 bool CDualILE::CreateILE()
@@ -674,7 +663,10 @@ void CDualILE::DeleteILE()
 
 void CDualILE::DisconnectILEInterfaces()
 {
-  Ports_->UpdateILEInterface( nullptr, nullptr );
+  if ( Ports_ )
+  {
+    Ports_->UpdateILEInterface( nullptr, nullptr );
+  }
 }
 
 void CDualILE::ReconnectILEInterfaces()
@@ -684,12 +676,18 @@ void CDualILE::ReconnectILEInterfaces()
   if ( vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
   {
     IALC_REV_Port* vDualPortInterface = ILEDevice_->GetPortInterface();
-    Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
+    if ( Ports_ )
+    {
+      Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
+    }
   }
 }
 
 int CDualILE::InitializePorts()
 {
+  // Initialisation of Ports configuration
+  PortsConfiguration_ = new CPortsConfiguration( DevicesNames_[0], DevicesNames_[1], this );
+
   IALC_REV_ILE2* vILE2 = ILEWrapper_->GetILEInterface2( ILEDevice_ );
   IALC_REVObject3 *vILEDevice1, *vILEDevice2;
   if ( vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
@@ -697,23 +695,9 @@ int CDualILE::InitializePorts()
     IALC_REV_Port* vDualPortInterface = ILEDevice_->GetPortInterface();
     if ( vDualPortInterface!= nullptr )
     {
-      CPortsConfiguration *vPortsConfiguration = nullptr;
-      std::vector<CPortsConfiguration>& vPortsConfigurationList = GetPortsConfigurationList();
-      std::vector<CPortsConfiguration>::iterator vPortsConfigurationIt = vPortsConfigurationList.begin();
-      while ( vPortsConfiguration == nullptr && vPortsConfigurationIt != vPortsConfigurationList.end() )
-      {
-        if ( vPortsConfigurationIt->GetName() == PortsConfiguration_ )
-        {
-          vPortsConfiguration = &*vPortsConfigurationIt;
-        }
-        else
-        {
-          ++vPortsConfigurationIt;
-        }
-      }
       try
       {
-        Ports_ = new CDualILEPorts( vDualPortInterface, vILE2, vPortsConfiguration, this );
+        Ports_ = new CDualILEPorts( vDualPortInterface, vILE2, PortsConfiguration_, this );
       }
       catch ( std::exception& vException )
       {
