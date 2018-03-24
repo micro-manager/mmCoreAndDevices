@@ -91,7 +91,9 @@ bool CPortsConfiguration::LoadConfigFile(const std::string& FileName)
         {
           try
           {
-            vNewConfiguration[vValueList[0]] = { std::atoi( vValueList[1].c_str() ), std::atoi( vValueList[2].c_str() ) };
+            vNewConfiguration[vValueList[0]] = std::vector<int>();
+            vNewConfiguration[vValueList[0]].push_back( std::atoi( vValueList[1].c_str() ) );
+            vNewConfiguration[vValueList[0]].push_back( std::atoi( vValueList[2].c_str() ) );
             vPortConfigurationRetrieved = true;
           }
           catch ( ... )
