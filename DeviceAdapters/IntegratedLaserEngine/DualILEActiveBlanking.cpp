@@ -150,7 +150,7 @@ bool CDualILEActiveBlanking::IsLineEnabledForSinglePort( int Unit, int Line ) co
   }
 
   // Line is 1-based
-  if ( Line <= vNbLines )
+  if ( Line > 0 && Line <= vNbLines )
   {
     int vMask = 1;
     for ( int vIt = 1; vIt < Line; vIt++ )
@@ -192,7 +192,7 @@ void CDualILEActiveBlanking::SetLineStateForSinglePort( int Unit, int Line, bool
   }
   
   // Line is 1-based
-  if ( Line <= vNbLines )
+  if ( Line > 0 && Line <= vNbLines )
   {
     std::string vLogStart = "Changing line " + std::to_string( static_cast<long long>( Line ) ) + " for unit " + std::to_string( static_cast<long long>( Unit + 1 ) );
     MMILE_->LogMMMessage( vLogStart + " - Old pattern = " + std::to_string( static_cast<long long>( *vEnabledPattern ) ), true );
