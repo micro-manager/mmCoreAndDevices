@@ -41,6 +41,10 @@ CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
     {
       vPortName[0] = PortIndexToName( vCurrentPortIndex );
     }
+    else
+    {
+      throw std::runtime_error( "CPorts: GetPortIndex FAILED" );
+    }
 
     CPropertyAction* vAct = new CPropertyAction( this, &CPorts::OnPortChange );
     int vRet = MMILE_->CreateStringProperty( g_PropertyName, vPortName, false, vAct );

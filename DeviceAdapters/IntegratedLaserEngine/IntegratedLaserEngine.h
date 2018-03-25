@@ -129,6 +129,7 @@ private:
 class CDualILEPorts;
 class CPortsConfiguration;
 class CDualILEActiveBlanking;
+class CDualILELowPowerMode;
 
 class CDualILE : public CIntegratedLaserEngine
 {
@@ -148,6 +149,7 @@ private:
   CDualILEPorts* Ports_;
   CPortsConfiguration* PortsConfiguration_;
   CDualILEActiveBlanking* ActiveBlanking_;
+  CDualILELowPowerMode* LowPowerMode_;
 
   std::string GetDeviceName() const;
   bool CreateILE();

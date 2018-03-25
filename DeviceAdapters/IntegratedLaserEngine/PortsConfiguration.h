@@ -22,7 +22,7 @@ public:
 
   std::vector<std::string> GetPortList() const;
   void GetUnitPortsForMergedPort( const std::string& MergedPort, std::vector<int>* UnitPorts ) const;
-  std::string FindMergedPortForUnitPort( int UnitIndex, int PortIndex ) const;
+  std::string FindMergedPortForUnitPort( int Uni1Port, int Unit2Port ) const;
 
   bool LoadConfigFile( const std::string& FileName );
 

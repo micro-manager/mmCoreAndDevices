@@ -32,6 +32,8 @@ private:
   CIntegratedLaserEngine* MMILE_;
   int NbPortsUnit1_;
   int NbPortsUnit2_;
+
+  int ChangePort( const std::string& PortName );
 };
 
 #endif

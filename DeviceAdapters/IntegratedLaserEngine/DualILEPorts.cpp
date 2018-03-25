@@ -46,8 +46,19 @@ CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* I
 
   if ( vPortList.size() > 0 )
   {
+    int vUnit1Port, vUnit2Port;
+    ILE2Interface_->GetPortIndex( &vUnit1Port, &vUnit2Port );
+    std::string vCurrentPortName = PortsConfiguration_->FindMergedPortForUnitPort( vUnit1Port, vUnit2Port );
+    if ( vCurrentPortName == "" )
+    {
+      // The combination of ports is invalid for the port configuration so we initialise them
+      vCurrentPortName = vPortList[0];
+      MMILE_->LogMMMessage( "Current port combination [" + std::to_string( static_cast<long long>( vUnit1Port ) ) + "," + std::to_string( static_cast<long long>( vUnit1Port ) ) + "] doesn't correspond to any of the ports in the configuration. Changing it to " + vCurrentPortName, true );
+      ChangePort( vCurrentPortName );
+    }
+
     CPropertyAction* vAct = new CPropertyAction( this, &CDualILEPorts::OnPortChange );
-    int vRet = MMILE_->CreateStringProperty( g_PropertyName, vPortList[0].c_str(), false, vAct );
+    int vRet = MMILE_->CreateStringProperty( g_PropertyName, vCurrentPortName.c_str(), false, vAct );
     if ( vRet != DEVICE_OK )
     {
       throw std::runtime_error( "Error creating " + std::string( g_PropertyName ) + " property" );
@@ -65,6 +76,45 @@ CDualILEPorts::~CDualILEPorts()
 
 }
 
+int CDualILEPorts::ChangePort( const std::string& PortName )
+{
+  std::vector<int> vPortIndices;
+  PortsConfiguration_->GetUnitPortsForMergedPort( PortName, &vPortIndices );
+
+  if ( vPortIndices.size() >= 2 )
+  {
+    if ( vPortIndices[0] <= NbPortsUnit1_ && vPortIndices[1] <= NbPortsUnit2_ )
+    {
+      // Updating ports
+      MMILE_->LogMMMessage( "Setting port indices to [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + "," + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "]", true );
+      if ( ILE2Interface_->SetPortIndex( vPortIndices[0], vPortIndices[1] ) )
+      {
+        // Updating lasers
+        MMILE_->CheckAndUpdateLasers();
+      }
+      else
+      {
+        MMILE_->LogMMMessage( "Changing merged port to " + PortName + " [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + ", " + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "] FAILED" );
+        return ERR_DUALPORTS_PORTCHANGEFAIL;
+      }
+    }
+    else
+    {
+      std::string vMessage = "Changing merged port to " + PortName + " FAILED. ";
+      vMessage += "Number of ports [" + std::to_string( static_cast<long long>( NbPortsUnit1_ ) ) + ", " + std::to_string( static_cast<long long>( NbPortsUnit2_ ) ) + "] - ";
+      vMessage += "Requested ports [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + ", " + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "]";
+      MMILE_->LogMMMessage( vMessage );
+      return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
+    }
+  }
+  else
+  {
+    MMILE_->LogMMMessage( "Changing merged port to " + PortName + " FAILED. The number of units in the configuration is invalid [" + std::to_string( vPortIndices.size() ) + "]" );
+    return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
+  }
+  return DEVICE_OK;
+}
+
 int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   if ( Act == MM::AfterSet )
@@ -76,40 +126,7 @@ int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 
     std::string vValue;
     Prop->Get( vValue );
-    std::vector<int> vPortIndices;
-    PortsConfiguration_->GetUnitPortsForMergedPort( vValue, &vPortIndices );
-
-    if ( vPortIndices.size() >= 2 )
-    {      
-      if ( vPortIndices[0] <= NbPortsUnit1_ && vPortIndices[1] <= NbPortsUnit2_ )
-      {
-        // Updating ports
-        MMILE_->LogMMMessage( "Setting port indices to [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + "," + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "]", true );
-        if ( ILE2Interface_->SetPortIndex( vPortIndices[0], vPortIndices[1] ) )
-        {
-          // Updating lasers
-          MMILE_->CheckAndUpdateLasers();
-        }
-        else
-        {
-          MMILE_->LogMMMessage( "Changing merged port to " + vValue + " [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + ", " + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "] FAILED" );
-          return ERR_DUALPORTS_PORTCHANGEFAIL;
-        }
-      }
-      else
-      {
-        std::string vMessage = "Changing merged port to " + vValue + " FAILED. ";
-        vMessage += "Number of ports [" + std::to_string( static_cast<long long>( NbPortsUnit1_ ) ) + ", " + std::to_string( static_cast<long long>( NbPortsUnit2_ ) ) + "] - ";
-        vMessage += "Requested ports [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + ", " + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "]";
-        MMILE_->LogMMMessage( vMessage );
-        return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
-      }
-    }
-    else
-    {
-      MMILE_->LogMMMessage( "Changing merged port to " + vValue + " FAILED. The number of units in the configuration is invalid [" + std::to_string( vPortIndices.size() ) +  "]" );
-      return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
-    }
+    return ChangePort( vValue );
   }
   return DEVICE_OK;
 }

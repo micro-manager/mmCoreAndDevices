@@ -94,6 +94,7 @@ bool CPortsConfiguration::LoadConfigFile(const std::string& FileName)
             vNewConfiguration[vValueList[0]] = std::vector<int>();
             vNewConfiguration[vValueList[0]].push_back( std::atoi( vValueList[1].c_str() ) );
             vNewConfiguration[vValueList[0]].push_back( std::atoi( vValueList[2].c_str() ) );
+            MMILE_->LogMMMessage( "Loaded port from config file: Port " + vValueList[0] + ": unit1/" + vValueList[1] + " - unit2/" + vValueList[2], true );
             vPortConfigurationRetrieved = true;
           }
           catch ( ... )
@@ -136,16 +137,16 @@ void CPortsConfiguration::GetUnitPortsForMergedPort( const std::string& MergedPo
   }
 }
 
-std::string CPortsConfiguration::FindMergedPortForUnitPort( int UnitIndex, int PortIndex ) const
+std::string CPortsConfiguration::FindMergedPortForUnitPort( int Unit1Port, int Unit2Port ) const
 {
   std::string vMergedPort = "";
   bool vPortFound = false;
   TConfiguration::const_iterator vConfigurationIt = Configuration_.begin();
   while ( !vPortFound && vConfigurationIt != Configuration_.end() )
   {
-    if ( UnitIndex < vConfigurationIt->second.size() )
+    if ( vConfigurationIt->second.size() >= 2 )
     {
-      if ( vConfigurationIt->second[UnitIndex] == PortIndex )
+      if ( vConfigurationIt->second[0] == Unit1Port && vConfigurationIt->second[1] == Unit2Port )
       {
         vMergedPort = vConfigurationIt->first;
         vPortFound = true;

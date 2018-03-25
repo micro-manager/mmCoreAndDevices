@@ -9,6 +9,7 @@
 //
 
 #include "ALC_REV.h"
+#include "ALC_REV_ILE2.h"
 #include "IntegratedLaserEngine.h"
 #include "ILEWrapper/ILEWrapper.h"
 #include "Ports.h"
@@ -18,7 +19,8 @@
 #include "PortsConfiguration.h"
 #include "DualILEPorts.h"
 #include "DualILEActiveBlanking.h"
-#include "ALC_REV_ILE2.h"
+#include "DualILELowPowerMode.h"
+
 
 // Properties
 const char* const g_DeviceName = "Andor ILE";
@@ -619,7 +621,8 @@ CDualILE::CDualILE( bool ILE700 ) :
   ILE700_( ILE700 ),
   Ports_( nullptr ),
   PortsConfiguration_( nullptr ),
-  ActiveBlanking_( nullptr )
+  ActiveBlanking_( nullptr ),
+  LowPowerMode_( nullptr )
 {
   SetErrorText( ERR_DUALPORTS_PORTCONFIGCORRUPTED, "Changing port failed. Port configuration is corrupted" );
   SetErrorText( ERR_DUALPORTS_PORTCHANGEFAIL, "Changing port failed." );
@@ -642,10 +645,12 @@ std::string CDualILE::GetDeviceName() const
 
 int CDualILE::Shutdown()
 {
-  delete Ports_;
-  Ports_ = nullptr;
+  delete LowPowerMode_;
+  LowPowerMode_ = nullptr;
   delete ActiveBlanking_;
   ActiveBlanking_ = nullptr;
+  delete Ports_;
+  Ports_ = nullptr;
   return CIntegratedLaserEngine::Shutdown();
 }
 
@@ -667,6 +672,10 @@ void CDualILE::DeleteILE()
 
 void CDualILE::DisconnectILEInterfaces()
 {
+  if ( LowPowerMode_ )
+  {
+    LowPowerMode_->UpdateILEInterface( nullptr, nullptr );
+  }
   if ( ActiveBlanking_ )
   {
     ActiveBlanking_->UpdateILEInterface( nullptr );
@@ -688,6 +697,12 @@ void CDualILE::ReconnectILEInterfaces()
     if ( Ports_ )
     {
       Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
+    }
+    IALC_REV_ILEPowerManagement* vUnit1LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice1 );
+    IALC_REV_ILEPowerManagement* vUnit2LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice2 );
+    if ( LowPowerMode_ )
+    {
+      LowPowerMode_->UpdateILEInterface( vUnit1LowPowerMode, vUnit2LowPowerMode );
     }
   }
   if ( ActiveBlanking_ )
@@ -773,5 +788,63 @@ int CDualILE::InitializeActiveBlanking()
 
 int CDualILE::InitializeLowPowerMode()
 {
+  IALC_REV_ILE2* vILE2 = ILEWrapper_->GetILEInterface2( ILEDevice_ );
+  IALC_REVObject3 *vILEDevice1, *vILEDevice2;
+  if ( vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
+  {
+    IALC_REV_ILEPowerManagement* vUnit1LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice1 );
+    IALC_REV_ILEPowerManagement* vUnit2LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice2 );
+    if ( vUnit1LowPowerMode != nullptr && vUnit2LowPowerMode != nullptr )
+    {
+      bool vUnit1LowPowerModePresent = false, vUnit2LowPowerModePresent = false;
+      if ( !vUnit1LowPowerMode->IsLowPowerPresent( &vUnit1LowPowerModePresent ) )
+      {
+        LogMessage( "ILE Power IsLowPowerPresent failed for unit1" );
+        return ERR_LOWPOWERMODE_INIT;
+      }
+      if ( !vUnit2LowPowerMode->IsLowPowerPresent( &vUnit2LowPowerModePresent ) )
+      {
+        LogMessage( "ILE Power IsLowPowerPresent failed for unit2" );
+        return ERR_LOWPOWERMODE_INIT;
+      }
+      if ( vUnit1LowPowerModePresent || vUnit2LowPowerModePresent )
+      {
+        if ( !vUnit1LowPowerModePresent ) vUnit1LowPowerMode = nullptr;
+        if ( !vUnit2LowPowerModePresent ) vUnit2LowPowerMode = nullptr;
+        try
+        {
+          LowPowerMode_ = new CDualILELowPowerMode( vUnit1LowPowerMode, vUnit2LowPowerMode, PortsConfiguration_, this );
+        }
+        catch ( std::exception& vException )
+        {
+          std::string vMessage( "Error loading Low Power mode. Caught Exception with message: " );
+          vMessage += vException.what();
+          LogMessage( vMessage );
+          return ERR_LOWPOWERMODE_INIT;
+        }
+      }
+    }
+    else
+    {
+      std::string vUnitsMessage;
+      if ( vUnit1LowPowerMode == nullptr )
+      {
+        vUnitsMessage += "unit1";
+      }
+      if ( vUnit2LowPowerMode == nullptr )
+      {
+        if ( !vUnitsMessage.empty() )
+        {
+          vUnitsMessage += " and ";
+        }
+        vUnitsMessage += "unit2";
+      }
+      LogMessage( "ILE Power interface pointer invalid for " );
+    }
+  }
+  else
+  {
+    LogMessage( "Retrieving Dual port intefaces failed" );
+  }
   return DEVICE_OK;
 }
