@@ -54,6 +54,7 @@ bool CSingleILE::CreateILE()
   bool vRet = false;
   if ( DevicesNames_.size() > 0 )
   {
+    LogMessage( "Creating ILE for device " + DevicesNames_[0], true );
     vRet = ILEWrapper_->CreateILE( &ILEDevice_, DevicesNames_[0].c_str() );
   }
   return vRet;

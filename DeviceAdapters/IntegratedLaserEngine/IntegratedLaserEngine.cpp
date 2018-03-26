@@ -18,7 +18,7 @@
 
 // Properties
 const char* const g_DeviceListProperty = "Device";
-const char* const g_ResetDeviceProperty = "Reset device connection";
+const char* const g_ResetDeviceProperty = "Interlock Reset";
 
 // Property values
 const char* const g_Undefined = "Undefined";
@@ -101,7 +101,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_LASERS_INIT, "Lasers initialisation failed" );
   SetErrorText( ERR_INTERLOCK, "Interlock triggered" );
   SetErrorText( ERR_CLASSIV_INTERLOCK, "Class IV interlock triggered" );
-  SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device reconnecting. Please wait." );
+  SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device not connected. If it is reconnecting, please wait." );
   SetErrorText( ERR_ACTIVEBLANKING_SET, "Setting active blanking failed" );
   SetErrorText( ERR_DEVICE_INDEXINVALID, "Device index invalid" );
   SetErrorText( ERR_DEVICE_CONNECTIONFAILED, "Connection to the device failed" );
@@ -301,7 +301,13 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
     ResetDeviceProperty_ = Prop;
   }
   int vRet = DEVICE_OK;
-  if ( Act == MM::AfterSet )
+  if ( Act == MM::BeforeGet )
+  {
+    // Displaying "off" since the only time when the property is "on" is while the reset happens
+    // If we are here then we are not going through a reset so making sure we set the value back to "off" is a good idea (in case reset failed)
+    Prop->Set( g_PropertyOff );
+  }
+  else if ( Act == MM::AfterSet )
   {
     std::string vValue;
     Prop->Get( vValue );
@@ -317,7 +323,7 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       // Reconnect the device
       try
       {
-        if ( CreateILE() )
+        if ( !CreateILE() )
         {
           LogMessage( "CreateILE failed" );
           return ERR_DEVICE_CONNECTIONFAILED;

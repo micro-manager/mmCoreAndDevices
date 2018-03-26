@@ -14,7 +14,8 @@ const char* const g_PropertyName = "Output Port";
 CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
   PortInterface_( PortInterface ),
   MMILE_( MMILE ),
-  NbPorts_( 0 )
+  NbPorts_( 0 ),
+  CurrentPortIndex_( 0 )
 {
   if ( PortInterface_ == nullptr )
   {
@@ -35,11 +36,10 @@ CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
       vPorts.push_back( vPortName );
     }
 
-    int vCurrentPortIndex = 0;
     vPortName[0] = 'A';
-    if ( PortInterface_->GetPortIndex( &vCurrentPortIndex ) )
+    if ( PortInterface_->GetPortIndex( &CurrentPortIndex_ ) )
     {
-      vPortName[0] = PortIndexToName( vCurrentPortIndex );
+      vPortName[0] = PortIndexToName( CurrentPortIndex_ );
     }
     else
     {
@@ -73,7 +73,14 @@ int CPorts::PortNameToIndex( char PortName )
 
 int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
-  if ( Act == MM::AfterSet )
+  if ( Act == MM::BeforeGet )
+  {
+    char vPortName[2];
+    vPortName[1] = 0;
+    vPortName[0] = PortIndexToName( CurrentPortIndex_ );
+    Prop->Set( vPortName );
+  }
+  else if ( Act == MM::AfterSet )
   {
     if ( PortInterface_ == nullptr )
     {
@@ -83,8 +90,10 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
     std::string vValue;
     Prop->Get( vValue );
     char vPortName = vValue[0];
-    if ( PortInterface_->SetPortIndex( PortNameToIndex( vPortName ) ) )
+    int vPortIndex = PortNameToIndex( vPortName );
+    if ( PortInterface_->SetPortIndex( vPortIndex ) )
     {
+      CurrentPortIndex_ = vPortIndex;
       MMILE_->CheckAndUpdateLasers();
     }
     else

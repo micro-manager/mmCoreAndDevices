@@ -19,7 +19,8 @@ CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* I
   PortsConfiguration_( PortsConfiguration ),
   MMILE_( MMILE ),
   NbPortsUnit1_( 0 ),
-  NbPortsUnit2_( 0 )
+  NbPortsUnit2_( 0 ),
+  CurrentPortName_( "" )
 {
   if ( DualPortInterface_ == nullptr )
   {
@@ -48,17 +49,20 @@ CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* I
   {
     int vUnit1Port, vUnit2Port;
     ILE2Interface_->GetPortIndex( &vUnit1Port, &vUnit2Port );
-    std::string vCurrentPortName = PortsConfiguration_->FindMergedPortForUnitPort( vUnit1Port, vUnit2Port );
-    if ( vCurrentPortName == "" )
+    CurrentPortName_ = PortsConfiguration_->FindMergedPortForUnitPort( vUnit1Port, vUnit2Port );
+    if ( CurrentPortName_ == "" )
     {
       // The combination of ports is invalid for the port configuration so we initialise them
-      vCurrentPortName = vPortList[0];
-      MMILE_->LogMMMessage( "Current port combination [" + std::to_string( static_cast<long long>( vUnit1Port ) ) + "," + std::to_string( static_cast<long long>( vUnit1Port ) ) + "] doesn't correspond to any of the ports in the configuration. Changing it to " + vCurrentPortName, true );
-      ChangePort( vCurrentPortName );
+      CurrentPortName_ = vPortList[0];
+      MMILE_->LogMMMessage( "Current port combination [" + std::to_string( static_cast<long long>( vUnit1Port ) ) + "," + std::to_string( static_cast<long long>( vUnit1Port ) ) + "] doesn't correspond to any of the ports in the configuration. Changing it to " + CurrentPortName_, true );
+      if ( ChangePort( CurrentPortName_ ) != DEVICE_OK )
+      {
+        throw std::runtime_error( "Error changing port to " + CurrentPortName_ );
+      }
     }
 
     CPropertyAction* vAct = new CPropertyAction( this, &CDualILEPorts::OnPortChange );
-    int vRet = MMILE_->CreateStringProperty( g_PropertyName, vCurrentPortName.c_str(), false, vAct );
+    int vRet = MMILE_->CreateStringProperty( g_PropertyName, CurrentPortName_.c_str(), false, vAct );
     if ( vRet != DEVICE_OK )
     {
       throw std::runtime_error( "Error creating " + std::string( g_PropertyName ) + " property" );
@@ -89,6 +93,7 @@ int CDualILEPorts::ChangePort( const std::string& PortName )
       MMILE_->LogMMMessage( "Setting port indices to [" + std::to_string( static_cast<long long>( vPortIndices[0] ) ) + "," + std::to_string( static_cast<long long>( vPortIndices[1] ) ) + "]", true );
       if ( ILE2Interface_->SetPortIndex( vPortIndices[0], vPortIndices[1] ) )
       {
+        CurrentPortName_ = PortName;
         // Updating lasers
         MMILE_->CheckAndUpdateLasers();
       }
@@ -117,7 +122,11 @@ int CDualILEPorts::ChangePort( const std::string& PortName )
 
 int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
-  if ( Act == MM::AfterSet )
+  if ( Act == MM::BeforeGet )
+  {
+    Prop->Set( CurrentPortName_.c_str() );
+  }
+  else if ( Act == MM::AfterSet )
   {
     if ( ILE2Interface_ == nullptr )
     {

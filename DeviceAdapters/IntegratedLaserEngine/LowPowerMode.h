@@ -27,6 +27,7 @@ public:
 private:
   IALC_REV_ILEPowerManagement* PowerInterface_;
   CIntegratedLaserEngine* MMILE_;
+  bool LowPowerModeActive_;
 };
 
 #endif

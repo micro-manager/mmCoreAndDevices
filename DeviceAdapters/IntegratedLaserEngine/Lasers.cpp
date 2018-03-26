@@ -185,12 +185,12 @@ void CLasers::GenerateProperties()
   vEnabledValues.push_back( g_LaserEnableOn );
   vEnabledValues.push_back( g_LaserEnableOff );
   vAct2 = new CPropertyAction( this, &CLasers::OnInterlock );
-  MMILE_->CreateStringProperty( "TEST Activate Interlock", g_LaserEnableOff, false, vAct2 );
-  MMILE_->SetAllowedValues( "TEST Activate Interlock", vEnabledValues );
+  MMILE_->CreateStringProperty( "Interlock TEST Activate", g_LaserEnableOff, false, vAct2 );
+  MMILE_->SetAllowedValues( "Interlock TEST Activate", vEnabledValues );
 
   vAct2 = new CPropertyAction( this, &CLasers::OnClassIVInterlock );
-  MMILE_->CreateStringProperty( "TEST Activate Class IV Interlock", g_LaserEnableOff, false, vAct2 );
-  MMILE_->SetAllowedValues( "TEST Activate Class IV Interlock", vEnabledValues );
+  MMILE_->CreateStringProperty( "Interlock TEST Activate Class IV", g_LaserEnableOff, false, vAct2 );
+  MMILE_->SetAllowedValues( "Interlock TEST Activate Class IV", vEnabledValues );
 #endif
   UpdateLasersRange();
 }
@@ -214,13 +214,17 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   }
   else if ( Act == MM::AfterSet )
   {
+    if ( LaserInterface_ == nullptr )
+    {
+      return ERR_DEVICE_NOT_CONNECTED;
+    }
     if ( !IsInterlockTriggered( LaserIndex ) )
     {
       Prop->Get( vPowerSetpoint );
       MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long long>( vPowerSetpoint ) ), true );
       PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
       if ( OpenRequest_ )
-        SetOpen();
+        return SetOpen();
     }
     else
     {

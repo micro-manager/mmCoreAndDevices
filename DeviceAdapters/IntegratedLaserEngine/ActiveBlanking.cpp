@@ -89,7 +89,16 @@ void CActiveBlanking::ChangeLineState( int Line )
 
 int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
-  if ( Act == MM::AfterSet )
+  if ( Act == MM::BeforeGet )
+  {
+    if ( PropertyLineIndexMap_.find( Prop->GetName() ) != PropertyLineIndexMap_.end() )
+    {
+      int vLineIndex = PropertyLineIndexMap_[Prop->GetName()];
+      bool vEnabled = IsLineEnabled( vLineIndex );
+      Prop->Set( vEnabled ? g_On : g_Off );
+    }
+  }
+  else if ( Act == MM::AfterSet )
   {
     if ( ActiveBlankingInterface_ == nullptr )
     {

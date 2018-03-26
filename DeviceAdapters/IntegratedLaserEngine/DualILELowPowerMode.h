@@ -32,6 +32,8 @@ private:
   CIntegratedLaserEngine* MMILE_;
   std::vector<std::string> PortNames_;
   std::vector<std::vector<int>> UnitsPropertyMap_;
+  bool Unit1Active_;
+  bool Unit2Active_;
 };
 
 #endif

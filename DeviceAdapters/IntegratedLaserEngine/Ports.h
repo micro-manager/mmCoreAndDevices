@@ -36,6 +36,7 @@ private:
   IALC_REV_Port* PortInterface_;
   int NbPorts_;
   CIntegratedLaserEngine* MMILE_;
+  int CurrentPortIndex_;
 };
 
 #endif

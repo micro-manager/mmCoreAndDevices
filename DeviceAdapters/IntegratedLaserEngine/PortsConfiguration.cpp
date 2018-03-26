@@ -26,29 +26,39 @@ CPortsConfiguration::CPortsConfiguration( const std::string& Device1Name, const 
   Device2Name_( Device2Name ),
   MMILE_( MMILE )
 {  
-  std::string vFusionConfigFolderPath;
-  if ( GetFusionConfigFolderPath( &vFusionConfigFolderPath ) )
+  bool vGenerateDefaultConfig = false;
+  std::string vFile1Name = GenerateFileName( Device1Name_, Device2Name_ );
+  std::string vFile2Name = GenerateFileName( Device2Name_, Device1Name_ );
+  // Look for the config file in the MicroManager folder
+  if ( !LoadConfigFile( vFile1Name ) )
   {
-    std::string vFile1Name = GenerateFileName( Device1Name_, Device2Name_ );
-    std::string vFile2Name = GenerateFileName( Device2Name_, Device1Name_ );
-    std::string vFileName = vFusionConfigFolderPath + vFile1Name;
-    if ( !LoadConfigFile( vFileName ) )
+    if ( !LoadConfigFile( vFile2Name ) )
     {
-      vFileName = vFusionConfigFolderPath + vFile2Name;
-      if ( !LoadConfigFile( vFileName ) )
+      // Look for the config file in the Fusion config folder
+      std::string vFusionConfigFolderPath;
+      if ( GetFusionConfigFolderPath( &vFusionConfigFolderPath ) )
       {
-        // Look for the config file in the MicroManager folder
-        if ( !LoadConfigFile( vFile1Name ) )
+        std::string vFileName = vFusionConfigFolderPath + vFile1Name;
+        if ( !LoadConfigFile( vFileName ) )
         {
-          if ( !LoadConfigFile( vFile2Name ) )
+          vFileName = vFusionConfigFolderPath + vFile2Name;
+          if ( !LoadConfigFile( vFileName ) )
           {
             // No config file found, generate a demo file
+            vGenerateDefaultConfig = true;
             MMILE_->LogMMMessage( "No port configuration file found. Using a default port configuration." );
-            GenerateDefaultConfig();
           }
         }
       }
+      else
+      {
+        vGenerateDefaultConfig = true;
+      }
     }
+  }
+  if ( vGenerateDefaultConfig )
+  {
+    GenerateDefaultConfig();
   }
 }
 

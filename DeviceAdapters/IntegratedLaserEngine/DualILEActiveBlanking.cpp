@@ -229,7 +229,17 @@ void CDualILEActiveBlanking::SetLineStateForDualPort( const std::string& PortNam
 
 int CDualILEActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act, long PortIndex )
 {
-  if ( Act == MM::AfterSet )
+  if ( Act == MM::BeforeGet )
+  {
+    // Commenting this in case 2 virtual ports share the same physical port. In this case changing the active blanking state
+    // of one of the virtual ports will sometimes change the state of other virtual ports using one of its physical ports.
+    //if ( PortIndex < PortNames_.size() )
+    //{
+    //  std::string vPortName = PortNames_[PortIndex];    
+    //  Prop->Set( IsLineEnabledForDualPort( vPortName ) ? g_On : g_Off );
+    //}
+  }
+  else if ( Act == MM::AfterSet )
   {
     if ( DualActiveBlankingInterface_ == nullptr )
     {

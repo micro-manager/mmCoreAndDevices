@@ -69,6 +69,7 @@ bool CDualILE::CreateILE()
   bool vRet = false;
   if ( DevicesNames_.size() > 1 )
   {
+    LogMessage( "Creating Dual ILE for devices " + DevicesNames_[0] + " and " + DevicesNames_[1], true );
     vRet = ILEWrapper_->CreateDualILE( &ILEDevice_, DevicesNames_[0].c_str(), DevicesNames_[1].c_str(), ILE700_ );
   }
   return vRet;
@@ -98,25 +99,29 @@ void CDualILE::DisconnectILEInterfaces()
 
 void CDualILE::ReconnectILEInterfaces()
 {
+  LogMessage( "Reconnecting to Dual ILE", true );
   IALC_REV_ILE2* vILE2 = ILEWrapper_->GetILEInterface2( ILEDevice_ );
   IALC_REV_ILE4* vILE4 = ILEWrapper_->GetILEInterface4( ILEDevice_ );
   IALC_REVObject3 *vILEDevice1, *vILEDevice2;
-  if ( vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
+  if ( vILE2 && vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
   {
     IALC_REV_Port* vDualPortInterface = ILEDevice_->GetPortInterface();
     if ( Ports_ )
     {
+      LogMessage( "Reconnecting Dual Ports", true );
       Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
     }
     IALC_REV_ILEPowerManagement* vUnit1LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice1 );
     IALC_REV_ILEPowerManagement* vUnit2LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice2 );
     if ( LowPowerMode_ )
     {
+      LogMessage( "Reconnecting Dual Low Power Mode", true );
       LowPowerMode_->UpdateILEInterface( vUnit1LowPowerMode, vUnit2LowPowerMode );
     }
   }
   if ( ActiveBlanking_ )
   {
+    LogMessage( "Reconnecting Dual Active Blanking", true );
     ActiveBlanking_->UpdateILEInterface( vILE4 );
   }
 }

@@ -16,7 +16,8 @@ const char* const g_Off = "Off";
 
 CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CIntegratedLaserEngine* MMILE ) :
   PowerInterface_( PowerInterface ),
-  MMILE_( MMILE )
+  MMILE_( MMILE ),
+  LowPowerModeActive_( false )
 {
   if ( PowerInterface_ == nullptr )
   {
@@ -34,8 +35,7 @@ CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CInte
     throw std::runtime_error( "Low Power port index invalid [" + std::to_string( static_cast<long long>( vLowPowerPortIndex ) ) + "]" );
   }
 
-  bool vActive;
-  if ( !PowerInterface_->GetLowPowerState( &vActive ) )
+  if ( !PowerInterface_->GetLowPowerState( &LowPowerModeActive_ ) )
   {
     throw std::runtime_error( "ILE Power GetLowPowerState failed" );
   }
@@ -49,7 +49,7 @@ CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CInte
   vAllowedValues.push_back( g_On );
   vAllowedValues.push_back( g_Off );
   CPropertyAction* vAct = new CPropertyAction( this, &CLowPowerMode::OnValueChange );
-  MMILE_->CreateStringProperty( vPropertyName.c_str(), vActive ? g_On : g_Off, false, vAct );
+  MMILE_->CreateStringProperty( vPropertyName.c_str(), LowPowerModeActive_ ? g_On : g_Off, false, vAct );
   MMILE_->SetAllowedValues( vPropertyName.c_str(), vAllowedValues );
 }
 
@@ -59,7 +59,11 @@ CLowPowerMode::~CLowPowerMode()
 
 int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
-  if ( Act == MM::AfterSet )
+  if ( Act == MM::BeforeGet )
+  {
+    Prop->Set( LowPowerModeActive_ ? g_On : g_Off );
+  }
+  else if ( Act == MM::AfterSet )
   {
     if ( PowerInterface_ == nullptr )
     {
@@ -68,14 +72,15 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 
     std::string vValue;
     Prop->Get( vValue );
-    bool vEnabled = ( vValue == g_On );
-    if ( PowerInterface_->SetLowPowerState( vEnabled ) )
+    bool vEnable = ( vValue == g_On );
+    if ( PowerInterface_->SetLowPowerState( vEnable ) )
     {
+      LowPowerModeActive_ = vEnable;
       MMILE_->CheckAndUpdateLasers();
     }
     else
     {
-      MMILE_->LogMMMessage( std::string( vEnabled ? "Enabling" : "Disabling" ) + " low power state FAILED" );
+      MMILE_->LogMMMessage( std::string( vEnable ? "Enabling" : "Disabling" ) + " low power state FAILED" );
       return ERR_LOWPOWERMODE_SET;
     }
   }
