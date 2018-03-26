@@ -12,9 +12,7 @@
 #ifndef _INTEGRATEDLASERENGINE_H_
 #define _INTEGRATEDLASERENGINE_H_
 
-#include "../../MMDevice/MMDevice.h"
 #include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
 #include <string>
 #include <vector>
 #include "ILEWrapperInterface.h"
@@ -28,17 +26,11 @@
 #define ERR_INTERLOCK 201
 #define ERR_CLASSIV_INTERLOCK 202
 #define ERR_DEVICE_NOT_CONNECTED 203
-#define ERR_DUALPORTS_PORTCHANGEFAIL 301
-#define ERR_DUALPORTS_PORTCONFIGCORRUPTED 302
 #define ERR_ACTIVEBLANKING_SET 401
 #define ERR_LOWPOWERMODE_SET 501
 #define ERR_PORTS_SET 601
 
 class IALC_REVObject3;
-class IALC_REV_Laser2;
-class CPorts;
-class CActiveBlanking;
-class CLowPowerMode;
 class CLasers;
 
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
@@ -99,66 +91,6 @@ private:
   virtual int InitializeLowPowerMode() = 0;
   virtual void DisconnectILEInterfaces() = 0;
   virtual void ReconnectILEInterfaces() = 0;
-};
-
-class CSingleILE : public CIntegratedLaserEngine
-{
-public:
-  CSingleILE();
-  virtual ~CSingleILE();
-
-  int Shutdown();
-
-protected:
-
-private:
-  CPorts* Ports_;
-  CActiveBlanking* ActiveBlanking_;
-  CLowPowerMode* LowPowerMode_;
-
-  std::string GetDeviceName() const;
-  bool CreateILE();
-  void DeleteILE();
-  int InitializePorts();
-  int InitializeActiveBlanking();
-  int InitializeLowPowerMode();
-  void DisconnectILEInterfaces();
-  void ReconnectILEInterfaces();
-};
-
-class CDualILEPorts;
-class CPortsConfiguration;
-class CDualILEActiveBlanking;
-class CDualILELowPowerMode;
-
-class CDualILE : public CIntegratedLaserEngine
-{
-public:
-  CDualILE( bool ILE700 );
-  virtual ~CDualILE();
-
-  int Shutdown();
-
-  //Action interface
-  typedef MM::Action<CDualILE> CPropertyAction;
-  
-protected:
-
-private:
-  bool ILE700_;
-  CDualILEPorts* Ports_;
-  CPortsConfiguration* PortsConfiguration_;
-  CDualILEActiveBlanking* ActiveBlanking_;
-  CDualILELowPowerMode* LowPowerMode_;
-
-  std::string GetDeviceName() const;
-  bool CreateILE();
-  void DeleteILE();
-  int InitializePorts();
-  int InitializeActiveBlanking();
-  int InitializeLowPowerMode();
-  void DisconnectILEInterfaces();
-  void ReconnectILEInterfaces();
 };
 
 #endif

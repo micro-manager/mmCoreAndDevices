@@ -187,6 +187,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ActiveBlanking.cpp" />
+    <ClCompile Include="DualILE.cpp" />
     <ClCompile Include="DualILEActiveBlanking.cpp" />
     <ClCompile Include="DualILELowPowerMode.cpp" />
     <ClCompile Include="DualILEPorts.cpp" />
@@ -205,6 +206,7 @@
     <ClCompile Include="LowPowerMode.cpp" />
     <ClCompile Include="Ports.cpp" />
     <ClCompile Include="PortsConfiguration.cpp" />
+    <ClCompile Include="SingleILE.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">

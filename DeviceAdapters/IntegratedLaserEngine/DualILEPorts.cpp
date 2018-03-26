@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 #include "DualILEPorts.h"
-#include "IntegratedLaserEngine.h"
+#include "DualILE.h"
 #include "ALC_REV.h"
 #include "ALC_REV_ILE2.h"
 #include "PortsConfiguration.h"
