@@ -441,7 +441,7 @@ bool CLasers::IsInterlockTriggered( int LaserIndex )
   TLaserState vLaserState;
   if ( LaserInterface_->GetLaserState( LaserIndex, &vLaserState ) )
   {
-    if ( vLaserState == ALC_INTERLOCK_ERROR || vLaserState == ALC_CLASS_IV_INTERLOCK_ERROR )
+    if ( vLaserState == ALC_INTERLOCK_ERROR || vLaserState == ALC_POWER_ERROR || vLaserState == ALC_CLASS_IV_INTERLOCK_ERROR )
     {
       vInterlockError = true;
     }

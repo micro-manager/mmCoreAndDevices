@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <Shlobj.h>
 #include <fstream>
+#include "boost\filesystem.hpp"
 
 
 #if defined(WIN32) || defined(_WIN32) 
@@ -17,25 +18,23 @@
 #define PATH_SEPARATOR "/" 
 #endif 
 
+const std::string CPortsConfiguration::ConfigFileKeyBaseName_ = "OutputPort";
+
+
 CPortsConfiguration::CPortsConfiguration( const std::string& Device1Name, const std::string& Device2Name, CIntegratedLaserEngine* MMILE ) :
   Device1Name_( Device1Name ),
   Device2Name_( Device2Name ),
   MMILE_( MMILE )
-{
-  std::string vBaseFileName = "DualILE - ";
-  std::string vFile1Name = vBaseFileName + Device1Name_ + ", " + Device2Name_ + ".desc";
-  std::string vFile2Name = vBaseFileName + Device2Name_ + ", " + Device1Name_ + ".desc";
-  PWSTR vWPathName;
-  if ( SUCCEEDED( SHGetKnownFolderPath( FOLDERID_PublicDocuments, KF_FLAG_DEFAULT, NULL, &vWPathName ) ) ) // FOLDERID_PublicDocuments for Public documents path - FOLDERID_ProgramData for All users (aka ProgramData) path
+{  
+  std::string vFusionConfigFolderPath;
+  if ( GetFusionConfigFolderPath( &vFusionConfigFolderPath ) )
   {
-    std::wstring vWPathNameString = vWPathName;
-    vBaseFileName.assign( vWPathNameString.begin(), vWPathNameString.end() );
-    CoTaskMemFree( vWPathName );
-    std::string vFullPath = vBaseFileName + PATH_SEPARATOR + "Fusion Global Data" + PATH_SEPARATOR + "Config" + PATH_SEPARATOR;
-    std::string vFileName = vFullPath + vFile1Name;
+    std::string vFile1Name = GenerateFileName( Device1Name_, Device2Name_ );
+    std::string vFile2Name = GenerateFileName( Device2Name_, Device1Name_ );
+    std::string vFileName = vFusionConfigFolderPath + vFile1Name;
     if ( !LoadConfigFile( vFileName ) )
     {
-      vFileName = vFullPath + vFile2Name;
+      vFileName = vFusionConfigFolderPath + vFile2Name;
       if ( !LoadConfigFile( vFileName ) )
       {
         // Look for the config file in the MicroManager folder
@@ -43,25 +42,114 @@ CPortsConfiguration::CPortsConfiguration( const std::string& Device1Name, const 
         {
           if ( !LoadConfigFile( vFile2Name ) )
           {
-            // No config file found
-            MMILE_->LogMMMessage( "No config file found" );
-            //TODO: Handle this case when we know what we want to do
+            // No config file found, generate a demo file
+            MMILE_->LogMMMessage( "No port configuration file found. Using a default port configuration." );
+            GenerateDefaultConfig();
           }
         }
       }
     }
   }
-
-
 }
 
 CPortsConfiguration::~CPortsConfiguration()
 {
 }
 
+std::string CPortsConfiguration::GenerateFileName( const std::string& Device1Name, const std::string& Device2Name ) const
+{
+  static const std::string vBaseFileName = "DualILE - ";
+  return vBaseFileName + Device1Name + ", " + Device2Name + ".desc";
+}
+
+bool CPortsConfiguration::GetFusionConfigFolderPath( std::string* Path ) const
+{
+  PWSTR vWPathName;
+  if ( SUCCEEDED( SHGetKnownFolderPath( FOLDERID_PublicDocuments, KF_FLAG_DEFAULT, NULL, &vWPathName ) ) ) // FOLDERID_PublicDocuments for Public documents path - FOLDERID_ProgramData for All users (aka ProgramData) path
+  {
+    std::wstring vWPathNameString = vWPathName;
+    std::string vBaseFileName( vWPathNameString.begin(), vWPathNameString.end() );
+    CoTaskMemFree( vWPathName );
+    *Path = vBaseFileName + PATH_SEPARATOR + "Fusion Global Data" + PATH_SEPARATOR + "Config" + PATH_SEPARATOR;
+    return true;
+  }
+  return false;
+}
+
+bool CPortsConfiguration::TestFileWriteAccess( const std::string& FileName, std::string* FileToOpen ) const
+{
+  std::ofstream vFile( FileName );
+  if ( vFile.is_open() )
+  {
+    vFile.close();
+    *FileToOpen = FileName;
+    return true;
+  }
+
+  // Create Fusion config folder if needed and test if we can write the config file 
+  //std::string vPath;
+  //if ( GetFusionConfigFolderPath( &vPath ) )
+  //{
+  //  std::wstring vwPath( vPath.begin(), vPath.end() );
+  //  boost::filesystem::path vDirectory( vwPath.c_str() );
+  //  if ( !boost::filesystem::exists( vDirectory ) )
+  //  {
+  //    if ( !boost::filesystem::create_directory( vDirectory ) )
+  //    {
+  //      return false;
+  //    }
+  //  }
+  //  std::string vFullFilePath = vPath + FileName;
+  //  std::ofstream vFile( vFullFilePath );
+  //  if ( vFile.is_open() )
+  //  {
+  //    vFile.close();
+  //    *FileToOpen = vFullFilePath;
+  //    return true;
+  //  }
+  //}
+  return false;
+}
+
+void CPortsConfiguration::GenerateDefaultConfig()
+{
+  std::vector<int> vTIRFConfiguration; vTIRFConfiguration.push_back( 1 ); vTIRFConfiguration.push_back( 1 );
+  std::vector<int> vBorealisConfiguration; vBorealisConfiguration.push_back( 3 ); vBorealisConfiguration.push_back( 1 );
+  std::vector<int> vPhotoStimulationConfiguration; vPhotoStimulationConfiguration.push_back( 2 ); vPhotoStimulationConfiguration.push_back( 2 );
+  Configuration_["TIRF"] = vTIRFConfiguration;
+  Configuration_["Borealis"] = vBorealisConfiguration;
+  Configuration_["Photostimulation"] = vPhotoStimulationConfiguration;
+
+  std::string vFileName = GenerateFileName( Device1Name_, Device2Name_ );
+  std::string vFileToOpen;
+  if ( TestFileWriteAccess( vFileName, &vFileToOpen ) )
+  {
+    std::ofstream vFile( vFileToOpen );
+    WritePortToConfigFile( vFile, 0, "TIRF" );
+    WritePortToConfigFile( vFile, 1, "Borealis" );
+    WritePortToConfigFile( vFile, 2, "Photostimulation" );    
+    vFile.close();
+  }
+  else
+  {
+    MMILE_->LogMMMessage( "Generating configuration file FAILED" );
+  }
+}
+
+void CPortsConfiguration::WritePortToConfigFile( std::ofstream& File, int PortIndex, const std::string& PortName ) const
+{
+  if ( File.is_open() )
+  {
+    TConfiguration::const_iterator vPortIt = Configuration_.find( PortName );
+    if ( vPortIt != Configuration_.end() && vPortIt->second.size() >= 2)
+    {
+      File << ConfigFileKeyBaseName_ << "[" + std::to_string( static_cast<long long>( PortIndex ) ) + "]=" << vPortIt->first << "," << vPortIt->second[0] << "," << vPortIt->second[1] << std::endl;
+    }
+  }
+}
+
 bool CPortsConfiguration::LoadConfigFile(const std::string& FileName)
 {
-  static const std::string vKeyBaseName = "OutputPort";
   TConfiguration vNewConfiguration;
 
   std::ifstream vFile( FileName );
@@ -77,7 +165,7 @@ bool CPortsConfiguration::LoadConfigFile(const std::string& FileName)
     size_t vEqualPos = vLine.find( "=" );
     if ( vEqualPos != std::string::npos )
     {
-      if ( vLine.find( vKeyBaseName ) != std::string::npos )
+      if ( vLine.find( ConfigFileKeyBaseName_ ) != std::string::npos )
       {
         bool vPortConfigurationRetrieved = false;
         std::vector<std::string> vValueList;

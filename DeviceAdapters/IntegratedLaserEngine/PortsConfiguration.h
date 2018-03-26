@@ -31,6 +31,13 @@ private:
   std::string Device2Name_;
   CIntegratedLaserEngine* MMILE_;
   TConfiguration Configuration_;
+  static const std::string ConfigFileKeyBaseName_;
+
+  std::string GenerateFileName( const std::string& Device1Name, const std::string& Device2Name ) const;
+  bool GetFusionConfigFolderPath( std::string* Path ) const;
+  bool TestFileWriteAccess( const std::string& FileName, std::string* FileToOpen = nullptr ) const;
+  void GenerateDefaultConfig();
+  void WritePortToConfigFile( std::ofstream& File, int PortIndex, const std::string& PortName ) const;
 };
 
 #endif
