@@ -285,7 +285,7 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
         MMILE_->LogMMMessage( "Enable" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + " = " + Enable_[LaserIndex], true );
         if ( OpenRequest_ )
         {
-          SetOpen();
+          return SetOpen();
         }
       }
     }
@@ -331,22 +331,29 @@ int CLasers::SetOpen(bool Open)
       MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( vLaserIndex ) ) + "  = " + std::to_string( static_cast<long long>( vPower ) ) + "(" + std::to_string( static_cast<long long>( vLaserOn ) ) + ")", true );
 
       TLaserState vLaserState;
-      LaserInterface_->GetLaserState( vLaserIndex, &vLaserState );
-      if ( vLaserOn && ( vLaserState != ALC_READY ) )
+      if ( LaserInterface_->GetLaserState( vLaserIndex, &vLaserState ) )
       {
-        std::string vMessage = "Laser # " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " is not ready!";
-        // laser is not ready!
-        MMILE_->LogMMMessage( vMessage.c_str(), false );
-        // GetCoreCallback()->PostError(std::make_pair<int,std::string>(DEVICE_ERR,vMessage));
-      }
-
-      if ( vLaserState > ALC_NOT_AVAILABLE )
-      {
-        MMILE_->LogMMMessage( "setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long long>( vPower ) ) + "% full scale", true );
-        if ( !LaserInterface_->SetLas_I( vLaserIndex, vPower, vLaserOn ) )
+        if ( vLaserOn && ( vLaserState != ALC_READY ) )
         {
-          MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long long>( vPower ) ) + "]" );
+          std::string vMessage = "Laser # " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " is not ready!";
+          // laser is not ready!
+          MMILE_->LogMMMessage( vMessage.c_str(), false );
+          // GetCoreCallback()->PostError(std::make_pair<int,std::string>(DEVICE_ERR,vMessage));
         }
+
+        if ( vLaserState > ALC_NOT_AVAILABLE )
+        {
+          MMILE_->LogMMMessage( "setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long long>( vPower ) ) + "% full scale", true );
+          if ( !LaserInterface_->SetLas_I( vLaserIndex, vPower, vLaserOn ) )
+          {
+            MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long long>( vPower ) ) + "]" );
+            return ERR_LASER_SET;
+          }
+        }
+      }
+      else
+      {
+        return ERR_LASER_STATE_READ;
       }
     }
     MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast<long long>( Open ) ), true );

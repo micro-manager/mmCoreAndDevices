@@ -99,9 +99,11 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_ACTIVEBLANKING_INIT, "Active Blanking initialisation failed" );
   SetErrorText( ERR_LOWPOWERMODE_INIT, "Low Power mode initialisation failed" );
   SetErrorText( ERR_LASERS_INIT, "Lasers initialisation failed" );
+  SetErrorText( ERR_LASER_STATE_READ, "Reading laser state failed" );
   SetErrorText( ERR_INTERLOCK, "Interlock triggered" );
   SetErrorText( ERR_CLASSIV_INTERLOCK, "Class IV interlock triggered" );
   SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device not connected. If it is reconnecting, please wait." );
+  SetErrorText( ERR_LASER_SET, "Setting laser power failed" );
   SetErrorText( ERR_ACTIVEBLANKING_SET, "Setting active blanking failed" );
   SetErrorText( ERR_DEVICE_INDEXINVALID, "Device index invalid" );
   SetErrorText( ERR_DEVICE_CONNECTIONFAILED, "Connection to the device failed" );
