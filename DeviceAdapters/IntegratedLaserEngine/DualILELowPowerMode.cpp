@@ -148,6 +148,11 @@ int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType
   }
   else if ( Act == MM::AfterSet )
   {
+    int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+    if ( vInterlockStatus != DEVICE_OK )
+    {
+      return vInterlockStatus;
+    }
     if ( Unit1PowerInterface_ == nullptr && Unit2PowerInterface_ == nullptr )
     {
       return ERR_DEVICE_NOT_CONNECTED;

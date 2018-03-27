@@ -74,7 +74,9 @@ public:
 
   void CheckAndUpdateLasers();
   void ActiveClassIVInterlock();
+  void ActiveKeyInterlock();
   void UpdatePropertyUI( const char* PropertyName, const char* PropertyValue );
+  int GetClassIVAndKeyInterlockStatus();
 
 protected:
   IILEWrapperInterface* ILEWrapper_;
@@ -86,6 +88,8 @@ private:
   IILEWrapperInterface::TDeviceList DeviceList_;
   CLasers* Lasers_;
   MM::PropertyBase* ResetDeviceProperty_;
+  bool ClassIVInterlockActive_;
+  bool KeyInterlockActive_;
 
   bool Initialized_;
   MM::MMTime ChangedTime_;
@@ -96,8 +100,10 @@ private:
     return *this;
   }
 
-  virtual std::string GetDeviceName() const = 0;
   void CreateDeviceSelectionProperty( int DeviceID, int DeviceIndex );
+  void ActivateInterlock();
+
+  virtual std::string GetDeviceName() const = 0;
   virtual bool CreateILE() = 0;
   virtual void DeleteILE() = 0;
   virtual int InitializePorts() = 0;

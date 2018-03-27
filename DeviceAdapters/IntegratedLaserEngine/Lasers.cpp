@@ -234,6 +234,11 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   }
   else if ( Act == MM::AfterSet )
   {
+    int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+    if ( vInterlockStatus != DEVICE_OK )
+    {
+      return vInterlockStatus;
+    }
     if ( LaserInterface_ == nullptr )
     {
       return ERR_DEVICE_NOT_CONNECTED;
@@ -255,7 +260,7 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
       }
       else if( IsKeyInterlockTriggered( 1 ) )
       {
-        MMILE_->ActiveClassIVInterlock();
+        MMILE_->ActiveKeyInterlock();
         return ERR_KEY_INTERLOCK;
       }
       else
@@ -289,6 +294,11 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
   }
   else if ( Act == MM::AfterSet )
   {
+    int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+    if ( vInterlockStatus != DEVICE_OK )
+    {
+      return vInterlockStatus;
+    }
     if ( LaserInterface_ == nullptr )
     {
       return ERR_DEVICE_NOT_CONNECTED;
@@ -333,7 +343,7 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
       }
       else if( IsKeyInterlockTriggered( 1 ) )
       {
-        MMILE_->ActiveClassIVInterlock(); 
+        MMILE_->ActiveKeyInterlock();
         return ERR_KEY_INTERLOCK;
       }
       else
@@ -351,6 +361,11 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
 
 int CLasers::SetOpen(bool Open)
 {
+  int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+  if ( vInterlockStatus != DEVICE_OK )
+  {
+    return vInterlockStatus;
+  }
   if ( LaserInterface_ == nullptr )
   {
     return ERR_DEVICE_NOT_CONNECTED;
@@ -482,6 +497,11 @@ int CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPo
 
 int CLasers::Wavelength(const int LaserIndex )
 {
+  int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+  if ( vInterlockStatus != DEVICE_OK )
+  {
+    return vInterlockStatus;
+  }
   if ( LaserInterface_ == nullptr )
   {
     return ERR_DEVICE_NOT_CONNECTED;
@@ -633,6 +653,10 @@ int CLasers::OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act )
 {
   if ( Act == MM::BeforeGet )
   {
+    if ( LaserInterface_ == nullptr || ILEInterface_ == nullptr )
+    {
+      return DEVICE_OK;
+    }
     if ( IsInterlockTriggered( 1 ) )
     {
       if ( IsClassIVInterlockTriggered() || IsKeyInterlockTriggered( 1 ) )
@@ -641,7 +665,14 @@ int CLasers::OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act )
         {
           Prop->Set( g_InterlockClassIVActive );
           MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockClassIVActive );
-          MMILE_->ActiveClassIVInterlock();
+          if ( IsClassIVInterlockTriggered() )
+          {
+            MMILE_->ActiveClassIVInterlock();
+          }
+          else
+          {
+            MMILE_->ActiveKeyInterlock();
+          }
         }
         Interlock_ = false;
         ClassIVInterlock_ = true;

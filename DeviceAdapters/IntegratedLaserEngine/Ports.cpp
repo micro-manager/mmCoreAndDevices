@@ -91,6 +91,11 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
   }
   else if ( Act == MM::AfterSet )
   {
+    int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+    if ( vInterlockStatus != DEVICE_OK )
+    {
+      return vInterlockStatus;
+    }
     if ( PortInterface_ == nullptr )
     {
       return ERR_DEVICE_NOT_CONNECTED;

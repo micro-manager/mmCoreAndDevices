@@ -84,7 +84,9 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   ILEDevice_( nullptr ),
   Lasers_( nullptr ),
   ResetDeviceProperty_( nullptr ),
-  ConstructionReturnCode_( DEVICE_OK )
+  ConstructionReturnCode_( DEVICE_OK ),
+  ClassIVInterlockActive_( false ),
+  KeyInterlockActive_( false )
 {
   if ( NbDevices <= 0 )
   {
@@ -110,7 +112,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_INTERLOCK, "Interlock triggered" );
   SetErrorText( ERR_CLASSIV_INTERLOCK, "Class IV interlock triggered" );
   SetErrorText( ERR_KEY_INTERLOCK, "Key interlock triggered" );
-  SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device not connected. If it is reconnecting, please wait." );
+  SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device not connected" );
   SetErrorText( ERR_LASER_SET, "Setting laser power failed" );
   SetErrorText( ERR_SETCONTROLMODE, "Setting control mode failed" );
   SetErrorText( ERR_SETLASERSHUTTER, "Failed to open or close the laser shutter!" );
@@ -360,13 +362,6 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
     Prop->Get( vValue );
     if ( vValue == g_PropertyOn )
     {
-      // Disconnect from the ILE interface
-      DisconnectILEInterfaces();
-      Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
-
-      // Disconnect the device
-      DeleteILE();
-
       // Reconnect the device
       try
       {
@@ -403,6 +398,8 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       }
       if ( vRet == DEVICE_OK )
       {
+        ClassIVInterlockActive_ = false;
+        KeyInterlockActive_ = false;
         Prop->Set( g_PropertyOff );
         MM::Property* pChildProperty = ( MM::Property* )Prop;
         pChildProperty->SetReadOnly( true );
@@ -470,13 +467,46 @@ void CIntegratedLaserEngine::CheckAndUpdateLasers()
   }
 }
 
-void CIntegratedLaserEngine::ActiveClassIVInterlock()
+void CIntegratedLaserEngine::ActivateInterlock()
 {
   if ( ResetDeviceProperty_ != nullptr )
   {
     MM::Property* pChildProperty = ( MM::Property* )ResetDeviceProperty_;
     pChildProperty->SetReadOnly( false );
   }
+
+  // Disconnect from the ILE interface
+  DisconnectILEInterfaces();
+  Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
+
+  // Disconnect the device
+  DeleteILE();
+}
+
+void CIntegratedLaserEngine::ActiveClassIVInterlock()
+{
+  ClassIVInterlockActive_ = true;
+  ActivateInterlock();
+}
+
+void CIntegratedLaserEngine::ActiveKeyInterlock()
+{
+  KeyInterlockActive_ = true;
+  ActivateInterlock();
+}
+
+int CIntegratedLaserEngine::GetClassIVAndKeyInterlockStatus()
+{
+  if ( ClassIVInterlockActive_ )
+  {
+    return ERR_CLASSIV_INTERLOCK;
+    
+  }
+  if ( KeyInterlockActive_ ) 
+  {
+    return ERR_KEY_INTERLOCK;
+  }
+  return DEVICE_OK;
 }
 
 void CIntegratedLaserEngine::UpdatePropertyUI( const char* PropertyName, const char* PropertyValue )
