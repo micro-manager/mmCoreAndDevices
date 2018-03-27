@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 #include "DualILELowPowerMode.h"
-#include "IntegratedLaserEngine.h"
+#include "DualILE.h"
 #include "PortsConfiguration.h"
 #include "ALC_REV.h"
 #include <exception>
@@ -14,7 +14,7 @@ const char* const g_PropertyBaseName = "Low Power Mode [X 0.1]";
 const char* const g_On = "On";
 const char* const g_Off = "Off";
 
-CDualILELowPowerMode::CDualILELowPowerMode( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface, const CPortsConfiguration* PortsConfiguration, CIntegratedLaserEngine* MMILE ) :
+CDualILELowPowerMode::CDualILELowPowerMode( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface, const CPortsConfiguration* PortsConfiguration, CDualILE* MMILE ) :
   Unit1PowerInterface_( Unit1PowerInterface ),
   Unit2PowerInterface_( Unit2PowerInterface ),
   PortsConfiguration_( PortsConfiguration ),

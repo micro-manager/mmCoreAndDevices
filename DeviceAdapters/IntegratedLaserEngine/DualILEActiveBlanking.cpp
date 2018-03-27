@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 #include "DualILEActiveBlanking.h"
-#include "IntegratedLaserEngine.h"
+#include "DualILE.h"
 #include "PortsConfiguration.h"
 #include "ALC_REV.h"
 #include "ALC_REV_ILE2.h"
@@ -16,7 +16,7 @@ const char* const g_PropertyBaseName = "Active Blanking";
 const char* const g_On = "On";
 const char* const g_Off = "Off";
 
-CDualILEActiveBlanking::CDualILEActiveBlanking( IALC_REV_ILE4* DualActiveBlankingInterface, const CPortsConfiguration* PortsConfiguration, CIntegratedLaserEngine* MMILE ) :
+CDualILEActiveBlanking::CDualILEActiveBlanking( IALC_REV_ILE4* DualActiveBlankingInterface, const CPortsConfiguration* PortsConfiguration, CDualILE* MMILE ) :
   DualActiveBlankingInterface_( DualActiveBlankingInterface ),
   PortsConfiguration_( PortsConfiguration ),
   MMILE_( MMILE ),
@@ -275,12 +275,12 @@ int CDualILEActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionTy
       MMILE_->LogMMMessage( "Changing Active Blanking - Port " + vPortName + ": Unit1/" + std::to_string( static_cast<long long>( vUnitsPorts[0] ) ) + " = " + ( vUnit1 ? g_On : g_Off ) );
       MMILE_->LogMMMessage( "Changing Active Blanking - Port " + vPortName + ": Unit2/" + std::to_string( static_cast<long long>( vUnitsPorts[1] ) ) + " = " + ( vUnit2 ? g_On : g_Off ) );
       // TEST
-      if ( !DualActiveBlankingInterface_->SetActiveBlankingState( 0, Unit1EnabledPattern_ ) )
+      if ( Unit1ActiveBlankingPresent_ && !DualActiveBlankingInterface_->SetActiveBlankingState( 0, Unit1EnabledPattern_ ) )
       {
         LogSetActiveBlankingError( 0, vPortName, vRequestEnabled );
         return ERR_ACTIVEBLANKING_SET;
       }
-      if ( !DualActiveBlankingInterface_->SetActiveBlankingState( 1, Unit2EnabledPattern_ ) ) 
+      if ( Unit2ActiveBlankingPresent_ && !DualActiveBlankingInterface_->SetActiveBlankingState( 1, Unit2EnabledPattern_ ) )
       {
         LogSetActiveBlankingError( 1, vPortName, vRequestEnabled );
         return ERR_ACTIVEBLANKING_SET;
@@ -328,6 +328,38 @@ void CDualILEActiveBlanking::UpdateILEInterface( IALC_REV_ILE4* DualActiveBlanki
         PropertyPointers_[vPropertyName]->Set( IsLineEnabledForDualPort( *vPortIt ) ? g_On : g_Off );
       }
       ++vPortIt;
+    }
+  }
+}
+
+void CDualILEActiveBlanking::UpdateActiveBlankingOnPortChange( const std::string& PortName )
+{
+  // Update the device when a port is changed. This is needed since the displayed value for Active Blanking may not 
+  // reflect the exact state of the device. The reason is that a physical port may be shared between 2 virtual ports.
+  std::string vPropertyName = BuildProperty( PortName );
+  if ( PropertyPointers_.find( vPropertyName ) != PropertyPointers_.end() && PropertyPointers_[vPropertyName] != nullptr )
+  {
+    std::string vValue;
+    PropertyPointers_[vPropertyName]->Get( vValue );
+    bool vEnable = ( vValue == g_On );
+    int vOldUnit1EnabledPattern = Unit1EnabledPattern_;
+    int vOldUnit2EnabledPattern = Unit2EnabledPattern_;
+    MMILE_->LogMMMessage( "Updating Active Blanking following port change. Old pattern [" + std::to_string( static_cast<long long>( vOldUnit1EnabledPattern ) ) + "," + std::to_string( static_cast<long long>( vOldUnit2EnabledPattern ) ) + "]", true );
+    SetLineStateForDualPort( PortName, vEnable );
+    MMILE_->LogMMMessage( "Updating Active Blanking following port change. New pattern [" + std::to_string( static_cast<long long>( Unit1EnabledPattern_ ) ) + "," + std::to_string( static_cast<long long>( Unit2EnabledPattern_ ) ) + "]", true );
+    if ( Unit1ActiveBlankingPresent_ && vOldUnit1EnabledPattern != Unit1EnabledPattern_ )
+    {
+      if ( !DualActiveBlankingInterface_->SetActiveBlankingState( 0, Unit1EnabledPattern_ ) )
+      {
+        LogSetActiveBlankingError( 0, PortName, vEnable );
+      }
+    }
+    if ( Unit2ActiveBlankingPresent_ && vOldUnit2EnabledPattern != Unit2EnabledPattern_ )
+    {
+      if ( !DualActiveBlankingInterface_->SetActiveBlankingState( 1, Unit2EnabledPattern_ ) )
+      {
+        LogSetActiveBlankingError( 1, PortName, vEnable );
+      }
     }
   }
 }

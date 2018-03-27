@@ -12,12 +12,12 @@
 
 class IALC_REV_ILEPowerManagement;
 class CPortsConfiguration;
-class CIntegratedLaserEngine;
+class CDualILE;
 
 class CDualILELowPowerMode
 {
 public:
-  CDualILELowPowerMode( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface, const CPortsConfiguration* PortsConfiguration, CIntegratedLaserEngine* MMILE );
+  CDualILELowPowerMode( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface, const CPortsConfiguration* PortsConfiguration, CDualILE* MMILE );
   ~CDualILELowPowerMode();
 
   int OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act );
@@ -29,7 +29,7 @@ private:
   IALC_REV_ILEPowerManagement* Unit1PowerInterface_;
   IALC_REV_ILEPowerManagement* Unit2PowerInterface_;
   const CPortsConfiguration* PortsConfiguration_;
-  CIntegratedLaserEngine* MMILE_;
+  CDualILE* MMILE_;
   std::map<std::string, std::vector<int>> UnitsPropertyMap_;
   std::map<std::string, MM::PropertyBase *> PropertyPointers_;
   bool Unit1Active_;

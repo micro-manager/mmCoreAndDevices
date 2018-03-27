@@ -12,12 +12,12 @@
 class IALC_REV_Port;
 class IALC_REV_ILE2;
 class CPortsConfiguration;
-class CIntegratedLaserEngine;
+class CDualILE;
 
 class CDualILEPorts
 {
 public:
-  CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface, CPortsConfiguration* PortsConfiguration, CIntegratedLaserEngine* MMILE );
+  CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface, CPortsConfiguration* PortsConfiguration, CDualILE* MMILE );
   ~CDualILEPorts();
 
   int OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act );
@@ -29,7 +29,7 @@ private:
   IALC_REV_Port* DualPortInterface_;
   IALC_REV_ILE2* ILE2Interface_;
   CPortsConfiguration* PortsConfiguration_;
-  CIntegratedLaserEngine* MMILE_;
+  CDualILE* MMILE_;
   int NbPortsUnit1_;
   int NbPortsUnit2_;
   std::string CurrentPortName_;

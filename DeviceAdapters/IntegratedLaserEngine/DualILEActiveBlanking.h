@@ -11,24 +11,25 @@
 #include <map>
 
 class IALC_REV_ILE4;
-class CIntegratedLaserEngine;
+class CDualILE;
 class CPortsConfiguration;
 
 class CDualILEActiveBlanking
 {
 public:
-  CDualILEActiveBlanking( IALC_REV_ILE4* DualActiveBlankingInterface, const CPortsConfiguration* PortsConfiguration, CIntegratedLaserEngine* MMILE );
+  CDualILEActiveBlanking( IALC_REV_ILE4* DualActiveBlankingInterface, const CPortsConfiguration* PortsConfiguration, CDualILE* MMILE );
   ~CDualILEActiveBlanking();
 
   int OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act, long PortIndex );
   typedef MM::ActionEx<CDualILEActiveBlanking> CPropertyActionEx;
 
   void UpdateILEInterface( IALC_REV_ILE4* DualActiveBlankingInterface );
+  void UpdateActiveBlankingOnPortChange( const std::string& PortName );
 
 private:
   IALC_REV_ILE4* DualActiveBlankingInterface_;
   const CPortsConfiguration* PortsConfiguration_;
-  CIntegratedLaserEngine* MMILE_;
+  CDualILE* MMILE_;
   std::vector<std::string> PortNames_;
   int Unit1EnabledPattern_;
   int Unit2EnabledPattern_;

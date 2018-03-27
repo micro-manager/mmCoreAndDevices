@@ -30,6 +30,7 @@ public:
   virtual ~CDualILE();
 
   int Shutdown();
+  void UpdateActiveBlanking( const std::string& PortName );
 
   static const char* const g_DualDeviceName;
   static const char* const g_Dual700DeviceName;

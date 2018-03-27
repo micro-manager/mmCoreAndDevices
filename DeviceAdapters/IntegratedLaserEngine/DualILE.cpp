@@ -284,3 +284,11 @@ int CDualILE::InitializeLowPowerMode()
   }
   return DEVICE_OK;
 }
+
+void CDualILE::UpdateActiveBlanking( const std::string& PortName )
+{
+  if ( ActiveBlanking_ != nullptr )
+  {
+    ActiveBlanking_->UpdateActiveBlankingOnPortChange( PortName );
+  }
+}

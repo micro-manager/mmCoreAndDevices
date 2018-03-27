@@ -13,7 +13,7 @@
 
 const char* const g_PropertyName = "Output Port";
 
-CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface, CPortsConfiguration* PortsConfiguration, CIntegratedLaserEngine* MMILE ) :
+CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface, CPortsConfiguration* PortsConfiguration, CDualILE* MMILE ) :
   DualPortInterface_( DualPortInterface ),
   ILE2Interface_( ILE2Interface ),
   PortsConfiguration_( PortsConfiguration ),
@@ -97,6 +97,7 @@ int CDualILEPorts::ChangePort( const std::string& PortName )
         CurrentPortName_ = PortName;
         // Updating lasers
         MMILE_->CheckAndUpdateLasers();
+        MMILE_->UpdateActiveBlanking( CurrentPortName_ );
       }
       else
       {
@@ -159,10 +160,14 @@ void CDualILEPorts::UpdateILEInterface( IALC_REV_Port* DualPortInterface, IALC_R
       std::string vCurrentPortName = PortsConfiguration_->FindMergedPortForUnitPort( vUnit1Port, vUnit2Port );
       if ( vCurrentPortName != "" )
       {
-        CurrentPortName_ = vCurrentPortName;
-        if ( PropertyPointer_ != nullptr )
+        if ( vCurrentPortName != CurrentPortName_ )
         {
-          PropertyPointer_->Set( CurrentPortName_.c_str() );
+          CurrentPortName_ = vCurrentPortName;
+          if ( PropertyPointer_ != nullptr )
+          {
+            PropertyPointer_->Set( CurrentPortName_.c_str() );
+          }
+          MMILE_->UpdateActiveBlanking( CurrentPortName_ );
         }
         MMILE_->LogMMMessage( "Resetting curren port to device state [" + CurrentPortName_ + " (" + std::to_string( static_cast<long long>( vUnit1Port ) ) + ", " + std::to_string( static_cast<long long>( vUnit2Port ) ) + ")]", true );
       }
