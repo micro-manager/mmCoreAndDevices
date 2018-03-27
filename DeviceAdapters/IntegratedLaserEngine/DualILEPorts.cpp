@@ -27,15 +27,17 @@ CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* I
   {
     throw std::logic_error( "CDualILEPorts: Pointer to the dual Port interface invalid" );
   }
-
   if ( ILE2Interface_ == nullptr )
   {
     throw std::logic_error( "CDualILEPorts: Pointer to the ILE interface 2 invalid" );
   }
-
   if ( PortsConfiguration_ == nullptr )
   {
     throw std::logic_error( "CDualILEPorts: Pointer to Port configuration invalid" );
+  }
+  if ( MMILE_ == nullptr )
+  {
+    throw std::logic_error( "CDualILEPorts: Pointer tomain class invalid" );
   }
 
   DualPortInterface_->InitializePort();
@@ -97,7 +99,6 @@ int CDualILEPorts::ChangePort( const std::string& PortName )
         CurrentPortName_ = PortName;
         // Updating lasers
         MMILE_->CheckAndUpdateLasers();
-        MMILE_->UpdateActiveBlanking( CurrentPortName_ );
       }
       else
       {
@@ -146,7 +147,7 @@ int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
   return DEVICE_OK;
 }
 
-void CDualILEPorts::UpdateILEInterface( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface )
+int CDualILEPorts::UpdateILEInterface( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface )
 {
   DualPortInterface_ = DualPortInterface;
   ILE2Interface_ = ILE2Interface;
@@ -160,17 +161,18 @@ void CDualILEPorts::UpdateILEInterface( IALC_REV_Port* DualPortInterface, IALC_R
       std::string vCurrentPortName = PortsConfiguration_->FindMergedPortForUnitPort( vUnit1Port, vUnit2Port );
       if ( vCurrentPortName != "" )
       {
-        if ( vCurrentPortName != CurrentPortName_ )
+        CurrentPortName_ = vCurrentPortName;
+        if ( PropertyPointer_ != nullptr )
         {
-          CurrentPortName_ = vCurrentPortName;
-          if ( PropertyPointer_ != nullptr )
-          {
-            PropertyPointer_->Set( CurrentPortName_.c_str() );
-          }
-          MMILE_->UpdateActiveBlanking( CurrentPortName_ );
+          PropertyPointer_->Set( CurrentPortName_.c_str() );
         }
         MMILE_->LogMMMessage( "Resetting curren port to device state [" + CurrentPortName_ + " (" + std::to_string( static_cast<long long>( vUnit1Port ) ) + ", " + std::to_string( static_cast<long long>( vUnit2Port ) ) + ")]", true );
       }
     }
+    else
+    {
+      return ERR_PORTS_GET;
+    }
   }
+  return DEVICE_OK;
 }

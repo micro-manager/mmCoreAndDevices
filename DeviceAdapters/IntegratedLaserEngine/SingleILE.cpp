@@ -82,23 +82,49 @@ void CSingleILE::DisconnectILEInterfaces()
   }
 }
 
-void CSingleILE::ReconnectILEInterfaces()
+int CSingleILE::ReconnectILEInterfaces()
 {
   IALC_REV_Port* vPortInterface = ILEDevice_->GetPortInterface();
-  IALC_REV_ILEActiveBlankingManagement* vActiveBlanking = ILEWrapper_->GetILEActiveBlankingManagementInterface( ILEDevice_ );
-  IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
-  if ( Ports_ )
+  IALC_REV_ILEActiveBlankingManagement* vActiveBlankingInterface = ILEWrapper_->GetILEActiveBlankingManagementInterface( ILEDevice_ );
+  IALC_REV_ILEPowerManagement* vLowPowerModeInterface = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
+  int vRet = DEVICE_OK;
+  if ( Ports_ != nullptr )
   {
-    Ports_->UpdateILEInterface( vPortInterface );
+    if ( vPortInterface != nullptr )
+    {
+      vRet = Ports_->UpdateILEInterface( vPortInterface );
+    }
+    else
+    {
+      LogMessage( "Pointer to the Port inteface invalid" );
+      vRet = ERR_DEVICE_RECONNECTIONFAILED;
+    }
   }
-  if ( ActiveBlanking_ )
+  if ( vRet == DEVICE_OK && ActiveBlanking_ != nullptr )
   {
-    ActiveBlanking_->UpdateILEInterface( vActiveBlanking );
+    if ( vActiveBlankingInterface != nullptr )
+    {
+      vRet = ActiveBlanking_->UpdateILEInterface( vActiveBlankingInterface );
+    }
+    else
+    {
+      LogMessage( "Pointer to the Active Blanking inteface invalid" );
+      vRet = ERR_DEVICE_RECONNECTIONFAILED;
+    }
   }
-  if ( LowPowerMode_ )
+  if ( vRet == DEVICE_OK && LowPowerMode_ != nullptr )
   {
-    LowPowerMode_->UpdateILEInterface( vLowPowerMode );
+    if ( vLowPowerModeInterface != nullptr )
+    {
+      vRet = LowPowerMode_->UpdateILEInterface( vLowPowerModeInterface );
+    }
+    else
+    {
+      LogMessage( "Pointer to the Low Power Mode inteface invalid" );
+      vRet = ERR_DEVICE_RECONNECTIONFAILED;
+    }
   }
+  return vRet;
 }
 
 int CSingleILE::InitializePorts()

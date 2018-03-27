@@ -34,6 +34,8 @@ CDualILE::CDualILE( bool ILE700 ) :
 {
   SetErrorText( ERR_DUALPORTS_PORTCONFIGCORRUPTED, "Changing port failed. Port configuration is corrupted" );
   SetErrorText( ERR_DUALPORTS_PORTCHANGEFAIL, "Changing port failed." );
+  SetErrorText( ERR_DUALILE_GETINTERFACE, "Dual ILE GetInterface failed" );
+  SetErrorText( ERR_LOWPOWERPRESENT, "Failed to retrieve low power presence" );
   LogMessage( std::string( g_DualDeviceName ) + " ctor OK", true );
 }
 
@@ -97,54 +99,104 @@ void CDualILE::DisconnectILEInterfaces()
   }
 }
 
-void CDualILE::ReconnectILEInterfaces()
+int CDualILE::ReconnectILEInterfaces()
 {
   LogMessage( "Reconnecting to Dual ILE", true );
   IALC_REV_ILE2* vILE2 = ILEWrapper_->GetILEInterface2( ILEDevice_ );
   IALC_REV_ILE4* vILE4 = ILEWrapper_->GetILEInterface4( ILEDevice_ );
   IALC_REVObject3 *vILEDevice1, *vILEDevice2;
-  if ( vILE2 != nullptr && vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
+  int vRet = DEVICE_OK;
+  if ( vILE2 != nullptr )
   {
-    IALC_REV_Port* vDualPortInterface = ILEDevice_->GetPortInterface();
-    if ( Ports_ != nullptr )
+    if ( vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
     {
-      LogMessage( "Reconnecting Dual Ports", true );
-      Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
-    }
-    IALC_REV_ILEPowerManagement* vUnit1LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice1 );
-    IALC_REV_ILEPowerManagement* vUnit2LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice2 );
-    if ( LowPowerMode_ != nullptr )
-    {
-      LogMessage( "Reconnecting Dual Low Power Mode", true );
-      bool vLowPowerModePresent;
-      if ( vUnit1LowPowerMode != nullptr )
+      if ( Ports_ != nullptr )
       {
-        if ( vUnit1LowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
+        IALC_REV_Port* vDualPortInterface = ILEDevice_->GetPortInterface();
+        if ( vDualPortInterface != nullptr )
         {
-          if ( !vLowPowerModePresent )
-          {
-            vUnit1LowPowerMode = nullptr;
-          }
+          LogMessage( "Reconnecting Dual Ports", true );
+          vRet = Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
+        }
+        else
+        {
+          LogMessage( "Pointer to dual port interface invalid" );
+          vRet = ERR_DEVICE_RECONNECTIONFAILED;
         }
       }
-      if ( vUnit2LowPowerMode != nullptr )
+      if ( LowPowerMode_ != nullptr )
       {
-        if ( vUnit2LowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
+        IALC_REV_ILEPowerManagement* vUnit1LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice1 );
+        IALC_REV_ILEPowerManagement* vUnit2LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice2 );
+        if ( vUnit1LowPowerMode != nullptr || vUnit2LowPowerMode != nullptr )
         {
-          if ( !vLowPowerModePresent )
+          LogMessage( "Reconnecting Dual Low Power Mode", true );
+          bool vLowPowerModePresent;
+          if ( vUnit1LowPowerMode != nullptr )
           {
-            vUnit2LowPowerMode = nullptr;
+            if ( vUnit1LowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
+            {
+              if ( !vLowPowerModePresent )
+              {
+                vUnit1LowPowerMode = nullptr;
+              }
+            }
+            else
+            {
+              vRet = ERR_LOWPOWERPRESENT;
+            }
+          }
+          if ( vRet == DEVICE_OK && vUnit2LowPowerMode != nullptr )
+          {
+            if ( vUnit2LowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
+            {
+              if ( !vLowPowerModePresent )
+              {
+                vUnit2LowPowerMode = nullptr;
+              }
+            }
+            else
+            {
+              vRet = ERR_LOWPOWERPRESENT;
+            }
+          }
+          if ( vRet == DEVICE_OK )
+          {
+            vRet = LowPowerMode_->UpdateILEInterface( vUnit1LowPowerMode, vUnit2LowPowerMode );
           }
         }
+        else
+        {
+          LogMessage( "Pointers to both power management interfaces invalid" );
+          vRet = ERR_DEVICE_RECONNECTIONFAILED;
+        }
       }
-      LowPowerMode_->UpdateILEInterface( vUnit1LowPowerMode, vUnit2LowPowerMode );
+    }
+    else
+    {
+      return ERR_DUALILE_GETINTERFACE;
     }
   }
-  if ( ActiveBlanking_ != nullptr )
+  else
   {
-    LogMessage( "Reconnecting Dual Active Blanking", true );
-    ActiveBlanking_->UpdateILEInterface( vILE4 );
+    LogMessage( "Pointer to ILE interface 2 invalid" );
+    vRet = ERR_DEVICE_RECONNECTIONFAILED;
   }
+
+  if ( vRet == DEVICE_OK && ActiveBlanking_ != nullptr )
+  {
+    if ( vILE4 != nullptr )
+    {
+      LogMessage( "Reconnecting Dual Active Blanking", true );
+      vRet = ActiveBlanking_->UpdateILEInterface( vILE4 );
+    }
+    else
+    {
+      LogMessage( "Pointer to ILE interface 4 invalid" );
+      vRet = ERR_DEVICE_RECONNECTIONFAILED;
+    }
+  }
+  return vRet;
 }
 
 int CDualILE::InitializePorts()
@@ -283,12 +335,4 @@ int CDualILE::InitializeLowPowerMode()
     LogMessage( "Retrieving Dual port intefaces failed" );
   }
   return DEVICE_OK;
-}
-
-void CDualILE::UpdateActiveBlanking( const std::string& PortName )
-{
-  if ( ActiveBlanking_ != nullptr )
-  {
-    ActiveBlanking_->UpdateActiveBlankingOnPortChange( PortName );
-  }
 }

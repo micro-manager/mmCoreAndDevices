@@ -17,20 +17,29 @@
 #include <vector>
 #include "ILEWrapperInterface.h"
 
-#define ERR_PORTS_INIT 101
-#define ERR_ACTIVEBLANKING_INIT 102
-#define ERR_LOWPOWERMODE_INIT 103
-#define ERR_LASERS_INIT 104
-#define ERR_DEVICE_INDEXINVALID 105
-#define ERR_DEVICE_CONNECTIONFAILED 106
+
+#define ERR_LIBRARY_LOAD 101
+#define ERR_PORTS_INIT 102
+#define ERR_ACTIVEBLANKING_INIT 103
+#define ERR_LOWPOWERMODE_INIT 104
+#define ERR_LASERS_INIT 105
+#define ERR_DEVICE_INDEXINVALID 106
+#define ERR_DEVICE_CONNECTIONFAILED 107
+#define ERR_DEVICE_RECONNECTIONFAILED 108
 #define ERR_LASER_STATE_READ 201
 #define ERR_INTERLOCK 202
 #define ERR_CLASSIV_INTERLOCK 203
 #define ERR_DEVICE_NOT_CONNECTED 204
 #define ERR_LASER_SET 205
+#define ERR_SETCONTROLMODE 206
+#define ERR_SETLASERSHUTTER 207
 #define ERR_ACTIVEBLANKING_SET 401
+#define ERR_ACTIVEBLANKING_GETNBLINES 402
+#define ERR_ACTIVEBLANKING_GETSTATE 403
 #define ERR_LOWPOWERMODE_SET 501
+#define ERR_LOWPOWERMODE_GET 502
 #define ERR_PORTS_SET 601
+#define ERR_PORTS_GET 602
 
 
 class IALC_REVObject3;
@@ -70,6 +79,7 @@ protected:
   IILEWrapperInterface* ILEWrapper_;
   IALC_REVObject3 *ILEDevice_;
   std::vector<std::string> DevicesNames_;
+  int ConstructionReturnCode_;
 
 private:   
   IILEWrapperInterface::TDeviceList DeviceList_;
@@ -93,7 +103,7 @@ private:
   virtual int InitializeActiveBlanking() = 0;
   virtual int InitializeLowPowerMode() = 0;
   virtual void DisconnectILEInterfaces() = 0;
-  virtual void ReconnectILEInterfaces() = 0;
+  virtual int ReconnectILEInterfaces() = 0;
 };
 
 #endif

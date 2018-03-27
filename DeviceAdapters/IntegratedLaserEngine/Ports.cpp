@@ -22,6 +22,10 @@ CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
   {
     throw std::logic_error( "CPorts: Pointer to Port interface invalid" );
   }
+  if ( MMILE_ == nullptr )
+  {
+    throw std::logic_error( "CPorts: Pointer tomain class invalid" );
+  }
 
   NbPorts_ = PortInterface_->InitializePort();
 
@@ -110,7 +114,7 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
   return DEVICE_OK;
 }
 
-void CPorts::UpdateILEInterface( IALC_REV_Port* PortInterface )
+int CPorts::UpdateILEInterface( IALC_REV_Port* PortInterface )
 {
   PortInterface_ = PortInterface;
   if ( PortInterface_ != nullptr )
@@ -127,5 +131,10 @@ void CPorts::UpdateILEInterface( IALC_REV_Port* PortInterface )
         PropertyPointer_->Set( vPortName );
       }
     }
+    else
+    {
+      return ERR_PORTS_GET;
+    }
   }
+  return DEVICE_OK;
 }

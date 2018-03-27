@@ -44,7 +44,7 @@ private:
   int InitializeActiveBlanking();
   int InitializeLowPowerMode();
   void DisconnectILEInterfaces();
-  void ReconnectILEInterfaces();
+  int ReconnectILEInterfaces();
 };
 
 #endif

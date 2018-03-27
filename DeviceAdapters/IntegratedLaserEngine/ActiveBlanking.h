@@ -22,7 +22,7 @@ public:
   int OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CActiveBlanking> CPropertyAction;
 
-  void UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface );
+  int UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface );
 
 private:
   IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface_;

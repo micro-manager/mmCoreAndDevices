@@ -23,7 +23,7 @@ public:
   int OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CDualILEPorts> CPropertyAction;
 
-  void UpdateILEInterface( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface );
+  int UpdateILEInterface( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* ILE2Interface );
 
 private:
   IALC_REV_Port* DualPortInterface_;

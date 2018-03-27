@@ -23,7 +23,7 @@ public:
   int OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CDualILELowPowerMode> CPropertyAction;
 
-  void UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface );
+  int UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface );
 
 private:
   IALC_REV_ILEPowerManagement* Unit1PowerInterface_;

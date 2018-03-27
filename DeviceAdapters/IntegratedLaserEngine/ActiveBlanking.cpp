@@ -22,6 +22,10 @@ CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBl
   {
     throw std::logic_error( "CActiveBlanking: Pointer to Active Blanking interface invalid" );
   }
+  if ( MMILE_ == nullptr )
+  {
+    throw std::logic_error( "CActiveBlanking: Pointer tomain class invalid" );
+  }
 
   int vNbLines;
   if ( !ActiveBlankingInterface_->GetNumberOfLines( &vNbLines ) )
@@ -139,7 +143,7 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
   return DEVICE_OK;
 }
 
-void CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface )
+int CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface )
 {
   ActiveBlankingInterface_ = ActiveBlankingInterface;
   if ( ActiveBlankingInterface_ != nullptr )
@@ -162,6 +166,15 @@ void CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* 
           ++vPropertyIt;
         }
       }
+      else
+      {
+        return ERR_ACTIVEBLANKING_GETSTATE;
+      }
+    }
+    else
+    {
+      return ERR_ACTIVEBLANKING_GETNBLINES;
     }
   }
+  return DEVICE_OK;
 }

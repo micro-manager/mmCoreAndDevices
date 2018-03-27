@@ -207,7 +207,7 @@ int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType
   return vRet;
 }
 
-void CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface )
+int CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface )
 {
   Unit1PowerInterface_ = Unit1PowerInterface;
   Unit2PowerInterface_ = Unit2PowerInterface;
@@ -216,11 +216,17 @@ void CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit
   {
     if ( Unit1PowerInterface_ )
     {
-      Unit1PowerInterface_->GetLowPowerState( &Unit1Active_ );
+      if ( !Unit1PowerInterface_->GetLowPowerState( &Unit1Active_ ) )
+      {
+        return ERR_LOWPOWERMODE_GET;
+      }
     }
     if ( Unit2PowerInterface_ )
     {
-      Unit2PowerInterface_->GetLowPowerState( &Unit2Active_ );
+      if ( !Unit2PowerInterface_->GetLowPowerState( &Unit2Active_ ) )
+      {
+        return ERR_LOWPOWERMODE_GET;
+      }
     }
     MMILE_->LogMMMessage( "Resetting low power mode to device state [" + std::string( Unit1Active_ ? g_On : g_Off ) + ", " + ( Unit2Active_ ? g_On : g_Off ) + "]", true );
     std::map<std::string, std::vector<int>>::const_iterator vPropertyIt = UnitsPropertyMap_.begin();
@@ -233,4 +239,5 @@ void CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit
       ++vPropertyIt;
     }
   }
+  return DEVICE_OK;
 }

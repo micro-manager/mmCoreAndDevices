@@ -26,6 +26,11 @@ CPortsConfiguration::CPortsConfiguration( const std::string& Device1Name, const 
   Device2Name_( Device2Name ),
   MMILE_( MMILE )
 {  
+  if ( MMILE_ == nullptr )
+  {
+    throw std::logic_error( "CPortsConfiguration: Pointer tomain class invalid" );
+  }
+
   bool vGenerateDefaultConfig = false;
   std::string vFile1Name = GenerateFileName( Device1Name_, Device2Name_ );
   std::string vFile2Name = GenerateFileName( Device2Name_, Device1Name_ );

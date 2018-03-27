@@ -22,7 +22,7 @@ public:
   int OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CLowPowerMode> CPropertyAction;
 
-  void UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterface );
+  int UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterface );
 
 private:
   IALC_REV_ILEPowerManagement* PowerInterface_;

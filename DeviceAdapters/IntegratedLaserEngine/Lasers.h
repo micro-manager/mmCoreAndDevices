@@ -45,7 +45,7 @@ public:
   int GetOpen( bool& Open );
   
   void CheckAndUpdateLasers();
-  void UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface );
+  int UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface );
 
 private:   
   IALC_REV_Laser2 *LaserInterface_;

@@ -24,6 +24,10 @@ CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CInte
   {
     throw std::logic_error( "CLowPowerMode: Pointer to ILE Power interface invalid" );
   }
+  if ( MMILE_ == nullptr )
+  {
+    throw std::logic_error( "CLowPowerMode: Pointer tomain class invalid" );
+  }
 
   int vLowPowerPortIndex;
   if ( !PowerInterface_->GetLowPowerPort( &vLowPowerPortIndex ) )
@@ -92,7 +96,7 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
   return DEVICE_OK;
 }
 
-void CLowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterface )
+int CLowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterface )
 {
   PowerInterface_ = PowerInterface;
   if ( PowerInterface_ != nullptr )
@@ -105,5 +109,10 @@ void CLowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterf
         PropertyPointer_->Set( LowPowerModeActive_ ? g_On : g_Off );
       }
     }
+    else
+    {
+      return ERR_LOWPOWERMODE_GET;
+    }
   }
+  return DEVICE_OK;
 }

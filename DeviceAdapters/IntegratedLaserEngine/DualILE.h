@@ -17,6 +17,9 @@
 
 #define ERR_DUALPORTS_PORTCHANGEFAIL 301
 #define ERR_DUALPORTS_PORTCONFIGCORRUPTED 302
+#define ERR_DUALILE_GETINTERFACE 303
+#define ERR_LOWPOWERPRESENT 304
+
 
 class CDualILEPorts;
 class CPortsConfiguration;
@@ -30,7 +33,6 @@ public:
   virtual ~CDualILE();
 
   int Shutdown();
-  void UpdateActiveBlanking( const std::string& PortName );
 
   static const char* const g_DualDeviceName;
   static const char* const g_Dual700DeviceName;
@@ -53,7 +55,7 @@ private:
   int InitializeActiveBlanking();
   int InitializeLowPowerMode();
   void DisconnectILEInterfaces();
-  void ReconnectILEInterfaces();
+  int ReconnectILEInterfaces();
 };
 
 #endif

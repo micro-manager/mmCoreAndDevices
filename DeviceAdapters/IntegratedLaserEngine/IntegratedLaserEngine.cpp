@@ -83,32 +83,60 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   ILEWrapper_( nullptr ),
   ILEDevice_( nullptr ),
   Lasers_( nullptr ),
-  ResetDeviceProperty_( nullptr )
+  ResetDeviceProperty_( nullptr ),
+  ConstructionReturnCode_( DEVICE_OK )
 {
   if ( NbDevices <= 0 )
   {
     throw std::logic_error( "Number of requested ILE devices null or negative" );
   }
 
-  // Load the library
-  ILEWrapper_ = LoadILEWrapper( this );
-
   InitializeDefaultErrorMessages();
 
+#ifdef _M_X64
+  SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the ILE library. Make sure AB_ALC_REV64.dll is present in the Micro-Manager root directory and it is version 1.1.1.1 or later." );
+#else
+  SetErrorText( ERR_LIBRARY_LOAD, "Failed to load the Dragonfly library. Make sure AB_ALC_REV.dll is present in the Micro-Manager root directory and it is version 1.1.1.1 or later." );
+#endif
   SetErrorText( ERR_PORTS_INIT, "Ports initialisation failed" );
   SetErrorText( ERR_ACTIVEBLANKING_INIT, "Active Blanking initialisation failed" );
   SetErrorText( ERR_LOWPOWERMODE_INIT, "Low Power mode initialisation failed" );
   SetErrorText( ERR_LASERS_INIT, "Lasers initialisation failed" );
+  SetErrorText( ERR_DEVICE_INDEXINVALID, "Device index invalid" );
+  SetErrorText( ERR_DEVICE_CONNECTIONFAILED, "Connection to the device failed" );
+  SetErrorText( ERR_DEVICE_RECONNECTIONFAILED, "Error occured during the reconnection with the device. Please try again or reload the configuration." );
+
   SetErrorText( ERR_LASER_STATE_READ, "Reading laser state failed" );
   SetErrorText( ERR_INTERLOCK, "Interlock triggered" );
   SetErrorText( ERR_CLASSIV_INTERLOCK, "Class IV interlock triggered" );
   SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device not connected. If it is reconnecting, please wait." );
   SetErrorText( ERR_LASER_SET, "Setting laser power failed" );
+  SetErrorText( ERR_SETCONTROLMODE, "Setting control mode failed" );
+  SetErrorText( ERR_SETLASERSHUTTER, "Failed to open or close the laser shutter!" );
+
   SetErrorText( ERR_ACTIVEBLANKING_SET, "Setting active blanking failed" );
-  SetErrorText( ERR_DEVICE_INDEXINVALID, "Device index invalid" );
-  SetErrorText( ERR_DEVICE_CONNECTIONFAILED, "Connection to the device failed" );
+  SetErrorText( ERR_ACTIVEBLANKING_GETNBLINES, "Getting the number of lines for Active Blanking failed" );
+  SetErrorText( ERR_ACTIVEBLANKING_GETSTATE, "Getting Active Blanking state failed" );
+
   SetErrorText( ERR_LOWPOWERMODE_SET, "Setting low power mode failed" );
+  SetErrorText( ERR_LOWPOWERMODE_GET, "Getting low power mode state failed" );
+
   SetErrorText( ERR_PORTS_SET, "Setting port failed" );
+  SetErrorText( ERR_PORTS_GET, "Getting current port index failed" );
+
+  // Load the library
+  try
+  {
+    ILEWrapper_ = LoadILEWrapper( this );
+  }
+  catch ( std::exception& vException )
+  {
+    ILEWrapper_ = nullptr;
+    std::string vMessage = "Error loading the ILE library. Caught Exception with message: ";
+    vMessage += vException.what();
+    LogMessage( vMessage );
+    ConstructionReturnCode_ = ERR_LIBRARY_LOAD;
+  }
 
   // Create pre-initialization properties:
   // -------------------------------------
@@ -117,17 +145,20 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   CreateStringProperty( MM::g_Keyword_Description, Description.c_str(), true );
  
   // Devices
-  ILEWrapper_->GetListOfDevices( DeviceList_ );
-  DevicesNames_.assign( NbDevices, g_Undefined );
-  if ( NbDevices == 1 )
+  if ( ILEWrapper_ != nullptr )
   {
-    CreateDeviceSelectionProperty( 0, 0 );
-  }
-  else
-  {
-    for ( int vDeviceIndex = 0; vDeviceIndex < NbDevices; ++vDeviceIndex )
+    ILEWrapper_->GetListOfDevices( DeviceList_ );
+    DevicesNames_.assign( NbDevices, g_Undefined );
+    if ( NbDevices == 1 )
     {
-      CreateDeviceSelectionProperty( vDeviceIndex + 1, vDeviceIndex );
+      CreateDeviceSelectionProperty( 0, 0 );
+    }
+    else
+    {
+      for ( int vDeviceIndex = 0; vDeviceIndex < NbDevices; ++vDeviceIndex )
+      {
+        CreateDeviceSelectionProperty( vDeviceIndex + 1, vDeviceIndex );
+      }
     }
   }
   
@@ -187,6 +218,10 @@ void CIntegratedLaserEngine::GetName(char* Name) const
 
 int CIntegratedLaserEngine::Initialize()
 {
+  if ( ConstructionReturnCode_ != DEVICE_OK )
+  {
+    return ConstructionReturnCode_;
+  }
   if ( Initialized_ )
   {
     return DEVICE_OK;
@@ -267,6 +302,15 @@ int CIntegratedLaserEngine::Initialize()
 
 int CIntegratedLaserEngine::Shutdown()
 {
+  if ( ConstructionReturnCode_ != DEVICE_OK )
+  {
+    return DEVICE_OK;
+  }
+  if ( !Initialized_ )
+  {
+    return DEVICE_OK;
+  }
+
   delete Lasers_;
   Lasers_ = nullptr;
   DeleteILE();
@@ -344,12 +388,24 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
       IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
       IALC_REV_ILE* vILE = ILEDevice_->GetILEInterface();
-      Lasers_->UpdateILEInterface( vLaserInterface, vLowPowerMode, vILE );
-      ReconnectILEInterfaces();
-
-      Prop->Set( g_PropertyOff );
-      MM::Property* pChildProperty = ( MM::Property* )Prop;
-      pChildProperty->SetReadOnly( true );
+      if ( vLowPowerMode != nullptr && vLaserInterface != nullptr && vILE != nullptr )
+      {
+        vRet = Lasers_->UpdateILEInterface( vLaserInterface, vLowPowerMode, vILE );
+      }
+      else
+      {
+        vRet = ERR_DEVICE_RECONNECTIONFAILED;
+      }
+      if ( vRet == DEVICE_OK )
+      {
+        vRet = ReconnectILEInterfaces();
+      }
+      if ( vRet == DEVICE_OK )
+      {
+        Prop->Set( g_PropertyOff );
+        MM::Property* pChildProperty = ( MM::Property* )Prop;
+        pChildProperty->SetReadOnly( true );
+      }
     }
   }
   return vRet;

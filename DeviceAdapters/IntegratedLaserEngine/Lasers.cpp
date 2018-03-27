@@ -49,7 +49,11 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
   {
     throw std::logic_error( "CLasers: Pointer to ILE interface invalid" );
   }
-  
+  if ( MMILE_ == nullptr )
+  {
+    throw std::logic_error( "CLasers: Pointer tomain class invalid" );
+  }
+
   for ( int vLaserIndex = 0; vLaserIndex < MaxLasers + 1; ++vLaserIndex )
   {
     PowerSetPoint_[vLaserIndex] = 0;
@@ -289,11 +293,17 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
         // from External TTL mode
         if ( vEnable.compare( g_LaserEnableTTL ) == 0 )
         {
-          LaserInterface_->SetControlMode( LaserIndex, TTL_PULSED );
+          if ( !LaserInterface_->SetControlMode( LaserIndex, TTL_PULSED ) )
+          {
+            return ERR_SETCONTROLMODE;
+          }
         }
         else if ( Enable_[LaserIndex].compare( g_LaserEnableTTL ) == 0 )
         {
-          LaserInterface_->SetControlMode( LaserIndex, CW );
+          if ( !LaserInterface_->SetControlMode( LaserIndex, CW ) )
+          {
+            return ERR_SETCONTROLMODE;
+          }
         }
 
         Enable_[LaserIndex] = vEnable;
@@ -376,6 +386,7 @@ int CLasers::SetOpen(bool Open)
     if ( !vSuccess )
     {
       MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast<long long>( Open ) ) + " failed", false );
+      return ERR_SETLASERSHUTTER;
     }
   }
 
@@ -411,7 +422,7 @@ void CLasers::UpdateLasersRange()
   }
 }
 
-void CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface )
+int CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface )
 {
   LaserInterface_ = LaserInterface;
   PowerInterface_ = PowerInterface;
@@ -419,6 +430,10 @@ void CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEP
   if ( LaserInterface_ != nullptr && PowerInterface_ != nullptr && ILEInterface_ != nullptr )
   {
     int vNbLasers = LaserInterface_->Initialize();
+    if ( vNbLasers <= 0 )
+    {
+      return ERR_LASERS_INIT;
+    }
     WaitOnLaserWarmingUp();
     UpdateLasersRange();
 
@@ -443,6 +458,7 @@ void CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEP
       }
     }
   }
+  return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
