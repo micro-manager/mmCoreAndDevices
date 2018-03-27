@@ -69,43 +69,44 @@ CDualILELowPowerMode::CDualILELowPowerMode( IALC_REV_ILEPowerManagement* Unit1Po
     MMILE_->LogMMMessage( "Low power mode port for unit2: " + std::to_string( static_cast<long long>( vUnit2LowPowerPortIndex ) ) + " - " + ( Unit2Active_ ? g_On : g_Off ), true );
   }
 
-  PortNames_ = PortsConfiguration_->GetPortList();
+  std::vector<std::string> vPortNames = PortsConfiguration_->GetPortList();
 
   // Create properties
-  if ( !PortNames_.empty() )
+  if ( !vPortNames.empty() )
   {
     std::vector<std::string> vAllowedValues;
     vAllowedValues.push_back( g_On );
     vAllowedValues.push_back( g_Off );
 
-    std::vector<std::string>::const_iterator vPort = PortNames_.begin();
+    std::vector<std::string>::const_iterator vPortIt = vPortNames.begin();
     std::vector<int> vUnitsPorts;
     long vPropertyIndex = 0;
-    while ( vPort != PortNames_.end() )
+    while ( vPortIt != vPortNames.end() )
     {
       std::vector<int> vUnitsProperty;
-      PortsConfiguration_->GetUnitPortsForMergedPort( *vPort, &vUnitsPorts );
+      PortsConfiguration_->GetUnitPortsForMergedPort( *vPortIt, &vUnitsPorts );
       if ( Unit1PowerInterface_ && vUnitsPorts[0] == vUnit1LowPowerPortIndex )
       {
         vUnitsProperty.push_back( 0 );
-        MMILE_->LogMMMessage( "Port " + *vPort + " low power mode available for unit1", true );
+        MMILE_->LogMMMessage( "Port " + *vPortIt + " low power mode available for unit1", true );
       }
       if ( Unit2PowerInterface_ && vUnitsPorts[1] == vUnit2LowPowerPortIndex )
       {
         vUnitsProperty.push_back( 1 );
-        MMILE_->LogMMMessage( "Port " + *vPort + " low power mode available for unit2", true );
+        MMILE_->LogMMMessage( "Port " + *vPortIt + " low power mode available for unit2", true );
       }
       if ( !vUnitsProperty.empty() )
       {
         // Create a property if at least one of the units' port in the current virtual port supports low power mode
-        std::string vPropertyName = std::string( "Port " ) + *vPort + "-" + g_PropertyBaseName;
-        CPropertyActionEx* vAct = new CPropertyActionEx( this, &CDualILELowPowerMode::OnValueChange, vPropertyIndex );
+        std::string vPropertyName = std::string( "Port " ) + *vPortIt + "-" + g_PropertyBaseName;
+        CPropertyAction* vAct = new CPropertyAction( this, &CDualILELowPowerMode::OnValueChange );
         MMILE_->CreateStringProperty( vPropertyName.c_str(), ( ( Unit1Active_ || Unit2Active_ ) ? g_On : g_Off ), false, vAct );
         MMILE_->SetAllowedValues( vPropertyName.c_str(), vAllowedValues );
         ++vPropertyIndex;
-        UnitsPropertyMap_.push_back( vUnitsProperty );
+        UnitsPropertyMap_[vPropertyName] = vUnitsProperty;
+        PropertyPointers_[vPropertyName] = nullptr;
       }
-      ++vPort;
+      ++vPortIt;
     }
   }
 }
@@ -114,12 +115,36 @@ CDualILELowPowerMode::~CDualILELowPowerMode()
 {
 }
 
-int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act, long UnitsPropertyIndex )
+bool CDualILELowPowerMode::GetCachedValueForProperty( const std::string& PropertyName )
+{
+  bool vLowPowerModeActive = false;
+  std::vector<int>* vUnitsProperty = &( UnitsPropertyMap_[PropertyName] );
+  std::vector<int>::const_iterator vUnitsIt = vUnitsProperty->begin();
+  while ( vUnitsIt != vUnitsProperty->end() )
+  {
+    if ( *vUnitsIt == 0 )
+    {
+      vLowPowerModeActive |= Unit1Active_;
+    }
+    if ( *vUnitsIt == 1 )
+    {
+      vLowPowerModeActive |= Unit2Active_;
+    }
+    ++vUnitsIt;
+  }
+  return vLowPowerModeActive;
+}
+
+int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   int vRet = DEVICE_OK;
+  if ( PropertyPointers_.find( Prop->GetName() ) != PropertyPointers_.end() && PropertyPointers_[Prop->GetName()] == nullptr )
+  {
+    PropertyPointers_[Prop->GetName()] = Prop;
+  }
   if ( Act == MM::BeforeGet )
   {
-    Prop->Set( ( Unit1Active_ || Unit2Active_ ) ? g_On : g_Off );
+    Prop->Set( GetCachedValueForProperty( Prop->GetName() ) ? g_On : g_Off );
   }
   else if ( Act == MM::AfterSet )
   {
@@ -127,15 +152,17 @@ int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType
     {
       return ERR_DEVICE_NOT_CONNECTED;
     }
-    if ( UnitsPropertyIndex >= UnitsPropertyMap_.size() )
+    std::string vPropertyName = Prop->GetName();
+    std::map<std::string, std::vector<int>>::const_iterator vPropertyIt = UnitsPropertyMap_.find( vPropertyName );
+    if ( vPropertyIt == UnitsPropertyMap_.end() )
     {
-      MMILE_->LogMMMessage( "Low Power Mode: Invalid unit property index. Index = " + std::to_string( static_cast<long long>( UnitsPropertyIndex ) ) + " - Map size = " + std::to_string( static_cast<long long>( UnitsPropertyMap_.size() ) ) );
+      MMILE_->LogMMMessage( "Low Power Mode: Property not found in property map [" + vPropertyName + "]" );
       return DEVICE_ERR;
     }
     std::string vValue;
     Prop->Get( vValue );
     bool vEnable = ( vValue == g_On );
-    std::vector<int>* vUnitsProperty = &(UnitsPropertyMap_[UnitsPropertyIndex]);
+    std::vector<int>* vUnitsProperty = &(UnitsPropertyMap_[vPropertyName]);
     std::vector<int>::const_iterator vUnitsIt = vUnitsProperty->begin();
     bool vPowerStateUpdated = false;
     while ( vUnitsIt != vUnitsProperty->end() )
@@ -184,4 +211,26 @@ void CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit
 {
   Unit1PowerInterface_ = Unit1PowerInterface;
   Unit2PowerInterface_ = Unit2PowerInterface;
+
+  if ( Unit1PowerInterface_ != nullptr || Unit2PowerInterface_ != nullptr )
+  {
+    if ( Unit1PowerInterface_ )
+    {
+      Unit1PowerInterface_->GetLowPowerState( &Unit1Active_ );
+    }
+    if ( Unit2PowerInterface_ )
+    {
+      Unit2PowerInterface_->GetLowPowerState( &Unit2Active_ );
+    }
+    MMILE_->LogMMMessage( "Resetting low power mode to device state [" + std::string( Unit1Active_ ? g_On : g_Off ) + ", " + ( Unit2Active_ ? g_On : g_Off ) + "]", true );
+    std::map<std::string, std::vector<int>>::const_iterator vPropertyIt = UnitsPropertyMap_.begin();
+    while ( vPropertyIt != UnitsPropertyMap_.end() )
+    {
+      if ( PropertyPointers_.find( vPropertyIt->first ) != PropertyPointers_.end() && PropertyPointers_[vPropertyIt->first] != nullptr )
+      {
+        PropertyPointers_[vPropertyIt->first]->Set( GetCachedValueForProperty( vPropertyIt->first ) ? g_On : g_Off );
+      }
+      ++vPropertyIt;
+    }
+  }
 }

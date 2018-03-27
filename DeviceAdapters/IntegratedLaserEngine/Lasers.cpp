@@ -49,7 +49,7 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
   {
     throw std::logic_error( "CLasers: Pointer to ILE interface invalid" );
   }
-
+  
   for ( int vLaserIndex = 0; vLaserIndex < MaxLasers + 1; ++vLaserIndex )
   {
     PowerSetPoint_[vLaserIndex] = 0;
@@ -61,6 +61,24 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
   MMILE_->LogMMMessage( ( "in CLasers constructor, NumberOfLasers_ =" + std::to_string( static_cast<long long>( NumberOfLasers_ ) ) ), true );
   CDeviceUtils::SleepMs( 100 );
 
+  WaitOnLaserWarmingUp();
+  GenerateProperties();
+
+  InterlockStatusMonitor_ = new CInterlockStatusMonitor( MMILE_ );
+  InterlockStatusMonitor_->activate();
+}
+
+CLasers::~CLasers()
+{
+  delete InterlockStatusMonitor_;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Generate properties
+///////////////////////////////////////////////////////////////////////////////
+
+void CLasers::WaitOnLaserWarmingUp()
+{
   TLaserState state[10];
   memset( (void*)state, 0, 10 * sizeof( state[0] ) );
 
@@ -115,20 +133,7 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
     CDeviceUtils::SleepMs( 100 );
   }
 
-  GenerateProperties();
-
-  InterlockStatusMonitor_ = new CInterlockStatusMonitor( MMILE_ );
-  InterlockStatusMonitor_->activate();
 }
-
-CLasers::~CLasers()
-{
-  delete InterlockStatusMonitor_;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Generate properties
-///////////////////////////////////////////////////////////////////////////////
 
 std::string CLasers::BuildPropertyName( const std::string& BasePropertyName, int Wavelength )
 {
@@ -162,6 +167,7 @@ void CLasers::GenerateProperties()
     // Set the limits as interrogated from the laser controller
     MMILE_->LogMMMessage( "Range for " + vPropertyName + "= [0,100]", true );
     MMILE_->SetPropertyLimits( vPropertyName.c_str(), 0, 100 );
+    PropertyPointers_[vPropertyName] = nullptr;
 
     // Enable
     vAct = new CPropertyActionEx( this, &CLasers::OnEnable, vLaserIndex );
@@ -175,6 +181,7 @@ void CLasers::GenerateProperties()
     }
     MMILE_->CreateProperty( vPropertyName.c_str(), EnableStates_[vLaserIndex][0].c_str(), MM::String, false, vAct );
     MMILE_->SetAllowedValues( vPropertyName.c_str(), EnableStates_[vLaserIndex] );
+    PropertyPointers_[vPropertyName] = nullptr;
   }
 
   CPropertyAction* vAct2 = new CPropertyAction( this, &CLasers::OnInterlockStatus );
@@ -205,6 +212,10 @@ void CLasers::GenerateProperties()
 */
 int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  LaserIndex)
 {
+  if ( PropertyPointers_.find( Prop->GetName() ) != PropertyPointers_.end() && PropertyPointers_[Prop->GetName()] == nullptr )
+  {
+    PropertyPointers_[Prop->GetName()] = Prop;
+  }
   double vPowerSetpoint;
   if ( Act == MM::BeforeGet )
   {
@@ -252,6 +263,10 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
  */
 int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserIndex)
 {
+  if ( PropertyPointers_.find( Prop->GetName() ) != PropertyPointers_.end() && PropertyPointers_[Prop->GetName()] == nullptr )
+  {
+    PropertyPointers_[Prop->GetName()] = Prop;
+  }
   if ( Act == MM::BeforeGet )
   {
     // Not calling GetControlMode() from ALC SDK, since it may slow
@@ -401,6 +416,33 @@ void CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEP
   LaserInterface_ = LaserInterface;
   PowerInterface_ = PowerInterface;
   ILEInterface_ = ILEInterface;
+  if ( LaserInterface_ != nullptr && PowerInterface_ != nullptr && ILEInterface_ != nullptr )
+  {
+    int vNbLasers = LaserInterface_->Initialize();
+    WaitOnLaserWarmingUp();
+    UpdateLasersRange();
+
+    std::string vPropertyName;
+    int vWavelength;
+    for ( int vLaserIndex = 1; vLaserIndex <= vNbLasers; vLaserIndex++ )
+    {
+      vWavelength = Wavelength( vLaserIndex );
+
+      Enable_[vLaserIndex] = g_LaserEnableOn;
+      vPropertyName = BuildPropertyName( g_PowerSetpointProperty, vWavelength );
+      if ( PropertyPointers_.find( vPropertyName ) != PropertyPointers_.end() && PropertyPointers_[vPropertyName] != nullptr )
+      {
+        PropertyPointers_[vPropertyName]->Set( Enable_[vLaserIndex].c_str() );
+      }
+
+      PowerSetpoint( vLaserIndex, 0. );
+      vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
+      if ( PropertyPointers_.find( vPropertyName ) != PropertyPointers_.end() && PropertyPointers_[vPropertyName] != nullptr )
+      {
+        PropertyPointers_[vPropertyName]->Set( "0" );
+      }
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

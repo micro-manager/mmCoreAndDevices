@@ -20,8 +20,12 @@ CDualILEActiveBlanking::CDualILEActiveBlanking( IALC_REV_ILE4* DualActiveBlankin
   DualActiveBlankingInterface_( DualActiveBlankingInterface ),
   PortsConfiguration_( PortsConfiguration ),
   MMILE_( MMILE ),
+  Unit1EnabledPattern_( 0 ),
+  Unit2EnabledPattern_( 0 ),
   Unit1ActiveBlankingPresent_( false ),
-  Unit2ActiveBlankingPresent_( false )
+  Unit2ActiveBlankingPresent_( false ),
+  Unit1NbLines_( 0 ),
+  Unit2NbLines_( 0 )
 {
   // Check pointers validity
   if ( DualActiveBlankingInterface_ == nullptr )
@@ -119,11 +123,12 @@ CDualILEActiveBlanking::CDualILEActiveBlanking( IALC_REV_ILE4* DualActiveBlankin
     std::string vPropertyName;
     for (int vPortIndex = 0; vPortIndex < PortNames_.size(); ++vPortIndex )
     {
-      vPropertyName = "Port " + PortNames_[vPortIndex] + "-" + g_PropertyBaseName;
+      vPropertyName = BuildProperty( PortNames_[vPortIndex] );
       bool vEnabled = IsLineEnabledForDualPort( PortNames_[vPortIndex] );
       CPropertyActionEx* vAct = new CPropertyActionEx( this, &CDualILEActiveBlanking::OnValueChange, vPortIndex );
       MMILE_->CreateStringProperty( vPropertyName.c_str(), vEnabled ? g_On : g_Off, false, vAct );
       MMILE_->SetAllowedValues( vPropertyName.c_str(), vAllowedValues );
+      PropertyPointers_[vPropertyName] = nullptr;
     }
   }
 }
@@ -131,6 +136,11 @@ CDualILEActiveBlanking::CDualILEActiveBlanking( IALC_REV_ILE4* DualActiveBlankin
 CDualILEActiveBlanking::~CDualILEActiveBlanking()
 {
 
+}
+
+std::string CDualILEActiveBlanking::BuildProperty( const std::string& PortName ) const
+{
+  return "Port " + PortName + "-" + g_PropertyBaseName;
 }
 
 bool CDualILEActiveBlanking::IsLineEnabledForSinglePort( int Unit, int Line ) const
@@ -229,6 +239,10 @@ void CDualILEActiveBlanking::SetLineStateForDualPort( const std::string& PortNam
 
 int CDualILEActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act, long PortIndex )
 {
+  if ( PropertyPointers_.find( Prop->GetName() ) != PropertyPointers_.end() && PropertyPointers_[Prop->GetName()] == nullptr )
+  {
+    PropertyPointers_[Prop->GetName()] = Prop;
+  }
   if ( Act == MM::BeforeGet )
   {
     // Commenting this in case 2 virtual ports share the same physical port. In this case changing the active blanking state
@@ -291,4 +305,29 @@ void CDualILEActiveBlanking::LogSetActiveBlankingError( int Unit, const std::str
 void CDualILEActiveBlanking::UpdateILEInterface( IALC_REV_ILE4* DualActiveBlankingInterface )
 {
   DualActiveBlankingInterface_ = DualActiveBlankingInterface;
+  if ( DualActiveBlankingInterface_ != nullptr )
+  {
+    // Get state and number of lines for each unit
+    if ( Unit1ActiveBlankingPresent_ )
+    {
+      DualActiveBlankingInterface_->GetActiveBlankingState( 0, &Unit1EnabledPattern_ );
+    }
+    if ( Unit2ActiveBlankingPresent_ )
+    {
+      DualActiveBlankingInterface_->GetActiveBlankingState( 1, &Unit2EnabledPattern_ );
+    }
+
+    MMILE_->LogMMMessage( "Resetting active blanking to device state [" + std::to_string( static_cast<long long>( Unit1EnabledPattern_ ) ) + ", " + std::to_string( static_cast<long long>( Unit2EnabledPattern_ ) ) + "]", true );
+    std::string vPropertyName;
+    std::vector<std::string>::const_iterator vPortIt = PortNames_.begin();
+    while ( vPortIt != PortNames_.end() )
+    {
+      vPropertyName = BuildProperty( *vPortIt );
+      if ( PropertyPointers_.find(vPropertyName) != PropertyPointers_.end() && PropertyPointers_[vPropertyName] != nullptr )
+      {
+        PropertyPointers_[vPropertyName]->Set( IsLineEnabledForDualPort( *vPortIt ) ? g_On : g_Off );
+      }
+      ++vPortIt;
+    }
+  }
 }

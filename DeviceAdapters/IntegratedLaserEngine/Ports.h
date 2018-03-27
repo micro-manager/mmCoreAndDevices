@@ -37,6 +37,7 @@ private:
   int NbPorts_;
   CIntegratedLaserEngine* MMILE_;
   int CurrentPortIndex_;
+  MM::PropertyBase* PropertyPointer_;
 };
 
 #endif

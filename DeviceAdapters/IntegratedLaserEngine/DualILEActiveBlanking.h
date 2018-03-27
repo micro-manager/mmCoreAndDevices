@@ -36,7 +36,9 @@ private:
   bool Unit2ActiveBlankingPresent_;
   int Unit1NbLines_;
   int Unit2NbLines_;
+  std::map<std::string, MM::PropertyBase *> PropertyPointers_;
 
+  std::string BuildProperty( const std::string& PortName ) const;
   bool IsLineEnabledForSinglePort( int Unit, int Port ) const;
   bool IsLineEnabledForDualPort( const std::string& PortName ) const;
   void SetLineStateForSinglePort( int Unit, int Line, bool Enable );

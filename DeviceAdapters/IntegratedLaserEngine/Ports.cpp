@@ -15,7 +15,8 @@ CPorts::CPorts( IALC_REV_Port* PortInterface, CIntegratedLaserEngine* MMILE ) :
   PortInterface_( PortInterface ),
   MMILE_( MMILE ),
   NbPorts_( 0 ),
-  CurrentPortIndex_( 0 )
+  CurrentPortIndex_( 0 ),
+  PropertyPointer_( nullptr )
 {
   if ( PortInterface_ == nullptr )
   {
@@ -73,6 +74,10 @@ int CPorts::PortNameToIndex( char PortName )
 
 int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  if ( PropertyPointer_ == nullptr )
+  {
+    PropertyPointer_ = Prop;
+  }
   if ( Act == MM::BeforeGet )
   {
     char vPortName[2];
@@ -108,4 +113,19 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 void CPorts::UpdateILEInterface( IALC_REV_Port* PortInterface )
 {
   PortInterface_ = PortInterface;
+  if ( PortInterface_ != nullptr )
+  {
+    PortInterface_->InitializePort();
+    char vPortName[2];
+    vPortName[1] = 0;
+    if ( PortInterface_->GetPortIndex( &CurrentPortIndex_ ) )
+    {
+      MMILE_->LogMMMessage( "Resetting current port to device state [" + std::to_string( static_cast<long long>( CurrentPortIndex_ ) ) + "]", true );
+      vPortName[0] = PortIndexToName( CurrentPortIndex_ );
+      if ( PropertyPointer_ != nullptr )
+      {
+        PropertyPointer_->Set( vPortName );
+      }
+    }
+  }
 }

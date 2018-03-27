@@ -28,6 +28,7 @@ private:
   IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface_;
   CIntegratedLaserEngine* MMILE_;
   std::map<std::string, int> PropertyLineIndexMap_;
+  std::map<std::string, MM::PropertyBase *> PropertyPointers_;
   int EnabledPattern_;
 
   bool IsLineEnabled( int Line ) const;

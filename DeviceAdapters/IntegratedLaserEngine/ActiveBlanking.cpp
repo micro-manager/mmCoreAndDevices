@@ -6,6 +6,7 @@
 
 #include "ActiveBlanking.h"
 #include "IntegratedLaserEngine.h"
+#include "Ports.h"
 #include "ALC_REV.h"
 #include <exception>
 
@@ -44,9 +45,10 @@ CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBl
     std::string vPropertyName;
     for ( int vLineIndex = 0; vLineIndex < vNbLines; vLineIndex++ )
     {
-      vLineName[0] = (char)( 65 + vLineIndex );
+      vLineName[0] = CPorts::PortIndexToName( vLineIndex + 1 ); // port indices are 1-based but line indices are 0-based
       vPropertyName = "Port " + std::string( vLineName ) + "-" + g_PropertyBaseName;
       PropertyLineIndexMap_[vPropertyName] = vLineIndex;
+      PropertyPointers_[vPropertyName] = nullptr;
       bool vEnabled = IsLineEnabled( vLineIndex );
       CPropertyAction* vAct = new CPropertyAction( this, &CActiveBlanking::OnValueChange );
       MMILE_->CreateStringProperty( vPropertyName.c_str(), vEnabled ? g_On : g_Off, false, vAct );
@@ -89,6 +91,10 @@ void CActiveBlanking::ChangeLineState( int Line )
 
 int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  if ( PropertyPointers_.find( Prop->GetName() ) != PropertyPointers_.end() && PropertyPointers_[Prop->GetName()] == nullptr )
+  {
+    PropertyPointers_[Prop->GetName()] = Prop;
+  }
   if ( Act == MM::BeforeGet )
   {
     if ( PropertyLineIndexMap_.find( Prop->GetName() ) != PropertyLineIndexMap_.end() )
@@ -136,4 +142,26 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
 void CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface )
 {
   ActiveBlankingInterface_ = ActiveBlankingInterface;
+  if ( ActiveBlankingInterface_ != nullptr )
+  {
+    int vNbLines;
+    if ( ActiveBlankingInterface_->GetNumberOfLines( &vNbLines ) )
+    {
+      if ( ActiveBlankingInterface_->GetActiveBlankingState( &EnabledPattern_ ) )
+      {
+        MMILE_->LogMMMessage( "Resetting active blanking to device state [" + std::to_string( static_cast<long long>( EnabledPattern_ ) ) + "]", true );
+        int vLineIndex = 0;
+        std::map<std::string, int>::const_iterator vPropertyIt = PropertyLineIndexMap_.begin();
+        while ( vPropertyIt != PropertyLineIndexMap_.end() )
+        {
+          if ( vPropertyIt->second < vNbLines && PropertyPointers_.find( vPropertyIt->first.c_str() ) != PropertyPointers_.end() && PropertyPointers_[vPropertyIt->first] != nullptr )
+          {
+            PropertyPointers_[vPropertyIt->first]->Set( IsLineEnabled( vLineIndex ) ? g_On : g_Off );
+          }
+          ++vLineIndex;
+          ++vPropertyIt;
+        }
+      }
+    }
+  }
 }

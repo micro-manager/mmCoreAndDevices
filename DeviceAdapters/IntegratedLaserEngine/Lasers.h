@@ -75,6 +75,7 @@ private:
   bool InterlockTEMP_;
   bool ClassIVInterlockTEMP_;
 #endif
+  std::map<std::string, MM::PropertyBase *> PropertyPointers_;
 
   void GenerateProperties();
   std::string BuildPropertyName( const std::string& BasePropertyName, int Wavelength );
@@ -85,6 +86,7 @@ private:
   void UpdateLasersRange();
   bool IsInterlockTriggered( int LaserIndex );
   bool IsClassIVInterlockTriggered();
+  void WaitOnLaserWarmingUp();
 };
 
 

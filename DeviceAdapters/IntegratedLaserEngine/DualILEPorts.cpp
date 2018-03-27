@@ -20,7 +20,8 @@ CDualILEPorts::CDualILEPorts( IALC_REV_Port* DualPortInterface, IALC_REV_ILE2* I
   MMILE_( MMILE ),
   NbPortsUnit1_( 0 ),
   NbPortsUnit2_( 0 ),
-  CurrentPortName_( "" )
+  CurrentPortName_( "" ),
+  PropertyPointer_( nullptr )
 {
   if ( DualPortInterface_ == nullptr )
   {
@@ -122,6 +123,10 @@ int CDualILEPorts::ChangePort( const std::string& PortName )
 
 int CDualILEPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  if ( PropertyPointer_ == nullptr )
+  {
+    PropertyPointer_ = Prop;
+  }
   if ( Act == MM::BeforeGet )
   {
     Prop->Set( CurrentPortName_.c_str() );
@@ -144,4 +149,23 @@ void CDualILEPorts::UpdateILEInterface( IALC_REV_Port* DualPortInterface, IALC_R
 {
   DualPortInterface_ = DualPortInterface;
   ILE2Interface_ = ILE2Interface;
+
+  if ( ILE2Interface_ != nullptr && DualPortInterface_ != nullptr )
+  {
+    DualPortInterface_->InitializePort();
+    int vUnit1Port, vUnit2Port;
+    if ( ILE2Interface_->GetPortIndex( &vUnit1Port, &vUnit2Port ) )
+    {
+      std::string vCurrentPortName = PortsConfiguration_->FindMergedPortForUnitPort( vUnit1Port, vUnit2Port );
+      if ( vCurrentPortName != "" )
+      {
+        CurrentPortName_ = vCurrentPortName;
+        if ( PropertyPointer_ != nullptr )
+        {
+          PropertyPointer_->Set( CurrentPortName_.c_str() );
+        }
+        MMILE_->LogMMMessage( "Resetting curren port to device state [" + CurrentPortName_ + " (" + std::to_string( static_cast<long long>( vUnit1Port ) ) + ", " + std::to_string( static_cast<long long>( vUnit2Port ) ) + ")]", true );
+      }
+    }
+  }
 }

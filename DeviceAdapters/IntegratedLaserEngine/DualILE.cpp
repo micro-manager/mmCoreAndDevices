@@ -103,23 +103,44 @@ void CDualILE::ReconnectILEInterfaces()
   IALC_REV_ILE2* vILE2 = ILEWrapper_->GetILEInterface2( ILEDevice_ );
   IALC_REV_ILE4* vILE4 = ILEWrapper_->GetILEInterface4( ILEDevice_ );
   IALC_REVObject3 *vILEDevice1, *vILEDevice2;
-  if ( vILE2 && vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
+  if ( vILE2 != nullptr && vILE2->GetInterface( &vILEDevice1, &vILEDevice2 ) )
   {
     IALC_REV_Port* vDualPortInterface = ILEDevice_->GetPortInterface();
-    if ( Ports_ )
+    if ( Ports_ != nullptr )
     {
       LogMessage( "Reconnecting Dual Ports", true );
       Ports_->UpdateILEInterface( vDualPortInterface, vILE2 );
     }
     IALC_REV_ILEPowerManagement* vUnit1LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice1 );
     IALC_REV_ILEPowerManagement* vUnit2LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice2 );
-    if ( LowPowerMode_ )
+    if ( LowPowerMode_ != nullptr )
     {
       LogMessage( "Reconnecting Dual Low Power Mode", true );
+      bool vLowPowerModePresent;
+      if ( vUnit1LowPowerMode != nullptr )
+      {
+        if ( vUnit1LowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
+        {
+          if ( !vLowPowerModePresent )
+          {
+            vUnit1LowPowerMode = nullptr;
+          }
+        }
+      }
+      if ( vUnit2LowPowerMode != nullptr )
+      {
+        if ( vUnit2LowPowerMode->IsLowPowerPresent( &vLowPowerModePresent ) )
+        {
+          if ( !vLowPowerModePresent )
+          {
+            vUnit2LowPowerMode = nullptr;
+          }
+        }
+      }
       LowPowerMode_->UpdateILEInterface( vUnit1LowPowerMode, vUnit2LowPowerMode );
     }
   }
-  if ( ActiveBlanking_ )
+  if ( ActiveBlanking_ != nullptr )
   {
     LogMessage( "Reconnecting Dual Active Blanking", true );
     ActiveBlanking_->UpdateILEInterface( vILE4 );

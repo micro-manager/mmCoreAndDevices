@@ -17,7 +17,8 @@ const char* const g_Off = "Off";
 CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CIntegratedLaserEngine* MMILE ) :
   PowerInterface_( PowerInterface ),
   MMILE_( MMILE ),
-  LowPowerModeActive_( false )
+  LowPowerModeActive_( false ),
+  PropertyPointer_( nullptr )
 {
   if ( PowerInterface_ == nullptr )
   {
@@ -59,6 +60,10 @@ CLowPowerMode::~CLowPowerMode()
 
 int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  if ( PropertyPointer_ == nullptr )
+  {
+    PropertyPointer_ = Prop;
+  }
   if ( Act == MM::BeforeGet )
   {
     Prop->Set( LowPowerModeActive_ ? g_On : g_Off );
@@ -90,4 +95,15 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 void CLowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterface )
 {
   PowerInterface_ = PowerInterface;
+  if ( PowerInterface_ != nullptr )
+  {
+    if ( PowerInterface_->GetLowPowerState( &LowPowerModeActive_ ) )
+    {
+      MMILE_->LogMMMessage( "Resetting low power mode to device state [" + std::string( LowPowerModeActive_ ? g_On : g_Off ) + "]", true );
+      if ( PropertyPointer_ != nullptr )
+      {
+        PropertyPointer_->Set( LowPowerModeActive_ ? g_On : g_Off );
+      }
+    }
+  }
 }

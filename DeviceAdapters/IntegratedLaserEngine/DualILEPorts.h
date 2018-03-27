@@ -33,6 +33,7 @@ private:
   int NbPortsUnit1_;
   int NbPortsUnit2_;
   std::string CurrentPortName_;
+  MM::PropertyBase* PropertyPointer_;
 
   int ChangePort( const std::string& PortName );
 };
