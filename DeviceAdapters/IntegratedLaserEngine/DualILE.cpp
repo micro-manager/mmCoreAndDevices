@@ -124,7 +124,8 @@ int CDualILE::ReconnectILEInterfaces()
           vRet = ERR_DEVICE_RECONNECTIONFAILED;
         }
       }
-      if ( LowPowerMode_ != nullptr )
+
+      if ( vRet == DEVICE_OK && LowPowerMode_ != nullptr )
       {
         IALC_REV_ILEPowerManagement* vUnit1LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice1 );
         IALC_REV_ILEPowerManagement* vUnit2LowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( vILEDevice2 );
@@ -174,7 +175,7 @@ int CDualILE::ReconnectILEInterfaces()
     }
     else
     {
-      return ERR_DUALILE_GETINTERFACE;
+      vRet = ERR_DUALILE_GETINTERFACE;
     }
   }
   else
