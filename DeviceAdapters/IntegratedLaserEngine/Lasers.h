@@ -37,6 +37,7 @@ public:
 #ifdef _ACTIVATE_DUMMYTEST_
   int OnInterlock( MM::PropertyBase* Prop, MM::ActionType Act );
   int OnClassIVInterlock( MM::PropertyBase* Prop, MM::ActionType Act );
+  int OnKeyInterlock( MM::PropertyBase* Prop, MM::ActionType Act );
 #endif
   int OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act );
 
@@ -74,6 +75,7 @@ private:
 #ifdef _ACTIVATE_DUMMYTEST_
   bool InterlockTEMP_;
   bool ClassIVInterlockTEMP_;
+  bool KeyInterlockTEMP_;
 #endif
   std::map<std::string, MM::PropertyBase *> PropertyPointers_;
 
@@ -84,6 +86,7 @@ private:
   float PowerSetpoint( const int LaserIndex );  // milli-Watts
   void PowerSetpoint( const int LaserIndex, const float Value );  // milli-Watts
   void UpdateLasersRange();
+  bool IsKeyInterlockTriggered( int LaserIndex );
   bool IsInterlockTriggered( int LaserIndex );
   bool IsClassIVInterlockTriggered();
   void WaitOnLaserWarmingUp();

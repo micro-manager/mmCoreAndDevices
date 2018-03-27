@@ -109,6 +109,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_LASER_STATE_READ, "Reading laser state failed" );
   SetErrorText( ERR_INTERLOCK, "Interlock triggered" );
   SetErrorText( ERR_CLASSIV_INTERLOCK, "Class IV interlock triggered" );
+  SetErrorText( ERR_KEY_INTERLOCK, "Key interlock triggered" );
   SetErrorText( ERR_DEVICE_NOT_CONNECTED, "Device not connected. If it is reconnecting, please wait." );
   SetErrorText( ERR_LASER_SET, "Setting laser power failed" );
   SetErrorText( ERR_SETCONTROLMODE, "Setting control mode failed" );

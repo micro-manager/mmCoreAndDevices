@@ -20,7 +20,7 @@ const char* const g_LaserEnableTTL = "External TTL";
 
 const char* const g_InterlockInactive = "Inactive";
 const char* const g_InterlockActive = "Active";
-const char* const g_InterlockClassIVActive = "Class IV active. Device reset required.";
+const char* const g_InterlockClassIVActive = "Class IV or Key interlock active. Device reset required.";
 
 CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface, CIntegratedLaserEngine* MMILE ) :
   LaserInterface_( LaserInterface ),
@@ -34,6 +34,7 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
 #ifdef _ACTIVATE_DUMMYTEST_
   InterlockTEMP_( false ),
   ClassIVInterlockTEMP_( false ),
+  KeyInterlockTEMP_( false ),
 #endif
   InterlockStatusMonitor_( nullptr )
 {
@@ -202,6 +203,10 @@ void CLasers::GenerateProperties()
   vAct2 = new CPropertyAction( this, &CLasers::OnClassIVInterlock );
   MMILE_->CreateStringProperty( "Interlock TEST Activate Class IV", g_LaserEnableOff, false, vAct2 );
   MMILE_->SetAllowedValues( "Interlock TEST Activate Class IV", vEnabledValues );
+
+  vAct2 = new CPropertyAction( this, &CLasers::OnKeyInterlock );
+  MMILE_->CreateStringProperty( "Interlock TEST Activate Key", g_LaserEnableOff, false, vAct2 );
+  MMILE_->SetAllowedValues( "Interlock TEST Activate Key", vEnabledValues );
 #endif
   UpdateLasersRange();
 }
@@ -243,10 +248,15 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
     }
     else
     {
-      if ( IsClassIVInterlockTriggered() )
+      if( IsClassIVInterlockTriggered() )
       {
         MMILE_->ActiveClassIVInterlock();
         return ERR_CLASSIV_INTERLOCK;
+      }
+      else if( IsKeyInterlockTriggered( 1 ) )
+      {
+        MMILE_->ActiveClassIVInterlock();
+        return ERR_KEY_INTERLOCK;
       }
       else
       {
@@ -320,6 +330,11 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
       {
         MMILE_->ActiveClassIVInterlock();
         return ERR_CLASSIV_INTERLOCK;
+      }
+      else if( IsKeyInterlockTriggered( 1 ) )
+      {
+        MMILE_->ActiveClassIVInterlock(); 
+        return ERR_KEY_INTERLOCK;
       }
       else
       {
@@ -499,6 +514,28 @@ bool CLasers::AllowsExternalTTL(const int LaserIndex )
   return (vValue == 1);
 }
 
+bool CLasers::IsKeyInterlockTriggered(int LaserIndex)
+{
+  if( LaserInterface_ == nullptr )
+  {
+    return false;
+  }
+
+  bool vInterlockError = false;
+  TLaserState vLaserState;
+  if( LaserInterface_->GetLaserState( LaserIndex, &vLaserState ) )
+  {
+    if( vLaserState == ALC_POWER_ERROR )
+    {
+      vInterlockError = true;
+    }
+  }
+#ifdef _ACTIVATE_DUMMYTEST_
+  vInterlockError = KeyInterlockTEMP_;
+#endif
+  return vInterlockError;
+}
+
 bool CLasers::IsInterlockTriggered( int LaserIndex )
 {
   if ( LaserInterface_ == nullptr )
@@ -516,7 +553,7 @@ bool CLasers::IsInterlockTriggered( int LaserIndex )
     }
   }
 #ifdef _ACTIVATE_DUMMYTEST_
-  vInterlockError = InterlockTEMP_ | ClassIVInterlockTEMP_;
+  vInterlockError = InterlockTEMP_ | ClassIVInterlockTEMP_ | KeyInterlockTEMP_;
 #endif
   return vInterlockError;
 }
@@ -572,6 +609,24 @@ int CLasers::OnClassIVInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
   }
   return DEVICE_OK;
 }
+
+int CLasers::OnKeyInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
+{
+  if( Act == MM::AfterSet )
+  {
+    std::string vValue;
+    Prop->Get( vValue );
+    if( vValue == g_LaserEnableOn )
+    {
+      KeyInterlockTEMP_ = true;
+    }
+    else
+    {
+      KeyInterlockTEMP_ = false;
+    }
+  }
+  return DEVICE_OK;
+}
 #endif
 
 int CLasers::OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act )
@@ -580,7 +635,7 @@ int CLasers::OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act )
   {
     if ( IsInterlockTriggered( 1 ) )
     {
-      if ( IsClassIVInterlockTriggered() )
+      if ( IsClassIVInterlockTriggered() || IsKeyInterlockTriggered( 1 ) )
       {
         if ( !ClassIVInterlock_ )
         {

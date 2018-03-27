@@ -170,7 +170,7 @@ bool CPortsConfiguration::LoadConfigFile(const std::string& FileName)
   std::ifstream vFile( FileName );
   if ( !vFile.is_open() )
   {
-    MMILE_->LogMMMessage( "Failed to open port config file: " + FileName );
+    MMILE_->LogMMMessage( "Failed to open port config file: " + FileName, true );
     return false;
   }
 
