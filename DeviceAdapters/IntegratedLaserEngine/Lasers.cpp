@@ -229,7 +229,7 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   if ( Act == MM::BeforeGet )
   {
     vPowerSetpoint = (double)PowerSetpoint( LaserIndex );
-    MMILE_->LogMMMessage( "from equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long long>( vPowerSetpoint ) ), true );
+    MMILE_->LogMMMessage( "from equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long double>( vPowerSetpoint ) ), true );
     Prop->Set( vPowerSetpoint );
   }
   else if ( Act == MM::AfterSet )
@@ -246,7 +246,7 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
     if ( !IsInterlockTriggered( LaserIndex ) )
     {
       Prop->Get( vPowerSetpoint );
-      MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long long>( vPowerSetpoint ) ), true );
+      MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long double>( vPowerSetpoint ) ), true );
       PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
       if ( OpenRequest_ )
         return SetOpen();
@@ -383,7 +383,7 @@ int CLasers::SetOpen(bool Open)
       }
       double vPower = ( vPercentScale / 100. ) * ( LaserRange_[vLaserIndex].PowerMax - LaserRange_[vLaserIndex].PowerMin ) + LaserRange_[vLaserIndex].PowerMin;
 
-      MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( vLaserIndex ) ) + "  = " + std::to_string( static_cast<long long>( vPower ) ) + "(" + std::to_string( static_cast<long long>( vLaserOn ) ) + ")", true );
+      MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( vLaserIndex ) ) + "  = " + std::to_string( static_cast<long double>( vPower ) ) + "(" + std::to_string( static_cast<long long>( vLaserOn ) ) + ")", true );
 
       TLaserState vLaserState;
       if ( LaserInterface_->GetLaserState( vLaserIndex, &vLaserState ) )
@@ -398,10 +398,10 @@ int CLasers::SetOpen(bool Open)
 
         if ( vLaserState > ALC_NOT_AVAILABLE )
         {
-          MMILE_->LogMMMessage( "setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long long>( vPower ) ) + "% full scale", true );
+          MMILE_->LogMMMessage( "setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long double>( vPower ) ) + "% full scale", true );
           if ( !LaserInterface_->SetLas_I( vLaserIndex, vPower, vLaserOn ) )
           {
-            MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long long>( vPower ) ) + "]" );
+            MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long double>( vPower ) ) + "]" );
             return ERR_LASER_SET;
           }
         }

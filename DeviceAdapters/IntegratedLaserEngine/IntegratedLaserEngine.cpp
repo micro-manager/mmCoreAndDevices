@@ -469,6 +469,7 @@ void CIntegratedLaserEngine::CheckAndUpdateLasers()
 
 void CIntegratedLaserEngine::ActivateInterlock()
 {
+  LogMessage( "Modifying Reset property state", true );
   if ( ResetDeviceProperty_ != nullptr )
   {
     MM::Property* pChildProperty = ( MM::Property* )ResetDeviceProperty_;
@@ -476,31 +477,36 @@ void CIntegratedLaserEngine::ActivateInterlock()
   }
 
   // Disconnect from the ILE interface
+  LogMessage( "Disconnecting from the ILE interface", true );
   DisconnectILEInterfaces();
   Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
 
   // Disconnect the device
+  LogMessage( "Disconnecting ILE", true );
   DeleteILE();
 }
 
 void CIntegratedLaserEngine::ActiveClassIVInterlock()
 {
+  LogMessage( "Class IV interlock detected", true );
   ClassIVInterlockActive_ = true;
   ActivateInterlock();
+  LogMessage( "Class IV interlock activated", true );
 }
 
 void CIntegratedLaserEngine::ActiveKeyInterlock()
 {
+  LogMessage( "Key interlock detected", true );
   KeyInterlockActive_ = true;
   ActivateInterlock();
+  LogMessage( "Key interlock activated", true );
 }
 
 int CIntegratedLaserEngine::GetClassIVAndKeyInterlockStatus()
 {
   if ( ClassIVInterlockActive_ )
   {
-    return ERR_CLASSIV_INTERLOCK;
-    
+    return ERR_CLASSIV_INTERLOCK;    
   }
   if ( KeyInterlockActive_ ) 
   {
