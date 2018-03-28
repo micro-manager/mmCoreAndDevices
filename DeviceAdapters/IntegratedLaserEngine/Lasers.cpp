@@ -253,15 +253,15 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
     }
     else
     {
-      if( IsClassIVInterlockTriggered() )
-      {
-        MMILE_->ActiveClassIVInterlock();
-        return ERR_CLASSIV_INTERLOCK;
-      }
-      else if( IsKeyInterlockTriggered( 1 ) )
+      if( IsKeyInterlockTriggered( LaserIndex ) )
       {
         MMILE_->ActiveKeyInterlock();
         return ERR_KEY_INTERLOCK;
+      }
+      else if ( IsClassIVInterlockTriggered() )
+      {
+        MMILE_->ActiveClassIVInterlock();
+        return ERR_CLASSIV_INTERLOCK;
       }
       else
       {
@@ -336,15 +336,15 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
     }
     else
     {
-      if ( IsClassIVInterlockTriggered() )
-      {
-        MMILE_->ActiveClassIVInterlock();
-        return ERR_CLASSIV_INTERLOCK;
-      }
-      else if( IsKeyInterlockTriggered( 1 ) )
+      if ( IsKeyInterlockTriggered( LaserIndex ) )
       {
         MMILE_->ActiveKeyInterlock();
         return ERR_KEY_INTERLOCK;
+      }
+      else if ( IsClassIVInterlockTriggered() )
+      {
+        MMILE_->ActiveClassIVInterlock();
+        return ERR_CLASSIV_INTERLOCK;
       }
       else
       {
@@ -665,13 +665,13 @@ int CLasers::OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act )
         {
           Prop->Set( g_InterlockClassIVActive );
           MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockClassIVActive );
-          if ( IsClassIVInterlockTriggered() )
-          {
-            MMILE_->ActiveClassIVInterlock();
-          }
-          else
+          if ( IsKeyInterlockTriggered( 1 ) )
           {
             MMILE_->ActiveKeyInterlock();
+          }
+          else if ( IsClassIVInterlockTriggered() )
+          {
+            MMILE_->ActiveClassIVInterlock();
           }
         }
         Interlock_ = false;
