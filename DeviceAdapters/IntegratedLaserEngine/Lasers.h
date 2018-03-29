@@ -69,8 +69,6 @@ private:
     TTL_PULSED
   };
   bool OpenRequest_;
-  bool Interlock_;
-  bool ClassIVInterlock_;
   CInterlockStatusMonitor* InterlockStatusMonitor_;
 #ifdef _ACTIVATE_DUMMYTEST_
   bool InterlockTEMP_;
@@ -78,6 +76,14 @@ private:
   bool KeyInterlockTEMP_;
 #endif
   std::map<std::string, MM::PropertyBase *> PropertyPointers_;
+  enum INTERLOCKSTATE
+  {
+    NO_INTERLOCK,
+    INTERLOCK,
+    KEY_INTERLOCK,
+    CLASSIV_INTERLOCK
+  };
+  INTERLOCKSTATE DisplayedInterlockState_;
 
   void GenerateProperties();
   std::string BuildPropertyName( const std::string& BasePropertyName, int Wavelength );
@@ -90,6 +96,10 @@ private:
   bool IsInterlockTriggered( int LaserIndex );
   bool IsClassIVInterlockTriggered();
   void WaitOnLaserWarmingUp();
+  void DisplayKeyInterlockMessage( MM::PropertyBase* Prop );
+  void DisplayClassIVInterlockMessage( MM::PropertyBase* Prop );
+  void DisplayInterlockMessage( MM::PropertyBase* Prop );
+  void DisplayNoInterlockMessage( MM::PropertyBase* Prop );
 };
 
 

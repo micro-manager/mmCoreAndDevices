@@ -207,6 +207,7 @@
     <ClCompile Include="Ports.cpp" />
     <ClCompile Include="PortsConfiguration.cpp" />
     <ClCompile Include="SingleILE.cpp" />
+    <ClCompile Include="VeryLowPower.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">

@@ -20,7 +20,8 @@ const char* const g_LaserEnableTTL = "External TTL";
 
 const char* const g_InterlockInactive = "Inactive";
 const char* const g_InterlockActive = "Active";
-const char* const g_InterlockClassIVActive = "Class IV or Key interlock active. Device reset required.";
+const char* const g_InterlockClassIVActive = "Class IV interlock active. Device reset required.";
+const char* const g_InterlockKeyActive = "Key interlock active. Device reset required.";
 
 CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface, CIntegratedLaserEngine* MMILE ) :
   LaserInterface_( LaserInterface ),
@@ -29,8 +30,7 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
   MMILE_( MMILE ),
   NumberOfLasers_( 0 ),
   OpenRequest_( false ),
-  Interlock_( false ),
-  ClassIVInterlock_( false ),
+  DisplayedInterlockState_( NO_INTERLOCK ),
 #ifdef _ACTIVATE_DUMMYTEST_
   InterlockTEMP_( false ),
   ClassIVInterlockTEMP_( false ),
@@ -157,7 +157,7 @@ std::string CLasers::BuildPropertyName( const std::string& BasePropertyName, int
 
 void CLasers::GenerateProperties()
 {
-  CPropertyActionEx* vAct; 
+  CPropertyActionEx* vActEx; 
   std::string vPropertyName;
   int vWavelength;
 
@@ -165,9 +165,9 @@ void CLasers::GenerateProperties()
   for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
   {
     vWavelength = Wavelength( vLaserIndex );
-    vAct = new CPropertyActionEx( this, &CLasers::OnPowerSetpoint, vLaserIndex );
+    vActEx = new CPropertyActionEx( this, &CLasers::OnPowerSetpoint, vLaserIndex );
     vPropertyName = BuildPropertyName( g_PowerSetpointProperty, vWavelength );
-    MMILE_->CreateProperty( vPropertyName.c_str(), "0", MM::Float, false, vAct );
+    MMILE_->CreateProperty( vPropertyName.c_str(), "0", MM::Float, false, vActEx );
 
     // Set the limits as interrogated from the laser controller
     MMILE_->LogMMMessage( "Range for " + vPropertyName + "= [0,100]", true );
@@ -175,7 +175,7 @@ void CLasers::GenerateProperties()
     PropertyPointers_[vPropertyName] = nullptr;
 
     // Enable
-    vAct = new CPropertyActionEx( this, &CLasers::OnEnable, vLaserIndex );
+    vActEx = new CPropertyActionEx( this, &CLasers::OnEnable, vLaserIndex );
     vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
     EnableStates_[vLaserIndex].clear();
     EnableStates_[vLaserIndex].push_back( g_LaserEnableOn );
@@ -184,28 +184,28 @@ void CLasers::GenerateProperties()
     {
       EnableStates_[vLaserIndex].push_back( g_LaserEnableTTL );
     }
-    MMILE_->CreateProperty( vPropertyName.c_str(), EnableStates_[vLaserIndex][0].c_str(), MM::String, false, vAct );
+    MMILE_->CreateProperty( vPropertyName.c_str(), EnableStates_[vLaserIndex][0].c_str(), MM::String, false, vActEx );
     MMILE_->SetAllowedValues( vPropertyName.c_str(), EnableStates_[vLaserIndex] );
     PropertyPointers_[vPropertyName] = nullptr;
   }
 
-  CPropertyAction* vAct2 = new CPropertyAction( this, &CLasers::OnInterlockStatus );
-  MMILE_->CreateStringProperty( g_InterlockStatus, g_InterlockInactive, true, vAct2 );
+  CPropertyAction* vAct = new CPropertyAction( this, &CLasers::OnInterlockStatus );
+  MMILE_->CreateStringProperty( g_InterlockStatus, g_InterlockInactive, true, vAct );
 
 #ifdef _ACTIVATE_DUMMYTEST_
   std::vector<std::string> vEnabledValues;
   vEnabledValues.push_back( g_LaserEnableOn );
   vEnabledValues.push_back( g_LaserEnableOff );
-  vAct2 = new CPropertyAction( this, &CLasers::OnInterlock );
-  MMILE_->CreateStringProperty( "Interlock TEST Activate", g_LaserEnableOff, false, vAct2 );
+  vAct = new CPropertyAction( this, &CLasers::OnInterlock );
+  MMILE_->CreateStringProperty( "Interlock TEST Activate", g_LaserEnableOff, false, vAct );
   MMILE_->SetAllowedValues( "Interlock TEST Activate", vEnabledValues );
 
-  vAct2 = new CPropertyAction( this, &CLasers::OnClassIVInterlock );
-  MMILE_->CreateStringProperty( "Interlock TEST Activate Class IV", g_LaserEnableOff, false, vAct2 );
+  vAct = new CPropertyAction( this, &CLasers::OnClassIVInterlock );
+  MMILE_->CreateStringProperty( "Interlock TEST Activate Class IV", g_LaserEnableOff, false, vAct );
   MMILE_->SetAllowedValues( "Interlock TEST Activate Class IV", vEnabledValues );
 
-  vAct2 = new CPropertyAction( this, &CLasers::OnKeyInterlock );
-  MMILE_->CreateStringProperty( "Interlock TEST Activate Key", g_LaserEnableOff, false, vAct2 );
+  vAct = new CPropertyAction( this, &CLasers::OnKeyInterlock );
+  MMILE_->CreateStringProperty( "Interlock TEST Activate Key", g_LaserEnableOff, false, vAct );
   MMILE_->SetAllowedValues( "Interlock TEST Activate Key", vEnabledValues );
 #endif
   UpdateLasersRange();
@@ -534,6 +534,10 @@ bool CLasers::AllowsExternalTTL(const int LaserIndex )
   return (vValue == 1);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Interlock functions
+///////////////////////////////////////////////////////////////////////////////
+
 bool CLasers::IsKeyInterlockTriggered(int LaserIndex)
 {
   if( LaserInterface_ == nullptr )
@@ -649,54 +653,71 @@ int CLasers::OnKeyInterlock( MM::PropertyBase* Prop, MM::ActionType Act )
 }
 #endif
 
+void CLasers::DisplayKeyInterlockMessage( MM::PropertyBase* Prop )
+{
+  if( DisplayedInterlockState_ != KEY_INTERLOCK )
+  {
+    DisplayedInterlockState_ = KEY_INTERLOCK;
+    Prop->Set( g_InterlockKeyActive );
+    MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockKeyActive );
+    MMILE_->ActiveKeyInterlock();
+  }
+}
+
+void CLasers::DisplayClassIVInterlockMessage( MM::PropertyBase* Prop )
+{
+  if( DisplayedInterlockState_ != CLASSIV_INTERLOCK ) 
+  {
+    DisplayedInterlockState_ = CLASSIV_INTERLOCK;
+    Prop->Set( g_InterlockClassIVActive );
+    MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockClassIVActive );
+    MMILE_->ActiveClassIVInterlock();
+  }
+}
+
+void CLasers::DisplayInterlockMessage( MM::PropertyBase* Prop )
+{
+  if( DisplayedInterlockState_ != INTERLOCK )
+  {
+    DisplayedInterlockState_ = INTERLOCK;
+    Prop->Set( g_InterlockActive );
+    MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockActive );
+  }
+}
+
+void CLasers::DisplayNoInterlockMessage( MM::PropertyBase* Prop )
+{
+  if( DisplayedInterlockState_ != NO_INTERLOCK )
+  {
+    DisplayedInterlockState_ = NO_INTERLOCK;
+    Prop->Set( g_InterlockInactive );
+    MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockInactive );
+  }
+}
+
 int CLasers::OnInterlockStatus( MM::PropertyBase* Prop, MM::ActionType Act )
 {
   if ( Act == MM::BeforeGet )
   {
-    if ( LaserInterface_ == nullptr || ILEInterface_ == nullptr )
+    int vMainClassInterlockState = MMILE_->GetClassIVAndKeyInterlockStatus();
+    if( vMainClassInterlockState != DEVICE_OK || IsInterlockTriggered( 1 ) ) 
     {
-      return DEVICE_OK;
-    }
-    if ( IsInterlockTriggered( 1 ) )
-    {
-      if ( IsClassIVInterlockTriggered() || IsKeyInterlockTriggered( 1 ) )
+      if( vMainClassInterlockState == ERR_KEY_INTERLOCK || IsKeyInterlockTriggered( 1 ) ) 
       {
-        if ( !ClassIVInterlock_ )
-        {
-          Prop->Set( g_InterlockClassIVActive );
-          MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockClassIVActive );
-          if ( IsKeyInterlockTriggered( 1 ) )
-          {
-            MMILE_->ActiveKeyInterlock();
-          }
-          else if ( IsClassIVInterlockTriggered() )
-          {
-            MMILE_->ActiveClassIVInterlock();
-          }
-        }
-        Interlock_ = false;
-        ClassIVInterlock_ = true;
+        DisplayKeyInterlockMessage( Prop );
       }
-      else
+      else if( vMainClassInterlockState == ERR_CLASSIV_INTERLOCK || IsClassIVInterlockTriggered() )
       {
-        if ( !Interlock_ )
-        {
-          Prop->Set( g_InterlockActive );
-          MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockActive );
-        }
-        Interlock_ = true;
-        ClassIVInterlock_ = false;
+        DisplayClassIVInterlockMessage( Prop );
+      }
+      else 
+      {
+        DisplayInterlockMessage( Prop );
       }
     }
-    else
+    else 
     {
-      if ( Interlock_ || ClassIVInterlock_ )
-      {
-        Prop->Set( g_InterlockInactive );
-        MMILE_->UpdatePropertyUI( g_InterlockStatus, g_InterlockInactive );
-      }
-      Interlock_ = false;
-      ClassIVInterlock_ = false;
+      DisplayNoInterlockMessage( Prop );
     }
   }
   return DEVICE_OK;

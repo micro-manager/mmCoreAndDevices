@@ -176,6 +176,10 @@ int CSingleILE::InitializeActiveBlanking()
         return ERR_ACTIVEBLANKING_INIT;
       }
     }
+    else
+    {
+      LogMessage( "Active Blanking not present", true );
+    }
   }
   else
   {
@@ -208,6 +212,10 @@ int CSingleILE::InitializeLowPowerMode()
         LogMessage( vMessage );
         return ERR_LOWPOWERMODE_INIT;
       }
+    }
+    else
+    {
+      LogMessage( "Low Power Mode not present", true );
     }
   }
   else

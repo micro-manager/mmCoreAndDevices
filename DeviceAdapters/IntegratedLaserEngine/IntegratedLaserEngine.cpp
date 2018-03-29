@@ -14,6 +14,7 @@
 #include "DualILE.h"
 #include "ILEWrapper/ILEWrapper.h"
 #include "Lasers.h"
+#include "VeryLowPower.h"
 
 
 // Properties
@@ -83,6 +84,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   ILEWrapper_( nullptr ),
   ILEDevice_( nullptr ),
   Lasers_( nullptr ),
+  VeryLowPower_( nullptr ),
   ResetDeviceProperty_( nullptr ),
   ConstructionReturnCode_( DEVICE_OK ),
   ClassIVInterlockActive_( false ),
@@ -104,6 +106,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_ACTIVEBLANKING_INIT, "Active Blanking initialisation failed" );
   SetErrorText( ERR_LOWPOWERMODE_INIT, "Low Power mode initialisation failed" );
   SetErrorText( ERR_LASERS_INIT, "Lasers initialisation failed" );
+  SetErrorText( ERR_VERYLOWPOWER_INIT, "Very Low Power initialisation failed" );
   SetErrorText( ERR_DEVICE_INDEXINVALID, "Device index invalid" );
   SetErrorText( ERR_DEVICE_CONNECTIONFAILED, "Connection to the device failed" );
   SetErrorText( ERR_DEVICE_RECONNECTIONFAILED, "Error occured during the reconnection with the device. Please try again or reload the configuration." );
@@ -126,6 +129,9 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
 
   SetErrorText( ERR_PORTS_SET, "Setting port failed" );
   SetErrorText( ERR_PORTS_GET, "Getting current port index failed" );
+
+  SetErrorText( ERR_VERYLOWPOWER_SET, "Setting very low power failed" );
+  SetErrorText( ERR_VERYLOWPOWER_GET, "Getting very low power state failed" );
 
   // Load the library
   try
@@ -256,30 +262,21 @@ int CIntegratedLaserEngine::Initialize()
   SetAllowedValues( g_ResetDeviceProperty, vEnabledValues );
 
   // Lasers
-  IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
-  IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
-  IALC_REV_ILE* vILE = ILEDevice_->GetILEInterface();
-  if ( vLaserInterface != nullptr )
+  int vRet = InitalizeLasers();
+  if( vRet != DEVICE_OK )
   {
-    try
-    {
-      Lasers_ = new CLasers( vLaserInterface, vLowPowerMode, vILE, this );
-    }
-    catch ( std::exception& vException )
-    {
-      std::string vMessage( "Error loading the Lasers. Caught Exception with message: " );
-      vMessage += vException.what();
-      LogMessage( vMessage );
-      return ERR_LASERS_INIT;
-    }
+    return vRet;
   }
-  else
+
+  // Very Low Power
+  vRet = InitializeVeryLowPower();
+  if( vRet != DEVICE_OK )
   {
-    LogMessage( "Laser interface pointer invalid" );
+    return vRet;
   }
   
   // Ports
-  int vRet = InitializePorts();
+  vRet = InitializePorts();
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -303,6 +300,80 @@ int CIntegratedLaserEngine::Initialize()
   return DEVICE_OK;
 }
 
+int CIntegratedLaserEngine::InitalizeLasers()
+{
+  IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
+  IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
+  IALC_REV_ILE* vILE = ILEDevice_->GetILEInterface();
+  if( vLaserInterface != nullptr && vLowPowerMode != nullptr && vILE != nullptr )
+  {
+    try
+    {
+      Lasers_ = new CLasers( vLaserInterface, vLowPowerMode, vILE, this );
+    }
+    catch( std::exception& vException )
+    {
+      std::string vMessage( "Error loading the Lasers. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      return ERR_LASERS_INIT;
+    }
+  }
+  else
+  {
+    if( vLaserInterface == nullptr )
+    {
+      LogMessage( "Laser interface pointer invalid" );
+    }
+    if( vLowPowerMode == nullptr )
+    {
+      LogMessage( "Low power interface pointer invalid" );
+    }
+    if( vILE == nullptr )
+    {
+      LogMessage( "ILE interface pointer invalid" );
+    }
+  }
+  return DEVICE_OK;
+}
+
+int CIntegratedLaserEngine::InitializeVeryLowPower()
+{
+  IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
+  if( vLowPowerMode != nullptr )
+  {
+    bool vVeryLowPowerPresent = false;
+    if( !vLowPowerMode->IsCoherenceModePresent( &vVeryLowPowerPresent ) )
+    {
+      LogMessage( "ILE Power IsCoherenceModePresent failed" );
+      return ERR_VERYLOWPOWER_INIT;
+    }
+    if( vVeryLowPowerPresent )
+    {
+      try
+      {
+        VeryLowPower_ = new CVeryLowPower( vLowPowerMode, this );
+      }
+      catch( std::exception& vException )
+      {
+        std::string vMessage( "Error loading Very Low Power. Caught Exception with message: " );
+        vMessage += vException.what();
+        LogMessage( vMessage );
+        return ERR_VERYLOWPOWER_INIT;
+      }
+    }
+    else
+    {
+      LogMessage( "Very Low Power not present", true );
+    }
+  }
+  else
+  {
+    LogMessage( "ILE Power interface pointer invalid" );
+  }
+  return DEVICE_OK;
+}
+
 int CIntegratedLaserEngine::Shutdown()
 {
   if ( ConstructionReturnCode_ != DEVICE_OK )
@@ -314,6 +385,8 @@ int CIntegratedLaserEngine::Shutdown()
     return DEVICE_OK;
   }
 
+  delete VeryLowPower_;
+  VeryLowPower_ = nullptr;
   delete Lasers_;
   Lasers_ = nullptr;
   DeleteILE();
@@ -348,6 +421,10 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
   if ( ResetDeviceProperty_ == nullptr )
   {
     ResetDeviceProperty_ = Prop;
+    if( GetClassIVAndKeyInterlockStatus() != DEVICE_OK )
+    {
+      ActivateInterlock();
+    }
   }
   int vRet = DEVICE_OK;
   if ( Act == MM::BeforeGet )
@@ -362,7 +439,24 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
     Prop->Get( vValue );
     if ( vValue == g_PropertyOn )
     {
+      // Disconnect from the ILE interface
+      LogMessage( "Disconnecting from the ILE interface", true );
+      DisconnectILEInterfaces();
+      if( VeryLowPower_ != nullptr )
+      {
+        VeryLowPower_->UpdateILEInterface( nullptr );
+      }
+      if( Lasers_ != nullptr )
+      {
+        Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
+      }
+
+      // Disconnect the device
+      LogMessage( "Disconnecting ILE", true );
+      DeleteILE();
+
       // Reconnect the device
+      LogMessage( "Reconnecting ILE", true );
       try
       {
         if ( !CreateILE() )
@@ -381,20 +475,16 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       }
 
       // Reconnect to ILE interface
-      IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
-      IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
-      IALC_REV_ILE* vILE = ILEDevice_->GetILEInterface();
-      if ( vLowPowerMode != nullptr && vLaserInterface != nullptr && vILE != nullptr )
-      {
-        vRet = Lasers_->UpdateILEInterface( vLaserInterface, vLowPowerMode, vILE );
-      }
-      else
-      {
-        vRet = ERR_DEVICE_RECONNECTIONFAILED;
-      }
+      LogMessage( "Reconnecting to the ILE interface", true );
+      vRet = ReconnectLasers();
       if ( vRet == DEVICE_OK )
       {
         vRet = ReconnectILEInterfaces();
+      }
+      if( vRet == DEVICE_OK )
+      {
+        // Handling very low power last since it enforces an update of the laser range
+        vRet = ReconnectVeryLowPower();
       }
       if ( vRet == DEVICE_OK )
       {
@@ -404,6 +494,57 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
         MM::Property* pChildProperty = ( MM::Property* )Prop;
         pChildProperty->SetReadOnly( true );
       }
+    }
+  }
+  return vRet;
+}
+
+int CIntegratedLaserEngine::ReconnectLasers()
+{
+  int vRet = DEVICE_OK;
+  if( Lasers_ != nullptr )
+  {
+    IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
+    IALC_REV_Laser2* vLaserInterface = ILEDevice_->GetLaserInterface2();
+    IALC_REV_ILE* vILE = ILEDevice_->GetILEInterface();
+    if( vLowPowerMode != nullptr && vLaserInterface != nullptr && vILE != nullptr )
+    {
+      vRet = Lasers_->UpdateILEInterface( vLaserInterface, vLowPowerMode, vILE );
+    }
+    else
+    {
+      if( vLaserInterface == nullptr )
+      {
+        LogMessage( "Laser interface pointer invalid" );
+      }
+      if( vLowPowerMode == nullptr )
+      {
+        LogMessage( "Low power interface pointer invalid" );
+      }
+      if( vILE == nullptr )
+      {
+        LogMessage( "ILE interface pointer invalid" );
+      }
+      vRet = ERR_DEVICE_RECONNECTIONFAILED;
+    }
+  }
+  return vRet;
+}
+
+int CIntegratedLaserEngine::ReconnectVeryLowPower()
+{
+  int vRet = DEVICE_OK;
+  if( VeryLowPower_ != nullptr )
+  {
+    IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
+    if( vLowPowerMode != nullptr )
+    {
+      vRet = VeryLowPower_->UpdateILEInterface( vLowPowerMode );
+    }
+    else
+    {
+      LogMessage( "ILE Power interface pointer invalid" );
+      vRet = ERR_DEVICE_RECONNECTIONFAILED;
     }
   }
   return vRet;
@@ -427,7 +568,7 @@ int CIntegratedLaserEngine::GetOpen(bool& Open)
   Open = false;
   if ( Lasers_ != nullptr )
   {
-    Lasers_->GetOpen( Open );
+    return Lasers_->GetOpen( Open );
   }
   return DEVICE_OK;
 }
@@ -439,10 +580,13 @@ int CIntegratedLaserEngine::GetOpen(bool& Open)
  */
 int CIntegratedLaserEngine::Fire(double DeltaT)
 {
-  SetOpen( true );
-  CDeviceUtils::SleepMs( (long)( DeltaT + .5 ) );
-  SetOpen( false );
-  return DEVICE_OK;
+  int vRet = SetOpen( true );
+  if( vRet == DEVICE_OK )
+  {
+    CDeviceUtils::SleepMs( ( long )( DeltaT + .5 ) );
+    vRet = SetOpen( false );
+  }
+  return vRet;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -475,15 +619,6 @@ void CIntegratedLaserEngine::ActivateInterlock()
     MM::Property* pChildProperty = ( MM::Property* )ResetDeviceProperty_;
     pChildProperty->SetReadOnly( false );
   }
-
-  // Disconnect from the ILE interface
-  LogMessage( "Disconnecting from the ILE interface", true );
-  DisconnectILEInterfaces();
-  Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
-
-  // Disconnect the device
-  LogMessage( "Disconnecting ILE", true );
-  DeleteILE();
 }
 
 void CIntegratedLaserEngine::ActiveClassIVInterlock()
