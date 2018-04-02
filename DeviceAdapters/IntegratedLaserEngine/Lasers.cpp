@@ -450,6 +450,10 @@ void CLasers::UpdateLasersRange()
       PowerInterface_->GetPowerRange( vLaserIndex, &( LaserRange_[vLaserIndex].PowerMin ), &( LaserRange_[vLaserIndex].PowerMax ) );
       MMILE_->LogMMMessage( "New range for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " [" + std::to_string( static_cast<long double>( LaserRange_[vLaserIndex].PowerMin ) ) + ", " + std::to_string( static_cast<long double>( LaserRange_[vLaserIndex].PowerMax ) ) + "]", true );
     }
+    if( OpenRequest_ )
+    {
+      SetOpen( OpenRequest_ );
+    }
   }
 }
 
