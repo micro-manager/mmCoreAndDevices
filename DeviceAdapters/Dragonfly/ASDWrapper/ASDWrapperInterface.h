@@ -29,46 +29,46 @@ public:
   ~CASDWrapperInterface();
 
   // IASDInterface
-  const char* GetSerialNumber() const;
-  const char* GetProductID() const;
-  const char* GetSoftwareVersion() const;
-  const char* GetSoftwareBuildTime() const;
-  bool IsDichroicAvailable();
-  IDichroicMirrorInterface* GetDichroicMirror();
-  bool IsDiskAvailable();
-  IDiskInterface* GetDisk();
-  bool IsFilterWheelAvailable( TWheelIndex FilterIndex );
-  IFilterWheelInterface* GetFilterWheel( TWheelIndex FilterIndex );
-  bool IsBrightFieldPortAvailable();
-  IConfocalModeInterface2* GetBrightFieldPort();
-  IDiskInterface2* GetDisk_v2();
+  const char* __stdcall GetSerialNumber() const;
+  const char* __stdcall GetProductID() const;
+  const char* __stdcall GetSoftwareVersion() const;
+  const char* __stdcall GetSoftwareBuildTime() const;
+  bool __stdcall IsDichroicAvailable();
+  IDichroicMirrorInterface* __stdcall GetDichroicMirror();
+  bool __stdcall IsDiskAvailable();
+  IDiskInterface* __stdcall GetDisk();
+  bool __stdcall IsFilterWheelAvailable( TWheelIndex FilterIndex );
+  IFilterWheelInterface* __stdcall GetFilterWheel( TWheelIndex FilterIndex );
+  bool __stdcall IsBrightFieldPortAvailable();
+  IConfocalModeInterface2* __stdcall GetBrightFieldPort();
+  IDiskInterface2* __stdcall GetDisk_v2();
 
   // IASDInterface2
-  bool IsApertureAvailable();
-  IApertureInterface* GetAperture();
-  bool IsCameraPortMirrorAvailable();
-  ICameraPortMirrorInterface* GetCameraPortMirror();
-  bool IsLensAvailable( TLensType LensIndex );
-  ILensInterface* GetLens( TLensType LensIndex );
-  int GetModelID();
+  bool __stdcall IsApertureAvailable();
+  IApertureInterface* __stdcall GetAperture();
+  bool __stdcall IsCameraPortMirrorAvailable();
+  ICameraPortMirrorInterface* __stdcall GetCameraPortMirror();
+  bool __stdcall IsLensAvailable( TLensType LensIndex );
+  ILensInterface* __stdcall GetLens( TLensType LensIndex );
+  int __stdcall GetModelID();
 
   // IASDInterface3
-  bool IsIllLensAvailable( TLensType LensIndex );
-  IIllLensInterface* GetIllLens( TLensType LensIndex );
-  bool IsEPIPolariserAvailable();
-  IEPIPolariserInterface*	GetEPIPolariser();
-  bool IsTIRFPolariserAvailable();
-  ITIRFPolariserInterface* GetTIRFPolariser();
-  bool IsEmissionIrisAvailable();
-  IEmissionIrisInterface* GetEmissionIris();
-  bool IsSuperResAvailable();
-  ISuperResInterface* GetSuperRes();
-  bool IsImagingModeAvailable();
-  IConfocalModeInterface3* GetImagingMode();
-  bool IsTIRFAvailable();
-  ITIRFInterface* GetTIRF();
-  IStatusInterface* GetStatus();
-  IFrontPanelLEDInterface* GetFrontPanelLED();
+  bool __stdcall IsIllLensAvailable( TLensType LensIndex );
+  IIllLensInterface* __stdcall GetIllLens( TLensType LensIndex );
+  bool __stdcall IsEPIPolariserAvailable();
+  IEPIPolariserInterface*	__stdcall GetEPIPolariser();
+  bool __stdcall IsTIRFPolariserAvailable();
+  ITIRFPolariserInterface* __stdcall GetTIRFPolariser();
+  bool __stdcall IsEmissionIrisAvailable();
+  IEmissionIrisInterface* __stdcall GetEmissionIris();
+  bool __stdcall IsSuperResAvailable();
+  ISuperResInterface* __stdcall GetSuperRes();
+  bool __stdcall IsImagingModeAvailable();
+  IConfocalModeInterface3* __stdcall GetImagingMode();
+  bool __stdcall IsTIRFAvailable();
+  ITIRFInterface* __stdcall GetTIRF();
+  IStatusInterface* __stdcall GetStatus();
+  IFrontPanelLEDInterface* __stdcall GetFrontPanelLED();
 
 private:
   IASDInterface3* ASDInterface_;

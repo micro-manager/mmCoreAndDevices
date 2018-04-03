@@ -17,10 +17,10 @@ public:
   ~CASDWrapperLens();
 
   // ILensInterface
-  bool GetPosition( unsigned int& Position );
-  bool SetPosition( unsigned int Position );
-  bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
-  IFilterSet* GetLensConfigInterface();
+  bool __stdcall GetPosition( unsigned int& Position );
+  bool __stdcall SetPosition( unsigned int Position );
+  bool __stdcall GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
+  IFilterSet* __stdcall GetLensConfigInterface();
 
 private:
   ILensInterface* LensInterface_;

@@ -17,9 +17,11 @@ class CASDWrapperLoader : public IASDLoader
 public:
   CASDWrapperLoader( IASDLoader* ASDLoader );
   ~CASDWrapperLoader();
-  IASDInterface* GetASDInterface();
-  IASDInterface2* GetASDInterface2();
-  IASDInterface3* GetASDInterface3();
+
+  // IASDLoader
+  IASDInterface* __stdcall GetASDInterface();
+  IASDInterface2* __stdcall GetASDInterface2();
+  IASDInterface3* __stdcall GetASDInterface3();
 
   IASDLoader* GetASDLoader();
   

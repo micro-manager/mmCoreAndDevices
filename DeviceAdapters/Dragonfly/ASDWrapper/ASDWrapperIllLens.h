@@ -17,13 +17,13 @@ public:
   ~CASDWrapperIllLens();
 
   // IIllLensInterface
-  bool GetPosition( unsigned int& Position );
-  bool SetPosition( unsigned int Position );
-  bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
-  bool IsRestrictionEnabled();
-  bool GetRestrictedRange( unsigned int &MinPosition, unsigned int &MaxPosition );
-  bool RegisterForNotificationOnRangeRestriction( INotify *Notify );
-  IFilterSet* GetLensConfigInterface();
+  bool __stdcall GetPosition( unsigned int& Position );
+  bool __stdcall SetPosition( unsigned int Position );
+  bool __stdcall GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
+  bool __stdcall IsRestrictionEnabled();
+  bool __stdcall GetRestrictedRange( unsigned int &MinPosition, unsigned int &MaxPosition );
+  bool __stdcall RegisterForNotificationOnRangeRestriction( INotify *Notify );
+  IFilterSet* __stdcall GetLensConfigInterface();
 
 private:
   IIllLensInterface* IllLensInterface_;

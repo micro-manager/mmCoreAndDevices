@@ -15,9 +15,9 @@ public:
   ~CASDWrapperFilterSet();
 
   // IFilterSet
-  bool GetDescription( char *Description, unsigned int StringLength );
-  bool GetFilterDescription( unsigned int Position, char *Description, unsigned int StringLength );
-  bool GetLimits( unsigned int &MinPosition, unsigned int &MaxPosition );
+  bool __stdcall GetDescription( char *Description, unsigned int StringLength );
+  bool __stdcall GetFilterDescription( unsigned int Position, char *Description, unsigned int StringLength );
+  bool __stdcall GetLimits( unsigned int &MinPosition, unsigned int &MaxPosition );
 
 private:
   IFilterSet* FilterSetInterface_;

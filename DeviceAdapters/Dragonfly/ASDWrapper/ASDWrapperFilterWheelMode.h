@@ -16,8 +16,8 @@ public:
   ~CASDWrapperFilterWheelMode();
 
   // IFilterWheelModeInterface
-  bool GetMode( TFilterWheelMode& FilterWheelMode );
-  bool SetMode( TFilterWheelMode FilterWheelMode );
+  bool __stdcall GetMode( TFilterWheelMode& FilterWheelMode );
+  bool __stdcall SetMode( TFilterWheelMode FilterWheelMode );
 
 private:
   IFilterWheelModeInterface* FilterWheelModeInterface_;

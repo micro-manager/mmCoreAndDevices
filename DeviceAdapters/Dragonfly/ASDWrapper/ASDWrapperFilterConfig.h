@@ -17,10 +17,10 @@ public:
   ~CASDWrapperFilterConfig();
 
   // IFilterConfigInterface
-  IFilterSet* GetFilterSet();
-  bool GetPositionOfFilterSetInRepository( unsigned int *Position );
-  bool ExchangeFilterSet( unsigned int Position );
-  IFilterRepository* GetFilterRepository();
+  IFilterSet* __stdcall GetFilterSet();
+  bool __stdcall GetPositionOfFilterSetInRepository( unsigned int *Position );
+  bool __stdcall ExchangeFilterSet( unsigned int Position );
+  IFilterRepository* __stdcall GetFilterRepository();
 
 private:
   IFilterConfigInterface* FilterConfigInterface_;

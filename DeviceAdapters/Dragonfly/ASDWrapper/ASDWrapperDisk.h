@@ -15,17 +15,17 @@ public:
   ~CASDWrapperDisk();
 
   // IDiskInterface
-  bool GetSpeed( unsigned int &Speed );
-  bool SetSpeed( unsigned int Speed );
-  bool IncreaseSpeed();
-  bool DecreaseSpeed();
-  bool GetLimits( unsigned int &Min, unsigned int &Max );
-  bool Start();
-  bool Stop();
-  bool IsSpinning();
+  bool __stdcall GetSpeed( unsigned int &Speed );
+  bool __stdcall SetSpeed( unsigned int Speed );
+  bool __stdcall IncreaseSpeed();
+  bool __stdcall DecreaseSpeed();
+  bool __stdcall GetLimits( unsigned int &Min, unsigned int &Max );
+  bool __stdcall Start();
+  bool __stdcall Stop();
+  bool __stdcall IsSpinning();
 
   // IDiskInterface2
-  bool GetScansPerRevolution( unsigned int *NumberOfScans );
+  bool __stdcall GetScansPerRevolution( unsigned int *NumberOfScans );
 
 private:
   IDiskInterface2* DiskInterface_;

@@ -15,10 +15,10 @@ public:
   ~CASDWrapperStatus();
 
   // IStatusInterface
-  bool GetStatusCode( unsigned int *Status );
-  bool IsStandbyActive();
-  bool ActivateStandby();
-  bool WakeFromStandby();
+  bool __stdcall GetStatusCode( unsigned int *Status );
+  bool __stdcall IsStandbyActive();
+  bool __stdcall ActivateStandby();
+  bool __stdcall WakeFromStandby();
 
 private:
   IStatusInterface* StatusInterface_;

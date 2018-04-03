@@ -18,12 +18,12 @@ public:
   ~CASDWrapperFilterWheel();
 
   // IFilterWheelInterface
-  bool GetPosition( unsigned int& Position );
-  bool SetPosition( unsigned int Position );
-  bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
-  IFilterWheelSpeedInterface* GetFilterWheelSpeedInterface();
-  IFilterConfigInterface* GetFilterConfigInterface();
-  IFilterWheelModeInterface* GetFilterWheelModeInterface();
+  bool __stdcall GetPosition( unsigned int& Position );
+  bool __stdcall SetPosition( unsigned int Position );
+  bool __stdcall GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
+  IFilterWheelSpeedInterface* __stdcall GetFilterWheelSpeedInterface();
+  IFilterConfigInterface* __stdcall GetFilterConfigInterface();
+  IFilterWheelModeInterface* __stdcall GetFilterWheelModeInterface();
 
 private:
   IFilterWheelInterface* FilterWheelInterface_;

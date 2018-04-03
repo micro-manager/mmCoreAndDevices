@@ -17,10 +17,10 @@ public:
   ~CASDWrapperDichroicMirror();
 
   // IDichroicMirrorInterface
-  bool GetPosition( unsigned int& Position );
-  bool SetPosition( unsigned int Position );
-  bool GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
-  IFilterConfigInterface* GetFilterConfigInterface();
+  bool __stdcall GetPosition( unsigned int& Position );
+  bool __stdcall SetPosition( unsigned int Position );
+  bool __stdcall GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition );
+  IFilterConfigInterface* __stdcall GetFilterConfigInterface();
 
 private:
   IDichroicMirrorInterface* DichroicMirrorInterface_;

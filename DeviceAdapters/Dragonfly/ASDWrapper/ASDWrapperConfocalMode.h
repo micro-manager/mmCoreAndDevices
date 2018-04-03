@@ -15,21 +15,21 @@ public:
   ~CASDWrapperConfocalMode();
 
   // IConfocalModeInterface
-  bool ModeNone();
-  bool ModeConfocalHC();
-  bool ModeWideField();
-  bool GetMode( TConfocalMode &BrightFieldMode );
+  bool __stdcall ModeNone();
+  bool __stdcall ModeConfocalHC();
+  bool __stdcall ModeWideField();
+  bool __stdcall GetMode( TConfocalMode &BrightFieldMode );
 
   // IConfocalModeInterface2
-  bool ModeConfocalHS();
-  bool IsModeConfocalHSAvailable();
-  bool IsFirstDisk25um();
-  bool GetPinHoleSize_um( TConfocalMode ConfocalMode, int *PinHoleSize_um );
+  bool __stdcall ModeConfocalHS();
+  bool __stdcall IsModeConfocalHSAvailable();
+  bool __stdcall IsFirstDisk25um();
+  bool __stdcall GetPinHoleSize_um( TConfocalMode ConfocalMode, int *PinHoleSize_um );
 
   // IConfocalModeInterface3
-  bool ModeTIRF();
-  bool IsModeTIRFAvailable();
-  bool IsConfocalModeAvailable( TConfocalMode Mode );
+  bool __stdcall ModeTIRF();
+  bool __stdcall IsModeTIRFAvailable();
+  bool __stdcall IsConfocalModeAvailable( TConfocalMode Mode );
 
 private:
   IConfocalModeInterface3* ConfocalModeInterface_;
