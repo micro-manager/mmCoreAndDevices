@@ -16,17 +16,17 @@ public:
   ~CALC_REV_ILEPowerManagementWrapper();
 
   // IALC_REV_ILEPowerManagement
-  int GetNumberOfLasers();
-  bool IsLowPowerPresent( bool *Present );
-  bool IsLowPowerEnabled( bool *Enabled );
-  bool GetLowPowerState( bool *Active );
-  bool SetLowPowerState( bool Activate );
-  bool GetLowPowerPort( int *PortIndex );
-  bool IsCoherenceModePresent( bool *Present );
-  bool IsCoherenceModeActive( bool *Active );
-  bool SetCoherenceMode( bool Active );
-  bool GetPowerRange( int LaserIndex, double *PowerMinPercentage, double *PowerMaxPercentage );
-  bool GetLowPowerDetails( int LaserIndex, int *LowPowerPort, int *StepsPerRotation, int *StepsToHome, int *InsertHome );
+  int __stdcall GetNumberOfLasers();
+  bool __stdcall IsLowPowerPresent( bool *Present );
+  bool __stdcall IsLowPowerEnabled( bool *Enabled );
+  bool __stdcall GetLowPowerState( bool *Active );
+  bool __stdcall SetLowPowerState( bool Activate );
+  bool __stdcall GetLowPowerPort( int *PortIndex );
+  bool __stdcall IsCoherenceModePresent( bool *Present );
+  bool __stdcall IsCoherenceModeActive( bool *Active );
+  bool __stdcall SetCoherenceMode( bool Active );
+  bool __stdcall GetPowerRange( int LaserIndex, double *PowerMinPercentage, double *PowerMaxPercentage );
+  bool __stdcall GetLowPowerDetails( int LaserIndex, int *LowPowerPort, int *StepsPerRotation, int *StepsToHome, int *InsertHome );
 
 private:
   IALC_REV_ILEPowerManagement* ALC_REV_ILEPowerManagement_;

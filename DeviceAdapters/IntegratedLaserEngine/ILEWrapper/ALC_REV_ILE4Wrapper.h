@@ -17,11 +17,11 @@ public:
   ~CALC_REV_ILE4Wrapper();
 
   // IALC_REV_ILE4
-  bool GetNumberOfUnits( int *NumUnits );
-  bool IsActiveBlankingManagementPresent( int UnitIndex, bool *Present );
-  bool GetNumberOfLines( int UnitIndex, int *NumberOfLines );
-  bool GetActiveBlankingState( int UnitIndex, int *EnabledPattern );
-  bool SetActiveBlankingState( int UnitIndex, int EnabledPattern );
+  bool __stdcall GetNumberOfUnits( int *NumUnits );
+  bool __stdcall IsActiveBlankingManagementPresent( int UnitIndex, bool *Present );
+  bool __stdcall GetNumberOfLines( int UnitIndex, int *NumberOfLines );
+  bool __stdcall GetActiveBlankingState( int UnitIndex, int *EnabledPattern );
+  bool __stdcall SetActiveBlankingState( int UnitIndex, int EnabledPattern );
   
 private:
   IALC_REV_ILE4* ALC_REV_ILE4_;

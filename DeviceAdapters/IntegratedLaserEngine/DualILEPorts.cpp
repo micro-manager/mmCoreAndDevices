@@ -117,7 +117,7 @@ int CDualILEPorts::ChangePort( const std::string& PortName )
   }
   else
   {
-    MMILE_->LogMMMessage( "Changing merged port to " + PortName + " FAILED. The number of units in the configuration is invalid [" + std::to_string( vPortIndices.size() ) + "]" );
+    MMILE_->LogMMMessage( "Changing merged port to " + PortName + " FAILED. The number of units in the configuration is invalid [" + std::to_string( static_cast<long long>( vPortIndices.size() ) ) + "]" );
     return ERR_DUALPORTS_PORTCONFIGCORRUPTED;
   }
   return DEVICE_OK;

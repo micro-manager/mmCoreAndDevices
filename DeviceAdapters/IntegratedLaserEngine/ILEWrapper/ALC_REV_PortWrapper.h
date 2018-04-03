@@ -16,10 +16,10 @@ public:
   ~CALC_REV_PortWrapper();
 
   // IALC_REV_Port
-  int InitializePort( void );
-  bool GetNumberOfPorts( int *NumberOfPorts );
-  bool GetPortIndex( int *PortIndex );
-  bool SetPortIndex( int PortIndex );
+  int __stdcall InitializePort( void );
+  bool __stdcall GetNumberOfPorts( int *NumberOfPorts );
+  bool __stdcall GetPortIndex( int *PortIndex );
+  bool __stdcall SetPortIndex( int PortIndex );
 
 private:
   IALC_REV_Port* ALC_REV_Port_;

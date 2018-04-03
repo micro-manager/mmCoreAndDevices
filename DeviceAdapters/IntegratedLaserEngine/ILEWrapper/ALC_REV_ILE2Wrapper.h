@@ -18,16 +18,16 @@ public:
   ~CALC_REV_ILE2Wrapper();
 
   // IALC_REV_ILE2
-  bool GetNumberOfLasers( int *NumLasersUnit1, int *NumLasersUnit2 );
-  bool GetNumberOfPorts( int *NumPortsUnit1, int *NumPortsUnit2 );
-  bool GetPortIndex( int *PortIndexUnit1, int *PortIndexUnit2 );
-  bool SetPortIndex( int PortIndexUnit1, int PortIndexUnit2 );
-  bool CalculatePort( int Port1, int Port2, int *Port );
-  bool ExtractPort( int Port, int *Port1, int *Port2 );
-  bool GetInterface( IALC_REVObject3 **ILE1, IALC_REVObject3 **ILE2 );
-  bool IsILE700();
-  bool GetCurrentPowerIntoFiberForDualUnit( double *Power1_mW, double *Power2_mW );
-  bool AdjustPowerIntoInputFibre();
+  bool __stdcall GetNumberOfLasers( int *NumLasersUnit1, int *NumLasersUnit2 );
+  bool __stdcall GetNumberOfPorts( int *NumPortsUnit1, int *NumPortsUnit2 );
+  bool __stdcall GetPortIndex( int *PortIndexUnit1, int *PortIndexUnit2 );
+  bool __stdcall SetPortIndex( int PortIndexUnit1, int PortIndexUnit2 );
+  bool __stdcall CalculatePort( int Port1, int Port2, int *Port );
+  bool __stdcall ExtractPort( int Port, int *Port1, int *Port2 );
+  bool __stdcall GetInterface( IALC_REVObject3 **ILE1, IALC_REVObject3 **ILE2 );
+  bool __stdcall IsILE700();
+  bool __stdcall GetCurrentPowerIntoFiberForDualUnit( double *Power1_mW, double *Power2_mW );
+  bool __stdcall AdjustPowerIntoInputFibre();
 
 private:
   IALC_REV_ILE2* ALC_REV_ILE2_;

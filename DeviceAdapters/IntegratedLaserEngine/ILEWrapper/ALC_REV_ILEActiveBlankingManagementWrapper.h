@@ -16,10 +16,10 @@ public:
   ~CALC_REV_ILEActiveBlankingManagementWrapper();
 
   // IALC_REV_ILEActiveBlankingManagement
-  bool IsActiveBlankingManagementPresent( bool *Present );
-  bool GetNumberOfLines( int *NumberOfLines );
-  bool GetActiveBlankingState( int *EnabledPattern );
-  bool SetActiveBlankingState( int EnabledPattern );
+  bool __stdcall IsActiveBlankingManagementPresent( bool *Present );
+  bool __stdcall GetNumberOfLines( int *NumberOfLines );
+  bool __stdcall GetActiveBlankingState( int *EnabledPattern );
+  bool __stdcall SetActiveBlankingState( int EnabledPattern );
  
 private:
   IALC_REV_ILEActiveBlankingManagement* ALC_REV_ILEActiveBlankingManagement_;

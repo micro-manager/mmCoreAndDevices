@@ -16,16 +16,16 @@ public:
   ~CALC_REV_ILEWrapper();
 
   // IALC_REV_ILE
-  bool SetFLICRThreshold( int Percent );
-  bool GetFLICRThreshold( int *Percent );
-  bool GetLaserWarmUpTime( int LaserIndex, int *Minutes );
-  bool GetHours( double *Hours, double *Lifetime );
-  bool GetLaserHours( int LaserIndex, double *Hours );
-  bool GetAttenuationWheelDetails( int LaserIndex, int *AttenuationWheelPresent, int *StepsPerRotation, int *StepsToHome );
-  bool GetPowerIntoInputFibre( double *Power_mW );
-  bool SetPowerIntoInputFibre( double Power_mW );
-  bool IsClassIVInterlockFlagActive( bool *Active );
-  bool ClearClassIVInterlockFlag();
+  bool __stdcall SetFLICRThreshold( int Percent );
+  bool __stdcall GetFLICRThreshold( int *Percent );
+  bool __stdcall GetLaserWarmUpTime( int LaserIndex, int *Minutes );
+  bool __stdcall GetHours( double *Hours, double *Lifetime );
+  bool __stdcall GetLaserHours( int LaserIndex, double *Hours );
+  bool __stdcall GetAttenuationWheelDetails( int LaserIndex, int *AttenuationWheelPresent, int *StepsPerRotation, int *StepsToHome );
+  bool __stdcall GetPowerIntoInputFibre( double *Power_mW );
+  bool __stdcall SetPowerIntoInputFibre( double Power_mW );
+  bool __stdcall IsClassIVInterlockFlagActive( bool *Active );
+  bool __stdcall ClearClassIVInterlockFlag();
 
 private:
   IALC_REV_ILE* ALC_REV_ILE_;

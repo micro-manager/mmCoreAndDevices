@@ -24,15 +24,15 @@ public:
   IALC_REVObject3* GetILEObject() { return ALC_REVObject3_; }
 
   // IALC_REVObject3
-  IALC_REV_Laser3* GetLaserInterface3();
-  IALC_REV_ILE* GetILEInterface();
+  IALC_REV_Laser3* __stdcall GetLaserInterface3();
+  IALC_REV_ILE* __stdcall GetILEInterface();
 
   // IALC_REVObject2
-  IALC_REV_Laser* GetLaserInterface();
-  IALC_REV_Laser2* GetLaserInterface2();
-  IALC_REV_Piezo* GetPiezoInterface();
-  IALC_REV_DIO* GetDIOInterface();
-  IALC_REV_Port* GetPortInterface();
+  IALC_REV_Laser* __stdcall GetLaserInterface();
+  IALC_REV_Laser2* __stdcall GetLaserInterface2();
+  IALC_REV_Piezo* __stdcall GetPiezoInterface();
+  IALC_REV_DIO* __stdcall GetDIOInterface();
+  IALC_REV_Port* __stdcall GetPortInterface();
 
 private:
   HMODULE DLL_;
