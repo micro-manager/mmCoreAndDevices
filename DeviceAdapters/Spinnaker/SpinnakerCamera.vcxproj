@@ -79,19 +79,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>"..\..\..\3rdparty\Point Grey Research\Spinnaker\1.20.0.15\lib\vs2010";$(LibraryPath)</LibraryPath>
+    <LibraryPath>"%(MM_3RDPARTYPRIVATE)\Point Grey Research\Spinnaker\1.20.0.15\lib\vs2010";$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>"..\..\..\3rdparty\Point Grey Research\Spinnaker\1.20.0.15\lib64\vs2010";$(LibraryPath)</LibraryPath>
+    <LibraryPath>"%(MM_3RDPARTYPRIVATE)\Point Grey Research\Spinnaker\1.20.0.15\lib64\vs2010";$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>"..\..\..\3rdparty\Point Grey Research\Spinnaker\1.20.0.15\lib\vs2010";$(LibraryPath)</LibraryPath>
+    <LibraryPath>"%(MM_3RDPARTYPRIVATE)\Point Grey Research\Spinnaker\1.20.0.15\lib\vs2010";$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>"..\..\..\3rdparty\Point Grey Research\Spinnaker\1.20.0.15\lib64\vs2010";$(LibraryPath)</LibraryPath>
+    <LibraryPath>"%(MM_3RDPARTYPRIVATE)\Point Grey Research\Spinnaker\1.20.0.15\lib64\vs2010";$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
