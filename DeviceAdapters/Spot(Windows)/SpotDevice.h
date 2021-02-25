@@ -32,7 +32,7 @@
 
 #pragma warning(push)
 #pragma warning(disable:4201)
-#include "../../../3rdparty/Spot/WINDOWS/SpotCam/SpotCam.h"
+#include "Spot/WINDOWS/SpotCam/SpotCam.h"
 #pragma warning(pop)
 
 #define SpotAPI(X) (*p##X)

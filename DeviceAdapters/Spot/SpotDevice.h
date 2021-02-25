@@ -29,7 +29,7 @@
 #include <sstream>
 
 #ifdef _WINDOWS
-#include "../../../3rdparty/Spot/WINDOWS/SpotCam/SpotCam.h"
+#include "Spot/WINDOWS/SpotCam/SpotCam.h"
 #define SpotAPI(X) (*p##X)
 #else
 // #define SpotAPI(X) (std::cerr << __LINE__ << ": Calling Spot API: " #X << std::endl, X)
