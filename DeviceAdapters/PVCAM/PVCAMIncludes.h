@@ -3,8 +3,8 @@
 
 #ifdef WIN32
 #pragma warning(push)
-#include "../../../3rdpartypublic/Photometrics/PVCAM/SDK/Headers/master.h"
-#include "../../../3rdpartypublic/Photometrics/PVCAM/SDK/Headers/pvcam.h"
+#include "Photometrics/PVCAM/SDK/Headers/master.h"
+#include "Photometrics/PVCAM/SDK/Headers/pvcam.h"
 #pragma warning(pop)
 #endif
 
