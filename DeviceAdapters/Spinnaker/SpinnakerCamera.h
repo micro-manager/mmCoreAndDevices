@@ -1,7 +1,7 @@
 #ifndef _SPINNAKER_CAMERA_H_
 #define _SPINNAKER_CAMERA_H_
 
-#include "$(MM_3RDPARTYPRIVATE)/Point Grey Research/Spinnaker/1.20.0.15/include/Spinnaker.h"
+#include "Point Grey Research/Spinnaker/1.20.0.15/include/Spinnaker.h"
 #include "../../MMDevice/DeviceBase.h"
 #include "../../MMDevice/ImgBuffer.h"
 #include "../../MMDevice/DeviceThreads.h"
