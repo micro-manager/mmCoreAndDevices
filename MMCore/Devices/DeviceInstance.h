@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "MMDeviceConstants.h"
+#include "../../MMDevice/MMDeviceConstants.h"
 #include "../Error.h"
 #include "../Logging/Logger.h"
 

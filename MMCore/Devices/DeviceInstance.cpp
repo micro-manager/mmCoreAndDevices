@@ -21,7 +21,7 @@
 
 #include "DeviceInstance.h"
 
-#include "MMDevice.h"
+#include "../../MMDevice/MMDevice.h"
 #include "../CoreUtils.h"
 #include "../Error.h"
 #include "../LoadableModules/LoadedDeviceAdapter.h"
