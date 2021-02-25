@@ -8,7 +8,7 @@
 #ifndef _MODBUS_MODULE_H_
 #define _MODBUS_MODULE_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include <string>
 #include <sstream>
 #include <map>

@@ -35,11 +35,11 @@
 // enable or disable an independent active movie window
 #define ACTIVEMOVIE false
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "MMDevice.h"
+#include "ImgBuffer.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 #include <string>
 #include <sstream>
 #include <map>

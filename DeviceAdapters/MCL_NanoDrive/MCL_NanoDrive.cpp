@@ -10,7 +10,7 @@ License:	Distributed under the BSD license.
 #include "handle_list_if.h"
 
 // MM
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 // Devices
 #include "MCL_NanoDrive_XYStage.h"

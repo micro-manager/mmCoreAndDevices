@@ -26,8 +26,8 @@
 #define _ASITigerComm_H_
 
 #include "ASIHub.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 
 ///////////////////////////////////////////////////////

@@ -25,7 +25,7 @@
 //
 
 #include "AndorSDK3.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <map>
 #include <string>
 #include <sstream>

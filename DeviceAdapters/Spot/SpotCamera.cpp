@@ -37,7 +37,7 @@
 #include "SpotCamera.h"
 #include "SpotDevice.h"
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "CodeUtility.h"
 
 using namespace std;

@@ -27,7 +27,7 @@
 #include "FixSnprintf.h"
 
 #include "DTOpenLayer.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 const char* g_DeviceNameDTOLSwitch = "DTOL-Switch";
 const char* g_DeviceNameDTOLShutter = "DTOL-Shutter";

@@ -2,7 +2,7 @@
 #define _SRRF_H_
 
 #include "SRRF_Stream.h"
-#include "../../MMDevice/Property.h"
+#include "Property.h"
 #include <fstream>
 
 class ISRRFCamera;

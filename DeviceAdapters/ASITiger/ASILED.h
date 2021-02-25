@@ -26,8 +26,8 @@
 #define _ASILED_H_
 
 #include "ASIPeripheralBase.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 class CLED : public ASIPeripheralBase<CShutterBase, CLED>
 {

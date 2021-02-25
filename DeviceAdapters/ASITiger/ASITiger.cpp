@@ -41,8 +41,8 @@
 #include "ASIDac.h"
 #include <cstdio>
 #include <string>
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include <iostream>
 #include <sstream>
 #include <vector>

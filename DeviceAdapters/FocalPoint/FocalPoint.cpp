@@ -29,8 +29,8 @@
 
 #include "FocalPoint.h"
 #include <string>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 #include <sstream>
 #include <iostream>
 

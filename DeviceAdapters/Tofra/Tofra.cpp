@@ -32,9 +32,9 @@
 #include <cstdio>
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
 #include <sstream>
 using namespace std;
 

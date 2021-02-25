@@ -1,5 +1,5 @@
 #pragma once
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include "DEProtoProxy.h"
 
 namespace DirectElectronPlugin

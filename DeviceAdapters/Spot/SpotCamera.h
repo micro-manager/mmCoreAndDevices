@@ -25,10 +25,10 @@
 #ifndef _SPOTCAMERA_H_
 #define _SPOTCAMERA_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/ImgBuffer.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
+#include "ImgBuffer.h"
 
 #include <string>
 #include <map>

@@ -25,8 +25,8 @@
 #ifndef _KDV_H
 #define _KDV_H
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include <string>
 #include <map>
 #include <list>

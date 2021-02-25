@@ -35,7 +35,7 @@
 
 #include "K8061.h"
 #include "K8061Interface.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <cstdio>
 
 K8061Interface::K8061Interface() :

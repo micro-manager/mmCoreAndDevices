@@ -13,7 +13,7 @@
 
 #include "TeensySLM.h"
 #include "TeensyShutter.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 #include <cstdio>
 

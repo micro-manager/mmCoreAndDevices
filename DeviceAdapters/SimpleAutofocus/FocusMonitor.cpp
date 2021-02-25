@@ -33,7 +33,7 @@
 #include "FixSnprintf.h"
 
 #include "SimpleAutofocus.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <string>
 #include <cmath>
 #include <sstream>

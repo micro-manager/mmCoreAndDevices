@@ -30,8 +30,8 @@
 
 #include "Utilities.h"
 
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/MMDevice.h"
+#include "ModuleInterface.h"
+#include "MMDevice.h"
 
 #include <boost/lexical_cast.hpp>
 

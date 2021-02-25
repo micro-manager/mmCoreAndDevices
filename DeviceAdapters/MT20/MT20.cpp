@@ -27,7 +27,7 @@
 // along with the Olympus MT20 Device Adapter.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "MT20.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 const char* g_MT20HUB = "MT20-HUB";
 const char* g_MT20Burner = "MT20-Burner";

@@ -28,7 +28,7 @@
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #endif
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "Sensicam.h"
 #include "../../../3rdparty/PCO/Windows/SDK_515/sencam.h"
 #include "../../../3rdparty/PCO/Windows/SDK_515/errcodes.h"

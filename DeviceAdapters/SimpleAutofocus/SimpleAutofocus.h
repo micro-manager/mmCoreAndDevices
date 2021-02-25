@@ -23,9 +23,9 @@
 #ifndef _SIMPLEAUTOFOCUS_H_
 #define _SIMPLEAUTOFOCUS_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
 
 #include <string>
 //#include <iostream>

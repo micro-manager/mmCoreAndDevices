@@ -1,4 +1,4 @@
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "ModuleAPIFunctions.h"
 
 

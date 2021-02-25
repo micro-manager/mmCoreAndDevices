@@ -14,7 +14,7 @@
 #ifndef _K8061_H_
 #define _K8061_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include "K8061Interface.h"
 #include <string>
 #include <map>

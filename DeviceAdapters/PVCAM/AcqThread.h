@@ -1,7 +1,7 @@
 #ifndef _ACQTHREAD_H_
 #define _ACQTHREAD_H_
 
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceThreads.h"
 
 #include "Event.h"
 

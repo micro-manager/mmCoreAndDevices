@@ -39,8 +39,8 @@
 
 
 #include "ZeissAxioZoom.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 #include <cstdio>
 #include <string>
 #include <math.h>

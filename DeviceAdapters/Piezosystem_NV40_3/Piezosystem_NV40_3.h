@@ -31,8 +31,8 @@
 
 #ifndef _PIEZOSYSTEM_NV40_3_H_
 #define _PIEZOSYSTEM_NV40_3_H_
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include <string>
 #include <map>
 

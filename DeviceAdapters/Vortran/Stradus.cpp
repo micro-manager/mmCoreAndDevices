@@ -26,11 +26,11 @@
 #endif
 #include "FixSnprintf.h"
 
-#include "../../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 #include <cstdio>
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 
 const char* DEVICE_NAME = "VLTStradus";

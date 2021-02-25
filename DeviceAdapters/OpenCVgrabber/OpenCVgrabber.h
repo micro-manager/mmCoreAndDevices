@@ -31,9 +31,9 @@
 #ifndef _OPENCVGRABBER_H_
 #define _OPENCVGRABBER_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
 #ifdef WIN32
 #include "DeviceEnumerator.h"
 #endif

@@ -25,7 +25,7 @@
 #ifndef _PICARDSTAGE_H_
 #define _PICARDSTAGE_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // CPiTwister class

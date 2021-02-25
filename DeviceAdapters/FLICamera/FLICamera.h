@@ -25,9 +25,9 @@
 #define _FLICAMERA_H_
 
 #include "libfli.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceUtils.h"
 #include <string>
 #include <map>
 

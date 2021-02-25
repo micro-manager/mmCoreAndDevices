@@ -30,12 +30,12 @@
 #include "FixSnprintf.h"
 
 
-#include "../../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 #include "CoherentCube.h"
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 #include <sstream>
 
 // Controller

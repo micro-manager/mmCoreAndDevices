@@ -99,7 +99,7 @@
 #include <cstdio>
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 #include <FreeImagePlus.h>
 

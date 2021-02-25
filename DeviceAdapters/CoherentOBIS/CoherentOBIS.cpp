@@ -29,9 +29,9 @@
 
 #include "CoherentOBIS.h"
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "MMDevice.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 
 #include <algorithm>
 #include <math.h>

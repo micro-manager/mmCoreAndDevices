@@ -23,9 +23,9 @@
 #ifndef _APOGEE_H_
 #define _APOGEE_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceUtils.h"
 #include <string>
 #include <map>
 

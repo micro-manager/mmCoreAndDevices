@@ -26,9 +26,9 @@
 #include "E600.h"
 
 // Include micro-manager header files.
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "MMDevice.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 
 // Include standard c/c++ library.
 #include <string>

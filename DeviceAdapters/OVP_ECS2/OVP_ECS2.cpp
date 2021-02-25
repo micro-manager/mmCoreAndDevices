@@ -24,9 +24,9 @@
 #include "FixSnprintf.h"
 
 #include "OVP_ECS2.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
 #include <iostream>
 #include <sstream>
 #include <vector>

@@ -42,7 +42,7 @@
 #include <windows.h>
 #endif
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "PVCAMAdapter.h"
 #include "PVCAMParam.h"
 

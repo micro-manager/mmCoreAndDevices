@@ -11,10 +11,10 @@ License:	Distributed under the BSD license.
 #include "MCL_MicroDrive.h"
 
 // MM headers
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "ModuleInterface.h"
 
 // List headers
 #include "handle_list_if.h"

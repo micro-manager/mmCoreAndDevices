@@ -28,9 +28,9 @@
 #include "FixSnprintf.h"
 
 #include "FreeSerialPort.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
 #include "boost/lexical_cast.hpp"
 
 

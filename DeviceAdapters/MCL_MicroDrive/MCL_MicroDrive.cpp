@@ -6,7 +6,7 @@ License:	Distributed under the BSD license.
 
 #include "MicroDriveZStage.h"
 #include "MicroDriveXYStage.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "handle_list_if.h"
 
 #define WIN32_LEAN_AND_MEAN

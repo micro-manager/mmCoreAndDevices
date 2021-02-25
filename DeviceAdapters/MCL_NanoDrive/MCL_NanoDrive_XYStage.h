@@ -10,9 +10,9 @@ License:	Distributed under the BSD license.
 #include "MCL_NanoDrive.h"
 
 // MM headers
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "ModuleInterface.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 // List/heap headers
 #include "handle_list_if.h"

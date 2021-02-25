@@ -11,7 +11,7 @@
 #ifndef _AGILENTLASERCOMBINER_H_
 #define _AGILENTLASERCOMBINER_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include <string>
 #include <map>
 

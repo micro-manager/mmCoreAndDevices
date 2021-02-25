@@ -5,7 +5,7 @@
 # include "../../MMDevice/MMDevice.h"
 # include "../../MMDevice/DeviceBase.h"
 # include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 # include <limits>
 # include <iostream>
 # include <iterator>

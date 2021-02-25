@@ -25,10 +25,10 @@
 
 #include "ASICRISP.h"
 #include "ASIHub.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/MMDevice.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
+#include "DeviceBase.h"
+#include "MMDevice.h"
 #include <iostream>
 #include <cmath>
 #include <sstream>

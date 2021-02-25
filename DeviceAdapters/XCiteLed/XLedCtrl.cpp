@@ -40,8 +40,8 @@
 #include <sstream>
 #include <math.h>
 //#include <strsafe.h>
-#include "../../MMDevice/ModuleInterface.h"
-//#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+//#include "DeviceUtils.h"
 #include "XLed.h"
 #include "XLedCtrl.h"
 //#include "XLedDev.h"

@@ -21,7 +21,7 @@
 //
 
 #include "XIMEACamera.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 using namespace std;
 

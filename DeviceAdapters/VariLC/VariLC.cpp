@@ -45,7 +45,7 @@
 #include <cctype>
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm>    // std::remove_if
 

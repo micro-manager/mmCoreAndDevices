@@ -31,7 +31,7 @@
 #include "FixSnprintf.h"
 
 #include "XCite120PC.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 #include <string>
 #include <math.h>

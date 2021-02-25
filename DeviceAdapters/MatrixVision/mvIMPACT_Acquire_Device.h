@@ -23,8 +23,8 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include <map>
 #include <mvIMPACT_CPP/mvIMPACT_acquire.h>
 #include <mvIMPACT_CPP/mvIMPACT_acquire_GenICam.h>

@@ -32,9 +32,9 @@
 //==================================================================== INCLUDES
 
 
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "ImgBuffer.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 
 #include "DeviceBase.h"
 #include "PvDebayer.h"

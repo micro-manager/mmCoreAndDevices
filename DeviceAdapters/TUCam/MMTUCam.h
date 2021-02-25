@@ -22,9 +22,9 @@
 #define _MMTUCAM_H_
 
 #include "TUCamApi.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
 #include <string>
 #include <map>
 #include <algorithm>

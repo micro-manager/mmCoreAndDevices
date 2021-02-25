@@ -36,7 +36,7 @@
 #include "FixSnprintf.h"
 
 #include "Apogee.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #pragma warning(disable : 4996) // disable warning for deperecated CRT functions on Windows 
 
 

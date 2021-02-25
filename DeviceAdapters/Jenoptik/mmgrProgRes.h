@@ -27,9 +27,9 @@
 #ifndef _ProgRes_H_
 #define _ProgRes_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
 #include "sdk/MexExl.h"
 #include <string>
 #include <map>

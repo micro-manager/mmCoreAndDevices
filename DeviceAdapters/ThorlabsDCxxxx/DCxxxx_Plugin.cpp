@@ -29,9 +29,9 @@
 #include <string>
 #include <math.h>
 #include "DCxxxx_Plugin.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "MMDevice.h"
+#include "DeviceUtils.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //

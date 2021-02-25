@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include "nPC400.h"
 #include "nPC400Ctrl.h"
 	

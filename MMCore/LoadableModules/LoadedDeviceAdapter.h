@@ -22,9 +22,9 @@
 
 #include "LoadedModule.h"
 
-#include "../../MMDevice/DeviceThreads.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "DeviceThreads.h"
+#include "MMDevice.h"
+#include "ModuleInterface.h"
 #include "../Logging/Logger.h"
 
 #include <boost/enable_shared_from_this.hpp>

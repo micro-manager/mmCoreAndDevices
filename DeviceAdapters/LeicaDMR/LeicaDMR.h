@@ -26,7 +26,7 @@
 #ifndef _LeicaDMR_H_
 #define _LeicaDMR_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include <string>
 #include <map>
 

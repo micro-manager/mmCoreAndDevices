@@ -16,7 +16,7 @@
 
 #include <string>
 #include <iostream>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 using namespace std;
 

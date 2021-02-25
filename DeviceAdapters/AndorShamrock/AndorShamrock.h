@@ -23,8 +23,8 @@
   #ifndef _SHAMROCK_H_
   #define _SHAMROCK_H_
 
-  #include "../../MMDevice/DeviceBase.h"
-  #include "../../MMDevice/MMDevice.h"
+  #include "DeviceBase.h"
+  #include "MMDevice.h"
   #include <stdint.h>
   #include <cstdio>
   #include <string>

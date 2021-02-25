@@ -28,9 +28,9 @@
 #ifndef _NIZStage_H_
 #define _NIZStage_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
 #include "flexmotn.h"
 #include "MotnCnst.h"
 #include <string>

@@ -25,8 +25,8 @@
 #ifndef _ASIBase_H_
 #define _ASIBase_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include "ASITiger.h"
 #include <string>
 

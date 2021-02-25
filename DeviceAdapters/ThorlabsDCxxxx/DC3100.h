@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include "DynError.h"
 
 /****************************************************************************

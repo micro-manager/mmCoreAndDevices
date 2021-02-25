@@ -1,7 +1,7 @@
 #ifndef _SRRFCAMERA_H_
 #define _SRRFCAMERA_H_
 
-#include "../../MMDevice/Property.h"
+#include "Property.h"
 
 class ISRRFCamera 
 {

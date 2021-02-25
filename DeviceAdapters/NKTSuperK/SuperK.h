@@ -30,8 +30,8 @@
 
 #pragma once
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include "NKTPDLL.h"
 #include <string>
 #include <map>

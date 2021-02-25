@@ -24,7 +24,7 @@
 #define _Mightex_Sirius_LED_PLUGIN_H_
 
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include "Mightex_LEDDriver_SDK.h"
 #include "Mightex_BLSDriver_SDK.h"
 

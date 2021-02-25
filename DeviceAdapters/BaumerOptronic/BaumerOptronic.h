@@ -23,9 +23,9 @@
 #ifndef _BAUMEROPTRONIC_H_
 #define _BAUMEROPTRONIC_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4245)

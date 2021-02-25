@@ -26,8 +26,8 @@
 #define _ASIXYStage_H_
 
 #include "ASIPeripheralBase.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 class CXYStage : public ASIPeripheralBase<CXYStageBase, CXYStage>
 {

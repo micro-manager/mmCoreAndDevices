@@ -26,8 +26,8 @@
 #define _ASICRISP_H_
 
 #include "ASIPeripheralBase.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 class CCRISP : public ASIPeripheralBase<CAutoFocusBase, CCRISP>
 {

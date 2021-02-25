@@ -24,8 +24,8 @@
 #ifndef _Rapp_H_
 #define _Rapp_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include <string>
 #include <map>
 

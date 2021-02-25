@@ -28,9 +28,9 @@
 #ifndef _PIMOTION_H_
 #define _PIMOTION_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
 #include <MMC410.H>
 #include <string>
 #include <map>

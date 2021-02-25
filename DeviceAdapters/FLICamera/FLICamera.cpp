@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 #include "FLICamera.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <string>
 #include <sstream>
 #include <cmath>

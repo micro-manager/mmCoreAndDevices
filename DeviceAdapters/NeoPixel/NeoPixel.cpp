@@ -13,8 +13,8 @@
 
 
 #include "NeoPixel.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 #ifdef WIN32
    #define WIN32_LEAN_AND_MEAN

@@ -26,9 +26,9 @@
 #define _ASIHub_H_
 
 #include "ASIBase.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceThreads.h"
 #include <string>
 
 using namespace std;
