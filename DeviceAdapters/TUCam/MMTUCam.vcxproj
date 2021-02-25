@@ -147,7 +147,7 @@
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4290;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\TUCam\TUCam_V2.0.3.0_20190919\sdk\inc;..\$(MM_3RDPARTYPRIVATE)public\TUCam\TUCam_V2.0.3.0_20190919\lib\$(Platform)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\TUCam\TUCam_V2.0.3.0_20190919\sdk\inc;..\$(MM_3RDPARTYPRIVATE)public\TUCam\TUCam_V2.0.3.0_20190919\lib\$(Platform); %(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
