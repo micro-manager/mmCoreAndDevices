@@ -8,7 +8,7 @@
 #ifndef _PECON2000_H_
 #define _PECON2000_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include <string>
 #include <sstream>
 #include <map>

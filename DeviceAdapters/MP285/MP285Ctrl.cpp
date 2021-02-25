@@ -40,8 +40,8 @@
 #include <sstream>
 #include <math.h>
 //#include <strsafe.h>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 #include "MP285Error.h"
 #include "MP285.h"
 #include "MP285Ctrl.h"

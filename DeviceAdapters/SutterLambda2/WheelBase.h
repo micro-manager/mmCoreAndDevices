@@ -23,9 +23,9 @@
 // CVS:           $Id$
 //
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "SutterHub.h" 
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "SutterHub.h"
 
 #define ERR_UNKNOWN_POSITION         10002
 #define ERR_INVALID_SPEED            10003

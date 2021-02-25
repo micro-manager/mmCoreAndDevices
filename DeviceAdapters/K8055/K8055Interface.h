@@ -15,8 +15,8 @@
 #define _K8055Interface_H_
 
 //#include "/usr/local/include/usb.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 class K8055Interface
 {

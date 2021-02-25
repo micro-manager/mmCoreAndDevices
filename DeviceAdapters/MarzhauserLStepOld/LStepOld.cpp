@@ -26,7 +26,7 @@
 #include <string>
 #include <math.h>
 #include <time.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 #include <iostream>
 #include <cstdio>

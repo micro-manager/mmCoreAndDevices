@@ -14,9 +14,9 @@
 #define _SKYRA_H_
 #endif
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "ModuleInterface.h"
 
 
 #include <iostream>

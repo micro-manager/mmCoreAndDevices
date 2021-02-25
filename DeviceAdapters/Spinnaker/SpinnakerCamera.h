@@ -2,9 +2,9 @@
 #define _SPINNAKER_CAMERA_H_
 
 #include "Point Grey Research/Spinnaker/1.20.0.15/include/Spinnaker.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
 
 #define SPKR Spinnaker
 #define GENAPI Spinnaker::GenApi

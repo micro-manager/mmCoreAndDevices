@@ -34,7 +34,7 @@
 
 #include "Conex_Axis.h"
 #include <string>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 
 const char* g_X_AxisDeviceName  = "XAxis";

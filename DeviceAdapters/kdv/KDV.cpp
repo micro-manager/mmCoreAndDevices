@@ -37,8 +37,8 @@
 #include "KDV.h"
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/MMDevice.h"
+#include "ModuleInterface.h"
+#include "MMDevice.h"
 #include <sstream>
 
 const char* g_ZStageDeviceName = "KDVZStage";

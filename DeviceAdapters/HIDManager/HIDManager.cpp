@@ -34,8 +34,8 @@
 #endif
 
 
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "ModuleInterface.h"
+#include "DeviceBase.h"
 #include <cstdio>
 #include <cmath>
 #include <sstream>

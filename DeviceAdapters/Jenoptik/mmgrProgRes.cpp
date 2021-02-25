@@ -24,7 +24,7 @@
 #include "mmgrProgRes.h"
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 
 // ATLTRACE disabled to avoid dependency on ATL (which is not included in VS Express)

@@ -44,7 +44,7 @@
 #include <sstream>
 #include "Corvus.h"
 //#include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 
 const char* g_ControllerName    = "ITK Corvus Controller";

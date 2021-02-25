@@ -42,7 +42,7 @@
 #include <sstream>
 #include "ITKHydra.h"
 //#include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 // SG Namespace anonymous!
 

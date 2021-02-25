@@ -36,12 +36,12 @@
 // Declarations for the ALC library.
 #include "ALC_REV.h"
 
-#include "../../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 #include "AndorLaserCombiner.h"
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 //#include "../Utilities/CodeUtility.h"
 //#include "../../MMCore/CoreUtils.h"
 #include <sstream>

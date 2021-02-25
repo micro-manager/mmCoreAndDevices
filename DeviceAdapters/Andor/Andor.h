@@ -39,11 +39,11 @@
 #ifndef _ANDOR_H_
 #define _ANDOR_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "MMDevice.h"
+#include "ImgBuffer.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 #include <string>
 #include <sstream>
 #include <map>

@@ -1,7 +1,7 @@
 #ifndef _NOTIFICATIONTHREAD_H_
 #define _NOTIFICATIONTHREAD_H_
 
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceThreads.h"
 
 #include "NotificationEntry.h"
 

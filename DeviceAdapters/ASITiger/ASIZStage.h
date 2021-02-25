@@ -26,8 +26,8 @@
 #define _ASIZStage_H_
 
 #include "ASIPeripheralBase.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 class CZStage : public ASIPeripheralBase<CStageBase, CZStage>
 {

@@ -37,9 +37,9 @@
 #include "FixSnprintf.h"
 
 #include "Piezosystem_NV120_1.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
 #include <string>
 #include <math.h>
 

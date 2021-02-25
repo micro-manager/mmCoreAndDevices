@@ -19,7 +19,7 @@
 #include "AgilentLaserCombiner.h"
 #include "LaserCombinerSDK.h"
 #include "ErrorCodes.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <cstdio>
 
 

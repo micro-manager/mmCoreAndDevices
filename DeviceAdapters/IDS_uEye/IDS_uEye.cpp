@@ -38,7 +38,7 @@
 #include <sstream>
 #include <iostream>
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 #include "IDS_uEye.h"
 

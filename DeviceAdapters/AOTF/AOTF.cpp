@@ -32,7 +32,7 @@
 #include "FixSnprintf.h"
 
 #include "AOTF.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 const char* g_DeviceNameAOTFSwitch = "AOTF-Switch";
 const char* g_DeviceNameAOTFShutter = "AOTF-Shutter";

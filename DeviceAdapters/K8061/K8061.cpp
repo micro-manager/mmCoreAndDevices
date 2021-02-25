@@ -12,7 +12,7 @@
 //
 
 #include "K8061.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <cstdio>
 
 #ifdef WIN32

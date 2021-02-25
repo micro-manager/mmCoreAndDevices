@@ -30,7 +30,7 @@
 #include <amfa.h>
 #include <ams.h>
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "StanfordPhotonics.h"
 #include <string>
 #include <sstream>

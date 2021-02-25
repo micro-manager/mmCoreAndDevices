@@ -25,9 +25,9 @@
 #ifndef _CoherentScientificRemote_H_
 #define _CoherentScientificRemote_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
 #include <string>
 //#include <iostream>
 #include <vector>

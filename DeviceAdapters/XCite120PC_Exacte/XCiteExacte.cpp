@@ -32,7 +32,7 @@
 #include "FixSnprintf.h"
 
 #include "XCiteExacte.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 #include <string>
 #include <math.h>

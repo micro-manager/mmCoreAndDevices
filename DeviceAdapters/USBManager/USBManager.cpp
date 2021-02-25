@@ -68,8 +68,8 @@ BOOL APIENTRY DllMain(HANDLE /*hModule*/,
 #endif
 
 
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "ModuleInterface.h"
+#include "DeviceBase.h"
 #include <cstdio>
 #include <sstream>
 #include <algorithm>

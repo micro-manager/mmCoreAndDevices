@@ -69,7 +69,7 @@ extern const char* g_msg_DLL_NOT_FOUND;
 extern const char* g_msg_INVALID_INTERFACE_NAME;
 extern const char* g_msg_INVALID_INTERFACE_PARAMETER;
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include <string>
 
 #ifndef WIN32

@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-	
+#include "MMDevice.h"
+#include "DeviceBase.h"
+
 //
 // MAP285 is a micromanipulator controller from Sutter Instrument Comapny.
 // It accept remote serial input to conrol micromanipulator.

@@ -39,7 +39,7 @@
 #include <string>
 #include "ASIFW1000Hub.h"
 
-#include "../../MMDevice/DeviceUtils.h"
+#include "DeviceUtils.h"
 
 using namespace std;
 

@@ -29,9 +29,9 @@
 #ifndef _WIENECKESINSKE_H_
 #define _WIENECKESINSKE_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceThreads.h"
 
 #include "CAN29.h"
 #include <string>

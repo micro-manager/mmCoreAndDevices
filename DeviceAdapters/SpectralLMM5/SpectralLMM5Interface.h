@@ -1,8 +1,8 @@
 #ifndef _SPECTRALLMM5INTERFACE_H_
 #define _SPECTRALLMM5INTERFACE_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include <stdint.h>
 
 struct availableLines {

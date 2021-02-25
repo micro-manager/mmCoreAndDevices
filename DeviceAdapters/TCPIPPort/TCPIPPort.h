@@ -27,8 +27,8 @@
 
 #include <istream>
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 #define BOOST_ERROR 20000
 

@@ -18,8 +18,8 @@
 #include "FixSnprintf.h"
 
 #include "MMITC18.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 
 
 #define PIPELINE 3 // Size of ITC-18 hardware pipeline

@@ -28,8 +28,8 @@
 //
 // AUTHOR:        Motic
 
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/MMDeviceConstants.h"
+#include "ModuleInterface.h"
+#include "MMDeviceConstants.h"
 #include "MUCamSource.h"
 #include <algorithm>
 #include <iterator>

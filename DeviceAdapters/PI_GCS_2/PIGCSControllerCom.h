@@ -25,7 +25,7 @@
 #ifndef _PI_GCS_CONTROLLER_H_
 #define _PI_GCS_CONTROLLER_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include "Controller.h"
 #include <string>
 

@@ -27,10 +27,10 @@
 #ifndef _PVCAM_H_
 #define _PVCAM_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 
 #ifdef WIN32
 #include "master.h"

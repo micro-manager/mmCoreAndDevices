@@ -3,7 +3,7 @@
 #pragma warning(disable : 4251) // Note: need to have a C++ interface, i.e., compiler versions need to match!
 
 #include "SpinnakerCamera.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <vector>
 #include <string>
 

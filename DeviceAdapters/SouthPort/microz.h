@@ -1,9 +1,9 @@
 #ifndef DEMO_Z_H
 #define DEMO_Z_H
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
 #include <string>
 #include <map>
 #include <algorithm>

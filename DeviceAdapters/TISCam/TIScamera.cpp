@@ -57,7 +57,7 @@ The files VC100*.* shall be reachable from the path specifier.
   #include <Shlobj.h>
 #endif
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "TIScamera.h"
 #include <string>
 #include <sstream>

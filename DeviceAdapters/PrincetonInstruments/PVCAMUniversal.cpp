@@ -29,10 +29,10 @@
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#pragma warning(disable : 4996) // disable warning for deperecated CRT functions on Windows 
+#pragma warning(disable : 4996) // disable warning for deperecated CRT functions on Windows
 #endif
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "PVCAMInt.h"
 #include "PVCAMUtils.h"
 #include "PVCAMProperty.h"

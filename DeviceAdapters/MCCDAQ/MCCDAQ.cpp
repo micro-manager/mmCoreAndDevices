@@ -20,7 +20,7 @@
 //
 
 #include "MCCDAQ.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "cbw.h"
 #include <sstream>
 
