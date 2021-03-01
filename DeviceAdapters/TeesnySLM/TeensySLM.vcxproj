@@ -111,9 +111,7 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <PostBuildEvent>
-      <Message>copy " C:\projects\micromanager\build\Debug\x64\mmgr_dal_TeensySLM.dll" "C:\Program Files\Micro-Manager-1.4 (Magellan)"</Message>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

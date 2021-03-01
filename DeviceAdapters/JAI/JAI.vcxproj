@@ -113,10 +113,7 @@
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>$(MM_BOOST_LIBDIR);$(MM_3RDPARTYPRIVATE)\JAI\eBUS-SDK\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -154,10 +151,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalLibraryDirectories>$(MM_BOOST_LIBDIR);$(MM_3RDPARTYPRIVATE)\JAI\eBUS-SDK\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="JAI.cpp" />
