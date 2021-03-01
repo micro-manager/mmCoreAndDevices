@@ -99,10 +99,7 @@
       <AdditionalDependencies>opencv_core248d.lib;opencv_highgui248d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x86\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -116,10 +113,7 @@
       <AdditionalDependencies>opencv_core248d.lib;opencv_highgui248d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x64\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -137,10 +131,7 @@
       <AdditionalDependencies>opencv_core248.lib;opencv_highgui248.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x86\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -158,10 +149,7 @@
       <AdditionalDependencies>opencv_core248.lib;opencv_highgui248.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\OpenCV2.4.8\build\x64\vc10\lib;$(MM_BOOST_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">

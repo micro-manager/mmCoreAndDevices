@@ -105,9 +105,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
     </Link>
-    <PostBuildEvent>
-      <Command>copy build\$(Configuration)\$(Platform)\mmgr_dal_$(ProjectName).dll "C:\Program Files (x86)\Micro-Manager-1.4-Nightly"</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
