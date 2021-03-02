@@ -12,12 +12,13 @@
     <MM_PROTOBUF_INCLUDEDIR>$(MM_3RDPARTYPUBLIC)\google\protobuf-2.5.0_build\VS2010\include</MM_PROTOBUF_INCLUDEDIR>
     <MM_PROTOBUF_LIBDIR>$(MM_3RDPARTYPUBLIC)\google\protobuf-2.5.0_build\VS2010\lib\$(Configuration)\$(Platform)</MM_PROTOBUF_LIBDIR>
     <MM_PROTOC>$(MM_3RDPARTYPUBLIC)\google\protobuf-2.5.0_build\VS2010\bin\protoc.exe</MM_PROTOC>
+	<MM_BUILDDIR>$(SolutionDir)build</MM_BUILDDIR>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>$(SolutionDir)build\$(Configuration)\$(Platform)\</OutDir>
+    <OutDir>$(MM_BUILDDIR)\$(Configuration)\$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup>
-    <IntDir>$(SolutionDir)build\intermediates\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
+    <IntDir>$(MM_BUILDDIR)\intermediates\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
