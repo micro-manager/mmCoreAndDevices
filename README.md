@@ -12,7 +12,6 @@ The windows project uses the following properties which may be overridden in the
     MM_PROTOBUF_INCLUDEDIR: The include directory for Google's `protobuf`
     MM_PROTOBUF_LIBDIR: The lib directory for Google's `protobuf`
     MM_PROTOC: The location of `protoc.exe` for Googles `protobuf`
-    OutDir: The directory that build artifacts will be stored in.
-    IntDir: The directory that biuld intermediates to be stored in.
+    MM_BUILDDIR: The directory that build artifacts will be stored in.
 	
 To see the default values of each property please view `MMCommon.props`
