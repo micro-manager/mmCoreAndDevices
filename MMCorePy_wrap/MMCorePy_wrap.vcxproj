@@ -144,7 +144,7 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Running Swig on %(Filename)%(Extension)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">rem Stage output within IntDir so that it will be cleaned.
 set swig_out_dir=$(IntDir)Swig
-set py_src_dir=..\build\Swig
+set py_src_dir=$(MM_BUILDDIR)\Swig
 rem
 echo Removing existing SWIG-generated sources (%swig_out_dir%)...
 del /s/q %swig_out_dir% &gt; NUL
@@ -182,7 +182,7 @@ copy %swig_out_dir%\*.py %py_src_dir%\ &gt; NUL</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Running Swig on %(Filename)%(Extension)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">rem Stage output within IntDir so that it will be cleaned.
 set swig_out_dir=$(IntDir)Swig
-set py_src_dir=..\build\Swig
+set py_src_dir=$(MM_BUILDDIR)\Swig
 rem
 echo Removing existing SWIG-generated sources (%swig_out_dir%)...
 del /s/q %swig_out_dir% &gt; NUL
@@ -201,7 +201,7 @@ copy %swig_out_dir%\*.py %py_src_dir%\ &gt; NUL</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Running Swig on %(Filename)%(Extension)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rem Stage output within IntDir so that it will be cleaned.
 set swig_out_dir=$(IntDir)Swig
-set py_src_dir=..\build\Swig
+set py_src_dir=$(MM_BUILDDIR)\Swig
 rem
 echo Removing existing SWIG-generated sources (%swig_out_dir%)...
 del /s/q %swig_out_dir% &gt; NUL
