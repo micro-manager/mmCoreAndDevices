@@ -66,5 +66,8 @@
     <BuildMacro Include="MM_PROTOC">
       <Value>$(MM_PROTOC)</Value>
     </BuildMacro>
+    <BuildMacro Include="MM_BUILDDIR">
+      <Value>$(MM_BUILDDIR)</Value>
+    </BuildMacro>
   </ItemGroup>
 </Project>
