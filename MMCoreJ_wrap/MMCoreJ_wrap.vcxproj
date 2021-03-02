@@ -180,7 +180,7 @@ copy %swig_out_dir%\*.java %java_src_dir%\ &gt; NUL</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Running Swig on %(Filename)%(Extension)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">rem Stage output within IntDir so that it will be cleaned.
 set swig_out_dir=$(IntDir)Swig
-set java_src_dir=..\build\intermediates\Swig\mmcorej
+set java_src_dir=%swig_out_dir%\mmcorej
 rem
 echo Removing existing SWIG-generated sources (%swig_out_dir%)...
 del /s/q %swig_out_dir% &gt; NUL
