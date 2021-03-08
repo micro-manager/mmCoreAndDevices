@@ -50,7 +50,7 @@
 #pragma warning(disable: 4610)
 #endif // _MSC_VER
 
-#ifdef linux
+#ifdef __linux__
 #include <ueye.h>
 #else
 #include <uEye.h>
