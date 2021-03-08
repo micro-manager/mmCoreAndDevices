@@ -153,7 +153,7 @@ void SerialPortLister::ListPorts(std::vector<std::string> &availablePorts)
    }
 #endif // WIN32
 
-#ifdef linux
+#ifdef __linux__
    // Look for /dev files with correct signature
    DIR* pdir = opendir("/dev");
    struct dirent *pent;

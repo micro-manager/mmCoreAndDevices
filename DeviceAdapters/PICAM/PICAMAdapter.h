@@ -40,7 +40,7 @@
 
 #include <functional> // for mem_fn
 
-#ifdef linux
+#ifdef __linux__
 #include <pvcam/master.h>
 #include <pvcam/pvcam.h>
 #endif

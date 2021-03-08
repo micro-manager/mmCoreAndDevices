@@ -44,7 +44,7 @@
 
 #endif // WIN32
 
-#ifdef LINUX   // Linux
+#ifdef __linux__   // Linux
 
   typedef unsigned long long      u64;
   typedef unsigned long           u32;
