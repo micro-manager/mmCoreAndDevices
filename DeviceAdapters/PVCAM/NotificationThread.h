@@ -103,6 +103,3 @@ private:
 };
 
 #endif // _NOTIFICATIONTHREAD_H_
-};
-
-#endif // _NOTIFICATIONTHREAD_H_

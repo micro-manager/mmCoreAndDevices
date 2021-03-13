@@ -856,11 +856,3 @@ private: // Static
 };
 
 #endif //_PVCAMADAPTER_H_
-    // Currently selected speed
-    SpdTabEntry camCurrentSpeed_;
-
-    // 'Universal' parameters
-    std::vector<PvUniversalParam*> universalParams_;
-};
-
-#endif //_PVCAMADAPTER_H_
