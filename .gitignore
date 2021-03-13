@@ -8,3 +8,5 @@ SecretDeviceAdapters/
 *.suo
 *.cxx
 *.cache
+*.pb.cc
+*.pb.h
