@@ -4,7 +4,6 @@
 build/
 bin
 ipch/
-SecretDeviceAdapters/
 *.suo
 *.cxx
 *.cache
