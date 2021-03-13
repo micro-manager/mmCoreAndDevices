@@ -17,6 +17,3 @@
 #endif
 
 #endif // _PVCAMINCLUDES_H_
-#endif
-
-#endif // _PVCAMINCLUDES_H_
