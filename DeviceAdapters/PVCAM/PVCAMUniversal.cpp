@@ -5937,8 +5937,3 @@ void Universal::PvcamCallbackEofEx3(PFRAME_INFO /*pFrameInfo*/, void* pContext)
     // Do not call anything else here, handle it in the Universal class.
 }
 #endif // PVCAM_CALLBACKS_SUPPORTED
-    Universal* pCam = (Universal*)pContext;
-    pCam->FrameAcquired();
-    // Do not call anything else here, handle it in the Universal class.
-}
-#endif // PVCAM_CALLBACKS_SUPPORTED
