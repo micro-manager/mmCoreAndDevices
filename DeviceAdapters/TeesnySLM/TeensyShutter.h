@@ -1,5 +1,5 @@
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 #define ERR_COMMAND_SUCCESS_MISSING 101 
 

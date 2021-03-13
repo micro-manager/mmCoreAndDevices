@@ -26,10 +26,10 @@
 
 #include "ASITiger.h"
 #include "ASIHub.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 #include <algorithm>
 #include <string>
 #include <vector>

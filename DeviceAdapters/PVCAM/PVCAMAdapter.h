@@ -32,9 +32,9 @@
 //==================================================================== INCLUDES
 
 
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "ImgBuffer.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 
 #include "DeviceBase.h"
 #include "PvDebayer.h"
@@ -848,6 +848,14 @@ private: // Static
     // Reverse speed table to get the speed based on UI selection
     //  usage: SpdTabEntry e = camSpdTableReverse_[port][ui_selected_string];
     std::map<uns32, std::map<std::string, SpdTabEntry> > camSpdTableReverse_;
+    // Currently selected speed
+    SpdTabEntry camCurrentSpeed_;
+
+    // 'Universal' parameters
+    std::vector<PvUniversalParam*> universalParams_;
+};
+
+#endif //_PVCAMADAPTER_H_
     // Currently selected speed
     SpdTabEntry camCurrentSpeed_;
 

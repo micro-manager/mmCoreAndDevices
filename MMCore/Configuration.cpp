@@ -16,7 +16,7 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-// CVS:           $Id$
+// CVS:           $Id: Configuration.cpp 13763 2014-07-01 00:43:11Z mark $
 //
 #include "Configuration.h"
 #include "../MMDevice/MMDevice.h"

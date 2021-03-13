@@ -32,9 +32,9 @@
 #include "FixSnprintf.h"
 
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "MMDevice.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 #include <boost/lexical_cast.hpp>
 #include <string>
 #include "niji.h"

@@ -54,10 +54,10 @@ strace -f java -Djava.library.path=/usr/lib/micro-manager -classpath /usr/share/
 #include <iostream>
 #include <string>
 #include <math.h>
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/ImgBuffer.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "ModuleInterface.h"
+#include "ImgBuffer.h"
 #include <sstream>
 #include <map>
 #include <vector>

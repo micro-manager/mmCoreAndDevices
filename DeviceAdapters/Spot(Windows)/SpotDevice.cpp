@@ -32,8 +32,8 @@
 //#include "spot_defs.h"
 //#include "SaveBmpImage.h"
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/MMDevice.h"
+#include "DeviceBase.h"
+#include "MMDevice.h"
 
 
 #include "SpotCamera.h"

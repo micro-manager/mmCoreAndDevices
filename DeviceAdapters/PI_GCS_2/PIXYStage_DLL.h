@@ -26,8 +26,8 @@
 #define _PI_XYSTAGE_DLL_H_
 
 #include "PI_GCS_2.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 class PIController;
 

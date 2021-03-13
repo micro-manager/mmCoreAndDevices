@@ -21,10 +21,10 @@
 #ifndef PE300_H
 #define PE300_H
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 #include <string>
 //#include <iostream>
 #include <vector>

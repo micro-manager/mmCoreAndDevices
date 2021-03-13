@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <string>
 #include <map>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 using namespace std;
 
 //

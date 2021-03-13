@@ -25,7 +25,7 @@
 //
 
 #include "AndorSDK3.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <map>
 #include <string>
 #include <sstream>
@@ -1531,7 +1531,7 @@ void CAndorSDK3Camera::RestartLiveAcquisition()
 
 AT_64 CAndorSDK3Camera::GetTimeStamp(unsigned char* pBuf)
 {
-#if defined(__linux__) && defined(_LP64)
+#if defined(linux) && defined(_LP64)
    typedef unsigned int    AT_U32;
 #else
    typedef unsigned long   AT_U32;

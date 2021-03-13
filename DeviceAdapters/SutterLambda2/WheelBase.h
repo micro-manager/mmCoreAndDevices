@@ -23,8 +23,8 @@
 // CVS:           $Id$
 //
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include "SutterHub.h" 
 
 #define ERR_UNKNOWN_POSITION         10002

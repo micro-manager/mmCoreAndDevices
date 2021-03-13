@@ -37,7 +37,7 @@
 #include <sstream>
 #include <iostream>
 
-#include "../../MMDevice/DeviceUtils.h"
+#include "DeviceUtils.h"
 
 using namespace std;
 

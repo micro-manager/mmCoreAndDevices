@@ -22,7 +22,7 @@
 #define _Mightex_Sirius_SLC_PLUGIN_H_
 
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include "Mightex_LEDDriver_SDK.h"
 
 //////////////////////////////////////////////////////////////////////////////

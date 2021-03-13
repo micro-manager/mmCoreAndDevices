@@ -23,9 +23,9 @@
 #ifndef _Sapphire_H_
 #define _Sapphire_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
 #include <string>
 //#include <iostream>
 #include <vector>

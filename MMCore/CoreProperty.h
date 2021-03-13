@@ -21,7 +21,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// CVS:           $Id$
+// CVS:           $Id: CoreProperty.h 8004 2011-10-27 04:58:53Z nico $
 //
 #ifndef _CORE_PROPERTY_H
 #define _CORE_PROPERTY_H

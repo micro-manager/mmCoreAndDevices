@@ -54,7 +54,7 @@
 #define strnicmp strncasecmp 
 #endif
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "Andor.h"
 #include "SpuriousNoiseFilterControl.h"
 #include "ReadModeControl.h"

@@ -32,8 +32,8 @@
 #include "FixSnprintf.h"
 
 #include "Ludl.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "ModuleInterface.h"
+#include "DeviceBase.h"
 #include <cstdio>
 #include <math.h>
 

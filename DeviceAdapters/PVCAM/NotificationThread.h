@@ -1,7 +1,7 @@
 #ifndef _NOTIFICATIONTHREAD_H_
 #define _NOTIFICATIONTHREAD_H_
 
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceThreads.h"
 
 #include "NotificationEntry.h"
 
@@ -100,6 +100,9 @@ private:
 
     bool                      overflowed_;
     bool                      requestStop_;
+};
+
+#endif // _NOTIFICATIONTHREAD_H_
 };
 
 #endif // _NOTIFICATIONTHREAD_H_

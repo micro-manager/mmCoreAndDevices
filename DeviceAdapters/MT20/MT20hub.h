@@ -41,7 +41,7 @@
 
 #include "msg_lib.h"
 
-#include "../../MMDevice/MMDeviceConstants.h"
+#include "MMDeviceConstants.h"
 #include "tinyxml.h"
 #include <list>
 #include <queue>

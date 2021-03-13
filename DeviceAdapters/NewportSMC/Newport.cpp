@@ -31,7 +31,7 @@
 #include "Newport.h"
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 
 const char* g_Newport_ZStageDeviceName = "NewportZStage";

@@ -31,9 +31,9 @@
 #include <vector>
 #include <map>
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceThreads.h"
 
 /*
  * Abstract model of a device in the Lecia DMI microscope

@@ -14,8 +14,8 @@
 #ifndef CANONEDSDK_H_
 #define CANONEDSDK_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
 #include "../../../3rdparty/trunk/Canon/EDSDK2.13/Mac/EDSDK/Header/EDSDKTypes.h"
 
 //////////////////////////////////////////////////////////////////////////////

@@ -27,10 +27,10 @@
 #ifndef _PVCAM_H_
 #define _PVCAM_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 
 #ifdef WIN32
 #include "master.h"
@@ -170,7 +170,7 @@ public:
    int ClearROI();
    int IsExposureSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
 
-#ifndef __linux__
+#ifndef linux
    // high-speed interface
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
@@ -216,7 +216,7 @@ public:
                                       uns32_ptr length);
 
 protected:
-#ifndef __linux__
+#ifndef linux
    int ThreadRun(void);
    void OnThreadExiting() throw();
 #endif

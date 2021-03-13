@@ -28,7 +28,7 @@
 #ifndef _TriggerScope_H_
 #define _TriggerScope_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include <string>
 #include <map>
 #include <algorithm>

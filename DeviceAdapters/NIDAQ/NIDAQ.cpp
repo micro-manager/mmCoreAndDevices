@@ -14,7 +14,7 @@
 
 #include "NIDAQ.h"
 #include "../../../3rdParty/trunk/NationalInstruments/NI-DAQmxBase/includes/NIDAQmxBase.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 
 #ifdef WIN32

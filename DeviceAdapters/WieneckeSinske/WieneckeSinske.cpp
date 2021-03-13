@@ -37,9 +37,9 @@
 #include "WieneckeSinske.h"
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
+#include "DeviceBase.h"
 
 #include <sstream>
 

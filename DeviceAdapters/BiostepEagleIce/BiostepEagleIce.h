@@ -13,10 +13,10 @@
 #ifndef EagleIce_H_
 #define EagleIce_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
-#include "../../../3rdparty/biostep/EI_SDK 1.0/EagleIceSDK.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
+#include "biostep\EI_SDK 1.0\EagleIceSDK.h"
 #include <string>
 
 class biThread;

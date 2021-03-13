@@ -24,7 +24,7 @@
 //
 
 #include "Arduino32bitBoards.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 #include <cstdio>
 

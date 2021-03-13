@@ -40,8 +40,8 @@
 #include <sstream>
 #include <math.h>
 #include <time.h>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 #include "XT600.h"
 #include "XT600Ctrl.h"
 #include "XT600Dev.h"

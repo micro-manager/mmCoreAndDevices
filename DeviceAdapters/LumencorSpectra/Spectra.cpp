@@ -22,7 +22,7 @@
 
 #include "Spectra.h"
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 #include <cstdlib> // atol()
 

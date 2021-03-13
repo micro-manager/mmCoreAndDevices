@@ -34,13 +34,13 @@
 //#include "Probe.h"
 #include "PerformanceTimer.h"
 #include "TwainSpecUtilities.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include "TwainCamera.h"
 #include "CommonTwain.h"
 
 #include "SaveBmpImage.h"  // write file directly from OS handle
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "MMDevice.h"
+#include "ModuleInterface.h"
 //#include "../../MMCore/CoreUtils.h"
 
 //#define mmdebugmessage(x) LogMessage((x), true)

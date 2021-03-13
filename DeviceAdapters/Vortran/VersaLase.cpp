@@ -53,9 +53,9 @@
 #endif
 #include "FixSnprintf.h"
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
 #include <string>
 #include <sstream>
 #include <vector>

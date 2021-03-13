@@ -32,9 +32,9 @@
 #define __MUCamSource__MUCamSource__
 
 #include "MoticUCam.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
 
 using namespace std;
 //////////////////////////////////////////////////////////////////////////////

@@ -2250,7 +2250,7 @@ int Universal::ResizeImageBufferSingle()
 // Continuous acquisition
 //
 
-#ifndef __linux__
+#ifndef linux
 /*
  * Overrides a virtual function from the CCameraBase class
  * Do actual capture

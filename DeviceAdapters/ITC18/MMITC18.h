@@ -13,8 +13,8 @@
 #define _ITC18_H_
 #endif
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 #ifdef __linux__
 #include "../../../3rdparty/ITC18-lib-linux/ITC18.h"

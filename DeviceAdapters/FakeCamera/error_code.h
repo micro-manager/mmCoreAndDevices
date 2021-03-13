@@ -26,7 +26,7 @@
 #include <exception>
 #include <string>
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 
 #define ERRH_START try {
 #define ERRH_END } catch (error_code e) { if(e.msg != "") SetErrorText(CONTROLLER_ERROR, e.msg.c_str()); return e.code;} return DEVICE_OK;

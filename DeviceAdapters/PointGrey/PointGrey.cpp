@@ -27,7 +27,7 @@
 #include <algorithm>
 
 #include "PointGrey.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 using namespace FlyCapture2;
 
