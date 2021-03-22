@@ -23,12 +23,13 @@ AX_BOOST_CHRONO
 AX_BOOST_DATE_TIME
 
 # Find Micro-Manager headers
-micromanager_path=${ac_pwd}/..
-MMDEVAPI_CXXFLAGS="-I${micromanager_path}/MMDevice ${BOOST_CPPFLAGS}"
+micromanager_cpp_path=${ac_pwd}/..
+micromanager_path=${micromanager_cpp_path}/..
+MMDEVAPI_CXXFLAGS="-I${micromanager_cpp_path}/MMDevice ${BOOST_CPPFLAGS}"
 AC_SUBST(MMDEVAPI_CXXFLAGS)
 
 # Find Micro-Mana:ger static device library
-MMDEVAPI_LIBADD="${micromanager_path}/MMDevice/libMMDevice.la"
+MMDEVAPI_LIBADD="${micromanager_cpp_path}/MMDevice/libMMDevice.la"
 AC_SUBST(MMDEVAPI_LIBADD)
 
 # Apply appropriate libtool options for the Micro-Manager device API

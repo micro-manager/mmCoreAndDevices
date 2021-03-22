@@ -1,10 +1,10 @@
 <project name="MMCoreJ" basedir="." default="jar">
-	<include file="../buildscripts/buildprops.xml"/>
+	<include file="../../buildscripts/buildprops.xml"/>
 	<property name="srcdir" value="${mm.swig.javasrcdir}"/>
 	<property name="json.srcdir" value="src/main/java"/>
 	<property name="package" value="mmcorej"/>
 
-	<import file="../buildscripts/javabuild.xml"/>
+	<import file="../../buildscripts/javabuild.xml"/>
 
 	<!-- Override mm.javabuild.compile -->
 	<target name="compile" depends="prepare" description="Compile Java sources">
