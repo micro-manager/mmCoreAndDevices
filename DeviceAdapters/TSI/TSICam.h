@@ -39,7 +39,7 @@
 //...
 #endif
 
-#ifdef __linux__
+#ifdef linux
 //...
 #endif
 
