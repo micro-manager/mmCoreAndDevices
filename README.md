@@ -1,4 +1,4 @@
-# CMMCore
+# mmCoreAndDevices
 The c++ code at the core of the Micro-Manager project.
 
 ### Building on Windows
