@@ -19,4 +19,6 @@ configure_file( output : 'config.h',
 config_include = include_directories('.') # include the config.h file.
 
 
-static_library('MMDevice', 'MMDevice.cpp', include_directories: config_include)
+MMDev_lib = static_library('MMDevice', 'MMDevice.cpp', include_directories: config_include)
+
+MMDev_dep = declare_dependency(include_directories: config_include, link_with: MMDev_lib) 
