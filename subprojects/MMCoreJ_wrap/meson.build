@@ -1,16 +1,7 @@
 project('MMCoreJ_wrap', 'cpp', version : '0.0.1')
 
+add_project_arguments('-DWIN32', '-DDEBUG', '-D_USRDLL', '-DMMCOREJ_WRAP_EXPORTS', '-D_WINDOWS', language: 'cpp')
 
-conf = configuration_data({
-	'WIN32': true,
-	'DEBUG': true,
-	'_USRDLL': true,
-	'_WINDOWS': true,
-	'MMCOREJ_WRAP_EXPORTS': true
-	})
-	
-configure_file( output : 'projconfig.h',
-               configuration : conf)
 includes = [
 	include_directories('.') # include the projconfig.h file.
 	]
@@ -35,7 +26,7 @@ MMCore_dep = MMCore_proj.get_variable('MMCore_dep')
 deps = [
     dependency('jni'),
 	MMCore_dep,
-	dependency('boost', fallback: 'MMCore')
+	#dependency('boost', modules: ['chrono', 'date_time', 'regex', 'system', 'thread'], fallback: 'MMCore')
 ]
 
 cpp_source = swig_gen.process(swig_source)

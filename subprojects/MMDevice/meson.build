@@ -7,18 +7,19 @@ as_major_version = ver_arr[0]
 as_minor_version = ver_arr[1]
 as_micro_version = ver_arr[2]
 
-conf = configuration_data({
-	'WIN32': true,
-	'DEBUG': true,
-	'_LIB': true,
-	'MODULE_EXPORTS': true
-	})
-	
-configure_file( output : 'config.h',
-               configuration : conf)
-config_include = include_directories('.') # include the config.h file.
+add_project_arguments('-DWIN32', '-DDEBUG', '-D_LIB', '-DMODULE_EXPORTS', language: 'cpp')
 
 
-MMDev_lib = static_library('MMDevice', 'MMDevice.cpp', include_directories: config_include)
+includes = include_directories('.') # include the config.h file.
+sources = [
+	'MMDevice.cpp',
+	'Debayer.cpp',
+	'DeviceUtils.cpp',
+	'ImgBuffer.cpp', 
+	'ModuleInterface.cpp', 
+	'Property.cpp'
+]
 
-MMDev_dep = declare_dependency(include_directories: config_include, link_with: MMDev_lib) 
+MMDev_lib = static_library('MMDevice', sources, include_directories: includes)
+
+MMDev_dep = declare_dependency(include_directories: includes, link_with: MMDev_lib) 

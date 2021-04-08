@@ -37,8 +37,7 @@
 //                because all public methods will most likely appear in other
 //                programming environments (Java or Python).
 
-//Configure Defines.
-#include <projconfig.h>
+
 //MMDevice includes
 #include "DeviceThreads.h"
 #include "DeviceUtils.h"
