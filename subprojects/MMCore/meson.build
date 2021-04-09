@@ -15,12 +15,12 @@ endif
 includes = include_directories('.') # include the main directory
 
 MMDev_proj = subproject('MMDevice')
-MMDev_dep = MMDev_proj.get_variable('MMDev_dep')
+MMDevice_dep = dependency('MMDevice', fallback: ['MMDevice', 'MMDevice_dep'])
 boost_dep = dependency('boost', modules: ['chrono', 'date_time', 'regex', 'system', 'thread'])
 
 deps = [
 	boost_dep,
-	MMDev_dep
+	MMDevice_dep
 	]
 	
 sources = [  # Must explicitly list all source files.

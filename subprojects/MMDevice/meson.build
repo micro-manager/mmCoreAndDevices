@@ -30,6 +30,6 @@ sources = [
 	'Property.cpp'
 ]
 
-MMDev_lib = static_library('MMDevice', sources, include_directories: includes)
+MMDevice_lib = static_library('MMDevice', sources, include_directories: includes)
 
-MMDev_dep = declare_dependency(include_directories: includes, link_with: MMDev_lib) 
+MMDevice_dep = declare_dependency(include_directories: includes, link_with: MMDevice_lib) 

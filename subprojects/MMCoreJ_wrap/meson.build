@@ -30,7 +30,7 @@ swig_gen = generator(
 swig_source = 'MMCoreJ.i'
 
 MMCore_proj = subproject('MMCore')
-MMCore_dep = MMCore_proj.get_variable('MMCore_dep')
+MMCore_dep = dependency('MMCore', fallback: ['MMCore', 'MMCore_dep']) #MMCore_proj.get_variable('MMCore_dep')
 
 deps = [
     dependency('jni'),
