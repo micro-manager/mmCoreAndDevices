@@ -10,9 +10,9 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'XIMEACamera.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('Ximea', sources, dependencies : deps, install: true)
 

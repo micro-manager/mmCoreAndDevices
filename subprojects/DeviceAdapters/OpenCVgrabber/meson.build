@@ -10,9 +10,10 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'DeviceEnumerator.cpp',
+	'OpenCVgrabber.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('OpenCVgrabber', sources, dependencies : deps, install: true)
 

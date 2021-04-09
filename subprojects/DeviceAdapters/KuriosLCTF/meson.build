@@ -10,9 +10,10 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'KuriosLCTF.cpp',
+	'KuriosLCTFModule.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('KuriosLCTF', sources, dependencies : deps, install: true)
 

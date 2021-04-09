@@ -10,9 +10,12 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'LambdaVF5.cpp',
+	'Shutter.cpp',
+	'SutterHub.cpp',
+	'SutterLambda2.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('SutterLambda2', sources, dependencies : deps, install: true)
 

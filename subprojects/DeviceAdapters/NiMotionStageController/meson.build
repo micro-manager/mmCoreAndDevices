@@ -10,9 +10,10 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'NiMotionControl.cpp',
+	'ZStage.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('NiMotionStageController', sources, dependencies : deps, install: true)
 

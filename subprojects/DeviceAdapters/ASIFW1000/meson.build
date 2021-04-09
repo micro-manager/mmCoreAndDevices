@@ -10,9 +10,10 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'ASIFW1000.cpp',
+	'ASIFW1000Hub.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('ASIFW1000', sources, dependencies : deps, install: true)
 

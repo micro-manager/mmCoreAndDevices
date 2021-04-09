@@ -10,9 +10,9 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'Mightex_USBCamera.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('Mightex_C_Cam', sources, dependencies : deps, install: true)
 

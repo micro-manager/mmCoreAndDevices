@@ -10,9 +10,9 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'PrecisExcite.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('PrecisExcite', sources, dependencies : deps, install: true)
 

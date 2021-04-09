@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'PVCAM.cpp',
+	'PVCAMUniversal.cpp',
+	'PVCAMUtils.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('PrincetonInstruments', sources, dependencies : deps, install: true)
 

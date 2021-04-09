@@ -10,9 +10,12 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'error_code.cpp',
+	'module.cpp',
+	'TCPIPPort.cpp',
+	'Util.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('TCPIPPort', sources, dependencies : deps, install: true)
 

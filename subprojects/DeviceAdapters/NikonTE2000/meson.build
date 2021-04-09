@@ -10,9 +10,10 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'NikonTE2000.cpp',
+	'TEHub.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('NikonTE2000', sources, dependencies : deps, install: true)
 

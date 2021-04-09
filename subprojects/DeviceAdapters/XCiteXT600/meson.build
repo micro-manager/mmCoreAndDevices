@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'XT600.cpp',
+	'XT600Ctrl.cpp',
+	'XT600Dev.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('XCiteXT600', sources, dependencies : deps, install: true)
 

@@ -10,9 +10,10 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'OnBoardHW.cpp',
+	'Oxxius_combiner.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('OxxiusCombiner', sources, dependencies : deps, install: true)
 

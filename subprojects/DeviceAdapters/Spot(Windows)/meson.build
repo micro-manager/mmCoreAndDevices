@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'CodeUtility.cpp',
+	'SpotCamera.cpp',
+	'SpotDevice.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('Spot(Windows)', sources, dependencies : deps, install: true)
 

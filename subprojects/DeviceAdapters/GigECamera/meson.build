@@ -10,9 +10,12 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'GigECamera.cpp',
+	'GigECameraAcq.cpp',
+	'GigECameraAction.cpp',
+	'GigENodes.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('GigECamera', sources, dependencies : deps, install: true)
 

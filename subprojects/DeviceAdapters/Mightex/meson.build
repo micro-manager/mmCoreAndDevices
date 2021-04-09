@@ -10,9 +10,13 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'DeviceOperate.cpp',
+	'HID.cpp',
+	'hiddll.cpp',
+	'Mightex.cpp',
+	'Mightex_LEDDriver_SDK.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('Mightex', sources, dependencies : deps, install: true)
 

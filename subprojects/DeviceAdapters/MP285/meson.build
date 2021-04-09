@@ -10,9 +10,13 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'MP285.cpp',
+	'MP285Ctrl.cpp',
+	'MP285Error.cpp',
+	'MP285XYStage.cpp',
+	'MP285ZStage.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('MP285', sources, dependencies : deps, install: true)
 

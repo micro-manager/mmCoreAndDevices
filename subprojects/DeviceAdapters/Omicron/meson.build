@@ -10,9 +10,12 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'CoherentOBISDirect.cpp',
+	'Omicron.cpp',
+	'OmicronDeviceDriver.cpp',
+	'OmicronxX.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('Omicron', sources, dependencies : deps, install: true)
 

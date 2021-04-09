@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'LeicaDMI.cpp',
+	'LeicaDMIModel.cpp',
+	'LeicaDMIScopeInterface.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('LeicaDMI', sources, dependencies : deps, install: true)
 

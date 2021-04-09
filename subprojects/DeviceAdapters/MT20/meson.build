@@ -10,9 +10,14 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'MT20.cpp',
+	'MT20hub.cpp',
+	'tinystr.cpp',
+	'tinyxml.cpp',
+	'tinyxmlerror.cpp',
+	'tinyxmlparser.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('MT20', sources, dependencies : deps, install: true)
 

@@ -10,9 +10,10 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'ScopeLEDDevices.cpp',
+	'USBCommAdapter.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('ScopeLED', sources, dependencies : deps, install: true)
 

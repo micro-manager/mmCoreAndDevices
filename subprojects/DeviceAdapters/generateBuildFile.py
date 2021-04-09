@@ -31,7 +31,9 @@ print(f"Search pattern is: {searchPattern}")
 
 template = """
 
-includes = include_directories('.') # include the main directory
+includes = [
+    include_directories('.') # include the main directory
+    ]
 
 deps = [
 	boost_dep,

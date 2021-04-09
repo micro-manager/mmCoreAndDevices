@@ -10,9 +10,12 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'mcu28.cpp',
+	'PhotoModule.cpp',
+	'ZeissCAN.cpp',
+	'ZStage.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('ZeissCAN', sources, dependencies : deps, install: true)
 

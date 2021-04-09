@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'XLed.cpp',
+	'XLedCtrl.cpp',
+	'XLedDev.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('XCiteLed', sources, dependencies : deps, install: true)
 

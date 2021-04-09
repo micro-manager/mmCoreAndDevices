@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'AndorShamrock.cpp',
+	'ModuleAPIFunctions.cpp',
+	'ShamrockConstants.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('AndorShamrock', sources, dependencies : deps, install: true)
 

@@ -10,9 +10,12 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'ZeissCAN29.cpp',
+	'ZeissHub.cpp',
+	'ZeissModel.cpp',
+	'ZeissMonitor.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('ZeissCAN29', sources, dependencies : deps, install: true)
 

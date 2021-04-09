@@ -20,7 +20,7 @@ else
 endif
 
 
-includes = include_directories('.') # include the config.h file.
+includes = include_directories('.')
 sources = [
 	'MMDevice.cpp',
 	'Debayer.cpp',

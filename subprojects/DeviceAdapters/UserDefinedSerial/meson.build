@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'ResponseDetector.cpp',
+	'StringEscapes.cpp',
+	'UserDefinedSerial.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('UserDefinedSerial', sources, dependencies : deps, install: true)
 

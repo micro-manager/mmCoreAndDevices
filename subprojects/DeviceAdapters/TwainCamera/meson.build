@@ -1,0 +1,26 @@
+
+
+includes = [
+    include_directories('.') # include the main directory
+    ]
+
+deps = [
+	boost_dep,
+	MMDevice_dep
+	]
+	
+sources = [  # Must explicitly list all source files.
+	'CommonTWAIN.cpp',
+	'dbgbox.cpp',
+	'PerformanceTimer.cpp',
+	'Probe.cpp',
+	'ROIRectangle.cpp',
+	'SaveBmpImage.cpp',
+	'TwainCamera.cpp',
+	'TwainDevice.cpp',
+	'yyyyMMddhhmmss.cpp'
+]
+
+
+shared_library('TwainCamera', sources, dependencies : deps, install: true)
+

@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'XCite.cpp',
+	'XCite120PC.cpp',
+	'XCiteExacte.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('XCite120PC_Exacte', sources, dependencies : deps, install: true)
 

@@ -10,9 +10,12 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'CSU22.cpp',
+	'CSU22Hub.cpp',
+	'CSUX.cpp',
+	'CSUXHub.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('Yokogawa', sources, dependencies : deps, install: true)
 

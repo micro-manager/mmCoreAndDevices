@@ -10,9 +10,14 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'FilterCubeTurret.cpp',
+	'FilterWheel.cpp',
+	'Illuminator.cpp',
+	'Stage.cpp',
+	'XYStage.cpp',
+	'Zaber.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('Zaber', sources, dependencies : deps, install: true)
 

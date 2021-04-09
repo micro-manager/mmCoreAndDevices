@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'capture.cpp',
+	'ScionCamera.cpp',
+	'utilities.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('ScionCam', sources, dependencies : deps, install: true)
 

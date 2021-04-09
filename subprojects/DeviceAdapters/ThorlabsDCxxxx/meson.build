@@ -10,9 +10,14 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'DC2200.cpp',
+	'DC2XXX.cpp',
+	'DC3100.cpp',
+	'DC4100.cpp',
+	'DCxxxx_Plugin.cpp',
+	'DynError.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('ThorlabsDCxxxx', sources, dependencies : deps, install: true)
 

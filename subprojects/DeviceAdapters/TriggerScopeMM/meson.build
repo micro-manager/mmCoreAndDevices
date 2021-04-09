@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'TriggerScopeMM.cpp',
+	'TriggerScopeMMDAC.cpp',
+	'TriggerScopeMMTTL.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('TriggerScopeMM', sources, dependencies : deps, install: true)
 

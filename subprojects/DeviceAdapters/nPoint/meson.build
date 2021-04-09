@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'nPC400.cpp',
+	'nPC400Channel.cpp',
+	'nPC400Ctrl.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('nPoint', sources, dependencies : deps, install: true)
 

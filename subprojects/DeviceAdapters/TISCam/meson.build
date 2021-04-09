@@ -10,9 +10,11 @@ deps = [
 	]
 	
 sources = [  # Must explicitly list all source files.
-	'VarispecLCTF.cpp'
+	'DynDialogs.cpp',
+	'SimplePropertyAccess.cpp',
+	'TIScamera.cpp'
 ]
 
 
-shared_library('VarispecLCTF', sources, dependencies : deps, install: true)
+shared_library('TISCam', sources, dependencies : deps, install: true)
 
