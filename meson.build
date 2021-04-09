@@ -7,5 +7,11 @@ project('mmCoreAndDevices', 'cpp', version : '0.0.1',
 
 subproject('MMDevice')
 subproject('MMCore')
-subproject('MMCoreJ_wrap')
-subproject('DeviceAdapters')
+
+if get_option('BUILD_MMCOREJ')
+	subproject('MMCoreJ_wrap')
+endif
+
+if get_option('BUILD_DEVICE_ADAPTERS')
+	subproject('DeviceAdapters')
+endif
