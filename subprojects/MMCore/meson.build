@@ -1,6 +1,16 @@
 project('MMCore', 'cpp', version : '0.0.1')
 
-add_project_arguments('-DWIN32', '-DDEBUG', '-D_LIB', '-D_WINDOWS', language: 'cpp')
+add_project_arguments('-D_LIB', language: ['cpp'])
+
+if host_machine.system() == 'windows'
+	add_project_arguments('-DWIN32', '-D_WINDOWS', language: ['cpp'])
+endif
+
+if get_option('buildtype').startswith('release')
+    add_project_arguments('-DNDEBUG', language : ['cpp'])
+else
+    add_project_arguments('-DDEBUG', language : ['cpp'])
+endif
 
 includes = include_directories('.') # include the main directory
 dev_inc = include_directories('../MMDevice')

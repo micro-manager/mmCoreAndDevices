@@ -7,7 +7,17 @@ as_major_version = ver_arr[0]
 as_minor_version = ver_arr[1]
 as_micro_version = ver_arr[2]
 
-add_project_arguments('-DWIN32', '-DDEBUG', '-D_LIB', '-DMODULE_EXPORTS', language: 'cpp')
+add_project_arguments('-D_LIB', '-DMODULE_EXPORTS', language: 'cpp')
+
+if host_machine.system() == 'windows'
+	add_project_arguments('-DWIN32', language: ['cpp'])
+endif
+
+if get_option('buildtype').startswith('release')
+    add_project_arguments('-DNDEBUG', language : ['cpp'])
+else
+    add_project_arguments('-DDEBUG', language : ['cpp'])
+endif
 
 
 includes = include_directories('.') # include the config.h file.
