@@ -35,7 +35,6 @@ MMCore_dep = MMCore_proj.get_variable('MMCore_dep')
 deps = [
     dependency('jni'),
 	MMCore_dep,
-	#dependency('boost', modules: ['chrono', 'date_time', 'regex', 'system', 'thread'], fallback: 'MMCore')
 ]
 
 cpp_source = swig_gen.process(swig_source)

@@ -13,7 +13,6 @@ else
 endif
 
 includes = include_directories('.') # include the main directory
-dev_inc = include_directories('../MMDevice')
 
 MMDev_proj = subproject('MMDevice')
 MMDev_dep = MMDev_proj.get_variable('MMDev_dep')
