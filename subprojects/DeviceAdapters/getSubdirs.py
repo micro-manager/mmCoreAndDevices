@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Apr  9 12:25:41 2021
+This script is called from meson.build in order to dynamically determine
+which subdirectories are present.
 
 @author: nick
 """

@@ -24,16 +24,7 @@ fs = import('fs')  # Get the filesystem module
 foreach subpath : subdirs
 	if fs.exists(join_paths(subpath, 'meson.build'))
 		subdir(subpath) ## Use the build script defined in the subdir
-	else  # Use the default procedure.
-		message('Default config: @0@'.format(subpath))
-		includes = include_directories(subpath)
-		deps = [boost_dep, MMDevice_dep]
-		cmd = run_command(python, 'getSourcefiles.py', subpath)
-		sources = cmd.stdout().strip().split('\n')
-		if sources[0] == ''
-			message('No Sources found')
-			continue
-		endif
-		shared_library(subpath, sources, include_directories: includes, dependencies: deps, install: true, required: false)
+	else  # Skip if no build file.
+		continue
 	endif
 endforeach
