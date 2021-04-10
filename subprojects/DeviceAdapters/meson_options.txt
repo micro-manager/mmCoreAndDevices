@@ -1,0 +1,2 @@
+option('3rdPartyPrivate', type: 'string', value: '../../../../3rdparty', yield: true)
+option('3rdPartyPublic', type: 'string', value: '../../../../3rdpartypublic', yield: true)

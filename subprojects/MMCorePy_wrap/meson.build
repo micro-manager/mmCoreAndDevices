@@ -15,7 +15,7 @@ else
 endif
 
 	
-swig = find_program('swig', dirs: [join_paths(thirdPartyDir, 'swigwin')])
+swig = find_program('swig')
 swig_gen = generator(
     swig,
     output: ['@BASENAME@.cxx'],
@@ -32,7 +32,7 @@ MMCore_dep = dependency('MMCore', fallback: ['MMCore', 'MMCore_dep'])
 pymod = import('python')
 python = pymod.find_installation('python', modules: ['numpy'])
 cmd = run_command(python, '-c',  'import numpy; print(numpy.get_include())')
-np_inc = include_directories('C:\\Users\\nicke\\Anaconda3\\Lib\\site-packages\\numpy\\core\\include')    # cmd.stdout())
+np_inc = include_directories(cmd.stdout())
 message(cmd.stdout())
 includes = [
 	include_directories('.'),

@@ -16,10 +16,10 @@ endif
 
 
 includes = [
-	include_directories('.') # include the projconfig.h file.
+	include_directories('.')
 	]
 	
-swig = find_program('swig', dirs: [join_paths(thirdPartyDir, 'swigwin')])
+swig = find_program('swig') # Make sure you have swig3 on your path.
 swig_gen = generator(
     swig,
     output: ['@BASENAME@.cxx'],
