@@ -15,3 +15,7 @@ endif
 if get_option('BUILD_DEVICE_ADAPTERS')
 	subproject('DeviceAdapters')
 endif
+
+if get_option('BUILD_MMCOREPY')
+	subproject('MMCorePy_wrap')
+endif
