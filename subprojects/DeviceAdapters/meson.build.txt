@@ -1,2 +1,0 @@
-project('DeviceAdapters', 'cpp', version : '0.0.1')
-subproject('VariLC')

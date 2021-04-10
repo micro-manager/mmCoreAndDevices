@@ -39,7 +39,7 @@
 #include "Aclapi.h"
 #include <string>
 #include <vector>
-#include "StringTools.h"
+#include "stringtools.h"
 
 //#include "Windows.h"
 
