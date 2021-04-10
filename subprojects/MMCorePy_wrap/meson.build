@@ -1,5 +1,7 @@
 project('MMCorePy_wrap', 'cpp', version : '0.0.1')
 
+thirdPartyDir = join_paths(meson.current_source_dir(), get_option('3rdPartyPrivate'))
+
 add_project_arguments('-DMMCOREPY_WRAP_EXPORTS', language: 'cpp')
 
 if host_machine.system() == 'windows'
@@ -12,12 +14,8 @@ else
     add_project_arguments('-D_DEBUG', language : ['cpp'])
 endif
 
-
-includes = [
-	include_directories('.')
-	]
 	
-swig = find_program('swig')
+swig = find_program('swig', dirs: [join_paths(thirdPartyDir, 'swigwin')])
 swig_gen = generator(
     swig,
     output: ['@BASENAME@.cxx'],
@@ -33,6 +31,13 @@ MMCore_dep = dependency('MMCore', fallback: ['MMCore', 'MMCore_dep'])
 
 pymod = import('python')
 python = pymod.find_installation('python', modules: ['numpy'])
+cmd = run_command(python, '-c',  'import numpy; print(numpy.get_include())')
+np_inc = include_directories('C:\\Users\\nicke\\Anaconda3\\Lib\\site-packages\\numpy\\core\\include')    # cmd.stdout())
+message(cmd.stdout())
+includes = [
+	include_directories('.'),
+	np_inc
+	]
 
 deps = [
     python.dependency(),

@@ -1,0 +1,1 @@
+option('3rdPartyPrivate', type: 'string', value: '../../../../3rdparty', yield: true)

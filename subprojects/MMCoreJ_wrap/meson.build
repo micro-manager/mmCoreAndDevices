@@ -1,5 +1,7 @@
 project('MMCoreJ_wrap', 'cpp', version : '0.0.1')
 
+thirdPartyDir = join_paths(meson.current_source_dir(), get_option('3rdPartyPrivate'))
+
 add_project_arguments('-D_USRDLL', '-DMMCOREJ_WRAP_EXPORTS', language: 'cpp')
 
 if host_machine.system() == 'windows'
@@ -17,7 +19,7 @@ includes = [
 	include_directories('.') # include the projconfig.h file.
 	]
 	
-swig = find_program('swig')
+swig = find_program('swig', dirs: [join_paths(thirdPartyDir, 'swigwin')])
 swig_gen = generator(
     swig,
     output: ['@BASENAME@.cxx'],
