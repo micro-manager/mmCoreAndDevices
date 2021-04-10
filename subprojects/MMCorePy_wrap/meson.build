@@ -32,7 +32,7 @@ swig_source = 'MMCorePy.i'
 MMCore_dep = dependency('MMCore', fallback: ['MMCore', 'MMCore_dep'])
 
 pymod = import('python')
-python = pymod.find_installation('python')
+python = pymod.find_installation('python', modules: ['numpy'])
 
 deps = [
     python.dependency(),
