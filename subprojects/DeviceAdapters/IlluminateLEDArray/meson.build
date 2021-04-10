@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('IlluminateLEDArray', sources, dependencies : deps, install: true)
+shared_library('IlluminateLEDArray', sources, include_directories: includes, dependencies : deps, install: true)
 

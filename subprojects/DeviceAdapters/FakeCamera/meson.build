@@ -16,5 +16,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('FakeCamera', sources, dependencies : deps, install: true)
+shared_library('FakeCamera', sources, include_directories: includes, dependencies : deps, install: true)
 

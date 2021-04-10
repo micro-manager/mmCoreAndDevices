@@ -22,5 +22,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('TwainCamera', sources, dependencies : deps, install: true)
+shared_library('TwainCamera', sources, include_directories: includes, dependencies : deps, install: true)
 

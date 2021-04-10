@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('VisiTech_iSIM', sources, dependencies : deps, install: true)
+shared_library('VisiTech_iSIM', sources, include_directories: includes, dependencies : deps, install: true)
 

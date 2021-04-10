@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('NIMultiAnalog', sources, dependencies : deps, install: true)
+shared_library('NIMultiAnalog', sources, include_directories: includes, dependencies : deps, install: true)
 

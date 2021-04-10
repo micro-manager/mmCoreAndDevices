@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('ChuoSeiki_MD5000', sources, dependencies : deps, install: true)
+shared_library('ChuoSeiki_MD5000', sources, include_directories: includes, dependencies : deps, install: true)
 

@@ -15,5 +15,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('K8055', sources, dependencies : deps, install: true)
+shared_library('K8055', sources, include_directories: includes, dependencies : deps, install: true)
 

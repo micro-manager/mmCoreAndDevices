@@ -15,5 +15,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('CARVII', sources, dependencies : deps, install: true)
+shared_library('CARVII', sources, include_directories: includes, dependencies : deps, install: true)
 

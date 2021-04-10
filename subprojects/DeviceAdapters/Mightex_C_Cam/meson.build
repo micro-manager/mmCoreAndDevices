@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('Mightex_C_Cam', sources, dependencies : deps, install: true)
+shared_library('Mightex_C_Cam', sources, include_directories: includes, dependencies : deps, install: true)
 

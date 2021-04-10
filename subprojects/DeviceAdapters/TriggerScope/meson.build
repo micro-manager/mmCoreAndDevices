@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('TriggerScope', sources, dependencies : deps, install: true)
+shared_library('TriggerScope', sources, include_directories: includes, dependencies : deps, install: true)
 

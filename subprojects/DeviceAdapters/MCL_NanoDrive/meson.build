@@ -18,5 +18,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('MCL_NanoDrive', sources, dependencies : deps, install: true)
+shared_library('MCL_NanoDrive', sources, include_directories: includes, dependencies : deps, install: true)
 

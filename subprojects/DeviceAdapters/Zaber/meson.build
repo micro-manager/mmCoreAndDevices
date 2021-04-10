@@ -19,5 +19,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('Zaber', sources, dependencies : deps, install: true)
+shared_library('Zaber', sources, include_directories: includes, dependencies : deps, install: true)
 

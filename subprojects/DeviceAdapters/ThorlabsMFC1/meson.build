@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('ThorlabsMFC1', sources, dependencies : deps, install: true)
+shared_library('ThorlabsMFC1', sources, include_directories: includes, dependencies : deps, install: true)
 

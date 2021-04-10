@@ -17,5 +17,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('Omicron', sources, dependencies : deps, install: true)
+shared_library('Omicron', sources, include_directories: includes, dependencies : deps, install: true)
 

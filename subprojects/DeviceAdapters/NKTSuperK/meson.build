@@ -18,5 +18,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('NKTSuperK', sources, dependencies : deps, install: true)
+shared_library('NKTSuperK', sources, include_directories: includes, dependencies : deps, install: true)
 
