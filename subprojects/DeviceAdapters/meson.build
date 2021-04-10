@@ -1,7 +1,7 @@
 project('DeviceAdapters', 'cpp', version : '0.0.1')
 
 MMDevice_dep = dependency('MMDevice', fallback: ['MMDevice', 'MMDevice_dep'])
-boost_dep = dependency('boost', modules: ['chrono', 'date_time', 'regex', 'system', 'thread'])
+boost_dep = dependency('boost', modules: ['chrono', 'date_time', 'regex', 'system', 'thread'], fallback: ['MMCore', 'boost_dep'])
 
 add_project_arguments('-DMODULE_EXPORTS', language: ['cpp'])
 
@@ -18,8 +18,17 @@ endif
 
 pymod = import('python')  # Import mesons python module
 python = pymod.find_installation('python3')  # Get a reference to python
-cmd = run_command(python, 'getSubdirs.py')  # run a python script.
-subdirs = cmd.stdout().strip().split('\n')  # Parse the scripts output to get the subdirs.
+
+getSubDirsScript = '''  # Indentation matters here
+from glob import glob
+from os import path
+wDir = r"@0@"
+files = [f[len(wDir)+1:] for f in glob(path.join(wDir, '*')) if path.isdir(f)]
+print(','.join(files))
+'''.format(meson.current_source_dir())
+
+cmd = run_command(python, '-c', getSubDirsScript)  # run a python script.
+subdirs = cmd.stdout().strip().split(',')  # Parse the scripts output to get the subdirs.
 fs = import('fs')  # Get the filesystem module
 foreach subpath : subdirs
 	if fs.exists(join_paths(subpath, 'meson.build'))
