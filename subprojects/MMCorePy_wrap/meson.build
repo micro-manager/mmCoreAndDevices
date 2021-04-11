@@ -32,8 +32,8 @@ MMCore_dep = dependency('MMCore', fallback: ['MMCore', 'MMCore_dep'])
 pymod = import('python')
 python = pymod.find_installation('python', modules: ['numpy'])
 cmd = run_command(python, '-c',  'import numpy; print(numpy.get_include())')
-np_inc = include_directories(cmd.stdout())
-message(cmd.stdout())
+np_inc = include_directories(cmd.stdout().strip())
+
 includes = [
 	include_directories('.'),
 	np_inc
