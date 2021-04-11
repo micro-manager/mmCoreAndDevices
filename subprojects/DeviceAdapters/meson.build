@@ -26,7 +26,7 @@ getSubDirsScript = '''  # Indentation matters here
 from glob import glob
 from os import path
 wDir = r"@0@"
-files = [f[len(wDir)+1:] for f in glob(path.join(wDir, @1@)) if path.isdir(f)]
+files = [f[len(wDir)+1:] for f in glob(path.join(wDir, '@1@')) if path.isdir(f)]
 print(','.join(files))
 '''.format(meson.current_source_dir(), get_option('SearchPattern'))
 
