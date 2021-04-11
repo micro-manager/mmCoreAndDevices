@@ -1,2 +1,3 @@
 option('3rdPartyPrivate', type: 'string', value: '../../../../3rdparty', yield: true)
 option('3rdPartyPublic', type: 'string', value: '../../../../3rdpartypublic', yield: true)
+option('SearchPattern', type: 'string', value: '*', description: 'Only device adapters matching this regex pattern will be compiled')

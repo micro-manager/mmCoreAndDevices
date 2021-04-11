@@ -5,7 +5,6 @@ MM_3RDPARTY_PUBLIC = join_paths(meson.current_source_dir(), get_option('3rdParty
 
 
 MMDevice_dep = dependency('MMDevice', fallback: ['MMDevice', 'MMDevice_dep'])
-boost_dep = dependency('boost', modules: ['chrono', 'date_time', 'regex', 'system', 'thread'], fallback: ['MMCore', 'boost_dep'])
 
 add_project_arguments('-DMODULE_EXPORTS', language: ['cpp'])
 
@@ -27,9 +26,9 @@ getSubDirsScript = '''  # Indentation matters here
 from glob import glob
 from os import path
 wDir = r"@0@"
-files = [f[len(wDir)+1:] for f in glob(path.join(wDir, '*')) if path.isdir(f)]
+files = [f[len(wDir)+1:] for f in glob(path.join(wDir, @1@)) if path.isdir(f)]
 print(','.join(files))
-'''.format(meson.current_source_dir())
+'''.format(meson.current_source_dir(), get_option('SearchPattern'))
 
 cmd = run_command(python, '-c', getSubDirsScript)  # run a python script.
 subdirs = cmd.stdout().strip().split(',')  # Parse the scripts output to get the subdirs.
