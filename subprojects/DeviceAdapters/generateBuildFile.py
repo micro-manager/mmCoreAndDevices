@@ -36,7 +36,6 @@ includes = [
     ]
 
 deps = [
-	boost_dep,
 	MMDevice_dep
 	]
 	

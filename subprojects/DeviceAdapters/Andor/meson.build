@@ -8,7 +8,7 @@ includes = [
     ]
 
 deps = [
-	boost_dep,
+	dependency('boost', modules: ['filesystem']),
 	MMDevice_dep,
 	SDK_dep
 	]

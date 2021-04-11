@@ -8,7 +8,6 @@ ABSCAM_dep = meson.get_compiler('cpp').find_library('CamUsb_API64_hal', static: 
 	dirs: join_paths(meson.current_source_dir(), 'lib_x64'))
 
 deps = [
-	boost_dep,
 	MMDevice_dep,
 	ABSCAM_dep
 	]
