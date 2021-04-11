@@ -1,11 +1,13 @@
 
 
 includes = [
-    include_directories('.') # include the main directory
+    include_directories('.'), # include the main directory
+	include_directories(join_paths(MM_3RDPARTY_PRIVATE, 'Andor', 'ALC', 'SDK2.4', 'Include'))
     ]
 
 deps = [
-	MMDevice_dep
+	MMDevice_dep,
+	dependency('boost')
 	]
 	
 sources = [  # Must explicitly list all source files.
