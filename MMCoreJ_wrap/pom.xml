@@ -3,7 +3,10 @@
    <groupId>org.micro-manager.mmcorej</groupId>
    <artifactId>MMCoreJ</artifactId>
    <packaging>jar</packaging>
-   <version>10.1.0.0</version>
+   <version>10.1.1.0</version>
+   <name>Micro-Manager Java Interface to MMCore</name>
+   <description>Micro-Manager is open source software for control of automated/motorized microscopes.  This specific packages provides the Java interface to the device abstractino layer (MMCore) that is written in C++ with a C-interface</description>
+   <url>http://micro-manager.org</url>
 
    <properties>
       <maven.compiler.source>1.8</maven.compiler.source>
@@ -29,6 +32,19 @@
       </developer>
    </developers>
 
+   <scm>
+      <url>https://github.com/micro-manager/mmCoreAndDevices</url>
+		<connection>scm:git:git://github.com/micro-manager/mmCoreAndDevices.git</connection>
+		<developerConnection>scm:git:git@github.com:micro-manager/mmCoreAndDevices.git</developerConnection>
+   </scm>
+
+   <licenses>
+      <license>
+         <name>LGPL-2.1</name>
+         <url>https://github.com/micro-manager/mmCoreAndDevices/blob/main/MMCoreJ_wrap/license.txt</url>
+         <distribution>repo</distribution>
+       </license>
+  </licenses>
 
 	<!--
 	    Do not use maven to build MMCoreJ.jar.  
@@ -50,7 +66,7 @@
 						</goals>
 						<configuration>
 							<sources>
-                        <source>../build/intermediates/Swig</source>
+                        <source>../../build/intermediates/Swig</source>
 							</sources>
 						</configuration>
 					</execution>
@@ -82,26 +98,32 @@
               </execution>
             </executions>
           </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.5</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
 		</plugins>
 	</build>
 
-   <repositories>
-       <repository>
-           <snapshots>
-               <enabled>false</enabled>
-           </snapshots>
-           <id>bintray-micro-manager</id>
-           <name>bintray</name>
-           <url>https://dl.bintray.com/micro-manager/micro-manager</url>
-       </repository>
-   </repositories>
-
    <distributionManagement>
-       <repository>
-          <id>bintray-micro-manager</id>
-          <name>micro-manager-mmcorej</name>
-          <url>https://api.bintray.com/maven/micro-manager/micro-manager/MMCoreJ/;publish=1</url>
-       </repository>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+			<id>ossrh</id>
+			<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
    </distributionManagement>
 
 </project>
