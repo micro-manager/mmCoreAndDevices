@@ -1,4 +1,6 @@
-project('DeviceAdapters', 'cpp', version : '0.0.1')
+project('DeviceAdapters', 'cpp', version : '0.0.1',
+	default_options: ['pkg_config_path=../3rdPartyPrivate']
+)
 
 MM_3RDPARTY_PRIVATE = join_paths(meson.current_source_dir(), get_option('3rdPartyPrivate'))
 MM_3RDPARTY_PUBLIC = join_paths(meson.current_source_dir(), get_option('3rdPartyPublic'))
