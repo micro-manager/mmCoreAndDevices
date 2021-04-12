@@ -15,7 +15,7 @@
 
 
 #include "MicroFPGA.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 #ifdef WIN32
 #include <windows.h>
