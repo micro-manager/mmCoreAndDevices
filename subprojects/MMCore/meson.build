@@ -73,7 +73,11 @@ cxx = meson.get_compiler('cpp')
 if host_machine.system() == 'windows'
 	iphlpapi_dep = cxx.find_library('iphlpapi')
 	deps += [iphlpapi_dep]
+elif host_machine.system() == 'linux'
+	libdl_dep = cxx.find_library('dl')
+	deps += [libdl_dep]
 endif
 
 MMCore_lib = static_library('MMCore', sources, include_directories: includes, dependencies : deps)
 MMCore_dep = declare_dependency(include_directories: includes, link_with: MMCore_lib, dependencies: deps)
+meson.override_dependency('MMCore', MMCore_dep)

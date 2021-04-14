@@ -27,10 +27,10 @@ swig_gen = generator(
 
 swig_source = 'MMCorePy.i'
 
-MMCore_dep = dependency('MMCore', fallback: ['MMCore', 'MMCore_dep'])
+MMCore_dep = dependency('MMCore', fallback: 'MMCore')
 
 pymod = import('python')
-python = pymod.find_installation('python', modules: ['numpy'])
+python = pymod.find_installation('python2', modules: ['numpy'])
 cmd = run_command(python, '-c',  'import numpy; print(numpy.get_include())')
 np_inc = include_directories(cmd.stdout().strip())
 
