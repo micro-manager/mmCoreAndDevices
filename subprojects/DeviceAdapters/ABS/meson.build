@@ -1,11 +1,10 @@
 
 
 includes = [
-    include_directories('.', 'include'), # include the main directory
+    include_directories('.'), # include the main directory
     ]
 
-ABSCAM_dep = meson.get_compiler('cpp').find_library('CamUsb_API64_hal', static: true, 
-	dirs: join_paths(meson.current_source_dir(), 'lib_x64'))
+ABSCAM_dep = dependency('ABS_CamUsb', fallback: ['3rdPartyPrivate'])
 
 deps = [
 	MMDevice_dep,
