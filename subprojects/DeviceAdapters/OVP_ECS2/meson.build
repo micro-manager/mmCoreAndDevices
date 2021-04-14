@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('OVP_ECS2', sources, include_directories: includes, dependencies : deps, install: true)
+library('OVP_ECS2', sources, include_directories: includes, dependencies : deps, install: true)
 

@@ -16,5 +16,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('GigECamera', sources, include_directories: includes, dependencies : deps, install: true)
+library('GigECamera', sources, include_directories: includes, dependencies : deps, install: true)
 

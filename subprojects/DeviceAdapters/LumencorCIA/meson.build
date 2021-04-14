@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('LumencorCIA', sources, include_directories: includes, dependencies : deps, install: true)
+library('LumencorCIA', sources, include_directories: includes, dependencies : deps, install: true)
 

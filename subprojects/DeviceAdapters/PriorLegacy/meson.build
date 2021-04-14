@@ -13,5 +13,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('PriorLegacy', sources, include_directories: includes, dependencies : deps, install: true)
+library('PriorLegacy', sources, include_directories: includes, dependencies : deps, install: true)
 

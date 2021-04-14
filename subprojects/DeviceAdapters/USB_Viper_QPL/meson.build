@@ -13,5 +13,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('USB_Viper_QPL', sources, include_directories: includes, dependencies : deps, install: true)
+library('USB_Viper_QPL', sources, include_directories: includes, dependencies : deps, install: true)
 

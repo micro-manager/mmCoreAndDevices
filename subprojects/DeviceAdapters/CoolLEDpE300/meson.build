@@ -13,5 +13,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('CoolLEDpE300', sources, include_directories: includes, dependencies : deps, install: true)
+library('CoolLEDpE300', sources, include_directories: includes, dependencies : deps, install: true)
 

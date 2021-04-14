@@ -18,5 +18,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('PI_GCS_2', sources, include_directories: includes, dependencies : deps, install: true)
+library('PI_GCS_2', sources, include_directories: includes, dependencies : deps, install: true)
 

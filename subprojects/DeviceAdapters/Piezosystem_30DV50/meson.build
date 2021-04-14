@@ -13,5 +13,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('Piezosystem_30DV50', sources, include_directories: includes, dependencies : deps, install: true)
+library('Piezosystem_30DV50', sources, include_directories: includes, dependencies : deps, install: true)
 

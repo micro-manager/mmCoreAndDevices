@@ -13,5 +13,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('Xcite', sources, include_directories: includes, dependencies : deps, install: true)
+library('Xcite', sources, include_directories: includes, dependencies : deps, install: true)
 

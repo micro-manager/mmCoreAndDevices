@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('NikonTE2000', sources, include_directories: includes, dependencies : deps, install: true)
+library('NikonTE2000', sources, include_directories: includes, dependencies : deps, install: true)
 

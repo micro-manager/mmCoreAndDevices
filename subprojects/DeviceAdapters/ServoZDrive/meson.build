@@ -13,5 +13,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('ServoZDrive', sources, include_directories: includes, dependencies : deps, install: true)
+library('ServoZDrive', sources, include_directories: includes, dependencies : deps, install: true)
 

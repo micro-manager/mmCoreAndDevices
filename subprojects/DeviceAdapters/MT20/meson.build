@@ -18,5 +18,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('MT20', sources, include_directories: includes, dependencies : deps, install: true)
+library('MT20', sources, include_directories: includes, dependencies : deps, install: true)
 

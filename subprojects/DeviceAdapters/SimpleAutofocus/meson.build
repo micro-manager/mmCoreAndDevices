@@ -15,5 +15,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('SimpleAutofocus', sources, include_directories: includes, dependencies : deps, install: true)
+library('SimpleAutofocus', sources, include_directories: includes, dependencies : deps, install: true)
 

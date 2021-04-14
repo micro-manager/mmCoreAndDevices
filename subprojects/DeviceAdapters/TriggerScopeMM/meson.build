@@ -15,5 +15,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('TriggerScopeMM', sources, include_directories: includes, dependencies : deps, install: true)
+library('TriggerScopeMM', sources, include_directories: includes, dependencies : deps, install: true)
 

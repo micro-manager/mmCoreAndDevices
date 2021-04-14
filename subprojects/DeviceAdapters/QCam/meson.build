@@ -14,5 +14,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('QCam', sources, include_directories: includes, dependencies : deps, install: true)
+library('QCam', sources, include_directories: includes, dependencies : deps, install: true)
 

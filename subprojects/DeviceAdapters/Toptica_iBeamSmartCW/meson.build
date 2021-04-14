@@ -13,5 +13,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('Toptica_iBeamSmartCW', sources, include_directories: includes, dependencies : deps, install: true)
+library('Toptica_iBeamSmartCW', sources, include_directories: includes, dependencies : deps, install: true)
 

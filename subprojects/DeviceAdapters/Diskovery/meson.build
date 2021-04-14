@@ -17,5 +17,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('Diskovery', sources, include_directories: includes, dependencies : deps, install: true)
+library('Diskovery', sources, include_directories: includes, dependencies : deps, install: true)
 

@@ -13,5 +13,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('SimpleCam', sources, include_directories: includes, dependencies : deps, install: true)
+library('SimpleCam', sources, include_directories: includes, dependencies : deps, install: true)
 
