@@ -41,8 +41,8 @@ includes = [
 
 deps = [
     python.dependency(),
-	MMCore_dep,
-]
+	MMCore_dep
+    ]
 
 cpp_source = swig_gen.process(swig_source)
 
