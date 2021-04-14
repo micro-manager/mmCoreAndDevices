@@ -1,4 +1,4 @@
 [submodule "subprojects/3rdPartyPrivate"]
 	path = subprojects/3rdPartyPrivate
 	url = https://github.com/nanthony21/MM_CPP_3rdParty_Private.git
-	branch = master
+	branch = main
