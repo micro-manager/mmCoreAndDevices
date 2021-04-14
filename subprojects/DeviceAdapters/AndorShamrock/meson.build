@@ -1,19 +1,24 @@
+SDK_dep = dependency('AndorShamrockSDK', fallback: '3rdPartyPrivate', required: false)
 
-includes = [
-    include_directories('.'), # include the main directory
-    ]
+if SDK_dep.found()
 
-deps = [
-	MMDevice_dep,
-	dependency('AndorShamrockSDK', fallback: '3rdPartyPrivate')
-]
-	
-sources = [  # Must explicitly list all source files.
-	'AndorShamrock.cpp',
-	'ModuleAPIFunctions.cpp',
-	'ShamrockConstants.cpp'
-]
+	includes = [
+		include_directories('.'), # include the main directory
+		]
+
+	deps = [
+		MMDevice_dep,
+		SDK_dep
+	]
+		
+	sources = [  # Must explicitly list all source files.
+		'AndorShamrock.cpp',
+		'ModuleAPIFunctions.cpp',
+		'ShamrockConstants.cpp'
+	]
 
 
-library('AndorShamrock', sources, include_directories: includes, dependencies : deps, install: true)
-
+	library('AndorShamrock', sources, include_directories: includes, dependencies : deps, install: true)
+else
+	message('Skipping AndorShamrock DeviceAdapter. No SDK found.')
+endif
