@@ -25,5 +25,5 @@ sources = [  # Must explicitly list all source files.
 ]
 
 
-shared_library('ABS', sources, include_directories: includes, dependencies : deps, install: true)
+library('ABS', sources, include_directories: includes, dependencies : deps, install: true)
 

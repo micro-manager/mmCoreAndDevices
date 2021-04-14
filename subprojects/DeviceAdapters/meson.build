@@ -1,7 +1,11 @@
-project('DeviceAdapters', 'cpp', version : '0.0.1')
+project('DeviceAdapters', 'cpp', version : '0.0.1',
+	default_options: [
+		'default_library=shared'  # Build DLLs rather than Libs
+	]
+)
 
-MM_3RDPARTY_PRIVATE = join_paths(meson.current_source_dir(), get_option('3rdPartyPrivate'))
-MM_3RDPARTY_PUBLIC = join_paths(meson.current_source_dir(), get_option('3rdPartyPublic'))
+#MM_3RDPARTY_PRIVATE = join_paths(meson.current_source_dir(), get_option('3rdPartyPrivate'))
+#MM_3RDPARTY_PUBLIC = join_paths(meson.current_source_dir(), get_option('3rdPartyPublic'))
 
 
 MMDevice_dep = dependency('MMDevice', fallback: ['MMDevice', 'MMDevice_dep'])
