@@ -1,5 +1,5 @@
 
-SDK_dep = dependency('AgilentLaserCombiner', fallback: '3rdPartyPrivate')
+SDK_dep = dependency('AgilentLaserCombinerSDK', fallback: '3rdPartyPrivate')
 
 includes = [
     include_directories('.'), # include the main directory
