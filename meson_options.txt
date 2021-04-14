@@ -1,3 +1,3 @@
-option('BUILD_MMCOREJ', type: 'boolean', value: true)
-option('BUILD_MMCOREPY', type: 'boolean', value: true)
-option('BUILD_DEVICE_ADAPTERS', type: 'boolean', value: true)
+option('MMCOREJ', type: 'boolean', value: true)
+option('MMCOREPY', type: 'boolean', value: true)
+option('DEVICE_ADAPTERS', type: 'boolean', value: true)

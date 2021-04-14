@@ -8,14 +8,14 @@ subproject('MMDevice')
 subproject('MMCore')
 subproject('3rdPartyPrivate')
 
-if get_option('BUILD_MMCOREJ')
+if get_option('MMCOREJ')
 	subproject('MMCoreJ_wrap')
 endif
 
-if get_option('BUILD_DEVICE_ADAPTERS')
+if get_option('DEVICE_ADAPTERS')
 	subproject('DeviceAdapters')
 endif
 
-if get_option('BUILD_MMCOREPY')
+if get_option('MMCOREPY')
 	subproject('MMCorePy_wrap')
 endif
