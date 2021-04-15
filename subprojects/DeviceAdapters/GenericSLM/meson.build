@@ -5,6 +5,7 @@ includes = [
     ]
 
 deps = [
+	dependency('boost'),
 	MMDevice_dep
 	]
 	

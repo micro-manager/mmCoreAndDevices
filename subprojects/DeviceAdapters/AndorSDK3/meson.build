@@ -1,3 +1,4 @@
+message('Skipping AndorSDK3. Not implemented in Meson build system')
 # This project was too messy to include in the new meson build system. It was including files from other projects.
 
 #SDK_dep = meson.get_compiler('cpp').find_library('atcorem', dirs: [join_paths(meson.current_source_dir(), 'lib64')], static: true)

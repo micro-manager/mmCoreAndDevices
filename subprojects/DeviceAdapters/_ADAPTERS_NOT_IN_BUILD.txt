@@ -6,3 +6,4 @@ StanfordPhotonics: Superseded by Piper
 
 Updated for migration to Meson:
 	AndorSDK3 was too messy to include in the new build. It had many source files that were not meant to be included and it included many source files that were from other adapters.
+	Basler also too complicated.

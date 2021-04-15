@@ -1,5 +1,5 @@
-
-
+message('Skipping Basler. Not implemented in Meson build system')
+'''
 includes = [
     include_directories('.') # include the main directory
     ]
@@ -15,3 +15,4 @@ sources = [  # Must explicitly list all source files.
 
 library('Basler', sources, include_directories: includes, dependencies : deps, install: true)
 
+'''
