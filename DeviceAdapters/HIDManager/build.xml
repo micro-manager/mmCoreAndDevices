@@ -1,5 +1,5 @@
 <project name="HIDManager">
-	<import file="../../buildscripts/deviceadapter.xml"/>
+   <import file="../../../buildscripts/deviceadapter.xml"/>
 
 	<property name="hidapi.libs" location="${mm.thirdpartypublic}/hidapi/build-3a66d4e513-patched/windows"/>
 

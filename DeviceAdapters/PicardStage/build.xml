@@ -1,5 +1,5 @@
 <project name="PicardStage">
-	<import file="../../buildscripts/deviceadapter.xml"/>
+   <import file="../../../buildscripts/deviceadapter.xml"/>
 
 	<property name="picard.4d.libs" location="${mm.thirdpartypublic}/Picard/20140430/4D-Stage DLL and Docs"/>
 
