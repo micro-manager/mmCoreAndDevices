@@ -1,5 +1,5 @@
 <project name="IIDC">
-	<import file="../../buildscripts/deviceadapter.xml"/>
+   <import file="../../../buildscripts/deviceadapter.xml"/>
 
 	<property name="PDL2000.libs" location="${mm.basedir}/../3rdparty/PeCon/PDL2000"/>
 
