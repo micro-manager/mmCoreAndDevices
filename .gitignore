@@ -1,11 +1,74 @@
+# Editors, etc.
+*~
+.*.swp
+.swp
+tags
+.DS_Store
+*.log
+*.stamp
+*.dirstamp
+
+/SecretDeviceAdapters/
+
+# Visual Studio
+*.ncb
 *.opensdf
 *.sdf
-*.user
-build/
-bin
-ipch/
 *.suo
-*.cxx
+*.user
+ipch/
+.vs/
+
+# GNU build system
 *.cache
+*.la
+*.lo
+*.o
+*.trs
+.deps/
+.libs/
+Makefile
+Makefile.in
+aclocal.m4
+compile
+config.guess
+config.log
+config.status
+config.sub
+configure
+libtool
+ltmain.sh
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
+missing
+test-driver
+
+# Python
+*.pyc
+*.pyo
+__pycache__/
+
+# IntelliJ and Pycharm
+.idea
+*.iml
+
+# Build
+*.class
+*.jar
+*-Tests
+build/
+test-reports/
+
+# Generated source
+/MMCoreJ_wrap/gensrc/
+/MMCoreJ_wrap/MMCoreJ_wrap.cxx
+/MMCoreJ_wrap/MMCoreJ_wrap.h
+/MMCorePy_wrap/MMCorePy.py
+/MMCorePy_wrap/MMCorePy_wrap.cxx
+/MMCorePy_wrap/MMCorePy_wrap.h
 *.pb.cc
 *.pb.h
+bin
