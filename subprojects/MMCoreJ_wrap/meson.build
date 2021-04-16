@@ -27,16 +27,11 @@ swig_gen = generator(
     depfile: '@BASENAME@.d',
 )
 
-swig_source = 'MMCoreJ.i'
-
-MMCore_dep = dependency('MMCore', fallback: ['MMCore', 'MMCore_dep'])
+cpp_source = swig_gen.process('MMCoreJ.i')
 
 deps = [
     dependency('jni'),
-	MMCore_dep,
+	dependency('MMCore', fallback: 'MMCore')
 ]
-
-cpp_source = swig_gen.process(swig_source)
-
 
 shared_library('MMCoreJ_wrap', cpp_source, include_directories: includes, dependencies: deps, install: true)
