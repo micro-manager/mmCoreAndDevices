@@ -1,5 +1,5 @@
 <project name="IIDC">
-	<import file="../../buildscripts/deviceadapter.xml"/>
+   <import file="../../../buildscripts/deviceadapter.xml"/>
 
 	<property name="dc1394.libs" location="${mm.thirdpartypublic}/libdc1394/libdc1394-2.2.1-bin"/>
 

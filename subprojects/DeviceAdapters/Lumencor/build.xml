@@ -1,5 +1,5 @@
 <project name="Lumencor">
-	<import file="../../buildscripts/deviceadapter.xml"/>
+   <import file="../../../buildscripts/deviceadapter.xml"/>
 
 	<target name="install-Win32">
 		<copy todir="${mm.dll.installdir}" file="${mm.basedir}/../3rdparty/Lumencor/LumencorAPI/bin_Win32/LightEngineAPI.dll"/>

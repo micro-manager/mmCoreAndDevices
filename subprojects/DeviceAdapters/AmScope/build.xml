@@ -1,5 +1,5 @@
 <project name="AmScope">
-	<import file="../../buildscripts/deviceadapter.xml"/>
+   <import file="../../../buildscripts/deviceadapter.xml"/>
 
 	<target name="install-Win32">
 		<copy todir="${mm.dll.installdir}" file="lib/win/x86/toupcam.dll"/>
