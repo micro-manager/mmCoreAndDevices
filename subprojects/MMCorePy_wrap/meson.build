@@ -44,5 +44,4 @@ deps = [
 
 cpp_source = swig_gen.process(swig_source)
 
-
 shared_library('MMCorePy_wrap', cpp_source, include_directories: includes, dependencies: deps, install: true)
