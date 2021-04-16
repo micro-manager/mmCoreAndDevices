@@ -4,11 +4,7 @@ project('DeviceAdapters', 'cpp', version : '0.0.1',
 	]
 )
 
-#MM_3RDPARTY_PRIVATE = join_paths(meson.current_source_dir(), get_option('3rdPartyPrivate'))
-#MM_3RDPARTY_PUBLIC = join_paths(meson.current_source_dir(), get_option('3rdPartyPublic'))
-
-
-MMDevice_dep = dependency('MMDevice', fallback: ['MMDevice', 'MMDevice_dep'])
+MMDevice_dep = dependency('MMDevice', fallback: ['MMDevice'])
 
 add_project_arguments('-DMODULE_EXPORTS', language: ['cpp'])
 

@@ -1,7 +1,5 @@
 project('MMCorePy_wrap', 'cpp', version : '0.0.1')
 
-thirdPartyDir = join_paths(meson.current_source_dir(), get_option('3rdPartyPrivate'))
-
 add_project_arguments('-DMMCOREPY_WRAP_EXPORTS', language: 'cpp')
 
 if host_machine.system() == 'windows'

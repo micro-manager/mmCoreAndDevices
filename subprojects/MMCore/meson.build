@@ -14,8 +14,7 @@ endif
 
 includes = include_directories('.') # include the main directory
 
-MMDev_proj = subproject('MMDevice')
-MMDevice_dep = dependency('MMDevice', fallback: ['MMDevice', 'MMDevice_dep'])
+MMDevice_dep = dependency('MMDevice', fallback: 'MMDevice')
 boost_dep = dependency('boost', modules: ['chrono', 'date_time', 'regex', 'system', 'thread'])
 
 deps = [
