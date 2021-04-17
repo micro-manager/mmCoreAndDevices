@@ -14,19 +14,18 @@ endif
 
 	
 swig = find_program('swig')
-swig_gen = generator(
-    swig,
-    output: ['@BASENAME@.cxx'],
-    arguments: ['-c++', '-python', '-o', './@OUTPUT@',
-                '-outdir', '.', '-I../src', '-MMD',
-                '@INPUT@'],
-    depfile: '@BASENAME@.d',
+cpp_source = custom_target(
+    'MMCorePy_generate_source',
+    input: ['MMCorePy.i'],
+    output: ['@BASENAME@.cxx', '@BASENAME@.py'],  # I'm not sure why but swig doesn't want to have the .h defined here, it'll still be generated.
+    install: true,
+    install_dir: [false, 'MMCorePySource'],
+    command: [swig, '-c++', '-python', '-outdir', '@OUTDIR@', 
+        '-o', '@OUTPUT0@', '@INPUT@']
 )
+#install_data(meson.project_build_root() / 'MMCorePy.py', install_dir: 'MMCorePySource')
 
-swig_source = 'MMCorePy.i'
-
-MMCore_dep = dependency('MMCore', fallback: 'MMCore')
-
+# Get the numpy include path
 pymod = import('python')
 python = pymod.find_installation('python2', modules: ['numpy'])
 cmd = run_command(python, '-c',  'import numpy; print(numpy.get_include())')
@@ -38,10 +37,9 @@ includes = [
 	]
 
 deps = [
-    python.dependency(),
-	MMCore_dep
+    python.dependency(default_options: ['buildtype=release']),  # Even if we are building debug get the normal linker path, most people don't have the debug dependency installed.
+	dependency('MMCore', fallback: 'MMCore')
     ]
 
-cpp_source = swig_gen.process(swig_source)
 
 shared_library('MMCorePy_wrap', cpp_source, include_directories: includes, dependencies: deps, install: true)

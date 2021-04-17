@@ -13,7 +13,8 @@ else
 endif
 
 
-### Copy the pre-written source to the build dir. This also creates the javaSource/main/java/mmcorej path that we need to exist so SWIG can output there without an error.
+### Copy the pre-written source to the build dir. 
+### This also creates the javaSource/main/java/mmcorej path that we need to exist so SWIG can output there without an error.
 py_script = '''
 import os, shutil
 shutil.copytree(os.path.join(r"@1@", "src"),
@@ -36,7 +37,8 @@ cpp_source = custom_target(
         '-o', '@OUTPUT@', '@INPUT@']
 )
 
-install_subdir(meson.project_build_root() / 'javaSource', install_dir: '.')  # Copy java source from the build directory to install at install time.
+# Copy java source from the build directory to install at install time.
+install_subdir(meson.project_build_root() / 'javaSource', install_dir: '.')  
 
 deps = [
     dependency('jni'),
