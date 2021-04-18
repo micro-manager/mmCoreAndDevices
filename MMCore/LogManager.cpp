@@ -33,6 +33,8 @@ const char* StringForLogLevel(LogLevel level)
 
 } // anonymous namespace
 
+const logging::SinkMode LogManager::PrimarySinkMode = logging::SinkModeAsynchronous;
+
 LogManager::LogManager() :
    loggingCore_(boost::make_shared<LoggingCore>()),
    internalLogger_(loggingCore_->NewLogger("LogManager")),
