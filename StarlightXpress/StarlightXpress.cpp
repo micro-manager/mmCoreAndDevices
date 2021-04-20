@@ -1,0 +1,232 @@
+#include "StarlightXpress.h"
+
+#include <sstream>
+
+const char *StarlightXpressFilterWheel::device_name = "Filter Wheel";
+const char* StarlightXpressFilterWheel::device_desc = "Starlight Xpress Filter Wheel";
+
+const StarlightXpressFilterWheel::Command StarlightXpressFilterWheel::Command::GetNFilters(0, 1);
+const StarlightXpressFilterWheel::Command StarlightXpressFilterWheel::Command::GetCurrentFilter(0, 0);
+
+#define SXPR_ERROR 108903
+#define SXPR_PORT_CHANGE_FORBIDDEN 108904
+
+MODULE_API void InitializeModuleData()
+{
+	RegisterDevice(StarlightXpressFilterWheel::device_name, MM::StateDevice, StarlightXpressFilterWheel::device_desc);
+}
+
+MODULE_API MM::Device* CreateDevice(const char* deviceName)
+{
+   if (deviceName == 0)
+      return 0;
+
+   if (strcmp(deviceName, StarlightXpressFilterWheel::device_name) == 0)
+   {
+      StarlightXpressFilterWheel* device = new StarlightXpressFilterWheel();
+      return device;
+   }
+
+   return 0;
+}
+
+MODULE_API void DeleteDevice(MM::Device* pDevice)
+{
+   delete pDevice;
+}
+
+StarlightXpressFilterWheel::StarlightXpressFilterWheel()
+   : m_port("Undefined"),
+   m_initialised(false),
+	m_busy(false),
+	m_n_filters(0),
+	m_response_timeout_ms(1000)
+{
+   InitializeDefaultErrorMessages();
+	SetErrorText(SXPR_PORT_CHANGE_FORBIDDEN, "Port change is forbidden after initialization");
+
+	CreateProperty(MM::g_Keyword_Name, device_name, MM::String, true);
+	CreateProperty(MM::g_Keyword_Description, device_desc, MM::String, true);
+
+
+	CPropertyAction* pActPort = new CPropertyAction (this, &StarlightXpressFilterWheel::OnPort);
+	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pActPort, true);
+}
+
+int StarlightXpressFilterWheel::Initialize()
+{
+	PurgeComPort(m_port.c_str());
+
+	try {
+		m_n_filters = get_n_filters();
+	}
+	catch (const std::runtime_error& e) {
+		SetErrorText(SXPR_ERROR, e.what());
+		return SXPR_ERROR;
+	}
+
+	LogMessage(std::string("N Filters : ") + CDeviceUtils::ConvertToString(m_n_filters));
+
+   int ret = CreateIntegerProperty(MM::g_Keyword_Closed_Position, 0, false);
+   if (ret != DEVICE_OK)
+      return ret;
+
+	for (int i = 0; i < m_n_filters; i++) {
+		std::stringstream ss;
+		ss << "Filter-" << i;
+      SetPositionLabel(i, ss.str().c_str());
+		AddAllowedValue(MM::g_Keyword_Closed_Position, CDeviceUtils::ConvertToString(i));
+	}
+
+   CPropertyAction* pAct = new CPropertyAction(this, &StarlightXpressFilterWheel::OnState);
+   ret = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   pAct = new CPropertyAction(this, &CStateBase::OnLabel);
+   ret = CreateStringProperty(MM::g_Keyword_Label, "", false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
+
+   m_initialised = true;
+   return DEVICE_OK;
+}
+
+int StarlightXpressFilterWheel::Shutdown() 
+{ 
+	return DEVICE_OK;
+}
+
+void StarlightXpressFilterWheel::GetName(char* pszName) const
+{
+	CDeviceUtils::CopyLimitedString(pszName, StarlightXpressFilterWheel::device_name);
+}
+
+bool StarlightXpressFilterWheel::Busy()
+{
+	return m_busy;
+}
+
+unsigned long StarlightXpressFilterWheel::GetNumberOfPositions() const
+{
+	return m_n_filters;
+}
+
+int StarlightXpressFilterWheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet) {
+		try {
+			unsigned char filter = get_current_filter();
+			pProp->Set(static_cast<long>(filter));
+		}
+		catch (const std::runtime_error& e) {
+			SetErrorText(SXPR_ERROR, e.what());
+			return SXPR_ERROR;
+		}
+	}
+   else if (eAct == MM::AfterSet) {
+      long filter = 0;
+      pProp->Get(filter);
+
+      try {
+         set_current_filter(static_cast<unsigned char>(filter));
+      }
+      catch (const std::runtime_error& e) {
+         SetErrorText(SXPR_ERROR, e.what());
+         return SXPR_ERROR;
+      }
+	}
+
+	return DEVICE_OK;
+}
+
+int StarlightXpressFilterWheel::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(m_port.c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		if (m_initialised)
+		{
+			// revert
+			pProp->Set(m_port.c_str());
+			return SXPR_PORT_CHANGE_FORBIDDEN;
+		}
+		pProp->Get(m_port);
+	}
+
+	return DEVICE_OK;
+
+}
+
+StarlightXpressFilterWheel::Response StarlightXpressFilterWheel::send(Command cmd)
+{
+	PurgeComPort(m_port.c_str());
+	std::stringstream ss;
+	ss << "Sending Command : {" << (int)cmd.fst << ", " << (int)cmd.snd << "}";
+	LogMessage(ss.str(), true);
+
+	unsigned char data[2] = { cmd.fst, cmd.snd };
+
+	int ret = WriteToComPort(m_port.c_str(), data, 2) != DEVICE_OK;
+	if (ret) {
+		LogMessage("Failed to send command to Starlight Xpress Filter Wheel!", true);
+		throw std::runtime_error(std::string("Failed to send command to Starlight Xpress Filter Wheel! Error : ") + CDeviceUtils::ConvertToString(ret));
+	}
+
+	unsigned long bytes_read = 0;
+	MM::TimeoutMs timeout(GetCurrentMMTime(), MM::MMTime(m_response_timeout_ms * 1000.0));
+	while (bytes_read < 2) {
+		if (timeout.expired(GetCurrentMMTime())) {
+			throw std::runtime_error("Timed out while awaiting response from Starlight Xpress Filter Wheel!");
+		}
+
+		int ret = ReadFromComPort(m_port.c_str(), data + bytes_read, 2 - bytes_read, bytes_read);
+		if (ret != DEVICE_OK) {
+			throw std::runtime_error("Failed to read response from Starlight Xpress Filter Wheel!");
+		}
+	}
+
+	ss = std::stringstream();
+	ss << "Recieved Response : {" << (int)data[0] << ", " << (int)data[1] << "}";
+	LogMessage(ss.str(), true);
+
+	return Response(data[0], data[1]);
+}
+
+int StarlightXpressFilterWheel::get_n_filters()
+{
+	m_busy = true;
+	Response r = send(Command::GetNFilters);
+   while (r.fst == 0) {
+      CDeviceUtils::SleepMs(1000);
+      r = send(Command::GetCurrentFilter);
+   }
+	m_busy = false;
+	return r.snd;
+}
+
+int StarlightXpressFilterWheel::get_current_filter()
+{
+	m_busy = true;
+	Response r = send(Command::GetCurrentFilter);
+	while (r.fst == 0) {
+		CDeviceUtils::SleepMs(100);
+		r = send(Command::GetCurrentFilter);
+	}
+
+	m_busy = false;
+	return r.fst - 1;
+}
+
+void StarlightXpressFilterWheel::set_current_filter(unsigned char n)
+{
+	m_busy = true;
+	send(Command::SetCurrentFilter(n));
+	CDeviceUtils::SleepMs(100);
+	get_current_filter();
+	m_busy = false;
+}
