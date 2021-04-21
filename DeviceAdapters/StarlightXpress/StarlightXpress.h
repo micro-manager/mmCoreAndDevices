@@ -6,55 +6,55 @@
 
 
 class StarlightXpressFilterWheel : public CStateDeviceBase<StarlightXpressFilterWheel> {
-public: 
-   static const char* device_name;
-   static const char* device_desc;
+   public: 
+      static const char* device_name;
+      static const char* device_desc;
 
-   StarlightXpressFilterWheel();
-  
-   int Initialize();
-   int Shutdown();
-  
-   void GetName(char* pszName) const;
-   bool Busy();
-   unsigned long GetNumberOfPositions() const;
+      StarlightXpressFilterWheel();
 
-   int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnRunCalibration(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnNFilters(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int Initialize();
+      int Shutdown();
 
-private:
-   static const char *filterCalibrationModeName;
-   static const char *filterNumberName;
-   static const char *autoValue;
-   static const char *manualValue;
+      void GetName(char* pszName) const;
+      bool Busy();
+      unsigned long GetNumberOfPositions() const;
 
-   struct Command { 
-      Command(unsigned char fst, unsigned char snd) : fst(fst), snd(snd) {}
-      unsigned char fst; unsigned char snd; 
+      int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnRunCalibration(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnNFilters(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-      const static Command GetNFilters;
-      const static Command GetCurrentFilter;
-      static Command SetCurrentFilter(unsigned char n) { return Command(n + 129, 0); }
-   };
-   struct Response {
-      Response(unsigned char fst, unsigned char snd) : fst(fst), snd(snd) {}
-      unsigned char fst; unsigned char snd; 
-   };
+   private:
+      static const char *filterCalibrationModeName;
+      static const char *filterNumberName;
+      static const char *autoValue;
+      static const char *manualValue;
 
-   Response send(Command cmd);
+      struct Command { 
+         Command(unsigned char fst, unsigned char snd) : fst(fst), snd(snd) {}
+         unsigned char fst; unsigned char snd; 
 
-   int get_n_filters();
-   int get_current_filter();
-   void set_current_filter(unsigned char filter);
+         const static Command GetNFilters;
+         const static Command GetCurrentFilter;
+         static Command SetCurrentFilter(unsigned char n) { return Command(n + 129, 0); }
+      };
+      struct Response {
+         Response(unsigned char fst, unsigned char snd) : fst(fst), snd(snd) {}
+         unsigned char fst; unsigned char snd; 
+      };
 
-   std::string m_port;
-   bool m_busy;
-   bool m_initialised;
-   bool m_runCalibration;
-   int m_n_filters;
-   unsigned long m_response_timeout_ms; 
+      Response send(Command cmd);
+
+      int get_n_filters();
+      int get_current_filter();
+      void set_current_filter(unsigned char filter);
+
+      std::string m_port;
+      bool m_busy;
+      bool m_initialised;
+      bool m_runCalibration;
+      int m_n_filters;
+      unsigned long m_response_timeout_ms; 
 };
 
 #endif
