@@ -460,7 +460,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SouthPort", "DeviceAdapters
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeensySLM", "DeviceAdapters\TeesnySLM\TeensySLM.vcxproj", "{2289E020-8729-4785-8EEA-168303BF6A35}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StarlightXpress", "StarlightXpress\StarlightXpress.vcxproj", "{A8FBEF79-3324-4ABF-B494-1A47C604F5B5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StarlightXpress", "DeviceAdapters\StarlightXpress\StarlightXpress.vcxproj", "{A8FBEF79-3324-4ABF-B494-1A47C604F5B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
