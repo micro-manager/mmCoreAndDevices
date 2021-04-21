@@ -3,13 +3,18 @@
 #include <sstream>
 
 const char *StarlightXpressFilterWheel::device_name = "Filter Wheel";
-const char* StarlightXpressFilterWheel::device_desc = "Starlight Xpress Filter Wheel";
+const char *StarlightXpressFilterWheel::device_desc = "Starlight Xpress Filter Wheel";
+const char *StarlightXpressFilterWheel::filterCalibrationModeName = "Filter Calibration Mode";
+const char *StarlightXpressFilterWheel::filterNumberName = "Number of Filters";
+const char *StarlightXpressFilterWheel::autoValue = "Auto";
+const char *StarlightXpressFilterWheel::manualValue = "Manual";
 
 const StarlightXpressFilterWheel::Command StarlightXpressFilterWheel::Command::GetNFilters(0, 1);
 const StarlightXpressFilterWheel::Command StarlightXpressFilterWheel::Command::GetCurrentFilter(0, 0);
 
 #define SXPR_ERROR 108903
 #define SXPR_PORT_CHANGE_FORBIDDEN 108904
+#define SXPR_N_FILTERS_CHANGE_FORBIDDEN 108905
 
 MODULE_API void InitializeModuleData()
 {
@@ -39,6 +44,7 @@ StarlightXpressFilterWheel::StarlightXpressFilterWheel()
    : m_port("Undefined"),
    m_initialised(false),
 	m_busy(false),
+	m_runCalibration(true),
 	m_n_filters(0),
 	m_response_timeout_ms(1000)
 {
@@ -49,20 +55,30 @@ StarlightXpressFilterWheel::StarlightXpressFilterWheel()
 	CreateProperty(MM::g_Keyword_Description, device_desc, MM::String, true);
 
 
-	CPropertyAction* pActPort = new CPropertyAction (this, &StarlightXpressFilterWheel::OnPort);
-	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pActPort, true);
+	CPropertyAction* pAct = new CPropertyAction (this, &StarlightXpressFilterWheel::OnPort);
+	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+
+	pAct = new CPropertyAction(this, &StarlightXpressFilterWheel::OnRunCalibration);
+	CreateProperty(filterCalibrationModeName, autoValue, MM::String, false, pAct, true);
+	AddAllowedValue(filterCalibrationModeName, autoValue);
+	AddAllowedValue(filterCalibrationModeName, manualValue);
+
+	pAct = new CPropertyAction(this, &StarlightXpressFilterWheel::OnNFilters);
+	CreateIntegerProperty(filterNumberName, 0, false, pAct, true);
 }
 
 int StarlightXpressFilterWheel::Initialize()
 {
 	PurgeComPort(m_port.c_str());
 
-	try {
-		m_n_filters = get_n_filters();
-	}
-	catch (const std::runtime_error& e) {
-		SetErrorText(SXPR_ERROR, e.what());
-		return SXPR_ERROR;
+	if (m_n_filters == 0) {
+		try {
+			m_n_filters = get_n_filters();
+		}
+		catch (const std::runtime_error& e) {
+			SetErrorText(SXPR_ERROR, e.what());
+			return SXPR_ERROR;
+		}
 	}
 
 	LogMessage(std::string("N Filters : ") + CDeviceUtils::ConvertToString(m_n_filters));
@@ -87,7 +103,6 @@ int StarlightXpressFilterWheel::Initialize()
    ret = CreateStringProperty(MM::g_Keyword_Label, "", false, pAct);
    if (ret != DEVICE_OK)
       return ret;
-
 
    m_initialised = true;
    return DEVICE_OK;
@@ -162,6 +177,53 @@ int StarlightXpressFilterWheel::OnPort(MM::PropertyBase* pProp, MM::ActionType e
 
 }
 
+int StarlightXpressFilterWheel::OnRunCalibration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet) {
+		pProp->Set(m_runCalibration ? autoValue : manualValue);
+	}
+	else {
+		std::string val;
+		pProp->Get(val);
+
+		if (val == autoValue) {
+			m_runCalibration = true;
+		}
+		else if (val == manualValue) {
+			m_runCalibration = false;
+		}
+		else {
+			SetErrorText(SXPR_ERROR, ("Invalid value " + val + " for Run Calibration Property").c_str());
+			return SXPR_ERROR;
+		}
+	}
+	return DEVICE_OK;
+}
+
+int StarlightXpressFilterWheel::OnNFilters(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet) {
+		pProp->Set(static_cast<long>(m_n_filters));
+	}
+	else {
+		if (m_initialised) {
+			SetErrorText(SXPR_N_FILTERS_CHANGE_FORBIDDEN, "Cannot change number of filters after initialisation!");
+			return SXPR_N_FILTERS_CHANGE_FORBIDDEN;
+		}
+		else if (m_runCalibration && m_n_filters != 0) {
+			SetErrorText(SXPR_N_FILTERS_CHANGE_FORBIDDEN, "Cannot change number of filters when in automatic mode!");
+			return SXPR_N_FILTERS_CHANGE_FORBIDDEN;
+		}
+		else {
+			long v;
+			pProp->Get(v);
+			m_n_filters = static_cast<int>(v);
+		}
+	}
+
+	return DEVICE_OK;
+}
+
 StarlightXpressFilterWheel::Response StarlightXpressFilterWheel::send(Command cmd)
 {
 	PurgeComPort(m_port.c_str());
@@ -200,7 +262,7 @@ StarlightXpressFilterWheel::Response StarlightXpressFilterWheel::send(Command cm
 int StarlightXpressFilterWheel::get_n_filters()
 {
 	m_busy = true;
-	Response r = send(Command::GetNFilters);
+	Response r = m_runCalibration ? send(Command::GetNFilters) : send(Command::GetCurrentFilter);
    while (r.fst == 0) {
       CDeviceUtils::SleepMs(1000);
       r = send(Command::GetCurrentFilter);

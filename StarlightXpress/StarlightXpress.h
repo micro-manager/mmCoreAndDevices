@@ -21,7 +21,15 @@ public:
 
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnRunCalibration(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnNFilters(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 private:
+   static const char *filterCalibrationModeName;
+   static const char *filterNumberName;
+   static const char *autoValue;
+   static const char *manualValue;
+
    struct Command { 
       Command(unsigned char fst, unsigned char snd) : fst(fst), snd(snd) {}
       unsigned char fst; unsigned char snd; 
@@ -44,6 +52,7 @@ private:
    std::string m_port;
    bool m_busy;
    bool m_initialised;
+   bool m_runCalibration;
    int m_n_filters;
    unsigned long m_response_timeout_ms; 
 };
