@@ -82,6 +82,7 @@
       <PreprocessorDefinitions>MODULE_EXPORTS;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalDependencies>MicroDrive.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -100,6 +101,7 @@
       <PreprocessorDefinitions>MODULE_EXPORTS;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalDependencies>MicroDrive64.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -112,6 +114,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MODULE_EXPORTS;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalDependencies>MicroDrive.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -131,6 +134,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MODULE_EXPORTS;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalDependencies>MicroDrive64.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -158,11 +162,17 @@
     <ClInclude Include="mdutils.h" />
     <ClInclude Include="MicroDrive.h" />
     <ClInclude Include="MicroDriveXYStage.h" />
+    <ClInclude Include="..\MMDevice\DeviceBase.h" />
+    <ClInclude Include="..\MMDevice\DeviceUtils.h" />
+    <ClInclude Include="..\MMDevice\MMDevice.h" />
+    <ClInclude Include="..\MMDevice\MMDeviceConstants.h" />
+    <ClInclude Include="..\MMDevice\ModuleInterface.h" />
+    <ClInclude Include="..\MMDevice\Property.h" />
     <ClInclude Include="MicroDriveZStage.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
-      <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
+    <ProjectReference Include="..\..\MMDevice\MMDevice-StaticRuntime.vcxproj">
+      <Project>{af3143a4-5529-4c78-a01a-9f2a8977ed64}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
