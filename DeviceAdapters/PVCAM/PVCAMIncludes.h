@@ -3,8 +3,8 @@
 
 #if defined(_WIN32)
     #pragma warning(push)
-    #include "../../../3rdpartypublic/Photometrics/PVCAM/SDK/Headers/master.h"
-    #include "../../../3rdpartypublic/Photometrics/PVCAM/SDK/Headers/pvcam.h"
+    #include "Photometrics/PVCAM/SDK/Headers/master.h"
+    #include "Photometrics/PVCAM/SDK/Headers/pvcam.h"
     #pragma warning(pop)
 #elif defined(__linux__)
     // PVCAM runtime and SDK must be installed in order to build and link the adapter.
