@@ -28,6 +28,6 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\..\..\3rdparty\Pco\Windows\Sdk_515\Senntcam.lib" />
+    <Library Include="$(MM_3RDPARTYPRIVATE)\Pco\Windows\Sdk_515\Senntcam.lib" />
   </ItemGroup>
 </Project>
