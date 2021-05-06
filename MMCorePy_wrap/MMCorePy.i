@@ -233,8 +233,6 @@ PyObject *setSLMImage_pywrap(const char* slmLabel, char *pixels, int receivedLen
         case MMERR_BadConfigName:
         case MMERR_DuplicateConfigGroup:
         case MMERR_DuplicateLabel:
-        case MMERR_InvalidCFGEntry:
-        case MMERR_InvalidConfigurationFile:
         case MMERR_InvalidContents:
         case MMERR_InvalidCoreProperty:
         case MMERR_InvalidCoreValue:
@@ -248,26 +246,26 @@ PyObject *setSLMImage_pywrap(const char* slmLabel, char *pixels, int receivedLen
         case MMERR_InvalidXYStageDevice:
         case MMERR_NoConfigGroup:
         case MMERR_NoConfiguration:
+        case MMERR_NullPointerException:
         case MMERR_PropertyNotInCache:
         case MMERR_SetPropertyFailed:
         case MMERR_UnexpectedDevice:
-        case MMERR_UnknownModule:
             SWIG_exception(SWIG_ValueError, e.what());
-        case MMERR_NullPointerException:
-            SWIG_exception(SWIG_NullReferenceError, e.what());
         case MMERR_FileOpenFailed:
+        case MMERR_InvalidCFGEntry:
+        case MMERR_InvalidConfigurationFile:
         case MMERR_LoadLibraryFailed:
             SWIG_exception(SWIG_IOError, e.what());
+        case MMERR_CircularBufferEmpty:
         case MMERR_InvalidConfigurationIndex:
             SWIG_exception(SWIG_IndexError, e.what());
-        case MMERR_CameraBufferReadFailed:
-        case MMERR_CircularBufferEmpty:
         case MMERR_CircularBufferFailedToInitialize:
-        case MMERR_CircularBufferIncompatibleImage:
         case MMERR_OutOfMemory:
             SWIG_exception(SWIG_MemoryError, e.what());
+        case MMERR_CameraBufferReadFailed:
+        case MMERR_CircularBufferIncompatibleImage:
         case MMERR_UnhandledException:
-            SWIG_exception(SWIG_SystemError, e.what());
+        case MMERR_UnknownModule:
         default:
             SWIG_exception(SWIG_RuntimeError, e.what());
     }
