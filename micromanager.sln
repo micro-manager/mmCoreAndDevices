@@ -290,8 +290,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Piezosystem_NV40_3", "Devic
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Piezosystem_NV120_1", "DeviceAdapters\Piezosystem_NV120_1\Piezosystem_NV120_1.vcxproj", "{B305430A-2CB0-4057-AB7C-F90F52973BC1}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MMCorePy_wrap", "MMCorePy_wrap\MMCorePy_wrap.vcxproj", "{3BBF25B0-B80B-11E2-9E96-0800200C9A66}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BiostepEagleIce", "DeviceAdapters\BiostepEagleIce\BiostepEagleIce.vcxproj", "{50929242-8E4F-4606-B30D-2A2D5131F645}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Zaber", "DeviceAdapters\Zaber\Zaber.vcxproj", "{16385D50-05B1-454D-9F0B-AC2C9D6BD9AB}"
@@ -2181,18 +2179,6 @@ Global
 		{B305430A-2CB0-4057-AB7C-F90F52973BC1}.Release|Win32.Build.0 = Release|Win32
 		{B305430A-2CB0-4057-AB7C-F90F52973BC1}.Release|x64.ActiveCfg = Release|x64
 		{B305430A-2CB0-4057-AB7C-F90F52973BC1}.Release|x64.Build.0 = Release|x64
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Debug|Mixed Platforms.Build.0 = Debug|x64
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Debug|Win32.ActiveCfg = Debug|Win32
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Debug|Win32.Build.0 = Debug|Win32
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Debug|x64.ActiveCfg = Debug|x64
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Debug|x64.Build.0 = Debug|x64
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Release|Mixed Platforms.ActiveCfg = Release|x64
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Release|Mixed Platforms.Build.0 = Release|x64
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Release|Win32.ActiveCfg = Release|Win32
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Release|Win32.Build.0 = Release|Win32
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Release|x64.ActiveCfg = Release|x64
-		{3BBF25B0-B80B-11E2-9E96-0800200C9A66}.Release|x64.Build.0 = Release|x64
 		{50929242-8E4F-4606-B30D-2A2D5131F645}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{50929242-8E4F-4606-B30D-2A2D5131F645}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{50929242-8E4F-4606-B30D-2A2D5131F645}.Debug|Win32.ActiveCfg = Debug|Win32
