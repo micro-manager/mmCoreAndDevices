@@ -1,6 +1,7 @@
 #ifndef _ACQTHREAD_H_
 #define _ACQTHREAD_H_
 
+// MMDevice
 #include "DeviceThreads.h"
 
 #include "Event.h"
@@ -46,7 +47,7 @@ public:
     void Resume();
 
     /**
-    * Overrided function from MMDeviceThreadBase.
+    * Overridden function from MMDeviceThreadBase.
     */
     int svc();
 

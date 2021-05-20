@@ -66,9 +66,6 @@ test-reports/
 /MMCoreJ_wrap/gensrc/
 /MMCoreJ_wrap/MMCoreJ_wrap.cxx
 /MMCoreJ_wrap/MMCoreJ_wrap.h
-/MMCorePy_wrap/MMCorePy.py
-/MMCorePy_wrap/MMCorePy_wrap.cxx
-/MMCorePy_wrap/MMCorePy_wrap.h
 *.pb.cc
 *.pb.h
 bin

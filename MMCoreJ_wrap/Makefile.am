@@ -18,8 +18,6 @@ AM_CPPFLAGS = $(JNI_CPPFLAGS) $(BOOST_CPPFLAGS) -DBOOST_THREAD_VERSION=2
 # This ugly list of headers is necessary to trigger the rebuild of the
 # SWIG-generated source when a header is modified. The issue cannot be fixed
 # here; it is a result of poor implementation hiding in the MMCore headers.
-# Unfortunately this list needs to be repeated in MMCorePy_wrap/Makefile.am, so
-# don't forget to update that file.
 swig_sources = MMCoreJ.i \
 	../MMCore/CircularBuffer.h  \
 	../MMCore/ConfigGroup.h  \
