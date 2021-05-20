@@ -32,6 +32,7 @@ const char *StarlightXpressFilterWheel::filterCalibrationModeName = "Filter Cali
 const char *StarlightXpressFilterWheel::filterNumberName = "Number of Filters";
 const char *StarlightXpressFilterWheel::autoValue = "Auto";
 const char *StarlightXpressFilterWheel::manualValue = "Manual";
+const char* StarlightXpressFilterWheel::pollDelayName = "Poll Delay (ms)";
 
 const StarlightXpressFilterWheel::Command StarlightXpressFilterWheel::Command::GetNFilters(0, 1);
 const StarlightXpressFilterWheel::Command StarlightXpressFilterWheel::Command::GetCurrentFilter(0, 0);
@@ -39,6 +40,16 @@ const StarlightXpressFilterWheel::Command StarlightXpressFilterWheel::Command::G
 #define SXPR_ERROR 108903
 #define SXPR_PORT_CHANGE_FORBIDDEN 108904
 #define SXPR_N_FILTERS_CHANGE_FORBIDDEN 108905
+
+#ifdef min
+#undef min
+#endif // min
+
+#ifdef max
+#undef max
+#endif // max
+
+
 
 MODULE_API void InitializeModuleData()
 {
@@ -70,7 +81,9 @@ StarlightXpressFilterWheel::StarlightXpressFilterWheel()
    m_busy(false),
    m_runCalibration(true),
    m_n_filters(0),
-   m_response_timeout_ms(1000)
+   m_response_timeout_ms(1000),
+   m_poll_delay_ms(2000),
+   m_current_filter_dirty(true)
 {
    InitializeDefaultErrorMessages();
    SetErrorText(SXPR_PORT_CHANGE_FORBIDDEN, "Port change is forbidden after initialization");
@@ -127,6 +140,11 @@ int StarlightXpressFilterWheel::Initialize()
    ret = CreateStringProperty(MM::g_Keyword_Label, "", false, pAct);
    if (ret != DEVICE_OK)
       return ret;
+
+   pAct = new CPropertyAction(this, &StarlightXpressFilterWheel::OnPollDelay);
+   ret = CreateIntegerProperty(StarlightXpressFilterWheel::pollDelayName, m_poll_delay_ms, false, pAct);
+   if (ret != DEVICE_OK)
+       return ret;
 
    m_initialised = true;
    return DEVICE_OK;
@@ -248,6 +266,20 @@ int StarlightXpressFilterWheel::OnNFilters(MM::PropertyBase* pProp, MM::ActionTy
    return DEVICE_OK;
 }
 
+int StarlightXpressFilterWheel::OnPollDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet) {
+        pProp->Set(static_cast<long>(m_poll_delay_ms));
+    }
+    else if (eAct == MM::AfterSet) {
+        long v;
+        pProp->Get(v);
+        m_poll_delay_ms = static_cast<int>(v);
+    }
+
+    return DEVICE_OK;
+}
+
 StarlightXpressFilterWheel::Response StarlightXpressFilterWheel::send(Command cmd)
 {
    PurgeComPort(m_port.c_str());
@@ -285,6 +317,7 @@ StarlightXpressFilterWheel::Response StarlightXpressFilterWheel::send(Command cm
 
 int StarlightXpressFilterWheel::get_n_filters()
 {
+   LogMessage("GET N FILTERS START", true);
    m_busy = true;
    Response r = m_runCalibration ? send(Command::GetNFilters) : send(Command::GetCurrentFilter);
    while (r.fst == 0) {
@@ -292,27 +325,47 @@ int StarlightXpressFilterWheel::get_n_filters()
       r = send(Command::GetCurrentFilter);
    }
    m_busy = false;
+   LogMessage("GET N FILTERS END", true);
    return r.snd;
 }
 
 int StarlightXpressFilterWheel::get_current_filter()
 {
+   LogMessage("GET CURRENT FILTER START", true);
+
+   if (!m_current_filter_dirty) {
+	   LogMessage("GET CURRENT FILTER END", true);
+       return m_current_filter;
+   }
+
    m_busy = true;
    Response r = send(Command::GetCurrentFilter);
    while (r.fst == 0) {
-      CDeviceUtils::SleepMs(100);
+      CDeviceUtils::SleepMs(250);
       r = send(Command::GetCurrentFilter);
    }
 
+   m_current_filter = r.fst - 1;
+   m_current_filter_dirty = false;
    m_busy = false;
+
+   LogMessage("GET CURRENT FILTER END", true);
+
    return r.fst - 1;
 }
 
 void StarlightXpressFilterWheel::set_current_filter(unsigned char n)
 {
+   LogMessage("SET CURRENT FILTER START", true);
+   m_current_filter_dirty = true;
    m_busy = true;
    send(Command::SetCurrentFilter(n));
-   CDeviceUtils::SleepMs(100);
+
+   const int filter_distance = std::labs(m_current_filter - n);
+   const int delay = m_poll_delay_ms * std::min(filter_distance, m_n_filters - filter_distance);
+
+   CDeviceUtils::SleepMs(delay);
    get_current_filter();
+   LogMessage("SET CURRENT FILTER END", true);
    m_busy = false;
 }

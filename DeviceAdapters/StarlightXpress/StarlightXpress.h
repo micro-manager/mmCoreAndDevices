@@ -47,12 +47,14 @@ class StarlightXpressFilterWheel : public CStateDeviceBase<StarlightXpressFilter
       int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnRunCalibration(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnNFilters(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnPollDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    private:
       static const char *filterCalibrationModeName;
       static const char *filterNumberName;
       static const char *autoValue;
       static const char *manualValue;
+      static const char *pollDelayName;
 
       struct Command { 
          Command(unsigned char fst, unsigned char snd) : fst(fst), snd(snd) {}
@@ -79,6 +81,9 @@ class StarlightXpressFilterWheel : public CStateDeviceBase<StarlightXpressFilter
       bool m_runCalibration;
       int m_n_filters;
       unsigned long m_response_timeout_ms; 
+      int m_current_filter;
+      bool m_current_filter_dirty;
+      int m_poll_delay_ms;
 };
 
 #endif
