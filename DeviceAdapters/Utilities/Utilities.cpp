@@ -54,6 +54,7 @@ const char* g_DeviceNameMultiDAStateDevice = "Multi DA State Device";
 const char* g_DeviceNameAutoFocusStage = "AutoFocus Stage";
 const char* g_DeviceNameStateDeviceShutter = "State Device Shutter";
 const char* g_DeviceNameSerialDTRShutter = "Serial port DTR Shutter";
+const char* g_DeviceNameSignalIOsAsGalvo = "SignalIOs as Galvo";
 
 const char* g_PropertyMinUm = "Stage Low Position(um)";
 const char* g_PropertyMaxUm = "Stage High Position(um)";
@@ -5051,7 +5052,7 @@ int StateDeviceShutter::OnStateDevice(MM::PropertyBase* pProp, MM::ActionType eA
 }
 
 /**********************************************************************
- * StateDeviceShutter implementation
+ * SerialDTRShutter implementation
  */
 SerialDTRShutter::SerialDTRShutter() :
    port_ (""),
@@ -5206,3 +5207,334 @@ int SerialDTRShutter::OnLogic(MM::PropertyBase* pProp, MM::ActionType pAct)
    }
    return DEVICE_OK;
 }
+
+
+/**********************************************************************
+ * SerialIOsAsGalvos implementation
+ */
+SignalIOsAsGalvo::SignalIOsAsGalvo() :
+   initialized_(false)
+{
+
+   InitializeDefaultErrorMessages();
+
+   // SetErrorText(ERR_INVALID_DEVICE_NAME, "Please select a valid port");
+}
+
+SignalIOsAsGalvo::~SignalIOsAsGalvo()
+{
+   Shutdown();
+}
+
+
+int SignalIOsAsGalvo::Initialize() 
+{
+   //MMThreadGuard g(physicalShutterLock_);
+
+   // get list with available Shutters   
+   std::vector<std::string> tmpShutters;
+   char deviceName[MM::MaxStrLength];
+   unsigned int deviceIterator = 0;
+   for(;;)
+   {
+      GetLoadedDeviceOfType(MM::ShutterDevice, deviceName, deviceIterator++);
+      if( 0 < strlen(deviceName))
+      {
+         tmpShutters.push_back(std::string(deviceName));
+      }
+      else
+         break;
+   }
+
+   std::vector<std::string> availableShutters;
+   availableShutters.push_back(g_Undefined);
+   std::vector<std::string>::iterator iter;
+   for (iter = tmpShutters.begin(); iter != tmpShutters.end(); iter++ ) {
+      MM::Device* shutter = GetDevice((*iter).c_str());
+      std::ostringstream os;
+      os << this << " " << shutter;
+      LogMessage(os.str().c_str());
+      if (shutter &&  (this != shutter))
+         availableShutters.push_back(*iter);
+   }
+
+   CPropertyAction* pAct = new CPropertyAction (this, &SignalIOsAsGalvo::OnShutterDevice);
+   std::string shutter = "Shutter";
+   CreateProperty(shutter.c_str(), availableShutters[0].c_str(), MM::String, false, pAct, false);
+   SetAllowedValues(shutter.c_str(), availableShutters);
+
+   // get available SignalIO devices
+   std::vector<std::string> tmpSignalIODevices;
+   deviceIterator = 0;
+   for(;;)
+   {
+      GetLoadedDeviceOfType(MM::SignalIODevice, deviceName, deviceIterator++);
+      if( 0 < strlen(deviceName))
+      {
+         tmpSignalIODevices.push_back(std::string(deviceName));
+      }
+      else
+         break;
+   }
+   
+   std::vector<std::string> availableSignalIODevices;
+   availableSignalIODevices.push_back(g_Undefined);
+   for (iter = tmpSignalIODevices.begin(); iter != tmpSignalIODevices.end(); iter++ ) {
+      MM::Device* signalIO = GetDevice((*iter).c_str());
+      std::ostringstream os;
+      os << this << " " << signalIO;
+      LogMessage(os.str().c_str());
+      if (signalIO &&  (this != signalIO))
+         availableSignalIODevices.push_back(*iter);
+   }
+
+   pAct = new CPropertyAction (this, &SignalIOsAsGalvo::OnSignalIODevice1);
+   std::string signalIO = "SignalIO_1";
+   CreateProperty(signalIO.c_str(), availableSignalIODevices[0].c_str(), MM::String, false, pAct, false);
+   SetAllowedValues(signalIO.c_str(), availableSignalIODevices);
+
+   pAct = new CPropertyAction (this, &SignalIOsAsGalvo::OnSignalIODevice2);
+   signalIO = "SignalIO_2";
+   CreateProperty(signalIO.c_str(), availableSignalIODevices[0].c_str(), MM::String, false, pAct, false);
+   SetAllowedValues(signalIO.c_str(), availableSignalIODevices);
+
+   int ret = UpdateStatus();
+   if (ret != DEVICE_OK)
+      return ret;
+
+   initialized_ = true;
+
+
+   return DEVICE_OK;
+}
+
+void SignalIOsAsGalvo::GetName(char* name) const
+{
+   CDeviceUtils::CopyLimitedString(name, g_DeviceNameSignalIOsAsGalvo);
+}
+
+bool SignalIOsAsGalvo::Busy()
+{
+   MM::Shutter* shutter = (MM::Shutter*) GetDevice(shutterDevice_.c_str());
+   if ( (shutter != 0) && shutter->Busy())
+      return true;
+
+   MM::SignalIO* signalIO1 = (MM::SignalIO*) GetDevice(signalIODevice1_.c_str());
+   if (signalIO1 && signalIO1->Busy())
+      return true;
+
+   MM::SignalIO* signalIO2 = (MM::SignalIO*) GetDevice(signalIODevice2_.c_str());
+   if (signalIO2 && signalIO2->Busy())
+      return true;
+
+   return false;
+}
+
+int SignalIOsAsGalvo::SetPosition(double x, double y)
+{
+   MM::SignalIO* signalIO1 = (MM::SignalIO*) GetDevice(signalIODevice1_.c_str());
+   int ret = DEVICE_OK;
+   if (signalIO1)
+   {
+      ret = signalIO1->SetSignal(x);
+      if (ret != DEVICE_OK)
+         return ret;
+   } else
+   {
+      return ERR_INVALID_DEVICE_NAME;
+   }
+   MM::SignalIO* signalIO2 = (MM::SignalIO*) GetDevice(signalIODevice2_.c_str());
+   if (signalIO2)
+   {
+      int ret = signalIO2->SetSignal(y);
+      if (ret != DEVICE_OK)
+         return ret;
+   } else
+   {
+      return ERR_INVALID_DEVICE_NAME;
+   }
+   return DEVICE_OK;
+
+}
+
+int SignalIOsAsGalvo::GetPosition(double& x, double& y)
+{
+   MM::SignalIO* signalIO1 = (MM::SignalIO*) GetDevice(signalIODevice1_.c_str());
+   if (signalIO1)
+   {
+      int ret = signalIO1->GetSignal(x);
+      if (ret != DEVICE_OK)
+         return ret;
+   } else
+   {
+      return ERR_INVALID_DEVICE_NAME;
+   }
+   MM::SignalIO* signalIO2 = (MM::SignalIO*) GetDevice(signalIODevice2_.c_str());
+   if (signalIO2)
+   {
+      int ret = signalIO2->GetSignal(y);
+      if (ret != DEVICE_OK)
+         return ret;
+   } else
+   {
+      return ERR_INVALID_DEVICE_NAME;
+   }
+   return DEVICE_OK;
+}
+
+int SignalIOsAsGalvo::SetIlluminationState(bool on)
+{
+   MM::Shutter* shutter = (MM::Shutter*) GetDevice(shutterDevice_.c_str());
+   if (shutter)
+   {
+      int ret = shutter->SetOpen(on);
+      if (ret != DEVICE_OK)
+      {
+         return ret;
+      }
+   } else
+   {
+      return ERR_INVALID_DEVICE_NAME;
+   }
+   return DEVICE_OK;
+}
+
+int SignalIOsAsGalvo::PointAndFire(double x, double y, double duration_us)
+{
+   int ret = SetPosition(x, y);
+   if (ret != DEVICE_OK) 
+      return ret;
+   ret = SetIlluminationState(true);
+   if (ret != DEVICE_OK)
+      return ret;
+   CDeviceUtils::SleepMs((long) (duration_us / 1000.0));
+   return SetIlluminationState(false);
+}
+
+
+double SignalIOsAsGalvo::GetXMinimum()
+{
+   return GetMinimum(signalIODevice1_);
+}
+
+double SignalIOsAsGalvo::GetYMinimum()
+{
+   return GetMinimum(signalIODevice2_);
+}
+
+double SignalIOsAsGalvo::GetMinimum(std::string deviceName)
+{
+   MM::SignalIO* signalIO = (MM::SignalIO*) GetDevice(deviceName.c_str());
+   if (signalIO)
+   {
+      double min, max;
+      if (signalIO->GetLimits(min, max) == DEVICE_OK)
+      {
+         return min;
+      }
+   }
+   // Failure, did not get the minimum, do what now?
+   return 0.0;
+}
+
+double SignalIOsAsGalvo::GetXRange()
+{
+   return GetRange(signalIODevice1_);
+}
+
+double SignalIOsAsGalvo::GetYRange()
+{
+   return GetRange(signalIODevice2_);
+}
+
+double SignalIOsAsGalvo::GetRange(std::string deviceName)
+{
+   MM::SignalIO* signalIO = (MM::SignalIO*) GetDevice(deviceName.c_str());
+   if (signalIO)
+   {
+      double min, max;
+      if (signalIO->GetLimits(min, max) == DEVICE_OK)
+      {
+         // TODO: is range == max or range == max - min
+         return max;
+      }
+   }
+   // Failure, did not get the minimum, do what now?
+   return 0.0;
+}
+
+
+
+
+///////////////////////////////////////
+// Action Interface
+//////////////////////////////////////
+int SignalIOsAsGalvo::OnSignalIODevice1(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(signalIODevice1_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string serialIODevice1;
+      pProp->Get(serialIODevice1);
+      MM::SignalIO* da = (MM::SignalIO*) GetDevice(serialIODevice1.c_str());
+      if (da != 0) {
+         signalIODevice1_ = serialIODevice1;
+      } else
+         return ERR_INVALID_DEVICE_NAME;
+      if (initialized_)
+         da->GetLimits(minVolts1_, maxVolts1_);
+   }
+   return DEVICE_OK;
+}
+
+int SignalIOsAsGalvo::OnSignalIODevice2(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(signalIODevice2_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string serialIODevice2;
+      pProp->Get(serialIODevice2);
+      MM::SignalIO* da = (MM::SignalIO*) GetDevice(serialIODevice2.c_str());
+      if (da != 0) {
+         signalIODevice2_ = serialIODevice2;
+      } else
+         return ERR_INVALID_DEVICE_NAME;
+      if (initialized_)
+         da->GetLimits(minVolts2_, maxVolts2_);
+   }
+   return DEVICE_OK;
+}
+
+int SignalIOsAsGalvo::OnShutterDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   //MMThreadGuard g(physicalShutterLock_);
+
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(shutterDevice_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string shutterName;
+      pProp->Get(shutterName);
+      if (shutterName == g_Undefined) {
+         shutterDevice_ = g_Undefined;
+      } else {
+         MM::Shutter* shutter = (MM::Shutter*) GetDevice(shutterName.c_str());
+         if (shutter != 0) {
+            shutterDevice_ = shutterName;
+         } else
+            return ERR_INVALID_DEVICE_NAME;
+      }
+   }
+
+   return DEVICE_OK;
+}
+
+

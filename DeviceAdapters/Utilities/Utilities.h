@@ -773,5 +773,73 @@ private:
    MM::MMTime lastMoveStartTime_;
 };
 
+/**
+ * Combines two SerialIO devices into a single Glavo devices
+ */
+class SignalIOsAsGalvo : public CGalvoBase<SignalIOsAsGalvo>
+{
+public:
+   SignalIOsAsGalvo();
+   ~SignalIOsAsGalvo();
+
+   int Initialize();
+   int Shutdown() {initialized_ = false; return DEVICE_OK;}
+  
+   void GetName(char* pszName) const;
+   bool Busy();
+
+   int PointAndFire(double x, double y, double time_us);
+   int SetSpotInterval(double /* pulseInterval_us */) { return DEVICE_UNSUPPORTED_COMMAND;}
+   int SetPosition(double x, double y);
+   int GetPosition(double& x, double& y);
+   int SetIlluminationState(bool on);
+   /**
+    * X range of the device in native units
+    */
+   double GetXRange();
+   /**
+    * Minimum X value for the device in native units
+    * Must be implemented if it is not 0.0
+    */
+   double GetXMinimum();
+      /**
+       * Y range of the device in native units
+       */
+   double GetYRange();
+   /**
+    * Minimum Y value for the device in native units
+    * Must be implemented if it is not 0.0
+    */
+   double GetYMinimum();
+   int AddPolygonVertex(int /* polygonIndex */, double /* x */, double /* y */) { return DEVICE_UNSUPPORTED_COMMAND;};
+   int DeletePolygons() { return DEVICE_UNSUPPORTED_COMMAND;};
+   int RunSequence() { return DEVICE_UNSUPPORTED_COMMAND;};
+   int LoadPolygons() { return DEVICE_UNSUPPORTED_COMMAND;};
+   int SetPolygonRepetitions(int /* repetitions */) { return DEVICE_UNSUPPORTED_COMMAND;};
+   int RunPolygons() { return DEVICE_UNSUPPORTED_COMMAND;};
+   int StopSequence() { return DEVICE_UNSUPPORTED_COMMAND;};
+   int GetChannel(char* /* channelName */) { return DEVICE_UNSUPPORTED_COMMAND;};
+
+     // action interface
+   // ----------------
+   int OnSignalIODevice1(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSignalIODevice2(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnShutterDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   double GetMinimum(std::string deviceName);
+   double GetRange(std::string deviceName);
+
+   std::string signalIODevice1_;
+   std::string signalIODevice2_;
+   std::string shutterDevice_;
+
+   bool initialized_;
+   double minVolts1_;
+   double minVolts2_;
+   double maxVolts1_;
+   double maxVolts2_;
+};
+
 
 #endif //_UTILITIES_H_
