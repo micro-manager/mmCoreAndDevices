@@ -378,14 +378,9 @@ int PrizmatixHub::OnLogic(MM::PropertyBase* pProp, MM::ActionType pAct)
 // ~~~~~~~~~~~~~~~~~~~~~~
 
 PrizmatixLED::PrizmatixLED(int nmLeds_,char *Name) :
-      busy_(false), 
-      minV_(0.0), 
-      maxV_(100.0), 
-      volts_(0.0),
-      gatedVolts_(0.0),
-      nmLeds(nmLeds_), 
+      nmLeds(nmLeds_) 
    //   maxChannel_(10),
-      gateOpen_(true)
+   //   gateOpen_(true)
 {
    InitializeDefaultErrorMessages();
 
@@ -395,31 +390,15 @@ PrizmatixLED::PrizmatixLED(int nmLeds_,char *Name) :
    SetErrorText(ERR_WRITE_FAILED, "Failed to write data to the device");
    SetErrorText(ERR_CLOSE_FAILED, "Failed closing the device");
    SetErrorText(ERR_NO_PORT_SET, "Hub Device not found.  The Prizmatix Hub device is needed to create this device");
-
-   /* Channel property is not needed
-   CPropertyAction* pAct = new CPropertyAction(this, &PrizmatixLED::OnChannel);
-   CreateProperty("Channel", channel_ == 1 ? "1" : "2", MM::Integer, false, pAct, true);
-   for (int i=1; i<= 2; i++){
-      std::ostringstream os;
-      os << i;
-      AddAllowedValue("Channel", os.str().c_str());
-   }
-  
-
-   CPropertyAction* pAct = new CPropertyAction(this, &PrizmatixLED::OnMaxVolt);
-   CreateProperty("MaxVolt", "5.0", MM::Float, false, pAct, true);
- //  MM::Hub* hub = GetParentHub();
-  //  PrizmatixHub* PHub = dynamic_cast<PrizmatixHub *>(hub);
-     */
-   name_ = std::string(Name);// PHub->GetName();//channel_ == 1 ? g_DeviceNameArduinoDA1 : g_DeviceNameArduinoDA2;
+   name_ = std::string(Name);
   
    // Description
    int nRet = CreateProperty(MM::g_Keyword_Description, "Prizmatix Control", MM::String, true);
    assert(DEVICE_OK == nRet);
-    // ???    D:0,1
+  
    // Name
- //MM !!!  nRet = CreateProperty(MM::g_Keyword_Name, name_.c_str(), MM::String, true);
-// MM 11   assert(DEVICE_OK == nRet);
+ // nRet = CreateProperty(MM::g_Keyword_Name, name_.c_str(), MM::String, true);
+ //  assert(DEVICE_OK == nRet);
 
    // parent ID display
    CreateHubIDProperty();
@@ -446,17 +425,13 @@ int PrizmatixLED::Initialize()
    hub->GetLabel(hubLabel);
    SetParentID(hubLabel); // for backward comp.
 
-
-   /// FirmWareName
-    // ???    D:0,1
-   // Name
    {  // Firmware property
 			char *Com="V:1";
 			hub->SendSerialCommandH(Com);			      
 			std::string answer;
 			int  ret = hub->GetSerialAnswerH(  answer);
-			int NumFirm=atoi(answer.data()+2);
-			char NameF[15];
+			int NumFirm=atoi(answer.data()+2);			
+			char NameF[25];
 			switch(NumFirm)
 			{
 				 
@@ -474,6 +449,14 @@ int PrizmatixLED::Initialize()
 				CreateProperty("Firmware Name", NameF, MM::String, true);
 			if(NumFirm==2)
 			{ // Add Stbl
+				  
+			   CPropertyAction* pAct = new CPropertyAction (this, &PrizmatixLED::OnSTBL);
+			    ret = CreateProperty("STBL", "0", MM::Integer, false, pAct);
+				   if (ret != DEVICE_OK)
+					  return ret;
+
+				   AddAllowedValue("STBL", "0");
+				   AddAllowedValue("STBL", "1");
 			}
    }
    
@@ -503,6 +486,8 @@ int PrizmatixLED::Initialize()
    
    for(int i=0;i< nmLeds ;i++)
    {
+	   ValLeds[i]=0;
+		  OnOffLeds[i]=0;
 		  // CPropertyAction
 			   CPropertyActionEx* pAct = new CPropertyActionEx (this, &PrizmatixLED::OnPowerLEDEx,i);
 		   char Name[20],StateName[20];
@@ -519,8 +504,7 @@ int PrizmatixLED::Initialize()
 				sprintf(Name,"LED%d",i);  
 			nRet= CreateProperty(Name, "0", MM::Integer,  false, pAct);
 			 SetPropertyLimits(Name, 0, 100);
-			  ValLeds[i]=0;
-			  OnOffLeds[i]=0;
+			  
 		//-----
 					CPropertyActionEx* pAct5 = new CPropertyActionEx (this, &PrizmatixLED::OnOfOnEx,i);
 						sprintf(StateName,"State %s",Name); 
@@ -552,7 +536,7 @@ int PrizmatixLED::Shutdown()
    return DEVICE_OK;
 }
 
-int PrizmatixLED::WriteToPort(unsigned long value)
+int PrizmatixLED::WriteToPort(char *Str)
 {
    PrizmatixHub* hub = static_cast<PrizmatixHub*>(GetParentHub());
    if (!hub || !hub->IsPortAvailable())
@@ -561,106 +545,43 @@ int PrizmatixLED::WriteToPort(unsigned long value)
    MMThreadGuard myLock(hub->GetLock());
 
    hub->PurgeComPortH();
-   char Buf[100],StrNum[1024];
-   strcpy(Buf,"P:");
-   for(int i=0;i< nmLeds;i++)
+   if(Str ==0)
    {
-	  if( OnOffLeds[i]==0)
-		 strcat(Buf,"0");
-	  else
-		 strcat(Buf,_itoa(ValLeds[i],StrNum,10));
-	   strcat(Buf,",");
+		char Buf[100],StrNum[1024];
+   
+	   strcpy(Buf,"P:");
+	   for(int i=0;i< nmLeds;i++)
+	   {
+		  if( OnOffLeds[i]==0)
+			 strcat(Buf,"0");
+		  else
+			 strcat(Buf,_itoa(ValLeds[i],StrNum,10));
+		   strcat(Buf,",");
+	   }
+		hub->SendSerialCommandH(Buf);
    }
-    hub->SendSerialCommandH(Buf);
-		/***
-   int ret = hub->WriteToComPortH((const unsigned char*) command, 4);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   MM::MMTime startTime = GetCurrentMMTime();
-   unsigned long bytesRead = 0;
-   unsigned char answer[4];
-   while ((bytesRead < 4) && ( (GetCurrentMMTime() - startTime).getMsec() < 2500)) {
-      unsigned long bR;
-      ret = hub->ReadFromComPortH(answer + bytesRead, 4 - bytesRead, bR);
-      if (ret != DEVICE_OK)
-         return ret;
-      bytesRead += bR;
+   else
+   {
+	   hub->SendSerialCommandH(Str);
    }
-   if (answer[0] != 3)
-      return ERR_COMMUNICATION;
-	  ****/
+		
    hub->SetTimedOutput(false);
 
    return DEVICE_OK;
 }
 
-/***
-int PrizmatixLED::WriteSignal(double volts)
-{
-   long value = (long) ( (volts - minV_) / maxV_ * 4095);
 
-   std::ostringstream os;
-    os << "Volts: " << volts << " Max Voltage: " << maxV_ << " digital value: " << value;
-    LogMessage(os.str().c_str(), true);
-
-   return WriteToPort(value);
-}
-
-int PrizmatixLED::SetSignal(double volts)
-{
-   volts_ = volts;
-   if (gateOpen_) {
-      gatedVolts_ = volts_;
-      return WriteSignal(volts_);
-   } else {
-      gatedVolts_ = 0;
-   }
-
-   return DEVICE_OK;
-}
-*/
-int PrizmatixLED::SetGateOpen(bool open)
-{
-   if (open) {
-      gateOpen_ = true;
-      gatedVolts_ = volts_;
-      return DEVICE_OK;//WriteSignal(volts_);
-   } 
-   gateOpen_ = false;
-   gatedVolts_ = 0;
-   return  DEVICE_OK;
-
-}
- 
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
 
-int PrizmatixLED::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      // nothing to do, let the caller use cached property
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      double volts;
-      pProp->Get(volts);
- 
-    //  return SetSignal(volts);
-	     return WriteToPort(0);
-   }
-
-   return DEVICE_OK;
-}
  int PrizmatixLED::OnOfOnEx(MM::PropertyBase* pProp, MM::ActionType eAct,long Param)
  {
-	  if (eAct == MM::BeforeGet)
+	  if (eAct == MM::BeforeGet)// && OnOffLeds[Param]>=0 )
    {
       // nothing to do, let the caller use cached property
    }
-   else if (eAct == MM::AfterSet)
+   else if (eAct == MM::AfterSet )//|| OnOffLeds[Param] ==-1)
    {
 	   long pos;
 		pProp->Get(pos);
@@ -669,55 +590,39 @@ int PrizmatixLED::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
 	 }
 	   return DEVICE_OK;
  }
-int PrizmatixLED::OnPowerLEDEx(MM::PropertyBase* pProp, MM::ActionType eAct,long Param)
-{
-   if (eAct == MM::BeforeGet)
+ int PrizmatixLED::OnSTBL(MM::PropertyBase* pProp, MM::ActionType eAct)
+ {
+	  if (eAct == MM::BeforeGet )//&& ValLeds[Param] >=0)
    {
       // nothing to do, let the caller use cached property
    }
-   else if (eAct == MM::AfterSet)
+   else if (eAct == MM::AfterSet)//|| ValLeds[Param]==-1)
+   {
+      long Stat;
+      pProp->Get(Stat);
+      char Buf[20];
+	 sprintf(Buf,"K:1,8,%d",Stat);
+  
+	     return WriteToPort(Buf);
+   }
+
+   return DEVICE_OK;
+ }
+int PrizmatixLED::OnPowerLEDEx(MM::PropertyBase* pProp, MM::ActionType eAct,long Param)
+{
+   if (eAct == MM::BeforeGet )//&& ValLeds[Param] >=0)
+   {
+      // nothing to do, let the caller use cached property
+   }
+   else if (eAct == MM::AfterSet)//|| ValLeds[Param]==-1)
    {
       double volts;
       pProp->Get(volts);
      	ValLeds[Param]= floor((volts*4095/100));
-    //  return SetSignal(volts);
+
 	     return WriteToPort(0);
    }
 
    return DEVICE_OK;
 }
-/*
-int PrizmatixLED::OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(maxV_);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      pProp->Get(maxV_);
-      if (HasProperty("Volts"))
-         SetPropertyLimits("Volts", 0.0, maxV_);
 
-   }
-   return DEVICE_OK;
-}
-/* MMMMM ???
-int PrizmatixLED::OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set((long int)channel_);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      long channel;
-      pProp->Get(channel);
-      if (channel >=1 && ( (unsigned) channel <=maxChannel_) )
-         channel_ = channel;
-   }
-   return DEVICE_OK;
-}
-**/
-
-///////////////////////////////////////////////////////////////////////////////

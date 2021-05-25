@@ -100,39 +100,34 @@ public:
    int Shutdown();
   
    void GetName(char* pszName) const;
-   bool Busy() {return busy_;}
+   
 
    // DA API
-   int SetGateOpen(bool open);
-   int GetGateOpen(bool& open) {open = gateOpen_; return DEVICE_OK;};
-   int SetSignal(double volts){return DEVICE_OK;} ;
-   int GetSignal(double& volts) {volts_ = volts; return DEVICE_UNSUPPORTED_COMMAND;}     
-   int GetLimits(double& minVolts, double& maxVolts) {minVolts = minV_; maxVolts = maxV_; return DEVICE_OK;}
+      virtual bool Busy()
+	  {
+		  return false;
+	  }
+	  int SetGateOpen(bool open) {return DEVICE_OK;};  // abstract function in paret
+	int GetGateOpen(bool& open) { return DEVICE_OK;};
+	int SetSignal(double volts){return DEVICE_OK;} ;
+	int GetSignal(double& volts) { return DEVICE_UNSUPPORTED_COMMAND;}     
+	int GetLimits(double& minVolts, double& maxVolts) {return DEVICE_OK;}
    
    int IsDASequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
 
    // action interface
    // ----------------
-   int OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
+ 
    int OnPowerLEDEx(MM::PropertyBase* pProp, MM::ActionType eAct,long Param);
    int OnOfOnEx(MM::PropertyBase* pProp, MM::ActionType eAct,long Param);
- //??? MMMMM  int OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct);
-  //  MMM ???  int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSTBL(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   int WriteToPort(unsigned long lnValue);
-//   int WriteSignal(double volts);
+   int WriteToPort(char * Str);
    long  ValLeds[10];
    long  OnOffLeds[10];
    bool initialized_;
-   bool busy_;
-   double minV_;
-   double maxV_;
-   double volts_;
-   double gatedVolts_;
-   unsigned nmLeds;
-   unsigned maxnmLeds_;
-   bool gateOpen_;
+   unsigned int nmLeds;
    std::string name_;
 };
 #endif
