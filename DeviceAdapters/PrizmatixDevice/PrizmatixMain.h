@@ -1,0 +1,138 @@
+#ifndef __prizmatix_main_
+#define __prizmatix_main_
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include <string>
+#include <map>
+
+//////////////////////////////////////////////////////////////////////////////
+// Error codes
+//
+#define ERR_UNKNOWN_POSITION 101
+#define ERR_INITIALIZE_FAILED 102
+#define ERR_WRITE_FAILED 103
+#define ERR_CLOSE_FAILED 104
+#define ERR_BOARD_NOT_FOUND 105
+#define ERR_PORT_OPEN_FAILED 106
+#define ERR_COMMUNICATION 107
+#define ERR_NO_PORT_SET 108
+#define ERR_VERSION_MISMATCH 109
+
+class ArduinoInputMonitorThread;
+//  CArduinoHub
+ extern   MMThreadLock lock_;
+class PrizmatixHub : public HubBase<PrizmatixHub>  
+{
+public:
+   PrizmatixHub();
+   ~PrizmatixHub();
+   int GetNmLEDS(){return nmLeds;};
+   int Initialize();
+   int Shutdown();
+   void GetName(char* pszName) const;
+   bool Busy();
+
+   bool SupportsDeviceDetection(void);
+   MM::DeviceDetectionStatus DetectDevice(void);
+   int DetectInstalledDevices();
+
+   // property handlers
+   int OnPort(MM::PropertyBase* pPropt, MM::ActionType eAct);
+  //MMM???? int OnLogic(MM::PropertyBase* pPropt, MM::ActionType eAct);
+   int OnVersion(MM::PropertyBase* pPropt, MM::ActionType eAct);
+
+   // custom interface for child devices
+   bool IsPortAvailable() {return portAvailable_;}
+   bool IsLogicInverted() {return invertedLogic_;}
+   bool IsTimedOutputActive() {return timedOutputActive_;}
+   void SetTimedOutput(bool active) {timedOutputActive_ = active;}
+
+   int PurgeComPortH() {return PurgeComPort(port_.c_str());}
+   int WriteToComPortH(const unsigned char* command, unsigned len) {return WriteToComPort(port_.c_str(), command, len);}
+   int ReadFromComPortH(unsigned char* answer, unsigned maxLen, unsigned long& bytesRead)
+   {
+      return ReadFromComPort(port_.c_str(), answer, maxLen, bytesRead);
+   }
+     int  SendSerialCommandH(char *b)
+	 {
+		 if(initialized_==false) return 0;
+		 return SendSerialCommand(port_.c_str(), b,"\n");
+	 }
+	  int  GetSerialAnswerH( std::string &answer)
+	 {
+		   
+    return  GetSerialAnswer(port_.c_str(), "\r\n", answer);
+		  
+	 }
+   static MMThreadLock& GetLock() {return lock_;}
+  
+   void SetShutterState(unsigned state) {shutterState_ = state;}
+   void SetSwitchState(unsigned state) {switchState_ = state;}
+   unsigned GetShutterState() {return shutterState_;}
+   unsigned GetSwitchState() {return switchState_;}
+
+private:
+	int nmLeds;
+	
+   int GetControllerVersion(int&);
+   std::string port_;
+   bool initialized_;
+   bool portAvailable_;
+   bool invertedLogic_;
+   bool timedOutputActive_;
+   int version_;
+   
+   unsigned switchState_;
+   unsigned shutterState_;
+};
+
+ 
+//PrizmatixLED
+class PrizmatixLED : public CSignalIOBase<PrizmatixLED>  
+{
+public:
+   PrizmatixLED(int nmLeds,char *Name);
+   ~PrizmatixLED();
+  
+   // MMDevice API
+   // ------------
+   int Initialize();
+   int Shutdown();
+  
+   void GetName(char* pszName) const;
+   bool Busy() {return busy_;}
+
+   // DA API
+   int SetGateOpen(bool open);
+   int GetGateOpen(bool& open) {open = gateOpen_; return DEVICE_OK;};
+   int SetSignal(double volts){return DEVICE_OK;} ;
+   int GetSignal(double& volts) {volts_ = volts; return DEVICE_UNSUPPORTED_COMMAND;}     
+   int GetLimits(double& minVolts, double& maxVolts) {minVolts = minV_; maxVolts = maxV_; return DEVICE_OK;}
+   
+   int IsDASequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
+
+   // action interface
+   // ----------------
+   int OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPowerLEDEx(MM::PropertyBase* pProp, MM::ActionType eAct,long Param);
+   int OnOfOnEx(MM::PropertyBase* pProp, MM::ActionType eAct,long Param);
+ //??? MMMMM  int OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct);
+  //  MMM ???  int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   int WriteToPort(unsigned long lnValue);
+//   int WriteSignal(double volts);
+   long  ValLeds[10];
+   long  OnOffLeds[10];
+   bool initialized_;
+   bool busy_;
+   double minV_;
+   double maxV_;
+   double volts_;
+   double gatedVolts_;
+   unsigned nmLeds;
+   unsigned maxnmLeds_;
+   bool gateOpen_;
+   std::string name_;
+};
+#endif
