@@ -8,7 +8,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
 //
-#define ERR_UNKNOWN_POSITION 101
+ 
 #define ERR_INITIALIZE_FAILED 102
 #define ERR_WRITE_FAILED 103
 #define ERR_CLOSE_FAILED 104
@@ -18,9 +18,8 @@
 #define ERR_NO_PORT_SET 108
 #define ERR_VERSION_MISMATCH 109
 
-class ArduinoInputMonitorThread;
-//  CArduinoHub
- extern   MMThreadLock lock_;
+ 
+ 
 class PrizmatixHub : public HubBase<PrizmatixHub>  
 {
 public:
@@ -64,13 +63,14 @@ public:
     return  GetSerialAnswer(port_.c_str(), "\r\n", answer);
 		  
 	 }
+	  static MMThreadLock lock_;
    static MMThreadLock& GetLock() {return lock_;}
   
    void SetShutterState(unsigned state) {shutterState_ = state;}
    void SetSwitchState(unsigned state) {switchState_ = state;}
    unsigned GetShutterState() {return shutterState_;}
    unsigned GetSwitchState() {return switchState_;}
-
+   int GetNmLeds() {return nmLeds;}
 private:
 	int nmLeds;
 	
@@ -85,10 +85,10 @@ private:
    unsigned switchState_;
    unsigned shutterState_;
 };
-
+//CGenericBase
  
-//PrizmatixLED
-class PrizmatixLED : public CSignalIOBase<PrizmatixLED>  
+//PrizmatixLED   CSignalIOBase
+class PrizmatixLED : public CGenericBase<PrizmatixLED>  
 {
 public:
    PrizmatixLED(int nmLeds,char *Name);
@@ -107,14 +107,14 @@ public:
 	  {
 		  return false;
 	  }
-	  int SetGateOpen(bool open) {return DEVICE_OK;};  // abstract function in paret
+	   /*  int SetGateOpen(bool open) {return DEVICE_OK;};  // abstract function in paret
 	int GetGateOpen(bool& open) { return DEVICE_OK;};
 	int SetSignal(double volts){return DEVICE_OK;} ;
 	int GetSignal(double& volts) { return DEVICE_UNSUPPORTED_COMMAND;}     
 	int GetLimits(double& minVolts, double& maxVolts) {return DEVICE_OK;}
    
    int IsDASequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
-
+   */
    // action interface
    // ----------------
  
@@ -123,11 +123,18 @@ public:
    int OnSTBL(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+	PrizmatixHub* myHub;
    int WriteToPort(char * Str);
    long  ValLeds[10];
    long  OnOffLeds[10];
    bool initialized_;
-   unsigned int nmLeds;
+   int nmLeds;
    std::string name_;
 };
+
+
+
+
+ 
+ 
 #endif

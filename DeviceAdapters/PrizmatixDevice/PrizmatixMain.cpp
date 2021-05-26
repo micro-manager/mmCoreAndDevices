@@ -8,18 +8,11 @@
 
 const char* g_DeviceNameHub = "prizmatix-Hub";
 const char* g_DeviceOneLED = "Prizmatix Ctrl";
-const char* g_DeviceMultiLED_2 = "Prizmatix Ctrl(2)";
-const char* g_DeviceMultiLED_3 = "Prizmatix Ctrl(3)";
-const char* g_DeviceMultiLED_4 = "Prizmatix Ctrl(4)";
-const char* g_DeviceMultiLED_5 = "Prizmatix Ctrl(5)";
-const char* g_DeviceMultiLED_6 = "Prizmatix Ctrl(6)";
-const char* g_DeviceMultiLED_7 = "Prizmatix Ctrl(7)";
-const char* g_DeviceMultiLED_8 = "Prizmatix Ctrl(8)";
-const char* g_DeviceMultiLED_9 = "Prizmatix Ctrl(9)";
-const char* g_DeviceMultiLED_10 = "Prizmatix Ctrl(10)";
+ 
 const char* g_On = "On";
 const char* g_Off = "Off";
-   static MMThreadLock lock_;
+
+MMThreadLock PrizmatixHub::lock_;
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
 ///////////////////////////////////////////////////////////////////////////////
@@ -42,42 +35,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new PrizmatixLED(1,(char *)deviceName);
    }
-   else if (strcmp(deviceName, g_DeviceMultiLED_2) == 0)
-   {
-     return new PrizmatixLED(2,(char *)deviceName);
-   }
-      else if (strcmp(deviceName, g_DeviceMultiLED_3) == 0)
-   {
-     return new PrizmatixLED(3,(char *)deviceName);
-   }
-    else if (strcmp(deviceName, g_DeviceMultiLED_4) == 0)
-   {
-     return new PrizmatixLED(4,(char *)deviceName);
-   }   	  
-	    else if (strcmp(deviceName, g_DeviceMultiLED_5) == 0)
-   {
-     return new PrizmatixLED(5,(char *)deviceName);
-   }
-	  else if (strcmp(deviceName, g_DeviceMultiLED_6) == 0)
-   {
-     return new PrizmatixLED(6,(char *)deviceName);
-   }
-		  else if (strcmp(deviceName, g_DeviceMultiLED_7) == 0)
-   {
-     return new PrizmatixLED(7,(char *)deviceName);
-   }
-	    else if (strcmp(deviceName, g_DeviceMultiLED_8) == 0)
-   {
-     return new PrizmatixLED(8,(char *)deviceName);
-   }
-		    else if (strcmp(deviceName, g_DeviceMultiLED_9) == 0)
-   {
-     return new PrizmatixLED(9,(char *)deviceName);
-   }
-		  else if (strcmp(deviceName, g_DeviceMultiLED_10) == 0)
-   {
-     return new PrizmatixLED(10,(char *)deviceName);
-   }
+  
    return 0;
 }
 
@@ -110,20 +68,10 @@ PrizmatixHub::PrizmatixHub() :
    SetErrorText(ERR_PORT_OPEN_FAILED, "Failed opening Prizmatix USB device");
    SetErrorText(ERR_BOARD_NOT_FOUND, "Did not find an Prizmatix board .  Is the Prizmatix board connected to this serial port?");
    SetErrorText(ERR_NO_PORT_SET, "Hub Device not found.  The Prizmatix Hub device is needed to create this device");
-  /*??MMMMMM std::ostringstream errorText;
-   errorText << "The firmware version on the Arduino is not compatible with this adapter.  Please use firmware version ";
-   errorText <<  g_Min_MMVersion << " to " << g_Max_MMVersion;
-   SetErrorText(ERR_VERSION_MISMATCH, errorText.str().c_str());
-   ***/
+  
    CPropertyAction* pAct = new CPropertyAction(this, &PrizmatixHub::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
-   /*???? MMMMM
-   pAct = new CPropertyAction(this, &PrizmatixHub::OnLogic);
-   CreateProperty("Logic", g_invertedLogicString, MM::String, false, pAct, true);
-
-   AddAllowedValue("Logic", g_invertedLogicString);
-   AddAllowedValue("Logic", g_normalLogicString);
-   ***/
+  
 }
 
 PrizmatixHub::~PrizmatixHub()
@@ -141,9 +89,7 @@ bool PrizmatixHub::Busy()
    return false;
 }
 
-// private and expects caller to:
-// 1. guard the port
-// 2. purge the port
+
 int PrizmatixHub::GetControllerVersion(int& version)
 {
    int ret = DEVICE_OK;
@@ -159,11 +105,7 @@ int PrizmatixHub::GetControllerVersion(int& version)
    if (ret != DEVICE_OK)
       return ret ;
    int Mik=answer.find_last_of('_');
-   nmLeds=atoi(answer.data()+Mik+1);
-   //nmLeds=1;// MMM set from the answer 
-   // Check version number of the Arduino
-  
-   nmLeds=2;//MMMM
+   nmLeds=atoi(answer.data()+Mik+1);   
    return ret;
 
 }
@@ -255,22 +197,9 @@ int PrizmatixHub::Initialize()
       return ret;
    if(nmLeds <=0) return ERR_COMMUNICATION;
   
-/*MMM  ?????
-   if (version_ < g_Min_MMVersion || version_ > g_Max_MMVersion)
-      return ERR_VERSION_MISMATCH;
-
-   CPropertyAction* pAct = new CPropertyAction(this, &PrizmatixHub::OnVersion);
-   std::ostringstream sversion;
-   sversion << version_;
-   CreateProperty(g_versionProp, sversion.str().c_str(), MM::Integer, true, pAct);
-   */
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
-
-   // turn off verbose serial debug messages
-   // GetCoreCallback()->SetDeviceProperty(port_.c_str(), "Verbose", "0");
-
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -283,30 +212,11 @@ int PrizmatixHub::DetectInstalledDevices()
       std::vector<std::string> peripherals; 
       peripherals.clear();
 	  char *Name=0;
-	  switch(nmLeds)
-	  {
-			case 1: Name=(char *) g_DeviceOneLED;break;
-			case 2: Name=(char *)g_DeviceMultiLED_2;break;
-			case 3: Name=(char *)g_DeviceMultiLED_3;break;
-			case 4: Name=(char *)g_DeviceMultiLED_4;break;
-			case 5: Name=(char *)g_DeviceMultiLED_5;break;
-			case 6: Name=(char *)g_DeviceMultiLED_6;break;
-			case 7: Name=(char *)g_DeviceMultiLED_7;break;
-			case 8: Name=(char *)g_DeviceMultiLED_8;break;
-			case 9: Name=(char *)g_DeviceMultiLED_9;break;
-			case 10: Name=(char *)g_DeviceMultiLED_10;break;
-			default:
-				Name=(char *)g_DeviceMultiLED_10;break;
-	  }
-	 
+	/**  switch(nmLeds)**/
+	
+	  Name=(char *) g_DeviceOneLED;
 		peripherals.push_back(Name);
-	 /*** MMMM?????
-      peripherals.push_back(g_DeviceNameArduinoSwitch);
-      peripherals.push_back(g_DeviceNameArduinoShutter);
-      peripherals.push_back(g_DeviceNameArduinoInput);
-      peripherals.push_back(g_DeviceNameArduinoDA1);
-      peripherals.push_back(g_DeviceNameArduinoDA2);
-	  **/
+	 
       for (size_t i=0; i < peripherals.size(); i++) 
       {
          MM::Device* pDev = ::CreateDevice(peripherals[i].c_str());
@@ -350,42 +260,20 @@ int PrizmatixHub::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
    }
    return DEVICE_OK;
 }
-/*** MMM?????
-int PrizmatixHub::OnLogic(MM::PropertyBase* pProp, MM::ActionType pAct)
-{
-   if (pAct == MM::BeforeGet)
-   {
-      if (invertedLogic_)
-         pProp->Set(g_invertedLogicString);
-      else
-         pProp->Set(g_normalLogicString);
-   } else if (pAct == MM::AfterSet)
-   {
-      std::string logic;
-      pProp->Get(logic);
-      if (logic.compare(g_invertedLogicString)==0)
-         invertedLogic_ = true;
-      else invertedLogic_ = false;
-   }
-   return DEVICE_OK;
-}
-***/
-////////////////////////////////////////////////////
-
-
+ 
 ///////////////////////////////////////////////////////////////////////////////
 // PrizmatixLED implementation
 // ~~~~~~~~~~~~~~~~~~~~~~
 
 PrizmatixLED::PrizmatixLED(int nmLeds_,char *Name) :
       nmLeds(nmLeds_) 
-   //   maxChannel_(10),
-   //   gateOpen_(true)
+ 
 {
+	
    InitializeDefaultErrorMessages();
 
    // add custom error messages
-   SetErrorText(ERR_UNKNOWN_POSITION, "Invalid position (state) specified");
+ 
    SetErrorText(ERR_INITIALIZE_FAILED, "Initialization of the device failed");
    SetErrorText(ERR_WRITE_FAILED, "Failed to write data to the device");
    SetErrorText(ERR_CLOSE_FAILED, "Failed closing the device");
@@ -417,19 +305,21 @@ void PrizmatixLED::GetName(char* name) const
 
 int PrizmatixLED::Initialize()
 {
-   PrizmatixHub* hub = static_cast<PrizmatixHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable()) {
+   
+ 	myHub= static_cast<PrizmatixHub*>(GetParentHub());
+   if (!myHub || !myHub->IsPortAvailable()) {
       return ERR_NO_PORT_SET;
    }
+   nmLeds=myHub->GetNmLeds();
    char hubLabel[MM::MaxStrLength];
-   hub->GetLabel(hubLabel);
+   myHub->GetLabel(hubLabel);
    SetParentID(hubLabel); // for backward comp.
 
    {  // Firmware property
 			char *Com="V:1";
-			hub->SendSerialCommandH(Com);			      
+			myHub->SendSerialCommandH(Com);			      
 			std::string answer;
-			int  ret = hub->GetSerialAnswerH(  answer);
+			int  ret = myHub->GetSerialAnswerH(  answer);
 			int NumFirm=atoi(answer.data()+2);			
 			char NameF[25];
 			switch(NumFirm)
@@ -467,12 +357,12 @@ int PrizmatixLED::Initialize()
        char* command="S:0\n";
   
 // SendSerialCommand
-	 hub->SendSerialCommandH(command);
+	 myHub->SendSerialCommandH(command);
  
 	   long nmWrite;
      
 	    std::string answer;
-   int  ret = hub->GetSerialAnswerH(  answer);
+   int  ret = myHub->GetSerialAnswerH(  answer);
    const char * NameLeds=answer.data();
    nmWrite=answer.length();
    // set property list
@@ -530,7 +420,7 @@ int PrizmatixLED::Initialize()
 
 int PrizmatixLED::Shutdown()
 {
-     PrizmatixHub* hub = static_cast<PrizmatixHub*>(GetParentHub());
+     PrizmatixHub* hub = myHub;//static_cast<PrizmatixHub*>(GetParentHub());
 	 if(hub) hub->SendSerialCommandH("P:0");
    initialized_ = false;
    return DEVICE_OK;
@@ -538,7 +428,7 @@ int PrizmatixLED::Shutdown()
 
 int PrizmatixLED::WriteToPort(char *Str)
 {
-   PrizmatixHub* hub = static_cast<PrizmatixHub*>(GetParentHub());
+   PrizmatixHub* hub =myHub;// static_cast<PrizmatixHub*>(GetParentHub());
    if (!hub || !hub->IsPortAvailable())
       return ERR_NO_PORT_SET;
 
