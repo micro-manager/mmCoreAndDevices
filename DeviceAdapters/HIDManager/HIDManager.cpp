@@ -65,7 +65,8 @@ static HIDDeviceInfo g_knownDevices[] = {
    {"LMM5-HID-Andor", 0x1428, 0x0300},
    {"Andor-AMH200-FOS", 0x136e, 0x1001},
    {"MJC-SaimScan", 0x0461, 0x0004},
-   {"SAIMScannerV3", 0x04d8, 0xf11a}
+   {"SAIMScannerV3", 0x04d8, 0xf11a},
+   {"StarlightXpress-MidiFilterWheel", 0x1278, 0x0920}
 };
 static int g_numberKnownDevices = sizeof(g_knownDevices) / sizeof(HIDDeviceInfo);
 

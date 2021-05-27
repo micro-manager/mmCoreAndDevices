@@ -557,6 +557,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    SouthPort
    SpectralLMM5
    Spot
+   StarlightXpress
    SutterLambda
    SutterLambda2
    SutterLambdaParallelArduino

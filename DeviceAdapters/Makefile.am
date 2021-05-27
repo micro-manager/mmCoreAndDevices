@@ -170,6 +170,7 @@ SUBDIRS = \
 	SmarActHCU-3D \
 	SouthPort \
 	SpectralLMM5 \
+	StarlightXpress \
 	SutterLambda \
 	SutterLambda2 \
 	SutterLambdaParallelArduino \
