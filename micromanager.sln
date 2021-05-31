@@ -458,6 +458,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeensySLM", "DeviceAdapters
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StarlightXpress", "DeviceAdapters\StarlightXpress\StarlightXpress.vcxproj", "{A8FBEF79-3324-4ABF-B494-1A47C604F5B5}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PrizmatixDevice", "DeviceAdapters\PrizmatixDevice\PrizmatixDevice.vcxproj", "{17A48943-0897-4DA3-81D3-CDF2BA6028FD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -3166,6 +3168,18 @@ Global
 		{A8FBEF79-3324-4ABF-B494-1A47C604F5B5}.Release|Win32.Build.0 = Release|Win32
 		{A8FBEF79-3324-4ABF-B494-1A47C604F5B5}.Release|x64.ActiveCfg = Release|x64
 		{A8FBEF79-3324-4ABF-B494-1A47C604F5B5}.Release|x64.Build.0 = Release|x64
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Debug|Win32.Build.0 = Debug|Win32
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Debug|x64.ActiveCfg = Debug|x64
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Debug|x64.Build.0 = Debug|x64
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Release|Mixed Platforms.Build.0 = Release|x64
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Release|Win32.ActiveCfg = Release|Win32
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Release|Win32.Build.0 = Release|Win32
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Release|x64.ActiveCfg = Release|x64
+		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
