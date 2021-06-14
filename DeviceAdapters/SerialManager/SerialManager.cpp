@@ -698,11 +698,27 @@ int SerialPort::Shutdown()
 
    if( 0 != pThread_)
    {
-      CDeviceUtils::SleepMs(100);
+      // Theoretically we shouldn't need to sleep here, but skipping this
+      // exacerbates the gh-1254 problem described below. 40 ms was sufficient
+      // in testing; 30 ms was only partially effective; using 80 ms to be safe.
+      CDeviceUtils::SleepMs(80);
+
+      // Joining the async thread ensures that all asio resources are closed.
       if (!pThread_->timed_join(boost::posix_time::millisec(1000) )) {
          LogMessage("Failed to cleanly close port (thread join timed out)");
          pThread_->detach();
          g_BlockListedPorts.push_back(portName_);
+      }
+      else {
+         // We successfully joined, meaning that all asio resources have been
+         // closed. But immediately reopening the port can cause sporadic
+         // failures under some conditions (Windows, FTDI USB-serial).
+         // See issue gh-1254.
+         // In my testing, a 40 ms sleep slightly decreased the chance of
+         // failure, and 50 ms eliminated it. Using 100 ms to add a safety
+         // margin. (If the sleep before the join is skipped, even 100 ms here
+         // was not enough to eliminate failure.)
+         CDeviceUtils::SleepMs(100);
       }
    }
    initialized_ = false;
