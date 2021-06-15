@@ -234,7 +234,7 @@ int CTriggerScopeMMTTL::SetGateOpen(bool open)
 {  
    if (gateOpen_ != open) {
       gateOpen_ = open;
-      SendStateCommand(open ? curPos_ : 0);
+      SendStateCommand(open ? (uint8_t) curPos_ : 0);
    }
    return DEVICE_OK;
 }
@@ -366,12 +366,12 @@ int CTriggerScopeMMTTL::OnTTL(MM::PropertyBase* pProp, MM::ActionType eActEx, lo
 
       if(prop)
       {
-         prop |= prop << ttlNr; //set desired bit
+         curPos_ |= 1 << ttlNr; //set desired bit
       } else {
-         prop &= ~(1 << ttlNr); // clear the second lowest bit
+         curPos_ &= ~(1 << ttlNr); // clear the second lowest bit
       }
       std::ostringstream os;
-      os << prop;
+      os << curPos_;
       return SetProperty(MM::g_Keyword_State, os.str().c_str());
    }
    return DEVICE_OK;
