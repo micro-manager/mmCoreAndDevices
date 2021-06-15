@@ -204,7 +204,6 @@ private:
 	bool initialized_ ;
 	bool busy_;
 	bool gateOpen_;
-	bool open_;
    bool sequenceOn_;
    bool sequenceTransitionOnRising_;
    uint8_t voltrange_;
