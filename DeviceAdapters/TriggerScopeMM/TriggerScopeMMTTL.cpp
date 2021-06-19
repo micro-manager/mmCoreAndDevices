@@ -53,7 +53,7 @@ CTriggerScopeMMTTL::CTriggerScopeMMTTL(uint8_t pinGroup) :
    gateOpen_ = true;
    blanking_ = false;
    blankOnLow_ = true; 
-   isClosed_ = false;
+   isClosed_ = true;
 }
 
 void CTriggerScopeMMTTL::GetName(char* name) const
@@ -363,15 +363,16 @@ int CTriggerScopeMMTTL::OnTTL(MM::PropertyBase* pProp, MM::ActionType eActEx, lo
    {
       long prop;
       pProp->Get(prop);
+      long pos = curPos_;
 
       if(prop)
       {
-         curPos_ |= 1 << ttlNr; //set desired bit
+         pos |= 1 << ttlNr; //set desired bit
       } else {
-         curPos_ &= ~(1 << ttlNr); // clear the second lowest bit
+         pos &= ~(1 << ttlNr); // clear the second lowest bit
       }
       std::ostringstream os;
-      os << curPos_;
+      os << pos;
       return SetProperty(MM::g_Keyword_State, os.str().c_str());
    }
    return DEVICE_OK;
