@@ -94,6 +94,7 @@ int CTriggerScopeMMDAC::Initialize()
    is >> tmp;  // reads away the dash
    is >> maxV_;
 
+   // Query number of analog output states
    std::ostringstream oss;
    oss << "PAN" << dacNr_;
    std::string answer;
@@ -245,7 +246,42 @@ int CTriggerScopeMMDAC::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          WriteSignal(volts_);
       }
+   } else if (eAct == MM::IsSequenceable)
+   {
+      if (sequenceOn_)
+         pProp->SetSequenceable(nrEvents_);
+      else
+         pProp->SetSequenceable(0);
+   } 
+   else if (eAct == MM::AfterLoadSequence)
+   {
+      std::vector<std::string> sequence = pProp->GetSequence();  
+      // check for invalid values
+      std::ostringstream os;
+      if (sequence.size() > nrEvents_)
+         return DEVICE_SEQUENCE_TOO_LARGE;
+
+      ClearDASequence(); // also empties sequence_
+
+      double val;
+      for (unsigned int i=0; i < sequence.size(); i++)
+      {
+         std::istringstream os (sequence[i]);
+         os >> val;
+         // Check range?
+         sequence_.push_back(val);
+      }
+      return SendDASequence();
    }
+   else if (eAct == MM::StartSequence)
+   { 
+      return StartDASequence();
+    }
+   else if (eAct == MM::StopSequence)
+   {
+      return StopDASequence();
+   } 
+
 
    return DEVICE_OK;
 }
@@ -433,8 +469,10 @@ int CTriggerScopeMMDAC::ClearDASequence()
 
 int CTriggerScopeMMDAC::AddToDASequence(double voltage)
 {
-   sequence_.push_back(voltage);
+   if (sequence_.size() < nrEvents_)
+      sequence_.push_back(voltage);
+   else 
+      return DEVICE_SEQUENCE_TOO_LARGE;
 
    return DEVICE_OK;
 }
-
