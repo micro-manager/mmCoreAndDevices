@@ -308,7 +308,7 @@ StarlightXpressFilterWheel::Response StarlightXpressFilterWheel::send(Command cm
       }
    }
 
-   ss = std::stringstream();
+   ss.str(std::string());
    ss << "Recieved Response : {" << (int)data[0] << ", " << (int)data[1] << "}";
    LogMessage(ss.str(), true);
 
