@@ -3862,8 +3862,8 @@ int Universal::PollingThreadRun(void)
 
     try
     {
-        const long long usec = triggerTimeout_
-            + getEstimatedMaxReadoutTimeMs() * 1000
+        const long long usec = triggerTimeout_ * 1000000LL
+            + getEstimatedMaxReadoutTimeMs() * 1000LL
             + (long long)(4 * GetExposure() * 1000.0);
 
         const MM::MMTime timeout((long)(usec / 1000000L), (long)(usec % 1000000L));
@@ -4815,8 +4815,8 @@ int Universal::waitForFrameSeq()
 
     int nRet = DEVICE_OK;
 
-    const long long usec = triggerTimeout_
-        + getEstimatedMaxReadoutTimeMs() * 1000
+    const long long usec = triggerTimeout_ * 1000000LL
+        + getEstimatedMaxReadoutTimeMs() * 1000LL
         + (long long)(4 * GetExposure() * 1000.0);
 
     const MM::MMTime timeout((long)(usec / 1000000L), (long)(usec % 1000000L));
