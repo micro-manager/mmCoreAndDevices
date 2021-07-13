@@ -25,6 +25,7 @@
 #include "StarlightXpress.h"
 
 #include <sstream>
+#include <stdexcept>
 
 const char *StarlightXpressFilterWheel::device_name = "Filter Wheel";
 const char *StarlightXpressFilterWheel::device_desc = "Starlight Xpress Filter Wheel";
