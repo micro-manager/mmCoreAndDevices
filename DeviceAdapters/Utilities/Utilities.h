@@ -601,6 +601,7 @@ private:
    // Post-init property action handlers
    int OnDADevice(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnInvert(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    // Invariant: daDeviceLabels_ and daDevices_ are always size
@@ -611,6 +612,7 @@ private:
    bool initialized_;
 
    long mask_;
+   bool invert_;
 
    MM::MMTime lastChangeTime_;
 };

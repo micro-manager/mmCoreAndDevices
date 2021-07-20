@@ -2763,6 +2763,7 @@ int DAShutter::Initialize()
    // get list with available DA devices.
    // TODO: this is a initialization parameter, which makes it harder for the end-user to set up!
    availableDAs_.clear();
+   // availableDAs_.push_back(g_NoDevice);
    char deviceName[MM::MaxStrLength];
    unsigned int deviceIterator = 0;
    for(;;)
@@ -2775,7 +2776,6 @@ int DAShutter::Initialize()
       else
          break;
    }
-
 
    CPropertyAction* pAct = new CPropertyAction (this, &DAShutter::OnDADevice);      
    std::string defaultDA = "Undefined";
@@ -3963,6 +3963,7 @@ DATTLStateDevice::DATTLStateDevice() :
    numberOfDADevices_(1),
    initialized_(false),
    mask_(0L),
+   invert_(false),
    lastChangeTime_(0, 0)
 {
    CPropertyAction* pAct = new CPropertyAction(this,
@@ -4040,6 +4041,13 @@ int DATTLStateDevice::Initialize()
    if (ret != DEVICE_OK)
       return ret;
    SetPropertyLimits(MM::g_Keyword_State, 0, numPos - 1);
+
+   pAct = new CPropertyAction(this, &DATTLStateDevice::OnInvert);
+   ret = CreateStringProperty("Invert Logic", g_normalLogicString, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   AddAllowedValue("Invert Logic", g_normalLogicString);
+   AddAllowedValue("Invert Logic", g_invertedLogicString);
 
    pAct = new CPropertyAction(this, &DATTLStateDevice::OnLabel);
    ret = CreateStringProperty(MM::g_Keyword_Label, "0", false, pAct);
@@ -4147,7 +4155,6 @@ int DATTLStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          long mask = 0;
          for (unsigned int i = 0; i < numberOfDADevices_; ++i)
          {
-
             MM::SignalIO* da = static_cast<MM::SignalIO*>(GetDevice(daDeviceLabels_[i].c_str()));
 
             if (da)
@@ -4192,7 +4199,11 @@ int DATTLStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
          if (da)
          {
-            int ret = da->SetSignal((mask & (1 << i)) ? 5.0 : 0.0);
+            int ret;
+            if (invert_)
+               ret = da->SetSignal((mask & (1 << i)) ? 0.0 : 5.0);
+            else
+               ret = da->SetSignal((mask & (1 << i)) ? 5.0 : 0.0);
             lastChangeTime_ = GetCurrentMMTime();
             if (ret != DEVICE_OK)
                return ret;
@@ -4262,7 +4273,10 @@ int DATTLStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             for (std::vector<long>::const_iterator it = values.begin(),
                end = values.end(); it != end; ++it)
             {
-               int ret = da->AddToDASequence(*it & (1 << i) ? 5.0 : 0.0);
+               if (invert_)
+                  ret = da->AddToDASequence((*it & (1 << i)) ? 0.0 : 5.0);
+               else
+                  ret = da->AddToDASequence((*it & (1 << i)) ? 5.0 : 0.0);
                if (ret != DEVICE_OK)
                   return ret;
             }
@@ -4299,6 +4313,24 @@ int DATTLStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
                return ret;
          }
       }
+   }
+   return DEVICE_OK;
+}
+
+
+int DATTLStateDevice::OnInvert(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      if (invert_)
+         pProp->Set(g_invertedLogicString);
+      else 
+         pProp->Set(g_normalLogicString);
+   } else if (eAct == MM::AfterSet) {
+      std::string invertString;
+      pProp->Get(invertString);
+      invert_ = (invertString != g_normalLogicString);
+      // TODO: Set State property with cached value to let it invert the output.
    }
    return DEVICE_OK;
 }
