@@ -2763,7 +2763,7 @@ int DAShutter::Initialize()
    // get list with available DA devices.
    // TODO: this is a initialization parameter, which makes it harder for the end-user to set up!
    availableDAs_.clear();
-   // availableDAs_.push_back(g_NoDevice);
+   availableDAs_.push_back(g_NoDevice);
    char deviceName[MM::MaxStrLength];
    unsigned int deviceIterator = 0;
    for(;;)
@@ -2777,19 +2777,10 @@ int DAShutter::Initialize()
          break;
    }
 
-   CPropertyAction* pAct = new CPropertyAction (this, &DAShutter::OnDADevice);      
-   std::string defaultDA = "Undefined";
-   if (availableDAs_.size() >= 1)
-      defaultDA = availableDAs_[0];
-   CreateProperty("DA Device", defaultDA.c_str(), MM::String, false, pAct, false);         
-   if (availableDAs_.size() >= 1)
-      SetAllowedValues("DA Device", availableDAs_);
-   else
-      return ERR_NO_DA_DEVICE_FOUND;
-
-   // This is needed, otherwise DeviceDA_ is not always set resulting in crashes
-   // This could lead to strange problems if multiple DA devices are loaded
-   SetProperty("DA Device", defaultDA.c_str());
+   CPropertyAction* pAct = new CPropertyAction (this, &DAShutter::OnDADevice);
+   CreateProperty("DA Device", availableDAs_[0].c_str(), MM::String, false, pAct, false);
+   SetAllowedValues("DA Device", availableDAs_);
+   SetProperty("DA Device", availableDAs_[0].c_str());
 
    pAct = new CPropertyAction(this, &DAShutter::OnState);
    CreateProperty("State", "0", MM::Integer, false, pAct);
@@ -2831,7 +2822,7 @@ int DAShutter::GetOpen(bool& open)
 {
    MM::SignalIO* da = (MM::SignalIO*) GetDevice(DADeviceName_.c_str());
    if (da == 0)
-     return ERR_NO_DA_DEVICE;
+     return false;
 
    return da->GetGateOpen(open);
 }
@@ -2848,7 +2839,8 @@ int DAShutter::OnDADevice(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       // Make sure that the "old" DA device is open:
-      SetOpen(true);
+      if (DADeviceName_ != g_NoDevice)
+         SetOpen(true);
 
       std::string DADeviceName;
       pProp->Get(DADeviceName);
@@ -2856,10 +2848,11 @@ int DAShutter::OnDADevice(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (da != 0) {
          DADeviceName_ = DADeviceName;
       } else
-         return ERR_INVALID_DEVICE_NAME;
+         DADeviceName_ = g_NoDevice;
 
       // Gates are open by default.  Start with shutter closed:
-      SetOpen(false);
+      if (DADeviceName_ != g_NoDevice)
+         SetOpen(false);
    }
    return DEVICE_OK;
 }
