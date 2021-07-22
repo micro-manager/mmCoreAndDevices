@@ -2763,6 +2763,7 @@ int DAShutter::Initialize()
    // get list with available DA devices.
    // TODO: this is a initialization parameter, which makes it harder for the end-user to set up!
    availableDAs_.clear();
+   availableDAs_.push_back(g_NoDevice);
    char deviceName[MM::MaxStrLength];
    unsigned int deviceIterator = 0;
    for(;;)
@@ -2776,20 +2777,10 @@ int DAShutter::Initialize()
          break;
    }
 
-
-   CPropertyAction* pAct = new CPropertyAction (this, &DAShutter::OnDADevice);      
-   std::string defaultDA = "Undefined";
-   if (availableDAs_.size() >= 1)
-      defaultDA = availableDAs_[0];
-   CreateProperty("DA Device", defaultDA.c_str(), MM::String, false, pAct, false);         
-   if (availableDAs_.size() >= 1)
-      SetAllowedValues("DA Device", availableDAs_);
-   else
-      return ERR_NO_DA_DEVICE_FOUND;
-
-   // This is needed, otherwise DeviceDA_ is not always set resulting in crashes
-   // This could lead to strange problems if multiple DA devices are loaded
-   SetProperty("DA Device", defaultDA.c_str());
+   CPropertyAction* pAct = new CPropertyAction (this, &DAShutter::OnDADevice);
+   CreateProperty("DA Device", availableDAs_[0].c_str(), MM::String, false, pAct, false);
+   SetAllowedValues("DA Device", availableDAs_);
+   SetProperty("DA Device", availableDAs_[0].c_str());
 
    pAct = new CPropertyAction(this, &DAShutter::OnState);
    CreateProperty("State", "0", MM::Integer, false, pAct);
@@ -2831,7 +2822,7 @@ int DAShutter::GetOpen(bool& open)
 {
    MM::SignalIO* da = (MM::SignalIO*) GetDevice(DADeviceName_.c_str());
    if (da == 0)
-     return ERR_NO_DA_DEVICE;
+     return false;
 
    return da->GetGateOpen(open);
 }
@@ -2848,7 +2839,8 @@ int DAShutter::OnDADevice(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       // Make sure that the "old" DA device is open:
-      SetOpen(true);
+      if (DADeviceName_ != g_NoDevice)
+         SetOpen(true);
 
       std::string DADeviceName;
       pProp->Get(DADeviceName);
@@ -2856,10 +2848,11 @@ int DAShutter::OnDADevice(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (da != 0) {
          DADeviceName_ = DADeviceName;
       } else
-         return ERR_INVALID_DEVICE_NAME;
+         DADeviceName_ = g_NoDevice;
 
       // Gates are open by default.  Start with shutter closed:
-      SetOpen(false);
+      if (DADeviceName_ != g_NoDevice)
+         SetOpen(false);
    }
    return DEVICE_OK;
 }
@@ -3963,6 +3956,8 @@ DATTLStateDevice::DATTLStateDevice() :
    numberOfDADevices_(1),
    initialized_(false),
    mask_(0L),
+   invert_(false),
+   ttlVoltage_(3.3),
    lastChangeTime_(0, 0)
 {
    CPropertyAction* pAct = new CPropertyAction(this,
@@ -4040,6 +4035,20 @@ int DATTLStateDevice::Initialize()
    if (ret != DEVICE_OK)
       return ret;
    SetPropertyLimits(MM::g_Keyword_State, 0, numPos - 1);
+
+   pAct = new CPropertyAction(this, &DATTLStateDevice::OnInvert);
+   ret = CreateStringProperty("Invert Logic", g_normalLogicString, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   AddAllowedValue("Invert Logic", g_normalLogicString);
+   AddAllowedValue("Invert Logic", g_invertedLogicString);
+
+   pAct = new CPropertyAction(this, &DATTLStateDevice::OnTTLLevel);
+   ret = CreateStringProperty("TTL Voltage", "3.3", false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   AddAllowedValue("TTL Voltage", "3.3");
+   AddAllowedValue("TTL Voltage", "5.0");
 
    pAct = new CPropertyAction(this, &DATTLStateDevice::OnLabel);
    ret = CreateStringProperty(MM::g_Keyword_Label, "0", false, pAct);
@@ -4135,70 +4144,32 @@ int DATTLStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      bool gateOpen;
-      GetGateOpen(gateOpen);
-      if (!gateOpen)
-      {
-         pProp->Set(mask_);
-      }
-      else
-      {
-         // Read signal where possible; otherwise use stored value.
-         long mask = 0;
-         for (unsigned int i = 0; i < numberOfDADevices_; ++i)
-         {
-
-            MM::SignalIO* da = static_cast<MM::SignalIO*>(GetDevice(daDeviceLabels_[i].c_str()));
-
-            if (da)
-            {
-               double voltage = 0.0;
-               int ret = da->GetSignal(voltage);
-               if (ret != DEVICE_OK)
-               {
-                  if (ret == DEVICE_UNSUPPORTED_COMMAND)
-                  {
-                     mask |= (mask_ & (1 << i));
-                  }
-                  else
-                  {
-                     return ret;
-                  }
-               }
-               if (voltage > 0.0)
-               {
-                  mask |= (1 << i);
-               }
-            }
-         }
-         pProp->Set(mask);
-      }
+      pProp->Set(mask_);
    }
    else if (eAct == MM::AfterSet)
    {
       bool gateOpen;
       GetGateOpen(gateOpen);
-      long gatedMask = 0;
-      pProp->Get(gatedMask);
-      long mask = gatedMask;
+      pProp->Get(mask_);
+      long mask = mask_;
       if (!gateOpen)
-      {
          GetProperty(MM::g_Keyword_Closed_Position, mask);
-      }
 
       for (unsigned int i = 0; i < numberOfDADevices_; ++i)
       {
          MM::SignalIO* da = static_cast<MM::SignalIO*>(GetDevice(daDeviceLabels_[i].c_str()));
-
          if (da)
          {
-            int ret = da->SetSignal((mask & (1 << i)) ? 5.0 : 0.0);
+            int ret;
+            if (invert_)
+               ret = da->SetSignal((mask & (1 << i)) ? 0.0 : ttlVoltage_);
+            else
+               ret = da->SetSignal((mask & (1 << i)) ? ttlVoltage_ : 0.0);
             lastChangeTime_ = GetCurrentMMTime();
             if (ret != DEVICE_OK)
                return ret;
          }
       }
-      mask_ = gatedMask;
    }
    else if (eAct == MM::IsSequenceable)
    {
@@ -4207,7 +4178,6 @@ int DATTLStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       for (unsigned int i = 0; i < numberOfDADevices_; ++i)
       {
          MM::SignalIO* da = static_cast<MM::SignalIO*>(GetDevice(daDeviceLabels_[i].c_str()));
-
          if (da)
          {
             bool sequenceable = false;
@@ -4262,7 +4232,10 @@ int DATTLStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             for (std::vector<long>::const_iterator it = values.begin(),
                end = values.end(); it != end; ++it)
             {
-               int ret = da->AddToDASequence(*it & (1 << i) ? 5.0 : 0.0);
+               if (invert_)
+                  ret = da->AddToDASequence((*it & (1 << i)) ? 0.0 : ttlVoltage_);
+               else
+                  ret = da->AddToDASequence((*it & (1 << i)) ? ttlVoltage_ : 0.0);
                if (ret != DEVICE_OK)
                   return ret;
             }
@@ -4302,6 +4275,43 @@ int DATTLStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
+
+
+int DATTLStateDevice::OnInvert(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      if (invert_)
+         pProp->Set(g_invertedLogicString);
+      else 
+         pProp->Set(g_normalLogicString);
+   } else if (eAct == MM::AfterSet) {
+      std::string invertString;
+      pProp->Get(invertString);
+      invert_ = (invertString != g_normalLogicString);
+      // TODO: Set State property with cached value to let it invert the output.
+      SetPosition(mask_);
+   }
+   return DEVICE_OK;
+}
+
+int DATTLStateDevice::OnTTLLevel(MM::PropertyBase* pProp, MM::ActionType eAct) 
+{
+   if (eAct == MM::BeforeGet)
+   {
+      
+      pProp->Set(CDeviceUtils::ConvertToString(ttlVoltage_));
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string val;
+      pProp->Get(val);
+      ttlVoltage_ = atof(val.c_str());
+      SetProperty(MM::g_Keyword_State, CDeviceUtils::ConvertToString(mask_));
+   }
+   return DEVICE_OK;
+}
+
 
 
 MultiDAStateDevice::MultiDAStateDevice() :
