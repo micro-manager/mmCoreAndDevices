@@ -5062,6 +5062,11 @@ void CMMCore::setConfig(const char* groupName, const char* configName) throw (CM
       throw;
    }
 
+   if (externalCallback_) 
+   {
+      externalCallback_->onConfigSet(groupName, configName);
+   }
+
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": did apply preset " << configName;
 }

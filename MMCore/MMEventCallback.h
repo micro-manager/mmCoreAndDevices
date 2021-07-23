@@ -52,6 +52,12 @@ public:
       std::cout << std:: endl; 
    }
 
+   virtual void onConfigSet(const char* groupName, const char* newConfigName)
+   {
+      std::cout << "onConfigSet() " << groupName << " " << newConfigName;
+      std::cout << std:: endl; 
+   }
+
    virtual void onSystemConfigurationLoaded()
    {
       std::cout << "onSystemConfigurationLoaded() ";
