@@ -222,12 +222,16 @@ int CTriggerScopeMMDAC::WriteSignal(double volts)
 
 int CTriggerScopeMMDAC::SetSignal(double volts)
 {
-   if (gateOpen_) {
+   volts_ = volts;
+   if (gateOpen_) 
+   {
       gatedVolts_ = volts;
-      return WriteSignal(volts);
    }
-   gatedVolts_ = 0;
-   return WriteSignal(0);
+   else 
+   {
+      gatedVolts_ = 0;
+   }
+   return WriteSignal(gatedVolts_);
 }
 
 
