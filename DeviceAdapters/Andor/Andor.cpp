@@ -280,6 +280,14 @@ strCurrentTriggerMode_(""),
 ui_swVersion(0),
 sequencePaused_(0),
 countConvertMode_(""),
+gateMode_(""),
+insertionDelay_(""),
+intelligate_(""),
+IOC_(""),
+IOCTrigger_(""),
+mcpGain_(0),
+gateDelay_(0),
+gateWidth_(100),
 countConvertWavelength_(0.0),
 optAcquireModeStr_(""),
 optAcquireDescriptionStr_(""),
@@ -1219,6 +1227,178 @@ int AndorCamera::GetListOfAvailableCameras()
         }
         assert(nRet == DEVICE_OK);
       }
+
+
+
+
+
+
+      if (caps.ulSetFunctions & AC_SETFUNCTION_GATEMODE) //some cameras might not support this
+      {
+        if (!HasProperty("GateMode"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnGateMode);
+          nRet = CreateProperty("GateMode", "FIRE_AND_GATE", MM::String, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("GateMode", "FIRE_AND_GATE");
+          if (nRet != DEVICE_OK)
+            return nRet;
+        }
+        SetProperty("GateMode", "FIRE_AND_GATE");
+        vector<string> CCValues;
+        CCValues.push_back("FIRE_AND_GATE");
+        CCValues.push_back("FIRE_ONLY");
+        CCValues.push_back("GATE_ONLY");
+        CCValues.push_back("CW_ON");
+        CCValues.push_back("CW_OFF");
+        CCValues.push_back("DDG");
+        nRet = SetAllowedValues("GateMode", CCValues);
+
+        if (nRet != DEVICE_OK)
+          return nRet;
+
+
+        if (!HasProperty("DDGGateDelay"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGGateDelay);
+          nRet = CreateProperty("DDGGateDelay", "0", MM::Integer, false, pAct);
+          nRet = SetPropertyLimits("DDGGateDelay", 0, 10e9);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGGateDelay", "0");
+        }
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGGateWidth"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGGateWidth);
+          nRet = CreateProperty("DDGGateWidth", "100", MM::Integer, false, pAct);
+          nRet = SetPropertyLimits("DDGGateWidth", 0, 10e9);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGGateWidth", "100");
+        }
+        assert(nRet == DEVICE_OK);
+      }
+
+      if (caps.ulSetFunctions & AC_SETFUNCTION_MCPGAIN) //some cameras might not support this
+      {
+        if (!HasProperty("DDGGain")) {
+          pAct = new CPropertyAction(this, &AndorCamera::OnMCPGain);
+          nRet = CreateProperty("DDGGain", "0", MM::Integer, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGGain", "0");
+        }
+
+        int iLow, iHigh;
+        GetMCPGainRange(&iLow, &iHigh);
+        nRet = SetPropertyLimits("DDGGain", iLow, iHigh);
+        assert(nRet == DEVICE_OK);
+      }
+
+      if (caps.ulSetFunctions & AC_SETFUNCTION_INSERTION_DELAY) //some cameras might not support this
+      {
+        if (!HasProperty("DDGInsertionDelay"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGInsertionDelay);
+          nRet = CreateProperty("DDGInsertionDelay", "Normal", MM::String, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGInsertionDelay", "Normal");
+          if (nRet != DEVICE_OK)
+            return nRet;
+        }
+        SetProperty("DDGInsertionDelay", "Normal");
+        vector<string> CCValues;
+        CCValues.push_back("Normal");
+        CCValues.push_back("UltraFast");
+        nRet = SetAllowedValues("DDGInsertionDelay", CCValues);
+
+        if (nRet != DEVICE_OK)
+          return nRet;
+      }
+
+      if (caps.ulSetFunctions & AC_SETFUNCTION_INTELLIGATE) //some cameras might not support this
+      {
+        if (!HasProperty("DDGIntelligate"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGIntelligate);
+          nRet = CreateProperty("DDGIntelligate", "Off", MM::String, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGIntelligate", "Off");
+          if (nRet != DEVICE_OK)
+            return nRet;
+        }
+        SetProperty("DDGIntelligate", "Off");
+        vector<string> CCValues;
+        CCValues.push_back("Off");
+        CCValues.push_back("On");
+        nRet = SetAllowedValues("DDGIntelligate", CCValues);
+
+        if (nRet != DEVICE_OK)
+          return nRet;
+      }
+
+      if (caps.ulSetFunctions & AC_SETFUNCTION_IOC) //some cameras might not support this
+      {
+        if (!HasProperty("DDGIOC"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGIOC);
+          nRet = CreateProperty("DDGIOC", "Off", MM::String, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGIOC", "Off");
+          if (nRet != DEVICE_OK)
+            return nRet;
+        }
+        SetProperty("DDGIOC", "Off");
+        vector<string> CCValues;
+        CCValues.push_back("Off");
+        CCValues.push_back("On");
+        nRet = SetAllowedValues("DDGIOC", CCValues);
+
+        if (nRet != DEVICE_OK)
+          return nRet;
+
+        if (!HasProperty("DDGIOCTrigger"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGIOCTrigger);
+          nRet = CreateProperty("DDGIOCTrigger", "Exposure", MM::String, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGIOCTrigger", "Exposure");
+          if (nRet != DEVICE_OK)
+            return nRet;
+        }
+        SetProperty("DDGIOCTrigger", "Exposure");
+        CCValues.clear();
+        CCValues.push_back("Exposure");
+        CCValues.push_back("Trigger");
+        nRet = SetAllowedValues("DDGIOCTrigger", CCValues);
+
+        if (nRet != DEVICE_OK)
+          return nRet;
+      }
+
 
       spuriousNoiseFilterControl_ = new SpuriousNoiseFilterControl(this);
 	
@@ -2999,10 +3179,399 @@ int AndorCamera::GetListOfAvailableCameras()
       return DEVICE_OK;
    }
 
+   int AndorCamera::OnGateMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     if (eAct == MM::AfterSet)
+     {
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       if (sequenceRunning_)
+         return ERR_BUSY_ACQUIRING;
+
+       string text;
+       long mode = 0;
+       pProp->Get(text);
+
+       if (text.compare("FIRE_AND_GATE") == 0)
+       {
+         mode = AT_GATEMODE_FIRE_AND_GATE;
+       }
+       else if (text.compare("FIRE_ONLY") == 0)
+       {
+         mode = AT_GATEMODE_FIRE_ONLY;
+       }
+       else if (text.compare("GATE_ONLY") == 0)
+       {
+         mode = AT_GATEMODE_GATE_ONLY;
+       }
+       else if (text.compare("CW_ON") == 0)
+       {
+         mode = AT_GATEMODE_CW_ON;
+       }
+       else if (text.compare("CW_OFF") == 0)
+       {
+         mode = AT_GATEMODE_CW_OFF;
+       }
+       else if (text.compare("DDG") == 0)
+       {
+         mode = AT_GATEMODE_DDG;
+       }
+       if (text == gateMode_)
+         return DEVICE_OK;
+
+       //added to use RTA
+       SetToIdle();
+
+       unsigned int ret = SetGateMode(mode);
+       if (ret != DRV_SUCCESS)
+       {
+         return DEVICE_CAN_NOT_SET_PROPERTY;
+       }
+
+       pProp->Set(text.c_str());
+       gateMode_ = text;
+       if (acquiring)
+         StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+       PrepareSnap();
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       pProp->Set(gateMode_.c_str());
+     }
+     return DEVICE_OK;
+   }
    
+   int AndorCamera::OnDDGInsertionDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     if (eAct == MM::AfterSet)
+     {
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
 
+       if (sequenceRunning_)
+         return ERR_BUSY_ACQUIRING;
 
+       string text;
+       long mode = 0;
+       pProp->Get(text);
 
+       if (text.compare("Normal") == 0)
+       {
+         mode = 0;
+       }
+       else if (text.compare("UltraFast") == 0)
+       {
+         mode = 1;
+       }
+       if (text == insertionDelay_)
+         return DEVICE_OK;
+
+       //added to use RTA
+       SetToIdle();
+
+       unsigned int ret = SetDDGInsertionDelay(mode);
+       if (ret != DRV_SUCCESS)
+       {
+         return DEVICE_CAN_NOT_SET_PROPERTY;
+       }
+
+       pProp->Set(text.c_str());
+       insertionDelay_ = text;
+       if (acquiring)
+         StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+       PrepareSnap();
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       pProp->Set(insertionDelay_.c_str());
+     }
+     return DEVICE_OK;
+   }
+   
+   int AndorCamera::OnDDGIntelligate(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     if (eAct == MM::AfterSet)
+     {
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       if (sequenceRunning_)
+         return ERR_BUSY_ACQUIRING;
+
+       string text;
+       long mode = 0;
+       pProp->Get(text);
+
+       if (text.compare("Off") == 0)
+       {
+         mode = 0;
+       }
+       else if (text.compare("On") == 0)
+       {
+         mode = 1;
+       }
+       if (text == intelligate_)
+         return DEVICE_OK;
+
+       //added to use RTA
+       SetToIdle();
+
+       unsigned int ret = SetDDGIntelligate(mode);
+       if (ret != DRV_SUCCESS)
+       {
+         return DEVICE_CAN_NOT_SET_PROPERTY;
+       }
+
+       pProp->Set(text.c_str());
+       intelligate_ = text;
+       if (acquiring)
+         StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+       PrepareSnap();
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       pProp->Set(intelligate_.c_str());
+     }
+     return DEVICE_OK;
+   }
+
+   int AndorCamera::OnDDGIOC(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     if (eAct == MM::AfterSet)
+     {
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       if (sequenceRunning_)
+         return ERR_BUSY_ACQUIRING;
+
+       string text;
+       long mode = 0;
+       pProp->Get(text);
+
+       if (text.compare("Off") == 0)
+       {
+         mode = 0;
+       }
+       else if (text.compare("On") == 0)
+       {
+         mode = 1;
+       }
+       if (text == IOC_)
+         return DEVICE_OK;
+
+       //added to use RTA
+       SetToIdle();
+
+       unsigned int ret = SetDDGIOC(mode);
+       if (ret != DRV_SUCCESS)
+       {
+         return DEVICE_CAN_NOT_SET_PROPERTY;
+       }
+
+       pProp->Set(text.c_str());
+       IOC_ = text;
+       if (acquiring)
+         StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+       PrepareSnap();
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       pProp->Set(IOC_.c_str());
+     }
+     return DEVICE_OK;
+   }
+
+   int AndorCamera::OnDDGIOCTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     if (eAct == MM::AfterSet)
+     {
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       if (sequenceRunning_)
+         return ERR_BUSY_ACQUIRING;
+
+       string text;
+       long mode = 0;
+       pProp->Get(text);
+
+       if (text.compare("Exposure") == 0)
+       {
+         mode = 0;
+       }
+       else if (text.compare("Trigger") == 0)
+       {
+         mode = 1;
+       }
+       if (text == IOCTrigger_)
+         return DEVICE_OK;
+
+       //added to use RTA
+       SetToIdle();
+
+       unsigned int ret = SetDDGIOCTrigger(mode);
+       if (ret != DRV_SUCCESS)
+       {
+         return DEVICE_CAN_NOT_SET_PROPERTY;
+       }
+
+       pProp->Set(text.c_str());
+       IOCTrigger_ = text;
+       if (acquiring)
+         StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+       PrepareSnap();
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       pProp->Set(IOCTrigger_.c_str());
+     }
+     return DEVICE_OK;
+   }
+
+   /**
+   * Set camera MCP gain.
+   */
+   int AndorCamera::OnMCPGain(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     if (eAct == MM::AfterSet)
+     {
+       long gain;
+       pProp->Get(gain);
+
+       if (gain == mcpGain_)
+         return DEVICE_OK;
+
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       {
+         DriverGuard dg(this);
+
+         if (sequenceRunning_)
+           return ERR_BUSY_ACQUIRING;
+
+         pProp->Set(gain);
+
+         //added to use RTA
+         if (!(iCurrentTriggerMode_ == SOFTWARE))
+           SetToIdle();
+
+         unsigned ret = SetDDGGain((int)gain);
+         if (DRV_SUCCESS != ret)
+           return (int)ret;
+         mcpGain_ = gain;
+
+         if (acquiring)
+           StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+
+         PrepareSnap();
+       }
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       DriverGuard dg(this); //not even sure this is needed
+       pProp->Set(mcpGain_);
+     }
+     return DEVICE_OK;
+   }
+
+   int AndorCamera::OnDDGGateDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     if (eAct == MM::AfterSet)
+     {
+       long val;
+       pProp->Get(val);
+
+       if (val == gateDelay_)
+         return DEVICE_OK;
+
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       {
+         DriverGuard dg(this);
+
+         if (sequenceRunning_)
+           return ERR_BUSY_ACQUIRING;
+
+         pProp->Set(val);
+
+         //added to use RTA
+         if (!(iCurrentTriggerMode_ == SOFTWARE))
+           SetToIdle();
+
+         unsigned ret = SetDDGGateTime(val * 1000, gateWidth_ * 1000);
+         if (DRV_SUCCESS != ret)
+           return (int)ret;
+         gateDelay_ = val;
+
+         if (acquiring)
+           StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+
+         PrepareSnap();
+       }
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       DriverGuard dg(this); //not even sure this is needed
+       pProp->Set(gateDelay_);
+     }
+     return DEVICE_OK;
+   }
+
+   int AndorCamera::OnDDGGateWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     if (eAct == MM::AfterSet)
+     {
+       long val;
+       pProp->Get(val);
+
+       if (val == gateWidth_)
+         return DEVICE_OK;
+
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       {
+         DriverGuard dg(this);
+
+         if (sequenceRunning_)
+           return ERR_BUSY_ACQUIRING;
+
+         pProp->Set(val);
+
+         //added to use RTA
+         if (!(iCurrentTriggerMode_ == SOFTWARE))
+           SetToIdle();
+
+         unsigned ret = SetDDGGateTime(gateDelay_ * 1000, val * 1000);
+         if (DRV_SUCCESS != ret)
+           return (int)ret;
+         gateWidth_ = val;
+
+         if (acquiring)
+           StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+
+         PrepareSnap();
+       }
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       DriverGuard dg(this); //not even sure this is needed
+       pProp->Set(gateWidth_);
+     }
+     return DEVICE_OK;
+   }
 
    int AndorCamera::OnCountConvert(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
@@ -3436,7 +4005,7 @@ int AndorCamera::GetListOfAvailableCameras()
    /**
    * Force run till abort ON or OFF
    */
-   int AndorCamera::OnForceRunTillAbort(MM::PropertyBase* pProp, MM::ActionType eAct)
+   int AndorCamera::OnForceRunTillAbort(MM::PropertyBase* pProp, MM::ActionType /*eAct*/)
    {
      string value;
      pProp->Get(value);
