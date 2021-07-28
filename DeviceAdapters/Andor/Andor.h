@@ -178,6 +178,15 @@ public:
    int OnCountConvertWavelength(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnForceRunTillAbort(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   int OnGateMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnMCPGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDDGInsertionDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDDGIntelligate(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDDGIOC(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDDGIOCTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDDGGateDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDDGGateWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
+
    int OnOptAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnROI(MM::PropertyBase* pProp, MM::ActionType eAct);
    void UpdateOAParams(const char*  OAModeName);
@@ -242,6 +251,13 @@ private:
    bool stopOnOverflow_;
    double intervalMs_;
    std::string countConvertMode_;
+   std::string gateMode_;
+   std::string insertionDelay_;
+   std::string intelligate_;
+   std::string IOC_;
+   std::string IOCTrigger_;
+   long mcpGain_;
+   long gateDelay_, gateWidth_;
    double countConvertWavelength_;
 
    std::string optAcquireModeStr_;
