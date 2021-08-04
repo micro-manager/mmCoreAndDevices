@@ -117,7 +117,6 @@ SUBDIRS = \
 	DemoCamera \
 	Diskovery \
 	DTOpenLayer \
-	Diskovery \
 	FocalPoint \
 	FreeSerialPort \
 	HamiltonMVP \
