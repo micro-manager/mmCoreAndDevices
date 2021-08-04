@@ -115,7 +115,6 @@ SUBDIRS = \
 	CoolLEDpE4000 \
 	Corvus \
 	DemoCamera \
-	Diskovery \
 	DTOpenLayer \
 	Diskovery \
 	FocalPoint \
