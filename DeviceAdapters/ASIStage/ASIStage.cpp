@@ -4752,28 +4752,6 @@ int CRISP::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-// Get the compile date of this controller
-//int CRISP::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
-//{
-//   if (eAct == MM::BeforeGet)
-//   {
-//      if (initialized_)
-//         return DEVICE_OK;
-//
-//      ostringstream command;
-//      command << "CD";
-//      string answer;
-//      // query the device
-//      int ret = QueryCommand(command.str().c_str(), answer);
-//      if (ret != DEVICE_OK)
-//         return ret;
-//
-//      pProp->Set(answer.c_str());
-//
-//   }
-//   return DEVICE_OK;
-//}
-
 int CRISP::OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
