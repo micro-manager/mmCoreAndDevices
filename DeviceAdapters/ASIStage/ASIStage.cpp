@@ -41,7 +41,6 @@
 #include "DeviceUtils.h"
 #include <sstream>
 
-
 #include <iostream>
 using namespace std;
 
@@ -239,13 +238,13 @@ MM::DeviceDetectionStatus ASICheckSerialPort(MM::Device& device, MM::Core& core,
    return result;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // ASIBase (convenience parent class)
 //
 ASIBase::ASIBase(MM::Device *device, const char *prefix) :
    oldstage_(false),
    core_(0),
+   compileDay_(0),
    initialized_(false),
    device_(device),
    oldstagePrefix_(prefix),
@@ -387,6 +386,84 @@ unsigned int ASIBase::ExtractCompileDay(const char* compile_date)
 }
 
 
+// Get the version of this controller
+int ASIBase::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        ostringstream command;
+        command << "V";
+        string answer;
+        // query the device
+        int ret = QueryCommand(command.str().c_str(), answer);
+        if (ret != DEVICE_OK)
+        {
+            return ret;
+        }
+        if (answer.substr(0, 2).compare(":A") == 0)
+        {
+            pProp->Set(answer.substr(3).c_str());
+            return DEVICE_OK;
+        }
+        // deal with error later
+        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+        {
+            int errNo = atoi(answer.substr(3).c_str());
+            return ERR_OFFSET + errNo;
+        }
+        return ERR_UNRECOGNIZED_ANSWER;
+    }
+
+    return DEVICE_OK;
+}
+
+// Get the build name of this controller
+int ASIBase::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        if (initialized_)
+        {
+            return DEVICE_OK;
+        }
+        ostringstream command;
+        command << "BU";
+        string answer;
+        // query the device
+        int ret = QueryCommand(command.str().c_str(), answer);
+        if (ret != DEVICE_OK)
+        {
+            return ret;
+        }
+        pProp->Set(answer.c_str());
+    }
+    return DEVICE_OK;
+}
+
+// Get the compile date of this controller
+int ASIBase::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        if (initialized_)
+        {
+            return DEVICE_OK;
+        }
+        ostringstream command;
+        command << "CD";
+        string answer;
+        // query the device
+        int ret = QueryCommand(command.str().c_str(), answer);
+        if (ret != DEVICE_OK)
+        {
+            return ret;
+        }
+        pProp->Set(answer.c_str());
+    }
+    return DEVICE_OK;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // XYStage
 //
@@ -404,7 +481,6 @@ XYStage::XYStage() :
    answerTimeoutMs_(1000),
    serialOnlySendChanged_(true),
    manualSerialAnswer_(""),
-   compileDay_(0),
    advancedPropsEnabled_(false),
    axisletterX_("X"), //paving the way for future 
    axisletterY_("Y")
@@ -475,7 +551,9 @@ int XYStage::Initialize()
    // get the date of the firmware
    char compile_date[MM::MaxStrLength];
    if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-      compileDay_ = ExtractCompileDay(compile_date);
+   {
+       compileDay_ = ExtractCompileDay(compile_date);
+   }
 
    // if really old firmware then don't get build name
    // build name is really just for diagnostic purposes anyway
@@ -1044,81 +1122,6 @@ int XYStage::OnStepSizeY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
    return DEVICE_OK;
 }
-
-// Get the version of this controller
-int XYStage::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      ostringstream command;
-      command << "V";
-      string answer;
-      // query the device
-      int ret = QueryCommand(command.str().c_str(), answer);
-      if (ret != DEVICE_OK)
-         return ret;
-
-      if (answer.substr(0,2).compare(":A") == 0)
-      {
-         pProp->Set(answer.substr(3).c_str());
-         return DEVICE_OK;
-      }
-      // deal with error later
-      else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-      {
-         int errNo = atoi(answer.substr(3).c_str());
-         return ERR_OFFSET + errNo;
-      }
-      return ERR_UNRECOGNIZED_ANSWER;
-   }
-
-   return DEVICE_OK;
-}
-
-// Get the compile date of this controller
-int XYStage::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      if (initialized_)
-         return DEVICE_OK;
-
-      ostringstream command;
-      command << "CD";
-      string answer;
-      // query the device
-      int ret = QueryCommand(command.str().c_str(), answer);
-      if (ret != DEVICE_OK)
-         return ret;
-
-      pProp->Set(answer.c_str());
-
-   }
-   return DEVICE_OK;
-}
-
-// Get the build name of this controller
-int XYStage::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      if (initialized_)
-         return DEVICE_OK;
-
-      ostringstream command;
-      command << "BU";
-      string answer;
-      // query the device
-      int ret = QueryCommand(command.str().c_str(), answer);
-      if (ret != DEVICE_OK)
-         return ret;
-
-      pProp->Set(answer.c_str());
-
-   }
-   return DEVICE_OK;
-}
-
 
 // This sets how often the stage will approach the same position (0 = 1!!)
 int XYStage::OnNrMoveRepetitions(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -2267,7 +2270,7 @@ ZStage::ZStage() :
    nrEvents_(0),
    maxSpeed_(7.5),
    motorOn_(true),
-   compileDay_(0),
+   curSteps_(0),
    supportsLinearSequence_(false),
    linearSequenceIntervalUm_(0.0),
    linearSequenceLength_(0),
@@ -2313,7 +2316,6 @@ bool ZStage::SupportsDeviceDetection(void)
 
 MM::DeviceDetectionStatus ZStage::DetectDevice(void)
 {
-
    return ASICheckSerialPort(*this,*GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
@@ -2340,16 +2342,29 @@ int ZStage::Initialize()
    if (ret != DEVICE_OK)
       ret = GetPositionSteps(curSteps_);
 
-   CPropertyAction* pAct;
+   CPropertyAction* pAct = new CPropertyAction(this, &ZStage::OnVersion);
+   CreateProperty("Version", "", MM::String, true, pAct);
 
-   pAct = new CPropertyAction (this, &ZStage::OnCompileDate);
+   pAct = new CPropertyAction(this, &ZStage::OnCompileDate);
    CreateProperty("CompileDate", "", MM::String, true, pAct);
    UpdateProperty("CompileDate");
 
    // get the date of the firmware
    char compile_date[MM::MaxStrLength];
    if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-      compileDay_ = ExtractCompileDay(compile_date);
+   {
+       compileDay_ = ExtractCompileDay(compile_date);
+   }
+
+   // if really old firmware then don't get build name
+   // build name is really just for diagnostic purposes anyway
+   // I think it was present before 2010 but this is easy way
+   if (compileDay_ >= ConvertDay(2010, 1, 1))
+   {
+       pAct = new CPropertyAction(this, &ZStage::OnBuildName);
+       CreateProperty("BuildName", "", MM::String, true, pAct);
+       UpdateProperty("BuildName");
+   }
 
    if (HasRingBuffer() && nrEvents_ == 0)
    {
@@ -3126,26 +3141,26 @@ int ZStage::OnLinearSequenceTimeout(MM::PropertyBase* pProp, MM::ActionType eAct
 }
 
 // Get the compile date of this controller
-int ZStage::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      if (initialized_)
-         return DEVICE_OK;
-
-      ostringstream command;
-      command << "CD";
-      string answer;
-      // query the device
-      int ret = QueryCommand(command.str().c_str(), answer);
-      if (ret != DEVICE_OK)
-         return ret;
-
-      pProp->Set(answer.c_str());
-
-   }
-   return DEVICE_OK;
-}
+//int ZStage::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
+//{
+//   if (eAct == MM::BeforeGet)
+//   {
+//      if (initialized_)
+//         return DEVICE_OK;
+//
+//      ostringstream command;
+//      command << "CD";
+//      string answer;
+//      // query the device
+//      int ret = QueryCommand(command.str().c_str(), answer);
+//      if (ret != DEVICE_OK)
+//         return ret;
+//
+//      pProp->Set(answer.c_str());
+//
+//   }
+//   return DEVICE_OK;
+//}
 
 // This sets the number of waitcycles
 int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -3727,6 +3742,30 @@ int CRIF::Initialize()
    pAct = new CPropertyAction(this, &CRIF::OnWaitAfterLock);
    CreateProperty("Wait ms after Lock", "3000", MM::Integer, false, pAct);
 
+   pAct = new CPropertyAction(this, &CRIF::OnVersion);
+   CreateProperty("Version", "", MM::String, true, pAct);
+
+   pAct = new CPropertyAction(this, &CRIF::OnCompileDate);
+   CreateProperty("CompileDate", "", MM::String, true, pAct);
+   UpdateProperty("CompileDate");
+
+   // get the date of the firmware
+   char compile_date[MM::MaxStrLength];
+   if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
+   {
+       compileDay_ = ExtractCompileDay(compile_date);
+   }
+
+   // if really old firmware then don't get build name
+   // build name is really just for diagnostic purposes anyway
+   // I think it was present before 2010 but this is easy way
+   if (compileDay_ >= ConvertDay(2010, 1, 1))
+   {
+       pAct = new CPropertyAction(this, &CRIF::OnBuildName);
+       CreateProperty("BuildName", "", MM::String, true, pAct);
+       UpdateProperty("BuildName");
+   }
+
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -4181,7 +4220,7 @@ CRISP::CRISP() :
    na_(0.65),
    waitAfterLock_(1000),
    answerTimeoutMs_(1000),
-   compileDay_(0)
+   sum_(0)
 {
    InitializeDefaultErrorMessages();
 
@@ -4237,7 +4276,31 @@ int CRISP::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
-   CPropertyAction* pAct = new CPropertyAction(this, &CRISP::OnFocus);
+   CPropertyAction*  pAct = new CPropertyAction(this, &CRISP::OnVersion);
+   CreateProperty("Version", "", MM::String, true, pAct);
+
+   pAct = new CPropertyAction(this, &CRISP::OnCompileDate);
+   CreateProperty("CompileDate", "", MM::String, true, pAct);
+   UpdateProperty("CompileDate");
+
+   // get the date of the firmware
+   char compile_date[MM::MaxStrLength];
+   if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
+   {
+        compileDay_ = ExtractCompileDay(compile_date);
+   }
+
+   // if really old firmware then don't get build name
+   // build name is really just for diagnostic purposes anyway
+   // I think it was present before 2010 but this is easy way
+   if (compileDay_ >= ConvertDay(2010, 1, 1))
+   {
+       pAct = new CPropertyAction(this, &CRISP::OnBuildName);
+       CreateProperty("BuildName", "", MM::String, true, pAct);
+       UpdateProperty("BuildName");
+   }
+
+   pAct = new CPropertyAction(this, &CRISP::OnFocus);
    CreateProperty (g_CRISPState, "Undefined", MM::String, false, pAct);
 
    // Add values (TODO: check manual)
@@ -4259,11 +4322,6 @@ int CRISP::Initialize()
    pAct = new CPropertyAction (this, &CRISP::OnCompileDate);
    CreateProperty("CompileDate", "", MM::String, true, pAct);
    UpdateProperty("CompileDate");
-
-   // get the date of the firmware
-   char compile_date[MM::MaxStrLength];
-   if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-      compileDay_ = ExtractCompileDay(compile_date);
 
    pAct = new CPropertyAction(this, &CRISP::OnWaitAfterLock);
    CreateProperty("Wait ms after Lock", "1000", MM::Integer, false, pAct);
@@ -4691,28 +4749,6 @@ int CRISP::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Get(port_);
    }
 
-   return DEVICE_OK;
-}
-
-// Get the compile date of this controller
-int CRISP::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      if (initialized_)
-         return DEVICE_OK;
-
-      ostringstream command;
-      command << "CD";
-      string answer;
-      // query the device
-      int ret = QueryCommand(command.str().c_str(), answer);
-      if (ret != DEVICE_OK)
-         return ret;
-
-      pProp->Set(answer.c_str());
-
-   }
    return DEVICE_OK;
 }
 
@@ -5187,6 +5223,30 @@ int AZ100Turret::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
+   pAct = new CPropertyAction(this, &AZ100Turret::OnVersion);
+   CreateProperty("Version", "", MM::String, true, pAct);
+
+   pAct = new CPropertyAction(this, &AZ100Turret::OnCompileDate);
+   CreateProperty("CompileDate", "", MM::String, true, pAct);
+   UpdateProperty("CompileDate");
+
+   // get the date of the firmware
+   char compile_date[MM::MaxStrLength];
+   if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
+   {
+       compileDay_ = ExtractCompileDay(compile_date);
+   }
+
+   // if really old firmware then don't get build name
+   // build name is really just for diagnostic purposes anyway
+   // I think it was present before 2010 but this is easy way
+   if (compileDay_ >= ConvertDay(2010, 1, 1))
+   {
+       pAct = new CPropertyAction(this, &AZ100Turret::OnBuildName);
+       CreateProperty("BuildName", "", MM::String, true, pAct);
+       UpdateProperty("BuildName");
+   }
+
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -5338,8 +5398,32 @@ int StateDevice::Initialize()
 {
    core_ = GetCoreCallback();
 
+   CPropertyAction* pAct = new CPropertyAction(this, &StateDevice::OnVersion);
+   CreateProperty("Version", "", MM::String, true, pAct);
+
+   pAct = new CPropertyAction(this, &StateDevice::OnCompileDate);
+   CreateProperty("CompileDate", "", MM::String, true, pAct);
+   UpdateProperty("CompileDate");
+
+   // get the date of the firmware
+   char compile_date[MM::MaxStrLength];
+   if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
+   {
+       compileDay_ = ExtractCompileDay(compile_date);
+   }
+
+   // if really old firmware then don't get build name
+   // build name is really just for diagnostic purposes anyway
+   // I think it was present before 2010 but this is easy way
+   if (compileDay_ >= ConvertDay(2010, 1, 1))
+   {
+       pAct = new CPropertyAction(this, &StateDevice::OnBuildName);
+       CreateProperty("BuildName", "", MM::String, true, pAct);
+       UpdateProperty("BuildName");
+   }
+
    // state
-   CPropertyAction* pAct = new CPropertyAction (this, &StateDevice::OnState);
+   pAct = new CPropertyAction (this, &StateDevice::OnState);
    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
@@ -5595,6 +5679,30 @@ int LED::Initialize()
    if (ret != DEVICE_OK)
        return ret;
 
+   CPropertyAction* pAct = new CPropertyAction(this, &LED::OnVersion);
+   CreateProperty("Version", "", MM::String, true, pAct);
+
+   pAct = new CPropertyAction(this, &LED::OnCompileDate);
+   CreateProperty("CompileDate", "", MM::String, true, pAct);
+   UpdateProperty("CompileDate");
+
+   // get the date of the firmware
+   char compile_date[MM::MaxStrLength];
+   if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
+   {
+       compileDay_ = ExtractCompileDay(compile_date);
+   }
+
+   // if really old firmware then don't get build name
+   // build name is really just for diagnostic purposes anyway
+   // I think it was present before 2010 but this is easy way
+   if (compileDay_ >= ConvertDay(2010, 1, 1))
+   {
+       pAct = new CPropertyAction(this, &LED::OnBuildName);
+       CreateProperty("BuildName", "", MM::String, true, pAct);
+       UpdateProperty("BuildName");
+   }
+
    // not needed SetOpen and GetOpen do the same job. 
    /*
    CPropertyAction* pAct = new CPropertyAction (this, &LED::OnState);
@@ -5602,7 +5710,7 @@ int LED::Initialize()
    AddAllowedValue(MM::g_Keyword_State, g_Closed);
    AddAllowedValue(MM::g_Keyword_State, g_Open);
    */
-   CPropertyAction* pAct = new CPropertyAction(this, &LED::OnIntensity);
+   pAct = new CPropertyAction(this, &LED::OnIntensity);
    CreateProperty("Intensity", "20", MM::Integer, false, pAct);
    SetPropertyLimits("Intensity", 0, 100);
 
@@ -6052,7 +6160,31 @@ int Magnifier::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
-    CPropertyAction* pAct = new CPropertyAction(this, &Magnifier::OnMagnification);
+    CPropertyAction* pAct = new CPropertyAction(this, &Magnifier::OnVersion);
+    CreateProperty("Version", "", MM::String, true, pAct);
+    
+    pAct = new CPropertyAction(this, &Magnifier::OnCompileDate);
+    CreateProperty("CompileDate", "", MM::String, true, pAct);
+    UpdateProperty("CompileDate");
+
+    // get the date of the firmware
+    char compile_date[MM::MaxStrLength];
+    if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
+    {
+        compileDay_ = ExtractCompileDay(compile_date);
+    }
+
+    // if really old firmware then don't get build name
+    // build name is really just for diagnostic purposes anyway
+    // I think it was present before 2010 but this is easy way
+    if (compileDay_ >= ConvertDay(2010, 1, 1))
+    {
+        pAct = new CPropertyAction(this, &Magnifier::OnBuildName);
+        CreateProperty("BuildName", "", MM::String, true, pAct);
+        UpdateProperty("BuildName");
+    }
+
+    pAct = new CPropertyAction(this, &Magnifier::OnMagnification);
     CreateProperty("Magnification", "0.0", MM::Float, false, pAct);
     SetPropertyLimits("Magnification", 3.5, 125);
 
@@ -6292,7 +6424,31 @@ int ASI_TIRF::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
-    CPropertyAction* pAct = new CPropertyAction(this, &ASI_TIRF::OnAngle);
+    CPropertyAction* pAct = new CPropertyAction(this, &ASI_TIRF::OnVersion);
+    CreateProperty("Version", "", MM::String, true, pAct);
+
+    pAct = new CPropertyAction(this, &ASI_TIRF::OnCompileDate);
+    CreateProperty("CompileDate", "", MM::String, true, pAct);
+    UpdateProperty("CompileDate");
+
+    // get the date of the firmware
+    char compile_date[MM::MaxStrLength];
+    if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
+    {
+        compileDay_ = ExtractCompileDay(compile_date);
+    }
+
+    // if really old firmware then don't get build name
+    // build name is really just for diagnostic purposes anyway
+    // I think it was present before 2010 but this is easy way
+    if (compileDay_ >= ConvertDay(2010, 1, 1))
+    {
+        pAct = new CPropertyAction(this, &ASI_TIRF::OnBuildName);
+        CreateProperty("BuildName", "", MM::String, true, pAct);
+        UpdateProperty("BuildName");
+    }
+
+    pAct = new CPropertyAction(this, &ASI_TIRF::OnAngle);
     CreateProperty("TIRFAngle(deg)", "0.0", MM::Float, false, pAct);
     SetPropertyLimits("TIRFAngle(deg)", -90, 90);
 

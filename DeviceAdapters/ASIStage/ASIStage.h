@@ -76,13 +76,20 @@ public:
    unsigned int ExtractCompileDay(const char *compile_date);
 
 protected:
+   int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+protected:
    bool oldstage_;
    MM::Core *core_;
    bool initialized_;
    MM::Device *device_;
    std::string oldstagePrefix_;
    std::string port_;
+   unsigned int compileDay_; // "days" since Jan 1 2000 since the firmware was compiled according to (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
 };
+
 
 class XYStage : public CXYStageBase<XYStage>, public ASIBase
 {
@@ -136,9 +143,6 @@ private:
    int OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct);
    int GetMaxSpeed(char * maxSpeedStr);
    int OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnNrMoveRepetitions(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnJSMirror(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnJSSwapXY(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -178,7 +182,6 @@ private:
    bool stopSignal_;
    bool serialOnlySendChanged_;        // if true the serial command is only sent when it has changed
    std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
-   unsigned int compileDay_;  // "days" since Jan 1 2000 since the firmware was compiled according to (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
    bool advancedPropsEnabled_;
    std::string axisletterX_;
    std::string axisletterY_;	
@@ -237,7 +240,6 @@ public:
    int SetStageLinearSequence(double dZ_um, long nSlices);
 
 private:
-   int OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -267,7 +269,6 @@ private:
    long curSteps_;
    double maxSpeed_;
    bool motorOn_;
-   unsigned int compileDay_;  // "days" since Jan 1 2000 since the firmware was compiled according to (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
    bool supportsLinearSequence_;
    double linearSequenceIntervalUm_;
    long linearSequenceLength_;
@@ -349,7 +350,6 @@ public:
    // action interface
    // ----------------
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnNA(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -384,7 +384,6 @@ private:
    std::string focusState_;
    long waitAfterLock_;
    int answerTimeoutMs_;
-   unsigned int compileDay_;  // "days" since Jan 1 2000 since the firmware was compiled according to (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
    long sum_;
 };
 
