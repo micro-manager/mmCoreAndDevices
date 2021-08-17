@@ -131,6 +131,26 @@ void SkyraLaser::CreatePowerReadingProperty( const int line )
     RegisterPublicProperty( property );
 }
 
+void SkyraLaser::CreateDigitalModulationEnabledProperty( const int line )
+{
+    EnumerationProperty* property = new EnumerationProperty( MakeLineName( line ) + " Digital Modulation", laserDriver_, MakeLineCommand( "gdmes?", line ) );
+
+    property->RegisterEnumerationItem( "0", MakeLineCommand( "sdmes 0", line ), EnumerationItem_Disabled );
+    property->RegisterEnumerationItem( "1", MakeLineCommand( "sdmes 1", line ), EnumerationItem_Enabled );
+
+    RegisterPublicProperty( property );
+}
+
+void SkyraLaser::CreateAnalogModulationEnabledProperty( const int line )
+{
+    EnumerationProperty* property = new EnumerationProperty( MakeLineName( line ) + " Analog Modulation", laserDriver_, MakeLineCommand( "games?", line ) );
+
+    property->RegisterEnumerationItem( "0", MakeLineCommand( "sames 0", line ), EnumerationItem_Disabled );
+    property->RegisterEnumerationItem( "1", MakeLineCommand( "sames 1", line ), EnumerationItem_Enabled );
+
+    RegisterPublicProperty( property );
+}
+
 void SkyraLaser::CreateLaserStateProperty()
 {
     if ( IsInCdrhMode() ) {
@@ -217,6 +237,8 @@ void SkyraLaser::CreateLineSpecificProperties( const int line )
     CreateCurrentSetpointProperty( line );
     CreateCurrentReadingProperty( line );
     CreateModulationCurrentHighSetpointProperty( line );
+    CreateAnalogModulationEnabledProperty( line );
+    CreateDigitalModulationEnabledProperty( line );
     
     if ( line == 1 ) { CreateModulationCurrentLowSetpointProperty( line ); }
 }
