@@ -69,3 +69,5 @@ test-reports/
 *.pb.cc
 *.pb.h
 bin
+DeviceAdapters/CoboltOfficial/CoboltOfficial.vcxproj.filters
+DeviceAdapters/CoboltOfficial/.gitignore
