@@ -1,3 +1,6 @@
+# Cobolt Specifics
+- Set user environment variable MM_COBOLT_OUTPUT_DIR to the path where you want the built DLL to be copied.
+
 # mmCoreAndDevices
 The c++ code at the core of the Micro-Manager project.
 
