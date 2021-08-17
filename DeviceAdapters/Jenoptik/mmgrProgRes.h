@@ -30,7 +30,7 @@
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "DeviceThreads.h"
-#include "sdk/MexExl.h"
+#include "MexExl.h"
 #include <string>
 #include <map>
 

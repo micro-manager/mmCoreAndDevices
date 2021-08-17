@@ -76,7 +76,7 @@ Laser* LaserFactory::Create( LaserDriver* driver )
     std::string wavelength = "Unknown";
     
     if ( modelTokens.size() > 0 ) {
-        wavelength = std::to_string( (_Longlong) atoi( modelTokens[ 0 ].c_str() ) ); // TODO: Verify this, modelTokens[ 0 ] seems to use wrong index for wavelength...
+        wavelength = std::to_string( (long long) atoi( modelTokens[ 0 ].c_str() ) ); // TODO: Verify this, modelTokens[ 0 ] seems to use wrong index for wavelength...
     }
 
     Laser* laser;

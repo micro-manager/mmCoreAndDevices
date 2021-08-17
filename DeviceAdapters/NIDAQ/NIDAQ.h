@@ -16,7 +16,7 @@
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
-#include "../../../3rdParty/trunk/NationalInstruments/NI-DAQmxBase/includes/NIDAQmxBase.h"
+#include "NIDAQmxBase.h"
 
 ////////////////////////////////////////////////
 // Error codes
@@ -81,7 +81,10 @@ class NIDAQAO : public CSignalIOBase<NIDAQAO>
       int SetSignal(double volts);
       int GetSignal (double& volts) {volts = volts_; return DEVICE_OK;}
       int GetLimits (double& minVolts, double& maxVolts) {minVolts = minVolt_; maxVolts = maxVolt_; return DEVICE_OK;}
-
+      int IsDASequenceable(bool& isSequenceable) const {
+         isSequenceable = false; 
+         return DEVICE_OK;
+      };
       // Action Interface
       int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnMinVolt(MM::PropertyBase* pProp, MM::ActionType eAct);

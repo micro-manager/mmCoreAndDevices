@@ -3,3 +3,21 @@ NIDAQ: Interface to one of the NI APIs.  This actually worked (on the Mac), but 
 PiMotionStage: Superseded by PI_GCS_2, and dependencies not available
 Skeleton: Provided as a code example
 StanfordPhotonics: Superseded by Piper
+
+Updated for migration to Meson:
+	AndorSDK3 was too messy to include in the new build. It had many source files that were not meant to be included and it included many source files that were from other adapters.
+	Basler also too complicated.
+	ITC18 windows: SDK binaries were too old to use. Source could not be compiled on windows.
+	BioStepEagleIce: Only supported 32 bit build which we are now dropping. Couldn't find any info about this device online.
+	Jenoptik: Compiler Errors.
+	MCL_Nano and Micro Drive: Compiler errors, probably need to recompile SDK: 
+		MadLib64.lib(CNanoDrive.obj) : error LNK2001: unresolved external symbol printf
+		MadLib64.lib(core.obj) : error LNK2001: unresolved external symbol __iob_func
+		MadLib64.lib(core.obj) : error LNK2001: unresolved external symbol _snprintf
+		MadLib64.lib(core.obj) : error LNK2001: unresolved external symbol _vsnprintf
+		MadLib64.lib(windows_winusb.obj) : error LNK2001: unresolved external symbol sscanf
+	Mightex: Relies on old version of windows DDK. doesn't work for new compilers.
+	NIDAQ: Binary of SDK is missing. No longer supported.
+	NIMotionStageController: SDK only supported 32bit
+	SPOT (windows): Only supported 32 bit. If re-added should be included in the original Spot project, not copy a separate project.
+	ZeissAxioZoom: DATABYTES undeclared identifier

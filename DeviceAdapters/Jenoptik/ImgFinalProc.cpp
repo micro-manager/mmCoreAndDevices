@@ -1,4 +1,4 @@
-#include "sdk/mexexl.h"
+#include "mexexl.h"
 #include "mmgrProgRes.h"
 
 unsigned short GetShiftBpp (mexCameraTypeSummary camType)

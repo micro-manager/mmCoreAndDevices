@@ -266,7 +266,7 @@ int CoboltOfficial::SendCommand( const std::string& command, std::string* respon
         
         if ( returnCode != cobolt::return_code::ok ) {
 
-            Logger::Instance()->LogMessage( "CoboltOfficial::SendCommand: GetSerialAnswer Failed: " + std::to_string( (_Longlong) returnCode ), true );
+            Logger::Instance()->LogMessage( "CoboltOfficial::SendCommand: GetSerialAnswer Failed: " + std::to_string( (long long) returnCode ), true );
 
         } else if ( response->find( "error" ) != std::string::npos ||
                     response->find( "Error" ) != std::string::npos ||
@@ -282,7 +282,7 @@ int CoboltOfficial::SendCommand( const std::string& command, std::string* respon
         GetSerialAnswer( port_.c_str(), "\r\n", ignoredResponse );
         
         if ( returnCode != cobolt::return_code::ok ) {
-            Logger::Instance()->LogMessage( "CoboltOfficial::SendCommand: SendSerialCommand Failed: " + std::to_string( (_Longlong) returnCode ), true );
+            Logger::Instance()->LogMessage( "CoboltOfficial::SendCommand: SendSerialCommand Failed: " + std::to_string( (long long) returnCode ), true );
         }
     }
     return returnCode;
