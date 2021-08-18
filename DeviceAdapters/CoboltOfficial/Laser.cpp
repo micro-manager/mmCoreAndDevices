@@ -138,7 +138,8 @@ bool Laser::IsShutterEnabled() const
 {
     if ( laserOnOffProperty_ != NULL ) {
 
-        return true;
+        // Always enabled if open:
+        return ( laserOnOffProperty_->GetValue() == EnumerationItem_On );
 
     } else if ( laserStateProperty_ != NULL ) {
         
