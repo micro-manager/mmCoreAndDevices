@@ -524,7 +524,7 @@ int CoreCallback::OnPropertyChanged(const MM::Device* device, const char* propNa
                pixSizeUm = core_->getPixelSizeUm(true);
                OnPixelSizeAffineChanged(core_->getPixelSizeAffine(true));
             }
-            catch (CMMError ) {
+            catch (const CMMError&) {
                pixSizeUm = 0.0;
             }
             OnPixelSizeChanged(pixSizeUm);
@@ -649,7 +649,7 @@ int CoreCallback::OnMagnifierChanged(const MM::Device* /* device */)
          pixSizeUm = core_->getPixelSizeUm(true);
          OnPixelSizeAffineChanged(core_->getPixelSizeAffine(true));
       }
-      catch (CMMError ) {
+      catch (const CMMError&) {
          pixSizeUm = 0.0;
       }
       OnPixelSizeChanged(pixSizeUm);
