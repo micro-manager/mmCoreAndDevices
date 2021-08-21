@@ -58,6 +58,7 @@ static std::string GetExecutablePath()
          continue;
       return path.get();
    }
+   throw CMMError("Path to executable too long");
 }
 
 static std::string GetExecutableName()
