@@ -43,6 +43,7 @@
 #define CAN_XAXIS		0x26
 #define CAN_YAXIS		0x27
 #define CAN_ZAXIS		0x0F
+#define CAN_ZPIEZOAXIS	0x5F
 
 //////////////////////////////////////////////////////////////////////////////
 // Command numbers
