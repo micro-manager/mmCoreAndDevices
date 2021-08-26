@@ -1,0 +1,38 @@
+# When the main branch of this repo has a push, create a commit in
+# micro-manager.git so that it has the latest revision of this repo.
+# (The latest mmCoreAndDevices is used, not strictly the commit that triggered
+# this workflow.)
+
+name: Sync micro-manager submodule
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-micro-manager-submodule:
+    name: Sync micro-manager submodule
+    if: github.repository == 'micro-manager/mmCoreAndDevices'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: micro-manager/micro-manager
+          ssh-key: ${{ secrets.SSH_KEY_DEPLOY_TO_MICRO_MANAGER }}
+          path: micro-manager
+          submodules: true
+
+      - name: Commit and push if necessary
+        run: |
+          cd micro-manager
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git submodule update --remote -- mmCoreAndDevices
+          git add mmCoreAndDevices
+          if [ -z "$(git status --porcelain=v1 2>/dev/null)" ]; then
+              echo "No change to push"
+          else
+              git commit -m "Update mmCoreAndDevices submodule to latest"
+              git push
+          fi
