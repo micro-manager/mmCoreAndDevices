@@ -138,7 +138,8 @@ bool Laser::IsShutterEnabled() const
 {
     if ( laserOnOffProperty_ != NULL ) {
 
-        return ( laserOnOffProperty_->GetValue() == EnumerationItem_On ); // TODO: && not in modulation state
+        // Always enabled if open:
+        return ( laserOnOffProperty_->GetValue() == EnumerationItem_On );
 
     } else if ( laserStateProperty_ != NULL ) {
         
@@ -264,6 +265,7 @@ void Laser::CreateLaserOnOffProperty()
 
     property->RegisterEnumerationItem( "0", "abort", EnumerationItem_Off );
     property->RegisterEnumerationItem( "1", "restart", EnumerationItem_On );
+    property->SetCaching( false );
     
     RegisterPublicProperty( property );
     laserOnOffProperty_ = property;

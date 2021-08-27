@@ -82,8 +82,8 @@ void Mld06Laser::CreateLaserStateProperty()
         laserStateProperty_->RegisterState( "0", "Off", false );
         laserStateProperty_->RegisterState( "1", "Waiting for Key", false );
         laserStateProperty_->RegisterState( "2", "Completed", true );
-        laserStateProperty_->RegisterState( "3", "Completed (On/Off Modulation)", false );
-        laserStateProperty_->RegisterState( "4", "Completed (Modulation)", false );
+        laserStateProperty_->RegisterState( "3", "Completed (On/Off Modulation)", true );
+        laserStateProperty_->RegisterState( "4", "Completed (Modulation)", true );
         laserStateProperty_->RegisterState( "5", "Fault", false );
         laserStateProperty_->RegisterState( "6", "Aborted", false );
 

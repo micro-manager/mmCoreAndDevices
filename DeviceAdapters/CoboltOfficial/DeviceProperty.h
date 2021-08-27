@@ -51,8 +51,9 @@ public:
 
     /**
      * \brief If caching is on, then the value will remain the same until it is
-     *        changed on the Micromanager side. Thus properties that can change
-     *        on laser side should NOT be cached.
+     *        changed on the Micromanager side. Thus, any properties that can change
+     *        as a result of other things than user intervention should NOT
+     *        be cached.
      */
     void SetCaching( const bool enabled );
 
