@@ -79,7 +79,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(MM_COBOLT_OUTPUT_DIR)</OutDir>
+    <OutDir>$(MM_BUILDDIR)\$(Configuration)\$(Platform)\</OutDir>
     <ExtensionsToDeleteOnClean />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -136,18 +136,6 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
-    <PreBuildEvent>
-      <Command>del "C:\repos\Program Files\Micro-Manager-2.0\mmgr_dal_CoboltOfficial.dll"</Command>
-    </PreBuildEvent>
-    <PreBuildEvent>
-      <Message>Delete CoboltOfficial DLL</Message>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>COPY C:\repos\micro-manager\mmCoreAndDevices\build\Release\x64\mmgr_dal_CoboltOfficial.dll "C:\repos\Program Files\Micro-Manager-2.0\mmgr_dal_CoboltOfficial.dll"</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>Copy built CoboltOfficial DLL to sandboxed Micromanager folder</Message>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CoboltOfficial.cpp" />
