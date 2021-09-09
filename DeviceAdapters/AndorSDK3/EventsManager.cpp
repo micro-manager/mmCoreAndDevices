@@ -95,9 +95,11 @@ bool CEventsManager::Initialise(char * _errorMsg)
    v_events.push_back(new TEventContainer(g_Exposure_End_Event, camDevice_->GetInteger(g_Exposure_End_Event)));
    
    try
-   {
-      if (false == v_events[EV_BUFFER_OVERFLOW_EVENT]->GetActualEvent()->IsImplemented())
-      {
+   { 
+      auto eventEnableFeature = camDevice_->GetBool(L"EventEnable");
+      bool eventsSupported = eventEnableFeature->IsImplemented() && eventEnableFeature->IsWritable();
+      camDevice_->Release(eventEnableFeature);
+      if (!eventsSupported) {
          strcpy(_errorMsg, "[CEventsManager::Initialise] Events are Not Implemented");
       }
       else
