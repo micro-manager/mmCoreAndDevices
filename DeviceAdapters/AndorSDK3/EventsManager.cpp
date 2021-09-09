@@ -98,6 +98,7 @@ bool CEventsManager::Initialise(char * _errorMsg)
    { 
       auto eventEnableFeature = camDevice_->GetBool(L"EventEnable");
       bool eventsSupported = eventEnableFeature->IsImplemented() && eventEnableFeature->IsWritable();
+      camDevice_->Release(eventEnableFeature);
       if (!eventsSupported) {
          strcpy(_errorMsg, "[CEventsManager::Initialise] Events are Not Implemented");
       }
