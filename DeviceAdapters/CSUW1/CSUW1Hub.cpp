@@ -406,9 +406,12 @@ core.LogMessage(&device, os.str().c_str(), false);
  * Set Disk position
  * 0 = Disk 1
  * 1 = Disk 2
+ * 2 = Bright Field (-1)
  */
 int CSUW1Hub::SetDiskPosition(MM::Device& device, MM::Core& core, int pos)
 {
+   if (pos == 2) 
+      return SetBrightFieldPosition(device, core, 1);   
    ostringstream os;
    os << "DC_SLCT, " << (pos + 1);
 
@@ -436,9 +439,9 @@ int CSUW1Hub::SetDiskPosition(MM::Device& device, MM::Core& core, int pos)
 
 /*
  * Queries CSU for current disk position
- * -1 - Bright Field
  * 0  - Disk 1
  * 1  - Disk 2
+ * 2  - Bright Field (-1)
  */
 int CSUW1Hub::GetDiskPosition(MM::Device& device, MM::Core& core, int& pos)
 {
@@ -456,7 +459,7 @@ int CSUW1Hub::GetDiskPosition(MM::Device& device, MM::Core& core, int& pos)
    os << "Get Disk Position answer is: " << rcvBuf_;
 core.LogMessage(&device, os.str().c_str(), false);
    if (strstr(rcvBuf_, "-1") != 0)
-      pos = -1; // Bright Field
+      pos = 2; // Bright Field
    else if (strstr(rcvBuf_, "1") != 0)
 	   pos = 0;  // Disk 1
    else 
