@@ -284,6 +284,10 @@ int CCRISP::UpdateFocusState()
       case 'N': focusState_ = g_CRISP_N; break;
       case 'E': focusState_ = g_CRISP_E; break;
       case 'G': focusState_ = g_CRISP_G; break;
+      case 'H':
+      case 'C': focusState_ = g_CRISP_Cal; break;
+      case 'o':
+      case 'l': focusState_ = g_CRISP_RFO; break;
       case 'f': focusState_ = g_CRISP_f; break;
       case '1':
       case '2':
@@ -293,11 +297,15 @@ int CCRISP::UpdateFocusState()
       case 'g':
       case 'h':
       case 'i':
-      case 'j': focusState_ = g_CRISP_Cal; break;
-      case 'c': focusState_ = g_CRISP_C; break;
+      case 'j':
+      case 't': focusState_ = g_CRISP_Cal; break;
       case 'B': focusState_ = g_CRISP_B; break;
-      case 'o': focusState_ = g_CRISP_RFO; break;
-      default:  return ERR_UNRECOGNIZED_ANSWER;
+      case 'a':
+      case 'b':
+      case 'c':
+      case 'd':
+      case 'e': focusState_ = g_CRISP_C; break;
+      default:  focusState_ = g_CRISP_Unknown; break;
    }
    return DEVICE_OK;
 }
@@ -322,7 +330,7 @@ int CCRISP::ForceSetFocusState(string focusState)
    else if (focusState == g_CRISP_RFO) // reset focus offset
          command << addressChar_ << "LK F=111";
 
-		 if (command.str() == "")
+   if (command.str() == "")
       return DEVICE_OK;  // don't complain if we try to set to something else
    else
       return hub_->QueryCommandVerify(command.str(), ":A");
