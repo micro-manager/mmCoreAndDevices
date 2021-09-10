@@ -737,6 +737,7 @@ const char* const g_CRISP_C = "Curve";
 const char* const g_CRISP_B = "Balance";
 const char* const g_CRISP_RFO = "Reset Focus Offset";
 const char* const g_CRISP_SSZ = "Save to Controller";
+const char* const g_CRISP_Unknown = "Unknown";
 // TGPMT
 const char* const g_PMTGainPropertyName = "PMT Gain";
 const char* const g_PMTAVGPropertyName = "ADC Averaging Size";
