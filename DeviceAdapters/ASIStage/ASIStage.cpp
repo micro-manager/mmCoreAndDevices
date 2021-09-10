@@ -4879,7 +4879,7 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::BeforeGet)
    {
       float gainMultiplier;
-      std::string command = "KA " + axis_ + "?";
+      std::string command = "LR T?";
       int ret = GetValue(command.c_str(), gainMultiplier);
       if (ret != DEVICE_OK)
          return ret;
@@ -4891,7 +4891,7 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
       long nr;
       pProp->Get(nr);
       ostringstream command;
-      command << fixed << "KA " << axis_ << "=" << nr;
+      command << std::fixed << "LR T=" << nr;
 
       return SetCommand(command.str());
    }
