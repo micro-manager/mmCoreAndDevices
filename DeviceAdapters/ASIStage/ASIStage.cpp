@@ -85,6 +85,7 @@ const char* g_CRISP_C = "Curve";
 const char* g_CRISP_B = "Balance";
 const char* g_CRISP_RFO = "Reset Focus Offset";
 const char* g_CRISP_S = "Save to Controller";
+const char* g_CRISP_Unknown = "Unknown";
 const char* const g_CRISPOffsetPropertyName = "Lock Offset";
 const char* const g_CRISPSumPropertyName = "Sum";
 
@@ -4463,33 +4464,43 @@ int CRISP::GetFocusState(std::string& focusState)
 
    // translate response to one of our globals (see CRISP manual)
    char test = answer.c_str()[3];
-   switch (test) {
-      case 'I': focusState = g_CRISP_I; break;
-      case 'R': focusState = g_CRISP_R; break;
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case 'g':
-      case 'h':
-      case 'i':
-      case 'j': focusState = g_CRISP_Cal; break;
-      case 'D': focusState = g_CRISP_D; break;
-      case 'K': focusState = g_CRISP_K; break;
-      case 'F': focusState = g_CRISP_F; break;
-      case 'N': focusState = g_CRISP_N; break;
-      case 'E': focusState = g_CRISP_E; break;
-      // TODO: Sometimes the controller spits out extra information when the state is 'G'
-      // Figure out what that information is, and how to handle it best.  At the moment
-      // it causes problems since it will be read by the next command!
-      case 'G': focusState = g_CRISP_G; break;
-      case 'f': focusState = g_CRISP_f; break;
-      case 'C': focusState = g_CRISP_C; break;
-      case 'B': focusState = g_CRISP_B; break;
-      case 'l': focusState = g_CRISP_RFO; break;
-      default: return ERR_UNRECOGNIZED_ANSWER;
+   switch (test)
+   {
+	case 'I': focusState = g_CRISP_I; break;
+	case 'R': focusState = g_CRISP_R; break;
+	case 'D': focusState = g_CRISP_D; break;
+	case 'K': focusState = g_CRISP_K; break;  // trying to lock, goes to F when locked
+	case 'F': focusState = g_CRISP_F; break;  // this is read-only state
+	case 'N': focusState = g_CRISP_N; break;
+	case 'E': focusState = g_CRISP_E; break;
+	case 'G': focusState = g_CRISP_G; break;
+	case 'H':
+	case 'C': focusState = g_CRISP_Cal; break;
+	case 'o':
+	case 'l': focusState = g_CRISP_RFO; break;
+	case 'f': focusState = g_CRISP_f; break;
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case 'g':
+	case 'h':
+	case 'i':
+	case 'j':
+	case 't': focusState = g_CRISP_Cal; break;
+	case 'B': focusState = g_CRISP_B; break;
+	case 'a':
+	case 'b':
+	case 'c':
+	case 'd':
+	case 'e': focusState = g_CRISP_C; break;
+	default:  focusState = g_CRISP_Unknown; break;
    }
+   // As of 9/10/2021 this has not been checked:
+   // TODO: Sometimes the controller spits out extra information when the state is 'G'
+   // Figure out what that information is, and how to handle it best. At the moment
+   // it causes problems since it will be read by the next command!
    return DEVICE_OK;
 }
 
