@@ -167,11 +167,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CAN29Axis.cpp" />
     <ClCompile Include="WieneckeSinske.cpp" />
+    <ClCompile Include="WS.cpp" />
+    <ClCompile Include="WSAxis.cpp" />
+    <ClCompile Include="XYStageDevice.cpp" />
+    <ClCompile Include="ZPiezoCanDevice.cpp" />
+    <ClCompile Include="ZPiezoWSDevice.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CAN29.h" />
+    <ClInclude Include="CAN29Axis.h" />
     <ClInclude Include="WieneckeSinske.h" />
+    <ClInclude Include="WS.h" />
+    <ClInclude Include="WSAxis.h" />
+    <ClInclude Include="XYStageDevice.h" />
+    <ClInclude Include="ZPiezoCanDevice.h" />
+    <ClInclude Include="ZPiezoWSDevice.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
