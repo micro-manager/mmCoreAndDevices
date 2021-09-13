@@ -40,7 +40,7 @@
 #include "ModuleInterface.h"
 #include "DeviceUtils.h"
 #include "DeviceBase.h"
-#include "ZPiezoCANDevice.h"
+#include "ZPiezoCanDevice.h"
 #include "ZPiezoWSDevice.h"
 #include "XYStageDevice.h"
 
