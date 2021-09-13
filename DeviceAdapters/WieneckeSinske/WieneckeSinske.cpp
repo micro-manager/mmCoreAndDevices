@@ -41,6 +41,7 @@
 #include "DeviceUtils.h"
 #include "DeviceBase.h"
 #include "ZPiezoCANDevice.h"
+#include "ZPiezoWSDevice.h"
 #include "XYStageDevice.h"
 
 #include <sstream>
@@ -87,8 +88,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 	}
 	else if (strcmp(deviceName, g_ZPiezoWSDeviceName) == 0)
 	{
-		//Todo
-		ZPiezoCANDevice* pZPiezoWSDevice = new ZPiezoCANDevice();
+		ZPiezoWSDevice* pZPiezoWSDevice = new ZPiezoWSDevice();
 		return pZPiezoWSDevice;
 	}
 
