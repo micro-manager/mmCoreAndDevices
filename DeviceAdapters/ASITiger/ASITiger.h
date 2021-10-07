@@ -262,6 +262,7 @@ const char* const g_FWSpinStatePropertyName = "SpinOffOn";
 const char* const g_FWVelocityRunPropertyName = "VelocityRun";
 const char* const g_FWSpeedSettingPropertyName = "SpeedSetting";
 const char* const g_FWLockModePropertyName = "LockMode";
+const char* const g_FWOffsetPropertyName = "Offset";
 
 // scanner property names
 const char* const g_ScannerLowerLimXPropertyName = "MinDeflectionX(deg)";
