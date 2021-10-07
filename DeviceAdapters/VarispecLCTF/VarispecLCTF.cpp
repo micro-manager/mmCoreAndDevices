@@ -521,20 +521,26 @@ int VarispecLCTF::sendCmd(std::string cmd, std::string& out) {
    if (ret != DEVICE_OK) {
       return ret;
    }
-   GetSerialAnswer(port_.c_str(), "\r", out); //Try returning any extra response from the device.
+   ret = GetSerialAnswer(port_.c_str(), "\r", out); //Try returning any extra response from the device.
+   if (ret != DEVICE_OK) {
+       return ret;
+   }
    return DEVICE_OK;
 }
 
 int VarispecLCTF::sendCmd(std::string cmd) {
    int ret = SendSerialCommand(port_.c_str(), cmd.c_str(), "\r");
    if (ret != DEVICE_OK) {
-      return DEVICE_SERIAL_COMMAND_FAILED;
+      return ret;
    }
    std::string response;
-   GetSerialAnswer(port_.c_str(), "\r", response);   //Read back the response and make sure it matches what we sent. If not there is an issue with communication.
+   ret = GetSerialAnswer(port_.c_str(), "\r", response);   //Read back the response and make sure it matches what we sent. If not there is an issue with communication.
    if (response != cmd) {
       SetErrorText(LCTF_GENERIC_ERROR, "The VarispecLCTF did not respond.");
       return LCTF_GENERIC_ERROR;
+   }
+   if (ret != DEVICE_OK) {
+       return ret;
    }
    return DEVICE_OK;
 }
