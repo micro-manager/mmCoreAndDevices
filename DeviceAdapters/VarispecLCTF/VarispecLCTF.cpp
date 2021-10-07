@@ -244,7 +244,7 @@ int VarispecLCTF::Initialize()
       return ret;
 
    //Set VarispecLCTF to Standard Comms mode
-   ret = sendCmd("B0", getFromVarispecLCTF_);
+   ret = sendCmd("B0");
    if (ret != DEVICE_OK) {return ret;}
    ret = sendCmd("G0"); //disable the TTL port
    if (ret != DEVICE_OK) {return ret;}
