@@ -8,6 +8,7 @@
 // AUTHOR:        Nick Anthony, BPL, 2018 based heavily on the the VariLC adapter by Rudolf Oldenbourg.
 
 
+
 #include "VarispecLCTF.h"
 #include <cstdio>
 #include <cctype>
@@ -16,6 +17,10 @@
 #include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm> 
+
+#define LCTF_GENERIC_ERROR 99
+#define LCTF_NOT_INITIALIZED 98
+#define LCTF_NOT_EXERCISED 97
 
 
 const char* g_ControllerName    = "VarispecLCTF";
@@ -208,8 +213,8 @@ MM::DeviceDetectionStatus VarispecLCTF::DetectDevice(void)
 
 int VarispecLCTF::Initialize()
 {
-   SetErrorText(97, "The VarispecLCTF reports that it is not exercised.");
-   SetErrorText(98, "The VarispecLCTF reports that it is not initialized.");
+   SetErrorText(LCTF_NOT_EXERCISED, "The VarispecLCTF reports that it is not exercised.");
+   SetErrorText(LCTF_NOT_INITIALIZED, "The VarispecLCTF reports that it is not initialized.");
 
    //Configure the com port.
    GetCoreCallback()->SetSerialProperties(port_.c_str(),
@@ -239,29 +244,30 @@ int VarispecLCTF::Initialize()
       return ret;
 
    //Set VarispecLCTF to Standard Comms mode
-   ret = sendCmd("B0",getFromVarispecLCTF_);
+   ret = sendCmd("B0");
    if (ret != DEVICE_OK) {return ret;}
    ret = sendCmd("G0"); //disable the TTL port
    if (ret != DEVICE_OK) {return ret;}
 
    while (true){
       ret = getStatus();
-      if (ret == 98) { //Needs initialization
+      if (ret == LCTF_NOT_INITIALIZED) { //Needs initialization
          LogMessage("VarispecLCTF: Running initialization");
          sendCmd("I1");
          while (reportsBusy()){
-            CDeviceUtils::SleepMs(100);
+            CDeviceUtils::SleepMs(500);
          }
       }
-      else if (ret == 97) { //needs exercising
+      else if (ret == LCTF_NOT_EXERCISED) { //needs exercising
          LogMessage("VarispecLCTF: Running exercise");
          sendCmd("E1");
          while (reportsBusy()){
-            CDeviceUtils::SleepMs(100);
+            CDeviceUtils::SleepMs(500);
          }
       }
       else if (ret != DEVICE_OK) {
-		  LogMessage("VarispecLCTF: Failed on getStatus");
+         
+         LogMessage("VarispecLCTF: Failed on getStatus");
          return ret;
       }
       else { //Device is ok
@@ -302,7 +308,7 @@ int VarispecLCTF::Initialize()
    if (ret != DEVICE_OK) {
       return ret;
    }
-   SetErrorText(99, "Device set busy for ");
+   SetErrorText(LCTF_GENERIC_ERROR, "Device set busy for ");
    return DEVICE_OK;
 }
 
@@ -376,8 +382,8 @@ int VarispecLCTF::OnBaud(MM::PropertyBase* pProp, MM::ActionType eAct)
           vector<double> numbers = getNumbersFromMessage(ans);
           if (numbers.size() == 0) 
           { //The device must have returned "W*" meaning that an invalid wavelength was sent
-             SetErrorText(99, "The Varispec device was commanded to tune to an out of range wavelength.");
-             return 99;
+             SetErrorText(LCTF_GENERIC_ERROR, "The Varispec device was commanded to tune to an out of range wavelength.");
+             return LCTF_GENERIC_ERROR;
           }
           pProp->Set(numbers[0]);
           ret = getStatus();
@@ -510,26 +516,31 @@ bool VarispecLCTF::Busy()
 }
 
 
-
 int VarispecLCTF::sendCmd(std::string cmd, std::string& out) {
    int ret = sendCmd(cmd);
    if (ret != DEVICE_OK) {
       return ret;
    }
-   GetSerialAnswer(port_.c_str(), "\r", out); //Try returning any extra response from the device.
+   ret = GetSerialAnswer(port_.c_str(), "\r", out); //Try returning any extra response from the device.
+   if (ret != DEVICE_OK) {
+       return ret;
+   }
    return DEVICE_OK;
 }
 
 int VarispecLCTF::sendCmd(std::string cmd) {
    int ret = SendSerialCommand(port_.c_str(), cmd.c_str(), "\r");
    if (ret != DEVICE_OK) {
-      return DEVICE_SERIAL_COMMAND_FAILED;
+      return ret;
    }
    std::string response;
-   GetSerialAnswer(port_.c_str(), "\r", response);   //Read back the response and make sure it matches what we sent. If not there is an issue with communication.
+   ret = GetSerialAnswer(port_.c_str(), "\r", response);   //Read back the response and make sure it matches what we sent. If not there is an issue with communication.
    if (response != cmd) {
-      SetErrorText(99, "The VarispecLCTF did not respond.");
-      return 99;
+      SetErrorText(LCTF_GENERIC_ERROR, "The VarispecLCTF did not respond.");
+      return LCTF_GENERIC_ERROR;
+   }
+   if (ret != DEVICE_OK) {
+       return ret;
    }
    return DEVICE_OK;
 }
@@ -550,8 +561,8 @@ int VarispecLCTF::getStatus() {
       }
    }
    if (ans[0] != '@') {
-      SetErrorText(99, "Varispec LCTF: Did not receive '@' in response to a request for status");
-      return 99;
+      SetErrorText(LCTF_GENERIC_ERROR, "Varispec LCTF: Did not receive '@' in response to a request for status");
+      return LCTF_GENERIC_ERROR;
    }
    if (ans[1] & 0x20) { //An error has occurred.
       std::string answer;
@@ -560,14 +571,14 @@ int VarispecLCTF::getStatus() {
       ret = sendCmd("R1"); //clear the error
       if (ret != DEVICE_OK) { return ret; }
       std::string err =  "The VarispecLCTF reports error number: " + answer;
-      SetErrorText(99, err.c_str());
-      return 99;
+      SetErrorText(LCTF_GENERIC_ERROR, err.c_str());
+      return LCTF_GENERIC_ERROR;
    }
    if (!(ans[1] & 0x02)) {
-      return 97;
+      return LCTF_NOT_EXERCISED;
    }
    if (!(ans[1] & 0x01)) {
-      return 98;
+      return LCTF_NOT_INITIALIZED;
    }
    return DEVICE_OK;
 }
