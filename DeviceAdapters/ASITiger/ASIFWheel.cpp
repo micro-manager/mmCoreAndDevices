@@ -174,6 +174,12 @@ int CFWheel::Initialize()
    AddAllowedValue(g_FWLockModePropertyName, g_OnState);
    UpdateProperty(g_FWLockModePropertyName);
 
+   // offset
+   pAct = new CPropertyAction(this, &CFWheel::OnOffset);
+   CreateProperty(g_FWOffsetPropertyName, "0", MM::Integer, false, pAct);
+   SetPropertyLimits(g_FWOffsetPropertyName, 0, 255);
+   UpdateProperty(g_FWOffsetPropertyName);
+   
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -495,4 +501,33 @@ int CFWheel::OnLockMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), command.str(), g_SerialTerminatorFW) );
    }
    return DEVICE_OK;
+}
+
+int CFWheel::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    ostringstream command;
+    command.str("");
+    
+    long tmp = 0;
+    if (eAct == MM::BeforeGet)
+    {
+        if (!refreshProps_ && initialized_)
+        {
+            return DEVICE_OK;
+        }
+        RETURN_ON_MM_ERROR(hub_->QueryCommand("OF ", g_SerialTerminatorFW));
+        RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition2(tmp));
+        pProp->Set(tmp);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        pProp->Get(tmp);
+        command << "OF " << tmp;
+        ostringstream response; response.str("");
+        response << tmp << "OF " << tmp << " " << tmp;
+        RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), response.str(), g_SerialTerminatorFW));
+        // issue the home command
+        RETURN_ON_MM_ERROR(hub_->QueryCommand("HO", "HO"));
+    }
+    return DEVICE_OK;
 }
