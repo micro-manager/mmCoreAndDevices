@@ -19,7 +19,9 @@ To see the default values of each property please view `MMCommon.props`
 ### Building on Mac and  Linux
 *TODO*
 
-### Branches
+Most users should clone the `micro-manager` repository and use this repo as a submodule.
+
+### Branches (for maintainers only)
 This repository consists of two primary branches: `main` and `privateMain`.  
 Changes made to the `main` branch are merged into `privateMain`. The only difference between the two branches is that `privateMain` includes a private repository as a submodule containing device adapter code which is not permitted to be made publicly available.  
 Note: Please do not modify public files in the `privateMain` branch. Changes made in `main` should be merged into `privateMain` but never the other way around.  

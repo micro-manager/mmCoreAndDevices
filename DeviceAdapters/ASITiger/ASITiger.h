@@ -262,6 +262,7 @@ const char* const g_FWSpinStatePropertyName = "SpinOffOn";
 const char* const g_FWVelocityRunPropertyName = "VelocityRun";
 const char* const g_FWSpeedSettingPropertyName = "SpeedSetting";
 const char* const g_FWLockModePropertyName = "LockMode";
+const char* const g_FWOffsetPropertyName = "Offset";
 
 // scanner property names
 const char* const g_ScannerLowerLimXPropertyName = "MinDeflectionX(deg)";
@@ -534,6 +535,11 @@ const char* const g_PresetCode51 = "51 - cells 17-24 on BNC1-8";
 const char* const g_PresetCode52 = "52 - BNC3 source = TTL5";
 const char* const g_PresetCode53 = "53 - BNC1/6 enabled of 7";
 const char* const g_PresetCode54 = "54 - BNC1/4/6 enabled of 7";
+const char* const g_PresetCode55 = "55 - BNC1/4 enabled of 7";
+const char* const g_PresetCode56 = "56 - BNC2/5 enabled of 7";
+const char* const g_PresetCode57 = "57 - BNC3/6 enabled of 7";
+const char* const g_PresetCode58 = "58 - BNC1/5 enabled of 7";
+const char* const g_PresetCode59 = "59 - BNC2/6 enabled of 7";
 const char* const g_PLogicModeNone = "None";
 const char* const g_PLogicModediSPIMShutter = "diSPIM Shutter";
 const char* const g_PLogicMode4ChShutter = "Four-channel shutter";
@@ -560,6 +566,11 @@ const char* const g_Channel1And3And5 = "output 1 and 3 and 5";
 const char* const g_Channel2And4And6 = "output 2 and 4 and 6";
 const char* const g_Channel1And6 = "output 1 and 6";
 const char* const g_Channel1And4And6 = "output 1 and 4 and 6";
+const char* const g_Channel1And4 = "output 1 and 4";
+const char* const g_Channel2And5 = "output 2 and 5";
+const char* const g_Channel3And6 = "output 3 and 6";
+const char* const g_Channel1And5 = "output 1 and 5";
+const char* const g_Channel2And6 = "output 2 and 6";
 
 
 // SPIM enums
@@ -727,6 +738,7 @@ const char* const g_CRISP_C = "Curve";
 const char* const g_CRISP_B = "Balance";
 const char* const g_CRISP_RFO = "Reset Focus Offset";
 const char* const g_CRISP_SSZ = "Save to Controller";
+const char* const g_CRISP_Unknown = "Unknown";
 // TGPMT
 const char* const g_PMTGainPropertyName = "PMT Gain";
 const char* const g_PMTAVGPropertyName = "ADC Averaging Size";

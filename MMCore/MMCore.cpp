@@ -5546,7 +5546,7 @@ double CMMCore::getMagnificationFactor() const
          mm::DeviceModuleLockGuard guard(magnifier);
          magnification *= magnifier->GetMagnification();
       }
-      catch (CMMError e)
+      catch (const CMMError&)
       {
          assert(!"Internal error in generating a list of specific devices");
       }
