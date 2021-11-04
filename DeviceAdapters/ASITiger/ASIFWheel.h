@@ -56,6 +56,7 @@ public:
    int OnVelocity    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSpeedSetting(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLockMode    (MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnOffset      (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    unsigned int numPositions_;

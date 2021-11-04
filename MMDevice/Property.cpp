@@ -499,5 +499,5 @@ int MM::PropertyCollection::Apply(const char* pszName)
    if (!pProp)
       return DEVICE_INVALID_PROPERTY;
 
-      return pProp->Apply();
+   return pProp->Apply();
 }

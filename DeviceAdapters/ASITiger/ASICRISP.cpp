@@ -122,7 +122,7 @@ int CCRISP::Initialize()
 
    pAct = new CPropertyAction(this, &CCRISP::OnNumAvg);
    CreateProperty(g_CRISPNumberAveragesPropertyName, "1", MM::Integer, false, pAct);
-   SetPropertyLimits(g_CRISPNumberAveragesPropertyName, 0, 8);
+   SetPropertyLimits(g_CRISPNumberAveragesPropertyName, 0, 10);
    UpdateProperty(g_CRISPNumberAveragesPropertyName);
 
    pAct = new CPropertyAction(this, &CCRISP::OnSNR);
@@ -284,6 +284,10 @@ int CCRISP::UpdateFocusState()
       case 'N': focusState_ = g_CRISP_N; break;
       case 'E': focusState_ = g_CRISP_E; break;
       case 'G': focusState_ = g_CRISP_G; break;
+      case 'H':
+      case 'C': focusState_ = g_CRISP_Cal; break;
+      case 'o':
+      case 'l': focusState_ = g_CRISP_RFO; break;
       case 'f': focusState_ = g_CRISP_f; break;
       case '1':
       case '2':
@@ -293,11 +297,15 @@ int CCRISP::UpdateFocusState()
       case 'g':
       case 'h':
       case 'i':
-      case 'j': focusState_ = g_CRISP_Cal; break;
-      case 'c': focusState_ = g_CRISP_C; break;
+      case 'j':
+      case 't': focusState_ = g_CRISP_Cal; break;
       case 'B': focusState_ = g_CRISP_B; break;
-      case 'o': focusState_ = g_CRISP_RFO; break;
-      default:  return ERR_UNRECOGNIZED_ANSWER;
+      case 'a':
+      case 'b':
+      case 'c':
+      case 'd':
+      case 'e': focusState_ = g_CRISP_C; break;
+      default:  focusState_ = g_CRISP_Unknown; break;
    }
    return DEVICE_OK;
 }
@@ -322,7 +330,7 @@ int CCRISP::ForceSetFocusState(string focusState)
    else if (focusState == g_CRISP_RFO) // reset focus offset
          command << addressChar_ << "LK F=111";
 
-		 if (command.str() == "")
+   if (command.str() == "")
       return DEVICE_OK;  // don't complain if we try to set to something else
    else
       return hub_->QueryCommandVerify(command.str(), ":A");
@@ -493,7 +501,7 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
-      command << "KA " << axisLetter_ << "?";
+      command << "LR T?";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A"));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       if (!pProp->Set(tmp))
@@ -502,7 +510,7 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << "KA " << axisLetter_ << "="<< tmp;
+      command << "LR T=" << tmp;
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A") );
    }
    return DEVICE_OK;

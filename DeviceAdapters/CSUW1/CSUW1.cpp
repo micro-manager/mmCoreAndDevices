@@ -955,7 +955,7 @@ int Disk::Initialize()
 
    SetPositionLabel(0, "Disk 1");
    SetPositionLabel(1, "Disk 2");
-  // SetPositionLabel(2, "BrightField");
+   SetPositionLabel(2, "BrightField");
 
    ret = UpdateStatus();
    if (ret != DEVICE_OK) 

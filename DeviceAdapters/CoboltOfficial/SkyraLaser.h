@@ -62,6 +62,8 @@ protected:
     void CreateCurrentReadingProperty( const int line );
     void CreatePowerSetpointProperty( const int line );
     void CreatePowerReadingProperty( const int line );
+    void CreateDigitalModulationEnabledProperty( const int line );
+    void CreateAnalogModulationEnabledProperty( const int line );
 
     void CreateLaserStateProperty();
 
