@@ -1,4 +1,4 @@
-#include "sdk/mexexl.h"
+#include "mexexl.h"
 #include "mmgrProgRes.h"
 extern 	unsigned __int64 g_TriggeredGUID;
 extern mexAcquisParams* g_pAcqProperties;

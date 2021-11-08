@@ -3,7 +3,7 @@
 
 #include "TimeSpanPC.h"
 #include <string>
-#include "StringTools.h"
+#include "stringtools.h"
 
 class CAutoTimeMeasure : public CTimeSpanPC
 { 

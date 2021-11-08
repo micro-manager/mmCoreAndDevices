@@ -37,6 +37,8 @@
 #ifndef __COBOLT__LOGGER
 #define __COBOLT__LOGGER
 
+#include <string>
+
 NAMESPACE_COBOLT_BEGIN
 
 class Logger

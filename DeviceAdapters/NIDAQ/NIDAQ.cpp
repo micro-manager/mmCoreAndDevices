@@ -13,7 +13,6 @@
 
 
 #include "NIDAQ.h"
-#include "../../../3rdParty/trunk/NationalInstruments/NI-DAQmxBase/includes/NIDAQmxBase.h"
 #include "ModuleInterface.h"
 
 

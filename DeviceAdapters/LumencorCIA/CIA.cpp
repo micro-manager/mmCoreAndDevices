@@ -34,8 +34,8 @@
 #include "CIA.h"
 #include <string>
 #include <math.h>
-#include "..\..\MMDevice\ModuleInterface.h"
-#include "..\..\MMDevice\DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 #include <sstream>
 #include <fstream>
 #include "time.h"
