@@ -38,11 +38,10 @@
 //                programming environments (Java or Python).
 
 
-//MMDevice includes
-#include "DeviceThreads.h"
-#include "DeviceUtils.h"
-#include "ImageMetadata.h"
-#include "ModuleInterface.h"
+#include "../MMDevice/DeviceThreads.h"
+#include "../MMDevice/DeviceUtils.h"
+#include "../MMDevice/ImageMetadata.h"
+#include "../MMDevice/ModuleInterface.h"
 #include "CircularBuffer.h"
 #include "ConfigGroup.h"
 #include "Configuration.h"
