@@ -419,7 +419,7 @@ int CTriggerScopeMMHub::Initialize()
    if (SendAndReceive("SSL1", answer) == DEVICE_OK)
    {
       pAct = new CPropertyAction(this, &CTriggerScopeMMHub::OnUseActionLEDs);
-      ret = CreateProperty("UseActionLEDs", "On", MM::String, true, pAct);
+      ret = CreateProperty("UseActionLEDs", "On", MM::String, false, pAct);
       AddAllowedValue("UseActionLEDs", "On");
       AddAllowedValue("UseActionLEDs", "Off");
    }
@@ -542,27 +542,37 @@ int CTriggerScopeMMHub::OnUseActionLEDs(MM::PropertyBase* pProp, MM::ActionType 
 {
    if (eAct == MM::BeforeGet)
    {
-      useActionLEDs_ ? pProp->Set("On") : pProp->Set("Off");
+      if (useActionLEDs_) 
+      {
+         pProp->Set("On");
+      } else
+      {
+         pProp->Set("Off");
+      }
    }
    else if (eAct == MM::AfterSet)
    {
       std::string result;
       pProp->Get(result);
       std::string answer;
+      int ret = DEVICE_OK;
       if (result == "On")
       {
-         if (SendAndReceive("SSL1", answer)) 
+         ret = SendAndReceive("SSL1", answer);
+         if (ret == DEVICE_OK)
          {
             useActionLEDs_ = true;
          }
       }
       else if (result == "Off") 
       {
-         if (SendAndReceive("SSL0", answer)) 
+         ret = SendAndReceive("SSL0", answer);
+         if (ret == DEVICE_OK)
          {
             useActionLEDs_ = false;
          }
       }
+      return ret;
    }
    return DEVICE_OK;
 }
