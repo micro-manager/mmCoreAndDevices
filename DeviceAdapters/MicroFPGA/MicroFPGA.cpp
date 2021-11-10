@@ -467,11 +467,11 @@ int CameraTrigger::Initialize()
 
 
 	CPropertyAction* pAct = new CPropertyAction(this, &CameraTrigger::OnStart);
-	int nRet = CreateProperty("Start", "0", MM::Integer, false, pAct);
+	int nRet = CreateProperty("Start", "Start", MM::String, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
-	AddAllowedValue("Start", "1");
-	AddAllowedValue("Start", "0");
+	AddAllowedValue("Start", "Start");
+	AddAllowedValue("Start", "Stop");
 
 	pAct = new CPropertyAction(this, &CameraTrigger::OnPulse);
 	nRet = CreateProperty("Pulse", "10", MM::Integer, false, pAct);
@@ -567,19 +567,31 @@ int CameraTrigger::OnMode(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer);
-		mode_ = answer == 1;
+		if (answer == 1) {
+			pProp->Set("Active");
+			mode_ = true;
+		}
+		else {
+			pProp->Set("Passive");
+			mode_ = false;
+		}
 	}
 	else if (pAct == MM::AfterSet)
 	{
-		long mode;
+		std::string mode;
 		pProp->Get(mode);
 
-		int ret = WriteToPort(g_offsetaddressLaserMode, mode);
+		if (mode.compare("Active")) {
+			mode_ = true;
+		}
+		else {
+			mode_ = false;
+		}
+
+		int ret = WriteToPort(g_offsetaddressLaserMode, mode_);
 		if (ret != DEVICE_OK)
 			return ret;
 
-		mode_ = mode == 1;
 	}
 
 	return DEVICE_OK;
@@ -605,19 +617,30 @@ int CameraTrigger::OnStart(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer);
-		start_ = answer == 1;
+		if (answer == 1) {
+			pProp->Set("On");
+			start_ = true;
+		}
+		else {
+			pProp->Set("Off");
+			start_ = false;
+		}
 	}
 	else if (pAct == MM::AfterSet)
 	{
-		long start;
-		pProp->Get(start);
+		std::string status;
+		pProp->Get(status);
 
-		int ret = WriteToPort(g_offsetaddressCamTriggerStart, start);
+		if (status.compare("On") == 0) {
+			start_ = true;
+		}
+		else {
+			start_ = false;
+		}
+
+		int ret = WriteToPort(g_offsetaddressCamTriggerStart, start_);
 		if (ret != DEVICE_OK)
 			return ret;
-
-		start_ = start == 1;
 	}
 
 	return DEVICE_OK;
