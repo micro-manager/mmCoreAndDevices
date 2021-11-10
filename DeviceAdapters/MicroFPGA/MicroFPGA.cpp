@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Adapter for MicroFPGA, a FPGA platform using FPGA boards from
 //                Alchitry. The adapter must be used with a special firmware, see:
-//                https://github.com/jdeschamps/MicroFPGA
+//                https://github.com/mufpga/MicroFPGA
 // COPYRIGHT:     EMBL
 // LICENSE:       LGPL
 //
@@ -23,21 +23,23 @@
 #endif
 
 const char* g_DeviceNameMicroFPGAHub = "MicroFPGA-Hub";
-const char* g_DeviceNameLaserTrig = "LaserTrig";
-const char* g_DeviceNameAnalogInput = "AnalogInput";
+const char* g_DeviceNameCamTrig = "Camera Trigger";
+const char* g_DeviceNameLaserTrig = "Laser Trigger";
+const char* g_DeviceNameAnalogInput = "Analog Input";
 const char* g_DeviceNamePWM = "PWM";
 const char* g_DeviceNameTTL = "TTL";
 const char* g_DeviceNameServos = "Servos";
 
 //////////////////////////////////////////////////////////////////////////////
 /// Constants that should match the ones in the firmware
-const int g_version = 2;
+const int g_version = 3;
 const int g_id_au = 79;
+const int g_id_aup = 80;
 const int g_id_cu = 29;
 
 const int g_maxlasers = 8;
 const int g_maxanaloginput = 8;
-const int g_maxttl = 5;
+const int g_maxttl = 4;
 const int g_maxpwm = 5;
 const int g_maxservos = 7;
 
@@ -47,10 +49,18 @@ const int g_offsetaddressLaserSequence = g_offsetaddressLaserDuration+g_maxlaser
 const int g_offsetaddressTTL = g_offsetaddressLaserSequence+g_maxlasers;
 const int g_offsetaddressServo = g_offsetaddressTTL+g_maxttl;
 const int g_offsetaddressPWM = g_offsetaddressServo+g_maxservos;
-const int g_offsetaddressAnalogInput = g_offsetaddressPWM+g_maxpwm;
 
-const int g_address_version = 100;
-const int g_address_id = 101;
+const int g_offsetaddressCamTriggerMode = g_offsetaddressPWM + g_maxpwm;
+const int g_offsetaddressCamTriggerStart = g_offsetaddressCamTriggerMode + 1;
+const int g_offsetaddressCamPulse = g_offsetaddressCamTriggerStart + 1;
+const int g_offsetaddressCamPeriod = g_offsetaddressCamPulse + 1;
+const int g_offsetaddressCamExposure = g_offsetaddressCamPeriod + 1;
+const int g_offsetaddressLaserDelay = g_offsetaddressCamExposure + 1;
+
+const int g_offsetaddressAnalogInput = g_offsetaddressLaserDelay + 1;
+
+const int g_address_version = 200;
+const int g_address_id = 201;
 
 // static lock
 MMThreadLock MicroFPGAHub::lock_;
@@ -61,6 +71,7 @@ MMThreadLock MicroFPGAHub::lock_;
 MODULE_API void InitializeModuleData()
 {
 	RegisterDevice(g_DeviceNameMicroFPGAHub, MM::HubDevice, "Hub (required)");
+	RegisterDevice(g_DeviceNameCamTrig, MM::GenericDevice, "Camera Trigger");
 	RegisterDevice(g_DeviceNameLaserTrig, MM::GenericDevice, "Laser Trigger");
 	RegisterDevice(g_DeviceNameAnalogInput, MM::GenericDevice, "Analog Input");
 	RegisterDevice(g_DeviceNamePWM, MM::GenericDevice, "PWM Output");
@@ -77,9 +88,13 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 	{
 		return new MicroFPGAHub;
 	}
+	else if (strcmp(deviceName, g_DeviceNameCamTrig) == 0)
+	{
+		return new CameraTrigger;
+	}
 	else if (strcmp(deviceName, g_DeviceNameLaserTrig) == 0)
 	{
-		return new LaserTrig;
+		return new LaserTrigger;
 	}
 	else if (strcmp(deviceName, g_DeviceNameAnalogInput) == 0)
 	{
@@ -232,11 +247,18 @@ int MicroFPGAHub::Initialize()
 
 	if (g_id_au == id_){
 		CreateProperty("MicroFPGA ID", "Au", MM::String, true);
-	} else if(g_id_cu == id_){
+	}
+	else if (g_id_aup == id_) {
+		CreateProperty("MicroFPGA ID", "Au+", MM::String, true);
+	}
+	else if (g_id_cu == id_) {
 		CreateProperty("MicroFPGA ID", "Cu", MM::String, true);
-	}else {
+	}
+	else {
 		return ERR_UNKNOWN_ID;
 	}
+
+	// By default camera trigger in PASSIVE mode: listens to external input
 
 	initialized_ = true;
 	return DEVICE_OK;
@@ -366,6 +388,15 @@ int MicroFPGAHub::ReadAnswer(long& ans){
 	return DEVICE_OK;
 }
 
+int MicroFPGAHub::SetPassiveMode()
+{
+	int ret = SendWriteRequest(g_offsetaddressCamTriggerMode, 0);
+	if (ret != DEVICE_OK)
+		return ret;
+
+	return DEVICE_OK;
+}
+
 int MicroFPGAHub::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
 	if (pAct == MM::BeforeGet)
@@ -382,8 +413,8 @@ int MicroFPGAHub::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //////
-LaserTrig::LaserTrig() :
-initialized_ (false),
+CameraTrigger::CameraTrigger() :
+	initialized_(false),
 	busy_(false)
 {
 	InitializeDefaultErrorMessages();
@@ -393,32 +424,33 @@ initialized_ (false),
 	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
 
 	// Description
-	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA laser triggering system", MM::String, true);
+	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA camera triggering", MM::String, true);
 	assert(DEVICE_OK == ret);
 
 	// Name
-	ret = CreateProperty(MM::g_Keyword_Name, g_DeviceNameLaserTrig, MM::String, true);
+	ret = CreateProperty(MM::g_Keyword_Name, g_DeviceNameCamTrig, MM::String, true);
 	assert(DEVICE_OK == ret);
 
 	// Number of lasers
-	CPropertyAction* pAct = new CPropertyAction(this, &LaserTrig::OnNumberOfLasers);
-	CreateProperty("Number of lasers", "4", MM::Integer, false, pAct, true);
-	SetPropertyLimits("Number of lasers", 1, g_maxlasers);
+	CPropertyAction* pAct = new CPropertyAction(this, &CameraTrigger::OnMode);
+	CreateProperty("Trigger mode", "Active", MM::String, false, pAct, true);
+	AddAllowedValue("Trigger mode", "Active");
+	AddAllowedValue("Trigger mode", "Passive");
 }
 
 
-LaserTrig::~LaserTrig()
+CameraTrigger::~CameraTrigger()
 {
 	Shutdown();
 }
 
-void LaserTrig::GetName(char* name) const
+void CameraTrigger::GetName(char* name) const
 {
 	CDeviceUtils::CopyLimitedString(name, g_DeviceNameLaserTrig);
 }
 
 
-int LaserTrig::Initialize()
+int CameraTrigger::Initialize()
 {
 	// Parent ID display	
 	MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
@@ -430,44 +462,38 @@ int LaserTrig::Initialize()
 	SetParentID(hubLabel);
 	CreateHubIDProperty();
 
-	// Allocate memory for lasers
-	mode_ = new long [GetNumberOfLasers()];
-	duration_ = new long [GetNumberOfLasers()];
-	sequence_ = new long [GetNumberOfLasers()];
 
-	CPropertyActionEx *pExAct;
-	int nRet;
+	CPropertyAction* pAct = new CPropertyAction(this, &CameraTrigger::OnStart);
+	int nRet = CreateProperty("Start", "0", MM::Integer, false, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	AddAllowedValue("Start", "1");
+	AddAllowedValue("Start", "0");
 
-	for(unsigned int i=0;i<GetNumberOfLasers();i++){	
-		mode_[i] = 0;
-		duration_[i] = 0;
-		sequence_[i] = 0;
+	pAct = new CPropertyAction(this, &CameraTrigger::OnPulse);
+	nRet = CreateProperty("Pulse", "10", MM::Integer, false, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	SetPropertyLimits("Pulse", 0, 65535);
 
-		std::stringstream mode;
-		std::stringstream dura;
-		std::stringstream seq;
-		mode << "Mode" << i;
-		dura << "Duration" << i;
-		seq << "Sequence" << i;
+	pAct = new CPropertyAction(this, &CameraTrigger::OnPeriod);
+	nRet = CreateProperty("Period", "300", MM::Integer, false, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	SetPropertyLimits("Period", 0, 65535);
 
-		pExAct = new CPropertyActionEx (this, &LaserTrig::OnDuration,i);
-		nRet = CreateProperty(dura.str().c_str(), "0", MM::Integer, false, pExAct);
-		if (nRet != DEVICE_OK)
-			return nRet;
-		SetPropertyLimits(dura.str().c_str(), 0, 65535);   
+	pAct = new CPropertyAction(this, &CameraTrigger::OnExposure);
+	nRet = CreateProperty("Exposure", "300", MM::Integer, false, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	SetPropertyLimits("Exposure", 0, 65535);
 
-		pExAct = new CPropertyActionEx (this, &LaserTrig::OnMode,i);
-		nRet = CreateProperty(mode.str().c_str(), "0", MM::Integer, false, pExAct);
-		if (nRet != DEVICE_OK)
-			return nRet;
-		SetPropertyLimits(mode.str().c_str(), 0, 4);
+	pAct = new CPropertyAction(this, &CameraTrigger::OnDelay);
+	nRet = CreateProperty("Delay", "10", MM::Integer, false, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	SetPropertyLimits("Delay", 0, 65535);
 
-		pExAct = new CPropertyActionEx (this, &LaserTrig::OnSequence,i);
-		nRet = CreateProperty(seq.str().c_str(), "65535", MM::Integer, false, pExAct);
-		if (nRet != DEVICE_OK)
-			return nRet;
-		SetPropertyLimits(seq.str().c_str(), 0, 65535);
-	}
 
 	nRet = UpdateStatus();
 	if (nRet != DEVICE_OK)
@@ -478,13 +504,13 @@ int LaserTrig::Initialize()
 	return DEVICE_OK;
 }
 
-int LaserTrig::Shutdown()
+int CameraTrigger::Shutdown()
 {
 	initialized_ = false;
 	return DEVICE_OK;
 }
 
-int LaserTrig::WriteToPort(long address, long value)
+int CameraTrigger::WriteToPort(long address, long value)
 {
 	MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
 	if (!hub) {
@@ -502,7 +528,7 @@ int LaserTrig::WriteToPort(long address, long value)
 	return DEVICE_OK;
 }
 
-int LaserTrig::ReadFromPort(long& answer)
+int CameraTrigger::ReadFromPort(long& answer)
 {
 	MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
 	if (!hub) {
@@ -518,28 +544,18 @@ int LaserTrig::ReadFromPort(long& answer)
 
 ///////////////////////////////////////
 /////////// Action handlers
-int LaserTrig::OnNumberOfLasers(MM::PropertyBase* pProp, MM::ActionType pAct)
-{
-	if (pAct == MM::BeforeGet){
-		pProp->Set(numlasers_);
-	} else if (pAct == MM::AfterSet){
-		pProp->Get(numlasers_);
-	}
-	return DEVICE_OK;
-}
-
-int LaserTrig::OnMode(MM::PropertyBase* pProp, MM::ActionType pAct, long laser)
+int CameraTrigger::OnMode(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
 	if (pAct == MM::BeforeGet)
 	{
 		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
-		if (!hub){
+		if (!hub) {
 			return ERR_NO_PORT_SET;
 		}
 
 		MMThreadGuard myLock(hub->GetLock());
 
-		int ret = hub->SendReadRequest(g_offsetaddressLaserMode+laser);
+		int ret = hub->SendReadRequest(g_offsetaddressCamTriggerMode);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -549,14 +565,392 @@ int LaserTrig::OnMode(MM::PropertyBase* pProp, MM::ActionType pAct, long laser)
 			return ret;
 
 		pProp->Set(answer);
-		mode_[laser]=answer;
+		mode_ = answer == 1;
 	}
 	else if (pAct == MM::AfterSet)
 	{
 		long mode;
 		pProp->Get(mode);
 
-		int ret = WriteToPort(g_offsetaddressLaserMode+laser,mode);  
+		int ret = WriteToPort(g_offsetaddressLaserMode, mode);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		mode_ = mode == 1;
+	}
+
+	return DEVICE_OK;
+}
+
+int CameraTrigger::OnStart(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressCamTriggerStart);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer);
+		start_ = answer == 1;
+	}
+	else if (pAct == MM::AfterSet)
+	{
+		long start;
+		pProp->Get(start);
+
+		int ret = WriteToPort(g_offsetaddressCamTriggerStart, start);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		start_ = start == 1;
+	}
+
+	return DEVICE_OK;
+}
+
+int CameraTrigger::OnPulse(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressCamPulse);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer);
+		pulse_ = answer;
+	}
+	else if (pAct == MM::AfterSet)
+	{
+		long pos;
+		pProp->Get(pos);
+
+		int ret = WriteToPort(g_offsetaddressCamPulse, pos);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pulse_ = pos;
+	}
+
+	return DEVICE_OK;
+}
+
+int CameraTrigger::OnPeriod(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressCamPeriod);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer);
+		period_ = answer;
+	}
+	else if (pAct == MM::AfterSet)
+	{
+		long pos;
+		pProp->Get(pos);
+
+		int ret = WriteToPort(g_offsetaddressCamPeriod, pos);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		period_ = pos;
+	}
+
+	return DEVICE_OK;
+}
+
+int CameraTrigger::OnExposure(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressCamExposure);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer);
+		exposure_ = answer;
+	}
+	else if (pAct == MM::AfterSet)
+	{
+		long pos;
+		pProp->Get(pos);
+
+		int ret = WriteToPort(g_offsetaddressCamExposure, pos);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		exposure_ = pos;
+	}
+
+	return DEVICE_OK;
+}
+
+int CameraTrigger::OnDelay(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressLaserDelay);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer);
+		delay_ = answer;
+	}
+	else if (pAct == MM::AfterSet)
+	{
+		long pos;
+		pProp->Get(pos);
+
+		int ret = WriteToPort(g_offsetaddressLaserDelay, pos);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		delay_ = pos;
+	}
+
+	return DEVICE_OK;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+//////
+LaserTrigger::LaserTrigger() :
+	initialized_(false),
+	busy_(false)
+{
+	InitializeDefaultErrorMessages();
+
+	// Custom error messages
+	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device");
+	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
+
+	// Description
+	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA laser triggering", MM::String, true);
+	assert(DEVICE_OK == ret);
+
+	// Name
+	ret = CreateProperty(MM::g_Keyword_Name, g_DeviceNameLaserTrig, MM::String, true);
+	assert(DEVICE_OK == ret);
+
+	// Number of lasers
+	CPropertyAction* pAct = new CPropertyAction(this, &LaserTrigger::OnNumberOfLasers);
+	CreateProperty("Number of lasers", "4", MM::Integer, false, pAct, true);
+	SetPropertyLimits("Number of lasers", 1, g_maxlasers);
+}
+
+
+LaserTrigger::~LaserTrigger()
+{
+	Shutdown();
+}
+
+void LaserTrigger::GetName(char* name) const
+{
+	CDeviceUtils::CopyLimitedString(name, g_DeviceNameLaserTrig);
+}
+
+
+int LaserTrigger::Initialize()
+{
+	// Parent ID display	
+	MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+	if (!hub) {
+		return ERR_NO_PORT_SET;
+	}
+	char hubLabel[MM::MaxStrLength];
+	hub->GetLabel(hubLabel);
+	SetParentID(hubLabel);
+	CreateHubIDProperty();
+
+	// Allocate memory for lasers
+	mode_ = new long[GetNumberOfLasers()];
+	duration_ = new long[GetNumberOfLasers()];
+	sequence_ = new long[GetNumberOfLasers()];
+
+	CPropertyActionEx* pExAct;
+	int nRet;
+
+	for (unsigned int i = 0; i < GetNumberOfLasers(); i++) {
+		mode_[i] = 0;
+		duration_[i] = 0;
+		sequence_[i] = 0;
+
+		std::stringstream mode;
+		std::stringstream dura;
+		std::stringstream seq;
+		mode << "Mode" << i;
+		dura << "Duration" << i;
+		seq << "Sequence" << i;
+
+		pExAct = new CPropertyActionEx(this, &LaserTrigger::OnDuration, i);
+		nRet = CreateProperty(dura.str().c_str(), "0", MM::Integer, false, pExAct);
+		if (nRet != DEVICE_OK)
+			return nRet;
+		SetPropertyLimits(dura.str().c_str(), 0, 65535);
+
+		pExAct = new CPropertyActionEx(this, &LaserTrigger::OnMode, i);
+		nRet = CreateProperty(mode.str().c_str(), "0", MM::Integer, false, pExAct);
+		if (nRet != DEVICE_OK)
+			return nRet;
+		SetPropertyLimits(mode.str().c_str(), 0, 4);
+
+		pExAct = new CPropertyActionEx(this, &LaserTrigger::OnSequence, i);
+		nRet = CreateProperty(seq.str().c_str(), "65535", MM::Integer, false, pExAct);
+		if (nRet != DEVICE_OK)
+			return nRet;
+		SetPropertyLimits(seq.str().c_str(), 0, 65535);
+	}
+
+	nRet = UpdateStatus();
+	if (nRet != DEVICE_OK)
+		return nRet;
+
+	initialized_ = true;
+
+	return DEVICE_OK;
+}
+
+int LaserTrigger::Shutdown()
+{
+	initialized_ = false;
+	return DEVICE_OK;
+}
+
+int LaserTrigger::WriteToPort(long address, long value)
+{
+	MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+	if (!hub) {
+		return ERR_NO_PORT_SET;
+	}
+
+	MMThreadGuard myLock(hub->GetLock());
+
+	hub->PurgeComPortH();
+
+	int ret = hub->SendWriteRequest(address, value);
+	if (ret != DEVICE_OK)
+		return ret;
+
+	return DEVICE_OK;
+}
+
+int LaserTrigger::ReadFromPort(long& answer)
+{
+	MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+	if (!hub) {
+		return ERR_NO_PORT_SET;
+	}
+	int ret = hub->ReadAnswer(answer);
+	if (ret != DEVICE_OK)
+		return ret;
+
+	return DEVICE_OK;
+}
+
+
+///////////////////////////////////////
+/////////// Action handlers
+int LaserTrigger::OnNumberOfLasers(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet) {
+		pProp->Set(numlasers_);
+	}
+	else if (pAct == MM::AfterSet) {
+		pProp->Get(numlasers_);
+	}
+	return DEVICE_OK;
+}
+
+int LaserTrigger::OnMode(MM::PropertyBase* pProp, MM::ActionType pAct, long laser)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressLaserMode + laser);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer);
+		mode_[laser] = answer;
+	}
+	else if (pAct == MM::AfterSet)
+	{
+		long mode;
+		pProp->Get(mode);
+
+		int ret = WriteToPort(g_offsetaddressLaserMode + laser, mode);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -566,18 +960,18 @@ int LaserTrig::OnMode(MM::PropertyBase* pProp, MM::ActionType pAct, long laser)
 	return DEVICE_OK;
 }
 
-int LaserTrig::OnDuration(MM::PropertyBase* pProp, MM::ActionType pAct, long laser)
+int LaserTrigger::OnDuration(MM::PropertyBase* pProp, MM::ActionType pAct, long laser)
 {
 	if (pAct == MM::BeforeGet)
 	{
 		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
-		if (!hub){
+		if (!hub) {
 			return ERR_NO_PORT_SET;
 		}
 
 		MMThreadGuard myLock(hub->GetLock());
 
-		int ret = hub->SendReadRequest(g_offsetaddressLaserDuration+laser);
+		int ret = hub->SendReadRequest(g_offsetaddressLaserDuration + laser);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -587,14 +981,14 @@ int LaserTrig::OnDuration(MM::PropertyBase* pProp, MM::ActionType pAct, long las
 			return ret;
 
 		pProp->Set(answer);
-		duration_[laser]=answer;
+		duration_[laser] = answer;
 	}
 	else if (pAct == MM::AfterSet)
 	{
 		long pos;
 		pProp->Get(pos);
 
-		int ret = WriteToPort(g_offsetaddressLaserDuration+laser,pos); 
+		int ret = WriteToPort(g_offsetaddressLaserDuration + laser, pos);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -604,18 +998,18 @@ int LaserTrig::OnDuration(MM::PropertyBase* pProp, MM::ActionType pAct, long las
 	return DEVICE_OK;
 }
 
-int LaserTrig::OnSequence(MM::PropertyBase* pProp, MM::ActionType pAct, long laser)
+int LaserTrigger::OnSequence(MM::PropertyBase* pProp, MM::ActionType pAct, long laser)
 {
 	if (pAct == MM::BeforeGet)
 	{
 		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
-		if (!hub){
+		if (!hub) {
 			return ERR_NO_PORT_SET;
 		}
 
 		MMThreadGuard myLock(hub->GetLock());
 
-		int ret = hub->SendReadRequest(g_offsetaddressLaserSequence+laser);
+		int ret = hub->SendReadRequest(g_offsetaddressLaserSequence + laser);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -625,16 +1019,16 @@ int LaserTrig::OnSequence(MM::PropertyBase* pProp, MM::ActionType pAct, long las
 			return ret;
 
 		pProp->Set(answer);
-		sequence_[laser]=answer;
+		sequence_[laser] = answer;
 	}
 	else if (pAct == MM::AfterSet)
 	{
 		long pos;
 		pProp->Get(pos);
 
-		int ret = WriteToPort(g_offsetaddressLaserSequence+laser,pos);
+		int ret = WriteToPort(g_offsetaddressLaserSequence + laser, pos);
 		if (ret != DEVICE_OK)
-			return ret; 
+			return ret;
 
 		sequence_[laser] = pos;
 	}
@@ -707,7 +1101,7 @@ int TTL::Initialize()
 		std::stringstream sstm;
 		sstm << "State" << i;
 
-		pExAct = new CPropertyActionEx (this, &TTL::OnState,i);
+		pExAct = new CPropertyActionEx(this, &TTL::OnState,i);
 		nRet = CreateProperty(sstm.str().c_str(), "0", MM::Integer, false, pExAct);
 		if (nRet != DEVICE_OK)
 			return nRet;
