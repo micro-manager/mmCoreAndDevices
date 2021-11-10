@@ -530,13 +530,8 @@ int CameraTrigger::Initialize()
 		return nRet;
 	SetPropertyLimits("Delay", 0, 65535);
 
-	// active trigger
-	nRet = CreateProperty("Trigger mode", "Active", MM::String, true);
-	if (nRet != DEVICE_OK)
-		return nRet;
-
+	// set to active trigger
 	hub->SetActiveTrigger();
-
 
 	nRet = UpdateStatus();
 	if (nRet != DEVICE_OK)
