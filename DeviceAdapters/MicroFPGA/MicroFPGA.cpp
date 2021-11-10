@@ -547,7 +547,7 @@ int CameraTrigger::Initialize()
 	SetPropertyLimits("Exposure", 0, 65535);
 
 	pAct = new CPropertyAction(this, &CameraTrigger::OnExposureMs);
-	nRet = CreateProperty("Exposure (ms)", "25", MM::Integer, true, pAct);
+	nRet = CreateProperty("Exposure (ms)", "25", MM::Float, true, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
 
@@ -559,7 +559,7 @@ int CameraTrigger::Initialize()
 	SetPropertyLimits("Delay", 0, 65535);
 
 	pAct = new CPropertyAction(this, &CameraTrigger::OnDelayMs);
-	nRet = CreateProperty("Delay (ms)", "10", MM::Integer, true, pAct);
+	nRet = CreateProperty("Delay (ms)", "10", MM::Float, true, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
 
