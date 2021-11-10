@@ -131,12 +131,12 @@ MicroFPGAHub::MicroFPGAHub() :
 	portAvailable_ = false;
 
 	InitializeDefaultErrorMessages();
-	SetErrorText(ERR_PORT_OPEN_FAILED, "Failed opening MicroFPGA USB device.");
-	SetErrorText(ERR_BOARD_NOT_FOUND, "Did not find an MicroFPGA board with the correct firmware. Is the MicroFPGA board connected to this serial port?");
+	SetErrorText(ERR_PORT_OPEN_FAILED, "Failed to open MicroFPGA USB device.");
+	SetErrorText(ERR_BOARD_NOT_FOUND, "Did not find an MicroFPGA board with the correct firmware. Is the MicroFPGA board connected to port?");
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device.");
-	SetErrorText(ERR_VERSION_MISMATCH, "The firmware version on the MicroFPGA is not compatible with this adapter. Please use firmware version 2.");
-	SetErrorText(ERR_UNKNOWN_ID, "The board ID is unknwown.");
-	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
+	SetErrorText(ERR_VERSION_MISMATCH, "The firmware version on the MicroFPGA is not compatible with this adapter. Please use firmware version 3.");
+	SetErrorText(ERR_UNKNOWN_ID, "The board ID is unknown.");
+	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
 	CPropertyAction* pAct = new CPropertyAction(this, &MicroFPGAHub::OnPort);
 	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
@@ -447,7 +447,7 @@ CameraTrigger::~CameraTrigger()
 
 void CameraTrigger::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(name, g_DeviceNameLaserTrig);
+	CDeviceUtils::CopyLimitedString(name, g_DeviceNameCamTrig);
 }
 
 
