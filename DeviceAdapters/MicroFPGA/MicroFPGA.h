@@ -95,6 +95,10 @@ public:
 	int OnPeriod(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnPulseMs(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnPeriodMs(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExposureMs(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnDelayMs(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 

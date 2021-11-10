@@ -507,6 +507,7 @@ int CameraTrigger::Initialize()
 	// set to active trigger
 	hub->SetActiveTrigger();
 
+	// Start/stop
 	CPropertyAction* pAct = new CPropertyAction(this, &CameraTrigger::OnStart);
 	int nRet = CreateProperty("Start", "Start", MM::String, false, pAct);
 	if (nRet != DEVICE_OK)
@@ -514,29 +515,53 @@ int CameraTrigger::Initialize()
 	AddAllowedValue("Start", "Start");
 	AddAllowedValue("Start", "Stop");
 
+	// pulse
 	pAct = new CPropertyAction(this, &CameraTrigger::OnPulse);
 	nRet = CreateProperty("Pulse", "10", MM::Integer, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
 	SetPropertyLimits("Pulse", 0, 65535);
 
+	pAct = new CPropertyAction(this, &CameraTrigger::OnPulseMs);
+	nRet = CreateProperty("Pulse (ms)", "1", MM::Float, true, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+
+	// period
 	pAct = new CPropertyAction(this, &CameraTrigger::OnPeriod);
 	nRet = CreateProperty("Period", "300", MM::Integer, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
 	SetPropertyLimits("Period", 0, 65535);
 
+	pAct = new CPropertyAction(this, &CameraTrigger::OnPeriodMs);
+	nRet = CreateProperty("Period (ms)", "30", MM::Float, true, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+
+	// exposure
 	pAct = new CPropertyAction(this, &CameraTrigger::OnExposure);
-	nRet = CreateProperty("Exposure", "300", MM::Integer, false, pAct);
+	nRet = CreateProperty("Exposure", "250", MM::Integer, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
 	SetPropertyLimits("Exposure", 0, 65535);
 
+	pAct = new CPropertyAction(this, &CameraTrigger::OnExposureMs);
+	nRet = CreateProperty("Exposure (ms)", "25", MM::Integer, true, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+
+	// delay
 	pAct = new CPropertyAction(this, &CameraTrigger::OnDelay);
 	nRet = CreateProperty("Delay", "10", MM::Integer, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
 	SetPropertyLimits("Delay", 0, 65535);
+
+	pAct = new CPropertyAction(this, &CameraTrigger::OnDelayMs);
+	nRet = CreateProperty("Delay (ms)", "10", MM::Integer, true, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
 
 	nRet = UpdateStatus();
 	if (nRet != DEVICE_OK)
@@ -788,6 +813,110 @@ int CameraTrigger::OnDelay(MM::PropertyBase* pProp, MM::ActionType pAct)
 	return DEVICE_OK;
 }
 
+int CameraTrigger::OnPulseMs(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressCamPulse);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer / 100.);
+	}
+
+	return DEVICE_OK;
+}
+
+int CameraTrigger::OnPeriodMs(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressCamPeriod);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer / 100.);
+	}
+
+	return DEVICE_OK;
+}
+
+int CameraTrigger::OnExposureMs(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressCamExposure);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer / 100.);
+	}
+
+	return DEVICE_OK;
+}
+
+int CameraTrigger::OnDelayMs(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
+		if (!hub) {
+			return ERR_NO_PORT_SET;
+		}
+
+		MMThreadGuard myLock(hub->GetLock());
+
+		int ret = hub->SendReadRequest(g_offsetaddressLaserDelay);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadFromPort(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		pProp->Set(answer / 10.);
+	}
+
+	return DEVICE_OK;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //////
@@ -856,7 +985,7 @@ int LaserTrigger::Initialize()
 		std::stringstream dura;
 		std::stringstream seq;
 		mode << "Mode" << i;
-		dura << "Duration" << i;
+		dura << "Duration" << i << " (us)";
 		seq << "Sequence" << i;
 
 		pExAct = new CPropertyActionEx(this, &LaserTrigger::OnDuration, i);
