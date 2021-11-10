@@ -498,6 +498,8 @@ int CameraTrigger::Initialize()
 	SetParentID(hubLabel);
 	CreateHubIDProperty();
 
+	// set to active trigger
+	hub->SetActiveTrigger();
 
 	CPropertyAction* pAct = new CPropertyAction(this, &CameraTrigger::OnStart);
 	int nRet = CreateProperty("Start", "Start", MM::String, false, pAct);
@@ -529,9 +531,6 @@ int CameraTrigger::Initialize()
 	if (nRet != DEVICE_OK)
 		return nRet;
 	SetPropertyLimits("Delay", 0, 65535);
-
-	// set to active trigger
-	hub->SetActiveTrigger();
 
 	nRet = UpdateStatus();
 	if (nRet != DEVICE_OK)
@@ -603,11 +602,11 @@ int CameraTrigger::OnStart(MM::PropertyBase* pProp, MM::ActionType pAct)
 			return ret;
 
 		if (answer == 1) {
-			pProp->Set("On");
+			pProp->Set("Start");
 			start_ = true;
 		}
 		else {
-			pProp->Set("Off");
+			pProp->Set("Stop");
 			start_ = false;
 		}
 	}
@@ -616,7 +615,7 @@ int CameraTrigger::OnStart(MM::PropertyBase* pProp, MM::ActionType pAct)
 		std::string status;
 		pProp->Get(status);
 
-		if (status.compare("On") == 0) {
+		if (status.compare("Start") == 0) {
 			start_ = true;
 		}
 		else {
