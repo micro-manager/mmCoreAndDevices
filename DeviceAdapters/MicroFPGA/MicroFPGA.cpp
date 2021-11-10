@@ -258,7 +258,7 @@ int MicroFPGAHub::Initialize()
 	}
 
 	// By default camera trigger in PASSIVE mode: listens to external input
-	CPropertyAction* pAct = new CPropertyAction(this, &MicroFPGAHub::OnPort);
+	CPropertyAction* pAct = new CPropertyAction(this, &MicroFPGAHub::OnTriggerMode);
 	CreateProperty("Trigger mode", "Passive", MM::String, true, pAct);
 	AddAllowedValue("Trigger mode", "Active");
 	AddAllowedValue("Trigger mode", "Passive");
