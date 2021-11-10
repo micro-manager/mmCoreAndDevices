@@ -104,10 +104,10 @@ private:
 	bool initialized_;
 	bool mode_;
 	bool start_;
-	double pulse_;
-	double period_;
-	double exposure_;
-	double delay_;
+	long pulse_;
+	long period_;
+	long exposure_;
+	long delay_;
 	bool busy_;
 };
 
