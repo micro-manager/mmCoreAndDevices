@@ -515,28 +515,28 @@ int CameraTrigger::Initialize()
 	AddAllowedValue("Start", "Stop");
 
 	pAct = new CPropertyAction(this, &CameraTrigger::OnPulse);
-	nRet = CreateProperty("Pulse", "10", MM::Integer, false, pAct);
+	nRet = CreateProperty("Pulse (ms)", "10", MM::Float, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
-	SetPropertyLimits("Pulse", 0, 65535);
+	SetPropertyLimits("Pulse (ms)", 0, 65535 * 0.1); // step size is 100 us
 
 	pAct = new CPropertyAction(this, &CameraTrigger::OnPeriod);
-	nRet = CreateProperty("Period", "300", MM::Integer, false, pAct);
+	nRet = CreateProperty("Period (ms)", "300", MM::Float, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
-	SetPropertyLimits("Period", 0, 65535);
+	SetPropertyLimits("Period (ms)", 0, 65535 * 0.1);
 
 	pAct = new CPropertyAction(this, &CameraTrigger::OnExposure);
-	nRet = CreateProperty("Exposure", "300", MM::Integer, false, pAct);
+	nRet = CreateProperty("Exposure (ms)", "250", MM::Float, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
-	SetPropertyLimits("Exposure", 0, 65535);
+	SetPropertyLimits("Exposure (ms)", 0, 65535 * 0.1);
 
 	pAct = new CPropertyAction(this, &CameraTrigger::OnDelay);
-	nRet = CreateProperty("Delay", "10", MM::Integer, false, pAct);
+	nRet = CreateProperty("Delay (ms)", "10", MM::Float, false, pAct);  // step size is 10 us
 	if (nRet != DEVICE_OK)
 		return nRet;
-	SetPropertyLimits("Delay", 0, 65535);
+	SetPropertyLimits("Delay (ms)", 0, 65535 * 0.01);
 
 	nRet = UpdateStatus();
 	if (nRet != DEVICE_OK)
@@ -656,15 +656,15 @@ int CameraTrigger::OnPulse(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer);
-		pulse_ = answer;
+		pulse_ = answer / 100.;
+		pProp->Set(pulse_);
 	}
 	else if (pAct == MM::AfterSet)
 	{
-		long pos;
+		double pos;
 		pProp->Get(pos);
 
-		int ret = WriteToPort(g_offsetaddressCamPulse, pos);
+		int ret = WriteToPort(g_offsetaddressCamPulse, (long) pos * 100);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -694,15 +694,15 @@ int CameraTrigger::OnPeriod(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer);
-		period_ = answer;
+		period_ = answer / 100.;
+		pProp->Set(period_);
 	}
 	else if (pAct == MM::AfterSet)
 	{
 		long pos;
 		pProp->Get(pos);
 
-		int ret = WriteToPort(g_offsetaddressCamPeriod, pos);
+		int ret = WriteToPort(g_offsetaddressCamPeriod, (long) pos * 100);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -732,15 +732,15 @@ int CameraTrigger::OnExposure(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer);
-		exposure_ = answer;
+		exposure_ = answer / 100.;
+		pProp->Set(exposure_);
 	}
 	else if (pAct == MM::AfterSet)
 	{
 		long pos;
 		pProp->Get(pos);
 
-		int ret = WriteToPort(g_offsetaddressCamExposure, pos);
+		int ret = WriteToPort(g_offsetaddressCamExposure, (long) pos * 100.);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -770,15 +770,15 @@ int CameraTrigger::OnDelay(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer);
-		delay_ = answer;
+		delay_ = answer / 10.;
+		pProp->Set(delay_);
 	}
 	else if (pAct == MM::AfterSet)
 	{
 		long pos;
 		pProp->Get(pos);
 
-		int ret = WriteToPort(g_offsetaddressLaserDelay, pos);
+		int ret = WriteToPort(g_offsetaddressLaserDelay, (long) pos * 10);
 		if (ret != DEVICE_OK)
 			return ret;
 
@@ -856,7 +856,7 @@ int LaserTrigger::Initialize()
 		std::stringstream dura;
 		std::stringstream seq;
 		mode << "Mode" << i;
-		dura << "Duration" << i;
+		dura << "Duration" << i << " (us)";
 		seq << "Sequence" << i;
 
 		pExAct = new CPropertyActionEx(this, &LaserTrigger::OnDuration, i);
