@@ -272,9 +272,10 @@ int MicroFPGAHub::DetectInstalledDevices()
 		std::vector<std::string> peripherals; 
 		peripherals.clear();
 		peripherals.push_back(g_DeviceNameLaserTrig);
+		peripherals.push_back(g_DeviceNameCamTrig);
 		
-		// Only the Au has an ADC
-		if(id_ == g_id_au){
+		// Only the Au and Au+ have an ADC
+		if(id_ == g_id_au || id_ == g_id_aup){
 			peripherals.push_back(g_DeviceNameAnalogInput);
 		}
 
