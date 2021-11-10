@@ -258,7 +258,12 @@ int MicroFPGAHub::Initialize()
 	}
 
 	// By default camera trigger in PASSIVE mode: listens to external input
-	ret = SetPassiveMode();
+	CPropertyAction* pAct = new CPropertyAction(this, &MicroFPGAHub::OnPort);
+	CreateProperty("Trigger mode", "Passive", MM::String, true, pAct);
+	AddAllowedValue("Trigger mode", "Active");
+	AddAllowedValue("Trigger mode", "Passive");
+
+	ret = SetPassiveTrigger();
 	if (DEVICE_OK != ret)
 		return ret;
 
@@ -391,9 +396,18 @@ int MicroFPGAHub::ReadAnswer(long& ans){
 	return DEVICE_OK;
 }
 
-int MicroFPGAHub::SetPassiveMode()
+int MicroFPGAHub::SetPassiveTrigger()
 {
 	int ret = SendWriteRequest(g_offsetaddressCamTriggerMode, 0);
+	if (ret != DEVICE_OK)
+		return ret;
+
+	return DEVICE_OK;
+}
+
+int MicroFPGAHub::SetActiveTrigger()
+{
+	int ret = SendWriteRequest(g_offsetaddressCamTriggerMode, 1);
 	if (ret != DEVICE_OK)
 		return ret;
 
@@ -411,6 +425,31 @@ int MicroFPGAHub::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
 		pProp->Get(port_);
 		portAvailable_ = true;
 	}
+	return DEVICE_OK;
+}
+
+int MicroFPGAHub::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+	if (pAct == MM::BeforeGet)
+	{
+		
+		int ret = SendReadRequest(g_offsetaddressCamTriggerMode);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		long answer;
+		ret = ReadAnswer(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		if (answer == 1) {
+			pProp->Set("Active");
+		}
+		else {
+			pProp->Set("Passive");
+		}
+	}
+
 	return DEVICE_OK;
 }
 
@@ -433,12 +472,6 @@ CameraTrigger::CameraTrigger() :
 	// Name
 	ret = CreateProperty(MM::g_Keyword_Name, g_DeviceNameCamTrig, MM::String, true);
 	assert(DEVICE_OK == ret);
-
-	// Number of lasers
-	CPropertyAction* pAct = new CPropertyAction(this, &CameraTrigger::OnMode);
-	CreateProperty("Trigger mode", "Active", MM::String, false, pAct, true);
-	AddAllowedValue("Trigger mode", "Active");
-	AddAllowedValue("Trigger mode", "Passive");
 }
 
 
@@ -497,6 +530,13 @@ int CameraTrigger::Initialize()
 		return nRet;
 	SetPropertyLimits("Delay", 0, 65535);
 
+	// active trigger
+	nRet = CreateProperty("Trigger mode", "Active", MM::String, true);
+	if (nRet != DEVICE_OK)
+		return nRet;
+
+	hub->SetActiveTrigger();
+
 
 	nRet = UpdateStatus();
 	if (nRet != DEVICE_OK)
@@ -547,56 +587,6 @@ int CameraTrigger::ReadFromPort(long& answer)
 
 ///////////////////////////////////////
 /////////// Action handlers
-int CameraTrigger::OnMode(MM::PropertyBase* pProp, MM::ActionType pAct)
-{
-	if (pAct == MM::BeforeGet)
-	{
-		MicroFPGAHub* hub = static_cast<MicroFPGAHub*>(GetParentHub());
-		if (!hub) {
-			return ERR_NO_PORT_SET;
-		}
-
-		MMThreadGuard myLock(hub->GetLock());
-
-		int ret = hub->SendReadRequest(g_offsetaddressCamTriggerMode);
-		if (ret != DEVICE_OK)
-			return ret;
-
-		long answer;
-		ret = ReadFromPort(answer);
-		if (ret != DEVICE_OK)
-			return ret;
-
-		if (answer == 1) {
-			pProp->Set("Active");
-			mode_ = true;
-		}
-		else {
-			pProp->Set("Passive");
-			mode_ = false;
-		}
-	}
-	else if (pAct == MM::AfterSet)
-	{
-		std::string mode;
-		pProp->Get(mode);
-
-		if (mode.compare("Active")) {
-			mode_ = true;
-		}
-		else {
-			mode_ = false;
-		}
-
-		int ret = WriteToPort(g_offsetaddressLaserMode, mode_);
-		if (ret != DEVICE_OK)
-			return ret;
-
-	}
-
-	return DEVICE_OK;
-}
-
 int CameraTrigger::OnStart(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
 	if (pAct == MM::BeforeGet)
