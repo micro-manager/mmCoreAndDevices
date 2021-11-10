@@ -235,7 +235,6 @@ int MicroFPGAHub::Initialize()
 		return ERR_VERSION_MISMATCH;
 	}
 
-	//CPropertyAction* pAct = new CPropertyAction(this, &MicroFPGAHub::OnVersion);
 	std::ostringstream sversion;
 	sversion << version_;
 	CreateProperty("MicroFPGA version", sversion.str().c_str(), MM::Integer, true);
@@ -259,6 +258,9 @@ int MicroFPGAHub::Initialize()
 	}
 
 	// By default camera trigger in PASSIVE mode: listens to external input
+	ret = SetPassiveMode();
+	if (DEVICE_OK != ret)
+		return ret;
 
 	initialized_ = true;
 	return DEVICE_OK;
