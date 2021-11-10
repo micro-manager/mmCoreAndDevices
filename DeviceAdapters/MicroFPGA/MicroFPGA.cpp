@@ -833,7 +833,7 @@ int CameraTrigger::OnPulseMs(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer / 100.);
+		pProp->Set((double) answer / 10.);
 	}
 
 	return DEVICE_OK;
@@ -859,7 +859,7 @@ int CameraTrigger::OnPeriodMs(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer / 100.);
+		pProp->Set((double) answer / 10.);
 	}
 
 	return DEVICE_OK;
@@ -885,7 +885,7 @@ int CameraTrigger::OnExposureMs(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer / 100.);
+		pProp->Set((double) answer / 10.);
 	}
 
 	return DEVICE_OK;
@@ -911,7 +911,7 @@ int CameraTrigger::OnDelayMs(MM::PropertyBase* pProp, MM::ActionType pAct)
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer / 10.);
+		pProp->Set((double) answer / 100.);
 	}
 
 	return DEVICE_OK;
