@@ -62,6 +62,12 @@ const int g_offsetaddressAnalogInput = g_offsetaddressLaserDelay + 1;
 const int g_address_version = 200;
 const int g_address_id = 201;
 
+const char* g_mode_0 = "0 - Off";
+const char* g_mode_1 = "1 - On";
+const char* g_mode_2 = "2 - Rising";
+const char* g_mode_3 = "3 - Falling";
+const char* g_mode_4 = "4 - Follow";
+
 // static lock
 MMThreadLock MicroFPGAHub::lock_;
 
@@ -134,7 +140,7 @@ MicroFPGAHub::MicroFPGAHub() :
 	SetErrorText(ERR_PORT_OPEN_FAILED, "Failed to open MicroFPGA USB device.");
 	SetErrorText(ERR_BOARD_NOT_FOUND, "Did not find an MicroFPGA board with the correct firmware. Is the MicroFPGA board connected to port?");
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device.");
-	SetErrorText(ERR_VERSION_MISMATCH, "The firmware version on the MicroFPGA is not compatible with this adapter. Please use firmware version 3.");
+	SetErrorText(ERR_VERSION_MISMATCH, "The firmware version on the board is not compatible with this adapter. Please use firmware version 3.");
 	SetErrorText(ERR_UNKNOWN_ID, "The board ID is unknown.");
 	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
@@ -463,7 +469,7 @@ CameraTrigger::CameraTrigger() :
 
 	// Custom error messages
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device");
-	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
+	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
 	// Description
 	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA camera triggering", MM::String, true);
@@ -793,7 +799,7 @@ LaserTrigger::LaserTrigger() :
 
 	// Custom error messages
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device");
-	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
+	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
 	// Description
 	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA laser triggering", MM::String, true);
@@ -860,10 +866,14 @@ int LaserTrigger::Initialize()
 		SetPropertyLimits(dura.str().c_str(), 0, 65535);
 
 		pExAct = new CPropertyActionEx(this, &LaserTrigger::OnMode, i);
-		nRet = CreateProperty(mode.str().c_str(), "0", MM::Integer, false, pExAct);
+		nRet = CreateProperty(mode.str().c_str(), "0 - Off", MM::String, false, pExAct);
 		if (nRet != DEVICE_OK)
 			return nRet;
-		SetPropertyLimits(mode.str().c_str(), 0, 4);
+		AddAllowedValue(mode.str().c_str(), g_mode_0);
+		AddAllowedValue(mode.str().c_str(), g_mode_1);
+		AddAllowedValue(mode.str().c_str(), g_mode_2);
+		AddAllowedValue(mode.str().c_str(), g_mode_3);
+		AddAllowedValue(mode.str().c_str(), g_mode_4);
 
 		pExAct = new CPropertyActionEx(this, &LaserTrigger::OnSequence, i);
 		nRet = CreateProperty(seq.str().c_str(), "65535", MM::Integer, false, pExAct);
@@ -952,13 +962,51 @@ int LaserTrigger::OnMode(MM::PropertyBase* pProp, MM::ActionType pAct, long lase
 		if (ret != DEVICE_OK)
 			return ret;
 
-		pProp->Set(answer);
+		std::string status;
+		switch (answer) {
+		case 0:
+			status = g_mode_0;
+			break;
+		case 1:
+			status = g_mode_1;
+			break;
+		case 2:
+			status = g_mode_2;
+			break;
+		case 3:
+			status = g_mode_3;
+			break;
+		case 4:
+			status = g_mode_4;
+			break;
+		default:
+			status = g_mode_0;
+		}
+
+		pProp->Set(status.c_str());
 		mode_[laser] = answer;
 	}
 	else if (pAct == MM::AfterSet)
 	{
+		std::string status;
+		pProp->Get(status);
+
 		long mode;
-		pProp->Get(mode);
+		if (status.compare(g_mode_0) == 0) {
+			mode = 0;
+		}
+		else if (status.compare(g_mode_1) == 0) {
+			mode = 1;
+		}
+		else if (status.compare(g_mode_2) == 0) {
+			mode = 2;
+		}
+		else if (status.compare(g_mode_3) == 0) {
+			mode = 3;
+		}
+		else {
+			mode = 4;
+		}
 
 		int ret = WriteToPort(g_offsetaddressLaserMode + laser, mode);
 		if (ret != DEVICE_OK)
@@ -1057,7 +1105,7 @@ initialized_ (false),
 
 	// Custom error messages
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device");
-	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
+	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
 	// Description
 	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA TTL", MM::String, true);
@@ -1230,7 +1278,7 @@ initialized_ (false),
 
 	// Custom error messages
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device");
-	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
+	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
 	// Description
 	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA Servo controller", MM::String, true);
@@ -1400,7 +1448,7 @@ initialized_ (false),
 
 	// Custom error messages
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device");
-	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
+	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
 	// Description
 	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA PWM controller", MM::String, true);
@@ -1570,7 +1618,7 @@ initialized_ (false)
 
 	// Custom error messages
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device");
-	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to the MicroFPGA.");
+	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
 	// Description
 	int ret = CreateProperty(MM::g_Keyword_Description, "MicroFPGA AnalogInput", MM::String, true);
