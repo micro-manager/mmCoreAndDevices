@@ -179,6 +179,7 @@ CTriggerScopeMMHub::CTriggerScopeMMHub(void)  :
    error_(0),
    fidSerialLog_(NULL),
    firmwareVer_(0.0),
+   useActionLEDs_(true),
    initialized_(false)
 {
    // call the base class method to set-up default error codes/messages
@@ -415,6 +416,14 @@ int CTriggerScopeMMHub::Initialize()
 	ret = CreateProperty("Serial Send", "", MM::String, false, pAct);
 	assert(ret == DEVICE_OK);
 
+   if (SendAndReceive("SSL1", answer) == DEVICE_OK)
+   {
+      pAct = new CPropertyAction(this, &CTriggerScopeMMHub::OnUseActionLEDs);
+      ret = CreateProperty("UseActionLEDs", "On", MM::String, false, pAct);
+      AddAllowedValue("UseActionLEDs", "On");
+      AddAllowedValue("UseActionLEDs", "Off");
+   }
+
    pAct = new CPropertyAction (this, &CTriggerScopeMMHub::OnRecvSerialCmd);
 	ret = CreateProperty("Serial Receive", "", MM::String, true, pAct);
 	assert(ret == DEVICE_OK);
@@ -528,6 +537,46 @@ int CTriggerScopeMMHub::OnCOMPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 
    return DEVICE_OK;
 }
+
+int CTriggerScopeMMHub::OnUseActionLEDs(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      if (useActionLEDs_) 
+      {
+         pProp->Set("On");
+      } else
+      {
+         pProp->Set("Off");
+      }
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string result;
+      pProp->Get(result);
+      std::string answer;
+      int ret = DEVICE_OK;
+      if (result == "On")
+      {
+         ret = SendAndReceive("SSL1", answer);
+         if (ret == DEVICE_OK)
+         {
+            useActionLEDs_ = true;
+         }
+      }
+      else if (result == "Off") 
+      {
+         ret = SendAndReceive("SSL0", answer);
+         if (ret == DEVICE_OK)
+         {
+            useActionLEDs_ = false;
+         }
+      }
+      return ret;
+   }
+   return DEVICE_OK;
+}
+
 
 int CTriggerScopeMMHub::SendAndReceive(string command)
 {

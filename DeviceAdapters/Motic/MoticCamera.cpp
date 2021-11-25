@@ -722,7 +722,7 @@ int CMoticCamera::GetBinning() const
 #ifdef _LOG_OUT_
   OutputDebugString("GetBinning");
 #endif
-   return m_iBinning;
+   return m_iBinning + 1;
 }
 
 /**
@@ -734,8 +734,8 @@ int CMoticCamera::SetBinning(int binF)
 #ifdef _LOG_OUT_
   OutputDebugString("SetBinning");
 #endif
-  MIDP_SelectResByIndex(m_iBinning);
-  ResizeImageBuffer();
+  // MIDP_SelectResByIndex(m_iBinning);
+  // ResizeImageBuffer();
   return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));
 }
 
@@ -900,7 +900,7 @@ int CMoticCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
  #endif
       long binSize;
       pProp->Get(binSize);
-      m_iBinning = (int)binSize;
+      m_iBinning = (int)binSize - 1;
       MIDP_SelectResByIndex(m_iBinning);
       return ResizeImageBuffer();
    }
@@ -909,8 +909,8 @@ int CMoticCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
  #ifdef _LOG_OUT_
       OutputDebugString("BeforeGet");
  #endif
-     m_iBinning = MIDP_GetCurResolutionIndex();
-      pProp->Set((long)m_iBinning);
+      m_iBinning = MIDP_GetCurResolutionIndex();
+      pProp->Set((long)(m_iBinning + 1));
    }
  #ifdef _LOG_OUT_
     OutputDebugString("OnBinning OK");

@@ -6,16 +6,11 @@ README FOR SOFTWARE/VERSION:
 pco_generic device adapter for Micro Manager
 
 FOR PCO PRODUCT/VERSION:
-pco.camera, PixelFly, SensiCam
+pco.camera, pco.sdk supported cameras
 
 DESCRIPTION:
 This directory contains the source files needed to build the pco_generic device
 adapter for MicroManager.
-
-Installation:
-To compile and link the project you need to place the
-files in pco_generic.zip (library and header files) to the following folder:
-<somewhere>..\3rdparty\pco\windows.
 
 Please copy the following files into the MicroManager folder:
   pco_conv.dll, pco_cdlg.dll and pco_cryptdll.dll
@@ -24,9 +19,7 @@ pco_conv.dll: Image conversion dll
 pco_cdlg.dll: Image conversion dialog dll
 pco_cryptdll.dll: Software protection dll for conversion
 
-With a PixelFly or SensiCam you're ready to go.
-
-In case you've got a pco.camera (e.g. pco.1200hs, pco.1600...) series you'll
+Depending on the camera interface you'll
 have to copy the interface files to the MicroManager folder.
 
 These files are needed for all interfaces:

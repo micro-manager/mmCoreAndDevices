@@ -34,7 +34,7 @@
 #define ATLTRACE
 #endif
 
-#include "sdk/MexExl.h"
+#include "MexExl.h"
 #include "resource.h"
 using namespace std;
 const double CProgRes::nominalPixelSizeUm_ = 1.0;

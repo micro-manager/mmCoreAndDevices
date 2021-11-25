@@ -47,7 +47,8 @@ CLED::CLED(const char* name) :
    open_(false),
    intensity_(50),
    channel_(0),  // 0 for LED on 2-axis card
-   channelAxisChar_('X')
+   channelAxisChar_('X'),
+   stablight_(false)
 {
    //Figure out what channel we are on
    if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
@@ -98,6 +99,12 @@ int CLED::Initialize()
 
    CPropertyAction* pAct;
 
+   // detect Stabilight or not based on build name
+   char buildName[MM::MaxStrLength];
+   GetProperty(g_FirmwareBuildPropertyName, buildName);
+   string s = buildName;
+   stablight_ = (s.length() > 5 && s.substr(0, 6).compare("TGLEDS") == 0);
+
    pAct = new CPropertyAction (this, &CLED::OnIntensity);
    CreateProperty(g_LEDIntensityPropertyName, "50", MM::Integer, false, pAct);
    SetPropertyLimits(g_LEDIntensityPropertyName, 1, 100);
@@ -129,7 +136,7 @@ int CLED::Initialize()
 
    // LED current limit, card wide setting
    // once mechanism for shared settings devices gets implemented use for this one
-   if (channel_ > 0)
+   if (channel_ > 0 && !stablight_)
    {
       pAct = new CPropertyAction (this, &CLED::OnCurrentLimit);
       CreateProperty(g_LEDCurrentLimitPropertyName, "700", MM::Integer, false, pAct);
