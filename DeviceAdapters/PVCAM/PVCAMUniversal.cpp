@@ -276,6 +276,12 @@ Universal::Universal(short cameraId, const char* deviceName)
     prmLastMuxedSignal_(NULL),
     prmPMode_(NULL),
     prmAdcOffset_(NULL),
+    prmScanMode_(NULL),
+    prmScanDirection_(NULL),
+    prmScanDirectionReset_(NULL),
+    prmScanLineDelay_(NULL),
+    prmScanLineTime_(NULL),
+    prmScanWidth_(NULL),
     prmReadoutTime_(NULL),
     prmClearingTime_(NULL),
     prmPreTriggerDelay_(NULL),
@@ -371,6 +377,12 @@ Universal::~Universal()
     delete prmLastMuxedSignal_;
     delete prmPMode_;
     delete prmAdcOffset_;
+    delete prmScanMode_;
+    delete prmScanDirection_;
+    delete prmScanDirectionReset_;
+    delete prmScanLineDelay_;
+    delete prmScanLineTime_;
+    delete prmScanWidth_;
     delete prmReadoutTime_;
     delete prmClearingTime_;
     delete prmPreTriggerDelay_;
