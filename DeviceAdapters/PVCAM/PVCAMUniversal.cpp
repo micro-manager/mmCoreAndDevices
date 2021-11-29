@@ -301,6 +301,7 @@ Universal::Universal(short cameraId, const char* deviceName)
     SetErrorText(ERR_FRAME_READOUT_FAILED, "Frame readout failed");
     SetErrorText(ERR_TOO_MANY_ROIS, "Too many ROIs"); // Later overwritten by more specific message
     SetErrorText(ERR_FILE_OPERATION_FAILED, "File operation has failed");
+    SetErrorText(ERR_SW_TRIGGER_NOT_SUPPORTED, "Selected SW trigger mode is not supported by the adapter");
 
     pollingThd_ = new PollingThread(this);             // Pointer to the sequencing thread
 
@@ -2426,6 +2427,21 @@ int Universal::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         std::string valStr;
         pProp->Get( valStr );
+
+        const int32 newMode = prmTriggerMode_->GetEnumValue(valStr);
+
+        if (newMode == EXT_TRIG_SOFTWARE_FIRST)
+        {
+            return LogAdapterError(ERR_SW_TRIGGER_NOT_SUPPORTED, __LINE__,
+                    "Universal::OnTriggerMode() - EXT_TRIG_SOFTWARE_FIRST not supported at all");
+        }
+
+        // TODO: Remove once this trigger mode is used for single snaps with minimal latency
+        if (newMode == EXT_TRIG_SOFTWARE_EDGE)
+        {
+            return LogAdapterError(ERR_SW_TRIGGER_NOT_SUPPORTED, __LINE__,
+                    "Universal::OnTriggerMode() - EXT_TRIG_SOFTWARE_EDGE not supported yet");
+        }
 
         prmTriggerMode_->Set( valStr );
         // We don't call Write() here because the PARAM_EXPOSURE_MODE cannot be set,
