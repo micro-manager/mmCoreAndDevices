@@ -55,7 +55,7 @@ The `sudo` is only necessary if you are installing to the default `/usr/local/mi
 Many downstream libraries will expect the demo config file to be located along with the installed files. So here we download it directly from the micro-manager repo:
 
 ```bash
-sudo curl https://github.com/micro-manager/micro-manager/blob/master/bindist/any-platform/MMConfig_demo.cfg --output /usr/local/micro-manager/MMConfig_demo.cfg
+sudo curl https://raw.githubusercontent.com/micro-manager/micro-manager/master/bindist/any-platform/MMConfig_demo.cfg --output /usr/local/micro-manager/MMConfig_demo.cfg
 ```
 
 ## 4. Test install
