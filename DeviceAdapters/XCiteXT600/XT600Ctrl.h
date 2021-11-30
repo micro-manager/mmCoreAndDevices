@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          XLedCtrl.h
+// FILE:          XT600Ctrl.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -20,17 +20,16 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // AUTHOR:        Lon Chu (lonchu@yahoo.com) created on July 2011
-//
+//                Steffen Leidenbach on November 2021 (NOVEM/XT900 extensions)//
 
 #pragma once
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
-//#include "ModuleInterface.h"
 	
 //
-// XLED1 is a controller from Lumen Dynamics.
-// It accept remote serial input to conrol micromanipulator.
+// XLEDCtrl is a controller from Lumen Dynamics.
+// It accept remote serial input to control micromanipulator.
 //
 
 class XLedCtrl : public CGenericBase<XLedCtrl>
@@ -39,7 +38,7 @@ class XLedCtrl : public CGenericBase<XLedCtrl>
 
 	  // contructor & destructor
 	  // .......................
-      XLedCtrl();
+      XLedCtrl(const char* pszName, const char* pszDescription);
       ~XLedCtrl();
 
       // Device API
@@ -91,4 +90,6 @@ class XLedCtrl : public CGenericBase<XLedCtrl>
       long          m_lScrnBrite;           // screen brightness
       long          m_lScrnTimeout;         // screen saver time out
       long          m_lSpeakerVol;          // speaker volume
+	  const char*   m_DeviceName;
+	  const char*   m_DeviceDescription;
 };

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          XLed.h
+// FILE:          XT600.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -7,6 +7,7 @@
 //
 // COPYRIGHT:     Lumen Dynamics
 //                Mission Bay Imaging, San Francisco, 2011
+//                S3L GmbH 2021
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -20,6 +21,7 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // AUTHOR:        Lon Chu (lonchu@yahoo.com) created on July 2011
+//                Steffen Leidenbach on November 2021 (NOVEM/XT900 extensions)
 //
 
 #pragma once
@@ -38,20 +40,31 @@ public:
     typedef int XLED;
     enum _XLED
     {
-        XL_CtrlBoardName            = 0,            // XLed controller name
-        XL_CtrlBoardDesc            ,            // XLed controller description
-        XL_ULedDevName              ,            // W LED device name
-        XL_VLedDevName              ,            // X LED device name
+        XL_CtrlBoardXT600Name       = 0,         // XT600 controller name
+        XL_CtrlBoardXT900Name       ,            // XT900 controller name
+        XL_CtrlBoardXT600Desc       ,            // XT600 controller description
+        XL_CtrlBoardXT900Desc       ,            // XT900 controller description
+        
+		XL_RLedDevName              ,            // R LED device name
+        XL_SLedDevName              ,            // S LED device name
+        XL_TLedDevName              ,            // T LED device name
+        XL_ULedDevName              ,            // U LED device name
+        XL_VLedDevName              ,            // V LED device name
         XL_WLedDevName              ,            // W LED device name
         XL_XLedDevName              ,            // X LED device name
         XL_YLedDevName              ,            // Y LED device name
         XL_ZLedDevName              ,            // Z LED device name
-        XL_ULedDevDesc              ,            // W LED device name
-        XL_VLedDevDesc              ,            // X LED device name
+        
+		XL_RLedDevDesc              ,            // R LED device name
+        XL_SLedDevDesc              ,            // S LED device name
+        XL_TLedDevDesc              ,            // T LED device name
+        XL_ULedDevDesc              ,            // U LED device name
+        XL_VLedDevDesc              ,            // V LED device name
         XL_WLedDevDesc              ,            // W LED device name
         XL_XLedDevDesc              ,            // X LED device name
         XL_YLedDevDesc              ,            // Y LED device name
         XL_ZLedDevDesc              ,            // Z LED device name
+		
         XL_XLedSoftVer              ,           // XLed software version
         XL_LogFilename              ,           // XLed logfile name
         XL_CtrlBoardNameLabel       ,           // XLed controller name label
@@ -102,7 +115,10 @@ public:
 
     enum
     {
-        XL_LedDevU                  = 0,         // Led device W
+        XL_LedDevR                  =0,          // Led device R
+        XL_LedDevS                  ,            // Led device S
+        XL_LedDevT                  ,            // Led device T
+        XL_LedDevU                  ,            // Led device W
         XL_LedDevV                  ,            // Led device X
         XL_LedDevW                  ,            // Led device W
         XL_LedDevX                  ,            // Led device X
@@ -110,7 +126,7 @@ public:
         XL_LedDevZ                  ,            // Led device Z
         XL_TxTerm                   = '\r',      // unique termination from MM to XLED communication - host mode
         XL_RxTerm                   = '\r',      // unique termination from XLED to MM communication
-        XL_MaxPropSize              = 50         // property size
+        XL_MaxPropSize              = 60         // property size
     };
 
     enum
