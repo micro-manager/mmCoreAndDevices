@@ -69,3 +69,7 @@ test-reports/
 *.pb.cc
 *.pb.h
 bin
+DeviceAdapters/depcomp
+DeviceAdapters/install-sh
+depcomp
+install-sh

@@ -16,8 +16,10 @@ The windows project uses the following properties which may be overridden in the
 	
 To see the default values of each property please view `MMCommon.props`
 
-### Building on Mac and  Linux
-*TODO*
+### Building on Mac and Linux
+
+For building just the `C++` in this repository (ignoring `MMCoreJ_wrap`) see the instructions in `building-cpp.md`
+
 
 ### Branches
 This repository consists of two primary branches: `main` and `privateMain`.  
