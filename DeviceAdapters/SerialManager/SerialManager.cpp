@@ -704,7 +704,8 @@ int SerialPort::Shutdown()
       CDeviceUtils::SleepMs(80);
 
       // Joining the async thread ensures that all asio resources are closed.
-      if (!pThread_->timed_join(boost::posix_time::millisec(1000) )) {
+	  // This may last several seconds!
+      if (!pThread_->timed_join(boost::posix_time::millisec(10000) )) {
          LogMessage("Failed to cleanly close port (thread join timed out)");
          pThread_->detach();
          g_BlockListedPorts.push_back(portName_);
