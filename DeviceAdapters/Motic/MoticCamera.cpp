@@ -101,7 +101,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CMoticCamera::CMoticCamera() :
-   m_iBinning(1),
+   m_iBinning(0),
    m_dGain(1.0),
    m_iBytesPerPixel(4),
    m_bInitialized(false),
@@ -722,7 +722,7 @@ int CMoticCamera::GetBinning() const
 #ifdef _LOG_OUT_
   OutputDebugString("GetBinning");
 #endif
-   return m_iBinning;
+   return m_iBinning + 1;
 }
 
 /**
@@ -734,8 +734,8 @@ int CMoticCamera::SetBinning(int binF)
 #ifdef _LOG_OUT_
   OutputDebugString("SetBinning");
 #endif
-  MIDP_SelectResByIndex(m_iBinning);
-  ResizeImageBuffer();
+  // MIDP_SelectResByIndex(m_iBinning);
+  // ResizeImageBuffer();
   return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));
 }
 
@@ -900,7 +900,7 @@ int CMoticCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
  #endif
       long binSize;
       pProp->Get(binSize);
-      m_iBinning = (int)binSize;
+      m_iBinning = (int)binSize - 1;
       MIDP_SelectResByIndex(m_iBinning);
       return ResizeImageBuffer();
    }
@@ -909,8 +909,8 @@ int CMoticCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
  #ifdef _LOG_OUT_
       OutputDebugString("BeforeGet");
  #endif
-     m_iBinning = MIDP_GetCurResolutionIndex();
-      pProp->Set((long)m_iBinning);
+      m_iBinning = MIDP_GetCurResolutionIndex();
+      pProp->Set((long)(m_iBinning + 1));
    }
  #ifdef _LOG_OUT_
     OutputDebugString("OnBinning OK");
@@ -1155,8 +1155,8 @@ void CMoticCamera::InitBinning()
   OutputDebugString("InitBinning");
 #endif
   m_vBinning.clear();
-  int c = MIDP_GetResolutionCount();
-  for(int i = 0; i < c; i++)
+  int resolutionCount = MIDP_GetResolutionCount();
+  for(int i = 0; i < resolutionCount; i++)
   {
     long x, y;
     MIDP_GetResolution(i, &x, &y);
@@ -1168,13 +1168,12 @@ void CMoticCamera::InitBinning()
       
   // binning
   CPropertyAction *pAct = new CPropertyAction (this, &CMoticCamera::OnBinning);
-  int ret = CreateProperty(MM::g_Keyword_Binning, _itoa(m_iBinning,bin, 10), MM::Integer, false, pAct);
-  //assert(ret == DEVICE_OK);
+  int ret = CreateProperty(MM::g_Keyword_Binning, _itoa(m_iBinning + 1, bin, 10), MM::Integer, false, pAct);
 
   vector<string> binningValues;
-  for(int i = 0; i < c; i++)
+  for(int i = 1; i<= resolutionCount; i++)
   {
-    binningValues.push_back(_itoa(i,bin, 10));
+    binningValues.push_back(_itoa(i, bin, 10));
   }  
 
   ret = SetAllowedValues(MM::g_Keyword_Binning, binningValues);
