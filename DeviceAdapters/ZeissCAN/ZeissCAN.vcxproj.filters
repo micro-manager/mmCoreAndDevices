@@ -24,6 +24,9 @@
     <ClCompile Include="ZStage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PhotoModule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ZeissCAN.h">

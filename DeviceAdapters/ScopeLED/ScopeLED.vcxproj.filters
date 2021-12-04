@@ -24,9 +24,6 @@
     <ClInclude Include="USBCommAdapter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="USBCommDLL\USBCommDLL.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ScopeLEDDevices.cpp">

@@ -18,12 +18,18 @@
     <ClCompile Include="QICamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PvDebayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="QICamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DeviceEvents.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PvDebayer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
