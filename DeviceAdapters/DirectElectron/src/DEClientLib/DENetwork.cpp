@@ -5,6 +5,16 @@
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 
+template <typename T>
+boost::asio::io_service& GetIoService(T* s) {
+#if BOOST_VERSION >= 107000
+	boost::asio::execution_context& r = s->get_executor().context();
+	return static_cast<boost::asio::io_service&>(r);
+#else
+	return s->get_io_service();
+#endif
+}
+
 using namespace std;
 using boost::asio::ip::tcp;
 using boost::asio::deadline_timer;
@@ -87,7 +97,7 @@ bool DENetwork::send(void* data, std::size_t size, unsigned long timeout)
 	optional<boost::system::error_code> timeout_result;
 	optional<boost::system::error_code> write_result;
 
-	deadline_timer timer(this->write->get_io_service());
+	deadline_timer timer(GetIoService(this->write));
 
 	timer.expires_from_now(seconds(timeout));
 	if (!debugMode)
@@ -98,8 +108,8 @@ bool DENetwork::send(void* data, std::size_t size, unsigned long timeout)
 		boost::bind(&DENetwork::setResult, this, &write_result, boost::asio::placeholders::error,
 		 		boost::asio::placeholders::bytes_transferred));
 
-	this->write->get_io_service().reset();
-	while ( this->write->get_io_service().run_one() )
+	GetIoService(this->write).reset();
+	while ( GetIoService(this->write).run_one() )
 	{
 		// Normal result.
 		if (write_result)
@@ -137,7 +147,7 @@ bool DENetwork::receive(void* data, std::size_t size, unsigned long timeout)
 	optional<boost::system::error_code> timeout_result;
 	optional<boost::system::error_code> read_result;
 
-	deadline_timer timer(this->read->get_io_service());
+	deadline_timer timer(GetIoService(this->read));
 	timer.expires_from_now(seconds(timeout));
 	if (!debugMode)
 		timer.async_wait(boost::bind(&DENetwork::setResult, this, &timeout_result, _1, 0));
@@ -147,9 +157,9 @@ bool DENetwork::receive(void* data, std::size_t size, unsigned long timeout)
 		boost::bind(&DENetwork::setResult, this, &read_result, boost::asio::placeholders::error,
 		 		boost::asio::placeholders::bytes_transferred));
 
-	this->read->get_io_service().reset();
+	GetIoService(this->read).reset();
 
-	while ( this->read->get_io_service().run_one() )
+	while ( GetIoService(this->read).run_one() )
 	{
 		// Normal result.
 		if (read_result)
