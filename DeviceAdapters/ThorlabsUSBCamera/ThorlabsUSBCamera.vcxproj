@@ -14,6 +14,7 @@
     <ProjectGuid>{A356B8C0-0897-4BAA-9DD1-8D210988155C}</ProjectGuid>
     <RootNamespace>DemoCamera</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

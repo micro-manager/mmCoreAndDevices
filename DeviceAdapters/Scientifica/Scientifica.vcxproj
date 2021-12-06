@@ -14,6 +14,7 @@
     <ProjectGuid>{20B38F93-934F-4022-9507-72693315AF6E}</ProjectGuid>
     <RootNamespace>Scientifica</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

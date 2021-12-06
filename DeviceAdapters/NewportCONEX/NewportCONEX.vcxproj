@@ -15,6 +15,7 @@
     <ProjectGuid>{9953A884-2927-4E91-B414-FC773102FE6D}</ProjectGuid>
     <RootNamespace>NewportCONEX</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

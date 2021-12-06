@@ -14,6 +14,7 @@
     <ProjectGuid>{349B37AE-AB50-410E-A445-6C4A29522434}</ProjectGuid>
     <RootNamespace>HIDManager</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

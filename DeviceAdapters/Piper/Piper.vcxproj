@@ -15,6 +15,7 @@
     <ProjectGuid>{8FDA6D04-7C5D-4061-8467-AE0C104A2C83}</ProjectGuid>
     <RootNamespace>PiperMmAdapter</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

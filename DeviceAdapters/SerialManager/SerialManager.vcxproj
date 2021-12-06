@@ -14,6 +14,7 @@
     <ProjectGuid>{2EF7ACDC-F742-4CB6-B301-A242F52BE5C3}</ProjectGuid>
     <RootNamespace>SerialManager</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

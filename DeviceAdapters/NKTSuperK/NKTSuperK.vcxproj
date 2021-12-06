@@ -14,6 +14,7 @@
     <ProjectGuid>{45AC6AA4-D094-4248-98E1-53403895BEE8}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>NKTSuperK</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

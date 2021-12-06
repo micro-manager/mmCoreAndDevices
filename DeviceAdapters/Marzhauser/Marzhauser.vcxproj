@@ -14,6 +14,7 @@
     <ProjectGuid>{2B522528-9660-4B78-8E2A-BC296C9B9937}</ProjectGuid>
     <RootNamespace>Marzhauser</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

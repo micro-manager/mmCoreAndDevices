@@ -15,6 +15,7 @@
     <ProjectGuid>{52A0BB2A-0A16-40F8-86D4-99E0379F6E55}</ProjectGuid>
     <RootNamespace>nPC400</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
