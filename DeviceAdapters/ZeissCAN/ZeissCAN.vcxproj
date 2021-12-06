@@ -14,6 +14,7 @@
     <ProjectGuid>{E2900E6C-549B-46D2-AB40-8656280F7C53}</ProjectGuid>
     <RootNamespace>ZeissCAN</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

@@ -14,6 +14,7 @@
     <ProjectGuid>{CF60E682-EF19-4FDD-8060-DE80188C827C}</ProjectGuid>
     <RootNamespace>K8061</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

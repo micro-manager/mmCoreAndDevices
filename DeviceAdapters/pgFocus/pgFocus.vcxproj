@@ -14,6 +14,7 @@
     <ProjectGuid>{BECF37AD-77C3-4BD4-83EF-E5B0A2DC4188}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>pgFocus</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

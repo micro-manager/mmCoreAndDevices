@@ -14,6 +14,7 @@
     <ProjectGuid>{DC09C991-D279-4A37-9332-5F7767621D5C}</ProjectGuid>
     <RootNamespace>PICAM</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

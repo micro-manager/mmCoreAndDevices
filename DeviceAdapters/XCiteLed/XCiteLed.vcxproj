@@ -14,6 +14,7 @@
     <ProjectGuid>{5A692627-8FBA-4DAB-911D-75E88B96F99F}</ProjectGuid>
     <RootNamespace>XCiteLed</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

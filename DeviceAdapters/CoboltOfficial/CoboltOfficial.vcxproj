@@ -14,6 +14,7 @@
     <ProjectGuid>{7074BB23-A32B-4CD5-B77E-9EF4E24416BD}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CoboltOfficial</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

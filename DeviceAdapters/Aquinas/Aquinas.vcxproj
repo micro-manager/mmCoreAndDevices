@@ -14,6 +14,7 @@
     <ProjectGuid>{00B6552D-65F7-4412-BF78-E72F34152AB9}</ProjectGuid>
     <RootNamespace>Aquinas</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

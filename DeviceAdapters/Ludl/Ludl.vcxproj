@@ -14,6 +14,7 @@
     <ProjectGuid>{8A82B822-DA7A-464B-AE6F-8EFB5EDA2C19}</ProjectGuid>
     <RootNamespace>Ludl</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

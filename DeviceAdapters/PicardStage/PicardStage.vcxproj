@@ -14,6 +14,7 @@
     <ProjectGuid>{FB87D337-AFA5-4DA8-8D99-84461B363108}</ProjectGuid>
     <RootNamespace>PicardStage</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

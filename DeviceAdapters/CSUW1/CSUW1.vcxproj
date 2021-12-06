@@ -14,6 +14,7 @@
     <ProjectGuid>{7C767DFF-87E6-4FE0-9557-2FF656ED1E57}</ProjectGuid>
     <RootNamespace>CSUW1</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">

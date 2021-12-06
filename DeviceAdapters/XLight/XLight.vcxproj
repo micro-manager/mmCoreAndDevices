@@ -14,6 +14,7 @@
     <ProjectGuid>{2AC2C860-BA44-452A-A801-BAAB7A51C0AC}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>XLight</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

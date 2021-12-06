@@ -14,6 +14,7 @@
     <ProjectGuid>{6626896D-CA91-457B-9B78-242797B88FCF}</ProjectGuid>
     <RootNamespace>AOTF</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
