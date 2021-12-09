@@ -364,10 +364,8 @@ int serialWriteReadCmd(int unitopenmap, int unit, unsigned char* bufin, int insi
 	extern "C" {
 	#if defined (MMLINUX32) || defined(MMLINUX64)
 		#include "/usr/local/xclib/xcliball.h"
-	#elif defined(WIN64)
-		#include "..\..\SecretDeviceAdapters\RaptorEPIX\XCLIB64\xcliball.h"
-	#else
-		#include "..\..\SecretDeviceAdapters\RaptorEPIX\XCLIB32\xcliball.h"
+	#else // Assume build system configures include path
+		#include "xcliball.h"
 	#endif
 	}
 
