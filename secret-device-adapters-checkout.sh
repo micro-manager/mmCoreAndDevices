@@ -10,6 +10,8 @@
 # If there is an existing clone of SecretDeviceAdapters, it is used regardless
 # of its settings and which remote it points to.
 
+set -e
+
 if [ ! -f secret-device-adapters-commit ]; then
     echo The secret-device-adapters-commit file is missing.
     exit 1
