@@ -647,9 +647,10 @@ int CCameraAdapter::Initialize()
    INT16 nMinor;
    INT16 nBuild;
    RETURN_ON_PIL_ERROR( pilGetLibraryId( (LPTSTR)pszLib, 100, nMajor, nMinor, nBuild ) );
-   sprintf( m_sVersion._Myptr(), "v%d.%d.%02d", nMajor, nMinor, nBuild );
-   //m_sVersion._Myptr( "v%d.%d.%02d", nMajor, nMinor, nBuild );
-   RETURN_ON_MM_ERROR( CreateProperty(MM::g_Keyword_Version, m_sVersion.c_str(), MM::String, true) );
+
+   char sVersion[100];
+   sprintf(sVersion, "v%d.%d.%02d", nMajor, nMinor, nBuild);
+   RETURN_ON_MM_ERROR( CreateProperty(MM::g_Keyword_Version, sVersion, MM::String, true) );
 
    // Enable all log messages for the local group
    pAct = new CPropertyAction (this, &CCameraAdapter::OnEnableLogGroup);
@@ -1834,8 +1835,9 @@ INT16 CCameraAdapter::GetProperties()
 
    m_bExposureInSync = ( m_nFrameClocks == m_nMMFrameClocks );
 
-   sprintf( m_sPixel._Myptr(), "%dbit", m_nCapBits );
-   //m_sPixel.Format( "%dbit", m_nCapBits );
+   char sPixel[8];
+   sprintf(sPixel, "%dbit", m_nCapBits );
+   m_sPixel = sPixel;
    m_asPixelTypes.clear();
    m_asPixelTypes.push_back( m_sPixel.c_str() );
    SetAllowedValues( MM::g_Keyword_PixelType, m_asPixelTypes );
@@ -3214,11 +3216,9 @@ int CCameraAdapter::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       string pixelType;
       pProp->Get(pixelType);
-      //piulLogMessage( m_sMyName, s_unLogSetProps, "" );
    }
    else if( MM::BeforeGet == eAct )
    {
-      //piulLogMessage( m_sMyName, s_unLogGetProps, "" );
       pProp->Set( m_sPixel.c_str() );
    }
 
