@@ -1917,7 +1917,7 @@ int PointGrey::CameraID(PGRGuid id, std::string* camIdString)
 
    std::string sep = "_";
    *camIdString = camInfo.modelName + sep;
-   *camIdString += std::to_string( (_ULonglong) camInfo.serialNumber);
+   *camIdString += std::to_string((unsigned long long) camInfo.serialNumber);
    error = cam.Disconnect();
 
    return DEVICE_OK;
