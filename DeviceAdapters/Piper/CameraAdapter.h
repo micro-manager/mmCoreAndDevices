@@ -210,7 +210,6 @@ private:
    int m_nDiscriminatorNumTotal;
    BOOL m_bDiscriminatorEnabled;
 
-   string m_sVersion;
    vector<string> m_asGrabbers;
    vector<string> m_asCameras;
    vector<string> m_asCameraSns;
