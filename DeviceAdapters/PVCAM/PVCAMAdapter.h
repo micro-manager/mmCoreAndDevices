@@ -66,6 +66,8 @@
 #define PVCAM_SMART_STREAMING_SUPPORTED
 // Metadata, Multi-ROI, Centroids and other features that were added to PVCAM 3.0.12
 #define PVCAM_METADATA_SUPPORTED
+// Software trigger support (since PVCAM 3.9.0)
+#define PVCAM_SW_TRIGGER_SUPPORTED
 
 // PVCAM 3.1+ has some additional PL_COLOR_MODES defined which we use across the code
 // even if we don't compile against that PVCAM. To make it easier we define them ourselves.
@@ -73,6 +75,13 @@
 #define COLOR_GRBG 3
 #define COLOR_GBRG 4
 #define COLOR_BGGR 5
+#endif
+
+// PVCAM 3.9+ has some additional PL_EXPOSURE_MODES defined which we use across the code
+// even if we don't compile against that PVCAM. To make it easier we define them ourselves.
+#ifndef PVCAM_SW_TRIGGER_SUPPORTED
+#define EXT_TRIG_SOFTWARE_FIRST ((7 + 4) << 8)
+#define EXT_TRIG_SOFTWARE_EDGE  ((7 + 5) << 8)
 #endif
 
 // Custom error codes originating from this adapter
@@ -90,6 +99,7 @@
 #define ERR_FRAME_READOUT_FAILED        10013 // Polling: status = READOUT_FAILED
 #define ERR_TOO_MANY_ROIS               10014 // Device does not support that many ROIs (uM 2.0)
 #define ERR_FILE_OPERATION_FAILED       10015
+#define ERR_SW_TRIGGER_NOT_SUPPORTED    10016
 
 // PVCAM-specific error codes base. When a PVCAM error occurs we use the PVCAM
 // ID and PVCAM message to create a new uM error code, we call the SetErrorCode()
