@@ -23,10 +23,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\CSU22Hub.h">
+    <ClInclude Include="..\CSUXHub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\CSUXHub.h">
+    <ClInclude Include="..\CSUX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          XLedDev.cpp
+// FILE:          XT600Dev.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -7,6 +7,7 @@
 //
 // COPYRIGHT:     Lumen Dynamics,
 //				  Mission Bay Imaging, San Francisco, 2011
+//				  S3L GmbH 2021
 //                All rights reserved
 //
 // LICENSE:       This library is free software; you can redistribute it and/or
@@ -26,6 +27,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
 //
 // AUTHOR:        Lon Chu (lonchu@yahoo.com), created on August 2011
+//                Steffen Leidenbach on November 2021 (NOVEM/XT900 extensions)
 //
 
 #ifdef WIN32
@@ -40,28 +42,12 @@
 #include <sstream>
 #include <math.h>
 #include "ModuleInterface.h"
-//#include "DeviceUtils.h"
 #include "XT600.h"
-//#include "XLedCtrl.h"
 #include "XT600Dev.h"
 
 using namespace std;
 
 
-///////////////////////////////////////////////////////////////////////////////
-// C400 Channel
-///////////////////////////////////////////////////////////////////////////////
-//
-// C400 Channel - single axis stage device.
-// Note that this adapter uses two coordinate systems.  There is the adapters own coordinate
-// system with the X and Y axis going the 'Micro-Manager standard' direction
-// Then, there is the MP285s native system.  All functions using 'steps' use the MP285 system
-// All functions using Um use the Micro-Manager coordinate system
-//
-
-//
-// Single axis stage constructor
-//
 XLedDev::XLedDev(int nLedDevNumber) :
 m_yInitialized(false),
    m_dAnswerTimeoutMs(5000.),
@@ -89,7 +75,7 @@ XLedDev::~XLedDev()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Stage methods required by the API
+// Methods required by the API
 ///////////////////////////////////////////////////////////////////////////////
 
 //
@@ -105,29 +91,29 @@ int XLedDev::Initialize()
    char sLedDevNameLabel[120];
    memset(sLedDevNameLabel, 0, 120);
    sprintf(sLedDevNameLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevNameLabel).c_str(), MM::g_Keyword_Name);
-   ret = CreateProperty(sLedDevNameLabel, XLed::Instance()->GetXLedStr(XLed::XL_ULedDevName + m_nLedDevNumber).c_str(), MM::String, true);
+   ret = CreateProperty(sLedDevNameLabel, XLed::Instance()->GetXLedStr(XLed::XL_RLedDevName + m_nLedDevNumber).c_str(), MM::String, true);
 
    if (nDebugLog > 0)
    {
       osMessage.str("");
-      osMessage << "<XLedDev::Initialize> CreateProperty(" << sLedDevNameLabel << "=" << XLed::Instance()->GetXLedStr(XLed::XL_ULedDevName + m_nLedDevNumber).c_str() << "), ReturnCode=" << ret;
+      osMessage << "<XLedDev::Initialize> CreateProperty(" << sLedDevNameLabel << "=" << XLed::Instance()->GetXLedStr(XLed::XL_RLedDevName + m_nLedDevNumber).c_str() << "), ReturnCode=" << ret;
       this->LogMessage(osMessage.str().c_str());
    }
 
    if (ret != DEVICE_OK) return ret;
 
    // Led Device Description
-   if (strcmp(XLed::Instance()->GetXLedStr(XLed::XL_ULedDevName + m_nLedDevNumber).c_str(), XLed::Instance()->GetXLedStr(XLed::XL_ULedDevName + m_nLedDevNumber).c_str()) != 0)
+   if (strcmp(XLed::Instance()->GetXLedStr(XLed::XL_RLedDevName + m_nLedDevNumber).c_str(), XLed::Instance()->GetXLedStr(XLed::XL_RLedDevName + m_nLedDevNumber).c_str()) != 0)
    {
       char sLedDevDescLabel[120];
       memset(sLedDevDescLabel, 0, 120);
       sprintf(sLedDevDescLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevDescLabel).c_str(), MM::g_Keyword_Description);
-      ret = CreateProperty(sLedDevDescLabel, XLed::Instance()->GetXLedStr(XLed::XL_ULedDevName + m_nLedDevNumber).c_str(), MM::String, true);
+      ret = CreateProperty(sLedDevDescLabel, XLed::Instance()->GetXLedStr(XLed::XL_RLedDevName + m_nLedDevNumber).c_str(), MM::String, true);
 
       if (nDebugLog > 0)
       {
          osMessage.str("");
-         osMessage << "<XLedDev::Initialize> CreateProperty(" << MM::g_Keyword_Description << XLed::Instance()->GetXLedStr(XLed::XL_ULedDevName + m_nLedDevNumber).c_str() << ") ReturnCode=" << ret;
+         osMessage << "<XLedDev::Initialize> CreateProperty(" << MM::g_Keyword_Description << XLed::Instance()->GetXLedStr(XLed::XL_RLedDevName + m_nLedDevNumber).c_str() << ") ReturnCode=" << ret;
          this->LogMessage(osMessage.str().c_str());
       }
 
@@ -431,6 +417,9 @@ int XLedDev::Initialize()
    AddAllowedValue(XLed::Instance()->GetXLedStr(XLed::XL_LedTriggerSequenceLabel).c_str(),"4");
    AddAllowedValue(XLed::Instance()->GetXLedStr(XLed::XL_LedTriggerSequenceLabel).c_str(),"5");
    AddAllowedValue(XLed::Instance()->GetXLedStr(XLed::XL_LedTriggerSequenceLabel).c_str(),"6");
+   AddAllowedValue(XLed::Instance()->GetXLedStr(XLed::XL_LedTriggerSequenceLabel).c_str(),"7");
+   AddAllowedValue(XLed::Instance()->GetXLedStr(XLed::XL_LedTriggerSequenceLabel).c_str(),"8");
+   AddAllowedValue(XLed::Instance()->GetXLedStr(XLed::XL_LedTriggerSequenceLabel).c_str(),"9");
    //SetPropertyLimits(XLed::Instance()->GetXLedStr(XLed::XL_LedOnOffStateLabel).c_str(),0,1);
 
    if (nDebugLog > 0)
@@ -810,7 +799,7 @@ int XLedDev::Shutdown()
 //
 void XLedDev::GetName(char* Name) const
 {
-   CDeviceUtils::CopyLimitedString(Name, XLed::Instance()->GetXLedStr(XLed::XL_ULedDevName + m_nLedDevNumber).c_str());
+   CDeviceUtils::CopyLimitedString(Name, XLed::Instance()->GetXLedStr(XLed::XL_RLedDevName + m_nLedDevNumber).c_str());
 }
 
 //
@@ -819,11 +808,11 @@ void XLedDev::GetName(char* Name) const
 int XLedDev::GetLedParmVal(unsigned char* sResp, char* sParm)
 {
    std::ostringstream osMessage;
-   char sData[60];
+   char sData[80];
 
    if (sResp == NULL || sParm == NULL) return DEVICE_ERR;
 
-   memset(sData, 0, 60);
+   memset(sData, 0, 80);
 
    // locate the string section describe the Led parameter
    strcpy(sData, (char*)sResp);

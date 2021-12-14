@@ -27,8 +27,8 @@
     <ClCompile Include="xiApiPlus\xiAPIplus_core.cpp">
       <Filter>Source Files\xiApiPlus</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\3rdpartypublic\pugixml\pugixml-1.8\src\pugixml.cpp">
-      <Filter>Source Files\pugixml</Filter>
+    <ClCompile Include="$(MM_3RDPARTYPRIVATE)public\pugixml\pugixml-1.8\src\pugixml.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -38,8 +38,8 @@
     <ClInclude Include="xiApiPlus\xiapiplus.h">
       <Filter>Source Files\xiApiPlus</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\3rdpartypublic\pugixml\pugixml-1.8\src\pugixml.hpp">
-      <Filter>Source Files\pugixml</Filter>
+    <ClInclude Include="$(MM_3RDPARTYPRIVATE)public\pugixml\pugixml-1.8\src\pugixml.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
