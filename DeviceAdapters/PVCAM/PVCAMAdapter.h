@@ -140,6 +140,7 @@ typedef struct
     uns32 portIndex;          // Port index
     int16 portDefaultSpdIdx;  // Default speed index for given port (applied when port changes)
     std::string spdString;    // A string that describes this choice in GUI
+    std::string spdName;      // A string received from camera, empty if not supported
     int32       colorMask;    // Sensor color mask (PARAM_COLOR_MODE) 
     std::string colorMaskStr; // Sensor color mask description (retrieved from PVCAM)
 } SpdTabEntry;
@@ -273,6 +274,11 @@ public: // Action handlers
     * See speedChanged().
     */
     int OnReadoutRate(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Read-only: Shows the camera-reported speed name for currently selected speed.
+    * The available choices are obtained from the speed table which is build in Initialize().
+    */
+    int OnReadoutRateName(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Gets or sets the EM/Multiplier gain if supported.
     */

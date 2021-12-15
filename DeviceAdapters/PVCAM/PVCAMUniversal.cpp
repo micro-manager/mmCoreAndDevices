@@ -92,6 +92,7 @@ const unsigned long long CIRC_BUF_SIZE_MAX_AUTO = CIRC_BUF_SIZE_MAX_USER;
 
 // global constants
 const char* g_ReadoutRate = "ReadoutRate";
+const char* g_ReadoutRateName = "ReadoutRateName";
 const char* g_ReadoutPort = "Port";
 
 const char* g_Keyword_ChipName        = "ChipName";
@@ -918,6 +919,13 @@ int Universal::Initialize()
             spdChoices.push_back(i->second.spdString);
         // Set the allowed readout rates
         SetAllowedValues(g_ReadoutRate, spdChoices);
+    }
+    if (!camCurrentSpeed_.spdName.empty())
+    {
+        pAct = new CPropertyAction(this, &Universal::OnReadoutRateName);
+        nRet = CreateProperty(g_ReadoutRateName, camCurrentSpeed_.spdName.c_str(), MM::String, true, pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
     }
 
     /// GAIN
@@ -2192,6 +2200,17 @@ int Universal::OnReadoutRate(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Set(camCurrentSpeed_.spdString.c_str());
     }
 
+    return DEVICE_OK;
+}
+
+int Universal::OnReadoutRateName(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnReadoutRateName", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(camCurrentSpeed_.spdName.c_str());
+    }
+    // Nothing to set, this is a read-only property
     return DEVICE_OK;
 }
 
@@ -4440,6 +4459,25 @@ int Universal::initializeSpeedTable()
             // breaks the expected scheme.
             tmp << 1000.0f/spdEntry.pixTime << "MHz " << bitDepth << "bit";
             spdEntry.spdString = tmp.str();
+
+            // Let's assume we won't succeed reading speed name from camera,
+            // this just makes the following code much easier.
+            std::string spdNameStr;
+            rs_bool spdNameAvail = FALSE;
+            if (pl_get_param(hPVCAM_, PARAM_SPDTAB_NAME, ATTR_AVAIL, &spdNameAvail) == PV_OK
+                && spdNameAvail == TRUE)
+            {
+                char spdName[MAX_SPDTAB_NAME_LEN];
+                if (pl_get_param(hPVCAM_, PARAM_SPDTAB_NAME, ATTR_CURRENT, spdName) == PV_OK)
+                {
+                    // Workaround if for some reason PVCAM returns empty string
+                    if (strlen(spdName) != 0)
+                    {
+                        spdNameStr = spdName;
+                    }
+                }
+            }
+            spdEntry.spdName = spdNameStr;
 
             camSpdTable_[portIndex][spdIndex] = spdEntry;
             camSpdTableReverse_[portIndex][tmp.str()] = spdEntry;
