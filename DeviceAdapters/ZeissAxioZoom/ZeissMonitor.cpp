@@ -129,7 +129,7 @@ void ZeissMonitoringThread::interpretMessageAZ(unsigned char* message)
 {
    //const int TARGET = 0;
    const int SOURCE = 1;
-   //const int DATABYTES = 2;
+   const int DATABYTES = 2;
    const int CLASS = 3;
    const int NUMBER = 4;
    //const int PROCID = 5;// data1
