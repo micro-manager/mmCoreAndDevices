@@ -67,7 +67,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>hid.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\Microsoft\WinDDK\7600.16385.1\lib\win7\amd64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
@@ -90,7 +90,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>hid.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\Microsoft\WinDDK\7600.16385.1\lib\win7\amd64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
