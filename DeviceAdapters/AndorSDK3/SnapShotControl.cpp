@@ -211,7 +211,7 @@ bool SnapShotControl::takeSnapShot()
          if (in_software_ && !in_external_)
          {
             // wait until event is set
-            b_ret = eventsManager_->WaitForEvent(CEventsManager::EV_EXPOSURE_END_EVENT, AT_INFINITE);
+            b_ret = eventsManager_->WaitForEvent(CEventsManager::EV_EXPOSURE_END_EVENT, exposure_ms + EVENT_TIMEOUT_MILLISECONDS);
          }
          else
          {

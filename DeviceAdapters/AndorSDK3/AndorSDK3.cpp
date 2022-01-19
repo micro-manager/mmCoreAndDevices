@@ -1021,6 +1021,9 @@ int CAndorSDK3Camera::SnapImage()
    else
    {
       ret = (snapShotController_->takeSnapShot() ? DEVICE_OK : DEVICE_SNAP_IMAGE_FAILED);
+      if (ret == DEVICE_SNAP_IMAGE_FAILED) {
+         LogMessage("Device Snap Image Failed (Event timeout)");
+      }
    }
 
    return ret;
@@ -1674,17 +1677,18 @@ int CAndorSDK3Camera::checkForBufferOverflow()
 bool CAndorSDK3Camera::waitForData(unsigned char *& return_buffer, int & buffer_size, bool is_first_frame)
 {
    bool got_image = false;
-   bool endExpEventFired = false;
    bool softwareTrigger = snapShotController_->isSoftware();
    //if support events & SW, wait for end exp and fire next trigger
    if (softwareTrigger && eventsManager_->IsEventRegistered(CEventsManager::EV_EXPOSURE_END_EVENT) )
    {
-      endExpEventFired = eventsManager_->WaitForEvent(CEventsManager::EV_EXPOSURE_END_EVENT, AT_INFINITE);
-      
-      if (endExpEventFired)
+      bool endExpEventFired = eventsManager_->WaitForEvent(CEventsManager::EV_EXPOSURE_END_EVENT, currentSeqExposure_ + SnapShotControl::EVENT_TIMEOUT_MILLISECONDS);
+      if (!endExpEventFired)
       {
-         sendSoftwareTrigger->Do();
+        LogMessage("[ThreadRun] Timeout when waiting for ExposureEndEvent");
       }
+
+      //send the trigger anyway
+      sendSoftwareTrigger->Do();
    }
 
    //else just wait on frame (1st trigger sent at Acq start)
