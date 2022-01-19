@@ -92,6 +92,7 @@ const unsigned long long CIRC_BUF_SIZE_MAX_AUTO = CIRC_BUF_SIZE_MAX_USER;
 
 // global constants
 const char* g_ReadoutRate = "ReadoutRate";
+const char* g_ReadoutRateName = "ReadoutRateName";
 const char* g_ReadoutPort = "Port";
 
 const char* g_Keyword_ChipName        = "ChipName";
@@ -276,6 +277,12 @@ Universal::Universal(short cameraId, const char* deviceName)
     prmLastMuxedSignal_(NULL),
     prmPMode_(NULL),
     prmAdcOffset_(NULL),
+    prmScanMode_(NULL),
+    prmScanDirection_(NULL),
+    prmScanDirectionReset_(NULL),
+    prmScanLineDelay_(NULL),
+    prmScanLineTime_(NULL),
+    prmScanWidth_(NULL),
     prmReadoutTime_(NULL),
     prmClearingTime_(NULL),
     prmPreTriggerDelay_(NULL),
@@ -295,6 +302,7 @@ Universal::Universal(short cameraId, const char* deviceName)
     SetErrorText(ERR_FRAME_READOUT_FAILED, "Frame readout failed");
     SetErrorText(ERR_TOO_MANY_ROIS, "Too many ROIs"); // Later overwritten by more specific message
     SetErrorText(ERR_FILE_OPERATION_FAILED, "File operation has failed");
+    SetErrorText(ERR_SW_TRIGGER_NOT_SUPPORTED, "Selected SW trigger mode is not supported by the adapter");
 
     pollingThd_ = new PollingThread(this);             // Pointer to the sequencing thread
 
@@ -371,6 +379,12 @@ Universal::~Universal()
     delete prmLastMuxedSignal_;
     delete prmPMode_;
     delete prmAdcOffset_;
+    delete prmScanMode_;
+    delete prmScanDirection_;
+    delete prmScanDirectionReset_;
+    delete prmScanLineDelay_;
+    delete prmScanLineTime_;
+    delete prmScanWidth_;
     delete prmReadoutTime_;
     delete prmClearingTime_;
     delete prmPreTriggerDelay_;
@@ -905,6 +919,13 @@ int Universal::Initialize()
             spdChoices.push_back(i->second.spdString);
         // Set the allowed readout rates
         SetAllowedValues(g_ReadoutRate, spdChoices);
+    }
+    if (!camCurrentSpeed_.spdName.empty())
+    {
+        pAct = new CPropertyAction(this, &Universal::OnReadoutRateName);
+        nRet = CreateProperty(g_ReadoutRateName, camCurrentSpeed_.spdName.c_str(), MM::String, true, pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
     }
 
     /// GAIN
@@ -2182,6 +2203,17 @@ int Universal::OnReadoutRate(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
+int Universal::OnReadoutRateName(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnReadoutRateName", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(camCurrentSpeed_.spdName.c_str());
+    }
+    // Nothing to set, this is a read-only property
+    return DEVICE_OK;
+}
+
 int Universal::OnMultiplierGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnMultiplierGain", eAct);
@@ -2414,6 +2446,21 @@ int Universal::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         std::string valStr;
         pProp->Get( valStr );
+
+        const int32 newMode = prmTriggerMode_->GetEnumValue(valStr);
+
+        if (newMode == EXT_TRIG_SOFTWARE_FIRST)
+        {
+            return LogAdapterError(ERR_SW_TRIGGER_NOT_SUPPORTED, __LINE__,
+                    "Universal::OnTriggerMode() - EXT_TRIG_SOFTWARE_FIRST not supported at all");
+        }
+
+        // TODO: Remove once this trigger mode is used for single snaps with minimal latency
+        if (newMode == EXT_TRIG_SOFTWARE_EDGE)
+        {
+            return LogAdapterError(ERR_SW_TRIGGER_NOT_SUPPORTED, __LINE__,
+                    "Universal::OnTriggerMode() - EXT_TRIG_SOFTWARE_EDGE not supported yet");
+        }
 
         prmTriggerMode_->Set( valStr );
         // We don't call Write() here because the PARAM_EXPOSURE_MODE cannot be set,
@@ -4412,6 +4459,25 @@ int Universal::initializeSpeedTable()
             // breaks the expected scheme.
             tmp << 1000.0f/spdEntry.pixTime << "MHz " << bitDepth << "bit";
             spdEntry.spdString = tmp.str();
+
+            // Let's assume we won't succeed reading speed name from camera,
+            // this just makes the following code much easier.
+            std::string spdNameStr;
+            rs_bool spdNameAvail = FALSE;
+            if (pl_get_param(hPVCAM_, PARAM_SPDTAB_NAME, ATTR_AVAIL, &spdNameAvail) == PV_OK
+                && spdNameAvail == TRUE)
+            {
+                char spdName[MAX_SPDTAB_NAME_LEN];
+                if (pl_get_param(hPVCAM_, PARAM_SPDTAB_NAME, ATTR_CURRENT, spdName) == PV_OK)
+                {
+                    // Workaround if for some reason PVCAM returns empty string
+                    if (strlen(spdName) != 0)
+                    {
+                        spdNameStr = spdName;
+                    }
+                }
+            }
+            spdEntry.spdName = spdNameStr;
 
             camSpdTable_[portIndex][spdIndex] = spdEntry;
             camSpdTableReverse_[portIndex][tmp.str()] = spdEntry;
