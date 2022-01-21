@@ -726,20 +726,28 @@ int XLedDev::SetOpen(bool yOpen)
 
    if (ret != DEVICE_OK) return ret;
 
-   memset(sResp, 0, XLed::XL_MaxPropSize);
 
-   ret = GetLedParm(sCmdGet, sResp, sParm);
-
-   if (XLed::Instance()->GetDebugLogFlag() > 1)
+   for(int i=0; i< 10; i++)
    {
-      osMessage << "<XLedDev::SetOpen>::<" << XLed::Instance()->GetXLedStr(XLed::XL_LedOnOffStateLabel).c_str() << "=" << sParm << "), Returncode = " << ret;
-      this->LogMessage(osMessage.str().c_str());
+	   memset(sResp, 0, XLed::XL_MaxPropSize);
+
+	   ret = GetLedParm(sCmdGet, sResp, sParm);
+
+	   if (XLed::Instance()->GetDebugLogFlag() > 1)
+	   {
+		  osMessage << "<XLedDev::SetOpen>::<" << XLed::Instance()->GetXLedStr(XLed::XL_LedOnOffStateLabel).c_str() << "=" << sParm << "), Returncode = " << ret;
+		  this->LogMessage(osMessage.str().c_str());
+	   }
+
+	   if (ret != DEVICE_OK) return ret;
+
+	   if( sParm[0] == (yOpen? '1':'0'))
+		   break;
+	   
+	   CDeviceUtils::SleepMs(10);
    }
 
-   if (ret != DEVICE_OK) return ret;
-
    m_lOnOffState = (sParm[0] == '0') ? 0 : 1;
-
    return DEVICE_OK;
 }
 
@@ -973,13 +981,19 @@ int XLedDev::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (ret != DEVICE_OK) return ret;
 
    long lStatus = atol((const char*)sParm);
+  
+   // set state property
    pProp->Set(lStatus);
+
+   // update on off property
+   UpdateProperty(XLed::Instance()->GetXLedStr(XLed::XL_LedOnOffStateLabel).c_str());
 
    char sStatus[400];
    memset(sStatus, 0, 400);
 
    GetStatusDescription(lStatus, sStatus);
 
+   // set status  description property
    SetProperty(XLed::Instance()->GetXLedStr(XLed::XL_LedStatusDescLabel).c_str(), sStatus);
 
    if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1214,6 +1228,8 @@ int XLedDev::OnLedOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
 
    if (eAct == MM::BeforeGet)
    {
+	   // use status (Bit 0) to get the on/off state
+	  sResp =  XLed::Instance()->GetParameter(XLed::XL_UnitStatus);
       ret = GetLedParmVal(sResp, sParm);
 
       if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1222,10 +1238,14 @@ int XLedDev::OnLedOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
          this->LogMessage(osMessage.str().c_str());
       }
 
-      if (ret !=DEVICE_OK) return ret;
-
-      if (*sParm == '0') m_lOnOffState = 0;
+	  if (ret !=DEVICE_OK) return ret;
+	
+	  long lStatus = atol((const char*)sParm);
+      if ((lStatus & 0x01) == 0 ) m_lOnOffState = 0;
       else m_lOnOffState = 1;
+     
+      /*if (*sParm == '0') m_lOnOffState = 0;
+      else m_lOnOffState = 1;*/
       pProp->Set(m_lOnOffState);
 
       if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1252,17 +1272,25 @@ int XLedDev::OnLedOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
 
       if (ret != DEVICE_OK) return ret;
 
-      memset(sResp, 0, XLed::XL_MaxPropSize);
+	  for(int i = 0; i < 10; i++)
+	  {
+		  memset(sResp, 0, XLed::XL_MaxPropSize);
 
-      ret = GetLedParm(sCmdGet, sResp, sParm);
+		  ret = GetLedParm(sCmdGet, sResp, sParm);
 
-      if (XLed::Instance()->GetDebugLogFlag() > 1)
-      {
-         osMessage << "<XLedDev::OnLedOnOff> AfterSet(2)::<" << XLed::Instance()->GetXLedStr(XLed::XL_LedOnOffStateLabel).c_str() << "=" << sParm << "), Returncode = " << ret;
-         this->LogMessage(osMessage.str().c_str());
-      }
+		  if (XLed::Instance()->GetDebugLogFlag() > 1)
+		  {
+			 osMessage << "<XLedDev::OnLedOnOff> AfterSet(2)::<" << XLed::Instance()->GetXLedStr(XLed::XL_LedOnOffStateLabel).c_str() << "=" << sParm << "), Returncode = " << ret;
+			 this->LogMessage(osMessage.str().c_str());
+		  }
 
-      if (ret != DEVICE_OK) return ret;
+		  if (ret != DEVICE_OK) return ret;
+		  
+		  if(sParm[0] == ((m_lOnOffState > 0)?'1':'0'))
+			  break;
+
+		  CDeviceUtils::SleepMs(10);
+	  }
 
       m_lOnOffState = (sParm[0] == '0') ? 0 : 1;
 
