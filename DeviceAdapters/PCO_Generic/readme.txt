@@ -1,6 +1,6 @@
--------------------------------------------------------------------
- P C O   AG   -     TECHNICAL  INFORMATION  DOCUMENT
--------------------------------------------------------------------
+--------------------------------------------------------------------
+ E X C E L I T A S   P C O   GmbH - TECHNICAL  INFORMATION  DOCUMENT
+--------------------------------------------------------------------
 
 README FOR SOFTWARE/VERSION:  
 pco_generic device adapter for Micro Manager
@@ -46,7 +46,7 @@ VERSION HISTORY:
 see SVN repository.
 
 
- PCO AG
+ EXCELITAS PCO GmbH
  DONAUPARK 11
  93309 KELHEIM / GERMANY
  PHONE +49 (9441) 20050
