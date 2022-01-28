@@ -531,7 +531,7 @@ bool CPiTwister::IsContinuousFocusDrive() const
 // The Stage
 
 CPiStage::CPiStage()
-: serial_(DEFAULT_SERIAL_UNKNOWN), handle_(NULL)
+: serial_(DEFAULT_SERIAL_UNKNOWN), handle_(NULL), homing_(false)
 {
 	CreateProperty(g_Keyword_SerialNumber, FIXED_TO_STRING(DEFAULT_SERIAL_UNKNOWN), MM::Integer, false, new CPropertyAction (this, &CPiStage::OnSerialNumber), true);
 
