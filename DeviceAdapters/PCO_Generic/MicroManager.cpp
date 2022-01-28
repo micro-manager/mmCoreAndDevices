@@ -616,6 +616,8 @@ int CPCOCam::OnNoiseFilterMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
         m_nMode |= 0x80;
       nErr = SetupCamera(true, false);
+      if (m_bDoDotPhoton)  // Must re-init dot photon in case of shutter mode, pixelrate and noise filter change
+        InitDotPhoton();
     }
 
     if(nErr != 0)
@@ -819,6 +821,8 @@ int CPCOCam::OnPixelRate(MM::PropertyBase* pProp, MM::ActionType eAct)
         if(CheckLineTime(&m_dwCMOSLineTime) != DEVICE_OK)
           nErr = SetupCamera(true, false);
       }
+      if (m_bDoDotPhoton)  // Must re-init dot photon in case of shutter mode, pixelrate and noise filter change
+        InitDotPhoton();
     }
 
     if(nErr != 0)
