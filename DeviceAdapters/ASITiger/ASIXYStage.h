@@ -46,7 +46,7 @@ public:
 
    // XYStageBase uses these functions to move the stage
    // the step size is the programming unit for dimensions and is integer
-   // see http://micro-manager.3463995.n2.nabble.com/what-are-quot-steps-quot-for-stages-td7580724.html
+   // see https://sourceforge.net/p/micro-manager/mailman/message/31318649/
    double GetStepSizeXUm() {return stepSizeYUm_;}
    double GetStepSizeYUm() {return stepSizeYUm_;}
    int GetPositionSteps(long& x, long& y);
