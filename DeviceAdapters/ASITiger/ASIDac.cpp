@@ -44,15 +44,21 @@ using namespace std;
 //
 CDAC::CDAC(const char* name) :
 	ASIPeripheralBase< ::CSignalIOBase, CDAC >(name),
-	unitMult_(g_DACDefaultUnitMult),  // later will try to read actual setting
-	axisLetter_(g_EmptyAxisLetterStr)  // value determined by extended name
+	unitMult_(g_DACDefaultUnitMult),   // later will try to read actual setting
+	axisLetter_(g_EmptyAxisLetterStr), // value determined by extended name
+	maxvolts_(0.0),
+	minvolts_(0.0),
+	ring_buffer_supported_(false),
+	ring_buffer_capacity_(0),
+	ttl_trigger_supported_(false),
+	ttl_trigger_enabled_(false)
 {
 	if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
 	{
 		axisLetter_ = GetAxisLetterFromExtName(name);
 		CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
 	}
-}//end of CDAC constructor
+}
 
 int CDAC::Initialize()
 {
