@@ -37,6 +37,7 @@
 #include <math.h>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 
 #include "ModuleInterface.h"
 
@@ -800,26 +801,26 @@ long CIDS_uEye::GetImageBufferSize() const
 * This command will change the dimensions of the image.
 * Depending on the hardware capabilities the camera may not be able to configure the
 * exact dimensions requested - but will try as close as possible.
-* @param x - top-left corner coordinate
-* @param y - top-left corner coordinate
+* @param xPos - top-left corner coordinate
+* @param yPos - top-left corner coordinate
 * @param xSize - width
 * @param ySize - height
 */
-int CIDS_uEye::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
+int CIDS_uEye::SetROI(unsigned xPos, unsigned yPos, unsigned xSize, unsigned ySize)
 {
   
   IS_RECT rectAOI;
   IS_RECT rectAOI2;
   IS_SIZE_2D sizeMin;
   IS_SIZE_2D sizeInc;
+  IS_SIZE_2D posInc;
 
 
   if (xSize == 0 && ySize == 0){
 
     //clear ROI
-    ClearROI();
-    
-    return DEVICE_OK;
+    return ClearROI();
+        
   }
   else{
 
@@ -828,44 +829,68 @@ int CIDS_uEye::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
     is_StopLiveVideo (hCam, IS_FORCE_VIDEO_STOP);
     */  
 
-    printf("IDS_uEye: ROI of %d x %d pixel requested\n", xSize, ySize);
-
-    //read out the current ROI
-    is_AOI(hCam, IS_AOI_IMAGE_GET_AOI, (void*)&rectAOI2, sizeof(rectAOI2)); 
-
-    //check ROI parameters and define the ROI rectangle
+    std::stringstream logStr;
+    logStr << "ROI at " << xPos << " , " << yPos << " size " << xSize <<" x " << ySize <<" requested";
+    LogMessage(logStr.str(), true); logStr.str("");
+        
+    //query camera for allowed ROI parameters
     is_AOI(hCam, IS_AOI_IMAGE_GET_SIZE_INC , (void*)&sizeInc, sizeof(sizeInc)); 
     is_AOI(hCam, IS_AOI_IMAGE_GET_SIZE_MIN , (void*)&sizeMin, sizeof(sizeMin)); 
+    is_AOI(hCam, IS_AOI_IMAGE_GET_POS_INC, (void*)&posInc, sizeof(posInc));
 
-    //printf("minimal ROI size: %d x %d pixels\n", sizeMin.s32Width, sizeMin.s32Height);
-    //printf("ROI increment: x:%d  y:%d pixels\n", sizeInc.s32Width, sizeInc.s32Height);
-
-    rectAOI.s32X = x;
-    rectAOI.s32Y = y;
-
-    if (((long)xSize > sizeMin.s32Width) && ((long)xSize <= cameraCCDXSize_)) {
-      rectAOI.s32Width= xSize / sizeInc.s32Width * sizeInc.s32Width;
+    {   // debug output
+        std::stringstream logStr;
+        logStr << "Minimum ROI size " << sizeMin.s32Width << " , " << sizeMin.s32Height;
+        LogMessage(logStr.str(), true); logStr.str("");
+        logStr << "ROI size increments " << sizeInc.s32Width << " , " << sizeInc.s32Height;
+        LogMessage(logStr.str(), true); logStr.str("");
+        logStr << "ROI position increments " << posInc.s32Width << " , " << posInc.s32Height;
+        LogMessage(logStr.str(), true); logStr.str("");
     }
-    if (((long)ySize > sizeMin.s32Height) && ((long)ySize <= cameraCCDYSize_)) {
-      rectAOI.s32Height= ySize / sizeInc.s32Height * sizeInc.s32Height;
-    }
+
+      
+    // ensure min. ROI size
+    if (xSize < sizeMin.s32Width)  xSize = sizeMin.s32Width;
+    if (ySize < sizeMin.s32Height) ySize = sizeMin.s32Height;
     
+    // ensure ROI size is a multiple of ROI size granularity
+    xSize = (xSize / sizeInc.s32Width) * sizeInc.s32Width;
+    ySize = (ySize / sizeInc.s32Height) * sizeInc.s32Height;
+    
+    // ensure ROI is fully within sensor (as we might have increased its size through checking sizeMin)
+    if (xPos + xSize > cameraCCDXSize_) xPos = cameraCCDXSize_ - xSize;
+    if (yPos + ySize > cameraCCDYSize_) yPos = cameraCCDYSize_ - ySize;
+
+    // ensure ROI position is a multiple of ROI position granularity
+    xPos = (xPos / posInc.s32Width) * posInc.s32Width;
+    yPos = (yPos / posInc.s32Height) * posInc.s32Height;
+
+    logStr << "ROI at " << xPos << " , " << yPos << " size " << xSize << " x " << ySize << " send to camera";
+    LogMessage(logStr.str(), true); logStr.str("");
+        
+    rectAOI.s32Width = xSize;
+    rectAOI.s32Height = ySize;
+    rectAOI.s32X = xPos;
+    rectAOI.s32Y = yPos;
+     
 
     //apply ROI  
     INT nRet = is_AOI(hCam, IS_AOI_IMAGE_SET_AOI, (void*)&rectAOI, sizeof(rectAOI)); 
 
     if(nRet==IS_SUCCESS){
 
-
-      //update ROI parameters
-      roiX_=rectAOI.s32X;
-      roiY_=rectAOI.s32Y;      
-      roiXSize_=rectAOI.s32Width;
-      roiYSize_=rectAOI.s32Height;
-
       //read out the ROI
       is_AOI(hCam, IS_AOI_IMAGE_GET_AOI, (void*)&rectAOI2, sizeof(rectAOI2)); 
-      printf("IDS_uEye: ROI of %d x %d pixel obtained\n", rectAOI2.s32Width, rectAOI2.s32Height );
+      
+      logStr << "ROI at " << rectAOI2.s32X << " , " << rectAOI2.s32Y << " size " 
+             << rectAOI2.s32Width << " x " << rectAOI2.s32Height << " returned by camera";
+      LogMessage(logStr.str(), true); logStr.str("");
+    
+      //update ROI parameters to those returned by camera
+      roiX_ = rectAOI2.s32X;
+      roiY_ = rectAOI2.s32Y;
+      roiXSize_ = rectAOI2.s32Width;
+      roiYSize_ = rectAOI2.s32Height;
 
       roiXSizeReal_=rectAOI2.s32Width*binX_;
       roiYSizeReal_=rectAOI2.s32Height*binY_;
@@ -881,7 +906,9 @@ int CIDS_uEye::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
       //update frame rate range
       GetFramerateRange(hCam, &framerateMin_, &framerateMax_);
       SetPropertyLimits("Frame Rate", framerateMin_, framerateMax_);
-      //printf("new frame rate range %f %f\n", framerateMin_, framerateMax_);
+      
+      logStr << "new framerate range " << framerateMin_ << " - " << framerateMax_;
+      LogMessage(logStr.str(), true); logStr.str("");
 
       //update the exposure range
       GetExposureRange(hCam, &exposureMin_, &exposureMax_, &exposureIncrement_);
