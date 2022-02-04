@@ -155,7 +155,9 @@ CIDS_uEye::CIDS_uEye() :
    SetErrorText(ERR_MEM_ALLOC, Err_MEM_ALLOC);
    SetErrorText(ERR_ROI_INVALID, Err_ROI_INVALID);
 
-
+   // Add an int. value to select camera (TODO: query list from driver?)
+   CreateProperty("Cam.ID", "1", MM::Integer, false, 0, true);
+   
    // call the base class method to set-up default error codes/messages
    InitializeDefaultErrorMessages();
    readoutStartTime_ = GetCurrentMMTime();
@@ -212,16 +214,29 @@ int CIDS_uEye::Initialize()
       return DEVICE_OK;
 	
 
-    
-   //Open camera with ID 1
-   hCam = 1;
-   INT nReturn = is_InitCamera (&hCam, NULL);
-   
-   if (nReturn != IS_SUCCESS){                          //could not open camera
-     LogMessage("could not find a uEye camera",true);
-     return ERR_CAMERA_NOT_FOUND;
+   // Open camera with camera ID 'Cam.ID.
+   // This is either set through the config file or (old files, backwards compatible)
+   // defaults to '1' (see 'CreateProterty' call above).
+   long tmpCamId = 1;
+   int ret = GetProperty("Cam.ID", tmpCamId);
+   if (ret != DEVICE_OK) {
+       LogMessage("Failed to load Cam.ID");
+       return ret;
    }
 
+   hCam = tmpCamId;
+   INT nReturn = is_InitCamera (&hCam, NULL);
+   
+   std::stringstream logStr;
+
+   if (nReturn != IS_SUCCESS) {                          //could not open camera
+    logStr << "Could not find a uEye camera with camera ID " << tmpCamId;
+    LogMessage(logStr.str(), true); logStr.str("");
+    return ERR_CAMERA_NOT_FOUND;
+   }
+   
+   logStr << "Initialized uEye with Cam.ID " << tmpCamId << " ( hCam "<<hCam<<" )";
+   LogMessage(logStr.str()); logStr.str("");
 
    //get camera info
    CAMINFO camInfo;
