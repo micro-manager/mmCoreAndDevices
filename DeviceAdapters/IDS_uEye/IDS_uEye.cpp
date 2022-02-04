@@ -80,6 +80,15 @@ const char* g_TriggerType_HI_LO =       "ext. falling";
 const char* g_TriggerType_LO_HI =       "ext. rising";
 const char* g_TriggerType_SOFTWARE =    "internal";
 
+// constants for naming flash modes (allowed values of the "Flash Mode" property)
+const char* g_FlashMode_OFF =			"off";
+const char* g_FlashMode_CONST_HI =		"const. high";
+const char* g_FlashMode_CONST_LO =      "const. low";   
+const char* g_FlashMode_TRIGGER_LO_ACT ="trigger lo act";
+const char* g_FlashMode_TRIGGER_HI_ACT ="trigger hi act";     
+const char* g_FlashMode_FREERUN_LO_ACT ="freerun lo act";
+const char* g_FlashMode_FREERUN_HI_ACT ="freerun hi act";    
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -537,6 +546,27 @@ int CIDS_uEye::Initialize()
    pAct = new CPropertyAction (this, &CIDS_uEye::OnFractionOfPixelsToDropOrSaturate);
    CreateProperty("FractionOfPixelsToDropOrSaturate", "0.002", MM::Float, false, pAct);
    SetPropertyLimits("FractionOfPixelsToDropOrSaturate", 0., 0.1);
+
+
+   // flash mode
+   pAct = new CPropertyAction (this, &CIDS_uEye::OnFlashMode);
+   nRet = CreateProperty("Flash Output", g_FlashMode_OFF, MM::String, false, pAct);
+   assert(nRet == DEVICE_OK);
+
+   vector<string> flashModeValues;
+   flashModeValues.push_back( g_FlashMode_OFF );
+   flashModeValues.push_back( g_FlashMode_CONST_HI );
+   flashModeValues.push_back( g_FlashMode_CONST_LO );   
+   flashModeValues.push_back( g_FlashMode_TRIGGER_LO_ACT );
+   flashModeValues.push_back( g_FlashMode_TRIGGER_HI_ACT );  
+   // these currently don't work, see comment at "CIDS_uEye::OnFlashMode"
+   //flashModeValues.push_back( g_FlashMode_FREERUN_LO_ACT );
+   //flashModeValues.push_back( g_FlashMode_FREERUN_HI_ACT );
+
+   nRet = SetAllowedValues("Flash Output", flashModeValues);
+   if (nRet != DEVICE_OK)
+      return nRet;
+   
 
 
    // synchronize all properties
@@ -2085,6 +2115,160 @@ int CIDS_uEye::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Get(triggerDevice_);
    }
    return DEVICE_OK;
+}
+
+
+/**
+* Handles "FlashMode" property.
+* The "freerunning" mode can currently not be used: The camera only snaps
+* one image, but flash-sync in freerun requires an image delay to obtain the
+* timing. Thus, use one of the triggered modes (software-trigger, if there is
+* no hardware sync) if you want to use the flash.
+* TODO: Implement blocking the selection of triggered flash modes if no
+* trigger is set.
+*
+* */
+int CIDS_uEye::OnFlashMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  int ret = DEVICE_INVALID_PROPERTY_VALUE;
+  int nRet;
+  
+  switch(eAct)
+  {
+
+  case MM::BeforeGet:{
+      
+    UINT flashMode;
+      
+	// TODO: Do some kind of error-handling also for the query?
+    //int nRet = is_IO(hCam, IS_IO_CMD_FLASH_GET_MODE, (void*)&flashMode, sizeof(flashMode));
+    
+	is_IO(hCam, IS_IO_CMD_FLASH_GET_MODE, (void*)&flashMode, sizeof(flashMode));
+
+	switch(flashMode){
+
+    case(IO_FLASH_MODE_OFF):
+      pProp->Set(g_FlashMode_OFF);
+      break;
+
+    case(IO_FLASH_MODE_CONSTANT_LOW):
+      pProp->Set(g_FlashMode_CONST_LO);
+      break;
+
+    case(IO_FLASH_MODE_CONSTANT_HIGH):
+      pProp->Set(g_FlashMode_CONST_HI);
+      break;
+
+	case(IO_FLASH_MODE_TRIGGER_LO_ACTIVE):
+      pProp->Set(g_FlashMode_TRIGGER_LO_ACT);
+      break;
+
+    case(IO_FLASH_MODE_TRIGGER_HI_ACTIVE):
+      pProp->Set(g_FlashMode_TRIGGER_HI_ACT);
+      break;
+
+	 case(IO_FLASH_MODE_FREERUN_LO_ACTIVE):
+      pProp->Set(g_FlashMode_FREERUN_LO_ACT);
+      break;
+
+    case(IO_FLASH_MODE_FREERUN_HI_ACTIVE):
+      pProp->Set(g_FlashMode_FREERUN_HI_ACT);
+      break;
+    
+      
+    default:
+      break;
+    }
+    
+
+    ret=DEVICE_OK;
+  }
+    break;
+
+  case MM::AfterSet:{
+
+    //if(IsCapturing())
+    //  return DEVICE_CAMERA_BUSY_ACQUIRING;
+
+    string flashModeType;
+    pProp->Get(flashModeType);
+	UINT nMode = IO_FLASH_MODE_OFF;  
+	int found  = 0 ;
+
+    if (flashModeType.compare(g_FlashMode_OFF) == 0){
+      nMode = IO_FLASH_MODE_OFF;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_CONST_LO) == 0){
+      nMode = IO_FLASH_MODE_CONSTANT_LOW;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_CONST_HI) == 0){
+      nMode = IO_FLASH_MODE_CONSTANT_HIGH;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_TRIGGER_LO_ACT) == 0){
+      nMode = IO_FLASH_MODE_TRIGGER_LO_ACTIVE;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_TRIGGER_HI_ACT) == 0){
+      nMode = IO_FLASH_MODE_TRIGGER_HI_ACTIVE;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_FREERUN_LO_ACT) == 0){
+      nMode = IO_FLASH_MODE_FREERUN_LO_ACTIVE;
+	  found = 2;
+	}
+
+	if (flashModeType.compare(g_FlashMode_FREERUN_HI_ACT) == 0){
+      nMode = IO_FLASH_MODE_FREERUN_HI_ACTIVE;
+	  found = 2;
+	}
+	
+	if (found) {
+		nRet=is_IO( hCam, IS_IO_CMD_FLASH_SET_MODE, (void*)&nMode, sizeof(nMode));
+		if(nRet==IS_SUCCESS){
+			ret=DEVICE_OK;
+		} else {
+			char errMsg[256];
+			is_GetError( hCam, &nRet , (IS_CHAR**)&errMsg );
+			LogMessage("Problem setting uEye flash, error is: " );
+			LogMessage(errMsg );
+		}
+		// in freerun-mode, additionally set the timing to auto
+		if ( found == 2 ) {
+			
+			nMode = IS_FLASH_AUTO_FREERUN_ON;
+			nRet = is_IO(hCam, IS_IO_CMD_FLASH_SET_AUTO_FREERUN, (void*)&nMode, sizeof(nMode));
+			
+			if(nRet==IS_SUCCESS){
+				ret=DEVICE_OK;
+			} else {
+				char errMsg[256];
+				is_GetError( hCam, &nRet , (IS_CHAR**)&errMsg );
+				LogMessage("Problem setting uEye freerun flash-mode to auto, error is: " );
+				LogMessage(errMsg );
+				ret = ERR_UNKNOWN_MODE;
+			}
+		}
+		
+	} else{
+      // on not found do nothing
+      ret = ERR_UNKNOWN_MODE;
+    }
+	  
+	}
+    break;
+    
+  }
+
+
+  return ret;
 }
 
 
