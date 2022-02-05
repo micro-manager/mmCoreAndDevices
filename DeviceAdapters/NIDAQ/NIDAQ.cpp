@@ -982,6 +982,8 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    }
    hub_->LogMessage("Created task", true);
 
+   boost::scoped_array<Tuint> samples;
+
    const std::string chanList = hub_->GetPhysicalChannelListForSequencing(physicalDOChannels_);
    nierr = DAQmxCreateDOChan(doTask_, chanList.c_str(), "DOSeqChan", DAQmx_Val_Volts);
    if (nierr != 0)
@@ -1000,26 +1002,13 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    }
    hub_->LogMessage("Configured sample clock timing to use " + hub_->niTriggerPort_, true);
 
-   boost::scoped_array<Tuint> samples;
+
    samples.reset(new Tuint[samplesPerChan * numChans]);
    hub_->GetLCMSequence(samples.get(), doChannelSequences_);
    int32 numWritten = 0;
 
-   if (typeid(Tuint) == typeid(uInt8))
-   {
-      DaqmxWriteDigital(doTask_, static_cast<int32>(samplesPerChan), samples, &numWritten);
-      const uInt8* samples8 = samples.get();
-      nierr = DAQmxWriteDigitalU8(doTask_, static_cast<int32>(samplesPerChan),
-         false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
-          samples8, &numWritten, NULL);
-   }
-   else if (typeid(Tuint) == typeid(uInt32))
-   {
-      const uInt32* samples32 = samples.get();
-      nierr = DAQmxWriteDigitalU32(doTask_, static_cast<int32>(samplesPerChan),
-         false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
-         samples32, &numWritten, NULL);
-   }
+   nierr = DaqmxWriteDigital(doTask_, static_cast<int32>(samplesPerChan), samples.get(), &numWritten);
+
    if (nierr != 0)
    {
       hub_->LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
@@ -1059,6 +1048,31 @@ error:
    }
    return err;
 }
+
+template<class Tuint>
+int NIDAQDOHub<Tuint>::DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChan, const Tuint* samples, int32* numWritten)
+{
+   return 0;
+}
+
+
+template<>
+int NIDAQDOHub<uInt8>::DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChan, const uInt8* samples, int32* numWritten)
+{
+   return DAQmxWriteDigitalU8(doTask_, samplesPerChan,
+      false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+      samples, numWritten, NULL);
+}
+
+template<>
+int NIDAQDOHub<uInt32>::DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChan, const uInt32* samples, int32* numWritten)
+{
+   return DAQmxWriteDigitalU32(doTask_, samplesPerChan,
+      false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+      samples, numWritten, NULL);
+}
+
+
 
 
 //

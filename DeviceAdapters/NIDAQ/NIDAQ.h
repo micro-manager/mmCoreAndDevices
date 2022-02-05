@@ -74,7 +74,7 @@ class NIDAQHub;
 
 // template class to deal with 8 pin and 32 pin DO ports without
 // too much code duplication
-template <typename Tuint>
+template <class Tuint>
 class NIDAQDOHub
 {
 public:
@@ -89,25 +89,8 @@ private:
    void RemoveDOPortFromSequencing(const std::string& port);
    int StartDOSequencingTask();
 
-   template<typename T> 
-   int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const uInt8* samples, int32* numWritten) {}
 
-   template<uInt8>
-      int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const uInt8* samples, int32* numWritten) 
-      {
-         return DAQmxWriteDigitalU8(doTask_, samplesPerChan,
-            false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
-            samples, numWritten, NULL);
-      }
-
-   template<uInt32>
-      int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const uInt32* samples, int32* numWritten)
-      {
-         return DAQmxWriteDigitalU32(doTask_, samplesPerChan,
-            false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
-            samples, numWritten, NULL);
-      }
-
+   int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const Tuint* samples, int32* numWritten);
 
    NIDAQHub* hub_;
    TaskHandle doTask_;
