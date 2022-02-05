@@ -35,7 +35,7 @@
 template <typename TDevice>
 class ErrorTranslator
 {
-protected:
+public:
    explicit ErrorTranslator(int minCode, int maxCode,
          void (TDevice::*setCodeFunc)(int, const char*)) :
       minErrorCode_(minCode),
@@ -69,16 +69,64 @@ private:
    int nextErrorCode_;
 };
 
+class NIDAQHub;
+
+
+// template class to deal with 8 pin and 32 pin DO ports without
+// too much code duplication
+template <typename Tuint>
+class NIDAQDOHub
+{
+public:
+   NIDAQDOHub(NIDAQHub* hub) { hub_ = hub;  }
+   int StartDOSequenceForPort(const std::string& port,
+      const std::vector<Tuint> sequence);
+   virtual int StopDOSequenceForPort(const std::string& port);
+
+private:
+   int AddDOPortToSequencing(const std::string& port,
+      const std::vector<Tuint> sequence);
+   void RemoveDOPortFromSequencing(const std::string& port);
+   int StartDOSequencingTask();
+
+   template<typename T> 
+   int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const uInt8* samples, int32* numWritten) {}
+
+   template<uInt8>
+      int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const uInt8* samples, int32* numWritten) 
+      {
+         return DAQmxWriteDigitalU8(doTask_, samplesPerChan,
+            false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+            samples, numWritten, NULL);
+      }
+
+   template<uInt32>
+      int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const uInt32* samples, int32* numWritten)
+      {
+         return DAQmxWriteDigitalU32(doTask_, samplesPerChan,
+            false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+            samples, numWritten, NULL);
+      }
+
+
+   NIDAQHub* hub_;
+   TaskHandle doTask_;
+   std::vector<std::string> physicalDOChannels_;
+   std::vector<std::vector<Tuint>> doChannelSequences_;
+};
+
 
 // A hub-peripheral device set for driving multiple analog output ports,
 // possibly with hardware-triggered sequencing using a shared trigger input.
-class MultiAnalogOutHub : public HubBase<MultiAnalogOutHub>,
-   ErrorTranslator<MultiAnalogOutHub>,
+class NIDAQHub : public HubBase<NIDAQHub>,
+   public ErrorTranslator<NIDAQHub>,
    boost::noncopyable
 {
+   friend NIDAQDOHub<uInt32>;
+   friend NIDAQDOHub<uInt8>;
 public:
-   MultiAnalogOutHub();
-   virtual ~MultiAnalogOutHub();
+   NIDAQHub();
+   virtual ~NIDAQHub();
 
    virtual int Initialize();
    virtual int Shutdown();
@@ -88,21 +136,20 @@ public:
 
    virtual int DetectInstalledDevices();
 
-public: // Interface for individual ports
+   // Interface for individual ports
    virtual int GetVoltageLimits(double& minVolts, double& maxVolts);
-
    virtual int StartAOSequenceForPort(const std::string& port,
       const std::vector<double> sequence);
    virtual int StopAOSequenceForPort(const std::string& port);
 
-   int StartDOSequenceForPort8(const std::string& port,
-      const std::vector<uInt8> sequence);
-   int StartDOSequenceForPort32(const std::string& port,
-      const std::vector<uInt32> sequence);
-   virtual int StopDOSequenceForPort(const std::string& port);
 
    virtual int IsSequencingEnabled(bool& flag) const;
    virtual int GetSequenceMaxLength(long& maxLength) const;
+
+   NIDAQDOHub<uInt8> * getDOHub8()  {return doHub8_; }
+   NIDAQDOHub<uInt32> * getDOHub32() { return doHub32_; }
+
+   int StopTask(TaskHandle& task);
 
 private:
    int AddAOPortToSequencing(const std::string& port,
@@ -125,16 +172,11 @@ private:
        const std::string& device);
    std::string GetPhysicalChannelListForSequencing(std::vector<std::string> channels) const;
    template<typename T> int GetLCMSamplesPerChannel(size_t& seqLen, std::vector<std::vector<T>>) const;
-   void GetLCMSequence(double* buffer) const;
+   template<typename T> void GetLCMSequence(T* buffer, std::vector<std::vector<T>> sequences) const;
 
    int StartAOSequencingTask();
 
-   int StartDOSequencingTask();
 
-
-   int StopTask(TaskHandle& task);
-
-private:
    // Action handlers
    int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxSequenceLength(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -143,7 +185,7 @@ private:
    int OnTriggerInputPort(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-private:
+
    bool initialized_;
    size_t maxSequenceLength_;
    bool sequencingEnabled_;
@@ -155,8 +197,11 @@ private:
    double maxVolts_; // Max possible for device
    double sampleRateHz_;
 
-   TaskHandle aoTask_;
+   TaskHandle aoTask_;   
    TaskHandle doTask_;
+
+   NIDAQDOHub<uInt8> * doHub8_;
+   NIDAQDOHub<uInt32> * doHub32_;
 
    // "Loaded" sequences for each channel
    // Invariant: physicalChannels_.size() == channelSequences_.size()
@@ -208,8 +253,8 @@ private:
    int OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   MultiAnalogOutHub* GetAOHub() const
-   { return static_cast<MultiAnalogOutHub*>(GetParentHub()); }
+   NIDAQHub* GetAOHub() const
+   { return static_cast<NIDAQHub*>(GetParentHub()); }
    int TranslateHubError(int err);
    int StartOnDemandTask(double voltage);
    int StopTask();
@@ -258,9 +303,9 @@ public:
 
 private:
     int OnSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct);
-    MultiAnalogOutHub* GetHub() const
+    NIDAQHub* GetHub() const
     {
-       return static_cast<MultiAnalogOutHub*>(GetParentHub());
+       return static_cast<NIDAQHub*>(GetParentHub());
     }
     int StartOnDemandTask(long state);
     int StopTask();
