@@ -319,6 +319,8 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   
   double dPhase_;
   ImgBuffer img_;
+  UEYEIMAGEINFO imgInfo_;
+
   bool busy_;
   bool stopOnOverflow_;
   bool initialized_;

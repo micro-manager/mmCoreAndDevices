@@ -74,7 +74,7 @@ const char* g_PixelType_8bitBGRA =      "8bit BGRA";    //directly corresponds t
 const char* g_PixelType_32bit =         "32bit";        // floating point greyscale
 
 
-// constants for naming trigger modes (allowed values of the "Triger" property)
+// constants for naming trigger modes (allowed values of the "Trigger" property)
 const char* g_TriggerType_OFF =         "off";
 const char* g_TriggerType_HI_LO =       "ext. falling";
 const char* g_TriggerType_LO_HI =       "ext. rising";
@@ -700,14 +700,21 @@ int CIDS_uEye::SnapImage()
   nReturn=is_FreezeVideo(hCam, ACQ_TIMEOUT);                    //returns when the first image is in memory or timeout
   if(nReturn !=IS_SUCCESS){
     if(nReturn == IS_TRANSFER_ERROR){
-      printf("IDS_uEye: failed capturing an image, transfer failed. Check/reduce pixel clock.\n");
+      LogMessage("IDS_uEye: failed capturing an image, transfer failed. Check/reduce pixel clock.");
     }
     else{
       is_GetError(hCam, &nReturn, &pErr);                       //retrieve detailed error message
-      printf("IDS_uEye: failed capturing an image, error %d: %s\n", nReturn, pErr);
+	  char tmp[2048];
+      snprintf(tmp,2047,"IDS_uEye: failed capturing an image, error %d: %s\n", nReturn, pErr);
+	  LogMessage(tmp);
     }
   }
   
+  // retrieve the image info
+  int ret = is_GetImageInfo( hCam, memPid, &imgInfo_, sizeof( UEYEIMAGEINFO ));
+  if ( ret != IS_SUCCESS ) {
+	 LogMessage( "IDS_uEye: ERR failed to retrive image info in snap" );
+  }
 
   /*
   //copy image into the buffer (not needed if the buffer is assigned directly via SetAllocatedImageMem)
@@ -1310,6 +1317,26 @@ int CIDS_uEye::InsertImage()
    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+
+   // Add a timestamp
+   char tStamp[128], tStampRaw[64];
+   snprintf(tStamp, 127, "uEye-%d-time [%04d-%02d-%02dT%02d:%02d:%02d.%04d]", hCam,
+	   imgInfo_.TimestampSystem.wYear,
+	   imgInfo_.TimestampSystem.wMonth,
+	   imgInfo_.TimestampSystem.wDay,
+	   imgInfo_.TimestampSystem.wHour,
+	   imgInfo_.TimestampSystem.wMinute,
+	   imgInfo_.TimestampSystem.wSecond,
+	   imgInfo_.TimestampSystem.wMilliseconds );
+
+   snprintf(tStampRaw, 63, "t:[%lu] io:[%d] prc: [%ld]", 
+	   imgInfo_.u64TimestampDevice, 
+	   imgInfo_.dwIoStatus,
+	   imgInfo_.dwHostProcessTime );
+
+   md.put("uEye-Timestamp", tStamp);
+   md.put("uEye-rawStamp", tStampRaw);
+
 
    imageCounter_++;
 
