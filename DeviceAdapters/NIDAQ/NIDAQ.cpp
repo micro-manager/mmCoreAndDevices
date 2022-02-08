@@ -34,6 +34,8 @@ const char* g_DeviceNameNIDAQDOPortPrefix = "NIDAQDO-";
 
 const char* g_On = "On";
 const char* g_Off = "Off";
+const char* g_Low = "Low";
+const char* g_High = "High";
 
 const char* g_Never = "Never";
 const char* g_UseHubSetting = "Use hub setting";
@@ -1441,6 +1443,16 @@ int DigitalOutputPort::Initialize()
     CreateIntegerProperty("State", 0, false, pAct, false);
     SetPropertyLimits("State", 0, numPos_);
 
+    pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
+    CreateStringProperty("Blanking", g_Off, false, pAct, false);
+    AddAllowedValue("Blanking", g_Off);
+    AddAllowedValue("Blanking", g_On);
+
+    pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlankingTriggerDirection);
+    CreateStringProperty("Blank on", g_Low, false, pAct, false);
+    AddAllowedValue("Blank on", g_Low);
+    AddAllowedValue("Blank on", g_High);
+
     return DEVICE_OK;
 }
 
@@ -1608,6 +1620,28 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          // do the thing in the hub
          blanking_ = blanking;
+      }
+      return DEVICE_OK;
+   }
+}
+
+int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      std::string response = blankOnLow_ ? g_Low : g_High;
+      pProp->Set(response.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+
+      std::string response;
+      pProp->Get(response);
+      bool blankOnLow = response == g_Low ? true : false;
+      if (blankOnLow_ != blankOnLow)
+      {
+         // do the thing in the hub
+         blankOnLow_ = blankOnLow;
       }
       return DEVICE_OK;
    }

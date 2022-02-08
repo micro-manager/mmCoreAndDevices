@@ -301,5 +301,3 @@ private:
 
     TaskHandle task_;
 };
-
-
