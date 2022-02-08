@@ -107,6 +107,7 @@ class NIDAQHub : public HubBase<NIDAQHub>,
    boost::noncopyable
 {
    friend NIDAQDOHub<uInt32>;
+   friend NIDAQDOHub<uInt16>;
    friend NIDAQDOHub<uInt8>;
 public:
    NIDAQHub();
@@ -130,6 +131,7 @@ public:
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
    NIDAQDOHub<uInt8> * getDOHub8()  {return doHub8_; }
+   NIDAQDOHub<uInt16>* getDOHub16() { return doHub16_; }
    NIDAQDOHub<uInt32> * getDOHub32() { return doHub32_; }
 
    int StopTask(TaskHandle& task);
@@ -177,6 +179,7 @@ private:
    TaskHandle aoTask_;   
 
    NIDAQDOHub<uInt8> * doHub8_;
+   NIDAQDOHub<uInt16>* doHub16_;
    NIDAQDOHub<uInt32> * doHub32_;
 
    // "Loaded" sequences for each channel
@@ -268,10 +271,9 @@ public:
     // action interface
     // ----------------
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-    //int OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct);
-    //int OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-    //int OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     int OnSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -285,6 +287,8 @@ private:
     std::string niPort_;
     bool initialized_;
     bool sequenceRunning_;
+    bool blanking_;
+    bool blankOnLow_;
     long pos_;
     long numPos_;
     uInt32 portWidth_;
@@ -292,6 +296,7 @@ private:
 
     // this can probably be done more elegantly using templates
     std::vector<uInt8> sequence8_;
+    std::vector<uInt16> sequence16_;
     std::vector<uInt32> sequence32_;
 
     TaskHandle task_;

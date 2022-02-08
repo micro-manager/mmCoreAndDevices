@@ -121,6 +121,7 @@ NIDAQHub::NIDAQHub () :
    sampleRateHz_(10000.0),
    aoTask_(0),
    doHub8_(0),
+   doHub16_(0),
    doHub32_(0)
 {
    // TODO: discover devices available on this computer and list them here
@@ -219,6 +220,10 @@ int NIDAQHub::Initialize()
       if (portWidth == 8) {
          doHub8_ = new NIDAQDOHub<uInt8>(this);
       }
+      else if (portWidth == 16)
+      {
+         doHub16_ = new NIDAQDOHub<uInt16>(this);
+      }
       else if (portWidth == 32) {
          doHub32_ = new NIDAQDOHub<uInt32>(this);
       }
@@ -240,9 +245,11 @@ int NIDAQHub::Shutdown()
    aoChannelSequences_.clear();
 
    if (doHub8_ != 0)
-      delete(doHub8_);
+      delete doHub8_;
+   else if (doHub16_ != 0)
+      delete doHub16_;
    else if (doHub32_ != 0)
-      delete (doHub32_);
+      delete  doHub32_;
 
    initialized_ = false;
    return err;
@@ -981,6 +988,14 @@ int NIDAQDOHub<uInt8>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerChan
 }
 
 template<>
+int NIDAQDOHub<uInt16>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerChan, const uInt16* samples, int32* numWritten)
+{
+   return DAQmxWriteDigitalU16(doTask, samplesPerChan,
+      false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+      samples, numWritten, NULL);
+}
+
+template<>
 int NIDAQDOHub<uInt32>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerChan, const uInt32* samples, int32* numWritten)
 {
    return DAQmxWriteDigitalU32(doTask, samplesPerChan,
@@ -1381,6 +1396,8 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    niPort_(port),
    initialized_(false),
    sequenceRunning_(false),
+   blanking_(false),
+   blankOnLow_(true),
    pos_(0),
    numPos_(0),
    portWidth_(0),
@@ -1503,6 +1520,17 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             sequence8_.push_back(val);
          }
       }
+      else if (portWidth_ == 16)
+      {
+         sequence16_.clear();
+         for (unsigned int i = 0; i < sequence.size(); i++)
+         {
+            std::istringstream os(sequence[i]);
+            uInt32 val;
+            os >> val;
+            sequence16_.push_back(val);
+         }
+      }
       else if (portWidth_ == 32)
       {
          sequence32_.clear();
@@ -1525,6 +1553,10 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          err = GetHub()->getDOHub8()->StartDOSequenceForPort(niPort_, sequence8_);
       }
+      else if (portWidth_ == 16)
+      {
+         err = GetHub()->getDOHub16()->StartDOSequenceForPort(niPort_, sequence16_);
+      }
       else if (portWidth_ == 32)
       {
          err = GetHub()->getDOHub32()->StartDOSequenceForPort(niPort_, sequence32_);
@@ -1542,6 +1574,10 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          err =  GetHub()->getDOHub8()->StopDOSequenceForPort(niPort_);
       }
+      else if (portWidth_ == 16)
+      {
+         err = GetHub()->getDOHub16()->StopDOSequenceForPort(niPort_);
+      }
       else if (portWidth_ == 32)
       {
          err =  GetHub()->getDOHub32()->StopDOSequenceForPort(niPort_);
@@ -1553,6 +1589,28 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
 
     return DEVICE_OK;
+}
+
+int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      std::string response = blanking_ ? g_On : g_Off;
+      pProp->Set(response.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+
+      std::string response;
+      pProp->Get(response);
+      bool blanking = response == g_On ? true : false;
+      if (blanking_ != blanking)
+      {
+         // do the thing in the hub
+         blanking_ = blanking;
+      }
+      return DEVICE_OK;
+   }
 }
 
 
