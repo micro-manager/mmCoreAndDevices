@@ -78,10 +78,11 @@ template <class Tuint>
 class NIDAQDOHub
 {
 public:
-   NIDAQDOHub(NIDAQHub* hub) { hub_ = hub;  }
+   NIDAQDOHub(NIDAQHub* hub) : doTask_(0), hub_(hub) {}
+   ~NIDAQDOHub();
    int StartDOSequenceForPort(const std::string& port,
       const std::vector<Tuint> sequence);
-   virtual int StopDOSequenceForPort(const std::string& port);
+   int StopDOSequenceForPort(const std::string& port);
 
 private:
    int AddDOPortToSequencing(const std::string& port,
@@ -125,7 +126,6 @@ public:
       const std::vector<double> sequence);
    virtual int StopAOSequenceForPort(const std::string& port);
 
-
    virtual int IsSequencingEnabled(bool& flag) const;
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
@@ -138,12 +138,6 @@ private:
    int AddAOPortToSequencing(const std::string& port,
       const std::vector<double> sequence);
    void RemoveAOPortFromSequencing(const std::string& port);
-
-   int AddDOPortToSequencing8(const std::string& port,
-      const std::vector<uInt8> sequence);
-   int AddDOPortToSequencing32(const std::string& port,
-      const std::vector<uInt32> sequence);
-   void RemoveDOPortFromSequencing(const std::string& port);
 
    int GetVoltageRangeForDevice(const std::string& device,
       double& minVolts, double& maxVolts);
@@ -181,7 +175,6 @@ private:
    double sampleRateHz_;
 
    TaskHandle aoTask_;   
-   TaskHandle doTask_;
 
    NIDAQDOHub<uInt8> * doHub8_;
    NIDAQDOHub<uInt32> * doHub32_;
@@ -191,20 +184,16 @@ private:
    std::vector<std::string> physicalAOChannels_; // Invariant: all unique
    std::vector<std::vector<double>> aoChannelSequences_;
 
-   std::vector<std::string> physicalDOChannels_;
-
-   std::vector<std::vector<uInt8>> doChannelSequences8_;
-   std::vector<std::vector<uInt32>> doChannelSequences32_;
 };
 
 
-class MultiAnalogOutPort : public CSignalIOBase<MultiAnalogOutPort>,
-   ErrorTranslator<MultiAnalogOutPort>,
+class AnalogOutputPort : public CSignalIOBase<AnalogOutputPort>,
+   ErrorTranslator<AnalogOutputPort>,
    boost::noncopyable
 {
 public:
-   MultiAnalogOutPort(const std::string& port);
-   virtual ~MultiAnalogOutPort();
+   AnalogOutputPort(const std::string& port);
+   virtual ~AnalogOutputPort();
 
    virtual int Initialize();
    virtual int Shutdown();
@@ -296,6 +285,7 @@ private:
     std::string niPort_;
     bool initialized_;
     bool sequenceRunning_;
+    long pos_;
     long numPos_;
     uInt32 portWidth_;
     bool neverSequenceable_;

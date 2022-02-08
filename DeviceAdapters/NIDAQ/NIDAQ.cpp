@@ -28,9 +28,9 @@
 #include <boost/scoped_array.hpp>
 
 
-const char* g_DeviceNameMultiAnalogOutHub = "NIMultiAnalogOutHub";
-const char* g_DeviceNameMultiAnalogOutPortPrefix = "NIMultiAnalogOut-";
-const char* g_DeviceNameDigitalOutputPortPrefix = "NIDigitalOutput-";
+const char* g_DeviceNameNIDAQHub = "NIDAQHub";
+const char* g_DeviceNameNIDAQAOPortPrefix = "NIDAQAO-";
+const char* g_DeviceNameNIDAQDOPortPrefix = "NIDAQDO-";
 
 const char* g_On = "On";
 const char* g_Off = "Off";
@@ -50,7 +50,7 @@ const int ERR_UNKNOWN_PINS_PER_PORT = 2007;
 
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_DeviceNameMultiAnalogOutHub, MM::HubDevice, "Multi-channel analog output");
+   RegisterDevice(g_DeviceNameNIDAQHub, MM::HubDevice, "Multi-channel analog output");
 }
 
 
@@ -59,22 +59,22 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    if (deviceName == 0)
       return 0;
 
-   if (strcmp(deviceName, g_DeviceNameMultiAnalogOutHub) == 0)
+   if (strcmp(deviceName, g_DeviceNameNIDAQHub) == 0)
    {
       return new NIDAQHub;
    }
    else if (std::string(deviceName).
-      substr(0, strlen(g_DeviceNameMultiAnalogOutPortPrefix)) ==
-      g_DeviceNameMultiAnalogOutPortPrefix)
+      substr(0, strlen(g_DeviceNameNIDAQAOPortPrefix)) ==
+      g_DeviceNameNIDAQAOPortPrefix)
    {
-      return new MultiAnalogOutPort(std::string(deviceName).
-         substr(strlen(g_DeviceNameMultiAnalogOutPortPrefix)));
+      return new AnalogOutputPort(std::string(deviceName).
+         substr(strlen(g_DeviceNameNIDAQAOPortPrefix)));
    }
-   else if (std::string(deviceName).substr(0, strlen(g_DeviceNameDigitalOutputPortPrefix)) ==
-       g_DeviceNameDigitalOutputPortPrefix)
+   else if (std::string(deviceName).substr(0, strlen(g_DeviceNameNIDAQDOPortPrefix)) ==
+       g_DeviceNameNIDAQDOPortPrefix)
    {
       return new DigitalOutputPort(std::string(deviceName).
-         substr(strlen(g_DeviceNameDigitalOutputPortPrefix)));
+         substr(strlen(g_DeviceNameNIDAQDOPortPrefix)));
    }
 
    return 0;
@@ -119,10 +119,43 @@ NIDAQHub::NIDAQHub () :
    minVolts_(0.0),
    maxVolts_(5.0),
    sampleRateHz_(10000.0),
-   aoTask_(0)
+   aoTask_(0),
+   doHub8_(0),
+   doHub32_(0)
 {
+   // TODO: discover devices available on this computer and list them here
+
+   std::string defaultDeviceName = "";
+   int32 stringLength = DAQmxGetSysDevNames(NULL, 0);
+   std::vector<std::string> result;
+   if (stringLength > 0)
+   {
+      char* deviceNames = new char[stringLength];
+      int32 nierr = DAQmxGetSysDevNames(deviceNames, stringLength);
+      if (nierr == 0)
+      {
+         LogMessage(deviceNames, false);
+         boost::split(result, deviceNames, boost::is_any_of(", "),
+            boost::token_compress_on);
+         defaultDeviceName = result[0];
+      }
+      else
+      {
+         LogMessage("No NIDAQ devicename found, false");
+      }
+      delete[] deviceNames;
+   }
+
+  
    CPropertyAction* pAct = new CPropertyAction(this, &NIDAQHub::OnDevice);
-   int err = CreateStringProperty("Device", "", false, pAct, true);
+   int err = CreateStringProperty("Device", defaultDeviceName.c_str(), false, pAct, true);
+   if (result.size() > 0)
+   {
+      for (std::string device : result)
+      {
+         AddAllowedValue("Device", device.c_str());
+      }
+   }
 
    pAct = new CPropertyAction(this, &NIDAQHub::OnMaxSequenceLength);
    err = CreateIntegerProperty("MaxSequenceLength",
@@ -189,7 +222,6 @@ int NIDAQHub::Initialize()
       else if (portWidth == 32) {
          doHub32_ = new NIDAQDOHub<uInt32>(this);
       }
-
    }
 
    initialized_ = true;
@@ -203,13 +235,14 @@ int NIDAQHub::Shutdown()
       return DEVICE_OK;
 
    int err = StopTask(aoTask_);
-   err = StopTask(doTask_);
 
    physicalAOChannels_.clear();
    aoChannelSequences_.clear();
-   physicalDOChannels_.clear();
-   doChannelSequences8_.clear();
-   doChannelSequences32_.clear();
+
+   if (doHub8_ != 0)
+      delete(doHub8_);
+   else if (doHub32_ != 0)
+      delete (doHub32_);
 
    initialized_ = false;
    return err;
@@ -218,7 +251,7 @@ int NIDAQHub::Shutdown()
 
 void NIDAQHub::GetName(char* name) const
 {
-   CDeviceUtils::CopyLimitedString(name, g_DeviceNameMultiAnalogOutHub);
+   CDeviceUtils::CopyLimitedString(name, g_DeviceNameNIDAQHub);
 }
 
 
@@ -231,7 +264,7 @@ int NIDAQHub::DetectInstalledDevices()
       it != end; ++it)
    {
       MM::Device* pDevice =
-         ::CreateDevice((g_DeviceNameMultiAnalogOutPortPrefix + *it).c_str());
+         ::CreateDevice((g_DeviceNameNIDAQAOPortPrefix + *it).c_str());
       if (pDevice)
       {
          AddInstalledDevice(pDevice);
@@ -245,7 +278,7 @@ int NIDAQHub::DetectInstalledDevices()
        it != end; ++it)
    {
        MM::Device* pDevice =
-           ::CreateDevice((g_DeviceNameDigitalOutputPortPrefix + *it).c_str());
+           ::CreateDevice((g_DeviceNameNIDAQDOPortPrefix + *it).c_str());
        if (pDevice)
        {
            AddInstalledDevice(pDevice);
@@ -296,61 +329,6 @@ int NIDAQHub::StopAOSequenceForPort(const std::string& port)
    return DEVICE_OK;
 }
 
-/*
-int NIDAQHub::StartDOSequenceForPort8(const std::string& port,
-   const std::vector<uInt8> sequence)
-{
-   int err = StopTask(doTask_);
-   if (err != DEVICE_OK)
-      return err;
-
-   err = AddDOPortToSequencing8(port, sequence);
-   if (err != DEVICE_OK)
-      return err;
-
-   err = StartDOSequencingTask();
-   if (err != DEVICE_OK)
-      return err;
-   // We don't restart the task without this port on failure.
-   // There is little point in doing so.
-
-   return DEVICE_OK;
-}
-
-
-int NIDAQHub::StartDOSequenceForPort32(const std::string& port,
-   const std::vector<uInt32> sequence)
-{
-   int err = StopTask(doTask_);
-   if (err != DEVICE_OK)
-      return err;
-
-   err = AddDOPortToSequencing32(port, sequence);
-   if (err != DEVICE_OK)
-      return err;
-
-   err = StartDOSequencingTask();
-   if (err != DEVICE_OK)
-      return err;
-   // We don't restart the task without this port on failure.
-   // There is little point in doing so.
-
-   return DEVICE_OK;
-}
-
-
-int NIDAQHub::StopDOSequenceForPort(const std::string& port)
-{
-   int err = StopTask(doTask_);
-   if (err != DEVICE_OK)
-      return err;
-   RemoveDOPortFromSequencing(port);
-   // We do not restart sequencing for the remaining ports,
-   // since it is meaningless (we can't preserve their state).
-   return DEVICE_OK;
-}
-*/
-
 
 int NIDAQHub::IsSequencingEnabled(bool& flag) const
 {
@@ -389,59 +367,6 @@ void NIDAQHub::RemoveAOPortFromSequencing(const std::string& port)
       if (physicalAOChannels_[i] == port) {
          physicalAOChannels_.erase(physicalAOChannels_.begin() + i);
          aoChannelSequences_.erase(aoChannelSequences_.begin() + i);
-         break;
-      }
-   }
-}
-
-
-int NIDAQHub::AddDOPortToSequencing8(const std::string& port,
-   const std::vector<uInt8> sequence)
-{
-   if (sequence.size() > maxSequenceLength_)
-      return ERR_SEQUENCE_TOO_LONG;
-
-   RemoveDOPortFromSequencing(port);
-
-   physicalDOChannels_.push_back(port);
-   doChannelSequences8_.push_back(sequence);
-   return DEVICE_OK;
-}
-
-int NIDAQHub::AddDOPortToSequencing32(const std::string& port,
-   const std::vector<uInt32> sequence)
-{
-   if (sequence.size() > maxSequenceLength_)
-      return ERR_SEQUENCE_TOO_LONG;
-
-   RemoveAOPortFromSequencing(port);
-
-   physicalDOChannels_.push_back(port);
-   doChannelSequences32_.push_back(sequence);
-   return DEVICE_OK;
-}
-
-void NIDAQHub::RemoveDOPortFromSequencing(const std::string& port)
-{
-   // We assume a given port appears at most once in physicalChannels_
-   size_t n = physicalDOChannels_.size();
-   for (size_t i = 0; i < n; ++i)
-   {
-      if (physicalDOChannels_[i] == port) {
-         uInt32 portWidth;
-         int32 nierr = DAQmxGetPhysicalChanDOPortWidth(port.c_str(), &portWidth);
-         if (nierr != 0)
-         {
-            LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-            return;
-         }
-         physicalDOChannels_.erase(physicalDOChannels_.begin() + i);
-         // this will break if the device has both 8 and 32 pinWidth ports
-         if (portWidth == 8)
-            doChannelSequences8_.erase(doChannelSequences8_.begin() + i);
-         else if (portWidth == 32)
-            doChannelSequences32_.erase(doChannelSequences32_.begin() + i);
-
          break;
       }
    }
@@ -593,7 +518,7 @@ inline int NIDAQHub::GetLCMSamplesPerChannel(size_t& seqLen, std::vector<std::ve
    uint64_t len = 1;
    for (unsigned int i = 0; i < channelSequences.size(); ++i)
    {
-      uint64_t channelSeqLen = aoChannelSequences_[i].size();
+      uint64_t channelSeqLen = channelSequences[i].size();
       if (channelSeqLen > factorLimit)
       {
          return ERR_SEQUENCE_TOO_LONG;
@@ -632,25 +557,6 @@ void NIDAQHub::GetLCMSequence(T* buffer, std::vector<std::vector<T>> sequences) 
    }
 }
 
-/*
-void NIDAQHub::GetLCMSequence(double* buffer) const
-{
-   size_t seqLen;
-   if (GetLCMSamplesPerChannel(seqLen, aoChannelSequences_) != DEVICE_OK)
-      return;
-
-   for (unsigned int i = 0; i < aoChannelSequences_.size(); ++i)
-   {
-      size_t chanOffset = seqLen * i;
-      size_t chanSeqLen = aoChannelSequences_[i].size();
-      for (unsigned int j = 0; j < seqLen; ++j)
-      {
-         buffer[chanOffset + j] =
-            aoChannelSequences_[i][j % chanSeqLen];
-      }
-   }
-}
-*/
 
 int NIDAQHub::StartAOSequencingTask()
 {
@@ -866,6 +772,16 @@ int NIDAQHub::OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 //
 
 template<typename Tuint>
+ NIDAQDOHub<Tuint>::~NIDAQDOHub<Tuint>()
+{
+   hub_->StopTask(doTask_);
+
+   physicalDOChannels_.clear();
+   doChannelSequences_.clear();
+}
+
+
+template<typename Tuint>
 int NIDAQDOHub<Tuint>::AddDOPortToSequencing(const std::string& port, const std::vector<Tuint> sequence)
 {
    long maxSequenceLength;
@@ -959,7 +875,6 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    int32 nierr = DAQmxGetPhysicalChanDOPortWidth(physicalDOChannels_[0].c_str(), &portWidth);
    if (nierr != 0)
    {
-      hub_->LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
       return hub_->TranslateNIError(nierr);
    }
 
@@ -977,8 +892,7 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    nierr = DAQmxCreateTask("DOSeqTask", &doTask_);
    if (nierr != 0)
    {
-      hub_->LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-      return nierr;
+      return hub_->TranslateNIError(nierr);;
    }
    hub_->LogMessage("Created task", true);
 
@@ -988,7 +902,6 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    nierr = DAQmxCreateDOChan(doTask_, chanList.c_str(), "DOSeqChan", DAQmx_Val_Volts);
    if (nierr != 0)
    {
-      hub_->LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
       goto error;
    }
    hub_->LogMessage(("Created DO voltage channel for: " + chanList).c_str(), true);
@@ -997,7 +910,6 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
       hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, samplesPerChan);
    if (nierr != 0)
    {
-      hub_->LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
       goto error;
    }
    hub_->LogMessage("Configured sample clock timing to use " + hub_->niTriggerPort_, true);
@@ -1011,7 +923,6 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
 
    if (nierr != 0)
    {
-      hub_->LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
       goto error;
    }
    if (numWritten != static_cast<int32>(samplesPerChan))
@@ -1025,8 +936,7 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
 
    nierr = DAQmxStartTask(doTask_);
    if (nierr != 0)
-   {
-      hub_->LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+   {      
       goto error;
    }
    hub_->LogMessage("Started task", true);
@@ -1034,13 +944,19 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    return DEVICE_OK;
 
 error:
+   std::string niErrorMsg;
+   if (nierr != 0)
+   {
+      niErrorMsg = GetNIDetailedErrorForMostRecentCall();
+      hub_->LogMessage(niErrorMsg.c_str());
+   }
    DAQmxClearTask(doTask_);
    doTask_ = 0;
    err;
    if (nierr != 0)
    {
-      hub_->LogMessage("Failed; task cleared");
       err = hub_->TranslateNIError(nierr);
+      hub_->SetErrorText(err, niErrorMsg.c_str());
    }
    else
    {
@@ -1052,22 +968,22 @@ error:
 template<class Tuint>
 int NIDAQDOHub<Tuint>::DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChan, const Tuint* samples, int32* numWritten)
 {
-   return 0;
+   return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
 
 template<>
-int NIDAQDOHub<uInt8>::DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChan, const uInt8* samples, int32* numWritten)
+int NIDAQDOHub<uInt8>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerChan, const uInt8* samples, int32* numWritten)
 {
-   return DAQmxWriteDigitalU8(doTask_, samplesPerChan,
+   return DAQmxWriteDigitalU8(doTask, samplesPerChan,
       false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
       samples, numWritten, NULL);
 }
 
 template<>
-int NIDAQDOHub<uInt32>::DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChan, const uInt32* samples, int32* numWritten)
+int NIDAQDOHub<uInt32>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerChan, const uInt32* samples, int32* numWritten)
 {
-   return DAQmxWriteDigitalU32(doTask_, samplesPerChan,
+   return DAQmxWriteDigitalU32(doTask, samplesPerChan,
       false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
       samples, numWritten, NULL);
 }
@@ -1079,9 +995,9 @@ int NIDAQDOHub<uInt32>::DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerCh
 // MultiAnalogOutPort
 //
 
-MultiAnalogOutPort::MultiAnalogOutPort(const std::string& port) :
-   ErrorTranslator(21000, 21999, &MultiAnalogOutPort::SetErrorText),
-   niPort_(port),
+AnalogOutputPort::AnalogOutputPort(const std::string& port) :
+   ErrorTranslator(21000, 21999, &AnalogOutputPort::SetErrorText),
+   niPort_(port), 
    initialized_(false),
    gateOpen_(true),
    gatedVoltage_(0.0),
@@ -1091,25 +1007,33 @@ MultiAnalogOutPort::MultiAnalogOutPort(const std::string& port) :
    neverSequenceable_(false),
    task_(0)
 {
-   CPropertyAction* pAct = new CPropertyAction(this, &MultiAnalogOutPort::OnMinVolts);
+   InitializeDefaultErrorMessages();
+   SetErrorText(ERR_SEQUENCE_RUNNING, "A sequence is running on this port.  Please stop this sequence first.");
+   SetErrorText(ERR_SEQUENCE_TOO_LONG, "Sequence is too long. Try increasing sequence length in the Hub device.");
+   SetErrorText(ERR_SEQUENCE_ZERO_LENGTH, "Sequence has length zero.");
+   SetErrorText(ERR_VOLTAGE_OUT_OF_RANGE, "Requested voltage is out of range");
+   SetErrorText(ERR_NONUNIFORM_CHANNEL_VOLTAGE_RANGES, "Non-uniform channel voltage ranges.");
+   SetErrorText(ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS, "Requested voltage range exceeds the device's limits.");
+
+   CPropertyAction* pAct = new CPropertyAction(this, &AnalogOutputPort::OnMinVolts);
    CreateFloatProperty("MinVolts", minVolts_, false, pAct, true);
-   pAct = new CPropertyAction(this, &MultiAnalogOutPort::OnMaxVolts);
+   pAct = new CPropertyAction(this, &AnalogOutputPort::OnMaxVolts);
    CreateFloatProperty("MaxVolts", maxVolts_, false, pAct, true);
 
-   pAct = new CPropertyAction(this, &MultiAnalogOutPort::OnSequenceable);
+   pAct = new CPropertyAction(this, &AnalogOutputPort::OnSequenceable);
    CreateStringProperty("Sequencing", g_UseHubSetting, false, pAct, true);
    AddAllowedValue("Sequencing", g_UseHubSetting);
    AddAllowedValue("Sequencing", g_Never);
 }
 
 
-MultiAnalogOutPort::~MultiAnalogOutPort()
+AnalogOutputPort::~AnalogOutputPort()
 {
    Shutdown();
 }
 
 
-int MultiAnalogOutPort::Initialize()
+int AnalogOutputPort::Initialize()
 {
    if (initialized_)
       return DEVICE_OK;
@@ -1125,7 +1049,7 @@ int MultiAnalogOutPort::Initialize()
    if (minVolts_ < minVolts || maxVolts_ > maxVolts)
       return ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS;
 
-   CPropertyAction* pAct = new CPropertyAction(this, &MultiAnalogOutPort::OnVoltage);
+   CPropertyAction* pAct = new CPropertyAction(this, &AnalogOutputPort::OnVoltage);
    err = CreateFloatProperty("Voltage", gatedVoltage_, false, pAct);
    if (err != DEVICE_OK)
       return err;
@@ -1141,7 +1065,7 @@ int MultiAnalogOutPort::Initialize()
 }
 
 
-int MultiAnalogOutPort::Shutdown()
+int AnalogOutputPort::Shutdown()
 {
    if (!initialized_)
       return DEVICE_OK;
@@ -1156,14 +1080,14 @@ int MultiAnalogOutPort::Shutdown()
 }
 
 
-void MultiAnalogOutPort::GetName(char* name) const
+void AnalogOutputPort::GetName(char* name) const
 {
    CDeviceUtils::CopyLimitedString(name,
-      (g_DeviceNameMultiAnalogOutPortPrefix + niPort_).c_str());
+      (g_DeviceNameNIDAQAOPortPrefix + niPort_).c_str());
 }
 
 
-int MultiAnalogOutPort::SetGateOpen(bool open)
+int AnalogOutputPort::SetGateOpen(bool open)
 {
    if (open && !gateOpen_)
    {
@@ -1183,14 +1107,14 @@ int MultiAnalogOutPort::SetGateOpen(bool open)
 }
 
 
-int MultiAnalogOutPort::GetGateOpen(bool& open)
+int AnalogOutputPort::GetGateOpen(bool& open)
 {
    open = gateOpen_;
    return DEVICE_OK;
 }
 
 
-int MultiAnalogOutPort::SetSignal(double volts)
+int AnalogOutputPort::SetSignal(double volts)
 {
    if (volts < minVolts_ || volts > maxVolts_)
       return ERR_VOLTAGE_OUT_OF_RANGE;
@@ -1206,7 +1130,7 @@ int MultiAnalogOutPort::SetSignal(double volts)
 }
 
 
-int MultiAnalogOutPort::GetLimits(double& minVolts, double& maxVolts)
+int AnalogOutputPort::GetLimits(double& minVolts, double& maxVolts)
 {
    minVolts = minVolts_;
    maxVolts = maxVolts_;
@@ -1214,7 +1138,7 @@ int MultiAnalogOutPort::GetLimits(double& minVolts, double& maxVolts)
 }
 
 
-int MultiAnalogOutPort::IsDASequenceable(bool& isSequenceable) const
+int AnalogOutputPort::IsDASequenceable(bool& isSequenceable) const
 {
    if (neverSequenceable_)
       return false;
@@ -1224,14 +1148,14 @@ int MultiAnalogOutPort::IsDASequenceable(bool& isSequenceable) const
 }
 
 
-int MultiAnalogOutPort::GetDASequenceMaxLength(long& maxLength) const
+int AnalogOutputPort::GetDASequenceMaxLength(long& maxLength) const
 {
    // Translation from hub error code skipped (since this never fails)
    return GetAOHub()->GetSequenceMaxLength(maxLength);
 }
 
 
-int MultiAnalogOutPort::StartDASequence()
+int AnalogOutputPort::StartDASequence()
 {
    if (task_)
       StopTask();
@@ -1246,7 +1170,7 @@ int MultiAnalogOutPort::StartDASequence()
 }
 
 
-int MultiAnalogOutPort::StopDASequence()
+int AnalogOutputPort::StopDASequence()
 {
    int err = GetAOHub()->StopAOSequenceForPort(niPort_);
    if (err != DEVICE_OK)
@@ -1264,14 +1188,14 @@ int MultiAnalogOutPort::StopDASequence()
 }
 
 
-int MultiAnalogOutPort::ClearDASequence()
+int AnalogOutputPort::ClearDASequence()
 {
    unsentSequence_.clear();
    return DEVICE_OK;
 }
 
 
-int MultiAnalogOutPort::AddToDASequence(double voltage)
+int AnalogOutputPort::AddToDASequence(double voltage)
 {
    if (voltage < minVolts_ || voltage > maxVolts_)
       return ERR_VOLTAGE_OUT_OF_RANGE;
@@ -1281,7 +1205,7 @@ int MultiAnalogOutPort::AddToDASequence(double voltage)
 }
 
 
-int MultiAnalogOutPort::SendDASequence()
+int AnalogOutputPort::SendDASequence()
 {
    if (sequenceRunning_)
       return ERR_SEQUENCE_RUNNING;
@@ -1294,7 +1218,7 @@ int MultiAnalogOutPort::SendDASequence()
 }
 
 
-int MultiAnalogOutPort::OnMinVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
+int AnalogOutputPort::OnMinVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1308,7 +1232,7 @@ int MultiAnalogOutPort::OnMinVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int MultiAnalogOutPort::OnMaxVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
+int AnalogOutputPort::OnMaxVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1322,7 +1246,7 @@ int MultiAnalogOutPort::OnMaxVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int MultiAnalogOutPort::OnSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct)
+int AnalogOutputPort::OnSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1338,7 +1262,7 @@ int MultiAnalogOutPort::OnSequenceable(MM::PropertyBase* pProp, MM::ActionType e
 }
 
 
-int MultiAnalogOutPort::OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+int AnalogOutputPort::OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1356,7 +1280,7 @@ int MultiAnalogOutPort::OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int MultiAnalogOutPort::TranslateHubError(int err)
+int AnalogOutputPort::TranslateHubError(int err)
 {
    if (err == DEVICE_OK)
       return DEVICE_OK;
@@ -1367,7 +1291,7 @@ int MultiAnalogOutPort::TranslateHubError(int err)
 }
 
 
-int MultiAnalogOutPort::StartOnDemandTask(double voltage)
+int AnalogOutputPort::StartOnDemandTask(double voltage)
 {
    if (sequenceRunning_)
       return ERR_SEQUENCE_RUNNING;
@@ -1389,8 +1313,7 @@ int MultiAnalogOutPort::StartOnDemandTask(double voltage)
    }
    LogMessage("Created task", true);
 
-   nierr = DAQmxCreateAOVoltageChan(task_,
-      niPort_.c_str(), NULL, minVolts_, maxVolts_,
+   nierr = DAQmxCreateAOVoltageChan(task_, niPort_.c_str(), NULL, minVolts_, maxVolts_,
       DAQmx_Val_Volts, NULL);
    if (nierr != 0)
    {
@@ -1438,7 +1361,7 @@ error:
 }
 
 
-int MultiAnalogOutPort::StopTask()
+int AnalogOutputPort::StopTask()
 {
    if (!task_)
       return DEVICE_OK;
@@ -1454,15 +1377,22 @@ int MultiAnalogOutPort::StopTask()
 
 
 DigitalOutputPort::DigitalOutputPort(const std::string& port) :
-    ErrorTranslator(22000, 22999, &DigitalOutputPort::SetErrorText),
-    niPort_(port),
-    initialized_(false),
-    sequenceRunning_(false),
-    numPos_(0),
-    portWidth_(0),
-    neverSequenceable_(false),
-    task_(0)
+      ErrorTranslator(21000, 21999, &DigitalOutputPort::SetErrorText),
+   niPort_(port),
+   initialized_(false),
+   sequenceRunning_(false),
+   pos_(0),
+   numPos_(0),
+   portWidth_(0),
+   neverSequenceable_(false),
+   task_(0)
 {
+   InitializeDefaultErrorMessages();
+   SetErrorText(ERR_SEQUENCE_RUNNING, "A sequence is running on this port.  Please stop this sequence first.");
+   SetErrorText(ERR_SEQUENCE_TOO_LONG, "Sequence is too long. Try increasing sequence length in the Hub device.");
+   SetErrorText(ERR_SEQUENCE_ZERO_LENGTH, "Sequence has length zero.");
+   SetErrorText(ERR_UNKNOWN_PINS_PER_PORT, "Only 8 and 32 pin ports are supported.");
+
    CPropertyAction *pAct = new CPropertyAction(this, &DigitalOutputPort::OnSequenceable);
    CreateStringProperty("Sequencing", g_UseHubSetting, false, pAct, true);
    AddAllowedValue("Sequencing", g_UseHubSetting);
@@ -1513,7 +1443,7 @@ int DigitalOutputPort::Shutdown()
 void DigitalOutputPort::GetName(char* name) const
 {
     CDeviceUtils::CopyLimitedString(name,
-        (g_DeviceNameDigitalOutputPortPrefix + niPort_).c_str());
+        (g_DeviceNameNIDAQDOPortPrefix + niPort_).c_str());
 }
 
 
@@ -1521,13 +1451,16 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      // nothing to do, let the caller use cached property
+      pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
    {
       long pos;
       pProp->Get(pos);
-      return StartOnDemandTask(pos);
+      int err = StartOnDemandTask(pos);
+      if (err == DEVICE_OK)
+         pos_ = pos;
+      return err;
    }
 
    else if (eAct == MM::IsSequenceable)
@@ -1585,26 +1518,38 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
    else if (eAct == MM::StartSequence)
    {
+      int err = DEVICE_OK;
+      sequenceRunning_ = true;
+      // TODO: set the first state of the sequence before we start?
       if (portWidth_ == 8)
       {
-         return GetHub()->getDOHub8()->StartDOSequenceForPort(niPort_, sequence8_);
+         err = GetHub()->getDOHub8()->StartDOSequenceForPort(niPort_, sequence8_);
       }
       else if (portWidth_ == 32)
       {
-         return GetHub()->getDOHub32()->StartDOSequenceForPort(niPort_, sequence32_);
+         err = GetHub()->getDOHub32()->StartDOSequenceForPort(niPort_, sequence32_);
       }
+      if (err != DEVICE_OK)
+         sequenceRunning_ = false;
+      return err;
    }
 
    else if (eAct == MM::StopSequence)
    {
+      int err = DEVICE_OK;
+      sequenceRunning_ = false;
       if (portWidth_ == 8)
       {
-         return GetHub()->getDOHub8()->StopDOSequenceForPort(niPort_);
+         err =  GetHub()->getDOHub8()->StopDOSequenceForPort(niPort_);
       }
       else if (portWidth_ == 32)
       {
-         return GetHub()->getDOHub32()->StopDOSequenceForPort(niPort_);
+         err =  GetHub()->getDOHub32()->StopDOSequenceForPort(niPort_);
       }
+      if (err == DEVICE_OK) {
+         int err = StartOnDemandTask(pos_);
+      }
+      return err;
    }
 
     return DEVICE_OK;
