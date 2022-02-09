@@ -37,6 +37,7 @@
 #include <math.h>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 
 #include "ModuleInterface.h"
 
@@ -73,11 +74,20 @@ const char* g_PixelType_8bitBGRA =      "8bit BGRA";    //directly corresponds t
 const char* g_PixelType_32bit =         "32bit";        // floating point greyscale
 
 
-// constants for naming trigger modes (allowed values of the "Triger" property)
+// constants for naming trigger modes (allowed values of the "Trigger" property)
 const char* g_TriggerType_OFF =         "off";
 const char* g_TriggerType_HI_LO =       "ext. falling";
 const char* g_TriggerType_LO_HI =       "ext. rising";
 const char* g_TriggerType_SOFTWARE =    "internal";
+
+// constants for naming flash modes (allowed values of the "Flash Mode" property)
+const char* g_FlashMode_OFF =			"off";
+const char* g_FlashMode_CONST_HI =		"const. high";
+const char* g_FlashMode_CONST_LO =      "const. low";   
+const char* g_FlashMode_TRIGGER_LO_ACT ="trigger lo act";
+const char* g_FlashMode_TRIGGER_HI_ACT ="trigger hi act";     
+const char* g_FlashMode_FREERUN_LO_ACT ="freerun lo act";
+const char* g_FlashMode_FREERUN_HI_ACT ="freerun hi act";    
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -154,7 +164,9 @@ CIDS_uEye::CIDS_uEye() :
    SetErrorText(ERR_MEM_ALLOC, Err_MEM_ALLOC);
    SetErrorText(ERR_ROI_INVALID, Err_ROI_INVALID);
 
-
+   // Add an int. value to select camera (TODO: query list from driver?)
+   CreateProperty("Cam.ID", "1", MM::Integer, false, 0, true);
+   
    // call the base class method to set-up default error codes/messages
    InitializeDefaultErrorMessages();
    readoutStartTime_ = GetCurrentMMTime();
@@ -211,16 +223,29 @@ int CIDS_uEye::Initialize()
       return DEVICE_OK;
 	
 
-    
-   //Open camera with ID 1
-   hCam = 1;
-   INT nReturn = is_InitCamera (&hCam, NULL);
-   
-   if (nReturn != IS_SUCCESS){                          //could not open camera
-     LogMessage("could not find a uEye camera",true);
-     return ERR_CAMERA_NOT_FOUND;
+   // Open camera with camera ID 'Cam.ID.
+   // This is either set through the config file or (old files, backwards compatible)
+   // defaults to '1' (see 'CreateProterty' call above).
+   long tmpCamId = 1;
+   int ret = GetProperty("Cam.ID", tmpCamId);
+   if (ret != DEVICE_OK) {
+       LogMessage("Failed to load Cam.ID");
+       return ret;
    }
 
+   hCam = tmpCamId;
+   INT nReturn = is_InitCamera (&hCam, NULL);
+   
+   std::stringstream logStr;
+
+   if (nReturn != IS_SUCCESS) {                          //could not open camera
+    logStr << "Could not find a uEye camera with camera ID " << tmpCamId;
+    LogMessage(logStr.str(), true); logStr.str("");
+    return ERR_CAMERA_NOT_FOUND;
+   }
+   
+   logStr << "Initialized uEye with Cam.ID " << tmpCamId << " ( hCam "<<hCam<<" )";
+   LogMessage(logStr.str()); logStr.str("");
 
    //get camera info
    CAMINFO camInfo;
@@ -523,6 +548,27 @@ int CIDS_uEye::Initialize()
    SetPropertyLimits("FractionOfPixelsToDropOrSaturate", 0., 0.1);
 
 
+   // flash mode
+   pAct = new CPropertyAction (this, &CIDS_uEye::OnFlashMode);
+   nRet = CreateProperty("Flash Output", g_FlashMode_OFF, MM::String, false, pAct);
+   assert(nRet == DEVICE_OK);
+
+   vector<string> flashModeValues;
+   flashModeValues.push_back( g_FlashMode_OFF );
+   flashModeValues.push_back( g_FlashMode_CONST_HI );
+   flashModeValues.push_back( g_FlashMode_CONST_LO );   
+   flashModeValues.push_back( g_FlashMode_TRIGGER_LO_ACT );
+   flashModeValues.push_back( g_FlashMode_TRIGGER_HI_ACT );  
+   // these currently don't work, see comment at "CIDS_uEye::OnFlashMode"
+   //flashModeValues.push_back( g_FlashMode_FREERUN_LO_ACT );
+   //flashModeValues.push_back( g_FlashMode_FREERUN_HI_ACT );
+
+   nRet = SetAllowedValues("Flash Output", flashModeValues);
+   if (nRet != DEVICE_OK)
+      return nRet;
+   
+
+
    // synchronize all properties
    // --------------------------
    nRet = UpdateStatus();
@@ -654,14 +700,21 @@ int CIDS_uEye::SnapImage()
   nReturn=is_FreezeVideo(hCam, ACQ_TIMEOUT);                    //returns when the first image is in memory or timeout
   if(nReturn !=IS_SUCCESS){
     if(nReturn == IS_TRANSFER_ERROR){
-      printf("IDS_uEye: failed capturing an image, transfer failed. Check/reduce pixel clock.\n");
+      LogMessage("IDS_uEye: failed capturing an image, transfer failed. Check/reduce pixel clock.");
     }
     else{
       is_GetError(hCam, &nReturn, &pErr);                       //retrieve detailed error message
-      printf("IDS_uEye: failed capturing an image, error %d: %s\n", nReturn, pErr);
+	  char tmp[2048];
+      snprintf(tmp,2047,"IDS_uEye: failed capturing an image, error %d: %s\n", nReturn, pErr);
+	  LogMessage(tmp);
     }
   }
   
+  // retrieve the image info
+  int ret = is_GetImageInfo( hCam, memPid, &imgInfo_, sizeof( UEYEIMAGEINFO ));
+  if ( ret != IS_SUCCESS ) {
+	 LogMessage( "IDS_uEye: ERR failed to retrive image info in snap" );
+  }
 
   /*
   //copy image into the buffer (not needed if the buffer is assigned directly via SetAllocatedImageMem)
@@ -800,26 +853,26 @@ long CIDS_uEye::GetImageBufferSize() const
 * This command will change the dimensions of the image.
 * Depending on the hardware capabilities the camera may not be able to configure the
 * exact dimensions requested - but will try as close as possible.
-* @param x - top-left corner coordinate
-* @param y - top-left corner coordinate
+* @param xPos - top-left corner coordinate
+* @param yPos - top-left corner coordinate
 * @param xSize - width
 * @param ySize - height
 */
-int CIDS_uEye::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
+int CIDS_uEye::SetROI(unsigned xPos, unsigned yPos, unsigned xSize, unsigned ySize)
 {
   
   IS_RECT rectAOI;
   IS_RECT rectAOI2;
   IS_SIZE_2D sizeMin;
   IS_SIZE_2D sizeInc;
+  IS_SIZE_2D posInc;
 
 
   if (xSize == 0 && ySize == 0){
 
     //clear ROI
-    ClearROI();
-    
-    return DEVICE_OK;
+    return ClearROI();
+        
   }
   else{
 
@@ -828,44 +881,68 @@ int CIDS_uEye::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
     is_StopLiveVideo (hCam, IS_FORCE_VIDEO_STOP);
     */  
 
-    printf("IDS_uEye: ROI of %d x %d pixel requested\n", xSize, ySize);
-
-    //read out the current ROI
-    is_AOI(hCam, IS_AOI_IMAGE_GET_AOI, (void*)&rectAOI2, sizeof(rectAOI2)); 
-
-    //check ROI parameters and define the ROI rectangle
+    std::stringstream logStr;
+    logStr << "ROI at " << xPos << " , " << yPos << " size " << xSize <<" x " << ySize <<" requested";
+    LogMessage(logStr.str(), true); logStr.str("");
+        
+    //query camera for allowed ROI parameters
     is_AOI(hCam, IS_AOI_IMAGE_GET_SIZE_INC , (void*)&sizeInc, sizeof(sizeInc)); 
     is_AOI(hCam, IS_AOI_IMAGE_GET_SIZE_MIN , (void*)&sizeMin, sizeof(sizeMin)); 
+    is_AOI(hCam, IS_AOI_IMAGE_GET_POS_INC, (void*)&posInc, sizeof(posInc));
 
-    //printf("minimal ROI size: %d x %d pixels\n", sizeMin.s32Width, sizeMin.s32Height);
-    //printf("ROI increment: x:%d  y:%d pixels\n", sizeInc.s32Width, sizeInc.s32Height);
-
-    rectAOI.s32X = x;
-    rectAOI.s32Y = y;
-
-    if (((long)xSize > sizeMin.s32Width) && ((long)xSize <= cameraCCDXSize_)) {
-      rectAOI.s32Width= xSize / sizeInc.s32Width * sizeInc.s32Width;
+    {   // debug output
+        std::stringstream logStr;
+        logStr << "Minimum ROI size " << sizeMin.s32Width << " , " << sizeMin.s32Height;
+        LogMessage(logStr.str(), true); logStr.str("");
+        logStr << "ROI size increments " << sizeInc.s32Width << " , " << sizeInc.s32Height;
+        LogMessage(logStr.str(), true); logStr.str("");
+        logStr << "ROI position increments " << posInc.s32Width << " , " << posInc.s32Height;
+        LogMessage(logStr.str(), true); logStr.str("");
     }
-    if (((long)ySize > sizeMin.s32Height) && ((long)ySize <= cameraCCDYSize_)) {
-      rectAOI.s32Height= ySize / sizeInc.s32Height * sizeInc.s32Height;
-    }
+
+      
+    // ensure min. ROI size
+    if (xSize < sizeMin.s32Width)  xSize = sizeMin.s32Width;
+    if (ySize < sizeMin.s32Height) ySize = sizeMin.s32Height;
     
+    // ensure ROI size is a multiple of ROI size granularity
+    xSize = (xSize / sizeInc.s32Width) * sizeInc.s32Width;
+    ySize = (ySize / sizeInc.s32Height) * sizeInc.s32Height;
+    
+    // ensure ROI is fully within sensor (as we might have increased its size through checking sizeMin)
+    if (xPos + xSize > cameraCCDXSize_) xPos = cameraCCDXSize_ - xSize;
+    if (yPos + ySize > cameraCCDYSize_) yPos = cameraCCDYSize_ - ySize;
+
+    // ensure ROI position is a multiple of ROI position granularity
+    xPos = (xPos / posInc.s32Width) * posInc.s32Width;
+    yPos = (yPos / posInc.s32Height) * posInc.s32Height;
+
+    logStr << "ROI at " << xPos << " , " << yPos << " size " << xSize << " x " << ySize << " send to camera";
+    LogMessage(logStr.str(), true); logStr.str("");
+        
+    rectAOI.s32Width = xSize;
+    rectAOI.s32Height = ySize;
+    rectAOI.s32X = xPos;
+    rectAOI.s32Y = yPos;
+     
 
     //apply ROI  
     INT nRet = is_AOI(hCam, IS_AOI_IMAGE_SET_AOI, (void*)&rectAOI, sizeof(rectAOI)); 
 
     if(nRet==IS_SUCCESS){
 
-
-      //update ROI parameters
-      roiX_=rectAOI.s32X;
-      roiY_=rectAOI.s32Y;      
-      roiXSize_=rectAOI.s32Width;
-      roiYSize_=rectAOI.s32Height;
-
       //read out the ROI
       is_AOI(hCam, IS_AOI_IMAGE_GET_AOI, (void*)&rectAOI2, sizeof(rectAOI2)); 
-      printf("IDS_uEye: ROI of %d x %d pixel obtained\n", rectAOI2.s32Width, rectAOI2.s32Height );
+      
+      logStr << "ROI at " << rectAOI2.s32X << " , " << rectAOI2.s32Y << " size " 
+             << rectAOI2.s32Width << " x " << rectAOI2.s32Height << " returned by camera";
+      LogMessage(logStr.str(), true); logStr.str("");
+    
+      //update ROI parameters to those returned by camera
+      roiX_ = rectAOI2.s32X;
+      roiY_ = rectAOI2.s32Y;
+      roiXSize_ = rectAOI2.s32Width;
+      roiYSize_ = rectAOI2.s32Height;
 
       roiXSizeReal_=rectAOI2.s32Width*binX_;
       roiYSizeReal_=rectAOI2.s32Height*binY_;
@@ -881,7 +958,9 @@ int CIDS_uEye::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
       //update frame rate range
       GetFramerateRange(hCam, &framerateMin_, &framerateMax_);
       SetPropertyLimits("Frame Rate", framerateMin_, framerateMax_);
-      //printf("new frame rate range %f %f\n", framerateMin_, framerateMax_);
+      
+      logStr << "new framerate range " << framerateMin_ << " - " << framerateMax_;
+      LogMessage(logStr.str(), true); logStr.str("");
 
       //update the exposure range
       GetExposureRange(hCam, &exposureMin_, &exposureMax_, &exposureIncrement_);
@@ -1238,6 +1317,26 @@ int CIDS_uEye::InsertImage()
    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+
+   // Add a timestamp
+   char tStamp[128], tStampRaw[64];
+   snprintf(tStamp, 127, "uEye-%d-time [%04d-%02d-%02dT%02d:%02d:%02d.%04d]", hCam,
+	   imgInfo_.TimestampSystem.wYear,
+	   imgInfo_.TimestampSystem.wMonth,
+	   imgInfo_.TimestampSystem.wDay,
+	   imgInfo_.TimestampSystem.wHour,
+	   imgInfo_.TimestampSystem.wMinute,
+	   imgInfo_.TimestampSystem.wSecond,
+	   imgInfo_.TimestampSystem.wMilliseconds );
+
+   snprintf(tStampRaw, 63, "t:[%lu] io:[%d] prc: [%ld]", 
+	   imgInfo_.u64TimestampDevice, 
+	   imgInfo_.dwIoStatus,
+	   imgInfo_.dwHostProcessTime );
+
+   md.put("uEye-Timestamp", tStamp);
+   md.put("uEye-rawStamp", tStampRaw);
+
 
    imageCounter_++;
 
@@ -2043,6 +2142,160 @@ int CIDS_uEye::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Get(triggerDevice_);
    }
    return DEVICE_OK;
+}
+
+
+/**
+* Handles "FlashMode" property.
+* The "freerunning" mode can currently not be used: The camera only snaps
+* one image, but flash-sync in freerun requires an image delay to obtain the
+* timing. Thus, use one of the triggered modes (software-trigger, if there is
+* no hardware sync) if you want to use the flash.
+* TODO: Implement blocking the selection of triggered flash modes if no
+* trigger is set.
+*
+* */
+int CIDS_uEye::OnFlashMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  int ret = DEVICE_INVALID_PROPERTY_VALUE;
+  int nRet;
+  
+  switch(eAct)
+  {
+
+  case MM::BeforeGet:{
+      
+    UINT flashMode;
+      
+	// TODO: Do some kind of error-handling also for the query?
+    //int nRet = is_IO(hCam, IS_IO_CMD_FLASH_GET_MODE, (void*)&flashMode, sizeof(flashMode));
+    
+	is_IO(hCam, IS_IO_CMD_FLASH_GET_MODE, (void*)&flashMode, sizeof(flashMode));
+
+	switch(flashMode){
+
+    case(IO_FLASH_MODE_OFF):
+      pProp->Set(g_FlashMode_OFF);
+      break;
+
+    case(IO_FLASH_MODE_CONSTANT_LOW):
+      pProp->Set(g_FlashMode_CONST_LO);
+      break;
+
+    case(IO_FLASH_MODE_CONSTANT_HIGH):
+      pProp->Set(g_FlashMode_CONST_HI);
+      break;
+
+	case(IO_FLASH_MODE_TRIGGER_LO_ACTIVE):
+      pProp->Set(g_FlashMode_TRIGGER_LO_ACT);
+      break;
+
+    case(IO_FLASH_MODE_TRIGGER_HI_ACTIVE):
+      pProp->Set(g_FlashMode_TRIGGER_HI_ACT);
+      break;
+
+	 case(IO_FLASH_MODE_FREERUN_LO_ACTIVE):
+      pProp->Set(g_FlashMode_FREERUN_LO_ACT);
+      break;
+
+    case(IO_FLASH_MODE_FREERUN_HI_ACTIVE):
+      pProp->Set(g_FlashMode_FREERUN_HI_ACT);
+      break;
+    
+      
+    default:
+      break;
+    }
+    
+
+    ret=DEVICE_OK;
+  }
+    break;
+
+  case MM::AfterSet:{
+
+    //if(IsCapturing())
+    //  return DEVICE_CAMERA_BUSY_ACQUIRING;
+
+    string flashModeType;
+    pProp->Get(flashModeType);
+	UINT nMode = IO_FLASH_MODE_OFF;  
+	int found  = 0 ;
+
+    if (flashModeType.compare(g_FlashMode_OFF) == 0){
+      nMode = IO_FLASH_MODE_OFF;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_CONST_LO) == 0){
+      nMode = IO_FLASH_MODE_CONSTANT_LOW;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_CONST_HI) == 0){
+      nMode = IO_FLASH_MODE_CONSTANT_HIGH;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_TRIGGER_LO_ACT) == 0){
+      nMode = IO_FLASH_MODE_TRIGGER_LO_ACTIVE;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_TRIGGER_HI_ACT) == 0){
+      nMode = IO_FLASH_MODE_TRIGGER_HI_ACTIVE;
+	  found = 1;
+	}
+
+	if (flashModeType.compare(g_FlashMode_FREERUN_LO_ACT) == 0){
+      nMode = IO_FLASH_MODE_FREERUN_LO_ACTIVE;
+	  found = 2;
+	}
+
+	if (flashModeType.compare(g_FlashMode_FREERUN_HI_ACT) == 0){
+      nMode = IO_FLASH_MODE_FREERUN_HI_ACTIVE;
+	  found = 2;
+	}
+	
+	if (found) {
+		nRet=is_IO( hCam, IS_IO_CMD_FLASH_SET_MODE, (void*)&nMode, sizeof(nMode));
+		if(nRet==IS_SUCCESS){
+			ret=DEVICE_OK;
+		} else {
+			char errMsg[256];
+			is_GetError( hCam, &nRet , (IS_CHAR**)&errMsg );
+			LogMessage("Problem setting uEye flash, error is: " );
+			LogMessage(errMsg );
+		}
+		// in freerun-mode, additionally set the timing to auto
+		if ( found == 2 ) {
+			
+			nMode = IS_FLASH_AUTO_FREERUN_ON;
+			nRet = is_IO(hCam, IS_IO_CMD_FLASH_SET_AUTO_FREERUN, (void*)&nMode, sizeof(nMode));
+			
+			if(nRet==IS_SUCCESS){
+				ret=DEVICE_OK;
+			} else {
+				char errMsg[256];
+				is_GetError( hCam, &nRet , (IS_CHAR**)&errMsg );
+				LogMessage("Problem setting uEye freerun flash-mode to auto, error is: " );
+				LogMessage(errMsg );
+				ret = ERR_UNKNOWN_MODE;
+			}
+		}
+		
+	} else{
+      // on not found do nothing
+      ret = ERR_UNKNOWN_MODE;
+    }
+	  
+	}
+    break;
+    
+  }
+
+
+  return ret;
 }
 
 
