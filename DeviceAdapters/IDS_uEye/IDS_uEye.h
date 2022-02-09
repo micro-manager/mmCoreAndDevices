@@ -308,6 +308,7 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   int OnDropPixels(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFractionOfPixelsToDropOrSaturate(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGainMaster(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnFlashMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 
  private:
 
@@ -318,6 +319,8 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   
   double dPhase_;
   ImgBuffer img_;
+  UEYEIMAGEINFO imgInfo_;
+
   bool busy_;
   bool stopOnOverflow_;
   bool initialized_;
