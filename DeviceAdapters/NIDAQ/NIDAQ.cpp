@@ -186,8 +186,7 @@ int NIDAQHub::Initialize()
       return err;
 
    CPropertyAction* pAct = new CPropertyAction(this, &NIDAQHub::OnSequencingEnabled);
-   err = CreateStringProperty("Sequence", sequencingEnabled_ ? g_On : g_Off,
-      false, pAct);
+   err = CreateStringProperty("Sequence", sequencingEnabled_ ? g_On : g_Off, false, pAct);
    if (err != DEVICE_OK)
       return err;
    AddAllowedValue("Sequence", g_On);
@@ -665,6 +664,18 @@ error:
    return err;
 }
 
+int NIDAQHub::StopDOBlanking()
+{
+   if (doHub8_ != 0)
+      return doHub8_->StopDOBlanking();
+   else if (doHub16_ != 0)
+      return doHub16_->StopDOBlanking();
+   else if (doHub32_ != 0)
+      return doHub32_->StopDOBlanking();
+
+   return ERR_UNKNOWN_PINS_PER_PORT;
+}
+
  int NIDAQHub::StopTask(TaskHandle &task)
 {
    if (!task)
@@ -840,6 +851,15 @@ int NIDAQDOHub<Tuint>::StopDOSequenceForPort(const std::string& port)
    return DEVICE_OK;
 }
 
+
+/*
+* Starts digital output sequences for all ports requesting sequences.
+* Note that in practice, most NI boards only allow sequencing on one output port (the first port).
+* We may refactor this code to reflect that better.
+* Starting sequences on ports higher than the first one will most likely
+* result in errors.
+*
+*/
 template<typename Tuint>
 inline int NIDAQDOHub<Tuint>::StartDOSequenceForPort(const std::string& port, const std::vector<Tuint> sequence)
 {
@@ -874,6 +894,8 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    uInt32 portWidth;
    if (typeid(Tuint) == typeid(uInt8))
       portWidth = 8;
+   else if (typeid(Tuint) == typeid(uInt8))
+      portWidth = 16;
    else if (typeid(Tuint) == typeid(uInt32))
       portWidth = 32;
    else
@@ -908,18 +930,18 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    boost::scoped_array<Tuint> samples;
 
    const std::string chanList = hub_->GetPhysicalChannelListForSequencing(physicalDOChannels_);
-   nierr = DAQmxCreateDOChan(doTask_, chanList.c_str(), "DOSeqChan", DAQmx_Val_Volts);
+   nierr = DAQmxCreateDOChan(doTask_, chanList.c_str(), "DOSeqChan", DAQmx_Val_ChanForAllLines);
    if (nierr != 0)
    {
-      goto error;
+      return HandleTaskError(nierr);
    }
-   hub_->LogMessage(("Created DO voltage channel for: " + chanList).c_str(), true);
+   hub_->LogMessage(("Created DO channel for: " + chanList).c_str(), true);
 
    nierr = DAQmxCfgSampClkTiming(doTask_, hub_->niTriggerPort_.c_str(),
       hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, samplesPerChan);
    if (nierr != 0)
    {
-      goto error;
+      return HandleTaskError(nierr);
    }
    hub_->LogMessage("Configured sample clock timing to use " + hub_->niTriggerPort_, true);
 
@@ -932,44 +954,180 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
 
    if (nierr != 0)
    {
-      goto error;
+      return HandleTaskError(nierr);
    }
    if (numWritten != static_cast<int32>(samplesPerChan))
    {
       hub_->LogMessage("Failed to write complete sequence");
       // This is presumably unlikely; no error code here
-      goto error;
+      return HandleTaskError(nierr);
    }
    hub_->LogMessage("Wrote samples", true);
   
 
    nierr = DAQmxStartTask(doTask_);
    if (nierr != 0)
-   {      
-      goto error;
+   {
+      return HandleTaskError(nierr);
    }
    hub_->LogMessage("Started task", true);
 
    return DEVICE_OK;
+}
 
-error:
-   std::string niErrorMsg;
+template<class Tuint>
+int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool sequenceOn, 
+                                       const long& pos, const bool blankingDirection)
+{
+   int err = hub_->StopTask(diTask_);
+   if (err != DEVICE_OK)
+      return err;
+
+   int32 nierr = DAQmxCreateTask("DIChangeTask", &diTask_);
    if (nierr != 0)
+   {
+      return hub_->TranslateNIError(nierr);;
+   }
+   hub_->LogMessage("Created DI task", true);
+
+   int32 number = 2;
+   if (!sequenceOn)
+   {
+
+   }
+
+   //std::string triggerPort = hub_->niTriggerPort_;
+   std::string triggerPort = "/Dev1/port0/line7";
+
+   nierr = DAQmxCreateDIChan(diTask_, triggerPort.c_str(), "DIBlankChan", DAQmx_Val_ChanForAllLines);
+   if (nierr != 0)
+   {
+      return HandleTaskError(nierr);
+   }
+   hub_->LogMessage("Created DI channel for: " + hub_->niTriggerPort_, true);
+
+
+
+   nierr = DAQmxCfgChangeDetectionTiming(diTask_, triggerPort.c_str(),
+      triggerPort.c_str(), DAQmx_Val_ContSamps, number);
+   if (nierr != 0)
+   {
+      return HandleTaskError(nierr);
+   }
+   hub_->LogMessage("Configured change detection timing to use " + hub_->niTriggerPort_, true);
+
+   nierr = DAQmxStartTask(diTask_);
+   if (nierr != 0)
+   {
+      return HandleTaskError(nierr);
+   }
+   hub_->LogMessage("Started DI task", true);
+
+
+   // Change detection now should be running on the input port.  
+   // Configure a task to use change detection as the input
+
+   err = hub_->StopTask(doTask_);
+   if (err != DEVICE_OK)
+      return err;
+
+   nierr = DAQmxCreateTask("DOBlankTask", &doTask_);
+   if (nierr != 0)
+   {
+      return hub_->TranslateNIError(nierr);;
+   }
+   hub_->LogMessage("Created DI task", true);
+
+
+   std::string tempPort;
+   tempPort = "/Dev1/port0/line0:6";
+
+   nierr = DAQmxCreateDOChan(doTask_, tempPort.c_str(), "DOSeqChan", DAQmx_Val_ChanForAllLines);
+   if (nierr != 0)
+   {
+      return HandleTaskError(nierr);
+   }
+   hub_->LogMessage("Created DO channel for: " + tempPort, true);
+
+   uInt32 portWidth = 8;
+   /*
+   if (typeid(Tuint) == typeid(uInt8))
+      portWidth = 8;
+   else if (typeid(Tuint) == typeid(uInt8))
+      portWidth = 16;
+   else if (typeid(Tuint) == typeid(uInt32))
+      portWidth = 32;
+   else
+      return ERR_UNKNOWN_PINS_PER_PORT;
+
+   hub_->LogMessage("Starting DO sequencing task", true);
+
+   nierr = DAQmxGetPhysicalChanDOPortWidth(physicalDOChannels_[0].c_str(), &portWidth);
+   if (nierr != 0)
+   {
+      return hub_->TranslateNIError(nierr);
+   }
+   */
+
+
+   boost::scoped_array<Tuint> samples;
+   samples.reset(new Tuint[number]);
+   samples.get()[0] = 0;
+   samples.get()[1] = pos;
+
+   std::string changeInput = "/Dev1/ChangeDetectionEvent";
+
+   nierr = DAQmxCfgSampClkTiming(doTask_, changeInput.c_str(),
+      hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, number);
+   if (nierr != 0)
+   {
+      return HandleTaskError(nierr);
+   }
+   hub_->LogMessage("Configured sample clock timing to use " + changeInput, true);
+
+   int32 numWritten = 0;
+   nierr = DaqmxWriteDigital(doTask_, static_cast<int32>(number), samples.get(), &numWritten);
+
+   if (nierr != 0)
+   {
+      return HandleTaskError(nierr);
+   }
+   if (numWritten != static_cast<int32>(number))
+   {
+      hub_->LogMessage("Failed to write complete sequence");
+      // This is presumably unlikely; no error code here
+      return HandleTaskError(nierr);
+   }
+   hub_->LogMessage("Wrote samples", true);
+   
+   return DEVICE_OK;
+}
+
+template<class Tuint>
+int NIDAQDOHub<Tuint>::StopDOBlanking()
+{
+   hub_->StopTask(doTask_); // even if this fails, we still want to stop the diTask_
+   return hub_->StopTask(diTask_);
+}
+
+template<class Tuint>
+int NIDAQDOHub<Tuint>::HandleTaskError(int32 niError)
+{
+   std::string niErrorMsg;
+   if (niError != 0)
    {
       niErrorMsg = GetNIDetailedErrorForMostRecentCall();
       hub_->LogMessage(niErrorMsg.c_str());
    }
+   DAQmxClearTask(diTask_);
+   diTask_ = 0;
    DAQmxClearTask(doTask_);
    doTask_ = 0;
-   err;
-   if (nierr != 0)
+   int err = DEVICE_OK;;
+   if (niError != 0)
    {
-      err = hub_->TranslateNIError(nierr);
+      err = hub_->TranslateNIError(niError);
       hub_->SetErrorText(err, niErrorMsg.c_str());
-   }
-   else
-   {
-      err = DEVICE_ERR;
    }
    return err;
 }
@@ -1440,16 +1598,16 @@ int DigitalOutputPort::Initialize()
     numPos_ = (1 << portWidth_) - 1;
 
     CPropertyAction* pAct = new CPropertyAction(this, &DigitalOutputPort::OnState);
-    CreateIntegerProperty("State", 0, false, pAct, false);
+    CreateIntegerProperty("State", 0, false, pAct);
     SetPropertyLimits("State", 0, numPos_);
 
     pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
-    CreateStringProperty("Blanking", g_Off, false, pAct, false);
+    CreateStringProperty("Blanking", blanking_ ? g_On : g_Off, false, pAct);
     AddAllowedValue("Blanking", g_Off);
     AddAllowedValue("Blanking", g_On);
 
     pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlankingTriggerDirection);
-    CreateStringProperty("Blank on", g_Low, false, pAct, false);
+    CreateStringProperty("Blank on", blankOnLow_ ? g_Low : g_High, false, pAct);
     AddAllowedValue("Blank on", g_Low);
     AddAllowedValue("Blank on", g_High);
 
@@ -1595,7 +1753,7 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          err =  GetHub()->getDOHub32()->StopDOSequenceForPort(niPort_);
       }
       if (err == DEVICE_OK) {
-         int err = StartOnDemandTask(pos_);
+         err = StartOnDemandTask(pos_);
       }
       return err;
    }
@@ -1607,22 +1765,29 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      std::string response = blanking_ ? g_On : g_Off;
-      pProp->Set(response.c_str());
+      pProp->Set(blanking_ ? g_On : g_Off);
    }
    else if (eAct == MM::AfterSet)
    {
 
       std::string response;
       pProp->Get(response);
-      bool blanking = response == g_On ? true : false;
+      bool blanking = response == g_On;
       if (blanking_ != blanking)
       {
          // do the thing in the hub
          blanking_ = blanking;
+         if (blanking_)
+            GetHub()->getDOHub8()->StartDOBlanking(niPort_, false, pos_, blankOnLow_);
+         else
+         {
+            GetHub()->StopDOBlanking();
+            return StartOnDemandTask(pos_);
+         }
+
       }
-      return DEVICE_OK;
    }
+   return DEVICE_OK;
 }
 
 int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -1643,8 +1808,8 @@ int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::A
          // do the thing in the hub
          blankOnLow_ = blankOnLow;
       }
-      return DEVICE_OK;
    }
+   return DEVICE_OK;
 }
 
 

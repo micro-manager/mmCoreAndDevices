@@ -78,22 +78,26 @@ template <class Tuint>
 class NIDAQDOHub
 {
 public:
-   NIDAQDOHub(NIDAQHub* hub) : doTask_(0), hub_(hub) {}
+   NIDAQDOHub(NIDAQHub* hub) : diTask_(0), doTask_(0), hub_(hub) {}
    ~NIDAQDOHub();
    int StartDOSequenceForPort(const std::string& port,
       const std::vector<Tuint> sequence);
    int StopDOSequenceForPort(const std::string& port);
+   int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos, const bool blankingDirection);
+   int StopDOBlanking();
 
 private:
    int AddDOPortToSequencing(const std::string& port,
       const std::vector<Tuint> sequence);
    void RemoveDOPortFromSequencing(const std::string& port);
    int StartDOSequencingTask();
+   int HandleTaskError(int32 niError);
 
 
    int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const Tuint* samples, int32* numWritten);
 
    NIDAQHub* hub_;
+   TaskHandle diTask_;
    TaskHandle doTask_;
    std::vector<std::string> physicalDOChannels_;
    std::vector<std::vector<Tuint>> doChannelSequences_;
@@ -130,6 +134,9 @@ public:
    virtual int IsSequencingEnabled(bool& flag) const;
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
+   int StopDOBlanking();
+   
+
    NIDAQDOHub<uInt8> * getDOHub8()  {return doHub8_; }
    NIDAQDOHub<uInt16>* getDOHub16() { return doHub16_; }
    NIDAQDOHub<uInt32> * getDOHub32() { return doHub32_; }
@@ -143,12 +150,9 @@ private:
 
    int GetVoltageRangeForDevice(const std::string& device,
       double& minVolts, double& maxVolts);
-   std::vector<std::string> GetTriggerPortsForDevice(
-      const std::string& device);
-   std::vector<std::string> GetAnalogPortsForDevice(
-      const std::string& device);
-   std::vector<std::string> GetDigitalPortsForDevice(
-       const std::string& device);
+   std::vector<std::string> GetTriggerPortsForDevice(const std::string& device);
+   std::vector<std::string> GetAnalogPortsForDevice(const std::string& device);
+   std::vector<std::string> GetDigitalPortsForDevice(const std::string& device);
    std::string GetPhysicalChannelListForSequencing(std::vector<std::string> channels) const;
    template<typename T> int GetLCMSamplesPerChannel(size_t& seqLen, std::vector<std::vector<T>>) const;
    template<typename T> void GetLCMSequence(T* buffer, std::vector<std::vector<T>> sequences) const;
