@@ -126,7 +126,7 @@ const char* const g_PLogicDeviceName = "PLogic";
 const char* const g_PMTDeviceName = "PMT";
 const char* const g_LensDeviceName = "TunableLens";
 const char* const g_DacDeviceName = "DAC";
-
+const char* const g_DacXYStageDeviceName = "DACXYStage";
 
 // corresponding device descriptions
 const char* const g_TigerCommHubDescription = "ASI TigerComm Hub (TG-1000)";
@@ -144,6 +144,7 @@ const char* const g_PLogicDeviceDescription = "ASI Programmable Logic";
 const char* const g_PMTDeviceDescription = "ASI Photo Multiplier Tube";  
 const char* const g_LensDeviceDescription = "ASI Tunable Lens";  
 const char* const g_DacDeviceDescription = "ASI DAC";
+const char* const g_DacXYStageDeviceDescription = "ASI DAC XY Stage";
 
 // constant values
 const double g_StageMinStepSize = 0.001;   // in units of um
@@ -303,10 +304,10 @@ const char* const g_TLCMode_1 = "1 - external input";
 // single axis property names
 const char* const g_AdvancedSAPropertiesPropertyName = "SingleAxisAdvancedPropertiesEnable";
 const char* const g_SAAmplitudePropertyName = "SingleAxisAmplitude(um)";
-const char* const g_SAAmplitudeDACPropertyName = "SingleAxisAmplitude(mv)"; //SIGNAL_DAC version
+const char* const g_SAAmplitudeDACPropertyName = "SingleAxisAmplitude(mv)"; // SIGNAL_DAC version
 const char* const g_SAAnonUnitPropertyName = "SingleAxisAmplitude";
 const char* const g_SAOffsetPropertyName = "SingleAxisOffset(um)";
-const char* const g_SAOffsetDACPropertyName = "SingleAxisOffset(mv)";//SIGNAL_DAC version
+const char* const g_SAOffsetDACPropertyName = "SingleAxisOffset(mv)"; // SIGNAL_DAC version
 const char* const g_SAOnonUnitPropertyName = "SingleAxisOffset";
 const char* const g_SAPeriodPropertyName = "SingleAxisPeriod(ms)";
 const char* const g_SAModePropertyName = "SingleAxisMode";
@@ -338,6 +339,11 @@ const char* const g_SAClkPolYPropertyName = "SingleAxisYClockPolarity";
 const char* const g_SATTLOutYPropertyName = "SingleAxisYTTLOut";
 const char* const g_SATTLPolYPropertyName = "SingleAxisYTTLPolarity";
 const char* const g_SAPatternModeYPropertyName = "SingleAxisYPatternByte";
+// added for DAC_XY_4CH
+const char* const g_SAAmplitudeXDACPropertyName = "SingleAxisXAmplitude(mv)"; // SIGNAL_DAC version
+const char* const g_SAAmplitudeYDACPropertyName = "SingleAxisYAmplitude(mv)"; // SIGNAL_DAC version
+const char* const g_SAOffsetDACXPropertyName = "SingleAxisXOffset(mv)"; // SIGNAL_DAC version
+const char* const g_SAOffsetDACYPropertyName = "SingleAxisYOffset(mv)"; // SIGNAL_DAC version
 
 // SCAN firmware property names
 const char* const g_ScanStatePropertyName = "ScanState";
@@ -746,13 +752,24 @@ const char* const g_PMTSignal="PMT Signal";
 const char* const g_PMTOverload="PMT Overloaded";
 const char* const g_PMTOverloadReset="PMT Overload Reset";
 const char* const g_PMTOverloadDone="Reset Applied";
-//SIGNAL_DAC
+// SIGNAL_DAC
 const double	  g_DACDefaultUnitMult = 1000;  // in units of volts
 const char* const g_DACModePropertyName = "OutputMode (Restart Needed)";
 const char* const g_DACMaxVoltsPropertyName = "MaxVoltage(V)";
 const char* const g_DACMinVoltsPropertyName = "MinVoltage(V)";
 const char* const g_DACVoltageName = "DACVoltage(mV)";
 const char* const g_DACGatePropertyName = "DAC Gate";
+// DAC_XY_4CH build
+const char* const g_DACModeXPropertyName = "OutputModeX (Restart Needed)";
+const char* const g_DACModeYPropertyName = "OutputModeY (Restart Needed)";
+const char* const g_DACMaxVoltsXPropertyName = "MaxVoltageX(V)";
+const char* const g_DACMinVoltsXPropertyName = "MinVoltageX(V)";
+const char* const g_DACMaxVoltsYPropertyName = "MaxVoltageY(V)";
+const char* const g_DACMinVoltsYPropertyName = "MinVoltageY(V)";
+const char* const g_DACGateXPropertyName = "DAC Gate X";
+const char* const g_DACGateYPropertyName = "DAC Gate Y";
+const char* const g_DACMicronsPerMvXPropertyName = "MicronsPerMillivoltX"; // pre-init property
+const char* const g_DACMicronsPerMvYPropertyName = "MicronsPerMillivoltY"; // pre-init property
 
 struct build_info_type
 {
