@@ -997,6 +997,9 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
    }
 
    //std::string triggerPort = hub_->niTriggerPort_;
+
+   // may first need to read the state of the triggerport, since we will only get changes, not
+   // its actual state.
    std::string triggerPort = "/Dev1/port0/line7";
 
    nierr = DAQmxCreateDIChan(diTask_, triggerPort.c_str(), "DIBlankChan", DAQmx_Val_ChanForAllLines);
@@ -1005,7 +1008,6 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
       return HandleTaskError(nierr);
    }
    hub_->LogMessage("Created DI channel for: " + hub_->niTriggerPort_, true);
-
 
 
    nierr = DAQmxCfgChangeDetectionTiming(diTask_, triggerPort.c_str(),
@@ -1018,6 +1020,7 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
 
 
    std::string changeInput = "/Dev1/ChangeDetectionEvent";
+   // this is only here to monitor the ChangeDetectionEvent
    nierr = DAQmxExportSignal(diTask_, DAQmx_Val_ChangeDetectionEvent, "/Dev1/PFI0");
    if (nierr != 0)
    {
@@ -1081,8 +1084,8 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
 
    boost::scoped_array<Tuint> samples;
    samples.reset(new Tuint[number]);
-   samples.get()[0] = 0;
-   samples.get()[1] = pos;
+   samples.get()[0] = pos;
+   samples.get()[1] = 0;
 
    nierr = DAQmxCfgSampClkTiming(doTask_, changeInput.c_str(),
       hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, number);
@@ -1106,6 +1109,13 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
       return HandleTaskError(nierr);
    }
    hub_->LogMessage("Wrote samples", true);
+
+   nierr = DAQmxStartTask(doTask_);
+   if (nierr != 0)
+   {
+      return HandleTaskError(nierr);
+   }
+   hub_->LogMessage("Started DO task", true);
    
    return DEVICE_OK;
 }
