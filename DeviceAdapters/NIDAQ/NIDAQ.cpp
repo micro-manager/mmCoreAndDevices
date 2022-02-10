@@ -1016,6 +1016,15 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
    }
    hub_->LogMessage("Configured change detection timing to use " + hub_->niTriggerPort_, true);
 
+
+   std::string changeInput = "/Dev1/ChangeDetectionEvent";
+   nierr = DAQmxExportSignal(diTask_, DAQmx_Val_ChangeDetectionEvent, "/Dev1/PFI0");
+   if (nierr != 0)
+   {
+      return HandleTaskError(nierr);
+   }
+   hub_->LogMessage("Routed change detection timing to  " + changeInput, true);
+
    nierr = DAQmxStartTask(diTask_);
    if (nierr != 0)
    {
@@ -1074,8 +1083,6 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
    samples.reset(new Tuint[number]);
    samples.get()[0] = 0;
    samples.get()[1] = pos;
-
-   std::string changeInput = "/Dev1/ChangeDetectionEvent";
 
    nierr = DAQmxCfgSampClkTiming(doTask_, changeInput.c_str(),
       hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, number);
