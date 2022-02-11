@@ -9,6 +9,8 @@ libmmgr_dal_ASITiger_la_SOURCES = \
 	ASICRISP.h \
 	ASIDac.cpp \
 	ASIDac.h \
+	ASIDacXYStage.cpp \
+	ASIDacXYStage.h \
 	ASIFWheel.cpp \
 	ASIFWheel.h \
 	ASIHub.cpp \
