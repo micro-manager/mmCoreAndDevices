@@ -633,11 +633,15 @@
    import mmcorej.org.json.JSONObject;
    import java.awt.geom.Point2D;
    import java.awt.Rectangle;
+   import java.util.HashMap;
    import java.util.ArrayList;
    import java.util.List;
 %}
 
 %typemap(javacode) CMMCore %{
+   HashMap<Object, Long> Obj2LongHashMap = new HashMap<>();
+   HashMap<Long, Integer> Long2IntHashMap = new HashMap<>();
+
    private JSONObject metadataToMap(Metadata md) {
       JSONObject tags = new JSONObject();
       for (String key:md.GetKeys()) {
@@ -824,8 +828,8 @@
       getMultiROI(xs, ys, widths, heights);
       ArrayList<Rectangle> result = new ArrayList<Rectangle>();
       for (int i = 0; i < xs.size(); ++i) {
-         Rectangle r = new Rectangle((int) xs.get(i), (int) ys.get(i),
-               (int) widths.get(i), (int) heights.get(i));
+         Rectangle r = new Rectangle(Long2IntHashMap.get(xs.get(i)), Long2IntHashMap.get(ys.get(i)),
+               Long2IntHashMap.get(widths.get(i)), Long2IntHashMap.get(heights.get(i)));
          result.add(r);
       }
       return result;
@@ -841,16 +845,16 @@
       UnsignedVector widths = new UnsignedVector();
       UnsignedVector heights = new UnsignedVector();
       for (Rectangle r : rects) {
-         xs.add(r.x);
-         ys.add(r.y);
-         widths.add(r.width);
-         heights.add(r.height);
+         xs.add(Obj2LongHashMap.get(r.x));
+         ys.add(Obj2LongHashMap.get(r.y));
+         widths.add(Obj2LongHashMap.get(r.width));
+         heights.add(Obj2LongHashMap.get(r.height));
       }
       setMultiROI(xs, ys, widths, heights);
    }
 
    /**
-    * Convenience function.  Retuns affine transform as a String
+    * Convenience function. Returns affine transform as a String
     * Used in this class and by the acquisition engine 
     * (rather than duplicating this code there
     */
@@ -949,7 +953,7 @@ namespace std {
          if (0==size())
             return new Character[0];
 
-         Character ints[] = new Character[(int) size()];
+         Character ints[] = new Character[size()];
          for (int i=0; i<size(); ++i) {
             ints[i] = get(i);
          }
@@ -1000,7 +1004,7 @@ namespace std {
          if (0==size())
             return new Integer[0];
 
-         Integer ints[] = new Integer[(int) size()];
+         Integer ints[] = new Integer[size()];
          for (int i=0; i<size(); ++i) {
             ints[i] = get(i);
          }
@@ -1046,7 +1050,7 @@ namespace std {
          if (0==size())
             return new Double[0];
 
-         Double ints[] = new Double[(int) size()];
+         Double ints[] = new Double[size()];
          for (int i=0; i<size(); ++i) {
             ints[i] = get(i);
          }
@@ -1094,7 +1098,7 @@ namespace std {
 			if (0==size())
 				return new String[0];
 			
-			String strs[] = new String[(int) size()];
+			String strs[] = new String[size()];
 			for (int i=0; i<size(); ++i) {
 				strs[i] = get(i);
 			}
@@ -1144,7 +1148,7 @@ namespace std {
 			if (0==size())
 				return new Boolean[0];
 			
-			Boolean strs[] = new Boolean[(int) size()];
+			Boolean strs[] = new Boolean[size()];
 			for (int i=0; i<size(); ++i) {
 				strs[i] = get(i);
 			}
@@ -1192,7 +1196,7 @@ namespace std {
          if (0==size())
             return new Long[0];
 
-         Long ints[] = new Long[(int) size()];
+         Long ints[] = new Long[size()];
          for (int i=0; i<size(); ++i) {
             ints[i] = get(i);
          }
