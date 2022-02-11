@@ -31,6 +31,44 @@
 #include <vector>
 
 
+extern const char* g_DeviceNameNIDAQHub;
+extern const char* g_DeviceNameNIDAQAOPortPrefix;
+extern const char* g_DeviceNameNIDAQDOPortPrefix;
+extern const char* g_On;
+extern const char* g_Off;
+extern const char* g_Low;
+extern const char* g_High;
+
+extern const char* g_Never;
+extern const char* g_UseHubSetting;
+
+extern const int ERR_SEQUENCE_RUNNING;
+extern const int ERR_SEQUENCE_TOO_LONG;
+extern const int ERR_SEQUENCE_ZERO_LENGTH;
+extern const int ERR_VOLTAGE_OUT_OF_RANGE;
+extern const int ERR_NONUNIFORM_CHANNEL_VOLTAGE_RANGES;
+extern const int ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS;
+extern const int ERR_UNKNOWN_PINS_PER_PORT;
+
+
+inline std::string GetNIError(int32 nierr)
+{
+   char buf[1024];
+   if (DAQmxGetErrorString(nierr, buf, sizeof(buf)))
+      return "[failed to get DAQmx error code]";
+   return buf;
+}
+
+
+inline std::string GetNIDetailedErrorForMostRecentCall()
+{
+   char buf[1024];
+   if (DAQmxGetExtendedErrorInfo(buf, sizeof(buf)))
+      return "[failed to get DAQmx extended error info]";
+   return buf;
+}
+
+
 // Mix-in class for error code handling.
 template <typename TDevice>
 class ErrorTranslator
@@ -194,13 +232,13 @@ private:
 };
 
 
-class AnalogOutputPort : public CSignalIOBase<AnalogOutputPort>,
-   ErrorTranslator<AnalogOutputPort>,
+class NIAnalogOutputPort : public CSignalIOBase<NIAnalogOutputPort>,
+   ErrorTranslator<NIAnalogOutputPort>,
    boost::noncopyable
 {
 public:
-   AnalogOutputPort(const std::string& port);
-   virtual ~AnalogOutputPort();
+   NIAnalogOutputPort(const std::string& port);
+   virtual ~NIAnalogOutputPort();
 
    virtual int Initialize();
    virtual int Shutdown();

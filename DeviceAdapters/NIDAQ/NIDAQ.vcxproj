@@ -91,6 +91,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="NIDAQ.cpp" />
+    <ClCompile Include="NIAnalogOutputPort.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NIDAQ.h" />
