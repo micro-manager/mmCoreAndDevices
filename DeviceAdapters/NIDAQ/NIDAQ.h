@@ -118,10 +118,10 @@ class NIDAQDOHub
 public:
    NIDAQDOHub(NIDAQHub* hub) : diTask_(0), doTask_(0), hub_(hub) {}
    ~NIDAQDOHub();
-   int StartDOSequenceForPort(const std::string& port,
-      const std::vector<Tuint> sequence);
+   int StartDOSequenceForPort(const std::string& port, const std::vector<Tuint> sequence);
    int StopDOSequenceForPort(const std::string& port);
-   int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos, const bool blankingDirection);
+   int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos, 
+            const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
 
 private:
@@ -173,6 +173,7 @@ public:
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
    int StopDOBlanking();
+   const std::string GetTriggerPort() { return niTriggerPort_; }
    
 
    NIDAQDOHub<uInt8> * getDOHub8()  {return doHub8_; }

@@ -40,7 +40,6 @@ const char* g_High = "High";
 const char* g_Never = "Never";
 const char* g_UseHubSetting = "Use hub setting";
 
-
 const int ERR_SEQUENCE_RUNNING = 2001;
 const int ERR_SEQUENCE_TOO_LONG = 2002;
 const int ERR_SEQUENCE_ZERO_LENGTH = 2003;
@@ -104,7 +103,7 @@ NIDAQHub::NIDAQHub () :
    doHub16_(0),
    doHub32_(0)
 {
-   // TODO: discover devices available on this computer and list them here
+   // discover devices available on this computer and list them here
 
    std::string defaultDeviceName = "";
    int32 stringLength = DAQmxGetSysDevNames(NULL, 0);
@@ -170,6 +169,23 @@ int NIDAQHub::Initialize()
    AddAllowedValue("Sequence", g_On);
    AddAllowedValue("Sequence", g_Off);
 
+   std::vector<std::string> doPorts = GetDigitalPortsForDevice(niDeviceName_);
+   if (doPorts.size() > 0)
+   {
+      uInt32 portWidth;
+      int32 nierr = DAQmxGetPhysicalChanDOPortWidth(doPorts[0].c_str(), &portWidth);
+      if (portWidth == 8) {
+         doHub8_ = new NIDAQDOHub<uInt8>(this);
+      }
+      else if (portWidth == 16)
+      {
+         doHub16_ = new NIDAQDOHub<uInt16>(this);
+      }
+      else if (portWidth == 32) {
+         doHub32_ = new NIDAQDOHub<uInt32>(this);
+      }
+   }
+
    std::vector<std::string> triggerPorts = GetTriggerPortsForDevice(niDeviceName_);
    if (!triggerPorts.empty())
    {
@@ -191,22 +207,7 @@ int NIDAQHub::Initialize()
          return err;
    }
 
-   std::vector<std::string> doPorts = GetDigitalPortsForDevice(niDeviceName_);
-   if (doPorts.size() > 0)
-   {
-      uInt32 portWidth;
-      int32 nierr = DAQmxGetPhysicalChanDOPortWidth(doPorts[0].c_str(), &portWidth);
-      if (portWidth == 8) {
-         doHub8_ = new NIDAQDOHub<uInt8>(this);
-      }
-      else if (portWidth == 16)
-      {
-         doHub16_ = new NIDAQDOHub<uInt16>(this);
-      }
-      else if (portWidth == 32) {
-         doHub32_ = new NIDAQDOHub<uInt32>(this);
-      }
-   }
+
 
    initialized_ = true;
    return DEVICE_OK;
@@ -257,8 +258,7 @@ int NIDAQHub::DetectInstalledDevices()
       }
    }
 
-   std::vector<std::string> doPorts =
-       GetDigitalPortsForDevice(niDeviceName_);
+   std::vector<std::string> doPorts = GetDigitalPortsForDevice(niDeviceName_);
 
    for (std::vector<std::string>::const_iterator it = doPorts.begin(), end = doPorts.end();
        it != end; ++it)
@@ -408,6 +408,35 @@ NIDAQHub::GetTriggerPortsForDevice(const std::string& device)
 {
    std::vector<std::string> result;
 
+   // first list the last pin of each DO port that is capable of changedetection.
+   std::vector<std::string> doPorts = GetDigitalPortsForDevice(niDeviceName_);
+   uInt32 portWidth;
+   for (std::string doPort : doPorts)
+   {
+      int32 nierr = DAQmxGetPhysicalChanDOPortWidth(doPort.c_str(), &portWidth);
+      if (nierr != 0)
+      {
+         LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+         // return TranslateNIError(nierr);
+      }
+      else
+      {
+         std::string tmpTriggerPort = doPort + "/line" + std::to_string(portWidth - 1);
+         int err = DEVICE_OK;
+         if (doHub8_ != 0)
+            err = doHub8_->StartDOBlanking(doPort, false, 0, false, tmpTriggerPort);
+         else if (doHub16_ != 0)
+            err = doHub16_->StartDOBlanking(doPort, false, 0, false, tmpTriggerPort);
+         else if (doHub32_ != 0)
+            err = doHub32_->StartDOBlanking(doPort, false, 0, false, tmpTriggerPort);
+         else
+            continue;
+         if (err == DEVICE_OK)
+            result.push_back(tmpTriggerPort);
+      }
+
+   }
+
    char ports[4096];
    int32 nierr = DAQmxGetDevTerminals(device.c_str(), ports, sizeof(ports));
    if (nierr == 0)
@@ -542,6 +571,7 @@ void NIDAQHub::GetLCMSequence(T* buffer, std::vector<std::vector<T>> sequences) 
       }
    }
 }
+
 
 
 int NIDAQHub::StartAOSequencingTask()
@@ -955,7 +985,7 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
 
 template<class Tuint>
 int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool sequenceOn, 
-                                       const long& pos, const bool blankingDirection)
+                                       const long& pos, const bool blankingDirection, const std::string triggerPort)
 {
    int err = hub_->StopTask(diTask_);
    if (err != DEVICE_OK)
@@ -978,7 +1008,7 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
 
    // may first need to read the state of the triggerport, since we will only get changes, not
    // its actual state.
-   std::string triggerPort = "/Dev1/port0/line7";
+   // std::string triggerPort = "/Dev1/port0/line7";
 
    nierr = DAQmxCreateDIChan(diTask_, triggerPort.c_str(), "DIBlankChan", DAQmx_Val_ChanForAllLines);
    if (nierr != 0)
@@ -1181,7 +1211,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    SetErrorText(ERR_SEQUENCE_RUNNING, "A sequence is running on this port.  Please stop this sequence first.");
    SetErrorText(ERR_SEQUENCE_TOO_LONG, "Sequence is too long. Try increasing sequence length in the Hub device.");
    SetErrorText(ERR_SEQUENCE_ZERO_LENGTH, "Sequence has length zero.");
-   SetErrorText(ERR_UNKNOWN_PINS_PER_PORT, "Only 8 and 32 pin ports are supported.");
+   SetErrorText(ERR_UNKNOWN_PINS_PER_PORT, "Only 8, 16 and 32 pin ports are supported.");
 
    CPropertyAction *pAct = new CPropertyAction(this, &DigitalOutputPort::OnSequenceable);
    CreateStringProperty("Sequencing", g_UseHubSetting, false, pAct, true);
@@ -1214,15 +1244,39 @@ int DigitalOutputPort::Initialize()
     CreateIntegerProperty("State", 0, false, pAct);
     SetPropertyLimits("State", 0, numPos_);
 
-    pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
-    CreateStringProperty("Blanking", blanking_ ? g_On : g_Off, false, pAct);
-    AddAllowedValue("Blanking", g_Off);
-    AddAllowedValue("Blanking", g_On);
+    bool supportsBlanking = false;
+    std::string tmpTriggerPort = niPort_ + "/line" + std::to_string(portWidth_ - 1);
+    if (portWidth_ == 8)
+    {
+       if (GetHub()->getDOHub8()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
+          supportsBlanking = true;
+       GetHub()->getDOHub8()->StopDOBlanking();
+    }
+    else if (portWidth_ == 16)
+    {
+       if (GetHub()->getDOHub16()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
+          supportsBlanking = true;
+       GetHub()->getDOHub16()->StopDOBlanking();
+    }
+    else if (portWidth_ == 32)
+    {
+       if (GetHub()->getDOHub32()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
+          supportsBlanking = true;
+       GetHub()->getDOHub32()->StopDOBlanking();
+    }
 
-    pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlankingTriggerDirection);
-    CreateStringProperty("Blank on", blankOnLow_ ? g_Low : g_High, false, pAct);
-    AddAllowedValue("Blank on", g_Low);
-    AddAllowedValue("Blank on", g_High);
+    if (supportsBlanking)
+    {
+       pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
+       CreateStringProperty("Blanking", blanking_ ? g_On : g_Off, false, pAct);
+       AddAllowedValue("Blanking", g_Off);
+       AddAllowedValue("Blanking", g_On);
+
+       pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlankingTriggerDirection);
+       CreateStringProperty("Blank on", blankOnLow_ ? g_Low : g_High, false, pAct);
+       AddAllowedValue("Blank on", g_Low);
+       AddAllowedValue("Blank on", g_High);
+    }
 
     return DEVICE_OK;
 }
@@ -1390,8 +1444,9 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          // do the thing in the hub
          blanking_ = blanking;
+         // TODO: add 16 and 32 bits blanking
          if (blanking_)
-            GetHub()->getDOHub8()->StartDOBlanking(niPort_, false, pos_, blankOnLow_);
+            GetHub()->getDOHub8()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, GetHub()->GetTriggerPort());
          else
          {
             GetHub()->StopDOBlanking();
