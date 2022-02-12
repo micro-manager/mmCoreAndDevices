@@ -336,6 +336,7 @@ private:
     long numPos_;
     uInt32 portWidth_;
     bool neverSequenceable_;
+    bool supportsBlankingAndSequencing_;
 
     // this can probably be done more elegantly using templates
     std::vector<uInt8> sequence8_;

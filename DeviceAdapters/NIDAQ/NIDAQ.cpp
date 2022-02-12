@@ -1205,6 +1205,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    numPos_(0),
    portWidth_(0),
    neverSequenceable_(false),
+   supportsBlankingAndSequencing_(false),
    task_(0)
 {
    InitializeDefaultErrorMessages();
@@ -1244,28 +1245,27 @@ int DigitalOutputPort::Initialize()
     CreateIntegerProperty("State", 0, false, pAct);
     SetPropertyLimits("State", 0, numPos_);
 
-    bool supportsBlanking = false;
     std::string tmpTriggerPort = niPort_ + "/line" + std::to_string(portWidth_ - 1);
     if (portWidth_ == 8)
     {
        if (GetHub()->getDOHub8()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
-          supportsBlanking = true;
+          supportsBlankingAndSequencing_ = true;
        GetHub()->getDOHub8()->StopDOBlanking();
     }
     else if (portWidth_ == 16)
     {
        if (GetHub()->getDOHub16()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
-          supportsBlanking = true;
+          supportsBlankingAndSequencing_ = true;
        GetHub()->getDOHub16()->StopDOBlanking();
     }
     else if (portWidth_ == 32)
     {
        if (GetHub()->getDOHub32()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
-          supportsBlanking = true;
+          supportsBlankingAndSequencing_ = true;
        GetHub()->getDOHub32()->StopDOBlanking();
     }
 
-    if (supportsBlanking)
+    if (supportsBlankingAndSequencing_)
     {
        pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
        CreateStringProperty("Blanking", blanking_ ? g_On : g_Off, false, pAct);
@@ -1319,10 +1319,13 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
    else if (eAct == MM::IsSequenceable)
    {
-      bool isHubSequenceable;
-      GetHub()->IsSequencingEnabled(isHubSequenceable);
-
-      bool sequenceable = neverSequenceable_ ? false : isHubSequenceable;
+      bool sequenceable = false;
+      if (supportsBlankingAndSequencing_)
+      {
+         bool isHubSequenceable;
+         GetHub()->IsSequencingEnabled(isHubSequenceable);
+         sequenceable = neverSequenceable_ ? false : isHubSequenceable;
+      }
 
       if (sequenceable)
       {
@@ -1334,7 +1337,7 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          pProp->SetSequenceable(0);
       }
-    }
+   }
    else if (eAct == MM::AfterLoadSequence)
    {
       if (sequenceRunning_)
