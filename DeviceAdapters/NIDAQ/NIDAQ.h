@@ -129,6 +129,7 @@ private:
       const std::vector<Tuint> sequence);
    void RemoveDOPortFromSequencing(const std::string& port);
    int StartDOSequencingTask();
+   int GetPinState(const std::string pinDesignation, bool& state);
    int HandleTaskError(int32 niError);
 
 

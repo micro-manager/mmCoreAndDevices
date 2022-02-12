@@ -987,7 +987,11 @@ template<class Tuint>
 int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool sequenceOn, 
                                        const long& pos, const bool blankingDirection, const std::string triggerPort)
 {
-   int err = hub_->StopTask(diTask_);
+   bool triggerPinState;
+   int err = GetPinState(triggerPort, triggerPinState);
+   if (err != DEVICE_OK)
+      return err;
+   err = hub_->StopTask(diTask_);
    if (err != DEVICE_OK)
       return err;
 
@@ -1125,6 +1129,37 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
    }
    hub_->LogMessage("Started DO task", true);
    
+   return DEVICE_OK;
+}
+
+template<class Tuint>
+int NIDAQDOHub<Tuint>::GetPinState(const std::string pinDesignation, bool & state)
+{
+   int err = hub_->StopTask(diTask_);
+   if (err != DEVICE_OK)
+      return err;
+
+   int32 nierr = DAQmxCreateTask("DIReadTriggerPinTask", &diTask_);
+   if (nierr != 0)
+   {
+      return hub_->TranslateNIError(nierr);;
+   }
+   hub_->LogMessage("Created DI task", true);
+   nierr = DAQmxCreateDIChan(diTask_, pinDesignation.c_str(), "tIn", DAQmx_Val_ChanForAllLines);
+   if (nierr != 0)
+   {
+      return hub_->TranslateNIError(nierr);;
+   }
+   nierr = DAQmxStartTask(diTask_);
+   uInt8 readArray[1];
+   int32 read;
+   int32 bytesPerSample;
+   nierr = DAQmxReadDigitalLines(diTask_, 1, 0, DAQmx_Val_GroupByChannel, readArray, 1, &read, &bytesPerSample, NULL);
+   if (nierr != 0)
+   {
+      return hub_->TranslateNIError(nierr);;
+   }
+   state = readArray[0] != 0;
    return DEVICE_OK;
 }
 
