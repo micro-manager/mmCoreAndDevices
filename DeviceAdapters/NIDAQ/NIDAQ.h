@@ -116,7 +116,7 @@ template <class Tuint>
 class NIDAQDOHub
 {
 public:
-   NIDAQDOHub(NIDAQHub* hub) : diTask_(0), doTask_(0), hub_(hub) {}
+   NIDAQDOHub(NIDAQHub* hub);
    ~NIDAQDOHub();
    int StartDOSequenceForPort(const std::string& port, const std::vector<Tuint> sequence);
    int StopDOSequenceForPort(const std::string& port);
@@ -130,13 +130,13 @@ private:
    void RemoveDOPortFromSequencing(const std::string& port);
    int StartDOSequencingTask();
    int GetPinState(const std::string pinDesignation, bool& state);
-   int SetPortState(const std::string port, long state);
    int HandleTaskError(int32 niError);
 
 
    int DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChar, const Tuint* samples, int32* numWritten);
 
    NIDAQHub* hub_;
+   uInt32 portWidth_;
    TaskHandle diTask_;
    TaskHandle doTask_;
    std::vector<std::string> physicalDOChannels_;
@@ -179,6 +179,8 @@ public:
    int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos,
       const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
+
+   int SetDOPortState(const std::string port, uInt32 portWidth, long state);
    const std::string GetTriggerPort() { return niTriggerPort_; }
    
 
@@ -223,7 +225,8 @@ private:
    double maxVolts_; // Max possible for device
    double sampleRateHz_;
 
-   TaskHandle aoTask_;   
+   TaskHandle aoTask_;
+   TaskHandle doTask_;
 
    NIDAQDOHub<uInt8> * doHub8_;
    NIDAQDOHub<uInt16>* doHub16_;

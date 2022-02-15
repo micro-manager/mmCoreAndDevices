@@ -189,7 +189,7 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          for (unsigned int i = 0; i < sequence.size(); i++)
          {
             std::istringstream os(sequence[i]);
-            uInt32 val;
+            uInt16 val;
             os >> val;
             sequence16_.push_back(val);
          }
@@ -330,95 +330,5 @@ int DigitalOutputPort::SetState(long state)
    if (sequenceRunning_)
       return ERR_SEQUENCE_RUNNING;
 
-   if (task_)
-   {
-      int err = StopTask();
-      if (err != DEVICE_OK)
-         return err;
-   }
-
-   LogMessage("Starting on-demand task", true);
-
-   int32 nierr = DAQmxCreateTask(NULL, &task_);
-   if (nierr != 0)
-   {
-      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-      return TranslateNIError(nierr);
-   }
-   LogMessage("Created task", true);
-
-
-   nierr = DAQmxCreateDOChan(task_,
-      niPort_.c_str(), NULL, DAQmx_Val_ChanForAllLines);
-   if (nierr != 0)
-   {
-      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-      goto error;
-   }
-   LogMessage("Created DO channel", true);
-
-
-   int32 numWritten = 0;
-
-   if (portWidth_ == 8)
-   {
-      uInt8 samples[1];
-      samples[0] = (uInt8)state;
-      nierr = DAQmxWriteDigitalU8(task_, 1,
-         true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
-         samples, &numWritten, NULL);
-
-   }
-   else if (portWidth_ == 16)
-   {
-      uInt16 samples[1];
-      samples[0] = (uInt16)state;
-      nierr = DAQmxWriteDigitalU16(task_, 1,
-         true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
-         samples, &numWritten, NULL);
-   }
-   else if (portWidth_ == 32)
-   {
-      uInt32 samples[1];
-      samples[0] = (uInt32)state;
-      nierr = DAQmxWriteDigitalU32(task_, 1,
-         true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
-         samples, &numWritten, NULL);
-   }
-   else
-   {
-      LogMessage(("Found invalid number of pins per port: " +
-         boost::lexical_cast<std::string>(portWidth_)).c_str(), true);
-      goto error;
-   }
-   if (nierr != 0)
-   {
-      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-      goto error;
-   }
-   if (numWritten != 1)
-   {
-      LogMessage("Failed to write voltage");
-      // This is presumably unlikely; no error code here
-      goto error;
-   }
-   LogMessage(("Wrote Digital out with task autostart: " +
-      boost::lexical_cast<std::string>(state)).c_str(), true);
-
-   return DEVICE_OK;
-
-error:
-   DAQmxClearTask(task_);
-   task_ = 0;
-   int err;
-   if (nierr != 0)
-   {
-      LogMessage("Failed; task cleared");
-      err = TranslateNIError(nierr);
-   }
-   else
-   {
-      err = DEVICE_ERR;
-   }
-   return err;
+   return GetHub()->SetDOPortState(niPort_, portWidth_, state);
 }

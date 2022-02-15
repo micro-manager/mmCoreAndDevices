@@ -99,6 +99,7 @@ NIDAQHub::NIDAQHub () :
    maxVolts_(5.0),
    sampleRateHz_(10000.0),
    aoTask_(0),
+   doTask_(0),
    doHub8_(0),
    doHub16_(0),
    doHub32_(0)
@@ -709,6 +710,100 @@ int NIDAQHub::StopDOBlanking()
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
+int NIDAQHub::SetDOPortState(std::string port, uInt32 portWidth, long state)
+{
+   if (doTask_)
+   {
+      int err = StopTask(doTask_);
+      if (err != DEVICE_OK)
+         return err;
+   }
+
+   LogMessage("Starting on-demand task", true);
+
+   int32 nierr = DAQmxCreateTask(NULL, &doTask_);
+   if (nierr != 0)
+   {
+      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+      return TranslateNIError(nierr);
+   }
+   LogMessage("Created task", true);
+
+
+   nierr = DAQmxCreateDOChan(doTask_, port.c_str(), NULL, DAQmx_Val_ChanForAllLines);
+   if (nierr != 0)
+   {
+      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+      goto error;
+   }
+   LogMessage("Created DO channel", true);
+
+
+   int32 numWritten = 0;
+
+   if (portWidth == 8)
+   {
+      uInt8 samples[1];
+      samples[0] = (uInt8)state;
+      nierr = DAQmxWriteDigitalU8(doTask_, 1,
+         true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+         samples, &numWritten, NULL);
+
+   }
+   else if (portWidth == 16)
+   {
+      uInt16 samples[1];
+      samples[0] = (uInt16)state;
+      nierr = DAQmxWriteDigitalU16(doTask_, 1,
+         true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+         samples, &numWritten, NULL);
+   }
+   else if (portWidth == 32)
+   {
+      uInt32 samples[1];
+      samples[0] = (uInt32)state;
+      nierr = DAQmxWriteDigitalU32(doTask_, 1,
+         true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+         samples, &numWritten, NULL);
+   }
+   else
+   {
+      LogMessage(("Found invalid number of pins per port: " +
+         boost::lexical_cast<std::string>(portWidth)).c_str(), true);
+      goto error;
+   }
+   if (nierr != 0)
+   {
+      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+      goto error;
+   }
+   if (numWritten != 1)
+   {
+      LogMessage("Failed to write voltage");
+      // This is presumably unlikely; no error code here
+      goto error;
+   }
+   LogMessage(("Wrote Digital out with task autostart: " +
+      boost::lexical_cast<std::string>(state)).c_str(), true);
+
+   return DEVICE_OK;
+
+error:
+   DAQmxClearTask(doTask_);
+   doTask_ = 0;
+   int err;
+   if (nierr != 0)
+   {
+      LogMessage("Failed; task cleared");
+      err = TranslateNIError(nierr);
+   }
+   else
+   {
+      err = DEVICE_ERR;
+   }
+   return err;
+}
+
  int NIDAQHub::StopTask(TaskHandle &task)
 {
    if (!task)
@@ -824,6 +919,20 @@ int NIDAQHub::OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 // NIDAQDOHub
 //
 
+
+template<typename Tuint>
+NIDAQDOHub<Tuint>::NIDAQDOHub(NIDAQHub* hub) : diTask_(0), doTask_(0), hub_(hub)
+{
+   if (typeid(Tuint) == typeid(uInt8))
+      portWidth_ = 8;
+   else if (typeid(Tuint) == typeid(uInt8))
+      portWidth_ = 16;
+   else if (typeid(Tuint) == typeid(uInt32))
+      portWidth_ = 32;
+   else
+      portWidth_ = 0;
+}
+
 template<typename Tuint>
  NIDAQDOHub<Tuint>::~NIDAQDOHub<Tuint>()
 {
@@ -924,23 +1033,10 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
          return err;
    }
 
-   uInt32 portWidth;
-   if (typeid(Tuint) == typeid(uInt8))
-      portWidth = 8;
-   else if (typeid(Tuint) == typeid(uInt8))
-      portWidth = 16;
-   else if (typeid(Tuint) == typeid(uInt32))
-      portWidth = 32;
-   else
+   if (portWidth_ == 0)
       return ERR_UNKNOWN_PINS_PER_PORT;
 
    hub_->LogMessage("Starting DO sequencing task", true);
-
-   int32 nierr = DAQmxGetPhysicalChanDOPortWidth(physicalDOChannels_[0].c_str(), &portWidth);
-   if (nierr != 0)
-   {
-      return hub_->TranslateNIError(nierr);
-   }
 
    size_t numChans = physicalDOChannels_.size();
    size_t samplesPerChan;
@@ -953,7 +1049,7 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    hub_->LogMessage("LCM sequence length = " +
       boost::lexical_cast<std::string>(samplesPerChan), true);
 
-   nierr = DAQmxCreateTask("DOSeqTask", &doTask_);
+   int32 nierr = DAQmxCreateTask("DOSeqTask", &doTask_);
    if (nierr != 0)
    {
       return hub_->TranslateNIError(nierr);;
@@ -1018,6 +1114,13 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
    int err = GetPinState(triggerPort, triggerPinState);
    if (err != DEVICE_OK)
       return err;
+
+   if (blankOnLow ^ triggerPinState)
+   {
+      err = hub_->SetDOPortState(port, portWidth_, 0);
+      if (err != DEVICE_OK)
+         return err;
+   }
 
    // TODO: set initial state based on blankOnLow and triggerPort state
 
