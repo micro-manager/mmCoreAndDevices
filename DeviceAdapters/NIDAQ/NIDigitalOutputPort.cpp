@@ -76,27 +76,14 @@ int DigitalOutputPort::Initialize()
    SetPropertyLimits("State", 0, numPos_);
 
    std::string tmpTriggerPort = niPort_ + "/line" + std::to_string(portWidth_ - 1);
-   if (portWidth_ == 8)
-   {
-      if (GetHub()->getDOHub8()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
-         supportsBlankingAndSequencing_ = true;
-      GetHub()->getDOHub8()->StopDOBlanking();
-   }
-   else if (portWidth_ == 16)
-   {
-      if (GetHub()->getDOHub16()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
-         supportsBlankingAndSequencing_ = true;
-      GetHub()->getDOHub16()->StopDOBlanking();
-   }
-   else if (portWidth_ == 32)
-   {
-      if (GetHub()->getDOHub32()->StartDOBlanking(niPort_, false, 0, false, tmpTriggerPort) == DEVICE_OK)
-         supportsBlankingAndSequencing_ = true;
-      GetHub()->getDOHub32()->StopDOBlanking();
-   }
+   std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
+   if (GetHub()->StartDOBlanking(tmpNiPort, false, 0, false, tmpTriggerPort) == DEVICE_OK)
+      supportsBlankingAndSequencing_ = true;
+   GetHub()->StopDOBlanking();
 
    if (supportsBlankingAndSequencing_)
    {
+      niPort_ = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
       pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
       CreateStringProperty("Blanking", blanking_ ? g_On : g_Off, false, pAct);
       AddAllowedValue("Blanking", g_Off);
@@ -108,6 +95,11 @@ int DigitalOutputPort::Initialize()
       AddAllowedValue("Blank on", g_High);
    }
 
+   // In case someone left some pins high:
+   SetState(0);
+
+   initialized_ = true;
+
    return DEVICE_OK;
 }
 
@@ -117,6 +109,7 @@ int DigitalOutputPort::Shutdown()
    if (!initialized_)
       return DEVICE_OK;
 
+   SetState(0);
    int err = StopTask();
 
    initialized_ = false;
@@ -141,7 +134,7 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       long pos;
       pProp->Get(pos);
-      int err = StartOnDemandTask(pos);
+      int err = SetState(pos);
       if (err == DEVICE_OK)
          pos_ = pos;
       return err;
@@ -238,24 +231,8 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
    else if (eAct == MM::StopSequence)
    {
-      int err = DEVICE_OK;
       sequenceRunning_ = false;
-      if (portWidth_ == 8)
-      {
-         err = GetHub()->getDOHub8()->StopDOSequenceForPort(niPort_);
-      }
-      else if (portWidth_ == 16)
-      {
-         err = GetHub()->getDOHub16()->StopDOSequenceForPort(niPort_);
-      }
-      else if (portWidth_ == 32)
-      {
-         err = GetHub()->getDOHub32()->StopDOSequenceForPort(niPort_);
-      }
-      if (err == DEVICE_OK) {
-         err = StartOnDemandTask(pos_);
-      }
-      return err;
+      return GetHub()->StopDOSequenceForPort(niPort_);
    }
 
    return DEVICE_OK;
@@ -277,13 +254,12 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          // do the thing in the hub
          blanking_ = blanking;
-         // TODO: add 16 and 32 bits blanking
          if (blanking_)
-            GetHub()->getDOHub8()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, GetHub()->GetTriggerPort());
+            GetHub()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, GetHub()->GetTriggerPort());
          else
          {
             GetHub()->StopDOBlanking();
-            return StartOnDemandTask(pos_);
+            return SetState(pos_);
          }
 
       }
@@ -306,8 +282,12 @@ int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::A
       bool blankOnLow = response == g_Low ? true : false;
       if (blankOnLow_ != blankOnLow)
       {
-         // do the thing in the hub
          blankOnLow_ = blankOnLow;
+         if (blanking_)
+         {
+            GetHub()->StopDOBlanking();
+            GetHub()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, GetHub()->GetTriggerPort());
+         }            
       }
    }
    return DEVICE_OK;
@@ -345,7 +325,7 @@ int DigitalOutputPort::StopTask()
 }
 
 
-int DigitalOutputPort::StartOnDemandTask(long state)
+int DigitalOutputPort::SetState(long state)
 {
    if (sequenceRunning_)
       return ERR_SEQUENCE_RUNNING;
@@ -387,11 +367,15 @@ int DigitalOutputPort::StartOnDemandTask(long state)
       nierr = DAQmxWriteDigitalU8(task_, 1,
          true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
          samples, &numWritten, NULL);
-      if (nierr != 0)
-      {
-         LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-         goto error;
-      }
+
+   }
+   else if (portWidth_ == 16)
+   {
+      uInt16 samples[1];
+      samples[0] = (uInt16)state;
+      nierr = DAQmxWriteDigitalU16(task_, 1,
+         true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
+         samples, &numWritten, NULL);
    }
    else if (portWidth_ == 32)
    {
@@ -400,16 +384,16 @@ int DigitalOutputPort::StartOnDemandTask(long state)
       nierr = DAQmxWriteDigitalU32(task_, 1,
          true, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
          samples, &numWritten, NULL);
-      if (nierr != 0)
-      {
-         LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-         goto error;
-      }
    }
    else
    {
       LogMessage(("Found invalid number of pins per port: " +
          boost::lexical_cast<std::string>(portWidth_)).c_str(), true);
+      goto error;
+   }
+   if (nierr != 0)
+   {
+      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
       goto error;
    }
    if (numWritten != 1)

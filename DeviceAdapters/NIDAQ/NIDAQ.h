@@ -130,6 +130,7 @@ private:
    void RemoveDOPortFromSequencing(const std::string& port);
    int StartDOSequencingTask();
    int GetPinState(const std::string pinDesignation, bool& state);
+   int SetPortState(const std::string port, long state);
    int HandleTaskError(int32 niError);
 
 
@@ -170,9 +171,13 @@ public:
       const std::vector<double> sequence);
    virtual int StopAOSequenceForPort(const std::string& port);
 
+   int StopDOSequenceForPort(const std::string port);
+
    virtual int IsSequencingEnabled(bool& flag) const;
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
+   int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos,
+      const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
    const std::string GetTriggerPort() { return niTriggerPort_; }
    
@@ -188,8 +193,7 @@ private:
       const std::vector<double> sequence);
    void RemoveAOPortFromSequencing(const std::string& port);
 
-   int GetVoltageRangeForDevice(const std::string& device,
-      double& minVolts, double& maxVolts);
+   int GetVoltageRangeForDevice(const std::string& device, double& minVolts, double& maxVolts);
    std::vector<std::string> GetTriggerPortsForDevice(const std::string& device);
    std::vector<std::string> GetAnalogPortsForDevice(const std::string& device);
    std::vector<std::string> GetDigitalPortsForDevice(const std::string& device);
@@ -198,7 +202,6 @@ private:
    template<typename T> void GetLCMSequence(T* buffer, std::vector<std::vector<T>> sequences) const;
 
    int StartAOSequencingTask();
-
 
    // Action handlers
    int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -325,7 +328,7 @@ private:
     {
        return static_cast<NIDAQHub*>(GetParentHub());
     }
-    int StartOnDemandTask(long state);
+    int SetState(long state);
     int StopTask();
 
     std::string niPort_;
