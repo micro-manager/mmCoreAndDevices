@@ -134,7 +134,17 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       long pos;
       pProp->Get(pos);
-      int err = SetState(pos);
+      // pause blanking, otherwise most cards will error
+      int err;
+      if (blanking_)
+      {
+         GetHub()->StopDOBlanking();
+         err = GetHub()->StartDOBlanking(niPort_, false, pos, blankOnLow_, GetHub()->GetTriggerPort());
+      }
+      else
+      {
+         err = SetState(pos);
+      }
       if (err == DEVICE_OK)
          pos_ = pos;
       return err;
