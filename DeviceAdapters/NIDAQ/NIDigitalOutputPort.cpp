@@ -147,6 +147,7 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       if (err == DEVICE_OK)
          pos_ = pos;
+
       return err;
    }
 
@@ -224,15 +225,25 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       // TODO: set the first state of the sequence before we start?
       if (portWidth_ == 8)
       {
-         err = GetHub()->getDOHub8()->StartDOSequenceForPort(niPort_, sequence8_);
+         err = GetHub()->getDOHub8()->AddDOPortToSequencing(niPort_, sequence8_);
       }
       else if (portWidth_ == 16)
       {
-         err = GetHub()->getDOHub16()->StartDOSequenceForPort(niPort_, sequence16_);
+         err = GetHub()->getDOHub16()->AddDOPortToSequencing(niPort_, sequence16_);
       }
       else if (portWidth_ == 32)
       {
-         err = GetHub()->getDOHub32()->StartDOSequenceForPort(niPort_, sequence32_);
+         err = GetHub()->getDOHub32()->AddDOPortToSequencing(niPort_, sequence32_);
+      }
+      if (err == DEVICE_OK)
+      {
+         err = GetHub()->StopDOBlanking();
+         if (err != DEVICE_OK)
+         {
+            sequenceRunning_ = false;
+            return err;
+         }
+         err = GetHub()->StartDOBlanking(niPort_, true, pos_, blankOnLow_, GetHub()->GetTriggerPort());
       }
       if (err != DEVICE_OK)
          sequenceRunning_ = false;

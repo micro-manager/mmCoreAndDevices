@@ -123,10 +123,9 @@ public:
    int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos, 
             const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
+   int AddDOPortToSequencing(const std::string& port, const std::vector<Tuint> sequence);
 
 private:
-   int AddDOPortToSequencing(const std::string& port,
-      const std::vector<Tuint> sequence);
    void RemoveDOPortFromSequencing(const std::string& port);
    int StartDOSequencingTask();
    int GetPinState(const std::string pinDesignation, bool& state);
@@ -177,7 +176,7 @@ public:
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
    int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos,
-      const bool blankingDirection, const std::string triggerPort);
+                        const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
 
    int SetDOPortState(const std::string port, uInt32 portWidth, long state);

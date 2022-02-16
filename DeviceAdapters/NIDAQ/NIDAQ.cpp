@@ -1108,7 +1108,7 @@ template<class Tuint>
 int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool sequenceOn, 
                                        const long& pos, const bool blankOnLow, const std::string triggerPort)
 {
-   // First read the state of the triggerport, since we will only get changes of troggerPort, not
+   // First read the state of the triggerport, since we will only get changes of triggerPort, not
    // its actual state.
    bool triggerPinState;
    int err = GetPinState(triggerPort, triggerPinState);
@@ -1117,13 +1117,12 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
 
    if (blankOnLow ^ triggerPinState)
    {
+      //Set initial state based on blankOnLow and triggerPort state
       err = hub_->SetDOPortState(port, portWidth_, 0);
       if (err != DEVICE_OK)
          return err;
    }
-
-   // TODO: set initial state based on blankOnLow and triggerPort state
-
+      
    err = hub_->StopTask(diTask_);
    if (err != DEVICE_OK)
       return err;
@@ -1136,9 +1135,19 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
    hub_->LogMessage("Created DI task", true);
 
    int32 number = 2;
-   if (!sequenceOn)
+   std::vector<Tuint> doSequence_;
+   if (sequenceOn)
    {
-      //TODO
+      int i = 0;
+      for (std::string pChan : physicalDOChannels_)
+      {
+         if (port == pChan)
+         {
+            doSequence_ = doChannelSequences_[i];
+            number = 2 * (int32) doSequence_.size();
+         }
+         i++;
+      }
    }
 
    nierr = DAQmxCreateDIChan(diTask_, triggerPort.c_str(), "DIBlankChan", DAQmx_Val_ChanForAllLines);
@@ -1175,6 +1184,7 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
       return HandleTaskError(nierr);
    }
    hub_->LogMessage("Started DI task", true);
+   // end routing changedetectionEvent
 
 
    // Change detection now should be running on the input port.  
@@ -1197,45 +1207,47 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
       return HandleTaskError(nierr);
    }
    hub_->LogMessage("Created DO channel for: " + port, true);
-   
-   /*
-   uInt32 portWidth = 8;
-
-   if (typeid(Tuint) == typeid(uInt8))
-      portWidth = 8;
-   else if (typeid(Tuint) == typeid(uInt8))
-      portWidth = 16;
-   else if (typeid(Tuint) == typeid(uInt32))
-      portWidth = 32;
-   else
-      return ERR_UNKNOWN_PINS_PER_PORT;
-
-   hub_->LogMessage("Starting DO sequencing task", true);
-
-   nierr = DAQmxGetPhysicalChanDOPortWidth(physicalDOChannels_[0].c_str(), &portWidth);
-   if (nierr != 0)
-   {
-      return hub_->TranslateNIError(nierr);
-   }
-   */
+  
 
 
    boost::scoped_array<Tuint> samples;
    samples.reset(new Tuint[number]);
    // more general (i.e. once we add sequences) do we prepend with 0?
-   if (blankOnLow ^ triggerPinState)
+   if (sequenceOn && doSequence_.size() > 0)
    {
-      samples.get()[0] = (Tuint)pos;
-      samples.get()[1] = 0;
+      if (blankOnLow ^ triggerPinState)
+      {
+         for (uInt32 i = 0; i < doSequence_.size(); i++)
+         {
+            samples.get()[2 * i] = doSequence_[i];
+            samples.get()[2 * i + 1] = 0;
+         }
+      }
+      else
+      {
+         for (uInt32 i = 0; i < doSequence_.size(); i++)
+         {
+            samples.get()[2 * i] = 0;
+            samples.get()[2 * i + 1] = doSequence_[i];
+         }
+      }
    }
    else
    {
-      samples.get()[0] = 0;
-      samples.get()[1] = (Tuint)pos;
+      if (blankOnLow ^ triggerPinState)
+      {
+         samples.get()[0] = (Tuint)pos;
+         samples.get()[1] = 0;
+      }
+      else
+      {
+         samples.get()[0] = 0;
+         samples.get()[1] = (Tuint)pos;
+      }
    }
 
    nierr = DAQmxCfgSampClkTiming(doTask_, changeInput.c_str(),
-      hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, number);
+                  hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, number);
    if (nierr != 0)
    {
       return HandleTaskError(nierr);
