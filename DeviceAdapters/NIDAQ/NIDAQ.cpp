@@ -1161,7 +1161,7 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
    // Note, if triggerPort is not part of the port, we'll likely start seeing errors here
    // This needs to be in the documentation
    nierr = DAQmxCfgChangeDetectionTiming(diTask_, triggerPort.c_str(),
-      triggerPort.c_str(), DAQmx_Val_ContSamps, number);
+          triggerPort.c_str(), DAQmx_Val_ContSamps, number);
    if (nierr != 0)
    {
       return HandleTaskError(nierr);

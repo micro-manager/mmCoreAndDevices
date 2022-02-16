@@ -124,9 +124,9 @@ public:
             const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
    int AddDOPortToSequencing(const std::string& port, const std::vector<Tuint> sequence);
-
-private:
    void RemoveDOPortFromSequencing(const std::string& port);
+
+private:   
    int StartDOSequencingTask();
    int GetPinState(const std::string pinDesignation, bool& state);
    int HandleTaskError(int32 niError);
