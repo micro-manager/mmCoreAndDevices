@@ -1,21 +1,14 @@
 <project name="Rapp">
    <import file="../../../buildscripts/deviceadapter.xml"/>
 
-	<target name="install-Win32">
-		<copy todir="${mm.dll.installdir}">
-			<filelist dir="lib/x86">
-				<file name="obsROE_Device.dll"/>
-				<file name="ROEobsTools.dll"/>
-			</filelist>
-		</copy>
-	</target>
+   <property name="uga40sdk" location="${mm.basedir}/../3rdparty/Rapp/2022-02-17 UGA-40 SDK"/>
 
-	<target name="install-x64">
-		<copy todir="${mm.dll.installdir}">
-			<filelist dir="lib/x64">
-                                <file name="obsROE_Device.dll"/>
-                                <file name="ROEobsTools.dll"/>
-			</filelist>
-		</copy>
-	</target>
+   <target name="install-x64">
+      <copy todir="${mm.dll.installdir}">
+         <filelist dir="${uga40sdk}/release x64">
+            <file name="obsROE_Device.dll"/>
+            <file name="ROEobsTools.dll"/>
+         </filelist>
+      </copy>
+   </target>
 </project>
