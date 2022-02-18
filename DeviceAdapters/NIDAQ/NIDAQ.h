@@ -119,7 +119,8 @@ public:
    NIDAQDOHub(NIDAQHub* hub);
    ~NIDAQDOHub();
    int StartDOSequenceForPort(const std::string& port, const std::vector<Tuint> sequence);
-   int StopDOSequenceForPort(const std::string& port);
+   int StopDOSequenceForPort(const std::string& port); 
+   int StartDOSequencingTask();
    int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos, 
             const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
@@ -127,7 +128,7 @@ public:
    void RemoveDOPortFromSequencing(const std::string& port);
 
 private:   
-   int StartDOSequencingTask();
+   
    int GetPinState(const std::string pinDesignation, bool& state);
    int HandleTaskError(int32 niError);
 
@@ -170,14 +171,15 @@ public:
       const std::vector<double> sequence);
    virtual int StopAOSequenceForPort(const std::string& port);
 
-   int StopDOSequenceForPort(const std::string port);
-
    virtual int IsSequencingEnabled(bool& flag) const;
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
    int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos,
                         const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
+
+   int StartDOSequence();
+   int StopDOSequenceForPort(const std::string& port);
 
    int SetDOPortState(const std::string port, uInt32 portWidth, long state);
    const std::string GetTriggerPort() { return niTriggerPort_; }

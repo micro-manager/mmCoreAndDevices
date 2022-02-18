@@ -673,7 +673,7 @@ error:
    return err;
 }
 
-int NIDAQHub::StopDOSequenceForPort(std::string port)
+int NIDAQHub::StopDOSequenceForPort(const std::string& port)
 {
    if (doHub8_ != 0)
       return doHub8_->StopDOSequenceForPort(port);
@@ -706,6 +706,18 @@ int NIDAQHub::StopDOBlanking()
       return doHub16_->StopDOBlanking();
    else if (doHub32_ != 0)
       return doHub32_->StopDOBlanking();
+
+   return ERR_UNKNOWN_PINS_PER_PORT;
+}
+
+int NIDAQHub::StartDOSequence()
+{
+   if (doHub8_ != 0)
+      return doHub8_->StartDOSequencingTask();
+   else if (doHub16_ != 0)
+      return doHub16_->StartDOSequencingTask();
+   else if (doHub32_ != 0)
+      return doHub32_->StartDOSequencingTask();
 
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
@@ -961,21 +973,12 @@ int NIDAQDOHub<Tuint>::AddDOPortToSequencing(const std::string& port, const std:
 template<typename Tuint>
 inline void NIDAQDOHub<Tuint>::RemoveDOPortFromSequencing(const std::string & port)
 {
-   // We assume a given port appears at most once in physicalChannels_
    size_t n = physicalDOChannels_.size();
    for (size_t i = 0; i < n; ++i)
    {
       if (physicalDOChannels_[i] == port) {
-         uInt32 portWidth;
-         int32 nierr = DAQmxGetPhysicalChanDOPortWidth(port.c_str(), &portWidth);
-         if (nierr != 0)
-         {
-            hub_->LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-            return;
-         }
          physicalDOChannels_.erase(physicalDOChannels_.begin() + i);
          doChannelSequences_.erase(doChannelSequences_.begin() + i);
-         break;
       }
    }
 }
@@ -984,10 +987,10 @@ inline void NIDAQDOHub<Tuint>::RemoveDOPortFromSequencing(const std::string & po
 template<typename Tuint>
 int NIDAQDOHub<Tuint>::StopDOSequenceForPort(const std::string& port)
 {
+   RemoveDOPortFromSequencing(port);
    int err = hub_->StopTask(doTask_);
    if (err != DEVICE_OK)
       return err;
-   RemoveDOPortFromSequencing(port);
    // We do not restart sequencing for the remaining ports,
    // since it is meaningless (we can't preserve their state).
    return DEVICE_OK;

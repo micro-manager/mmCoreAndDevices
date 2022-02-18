@@ -231,13 +231,21 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
       if (err == DEVICE_OK)
       {
-         err = GetHub()->StopDOBlanking();
-         if (err != DEVICE_OK)
+         if (blanking_)
          {
-            sequenceRunning_ = false;
-            return err;
+            err = GetHub()->StopDOBlanking();
+            if (err != DEVICE_OK)
+            {
+               sequenceRunning_ = false;
+               return err;
+            }
+            err = GetHub()->StartDOBlanking(niPort_, true, pos_, blankOnLow_, GetHub()->GetTriggerPort());
          }
-         err = GetHub()->StartDOBlanking(niPort_, true, pos_, blankOnLow_, GetHub()->GetTriggerPort());
+         else
+         {
+            err = GetHub()->StartDOSequence();
+         }
+
       }
       if (err != DEVICE_OK)
          sequenceRunning_ = false;
