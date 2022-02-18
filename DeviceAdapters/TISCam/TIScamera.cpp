@@ -341,15 +341,15 @@ int CTIScamera::Initialize()
    if (!success) //else connect to 1st available list entry (if not empty)
    {
       if (!(pVidCapDevList == 0 || pVidCapDevList->empty()))
-    	  pGrabber->openDev(pVidCapDevList->begin()->c_str());
+    	  pGrabber->openDev(*(pVidCapDevList->begin()));
    }
 
    pAct = new CPropertyAction (this, &CTIScamera::OnCamera);
-   nRet = CreateProperty(MM::g_Keyword_CameraName, pGrabber->getDev().c_str(), MM::String, false, pAct);
+   nRet = CreateProperty(MM::g_Keyword_CameraName, pGrabber->getDev().getDisplayName().c_str(), MM::String, false, pAct);
    if (nRet != DEVICE_OK) return nRet;
    for ( Grabber::tVidCapDevList::iterator it = pVidCapDevList->begin(); it != pVidCapDevList->end(); ++it )
    {
-      AddAllowedValue(MM::g_Keyword_CameraName, it->c_str() );
+      AddAllowedValue(MM::g_Keyword_CameraName, it->getDisplayName().c_str() );
    }
  
    DShowLib::Grabber::tVidFmtListPtr     VidFmtListPtr     = pGrabber->getAvailableVideoFormats();
@@ -906,7 +906,7 @@ int CTIScamera::OnSelectDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if( pGrabber->isDevValid() )
 		{
 			string Text = pGrabber->getDev().toString() + " ";
-			Text += pGrabber->getVideoFormat().c_str();
+			Text += pGrabber->getVideoFormat().toString().c_str();
 			pProp->Set(Text.c_str());
 		}
 		else

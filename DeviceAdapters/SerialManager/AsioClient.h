@@ -181,7 +181,7 @@ public:
 
    void ChangeDTR (bool enable)
    {
-      boost::asio::serial_port::native_type handle = serialPortImplementation_.native();
+      SerialNativeHandle handle = serialPortImplementation_.native_handle();
       BOOL result = true;
       if (enable) 
       {

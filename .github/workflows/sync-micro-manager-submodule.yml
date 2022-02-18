@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - main
+      - vs2019
 
 jobs:
   sync-micro-manager-submodule:
@@ -19,15 +20,18 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: micro-manager/micro-manager
+          ref: ${{ github.ref_name }}  # Use matching branch
           ssh-key: ${{ secrets.SSH_KEY_DEPLOY_TO_MICRO_MANAGER }}
           path: micro-manager
-          submodules: true
+          submodules: false
 
       - name: Commit and push if necessary
         run: |
           cd micro-manager
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git submodule init
+          git submodule set-branch -b ${{ github.ref_name }} -- mmCoreAndDevices
           git submodule update --remote -- mmCoreAndDevices
           git add mmCoreAndDevices
           if [ -z "$(git status --porcelain=v1 2>/dev/null)" ]; then

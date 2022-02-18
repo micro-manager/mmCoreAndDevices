@@ -348,6 +348,36 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // Oasis Hub
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ * Translate an Oasis return code into uM return code
+ */
+int TranslateReturn(int oi_ret)
+{
+    switch (oi_ret)
+    {
+    case OI_OK:
+        return DEVICE_OK;
+
+    default:
+        if (oi_ret & OI_NOTSUPPORTED)
+            return DEVICE_NOT_SUPPORTED;
+
+        // None of the Oasis controllers are serial controllers, but
+        // this is the only uM timeout error offered, so we'll just use it
+        else if (oi_ret & OI_TIMEOUT)
+            return DEVICE_SERIAL_TIMEOUT;
+
+        else if (oi_ret & OI_INVALIDARG)
+            return DEVICE_INVALID_PROPERTY_VALUE;
+
+        else if (oi_ret & OI_NOHARDWARE)
+            return DEVICE_NOT_CONNECTED;
+
+        else
+            return DEVICE_ERR;
+    }
+}
+
 Hub::Hub() :
    initialized_(false),
    boardId_(0)
@@ -389,36 +419,6 @@ void Hub::GetName(char* name) const
 bool Hub::Busy()
 {
    return false;
-}
-
-/**
- * Translate an Oasis return code into uM return code
- */
-int TranslateReturn(int oi_ret)
-{
-   switch(oi_ret)
-   {
-   case OI_OK:
-      return DEVICE_OK;
-
-   default:
-      if(oi_ret & OI_NOTSUPPORTED)
-         return DEVICE_NOT_SUPPORTED;
-
-      // None of the Oasis controllers are serial controllers, but
-      // this is the only uM timeout error offered, so we'll just use it
-      else if(oi_ret & OI_TIMEOUT)
-         return DEVICE_SERIAL_TIMEOUT;
-
-      else if(oi_ret & OI_INVALIDARG)
-         return DEVICE_INVALID_PROPERTY_VALUE;
-
-      else if(oi_ret & OI_NOHARDWARE)
-         return DEVICE_NOT_CONNECTED;
-
-      else
-         return DEVICE_ERR;
-   }
 }
 
 bool Hub::SupportsDeviceDetection(void)
