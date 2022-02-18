@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - main
-      - vs2019
 
 jobs:
   sync-micro-manager-submodule:
