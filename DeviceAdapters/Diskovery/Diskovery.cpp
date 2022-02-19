@@ -533,43 +533,47 @@ int DiskoveryStateDev::Initialize()
       ostringstream os;
       os << "Preset-" << (i + firstPos_);
       // set default label
-      const char* label = os.str().c_str();
-      if (devType_ == WF) 
+      std::string label = os.str();
+      if (devType_ == WF)
       {
          label = hub_->GetModel()->GetButtonWFLabel(i + firstPos_);
-      } else if (devType_ == IRIS) 
+      }
+      else if (devType_ == IRIS)
       {
          label = hub_->GetModel()->GetButtonIrisLabel(i + firstPos_);
          uint16_t val;
          std::stringstream ss;
-         std::string strLabel(label);
-         ss << strLabel.substr(0, strLabel.size() - 1);
+         ss << label.substr(0, label.size() - 1);
          ss >> val;
          irisValues_.push_back(val);
-      } else if (devType_ == FILTERW) 
+      }
+      else if (devType_ == FILTERW)
       {
          label = hub_->GetModel()->GetButtonFilterWLabel(i + firstPos_);
-      } else if (devType_ == FILTERT) 
+      }
+      else if (devType_ == FILTERT)
       {
          label = hub_->GetModel()->GetButtonFilterTLabel(i + firstPos_);
-      } else if (devType_ == SD) {
+      }
+      else if (devType_ == SD) {
          if (i == 0)
             label = "Disk Out";
-         else if (i == 1) 
+         else if (i == 1)
             label = "Exchange";
          else
             label = hub_->GetModel()->GetDiskLabel(i - 2 + firstPos_);
-      } else if (devType_ == TIRF) {
+      }
+      else if (devType_ == TIRF) {
          if (i == 0)
             label = "Disabled";
-         else 
+         else
          {
             std::ostringstream os;
-            os << "OM " << i; 
-            label = os.str().c_str();;
+            os << "OM " << i;
+            label = os.str();;
          }
       }
-      SetPositionLabel(i, label);
+      SetPositionLabel(i, label.c_str());
    }
 
    // State
