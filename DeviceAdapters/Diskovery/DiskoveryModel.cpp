@@ -36,8 +36,9 @@ void DiskoveryModel::SetMotorRunningSD(const bool p)
 {
    MMThreadGuard g(lock_);
    motorRunningSD_ = p;
-   std::string s = static_cast<std::ostringstream*>( &(std::ostringstream() << p) )->str();
-   core_.OnPropertyChanged(hubDevice_, motorRunningProp_, s.c_str());
+   std::ostringstream oss;
+   oss << p;
+   core_.OnPropertyChanged(hubDevice_, motorRunningProp_, oss.str().c_str());
 }
 
 // Preset SD

@@ -533,7 +533,7 @@ int DiskoveryStateDev::Initialize()
       ostringstream os;
       os << "Preset-" << (i + firstPos_);
       // set default label
-      const char* label = os.str().c_str();
+      std::string label = os.str();
       if (devType_ == WF)
       {
          label = hub_->GetModel()->GetButtonWFLabel(i + firstPos_);
@@ -543,8 +543,7 @@ int DiskoveryStateDev::Initialize()
          label = hub_->GetModel()->GetButtonIrisLabel(i + firstPos_);
          uint16_t val;
          std::stringstream ss;
-         std::string strLabel(label);
-         ss << strLabel.substr(0, strLabel.size() - 1);
+         ss << label.substr(0, label.size() - 1);
          ss >> val;
          irisValues_.push_back(val);
       }
@@ -571,10 +570,10 @@ int DiskoveryStateDev::Initialize()
          {
             std::ostringstream os;
             os << "OM " << i;
-            label = os.str().c_str();;
+            label = os.str();;
          }
       }
-      SetPositionLabel(i, label);
+      SetPositionLabel(i, label.c_str());
    }
 
    // State
