@@ -1,5 +1,5 @@
 
-AC_PREREQ([2.64])
+AC_PREREQ([2.71])
 AC_INIT([Micro-Manager], [1.4], [info@micro-manager.org])
 AC_CONFIG_MACRO_DIR([../m4])
 AC_CONFIG_SRCDIR([DemoCamera/DemoCamera.cpp])
@@ -449,7 +449,6 @@ AC_SUBST(MMPREFIX)
 
 
 # Checks for library functions.
-AC_HEADER_STDC
 AC_CHECK_FUNCS([memset])
 
 
