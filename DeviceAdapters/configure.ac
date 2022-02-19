@@ -1,6 +1,5 @@
-
 AC_PREREQ([2.71])
-AC_INIT([Micro-Manager], [1.4], [info@micro-manager.org])
+AC_INIT([Micro-Manager], [2])
 AC_CONFIG_MACRO_DIR([../m4])
 AC_CONFIG_SRCDIR([DemoCamera/DemoCamera.cpp])
 AC_CANONICAL_HOST
