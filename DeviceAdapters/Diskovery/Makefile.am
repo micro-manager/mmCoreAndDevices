@@ -1,4 +1,4 @@
-AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS)
+AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) $(BOOST_CPPFLAGS)
 deviceadapter_LTLIBRARIES = libmmgr_dal_Diskovery.la
 
 libmmgr_dal_Diskovery_la_SOURCES = \
@@ -12,6 +12,6 @@ libmmgr_dal_Diskovery_la_SOURCES = \
 				   MessageSender.cpp
 
 libmmgr_dal_Diskovery_la_LIBADD = $(MMDEVAPI_LIBADD) $(BOOST_SYSTEM_LIB) $(BOOST_THREAD_LIB)
-libmmgr_dal_Diskovery_la_LDFLAGS = $(MMDEVAPI_LDFLAGS)
+libmmgr_dal_Diskovery_la_LDFLAGS = $(MMDEVAPI_LDFLAGS) $(BOOST_LDFLAGS)
 
 EXTRA_DIST = license.txt

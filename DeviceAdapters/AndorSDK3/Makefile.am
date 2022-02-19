@@ -1,3 +1,5 @@
+AUTOMAKE_OPTIONS = foreign subdir-objects
+
 AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS)
 deviceadapter_LTLIBRARIES = libmmgr_dal_AndorSDK3.la
 libmmgr_dal_AndorSDK3_la_SOURCES = \

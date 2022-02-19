@@ -1,6 +1,5 @@
-
-AC_PREREQ([2.64])
-AC_INIT([Micro-Manager], [1.4], [info@micro-manager.org])
+AC_PREREQ([2.71])
+AC_INIT([Micro-Manager], [2])
 AC_CONFIG_MACRO_DIR([../m4])
 AC_CONFIG_SRCDIR([DemoCamera/DemoCamera.cpp])
 AC_CANONICAL_HOST
@@ -8,8 +7,8 @@ AM_INIT_AUTOMAKE([foreign 1.11])
 LT_PREREQ([2.2.6])
 LT_INIT([disable-static])
 
-AC_PROG_CXX([clang++ llvm-g++ g++ c++])
-AC_PROG_CC([clang llvm-gcc gcc cc])
+AC_PROG_CC([cc gcc clang])
+AC_PROG_CXX([c++ g++ clang++])
 
 MM_GMOCK([$srcdir/../testing/googletest], [\$(top_srcdir)/../testing/googletest])
 AM_CONDITIONAL([BUILD_CPP_TESTS], [test "x$have_gmock" = xyes])
@@ -449,7 +448,6 @@ AC_SUBST(MMPREFIX)
 
 
 # Checks for library functions.
-AC_HEADER_STDC
 AC_CHECK_FUNCS([memset])
 
 
