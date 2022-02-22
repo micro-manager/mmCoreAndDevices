@@ -192,19 +192,19 @@ int NIDAQHub::Initialize()
       }
    }
 
-   std::vector<std::string> triggerPorts = GetTriggerPortsForDevice(niDeviceName_);
+   std::vector<std::string> triggerPorts = GetAOTriggerTerminalsForDevice(niDeviceName_);
    if (!triggerPorts.empty())
    {
       niTriggerPort_ = triggerPorts[0];
       pAct = new CPropertyAction(this, &NIDAQHub::OnTriggerInputPort);
-      err = CreateStringProperty("TriggerInputPort", niTriggerPort_.c_str(), false, pAct);
+      err = CreateStringProperty("AOTriggerInputPort", niTriggerPort_.c_str(), false, pAct);
       if (err != DEVICE_OK)
          return err;
       for (std::vector<std::string>::const_iterator it = triggerPorts.begin(),
             end = triggerPorts.end();
             it != end; ++it)
       {
-         AddAllowedValue("TriggerInputPort", it->c_str());
+         AddAllowedValue("AOTriggerInputPort", it->c_str());
       }
 
       pAct = new CPropertyAction(this, &NIDAQHub::OnSampleRate);
@@ -410,34 +410,10 @@ int NIDAQHub::GetVoltageRangeForDevice(
 
 
 std::vector<std::string>
-NIDAQHub::GetTriggerPortsForDevice(const std::string& device)
+NIDAQHub::GetAOTriggerTerminalsForDevice(const std::string& device)
 {
    std::vector<std::string> result;
-
-   // first list the last pin of each DO port that is capable of changedetection.
-   std::vector<std::string> doPorts = GetDigitalPortsForDevice(niDeviceName_);
-   uInt32 portWidth;
-   for (std::string doPort : doPorts)
-   {
-      int32 nierr = DAQmxGetPhysicalChanDOPortWidth(doPort.c_str(), &portWidth);
-      if (nierr != 0)
-      {
-         LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-         // return TranslateNIError(nierr);
-      }
-      else
-      {
-         std::string tmpTriggerPort = doPort + "/line" + std::to_string(portWidth - 1);
-         std::string tmpDoPort = doPort + "/line" + "0:" + std::to_string(portWidth - 2);
-         if (DEVICE_OK == StartDOBlanking(tmpDoPort, false, 0, false, tmpTriggerPort))
-         {
-            result.push_back(tmpTriggerPort);
-            StopDOBlanking();
-         }
-      }
-
-   }
-
+      
    char ports[4096];
    int32 nierr = DAQmxGetDevTerminals(device.c_str(), ports, sizeof(ports));
    if (nierr == 0)
@@ -574,7 +550,17 @@ void NIDAQHub::GetLCMSequence(T* buffer, std::vector<std::vector<T>> sequences) 
 }
 
 
-
+/**
+* This task will start sequencing of all analog outputs that were previously added 
+* using AddAOPortToSequencing
+* The triggerinputport has to be supported by the device.  
+* Specifically, a trigger input terminal is of the form /Dev1/PFI0, where 
+* there is a preceding slash.  Terminals that are part of an output port
+* (such as Dev1/port0/line7) do not work.
+* Uses DAQmxCfgSampClkTiming to transition to the next state for each 
+* anlog output at each consecutive rising flank of the trigger input terminal.
+* 
+*/
 int NIDAQHub::StartAOSequencingTask()
 {
    if (aoTask_)

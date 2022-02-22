@@ -75,19 +75,22 @@ int DigitalOutputPort::Initialize()
    CreateIntegerProperty("State", 0, false, pAct);
    SetPropertyLimits("State", 0, numPos_);
 
-   std::string tmpTriggerPort = niPort_ + "/line" + std::to_string(portWidth_ - 1);
+   std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(portWidth_ - 1);
    std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
-   if (GetHub()->StartDOBlanking(tmpNiPort, false, 0, false, tmpTriggerPort) == DEVICE_OK)
+   if (GetHub()->StartDOBlanking(tmpNiPort, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
       supportsBlankingAndSequencing_ = true;
    GetHub()->StopDOBlanking();
 
    if (supportsBlankingAndSequencing_)
    {
+      triggerTerminal_ = niPort_ + "/line" + std::to_string(portWidth_ - 1);
       niPort_ = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
       pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
       CreateStringProperty("Blanking", blanking_ ? g_On : g_Off, false, pAct);
       AddAllowedValue("Blanking", g_Off);
       AddAllowedValue("Blanking", g_On);
+            
+      CreateProperty("TriggerInputPin", triggerTerminal_.c_str(), MM::String, true);
 
       pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlankingTriggerDirection);
       CreateStringProperty("Blank on", blankOnLow_ ? g_Low : g_High, false, pAct);
@@ -138,8 +141,9 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       int err;
       if (blanking_)
       {
-         GetHub()->StopDOBlanking();
-         err = GetHub()->StartDOBlanking(niPort_, false, pos, blankOnLow_, GetHub()->GetTriggerPort());
+         err = GetHub()->StopDOBlanking();
+         if (err == DEVICE_OK)
+            err = GetHub()->StartDOBlanking(niPort_, false, pos, blankOnLow_, triggerTerminal_);
       }
       else
       {
@@ -239,7 +243,7 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
                sequenceRunning_ = false;
                return err;
             }
-            err = GetHub()->StartDOBlanking(niPort_, true, pos_, blankOnLow_, GetHub()->GetTriggerPort());
+            err = GetHub()->StartDOBlanking(niPort_, true, pos_, blankOnLow_, triggerTerminal_);
          }
          else
          {
@@ -276,13 +280,22 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (blanking_ != blanking)
       {
          // do the thing in the hub
-         blanking_ = blanking;
-         if (blanking_)
-            GetHub()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, GetHub()->GetTriggerPort());
+         if (blanking)
+         {
+            int ret = GetHub()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, triggerTerminal_);
+            if (ret != DEVICE_OK)
+               return ret;
+            blanking_ = blanking;
+         }
          else
          {
-            GetHub()->StopDOBlanking();
-            return SetState(pos_);
+            int ret = GetHub()->StopDOBlanking();
+            if (ret != DEVICE_OK)
+               return ret;
+            blanking_ = blanking;
+            ret =  SetState(pos_); 
+            if (ret != DEVICE_OK)
+               return ret;            
          }
 
       }
@@ -309,7 +322,7 @@ int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::A
          if (blanking_)
          {
             GetHub()->StopDOBlanking();
-            GetHub()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, GetHub()->GetTriggerPort());
+            GetHub()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, triggerTerminal_);
          }            
       }
    }

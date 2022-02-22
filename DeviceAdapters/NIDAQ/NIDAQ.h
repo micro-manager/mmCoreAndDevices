@@ -185,19 +185,18 @@ public:
    const std::string GetTriggerPort() { return niTriggerPort_; }
    
 
-   NIDAQDOHub<uInt8> * getDOHub8()  {return doHub8_; }
+   NIDAQDOHub<uInt8> * getDOHub8()  { return doHub8_; }
    NIDAQDOHub<uInt16>* getDOHub16() { return doHub16_; }
    NIDAQDOHub<uInt32> * getDOHub32() { return doHub32_; }
 
    int StopTask(TaskHandle& task);
 
 private:
-   int AddAOPortToSequencing(const std::string& port,
-      const std::vector<double> sequence);
+   int AddAOPortToSequencing(const std::string& port, const std::vector<double> sequence);
    void RemoveAOPortFromSequencing(const std::string& port);
 
    int GetVoltageRangeForDevice(const std::string& device, double& minVolts, double& maxVolts);
-   std::vector<std::string> GetTriggerPortsForDevice(const std::string& device);
+   std::vector<std::string> GetAOTriggerTerminalsForDevice(const std::string& device);
    std::vector<std::string> GetAnalogPortsForDevice(const std::string& device);
    std::vector<std::string> GetDigitalPortsForDevice(const std::string& device);
    std::string GetPhysicalChannelListForSequencing(std::vector<std::string> channels) const;
@@ -336,6 +335,7 @@ private:
     int StopTask();
 
     std::string niPort_;
+    std::string triggerTerminal_;
     bool initialized_;
     bool sequenceRunning_;
     bool blanking_;
