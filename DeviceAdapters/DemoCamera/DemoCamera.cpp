@@ -31,6 +31,7 @@
 #include <algorithm>
 #include "WriteCompactTiffRGB.h"
 #include <iostream>
+#include <future>
 
 
 
@@ -395,6 +396,16 @@ int CDemoCamera::Initialize()
          SetPropertyLimits(propName.c_str(), lowerLimit, upperLimit);
       }
 	}
+
+   // Test Property with an async callback
+   // When the leader is set the follower will be set to the same value
+   // with some delay (default 2 seconds).
+   // This is to allow downstream testing of callbacks originating from
+   // device threads.
+   pAct = new CPropertyAction (this, &CDemoCamera::OnAsyncTestProperty);
+   CreateStringProperty("AsyncPropertyLeader", "init", false, pAct);
+   CreateStringProperty("AsyncPropertyFollower", "init", false);
+   CreateIntegerProperty("AsyncPropertyDelayMS", 2000, false);
 
    //pAct = new CPropertyAction(this, &CDemoCamera::OnSwitch);
    //nRet = CreateIntegerProperty("Switch", 0, false, pAct);
@@ -1289,6 +1300,25 @@ int CDemoCamera::OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, lo
 
 }
 
+void CDemoCamera::slowPropUpdate(MM::PropertyBase* pProp)
+{
+      // wait in order to simulate a device doing something slowly
+      // in a thread
+      long delay; GetProperty("AsyncPropertyDelayMS", delay);
+      CDeviceUtils::SleepMs(delay);
+      std::string leader; pProp->Get(leader);
+      SetProperty("AsyncPropertyFollower", leader.c_str());
+      OnPropertyChanged("AsyncPropertyFollower", leader.c_str());
+   }
+
+int CDemoCamera::OnAsyncTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::AfterSet)
+   {
+      _fut = std::async(std::launch::async, &CDemoCamera::slowPropUpdate, this, pProp);
+   }
+	return DEVICE_OK;
+}
 
 /**
 * Handles "Binning" property.
