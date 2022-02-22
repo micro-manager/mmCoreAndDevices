@@ -23,6 +23,23 @@ The windows project uses the following properties which may be overridden in the
 To see the default values of each property please view `MMCommon.props`
 
 ### Building on Mac and  Linux
-*TODO*
 
-Most users should clone the `micro-manager` repository and use this repo as a submodule.
+The easiest way to build on Mac or Linux is to clone the [micro-manager](https://github.com/micro-manager/micro-manager) repository and use this repo as a submodule. 
+
+
+Then follow the [instructions](https://github.com/micro-manager/micro-manager/blob/main/doc/how-to-build.md#building-on-unix) for building micro-manager which will also build this repo.
+
+You can avoid building the micro-manager parts and only build MMCore and the device adapters by using the following configure command: `./configure --without-java`.
+
+The other thing to note is that `make install` may require the use of `sudo` unless you used the `--prefix=` option for configure.
+
+#### Using your own fork
+If you want to make changes to this repo then you need to update the submodule to point to your fork. After you set that up you can work in the submodule as if it were a standalone git repository.
+
+From the top level of the `micro-manager` folder
+```bash
+git clone git@github.com:micro-manager/micro-manager.git
+cd micro-manager
+git submodule set-url mmCoreAndDevices <git url of your fork>
+git submodule update --init --recursive
+```
