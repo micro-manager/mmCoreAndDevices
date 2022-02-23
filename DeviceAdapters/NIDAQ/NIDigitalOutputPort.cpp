@@ -77,9 +77,9 @@ int DigitalOutputPort::Initialize()
 
    std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(portWidth_ - 1);
    std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
-   if (GetHub()->StartDOBlanking(tmpNiPort, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
+   if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
       supportsBlankingAndSequencing_ = true;
-   GetHub()->StopDOBlanking();
+   GetHub()->StopDOBlankingAndSequence();
 
    if (supportsBlankingAndSequencing_)
    {
@@ -135,15 +135,18 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
+      if (sequenceRunning_)
+         return ERR_SEQUENCE_RUNNING;
+
       long pos;
       pProp->Get(pos);
       // pause blanking, otherwise most cards will error
       int err;
       if (blanking_)
       {
-         err = GetHub()->StopDOBlanking();
+         err = GetHub()->StopDOBlankingAndSequence();
          if (err == DEVICE_OK)
-            err = GetHub()->StartDOBlanking(niPort_, false, pos, blankOnLow_, triggerTerminal_);
+            err = GetHub()->StartDOBlankingAndOrSequence(niPort_, true, false, pos, blankOnLow_, triggerTerminal_);
       }
       else
       {
@@ -235,21 +238,13 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
       if (err == DEVICE_OK)
       {
-         if (blanking_)
+         err = GetHub()->StopDOBlankingAndSequence();
+         if (err != DEVICE_OK)
          {
-            err = GetHub()->StopDOBlanking();
-            if (err != DEVICE_OK)
-            {
-               sequenceRunning_ = false;
-               return err;
-            }
-            err = GetHub()->StartDOBlanking(niPort_, true, pos_, blankOnLow_, triggerTerminal_);
+            sequenceRunning_ = false;
+            return err;
          }
-         else
-         {
-            err = GetHub()->StartDOSequence();
-         }
-
+         err = GetHub()->StartDOBlankingAndOrSequence(niPort_, blanking_, true, pos_, blankOnLow_, triggerTerminal_);        
       }
       if (err != DEVICE_OK)
          sequenceRunning_ = false;
@@ -259,7 +254,13 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::StopSequence)
    {
       sequenceRunning_ = false;
-      return GetHub()->StopDOSequenceForPort(niPort_);
+      int err = GetHub()->StopDOBlankingAndSequence();
+      if (err != DEVICE_OK)
+         return err;
+      if (blanking_)
+         return GetHub()->StartDOBlankingAndOrSequence(niPort_, blanking_, false, pos_, blankOnLow_, triggerTerminal_);
+      else
+         return SetState(pos_);
    }
 
    return DEVICE_OK;
@@ -273,6 +274,8 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
+      if (sequenceRunning_)
+         return ERR_SEQUENCE_RUNNING;
 
       std::string response;
       pProp->Get(response);
@@ -282,14 +285,14 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
          // do the thing in the hub
          if (blanking)
          {
-            int ret = GetHub()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, triggerTerminal_);
+            int ret = GetHub()->StartDOBlankingAndOrSequence(niPort_, true, false, pos_, blankOnLow_, triggerTerminal_);
             if (ret != DEVICE_OK)
                return ret;
             blanking_ = blanking;
          }
          else
          {
-            int ret = GetHub()->StopDOBlanking();
+            int ret = GetHub()->StopDOBlankingAndSequence();
             if (ret != DEVICE_OK)
                return ret;
             blanking_ = blanking;
@@ -321,8 +324,10 @@ int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::A
          blankOnLow_ = blankOnLow;
          if (blanking_)
          {
-            GetHub()->StopDOBlanking();
-            GetHub()->StartDOBlanking(niPort_, false, pos_, blankOnLow_, triggerTerminal_);
+            int ret  = GetHub()->StopDOBlankingAndSequence();
+            if (ret != DEVICE_OK)
+               return ret;
+            return GetHub()->StartDOBlankingAndOrSequence(niPort_, true, false, pos_, blankOnLow_, triggerTerminal_);
          }            
       }
    }

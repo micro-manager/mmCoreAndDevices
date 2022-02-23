@@ -121,8 +121,9 @@ public:
    int StartDOSequenceForPort(const std::string& port, const std::vector<Tuint> sequence);
    int StopDOSequenceForPort(const std::string& port); 
    int StartDOSequencingTask();
-   int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos, 
-            const bool blankingDirection, const std::string triggerPort);
+   int StartDOBlanking(const std::string& port, const bool blankingOn,
+ const bool sequenceOn, 
+            const long& pos, const bool blankingDirection, const std::string triggerPort);
    int StopDOBlanking();
    int AddDOPortToSequencing(const std::string& port, const std::vector<Tuint> sequence);
    void RemoveDOPortFromSequencing(const std::string& port);
@@ -174,9 +175,9 @@ public:
    virtual int IsSequencingEnabled(bool& flag) const;
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
-   int StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos,
-                        const bool blankingDirection, const std::string triggerPort);
-   int StopDOBlanking();
+   int StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, const bool sequenceOn,
+                        const long& pos, const bool blankingDirection, const std::string triggerPort);
+   int StopDOBlankingAndSequence();
 
    int StartDOSequence();
    int StopDOSequenceForPort(const std::string& port);

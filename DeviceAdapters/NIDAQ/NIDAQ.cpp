@@ -47,6 +47,7 @@ const int ERR_VOLTAGE_OUT_OF_RANGE = 2004;
 const int ERR_NONUNIFORM_CHANNEL_VOLTAGE_RANGES = 2005;
 const int ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS = 2006;
 const int ERR_UNKNOWN_PINS_PER_PORT = 2007;
+const int ERR_INVALID_REQUEST = 2008;
 
 
 
@@ -671,20 +672,20 @@ int NIDAQHub::StopDOSequenceForPort(const std::string& port)
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
-int NIDAQHub::StartDOBlanking(const std::string& port, const bool sequenceOn, const long& pos, 
-            const bool blankingDirection, const std::string triggerPort)
+int NIDAQHub::StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, const bool sequenceOn, 
+            const long& pos, const bool blankingDirection, const std::string triggerPort)
 {
    if (doHub8_ != 0)
-      return doHub8_->StartDOBlanking(port, sequenceOn, pos, blankingDirection, triggerPort);
+      return doHub8_->StartDOBlanking(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
    else if (doHub16_ != 0)
-      return doHub16_->StartDOBlanking(port, sequenceOn, pos, blankingDirection, triggerPort);
+      return doHub16_->StartDOBlanking(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
    else if (doHub32_ != 0)
-      return doHub32_->StartDOBlanking(port, sequenceOn, pos, blankingDirection, triggerPort);
+      return doHub32_->StartDOBlanking(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
 
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
-int NIDAQHub::StopDOBlanking()
+int NIDAQHub::StopDOBlankingAndSequence()
 {
    if (doHub8_ != 0)
       return doHub8_->StopDOBlanking();
@@ -1015,6 +1016,8 @@ inline int NIDAQDOHub<Tuint>::StartDOSequenceForPort(const std::string& port, co
 template<typename Tuint>
 int NIDAQDOHub<Tuint>::StartDOSequencingTask()
 {
+   std::string triggerPort = hub_->niTriggerPort_;
+   triggerPort = "/Dev1/port0/line7";
    if (doTask_)
    {
       int err = hub_->StopTask(doTask_);
@@ -1055,13 +1058,13 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
    }
    hub_->LogMessage(("Created DO channel for: " + chanList).c_str(), true);
 
-   nierr = DAQmxCfgSampClkTiming(doTask_, hub_->niTriggerPort_.c_str(),
+   nierr = DAQmxCfgSampClkTiming(doTask_, triggerPort.c_str(),
       hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, samplesPerChan);
    if (nierr != 0)
    {
       return HandleTaskError(nierr);
    }
-   hub_->LogMessage("Configured sample clock timing to use " + hub_->niTriggerPort_, true);
+   hub_->LogMessage("Configured sample clock timing to use " + triggerPort, true);
 
 
    samples.reset(new Tuint[samplesPerChan * numChans]);
@@ -1094,9 +1097,13 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
 }
 
 template<class Tuint>
-int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool sequenceOn, 
+int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool blankingOn, const bool sequenceOn, 
                                        const long& pos, const bool blankOnLow, const std::string triggerPort)
 {
+   if (!blankingOn && !sequenceOn)
+   {
+      return ERR_INVALID_REQUEST;
+   }
    // First read the state of the triggerport, since we will only get changes of triggerPort, not
    // its actual state.
    bool triggerPinState;
@@ -1104,13 +1111,13 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
    if (err != DEVICE_OK)
       return err;
 
-   if (blankOnLow ^ triggerPinState)
-   {
-      //Set initial state based on blankOnLow and triggerPort state
+   //Set initial state based on blankOnLow and triggerPort state
+   if (blankOnLow ^ triggerPinState) 
       err = hub_->SetDOPortState(port, portWidth_, 0);
-      if (err != DEVICE_OK)
-         return err;
-   }
+   else
+      err = hub_->SetDOPortState(port, portWidth_, pos);
+   if (err != DEVICE_OK)
+      return err;
       
    err = hub_->StopTask(diTask_);
    if (err != DEVICE_OK)
@@ -1133,7 +1140,7 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
          if (port == pChan)
          {
             doSequence_ = doChannelSequences_[i];
-            number = 2 * (int32) doSequence_.size();
+            number =  2 * (int32) doSequence_.size();
          }
          i++;
       }
@@ -1209,19 +1216,26 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool seque
          for (uInt32 i = 0; i < doSequence_.size(); i++)
          {
             samples.get()[2 * i] = doSequence_[i];
-            samples.get()[2 * i + 1] = 0;
+            if (blankingOn)
+               samples.get()[2 * i + 1] = 0;
+            else
+               samples.get()[2 * i + 1] = doSequence_[i];
          }
       }
       else
       {
          for (uInt32 i = 0; i < doSequence_.size(); i++)
          {
-            samples.get()[2 * i] = 0;
-            samples.get()[2 * i + 1] = doSequence_[i];
+            if (blankingOn)
+               samples.get()[2 * i] = 0;
+            else 
+               samples.get()[2 * i] = doSequence_[i];
+            
+            samples.get()[2 * i + 1] = doSequence_[i];            
          }
       }
    }
-   else
+   else  // assuma that blanking is on, otherwise things make no sense
    {
       if (blankOnLow ^ triggerPinState)
       {
