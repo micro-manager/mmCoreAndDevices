@@ -1301,19 +1301,17 @@ int CDemoCamera::OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, lo
 
 }
 
-void CDemoCamera::SlowPropUpdate()
+void CDemoCamera::SlowPropUpdate(std::string leaderValue)
 {
       // wait in order to simulate a device doing something slowly
       // in a thread
       long delay; GetProperty("AsyncPropertyDelayMS", delay);
       CDeviceUtils::SleepMs(delay);
-      std::string followerValue;
       {
          MMThreadGuard g(asyncFollowerLock_);
-         asyncFollower_ = asyncLeader_;
-         followerValue = asyncFollower_;
+         asyncFollower_ = leaderValue;
       }
-      OnPropertyChanged("AsyncPropertyFollower", followerValue.c_str());
+      OnPropertyChanged("AsyncPropertyFollower", leaderValue.c_str());
    }
 
 int CDemoCamera::OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -1334,11 +1332,13 @@ int CDemoCamera::OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    if (eAct == MM::AfterSet)
    {
+      std::string asyncLeaderTmp;
       {
          MMThreadGuard g(asyncLeaderLock_);
          pProp->Get(asyncLeader_);
+         asyncLeaderTmp = asyncLeader_;
       }
-      fut_ = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this);
+      fut_ = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this, asyncLeaderTmp);
    }
 	return DEVICE_OK;
 }

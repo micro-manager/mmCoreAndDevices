@@ -178,7 +178,7 @@ public:
    int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
    int OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct);
-   void SlowPropUpdate();
+   void SlowPropUpdate(std::string leaderValue);
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
