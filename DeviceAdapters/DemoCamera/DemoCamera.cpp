@@ -1307,11 +1307,13 @@ void CDemoCamera::SlowPropUpdate()
       // in a thread
       long delay; GetProperty("AsyncPropertyDelayMS", delay);
       CDeviceUtils::SleepMs(delay);
+      std::string followerValue;
       {
          MMThreadGuard g(asyncFollowerLock_);
          asyncFollower_ = asyncLeader_;
+         followerValue = asyncFollower_;
       }
-      OnPropertyChanged("AsyncPropertyFollower", asyncFollower_.c_str());
+      OnPropertyChanged("AsyncPropertyFollower", followerValue.c_str());
    }
 
 int CDemoCamera::OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct)
