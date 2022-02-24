@@ -272,7 +272,6 @@ private:
    std::string asyncLeader_;
    std::string asyncFollower_;
    MMThreadLock imgPixelsLock_;
-   MMThreadLock asyncLeaderLock_;
    MMThreadLock asyncFollowerLock_;
    friend class MySequenceThread;
    int nComponents_;

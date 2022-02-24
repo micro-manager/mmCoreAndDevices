@@ -1327,18 +1327,12 @@ int CDemoCamera::OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CDemoCamera::OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet){
-      MMThreadGuard g(asyncLeaderLock_);
       pProp->Set(asyncLeader_.c_str());
    }
    if (eAct == MM::AfterSet)
    {
-      std::string asyncLeaderTmp;
-      {
-         MMThreadGuard g(asyncLeaderLock_);
-         pProp->Get(asyncLeader_);
-         asyncLeaderTmp = asyncLeader_;
-      }
-      fut_ = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this, asyncLeaderTmp);
+      pProp->Get(asyncLeader_);
+      fut_ = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this, asyncLeader_);
    }
 	return DEVICE_OK;
 }
