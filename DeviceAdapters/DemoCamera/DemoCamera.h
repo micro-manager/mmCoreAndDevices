@@ -275,7 +275,7 @@ private:
    friend class MySequenceThread;
    int nComponents_;
    MySequenceThread * thd_;
-   std::future<void> _fut;
+   std::future<void> fut_;
    int mode_;
    ImgManipulator* imgManpl_;
    double pcf_;

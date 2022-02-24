@@ -1328,7 +1328,7 @@ int CDemoCamera::OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::AfterSet)
    {
       pProp->Get(asyncLeader);
-      _fut = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this);
+      fut_ = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this);
    }
 	return DEVICE_OK;
 }
