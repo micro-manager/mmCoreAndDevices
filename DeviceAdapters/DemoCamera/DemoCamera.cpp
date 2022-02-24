@@ -402,9 +402,10 @@ int CDemoCamera::Initialize()
    // with some delay (default 2 seconds).
    // This is to allow downstream testing of callbacks originating from
    // device threads.
-   pAct = new CPropertyAction (this, &CDemoCamera::OnAsyncTestProperty);
+   pAct = new CPropertyAction (this, &CDemoCamera::OnAsyncLeader);
    CreateStringProperty("AsyncPropertyLeader", "init", false, pAct);
-   CreateStringProperty("AsyncPropertyFollower", "init", false);
+   pAct = new CPropertyAction (this, &CDemoCamera::OnAsyncFollower);
+   CreateStringProperty("AsyncPropertyFollower", "init", true, pAct);
    CreateIntegerProperty("AsyncPropertyDelayMS", 2000, false);
 
    //pAct = new CPropertyAction(this, &CDemoCamera::OnSwitch);
@@ -1300,22 +1301,34 @@ int CDemoCamera::OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, lo
 
 }
 
-void CDemoCamera::slowPropUpdate(MM::PropertyBase* pProp)
+void CDemoCamera::SlowPropUpdate()
 {
       // wait in order to simulate a device doing something slowly
       // in a thread
       long delay; GetProperty("AsyncPropertyDelayMS", delay);
       CDeviceUtils::SleepMs(delay);
-      std::string leader; pProp->Get(leader);
-      SetProperty("AsyncPropertyFollower", leader.c_str());
-      OnPropertyChanged("AsyncPropertyFollower", leader.c_str());
+      asyncFollower = asyncLeader;
+      OnPropertyChanged("AsyncPropertyFollower", asyncFollower.c_str());
    }
 
-int CDemoCamera::OnAsyncTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CDemoCamera::OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   if (eAct == MM::BeforeGet){
+      pProp->Set(asyncFollower.c_str());
+   }
+   // no AfterSet as this is a readonly property
+   return DEVICE_OK;
+}
+
+int CDemoCamera::OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet){
+      pProp->Set(asyncLeader.c_str());
+   }
    if (eAct == MM::AfterSet)
    {
-      _fut = std::async(std::launch::async, &CDemoCamera::slowPropUpdate, this, pProp);
+      pProp->Get(asyncLeader);
+      _fut = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this);
    }
 	return DEVICE_OK;
 }

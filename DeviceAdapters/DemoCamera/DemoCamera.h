@@ -176,8 +176,9 @@ public:
    // ----------------
    int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
-   int OnAsyncTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
-   void slowPropUpdate(MM::PropertyBase* pProp);
+   int OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct);
+   void SlowPropUpdate();
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -268,6 +269,8 @@ private:
    std::vector<unsigned> multiROIHeights_;
 
 	double testProperty_[10];
+   std::string asyncLeader;
+   std::string asyncFollower;
    MMThreadLock imgPixelsLock_;
    friend class MySequenceThread;
    int nComponents_;
