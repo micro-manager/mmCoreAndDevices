@@ -269,8 +269,8 @@ private:
    std::vector<unsigned> multiROIHeights_;
 
 	double testProperty_[10];
-   std::string asyncLeader;
-   std::string asyncFollower;
+   std::string asyncLeader_;
+   std::string asyncFollower_;
    MMThreadLock imgPixelsLock_;
    MMThreadLock asyncLeaderLock_;
    MMThreadLock asyncFollowerLock_;

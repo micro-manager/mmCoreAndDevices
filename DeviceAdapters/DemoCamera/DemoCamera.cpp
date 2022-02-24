@@ -1309,16 +1309,16 @@ void CDemoCamera::SlowPropUpdate()
       CDeviceUtils::SleepMs(delay);
       {
          MMThreadGuard g(asyncFollowerLock_);
-         asyncFollower = asyncLeader;
+         asyncFollower_ = asyncLeader_;
       }
-      OnPropertyChanged("AsyncPropertyFollower", asyncFollower.c_str());
+      OnPropertyChanged("AsyncPropertyFollower", asyncFollower_.c_str());
    }
 
 int CDemoCamera::OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet){
       MMThreadGuard g(asyncFollowerLock_);
-      pProp->Set(asyncFollower.c_str());
+      pProp->Set(asyncFollower_.c_str());
    }
    // no AfterSet as this is a readonly property
    return DEVICE_OK;
@@ -1328,13 +1328,13 @@ int CDemoCamera::OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet){
       MMThreadGuard g(asyncLeaderLock_);
-      pProp->Set(asyncLeader.c_str());
+      pProp->Set(asyncLeader_.c_str());
    }
    if (eAct == MM::AfterSet)
    {
       {
          MMThreadGuard g(asyncLeaderLock_);
-         pProp->Get(asyncLeader);
+         pProp->Get(asyncLeader_);
       }
       fut_ = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this);
    }
