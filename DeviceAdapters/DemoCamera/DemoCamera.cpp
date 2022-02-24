@@ -1307,12 +1307,14 @@ void CDemoCamera::SlowPropUpdate()
       // in a thread
       long delay; GetProperty("AsyncPropertyDelayMS", delay);
       CDeviceUtils::SleepMs(delay);
+      MMThreadGuard g(asyncFollowerLock_);
       asyncFollower = asyncLeader;
       OnPropertyChanged("AsyncPropertyFollower", asyncFollower.c_str());
    }
 
 int CDemoCamera::OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   MMThreadGuard g(asyncFollowerLock_);
    if (eAct == MM::BeforeGet){
       pProp->Set(asyncFollower.c_str());
    }
@@ -1322,6 +1324,7 @@ int CDemoCamera::OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDemoCamera::OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   MMThreadGuard g(asyncLeaderLock_);
    if (eAct == MM::BeforeGet){
       pProp->Set(asyncLeader.c_str());
    }
