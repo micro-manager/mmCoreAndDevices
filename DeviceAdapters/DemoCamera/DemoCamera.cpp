@@ -31,6 +31,7 @@
 #include <algorithm>
 #include "WriteCompactTiffRGB.h"
 #include <iostream>
+#include <future>
 
 
 
@@ -395,6 +396,17 @@ int CDemoCamera::Initialize()
          SetPropertyLimits(propName.c_str(), lowerLimit, upperLimit);
       }
 	}
+
+   // Test Property with an async callback
+   // When the leader is set the follower will be set to the same value
+   // with some delay (default 2 seconds).
+   // This is to allow downstream testing of callbacks originating from
+   // device threads.
+   pAct = new CPropertyAction (this, &CDemoCamera::OnAsyncLeader);
+   CreateStringProperty("AsyncPropertyLeader", "init", false, pAct);
+   pAct = new CPropertyAction (this, &CDemoCamera::OnAsyncFollower);
+   CreateStringProperty("AsyncPropertyFollower", "init", true, pAct);
+   CreateIntegerProperty("AsyncPropertyDelayMS", 2000, false);
 
    //pAct = new CPropertyAction(this, &CDemoCamera::OnSwitch);
    //nRet = CreateIntegerProperty("Switch", 0, false, pAct);
@@ -1289,6 +1301,41 @@ int CDemoCamera::OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, lo
 
 }
 
+void CDemoCamera::SlowPropUpdate(std::string leaderValue)
+{
+      // wait in order to simulate a device doing something slowly
+      // in a thread
+      long delay; GetProperty("AsyncPropertyDelayMS", delay);
+      CDeviceUtils::SleepMs(delay);
+      {
+         MMThreadGuard g(asyncFollowerLock_);
+         asyncFollower_ = leaderValue;
+      }
+      OnPropertyChanged("AsyncPropertyFollower", leaderValue.c_str());
+   }
+
+int CDemoCamera::OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet){
+      MMThreadGuard g(asyncFollowerLock_);
+      pProp->Set(asyncFollower_.c_str());
+   }
+   // no AfterSet as this is a readonly property
+   return DEVICE_OK;
+}
+
+int CDemoCamera::OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet){
+      pProp->Set(asyncLeader_.c_str());
+   }
+   if (eAct == MM::AfterSet)
+   {
+      pProp->Get(asyncLeader_);
+      fut_ = std::async(std::launch::async, &CDemoCamera::SlowPropUpdate, this, asyncLeader_);
+   }
+	return DEVICE_OK;
+}
 
 /**
 * Handles "Binning" property.

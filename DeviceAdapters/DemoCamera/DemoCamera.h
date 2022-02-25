@@ -37,6 +37,7 @@
 #include <map>
 #include <algorithm>
 #include <stdint.h>
+#include <future>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -174,7 +175,10 @@ public:
    // action interface
    // ----------------
    int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
+   int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
+   int OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct);
+   void SlowPropUpdate(std::string leaderValue);
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -265,10 +269,14 @@ private:
    std::vector<unsigned> multiROIHeights_;
 
 	double testProperty_[10];
+   std::string asyncLeader_;
+   std::string asyncFollower_;
    MMThreadLock imgPixelsLock_;
+   MMThreadLock asyncFollowerLock_;
    friend class MySequenceThread;
    int nComponents_;
    MySequenceThread * thd_;
+   std::future<void> fut_;
    int mode_;
    ImgManipulator* imgManpl_;
    double pcf_;
