@@ -96,6 +96,7 @@ NIDAQHub::NIDAQHub () :
    initialized_(false),
    maxSequenceLength_(1024),
    sequencingEnabled_(false),
+   sequenceRunning_(false),
    minVolts_(0.0),
    maxVolts_(5.0),
    sampleRateHz_(10000.0),
@@ -106,7 +107,6 @@ NIDAQHub::NIDAQHub () :
    doHub32_(0)
 {
    // discover devices available on this computer and list them here
-
    std::string defaultDeviceName = "";
    int32 stringLength = DAQmxGetSysDevNames(NULL, 0);
    std::vector<std::string> result;
@@ -158,6 +158,10 @@ int NIDAQHub::Initialize()
 
    if (!GetParentHub())
       return DEVICE_ERR;
+
+
+   // Dynamically determine name of ChangeDetectionEvent for this device
+   niChangeDetection_ = "/" + niDeviceName_ + "/ChangeDetectionEvent";
 
    // Determine the possible voltage range
    int err = GetVoltageRangeForDevice(niDeviceName_, minVolts_, maxVolts_);
@@ -214,7 +218,12 @@ int NIDAQHub::Initialize()
          return err;
    }
 
-
+   err = SwitchTriggerPortToReadMode();
+   if (err != DEVICE_OK)
+   {
+      LogMessage("Failed to switch device " + niDeviceName_ + ", port " + niTriggerPort_ + " to read mode.");
+      // do not return an error to allow the user to switch the triggerport to something that works
+   }
 
    initialized_ = true;
    return DEVICE_OK;
@@ -316,9 +325,34 @@ int NIDAQHub::StopAOSequenceForPort(const std::string& port)
    int err = StopTask(aoTask_);
    if (err != DEVICE_OK)
       return err;
+   sequenceRunning_ = false;
    RemoveAOPortFromSequencing(port);
    // We do not restart sequencing for the remaining ports,
    // since it is meaningless (we can't preserve their state).
+   
+   // Make sure that the input trigger pin has a high impedance (i.e. does not 
+   // somehow become an output pin
+   return SwitchTriggerPortToReadMode();
+}
+
+
+int NIDAQHub::SwitchTriggerPortToReadMode()
+{
+   int err = StopTask(aoTask_);
+   if (err != DEVICE_OK)
+      return err;
+
+   int32 nierr = DAQmxCreateTask((niDeviceName_ + "TriggerPinReadTask").c_str(), &aoTask_);
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+   LogMessage("Created Trigger pin read task", true);
+   nierr = DAQmxCreateDIChan(aoTask_, niTriggerPort_.c_str(), "tIn", DAQmx_Val_ChanForAllLines);
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+   nierr = DAQmxStartTask(aoTask_);
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+
    return DEVICE_OK;
 }
 
@@ -642,6 +676,8 @@ int NIDAQHub::StartAOSequencingTask()
    }
    LogMessage("Started task", true);
 
+   sequenceRunning_ = true;
+
    return DEVICE_OK;
 
 error:
@@ -657,6 +693,8 @@ error:
    {
       err = DEVICE_ERR;
    }
+
+   sequenceRunning_ = false;
    return err;
 }
 
@@ -676,11 +714,11 @@ int NIDAQHub::StartDOBlankingAndOrSequence(const std::string& port, const bool b
             const long& pos, const bool blankingDirection, const std::string triggerPort)
 {
    if (doHub8_ != 0)
-      return doHub8_->StartDOBlanking(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
+      return doHub8_->StartDOBlankingAndOrSequence(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
    else if (doHub16_ != 0)
-      return doHub16_->StartDOBlanking(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
+      return doHub16_->StartDOBlankingAndOrSequence(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
    else if (doHub32_ != 0)
-      return doHub32_->StartDOBlanking(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
+      return doHub32_->StartDOBlankingAndOrSequence(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
 
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
@@ -688,11 +726,11 @@ int NIDAQHub::StartDOBlankingAndOrSequence(const std::string& port, const bool b
 int NIDAQHub::StopDOBlankingAndSequence()
 {
    if (doHub8_ != 0)
-      return doHub8_->StopDOBlanking();
+      return doHub8_->StopDOBlankingAndSequence();
    else if (doHub16_ != 0)
-      return doHub16_->StopDOBlanking();
+      return doHub16_->StopDOBlankingAndSequence();
    else if (doHub32_ != 0)
-      return doHub32_->StopDOBlanking();
+      return doHub32_->StopDOBlankingAndSequence();
 
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
@@ -879,12 +917,13 @@ int NIDAQHub::OnTriggerInputPort(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      if (aoTask_)
+      if (sequenceRunning_)
          return ERR_SEQUENCE_RUNNING;
 
       std::string port;
       pProp->Get(port);
       niTriggerPort_ = port;
+      return SwitchTriggerPortToReadMode();
    }
    return DEVICE_OK;
 }
@@ -898,7 +937,7 @@ int NIDAQHub::OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      if (aoTask_)
+      if (sequenceRunning_)
          return ERR_SEQUENCE_RUNNING;
 
       double rateHz;
@@ -1097,7 +1136,7 @@ int NIDAQDOHub<Tuint>::StartDOSequencingTask()
 }
 
 template<class Tuint>
-int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool blankingOn, const bool sequenceOn, 
+int NIDAQDOHub<Tuint>::StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, const bool sequenceOn, 
                                        const long& pos, const bool blankOnLow, const std::string triggerPort)
 {
    if (!blankingOn && !sequenceOn)
@@ -1164,15 +1203,14 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool blank
    }
    hub_->LogMessage("Configured change detection timing to use " + triggerPort, true);
 
-   std::string changeInput = "/Dev1/ChangeDetectionEvent";
-
    // this is only here to monitor the ChangeDetectionEvent, delete after debugging
-   nierr = DAQmxExportSignal(diTask_, DAQmx_Val_ChangeDetectionEvent, "/Dev1/PFI0");
+   
+   nierr = DAQmxExportSignal(diTask_, DAQmx_Val_ChangeDetectionEvent, "/Dev1/PFI1");
    if (nierr != 0)
    {
       return HandleTaskError(nierr);
    }
-   hub_->LogMessage("Routed change detection timing to  " + changeInput, true);
+   hub_->LogMessage("Routed change detection timing to  " + hub_->niChangeDetection_, true);
 
    nierr = DAQmxStartTask(diTask_);
    if (nierr != 0)
@@ -1180,7 +1218,9 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool blank
       return HandleTaskError(nierr);
    }
    hub_->LogMessage("Started DI task", true);
+   
    // end routing changedetectionEvent
+   
 
 
    // Change detection now should be running on the input port.  
@@ -1195,7 +1235,7 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool blank
    {
       return hub_->TranslateNIError(nierr);;
    }
-   hub_->LogMessage("Created DI task", true);
+   hub_->LogMessage("Created DO task", true);
 
    nierr = DAQmxCreateDOChan(doTask_, port.c_str(), "DOSeqChan", DAQmx_Val_ChanForAllLines);
    if (nierr != 0)
@@ -1204,8 +1244,6 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool blank
    }
    hub_->LogMessage("Created DO channel for: " + port, true);
   
-
-
    boost::scoped_array<Tuint> samples;
    samples.reset(new Tuint[number]);
    // more general (i.e. once we add sequences) do we prepend with 0?
@@ -1249,13 +1287,13 @@ int NIDAQDOHub<Tuint>::StartDOBlanking(const std::string& port, const bool blank
       }
    }
 
-   nierr = DAQmxCfgSampClkTiming(doTask_, changeInput.c_str(),
+   nierr = DAQmxCfgSampClkTiming(doTask_, hub_->niChangeDetection_.c_str(),
                   hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, number);
    if (nierr != 0)
    {
       return HandleTaskError(nierr);
    }
-   hub_->LogMessage("Configured sample clock timing to use " + changeInput, true);
+   hub_->LogMessage("Configured sample clock timing to use " + hub_->niChangeDetection_, true);
 
    int32 numWritten = 0;
    nierr = DaqmxWriteDigital(doTask_, static_cast<int32>(number), samples.get(), &numWritten);
@@ -1318,7 +1356,7 @@ int NIDAQDOHub<Tuint>::GetPinState(const std::string pinDesignation, bool & stat
 }
 
 template<class Tuint>
-int NIDAQDOHub<Tuint>::StopDOBlanking()
+int NIDAQDOHub<Tuint>::StopDOBlankingAndSequence()
 {
    hub_->StopTask(doTask_); // even if this fails, we still want to stop the diTask_
    return hub_->StopTask(diTask_);

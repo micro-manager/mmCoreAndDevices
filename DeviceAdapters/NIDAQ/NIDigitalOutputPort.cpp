@@ -71,18 +71,16 @@ int DigitalOutputPort::Initialize()
    }
    numPos_ = (1 << portWidth_) - 1;
 
-   CPropertyAction* pAct = new CPropertyAction(this, &DigitalOutputPort::OnState);
-   CreateIntegerProperty("State", 0, false, pAct);
-   SetPropertyLimits("State", 0, numPos_);
-
    std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(portWidth_ - 1);
    std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
    if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
       supportsBlankingAndSequencing_ = true;
    GetHub()->StopDOBlankingAndSequence();
 
+   CPropertyAction* pAct;
    if (supportsBlankingAndSequencing_)
    {
+      numPos_--;
       triggerTerminal_ = niPort_ + "/line" + std::to_string(portWidth_ - 1);
       niPort_ = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
       pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
@@ -97,6 +95,10 @@ int DigitalOutputPort::Initialize()
       AddAllowedValue("Blank on", g_Low);
       AddAllowedValue("Blank on", g_High);
    }
+
+   pAct = new CPropertyAction(this, &DigitalOutputPort::OnState);
+   CreateIntegerProperty("State", 0, false, pAct);
+   SetPropertyLimits("State", 0, numPos_);
 
    // In case someone left some pins high:
    SetState(0);
