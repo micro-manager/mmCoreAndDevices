@@ -69,7 +69,6 @@ int DigitalOutputPort::Initialize()
       LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
       return TranslateNIError(nierr);
    }
-   numPos_ = (1 << portWidth_) - 1;
 
    std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(portWidth_ - 1);
    std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
@@ -80,7 +79,7 @@ int DigitalOutputPort::Initialize()
    CPropertyAction* pAct;
    if (supportsBlankingAndSequencing_)
    {
-      numPos_--;
+      numPos_ = (1 << (portWidth_ - 1)) - 1;
       triggerTerminal_ = niPort_ + "/line" + std::to_string(portWidth_ - 1);
       niPort_ = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
       pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
@@ -94,6 +93,10 @@ int DigitalOutputPort::Initialize()
       CreateStringProperty("Blank on", blankOnLow_ ? g_Low : g_High, false, pAct);
       AddAllowedValue("Blank on", g_Low);
       AddAllowedValue("Blank on", g_High);
+   }
+   else
+   {
+      numPos_ = (1 << portWidth_) - 1;
    }
 
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnState);

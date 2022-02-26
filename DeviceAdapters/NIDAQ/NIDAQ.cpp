@@ -162,6 +162,7 @@ int NIDAQHub::Initialize()
 
    // Dynamically determine name of ChangeDetectionEvent for this device
    niChangeDetection_ = "/" + niDeviceName_ + "/ChangeDetectionEvent";
+   niSampleClock_ = "/" + niDeviceName_ + "/do/SampleClock";
 
    // Determine the possible voltage range
    int err = GetVoltageRangeForDevice(niDeviceName_, minVolts_, maxVolts_);
@@ -1205,7 +1206,7 @@ int NIDAQDOHub<Tuint>::StartDOBlankingAndOrSequence(const std::string& port, con
 
    // this is only here to monitor the ChangeDetectionEvent, delete after debugging
    
-   nierr = DAQmxExportSignal(diTask_, DAQmx_Val_ChangeDetectionEvent, "/Dev1/PFI1");
+   nierr = DAQmxExportSignal(diTask_, DAQmx_Val_ChangeDetectionEvent, hub_->niSampleClock_.c_str());
    if (nierr != 0)
    {
       return HandleTaskError(nierr);

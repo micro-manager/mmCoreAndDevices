@@ -225,6 +225,7 @@ private:
    std::string niDeviceName_;
    std::string niTriggerPort_;
    std::string niChangeDetection_;
+   std::string niSampleClock_;
 
    double minVolts_; // Min possible for device
    double maxVolts_; // Max possible for device
