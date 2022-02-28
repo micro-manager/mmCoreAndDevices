@@ -89,4 +89,18 @@ public:
       std::cout << "onSLMExposureChanged()" << name << " " << newExposure << "\n";
    }
 
+   virtual void onDeviceLoaded(const char* name)
+   {
+      std::cout << "onDeviceLoaded " << name;
+   }
+
+   virtual void onDeviceWillBeUnloaded(const char* name)
+   {
+      std::cout << "onDeviceWillBeUnloaded " << name;
+   }
+
+   virtual void onAllDevicesWillBeUnloaded()
+   {
+      std::cout << "onAllDevicesWillBeUnloaded ";
+   }
 };
