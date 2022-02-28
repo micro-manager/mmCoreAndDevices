@@ -179,6 +179,11 @@ int NIDAQHub::Initialize()
    std::vector<std::string> doPorts = GetDigitalPortsForDevice(niDeviceName_);
    if (doPorts.size() > 0)
    {
+      doHub8_ = new NIDAQDOHub<uInt8>(this);
+      doHub16_ = new NIDAQDOHub<uInt16>(this);
+      doHub32_ = new NIDAQDOHub<uInt32>(this);
+
+      /*
       uInt32 portWidth;
       int32 nierr = DAQmxGetPhysicalChanDOPortWidth(doPorts[0].c_str(), &portWidth);
       if (nierr != 0)
@@ -196,6 +201,7 @@ int NIDAQHub::Initialize()
       else if (portWidth == 32) {
          doHub32_ = new NIDAQDOHub<uInt32>(this);
       }
+      */
    }
 
    std::vector<std::string> triggerPorts = GetAOTriggerTerminalsForDevice(niDeviceName_);
@@ -699,50 +705,50 @@ error:
    return err;
 }
 
-int NIDAQHub::StopDOSequenceForPort(const std::string& port)
+int NIDAQHub::StopDOSequenceForPort(const std::string& port, const uInt32 portWidth)
 {
-   if (doHub8_ != 0)
+   if (portWidth == 8)
       return doHub8_->StopDOSequenceForPort(port);
-   else if (doHub16_ != 0)
+   else if (portWidth == 16)
       return doHub16_->StopDOSequenceForPort(port);
-   else if (doHub32_ != 0)
+   else if (portWidth == 32)
       return doHub32_->StopDOSequenceForPort(port);
 
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
-int NIDAQHub::StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, const bool sequenceOn, 
-            const long& pos, const bool blankingDirection, const std::string triggerPort)
+int NIDAQHub::StartDOBlankingAndOrSequence(const std::string& port, const uInt32 portWidth, const bool blankingOn, 
+            const bool sequenceOn, const long& pos, const bool blankingDirection, const std::string triggerPort)
 {
-   if (doHub8_ != 0)
+   if (portWidth == 8)
       return doHub8_->StartDOBlankingAndOrSequence(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
-   else if (doHub16_ != 0)
+   else if (portWidth == 16)
       return doHub16_->StartDOBlankingAndOrSequence(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
-   else if (doHub32_ != 0)
+   else if (portWidth == 32)
       return doHub32_->StartDOBlankingAndOrSequence(port, blankingOn, sequenceOn, pos, blankingDirection, triggerPort);
 
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
-int NIDAQHub::StopDOBlankingAndSequence()
+int NIDAQHub::StopDOBlankingAndSequence(const uInt32 portWidth)
 {
-   if (doHub8_ != 0)
+   if (portWidth == 8)
       return doHub8_->StopDOBlankingAndSequence();
-   else if (doHub16_ != 0)
+   else if (portWidth == 16)
       return doHub16_->StopDOBlankingAndSequence();
-   else if (doHub32_ != 0)
+   else if (portWidth == 32)
       return doHub32_->StopDOBlankingAndSequence();
 
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
-int NIDAQHub::StartDOSequence()
+int NIDAQHub::StartDOSequence(const uInt32 portWidth)
 {
-   if (doHub8_ != 0)
+   if (portWidth == 8)
       return doHub8_->StartDOSequencingTask();
-   else if (doHub16_ != 0)
+   else if (portWidth == 16)
       return doHub16_->StartDOSequencingTask();
-   else if (doHub32_ != 0)
+   else if (portWidth == 32)
       return doHub32_->StartDOSequencingTask();
 
    return ERR_UNKNOWN_PINS_PER_PORT;
@@ -1274,7 +1280,7 @@ int NIDAQDOHub<Tuint>::StartDOBlankingAndOrSequence(const std::string& port, con
          }
       }
    }
-   else  // assuma that blanking is on, otherwise things make no sense
+   else  // assume that blanking is on, otherwise things make no sense
    {
       if (blankOnLow ^ triggerPinState)
       {

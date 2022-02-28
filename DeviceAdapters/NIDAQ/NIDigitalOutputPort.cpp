@@ -72,9 +72,9 @@ int DigitalOutputPort::Initialize()
 
    std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(portWidth_ - 1);
    std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
-   if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
+   if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
       supportsBlankingAndSequencing_ = true;
-   GetHub()->StopDOBlankingAndSequence();
+   GetHub()->StopDOBlankingAndSequence(portWidth_);
 
    CPropertyAction* pAct;
    if (supportsBlankingAndSequencing_)
@@ -149,9 +149,9 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       int err;
       if (blanking_)
       {
-         err = GetHub()->StopDOBlankingAndSequence();
+         err = GetHub()->StopDOBlankingAndSequence(portWidth_);
          if (err == DEVICE_OK)
-            err = GetHub()->StartDOBlankingAndOrSequence(niPort_, true, false, pos, blankOnLow_, triggerTerminal_);
+            err = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, pos, blankOnLow_, triggerTerminal_);
       }
       else
       {
@@ -243,13 +243,13 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
       if (err == DEVICE_OK)
       {
-         err = GetHub()->StopDOBlankingAndSequence();
+         err = GetHub()->StopDOBlankingAndSequence(portWidth_);
          if (err != DEVICE_OK)
          {
             sequenceRunning_ = false;
             return err;
          }
-         err = GetHub()->StartDOBlankingAndOrSequence(niPort_, blanking_, true, pos_, blankOnLow_, triggerTerminal_);        
+         err = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, blanking_, true, pos_, blankOnLow_, triggerTerminal_);
       }
       if (err != DEVICE_OK)
          sequenceRunning_ = false;
@@ -259,11 +259,11 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::StopSequence)
    {
       sequenceRunning_ = false;
-      int err = GetHub()->StopDOBlankingAndSequence();
+      int err = GetHub()->StopDOBlankingAndSequence(portWidth_);
       if (err != DEVICE_OK)
          return err;
       if (blanking_)
-         return GetHub()->StartDOBlankingAndOrSequence(niPort_, blanking_, false, pos_, blankOnLow_, triggerTerminal_);
+         return GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, blanking_, false, pos_, blankOnLow_, triggerTerminal_);
       else
          return SetState(pos_);
    }
@@ -290,14 +290,14 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
          // do the thing in the hub
          if (blanking)
          {
-            int ret = GetHub()->StartDOBlankingAndOrSequence(niPort_, true, false, pos_, blankOnLow_, triggerTerminal_);
+            int ret = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, pos_, blankOnLow_, triggerTerminal_);
             if (ret != DEVICE_OK)
                return ret;
             blanking_ = blanking;
          }
          else
          {
-            int ret = GetHub()->StopDOBlankingAndSequence();
+            int ret = GetHub()->StopDOBlankingAndSequence(portWidth_);
             if (ret != DEVICE_OK)
                return ret;
             blanking_ = blanking;
@@ -329,10 +329,10 @@ int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::A
          blankOnLow_ = blankOnLow;
          if (blanking_)
          {
-            int ret  = GetHub()->StopDOBlankingAndSequence();
+            int ret  = GetHub()->StopDOBlankingAndSequence(portWidth_);
             if (ret != DEVICE_OK)
                return ret;
-            return GetHub()->StartDOBlankingAndOrSequence(niPort_, true, false, pos_, blankOnLow_, triggerTerminal_);
+            return GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, pos_, blankOnLow_, triggerTerminal_);
          }            
       }
    }

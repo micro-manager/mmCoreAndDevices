@@ -1,6 +1,7 @@
-// DESCRIPTION:   Drive multiple analog outputs on NI DAQ
-// AUTHOR:        Mark Tsuchida, 2015
-// COPYRIGHT:     2015-2016, Open Imaging, Inc.
+// DESCRIPTION:   Drive multiple analog and digital outputs on NI DAQ
+//                Based on Multi-Analog device adapter by Mark Tuschida
+// AUTHOR:        Mark Tsuchida, 2015, Nico Stuurman 2022
+// COPYRIGHT:     2015-2016, Open Imaging, Inc., 2022 Altos Labs
 // LICENSE:       This library is free software; you can redistribute it and/or
 //                modify it under the terms of the GNU Lesser General Public
 //                License as published by the Free Software Foundation; either
@@ -121,8 +122,8 @@ public:
    int StartDOSequenceForPort(const std::string& port, const std::vector<Tuint> sequence);
    int StopDOSequenceForPort(const std::string& port); 
    int StartDOSequencingTask();
-   int StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, const bool sequenceOn, 
-            const long& pos, const bool blankingDirection, const std::string triggerPort);
+   int StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, 
+            const bool sequenceOn, const long& pos, const bool blankingDirection, const std::string triggerPort);
    int StopDOBlankingAndSequence();
    int AddDOPortToSequencing(const std::string& port, const std::vector<Tuint> sequence);
    void RemoveDOPortFromSequencing(const std::string& port);
@@ -174,17 +175,16 @@ public:
    virtual int IsSequencingEnabled(bool& flag) const;
    virtual int GetSequenceMaxLength(long& maxLength) const;
 
-   int StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, const bool sequenceOn,
+   int StartDOBlankingAndOrSequence(const std::string& port, const uInt32 portWidth, const bool blankingOn, const bool sequenceOn,
                         const long& pos, const bool blankingDirection, const std::string triggerPort);
-   int StopDOBlankingAndSequence();
+   int StopDOBlankingAndSequence(const uInt32 portWidth);
 
    // Currently, the following two functions are not used
-   int StartDOSequence();
-   int StopDOSequenceForPort(const std::string& port);
+   int StartDOSequence(const uInt32 portWidth);
+   int StopDOSequenceForPort(const std::string& port, const uInt32 portWidth);
 
    int SetDOPortState(const std::string port, uInt32 portWidth, long state);
-   const std::string GetTriggerPort() { return niTriggerPort_; }
-   
+   const std::string GetTriggerPort() { return niTriggerPort_; }   
 
    NIDAQDOHub<uInt8> * getDOHub8()  { return doHub8_; }
    NIDAQDOHub<uInt16>* getDOHub16() { return doHub16_; }
@@ -322,7 +322,7 @@ public:
     virtual void GetName(char* name) const;
     virtual bool Busy() { return false; }
 
-    virtual unsigned long GetNumberOfPositions()const { return numPos_; }
+    virtual unsigned long GetNumberOfPositions()const { return 0; } // replace with numPos_ once API allows not creating Labels
 
     // action interface
     // ----------------
