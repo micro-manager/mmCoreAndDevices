@@ -359,6 +359,7 @@ private:
     bool sequenceRunning_;
     bool blanking_;
     bool blankOnLow_;
+    bool open_;
     long pos_;
     long numPos_;
     uInt32 portWidth_;

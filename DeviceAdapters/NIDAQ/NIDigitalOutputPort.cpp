@@ -117,6 +117,10 @@ int DigitalOutputPort::Initialize()
    // In case someone left some pins high:
    SetState(0);
 
+   // Gate Closed Position
+   CreateProperty(MM::g_Keyword_Closed_Position, "0", MM::Integer, false);
+   GetGateOpen(open_);
+
    for (long ttlNr = 1; ttlNr <= nrOfStateSliders_; ttlNr++)
    {
      
@@ -165,22 +169,34 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (sequenceRunning_)
          return ERR_SEQUENCE_RUNNING;
 
+      bool gateOpen;
+      GetGateOpen(gateOpen);
       long pos;
       pProp->Get(pos);
+      if ((pos == pos_) && (open_ == gateOpen))
+         return DEVICE_OK;
+
+      long closed_state;
+      GetProperty(MM::g_Keyword_Closed_Position, closed_state);
+      long newState = gateOpen ? pos : closed_state;
+
       // pause blanking, otherwise most cards will error
       int err;
       if (blanking_)
       {
          err = GetHub()->StopDOBlankingAndSequence(portWidth_);
          if (err == DEVICE_OK)
-            err = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, pos, blankOnLow_, triggerTerminal_);
+            err = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, newState, blankOnLow_, triggerTerminal_);
       }
       else
       {
-         err = SetState(pos);
+         err = SetState(newState);
       }
       if (err == DEVICE_OK)
+      {
          pos_ = pos;
+         open_ = gateOpen;
+      }
 
       return err;
    }

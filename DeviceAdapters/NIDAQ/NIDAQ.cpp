@@ -54,7 +54,7 @@ const int ERR_INVALID_REQUEST = 2008;
 
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_DeviceNameNIDAQHub, MM::HubDevice, "Multi-channel analog output");
+   RegisterDevice(g_DeviceNameNIDAQHub, MM::HubDevice, "NIDAQ analog and digital output");
 }
 
 
