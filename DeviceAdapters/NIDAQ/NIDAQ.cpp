@@ -1,6 +1,7 @@
-// DESCRIPTION:   Drive multiple analog outputs on NI DAQ
-// AUTHOR:        Mark Tsuchida, 2015
-// COPYRIGHT:     2015-2016, Open Imaging, Inc.
+// DESCRIPTION:   Drive multiple analog and digital outputs on NI DAQ
+//                Based on NI-MultiAnalog device adapter by Mark Tsuchida
+// AUTHOR:        Mark Tsuchida, 2015, Nico Stuurman, 2022
+// COPYRIGHT:     2015-2016, Open Imaging, Inc., Altos Labs 2022
 // LICENSE:       This library is free software; you can redistribute it and/or
 //                modify it under the terms of the GNU Lesser General Public
 //                License as published by the Free Software Foundation; either
@@ -179,29 +180,10 @@ int NIDAQHub::Initialize()
    std::vector<std::string> doPorts = GetDigitalPortsForDevice(niDeviceName_);
    if (doPorts.size() > 0)
    {
+      // we could check if we actually have ports of these kinds, but the cost of instantiating all is low
       doHub8_ = new NIDAQDOHub<uInt8>(this);
       doHub16_ = new NIDAQDOHub<uInt16>(this);
       doHub32_ = new NIDAQDOHub<uInt32>(this);
-
-      /*
-      uInt32 portWidth;
-      int32 nierr = DAQmxGetPhysicalChanDOPortWidth(doPorts[0].c_str(), &portWidth);
-      if (nierr != 0)
-      {
-         LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
-         // TODO: this is likely a bad situation.  Abort?
-      }
-      if (portWidth == 8) {
-         doHub8_ = new NIDAQDOHub<uInt8>(this);
-      }
-      else if (portWidth == 16)
-      {
-         doHub16_ = new NIDAQDOHub<uInt16>(this);
-      }
-      else if (portWidth == 32) {
-         doHub32_ = new NIDAQDOHub<uInt32>(this);
-      }
-      */
    }
 
    std::vector<std::string> triggerPorts = GetAOTriggerTerminalsForDevice(niDeviceName_);
@@ -542,6 +524,7 @@ std::string NIDAQHub::GetPhysicalChannelListForSequencing(std::vector<std::strin
    return ret;
 }
 
+
 template<typename T>
 inline int NIDAQHub::GetLCMSamplesPerChannel(size_t& seqLen, std::vector<std::vector<T>> channelSequences) const
 {
@@ -705,17 +688,6 @@ error:
    return err;
 }
 
-int NIDAQHub::StopDOSequenceForPort(const std::string& port, const uInt32 portWidth)
-{
-   if (portWidth == 8)
-      return doHub8_->StopDOSequenceForPort(port);
-   else if (portWidth == 16)
-      return doHub16_->StopDOSequenceForPort(port);
-   else if (portWidth == 32)
-      return doHub32_->StopDOSequenceForPort(port);
-
-   return ERR_UNKNOWN_PINS_PER_PORT;
-}
 
 int NIDAQHub::StartDOBlankingAndOrSequence(const std::string& port, const uInt32 portWidth, const bool blankingOn, 
             const bool sequenceOn, const long& pos, const bool blankingDirection, const std::string triggerPort)
@@ -730,6 +702,7 @@ int NIDAQHub::StartDOBlankingAndOrSequence(const std::string& port, const uInt32
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
+
 int NIDAQHub::StopDOBlankingAndSequence(const uInt32 portWidth)
 {
    if (portWidth == 8)
@@ -742,17 +715,6 @@ int NIDAQHub::StopDOBlankingAndSequence(const uInt32 portWidth)
    return ERR_UNKNOWN_PINS_PER_PORT;
 }
 
-int NIDAQHub::StartDOSequence(const uInt32 portWidth)
-{
-   if (portWidth == 8)
-      return doHub8_->StartDOSequencingTask();
-   else if (portWidth == 16)
-      return doHub16_->StartDOSequencingTask();
-   else if (portWidth == 32)
-      return doHub32_->StartDOSequencingTask();
-
-   return ERR_UNKNOWN_PINS_PER_PORT;
-}
 
 int NIDAQHub::SetDOPortState(std::string port, uInt32 portWidth, long state)
 {
@@ -773,7 +735,6 @@ int NIDAQHub::SetDOPortState(std::string port, uInt32 portWidth, long state)
    }
    LogMessage("Created task", true);
 
-
    nierr = DAQmxCreateDOChan(doTask_, port.c_str(), NULL, DAQmx_Val_ChanForAllLines);
    if (nierr != 0)
    {
@@ -782,9 +743,7 @@ int NIDAQHub::SetDOPortState(std::string port, uInt32 portWidth, long state)
    }
    LogMessage("Created DO channel", true);
 
-
    int32 numWritten = 0;
-
    if (portWidth == 8)
    {
       uInt8 samples[1];
@@ -847,6 +806,7 @@ error:
    }
    return err;
 }
+
 
  int NIDAQHub::StopTask(TaskHandle &task)
 {
@@ -978,6 +938,7 @@ NIDAQDOHub<Tuint>::NIDAQDOHub(NIDAQHub* hub) : diTask_(0), doTask_(0), hub_(hub)
       portWidth_ = 0;
 }
 
+
 template<typename Tuint>
  NIDAQDOHub<Tuint>::~NIDAQDOHub<Tuint>()
 {
@@ -1003,6 +964,7 @@ int NIDAQDOHub<Tuint>::AddDOPortToSequencing(const std::string& port, const std:
    return DEVICE_OK;
 }
 
+
 template<typename Tuint>
 inline void NIDAQDOHub<Tuint>::RemoveDOPortFromSequencing(const std::string & port)
 {
@@ -1016,131 +978,6 @@ inline void NIDAQDOHub<Tuint>::RemoveDOPortFromSequencing(const std::string & po
    }
 }
 
-
-template<typename Tuint>
-int NIDAQDOHub<Tuint>::StopDOSequenceForPort(const std::string& port)
-{
-   RemoveDOPortFromSequencing(port);
-   int err = hub_->StopTask(doTask_);
-   if (err != DEVICE_OK)
-      return err;
-   // We do not restart sequencing for the remaining ports,
-   // since it is meaningless (we can't preserve their state).
-   return DEVICE_OK;
-}
-
-
-/*
-* Starts digital output sequences for all ports requesting sequences.
-* Note that in practice, most NI boards only allow sequencing on one output port (the first port).
-* We may refactor this code to reflect that better.
-* Starting sequences on ports higher than the first one will most likely
-* result in errors.
-*
-*/
-template<typename Tuint>
-inline int NIDAQDOHub<Tuint>::StartDOSequenceForPort(const std::string& port, const std::vector<Tuint> sequence)
-{
-   int err = hub_->StopTask(doTask_);
-   if (err != DEVICE_OK)
-      return err;
-
-   err = AddDOPortToSequencing(port, sequence);
-   if (err != DEVICE_OK)
-      return err;
-
-   err = StartDOSequencingTask();
-   if (err != DEVICE_OK)
-      return err;
-   // We don't restart the task without this port on failure.
-   // There is little point in doing so.
-
-   return DEVICE_OK;
-}
-   
-
-template<typename Tuint>
-int NIDAQDOHub<Tuint>::StartDOSequencingTask()
-{
-   std::string triggerPort = hub_->niTriggerPort_;
-   triggerPort = "/Dev1/port0/line7";
-   if (doTask_)
-   {
-      int err = hub_->StopTask(doTask_);
-      if (err != DEVICE_OK)
-         return err;
-   }
-
-   if (portWidth_ == 0)
-      return ERR_UNKNOWN_PINS_PER_PORT;
-
-   hub_->LogMessage("Starting DO sequencing task", true);
-
-   size_t numChans = physicalDOChannels_.size();
-   size_t samplesPerChan;
-   int err = hub_->GetLCMSamplesPerChannel(samplesPerChan, doChannelSequences_);
-
-   if (err != DEVICE_OK)
-      return err;
-
-   hub_->LogMessage(boost::lexical_cast<std::string>(numChans) + " channels", true);
-   hub_->LogMessage("LCM sequence length = " +
-      boost::lexical_cast<std::string>(samplesPerChan), true);
-
-   int32 nierr = DAQmxCreateTask("DOSeqTask", &doTask_);
-   if (nierr != 0)
-   {
-      return hub_->TranslateNIError(nierr);;
-   }
-   hub_->LogMessage("Created task", true);
-
-   boost::scoped_array<Tuint> samples;
-
-   const std::string chanList = hub_->GetPhysicalChannelListForSequencing(physicalDOChannels_);
-   nierr = DAQmxCreateDOChan(doTask_, chanList.c_str(), "DOSeqChan", DAQmx_Val_ChanForAllLines);
-   if (nierr != 0)
-   {
-      return HandleTaskError(nierr);
-   }
-   hub_->LogMessage(("Created DO channel for: " + chanList).c_str(), true);
-
-   nierr = DAQmxCfgSampClkTiming(doTask_, triggerPort.c_str(),
-      hub_->sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, samplesPerChan);
-   if (nierr != 0)
-   {
-      return HandleTaskError(nierr);
-   }
-   hub_->LogMessage("Configured sample clock timing to use " + triggerPort, true);
-
-
-   samples.reset(new Tuint[samplesPerChan * numChans]);
-   hub_->GetLCMSequence(samples.get(), doChannelSequences_);
-   int32 numWritten = 0;
-
-   nierr = DaqmxWriteDigital(doTask_, static_cast<int32>(samplesPerChan), samples.get(), &numWritten);
-
-   if (nierr != 0)
-   {
-      return HandleTaskError(nierr);
-   }
-   if (numWritten != static_cast<int32>(samplesPerChan))
-   {
-      hub_->LogMessage("Failed to write complete sequence");
-      // This is presumably unlikely; no error code here
-      return HandleTaskError(nierr);
-   }
-   hub_->LogMessage("Wrote samples", true);
-  
-
-   nierr = DAQmxStartTask(doTask_);
-   if (nierr != 0)
-   {
-      return HandleTaskError(nierr);
-   }
-   hub_->LogMessage("Started task", true);
-
-   return DEVICE_OK;
-}
 
 template<class Tuint>
 int NIDAQDOHub<Tuint>::StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, const bool sequenceOn, 
@@ -1199,7 +1036,6 @@ int NIDAQDOHub<Tuint>::StartDOBlankingAndOrSequence(const std::string& port, con
    }
    hub_->LogMessage("Created DI channel for: " + triggerPort, true);
 
-
    // Note, if triggerPort is not part of the port, we'll likely start seeing errors here
    // This needs to be in the documentation
    nierr = DAQmxCfgChangeDetectionTiming(diTask_, triggerPort.c_str(),
@@ -1229,10 +1065,8 @@ int NIDAQDOHub<Tuint>::StartDOBlankingAndOrSequence(const std::string& port, con
    // end routing changedetectionEvent
    
 
-
    // Change detection now should be running on the input port.  
    // Configure a task to use change detection as the input
-
    err = hub_->StopTask(doTask_);
    if (err != DEVICE_OK)
       return err;
@@ -1253,7 +1087,6 @@ int NIDAQDOHub<Tuint>::StartDOBlankingAndOrSequence(const std::string& port, con
   
    boost::scoped_array<Tuint> samples;
    samples.reset(new Tuint[number]);
-   // more general (i.e. once we add sequences) do we prepend with 0?
    if (sequenceOn && doSequence_.size() > 0)
    {
       if (blankOnLow ^ triggerPinState)
@@ -1327,6 +1160,7 @@ int NIDAQDOHub<Tuint>::StartDOBlankingAndOrSequence(const std::string& port, con
    return DEVICE_OK;
 }
 
+
 template<class Tuint>
 int NIDAQDOHub<Tuint>::GetPinState(const std::string pinDesignation, bool & state)
 {
@@ -1362,12 +1196,14 @@ int NIDAQDOHub<Tuint>::GetPinState(const std::string pinDesignation, bool & stat
    return DEVICE_OK;
 }
 
+
 template<class Tuint>
 int NIDAQDOHub<Tuint>::StopDOBlankingAndSequence()
 {
    hub_->StopTask(doTask_); // even if this fails, we still want to stop the diTask_
    return hub_->StopTask(diTask_);
 }
+
 
 template<class Tuint>
 int NIDAQDOHub<Tuint>::HandleTaskError(int32 niError)
@@ -1391,6 +1227,7 @@ int NIDAQDOHub<Tuint>::HandleTaskError(int32 niError)
    return err;
 }
 
+
 template<class Tuint>
 int NIDAQDOHub<Tuint>::DaqmxWriteDigital(TaskHandle doTask_, int32 samplesPerChan, const Tuint* samples, int32* numWritten)
 {
@@ -1406,6 +1243,7 @@ int NIDAQDOHub<uInt8>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerChan
       samples, numWritten, NULL);
 }
 
+
 template<>
 int NIDAQDOHub<uInt16>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerChan, const uInt16* samples, int32* numWritten)
 {
@@ -1413,6 +1251,7 @@ int NIDAQDOHub<uInt16>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerCha
       false, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel,
       samples, numWritten, NULL);
 }
+
 
 template<>
 int NIDAQDOHub<uInt32>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerChan, const uInt32* samples, int32* numWritten)

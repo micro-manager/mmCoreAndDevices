@@ -1,4 +1,4 @@
-// DESCRIPTION:   Drive multiple analog outputs on NI DAQ
+// DESCRIPTION:   Drive multiple analog and digital outputs on NI DAQ
 // AUTHOR:        Mark Tsuchida, 2015, Nico Stuurman 2022
 // COPYRIGHT:     2015-2016, Open Imaging, Inc., 2022 Altos Labs
 // LICENSE:       This library is free software; you can redistribute it and/or
@@ -21,7 +21,6 @@
 #include "NIDAQ.h"
 
 #include "ModuleInterface.h"
-
 
 
 DigitalOutputPort::DigitalOutputPort(const std::string& port) :
@@ -363,6 +362,7 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+
 int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -406,6 +406,7 @@ int DigitalOutputPort::OnSequenceable(MM::PropertyBase* pProp, MM::ActionType eA
    }
    return DEVICE_OK;
 }
+
 
 int DigitalOutputPort::OnNrOfStateSliders(MM::PropertyBase* pProp, MM::ActionType eAct)
 {

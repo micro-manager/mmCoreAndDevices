@@ -1,6 +1,6 @@
-// DESCRIPTION:   Drive multiple analog outputs on NI DAQ
-// AUTHOR:        Mark Tsuchida, 2015
-// COPYRIGHT:     2015-2016, Open Imaging, Inc.
+// DESCRIPTION:   Drive multiple analog and digital outputs on NI DAQ
+// AUTHOR:        Mark Tsuchida, 2015, Nico Stuurman 2022
+// COPYRIGHT:     2015-2016, Open Imaging, Inc., 2022 Altos Labs
 // LICENSE:       This library is free software; you can redistribute it and/or
 //                modify it under the terms of the GNU Lesser General Public
 //                License as published by the Free Software Foundation; either

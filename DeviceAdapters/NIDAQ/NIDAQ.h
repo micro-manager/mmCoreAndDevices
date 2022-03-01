@@ -111,17 +111,21 @@ private:
 class NIDAQHub;
 
 
-// template class to deal with 8 pin and 32 pin DO ports without
-// too much code duplication
+/**
+ * Helper class for NIDAQHub using templates to deal with 8 pin and 32 pin DO ports without
+ * too much code duplication.
+ * 
+ * Each NIDAQHub is associated with one phtysical device.  Each hub instantiates versions of 
+ * NIDAQDOHUb for uInt8, uInt16, and uInt32, to handle 8, 16, and 32 pin ports.   * 
+ * 
+*/
 template <class Tuint>
 class NIDAQDOHub
 {
 public:
    NIDAQDOHub(NIDAQHub* hub);
    ~NIDAQDOHub();
-   int StartDOSequenceForPort(const std::string& port, const std::vector<Tuint> sequence);
-   int StopDOSequenceForPort(const std::string& port); 
-   int StartDOSequencingTask();
+
    int StartDOBlankingAndOrSequence(const std::string& port, const bool blankingOn, 
             const bool sequenceOn, const long& pos, const bool blankingDirection, const std::string triggerPort);
    int StopDOBlankingAndSequence();
@@ -145,8 +149,11 @@ private:
 };
 
 
-// A hub-peripheral device set for driving multiple analog output ports,
-// possibly with hardware-triggered sequencing using a shared trigger input.
+/**
+ * A hub - peripheral device set for driving multiple analog output ports,
+ * possibly with hardware-triggered sequencing using a shared trigger input.
+ * Each Hub is associated with one NIDAQ device, usually named Dev1, Dev2, etc..
+*/
 class NIDAQHub : public HubBase<NIDAQHub>,
    public ErrorTranslator<NIDAQHub>,
    boost::noncopyable
@@ -178,10 +185,6 @@ public:
    int StartDOBlankingAndOrSequence(const std::string& port, const uInt32 portWidth, const bool blankingOn, const bool sequenceOn,
                         const long& pos, const bool blankingDirection, const std::string triggerPort);
    int StopDOBlankingAndSequence(const uInt32 portWidth);
-
-   // Currently, the following two functions are not used
-   int StartDOSequence(const uInt32 portWidth);
-   int StopDOSequenceForPort(const std::string& port, const uInt32 portWidth);
 
    int SetDOPortState(const std::string port, uInt32 portWidth, long state);
    const std::string GetTriggerPort() { return niTriggerPort_; }   
@@ -246,6 +249,10 @@ private:
 };
 
 
+/**
+* Represents analog output ports.   Each port is one pin, corresponding to a0, a1, etc.. on the NIDAQ board.
+*/
+
 class NIAnalogOutputPort : public CSignalIOBase<NIAnalogOutputPort>,
    ErrorTranslator<NIAnalogOutputPort>,
    boost::noncopyable
@@ -309,6 +316,10 @@ private:
    std::vector<double> sentSequence_; // Pretend "sent" to device
 };
 
+
+/**
+* Class that provides the digital output port (p0, p1, etc..).  Each port (8, 16, or 32 pins) will get one instance of these
+*/
 class DigitalOutputPort : public CStateDeviceBase<DigitalOutputPort>, 
     ErrorTranslator<DigitalOutputPort>
 {
@@ -322,7 +333,7 @@ public:
     virtual void GetName(char* name) const;
     virtual bool Busy() { return false; }
 
-    virtual unsigned long GetNumberOfPositions()const { return 0; } // replace with numPos_ once API allows not creating Labels
+    virtual unsigned long GetNumberOfPositions()const { return numPos_; } // replace with numPos_ once API allows not creating Labels
 
     // action interface
     // ----------------
