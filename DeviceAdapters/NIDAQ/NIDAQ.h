@@ -329,6 +329,8 @@ public:
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnNrOfStateSliders(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnTTL(MM::PropertyBase* pProp, MM::ActionType eActEx, long ttlNr);
 
 
 private:
@@ -349,6 +351,7 @@ private:
     long pos_;
     long numPos_;
     uInt32 portWidth_;
+    long nrOfStateSliders_;
     bool neverSequenceable_;
     bool supportsBlankingAndSequencing_;
 

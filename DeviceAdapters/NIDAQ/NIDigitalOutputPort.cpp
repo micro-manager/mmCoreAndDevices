@@ -34,6 +34,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    pos_(0),
    numPos_(0),
    portWidth_(0),
+   nrOfStateSliders_(8),
    neverSequenceable_(false),
    supportsBlankingAndSequencing_(false),
    task_(0)
@@ -48,6 +49,17 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    CreateStringProperty("Sequencing", g_UseHubSetting, false, pAct, true);
    AddAllowedValue("Sequencing", g_UseHubSetting);
    AddAllowedValue("Sequencing", g_Never);
+ 
+   int maxNrOfStateSliders = 8;
+   int32 nierr = DAQmxGetPhysicalChanDOPortWidth(niPort_.c_str(), &portWidth_);
+   // ignore errors at this point
+   if (nierr == 0)
+   {
+      maxNrOfStateSliders = portWidth_;
+   }
+   pAct = new CPropertyAction(this, &DigitalOutputPort::OnNrOfStateSliders);
+   CreateIntegerProperty("Nr of TTL Sliders", nrOfStateSliders_, false, pAct, true);
+   SetPropertyLimits("Nr of TTL Sliders", 0, maxNrOfStateSliders);
 }
 
 
@@ -105,6 +117,17 @@ int DigitalOutputPort::Initialize()
 
    // In case someone left some pins high:
    SetState(0);
+
+   for (long ttlNr = 1; ttlNr <= nrOfStateSliders_; ttlNr++)
+   {
+     
+      std::ostringstream os;
+      os << "TTL-" << ttlNr;
+      std::string propName = os.str();
+      CPropertyActionEx* pActEx = new CPropertyActionEx(this, &DigitalOutputPort::OnTTL, ttlNr - 1);
+      CreateProperty(propName.c_str(), "0", MM::Integer, false, pActEx, false);
+      SetPropertyLimits(propName.c_str(), 0, 1);
+   }
 
    initialized_ = true;
 
@@ -271,6 +294,35 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+
+int DigitalOutputPort::OnTTL(MM::PropertyBase* pProp, MM::ActionType eActEx, long ttlNr)
+{
+   if (eActEx == MM::BeforeGet)
+   {
+      long state = (pos_ >> ttlNr) & 1;
+      pProp->Set(state);
+   }
+   else if (eActEx == MM::AfterSet)
+   {
+      long prop;
+      pProp->Get(prop);
+      long pos = pos_;
+
+      if (prop)
+      {
+         pos |= 1 << ttlNr; //set desired bit
+      }
+      else {
+         pos &= ~(1 << ttlNr); // clear the second lowest bit
+      }
+      std::ostringstream os;
+      os << pos;
+      return SetProperty(MM::g_Keyword_State, os.str().c_str());
+   }
+   return DEVICE_OK;
+}
+
+
 int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -351,6 +403,19 @@ int DigitalOutputPort::OnSequenceable(MM::PropertyBase* pProp, MM::ActionType eA
       std::string s;
       pProp->Get(s);
       neverSequenceable_ = (s == g_Never);
+   }
+   return DEVICE_OK;
+}
+
+int DigitalOutputPort::OnNrOfStateSliders(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(nrOfStateSliders_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(nrOfStateSliders_);
    }
    return DEVICE_OK;
 }
