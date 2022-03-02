@@ -91,15 +91,35 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ASIStage.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="ASIStage.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
       <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ASIBase.h" />
+    <ClInclude Include="ASICRIF.h" />
+    <ClInclude Include="ASICRISP.h" />
+    <ClInclude Include="ASILED.h" />
+    <ClInclude Include="ASIMagnifier.h" />
+    <ClInclude Include="ASIStage.h" />
+    <ClInclude Include="ASIStateDevice.h" />
+    <ClInclude Include="ASITIRF.h" />
+    <ClInclude Include="ASITurret.h" />
+    <ClInclude Include="ASIXYStage.h" />
+    <ClInclude Include="ASIZStage.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ASIBase.cpp" />
+    <ClCompile Include="ASICRIF.cpp" />
+    <ClCompile Include="ASICRISP.cpp" />
+    <ClCompile Include="ASILED.cpp" />
+    <ClCompile Include="ASIMagnifier.cpp" />
+    <ClCompile Include="ASIStage.cpp" />
+    <ClCompile Include="ASIStateDevice.cpp" />
+    <ClCompile Include="ASITIRF.cpp" />
+    <ClCompile Include="ASITurret.cpp" />
+    <ClCompile Include="ASIXYStage.cpp" />
+    <ClCompile Include="ASIZStage.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
