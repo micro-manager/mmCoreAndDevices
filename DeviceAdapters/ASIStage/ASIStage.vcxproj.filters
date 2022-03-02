@@ -15,13 +15,73 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ASIStage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="ASICRIF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASICRISP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASILED.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASIMagnifier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="ASIStage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ASIStateDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASITIRF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASITurret.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASIXYStage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASIZStage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASIBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ASIBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASICRIF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASICRISP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASILED.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASIMagnifier.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASIStage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASIStateDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASITIRF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASITurret.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASIXYStage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASIZStage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
