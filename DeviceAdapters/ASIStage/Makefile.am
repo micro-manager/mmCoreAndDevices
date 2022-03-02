@@ -1,9 +1,9 @@
 AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS)
 deviceadapter_LTLIBRARIES = libmmgr_dal_ASIStage.la
 libmmgr_dal_ASITiger_la_SOURCES = \
+	ASIBase.cpp \
 	ASIBase.h \
-    ASIBase.cpp \
-    ASICRIF.cpp \
+	ASICRIF.cpp \
 	ASICRIF.h \
 	ASICRISP.cpp \
 	ASICRISP.h \
