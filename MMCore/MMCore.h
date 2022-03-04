@@ -345,10 +345,10 @@ public:
 
    /** \name Property blocks. */
    ///@{
-   void definePropertyBlock(const char* blockName, const char* propertyName,
-         const char* propertyValue);
-   std::vector<std::string> getAvailablePropertyBlocks() const;
-   PropertyBlock getPropertyBlockData(const char* blockName);
+   MMCORE_DEPRECATED(void definePropertyBlock(const char* blockName, const char* propertyName,
+         const char* propertyValue));
+   MMCORE_DEPRECATED(std::vector<std::string> getAvailablePropertyBlocks() const);
+   MMCORE_DEPRECATED(PropertyBlock getPropertyBlockData(const char* blockName));
    ///@}
 
    /** \name Image acquisition. */
@@ -464,9 +464,9 @@ public:
       throw (CMMError);
    long getStateFromLabel(const char* stateDeviceLabel,
          const char* stateLabel) throw (CMMError);
-   PropertyBlock getStateLabelData(const char* stateDeviceLabel,
-         const char* stateLabel);
-   PropertyBlock getData(const char* stateDeviceLabel);
+   MMCORE_DEPRECATED(PropertyBlock getStateLabelData(const char* stateDeviceLabel,
+         const char* stateLabel));
+   MMCORE_DEPRECATED(PropertyBlock getData(const char* stateDeviceLabel));
    ///@}
 
    /** \name Focus (Z) stage control. */

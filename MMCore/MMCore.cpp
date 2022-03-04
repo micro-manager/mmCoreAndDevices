@@ -5635,6 +5635,8 @@ bool CMMCore::isGroupDefined(const char* groupName)
  * Defines a reference for the collection of property-value pairs.
  * This construct is useful for defining
  * interchangeable equipment features, such as objective magnifications, filter wavelengths, etc.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 void CMMCore::definePropertyBlock(const char* blockName, const char* propertyName, const char* propertyValue)
 {
@@ -5663,6 +5665,8 @@ void CMMCore::definePropertyBlock(const char* blockName, const char* propertyNam
 
 /**
  * Returns all defined property block identifiers.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 std::vector<std::string> CMMCore::getAvailablePropertyBlocks() const
 {
@@ -5676,6 +5680,8 @@ std::vector<std::string> CMMCore::getAvailablePropertyBlocks() const
 
 /**
  * Returns the collection of property-value pairs defined in this block.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 PropertyBlock CMMCore::getPropertyBlockData(const char* blockName)
 {
@@ -5693,6 +5699,8 @@ PropertyBlock CMMCore::getPropertyBlockData(const char* blockName)
 
 /**
  * Returns the collection of property-value pairs defined for the specific device and state label.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 PropertyBlock CMMCore::getStateLabelData(const char* deviceLabel, const char* stateLabel)
 {
@@ -5725,6 +5733,8 @@ PropertyBlock CMMCore::getStateLabelData(const char* deviceLabel, const char* st
 
 /**
  * Returns the collection of property-value pairs defined for the current state.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 PropertyBlock CMMCore::getData(const char* deviceLabel)
 {
