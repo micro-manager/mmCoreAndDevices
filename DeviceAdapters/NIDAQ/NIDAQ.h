@@ -291,7 +291,7 @@ private:
    int OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   NIDAQHub* GetAOHub() const
+   NIDAQHub* GetHub() const
    { return static_cast<NIDAQHub*>(GetParentHub()); }
    int TranslateHubError(int err);
    int StartOnDemandTask(double voltage);
@@ -341,7 +341,7 @@ public:
     int OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNrOfStateSliders(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnTTL(MM::PropertyBase* pProp, MM::ActionType eActEx, long ttlNr);
+    int OnLine(MM::PropertyBase* pProp, MM::ActionType eActEx, long ttlNr);
 
 
 private:
@@ -350,6 +350,7 @@ private:
     {
        return static_cast<NIDAQHub*>(GetParentHub());
     }
+    int TranslateHubError(int err);
     int SetState(long state);
     int StopTask();
 

@@ -72,7 +72,7 @@ int NIAnalogOutputPort::Initialize()
    // Check that the voltage range is allowed (since we cannot
    // enforce this when creating pre-init properties)
    double minVolts, maxVolts;
-   int err = GetAOHub()->GetVoltageLimits(minVolts, maxVolts);
+   int err = GetHub()->GetVoltageLimits(minVolts, maxVolts);
    if (err != DEVICE_OK)
       return TranslateHubError(err);
    LogMessage("Device voltage limits: " + boost::lexical_cast<std::string>(minVolts) +
@@ -175,14 +175,14 @@ int NIAnalogOutputPort::IsDASequenceable(bool& isSequenceable) const
       return false;
 
    // Translation from hub error code skipped (since this never fails)
-   return GetAOHub()->IsSequencingEnabled(isSequenceable);
+   return GetHub()->IsSequencingEnabled(isSequenceable);
 }
 
 
 int NIAnalogOutputPort::GetDASequenceMaxLength(long& maxLength) const
 {
    // Translation from hub error code skipped (since this never fails)
-   return GetAOHub()->GetSequenceMaxLength(maxLength);
+   return GetHub()->GetSequenceMaxLength(maxLength);
 }
 
 
@@ -193,7 +193,7 @@ int NIAnalogOutputPort::StartDASequence()
 
    sequenceRunning_ = true;
 
-   int err = GetAOHub()->StartAOSequenceForPort(niPort_, sentSequence_);
+   int err = GetHub()->StartAOSequenceForPort(niPort_, sentSequence_);
    if (err != DEVICE_OK)
       return TranslateHubError(err);
 
@@ -203,7 +203,7 @@ int NIAnalogOutputPort::StartDASequence()
 
 int NIAnalogOutputPort::StopDASequence()
 {
-   int err = GetAOHub()->StopAOSequenceForPort(niPort_);
+   int err = GetHub()->StopAOSequenceForPort(niPort_);
    if (err != DEVICE_OK)
       return TranslateHubError(err);
 
@@ -316,7 +316,7 @@ int NIAnalogOutputPort::TranslateHubError(int err)
    if (err == DEVICE_OK)
       return DEVICE_OK;
    char buf[MM::MaxStrLength];
-   if (GetAOHub()->GetErrorText(err, buf))
+   if (GetHub()->GetErrorText(err, buf))
       return NewErrorCode(buf);
    return NewErrorCode("Unknown hub error");
 }

@@ -129,7 +129,7 @@ int DigitalOutputPort::Initialize()
       std::ostringstream os;
       os << "line" << line;
       std::string propName = os.str();
-      CPropertyActionEx* pActEx = new CPropertyActionEx(this, &DigitalOutputPort::OnTTL, line);
+      CPropertyActionEx* pActEx = new CPropertyActionEx(this, &DigitalOutputPort::OnLine, line);
       CreateProperty(propName.c_str(), "0", MM::Integer, false, pActEx, false);
       SetPropertyLimits(propName.c_str(), 0, 1);
    }
@@ -198,6 +198,10 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          pos_ = pos;
          open_ = gateOpen;
+      }
+      else
+      {
+         return TranslateHubError(err);
       }
 
       return err;
@@ -292,7 +296,10 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          err = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, blanking_, true, pos_, blankOnLow_, triggerTerminal_);
       }
       if (err != DEVICE_OK)
+      {
          sequenceRunning_ = false;
+         return TranslateHubError(err);
+      }
       return err;
    }
 
@@ -301,18 +308,20 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       sequenceRunning_ = false;
       int err = GetHub()->StopDOBlankingAndSequence(portWidth_);
       if (err != DEVICE_OK)
-         return err;
+         return TranslateHubError(err);
       if (blanking_)
-         return GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, blanking_, false, pos_, blankOnLow_, triggerTerminal_);
+         err = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, blanking_, false, pos_, blankOnLow_, triggerTerminal_);
       else
-         return SetState(pos_);
+         err = SetState(pos_);
+      if (err != DEVICE_OK)
+         TranslateHubError(err);
    }
 
    return DEVICE_OK;
 }
 
 
-int DigitalOutputPort::OnTTL(MM::PropertyBase* pProp, MM::ActionType eActEx, long ttlNr)
+int DigitalOutputPort::OnLine(MM::PropertyBase* pProp, MM::ActionType eActEx, long ttlNr)
 {
    if (eActEx == MM::BeforeGet)
    {
@@ -359,22 +368,21 @@ int DigitalOutputPort::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
          // do the thing in the hub
          if (blanking)
          {
-            int ret = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, pos_, blankOnLow_, triggerTerminal_);
-            if (ret != DEVICE_OK)
-               return ret;
+            int err = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, pos_, blankOnLow_, triggerTerminal_);
+            if (err != DEVICE_OK)
+               return TranslateHubError(err);
             blanking_ = blanking;
          }
          else
          {
-            int ret = GetHub()->StopDOBlankingAndSequence(portWidth_);
-            if (ret != DEVICE_OK)
-               return ret;
+            int err = GetHub()->StopDOBlankingAndSequence(portWidth_);
+            if (err != DEVICE_OK)
+               return TranslateHubError(err);
             blanking_ = blanking;
-            ret =  SetState(pos_); 
-            if (ret != DEVICE_OK)
-               return ret;            
+            err =  SetState(pos_);
+            if (err != DEVICE_OK)
+               return TranslateHubError(err);
          }
-
       }
    }
    return DEVICE_OK;
@@ -399,10 +407,12 @@ int DigitalOutputPort::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::A
          blankOnLow_ = blankOnLow;
          if (blanking_)
          {
-            int ret  = GetHub()->StopDOBlankingAndSequence(portWidth_);
-            if (ret != DEVICE_OK)
-               return ret;
-            return GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, pos_, blankOnLow_, triggerTerminal_);
+            int err = GetHub()->StopDOBlankingAndSequence(portWidth_);
+            if (err != DEVICE_OK)
+               return TranslateHubError(err);
+            err = GetHub()->StartDOBlankingAndOrSequence(niPort_, portWidth_, true, false, pos_, blankOnLow_, triggerTerminal_);
+            if (err != DEVICE_OK)
+               return TranslateHubError(err);
          }            
       }
    }
@@ -461,4 +471,15 @@ int DigitalOutputPort::SetState(long state)
       return ERR_SEQUENCE_RUNNING;
 
    return GetHub()->SetDOPortState(niPort_, portWidth_, state);
+}
+
+
+int DigitalOutputPort::TranslateHubError(int err)
+{
+   if (err == DEVICE_OK)
+      return DEVICE_OK;
+   char buf[MM::MaxStrLength];
+   if (GetHub()->GetErrorText(err, buf))
+      return NewErrorCode(buf);
+   return NewErrorCode("Unknown hub error");
 }
