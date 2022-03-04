@@ -121,13 +121,15 @@ int DigitalOutputPort::Initialize()
    CreateProperty(MM::g_Keyword_Closed_Position, "0", MM::Integer, false);
    GetGateOpen(open_);
 
-   for (long ttlNr = 1; ttlNr <= nrOfStateSliders_; ttlNr++)
-   {
-     
+   if (supportsBlankingAndSequencing_ && nrOfStateSliders_ >= portWidth_) {
+      nrOfStateSliders_ = portWidth_ - 1;
+   }
+   for (long line = 0; line < nrOfStateSliders_; line++)
+   {     
       std::ostringstream os;
-      os << "TTL-" << ttlNr;
+      os << "line" << line;
       std::string propName = os.str();
-      CPropertyActionEx* pActEx = new CPropertyActionEx(this, &DigitalOutputPort::OnTTL, ttlNr - 1);
+      CPropertyActionEx* pActEx = new CPropertyActionEx(this, &DigitalOutputPort::OnTTL, line);
       CreateProperty(propName.c_str(), "0", MM::Integer, false, pActEx, false);
       SetPropertyLimits(propName.c_str(), 0, 1);
    }
