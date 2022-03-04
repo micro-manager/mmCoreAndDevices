@@ -1316,6 +1316,8 @@ void CMMCore::waitForConfig(const char* group, const char* configName) throw (CM
 
 /**
  * Wait for the slowest device in the ImageSynchro list.
+ *
+ * @deprecated ImageSynchro will not be supported in the future.
  */
 void CMMCore::waitForImageSynchro() throw (CMMError)
 {
@@ -2469,6 +2471,8 @@ namespace
  * Add device to the image-synchro list. Image acquisition waits for all devices
  * in this list.
  * @param label   the device label
+ *
+ * @deprecated ImageSynchro will not be supported in the future.
  */
 void CMMCore::assignImageSynchro(const char* label) throw (CMMError)
 {
@@ -2485,6 +2489,8 @@ void CMMCore::assignImageSynchro(const char* label) throw (CMMError)
 /**
  * Removes device from the image-synchro list.
  * @param label   the device label
+ *
+ * @deprecated ImageSynchro will not be supported in the future.
  */
 void CMMCore::removeImageSynchro(const char* label) throw (CMMError)
 {
@@ -2497,6 +2503,8 @@ void CMMCore::removeImageSynchro(const char* label) throw (CMMError)
 
 /**
  * Clears the image synchro device list.
+ *
+ * @deprecated ImageSynchro will not be supported in the future.
  */
 void CMMCore::removeImageSynchroAll()
 {

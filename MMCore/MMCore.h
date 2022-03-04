@@ -242,7 +242,7 @@ public:
    void waitForConfig(const char* group, const char* configName) throw (CMMError);
    bool systemBusy() throw (CMMError);
    void waitForSystem() throw (CMMError);
-   void waitForImageSynchro() throw (CMMError);
+   MMCORE_DEPRECATED(void waitForImageSynchro() throw (CMMError));
    bool deviceTypeBusy(MM::DeviceType devType) throw (CMMError);
    void waitForDeviceType(MM::DeviceType devType) throw (CMMError);
 
@@ -386,9 +386,9 @@ public:
    std::string getCameraChannelName(unsigned int channelNr);
    long getImageBufferSize();
 
-   void assignImageSynchro(const char* deviceLabel) throw (CMMError);
-   void removeImageSynchro(const char* deviceLabel) throw (CMMError);
-   void removeImageSynchroAll();
+   MMCORE_DEPRECATED(void assignImageSynchro(const char* deviceLabel) throw (CMMError));
+   MMCORE_DEPRECATED(void removeImageSynchro(const char* deviceLabel) throw (CMMError));
+   MMCORE_DEPRECATED(void removeImageSynchroAll());
 
    void setAutoShutter(bool state);
    bool getAutoShutter();
