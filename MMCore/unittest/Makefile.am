@@ -1,4 +1,5 @@
 check_PROGRAMS = \
+	APIError-Tests \
 	CoreSanity-Tests \
 	LoggingSplitEntryIntoLines-Tests \
 	Logger-Tests
