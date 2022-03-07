@@ -272,11 +272,11 @@ OnResponseDetectionMethod(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       std::string s;
       pProp->Get(s);
-      std::auto_ptr<ResponseDetector> newDetector =
+      std::unique_ptr<ResponseDetector> newDetector =
          ResponseDetector::NewByName(s);
       if (!newDetector.get())
          return DEVICE_INVALID_PROPERTY_VALUE;
-      responseDetector_ = newDetector;
+      responseDetector_ = std::move(newDetector);
    }
    return DEVICE_OK;
 }

@@ -28,10 +28,10 @@
 #include <vector>
 
 
-std::auto_ptr<ResponseDetector>
+std::unique_ptr<ResponseDetector>
 ResponseDetector::NewByName(const std::string& name)
 {
-   std::auto_ptr<ResponseDetector> newDetector;
+   std::unique_ptr<ResponseDetector> newDetector;
 
    newDetector = IgnoringResponseDetector::NewByName(name);
    if (newDetector.get())
@@ -49,14 +49,14 @@ ResponseDetector::NewByName(const std::string& name)
    if (newDetector.get())
       return newDetector;
 
-   return std::auto_ptr<ResponseDetector>();
+   return std::unique_ptr<ResponseDetector>();
 }
 
 
-std::auto_ptr<ResponseDetector>
+std::unique_ptr<ResponseDetector>
 IgnoringResponseDetector::NewByName(const std::string& name)
 {
-   std::auto_ptr<ResponseDetector> ret;
+   std::unique_ptr<ResponseDetector> ret;
    if (name == g_PropValue_ResponseIgnore)
       ret.reset(new IgnoringResponseDetector());
    return ret;
@@ -86,10 +86,10 @@ IgnoringResponseDetector::RecvAlternative(MM::Core*, MM::Device*,
 }
 
 
-std::auto_ptr<ResponseDetector>
+std::unique_ptr<ResponseDetector>
 TerminatorResponseDetector::NewByName(const std::string& name)
 {
-   std::auto_ptr<ResponseDetector> ret;
+   std::unique_ptr<ResponseDetector> ret;
    if (name == g_PropValue_ResponseCRLFTerminated)
       ret.reset(new TerminatorResponseDetector("\r\n", "CRLF"));
    else if (name == g_PropValue_ResponseCRTerminated)
@@ -240,10 +240,10 @@ BinaryResponseDetector::Recv(MM::Core* core, MM::Device* device,
 }
 
 
-std::auto_ptr<ResponseDetector>
+std::unique_ptr<ResponseDetector>
 FixedLengthResponseDetector::NewByName(const std::string& name)
 {
-   std::auto_ptr<ResponseDetector> ret;
+   std::unique_ptr<ResponseDetector> ret;
    const std::string prefix(g_PropValuePrefix_ResponseFixedByteCount);
    if (name.substr(0, prefix.size()) == prefix)
    {
@@ -322,10 +322,10 @@ FixedLengthResponseDetector::RecvAlternative(MM::Core* core,
 }
 
 
-std::auto_ptr<ResponseDetector>
+std::unique_ptr<ResponseDetector>
 VariableLengthResponseDetector::NewByName(const std::string& name)
 {
-   std::auto_ptr<ResponseDetector> ret;
+   std::unique_ptr<ResponseDetector> ret;
    if (name == g_PropValue_ResponseVariableByteCount)
       ret.reset(new VariableLengthResponseDetector());
    return ret;

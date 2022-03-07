@@ -42,7 +42,7 @@ public:
     * NewByName() functions to create the appropriate instance. If name is not
     * a known name, returns null.
     */
-   static std::auto_ptr<ResponseDetector> NewByName(const std::string& name);
+   static std::unique_ptr<ResponseDetector> NewByName(const std::string& name);
 
    virtual ~ResponseDetector() {}
 
@@ -78,7 +78,7 @@ public:
 class IgnoringResponseDetector : public ResponseDetector
 {
 public:
-   static std::auto_ptr<ResponseDetector> NewByName(const std::string& name);
+   static std::unique_ptr<ResponseDetector> NewByName(const std::string& name);
 
    virtual std::string GetMethodName() const;
    virtual int RecvExpected(MM::Core* core, MM::Device* device,
@@ -101,7 +101,7 @@ class TerminatorResponseDetector : public ResponseDetector
    std::string terminatorName_;
 
 public:
-   static std::auto_ptr<ResponseDetector> NewByName(const std::string& name);
+   static std::unique_ptr<ResponseDetector> NewByName(const std::string& name);
 
    virtual std::string GetMethodName() const;
    virtual int RecvExpected(MM::Core* core, MM::Device* device,
@@ -138,7 +138,7 @@ class FixedLengthResponseDetector : public BinaryResponseDetector
    size_t byteCount_;
 
 public:
-   static std::auto_ptr<ResponseDetector> NewByName(const std::string& name);
+   static std::unique_ptr<ResponseDetector> NewByName(const std::string& name);
 
    virtual std::string GetMethodName() const;
    virtual int RecvExpected(MM::Core* core, MM::Device* device,
@@ -160,7 +160,7 @@ private:
 class VariableLengthResponseDetector : public BinaryResponseDetector
 {
 public:
-   static std::auto_ptr<ResponseDetector> NewByName(const std::string& name);
+   static std::unique_ptr<ResponseDetector> NewByName(const std::string& name);
 
    virtual std::string GetMethodName() const;
    virtual int RecvExpected(MM::Core* core, MM::Device* device,
