@@ -242,7 +242,7 @@ public:
    void waitForConfig(const char* group, const char* configName) throw (CMMError);
    bool systemBusy() throw (CMMError);
    void waitForSystem() throw (CMMError);
-   void waitForImageSynchro() throw (CMMError);
+   MMCORE_DEPRECATED(void waitForImageSynchro() throw (CMMError));
    bool deviceTypeBusy(MM::DeviceType devType) throw (CMMError);
    void waitForDeviceType(MM::DeviceType devType) throw (CMMError);
 
@@ -345,10 +345,10 @@ public:
 
    /** \name Property blocks. */
    ///@{
-   void definePropertyBlock(const char* blockName, const char* propertyName,
-         const char* propertyValue);
-   std::vector<std::string> getAvailablePropertyBlocks() const;
-   PropertyBlock getPropertyBlockData(const char* blockName);
+   MMCORE_DEPRECATED(void definePropertyBlock(const char* blockName, const char* propertyName,
+         const char* propertyValue));
+   MMCORE_DEPRECATED(std::vector<std::string> getAvailablePropertyBlocks() const);
+   MMCORE_DEPRECATED(PropertyBlock getPropertyBlockData(const char* blockName));
    ///@}
 
    /** \name Image acquisition. */
@@ -386,9 +386,9 @@ public:
    std::string getCameraChannelName(unsigned int channelNr);
    long getImageBufferSize();
 
-   void assignImageSynchro(const char* deviceLabel) throw (CMMError);
-   void removeImageSynchro(const char* deviceLabel) throw (CMMError);
-   void removeImageSynchroAll();
+   MMCORE_DEPRECATED(void assignImageSynchro(const char* deviceLabel) throw (CMMError));
+   MMCORE_DEPRECATED(void removeImageSynchro(const char* deviceLabel) throw (CMMError));
+   MMCORE_DEPRECATED(void removeImageSynchroAll());
 
    void setAutoShutter(bool state);
    bool getAutoShutter();
@@ -464,9 +464,9 @@ public:
       throw (CMMError);
    long getStateFromLabel(const char* stateDeviceLabel,
          const char* stateLabel) throw (CMMError);
-   PropertyBlock getStateLabelData(const char* stateDeviceLabel,
-         const char* stateLabel);
-   PropertyBlock getData(const char* stateDeviceLabel);
+   MMCORE_DEPRECATED(PropertyBlock getStateLabelData(const char* stateDeviceLabel,
+         const char* stateLabel));
+   MMCORE_DEPRECATED(PropertyBlock getData(const char* stateDeviceLabel));
    ///@}
 
    /** \name Focus (Z) stage control. */

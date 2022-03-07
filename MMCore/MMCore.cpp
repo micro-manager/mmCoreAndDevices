@@ -113,7 +113,7 @@ using namespace std;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 10, MMCore_versionMinor = 1, MMCore_versionPatch = 1;
+const int MMCore_versionMajor = 10, MMCore_versionMinor = 2, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -423,6 +423,11 @@ string CMMCore::getAPIVersionInfo() const
 
 /**
  * Returns the entire system state, i.e. the collection of all property values from all devices.
+ *
+ * For legacy reasons, this function does not throw an exception if there is an
+ * error. If there is an error, properties may be missing from the return
+ * value.
+ *
  * @return Configuration object containing a collection of device-property-value triplets
  */
 Configuration CMMCore::getSystemState()
@@ -1311,6 +1316,8 @@ void CMMCore::waitForConfig(const char* group, const char* configName) throw (CM
 
 /**
  * Wait for the slowest device in the ImageSynchro list.
+ *
+ * @deprecated ImageSynchro will not be supported in the future.
  */
 void CMMCore::waitForImageSynchro() throw (CMMError)
 {
@@ -1955,6 +1962,9 @@ int CMMCore::getFocusDirection(const char* stageLabel) throw (CMMError)
  *
  * Once this method is called, getFocusDirection() for the stage will always
  * return the set value.
+ *
+ * For legacy reasons, an exception is not thrown if there is an error.
+ * Instead, nothing is done if stageLabel is not a valid focus stage.
  */
 void CMMCore::setFocusDirection(const char* stageLabel, int sign)
 {
@@ -1964,11 +1974,17 @@ void CMMCore::setFocusDirection(const char* stageLabel, int sign)
    if (sign < 0)
       direction = MM::FocusDirectionAwayFromSample;
 
-   boost::shared_ptr<StageInstance> stage =
-      deviceManager_->GetDeviceOfType<StageInstance>(stageLabel);
+   try
+   {
+      boost::shared_ptr<StageInstance> stage =
+         deviceManager_->GetDeviceOfType<StageInstance>(stageLabel);
 
-   mm::DeviceModuleLockGuard guard(stage);
-   stage->SetFocusDirection(direction);
+      mm::DeviceModuleLockGuard guard(stage);
+      stage->SetFocusDirection(direction);
+   }
+   catch (const CMMError&)
+   {
+   }
 }
 
 
@@ -2455,6 +2471,8 @@ namespace
  * Add device to the image-synchro list. Image acquisition waits for all devices
  * in this list.
  * @param label   the device label
+ *
+ * @deprecated ImageSynchro will not be supported in the future.
  */
 void CMMCore::assignImageSynchro(const char* label) throw (CMMError)
 {
@@ -2471,6 +2489,8 @@ void CMMCore::assignImageSynchro(const char* label) throw (CMMError)
 /**
  * Removes device from the image-synchro list.
  * @param label   the device label
+ *
+ * @deprecated ImageSynchro will not be supported in the future.
  */
 void CMMCore::removeImageSynchro(const char* label) throw (CMMError)
 {
@@ -2483,6 +2503,8 @@ void CMMCore::removeImageSynchro(const char* label) throw (CMMError)
 
 /**
  * Clears the image synchro device list.
+ *
+ * @deprecated ImageSynchro will not be supported in the future.
  */
 void CMMCore::removeImageSynchroAll()
 {
@@ -4625,13 +4647,23 @@ long CMMCore::getState(const char* deviceLabel) throw (CMMError)
 
 /**
  * Returns the total number of available positions (states).
+ *
+ * For legacy reasons, an exception is not thrown on error.
+ * Instead, -1 is returned if deviceLabel is not a valid state device.
  */
 long CMMCore::getNumberOfStates(const char* deviceLabel)
 {
-   boost::shared_ptr<StateInstance> pStateDev =
-      deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
-   mm::DeviceModuleLockGuard guard(pStateDev);
-   return pStateDev->GetNumberOfPositions();
+   try
+   {
+      boost::shared_ptr<StateInstance> pStateDev =
+         deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
+      mm::DeviceModuleLockGuard guard(pStateDev);
+      return pStateDev->GetNumberOfPositions();
+   }
+   catch (const CMMError&)
+   {
+      return -1;
+   }
 }
 
 /**
@@ -5144,13 +5176,25 @@ void CMMCore::deleteConfig(const char* groupName, const char* configName, const 
 
 /**
  * Returns all defined configuration names in a given group
+ *
+ * For legacy reasons, an exception is not thrown if there is an error.
+ * Instead, an empty vector is returned if group is not a valid config group.
+ *
  * @return an array of configuration names
  */
 vector<string> CMMCore::getAvailableConfigs(const char* group) const
 {
-   CheckConfigGroupName(group);
+   std::vector<std::string> ret;
+   try
+   {
+      CheckConfigGroupName(group);
 
-   return configGroups_->GetAvailableConfigs(group);
+      ret = configGroups_->GetAvailableConfigs(group);
+   }
+   catch (const CMMError&)
+   {
+   }
+   return ret;
 }
 
 /**
@@ -5399,14 +5443,29 @@ double CMMCore::getPixelSizeUm()
  * Returns the current pixel size in microns.
  * This method is based on sensing the current pixel size configuration and adjusting
  * for the binning.
+ *
+ * For legacy reasons, an exception is not thrown if there is an error.
+ * Instead, 0.0 is returned if any property values cannot be read, or if no
+ * pixel size preset matches the property values.
  */
 double CMMCore::getPixelSizeUm(bool cached)
 {
-   std::string resolutionID = getCurrentPixelSizeConfig(cached);
+   std::string resolutionID;
+   try
+   {
+      resolutionID = getCurrentPixelSizeConfig(cached);
+   }
+   catch (const CMMError&)
+   {
+   }
+
    if (resolutionID.length() > 0)
    {
       // check which one matches the current state
       PixelSizeConfiguration* pCfg = pixelSizeGroup_->Find(resolutionID.c_str());
+      if (!pCfg)
+         return 0.0;
+
       double pixSize = pCfg->getPixelSizeUm();
 
       boost::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
@@ -5561,8 +5620,8 @@ double CMMCore::getMagnificationFactor() const
  */
 bool CMMCore::isConfigDefined(const char* groupName, const char* configName)
 {
-   CheckConfigGroupName(groupName);
-   CheckConfigPresetName(configName);
+   if (!groupName || !configName)
+      return false;
 
    return  configGroups_->Find(groupName, configName) != 0;
 }
@@ -5574,7 +5633,8 @@ bool CMMCore::isConfigDefined(const char* groupName, const char* configName)
  */
 bool CMMCore::isGroupDefined(const char* groupName)
 {
-   CheckConfigGroupName(groupName);
+   if (!groupName)
+      return false;
 
    return  configGroups_->isDefined(groupName);
 }
@@ -5583,6 +5643,8 @@ bool CMMCore::isGroupDefined(const char* groupName)
  * Defines a reference for the collection of property-value pairs.
  * This construct is useful for defining
  * interchangeable equipment features, such as objective magnifications, filter wavelengths, etc.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 void CMMCore::definePropertyBlock(const char* blockName, const char* propertyName, const char* propertyValue)
 {
@@ -5611,6 +5673,8 @@ void CMMCore::definePropertyBlock(const char* blockName, const char* propertyNam
 
 /**
  * Returns all defined property block identifiers.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 std::vector<std::string> CMMCore::getAvailablePropertyBlocks() const
 {
@@ -5624,6 +5688,8 @@ std::vector<std::string> CMMCore::getAvailablePropertyBlocks() const
 
 /**
  * Returns the collection of property-value pairs defined in this block.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 PropertyBlock CMMCore::getPropertyBlockData(const char* blockName)
 {
@@ -5641,6 +5707,8 @@ PropertyBlock CMMCore::getPropertyBlockData(const char* blockName)
 
 /**
  * Returns the collection of property-value pairs defined for the specific device and state label.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 PropertyBlock CMMCore::getStateLabelData(const char* deviceLabel, const char* stateLabel)
 {
@@ -5673,6 +5741,8 @@ PropertyBlock CMMCore::getStateLabelData(const char* deviceLabel, const char* st
 
 /**
  * Returns the collection of property-value pairs defined for the current state.
+ *
+ * @deprecated Property blocks will not be supported in the future.
  */
 PropertyBlock CMMCore::getData(const char* deviceLabel)
 {
@@ -7532,13 +7602,23 @@ void CMMCore::updateAllowedChannelGroups()
 /**
  * Return whether or not the device supports automatic device detection
  * (i.e. whether or not detectDevice() may be safely called).
+ *
+ * For legacy reasons, an exception is not thrown if there is an error.
+ * Instead, false is returned if label is not a valid device.
  */
 bool CMMCore::supportsDeviceDetection(char* label)
 {
-   boost::shared_ptr<DeviceInstance> pDevice =
-      deviceManager_->GetDevice(label);
-   mm::DeviceModuleLockGuard guard(pDevice);
-   return pDevice->SupportsDeviceDetection();
+   try
+   {
+      boost::shared_ptr<DeviceInstance> pDevice =
+         deviceManager_->GetDevice(label);
+      mm::DeviceModuleLockGuard guard(pDevice);
+      return pDevice->SupportsDeviceDetection();
+   }
+   catch (const CMMError&)
+   {
+      return false;
+   }
 }
 
 /**
@@ -7546,11 +7626,21 @@ bool CMMCore::supportsDeviceDetection(char* label)
  * Used to automate discovery of correct serial port
  * Also configures the serial port correctly
  *
+ * For legacy reasons, an exception is not thrown if there is an error.
+ * Instead, MM::Unimplemented is returned if label is not a valid device.
+ *
  * @param label  the label of the device for which the serial port should be found
  */
 MM::DeviceDetectionStatus CMMCore::detectDevice(char* label)
 {
-   CheckDeviceLabel(label);
+   try
+   {
+      CheckDeviceLabel(label);
+   }
+   catch (const CMMError&)
+   {
+      return MM::Unimplemented;
+   }
 
    MM::DeviceDetectionStatus result = MM::Unimplemented;
    std::vector< std::string> propertiesToRestore;
