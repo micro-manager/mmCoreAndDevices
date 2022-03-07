@@ -7,7 +7,6 @@
 
 #include "ASIBase.h"
 
-// ASIBase (convenience parent class)
 ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	oldstage_(false),
 	core_(0),
@@ -244,4 +243,59 @@ int ASIBase::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Set(answer.c_str());
 	}
 	return DEVICE_OK;
+}
+
+// long version
+int ASIBase::ParseResponseAfterPosition(const std::string& answer, const unsigned int position, long& value) const
+{
+	// specify position as 3 to parse skipping the first 3 characters, e.g. for ":A 45.1"
+	if (position >= answer.length())
+	{
+		return ERR_UNRECOGNIZED_ANSWER;
+	}
+	value = atol(answer.substr(position).c_str());
+	return DEVICE_OK;
+}
+
+// double version
+int ASIBase::ParseResponseAfterPosition(const std::string& answer, const unsigned int position, double& value) const
+{
+	// specify position as 3 to parse skipping the first 3 characters, e.g. for ":A 45.1"
+	if (position >= answer.length())
+	{
+		return ERR_UNRECOGNIZED_ANSWER;
+	}
+	value = atof(answer.substr(position).c_str());
+	return DEVICE_OK;
+}
+
+// double version + count for substr
+int ASIBase::ParseResponseAfterPosition(const std::string& answer, const unsigned int position, const unsigned int count, double& value) const
+{
+	// specify position as 3 to parse skipping the first 3 characters, e.g. for ":A 45.1"
+	if (position >= answer.length())
+	{
+		return ERR_UNRECOGNIZED_ANSWER;
+	}
+	value = atof(answer.substr(position, count).c_str());
+	return DEVICE_OK;
+}
+
+// Returns DEVICE_OK if the response string starts with ":A" otherwise it returns the error code.
+int ASIBase::ResponseStartsWithColonA(const std::string& answer) const
+{
+	if (answer.length() < 2)
+	{
+		return ERR_UNRECOGNIZED_ANSWER;
+	}
+	if (answer.substr(0, 2).compare(":A") == 0)
+	{
+		return DEVICE_OK;
+	}
+	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	{
+		const int errorNumber = atoi(answer.substr(3).c_str());
+		return ERR_OFFSET + errorNumber;
+	}
+	return ERR_UNRECOGNIZED_ANSWER;
 }
