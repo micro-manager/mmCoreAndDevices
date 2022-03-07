@@ -22,7 +22,7 @@ XYStage::XYStage() :
 	serialOnlySendChanged_(true),
 	manualSerialAnswer_(""),
 	advancedPropsEnabled_(false),
-	axisletterX_("X"), // paving the way for future 
+	axisletterX_("X"),
 	axisletterY_("Y")
 {
 	InitializeDefaultErrorMessages();
@@ -149,41 +149,41 @@ int XYStage::Initialize()
 		pAct = new CPropertyAction(this, &XYStage::OnBacklash);
 		CreateProperty("Backlash-B", "0", MM::Float, false, pAct);
 	}
-
+	
 	// Error (sets both x and y)
 	if (hasCommand("E " + axisletterX_ + "?"))
 	{
 		pAct = new CPropertyAction(this, &XYStage::OnError);
 		CreateProperty("Error-E(nm)", "0", MM::Float, false, pAct);
 	}
-
+	
 	// acceleration (sets both x and y)
 	if (hasCommand("AC " + axisletterX_ + "?"))
 	{
 		pAct = new CPropertyAction(this, &XYStage::OnAcceleration);
 		CreateProperty("Acceleration-AC(ms)", "0", MM::Integer, false, pAct);
 	}
-
+	
 	// Finish Error (sets both x and y)
 	if (hasCommand("PC " + axisletterX_ + "?"))
 	{
 		pAct = new CPropertyAction(this, &XYStage::OnFinishError);
 		CreateProperty("FinishError-PCROS(nm)", "0", MM::Float, false, pAct);
 	}
-
+	
 	// OverShoot (sets both x and y)
 	if (hasCommand("OS " + axisletterX_ + "?"))
 	{
 		pAct = new CPropertyAction(this, &XYStage::OnOverShoot);
 		CreateProperty("OverShoot(um)", "0", MM::Float, false, pAct);
 	}
-
+	
 	// MotorCtrl (works on both x and y)
 	pAct = new CPropertyAction(this, &XYStage::OnMotorCtrl);
 	CreateProperty("MotorOnOff", "On", MM::String, false, pAct);
 	AddAllowedValue("MotorOnOff", "On");
 	AddAllowedValue("MotorOnOff", "Off");
-
+	
 	// JoyStick MirrorsX
 	// TODO: the following properties should only appear in controllers version 8 and higher
 	pAct = new CPropertyAction(this, &XYStage::OnJSMirror);
@@ -198,7 +198,7 @@ int XYStage::Initialize()
 	pAct = new CPropertyAction(this, &XYStage::OnJSSlowSpeed);
 	CreateProperty("JoyStick Slow Speed", "100", MM::Integer, false, pAct);
 	SetPropertyLimits("JoyStick Slow Speed", 1, 100);
-
+	
 	// property to allow sending arbitrary serial commands and receiving response
 	pAct = new CPropertyAction(this, &XYStage::OnSerialCommand);
 	CreateProperty("SerialCommand", "", MM::String, false, pAct);
@@ -219,23 +219,7 @@ int XYStage::Initialize()
 	CreateProperty("EnableAdvancedProperties", "No", MM::String, false, pAct);
 	AddAllowedValue("EnableAdvancedProperties", "No");
 	AddAllowedValue("EnableAdvancedProperties", "Yes");
-
-	/* Disabled. Use the MA command instead
-	// Number of times stage approaches a new position (+1)
-	if (hasCommand("CCA Y?"))
-	{
-	   pAct = new CPropertyAction(this, &XYStage::OnNrMoveRepetitions);
-	   CreateProperty("NrMoveRepetitions", "0", MM::Integer, false, pAct);
-	   SetPropertyLimits("NrMoveRepetitions", 0, 10);
-	}
-	*/
-
-	/*
-	ret = UpdateStatus();
-	if (ret != DEVICE_OK)
-	   return ret;
-	*/
-
+	
 	if (hasCommand("VE " + axisletterX_ + "=0")) {
 		char orig_speed[MM::MaxStrLength];
 		ret = GetProperty("Speed-S", orig_speed);
@@ -259,7 +243,7 @@ int XYStage::Initialize()
 		SetPropertyLimits("VectorMoveY-VE(mm/s)", mspeed * -1, mspeed);
 		UpdateProperty("VectorMoveY-VE(mm/s)");
 	}
-
+	
 	initialized_ = true;
 	return DEVICE_OK;
 }
@@ -332,7 +316,6 @@ int XYStage::SetPositionSteps(long x, long y)
 		int errNo = atoi(answer.substr(4).c_str());
 		return ERR_OFFSET + errNo;
 	}
-
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
@@ -373,7 +356,6 @@ int XYStage::SetRelativePositionSteps(long x, long y)
 		int errNo = atoi(answer.substr(4).c_str());
 		return ERR_OFFSET + errNo;
 	}
-
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
@@ -411,7 +393,6 @@ int XYStage::GetPositionSteps(long& x, long& y)
 
 		return DEVICE_OK;
 	}
-
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
@@ -436,7 +417,6 @@ int XYStage::SetOrigin()
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
 	}
-
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
@@ -529,7 +509,6 @@ int XYStage::Home()
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
 	}
-
 	return DEVICE_OK;
 }
 
@@ -574,45 +553,6 @@ int XYStage::Calibrate() {
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
 	}
-
-	//Wait();
-	//if (stopSignal_) return DEVICE_OK;
-	////
-
-	//double x2, y2;
-	//ret = GetPositionUm(x2, y2);
-	//   if (ret != DEVICE_OK)
-	//     return ret;
-
-	//Wait();
-	////ret = Wait();
-	////   if (ret != DEVICE_OK)
-	////     return ret;
-	//if (stopSignal_) return DEVICE_OK;
-
-	//ret = SetOrigin();
-	//if (ret != DEVICE_OK)
-	//     return ret;
-
-	//Wait();
-	////ret = Wait();
-	////   if (ret != DEVICE_OK)
-	////     return ret;
-	//if (stopSignal_) return DEVICE_OK;
-
-	////
-	//double x = x1-x2;
-	//double y = y1-y2;
-	//ret = SetPositionUm(x, y);
-	//if (ret != DEVICE_OK)
-	//     return ret;
-	//
-	//Wait();
-	////ret = Wait();
-	////   if (ret != DEVICE_OK)
-	////     return ret;
-	//if (stopSignal_) return DEVICE_OK;
-
 	return DEVICE_OK;
 }
 
@@ -795,9 +735,10 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (answer.substr(0, 2).compare(":X") == 0)
 		{
-			long waitCycles = atol(answer.substr(3).c_str());
+			long waitCycles = 0;
+			const int code = ParseResponseAfterPosition(answer, 3, waitCycles);
 			pProp->Set(waitCycles);
-			return DEVICE_OK;
+			return code;
 		}
 		// deal with error later
 		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -842,17 +783,7 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -874,9 +805,10 @@ int XYStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (answer.substr(0, 2).compare(":X") == 0)
 		{
-			double speed = atof(answer.substr(3, 8).c_str());
+			double speed = 0.0;
+			const int code = ParseResponseAfterPosition(answer, 3, 8, speed);
 			pProp->Set(speed);
-			return DEVICE_OK;
+			return code;
 		}
 		// deal with error later
 		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -904,17 +836,7 @@ int XYStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -936,16 +858,18 @@ int XYStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (answer.substr(0, 2).compare(":X") == 0)
 		{
-			double fError = atof(answer.substr(3, 8).c_str());
-			pProp->Set(1000000 * fError);
-			return DEVICE_OK;
+			double finishError = 0.0;
+			const int code = ParseResponseAfterPosition(answer, 3, 8, finishError);
+			pProp->Set(1000000 * finishError);
+			return code;
 		}
 		if (answer.substr(0, 2).compare(":A") == 0)
 		{
 			// Answer is of the form :A X=0.00003
-			double fError = atof(answer.substr(5, 8).c_str());
-			pProp->Set(1000000 * fError);
-			return DEVICE_OK;
+			double finishError = 0.0;
+			const int code = ParseResponseAfterPosition(answer, 5, 8, finishError);
+			pProp->Set(1000000 * finishError);
+			return code;
 		}
 		// deal with error later
 		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -974,17 +898,7 @@ int XYStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -1007,9 +921,10 @@ int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (answer.substr(0, 2).compare(":X") == 0)
 		{
-			double speed = atof(answer.substr(3, 8).c_str());
+			double speed = 0.0;
+			const int code = ParseResponseAfterPosition(answer, 3, 8, speed);
 			pProp->Set(speed);
-			return DEVICE_OK;
+			return code;
 		}
 		// deal with error later
 		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1037,17 +952,7 @@ int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -1070,9 +975,10 @@ int XYStage::OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (answer.substr(0, 2).compare(":A") == 0)
 		{
-			double overShoot = atof(answer.substr(5, 8).c_str());
-			pProp->Set(overShoot * 1000.0);
-			return DEVICE_OK;
+			double overshoot = 0.0;
+			const int code = ParseResponseAfterPosition(answer, 5, 8, overshoot);
+			pProp->Set(overshoot * 1000.0);
+			return code;
 		}
 		// deal with error later
 		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1101,17 +1007,7 @@ int XYStage::OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -1133,9 +1029,10 @@ int XYStage::OnError(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (answer.substr(0, 2).compare(":X") == 0)
 		{
-			double fError = atof(answer.substr(3, 8).c_str());
-			pProp->Set(fError * 1000000.0);
-			return DEVICE_OK;
+			double error = 0.0;
+			const int code = ParseResponseAfterPosition(answer, 3, 8, error);
+			pProp->Set(error * 1000000.0);
+			return code;
 		}
 		// deal with error later
 		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1164,22 +1061,11 @@ int XYStage::OnError(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
 
-// TODO: move out of action handlers?
 int XYStage::GetMaxSpeed(char* maxSpeedStr)
 {
 	double origMaxSpeed = maxSpeed_;
@@ -1226,9 +1112,10 @@ int XYStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (answer.substr(0, 2).compare(":A") == 0)
 		{
-			double speed = atof(answer.substr(5).c_str());
+			double speed = 0.0;
+			const int code = ParseResponseAfterPosition(answer, 5, speed);
 			pProp->Set(speed);
-			return DEVICE_OK;
+			return code;
 		}
 		// deal with error later
 		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1260,17 +1147,7 @@ int XYStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -1315,17 +1192,7 @@ int XYStage::OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -1505,8 +1372,6 @@ int XYStage::OnJSSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-// TODO: move out of action handlers?
-
 // use the peculiar fact that the info command is the only Tiger command
 // that begins with the letter I.  So isolate for the actual command
 // (stripping card address and leading whitespace) and then see if the
@@ -1586,9 +1451,9 @@ int XYStage::OnSerialCommandOnlySendChanged(MM::PropertyBase* pProp, MM::ActionT
 	return DEVICE_OK;
 }
 
-int XYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
 // these parameters exposed with some hurdle to user: KP, KI, KD, AA
+int XYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1634,7 +1499,6 @@ int XYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 
 			// Autozero drive electronics (AZ)  // omitting for now, need to do for each axis (see Tiger)
-
 			// number of extra move repetitions  // in Nico's original
 		}
 	}
@@ -1660,7 +1524,7 @@ int XYStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (answer.substr(0, 2).compare(":A") == 0)
 		{
-			tmp = atol(answer.substr(5).c_str());
+			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
 			{
 				return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1688,16 +1552,7 @@ int XYStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -1721,7 +1576,7 @@ int XYStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		if (answer.substr(0, 2).compare(":A") == 0)
 		{
-			tmp = atol(answer.substr(5).c_str());
+			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
 			{
 				return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1749,16 +1604,7 @@ int XYStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -1782,7 +1628,7 @@ int XYStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		if (answer.substr(0, 2).compare(":A") == 0)
 		{
-			tmp = atol(answer.substr(5).c_str());
+			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
 			{
 				return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1810,16 +1656,7 @@ int XYStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
@@ -1843,7 +1680,7 @@ int XYStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		if (answer.substr(0, 2).compare(":A") == 0)
 		{
-			tmp = atol(answer.substr(5).c_str());
+			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
 			{
 				return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1871,21 +1708,11 @@ int XYStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
 
-// TODO: remove from action handlers/
 int XYStage::GetPositionStepsSingle(char /*axis*/, long& /*steps*/)
 {
 	return ERR_UNRECOGNIZED_ANSWER;
@@ -1902,23 +1729,10 @@ int XYStage::SetAxisDirection()
 	{
 		return ret;
 	}
-
-	if (answer.substr(0, 2).compare(":A") == 0)
-	{
-		return DEVICE_OK;
-	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-	{
-		int errNo = atoi(answer.substr(3).c_str());
-		return ERR_OFFSET + errNo;
-	}
-
-	return ERR_UNRECOGNIZED_ANSWER;
-
+	return ResponseStartsWithColonA(answer);
 	/*
 	//ASI XY Stage positive limit is top-right, however micromanager convention is top-left
 	//so we reverse X axis direction
-
 	XYStage::SetProperty(MM::g_Keyword_Transpose_MirrorX,"1" );
 	XYStage::SetProperty(MM::g_Keyword_Transpose_MirrorY,"0" );
 	return DEVICE_OK;
@@ -2057,9 +1871,10 @@ int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::
 		// if (answer.substr(0,2).compare(":" + axisLetter) == 0)
 		if (answer.substr(0, 5).compare(":A " + axisLetter + "=") == 0)
 		{
-			double speed = atof(answer.substr(6, 13).c_str());
+			double speed = 0.0;
+			const int code = ParseResponseAfterPosition(answer, 6, 13, speed);
 			pProp->Set(speed);
-			return DEVICE_OK;
+			return code;
 		}
 		// deal with error later
 		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -2083,17 +1898,7 @@ int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::
 		{
 			return ret;
 		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return ResponseStartsWithColonA(answer);
 	}
 	return DEVICE_OK;
 }
