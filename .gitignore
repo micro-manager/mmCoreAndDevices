@@ -19,6 +19,7 @@ tags
 *.user
 ipch/
 .vs/
+.vscode/
 
 # GNU build system
 *.cache
