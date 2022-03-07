@@ -11,7 +11,7 @@ AC_PROG_CC([cc gcc clang])
 AC_PROG_CXX([c++ g++ clang++])
 AX_CXX_COMPILE_STDCXX([14], [noext])
 
-MM_GMOCK([$srcdir/../testing/googletest], [\$(top_srcdir)/../testing/googletest])
+MM_GMOCK([$srcdir/../../testing/googletest], [\$(top_srcdir)/../../testing/googletest])
 AM_CONDITIONAL([BUILD_CPP_TESTS], [test "x$have_gmock" = xyes])
 
 # TODO: Following should decide whether adapters depending on BOOST get build
