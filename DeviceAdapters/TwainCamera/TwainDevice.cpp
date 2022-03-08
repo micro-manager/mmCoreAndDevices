@@ -804,7 +804,7 @@ public:
 
 		twCap.Cap = cap;
 		twCap.ConType = TWON_ONEVALUE;
-		std::auto_ptr<TW_ONEVALUE> handle( new TW_ONEVALUE);
+		std::unique_ptr<TW_ONEVALUE> handle( new TW_ONEVALUE);
 		
 		twCap.hContainer = handle.get();
 		//twCap.hContainer = (void *) malloc(sizeof(TW_ONEVALUE));
@@ -1260,7 +1260,7 @@ public:
 
 	//  cap.Cap         = Cap;
 	//  cap.ConType     = TWON_ONEVALUE;
-	//  std::auto_ptr<TW_ONEVALUEFIX32> pcontainer (new TW_ONEVALUEFIX32);
+	//  std::unique_ptr<TW_ONEVALUEFIX32> pcontainer (new TW_ONEVALUEFIX32);
 	//  cap.hContainer  = pcontainer.get();
 
 	//  pcontainer->ItemType = TWTY_FIX32;

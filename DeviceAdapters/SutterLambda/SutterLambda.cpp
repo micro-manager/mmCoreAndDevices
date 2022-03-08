@@ -1572,7 +1572,7 @@ bool ShutterOnTenDashTwo::Busy()
 {
 
    {
-      std::auto_ptr<MMThreadGuard> pg ( new MMThreadGuard(*(::gplocks_[port_])));
+      std::unique_ptr<MMThreadGuard> pg ( new MMThreadGuard(*(::gplocks_[port_])));
       if(::g_Busy[port_])
          return true;
    }

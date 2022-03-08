@@ -668,7 +668,7 @@ int QICamera::Initialize()
    }
 
    // init the driver
-   m_driverAccess = auto_ptr<QIDriver::Access>(new QIDriver::Access);
+   m_driverAccess = unique_ptr<QIDriver::Access>(new QIDriver::Access);
    if (!*m_driverAccess) {
       REPORT_QERR(m_driverAccess->Status());
       return DEVICE_NATIVE_MODULE_FAILED;

@@ -130,7 +130,7 @@ void SerialPortLister::ListPorts(std::vector<std::string> &availablePorts)
 #ifdef WIN32
 
    availablePorts.clear();
-   std::auto_ptr<B100000> allDeviceNames (new B100000());
+   std::unique_ptr<B100000> allDeviceNames (new B100000());
 
    // on Windows the serial ports are devices that begin with "COM"
    int ret = QueryDosDevice( 0, allDeviceNames->buffer, MaxBuf);

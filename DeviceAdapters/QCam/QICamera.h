@@ -294,7 +294,7 @@ private:
 #endif
     int SendSettingsToCamera(QCam_Settings* settings);
 
-    std::auto_ptr<QIDriver::Access> m_driverAccess;
+    std::unique_ptr<QIDriver::Access> m_driverAccess;
 
     bool				m_isInitialized;    // Has the camera been initialized (setup)?
     QCam_Handle			m_camera;           // handle to the camera. Used by all QCam_* functions

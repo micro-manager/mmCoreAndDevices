@@ -104,7 +104,7 @@ private:
 
    bool binaryMode_;
    std::string asciiTerminator_;
-   std::auto_ptr<ResponseDetector> responseDetector_;
+   std::unique_ptr<ResponseDetector> responseDetector_;
 
    std::vector<char> initializeCommand_;
    std::vector<char> initializeResponse_;
