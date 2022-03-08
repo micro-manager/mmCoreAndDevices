@@ -28,6 +28,11 @@ public:
 	unsigned int ConvertDay(int year, int month, int day);
 	unsigned int ExtractCompileDay(const char* compile_date);
 
+	int ParseResponseAfterPosition(const std::string& answer, const unsigned int position, long& value) const;
+	int ParseResponseAfterPosition(const std::string& answer, const unsigned int position, double& value) const;
+	int ParseResponseAfterPosition(const std::string& answer, const unsigned int position, const unsigned int count, double& value) const;
+	int ResponseStartsWithColonA(const std::string& answer) const;
+
 protected:
 	int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct);

@@ -990,9 +990,10 @@ int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (answer.substr(0, 2).compare(":" + axis_) == 0)
         {
-            long waitCycles = atol(answer.substr(3).c_str());
+            long waitCycles = 0;
+            const int code = ParseResponseAfterPosition(answer, 3, waitCycles);
             pProp->Set(waitCycles);
-            return DEVICE_OK;
+            return code;
         }
         // deal with error later
         else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1038,17 +1039,7 @@ int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             return ret;
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
@@ -1070,9 +1061,10 @@ int ZStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (answer.substr(0, 2).compare(":" + axis_) == 0)
         {
-            double speed = atof(answer.substr(3, 8).c_str());
+            double speed = 0.0;
+            const int code = ParseResponseAfterPosition(answer, 3, 8, speed);
             pProp->Set(speed);
-            return DEVICE_OK;
+            return code;
         }
         // deal with error later
         else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1099,17 +1091,7 @@ int ZStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             return ret;
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
@@ -1131,16 +1113,18 @@ int ZStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (answer.substr(0, 2).compare(":" + axis_) == 0)
         {
-            double fError = atof(answer.substr(3, 8).c_str());
-            pProp->Set(1000000 * fError);
-            return DEVICE_OK;
+            double finishError = 0.0;
+            const int code = ParseResponseAfterPosition(answer, 3, 8, finishError);
+            pProp->Set(1000000 * finishError);
+            return code;
         }
         if (answer.substr(0, 2).compare(":A") == 0)
         {
             // Answer is of the form :A X=0.00003
-            double fError = atof(answer.substr(5, 8).c_str());
-            pProp->Set(1000000 * fError);
-            return DEVICE_OK;
+            double finishError = 0.0;
+            const int code = ParseResponseAfterPosition(answer, 5, 8, finishError);
+            pProp->Set(1000000 * finishError);
+            return code;
         }
         // deal with error later
         else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1168,17 +1152,7 @@ int ZStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             return ret;
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
@@ -1201,9 +1175,10 @@ int ZStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (answer.substr(0, 2).compare(":" + axis_) == 0)
         {
-            double speed = atof(answer.substr(3, 8).c_str());
+            double speed = 0.0;
+            const int code = ParseResponseAfterPosition(answer, 3, 8, speed);
             pProp->Set(speed);
-            return DEVICE_OK;
+            return code;
         }
         // deal with error later
         else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1230,17 +1205,7 @@ int ZStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             return ret;
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
@@ -1262,9 +1227,10 @@ int ZStage::OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (answer.substr(0, 2).compare(":A") == 0)
         {
-            double overShoot = atof(answer.substr(5, 8).c_str());
-            pProp->Set(overShoot * 1000.0);
-            return DEVICE_OK;
+            double overshoot = 0.0;
+            const int code = ParseResponseAfterPosition(answer, 5, 8, overshoot);
+            pProp->Set(overshoot * 1000.0);
+            return code;
         }
         // deal with error later
         else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1292,17 +1258,7 @@ int ZStage::OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             return ret;
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
@@ -1324,9 +1280,10 @@ int ZStage::OnError(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (answer.substr(0, 2).compare(":" + axis_) == 0)
         {
-            double fError = atof(answer.substr(3, 8).c_str());
-            pProp->Set(fError * 1000000.0);
-            return DEVICE_OK;
+            double error = 0.0;
+            const int code = ParseResponseAfterPosition(answer, 3, 8, error);
+            pProp->Set(error * 1000000.0);
+            return code;
         }
         // deal with error later
         else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1354,17 +1311,7 @@ int ZStage::OnError(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             return ret;
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
@@ -1411,9 +1358,10 @@ int ZStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (answer.substr(0, 2).compare(":A") == 0)
         {
-            double speed = atof(answer.substr(5).c_str());
+            double speed = 0.0;
+            const int code = ParseResponseAfterPosition(answer, 5, speed);
             pProp->Set(speed);
-            return DEVICE_OK;
+            return code;
         }
         // deal with error later
         else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1445,17 +1393,7 @@ int ZStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             return ret;
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
@@ -1500,17 +1438,7 @@ int ZStage::OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             return ret;
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
@@ -1534,9 +1462,10 @@ int ZStage::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
         // if (answer.substr(0,2).compare(":" + axis_) == 0)
         if (answer.substr(0, 5).compare(":A " + axis_ + "=") == 0)
         {
-            double speed = atof(answer.substr(6, 13).c_str());
+            double speed = 0.0;
+            const int code = ParseResponseAfterPosition(answer, 6, 13, speed);
             pProp->Set(speed);
-            return DEVICE_OK;
+            return code;
         }
         // deal with error later
         else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -1558,19 +1487,9 @@ int ZStage::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
         int ret = QueryCommand(command.str().c_str(), answer);
         if (ret != DEVICE_OK)
         {
-            return ret;
+            return ret; 
         }
-
-        if (answer.substr(0, 2).compare(":A") == 0)
-        {
-            return DEVICE_OK;
-        }
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-        {
-            int errNo = atoi(answer.substr(3).c_str());
-            return ERR_OFFSET + errNo;
-        }
-        return ERR_UNRECOGNIZED_ANSWER;
+        return ResponseStartsWithColonA(answer);
     }
     return DEVICE_OK;
 }
