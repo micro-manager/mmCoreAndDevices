@@ -1133,9 +1133,10 @@ int CDemoCamera::InsertImage()
  * Do actual capturing
  * Called from inside the thread  
  */
-int CDemoCamera::RunSequenceOnThread(MM::MMTime startTime)
+int CDemoCamera::RunSequenceOnThread()
 {
    int ret=DEVICE_ERR;
+   MM::MMTime startTime = GetCurrentMMTime();
    
    // Trigger
    if (triggerDevice_.length() > 0) {
@@ -1154,8 +1155,7 @@ int CDemoCamera::RunSequenceOnThread(MM::MMTime startTime)
    }
 
    // Simulate exposure duration
-   double finishTime = exposure * (imageCounter_ + 1);
-   while ((GetCurrentMMTime() - startTime).getMsec() < finishTime)
+   while ((GetCurrentMMTime() - startTime).getMsec() < exposure)
    {
       CDeviceUtils::SleepMs(1);
    }
@@ -1251,7 +1251,7 @@ int MySequenceThread::svc(void) throw()
    {
       do
       {  
-         ret = camera_->RunSequenceOnThread(startTime_);
+         ret = camera_->RunSequenceOnThread();
       } while (DEVICE_OK == ret && !IsStopped() && imageCounter_++ < numImages_-1);
       if (IsStopped())
          camera_->LogMessage("SeqAcquisition interrupted by the user\n");

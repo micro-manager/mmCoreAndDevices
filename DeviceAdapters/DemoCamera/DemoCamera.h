@@ -154,7 +154,7 @@ public:
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
    int InsertImage();
-   int RunSequenceOnThread(MM::MMTime startTime);
+   int RunSequenceOnThread();
    bool IsCapturing();
    void OnThreadExiting() throw(); 
    double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
