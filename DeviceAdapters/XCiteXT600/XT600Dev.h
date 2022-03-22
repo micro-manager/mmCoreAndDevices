@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          XLedDev.h
+// FILE:          XT600Dev.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -7,6 +7,7 @@
 //
 // COPYRIGHT:     Lumen Dynamics
 //                Mission Bay Imaging, San Francisco, 2011
+//				  S3L GmbH 2021
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -20,19 +21,16 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // AUTHOR:        Lon Chu (lonchu@yahoo.com) created on July 2011
-//
+//                Steffen Leidenbach on November 2021 (NOVEM/XT900 extensions)//
 
 
 #pragma once
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
-//#include "ModuleInterface.h"
-//#include "XLed.h"
-//#include "XLedCtrl.h"
 	
 //
-// define LED device class that is atached to the XLED1 controller
+// define LED device class that is atached to the XTn900 controller
 //
 class XLedDev : public CShutterBase<XLedDev>
 {

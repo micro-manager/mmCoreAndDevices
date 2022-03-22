@@ -26,6 +26,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
 //
 // AUTHOR:        Lon Chu (lonchu@yahoo.com), created on August 2011
+//                Steffen Leidenbach on November 2021 (NOVEM/XT900 extensions)
 //
 
 #ifdef WIN32
@@ -60,7 +61,9 @@ using namespace std;
 //
 // XLed Controller Constructor
 //
-XLedCtrl::XLedCtrl() :
+XLedCtrl::XLedCtrl(const char* pszName, const char* pszDescription) :
+    m_DeviceName(pszName),
+    m_DeviceDescription(pszDescription),
     m_dAnswerTimeoutMs(5000.),   // wait time out set 1000 ms
     m_yInitialized(false),      // initialized flag set to false
     m_lAllOnOff(0),             // ALl On/Off flag
@@ -97,7 +100,7 @@ XLedCtrl::~XLedCtrl()
 //
 void XLedCtrl::GetName(char* sName) const
 {
-    CDeviceUtils::CopyLimitedString(sName, XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardName).c_str());
+    CDeviceUtils::CopyLimitedString(sName, m_DeviceName);
 }
 
 //
@@ -342,7 +345,7 @@ int XLedCtrl::ReadAllProperty()
     ret = XLedSerialIO(sCmdGet, sResp);
     if (ret != DEVICE_OK) return ret;
 
-    // Minimum Pulse Width (mw?)
+    // trigger sequence (ts?)
     sResp = XLed::Instance()->GetParameter(XLed::XL_LedTriggerSequence);
     sCmdGet[0] = 0x74; sCmdGet[1] = 0x73;
     //memset(sResp, 0, XLed::XL_MaxPropSize);
@@ -395,12 +398,12 @@ int XLedCtrl::GetStatusDescription(long lStatus, char* sStatus)
         "Light guide sensor",
         "Reserved",
         "One or more LEDs on",
-        "Reserved",
+        "Single shot",
         "Reserved",
         "SpeedDIAL Lock",
         "Reserved",
-        "Reserved",
-        "reserved",
+        "PWM module present",
+        "Speed Dial present",
         "NVM Error",
         "A/D Error",
         "System Performance Error",
@@ -412,25 +415,24 @@ int XLedCtrl::GetStatusDescription(long lStatus, char* sStatus)
 
     const char* sStatusBitsOff[] =
     {
-        "Alarm off",
-        "X",
-        "X",
-        "All off",
-        "X",
-        "X",
-        "X",
-        "X",
-        "X",
-        "X",
-        "X",
-        "X",
-        "X",
-        "X",
-        "X",
-        "X",
+        "Alarm off",                
+        "X",						
+        "X",						
+        "All off",					
+        "Continuous shot",			
+        "X",						
+        "X",						
+        "X",						
+        "X",						
+        "X",						
+        "X",						
+        "X",						
+        "X",						
+        "X",						
+        "X",						
+        "X",						
         NULL
     };
-
     long lValue = 1;
     // memset(sStatus, 0, 800);
     sprintf(sStatus, "%s", "[");
@@ -489,30 +491,30 @@ int XLedCtrl::Initialize()
     char sCtrlNameLabel[120];
     memset(sCtrlNameLabel, 0, 120);
     sprintf(sCtrlNameLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardNameLabel).c_str(), MM::g_Keyword_Name);
-    ret = CreateProperty(sCtrlNameLabel/*MM::g_Keyword_Name*/, XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardName).c_str(), MM::String, true);
+    ret = CreateProperty(sCtrlNameLabel/*MM::g_Keyword_Name*/, m_DeviceName, MM::String, true);
 
     if (nDebugLog > 0)
     {
         osMessage.str("");
-        osMessage << "<XLedCtrl::Initialize> CreateProperty(" << sCtrlNameLabel << "=" << XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardName).c_str() << "), ReturnCode = " << ret;
+        osMessage << "<XLedCtrl::Initialize> CreateProperty(" << sCtrlNameLabel << "=" << m_DeviceName << "), ReturnCode = " << ret;
         this->LogMessage(osMessage.str().c_str());
     }
 
     if (ret != DEVICE_OK) return ret;
 
     // Description
-    if (strcmp(XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardName).c_str(),  XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardDesc).c_str()) != 0)
+	if (strcmp(m_DeviceName,  m_DeviceDescription) != 0)
     {
 
         char sCtrlDescLabel[120];
         memset(sCtrlDescLabel, 0, 120);
         sprintf(sCtrlDescLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardDescLabel).c_str(), MM::g_Keyword_Description);
-        ret = CreateProperty(sCtrlDescLabel/*MM::g_Keyword_Description*/, XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardDesc).c_str(), MM::String, true);
+        ret = CreateProperty(sCtrlDescLabel/*MM::g_Keyword_Description*/, m_DeviceDescription, MM::String, true);
 
         if (nDebugLog > 0)
         {
             osMessage.str("");
-            osMessage << "<XLedCtrl::Initialize> CreateProperty(" << sCtrlDescLabel << "=" << XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardDesc).c_str() << "), ReturnCode = " << ret;
+            osMessage << "<XLedCtrl::Initialize> CreateProperty(" << sCtrlDescLabel << "=" << m_DeviceDescription << "), ReturnCode = " << ret;
             this->LogMessage(osMessage.str().c_str());
         }
 
@@ -846,7 +848,7 @@ int XLedCtrl::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
 }
 
 //
-// lock/unlock the fron panel
+// lock/unlock the front panel
 //
 int XLedCtrl::OnDebugLogFlag(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
@@ -952,7 +954,7 @@ int XLedCtrl::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 //
-// lock/unlock the fron panel
+// LED On Status
 //
 int XLedCtrl::OnAllOnOff(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
@@ -967,7 +969,7 @@ int XLedCtrl::OnAllOnOff(MM::PropertyBase* pProp, MM::ActionType pAct)
         pProp->Set(m_lAllOnOff);
         if (nDebugLog > 1)
         {
-            osMessage << "<XLedCtrl::OnFrontPanel> (BeforeGet::<" << XLed::Instance()->GetXLedStr(XLed::XL_AllOnOffLabel).c_str() << "> PROPSET=<" << m_lAllOnOff << ">)";
+            osMessage << "<XLedCtrl::OnAllOnOff> (BeforeGet::<" << XLed::Instance()->GetXLedStr(XLed::XL_AllOnOffLabel).c_str() << "> PROPSET=<" << m_lAllOnOff << ">)";
         }
     }
     else if (pAct == MM::AfterSet)
