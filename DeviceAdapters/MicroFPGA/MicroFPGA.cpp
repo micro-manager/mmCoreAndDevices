@@ -878,7 +878,7 @@ int LaserTrigger::Initialize()
 		nRet = CreateProperty(dura.str().c_str(), "0", MM::Integer, false, pExAct);
 		if (nRet != DEVICE_OK)
 			return nRet;
-		SetPropertyLimits(dura.str().c_str(), 0, 65535);
+		SetPropertyLimits(dura.str().c_str(), 0, 1048575);
 
 		pExAct = new CPropertyActionEx(this, &LaserTrigger::OnMode, i);
 		nRet = CreateProperty(mode.str().c_str(), "0 - Off", MM::String, false, pExAct);
