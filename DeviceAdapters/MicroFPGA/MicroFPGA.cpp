@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Adapter for MicroFPGA, a FPGA platform using FPGA boards from
 //                Alchitry. The adapter must be used with a special firmware, see:
+//				  https://mufpga.github.io/
 //                https://github.com/mufpga/MicroFPGA
 // COPYRIGHT:     EMBL
 // LICENSE:       LGPL
