@@ -46,7 +46,7 @@ public:
 
    // property handlers
    int OnPort(MM::PropertyBase* pPropt, MM::ActionType eAct);
-   int OnTriggerMode(MM::PropertyBase* pPropt, MM::ActionType eAct);
+   int OnSyncMode(MM::PropertyBase* pPropt, MM::ActionType eAct);
 
    int PurgeComPortH() {return PurgeComPort(port_.c_str());}
    int SendWriteRequest(long address, long value);
@@ -56,8 +56,8 @@ public:
    int ReadFromComPortH(unsigned char* answer, unsigned maxLen, unsigned long& bytesRead) {
       return ReadFromComPort(port_.c_str(), answer, maxLen, bytesRead);
    }
-   int SetPassiveTrigger();
-   int SetActiveTrigger();
+   int SetPassiveSync();
+   int SetActiveSync();
 
    static MMThreadLock& GetLock() {return lock_;}
 
@@ -92,13 +92,9 @@ public:
 	// ----------------
 	int OnStart(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPulse(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnPeriod(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnReadout(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnPulseMs(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnPeriodMs(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnExposureMs(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnDelayMs(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 
@@ -109,7 +105,7 @@ private:
 	bool mode_;
 	bool start_;
 	long pulse_;
-	long period_;
+	long readout_;
 	long exposure_;
 	long delay_;
 	bool busy_;
