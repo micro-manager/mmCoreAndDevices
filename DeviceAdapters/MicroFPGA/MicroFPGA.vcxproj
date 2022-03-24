@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2067D4A8-8C32-40D3-BA9F-6B388ECCD714}</ProjectGuid>
-    <RootNamespace>Arduino</RootNamespace>
+    <RootNamespace>MicroFPGA</RootNamespace>
     <ProjectName>MicroFPGA</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
