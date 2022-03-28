@@ -908,7 +908,7 @@ int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::BeforeGet)
 	{
 		float val;
-		int ret = GetValue("AFLIM X?", val);
+		int ret = GetValue("AL X?", val);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
@@ -947,7 +947,7 @@ int CRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::BeforeGet)
 	{
 		float focusRange;
-		int ret = GetValue("AFLIM Z?", focusRange);
+		int ret = GetValue("AL Z?", focusRange);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
@@ -959,7 +959,7 @@ int CRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 		double lr;
 		pProp->Get(lr);
 		std::ostringstream command;
-		command << std::fixed << "AFLIM Z=" << lr / 1000;
+		command << std::fixed << "AL Z=" << lr / 1000;
 
 		return SetCommand(command.str());
 	}
