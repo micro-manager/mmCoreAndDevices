@@ -30,7 +30,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git submodule init
-          git submodule set-branch -b ${{ github.ref_name }} -- mmCoreAndDevices
           git submodule update --remote -- mmCoreAndDevices
           git add mmCoreAndDevices
           if [ -z "$(git status --porcelain=v1 2>/dev/null)" ]; then
