@@ -628,7 +628,7 @@ int CCRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::BeforeGet)
    {
       // always read
-      command << addressChar_ << "AFLIM X?";
+      command << addressChar_ << "AL X?";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A X="));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       if (!pProp->Set(tmp))
@@ -668,7 +668,7 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       if (!refreshProps_ && initialized_ && !refreshOverride_)
          return DEVICE_OK;
-      command << addressChar_ << "AFLIM Z?";
+      command << addressChar_ << "AL Z?";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A Z="));
       RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
       if (!pProp->Set(tmp*1000))
@@ -677,7 +677,7 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "AFLIM Z=" << tmp/1000;
+      command << addressChar_ << "AL Z=" << tmp/1000;
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A") );
    }
    return DEVICE_OK;
