@@ -63,8 +63,8 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    SetPropertyLimits("Line # of first slider", 0, maxNrOfStateSliders - 1);
 
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnNrOfStateSliders);
-   CreateIntegerProperty("Nr of sliders", nrOfStateSliders_, false, pAct, true);
-   SetPropertyLimits("Nr of sliders", 0, maxNrOfStateSliders);
+   CreateIntegerProperty("Nr of TTL Sliders", nrOfStateSliders_, false, pAct, true);
+   SetPropertyLimits("Nr of TTL Sliders", 0, maxNrOfStateSliders);
 
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnInputLine);
    CreateIntegerProperty("Input Line", portWidth_ - 1, false, pAct, true);
@@ -134,7 +134,7 @@ int DigitalOutputPort::Initialize()
    if (supportsBlankingAndSequencing_ && nrOfStateSliders_ >= portWidth_) {
       nrOfStateSliders_ = portWidth_ - 1;
    }
-   for (long line = firstStateSlider_; line < nrOfStateSliders_; line++)
+   for (long line = firstStateSlider_; line < nrOfStateSliders_ + firstStateSlider_; line++)
    {     
       std::ostringstream os;
       os << "line" << line;
