@@ -67,8 +67,9 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    SetPropertyLimits("Nr of TTL Sliders", 0, maxNrOfStateSliders);
 
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnInputLine);
-   CreateIntegerProperty("Input Line", portWidth_ - 1, false, pAct, true);
-   SetPropertyLimits("Input Line", 0, portWidth_ - 1);
+   inputLine_ = portWidth_ - 1;
+   CreateIntegerProperty("Input Line", inputLine_, false, pAct, true);
+   SetPropertyLimits("Input Line", 0, inputLine_);
 }
 
 
