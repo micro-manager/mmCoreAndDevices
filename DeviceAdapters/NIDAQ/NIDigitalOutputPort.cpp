@@ -33,7 +33,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    pos_(0),
    numPos_(0),
    portWidth_(0),
-   nrOfStateSliders_(8),
+   nrOfStateSliders_(4),
    inputLine_(8),
    neverSequenceable_(false),
    supportsBlankingAndSequencing_(false),
@@ -134,6 +134,15 @@ int DigitalOutputPort::Initialize()
 
    if (supportsBlankingAndSequencing_ && nrOfStateSliders_ >= portWidth_) {
       nrOfStateSliders_ = portWidth_ - 1;
+   }
+
+   // Sanity check of input.  It would be nicer to give feedback in HCW, but these values are interrelated,
+   // and HCW does not change ranges upon input of a value.
+   if (firstStateSlider_ >= inputLine_) {
+       firstStateSlider_ = inputLine_ - nrOfStateSliders_;
+   }
+   if (nrOfStateSliders_ + firstStateSlider_ > inputLine_) {
+       nrOfStateSliders_ = inputLine_ - firstStateSlider_;
    }
    for (long line = firstStateSlider_; line < nrOfStateSliders_ + firstStateSlider_; line++)
    {     
