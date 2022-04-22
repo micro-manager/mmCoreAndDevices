@@ -50,6 +50,7 @@ const char* g_DeviceNameDAMonochromator = "DA Monochromator";
 const char* g_DeviceNameDAZStage = "DA Z Stage";
 const char* g_DeviceNameDAXYStage = "DA XY Stage";
 const char* g_DeviceNameDATTLStateDevice = "DA TTL State Device";
+const char* g_DeviceNameDAGalvoDevice = "DA Galvo";
 const char* g_DeviceNameMultiDAStateDevice = "Multi DA State Device";
 const char* g_DeviceNameAutoFocusStage = "AutoFocus Stage";
 const char* g_DeviceNameStateDeviceShutter = "State Device Shutter";
@@ -89,6 +90,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DeviceNameDAZStage, MM::StageDevice, "DA-controlled Z-stage");
    RegisterDevice(g_DeviceNameDAXYStage, MM::XYStageDevice, "DA-controlled XY-stage");
    RegisterDevice(g_DeviceNameDATTLStateDevice, MM::StateDevice, "Several DAs as a TTL state device");
+   RegisterDevice(g_DeviceNameDAGalvoDevice, MM::GalvoDevice, "Two DAs operating a Galvo pair");
    RegisterDevice(g_DeviceNameMultiDAStateDevice, MM::StateDevice, "Several DAs as a single state device allowing digital masking");
    RegisterDevice(g_DeviceNameAutoFocusStage, MM::StageDevice, "AutoFocus offset acting as a Z-stage");
    RegisterDevice(g_DeviceNameStateDeviceShutter, MM::ShutterDevice, "State device used as a shutter");
@@ -120,6 +122,8 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       return new DAXYStage();
    } else if (strcmp(deviceName, g_DeviceNameDATTLStateDevice) == 0) {
       return new DATTLStateDevice();
+   } else if (strcmp(deviceName, g_DeviceNameDAGalvoDevice) == 0) {
+      return new DAGalvoDevice();
    } else if (strcmp(deviceName, g_DeviceNameMultiDAStateDevice) == 0) {
       return new MultiDAStateDevice();
    } else if (strcmp(deviceName, g_DeviceNameAutoFocusStage) == 0) { 
@@ -483,9 +487,9 @@ const unsigned char* MultiCamera::GetImageBuffer(unsigned channelNr)
             {
                // we need to copy line by line
                const unsigned char* pixels = camera->GetImageBuffer();
-               for (unsigned i=0; i < thisHeight; i++)
+               for (unsigned k = 0; k < thisHeight; k++)
                {
-                  memcpy(img_.GetPixelsRW() + i * width, pixels + i * thisWidth, thisWidth);
+                  memcpy(img_.GetPixelsRW() + k * width, pixels + k * thisWidth, thisWidth);
                }
             }
             return img_.GetPixels();
@@ -4313,7 +4317,245 @@ int DATTLStateDevice::OnTTLLevel(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
+DAGalvoDevice::DAGalvoDevice() :
+   daXDevice_(""),
+   daYDevice_(""),
+   initialized_(false)
+{
+   
+}
 
+DAGalvoDevice::~DAGalvoDevice()
+{
+   Shutdown();
+}
+
+
+
+int DAGalvoDevice::Initialize()
+{
+   // Get labels of DA (SignalIO) devices
+   std::vector<std::string> daDevices;
+   char deviceName[MM::MaxStrLength];
+   unsigned int deviceIterator = 0;
+   for (;;)
+   {
+      GetLoadedDeviceOfType(MM::SignalIODevice, deviceName, deviceIterator++);
+      if (0 < strlen(deviceName))
+      {
+         daDevices.push_back(std::string(deviceName));
+      }
+      else
+         break;
+   }
+   std::string propNameX = "DA for X";
+   std::string propNameY = "DA for Y";
+   CPropertyAction* pAct = new CPropertyAction(this, &DAGalvoDevice::OnDAX);
+   int ret = CreateStringProperty(propNameX.c_str(), "", false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   pAct = new CPropertyAction(this, &DAGalvoDevice::OnDAY);
+   ret = CreateStringProperty(propNameY.c_str(), "", false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   AddAllowedValue(propNameX.c_str(), g_NoDevice);
+   AddAllowedValue(propNameY.c_str(), g_NoDevice);
+   for (std::vector<std::string>::const_iterator it = daDevices.begin(),
+      end = daDevices.end(); it != end; ++it)
+   {
+      AddAllowedValue(propNameX.c_str(), it->c_str());
+      AddAllowedValue(propNameY.c_str(), it->c_str());
+   }
+   return DEVICE_OK;
+}
+
+int DAGalvoDevice::Shutdown()
+{
+   initialized_ = false;
+   return DEVICE_OK;
+}
+
+void DAGalvoDevice::GetName(char* name) const
+{
+   CDeviceUtils::CopyLimitedString(name, g_DeviceNameDAGalvoDevice);
+}
+
+bool DAGalvoDevice::Busy()
+{
+   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
+   if (dax && dax->Busy())
+      return true;
+
+   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
+   if (day && day->Busy())
+      return true;
+
+   return false;
+}
+
+int DAGalvoDevice::PointAndFire(double x, double y, double time_us)
+{
+   return SetPosition(x, y);
+}
+
+int DAGalvoDevice::SetSpotInterval(double /* pulseInterval_us */)
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
+int DAGalvoDevice::SetIlluminationState(bool /* on */)
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
+int DAGalvoDevice::SetPosition(double x, double y)
+{
+   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
+   if (!dax)
+      return ERR_NO_DA_DEVICE_FOUND;
+   int ret = dax->SetSignal(x);
+   if (ret != DEVICE_OK)
+      return ret;
+   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
+   if (!day)
+      return ERR_NO_DA_DEVICE_FOUND;
+   return day->SetSignal(y);
+}
+
+int DAGalvoDevice::GetPosition(double& x , double& y)
+{
+   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
+   if (!dax)
+      return ERR_NO_DA_DEVICE_FOUND;
+   int ret = dax->GetSignal(x);
+   if (ret != DEVICE_OK)
+      return ret;
+   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
+   if (!day)
+      return ERR_NO_DA_DEVICE_FOUND;
+   return day->GetSignal(y);
+}
+
+double DAGalvoDevice::GetXRange()
+{
+   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
+   if (!dax)
+      return ERR_NO_DA_DEVICE_FOUND;
+   double xMin;
+   double xMax;
+   dax->GetLimits(xMin, xMax);
+   return xMax - xMin;
+}
+
+double DAGalvoDevice::GetXMinimum() {
+   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
+   if (!dax)
+      return ERR_NO_DA_DEVICE_FOUND;
+   double xMin;
+   double xMax;
+   dax->GetLimits(xMin, xMax);
+   return xMin;
+}
+
+double DAGalvoDevice::GetYRange()
+{
+   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
+   if (!day)
+      return ERR_NO_DA_DEVICE_FOUND;
+   double yMin;
+   double yMax;
+   day->GetLimits(yMin, yMax);
+   return yMax - yMin;
+}
+
+double DAGalvoDevice::GetYMinimum()
+{
+   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
+   if (!day)
+      return ERR_NO_DA_DEVICE_FOUND;
+   double yMin;
+   double yMax;
+   day->GetLimits(yMin, yMax);
+   return yMin;
+}
+
+int DAGalvoDevice::AddPolygonVertex(int /* polygonIndex */, double /* x */, double /* y */)
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+int DAGalvoDevice::DeletePolygons()
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+int DAGalvoDevice::RunSequence()
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+int DAGalvoDevice::LoadPolygons() 
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+int DAGalvoDevice::SetPolygonRepetitions(int /* repetitions */)
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+int DAGalvoDevice::RunPolygons()
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+int DAGalvoDevice::StopSequence()
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+int DAGalvoDevice::GetChannel(char* /* channelName */)
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
+int DAGalvoDevice::OnDAX(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(daXDevice_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string DADeviceName;
+      pProp->Get(DADeviceName);
+      MM::SignalIO* dax = (MM::SignalIO*)GetDevice(DADeviceName.c_str());
+      if (dax != 0) {
+         daXDevice_ = DADeviceName;
+      }
+      else
+         daXDevice_ = g_NoDevice;
+   }
+   return DEVICE_OK;
+}
+
+int DAGalvoDevice::OnDAY(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(daYDevice_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string DADeviceName;
+      pProp->Get(DADeviceName);
+      MM::SignalIO* day = (MM::SignalIO*)GetDevice(DADeviceName.c_str());
+      if (day != 0) {
+         daYDevice_ = DADeviceName;
+      }
+      else
+         daYDevice_ = g_NoDevice;
+   }
+   return DEVICE_OK;
+}
+
+
+
+// Enables use of DAs as TTLs (i.e. as a state device)
 MultiDAStateDevice::MultiDAStateDevice() :
    numberOfDADevices_(1),
    minVoltage_(0.0),
@@ -4423,10 +4665,8 @@ int MultiDAStateDevice::Initialize()
    {
       const std::string propName =
          "DADevice-" + boost::lexical_cast<std::string>(i) + "-Voltage";
-      CPropertyActionEx* pAct = new CPropertyActionEx(this,
-            &MultiDAStateDevice::OnVoltage, i);
-      int ret = CreateFloatProperty(propName.c_str(), voltages_[i],
-            false, pAct);
+      CPropertyActionEx* pActEx = new CPropertyActionEx(this, &MultiDAStateDevice::OnVoltage, i);
+      ret = CreateFloatProperty(propName.c_str(), voltages_[i], false, pActEx);
       if (ret != DEVICE_OK)
          return ret;
 
@@ -4595,7 +4835,7 @@ int MultiDAStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             if (sequenceable)
             {
                long daMaxLen = 0;
-               int ret = da->GetDASequenceMaxLength(daMaxLen);
+               ret = da->GetDASequenceMaxLength(daMaxLen);
                if (ret != DEVICE_OK)
                   return ret;
                if (daMaxLen < maxSeqLen)
@@ -4641,7 +4881,7 @@ int MultiDAStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
                end = values.end(); it != end; ++it)
             {
                double volts = voltages_[i];
-               int ret = da->AddToDASequence(*it & (1 << i) ? volts : 0.0);
+               ret = da->AddToDASequence(*it & (1 << i) ? volts : 0.0);
                if (ret != DEVICE_OK)
                   return ret;
             }

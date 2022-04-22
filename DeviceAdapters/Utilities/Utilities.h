@@ -620,6 +620,45 @@ private:
 };
 
 
+class DAGalvoDevice : public CGalvoBase<DAGalvoDevice>
+{
+public:
+   DAGalvoDevice();
+   ~DAGalvoDevice();
+
+   int Initialize();
+   int Shutdown();
+   void GetName(char* name) const;
+   bool Busy();
+
+   int PointAndFire(double x, double y, double time_us);
+   int SetSpotInterval(double pulseInterval_us);
+   int SetPosition(double x, double y);
+   int GetPosition(double& x, double& y);
+   int SetIlluminationState(bool on);
+   double GetXRange();
+   double GetXMinimum();
+   double GetYRange();
+   double GetYMinimum();
+   int AddPolygonVertex(int polygonIndex, double x, double y);
+   int DeletePolygons();
+   int RunSequence();
+   int LoadPolygons();
+   int SetPolygonRepetitions(int repetitions);
+   int RunPolygons();
+   int StopSequence();
+   int GetChannel(char* channelName);
+
+private:
+   int OnDAX(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDAY(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   std::string daXDevice_;
+   std::string daYDevice_;
+   bool initialized_;
+
+};
+
 // Use several DA (SignalIO) devices as a state device with adjustable voltage
 class MultiDAStateDevice : public CStateDeviceBase<MultiDAStateDevice>
 {
