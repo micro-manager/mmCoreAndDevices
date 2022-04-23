@@ -633,7 +633,7 @@ public:
    bool Busy();
 
    int PointAndFire(double x, double y, double time_us);
-   int SetSpotInterval(double pulseInterval_us);
+   int SetSpotInterval(double pulseIntervalUs);
    int SetPosition(double x, double y);
    int GetPosition(double& x, double& y);
    int SetIlluminationState(bool on);
@@ -659,6 +659,7 @@ private:
    std::string daYDevice_;
    bool initialized_;
    long nrRepetitions_;
+   double pulseIntervalUs_;
    std::string shutter_;
 
 };

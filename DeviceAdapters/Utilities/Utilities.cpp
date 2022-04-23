@@ -8,8 +8,10 @@
 //
 // AUTHOR:        Nico Stuurman, nico@cmp.ucsf.edu, 11/07/2008
 //                DAXYStage by Ed Simmon, 11/28/2011
+//                Nico Stuurman, nstuurman@altoslabs.com, 4/22/2022
 // COPYRIGHT:     University of California, San Francisco, 2008
 //                2015-2016, Open Imaging, Inc.
+//                Altos Labs, 2022
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
 //
@@ -36,6 +38,8 @@
 #include <boost/lexical_cast.hpp>
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 
 const char* g_Undefined = "Undefined";
@@ -4321,6 +4325,7 @@ DAGalvoDevice::DAGalvoDevice() :
    daXDevice_(g_NoDevice),
    daYDevice_(g_NoDevice),
    shutter_(g_NoDevice),
+   pulseIntervalUs_(100000),
    initialized_(false)
 {
    
@@ -4335,20 +4340,6 @@ DAGalvoDevice::~DAGalvoDevice()
 
 int DAGalvoDevice::Initialize()
 {
-   // Get labels of DA (SignalIO) devices
-   std::vector<std::string> daDevices;
-   char deviceName[MM::MaxStrLength];
-   unsigned int deviceIterator = 0;
-   for (;;)
-   {
-      GetLoadedDeviceOfType(MM::SignalIODevice, deviceName, deviceIterator++);
-      if (0 < strlen(deviceName))
-      {
-         daDevices.push_back(std::string(deviceName));
-      }
-      else
-         break;
-   }
    std::string propNameX = "DA for X";
    std::string propNameY = "DA for Y";
    CPropertyAction* pAct = new CPropertyAction(this, &DAGalvoDevice::OnDAX);
@@ -4362,22 +4353,17 @@ int DAGalvoDevice::Initialize()
 
    AddAllowedValue(propNameX.c_str(), g_NoDevice);
    AddAllowedValue(propNameY.c_str(), g_NoDevice);
-   for (std::vector<std::string>::const_iterator it = daDevices.begin(),
-      end = daDevices.end(); it != end; ++it)
-   {
-      AddAllowedValue(propNameX.c_str(), it->c_str());
-      AddAllowedValue(propNameY.c_str(), it->c_str());
-   }
-
-   std::vector<std::string> shutters;
-   char shutterDevice[MM::MaxStrLength];
-   deviceIterator = 0;
+   // Get labels of DA (SignalIO) devices
+   std::vector<std::string> daDevices;
+   char deviceName[MM::MaxStrLength];
+   unsigned int deviceIterator = 0;
    for (;;)
    {
-      GetLoadedDeviceOfType(MM::SignalIODevice, shutterDevice, deviceIterator++);
-      if (0 < strlen(shutterDevice))
+      GetLoadedDeviceOfType(MM::SignalIODevice, deviceName, deviceIterator++);
+      if (0 < strlen(deviceName))
       {
-         shutters.push_back(std::string(shutterDevice));
+         AddAllowedValue(propNameX.c_str(), deviceName);
+         AddAllowedValue(propNameY.c_str(), deviceName);
       }
       else
          break;
@@ -4387,11 +4373,19 @@ int DAGalvoDevice::Initialize()
    ret = CreateStringProperty("Shutter", shutter_.c_str(), false, pAct);
    if (ret != DEVICE_OK)
       return ret;
+
    AddAllowedValue("Shutter", g_NoDevice);
-   for (std::vector<std::string>::const_iterator it = shutters.begin(),
-      end = shutters.end(); it != end; ++it)
+   char shutterDevice[MM::MaxStrLength];
+   deviceIterator = 0;
+   for (;;)
    {
-      AddAllowedValue("Shutters", it->c_str());
+      GetLoadedDeviceOfType(MM::ShutterDevice, shutterDevice, deviceIterator++);
+      if (0 < strlen(shutterDevice))
+      {
+         AddAllowedValue("Shutter", shutterDevice);
+      }
+      else
+         break;
    }
 
    return DEVICE_OK;
@@ -4421,14 +4415,31 @@ bool DAGalvoDevice::Busy()
    return false;
 }
 
-int DAGalvoDevice::PointAndFire(double x, double y, double time_us)
+int DAGalvoDevice::PointAndFire(double x, double y, double timeUs)
 {
-   return SetPosition(x, y);
+   int ret = SetPosition(x, y);
+   if (ret != DEVICE_OK)
+      return ret;
+   MM::Shutter* s = static_cast<MM::Shutter*>(GetDevice(shutter_.c_str()));
+   if (!s)
+      return ERR_NO_SHUTTER_DEVICE_FOUND;
+   
+   // Should we do this non-blocking instead?
+   ret = s->SetOpen(true);
+   if (ret != DEVICE_OK)
+      return ret;
+   std::this_thread::sleep_for(std::chrono::microseconds((long long)timeUs));
+   return s->SetOpen(false);
+   
 }
 
-int DAGalvoDevice::SetSpotInterval(double /* pulseInterval_us */)
+/*
+* This appears to set the time a single spot should be illuminated
+*/
+int DAGalvoDevice::SetSpotInterval(double pulseIntervalUs)
 {
-   return DEVICE_NOT_YET_IMPLEMENTED;
+   pulseIntervalUs_ = pulseIntervalUs;
+   return DEVICE_OK;
 }
 
 int DAGalvoDevice::SetIlluminationState(bool on)
