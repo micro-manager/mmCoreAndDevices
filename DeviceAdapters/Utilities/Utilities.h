@@ -47,6 +47,7 @@
 #define ERR_NO_EQUAL_SIZE                  10011
 #define ERR_AUTOFOCUS_NOT_SUPPORTED        10012
 #define ERR_NO_PHYSICAL_STAGE              10013
+#define ERR_NO_SHUTTER_DEVICE_FOUND        10014
 #define ERR_TIMEOUT                        10021
 
 
@@ -652,10 +653,13 @@ public:
 private:
    int OnDAX(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDAY(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    std::string daXDevice_;
    std::string daYDevice_;
    bool initialized_;
+   long nrRepetitions_;
+   std::string shutter_;
 
 };
 
