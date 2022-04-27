@@ -4327,16 +4327,13 @@ DAGalvoDevice::DAGalvoDevice() :
    shutter_(g_NoDevice),
    pulseIntervalUs_(100000),
    initialized_(false)
-{
-   
+{  
 }
 
 DAGalvoDevice::~DAGalvoDevice()
 {
    Shutdown();
 }
-
-
 
 int DAGalvoDevice::Initialize()
 {
