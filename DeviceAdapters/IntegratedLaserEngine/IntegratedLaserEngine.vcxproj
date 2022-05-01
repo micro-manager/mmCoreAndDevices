@@ -1,17 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
@@ -20,48 +12,26 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5BCA72C1-C342-4272-A037-A94C73E4ACE8}</ProjectGuid>
-    <RootNamespace>AndorLaserCombiner</RootNamespace>
+    <RootNamespace>IntegratedLaserEngine</RootNamespace>
     <Keyword>Win32Proj</Keyword>
     <ProjectName>IntegratedLaserEngine</ProjectName>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>Windows7.1SDK</PlatformToolset>
-    <UseDebugLibraries>false</UseDebugLibraries>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>Windows7.1SDK</PlatformToolset>
-    <UseDebugLibraries>true</UseDebugLibraries>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>Windows7.1SDK</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>Windows7.1SDK</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
-    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
-    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -76,57 +46,27 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <SourcePath>$(SourcePath)</SourcePath>
-    <TargetName>mmgr_dal_AndorILE</TargetName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <SourcePath>$(SourcePath)</SourcePath>
-    <TargetName>mmgr_dal_AndorILE</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <SourcePath>$(SourcePath)</SourcePath>
     <TargetName>mmgr_dal_AndorILE</TargetName>
+    <IncludePath>$(WindowsSdkDir)\include;$(VCInstallDir)include</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <SourcePath>$(SourcePath)</SourcePath>
     <TargetName>mmgr_dal_AndorILE</TargetName>
+    <IncludePath>$(WindowsSdkDir)\include;$(VCInstallDir)include</IncludePath>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../../../3rdparty/Andor/ALC/SDK2.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <DataExecutionPrevention>
-      </DataExecutionPrevention>
-    </Link>
-    <PostBuildEvent>
-      <Command>copy $(TargetPath) "C:\Program Files\Micro-Manager-1.4.22"</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../../../3rdparty/Andor/ALC/SDK2.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)/boost-versions/boost_1_77_0;$(MM_3RDPARTYPRIVATE)/Andor/ALC/SDK2.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
@@ -138,36 +78,13 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
     </Link>
-    <PostBuildEvent>
-      <Command>copy $(TargetPath) "C:\Program Files\Micro-Manager-1.4.22"</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>../../../3rdparty/Andor/ALC/SDK2.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <OptimizeReferences>true</OptimizeReferences>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <DataExecutionPrevention>
-      </DataExecutionPrevention>
-    </Link>
-    <PostBuildEvent>
-      <Command>copy $(TargetPath) "C:\Program Files\Micro-Manager-1.4.22"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
-      <AdditionalIncludeDirectories>../../../3rdparty/Andor/ALC/SDK2.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)/boost-versions/boost_1_77_0;$(MM_3RDPARTYPRIVATE)/Andor/ALC/SDK2.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
@@ -181,9 +98,6 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
     </Link>
-    <PostBuildEvent>
-      <Command>copy $(TargetPath) "C:\Program Files\Micro-Manager-1.4.22"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ActiveBlanking.cpp" />
