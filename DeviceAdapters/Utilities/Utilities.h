@@ -56,6 +56,9 @@
 //
 #define MAX_NUMBER_PHYSICAL_CAMERAS       4
 
+
+
+
 /*
  * MultiShutter: Combines multiple physical shutters into one logical device
  */
@@ -621,11 +624,11 @@ private:
 };
 
 
-class DAGalvoDevice : public CGalvoBase<DAGalvoDevice>
+class DAGalvo : public CGalvoBase<DAGalvo>
 {
 public:
-   DAGalvoDevice();
-   ~DAGalvoDevice();
+   DAGalvo();
+   ~DAGalvo();
 
    int Initialize();
    int Shutdown();

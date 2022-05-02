@@ -33,13 +33,10 @@
 #include "Utilities.h"
 
 #include "ModuleInterface.h"
-#include "MMDevice.h"
 
 #include <boost/lexical_cast.hpp>
 
 #include <algorithm>
-#include <chrono>
-#include <thread>
 
 
 const char* g_Undefined = "Undefined";
@@ -66,6 +63,7 @@ const char* g_SyncNow = "Sync positions now";
 
 const char* g_normalLogicString = "Normal";
 const char* g_invertedLogicString = "Inverted";
+
 
 
 inline long Round(double x)
@@ -127,7 +125,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    } else if (strcmp(deviceName, g_DeviceNameDATTLStateDevice) == 0) {
       return new DATTLStateDevice();
    } else if (strcmp(deviceName, g_DeviceNameDAGalvoDevice) == 0) {
-      return new DAGalvoDevice();
+      return new DAGalvo();
    } else if (strcmp(deviceName, g_DeviceNameMultiDAStateDevice) == 0) {
       return new MultiDAStateDevice();
    } else if (strcmp(deviceName, g_DeviceNameAutoFocusStage) == 0) { 
@@ -4320,303 +4318,6 @@ int DATTLStateDevice::OnTTLLevel(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-
-DAGalvoDevice::DAGalvoDevice() :
-   daXDevice_(g_NoDevice),
-   daYDevice_(g_NoDevice),
-   shutter_(g_NoDevice),
-   pulseIntervalUs_(100000),
-   initialized_(false)
-{  
-}
-
-DAGalvoDevice::~DAGalvoDevice()
-{
-   Shutdown();
-}
-
-int DAGalvoDevice::Initialize()
-{
-   std::string propNameX = "DA for X";
-   std::string propNameY = "DA for Y";
-   CPropertyAction* pAct = new CPropertyAction(this, &DAGalvoDevice::OnDAX);
-   int ret = CreateStringProperty(propNameX.c_str(), daXDevice_.c_str(), false, pAct);
-   if (ret != DEVICE_OK)
-      return ret;
-   pAct = new CPropertyAction(this, &DAGalvoDevice::OnDAY);
-   ret = CreateStringProperty(propNameY.c_str(), daYDevice_.c_str(), false, pAct);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   AddAllowedValue(propNameX.c_str(), g_NoDevice);
-   AddAllowedValue(propNameY.c_str(), g_NoDevice);
-   // Get labels of DA (SignalIO) devices
-   std::vector<std::string> daDevices;
-   char deviceName[MM::MaxStrLength];
-   unsigned int deviceIterator = 0;
-   for (;;)
-   {
-      GetLoadedDeviceOfType(MM::SignalIODevice, deviceName, deviceIterator++);
-      if (0 < strlen(deviceName))
-      {
-         AddAllowedValue(propNameX.c_str(), deviceName);
-         AddAllowedValue(propNameY.c_str(), deviceName);
-      }
-      else
-         break;
-   }
-
-   pAct = new CPropertyAction(this, &DAGalvoDevice::OnShutter);
-   ret = CreateStringProperty("Shutter", shutter_.c_str(), false, pAct);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   AddAllowedValue("Shutter", g_NoDevice);
-   char shutterDevice[MM::MaxStrLength];
-   deviceIterator = 0;
-   for (;;)
-   {
-      GetLoadedDeviceOfType(MM::ShutterDevice, shutterDevice, deviceIterator++);
-      if (0 < strlen(shutterDevice))
-      {
-         AddAllowedValue("Shutter", shutterDevice);
-      }
-      else
-         break;
-   }
-
-   return DEVICE_OK;
-}
-
-int DAGalvoDevice::Shutdown()
-{
-   initialized_ = false;
-   return DEVICE_OK;
-}
-
-void DAGalvoDevice::GetName(char* name) const
-{
-   CDeviceUtils::CopyLimitedString(name, g_DeviceNameDAGalvoDevice);
-}
-
-bool DAGalvoDevice::Busy()
-{
-   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
-   if (dax && dax->Busy())
-      return true;
-
-   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
-   if (day && day->Busy())
-      return true;
-
-   return false;
-}
-
-int DAGalvoDevice::PointAndFire(double x, double y, double timeUs)
-{
-   int ret = SetPosition(x, y);
-   if (ret != DEVICE_OK)
-      return ret;
-   MM::Shutter* s = static_cast<MM::Shutter*>(GetDevice(shutter_.c_str()));
-   if (!s)
-      return ERR_NO_SHUTTER_DEVICE_FOUND;
-   
-   // Should we do this non-blocking instead?
-   ret = s->SetOpen(true);
-   if (ret != DEVICE_OK)
-      return ret;
-   std::this_thread::sleep_for(std::chrono::microseconds((long long)timeUs));
-   return s->SetOpen(false);
-   
-}
-
-/*
-* This appears to set the time a single spot should be illuminated
-*/
-int DAGalvoDevice::SetSpotInterval(double pulseIntervalUs)
-{
-   pulseIntervalUs_ = pulseIntervalUs;
-   return DEVICE_OK;
-}
-
-int DAGalvoDevice::SetIlluminationState(bool on)
-{
-   MM::Shutter* s = static_cast<MM::Shutter*>(GetDevice(shutter_.c_str()));
-   if (!s)
-      return ERR_NO_SHUTTER_DEVICE_FOUND;
-   return s->SetOpen(on);
-}
-
-int DAGalvoDevice::SetPosition(double x, double y)
-{
-   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
-   if (!dax)
-      return ERR_NO_DA_DEVICE_FOUND;
-   int ret = dax->SetSignal(x);
-   if (ret != DEVICE_OK)
-      return ret;
-   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
-   if (!day)
-      return ERR_NO_DA_DEVICE_FOUND;
-   return day->SetSignal(y);
-}
-
-int DAGalvoDevice::GetPosition(double& x , double& y)
-{
-   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
-   if (!dax)
-      return ERR_NO_DA_DEVICE_FOUND;
-   int ret = dax->GetSignal(x);
-   if (ret != DEVICE_OK)
-      return ret;
-   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
-   if (!day)
-      return ERR_NO_DA_DEVICE_FOUND;
-   return day->GetSignal(y);
-}
-
-double DAGalvoDevice::GetXRange()
-{
-   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
-   if (!dax)
-      return ERR_NO_DA_DEVICE_FOUND;
-   double xMin;
-   double xMax;
-   dax->GetLimits(xMin, xMax);
-   return xMax - xMin;
-}
-
-double DAGalvoDevice::GetXMinimum() {
-   MM::SignalIO* dax = static_cast<MM::SignalIO*>(GetDevice(daXDevice_.c_str()));
-   if (!dax)
-      return ERR_NO_DA_DEVICE_FOUND;
-   double xMin;
-   double xMax;
-   dax->GetLimits(xMin, xMax);
-   return xMin;
-}
-
-double DAGalvoDevice::GetYRange()
-{
-   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
-   if (!day)
-      return ERR_NO_DA_DEVICE_FOUND;
-   double yMin;
-   double yMax;
-   day->GetLimits(yMin, yMax);
-   return yMax - yMin;
-}
-
-double DAGalvoDevice::GetYMinimum()
-{
-   MM::SignalIO* day = static_cast<MM::SignalIO*>(GetDevice(daYDevice_.c_str()));
-   if (!day)
-      return ERR_NO_DA_DEVICE_FOUND;
-   double yMin;
-   double yMax;
-   day->GetLimits(yMin, yMax);
-   return yMin;
-}
-
-int DAGalvoDevice::AddPolygonVertex(int /* polygonIndex */, double /* x */, double /* y */)
-{
-   return DEVICE_NOT_YET_IMPLEMENTED;
-}
-int DAGalvoDevice::DeletePolygons()
-{
-   return DEVICE_NOT_YET_IMPLEMENTED;
-}
-int DAGalvoDevice::RunSequence()
-{
-   return DEVICE_NOT_YET_IMPLEMENTED;
-}
-int DAGalvoDevice::LoadPolygons() 
-{
-   return DEVICE_NOT_YET_IMPLEMENTED;
-}
-
-int DAGalvoDevice::SetPolygonRepetitions(int repetitions)
-{
-   nrRepetitions_ = repetitions;
-
-   return DEVICE_OK;
-}
-
-int DAGalvoDevice::RunPolygons()
-{
-   return DEVICE_NOT_YET_IMPLEMENTED;
-}
-int DAGalvoDevice::StopSequence()
-{
-   return DEVICE_NOT_YET_IMPLEMENTED;
-}
-
-// TODO: once we control illumination, this can be used to provide feedback
-// Careful: the Galvo interface is not well documented.
-int DAGalvoDevice::GetChannel(char* /* channelName */)
-{
-   return DEVICE_OK;;
-}
-
-int DAGalvoDevice::OnDAX(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(daXDevice_.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string daDeviceName;
-      pProp->Get(daDeviceName);
-      MM::SignalIO* dax = (MM::SignalIO*)GetDevice(daDeviceName.c_str());
-      if (dax != 0) {
-         daXDevice_ = daDeviceName;
-      }
-      else
-         daXDevice_ = g_NoDevice;
-   }
-   return DEVICE_OK;
-}
-
-int DAGalvoDevice::OnDAY(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(daYDevice_.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string daDeviceName;
-      pProp->Get(daDeviceName);
-      MM::SignalIO* day = (MM::SignalIO*)GetDevice(daDeviceName.c_str());
-      if (day != 0) {
-         daYDevice_ = daDeviceName;
-      }
-      else
-         daYDevice_ = g_NoDevice;
-   }
-   return DEVICE_OK;
-}
-
-int DAGalvoDevice::OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(shutter_.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string shutter;
-      pProp->Get(shutter);
-      MM::Shutter* s = (MM::Shutter*)GetDevice(shutter.c_str());
-      if (s != 0) {
-         shutter_ = shutter;
-      }
-      else
-         shutter_ = g_NoDevice;
-   }
-   return DEVICE_OK;
-}
 
 
 
