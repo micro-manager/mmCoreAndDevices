@@ -83,6 +83,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DAGalvo.cpp" />
+    <ClCompile Include="SerialDTRShutter.cpp" />
+    <ClCompile Include="AutoFocusStage.cpp" />
+    <ClCompile Include="MultiDAStateDevice.cpp" />
+    <ClCompile Include="DATTLStateDevice.cpp" />
+    <ClCompile Include="DAXYStage.cpp" />
+    <ClCompile Include="DAZStage.cpp" />
+    <ClCompile Include="DAShutter.cpp" />
+    <ClCompile Include="DAMonochromator.cpp" />
+    <ClCompile Include="SingleAxisStage.cpp" />
+    <ClCompile Include="ComboXYStage.cpp" />
+    <ClCompile Include="MultiStage.cpp" />
+    <ClCompile Include="MultiCamera.cpp" />
+    <ClCompile Include="MultiShutter.cpp" />
+    <ClCompile Include="StateDeviceShutter.cpp" />
     <ClCompile Include="Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>

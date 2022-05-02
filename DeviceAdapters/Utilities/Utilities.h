@@ -57,6 +57,15 @@
 #define MAX_NUMBER_PHYSICAL_CAMERAS       4
 
 
+inline long Round(double x)
+{
+   double rounded;
+   if (x >= 0)
+      rounded = floor(x + 0.5);
+   else
+      rounded = ceil(x - 0.5);
+   return static_cast<long>(rounded);
+}
 
 
 /*
