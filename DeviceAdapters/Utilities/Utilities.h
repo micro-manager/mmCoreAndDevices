@@ -47,6 +47,7 @@
 #define ERR_NO_EQUAL_SIZE                  10011
 #define ERR_AUTOFOCUS_NOT_SUPPORTED        10012
 #define ERR_NO_PHYSICAL_STAGE              10013
+#define ERR_NO_SHUTTER_DEVICE_FOUND        10014
 #define ERR_TIMEOUT                        10021
 
 
@@ -54,6 +55,18 @@
 // Max number of physical cameras
 //
 #define MAX_NUMBER_PHYSICAL_CAMERAS       4
+
+
+inline long Round(double x)
+{
+   double rounded;
+   if (x >= 0)
+      rounded = floor(x + 0.5);
+   else
+      rounded = ceil(x - 0.5);
+   return static_cast<long>(rounded);
+}
+
 
 /*
  * MultiShutter: Combines multiple physical shutters into one logical device
@@ -619,6 +632,49 @@ private:
    MM::MMTime lastChangeTime_;
 };
 
+
+class DAGalvo : public CGalvoBase<DAGalvo>
+{
+public:
+   DAGalvo();
+   ~DAGalvo();
+
+   int Initialize();
+   int Shutdown();
+   void GetName(char* name) const;
+   bool Busy();
+
+   int PointAndFire(double x, double y, double time_us);
+   int SetSpotInterval(double pulseIntervalUs);
+   int SetPosition(double x, double y);
+   int GetPosition(double& x, double& y);
+   int SetIlluminationState(bool on);
+   double GetXRange();
+   double GetXMinimum();
+   double GetYRange();
+   double GetYMinimum();
+   int AddPolygonVertex(int polygonIndex, double x, double y);
+   int DeletePolygons();
+   int RunSequence();
+   int LoadPolygons();
+   int SetPolygonRepetitions(int repetitions);
+   int RunPolygons();
+   int StopSequence();
+   int GetChannel(char* channelName);
+
+private:
+   int OnDAX(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDAY(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   std::string daXDevice_;
+   std::string daYDevice_;
+   bool initialized_;
+   long nrRepetitions_;
+   double pulseIntervalUs_;
+   std::string shutter_;
+
+};
 
 // Use several DA (SignalIO) devices as a state device with adjustable voltage
 class MultiDAStateDevice : public CStateDeviceBase<MultiDAStateDevice>
