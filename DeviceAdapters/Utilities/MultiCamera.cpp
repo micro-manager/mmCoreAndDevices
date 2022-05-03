@@ -633,7 +633,7 @@ int MultiCamera::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct, 
             return ERR_INVALID_DEVICE_NAME;
       }
       nrCamerasInUse_ = 0;
-      for (unsigned int usedCameraCounter = 0; i < usedCameras_.size(); usedCameraCounter++)
+      for (unsigned int usedCameraCounter = 0; usedCameraCounter < usedCameras_.size(); usedCameraCounter++)
       {
          if (usedCameras_[usedCameraCounter] != g_Undefined)
             nrCamerasInUse_++;
