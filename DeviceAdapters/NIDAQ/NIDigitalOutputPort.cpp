@@ -33,7 +33,8 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    pos_(0),
    numPos_(0),
    portWidth_(0),
-   nrOfStateSliders_(8),
+   nrOfStateSliders_(4),
+   inputLine_(8),
    neverSequenceable_(false),
    supportsBlankingAndSequencing_(false),
    task_(0)
@@ -56,9 +57,19 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    {
       maxNrOfStateSliders = portWidth_;
    }
+
+   pAct = new CPropertyAction(this, &DigitalOutputPort::OnFirstStateSlider);
+   CreateIntegerProperty("Line # of first slider", 0, false, pAct, true);
+   SetPropertyLimits("Line # of first slider", 0, maxNrOfStateSliders - 1);
+
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnNrOfStateSliders);
    CreateIntegerProperty("Nr of TTL Sliders", nrOfStateSliders_, false, pAct, true);
    SetPropertyLimits("Nr of TTL Sliders", 0, maxNrOfStateSliders);
+
+   pAct = new CPropertyAction(this, &DigitalOutputPort::OnInputLine);
+   inputLine_ = portWidth_ - 1;
+   CreateIntegerProperty("Input Line", inputLine_, false, pAct, true);
+   SetPropertyLimits("Input Line", 0, inputLine_);
 }
 
 
@@ -81,8 +92,8 @@ int DigitalOutputPort::Initialize()
       return TranslateNIError(nierr);
    }
 
-   std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(portWidth_ - 1);
-   std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
+   std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(inputLine_);
+   std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(inputLine_ - 1);
    if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
       supportsBlankingAndSequencing_ = true;
    GetHub()->StopDOBlankingAndSequence(portWidth_);
@@ -91,8 +102,8 @@ int DigitalOutputPort::Initialize()
    if (supportsBlankingAndSequencing_)
    {
       numPos_ = (1 << (portWidth_ - 1)) - 1;
-      triggerTerminal_ = niPort_ + "/line" + std::to_string(portWidth_ - 1);
-      niPort_ = niPort_ + "/line" + "0:" + std::to_string(portWidth_ - 2);
+      triggerTerminal_ = niPort_ + "/line" + std::to_string(inputLine_);
+      niPort_ = niPort_ + "/line" + "0:" + std::to_string(inputLine_ - 1);
       pAct = new CPropertyAction(this, &DigitalOutputPort::OnBlanking);
       CreateStringProperty("Blanking", blanking_ ? g_On : g_Off, false, pAct);
       AddAllowedValue("Blanking", g_Off);
@@ -124,7 +135,16 @@ int DigitalOutputPort::Initialize()
    if (supportsBlankingAndSequencing_ && nrOfStateSliders_ >= portWidth_) {
       nrOfStateSliders_ = portWidth_ - 1;
    }
-   for (long line = 0; line < nrOfStateSliders_; line++)
+
+   // Sanity check of input.  It would be nicer to give feedback in HCW, but these values are interrelated,
+   // and HCW does not change ranges upon input of a value.
+   if (firstStateSlider_ >= inputLine_) {
+       firstStateSlider_ = inputLine_ - nrOfStateSliders_;
+   }
+   if (nrOfStateSliders_ + firstStateSlider_ > inputLine_) {
+       nrOfStateSliders_ = inputLine_ - firstStateSlider_;
+   }
+   for (long line = firstStateSlider_; line < nrOfStateSliders_ + firstStateSlider_; line++)
    {     
       std::ostringstream os;
       os << "line" << line;
@@ -445,6 +465,32 @@ int DigitalOutputPort::OnNrOfStateSliders(MM::PropertyBase* pProp, MM::ActionTyp
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(nrOfStateSliders_);
+   }
+   return DEVICE_OK;
+}
+
+int DigitalOutputPort::OnInputLine(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(inputLine_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        pProp->Get(inputLine_);
+    }
+    return DEVICE_OK;
+}
+
+int DigitalOutputPort::OnFirstStateSlider(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(firstStateSlider_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(firstStateSlider_);
    }
    return DEVICE_OK;
 }
