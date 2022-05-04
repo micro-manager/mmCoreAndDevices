@@ -34,11 +34,11 @@
 #define ERR_UNKNOWN_MODE         102
 #define ERR_UNKNOWN_POSITION     103
 
-class CPowermeter : public CGenericBase<CPowermeter>
+class PM100 : public CGenericBase<PM100>
 {
 public:
-	CPowermeter();
-	~CPowermeter();
+	PM100();
+	~PM100();
 
 	// MMDevice API
 	// ------------
@@ -53,6 +53,11 @@ public:
 	int OnValue(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDeviceName(MM::PropertyBase* pProp, MM::ActionType eAct);
 private:
+	ViStatus FindInstruments(ViString findPattern, std::vector<std::string>& deviceNames);
+
+
+	ViChar* rscPtr_;
+	ViSession   instrHdl_;
 	bool initialized_;
 	MM::MMTime changedTime_;
 	std::string deviceName_;
