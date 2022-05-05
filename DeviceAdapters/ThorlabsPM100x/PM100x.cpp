@@ -64,35 +64,36 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 ///////////////////////////////////////////////////////////////////////////////
 PM100::PM100() :
    initialized_(false),
-   instrHdl_(VI_NULL),
-   deviceName_("")
-{
-   rscPtr_ = new ViChar();
+   deviceName_(""),
+   instrHdl_(VI_NULL)
+{ 
 }
 
 PM100::~PM100() 
 {
-   delete rscPtr_;
 }
 
 
 int PM100::Initialize()
 {
-   std::vector<std::string> deviceNames;
 
-   ViStatus err = FindInstruments(PM100USB_FIND_PATTERN, deviceNames);
+   std::vector<std::string> pmNames;
+   int result = FindPowerMeters(pmNames);
+   if (result != DEVICE_OK)
+      return result;
+   if (pmNames.size() < 1)
+      return ERR_NO_PM_CONNECTED;
+
+   deviceName_ = pmNames.at(0);
+
+   // the TLPM lib seems to hold on to the rsrcName, so it 
+   static ViChar rsrcName[TLPM_BUFFER_SIZE];
+
+   CDeviceUtils::CopyLimitedString(rsrcName, deviceName_.c_str());
+
+   ViStatus err = TLPM_init(rsrcName, VI_ON, VI_OFF, &instrHdl_);
    if (err != VI_SUCCESS) {
       return (int) err;
-   }
-
-   if (deviceNames.size() > 0)
-      deviceName_ = deviceNames.at(0);
-
-   CDeviceUtils::CopyLimitedString(rscPtr_, deviceName_.c_str());
-
-   err = TLPM_init(rscPtr_, VI_ON, VI_OFF, &instrHdl_);
-   if (err != VI_SUCCESS) {
-      return (int)err;
    }
 
    CPropertyAction* pAct = new CPropertyAction(this, &PM100::OnValue);
@@ -133,7 +134,7 @@ int PM100::OnValue(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       ViStatus       err = VI_SUCCESS;
       ViReal64       power = 0.0;
-      ViInt16        power_unit = TLPM_POWER_UNIT_WATT;
+      ViInt16        power_unit;
       std::string unit;
 
       err = TLPM_getPowerUnit(instrHdl_, &power_unit);
@@ -184,19 +185,13 @@ int PM100::OnDeviceName(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-ViStatus PM100::FindInstruments(ViString findPattern, std::vector<std::string>& deviceNames)
+int PM100::FindPowerMeters(std::vector<std::string>& deviceNames)
 {
- 
-   ViStatus err;
    ViUInt32 deviceCount;
    ViChar rsrcDescr[TLPM_BUFFER_SIZE];
-   ViChar name[TLPM_BUFFER_SIZE], sernr[TLPM_BUFFER_SIZE];
-   ViBoolean available;
-
-   // prepare return value
    rsrcDescr[0] = '\0';
 
-   err = TLPM_findRsrc(0, &deviceCount);
+   int err = TLPM_findRsrc(0, &deviceCount);
    switch (err)
    {
       case VI_SUCCESS:
@@ -211,82 +206,13 @@ ViStatus PM100::FindInstruments(ViString findPattern, std::vector<std::string>& 
          return (err);
    }
 
-   for (int i = 0; i < deviceCount; i++)
+   for (ViUInt32 cnt = 0; cnt < deviceCount; cnt++)
    {
-      err = TLPM_getRsrcName(0, i, rsrcDescr);
-      deviceNames.push_back(rsrcDescr);
+      err = TLPM_getRsrcName(0, 0, rsrcDescr);
       if (err != VI_SUCCESS)
          return err;
+      deviceNames.push_back(rsrcDescr);
    }
 
-   return VI_SUCCESS;
-   /*
-
-   if (deviceCount < 2)
-   {
-      // Found only one matching instrument - return this
-      err = TLPM_getRsrcName(0, 0, rsrcDescr);
-      deviceName_ = rsrcDescr;
-      return (err);
-   }
-
-   // Found multiple instruments - Display list of instruments
-   done = 0;
-   do
-   {
-      // Print device list
-      for (cnt = 0; cnt < deviceCount; cnt++)
-      {
-         err = TLPM_getRsrcInfo(0, cnt, name, sernr, VI_NULL, &available);
-         if (err) return (err);
-         printf("% d(%s): S/N:%s \t%s\n", cnt + 1, (available) ? "FREE" : "LOCK", sernr, name);
-      }
-
-      printf("\nPlease select, press q to exit: ");
-      while ((i = getchar()) == EOF);
-      fflush(stdin);
-      switch (i)
-      {
-      case 'q':
-      case 'Q':
-         printf("User abort\n\n");
-         return (VI_ERROR_RSRC_NFOUND);
-
-      default:
-         break;   // do nothing
-      }
-
-      // an integer is expected
-      i -= '0';
-      printf("\n");
-      if ((i < 1) || (i > cnt))
-      {
-         printf("Invalid selection\n\n");
-      }
-      else
-      {
-         done = VI_TRUE;
-      }
-
-      printf("\nPlease select: ");
-      while ((i = getchar()) == EOF);
-      i -= '0';
-      fflush(stdin);
-      printf("\n");
-      if ((i < 1) || (i > cnt))
-      {
-         printf("Invalid selection\n\n");
-      }
-      else
-      {
-         done = 1;
-      }
-   } while (!done);
-
-   // Copy resource string to static buffer
-   err = TLPM_getRsrcName(0, i - 1, rsrcDescr);
-
-   return (err);
-   */
-
+   return DEVICE_OK;
 }

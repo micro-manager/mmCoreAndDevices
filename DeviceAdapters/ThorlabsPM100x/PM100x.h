@@ -33,6 +33,7 @@
 //
 #define ERR_UNKNOWN_MODE         102
 #define ERR_UNKNOWN_POSITION     103
+#define ERR_NO_PM_CONNECTED      104
 
 class PM100 : public CGenericBase<PM100>
 {
@@ -52,11 +53,10 @@ public:
 	// ----------------
 	int OnValue(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDeviceName(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 private:
-	ViStatus FindInstruments(ViString findPattern, std::vector<std::string>& deviceNames);
+	int FindPowerMeters(std::vector<std::string>& deviceNames);
 
-
-	ViChar* rscPtr_;
 	ViSession   instrHdl_;
 	bool initialized_;
 	MM::MMTime changedTime_;
