@@ -67,6 +67,26 @@ PM100::PM100() :
    deviceName_(""),
    instrHdl_(VI_NULL)
 { 
+   std::vector<std::string> pmNames;
+   pmNames.push_back("");
+   int result = FindPowerMeters(pmNames);
+
+   pmNames.size() > 1 ? deviceName_ = pmNames.at(1) : deviceName_ = pmNames.at(0);
+   
+   // custom error messages
+   SetErrorText(ERR_NO_PM_CONNECTED, "No Power Meters connected");
+
+   // create pre-initialization properties
+   // ------------------------------------
+
+   // Port
+   CPropertyAction* pAct = new CPropertyAction(this, &PM100::OnPMName);
+   CreateProperty("PowerMeter", deviceName_.c_str(), MM::String, false, pAct, true);
+   for (size_t cnt = 0; cnt < pmNames.size(); cnt++)
+   {
+      AddAllowedValue("PowerMeter", pmNames.at(cnt).c_str());
+   }
+
 }
 
 PM100::~PM100() 
@@ -81,10 +101,14 @@ int PM100::Initialize()
    int result = FindPowerMeters(pmNames);
    if (result != DEVICE_OK)
       return result;
+
    if (pmNames.size() < 1)
       return ERR_NO_PM_CONNECTED;
 
-   deviceName_ = pmNames.at(0);
+   if (std::find(pmNames.begin(), pmNames.end(), deviceName_) == pmNames.end())
+      return ERR_PM_NOT_CONNECTED;
+
+   // deviceName_ = pmNames.at(0);
 
    // the TLPM lib seems to hold on to the rsrcName, so it 
    static ViChar rsrcName[TLPM_BUFFER_SIZE];
@@ -175,11 +199,15 @@ int PM100::OnValue(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int PM100::OnDeviceName(MM::PropertyBase* pProp, MM::ActionType eAct)
+int PM100::OnPMName(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
       pProp->Set(deviceName_.c_str());
+   }
+   if (eAct == MM::AfterSet)
+   {
+      pProp->Get(deviceName_);
    }
    return DEVICE_OK;
 }

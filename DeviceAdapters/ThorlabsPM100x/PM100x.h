@@ -34,6 +34,7 @@
 #define ERR_UNKNOWN_MODE         102
 #define ERR_UNKNOWN_POSITION     103
 #define ERR_NO_PM_CONNECTED      104
+#define ERR_PM_NOT_CONNECTED     105
 
 class PM100 : public CGenericBase<PM100>
 {
@@ -52,7 +53,7 @@ public:
 	// action interface
 	// ----------------
 	int OnValue(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnDeviceName(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnPMName(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	int FindPowerMeters(std::vector<std::string>& deviceNames);
