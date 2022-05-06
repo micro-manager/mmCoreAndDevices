@@ -125,6 +125,16 @@ int PM100::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
+   pAct = new CPropertyAction(this, &PM100::OnRawValue);
+   ret = CreateStringProperty("RawPower", "0.0", true, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   pAct = new CPropertyAction(this, &PM100::OnRawUnit);
+   ret = CreateStringProperty("RawUnit", "W", true, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -198,6 +208,44 @@ int PM100::OnValue(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_ERR;
 }
 
+int PM100::OnRawValue(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      ViStatus       err = VI_SUCCESS;
+      ViReal64       power = 0.0;
+
+      err = TLPM_measPower(instrHdl_, &power);
+      if (err != VI_SUCCESS)
+         return err;
+
+      std::ostringstream os;
+      os << std::setprecision(4) << power;
+      pProp->Set(os.str().c_str());
+   }
+   return DEVICE_OK;
+}
+
+int PM100::OnRawUnit(MM::PropertyBase * pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      ViStatus       err = VI_SUCCESS;
+      ViInt16        power_unit;
+
+      err = TLPM_getPowerUnit(instrHdl_, &power_unit);
+      std::string unit;
+      switch (power_unit)
+      {
+         case TLPM_POWER_UNIT_DBM: unit = "dBm"; break;
+         default: unit = "W"; break;
+      }
+
+      pProp->Set(unit.c_str());
+   }
+   return DEVICE_OK;
+}
+
 
 int PM100::OnPMName(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -208,6 +256,30 @@ int PM100::OnPMName(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::AfterSet)
    {
       pProp->Get(deviceName_);
+   }
+   return DEVICE_OK;
+}
+
+int PM100::OnWavelength(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      ViStatus       err = VI_SUCCESS;
+      ViInt16        power_unit;
+
+      err = TLPM_getPowerUnit(instrHdl_, &power_unit);
+      std::string unit;
+      switch (power_unit)
+      {
+      case TLPM_POWER_UNIT_DBM: unit = "dBm"; break;
+      default: unit = "W"; break;
+      }
+
+      pProp->Set(unit.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+
    }
    return DEVICE_OK;
 }

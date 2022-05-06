@@ -53,7 +53,10 @@ public:
 	// action interface
 	// ----------------
 	int OnValue(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnRawValue(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnRawUnit(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPMName(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnWavelength (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	int FindPowerMeters(std::vector<std::string>& deviceNames);
