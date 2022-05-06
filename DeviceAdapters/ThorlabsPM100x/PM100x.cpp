@@ -71,6 +71,9 @@ PM100::PM100() :
    pmNames.push_back("");
    int result = FindPowerMeters(pmNames);
 
+   if (result != DEVICE_OK)
+      return;
+
    pmNames.size() > 1 ? deviceName_ = pmNames.at(1) : deviceName_ = pmNames.at(0);
    
    // custom error messages
@@ -119,6 +122,22 @@ int PM100::Initialize()
    if (err != VI_SUCCESS) {
       return (int) err;
    }
+
+   // get the calibration at the first memory position
+   ViUInt16	memoryPosition = TLPM_INDEX_4;;
+   ViChar 	sensorSerialNumber[TLPM_BUFFER_SIZE];
+   ViChar 	calibrationDate[TLPM_BUFFER_SIZE];
+   ViUInt16 calibrationPointsCount;
+   ViChar 	author[TLPM_BUFFER_SIZE];
+   ViUInt16 sensorPosition;
+   err = TLPM_getPowerCalibrationPointsInformation(instrHdl_, memoryPosition, sensorSerialNumber, 
+      calibrationDate, &calibrationPointsCount, author, &sensorPosition);
+   if (err != VI_SUCCESS) {
+      return (int)err;
+   }
+   CreateStringProperty("Sensor Serial Number", sensorSerialNumber, true);
+   CreateStringProperty("Calibration Date", calibrationDate, true);
+   CreateStringProperty("Author", author, true);
 
    CPropertyAction* pAct = new CPropertyAction(this, &PM100::OnValue);
    int ret = CreateProperty("Power", "0", MM::String, true, pAct);
@@ -260,26 +279,26 @@ int PM100::OnPMName(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+
 int PM100::OnWavelength(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   ViStatus err = VI_SUCCESS;
+   ViReal64 actWavelength;
+   
    if (eAct == MM::BeforeGet)
    {
-      ViStatus       err = VI_SUCCESS;
-      ViInt16        power_unit;
 
-      err = TLPM_getPowerUnit(instrHdl_, &power_unit);
-      std::string unit;
-      switch (power_unit)
-      {
-      case TLPM_POWER_UNIT_DBM: unit = "dBm"; break;
-      default: unit = "W"; break;
-      }
+      err = TLPM_getWavelength(instrHdl_, TLPM_ATTR_SET_VAL, &actWavelength);
+      if (err != VI_SUCCESS)
+         return err;
 
-      pProp->Set(unit.c_str());
+      pProp->Set(actWavelength);
    }
    else if (eAct == MM::AfterSet)
    {
-
+      pProp->Get(actWavelength);
+      return TLPM_setWavelength(instrHdl_,  actWavelength);
+      
    }
    return DEVICE_OK;
 }
