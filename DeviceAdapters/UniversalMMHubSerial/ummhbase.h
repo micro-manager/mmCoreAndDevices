@@ -2,11 +2,11 @@
 
 #include "MMDevice.h"
 
-class UshDeviceUtilities
+class UmmhDeviceUtilities
 {
 public:
-	UshDeviceUtilities() {};
-	~UshDeviceUtilities() {};
+	UmmhDeviceUtilities() {};
+	~UmmhDeviceUtilities() {};
 
 	void SetBusy(bool val) { busy_ = val; }
 	bool GetBusy() { return busy_; }
