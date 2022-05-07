@@ -28,8 +28,8 @@ using namespace std;
 
 // External names used by the rest of the system
 // to load particular device from the device adapter dll
-const char* g_HubDeviceName = "UniversalSerialHub";
-const char* g_HubDeviceDescription = "Universal hardware hub";
+const char* g_HubDeviceName = "UniversalMMHubSerial";
+const char* g_HubDeviceDescription = "Universal hardware hub (serial)";
 
 vector<mmdevicedescription> deviceDescriptionList;
 UniHub* hub_ = 0;
@@ -179,12 +179,12 @@ int UniHub::Initialize()
 
 	stringstream sss;
 	sss << "Device description list length = " << deviceDescriptionList.size();
+	LogMessage(sss.str().c_str(), true);
 	for (int ii = 0; ii < deviceDescriptionList.size(); ii++) {
 		mmdevicedescription dd = deviceDescriptionList.at(ii);
-		LogMessage(dd.name, true);
-		LogMessage(dd.type, true);
-		LogMessage(to_string((long long)dd.isValid), true);
-		LogMessage(dd.reasonWhyInvalid, true);
+		LogMessage(dd.name, dd.isValid);
+		LogMessage(dd.type, dd.isValid);
+		if (!dd.isValid) LogMessage(dd.reasonWhyInvalid, false);
 	}
 
 	ret = UpdateStatus();
@@ -723,8 +723,11 @@ int UniHub::ReportErrorForDevice(string devicename, string command, vector<strin
 
 int UniHub::WriteError(string addonstr, int err) {	
 	stringstream ss;
-	ss << "UMMH error: ";
+	ss << "UMMH error (" << port_ << "):";
 	switch (err) {
+	case ummherrors::adp_communication_error:
+		ss << "controller communication error (";
+		break;
 	case ummherrors::adp_version_mismatch:
 		ss << "Version number specified by the controller is not supported by this adapter (";
 		break;
@@ -742,6 +745,9 @@ int UniHub::WriteError(string addonstr, int err) {
 		break;
 	case ummherrors::adp_device_command_value_not_allowed:
 		ss << "Device command value was not recognized (";
+		break;
+	case ummherrors::ctr_string_not_recognized:
+		ss << "Adapter sent a string that controller is unable parse (";
 		break;
 	case ummherrors::ctr_device_not_recognized:
 		ss << "Device was not recognized by the controller (";
@@ -1400,17 +1406,17 @@ int UmmhShutter::CreatePropertyBasedOnDescription(mmpropertydescription pd) {
 		if (pd.type == MM::PropertyType::String) {
 			ret = CreateStringProperty(pd.name.c_str(), pd.valueString.c_str(), pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetAllowedValues(pd.name.c_str(), pd.allowedValues);
+			if (!pd.isReadOnly) SetAllowedValues(pd.name.c_str(), pd.allowedValues);
 		}
 		else if (pd.type == MM::PropertyType::Integer) {
 			ret = CreateIntegerProperty(pd.name.c_str(), pd.valueInteger, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
 		}
 		else if (pd.type == MM::PropertyType::Float) {
 			ret = CreateFloatProperty(pd.name.c_str(), pd.valueFloat, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
 		}
 	}
 	return DEVICE_OK;
@@ -1649,8 +1655,8 @@ int UmmhStateDevice::Initialize()
 			if (strcmp(pd.name.c_str(), MM::g_Keyword_Label) == 0) {
 				CPropertyAction* pAct = new CPropertyAction(this, &CStateBase::OnLabel);
 				ret = CreateStringProperty(MM::g_Keyword_Label, pd.valueString.c_str(), false, pAct);
-				for (int ii = 0; ii < pd.allowedValues.size(); ii++) {
-					AddAllowedValue(MM::g_Keyword_Label, pd.allowedValues.at(ii).c_str());
+				for (int jj = 0; jj < pd.allowedValues.size(); jj++) {
+					AddAllowedValue(MM::g_Keyword_Label, pd.allowedValues.at(jj).c_str());
 				}
 				if (ret != DEVICE_OK) return ret;
 			}
@@ -1724,17 +1730,17 @@ int UmmhStateDevice::CreatePropertyBasedOnDescription(mmpropertydescription pd) 
 		if (pd.type == MM::PropertyType::String) {
 			ret = CreateStringProperty(pd.name.c_str(), pd.valueString.c_str(), pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetAllowedValues(pd.name.c_str(), pd.allowedValues);
+			if (!pd.isReadOnly) SetAllowedValues(pd.name.c_str(), pd.allowedValues);
 		}
 		else if (pd.type == MM::PropertyType::Integer) {
 			ret = CreateIntegerProperty(pd.name.c_str(), pd.valueInteger, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
 		}
 		else if (pd.type == MM::PropertyType::Float) {
 			ret = CreateFloatProperty(pd.name.c_str(), pd.valueFloat, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
 		}
 	}
 	return DEVICE_OK;
@@ -1983,17 +1989,17 @@ int UmmhStage::CreatePropertyBasedOnDescription(mmpropertydescription pd) {
 		if (pd.type == MM::PropertyType::String) {
 			ret = CreateStringProperty(pd.name.c_str(), pd.valueString.c_str(), pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetAllowedValues(pd.name.c_str(), pd.allowedValues);
+			if (!pd.isReadOnly) SetAllowedValues(pd.name.c_str(), pd.allowedValues);
 		}
 		else if (pd.type == MM::PropertyType::Integer) {
 			ret = CreateIntegerProperty(pd.name.c_str(), pd.valueInteger, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
 		}
 		else if (pd.type == MM::PropertyType::Float) {
 			ret = CreateFloatProperty(pd.name.c_str(), pd.valueFloat, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
 		}
 	}
 	return DEVICE_OK;
@@ -2338,17 +2344,17 @@ int UmmhXYStage::CreatePropertyBasedOnDescription(mmpropertydescription pd) {
 		if (pd.type == MM::PropertyType::String) {
 			ret = CreateStringProperty(pd.name.c_str(), pd.valueString.c_str(), pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetAllowedValues(pd.name.c_str(), pd.allowedValues);
+			if (!pd.isReadOnly) SetAllowedValues(pd.name.c_str(), pd.allowedValues);
 		}
 		else if (pd.type == MM::PropertyType::Integer) {
 			ret = CreateIntegerProperty(pd.name.c_str(), pd.valueInteger, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
 		}
 		else if (pd.type == MM::PropertyType::Float) {
 			ret = CreateFloatProperty(pd.name.c_str(), pd.valueFloat, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
 		}
 	}
 	return DEVICE_OK;
@@ -2688,17 +2694,17 @@ int UmmhGeneric::CreatePropertyBasedOnDescription(mmpropertydescription pd) {
 		if (pd.type == MM::PropertyType::String) {
 			ret = CreateStringProperty(pd.name.c_str(), pd.valueString.c_str(), pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetAllowedValues(pd.name.c_str(), pd.allowedValues);
+			if (!pd.isReadOnly) SetAllowedValues(pd.name.c_str(), pd.allowedValues);
 		}
 		else if (pd.type == MM::PropertyType::Integer) {
 			ret = CreateIntegerProperty(pd.name.c_str(), pd.valueInteger, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitInteger, pd.upperLimitInteger);
 		}
 		else if (pd.type == MM::PropertyType::Float) {
 			ret = CreateFloatProperty(pd.name.c_str(), pd.valueFloat, pd.isReadOnly);
 			if (DEVICE_OK != ret) return ret;
-			SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
+			if (!pd.isReadOnly) SetPropertyLimits(pd.name.c_str(), pd.lowerLimitFloat, pd.upperLimitFloat);
 		}
 	}
 	return DEVICE_OK;
