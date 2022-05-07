@@ -1,14 +1,14 @@
 #pragma once
 
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          ush.h
+// FILE:          ummhSerial.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Implementation of the universal hardware hub
 //                that uses a serial port for communication
 //                
-// COPYRIGHT:     Artem Melnykov, 2021
+// COPYRIGHT:     Artem Melnykov, 2021-2022
 //
 // LICENSE:       This file is distributed under the BSD license.
 //
@@ -23,11 +23,11 @@
 // AUTHOR:        Artem Melnykov, melnykov.artem at gmail.com, 2021
 // 
 
-#ifndef _USH_H_
-#define _USH_H_
+#ifndef _UMMHSERIAL_H_
+#define _UMMHSERIAL_H_
 
 #include "DeviceBase.h"
-#include "ushbase.h"
+#include "ummhbase.h"
 
 using namespace std;
 
@@ -160,11 +160,11 @@ private:
 	int svc(void);
 };
 
-class UshShutter : public UshDeviceUtilities, public CShutterBase<UshShutter>
+class UmmhShutter : public UmmhDeviceUtilities, public CShutterBase<UmmhShutter>
 {
 public:
-	UshShutter(const char* name);
-	~UshShutter();
+	UmmhShutter(const char* name);
+	~UmmhShutter();
 
 	// MMDevice API
 	// ------------
@@ -191,11 +191,11 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UshStateDevice : public UshDeviceUtilities, public CStateDeviceBase<UshStateDevice>
+class UmmhStateDevice : public UmmhDeviceUtilities, public CStateDeviceBase<UmmhStateDevice>
 {
 public:
-	UshStateDevice(const char* name);
-	~UshStateDevice();
+	UmmhStateDevice(const char* name);
+	~UmmhStateDevice();
 
 	// MMDevice API
 	// ------------
@@ -222,11 +222,11 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UshStage : public UshDeviceUtilities, public CStageBase<UshStage>
+class UmmhStage : public UmmhDeviceUtilities, public CStageBase<UmmhStage>
 {
 public:
-	UshStage(const char* name);
-	~UshStage();
+	UmmhStage(const char* name);
+	~UmmhStage();
 
 	// MMDevice API
 	// ------------
@@ -279,11 +279,11 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UshXYStage : public UshDeviceUtilities, public CXYStageBase<UshXYStage>
+class UmmhXYStage : public UmmhDeviceUtilities, public CXYStageBase<UmmhXYStage>
 {
 public:
-	UshXYStage(const char* name);
-	~UshXYStage();
+	UmmhXYStage(const char* name);
+	~UmmhXYStage();
 
 	// MMDevice API
 	// ------------
@@ -357,11 +357,11 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UshGeneric : public UshDeviceUtilities, public CGenericBase<UshGeneric>
+class UmmhGeneric : public UmmhDeviceUtilities, public CGenericBase<UmmhGeneric>
 {
 public:
-	UshGeneric(const char* name);
-	~UshGeneric();
+	UmmhGeneric(const char* name);
+	~UmmhGeneric();
 
 	// MMDevice API
 	// ------------
@@ -382,4 +382,4 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-#endif //_USH_H_
+#endif //_UMMHSERIAL_H_

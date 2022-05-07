@@ -97,12 +97,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ush.h" />
-    <ClInclude Include="ushbase.h" />
-    <ClInclude Include="ushreserved.h" />
+    <ClInclude Include="ummhSerial.h" />
+    <ClInclude Include="ummhbase.h" />
+    <ClInclude Include="ummhreserved.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ush.cpp" />
+    <ClCompile Include="ummhSerial.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

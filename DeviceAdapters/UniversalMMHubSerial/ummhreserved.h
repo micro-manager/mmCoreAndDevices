@@ -1,11 +1,11 @@
 #pragma once
 
-namespace ushflags {
+namespace ummhflags {
 	const char serial_out = 0;
 	const char serial_in = 1;
 }
 
-namespace ushwords {
+namespace ummhwords {
 	const char sepSetup = '|';
 	const char sepOut = '>';
 	const char sepIn = '<';
@@ -49,7 +49,7 @@ namespace ushwords {
 
 }
 
-namespace usherrors {
+namespace ummherrors {
 	
 	// *** errors generated in the adapter ***
 	// controller specified version not supported by adapter
