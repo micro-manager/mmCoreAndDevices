@@ -80,7 +80,7 @@ const char* g_Keyword_Power7 = "Power LED 7";
 
 const char* g_Keyword_LEDPosition = "LED Selected";
 const char* g_Keyword_LEDMulti = "Multi-LED Mode";
-const char* g_Keyword_Version = "v1.0.0, 5/4/2022"; 
+const char* g_Keyword_Version = "v1.0.1, 5/9/2022"; 
 using namespace std;
 
 std::map<std::string, bool> g_Busy;
@@ -103,11 +103,7 @@ void newGlobals(std::string p)
 ///////////////////////////////////////////////////////////////////////////////
 MODULE_API void InitializeModuleData()
 {
-#ifdef DefineLambda721
    RegisterDevice(g_ShutterLambda721Name, MM::ShutterDevice, "Lambda 721");
-   //RegisterDevice(g_ShutterLambda721Name, MM::StateDevice, "Lambda 721 Shutter");
-#endif
-
    RegisterDevice(g_WheelAName, MM::StateDevice, "Lambda 10 filter wheel A");
    RegisterDevice(g_WheelBName, MM::StateDevice, "Lambda 10 filter wheel B");
    RegisterDevice(g_WheelCName, MM::StateDevice, "Lambda 10 wheel C (10-3 only)");
@@ -125,14 +121,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
    if (deviceName == 0)
       return 0;
-#ifdef DefineLambda721
    if (strcmp(deviceName, g_ShutterLambda721Name) == 0)
    {
       // create Shutter
       ShutterOn721* pShutter = new ShutterOn721(g_ShutterLambda721Name, 0);
       return pShutter;
    }
-#endif
    if (strcmp(deviceName, g_WheelAName) == 0)
    {
       // create Wheel A
@@ -1742,7 +1736,6 @@ int ShutterOnTenDashTwo::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 #endif
 
-#ifdef DefineLambda721
 ShutterOn721::ShutterOn721(const char* name, int id) :
 initialized_(false), 
 id_(id), 
@@ -1820,12 +1813,6 @@ int ShutterOn721::Initialize()
    if (ret != DEVICE_OK) return ret;
    SetPropertyLimits(g_Keyword_LEDPosition, 0, 7);
 
-   /*
-   pAct = new CPropertyAction (this, &ShutterOn721::OnState0);
-   ret = CreateProperty(g_Keyword_State0, "0", MM::Integer, false, pAct);
-   if (ret != DEVICE_OK) return ret;
-   SetPropertyLimits(g_Keyword_State0, 0, 1);
-   */
    pAct = new CPropertyAction (this, &ShutterOn721::OnState1);
    ret = CreateProperty(g_Keyword_State1, "0", MM::Integer, false, pAct);
    if (ret != DEVICE_OK) return ret;
@@ -1861,12 +1848,6 @@ int ShutterOn721::Initialize()
    if (ret != DEVICE_OK) return ret;
    SetPropertyLimits(g_Keyword_State7, 0, 1);
 
-   /*
-   pAct = new CPropertyAction (this, &ShutterOn721::OnPower0);
-   ret = CreateProperty(g_Keyword_Power0, "0", MM::Integer, false, pAct);
-   if (ret != DEVICE_OK) return ret;
-   SetPropertyLimits(g_Keyword_Power0, 0, 100);
-   */
    pAct = new CPropertyAction (this, &ShutterOn721::OnPower1);
    ret = CreateProperty(g_Keyword_Power1, "1", MM::Integer, false, pAct);
    if (ret != DEVICE_OK) return ret;
@@ -1902,29 +1883,7 @@ int ShutterOn721::Initialize()
    if (ret != DEVICE_OK) return ret;
    SetPropertyLimits(g_Keyword_Power7, 1, 100);
 
-
-   // Shutter mode
-   // ------------
-   if(0)
-   {
-	   pAct = new CPropertyAction (this, &ShutterOn721::OnMode);
-	   vector<string> modes;
-	   modes.push_back(g_FastMode);
-	   modes.push_back(g_SoftMode);
-
-	   CreateProperty(g_ShutterModeProperty, g_FastMode, MM::String, false, pAct);
-	   SetAllowedValues(g_ShutterModeProperty, modes);
-   }
-
-   // Transfer to On Line
-   //unsigned char setSerial = (unsigned char)238;
-   //ret = WriteToComPort(port_.c_str(), &setSerial, 1);
-   //if (DEVICE_OK != ret)
-   //   return ret;
-
    // set initial values
-   //SetProperty(g_ShutterModeProperty, curMode_.c_str());
-   
    for(int ii=0; ii<8; ii++)
 	   state_[ii] = 0;
 
@@ -2093,19 +2052,6 @@ int ShutterOn721::SetLEDPower7(long power)
 	SetLEDPower(7, power);
    return SetProperty(g_Keyword_Power7, CDeviceUtils::ConvertToString(power));
 }
-/*
-int ShutterOn721::GetPower(long& power)
-{
-   char buf[MM::MaxStrLength];
-   int ret = GetProperty(MM::g_Keyword_State, buf);
-   if (ret != DEVICE_OK)
-      return ret;
-   long pos = atol(buf);
-   power = pos;
-
-   return DEVICE_OK;
-}
-*/
 
 int ShutterOn721::Fire(double /*deltaT*/)
 {
@@ -2904,7 +2850,6 @@ int ShutterOn721::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // DG4 Devices

@@ -200,7 +200,6 @@ private:
 
 #endif
 
-#ifdef DefineLambda721 
 class ShutterOn721 : public CShutterBase<ShutterOn721>
 {
 public:
@@ -263,13 +262,11 @@ public:
    int OnPower7(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-   //int OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    
 
 private:
    bool ControllerBusy();
-   bool SetShutterPosition(bool state);
    bool SetShutterMode(const char* mode);
 
    bool SetLEDState(long led, bool state);
@@ -294,7 +291,6 @@ private:
    ShutterOn721& operator=(ShutterOn721& /*rhs*/) {assert(false); return *this;}
 };
 
-#endif
 
 class DG4Wheel : public CStateDeviceBase<DG4Wheel>
 {
