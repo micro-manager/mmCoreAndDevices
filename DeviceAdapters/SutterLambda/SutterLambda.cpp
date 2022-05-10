@@ -45,11 +45,9 @@ const char* g_WheelCName = "Wheel-C";
 const char* g_ShutterAName = "Shutter-A";
 const char* g_ShutterBName = "Shutter-B";
 
-#ifdef DefineShutterOnTenDashTwo
 const char* g_ShutterAName10dash2 = "Shutter-A 10-2";
 const char* g_ShutterBName10dash2 = "Shutter-B 10-2";
 const double g_busyTimeoutMs = 500;
-#endif
 
 const char* g_DG4WheelName = "Wheel-DG4";
 const char* g_DG4ShutterName = "Shutter-DG4";
@@ -109,10 +107,8 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_WheelCName, MM::StateDevice, "Lambda 10 wheel C (10-3 only)");
    RegisterDevice(g_ShutterAName, MM::ShutterDevice, "Lambda 10 shutter A");
    RegisterDevice(g_ShutterBName, MM::ShutterDevice, "Lambda 10 shutter B");
-#ifdef DefineShutterOnTenDashTwo
    RegisterDevice(g_ShutterAName10dash2, MM::ShutterDevice, "Lambda 10-2 shutter A");
    RegisterDevice(g_ShutterBName10dash2, MM::ShutterDevice, "Lambda 10-2 shutter B");
-#endif
    RegisterDevice(g_DG4ShutterName, MM::ShutterDevice, "DG4 shutter");
    RegisterDevice(g_DG4WheelName, MM::StateDevice, "DG4 filter changer");
 }
@@ -163,7 +159,6 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       ShutterOn721* pShutter = new ShutterOn721(g_ShutterLambda721Name, 0);
       return pShutter;
    }
-#ifdef DefineShutterOnTenDashTwo
    else if (strcmp(deviceName, g_ShutterAName10dash2) == 0)
    {
       // create Shutter A
@@ -176,7 +171,6 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       ShutterOnTenDashTwo* pShutter = new ShutterOnTenDashTwo(g_ShutterBName10dash2, 1);
       return pShutter;
    }
-#endif
    else if (strcmp(deviceName, g_DG4ShutterName) == 0)
    {
       // create DG4 shutter
@@ -1360,7 +1354,6 @@ int Shutter::OnND(MM::PropertyBase* pProp, MM::ActionType eAct)
 ///////////////////////////////////////////////////////////////////////////////
 // Shutter implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~
-#ifdef DefineShutterOnTenDashTwo
 ShutterOnTenDashTwo::ShutterOnTenDashTwo(const char* name, int id) :
 initialized_(false), 
 id_(id), 
@@ -1726,7 +1719,6 @@ int ShutterOnTenDashTwo::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-#endif
 
 ShutterOn721::ShutterOn721(const char* name, int id) :
 initialized_(false), 
