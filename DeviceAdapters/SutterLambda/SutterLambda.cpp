@@ -121,12 +121,6 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
    if (deviceName == 0)
       return 0;
-   if (strcmp(deviceName, g_ShutterLambda721Name) == 0)
-   {
-      // create Shutter
-      ShutterOn721* pShutter = new ShutterOn721(g_ShutterLambda721Name, 0);
-      return pShutter;
-   }
    if (strcmp(deviceName, g_WheelAName) == 0)
    {
       // create Wheel A
@@ -163,14 +157,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       Shutter* pShutter = new Shutter(g_ShutterBName, 1);
       return pShutter;
    }
-#ifdef DefineSutter721
    else if (strcmp(deviceName, g_ShutterLambda721Name) == 0)
    {
-      // create Shutter 721
-      ShutterOn721* pShutter = new ShutterOn721(g_ShutterLambda721Name, 3);
+      // create Shutter
+      ShutterOn721* pShutter = new ShutterOn721(g_ShutterLambda721Name, 0);
       return pShutter;
    }
-#endif
 #ifdef DefineShutterOnTenDashTwo
    else if (strcmp(deviceName, g_ShutterAName10dash2) == 0)
    {
