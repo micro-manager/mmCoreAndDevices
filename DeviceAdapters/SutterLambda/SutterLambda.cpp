@@ -37,6 +37,8 @@
 
 
 // Wheels
+const char* g_WheelLambda721Name = "Wheel";
+const char* g_ShutterLambda721Name = "Shutter";
 const char* g_WheelAName = "Wheel-A";
 const char* g_WheelBName = "Wheel-B";
 const char* g_WheelCName = "Wheel-C";
@@ -58,6 +60,27 @@ const char* g_SoftMode = "Soft";
 const char* g_NDMode = "ND";
 const char* g_ControllerID = "Controller Info";
 
+const char* g_Keyword_State0 = "State LED 0";
+const char* g_Keyword_State1 = "State LED 1";
+const char* g_Keyword_State2 = "State LED 2";
+const char* g_Keyword_State3 = "State LED 3";
+const char* g_Keyword_State4 = "State LED 4";
+const char* g_Keyword_State5 = "State LED 5";
+const char* g_Keyword_State6 = "State LED 6";
+const char* g_Keyword_State7 = "State LED 7";
+
+const char* g_Keyword_Power0 = "Power LED 0";
+const char* g_Keyword_Power1 = "Power LED 1";
+const char* g_Keyword_Power2 = "Power LED 2";
+const char* g_Keyword_Power3 = "Power LED 3";
+const char* g_Keyword_Power4 = "Power LED 4";
+const char* g_Keyword_Power5 = "Power LED 5";
+const char* g_Keyword_Power6 = "Power LED 6";
+const char* g_Keyword_Power7 = "Power LED 7";
+
+const char* g_Keyword_LEDPosition = "LED Selected";
+const char* g_Keyword_LEDMulti = "Multi-LED Mode";
+const char* g_Keyword_Version = "v1.0.1, 5/9/2022"; 
 using namespace std;
 
 std::map<std::string, bool> g_Busy;
@@ -80,6 +103,7 @@ void newGlobals(std::string p)
 ///////////////////////////////////////////////////////////////////////////////
 MODULE_API void InitializeModuleData()
 {
+   RegisterDevice(g_ShutterLambda721Name, MM::ShutterDevice, "Lambda 721");
    RegisterDevice(g_WheelAName, MM::StateDevice, "Lambda 10 filter wheel A");
    RegisterDevice(g_WheelBName, MM::StateDevice, "Lambda 10 filter wheel B");
    RegisterDevice(g_WheelCName, MM::StateDevice, "Lambda 10 wheel C (10-3 only)");
@@ -97,7 +121,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
    if (deviceName == 0)
       return 0;
-
+   if (strcmp(deviceName, g_ShutterLambda721Name) == 0)
+   {
+      // create Shutter
+      ShutterOn721* pShutter = new ShutterOn721(g_ShutterLambda721Name, 0);
+      return pShutter;
+   }
    if (strcmp(deviceName, g_WheelAName) == 0)
    {
       // create Wheel A
@@ -116,6 +145,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       Wheel* pWheel = new Wheel(g_WheelCName, 2);
       return pWheel;
    }
+   else if (strcmp(deviceName, g_WheelLambda721Name) == 0)
+   {
+      // create Wheel C
+      Wheel* pWheel = new Wheel(g_WheelLambda721Name, 3);
+      return pWheel;
+   }
    else if (strcmp(deviceName, g_ShutterAName) == 0)
    {
       // create Shutter A
@@ -128,6 +163,14 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       Shutter* pShutter = new Shutter(g_ShutterBName, 1);
       return pShutter;
    }
+#ifdef DefineSutter721
+   else if (strcmp(deviceName, g_ShutterLambda721Name) == 0)
+   {
+      // create Shutter 721
+      ShutterOn721* pShutter = new ShutterOn721(g_ShutterLambda721Name, 3);
+      return pShutter;
+   }
+#endif
 #ifdef DefineShutterOnTenDashTwo
    else if (strcmp(deviceName, g_ShutterAName10dash2) == 0)
    {
@@ -530,7 +573,7 @@ curPos_(0),
 speed_(3), 
 answerTimeoutMs_(500)
 {
-   assert(id==0 || id==1 || id==2);
+   assert(id==0 || id==1 || id==2 || id==3);
    assert(strlen(name) < (unsigned int) MM::MaxStrLength);
 
    InitializeDefaultErrorMessages();
@@ -548,7 +591,13 @@ answerTimeoutMs_(500)
    CreateProperty(MM::g_Keyword_Name, name_.c_str(), MM::String, true);
 
    // Description
-   CreateProperty(MM::g_Keyword_Description, "Sutter Lambda filter wheel adapter", MM::String, true);
+   if(id==3)
+   {
+	   CreateProperty(MM::g_Keyword_Description, "Sutter Lambda 721 adapter", MM::String, true);
+	   numPos_ = 8;
+   }
+   else
+	   CreateProperty(MM::g_Keyword_Description, "Sutter Lambda filter wheel adapter", MM::String, true);	   
 
    // Port
    CPropertyAction* pAct = new CPropertyAction (this, &Wheel::OnPort);
@@ -1509,22 +1558,25 @@ bool ShutterOnTenDashTwo::SetShutterPosition(bool state)
          LogMessage("ReadFromComPort failed", false);
          return false;
       }
-      if (answer == command)
-      {
-         ret = true;
-         break;
-      }
-      else if (answer == 13) // CR
-      {
-         LogMessage("error, command was not echoed!", false);
-         break;
-      }
-      else if( answer != 0)
-      {
-         std::ostringstream bufff;
-         bufff << answer;
-         LogMessage("unexpected response: " + bufff.str(), false);
-      }
+	  if(read > 0)
+	  {
+		  if (answer == command)
+		  {
+			 ret = true;
+			 break;
+		  }
+		  else if (answer == 13) // CR
+		  {
+			 LogMessage("error, command was not echoed!", false);
+			 break;
+		  }
+		  else if( answer != 0)
+		  {
+			 std::ostringstream bufff;
+			 bufff << answer;
+			 LogMessage("unexpected response: " + bufff.str(), false);
+		  }
+	  }
       MM::MMTime del2 = GetCurrentMMTime() - startTime;
       if( 1000.0 * answerTimeoutMs_ < del2.getUsec())
       {
@@ -1545,15 +1597,18 @@ bool ShutterOnTenDashTwo::SetShutterPosition(bool state)
          LogMessage("ReadFromComPort failed", false);
          return false;
       }
-      if (answer == 13) // CR
-      {
-         ret = true;
-         break;
-      }
-      if( 0 < read)
-      {
-         LogMessage("error, extraneous response " + std::string((char*)&answer), false);
-      }
+	  if(read>0)
+	  {
+		  if (answer == 13) // CR
+		  {
+			 ret = true;
+			 break;
+		  }
+		  if( 0 < read)
+		  {
+			 LogMessage("error, extraneous response " + std::string((char*)&answer), false);
+		  }
+	  }
       if( 1000.0 * answerTimeoutMs_ < (GetCurrentMMTime() - startTime).getUsec())
       {
          std::ostringstream bufff;
@@ -1572,7 +1627,7 @@ bool ShutterOnTenDashTwo::Busy()
 {
 
    {
-      std::unique_ptr<MMThreadGuard> pg ( new MMThreadGuard(*(::gplocks_[port_])));
+      std::auto_ptr<MMThreadGuard> pg ( new MMThreadGuard(*(::gplocks_[port_])));
       if(::g_Busy[port_])
          return true;
    }
@@ -1680,6 +1735,1120 @@ int ShutterOnTenDashTwo::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 #endif
+
+ShutterOn721::ShutterOn721(const char* name, int id) :
+initialized_(false), 
+id_(id), 
+name_(name), 
+answerTimeoutMs_(500), 
+curMode_(g_FastMode)
+{
+   InitializeDefaultErrorMessages();
+
+   // create pre-initialization properties
+   // ------------------------------------
+
+   // Name
+   CreateProperty(MM::g_Keyword_Name, name_.c_str(), MM::String, true);
+
+   // Description
+   CreateProperty(MM::g_Keyword_Description, "Sutter Lambda 721 adapter", MM::String, true);
+
+   // Port
+   CPropertyAction* pAct = new CPropertyAction (this, &ShutterOn721::OnPort);
+   CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+
+   for(int ii=0; ii<8; ii++)
+   {
+	   state_[ii] = 0;
+	   power_[ii] = 1;
+   }
+   multiMode_ = 0;
+   wheelPosition_ = 0;
+   open_ = 0;
+   lastCode_ = 255;
+
+   EnableDelay();
+   //UpdateStatus();
+}
+
+ShutterOn721::~ShutterOn721()
+{
+   Shutdown();
+}
+
+void ShutterOn721::GetName(char* name) const
+{
+   CDeviceUtils::CopyLimitedString(name, name_.c_str());
+}
+
+int ShutterOn721::Initialize()
+{
+   if (initialized_) 
+      return DEVICE_OK;
+
+
+ newGlobals(port_);
+
+   // set property list
+   // -----------------
+
+   // State
+   // -----
+   CPropertyAction* pAct = new CPropertyAction (this, &ShutterOn721::OnState);
+   int ret = CreateProperty(MM::g_Keyword_State, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(MM::g_Keyword_State, 0, 1);
+   
+   ret = CreateProperty("Version", g_Keyword_Version, MM::String, true, NULL);
+   if (ret != DEVICE_OK) return ret;
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnLEDMultiMode);
+   ret = CreateProperty(g_Keyword_LEDMulti, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_LEDMulti, 0, 1);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnLEDPosition);
+   ret = CreateProperty(g_Keyword_LEDPosition, "0", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_LEDPosition, 0, 7);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnState1);
+   ret = CreateProperty(g_Keyword_State1, "0", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_State1, 0, 1);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnState2);
+   ret = CreateProperty(g_Keyword_State2, "0", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_State2, 0, 1);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnState3);
+   ret = CreateProperty(g_Keyword_State3, "0", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_State3, 0, 1);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnState4);
+   ret = CreateProperty(g_Keyword_State4, "0", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_State4, 0, 1);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnState5);
+   ret = CreateProperty(g_Keyword_State5, "0", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_State5, 0, 1);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnState6);
+   ret = CreateProperty(g_Keyword_State6, "0", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_State6, 0, 1);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnState7);
+   ret = CreateProperty(g_Keyword_State7, "0", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_State7, 0, 1);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnPower1);
+   ret = CreateProperty(g_Keyword_Power1, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_Power1, 1, 100);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnPower2);
+   ret = CreateProperty(g_Keyword_Power2, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_Power2, 1, 100);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnPower3);
+   ret = CreateProperty(g_Keyword_Power3, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_Power3, 1, 100);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnPower4);
+   ret = CreateProperty(g_Keyword_Power4, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_Power4, 1, 100);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnPower5);
+   ret = CreateProperty(g_Keyword_Power5, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_Power5, 1, 100);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnPower6);
+   ret = CreateProperty(g_Keyword_Power6, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_Power6, 1, 100);
+
+   pAct = new CPropertyAction (this, &ShutterOn721::OnPower7);
+   ret = CreateProperty(g_Keyword_Power7, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK) return ret;
+   SetPropertyLimits(g_Keyword_Power7, 1, 100);
+
+   // set initial values
+   for(int ii=0; ii<8; ii++)
+	   state_[ii] = 0;
+
+   SetLEDState(0, 1);
+   SetOpen(0);
+
+   SetProperty(MM::g_Keyword_State, CDeviceUtils::ConvertToString(open_));
+   SetProperty(g_Keyword_State1, CDeviceUtils::ConvertToString(state_[1]));
+   SetProperty(g_Keyword_State2, CDeviceUtils::ConvertToString(state_[2]));
+   SetProperty(g_Keyword_State3, CDeviceUtils::ConvertToString(state_[3]));
+   SetProperty(g_Keyword_State4, CDeviceUtils::ConvertToString(state_[4]));
+   SetProperty(g_Keyword_State5, CDeviceUtils::ConvertToString(state_[5]));
+   SetProperty(g_Keyword_State6, CDeviceUtils::ConvertToString(state_[6]));
+   SetProperty(g_Keyword_State7, CDeviceUtils::ConvertToString(state_[7]));
+   
+   for(int ii=1; ii<8; ii++)
+	   SetLEDPower(ii, 1);
+	   
+   ret = UpdateStatus();
+   if (ret != DEVICE_OK)
+      return ret;
+
+
+   // Needed for Busy flag
+   changedTime_ = GetCurrentMMTime();
+
+   initialized_ = true;
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::Shutdown()
+{
+   if (initialized_)
+   {
+      initialized_ = false;
+   }
+   return DEVICE_OK;
+}
+
+int ShutterOn721::SetWheelPosition(long pos)
+{
+	wheelPosition_ = pos;	
+	SetMultiMode(false);
+	return DEVICE_OK;
+}
+
+int ShutterOn721::SetMultiMode(bool mode)
+{
+	multiMode_ = mode;
+
+	if(mode==false)
+	{
+		for(int ii=0; ii<8; ii++)
+		{
+			state_[ii] = 0;
+		}
+		if(wheelPosition_==0)
+		{
+			SetLEDState(wheelPosition_, 0);
+		}
+		else
+		{
+			state_[wheelPosition_] = 1;
+			SetLEDState(wheelPosition_, 1);
+		}
+	}
+	return DEVICE_OK;
+}
+
+int ShutterOn721::SetOpen(bool open)
+{
+   long pos;
+   if (open)
+      pos = 1;
+   else
+      pos = 0;
+
+   if(open_!=open)
+   {
+	   open_=open;
+	   SetLEDState(-1, open);
+	   return SetProperty(MM::g_Keyword_State, CDeviceUtils::ConvertToString(pos));
+   }
+   return DEVICE_OK;
+}
+
+int ShutterOn721::SetLEDState0(bool state)
+{
+	SetLEDState(0, state);
+   return SetProperty(g_Keyword_State0, CDeviceUtils::ConvertToString(state));
+}
+int ShutterOn721::SetLEDState1(bool state)
+{
+	SetLEDState(1, state);
+   return SetProperty(g_Keyword_State1, CDeviceUtils::ConvertToString(state));
+}
+int ShutterOn721::SetLEDState2(bool state)
+{
+	SetLEDState(2, state);
+   return SetProperty(g_Keyword_State2, CDeviceUtils::ConvertToString(state));
+}
+int ShutterOn721::SetLEDState3(bool state)
+{
+	SetLEDState(3, state);
+   return SetProperty(g_Keyword_State3, CDeviceUtils::ConvertToString(state));
+}
+int ShutterOn721::SetLEDState4(bool state)
+{
+	SetLEDState(4, state);
+   return SetProperty(g_Keyword_State4, CDeviceUtils::ConvertToString(state));
+}
+int ShutterOn721::SetLEDState5(bool state)
+{
+	SetLEDState(5, state);
+   return SetProperty(g_Keyword_State5, CDeviceUtils::ConvertToString(state));
+}
+int ShutterOn721::SetLEDState6(bool state)
+{
+	SetLEDState(6, state);
+   return SetProperty(g_Keyword_State6, CDeviceUtils::ConvertToString(state));
+}
+int ShutterOn721::SetLEDState7(bool state)
+{
+	SetLEDState(7, state);
+   return SetProperty(g_Keyword_State7, CDeviceUtils::ConvertToString(state));
+}
+
+int ShutterOn721::SetLEDPower0(long power)
+{
+   SetLEDPower(0, power);
+   return SetProperty(g_Keyword_Power0, CDeviceUtils::ConvertToString(power));
+}
+int ShutterOn721::SetLEDPower1(long power)
+{
+   SetLEDPower(1, power);
+   return SetProperty(g_Keyword_Power1, CDeviceUtils::ConvertToString(power));
+}
+int ShutterOn721::SetLEDPower2(long power)
+{
+	SetLEDPower(2, power);
+   return SetProperty(g_Keyword_Power2, CDeviceUtils::ConvertToString(power));
+}
+int ShutterOn721::SetLEDPower3(long power)
+{
+	SetLEDPower(3, power);
+   return SetProperty(g_Keyword_Power3, CDeviceUtils::ConvertToString(power));
+}
+int ShutterOn721::SetLEDPower4(long power)
+{
+	SetLEDPower(4, power);
+   return SetProperty(g_Keyword_Power4, CDeviceUtils::ConvertToString(power));
+}
+int ShutterOn721::SetLEDPower5(long power)
+{
+	SetLEDPower(5, power);
+   return SetProperty(g_Keyword_Power5, CDeviceUtils::ConvertToString(power));
+}
+int ShutterOn721::SetLEDPower6(long power)
+{
+	SetLEDPower(6, power);
+   return SetProperty(g_Keyword_Power6, CDeviceUtils::ConvertToString(power));
+}
+int ShutterOn721::SetLEDPower7(long power)
+{
+	SetLEDPower(7, power);
+   return SetProperty(g_Keyword_Power7, CDeviceUtils::ConvertToString(power));
+}
+
+int ShutterOn721::Fire(double /*deltaT*/)
+{
+   return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+/**
+* Sends a command to Lambda through the serial port.
+*/
+bool ShutterOn721::SetLEDState(long led, bool state)
+{
+   bool ret = true;
+   unsigned char command[2], code=0;
+
+   if(led>=0)
+	   state_[led] = state;
+
+   command[0] = 'M';
+   
+	if(multiMode_==0)
+	{
+		for(int ii=0; ii<8; ii++)
+		    state_[ii] = 0;
+
+		if(led<0)
+			led = wheelPosition_;
+		else if(state)
+			wheelPosition_ = led;			
+
+		state_[led] = state;
+
+		if(state && led>0)
+		{			   			
+			code = 1<<(led-1);
+		}
+		   
+	}
+	else
+	{
+		for(int ii=1; ii<8; ii++)
+			if(state_[ii])
+				code += (1<<(ii-1));
+	}
+
+	if(open_==0)
+		code = 0;
+
+	command[1] = code;	
+
+	if(lastCode_==code)
+		return 0;
+
+	lastCode_=code;
+
+   // wait if the device is busy
+   MMThreadGuard g(*(::gplocks_[port_]));
+
+   if( ::g_Busy[port_])
+      LogMessage("busy entering SetShutterPosition",true);
+
+   MM::MMTime startTime = GetCurrentMMTime();
+   while (::g_Busy[port_] && (GetCurrentMMTime() - startTime) < (g_busyTimeoutMs * 1000.0) )
+   {
+      CDeviceUtils::SleepMs(10);
+   }
+
+   if(g_Busy[port_] )
+      LogMessage(std::string("Sequence error, port ") + port_ + std::string("was busy!"), false);
+
+   g_Busy[port_] = true;
+
+
+   (void)PurgeComPort(port_.c_str());
+
+   // send command
+   if (DEVICE_OK != WriteToComPort(port_.c_str(), command, 2))
+      return false;
+
+   // Start timer for Busy flag
+   changedTime_ = GetCurrentMMTime();
+
+   // block/wait for acknowledge, or until we time out;
+   unsigned char answer = 0;
+   unsigned long read;
+   startTime = GetCurrentMMTime();
+
+   // first we will see the echo
+   startTime = GetCurrentMMTime();
+   // read the response
+   for(;;)
+   {
+      if (DEVICE_OK != ReadFromComPort(port_.c_str(), &answer, 1, read))
+      {
+         LogMessage("ReadFromComPort failed", false);
+         return false;
+      }
+	  if(read>0)
+	  {
+		  if (answer == 'M')
+		  {
+			 ret = true;
+			 break;
+		  }
+		  else
+		  {
+			 std::ostringstream bufff;
+			 bufff << answer;
+			 LogMessage("unexpected response: " + bufff.str(), false);
+		  }
+	  }
+      MM::MMTime del2 = GetCurrentMMTime() - startTime;
+      if( 1000.0 * answerTimeoutMs_ < del2.getUsec())
+      {
+         std::ostringstream bufff;
+         bufff << "answer timeout after " << del2.getUsec() << " microsec";
+         LogMessage(bufff.str(),false);
+         break;
+      }
+   }
+
+
+   startTime = GetCurrentMMTime();
+   answer = 0;
+   // now look for a 13
+   for(;;){
+      if (DEVICE_OK != ReadFromComPort(port_.c_str(), &answer, 1, read))
+      {
+         LogMessage("ReadFromComPort failed", false);
+         return false;
+      }
+	  if(read>0)
+	  {
+		  if (answer == 13) // CR
+		  {
+			 ret = true;
+			 break;
+		  }
+		  if( 0 < read)
+		  {
+			 LogMessage("error, extraneous response " + std::string((char*)&answer), false);
+		  }
+	  }
+      if( 1000.0 * answerTimeoutMs_ < (GetCurrentMMTime() - startTime).getUsec())
+      {
+         std::ostringstream bufff;
+         bufff << answerTimeoutMs_*2. << " msec";
+         LogMessage("answer timeout after " + bufff.str(),false);
+         break;
+      }
+   }
+
+   g_Busy[port_] = false;
+
+   return ret;
+}
+
+bool ShutterOn721::GetLEDStates(int *state)
+{
+   bool ret = true;
+   unsigned char command;
+
+   command = 'S';
+
+   // wait if the device is busy
+   MMThreadGuard g(*(::gplocks_[port_]));
+
+   if( ::g_Busy[port_])
+      LogMessage("busy entering SetShutterPosition",true);
+
+   MM::MMTime startTime = GetCurrentMMTime();
+   while (::g_Busy[port_] && (GetCurrentMMTime() - startTime) < (g_busyTimeoutMs * 1000.0) )
+   {
+      CDeviceUtils::SleepMs(10);
+   }
+
+   if(g_Busy[port_] )
+      LogMessage(std::string("Sequence error, port ") + port_ + std::string("was busy!"), false);
+
+   g_Busy[port_] = true;
+
+
+   (void)PurgeComPort(port_.c_str());
+
+   // send command
+   if (DEVICE_OK != WriteToComPort(port_.c_str(), &command, 1))
+      return false;
+
+   // Start timer for Busy flag
+   changedTime_ = GetCurrentMMTime();
+
+   // block/wait for acknowledge, or until we time out;
+   unsigned char answer;
+   unsigned long read;
+   unsigned char led;
+   startTime = GetCurrentMMTime();
+
+   // first we will see the echo
+   startTime = GetCurrentMMTime();
+   // read the response
+   for(;;)
+   {
+      if (DEVICE_OK != ReadFromComPort(port_.c_str(), &answer, 1, read))
+      {
+         LogMessage("ReadFromComPort failed", false);
+         return false;
+      }
+	  if(read>0)
+	  {
+		  if( answer == 'S')
+		  {
+		  }
+		  else if (answer == 13)
+		  {
+			 ret = true;
+			 break;
+		  }
+		  else if(answer>='1' && answer<='7')
+		  {
+			  led = (unsigned char)atoi((char*)&answer);
+			  state[led] = 1; 
+		  }
+		  else
+		  {
+			 std::ostringstream bufff;
+			 bufff << answer;
+			 LogMessage("unexpected response: " + bufff.str(), false);
+		  }
+	  }
+      MM::MMTime del2 = GetCurrentMMTime() - startTime;
+      if( 1000.0 * answerTimeoutMs_ < del2.getUsec())
+      {
+         std::ostringstream bufff;
+         bufff << "answer timeout after " << del2.getUsec() << " microsec";
+         LogMessage(bufff.str(),false);
+         break;
+      }
+   }
+
+
+   startTime = GetCurrentMMTime();
+   answer = 0;
+   // now look for a 13
+   for(;;){
+      if (DEVICE_OK != ReadFromComPort(port_.c_str(), &answer, 1, read))
+      {
+         LogMessage("ReadFromComPort failed", false);
+         return false;
+      }
+	  if(read>0)
+	  {
+		  if (answer == 13) // CR
+		  {
+			 ret = true;
+			 break;
+		  }
+		  if( 0 < read)
+		  {
+			 LogMessage("error, extraneous response " + std::string((char*)&answer), false);
+		  }
+	  }
+      if( 1000.0 * answerTimeoutMs_ < (GetCurrentMMTime() - startTime).getUsec())
+      {
+         std::ostringstream bufff;
+         bufff << answerTimeoutMs_*2. << " msec";
+         LogMessage("answer timeout after " + bufff.str(),false);
+         break;
+      }
+   }
+
+   g_Busy[port_] = false;
+
+   return ret;
+}
+
+bool ShutterOn721::SetLEDPower(long led, long power)
+{
+   bool ret = true;
+   unsigned char command[3];
+
+   power_[led] = power;
+   command[0] = 'P';
+   command[1] = (unsigned char)led;
+   command[2] = (unsigned char)power;
+
+   // wait if the device is busy
+   MMThreadGuard g(*(::gplocks_[port_]));
+
+   if( ::g_Busy[port_])
+      LogMessage("busy entering SetLEDPower",true);
+
+   MM::MMTime startTime = GetCurrentMMTime();
+   while (::g_Busy[port_] && (GetCurrentMMTime() - startTime) < (g_busyTimeoutMs * 1000.0) )
+   {
+      CDeviceUtils::SleepMs(10);
+   }
+
+   if(g_Busy[port_] )
+      LogMessage(std::string("Sequence error, port ") + port_ + std::string("was busy!"), false);
+
+   g_Busy[port_] = true;
+
+   (void)PurgeComPort(port_.c_str());
+
+   // send command
+   if (DEVICE_OK != WriteToComPort(port_.c_str(), command, 3))
+      return false;
+
+   // Start timer for Busy flag
+   changedTime_ = GetCurrentMMTime();
+
+   // block/wait for acknowledge, or until we time out;
+   unsigned char answer[16];
+   unsigned long read;
+   startTime = GetCurrentMMTime();
+
+   // first we will see the echo
+   startTime = GetCurrentMMTime();
+   // read the response
+   ret=0;
+   int readN=0;
+   for(;;)
+   {	  
+      if (DEVICE_OK != ReadFromComPort(port_.c_str(), &answer[readN], 1, read))
+      {
+         LogMessage("ReadFromComPort failed", false);
+         return false;
+      }	  
+	  readN += read;
+	  if(readN>0)
+	  {
+		  if (readN==4 && answer[0] == command[0] && answer[1] == command[1] && answer[2] == command[2] && answer[3] == 13)
+		  {
+			 ret = true;
+			 break;
+		  }
+		  else if (answer[0] == 13) // CR
+		  {
+			 LogMessage("error, command was not echoed!", false);
+			 break;
+		  }
+		  else if( answer[0] != command[0])
+		  {
+			 std::ostringstream bufff;
+			 bufff << answer;
+			 LogMessage("unexpected response: " + bufff.str(), false);
+		  }
+	  }
+      MM::MMTime del2 = GetCurrentMMTime() - startTime;
+      if( 1000.0 * answerTimeoutMs_ < del2.getUsec())
+      {
+         std::ostringstream bufff;
+         bufff << "answer timeout after " << del2.getUsec() << " microsec";
+         LogMessage(bufff.str(),false);
+         break;
+      }
+   }
+
+   g_Busy[port_] = false;
+
+   return ret;
+}
+
+bool ShutterOn721::Busy()
+{
+
+   {
+      std::auto_ptr<MMThreadGuard> pg ( new MMThreadGuard(*(::gplocks_[port_])));
+      if(::g_Busy[port_])
+         return true;
+   }
+
+   if (GetDelayMs() > 0.0) {
+      MM::MMTime interval = GetCurrentMMTime() - changedTime_;
+      MM::MMTime delay(GetDelayMs()*1000.0);
+      if (interval < delay ) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
+bool ShutterOn721::ControllerBusy()
+{
+
+   return g_Busy[port_];
+}
+
+bool ShutterOn721::SetShutterMode(const char* mode)
+{
+   unsigned char msg[3];
+   //msg[0] = 0;
+
+   if (strcmp(mode, g_FastMode) == 0)
+      msg[0] = 220;
+   else if (strcmp(mode, g_SoftMode) == 0)
+      msg[0] = 221;
+   else
+      return false;
+
+   msg[1] = (unsigned char)id_ + 1;
+   msg[2] = 13; // CR
+
+   // send command
+   if (DEVICE_OK != WriteToComPort(port_.c_str(), msg, 3))
+      return false;
+
+   return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Action handlers
+///////////////////////////////////////////////////////////////////////////////
+
+int ShutterOn721::OnLEDPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)wheelPosition_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetWheelPosition(pos);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnLEDMultiMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)multiMode_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetMultiMode(pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)open_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetOpen(pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState0(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)state_[0]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDState(0, pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState1(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)state_[1]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDState(1, pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState2(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)state_[2]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDState(2, pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState3(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)state_[3]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDState(3, pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState4(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)state_[4]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDState(4, pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState5(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)state_[5]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDState(5, pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState6(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)state_[6]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDState(6, pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnState7(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)state_[7]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDState(7, pos == 0 ? false : true);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnPower0(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDPower(0, pos);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnPower1(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)power_[1]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDPower(1, pos);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnPower2(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)power_[2]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDPower(2, pos);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnPower3(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)power_[3]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDPower(3, pos);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnPower4(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)power_[4]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDPower(4, pos);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnPower5(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)power_[5]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDPower(5, pos);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnPower6(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)power_[6]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDPower(6, pos);
+   }
+
+   return DEVICE_OK;
+}
+
+int ShutterOn721::OnPower7(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+	   pProp->Set((long)power_[7]);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+
+      // apply the value
+      SetLEDPower(7, pos);
+   }
+
+   return DEVICE_OK;
+}
+
+
+int ShutterOn721::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(port_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      if (initialized_)
+      {
+         // revert
+         pProp->Set(port_.c_str());
+         return ERR_PORT_CHANGE_FORBIDDEN;
+      }
+
+      pProp->Get(port_);
+   }
+
+   return DEVICE_OK;
+}
+
+
+int ShutterOn721::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(curMode_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      string mode;
+      pProp->Get(mode);
+
+      if (SetShutterMode(mode.c_str()))
+         curMode_ = mode;
+      else
+         return ERR_UNKNOWN_SHUTTER_MODE;
+   }
+
+   return DEVICE_OK;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
