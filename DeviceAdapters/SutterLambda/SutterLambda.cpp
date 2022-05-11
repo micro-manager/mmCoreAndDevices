@@ -37,7 +37,6 @@
 
 
 // Wheels
-const char* g_WheelLambda721Name = "Wheel";
 const char* g_ShutterLambda721Name = "Shutter";
 const char* g_WheelAName = "Wheel-A";
 const char* g_WheelBName = "Wheel-B";
@@ -133,12 +132,6 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       // create Wheel C
       Wheel* pWheel = new Wheel(g_WheelCName, 2);
-      return pWheel;
-   }
-   else if (strcmp(deviceName, g_WheelLambda721Name) == 0)
-   {
-      // create Wheel C
-      Wheel* pWheel = new Wheel(g_WheelLambda721Name, 3);
       return pWheel;
    }
    else if (strcmp(deviceName, g_ShutterAName) == 0)
