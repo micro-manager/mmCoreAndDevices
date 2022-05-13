@@ -44,7 +44,7 @@
 #ifdef PLEORA
 	const char* g_strVersion = "v1.0.3, 10/21/2019";
 #else
-	const char* g_strVersion = "v1.14.6, 1/28/2020";
+	const char* g_strVersion = "v1.16.3, 5/11/2022";
 #endif
 
 
@@ -338,6 +338,11 @@ int g_PIXCI_DriverLoaded = 0;
 unsigned char g_ucSerialBuf[256];
 int g_SerialOK=false;
 bool g_bCheckSum = true;
+bool g_bCmdAck = true;
+int g_nCheckSum = 0x40;
+int g_nCmdAck = 0x10;
+unsigned char g_SysState0 = 0x12;
+unsigned char g_SysStateFPGA = 0x13;
 
 int serialWriteReadCmd(int unitopenmap, int unit, unsigned char* bufin, int insize, unsigned char* bufout, int outsize, int outread=2, bool bChkSum=true ) ;
 
@@ -393,8 +398,8 @@ int serialWriteReadCmd(int unitopenmap, int unit, unsigned char* bufin, int insi
 		//#define FORMATFILE_LOAD_OWL    "XCAP\xcapRaptorOWL640x480_64.fmt"  // loaded from file during execution
 		#define FORMATFILE_LOAD_OWL_320    "XCAP\xcapRaptorOWL-CL-320_64.fmt"  // loaded from file during execution
 		#define FORMATFILE_LOAD_OWL_640    "XCAP\xcapRaptorOWL-CL-640_64.fmt"  // loaded from file during execution
-		#define FORMATFILE_LOAD_OWL_NINOX_640    "XCAP\xcapRaptorNinox-640_64B.fmt"  // loaded from file during execution
-		#define FORMATFILE_LOAD_OWL_NINOX_640_BIN1    "XCAP\xcapRaptorNinox-640_64_Bin1.fmt"  // loaded from file during execution
+		#define FORMATFILE_LOAD_OWL_NINOX_640    "XCAP\xcapRaptorNinox-640_64C.fmt"  // loaded from file during execution
+		#define FORMATFILE_LOAD_OWL_NINOX_640_BIN1    "XCAP\xcapRaptorNinox-640_64C_Bin1.fmt"  // loaded from file during execution
 
 		#define FORMATFILE_LOAD_EAGLE "XCAP\xcapRaptorEagle_64A.fmt"  // loaded from file during execution
 		#define FORMATFILE_LOAD_EAGLE_BIN1 "XCAP\xcapRaptorEagle_64A_Bin1.fmt"  // loaded from file during execution
@@ -1184,7 +1189,7 @@ void CRaptorEPIX::SetMicroReset() const
 		unsigned char buf[256];
 		serialWriteReadCmd(UNITSOPENMAP, UNITMASK, bufin, 6, buf, 256 );
 
-		int ret=0, loop=0;
+		int ret = 0;
 		bool bBooted=false;
 		do
 		{
@@ -1196,7 +1201,7 @@ void CRaptorEPIX::SetMicroReset() const
 		}
 		while(!bBooted && loop<10);
 
-		SetSystemState(0x12);
+		SetSystemState(g_SysState0);
 		unsigned char nState;
 		nState = GetSystemState();
 		loop=0;
@@ -1214,7 +1219,7 @@ void CRaptorEPIX::SetMicroReset() const
 		serialWriteReadCmd(UNITSOPENMAP, UNITMASK, bufin, 2, buf, 256 );
 
 		loop=0;
-		while(SetSystemState(0x12)==0 && loop<10)
+		while(SetSystemState(g_SysState0)==0 && loop<10)
 		{
 			Sleep(1000);
 			loop++;
@@ -1529,12 +1534,25 @@ int CRaptorEPIX::SetSystemState(unsigned char nState) const
 	if(g_bCheckSum)
 		bufin[1] = nState | 0x40;
 	else
-		bufin[1] = nState ;
+		bufin[1] = nState & 0xBF;
 
+	
+	if(g_bCmdAck)
+		bufin[1] = nState | 0x10;
+	else
+		bufin[1] = nState & 0xEF;
+
+	
+	if(g_bCheckSum)
+	{
 	bufin[3] = bufin[0] ^ bufin[1] ^ bufin[2] ;
 
 	return serialWriteReadCmd(UNITSOPENMAP, UNITMASK, bufin,  4, buf, 256, 3, false );
-	
+	}
+	else
+	{
+		return serialWriteReadCmd(UNITSOPENMAP, UNITMASK, bufin,  3, buf, 256, 2, false );
+	}	
 }
 
 unsigned char CRaptorEPIX::GetSystemState() const
@@ -1568,7 +1586,7 @@ int CRaptorEPIX::GetSerialNumber() const
 
 	thd_->Suspend(); MMThreadGuard g(g_serialLock_[UNITSOPENMAP]);
 
-	SetSystemState(0x13);
+	SetSystemState(g_SysStateFPGA);
 	unsigned char buf[256];
 	int nValue;
 
@@ -1584,7 +1602,7 @@ int CRaptorEPIX::GetSerialNumber() const
 	else if(ret==2)
 		nValue = (int(buf[1])<<8) + buf[0];
 
-	SetSystemState(0x12);
+	SetSystemState(g_SysState0);
 
 	DisableMicro(); thd_->Resume();
 	return nValue;
@@ -1594,7 +1612,7 @@ int CRaptorEPIX::GetSerialNumber() const
 
 #else
 
-int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
+int CRaptorEPIX::SetVideoFormat(int cameraType, char* driverparms)
 {
 #ifdef _MSC_VER
 #pragma warning (push)
@@ -1608,7 +1626,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 	//ret = pxd_PIXCIopen(driverparms, "Default", NULL); 
 	struct stat fileStat;
 
-	if(cameraType_ == _RAPTOR_CAMERA_KITE)
+	if(cameraType == _RAPTOR_CAMERA_KITE)
 	{
 		if(stat(FORMATFILE_LOAD_KITE,&fileStat) >= 0) 
 			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_KITE);		
@@ -1632,7 +1650,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(cameraType_ == _RAPTOR_CAMERA_OWL_320)
+	else if(cameraType == _RAPTOR_CAMERA_OWL_320)
 	{
 		if(stat(FORMATFILE_LOAD_OWL_320,&fileStat) >= 0) 
 			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_OWL_320);
@@ -1656,7 +1674,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(cameraType_ == _RAPTOR_CAMERA_OWL_640)
+	else if(cameraType == _RAPTOR_CAMERA_OWL_640)
 	{
 		if(stat(FORMATFILE_LOAD_OWL_640,&fileStat) >= 0) 
 			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_OWL_640);
@@ -1680,7 +1698,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(cameraType_ == _RAPTOR_CAMERA_OWL_NINOX_640)
+	else if(cameraType == _RAPTOR_CAMERA_OWL_NINOX_640)
 	{
 		if(stat(FORMATFILE_LOAD_OWL_NINOX_640,&fileStat) >= 0) 
 			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_OWL_NINOX_640);
@@ -1704,7 +1722,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(cameraType_ == _RAPTOR_CAMERA_EAGLE)
+	else if(cameraType == _RAPTOR_CAMERA_EAGLE)
 	{
 		if(stat(FORMATFILE_LOAD_EAGLE,&fileStat) >= 0) 
 			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_EAGLE);
@@ -1728,7 +1746,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}	
-	else if(cameraType_ == _RAPTOR_CAMERA_EAGLE_V)
+	else if(cameraType == _RAPTOR_CAMERA_EAGLE_V)
 	{
 		if(stat(FORMATFILE_LOAD_EAGLE_V,&fileStat) >= 0) 
 			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_EAGLE_V);
@@ -1752,10 +1770,10 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(cameraType_ == _RAPTOR_CAMERA_EAGLE_V_4240)
+	else if(cameraType == _RAPTOR_CAMERA_EAGLE_V_4240)
 	{
 		if(stat(FORMATFILE_LOAD_EAGLE_XO4240,&fileStat) >= 0) 
-			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_EAGLE_V);
+			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_EAGLE_XO4240);
 		if(ret<0)
 		{
 			ret = pxd_PIXCIopen(driverparms, "Default", "");
@@ -1776,10 +1794,10 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(cameraType_ == _RAPTOR_CAMERA_EAGLE_V_4210)
+	else if(cameraType == _RAPTOR_CAMERA_EAGLE_V_4210)
 	{
 		if(stat(FORMATFILE_LOAD_EAGLE_XO4210,&fileStat) >= 0) 
-			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_EAGLE_V);
+			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_EAGLE_XO4210);
 		if(ret<0)
 		{
 			ret = pxd_PIXCIopen(driverparms, "Default", "");
@@ -1800,7 +1818,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(cameraType_ == _RAPTOR_CAMERA_FALCON)
+	else if(cameraType == _RAPTOR_CAMERA_FALCON)
 	{
 		if(stat(FORMATFILE_LOAD_FALCON,&fileStat) >= 0) 
 			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_FALCON);
@@ -1824,7 +1842,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(cameraType_ == _RAPTOR_CAMERA_FALCON_III)
+	else if(cameraType == _RAPTOR_CAMERA_FALCON_III)
 	{
 		if(stat(FORMATFILE_LOAD_FALCON_III,&fileStat) >= 0) 
 			ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_FALCON_III);
@@ -1848,10 +1866,10 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 	}
-	else if(((cameraType_ & _RAPTOR_CAMERA_COMMONCMDS1)) > 0)
+	else if(((cameraType & _RAPTOR_CAMERA_COMMONCMDS1)) > 0)
 	{
 		// *************************************************//
-		if(cameraType_ == _RAPTOR_CAMERA_OSPREY)
+		if(cameraType == _RAPTOR_CAMERA_OSPREY)
 		{
 			if(stat(FORMATFILE_LOAD_OSPREY,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_OSPREY);
@@ -1880,7 +1898,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 		// *************************************************//
-		else if(cameraType_ == _RAPTOR_CAMERA_OSPREY_RGB)
+		else if(cameraType == _RAPTOR_CAMERA_OSPREY_RGB)
 		{
 			if(stat(FORMATFILE_LOAD_OSPREY_RGB,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_OSPREY_RGB);
@@ -1905,7 +1923,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 		// *************************************************//
-		else if(cameraType_ == _RAPTOR_CAMERA_KINGFISHER_674)
+		else if(cameraType == _RAPTOR_CAMERA_KINGFISHER_674)
 		{
 			if(stat(FORMATFILE_LOAD_KINGFISHER674,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_KINGFISHER674);
@@ -1930,7 +1948,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 		// *************************************************//
-		else if(cameraType_ == _RAPTOR_CAMERA_KINGFISHER_674_RGB)
+		else if(cameraType == _RAPTOR_CAMERA_KINGFISHER_674_RGB)
 		{
 			if(stat(FORMATFILE_LOAD_KINGFISHER674_RGB,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_KINGFISHER674_RGB);
@@ -1955,7 +1973,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 		// *************************************************//
-		else if(cameraType_ == _RAPTOR_CAMERA_KINGFISHER_694)
+		else if(cameraType == _RAPTOR_CAMERA_KINGFISHER_694)
 		{
 			if(stat(FORMATFILE_LOAD_KINGFISHER694,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_KINGFISHER694);
@@ -1986,7 +2004,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 		// *************************************************//
-		else if(cameraType_ == _RAPTOR_CAMERA_KINGFISHER_694_RGB)
+		else if(cameraType == _RAPTOR_CAMERA_KINGFISHER_694_RGB)
 		{
 			if(stat(FORMATFILE_LOAD_KINGFISHER694_RGB,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_KINGFISHER694_RGB);
@@ -2011,7 +2029,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 		// *************************************************//
-/*		else if(cameraType_ == _RAPTOR_CAMERA_CYGNET)
+/*		else if(cameraType == _RAPTOR_CAMERA_CYGNET)
 		{
 			if(stat(FORMATFILE_LOAD_CYGNET,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_CYGNET);
@@ -2030,7 +2048,7 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 */		// *************************************************//
-/*		else if(cameraType_ == _RAPTOR_CAMERA_CYGNET_RGB)
+/*		else if(cameraType == _RAPTOR_CAMERA_CYGNET_RGB)
 		{
 			if(stat(FORMATFILE_LOAD_CYGNET_RGB,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_CYGNET_RGB);
@@ -2049,13 +2067,13 @@ int CRaptorEPIX::SetVideoFormat(int cameraType_, char* driverparms)
 			}
 		}
 */		// *************************************************//
-/*		else if(cameraType_ == _RAPTOR_CAMERA_UNKNOWN1)
+/*		else if(cameraType == _RAPTOR_CAMERA_UNKNOWN1)
 		{
 			if(stat(FORMATFILE_LOAD_UNKNOWN1,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_UNKNOWN1);
 		}
 */		// *************************************************//
-/*		else if(cameraType_ == _RAPTOR_CAMERA_UNKNOWN1_RGB)
+/*		else if(cameraType == _RAPTOR_CAMERA_UNKNOWN1_RGB)
 		{
 			if(stat(FORMATFILE_LOAD_UNKNOWN1_RGB,&fileStat) >= 0) 
 				ret = pxd_PIXCIopen(driverparms, "", FORMATFILE_LOAD_UNKNOWN1_RGB);
@@ -2128,7 +2146,7 @@ int CRaptorEPIX::Initialize()
 	}
 	
 	
-	SetSystemState(0x12);
+	SetSystemState(g_SysState0);
 	Sleep(100);
 	unsigned char nState;
 	nState = GetSystemState();
@@ -2161,7 +2179,7 @@ int CRaptorEPIX::Initialize()
 			g_SerialOK = serialOK_;
 		}
 
-		SetSystemState(0x12);
+		SetSystemState(g_SysState0);
 		Sleep(100);
 		unsigned char nState;
 		nState = GetSystemState();
@@ -2352,7 +2370,7 @@ int CRaptorEPIX::Initialize()
 	int nSerial, nBinning;
 	int OWLVideoPeak=0, OWLVideoAvg=0;
  
-	SetSystemState(0x12);
+	SetSystemState(g_SysState0);
 
 	ret = GetSystemState();
 
@@ -2371,7 +2389,7 @@ int CRaptorEPIX::Initialize()
 		
 	}
 	
-	SetSystemState(0x12);
+	SetSystemState(g_SysState0);
 
 	SetExtTrigStatus(0); 
 	SetLiveVideo(0);
@@ -2686,7 +2704,6 @@ int CRaptorEPIX::Initialize()
 	   nRet = CreateProperty(MM::g_Keyword_PixelType, g_PixelType_16bit, MM::String, false, pAct);
 	   assert(nRet == DEVICE_OK);
 
-	   vector<string> pixelTypeValues;
 	//   pixelTypeValues.push_back(g_PixelType_8bit);
 	   pixelTypeValues.push_back(g_PixelType_16bit); 
 	//	pixelTypeValues.push_back(g_PixelType_32bitRGB);
@@ -3074,7 +3091,7 @@ int CRaptorEPIX::Initialize()
 	   SetPropertyLimits(g_Keyword_ExpSpeed, 0, 15);
 
 
-	   CPropertyAction *pAct = new CPropertyAction (this, &CRaptorEPIX::OnVideoPeak);
+	   pAct = new CPropertyAction (this, &CRaptorEPIX::OnVideoPeak);
 	   nRet = CreateProperty(g_Keyword_VideoPeak, osVideoPeak.str().c_str(), MM::Integer, true, pAct);
 	   assert(nRet == DEVICE_OK);
 
@@ -3410,7 +3427,7 @@ int CRaptorEPIX::Initialize()
 
 	initialized_ = true; 
 	
-	SetSystemState(0x12);
+	SetSystemState(g_SysState0);
 
 	if((((cameraType_ & _RAPTOR_CAMERA_FALCON_III)) > 0))
 	{
@@ -3540,7 +3557,7 @@ int CRaptorEPIX::Shutdown()
 	  }
 
 	g_bCheckSum = false;
-	SetSystemState(0x12);
+	SetSystemState(g_SysState0);
 
 	DisableMicro();
 
@@ -4666,7 +4683,7 @@ int CRaptorEPIX::SetLiveVideo(bool bLive) const
 			ret = serialWriteRaptorRegister1(UNITMASK, 0xD4, ((unsigned char)ExtTrigStatus_) | 0x04);		
 		
 		if(g_bCheckSum)
-			SetSystemState(0x12);
+			SetSystemState(g_SysState0);
 	}
 	else if(((cameraType_ & _RAPTOR_CAMERA_COMMONCMDS1) > 0))
 	{
@@ -4676,7 +4693,7 @@ int CRaptorEPIX::SetLiveVideo(bool bLive) const
 			ret = serialWriteRaptorRegister1(UNITMASK, 0xD4, ((unsigned char)ExtTrigStatus_) & ~0x04);		
 		
 		if(g_bCheckSum)
-			SetSystemState(0x12);
+			SetSystemState(g_SysState0);
 	}
 	else
 	{
@@ -4784,7 +4801,7 @@ void CRaptorEPIX::SetBinningFactor(int nBin)
 		pxd_goAbortLive(UNITMASK);
 
 		if(g_bCheckSum)
-			SetSystemState(0x12);
+			SetSystemState(g_SysState0);
 
 		if(nBin>=16)
 		{
@@ -4840,6 +4857,12 @@ void CRaptorEPIX::SetBinningFactor(int nBin)
 				ret = pxd_videoFormatAsIncluded(0);
 			}		
 		}
+		else if(cameraType_ == _RAPTOR_CAMERA_EAGLE_V_4240)
+		{
+			#include FORMATFILE_LOAD_EAGLE_XO4240_BIN1
+			pxd_videoFormatAsIncludedInit(0);
+			ret = pxd_videoFormatAsIncluded(0);
+		}
 		else if(cameraType_ == _RAPTOR_CAMERA_EAGLE_V)
 		{
 			if(nBin==1)
@@ -4870,7 +4893,7 @@ void CRaptorEPIX::SetBinningFactor(int nBin)
 			val1 |= 0x08;
 			serialWriteRaptorRegister1(UNITMASK, 0xD4, val1 ) ;		
 			if(g_bCheckSum)
-				SetSystemState(0x12);
+				SetSystemState(g_SysState0);
 		}
 
 	}
@@ -5140,7 +5163,13 @@ void CRaptorEPIX::SetBinningFactorXY(int nBinX, int nBinY)
 		serialWriteRaptorRegister1(UNITMASK, 0xA1, (valx-1)&0xFF);
 		serialWriteRaptorRegister1(UNITMASK, 0xA2, (valy-1)&0xFF);
 
-		if(cameraType_ == _RAPTOR_CAMERA_EAGLE_V)
+		if(cameraType_ == _RAPTOR_CAMERA_EAGLE_V_4240)
+		{
+			#include FORMATFILE_LOAD_EAGLE_XO4240_BIN1
+			pxd_videoFormatAsIncludedInit(0);
+			ret = pxd_videoFormatAsIncluded(0);
+		}
+		else if(cameraType_ == _RAPTOR_CAMERA_EAGLE_V)
 		{
 #ifdef PLEORA
 
@@ -5169,7 +5198,7 @@ void CRaptorEPIX::SetBinningFactorXY(int nBinX, int nBinY)
 			val1 |= 0x08;
 			serialWriteRaptorRegister1(UNITMASK, 0xD4, val1 ) ;		
 			if(g_bCheckSum)
-				SetSystemState(0x12);
+				SetSystemState(g_SysState0);
 		}
 
 	}
@@ -5350,6 +5379,13 @@ int serialWriteReadCmd(int unitopenmap, int unit, unsigned char* bufin, int insi
 
 #else
 
+		if(g_bCmdAck==false && outsize==2)
+		{
+			bufout[0] = 0x50;
+			ret = outsize;
+			return ret;
+		}
+
 
 		while(pxd_serialRead( unit, 0, NULL, 0)==0 && tick<100)
 		{
@@ -5509,7 +5545,7 @@ void CRaptorEPIX::SetExposure(double exp, bool bUpdate)
 		val1 |= 0x08;
 		serialWriteRaptorRegister1(UNITMASK, 0xD4, val1 ) ;		
 		if(g_bCheckSum)
-			SetSystemState(0x12);
+			SetSystemState(g_SysState0);
 	}
 	unsigned long long lExp = (unsigned long long)(exp);
 	unsigned char ucExp[5];
@@ -6671,7 +6707,7 @@ int CRaptorEPIX::GetEPROMManuData()
 	unsigned char bufin2[] = {0x53, 0xAF, 0x12, 0x50};
 	unsigned char buf[256];
 
-	SetSystemState(0x13);
+	SetSystemState(g_SysStateFPGA);
 	int ret;
 
 	if((cameraType_ & _RAPTOR_CAMERA_FALCON_III) > 0)
@@ -6684,7 +6720,7 @@ int CRaptorEPIX::GetEPROMManuData()
 		if(ret>0)
 			ret = serialWriteReadCmd(UNITSOPENMAP, UNITMASK, bufin2,  4, buf, 256, 19 );
 	}
-	SetSystemState(0x12);
+	SetSystemState(g_SysState0);
 
 	int numFF=0;
 	if(ret>=18)
@@ -6696,7 +6732,7 @@ int CRaptorEPIX::GetEPROMManuData()
 
 	if(ret<18 || numFF>1)
 	{
-		SetSystemState(0x13);
+		SetSystemState(g_SysStateFPGA);
 		if((cameraType_ & _RAPTOR_CAMERA_FALCON_III) > 0)
 		{
 			ret = serialWriteReadCmd(UNITSOPENMAP, UNITMASK, bufinF,  9, buf, 256 );
@@ -6709,7 +6745,7 @@ int CRaptorEPIX::GetEPROMManuData()
 		}
 	}
 
-	SetSystemState(0x12);
+	SetSystemState(g_SysState0);
 	DisableMicro(); thd_->Resume();
 
 	if(ret<0)
@@ -6875,19 +6911,30 @@ void CRaptorEPIX::SetExtTrigStatus(unsigned char val) const
 	{
 		serialWriteRaptorRegister1(UNITMASK, 0xD4, val | 0x08) ;
 		if(g_bCheckSum)
-			SetSystemState(0x12);
+			SetSystemState(g_SysState0);
 	}
 	else if(_IS_CAMERA_OWL_FAMILY)
 	{
 		if(val==1)
 			val = 0;
 
-		if(cameraType_ == _RAPTOR_CAMERA_OWL_640 || cameraType_ == _RAPTOR_CAMERA_OWL_NINOX_640 )
+		if(cameraType_ == _RAPTOR_CAMERA_OWL_640 )
+		{
+			unsigned char val2 = 0;
+
+			serialReadRaptorRegister1(UNITMASK, 0xF2, &val2 ) ;
+			val2 &= 0x9F;
+			val2 |= val;
+			serialWriteRaptorRegister1(UNITMASK, 0xF2, val2 ) ;
+		}
+		else if(cameraType_ == _RAPTOR_CAMERA_OWL_NINOX_640 )
 		{
 			unsigned char val2 = 0;
 			serialReadRaptorRegister1(UNITMASK, 0xF2, &val2 ) ;
 			val2 &= 0x9F;
 			val2 |= val;
+
+			serialWriteRaptorRegister1(UNITMASK, 0xF2, 0 ) ;
 			serialWriteRaptorRegister1(UNITMASK, 0xF2, val2 ) ;
 		}
 		else
@@ -7155,7 +7202,7 @@ void CRaptorEPIX::SetROIStatus(unsigned int nWidth, unsigned int nHeight, unsign
 		serialWriteRaptorRegister1(UNITMASK, 0xD4, val1 ) ;
 
 		if(g_bCheckSum)
-			SetSystemState(0x12);
+			SetSystemState(g_SysState0);
 
 #ifdef PLEORA
 
@@ -7548,7 +7595,6 @@ int CRaptorEPIX::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(Gain_);
 		SetGain(Gain_);
 
-        std::ostringstream os;
         os << Gain_;
 	  }
 	  else
@@ -7671,7 +7717,8 @@ int CRaptorEPIX::OnCCDTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 		  double dTemp=-999.0;		  
 
-		  
+		  if(ForceUpdate_ || (ExtTrigStatus_ & 0x04))
+		  {
  	  	  GetSystemState();
 		  FPGACtrl_ = GetFPGACtrl()  ;
 		  
@@ -7691,6 +7738,7 @@ int CRaptorEPIX::OnCCDTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
 		  	  dCCDTemp_ = dTemp;
 			  nCCDTempCount_ = 0;
 		  }
+		}
 		}
 		else
 			nCCDTempCount_++;
@@ -10745,7 +10793,7 @@ int CRaptorEPIX::GetNewEPIXImage(ImgBuffer& img, double exp)
 		}
 
 		//if(captureMode_==0 || triggerMode_>0)
-		if(triggerMode_<=1)
+		if(triggerMode_<=1 || (_IS_CAMERA_OWL_FAMILY))
 		{
 			pxd_goAbortLive(UNITMASK); 
 			captureMode_ = 0;
