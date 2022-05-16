@@ -156,7 +156,7 @@ int TsiCam::Initialize()
    {
       // load TSL dll and create api handle
 		string sdkPath = getSDKPath();
-		sdkPath += "tsi_sdk.dll";
+		sdkPath += "thorlabs_ccd_tsi_sdk.dll";
       g_tsiDllHandle = LoadLibrary(sdkPath.c_str());
       if (g_tsiDllHandle)
       {
