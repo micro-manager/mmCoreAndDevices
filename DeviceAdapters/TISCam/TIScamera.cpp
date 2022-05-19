@@ -417,7 +417,7 @@ int CTIScamera::Initialize()
    pAct = new CPropertyAction (this, &CTIScamera::OnFlipVertical);
    if (pRotateFlipFilter == NULL)
    {
-      nRet = CreateProperty(g_FlipV, "n/a", MM::String, false, pAct);
+      nRet = CreateProperty(g_FlipV, "n/a", MM::String, true);
       if (nRet != DEVICE_OK) return nRet;
    }
    else
@@ -426,6 +426,23 @@ int CTIScamera::Initialize()
       if (nRet != DEVICE_OK) return nRet;
       AddAllowedValue(g_FlipV,g_On);
       AddAllowedValue(g_FlipV,g_Off);
+   }
+
+   if (pDeNoiseFilter == NULL)
+   {
+      nRet = CreateProperty(g_Keyword_DeNoise, "n/a", MM::String, true);
+      if (nRet != DEVICE_OK) return nRet;
+   }
+   else
+   {
+      pAct = new CPropertyAction(this, &CTIScamera::OnDeNoise);
+      nRet = CreateProperty(g_Keyword_DeNoise, "0", MM::Integer, false, pAct);
+      if (nRet != DEVICE_OK) return nRet;
+      AddAllowedValue(g_Keyword_DeNoise, "0");
+      AddAllowedValue(g_Keyword_DeNoise, "1");
+      AddAllowedValue(g_Keyword_DeNoise, "2");
+      AddAllowedValue(g_Keyword_DeNoise, "3");
+      AddAllowedValue(g_Keyword_DeNoise, "4");
    }
 
    pAct = new CPropertyAction (this, &CTIScamera::OnRotate);
@@ -615,13 +632,8 @@ int CTIScamera::SetupProperties()
    bool bResult = pGrabber->setSinkType(pSink);
    assert (bResult == true);
 
-
-
    //we use snap mode
    pSink->setSnapMode(true);
-
-
-
 
    //update property Serial Number
    LARGE_INTEGER iSerNum;
@@ -780,7 +792,6 @@ int CTIScamera::SetupProperties()
    // Retrieve the output type and dimension of the handler sink.
    // The dimension of the sink could be different from the VideoFormat, when
    // you use filters.
-
    bResult = pSink->isAttached();
    if (!bResult) RunTimeDebugMessage("pSink->isAttached() is FALSE");
 
@@ -853,34 +864,10 @@ int CTIScamera::SetupProperties()
    // DeNoise
    if( pDeNoiseFilter != NULL )
    {	
-      string buf;
-      pGrabber->stopLive();
-      pDeNoiseFilter->getParameter( "DeNoise Level", DeNoiseLevel_ );
-   }
-
-   if(!HasProperty(g_Keyword_DeNoise))
-   {
-      CPropertyAction *pAct = new CPropertyAction (this, &CTIScamera::OnDeNoise);
-      nRet = CreateProperty(g_Keyword_DeNoise, "n/a", MM::Integer, false, pAct);
-      assert(nRet == DEVICE_OK);
-   }
-   else
-   {
-      nRet = SetProperty(g_Keyword_DeNoise, "1");   
+      nRet = SetProperty(g_Keyword_DeNoise, "0");
       if (nRet != DEVICE_OK)
          return nRet;
    }
-
-   vector<string> DeNoiseValues;
-   DeNoiseValues.push_back("0");
-   DeNoiseValues.push_back("1");
-   DeNoiseValues.push_back("2");
-   DeNoiseValues.push_back("3");
-   DeNoiseValues.push_back("4");
-   LogMessage("Setting some DeNoise settings", true);
-   SetAllowedValues(g_Keyword_DeNoise, DeNoiseValues);
-
-
 
 
    initialized_ = true;
