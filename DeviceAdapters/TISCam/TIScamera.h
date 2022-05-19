@@ -157,20 +157,19 @@ unsigned GetBitDepth() const;
 	int DisableTrigger();
 
 private:
+   static CTIScamera* instance_;
+   static unsigned refCount_;
 
-    static CTIScamera* instance_;
-    static unsigned refCount_;
-
-    bool initialized_;
+   bool initialized_;
 
 	long lCCD_Width, lCCD_Height;
 	unsigned int uiCCD_BitsPerPixel;
 	bool busy_;
 
-    double currentExpMS_; // value used by camera
+   double currentExpMS_; // value used by camera
 
 	bool sequenceRunning_;
-    bool sequencePaused_;
+   bool sequencePaused_;
 	double FPS_;
 	long Brightness_;
 	long Rotation_;
@@ -180,7 +179,6 @@ private:
 	long WhiteBalanceGreen_;
 	long Gain_;
 	long DeNoiseLevel_;
-
 
 	ImgBuffer img_;
 
