@@ -1252,7 +1252,7 @@ void Cdc1394::rgb8ToMono8(uint8_t* dest, uint8_t* src, uint32_t width, uint32_t 
 // It is the callers responsibility that both src and destination exist
 void Cdc1394::rgb8ToBGRA8(uint8_t* dest, uint8_t* src, uint32_t width, uint32_t height) 
 {
-	for (register uint64_t i=0, j=0; i < (width * height * 3); i+=3, j+=4 ) 
+	for (uint64_t i=0, j=0; i < (width * height * 3); i+=3, j+=4 )
 	{
 		dest[j] = src[i+2];
 		dest[j+1] = src[i+1];
