@@ -1067,21 +1067,23 @@ void SpinnakerCamera::SetExposure(double exp)
 
 int SpinnakerCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
-   try
-   {
-      //Force offsets to be multiples of 2
-      x -= (unsigned) ( (m_cam->OffsetX.GetInc() - ((x - m_cam->OffsetX.GetMin()) % m_cam->OffsetX.GetInc())));
-      y -= (unsigned) ( (m_cam->OffsetY.GetInc() - ((y - m_cam->OffsetY.GetMin()) % m_cam->OffsetY.GetInc())));
-
-      // Force width and height to be multiple of 8
-      xSize += (unsigned) ((m_cam->Width.GetInc() - ((xSize - m_cam->Width.GetMin()) % m_cam->Width.GetInc())));
-      ySize += (unsigned) ((m_cam->Height.GetInc() - ((ySize - m_cam->Height.GetMin()) % m_cam->Height.GetInc())));
-
-      xSize = (unsigned) (min(xSize, m_cam->Width.GetMax()));
-      ySize = (unsigned) (min(ySize, m_cam->Height.GetMax()));
+    try
+   {   
+      // Reset offsets from previous ROI
+      m_cam->OffsetX.SetValue(m_cam->OffsetX.GetMin());
+      m_cam->OffsetY.SetValue(m_cam->OffsetY.GetMin());
+        
+      // Force width and height to be multiple of Width.GetInc() and Height.GetInc()
+      xSize = (unsigned) min(xSize + xSize % m_cam->Width.GetInc(), m_cam->Width.GetMax());
+      ySize = (unsigned) min(ySize + ySize % m_cam->Height.GetInc(), m_cam->Height.GetMax());
 
       m_cam->Width.SetValue(xSize);
       m_cam->Height.SetValue(ySize);
+
+      //Force offsets to be multiples of OffsetX.GetInc() and OffsetY.GetInc()
+      x = (unsigned) min(x + x % m_cam->OffsetX.GetInc(), m_cam->OffsetX.GetMax());
+      y = (unsigned) min(y + y % m_cam->OffsetY.GetInc(), m_cam->OffsetY.GetMax());
+
       m_cam->OffsetX.SetValue(x); 
       m_cam->OffsetY.SetValue(y);
    }
