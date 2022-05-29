@@ -15,19 +15,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\Desktop\LuXApps\Micromanager\LumeneraAdapter\LumeneraCamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\Desktop\LuXApps\Micromanager\LumeneraAdapter\VideoSequenceThread.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClInclude Include="LumeneraCamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VideoSequenceThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\Desktop\LuXApps\Micromanager\LumeneraAdapter\VideoSequenceThread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\Desktop\LuXApps\Micromanager\LumeneraAdapter\LumeneraCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClCompile Include="LumeneraCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VideoSequenceThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

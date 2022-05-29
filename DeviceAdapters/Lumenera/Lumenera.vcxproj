@@ -16,12 +16,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\Desktop\LuXApps\Micromanager\LumeneraAdapter\LumeneraCamera.cpp" />
-    <ClCompile Include="..\..\..\..\Desktop\LuXApps\Micromanager\LumeneraAdapter\VideoSequenceThread.cpp" />
+    <ClInclude Include="LumeneraCamera.h" />
+    <ClInclude Include="VideoSequenceThread.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\Desktop\LuXApps\Micromanager\LumeneraAdapter\LumeneraCamera.h" />
-    <ClInclude Include="..\..\..\..\Desktop\LuXApps\Micromanager\LumeneraAdapter\VideoSequenceThread.h" />
+    <ClCompile Include="LumeneraCamera.cpp" />
+    <ClCompile Include="VideoSequenceThread.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -78,8 +78,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>C:\Users\henry\Desktop\LuXApps\ThirdParty\lib\win\lib64;C:\Users\henry\Desktop\LuXApps\Shared\lib\win\lib64;C:\Users\henry\Desktop\LuXApps\lumenera_sdk\lib\win\lib64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>luxapps.lib;luxappsd.lib;lucamapi.lib;opencv_world331.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\henry\Desktop\tmp\mm_Lumenera_dependencies_debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt5Cored.lib;Qt5Guid.lib;Qt5MultimediaWidgetsd.lib;Qt5Multimediad.lib;Qt5Networkd.lib;Qt5OpenGLd.lib;Qt5PrintSupportd.lib;Qt5Svgd.lib;Qt5Testd.lib;Qt5Widgetsd.lib;boost_filesystem-vc140-mt-gd-x64-1_68.lib;boost_regex-vc140-mt-gd-x64-1_68.lib;boost_system-vc140-mt-gd-x64-1_68.lib;exiv2d.lib;expatd.lib;libGLESv2d.lib;libusb-1.0.lib;lucamapi.lib;luu3vd.lib;luxappsd.lib;opencv_world331d.lib;quazipd.lib;tiffd.lib;zlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(TargetDir)$(TargetName).dll" "C:\Program Files\Micro-Manager-2.0gamma\$(TargetName).dll"</Command>
@@ -102,7 +102,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>C:\Users\henry\Desktop\LuXApps\ThirdParty\lib\win\lib64;C:\Users\henry\Desktop\LuXApps\Shared\lib\win\lib64;C:\Users\henry\Desktop\LuXApps\lumenera_sdk\lib\win\lib64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>luxapps.lib;luxappsd.lib;lucamapi.lib;opencv_world331.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lucamapi.lib;luxapps.lib;opencv_world331.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(TargetDir)$(TargetName).dll" "C:\Program Files\Micro-Manager-2.0gamma\$(TargetName).dll"</Command>
