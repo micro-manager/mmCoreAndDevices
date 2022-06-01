@@ -63,6 +63,8 @@
 using namespace std;
 
 const char* g_LumeneraCameraDeviceName = "LumeneraCamera";
+const char* g_Device_Name = "LuCam";
+const char* g_Camera_Description = "Lumenera INFINITY Adapter";
 
 static const char* g_Keyword_USB = "USB";
 static const char* g_Keyword_GIGE = "GigE Vision";
@@ -70,6 +72,12 @@ std::vector<std::string> HARDWARE_INTERFACES
 {
 	g_Keyword_USB,
 	g_Keyword_GIGE,
+};
+
+std::vector<std::string> FILTERED_LIGHT_SOURCES
+{
+	to_string(LuXApps::CORRECTION_MATRIX::NONE),
+	to_string(LuXApps::CORRECTION_MATRIX::CUSTOM),
 };
 
 static const char* g_PixelType_8bit_MONO = "8bit-MONO";
@@ -453,51 +461,332 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 		}
 	}
 
-	RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_Binning, binSize.c_str(), MM::Integer, readOnly, 
+	RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_Binning, binSize.c_str(), MM::Integer, readOnly,
 		readOnly ? nullptr : new CPropertyAction(this, &LumeneraCamera::OnBinning)));
 	RETURN_ON_ERROR(SetAllowedValues(MM::g_Keyword_Binning, binSizes));
 
+	//Device name
+	RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_Name, g_Device_Name, MM::String, true));
+
+	//Device description
+	RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_Description, g_Camera_Description, MM::String, true));
+
+	//Model name
+	RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_CameraName, camera->getModelName().c_str(), MM::String, true));
 
 
+	//Camera ID
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_CAMERA_ID, prop))
+	{
+		char cBuf[MM::MaxStrLength];
+		unsigned long modelId = std::stoul(prop->getValue());
+		sprintf(cBuf, "0x%04X", modelId);
 
-	//RETURN_ON_ERROR(createDeviceNameProperty());
-	//RETURN_ON_ERROR(createDeviceDescriptionProperty());
+		RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_CameraID, cBuf, MM::String, true));
+	}
 
 
-	//RETURN_ON_ERROR(createModelNameProperty(camera));
-	//RETURN_ON_ERROR(createCameraIdProperty(camera));
-	//RETURN_ON_ERROR(createCameraApiProperty(camera));
-	//RETURN_ON_ERROR(createCameraDriverProperty(camera));
-	//RETURN_ON_ERROR(createCameraFirmwareProperty(camera));
-	//RETURN_ON_ERROR(createCameraFpgaProperty(camera));
-	//RETURN_ON_ERROR(createSensorWidthProperty(camera));
-	//RETURN_ON_ERROR(createSensorHeightProperty(camera));
-	//RETURN_ON_ERROR(createBitDepthProperty(camera));
-	//RETURN_ON_ERROR(createTapConfigurationProperty(camera));
-	//RETURN_ON_ERROR(createGainProperty(camera));
-	//RETURN_ON_ERROR(createRedGainProperty(camera));
-	//RETURN_ON_ERROR(createGreen1GainProperty(camera));
-	//RETURN_ON_ERROR(createGreen2GainProperty(camera));
-	//RETURN_ON_ERROR(createBlueGainProperty(camera));
-	//RETURN_ON_ERROR(createDemosaicMethodProperty(camera));
-	//RETURN_ON_ERROR(createLightSourceProperty(camera));
-	//RETURN_ON_ERROR(createFlippingProperty(camera));
-	//RETURN_ON_ERROR(createMirrorProperty(camera));
-	//RETURN_ON_ERROR(createHueProperty(camera));
-	//RETURN_ON_ERROR(createSaturationProperty(camera));
-	//RETURN_ON_ERROR(createGammaProperty(camera));
-	//RETURN_ON_ERROR(createContrastProperty(camera));
-	//RETURN_ON_ERROR(createBrightnessProperty(camera));
-	//RETURN_ON_ERROR(createHighConversionGainProperty(camera));
-	//RETURN_ON_ERROR(createCoolingProperty(camera));
-	//RETURN_ON_ERROR(createTemperatureProperty(camera));
-	//RETURN_ON_ERROR(createIrisProperty(camera));
-	//RETURN_ON_ERROR(createFocusProperty(camera));
-	//RETURN_ON_ERROR(createAbsoluteFocusProperty(camera));
-	//RETURN_ON_ERROR(createWhiteBalanceTargetRedProperty(camera));
-	//RETURN_ON_ERROR(createWhiteBalanceTargetGreenProperty(camera));
-	//RETURN_ON_ERROR(createWhiteBalanceTargetBlueProperty(camera));
-	//RETURN_ON_ERROR(createWhiteBalanceProperty(camera));
+	//Camera API
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_VERSION_API, prop))
+	{
+		RETURN_ON_ERROR(CreateProperty(g_Camera_API, prop->getValue().c_str(), MM::String, true));
+	}
+
+
+	//Camera driver
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_VERSION_DRIVER, prop))
+	{
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Driver, prop->getValue().c_str(), MM::String, true));
+	}
+
+
+	//Camera firmware
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_VERSION_FIRMWARE, prop))
+	{
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Firmware, prop->getValue().c_str(), MM::String, true));
+	}
+
+
+	//Camera FPGA
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_VERSION_FPGA, prop))
+	{
+		RETURN_ON_ERROR(CreateProperty(g_Camera_FPGA, prop->getValue().c_str(), MM::String, true));
+	}
+
+	//Hardware revision
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_HARDWARE_REVISION, prop))
+	{
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Hardware_Revision, prop->getValue().c_str(), MM::String, true));
+	}
+
+
+	//Sensor width
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_MAXIMUM_WIDTH, prop))
+	{
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Sensor_Width, prop->getValue().c_str(), MM::Integer, true));
+	}
+
+
+	//Sensor height
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_MAXIMUM_HEIGHT, prop))
+	{
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Sensor_Height, prop->getValue().c_str(), MM::Integer, true));
+	}
+
+
+	//Bit depth
+	RETURN_ON_ERROR(getBitDepthFromCamera(bitDepth));
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_PIXEL_FORMAT, prop))
+	{
+		std::vector<std::string> pixelFormats = prop->getValueList();
+
+		std::vector<std::string> bitDepthOptions = getBitDepthOptions();
+		std::vector<std::string> bitDepths;
+
+		for (const std::string& pixelFormat : pixelFormats)
+		{
+			if (::Utilities::contains(bitDepthOptions, pixelFormat))
+			{
+				bitDepths.push_back(pixelFormat);
+			}
+		}
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnBitDepth);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_BitDepth, to_string(bitDepth).c_str(), MM::String, true, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(g_Camera_BitDepth, bitDepths));
+	}
+
+
+	//Tap configuration
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_VIDEO_TAP_CONFIGURATION, prop))
+	{
+		std::string value = prop->getValue();
+		std::vector<std::string> values = prop->getValueList();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnTapConfiguration);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Tap_Configuration, value.c_str(), MM::String, false, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Tap_Configuration, values));
+	}
+
+	//Gain
+	RETURN_ON_ERROR(createLinkedGainProperty(camera, LuXAppsProperties::LUXPROP_VIDEO_GAIN, MM::g_Keyword_Gain));
+
+	//red gain
+	RETURN_ON_ERROR(createLinkedGainProperty(camera, LuXAppsProperties::LUXPROP_VIDEO_GAIN_RED, g_Camera_Gain_Red));
+
+	//Green1 gain
+	RETURN_ON_ERROR(createLinkedGainProperty(camera, LuXAppsProperties::LUXPROP_VIDEO_GAIN_GREEN_1, g_Camera_Gain_Green1));
+
+	//Green2 gain
+	RETURN_ON_ERROR(createLinkedGainProperty(camera, LuXAppsProperties::LUXPROP_VIDEO_GAIN_GREEN_2, g_Camera_Gain_Green2));
+
+	//Blue gain
+	RETURN_ON_ERROR(createLinkedGainProperty(camera, LuXAppsProperties::LUXPROP_VIDEO_GAIN_BLUE, g_Camera_Gain_Blue));
+
+	//Demosaic method
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_DEMOSAIC_METHOD, prop))
+	{
+		std::string value = prop->getValue();
+		std::vector<std::string> values = prop->getValueList();
+		//TODO: Need to filter out HIGHER_QUALITY
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnDemosaicingMethod);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Demosaic_Method, value.c_str(), MM::String, false, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Demosaic_Method, values));
+	}
+
+	//Light source
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_CORRECTION_MATRIX, prop))
+	{
+		std::string value = prop->getValue();
+		std::vector<std::string> values = prop->getValueList();
+
+		::Utilities::remove_all(values, FILTERED_LIGHT_SOURCES);
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnLightSource);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Light_Source, value.c_str(), MM::String, false, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Light_Source, values));
+	}
+
+
+	//Flipping
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_VERTICAL_FLIP, prop))
+	{
+		std::string value = prop->getValue();
+		std::vector<std::string> values = prop->getValueList();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnFlip);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Flip, value.c_str(), MM::String, false, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Flip, values));
+	}
+
+	//Mirror
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_HORIZONTAL_FLIP, prop))
+	{
+		std::string value = prop->getValue();
+		std::vector<std::string> values = prop->getValueList();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnMirror);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Mirror, value.c_str(), MM::String, false, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Mirror, values));
+	}
+
+
+	//Hue
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_HUE, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnHue);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Hue, value.c_str(), MM::Float, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Hue, std::stod(minimum), std::stod(maximum)));
+	}
+
+
+	//Saturation
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_SATURATION, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnSaturation);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Saturation, value.c_str(), MM::Float, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Saturation, std::stod(minimum), std::stod(maximum)));
+	}
+
+
+	//Gamma
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_GAMMA, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnGamma);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Gamma, value.c_str(), MM::Float, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Gamma, std::stod(minimum), std::stod(maximum)));
+	}
+
+	//Contrast
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_CONTRAST, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnContrast);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Contrast, value.c_str(), MM::Float, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Contrast, std::stod(minimum), std::stod(maximum)));
+	}
+
+	//BRightness
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_BRIGHTNESS, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnBrightness);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Brigthness, value.c_str(), MM::Float, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Brigthness, std::stod(minimum), std::stod(maximum)));
+	}
+
+	//Hugh Conversion Gain
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_HIGH_CONVERSION_GAIN, prop))
+	{
+		std::string value = prop->getValue();
+		std::vector<std::string> values = prop->getValueList();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnHighConversionGain);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_High_Conversion_Gain, value.c_str(), MM::String, false, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(g_Camera_High_Conversion_Gain, values));
+	}
+
+
+	//Cooling
+	if (camera->isPropertySupported(LuXAppsProperties::LUXPROP_FAN) && camera->isPropertySupported(LuXAppsProperties::LUXPROP_COOLING))
+	{
+		CameraInterface::Property* fanProperty = nullptr;
+
+		if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_FAN, fanProperty))
+		{
+			std::string value = fanProperty->getValue();
+			std::vector<std::string> values = fanProperty->getValueList();
+
+			CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnCooling);
+			RETURN_ON_ERROR(CreateProperty(g_Camera_Cooling, value.c_str(), MM::String, false, pAction));
+			RETURN_ON_ERROR(SetAllowedValues(g_Camera_Cooling, values));
+		}
+	}
+
+	//Temperature
+		//TODO: Should create some kind of timer to refresh Temperature property
+
+
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_CAMERA_TEMPERATURE, prop))
+	{
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnTemperature);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Temperature, prop->getValue().c_str(), MM::String, true, pAction));
+	}
+
+
+	//Iris
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_IRIS, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnIris);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Iris, value.c_str(), MM::Float, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Iris, std::stod(minimum), std::stod(maximum)));
+	}
+
+	//Focus
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_FOCUS, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnFocus);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Focus, value.c_str(), MM::Integer, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Focus, std::stod(minimum), std::stod(maximum)));
+	}
+
+
+	//Absolute focus
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_ABSOLUTE_FOCUS, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnAbsoluteFocus);
+		RETURN_ON_ERROR(CreateProperty(g_Camera_Absolute_Focus, value.c_str(), MM::Integer, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Absolute_Focus, std::stod(minimum), std::stod(maximum)));
+	}
+
+	//White balance target red
+	RETURN_ON_ERROR(createWhiteBalanceTargetProperty(camera_, g_Keyword_White_Balance_Target_Red));
+	//White balance target green
+	RETURN_ON_ERROR(createWhiteBalanceTargetProperty(camera_, g_Keyword_White_Balance_Target_Green));
+	//White balance target blue
+	RETURN_ON_ERROR(createWhiteBalanceTargetProperty(camera_, g_Keyword_White_Balance_Target_Blue));
+
+
+	//White Balance
+	if (LuXApps::isColorCamera(camera))
+	{
+		std::vector<std::string> values{ TRUE_STRING, FALSE_STRING };
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnWhiteBalance);
+		RETURN_ON_ERROR(CreateProperty(g_Keyword_White_Balance, FALSE_STRING, MM::String, false, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(g_Keyword_White_Balance, values));
+	}
 
 	return DEVICE_OK;
 }
@@ -787,17 +1076,17 @@ int LumeneraCamera::StartSequenceAcquisition(long numImages, double interval_ms,
 	}
 	else
 	{
-			LUXAPPS_TRY
-			{
-				RETURN_ON_ERROR(GetCoreCallback()->PrepareForAcq(this));
-				sequenceThread_->Start();
+		LUXAPPS_TRY
+		{
+			RETURN_ON_ERROR(GetCoreCallback()->PrepareForAcq(this));
+			sequenceThread_->Start();
 
-				return DEVICE_OK;
-			}
-				LUXAPPS_CATCH(...)
-			{
-				return DEVICE_ERR;
-			}
+			return DEVICE_OK;
+		}
+			LUXAPPS_CATCH(...)
+		{
+			return DEVICE_ERR;
+		}
 	}
 	return DEVICE_OK;
 }
@@ -833,7 +1122,7 @@ bool LumeneraCamera::hasCamera()
 	return camera_ != nullptr;
 }
 
-CameraInterface::LucamAdapter::LucamCamera* LumeneraCamera::camera() 
+CameraInterface::LucamAdapter::LucamCamera* LumeneraCamera::camera()
 {
 	return camera_;
 }
@@ -861,6 +1150,25 @@ int LumeneraCamera::readCameraPropertyValue(const std::string& name, std::string
 	}
 
 	return ret;
+}
+
+
+int LumeneraCamera::createLinkedGainProperty(CameraInterface::Camera* camera, const std::string& propertyName, const char* uiName)
+{
+	CameraInterface::Property* prop = nullptr;
+
+	if (camera->tryGetProperty(propertyName, prop))
+	{
+		std::string value = prop->getValue();
+		std::string minimum = prop->getMin();
+		std::string maximum = prop->getMax();
+
+		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnGain);
+		RETURN_ON_ERROR(CreateProperty(uiName, value.c_str(), MM::Float, false, pAction, false));
+		RETURN_ON_ERROR(SetPropertyLimits(uiName, std::stod(minimum), std::stod(maximum)));
+	}
+
+	return DEVICE_OK;
 }
 
 int LumeneraCamera::writeCameraPropertyValue(const std::string& name, const std::string& value)
@@ -909,6 +1217,17 @@ void LumeneraCamera::throttleClockSpeed(CameraInterface::Camera* cam, const std:
 			prop->setValue(supportedClocks[1]);
 		}
 	}
+}
+
+int LumeneraCamera::createWhiteBalanceTargetProperty(CameraInterface::Camera* camera, const char* uiName)
+{
+	if (LuXApps::isColorCamera(camera))
+	{
+		RETURN_ON_ERROR(CreateIntegerProperty(uiName, 255, false));
+		RETURN_ON_ERROR(SetPropertyLimits(uiName, 0, 255));
+	}
+
+	return DEVICE_OK;
 }
 
 bool LumeneraCamera::initializeHardwareInterface()
@@ -1099,6 +1418,17 @@ bool LumeneraCamera::isMirrorEnabled()
 	return enabled;
 }
 
+std::vector<std::string> LumeneraCamera::getBitDepthOptions()
+{
+	static std::vector<std::string> bitDepthOptions;
+	{
+		to_string(Imaging::IMAGE_BIT_DEPTH::EIGHT_BIT);
+		to_string(Imaging::IMAGE_BIT_DEPTH::SIXTEEN_BIT);
+	};
+
+	return bitDepthOptions;
+}
+
 Imaging::IMAGE_BIT_DEPTH LumeneraCamera::getBitDepthFromPixelType(const std::string& pixelType)
 {
 	Imaging::IMAGE_BIT_DEPTH bitDepth = Imaging::IMAGE_BIT_DEPTH::EIGHT_BIT;
@@ -1155,6 +1485,61 @@ std::string getPixelTypeFromFormatAndBitDepth(const Imaging::IMAGE_FORMAT& forma
 	return pixelType;
 }
 
+
+std::string LumeneraCamera::getPropertyName(const std::string& name)
+{
+	static const std::map<std::string, std::string> PROPERTY_MAP
+	{
+		std::make_pair(std::string(g_Camera_Flip),					LuXAppsProperties::LUXPROP_VERTICAL_FLIP),
+		std::make_pair(std::string(g_Camera_Mirror),				LuXAppsProperties::LUXPROP_HORIZONTAL_FLIP),
+		std::make_pair(std::string(g_Camera_Demosaic_Method),		LuXAppsProperties::LUXPROP_DEMOSAIC_METHOD),
+		std::make_pair(std::string(g_Camera_Light_Source),			LuXAppsProperties::LUXPROP_CORRECTION_MATRIX),
+		std::make_pair(std::string(g_Camera_Hue),					LuXAppsProperties::LUXPROP_HUE),
+		std::make_pair(std::string(g_Camera_Saturation),			LuXAppsProperties::LUXPROP_SATURATION),
+		std::make_pair(std::string(g_Camera_Gamma),					LuXAppsProperties::LUXPROP_GAMMA),
+		std::make_pair(std::string(g_Camera_Contrast),				LuXAppsProperties::LUXPROP_CONTRAST),
+		std::make_pair(std::string(g_Camera_Brigthness),			LuXAppsProperties::LUXPROP_BRIGHTNESS),
+		std::make_pair(std::string(g_Camera_High_Conversion_Gain),  LuXAppsProperties::LUXPROP_HIGH_CONVERSION_GAIN),
+		std::make_pair(std::string(g_Camera_Temperature), 			LuXAppsProperties::LUXPROP_CAMERA_TEMPERATURE),
+		std::make_pair(std::string(g_Camera_Iris), 					LuXAppsProperties::LUXPROP_IRIS),
+		std::make_pair(std::string(g_Camera_Focus), 				LuXAppsProperties::LUXPROP_FOCUS),
+		std::make_pair(std::string(g_Camera_Absolute_Focus), 		LuXAppsProperties::LUXPROP_ABSOLUTE_FOCUS),
+	};
+
+	return PROPERTY_MAP.at(name);
+}
+
+std::string LumeneraCamera::getVideoPropertyName(const std::string& name)
+{
+	static const std::map<std::string, std::string> VIDEO_PROPERTY_MAP
+	{
+		std::make_pair(std::string(MM::g_Keyword_Gain),				LuXAppsProperties::LUXPROP_VIDEO_GAIN),
+		std::make_pair(std::string(g_Camera_Gain_Red),				LuXAppsProperties::LUXPROP_VIDEO_GAIN_RED),
+		std::make_pair(std::string(g_Camera_Gain_Green1),			LuXAppsProperties::LUXPROP_VIDEO_GAIN_GREEN_1),
+		std::make_pair(std::string(g_Camera_Gain_Green2),			LuXAppsProperties::LUXPROP_VIDEO_GAIN_GREEN_2),
+		std::make_pair(std::string(g_Camera_Gain_Blue),				LuXAppsProperties::LUXPROP_VIDEO_GAIN_BLUE),
+		std::make_pair(std::string(g_Camera_Tap_Configuration),		LuXAppsProperties::LUXPROP_VIDEO_TAP_CONFIGURATION),
+	};
+
+	return VIDEO_PROPERTY_MAP.at(name);
+}
+
+std::string LumeneraCamera::getStillPropertyName(const std::string& name)
+{
+	static const std::map<std::string, std::string> STILL_PROPERTY_MAP
+	{
+		std::make_pair(std::string(MM::g_Keyword_Gain),				LuXAppsProperties::LUXPROP_STILL_GAIN),
+		std::make_pair(std::string(g_Camera_Gain_Red),				LuXAppsProperties::LUXPROP_STILL_GAIN_RED),
+		std::make_pair(std::string(g_Camera_Gain_Green1),			LuXAppsProperties::LUXPROP_STILL_GAIN_GREEN_1),
+		std::make_pair(std::string(g_Camera_Gain_Green2),			LuXAppsProperties::LUXPROP_STILL_GAIN_GREEN_2),
+		std::make_pair(std::string(g_Camera_Gain_Blue),				LuXAppsProperties::LUXPROP_STILL_GAIN_BLUE),
+		std::make_pair(std::string(g_Camera_Tap_Configuration),		LuXAppsProperties::LUXPROP_STILL_TAP_CONFIGURATION),
+	};
+
+	return STILL_PROPERTY_MAP.at(name);
+}
+
+
 int LumeneraCamera::refreshStream()
 {
 	bool streaming = IsCapturing();
@@ -1201,6 +1586,15 @@ bool LumeneraCamera::exposureRequiresStillStream(double value)
 	return requiresStillStream;
 }
 
+
+bool LumeneraCamera::cameraSupportsProperty(const std::string& name)
+{
+	bool supported = false;
+		supported = camera_->isPropertySupported(name);
+
+	return supported;
+}
+
 bool LumeneraCamera::exposureRequiresVideoStream(double value)
 {
 	return !exposureRequiresStillStream(value);
@@ -1222,6 +1616,34 @@ bool LumeneraCamera::isVideoStreamingMode()
 bool LumeneraCamera::isStillStreamingMode()
 {
 	return !isVideoStreamingMode();
+}
+
+int LumeneraCamera::setCoolingState(const std::string& state)
+{
+	int ret = DEVICE_ERR;
+
+	LUXAPPS_TRY
+	{
+		CameraInterface::Property * fanProperty = nullptr;
+		CameraInterface::Property* coolingProperty = nullptr;
+		if (camera_->tryGetProperty(LuXAppsProperties::LUXPROP_FAN, fanProperty) && camera()->tryGetProperty(LuXAppsProperties::LUXPROP_COOLING, coolingProperty))
+		{
+			fanProperty->setValue(state);
+			coolingProperty->setValue(state);
+
+			ret = DEVICE_OK;
+		}
+		else
+		{
+			ret = DEVICE_INVALID_PROPERTY;
+		}
+	}
+		LUXAPPS_CATCH(...)
+	{
+		ret = DEVICE_CAN_NOT_SET_PROPERTY;
+	}
+
+	return ret;
 }
 
 int LumeneraCamera::getBinValueFromSampling(const std::string& sampling)
@@ -1280,9 +1702,98 @@ void LumeneraCamera::sequenceEnded() noexcept
 	}
 		LUXAPPS_CATCH(CMMError& e)
 	{
-		
+
 	}
 }
+
+void LumeneraCamera::waitForCameraStream()
+{
+		int runs = 0;
+		do
+		{
+			if (camera_->isStreaming())
+				break;
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			runs++;
+
+		} while (runs < 5);
+}
+
+int LumeneraCamera::OnLinkedVideoAndStillProperty(MM::PropertyBase* pProp, MM::ActionType eAct, bool requiresStreamRefresh)
+{
+	int ret = DEVICE_ERR;
+
+	std::string propertyName = pProp->GetName();
+	std::string videoPropertyName = getVideoPropertyName(propertyName);
+	std::string stillPropertyName = getStillPropertyName(propertyName);
+
+	switch (eAct)
+	{
+	case MM::BeforeGet:
+	{
+
+		if (hasCamera())
+		{
+			std::string value;
+			ret = readCameraPropertyValue(videoPropertyName, value);
+			if (ret == DEVICE_OK)
+			{
+				if (pProp->Set(value.c_str()))
+				{
+					ret = DEVICE_OK;
+				}
+				else
+				{
+					ret = DEVICE_ERR;
+				}
+			}
+		}
+		else
+		{
+			ret = DEVICE_NOT_CONNECTED;
+		}
+	}
+	break;
+
+	case MM::AfterSet:
+	{
+
+		if (hasCamera())
+		{
+			std::string value;
+			pProp->Get(value);
+
+			bool streaming = IsCapturing();
+
+			if (streaming && requiresStreamRefresh) RETURN_ON_ERROR(StopSequenceAcquisition());
+
+			ret = writeCameraPropertyValue(videoPropertyName, value);
+
+			if (ret == DEVICE_OK && cameraSupportsProperty(stillPropertyName))
+			{
+				ret = writeCameraPropertyValue(stillPropertyName, value);
+			}
+
+			if (ret == DEVICE_OK)
+			{
+				if (requiresStreamRefresh) RETURN_ON_ERROR(resizeImageBuffer());
+			}
+			
+			if (streaming && requiresStreamRefresh) RETURN_ON_ERROR(StartSequenceAcquisition(0));
+		}
+		else
+		{
+			ret = DEVICE_NOT_CONNECTED;
+		}
+	}
+	break;
+	}
+
+	return ret;
+}
+
+
 
 //////
 // //Action handlers
@@ -1319,6 +1830,43 @@ int LumeneraCamera::OnCameraIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 	return DEVICE_OK;
 }
+
+
+int LumeneraCamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	int ret = DEVICE_ERR;
+
+	switch (eAct)
+	{
+	case MM::BeforeGet:
+	{
+		if (hasCamera())
+		{
+			long bitDepth = GetBitDepth();
+			ret = DEVICE_OK;
+
+			if (ret == DEVICE_OK)
+			{
+				pProp->Set(static_cast<long>(bitDepth));
+			}
+		}
+		else
+		{
+			ret = DEVICE_NOT_CONNECTED;
+		}
+	}
+	break;
+
+	case MM::AfterSet:
+	{
+		//NOTE: Bit depth is read only and is controlled by setting the Pixel Type
+	}
+	break;
+	}
+
+	return ret;
+}
+
 
 int LumeneraCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1456,20 +2004,20 @@ int LumeneraCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 	case MM::BeforeGet:
 	{
 
-			std::string value;
-			ret = readCameraPropertyValue(LuXAppsProperties::LUXPROP_SAMPLING_DESCRIPTION, value);
-			if (ret == DEVICE_OK)
+		std::string value;
+		ret = readCameraPropertyValue(LuXAppsProperties::LUXPROP_SAMPLING_DESCRIPTION, value);
+		if (ret == DEVICE_OK)
+		{
+			int binSize = getBinValueFromSampling(value);
+			if (pProp->Set(static_cast<long>(binSize)))
 			{
-				int binSize = getBinValueFromSampling(value);
-				if (pProp->Set(static_cast<long>(binSize)))
-				{
-					ret = DEVICE_OK;
-				}
-				else
-				{
-					ret = DEVICE_ERR;
-				}
+				ret = DEVICE_OK;
 			}
+			else
+			{
+				ret = DEVICE_ERR;
+			}
+		}
 	}
 	break;
 
@@ -1482,33 +2030,33 @@ int LumeneraCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 		else
 		{
 
-				std::string value;
-				pProp->Get(value);
+			std::string value;
+			pProp->Get(value);
 
-				std::string currentSampling;
-				RETURN_ON_ERROR(readCameraPropertyValue(LuXAppsProperties::LUXPROP_SAMPLING_DESCRIPTION, currentSampling));
-				int currentBinning = getBinValueFromSampling(currentSampling);
+			std::string currentSampling;
+			RETURN_ON_ERROR(readCameraPropertyValue(LuXAppsProperties::LUXPROP_SAMPLING_DESCRIPTION, currentSampling));
+			int currentBinning = getBinValueFromSampling(currentSampling);
 
-				int newBinning = std::stoi(value);
-				std::string sampling = getSamplingFromBinValue(newBinning);
-				ret = writeCameraPropertyValue(LuXAppsProperties::LUXPROP_SAMPLING_DESCRIPTION, sampling);
+			int newBinning = std::stoi(value);
+			std::string sampling = getSamplingFromBinValue(newBinning);
+			ret = writeCameraPropertyValue(LuXAppsProperties::LUXPROP_SAMPLING_DESCRIPTION, sampling);
 
-				if (ret == DEVICE_OK)
-				{
-					unsigned x, y, width, height;
+			if (ret == DEVICE_OK)
+			{
+				unsigned x, y, width, height;
 
-					RETURN_ON_ERROR(getCameraRoi(x, y, width, height));
+				RETURN_ON_ERROR(getCameraRoi(x, y, width, height));
 
-					double adjustmentFactor = static_cast<double>(newBinning) / currentBinning;
+				double adjustmentFactor = static_cast<double>(newBinning) / currentBinning;
 
-					x = std::floor(static_cast<double>(x) / adjustmentFactor);
-					y = std::floor(static_cast<double>(y) / adjustmentFactor);
-					width = std::floor(static_cast<double>(width) / adjustmentFactor);
-					height = std::floor(static_cast<double>(height) / adjustmentFactor);
+				x = std::floor(static_cast<double>(x) / adjustmentFactor);
+				y = std::floor(static_cast<double>(y) / adjustmentFactor);
+				width = std::floor(static_cast<double>(width) / adjustmentFactor);
+				height = std::floor(static_cast<double>(height) / adjustmentFactor);
 
-					RETURN_ON_ERROR(setCameraRoi(x, y, width, height, newBinning));
-					RETURN_ON_ERROR(refreshStream());
-				}
+				RETURN_ON_ERROR(setCameraRoi(x, y, width, height, newBinning));
+				RETURN_ON_ERROR(refreshStream());
+			}
 		}
 	}
 	break;
@@ -1517,3 +2065,345 @@ int LumeneraCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return ret;
 }
 
+int LumeneraCamera::OnTapConfiguration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnLinkedVideoAndStillProperty(pProp, eAct, true));
+
+	return DEVICE_OK;
+}
+int LumeneraCamera::OnDemosaicingMethod(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnLightSource(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnFlip(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnHue(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnSaturation(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnContrast(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnBrightness(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnHighConversionGain(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnCooling(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	int ret = DEVICE_ERR;
+
+	switch (eAct)
+	{
+	case MM::BeforeGet:
+	{
+		if (hasCamera())
+		{
+			std::string value;
+			ret = readCameraPropertyValue(LuXAppsProperties::LUXPROP_FAN, value);
+			if (ret == DEVICE_OK)
+			{
+				if (pProp->Set(value.c_str()))
+				{
+					ret = DEVICE_OK;
+				}
+				else
+				{
+					ret = DEVICE_ERR;
+				}
+			}
+		}
+		else
+		{
+			ret = DEVICE_NOT_CONNECTED;
+		}
+	}
+	break;
+
+	case MM::AfterSet:
+	{
+
+		if (hasCamera())
+		{
+			std::string value;
+			pProp->Get(value);
+
+			ret = setCoolingState(value);
+
+		}
+		else
+		{
+			ret = DEVICE_NOT_CONNECTED;
+		}
+	}
+	break;
+	}
+
+	return ret;
+}
+
+int LumeneraCamera::OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	char buf[MM::MaxStrLength];
+
+	//NOTE: Camera temperature value is only valid if camera cooling is enabled.
+	if (HasProperty(g_Camera_Cooling) && GetProperty(g_Camera_Cooling, buf) == DEVICE_OK && (std::string(buf) == to_string(LuXApps::PROPERTY_STATE::ENABLED)))
+	{
+		RETURN_ON_ERROR(OnReadOnlyProperty(pProp, eAct));
+	}
+	else
+	{
+		if (eAct == MM::BeforeGet)
+		{
+			pProp->Set("N/A");
+		}
+	}
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnIris(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnAbsoluteFocus(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}
+
+int LumeneraCamera::OnReadOnlyProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	int ret = DEVICE_ERR;
+
+	std::string propertyName = pProp->GetName();
+	std::string cameraPropertyName = getPropertyName(propertyName);
+
+	switch (eAct)
+	{
+	case MM::BeforeGet:
+	{
+		if (hasCamera())
+		{
+			std::string value;
+			ret = readCameraPropertyValue(cameraPropertyName, value);
+			if (ret == DEVICE_OK)
+			{
+				if (pProp->Set(value.c_str()))
+				{
+					ret = DEVICE_OK;
+				}
+				else
+				{
+					ret = DEVICE_ERR;
+				}
+			}
+		}
+		else
+		{
+			ret = DEVICE_NOT_CONNECTED;
+		}
+	}
+	break;
+
+	case MM::AfterSet:
+	{
+		ret = DEVICE_CAN_NOT_SET_PROPERTY;
+	}
+	break;
+	}
+
+	return ret;
+}
+
+int LumeneraCamera::OnSingleProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	int ret = DEVICE_ERR;
+
+	std::string propertyName = pProp->GetName();
+	std::string cameraPropertyName = getPropertyName(propertyName);
+
+	switch (eAct)
+	{
+	case MM::BeforeGet:
+	{
+		if (hasCamera())
+		{
+			std::string value;
+			ret = readCameraPropertyValue(cameraPropertyName, value);
+			if (ret == DEVICE_OK)
+			{
+				if (pProp->Set(value.c_str()))
+				{
+					ret = DEVICE_OK;
+				}
+				else
+				{
+					ret = DEVICE_ERR;
+				}
+			}
+		}
+		else
+		{
+			ret = DEVICE_NOT_CONNECTED;
+		}
+	}
+	break;
+
+	case MM::AfterSet:
+	{
+		if (hasCamera())
+		{
+			std::string value;
+			pProp->Get(value);
+
+			ret = writeCameraPropertyValue(cameraPropertyName, value);
+
+		}
+	}
+	break;
+	}
+
+	return ret;
+}
+
+int LumeneraCamera::OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	int ret = DEVICE_ERR;
+
+	switch (eAct)
+	{
+	case MM::BeforeGet:
+	{
+		pProp->Set(FALSE_STRING);
+		ret = DEVICE_OK;
+	}
+	break;
+
+	case MM::AfterSet:
+	{
+		if (hasCamera())
+		{
+			std::string value;
+			pProp->Get(value);
+
+			if (value == TRUE_STRING)
+			{
+				LUXAPPS_TRY
+				{
+					bool idle = !IsCapturing();
+
+					if (idle) { RETURN_ON_ERROR(StartSequenceAcquisition(0)); }
+
+					//NOTE: Need to give time for the video thread to enable the
+					//		camera stream in order for white balance to work
+					waitForCameraStream();
+
+					double red = 255;
+					double green = 255;
+					double blue = 255;
+
+					GetProperty(g_Keyword_White_Balance_Target_Red, red);
+					GetProperty(g_Keyword_White_Balance_Target_Green, green);
+					GetProperty(g_Keyword_White_Balance_Target_Blue, blue);
+
+					LuXApps::whiteBalance(camera(), LuXApps::Rect{}, red, green, blue);
+
+					if (idle) { RETURN_ON_ERROR(StopSequenceAcquisition()); }
+
+					ret = DEVICE_OK;
+				}
+					LUXAPPS_CATCH(LuXAppsExceptions::LuXAppsException & e)
+				{
+					ret = DEVICE_ERR;
+				}
+				catch (...)
+				{
+					ret = DEVICE_ERR;
+				}
+			}
+			else
+			{
+				ret = DEVICE_OK;
+			}
+		}
+		else
+		{
+			ret = DEVICE_NOT_CONNECTED;
+		}
+	}
+	break;
+	}
+
+	return ret;
+}
+
+int LumeneraCamera::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	RETURN_ON_ERROR(OnLinkedVideoAndStillProperty(pProp, eAct));
+
+	return DEVICE_OK;
+}

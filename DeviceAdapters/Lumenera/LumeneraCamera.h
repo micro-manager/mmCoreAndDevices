@@ -136,6 +136,30 @@ public:
 	int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+	int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTapConfiguration(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnDemosaicingMethod(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLightSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnFlip(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnMirror(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnHue(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnSaturation(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnContrast(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnBrightness(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnHighConversionGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnCooling(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnIris(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnAbsoluteFocus(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+	int OnReadOnlyProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnSingleProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLinkedVideoAndStillProperty(MM::PropertyBase* pProp, MM::ActionType eAct, bool requiresStreamRefresh = false);
+
+	int OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
 private:
@@ -193,7 +217,18 @@ private:
 
 	Imaging::IMAGE_BIT_DEPTH getBitDepthFromPixelType(const std::string& pixelType);
 	Imaging::IMAGE_FORMAT getImageFormatFromPixelType(const std::string& pixelType);
+	int createLinkedGainProperty(CameraInterface::Camera* camera, const std::string& propertyName, const char* uiName);
+	void waitForCameraStream();
+	int setCoolingState(const std::string& state);
+	int createWhiteBalanceTargetProperty(CameraInterface::Camera* camera, const char* uiName);
 
+	bool cameraSupportsProperty(const std::string& name);
+
+	std::string getPropertyName(const std::string& name);
+	std::string getVideoPropertyName(const std::string& name);
+	std::string getStillPropertyName(const std::string& name);
+
+	std::vector<std::string> getBitDepthOptions();
 
 	int captureSequenceImage();
 	void sequenceEnded() noexcept;

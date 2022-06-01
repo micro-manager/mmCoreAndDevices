@@ -72,14 +72,15 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;LUMENERA_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\henry\Desktop\LuXApps\ThirdParty\json\src;C:\Users\henry\Desktop\LuXApps\ThirdParty\include;C:\Users\henry\Desktop\LuXApps\inc;C:\Users\henry\Desktop\LuXApps\Shared\include;C:\Users\henry\Desktop\LuXApps\lumenera_sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\henry\Desktop\LuXApps\ThirdParty\json\src;C:\Users\henry\Desktop\LuXApps\ThirdParty\include;C:\Users\henry\Desktop\LuXApps\Shared\include;C:\Users\henry\Desktop\LuXApps\lumenera_sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>C:\Users\henry\Desktop\tmp\mm_Lumenera_dependencies_debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Qt5Cored.lib;Qt5Guid.lib;Qt5MultimediaWidgetsd.lib;Qt5Multimediad.lib;Qt5Networkd.lib;Qt5OpenGLd.lib;Qt5PrintSupportd.lib;Qt5Svgd.lib;Qt5Testd.lib;Qt5Widgetsd.lib;boost_filesystem-vc140-mt-gd-x64-1_68.lib;boost_regex-vc140-mt-gd-x64-1_68.lib;boost_system-vc140-mt-gd-x64-1_68.lib;exiv2d.lib;expatd.lib;libGLESv2d.lib;libusb-1.0.lib;lucamapi.lib;luu3vd.lib;luxappsd.lib;opencv_world331d.lib;quazipd.lib;tiffd.lib;zlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_world331d.lib;lucamapi.lib;luxappsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(TargetDir)$(TargetName).dll" "C:\Program Files\Micro-Manager-2.0gamma\$(TargetName).dll"</Command>
