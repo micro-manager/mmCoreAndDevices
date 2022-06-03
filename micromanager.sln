@@ -432,9 +432,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StarlightXpress", "DeviceAd
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PrizmatixDevice", "DeviceAdapters\PrizmatixDevice\PrizmatixDevice.vcxproj", "{17A48943-0897-4DA3-81D3-CDF2BA6028FD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UniversalSerialHub", "DeviceAdapters\UniversalSerialHub\UniversalSerialHub.vcxproj", "{870B45D3-5EA6-47C3-9A86-3372CE0A0436}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NIDAQ", "DeviceAdapters\NIDAQ\NIDAQ.vcxproj", "{51AC9E8C-8BD5-4EFE-8571-6EE74D0BC22B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UniversalMMHubSerial", "DeviceAdapters\UniversalMMHubSerial\UniversalMMHubSerial.vcxproj", "{870B45D3-5EA6-47C3-9A86-3372CE0A0436}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UniversalMMHubUsb", "DeviceAdapters\UniversalMMHubUsb\UniversalMMHubUsb.vcxproj", "{9A33047E-4E1F-4C96-8BBA-FB9610D75373}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1302,14 +1304,18 @@ Global
 		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Debug|x64.Build.0 = Debug|x64
 		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Release|x64.ActiveCfg = Release|x64
 		{17A48943-0897-4DA3-81D3-CDF2BA6028FD}.Release|x64.Build.0 = Release|x64
-		{870B45D3-5EA6-47C3-9A86-3372CE0A0436}.Debug|x64.ActiveCfg = Debug|x64
-		{870B45D3-5EA6-47C3-9A86-3372CE0A0436}.Debug|x64.Build.0 = Debug|x64
-		{870B45D3-5EA6-47C3-9A86-3372CE0A0436}.Release|x64.ActiveCfg = Release|x64
-		{870B45D3-5EA6-47C3-9A86-3372CE0A0436}.Release|x64.Build.0 = Release|x64
 		{51AC9E8C-8BD5-4EFE-8571-6EE74D0BC22B}.Debug|x64.ActiveCfg = Debug|x64
 		{51AC9E8C-8BD5-4EFE-8571-6EE74D0BC22B}.Debug|x64.Build.0 = Debug|x64
 		{51AC9E8C-8BD5-4EFE-8571-6EE74D0BC22B}.Release|x64.ActiveCfg = Release|x64
 		{51AC9E8C-8BD5-4EFE-8571-6EE74D0BC22B}.Release|x64.Build.0 = Release|x64
+		{870B45D3-5EA6-47C3-9A86-3372CE0A0436}.Debug|x64.ActiveCfg = Debug|x64
+		{870B45D3-5EA6-47C3-9A86-3372CE0A0436}.Debug|x64.Build.0 = Debug|x64
+		{870B45D3-5EA6-47C3-9A86-3372CE0A0436}.Release|x64.ActiveCfg = Release|x64
+		{870B45D3-5EA6-47C3-9A86-3372CE0A0436}.Release|x64.Build.0 = Release|x64
+		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Debug|x64.ActiveCfg = Debug|x64
+		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Debug|x64.Build.0 = Debug|x64
+		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Release|x64.ActiveCfg = Release|x64
+		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

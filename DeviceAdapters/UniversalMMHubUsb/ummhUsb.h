@@ -1,14 +1,14 @@
 #pragma once
 
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          ush.h
+// FILE:          ummhUsb.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Implementation of the universal hardware hub
 //                that uses a serial port for communication
 //                
-// COPYRIGHT:     Artem Melnykov, 2021
+// COPYRIGHT:     Artem Melnykov, 2022
 //
 // LICENSE:       This file is distributed under the BSD license.
 //
@@ -23,11 +23,14 @@
 // AUTHOR:        Artem Melnykov, melnykov.artem at gmail.com, 2021
 // 
 
-#ifndef _USH_H_
-#define _USH_H_
+#ifndef _UMMHUSB_H_
+#define _UMMHUSB_H_
 
 #include "DeviceBase.h"
-#include "ushbase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
+
+#include "../UniversalMMHubSerial/ummhbase.h"
 
 using namespace std;
 
@@ -87,7 +90,7 @@ public:
 	int DetectInstalledDevices();
 	bool Busy();
 	// this is a preinitialization setting
-	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnUSBDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	// get device index in deviceCescriptionList
 	int GetDeviceIndexFromName(string devicename);
@@ -96,9 +99,12 @@ public:
 	// concatenate and send a serial command
 	int MakeAndSendOutputCommand(string devicename, string command, vector<string> values);
 	// send serial command
-	int SendCommand(string cmd);
+	int SendCommand(string cmd, unsigned int timeoutMS);
 	// receive serial command
-	int ReceiveAnswer(string& ans);
+	int ReceiveAnswer(string& ans, unsigned int timeoutMS);
+
+	int UsbReceiveBuffer(unsigned char endpoint, unsigned char* buff, int size, int &receivedBytes, int timeoutMS);
+
 	// block until serial command is received, exit at timeout regardless
 	int ReceiveAndWaitForAnswer(string& ans, MM::MMTime timeout);
 	// report values to the device
@@ -126,6 +132,8 @@ public:
 	void SetLastCommandTime(string devicename, MM::MMTime val);
 
 private:
+	// make a human readable unique USB device descriptor
+	string MakeUniqueUSBDescriptor(char* strDesc, unsigned char serialNumber);
 	// communicate with the hardware and populate deviceDescriptionList
 	int PopulateDeviceDescriptionList();
 	// convert vector<string> to mmdevicedescription
@@ -133,12 +141,17 @@ private:
 	// get the string with device type from deviceDescriptionList based on device name
 	string GetDeviceTypeFromName(string devicename);
 	// thread-locked serial communication
-	int SerialCommunication(char inorout, string cmd, string& ans);
+	int UsbCommunication(char inorout, string cmd, string& ans, unsigned int timeoutMS);
 
+	static const unsigned char bulk_ep_cmd_out = 0x01;
+	static const unsigned char bulk_ep_cmd_in = 0x81;
+	//static const unsigned char bulk_ep_buff_out = 0x02;
+	//static const unsigned char bulk_ep_buff_in = 0x82;
+	
 	bool busy_;
 	bool initialized_;
 	int error_;
-	std::string port_;
+	std::string usbDeviceName_;
 	MMThreadLock executeLock_;
 
 	// thread for responding to communications from controller
@@ -160,11 +173,11 @@ private:
 	int svc(void);
 };
 
-class UshShutter : public UshDeviceUtilities, public CShutterBase<UshShutter>
+class UmmhShutter : public UmmhDeviceUtilities, public CShutterBase<UmmhShutter>
 {
 public:
-	UshShutter(const char* name);
-	~UshShutter();
+	UmmhShutter(const char* name);
+	~UmmhShutter();
 
 	// MMDevice API
 	// ------------
@@ -191,13 +204,13 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UshStateDevice : public UshDeviceUtilities, public CStateDeviceBase<UshStateDevice>
+class UmmhStateDevice : public UmmhDeviceUtilities, public CStateDeviceBase<UmmhStateDevice>
 {
 public:
-	UshStateDevice(const char* name);
-	~UshStateDevice();
+	UmmhStateDevice(const char* name);
+	~UmmhStateDevice();
 
-	// MMDevice API
+	// MMDevice API 
 	// ------------
 	int Initialize();
 	int Shutdown();
@@ -205,7 +218,7 @@ public:
 	bool Busy();
 
 	// State API
-	unsigned long GetNumberOfPositions()const;
+	unsigned long GetNumberOfPositions() const;
 
 	// action interface
 	// ----------------
@@ -222,11 +235,11 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UshStage : public UshDeviceUtilities, public CStageBase<UshStage>
+class UmmhStage : public UmmhDeviceUtilities, public CStageBase<UmmhStage>
 {
 public:
-	UshStage(const char* name);
-	~UshStage();
+	UmmhStage(const char* name);
+	~UmmhStage();
 
 	// MMDevice API
 	// ------------
@@ -279,11 +292,11 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UshXYStage : public UshDeviceUtilities, public CXYStageBase<UshXYStage>
+class UmmhXYStage : public UmmhDeviceUtilities, public CXYStageBase<UmmhXYStage>
 {
 public:
-	UshXYStage(const char* name);
-	~UshXYStage();
+	UmmhXYStage(const char* name);
+	~UmmhXYStage();
 
 	// MMDevice API
 	// ------------
@@ -357,11 +370,11 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UshGeneric : public UshDeviceUtilities, public CGenericBase<UshGeneric>
+class UmmhGeneric : public UmmhDeviceUtilities, public CGenericBase<UmmhGeneric>
 {
 public:
-	UshGeneric(const char* name);
-	~UshGeneric();
+	UmmhGeneric(const char* name);
+	~UmmhGeneric();
 
 	// MMDevice API
 	// ------------
@@ -382,4 +395,125 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-#endif //_USH_H_
+class UmmhCamera : public UmmhDeviceUtilities, public CCameraBase<UmmhCamera>
+{
+public:
+	UmmhCamera(const char* name);
+	~UmmhCamera();
+
+	// MMDevice API
+	// ------------
+	int Initialize();
+	int Shutdown();
+	void GetName(char* pszName) const;
+	bool Busy();
+
+	// Camera API
+	double GetExposure() const {return exposure_;};
+	void SetExposure(double exp);
+	unsigned GetImageWidth() const {return roiWidth_;}
+	unsigned GetImageHeight() const {return roiHeight_;}
+	unsigned GetImageBytesPerPixel() const {return bytesPerPixel_;}
+	unsigned GetBitDepth() const {return bitDepth_;}
+	long GetImageBufferSize() const {
+		long size = bytesPerPixel_*roiWidth_*roiHeight_;
+		LogMessage("BufferSize=",false);
+		LogMessage(to_string((long long)size).c_str(),false);
+		return size;
+	}
+	int SnapImage();
+	const unsigned char* GetImageBuffer();
+	int SetBinning(int bin);
+	int GetBinning() const {return binning_;}
+	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
+	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
+	int ClearROI();
+
+	// sequence acquisition
+	int PrepareSequenceAcqusition() { return DEVICE_OK; }
+	int StartSequenceAcquisition(double interval);
+	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+	int StopSequenceAcquisition();
+	int InsertImage();
+	int RunSequenceOnThread(MM::MMTime startTime);
+	bool IsCapturing();
+	void OnThreadExiting() throw();
+	int IsExposureSequenceable(bool& seq) const { seq = false; return DEVICE_OK; }
+
+	// additional API calls specific to this adapter
+	int SetPixelType(const char* pixelType);
+	int SetBitDepth(int bitDepth);
+	int SetTransferTimeout(int transferTimeout);
+
+	// action interface
+	// ----------------
+	int OnAction(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+
+	friend class MySequenceThread;
+
+	string name_;
+	bool initialized_;
+	UniHub* pHub_;
+
+	unsigned int imageMaxWidth_;
+	unsigned int imageMaxHeight_;
+	unsigned int roiX_;
+	unsigned int roiY_;
+	unsigned int roiWidth_;
+	unsigned int roiHeight_;
+	unsigned int bytesPerPixel_;
+	unsigned int nComponents_; // 1 for grey, 4 for RGB
+	unsigned int bitDepth_;
+	double exposure_;
+	int binning_;
+	unsigned int transferTimeout_;
+	unsigned char bulk_ep_camera_out_;
+	unsigned char bulk_ep_camera_in_;
+
+	MM::MMTime sequenceStartTime_;
+	long imageCounter_;
+	bool stopOnOverflow_;
+	MySequenceThread* thd_;
+	MMThreadLock imgPixelsLock_;
+
+	int CreatePropertyBasedOnDescription(mmpropertydescription);
+};
+
+class MySequenceThread : public MMDeviceThreadBase
+{
+	friend class UmmhCamera;
+	enum { default_numImages = 1, default_intervalMS = 100 };
+public:
+	MySequenceThread(UmmhCamera* pCam);
+	~MySequenceThread();
+	void Stop();
+	void Start(long numImages, double intervalMs);
+	bool IsStopped();
+	void Suspend();
+	bool IsSuspended();
+	void Resume();
+	double GetIntervalMs() { return intervalMs_; }
+	void SetLength(long images) { numImages_ = images; }
+	long GetLength() const { return numImages_; }
+	long GetImageCounter() { return imageCounter_; }
+	MM::MMTime GetStartTime() { return startTime_; }
+	MM::MMTime GetActualDuration() { return actualDuration_; }
+private:
+	int svc(void) throw();
+	double intervalMs_;
+	long numImages_;
+	long imageCounter_;
+	bool stop_;
+	bool suspend_;
+	UmmhCamera* camera_;
+	MM::MMTime startTime_;
+	MM::MMTime actualDuration_;
+	MM::MMTime lastFrameTime_;
+	MMThreadLock stopLock_;
+	MMThreadLock suspendLock_;
+};
+
+
+#endif //_UMMHUSB_H_
