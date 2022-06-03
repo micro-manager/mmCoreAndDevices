@@ -28,7 +28,7 @@
 
 #include "ummhUsb.h"
 #include "../UniversalMMHubSerial/ummhreserved.h"
-#include "../../../3rdpartypublic/libusb-1.0.26/libusb/libusb.h"
+#include "libusb.h"
 
 using namespace MM;
 
