@@ -12,6 +12,8 @@
 #include "ASDWrapperSuperRes.h"
 #include "ASDWrapperTIRF.h"
 #include "ASDWrapperTIRFPolariser.h"
+#include "ASDWrapperBorealisTIRF.h"
+#include "ASDWrapperTIRFIntensity.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
   : ASDInterface_( ASDInterface ),
@@ -344,4 +346,118 @@ IStatusInterface* CASDWrapperInterface::GetStatus()
 IFrontPanelLEDInterface* CASDWrapperInterface::GetFrontPanelLED()
 {
   throw std::logic_error( "GetFrontPanelLED() wrapper function not implemented" );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// IASDInterface4
+///////////////////////////////////////////////////////////////////////////////
+
+CASDWrapperInterface4::CASDWrapperInterface4( IASDInterface4* ASDInterface )
+  : ASDWrapperInterface_( ASDInterface ),
+  ASDInterface4_( ASDInterface ),
+  ConfocalMode4Wrapper_( nullptr ),
+  BorealisTIRF100Wrapper_( nullptr ),
+  BorealisTIRF60Wrapper_( nullptr )
+{
+  if ( ASDInterface4_ == nullptr )
+  {
+    throw std::exception("Invalid pointer to ASDInterface4");
+  }
+}
+
+CASDWrapperInterface4::~CASDWrapperInterface4()
+{
+  delete ConfocalMode4Wrapper_;
+  delete BorealisTIRF100Wrapper_;
+  delete BorealisTIRF60Wrapper_;
+}
+
+IConfocalModeInterface4* CASDWrapperInterface4::GetImagingMode2()
+{
+  if ( ConfocalMode4Wrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    ConfocalMode4Wrapper_ = new CASDWrapperConfocalMode4( ASDInterface4_->GetImagingMode2() );
+  }
+  return ConfocalMode4Wrapper_;
+}
+
+bool CASDWrapperInterface4::IsBorealisTIRF100Available()
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface4_->IsBorealisTIRF100Available();
+}
+
+IBorealisTIRFInterface* CASDWrapperInterface4::GetBorealisTIRF100()
+{
+  if ( BorealisTIRF100Wrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    BorealisTIRF100Wrapper_ = new CASDWrapperBorealisTIRF( ASDInterface4_->GetBorealisTIRF100() );
+  }
+  return BorealisTIRF100Wrapper_;
+}
+
+bool CASDWrapperInterface4::IsBorealisTIRF60Available()
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface4_->IsBorealisTIRF60Available();
+}
+
+IBorealisTIRFInterface* CASDWrapperInterface4::GetBorealisTIRF60()
+{
+  if ( BorealisTIRF60Wrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    BorealisTIRF60Wrapper_ = new CASDWrapperBorealisTIRF( ASDInterface4_->GetBorealisTIRF60() );
+  }
+  return BorealisTIRF60Wrapper_;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// IASDInterface6
+///////////////////////////////////////////////////////////////////////////////
+
+CASDWrapperInterface6::CASDWrapperInterface6( IASDInterface6* ASDInterface )
+  : ASDWrapperInterface4_( ASDInterface ),
+  ASDInterface6_( ASDInterface ),
+  TIRFIntensityWrapper_( nullptr )
+{
+  if ( ASDInterface6_ == nullptr )
+  {
+    throw std::exception("Invalid pointer to ASDInterface6");
+  }
+}
+
+CASDWrapperInterface6::~CASDWrapperInterface6()
+{
+  delete TIRFIntensityWrapper_;
+}
+
+const char* CASDWrapperInterface6::GetSoftwareVersion2( int ID ) const
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface6_->GetSoftwareVersion2( ID );
+}
+
+const char* CASDWrapperInterface6::GetSoftwareBuildTime2( int ID ) const
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface6_->GetSoftwareBuildTime2( ID );
+}
+
+bool CASDWrapperInterface6::IsTIRFIntensityAvailable()
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface6_->IsTIRFIntensityAvailable();
+}
+
+ITIRFIntensityInterface* CASDWrapperInterface6::GetTIRFIntensity()
+{
+  if ( TIRFIntensityWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    TIRFIntensityWrapper_ = new CASDWrapperTIRFIntensity( ASDInterface6_->GetTIRFIntensity() );
+  }
+  return TIRFIntensityWrapper_;
 }

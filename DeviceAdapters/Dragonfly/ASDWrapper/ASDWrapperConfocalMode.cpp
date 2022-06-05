@@ -92,3 +92,46 @@ bool CASDWrapperConfocalMode::IsConfocalModeAvailable( TConfocalMode Mode )
   return ConfocalModeInterface_->IsConfocalModeAvailable( Mode );
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// IConfocalModeInterface4
+///////////////////////////////////////////////////////////////////////////////
+
+CASDWrapperConfocalMode4::CASDWrapperConfocalMode4(IConfocalModeInterface4* ConfocalModeInterface)
+  : ASDWrapperConfocalMode_(ConfocalModeInterface),
+  ConfocalModeInterface4_(ConfocalModeInterface)
+{
+  if (ConfocalModeInterface4_ == nullptr)
+  {
+    throw std::exception("Invalid pointer to ConfocalModeInterface4");
+  }
+}
+
+CASDWrapperConfocalMode4::~CASDWrapperConfocalMode4()
+{
+}
+
+bool CASDWrapperConfocalMode4::ModeBorealisTIRF100()
+{
+  return ConfocalModeInterface4_->ModeBorealisTIRF100();
+}
+
+bool CASDWrapperConfocalMode4::IsModeBorealisTIRF100Available()
+{
+  return ConfocalModeInterface4_->IsModeBorealisTIRF100Available();
+}
+
+bool CASDWrapperConfocalMode4::ModeBorealisTIRF60()
+{
+  return ConfocalModeInterface4_->ModeBorealisTIRF60();
+}
+
+bool CASDWrapperConfocalMode4::IsModeBorealisTIRF60Available()
+{
+  return ConfocalModeInterface4_->IsModeBorealisTIRF60Available();
+}
+
+bool CASDWrapperConfocalMode4::SetConfocalMode(TConfocalMode Mode)
+{
+  return ConfocalModeInterface4_->SetConfocalMode(Mode);
+}
+
