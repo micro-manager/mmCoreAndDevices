@@ -329,6 +329,8 @@ int CDragonfly::InitializeComponents()
   IASDInterface* vASDInterface = ASDLoader_->GetASDInterface();
   IASDInterface2* vASDInterface2 = ASDLoader_->GetASDInterface2();
   IASDInterface3* vASDInterface3 = ASDLoader_->GetASDInterface3();
+  IASDInterface4* vASDInterface4 = ASDWrapper_->GetASDInterface4( ASDLoader_ );
+  IASDInterface6* vASDInterface6 = ASDWrapper_->GetASDInterface6( ASDLoader_ );
 
   // Description property
   int vRet = CreateProperty( MM::g_Keyword_Description, g_DeviceDescription, MM::String, true );
@@ -392,7 +394,7 @@ int CDragonfly::InitializeComponents()
   }
 
   // Confocal mode component
-  vRet = CreateConfocalMode( vASDInterface3 );
+  vRet = CreateConfocalMode( vASDInterface3, vASDInterface4 );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -563,29 +565,31 @@ int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
   return vErrorCode;
 }
 
-int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
+int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface3, IASDInterface4* ASDInterface4 )
 {
   int vErrorCode = DEVICE_OK;
-  if ( ASDInterface->IsImagingModeAvailable() )
+  if ( ASDInterface3->IsImagingModeAvailable() )
   {
     try
     {
-      IConfocalModeInterface3* vASDConfocalMode = ASDInterface->GetImagingMode();
-      if ( vASDConfocalMode != nullptr )
+      IConfocalModeInterface3* vASDConfocalMode3 = ASDInterface3->GetImagingMode();
+      if ( vASDConfocalMode3 != nullptr )
       {
         IIllLensInterface* vIllLensInterface = nullptr;
         for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax && vIllLensInterface == nullptr; ++vLensIndex )
         {
-          if ( ASDInterface->IsIllLensAvailable( (TLensType)vLensIndex ) )
+          if ( ASDInterface3->IsIllLensAvailable( (TLensType)vLensIndex ) )
           {
-            vIllLensInterface = ASDInterface->GetIllLens( (TLensType)vLensIndex );
+            vIllLensInterface = ASDInterface3->GetIllLens( (TLensType)vLensIndex );
           }
         }
         if ( vIllLensInterface == nullptr )
         {
           LogMessage( "Couldn't find any valid instance of Power Density" );
         }
-        ConfocalMode_ = new CConfocalMode( vASDConfocalMode, vIllLensInterface, this );
+        IConfocalModeInterface4* vASDConfocalMode4 = ASDInterface4 ? ASDInterface4->GetImagingMode2() : nullptr;
+        IBorealisTIRFInterface* vBorealisTIRF60Interface = ASDInterface4 ? ASDInterface4->GetBorealisTIRF60() : nullptr;
+        ConfocalMode_ = new CConfocalMode( vASDConfocalMode3, vASDConfocalMode4, vIllLensInterface, vBorealisTIRF60Interface, this );
       }
       else
       {

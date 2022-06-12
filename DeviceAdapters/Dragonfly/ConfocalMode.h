@@ -17,15 +17,17 @@ class CDragonfly;
 class CConfocalMode
 {
 public:
-  CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, IIllLensInterface* IllLensInterface, CDragonfly* MMDragonfly );
+  CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, IConfocalModeInterface4* ConfocalModeInterface4, IIllLensInterface* IllLensInterface, IBorealisTIRFInterface* vBorealisTIRF60Interface, CDragonfly* MMDragonfly );
   ~CConfocalMode();
 
   int OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CConfocalMode> CPropertyAction;
 
 private:
-  IConfocalModeInterface3* ConfocalModeInterface_;
+  IConfocalModeInterface3* ConfocalModeInterface3_;
+  IConfocalModeInterface4* ConfocalModeInterface4_;
   IIllLensInterface* IllLensInterface_;
+  IBorealisTIRFInterface* BorealisTIRF60Interface_;
   CDragonfly* MMDragonfly_;
   std::string ConfocalHCName_;
   std::string ConfocalHSName_;

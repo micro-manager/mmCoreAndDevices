@@ -32,6 +32,8 @@ class IASDLoader;
 class IASDInterface;
 class IASDInterface2;
 class IASDInterface3;
+class IASDInterface4;
+class IASDInterface6;
 
 #define ERR_LIBRARY_LOAD 101
 #define ERR_LIBRARY_INIT 102
@@ -98,7 +100,7 @@ private:
   int CreateDichroicMirror( IASDInterface* ASDInterface );
   int CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode );
   int CreateDisk( IASDInterface* ASDInterface );
-  int CreateConfocalMode( IASDInterface3* ASDInterface );
+  int CreateConfocalMode( IASDInterface3* ASDInterface3, IASDInterface4* ASDInterface4 );
   int CreateAperture( IASDInterface2* ASDInterface );
   int CreateCameraPortMirror( IASDInterface2* ASDInterface );
   int CreateLens( IASDInterface2* ASDInterface, int LensIndex );
