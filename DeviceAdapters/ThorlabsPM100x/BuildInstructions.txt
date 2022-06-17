@@ -1,0 +1,5 @@
+To build this code, create a directory called "3rdparty" at the same 
+level as the "micro-manager" source code directory.  In there, create
+'Thorlabs/PM100/VISA/Win64'.  Install the legacy SDK provided by Thorlabs
+for the PM100x (https://www.thorlabs.com/software_pages/ViewSoftwarePage.cfm?Code=PM100x).  From '/c/Program Files (x86)/IVI Foundation/VISA/WinNT', copy the Bin, Include, and Lib_x64 directories to '3rdparty/Thorlabs/PM100/VISA/Win64'. 
+
