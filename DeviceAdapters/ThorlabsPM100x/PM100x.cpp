@@ -132,12 +132,11 @@ int PM100::Initialize()
    ViUInt16 sensorPosition;
    err = TLPM_getPowerCalibrationPointsInformation(instrHdl_, memoryPosition, sensorSerialNumber, 
       calibrationDate, &calibrationPointsCount, author, &sensorPosition);
-   if (err != VI_SUCCESS) {
-      return (int)err;
+   if (err == VI_SUCCESS) {
+      CreateStringProperty("Sensor Serial Number", sensorSerialNumber, true);
+      CreateStringProperty("Calibration Date", calibrationDate, true);
+      CreateStringProperty("Author", author, true);
    }
-   CreateStringProperty("Sensor Serial Number", sensorSerialNumber, true);
-   CreateStringProperty("Calibration Date", calibrationDate, true);
-   CreateStringProperty("Author", author, true);
 
    CPropertyAction* pAct = new CPropertyAction(this, &PM100::OnValue);
    int ret = CreateProperty("Power", "0", MM::String, true, pAct);
@@ -151,6 +150,11 @@ int PM100::Initialize()
 
    pAct = new CPropertyAction(this, &PM100::OnRawUnit);
    ret = CreateStringProperty("RawUnit", "W", true, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   pAct = new CPropertyAction(this, &PM100::OnWavelength);
+   ret = CreateFloatProperty("Wavelength", 488.0, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
 
