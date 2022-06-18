@@ -1,13 +1,9 @@
 <project name="RaptorEPIX">
    <import file="../../../buildscripts/deviceadapter.xml"/>
 
-   <property name="epix.xclib" location="${mm.basedir}/../3rdparty/EPIX"/>
-
-   <target name="install-Win32">
-      <copy todir="${mm.dll.installdir}" file="${epix.xclib}/XCLIB32/XCLIBWNT.dll"/>
-   </target>
+   <property name="epix.xclib" location="${mm.basedir}/../3rdparty/EPIX/XCLIB-3.8.31188.27115"/>
 
    <target name="install-x64">
-      <copy todir="${mm.dll.installdir}" file="${epix.xclib}/XCLIB64/XCLIBW64.dll"/>
+      <copy todir="${mm.dll.installdir}" file="${epix.xclib}/lib/XCLIBW64.dll"/>
    </target>
 </project>

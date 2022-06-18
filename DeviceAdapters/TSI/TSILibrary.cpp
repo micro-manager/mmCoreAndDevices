@@ -112,7 +112,7 @@ bool isTsiSDK3Available()
 bool isTsiSDKAvailable()
 {
 	std::string sdkPath = getSDKPath();
-	sdkPath += "tsi_sdk.dll";
+	sdkPath += "thorlabs_ccd_tsi_sdk.dll";
 
    HMODULE libHandle = LoadLibrary(sdkPath.c_str());
    if (!libHandle)

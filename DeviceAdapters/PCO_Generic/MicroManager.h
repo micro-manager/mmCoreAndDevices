@@ -121,6 +121,7 @@ public:
   int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnCoolSet(MM::PropertyBase* pProp, MM::ActionType eAct);
 
   int OnDemoMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTimestampMode( MM::PropertyBase* pProp, MM::ActionType eAct );
@@ -282,6 +283,7 @@ private:
   int m_iGain;
   int m_iEMGain;
   int m_iGainCam;
+  short m_sCoolSet;
   int m_iOffset;
   int m_iTimestamp;
   unsigned int m_uiFlags;

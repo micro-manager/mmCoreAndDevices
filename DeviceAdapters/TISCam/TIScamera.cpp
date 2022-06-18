@@ -417,7 +417,7 @@ int CTIScamera::Initialize()
    pAct = new CPropertyAction (this, &CTIScamera::OnFlipVertical);
    if (pRotateFlipFilter == NULL)
    {
-      nRet = CreateProperty(g_FlipV, "n/a", MM::String, false, pAct);
+      nRet = CreateProperty(g_FlipV, "n/a", MM::String, true);
       if (nRet != DEVICE_OK) return nRet;
    }
    else
@@ -426,6 +426,23 @@ int CTIScamera::Initialize()
       if (nRet != DEVICE_OK) return nRet;
       AddAllowedValue(g_FlipV,g_On);
       AddAllowedValue(g_FlipV,g_Off);
+   }
+
+   if (pDeNoiseFilter == NULL)
+   {
+      nRet = CreateProperty(g_Keyword_DeNoise, "n/a", MM::String, true);
+      if (nRet != DEVICE_OK) return nRet;
+   }
+   else
+   {
+      pAct = new CPropertyAction(this, &CTIScamera::OnDeNoise);
+      nRet = CreateProperty(g_Keyword_DeNoise, "0", MM::Integer, false, pAct);
+      if (nRet != DEVICE_OK) return nRet;
+      AddAllowedValue(g_Keyword_DeNoise, "0");
+      AddAllowedValue(g_Keyword_DeNoise, "1");
+      AddAllowedValue(g_Keyword_DeNoise, "2");
+      AddAllowedValue(g_Keyword_DeNoise, "3");
+      AddAllowedValue(g_Keyword_DeNoise, "4");
    }
 
    pAct = new CPropertyAction (this, &CTIScamera::OnRotate);
@@ -454,12 +471,6 @@ int CTIScamera::Initialize()
    pAct = new CPropertyAction (this, &CTIScamera::OnGain);
    nRet = CreateProperty(g_Keyword_Gain, CDeviceUtils::ConvertToString(Gain_), MM::Integer, false, pAct);
    if (nRet != DEVICE_OK) return nRet;
-
-   pAct = new CPropertyAction (this, &CTIScamera::OnGainAuto);
-   nRet = CreateProperty(g_Keyword_Gain_Auto, "n/a", MM::String, false, pAct);
-   if (nRet != DEVICE_OK) return nRet;
-   AddAllowedValue(g_Keyword_Gain_Auto,g_On);
-   AddAllowedValue(g_Keyword_Gain_Auto,g_Off);
 
    pAct = new CPropertyAction (this, &CTIScamera::OnWhiteBalance);
    nRet = CreateProperty(g_Keyword_WhiteBalance, CDeviceUtils::ConvertToString(WhiteBalance_), MM::Integer, false, pAct);
@@ -615,13 +626,8 @@ int CTIScamera::SetupProperties()
    bool bResult = pGrabber->setSinkType(pSink);
    assert (bResult == true);
 
-
-
    //we use snap mode
    pSink->setSnapMode(true);
-
-
-
 
    //update property Serial Number
    LARGE_INTEGER iSerNum;
@@ -665,7 +671,6 @@ int CTIScamera::SetupProperties()
       }
    }
 
-
    if (!m_pSimpleProperties->isAvailable(VCDID_Brightness))
       SetProperty(g_Keyword_Brightness, "n/a");
    else
@@ -702,6 +707,20 @@ int CTIScamera::SetupProperties()
       }
    }
 
+   if (!m_pSimpleProperties->isAutoAvailable(VCDID_Gain))
+   {
+      nRet = CreateProperty(g_Keyword_Gain_Auto, "n/a", MM::String, true);
+      if (nRet != DEVICE_OK) return nRet;
+   }
+   else
+   {
+      CPropertyAction* pAct = new CPropertyAction(this, &CTIScamera::OnGainAuto);
+      nRet = CreateProperty(g_Keyword_Gain_Auto, g_Off, MM::String, false, pAct);
+      if (nRet != DEVICE_OK) return nRet;
+      AddAllowedValue(g_Keyword_Gain_Auto, g_On);
+      AddAllowedValue(g_Keyword_Gain_Auto, g_Off);
+      SetProperty(g_Keyword_Gain_Auto, g_Off);
+   }
 
    if(!m_pSimpleProperties->isAvailable(VCDID_WhiteBalance))
       SetProperty(g_Keyword_WhiteBalance, "n/a");
@@ -726,11 +745,12 @@ int CTIScamera::SetupProperties()
             SetProperty(g_Keyword_WhiteBalance_Auto,g_Off);
          }
       }
-      else SetProperty(g_Keyword_WhiteBalance_Auto, "n/a");
+      else
+      {
+         SetProperty(g_Keyword_WhiteBalance_Auto, "n/a");
+      }
 
-
-
-	  // Initialize the slider for whitebalance blue
+	   // Initialize the slider for whitebalance blue
       if( !m_pSimpleProperties->isAvailable( VCDElement_WhiteBalanceBlue ) )
       {
          SetProperty(g_Keyword_WhiteBalanceBlue, "n/a");
@@ -745,7 +765,7 @@ int CTIScamera::SetupProperties()
       }
  
       // Initialize the slider for whitebalance green
-      if( !m_pSimpleProperties->isAvailable( VCDElement_WhiteBalanceGreen ) )
+      if ( !m_pSimpleProperties->isAvailable( VCDElement_WhiteBalanceGreen ) )
       {
          SetProperty(g_Keyword_WhiteBalanceGreen, "n/a");
       }
@@ -780,7 +800,6 @@ int CTIScamera::SetupProperties()
    // Retrieve the output type and dimension of the handler sink.
    // The dimension of the sink could be different from the VideoFormat, when
    // you use filters.
-
    bResult = pSink->isAttached();
    if (!bResult) RunTimeDebugMessage("pSink->isAttached() is FALSE");
 
@@ -791,7 +810,7 @@ int CTIScamera::SetupProperties()
    //sink oriented data size
    lCCD_Width         = info.dim.cx;
    lCCD_Height        = info.dim.cy;
-   uiCCD_BitsPerPixel = info.getBitsPerPixel();
+   uiCCD_BitsPerPixel = (unsigned int) info.getBitsPerPixel();
 
    roiX_ = 0;
    roiY_ = 0;
@@ -853,35 +872,10 @@ int CTIScamera::SetupProperties()
    // DeNoise
    if( pDeNoiseFilter != NULL )
    {	
-      string buf;
-      pGrabber->stopLive();
-      pDeNoiseFilter->getParameter( "DeNoise Level", DeNoiseLevel_ );
-   }
-
-   if(!HasProperty(g_Keyword_DeNoise))
-   {
-      CPropertyAction *pAct = new CPropertyAction (this, &CTIScamera::OnDeNoise);
-      nRet = CreateProperty(g_Keyword_DeNoise, "n/a", MM::Integer, false, pAct);
-      assert(nRet == DEVICE_OK);
-   }
-   else
-   {
-      nRet = SetProperty(g_Keyword_DeNoise, "1");   
+      nRet = SetProperty(g_Keyword_DeNoise, "0");
       if (nRet != DEVICE_OK)
          return nRet;
    }
-
-   vector<string> DeNoiseValues;
-   DeNoiseValues.push_back("0");
-   DeNoiseValues.push_back("1");
-   DeNoiseValues.push_back("2");
-   DeNoiseValues.push_back("3");
-   DeNoiseValues.push_back("4");
-   LogMessage("Setting some DeNoise settings", true);
-   SetAllowedValues(g_Keyword_DeNoise, DeNoiseValues);
-
-
-
 
    initialized_ = true;
 
@@ -1111,7 +1105,7 @@ unsigned CTIScamera::GetBitDepth() const
   {
 	DShowLib::FrameTypeInfo fti;
 	pSink->getOutputFrameType(fti);
-	bitDepth = fti.getBitsPerPixel();
+	bitDepth = (unsigned int) fti.getBitsPerPixel();
 	const tColorformatEnum cf = fti.getColorformat();
 	if      (cf == eRGB32) bitDepth = bitDepth / 4;
 	else if (cf == eRGB24) bitDepth = bitDepth / 3;
@@ -1494,7 +1488,7 @@ int CTIScamera::ResizeImageBuffer()
    //sink oriented data size
    lCCD_Width         = info.dim.cx;
    lCCD_Height        = info.dim.cy;
-   uiCCD_BitsPerPixel = info.getBitsPerPixel();
+   uiCCD_BitsPerPixel = (unsigned int) info.getBitsPerPixel();
 
    int byteDepth = uiCCD_BitsPerPixel / 8;
 

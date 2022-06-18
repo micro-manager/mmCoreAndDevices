@@ -1046,7 +1046,6 @@ int CPCOCam::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     else if(eAct == MM::AfterSet)
     {
-      int igains[4] = {0, 1, 2, 3};
       int nErr = 0;
       long ihelp;
       string tmp;
@@ -1072,6 +1071,50 @@ int CPCOCam::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
   }
   return DEVICE_OK;
 }
+
+int CPCOCam::OnCoolSet(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  if (m_pCamera->m_iCamClass == 3)
+  {
+    if (eAct == MM::BeforeGet)
+    {
+      char szval[20] = { 0 };
+      snprintf(szval, 20, "%d", (int)m_pCamera->m_strCamera.strSensor.sCoolSet);
+      m_sCoolSet = m_pCamera->m_strCamera.strSensor.sCoolSet;
+
+      pProp->Set(szval);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+      int nErr = 0;
+      long shelp;
+      if ((m_pCamera->m_strCamera.strSensor.strDescription.dwGeneralCapsDESC1 & GENERALCAPS1_COOLING_SETPOINTS))
+      {
+        string tmp;
+        pProp->Get(tmp);
+        ((MM::Property*)pProp)->GetData(tmp.c_str(), shelp);
+      }
+      else
+      {
+        pProp->Get(shelp);
+      }
+      if (shelp != (double)m_sCoolSet)
+      {
+        m_sCoolSet = (short)shelp;
+
+        m_pCamera->m_strCamera.strSensor.sCoolSet = (WORD)m_sCoolSet;
+
+        nErr = SetupCamera(true, false);
+        if (nErr != 0)
+        {
+          return nErr;
+        }
+      }
+    }
+  }
+  return DEVICE_OK;
+}
+
 
 HMODULE hcrypt;
 HMODULE hmodule;
@@ -1508,6 +1551,36 @@ int CPCOCam::Initialize()
           return nRet;
       }
     }
+    if (m_pCamera->m_strCamera.strSensor.strDescription.sMaxCoolSetDESC > m_pCamera->m_strCamera.strSensor.strDescription.sMinCoolSetDESC + 1)
+    {
+      if ((m_pCamera->m_strCamera.strSensor.strDescription.dwGeneralCapsDESC1 & GENERALCAPS1_COOLING_SETPOINTS))
+      {
+        char szval[20] = { 0 };
+        pAct = new CPropertyAction(this, &CPCOCam::OnCoolSet);
+        snprintf(szval, 20, "%d", (int)m_pCamera->m_strCamera.strSensor.strDescription.sDefaultCoolSetDESC);
+        nRet = CreateProperty("Cooling Set Point", szval, MM::String, false, pAct);
+        if (nRet != DEVICE_OK)
+          return nRet;
+        for (int i = 0; i < m_pCamera->m_strCamera.strSensor.strDescription.wNumCoolingSetpoints; i++)
+        {
+          snprintf(szval, 20, "%d", (int)m_pCamera->m_strCamera.strSensor.strDescription.sCoolingSetpoints[i]);
+          nRet = AddAllowedValue("Cooling Set Point", szval, m_pCamera->m_strCamera.strSensor.strDescription.sCoolingSetpoints[i]);
+          if (nRet != DEVICE_OK)
+            return nRet;
+        }
+      }
+      else
+      {
+        pAct = new CPropertyAction(this, &CPCOCam::OnCoolSet);
+        nRet = CreateProperty("Cooling Set Point", "1", MM::Integer, false, pAct);
+        if (nRet != DEVICE_OK)
+          return nRet;
+        nRet = SetPropertyLimits("Cooling Set Point", m_pCamera->m_strCamera.strSensor.strDescription.sMinCoolSetDESC, m_pCamera->m_strCamera.strSensor.strDescription.sMaxCoolSetDESC);
+        if (nRet != DEVICE_OK)
+          return nRet;
+      }
+    }
+
     if (m_pCamera->m_strCamera.strSensor.strDescription.dwGeneralCapsDESC1 & GENERALCAPS1_HW_IO_SIGNAL_DESCRIPTOR)
       InitHWIO();
     if(m_bCMOSLineTiming)
