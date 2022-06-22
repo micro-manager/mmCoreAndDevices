@@ -154,6 +154,7 @@ const char* g_Keyword_SmartStreamingValues   = "SMARTStreamingValues[ms]";
 const char* g_Keyword_SmartStreamingEnable   = "SMARTStreamingEnabled";
 #endif
 const char* g_Keyword_MetadataEnabled  = "MetadataEnabled"; // Yes/No
+const char* g_Keyword_MetadataResetTimestamp  = "MetadataResetTimestamp"; // Yes/No
 const char* g_Keyword_CentroidsEnabled = "CentroidsEnabled"; // Yes/No
 const char* g_Keyword_CentroidsRadius  = "CentroidsRadius";
 const char* g_Keyword_CentroidsCount   = "CentroidsCount";
@@ -271,6 +272,7 @@ Universal::Universal(short cameraId, const char* deviceName)
     prmFrameBufSize_(NULL),
     prmRoiCount_(NULL),
     prmMetadataEnabled_(NULL),
+    prmMetadataResetTimestamp_(NULL),
     prmCentroidsEnabled_(NULL),
     prmCentroidsRadius_(NULL),
     prmCentroidsCount_(NULL),
@@ -375,6 +377,7 @@ Universal::~Universal()
     delete prmFrameBufSize_;
     delete prmRoiCount_;
     delete prmMetadataEnabled_;
+    delete prmMetadataResetTimestamp_;
     delete prmCentroidsEnabled_;
     delete prmCentroidsRadius_;
     delete prmCentroidsCount_;
@@ -598,6 +601,24 @@ int Universal::Initialize()
             acqCfgNew_.FrameMetadataEnabled ? g_Keyword_Yes : g_Keyword_No, MM::String, false, pAct);
         AddAllowedValue(g_Keyword_MetadataEnabled, g_Keyword_No);
         AddAllowedValue(g_Keyword_MetadataEnabled, g_Keyword_Yes);
+    }
+
+    /// EMBEDDED FRAME METADATA RESET TIMESTAMP FEATURE
+    acqCfgNew_.FrameMetadataResetTimestamp = false;
+    prmMetadataResetTimestamp_ =  new PvParam<rs_bool>("PARAM_METADATA_RESET_TIMESTAMP", PARAM_METADATA_RESET_TIMESTAMP, this, true);
+    if (prmMetadataResetTimestamp_->IsAvailable())
+    {
+        // The parameter is write-only and resets the timestamp by writing 'TRUE' to it.
+        // Because the adapter does any action only if the old and new value differs,
+        // we keep the AcqCfg::FrameMetadataResetTimestamp 'false' all the time and the
+        // user simply triggers the reset by selecting the other value in combo box.
+
+        // MetadataResetTimestamp UI property
+        pAct = new CPropertyAction (this, &Universal::OnMetadataResetTimestamp);
+        CreateProperty(g_Keyword_MetadataResetTimestamp,
+            acqCfgNew_.FrameMetadataResetTimestamp ? g_Keyword_Yes : g_Keyword_No, MM::String, false, pAct);
+        AddAllowedValue(g_Keyword_MetadataResetTimestamp, g_Keyword_No);
+        AddAllowedValue(g_Keyword_MetadataResetTimestamp, g_Keyword_Yes);
     }
 
     /// CENTROIDS FEATURE
@@ -2663,6 +2684,24 @@ int Universal::OnMetadataEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get(val);
         // The new settings will be applied once the acquisition is restarted
         acqCfgNew_.FrameMetadataEnabled = (0 == val.compare(g_Keyword_Yes));
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnMetadataResetTimestamp(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnMetadataResetTimestamp", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(acqCfgCur_.FrameMetadataResetTimestamp ? g_Keyword_Yes : g_Keyword_No);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        // The new settings will be applied once the acquisition is restarted
+        acqCfgNew_.FrameMetadataResetTimestamp = (0 == val.compare(g_Keyword_Yes));
         return applyAcqConfig();
     }
     return DEVICE_OK;
@@ -5554,6 +5593,20 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in SetAndApply()
         }
+    }
+
+    // Frame metadata reset timestamp
+    if (acqCfgNew_.FrameMetadataResetTimestamp != acqCfgCur_.FrameMetadataResetTimestamp)
+    {
+        configChanged = true;
+        nRet = prmMetadataResetTimestamp_->SetAndApply(acqCfgNew_.FrameMetadataResetTimestamp ? TRUE : FALSE);
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+        // It behaves like a trigger, reset the value, the next change will be again false->true
+        acqCfgNew_.FrameMetadataResetTimestamp = false;
     }
 
     // Centroids require buffer reallocation and metadata
