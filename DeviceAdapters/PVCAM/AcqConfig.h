@@ -57,6 +57,10 @@ public:
     */
     bool FrameMetadataEnabled;
     /**
+    * Resets the camera-generated metadata timestamp.
+    */
+    bool FrameMetadataResetTimestamp;
+    /**
     * Centroids - camera selected ROIs enabled or disabled.
     */
     bool CentroidsEnabled;

@@ -376,6 +376,12 @@ public: // Action handlers
     */
     int OnMetadataEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
+    * In normal operation, the timestamp is reset upon camera power up.
+    * Use this function and related parameter to reset the timestamp when needed.
+    * The parameter is a write-only, write 'true' value to reset the timestamp.
+    */
+    int OnMetadataResetTimestamp(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
     * Enables or disables the Centroids feature. Introduced with Prime camera under
     * "SmartLocate" name. Requires Metadata to be enabled. When enabled the camera
     * analyzes the frame and picks regions that are interesting. Only those regions
@@ -723,7 +729,7 @@ private: // Static
     /**
     * Static PVCAM callback handler.
     */
-    static void PvcamCallbackEofEx3(PFRAME_INFO pNewFrameInfo, void* pContext);
+    static void PvcamCallbackEofEx3(FRAME_INFO* pNewFrameInfo, void* pContext);
 #endif
 
 private:
@@ -827,7 +833,7 @@ private:
     MMThreadLock     acqLock_;
 
 #ifdef PVCAM_FRAME_INFO_SUPPORTED
-    PFRAME_INFO     pFrameInfo_;           // PVCAM frame metadata
+    FRAME_INFO*     pFrameInfo_;           // PVCAM frame metadata
 #endif
     int             lastPvFrameNr_;        // The last FrameNr reported by PVCAM
 
@@ -850,6 +856,7 @@ private:
 
     PvParam<uns16>*   prmRoiCount_;
     PvParam<rs_bool>* prmMetadataEnabled_;
+    PvParam<rs_bool>* prmMetadataResetTimestamp_;
     PvParam<rs_bool>* prmCentroidsEnabled_;
     PvParam<uns16>*   prmCentroidsRadius_;
     PvParam<uns16>*   prmCentroidsCount_;

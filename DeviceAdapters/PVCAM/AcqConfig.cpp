@@ -9,6 +9,7 @@ AcqConfig::AcqConfig() :
     ExposureRes(EXP_RES_ONE_MICROSEC),
     AcquisitionType(AcqType_Snap),
     FrameMetadataEnabled(false),
+    FrameMetadataResetTimestamp(false),
     CentroidsEnabled(false),
     CentroidsRadius(0),
     CentroidsCount(0),

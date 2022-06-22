@@ -107,12 +107,11 @@ const char* g_Keyword_ClearCycles     = "ClearCycles";
 const char* g_Keyword_ClearMode       = "ClearMode";
 const char* g_Keyword_ColorMode       = "ColorMode";
 const char* g_Keyword_TriggerTimeout  = "Trigger Timeout (secs)";
-const char* g_Keyword_ActualGain      = "Actual Gain e/ADU";
-const char* g_Keyword_ReadNoise       = "Current Read Noise";
+//const char* g_Keyword_ActualGain      = "Actual Gain e/ADU";
+//const char* g_Keyword_ReadNoise       = "Current Read Noise";
 const char* g_Keyword_BinningX        = "BinningX";
 const char* g_Keyword_BinningY        = "BinningY";
 const char* g_Keyword_MultiplierGain  = "MultiplierGain";
-const char* g_Keyword_PreampOffLimit  = "PreampOffLimit";
 const char* g_Keyword_Yes             = "Yes";
 const char* g_Keyword_No              = "No";
 const char* g_Keyword_FrameCapable    = "FTCapable";
@@ -140,14 +139,13 @@ const char* g_Keyword_AdaptiveSmoothHue = "Adaptive Smooth Hue (edge detecting)"
 const char* g_Keyword_AcqMethod           = "AcquisitionMethod";             // Callbacks/Polling
 const char* g_Keyword_AcqMethod_Callbacks = "Callbacks";
 const char* g_Keyword_AcqMethod_Polling   = "Polling";
-const char* g_Keyword_OutputTriggerFirstMissing = "OutputTriggerFirstMissing";
 const char* g_Keyword_CircBufFrameCnt      = "CircularBufferFrameCount";
 const char* g_Keyword_CircBufSizeAuto      = "CircularBufferAutoSize";       // ON/OFF
 const char* g_Keyword_CircBufFrameRecovery = "CircularBufferFrameRecovery";  // ON/OFF
 const char* g_Keyword_CircBufEnabled       = "CircularBufferEnabled";        // ON/OFF
 const char* g_Keyword_ScanMode             = "ScanMode";
 const char* g_Keyword_ScanDirection        = "ScanDirection";
-const char* g_Keyword_ScanDirectionReset   = "ScanDirectionReset";
+const char* g_Keyword_ScanDirectionReset   = "ScanDirectionReset"; // Yes/No
 const char* g_Keyword_ScanLineDelay        = "ScanLineDelay";
 const char* g_Keyword_ScanLineTime         = "ScanLineTime";
 const char* g_Keyword_ScanWidth            = "ScanWidth";
@@ -155,8 +153,9 @@ const char* g_Keyword_ScanWidth            = "ScanWidth";
 const char* g_Keyword_SmartStreamingValues   = "SMARTStreamingValues[ms]";
 const char* g_Keyword_SmartStreamingEnable   = "SMARTStreamingEnabled";
 #endif
-const char* g_Keyword_MetadataEnabled  = "MetadataEnabled";
-const char* g_Keyword_CentroidsEnabled = "CentroidsEnabled";
+const char* g_Keyword_MetadataEnabled  = "MetadataEnabled"; // Yes/No
+const char* g_Keyword_MetadataResetTimestamp  = "MetadataResetTimestamp"; // Yes/No
+const char* g_Keyword_CentroidsEnabled = "CentroidsEnabled"; // Yes/No
 const char* g_Keyword_CentroidsRadius  = "CentroidsRadius";
 const char* g_Keyword_CentroidsCount   = "CentroidsCount";
 const char* g_Keyword_FanSpeedSetpoint = "FanSpeedSetpoint";
@@ -229,6 +228,8 @@ Universal::Universal(short cameraId, const char* deviceName)
     acqThd_(NULL),
     customDiskWriter_(NULL),
     customDiskWriterActive_(false),
+    camParSize_(0),
+    camSerSize_(0),
     prmTemp_(NULL),
     prmTempSetpoint_(NULL),
     prmGainIndex_(NULL),
@@ -246,11 +247,13 @@ Universal::Universal(short cameraId, const char* deviceName)
     metaBlackFilledBufSz_(0),
     singleFrameBufRaw_(NULL),
     singleFrameBufRawSz_(0),
+    singleFrameBufFinal_(NULL),
     rgbImgBuf_(NULL),
     eofEvent_(false, false),
 #ifdef PVCAM_FRAME_INFO_SUPPORTED
     pFrameInfo_(NULL),
 #endif
+    lastPvFrameNr_(0),
 #ifdef PVCAM_SMART_STREAMING_SUPPORTED
     prmSmartStreamingValues_(NULL),
     prmSmartStreamingEnabled_(NULL),
@@ -269,6 +272,7 @@ Universal::Universal(short cameraId, const char* deviceName)
     prmFrameBufSize_(NULL),
     prmRoiCount_(NULL),
     prmMetadataEnabled_(NULL),
+    prmMetadataResetTimestamp_(NULL),
     prmCentroidsEnabled_(NULL),
     prmCentroidsRadius_(NULL),
     prmCentroidsCount_(NULL),
@@ -309,6 +313,8 @@ Universal::Universal(short cameraId, const char* deviceName)
     deviceLabel_[0] = '\0';
 
     camName_[0] = '\0';
+
+    metaRoiStr_[0] = '\0';
 
     // The notification thread will have slightly smaller queue than the circular buffer.
     // This is to reduce the risk of frames being overwritten by PVCAM when the circular
@@ -371,6 +377,7 @@ Universal::~Universal()
     delete prmFrameBufSize_;
     delete prmRoiCount_;
     delete prmMetadataEnabled_;
+    delete prmMetadataResetTimestamp_;
     delete prmCentroidsEnabled_;
     delete prmCentroidsRadius_;
     delete prmCentroidsCount_;
@@ -588,12 +595,30 @@ int Universal::Initialize()
         nRet = prmMetadataEnabled_->SetAndApply(acqCfgNew_.FrameMetadataEnabled ? TRUE : FALSE);
         if (nRet != DEVICE_OK)
             return nRet;
-        // CentroidsEnabled UI property
+        // MetadataEnabled UI property
         pAct = new CPropertyAction (this, &Universal::OnMetadataEnabled);
         CreateProperty(g_Keyword_MetadataEnabled, 
             acqCfgNew_.FrameMetadataEnabled ? g_Keyword_Yes : g_Keyword_No, MM::String, false, pAct);
         AddAllowedValue(g_Keyword_MetadataEnabled, g_Keyword_No);
         AddAllowedValue(g_Keyword_MetadataEnabled, g_Keyword_Yes);
+    }
+
+    /// EMBEDDED FRAME METADATA RESET TIMESTAMP FEATURE
+    acqCfgNew_.FrameMetadataResetTimestamp = false;
+    prmMetadataResetTimestamp_ =  new PvParam<rs_bool>("PARAM_METADATA_RESET_TIMESTAMP", PARAM_METADATA_RESET_TIMESTAMP, this, true);
+    if (prmMetadataResetTimestamp_->IsAvailable())
+    {
+        // The parameter is write-only and resets the timestamp by writing 'TRUE' to it.
+        // Because the adapter does any action only if the old and new value differs,
+        // we keep the AcqCfg::FrameMetadataResetTimestamp 'false' all the time and the
+        // user simply triggers the reset by selecting the other value in combo box.
+
+        // MetadataResetTimestamp UI property
+        pAct = new CPropertyAction (this, &Universal::OnMetadataResetTimestamp);
+        CreateProperty(g_Keyword_MetadataResetTimestamp,
+            acqCfgNew_.FrameMetadataResetTimestamp ? g_Keyword_Yes : g_Keyword_No, MM::String, false, pAct);
+        AddAllowedValue(g_Keyword_MetadataResetTimestamp, g_Keyword_No);
+        AddAllowedValue(g_Keyword_MetadataResetTimestamp, g_Keyword_Yes);
     }
 
     /// CENTROIDS FEATURE
@@ -2659,6 +2684,24 @@ int Universal::OnMetadataEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get(val);
         // The new settings will be applied once the acquisition is restarted
         acqCfgNew_.FrameMetadataEnabled = (0 == val.compare(g_Keyword_Yes));
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnMetadataResetTimestamp(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnMetadataResetTimestamp", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(acqCfgCur_.FrameMetadataResetTimestamp ? g_Keyword_Yes : g_Keyword_No);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        // The new settings will be applied once the acquisition is restarted
+        acqCfgNew_.FrameMetadataResetTimestamp = (0 == val.compare(g_Keyword_Yes));
         return applyAcqConfig();
     }
     return DEVICE_OK;
@@ -5552,6 +5595,20 @@ int Universal::applyAcqConfig(bool forceSetup)
         }
     }
 
+    // Frame metadata reset timestamp
+    if (acqCfgNew_.FrameMetadataResetTimestamp != acqCfgCur_.FrameMetadataResetTimestamp)
+    {
+        configChanged = true;
+        nRet = prmMetadataResetTimestamp_->SetAndApply(acqCfgNew_.FrameMetadataResetTimestamp ? TRUE : FALSE);
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+        // It behaves like a trigger, reset the value, the next change will be again false->true
+        acqCfgNew_.FrameMetadataResetTimestamp = false;
+    }
+
     // Centroids require buffer reallocation and metadata
     if (acqCfgNew_.CentroidsEnabled != acqCfgCur_.CentroidsEnabled)
     {
@@ -6165,7 +6222,7 @@ int Universal::applyAcqConfig(bool forceSetup)
 
 
 #ifdef PVCAM_CALLBACKS_SUPPORTED
-void Universal::PvcamCallbackEofEx3(PFRAME_INFO /*pFrameInfo*/, void* pContext)
+void Universal::PvcamCallbackEofEx3(FRAME_INFO* /*pFrameInfo*/, void* pContext)
 {
     // We don't need the FRAME_INFO because we will get it in FrameAcquired via get_latest_frame
     Universal* pCam = (Universal*)pContext;
