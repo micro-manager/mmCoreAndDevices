@@ -107,12 +107,11 @@ const char* g_Keyword_ClearCycles     = "ClearCycles";
 const char* g_Keyword_ClearMode       = "ClearMode";
 const char* g_Keyword_ColorMode       = "ColorMode";
 const char* g_Keyword_TriggerTimeout  = "Trigger Timeout (secs)";
-const char* g_Keyword_ActualGain      = "Actual Gain e/ADU";
-const char* g_Keyword_ReadNoise       = "Current Read Noise";
+//const char* g_Keyword_ActualGain      = "Actual Gain e/ADU";
+//const char* g_Keyword_ReadNoise       = "Current Read Noise";
 const char* g_Keyword_BinningX        = "BinningX";
 const char* g_Keyword_BinningY        = "BinningY";
 const char* g_Keyword_MultiplierGain  = "MultiplierGain";
-const char* g_Keyword_PreampOffLimit  = "PreampOffLimit";
 const char* g_Keyword_Yes             = "Yes";
 const char* g_Keyword_No              = "No";
 const char* g_Keyword_FrameCapable    = "FTCapable";
@@ -140,14 +139,13 @@ const char* g_Keyword_AdaptiveSmoothHue = "Adaptive Smooth Hue (edge detecting)"
 const char* g_Keyword_AcqMethod           = "AcquisitionMethod";             // Callbacks/Polling
 const char* g_Keyword_AcqMethod_Callbacks = "Callbacks";
 const char* g_Keyword_AcqMethod_Polling   = "Polling";
-const char* g_Keyword_OutputTriggerFirstMissing = "OutputTriggerFirstMissing";
 const char* g_Keyword_CircBufFrameCnt      = "CircularBufferFrameCount";
 const char* g_Keyword_CircBufSizeAuto      = "CircularBufferAutoSize";       // ON/OFF
 const char* g_Keyword_CircBufFrameRecovery = "CircularBufferFrameRecovery";  // ON/OFF
 const char* g_Keyword_CircBufEnabled       = "CircularBufferEnabled";        // ON/OFF
 const char* g_Keyword_ScanMode             = "ScanMode";
 const char* g_Keyword_ScanDirection        = "ScanDirection";
-const char* g_Keyword_ScanDirectionReset   = "ScanDirectionReset";
+const char* g_Keyword_ScanDirectionReset   = "ScanDirectionReset"; // Yes/No
 const char* g_Keyword_ScanLineDelay        = "ScanLineDelay";
 const char* g_Keyword_ScanLineTime         = "ScanLineTime";
 const char* g_Keyword_ScanWidth            = "ScanWidth";
@@ -155,8 +153,8 @@ const char* g_Keyword_ScanWidth            = "ScanWidth";
 const char* g_Keyword_SmartStreamingValues   = "SMARTStreamingValues[ms]";
 const char* g_Keyword_SmartStreamingEnable   = "SMARTStreamingEnabled";
 #endif
-const char* g_Keyword_MetadataEnabled  = "MetadataEnabled";
-const char* g_Keyword_CentroidsEnabled = "CentroidsEnabled";
+const char* g_Keyword_MetadataEnabled  = "MetadataEnabled"; // Yes/No
+const char* g_Keyword_CentroidsEnabled = "CentroidsEnabled"; // Yes/No
 const char* g_Keyword_CentroidsRadius  = "CentroidsRadius";
 const char* g_Keyword_CentroidsCount   = "CentroidsCount";
 const char* g_Keyword_FanSpeedSetpoint = "FanSpeedSetpoint";
@@ -229,6 +227,8 @@ Universal::Universal(short cameraId, const char* deviceName)
     acqThd_(NULL),
     customDiskWriter_(NULL),
     customDiskWriterActive_(false),
+    camParSize_(0),
+    camSerSize_(0),
     prmTemp_(NULL),
     prmTempSetpoint_(NULL),
     prmGainIndex_(NULL),
@@ -246,11 +246,13 @@ Universal::Universal(short cameraId, const char* deviceName)
     metaBlackFilledBufSz_(0),
     singleFrameBufRaw_(NULL),
     singleFrameBufRawSz_(0),
+    singleFrameBufFinal_(NULL),
     rgbImgBuf_(NULL),
     eofEvent_(false, false),
 #ifdef PVCAM_FRAME_INFO_SUPPORTED
     pFrameInfo_(NULL),
 #endif
+    lastPvFrameNr_(0),
 #ifdef PVCAM_SMART_STREAMING_SUPPORTED
     prmSmartStreamingValues_(NULL),
     prmSmartStreamingEnabled_(NULL),
@@ -309,6 +311,8 @@ Universal::Universal(short cameraId, const char* deviceName)
     deviceLabel_[0] = '\0';
 
     camName_[0] = '\0';
+
+    metaRoiStr_[0] = '\0';
 
     // The notification thread will have slightly smaller queue than the circular buffer.
     // This is to reduce the risk of frames being overwritten by PVCAM when the circular
@@ -588,7 +592,7 @@ int Universal::Initialize()
         nRet = prmMetadataEnabled_->SetAndApply(acqCfgNew_.FrameMetadataEnabled ? TRUE : FALSE);
         if (nRet != DEVICE_OK)
             return nRet;
-        // CentroidsEnabled UI property
+        // MetadataEnabled UI property
         pAct = new CPropertyAction (this, &Universal::OnMetadataEnabled);
         CreateProperty(g_Keyword_MetadataEnabled, 
             acqCfgNew_.FrameMetadataEnabled ? g_Keyword_Yes : g_Keyword_No, MM::String, false, pAct);
