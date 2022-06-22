@@ -6165,7 +6165,7 @@ int Universal::applyAcqConfig(bool forceSetup)
 
 
 #ifdef PVCAM_CALLBACKS_SUPPORTED
-void Universal::PvcamCallbackEofEx3(PFRAME_INFO /*pFrameInfo*/, void* pContext)
+void Universal::PvcamCallbackEofEx3(FRAME_INFO* /*pFrameInfo*/, void* pContext)
 {
     // We don't need the FRAME_INFO because we will get it in FrameAcquired via get_latest_frame
     Universal* pCam = (Universal*)pContext;

@@ -723,7 +723,7 @@ private: // Static
     /**
     * Static PVCAM callback handler.
     */
-    static void PvcamCallbackEofEx3(PFRAME_INFO pNewFrameInfo, void* pContext);
+    static void PvcamCallbackEofEx3(FRAME_INFO* pNewFrameInfo, void* pContext);
 #endif
 
 private:
@@ -827,7 +827,7 @@ private:
     MMThreadLock     acqLock_;
 
 #ifdef PVCAM_FRAME_INFO_SUPPORTED
-    PFRAME_INFO     pFrameInfo_;           // PVCAM frame metadata
+    FRAME_INFO*     pFrameInfo_;           // PVCAM frame metadata
 #endif
     int             lastPvFrameNr_;        // The last FrameNr reported by PVCAM
 
