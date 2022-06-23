@@ -55,6 +55,8 @@ public:
    // Action interface
    int OnPositionXmm(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPositionYmm(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnMoveXmm(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnMoveYmm(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSetOriginHere(MM::PropertyBase* pProp, MM::ActionType eAct);  
    int OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct);      
    int OnReturnToOrigin(MM::PropertyBase* pProp, MM::ActionType eAct);  
@@ -122,6 +124,7 @@ private:
    bool deviceHasTirfModuleAxis_;
    bool axis1IsTirfModule_;
    bool axis2IsTirfModule_;
+   bool hasUnknownTirfModuleAxis_;
    double tirfModCalibrationMm_;
 };
 

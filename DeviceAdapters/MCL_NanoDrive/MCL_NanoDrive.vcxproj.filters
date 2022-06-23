@@ -9,9 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Micro Manager Headers">
-      <UniqueIdentifier>{80bcf84c-ddd6-4cba-9264-98f4470f1f9f}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="handle_list_if.cpp">
@@ -27,6 +24,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MCL_NanoDrive_ZStage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MCL_Common.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -49,26 +49,8 @@
     <ClInclude Include="MCL_NanoDrive_ZStage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\MMDevice\DeviceBase.h">
-      <Filter>Micro Manager Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MMDevice\DeviceUtils.h">
-      <Filter>Micro Manager Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MMDevice\ImgBuffer.h">
-      <Filter>Micro Manager Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MMDevice\MMDevice.h">
-      <Filter>Micro Manager Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MMDevice\MMDeviceConstants.h">
-      <Filter>Micro Manager Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MMDevice\ModuleInterface.h">
-      <Filter>Micro Manager Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MMDevice\Property.h">
-      <Filter>Micro Manager Headers</Filter>
+    <ClInclude Include="MCL_Common.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
