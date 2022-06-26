@@ -131,6 +131,7 @@
     <ClCompile Include="CameraPortMirror.cpp" />
     <ClCompile Include="ConfigFileHandler.cpp" />
     <ClCompile Include="ConfocalMode.cpp" />
+    <ClCompile Include="TIRFIntensity.cpp" />
     <ClCompile Include="DichroicMirror.cpp" />
     <ClCompile Include="Disk.cpp" />
     <ClCompile Include="DiskSpeedSimulator.cpp" />

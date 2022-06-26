@@ -17,6 +17,7 @@
 #include "Lens.h"
 #include "SuperRes.h"
 #include "TIRF.h"
+#include "TIRFIntensity.h"
 #include "ConfigFileHandler.h"
 
 #include "ASDInterface.h"
@@ -84,6 +85,7 @@ CDragonfly::CDragonfly()
   CameraPortMirror_( nullptr ),
   SuperRes_( nullptr ),
   TIRF_( nullptr ),
+  TIRFIntensity_( nullptr ),
   ConfigFile_( nullptr )
 {
   InitializeDefaultErrorMessages();
@@ -261,6 +263,8 @@ int CDragonfly::Shutdown()
   SuperRes_ = nullptr;
   delete TIRF_;
   TIRF_ = nullptr;
+  delete TIRFIntensity_;
+  TIRFIntensity_ = nullptr;
 
   Disconnect();
 
@@ -331,7 +335,7 @@ int CDragonfly::InitializeComponents()
   IASDInterface3* vASDInterface3 = ASDLoader_->GetASDInterface3();
   IASDInterface4* vASDInterface4 = ASDWrapper_->GetASDInterface4( ASDLoader_ );
   IASDInterface6* vASDInterface6 = ASDWrapper_->GetASDInterface6( ASDLoader_ );
-
+  
   // Description property
   int vRet = CreateProperty( MM::g_Keyword_Description, g_DeviceDescription, MM::String, true );
   if ( vRet != DEVICE_OK )
@@ -437,6 +441,9 @@ int CDragonfly::InitializeComponents()
   {
     return vRet;
   }
+
+  // Optical feedback
+  vRet = CreateTIRFIntensity( vASDInterface6 );
   
   return vRet;
 }
@@ -755,10 +762,10 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
   {
     try
     {
-      ITIRFInterface* vTIRF = ASDInterface->GetTIRF();
-      if ( vTIRF != nullptr )
+      ITIRFInterface* vASDTIRF = ASDInterface->GetTIRF();
+      if ( vASDTIRF != nullptr )
       {
-        TIRF_ = new CTIRF( vTIRF, ConfigFile_, this );
+        TIRF_ = new CTIRF( vASDTIRF, ConfigFile_, this );
       }
       else
       {
@@ -777,6 +784,39 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
   else
   {
     LogMessage( "TIRF not available", true );
+  }
+  return vErrorCode;
+}
+
+int CDragonfly::CreateTIRFIntensity( IASDInterface6* ASDInterface6 )
+{
+  int vErrorCode = DEVICE_OK;
+  if ( ASDInterface6 && ASDInterface6->IsTIRFIntensityAvailable() )
+  {
+    try
+    {
+      ITIRFIntensityInterface* vASDTIRFIntensity = ASDInterface6->GetTIRFIntensity();
+      if ( vASDTIRFIntensity != nullptr )
+      {
+        TIRFIntensity_ = new CTIRFIntensity( vASDTIRFIntensity, this );
+      }
+      else
+      {
+        LogMessage( "TIRF Intensity ASD SDK pointer invalid" );
+        vErrorCode = ERR_TIRF_INTENSITY_INIT;
+      }
+    }
+    catch ( exception& vException )
+    {
+      string vMessage( "Error loading TIRF Intensity. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      vErrorCode = ERR_TIRF_INTENSITY_INIT;
+    }
+  }
+  else
+  {
+    LogMessage( "TIRF Intensity not available", true );
   }
   return vErrorCode;
 }

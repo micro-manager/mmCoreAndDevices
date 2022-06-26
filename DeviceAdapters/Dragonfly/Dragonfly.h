@@ -26,6 +26,7 @@ class CCameraPortMirror;
 class CLens;
 class CSuperRes;
 class CTIRF;
+class CTIRFIntensity;
 class CConfigFileHandler;
 
 class IASDLoader;
@@ -50,9 +51,10 @@ class IASDInterface6;
 #define ERR_POWERDENSITY_INIT 113
 #define ERR_SUPERRES_INIT 114
 #define ERR_TIRF_INIT 115
-#define ERR_CONFIGFILEIO_ERROR 116
-#define ERR_COMPORTPROPERTY_CREATION 117
-#define ERR_CONFIGFILEPROPERTY_CREATION 118
+#define ERR_TIRF_INTENSITY_INIT 116
+#define ERR_CONFIGFILEIO_ERROR 117
+#define ERR_COMPORTPROPERTY_CREATION 118
+#define ERR_CONFIGFILEPROPERTY_CREATION 119
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -88,6 +90,7 @@ private:
   std::list<CLens*> Lens_;
   CSuperRes* SuperRes_;
   CTIRF* TIRF_;
+  CTIRFIntensity* TIRFIntensity_;
   CConfigFileHandler* ConfigFile_;
   
   IASDLoader* ASDLoader_;
@@ -106,6 +109,7 @@ private:
   int CreateLens( IASDInterface2* ASDInterface, int LensIndex );
   int CreateSuperRes( IASDInterface3* ASDInterface );
   int CreateTIRF( IASDInterface3* ASDInterface );
+  int CreateTIRFIntensity( IASDInterface6* ASDInterface6 );
 };
 
 #endif
