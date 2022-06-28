@@ -435,9 +435,12 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NIDAQ", "DeviceAdapters\NIDAQ\NIDAQ.vcxproj", "{51AC9E8C-8BD5-4EFE-8571-6EE74D0BC22B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsPM100x", "DeviceAdapters\ThorlabsPM100x\ThorlabsPM100x.vcxproj", "{5583AC3C-328B-4969-978A-63AED0DD2258}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UniversalMMHubSerial", "DeviceAdapters\UniversalMMHubSerial\UniversalMMHubSerial.vcxproj", "{870B45D3-5EA6-47C3-9A86-3372CE0A0436}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UniversalMMHubUsb", "DeviceAdapters\UniversalMMHubUsb\UniversalMMHubUsb.vcxproj", "{9A33047E-4E1F-4C96-8BBA-FB9610D75373}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MeadowlarkLC", "DeviceAdapters\MeadowlarkLC\MeadowlarkLC.vcxproj", "{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1321,6 +1324,10 @@ Global
 		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Debug|x64.Build.0 = Debug|x64
 		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Release|x64.ActiveCfg = Release|x64
 		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Release|x64.Build.0 = Release|x64
+		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Debug|x64.ActiveCfg = Debug|x64
+		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Debug|x64.Build.0 = Debug|x64
+		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Release|x64.ActiveCfg = Release|x64
+		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
