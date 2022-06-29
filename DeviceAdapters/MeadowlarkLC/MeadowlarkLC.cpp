@@ -175,7 +175,7 @@ const char* g_ControllerDescriptionInfo = "Description Info";
 const std::string g_Nonedetected = "None detected";
 const LPCSTR g_About = "MeadowlarkLC Device Adapter for Micro-Manager and use with OpenPolScope Micro-Manager plugin. \n Please refer to http://www.openpolscope.org for more information.";
 
-const char* g_Dev_Adapter_Ver = "1.00.03";
+const char* g_Dev_Adapter_Ver = "1.1.0";
 using namespace std;
 
 const HMODULE GetCurrentModule()
@@ -713,14 +713,14 @@ int MeadowlarkLC::Initialize()
 	if (DEVICE_OK != ret)
 		return ret;
 
-	// Version number
+	// Controller Serial number
 	CPropertyAction* pAct = new CPropertyAction(this, &MeadowlarkLC::OnSerialNumber);
-	ret = CreateProperty("Version Number", "Version Number Not Found", MM::String, true, pAct);
+	ret = CreateProperty("Controller Serial Number", "Serial Number Not Found", MM::String, true, pAct);
 	if (ret != DEVICE_OK)
 		return ret;
 
 	// Device Adapter Version number
-	pAct = new CPropertyAction(this, &MeadowlarkLC::OnDevAdapterSerialNumber);
+	pAct = new CPropertyAction(this, &MeadowlarkLC::OnDevAdapterVersionNumber);
 	ret = CreateProperty("Device Adapter Version Number", "Device Adapter Version Number Not Found", MM::String, true, pAct);
 	if (ret != DEVICE_OK)
 		return ret;
@@ -1328,7 +1328,7 @@ int MeadowlarkLC::OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int MeadowlarkLC::OnDevAdapterSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
+int MeadowlarkLC::OnDevAdapterVersionNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1957,6 +1957,7 @@ double MeadowlarkLC::GetVoltage(long index) {
 }
 
 double MeadowlarkLC::VoltageToRetardance(double volt, long index) {
+	//TODO: voltage to retardance conversion does not work for low voltages (<2 V)
 
 	double retardance = 0;
 	double FacRetardance = 0;
@@ -2017,6 +2018,8 @@ double MeadowlarkLC::VoltageToRetardance(double volt, long index) {
 }
 
 double MeadowlarkLC::RetardanceToVoltage(double retard, long index) {
+	// retardance to voltage conversion does not work for high retardances (>= 1.6).
+	// voltage cannot be set to Vmax
 
 	double voltage = 0;
 	double FacRetardance = 0;

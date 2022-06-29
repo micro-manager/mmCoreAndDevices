@@ -84,7 +84,7 @@ public:
 	int OnBriefMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	int OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnDevAdapterSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnDevAdapterVersionNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnActivationKey(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnControllerType(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnControllerLCType(MM::PropertyBase* pProp, MM::ActionType eAct);
