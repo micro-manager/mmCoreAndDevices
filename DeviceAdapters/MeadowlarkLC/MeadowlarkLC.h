@@ -181,6 +181,7 @@ private:
 	double VoltageToRetardance(double volt, long index);
 	double RetardanceToVoltage(double retardance, long index);
 	double RetardanceToVoltage(long wIndex, double AbsRetardance);
+	double GetVoltage(long index);
 
 	void SendVoltageToDevice(int volt16bit, long index);
 	void SetTneToDevice(int amplitude, double duration);

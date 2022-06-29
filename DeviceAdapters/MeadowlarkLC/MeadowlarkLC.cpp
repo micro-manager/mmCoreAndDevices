@@ -805,15 +805,15 @@ int MeadowlarkLC::Initialize()
 	// Voltage controls
 	for (long i = 0; i < numActiveLCs_; ++i) {
 		ostringstream s;
-		s << "Voltage (mV) LC-" << char(65 + i);
+		s << "Voltage (V) LC-" << char(65 + i);
 		pActX = new CPropertyActionEx(this, &MeadowlarkLC::OnVoltage, i);
-		CreateProperty(s.str().c_str(), "7500", MM::Integer, true, pActX);
+		CreateProperty(s.str().c_str(), "7.500", MM::Float, false, pActX);
 
 		if (controllerType_ == g_ControllerDeviceType10V) {
-			SetPropertyLimits(s.str().c_str(), 0, 10000);
+			SetPropertyLimits(s.str().c_str(), 0, 10.0);
 		}
 		else {
-			SetPropertyLimits(s.str().c_str(), 0, 20000);
+			SetPropertyLimits(s.str().c_str(), 0, 20.0);
 		}
 	}
 
@@ -829,7 +829,7 @@ int MeadowlarkLC::Initialize()
 	// Absolute Retardance controls -- after Voltage controls
 	for (long i = 0; i < numActiveLCs_; ++i) {
 		ostringstream s;
-		s << "Retardance LC-" << char(65 + i) << " [in nm.]";
+		s << "Retardance LC-" << char(65 + i) << " [in nm]";
 		pActX = new CPropertyActionEx(this, &MeadowlarkLC::OnAbsRetardance, i);
 		CreateProperty(s.str().c_str(), "100", MM::Float, true, pActX);
 	}
@@ -1100,8 +1100,31 @@ int MeadowlarkLC::OnRetardance(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 	if (eAct == MM::BeforeGet)
 	{
 
-		if (index + 1 > 0) {
-			pProp->Set(retardance_[index]);
+		if (index + 1 > 0) 
+		{
+			double voltage = GetVoltage(index); // in mV
+			//double voltage = voltage_[index];
+			double maxV = 10000;
+			if (controllerType_ == g_ControllerDeviceType20V_D3060HV || controllerType_ == g_ControllerDeviceType20V_D5020) {
+				maxV = 20000;
+			}
+
+			if (voltage >= 0 && voltage <= maxV) {
+				double retardance = VoltageToRetardance(voltage, index);
+
+				//if the new retardance is the same as the old retardance, then do nothing
+				if (retardance_[index] == retardance) {
+					return DEVICE_OK;
+				}
+				retardance_[index] = retardance;
+				pProp->Set(retardance);
+
+				//update abs retardance property
+				ostringstream s;
+				s << "Retardance LC-" << char(65 + index) << " [in nm]";
+				std::string s2 = DoubleToString(retardance * wavelength_);
+				SetProperty(s.str().c_str(), s2.c_str());
+			}
 		}
 		else {
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1111,6 +1134,7 @@ int MeadowlarkLC::OnRetardance(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 	{
 		double retardance = retardance_[index];
 		double retardanceT;
+
 		// read value from property
 		pProp->Get(retardanceT);
 
@@ -1122,7 +1146,6 @@ int MeadowlarkLC::OnRetardance(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 		}
 
 		// write retardance out to device....	  
-
 		retardanceT = ceilf(retardanceT * 10000) / 10000;
 		double voltage = round(RetardanceToVoltage(retardanceT, index));
 
@@ -1163,15 +1186,17 @@ int MeadowlarkLC::OnRetardance(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 		if (voltage_[index] == voltage) {
 			return DEVICE_OK;
 		}
+		voltage_[index] = voltage;
+
+		//update Voltage property
+		ostringstream s;
+		s << "Voltage (V) LC-" << char(65+index);
+		std::string s2 = DoubleToString(voltage/1000); // in V
+		SetProperty(s.str().c_str(), s2.c_str());
 
 		// write voltage out to device....
-		//ostringstream s;
-		//s << "Voltage (mV) LC-" << char(65+index);
-		//std::string s2 = DoubleToString(voltage);
-		//SetProperty(s.str().c_str(), s2.c_str());
 		int volt16bit = static_cast<int>(voltage);
 		SendVoltageToDevice(volt16bit, index);
-		voltage_[index] = voltage;
 
 		// changedTime_ = GetCurrentMMTime();
 	}
@@ -1201,70 +1226,49 @@ int MeadowlarkLC::OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct, long i
 	if (initialized_) {
 		if (eAct == MM::BeforeGet)
 		{
-
-			BYTE query_volt[] = { 'l', 'd', ':', char(index + 49), ',', '?', '\r' };
-			BYTE statusRead[64];
-
-			USBDRVD_BulkWrite(dev_Handle, 1, query_volt, sizeof(query_volt)); /* send ld:n,? command */
-
-			USBDRVD_BulkRead(dev_Handle, 0, statusRead, sizeof(statusRead)); /* read status response */
-
-			std::string ans = ((char*)statusRead);
-
-			size_t length;
-			char buffer[64];
-			length = ans.copy(buffer, 5, 5);
-			buffer[length] = '\n';
-
-			//int voltInt = StringToInt(buffer) * 1000/g_ControllerDeviceTypeVFac;
-
-			double voltage = round(StringToInt(buffer) * 1000 / g_ControllerDeviceTypeVFac);
+			double voltage = GetVoltage(index); // in mV
 
 			double maxV = 10000;
 			if (controllerType_ == g_ControllerDeviceType20V_D3060HV || controllerType_ == g_ControllerDeviceType20V_D5020) {
 				maxV = 20000;
 			}
 
-			if (index + 1 >= 0 && voltage > 0 && voltage <= maxV) {
+			if (index + 1 >= 0 && voltage >= 0 && voltage <= maxV) {
 
-				pProp->Set(voltage);
-
+				//if the new voltage is the same as the old voltage, then do nothing
 				if (voltage_[index] == voltage) {
 					return DEVICE_OK;
 				}
 				voltage_[index] = voltage;
-
-				double Retardance = VoltageToRetardance(voltage, index);
-				retardance_[index] = Retardance;
-				ostringstream s;
-				s << "Retardance LC-" << char(65 + index) << " [in waves]";
-				std::string s2 = DoubleToString(Retardance);
-				SetProperty(s.str().c_str(), s2.c_str());
-
-			}
-			else {
-				// return DEVICE_INVALID_PROPERTY_VALUE;
+				pProp->Set(voltage / 1000); // pProp is in V
 			}
 		}
 		else if (eAct == MM::AfterSet)
 		{
 			double voltage;
 
-			// read value from property
+			// read value from property, in Volts
 			pProp->Get(voltage);
+			voltage *= 1000; // now in mV
 
-			if (voltage_[index] == voltage) {
-				return DEVICE_OK;
+			double maxV = 10000;
+			if (controllerType_ == g_ControllerDeviceType20V_D3060HV || controllerType_ == g_ControllerDeviceType20V_D5020) {
+				maxV = 20000;
 			}
 
-			//		  double Retardance = VoltageToRetardance(voltage);
-			//		  retardance_[index] = Retardance;
-			//		  write voltage out to device....	  
+			if (index+1 >= 0 && voltage >= 0 && voltage <= maxV) {
 
-			double v = ((voltage / 1000) * g_ControllerDeviceTypeVFac);
-			int volt16bit = static_cast<int>(v);
+				//if the new voltage is the same as the old voltage, then do nothing
+				if (voltage_[index] == voltage) {
+					return DEVICE_OK;
+				}
+				voltage_[index] = voltage;
 
-			SendVoltageToDevice(volt16bit, index);
+				//send voltage to device
+				double v = voltage / 1000 * g_ControllerDeviceTypeVFac;
+				int volt16bit = static_cast<int>(v);
+				SendVoltageToDevice(volt16bit, index);
+			}
 		}
 	}
 	return DEVICE_OK;
@@ -1925,6 +1929,31 @@ double MeadowlarkLC::roundN(double val, int precision)
 	s << std::setprecision(precision) << std::setiosflags(std::ios_base::fixed) << val;
 	s >> val;
 	return val;
+}
+
+double MeadowlarkLC::GetVoltage(long index) {
+	// returns voltage in mV
+
+	double voltage = -1;
+
+	if (index + 1 > 0) {
+		BYTE query_volt[] = { 'l', 'd', ':', char(index + 49), ',', '?', '\r' };
+		BYTE statusRead[64];
+
+		USBDRVD_BulkWrite(dev_Handle, 1, query_volt, sizeof(query_volt)); /* send ld:n,? command */
+		USBDRVD_BulkRead(dev_Handle, 0, statusRead, sizeof(statusRead)); /* read status response */
+
+		std::string ans = ((char*)statusRead);
+
+		size_t length;
+		char buffer[64];
+		length = ans.copy(buffer, 5, 5);
+		buffer[length] = '\n';
+
+		voltage = round(StringToInt(buffer) * 1000 / g_ControllerDeviceTypeVFac); // in mV
+	}
+
+	return voltage;
 }
 
 double MeadowlarkLC::VoltageToRetardance(double volt, long index) {
