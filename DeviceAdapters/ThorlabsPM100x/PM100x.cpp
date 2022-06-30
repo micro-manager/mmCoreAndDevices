@@ -29,6 +29,8 @@
 
 
 const char* g_PM100Name = "ThorlabsPM100";
+const char* g_On = "On";
+const char* g_Off = "Off";
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -157,6 +159,20 @@ int PM100::Initialize()
    ret = CreateFloatProperty("Wavelength", 488.0, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
+   
+   pAct = new CPropertyAction(this, &PM100::OnAutoRange);
+   ret = CreateStringProperty("AutoRange", g_On, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   AddAllowedValue("AutoRange", g_On);
+   AddAllowedValue("AutoRange", g_Off);
+   
+   pAct = new CPropertyAction(this, &PM100::OnPowerRange);
+   ret = CreateFloatProperty("PowerRange", 100.0, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   
+
 
    initialized_ = true;
    return DEVICE_OK;
@@ -303,6 +319,56 @@ int PM100::OnWavelength(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Get(actWavelength);
       return TLPM_setWavelength(instrHdl_,  actWavelength);
       
+   }
+   return DEVICE_OK;
+}
+
+int PM100::OnAutoRange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   ViStatus err = VI_SUCCESS;
+   ViBoolean autoRangeMode = TLPM_AUTORANGE_POWER_OFF;
+   std::string state = g_Off;
+
+   if (eAct == MM::BeforeGet)
+   {
+
+      err = TLPM_getPowerAutorange(instrHdl_, &autoRangeMode);
+      if (err != VI_SUCCESS)
+         return err;
+      if (autoRangeMode)
+         state = g_On;
+
+      pProp->Set(state.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(state);
+      if (state == g_On)
+         autoRangeMode = (ViBoolean) TLPM_AUTORANGE_POWER_ON;
+      return TLPM_setPowerAutoRange(instrHdl_, autoRangeMode);
+
+   }
+   return DEVICE_OK;
+}
+
+int PM100::OnPowerRange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   ViStatus err = VI_SUCCESS;
+   ViReal64 powerRange;
+
+   if (eAct == MM::BeforeGet)
+   {
+      err = TLPM_getPowerRange(instrHdl_, TLPM_AUTORANGE_POWER_OFF, &powerRange);
+      if (err != VI_SUCCESS)
+         return err;
+
+      pProp->Set(powerRange);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(powerRange);
+      return TLPM_setPowerRange(instrHdl_, powerRange);
+
    }
    return DEVICE_OK;
 }
