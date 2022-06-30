@@ -58,6 +58,8 @@ public:
 	int OnPMName(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWavelength (MM::PropertyBase* pProp, MM::ActionType eAct);
 
+	int OnAutoRange(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnPowerRange(MM::PropertyBase* pProp, MM::ActionType eAct);
 private:
 	int FindPowerMeters(std::vector<std::string>& deviceNames);
 
