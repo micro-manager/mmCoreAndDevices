@@ -1,3 +1,12 @@
+"""
+This script tests a camera by running through various API functions and properties
+
+It can be runs using pycromanager, which needs to be set up by following the instructions here:
+https://pycro-manager.readthedocs.io/en/latest/setup.html
+
+Additionally, the end part requires matplotlib to be installed for plotting images
+"""
+
 from pycromanager import Core
 import numpy as np
 import time
