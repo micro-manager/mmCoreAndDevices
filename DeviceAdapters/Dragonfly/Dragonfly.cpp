@@ -18,6 +18,7 @@
 #include "SuperRes.h"
 #include "TIRF.h"
 #include "TIRFIntensity.h"
+#include "BTIRF.h"
 #include "ConfigFileHandler.h"
 
 #include "ASDInterface.h"
@@ -86,6 +87,7 @@ CDragonfly::CDragonfly()
   SuperRes_( nullptr ),
   TIRF_( nullptr ),
   TIRFIntensity_( nullptr ),
+  BTIRF_( nullptr ),
   ConfigFile_( nullptr )
 {
   InitializeDefaultErrorMessages();
@@ -123,6 +125,10 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_SUPERRES_INIT, vMessage.c_str() );
   vMessage = "TIRF initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_TIRF_INIT, vMessage.c_str() );
+  vMessage = "TIRF Intensity initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_TIRF_INTENSITY_INIT, vMessage.c_str() );
+  vMessage = "BTIRF initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_BTIRF_INIT, vMessage.c_str() );
   SetErrorText( ERR_CONFIGFILEIO_ERROR, "Can't write to Dragonfly configuration file. Please select a file for which you have read and write access." );
   SetErrorText( ERR_COMPORTPROPERTY_CREATION, "Error creating COM Port property" );
   SetErrorText( ERR_CONFIGFILEPROPERTY_CREATION, "Error creating Configuration File path property" );
@@ -265,6 +271,8 @@ int CDragonfly::Shutdown()
   TIRF_ = nullptr;
   delete TIRFIntensity_;
   TIRFIntensity_ = nullptr;
+  delete BTIRF_;
+  BTIRF_ = nullptr;
 
   Disconnect();
 
@@ -444,7 +452,14 @@ int CDragonfly::InitializeComponents()
 
   // Optical feedback
   vRet = CreateTIRFIntensity( vASDInterface6 );
-  
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  // BTIRF component
+  vRet = CreateBTIRF( vASDInterface4 );
+    
   return vRet;
 }
 
@@ -817,6 +832,30 @@ int CDragonfly::CreateTIRFIntensity( IASDInterface6* ASDInterface6 )
   else
   {
     LogMessage( "TIRF Intensity not available", true );
+  }
+  return vErrorCode;
+}
+
+int CDragonfly::CreateBTIRF( IASDInterface4* ASDInterface4 )
+{
+  int vErrorCode = DEVICE_OK;
+  if ( ASDInterface4 )
+  {
+    try
+    {
+      BTIRF_ = new CBTIRF( ASDInterface4, this );
+    }
+    catch ( exception& vException )
+    {
+      string vMessage( "Error loading BTIRF. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      vErrorCode = ERR_BTIRF_INIT;
+    }
+  }
+  else
+  {
+    LogMessage( "ASD Interface4 not available", true );
   }
   return vErrorCode;
 }

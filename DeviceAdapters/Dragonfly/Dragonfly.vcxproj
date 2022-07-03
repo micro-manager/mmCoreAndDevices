@@ -128,6 +128,7 @@
     <ClCompile Include="ASDWrapper\ASDWrapperTIRF.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperTIRFIntensity.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperTIRFPolariser.cpp" />
+    <ClCompile Include="BTIRF.cpp" />
     <ClCompile Include="CameraPortMirror.cpp" />
     <ClCompile Include="ConfigFileHandler.cpp" />
     <ClCompile Include="ConfocalMode.cpp" />

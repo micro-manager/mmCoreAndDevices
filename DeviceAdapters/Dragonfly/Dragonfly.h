@@ -27,6 +27,7 @@ class CLens;
 class CSuperRes;
 class CTIRF;
 class CTIRFIntensity;
+class CBTIRF;
 class CConfigFileHandler;
 
 class IASDLoader;
@@ -52,9 +53,10 @@ class IASDInterface6;
 #define ERR_SUPERRES_INIT 114
 #define ERR_TIRF_INIT 115
 #define ERR_TIRF_INTENSITY_INIT 116
-#define ERR_CONFIGFILEIO_ERROR 117
-#define ERR_COMPORTPROPERTY_CREATION 118
-#define ERR_CONFIGFILEPROPERTY_CREATION 119
+#define ERR_BTIRF_INIT 117
+#define ERR_CONFIGFILEIO_ERROR 118
+#define ERR_COMPORTPROPERTY_CREATION 119
+#define ERR_CONFIGFILEPROPERTY_CREATION 120
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -91,6 +93,7 @@ private:
   CSuperRes* SuperRes_;
   CTIRF* TIRF_;
   CTIRFIntensity* TIRFIntensity_;
+  CBTIRF* BTIRF_;
   CConfigFileHandler* ConfigFile_;
   
   IASDLoader* ASDLoader_;
@@ -110,6 +113,7 @@ private:
   int CreateSuperRes( IASDInterface3* ASDInterface );
   int CreateTIRF( IASDInterface3* ASDInterface );
   int CreateTIRFIntensity( IASDInterface6* ASDInterface6 );
+  int CreateBTIRF( IASDInterface4* ASDInterface4 );
 };
 
 #endif
