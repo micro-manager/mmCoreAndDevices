@@ -20,7 +20,7 @@ CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
 {
   if ( ASDInterface3_ == nullptr )
   {
-    throw std::exception( "Invalid pointer to ASDInterface" );
+    throw std::exception( "Invalid pointer to ASDInterface3" );
   }
 }
 
@@ -378,10 +378,13 @@ bool CASDWrapperInterface::IsBorealisTIRF100Available()
 
 IBorealisTIRFInterface* CASDWrapperInterface::GetBorealisTIRF100()
 {
-  if ( BorealisTIRF100Wrapper_ == nullptr )
+  if ( IsBorealisTIRF100Available() )
   {
-    CASDSDKLock vSDKLock;
-    BorealisTIRF100Wrapper_ = new CASDWrapperBorealisTIRF( ASDInterface4_->GetBorealisTIRF100() );
+    if ( BorealisTIRF100Wrapper_ == nullptr )
+    {
+      CASDSDKLock vSDKLock;
+      BorealisTIRF100Wrapper_ = new CASDWrapperBorealisTIRF( ASDInterface4_->GetBorealisTIRF100() );
+    }
   }
   return BorealisTIRF100Wrapper_;
 }
@@ -394,10 +397,13 @@ bool CASDWrapperInterface::IsBorealisTIRF60Available()
 
 IBorealisTIRFInterface* CASDWrapperInterface::GetBorealisTIRF60()
 {
-  if ( BorealisTIRF60Wrapper_ == nullptr )
+  if ( IsBorealisTIRF60Available() )
   {
-    CASDSDKLock vSDKLock;
-    BorealisTIRF60Wrapper_ = new CASDWrapperBorealisTIRF( ASDInterface4_->GetBorealisTIRF60() );
+    if ( BorealisTIRF60Wrapper_ == nullptr )
+    {
+      CASDSDKLock vSDKLock;
+      BorealisTIRF60Wrapper_ = new CASDWrapperBorealisTIRF( ASDInterface4_->GetBorealisTIRF60() );
+    }
   }
   return BorealisTIRF60Wrapper_;
 }
