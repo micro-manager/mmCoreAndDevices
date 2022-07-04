@@ -36,8 +36,6 @@ private:
   std::mutex TIRFIntensityMutex_;
 
   int CurrentTIRFIntensity_ = 0;
-  int TIRFIntensityMin_ = 0;
-  int TIRFIntensityMax_ = 0;
 };
 
 

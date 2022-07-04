@@ -14,11 +14,6 @@ CTIRFIntensity::CTIRFIntensity( ITIRFIntensityInterface* TIRFIntensity, IConfoca
   MMDragonfly_( MMDragonfly )
 {
   // Retrieve initial values
-  if ( !TIRFIntensity_->GetTIRFIntensityLimit(&TIRFIntensityMin_, &TIRFIntensityMax_) )
-  {
-    throw std::runtime_error( g_TIRFIntensityLimitsReadError );
-  }
-
   if ( !TIRFIntensity_->GetTIRFIntensity( &CurrentTIRFIntensity_ ) )
   {
     throw std::runtime_error( g_TIRFIntensityValueReadError );
@@ -31,7 +26,6 @@ CTIRFIntensity::CTIRFIntensity( ITIRFIntensityInterface* TIRFIntensity, IConfoca
   {
     throw std::runtime_error( "Error creating " + std::string( g_TIRFIntensityPropertyName ) + " property" );
   }
-  MMDragonfly_->SetPropertyLimits( g_TIRFIntensityPropertyName, TIRFIntensityMin_, TIRFIntensityMax_ );
 
   // Start the TIRF intensity monitor thread
   TIRFIntensityMonitor_ = std::make_unique<CTIRFIntensityMonitor>( this );
@@ -47,22 +41,17 @@ void CTIRFIntensity::UpdateFromDevice()
   // Only retrieve the TIRF intensity and update the UI if TIRF is selected
   if ( ConfocalMode_->IsTIRFSelected() )
   {
-    int vNewMin, vNewMax, vNewPosition;
-    if ( TIRFIntensity_->GetTIRFIntensityLimit( &vNewMin, &vNewMax )
-      && TIRFIntensity_->GetTIRFIntensity( &vNewPosition ) )
+    int vNewPosition;
+    if ( TIRFIntensity_->GetTIRFIntensity( &vNewPosition ) )
     {
-      int vOldMin, vOldMax, vOldPosition;
+      int vOldPosition;
       {
         std::lock_guard<std::mutex> lock( TIRFIntensityMutex_ );
         vOldPosition = CurrentTIRFIntensity_;
-        vOldMin = TIRFIntensityMin_;
-        vOldMax = TIRFIntensityMax_;
         CurrentTIRFIntensity_ = vNewPosition;
-        TIRFIntensityMin_ = vNewMin;
-        TIRFIntensityMax_ = vNewMax;
       }
       // Only refresh the UI if there is any change to report
-      if ( vNewPosition != vOldPosition || vNewMin != vOldMin || vNewMax != vOldMax )
+      if ( vNewPosition != vOldPosition )
       {
         MMDragonfly_->UpdateProperty( g_TIRFIntensityPropertyName );
       }
@@ -77,11 +66,10 @@ int CTIRFIntensity::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionTy
   {    
     if ( Prop->GetName() == g_TIRFIntensityPropertyName )
     {
-      // Update Optical Feedback
+      // Update TIRF intensity
       std::string vCurrentTIRFIntensityString;
       {
         std::lock_guard<std::mutex> lock( TIRFIntensityMutex_ );
-        Prop->SetLimits( TIRFIntensityMin_, TIRFIntensityMax_ );
         Prop->Set( static_cast< long >( CurrentTIRFIntensity_ ) );
         vCurrentTIRFIntensityString = std::to_string( CurrentTIRFIntensity_ );
       }
