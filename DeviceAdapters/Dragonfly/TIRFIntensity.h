@@ -13,13 +13,14 @@
 
 
 class ITIRFIntensityInterface;
+class IConfocalMode;
 class CDragonfly;
 class CTIRFIntensityMonitor;
 
 class CTIRFIntensity
 {
 public:
-  CTIRFIntensity( ITIRFIntensityInterface* TIRFIntensity, CDragonfly* MMDragonfly );
+  CTIRFIntensity( ITIRFIntensityInterface* TIRFIntensity, IConfocalMode* ConfocalMode, CDragonfly* MMDragonfly );
   ~CTIRFIntensity();
 
   int OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act );
@@ -29,6 +30,7 @@ public:
 
 private:
   ITIRFIntensityInterface* TIRFIntensity_;
+  IConfocalMode* ConfocalMode_;
   CDragonfly* MMDragonfly_;
   std::unique_ptr<CTIRFIntensityMonitor> TIRFIntensityMonitor_;
   std::mutex TIRFIntensityMutex_;
@@ -42,13 +44,12 @@ private:
 class CTIRFIntensityMonitor : public MMDeviceThreadBase
 {
 public:
-  CTIRFIntensityMonitor( CDragonfly* MMDragonfly, CTIRFIntensity* TIRFIntensity );
+  CTIRFIntensityMonitor( CTIRFIntensity* TIRFIntensity );
   virtual ~CTIRFIntensityMonitor();
 
   int svc();
 
 private:
-  CDragonfly* MMDragonfly_;
   CTIRFIntensity* TIRFIntensity_;
   bool KeepRunning_;
 };

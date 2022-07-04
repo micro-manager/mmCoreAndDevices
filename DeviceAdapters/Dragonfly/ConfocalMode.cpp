@@ -18,11 +18,11 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
   ConfocalModeInterface4_( ConfocalModeInterface4 ),
   IllLensInterface_( IllLensInterface ),
   MMDragonfly_( MMDragonfly ),
-  ConfocalModePropertyName_( g_ConfocalModeComposedPropertyName )
+  ConfocalModePropertyName_( g_ConfocalModeComposedPropertyName ),
+  CurrentConfocalMode_( bfmNone )
 {
   // Retrieve current confocal mode
-  TConfocalMode vCurrentConfocalMode;
-  bool vValueRetrieved = ConfocalModeInterface3_->GetMode( vCurrentConfocalMode );
+  bool vValueRetrieved = ConfocalModeInterface3_->GetMode( CurrentConfocalMode_ );
   if ( !vValueRetrieved )
   {
     throw std::runtime_error( g_ConfocalModeReadError );
@@ -67,7 +67,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
   if ( ConfocalModeInterface3_->IsConfocalModeAvailable( bfmWideField ) )
   {
     AddValuesForConfocalMode( bfmWideField, g_Widefield, vPowerDensityPositionNames );
-    if ( vCurrentConfocalMode == bfmWideField )
+    if ( CurrentConfocalMode_ == bfmWideField )
     {
       vCurrentModeBaseName = g_Widefield;
     }
@@ -77,7 +77,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
   {
     TDevicePosition vPosition = { bfmTIRF, 0 };
     PositionNameMap_[g_TIRF] = vPosition;
-    if ( vCurrentConfocalMode == bfmTIRF )
+    if ( CurrentConfocalMode_ == bfmTIRF )
     {
       vCurrentModeBaseName = g_TIRF;
     }
@@ -92,7 +92,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
       ConfocalHCName_ = string( g_ConfocalBaseName ) + " " + to_string( static_cast< long long >( vPinHoleSize ) ) + "mm";
     }
     AddValuesForConfocalMode( bfmConfocalHC, ConfocalHCName_, vPowerDensityPositionNames );
-    if ( vCurrentConfocalMode == bfmConfocalHC )
+    if ( CurrentConfocalMode_ == bfmConfocalHC )
     {
       vCurrentModeBaseName = ConfocalHCName_;
     }
@@ -107,7 +107,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
       ConfocalHSName_ = string( g_ConfocalBaseName ) + " " + to_string( static_cast< long long >( vPinHoleSize ) ) + "mm";
     }
     AddValuesForConfocalMode( bfmConfocalHS, ConfocalHSName_, vPowerDensityPositionNames );
-    if ( vCurrentConfocalMode == bfmConfocalHS )
+    if ( CurrentConfocalMode_ == bfmConfocalHS )
     {
       vCurrentModeBaseName = ConfocalHSName_;
     }
@@ -125,7 +125,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
         MMDragonfly_->LogComponentMessage( "BorealisTIRF60Interface not available even though BTIRF60 is available" );
       string vPositionName = g_BTIRFBaseName + to_string( vMag );
       PositionNameMap_[vPositionName] = vPosition;
-      if ( vCurrentConfocalMode == bfmBorealisTIRF60 )
+      if ( CurrentConfocalMode_ == bfmBorealisTIRF60 )
       {
         vCurrentModeBaseName = vPositionName;
       }
@@ -136,7 +136,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
       TDevicePosition vPosition = { bfmBorealisTIRF100, 0 };
       string vPositionName = g_BTIRFBaseName + to_string(100);
       PositionNameMap_[vPositionName] = vPosition;
-      if ( vCurrentConfocalMode == bfmBorealisTIRF100 )
+      if ( CurrentConfocalMode_ == bfmBorealisTIRF100 )
       {
         vCurrentModeBaseName = vPositionName;
       }
@@ -144,9 +144,9 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
   }
 
   // Reset the confocal mode and power density to their initial value since we modified them
-  if ( SetDeviceConfocalMode( vCurrentConfocalMode ) != DEVICE_OK )
+  if ( SetDeviceConfocalMode( CurrentConfocalMode_ ) != DEVICE_OK )
   {
-    MMDragonfly_->LogComponentMessage( "Failed to set Imaging mode position [" + to_string( static_cast< long long >( vCurrentConfocalMode ) ) + "]" );
+    MMDragonfly_->LogComponentMessage( "Failed to set Imaging mode position [" + to_string( static_cast< long long >( CurrentConfocalMode_ ) ) + "]" );
   }
   if ( IllLensInterface_ != nullptr )
   {
@@ -169,7 +169,7 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
     {
       MMDragonfly_->LogComponentMessage( "Current Power Density position invalid" );
     }
-    if ( vCurrentConfocalMode != bfmTIRF )
+    if ( !IsTIRFSelected() )
     {
       vCurrentPropertyValue = BuildPropertyValueFromDeviceValue( vCurrentModeBaseName, vCurrentPowerDensityName );
     }
@@ -195,6 +195,18 @@ CConfocalMode::CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface3, I
 CConfocalMode::~CConfocalMode()
 {
 
+}
+
+bool CConfocalMode::IsTIRFSelected() const
+{
+  return IsTIRFMode( CurrentConfocalMode_ );
+}
+
+bool CConfocalMode::IsTIRFMode( TConfocalMode ConfocalMode ) const
+{
+  return ConfocalMode == EConfocalMode::bfmTIRF
+    || ConfocalMode == EConfocalMode::bfmBorealisTIRF60
+    || ConfocalMode == EConfocalMode::bfmBorealisTIRF100;
 }
 
 #define _CONFOCALMODE_HARDWARE_EXPLORATION_
@@ -301,19 +313,20 @@ int CConfocalMode::SetDeviceFromPropertyValue( const std::string& PropertValue )
   {
     TDevicePosition vPosition = PositionNameMap_[PropertValue];
     vRet = SetDeviceConfocalMode( vPosition.ConfocalMode );
-    if ( vRet == DEVICE_OK && IllLensInterface_ != nullptr 
-        && vPosition.ConfocalMode != bfmTIRF
-        && vPosition.ConfocalMode != bfmBorealisTIRF60 
-        && vPosition.ConfocalMode != bfmBorealisTIRF100 )
+    if ( vRet == DEVICE_OK ) 
     {
-      if ( !IllLensInterface_->SetPosition( vPosition.PowerDensity ) )
+      CurrentConfocalMode_ = vPosition.ConfocalMode;
+      if ( IllLensInterface_ != nullptr && !IsTIRFMode( vPosition.ConfocalMode ) )
       {
-        MMDragonfly_->LogComponentMessage( "Failed to set the Power density" );
-        vRet = DEVICE_CAN_NOT_SET_PROPERTY;
-      }
-      else
-      {
-        vRet = DEVICE_OK;
+        if ( !IllLensInterface_->SetPosition( vPosition.PowerDensity ) )
+        {
+          MMDragonfly_->LogComponentMessage( "Failed to set the Power density to [" + to_string( vPosition.PowerDensity ) + "] after succesfully setting Imaging mode to [" + to_string( vPosition.ConfocalMode ) + "]" );
+          vRet = DEVICE_CAN_NOT_SET_PROPERTY;
+        }
+        else
+        {
+          vRet = DEVICE_OK;
+        }
       }
     }
   }

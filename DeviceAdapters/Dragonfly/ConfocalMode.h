@@ -14,7 +14,21 @@ class IConfocalModeInterface3;
 class IIllLensInterface;
 class CDragonfly;
 
-class CConfocalMode
+//////////////////////////////////////////////////////////////////////////////
+// IConfocalMode
+//////////////////////////////////////////////////////////////////////////////
+
+class IConfocalMode
+{
+public:
+  virtual bool IsTIRFSelected() const = 0;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// CConfocalMode
+//////////////////////////////////////////////////////////////////////////////
+
+class CConfocalMode : public IConfocalMode
 {
 public:
   CConfocalMode( IConfocalModeInterface3* ConfocalModeInterface, IConfocalModeInterface4* ConfocalModeInterface4, IIllLensInterface* IllLensInterface, IBorealisTIRFInterface* vBorealisTIRF60Interface, CDragonfly* MMDragonfly );
@@ -22,6 +36,8 @@ public:
 
   int OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CConfocalMode> CPropertyAction;
+
+  bool IsTIRFSelected() const override;
 
 private:
   IConfocalModeInterface3* ConfocalModeInterface3_;
@@ -35,12 +51,14 @@ private:
   typedef std::map<std::string, TDevicePosition> TPositionNameMap;
   TPositionNameMap PositionNameMap_;
   std::string ConfocalModePropertyName_;
+  TConfocalMode CurrentConfocalMode_;
 
   int SetDeviceConfocalMode( TConfocalMode ConfocalMode );
   std::string BuildPropertyValueFromDeviceValue( const std::string& ConfocalModeBaseName, const std::string& PowerDensityName );
   void AddValuesForConfocalMode( TConfocalMode ConfocalMode, const std::string& ConfocalModeBaseName, const CPositionComponentHelper::TPositionNameMap& PowerDensityPositionNames );
   void AddValue( TConfocalMode ConfocalMode, const std::string& ConfocalModeBaseName, unsigned int PowerDensity, const std::string& PowerDensityName );
   int SetDeviceFromPropertyValue( const std::string& PropertValue );
+  bool IsTIRFMode( TConfocalMode ConfocalMode ) const;
 };
 
 #endif

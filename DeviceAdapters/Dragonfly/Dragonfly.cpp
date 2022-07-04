@@ -813,7 +813,7 @@ int CDragonfly::CreateTIRFIntensity( IASDInterface6* ASDInterface6 )
       ITIRFIntensityInterface* vASDTIRFIntensity = ASDInterface6->GetTIRFIntensity();
       if ( vASDTIRFIntensity != nullptr )
       {
-        TIRFIntensity_ = new CTIRFIntensity( vASDTIRFIntensity, this );
+        TIRFIntensity_ = new CTIRFIntensity( vASDTIRFIntensity, ConfocalMode_, this );
       }
       else
       {
