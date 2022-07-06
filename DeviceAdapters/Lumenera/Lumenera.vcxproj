@@ -72,7 +72,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;LUMENERA_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\henry\Desktop\LuXApps\ThirdParty\json\src;C:\Users\henry\Desktop\LuXApps\ThirdParty\include;C:\Users\henry\Desktop\LuXApps\Shared\include;C:\Users\henry\Desktop\LuXApps\lumenera_sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\henry\Desktop\LuXApps\ThirdParty\json\src;C:\Users\henry\Desktop\LuXApps\inc;C:\Users\henry\Desktop\LuXApps\ThirdParty\include;C:\Users\henry\Desktop\LuXApps\Shared\include;C:\Users\henry\Desktop\LuXApps\lumenera_sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>

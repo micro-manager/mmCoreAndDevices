@@ -210,10 +210,13 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 LumeneraCamera::LumeneraCamera() :
 	CCameraBase<LumeneraCamera>(),
 	components_(1),
+	bitDepth_(Imaging::IMAGE_BIT_DEPTH::EIGHT_BIT),
 	colorCamera_(true),
 	cameraIndex_(1),
 	initialized_(false),
 	hasSwitchingExposure_(false),
+	camera_(nullptr),
+	format_(Imaging::IMAGE_FORMAT::MONO),
 	switchingExposure_(0)
 {
 	CameraInterface::Camera::initializeWorkspace();
@@ -278,7 +281,7 @@ int LumeneraCamera::Initialize()
 	if (GetProperty(g_Camera_Index, index) == DEVICE_OK)
 	{
 		cameraIndex_ = static_cast<int>(index);
-		size_t cameraListIndex = cameraIndex_ - 1;
+		size_t cameraListIndex = static_cast<size_t>(cameraIndex_) - 1;
 
 		if (cameraListIndex < cameraList.size())
 		{
@@ -332,6 +335,7 @@ int LumeneraCamera::Initialize()
 			}
 				LUXAPPS_CATCH(const LuXAppsExceptions::LuXAppsException & e)
 			{
+				GetCoreCallback()->LogMessage(this, e.what(), false);
 				//LOG_DEBUG(e.what());
 				return DEVICE_NOT_CONNECTED;
 			}
@@ -345,10 +349,6 @@ int LumeneraCamera::Initialize()
 	{
 		return DEVICE_NOT_CONNECTED;
 	}
-
-	initialized_ = true;
-
-	return DEVICE_OK;
 }
 
 
@@ -419,7 +419,7 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 			maximum = videoMaximum;
 		}
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnExposure);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnExposure);
 		RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_Exposure, value.c_str(), MM::Float, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(MM::g_Keyword_Exposure, minimum, maximum));
 	}
@@ -551,7 +551,7 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 			}
 		}
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnBitDepth);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnBitDepth);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_BitDepth, to_string(bitDepth).c_str(), MM::String, true, pAction));
 		RETURN_ON_ERROR(SetAllowedValues(g_Camera_BitDepth, bitDepths));
 	}
@@ -560,10 +560,10 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Tap configuration
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_VIDEO_TAP_CONFIGURATION, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::vector<std::string> values = prop->getValueList();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnTapConfiguration);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnTapConfiguration);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Tap_Configuration, value.c_str(), MM::String, false, pAction));
 		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Tap_Configuration, values));
 	}
@@ -586,11 +586,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Demosaic method
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_DEMOSAIC_METHOD, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::vector<std::string> values = prop->getValueList();
 		//TODO: Need to filter out HIGHER_QUALITY
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnDemosaicingMethod);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnDemosaicingMethod);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Demosaic_Method, value.c_str(), MM::String, false, pAction));
 		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Demosaic_Method, values));
 	}
@@ -598,12 +598,12 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Light source
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_CORRECTION_MATRIX, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::vector<std::string> values = prop->getValueList();
 
 		::Utilities::remove_all(values, FILTERED_LIGHT_SOURCES);
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnLightSource);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnLightSource);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Light_Source, value.c_str(), MM::String, false, pAction));
 		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Light_Source, values));
 	}
@@ -612,10 +612,10 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Flipping
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_VERTICAL_FLIP, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::vector<std::string> values = prop->getValueList();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnFlip);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnFlip);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Flip, value.c_str(), MM::String, false, pAction));
 		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Flip, values));
 	}
@@ -623,10 +623,10 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Mirror
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_HORIZONTAL_FLIP, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::vector<std::string> values = prop->getValueList();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnMirror);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnMirror);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Mirror, value.c_str(), MM::String, false, pAction));
 		RETURN_ON_ERROR(SetAllowedValues(g_Camera_Mirror, values));
 	}
@@ -635,11 +635,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Hue
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_HUE, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::string minimum = prop->getMin();
 		std::string maximum = prop->getMax();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnHue);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnHue);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Hue, value.c_str(), MM::Float, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Hue, std::stod(minimum), std::stod(maximum)));
 	}
@@ -648,11 +648,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Saturation
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_SATURATION, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::string minimum = prop->getMin();
 		std::string maximum = prop->getMax();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnSaturation);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnSaturation);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Saturation, value.c_str(), MM::Float, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Saturation, std::stod(minimum), std::stod(maximum)));
 	}
@@ -661,11 +661,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Gamma
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_GAMMA, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::string minimum = prop->getMin();
 		std::string maximum = prop->getMax();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnGamma);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnGamma);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Gamma, value.c_str(), MM::Float, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Gamma, std::stod(minimum), std::stod(maximum)));
 	}
@@ -673,11 +673,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Contrast
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_CONTRAST, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::string minimum = prop->getMin();
 		std::string maximum = prop->getMax();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnContrast);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnContrast);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Contrast, value.c_str(), MM::Float, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Contrast, std::stod(minimum), std::stod(maximum)));
 	}
@@ -685,11 +685,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//BRightness
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_BRIGHTNESS, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::string minimum = prop->getMin();
 		std::string maximum = prop->getMax();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnBrightness);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnBrightness);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Brigthness, value.c_str(), MM::Float, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Brigthness, std::stod(minimum), std::stod(maximum)));
 	}
@@ -697,10 +697,10 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Hugh Conversion Gain
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_HIGH_CONVERSION_GAIN, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::vector<std::string> values = prop->getValueList();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnHighConversionGain);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnHighConversionGain);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_High_Conversion_Gain, value.c_str(), MM::String, false, pAction));
 		RETURN_ON_ERROR(SetAllowedValues(g_Camera_High_Conversion_Gain, values));
 	}
@@ -713,10 +713,10 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 
 		if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_FAN, fanProperty))
 		{
-			std::string value = fanProperty->getValue();
+			value = fanProperty->getValue();
 			std::vector<std::string> values = fanProperty->getValueList();
 
-			CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnCooling);
+			pAction = new CPropertyAction(this, &LumeneraCamera::OnCooling);
 			RETURN_ON_ERROR(CreateProperty(g_Camera_Cooling, value.c_str(), MM::String, false, pAction));
 			RETURN_ON_ERROR(SetAllowedValues(g_Camera_Cooling, values));
 		}
@@ -728,7 +728,7 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_CAMERA_TEMPERATURE, prop))
 	{
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnTemperature);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnTemperature);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Temperature, prop->getValue().c_str(), MM::String, true, pAction));
 	}
 
@@ -736,11 +736,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Iris
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_IRIS, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::string minimum = prop->getMin();
 		std::string maximum = prop->getMax();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnIris);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnIris);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Iris, value.c_str(), MM::Float, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Iris, std::stod(minimum), std::stod(maximum)));
 	}
@@ -748,11 +748,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Focus
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_FOCUS, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::string minimum = prop->getMin();
 		std::string maximum = prop->getMax();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnFocus);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnFocus);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Focus, value.c_str(), MM::Integer, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Focus, std::stod(minimum), std::stod(maximum)));
 	}
@@ -761,11 +761,11 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	//Absolute focus
 	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_ABSOLUTE_FOCUS, prop))
 	{
-		std::string value = prop->getValue();
+		value = prop->getValue();
 		std::string minimum = prop->getMin();
 		std::string maximum = prop->getMax();
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnAbsoluteFocus);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnAbsoluteFocus);
 		RETURN_ON_ERROR(CreateProperty(g_Camera_Absolute_Focus, value.c_str(), MM::Integer, false, pAction, false));
 		RETURN_ON_ERROR(SetPropertyLimits(g_Camera_Absolute_Focus, std::stod(minimum), std::stod(maximum)));
 	}
@@ -783,7 +783,7 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	{
 		std::vector<std::string> values{ TRUE_STRING, FALSE_STRING };
 
-		CPropertyAction* pAction = new CPropertyAction(this, &LumeneraCamera::OnWhiteBalance);
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnWhiteBalance);
 		RETURN_ON_ERROR(CreateProperty(g_Keyword_White_Balance, FALSE_STRING, MM::String, false, pAction));
 		RETURN_ON_ERROR(SetAllowedValues(g_Keyword_White_Balance, values));
 	}
@@ -911,7 +911,7 @@ long LumeneraCamera::GetImageBufferSize() const
 int LumeneraCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
 	int ret = DEVICE_ERR;
-	char cBuf[MM::MaxStrLength];
+	//char cBuf[MM::MaxStrLength];
 	if (IsCapturing())
 	{
 		ret = DEVICE_CAMERA_BUSY_ACQUIRING;
@@ -1010,6 +1010,7 @@ int LumeneraCamera::ClearROI()
 			ret = DEVICE_ERR;
 		}
 	}
+	return ret;
 }
 
 /**
@@ -1062,13 +1063,11 @@ int LumeneraCamera::SetBinning(int binSize)
 
 int LumeneraCamera::StartSequenceAcquisition(double interval)
 {
-	return StartSequenceAcquisition(LONG_MAX, interval, false);
+	return StartSequenceAcquisition(-1, interval, false);
 }
 
-int LumeneraCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+int LumeneraCamera::StartSequenceAcquisition(long numImages, double, bool)
 {
-	//TODO: num is not respected here
-
 
 	if (IsCapturing())
 	{
@@ -1079,7 +1078,7 @@ int LumeneraCamera::StartSequenceAcquisition(long numImages, double interval_ms,
 		LUXAPPS_TRY
 		{
 			RETURN_ON_ERROR(GetCoreCallback()->PrepareForAcq(this));
-			sequenceThread_->Start();
+			sequenceThread_->Start(numImages);
 
 			return DEVICE_OK;
 		}
@@ -1088,7 +1087,6 @@ int LumeneraCamera::StartSequenceAcquisition(long numImages, double interval_ms,
 			return DEVICE_ERR;
 		}
 	}
-	return DEVICE_OK;
 }
 
 bool LumeneraCamera::IsCapturing()
@@ -1382,7 +1380,7 @@ unsigned LumeneraCamera::getSensorHeight()
 
 void LumeneraCamera::updateImageBuffer(std::unique_ptr<Imaging::Image>&& image)
 {
-	MMThreadGuard{ imageLock_ };
+	MMThreadGuard g( imageLock_ );
 
 	image_ = ImgBuffer(image->getWidth(), image->getHeight(), image->getBytesPerPixel());
 	image_.SetPixels(image->getDataAddress());
@@ -1702,7 +1700,7 @@ void LumeneraCamera::sequenceEnded() noexcept
 	}
 		LUXAPPS_CATCH(CMMError& e)
 	{
-
+		GetCoreCallback()->LogMessage(this, e.what(), false);
 	}
 }
 
@@ -1720,8 +1718,9 @@ void LumeneraCamera::waitForCameraStream()
 		} while (runs < 5);
 }
 
-int LumeneraCamera::OnLinkedVideoAndStillProperty(MM::PropertyBase* pProp, MM::ActionType eAct, bool requiresStreamRefresh)
+int LumeneraCamera::OnLinkedVideoAndStillProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+	bool requiresStreamRefresh = false;
 	int ret = DEVICE_ERR;
 
 	std::string propertyName = pProp->GetName();
@@ -2049,10 +2048,10 @@ int LumeneraCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 				double adjustmentFactor = static_cast<double>(newBinning) / currentBinning;
 
-				x = std::floor(static_cast<double>(x) / adjustmentFactor);
-				y = std::floor(static_cast<double>(y) / adjustmentFactor);
-				width = std::floor(static_cast<double>(width) / adjustmentFactor);
-				height = std::floor(static_cast<double>(height) / adjustmentFactor);
+				x = (unsigned) std::floor(static_cast<double>(x) / adjustmentFactor);
+				y = (unsigned) std::floor(static_cast<double>(y) / adjustmentFactor);
+				width = (unsigned) std::floor(static_cast<double>(width) / adjustmentFactor);
+				height = (unsigned) std::floor(static_cast<double>(height) / adjustmentFactor);
 
 				RETURN_ON_ERROR(setCameraRoi(x, y, width, height, newBinning));
 				RETURN_ON_ERROR(refreshStream());
@@ -2378,6 +2377,7 @@ int LumeneraCamera::OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct)
 				}
 					LUXAPPS_CATCH(LuXAppsExceptions::LuXAppsException & e)
 				{
+					GetCoreCallback()->LogMessage(this, e.what(), false);
 					ret = DEVICE_ERR;
 				}
 				catch (...)

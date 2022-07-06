@@ -8,6 +8,7 @@ VideoSequenceThread::VideoSequenceThread(LumeneraCamera* camera)
 	: MMDeviceThreadBase()
 	, device_(camera)
 	, stopped_(true)
+	, remainingInSequence_(0)
 {
 }
 
@@ -26,13 +27,17 @@ int VideoSequenceThread::svc()
 		do
 		{
 			ret = device_->captureSequenceImage();
+			if (remainingInSequence_ > 0) {
+				// If its less than 0 that means run forever
+				remainingInSequence_--;
+			}
+			if (remainingInSequence_ == 0) {
+				Stop();
+			}
 		} while (ret == DEVICE_OK && !IsStopped());
 
-		if (IsStopped())
-		{
-			device_->LogMessage("Video acquisition interrupted by user\n.");
-		}
-		else if (ret != DEVICE_OK)
+
+	    if (ret != DEVICE_OK)
 		{
 			device_->LogMessage("Video acquisition encountered an error\n.");
 		}
@@ -82,22 +87,23 @@ void VideoSequenceThread::StopCameraStream()
 	}
 }
 
-void VideoSequenceThread::Start()
+void VideoSequenceThread::Start(int numImages)
 {
-	MMThreadGuard(this->stopLock_);
+	MMThreadGuard g(this->stopLock_);
+	remainingInSequence_ = numImages;
 	stopped_ = false;
 	activate();
 }
 
 void VideoSequenceThread::Stop()
 {
-	MMThreadGuard(this->stopLock_);
+	MMThreadGuard g(this->stopLock_);
 	stopped_ = true;
 }
 
 bool VideoSequenceThread::IsStopped() const
 {
-	MMThreadGuard(this->stopLock_);
+	MMThreadGuard g(this->stopLock_);
 	return stopped_;
 }
 

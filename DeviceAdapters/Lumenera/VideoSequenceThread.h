@@ -24,7 +24,7 @@ public:
 
 	virtual int svc() override;
 
-	void Start();
+	void Start(int numImages);
 	void Stop();
 	bool IsStopped() const;
 
@@ -34,6 +34,7 @@ private:
 
 	mutable MMThreadLock stopLock_;
 	bool stopped_;
+	int remainingInSequence_;
 
 
 	bool hasCamera() const;
