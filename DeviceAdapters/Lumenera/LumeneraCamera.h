@@ -136,6 +136,12 @@ public:
 	int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+	int OnHardwareTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerPin(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerPolarity(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+
 	int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTapConfiguration(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -207,10 +213,11 @@ private:
 	int refreshStream();
 	int resizeImageBuffer();
 	int setBitDepth(const Imaging::IMAGE_BIT_DEPTH& bitDepth);
-	bool exposureRequiresStillStream(double value);
-	bool exposureRequiresVideoStream(double value);
+	bool requiresStillStream(double value, const std::string& hardwareTrigger);
+	bool requiresVideoStream(double value, const std::string& hardwareTrigger);
 	bool isVideoStreamingMode();
 	bool isStillStreamingMode();
+	int applyStreamMode(double exposure, const std::string& hardwareTrigger);
 	int getBinValueFromSampling(const std::string& sampling);
 	std::vector<std::string> getBinningOptions();
 	std::string getSamplingFromBinValue(int binValue);

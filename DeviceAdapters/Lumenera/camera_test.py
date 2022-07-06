@@ -16,9 +16,13 @@ def snap_and_get():
     core.snap_image()
     tagged_image = core.get_tagged_image()
     if core.get_number_of_components() == 4:
-        # rgb
+        # rgba
         new_shape = [tagged_image.tags['Height'],
                                   tagged_image.tags['Width'], 4]
+    elif core.get_number_of_components() == 3:
+        # rgb
+        new_shape = [tagged_image.tags['Height'],
+                                  tagged_image.tags['Width'], 3]
     else:
         # monochrome
         new_shape = [tagged_image.tags['Height'],
@@ -122,6 +126,9 @@ print("Sequence acquisition speed test:\n"
 
 ### Test camera properties
 print("Testing camera properties")
+core.set_property(camera_name, "Gain", 1.0)
+core.set_exposure(10)
+
 # Binning
 print("Binning")
 for bin_value in to_python_list(core.get_allowed_property_values(camera_name, "Binning")):
