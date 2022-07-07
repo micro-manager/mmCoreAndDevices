@@ -1801,6 +1801,12 @@ int LumeneraCamera::OnLinkedVideoAndStillProperty(MM::PropertyBase* pProp, MM::A
 			ret = readCameraPropertyValue(videoPropertyName, value);
 			if (ret == DEVICE_OK)
 			{
+				if (pProp->GetType() == MM::PropertyType::Float) {
+					//Enforce property limits
+					double dVal = atof(value.c_str());
+					dVal = max(pProp->GetLowerLimit(), min(dVal, pProp->GetUpperLimit()));
+					value = std::to_string(dVal);
+				}
 				if (pProp->Set(value.c_str()))
 				{
 					ret = DEVICE_OK;
