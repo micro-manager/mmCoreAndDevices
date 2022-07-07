@@ -980,7 +980,7 @@ int LumeneraCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySiz
 						// Try again with last valid ROI
 						if (validLastROI)
 						{
-							return setCameraRoi(lastX, lastY, lastXSize, lastYSize, binningFactor) == DEVICE_OK;
+							return setCameraRoi(lastX, lastY, lastXSize, lastYSize, binningFactor);
 						}
 					}
 				}
