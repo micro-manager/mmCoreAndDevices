@@ -242,22 +242,14 @@ int CDragonfly::Shutdown()
   }
 
   // It's important to reset pointers and clear lists in case there's a problem in the next Initialize call
-  delete DichroicMirror_;
-  DichroicMirror_ = nullptr;
-  delete FilterWheel1_;
-  FilterWheel1_ = nullptr;
-  delete FilterWheel2_;
-  FilterWheel2_ = nullptr;
-  delete DragonflyStatus_;
-  DragonflyStatus_ = nullptr;
-  delete Disk_;
-  Disk_ = nullptr;
-  delete ConfocalMode_;
-  ConfocalMode_ = nullptr;
-  delete Aperture_;
-  Aperture_ = nullptr;
-  delete CameraPortMirror_;
-  CameraPortMirror_ = nullptr;
+  delete BTIRF_;
+  BTIRF_ = nullptr;
+  delete TIRFIntensity_;
+  TIRFIntensity_ = nullptr;
+  delete TIRF_;
+  TIRF_ = nullptr;
+  delete SuperRes_;
+  SuperRes_ = nullptr;
   list<CLens*>::iterator vLensIt = Lens_.begin();
   while ( vLensIt != Lens_.end() )
   {
@@ -265,14 +257,22 @@ int CDragonfly::Shutdown()
     vLensIt++;
   }
   Lens_.clear();
-  delete SuperRes_;
-  SuperRes_ = nullptr;
-  delete TIRF_;
-  TIRF_ = nullptr;
-  delete TIRFIntensity_;
-  TIRFIntensity_ = nullptr;
-  delete BTIRF_;
-  BTIRF_ = nullptr;
+  delete CameraPortMirror_;
+  CameraPortMirror_ = nullptr;
+  delete Aperture_;
+  Aperture_ = nullptr;
+  delete ConfocalMode_;
+  ConfocalMode_ = nullptr;
+  delete Disk_;
+  Disk_ = nullptr;
+  delete FilterWheel2_;
+  FilterWheel2_ = nullptr;
+  delete FilterWheel1_;
+  FilterWheel1_ = nullptr;
+  delete DichroicMirror_;
+  DichroicMirror_ = nullptr;
+  delete DragonflyStatus_;
+  DragonflyStatus_ = nullptr;
 
   Disconnect();
 

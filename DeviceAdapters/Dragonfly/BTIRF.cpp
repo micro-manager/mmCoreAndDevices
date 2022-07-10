@@ -82,7 +82,6 @@ int CBTIRFCriticalAngleProperty::OnChange( MM::PropertyBase * Prop, MM::ActionTy
 
   if ( Act == MM::BeforeGet )
   {
-    int vRet = DEVICE_ERR;
     int vMin, vMax;
     bool vLimitsRetrieved = BTIRFInterface_->GetBTAngleLimit( &vMin, &vMax );
     if ( vLimitsRetrieved )
