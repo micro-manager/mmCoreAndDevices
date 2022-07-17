@@ -82,10 +82,17 @@ bool CPortsConfiguration::GetFusionConfigFolderPath( std::string* Path ) const
   PWSTR vWPathName;
   if ( SUCCEEDED( SHGetKnownFolderPath( FOLDERID_PublicDocuments, KF_FLAG_DEFAULT, NULL, &vWPathName ) ) ) // FOLDERID_PublicDocuments for Public documents path - FOLDERID_ProgramData for All users (aka ProgramData) path
   {
-    std::wstring vWPathNameString = vWPathName;
-    std::string vBaseFileName( vWPathNameString.begin(), vWPathNameString.end() );
+    static const size_t vMaxBufferByteSize = 256;
+    char* vPathName = new char[vMaxBufferByteSize];
+    size_t vResultStringByteSize;
+    errno_t vError = wcstombs_s( &vResultStringByteSize, vPathName, vMaxBufferByteSize, vWPathName, vMaxBufferByteSize - 1 );
+    if ( vError != 0 )
+    {
+      MMILE_->LogMMMessage( "Failed to convert Fusion config file path. Conversion result: " + std::string( vPathName ), true );
+      return false;
+    }
     CoTaskMemFree( vWPathName );
-    *Path = vBaseFileName + PATH_SEPARATOR + "Fusion Global Data" + PATH_SEPARATOR + "Config" + PATH_SEPARATOR;
+    *Path = std::string( vPathName ) + PATH_SEPARATOR + "Fusion Global Data" + PATH_SEPARATOR + "Config" + PATH_SEPARATOR;
     return true;
   }
   return false;
