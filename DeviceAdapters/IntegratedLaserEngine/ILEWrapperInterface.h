@@ -28,6 +28,8 @@ public:
 
   typedef std::vector<std::string> TDeviceList;
 
+  virtual ~IILEWrapperInterface() = default;
+
   virtual void GetListOfDevices( TDeviceList& DeviceList ) = 0;
   virtual bool CreateILE( IALC_REVObject3 **ILEDevice, const char *UnitID ) = 0;
   virtual void DeleteILE( IALC_REVObject3 *ILEDevice ) = 0;

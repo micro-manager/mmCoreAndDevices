@@ -137,28 +137,24 @@ CILEWrapper::CILEWrapper() :
 
 CILEWrapper::~CILEWrapper()
 {
-  TActiveBlankingManagementMap::iterator vActiveBlankingManagementIt = ActiveBlankingManagementMap_.begin();
-  while ( vActiveBlankingManagementIt != ActiveBlankingManagementMap_.end() )
+  for ( auto& elt : ActiveBlankingManagementMap_ )
   {
-    delete vActiveBlankingManagementIt->second;
+    delete elt.second;
   }
 
-  TPowerManagementMap::iterator vPowerManagementIt = PowerManagementMap_.begin();
-  while ( vPowerManagementIt != PowerManagementMap_.end() )
+  for ( auto& elt : PowerManagementMap_ )
   {
-    delete vPowerManagementIt->second;
+    delete elt.second;
   }
 
-  TILE2Map::iterator vILE2It = ILE2Map_.begin();
-  while ( vILE2It != ILE2Map_.end() )
+  for ( auto& elt : ILE2Map_ )
   {
-    delete vILE2It->second;
+    delete elt.second;
   }
 
-  TILE4Map::iterator vILE4It = ILE4Map_.begin();
-  while ( vILE4It != ILE4Map_.end() )
+  for ( auto& elt : ILE4Map_ )
   {
-    delete vILE4It->second;
+    delete elt.second;
   }
 
   if ( ILEDetection_ != nullptr )
