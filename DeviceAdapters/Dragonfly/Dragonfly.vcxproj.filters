@@ -1,0 +1,298 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source Files\ASDWrapper">
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files\ASDWrapper">
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Aperture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BTIRF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CameraPortMirror.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigFileHandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfocalMode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DichroicMirror.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Disk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DiskSpeedSimulator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DiskSpeedState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DiskStatus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Dragonfly.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DragonflyStatus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FilterWheel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FilterWheelProperty.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Lens.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PositionComponentHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PositionComponentInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SuperRes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TIRF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TIRFIntensity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TIRFModeFloatSubProperty.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TIRFModeIntSubProperty.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ASDWrapper\ASDSDKLock.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapper.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperAperture.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperBorealisTIRF.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperCameraPortMirror.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperConfocalMode.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperDichroicMirror.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperDisk.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterConfig.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterSet.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterWheel.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterWheelMode.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperIllLens.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperLens.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperInterface.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperLoader.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperStatus.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperSuperRes.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperTIRF.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperTIRFIntensity.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ASDWrapper\ASDWrapperTIRFPolariser.cpp">
+      <Filter>Source Files\ASDWrapper</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Aperture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BTIRF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraPortMirror.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigFileHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigFileHandlerInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfocalMode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DichroicMirror.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Disk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DiskSpeedSimulator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DiskSpeedState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DiskStatus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DiskStatusInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dragonfly.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DragonflyStatus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FilterWheel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FilterWheelDeviceInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FilterWheelProperty.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Lens.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PositionComponentHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PositionComponentInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PowerDensity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SuperRes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TIRF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TIRFIntensity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TIRFMode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TIRFModeFloatSubProperty.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TIRFModeIntSubProperty.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDSDKLock.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapper.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperAperture.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperBorealisTIRF.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperCameraPortMirror.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperConfocalMode.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperDichroicMirror.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperDisk.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterConfig.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterSet.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterWheel.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterWheelMode.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperIllLens.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperInterface.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperLens.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperLoader.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperStatus.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperSuperRes.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRF.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRFIntensity.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRFPolariser.h">
+      <Filter>Header Files\ASDWrapper</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

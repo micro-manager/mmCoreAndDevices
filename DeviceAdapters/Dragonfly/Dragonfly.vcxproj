@@ -146,6 +146,56 @@
     <ClCompile Include="TIRFModeFloatSubProperty.cpp" />
     <ClCompile Include="TIRFModeIntSubProperty.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Aperture.h" />
+    <ClInclude Include="ASDWrapper\ASDSDKLock.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapper.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperAperture.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperBorealisTIRF.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperCameraPortMirror.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperConfocalMode.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperDichroicMirror.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperDisk.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterConfig.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterSet.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterWheel.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterWheelMode.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperIllLens.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperInterface.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperLens.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperLoader.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperStatus.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperSuperRes.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRF.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRFIntensity.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRFPolariser.h" />
+    <ClInclude Include="BTIRF.h" />
+    <ClInclude Include="CameraPortMirror.h" />
+    <ClInclude Include="ConfigFileHandler.h" />
+    <ClInclude Include="ConfigFileHandlerInterface.h" />
+    <ClInclude Include="ConfocalMode.h" />
+    <ClInclude Include="DichroicMirror.h" />
+    <ClInclude Include="Disk.h" />
+    <ClInclude Include="DiskSpeedSimulator.h" />
+    <ClInclude Include="DiskSpeedState.h" />
+    <ClInclude Include="DiskStatus.h" />
+    <ClInclude Include="DiskStatusInterface.h" />
+    <ClInclude Include="Dragonfly.h" />
+    <ClInclude Include="DragonflyStatus.h" />
+    <ClInclude Include="FilterWheel.h" />
+    <ClInclude Include="FilterWheelDeviceInterface.h" />
+    <ClInclude Include="FilterWheelProperty.h" />
+    <ClInclude Include="Lens.h" />
+    <ClInclude Include="PositionComponentHelper.h" />
+    <ClInclude Include="PositionComponentInterface.h" />
+    <ClInclude Include="PowerDensity.h" />
+    <ClInclude Include="SuperRes.h" />
+    <ClInclude Include="TIRF.h" />
+    <ClInclude Include="TIRFIntensity.h" />
+    <ClInclude Include="TIRFMode.h" />
+    <ClInclude Include="TIRFModeFloatSubProperty.h" />
+    <ClInclude Include="TIRFModeIntSubProperty.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
