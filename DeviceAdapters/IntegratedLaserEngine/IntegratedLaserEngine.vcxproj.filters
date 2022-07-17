@@ -1,0 +1,158 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\ILEWrapper">
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Header Files\ILEWrapper">
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ILEWrapper\ALC_REV_ILE2Wrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ALC_REV_ILE4Wrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEActiveBlankingManagementWrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEPowerManagementWrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEWrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ALC_REV_Laser2Wrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ALC_REV_PortWrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ALC_REVOject3Wrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ILESDKLock.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="ILEWrapper\ILEWrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="VeryLowPower.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ActiveBlanking.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DualILE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DualILEActiveBlanking.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DualILELowPowerMode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DualILEPorts.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="IntegratedLaserEngine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Lasers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LowPowerMode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Ports.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PortsConfiguration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SingleILE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ActiveBlanking.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DualILE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DualILEActiveBlanking.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DualILELowPowerMode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DualILEPorts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapperInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IntegratedLaserEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Lasers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LowPowerMode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Ports.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PortsConfiguration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SingleILE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VeryLowPower.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REV_ILE2Wrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REV_ILE4Wrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEActiveBlankingManagementWrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEPowerManagementWrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEWrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REV_Laser2Wrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REV_PortWrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REVOject3Wrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ILESDKLock.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ILEWrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

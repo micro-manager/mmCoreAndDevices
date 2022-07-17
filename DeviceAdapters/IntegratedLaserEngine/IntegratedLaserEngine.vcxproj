@@ -128,6 +128,31 @@
       <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ActiveBlanking.h" />
+    <ClInclude Include="DualILE.h" />
+    <ClInclude Include="DualILEActiveBlanking.h" />
+    <ClInclude Include="DualILELowPowerMode.h" />
+    <ClInclude Include="DualILEPorts.h" />
+    <ClInclude Include="ILEWrapperInterface.h" />
+    <ClInclude Include="ILEWrapper\ALC_REVOject3Wrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILE2Wrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILE4Wrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEActiveBlankingManagementWrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEPowerManagementWrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEWrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_Laser2Wrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_PortWrapper.h" />
+    <ClInclude Include="ILEWrapper\ILESDKLock.h" />
+    <ClInclude Include="ILEWrapper\ILEWrapper.h" />
+    <ClInclude Include="IntegratedLaserEngine.h" />
+    <ClInclude Include="Lasers.h" />
+    <ClInclude Include="LowPowerMode.h" />
+    <ClInclude Include="Ports.h" />
+    <ClInclude Include="PortsConfiguration.h" />
+    <ClInclude Include="SingleILE.h" />
+    <ClInclude Include="VeryLowPower.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
