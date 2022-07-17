@@ -25,9 +25,15 @@ CConfigFileHandler::CConfigFileHandler( CDragonfly* MMDragonfly )
   PWSTR vWPathName;
   if ( SUCCEEDED( SHGetKnownFolderPath( FOLDERID_ProgramData, KF_FLAG_DEFAULT, NULL, &vWPathName ) ) ) // FOLDERID_PublicDocuments for Public documents path - FOLDERID_ProgramData for All users (aka ProgramData) path
   {
-    wstring vWPathNameString = vWPathName;
-    FileName_.assign( vWPathNameString.begin(), vWPathNameString.end() );
-    FileName_ = FileName_ + PATH_SEPARATOR + string( g_DefaultConfigFileName );
+    static const size_t vMaxBufferByteSize = 256;
+    char* vPathName = new char[vMaxBufferByteSize];
+    size_t vResultStringByteSize;
+    errno_t vError = wcstombs_s( &vResultStringByteSize, vPathName, vMaxBufferByteSize, vWPathName, vMaxBufferByteSize - 1 );
+    if ( vError != 0 )
+    {
+      throw std::runtime_error( "String conversion error during Configuration File path property creation" );
+    }
+    FileName_ = string( vPathName ) + PATH_SEPARATOR + string( g_DefaultConfigFileName );
     CoTaskMemFree( vWPathName );
   }
   CPropertyAction* vAct = new CPropertyAction( this, &CConfigFileHandler::OnConfigFileChange );
