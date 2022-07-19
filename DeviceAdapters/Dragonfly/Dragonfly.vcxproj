@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}</ProjectGuid>
+    <RootNamespace>Dragonfly</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(IncludePath)</IncludePath>
+    <TargetName>mmgr_dal_AndorDragonfly</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(IncludePath)</IncludePath>
+    <TargetName>mmgr_dal_AndorDragonfly</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(MM_MMDEVICE_INCLUDEDIR);$(MM_3RDPARTYPRIVATE)/Andor/ASD/SDK0.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <SubSystem>Windows</SubSystem>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MM_MMDEVICE_INCLUDEDIR);$(MM_3RDPARTYPRIVATE)/Andor/ASD/SDK0.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\MMDevice\MMDevice-StaticRuntime.vcxproj">
+      <Project>{af3143a4-5529-4c78-a01a-9f2a8977ed64}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Aperture.cpp" />
+    <ClCompile Include="ASDWrapper\ASDSDKLock.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapper.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperAperture.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperCameraPortMirror.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperConfocalMode.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperDichroicMirror.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperDisk.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterConfig.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterSet.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterWheel.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperFilterWheelMode.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperIllLens.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperLens.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperInterface.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperLoader.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperStatus.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperSuperRes.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperTIRF.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperTIRFPolariser.cpp" />
+    <ClCompile Include="CameraPortMirror.cpp" />
+    <ClCompile Include="ConfigFileHandler.cpp" />
+    <ClCompile Include="ConfocalMode.cpp" />
+    <ClCompile Include="DichroicMirror.cpp" />
+    <ClCompile Include="Disk.cpp" />
+    <ClCompile Include="DiskSpeedSimulator.cpp" />
+    <ClCompile Include="DiskSpeedState.cpp" />
+    <ClCompile Include="DiskStatus.cpp" />
+    <ClCompile Include="Dragonfly.cpp" />
+    <ClCompile Include="DragonflyStatus.cpp" />
+    <ClCompile Include="FilterWheel.cpp" />
+    <ClCompile Include="FilterWheelProperty.cpp" />
+    <ClCompile Include="Lens.cpp" />
+    <ClCompile Include="PositionComponentHelper.cpp" />
+    <ClCompile Include="PositionComponentInterface.cpp" />
+    <ClCompile Include="SuperRes.cpp" />
+    <ClCompile Include="TIRF.cpp" />
+    <ClCompile Include="TIRFModeFloatSubProperty.cpp" />
+    <ClCompile Include="TIRFModeIntSubProperty.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Aperture.h" />
+    <ClInclude Include="ASDWrapper\ASDSDKLock.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapper.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperAperture.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperBorealisTIRF.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperCameraPortMirror.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperConfocalMode.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperDichroicMirror.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperDisk.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterConfig.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterSet.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterWheel.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperFilterWheelMode.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperIllLens.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperInterface.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperLens.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperLoader.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperStatus.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperSuperRes.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRF.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRFIntensity.h" />
+    <ClInclude Include="ASDWrapper\ASDWrapperTIRFPolariser.h" />
+    <ClInclude Include="BTIRF.h" />
+    <ClInclude Include="CameraPortMirror.h" />
+    <ClInclude Include="ConfigFileHandler.h" />
+    <ClInclude Include="ConfigFileHandlerInterface.h" />
+    <ClInclude Include="ConfocalMode.h" />
+    <ClInclude Include="DichroicMirror.h" />
+    <ClInclude Include="Disk.h" />
+    <ClInclude Include="DiskSpeedSimulator.h" />
+    <ClInclude Include="DiskSpeedState.h" />
+    <ClInclude Include="DiskStatus.h" />
+    <ClInclude Include="DiskStatusInterface.h" />
+    <ClInclude Include="Dragonfly.h" />
+    <ClInclude Include="DragonflyStatus.h" />
+    <ClInclude Include="FilterWheel.h" />
+    <ClInclude Include="FilterWheelDeviceInterface.h" />
+    <ClInclude Include="FilterWheelProperty.h" />
+    <ClInclude Include="Lens.h" />
+    <ClInclude Include="PositionComponentHelper.h" />
+    <ClInclude Include="PositionComponentInterface.h" />
+    <ClInclude Include="PowerDensity.h" />
+    <ClInclude Include="SuperRes.h" />
+    <ClInclude Include="TIRF.h" />
+    <ClInclude Include="TIRFIntensity.h" />
+    <ClInclude Include="TIRFMode.h" />
+    <ClInclude Include="TIRFModeFloatSubProperty.h" />
+    <ClInclude Include="TIRFModeIntSubProperty.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
