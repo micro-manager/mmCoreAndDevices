@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5BCA72C1-C342-4272-A037-A94C73E4ACE8}</ProjectGuid>
+    <RootNamespace>IntegratedLaserEngine</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectName>IntegratedLaserEngine</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <SourcePath>$(SourcePath)</SourcePath>
+    <TargetName>mmgr_dal_AndorILE</TargetName>
+    <IncludePath>$(WindowsSdkDir)\include;$(VCInstallDir)include</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <SourcePath>$(SourcePath)</SourcePath>
+    <TargetName>mmgr_dal_AndorILE</TargetName>
+    <IncludePath>$(WindowsSdkDir)\include;$(VCInstallDir)include</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)/boost-versions/boost_1_77_0;$(MM_3RDPARTYPRIVATE)/Andor/ALC/SDK2.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)/boost-versions/boost_1_77_0;$(MM_3RDPARTYPRIVATE)/Andor/ALC/SDK2.5/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="ActiveBlanking.cpp" />
+    <ClCompile Include="DualILE.cpp" />
+    <ClCompile Include="DualILEActiveBlanking.cpp" />
+    <ClCompile Include="DualILELowPowerMode.cpp" />
+    <ClCompile Include="DualILEPorts.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REVOject3Wrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_ILE2Wrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_ILE4Wrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEActiveBlankingManagementWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEPowerManagementWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_Laser2Wrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ALC_REV_PortWrapper.cpp" />
+    <ClCompile Include="ILEWrapper\ILESDKLock.cpp" />
+    <ClCompile Include="ILEWrapper\ILEWrapper.cpp" />
+    <ClCompile Include="IntegratedLaserEngine.cpp" />
+    <ClCompile Include="Lasers.cpp" />
+    <ClCompile Include="LowPowerMode.cpp" />
+    <ClCompile Include="Ports.cpp" />
+    <ClCompile Include="PortsConfiguration.cpp" />
+    <ClCompile Include="SingleILE.cpp" />
+    <ClCompile Include="VeryLowPower.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
+      <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ActiveBlanking.h" />
+    <ClInclude Include="DualILE.h" />
+    <ClInclude Include="DualILEActiveBlanking.h" />
+    <ClInclude Include="DualILELowPowerMode.h" />
+    <ClInclude Include="DualILEPorts.h" />
+    <ClInclude Include="ILEWrapperInterface.h" />
+    <ClInclude Include="ILEWrapper\ALC_REVOject3Wrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILE2Wrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILE4Wrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEActiveBlankingManagementWrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEPowerManagementWrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEWrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_Laser2Wrapper.h" />
+    <ClInclude Include="ILEWrapper\ALC_REV_PortWrapper.h" />
+    <ClInclude Include="ILEWrapper\ILESDKLock.h" />
+    <ClInclude Include="ILEWrapper\ILEWrapper.h" />
+    <ClInclude Include="IntegratedLaserEngine.h" />
+    <ClInclude Include="Lasers.h" />
+    <ClInclude Include="LowPowerMode.h" />
+    <ClInclude Include="Ports.h" />
+    <ClInclude Include="PortsConfiguration.h" />
+    <ClInclude Include="SingleILE.h" />
+    <ClInclude Include="VeryLowPower.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
