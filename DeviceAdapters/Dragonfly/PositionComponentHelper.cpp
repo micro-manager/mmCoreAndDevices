@@ -32,6 +32,7 @@ bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* Filte
         }
         else
         {
+          vDescription[vStringLength - 1] = 0;
           vPositionName += vDescription;
         }
         PositionNames[vIndex] = vPositionName;
