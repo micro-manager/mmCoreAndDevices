@@ -86,9 +86,7 @@ camera.SendFrameStartTrigger();
 ```
 
 
-```c++
-core.startContinuousSequenceAcquisition(double ms)
-```
+```core.startContinuousSequenceAcquisition(double ms)```
 
 will under the hood call:
 
@@ -104,9 +102,7 @@ camera.PrepareForBurst(-1); // Go indefinitely
 camera.SendBurstStartTrigger();
 ```
 
-```c++
-core.stopSequenceAcquisition();
-```
+```core.stopSequenceAcquisition()```
 
 will call:
 
@@ -143,6 +139,7 @@ camera.PrepareForBurst(numImages);
 camera.SendBurstStartTrigger();
 ```
 
+This will mean, essentially that when the new camera API is implemented, `core.prepareSequenceAcquisition()` will be ignored. As result, higher level code should preferentially utilize the new API to achieve maximium performance.
 
 ## Data access
 
