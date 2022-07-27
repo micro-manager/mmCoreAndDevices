@@ -116,13 +116,13 @@
 #include <tchar.h>
 #include <iostream>
 #include <windows.h>
-#include "usbdrvd.h"
 #include <array>
 #include <fstream>
 
 
 //////// MeadowlarkLC //////////
 #include "MeadowlarkLC.h"
+#include "usbdrvd.h"
 #include "resource.h"
 
 //////// Micro-manager interface //////////
