@@ -3,7 +3,7 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   MeadowlarkLC Device Adapter for Four Channel Digital Interface (D3050) and API family
+// DESCRIPTION:   MeadowlarkLC Device Adapter for Meadowlark Optics liquid crystal controllers
 //
 // Copyright © 2009 - 2018, Marine Biological Laboratory
 // 
@@ -27,14 +27,19 @@
 // representing official policies, either expressed or implied, of any organization.
 //
 // Developed at the Laboratory of Rudolf Oldenbourg at the Marine Biological Laboratory in Woods Hole, MA.
-// LAST UPDATE:   Amitabh Verma, MBL - Aug. 21, 2018
+// LAST UPDATE:   Ivan Ivanov, Chan Zuckerberg Biohub - June, 2022
 //
 //
 // AUTHOR: Amitabh Verma, MBL - Dec. 05, 2012
 //
-// Issue tracker :---> http://www.openpolscope.org/mantis/
 // ToDo List at EOF
 //
+// Change Log - Ivan Ivanov - June 29, 2022 - 1.1.0
+// 1. Updated VS project files to allow compiling the device adapter along with MicroManager nightly builds.
+// 2. Fixed bug in OnVoltage function. Function input and output are now both in units of volts.
+// 3. Updated OnRetardance function to refresh the LC retardance once LC voltage is set. Similarly for OnVoltage.
+// 4. Renamed "Version Number" property to "Controller Serial Number", which is more accurate.
+// 
 // Change Log - Amitabh Verma - Aug. 21, 2018 - 1.00.03
 // 1. Implemented config file for device adapter that gets written out when not found based on serial number of device.
 // This config file can be updated with palette element values for different wavelengths and can be set using command eg. "sp 546"
