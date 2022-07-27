@@ -1,4 +1,4 @@
-# A proposed new API for camera Triggering
+# A proposed new API for camera triggering
 
 Based largerly off of the [GenICam specification](https://www.emva.org/wp-content/uploads/GenICam_SFNC_2_2.pdf), with modifications as needed for consistency with the existing API
 
@@ -6,7 +6,7 @@ Based largerly off of the [GenICam specification](https://www.emva.org/wp-conten
 `external` triggers mean a TTL pulse is sent to the camera
 `software` triggers mean an API function is called
 
-previous development of this API is discussed [here]([url](https://github.com/micro-manager/mmCoreAndDevices/issues/84)), but this file contains the most up to date version.
+previous development of this API is discussed [here](https://github.com/micro-manager/mmCoreAndDevices/issues/84), but this file contains the most up to date version.
 
 ```c++
 ////////////////////////////////////////////
