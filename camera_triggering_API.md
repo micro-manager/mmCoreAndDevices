@@ -57,14 +57,17 @@ int SendBurstEndTrigger();
 
 
 
-//TODO light sheet/global shutter API calls
+// Rolling shutter/Lightsheet mode
+double GetRollingShutterLineOffset();
+void setRollingShutterLineOffset(double offset_us) throw (CMMError);
 
+int GetRollingShutterActiveLines();
+void setRollingShutterActiveLines(int numLines) throw (CMMError);
 ```
 
 
 ## New calls in MMCore
 A set of API calls in MMCore will provide access to this high-level API. Following MM convention, these will be essentially a 1to1 access of camera API methods, so they are omitted for now.
-
 
 
 ## Backwards compatibility
