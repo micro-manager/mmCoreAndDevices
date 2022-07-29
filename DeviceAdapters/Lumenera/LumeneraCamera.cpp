@@ -813,24 +813,20 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	}
 	//if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_TRIGGER_PIN, prop))
 	//{
-	//	value = prop->getValue();
+	//	value = prop->getValue(); 
 	//	std::vector<std::string> values = prop->getValueList();
-	//	std::string minimum = prop->getMin();
-	//	std::string maximum = prop->getMax();
-	//	//bool dis = prop->hasDiscreteValues();
 	//	pAction = new CPropertyAction(this, &LumeneraCamera::OnTriggerPin);
-	//	RETURN_ON_ERROR(CreateProperty(LuXAppsProperties::LUXPROP_TRIGGER_PIN, value.c_str(), MM::Integer, false, pAction));
-	//	//RETURN_ON_ERROR(SetAllowedValues(LuXAppsProperties::LUXPROP_TRIGGER_PIN, values));
-	//	//RETURN_ON_ERROR(SetPropertyLimits(LuXAppsProperties::LUXPROP_TRIGGER_PIN, std::stod(minimum), std::stod(maximum)));
+	//	RETURN_ON_ERROR(CreateProperty(LuXAppsProperties::LUXPROP_TRIGGER_PIN, value.c_str(), MM::String, false, pAction));
+	//	RETURN_ON_ERROR(SetAllowedValues(LuXAppsProperties::LUXPROP_TRIGGER_PIN, values));
 	//}
-	//if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_TRIGGER_POLARITY, prop))
-	//{
-	//	value = prop->getValue();
-	//	std::vector<std::string> values = prop->getValueList();
-	//	pAction = new CPropertyAction(this, &LumeneraCamera::OnTriggerPolarity);
-	//	RETURN_ON_ERROR(CreateProperty(LuXAppsProperties::LUXPROP_TRIGGER_POLARITY, value.c_str(), MM::String, false, pAction));
-	//	RETURN_ON_ERROR(SetAllowedValues(LuXAppsProperties::LUXPROP_TRIGGER_POLARITY, values));
-	//}
+	if (camera->tryGetProperty(LuXAppsProperties::LUXPROP_TRIGGER_POLARITY, prop))
+	{
+		value = prop->getValue();
+		std::vector<std::string> values = prop->getValueList();
+		pAction = new CPropertyAction(this, &LumeneraCamera::OnTriggerPolarity);
+		RETURN_ON_ERROR(CreateProperty(LuXAppsProperties::LUXPROP_TRIGGER_POLARITY, value.c_str(), MM::String, false, pAction));
+		RETURN_ON_ERROR(SetAllowedValues(LuXAppsProperties::LUXPROP_TRIGGER_POLARITY, values));
+	}
 
 	return DEVICE_OK;
 }
@@ -2109,6 +2105,7 @@ int LumeneraCamera::OnTapConfiguration(MM::PropertyBase* pProp, MM::ActionType e
 
 	return DEVICE_OK;
 }
+
 int LumeneraCamera::OnDemosaicingMethod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	RETURN_ON_ERROR(OnSingleProperty(pProp, eAct));
