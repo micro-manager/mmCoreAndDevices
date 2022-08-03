@@ -130,7 +130,7 @@
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-const char* g_ControllerName = "MeadowlarkLC";
+const char* g_ControllerName = "MeadowlarkLcOpenSource";
 const char* g_ControllerAbout = "MeadowlarkLC Digital Device Controller/Interface";
 const char* g_ControllerDevices = "Select Device #";
 const char* g_ControllerDeviceType = "Select Device Interface";
