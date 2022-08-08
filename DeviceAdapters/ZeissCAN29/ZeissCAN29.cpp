@@ -507,7 +507,7 @@ ZeissAxis::~ZeissAxis()
 /*
  * Send command to microscope to set position of Axis. 
  */
-int ZeissAxis::SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, long position, ZeissByte moveMode)
+int ZeissAxis::SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong position, ZeissByte moveMode)
 {
    int ret;
    const int commandLength = 11;
@@ -526,7 +526,7 @@ int ZeissAxis::SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId,
    // movemode
    command[6] = moveMode;
    // position is a ZeissLong (4-byte) in big endian format...
-   ZeissLong tmp = htonl((ZeissLong) position);
+   ZeissLong tmp = htonl(position);
    memcpy(command+7, &tmp, ZeissLongSize); 
    ret = g_hub.ExecuteCommand(device, core,  command, commandLength);
    if (ret != DEVICE_OK)
@@ -539,7 +539,7 @@ int ZeissAxis::SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId,
 /*
  * Send command to microscope to move relative to current position of Axis
  */
-int ZeissAxis::SetRelativePosition(MM::Device& device, MM::Core& core, ZeissUByte devId, long increment, ZeissByte moveMode)
+int ZeissAxis::SetRelativePosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong increment, ZeissByte moveMode)
 {
    int ret;
    const int commandLength = 11;
@@ -558,7 +558,7 @@ int ZeissAxis::SetRelativePosition(MM::Device& device, MM::Core& core, ZeissUByt
    // movemode
    command[6] = moveMode;
    // position is a ZeissLong (4-byte) in big endian format...
-   ZeissLong tmp = htonl((ZeissLong) increment);
+   ZeissLong tmp = htonl(increment);
    memcpy(command+7, &tmp, ZeissLongSize); 
 
    ret = g_hub.ExecuteCommand(device, core,  command, commandLength);
@@ -637,7 +637,7 @@ int ZeissAxis::StopMove(MM::Device& device, MM::Core& core, ZeissUByte devId, Ze
 /*
  * Sets Trajectory Velocity 
  */
-int ZeissAxis::SetTrajectoryVelocity(MM::Device& device, MM::Core& core, ZeissUByte devId, long velocity)
+int ZeissAxis::SetTrajectoryVelocity(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong velocity)
 {
    int ret;
    const int commandLength = 10;
@@ -654,7 +654,7 @@ int ZeissAxis::SetTrajectoryVelocity(MM::Device& device, MM::Core& core, ZeissUB
    // Device ID
    command[5] = devId;
    // position is a ZeissLong (4-byte) in big endian format...
-   ZeissLong tmp = htonl((ZeissLong) velocity);
+   ZeissLong tmp = htonl(velocity);
    memcpy(command+6, &tmp, ZeissLongSize); 
    ret = g_hub.ExecuteCommand(device, core,  command, commandLength);
    if (ret != DEVICE_OK)
@@ -672,7 +672,7 @@ int ZeissAxis::HasTrajectoryVelocity(MM::Device& device, MM::Core& core, ZeissUB
 /*
  * Sets Trajectory Acceleration
  */
-int ZeissAxis::SetTrajectoryAcceleration(MM::Device& device, MM::Core& core, ZeissUByte devId, long acceleration)
+int ZeissAxis::SetTrajectoryAcceleration(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong acceleration)
 {
    int ret;
    const int commandLength = 10;
@@ -689,7 +689,7 @@ int ZeissAxis::SetTrajectoryAcceleration(MM::Device& device, MM::Core& core, Zei
    // Device ID
    command[5] = devId;
    // position is a ZeissLong (4-byte) in big endian format...
-   ZeissLong tmp = htonl((ZeissLong) acceleration);
+   ZeissLong tmp = htonl(acceleration);
    memcpy(command+6, &tmp, ZeissLongSize); 
    ret = g_hub.ExecuteCommand(device, core,  command, commandLength);
    if (ret != DEVICE_OK)
@@ -1616,7 +1616,10 @@ int Axis::SetPositionSteps(long steps)
 
 int Axis::GetPositionSteps(long& steps)
 {
-   return ZeissDevice::GetPosition(*this, *GetCoreCallback(), devId_, (ZeissLong&) steps);
+   ZeissLong zeissSteps;
+   int ret = ZeissDevice::GetPosition(*this, *GetCoreCallback(), devId_, zeissSteps);
+   steps = zeissSteps;
+   return ret;
 }
 
 int Axis::SetOrigin()
@@ -1884,13 +1887,17 @@ int XYStage::SetRelativePositionSteps(long xSteps, long ySteps)
 
 int XYStage::GetPositionSteps(long& xSteps, long& ySteps)
 {
-   int ret = ZeissDevice::GetPosition(*this, *GetCoreCallback(), g_StageXAxis, (ZeissLong&) xSteps);
+   ZeissLong xZeiss, yZeiss;
+   int ret = ZeissDevice::GetPosition(*this, *GetCoreCallback(), g_StageXAxis, xZeiss);
    if (ret != DEVICE_OK)
       return ret;
 
-   ret = ZeissDevice::GetPosition(*this, *GetCoreCallback(), g_StageYAxis, (ZeissLong&) ySteps);
+   ret = ZeissDevice::GetPosition(*this, *GetCoreCallback(), g_StageYAxis, yZeiss);
    if (ret != DEVICE_OK)
       return ret;
+
+   xSteps = xZeiss;
+   ySteps = yZeiss;
 
    return DEVICE_OK;
 }
@@ -1981,19 +1988,19 @@ int XYStage::OnTrajectoryVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet) {
       // we are lazy and only check the x axis
-      long velocity;
-      int ret = ZeissAxis::GetTrajectoryVelocity(*this, *GetCoreCallback(), g_StageXAxis, (ZeissLong&) velocity);
+      ZeissLong velocity;
+      int ret = ZeissAxis::GetTrajectoryVelocity(*this, *GetCoreCallback(), g_StageXAxis, velocity);
       if (ret != DEVICE_OK)
          return ret;
       pProp->Set( (float) (velocity/1000.0) );
    } else if (eAct == MM::AfterSet) {
       double tmp;
       pProp->Get(tmp);
-      long velocity = (long) (tmp * 1000.0);
-      int ret = ZeissAxis::SetTrajectoryVelocity(*this, *GetCoreCallback(), g_StageXAxis, (ZeissLong) velocity);
+      ZeissLong velocity = tmp * 1000.0;
+      int ret = ZeissAxis::SetTrajectoryVelocity(*this, *GetCoreCallback(), g_StageXAxis, velocity);
       if (ret != DEVICE_OK)
          return ret;
-      ret = ZeissAxis::SetTrajectoryVelocity(*this, *GetCoreCallback(), g_StageYAxis, (ZeissLong) velocity);
+      ret = ZeissAxis::SetTrajectoryVelocity(*this, *GetCoreCallback(), g_StageYAxis, velocity);
       if (ret != DEVICE_OK)
          return ret;
    }
@@ -2004,19 +2011,19 @@ int XYStage::OnTrajectoryAcceleration(MM::PropertyBase* pProp, MM::ActionType eA
 {
    if (eAct == MM::BeforeGet) {
       // we are lazy and only check the x axis
-      long accel;
-      int ret = ZeissAxis::GetTrajectoryAcceleration(*this, *GetCoreCallback(), g_StageXAxis, (ZeissLong&) accel);
+      ZeissLong accel;
+      int ret = ZeissAxis::GetTrajectoryAcceleration(*this, *GetCoreCallback(), g_StageXAxis, accel);
       if (ret != DEVICE_OK)
          return ret;
       pProp->Set( (float) (accel / 1000.0) );
    } else if (eAct == MM::AfterSet) {
       double tmp;
       pProp->Get(tmp);
-      long accel = (long) (tmp * 1000.0);
-      int ret = ZeissAxis::SetTrajectoryAcceleration(*this, *GetCoreCallback(), g_StageXAxis, (ZeissLong) accel);
+      ZeissLong accel = (tmp * 1000.0);
+      int ret = ZeissAxis::SetTrajectoryAcceleration(*this, *GetCoreCallback(), g_StageXAxis, accel);
       if (ret != DEVICE_OK)
          return ret;
-      ret = ZeissAxis::SetTrajectoryAcceleration(*this, *GetCoreCallback(), g_StageYAxis, (ZeissLong) accel);
+      ret = ZeissAxis::SetTrajectoryAcceleration(*this, *GetCoreCallback(), g_StageYAxis, accel);
       if (ret != DEVICE_OK)
          return ret;
    }
