@@ -56,6 +56,7 @@ const char* g_DeviceNameMultiDAStateDevice = "Multi DA State Device";
 const char* g_DeviceNameAutoFocusStage = "AutoFocus Stage";
 const char* g_DeviceNameStateDeviceShutter = "State Device Shutter";
 const char* g_DeviceNameSerialDTRShutter = "Serial port DTR Shutter";
+const char* g_DeviceNameLinearizer = "Linearizer";
 
 const char* g_PropertyMinUm = "Stage Low Position(um)";
 const char* g_PropertyMaxUm = "Stage High Position(um)";
@@ -86,6 +87,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DeviceNameAutoFocusStage, MM::StageDevice, "AutoFocus offset acting as a Z-stage");
    RegisterDevice(g_DeviceNameStateDeviceShutter, MM::ShutterDevice, "State device used as a shutter");
    RegisterDevice(g_DeviceNameSerialDTRShutter, MM::ShutterDevice, "Serial port DTR used as a shutter");
+   RegisterDevice(g_DeviceNameLinearizer, MM::GenericDevice, "Linearizes the output of another device");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)                  
@@ -123,6 +125,8 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       return new StateDeviceShutter();
    } else if (strcmp(deviceName, g_DeviceNameSerialDTRShutter) == 0) {
       return new SerialDTRShutter();
+   } else if (strcmp(deviceName, g_DeviceNameLinearizer) == 0) {
+      return new Linearizer();
    }
 
    return 0;
@@ -132,4 +136,3 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 {                                                                            
    delete pDevice;                                                           
 }
-

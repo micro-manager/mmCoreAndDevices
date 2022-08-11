@@ -96,10 +96,12 @@
     <ClCompile Include="MultiStage.cpp" />
     <ClCompile Include="MultiCamera.cpp" />
     <ClCompile Include="MultiShutter.cpp" />
+    <ClCompile Include="Linearizer.cpp" />
     <ClCompile Include="StateDeviceShutter.cpp" />
     <ClCompile Include="Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="Utilities.h" />
   </ItemGroup>
   <ItemGroup>

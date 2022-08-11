@@ -27,6 +27,8 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
+#include "json.hpp"
+using json = nlohmann::json;
 #include <string>
 #include <map>
 
@@ -48,7 +50,9 @@
 #define ERR_AUTOFOCUS_NOT_SUPPORTED        10012
 #define ERR_NO_PHYSICAL_STAGE              10013
 #define ERR_NO_SHUTTER_DEVICE_FOUND        10014
+#define ERR_FILE_UNPARSABLE                10015
 #define ERR_TIMEOUT                        10021
+
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -740,21 +744,21 @@ public:
    void GetName(char* pszName) const;
    bool Busy();
 
-   // Stage API
-   // ---------
-  int SetPositionUm(double pos);
-  int GetPositionUm(double& pos);
-  int SetPositionSteps(long steps);
-  int GetPositionSteps(long& steps);
-  int SetOrigin();
-  int GetLimits(double& min, double& max);
+// Stage API
+// ---------
+int SetPositionUm(double pos);
+int GetPositionUm(double& pos);
+int SetPositionSteps(long steps);
+int GetPositionSteps(long& steps);
+int SetOrigin();
+int GetLimits(double& min, double& max);
 
-  int IsStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
-  bool IsContinuousFocusDrive() const {return true;}
+int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
+bool IsContinuousFocusDrive() const { return true; }
 
-   // action interface
-   // ----------------
-   int OnAutoFocusDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
+// action interface
+// ----------------
+int OnAutoFocusDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    std::vector<std::string> availableAutoFocusDevices_;
@@ -770,19 +774,19 @@ class StateDeviceShutter : public CShutterBase<StateDeviceShutter>
 public:
    StateDeviceShutter();
    ~StateDeviceShutter();
-  
+
    // Device API
    // ----------
    int Initialize();
-   int Shutdown() {initialized_ = false; return DEVICE_OK;}
-  
+   int Shutdown() { initialized_ = false; return DEVICE_OK; }
+
    void GetName(char* pszName) const;
    bool Busy();
 
    // Shutter API
    int SetOpen(bool open = true);
    int GetOpen(bool& open);
-   int Fire (double /* deltaT */) { return DEVICE_UNSUPPORTED_COMMAND;}
+   int Fire(double /* deltaT */) { return DEVICE_UNSUPPORTED_COMMAND; }
    // ---------
 
    // action interface
@@ -805,19 +809,19 @@ class SerialDTRShutter : public CShutterBase<SerialDTRShutter>
 public:
    SerialDTRShutter();
    ~SerialDTRShutter();
-  
+
    // Device API
    // ----------
    int Initialize();
-   int Shutdown() {initialized_ = false; return DEVICE_OK;}
-  
+   int Shutdown() { initialized_ = false; return DEVICE_OK; }
+
    void GetName(char* pszName) const;
    bool Busy();
 
    // Shutter API
    int SetOpen(bool open = true);
    int GetOpen(bool& open);
-   int Fire (double /* deltaT */) { return DEVICE_UNSUPPORTED_COMMAND;}
+   int Fire(double /* deltaT */) { return DEVICE_UNSUPPORTED_COMMAND; }
    // ---------
 
    // action interface
@@ -833,5 +837,52 @@ private:
    MM::MMTime lastMoveStartTime_;
 };
 
+/**
+* Linearizer.  A device that linearizes the output of another device (such as a laser), by manipulating
+* the settings of that device (for instance by setting a voltage), based on measurements of the setting
+* versus the actual output.
+* Measurements are provided in the form of a JSON formatted file.
+*/
+class Linearizer : public CGenericBase<Linearizer>
+{
+public:
+   Linearizer();
+   ~Linearizer();
+
+   // Device API
+   // ----------
+   int Initialize();
+   int Shutdown();
+   void GetName(char* pszName) const;
+   bool Busy();
+
+   // action interface
+   // ----------------
+   int OnJSONFile(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnUnit(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnValue(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnMethod(MM::PropertyBase* pProp, MM::ActionType eAct); 
+
+private:
+   bool initialized_;
+   std::string deviceName_;
+   std::vector<std::string> availableDevices_;
+   json jsonData_;
+   std::string jsonFilePath_;
+   struct ChannelData {
+      std::string deviceName;
+      std::string xValuePropertyName;
+      float wavelength;
+      std::string xUnit;
+      std::string yUnit;
+      std::vector<float> xValues;
+      std::vector<float> yValues;
+   };
+   std::vector <ChannelData> channelData_;
+
+
+
+};
 
 #endif //_UTILITIES_H_
