@@ -1074,15 +1074,15 @@ int SpinnakerCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySi
       m_cam->OffsetY.SetValue(m_cam->OffsetY.GetMin());
         
       // Force width and height to be multiple of Width.GetInc() and Height.GetInc()
-      xSize = (unsigned) min(xSize + xSize % m_cam->Width.GetInc(), m_cam->Width.GetMax());
-      ySize = (unsigned) min(ySize + ySize % m_cam->Height.GetInc(), m_cam->Height.GetMax());
+      xSize = (unsigned) min(xSize - xSize % m_cam->Width.GetInc(), m_cam->Width.GetMax());
+      ySize = (unsigned) min(ySize - ySize % m_cam->Height.GetInc(), m_cam->Height.GetMax());
 
       m_cam->Width.SetValue(xSize);
       m_cam->Height.SetValue(ySize);
 
       //Force offsets to be multiples of OffsetX.GetInc() and OffsetY.GetInc()
-      x = (unsigned) min(x + x % m_cam->OffsetX.GetInc(), m_cam->OffsetX.GetMax());
-      y = (unsigned) min(y + y % m_cam->OffsetY.GetInc(), m_cam->OffsetY.GetMax());
+      x = (unsigned) min(x - x % m_cam->OffsetX.GetInc(), m_cam->OffsetX.GetMax());
+      y = (unsigned) min(y - y % m_cam->OffsetY.GetInc(), m_cam->OffsetY.GetMax());
 
       m_cam->OffsetX.SetValue(x); 
       m_cam->OffsetY.SetValue(y);
