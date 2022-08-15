@@ -17,6 +17,7 @@
 #include "ALC_REVOject3Wrapper.h"
 #include "ALC_REV_ILEActiveBlankingManagementWrapper.h"
 #include "ALC_REV_ILEPowerManagementWrapper.h"
+#include "ALC_REV_ILEPowerManagement2Wrapper.h"
 #include "ALC_REV_ILE2Wrapper.h"
 #include "ALC_REV_ILE4Wrapper.h"
 #include "ILESDKLock.h"
@@ -77,6 +78,7 @@ CILEWrapper::CILEWrapper() :
   Delete_ILE_Detection_( nullptr ),
   GetILEActiveBlankingManagementInterface_( nullptr ),
   GetILEPowerManagementInterface_( nullptr ),
+  GetILEPowerManagement2Interface_( nullptr ),
   GetILEInterface2_( nullptr ),
   GetILEInterface4_( nullptr )
 {
@@ -116,6 +118,12 @@ CILEWrapper::CILEWrapper() :
     throw std::runtime_error( "GetProcAddress GetILEPowerManagementInterface_ failed\n" );
   }
 
+  GetILEPowerManagement2Interface_ = ( TGetILEPowerManagement2Interface ) GetProcAddress( DLL_, "GetILEPowerManagement2Interface" );
+  if ( GetILEPowerManagement2Interface_ == nullptr )
+  {
+    throw std::runtime_error( "GetProcAddress GetILEPowerManagement2Interface_ failed\n" );
+  }
+
   GetILEInterface2_ = (TGetILEInterface2)GetProcAddress( DLL_, "GetILEInterface2" );
   if ( GetILEInterface2_ == nullptr )
   {
@@ -143,6 +151,11 @@ CILEWrapper::~CILEWrapper()
   }
 
   for ( auto& elt : PowerManagementMap_ )
+  {
+    delete elt.second;
+  }
+
+  for ( auto& elt : PowerManagement2Map_ )
   {
     delete elt.second;
   }
@@ -296,6 +309,35 @@ IALC_REV_ILEPowerManagement* CILEWrapper::GetILEPowerManagementInterface( IALC_R
     }
   }
   return vPowerManagementWrapper;
+}
+
+IALC_REV_ILEPowerManagement2* CILEWrapper::GetILEPowerManagement2Interface( IALC_REVObject3 *ILEDevice )
+{
+  CALC_REV_ILEPowerManagement2Wrapper* vPowerManagement2Wrapper = nullptr;
+  CALC_REVObject3Wrapper* vALC_REVObjectWrapper = dynamic_cast< CALC_REVObject3Wrapper* >( ILEDevice );
+  if ( vALC_REVObjectWrapper != nullptr )
+  {
+    IALC_REVObject3* vILEObject = vALC_REVObjectWrapper->GetILEObject();
+    IALC_REV_ILEPowerManagement2* vILEPowerManagement2 = nullptr;
+    {
+      CILESDKLock vSDKLock;
+      vILEPowerManagement2 = GetILEPowerManagement2Interface_( vILEObject );
+    }
+    if ( vILEPowerManagement2 != nullptr )
+    {
+      TPowerManagement2Map::iterator vPowerManagement2It = PowerManagement2Map_.find( vILEPowerManagement2 );
+      if ( vPowerManagement2It != PowerManagement2Map_.end() )
+      {
+        vPowerManagement2Wrapper = vPowerManagement2It->second;
+      }
+      else
+      {
+        vPowerManagement2Wrapper = new CALC_REV_ILEPowerManagement2Wrapper( vILEPowerManagement2 );
+        PowerManagement2Map_[vILEPowerManagement2] = vPowerManagement2Wrapper;
+      }
+    }
+  }
+  return vPowerManagement2Wrapper;
 }
 
 IALC_REV_ILE2* CILEWrapper::GetILEInterface2( IALC_REVObject3 *ILEDevice )
