@@ -191,8 +191,10 @@ void CILEWrapper::GetListOfDevices( TDeviceList& DeviceList )
   DeviceList.push_back("Demo");
   DeviceList.push_back( "DemoILE701" );
   DeviceList.push_back( "DemoILE702" );
-  DeviceList.push_back( "DemoILE703 " );
+  DeviceList.push_back( "DemoILE703" );
   DeviceList.push_back( "DemoILE704" );
+  DeviceList.push_back( "DemoCLE001" );
+  DeviceList.push_back( "DemoCLE022" );
   for (int vDeviceIndex = 0; vDeviceIndex < vNumberDevices; vDeviceIndex++ )
   {
     if ( ILEDetection_->GetSerialNumber( vDeviceIndex, vSerialNumber, 64 ) )

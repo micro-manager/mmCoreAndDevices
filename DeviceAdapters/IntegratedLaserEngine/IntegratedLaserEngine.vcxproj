@@ -119,6 +119,7 @@
     <ClCompile Include="IntegratedLaserEngine.cpp" />
     <ClCompile Include="Lasers.cpp" />
     <ClCompile Include="LowPowerMode.cpp" />
+    <ClCompile Include="NDFilters.cpp" />
     <ClCompile Include="Ports.cpp" />
     <ClCompile Include="PortsConfiguration.cpp" />
     <ClCompile Include="SingleILE.cpp" />
@@ -150,6 +151,7 @@
     <ClInclude Include="IntegratedLaserEngine.h" />
     <ClInclude Include="Lasers.h" />
     <ClInclude Include="LowPowerMode.h" />
+    <ClInclude Include="NDFilters.h" />
     <ClInclude Include="Ports.h" />
     <ClInclude Include="PortsConfiguration.h" />
     <ClInclude Include="SingleILE.h" />

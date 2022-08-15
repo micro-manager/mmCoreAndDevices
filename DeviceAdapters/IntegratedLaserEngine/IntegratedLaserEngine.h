@@ -27,6 +27,7 @@
 #define ERR_DEVICE_INDEXINVALID 107
 #define ERR_DEVICE_CONNECTIONFAILED 108
 #define ERR_DEVICE_RECONNECTIONFAILED 109
+#define ERR_NDFILTERS_INIT 110
 
 #define ERR_LASER_STATE_READ 201
 #define ERR_INTERLOCK 202
@@ -50,9 +51,13 @@
 #define ERR_VERYLOWPOWER_SET 701
 #define ERR_VERYLOWPOWER_GET 702
 
+#define ERR_NDFILTERS_SET 801
+#define ERR_NDFILTERS_GET 802
+
 class IALC_REVObject3;
 class CLasers;
 class CVeryLowPower;
+class CNDFilters;
 
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
@@ -96,6 +101,7 @@ private:
   IILEWrapperInterface::TDeviceList DeviceList_;
   CLasers* Lasers_;
   CVeryLowPower* VeryLowPower_;
+  CNDFilters* NDFilters_;
   MM::PropertyBase* ResetDeviceProperty_;
   bool ClassIVInterlockActive_;
   bool KeyInterlockActive_;
@@ -118,6 +124,7 @@ private:
 
   int InitalizeLasers();
   int InitializeVeryLowPower();
+  int InitializeNDFilters();
   virtual int InitializePorts() = 0;
   virtual int InitializeActiveBlanking() = 0;
   virtual int InitializeLowPowerMode() = 0;
@@ -125,6 +132,7 @@ private:
   virtual void DisconnectILEInterfaces() = 0;
 
   int ReconnectLasers();
+  int ReconnectNDFilters();
   int ReconnectVeryLowPower();
   virtual int ReconnectILEInterfaces() = 0;
 };
