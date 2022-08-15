@@ -479,14 +479,14 @@ int CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPo
       vWavelength = Wavelength( vLaserIndex );
 
       Enable_[vLaserIndex] = g_LaserEnableOn;
-      vPropertyName = BuildPropertyName( g_PowerSetpointProperty, vWavelength );
+      vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
       if ( PropertyPointers_.find( vPropertyName ) != PropertyPointers_.end() && PropertyPointers_[vPropertyName] != nullptr )
       {
         PropertyPointers_[vPropertyName]->Set( Enable_[vLaserIndex].c_str() );
       }
 
       PowerSetpoint( vLaserIndex, 0. );
-      vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
+      vPropertyName = BuildPropertyName( g_PowerSetpointProperty, vWavelength );
       if ( PropertyPointers_.find( vPropertyName ) != PropertyPointers_.end() && PropertyPointers_[vPropertyName] != nullptr )
       {
         PropertyPointers_[vPropertyName]->Set( "0" );
