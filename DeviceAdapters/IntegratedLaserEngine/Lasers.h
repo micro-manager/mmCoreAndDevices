@@ -92,6 +92,7 @@ private:
   float PowerSetpoint( const int LaserIndex );  // milli-Watts
   void PowerSetpoint( const int LaserIndex, const float Value );  // milli-Watts
   void UpdateLasersRange();
+  int CheckInterlock( int LaserIndex );
   bool IsKeyInterlockTriggered( int LaserIndex );
   bool IsInterlockTriggered( int LaserIndex );
   bool IsClassIVInterlockTriggered();

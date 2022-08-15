@@ -234,39 +234,14 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   }
   else if ( Act == MM::AfterSet )
   {
-    int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
-    if ( vInterlockStatus != DEVICE_OK )
-    {
-      return vInterlockStatus;
-    }
-    if ( LaserInterface_ == nullptr )
-    {
-      return ERR_DEVICE_NOT_CONNECTED;
-    }
-    if ( !IsInterlockTriggered( LaserIndex ) )
+    int vRet = CheckInterlock( LaserIndex );
+    if (vRet == DEVICE_OK)
     {
       Prop->Get( vPowerSetpoint );
       MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long double>( vPowerSetpoint ) ), true );
       PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
       if ( OpenRequest_ )
         return SetOpen();
-    }
-    else
-    {
-      if( IsKeyInterlockTriggered( LaserIndex ) )
-      {
-        MMILE_->ActiveKeyInterlock();
-        return ERR_KEY_INTERLOCK;
-      }
-      else if ( IsClassIVInterlockTriggered() )
-      {
-        MMILE_->ActiveClassIVInterlock();
-        return ERR_CLASSIV_INTERLOCK;
-      }
-      else
-      {
-        return ERR_INTERLOCK;
-      }
     }
 
     //Prop->Set(achievedSetpoint);  ---- for quantization....
@@ -294,16 +269,8 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
   }
   else if ( Act == MM::AfterSet )
   {
-    int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
-    if ( vInterlockStatus != DEVICE_OK )
-    {
-      return vInterlockStatus;
-    }
-    if ( LaserInterface_ == nullptr )
-    {
-      return ERR_DEVICE_NOT_CONNECTED;
-    }
-    if ( !IsInterlockTriggered( LaserIndex ) )
+    int vRet = CheckInterlock( LaserIndex );
+    if ( vRet == DEVICE_OK )
     {
       std::string vEnable;
       Prop->Get( vEnable );
@@ -332,23 +299,6 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
         {
           return SetOpen();
         }
-      }
-    }
-    else
-    {
-      if ( IsKeyInterlockTriggered( LaserIndex ) )
-      {
-        MMILE_->ActiveKeyInterlock();
-        return ERR_KEY_INTERLOCK;
-      }
-      else if ( IsClassIVInterlockTriggered() )
-      {
-        MMILE_->ActiveClassIVInterlock();
-        return ERR_CLASSIV_INTERLOCK;
-      }
-      else
-      {
-        return ERR_INTERLOCK;
       }
     }
   }
@@ -542,6 +492,38 @@ bool CLasers::AllowsExternalTTL(const int LaserIndex )
 ///////////////////////////////////////////////////////////////////////////////
 // Interlock functions
 ///////////////////////////////////////////////////////////////////////////////
+
+int CLasers::CheckInterlock( int LaserIndex )
+{
+  int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+  if ( vInterlockStatus != DEVICE_OK )
+  {
+    return vInterlockStatus;
+  }
+
+  if ( LaserInterface_ == nullptr )
+  {
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
+  if ( IsInterlockTriggered( LaserIndex ) )
+  {
+    if ( IsKeyInterlockTriggered( LaserIndex ) )
+    {
+      MMILE_->ActiveKeyInterlock();
+      return ERR_KEY_INTERLOCK;
+    }
+    else if ( IsClassIVInterlockTriggered() )
+    {
+      MMILE_->ActiveClassIVInterlock();
+      return ERR_CLASSIV_INTERLOCK;
+    }
+
+    return ERR_INTERLOCK;
+  }
+
+  return DEVICE_OK;
+}
 
 bool CLasers::IsKeyInterlockTriggered(int LaserIndex)
 {
