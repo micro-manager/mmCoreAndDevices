@@ -15,25 +15,27 @@
 #include "Property.h"
 #include "../../MMDevice/DeviceThreads.h"
 
-const int MaxLasers = 10;
-
 class IALC_REV_Laser2;
 class IALC_REV_ILEPowerManagement;
 class CIntegratedLaserEngine;
 class CInterlockStatusMonitor;
 //#define _ACTIVATE_DUMMYTEST_
 
+// Laser state property values
+const char* const g_LaserEnableOn = "On";
+const char* const g_LaserEnableOff = "Off";
+const char* const g_LaserEnableTTL = "External TTL";
+
 struct TLaserRange
 {
-  double PowerMin;
-  double PowerMax;
-}; 
+  double PowerMin = 0;
+  double PowerMax = 0;
+};
 
 struct CLaserState
 {
-  float PowerSetPoint_;
-  std::string Enable_;
-  std::vector<std::string> EnableStates_;
+  float PowerSetPoint_ = 0;
+  std::string Enable_ = g_LaserEnableOn;
   TLaserRange LaserRange_;
 };
 
@@ -67,8 +69,8 @@ private:
   IALC_REV_ILEPowerManagement* PowerInterface_;
   IALC_REV_ILE* ILEInterface_;
   CIntegratedLaserEngine* MMILE_;
-  int NumberOfLasers_;
-  CLaserState LasersState_[MaxLasers + 1];
+  std::size_t NumberOfLasers_;
+  std::vector<CLaserState> LasersState_;
   enum EXTERNALMODE
   {
     CW,
