@@ -23,6 +23,20 @@ class CIntegratedLaserEngine;
 class CInterlockStatusMonitor;
 //#define _ACTIVATE_DUMMYTEST_
 
+struct TLaserRange
+{
+  double PowerMin;
+  double PowerMax;
+}; 
+
+struct CLaserState
+{
+  float PowerSetPoint_;
+  std::string Enable_;
+  std::vector<std::string> EnableStates_;
+  TLaserRange LaserRange_;
+};
+
 class CLasers
 {
 public:
@@ -54,15 +68,7 @@ private:
   IALC_REV_ILE* ILEInterface_;
   CIntegratedLaserEngine* MMILE_;
   int NumberOfLasers_;
-  float PowerSetPoint_[MaxLasers + 1];  // 1-based arrays therefore +1
-  std::string Enable_[MaxLasers + 1];
-  std::vector<std::string> EnableStates_[MaxLasers + 1];
-  struct TLaserRange
-  {
-    double PowerMin; 
-    double PowerMax;
-  };
-  TLaserRange LaserRange_[MaxLasers + 1];
+  CLaserState LasersState_[MaxLasers + 1];
   enum EXTERNALMODE
   {
     CW,
