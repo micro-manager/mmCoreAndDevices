@@ -1177,6 +1177,56 @@ namespace MM {
    };
 
    /**
+   * DataStreamer API
+   */
+   class DataStreamer : public Device
+   {
+   public:
+       DataStreamer() {}
+       virtual ~DataStreamer() {}
+
+       // Device API
+       virtual DeviceType GetType() const { return Type; }
+       static const DeviceType Type;
+
+       // DataStreamer API
+
+       // Calls that are specific to each DataStreamer device 
+       // and should be implemented in the device adapter
+       /**
+        * Get the size (in bytes) of the data buffer available for download from the hardware
+        */
+       virtual int GetBufferSize(unsigned& dataBufferSiize) = 0;
+       /**
+        * Receive data buffer from the hardware and place it at memory location
+        * specified by pDataBuffer
+        */
+       virtual int GetBuffer(unsigned pDataBuffer) = 0;
+       /**
+        * Process the data buffer available at pDataBuffer and place
+        * resulting multidimensional array at pProcessedArray
+        */
+       virtual int ProcessBuffer(unsigned pDataBuffer, unsigned pProcessedArray) = 0;
+       /**
+        * Get dimensionality of the array obtained as a result of processing data
+        */
+       virtual int GetProcessedArrayDimension(unsigned& numberOfDimensions) = 0;
+       /**
+        * Get the shape of the array (how long the dimensions are)
+        */
+       virtual int GetProcessedArrayShape(unsigned& shape) = 0;
+
+       // Calls that are implemented at the DeviceBase level and
+       // remain the same for any DataStreamer device
+       virtual int SetStreamLength(unsigned numberOfBuffers, double timeUs) = 0;
+       virtual int GetStreamLength(unsigned& numberOfBuffers, double& timeUs) = 0;
+       virtual int StartStream() = 0;
+       virtual int StopStream() = 0;
+       virtual int PauseStream() = 0;
+       virtual int IsStreaming(unsigned& isStreaming) = 0;
+   };
+   
+   /**
     * HUB device. Used for complex uber-device functionality in microscope stands
     * and managing auto-configuration (discovery) of other devices
     */
