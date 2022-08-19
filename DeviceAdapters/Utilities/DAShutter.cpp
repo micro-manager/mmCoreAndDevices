@@ -37,7 +37,7 @@ extern const char* g_NoDevice;
 
 
 DAShutter::DAShutter() :
-   DADeviceName_(""),
+   DADeviceName_(g_NoDevice),
    initialized_(false)
 {
    InitializeDefaultErrorMessages();
@@ -84,7 +84,7 @@ int DAShutter::Initialize()
    }
 
    CPropertyAction* pAct = new CPropertyAction(this, &DAShutter::OnDADevice);
-   CreateProperty("DA Device", availableDAs_[0].c_str(), MM::String, false, pAct, false);
+   CreateProperty("DA Device", g_NoDevice, MM::String, false, pAct, false);
    SetAllowedValues("DA Device", availableDAs_);
    SetProperty("DA Device", availableDAs_[0].c_str());
 
@@ -118,19 +118,18 @@ bool DAShutter::Busy()
 int DAShutter::SetOpen(bool open)
 {
    MM::SignalIO* da = (MM::SignalIO*)GetDevice(DADeviceName_.c_str());
-   if (da == 0)
-      return ERR_NO_DA_DEVICE;
-
-   return da->SetGateOpen(open);
+   if (da != 0)
+      return da->SetGateOpen(open);
+   return DEVICE_OK;
 }
 
 int DAShutter::GetOpen(bool& open)
 {
    MM::SignalIO* da = (MM::SignalIO*)GetDevice(DADeviceName_.c_str());
-   if (da == 0)
-      return false;
-
-   return da->GetGateOpen(open);
+   if (da != 0)
+      return da->GetGateOpen(open);
+   open = false;
+   return DEVICE_OK;   
 }
 
 ///////////////////////////////////////
