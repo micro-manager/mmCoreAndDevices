@@ -410,8 +410,11 @@ int CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPo
   if ( LaserInterface_ != nullptr && PowerInterface_ != nullptr && ILEInterface_ != nullptr )
   {
     int vNbLasers = LaserInterface_->Initialize();
-    if ( vNbLasers <= 0 )
+    if ( vNbLasers != NumberOfLasers_ )
     {
+      LaserInterface_ = nullptr;
+      PowerInterface_ = nullptr;
+      ILEInterface_ = nullptr;
       return ERR_LASERS_INIT;
     }
     WaitOnLaserWarmingUp();
