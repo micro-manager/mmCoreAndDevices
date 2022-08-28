@@ -26,19 +26,6 @@ const char* const g_LaserEnableOn = "On";
 const char* const g_LaserEnableOff = "Off";
 const char* const g_LaserEnableTTL = "External TTL";
 
-struct TLaserRange
-{
-  double PowerMin = 0;
-  double PowerMax = 0;
-};
-
-struct CLaserState
-{
-  float PowerSetPoint_ = 0;
-  std::string Enable_ = g_LaserEnableOn;
-  TLaserRange LaserRange_;
-};
-
 class CLasers
 {
 public:
@@ -64,7 +51,20 @@ public:
   void CheckAndUpdateLasers();
   int UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface );
 
-private:   
+private:
+  struct TLaserRange
+  {
+    double PowerMin = 0;
+    double PowerMax = 0;
+  };
+
+  struct CLaserState
+  {
+    float PowerSetPoint_ = 0;
+    std::string Enable_ = g_LaserEnableOn;
+    TLaserRange LaserRange_;
+  };
+
   IALC_REV_Laser2 *LaserInterface_;
   IALC_REV_ILEPowerManagement* PowerInterface_;
   IALC_REV_ILE* ILEInterface_;

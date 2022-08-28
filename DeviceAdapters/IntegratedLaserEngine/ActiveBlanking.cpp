@@ -13,6 +13,7 @@
 const char* const g_PropertyBaseName = "Active Blanking";
 const char* const g_On = "On";
 const char* const g_Off = "Off";
+const int CActiveBlanking::LineMaskSize_ = sizeof( CActiveBlanking::EnabledPattern_ ) * CHAR_BIT;
 
 CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface, CIntegratedLaserEngine* MMILE ) :
   ActiveBlankingInterface_( ActiveBlankingInterface ),
@@ -27,13 +28,17 @@ CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBl
     throw std::logic_error( "CActiveBlanking: Pointer tomain class invalid" );
   }
 
-  int vNbLines;
-  if ( !ActiveBlankingInterface_->GetNumberOfLines( &vNbLines ) )
+  if ( !ActiveBlankingInterface_->GetNumberOfLines( &NumberOfLines_ ) )
   {
     throw std::runtime_error( "ActiveBlankingInterface GetNumberOfLines failed" );
   }
 
-  if ( vNbLines > 0 )
+  if ( NumberOfLines_ <= 0 || NumberOfLines_ > LineMaskSize_ )
+  {
+    MMILE_->LogMMMessage( "Invalid number of lines returned by ActiveBlankingInterface GetNumberOfLines [" + std::to_string( NumberOfLines_ ) + "]", true );
+    NumberOfLines_ = 0;
+  }
+  else
   {
     if ( !ActiveBlankingInterface_->GetActiveBlankingState( &EnabledPattern_ ) )
     {
@@ -47,7 +52,7 @@ CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBl
     char vLineName[2];
     vLineName[1] = 0;
     std::string vPropertyName;
-    for ( int vLineIndex = 0; vLineIndex < vNbLines; vLineIndex++ )
+    for ( int vLineIndex = 0; vLineIndex < NumberOfLines_; vLineIndex++ )
     {
       vLineName[0] = CPorts::PortIndexToName( vLineIndex + 1 ); // port indices are 1-based but line indices are 0-based
       vPropertyName = "Port " + std::string( vLineName ) + "-" + g_PropertyBaseName;
@@ -68,45 +73,37 @@ CActiveBlanking::~CActiveBlanking()
 
 bool CActiveBlanking::IsLineEnabled( int Line ) const
 {
-  if ( Line < PropertyLineIndexMap_.size() )
-  {
-    int vMask = 1;
-    for ( int vIt = 0; vIt < Line; vIt++ )
-    {
-      vMask <<= 1;
-    }
-    return ( EnabledPattern_ & vMask ) != 0;
-  }
-  return false;
+  // Note: Line is 0-based
+  int vMask = 1 << Line;
+  return ( EnabledPattern_ & vMask ) != 0;
 }
 
 void CActiveBlanking::ChangeLineState( int Line )
 {
-  if ( Line < PropertyLineIndexMap_.size() )
-  {
-    int vMask = 1;
-    for ( int vIt = 0; vIt < Line; vIt++ )
-    {
-      vMask <<= 1;
-    }
-    EnabledPattern_ ^= vMask;
-  }
+  // Note: Line is 0-based
+  int vMask = 1 << Line;
+  EnabledPattern_ ^= vMask;
 }
 
 int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
-  if ( PropertyPointers_.find( Prop->GetName() ) != PropertyPointers_.end() && PropertyPointers_[Prop->GetName()] == nullptr )
+  std::string vPropName = Prop->GetName();
+
+  if ( PropertyPointers_.find( vPropName ) == PropertyPointers_.end()
+    || PropertyLineIndexMap_.find( vPropName ) == PropertyLineIndexMap_.end() )
   {
-    PropertyPointers_[Prop->GetName()] = Prop;
+    return DEVICE_OK;
   }
+
+  if ( PropertyPointers_[vPropName] == nullptr )
+  {
+    PropertyPointers_[vPropName] = Prop;
+  }
+
   if ( Act == MM::BeforeGet )
   {
-    if ( PropertyLineIndexMap_.find( Prop->GetName() ) != PropertyLineIndexMap_.end() )
-    {
-      int vLineIndex = PropertyLineIndexMap_[Prop->GetName()];
-      bool vEnabled = IsLineEnabled( vLineIndex );
-      Prop->Set( vEnabled ? g_On : g_Off );
-    }
+    bool vEnabled = IsLineEnabled( PropertyLineIndexMap_[vPropName] );
+    Prop->Set( vEnabled ? g_On : g_Off );
   }
   else if ( Act == MM::AfterSet )
   {
@@ -115,33 +112,34 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
     {
       return vInterlockStatus;
     }
+
     if ( ActiveBlankingInterface_ == nullptr )
     {
       return ERR_DEVICE_NOT_CONNECTED;
     }
 
-    if ( PropertyLineIndexMap_.find( Prop->GetName() ) != PropertyLineIndexMap_.end() )
+    int vLineIndex = PropertyLineIndexMap_[vPropName];
+    bool vCurrentlyEnabled = IsLineEnabled( vLineIndex );
+
+    std::string vValue;
+    Prop->Get( vValue );
+    bool vRequestEnabled = ( vValue == g_On );
+
+    if ( vCurrentlyEnabled != vRequestEnabled )
     {
-      int vLineIndex = PropertyLineIndexMap_[Prop->GetName()];
-      std::string vValue;
-      Prop->Get( vValue );
-      bool vRequestEnabled = ( vValue == g_On );
-      bool vEnabled = IsLineEnabled( vLineIndex );
-      if ( vEnabled != vRequestEnabled )
+      ChangeLineState( vLineIndex );
+      if ( !ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ ) )
       {
-        ChangeLineState( vLineIndex );
-        if ( !ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ ) )
+        std::string message = "Active Blanking for line " + std::to_string( static_cast< long long >( vLineIndex ) ) + " FAILED";
+        if ( vRequestEnabled )
         {
-          if ( vRequestEnabled )
-          {
-            MMILE_->LogMMMessage( "Enabling Active Blanking for line " + std::to_string( static_cast<long long>( vLineIndex ) ) + " FAILED" );
-          }
-          else
-          {
-            MMILE_->LogMMMessage( "Disabling Active Blanking for line " + std::to_string( static_cast<long long>( vLineIndex ) ) + " FAILED" );
-          }
-          return ERR_ACTIVEBLANKING_SET;
+          MMILE_->LogMMMessage( "Enabling " + message );
         }
+        else
+        {
+          MMILE_->LogMMMessage( "Disabling " + message );
+        }
+        return ERR_ACTIVEBLANKING_SET;
       }
     }
   }
@@ -151,24 +149,21 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
 int CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* ActiveBlankingInterface )
 {
   ActiveBlankingInterface_ = ActiveBlankingInterface;
-  if ( ActiveBlankingInterface_ != nullptr )
+  if ( ActiveBlankingInterface_ != nullptr && NumberOfLines_ > 0 )
   {
     int vNbLines;
-    if ( ActiveBlankingInterface_->GetNumberOfLines( &vNbLines ) )
+    if ( bool vGetNbLinesSuccess = ActiveBlankingInterface_->GetNumberOfLines( &vNbLines ) 
+      && vNbLines == NumberOfLines_ )
     {
       if ( ActiveBlankingInterface_->GetActiveBlankingState( &EnabledPattern_ ) )
       {
         MMILE_->LogMMMessage( "Resetting active blanking to device state [" + std::to_string( static_cast<long long>( EnabledPattern_ ) ) + "]", true );
-        int vLineIndex = 0;
-        std::map<std::string, int>::const_iterator vPropertyIt = PropertyLineIndexMap_.begin();
-        while ( vPropertyIt != PropertyLineIndexMap_.end() )
+        for ( auto const& vLineIndex : PropertyLineIndexMap_ )
         {
-          if ( vPropertyIt->second < vNbLines && PropertyPointers_.find( vPropertyIt->first.c_str() ) != PropertyPointers_.end() && PropertyPointers_[vPropertyIt->first] != nullptr )
+          if ( PropertyPointers_[vLineIndex.first] != nullptr )
           {
-            PropertyPointers_[vPropertyIt->first]->Set( IsLineEnabled( vLineIndex ) ? g_On : g_Off );
+            PropertyPointers_[vLineIndex.first]->Set( IsLineEnabled( vLineIndex.second ) ? g_On : g_Off );
           }
-          ++vLineIndex;
-          ++vPropertyIt;
         }
       }
       else
@@ -178,6 +173,10 @@ int CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* A
     }
     else
     {
+      if ( vGetNbLinesSuccess )
+      {
+        MMILE_->LogMMMessage( "Invalid number of lines returned by ActiveBlankingInterface GetNumberOfLines [" + std::to_string( vNbLines ) + "], expected [" + std::to_string( NumberOfLines_ ) + "]", true );
+      }
       return ERR_ACTIVEBLANKING_GETNBLINES;
     }
   }
