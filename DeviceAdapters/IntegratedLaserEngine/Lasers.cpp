@@ -164,6 +164,7 @@ void CLasers::GenerateProperties()
     PropertyPointers_[vPropertyName] = nullptr;
 
     // Enable
+#ifdef SHOW_LASER_ENABLE_PROPERTY
     vActEx = new CPropertyActionEx( this, &CLasers::OnEnable, vLaserIndex );
     vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
     std::vector<std::string> vEnableStates;
@@ -176,6 +177,7 @@ void CLasers::GenerateProperties()
     MMILE_->CreateProperty( vPropertyName.c_str(), vEnableStates[0].c_str(), MM::String, false, vActEx );
     MMILE_->SetAllowedValues( vPropertyName.c_str(), vEnableStates );
     PropertyPointers_[vPropertyName] = nullptr;
+#endif
   }
 
   CPropertyAction* vAct = new CPropertyAction( this, &CLasers::OnInterlockStatus );
