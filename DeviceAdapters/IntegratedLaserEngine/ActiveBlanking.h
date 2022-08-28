@@ -35,6 +35,10 @@ private:
 
   bool IsLineEnabled( int Line ) const;
   void ChangeLineState( int Line );
+  bool IsActiveBlankingEnabled() const;
+  void EnableActiveBlanking();
+  void DisableActiveBlanking();
+  bool InitialiseActiveBlanking();
 };
 
 #endif

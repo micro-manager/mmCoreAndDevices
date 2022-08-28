@@ -10,7 +10,7 @@
 #include "ALC_REV.h"
 #include <exception>
 
-const char* const g_PropertyBaseName = "Active Blanking";
+const char* const g_PropertyBaseName = "Laser Active Blanking";
 const char* const g_On = "On";
 const char* const g_Off = "Off";
 const int CActiveBlanking::LineMaskSize_ = sizeof( CActiveBlanking::EnabledPattern_ ) * CHAR_BIT;
@@ -45,6 +45,7 @@ CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBl
       throw std::runtime_error( "ActiveBlankingInterface GetActiveBlankingState failed" );
     }
 
+#ifdef USE_PORT_SPECIFIC_ACTIVE_BLANKING
     // Create properties
     std::vector<std::string> vAllowedValues;
     vAllowedValues.push_back( g_On );
@@ -63,6 +64,22 @@ CActiveBlanking::CActiveBlanking( IALC_REV_ILEActiveBlankingManagement* ActiveBl
       MMILE_->CreateStringProperty( vPropertyName.c_str(), vEnabled ? g_On : g_Off, false, vAct );
       MMILE_->SetAllowedValues( vPropertyName.c_str(), vAllowedValues );
     }
+#else
+    // Retrieve Active Blanking value
+    bool vActiveBlankingEnabled = InitialiseActiveBlanking();
+
+    // Create property
+    PropertyLineIndexMap_[g_PropertyBaseName] = 0;
+    PropertyPointers_[g_PropertyBaseName] = nullptr;
+
+    std::vector<std::string> vAllowedValues;
+    vAllowedValues.push_back( g_On );
+    vAllowedValues.push_back( g_Off );
+
+    CPropertyAction* vAct = new CPropertyAction( this, &CActiveBlanking::OnValueChange );
+    MMILE_->CreateStringProperty( g_PropertyBaseName, vActiveBlankingEnabled ? g_On : g_Off, false, vAct );
+    MMILE_->SetAllowedValues( g_PropertyBaseName, vAllowedValues );
+#endif
   }
 }
 
@@ -83,6 +100,68 @@ void CActiveBlanking::ChangeLineState( int Line )
   // Note: Line is 0-based
   int vMask = 1 << Line;
   EnabledPattern_ ^= vMask;
+}
+
+bool CActiveBlanking::IsActiveBlankingEnabled() const
+{
+  return IsLineEnabled( 0 );
+}
+
+void CActiveBlanking::EnableActiveBlanking()
+{
+  // Set all ports to 1
+  if ( NumberOfLines_ < LineMaskSize_ - 1 )
+  {
+    EnabledPattern_ = ( 1 << NumberOfLines_ ) - 1;
+  }
+  else if ( NumberOfLines_ == LineMaskSize_ - 1 )
+  {
+    //0x7FFFFFFF for 32b int
+    EnabledPattern_ = ~( 1 << NumberOfLines_ );
+  }
+  else if ( NumberOfLines_ == LineMaskSize_ )
+  {
+    //0xFFFFFFFF for 32b int
+    EnabledPattern_ = ~( EnabledPattern_ & 0 );
+  }
+}
+
+void CActiveBlanking::DisableActiveBlanking()
+{
+  EnabledPattern_ = 0;
+}
+
+bool CActiveBlanking::InitialiseActiveBlanking()
+{
+  bool vActiveBlankingEnabled = false;
+  if ( NumberOfLines_ < 2 )
+  {
+    // Use the only port available (port A)
+    vActiveBlankingEnabled = IsLineEnabled( 0 );
+  }
+  else
+  {
+    // Use port B if it exists
+    vActiveBlankingEnabled = IsLineEnabled( 1 );
+  }
+
+  // Ensure all ports are properly initialised
+  EnabledPattern_ = 0;
+  if ( vActiveBlankingEnabled )
+  {
+    EnableActiveBlanking();
+  }
+
+  int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+  if ( vInterlockStatus == DEVICE_OK )
+  {
+    if ( !ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ ) )
+    {
+      throw std::runtime_error( "ActiveBlankingInterface SetActiveBlankingState failed on initialisation" );
+    }
+  }
+
+  return vActiveBlankingEnabled;
 }
 
 int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
@@ -127,10 +206,25 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
 
     if ( vCurrentlyEnabled != vRequestEnabled )
     {
+#ifdef USE_PORT_SPECIFIC_ACTIVE_BLANKING
       ChangeLineState( vLineIndex );
+#else
+      if ( vRequestEnabled )
+      {
+        EnableActiveBlanking();
+      }
+      else
+      {
+        DisableActiveBlanking();
+      }
+#endif
       if ( !ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ ) )
       {
+#ifdef USE_PORT_SPECIFIC_ACTIVE_BLANKING
         std::string message = "Active Blanking for line " + std::to_string( static_cast< long long >( vLineIndex ) ) + " FAILED";
+#else
+        std::string message = "Active Blanking FAILED";
+#endif
         if ( vRequestEnabled )
         {
           MMILE_->LogMMMessage( "Enabling " + message );
@@ -157,6 +251,7 @@ int CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* A
     {
       if ( ActiveBlankingInterface_->GetActiveBlankingState( &EnabledPattern_ ) )
       {
+#ifdef USE_PORT_SPECIFIC_ACTIVE_BLANKING
         MMILE_->LogMMMessage( "Resetting active blanking to device state [" + std::to_string( static_cast<long long>( EnabledPattern_ ) ) + "]", true );
         for ( auto const& vLineIndex : PropertyLineIndexMap_ )
         {
@@ -165,6 +260,14 @@ int CActiveBlanking::UpdateILEInterface( IALC_REV_ILEActiveBlankingManagement* A
             PropertyPointers_[vLineIndex.first]->Set( IsLineEnabled( vLineIndex.second ) ? g_On : g_Off );
           }
         }
+#else
+        bool vActiveBlankingEnabled = InitialiseActiveBlanking();
+        MMILE_->LogMMMessage( "Resetting active blanking to device state [" + vActiveBlankingEnabled ? std::string("Enabled") : std::string( "Disabled" ) + "]", true);
+        if ( PropertyPointers_[g_PropertyBaseName] != nullptr )
+        {
+          PropertyPointers_[g_PropertyBaseName]->Set( vActiveBlankingEnabled ? g_On : g_Off );
+        }
+#endif
       }
       else
       {
