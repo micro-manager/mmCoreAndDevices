@@ -6,11 +6,12 @@
 
 #include "NDFilters.h"
 #include "IntegratedLaserEngine.h"
+#include "Ports.h"
 #include "ALC_REV.h"
 #include <exception>
 #include <string>
 
-const char* const g_PropertyName = "ND Filters";
+const char* const g_PropertyBaseName = "ND Filters";
 const char* const g_1x = "100%";
 
 CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegratedLaserEngine* MMILE ) :
@@ -37,6 +38,16 @@ CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegrate
     throw std::runtime_error( "ILE GetNumberOfLowPowerLevels failed" );
   }
 
+  int vLowPowerPortIndex;
+  if ( !PowerInterface_->GetLowPowerPort( &vLowPowerPortIndex ) )
+  {
+    throw std::runtime_error( "ILE GetLowPowerPort failed" );
+  }
+  if ( vLowPowerPortIndex < 1 )
+  {
+    throw std::runtime_error( "Low Power port index invalid [" + std::to_string( static_cast< long long >( vLowPowerPortIndex ) ) + "]" );
+  }
+
   FilterPositions_.push_back( g_1x );
   for ( int vLevel = 1; vLevel < vNumLevels + 1; ++vLevel )
   {
@@ -60,9 +71,13 @@ CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegrate
   }
 
   // Create property
+  char vPortName[2];
+  vPortName[1] = 0;
+  vPortName[0] = CPorts::PortIndexToName( vLowPowerPortIndex );
+  std::string vPropertyName = std::string( "Port " ) + vPortName + "-" + g_PropertyBaseName;
   CPropertyAction* vAct = new CPropertyAction( this, &CNDFilters::OnValueChange );
-  MMILE_->CreateStringProperty( g_PropertyName, FilterPositions_[CurrentFilterPosition_].c_str(), false, vAct );
-  MMILE_->SetAllowedValues( g_PropertyName, FilterPositions_ );
+  MMILE_->CreateStringProperty( vPropertyName.c_str(), FilterPositions_[CurrentFilterPosition_].c_str(), false, vAct);
+  MMILE_->SetAllowedValues( vPropertyName.c_str(), FilterPositions_ );
 }
 
 CNDFilters::~CNDFilters()
