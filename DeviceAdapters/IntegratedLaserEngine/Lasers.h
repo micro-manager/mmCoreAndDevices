@@ -99,6 +99,7 @@ private:
   bool AllowsExternalTTL( const int LaserIndex );
   float PowerSetpoint( const int LaserIndex );  // milli-Watts
   void PowerSetpoint( const int LaserIndex, const float Value );  // milli-Watts
+  std::vector<int> GetLasersSortedByPower() const;
   void UpdateLasersRange();
   int CheckInterlock( int LaserIndex );
   bool IsKeyInterlockTriggered( int LaserIndex );

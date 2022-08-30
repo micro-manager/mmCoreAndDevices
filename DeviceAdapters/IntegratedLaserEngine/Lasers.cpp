@@ -7,6 +7,8 @@
 #include "ALC_REV.h"
 #include "Lasers.h"
 #include "IntegratedLaserEngine.h"
+#include <numeric>
+#include <algorithm>
 
 // Properties
 const char* const g_EnableProperty = "Power Enable";
@@ -336,8 +338,10 @@ int CLasers::SetOpen(bool Open)
     }
   }
 
+  std::vector<int> vSortedLaserIndicesByPower = GetLasersSortedByPower();
+
   // Update laser values
-  for( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex)
+  for ( int vLaserIndex : vSortedLaserIndicesByPower )
   {
     if ( Open )
     {
@@ -506,9 +510,29 @@ float CLasers::PowerSetpoint(const int LaserIndex )
   return LasersState_[LaserIndex].PowerSetPoint_;
 }
 
-void  CLasers::PowerSetpoint(const int LaserIndex, const float Value)
+void CLasers::PowerSetpoint(const int LaserIndex, const float Value)
 {
   LasersState_[LaserIndex].PowerSetPoint_ = Value;
+}
+
+std::vector<int> CLasers::GetLasersSortedByPower() const
+{
+  auto vLaserPowerComp = [this]( int laserIndex1, int laserIndex2 ) { return LasersState_[laserIndex1].PowerSetPoint_ < LasersState_[laserIndex2].PowerSetPoint_; };
+
+  std::vector<int> vLaserIndices( NumberOfLasers_ );
+  std::iota( vLaserIndices.begin(), vLaserIndices.end(), 1 );
+  std::sort( vLaserIndices.begin(), vLaserIndices.end(), vLaserPowerComp );
+
+  /*
+  std::vector<int> vLaserIndices;
+  for ( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex )
+  {
+    std::vector<int>::const_iterator vIndexIt = std::upper_bound( vLaserIndices.begin(), vLaserIndices.end(), vLaserIndex, vLaserPowerComp );
+    vLaserIndices.insert( vIndexIt, vLaserIndex );
+  }
+  */
+
+  return vLaserIndices;
 }
 
 bool CLasers::AllowsExternalTTL(const int LaserIndex )
