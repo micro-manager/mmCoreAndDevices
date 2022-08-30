@@ -122,6 +122,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_LASER_SET, "Setting laser power failed" );
   SetErrorText( ERR_SETCONTROLMODE, "Setting control mode failed" );
   SetErrorText( ERR_SETLASERSHUTTER, "Failed to open or close the laser shutter!" );
+  SetErrorText( ERR_MAX_POWER_LIMIT_EXCEEDED, "Failed to set laser power, maximum device power limit exceeded" );
 
   SetErrorText( ERR_ACTIVEBLANKING_SET, "Setting active blanking failed" );
   SetErrorText( ERR_ACTIVEBLANKING_GETNBLINES, "Getting the number of lines for Active Blanking failed" );

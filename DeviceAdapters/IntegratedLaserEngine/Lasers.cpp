@@ -358,8 +358,18 @@ int CLasers::SetOpen(bool Open)
           MMILE_->LogMMMessage( "Setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long double>( vPower ) ) + "% full scale", true );
           if ( !LaserInterface_->SetLas_I( vLaserIndex, vPower, vLaserOn ) )
           {
-            MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long double>( vPower ) ) + "]" );
-            return ERR_LASER_SET;
+            std::string vMessage = "Setting Laser power for laser " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " failed";
+            int vProhibited;
+            if ( LaserInterface_->WasLaserIlluminationProhibitedOnLastChange( vLaserIndex, &vProhibited ) && vProhibited == 1 )
+            {
+              MMILE_->LogMMMessage( vMessage + " because the maximum power limit was exceeded" );
+              return ERR_MAX_POWER_LIMIT_EXCEEDED;
+            }
+            else
+            {
+              MMILE_->LogMMMessage( vMessage + " for value [" + std::to_string( static_cast< long double >( vPower ) ) + "]" );
+              return ERR_LASER_SET;
+            }
           }
         }
       }
