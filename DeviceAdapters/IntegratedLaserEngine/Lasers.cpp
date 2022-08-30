@@ -228,11 +228,20 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
     int vRet = CheckInterlock( LaserIndex );
     if ( vRet == DEVICE_OK )
     {
+      float vOldValue = PowerSetpoint( LaserIndex );
       Prop->Get( vPowerSetpoint );
       MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long double>( vPowerSetpoint ) ), true );
       PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
       if ( OpenRequest_ )
-        return SetOpen();
+      {
+        vRet = SetOpen();
+        if ( vRet != DEVICE_OK )
+        {
+          PowerSetpoint( LaserIndex, vOldValue );
+          Prop->Set( vOldValue );
+          return vRet;
+        }
+      }
     }
 
     //Prop->Set(achievedSetpoint);  ---- for quantization....
@@ -414,7 +423,7 @@ void CLasers::UpdateLasersRange()
 {
   if ( PowerInterface_ != nullptr )
   {
-    for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
+    for ( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex )
     {
       TLaserRange& vLaserRange = LasersState_[vLaserIndex].LaserRange_;
       PowerInterface_->GetPowerRange( vLaserIndex, &( vLaserRange.PowerMin ), &( vLaserRange.PowerMax ) );
