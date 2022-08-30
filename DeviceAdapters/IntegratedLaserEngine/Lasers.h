@@ -109,6 +109,7 @@ private:
   void DisplayClassIVInterlockMessage( MM::PropertyBase* Prop );
   void DisplayInterlockMessage( MM::PropertyBase* Prop );
   void DisplayNoInterlockMessage( MM::PropertyBase* Prop );
+  int ChangeDeviceShutterState( bool Open );
 };
 
 

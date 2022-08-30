@@ -226,7 +226,7 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   else if ( Act == MM::AfterSet )
   {
     int vRet = CheckInterlock( LaserIndex );
-    if (vRet == DEVICE_OK)
+    if ( vRet == DEVICE_OK )
     {
       Prop->Get( vPowerSetpoint );
       MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long double>( vPowerSetpoint ) ), true );
@@ -305,6 +305,9 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
 
 int CLasers::SetOpen(bool Open)
 {
+  static const std::string vOn{ "On" };
+  static const std::string vOff{ "Off" };
+
   int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
   if ( vInterlockStatus != DEVICE_OK )
   {
@@ -315,6 +318,16 @@ int CLasers::SetOpen(bool Open)
     return ERR_DEVICE_NOT_CONNECTED;
   }
 
+  // If we close the shutter, do it before modifying laser values
+  if ( !Open )
+  {
+    if ( int vRet = ChangeDeviceShutterState( Open ) != DEVICE_OK )
+    {
+      return vRet;
+    }
+  }
+
+  // Update laser values
   for( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex)
   {
     if ( Open )
@@ -327,7 +340,7 @@ int CLasers::SetOpen(bool Open)
       }
       double vPower = ( vPercentScale / 100. ) * ( LasersState_[vLaserIndex].LaserRange_.PowerMax - LasersState_[vLaserIndex].LaserRange_.PowerMin ) + LasersState_[vLaserIndex].LaserRange_.PowerMin;
 
-      MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( vLaserIndex ) ) + "  = " + std::to_string( static_cast<long double>( vPower ) ) + "(" + std::to_string( static_cast<long long>( vLaserOn ) ) + ")", true );
+      MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( vLaserIndex ) ) + "  = " + std::to_string( static_cast<long double>( vPower ) ) + " (" + (vLaserOn ? vOn : vOff) + ")", true );
 
       TLaserState vLaserState;
       if ( LaserInterface_->GetLaserState( vLaserIndex, &vLaserState ) )
@@ -342,7 +355,7 @@ int CLasers::SetOpen(bool Open)
 
         if ( vLaserState > ALC_NOT_AVAILABLE )
         {
-          MMILE_->LogMMMessage( "setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long double>( vPower ) ) + "% full scale", true );
+          MMILE_->LogMMMessage( "Setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long double>( vPower ) ) + "% full scale", true );
           if ( !LaserInterface_->SetLas_I( vLaserIndex, vPower, vLaserOn ) )
           {
             MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long double>( vPower ) ) + "]" );
@@ -355,12 +368,14 @@ int CLasers::SetOpen(bool Open)
         return ERR_LASER_STATE_READ;
       }
     }
-    MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast<long long>( Open ) ), true );
-    bool vSuccess = LaserInterface_->SetLas_Shutter( Open );
-    if ( !vSuccess )
+  }
+
+  // If we open the shutter, do it only once all laser values are set
+  if ( Open )
+  {
+    if ( int vRet = ChangeDeviceShutterState( Open ) != DEVICE_OK )
     {
-      MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast<long long>( Open ) ) + " failed", false );
-      return ERR_SETLASERSHUTTER;
+      return vRet;
     }
   }
 
@@ -487,6 +502,21 @@ bool CLasers::AllowsExternalTTL(const int LaserIndex )
   int vValue = 0;
   LaserInterface_->IsControlModeAvailable( LaserIndex, &vValue);
   return (vValue == 1);
+}
+
+int CLasers::ChangeDeviceShutterState( bool Open )
+{
+  static const std::string vOpen{ "Open" };
+  static const std::string vClose{ "Close" };
+
+  MMILE_->LogMMMessage( "Set shutter [" + (Open ? vOpen : vClose) + "]", true);
+  bool vSuccess = LaserInterface_->SetLas_Shutter( Open );
+  if ( !vSuccess )
+  {
+    MMILE_->LogMMMessage( "Set shutter [" + (Open ? vOpen : vClose) + "] failed", false );
+    return ERR_SETLASERSHUTTER;
+  }
+  return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
