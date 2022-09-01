@@ -316,11 +316,13 @@ int SpinnakerCamera::Initialize()
          GENICAM::gcstring currentVideoMode = VM->GetCurrentEntry()->GetSymbolic();
          VM->GetSymbolics(videoModes);
 
-         pAct = new CPropertyAction(this, &SpinnakerCamera::OnBinningEnum);
-         CreateProperty(MM::g_Keyword_Binning, VM->GetCurrentEntry()->GetSymbolic(), MM::String, false, pAct);
-         for (unsigned int i = 0; i < videoModes.size(); i++)
-            AddAllowedValue(MM::g_Keyword_Binning, videoModes[i].c_str());
+         CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
 
+         pAct = new CPropertyAction(this, &SpinnakerCamera::OnVideoMode);
+         CreateStringProperty("Video Mode", currentVideoMode.c_str(), false, pAct);
+         for (const auto& videoMode : videoModes) {
+             AddAllowedValue("Video Mode", videoMode.c_str());
+         }
 
          for (unsigned int i = 0; i < videoModes.size(); i++)
          {
@@ -1262,7 +1264,7 @@ int SpinnakerCamera::OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct)
    return OnFloatPropertyChanged(m_cam->AcquisitionFrameRate, pProp, eAct);
 }
 
-int SpinnakerCamera::OnBinningEnum(MM::PropertyBase* pProp, MM::ActionType eAct)
+int SpinnakerCamera::OnVideoMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    GENAPI::CEnumerationPtr VM = m_cam->GetNodeMap().GetNode("VideoMode");
    if (eAct == MM::BeforeGet)

@@ -56,7 +56,7 @@ public:
    int OnFrameRateAuto(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnExposureAuto(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnBinningEnum(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnVideoMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBinningInt(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBinningModeEnum(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnADCBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
