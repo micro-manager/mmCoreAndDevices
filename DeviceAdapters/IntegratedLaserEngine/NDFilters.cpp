@@ -61,7 +61,6 @@ CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegrate
     }
   }
 
-  CurrentFilterPosition_ = 0;
   if ( vEnabled )
   {
     if ( !PowerInterface_->GetLowPowerLevel( &CurrentFilterPosition_ ) )

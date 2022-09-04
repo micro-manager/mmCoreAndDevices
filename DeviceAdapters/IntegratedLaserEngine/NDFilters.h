@@ -27,9 +27,8 @@ public:
 private:
   IALC_REV_ILEPowerManagement2* PowerInterface_;
   CIntegratedLaserEngine* MMILE_;
-  int CurrentFilterPosition_;
+  int CurrentFilterPosition_ = 0;
   std::vector<std::string> FilterPositions_;
-  MM::PropertyBase* PropertyPointer_;
 
   int SetDevice( int Position, bool Initialisation );
 };

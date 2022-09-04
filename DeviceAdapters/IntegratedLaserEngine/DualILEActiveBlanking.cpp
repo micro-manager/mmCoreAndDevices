@@ -71,7 +71,7 @@ CDualILEActiveBlanking::CDualILEActiveBlanking( IALC_REV_ILE4* DualActiveBlankin
   vAllowedValues.push_back( g_On );
   vAllowedValues.push_back( g_Off );
   CPropertyAction* vAct = new CPropertyAction( this, &CDualILEActiveBlanking::OnValueChange );
-  MMILE_->CreateStringProperty( g_PropertyName, Unit1EnabledPattern_ | Unit2EnabledPattern_ ? g_On : g_Off, false, vAct );
+  MMILE_->CreateStringProperty( g_PropertyName, ( Unit1EnabledPattern_ | Unit2EnabledPattern_ ) ? g_On : g_Off, false, vAct );
   MMILE_->SetAllowedValues( g_PropertyName, vAllowedValues );
 }
 
@@ -88,7 +88,7 @@ int CDualILEActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionTy
   }
   if ( Act == MM::BeforeGet )
   {
-    Prop->Set( Unit1EnabledPattern_ | Unit2EnabledPattern_ ? g_On : g_Off );
+    Prop->Set( ( Unit1EnabledPattern_ | Unit2EnabledPattern_ ) ? g_On : g_Off );
   }
   else if ( Act == MM::AfterSet )
   {
@@ -143,7 +143,7 @@ int CDualILEActiveBlanking::UpdateILEInterface( IALC_REV_ILE4* DualActiveBlankin
     MMILE_->LogMMMessage( "Resetting active blanking to device state [" + std::to_string( static_cast<long long>( Unit1EnabledPattern_ ) ) + ", " + std::to_string( static_cast<long long>( Unit2EnabledPattern_ ) ) + "]", true );
     if ( PropertyPointer_ != nullptr )
     {
-      PropertyPointer_->Set( Unit1EnabledPattern_ | Unit2EnabledPattern_ ? g_On : g_Off );
+      PropertyPointer_->Set( ( Unit1EnabledPattern_ | Unit2EnabledPattern_ ) ? g_On : g_Off );
     }
   }
   return DEVICE_OK;
