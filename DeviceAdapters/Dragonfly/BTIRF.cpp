@@ -65,7 +65,7 @@ CBTIRFCriticalAngleProperty::CBTIRFCriticalAngleProperty( IBorealisTIRFInterface
     throw std::runtime_error( "Failed to retrieve the current value for " + PropertyName_ );
   }
 
-  // Create the MM property for Disk speed
+  // Create the MM property for Critical angle
   CPropertyAction* vAct = new CPropertyAction( this, &CBTIRFCriticalAngleProperty::OnChange );
   MMDragonfly_->CreateIntegerProperty( PropertyName_.c_str(), vValue, false, vAct );
   MMDragonfly_->SetPropertyLimits( PropertyName_.c_str(), vMin, vMax );

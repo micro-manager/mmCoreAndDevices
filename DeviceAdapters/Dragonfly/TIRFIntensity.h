@@ -23,7 +23,8 @@ public:
   CTIRFIntensity( ITIRFIntensityInterface* TIRFIntensity, IConfocalMode* ConfocalMode, CDragonfly* MMDragonfly );
   ~CTIRFIntensity();
 
-  int OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act );
+  int OnIntensityUpdate( MM::PropertyBase * Prop, MM::ActionType Act );
+  int OnMonitoringUpdate( MM::PropertyBase * Prop, MM::ActionType Act );
   typedef MM::Action<CTIRFIntensity> CPropertyAction;
 
   void UpdateFromDevice();
@@ -36,6 +37,7 @@ private:
   std::mutex TIRFIntensityMutex_;
 
   int CurrentTIRFIntensity_ = 0;
+  std::atomic<bool> AllowMonitoring_ = true;
 };
 
 
