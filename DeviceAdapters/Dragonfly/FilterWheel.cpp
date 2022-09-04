@@ -121,6 +121,7 @@ bool CFilterWheel::GetPosition( unsigned int& Position )
 }
 bool CFilterWheel::SetPosition( unsigned int Position )
 {
+  MMDragonfly_->LogComponentMessage( "Set Filter Wheel position to [" + std::to_string( Position ) + "]", true );
   return FilterWheelInterface_->SetPosition( Position );
 }
 bool CFilterWheel::GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition )

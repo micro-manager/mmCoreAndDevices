@@ -109,6 +109,7 @@ int CBTIRFCriticalAngleProperty::OnChange( MM::PropertyBase * Prop, MM::ActionTy
   {
     long vRequestedValue;
     Prop->Get( vRequestedValue );
+    MMDragonfly_->LogComponentMessage( "Set BT Angle to [" + std::to_string( vRequestedValue ) + "]", true );
     BTIRFInterface_->SetBTAngle( vRequestedValue );
   }
 

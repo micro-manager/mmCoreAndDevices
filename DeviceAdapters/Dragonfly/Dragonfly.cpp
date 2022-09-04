@@ -860,7 +860,7 @@ int CDragonfly::CreateBTIRF( IASDInterface4* ASDInterface4 )
   return vErrorCode;
 }
 
-void CDragonfly::LogComponentMessage( const std::string& Message )
+void CDragonfly::LogComponentMessage( const std::string& Message, bool DebugOnly)
 {
-  LogMessage( Message );
+  LogMessage( Message, DebugOnly );
 }

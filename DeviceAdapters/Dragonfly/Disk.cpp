@@ -72,6 +72,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   // Start the disk
   if ( !DiskInterface_->IsSpinning() )
   {
+    MMDragonfly_->LogComponentMessage( "Start disk", true );
     bool vSuccess = DiskInterface_->Start();
     if ( !vSuccess )
     {
@@ -81,6 +82,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   DiskStatus_->Start();
 
   // Initialise the device speed
+  MMDragonfly_->LogComponentMessage( "Set Disk speed to [" + std::to_string( vRequestedSpeed_ ) + "]", true );
   bool vSuccess = DiskSimulator_.SetSpeed( vRequestedSpeed_ );
   //vSuccess = DiskInterface_->SetSpeed( RequestedSpeed_ );
   if ( !vSuccess )
@@ -174,6 +176,7 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
       {
         if ( vRequestedSpeed >= (long)vMin && vRequestedSpeed <= (long)vMax )
         {
+          MMDragonfly_->LogComponentMessage( "Set Disk speed to [" + std::to_string( vRequestedSpeed ) + "]", true );
           if ( DiskSimulator_.SetSpeed( vRequestedSpeed ) )
           //if ( DiskInterface_->SetSpeed( vRequestedSpeed ) )
           {
@@ -218,6 +221,7 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     Prop->Get( vRequest );
     if ( vRequest == g_DiskStatusStart )
     {
+      MMDragonfly_->LogComponentMessage( "Start Disk", true );
       if ( DiskInterface_->Start() )
       {
         boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
@@ -231,6 +235,7 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     }
     if ( vRequest == g_DiskStatusStop )
     {
+      MMDragonfly_->LogComponentMessage( "Stop Disk", true );
       if ( DiskInterface_->Stop() )
       {
         boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );

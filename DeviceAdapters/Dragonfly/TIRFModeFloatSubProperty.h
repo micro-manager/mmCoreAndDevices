@@ -10,6 +10,7 @@
 #include "Property.h"
 #include "ComponentInterface.h"
 #include "TIRFMode.h"
+#include "Dragonfly.h"
 
 class CDragonfly;
 class IConfigFileHandler;
@@ -27,7 +28,7 @@ public:
 class CHILOObliqueAngleWrapper : public CFloatDeviceWrapper
 {
 public:
-  CHILOObliqueAngleWrapper( ITIRFInterface* TIRFInterface ) : TIRFInterface_( TIRFInterface ) {}
+  CHILOObliqueAngleWrapper( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly ) : TIRFInterface_( TIRFInterface ), MMDragonfly_( MMDragonfly ) {}
   bool GetLimits( float* Min, float* Max )
   {
     int vMin, vMax;
@@ -45,11 +46,13 @@ public:
   }
   bool Set( float Value )
   {
+    MMDragonfly_->LogComponentMessage( "Set TIRF Oblique Angle to [" + std::to_string( Value * 1000 ) + "]", true );
     return TIRFInterface_->SetObliqueAngle_mdeg( (int)(Value*1000) );
   }
   ETIRFMode Mode() const { return HiLoObliqueAngle; }
 private:
   ITIRFInterface* TIRFInterface_;
+  CDragonfly* MMDragonfly_;
 };
 
 

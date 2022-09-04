@@ -1,5 +1,6 @@
 #include "DichroicMirror.h"
 #include "FilterWheelProperty.h"
+#include "Dragonfly.h"
 
 #include "ASDInterface.h"
 
@@ -23,6 +24,7 @@ bool CDichroicMirror::GetPosition( unsigned int& Position )
 }
 bool CDichroicMirror::SetPosition( unsigned int Position )
 {
+  MMDragonfly_->LogComponentMessage( "Set Dichroic Mirror position to [" + std::to_string( Position ) + "]", true );
   return DichroicMirrorInterface_->SetPosition( Position );
 }
 bool CDichroicMirror::GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition )

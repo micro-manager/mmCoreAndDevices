@@ -59,6 +59,7 @@ bool CCameraPortMirror::GetPosition( unsigned int& Position )
 }
 bool CCameraPortMirror::SetPosition( unsigned int Position )
 {
+  MMDragonfly_->LogComponentMessage( "Set Camera Port Mirror position to [" + std::to_string( Position ) + "]", true );
   return CameraPortMirrorInterface_->SetPosition( Position );
 }
 bool CCameraPortMirror::GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition )

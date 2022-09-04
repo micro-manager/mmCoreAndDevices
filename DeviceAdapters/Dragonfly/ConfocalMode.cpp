@@ -285,6 +285,7 @@ int CConfocalMode::SetDeviceConfocalMode( TConfocalMode ConfocalMode )
 {
   int vRet = DEVICE_OK;
   bool vDeviceSuccess = true;
+  MMDragonfly_->LogComponentMessage( "Set Confocal Mode to [" + std::to_string( ConfocalMode ) + "]", true );
   switch ( ConfocalMode )
   {
   case bfmWideField:       vDeviceSuccess = ConfocalModeInterface3_->ModeWideField();       break;
@@ -318,6 +319,7 @@ int CConfocalMode::SetDeviceFromPropertyValue( const std::string& PropertValue )
       CurrentConfocalMode_ = vPosition.ConfocalMode;
       if ( IllLensInterface_ != nullptr && !IsTIRFMode( vPosition.ConfocalMode ) )
       {
+        MMDragonfly_->LogComponentMessage( "Set Illumination Lens position to [" + std::to_string( vPosition.PowerDensity ) + "]", true );
         if ( !IllLensInterface_->SetPosition( vPosition.PowerDensity ) )
         {
           MMDragonfly_->LogComponentMessage( "Failed to set the Power density to [" + to_string( vPosition.PowerDensity ) + "] after succesfully setting Imaging mode to [" + to_string( vPosition.ConfocalMode ) + "]" );
