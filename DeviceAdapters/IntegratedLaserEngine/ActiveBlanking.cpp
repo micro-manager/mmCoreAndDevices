@@ -218,6 +218,7 @@ int CActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act 
         DisableActiveBlanking();
       }
 #endif
+      MMILE_->LogMMMessage( "Set Active Blanking state to [" + std::to_string( EnabledPattern_ ) + "]", true );
       if ( !ActiveBlankingInterface_->SetActiveBlankingState( EnabledPattern_ ) )
       {
 #ifdef USE_PORT_SPECIFIC_ACTIVE_BLANKING

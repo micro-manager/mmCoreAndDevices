@@ -184,6 +184,7 @@ int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType
         vPowerInterface = Unit2PowerInterface_;
         vUnitActive = &Unit2Active_;
       }
+      MMILE_->LogMMMessage( "Set Dual Low Power state for unit" + std::to_string( ( *vUnitsIt ) + 1 ) + " to [" + std::string( vEnable ? g_On : g_Off ) + "]", true );
       if ( vPowerInterface && vPowerInterface->SetLowPowerState( vEnable ) )
       {
         *vUnitActive = vEnable;

@@ -104,10 +104,12 @@ int CDualILEActiveBlanking::OnValueChange( MM::PropertyBase * Prop, MM::ActionTy
     std::string vValue;
     Prop->Get( vValue );
     Unit2EnabledPattern_ = Unit1EnabledPattern_ = ( vValue == g_On ) ? 0xFF : 0;
+    MMILE_->LogMMMessage( "Set Dual Active Blanking state for unit1 to [" + std::to_string( Unit1EnabledPattern_ ) + "]", true );
     if ( Unit1ActiveBlankingPresent_ && !DualActiveBlankingInterface_->SetActiveBlankingState( 0, Unit1EnabledPattern_ ) )
     {
       return ERR_ACTIVEBLANKING_SET;
     }
+    MMILE_->LogMMMessage( "Set Dual Active Blanking state for unit2 to [" + std::to_string( Unit2EnabledPattern_ ) + "]", true );
     if ( Unit2ActiveBlankingPresent_ && !DualActiveBlankingInterface_->SetActiveBlankingState( 1, Unit2EnabledPattern_ ) )
     {
       return ERR_ACTIVEBLANKING_SET;

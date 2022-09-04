@@ -284,6 +284,7 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
         if ( vNewLaserEnableState == g_LaserEnableTTL )
         {
           // Enable TTL mode
+          MMILE_->LogMMMessage( "Set Laser Control mode to [PULSED]", true );
           if ( !LaserInterface_->SetControlMode( LaserIndex, EXTERNALMODE::TTL_PULSED ) )
           {
             return ERR_SETCONTROLMODE;
@@ -292,6 +293,7 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
         else if ( vCurrentLaserEnableState == g_LaserEnableTTL )
         {
           // Disable TTL mode
+          MMILE_->LogMMMessage( "Set Laser Control mode to [CW]", true );
           if ( !LaserInterface_->SetControlMode( LaserIndex, EXTERNALMODE::CW ) )
           {
             return ERR_SETCONTROLMODE;
@@ -556,7 +558,7 @@ int CLasers::ChangeDeviceShutterState( bool Open )
   bool vSuccess = LaserInterface_->SetLas_Shutter( Open );
   if ( !vSuccess )
   {
-    MMILE_->LogMMMessage( "Set shutter [" + (Open ? vOpen : vClose) + "] failed", false );
+    MMILE_->LogMMMessage( "Set shutter [" + (Open ? vOpen : vClose) + "] failed" );
     return ERR_SETLASERSHUTTER;
   }
   return DEVICE_OK;

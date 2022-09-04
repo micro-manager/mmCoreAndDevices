@@ -88,9 +88,10 @@ int CNDFilters::SetDevice( int NewPosition, bool Initialisation )
 {
   if ( FilterPositions_[NewPosition] == g_1x )
   {
+    MMILE_->LogMMMessage( "Disable Activation mode", true );
     if ( !PowerInterface_->EnableActivationMode( false ) )
     {
-      MMILE_->LogMMMessage( "Disabling activation mode FAILED" );
+      MMILE_->LogMMMessage( "Disabling Activation mode FAILED" );
       return ERR_NDFILTERS_SET;
     }
   }
@@ -98,12 +99,14 @@ int CNDFilters::SetDevice( int NewPosition, bool Initialisation )
   {
     if ( Initialisation || FilterPositions_[CurrentFilterPosition_] == g_1x )
     {
+      MMILE_->LogMMMessage( "Enable Activation mode", true );
       if ( !PowerInterface_->EnableActivationMode( true ) )
       {
-        MMILE_->LogMMMessage( "Enabling activation mode FAILED" );
+        MMILE_->LogMMMessage( "Enabling Activation mode FAILED" );
         return ERR_NDFILTERS_SET;
       }
     }
+    MMILE_->LogMMMessage( "Set Low Power level to [" + std::to_string( NewPosition ) + "]", true );
     if ( !PowerInterface_->SetLowPowerLevel( NewPosition ) )
     {
       std::string vErrorMessage = "Changing ND Filters to position [" + std::to_string( NewPosition ) + "] FAILED";

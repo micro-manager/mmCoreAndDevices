@@ -87,6 +87,7 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
     std::string vValue;
     Prop->Get( vValue );
     bool vEnable = ( vValue == g_On );
+    MMILE_->LogMMMessage( "Set Low Power state to [" + std::string(vEnable ? "Enabled" : "Disabled") + "]", true);
     if ( PowerInterface_->SetLowPowerState( vEnable ) )
     {
       LowPowerModeActive_ = vEnable;
