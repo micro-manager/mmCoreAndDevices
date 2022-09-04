@@ -83,8 +83,11 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
 
   // Initialise the device speed
   MMDragonfly_->LogComponentMessage( "Set Disk speed to [" + std::to_string( vRequestedSpeed_ ) + "]", true );
+#ifdef _USE_DISKSIMULATOR_
   bool vSuccess = DiskSimulator_.SetSpeed( vRequestedSpeed_ );
-  //vSuccess = DiskInterface_->SetSpeed( RequestedSpeed_ );
+#else
+  bool vSuccess = DiskInterface_->SetSpeed( vRequestedSpeed_ );
+#endif
   if ( !vSuccess )
   {
     throw std::runtime_error( g_DiskSpeedSetError );
@@ -177,8 +180,11 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
         if ( vRequestedSpeed >= (long)vMin && vRequestedSpeed <= (long)vMax )
         {
           MMDragonfly_->LogComponentMessage( "Set Disk speed to [" + std::to_string( vRequestedSpeed ) + "]", true );
+#ifdef _USE_DISKSIMULATOR_
           if ( DiskSimulator_.SetSpeed( vRequestedSpeed ) )
-          //if ( DiskInterface_->SetSpeed( vRequestedSpeed ) )
+#else
+          if ( DiskInterface_->SetSpeed( vRequestedSpeed ) )
+#endif
           {
             ConfigFileHandler_->SavePropertyValue( g_DiskSpeedPropertyName, to_string( static_cast< long long >( vRequestedSpeed ) ) );
             boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
