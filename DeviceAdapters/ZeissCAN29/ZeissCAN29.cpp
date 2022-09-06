@@ -1996,7 +1996,7 @@ int XYStage::OnTrajectoryVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
    } else if (eAct == MM::AfterSet) {
       double tmp;
       pProp->Get(tmp);
-      ZeissLong velocity = tmp * 1000.0;
+      auto velocity = ZeissLong(tmp * 1000.0);
       int ret = ZeissAxis::SetTrajectoryVelocity(*this, *GetCoreCallback(), g_StageXAxis, velocity);
       if (ret != DEVICE_OK)
          return ret;
@@ -2019,7 +2019,7 @@ int XYStage::OnTrajectoryAcceleration(MM::PropertyBase* pProp, MM::ActionType eA
    } else if (eAct == MM::AfterSet) {
       double tmp;
       pProp->Get(tmp);
-      ZeissLong accel = (tmp * 1000.0);
+      auto accel = ZeissLong(tmp * 1000.0);
       int ret = ZeissAxis::SetTrajectoryAcceleration(*this, *GetCoreCallback(), g_StageXAxis, accel);
       if (ret != DEVICE_OK)
          return ret;
