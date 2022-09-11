@@ -30,7 +30,7 @@ private:
   int CurrentFilterPosition_ = 0;
   std::vector<std::string> FilterPositions_;
 
-  int SetDevice( int Position, bool Initialisation );
+  int SetDevice( int Position );
 };
 
 #endif

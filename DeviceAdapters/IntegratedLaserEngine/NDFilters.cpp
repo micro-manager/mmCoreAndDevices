@@ -83,20 +83,33 @@ CNDFilters::~CNDFilters()
 {
 }
 
-int CNDFilters::SetDevice( int NewPosition, bool Initialisation )
+int CNDFilters::SetDevice( int NewPosition )
 {
+  // Note: EnableActivationMode() will fail if we try to set the value to the current value
+
+  bool vCurrentDeviceState;
+  if ( !PowerInterface_->IsActivationModeEnabled( &vCurrentDeviceState ) )
+  {
+    MMILE_->LogMMMessage( "Retrieving Activation mode FAILED" );
+    return ERR_NDFILTERS_GET;
+  }
+  MMILE_->LogMMMessage( "Current Activation mode: [" + std::string( vCurrentDeviceState ? "Enabled" : "Disabled" ) + "]", true);
+
   if ( FilterPositions_[NewPosition] == g_1x )
   {
-    MMILE_->LogMMMessage( "Disable Activation mode", true );
-    if ( !PowerInterface_->EnableActivationMode( false ) )
+    if ( vCurrentDeviceState )
     {
-      MMILE_->LogMMMessage( "Disabling Activation mode FAILED" );
-      return ERR_NDFILTERS_SET;
+      MMILE_->LogMMMessage( "Disable Activation mode", true );
+      if ( !PowerInterface_->EnableActivationMode( false ) )
+      {
+        MMILE_->LogMMMessage( "Disabling Activation mode FAILED" );
+        return ERR_NDFILTERS_SET;
+      }
     }
   }
   else
   {
-    if ( Initialisation || FilterPositions_[CurrentFilterPosition_] == g_1x )
+    if ( !vCurrentDeviceState )
     {
       MMILE_->LogMMMessage( "Enable Activation mode", true );
       if ( !PowerInterface_->EnableActivationMode( true ) )
@@ -146,7 +159,7 @@ int CNDFilters::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
     }
 
     int vPosition = static_cast< int >( std::distance( FilterPositions_.begin(), vCurrentSelectionIt ) );
-    int vRet = SetDevice( vPosition, false );
+    int vRet = SetDevice( vPosition );
     if ( vRet != DEVICE_OK )
     {
       return vRet;
@@ -164,7 +177,7 @@ int CNDFilters::UpdateILEInterface( IALC_REV_ILEPowerManagement2* PowerInterface
     PowerInterface_ = PowerInterface;
     if ( PowerInterface_ != nullptr )
     {
-      int vRet = SetDevice( CurrentFilterPosition_, true );
+      int vRet = SetDevice( CurrentFilterPosition_ );
       if ( vRet != DEVICE_OK )
       {
         return vRet;
