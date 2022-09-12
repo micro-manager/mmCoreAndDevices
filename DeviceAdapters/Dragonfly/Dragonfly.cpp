@@ -149,6 +149,7 @@ CDragonfly::CDragonfly()
 
   // COM Port property
   int vRet = CreatePropertyWithHandler( g_DevicePort, "Undefined", MM::String, false, &CDragonfly::OnPort, true );
+  AddAllowedValue( g_DevicePort, "Undefined" );
   if ( vRet == DEVICE_OK )
   {
     string vComPortBaseName;
