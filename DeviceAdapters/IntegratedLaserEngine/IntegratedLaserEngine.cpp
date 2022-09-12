@@ -185,7 +185,9 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
 CIntegratedLaserEngine::~CIntegratedLaserEngine()
 {
   // Unload the library
+  LogMMMessage( "Unloading ILE wrapper", true );
   UnloadILEWrapper();
+  LogMMMessage( "Unloaded ILE wrapper", true );
 }
 
 void CIntegratedLaserEngine::CreateDeviceSelectionProperty( int DeviceID, int DeviceIndex )
@@ -396,8 +398,8 @@ int CIntegratedLaserEngine::InitializeNDFilters()
     bool vNDFiltersPresent = false;
     if ( !vPowerManagement2->IsActivationModePresent( &vNDFiltersPresent ) )
     {
-      LogMessage( "ILE Power IsActivationModePresent failed" );
-      return ERR_NDFILTERS_INIT;
+      LogMessage( "ILE Power IsActivationModePresent failed - assuming it is simply not present" );
+      return DEVICE_OK;
     }
     if ( vNDFiltersPresent )
     {
@@ -427,24 +429,40 @@ int CIntegratedLaserEngine::InitializeNDFilters()
 
 int CIntegratedLaserEngine::Shutdown()
 {
+  LogMessage( "Integrated Laser Engine shutdown", true );
   if ( ConstructionReturnCode_ != DEVICE_OK )
   {
-    return DEVICE_OK;
-  }
-  if ( !Initialized_ )
-  {
+    LogMessage( "Integrated Laser Engine shutdown after construction fail", true );
     return DEVICE_OK;
   }
 
-  delete VeryLowPower_;
-  VeryLowPower_ = nullptr;
-  delete NDFilters_;
-  NDFilters_ = nullptr;
-  delete Lasers_;
-  Lasers_ = nullptr;
+  if ( !Initialized_ )
+  {
+    LogMessage( "Integrated Laser Engine shutdown while not initialised", true );
+  }
+
+  if ( VeryLowPower_ )
+  {
+    delete VeryLowPower_;
+    VeryLowPower_ = nullptr;
+  }
+
+  if ( NDFilters_ )
+  {
+    delete NDFilters_;
+    NDFilters_ = nullptr;
+  }
+
+  if ( Lasers_ )
+  {
+    delete Lasers_;
+    Lasers_ = nullptr;
+  }
+
   DeleteILE();
   
   Initialized_ = false;
+  LogMessage( "Integrated Laser Engine shutdown done", true );
   return DEVICE_OK;
 }
 

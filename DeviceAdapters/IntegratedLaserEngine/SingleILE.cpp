@@ -40,12 +40,25 @@ std::string CSingleILE::GetDeviceName() const
 
 int CSingleILE::Shutdown()
 {
-  delete LowPowerMode_;
-  LowPowerMode_ = nullptr;
-  delete ActiveBlanking_;
-  ActiveBlanking_ = nullptr;
-  delete Ports_;
-  Ports_ = nullptr;
+  LogMessage( "Single ILE shutdown", true );
+
+  if ( LowPowerMode_ )
+  {
+    delete LowPowerMode_;
+    LowPowerMode_ = nullptr;
+  }
+  if ( ActiveBlanking_ )
+  {
+    delete ActiveBlanking_;
+    ActiveBlanking_ = nullptr;
+  }
+  if ( Ports_ )
+  {
+    delete Ports_;
+    Ports_ = nullptr;
+  }
+
+  LogMessage( "Single ILE shutdown done", true );
   return CIntegratedLaserEngine::Shutdown();
 }
 

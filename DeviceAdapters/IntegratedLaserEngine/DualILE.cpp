@@ -57,12 +57,25 @@ std::string CDualILE::GetDeviceName() const
 
 int CDualILE::Shutdown()
 {
-  delete LowPowerMode_;
-  LowPowerMode_ = nullptr;
-  delete ActiveBlanking_;
-  ActiveBlanking_ = nullptr;
-  delete Ports_;
-  Ports_ = nullptr;
+  LogMessage( "Dual ILE shutdown", true );
+
+  if ( LowPowerMode_ )
+  {
+    delete LowPowerMode_;
+    LowPowerMode_ = nullptr;
+  }
+  if ( ActiveBlanking_ )
+  {
+    delete ActiveBlanking_;
+    ActiveBlanking_ = nullptr;
+  }
+  if ( Ports_ )
+  {
+    delete Ports_;
+    Ports_ = nullptr;
+  }
+
+  LogMessage( "Dual ILE shutdown done", true );
   return CIntegratedLaserEngine::Shutdown();
 }
 
