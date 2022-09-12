@@ -121,7 +121,7 @@ bool CFilterWheel::GetPosition( unsigned int& Position )
 }
 bool CFilterWheel::SetPosition( unsigned int Position )
 {
-  MMDragonfly_->LogComponentMessage( "Set Filter Wheel position to [" + std::to_string( Position ) + "]", true );
+  MMDragonfly_->LogComponentMessage( "Set " + ComponentName_ + " position to [" + std::to_string( Position ) + "]", true );
   return FilterWheelInterface_->SetPosition( Position );
 }
 bool CFilterWheel::GetLimits( unsigned int& MinPosition, unsigned int& MaxPosition )
@@ -170,15 +170,17 @@ int CFilterWheel::OnModeChange( MM::PropertyBase* Prop, MM::ActionType Act )
   int vRet = DEVICE_OK;
   if ( Act == MM::AfterSet )
   {
-    string vNewMode;
-    Prop->Get( vNewMode );
-    if ( FilterWheelMode_->SetMode( GetModeFromString( vNewMode ) ) )
+    string vNewModeString;
+    Prop->Get( vNewModeString );
+    TFilterWheelMode vNewMode = GetModeFromString( vNewModeString );
+    MMDragonfly_->LogComponentMessage( "Set " + ComponentName_ + " mode to [" + std::to_string( ( int )vNewMode ) + "]", true );
+    if ( FilterWheelMode_->SetMode( vNewMode ) )
     {
-      ConfigFileHandler_->SavePropertyValue( FilterModeProperty_, vNewMode );
+      ConfigFileHandler_->SavePropertyValue( FilterModeProperty_, vNewModeString );
     }
     else
     {
-      MMDragonfly_->LogComponentMessage( "Failed to set Filter wheel mode for wheel " + to_string( static_cast< long long >( WheelIndex_ ) ) + " [" + vNewMode + "]" );
+      MMDragonfly_->LogComponentMessage( "Failed to set Filter wheel mode for wheel " + to_string( static_cast< long long >( WheelIndex_ ) ) + " [" + vNewModeString + "]" );
       vRet = DEVICE_CAN_NOT_SET_PROPERTY;
     }
   }

@@ -90,7 +90,7 @@ int CTIRFModeIntSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType A
       if ( SelectedTIRFMode_ == CriticalAngle && DeviceWrapper_->Mode() == Penetration )
       {
         // Special case for when Critical Angle is selected and the Penetration is changed
-        // Since the user is really not supposed to do this we prefer reset the UI to prevent confusions
+        // Since the user is really not supposed to do this we prefer to reset the UI to prevent confusions
         SetPropertyValue( Prop, BufferedUIValue_ );
       }
     }
