@@ -33,7 +33,8 @@ CVeryLowPower::CVeryLowPower( IALC_REV_ILEPowerManagement* PowerInterface, CInte
   MMILE_->LogMMMessage( "Initialising very low power device's state to [" + std::string( VeryLowPowerActive_ ? g_On : g_Off ) + "]", true );
   if ( !PowerInterface_->SetCoherenceMode( VeryLowPowerActive_ ) )
   {
-    throw std::runtime_error( "SetCoherenceMode failed" );
+    // Ignoring this error as it may be due to a single laser line refusing the command
+    MMILE_->LogMMMessage( "SetCoherenceMode failed. Ignoring this error." );
   }
 
 #ifndef ENABLE_VERY_LOW_POWER_MODE
