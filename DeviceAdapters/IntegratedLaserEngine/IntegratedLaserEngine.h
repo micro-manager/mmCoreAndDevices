@@ -54,11 +54,11 @@
 
 #define ERR_NDFILTERS_SET 801
 #define ERR_NDFILTERS_GET 802
+#define ERR_NDFILTERS_NOT_ENABLED 803
 
 class IALC_REVObject3;
 class CLasers;
 class CVeryLowPower;
-class CNDFilters;
 
 class CIntegratedLaserEngine : public CShutterBase<CIntegratedLaserEngine>
 {
@@ -102,7 +102,6 @@ private:
   IILEWrapperInterface::TDeviceList DeviceList_;
   CLasers* Lasers_;
   CVeryLowPower* VeryLowPower_;
-  CNDFilters* NDFilters_;
   MM::PropertyBase* ResetDeviceProperty_;
   bool ClassIVInterlockActive_;
   bool KeyInterlockActive_;
@@ -125,15 +124,13 @@ private:
 
   int InitalizeLasers();
   int InitializeVeryLowPower();
-  int InitializeNDFilters();
   virtual int InitializePorts() = 0;
   virtual int InitializeActiveBlanking() = 0;
-  virtual int InitializeLowPowerMode() = 0;
+  virtual int InitializeNDFilters() = 0;
 
   virtual void DisconnectILEInterfaces() = 0;
 
   int ReconnectLasers();
-  int ReconnectNDFilters();
   int ReconnectVeryLowPower();
   virtual int ReconnectILEInterfaces() = 0;
 };

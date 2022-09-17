@@ -15,7 +15,6 @@
 #include "ILEWrapper/ILEWrapper.h"
 #include "Lasers.h"
 #include "VeryLowPower.h"
-#include "NDFilters.h"
 
 
 // Properties
@@ -86,7 +85,6 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   ILEDevice_( nullptr ),
   Lasers_( nullptr ),
   VeryLowPower_( nullptr ),
-  NDFilters_( nullptr ),
   ResetDeviceProperty_( nullptr ),
   ConstructionReturnCode_( DEVICE_OK ),
   ClassIVInterlockActive_( false ),
@@ -139,6 +137,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
 
   SetErrorText( ERR_NDFILTERS_SET, "Setting ND filters failed" );
   SetErrorText( ERR_NDFILTERS_GET, "Getting ND filters state failed" );
+  SetErrorText( ERR_NDFILTERS_NOT_ENABLED, "ND filters not enabled at this point, wrong port selected" );
 
   // Load the library
   try
@@ -284,13 +283,6 @@ int CIntegratedLaserEngine::Initialize()
     return vRet;
   }
 
-  // ND Filters
-  vRet = InitializeNDFilters();
-  if ( vRet != DEVICE_OK )
-  {
-    return vRet;
-  }
-
   // Ports
   vRet = InitializePorts();
   if ( vRet != DEVICE_OK )
@@ -305,8 +297,8 @@ int CIntegratedLaserEngine::Initialize()
     return vRet;
   }
 
-  // Low Power Mode
-  vRet = InitializeLowPowerMode();
+  // ND Filters
+  vRet = InitializeNDFilters();
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -390,43 +382,6 @@ int CIntegratedLaserEngine::InitializeVeryLowPower()
   return DEVICE_OK;
 }
 
-int CIntegratedLaserEngine::InitializeNDFilters()
-{
-  IALC_REV_ILEPowerManagement2* vPowerManagement2 = ILEWrapper_->GetILEPowerManagement2Interface( ILEDevice_ );
-  if ( vPowerManagement2 != nullptr )
-  {
-    bool vNDFiltersPresent = false;
-    if ( !vPowerManagement2->IsActivationModePresent( &vNDFiltersPresent ) )
-    {
-      LogMessage( "ILE Power IsActivationModePresent failed - assuming it is simply not present" );
-      return DEVICE_OK;
-    }
-    if ( vNDFiltersPresent )
-    {
-      try
-      {
-        NDFilters_ = new CNDFilters( vPowerManagement2, this );
-      }
-      catch ( std::exception& vException )
-      {
-        std::string vMessage( "Error loading ND Filters. Caught Exception with message: " );
-        vMessage += vException.what();
-        LogMessage( vMessage );
-        return ERR_NDFILTERS_INIT;
-      }
-    }
-    else
-    {
-      LogMessage( "ND Filters not present", true );
-    }
-  }
-  else
-  {
-    LogMessage( "ILE Power interface pointer invalid" );
-  }
-  return DEVICE_OK;
-}
-
 int CIntegratedLaserEngine::Shutdown()
 {
   LogMessage( "Integrated Laser Engine shutdown", true );
@@ -445,12 +400,6 @@ int CIntegratedLaserEngine::Shutdown()
   {
     delete VeryLowPower_;
     VeryLowPower_ = nullptr;
-  }
-
-  if ( NDFilters_ )
-  {
-    delete NDFilters_;
-    NDFilters_ = nullptr;
   }
 
   if ( Lasers_ )
@@ -517,10 +466,6 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       {
         VeryLowPower_->UpdateILEInterface( nullptr );
       }
-      if ( NDFilters_ != nullptr )
-      {
-        NDFilters_->UpdateILEInterface( nullptr );
-      }
       if ( Lasers_ != nullptr )
       {
         Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
@@ -555,10 +500,6 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       if ( vRet == DEVICE_OK )
       {
         vRet = ReconnectILEInterfaces();
-      }
-      if ( vRet == DEVICE_OK )
-      {
-        vRet = ReconnectNDFilters();
       }
       if( vRet == DEVICE_OK )
       {
@@ -604,25 +545,6 @@ int CIntegratedLaserEngine::ReconnectLasers()
       {
         LogMessage( "ILE interface pointer invalid" );
       }
-      vRet = ERR_DEVICE_RECONNECTIONFAILED;
-    }
-  }
-  return vRet;
-}
-
-int CIntegratedLaserEngine::ReconnectNDFilters()
-{
-  int vRet = DEVICE_OK;
-  if ( NDFilters_ != nullptr )
-  {
-    IALC_REV_ILEPowerManagement2* vPowerManagement2 = ILEWrapper_->GetILEPowerManagement2Interface( ILEDevice_ );
-    if ( vPowerManagement2 != nullptr )
-    {
-      vRet = NDFilters_->UpdateILEInterface( vPowerManagement2 );
-    }
-    else
-    {
-      LogMessage( "ILE Power interface pointer invalid" );
       vRet = ERR_DEVICE_RECONNECTIONFAILED;
     }
   }

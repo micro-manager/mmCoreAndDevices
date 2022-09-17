@@ -53,6 +53,7 @@ private:
   void DeleteILE();
   int InitializePorts();
   int InitializeActiveBlanking();
+  int InitializeNDFilters();
   int InitializeLowPowerMode();
   void DisconnectILEInterfaces();
   int ReconnectILEInterfaces();

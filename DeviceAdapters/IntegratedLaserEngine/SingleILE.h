@@ -17,6 +17,7 @@
 
 class CPorts;
 class CActiveBlanking;
+class CNDFilters;
 class CLowPowerMode;
 
 class CSingleILE : public CIntegratedLaserEngine
@@ -35,6 +36,7 @@ protected:
 private:
   CPorts* Ports_;
   CActiveBlanking* ActiveBlanking_;
+  CNDFilters* NDFilters_;
   CLowPowerMode* LowPowerMode_;
 
   std::string GetDeviceName() const;
@@ -42,9 +44,11 @@ private:
   void DeleteILE();
   int InitializePorts();
   int InitializeActiveBlanking();
+  int InitializeNDFilters();
   int InitializeLowPowerMode();
   void DisconnectILEInterfaces();
   int ReconnectILEInterfaces();
+  int ReconnectNDFilters();
 };
 
 #endif

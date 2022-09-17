@@ -292,6 +292,11 @@ int CDualILE::InitializeActiveBlanking()
   return DEVICE_OK;
 }
 
+int CDualILE::InitializeNDFilters()
+{
+  return InitializeLowPowerMode();
+}
+
 int CDualILE::InitializeLowPowerMode()
 {
   IALC_REV_ILE2* vILE2 = ILEWrapper_->GetILEInterface2( ILEDevice_ );
@@ -349,7 +354,7 @@ int CDualILE::InitializeLowPowerMode()
         }
         vUnitsMessage += "unit2";
       }
-      LogMessage( "ILE Power interface pointer invalid for " );
+      LogMessage( "ILE Power Management interface pointer invalid for " + vUnitsMessage );
     }
   }
   else
