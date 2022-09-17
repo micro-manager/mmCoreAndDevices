@@ -28,10 +28,20 @@ CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegrate
   }
 
   bool vEnabled;
-  if ( !PowerInterface_->IsActivationModeEnabled( &vEnabled ) )
+  if ( !PowerInterface_->IsLowPowerEnabled( &vEnabled ) )
   {
-    throw std::runtime_error( "ILE IsActivationModeEnabled failed" );
+    throw std::runtime_error( "ILE IsLowPowerEnabled failed" );
   }
+
+  bool vLowPowerActive = false;
+  if ( vEnabled )
+  {
+    if ( !PowerInterface_->GetLowPowerState( &vLowPowerActive ) )
+    {
+      throw std::runtime_error( "ILE GetLowPowerState failed" );
+    }
+  }
+
   int vNumLevels;
   if ( !PowerInterface_->GetNumberOfLowPowerLevels( &vNumLevels ) )
   {
@@ -43,6 +53,7 @@ CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegrate
   {
     throw std::runtime_error( "ILE GetLowPowerPort failed" );
   }
+
   if ( vLowPowerPortIndex < 1 )
   {
     throw std::runtime_error( "Low Power port index invalid [" + std::to_string( static_cast< long long >( vLowPowerPortIndex ) ) + "]" );
@@ -61,7 +72,7 @@ CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegrate
     }
   }
 
-  if ( vEnabled )
+  if ( vEnabled && vLowPowerActive )
   {
     if ( !PowerInterface_->GetLowPowerLevel( &CurrentFilterPosition_ ) )
     {
@@ -85,24 +96,36 @@ CNDFilters::~CNDFilters()
 
 int CNDFilters::SetDevice( int NewPosition )
 {
-  // Note: EnableActivationMode() will fail if we try to set the value to the current value
-
-  bool vCurrentDeviceState;
-  if ( !PowerInterface_->IsActivationModeEnabled( &vCurrentDeviceState ) )
+  bool vEnabled;
+  if ( !PowerInterface_->IsLowPowerEnabled( &vEnabled ) )
   {
-    MMILE_->LogMMMessage( "Retrieving Activation mode FAILED" );
+    MMILE_->LogMMMessage( "ILE IsLowPowerEnabled FAILED" );
     return ERR_NDFILTERS_GET;
   }
-  MMILE_->LogMMMessage( "Current Activation mode: [" + std::string( vCurrentDeviceState ? "Enabled" : "Disabled" ) + "]", true);
+
+  if ( !vEnabled )
+  {
+    MMILE_->LogMMMessage( "ILE Low Power not enabled", true );
+    return ERR_NDFILTERS_NOT_ENABLED;
+  }
+
+  bool vCurrentDeviceState;
+  if ( !PowerInterface_->GetLowPowerState( &vCurrentDeviceState ) )
+  {
+    MMILE_->LogMMMessage( "ILE GetLowPowerState FAILED" );
+    return ERR_NDFILTERS_GET;
+  }
+
+  MMILE_->LogMMMessage( "Current Low Power state: [" + std::string( vCurrentDeviceState ? "ON" : "OFF" ) + "]", true);
 
   if ( FilterPositions_[NewPosition] == g_1x )
   {
     if ( vCurrentDeviceState )
     {
-      MMILE_->LogMMMessage( "Disable Activation mode", true );
-      if ( !PowerInterface_->EnableActivationMode( false ) )
+      MMILE_->LogMMMessage( "Turn Low Power OFF", true );
+      if ( !PowerInterface_->SetLowPowerState( false ) )
       {
-        MMILE_->LogMMMessage( "Disabling Activation mode FAILED" );
+        MMILE_->LogMMMessage( "Turning Low Power OFF FAILED" );
         return ERR_NDFILTERS_SET;
       }
     }
@@ -111,10 +134,10 @@ int CNDFilters::SetDevice( int NewPosition )
   {
     if ( !vCurrentDeviceState )
     {
-      MMILE_->LogMMMessage( "Enable Activation mode", true );
-      if ( !PowerInterface_->EnableActivationMode( true ) )
+      MMILE_->LogMMMessage( "Turn Low Power ON", true );
+      if ( !PowerInterface_->SetLowPowerState( true ) )
       {
-        MMILE_->LogMMMessage( "Enabling Activation mode FAILED" );
+        MMILE_->LogMMMessage( "Turning Low Power ON FAILED" );
         return ERR_NDFILTERS_SET;
       }
     }
@@ -123,6 +146,16 @@ int CNDFilters::SetDevice( int NewPosition )
     {
       std::string vErrorMessage = "Changing ND Filters to position [" + std::to_string( NewPosition ) + "] FAILED";
       MMILE_->LogMMMessage( vErrorMessage.c_str() );
+
+      if ( !vCurrentDeviceState )
+      {
+        MMILE_->LogMMMessage( "Reverting Low Power state to OFF");
+        if ( !PowerInterface_->SetLowPowerState( false ) )
+        {
+          MMILE_->LogMMMessage( "Turning Low Power OFF FAILED" );
+          return ERR_NDFILTERS_SET;
+        }
+      }
       return ERR_NDFILTERS_SET;
     }
   }
@@ -162,6 +195,9 @@ int CNDFilters::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
     int vRet = SetDevice( vPosition );
     if ( vRet != DEVICE_OK )
     {
+      // If we can't change the device's state, revert the selection to the previous position
+      MMILE_->LogMMMessage( "Couldn't change Low Power state, reverting the UI position [" + FilterPositions_[CurrentFilterPosition_] + "]");
+      Prop->Set( FilterPositions_[CurrentFilterPosition_].c_str() );
       return vRet;
     }
     CurrentFilterPosition_ = vPosition;

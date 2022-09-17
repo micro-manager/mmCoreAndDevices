@@ -32,7 +32,7 @@ CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CInte
   int vLowPowerPortIndex;
   if ( !PowerInterface_->GetLowPowerPort( &vLowPowerPortIndex ) )
   {
-    throw std::runtime_error( "ILE Power GetLowPowerPort failed" );
+    throw std::runtime_error( "ILE GetLowPowerPort failed" );
   }
 
   if ( vLowPowerPortIndex < 1 )
@@ -42,7 +42,7 @@ CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CInte
 
   if ( !PowerInterface_->GetLowPowerState( &LowPowerModeActive_ ) )
   {
-    throw std::runtime_error( "ILE Power GetLowPowerState failed" );
+    throw std::runtime_error( "ILE GetLowPowerState failed" );
   }
 
   // Create property
