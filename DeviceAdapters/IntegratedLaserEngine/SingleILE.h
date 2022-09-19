@@ -27,6 +27,7 @@ public:
   virtual ~CSingleILE();
 
   int Shutdown();
+  void CheckAndUpdateNDFilters() override;
 
   static const char* const g_DeviceName;
   static const char* const g_DeviceDescription;

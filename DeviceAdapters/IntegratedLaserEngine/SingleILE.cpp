@@ -290,6 +290,14 @@ int CSingleILE::InitializeNDFilters()
   return DEVICE_OK;
 }
 
+void CSingleILE::CheckAndUpdateNDFilters()
+{
+  if ( NDFilters_ != nullptr )
+  {
+    NDFilters_->CheckAndUpdate();
+  }
+}
+
 int CSingleILE::InitializeLowPowerMode()
 {
   IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );

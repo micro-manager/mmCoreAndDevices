@@ -87,6 +87,7 @@ public:
   MM::MMTime GetCurrentTime();
 
   void CheckAndUpdateLasers();
+  virtual void CheckAndUpdateNDFilters() = 0;
   void ActiveClassIVInterlock();
   void ActiveKeyInterlock();
   void UpdatePropertyUI( const char* PropertyName, const char* PropertyValue );

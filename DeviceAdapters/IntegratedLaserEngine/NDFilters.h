@@ -23,6 +23,7 @@ public:
   typedef MM::Action<CNDFilters> CPropertyAction;
 
   int UpdateILEInterface( IALC_REV_ILEPowerManagement2* PowerInterface );
+  void CheckAndUpdate();
 
 private:
   IALC_REV_ILEPowerManagement2* PowerInterface_;

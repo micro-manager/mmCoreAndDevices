@@ -76,6 +76,7 @@ CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegrate
     if ( PowerInterface_->GetLowPowerPercentage( vLevel, &vPercentage ) )
     {
       std::string str = std::to_string( vPercentage );
+      // Transform double to int (why not cast from double to int then???)
       str.erase( str.find_last_not_of( '0' ) + 1, std::string::npos );
       str.erase( str.find_last_not_of( '.' ) + 1, std::string::npos );
       FilterPositions_.push_back( str + "%" );
@@ -111,10 +112,6 @@ int CNDFilters::SetDevice( int NewPosition )
     return ERR_DEVICE_NOT_CONNECTED;
   }
 
-#if 0
-  // Checking enabled prevents changing Low Power when the wrong port is selected
-  // However this causes issues during MD acquisitions
-  // Note that, whether Low Power is enabled or not, Low Power functions work
   bool vEnabled;
   if ( !PowerInterface_->IsLowPowerEnabled( &vEnabled ) )
   {
@@ -124,10 +121,10 @@ int CNDFilters::SetDevice( int NewPosition )
 
   if ( !vEnabled )
   {
+    // Wrong port, ignore command
     MMILE_->LogMMMessage( "ILE Low Power not enabled", true );
     return ERR_NDFILTERS_NOT_ENABLED;
   }
-#endif
 
   bool vCurrentDeviceState;
   if ( !PowerInterface_->GetLowPowerState( &vCurrentDeviceState ) )
@@ -138,8 +135,10 @@ int CNDFilters::SetDevice( int NewPosition )
 
   MMILE_->LogMMMessage( "Current Low Power state: [" + std::string( vCurrentDeviceState ? "ON" : "OFF" ) + "]", true);
 
+  bool vDevicePositionChanged = false;
   if ( FilterPositions_[NewPosition] == g_1x )
   {
+    // Turn Low Power off if needed
     if ( vCurrentDeviceState )
     {
       MMILE_->LogMMMessage( "Turn Low Power OFF", true );
@@ -148,10 +147,12 @@ int CNDFilters::SetDevice( int NewPosition )
         MMILE_->LogMMMessage( "Turning Low Power OFF FAILED" );
         return ERR_NDFILTERS_SET;
       }
+      vDevicePositionChanged = true;
     }
   }
   else
   {
+    // Turn Low Power on if needed
     if ( !vCurrentDeviceState )
     {
       MMILE_->LogMMMessage( "Turn Low Power ON", true );
@@ -160,27 +161,44 @@ int CNDFilters::SetDevice( int NewPosition )
         MMILE_->LogMMMessage( "Turning Low Power ON FAILED" );
         return ERR_NDFILTERS_SET;
       }
+      vDevicePositionChanged = true;
     }
-    MMILE_->LogMMMessage( "Set Low Power level to [" + std::to_string( NewPosition ) + "]", true );
-    if ( !PowerInterface_->SetLowPowerLevel( NewPosition ) )
-    {
-      std::string vErrorMessage = "Changing ND Filters to position [" + std::to_string( NewPosition ) + "] FAILED";
-      MMILE_->LogMMMessage( vErrorMessage.c_str() );
 
-      if ( !vCurrentDeviceState )
+    int vCurrentPosition;
+    if ( !PowerInterface_->GetLowPowerLevel( &vCurrentPosition ) )
+    {
+      MMILE_->LogMMMessage( "ILE GetLowPowerLevel FAILED" );
+      return ERR_NDFILTERS_GET;
+    }
+
+    // Change Low Power level if needed
+    if ( vCurrentPosition != NewPosition )
+    {
+      MMILE_->LogMMMessage( "Set Low Power level to [" + std::to_string( NewPosition ) + "]", true );
+      if ( !PowerInterface_->SetLowPowerLevel( NewPosition ) )
       {
-        MMILE_->LogMMMessage( "Reverting Low Power state to OFF", true);
-        if ( !PowerInterface_->SetLowPowerState( false ) )
+        std::string vErrorMessage = "Changing ND Filters to position [" + std::to_string( NewPosition ) + "] FAILED";
+        MMILE_->LogMMMessage( vErrorMessage.c_str() );
+
+        if ( !vCurrentDeviceState )
         {
-          MMILE_->LogMMMessage( "Turning Low Power OFF FAILED" );
-          return ERR_NDFILTERS_SET;
+          MMILE_->LogMMMessage( "Reverting Low Power state to OFF", true );
+          if ( !PowerInterface_->SetLowPowerState( false ) )
+          {
+            MMILE_->LogMMMessage( "Turning Low Power OFF FAILED" );
+            return ERR_NDFILTERS_SET;
+          }
         }
+        return ERR_NDFILTERS_SET;
       }
-      return ERR_NDFILTERS_SET;
+     vDevicePositionChanged = true;
     }
   }
 
-  MMILE_->CheckAndUpdateLasers();
+  if ( vDevicePositionChanged )
+  {
+    MMILE_->CheckAndUpdateLasers();
+  }
 
   return DEVICE_OK;
 }
@@ -213,18 +231,18 @@ int CNDFilters::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 
     int vPosition = static_cast< int >( std::distance( FilterPositions_.begin(), vCurrentSelectionIt ) );
     int vRet = SetDevice( vPosition );
+
+    if ( vRet == ERR_NDFILTERS_NOT_ENABLED )
+    {
+      // Ignore when ND filter is not enabled (wrong current port) to allow MD acquisition to continue
+      vRet = DEVICE_OK;
+    }
+
     if ( vRet != DEVICE_OK )
     {
       // If we can't change the device's state, revert the selection to the previous position
       MMILE_->LogMMMessage( "Couldn't change Low Power state, reverting the UI position [" + FilterPositions_[CurrentFilterPosition_] + "]");
       Prop->Set( FilterPositions_[CurrentFilterPosition_].c_str() );
-#if 0
-      if ( vRet == ERR_NDFILTERS_NOT_ENABLED )
-      {
-        // Ignore when ND filter is not enabled (wrong current port) to allow MD acquisition to continue
-        vRet = DEVICE_OK;
-      }
-#endif
       return vRet;
     }
     CurrentFilterPosition_ = vPosition;
@@ -250,4 +268,12 @@ int CNDFilters::UpdateILEInterface( IALC_REV_ILEPowerManagement2* PowerInterface
   }
   
   return DEVICE_OK;
+}
+
+void CNDFilters::CheckAndUpdate()
+{
+  // Update the device state on port change
+  // If the previous port wasn't supporting ND filter, any requested ND filter position
+  // would have been ignored
+  SetDevice( CurrentFilterPosition_ );
 }
