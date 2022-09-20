@@ -261,17 +261,21 @@ int CDisk::OnMonitorStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
         bool vStateChanged = SpeedMonitorStateChangeObserver_->HasBeenNotified();
         static unsigned int vTick = 0;
         vTick = ( vTick == 5 ? 0 : vTick + 1 );
-        if ( DiskStatus_->IsChangingSpeed() && vTick == 0 )
+        if ( ( DiskStatus_->IsChangingSpeed() || DiskStatus_->IsStopping() ) && vTick == 0 )
         {
           unsigned int vDeviceSpeed = DiskStatus_->GetCurrentSpeed();
           Prop->Set( (long)vDeviceSpeed );
           vNewPropertyValue = to_string( static_cast< long long >( vDeviceSpeed ) );
         }
-        else if ( vStateChanged && DiskStatus_->IsAtSpeed() )
+        else if ( vStateChanged && ( DiskStatus_->IsAtSpeed() || DiskStatus_->IsStopped() ) )
         {
           vTick = 0;
-          unsigned int vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
-          Prop->Set( (long)vRequestedSpeed );
+          unsigned int vRequestedSpeed = 0;
+          if ( DiskStatus_->IsAtSpeed() )
+          {
+            vRequestedSpeed = DiskStatus_->GetRequestedSpeed();
+          }
+          Prop->Set( ( long )vRequestedSpeed );
           vNewPropertyValue = to_string( static_cast< long long >( vRequestedSpeed ) );
         }
       }
