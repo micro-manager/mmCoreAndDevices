@@ -21,6 +21,9 @@ Based on the [GenICam specification](https://www.emva.org/wp-content/uploads/Gen
 // Micro-Manager Camera API proposal (v2)
 ////////////////////////////////////////////
 
+## Changes to [MM::Camera]([url](https://valelab4.ucsf.edu/~MM/doc/MMDevice/html/class_m_m_1_1_camera.html))
+
+bool isNewAPIImplemented();
 
 //////////////////////////////
 // trigger states
@@ -154,8 +157,6 @@ bool readAcquisitionStatus(AcquisitionStatusType a);
 
 
 
-
-
 // Rolling shutter/Lightsheet mode
 double GetRollingShutterLineOffset();
 void setRollingShutterLineOffset(double offset_us) throw (CMMError);
@@ -165,17 +166,37 @@ void setRollingShutterActiveLines(int numLines) throw (CMMError);
 ```
 
 
-## Changes to Core Callback API
-TODO trigger change callback
+## Changes to [Core (Callback) API](https://valelab4.ucsf.edu/~MM/doc/MMDevice/html/class_m_m_1_1_core.html)
+```c++
+// Called by camera when trigger changes
+OnCameraTriggerChanged (const Device *caller, TriggerType, TriggerMode, TriggerSource);
+OnCameraTriggerChanged (const Device *caller, TriggerType, TriggerMode, TriggerSource, TriggerDelay, TriggerActivation, TriggerOverlap);
 
-// This generalizes the prepareForAcq and acqFinished
-//TODO what are the types of events
-cameraEventCallback(int ev)
+// Callbacks for camera events. This generalizes the prepareForAcq and acqFinished
+// Event types
+// AcquisitionTrigger: Device just received a trigger for the Acquisition of one or many Frames.
+// AcquisitionStart: Device just started the Acquisition of one or many Frames.
+// AcquisitionEnd: Device just completed the Acquisition of one or many Frames.
+// AcquisitionTransferStart: Device just started the transfer of one or many Frames.
+// AcquisitionTransferEnd: Device just completed the transfer of one or many Frames.
+// AcquisitionError: Device just detected an error during the active Acquisition.
+// FrameTrigger: Device just received a trigger to start the capture of one Frame.
+// FrameStart: Device just started the capture of one Frame.
+// FrameEnd: Device just completed the capture of one Frame.
+// FrameBurstStart: Device just started the capture of a burst of Frames.
+// FrameBurstEnd: Device just completed the capture of a burst of Frames.
+// FrameTransferStart: Device just started the transfer of one Frame.
+// FrameTransferEnd: Device just completed the transfer of one Frame.
+// ExposureStart: Device just started the exposure of one Frame (or Line).
+// ExposureEnd: Device just completed the exposure of one Frame (or Line).
+cameraEventCallback(const Device *caller, int EventType)
 
+```
 
-## New calls in MMCore
-A set of API calls in MMCore will provide access to this high-level API. Following MM convention, these will be essentially a 1to1 access of camera API methods, so they are omitted for now.
+## New calls in [MMCore](https://valelab4.ucsf.edu/~MM/doc/MMCore/html/class_c_m_m_core.html)
+A set of API calls in MMCore will provide access to this high-level API. Following MM convention, these will be essentially a 1to1 access of camera API methods.
 
+TODO...
 
 ## Backwards compatibility
 TODO...
