@@ -16,65 +16,95 @@ Based on the [GenICam specification](https://www.emva.org/wp-content/uploads/Gen
 
 [v1](https://github.com/micro-manager/mmCoreAndDevices/blob/4ce6d521a3875c0ecdd691fba5751b6a43bb0cd1/camera_triggering_API.md)
 
+
+## Changes to [MM::Camera](https://valelab4.ucsf.edu/~MM/doc/MMDevice/html/class_m_m_1_1_camera.html)
+
 ```c++
 ////////////////////////////////////////////
 // Micro-Manager Camera API proposal (v2)
 ////////////////////////////////////////////
 
-## Changes to [MM::Camera]([url](https://valelab4.ucsf.edu/~MM/doc/MMDevice/html/class_m_m_1_1_camera.html))
 
 bool isNewAPIImplemented();
 
+
 //////////////////////////////
-// trigger states
+// Triggers
 //////////////////////////////
 
-// TODO: change from enums to ints
 
-enum TriggerTypes { AcquisitionStart, AcquisitionEnd, AcquisitionActive, FrameBurstStart, FrameBurstEnd, FrameBurstActive, 
-                  FrameStart, FrameEnd, FrameActive, ExposureStart, ExposureEnd and ExposureActive}
+// trigger state constants
+//////////////////////////////
 
-enum TriggerMode {On, Off}
+//  TriggerSelector
+const int TriggerSelectorAcquisitionStart = 0;
+const int TriggerSelectorAcquisitionEnd = 1;
+const int TriggerSelectorAcquisitionActive = 2;
+const int TriggerSelectorFrameBurstStart = 3;
+const int TriggerSelectorFrameBurstEnd = 4;
+const int TriggerSelectorFrameBurstActive = 5;
+const int TriggerSelectorFrameStart = 6;
+const int TriggerSelectorFrameEnd = 7;
+const int TriggerSelectorFrameActive = 8;
+const int TriggerSelectorExposureStart = 9;
+const int TriggerSelectorExposureEnd = 10;
+const int TriggerSelectorExposureActive = 11;
 
-// "external" -- TTL pulse
-// "software" -- a call from "TriggerSoftware" function
-// "internal" -- From the cameras internal timer
-enum TriggerSource {Software, External, Internal}       
+
+// TriggerMode
+const int TriggerModeOn = 0;
+const int TriggerModeOff = 1;
+
+
+// TriggerSource
+//  "internal" -- From the cameras internal timer
+//  "external" -- TTL pulse
+//  "software" -- a call from "TriggerSoftware" function
+const int TriggerSourceInternal = 0;
+const int TriggerSourceExternal = 1;
+const int TriggerSourceSoftware = 2;
+
+
+// TriggerActivation
+const int TriggerActivationAnyEdge = 0;
+const int TriggerActivationRisingEdge = 1;
+const int TriggerActivationFallingEdge = 2;
+const int TriggerActivationLevelLow = 3;
+const int TriggerActivationLevelHigh = 4;
+
  
-enum TriggerActivation{RisingEdge, FallingEdge, AnyEdge, LevelHigh, LevelLow}
- 
-// Off: No trigger overlap is permitted.
-// ReadOut: Trigger is accepted immediately after the exposure period.
-// PreviousFrame: Trigger is accepted (latched) at any time during the capture of the previous frame.
-enum TriggerOverlap{Off, ReadOut, PreviousFrame }
+// TriggerOverlap
+//  Off: No trigger overlap is permitted.
+//  ReadOut: Trigger is accepted immediately after the exposure period.
+//  PreviousFrame: Trigger is accepted (latched) at any time during the capture of the previous frame.
+const int TriggerOverlapOff = 0;
+const int TriggerOverlapReadout = 1;
+const int TriggerOverlapPreviosFrame = 2;
 
-// Specifies the delay in microseconds (us) to apply after the trigger reception before activating it.
-float TriggerDelay_us;
 
-//////////////////////////////
 // trigger functions
 //////////////////////////////
       
 
 //Check which of the possible trigger types are available
-int hasTriggerType(TriggerType)
+int hasTrigger(int triggerSelector);
 
 // These should return an error code if the type is not valid
 // They are not meant to do any work. 
-int setTriggerState(TriggerType, TriggerMode, TriggerSource);
-int setTriggerState(TriggerType, TriggerMode, TriggerSource, TriggerDelay, TriggerActivation, TriggerOverlap);
+int setTriggerState(int triggerSelector, int triggerMode, int triggerSource);
+int setTriggerState(int triggerSelector, int triggerMode, int triggerSource, int triggerDelay, int triggerActivation, int triggerOverlap);
  
-int getTriggerState(&TriggerType, &TriggerMode, &TriggerSource);
-int getTriggerState(&TriggerType, &TriggerMode, &TriggerSource, &TriggerDelay, &TriggerActivation, &TriggerOverlap);
+int getTriggerState(int &triggerSelector, int &triggerMode, int &triggerSource);
+int getTriggerState(int &triggerSelector, int &triggerMode, int &triggerSource, int &triggerDelay, int &triggerActivation, int &triggerOverlap);
 
 
 // Send of software of the supplied type
-TriggerSoftware(TriggerType)
+int TriggerSoftware(int triggerSelector);
 
 
 
 //////////////////////////////
-// acquisition parameters
+// Acquisitions
 //////////////////////////////
 
 // Some terminology form GenICam
@@ -100,8 +130,8 @@ TriggerSoftware(TriggerType)
 
 
 
-//////////////////////////////
-// acquisition functions
+
+// Acquisition functions
 //////////////////////////////
 
 // Arms the device before an AcquisitionStart command. This optional command validates all 
@@ -115,6 +145,7 @@ TriggerSoftware(TriggerType)
 // if frameCount is:    1 --> acqMode is single
 //                    > 1 --> acqMode is MultiFrame
 //                     -1 --> acqMode is continuous
+
 int AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount);
 int AcquisitionArm(int frameCount, int burstFrameCount);
 int AcquisitionArm(int frameCount, double acquisitionFrameRate);
@@ -136,14 +167,11 @@ int AcquisitionStop();
 
 //Aborts the Acquisition immediately. This will end the capture without completing
 // the current Frame or waiting on a trigger. If no Acquisition is in progress, the command is ignored.
-int AcquisitionAbort()
+int AcquisitionAbort();
 
 
 
-
-
-
-// Maybe: for querying acquistion status
+// Maybe: for querying acquisition status
 // AcquisitionTriggerWait: Device is currently waiting for a trigger for the capture of one or many frames.
 // AcquisitionActive: Device is currently doing an acquisition of one or many frames.
 // AcquisitionTransfer: Device is currently transferring an acquisition of one or many frames.
@@ -159,21 +187,22 @@ bool readAcquisitionStatus(AcquisitionStatusType a);
 
 // Rolling shutter/Lightsheet mode
 double GetRollingShutterLineOffset();
-void setRollingShutterLineOffset(double offset_us) throw (CMMError);
+void SetRollingShutterLineOffset(double offset_us) throw (CMMError);
 
 int GetRollingShutterActiveLines();
-void setRollingShutterActiveLines(int numLines) throw (CMMError);
+void SetRollingShutterActiveLines(int numLines) throw (CMMError);
 ```
 
 
 ## Changes to [Core (Callback) API](https://valelab4.ucsf.edu/~MM/doc/MMDevice/html/class_m_m_1_1_core.html)
 ```c++
 // Called by camera when trigger changes
-OnCameraTriggerChanged (const Device *caller, TriggerType, TriggerMode, TriggerSource);
-OnCameraTriggerChanged (const Device *caller, TriggerType, TriggerMode, TriggerSource, TriggerDelay, TriggerActivation, TriggerOverlap);
+OnCameraTriggerChanged (const Device *caller, int triggerSelector, int triggerMode, int triggerSource);
+OnCameraTriggerChanged (const Device *caller, int triggerSelector, int triggerMode, int triggerSource, int triggerDelay, int triggerActivation, int triggerOverlap);
+
 
 // Callbacks for camera events. This generalizes the prepareForAcq and acqFinished
-// Event types
+
 // AcquisitionTrigger: Device just received a trigger for the Acquisition of one or many Frames.
 // AcquisitionStart: Device just started the Acquisition of one or many Frames.
 // AcquisitionEnd: Device just completed the Acquisition of one or many Frames.
@@ -189,8 +218,27 @@ OnCameraTriggerChanged (const Device *caller, TriggerType, TriggerMode, TriggerS
 // FrameTransferEnd: Device just completed the transfer of one Frame.
 // ExposureStart: Device just started the exposure of one Frame (or Line).
 // ExposureEnd: Device just completed the exposure of one Frame (or Line).
-cameraEventCallback(const Device *caller, int EventType)
+const int CameraEventAcquisitionTrigger = 0;
+const int CameraEventAcquisitionStart = 1;
+const int CameraEventAcquisitionEnd = 2;
+const int CameraEventAcquisitionTransferStart = 3;
+const int CameraEventAcquisitionTransferEnd = 4;
+const int CameraEventAcquisitionError = 5;
+const int CameraEventFrameTrigger = 6;
+const int CameraEventFrameStart = 7;
+const int CameraEventFrameEnd = 8;
+const int CameraEventFrameBurstStart = 9;
+const int CameraEventFrameBurstEnd = 10;
+const int CameraEventFrameTransferStart = 11;
+const int CameraEventFrameTransferEnd = 12;
+const int CameraEventExposureStart = 13;
+const int CameraEventExposureEnd = 14;
 
+// Camera calls this function on the core to notify of events
+// TODO: this may be coming from a camera internal thread,
+// so it may make sense to put restrictions on what the core
+// can do with these callbacks (i.e. nothing processor intensive)
+cameraEventCallback(const Device *caller, int EventType)
 ```
 
 ## New calls in [MMCore](https://valelab4.ucsf.edu/~MM/doc/MMCore/html/class_c_m_m_core.html)
@@ -199,8 +247,9 @@ A set of API calls in MMCore will provide access to this high-level API. Followi
 TODO...
 
 ## Backwards compatibility
-TODO...
+The old (camera) API for now will be optional on new devices, to be removed later in the future (maybe)
 
+The old (core) API will be implemented in terms of the new camera API when it is present, or fall back on the old camera API when its not
 
 ## Data access
 
