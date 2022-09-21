@@ -27,7 +27,7 @@ public:
   virtual ~CSingleILE();
 
   int Shutdown();
-  void CheckAndUpdateNDFilters() override;
+  void CheckAndUpdateLowPowerMode() override;
 
   static const char* const g_DeviceName;
   static const char* const g_DeviceDescription;

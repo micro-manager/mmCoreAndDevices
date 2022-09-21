@@ -23,12 +23,14 @@ public:
   typedef MM::Action<CLowPowerMode> CPropertyAction;
 
   int UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterface );
+  void CheckAndUpdate();
 
 private:
   IALC_REV_ILEPowerManagement* PowerInterface_;
   CIntegratedLaserEngine* MMILE_;
-  bool LowPowerModeActive_;
-  MM::PropertyBase* PropertyPointer_;
+  bool CurrentLowPowerPosition_;
+
+  int SetDevice( bool Position );
 };
 
 #endif

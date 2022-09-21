@@ -45,6 +45,7 @@
 
 #define ERR_LOWPOWERMODE_SET 501
 #define ERR_LOWPOWERMODE_GET 502
+#define ERR_LOWPOWERMODE_NOT_ENABLED 503
 
 #define ERR_PORTS_SET 601
 #define ERR_PORTS_GET 602
@@ -87,7 +88,7 @@ public:
   MM::MMTime GetCurrentTime();
 
   void CheckAndUpdateLasers();
-  virtual void CheckAndUpdateNDFilters() = 0;
+  virtual void CheckAndUpdateLowPowerMode() = 0;
   void ActiveClassIVInterlock();
   void ActiveKeyInterlock();
   void UpdatePropertyUI( const char* PropertyName, const char* PropertyValue );

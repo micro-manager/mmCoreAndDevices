@@ -241,7 +241,7 @@ int CNDFilters::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
     if ( vRet != DEVICE_OK )
     {
       // If we can't change the device's state, revert the selection to the previous position
-      MMILE_->LogMMMessage( "Couldn't change Low Power state, reverting the UI position [" + FilterPositions_[CurrentFilterPosition_] + "]");
+      MMILE_->LogMMMessage( "Couldn't change Low Power state, reverting the UI position to [" + FilterPositions_[CurrentFilterPosition_] + "]");
       Prop->Set( FilterPositions_[CurrentFilterPosition_].c_str() );
       return vRet;
     }
@@ -253,21 +253,23 @@ int CNDFilters::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 
 int CNDFilters::UpdateILEInterface( IALC_REV_ILEPowerManagement2* PowerInterface )
 {
+  int vRet = DEVICE_OK;
   if ( PowerInterface != PowerInterface_ )
   {
     PowerInterface_ = PowerInterface;
     if ( PowerInterface_ != nullptr )
     {
-      int vRet = SetDevice( CurrentFilterPosition_ );
-      if ( vRet != DEVICE_OK )
+      MMILE_->LogMMMessage( "Resetting ND Filters device's state to [" + FilterPositions_[CurrentFilterPosition_] + "]", true );
+      vRet = SetDevice( CurrentFilterPosition_ );
+      if ( vRet == ERR_NDFILTERS_NOT_ENABLED )
       {
-        return vRet;
+        // Ignore when ND filter is not enabled (wrong current port)
+        vRet = DEVICE_OK;
       }
     }
-    MMILE_->LogMMMessage( "Resetting ND Filters device's state to [" + FilterPositions_[CurrentFilterPosition_] + "]", true );
   }
   
-  return DEVICE_OK;
+  return vRet;
 }
 
 void CNDFilters::CheckAndUpdate()

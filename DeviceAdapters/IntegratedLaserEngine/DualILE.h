@@ -33,7 +33,7 @@ public:
   virtual ~CDualILE();
 
   int Shutdown();
-  void CheckAndUpdateNDFilters() override;
+  void CheckAndUpdateLowPowerMode() override;
 
   static const char* const g_DualDeviceName;
   static const char* const g_Dual700DeviceName;

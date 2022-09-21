@@ -290,11 +290,16 @@ int CSingleILE::InitializeNDFilters()
   return DEVICE_OK;
 }
 
-void CSingleILE::CheckAndUpdateNDFilters()
+void CSingleILE::CheckAndUpdateLowPowerMode()
 {
   if ( NDFilters_ != nullptr )
   {
     NDFilters_->CheckAndUpdate();
+  }
+
+  if ( LowPowerMode_ != nullptr )
+  {
+    LowPowerMode_->CheckAndUpdate();
   }
 }
 

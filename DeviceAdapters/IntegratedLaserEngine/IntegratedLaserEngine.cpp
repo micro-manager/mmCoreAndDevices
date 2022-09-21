@@ -128,6 +128,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
 
   SetErrorText( ERR_LOWPOWERMODE_SET, "Setting low power mode failed" );
   SetErrorText( ERR_LOWPOWERMODE_GET, "Getting low power mode state failed" );
+  SetErrorText( ERR_LOWPOWERMODE_NOT_ENABLED, "Low power mode not enabled at this point, wrong port selected" );
 
   SetErrorText( ERR_PORTS_SET, "Setting port failed" );
   SetErrorText( ERR_PORTS_GET, "Getting current port index failed" );

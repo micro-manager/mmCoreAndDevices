@@ -110,7 +110,7 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
     {
       CurrentPortIndex_ = vPortIndex;
       MMILE_->CheckAndUpdateLasers();
-      MMILE_->CheckAndUpdateNDFilters();
+      MMILE_->CheckAndUpdateLowPowerMode();
     }
     else
     {
