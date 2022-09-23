@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.31402.337
+VisualStudioVersion = 16.0.32802.440
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MMCore", "MMCore\MMCore.vcxproj", "{36571628-728C-4ACD-A47F-503BA91C5D43}"
 EndProject
@@ -443,6 +443,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Dragonfly", "DeviceAdapters\Dragonfly\Dragonfly.vcxproj", "{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IntegratedLaserEngine", "DeviceAdapters\IntegratedLaserEngine\IntegratedLaserEngine.vcxproj", "{5BCA72C1-C342-4272-A037-A94C73E4ACE8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Thorlabs_ELL14", "DeviceAdapters\Thorlabs_ELL14\Thorlabs_ELL14.vcxproj", "{03EEA700-F668-4F91-873F-E69A482A07E1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1334,6 +1336,10 @@ Global
 		{5BCA72C1-C342-4272-A037-A94C73E4ACE8}.Debug|x64.Build.0 = Debug|x64
 		{5BCA72C1-C342-4272-A037-A94C73E4ACE8}.Release|x64.ActiveCfg = Release|x64
 		{5BCA72C1-C342-4272-A037-A94C73E4ACE8}.Release|x64.Build.0 = Release|x64
+		{03EEA700-F668-4F91-873F-E69A482A07E1}.Debug|x64.ActiveCfg = Debug|x64
+		{03EEA700-F668-4F91-873F-E69A482A07E1}.Debug|x64.Build.0 = Debug|x64
+		{03EEA700-F668-4F91-873F-E69A482A07E1}.Release|x64.ActiveCfg = Release|x64
+		{03EEA700-F668-4F91-873F-E69A482A07E1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
