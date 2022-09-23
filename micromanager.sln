@@ -446,6 +446,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IntegratedLaserEngine", "De
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Thorlabs_ELL14", "DeviceAdapters\Thorlabs_ELL14\Thorlabs_ELL14.vcxproj", "{03EEA700-F668-4F91-873F-E69A482A07E1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ETL", "DeviceAdapters\ETL\ETL.vcxproj", "{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1340,6 +1342,10 @@ Global
 		{03EEA700-F668-4F91-873F-E69A482A07E1}.Debug|x64.Build.0 = Debug|x64
 		{03EEA700-F668-4F91-873F-E69A482A07E1}.Release|x64.ActiveCfg = Release|x64
 		{03EEA700-F668-4F91-873F-E69A482A07E1}.Release|x64.Build.0 = Release|x64
+		{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}.Debug|x64.ActiveCfg = Debug|x64
+		{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}.Debug|x64.Build.0 = Debug|x64
+		{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}.Release|x64.ActiveCfg = Release|x64
+		{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
