@@ -296,9 +296,13 @@ int CDualILE::InitializeNDFilters()
 {
   return InitializeLowPowerMode();
 }
+
 void CDualILE::CheckAndUpdateLowPowerMode()
 {
-  // ND Filters not currently supported by dual ILE
+  if ( LowPowerMode_ != nullptr )
+  {
+    LowPowerMode_->CheckAndUpdate();
+  }
 }
 
 int CDualILE::InitializeLowPowerMode()

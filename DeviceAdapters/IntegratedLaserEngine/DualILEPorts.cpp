@@ -99,6 +99,7 @@ int CDualILEPorts::ChangePort( const std::string& PortName )
         CurrentPortName_ = PortName;
         // Updating lasers
         MMILE_->CheckAndUpdateLasers();
+        MMILE_->CheckAndUpdateLowPowerMode();
       }
       else
       {

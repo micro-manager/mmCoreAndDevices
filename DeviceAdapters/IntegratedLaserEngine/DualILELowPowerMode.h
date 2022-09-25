@@ -24,6 +24,7 @@ public:
   typedef MM::Action<CDualILELowPowerMode> CPropertyAction;
 
   int UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface );
+  void CheckAndUpdate();
 
 private:
   IALC_REV_ILEPowerManagement* Unit1PowerInterface_;
