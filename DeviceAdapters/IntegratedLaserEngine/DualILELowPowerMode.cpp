@@ -129,6 +129,26 @@ bool CDualILELowPowerMode::GetCachedValueForProperty( const std::string& Propert
   return vLowPowerModeActive;
 }
 
+int CDualILELowPowerMode::SetDevice( IALC_REV_ILEPowerManagement* PowerInterface, int UnitIndex, bool NewPosition, bool& UpdatedPosition )
+{
+  UpdatedPosition = false;
+
+  if ( PowerInterface == nullptr )
+  {
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
+  MMILE_->LogMMMessage( "Set Dual Low Power state for unit" + std::to_string( UnitIndex ) + " to [" + std::string( NewPosition ? g_On : g_Off ) + "]", true );
+  if ( !PowerInterface->SetLowPowerState( NewPosition ) )
+  {
+    MMILE_->LogMMMessage( "Turning Low Power state " + std::string( NewPosition ? g_On : g_Off ) + " for unit " + std::to_string( UnitIndex ) + " FAILED" );
+    return ERR_LOWPOWERMODE_SET;
+  }
+  UpdatedPosition = true;
+
+  return DEVICE_OK;
+}
+
 int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
   int vRet = DEVICE_OK;
@@ -151,59 +171,63 @@ int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType
     {
       return ERR_DEVICE_NOT_CONNECTED;
     }
+
     std::string vPropertyName = Prop->GetName();
-    std::map<std::string, std::vector<int>>::const_iterator vPropertyIt = UnitsPropertyMap_.find( vPropertyName );
-    if ( vPropertyIt == UnitsPropertyMap_.end() )
+    if ( UnitsPropertyMap_.find( vPropertyName ) == UnitsPropertyMap_.end() )
     {
       MMILE_->LogMMMessage( "Low Power Mode: Property not found in property map [" + vPropertyName + "]" );
       return DEVICE_ERR;
     }
+
     std::string vValue;
     Prop->Get( vValue );
     bool vEnable = ( vValue == g_On );
-    std::vector<int>* vUnitsProperty = &(UnitsPropertyMap_[vPropertyName]);
-    std::vector<int>::const_iterator vUnitsIt = vUnitsProperty->begin();
+
+    const std::vector<int>& vUnitsProperty = UnitsPropertyMap_[vPropertyName];
+
+    std::vector<std::tuple<IALC_REV_ILEPowerManagement*, unsigned int, bool*>> vUnitsPreviousValues;
     bool vPowerStateUpdated = false;
-    while ( vUnitsIt != vUnitsProperty->end() )
+    for ( int vUnitIndex : vUnitsProperty )
     {
       IALC_REV_ILEPowerManagement* vPowerInterface = nullptr;
-      bool* vUnitActive = nullptr;
-      if ( *vUnitsIt == 0 )
+      bool *vUnitValuePtr = nullptr;
+      if ( vUnitIndex == 0 )
       {
         vPowerInterface = Unit1PowerInterface_;
-        vUnitActive = &Unit1Active_;
+        vUnitValuePtr = &Unit1Active_;
       }
-      if ( *vUnitsIt == 1 )
+      if ( vUnitIndex == 1 )
       {
         vPowerInterface = Unit2PowerInterface_;
-        vUnitActive = &Unit2Active_;
+        vUnitValuePtr = &Unit2Active_;
       }
-      MMILE_->LogMMMessage( "Set Dual Low Power state for unit" + std::to_string( ( *vUnitsIt ) + 1 ) + " to [" + std::string( vEnable ? g_On : g_Off ) + "]", true );
-      if ( vPowerInterface && vPowerInterface->SetLowPowerState( vEnable ) )
+
+      bool vUnitPowerStateUpdated;
+      int vSetDeviceRet = SetDevice( vPowerInterface, vUnitIndex + 1, vEnable, vUnitPowerStateUpdated );
+      vPowerStateUpdated |= vUnitPowerStateUpdated;
+
+      if ( vSetDeviceRet == DEVICE_OK )
       {
-        *vUnitActive = vEnable;
-        vPowerStateUpdated = true;
+        vUnitsPreviousValues.push_back( { vPowerInterface,  vUnitIndex + 1, vUnitValuePtr } );
       }
       else
       {
-        std::string vErrorLogBase = std::string( vEnable ? "Enabling" : "Disabling" ) + " low power state for unit" + std::to_string( static_cast<long long>( *vUnitsIt + 1 ) ) + " FAILED.";
-        if ( vPowerInterface )
-        {
-          MMILE_->LogMMMessage( vErrorLogBase + " Pointer to ILE power interface invalid." );
-        }
-        else
-        {
-          MMILE_->LogMMMessage( vErrorLogBase );
-        }
         vRet = ERR_LOWPOWERMODE_SET;
       }
-      ++vUnitsIt;
     }
+
+    // Update stored values
+    for ( const auto& vPreviousValue : vUnitsPreviousValues )
+    {
+      *std::get< bool*>( vPreviousValue ) = vEnable;
+    }
+
     if ( vPowerStateUpdated )
     {
       MMILE_->CheckAndUpdateLasers();
     }
   }
+
   return vRet;
 }
 

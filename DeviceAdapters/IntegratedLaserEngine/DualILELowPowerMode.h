@@ -36,6 +36,7 @@ private:
   bool Unit2Active_;
 
   bool GetCachedValueForProperty( const std::string& PropertyName );
+  int SetDevice( IALC_REV_ILEPowerManagement* PowerInterface, int UnitIndex, bool NewPosition, bool& UpdatedPosition );
 };
 
 #endif
