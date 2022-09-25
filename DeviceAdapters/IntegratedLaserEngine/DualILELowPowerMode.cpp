@@ -78,35 +78,31 @@ CDualILELowPowerMode::CDualILELowPowerMode( IALC_REV_ILEPowerManagement* Unit1Po
     vAllowedValues.push_back( g_On );
     vAllowedValues.push_back( g_Off );
 
-    std::vector<std::string>::const_iterator vPortIt = vPortNames.begin();
-    std::vector<int> vUnitsPorts;
-    long vPropertyIndex = 0;
-    while ( vPortIt != vPortNames.end() )
+    for ( const std::string& vPortName : vPortNames )
     {
+      std::vector<int> vUnitsPorts;
       std::vector<int> vUnitsProperty;
-      PortsConfiguration_->GetUnitPortsForMergedPort( *vPortIt, &vUnitsPorts );
+      PortsConfiguration_->GetUnitPortsForMergedPort( vPortName, &vUnitsPorts );
       if ( Unit1PowerInterface_ && vUnitsPorts[0] == vUnit1LowPowerPortIndex )
       {
         vUnitsProperty.push_back( 0 );
-        MMILE_->LogMMMessage( "Port " + *vPortIt + " low power mode available for unit1", true );
+        MMILE_->LogMMMessage( "Port " + vPortName + " low power mode available for unit1", true );
       }
       if ( Unit2PowerInterface_ && vUnitsPorts[1] == vUnit2LowPowerPortIndex )
       {
         vUnitsProperty.push_back( 1 );
-        MMILE_->LogMMMessage( "Port " + *vPortIt + " low power mode available for unit2", true );
+        MMILE_->LogMMMessage( "Port " + vPortName + " low power mode available for unit2", true );
       }
       if ( !vUnitsProperty.empty() )
       {
         // Create a property if at least one of the units' port in the current virtual port supports low power mode
-        std::string vPropertyName = std::string( "Port " ) + *vPortIt + "-" + g_PropertyBaseName;
+        std::string vPropertyName = std::string( "Port " ) + vPortName + "-" + g_PropertyBaseName;
         CPropertyAction* vAct = new CPropertyAction( this, &CDualILELowPowerMode::OnValueChange );
         MMILE_->CreateStringProperty( vPropertyName.c_str(), ( ( Unit1Active_ || Unit2Active_ ) ? g_On : g_Off ), false, vAct );
         MMILE_->SetAllowedValues( vPropertyName.c_str(), vAllowedValues );
-        ++vPropertyIndex;
         UnitsPropertyMap_[vPropertyName] = vUnitsProperty;
         PropertyPointers_[vPropertyName] = nullptr;
       }
-      ++vPortIt;
     }
   }
 }
@@ -118,19 +114,17 @@ CDualILELowPowerMode::~CDualILELowPowerMode()
 bool CDualILELowPowerMode::GetCachedValueForProperty( const std::string& PropertyName )
 {
   bool vLowPowerModeActive = false;
-  std::vector<int>* vUnitsProperty = &( UnitsPropertyMap_[PropertyName] );
-  std::vector<int>::const_iterator vUnitsIt = vUnitsProperty->begin();
-  while ( vUnitsIt != vUnitsProperty->end() )
+  const std::vector<int>& vUnitsProperty = UnitsPropertyMap_[PropertyName];
+  for ( int vUnitIndex : vUnitsProperty )
   {
-    if ( *vUnitsIt == 0 )
+    if ( vUnitIndex == 0 )
     {
       vLowPowerModeActive |= Unit1Active_;
     }
-    if ( *vUnitsIt == 1 )
+    if ( vUnitIndex == 1 )
     {
       vLowPowerModeActive |= Unit2Active_;
     }
-    ++vUnitsIt;
   }
   return vLowPowerModeActive;
 }

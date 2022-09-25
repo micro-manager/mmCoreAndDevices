@@ -28,7 +28,7 @@ CPortsConfiguration::CPortsConfiguration( const std::string& Device1Name, const 
 {  
   if ( MMILE_ == nullptr )
   {
-    throw std::logic_error( "CPortsConfiguration: Pointer tomain class invalid" );
+    throw std::logic_error( "CPortsConfiguration: Pointer to main class invalid" );
   }
 
   bool vGenerateDefaultConfig = false;
