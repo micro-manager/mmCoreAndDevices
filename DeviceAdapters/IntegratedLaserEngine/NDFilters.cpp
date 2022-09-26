@@ -16,7 +16,9 @@ const char* const g_1x = "100%";
 
 CNDFilters::CNDFilters( IALC_REV_ILEPowerManagement2* PowerInterface, CIntegratedLaserEngine* MMILE ) :
   PowerInterface_( PowerInterface ),
-  MMILE_( MMILE )
+  MMILE_( MMILE ),
+  CurrentFilterPosition_( 0 ),
+  PropertyPointer_( nullptr )
 {
   if ( PowerInterface_ == nullptr )
   {
@@ -205,6 +207,11 @@ int CNDFilters::SetDevice( int NewPosition )
 
 int CNDFilters::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  if ( PropertyPointer_ == nullptr )
+  {
+    PropertyPointer_ = Prop;
+  }
+
   if ( Act == MM::BeforeGet )
   {
     Prop->Set( FilterPositions_[CurrentFilterPosition_].c_str());
@@ -254,21 +261,52 @@ int CNDFilters::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 int CNDFilters::UpdateILEInterface( IALC_REV_ILEPowerManagement2* PowerInterface )
 {
   int vRet = DEVICE_OK;
+
   if ( PowerInterface != PowerInterface_ )
   {
     PowerInterface_ = PowerInterface;
+
     if ( PowerInterface_ != nullptr )
     {
-      MMILE_->LogMMMessage( "Resetting ND Filters device's state to [" + FilterPositions_[CurrentFilterPosition_] + "]", true );
-      vRet = SetDevice( CurrentFilterPosition_ );
-      if ( vRet == ERR_NDFILTERS_NOT_ENABLED )
+      MMILE_->LogMMMessage( "Resetting ND Filters position to device state", true );
+
+      bool vLowPowerActive = false;
+      if ( !PowerInterface_->GetLowPowerState( &vLowPowerActive ) )
       {
-        // Ignore when ND filter is not enabled (wrong current port)
-        vRet = DEVICE_OK;
+        MMILE_->LogMMMessage( "ILE GetLowPowerState FAILED" );
+        vRet = ERR_NDFILTERS_GET;
+      }
+
+      int vCurrentFilterPosition = 0;
+      if ( vRet == DEVICE_OK && vLowPowerActive )
+      {
+        if ( !PowerInterface_->GetLowPowerLevel( &vCurrentFilterPosition ) )
+        {
+          MMILE_->LogMMMessage( "ILE GetLowPowerLevel FAILED" );
+          vRet = ERR_NDFILTERS_GET;
+        }
+      }
+
+      if ( vRet == DEVICE_OK )
+      {
+        if ( vCurrentFilterPosition >= 0 && vCurrentFilterPosition < FilterPositions_.size() )
+        {
+          CurrentFilterPosition_ = vCurrentFilterPosition;
+          MMILE_->LogMMMessage( "ND Filters device state [" + std::to_string( CurrentFilterPosition_ ) + "]", true );
+          if ( PropertyPointer_ != nullptr )
+          {
+            PropertyPointer_->Set( FilterPositions_[CurrentFilterPosition_].c_str() );
+          }
+        }
+        else
+        {
+          MMILE_->LogMMMessage( "Invalid ND Filters device state [" + std::to_string( vCurrentFilterPosition ) + "]", true );
+          vRet = DEVICE_ERR;
+        }
       }
     }
   }
-  
+
   return vRet;
 }
 

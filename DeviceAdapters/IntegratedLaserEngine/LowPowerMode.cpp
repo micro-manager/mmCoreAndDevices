@@ -17,7 +17,8 @@ const char* const g_Off = "Off";
 CLowPowerMode::CLowPowerMode( IALC_REV_ILEPowerManagement* PowerInterface, CIntegratedLaserEngine* MMILE ) :
   PowerInterface_( PowerInterface ),
   MMILE_( MMILE ),
-  CurrentLowPowerPosition_( false )
+  CurrentLowPowerPosition_( false ),
+  PropertyPointer_( nullptr )
 {
   if ( PowerInterface_ == nullptr )
   {
@@ -110,6 +111,11 @@ int CLowPowerMode::SetDevice( bool NewPosition )
 
 int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 {
+  if ( PropertyPointer_ == nullptr )
+  {
+    PropertyPointer_ = Prop;
+  }
+
   if ( Act == MM::BeforeGet )
   {
     Prop->Set( CurrentLowPowerPosition_ ? g_On : g_Off );
@@ -155,22 +161,34 @@ int CLowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType Act )
 int CLowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* PowerInterface )
 {
   int vRet = DEVICE_OK;
+
   if ( PowerInterface != PowerInterface_ )
   {
     PowerInterface_ = PowerInterface;
+
     if ( PowerInterface_ != nullptr )
     {
-      MMILE_->LogMMMessage( "Resetting Low Power device state to [" + std::string( CurrentLowPowerPosition_ ? g_On : g_Off ) + "]", true );
-      vRet = SetDevice( CurrentLowPowerPosition_ );
-      if ( vRet == ERR_LOWPOWERMODE_NOT_ENABLED )
+      MMILE_->LogMMMessage( "Resetting Low Power mode to device state", true );
+
+      if ( PowerInterface_->GetLowPowerState( &CurrentLowPowerPosition_ ) )
       {
-        // Ignore when Low Power is not enabled (wrong current port)
-        vRet = DEVICE_OK;
+        MMILE_->LogMMMessage( "Low Power mode device state [" + std::string( CurrentLowPowerPosition_ ? g_On : g_Off ) + "]", true );
+        if ( PropertyPointer_ != nullptr )
+        {
+          PropertyPointer_->Set( CurrentLowPowerPosition_ ? g_On : g_Off );
+        }
+      }
+      else
+      {
+        MMILE_->LogMMMessage( "ILE GetLowPowerState FAILED" );
+        vRet = ERR_LOWPOWERMODE_GET;
       }
     }
   }
+
   return vRet;
 }
+
 
 void CLowPowerMode::CheckAndUpdate()
 {

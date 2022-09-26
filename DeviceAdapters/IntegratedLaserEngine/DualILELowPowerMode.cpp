@@ -294,6 +294,7 @@ int CDualILELowPowerMode::OnValueChange( MM::PropertyBase * Prop, MM::ActionType
 int CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1PowerInterface, IALC_REV_ILEPowerManagement* Unit2PowerInterface )
 {
   int vRet = DEVICE_OK;
+
   if ( Unit1PowerInterface != Unit1PowerInterface_ || Unit2PowerInterface != Unit2PowerInterface_ )
   {
     Unit1PowerInterface_ = Unit1PowerInterface;
@@ -301,39 +302,52 @@ int CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1
 
     if ( Unit1PowerInterface_ != nullptr || Unit2PowerInterface_ != nullptr )
     {
-      MMILE_->LogMMMessage( "Resetting Low Power device state to [" + std::string( Unit1Active_ ? g_On : g_Off ) + ", " + ( Unit2Active_ ? g_On : g_Off ) + "]", true );
+      MMILE_->LogMMMessage( "Resetting Low Power mode to device state", true );
 
-      bool vUpdatedPosition = false;
-
-      if ( Unit1PowerInterface_ )
+      if ( Unit1PowerInterface_ != nullptr )
       {
-        vRet = SetDevice( Unit1PowerInterface_, 1, Unit1Active_, vUpdatedPosition );
-        if ( vRet == ERR_LOWPOWERMODE_NOT_ENABLED )
+        if ( !Unit1PowerInterface_->GetLowPowerState( &Unit1Active_ ) )
         {
-          // Ignore when Low Power is not enabled (wrong current port)
-          vRet = DEVICE_OK;
+          MMILE_->LogMMMessage( "ILE GetLowPowerState for unit1 FAILED" );
+          vRet = ERR_LOWPOWERMODE_GET;
+        }
+        else
+        {
+          MMILE_->LogMMMessage( "Device state for unit1: " + std::string( Unit1Active_ ? g_On : g_Off ), true );
         }
       }
-
-      if ( vRet == DEVICE_OK && Unit2PowerInterface_ )
+      else
       {
-        bool vUnitUpdatedPosition = false;
-        vRet = SetDevice( Unit2PowerInterface_, 2, Unit2Active_, vUnitUpdatedPosition );
-        vUpdatedPosition |= vUnitUpdatedPosition;
-
-        if ( vRet == ERR_LOWPOWERMODE_NOT_ENABLED )
-        {
-          // Ignore when Low Power is not enabled (wrong current port)
-          vRet = DEVICE_OK;
-        }
+        MMILE_->LogMMMessage( "Pointer to Low power mode for unit1 is invalid" );
       }
 
-      if ( vUpdatedPosition )
+      if ( Unit2PowerInterface_ != nullptr )
       {
-        MMILE_->CheckAndUpdateLasers();
+        if ( !Unit2PowerInterface_->GetLowPowerState( &Unit2Active_ ) )
+        {
+          MMILE_->LogMMMessage( "ILE GetLowPowerState for unit2 FAILED" );
+          vRet = ERR_LOWPOWERMODE_GET;
+        }
+        else
+        {
+          MMILE_->LogMMMessage( "Device state for unit2: " + std::string( Unit2Active_ ? g_On : g_Off ), true );
+        }
+      }
+      else
+      {
+        MMILE_->LogMMMessage( "Pointer to Low power mode for unit2 is invalid" );
+      }
+
+      for ( const auto& vPropertyPointer : PropertyPointers_ )
+      {
+        if ( vPropertyPointer.second != nullptr )
+        {
+          vPropertyPointer.second->Set( GetCachedValueForProperty( vPropertyPointer.first ) ? g_On : g_Off );
+        }
       }
     }
   }
+
   return vRet;
 }
 

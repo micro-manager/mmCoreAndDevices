@@ -29,6 +29,7 @@ private:
   IALC_REV_ILEPowerManagement* PowerInterface_;
   CIntegratedLaserEngine* MMILE_;
   bool CurrentLowPowerPosition_;
+  MM::PropertyBase* PropertyPointer_;
 
   int SetDevice( bool Position );
 };
