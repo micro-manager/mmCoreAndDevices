@@ -358,6 +358,180 @@ namespace MM {
       static const DeviceType Type;
 
       // Camera API
+
+
+      //// New Camera API ////
+      virtual bool isNewAPIImplemented() = 0;
+
+      //////////////////////////////
+      // Triggers
+      //////////////////////////////
+
+
+      // trigger state constants
+      //////////////////////////////
+
+      //TODO: these constants probably belong somewhere else
+      //  TriggerSelector
+      const int TriggerSelectorAcquisitionStart = 0;
+      const int TriggerSelectorAcquisitionEnd = 1;
+      const int TriggerSelectorAcquisitionActive = 2;
+      const int TriggerSelectorFrameBurstStart = 3;
+      const int TriggerSelectorFrameBurstEnd = 4;
+      const int TriggerSelectorFrameBurstActive = 5;
+      const int TriggerSelectorFrameStart = 6;
+      const int TriggerSelectorFrameEnd = 7;
+      const int TriggerSelectorFrameActive = 8;
+      const int TriggerSelectorExposureStart = 9;
+      const int TriggerSelectorExposureEnd = 10;
+      const int TriggerSelectorExposureActive = 11;
+
+
+      // TriggerMode
+      const int TriggerModeOn = 0;
+      const int TriggerModeOff = 1;
+
+
+      // TriggerSource
+      //  "internal" -- From the cameras internal timer
+      //  "external" -- TTL pulse
+      //  "software" -- a call from "TriggerSoftware" function
+      const int TriggerSourceInternal = 0;
+      const int TriggerSourceExternal = 1;
+      const int TriggerSourceSoftware = 2;
+
+
+      // TriggerActivation
+      const int TriggerActivationAnyEdge = 0;
+      const int TriggerActivationRisingEdge = 1;
+      const int TriggerActivationFallingEdge = 2;
+      const int TriggerActivationLevelLow = 3;
+      const int TriggerActivationLevelHigh = 4;
+
+
+      // TriggerOverlap
+      //  Off: No trigger overlap is permitted.
+      //  ReadOut: Trigger is accepted immediately after the exposure period.
+      //  PreviousFrame: Trigger is accepted (latched) at any time during the capture of the previous frame.
+      const int TriggerOverlapOff = 0;
+      const int TriggerOverlapReadout = 1;
+      const int TriggerOverlapPreviousFrame = 2;
+
+
+      // trigger functions
+      //////////////////////////////
+
+      //Check which of the possible trigger types are available
+      virtual bool hasTrigger(int triggerSelector) = 0;
+
+      // These should return an error code if the type is not valid
+      // They are not meant to do any work. 
+      // virtual int setTriggerState(int triggerSelector, int triggerMode, int triggerSource) = 0;
+      virtual int setTriggerState(int triggerSelector, int triggerMode, int triggerSource, 
+          int triggerDelay, int triggerActivation, int triggerOverlap) = 0;
+
+      // virtual int getTriggerState(int& triggerSelector, int& triggerMode, int& triggerSource) = 0;
+      virtual int getTriggerState(int& triggerSelector, int& triggerMode, int& triggerSource,
+          int& triggerDelay, int& triggerActivation, int& triggerOverlap) = 0;
+
+
+      // Send of software of the supplied type
+      virtual int TriggerSoftware(int triggerSelector) = 0;
+
+
+
+      //////////////////////////////
+      // Acquisitions
+      //////////////////////////////
+
+      // Some terminology form GenICam
+      //
+      // AcquisitionMode
+      //    SingleFrame: One frame is captured.
+      //    MultiFrame: The number of frames specified by AcquisitionFrameCount is captured.
+      //    Continuous: Frames are captured continuously until stopped with the AcquisitionStop command.
+      //
+      // AcquisitionFrameCount
+      //    Number of frames to acquire in MultiFrame Acquisition mode. 
+      //
+      // AcquisitionBurstFrameCount 
+      //    Number of frames to acquire for each FrameBurstStart trigger.
+      //    This feature is used only if the FrameBurstStart trigger is enabled and
+      //    the FrameBurstEnd trigger is disabled. Note that the total number of frames
+      //    captured is also conditioned by AcquisitionFrameCount if AcquisitionMode is
+      //    MultiFrame and ignored if AcquisitionMode is Single.
+      //
+      // AcquisitionFrameRate
+      //    Controls the acquisition rate (in Hertz) at which the frames are captured.
+      //    TriggerMode must be Off for the Frame trigger.
+
+
+
+
+      // Acquisition functions
+      //////////////////////////////
+
+      // Arms the device before an AcquisitionStart command. This optional command validates all 
+      // the current features for consistency and prepares the device for a fast start of the Acquisition.
+      // If not used explicitly, this command will be automatically executed at the first 
+      // AcquisitionStart but will not be repeated for the subsequent ones unless a feature is changed in the device.
+
+      // TODO: the above logic needs to be implemented in core?
+
+      // Don't acqMode because it can be inferred from frameCount
+      // if frameCount is:    1 --> acqMode is single
+      //                    > 1 --> acqMode is MultiFrame
+      //                     -1 --> acqMode is continuous
+
+      virtual int AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount) = 0;
+      virtual int AcquisitionArm(int frameCount, int burstFrameCount) = 0;
+      virtual int AcquisitionArm(int frameCount, double acquisitionFrameRate) = 0;
+      virtual int AcquisitionArm(int frameCount) = 0;
+
+
+
+      // Starts the Acquisition of the device. The number of frames captured is specified by AcquisitionMode.
+      // Note that unless the AcquisitionArm was executed since the last feature change, 
+      // the AcquisitionStart command must validate all the current features for consistency before starting the Acquisition. 
+      virtual int AcquisitionStart() = 0;
+
+      // Stops the Acquisition of the device at the end of the current Frame. It is mainly 
+      // used when AcquisitionMode is Continuous but can be used in any acquisition mode.
+      // If the camera is waiting for a trigger, the pending Frame will be cancelled. 
+      // If no Acquisition is in progress, the command is ignored.
+      virtual int AcquisitionStop() = 0;
+
+
+      //Aborts the Acquisition immediately. This will end the capture without completing
+      // the current Frame or waiting on a trigger. If no Acquisition is in progress, the command is ignored.
+      virtual int AcquisitionAbort() = 0;
+
+
+
+      // Maybe: for querying acquisition status
+      // AcquisitionTriggerWait: Device is currently waiting for a trigger for the capture of one or many frames.
+      // AcquisitionActive: Device is currently doing an acquisition of one or many frames.
+      // AcquisitionTransfer: Device is currently transferring an acquisition of one or many frames.
+      // FrameTriggerWait: Device is currently waiting for a frame start trigger.
+      // FrameActive: Device is currently doing the capture of a frame.
+      // ExposureActive: Device is doing the exposure of a frame.
+
+      // enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
+      // bool readAcquisitionStatus(AcquisitionStatusType a);
+
+
+      // Rolling shutter/Lightsheet mode
+      virtual double GetRollingShutterLineOffset() const = 0;
+      virtual int SetRollingShutterLineOffset(double offset_us) = 0;
+
+      virtual unsigned GetRollingShutterActiveLines() const = 0;
+      virtual unsigned setRollingShutterActiveLines(unsigned numLines) = 0;
+
+      ///////////////////////////////////////////////////////////////
+      ///// End new camera API               ////////////////////////
+      //////////////////////////////////////////////////////////////
+
+
       /**
        * Performs exposure and grabs a single image.
        * Required by the MM::Camera API.

@@ -1333,6 +1333,13 @@ public:
 
    virtual bool Busy() {return busy_;}
 
+   ////// New Camera API //////
+   /*
+    * Assume not implemented unless overriden for backwards compatibility
+    */
+   virtual bool isNewAPIImplemented() { return false; };
+
+
    /**
    * Continuous sequence acquisition.
    * Default to sequence acquisition with a high number of images
