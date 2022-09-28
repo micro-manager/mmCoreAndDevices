@@ -318,7 +318,7 @@ int CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1
       }
       else
       {
-        MMILE_->LogMMMessage( "Pointer to Low power mode for unit1 is invalid" );
+        MMILE_->LogMMMessage( "Pointer to Low Power mode for unit1 is invalid" );
       }
 
       if ( Unit2PowerInterface_ != nullptr )
@@ -335,7 +335,7 @@ int CDualILELowPowerMode::UpdateILEInterface( IALC_REV_ILEPowerManagement* Unit1
       }
       else
       {
-        MMILE_->LogMMMessage( "Pointer to Low power mode for unit2 is invalid" );
+        MMILE_->LogMMMessage( "Pointer to Low Power mode for unit2 is invalid" );
       }
 
       for ( const auto& vPropertyPointer : PropertyPointers_ )

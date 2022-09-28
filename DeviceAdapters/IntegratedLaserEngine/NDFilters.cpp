@@ -173,6 +173,8 @@ int CNDFilters::SetDevice( int NewPosition )
       return ERR_NDFILTERS_GET;
     }
 
+    MMILE_->LogMMMessage( "Current Low Power level: [" + std::to_string( vCurrentPosition ) + "]", true );
+
     // Change Low Power level if needed
     if ( vCurrentPosition != NewPosition )
     {
