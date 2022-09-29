@@ -781,7 +781,6 @@ int  ELL14::receivePosition(double angle) {
 	// wait for the motion to be completed
 	double sleepTime = angle * maxReplyTimeMs_ / 360;
 	CDeviceUtils::SleepMs(sleepTime);
-	CDeviceUtils::SleepMs(angle);
 
 	int ret = GetSerialAnswer(port_.c_str(), "\r", answer);
 	if (ret != DEVICE_OK)
