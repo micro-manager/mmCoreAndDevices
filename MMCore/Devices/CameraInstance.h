@@ -82,4 +82,35 @@ public:
    int ClearExposureSequence();
    int AddToExposureSequence(double exposureTime_ms);
    int SendExposureSequence() const;
+
+
+
+   bool IsNewAPIImplemented();
+   bool HasTrigger(int triggerSelector);
+   int SetTriggerState(int triggerSelector, int triggerMode, int triggerSource,
+       double triggerDelay, int triggerActivation, int triggerOverlap);
+   int GetTriggerMode(int triggerSelector);
+   int GetTriggerSource(int triggerSelector);
+   double GetTriggerDelay(int triggerSelector);
+   int GetTriggerActivation(int triggerSelector);
+   int GetTriggerOverlap(int triggerSelector);
+
+   int SendSoftwareTrigger(int triggerSelector);
+   int ArmAcquisition(int frameCount, double acquisitionFrameRate, int burstFrameCount);
+   int ArmAcquisition(int frameCount, int burstFrameCount);
+   int ArmAcquisition(int frameCount, double acquisitionFrameRate);
+   int ArmAcquisition(int frameCount);
+   int StartAcquisition();
+   int StopAcquisition();
+   int AbortAcquisition();
+   // TODO: add these later?
+   // enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
+   // bool readAcquisitionStatus(AcquisitionStatusType a);
+   double GetRollingShutterLineOffset();
+   int SetRollingShutterLineOffset(double offset_us);
+   unsigned GetRollingShutterActiveLines() const;
+   unsigned SetRollingShutterActiveLines(unsigned numLines);
+
+
+
 };

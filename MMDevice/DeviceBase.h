@@ -1339,6 +1339,34 @@ public:
     */
    virtual bool isNewAPIImplemented() { return false; };
 
+	virtual bool hasTrigger(int triggerSelector) { return false; };
+   virtual int setTriggerState(int triggerSelector, int triggerMode, int triggerSource,
+       double triggerDelay, int triggerActivation, int triggerOverlap) {
+       return DEVICE_NOT_YET_IMPLEMENTED;
+   };
+   virtual int getTriggerState(int triggerSelector, int& triggerMode, int& triggerSource,
+                               double& triggerDelay, int& triggerActivation, int& triggerOverlap) {
+       return DEVICE_NOT_YET_IMPLEMENTED;
+   };
+   virtual int TriggerSoftware(int triggerSelector) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionArm(int frameCount, int burstFrameCount) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionArm(int frameCount, double acquisitionFrameRate) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionArm(int frameCount) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionStart() {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionStop() {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionAbort() {return DEVICE_NOT_YET_IMPLEMENTED;};
+   // TODO: add these later?
+   // enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
+   // bool readAcquisitionStatus(AcquisitionStatusType a);
+   virtual double GetRollingShutterLineOffset() const {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int SetRollingShutterLineOffset(double offset_us) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual unsigned GetRollingShutterActiveLines() const {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual unsigned setRollingShutterActiveLines(unsigned numLines) {return DEVICE_NOT_YET_IMPLEMENTED;};
+
+    //////////////////////////
+    /// End new camera API
+    //////////////////////////
 
    /**
    * Continuous sequence acquisition.

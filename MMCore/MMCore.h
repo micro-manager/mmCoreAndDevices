@@ -434,6 +434,39 @@ public:
    long getExposureSequenceMaxLength(const char* cameraLabel) throw (CMMError);
    void loadExposureSequence(const char* cameraLabel,
          std::vector<double> exposureSequence_ms) throw (CMMError);
+
+   ///@}
+
+   /** \name New camera API. */
+   ///@{
+   bool isNewAPIImplemented(const char* cameraLabel);
+
+   bool HasTrigger(const char* cameraLabel, int triggerSelector);
+   int SetTriggerState(const char* cameraLabel, int triggerSelector, int triggerMode, int triggerSource,
+         double triggerDelay, int triggerActivation, int triggerOverlap);
+   int GetTriggerMode(const char* cameraLabel, int triggerSelector);
+   int GetTriggerSource(const char* cameraLabel, int triggerSelector);
+   double GetTriggerDelay(const char* cameraLabel, int triggerSelector);
+   int GetTriggerActivation(const char* cameraLabel, int triggerSelector);
+   int GetTriggerOverlap(const char* cameraLabel, int triggerSelector);
+
+   void SendSoftwareTrigger(const char* cameraLabel, int triggerSelector);
+   int ArmAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate, int burstFrameCount);
+   int ArmAcquisition(const char* cameraLabel, int frameCount, int burstFrameCount);
+   int ArmAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate);
+   int ArmAcquisition(const char* cameraLabel, int frameCount);
+   int StartAcquisition(const char* cameraLabel);
+   int StopAcquisition(const char* cameraLabel);
+   int AbortAcquisition(const char* cameraLabel);
+   //TODO: add these later?
+   // enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
+   // bool readAcquisitionStatus(AcquisitionStatusType a);
+   double GetRollingShutterLineOffset(const char* cameraLabel);
+   int SetRollingShutterLineOffset(const char* cameraLabel, double offset_us);
+   unsigned GetRollingShutterActiveLines(const char* cameraLabel);
+   unsigned SetRollingShutterActiveLines(const char* cameraLabel, unsigned numLines);
+
+
    ///@}
 
    /** \name Autofocus control. */

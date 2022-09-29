@@ -96,8 +96,9 @@ public:
    void ClearImageBuffer(const MM::Device* caller);
    bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
-   int AcqFinished(const MM::Device* caller, int statusCode);
-   int PrepareForAcq(const MM::Device* caller);
+   /*Deprecated*/ int AcqFinished(const MM::Device* caller, int statusCode);
+   /*Deprecated*/ int PrepareForAcq(const MM::Device* caller);
+   int CameraEventCallback(const MM::Device* caller, int EventType);
 
    // autofocus support
    const char* GetImage();
@@ -122,6 +123,9 @@ public:
    int OnExposureChanged(const MM::Device* device, double newExposure);
    int OnSLMExposureChanged(const MM::Device* device, double newExposure);
    int OnMagnifierChanged(const MM::Device* device);
+   int OnCameraTriggerChanged(const MM::Device* caller, int triggerSelector, int triggerMode, int triggerSource);
+   int OnCameraTriggerChanged(const MM::Device* caller, int triggerSelector, int triggerMode, int triggerSource,
+				int triggerDelay, int triggerActivation, int triggerOverlap);
 
 
    void NextPostedError(int& errorCode, char* pMessage, int maxlen, int& messageLength);

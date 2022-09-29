@@ -146,3 +146,66 @@ int CameraInstance::StopExposureSequence() { return GetImpl()->StopExposureSeque
 int CameraInstance::ClearExposureSequence() { return GetImpl()->ClearExposureSequence(); }
 int CameraInstance::AddToExposureSequence(double exposureTime_ms) { return GetImpl()->AddToExposureSequence(exposureTime_ms); }
 int CameraInstance::SendExposureSequence() const { return GetImpl()->SendExposureSequence(); }
+
+bool CameraInstance::IsNewAPIImplemented(){ return GetImpl()->IsNewAPIImplemented();}
+bool CameraInstance::HasTrigger(int triggerSelector) { return GetImpl()->HasTrigger(triggerSelector); }
+int CameraInstance::SetTriggerState(int triggerSelector, int triggerMode, int triggerSource, double triggerDelay,
+   int triggerActivation, int triggerOverlap) { return GetImpl()->SetTriggerState(triggerSelector,  triggerMode, 
+      triggerSource, triggerDelay, triggerActivation, triggerOverlap);}
+
+int CameraInstance::GetTriggerMode(int triggerSelector)
+{
+   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   double triggerDelay;
+   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
+   return triggerMode;
+}
+
+int CameraInstance::GetTriggerSource(int triggerSelector)
+{
+   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   double triggerDelay;
+   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
+   return triggerSource;
+}
+
+double CameraInstance::GetTriggerDelay(int triggerSelector)
+{
+   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   double triggerDelay;
+   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
+   return triggerDelay;
+}
+
+int CameraInstance::GetTriggerActivation(int triggerSelector)
+{
+   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   double triggerDelay;
+   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
+   return triggerActivation;
+}
+
+int CameraInstance::GetTriggerOverlap(int triggerSelector)
+{
+   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   double triggerDelay;
+   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
+   return triggerOverlap;
+}
+
+int CameraInstance::SendSoftwareTrigger(int triggerSelector) { return GetImpl()->TriggerSoftware(triggerSelector); }
+int CameraInstance::ArmAcquisition(int frameCount, double acquisitionFrameRate, int burstFrameCount)
+{ return GetImpl()->AcquisitionArm(frameCount, acquisitionFrameRate, burstFrameCount);}
+int CameraInstance::ArmAcquisition(int frameCount, int burstFrameCount) { return GetImpl()->AcquisitionArm(
+   frameCount, burstFrameCount); }
+int CameraInstance::ArmAcquisition(int frameCount, double acquisitionFrameRate){ return GetImpl()->AcquisitionArm(
+   frameCount, acquisitionFrameRate);}
+int CameraInstance::ArmAcquisition(int frameCount) { return GetImpl()->AcquisitionArm(frameCount); }
+int CameraInstance::StartAcquisition() { return GetImpl()->AcquisitionStart(); }
+int CameraInstance::StopAcquisition() { return GetImpl()->AcquisitionStop(); }
+int CameraInstance::AbortAcquisition() { return GetImpl()->AcquisitionAbort(); }
+double CameraInstance::GetRollingShutterLineOffset() { return GetImpl()->GetRollingShutterLineOffset(); }
+int CameraInstance::SetRollingShutterLineOffset(double offset_us) { return GetImpl()->SetRollingShutterLineOffset(offset_us); }
+unsigned CameraInstance::GetRollingShutterActiveLines() const { return GetImpl()->GetRollingShutterActiveLines(); }
+unsigned CameraInstance::SetRollingShutterActiveLines(unsigned numLines) { return GetImpl()->SetRollingShutterActiveLines(numLines); }
+

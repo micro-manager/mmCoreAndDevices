@@ -443,6 +443,12 @@ int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
    return DEVICE_OK;
 }
 
+int CoreCallback::CameraEventCallback(const MM::Device* caller, int EventType)
+{
+   //TODO
+   return DEVICE_OK;
+}
+
 /**
  * Handler for the property change event from the device.
  */
@@ -657,6 +663,19 @@ int CoreCallback::OnMagnifierChanged(const MM::Device* /* device */)
    return DEVICE_OK;
 }
 
+int CoreCallback::OnCameraTriggerChanged(const MM::Device* caller, int triggerSelector, int triggerMode,
+   int triggerSource)
+{
+   //TODO
+   return DEVICE_OK;
+}
+
+int CoreCallback::OnCameraTriggerChanged(const MM::Device* caller, int triggerSelector, int triggerMode,
+   int triggerSource, int triggerDelay, int triggerActivation, int triggerOverlap)
+{
+   //TODO
+   return DEVICE_OK;
+}
 
 
 int CoreCallback::SetSerialProperties(const char* portName,

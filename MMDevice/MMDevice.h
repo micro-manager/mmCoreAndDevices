@@ -361,78 +361,24 @@ namespace MM {
 
 
       //// New Camera API ////
-      virtual bool isNewAPIImplemented() = 0;
+      virtual bool IsNewAPIImplemented() = 0;
 
       //////////////////////////////
       // Triggers
       //////////////////////////////
 
-
-      // trigger state constants
-      //////////////////////////////
-
-      //TODO: these constants probably belong somewhere else
-      //  TriggerSelector
-      const int TriggerSelectorAcquisitionStart = 0;
-      const int TriggerSelectorAcquisitionEnd = 1;
-      const int TriggerSelectorAcquisitionActive = 2;
-      const int TriggerSelectorFrameBurstStart = 3;
-      const int TriggerSelectorFrameBurstEnd = 4;
-      const int TriggerSelectorFrameBurstActive = 5;
-      const int TriggerSelectorFrameStart = 6;
-      const int TriggerSelectorFrameEnd = 7;
-      const int TriggerSelectorFrameActive = 8;
-      const int TriggerSelectorExposureStart = 9;
-      const int TriggerSelectorExposureEnd = 10;
-      const int TriggerSelectorExposureActive = 11;
-
-
-      // TriggerMode
-      const int TriggerModeOn = 0;
-      const int TriggerModeOff = 1;
-
-
-      // TriggerSource
-      //  "internal" -- From the cameras internal timer
-      //  "external" -- TTL pulse
-      //  "software" -- a call from "TriggerSoftware" function
-      const int TriggerSourceInternal = 0;
-      const int TriggerSourceExternal = 1;
-      const int TriggerSourceSoftware = 2;
-
-
-      // TriggerActivation
-      const int TriggerActivationAnyEdge = 0;
-      const int TriggerActivationRisingEdge = 1;
-      const int TriggerActivationFallingEdge = 2;
-      const int TriggerActivationLevelLow = 3;
-      const int TriggerActivationLevelHigh = 4;
-
-
-      // TriggerOverlap
-      //  Off: No trigger overlap is permitted.
-      //  ReadOut: Trigger is accepted immediately after the exposure period.
-      //  PreviousFrame: Trigger is accepted (latched) at any time during the capture of the previous frame.
-      const int TriggerOverlapOff = 0;
-      const int TriggerOverlapReadout = 1;
-      const int TriggerOverlapPreviousFrame = 2;
-
-
-      // trigger functions
-      //////////////////////////////
-
       //Check which of the possible trigger types are available
-      virtual bool hasTrigger(int triggerSelector) = 0;
+      virtual bool HasTrigger(int triggerSelector) = 0;
 
       // These should return an error code if the type is not valid
       // They are not meant to do any work. 
-      // virtual int setTriggerState(int triggerSelector, int triggerMode, int triggerSource) = 0;
-      virtual int setTriggerState(int triggerSelector, int triggerMode, int triggerSource, 
-          int triggerDelay, int triggerActivation, int triggerOverlap) = 0;
+      // virtual int SetTriggerState(int triggerSelector, int triggerMode, int triggerSource) = 0;
+      virtual int SetTriggerState(int triggerSelector, int triggerMode, int triggerSource, 
+          double triggerDelay, int triggerActivation, int triggerOverlap) = 0;
 
-      // virtual int getTriggerState(int& triggerSelector, int& triggerMode, int& triggerSource) = 0;
-      virtual int getTriggerState(int& triggerSelector, int& triggerMode, int& triggerSource,
-          int& triggerDelay, int& triggerActivation, int& triggerOverlap) = 0;
+      // virtual int GetTriggerState(int triggerSelector, int& triggerMode, int& triggerSource) = 0;
+      virtual int GetTriggerState(int triggerSelector, int& triggerMode, int& triggerSource,
+          double& triggerDelay, int& triggerActivation, int& triggerOverlap) = 0;
 
 
       // Send of software of the supplied type
@@ -525,7 +471,7 @@ namespace MM {
       virtual int SetRollingShutterLineOffset(double offset_us) = 0;
 
       virtual unsigned GetRollingShutterActiveLines() const = 0;
-      virtual unsigned setRollingShutterActiveLines(unsigned numLines) = 0;
+      virtual unsigned SetRollingShutterActiveLines(unsigned numLines) = 0;
 
       ///////////////////////////////////////////////////////////////
       ///// End new camera API               ////////////////////////
