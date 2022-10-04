@@ -30,11 +30,17 @@ CVeryLowPower::CVeryLowPower( IALC_REV_ILEPowerManagement* PowerInterface, CInte
   }
 
   // Forcing the value on initialisation
-  if( !PowerInterface_->SetCoherenceMode( VeryLowPowerActive_ ) )
+  MMILE_->LogMMMessage( "Initialising very low power device's state to [" + std::string( VeryLowPowerActive_ ? g_On : g_Off ) + "]", true );
+  if ( !PowerInterface_->SetCoherenceMode( VeryLowPowerActive_ ) )
   {
-    throw std::runtime_error( "SetCoherenceMode failed" );
+    // Ignoring this error as it may be due to a single laser line refusing the command
+    MMILE_->LogMMMessage( "SetCoherenceMode failed. Ignoring this error." );
   }
 
+#ifndef ENABLE_VERY_LOW_POWER_MODE
+  // Simply ensure laser range is up-to-date
+  MMILE_->CheckAndUpdateLasers();
+#else
   // Create property
   std::vector<std::string> vAllowedValues;
   vAllowedValues.push_back( g_On );
@@ -42,6 +48,7 @@ CVeryLowPower::CVeryLowPower( IALC_REV_ILEPowerManagement* PowerInterface, CInte
   CPropertyAction* vAct = new CPropertyAction( this, &CVeryLowPower::OnValueChange );
   MMILE_->CreateStringProperty( g_PropertyName, VeryLowPowerActive_ ? g_On : g_Off, false, vAct );
   MMILE_->SetAllowedValues( g_PropertyName, vAllowedValues );
+#endif
 }
 
 CVeryLowPower::~CVeryLowPower()

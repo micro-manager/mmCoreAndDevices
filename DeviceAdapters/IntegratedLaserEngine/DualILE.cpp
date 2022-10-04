@@ -57,12 +57,25 @@ std::string CDualILE::GetDeviceName() const
 
 int CDualILE::Shutdown()
 {
-  delete LowPowerMode_;
-  LowPowerMode_ = nullptr;
-  delete ActiveBlanking_;
-  ActiveBlanking_ = nullptr;
-  delete Ports_;
-  Ports_ = nullptr;
+  LogMessage( "Dual ILE shutdown", true );
+
+  if ( LowPowerMode_ )
+  {
+    delete LowPowerMode_;
+    LowPowerMode_ = nullptr;
+  }
+  if ( ActiveBlanking_ )
+  {
+    delete ActiveBlanking_;
+    ActiveBlanking_ = nullptr;
+  }
+  if ( Ports_ )
+  {
+    delete Ports_;
+    Ports_ = nullptr;
+  }
+
+  LogMessage( "Dual ILE shutdown done", true );
   return CIntegratedLaserEngine::Shutdown();
 }
 
@@ -279,6 +292,19 @@ int CDualILE::InitializeActiveBlanking()
   return DEVICE_OK;
 }
 
+int CDualILE::InitializeNDFilters()
+{
+  return InitializeLowPowerMode();
+}
+
+void CDualILE::CheckAndUpdateLowPowerMode()
+{
+  if ( LowPowerMode_ != nullptr )
+  {
+    LowPowerMode_->CheckAndUpdate();
+  }
+}
+
 int CDualILE::InitializeLowPowerMode()
 {
   IALC_REV_ILE2* vILE2 = ILEWrapper_->GetILEInterface2( ILEDevice_ );
@@ -336,7 +362,7 @@ int CDualILE::InitializeLowPowerMode()
         }
         vUnitsMessage += "unit2";
       }
-      LogMessage( "ILE Power interface pointer invalid for " );
+      LogMessage( "ILE Power Management interface pointer invalid for " + vUnitsMessage );
     }
   }
   else

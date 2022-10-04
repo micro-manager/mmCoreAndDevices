@@ -33,6 +33,7 @@ public:
   virtual ~CDualILE();
 
   int Shutdown();
+  void CheckAndUpdateLowPowerMode() override;
 
   static const char* const g_DualDeviceName;
   static const char* const g_Dual700DeviceName;
@@ -53,6 +54,7 @@ private:
   void DeleteILE();
   int InitializePorts();
   int InitializeActiveBlanking();
+  int InitializeNDFilters();
   int InitializeLowPowerMode();
   void DisconnectILEInterfaces();
   int ReconnectILEInterfaces();
