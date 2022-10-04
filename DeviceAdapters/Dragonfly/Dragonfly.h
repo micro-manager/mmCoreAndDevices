@@ -26,12 +26,16 @@ class CCameraPortMirror;
 class CLens;
 class CSuperRes;
 class CTIRF;
+class CTIRFIntensity;
+class CBTIRF;
 class CConfigFileHandler;
 
 class IASDLoader;
 class IASDInterface;
 class IASDInterface2;
 class IASDInterface3;
+class IASDInterface4;
+class IASDInterface6;
 
 #define ERR_LIBRARY_LOAD 101
 #define ERR_LIBRARY_INIT 102
@@ -48,9 +52,11 @@ class IASDInterface3;
 #define ERR_POWERDENSITY_INIT 113
 #define ERR_SUPERRES_INIT 114
 #define ERR_TIRF_INIT 115
-#define ERR_CONFIGFILEIO_ERROR 116
-#define ERR_COMPORTPROPERTY_CREATION 117
-#define ERR_CONFIGFILEPROPERTY_CREATION 118
+#define ERR_TIRF_INTENSITY_INIT 116
+#define ERR_BTIRF_INIT 117
+#define ERR_CONFIGFILEIO_ERROR 118
+#define ERR_COMPORTPROPERTY_CREATION 119
+#define ERR_CONFIGFILEPROPERTY_CREATION 120
 
 class CDragonfly : public CGenericBase<CDragonfly>
 {
@@ -66,7 +72,7 @@ public:
 
   int OnPort( MM::PropertyBase* Prop, MM::ActionType Act );
 
-  void LogComponentMessage( const std::string& Message );
+  void LogComponentMessage( const std::string& Message, bool DebugOnly = false );
   void UpdatePropertyUI( const char* PropertyName, const char* PropertyValue );
 
 private:
@@ -86,6 +92,8 @@ private:
   std::list<CLens*> Lens_;
   CSuperRes* SuperRes_;
   CTIRF* TIRF_;
+  CTIRFIntensity* TIRFIntensity_;
+  CBTIRF* BTIRF_;
   CConfigFileHandler* ConfigFile_;
   
   IASDLoader* ASDLoader_;
@@ -98,12 +106,14 @@ private:
   int CreateDichroicMirror( IASDInterface* ASDInterface );
   int CreateFilterWheel( IASDInterface* ASDInterface, CFilterWheel*& FilterWheel, TWheelIndex WheelIndex, unsigned int ErrorCode );
   int CreateDisk( IASDInterface* ASDInterface );
-  int CreateConfocalMode( IASDInterface3* ASDInterface );
+  int CreateConfocalMode( IASDInterface3* ASDInterface3, IASDInterface4* ASDInterface4 );
   int CreateAperture( IASDInterface2* ASDInterface );
   int CreateCameraPortMirror( IASDInterface2* ASDInterface );
   int CreateLens( IASDInterface2* ASDInterface, int LensIndex );
   int CreateSuperRes( IASDInterface3* ASDInterface );
   int CreateTIRF( IASDInterface3* ASDInterface );
+  int CreateTIRFIntensity( IASDInterface6* ASDInterface6 );
+  int CreateBTIRF( IASDInterface4* ASDInterface4 );
 };
 
 #endif

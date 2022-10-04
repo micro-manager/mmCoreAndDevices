@@ -12,22 +12,15 @@
 #include "ASDWrapperSuperRes.h"
 #include "ASDWrapperTIRF.h"
 #include "ASDWrapperTIRFPolariser.h"
+#include "ASDWrapperBorealisTIRF.h"
+#include "ASDWrapperTIRFIntensity.h"
 
 CASDWrapperInterface::CASDWrapperInterface( IASDInterface3* ASDInterface )
-  : ASDInterface_( ASDInterface ),
-  DichroicMirrorWrapper_( nullptr ),
-  DiskWrapper_( nullptr ),
-  StatusWrapper_( nullptr ),
-  ConfocalModeWrapper_( nullptr ),
-  ApertureWrapper_( nullptr ),
-  CameraPortMirrorWrapper_( nullptr ),
-  SuperResWrapper_( nullptr ),
-  TIRFWrapper_( nullptr ),
-  TIRFPolariserWrapper_( nullptr )
+  : ASDInterface3_( ASDInterface )
 {
-  if ( ASDInterface_ == nullptr )
+  if ( ASDInterface3_ == nullptr )
   {
-    throw std::exception( "Invalid pointer to ASDInterface" );
+    throw std::exception( "Invalid pointer to ASDInterface3" );
   }
 }
 
@@ -60,6 +53,25 @@ CASDWrapperInterface::~CASDWrapperInterface()
   delete SuperResWrapper_;
   delete TIRFWrapper_;
   delete TIRFPolariserWrapper_;
+
+  // IASDInterface4
+  delete BorealisTIRF100Wrapper_;
+  delete BorealisTIRF60Wrapper_;
+
+  // IASDInterface6
+  delete TIRFIntensityWrapper_;
+}
+
+void CASDWrapperInterface::InitialiseConfocalMode()
+{
+  if ( ConfocalModeWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    if ( IsASDInterface4Available() )
+      ConfocalModeWrapper_ = new CASDWrapperConfocalMode( ASDInterface4_->GetImagingMode2() );
+    else
+      ConfocalModeWrapper_ = new CASDWrapperConfocalMode( ASDInterface3_->GetImagingMode() );
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -69,31 +81,31 @@ CASDWrapperInterface::~CASDWrapperInterface()
 const char* CASDWrapperInterface::GetSerialNumber() const
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->GetSerialNumber();
+  return ASDInterface3_->GetSerialNumber();
 }
 
 const char* CASDWrapperInterface::GetProductID() const
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->GetProductID();
+  return ASDInterface3_->GetProductID();
 }
 
 const char* CASDWrapperInterface::GetSoftwareVersion() const
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->GetSoftwareVersion();
+  return ASDInterface3_->GetSoftwareVersion();
 }
 
 const char* CASDWrapperInterface::GetSoftwareBuildTime() const
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->GetSoftwareBuildTime();
+  return ASDInterface3_->GetSoftwareBuildTime();
 }
 
 bool CASDWrapperInterface::IsDichroicAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsDichroicAvailable();
+  return ASDInterface3_->IsDichroicAvailable();
 }
 
 IDichroicMirrorInterface* CASDWrapperInterface::GetDichroicMirror()
@@ -101,7 +113,7 @@ IDichroicMirrorInterface* CASDWrapperInterface::GetDichroicMirror()
   if ( DichroicMirrorWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    DichroicMirrorWrapper_ = new CASDWrapperDichroicMirror( ASDInterface_->GetDichroicMirror() );
+    DichroicMirrorWrapper_ = new CASDWrapperDichroicMirror( ASDInterface3_->GetDichroicMirror() );
   }
   return DichroicMirrorWrapper_;
 }
@@ -109,7 +121,7 @@ IDichroicMirrorInterface* CASDWrapperInterface::GetDichroicMirror()
 bool CASDWrapperInterface::IsDiskAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsDiskAvailable();
+  return ASDInterface3_->IsDiskAvailable();
 }
 
 IDiskInterface* CASDWrapperInterface::GetDisk()
@@ -117,7 +129,7 @@ IDiskInterface* CASDWrapperInterface::GetDisk()
   if ( DiskWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    DiskWrapper_ = new CASDWrapperDisk( ASDInterface_->GetDisk_v2() );
+    DiskWrapper_ = new CASDWrapperDisk( ASDInterface3_->GetDisk_v2() );
   }
   return DiskWrapper_;
 }
@@ -125,7 +137,7 @@ IDiskInterface* CASDWrapperInterface::GetDisk()
 bool CASDWrapperInterface::IsFilterWheelAvailable( TWheelIndex FilterIndex )
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsFilterWheelAvailable( FilterIndex );
+  return ASDInterface3_->IsFilterWheelAvailable( FilterIndex );
 }
 
 IFilterWheelInterface* CASDWrapperInterface::GetFilterWheel( TWheelIndex FilterIndex )
@@ -133,7 +145,7 @@ IFilterWheelInterface* CASDWrapperInterface::GetFilterWheel( TWheelIndex FilterI
   if ( FilterWheelWrappers_.find( FilterIndex ) == FilterWheelWrappers_.end() )
   {
     CASDSDKLock vSDKLock;
-    CASDWrapperFilterWheel* FilterWheelWrapper_ = new CASDWrapperFilterWheel( ASDInterface_->GetFilterWheel( FilterIndex ) );
+    CASDWrapperFilterWheel* FilterWheelWrapper_ = new CASDWrapperFilterWheel( ASDInterface3_->GetFilterWheel( FilterIndex ) );
     FilterWheelWrappers_[FilterIndex] = FilterWheelWrapper_;
   }
   return FilterWheelWrappers_[FilterIndex];
@@ -142,16 +154,12 @@ IFilterWheelInterface* CASDWrapperInterface::GetFilterWheel( TWheelIndex FilterI
 bool CASDWrapperInterface::IsBrightFieldPortAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsBrightFieldPortAvailable();
+  return ASDInterface3_->IsBrightFieldPortAvailable();
 }
 
 IConfocalModeInterface2* CASDWrapperInterface::GetBrightFieldPort()
 {
-  if ( ConfocalModeWrapper_ == nullptr )
-  {
-    CASDSDKLock vSDKLock;
-    ConfocalModeWrapper_ = new CASDWrapperConfocalMode( ASDInterface_->GetImagingMode() );
-  }
+  InitialiseConfocalMode();
   return ConfocalModeWrapper_;
 }
 
@@ -160,7 +168,7 @@ IDiskInterface2* CASDWrapperInterface::GetDisk_v2()
   if ( DiskWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    DiskWrapper_ = new CASDWrapperDisk( ASDInterface_->GetDisk_v2() );
+    DiskWrapper_ = new CASDWrapperDisk( ASDInterface3_->GetDisk_v2() );
   }
   return DiskWrapper_;
 }
@@ -172,7 +180,7 @@ IDiskInterface2* CASDWrapperInterface::GetDisk_v2()
 bool CASDWrapperInterface::IsApertureAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsApertureAvailable();
+  return ASDInterface3_->IsApertureAvailable();
 }
 
 IApertureInterface* CASDWrapperInterface::GetAperture()
@@ -180,7 +188,7 @@ IApertureInterface* CASDWrapperInterface::GetAperture()
   if ( ApertureWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    ApertureWrapper_ = new CASDWrapperAperture( ASDInterface_->GetAperture() );
+    ApertureWrapper_ = new CASDWrapperAperture( ASDInterface3_->GetAperture() );
   }
   return ApertureWrapper_;
 }
@@ -188,7 +196,7 @@ IApertureInterface* CASDWrapperInterface::GetAperture()
 bool CASDWrapperInterface::IsCameraPortMirrorAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsCameraPortMirrorAvailable();
+  return ASDInterface3_->IsCameraPortMirrorAvailable();
 }
 
 ICameraPortMirrorInterface* CASDWrapperInterface::GetCameraPortMirror()
@@ -196,7 +204,7 @@ ICameraPortMirrorInterface* CASDWrapperInterface::GetCameraPortMirror()
   if ( CameraPortMirrorWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    CameraPortMirrorWrapper_ = new CASDWrapperCameraPortMirror( ASDInterface_->GetCameraPortMirror() );
+    CameraPortMirrorWrapper_ = new CASDWrapperCameraPortMirror( ASDInterface3_->GetCameraPortMirror() );
   }
   return CameraPortMirrorWrapper_;
 }
@@ -204,7 +212,7 @@ ICameraPortMirrorInterface* CASDWrapperInterface::GetCameraPortMirror()
 bool CASDWrapperInterface::IsLensAvailable( TLensType LensIndex )
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsLensAvailable( LensIndex );
+  return ASDInterface3_->IsLensAvailable( LensIndex );
 }
 
 ILensInterface* CASDWrapperInterface::GetLens( TLensType LensIndex )
@@ -212,7 +220,7 @@ ILensInterface* CASDWrapperInterface::GetLens( TLensType LensIndex )
   if ( LensWrappers_.find( LensIndex ) == LensWrappers_.end() )
   {
     CASDSDKLock vSDKLock;
-    CASDWrapperLens* vLensWrapper_ = new CASDWrapperLens( ASDInterface_->GetLens( LensIndex ) );
+    CASDWrapperLens* vLensWrapper_ = new CASDWrapperLens( ASDInterface3_->GetLens( LensIndex ) );
     LensWrappers_[LensIndex] = vLensWrapper_;
   }
   return LensWrappers_[LensIndex];
@@ -221,7 +229,7 @@ ILensInterface* CASDWrapperInterface::GetLens( TLensType LensIndex )
 int CASDWrapperInterface::GetModelID()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->GetModelID();
+  return ASDInterface3_->GetModelID();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -231,7 +239,7 @@ int CASDWrapperInterface::GetModelID()
 bool CASDWrapperInterface::IsIllLensAvailable( TLensType LensIndex )
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsIllLensAvailable( LensIndex );
+  return ASDInterface3_->IsIllLensAvailable( LensIndex );
 }
 
 IIllLensInterface* CASDWrapperInterface::GetIllLens( TLensType LensIndex )
@@ -239,7 +247,7 @@ IIllLensInterface* CASDWrapperInterface::GetIllLens( TLensType LensIndex )
   if ( IllLensWrappers_.find( LensIndex ) == IllLensWrappers_.end() )
   {
     CASDSDKLock vSDKLock;
-    CASDWrapperIllLens* vIllLensWrapper_ = new CASDWrapperIllLens( ASDInterface_->GetIllLens( LensIndex ) );
+    CASDWrapperIllLens* vIllLensWrapper_ = new CASDWrapperIllLens( ASDInterface3_->GetIllLens( LensIndex ) );
     IllLensWrappers_[LensIndex] = vIllLensWrapper_;
   }
   return IllLensWrappers_[LensIndex];
@@ -248,10 +256,10 @@ IIllLensInterface* CASDWrapperInterface::GetIllLens( TLensType LensIndex )
 bool CASDWrapperInterface::IsEPIPolariserAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsEPIPolariserAvailable();
+  return ASDInterface3_->IsEPIPolariserAvailable();
 }
 
-IEPIPolariserInterface*	CASDWrapperInterface::GetEPIPolariser()
+IEPIPolariserInterface* CASDWrapperInterface::GetEPIPolariser()
 {
   throw std::logic_error( "GetEPIPolariser() wrapper function not implemented" );
 }
@@ -259,7 +267,7 @@ IEPIPolariserInterface*	CASDWrapperInterface::GetEPIPolariser()
 bool CASDWrapperInterface::IsTIRFPolariserAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsTIRFPolariserAvailable();
+  return ASDInterface3_->IsTIRFPolariserAvailable();
 }
 
 ITIRFPolariserInterface* CASDWrapperInterface::GetTIRFPolariser()
@@ -267,7 +275,7 @@ ITIRFPolariserInterface* CASDWrapperInterface::GetTIRFPolariser()
   if ( TIRFPolariserWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    TIRFPolariserWrapper_ = new CASDWrapperTIRFPolariser( ASDInterface_->GetTIRFPolariser() );
+    TIRFPolariserWrapper_ = new CASDWrapperTIRFPolariser( ASDInterface3_->GetTIRFPolariser() );
   }
   return TIRFPolariserWrapper_;
 }
@@ -275,7 +283,7 @@ ITIRFPolariserInterface* CASDWrapperInterface::GetTIRFPolariser()
 bool CASDWrapperInterface::IsEmissionIrisAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsEmissionIrisAvailable();
+  return ASDInterface3_->IsEmissionIrisAvailable();
 }
 
 IEmissionIrisInterface* CASDWrapperInterface::GetEmissionIris()
@@ -286,7 +294,7 @@ IEmissionIrisInterface* CASDWrapperInterface::GetEmissionIris()
 bool CASDWrapperInterface::IsSuperResAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsSuperResAvailable();
+  return ASDInterface3_->IsSuperResAvailable();
 }
 
 ISuperResInterface* CASDWrapperInterface::GetSuperRes()
@@ -294,7 +302,7 @@ ISuperResInterface* CASDWrapperInterface::GetSuperRes()
   if ( SuperResWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    SuperResWrapper_ = new CASDWrapperSuperRes( ASDInterface_->GetSuperRes() );
+    SuperResWrapper_ = new CASDWrapperSuperRes( ASDInterface3_->GetSuperRes() );
   }
   return SuperResWrapper_;
 }
@@ -302,23 +310,19 @@ ISuperResInterface* CASDWrapperInterface::GetSuperRes()
 bool CASDWrapperInterface::IsImagingModeAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsImagingModeAvailable();
+  return ASDInterface3_->IsImagingModeAvailable();
 }
 
 IConfocalModeInterface3* CASDWrapperInterface::GetImagingMode()
 {
-  if ( ConfocalModeWrapper_ == nullptr )
-  {
-    CASDSDKLock vSDKLock;
-    ConfocalModeWrapper_ = new CASDWrapperConfocalMode( ASDInterface_->GetImagingMode() );
-  }
+  InitialiseConfocalMode();
   return ConfocalModeWrapper_;
 }
 
 bool CASDWrapperInterface::IsTIRFAvailable()
 {
   CASDSDKLock vSDKLock;
-  return ASDInterface_->IsTIRFAvailable();
+  return ASDInterface3_->IsTIRFAvailable();
 }
 
 ITIRFInterface* CASDWrapperInterface::GetTIRF()
@@ -326,7 +330,7 @@ ITIRFInterface* CASDWrapperInterface::GetTIRF()
   if ( TIRFWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    TIRFWrapper_ = new CASDWrapperTIRF( ASDInterface_->GetTIRF() );
+    TIRFWrapper_ = new CASDWrapperTIRF( ASDInterface3_->GetTIRF() );
   }
   return TIRFWrapper_;
 }
@@ -336,7 +340,7 @@ IStatusInterface* CASDWrapperInterface::GetStatus()
   if ( StatusWrapper_ == nullptr )
   {
     CASDSDKLock vSDKLock;
-    StatusWrapper_ = new CASDWrapperStatus( ASDInterface_->GetStatus() );
+    StatusWrapper_ = new CASDWrapperStatus( ASDInterface3_->GetStatus() );
   }
   return StatusWrapper_;
 }
@@ -344,4 +348,104 @@ IStatusInterface* CASDWrapperInterface::GetStatus()
 IFrontPanelLEDInterface* CASDWrapperInterface::GetFrontPanelLED()
 {
   throw std::logic_error( "GetFrontPanelLED() wrapper function not implemented" );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// IASDInterface4
+///////////////////////////////////////////////////////////////////////////////
+
+CASDWrapperInterface::CASDWrapperInterface( IASDInterface4* ASDInterface )
+  : CASDWrapperInterface( dynamic_cast< IASDInterface3* >( ASDInterface ) )
+{
+  ASDInterface4_ = ASDInterface;
+  if ( ASDInterface4_ == nullptr )
+  {
+    throw std::exception( "Invalid pointer to ASDInterface4" );
+  }
+}
+
+IConfocalModeInterface4* CASDWrapperInterface::GetImagingMode2()
+{
+  InitialiseConfocalMode();
+  return ConfocalModeWrapper_;
+}
+
+bool CASDWrapperInterface::IsBorealisTIRF100Available()
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface4_->IsBorealisTIRF100Available();
+}
+
+IBorealisTIRFInterface* CASDWrapperInterface::GetBorealisTIRF100()
+{
+  if ( IsBorealisTIRF100Available() )
+  {
+    if ( BorealisTIRF100Wrapper_ == nullptr )
+    {
+      CASDSDKLock vSDKLock;
+      BorealisTIRF100Wrapper_ = new CASDWrapperBorealisTIRF( ASDInterface4_->GetBorealisTIRF100() );
+    }
+  }
+  return BorealisTIRF100Wrapper_;
+}
+
+bool CASDWrapperInterface::IsBorealisTIRF60Available()
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface4_->IsBorealisTIRF60Available();
+}
+
+IBorealisTIRFInterface* CASDWrapperInterface::GetBorealisTIRF60()
+{
+  if ( IsBorealisTIRF60Available() )
+  {
+    if ( BorealisTIRF60Wrapper_ == nullptr )
+    {
+      CASDSDKLock vSDKLock;
+      BorealisTIRF60Wrapper_ = new CASDWrapperBorealisTIRF( ASDInterface4_->GetBorealisTIRF60() );
+    }
+  }
+  return BorealisTIRF60Wrapper_;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// IASDInterface6
+///////////////////////////////////////////////////////////////////////////////
+
+CASDWrapperInterface::CASDWrapperInterface( IASDInterface6* ASDInterface )
+  : CASDWrapperInterface( dynamic_cast< IASDInterface4* >( ASDInterface ) )
+{
+  ASDInterface6_ = ASDInterface;
+  if ( ASDInterface6_ == nullptr )
+  {
+    throw std::exception( "Invalid pointer to ASDInterface6" );
+  }
+}
+
+const char* CASDWrapperInterface::GetSoftwareVersion2( int ID ) const
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface6_->GetSoftwareVersion2( ID );
+}
+
+const char* CASDWrapperInterface::GetSoftwareBuildTime2( int ID ) const
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface6_->GetSoftwareBuildTime2( ID );
+}
+
+bool CASDWrapperInterface::IsTIRFIntensityAvailable()
+{
+  CASDSDKLock vSDKLock;
+  return ASDInterface6_->IsTIRFIntensityAvailable();
+}
+
+ITIRFIntensityInterface* CASDWrapperInterface::GetTIRFIntensity()
+{
+  if ( TIRFIntensityWrapper_ == nullptr )
+  {
+    CASDSDKLock vSDKLock;
+    TIRFIntensityWrapper_ = new CASDWrapperTIRFIntensity( ASDInterface6_->GetTIRFIntensity() );
+  }
+  return TIRFIntensityWrapper_;
 }

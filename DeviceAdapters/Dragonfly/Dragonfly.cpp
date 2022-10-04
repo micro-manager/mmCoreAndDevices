@@ -17,6 +17,8 @@
 #include "Lens.h"
 #include "SuperRes.h"
 #include "TIRF.h"
+#include "TIRFIntensity.h"
+#include "BTIRF.h"
 #include "ConfigFileHandler.h"
 
 #include "ASDInterface.h"
@@ -84,6 +86,8 @@ CDragonfly::CDragonfly()
   CameraPortMirror_( nullptr ),
   SuperRes_( nullptr ),
   TIRF_( nullptr ),
+  TIRFIntensity_( nullptr ),
+  BTIRF_( nullptr ),
   ConfigFile_( nullptr )
 {
   InitializeDefaultErrorMessages();
@@ -121,6 +125,10 @@ CDragonfly::CDragonfly()
   SetErrorText( ERR_SUPERRES_INIT, vMessage.c_str() );
   vMessage = "TIRF initialisation failed. " + vContactSupportMessage;
   SetErrorText( ERR_TIRF_INIT, vMessage.c_str() );
+  vMessage = "TIRF Intensity initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_TIRF_INTENSITY_INIT, vMessage.c_str() );
+  vMessage = "BTIRF initialisation failed. " + vContactSupportMessage;
+  SetErrorText( ERR_BTIRF_INIT, vMessage.c_str() );
   SetErrorText( ERR_CONFIGFILEIO_ERROR, "Can't write to Dragonfly configuration file. Please select a file for which you have read and write access." );
   SetErrorText( ERR_COMPORTPROPERTY_CREATION, "Error creating COM Port property" );
   SetErrorText( ERR_CONFIGFILEPROPERTY_CREATION, "Error creating Configuration File path property" );
@@ -141,6 +149,7 @@ CDragonfly::CDragonfly()
 
   // COM Port property
   int vRet = CreatePropertyWithHandler( g_DevicePort, "Undefined", MM::String, false, &CDragonfly::OnPort, true );
+  AddAllowedValue( g_DevicePort, "Undefined" );
   if ( vRet == DEVICE_OK )
   {
     string vComPortBaseName;
@@ -234,22 +243,14 @@ int CDragonfly::Shutdown()
   }
 
   // It's important to reset pointers and clear lists in case there's a problem in the next Initialize call
-  delete DichroicMirror_;
-  DichroicMirror_ = nullptr;
-  delete FilterWheel1_;
-  FilterWheel1_ = nullptr;
-  delete FilterWheel2_;
-  FilterWheel2_ = nullptr;
-  delete DragonflyStatus_;
-  DragonflyStatus_ = nullptr;
-  delete Disk_;
-  Disk_ = nullptr;
-  delete ConfocalMode_;
-  ConfocalMode_ = nullptr;
-  delete Aperture_;
-  Aperture_ = nullptr;
-  delete CameraPortMirror_;
-  CameraPortMirror_ = nullptr;
+  delete BTIRF_;
+  BTIRF_ = nullptr;
+  delete TIRFIntensity_;
+  TIRFIntensity_ = nullptr;
+  delete TIRF_;
+  TIRF_ = nullptr;
+  delete SuperRes_;
+  SuperRes_ = nullptr;
   list<CLens*>::iterator vLensIt = Lens_.begin();
   while ( vLensIt != Lens_.end() )
   {
@@ -257,10 +258,22 @@ int CDragonfly::Shutdown()
     vLensIt++;
   }
   Lens_.clear();
-  delete SuperRes_;
-  SuperRes_ = nullptr;
-  delete TIRF_;
-  TIRF_ = nullptr;
+  delete CameraPortMirror_;
+  CameraPortMirror_ = nullptr;
+  delete Aperture_;
+  Aperture_ = nullptr;
+  delete ConfocalMode_;
+  ConfocalMode_ = nullptr;
+  delete Disk_;
+  Disk_ = nullptr;
+  delete FilterWheel2_;
+  FilterWheel2_ = nullptr;
+  delete FilterWheel1_;
+  FilterWheel1_ = nullptr;
+  delete DichroicMirror_;
+  DichroicMirror_ = nullptr;
+  delete DragonflyStatus_;
+  DragonflyStatus_ = nullptr;
 
   Disconnect();
 
@@ -329,7 +342,9 @@ int CDragonfly::InitializeComponents()
   IASDInterface* vASDInterface = ASDLoader_->GetASDInterface();
   IASDInterface2* vASDInterface2 = ASDLoader_->GetASDInterface2();
   IASDInterface3* vASDInterface3 = ASDLoader_->GetASDInterface3();
-
+  IASDInterface4* vASDInterface4 = ASDWrapper_->GetASDInterface4( ASDLoader_ );
+  IASDInterface6* vASDInterface6 = ASDWrapper_->GetASDInterface6( ASDLoader_ );
+  
   // Description property
   int vRet = CreateProperty( MM::g_Keyword_Description, g_DeviceDescription, MM::String, true );
   if ( vRet != DEVICE_OK )
@@ -392,7 +407,7 @@ int CDragonfly::InitializeComponents()
   }
 
   // Confocal mode component
-  vRet = CreateConfocalMode( vASDInterface3 );
+  vRet = CreateConfocalMode( vASDInterface3, vASDInterface4 );
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -435,7 +450,17 @@ int CDragonfly::InitializeComponents()
   {
     return vRet;
   }
-  
+
+  // Optical feedback
+  vRet = CreateTIRFIntensity( vASDInterface6 );
+  if ( vRet != DEVICE_OK )
+  {
+    return vRet;
+  }
+
+  // BTIRF component
+  vRet = CreateBTIRF( vASDInterface4 );
+    
   return vRet;
 }
 
@@ -563,29 +588,31 @@ int CDragonfly::CreateDisk( IASDInterface* ASDInterface )
   return vErrorCode;
 }
 
-int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface )
+int CDragonfly::CreateConfocalMode( IASDInterface3* ASDInterface3, IASDInterface4* ASDInterface4 )
 {
   int vErrorCode = DEVICE_OK;
-  if ( ASDInterface->IsImagingModeAvailable() )
+  if ( ASDInterface3->IsImagingModeAvailable() )
   {
     try
     {
-      IConfocalModeInterface3* vASDConfocalMode = ASDInterface->GetImagingMode();
-      if ( vASDConfocalMode != nullptr )
+      IConfocalModeInterface3* vASDConfocalMode3 = ASDInterface3->GetImagingMode();
+      if ( vASDConfocalMode3 != nullptr )
       {
         IIllLensInterface* vIllLensInterface = nullptr;
         for ( int vLensIndex = lt_Lens1; vLensIndex < lt_LensMax && vIllLensInterface == nullptr; ++vLensIndex )
         {
-          if ( ASDInterface->IsIllLensAvailable( (TLensType)vLensIndex ) )
+          if ( ASDInterface3->IsIllLensAvailable( (TLensType)vLensIndex ) )
           {
-            vIllLensInterface = ASDInterface->GetIllLens( (TLensType)vLensIndex );
+            vIllLensInterface = ASDInterface3->GetIllLens( (TLensType)vLensIndex );
           }
         }
         if ( vIllLensInterface == nullptr )
         {
           LogMessage( "Couldn't find any valid instance of Power Density" );
         }
-        ConfocalMode_ = new CConfocalMode( vASDConfocalMode, vIllLensInterface, this );
+        IConfocalModeInterface4* vASDConfocalMode4 = ASDInterface4 ? ASDInterface4->GetImagingMode2() : nullptr;
+        IBorealisTIRFInterface* vBorealisTIRF60Interface = ASDInterface4 ? ASDInterface4->GetBorealisTIRF60() : nullptr;
+        ConfocalMode_ = new CConfocalMode( vASDConfocalMode3, vASDConfocalMode4, vIllLensInterface, vBorealisTIRF60Interface, this );
       }
       else
       {
@@ -751,10 +778,10 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
   {
     try
     {
-      ITIRFInterface* vTIRF = ASDInterface->GetTIRF();
-      if ( vTIRF != nullptr )
+      ITIRFInterface* vASDTIRF = ASDInterface->GetTIRF();
+      if ( vASDTIRF != nullptr )
       {
-        TIRF_ = new CTIRF( vTIRF, ConfigFile_, this );
+        TIRF_ = new CTIRF( vASDTIRF, ConfigFile_, this );
       }
       else
       {
@@ -777,7 +804,64 @@ int CDragonfly::CreateTIRF( IASDInterface3* ASDInterface )
   return vErrorCode;
 }
 
-void CDragonfly::LogComponentMessage( const std::string& Message )
+int CDragonfly::CreateTIRFIntensity( IASDInterface6* ASDInterface6 )
 {
-  LogMessage( Message );
+  int vErrorCode = DEVICE_OK;
+  if ( ASDInterface6 && ASDInterface6->IsTIRFIntensityAvailable() )
+  {
+    try
+    {
+      ITIRFIntensityInterface* vASDTIRFIntensity = ASDInterface6->GetTIRFIntensity();
+      if ( vASDTIRFIntensity != nullptr )
+      {
+        TIRFIntensity_ = new CTIRFIntensity( vASDTIRFIntensity, ConfocalMode_, this );
+      }
+      else
+      {
+        LogMessage( "TIRF Intensity ASD SDK pointer invalid" );
+        vErrorCode = ERR_TIRF_INTENSITY_INIT;
+      }
+    }
+    catch ( exception& vException )
+    {
+      string vMessage( "Error loading TIRF Intensity. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      vErrorCode = ERR_TIRF_INTENSITY_INIT;
+    }
+  }
+  else
+  {
+    LogMessage( "TIRF Intensity not available", true );
+  }
+  return vErrorCode;
+}
+
+int CDragonfly::CreateBTIRF( IASDInterface4* ASDInterface4 )
+{
+  int vErrorCode = DEVICE_OK;
+  if ( ASDInterface4 )
+  {
+    try
+    {
+      BTIRF_ = new CBTIRF( ASDInterface4, this );
+    }
+    catch ( exception& vException )
+    {
+      string vMessage( "Error loading BTIRF. Caught Exception with message: " );
+      vMessage += vException.what();
+      LogMessage( vMessage );
+      vErrorCode = ERR_BTIRF_INIT;
+    }
+  }
+  else
+  {
+    LogMessage( "ASD Interface4 not available", true );
+  }
+  return vErrorCode;
+}
+
+void CDragonfly::LogComponentMessage( const std::string& Message, bool DebugOnly)
+{
+  LogMessage( Message, DebugOnly );
 }

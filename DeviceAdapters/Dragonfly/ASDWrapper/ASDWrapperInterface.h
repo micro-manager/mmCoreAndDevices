@@ -21,12 +21,22 @@ class CASDWrapperIllLens;
 class CASDWrapperSuperRes;
 class CASDWrapperTIRF;
 class CASDWrapperTIRFPolariser;
+class CASDWrapperConfocalMode4;
+class CASDWrapperBorealisTIRF;
+class CASDWrapperTIRFIntensity;
 
-class CASDWrapperInterface : public IASDInterface3
+class CASDWrapperInterface : public IASDInterface6
 {
 public:
-  CASDWrapperInterface( IASDInterface3* ASDInterface );
+  CASDWrapperInterface(IASDInterface3* ASDInterface);
+  CASDWrapperInterface(IASDInterface4* ASDInterface);
+  CASDWrapperInterface(IASDInterface6* ASDInterface);
   ~CASDWrapperInterface();
+
+  bool IsASDInterface4Available() const { return ASDInterface4_ != nullptr; }
+  bool IsASDInterface6Available() const { return ASDInterface6_ != nullptr; }
+
+  void InitialiseConfocalMode();
 
   // IASDInterface
   const char* __stdcall GetSerialNumber() const;
@@ -70,20 +80,43 @@ public:
   IStatusInterface* __stdcall GetStatus();
   IFrontPanelLEDInterface* __stdcall GetFrontPanelLED();
 
+  // IASDInterface4
+  IConfocalModeInterface4* __stdcall GetImagingMode2();
+  bool __stdcall IsBorealisTIRF100Available();
+  IBorealisTIRFInterface* __stdcall GetBorealisTIRF100();
+  bool __stdcall IsBorealisTIRF60Available();
+  IBorealisTIRFInterface* __stdcall GetBorealisTIRF60();
+
+  // IASDInterface5
+  const char* __stdcall GetSoftwareVersion2(int ID) const;
+  const char* __stdcall GetSoftwareBuildTime2(int ID) const;
+
+  // IASDInterface6
+  bool __stdcall IsTIRFIntensityAvailable();
+  ITIRFIntensityInterface* __stdcall GetTIRFIntensity();
+
 private:
-  IASDInterface3* ASDInterface_;
-  CASDWrapperDichroicMirror* DichroicMirrorWrapper_;
+  IASDInterface3* ASDInterface3_ = nullptr;
+  IASDInterface4* ASDInterface4_ = nullptr;
+  IASDInterface6* ASDInterface6_ = nullptr;
+
+  CASDWrapperDichroicMirror* DichroicMirrorWrapper_ = nullptr;
   std::map<TWheelIndex, CASDWrapperFilterWheel*> FilterWheelWrappers_;
-  CASDWrapperDisk* DiskWrapper_;
-  CASDWrapperStatus* StatusWrapper_;
-  CASDWrapperConfocalMode* ConfocalModeWrapper_;
-  CASDWrapperAperture* ApertureWrapper_;
-  CASDWrapperCameraPortMirror* CameraPortMirrorWrapper_;
+  CASDWrapperDisk* DiskWrapper_ = nullptr;
+  CASDWrapperStatus* StatusWrapper_ = nullptr;
+  CASDWrapperConfocalMode* ConfocalModeWrapper_ = nullptr;
+  CASDWrapperAperture* ApertureWrapper_ = nullptr;
+  CASDWrapperCameraPortMirror* CameraPortMirrorWrapper_ = nullptr;
   std::map<TLensType, CASDWrapperLens*> LensWrappers_;
   std::map<TLensType, CASDWrapperIllLens*> IllLensWrappers_;
-  CASDWrapperSuperRes* SuperResWrapper_;
-  CASDWrapperTIRF* TIRFWrapper_;
-  CASDWrapperTIRFPolariser* TIRFPolariserWrapper_;
+  CASDWrapperSuperRes* SuperResWrapper_ = nullptr;
+  CASDWrapperTIRF* TIRFWrapper_ = nullptr;
+  CASDWrapperTIRFPolariser* TIRFPolariserWrapper_ = nullptr;
+
+  CASDWrapperBorealisTIRF* BorealisTIRF100Wrapper_ = nullptr;
+  CASDWrapperBorealisTIRF* BorealisTIRF60Wrapper_ = nullptr;
+
+  CASDWrapperTIRFIntensity* TIRFIntensityWrapper_ = nullptr;
 };
 
 #endif

@@ -90,8 +90,12 @@ int CTIRFModeIntSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType A
       if ( SelectedTIRFMode_ == CriticalAngle && DeviceWrapper_->Mode() == Penetration )
       {
         // Special case for when Critical Angle is selected and the Penetration is changed
-        // Since the user is really not supposed to do this we prefer reset the UI to prevent confusions
+        // Since the user is really not supposed to do this we prefer to reset the UI to prevent confusions
         SetPropertyValue( Prop, BufferedUIValue_ );
+      }
+      else
+      {
+        BufferedUIValue_ = vRequestedValue;
       }
     }
     else
@@ -106,6 +110,7 @@ int CTIRFModeIntSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType A
 
 void CTIRFModeIntSubProperty::SetBufferedUserSelectionValue( int NewValue )
 {
+  MMDragonfly_->LogComponentMessage( "Buffering " + PropertyName_ + " position [" + to_string( NewValue ) + "]", true );
   BufferedUserSelectionValue_ = NewValue;
   // Save the new value to the config file
   ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( static_cast< long long >( BufferedUserSelectionValue_ ) ) );
@@ -131,6 +136,11 @@ int CTIRFModeIntSubProperty::SetDeviceValue( MM::PropertyBase* Prop, int Request
           Prop->Get( vNewValue );
           SetBufferedUserSelectionValue( (int)vNewValue );
         }
+        else
+        {
+          // We lost device connection so backup the value
+          SetBufferedUserSelectionValue( RequestedValue );
+        }
       }
       else
       {
@@ -146,6 +156,8 @@ int CTIRFModeIntSubProperty::SetDeviceValue( MM::PropertyBase* Prop, int Request
   }
   else
   {
+    // We lost device connection so backup the value
+    SetBufferedUserSelectionValue( RequestedValue );
     MMDragonfly_->LogComponentMessage( "Failed to retrieve " + PropertyName_ + " limits" );
     vRet = DEVICE_ERR;
   }
@@ -194,13 +206,10 @@ void CTIRFModeIntSubProperty::ModeSelected( ETIRFMode SelectedTIRFMode )
   {
     if ( MMProp_ )
     {
-      long vCurrentValue;
-      MMProp_->Get( vCurrentValue );
-      if ( BufferedUserSelectionValue_ != vCurrentValue )
-      {
-        SetPropertyValue( MMProp_, (long)BufferedUserSelectionValue_ );
-        SetDeviceValue( MMProp_, BufferedUserSelectionValue_ );
-      }
+      // Current TIRF mode has just been selected, apply the buffered value
+      MMDragonfly_->LogComponentMessage( "Load " + PropertyName_ + " position from Buffer [" + to_string( BufferedUserSelectionValue_ ) + "]", true );
+      SetPropertyValue( MMProp_, (long)BufferedUserSelectionValue_ );
+      SetDeviceValue( MMProp_, BufferedUserSelectionValue_ );
     }
     else
     {
@@ -211,7 +220,7 @@ void CTIRFModeIntSubProperty::ModeSelected( ETIRFMode SelectedTIRFMode )
   {
     if ( SelectedTIRFMode_ == CriticalAngle && DeviceWrapper_->Mode() == Penetration )
     {
-      // Critical Angle has just been selected, get the new value from the device
+      // Critical Angle has just been selected, get the new Penetration value from the device
       if ( MMProp_ )
       {
         SetPropertyValueFromDeviceValue( MMProp_ );

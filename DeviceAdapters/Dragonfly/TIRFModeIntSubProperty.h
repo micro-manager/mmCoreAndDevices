@@ -10,6 +10,7 @@
 #include "Property.h"
 #include "ComponentInterface.h"
 #include "TIRFMode.h"
+#include "Dragonfly.h"
 
 class CDragonfly;
 class IConfigFileHandler;
@@ -27,7 +28,7 @@ public:
 class CPenetrationWrapper : public CIntDeviceWrapper
 {
 public:
-  CPenetrationWrapper( ITIRFInterface* TIRFInterface ) : TIRFInterface_( TIRFInterface ) {}
+  CPenetrationWrapper( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly ) : TIRFInterface_( TIRFInterface ), MMDragonfly_( MMDragonfly ) {}
   bool GetLimits( int* Min, int* Max )
   {
     return TIRFInterface_->GetPenetrationLimit( Min, Max );
@@ -38,17 +39,19 @@ public:
   }
   bool Set( int Value )
   {
+    MMDragonfly_->LogComponentMessage( "Set TIRF Penetration to [" + std::to_string( Value ) + "]", true );
     return TIRFInterface_->SetPenetration_nm( Value );
   }
   ETIRFMode Mode() const { return Penetration; }
 private:
   ITIRFInterface* TIRFInterface_;
+  CDragonfly* MMDragonfly_;
 };
 
 class COffsetWrapper : public CIntDeviceWrapper
 {
 public:
-  COffsetWrapper( ITIRFInterface* TIRFInterface ) : TIRFInterface_( TIRFInterface ) {}
+  COffsetWrapper( ITIRFInterface* TIRFInterface, CDragonfly* MMDragonfly ) : TIRFInterface_( TIRFInterface ), MMDragonfly_( MMDragonfly ) {}
   bool GetLimits( int* Min, int* Max )
   {
     return TIRFInterface_->GetOffsetLimit( Min, Max );
@@ -59,11 +62,13 @@ public:
   }
   bool Set( int Value )
   {
+    MMDragonfly_->LogComponentMessage( "Set TIRF Offset to [" + std::to_string( Value ) + "]", true );
     return TIRFInterface_->SetOffset( Value );
   }
   ETIRFMode Mode() const { return CriticalAngle; }
 private:
   ITIRFInterface* TIRFInterface_;
+  CDragonfly* MMDragonfly_;
 };
 
 class CTIRFModeIntSubProperty

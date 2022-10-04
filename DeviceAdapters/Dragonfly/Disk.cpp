@@ -72,6 +72,7 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   // Start the disk
   if ( !DiskInterface_->IsSpinning() )
   {
+    MMDragonfly_->LogComponentMessage( "Start disk", true );
     bool vSuccess = DiskInterface_->Start();
     if ( !vSuccess )
     {
@@ -81,8 +82,12 @@ CDisk::CDisk( IDiskInterface2* DiskSpeedInterface, IConfigFileHandler* ConfigFil
   DiskStatus_->Start();
 
   // Initialise the device speed
+  MMDragonfly_->LogComponentMessage( "Set Disk speed to [" + std::to_string( vRequestedSpeed_ ) + "]", true );
+#ifdef _USE_DISKSIMULATOR_
   bool vSuccess = DiskSimulator_.SetSpeed( vRequestedSpeed_ );
-  //vSuccess = DiskInterface_->SetSpeed( RequestedSpeed_ );
+#else
+  bool vSuccess = DiskInterface_->SetSpeed( vRequestedSpeed_ );
+#endif
   if ( !vSuccess )
   {
     throw std::runtime_error( g_DiskSpeedSetError );
@@ -174,8 +179,12 @@ int CDisk::OnSpeedChange( MM::PropertyBase * Prop, MM::ActionType Act )
       {
         if ( vRequestedSpeed >= (long)vMin && vRequestedSpeed <= (long)vMax )
         {
+          MMDragonfly_->LogComponentMessage( "Set Disk speed to [" + std::to_string( vRequestedSpeed ) + "]", true );
+#ifdef _USE_DISKSIMULATOR_
           if ( DiskSimulator_.SetSpeed( vRequestedSpeed ) )
-          //if ( DiskInterface_->SetSpeed( vRequestedSpeed ) )
+#else
+          if ( DiskInterface_->SetSpeed( vRequestedSpeed ) )
+#endif
           {
             ConfigFileHandler_->SavePropertyValue( g_DiskSpeedPropertyName, to_string( static_cast< long long >( vRequestedSpeed ) ) );
             boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
@@ -218,6 +227,7 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     Prop->Get( vRequest );
     if ( vRequest == g_DiskStatusStart )
     {
+      MMDragonfly_->LogComponentMessage( "Start Disk", true );
       if ( DiskInterface_->Start() )
       {
         boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
@@ -231,6 +241,7 @@ int CDisk::OnStatusChange( MM::PropertyBase * Prop, MM::ActionType Act )
     }
     if ( vRequest == g_DiskStatusStop )
     {
+      MMDragonfly_->LogComponentMessage( "Stop Disk", true );
       if ( DiskInterface_->Stop() )
       {
         boost::lock_guard<boost::mutex> lock( DiskStatusMutex_ );
