@@ -472,12 +472,12 @@ m4_define([device_adapter_dirs], [m4_strip([
    Basler
    BlueboxOptics_niji
    CARVII
-   ChuoSeiki_MD5000
-   ChuoSeiki_QT
    CNCMicroscope
    CNCMicroscope/ArduinoNeoPixelShutter
    CNCMicroscope/RAMPSStage
    CSUW1
+   ChuoSeiki_MD5000
+   ChuoSeiki_QT
    Cobolt
    CoherentCube
    CoherentOBIS
@@ -492,9 +492,9 @@ m4_define([device_adapter_dirs], [m4_strip([
    FakeCamera
    FocalPoint
    FreeSerialPort
+   HIDManager
    HamiltonMVP
    HamiltonMVP/unittest
-   HIDManager
    HydraLMT200
    IDS_uEye
    IIDC
@@ -507,6 +507,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    LeicaDMI
    LeicaDMR
    LeicaDMSTC
+   LightSheetManager
    Ludl
    LudlLow
    LumencorSpectra
@@ -529,12 +530,12 @@ m4_define([device_adapter_dirs], [m4_strip([
    Oxxius
    OxxiusCombiner
    PI
+   PIEZOCONCEPT
    PI_GCS
    PI_GCS_2
    PVCAM
    ParallelPort
    Pecon
-   PIEZOCONCEPT
    Piezosystem_30DV50
    Piezosystem_NV120_1
    Piezosystem_NV40_1
@@ -566,6 +567,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    ThorlabsElliptecSlider
    ThorlabsFilterWheel
    ThorlabsSC10
+   Thorlabs_ELL14
    Tofra
    Toptica_iBeamSmartCW
    TriggerScope

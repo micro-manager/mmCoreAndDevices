@@ -129,6 +129,7 @@ SUBDIRS = \
 	LeicaDMI \
 	LeicaDMR \
 	LeicaDMSTC \
+	LightSheetManager \
 	Ludl \
 	LudlLow \
 	LumencorSpectra \
@@ -180,6 +181,7 @@ SUBDIRS = \
 	ThorlabsElliptecSlider \
 	ThorlabsFilterWheel \
 	ThorlabsSC10 \
+	Thorlabs_ELL14 \
 	Tofra \
 	Toptica_iBeamSmartCW \
 	TriggerScope \
