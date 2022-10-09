@@ -441,30 +441,33 @@ public:
    ///@{
    bool isNewAPIImplemented(const char* cameraLabel);
 
-   bool HasTrigger(const char* cameraLabel, int triggerSelector);
-   int SetTriggerState(const char* cameraLabel, int triggerSelector, int triggerMode, int triggerSource,
-         double triggerDelay, int triggerActivation, int triggerOverlap);
-   int GetTriggerMode(const char* cameraLabel, int triggerSelector);
-   int GetTriggerSource(const char* cameraLabel, int triggerSelector);
-   double GetTriggerDelay(const char* cameraLabel, int triggerSelector);
-   int GetTriggerActivation(const char* cameraLabel, int triggerSelector);
-   int GetTriggerOverlap(const char* cameraLabel, int triggerSelector);
+   bool hasTrigger(const char* cameraLabel, const char* triggerSelector);
+   int setTriggerState(const char* cameraLabel, const char* triggerSelector,
+         const char* triggerMode, const char* triggerSource, double triggerDelay,
+         const char* triggerActivation, const char* triggerOverlap);
+   std::string getTriggerMode(const char* cameraLabel, const char* triggerSelector);
+   std::string getTriggerSource(const char* cameraLabel, const char* triggerSelector);
+   double getTriggerDelay(const char* cameraLabel, const char* triggerSelector);
+   std::string getTriggerActivation(const char* cameraLabel, const char* triggerSelector);
+   std::string getTriggerOverlap(const char* cameraLabel, const char* triggerSelector);
 
-   void SendSoftwareTrigger(const char* cameraLabel, int triggerSelector);
-   int ArmAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate, int burstFrameCount);
-   int ArmAcquisition(const char* cameraLabel, int frameCount, int burstFrameCount);
-   int ArmAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate);
-   int ArmAcquisition(const char* cameraLabel, int frameCount);
-   int StartAcquisition(const char* cameraLabel);
-   int StopAcquisition(const char* cameraLabel);
-   int AbortAcquisition(const char* cameraLabel);
+   void sendSoftwareTrigger(const char* cameraLabel, const char* triggerSelector);
+   int armAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate, int burstFrameCount);
+   int armAcquisition(const char* cameraLabel, int frameCount, int burstFrameCount);
+   int armAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate);
+   int armAcquisition(const char* cameraLabel, int frameCount);
+   int armAcquisition(const char* cameraLabel);
+
+   int startAcquisition(const char* cameraLabel);
+   int stopAcquisition(const char* cameraLabel);
+   int abortAcquisition(const char* cameraLabel);
    //TODO: add these later?
    // enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
    // bool readAcquisitionStatus(AcquisitionStatusType a);
-   double GetRollingShutterLineOffset(const char* cameraLabel);
-   int SetRollingShutterLineOffset(const char* cameraLabel, double offset_us);
-   unsigned GetRollingShutterActiveLines(const char* cameraLabel);
-   unsigned SetRollingShutterActiveLines(const char* cameraLabel, unsigned numLines);
+   double getRollingShutterLineOffset(const char* cameraLabel);
+   int setRollingShutterLineOffset(const char* cameraLabel, double offset_us);
+   unsigned getRollingShutterActiveLines(const char* cameraLabel);
+   unsigned setRollingShutterActiveLines(const char* cameraLabel, unsigned numLines);
 
 
    ///@}

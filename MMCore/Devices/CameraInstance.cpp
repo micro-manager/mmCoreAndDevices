@@ -148,52 +148,67 @@ int CameraInstance::AddToExposureSequence(double exposureTime_ms) { return GetIm
 int CameraInstance::SendExposureSequence() const { return GetImpl()->SendExposureSequence(); }
 
 bool CameraInstance::IsNewAPIImplemented(){ return GetImpl()->IsNewAPIImplemented();}
-bool CameraInstance::HasTrigger(int triggerSelector) { return GetImpl()->HasTrigger(triggerSelector); }
-int CameraInstance::SetTriggerState(int triggerSelector, int triggerMode, int triggerSource, double triggerDelay,
-   int triggerActivation, int triggerOverlap) { return GetImpl()->SetTriggerState(triggerSelector,  triggerMode, 
+bool CameraInstance::HasTrigger(const char* triggerSelector) { return GetImpl()->HasTrigger(triggerSelector); }
+int CameraInstance::SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource, double triggerDelay,
+   const char* triggerActivation, const char* triggerOverlap) { return GetImpl()->SetTriggerState(triggerSelector,  triggerMode, 
       triggerSource, triggerDelay, triggerActivation, triggerOverlap);}
 
-int CameraInstance::GetTriggerMode(int triggerSelector)
+std::string CameraInstance::GetTriggerMode(const char* triggerSelector)
 {
-   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   char* triggerMode;
+   char* triggerSource;
+   char* triggerActivation;
+   char* triggerOverlap;
    double triggerDelay;
    GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
    return triggerMode;
 }
 
-int CameraInstance::GetTriggerSource(int triggerSelector)
+std::string CameraInstance::GetTriggerSource(const char* triggerSelector)
 {
-   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   char* triggerMode;
+   char* triggerSource;
+   char* triggerActivation;
+   char* triggerOverlap;
    double triggerDelay;
    GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
    return triggerSource;
 }
 
-double CameraInstance::GetTriggerDelay(int triggerSelector)
+double CameraInstance::GetTriggerDelay(const char* triggerSelector)
 {
-   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   char* triggerMode;
+   char* triggerSource;
+   char* triggerActivation;
+   char* triggerOverlap;
    double triggerDelay;
    GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
    return triggerDelay;
 }
 
-int CameraInstance::GetTriggerActivation(int triggerSelector)
+std::string CameraInstance::GetTriggerActivation(const char* triggerSelector)
 {
-   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   char* triggerMode;
+   char* triggerSource;
+   char* triggerActivation;
+   char* triggerOverlap;
    double triggerDelay;
    GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
    return triggerActivation;
 }
 
-int CameraInstance::GetTriggerOverlap(int triggerSelector)
+std::string CameraInstance::GetTriggerOverlap(const char* triggerSelector)
 {
-   int triggerMode, triggerSource, triggerActivation, triggerOverlap;
+   char* triggerMode;
+   char* triggerSource;
+   char* triggerActivation;
+   char* triggerOverlap;
    double triggerDelay;
    GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
    return triggerOverlap;
 }
 
-int CameraInstance::SendSoftwareTrigger(int triggerSelector) { return GetImpl()->TriggerSoftware(triggerSelector); }
+int CameraInstance::SendSoftwareTrigger(const char* triggerSelector) { return GetImpl()->TriggerSoftware(triggerSelector); }
 int CameraInstance::ArmAcquisition(int frameCount, double acquisitionFrameRate, int burstFrameCount)
 { return GetImpl()->AcquisitionArm(frameCount, acquisitionFrameRate, burstFrameCount);}
 int CameraInstance::ArmAcquisition(int frameCount, int burstFrameCount) { return GetImpl()->AcquisitionArm(
@@ -201,6 +216,7 @@ int CameraInstance::ArmAcquisition(int frameCount, int burstFrameCount) { return
 int CameraInstance::ArmAcquisition(int frameCount, double acquisitionFrameRate){ return GetImpl()->AcquisitionArm(
    frameCount, acquisitionFrameRate);}
 int CameraInstance::ArmAcquisition(int frameCount) { return GetImpl()->AcquisitionArm(frameCount); }
+int CameraInstance::ArmAcquisition() { return GetImpl()->AcquisitionArm(); }
 int CameraInstance::StartAcquisition() { return GetImpl()->AcquisitionStart(); }
 int CameraInstance::StopAcquisition() { return GetImpl()->AcquisitionStop(); }
 int CameraInstance::AbortAcquisition() { return GetImpl()->AcquisitionAbort(); }

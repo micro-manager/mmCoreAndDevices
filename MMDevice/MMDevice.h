@@ -368,21 +368,21 @@ namespace MM {
       //////////////////////////////
 
       //Check which of the possible trigger types are available
-      virtual bool HasTrigger(int triggerSelector) = 0;
+      virtual bool HasTrigger(const char* triggerSelector) = 0;
 
       // These should return an error code if the type is not valid
       // They are not meant to do any work. 
-      // virtual int SetTriggerState(int triggerSelector, int triggerMode, int triggerSource) = 0;
-      virtual int SetTriggerState(int triggerSelector, int triggerMode, int triggerSource, 
-          double triggerDelay, int triggerActivation, int triggerOverlap) = 0;
+      // virtual int setTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource) = 0;
+      virtual int SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource, 
+          double triggerDelay, const char* triggerActivation, const char* triggerOverlap) = 0;
 
-      // virtual int GetTriggerState(int triggerSelector, int& triggerMode, int& triggerSource) = 0;
-      virtual int GetTriggerState(int triggerSelector, int& triggerMode, int& triggerSource,
-          double& triggerDelay, int& triggerActivation, int& triggerOverlap) = 0;
+      // virtual int GetTriggerState(const char* triggerSelector, const char*& triggerMode, const char*& triggerSource) = 0;
+      virtual int GetTriggerState(const char* triggerSelector, char* triggerMode, char* triggerSource,
+          double& triggerDelay, char* triggerActivation, char* triggerOverlap) = 0;
 
 
       // Send of software of the supplied type
-      virtual int TriggerSoftware(int triggerSelector) = 0;
+      virtual int TriggerSoftware(const char* triggerSelector) = 0;
 
 
 
@@ -433,6 +433,7 @@ namespace MM {
       virtual int AcquisitionArm(int frameCount, int burstFrameCount) = 0;
       virtual int AcquisitionArm(int frameCount, double acquisitionFrameRate) = 0;
       virtual int AcquisitionArm(int frameCount) = 0;
+      virtual int AcquisitionArm() = 0;
 
 
 

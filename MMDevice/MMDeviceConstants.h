@@ -198,70 +198,53 @@ namespace MM {
 
    // trigger state constants
    //////////////////////////////
-   //  TriggerSelector
-   const int TriggerSelectorAcquisitionStart = 0;
-   const int TriggerSelectorAcquisitionEnd = 1;
-   const int TriggerSelectorAcquisitionActive = 2;
-   const int TriggerSelectorFrameBurstStart = 3;
-   const int TriggerSelectorFrameBurstEnd = 4;
-   const int TriggerSelectorFrameBurstActive = 5;
-   const int TriggerSelectorFrameStart = 6;
-   const int TriggerSelectorFrameEnd = 7;
-   const int TriggerSelectorFrameActive = 8;
-   const int TriggerSelectorExposureStart = 9;
-   const int TriggerSelectorExposureEnd = 10;
-   const int TriggerSelectorExposureActive = 11;
+   const char* const TriggerSelectorAcquisitionStart = "AcquisitionStart";
+   const char* const TriggerSelectorAcquisitionEnd = "AcquisitionEnd";
+   const char* const TriggerSelectorAcquisitionActive = "AcquisitionActive";
+   const char* const TriggerSelectorFrameBurstStart = "FrameBurstStart";
+   const char* const TriggerSelectorFrameBurstEnd = "FrameBurstEnd";
+   const char* const TriggerSelectorFrameBurstActive = "FrameBurstActive";
+   const char* const TriggerSelectorFrameStart = "FrameStart";
+   const char* const TriggerSelectorFrameEnd = "FrameEnd";
+   const char* const TriggerSelectorFrameActive = "FrameActive";
+   const char* const TriggerSelectorExposureStart = "ExposureStart";
+   const char* const TriggerSelectorExposureEnd = "ExposureEnd";
+   const char* const TriggerSelectorExposureActive = "ExposureActive";
+
+   const char* const TriggerModeOn = "On";
+   const char* const TriggerModeOff = "Off";
+
+   const char* const TriggerSourceInternal = "Internal";
+   const char* const TriggerSourceExternal = "External";
+   const char* const TriggerSourceSoftware = "Software";
+
+   const char* const TriggerActivationAnyEdge = "AnyEdge";
+   const char* const TriggerActivationRisingEdge = "RisingEdge";
+   const char* const TriggerActivationFallingEdge = "FallingEdge";
+   const char* const TriggerActivationLevelLow = "Low";
+   const char* const TriggerActivationLevelHigh = "High";
+   const char* const TriggerOverlapOff = "Off";
+   const char* const TriggerOverlapReadout = "Readout";
+   const char* const TriggerOverlapPreviousFrame = "PreviousFrame";
 
 
-   // TriggerMode
-   const int TriggerModeOn = 0;
-   const int TriggerModeOff = 1;
-
-   // TriggerSource
-   //  "internal" -- From the cameras internal timer
-   //  "external" -- TTL pulse
-   //  "software" -- a call from "TriggerSoftware" function
-   const int TriggerSourceInternal = 0;
-   const int TriggerSourceExternal = 1;
-   const int TriggerSourceSoftware = 2;
-
-
-   // TriggerActivation
-   const int TriggerActivationAnyEdge = 0;
-   const int TriggerActivationRisingEdge = 1;
-   const int TriggerActivationFallingEdge = 2;
-   const int TriggerActivationLevelLow = 3;
-   const int TriggerActivationLevelHigh = 4;
-
-
-   // TriggerOverlap
-   //  Off: No trigger overlap is permitted.
-   //  ReadOut: Trigger is accepted immediately after the exposure period.
-   //  PreviousFrame: Trigger is accepted (latched) at any time during the capture of the previous frame.
-   const int TriggerOverlapOff = 0;
-   const int TriggerOverlapReadout = 1;
-   const int TriggerOverlapPreviousFrame = 2;
-
-
-   /////////////////////////////////////////////////////////////////////
-   /// Camera event callbacks
-
-   const int CameraEventAcquisitionTrigger = 0;
-   const int CameraEventAcquisitionStart = 1;
-   const int CameraEventAcquisitionEnd = 2;
-   const int CameraEventAcquisitionTransferStart = 3;
-   const int CameraEventAcquisitionTransferEnd = 4;
-   const int CameraEventAcquisitionError = 5;
-   const int CameraEventFrameTrigger = 6;
-   const int CameraEventFrameStart = 7;
-   const int CameraEventFrameEnd = 8;
-   const int CameraEventFrameBurstStart = 9;
-   const int CameraEventFrameBurstEnd = 10;
-   const int CameraEventFrameTransferStart = 11;
-   const int CameraEventFrameTransferEnd = 12;
-   const int CameraEventExposureStart = 13;
-   const int CameraEventExposureEnd = 14;
-
+   //////////////////////////////////////
+   /// Camera Events
+   const char* const CameraEventAcquisitionTrigger = "CameraEventAcquisitionTrigger";
+   const char* const CameraEventAcquisitionStart = "CameraEventAcquisitionStart";
+   const char* const CameraEventAcquisitionEnd = "CameraEventAcquisitionEnd";
+   const char* const CameraEventAcquisitionTransferStart = "CameraEventAcquisitionTransferStart";
+   const char* const CameraEventAcquisitionTransferEnd = "CameraEventAcquisitionTransferEnd";
+   const char* const CameraEventAcquisitionError = "CameraEventAcquisitionError";
+   const char* const CameraEventFrameTrigger = "CameraEventFrameTrigger";
+   const char* const CameraEventFrameStart = "CameraEventFrameStart";
+   const char* const CameraEventFrameEnd = "CameraEventFrameEnd";
+   const char* const CameraEventFrameBurstStart = "CameraEventFrameBurstStart";
+   const char* const CameraEventFrameBurstEnd = "CameraEventFrameBurstEnd";
+   const char* const CameraEventFrameTransferStart = "CameraEventFrameTransferStart";
+   const char* const CameraEventFrameTransferEnd = "CameraEventFrameTransferEnd";
+   const char* const CameraEventExposureStart = "CameraEventExposureStart";
+   const char* const CameraEventExposureEnd = "CameraEventExposureEnd";
 
 
    //////////////////////////////////////////////////////////////////////////////

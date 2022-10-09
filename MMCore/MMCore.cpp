@@ -7015,134 +7015,142 @@ void CMMCore::registerCallback(MMEventCallback* cb)
 }
 
 
-bool CMMCore::HasTrigger(const char* cameraLabel, int triggerSelector)
+bool CMMCore::hasTrigger(const char* cameraLabel, const char* triggerSelector)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->HasTrigger(triggerSelector);
 }
 
-int CMMCore::SetTriggerState(const char* cameraLabel, int triggerSelector, int triggerMode, int triggerSource,
-                             double triggerDelay, int triggerActivation, int triggerOverlap)
+int CMMCore::setTriggerState(const char* cameraLabel, const char* triggerSelector, 
+                           const char* triggerMode, const char* triggerSource,
+                             double triggerDelay, const char* triggerActivation, const char* triggerOverlap)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->SetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
 }
 
-int CMMCore::GetTriggerMode(const char* cameraLabel, int triggerSelector)
+std::string CMMCore::getTriggerMode(const char* cameraLabel, const char* triggerSelector)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->GetTriggerMode(triggerSelector);
 }
 
-int CMMCore::GetTriggerSource(const char* cameraLabel, int triggerSelector)
+std::string CMMCore::getTriggerSource(const char* cameraLabel, const char* triggerSelector)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->GetTriggerSource(triggerSelector);
 }
 
-double CMMCore::GetTriggerDelay(const char* cameraLabel, int triggerSelector)
+double CMMCore::getTriggerDelay(const char* cameraLabel, const char* triggerSelector)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->GetTriggerDelay(triggerSelector);
 }
 
-int CMMCore::GetTriggerActivation(const char* cameraLabel, int triggerSelector)
+std::string CMMCore::getTriggerActivation(const char* cameraLabel, const char* triggerSelector)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->GetTriggerActivation(triggerSelector);
 }
 
-int CMMCore::GetTriggerOverlap(const char* cameraLabel, int triggerSelector)
+std::string CMMCore::getTriggerOverlap(const char* cameraLabel, const char* triggerSelector)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->GetTriggerOverlap(triggerSelector);
 }
 
-void CMMCore::SendSoftwareTrigger(const char* cameraLabel, int triggerSelector)
+void CMMCore::sendSoftwareTrigger(const char* cameraLabel, const char* triggerSelector)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    pCamera->SendSoftwareTrigger(triggerSelector);
 }
 
-int CMMCore::ArmAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate, int burstFrameCount)
+int CMMCore::armAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate, int burstFrameCount)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->ArmAcquisition(frameCount, acquisitionFrameRate, burstFrameCount);
 }
 
-int CMMCore::ArmAcquisition(const char* cameraLabel, int frameCount, int burstFrameCount)
+int CMMCore::armAcquisition(const char* cameraLabel, int frameCount, int burstFrameCount)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->ArmAcquisition(frameCount, burstFrameCount);
 }
 
-int CMMCore::ArmAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate)
+int CMMCore::armAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->ArmAcquisition(frameCount, acquisitionFrameRate);
 }
 
-int CMMCore::ArmAcquisition(const char* cameraLabel, int frameCount)
+int CMMCore::armAcquisition(const char* cameraLabel, int frameCount)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->ArmAcquisition(frameCount);
 }
 
-int CMMCore::StartAcquisition(const char* cameraLabel)
+int CMMCore::armAcquisition(const char* cameraLabel)
+{
+   boost::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+   return pCamera->ArmAcquisition();
+}
+
+int CMMCore::startAcquisition(const char* cameraLabel)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->StartAcquisition();
 }
 
-int CMMCore::StopAcquisition(const char* cameraLabel)
+int CMMCore::stopAcquisition(const char* cameraLabel)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->StopAcquisition();
 }
 
-int CMMCore::AbortAcquisition(const char* cameraLabel)
+int CMMCore::abortAcquisition(const char* cameraLabel)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->AbortAcquisition();
 }
 
-double CMMCore::GetRollingShutterLineOffset(const char* cameraLabel)
+double CMMCore::getRollingShutterLineOffset(const char* cameraLabel)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->GetRollingShutterLineOffset();
 }
 
-int CMMCore::SetRollingShutterLineOffset(const char* cameraLabel, double offset_us)
+int CMMCore::setRollingShutterLineOffset(const char* cameraLabel, double offset_us)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->SetRollingShutterLineOffset(offset_us);
 }
 
-unsigned CMMCore::GetRollingShutterActiveLines(const char* cameraLabel)
+unsigned CMMCore::getRollingShutterActiveLines(const char* cameraLabel)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    return pCamera->GetRollingShutterActiveLines();
 }
 
-unsigned CMMCore::SetRollingShutterActiveLines(const char* cameraLabel, unsigned numLines)
+unsigned CMMCore::setRollingShutterActiveLines(const char* cameraLabel, unsigned numLines)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);

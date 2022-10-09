@@ -127,6 +127,37 @@ public:
 	void ResultingFramerateCallback(GenApi::INode* pNode);
 
 
+	// New Camera API
+	bool IsNewAPIImplemented() { return true; };
+
+	bool HasTrigger(const char* triggerSelector);
+	int SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource,
+		double triggerDelay, const char* triggerActivation, const char* triggerOverlap);
+	int GetTriggerState(const char* triggerSelector, char* triggerMode, char* triggerSource,
+		double& triggerDelay, char* triggerActivation, char* triggerOverlap);
+	int TriggerSoftware(const char* triggerSelector);
+
+	int AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount);
+	int AcquisitionArm(int frameCount, int burstFrameCount);
+	int AcquisitionArm(int frameCount, double acquisitionFrameRate);
+	int AcquisitionArm(int frameCount);
+	int AcquisitionArm();
+
+	int AcquisitionStart();
+	int AcquisitionStop();
+	int AcquisitionAbort();
+
+	// TODO: add these later?
+	// enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
+	// bool readAcquisitionStatus(AcquisitionStatusType a);
+	double GetRollingShutterLineOffset() const;
+	int SetRollingShutterLineOffset(double offset_us);
+	unsigned GetRollingShutterActiveLines() const;
+	unsigned SetRollingShutterActiveLines(unsigned numLines);
+
+
+
+
 	// action interface
 	// ----------------
 	int OnAcqFramerate(MM::PropertyBase* pProp, MM::ActionType eAct);
