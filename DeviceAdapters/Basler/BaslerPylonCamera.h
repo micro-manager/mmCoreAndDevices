@@ -131,10 +131,20 @@ public:
 	bool IsNewAPIImplemented() { return true; };
 
 	bool HasTrigger(const char* triggerSelector);
-	int SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource,
-		double triggerDelay, const char* triggerActivation, const char* triggerOverlap);
-	int GetTriggerState(const char* triggerSelector, char* triggerMode, char* triggerSource,
-		double& triggerDelay, char* triggerActivation, char* triggerOverlap);
+
+	int SetTriggerMode(const char* triggerSelector, bool triggerMode);
+	int SetTriggerSource(const char* triggerSelector, const char* triggerSource);
+	int SetTriggerDelay(const char* triggerSelector, int triggerDelay);
+	int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation);
+	// int SetTriggerOverlap(const char* triggerSelector, const char* triggerOverlap);
+
+	int GetTriggerMode(const char* triggerSelector, bool& triggerMode);
+	int GetTriggerSource(const char* triggerSelector, char* triggerSource);
+	int GetTriggerDelay(const char* triggerSelector, int& triggerDelay);
+	int GetTriggerActivation(const char* triggerSelector, char* triggerActivation);
+	// int GetTriggerOverlap(const char* triggerSelector, char* triggerOverlap);
+
+
 	int TriggerSoftware(const char* triggerSelector);
 
 	int AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount);
@@ -155,8 +165,9 @@ public:
 	unsigned GetRollingShutterActiveLines() const;
 	unsigned SetRollingShutterActiveLines(unsigned numLines);
 
-
-
+	// Convenience functions
+	std::string NodeToString(const char* str) const;
+	void SelectTrigger(const char* triggerSelector);
 
 	// action interface
 	// ----------------
@@ -195,6 +206,7 @@ private:
 	bool  colorCamera_;
 
 	unsigned maxWidth_, maxHeight_;
+	unsigned multiFrameAcqCount_;
 	int64_t DeviceLinkThroughputLimit_;
 	int64_t InterPacketDelay_;
 	double ResultingFrameRatePrevious;

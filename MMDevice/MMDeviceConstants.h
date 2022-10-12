@@ -214,8 +214,7 @@ namespace MM {
    const char* const TriggerModeOn = "On";
    const char* const TriggerModeOff = "Off";
 
-   const char* const TriggerSourceInternal = "Internal";
-   const char* const TriggerSourceExternal = "External";
+   const char* const TriggerSourceHardware = "Hardware";
    const char* const TriggerSourceSoftware = "Software";
 
    const char* const TriggerActivationAnyEdge = "AnyEdge";
@@ -223,6 +222,7 @@ namespace MM {
    const char* const TriggerActivationFallingEdge = "FallingEdge";
    const char* const TriggerActivationLevelLow = "Low";
    const char* const TriggerActivationLevelHigh = "High";
+
    const char* const TriggerOverlapOff = "Off";
    const char* const TriggerOverlapReadout = "Readout";
    const char* const TriggerOverlapPreviousFrame = "PreviousFrame";

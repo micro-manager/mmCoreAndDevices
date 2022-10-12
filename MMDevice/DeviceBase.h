@@ -1325,7 +1325,7 @@ public:
    virtual ~CCameraBase()
    {
       if (!thd_->IsStopped()) {
-         thd_->Stop();
+         thd_->Stop(); 
          thd_->wait();
       }
       delete thd_;
@@ -1340,14 +1340,18 @@ public:
    virtual bool isNewAPIImplemented() { return false; };
 
 	virtual bool HasTrigger(const char* triggerSelector) { return false; };
-   virtual int SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource,
-       double triggerDelay, const char* triggerActivation, const char* triggerOverlap) {
-       return DEVICE_NOT_YET_IMPLEMENTED;
-   };
-   virtual int GetTriggerState(char* triggerSelector, char* triggerMode, char* triggerSource,
-                               double& triggerDelay, char* triggerActivation, char* triggerOverlap) {
-       return DEVICE_NOT_YET_IMPLEMENTED;
-   };
+   virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   // virtual int SetTriggerOverlap(const char* triggerSelector, const char* triggerOverlap) { return DEVICE_NOT_YET_IMPLEMENTED; };
+
+   virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   // virtual int GetTriggerOverlap(const char* triggerSelector, char* triggerOverlap) { return DEVICE_NOT_YET_IMPLEMENTED; };
+
    virtual int TriggerSoftware(const char* triggerSelector) {return DEVICE_NOT_YET_IMPLEMENTED;};
 
    virtual int AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount) {return DEVICE_NOT_YET_IMPLEMENTED;};

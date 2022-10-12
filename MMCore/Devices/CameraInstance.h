@@ -87,13 +87,18 @@ public:
 
    bool IsNewAPIImplemented();
    bool HasTrigger(const char* triggerSelector);
-   int SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource,
-       double triggerDelay, const char* triggerActivation, const char* triggerOverlap);
-   std::string GetTriggerMode(const char* triggerSelector);
-   std::string GetTriggerSource(const char* triggerSelector);
-   double GetTriggerDelay(const char* triggerSelector);
-   std::string GetTriggerActivation(const char* triggerSelector);
-   std::string GetTriggerOverlap(const char* triggerSelector);
+
+   int SetTriggerMode(const char* triggerSelector, bool on);
+   int SetTriggerSource(const char* triggerSelector, const char* triggerSource);
+   int SetTriggerDelay(const char* triggerSelector, int triggerDelay);
+   int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation);
+   // int SetTriggerOverlap(const char* triggerSelector, const char* triggerOverlap);
+
+   bool GetTriggerMode(const char* triggerSelector) const;
+   std::string GetTriggerSource(const char* triggerSelector) const;
+   int GetTriggerDelay(const char* triggerSelector) const;
+   std::string GetTriggerActivation(const char* triggerSelector) const;
+   // std::string GetTriggerOverlap(const char* triggerSelector) const;
 
    int SendSoftwareTrigger(const char* triggerSelector);
    int ArmAcquisition(int frameCount, double acquisitionFrameRate, int burstFrameCount);

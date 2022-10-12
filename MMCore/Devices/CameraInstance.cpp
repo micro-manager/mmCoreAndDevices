@@ -149,64 +149,47 @@ int CameraInstance::SendExposureSequence() const { return GetImpl()->SendExposur
 
 bool CameraInstance::IsNewAPIImplemented(){ return GetImpl()->IsNewAPIImplemented();}
 bool CameraInstance::HasTrigger(const char* triggerSelector) { return GetImpl()->HasTrigger(triggerSelector); }
-int CameraInstance::SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource, double triggerDelay,
-   const char* triggerActivation, const char* triggerOverlap) { return GetImpl()->SetTriggerState(triggerSelector,  triggerMode, 
-      triggerSource, triggerDelay, triggerActivation, triggerOverlap);}
 
-std::string CameraInstance::GetTriggerMode(const char* triggerSelector)
-{
-   char* triggerMode;
-   char* triggerSource;
-   char* triggerActivation;
-   char* triggerOverlap;
-   double triggerDelay;
-   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
-   return triggerMode;
-}
 
-std::string CameraInstance::GetTriggerSource(const char* triggerSelector)
-{
-   char* triggerMode;
-   char* triggerSource;
-   char* triggerActivation;
-   char* triggerOverlap;
-   double triggerDelay;
-   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
-   return triggerSource;
-}
 
-double CameraInstance::GetTriggerDelay(const char* triggerSelector)
-{
-   char* triggerMode;
-   char* triggerSource;
-   char* triggerActivation;
-   char* triggerOverlap;
-   double triggerDelay;
-   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
-   return triggerDelay;
-}
 
-std::string CameraInstance::GetTriggerActivation(const char* triggerSelector)
-{
-   char* triggerMode;
-   char* triggerSource;
-   char* triggerActivation;
-   char* triggerOverlap;
-   double triggerDelay;
-   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
-   return triggerActivation;
-}
+int CameraInstance::SetTriggerMode(const char* triggerSelector, bool triggerMode) {
+   return GetImpl()->SetTriggerMode(triggerSelector, triggerMode); };
+int CameraInstance::SetTriggerSource(const char* triggerSelector, const char* triggerSource) {
+   return GetImpl()->SetTriggerSource(triggerSelector, triggerSource); };
+int CameraInstance::SetTriggerDelay(const char* triggerSelector, int triggerDelay) {
+   return GetImpl()->SetTriggerDelay(triggerSelector, triggerDelay); };
+int CameraInstance::SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) {
+   return GetImpl()->SetTriggerActivation(triggerSelector, triggerActivation); };
+// int CameraInstance::SetTriggerOverlap(const char* triggerSelector, const char* triggerOverlap) {
+//    return GetImpl()->SetTriggerOverlap(triggerSelector, triggerOverlap); };
 
-std::string CameraInstance::GetTriggerOverlap(const char* triggerSelector)
-{
-   char* triggerMode;
-   char* triggerSource;
-   char* triggerActivation;
-   char* triggerOverlap;
-   double triggerDelay;
-   GetImpl()->GetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
-   return triggerOverlap;
-}
+bool CameraInstance::GetTriggerMode(const char* triggerSelector) const{
+   bool on;
+   GetImpl()->GetTriggerMode(triggerSelector, on);
+   return on;
+};
+std::string CameraInstance::GetTriggerSource(const char* triggerSelector) const {
+   char triggerSource[MM::MaxStrLength];
+   GetImpl()->GetTriggerSource(triggerSelector, triggerSource);
+   return std::string(triggerSource);
+};
+int CameraInstance::GetTriggerDelay(const char* triggerSelector) const {
+   int delay;
+   GetImpl()->GetTriggerDelay(triggerSelector, delay);
+   return delay;
+};
+// std::string CameraInstance::GetTriggerOverlap(const char* triggerSelector) const {
+//    char triggerOverlap[MM::MaxStrLength];
+//    GetImpl()->GetTriggerOverlap(triggerSelector, triggerOverlap);
+//    return std::string(triggerOverlap);
+// };
+std::string CameraInstance::GetTriggerActivation(const char* triggerSelector) const {
+   char triggerActivation[MM::MaxStrLength];
+   GetImpl()->GetTriggerActivation(triggerSelector, triggerActivation);
+   return std::string(triggerActivation);
+};
+
 
 int CameraInstance::SendSoftwareTrigger(const char* triggerSelector) { return GetImpl()->TriggerSoftware(triggerSelector); }
 int CameraInstance::ArmAcquisition(int frameCount, double acquisitionFrameRate, int burstFrameCount)

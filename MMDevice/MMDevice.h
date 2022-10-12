@@ -7,10 +7,11 @@
 //                plugin API for all devices.
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 06/08/2005
+//                Henry Pinkard, 2022
 //
 // COPYRIGHT:     University of California, San Francisco, 2006-2014
 //                100X Imaging Inc, 2008
-//
+//                Photomics Inc, 2022
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
 //
@@ -372,20 +373,21 @@ namespace MM {
 
       // These should return an error code if the type is not valid
       // They are not meant to do any work. 
-      // virtual int setTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource) = 0;
-      virtual int SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource, 
-          double triggerDelay, const char* triggerActivation, const char* triggerOverlap) = 0;
+      virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) = 0;
+      virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) = 0;
+      virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) = 0;
+      virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) = 0;
+      // virtual int SetTriggerOverlap(const char* triggerSelector, const char* triggerOverlap) = 0;
 
-      // virtual int GetTriggerState(const char* triggerSelector, const char*& triggerMode, const char*& triggerSource) = 0;
-      virtual int GetTriggerState(const char* triggerSelector, char* triggerMode, char* triggerSource,
-          double& triggerDelay, char* triggerActivation, char* triggerOverlap) = 0;
-
+      virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) = 0;
+      virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) = 0;
+      virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) = 0;
+      virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) = 0;
+      // virtual int GetTriggerOverlap(const char* triggerSelector, char* triggerOverlap) = 0;
 
       // Send of software of the supplied type
       virtual int TriggerSoftware(const char* triggerSelector) = 0;
-
-
-
+      
       //////////////////////////////
       // Acquisitions
       //////////////////////////////

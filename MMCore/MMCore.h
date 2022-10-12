@@ -442,14 +442,18 @@ public:
    bool isNewAPIImplemented(const char* cameraLabel);
 
    bool hasTrigger(const char* cameraLabel, const char* triggerSelector);
-   int setTriggerState(const char* cameraLabel, const char* triggerSelector,
-         const char* triggerMode, const char* triggerSource, double triggerDelay,
-         const char* triggerActivation, const char* triggerOverlap);
-   std::string getTriggerMode(const char* cameraLabel, const char* triggerSelector);
+
+   int setTriggerMode(const char* cameraLabel, const char* triggerSelector, bool on);
+   int setTriggerSource(const char* cameraLabel, const char* triggerSelector, const char* triggerSource);
+   int setTriggerDelay(const char* cameraLabel, const char* triggerSelector, double triggerDelay);
+   int setTriggerActivation(const char* cameraLabel, const char* triggerSelector, const char* triggerActivation);
+   // int setTriggerOverlap(const char* cameraLabel, const char* triggerSelector, const char* triggerOverlap);
+
+   bool getTriggerMode(const char* cameraLabel, const char* triggerSelector);
    std::string getTriggerSource(const char* cameraLabel, const char* triggerSelector);
    double getTriggerDelay(const char* cameraLabel, const char* triggerSelector);
    std::string getTriggerActivation(const char* cameraLabel, const char* triggerSelector);
-   std::string getTriggerOverlap(const char* cameraLabel, const char* triggerSelector);
+   // std::string getTriggerOverlap(const char* cameraLabel, const char* triggerSelector);
 
    void sendSoftwareTrigger(const char* cameraLabel, const char* triggerSelector);
    int armAcquisition(const char* cameraLabel, int frameCount, double acquisitionFrameRate, int burstFrameCount);

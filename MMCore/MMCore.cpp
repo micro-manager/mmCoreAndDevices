@@ -7022,16 +7022,38 @@ bool CMMCore::hasTrigger(const char* cameraLabel, const char* triggerSelector)
    return pCamera->HasTrigger(triggerSelector);
 }
 
-int CMMCore::setTriggerState(const char* cameraLabel, const char* triggerSelector, 
-                           const char* triggerMode, const char* triggerSource,
-                             double triggerDelay, const char* triggerActivation, const char* triggerOverlap)
+int CMMCore::setTriggerMode(const char* cameraLabel, const char* triggerSelector, bool on)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
-   return pCamera->SetTriggerState(triggerSelector, triggerMode, triggerSource, triggerDelay, triggerActivation, triggerOverlap);
+   return pCamera->SetTriggerMode(triggerSelector, on);
 }
 
-std::string CMMCore::getTriggerMode(const char* cameraLabel, const char* triggerSelector)
+int CMMCore::setTriggerSource(const char* cameraLabel, const char* triggerSelector, const char* triggerSource)
+{
+   boost::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+   return pCamera->SetTriggerSource(triggerSelector, triggerSource);
+}
+
+int CMMCore::setTriggerDelay(const char* cameraLabel, const char* triggerSelector, double triggerDelay)
+{
+   boost::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+   return pCamera->SetTriggerDelay(triggerSelector, triggerDelay);
+}
+
+int CMMCore::setTriggerActivation(const char* cameraLabel, const char* triggerSelector, const char* triggerActivation)
+{
+   boost::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+   return pCamera->SetTriggerActivation(triggerSelector, triggerActivation);
+}
+
+// int CMMCore::setTriggerOverlap(const char* cameraLabel, const char* triggerSelector, const char* triggerOverlap){
+// }
+
+bool CMMCore::getTriggerMode(const char* cameraLabel, const char* triggerSelector)
 {
    boost::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
@@ -7059,12 +7081,12 @@ std::string CMMCore::getTriggerActivation(const char* cameraLabel, const char* t
    return pCamera->GetTriggerActivation(triggerSelector);
 }
 
-std::string CMMCore::getTriggerOverlap(const char* cameraLabel, const char* triggerSelector)
-{
-   boost::shared_ptr<CameraInstance> pCamera =
-      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
-   return pCamera->GetTriggerOverlap(triggerSelector);
-}
+// std::string CMMCore::getTriggerOverlap(const char* cameraLabel, const char* triggerSelector)
+// {
+//    boost::shared_ptr<CameraInstance> pCamera =
+//       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+//    return pCamera->GetTriggerOverlap(triggerSelector);
+// }
 
 void CMMCore::sendSoftwareTrigger(const char* cameraLabel, const char* triggerSelector)
 {

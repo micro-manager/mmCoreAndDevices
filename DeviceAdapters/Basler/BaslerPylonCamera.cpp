@@ -156,6 +156,7 @@ BaslerCamera::BaslerCamera() :
 	gainMax_(0),
 	gainMin_(0),
 	bitDepth_(8),
+	multiFrameAcqCount_(0),
 	temperatureState_("Undefined"),
 	reverseX_("0"),
 	reverseY_("0"),
@@ -331,12 +332,14 @@ int BaslerCamera::Initialize()
 		//Pylon::String_t modelName = camera_->GetDeviceInfo().GetModelName();
 		//Get information about camera (e.g. height, width, byte depth)
 		//check if given Camera support event.
+
+
 		camera_->GrabCameraEvents = true;
+
 
 		camera_->Open();
 		// Get the camera nodeMap_ object.
 		nodeMap_ = &camera_->GetNodeMap();
-
 
 		if (camera_->EventSelector.IsWritable())
 		{
@@ -1249,7 +1252,7 @@ int BaslerCamera::StopSequenceAcquisition()
 	{
 		camera_->StopGrabbing();
 		GetCoreCallback()->AcqFinished(this, 0);
-		camera_->DeregisterImageEventHandler(ImageHandler_);
+		// camera_->DeregisterImageEventHandler(ImageHandler_);
 	}
 	return DEVICE_OK;
 }
@@ -1826,59 +1829,101 @@ void  BaslerCamera::ResultingFramerateCallback(GenApi::INode* pNode)
 
 }
 
+std::string BaslerCamera::NodeToString(const char* str) const {
+	CEnumerationPtr ptr(nodeMap_->GetNode(str));
+	gcstring val = ptr->ToString();
+	std::string s = val.c_str();
+	return s;
+}
+
+void BaslerCamera::SelectTrigger(const char* triggerSelector) {
+	CEnumerationPtr TriggerSelectorPtr(nodeMap_->GetNode("TriggerSelector"));
+	TriggerSelectorPtr->FromString(triggerSelector);
+}
+
 bool BaslerCamera:: HasTrigger(const char * triggerSelector)
 {
 	CEnumerationPtr TriggerSelectorPtr(nodeMap_->GetNode("TriggerSelector"));
 	return IsImplemented(*TriggerSelectorPtr);
 }
 
-int BaslerCamera::SetTriggerState(const char* triggerSelector, const char* triggerMode, const char* triggerSource,
-	double triggerDelay, const char* triggerActivation, const char* triggerOverlap)
-{
-	CEnumerationPtr TriggerSelectorPtr(nodeMap_->GetNode("TriggerSelector"));
-	TriggerSelectorPtr->FromString(triggerSelector);
-	CEnumerationPtr TriggerModePtr(nodeMap_->GetNode("TriggerMode"));
-	TriggerModePtr->FromString(triggerMode);
+int BaslerCamera::SetTriggerMode(const char* triggerSelector, bool triggerMode) {
+	SelectTrigger(triggerSelector);
+	if (triggerMode) {
+		CEnumParameter(nodeMap_, "TriggerMode").SetValue("On");
+	} else {
+		CEnumParameter(nodeMap_, "TriggerMode").SetValue("Off");
+	}
+	return DEVICE_OK;
+}
+
+int BaslerCamera::SetTriggerSource(const char* triggerSelector, const char* triggerSource) {
+	SelectTrigger(triggerSelector);
 	CEnumerationPtr TriggerSourcePtr(nodeMap_->GetNode("TriggerSource"));
-	TriggerSourcePtr->FromString(triggerSource);
+	if (strcmp(triggerSource, MM::TriggerSourceSoftware) == 0) {
+		// software triggers
+		TriggerSourcePtr->FromString("Software");
+	} else if (strcmp(triggerSource, MM::TriggerSourceHardware) == 0) {
+		// external (TTL) triggers
+		// If triggering on other pins were to be implemented, read a device-specific property
+		// with that information here
+		TriggerSourcePtr->FromString("Line1");
+	} else {
+		// No other trigger modes supported currently
+		return DEVICE_ERR; 
+	}
+	return DEVICE_OK;
+}
+
+int BaslerCamera::SetTriggerDelay(const char* triggerSelector, int triggerDelay) {
+	SelectTrigger(triggerSelector);
+	CFloatPtr ptr(nodeMap_->GetNode("TriggerDelay"));
+	ptr->SetValue(triggerDelay);
+	return DEVICE_OK;
+}
+
+int BaslerCamera::SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) {
+	SelectTrigger(triggerSelector);
 	CEnumerationPtr TriggerActivationPtr(nodeMap_->GetNode("TriggerActivation"));
 	TriggerActivationPtr->FromString(triggerActivation);
-	CEnumerationPtr TriggerOverlapPtr(nodeMap_->GetNode("TriggerOverlap"));
-	TriggerOverlapPtr->FromString(triggerOverlap);
-
-	CFloatPtr TriggerDelayPtr(nodeMap_->GetNode("TriggerDelay"));
-	TriggerDelayPtr->SetValue(triggerDelay);
 	return DEVICE_OK;
 }
 
-int BaslerCamera::GetTriggerState(const char* triggerSelector, char* triggerMode, char* triggerSource, 
-	double& triggerDelay, char* triggerActivation, char* triggerOverlap)
-{
-	// Read parameter values from camera
-	// TODO: set trigger mode doe reading and then go back to how it was?
-	// CEnumerationPtr TriggerSelectorPtr(nodeMap_->GetNode("TriggerSelector"));
-	// strcpy(triggerSelector, TriggerSelectorPtr->ToString().c_str());
+int BaslerCamera::GetTriggerMode(const char* triggerSelector, bool& triggerMode) {
+	SelectTrigger(triggerSelector);
+	std::string s = NodeToString("TriggerMode");
+	triggerMode = strcmp("On", s.c_str()) == 0;
+	return DEVICE_OK; 
+}
 
-
-	CEnumerationPtr TriggerModePtr(nodeMap_->GetNode("TriggerMode"));
-	strcpy(triggerMode, TriggerModePtr->ToString().c_str());
-	CEnumerationPtr TriggerSourcePtr(nodeMap_->GetNode("TriggerSource"));
-	strcpy(triggerSource, TriggerSourcePtr->ToString().c_str());
-	CEnumerationPtr TriggerActivationPtr(nodeMap_->GetNode("TriggerActivation"));
-	strcpy(triggerActivation, TriggerActivationPtr->ToString().c_str());
-	CEnumerationPtr TriggerOverlapPtr(nodeMap_->GetNode("TriggerOverlap"));
-	strcpy(triggerOverlap, TriggerOverlapPtr->ToString().c_str());
-
-	CFloatPtr TriggerDelayPtr(nodeMap_->GetNode("TriggerDelay"));
-	triggerDelay = TriggerDelayPtr->GetValue();
+int BaslerCamera::GetTriggerSource(const char* triggerSelector, char* triggerSource) {
+	SelectTrigger(triggerSelector);
+	std::string s = NodeToString("TriggerSource");
+	if (s.rfind("Line", 0) == 0) {
+		strcpy(triggerSource, MM::TriggerSourceHardware);
+	} else {
+		strcpy(triggerSource, MM::TriggerSourceSoftware);
+	}
 	return DEVICE_OK;
 }
 
-int BaslerCamera::TriggerSoftware(const char* triggerSelector)
-{
-	// Select the desired trigger
-	CEnumerationPtr TriggerSelectorPtr(nodeMap_->GetNode("TriggerSelector"));
-	TriggerSelectorPtr->FromString(triggerSelector);
+int BaslerCamera::GetTriggerDelay(const char* triggerSelector, int& triggerDelay) {
+	SelectTrigger(triggerSelector);
+	triggerDelay = CFloatPtr(nodeMap_->GetNode("TriggerDelay"))->GetValue();
+	return DEVICE_OK;
+}
+
+int BaslerCamera::GetTriggerActivation(const char* triggerSelector, char* triggerActivation) {
+	// Select the trigger to get the values of
+	SelectTrigger(triggerSelector);
+	std::string s = NodeToString("TriggerActivation");
+	strcpy(triggerActivation, s.c_str());
+	return DEVICE_OK;
+}
+
+
+int BaslerCamera::TriggerSoftware(const char* triggerSelector){
+	SelectTrigger(triggerSelector);
 	// Send the trigger
 	camera_->ExecuteSoftwareTrigger();
 	return DEVICE_OK;
@@ -1886,6 +1931,7 @@ int BaslerCamera::TriggerSoftware(const char* triggerSelector)
 
 int BaslerCamera::AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount)
 {
+	multiFrameAcqCount_ = frameCount;
 	if (frameCount == 1) {
 		// 1 frame
 		CEnumParameter(nodeMap_, "AcquisitionMode").SetValue("SingleFrame");
@@ -1893,25 +1939,13 @@ int BaslerCamera::AcquisitionArm(int frameCount, double acquisitionFrameRate, in
 		// Arbitrary number of frames
 		CEnumParameter(nodeMap_, "AcquisitionMode").SetValue("Continuous");
 	} else {
-		// more than one but fixed number of frames
-
-	 // TODO: Counter is externally triggered with a defined number
-		// Timer is for interally triggered with a defined number?
-		// timer if for externally triggered with a delay?
-
-
-		// TODO: figure out counter/time/software/external trigger sources
-		//
-		// TODOOOO Write out all combos of internal external software before and figure out how to implement them
-		//
-		//
-		// Timer is for delays longer than the maximum trigger delay
-
-		// if internal and frame count:  
-		// if external and frame count: 
-
+		// A GenICam "MultiFrame" acquisition mode
+		// Basler does not implement GenICam exactly here, so this is also "Continuous" mode
 		CEnumParameter(nodeMap_, "AcquisitionMode").SetValue("Continuous");
 	}
+	ImageHandler_ = new CircularBufferInserter(this);
+	camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
+
 
 	if (acquisitionFrameRate != 0) {
 		CBooleanParameter(nodeMap_, "AcquisitionFrameRateEnable").SetValue(true);
@@ -1920,20 +1954,20 @@ int BaslerCamera::AcquisitionArm(int frameCount, double acquisitionFrameRate, in
 		CBooleanParameter(nodeMap_, "AcquisitionFrameRateEnable").SetValue(false);
 	}
 
-	CIntegerParameter(nodeMap_, "AcquisitionBurstFrameCount").SetValue(3);
+	//TODO: burst frame count
+	// CIntegerParameter(nodeMap_, "AcquisitionBurstFrameCount").SetValue(3);
 	return DEVICE_OK;
 }
 
+// TODO: can probably move these other versions of arm to devicebase
 int BaslerCamera::AcquisitionArm(int frameCount, int burstFrameCount)
 {
-	AcquisitionArm(frameCount, 0, burstFrameCount);
-	return DEVICE_OK;
+	return AcquisitionArm(frameCount, 0, burstFrameCount);
 }
 
 int BaslerCamera::AcquisitionArm(int frameCount, double acquisitionFrameRate)
 {
-	AcquisitionArm(frameCount, acquisitionFrameRate, 1);
-	return DEVICE_OK;
+	return AcquisitionArm(frameCount, acquisitionFrameRate, 1);
 }
 
 int BaslerCamera::AcquisitionArm(int frameCount)
@@ -1944,19 +1978,28 @@ int BaslerCamera::AcquisitionArm(int frameCount)
 
 int BaslerCamera::AcquisitionArm()
 {
-	AcquisitionArm(-1, 0, 1);
-	return DEVICE_OK;
+	return AcquisitionArm(-1, 0, 1);
 }
 
 int BaslerCamera::AcquisitionStart()
 {
-	CCommandParameter(nodeMap_, "AcquisitionStart").Execute();
+	//The GenICam AcquisitionStart gets called automatically by StartGrabbing
+	if (multiFrameAcqCount_ == -1) {
+		// acquire until told to stop
+		camera_->StartGrabbing(GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+	} else {
+		// acquire a set number of frames
+		camera_->StartGrabbing(multiFrameAcqCount_, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+	}
 	return DEVICE_OK;
 }
 
 int BaslerCamera::AcquisitionStop()
 {
-	CCommandParameter(nodeMap_, "AcquisitionStop").Execute();
+	// The GenICam AcquisitionStop gets called automatically by StopGrabbing
+	// CCommandParameter(nodeMap_, "AcquisitionStop").Execute();
+	camera_->StopGrabbing();
+	camera_->DeregisterImageEventHandler(ImageHandler_);
 	return DEVICE_OK;
 }
 
