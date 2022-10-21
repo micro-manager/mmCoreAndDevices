@@ -10,11 +10,8 @@
 CRISP::CRISP() :
 	ASIBase(this, ""),
 	axis_("Z"),
-	//ledIntensity_(50),
-	//na_(0.65),
 	waitAfterLock_(1000),
 	answerTimeoutMs_(1000)
-	//sum_(0)
 {
 	InitializeDefaultErrorMessages();
 
