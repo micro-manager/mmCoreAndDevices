@@ -59,7 +59,8 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
+#include <cstring>
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -5870,7 +5871,7 @@ vector<char> CMMCore::readFromSerialPort(const char* portLabel) throw (CMMError)
    vector<char> data;
    data.resize(read, 0);
    if (read > 0)
-      memcpy(&(data[0]), answerBuf, read);
+      std::memcpy(&(data[0]), answerBuf, read);
 
    return data;
 }
