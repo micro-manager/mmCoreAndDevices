@@ -23,8 +23,6 @@
 
 #include "TaskSet_CopyMemory.h"
 
-#include <boost/foreach.hpp>
-
 #include <algorithm>
 #include <cassert>
 
@@ -82,7 +80,7 @@ void TaskSet_CopyMemory::SetUp(void* dst, const void* src, size_t bytes)
         return;
     }
 
-    BOOST_FOREACH(Task* task, tasks_)
+    for (Task* task : tasks_)
         static_cast<ATask*>(task)->SetUp(dst, src, bytes, usedTaskCount_);
 }
 
