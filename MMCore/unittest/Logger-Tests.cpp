@@ -2,11 +2,10 @@
 
 #include "Logging/Logging.h"
 
-#include <boost/bind.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/thread.hpp>
-
+#include <functional>
+#include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace mm::logging;
@@ -14,10 +13,10 @@ using namespace mm::logging;
 
 TEST(LoggerTests, BasicSynchronous)
 {
-   boost::shared_ptr<LoggingCore> c =
-      boost::make_shared<LoggingCore>();
+   std::shared_ptr<LoggingCore> c =
+      std::make_shared<LoggingCore>();
 
-   c->AddSink(boost::make_shared<StdErrLogSink>(), SinkModeSynchronous);
+   c->AddSink(std::make_shared<StdErrLogSink>(), SinkModeSynchronous);
 
    Logger lgr = c->NewLogger("mylabel");
 
@@ -29,10 +28,10 @@ TEST(LoggerTests, BasicSynchronous)
 
 TEST(LoggerTests, BasicAsynchronous)
 {
-   boost::shared_ptr<LoggingCore> c =
-      boost::make_shared<LoggingCore>();
+   std::shared_ptr<LoggingCore> c =
+      std::make_shared<LoggingCore>();
 
-   c->AddSink(boost::make_shared<StdErrLogSink>(), SinkModeAsynchronous);
+   c->AddSink(std::make_shared<StdErrLogSink>(), SinkModeAsynchronous);
 
    Logger lgr = c->NewLogger("mylabel");
 
@@ -44,10 +43,10 @@ TEST(LoggerTests, BasicAsynchronous)
 
 TEST(LoggerTests, BasicLogStream)
 {
-   boost::shared_ptr<LoggingCore> c =
-      boost::make_shared<LoggingCore>();
+   std::shared_ptr<LoggingCore> c =
+      std::make_shared<LoggingCore>();
 
-   c->AddSink(boost::make_shared<StdErrLogSink>(), SinkModeSynchronous);
+   c->AddSink(std::make_shared<StdErrLogSink>(), SinkModeSynchronous);
 
    Logger lgr = c->NewLogger("mylabel");
 
@@ -58,11 +57,11 @@ TEST(LoggerTests, BasicLogStream)
 class LoggerTestThreadFunc
 {
    unsigned n_;
-   boost::shared_ptr<LoggingCore> c_;
+   std::shared_ptr<LoggingCore> c_;
 
 public:
    LoggerTestThreadFunc(unsigned n,
-         boost::shared_ptr<LoggingCore> c) :
+         std::shared_ptr<LoggingCore> c) :
       n_(n), c_(c)
    {}
 
@@ -83,17 +82,17 @@ public:
 
 TEST(LoggerTests, SyncAndThreaded)
 {
-   boost::shared_ptr<LoggingCore> c =
-      boost::make_shared<LoggingCore>();
+   std::shared_ptr<LoggingCore> c =
+      std::make_shared<LoggingCore>();
 
-   c->AddSink(boost::make_shared<StdErrLogSink>(), SinkModeSynchronous);
+   c->AddSink(std::make_shared<StdErrLogSink>(), SinkModeSynchronous);
 
-   std::vector< boost::shared_ptr<boost::thread> > threads;
-   std::vector< boost::shared_ptr<LoggerTestThreadFunc> > funcs;
+   std::vector< std::shared_ptr<std::thread> > threads;
+   std::vector< std::shared_ptr<LoggerTestThreadFunc> > funcs;
    for (unsigned i = 0; i < 10; ++i)
    {
-      funcs.push_back(boost::make_shared<LoggerTestThreadFunc>(i, c));
-      threads.push_back(boost::make_shared<boost::thread>(
+      funcs.push_back(std::make_shared<LoggerTestThreadFunc>(i, c));
+      threads.push_back(std::make_shared<std::thread>(
                &LoggerTestThreadFunc::Run, funcs[i].get()));
    }
    for (unsigned i = 0; i < threads.size(); ++i)
@@ -103,17 +102,17 @@ TEST(LoggerTests, SyncAndThreaded)
 
 TEST(LoggerTests, AsyncAndThreaded)
 {
-   boost::shared_ptr<LoggingCore> c =
-      boost::make_shared<LoggingCore>();
+   std::shared_ptr<LoggingCore> c =
+      std::make_shared<LoggingCore>();
 
-   c->AddSink(boost::make_shared<StdErrLogSink>(), SinkModeAsynchronous);
+   c->AddSink(std::make_shared<StdErrLogSink>(), SinkModeAsynchronous);
 
-   std::vector< boost::shared_ptr<boost::thread> > threads;
-   std::vector< boost::shared_ptr<LoggerTestThreadFunc> > funcs;
+   std::vector< std::shared_ptr<std::thread> > threads;
+   std::vector< std::shared_ptr<LoggerTestThreadFunc> > funcs;
    for (unsigned i = 0; i < 10; ++i)
    {
-      funcs.push_back(boost::make_shared<LoggerTestThreadFunc>(i, c));
-      threads.push_back(boost::make_shared<boost::thread>(
+      funcs.push_back(std::make_shared<LoggerTestThreadFunc>(i, c));
+      threads.push_back(std::make_shared<std::thread>(
                &LoggerTestThreadFunc::Run, funcs[i].get()));
    }
    for (unsigned i = 0; i < threads.size(); ++i)

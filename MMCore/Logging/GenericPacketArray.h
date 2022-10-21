@@ -18,11 +18,10 @@
 
 #include "GenericLinePacket.h"
 
-#include <boost/container/vector.hpp>
-
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <vector>
 
 namespace mm
 {
@@ -37,14 +36,13 @@ class GenericPacketArray
 {
 public:
    typedef GenericLinePacket<TMetadata> LinePacketType;
-   typedef typename boost::container::vector<LinePacketType>::iterator
+   typedef typename std::vector<LinePacketType>::iterator
       IteratorType;
-   typedef typename boost::container::vector<LinePacketType>::const_iterator
+   typedef typename std::vector<LinePacketType>::const_iterator
       ConstIteratorType;
 
 private:
-   // Use boost's vector, which supports C++11-style emplace_back().
-   boost::container::vector<LinePacketType> packets_;
+   std::vector<LinePacketType> packets_;
 
 public:
    template <typename TPacketIter>

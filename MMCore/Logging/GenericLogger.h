@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include <boost/function.hpp>
 #include <boost/utility.hpp>
 
+#include <functional>
 #include <sstream>
 #include <string>
 
@@ -34,12 +34,12 @@ namespace internal
 template <typename TEntryData>
 class GenericLogger
 {
-   boost::function<void (TEntryData, const char*)> impl_;
+   std::function<void (TEntryData, const char*)> impl_;
 
 public:
    typedef TEntryData EntryDataType;
 
-   GenericLogger(boost::function<void (TEntryData, const char*)> f) :
+   GenericLogger(std::function<void (TEntryData, const char*)> f) :
       impl_(f)
    {}
 

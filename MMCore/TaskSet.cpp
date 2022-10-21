@@ -24,11 +24,13 @@
 #include "TaskSet.h"
 
 #include <boost/foreach.hpp>
-#include <boost/make_shared.hpp>
 
-TaskSet::TaskSet(boost::shared_ptr<ThreadPool> pool)
+#include <cassert>
+#include <memory>
+
+TaskSet::TaskSet(std::shared_ptr<ThreadPool> pool)
     : pool_(pool),
-    semaphore_(boost::make_shared<Semaphore>()),
+    semaphore_(std::make_shared<Semaphore>()),
     tasks_(),
     usedTaskCount_(0)
 {

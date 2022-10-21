@@ -30,7 +30,7 @@
 
 #include "../MMDevice/DeviceUtils.h"
 
-#include <boost/make_shared.hpp>
+#include <memory>
 
 
 const long long bytesInMB = 1 << 20;
@@ -50,8 +50,8 @@ CircularBuffer::CircularBuffer(unsigned int memorySizeMB) :
    saveIndex_(0), 
    memorySizeMB_(memorySizeMB), 
    overflow_(false),
-   threadPool_(boost::make_shared<ThreadPool>()),
-   tasksMemCopy_(boost::make_shared<TaskSet_CopyMemory>(threadPool_))
+   threadPool_(std::make_shared<ThreadPool>()),
+   tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
    facet = new boost::posix_time::time_facet("%Y-%m-%d %H:%M:%s");
    tStream.imbue(std::locale(tStream.getloc(), facet));
