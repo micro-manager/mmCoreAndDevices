@@ -23,8 +23,6 @@
 #include "../Error.h"
 #include "../Logging/Logger.h"
 
-#include <boost/utility.hpp>
-
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -60,7 +58,7 @@ typedef std::function<void (MM::Device*)> DeleteDeviceFunction;
  * DeviceInstance is an RAII class: the raw device instance is created in the
  * constructor, and destroyed in the destructor.
  */
-class DeviceInstance : boost::noncopyable
+class DeviceInstance
 {
 protected:
    MM::Device* pImpl_;
@@ -75,6 +73,9 @@ private:
    mm::logging::Logger coreLogger_;
 
 public:
+   DeviceInstance(const DeviceInstance&) = delete;
+   DeviceInstance& operator=(const DeviceInstance&) = delete;
+
    std::shared_ptr<LoadedDeviceAdapter> GetAdapterModule() const /* final */ { return adapter_; }
    std::string GetLabel() const /* final */ { return label_; }
    std::string GetDescription() const /* final */ { return description_; }
@@ -121,13 +122,16 @@ protected:
     *
     * For usage, see, e.g., the definition for DeviceInstance::GetName().
     */
-   class DeviceStringBuffer : boost::noncopyable
+   class DeviceStringBuffer
    {
       char buf_[MM::MaxStrLength + 1];
       const DeviceInstance* instance_;
       const std::string& funcName_;
 
    public:
+      DeviceStringBuffer(const DeviceStringBuffer&) = delete;
+      DeviceStringBuffer& operator=(const DeviceStringBuffer&) = delete;
+
       /**
        * instance and functionName must stay in scope during the lifetime of
        * the DeviceStringBuffer.

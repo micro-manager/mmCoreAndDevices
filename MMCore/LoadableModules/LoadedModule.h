@@ -21,15 +21,17 @@
 
 #pragma once
 
-#include <boost/utility.hpp>
 #include <string>
 
 
 class LoadedModuleImpl;
 
-class LoadedModule /* final */ : boost::noncopyable
+class LoadedModule /* final */
 {
 public:
+   LoadedModule(const LoadedModule&) = delete;
+   LoadedModule& operator=(const LoadedModule&) = delete;
+
    explicit LoadedModule(const std::string& filename);
    ~LoadedModule();
 
