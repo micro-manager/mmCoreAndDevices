@@ -27,6 +27,10 @@
 #include "ModuleInterface.h"
 #include "../../MMCore/Error.h"
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
