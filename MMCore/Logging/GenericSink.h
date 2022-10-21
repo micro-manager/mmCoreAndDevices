@@ -20,8 +20,6 @@
 #include "GenericLinePacket.h"
 #include "GenericPacketArray.h"
 
-#include <boost/container/vector.hpp>
-
 #include <memory>
 
 
