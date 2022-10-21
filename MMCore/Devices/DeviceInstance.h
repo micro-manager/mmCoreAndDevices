@@ -25,6 +25,7 @@
 
 #include <boost/utility.hpp>
 
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <string>
@@ -133,7 +134,7 @@ protected:
        */
       DeviceStringBuffer(const DeviceInstance* instance, const std::string& functionName) :
          instance_(instance), funcName_(functionName)
-      { memset(buf_, 0, sizeof(buf_)); }
+      { std::memset(buf_, 0, sizeof(buf_)); }
 
       char* GetBuffer() { return buf_; }
       std::string Get() const { Check(); return buf_; }
