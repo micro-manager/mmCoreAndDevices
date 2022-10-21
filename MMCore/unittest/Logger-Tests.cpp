@@ -3,7 +3,6 @@
 #include "Logging/Logging.h"
 
 #include <boost/bind.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
 
@@ -70,7 +69,7 @@ public:
    void Run()
    {
       Logger lgr =
-         c_->NewLogger("thread" + boost::lexical_cast<std::string>(n_));
+         c_->NewLogger("thread" + std::to_string(n_));
       char ch = '0' + n_;
       if (ch < '0' || ch > 'z')
          ch = '~';

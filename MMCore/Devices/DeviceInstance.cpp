@@ -247,7 +247,7 @@ DeviceInstance::GetPropertyValueAt(const std::string& propertyName, unsigned ind
    {
       throw CMMError("Device " + ToQuotedString(GetLabel()) +
             ": cannot get allowed value at index " +
-            boost::lexical_cast<std::string>(index) + " of property " +
+            ToString(index) + " of property " +
             ToQuotedString(propertyName));
    }
    return valueBuf.Get();
