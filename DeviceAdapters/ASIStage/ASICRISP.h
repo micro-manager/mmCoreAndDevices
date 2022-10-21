@@ -71,12 +71,9 @@ private:
 	static const int SIZE_OF_FC_ARRAY = 24;
 	std::string focusCurveData_[SIZE_OF_FC_ARRAY];
 	std::string axis_;
-	long ledIntensity_;
-	double na_;
 	std::string focusState_;
 	long waitAfterLock_;
 	int answerTimeoutMs_;
-	long sum_;
 };
 
-#endif // _ASICRISP_H_
+#endif // end _ASICRISP_H_
