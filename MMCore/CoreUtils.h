@@ -40,24 +40,29 @@
 #pragma warning( pop )
 #endif
 
-#include <boost/lexical_cast.hpp>
 #include <string>
 
 
-template <typename T>
-inline std::string ToString(const T& d)
-{ return boost::lexical_cast<std::string>(d); }
+inline std::string ToString(int d) { return std::to_string(d); }
+inline std::string ToString(long d) { return std::to_string(d); }
+inline std::string ToString(long long d) { return std::to_string(d); }
+inline std::string ToString(unsigned d) { return std::to_string(d); }
+inline std::string ToString(unsigned long d) { return std::to_string(d); }
+inline std::string ToString(unsigned long long d) { return std::to_string(d); }
+inline std::string ToString(float d) { return std::to_string(d); }
+inline std::string ToString(double d) { return std::to_string(d); }
+inline std::string ToString(long double d) { return std::to_string(d); }
 
-template <>
-inline std::string ToString<const char*>(char const* const& d)
+inline std::string ToString(const std::string& d) { return d; }
+
+inline std::string ToString(const char* d)
 {
    if (!d) 
       return "(null)";
    return d;
 }
 
-template <>
-inline std::string ToString<const MM::DeviceType>(const MM::DeviceType& d)
+inline std::string ToString(const MM::DeviceType d)
 {
    // TODO Any good way to ensure this doesn't get out of sync with the enum
    // definition?
