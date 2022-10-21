@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <boost/utility.hpp>
-
 #include <functional>
 #include <sstream>
 #include <string>
@@ -55,7 +53,7 @@ public:
  * Log an entry upon destruction.
  */
 template <class TLogger>
-class GenericLogStream : public std::ostringstream, boost::noncopyable
+class GenericLogStream : public std::ostringstream
 {
 public:
    typedef typename TLogger::EntryDataType EntryDataType;
@@ -65,6 +63,9 @@ public:
    bool used_;
 
 public:
+   GenericLogStream(const GenericLogStream&) = delete;
+   GenericLogStream& operator=(const GenericLogStream&) = delete;
+
    GenericLogStream(const TLogger& logger, EntryDataType level) :
       logger_(logger),
       level_(level),

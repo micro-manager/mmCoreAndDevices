@@ -27,8 +27,6 @@
 #include "../../MMDevice/ModuleInterface.h"
 #include "../Logging/Logger.h"
 
-#include <boost/utility.hpp>
-
 #include <cstring>
 #include <memory>
 
@@ -39,10 +37,12 @@ class DeviceInstance;
 
 
 class LoadedDeviceAdapter /* final */ :
-	boost::noncopyable,
 	public std::enable_shared_from_this<LoadedDeviceAdapter>
 {
 public:
+   LoadedDeviceAdapter(const LoadedDeviceAdapter&) = delete;
+   LoadedDeviceAdapter& operator=(const LoadedDeviceAdapter&) = delete;
+
    LoadedDeviceAdapter(const std::string& name, const std::string& filename);
 
    // TODO Unload() should mark the instance invalid (or require instance
@@ -68,13 +68,16 @@ private:
    /**
     * \brief Utility class for getting fixed-length strings from the module
     */
-   class ModuleStringBuffer : boost::noncopyable
+   class ModuleStringBuffer
    {
       char buf_[MM::MaxStrLength + 1];
       const LoadedDeviceAdapter* module_;
       const std::string& funcName_;
 
    public:
+      ModuleStringBuffer(const ModuleStringBuffer&) = delete;
+      ModuleStringBuffer& operator=(const ModuleStringBuffer&) = delete;
+
       ModuleStringBuffer(const LoadedDeviceAdapter* module,
             const std::string& functionName) :
          module_(module), funcName_(functionName)
