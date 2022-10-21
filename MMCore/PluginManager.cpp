@@ -211,7 +211,7 @@ CPluginManager::AddLegacyFallbackSearchPath(const std::string& path)
 }
 
 
-// TODO Use Boost.Filesystem instead of this.
+// TODO Use std::filesystem instead of this.
 // This stop-gap implementation makes the assumption that the argument is in
 // the format that could be returned from MMCorePrivate::GetPathOfThisModule()
 // (e.g. no trailing slashes; real filename present).

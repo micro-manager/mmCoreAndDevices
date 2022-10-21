@@ -47,7 +47,7 @@ private:
     void ThreadFunc();
 
 private:
-    // TODO: Should use boost::unique_ptr but that's available since boost 1.57
+    // TODO: Should use unique_ptr
     std::vector<std::shared_ptr<boost::thread> > threads_;
     bool abortFlag_;
     boost::mutex mx_;
