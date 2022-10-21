@@ -25,7 +25,6 @@
 #include "TriggerScope.h"
 
 #include "ModuleInterface.h"
-#include "../../MMCore/Error.h"
 
 #ifndef _WIN32
 #include <unistd.h>
