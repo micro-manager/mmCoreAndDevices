@@ -23,8 +23,6 @@
 
 #include "TaskSet.h"
 
-#include <boost/foreach.hpp>
-
 #include <cassert>
 #include <memory>
 
@@ -39,7 +37,7 @@ TaskSet::TaskSet(std::shared_ptr<ThreadPool> pool)
 
 TaskSet::~TaskSet()
 {
-    BOOST_FOREACH(Task* task, tasks_)
+    for (Task* task : tasks_)
         delete task;
 }
 

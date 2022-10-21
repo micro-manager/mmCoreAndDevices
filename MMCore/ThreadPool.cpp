@@ -26,8 +26,6 @@
 
 #include "Task.h"
 
-#include <boost/foreach.hpp>
-
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -50,7 +48,7 @@ ThreadPool::~ThreadPool()
     }
     cv_.notify_all();
 
-    BOOST_FOREACH(const std::shared_ptr<std::thread>& thread, threads_)
+    for (const std::shared_ptr<std::thread>& thread : threads_)
         thread->join();
 }
 
@@ -79,7 +77,7 @@ void ThreadPool::Execute(const std::vector<Task*>& tasks)
         std::lock_guard<std::mutex> lock(mx_);
         if (abortFlag_)
             return;
-        BOOST_FOREACH(Task* task, tasks)
+        for (Task* task : tasks)
         {
             assert(task != NULL);
             queue_.push_back(task);
