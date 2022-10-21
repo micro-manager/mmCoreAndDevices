@@ -28,7 +28,7 @@
 #include <algorithm>
 #include <cassert>
 
-TaskSet_CopyMemory::ATask::ATask(boost::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount)
+TaskSet_CopyMemory::ATask::ATask(std::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount)
     : Task(semDone, taskIndex, totalTaskCount),
     dst_(NULL),
     src_(NULL),
@@ -60,7 +60,7 @@ void TaskSet_CopyMemory::ATask::Execute()
     memcpy(dst, src, chunkBytes);
 }
 
-TaskSet_CopyMemory::TaskSet_CopyMemory(boost::shared_ptr<ThreadPool> pool)
+TaskSet_CopyMemory::TaskSet_CopyMemory(std::shared_ptr<ThreadPool> pool)
     : TaskSet(pool)
 {
     CreateTasks<ATask>();

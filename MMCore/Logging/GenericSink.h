@@ -21,7 +21,8 @@
 #include "GenericPacketArray.h"
 
 #include <boost/container/vector.hpp>
-#include <boost/shared_ptr.hpp>
+
+#include <memory>
 
 
 namespace mm
@@ -36,10 +37,10 @@ template <class TMetadata>
 class GenericSink
 {
 private:
-   boost::shared_ptr< GenericEntryFilter<TMetadata> > filter_;
+   std::shared_ptr< GenericEntryFilter<TMetadata> > filter_;
 
 protected:
-   boost::shared_ptr< GenericEntryFilter<TMetadata> > GetFilter() const
+   std::shared_ptr< GenericEntryFilter<TMetadata> > GetFilter() const
    { return filter_; }
 
 public:
@@ -50,7 +51,7 @@ public:
 
    // Note: If setting the filter while the sink is in use, you must pause the
    // logger. See the LoggingCore member function AtomicSetSinkFilters().
-   void SetFilter(boost::shared_ptr< GenericEntryFilter<TMetadata> > filter)
+   void SetFilter(std::shared_ptr< GenericEntryFilter<TMetadata> > filter)
    { filter_ = filter; }
 };
 

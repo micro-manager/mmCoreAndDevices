@@ -27,18 +27,18 @@
 #include "Task.h"
 
 #include <boost/foreach.hpp>
-#include <boost/make_shared.hpp>
 #include <boost/thread/locks.hpp>
 
 #include <algorithm>
 #include <cassert>
+#include <memory>
 
 ThreadPool::ThreadPool()
     : abortFlag_(false)
 {
     const size_t hwThreadCount = std::max<size_t>(1, boost::thread::hardware_concurrency());
     for (size_t n = 0; n < hwThreadCount; ++n)
-        threads_.push_back(boost::make_shared<boost::thread>(&ThreadPool::ThreadFunc, this));
+        threads_.push_back(std::make_shared<boost::thread>(&ThreadPool::ThreadFunc, this));
 }
 
 ThreadPool::~ThreadPool()
@@ -49,7 +49,7 @@ ThreadPool::~ThreadPool()
     }
     cv_.notify_all();
 
-    BOOST_FOREACH(const boost::shared_ptr<boost::thread>& thread, threads_)
+    BOOST_FOREACH(const std::shared_ptr<boost::thread>& thread, threads_)
         thread->join();
 }
 

@@ -38,10 +38,10 @@
 #include "PluginManager.h"
 
 #include <boost/algorithm/string.hpp>
-#include <boost/make_shared.hpp>
 
 #include <cstring>
 #include <fstream>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -130,7 +130,7 @@ CPluginManager::FindInSearchPath(std::string filename)
  *
  * @param moduleName Simple module name without path, prefix, or suffix.
  */
-boost::shared_ptr<LoadedDeviceAdapter>
+std::shared_ptr<LoadedDeviceAdapter>
 CPluginManager::GetDeviceAdapter(const std::string& moduleName)
 {
    if (moduleName.empty())
@@ -138,7 +138,7 @@ CPluginManager::GetDeviceAdapter(const std::string& moduleName)
       throw CMMError("Empty device adapter module name");
    }
 
-   std::map< std::string, boost::shared_ptr<LoadedDeviceAdapter> >::iterator it =
+   std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> >::iterator it =
       moduleMap_.find(moduleName);
    if (it != moduleMap_.end())
    {
@@ -150,13 +150,13 @@ CPluginManager::GetDeviceAdapter(const std::string& moduleName)
    filename += LIB_NAME_SUFFIX;
    filename = FindInSearchPath(filename);
 
-   boost::shared_ptr<LoadedDeviceAdapter> module =
-      boost::make_shared<LoadedDeviceAdapter>(moduleName, filename);
+   std::shared_ptr<LoadedDeviceAdapter> module =
+      std::make_shared<LoadedDeviceAdapter>(moduleName, filename);
    moduleMap_[moduleName] = module;
    return module;
 }
 
-boost::shared_ptr<LoadedDeviceAdapter>
+std::shared_ptr<LoadedDeviceAdapter>
 CPluginManager::GetDeviceAdapter(const char* moduleName)
 {
    if (!moduleName)
@@ -172,7 +172,7 @@ CPluginManager::GetDeviceAdapter(const char* moduleName)
 void
 CPluginManager::UnloadPluginLibrary(const char* moduleName)
 {
-   std::map< std::string, boost::shared_ptr<LoadedDeviceAdapter> >::iterator it =
+   std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> >::iterator it =
       moduleMap_.find(moduleName);
    if (it == moduleMap_.end())
       throw CMMError("No device adapter named " + ToQuotedString(moduleName));

@@ -27,15 +27,15 @@
 #include "Task.h"
 #include "ThreadPool.h"
 
-#include <boost/smart_ptr/shared_ptr.hpp>
 #include <boost/utility/enable_if.hpp>
 
+#include <memory>
 #include <vector>
 
 class TaskSet
 {
 public:
-    explicit TaskSet(boost::shared_ptr<ThreadPool> pool);
+    explicit TaskSet(std::shared_ptr<ThreadPool> pool);
     virtual ~TaskSet();
 
     TaskSet(const TaskSet&)/* = delete*/;
@@ -66,8 +66,8 @@ protected:
     }
 
 protected:
-    const boost::shared_ptr<ThreadPool> pool_;
-    const boost::shared_ptr<Semaphore> semaphore_;
+    const std::shared_ptr<ThreadPool> pool_;
+    const std::shared_ptr<Semaphore> semaphore_;
     std::vector<Task*> tasks_;
     size_t usedTaskCount_;
 };

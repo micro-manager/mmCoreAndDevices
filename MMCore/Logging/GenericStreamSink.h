@@ -18,12 +18,12 @@
 
 #include "GenericSink.h"
 
-#include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
 
 #include <exception>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <memory>
 
 
 namespace mm
@@ -47,7 +47,7 @@ template <class TFormatter, class UMetadata, typename VPacketIter>
 void
 WritePacketsToStream(std::ostream& stream,
       VPacketIter first, VPacketIter last,
-      boost::shared_ptr< GenericEntryFilter<UMetadata> > filter)
+      std::shared_ptr< GenericEntryFilter<UMetadata> > filter)
 {
    TFormatter formatter;
 

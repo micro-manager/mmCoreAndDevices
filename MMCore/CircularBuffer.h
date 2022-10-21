@@ -32,8 +32,8 @@
 #include "../MMDevice/MMDevice.h"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/smart_ptr/shared_ptr.hpp>
 
+#include <memory>
 #include <vector>
 
 #ifdef _MSC_VER
@@ -97,8 +97,8 @@ private:
    bool overflow_;
    std::vector<mm::FrameBuffer> frameArray_;
 
-   boost::shared_ptr<ThreadPool> threadPool_;
-   boost::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
+   std::shared_ptr<ThreadPool> threadPool_;
+   std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 
    boost::posix_time::time_facet * facet;
    std::ostringstream tStream;

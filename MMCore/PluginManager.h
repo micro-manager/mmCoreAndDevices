@@ -26,10 +26,8 @@
 
 #include "../MMDevice/DeviceThreads.h"
 
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
-
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -59,9 +57,9 @@ public:
    /**
     * Return a device adapter module, loading it if necessary
     */
-   boost::shared_ptr<LoadedDeviceAdapter>
+   std::shared_ptr<LoadedDeviceAdapter>
    GetDeviceAdapter(const std::string& moduleName);
-   boost::shared_ptr<LoadedDeviceAdapter>
+   std::shared_ptr<LoadedDeviceAdapter>
    GetDeviceAdapter(const char* moduleName);
 
 private:
@@ -73,7 +71,7 @@ private:
    std::vector<std::string> preferredSearchPaths_;
    static std::vector<std::string> fallbackSearchPaths_;
 
-   std::map< std::string, boost::shared_ptr<LoadedDeviceAdapter> > moduleMap_;
+   std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> > moduleMap_;
 };
 
 #endif //_PLUGIN_MANAGER_H_

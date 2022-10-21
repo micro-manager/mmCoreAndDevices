@@ -23,11 +23,12 @@
 #include "../Error.h"
 #include "../Logging/Logger.h"
 
+#include <boost/function.hpp>
+#include <boost/utility.hpp>
+
+#include <memory>
 #include <string>
 #include <vector>
-#include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/utility.hpp>
 
 class CMMCore;
 class HubInstance;
@@ -65,7 +66,7 @@ protected:
 
 private:
    CMMCore* core_; // Weak reference
-   boost::shared_ptr<LoadedDeviceAdapter> adapter_;
+   std::shared_ptr<LoadedDeviceAdapter> adapter_;
    const std::string label_;
    std::string description_;
    DeleteDeviceFunction deleteFunction_;
@@ -73,7 +74,7 @@ private:
    mm::logging::Logger coreLogger_;
 
 public:
-   boost::shared_ptr<LoadedDeviceAdapter> GetAdapterModule() const /* final */ { return adapter_; }
+   std::shared_ptr<LoadedDeviceAdapter> GetAdapterModule() const /* final */ { return adapter_; }
    std::string GetLabel() const /* final */ { return label_; }
    std::string GetDescription() const /* final */ { return description_; }
    void SetDescription(const std::string& description) /* final */ { description_ = description; }
@@ -89,7 +90,7 @@ protected:
    // The DeviceInstance object owns the raw device pointer (pDevice) as soon
    // as the constructor is called, even if the constructor throws.
    DeviceInstance(CMMCore* core,
-         boost::shared_ptr<LoadedDeviceAdapter> adapter,
+         std::shared_ptr<LoadedDeviceAdapter> adapter,
          const std::string& name,
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,

@@ -19,7 +19,7 @@ public:
    typedef int LogFileHandle;
 
 private:
-   boost::shared_ptr<logging::LoggingCore> loggingCore_;
+   std::shared_ptr<logging::LoggingCore> loggingCore_;
    logging::Logger internalLogger_;
 
    mutable boost::mutex mutex_;
@@ -27,20 +27,20 @@ private:
    logging::LogLevel primaryLogLevel_;
 
    bool usingStdErr_;
-   boost::shared_ptr<logging::LogSink> stdErrSink_;
+   std::shared_ptr<logging::LogSink> stdErrSink_;
 
    std::string primaryFilename_;
-   boost::shared_ptr<logging::LogSink> primaryFileSink_;
+   std::shared_ptr<logging::LogSink> primaryFileSink_;
 
    LogFileHandle nextSecondaryHandle_;
    struct LogFileInfo
    {
       std::string filename_;
-      boost::shared_ptr<logging::LogSink> sink_;
+      std::shared_ptr<logging::LogSink> sink_;
       logging::SinkMode mode_;
 
       LogFileInfo(const std::string& filename,
-            boost::shared_ptr<logging::LogSink> sink,
+            std::shared_ptr<logging::LogSink> sink,
             logging::SinkMode mode) :
          filename_(filename),
          sink_(sink),
