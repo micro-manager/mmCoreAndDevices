@@ -129,10 +129,6 @@ int CCRISP::Initialize()
    CreateProperty(g_CRISPSNRPropertyName, "", MM::Float, true, pAct);
    UpdateProperty(g_CRISPSNRPropertyName);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnDitherError);
-   CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
-   UpdateProperty(g_CRISPDitherErrorPropertyName);
-
    pAct = new CPropertyAction(this, &CCRISP::OnLogAmpAGC);
    CreateProperty(g_CRISPLogAmpAGCPropertyName, "", MM::Integer, true, pAct);
    UpdateProperty(g_CRISPLogAmpAGCPropertyName);
@@ -141,25 +137,42 @@ int CCRISP::Initialize()
    CreateProperty(g_CRISPOffsetPropertyName, "", MM::Integer, true, pAct);
    UpdateProperty(g_CRISPOffsetPropertyName);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnSum);
-   CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-   UpdateProperty(g_CRISPSumPropertyName);
-
-
    if (FirmwareVersionAtLeast(3.12))
    {
-   	pAct = new CPropertyAction(this, &CCRISP::OnNumSkips);
-   	CreateProperty(g_CRISPNumberSkipsPropertyName, "0", MM::Integer, false, pAct);
-   	SetPropertyLimits(g_CRISPNumberSkipsPropertyName, 0, 100);
-   	UpdateProperty(g_CRISPNumberSkipsPropertyName);
+    pAct = new CPropertyAction(this, &CCRISP::OnNumSkips);
+    CreateProperty(g_CRISPNumberSkipsPropertyName, "0", MM::Integer, false, pAct);
+    SetPropertyLimits(g_CRISPNumberSkipsPropertyName, 0, 100);
+    UpdateProperty(g_CRISPNumberSkipsPropertyName);
 
-   	pAct = new CPropertyAction(this, &CCRISP::OnInFocusRange);
-   	CreateProperty(g_CRISPInFocusRangePropertyName, "0.1", MM::Float, false, pAct);
-   	UpdateProperty(g_CRISPInFocusRangePropertyName);
+    pAct = new CPropertyAction(this, &CCRISP::OnInFocusRange);
+    CreateProperty(g_CRISPInFocusRangePropertyName, "0.1", MM::Float, false, pAct);
+    UpdateProperty(g_CRISPInFocusRangePropertyName);
+   }
+
+   // Note: Older firmware could only query the properties "Dither Error" and "Sum" through EXTRA X?, 
+   // new firmware has commands to query the values much faster.
+   if (FirmwareVersionAtLeast(3.40))
+   {
+       pAct = new CPropertyAction(this, &CCRISP::OnSum);
+       CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
+       UpdateProperty(g_CRISPSumPropertyName);
+
+       pAct = new CPropertyAction(this, &CCRISP::OnDitherError);
+       CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
+       UpdateProperty(g_CRISPDitherErrorPropertyName);
+   }
+   else
+   {
+       pAct = new CPropertyAction(this, &CCRISP::OnSumLegacy);
+       CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
+       UpdateProperty(g_CRISPSumPropertyName);
+
+       pAct = new CPropertyAction(this, &CCRISP::OnDitherErrorLegacy);
+       CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
+       UpdateProperty(g_CRISPDitherErrorPropertyName);
    }
 
    initialized_ = true;
-   sum_=0;
    return DEVICE_OK;
 }
 
@@ -545,55 +558,94 @@ int CCRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
-      // always read
       command << addressChar_ << "EXTRA Y?";
       RETURN_ON_MM_ERROR( hub_->QueryCommand(command.str()) );
       RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterPosition(0, tmp));
       if (!pProp->Set(tmp))
-         return DEVICE_INVALID_PROPERTY_VALUE;
+      {
+          return DEVICE_INVALID_PROPERTY_VALUE;
+      }
    }
    return DEVICE_OK;
 }
 
 int CCRISP::OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   if (eAct == MM::BeforeGet)
-   {
-      // always read
-      command << addressChar_ << "EXTRA X?";
-      RETURN_ON_MM_ERROR( hub_->QueryCommand(command.str()) );
-      vector<string> vReply = hub_->SplitAnswerOnSpace();
-      if (vReply.size() <= 2)
-         return DEVICE_INVALID_PROPERTY_VALUE;
-     
-	  sum_=atol(vReply[1].c_str()); 
-	  
-	  if (!pProp->Set(vReply[2].c_str()))
-         return DEVICE_INVALID_PROPERTY_VALUE;
-   }
-   return DEVICE_OK;
+    ostringstream command; command.str("");
+    long tmp = 0;
+    if (eAct == MM::BeforeGet)
+    {
+        command << addressChar_ << "LK Y?";
+        RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
+        RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition3(tmp));
+
+        if (!pProp->Set(tmp))
+        {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        }
+    }
+    return DEVICE_OK;
 }
 
 int CCRISP::OnSum(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   //ostringstream command; command.str("");
-   if (eAct == MM::BeforeGet)
-   {
-    /*  // always read
-      command << addressChar_ << "EXTRA X?";
-      RETURN_ON_MM_ERROR( hub_->QueryCommand(command.str()) );
-      vector<string> vReply = hub_->SplitAnswerOnSpace();
-      if (vReply.size() <= 2)
-         return DEVICE_INVALID_PROPERTY_VALUE;
-      if (!pProp->Set(vReply[1].c_str()))
-         return DEVICE_INVALID_PROPERTY_VALUE;
-		 */
-	//sum is read same time as dither error
-	pProp->Set((long)sum_);
+    ostringstream command; command.str("");
+    long tmp = 0;
+    if (eAct == MM::BeforeGet)
+    {
+        command << addressChar_ << "LK T?";
+        RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
+        RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition3(tmp));
 
-   }
-   return DEVICE_OK;
+        if (!pProp->Set(tmp))
+        {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        }
+    }
+    return DEVICE_OK;
+}
+
+// Provide support for Tiger firmware < 3.40
+int CCRISP::OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    ostringstream command; command.str("");
+    if (eAct == MM::BeforeGet)
+    {
+        command << addressChar_ << "EXTRA X?";
+        RETURN_ON_MM_ERROR( hub_->QueryCommand(command.str()) );
+        vector<string> vReply = hub_->SplitAnswerOnSpace();
+        if (vReply.size() <= 2)
+        {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        }
+
+        if (!pProp->Set(vReply[2].c_str()))
+        {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        }
+    }
+    return DEVICE_OK;
+}
+
+// Provide support for Tiger firmware < 3.40
+int CCRISP::OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    ostringstream command; command.str("");
+    if (eAct == MM::BeforeGet)
+    {
+        command << addressChar_ << "EXTRA X?";
+        RETURN_ON_MM_ERROR(hub_->QueryCommand(command.str()));
+        vector<string> vReply = hub_->SplitAnswerOnSpace();
+        if (vReply.size() <= 2)
+        {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        }
+        if (!pProp->Set(vReply[1].c_str()))
+        {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        }
+    }
+    return DEVICE_OK;
 }
 
 int CCRISP::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
