@@ -363,15 +363,15 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
  
 CTriggerScopeHub::CTriggerScopeHub(void)  :
    busy_(false),
-   error_(0),
    timeOutTimer_(0),
+   progfileCSV_("TriggerScope.csv"),
+   error_(0),
    fidSerialLog_(NULL),
    firmwareVer_(0.0),
    cmdInProgress_(0),
    initialized_(0),
-   nUseSerialLog_(1),
-   progfileCSV_("TriggerScope.csv"),
-   clearStr_(g_Keyword_Clear_Off)
+   clearStr_(g_Keyword_Clear_Off),
+   nUseSerialLog_(1)
 {
    // call the base class method to set-up default error codes/messages
    InitializeDefaultErrorMessages();
