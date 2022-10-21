@@ -23,9 +23,9 @@
 #include "../Error.h"
 #include "../Logging/Logger.h"
 
-#include <boost/function.hpp>
 #include <boost/utility.hpp>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -39,7 +39,7 @@ namespace MM
    class Device;
 }
 
-typedef boost::function<void (MM::Device*)> DeleteDeviceFunction;
+typedef std::function<void (MM::Device*)> DeleteDeviceFunction;
 
 
 /// Device instance wrapper class

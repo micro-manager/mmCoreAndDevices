@@ -16,9 +16,7 @@
 
 #pragma once
 
-#include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/function.hpp>
 
 #include <chrono>
 #include <condition_variable>
@@ -68,7 +66,7 @@ public:
       condVar_.notify_one();
    }
 
-   void RunReceiveLoop(boost::function<void (PacketArrayType&)>
+   void RunReceiveLoop(std::function<void (PacketArrayType&)>
          consume)
    {
       std::lock_guard<std::mutex> lock(threadMutex_);
@@ -84,7 +82,7 @@ public:
          loopThread_.join();
       }
 
-      std::thread t(boost::bind(&GenericPacketQueue::ReceiveLoop,
+      std::thread t(std::bind(&GenericPacketQueue::ReceiveLoop,
                this, consume));
       using std::swap;
       swap(loopThread_, t);
@@ -110,7 +108,7 @@ public:
    }
 
 private:
-   void ReceiveLoop(boost::function<void (PacketArrayType&)> consume)
+   void ReceiveLoop(std::function<void (PacketArrayType&)> consume)
    {
       using namespace std::chrono_literals;
 

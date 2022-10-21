@@ -25,8 +25,7 @@
 #include "../CoreUtils.h"
 #include "../Error.h"
 
-#include <boost/bind.hpp>
-
+#include <functional>
 #include <memory>
 
 
@@ -154,7 +153,7 @@ LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
       expectedType = actualType;
 
    std::shared_ptr<LoadedDeviceAdapter> shared_this(shared_from_this());
-   DeleteDeviceFunction deleter = boost::bind(&LoadedDeviceAdapter::DeleteDevice, this, _1);
+   DeleteDeviceFunction deleter = std::bind(&LoadedDeviceAdapter::DeleteDevice, this, std::placeholders::_1);
 
    switch (expectedType)
    {

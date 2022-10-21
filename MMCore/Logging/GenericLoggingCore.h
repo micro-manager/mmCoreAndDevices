@@ -22,9 +22,8 @@
 #include "GenericPacketQueue.h"
 #include "GenericSink.h"
 
-#include <boost/bind.hpp>
-
 #include <algorithm>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -88,8 +87,8 @@ public:
       // Loggers hold a shared pointer to the LoggingCore, so that they are
       // guaranteed to be safe to call at any time.
       return internal::GenericLogger<EntryDataType>(
-            boost::bind(&GenericLoggingCore::SendEntryToShared,
-               this->shared_from_this(), metadata, _1, _2));
+            std::bind(&GenericLoggingCore::SendEntryToShared,
+               this->shared_from_this(), metadata, std::placeholders::_1, std::placeholders::_2));
    }
 
    /**
@@ -299,7 +298,7 @@ private:
    void StartAsyncReceiveLoop()
    {
       asyncQueue_.RunReceiveLoop(
-            boost::bind(&GenericLoggingCore::RunAsynchronousSinks, this, _1));
+            std::bind(&GenericLoggingCore::RunAsynchronousSinks, this, std::placeholders::_1));
    }
 
    void StopAsyncReceiveLoop()

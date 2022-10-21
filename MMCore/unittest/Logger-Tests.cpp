@@ -2,8 +2,7 @@
 
 #include "Logging/Logging.h"
 
-#include <boost/bind.hpp>
-
+#include <functional>
 #include <memory>
 #include <string>
 #include <thread>
