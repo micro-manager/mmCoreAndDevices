@@ -2,9 +2,8 @@
 
 #include "Logging/Logging.h"
 
-#include <boost/thread/mutex.hpp>
-
 #include <map>
+#include <mutex>
 #include <string>
 
 namespace mm
@@ -22,7 +21,7 @@ private:
    std::shared_ptr<logging::LoggingCore> loggingCore_;
    logging::Logger internalLogger_;
 
-   mutable boost::mutex mutex_;
+   mutable std::mutex mutex_;
 
    logging::LogLevel primaryLogLevel_;
 

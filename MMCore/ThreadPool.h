@@ -24,10 +24,11 @@
 
 #pragma once
 
-#include <boost/thread.hpp>
-
+#include <condition_variable>
 #include <deque>
 #include <memory>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 class Task;
@@ -48,9 +49,9 @@ private:
 
 private:
     // TODO: Should use unique_ptr
-    std::vector<std::shared_ptr<boost::thread> > threads_;
+    std::vector<std::shared_ptr<std::thread> > threads_;
     bool abortFlag_;
-    boost::mutex mx_;
-    boost::condition_variable cv_;
+    std::mutex mx_;
+    std::condition_variable cv_;
     std::deque<Task*> queue_;
 };

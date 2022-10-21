@@ -23,7 +23,7 @@
 
 #include "Semaphore.h"
 
-#include <boost/thread/locks.hpp>
+#include <mutex>
 
 Semaphore::Semaphore()
     : count_(0)
@@ -37,7 +37,7 @@ Semaphore::Semaphore(size_t initCount)
 
 void Semaphore::Wait(size_t count)
 {
-    boost::unique_lock<boost::mutex> lock(mx_);
+    std::unique_lock<std::mutex> lock(mx_);
     cv_.wait(lock, [&]() { return count_ >= count; });
     count_ -= count;
 }
@@ -45,7 +45,7 @@ void Semaphore::Wait(size_t count)
 void Semaphore::Release(size_t count)
 {
     {
-        boost::lock_guard<boost::mutex> lock(mx_);
+        std::lock_guard<std::mutex> lock(mx_);
         count_ += count;
     }
     cv_.notify_all();

@@ -3,10 +3,10 @@
 #include "Logging/Logging.h"
 
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
 
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace mm::logging;
@@ -88,12 +88,12 @@ TEST(LoggerTests, SyncAndThreaded)
 
    c->AddSink(std::make_shared<StdErrLogSink>(), SinkModeSynchronous);
 
-   std::vector< std::shared_ptr<boost::thread> > threads;
+   std::vector< std::shared_ptr<std::thread> > threads;
    std::vector< std::shared_ptr<LoggerTestThreadFunc> > funcs;
    for (unsigned i = 0; i < 10; ++i)
    {
       funcs.push_back(std::make_shared<LoggerTestThreadFunc>(i, c));
-      threads.push_back(std::make_shared<boost::thread>(
+      threads.push_back(std::make_shared<std::thread>(
                &LoggerTestThreadFunc::Run, funcs[i].get()));
    }
    for (unsigned i = 0; i < threads.size(); ++i)
@@ -108,12 +108,12 @@ TEST(LoggerTests, AsyncAndThreaded)
 
    c->AddSink(std::make_shared<StdErrLogSink>(), SinkModeAsynchronous);
 
-   std::vector< std::shared_ptr<boost::thread> > threads;
+   std::vector< std::shared_ptr<std::thread> > threads;
    std::vector< std::shared_ptr<LoggerTestThreadFunc> > funcs;
    for (unsigned i = 0; i < 10; ++i)
    {
       funcs.push_back(std::make_shared<LoggerTestThreadFunc>(i, c));
-      threads.push_back(std::make_shared<boost::thread>(
+      threads.push_back(std::make_shared<std::thread>(
                &LoggerTestThreadFunc::Run, funcs[i].get()));
    }
    for (unsigned i = 0; i < threads.size(); ++i)

@@ -23,10 +23,10 @@
 #include "GenericSink.h"
 
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
 
 #include <algorithm>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -65,10 +65,10 @@ private:
    // When acquiring both syncSinksMutex_ and asyncQueueMutex_, acquire in that
    // order.
 
-   boost::mutex syncSinksMutex_; // Protect all access to synchronousSinks_
+   std::mutex syncSinksMutex_; // Protect all access to synchronousSinks_
    std::vector< std::shared_ptr<SinkType> > synchronousSinks_;
 
-   boost::mutex asyncQueueMutex_; // Protect start/stop and sinks change
+   std::mutex asyncQueueMutex_; // Protect start/stop and sinks change
    internal::GenericPacketQueue<TMetadata> asyncQueue_;
    // Changes to asynchronousSinks_ must be made with asyncQueueMutex_ held
    // _and_ the queue receive loop stopped.
@@ -101,13 +101,13 @@ public:
       {
          case SinkModeSynchronous:
          {
-            boost::lock_guard<boost::mutex> lock(syncSinksMutex_);
+            std::lock_guard<std::mutex> lock(syncSinksMutex_);
             synchronousSinks_.push_back(sink);
             break;
          }
          case SinkModeAsynchronous:
          {
-            boost::lock_guard<boost::mutex> lock(asyncQueueMutex_);
+            std::lock_guard<std::mutex> lock(asyncQueueMutex_);
             StopAsyncReceiveLoop();
             asynchronousSinks_.push_back(sink);
             StartAsyncReceiveLoop();
@@ -128,7 +128,7 @@ public:
       {
          case SinkModeSynchronous:
          {
-            boost::lock_guard<boost::mutex> lock(syncSinksMutex_);
+            std::lock_guard<std::mutex> lock(syncSinksMutex_);
             typename std::vector< std::shared_ptr<SinkType> >::iterator it =
                std::find(synchronousSinks_.begin(), synchronousSinks_.end(),
                      sink);
@@ -138,7 +138,7 @@ public:
          }
          case SinkModeAsynchronous:
          {
-            boost::lock_guard<boost::mutex> lock(asyncQueueMutex_);
+            std::lock_guard<std::mutex> lock(asyncQueueMutex_);
             StopAsyncReceiveLoop();
             typename std::vector< std::shared_ptr<SinkType> >::iterator it =
                std::find(asynchronousSinks_.begin(), asynchronousSinks_.end(),
@@ -171,8 +171,8 @@ public:
       // syncSinksMutex_ causes logging to block, subsequently draining the
       // async queue by stopping the receive loop causes all sinks to
       // synchronize (emit up to the same log entry).
-      boost::lock_guard<boost::mutex> lockSyncs(syncSinksMutex_);
-      boost::lock_guard<boost::mutex> lockAsyncQ(asyncQueueMutex_);
+      std::lock_guard<std::mutex> lockSyncs(syncSinksMutex_);
+      std::lock_guard<std::mutex> lockAsyncQ(asyncQueueMutex_);
       StopAsyncReceiveLoop();
 
       // Inefficient nested loop, but good enough for this purpose.
@@ -224,8 +224,8 @@ public:
    void AtomicSetSinkFilters(SinkModePairFilterPairIterator first,
          SinkModePairFilterPairIterator last)
    {
-      boost::lock_guard<boost::mutex> lockSyncs(syncSinksMutex_);
-      boost::lock_guard<boost::mutex> lockAsyncQ(asyncQueueMutex_);
+      std::lock_guard<std::mutex> lockSyncs(syncSinksMutex_);
+      std::lock_guard<std::mutex> lockAsyncQ(asyncQueueMutex_);
       StopAsyncReceiveLoop();
 
       for (SinkModePairFilterPairIterator it = first; it != last; ++it)
@@ -273,7 +273,7 @@ private:
       packets.AppendEntry(loggerData, entryData, stampData, entryText);
 
       {
-         boost::lock_guard<boost::mutex> lock(syncSinksMutex_);
+         std::lock_guard<std::mutex> lock(syncSinksMutex_);
 
          for (typename std::vector< std::shared_ptr<SinkType> >::iterator
                it = synchronousSinks_.begin(), end = synchronousSinks_.end();

@@ -4,6 +4,7 @@
 #include "Error.h"
 
 #include <memory>
+#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -45,7 +46,7 @@ LogManager::LogManager() :
 void
 LogManager::SetUseStdErr(bool flag)
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
 
    if (flag == usingStdErr_)
       return;
@@ -75,7 +76,7 @@ LogManager::SetUseStdErr(bool flag)
 bool
 LogManager::IsUsingStdErr() const
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
    return usingStdErr_;
 }
 
@@ -83,7 +84,7 @@ LogManager::IsUsingStdErr() const
 void
 LogManager::SetPrimaryLogFilename(const std::string& filename, bool truncate)
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
 
    if (filename == primaryFilename_)
       return;
@@ -154,7 +155,7 @@ LogManager::SetPrimaryLogFilename(const std::string& filename, bool truncate)
 std::string
 LogManager::GetPrimaryLogFilename() const
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
    return primaryFilename_;
 }
 
@@ -162,7 +163,7 @@ LogManager::GetPrimaryLogFilename() const
 bool
 LogManager::IsUsingPrimaryLogFile() const
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
    return !primaryFilename_.empty();
 }
 
@@ -170,7 +171,7 @@ LogManager::IsUsingPrimaryLogFile() const
 void
 LogManager::SetPrimaryLogLevel(LogLevel level)
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
 
    if (level == primaryLogLevel_)
       return;
@@ -213,7 +214,7 @@ LogManager::SetPrimaryLogLevel(LogLevel level)
 LogLevel
 LogManager::GetPrimaryLogLevel() const
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
    return primaryLogLevel_;
 }
 
@@ -222,7 +223,7 @@ LogManager::LogFileHandle
 LogManager::AddSecondaryLogFile(LogLevel level,
       const std::string& filename, bool truncate, SinkMode mode)
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
 
    std::shared_ptr<LogSink> sink;
    try
@@ -254,7 +255,7 @@ LogManager::AddSecondaryLogFile(LogLevel level,
 void
 LogManager::RemoveSecondaryLogFile(LogManager::LogFileHandle handle)
 {
-   boost::lock_guard<boost::mutex> lock(mutex_);
+   std::lock_guard<std::mutex> lock(mutex_);
 
    std::map<LogFileHandle, LogFileInfo>::iterator foundIt =
       secondaryLogFiles_.find(handle);

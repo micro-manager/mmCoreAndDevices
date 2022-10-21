@@ -19,7 +19,12 @@
 #include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/function.hpp>
-#include <boost/thread.hpp>
+
+#include <chrono>
+#include <condition_variable>
+#include <functional>
+#include <mutex>
+#include <thread>
 
 
 namespace mm
@@ -36,8 +41,8 @@ class GenericPacketQueue
 
 private:
    // The "queue" for asynchronous sinks.
-   boost::mutex mutex_;
-   boost::condition_variable condVar_;
+   std::mutex mutex_;
+   std::condition_variable condVar_;
    PacketArrayType queue_;
 
    // Swapped with queue_ and accessed from receiving thread.
@@ -47,8 +52,8 @@ private:
 
    // threadMutex_ protects the start/stop of loopThread_; it must be acquired
    // before mutex_.
-   boost::mutex threadMutex_;
-   boost::thread loopThread_; // Protected by threadMutex_
+   std::mutex threadMutex_;
+   std::thread loopThread_; // Protected by threadMutex_
 
 public:
    GenericPacketQueue() :
@@ -58,7 +63,7 @@ public:
    template <typename TPacketIter>
    void SendPackets(TPacketIter first, TPacketIter last)
    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       queue_.Append(first, last);
       condVar_.notify_one();
    }
@@ -66,45 +71,49 @@ public:
    void RunReceiveLoop(boost::function<void (PacketArrayType&)>
          consume)
    {
-      boost::lock_guard<boost::mutex> lock(threadMutex_);
+      std::lock_guard<std::mutex> lock(threadMutex_);
 
-      if (loopThread_.get_id() != boost::thread::id())
+      if (loopThread_.get_id() != std::thread::id())
       {
          // Already running: stop and replace.
          {
-            boost::lock_guard<boost::mutex> lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             shutdownRequested_ = true;
             condVar_.notify_one();
          }
          loopThread_.join();
       }
 
-      boost::thread t(boost::bind(&GenericPacketQueue::ReceiveLoop,
+      std::thread t(boost::bind(&GenericPacketQueue::ReceiveLoop,
                this, consume));
-      boost::swap(loopThread_, t);
+      using std::swap;
+      swap(loopThread_, t);
    }
 
    void ShutdownReceiveLoop()
    {
-      boost::lock_guard<boost::mutex> lock(threadMutex_);
+      std::lock_guard<std::mutex> lock(threadMutex_);
 
       if (!loopThread_.joinable())
          return;
 
       {
-         boost::lock_guard<boost::mutex> lock(mutex_);
+         std::lock_guard<std::mutex> lock(mutex_);
          shutdownRequested_ = true;
          condVar_.notify_one();
       }
       loopThread_.join();
 
-      boost::thread t;
-      boost::swap(loopThread_, t);
+      std::thread t;
+      using std::swap;
+      swap(loopThread_, t);
    }
 
 private:
    void ReceiveLoop(boost::function<void (PacketArrayType&)> consume)
    {
+      using namespace std::chrono_literals;
+
       // The loop operates in one of two modes: timed wait and untimed wait.
       //
       // When in timed wait mode, the loop unconditionally waits for a fixed
@@ -128,10 +137,10 @@ private:
          if (timedWaitMode)
          {
             // TODO Make interval configurable
-            boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+            std::this_thread::sleep_for(10ms);
 
             {
-               boost::lock_guard<boost::mutex> lock(mutex_);
+               std::lock_guard<std::mutex> lock(mutex_);
                if (shutdownRequested_)
                {
                   shutdownRequested_ = false; // Allow for restarting
@@ -153,7 +162,7 @@ private:
          else // untimed wait mode
          {
             {
-               boost::unique_lock<boost::mutex> lock(mutex_);
+               std::unique_lock<std::mutex> lock(mutex_);
                while (queue_.IsEmpty())
                {
                   condVar_.wait(lock);
