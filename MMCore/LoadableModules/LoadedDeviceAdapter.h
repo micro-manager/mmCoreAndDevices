@@ -29,6 +29,7 @@
 
 #include <boost/utility.hpp>
 
+#include <cstring>
 #include <memory>
 
 class CMMCore;
@@ -77,7 +78,7 @@ private:
       ModuleStringBuffer(const LoadedDeviceAdapter* module,
             const std::string& functionName) :
          module_(module), funcName_(functionName)
-      { memset(buf_, 0, sizeof(buf_)); }
+      { std::memset(buf_, 0, sizeof(buf_)); }
 
       char* GetBuffer() { return buf_; }
       size_t GetMaxStrLen() { return sizeof(buf_) - 1; }
