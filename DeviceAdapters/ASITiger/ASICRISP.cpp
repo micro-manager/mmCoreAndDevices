@@ -122,7 +122,7 @@ int CCRISP::Initialize()
 
    pAct = new CPropertyAction(this, &CCRISP::OnNumAvg);
    CreateProperty(g_CRISPNumberAveragesPropertyName, "1", MM::Integer, false, pAct);
-   SetPropertyLimits(g_CRISPNumberAveragesPropertyName, 0, 10);
+   SetPropertyLimits(g_CRISPNumberAveragesPropertyName, 0, 8);
    UpdateProperty(g_CRISPNumberAveragesPropertyName);
 
    pAct = new CPropertyAction(this, &CCRISP::OnSNR);
