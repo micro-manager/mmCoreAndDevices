@@ -55,7 +55,6 @@ const char* g_Keyword_Clear_All_Arrays = "Clear All Arrays";
 
 
 const char* serial_terminator = "\n";
-const unsigned char uc_serial_terminator = 10;
 const char* line_feed = "\n";
 const char * g_TriggerScope_Version = "v1.6.5, 8/16/16";
 bool g_bTS16 = false;
@@ -461,8 +460,8 @@ int CTriggerScopeHub::Initialize()
    if (initialized_)
       return DEVICE_OK;
 
-	char profilepath[1000];
 #ifdef _WIN32
+	char profilepath[1000];
 	ExpandEnvironmentStrings(TEXT("%userprofile%"),profilepath,1000);
 
 #else
@@ -1192,10 +1191,10 @@ CTriggerScopeFocus::CTriggerScopeFocus()
 	sequenceOn_ = true;
 
    CPropertyAction* pAct = new CPropertyAction(this, &CTriggerScopeFocus::OnUpperLimit);
-   int ret = CreateProperty("Upper Limit", "1000", MM::Float, false, pAct, true);
+   CreateProperty("Upper Limit", "1000", MM::Float, false, pAct, true);
 
    pAct = new CPropertyAction(this, &CTriggerScopeFocus::OnLowerLimit);
-   ret = CreateProperty("Lower Limit", "0", MM::Float, false, pAct, true);
+   CreateProperty("Lower Limit", "0", MM::Float, false, pAct, true);
 
 }
 
@@ -2346,11 +2345,10 @@ void CTriggerScopeHub::ReceiveSerialBytes(unsigned char* buf, unsigned long bufl
 void CTriggerScopeHub::FlushSerialBytes(unsigned char* buf, unsigned long buflen)
 {
    buf_string_ = "";
-   int nRet=0;
    unsigned long bytesRead=0;
    buf[0] = 0;
-   
-   nRet = ReadFromComPort(port_.c_str(), buf, buflen, bytesRead);
+
+   ReadFromComPort(port_.c_str(), buf, buflen, bytesRead);
 
    	if(nUseSerialLog_ && fidSerialLog_)
 	{
