@@ -23,16 +23,16 @@
 //
 
 #include "TriggerScope.h"
-#include <cstdio>
-#include <string>
-#include <math.h>
+
 #include "ModuleInterface.h"
 #include "../../MMCore/Error.h"
-#include <sstream>
-#include <algorithm>
-#include <iostream>
 
-#include "TriggerScope.h"
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 using namespace std;
 
