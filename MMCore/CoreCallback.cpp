@@ -32,7 +32,7 @@
 #include "CoreCallback.h"
 #include "DeviceManager.h"
 
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -1055,27 +1055,22 @@ void CoreCallback::ClearPostedErrors()
 }
 
 
-
-
-
-
 /**
  * Returns the number of microsecond tick
  * N.B. an unsigned long microsecond count rolls over in just over an hour!!!!
- * NOTE: This method is 'obsolete.'
+ *
+ * This method is obsolete and deprecated.
+ * Prefer std::chrono::steady_clock for time delta measurements
  */
 unsigned long CoreCallback::GetClockTicksUs(const MM::Device* /*caller*/)
 {
-	using namespace boost::posix_time;
-	using namespace boost::gregorian;
-	boost::posix_time::ptime t = boost::posix_time::microsec_clock::local_time();
-	boost::gregorian::date today( day_clock::local_day());
-	boost::posix_time::ptime timet_start(today); 
-	time_duration diff = t - timet_start; 
-	return (unsigned long) diff.total_microseconds();
+   using namespace std::chrono;
+   auto now = steady_clock::now();
+   auto usec = duration_cast<microseconds>(now.time_since_epoch()).count();
+   return static_cast<unsigned long>(usec);
 }
 
 MM::MMTime CoreCallback::GetCurrentMMTime()
-{		
-	return GetMMTimeNow();
+{
+   return GetMMTimeNow();
 }
