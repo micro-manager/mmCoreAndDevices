@@ -8,13 +8,10 @@
 #include "ASICRISP.h"
 
 CRISP::CRISP() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	axis_("Z"),
-	ledIntensity_(50),
-	na_(0.65),
 	waitAfterLock_(1000),
-	answerTimeoutMs_(1000),
-	sum_(0)
+	answerTimeoutMs_(1000)
 {
 	InitializeDefaultErrorMessages();
 
@@ -148,7 +145,7 @@ int CRISP::Initialize()
 
 	pAct = new CPropertyAction(this, &CRISP::OnNumAvg);
 	CreateProperty("Number of Averages", "1", MM::Integer, false, pAct);
-	SetPropertyLimits("Number of Averages", 0, 10);
+	SetPropertyLimits("Number of Averages", 0, 8);
 
 	pAct = new CPropertyAction(this, &CRISP::OnOffset);
 	CreateProperty(g_CRISPOffsetPropertyName, "", MM::Integer, true, pAct);
@@ -198,17 +195,6 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnLogAmpAGC);
 	CreateProperty("LogAmpAGC", "", MM::Integer, true, pAct);
 
-	// values that only we can change should be cached and enquired here:
-
-	float val;
-	ret = GetValue("LR Y?", val);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
-	}
-	na_ = (double)val;
-
-	sum_ = 0;
 	return DEVICE_OK;
 }
 
@@ -220,7 +206,7 @@ int CRISP::Shutdown()
 
 bool CRISP::Busy()
 {
-	// TODO: implement this feature
+	// TODO: implement this feature (if it makes sense!)
 	return false;
 }
 
@@ -302,11 +288,6 @@ int CRISP::GetFocusState(std::string& focusState)
 		default:  focusState = g_CRISP_Unknown; break;
 	}
 
-	// As of 3/1/2022 this has not been checked (it may not be a problem anymore):
-	// TODO: Sometimes the controller spits out extra information when the state is 'G'
-	// Figure out what that information is, and how to handle it best. At the moment
-	// it causes problems since it will be read by the next command!
-	
 	return DEVICE_OK;
 }
 
@@ -636,15 +617,22 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(na_);
+		float na;
+		int ret = GetValue("LR Y?", na);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
+		pProp->Set(na);
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(na_);
+		long na;
+		pProp->Get(na);
 		std::ostringstream command;
-		command << std::fixed << "LR Y=" << na_;
+		command << std::fixed << "LR Y=" << na;
 
-		return SetCommand(command.str().c_str());
+		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
 }
@@ -751,11 +739,22 @@ int CRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(ledIntensity_);
+		float ledIntensity;
+		int ret = GetValue("UL X?", ledIntensity);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
+		pProp->Set(ledIntensity);
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(ledIntensity_);
+		long ledIntensity;
+		pProp->Get(ledIntensity);
+		std::ostringstream command;
+		command << std::fixed << "UL X=" << ledIntensity;
+
+		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
 }
@@ -842,25 +841,15 @@ int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// TODO: investigate these messages and find a fix for this - Brandon 08/24/2020
-		// HACK: there are still occasionally intervening messages from the controller
-		ClearPort();
-
+		float snr;
 		std::string command = "EXTRA Y?";
-		std::string answer;
-		int ret = QueryCommand(command.c_str(), answer);
+		int ret = GetValue(command.c_str(), snr);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
-
-		std::stringstream ss(answer);
-		double snr;
-		ss >> snr;
-
 		pProp->Set(snr);
 	}
-
 	return DEVICE_OK;
 }
 
@@ -875,33 +864,16 @@ int CRISP::OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		// long val;
 		std::istringstream is(answer);
-		std::string token1;
-		std::string	token2;
+		std::string ditherError;
 		for (int i = 0; i < 3; i++)
 		{
-			if (i == 1)
-			{
-				is >> token2; // 2nd "is" is sum
-			}
-			else
-			{
-				is >> token1; // 3rd "is" is error
-			}
+			is >> ditherError; // 3rd "is" is error
 		}
 
-		// std::istringstream s(token1);
-		// s >> val;
-		// pProp->Set(val);
-
-		pProp->Set(token1.c_str());
-
-		// std::istringstream s2(token2);
-		// s2 >> val;
-		// sum_= val;
-
-		sum_ = atol(token2.c_str());
+		if (!pProp->Set(ditherError.c_str())) {
+			return DEVICE_INVALID_PROPERTY_VALUE;
+		}
 	}
 	return DEVICE_OK;
 }
@@ -973,24 +945,23 @@ int CRISP::OnSum(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		/*
 		std::string answer;
 		int ret = QueryCommand("EXTRA X?", answer);
 		if (ret != DEVICE_OK)
+		{
 			return ret;
+		}
 
-		long val;
 		std::istringstream is(answer);
-		std::string tok;
-		for (int i=0; i <2; i++) // SUM is 2nd last number
-			is >> tok;
-		std::istringstream s(tok);
-		s >> val;
-		pProp->Set(val);
-		*/
+		std::string sum;
+		for (int i = 0; i < 2; i++)
+		{
+			is >> sum; // 2nd "is" is sum
+		}
 
-		// more efficient way, sum is retrived same time as dither error
-		pProp->Set((long)sum_);
+		if (!pProp->Set(sum.c_str())) {
+			return DEVICE_INVALID_PROPERTY_VALUE;
+		}
 	}
 	return DEVICE_OK;
 }
@@ -999,16 +970,14 @@ int CRISP::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		double numSkips;
-		// int ret = GetValue("LK Z?", numSkips);
-
-		int ret = GetOffset(numSkips);
+		double offset;
+		int ret = GetOffset(offset);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
 
-		if (!pProp->Set(numSkips))
+		if (!pProp->Set(offset))
 		{
 			return DEVICE_INVALID_PROPERTY_VALUE;
 		}
