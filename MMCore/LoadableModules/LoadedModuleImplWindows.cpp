@@ -24,7 +24,7 @@
 
 #include "../Error.h"
 
-#include <boost/algorithm/string.hpp>
+#include <string>
 
 
 static void __declspec(noreturn)
@@ -48,7 +48,8 @@ ThrowLastError()
       errorText = pMsgBuf;
 
       // Windows error messages sometimes have trailing newlines
-      boost::algorithm::trim(errorText);
+      const std::string whitespace(" \f\n\r\t\v");
+      errorText.erase(errorText.find_last_not_of(whitespace) + 1);
 
       // This particular message can be rather misleading.
       if (errorText == "The specified module could not be found.") {
