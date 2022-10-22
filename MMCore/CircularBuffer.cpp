@@ -63,7 +63,7 @@ bool CircularBuffer::Initialize(unsigned channels, unsigned int w, unsigned int 
 {
    MMThreadGuard guard(g_bufferLock);
    imageNumbers_.clear();
-   startTime_ = GetMMTimeNow();
+   startTime_ = std::chrono::steady_clock::now();
 
    bool ret = true;
    try
@@ -128,7 +128,7 @@ void CircularBuffer::Clear()
    insertIndex_=0; 
    saveIndex_=0; 
    overflow_ = false;
-   startTime_ = GetMMTimeNow();
+   startTime_ = std::chrono::steady_clock::now();
    imageNumbers_.clear();
 }
 
@@ -233,8 +233,10 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
       if (!md.HasTag(MM::g_Keyword_Elapsed_Time_ms))
       {
          // if time tag was not supplied by the camera insert current timestamp
-         MM::MMTime timestamp = GetMMTimeNow();
-         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timestamp - startTime_).getMsec()));
+         using namespace std::chrono;
+         auto elapsed = steady_clock::now() - startTime_;
+         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+            std::to_string(duration_cast<milliseconds>(elapsed).count()));
       }
 
       boost::posix_time::ptime t = boost::posix_time::microsec_clock::local_time();
