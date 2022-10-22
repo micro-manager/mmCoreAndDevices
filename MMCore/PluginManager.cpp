@@ -21,7 +21,8 @@
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 08/10/2005
 
 #ifdef WIN32
-   #include <windows.h>
+   #define WIN32_LEAN_AND_MEAN
+   #include <Windows.h>
    #include <io.h>
 #else
    #include <sys/types.h>
