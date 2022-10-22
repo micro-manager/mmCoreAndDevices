@@ -28,8 +28,11 @@
 #include "../CoreUtils.h"
 #include "../Error.h"
 
-#include <boost/scoped_array.hpp>
-#include <Psapi.h>
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+#include <string>
+#include <vector>
 
 
 static HMODULE GetHandleOfThisModule()
@@ -56,8 +59,8 @@ static std::string GetPathOfModule(HMODULE hModule)
 {
    for (size_t bufsize = 1024, len = bufsize; ; bufsize += 1024)
    {
-      boost::scoped_array<char> filename(new char[bufsize]);
-      len = GetModuleFileNameA(hModule, filename.get(),
+      std::vector<char> filename(bufsize);
+      len = GetModuleFileNameA(hModule, filename.data(),
             static_cast<DWORD>(bufsize));
       if (!len)
       {
@@ -70,7 +73,7 @@ static std::string GetPathOfModule(HMODULE hModule)
       if (len == bufsize) // Filename may not have fit in buffer
          continue;
 
-      return filename.get();
+      return filename.data();
    }
 }
 
