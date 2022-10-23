@@ -38,8 +38,6 @@
 #include "LoadableModules/LoadedDeviceAdapter.h"
 #include "PluginManager.h"
 
-#include <boost/algorithm/string.hpp>
-
 #include <cstring>
 #include <fstream>
 #include <memory>
