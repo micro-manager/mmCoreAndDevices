@@ -103,13 +103,13 @@ namespace MM {
 
          MMTime() : sec_(0), uSec_(0) {}
 
-         MMTime(double uSecTotal)
+         explicit MMTime(double uSecTotal)
          {
             sec_ = (long) (uSecTotal / 1.0e6);
             uSec_ = (long) (uSecTotal - sec_ * 1.0e6);
          }
 
-         MMTime(long sec, long uSec) : sec_(sec), uSec_(uSec)
+         explicit MMTime(long sec, long uSec) : sec_(sec), uSec_(uSec)
          {
             Normalize();
          }

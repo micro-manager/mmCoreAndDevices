@@ -157,8 +157,8 @@ class ZeissMonitoringThread;
  */
 struct ZeissDeviceInfo {
    ZeissDeviceInfo(){
-      lastUpdateTime = 0;
-      lastRequestTime = 0;
+      lastUpdateTime = MM::MMTime{};
+      lastRequestTime = MM::MMTime{};
       currentPos = 0;
       targetPos = 0;
       maxPos = 0;

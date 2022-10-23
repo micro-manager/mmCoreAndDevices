@@ -1717,9 +1717,9 @@ void SpinnakerAcquisitionThread::Start(long numImages, double intervalMs)
    m_stop = false;
    m_suspend = false;
    activate();
-   m_actualDuration = 0;
+   m_actualDuration = MM::MMTime{};
    m_startTime = m_spkrCam->GetCurrentMMTime();
-   m_lastFrameTime = 0;
+   m_lastFrameTime = MM::MMTime{};
    m_spkrCam->allocateImageBuffer(m_spkrCam->GetImageBufferSize(), m_spkrCam->m_cam->PixelFormat.GetValue());
 
    if (numImages == -1)

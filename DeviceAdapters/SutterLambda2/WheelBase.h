@@ -362,7 +362,7 @@ int WheelBase<U>::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 		double delay;
 		pProp->Get(delay);
 		this->SetDelayMs(delay);
-		delay_ = delay * 1000;
+		delay_ = MM::MMTime::fromMs(delay);
 	}
 	return DEVICE_OK;
 }

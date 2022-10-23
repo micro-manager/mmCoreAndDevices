@@ -445,7 +445,7 @@ MM::MMTime UniHub::GetTimeout(string devicename) {
 		UmmhCamera* p = static_cast<UmmhCamera*>(pDevice);
 		return p->GetTimeout();
 	}
-	return 0;
+	return {};
 }
 
 void UniHub::SetTimeout(string devicename, MM::MMTime val) {
@@ -500,7 +500,7 @@ MM::MMTime UniHub::GetLastCommandTime(string devicename) {
 		UmmhCamera* p = static_cast<UmmhCamera*>(pDevice);
 		return p->GetLastCommandTime();
 	}
-	return 0;
+	return {};
 }
 
 void UniHub::SetLastCommandTime(string devicename, MM::MMTime val) {
@@ -3879,9 +3879,9 @@ void MySequenceThread::Start(long numImages, double intervalMs)
    stop_ = false;
    suspend_=false;
    activate();
-   actualDuration_ = 0;
+   actualDuration_ = MM::MMTime{};
    startTime_= camera_->GetCurrentMMTime();
-   lastFrameTime_ = 0;
+   lastFrameTime_ = MM::MMTime{};
 }
 
 bool MySequenceThread::IsStopped(){

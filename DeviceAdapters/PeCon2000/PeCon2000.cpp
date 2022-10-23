@@ -375,7 +375,7 @@ struct is_older_than {
    inline is_older_than(MM::MMTime now, double delta) : now(now), delta(delta) {};
 
    inline bool operator()(const MM::MMTime& then) {
-      return (now - then) > delta;
+      return (now - then) > MM::MMTime(delta);
    }
 };
 

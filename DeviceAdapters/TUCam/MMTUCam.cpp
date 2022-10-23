@@ -2619,9 +2619,9 @@ void CTUCamThread::Start(long numImages, double intervalMs)
     stop_ = false;
     suspend_=false;
     activate();
-    actualDuration_ = 0;
+    actualDuration_ = MM::MMTime{};
     startTime_= camera_->GetCurrentMMTime();
-    lastFrameTime_ = 0;
+    lastFrameTime_ = MM::MMTime{};
 }
 
 bool CTUCamThread::IsStopped()
