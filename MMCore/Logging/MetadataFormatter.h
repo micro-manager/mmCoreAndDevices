@@ -16,10 +16,13 @@
 
 #pragma once
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-
+#include <chrono>
+#include <cstddef>
+#include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <ostream>
+#include <sstream>
 #include <string>
 
 
@@ -68,14 +71,43 @@ public:
 };
 
 
+inline std::string
+FormatLocalTime(std::chrono::time_point<std::chrono::system_clock> tp)
+{
+   using namespace std::chrono;
+   auto us = duration_cast<microseconds>(tp.time_since_epoch());
+   auto secs = duration_cast<seconds>(us);
+   auto whole = duration_cast<microseconds>(secs);
+   auto frac = static_cast<int>((us - whole).count());
+
+   // As of C++14/17, it is simpler (and probably faster) to use C functions for
+   // date-time formatting
+
+   std::time_t t(secs.count()); // time_t is seconds on platforms we support
+   std::tm tmstruct;
+   std::tm *ptm;
+#ifdef _WIN32 // Windows localtime() is documented thread-safe
+   ptm = std::localtime(&t);
+#else // POSIX has localtime_r()
+   ptm = localtime_r(&t, &tmstruct);
+#endif
+
+   // Format as "yyyy-mm-dd hh:mm:ss.uuuuuu" (26 chars)
+   const char *timeFmt = "%Y-%m-%dT%H:%M:%S";
+   char buf[32];
+   std::size_t len = std::strftime(buf, sizeof(buf), timeFmt, ptm);
+   std::snprintf(buf + len, sizeof(buf) - len, ".%06d", frac);
+   return buf;
+}
+
+
 inline void
 MetadataFormatter::FormatLinePrefix(std::ostream& stream,
       const Metadata& metadata)
 {
    // Pre-forming string is more efficient than writing bit by bit to stream.
 
-   buf_ = boost::posix_time::to_iso_extended_string(
-         metadata.GetStampData().GetTimestamp());
+   buf_ = FormatLocalTime(metadata.GetStampData().GetTimestamp());
    buf_ += " tid";
    sstrm_.str(std::string());
    sstrm_ << metadata.GetStampData().GetThreadId();
