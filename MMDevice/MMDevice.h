@@ -220,12 +220,12 @@ namespace MM {
    {
    public:
       // arguments:  MMTime start time, millisecond interval time
-      TimeoutMs(const MMTime startTime, const unsigned long intervalMs) :
+      explicit TimeoutMs(const MMTime startTime, const unsigned long intervalMs) :
          startTime_(startTime),
          interval_(0, 1000*intervalMs)
       {
       }
-      TimeoutMs(const MMTime startTime, const MMTime interval) :
+      explicit TimeoutMs(const MMTime startTime, const MMTime interval) :
          startTime_(startTime),
          interval_(interval)
       {
