@@ -97,7 +97,13 @@ namespace MM {
    class MMTime
    {
       public:
-         MMTime(double uSecTotal = 0.0)
+         // Data members are public but new code should avoid direct access
+         long sec_;
+         long uSec_;
+
+         MMTime() : sec_(0), uSec_(0) {}
+
+         MMTime(double uSecTotal)
          {
             sec_ = (long) (uSecTotal / 1.0e6);
             uSec_ = (long) (uSecTotal - sec_ * 1.0e6);
@@ -108,22 +114,27 @@ namespace MM {
             Normalize();
          }
 
-         ~MMTime() {}
-
-         MMTime(std::string serialized) {
-            std::stringstream is(serialized);
-            is >> sec_ >> uSec_;
-            Normalize();
+         static MMTime fromUs(double us)
+         {
+            return MMTime(us);
          }
 
+         static MMTime fromMs(double ms)
+         {
+            return MMTime(ms * 1000.0);
+         }
+
+         static MMTime fromSeconds(long secs)
+         {
+            return MMTime(secs, 0);
+         }
+
+         // Deprecated
          std::string serialize() {
             std::ostringstream os;
             os << sec_ << " " << uSec_;
             return os.str().c_str();
          }
-
-         long sec_;
-         long uSec_;
 
          MMTime operator+(const MMTime &other) const
          {
@@ -219,17 +230,14 @@ namespace MM {
          interval_(interval)
       {
       }
-      ~TimeoutMs()
-      {
-      }
+
       bool expired(const MMTime tnow)
       {
          MMTime elapsed = tnow - startTime_;
          return ( interval_ < elapsed );
       }
+
    private:
-      TimeoutMs(const MM::TimeoutMs&) {}
-      const TimeoutMs& operator=(const MM::TimeoutMs&) {return *this;}
       MMTime startTime_; // start time
       MMTime interval_; // interval in milliseconds
    };
