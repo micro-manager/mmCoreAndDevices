@@ -93,6 +93,13 @@ int CRISP::Initialize()
 		compileDay_ = ExtractCompileDay(compile_date);
 	}
 
+	// get the firmware version data
+	char version[MM::MaxStrLength];
+	if (GetProperty("Version", version) == DEVICE_OK)
+	{
+		versionData_ = ExtractVersionData(std::string(version));
+	}
+
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
@@ -151,10 +158,6 @@ int CRISP::Initialize()
 	CreateProperty(g_CRISPOffsetPropertyName, "", MM::Integer, true, pAct);
 	UpdateProperty(g_CRISPOffsetPropertyName);
 
-	pAct = new CPropertyAction(this, &CRISP::OnSum);
-	CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-	UpdateProperty(g_CRISPSumPropertyName);
-
 	pAct = new CPropertyAction(this, &CRISP::OnState);
 	CreateProperty(g_CRISPStatePropertyName, "", MM::String, true, pAct);
 	UpdateProperty(g_CRISPStatePropertyName);
@@ -189,11 +192,32 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnSNR);
 	CreateProperty("Signal Noise Ratio", "", MM::Float, true, pAct);
 
-	pAct = new CPropertyAction(this, &CRISP::OnDitherError);
-	CreateProperty("Dither Error", "", MM::Integer, true, pAct);
-
 	pAct = new CPropertyAction(this, &CRISP::OnLogAmpAGC);
 	CreateProperty("LogAmpAGC", "", MM::Integer, true, pAct);
+
+	// use faster serial commands with new versions of the firmware
+	if (versionData_.isVersionAtLeast(9, 2, 'o'))
+	{
+		// These commands use LK T? and LK Y? => ":A 0 \r\n"
+		pAct = new CPropertyAction(this, &CRISP::OnDitherError);
+		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
+		UpdateProperty(g_CRISPDitherErrorPropertyName);
+
+		pAct = new CPropertyAction(this, &CRISP::OnSum);
+		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
+		UpdateProperty(g_CRISPSumPropertyName);
+	}
+	else
+	{
+		// These commands use EXTRA X? => "I    9    0 \r\n"
+		pAct = new CPropertyAction(this, &CRISP::OnDitherErrorLegacy);
+		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
+		UpdateProperty(g_CRISPDitherErrorPropertyName);
+
+		pAct = new CPropertyAction(this, &CRISP::OnSumLegacy);
+		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
+		UpdateProperty(g_CRISPSumPropertyName);
+	}
 
 	return DEVICE_OK;
 }
@@ -857,23 +881,22 @@ int CRISP::OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		std::string answer;
-		int ret = QueryCommand("EXTRA X?", answer);
+		float sum;
+		int ret = GetValue("LK Y?", sum);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
+		pProp->Set(sum);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		long nr;
+		pProp->Get(nr);
+		std::ostringstream command;
+		command << std::fixed << "LK Y = " << nr;
 
-		std::istringstream is(answer);
-		std::string ditherError;
-		for (int i = 0; i < 3; i++)
-		{
-			is >> ditherError; // 3rd "is" is error
-		}
-
-		if (!pProp->Set(ditherError.c_str())) {
-			return DEVICE_INVALID_PROPERTY_VALUE;
-		}
+		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
 }
@@ -945,23 +968,22 @@ int CRISP::OnSum(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		std::string answer;
-		int ret = QueryCommand("EXTRA X?", answer);
+		float sum;
+		int ret = GetValue("LK T?", sum);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
+		pProp->Set(sum);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		long nr;
+		pProp->Get(nr);
+		std::ostringstream command;
+		command << std::fixed << "LK T=" << nr;
 
-		std::istringstream is(answer);
-		std::string sum;
-		for (int i = 0; i < 2; i++)
-		{
-			is >> sum; // 2nd "is" is sum
-		}
-
-		if (!pProp->Set(sum.c_str())) {
-			return DEVICE_INVALID_PROPERTY_VALUE;
-		}
+		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
 }
@@ -999,6 +1021,58 @@ int CRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		const char *state = &answer[answer.size()-1];
 		if (!pProp->Set(state))
 		{
+			return DEVICE_INVALID_PROPERTY_VALUE;
+		}
+	}
+	return DEVICE_OK;
+}
+
+// Provide support for MS2000 firmware < 9.2o
+int CRISP::OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		std::string answer;
+		int ret = QueryCommand("EXTRA X?", answer);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
+
+		std::istringstream is(answer);
+		std::string ditherError;
+		for (int i = 0; i < 3; i++)
+		{
+			is >> ditherError; // 3rd "is" is error
+		}
+
+		if (!pProp->Set(ditherError.c_str())) {
+			return DEVICE_INVALID_PROPERTY_VALUE;
+		}
+	}
+	return DEVICE_OK;
+}
+
+// Provide support for MS2000 firmware < 9.2o
+int CRISP::OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		std::string answer;
+		int ret = QueryCommand("EXTRA X?", answer);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
+
+		std::istringstream is(answer);
+		std::string sum;
+		for (int i = 0; i < 2; i++)
+		{
+			is >> sum; // 2nd "is" is sum
+		}
+
+		if (!pProp->Set(sum.c_str())) {
 			return DEVICE_INVALID_PROPERTY_VALUE;
 		}
 	}
