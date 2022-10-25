@@ -56,8 +56,6 @@
 #include "MMEventCallback.h"
 #include "PluginManager.h"
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -114,7 +112,7 @@ using namespace std;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 10, MMCore_versionMinor = 2, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 10, MMCore_versionMinor = 2, MMCore_versionPatch = 2;
 
 
 ///////////////////////////////////////////////////////////////////////////////

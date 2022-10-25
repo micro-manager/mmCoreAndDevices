@@ -25,7 +25,8 @@
 #include <pthread.h>
 #endif
 
-#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <chrono>
+#include <string>
 
 
 namespace mm
@@ -36,16 +37,9 @@ namespace logging
 namespace internal
 {
 
-
-typedef boost::posix_time::ptime TimestampType;
-
-// Note: Boost's local_time() internally calls the C library function
-// localtime_r() or localtime(). On the platforms we are interested in, either
-// the thread-safe localtime_r() is provided (OS X, Linux), or localtime() is
-// made thread-safe by using thread-local storage (Windows).
-inline TimestampType
+inline std::chrono::time_point<std::chrono::system_clock>
 Now()
-{ return boost::posix_time::microsec_clock::local_time(); }
+{ return std::chrono::system_clock::now(); }
 
 
 #ifdef _WIN32
@@ -89,7 +83,7 @@ public:
 
 class StampData
 {
-   internal::TimestampType time_;
+   std::chrono::time_point<std::chrono::system_clock> time_;
    internal::ThreadIdType tid_;
 
 public:
@@ -99,7 +93,9 @@ public:
       tid_ = internal::GetTid();
    }
 
-   internal::TimestampType GetTimestamp() const { return time_; }
+   std::chrono::time_point<std::chrono::system_clock> GetTimestamp() const
+   { return time_; }
+
    internal::ThreadIdType GetThreadId() const { return tid_; }
 };
 

@@ -77,9 +77,11 @@ public:
    int SetSerialCommand(const MM::Device*, const char* portName, const char* command, const char* term);
    int GetSerialAnswer(const MM::Device*, const char* portName, unsigned long ansLength, char* answerTxt, const char* term);
 
-	unsigned long GetClockTicksUs(const MM::Device* caller);
+   // Return value overflows in ~72 minutes on Windows
+   // Prefer std::chrono::steady_clock for time delta measurements
+   /*Deprecated*/ unsigned long GetClockTicksUs(const MM::Device* caller);
 
-	// MMTime, in epoch beginning at 2000 01 01
+   // MMTime, in epoch beginning at 2000 01 01
    MM::MMTime GetCurrentMMTime();
 
    void Sleep(const MM::Device* caller, double intervalMs);

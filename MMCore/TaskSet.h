@@ -27,8 +27,6 @@
 #include "Task.h"
 #include "ThreadPool.h"
 
-#include <boost/utility/enable_if.hpp>
-
 #include <memory>
 #include <vector>
 
