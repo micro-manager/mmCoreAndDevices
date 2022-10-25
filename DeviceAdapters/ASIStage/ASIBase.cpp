@@ -16,6 +16,7 @@ ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	oldstagePrefix_(prefix),
 	port_("Undefined")
 {
+	versionData_ = VersionData();
 }
 
 ASIBase::~ASIBase()
@@ -166,6 +167,49 @@ unsigned int ASIBase::ExtractCompileDay(const char* compile_date)
 		return ConvertDay(year, month, day);
 	}
 	return 0;
+}
+
+VersionData ASIBase::ExtractVersionData(const std::string &version) const
+{	
+	// Version response example: ":A Version: USB-9.2m \r\n"
+	size_t startIndex = version.find("-");
+	if (startIndex == std::string::npos)
+	{
+		return VersionData(); // error => default data
+	}
+	std::string shortVersion = version.substr(startIndex+1);
+	// shortVersion => "9.2m \r\n"
+
+	// extract revision letter
+	int revIndex = 0;
+	char revision = '-';
+	for (int i = 0; i < shortVersion.size(); i++)
+	{
+		char c = shortVersion[i];
+		if (std::isalpha(c))
+		{
+			revIndex = i; // index
+			revision = c; // char
+			break;
+		}
+	}
+
+	// find the index of the dot to separate major and minor
+	size_t dotIndex = shortVersion.find(".");
+	if (dotIndex == std::string::npos)
+	{
+		return VersionData(); // error => default data
+	}
+	
+	size_t charsToCopy = revIndex - (dotIndex + 1);
+	// shortVersion => "9.2m \r\n"
+	//                   ^ ^
+	//            dotIndex revIndex
+	
+	// convert substrings to integers
+	int major = std::stoi(shortVersion.substr(0, dotIndex)); // use index as chars to copy
+	int minor = std::stoi(shortVersion.substr(dotIndex + 1, charsToCopy));
+	return VersionData(major, minor, revision);
 }
 
 // Get the version of this controller

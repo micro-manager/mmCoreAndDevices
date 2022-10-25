@@ -60,6 +60,9 @@ public:
 	int OnSum(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+	// For backwards compatibility with MS2000 firmware < 9.2o
+	int OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	int GetFocusState(std::string& focusState);
