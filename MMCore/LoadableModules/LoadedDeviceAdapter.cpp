@@ -183,6 +183,8 @@ LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
          return std::make_shared<SLMInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::GalvoDevice:
          return std::make_shared<GalvoInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+      case MM::DataStreamerDevice:
+          return std::make_shared<DataStreamerInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::HubDevice:
          return std::make_shared<HubInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       default:

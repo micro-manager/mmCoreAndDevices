@@ -609,6 +609,19 @@ public:
    std::string getGalvoChannel(const char* galvoLabel) throw (CMMError);
    ///@}
 
+   /** \name DataStreamer control.
+    *
+    * Control of data streaming devices.
+    */
+    ///@{
+   void startStream(const char* dataStreamerLabel) throw (CMMError);
+   void stopStream(const char* dataStreamerLabel) throw (CMMError);
+   void setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow,
+       unsigned numberOfBlocks, double durationUs, double updatePeriodUs) throw (CMMError);
+   void getStreamParameters(const char* label, bool& stopOnOverflow,
+       unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError);
+   ///@}
+
    /** \name Device discovery. */
    ///@{
    bool supportsDeviceDetection(char* deviceLabel);

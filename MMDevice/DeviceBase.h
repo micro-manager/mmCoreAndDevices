@@ -34,6 +34,8 @@
 #include "ModuleInterface.h"
 #include "DeviceThreads.h"
 
+#include <boost/circular_buffer.hpp>
+
 #include <math.h>
 #include <assert.h>
 
@@ -2159,6 +2161,269 @@ class CGalvoBase : public CDeviceBase<MM::Galvo, U>
 {
    double GetXMinimum() { return 0.0;};
    double GetYMinimum() { return 0.0;};
+};
+
+typedef struct {
+    std::unique_ptr<char[]> data;
+    unsigned int expectedSize;
+    unsigned int actualSize;
+} data_block;
+
+class CircularBlockCollection {
+public:
+    CircularBlockCollection(unsigned int maxNumberOfBlocks, bool stopOnOverflow) :
+        maxNumberOfBlocks_(0),
+        stopOnOverflow_(true),
+        overflowStatus_(false)
+    {
+        maxNumberOfBlocks_ = maxNumberOfBlocks;
+        cb_.set_capacity(maxNumberOfBlocks_);
+        cb_.empty();
+        //boost::circular_buffer<std::unique_ptr<data_block>> cb_(maxNumberOfBlocks_);
+        stopOnOverflow_ = stopOnOverflow;
+    }
+
+    ~CircularBlockCollection() {}
+
+    void Add(std::unique_ptr<data_block> &pDataBlock)
+    {
+        MMThreadGuard g(this->executeLock_);
+        if ((cb_.capacity() - cb_.size()) == 0) {
+            overflowStatus_ = true;
+            if (stopOnOverflow_) return;
+            cb_.empty();
+        }
+        cb_.push_front(std::move(pDataBlock));
+    }
+
+    int GetCapacity() {
+        return cb_.capacity();
+    }
+    
+    int GetSize() {
+        return cb_.size();
+    }
+
+    std::unique_ptr<data_block> Remove()
+    {
+        MMThreadGuard g(this->executeLock_);
+        if (cb_.size() == 0) {
+            return 0;
+        }
+        else {
+            //std::unique_ptr<data_block> dataBlock = std::move(cb_.at(0));
+            //cb_.pop_back();
+            return std::move(cb_.at(0));
+        }
+    }
+
+    void ResetOverflowStatus()
+    {
+        MMThreadGuard g(this->executeLock_);
+        overflowStatus_ = false;
+    }
+
+    bool GetOverflowStatus()
+    {
+        MMThreadGuard g(this->executeLock_);
+        return overflowStatus_;
+    }
+private:
+    boost::circular_buffer<std::unique_ptr<data_block>> cb_;
+    MMThreadLock executeLock_;
+    unsigned long maxNumberOfBlocks_;
+    bool stopOnOverflow_;
+    bool overflowStatus_;
+};
+
+
+/**
+* Base class for creating DataStreamer devices.
+*/
+template <class U>
+class CDataStreamerBase : public CDeviceBase<MM::DataStreamer, U>
+{
+    friend class CircularBlockCollection;
+public:
+    CDataStreamerBase() : numberOfBlocks_(1), durationUs_(1e6), updatePeriodUs_(1e5), 
+                          stopOnOverflow_(true), stopFlag_(false),
+                          cbcData_(0), thdAcq_(0)
+    {
+        cbcData_ = new CircularBlockCollection(numberOfBlocks_, stopOnOverflow_);
+        thdAcq_ = new AcquisitionThread(this);
+    }
+
+    virtual ~CDataStreamerBase()
+    {
+        if (thdAcq_->IsRunning()) {
+            thdAcq_->Stop();
+            thdAcq_->wait();
+        }
+        delete thdAcq_;
+        delete cbcData_;
+    }
+
+    virtual int GetBufferSize(unsigned& dataBufferSiize) = 0;
+    virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) = 0;
+    //virtual int ProcessBuffer(std::unique_ptr<char[]> &pDataBuffer) = 0;
+    virtual int ProcessBuffer(std::string str) = 0;
+
+    virtual int SetStreamParameters(bool stopOnOverflow, unsigned numberOfBlocks, double durationUs, double updatePeriodUs)
+    {
+        if (thdAcq_->IsRunning()) {
+            return DEVICE_CAMERA_BUSY_ACQUIRING;
+        }
+        stopOnOverflow_ = stopOnOverflow,
+        numberOfBlocks_ = numberOfBlocks;
+        durationUs_ = durationUs;
+        updatePeriodUs_ = updatePeriodUs;
+        delete cbcData_;
+        cbcData_ = new CircularBlockCollection(numberOfBlocks_, stopOnOverflow_);
+        return DEVICE_OK;
+    }
+
+    virtual int GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs)
+    {
+        stopOnOverflow = stopOnOverflow_,
+        numberOfBlocks = numberOfBlocks_;
+        durationUs = durationUs_;
+        updatePeriodUs = updatePeriodUs_;
+        return DEVICE_OK;
+    }
+
+    virtual int StartStream()
+    {
+        if (thdAcq_->IsRunning()) {
+            return DEVICE_CAMERA_BUSY_ACQUIRING;
+        }
+        thdAcq_->Start();
+        return DEVICE_OK;
+    }
+
+    virtual int StopStream() {
+        if (thdAcq_->IsRunning()) {
+            thdAcq_->Stop();
+            thdAcq_->wait();
+        }
+        return DEVICE_OK;
+    }
+
+    virtual int IsStreaming(unsigned& isStreaming) { return isStreaming_; }
+
+    //* GetDataCBC() { return this->cbcData_; }
+
+    class AcquisitionThread : public MMDeviceThreadBase
+    {
+        friend class CDataStreamerBase;
+        friend class CircularBlockCollection;
+    public:
+        AcquisitionThread(CDataStreamerBase* p) : pDataStreamerBase_(0), isRunning_(false),stopFlag_(false)
+        {
+            pDataStreamerBase_ = p;
+        }
+        ~AcquisitionThread() {}
+
+        void Start() {
+            this->SetIsRunning(true);
+            this->activate();
+        }
+
+        void Stop() {
+            if (this->GetIsRunning()) {
+                this->SetStopFlag(true);
+            }
+        }
+
+        bool IsRunning() {
+            return this->GetIsRunning();
+        }
+
+    private:
+        CDataStreamerBase* pDataStreamerBase_;
+        bool isRunning_;
+        bool stopFlag_;
+        MMThreadLock stopLock_;
+        MMThreadLock isRunningLock_;
+
+        // Provide description here
+        int svc(void)
+        {
+            int ret = 0;
+            unsigned int expectedDataSize, actualDataSize;
+            unsigned int blockCounter=0;
+            CircularBlockCollection* cbc = pDataStreamerBase_->cbcData_;
+            MM::MMTime startTime = pDataStreamerBase_->GetCurrentMMTime();
+            MM::MMTime timeSinceStart = pDataStreamerBase_->GetCurrentMMTime() - startTime;
+            // check all stopping conditions
+            while (!(this->GetStopFlag() || //read externally set stop flag
+                     blockCounter >= pDataStreamerBase_->numberOfBlocks_ || // stop if desired number of blocks have been collected
+                     (cbc->GetOverflowStatus() && pDataStreamerBase_->stopOnOverflow_) || // buffer overflow
+                     timeSinceStart > pDataStreamerBase_->durationUs_) ) { // timeout
+                Sleep(pDataStreamerBase_->updatePeriodUs_/1000);
+                timeSinceStart = pDataStreamerBase_->GetCurrentMMTime() - startTime;
+                ret = pDataStreamerBase_->GetBufferSize(expectedDataSize);
+                if (expectedDataSize != 0) {
+                    std::unique_ptr<data_block> newBlock(new data_block);
+                    newBlock->data = pDataStreamerBase_->GetBuffer(expectedDataSize, actualDataSize);
+                    newBlock->expectedSize = expectedDataSize;
+                    newBlock->actualSize = actualDataSize;
+                    cbc->Add(newBlock);
+                    blockCounter++;
+                }
+            }
+
+            std::stringstream ss;
+            ss << "Terminating acuisition thread for the following reason:";
+            if (this->GetStopFlag()) {
+                ss << " user selection";
+            }
+            else if (cbc->GetOverflowStatus() && pDataStreamerBase_->stopOnOverflow_) {
+                ss << " acquisition buffer overflow";
+            }
+            else if (blockCounter >= pDataStreamerBase_->numberOfBlocks_) {
+                ss << "desired number of blocks (" << blockCounter << ") have been collected";
+            }
+            else if (timeSinceStart > pDataStreamerBase_->durationUs_) {
+                ss << " acquisition time exceeded the set limit (" << pDataStreamerBase_->durationUs_ << " microseconds)";
+            }
+            pDataStreamerBase_->LogMessage(ss.str(), true);
+
+            this->SetIsRunning(false);
+            stopFlag_ = false;
+            return DEVICE_OK;
+         }
+
+        void SetStopFlag(bool stop) {
+            MMThreadGuard g(this->stopLock_);
+            stopFlag_ = stop;
+        }
+
+        bool GetStopFlag() {
+            MMThreadGuard g(this->stopLock_);
+            return stopFlag_;
+        }
+
+        void SetIsRunning(bool isRunning) {
+            MMThreadGuard g(this->isRunningLock_);
+            isRunning_ = isRunning;
+        }
+
+        bool GetIsRunning() {
+            MMThreadGuard g(this->isRunningLock_);
+            return isRunning_;
+        }
+
+    };
+
+private:
+    unsigned numberOfBlocks_;
+    double durationUs_;
+    double updatePeriodUs_;
+    bool stopOnOverflow_;
+    bool isStreaming_;
+    bool stopFlag_;
+    CircularBlockCollection* cbcData_;
+    AcquisitionThread* thdAcq_;
 };
 
 /**

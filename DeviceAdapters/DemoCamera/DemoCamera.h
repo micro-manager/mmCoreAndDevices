@@ -51,6 +51,8 @@
 
 const char* NoHubError = "Parent Hub not defined.";
 
+const char* g_DataStreamerDeviceName = "DSimulatedDataStreamer";
+
 // Defines which segments in a seven-segment display are lit up for each of
 // the numbers 0-9. Segments are:
 //
@@ -1194,6 +1196,63 @@ private:
    double vMaxY_;
 };
 
+//////////////////////////////////////////////////////////////////////////////
+// DemoShutter class
+// Simulation of shutter device
+//////////////////////////////////////////////////////////////////////////////
+class DemoDataStreamer : public CDataStreamerBase<DemoDataStreamer>
+{
+public:
+    DemoDataStreamer()
+    {
+        // parent ID display
+        CreateHubIDProperty();
+    }
+    ~DemoDataStreamer() {}
+
+    int Initialize() {
+        initialized_ = true;
+        return DEVICE_OK;
+    }
+    int Shutdown() { initialized_ = false; return DEVICE_OK; }
+
+    void GetName(char* pszName) const {
+        CDeviceUtils::CopyLimitedString(pszName, g_DataStreamerDeviceName);
+    }
+    bool Busy() {
+        return false;
+    }
+
+
+    int GetBufferSize(unsigned& dataBufferSize) { dataBufferSize = 5; LogMessage("HRYUK!!!-GetBufferSize", false);  return DEVICE_OK; }
+
+    std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) {
+        
+        LogMessage("HRYUK!!!-GetBuffer", false);
+
+        // allocate a new data array and put data into it
+        std::unique_ptr<char[]> data(new char[expectedDataBufferSize]);
+        //data.operator[](0) = 69;
+        //data.operator[](1) = 79;
+        //data.operator[](2) = 89;
+        //data.operator[](3) = 99;
+        //data.operator[](4) = 109;
+
+        actualDataBufferSize = 5;
+
+        return data;
+    }
+    
+    int ProcessBuffer(std::string str) {
+//    int ProcessBuffer(std::unique_ptr<char[]> &pDataBuffer) {
+        LogMessage(str.c_str(), false);
+        return DEVICE_OK;
+    }
+
+private:
+    bool initialized_;
+    MM::MMTime changedTime_;
+};
 
 
 #endif //_DEMOCAMERA_H_

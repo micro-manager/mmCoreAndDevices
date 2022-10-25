@@ -1201,28 +1201,20 @@ namespace MM {
         * Receive data buffer from the hardware and place it at memory location
         * specified by pDataBuffer
         */
-       virtual int GetBuffer(unsigned pDataBuffer) = 0;
+       virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) = 0;
        /**
         * Process the data buffer available at pDataBuffer and place
         * resulting multidimensional array at pProcessedArray
         */
-       virtual int ProcessBuffer(unsigned pDataBuffer, unsigned pProcessedArray) = 0;
-       /**
-        * Get dimensionality of the array obtained as a result of processing data
-        */
-       virtual int GetProcessedArrayDimension(unsigned& numberOfDimensions) = 0;
-       /**
-        * Get the shape of the array (how long the dimensions are)
-        */
-       virtual int GetProcessedArrayShape(unsigned& shape) = 0;
+       //virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer) = 0;
+       virtual int ProcessBuffer(std::string str) = 0;
 
        // Calls that are implemented at the DeviceBase level and
        // remain the same for any DataStreamer device
-       virtual int SetStreamLength(unsigned numberOfBuffers, double timeUs) = 0;
-       virtual int GetStreamLength(unsigned& numberOfBuffers, double& timeUs) = 0;
+       virtual int SetStreamParameters(bool stopOnOverflow, unsigned numberOfBuffers, double durationUs, double updatePeriodUs) = 0;
+       virtual int GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBuffers, double& durationUs, double& updatePeriodUs) = 0;
        virtual int StartStream() = 0;
        virtual int StopStream() = 0;
-       virtual int PauseStream() = 0;
        virtual int IsStreaming(unsigned& isStreaming) = 0;
    };
    

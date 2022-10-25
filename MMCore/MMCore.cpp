@@ -6412,6 +6412,97 @@ string CMMCore::getGalvoChannel(const char* deviceLabel) throw (CMMError)
 
 
 /**
+* Start acquisition with the specified data streamer.
+*/
+void CMMCore::startStream(const char* dataStreamerLabel) throw (CMMError)
+{
+    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    if (pDataStreamer)
+    {
+        mm::DeviceModuleLockGuard guard(pDataStreamer);
+        int ret = pDataStreamer->StartStream();
+        if (ret != DEVICE_OK)
+        {
+            logError("CMMCore::startStream()", getDeviceErrorText(ret, pDataStreamer).c_str());
+            throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
+        }
+    }
+}
+
+/**
+* Stop acquisition with the specified data streamer.
+*/
+void CMMCore::stopStream(const char* dataStreamerLabel) throw (CMMError)
+{
+    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    if (pDataStreamer)
+    {
+        mm::DeviceModuleLockGuard guard(pDataStreamer);
+        int ret = pDataStreamer->StopStream();
+        if (ret != DEVICE_OK)
+        {
+            logError("CMMCore::startStream()", getDeviceErrorText(ret, pDataStreamer).c_str());
+            throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
+        }
+    }
+}
+
+/**
+ * Sets data streamer parameters
+ * @param label         the data streamer device label
+ * @param stopOnOverflow    stop streaming if circular streaming buffer overflows
+ * @param numberOfBlocks    number of data blocks to collect
+ * @param durationUs        collection duration in microseconds
+ * @param updatePeriodUs    update period in microseconds
+ */
+void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow, 
+                                  unsigned numberOfBlocks, double durationUs, double updatePeriodUs)
+{
+    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+
+    LOG_DEBUG(coreLogger_) << "Setting stream parameters of " << dataStreamerLabel <<
+        " to stopOnOverflow=" << stopOnOverflow << ", " <<
+        "numberOfBlocks=" << numberOfBlocks << ", " <<
+        "durationUs=" << durationUs << ", " <<
+        "updatePeriodUs=" << updatePeriodUs;
+
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->SetStreamParameters(stopOnOverflow, numberOfBlocks, durationUs, updatePeriodUs);
+    if (ret != DEVICE_OK)
+    {
+        logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
+        throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
+    }
+}
+
+/**
+ * Obtains current parameters of the data streamer.
+ * @param label   the data streamer device label
+ * @param stopOnOverflow    a return parameter indicating if streaming should stop when acquisition buffer overflow takes place
+ * @param numberOfBlocks    a return parameter that gives the number of blocks to be acquired
+ * @param durationUs        a return parameter that gives duration of the stream
+ * @param updatePeriodUs    a return parameter that gives the update rate of the stream
+ */
+void CMMCore::getStreamParameters(const char* label, bool& stopOnOverflow, 
+    unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError)
+{
+    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+        deviceManager_->GetDeviceOfType<DataStreamerInstance>(label);
+
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->GetStreamParameters(stopOnOverflow, numberOfBlocks, durationUs, updatePeriodUs);
+    if (ret != DEVICE_OK)
+    {
+        logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
+        throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
+    }
+}
+
+
+/**
  * Saves the current system state to a text file of the MM specific format.
  * The file records only read-write properties.
  * The file format is directly readable by the complementary loadSystemState() command.

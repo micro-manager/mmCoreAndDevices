@@ -89,6 +89,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DA2DeviceName, MM::SignalIODevice, "Demo DA-2");
    RegisterDevice(g_MagnifierDeviceName, MM::MagnifierDevice, "Demo Optovar");
    RegisterDevice(g_GalvoDeviceName, MM::GalvoDevice, "Demo Galvo");
+   RegisterDevice(g_DataStreamerDeviceName, MM::DataStreamerDevice, "Demo DataStreamer");
    RegisterDevice("TransposeProcessor", MM::ImageProcessorDevice, "TransposeProcessor");
    RegisterDevice("ImageFlipX", MM::ImageProcessorDevice, "ImageFlipX");
    RegisterDevice("ImageFlipY", MM::ImageProcessorDevice, "ImageFlipY");
@@ -166,6 +167,11 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       // create Galvo 
       return new DemoGalvo();
+   }
+   else if (strcmp(deviceName, g_DataStreamerDeviceName) == 0)
+   {
+       // create DataStreamer 
+       return new DemoDataStreamer();
    }
 
    else if(strcmp(deviceName, "TransposeProcessor") == 0)

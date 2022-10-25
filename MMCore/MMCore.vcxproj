@@ -79,6 +79,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CircularBlockCollection.cpp" />
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Configuration.cpp" />
     <ClCompile Include="CoreCallback.cpp" />
@@ -86,6 +87,7 @@
     <ClCompile Include="DeviceManager.cpp" />
     <ClCompile Include="Devices\AutoFocusInstance.cpp" />
     <ClCompile Include="Devices\CameraInstance.cpp" />
+    <ClCompile Include="Devices\DataStreamerInstance.cpp" />
     <ClCompile Include="Devices\DeviceInstance.cpp" />
     <ClCompile Include="Devices\GalvoInstance.cpp" />
     <ClCompile Include="Devices\HubInstance.cpp" />
@@ -117,6 +119,7 @@
     <ClCompile Include="ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CircularBlockCollection.h" />
     <ClInclude Include="CircularBuffer.h" />
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />
@@ -126,6 +129,7 @@
     <ClInclude Include="DeviceManager.h" />
     <ClInclude Include="Devices\AutoFocusInstance.h" />
     <ClInclude Include="Devices\CameraInstance.h" />
+    <ClInclude Include="Devices\DataStreamerInstance.h" />
     <ClInclude Include="Devices\DeviceInstance.h" />
     <ClInclude Include="Devices\DeviceInstanceBase.h" />
     <ClInclude Include="Devices\DeviceInstances.h" />
