@@ -34,8 +34,8 @@ int VideoSequenceThread::svc()
 			if (remainingInSequence_ == 0) {
 				Stop();
 			}
-		} while (ret == DEVICE_OK && !IsStopped());
-
+		} 
+		while (ret == DEVICE_OK && !IsStopped());
 
 	    if (ret != DEVICE_OK)
 		{
@@ -44,7 +44,7 @@ int VideoSequenceThread::svc()
 
 		StopCameraStream();
 	}
-		LUXAPPS_CATCH(...)
+	LUXAPPS_CATCH(...)
 	{
 		StopCameraStream();
 

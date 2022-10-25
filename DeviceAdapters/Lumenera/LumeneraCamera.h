@@ -167,6 +167,8 @@ public:
 
 	int OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+	int OnTimeout(MM::PropertyBase* pProp, MM::ActionType eAct);
+	
 
 private:
 
@@ -192,7 +194,7 @@ private:
 
 	//////internal functions
 	bool hasCamera();
-	CameraInterface::LucamAdapter::LucamCamera* camera();
+	CameraInterface::LucamAdapter::LucamCamera* camera() const;
 	bool cameraRequiresClockThrottling(CameraInterface::Camera* cam);
 	void throttleClockSpeed(CameraInterface::Camera* cam, const std::string& clock);
 
@@ -225,7 +227,7 @@ private:
 	Imaging::IMAGE_BIT_DEPTH getBitDepthFromPixelType(const std::string& pixelType);
 	Imaging::IMAGE_FORMAT getImageFormatFromPixelType(const std::string& pixelType);
 	int createLinkedGainProperty(CameraInterface::Camera* camera, const std::string& propertyName, const char* uiName);
-	void waitForCameraStream();
+	void waitForCameraStream(bool streaming = true);
 	int setCoolingState(const std::string& state);
 	int createWhiteBalanceTargetProperty(CameraInterface::Camera* camera, const char* uiName);
 
@@ -237,8 +239,15 @@ private:
 
 	std::vector<std::string> getBitDepthOptions();
 
+	int captureImage();
+
 	int captureSequenceImage();
 	void sequenceEnded() noexcept;
+	bool hardwareTriggerEnabled();
+
+	void setHardwareTriggeringEnabledState(bool state);
+	void disableHardwareTriggering();
+	void enableHardwareTriggering();
 
 };
 
