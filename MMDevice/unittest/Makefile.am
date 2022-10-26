@@ -1,5 +1,6 @@
 check_PROGRAMS = \
-	FloatPropertyTruncation-Tests
+	FloatPropertyTruncation-Tests \
+	MMTime-Tests
 AM_DEFAULT_SOURCE_EXT = .cpp
 AM_CPPFLAGS = $(GMOCK_CPPFLAGS) -I.. $(BOOST_CPPFLAGS)
 LDADD = ../../../testing/libgmock.la ../libMMDevice.la
