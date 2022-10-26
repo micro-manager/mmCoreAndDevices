@@ -1335,10 +1335,7 @@ bool CArduino32Shutter::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
 
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
-   else
-       return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 int CArduino32Shutter::Initialize()

@@ -103,13 +103,13 @@ namespace MM {
 
          MMTime() : sec_(0), uSec_(0) {}
 
-         MMTime(double uSecTotal)
+         explicit MMTime(double uSecTotal)
          {
             sec_ = (long) (uSecTotal / 1.0e6);
             uSec_ = (long) (uSecTotal - sec_ * 1.0e6);
          }
 
-         MMTime(long sec, long uSec) : sec_(sec), uSec_(uSec)
+         explicit MMTime(long sec, long uSec) : sec_(sec), uSec_(uSec)
          {
             Normalize();
          }
@@ -220,12 +220,12 @@ namespace MM {
    {
    public:
       // arguments:  MMTime start time, millisecond interval time
-      TimeoutMs(const MMTime startTime, const unsigned long intervalMs) :
+      explicit TimeoutMs(const MMTime startTime, const unsigned long intervalMs) :
          startTime_(startTime),
          interval_(0, 1000*intervalMs)
       {
       }
-      TimeoutMs(const MMTime startTime, const MMTime interval) :
+      explicit TimeoutMs(const MMTime startTime, const MMTime interval) :
          startTime_(startTime),
          interval_(interval)
       {

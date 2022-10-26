@@ -896,7 +896,8 @@ int TEHub::ExecuteCommand(MM::Device& device, MM::Core& core, const char* type, 
          else
          {
             CDeviceUtils::SleepMs(delayMs);
-            if ( (core.GetCurrentMMTime() - startTime) > (maxTimeMs*1000.0) )
+            if ((core.GetCurrentMMTime() - startTime) >
+                  MM::MMTime::fromMs(maxTimeMs))
                done = true;
          }
       }

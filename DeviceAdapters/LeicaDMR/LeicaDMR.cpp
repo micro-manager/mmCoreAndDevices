@@ -453,8 +453,8 @@ int Lamp::Initialize()
       return ret;
 
   // Set timer for the Busy signal, or we'll get a time-out the first time we check the state of the shutter, for good measure, go back 5s into the past
-   changedTime_ = GetCurrentMMTime() - 5000000; 
-   
+   changedTime_ = GetCurrentMMTime() - MM::MMTime::fromSeconds(5);
+
    // Check current intensity of lamp
    ret = g_hub.GetLampIntensity(*this, *GetCoreCallback(), intensity_);
    if (DEVICE_OK != ret)
@@ -497,10 +497,7 @@ int Lamp::Initialize()
 bool Lamp::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
-
-   return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 int Lamp::Shutdown()
@@ -654,8 +651,8 @@ int RLShutter::Initialize()
       return ret;
 
   // Set timer for the Busy signal, or we'll get a time-out the first time we check the state of the shutter, for good measure, go back 5s into the past
-   changedTime_ = GetCurrentMMTime() - 5000000; 
-   
+   changedTime_ = GetCurrentMMTime() - MM::MMTime::fromSeconds(5);
+
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &RLShutter::OnState);
    ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct); 
@@ -681,8 +678,7 @@ bool RLShutter::Busy()
    // TODO: determine whether we need to use delay
    /*
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
    */
    return false;
 }
@@ -801,8 +797,8 @@ int ZStage::Initialize()
       return ret;
 
   // Set timer for the Busy signal, or we'll get a time-out the first time we check the state of the shutter, for good measure, go back 5s into the past
-   changedTime_ = GetCurrentMMTime() - 5000000; 
-   
+   changedTime_ = GetCurrentMMTime() - MM::MMTime::fromSeconds(5);
+
    // Position
    // There are two reference frames.  An absolute reference frame (implemeted here)
    // and a relative reference frame, implemented with a upper and lower lower limit
