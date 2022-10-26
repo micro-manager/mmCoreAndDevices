@@ -311,8 +311,7 @@ int XimeaCamera::SnapImage()
 		}
 
 		// store time stamp data
-		readoutStartTime_.sec_ = image.GetTimeStampSec();
-		readoutStartTime_.uSec_ = image.GetTimeStampUSec();
+		readoutStartTime_ = MM::MMTime(image.GetTimeStampSec(), image.GetTimeStampUSec());
 
 		if (!isAcqRunning)
 		{
@@ -332,7 +331,7 @@ int XimeaCamera::SnapImage()
 	}
 
 	// use time of first successfully captured frame for sequence start
-	if (sequenceStartTime_.sec_ == 0 && sequenceStartTime_.uSec_ == 0)
+	if (sequenceStartTime_ == MM::MMTime{})
 	{
 		sequenceStartTime_ = readoutStartTime_;
 	}
@@ -777,8 +776,7 @@ int XimeaCamera::StartSequenceAcquisition(long numImages, double interval_ms, bo
 		return DEVICE_ERR;
 	}
 
-	sequenceStartTime_.sec_ = 0;
-	sequenceStartTime_.uSec_ = 0;
+	sequenceStartTime_ = MM::MMTime{};
 
 	imageCounter_ = 0;
 	seq_thd_->Start(numImages, interval_ms);

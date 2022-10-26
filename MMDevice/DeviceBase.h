@@ -890,7 +890,7 @@ protected:
    {
       std::ostringstream os;
       MM::MMTime t = end-start;
-      os << message << t.sec_ << " seconds and " << t.uSec_ / 1000.0 << " msec";
+      os << message << t.toString() << " seconds";
       if (callback_)
          return callback_->LogMessage(this, os.str().c_str(), debugOnly);
       return DEVICE_NO_CALLBACK_REGISTERED;

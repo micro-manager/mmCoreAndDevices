@@ -2441,7 +2441,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
    char label[MM::MaxStrLength];
    GetLabel(label);
    ostringstream os;
-   os << "Started sequence on " << label << ", at " << startTime_.serialize() << ", with " << numImages << " and " << interval_ms << " ms" << endl;
+   os << "Started sequence on " << label << ", at " << startTime_.toString() << ", with " << numImages << " and " << interval_ms << " ms" << endl;
    LogMessage(os.str().c_str());
 
    return DEVICE_OK;
