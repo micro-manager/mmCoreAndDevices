@@ -111,9 +111,16 @@ namespace MM {
             microseconds_(sec * 1'000'000LL + uSec)
          {}
 
-         static MMTime fromUs(double us)
+         static MMTime fromUs(long long us)
          {
-            return MMTime(us);
+            // Work around our lack of a constructor that directly sets the
+            // internal representation.
+            // (Note that we cannot add a constructor from 'long long' because
+            // many existing uses would then get an error (ambiguous with the
+            // 'double' overload).)
+            MMTime ret;
+            ret.microseconds_ = us;
+            return ret;
          }
 
          static MMTime fromMs(double ms)
