@@ -130,13 +130,6 @@ namespace MM {
             return MMTime(secs, 0);
          }
 
-         // Deprecated; use toString()
-         std::string serialize() {
-            std::ostringstream os;
-            os << sec_ << " " << uSec_;
-            return os.str().c_str();
-         }
-
          MMTime operator+(const MMTime &other) const
          {
             MMTime res(sec_ + other.sec_, uSec_ + other.uSec_);

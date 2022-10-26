@@ -1914,7 +1914,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     isAcquiring_ = true;
 
     std::ostringstream os;
-    os << "Started sequence on " << deviceLabel_ << ", at " << startTime_.serialize()
+    os << "Started sequence on " << deviceLabel_ << ", at " << startTime_.toString()
         << ", with " << numImages << " frames, " << interval_ms << " ms interval and "
         << (stopOnOverflow ? "" : "don't ") << "stop on overflow" << std::endl;
     LogAdapterMessage(os.str().c_str());
