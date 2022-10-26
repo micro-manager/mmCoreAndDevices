@@ -1600,13 +1600,6 @@ int CAndorSDK3Camera::InsertImage()
    }
 
    stringstream ss;
-   ss << sequenceStartTime_;
-   MetadataSingleTag mstStartTime(MM::g_Keyword_Metadata_StartTime, deviceName, true);
-   mstStartTime.SetValue(ss.str().c_str());
-   md.SetTag(mstStartTime);
-
-   ss.str("");
-   ss.clear();
    double d_result = (timeStamp_-sequenceStartTime_)/static_cast<double>(fpgaTSclockFrequency_);
    ss << d_result*1000 << " [" << d_result << " seconds]";
    MetadataSingleTag mst(MM::g_Keyword_Elapsed_Time_ms, deviceName, true);
