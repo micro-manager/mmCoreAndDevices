@@ -48,12 +48,14 @@
 #include "DeviceUtils.h"
 #include "ImageMetadata.h"
 #include "DeviceThreads.h"
-#include <string>
-#include <cstring>
+
 #include <climits>
 #include <cstdlib>
-#include <vector>
+#include <cstring>
+#include <iomanip>
 #include <sstream>
+#include <string>
+#include <vector>
 
 
 #ifdef MODULE_EXPORTS
@@ -96,11 +98,10 @@ namespace MM {
     */
    class MMTime
    {
-      public:
-         // Data members are public but new code should avoid direct access
          long sec_;
          long uSec_;
 
+      public:
          MMTime() : sec_(0), uSec_(0) {}
 
          explicit MMTime(double uSecTotal)
@@ -129,7 +130,7 @@ namespace MM {
             return MMTime(secs, 0);
          }
 
-         // Deprecated
+         // Deprecated; use toString()
          std::string serialize() {
             std::ostringstream os;
             os << sec_ << " " << uSec_;
@@ -185,6 +186,12 @@ namespace MM {
          double getUsec() const
          {
             return sec_ * 1.0e6 + uSec_;
+         }
+
+         std::string toString() const {
+            std::ostringstream s;
+            s << sec_ << '.' << std::setfill('0') << std::right << std::setw(6) << uSec_;
+            return s.str();
          }
 
       private:
