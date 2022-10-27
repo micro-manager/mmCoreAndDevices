@@ -5886,7 +5886,6 @@ int CRaptorEPIX::InsertImage()
    }
 */
    md.put("Camera", label);
-   md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
    //md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
@@ -5895,10 +5894,6 @@ int CRaptorEPIX::InsertImage()
    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
    //md.put("FieldCount", CDeviceUtils::ConvertToString( (long) fieldCount_)); 
  
-//	MetadataSingleTag mstStartTime(MM::g_Keyword_Metadata_StartTime, label, true);
-//	mstStartTime.SetValue(CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
-//	md.SetTag(mstStartTime);
-
 	MetadataSingleTag mst1("Interval Wait Time", label, true);
 	mst1.SetValue(CDeviceUtils::ConvertToString(myIntervalWaitTime_*1000.0));
 	md.SetTag(mst1);

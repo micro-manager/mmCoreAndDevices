@@ -3815,9 +3815,6 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
         const double startTimeMsec   = startTime_.getMsec();
         const double elapsedTimeMsec = frameNfo.TimeStampMsec() - startTimeMsec;
 
-        // The start time of the acquisition
-        md.PutTag(MM::g_Keyword_Metadata_StartTime, deviceLabel_, CDeviceUtils::ConvertToString(startTimeMsec));
-
         // The time elapsed since start of the acquisition until current frame readout
         // Now added by MM automatically, no need to do it here.
         // md.PutTag(MM::g_Keyword_Elapsed_Time_ms, deviceLabel_, CDeviceUtils::ConvertToString(elapsedTimeMsec));
