@@ -1301,7 +1301,13 @@ namespace MM {
        */
       virtual int OnMagnifierChanged(const Device* caller) = 0;
 
+      // Deprecated: Return value overflows in ~72 minutes on Windows.
+      // Prefer std::chrono::steady_clock for time delta measurements.
       virtual unsigned long GetClockTicksUs(const Device* caller) = 0;
+
+      // Returns monotonic MMTime suitable for time delta measurements.
+      // Time zero is not fixed and may change on every launch.
+      // Prefer std::chrono::steady_clock::now() in new code.
       virtual MM::MMTime GetCurrentMMTime() = 0;
 
       // sequence acquisition
