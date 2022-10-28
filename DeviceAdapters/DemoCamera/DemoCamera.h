@@ -49,6 +49,8 @@
 #define ERR_STAGE_MOVING         106
 #define HUB_NOT_AVAILABLE        107
 
+int tempValue = 9;
+
 const char* NoHubError = "Parent Hub not defined.";
 
 const char* g_DataStreamerDeviceName = "DSimulatedDataStreamer";
@@ -1232,20 +1234,21 @@ public:
 
         // allocate a new data array and put data into it
         std::unique_ptr<char[]> data(new char[expectedDataBufferSize]);
-        //data.operator[](0) = 69;
-        //data.operator[](1) = 79;
-        //data.operator[](2) = 89;
-        //data.operator[](3) = 99;
-        //data.operator[](4) = 109;
+        tempValue += 3;
+        data.operator[](0) = tempValue;
+        data.operator[](1) = tempValue+1;
+        data.operator[](2) = tempValue+2;
+        data.operator[](3) = tempValue+3;
+        data.operator[](4) = tempValue+4;
 
         actualDataBufferSize = 5;
 
         return data;
     }
     
-    int ProcessBuffer(std::string str) {
-//    int ProcessBuffer(std::unique_ptr<char[]> &pDataBuffer) {
-        LogMessage(str.c_str(), false);
+    int ProcessBuffer(std::unique_ptr<char[]> &pDataBuffer) {
+        LogMessage("HRYUK!!!-ProcessBuffer", false);
+        LogMessage(std::to_string(pDataBuffer.operator[](0)),true);
         return DEVICE_OK;
     }
 

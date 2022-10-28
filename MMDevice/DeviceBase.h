@@ -2193,7 +2193,7 @@ public:
             if (stopOnOverflow_) return;
             cb_.empty();
         }
-        cb_.push_front(std::move(pDataBlock));
+        cb_.push_back(std::move(pDataBlock));
     }
 
     int GetCapacity() {
@@ -2211,9 +2211,9 @@ public:
             return 0;
         }
         else {
-            //std::unique_ptr<data_block> dataBlock = std::move(cb_.at(0));
-            //cb_.pop_back();
-            return std::move(cb_.at(0));
+            std::unique_ptr<data_block> dataBlock = std::move(cb_.at(0));
+            cb_.pop_front();
+            return dataBlock;
         }
     }
 
@@ -2245,12 +2245,13 @@ class CDataStreamerBase : public CDeviceBase<MM::DataStreamer, U>
 {
     friend class CircularBlockCollection;
 public:
-    CDataStreamerBase() : numberOfBlocks_(1), durationUs_(1e6), updatePeriodUs_(1e5), 
-                          stopOnOverflow_(true), stopFlag_(false),
-                          cbcData_(0), thdAcq_(0)
+    CDataStreamerBase() : numberOfBlocks_(1), durationUs_(1e6), updatePeriodUs_(1e5),
+        stopOnOverflow_(true), stopFlag_(false),
+        cbcData_(0), thdAcq_(0)
     {
         cbcData_ = new CircularBlockCollection(numberOfBlocks_, stopOnOverflow_);
         thdAcq_ = new AcquisitionThread(this);
+        thdProc_ = new ProcessingThread(this);
     }
 
     virtual ~CDataStreamerBase()
@@ -2259,14 +2260,17 @@ public:
             thdAcq_->Stop();
             thdAcq_->wait();
         }
+        if (thdProc_->IsRunning()) {
+            thdProc_->wait();
+        }
         delete thdAcq_;
+        delete thdProc_;
         delete cbcData_;
     }
 
     virtual int GetBufferSize(unsigned& dataBufferSiize) = 0;
     virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) = 0;
-    //virtual int ProcessBuffer(std::unique_ptr<char[]> &pDataBuffer) = 0;
-    virtual int ProcessBuffer(std::string str) = 0;
+    virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer) = 0;
 
     virtual int SetStreamParameters(bool stopOnOverflow, unsigned numberOfBlocks, double durationUs, double updatePeriodUs)
     {
@@ -2274,7 +2278,7 @@ public:
             return DEVICE_CAMERA_BUSY_ACQUIRING;
         }
         stopOnOverflow_ = stopOnOverflow,
-        numberOfBlocks_ = numberOfBlocks;
+            numberOfBlocks_ = numberOfBlocks;
         durationUs_ = durationUs;
         updatePeriodUs_ = updatePeriodUs;
         delete cbcData_;
@@ -2285,7 +2289,7 @@ public:
     virtual int GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs)
     {
         stopOnOverflow = stopOnOverflow_,
-        numberOfBlocks = numberOfBlocks_;
+            numberOfBlocks = numberOfBlocks_;
         durationUs = durationUs_;
         updatePeriodUs = updatePeriodUs_;
         return DEVICE_OK;
@@ -2293,10 +2297,11 @@ public:
 
     virtual int StartStream()
     {
-        if (thdAcq_->IsRunning()) {
+        if (thdAcq_->IsRunning() || thdProc_->IsRunning()) {
             return DEVICE_CAMERA_BUSY_ACQUIRING;
         }
         thdAcq_->Start();
+        thdProc_->Start();
         return DEVICE_OK;
     }
 
@@ -2305,12 +2310,13 @@ public:
             thdAcq_->Stop();
             thdAcq_->wait();
         }
+        if (thdProc_->IsRunning()) {
+            thdProc_->wait();
+        }
         return DEVICE_OK;
     }
 
     virtual int IsStreaming(unsigned& isStreaming) { return isStreaming_; }
-
-    //* GetDataCBC() { return this->cbcData_; }
 
     class AcquisitionThread : public MMDeviceThreadBase
     {
@@ -2415,6 +2421,69 @@ public:
 
     };
 
+    class ProcessingThread : public MMDeviceThreadBase
+    {
+        friend class CDataStreamerBase;
+        friend class CircularBlockCollection;
+        friend class AcquisitionThread;
+    public:
+        ProcessingThread(CDataStreamerBase* p) : pDataStreamerBase_(0), isRunning_(false)
+        {
+            pDataStreamerBase_ = p;
+        }
+        ~ProcessingThread() {}
+
+        void Start() {
+            this->SetIsRunning(true);
+            this->activate();
+        }
+
+        bool IsRunning() {
+            return this->GetIsRunning();
+        }
+
+    private:
+        CDataStreamerBase* pDataStreamerBase_;
+        AcquisitionThread* acq_;
+        bool isRunning_;
+        MMThreadLock isRunningLock_;
+
+        // Provide description here
+        int svc(void)
+        {
+            int ret = 0;
+            CircularBlockCollection* cbc = pDataStreamerBase_->cbcData_;
+            AcquisitionThread* acq = pDataStreamerBase_->thdAcq_;
+            // give the device time to acquire data
+            Sleep(pDataStreamerBase_->updatePeriodUs_ / 1000); 
+            // run while the acquisition thread is active or
+            // there is unprocessed data in the circular acquisition buffer
+            while (acq->GetIsRunning() || cbc->GetSize() != 0) {
+                Sleep(pDataStreamerBase_->updatePeriodUs_ / 1000);
+                if (cbc->GetSize() != 0) {
+                    std::unique_ptr<data_block> newBlock = cbc->Remove();
+                    ret = pDataStreamerBase_->ProcessBuffer(std::move(newBlock->data));
+                }
+            }
+
+            pDataStreamerBase_->LogMessage("Terminating processing thread.", true);
+
+            this->SetIsRunning(false);
+            return DEVICE_OK;
+        }
+
+        void SetIsRunning(bool isRunning) {
+            MMThreadGuard g(this->isRunningLock_);
+            isRunning_ = isRunning;
+        }
+
+        bool GetIsRunning() {
+            MMThreadGuard g(this->isRunningLock_);
+            return isRunning_;
+        }
+
+    };
+
 private:
     unsigned numberOfBlocks_;
     double durationUs_;
@@ -2424,6 +2493,7 @@ private:
     bool stopFlag_;
     CircularBlockCollection* cbcData_;
     AcquisitionThread* thdAcq_;
+    ProcessingThread* thdProc_;
 };
 
 /**
