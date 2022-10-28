@@ -58,6 +58,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstring>
 #include <fstream>
 #include <set>
@@ -1206,7 +1207,9 @@ void CMMCore::waitForDevice(std::shared_ptr<DeviceInstance> pDev) throw (CMMErro
 {
    LOG_DEBUG(coreLogger_) << "Waiting for device " << pDev->GetLabel() << "...";
 
-   MM::TimeoutMs timeout(GetMMTimeNow(),timeoutMs_);
+   auto now = std::chrono::steady_clock::now();
+   auto timeout = std::chrono::duration<long long, std::milli>(timeoutMs_);
+   auto deadline = now + timeout;
 
    while (true)
    {
@@ -1218,7 +1221,7 @@ void CMMCore::waitForDevice(std::shared_ptr<DeviceInstance> pDev) throw (CMMErro
          }
       }
 
-      if (timeout.expired(GetMMTimeNow()))
+      if (std::chrono::steady_clock::now() > deadline)
       {
          string label = pDev->GetLabel();
          std::ostringstream mez;
