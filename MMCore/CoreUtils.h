@@ -27,19 +27,6 @@
 
 #include "../MMDevice/MMDevice.h"
 
-// suppress hideous boost warnings
-#ifdef WIN32
-#pragma warning( push )
-#pragma warning( disable : 4244 )
-#pragma warning( disable : 4127 )
-#endif
-
-#include "boost/date_time/posix_time/posix_time.hpp"
-
-#ifdef WIN32
-#pragma warning( pop )
-#endif
-
 #include <string>
 
 
@@ -99,14 +86,4 @@ inline std::string ToQuotedString<const char*>(char const* const& d)
    if (!d) // Don't quote if null
       return ToString(d);
    return "\"" + ToString(d) + "\"";
-}
-
-
-//NB we are starting the 'epoch' on 2000 01 01
-inline MM::MMTime GetMMTimeNow()
-{
-   auto t0 = boost::posix_time::microsec_clock::local_time();
-   boost::posix_time::ptime timet_start(boost::gregorian::date(2000,1,1)); 
-   boost::posix_time::time_duration diff = t0 - timet_start; 
-   return MM::MMTime( (double) diff.total_microseconds());
 }

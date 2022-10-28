@@ -32,6 +32,7 @@
 #include "CoreCallback.h"
 #include "DeviceManager.h"
 
+#include <cassert>
 #include <chrono>
 #include <string>
 #include <vector>
@@ -1055,6 +1056,14 @@ void CoreCallback::ClearPostedErrors()
 }
 
 
+static long long SteadyMicroseconds()
+{
+   using namespace std::chrono;
+   auto now = steady_clock::now().time_since_epoch();
+   auto usec = duration_cast<microseconds>(now);
+   return usec.count();
+}
+
 /**
  * Returns the number of microsecond tick
  * N.B. an unsigned long microsecond count rolls over in just over an hour!!!!
@@ -1064,13 +1073,10 @@ void CoreCallback::ClearPostedErrors()
  */
 unsigned long CoreCallback::GetClockTicksUs(const MM::Device* /*caller*/)
 {
-   using namespace std::chrono;
-   auto now = steady_clock::now();
-   auto usec = duration_cast<microseconds>(now.time_since_epoch()).count();
-   return static_cast<unsigned long>(usec);
+   return static_cast<unsigned long>(SteadyMicroseconds());
 }
 
 MM::MMTime CoreCallback::GetCurrentMMTime()
 {
-   return GetMMTimeNow();
+   return MM::MMTime::fromUs(SteadyMicroseconds());
 }
