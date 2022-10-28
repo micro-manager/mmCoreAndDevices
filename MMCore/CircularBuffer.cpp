@@ -167,11 +167,11 @@ static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_c
    // date-time formatting
 
    std::time_t t(secs.count()); // time_t is seconds on platforms we support
-   std::tm tmstruct;
    std::tm *ptm;
 #ifdef _WIN32 // Windows localtime() is documented thread-safe
    ptm = std::localtime(&t);
 #else // POSIX has localtime_r()
+   std::tm tmstruct;
    ptm = localtime_r(&t, &tmstruct);
 #endif
 
@@ -212,7 +212,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 */
 bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError)
 {
-    MMThreadGuard guard(g_insertLock);
+    MMThreadGuard insertGuard(g_insertLock);
  
     mm::ImgBuffer* pImg;
     unsigned long singleChannelSize = (unsigned long)width * height * byteDepth;

@@ -84,11 +84,11 @@ FormatLocalTime(std::chrono::time_point<std::chrono::system_clock> tp)
    // date-time formatting
 
    std::time_t t(secs.count()); // time_t is seconds on platforms we support
-   std::tm tmstruct;
    std::tm *ptm;
 #ifdef _WIN32 // Windows localtime() is documented thread-safe
    ptm = std::localtime(&t);
 #else // POSIX has localtime_r()
+   std::tm tmstruct;
    ptm = localtime_r(&t, &tmstruct);
 #endif
 
