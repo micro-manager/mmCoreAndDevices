@@ -67,7 +67,7 @@ public:
    void RunReceiveLoop(std::function<void (PacketArrayType&)>
          consume)
    {
-      std::lock_guard<std::mutex> lock(threadMutex_);
+      std::lock_guard<std::mutex> tLock(threadMutex_);
 
       if (loopThread_.get_id() != std::thread::id())
       {
@@ -88,7 +88,7 @@ public:
 
    void ShutdownReceiveLoop()
    {
-      std::lock_guard<std::mutex> lock(threadMutex_);
+      std::lock_guard<std::mutex> tLock(threadMutex_);
 
       if (!loopThread_.joinable())
          return;

@@ -433,7 +433,7 @@ Configuration CMMCore::getSystemState()
 {
    Configuration config;
    vector<string> devices = deviceManager_->GetDeviceList();
-   for (vector<string>::const_iterator i = devices.begin(), end = devices.end(); i != end; ++i)
+   for (vector<string>::const_iterator i = devices.begin(), dend = devices.end(); i != dend; ++i)
    {
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*i);
       mm::DeviceModuleLockGuard guard(pDev);
@@ -4040,7 +4040,6 @@ void CMMCore::loadPropertySequence(const char* label, const char* propName, std:
    mm::DeviceModuleLockGuard guard(pDevice);
    pDevice->ClearPropertySequence(propName);
 
-   std::vector<std::string>::iterator it;
    for (std::vector<std::string>::const_iterator it = eventSequence.begin(),
          end = eventSequence.end();
          it < end; ++it)
@@ -5386,9 +5385,9 @@ string CMMCore::getCurrentPixelSizeConfig(bool cached) throw (CMMError)
    for (size_t i=0; i<cfgs.size(); i++) {
       PixelSizeConfiguration* cfgData = pixelSizeGroup_->Find(cfgs[i].c_str());
       assert(cfgData);
-      for (size_t i=0; i < cfgData->size(); i++)
+      for (size_t j=0; j < cfgData->size(); j++)
       {
-         PropertySetting cs = cfgData->getSetting(i); // config setting
+         PropertySetting cs = cfgData->getSetting(j); // config setting
          if (!curState.isPropertyIncluded(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str()))
          {
             try
@@ -6119,7 +6118,6 @@ void CMMCore::loadSLMSequence(const char* deviceLabel, std::vector<unsigned char
    if (ret != DEVICE_OK)
       throw CMMError(getDeviceErrorText(ret, pSLM));
 
-   std::vector<unsigned char *>::iterator it;
    for (std::vector<unsigned char *>::const_iterator it = imageSequence.begin(),
          end = imageSequence.end();
          it < end; ++it)
@@ -6620,15 +6618,15 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
    os << "# Stage focus directions\n";
    std::vector<std::string> stageLabels =
       deviceManager_->GetDeviceList(MM::StageDevice);
-   for (std::vector<std::string>::const_iterator it = stageLabels.begin(),
-         end = stageLabels.end(); it != end; ++it)
+   for (std::vector<std::string>::const_iterator stageIt = stageLabels.begin(),
+         end = stageLabels.end(); stageIt != end; ++stageIt)
    {
       std::shared_ptr<StageInstance> stage =
-         deviceManager_->GetDeviceOfType<StageInstance>(*it);
+         deviceManager_->GetDeviceOfType<StageInstance>(*stageIt);
       mm::DeviceModuleLockGuard guard(stage);
-      int direction = getFocusDirection(it->c_str());
+      int direction = getFocusDirection(stageIt->c_str());
       os << MM::g_CFGCommand_FocusDirection << ','
-         << *it << ',' << direction << '\n';
+         << *stageIt << ',' << direction << '\n';
    }
 
    // save labels
