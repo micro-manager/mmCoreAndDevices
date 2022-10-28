@@ -38,6 +38,7 @@
 #include "LoadableModules/LoadedDeviceAdapter.h"
 #include "PluginManager.h"
 
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <memory>
