@@ -1215,6 +1215,8 @@ namespace MM {
        virtual int StartStream() = 0;
        virtual int StopStream() = 0;
        virtual int IsStreaming(unsigned& isStreaming) = 0;
+       virtual int SetCircularAcquisitionBufferCapacity(unsigned capacity) = 0;
+       virtual int GetCircularAcquisitionBufferCapacity(unsigned& capacity) = 0;
    };
    
    /**

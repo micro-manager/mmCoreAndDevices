@@ -43,5 +43,7 @@ public:
     int GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBuffers, double& durationUs, double& updatePeriodUs);
     int StartStream();
     int StopStream();
-    int IsStreaming(unsigned& isStreaming);    
+    int IsStreaming(unsigned& isStreaming);  
+    int SetCircularAcquisitionBufferCapacity(unsigned capacity);
+    int GetCircularAcquisitionBufferCapacity(unsigned& capacity);
 };

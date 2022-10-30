@@ -30,4 +30,6 @@ int DataStreamerInstance::GetStreamParameters(bool& stopOnOverflow, unsigned& nu
 int DataStreamerInstance::StartStream() { return GetImpl()->StartStream(); }
 int DataStreamerInstance::StopStream() { return GetImpl()->StopStream(); }
 int DataStreamerInstance::IsStreaming(unsigned& isStreaming) { return GetImpl()->IsStreaming(isStreaming); }
+int DataStreamerInstance::SetCircularAcquisitionBufferCapacity(unsigned capacity) { return GetImpl()->SetCircularAcquisitionBufferCapacity(capacity); }
+int DataStreamerInstance::GetCircularAcquisitionBufferCapacity(unsigned& capacity) { return GetImpl()->GetCircularAcquisitionBufferCapacity(capacity); }
 

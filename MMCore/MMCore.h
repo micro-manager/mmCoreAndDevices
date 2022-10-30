@@ -620,6 +620,8 @@ public:
        unsigned numberOfBlocks, double durationUs, double updatePeriodUs) throw (CMMError);
    void getStreamParameters(const char* label, bool& stopOnOverflow,
        unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError);
+   void setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, unsigned capacity) throw (CMMError);
+   long getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel) throw (CMMError);
    ///@}
 
    /** \name Device discovery. */

@@ -2247,9 +2247,9 @@ class CDataStreamerBase : public CDeviceBase<MM::DataStreamer, U>
 public:
     CDataStreamerBase() : numberOfBlocks_(1), durationUs_(1e6), updatePeriodUs_(1e5),
         stopOnOverflow_(true), stopFlag_(false),
-        cbcData_(0), thdAcq_(0)
+        cbcData_(0), cbcCapacity_(10), thdAcq_(0), thdProc_(0)
     {
-        cbcData_ = new CircularBlockCollection(numberOfBlocks_, stopOnOverflow_);
+        cbcData_ = new CircularBlockCollection(cbcCapacity_, stopOnOverflow_);
         thdAcq_ = new AcquisitionThread(this);
         thdProc_ = new ProcessingThread(this);
     }
@@ -2277,19 +2277,19 @@ public:
         if (thdAcq_->IsRunning()) {
             return DEVICE_CAMERA_BUSY_ACQUIRING;
         }
-        stopOnOverflow_ = stopOnOverflow,
-            numberOfBlocks_ = numberOfBlocks;
+        stopOnOverflow_ = stopOnOverflow;
+        numberOfBlocks_ = numberOfBlocks;
         durationUs_ = durationUs;
         updatePeriodUs_ = updatePeriodUs;
         delete cbcData_;
-        cbcData_ = new CircularBlockCollection(numberOfBlocks_, stopOnOverflow_);
+        cbcData_ = new CircularBlockCollection(cbcCapacity_, stopOnOverflow_);
         return DEVICE_OK;
     }
 
     virtual int GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs)
     {
-        stopOnOverflow = stopOnOverflow_,
-            numberOfBlocks = numberOfBlocks_;
+        stopOnOverflow = stopOnOverflow_;
+        numberOfBlocks = numberOfBlocks_;
         durationUs = durationUs_;
         updatePeriodUs = updatePeriodUs_;
         return DEVICE_OK;
@@ -2314,6 +2314,20 @@ public:
             thdProc_->wait();
         }
         return DEVICE_OK;
+    }
+
+    virtual int SetCircularAcquisitionBufferCapacity(unsigned capacity) {
+        if (thdAcq_->IsRunning() || thdProc_->IsRunning()) {
+            return DEVICE_CAMERA_BUSY_ACQUIRING;
+        }
+        cbcCapacity_ = capacity;
+        delete cbcData_;
+        cbcData_ = new CircularBlockCollection(cbcCapacity_, stopOnOverflow_);
+        return DEVICE_OK;
+    }
+
+    virtual int GetCircularAcquisitionBufferCapacity(unsigned& capacity) {
+        return cbcCapacity_;
     }
 
     virtual int IsStreaming(unsigned& isStreaming) { return isStreaming_; }
@@ -2492,6 +2506,7 @@ private:
     bool isStreaming_;
     bool stopFlag_;
     CircularBlockCollection* cbcData_;
+    unsigned cbcCapacity_;
     AcquisitionThread* thdAcq_;
     ProcessingThread* thdProc_;
 };

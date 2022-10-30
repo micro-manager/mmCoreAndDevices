@@ -6501,6 +6501,47 @@ void CMMCore::getStreamParameters(const char* label, bool& stopOnOverflow,
     }
 }
 
+/**
+ * Sets circular acquisition buffer capacity
+ * @param label         the data streamer device label
+ * @param capacity    number of data blocks in the circular buffer
+ */
+void CMMCore::setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, unsigned capacity)
+{
+    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+
+    LOG_DEBUG(coreLogger_) << "Setting circular acquisition buffer capacity to" << capacity;
+
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->SetCircularAcquisitionBufferCapacity(capacity);
+    if (ret != DEVICE_OK)
+    {
+        logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
+        throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
+    }
+}
+
+/**
+ * Returns circular acquisition buffer capacity
+ * @param label         the data streamer device label
+ */
+long CMMCore::getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel)
+{
+    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    long capacity;
+    int ret = pDataStreamer->GetCircularAcquisitionBufferCapacity((unsigned&)capacity);
+    if (ret <= 0)
+    {
+        logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
+        throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
+    }
+    return capacity;
+}
+
 
 /**
  * Saves the current system state to a text file of the MM specific format.

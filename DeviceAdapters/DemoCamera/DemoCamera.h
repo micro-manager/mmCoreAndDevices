@@ -1226,7 +1226,7 @@ public:
     }
 
 
-    int GetBufferSize(unsigned& dataBufferSize) { dataBufferSize = 5; LogMessage("HRYUK!!!-GetBufferSize", false);  return DEVICE_OK; }
+    int GetBufferSize(unsigned& dataBufferSize) { dataBufferSize = 100*1024*1024; LogMessage("HRYUK!!!-GetBufferSize", false);  return DEVICE_OK; }
 
     std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) {
         
