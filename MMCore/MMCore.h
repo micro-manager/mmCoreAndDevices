@@ -629,9 +629,9 @@ public:
 
    /** \name Miscellaneous. */
    ///@{
-   std::string getUserId() const;
-   std::string getHostName() const;
-   std::vector<std::string> getMACAddresses(void);
+   MMCORE_DEPRECATED(std::string getUserId() const);
+   MMCORE_DEPRECATED(std::string getHostName() const);
+   MMCORE_DEPRECATED(std::vector<std::string> getMACAddresses(void));
    ///@}
 
 private:
