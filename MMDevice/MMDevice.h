@@ -1206,7 +1206,7 @@ namespace MM {
         * Process the data buffer available at pDataBuffer and place
         * resulting multidimensional array at pProcessedArray
         */
-       virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer) = 0;
+       virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) = 0;
 
        // Calls that are implemented at the DeviceBase level and
        // remain the same for any DataStreamer device

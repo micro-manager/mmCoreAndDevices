@@ -38,7 +38,7 @@ public:
 
     int GetBufferSize(unsigned& dataBufferSiize);
     std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize);
-    int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer);
+    int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize);
     int SetStreamParameters(bool stopOnOverflow, unsigned numberOfBuffers, double durationUs, double updatePeriodUs);
     int GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBuffers, double& durationUs, double& updatePeriodUs);
     int StartStream();

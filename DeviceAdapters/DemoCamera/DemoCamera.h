@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <stdint.h>
 #include <future>
+#include <fstream>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -48,8 +49,6 @@
 #define ERR_SEQUENCE_INACTIVE    105
 #define ERR_STAGE_MOVING         106
 #define HUB_NOT_AVAILABLE        107
-
-int tempValue = 9;
 
 const char* NoHubError = "Parent Hub not defined.";
 
@@ -1205,7 +1204,8 @@ private:
 class DemoDataStreamer : public CDataStreamerBase<DemoDataStreamer>
 {
 public:
-    DemoDataStreamer()
+    DemoDataStreamer() :
+        mockDataSize_(1024*1024)
     {
         // parent ID display
         CreateHubIDProperty();
@@ -1213,10 +1213,21 @@ public:
     ~DemoDataStreamer() {}
 
     int Initialize() {
+        // initialize mock data
+        mockData_ = new char[mockDataSize_];
+        char val = 0;
+        for (int ii = 0; ii < mockDataSize_; ii++) { mockData_[ii] = val; val++; }
+
+        writeFile_.open("C:\\temp\\mybinaryfile.txt", std::ios::out | std::ios::binary);
+
         initialized_ = true;
         return DEVICE_OK;
     }
-    int Shutdown() { initialized_ = false; return DEVICE_OK; }
+    int Shutdown() {
+        writeFile_.close();
+        initialized_ = false;
+        return DEVICE_OK;
+    }
 
     void GetName(char* pszName) const {
         CDeviceUtils::CopyLimitedString(pszName, g_DataStreamerDeviceName);
@@ -1226,34 +1237,47 @@ public:
     }
 
 
-    int GetBufferSize(unsigned& dataBufferSize) { dataBufferSize = 100*1024*1024; LogMessage("HRYUK!!!-GetBufferSize", false);  return DEVICE_OK; }
+    int GetBufferSize(unsigned& dataBufferSize) { 
+        LogMessage("Demo DataStreamer: calling GetBufferSize", true);
+        dataBufferSize = mockDataSize_;
+        return DEVICE_OK;
+    }
 
     std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) {
         
-        LogMessage("HRYUK!!!-GetBuffer", false);
+        LogMessage("Demo DataStreamer: calling GetBuffer", true);
 
-        // allocate a new data array and put data into it
-        std::unique_ptr<char[]> data(new char[expectedDataBufferSize]);
-        tempValue += 3;
-        data.operator[](0) = tempValue;
-        data.operator[](1) = tempValue+1;
-        data.operator[](2) = tempValue+2;
-        data.operator[](3) = tempValue+3;
-        data.operator[](4) = tempValue+4;
-
-        actualDataBufferSize = 5;
+        if (expectedDataBufferSize <= mockDataSize_) {
+            actualDataBufferSize = expectedDataBufferSize;
+        }
+        else {
+            actualDataBufferSize = mockDataSize_;
+        }
+        // allocate a new data array and put data in it
+        std::unique_ptr<char[]> data(new char[actualDataBufferSize]);
+        memcpy(data.get(), mockData_, actualDataBufferSize);
 
         return data;
     }
     
-    int ProcessBuffer(std::unique_ptr<char[]> &pDataBuffer) {
-        LogMessage("HRYUK!!!-ProcessBuffer", false);
-        LogMessage(std::to_string(pDataBuffer.operator[](0)),true);
+    int ProcessBuffer(std::unique_ptr<char[]> &pDataBuffer, unsigned dataSize) {
+
+        LogMessage("Demo DataStreamer: calling ProcessBuffer", true);
+
+        if (!writeFile_) {
+            LogMessage("Demo DataStreamer: unable to wite into a file during ProcessBuffer call", false);
+            return 0;
+        }
+        writeFile_.write(pDataBuffer.get(), dataSize);
+
         return DEVICE_OK;
     }
 
 private:
     bool initialized_;
+    unsigned mockDataSize_;
+    char* mockData_;
+    std::ofstream writeFile_;
     MM::MMTime changedTime_;
 };
 

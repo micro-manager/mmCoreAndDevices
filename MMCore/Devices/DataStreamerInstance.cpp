@@ -24,7 +24,7 @@
 
 int DataStreamerInstance::GetBufferSize(unsigned& dataBufferSiize) { return GetImpl()->GetBufferSize(dataBufferSiize); }
 std::unique_ptr<char[]> DataStreamerInstance::GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) { return GetImpl()->GetBuffer(expectedDataBufferSize,actualDataBufferSize); }
-int DataStreamerInstance::ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer) { return GetImpl()->ProcessBuffer(pDataBuffer); }
+int DataStreamerInstance::ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) { return GetImpl()->ProcessBuffer(pDataBuffer, dataSize); }
 int DataStreamerInstance::SetStreamParameters(bool stopOnOverflow, unsigned numberOfBuffers, double durationUs, double updatePeriodUs) { return GetImpl()->SetStreamParameters(stopOnOverflow, numberOfBuffers, durationUs, updatePeriodUs); }
 int DataStreamerInstance::GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBuffers, double& durationUs, double& updatePeriodUs) { return GetImpl()->GetStreamParameters(stopOnOverflow,numberOfBuffers,durationUs,updatePeriodUs); }
 int DataStreamerInstance::StartStream() { return GetImpl()->StartStream(); }

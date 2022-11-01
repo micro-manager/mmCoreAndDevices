@@ -2270,7 +2270,7 @@ public:
 
     virtual int GetBufferSize(unsigned& dataBufferSiize) = 0;
     virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) = 0;
-    virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer) = 0;
+    virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) = 0;
 
     virtual int SetStreamParameters(bool stopOnOverflow, unsigned numberOfBlocks, double durationUs, double updatePeriodUs)
     {
@@ -2476,7 +2476,7 @@ public:
                 Sleep(pDataStreamerBase_->updatePeriodUs_ / 1000);
                 if (cbc->GetSize() != 0) {
                     std::unique_ptr<data_block> newBlock = cbc->Remove();
-                    ret = pDataStreamerBase_->ProcessBuffer(std::move(newBlock->data));
+                    ret = pDataStreamerBase_->ProcessBuffer(std::move(newBlock->data),newBlock->actualSize);
                 }
             }
 
