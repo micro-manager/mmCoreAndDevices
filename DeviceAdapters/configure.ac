@@ -586,6 +586,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    XCiteLed
    XCiteXT600
    XLight
+   XLightV3
    Xcite
    YodnE600
    Yokogawa

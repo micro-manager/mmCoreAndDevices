@@ -197,6 +197,7 @@ SUBDIRS = \
 	XCiteLed \
 	XCiteXT600 \
 	XLight \
+	XLightV3 \
 	Xcite \
 	YodnE600 \
 	Yokogawa \
