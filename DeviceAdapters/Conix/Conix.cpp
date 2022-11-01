@@ -417,11 +417,7 @@ int HexaFluor::Shutdown()
 bool HexaFluor::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-
-   if (interval < (1000.0 * GetDelayMs()) )
-      return true;
-
-   return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 

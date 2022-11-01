@@ -30,7 +30,11 @@
 
 #include "../MMDevice/DeviceUtils.h"
 
-#include <boost/make_shared.hpp>
+#include <chrono>
+#include <cstdio>
+#include <ctime>
+#include <memory>
+#include <string>
 
 
 const long long bytesInMB = 1 << 20;
@@ -50,11 +54,9 @@ CircularBuffer::CircularBuffer(unsigned int memorySizeMB) :
    saveIndex_(0), 
    memorySizeMB_(memorySizeMB), 
    overflow_(false),
-   threadPool_(boost::make_shared<ThreadPool>()),
-   tasksMemCopy_(boost::make_shared<TaskSet_CopyMemory>(threadPool_))
+   threadPool_(std::make_shared<ThreadPool>()),
+   tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
-   facet = new boost::posix_time::time_facet("%Y-%m-%d %H:%M:%s");
-   tStream.imbue(std::locale(tStream.getloc(), facet));
 }
 
 CircularBuffer::~CircularBuffer() {}
@@ -63,8 +65,7 @@ bool CircularBuffer::Initialize(unsigned channels, unsigned int w, unsigned int 
 {
    MMThreadGuard guard(g_bufferLock);
    imageNumbers_.clear();
-   boost::posix_time::ptime t = boost::posix_time::microsec_clock::local_time();
-   startTime_ = GetMMTimeNow(t);
+   startTime_ = std::chrono::steady_clock::now();
 
    bool ret = true;
    try
@@ -129,8 +130,7 @@ void CircularBuffer::Clear()
    insertIndex_=0; 
    saveIndex_=0; 
    overflow_ = false;
-   boost::posix_time::ptime t = boost::posix_time::microsec_clock::local_time();
-   startTime_ = GetMMTimeNow(t);
+   startTime_ = std::chrono::steady_clock::now();
    imageNumbers_.clear();
 }
 
@@ -154,6 +154,33 @@ unsigned long CircularBuffer::GetRemainingImageCount() const
 {
    MMThreadGuard guard(g_bufferLock);
    return (unsigned long)(insertIndex_ - saveIndex_);
+}
+
+static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_clock> tp) {
+   using namespace std::chrono;
+   auto us = duration_cast<microseconds>(tp.time_since_epoch());
+   auto secs = duration_cast<seconds>(us);
+   auto whole = duration_cast<microseconds>(secs);
+   auto frac = static_cast<int>((us - whole).count());
+
+   // As of C++14/17, it is simpler (and probably faster) to use C functions for
+   // date-time formatting
+
+   std::time_t t(secs.count()); // time_t is seconds on platforms we support
+   std::tm *ptm;
+#ifdef _WIN32 // Windows localtime() is documented thread-safe
+   ptm = std::localtime(&t);
+#else // POSIX has localtime_r()
+   std::tm tmstruct;
+   ptm = localtime_r(&t, &tmstruct);
+#endif
+
+   // Format as "yyyy-mm-dd hh:mm:ss.uuuuuu" (26 chars)
+   const char *timeFmt = "%Y-%m-%d %H:%M:%S";
+   char buf[32];
+   std::size_t len = std::strftime(buf, sizeof(buf), timeFmt, ptm);
+   std::snprintf(buf + len, sizeof(buf) - len, ".%06d", frac);
+   return buf;
 }
 
 /**
@@ -185,7 +212,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 */
 bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError)
 {
-    MMThreadGuard guard(g_insertLock);
+    MMThreadGuard insertGuard(g_insertLock);
  
     mm::ImgBuffer* pImg;
     unsigned long singleChannelSize = (unsigned long)width * height * byteDepth;
@@ -232,17 +259,20 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
          ++imageNumbers_[cameraName];
       }
 
-      boost::posix_time::ptime t = boost::posix_time::microsec_clock::local_time();
       if (!md.HasTag(MM::g_Keyword_Elapsed_Time_ms))
       {
          // if time tag was not supplied by the camera insert current timestamp
-         MM::MMTime timestamp = GetMMTimeNow(t);
-         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timestamp - startTime_).getMsec()));
+         using namespace std::chrono;
+         auto elapsed = steady_clock::now() - startTime_;
+         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+            std::to_string(duration_cast<milliseconds>(elapsed).count()));
       }
-      tStream << t;
-      md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, tStream.str().c_str());
-      tStream.str(std::string());
-      tStream.clear();
+
+      // Note: It is not ideal to use local time. I think this tag is rarely
+      // used. Consider replacing with UTC (micro)seconds-since-epoch (with
+      // different tag key) after addressing current usage.
+      auto now = std::chrono::system_clock::now();
+      md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
 
       md.PutImageTag("Width",width);
       md.PutImageTag("Height",height);

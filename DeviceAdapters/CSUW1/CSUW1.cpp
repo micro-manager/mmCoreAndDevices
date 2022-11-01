@@ -617,10 +617,7 @@ int Shutter::Initialize()
 bool Shutter::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
-
-   return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 int Shutter::Shutdown()
@@ -1471,10 +1468,7 @@ int NIRShutter::Initialize()
 bool NIRShutter::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
-
-   return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 int NIRShutter::Shutdown()

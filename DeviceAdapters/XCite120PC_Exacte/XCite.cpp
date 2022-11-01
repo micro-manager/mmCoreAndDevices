@@ -43,7 +43,7 @@ const char* g_XCiteExacte_Name = "XCite-Exacte";
 
 // Device descriptions
 const char* g_XCite120PC_Desc = "X-Cite 120PC";
-const char* g_XCiteExacte_Desc = "X-Cite Exacte";
+const char* g_XCiteExacte_Desc = "X-Cite exacte or XYLIS";
 
 // Other string constants
 const char* g_Undefined = "Undefined";

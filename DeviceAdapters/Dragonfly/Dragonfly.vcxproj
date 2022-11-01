@@ -110,6 +110,7 @@
     <ClCompile Include="ASDWrapper\ASDSDKLock.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapper.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperAperture.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperBorealisTIRF.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperCameraPortMirror.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperConfocalMode.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperDichroicMirror.cpp" />
@@ -125,10 +126,13 @@
     <ClCompile Include="ASDWrapper\ASDWrapperStatus.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperSuperRes.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperTIRF.cpp" />
+    <ClCompile Include="ASDWrapper\ASDWrapperTIRFIntensity.cpp" />
     <ClCompile Include="ASDWrapper\ASDWrapperTIRFPolariser.cpp" />
+    <ClCompile Include="BTIRF.cpp" />
     <ClCompile Include="CameraPortMirror.cpp" />
     <ClCompile Include="ConfigFileHandler.cpp" />
     <ClCompile Include="ConfocalMode.cpp" />
+    <ClCompile Include="TIRFIntensity.cpp" />
     <ClCompile Include="DichroicMirror.cpp" />
     <ClCompile Include="Disk.cpp" />
     <ClCompile Include="DiskSpeedSimulator.cpp" />

@@ -7,17 +7,15 @@
 #include "ALC_REV.h"
 #include "Lasers.h"
 #include "IntegratedLaserEngine.h"
+#include <numeric>
+#include <algorithm>
 
 // Properties
 const char* const g_EnableProperty = "Power Enable";
 const char* const g_PowerSetpointProperty = "Power Setpoint";
 const char* const g_InterlockStatus = "Interlock Flag Status";
 
-// Property values
-const char* const g_LaserEnableOn = "On";
-const char* const g_LaserEnableOff = "Off";
-const char* const g_LaserEnableTTL = "External TTL";
-
+// Interlock status property values
 const char* const g_InterlockInactive = "Inactive";
 const char* const g_InterlockActive = "Active";
 const char* const g_InterlockClassIVActive = "Class IV interlock active. Device reset required.";
@@ -55,15 +53,10 @@ CLasers::CLasers( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* 
     throw std::logic_error( "CLasers: Pointer tomain class invalid" );
   }
 
-  for ( int vLaserIndex = 0; vLaserIndex < MaxLasers + 1; ++vLaserIndex )
-  {
-    PowerSetPoint_[vLaserIndex] = 0;
-    Enable_[vLaserIndex] = g_LaserEnableOn;
-    LaserRange_[vLaserIndex].PowerMin = LaserRange_[vLaserIndex].PowerMax = 0;
-  }
+  int vNumberOfLasers = LaserInterface_->Initialize();
+  MMILE_->LogMMMessage( "in CLasers constructor, number of lasers =" + std::to_string( static_cast<long long>( vNumberOfLasers ) ), true );
+  NumberOfLasers_ = vNumberOfLasers > 0 ? vNumberOfLasers : 0;
 
-  NumberOfLasers_ = LaserInterface_->Initialize();
-  MMILE_->LogMMMessage( ( "in CLasers constructor, NumberOfLasers_ =" + std::to_string( static_cast<long long>( NumberOfLasers_ ) ) ), true );
   CDeviceUtils::SleepMs( 100 );
 
   WaitOnLaserWarmingUp();
@@ -84,22 +77,20 @@ CLasers::~CLasers()
 
 void CLasers::WaitOnLaserWarmingUp()
 {
-  TLaserState state[10];
-  memset( (void*)state, 0, 10 * sizeof( state[0] ) );
+  std::vector<TLaserState> vState( NumberOfLasers_ + 1, ALC_NOT_AVAILABLE );
 
   // Lasers can take up to 90 seconds to initialize
   MM::TimeoutMs vTimerOut( MMILE_->GetCurrentTime(), 91000 );
-  int iloop = 0;
 
-  for ( ;;)
+  while ( true )
   {
     bool vFinishWaiting = true;
     for ( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex )
     {
-      if ( 0 == state[vLaserIndex] )
+      if ( ALC_NOT_AVAILABLE == vState[vLaserIndex] )
       {
-        LaserInterface_->GetLaserState( vLaserIndex, state + vLaserIndex );
-        switch ( state[vLaserIndex] )
+        LaserInterface_->GetLaserState( vLaserIndex, &( vState[vLaserIndex] ) );
+        switch ( vState[vLaserIndex] )
         {
         case ALC_NOT_AVAILABLE:
           vFinishWaiting = false;
@@ -122,19 +113,18 @@ void CLasers::WaitOnLaserWarmingUp()
         }
       }
     }
+
     if ( vFinishWaiting )
     {
       break;
     }
-    else
+
+    if ( vTimerOut.expired( MMILE_->GetCurrentTime() ) )
     {
-      if ( vTimerOut.expired( MMILE_->GetCurrentTime() ) )
-      {
-        MMILE_->LogMMMessage( " some lasers did not respond", false );
-        break;
-      }
-      iloop++;
+      MMILE_->LogMMMessage( " some lasers did not respond", false );
+      break;
     }
+
     CDeviceUtils::SleepMs( 100 );
   }
 
@@ -162,6 +152,7 @@ void CLasers::GenerateProperties()
   int vWavelength;
 
   // 1 based index for the lasers
+  LasersState_.resize( max( LasersState_.size(), NumberOfLasers_ + 1 ) );
   for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
   {
     vWavelength = Wavelength( vLaserIndex );
@@ -175,18 +166,20 @@ void CLasers::GenerateProperties()
     PropertyPointers_[vPropertyName] = nullptr;
 
     // Enable
+#ifdef SHOW_LASER_ENABLE_PROPERTY
     vActEx = new CPropertyActionEx( this, &CLasers::OnEnable, vLaserIndex );
     vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
-    EnableStates_[vLaserIndex].clear();
-    EnableStates_[vLaserIndex].push_back( g_LaserEnableOn );
-    EnableStates_[vLaserIndex].push_back( g_LaserEnableOff );
+    std::vector<std::string> vEnableStates;
+    vEnableStates.push_back( g_LaserEnableOn );
+    vEnableStates.push_back( g_LaserEnableOff );
     if ( AllowsExternalTTL( vLaserIndex ) )
     {
-      EnableStates_[vLaserIndex].push_back( g_LaserEnableTTL );
+      vEnableStates.push_back( g_LaserEnableTTL );
     }
-    MMILE_->CreateProperty( vPropertyName.c_str(), EnableStates_[vLaserIndex][0].c_str(), MM::String, false, vActEx );
-    MMILE_->SetAllowedValues( vPropertyName.c_str(), EnableStates_[vLaserIndex] );
+    MMILE_->CreateProperty( vPropertyName.c_str(), vEnableStates[0].c_str(), MM::String, false, vActEx );
+    MMILE_->SetAllowedValues( vPropertyName.c_str(), vEnableStates );
     PropertyPointers_[vPropertyName] = nullptr;
+#endif
   }
 
   CPropertyAction* vAct = new CPropertyAction( this, &CLasers::OnInterlockStatus );
@@ -234,38 +227,22 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
   }
   else if ( Act == MM::AfterSet )
   {
-    int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
-    if ( vInterlockStatus != DEVICE_OK )
+    int vRet = CheckInterlock( LaserIndex );
+    if ( vRet == DEVICE_OK )
     {
-      return vInterlockStatus;
-    }
-    if ( LaserInterface_ == nullptr )
-    {
-      return ERR_DEVICE_NOT_CONNECTED;
-    }
-    if ( !IsInterlockTriggered( LaserIndex ) )
-    {
+      float vOldValue = PowerSetpoint( LaserIndex );
       Prop->Get( vPowerSetpoint );
       MMILE_->LogMMMessage( "to equipment: PowerSetpoint" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + "  = " + std::to_string( static_cast<long double>( vPowerSetpoint ) ), true );
       PowerSetpoint( LaserIndex, static_cast<float>( vPowerSetpoint ) );
       if ( OpenRequest_ )
-        return SetOpen();
-    }
-    else
-    {
-      if( IsKeyInterlockTriggered( LaserIndex ) )
       {
-        MMILE_->ActiveKeyInterlock();
-        return ERR_KEY_INTERLOCK;
-      }
-      else if ( IsClassIVInterlockTriggered() )
-      {
-        MMILE_->ActiveClassIVInterlock();
-        return ERR_CLASSIV_INTERLOCK;
-      }
-      else
-      {
-        return ERR_INTERLOCK;
+        vRet = SetOpen();
+        if ( vRet != DEVICE_OK )
+        {
+          PowerSetpoint( LaserIndex, vOldValue );
+          Prop->Set( vOldValue );
+          return vRet;
+        }
       }
     }
 
@@ -286,69 +263,49 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
   {
     PropertyPointers_[Prop->GetName()] = Prop;
   }
+  std::string& vCurrentLaserEnableState = LasersState_[LaserIndex].Enable_;
   if ( Act == MM::BeforeGet )
   {
     // Not calling GetControlMode() from ALC SDK, since it may slow
     // down acquisition while switching channels
-    Prop->Set( Enable_[LaserIndex].c_str() );
+    Prop->Set( vCurrentLaserEnableState.c_str() );
   }
   else if ( Act == MM::AfterSet )
   {
-    int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
-    if ( vInterlockStatus != DEVICE_OK )
+    int vRet = CheckInterlock( LaserIndex );
+    if ( vRet == DEVICE_OK )
     {
-      return vInterlockStatus;
-    }
-    if ( LaserInterface_ == nullptr )
-    {
-      return ERR_DEVICE_NOT_CONNECTED;
-    }
-    if ( !IsInterlockTriggered( LaserIndex ) )
-    {
-      std::string vEnable;
-      Prop->Get( vEnable );
-      if ( Enable_[LaserIndex].compare( vEnable ) != 0 )
+      std::string vNewLaserEnableState;
+      Prop->Get( vNewLaserEnableState );
+      if ( vCurrentLaserEnableState != vNewLaserEnableState )
       {
         // Update the laser control mode if we are changing to, or
         // from External TTL mode
-        if ( vEnable.compare( g_LaserEnableTTL ) == 0 )
+        if ( vNewLaserEnableState == g_LaserEnableTTL )
         {
-          if ( !LaserInterface_->SetControlMode( LaserIndex, TTL_PULSED ) )
+          // Enable TTL mode
+          MMILE_->LogMMMessage( "Set Laser Control mode to [PULSED]", true );
+          if ( !LaserInterface_->SetControlMode( LaserIndex, EXTERNALMODE::TTL_PULSED ) )
           {
             return ERR_SETCONTROLMODE;
           }
         }
-        else if ( Enable_[LaserIndex].compare( g_LaserEnableTTL ) == 0 )
+        else if ( vCurrentLaserEnableState == g_LaserEnableTTL )
         {
-          if ( !LaserInterface_->SetControlMode( LaserIndex, CW ) )
+          // Disable TTL mode
+          MMILE_->LogMMMessage( "Set Laser Control mode to [CW]", true );
+          if ( !LaserInterface_->SetControlMode( LaserIndex, EXTERNALMODE::CW ) )
           {
             return ERR_SETCONTROLMODE;
           }
         }
 
-        Enable_[LaserIndex] = vEnable;
-        MMILE_->LogMMMessage( "Enable" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + " = " + Enable_[LaserIndex], true );
+        vCurrentLaserEnableState = vNewLaserEnableState;
+        MMILE_->LogMMMessage( "Enable" + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + " = " + vNewLaserEnableState, true );
         if ( OpenRequest_ )
         {
           return SetOpen();
         }
-      }
-    }
-    else
-    {
-      if ( IsKeyInterlockTriggered( LaserIndex ) )
-      {
-        MMILE_->ActiveKeyInterlock();
-        return ERR_KEY_INTERLOCK;
-      }
-      else if ( IsClassIVInterlockTriggered() )
-      {
-        MMILE_->ActiveClassIVInterlock();
-        return ERR_CLASSIV_INTERLOCK;
-      }
-      else
-      {
-        return ERR_INTERLOCK;
       }
     }
   }
@@ -361,6 +318,9 @@ int CLasers::OnEnable(MM::PropertyBase* Prop, MM::ActionType Act, long LaserInde
 
 int CLasers::SetOpen(bool Open)
 {
+  static const std::string vOn{ "On" };
+  static const std::string vOff{ "Off" };
+
   int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
   if ( vInterlockStatus != DEVICE_OK )
   {
@@ -371,19 +331,31 @@ int CLasers::SetOpen(bool Open)
     return ERR_DEVICE_NOT_CONNECTED;
   }
 
-  for( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex)
+  // If we close the shutter, do it before modifying laser values
+  if ( !Open )
+  {
+    if ( int vRet = ChangeDeviceShutterState( Open ) != DEVICE_OK )
+    {
+      return vRet;
+    }
+  }
+
+  std::vector<int> vSortedLaserIndicesByPower = GetLasersSortedByPower();
+
+  // Update laser values
+  for ( int vLaserIndex : vSortedLaserIndicesByPower )
   {
     if ( Open )
     {
-      bool vLaserOn = ( PowerSetpoint( vLaserIndex ) > 0 ) && ( Enable_[vLaserIndex].compare( g_LaserEnableOff ) != 0 );
+      bool vLaserOn = ( PowerSetpoint( vLaserIndex ) > 0 ) && ( LasersState_[vLaserIndex].Enable_ != g_LaserEnableOff );
       double vPercentScale = 0.;
       if ( vLaserOn )
       {
         vPercentScale = PowerSetpoint( vLaserIndex );
       }
-      double vPower = ( vPercentScale / 100. ) * ( LaserRange_[vLaserIndex].PowerMax - LaserRange_[vLaserIndex].PowerMin ) + LaserRange_[vLaserIndex].PowerMin;
+      double vPower = ( vPercentScale / 100. ) * ( LasersState_[vLaserIndex].LaserRange_.PowerMax - LasersState_[vLaserIndex].LaserRange_.PowerMin ) + LasersState_[vLaserIndex].LaserRange_.PowerMin;
 
-      MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( vLaserIndex ) ) + "  = " + std::to_string( static_cast<long double>( vPower ) ) + "(" + std::to_string( static_cast<long long>( vLaserOn ) ) + ")", true );
+      MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( vLaserIndex ) ) + "  = " + std::to_string( static_cast<long double>( vPower ) ) + " (" + (vLaserOn ? vOn : vOff) + ")", true );
 
       TLaserState vLaserState;
       if ( LaserInterface_->GetLaserState( vLaserIndex, &vLaserState ) )
@@ -398,11 +370,21 @@ int CLasers::SetOpen(bool Open)
 
         if ( vLaserState > ALC_NOT_AVAILABLE )
         {
-          MMILE_->LogMMMessage( "setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long double>( vPower ) ) + "% full scale", true );
+          MMILE_->LogMMMessage( "Setting Laser " + std::to_string( static_cast<long long>( Wavelength( vLaserIndex ) ) ) + " to " + std::to_string( static_cast<long double>( vPower ) ) + "% full scale", true );
           if ( !LaserInterface_->SetLas_I( vLaserIndex, vPower, vLaserOn ) )
           {
-            MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long double>( vPower ) ) + "]" );
-            return ERR_LASER_SET;
+            std::string vMessage = "Setting Laser power for laser " + std::to_string( static_cast< long long >( vLaserIndex ) ) + " failed";
+            int vProhibited;
+            if ( LaserInterface_->WasLaserIlluminationProhibitedOnLastChange( vLaserIndex, &vProhibited ) && vProhibited == 1 )
+            {
+              MMILE_->LogMMMessage( vMessage + " because the maximum power limit was exceeded" );
+              return ERR_MAX_POWER_LIMIT_EXCEEDED;
+            }
+            else
+            {
+              MMILE_->LogMMMessage( vMessage + " for value [" + std::to_string( static_cast< long double >( vPower ) ) + "]" );
+              return ERR_LASER_SET;
+            }
           }
         }
       }
@@ -411,12 +393,14 @@ int CLasers::SetOpen(bool Open)
         return ERR_LASER_STATE_READ;
       }
     }
-    MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast<long long>( Open ) ), true );
-    bool vSuccess = LaserInterface_->SetLas_Shutter( Open );
-    if ( !vSuccess )
+  }
+
+  // If we open the shutter, do it only once all laser values are set
+  if ( Open )
+  {
+    if ( int vRet = ChangeDeviceShutterState( Open ) != DEVICE_OK )
     {
-      MMILE_->LogMMMessage( "set shutter " + std::to_string( static_cast<long long>( Open ) ) + " failed", false );
-      return ERR_SETLASERSHUTTER;
+      return vRet;
     }
   }
 
@@ -445,10 +429,13 @@ void CLasers::UpdateLasersRange()
 {
   if ( PowerInterface_ != nullptr )
   {
-    for ( int vLaserIndex = 1; vLaserIndex < NumberOfLasers_ + 1; ++vLaserIndex )
+    for ( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex )
     {
-      PowerInterface_->GetPowerRange( vLaserIndex, &( LaserRange_[vLaserIndex].PowerMin ), &( LaserRange_[vLaserIndex].PowerMax ) );
-      MMILE_->LogMMMessage( "New range for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) + " [" + std::to_string( static_cast<long double>( LaserRange_[vLaserIndex].PowerMin ) ) + ", " + std::to_string( static_cast<long double>( LaserRange_[vLaserIndex].PowerMax ) ) + "]", true );
+      TLaserRange& vLaserRange = LasersState_[vLaserIndex].LaserRange_;
+      PowerInterface_->GetPowerRange( vLaserIndex, &( vLaserRange.PowerMin ), &( vLaserRange.PowerMax ) );
+      MMILE_->LogMMMessage( "New range for laser " + std::to_string( static_cast<long long>( vLaserIndex ) ) +
+            " [" + std::to_string( static_cast<long double>( vLaserRange.PowerMin ) ) +
+            ", " + std::to_string( static_cast<long double>( vLaserRange.PowerMax ) ) + "]", true );
     }
     if( OpenRequest_ )
     {
@@ -465,8 +452,11 @@ int CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPo
   if ( LaserInterface_ != nullptr && PowerInterface_ != nullptr && ILEInterface_ != nullptr )
   {
     int vNbLasers = LaserInterface_->Initialize();
-    if ( vNbLasers <= 0 )
+    if ( vNbLasers != NumberOfLasers_ )
     {
+      LaserInterface_ = nullptr;
+      PowerInterface_ = nullptr;
+      ILEInterface_ = nullptr;
       return ERR_LASERS_INIT;
     }
     WaitOnLaserWarmingUp();
@@ -478,15 +468,15 @@ int CLasers::UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPo
     {
       vWavelength = Wavelength( vLaserIndex );
 
-      Enable_[vLaserIndex] = g_LaserEnableOn;
-      vPropertyName = BuildPropertyName( g_PowerSetpointProperty, vWavelength );
+      LasersState_[vLaserIndex].Enable_ = g_LaserEnableOn;
+      vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
       if ( PropertyPointers_.find( vPropertyName ) != PropertyPointers_.end() && PropertyPointers_[vPropertyName] != nullptr )
       {
-        PropertyPointers_[vPropertyName]->Set( Enable_[vLaserIndex].c_str() );
+        PropertyPointers_[vPropertyName]->Set( LasersState_[vLaserIndex].Enable_.c_str() );
       }
 
       PowerSetpoint( vLaserIndex, 0. );
-      vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
+      vPropertyName = BuildPropertyName( g_PowerSetpointProperty, vWavelength );
       if ( PropertyPointers_.find( vPropertyName ) != PropertyPointers_.end() && PropertyPointers_[vPropertyName] != nullptr )
       {
         PropertyPointers_[vPropertyName]->Set( "0" );
@@ -519,12 +509,32 @@ int CLasers::Wavelength(const int LaserIndex )
 
 float CLasers::PowerSetpoint(const int LaserIndex )
 {
-  return PowerSetPoint_[LaserIndex];
+  return LasersState_[LaserIndex].PowerSetPoint_;
 }
 
-void  CLasers::PowerSetpoint(const int LaserIndex, const float Value)
+void CLasers::PowerSetpoint(const int LaserIndex, const float Value)
 {
-  PowerSetPoint_[LaserIndex] = Value;
+  LasersState_[LaserIndex].PowerSetPoint_ = Value;
+}
+
+std::vector<int> CLasers::GetLasersSortedByPower() const
+{
+  auto vLaserPowerComp = [this]( int laserIndex1, int laserIndex2 ) { return LasersState_[laserIndex1].PowerSetPoint_ < LasersState_[laserIndex2].PowerSetPoint_; };
+
+  std::vector<int> vLaserIndices( NumberOfLasers_ );
+  std::iota( vLaserIndices.begin(), vLaserIndices.end(), 1 );
+  std::sort( vLaserIndices.begin(), vLaserIndices.end(), vLaserPowerComp );
+
+  /*
+  std::vector<int> vLaserIndices;
+  for ( int vLaserIndex = 1; vLaserIndex <= NumberOfLasers_; ++vLaserIndex )
+  {
+    std::vector<int>::const_iterator vIndexIt = std::upper_bound( vLaserIndices.begin(), vLaserIndices.end(), vLaserIndex, vLaserPowerComp );
+    vLaserIndices.insert( vIndexIt, vLaserIndex );
+  }
+  */
+
+  return vLaserIndices;
 }
 
 bool CLasers::AllowsExternalTTL(const int LaserIndex )
@@ -539,9 +549,56 @@ bool CLasers::AllowsExternalTTL(const int LaserIndex )
   return (vValue == 1);
 }
 
+int CLasers::ChangeDeviceShutterState( bool Open )
+{
+  static const std::string vOpen{ "Open" };
+  static const std::string vClose{ "Close" };
+
+  MMILE_->LogMMMessage( "Set shutter [" + (Open ? vOpen : vClose) + "]", true);
+  bool vSuccess = LaserInterface_->SetLas_Shutter( Open );
+  if ( !vSuccess )
+  {
+    MMILE_->LogMMMessage( "Set shutter [" + (Open ? vOpen : vClose) + "] failed" );
+    return ERR_SETLASERSHUTTER;
+  }
+  return DEVICE_OK;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Interlock functions
 ///////////////////////////////////////////////////////////////////////////////
+
+int CLasers::CheckInterlock( int LaserIndex )
+{
+  int vInterlockStatus = MMILE_->GetClassIVAndKeyInterlockStatus();
+  if ( vInterlockStatus != DEVICE_OK )
+  {
+    return vInterlockStatus;
+  }
+
+  if ( LaserInterface_ == nullptr )
+  {
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
+  if ( IsInterlockTriggered( LaserIndex ) )
+  {
+    if ( IsKeyInterlockTriggered( LaserIndex ) )
+    {
+      MMILE_->ActiveKeyInterlock();
+      return ERR_KEY_INTERLOCK;
+    }
+    else if ( IsClassIVInterlockTriggered() )
+    {
+      MMILE_->ActiveClassIVInterlock();
+      return ERR_CLASSIV_INTERLOCK;
+    }
+
+    return ERR_INTERLOCK;
+  }
+
+  return DEVICE_OK;
+}
 
 bool CLasers::IsKeyInterlockTriggered(int LaserIndex)
 {

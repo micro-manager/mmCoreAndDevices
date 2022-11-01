@@ -327,10 +327,7 @@ bool FilterWheel::Busy()
    // TODO: figure out how speed commadn affects Busy
    MM::MMTime now = GetCurrentMMTime();
    // each position moved takes 33 msec
-   if ((now - lastMoveTime_) < (posMoved_ * 33))
-      return true;
- 
-   return false;
+   return (now - lastMoveTime_) < MM::MMTime::fromMs(posMoved_ * 33);
 }
 
 int FilterWheel::Shutdown()
@@ -605,10 +602,7 @@ int Shutter::Initialize()
 bool Shutter::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
-
-   return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 int Shutter::Shutdown()

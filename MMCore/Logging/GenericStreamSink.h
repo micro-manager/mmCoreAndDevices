@@ -18,12 +18,10 @@
 
 #include "GenericSink.h"
 
-#include <boost/shared_ptr.hpp>
-#include <boost/utility.hpp>
-
 #include <exception>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <memory>
 
 
 namespace mm
@@ -47,7 +45,7 @@ template <class TFormatter, class UMetadata, typename VPacketIter>
 void
 WritePacketsToStream(std::ostream& stream,
       VPacketIter first, VPacketIter last,
-      boost::shared_ptr< GenericEntryFilter<UMetadata> > filter)
+      std::shared_ptr< GenericEntryFilter<UMetadata> > filter)
 {
    TFormatter formatter;
 
@@ -122,7 +120,7 @@ public:
 
 
 template <class TMetadata, class UFormatter>
-class GenericFileLogSink : public GenericSink<TMetadata>, boost::noncopyable
+class GenericFileLogSink : public GenericSink<TMetadata>
 {
    std::string filename_;
    std::ofstream fileStream_;
@@ -131,6 +129,9 @@ class GenericFileLogSink : public GenericSink<TMetadata>, boost::noncopyable
 public:
    typedef GenericSink<TMetadata> Super;
    typedef typename Super::PacketArrayType PacketArrayType;
+
+   GenericFileLogSink(const GenericFileLogSink&) = delete;
+   GenericFileLogSink& operator=(const GenericFileLogSink&) = delete;
 
    GenericFileLogSink(const std::string& filename, bool append = false) :
       filename_(filename),

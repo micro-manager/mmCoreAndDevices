@@ -51,9 +51,6 @@ void CGigECamera::SnapImageCallback( J_tIMAGE_INFO* imageInfo )
 		Metadata md;
 		char label[MM::MaxStrLength];
 		GetLabel(label);
-		MetadataSingleTag mstStartTime( MM::g_Keyword_Metadata_StartTime, label, true );
-		mstStartTime.SetValue( boost::lexical_cast< std::string >( imageInfo->iTimeStamp ).c_str() );
-		md.SetTag( mstStartTime );
 
 		nRet = GetCoreCallback()->InsertImage(this, buffer_,
 				GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel(), md.Serialize().c_str());

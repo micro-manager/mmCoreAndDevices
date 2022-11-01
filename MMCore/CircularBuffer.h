@@ -31,9 +31,8 @@
 #include "../MMDevice/DeviceThreads.h"
 #include "../MMDevice/MMDevice.h"
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/smart_ptr/shared_ptr.hpp>
-
+#include <chrono>
+#include <memory>
 #include <vector>
 
 #ifdef _MSC_VER
@@ -83,7 +82,7 @@ private:
    unsigned int height_;
    unsigned int pixDepth_;
    long imageCounter_;
-   MM::MMTime startTime_;
+   std::chrono::time_point<std::chrono::steady_clock> startTime_;
    std::map<std::string, long> imageNumbers_;
 
    // Invariants:
@@ -97,9 +96,6 @@ private:
    bool overflow_;
    std::vector<mm::FrameBuffer> frameArray_;
 
-   boost::shared_ptr<ThreadPool> threadPool_;
-   boost::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
-
-   boost::posix_time::time_facet * facet;
-   std::ostringstream tStream;
+   std::shared_ptr<ThreadPool> threadPool_;
+   std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };

@@ -83,6 +83,12 @@
     <ClCompile Include="SingleILE.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ILEWrapper\ALC_REV_ILEPowerManagement2Wrapper.cpp">
+      <Filter>Source Files\ILEWrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="NDFilters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ActiveBlanking.h">
@@ -153,6 +159,12 @@
     </ClInclude>
     <ClInclude Include="ILEWrapper\ILEWrapper.h">
       <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="ILEWrapper\ALC_REV_ILEPowerManagement2Wrapper.h">
+      <Filter>Header Files\ILEWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="NDFilters.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

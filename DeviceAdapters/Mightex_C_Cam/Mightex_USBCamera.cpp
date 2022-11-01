@@ -1554,7 +1554,6 @@ int CMightex_BUF_USBCCDCamera::InsertImage()
    // Important:  metadata about the image are generated here:
    Metadata md;
    md.put("Camera", label);
-   md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
@@ -1668,9 +1667,9 @@ void MySequenceThread::Start(long numImages, double intervalMs)
    stop_ = false;
    suspend_=false;
    activate();
-   actualDuration_ = 0;
+   actualDuration_ = MM::MMTime{};
    startTime_= camera_->GetCurrentMMTime();
-   lastFrameTime_ = 0;
+   lastFrameTime_ = MM::MMTime{};
 }
 
 bool MySequenceThread::IsStopped(){

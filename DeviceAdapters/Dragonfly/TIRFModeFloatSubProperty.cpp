@@ -84,9 +84,10 @@ int CTIRFModeFloatSubProperty::OnChange( MM::PropertyBase * Prop, MM::ActionType
 
 void CTIRFModeFloatSubProperty::SetBufferedUserSelectionValue( float NewValue )
 {
+  MMDragonfly_->LogComponentMessage( "Buffering " + PropertyName_ + " position [" + to_string( NewValue ) + "]", true );
   BufferedUserSelectionValue_ = NewValue;
   // Save the new value to the config file
-  ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( static_cast< long long >( BufferedUserSelectionValue_ ) ) );
+  ConfigFileHandler_->SavePropertyValue( PropertyName_, to_string( BufferedUserSelectionValue_ ) );
 }
 
 int CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float RequestedValue )
@@ -102,12 +103,17 @@ int CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float Req
       {
         // Failed to set the device. Best is to refresh the UI with the device's current value.
         vRet = DEVICE_CAN_NOT_SET_PROPERTY;
-        MMDragonfly_->LogComponentMessage( "Failed to set " + PropertyName_ + " position [" + to_string( static_cast< long long >( RequestedValue ) ) + "]" );
+        MMDragonfly_->LogComponentMessage( "Failed to set " + PropertyName_ + " position [" + to_string( RequestedValue ) + "]" );
         if ( SetPropertyValueFromDeviceValue( Prop ) == DEVICE_OK )
         {
           double vNewValue;
           Prop->Get( vNewValue );
           SetBufferedUserSelectionValue( (float)vNewValue );
+        }
+        else
+        {
+          // We lost device connection so backup the value
+          SetBufferedUserSelectionValue( RequestedValue );
         }
       }
       else
@@ -124,6 +130,8 @@ int CTIRFModeFloatSubProperty::SetDeviceValue( MM::PropertyBase* Prop, float Req
   }
   else
   {
+    // We lost device connection so backup the value
+    SetBufferedUserSelectionValue( RequestedValue );
     MMDragonfly_->LogComponentMessage( "Failed to retrieve " + PropertyName_ + " limits" );
     vRet = DEVICE_ERR;
   }
@@ -171,17 +179,13 @@ void CTIRFModeFloatSubProperty::ModeSelected( ETIRFMode SelectedTIRFMode )
   {
     if ( MMProp_ )
     {
-      double vCurrentValue;
-      MMProp_->Get( vCurrentValue );
-      if ( BufferedUserSelectionValue_ != vCurrentValue )
-      {
-        SetPropertyValue( MMProp_, (double)BufferedUserSelectionValue_ );
-        SetDeviceValue( MMProp_, BufferedUserSelectionValue_ );
-      }
+      MMDragonfly_->LogComponentMessage( "Load " + PropertyName_ + " position from Buffer [" + to_string( BufferedUserSelectionValue_ ) + "]", true );
+      SetPropertyValue( MMProp_, (double)BufferedUserSelectionValue_ );
+      SetDeviceValue( MMProp_, BufferedUserSelectionValue_ );
     }
     else
     {
-      MMDragonfly_->SetProperty( PropertyName_.c_str(), to_string( static_cast< long long >( BufferedUserSelectionValue_ ) ).c_str() );
+      MMDragonfly_->SetProperty( PropertyName_.c_str(), to_string( BufferedUserSelectionValue_ ).c_str() );
     }
   }
 }

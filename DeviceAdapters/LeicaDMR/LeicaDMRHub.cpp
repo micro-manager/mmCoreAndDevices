@@ -168,7 +168,8 @@ int LeicaDMRHub::GetRLModulePosition(MM::Device& device, MM::Core& core, int& po
    pos = 0;
    MM::MMTime start = core.GetCurrentMMTime();
    int ret;
-   while (pos == 0 && (core.GetCurrentMMTime() - start < 500000) ) {
+   while (pos == 0 &&
+         (core.GetCurrentMMTime() - start < MM::MMTime::fromMs(500))) {
       ret = GetCommand(device, core, rLFA_, 10, pos);
       if (ret != DEVICE_OK)
          return ret;

@@ -64,13 +64,13 @@ CTIRF::CTIRF( ITIRFInterface* TIRFInterface, IConfigFileHandler* ConfigFileHandl
   MMDragonfly_->AddAllowedValue( g_TIRFModePropertyName, g_TIRFModeCritical );
 
   // Property for Penetration
-  PenetrationWrapper_ = new CPenetrationWrapper( TIRFInterface_ );
+  PenetrationWrapper_ = new CPenetrationWrapper( TIRFInterface_, MMDragonfly_ );
   PenetrationProperty_ = new CTIRFModeIntSubProperty( PenetrationWrapper_, ConfigFileHandler_, MMDragonfly_, "TIRF |  Penetration (nm)" );
   // Property for Oblique Angle
-  HILOObliqueAngleWrapper_ = new CHILOObliqueAngleWrapper( TIRFInterface_ );
+  HILOObliqueAngleWrapper_ = new CHILOObliqueAngleWrapper( TIRFInterface_, MMDragonfly_ );
   HILOObliqueAngleProperty_ = new CTIRFModeFloatSubProperty( HILOObliqueAngleWrapper_, ConfigFileHandler_, MMDragonfly_, "TIRF |  HiLo Oblique Angle (deg)" );
   // Property for Offset
-  CriticalAngleOffsetWrapper_ = new COffsetWrapper( TIRFInterface_ );
+  CriticalAngleOffsetWrapper_ = new COffsetWrapper( TIRFInterface_, MMDragonfly_ );
   CriticalAngleOffsetProperty_ = new CTIRFModeIntSubProperty( CriticalAngleOffsetWrapper_, ConfigFileHandler_, MMDragonfly_, "TIRF |  Critical Angle Offset" );
   
   // Set TIRF sub properties read/write status based on TIRF mode
@@ -141,6 +141,7 @@ int CTIRF::OnTIRFModeChange( MM::PropertyBase * Prop, MM::ActionType Act )
     int vTIRFModeIndex;
     if ( GetTIFRModeIndexFromName( vRequestedMode, &vTIRFModeIndex ) )
     {
+      MMDragonfly_->LogComponentMessage( "Set TIRF mode to [" + std::to_string( vTIRFModeIndex ) + "]", true );
       if ( TIRFInterface_->SetTIRFMode( vTIRFModeIndex ) )
       {
         UpdateTIRFModeSelection( vRequestedMode );

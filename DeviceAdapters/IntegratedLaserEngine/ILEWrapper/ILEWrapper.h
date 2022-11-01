@@ -17,6 +17,7 @@
 
 class CALC_REV_ILEActiveBlankingManagementWrapper;
 class CALC_REV_ILEPowerManagementWrapper;
+class CALC_REV_ILEPowerManagement2Wrapper;
 class CALC_REV_ILE2Wrapper;
 class CALC_REV_ILE4Wrapper;
 
@@ -35,6 +36,7 @@ public:
   void DeleteDualILE( IALC_REVObject3 *ILEDevice );
   IALC_REV_ILEActiveBlankingManagement* GetILEActiveBlankingManagementInterface( IALC_REVObject3 *ILEDevice );
   IALC_REV_ILEPowerManagement* GetILEPowerManagementInterface( IALC_REVObject3 *ILEDevice );
+  IALC_REV_ILEPowerManagement2* GetILEPowerManagement2Interface( IALC_REVObject3 *ILEDevice );
   IALC_REV_ILE2* GetILEInterface2( IALC_REVObject3 *ILEDevice );
   IALC_REV_ILE4* GetILEInterface4( IALC_REVObject3 *ILEDevice );
 
@@ -44,6 +46,7 @@ private:
   typedef bool( __stdcall *TDelete_ILE_Detection )( IILE_Detection *ILEDetection );
   typedef IALC_REV_ILEActiveBlankingManagement* ( __stdcall *TGetILEActiveBlankingManagementInterface )( IALC_REVObject3 *ALC_REVObject3 );
   typedef IALC_REV_ILEPowerManagement* ( __stdcall *TGetILEPowerManagementInterface )( IALC_REVObject3 *ALC_REVObject3 );
+  typedef IALC_REV_ILEPowerManagement2* ( __stdcall *TGetILEPowerManagement2Interface )( IALC_REVObject3 *ALC_REVObject3 );
   typedef IALC_REV_ILE2* ( __stdcall *TGetILEInterface2 )( IALC_REVObject3 *ILEDevice );
   typedef IALC_REV_ILE4* ( __stdcall *TGetILEInterface4 )( IALC_REVObject3 *ILEDevice );
 
@@ -51,6 +54,7 @@ private:
   TDelete_ILE_Detection Delete_ILE_Detection_;
   TGetILEActiveBlankingManagementInterface GetILEActiveBlankingManagementInterface_;
   TGetILEPowerManagementInterface GetILEPowerManagementInterface_;
+  TGetILEPowerManagement2Interface GetILEPowerManagement2Interface_;
   TGetILEInterface2 GetILEInterface2_;
   TGetILEInterface4 GetILEInterface4_;
 
@@ -59,6 +63,8 @@ private:
   TActiveBlankingManagementMap ActiveBlankingManagementMap_;
   typedef std::map<IALC_REV_ILEPowerManagement*, CALC_REV_ILEPowerManagementWrapper*> TPowerManagementMap;
   TPowerManagementMap PowerManagementMap_;
+  typedef std::map<IALC_REV_ILEPowerManagement2*, CALC_REV_ILEPowerManagement2Wrapper*> TPowerManagement2Map;
+  TPowerManagement2Map PowerManagement2Map_;
   typedef std::map<IALC_REV_ILE2*, CALC_REV_ILE2Wrapper*> TILE2Map;
   TILE2Map ILE2Map_;
   typedef std::map<IALC_REV_ILE4*, CALC_REV_ILE4Wrapper*> TILE4Map;

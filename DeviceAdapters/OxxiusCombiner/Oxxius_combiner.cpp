@@ -565,9 +565,11 @@ int OxxiusCombinerHub::QueryCommand(MM::Device* device, MM::Core* core, const un
 		while (!done) {
 			counter++;
 			ret = core->GetSerialAnswer(device, port_.c_str(), RCV_BUF_LENGTH, rcvBuf_, "\r\n");
-			if ( (ret == DEVICE_OK) ||  ( (core->GetCurrentMMTime() - startTime) > (maxTimeMs*1000.0) ) )
+			if ((ret == DEVICE_OK) ||
+				((core->GetCurrentMMTime() - startTime) >
+				 MM::MMTime::fromMs(maxTimeMs))) {
 				done = true;
-			else {
+			} else {
 				CDeviceUtils::SleepMs(delayMs);
 				delayMs *= 2;
 			}

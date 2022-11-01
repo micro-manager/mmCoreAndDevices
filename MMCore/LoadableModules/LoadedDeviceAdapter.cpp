@@ -25,8 +25,8 @@
 #include "../CoreUtils.h"
 #include "../Error.h"
 
-#include <boost/bind.hpp>
-#include <boost/make_shared.hpp>
+#include <functional>
+#include <memory>
 
 
 LoadedDeviceAdapter::LoadedDeviceAdapter(const std::string& name, const std::string& filename) :
@@ -43,7 +43,7 @@ LoadedDeviceAdapter::LoadedDeviceAdapter(const std::string& name, const std::str
 {
    try
    {
-      module_ = boost::make_shared<LoadedModule>(filename);
+      module_ = std::make_shared<LoadedModule>(filename);
    }
    catch (const CMMError& e)
    {
@@ -125,7 +125,7 @@ LoadedDeviceAdapter::GetAdvertisedDeviceType(const std::string& deviceName) cons
 }
 
 
-boost::shared_ptr<DeviceInstance>
+std::shared_ptr<DeviceInstance>
 LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
       const std::string& label,
       mm::logging::Logger deviceLogger,
@@ -152,39 +152,39 @@ LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
    if (expectedType == MM::UnknownType)
       expectedType = actualType;
 
-   boost::shared_ptr<LoadedDeviceAdapter> shared_this(shared_from_this());
-   DeleteDeviceFunction deleter = boost::bind(&LoadedDeviceAdapter::DeleteDevice, this, _1);
+   std::shared_ptr<LoadedDeviceAdapter> shared_this(shared_from_this());
+   DeleteDeviceFunction deleter = std::bind(&LoadedDeviceAdapter::DeleteDevice, this, std::placeholders::_1);
 
    switch (expectedType)
    {
       case MM::CameraDevice:
-         return boost::make_shared<CameraInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<CameraInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::ShutterDevice:
-         return boost::make_shared<ShutterInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<ShutterInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::StageDevice:
-         return boost::make_shared<StageInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<StageInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::XYStageDevice:
-         return boost::make_shared<XYStageInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<XYStageInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::StateDevice:
-         return boost::make_shared<StateInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<StateInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::SerialDevice:
-         return boost::make_shared<SerialInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<SerialInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::GenericDevice:
-         return boost::make_shared<GenericInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<GenericInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::AutoFocusDevice:
-         return boost::make_shared<AutoFocusInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<AutoFocusInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::ImageProcessorDevice:
-         return boost::make_shared<ImageProcessorInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<ImageProcessorInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::SignalIODevice:
-         return boost::make_shared<SignalIOInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<SignalIOInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::MagnifierDevice:
-         return boost::make_shared<MagnifierInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<MagnifierInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::SLMDevice:
-         return boost::make_shared<SLMInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<SLMInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::GalvoDevice:
-         return boost::make_shared<GalvoInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<GalvoInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::HubDevice:
-         return boost::make_shared<HubInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+         return std::make_shared<HubInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       default:
          deleter(pDevice);
          throw CMMError("Device " + ToQuotedString(name) +

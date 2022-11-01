@@ -29,10 +29,16 @@ private:
   CIntegratedLaserEngine* MMILE_;
   std::map<std::string, int> PropertyLineIndexMap_;
   std::map<std::string, MM::PropertyBase *> PropertyPointers_;
-  int EnabledPattern_;
+  int EnabledPattern_ = 0;
+  int NumberOfLines_ = 0;
+  static const int LineMaskSize_;
 
   bool IsLineEnabled( int Line ) const;
   void ChangeLineState( int Line );
+  bool IsActiveBlankingEnabled() const;
+  void EnableActiveBlanking();
+  void DisableActiveBlanking();
+  bool InitialiseActiveBlanking();
 };
 
 #endif

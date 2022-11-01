@@ -27,7 +27,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 70
+#define DEVICE_INTERFACE_VERSION 71
 ///////////////////////////////////////////////////////////////////////////////
 
 
@@ -48,12 +48,14 @@
 #include "DeviceUtils.h"
 #include "ImageMetadata.h"
 #include "DeviceThreads.h"
-#include <string>
-#include <cstring>
+
 #include <climits>
 #include <cstdlib>
-#include <vector>
+#include <cstring>
+#include <iomanip>
 #include <sstream>
+#include <string>
+#include <vector>
 
 
 #ifdef MODULE_EXPORTS
@@ -96,108 +98,102 @@ namespace MM {
     */
    class MMTime
    {
+         long long microseconds_;
+
       public:
-         MMTime(double uSecTotal = 0.0)
+         MMTime() : microseconds_(0LL) {}
+
+         explicit MMTime(double uSecTotal) :
+            microseconds_(static_cast<long long>(uSecTotal))
+         {}
+
+         explicit MMTime(long sec, long uSec) :
+            microseconds_(sec * 1'000'000LL + uSec)
+         {}
+
+         static MMTime fromUs(long long us)
          {
-            sec_ = (long) (uSecTotal / 1.0e6);
-            uSec_ = (long) (uSecTotal - sec_ * 1.0e6);
+            // Work around our lack of a constructor that directly sets the
+            // internal representation.
+            // (Note that we cannot add a constructor from 'long long' because
+            // many existing uses would then get an error (ambiguous with the
+            // 'double' overload).)
+            MMTime ret;
+            ret.microseconds_ = us;
+            return ret;
          }
 
-         MMTime(long sec, long uSec) : sec_(sec), uSec_(uSec)
+         static MMTime fromMs(double ms)
          {
-            Normalize();
+            return MMTime(ms * 1000.0);
          }
 
-         ~MMTime() {}
-
-         MMTime(std::string serialized) {
-            std::stringstream is(serialized);
-            is >> sec_ >> uSec_;
-            Normalize();
+         static MMTime fromSeconds(long secs)
+         {
+            return MMTime(secs, 0);
          }
-
-         std::string serialize() {
-            std::ostringstream os;
-            os << sec_ << " " << uSec_;
-            return os.str().c_str();
-         }
-
-         long sec_;
-         long uSec_;
 
          MMTime operator+(const MMTime &other) const
          {
-            MMTime res(sec_ + other.sec_, uSec_ + other.uSec_);
-            return res;
+            return fromUs(microseconds_ + other.microseconds_);
          }
 
          MMTime operator-(const MMTime &other) const
          {
-            MMTime res(sec_ - other.sec_, uSec_ - other.uSec_);
-            return res;
+            return fromUs(microseconds_ - other.microseconds_);
          }
 
          bool operator>(const MMTime &other) const
          {
-            if (sec_ > other.sec_)
-               return true;
-            else if (sec_ < other.sec_)
-               return false;
+            return microseconds_ > other.microseconds_;
+         }
 
-            if (uSec_ > other.uSec_)
-               return true;
-            else
-               return false;
+         bool operator>=(const MMTime &other) const
+         {
+            return microseconds_ >= other.microseconds_;
          }
 
          bool operator<(const MMTime &other) const
          {
-            if (*this == other)
-               return false;
+            return microseconds_ < other.microseconds_;
+         }
 
-            return ! (*this > other);
+         bool operator<=(const MMTime &other) const
+         {
+            return microseconds_ <= other.microseconds_;
          }
 
          bool operator==(const MMTime &other) const
          {
-            if (sec_ == other.sec_ && uSec_ == other.uSec_)
-               return true;
-            else
-               return false;
+            return microseconds_ == other.microseconds_;
+         }
+
+         bool operator!=(const MMTime &other) const
+         {
+            return !(*this == other);
          }
 
          double getMsec() const
          {
-            return sec_ * 1000.0 + uSec_ / 1000.0;
+            return microseconds_ / 1000.0;
          }
 
          double getUsec() const
          {
-            return sec_ * 1.0e6 + uSec_;
+            return static_cast<double>(microseconds_);
          }
 
-      private:
-         void Normalize()
-         {
-            if (sec_ < 0)
-            {
-               sec_ = 0L;
-               uSec_ = 0L;
-               return;
-            }
+         std::string toString() const {
+            long long absUs = std::abs(microseconds_);
+            long long seconds = absUs / 1'000'000LL;
+            long long fracUs = absUs - seconds * 1'000'000LL;
+            const char *sign = microseconds_ < 0 ? "-" : "";
 
-            if (uSec_ < 0)
-            {
-               sec_--;
-               uSec_ = 1000000L + uSec_;
-            }
-
-            long overflow = uSec_ / 1000000L;
-            if (overflow > 0)
-            {
-               sec_ += overflow;
-               uSec_ -= overflow * 1000000L;
-            }
+            using namespace std;
+            ostringstream s;
+            s << sign << seconds << '.' <<
+                  setfill('0') << right << setw(6) << fracUs;
+            return s.str();
          }
    };
 
@@ -209,27 +205,24 @@ namespace MM {
    {
    public:
       // arguments:  MMTime start time, millisecond interval time
-      TimeoutMs(const MMTime startTime, const unsigned long intervalMs) :
+      explicit TimeoutMs(const MMTime startTime, const unsigned long intervalMs) :
          startTime_(startTime),
          interval_(0, 1000*intervalMs)
       {
       }
-      TimeoutMs(const MMTime startTime, const MMTime interval) :
+      explicit TimeoutMs(const MMTime startTime, const MMTime interval) :
          startTime_(startTime),
          interval_(interval)
       {
       }
-      ~TimeoutMs()
-      {
-      }
+
       bool expired(const MMTime tnow)
       {
          MMTime elapsed = tnow - startTime_;
          return ( interval_ < elapsed );
       }
+
    private:
-      TimeoutMs(const MM::TimeoutMs&) {}
-      const TimeoutMs& operator=(const MM::TimeoutMs&) {return *this;}
       MMTime startTime_; // start time
       MMTime interval_; // interval in milliseconds
    };
@@ -1308,7 +1301,13 @@ namespace MM {
        */
       virtual int OnMagnifierChanged(const Device* caller) = 0;
 
+      // Deprecated: Return value overflows in ~72 minutes on Windows.
+      // Prefer std::chrono::steady_clock for time delta measurements.
       virtual unsigned long GetClockTicksUs(const Device* caller) = 0;
+
+      // Returns monotonic MMTime suitable for time delta measurements.
+      // Time zero is not fixed and may change on every launch.
+      // Prefer std::chrono::steady_clock::now() in new code.
       virtual MM::MMTime GetCurrentMMTime() = 0;
 
       // sequence acquisition

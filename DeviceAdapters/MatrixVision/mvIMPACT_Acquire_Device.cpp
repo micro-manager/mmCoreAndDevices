@@ -968,7 +968,6 @@ int mvIMPACT_Acquire_Device::InsertImage( void )
    char label[MM::MaxStrLength];
    GetLabel( label );
    md.put( "Camera", label );
-   md.put( MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString( sequenceStartTime_.getMsec() ) );
    MM::MMTime timeStamp = readoutStartTime_;
    md.put( MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString( ( timeStamp - sequenceStartTime_ ).getMsec() ) );
    md.put( MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( static_cast<long>( pCurrentRequest_->infoFrameID.read() ) ) );
@@ -1214,9 +1213,9 @@ void MySequenceThread::Start( long numImages, double intervalMs )
    stop_ = false;
    suspend_ = false;
    activate();
-   actualDuration_ = 0;
+   actualDuration_ = MM::MMTime{};
    startTime_ = pmvIMPACT_Acquire_Device_->GetCurrentMMTime();
-   lastFrameTime_ = 0;
+   lastFrameTime_ = MM::MMTime{};
 }
 
 //-----------------------------------------------------------------------------
