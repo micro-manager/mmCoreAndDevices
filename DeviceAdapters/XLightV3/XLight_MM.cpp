@@ -24,12 +24,14 @@
 
 #include "XLight_MM.h"
 #include "DeviceConfig.h"
+
+#include <string>
+
 // External names used used by the rest of the system
 // static lock
 MMThreadLock XLightHub::lock_;
 XLightHub* pXLightHub ;
 bool HCW_state;
-using namespace std;
 
 
 // ======================================== API ==================================================
@@ -330,7 +332,7 @@ bool XLightHub::Busy() {
 
 
 int XLightHub::ExecuteCmd(TCmdType eCmdType,  TDeviceInfo* pDeviceInfo, long value){
-	string CommandStr=BuilCommand(eCmdType,pDeviceInfo, value );
+	std::string CommandStr=BuilCommand(eCmdType,pDeviceInfo, value );
 	int ret=DEVICE_OK;
 	ret=SendCmdString(CommandStr,15000);
 	if (ret!=DEVICE_OK)
@@ -338,9 +340,9 @@ int XLightHub::ExecuteCmd(TCmdType eCmdType,  TDeviceInfo* pDeviceInfo, long val
 	return ParseAnswer(CommandStr, GetInputStr(), eCmdType, pDeviceInfo);
 }
 // ----------------------------------------------------------------------------------------------
-string XLightHub::BuilCommandBase (TCmdType eCmdType,  TDeviceInfo* pDeviceInfo){
+std::string XLightHub::BuilCommandBase (TCmdType eCmdType,  TDeviceInfo* pDeviceInfo){
 	
-	string StrCmdBase=pDeviceInfo->PrefixCMD;
+	std::string StrCmdBase=pDeviceInfo->PrefixCMD;
 	if (eCmdType!=SETPOS_CMD )
 		StrCmdBase="r"+StrCmdBase;
 
@@ -349,28 +351,28 @@ string XLightHub::BuilCommandBase (TCmdType eCmdType,  TDeviceInfo* pDeviceInfo)
 	return StrCmdBase;
 }
 // ----------------------------------------------------------------------------------------------
-string XLightHub::BuilCommand (TCmdType eCmdType,  TDeviceInfo* pDeviceInfo ,int value){
+std::string XLightHub::BuilCommand (TCmdType eCmdType,  TDeviceInfo* pDeviceInfo ,int value){
 
 
-	string result=BuilCommandBase(eCmdType, pDeviceInfo);
+	std::string result=BuilCommandBase(eCmdType, pDeviceInfo);
 	if (eCmdType==SETPOS_CMD){
 		if ((pDeviceInfo->DeviceType_ >= EMISSION_FT) && (pDeviceInfo->DeviceType_<=EXCITATION_FT)){
-			result=result+to_string((long long)( value+1));
+			result=result+std::to_string((long long)( value+1));
 		}
 		else {
-		result=result+to_string((long long) value);
+		result=result+std::to_string((long long) value);
 		}
 	}
 
 	return result;
 }
 // ----------------------------------------------------------------------------------------------
-int XLightHub::ParseAnswer(string pCmd, string pAnsw, TCmdType eCmdType , TDeviceInfo* pDeviceInfo){
+int XLightHub::ParseAnswer(std::string pCmd, std::string pAnsw, TCmdType eCmdType , TDeviceInfo* pDeviceInfo){
 
 	// creo il comando che è stato inviato
-	string StrCmdBase=BuilCommandBase(eCmdType, pDeviceInfo);
-	string StrAnsw= pAnsw;  
-	string StrCmd= pCmd;  
+	std::string StrCmdBase=BuilCommandBase(eCmdType, pDeviceInfo);
+	std::string StrAnsw= pAnsw;  
+	std::string StrCmd= pCmd;  
 	int ReqValue=-1;
 	int RetValue=-1;
 	// verifico prima che il comando sia integralmente contenuto nella risposta
@@ -381,7 +383,7 @@ int XLightHub::ParseAnswer(string pCmd, string pAnsw, TCmdType eCmdType , TDevic
 	StrAnsw=StrAnsw.substr(StrCmdBase.length()); 
 	try
 	{
-		RetValue=stoi ((char*)StrAnsw.c_str());
+		RetValue=std::stoi ((char*)StrAnsw.c_str());
 	}
 	catch (...)
 	{
@@ -393,7 +395,7 @@ int XLightHub::ParseAnswer(string pCmd, string pAnsw, TCmdType eCmdType , TDevic
 		// verifico che l'intero della posizione corrisponda
 		try
 		{
-			ReqValue=stoi (StrCmd);
+			ReqValue=std::stoi (StrCmd);
 		}
 		catch (...)
 		{
@@ -431,7 +433,7 @@ int XLightHub::GetDeviceValue(TDevicelType DeviceType, TValueType ValueType, int
 
 	* iValue=0;
 
-	string StrCmdBase;
+	std::string StrCmdBase;
 
 	switch (ValueType){
 	case WORK_VAL:{
@@ -465,7 +467,7 @@ int XLightHub::GetDeviceValue(TDevicelType DeviceType, TValueType ValueType, int
 
 	RetValue=0;
 
-	string Risp= GetInputStr();
+	std::string Risp= GetInputStr();
 
 	if (Risp!=""){
 
@@ -658,7 +660,7 @@ void XLightHub::ClearAllRcvBuf() {
 	memset(rcvBuf_, 0, RCV_BUF_LENGTH);
 }
 // ----------------------------------------------------------------------------------------------
-int XLightHub::GetIntFromAnswer(string cmdbase_str, string answ_str, bool *ans_present, int *answ_value){
+int XLightHub::GetIntFromAnswer(std::string cmdbase_str, std::string answ_str, bool *ans_present, int *answ_value){
 
 	if (answ_str.compare("\r")==0){
 		*ans_present=false;
@@ -672,7 +674,7 @@ int XLightHub::GetIntFromAnswer(string cmdbase_str, string answ_str, bool *ans_p
 		answ_str=answ_str.substr(cmdbase_str.length()); 
 		try
 		{
-			*answ_value=stoi ((char*)answ_str.c_str());
+			*answ_value=std::stoi ((char*)answ_str.c_str());
 			return DEVICE_OK;
 		}
 		catch (...)
@@ -682,13 +684,13 @@ int XLightHub::GetIntFromAnswer(string cmdbase_str, string answ_str, bool *ans_p
 	}
 }
 // ----------------------------------------------------------------------------------------------
-int  XLightHub::SendCmdString(string pcCmdTxt, unsigned uCmdTmOut, unsigned uRetry){
+int  XLightHub::SendCmdString(std::string pcCmdTxt, unsigned uCmdTmOut, unsigned uRetry){
 	
 
 
 	
 	int ret = DEVICE_OK;
-	string MIOERRORE;
+	std::string MIOERRORE;
 	MM::Core * pCoreCBK=GetCoreCallback();
 	// empty the Rx serial buffer before sending command
 	ClearAllRcvBuf();
@@ -723,7 +725,7 @@ int  XLightHub::SendCmdString(string pcCmdTxt, unsigned uCmdTmOut, unsigned uRet
 // ----------------------------------------------------------------------------------------------
 std::string XLightHub::GetInputStr(){
 
-	return (string) rcvBuf_;
+	return rcvBuf_;
 }
 // ----------------------------------------------------------------------------------------------
 
@@ -851,7 +853,7 @@ int XLightStateDevice::Initialize()
 
 	// State
 	CPropertyAction * pAct = new CPropertyAction(this, &XLightStateDevice::OnState);
-	ret = CreateProperty(MM::g_Keyword_State, (char *)(to_string((long long) DeviceInfo_.Value).c_str()), MM::Integer, false, pAct);// VALUE
+	ret = CreateProperty(MM::g_Keyword_State, (char *)(std::to_string((long long) DeviceInfo_.Value).c_str()), MM::Integer, false, pAct);// VALUE
 	if (ret != DEVICE_OK)
 		return ret;
 	//CPropertyAction* pAct = new CPropertyAction (this, &XLightStateDevice::OnNumberOfStates);
@@ -859,10 +861,10 @@ int XLightStateDevice::Initialize()
 
 	// ora setto tutte le possibili posizioni
 	for (int i=0; i<DeviceInfo_.MaxValue; i++){
-		AddAllowedValue(MM::g_Keyword_State, (char*)(to_string((long long) i)).c_str());
+		AddAllowedValue(MM::g_Keyword_State, (char*)(std::to_string((long long) i)).c_str());
 	}
 
-	string labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+to_string((long long)(DeviceInfo_.Value+1));// VALUE
+	std::string labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+std::to_string((long long)(DeviceInfo_.Value+1));// VALUE
 
 	// Label                                                                  
 	CPropertyAction * pAct1 = new CPropertyAction(this, &XLightStateDevice::OnLabel);
@@ -872,18 +874,18 @@ int XLightStateDevice::Initialize()
 
 	for (int i=0; i<DeviceInfo_.MaxValue; i++){
 		if (DeviceInfo_.DeviceType_>=EMISSION_FT && DeviceInfo_.DeviceType_<=EXCITATION_FT )
-			labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+to_string((long long)(i+1));
+			labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+std::to_string((long long)(i+1));
 		else if (DeviceInfo_.DeviceType_==SPINNING_SLIDER){
 			if (i==0)
 				labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+" out";
 			else 
-				labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+to_string((long long)(i));
+				labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+std::to_string((long long)(i));
 		}
 		else if (DeviceInfo_.DeviceType_==CAMERA_SLIDER){
 			if (i==DeviceInfo_.MaxValue-1)
 				labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+" out";
 			else 
-				labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+to_string((long long)(i));
+				labelpos=PositionLabels[DeviceInfo_.DeviceType_-1]+std::to_string((long long)(i));
 		}
 		else if (DeviceInfo_.DeviceType_==SPINNING_MOTOR){
 			if (i==0)

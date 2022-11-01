@@ -1,3 +1,5 @@
+#include <string>
+
 #define DEVICE_MAXNUMBER 8
 
 const char* g_HubDevice_Name = "XLightMMHub";
@@ -48,12 +50,12 @@ const char* g_HubDevice_Dev_Desc= "XLight Hub for MM";
 
 
 
-string PositionLabels[DEVICE_MAXNUMBER]={"Emission pos.", "Dichroic pos.", "Excitation pos.", "Spinning pos.", "Slider pos.", "Motor", "", ""};
-string DevicesName[DEVICE_MAXNUMBER]={"Emission wheel", "Dichroic wheel", "Excitation wheel", "Spinning slider", "Camera slider", "Spinning motor", "Emission Iris", "Illumination Iris"};
-string DevicesDesc[DEVICE_MAXNUMBER]={"Emission filter wheel", "Dichroic filter wheel", "Excitation filter wheel", "Spinning slider", "Dual camera slider", "Spinning motor", "Emission Iris", "Illumination Iris"};
+std::string PositionLabels[DEVICE_MAXNUMBER]={"Emission pos.", "Dichroic pos.", "Excitation pos.", "Spinning pos.", "Slider pos.", "Motor", "", ""};
+std::string DevicesName[DEVICE_MAXNUMBER]={"Emission wheel", "Dichroic wheel", "Excitation wheel", "Spinning slider", "Camera slider", "Spinning motor", "Emission Iris", "Illumination Iris"};
+std::string DevicesDesc[DEVICE_MAXNUMBER]={"Emission filter wheel", "Dichroic filter wheel", "Excitation filter wheel", "Spinning slider", "Dual camera slider", "Spinning motor", "Emission Iris", "Illumination Iris"};
 
 
-string CMDPrefix[DEVICE_MAXNUMBER]={"B", "C", "A","D", "P", "N", "V", "J"};
+std::string CMDPrefix[DEVICE_MAXNUMBER]={"B", "C", "A","D", "P", "N", "V", "J"};
 bool DeviceOnline[DEVICE_MAXNUMBER]={true, true, true,true, true, true, true, true}; //device connected
 long MaxPositions[DEVICE_MAXNUMBER]; // device range
 long InitialPositions[DEVICE_MAXNUMBER]; // initial position of devices
