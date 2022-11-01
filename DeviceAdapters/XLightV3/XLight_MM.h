@@ -25,17 +25,11 @@
 #ifndef _XLIGHTV3MM_H_
 #define _XLIGHTV3MM_H_
 
-#include <iostream>
-#include <fstream>
 
+#include "DeviceBase.h"
 
-/*#include <iostream>
-#include <fstream>
-*/
-using namespace std;
+#include <string>
 
-
-#include "../../mmCoreAndDevices/MMDevice/DeviceBase.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -78,12 +72,12 @@ typedef enum {GETPOS_CMD=0, GETNUMPOS_CMD, SETPOS_CMD} TCmdType;
 typedef struct {
 	bool Connected;
 	bool Working;
-	string PrefixCMD;
+	std::string PrefixCMD;
 	long Value;
 	long MaxValue;
 	TDevicelType DeviceType_;
-	string name_;
-	string description_;
+	std::string name_;
+	std::string description_;
 	long MinValue;
 
 } TDeviceInfo;
@@ -105,7 +99,7 @@ public:
 	// HUB api
 	int DetectInstalledDevices();
 
-	int SendCmdString(string pcCmdTxt,  unsigned uCmdTmOut=0, unsigned uRetry=1);
+	int SendCmdString(std::string pcCmdTxt,  unsigned uCmdTmOut=0, unsigned uRetry=1);
 
 	std::string GetInputStr();
 	MM::DeviceDetectionStatus DetectDevice(void);
@@ -117,11 +111,11 @@ private:
 
 	int GetControllerInfo();
 	int IsOnline(TDevicelType DeviceType);
-	int GetIntFromAnswer(string cmdbase_str, string answ_str, bool *ans_present, int *answ_value);
+	int GetIntFromAnswer(std::string cmdbase_str, std::string answ_str, bool *ans_present, int *answ_value);
 	int GetDeviceValue(TDevicelType DeviceType, TValueType ValueType, int * iValue);
-	string BuilCommand (TCmdType eCmdType,  TDeviceInfo* pDeviceInfo, int value);
-	string BuilCommandBase (TCmdType eCmdType, TDeviceInfo* pDeviceInfo);
-	int ParseAnswer(string pCmd, string pAnsw, TCmdType eCmdType , TDeviceInfo* pDeviceInfo);
+	std::string BuilCommand (TCmdType eCmdType,  TDeviceInfo* pDeviceInfo, int value);
+	std::string BuilCommandBase (TCmdType eCmdType, TDeviceInfo* pDeviceInfo);
+	int ParseAnswer(std::string pCmd, std::string pAnsw, TCmdType eCmdType , TDeviceInfo* pDeviceInfo);
 
 	bool initialized_;
 	bool busy_;
