@@ -450,6 +450,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ETL", "DeviceAdapters\ETL\E
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LightSheetManager", "DeviceAdapters\LightSheetManager\LightSheetManager.vcxproj", "{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XLightV3", "DeviceAdapters\XLightV3\XLightV3.vcxproj", "{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1352,6 +1354,10 @@ Global
 		{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}.Debug|x64.Build.0 = Debug|x64
 		{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}.Release|x64.ActiveCfg = Release|x64
 		{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}.Release|x64.Build.0 = Release|x64
+		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Debug|x64.ActiveCfg = Debug|x64
+		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Debug|x64.Build.0 = Debug|x64
+		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Release|x64.ActiveCfg = Release|x64
+		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
