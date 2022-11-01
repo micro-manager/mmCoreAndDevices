@@ -243,7 +243,7 @@ MM::DeviceDetectionStatus XLightHub::DetectDevice(void)
 			GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", "300.0");
 			GetCoreCallback()->SetDeviceProperty(port_.c_str(), "DelayBetweenCharsMs", "0");
 			MM::Device* pS = GetCoreCallback()->GetDevice(this, port_.c_str());
-			int ret ;
+			int ret = DEVICE_OK;
 			for (int t=0; t<2; t++){
 				if (t==0)
 					GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_BaudRate, "9600" );
