@@ -25,17 +25,12 @@
 #ifndef _XLIGHTV3MM_H_
 #define _XLIGHTV3MM_H_
 
-#include <iostream>
-#include <fstream>
 
+#include "DeviceBase.h"
 
-/*#include <iostream>
-#include <fstream>
-*/
+#include <string>
+
 using namespace std;
-
-
-#include "../../mmCoreAndDevices/MMDevice/DeviceBase.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
