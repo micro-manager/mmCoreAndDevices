@@ -8,10 +8,11 @@
 
 #include "ComponentInterface.h"
 
-class CASDWrapperConfocalMode : public IConfocalModeInterface3
+class CASDWrapperConfocalMode : public IConfocalModeInterface4
 {
 public:
   CASDWrapperConfocalMode( IConfocalModeInterface3* ConfocalModeInterface );
+  CASDWrapperConfocalMode( IConfocalModeInterface4* ConfocalModeInterface );
   ~CASDWrapperConfocalMode();
 
   // IConfocalModeInterface
@@ -31,7 +32,15 @@ public:
   bool __stdcall IsModeTIRFAvailable();
   bool __stdcall IsConfocalModeAvailable( TConfocalMode Mode );
 
+  // IConfocalModeInterface4
+  bool __stdcall ModeBorealisTIRF100();
+  bool __stdcall IsModeBorealisTIRF100Available();
+  bool __stdcall ModeBorealisTIRF60();
+  bool __stdcall IsModeBorealisTIRF60Available();
+  bool __stdcall SetConfocalMode( TConfocalMode Mode );
+
 private:
-  IConfocalModeInterface3* ConfocalModeInterface_;
+  IConfocalModeInterface3* ConfocalModeInterface3_;
+  IConfocalModeInterface4* ConfocalModeInterface4_;
 };
 #endif

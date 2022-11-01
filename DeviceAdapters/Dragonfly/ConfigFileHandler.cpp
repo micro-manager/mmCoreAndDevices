@@ -116,6 +116,8 @@ int CConfigFileHandler::LoadConfig()
           char vValue[256] = "";
           strncpy( vKey, vSubstr, vValuePos - vSubstr );
           strncpy( vValue, vValuePos + 1, vSubstrLen - ( vValuePos - vSubstr ) );
+          vKey[255] = '\0';
+          vValue[255] = '\0';
           Config_[vKey] = vValue;
         }
         vSubstr += ( vSubstrLen + 1 );

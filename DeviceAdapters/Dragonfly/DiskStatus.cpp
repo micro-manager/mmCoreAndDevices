@@ -126,8 +126,11 @@ bool CDiskStatus::ReadIsSpinningFromDevice() const
 
 unsigned int CDiskStatus::ReadCurrentSpeedFromDevice()
 {
-  //DiskSimulator_->GetSpeed( CurrentSpeed_ );
+#ifdef _USE_DISKSIMULATOR_
+  DiskSimulator_->GetSpeed( CurrentSpeed_ );
+#else
   DiskInterface_->GetSpeed( CurrentSpeed_ );
+#endif
   return CurrentSpeed_;
 }
 

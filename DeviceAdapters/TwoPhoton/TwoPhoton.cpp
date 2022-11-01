@@ -1020,10 +1020,6 @@ int BitFlowCamera::LiveThread::svc()
       MM::MMTime timestamp = cam_->GetCurrentMMTime();
       Metadata md;
 
-      MetadataSingleTag mstStartTime(MM::g_Keyword_Metadata_StartTime, label, true);
-	   mstStartTime.SetValue(CDeviceUtils::ConvertToString(cam_->startTime_.getMsec()));
-      md.SetTag(mstStartTime);
-
       MetadataSingleTag mstElapsed(MM::g_Keyword_Elapsed_Time_ms, label, true);
       MM::MMTime elapsed = timestamp - cam_->startTime_;
       mstElapsed.SetValue(CDeviceUtils::ConvertToString(elapsed.getMsec()));

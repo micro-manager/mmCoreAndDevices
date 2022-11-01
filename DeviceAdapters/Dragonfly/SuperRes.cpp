@@ -113,6 +113,7 @@ int CSuperRes::OnPositionChange( MM::PropertyBase* Prop, MM::ActionType Act )
     if ( vFound )
     {
       // Update device position
+      MMDragonfly_->LogComponentMessage( "Set Super Resolution position to [" + std::to_string( vIt->first ) + "]", true );
       if ( !SuperResInterface_->SetPosition( vIt->first ) )
       {
         MMDragonfly_->LogComponentMessage( "Failed to set Super Resolution position [" + to_string( static_cast< long long >( vIt->first ) ) + "]" );

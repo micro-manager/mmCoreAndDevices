@@ -26,7 +26,7 @@ class CameraInstance : public DeviceInstanceBase<MM::Camera>
 {
 public:
    CameraInstance(CMMCore* core,
-         boost::shared_ptr<LoadedDeviceAdapter> adapter,
+         std::shared_ptr<LoadedDeviceAdapter> adapter,
          const std::string& name,
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,

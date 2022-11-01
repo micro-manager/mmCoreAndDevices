@@ -212,7 +212,9 @@ int SutterUtils::GoOnLine(MM::Device& device, MM::Core& core,
       if (answer == 238)
          responseReceived = true;
    }
-   while( !responseReceived && (core.GetCurrentMMTime() - startTime) < (answerTimeoutMs * 1000.0) );
+   while (!responseReceived &&
+         (core.GetCurrentMMTime() - startTime) <
+         MM::MMTime::fromMs(answerTimeoutMs));
    if (!responseReceived)
       return ERR_NO_ANSWER;
 
@@ -294,7 +296,9 @@ int SutterUtils::GetStatus(MM::Device& device, MM::Core& core,
          responseReceived = true;
       CDeviceUtils::SleepMs(2);
    }
-   while( !responseReceived && (core.GetCurrentMMTime() - startTime) < (answerTimeoutMs * 1000.0) );
+   while (!responseReceived &&
+         (core.GetCurrentMMTime() - startTime) <
+         MM::MMTime::fromMs(answerTimeoutMs));
    if (!responseReceived)
       return ERR_NO_ANSWER;
 
@@ -313,7 +317,10 @@ int SutterUtils::GetStatus(MM::Device& device, MM::Core& core,
       }
       CDeviceUtils::SleepMs(2);
    }
-   while( !responseReceived && (core.GetCurrentMMTime() - startTime) < (answerTimeoutMs * 1000.0) && j < 22);
+   while (!responseReceived &&
+         (core.GetCurrentMMTime() - startTime) <
+         MM::MMTime::fromMs(answerTimeoutMs) &&
+         j < 22);
    if (!responseReceived)
       return ERR_NO_ANSWER;
 
@@ -1498,7 +1505,9 @@ bool ShutterOnTenDashTwo::SetShutterPosition(bool state)
       LogMessage("busy entering SetShutterPosition",true);
 
    MM::MMTime startTime = GetCurrentMMTime();
-   while (::g_Busy[port_] && (GetCurrentMMTime() - startTime) < (g_busyTimeoutMs * 1000.0) )
+   while (::g_Busy[port_] &&
+         (GetCurrentMMTime() - startTime) <
+         MM::MMTime::fromMs(g_busyTimeoutMs))
    {
       CDeviceUtils::SleepMs(10);
    }
@@ -2090,7 +2099,9 @@ bool ShutterOn721::SetLEDState(long led, bool state)
       LogMessage("busy entering SetShutterPosition",true);
 
    MM::MMTime startTime = GetCurrentMMTime();
-   while (::g_Busy[port_] && (GetCurrentMMTime() - startTime) < (g_busyTimeoutMs * 1000.0) )
+   while (::g_Busy[port_] &&
+         (GetCurrentMMTime() - startTime) <
+         MM::MMTime::fromMs(g_busyTimeoutMs))
    {
       CDeviceUtils::SleepMs(10);
    }
@@ -2199,7 +2210,9 @@ bool ShutterOn721::GetLEDStates(int *state)
       LogMessage("busy entering SetShutterPosition",true);
 
    MM::MMTime startTime = GetCurrentMMTime();
-   while (::g_Busy[port_] && (GetCurrentMMTime() - startTime) < (g_busyTimeoutMs * 1000.0) )
+   while (::g_Busy[port_] &&
+         (GetCurrentMMTime() - startTime) <
+         MM::MMTime::fromMs(g_busyTimeoutMs))
    {
       CDeviceUtils::SleepMs(10);
    }
@@ -2320,7 +2333,9 @@ bool ShutterOn721::SetLEDPower(long led, long power)
       LogMessage("busy entering SetLEDPower",true);
 
    MM::MMTime startTime = GetCurrentMMTime();
-   while (::g_Busy[port_] && (GetCurrentMMTime() - startTime) < (g_busyTimeoutMs * 1000.0) )
+   while (::g_Busy[port_] &&
+         (GetCurrentMMTime() - startTime) <
+         MM::MMTime::fromMs(g_busyTimeoutMs))
    {
       CDeviceUtils::SleepMs(10);
    }

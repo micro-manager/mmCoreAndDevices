@@ -15,13 +15,16 @@
 #include "Property.h"
 #include "../../MMDevice/DeviceThreads.h"
 
-const int MaxLasers = 10;
-
 class IALC_REV_Laser2;
 class IALC_REV_ILEPowerManagement;
 class CIntegratedLaserEngine;
 class CInterlockStatusMonitor;
 //#define _ACTIVATE_DUMMYTEST_
+
+// Laser state property values
+const char* const g_LaserEnableOn = "On";
+const char* const g_LaserEnableOff = "Off";
+const char* const g_LaserEnableTTL = "External TTL";
 
 class CLasers
 {
@@ -48,21 +51,26 @@ public:
   void CheckAndUpdateLasers();
   int UpdateILEInterface( IALC_REV_Laser2 *LaserInterface, IALC_REV_ILEPowerManagement* PowerInterface, IALC_REV_ILE* ILEInterface );
 
-private:   
+private:
+  struct TLaserRange
+  {
+    double PowerMin = 0;
+    double PowerMax = 0;
+  };
+
+  struct CLaserState
+  {
+    float PowerSetPoint_ = 0;
+    std::string Enable_ = g_LaserEnableOn;
+    TLaserRange LaserRange_;
+  };
+
   IALC_REV_Laser2 *LaserInterface_;
   IALC_REV_ILEPowerManagement* PowerInterface_;
   IALC_REV_ILE* ILEInterface_;
   CIntegratedLaserEngine* MMILE_;
-  int NumberOfLasers_;
-  float PowerSetPoint_[MaxLasers + 1];  // 1-based arrays therefore +1
-  std::string Enable_[MaxLasers + 1];
-  std::vector<std::string> EnableStates_[MaxLasers + 1];
-  struct TLaserRange
-  {
-    double PowerMin; 
-    double PowerMax;
-  };
-  TLaserRange LaserRange_[MaxLasers + 1];
+  std::size_t NumberOfLasers_;
+  std::vector<CLaserState> LasersState_;
   enum EXTERNALMODE
   {
     CW,
@@ -91,7 +99,9 @@ private:
   bool AllowsExternalTTL( const int LaserIndex );
   float PowerSetpoint( const int LaserIndex );  // milli-Watts
   void PowerSetpoint( const int LaserIndex, const float Value );  // milli-Watts
+  std::vector<int> GetLasersSortedByPower() const;
   void UpdateLasersRange();
+  int CheckInterlock( int LaserIndex );
   bool IsKeyInterlockTriggered( int LaserIndex );
   bool IsInterlockTriggered( int LaserIndex );
   bool IsClassIVInterlockTriggered();
@@ -100,6 +110,7 @@ private:
   void DisplayClassIVInterlockMessage( MM::PropertyBase* Prop );
   void DisplayInterlockMessage( MM::PropertyBase* Prop );
   void DisplayNoInterlockMessage( MM::PropertyBase* Prop );
+  int ChangeDeviceShutterState( bool Open );
 };
 
 

@@ -27,8 +27,6 @@
 
 #include "ErrorCodes.h"
 
-#include <boost/lexical_cast.hpp>
-
 #include <exception>
 #include <memory>
 #include <string>

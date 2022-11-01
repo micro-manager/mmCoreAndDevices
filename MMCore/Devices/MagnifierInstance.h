@@ -26,7 +26,7 @@ class MagnifierInstance : public DeviceInstanceBase<MM::Magnifier>
 {
 public:
    MagnifierInstance(CMMCore* core,
-         boost::shared_ptr<LoadedDeviceAdapter> adapter,
+         std::shared_ptr<LoadedDeviceAdapter> adapter,
          const std::string& name,
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,

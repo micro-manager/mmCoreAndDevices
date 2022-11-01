@@ -27,6 +27,7 @@
 #define ERR_DEVICE_INDEXINVALID 107
 #define ERR_DEVICE_CONNECTIONFAILED 108
 #define ERR_DEVICE_RECONNECTIONFAILED 109
+#define ERR_NDFILTERS_INIT 110
 
 #define ERR_LASER_STATE_READ 201
 #define ERR_INTERLOCK 202
@@ -36,6 +37,7 @@
 #define ERR_LASER_SET 206
 #define ERR_SETCONTROLMODE 207
 #define ERR_SETLASERSHUTTER 208
+#define ERR_MAX_POWER_LIMIT_EXCEEDED 209
 
 #define ERR_ACTIVEBLANKING_SET 401
 #define ERR_ACTIVEBLANKING_GETNBLINES 402
@@ -43,12 +45,17 @@
 
 #define ERR_LOWPOWERMODE_SET 501
 #define ERR_LOWPOWERMODE_GET 502
+#define ERR_LOWPOWERMODE_NOT_ENABLED 503
 
 #define ERR_PORTS_SET 601
 #define ERR_PORTS_GET 602
 
 #define ERR_VERYLOWPOWER_SET 701
 #define ERR_VERYLOWPOWER_GET 702
+
+#define ERR_NDFILTERS_SET 801
+#define ERR_NDFILTERS_GET 802
+#define ERR_NDFILTERS_NOT_ENABLED 803
 
 class IALC_REVObject3;
 class CLasers;
@@ -81,6 +88,7 @@ public:
   MM::MMTime GetCurrentTime();
 
   void CheckAndUpdateLasers();
+  virtual void CheckAndUpdateLowPowerMode() = 0;
   void ActiveClassIVInterlock();
   void ActiveKeyInterlock();
   void UpdatePropertyUI( const char* PropertyName, const char* PropertyValue );
@@ -120,7 +128,7 @@ private:
   int InitializeVeryLowPower();
   virtual int InitializePorts() = 0;
   virtual int InitializeActiveBlanking() = 0;
-  virtual int InitializeLowPowerMode() = 0;
+  virtual int InitializeNDFilters() = 0;
 
   virtual void DisconnectILEInterfaces() = 0;
 

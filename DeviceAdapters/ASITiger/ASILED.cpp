@@ -103,7 +103,8 @@ int CLED::Initialize()
    char buildName[MM::MaxStrLength];
    GetProperty(g_FirmwareBuildPropertyName, buildName);
    string s = buildName;
-   stablight_ = (s.length() > 5 && s.substr(0, 6).compare("TGLEDS") == 0);
+   stablight_ = (s.length() > 5) && 
+       ((s.substr(0, 6).compare("TGLED_S") == 0) || (s.substr(0, 6).compare("TGLEDS") == 0));
 
    pAct = new CPropertyAction (this, &CLED::OnIntensity);
    CreateProperty(g_LEDIntensityPropertyName, "50", MM::Integer, false, pAct);

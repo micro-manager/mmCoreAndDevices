@@ -12,6 +12,7 @@
 #include "SingleILE.h"
 #include "Ports.h"
 #include "ActiveBlanking.h"
+#include "NDFilters.h"
 #include "LowPowerMode.h"
 
 
@@ -23,6 +24,7 @@ CSingleILE::CSingleILE() :
   CIntegratedLaserEngine( g_DeviceDescription, 1 ),
   Ports_( nullptr ),
   ActiveBlanking_( nullptr ),
+  NDFilters_( nullptr ),
   LowPowerMode_( nullptr )
 {
   LogMessage( std::string( g_DeviceName ) + " ctor OK", true );
@@ -40,12 +42,30 @@ std::string CSingleILE::GetDeviceName() const
 
 int CSingleILE::Shutdown()
 {
-  delete LowPowerMode_;
-  LowPowerMode_ = nullptr;
-  delete ActiveBlanking_;
-  ActiveBlanking_ = nullptr;
-  delete Ports_;
-  Ports_ = nullptr;
+  LogMessage( "Single ILE shutdown", true );
+
+  if ( NDFilters_ )
+  {
+    delete NDFilters_;
+    NDFilters_ = nullptr;
+  }
+  if ( LowPowerMode_ )
+  {
+    delete LowPowerMode_;
+    LowPowerMode_ = nullptr;
+  }
+  if ( ActiveBlanking_ )
+  {
+    delete ActiveBlanking_;
+    ActiveBlanking_ = nullptr;
+  }
+  if ( Ports_ )
+  {
+    delete Ports_;
+    Ports_ = nullptr;
+  }
+
+  LogMessage( "Single ILE shutdown done", true );
   return CIntegratedLaserEngine::Shutdown();
 }
 
@@ -68,6 +88,10 @@ void CSingleILE::DeleteILE()
 
 void CSingleILE::DisconnectILEInterfaces()
 {
+  if ( NDFilters_ != nullptr )
+  {
+    NDFilters_->UpdateILEInterface( nullptr );
+  }
   if ( LowPowerMode_ )
   {
     LowPowerMode_->UpdateILEInterface( nullptr );
@@ -112,6 +136,10 @@ int CSingleILE::ReconnectILEInterfaces()
       vRet = ERR_DEVICE_RECONNECTIONFAILED;
     }
   }
+  if ( vRet == DEVICE_OK )
+  {
+    vRet = ReconnectNDFilters();
+  }
   if ( vRet == DEVICE_OK && LowPowerMode_ != nullptr )
   {
     if ( vLowPowerModeInterface != nullptr )
@@ -121,6 +149,25 @@ int CSingleILE::ReconnectILEInterfaces()
     else
     {
       LogMessage( "Pointer to the Low Power Mode inteface invalid" );
+      vRet = ERR_DEVICE_RECONNECTIONFAILED;
+    }
+  }
+  return vRet;
+}
+
+int CSingleILE::ReconnectNDFilters()
+{
+  int vRet = DEVICE_OK;
+  if ( NDFilters_ != nullptr )
+  {
+    IALC_REV_ILEPowerManagement2* vPowerManagement2 = ILEWrapper_->GetILEPowerManagement2Interface( ILEDevice_ );
+    if ( vPowerManagement2 != nullptr )
+    {
+      vRet = NDFilters_->UpdateILEInterface( vPowerManagement2 );
+    }
+    else
+    {
+      LogMessage( "ILE Power Management 2 interface pointer invalid" );
       vRet = ERR_DEVICE_RECONNECTIONFAILED;
     }
   }
@@ -188,6 +235,74 @@ int CSingleILE::InitializeActiveBlanking()
   return DEVICE_OK;
 }
 
+int CSingleILE::InitializeNDFilters()
+{
+  IALC_REV_ILEPowerManagement2* vPowerManagement2 = ILEWrapper_->GetILEPowerManagement2Interface( ILEDevice_ );
+  if ( vPowerManagement2 != nullptr )
+  {
+    bool vLowPowerModePresent = false;
+    if ( !vPowerManagement2->IsLowPowerPresent( &vLowPowerModePresent ) )
+    {
+      LogMessage( "ILE IsLowPowerPresent failed" );
+      return ERR_NDFILTERS_INIT;
+    }
+
+    if ( vLowPowerModePresent )
+    {
+      int vNumLevels;
+      if ( !vPowerManagement2->GetNumberOfLowPowerLevels( &vNumLevels ) )
+      {
+        LogMessage( "ILE GetNumberOfLowPowerLevels failed" );
+        return ERR_NDFILTERS_INIT;
+      }
+
+      if ( vNumLevels > 1 )
+      {
+        try
+        {
+          NDFilters_ = new CNDFilters( vPowerManagement2, this );
+        }
+        catch ( std::exception& vException )
+        {
+          std::string vMessage( "Error loading ND Filters. Caught Exception with message: " );
+          vMessage += vException.what();
+          LogMessage( vMessage );
+          return ERR_NDFILTERS_INIT;
+        }
+      }
+      else
+      {
+        LogMessage( "Low Power only has 1 level, ND Filters is not present on this device, reverting to old style Low Power UI", true );
+        return InitializeLowPowerMode();
+      }
+    }
+    else
+    {
+      LogMessage( "Low Power (ND Filters) not present", true );
+    }
+  }
+  else
+  {
+    LogMessage( "ILE Power Management 2 interface pointer invalid, trying to revert to old ILE Power Management", true );
+    // Since ND Filters are not available, trying old fashion Low Power mode
+    return InitializeLowPowerMode();
+  }
+  return DEVICE_OK;
+}
+
+void CSingleILE::CheckAndUpdateLowPowerMode()
+{
+  if ( NDFilters_ != nullptr )
+  {
+    NDFilters_->CheckAndUpdate();
+  }
+
+  if ( LowPowerMode_ != nullptr )
+  {
+    LowPowerMode_->CheckAndUpdate();
+  }
+}
+
 int CSingleILE::InitializeLowPowerMode()
 {
   IALC_REV_ILEPowerManagement* vLowPowerMode = ILEWrapper_->GetILEPowerManagementInterface( ILEDevice_ );
@@ -220,7 +335,7 @@ int CSingleILE::InitializeLowPowerMode()
   }
   else
   {
-    LogMessage( "ILE Power interface pointer invalid" );
+    LogMessage( "ILE Power Management interface pointer invalid" );
   }
   return DEVICE_OK;
 }

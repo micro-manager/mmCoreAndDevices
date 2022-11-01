@@ -29,7 +29,7 @@ class HubInstance : public DeviceInstanceBase<MM::Hub>
 
 public:
    HubInstance(CMMCore* core,
-         boost::shared_ptr<LoadedDeviceAdapter> adapter,
+         std::shared_ptr<LoadedDeviceAdapter> adapter,
          const std::string& name,
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,

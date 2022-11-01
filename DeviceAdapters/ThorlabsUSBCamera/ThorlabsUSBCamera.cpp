@@ -613,7 +613,6 @@ int ThorlabsUSBCam::InsertImage()
    char label[MM::MaxStrLength];
    this->GetLabel(label);
    md.put("Camera", label);
-   md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_)); 
 
@@ -730,9 +729,9 @@ void MySequenceThread::Start(long numImages, double intervalMs)
    stop_ = false;
    suspend_=false;
    activate();
-   actualDuration_ = 0;
+   actualDuration_ = MM::MMTime{};
    startTime_= camera_->GetCurrentMMTime();
-   lastFrameTime_ = 0;
+   lastFrameTime_ = MM::MMTime{};
 }
 
 bool MySequenceThread::IsStopped(){

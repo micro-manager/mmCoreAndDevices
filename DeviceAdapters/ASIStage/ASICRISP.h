@@ -60,6 +60,9 @@ public:
 	int OnSum(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+	// For backwards compatibility with MS2000 firmware < 9.2o
+	int OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	int GetFocusState(std::string& focusState);
@@ -71,12 +74,9 @@ private:
 	static const int SIZE_OF_FC_ARRAY = 24;
 	std::string focusCurveData_[SIZE_OF_FC_ARRAY];
 	std::string axis_;
-	long ledIntensity_;
-	double na_;
 	std::string focusState_;
 	long waitAfterLock_;
 	int answerTimeoutMs_;
-	long sum_;
 };
 
-#endif // _ASICRISP_H_
+#endif // end _ASICRISP_H_

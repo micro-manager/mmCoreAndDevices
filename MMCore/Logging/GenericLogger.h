@@ -16,9 +16,7 @@
 
 #pragma once
 
-#include <boost/function.hpp>
-#include <boost/utility.hpp>
-
+#include <functional>
 #include <sstream>
 #include <string>
 
@@ -34,12 +32,12 @@ namespace internal
 template <typename TEntryData>
 class GenericLogger
 {
-   boost::function<void (TEntryData, const char*)> impl_;
+   std::function<void (TEntryData, const char*)> impl_;
 
 public:
    typedef TEntryData EntryDataType;
 
-   GenericLogger(boost::function<void (TEntryData, const char*)> f) :
+   GenericLogger(std::function<void (TEntryData, const char*)> f) :
       impl_(f)
    {}
 
@@ -55,7 +53,7 @@ public:
  * Log an entry upon destruction.
  */
 template <class TLogger>
-class GenericLogStream : public std::ostringstream, boost::noncopyable
+class GenericLogStream : public std::ostringstream
 {
 public:
    typedef typename TLogger::EntryDataType EntryDataType;
@@ -65,6 +63,9 @@ public:
    bool used_;
 
 public:
+   GenericLogStream(const GenericLogStream&) = delete;
+   GenericLogStream& operator=(const GenericLogStream&) = delete;
+
    GenericLogStream(const TLogger& logger, EntryDataType level) :
       logger_(logger),
       level_(level),

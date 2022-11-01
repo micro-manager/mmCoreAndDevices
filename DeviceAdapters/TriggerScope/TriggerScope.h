@@ -273,7 +273,6 @@ public:
 
 
 private:
-	CTriggerScopeHub *pHub_;
 	int nChannel_;
 	long ttl_;
 	bool initialized_;
@@ -284,8 +283,6 @@ private:
 	long curPos_;
 
     static const unsigned int NUMPATTERNS = 50;
-    unsigned pattern_[NUMPATTERNS];
-
 };
 
 class CTriggerScopeCAM : public CStateDeviceBase<CTriggerScopeCAM>  
@@ -304,7 +301,6 @@ public:
    int WriteToPort(unsigned long value);
  
 private:
-	CTriggerScopeHub *pHub_;
 	int nChannel_;
 	long cam_;
 	bool initialized_;
@@ -380,7 +376,6 @@ public:
       return DEVICE_OK;
    }
 private:
-	CTriggerScopeHub *pHub_;
 	bool initialized_;
 	bool busy_;
 	double pos_um_;

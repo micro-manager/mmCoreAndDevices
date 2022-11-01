@@ -26,7 +26,7 @@ class SignalIOInstance : public DeviceInstanceBase<MM::SignalIO>
 {
 public:
    SignalIOInstance(CMMCore* core,
-         boost::shared_ptr<LoadedDeviceAdapter> adapter,
+         std::shared_ptr<LoadedDeviceAdapter> adapter,
          const std::string& name,
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,

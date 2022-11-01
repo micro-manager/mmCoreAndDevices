@@ -313,7 +313,7 @@ MM::MMTime UniHub::GetTimeout(string devicename) {
 		UmmhGeneric* p = static_cast<UmmhGeneric*>(pDevice);
 		return p->GetTimeout();
 	}
-	return 0;
+	return {};
 }
 
 void UniHub::SetTimeout(string devicename, MM::MMTime val) {
@@ -360,7 +360,7 @@ MM::MMTime UniHub::GetLastCommandTime(string devicename) {
 		UmmhGeneric* p = static_cast<UmmhGeneric*>(pDevice);
 		return p->GetLastCommandTime();
 	}
-	return 0;
+	return {};
 }
 
 void UniHub::SetLastCommandTime(string devicename, MM::MMTime val) {

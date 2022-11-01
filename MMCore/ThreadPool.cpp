@@ -26,33 +26,29 @@
 
 #include "Task.h"
 
-#include <boost/foreach.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/thread/locks.hpp>
-#ifndef _WINDOWS
-#include <boost/phoenix.hpp>
-#endif
-
 #include <algorithm>
 #include <cassert>
+#include <memory>
+#include <mutex>
+#include <thread>
 
 ThreadPool::ThreadPool()
     : abortFlag_(false)
 {
-    const size_t hwThreadCount = std::max<size_t>(1, boost::thread::hardware_concurrency());
+    const size_t hwThreadCount = std::max<size_t>(1, std::thread::hardware_concurrency());
     for (size_t n = 0; n < hwThreadCount; ++n)
-        threads_.push_back(boost::make_shared<boost::thread>(&ThreadPool::ThreadFunc, this));
+        threads_.push_back(std::make_shared<std::thread>(&ThreadPool::ThreadFunc, this));
 }
 
 ThreadPool::~ThreadPool()
 {
     {
-        boost::lock_guard<boost::mutex> lock(mx_);
+        std::lock_guard<std::mutex> lock(mx_);
         abortFlag_ = true;
     }
     cv_.notify_all();
 
-    BOOST_FOREACH(const boost::shared_ptr<boost::thread>& thread, threads_)
+    for (const std::shared_ptr<std::thread>& thread : threads_)
         thread->join();
 }
 
@@ -65,7 +61,7 @@ void ThreadPool::Execute(Task* task)
 {
     assert(task != NULL);
     {
-        boost::lock_guard<boost::mutex> lock(mx_);
+        std::lock_guard<std::mutex> lock(mx_);
         if (abortFlag_)
             return;
         queue_.push_back(task);
@@ -78,10 +74,10 @@ void ThreadPool::Execute(const std::vector<Task*>& tasks)
     assert(!tasks.empty());
 
     {
-        boost::lock_guard<boost::mutex> lock(mx_);
+        std::lock_guard<std::mutex> lock(mx_);
         if (abortFlag_)
             return;
-        BOOST_FOREACH(Task* task, tasks)
+        for (Task* task : tasks)
         {
             assert(task != NULL);
             queue_.push_back(task);
@@ -96,13 +92,8 @@ void ThreadPool::ThreadFunc()
     {
         Task* task = NULL;
         {
-            boost::unique_lock<boost::mutex> lock(mx_);
-#ifndef _WINDOWS
-            namespace phx = boost::phoenix;
-            cv_.wait(lock,  phx::ref(abortFlag_) || !phx::empty(phx::ref(queue_)));
-#else
+            std::unique_lock<std::mutex> lock(mx_);
             cv_.wait(lock, [&]() { return abortFlag_ || !queue_.empty(); });
-#endif
             if (abortFlag_)
                 break;
             task = queue_.front();

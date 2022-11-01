@@ -1405,7 +1405,7 @@ bool Shutter::Busy()
 {
    // First check delay, then query controller
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-   if (interval < (1000.0 * GetDelayMs()))
+   if (interval < MM::MMTime::fromMs(GetDelayMs()))
          return true;
 
    clearPort(*this, *GetCoreCallback(), GetPort().c_str());

@@ -21,6 +21,9 @@ public:
   bool CreateASDLoader( const char *Port, TASDType ASDType, IASDLoader **ASDLoader );
   bool DeleteASDLoader( IASDLoader *ASDLoader );
 
+  IASDInterface4* GetASDInterface4( IASDLoader *ASDLoader );
+  IASDInterface6* GetASDInterface6( IASDLoader *ASDLoader );
+
 private:
   HMODULE DLL_;
   std::list<CASDWrapperLoader*> ASDWrapperLoaders_;

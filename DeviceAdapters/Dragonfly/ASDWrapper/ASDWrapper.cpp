@@ -17,13 +17,13 @@ CASDWrapper::CASDWrapper()
     throw std::runtime_error( "LoadLibrary failed" );
   }
 
-  mCreateASDLoader = (tCreateASDLoader)GetProcAddress( DLL_, "CreateASDLoader" );
+  mCreateASDLoader = ( tCreateASDLoader ) GetProcAddress( DLL_, "CreateASDLoader" );
   if ( !mCreateASDLoader )
   {
     throw std::runtime_error( "GetProcAddress failed for CreateASDLoader" );
   }
 
-  mDeleteASDLoader = (tDeleteASDLoader)GetProcAddress( DLL_, "DeleteASDLoader" );
+  mDeleteASDLoader = ( tDeleteASDLoader ) GetProcAddress( DLL_, "DeleteASDLoader" );
   if ( !mDeleteASDLoader )
   {
     throw std::runtime_error( "GetProcAddress failed for DeleteASDLoader" );
@@ -38,22 +38,23 @@ CASDWrapper::~CASDWrapper()
     delete *vLoaderIt;
     vLoaderIt++;
   }
+
   FreeLibrary( DLL_ );
 }
 
-bool CASDWrapper::CreateASDLoader( const char *Port, TASDType ASDType, IASDLoader **ASDLoader )
+bool CASDWrapper::CreateASDLoader( const char* Port, TASDType ASDType, IASDLoader** ASDLoader )
 {
   bool vRet = mCreateASDLoader( Port, ASDType, ASDLoader );
   if ( vRet )
   {
-    CASDWrapperLoader* vLoader = new CASDWrapperLoader( *ASDLoader );
+    CASDWrapperLoader* vLoader = new CASDWrapperLoader( *ASDLoader, DLL_ );
     ASDWrapperLoaders_.push_back( vLoader );
     *ASDLoader = vLoader;
   }
   return vRet;
 }
 
-bool CASDWrapper::DeleteASDLoader( IASDLoader *ASDLoader )
+bool CASDWrapper::DeleteASDLoader( IASDLoader* ASDLoader )
 {
   std::list<CASDWrapperLoader*>::iterator vLoaderIt = ASDWrapperLoaders_.begin();
   while ( vLoaderIt != ASDWrapperLoaders_.end() )
@@ -72,3 +73,24 @@ bool CASDWrapper::DeleteASDLoader( IASDLoader *ASDLoader )
   }
   return false;
 }
+
+IASDInterface4* CASDWrapper::GetASDInterface4( IASDLoader *ASDLoader )
+{
+  CASDWrapperLoader* wrapper = dynamic_cast< CASDWrapperLoader* >( ASDLoader );
+  if ( wrapper != nullptr )
+  {
+    return wrapper->GetASDInterface4();
+  }
+  return nullptr;
+}
+
+IASDInterface6* CASDWrapper::GetASDInterface6( IASDLoader *ASDLoader )
+{
+  CASDWrapperLoader* wrapper = dynamic_cast< CASDWrapperLoader* >( ASDLoader );
+  if ( wrapper != nullptr )
+  {
+    return wrapper->GetASDInterface6();
+  }
+  return nullptr;
+}
+

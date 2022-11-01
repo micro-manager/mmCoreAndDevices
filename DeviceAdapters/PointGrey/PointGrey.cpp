@@ -1315,7 +1315,6 @@ int PointGrey::InsertImage(Image* pImg)
 
 	// Important:  metadata about the image are generated here:
 	Metadata md;
-	md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
 	md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
    md.put(g_CameraTime, CDeviceUtils::ConvertToString(timeStamp.getMsec()));
 	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));

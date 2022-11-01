@@ -107,6 +107,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_LOWPOWERMODE_INIT, "Low Power mode initialisation failed" );
   SetErrorText( ERR_LASERS_INIT, "Lasers initialisation failed" );
   SetErrorText( ERR_VERYLOWPOWER_INIT, "Very Low Power initialisation failed" );
+  SetErrorText( ERR_NDFILTERS_INIT, "ND Filters initialisation failed" );
   SetErrorText( ERR_DEVICE_INDEXINVALID, "Device index invalid" );
   SetErrorText( ERR_DEVICE_CONNECTIONFAILED, "Connection to the device failed" );
   SetErrorText( ERR_DEVICE_RECONNECTIONFAILED, "Error occured during the reconnection with the device. Please try again or reload the configuration." );
@@ -119,6 +120,7 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
   SetErrorText( ERR_LASER_SET, "Setting laser power failed" );
   SetErrorText( ERR_SETCONTROLMODE, "Setting control mode failed" );
   SetErrorText( ERR_SETLASERSHUTTER, "Failed to open or close the laser shutter!" );
+  SetErrorText( ERR_MAX_POWER_LIMIT_EXCEEDED, "Failed to set laser power, maximum device power limit exceeded" );
 
   SetErrorText( ERR_ACTIVEBLANKING_SET, "Setting active blanking failed" );
   SetErrorText( ERR_ACTIVEBLANKING_GETNBLINES, "Getting the number of lines for Active Blanking failed" );
@@ -126,12 +128,17 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
 
   SetErrorText( ERR_LOWPOWERMODE_SET, "Setting low power mode failed" );
   SetErrorText( ERR_LOWPOWERMODE_GET, "Getting low power mode state failed" );
+  SetErrorText( ERR_LOWPOWERMODE_NOT_ENABLED, "Low power mode not enabled at this point, wrong port selected" );
 
   SetErrorText( ERR_PORTS_SET, "Setting port failed" );
   SetErrorText( ERR_PORTS_GET, "Getting current port index failed" );
 
   SetErrorText( ERR_VERYLOWPOWER_SET, "Setting very low power failed" );
   SetErrorText( ERR_VERYLOWPOWER_GET, "Getting very low power state failed" );
+
+  SetErrorText( ERR_NDFILTERS_SET, "Setting ND filters failed" );
+  SetErrorText( ERR_NDFILTERS_GET, "Getting ND filters state failed" );
+  SetErrorText( ERR_NDFILTERS_NOT_ENABLED, "ND filters not enabled at this point, wrong port selected" );
 
   // Load the library
   try
@@ -178,7 +185,9 @@ CIntegratedLaserEngine::CIntegratedLaserEngine( const std::string& Description, 
 CIntegratedLaserEngine::~CIntegratedLaserEngine()
 {
   // Unload the library
+  LogMMMessage( "Unloading ILE wrapper", true );
   UnloadILEWrapper();
+  LogMMMessage( "Unloaded ILE wrapper", true );
 }
 
 void CIntegratedLaserEngine::CreateDeviceSelectionProperty( int DeviceID, int DeviceIndex )
@@ -274,7 +283,7 @@ int CIntegratedLaserEngine::Initialize()
   {
     return vRet;
   }
-  
+
   // Ports
   vRet = InitializePorts();
   if ( vRet != DEVICE_OK )
@@ -289,8 +298,8 @@ int CIntegratedLaserEngine::Initialize()
     return vRet;
   }
 
-  // Low Power Mode
-  vRet = InitializeLowPowerMode();
+  // ND Filters
+  vRet = InitializeNDFilters();
   if ( vRet != DEVICE_OK )
   {
     return vRet;
@@ -376,22 +385,34 @@ int CIntegratedLaserEngine::InitializeVeryLowPower()
 
 int CIntegratedLaserEngine::Shutdown()
 {
+  LogMessage( "Integrated Laser Engine shutdown", true );
   if ( ConstructionReturnCode_ != DEVICE_OK )
   {
-    return DEVICE_OK;
-  }
-  if ( !Initialized_ )
-  {
+    LogMessage( "Integrated Laser Engine shutdown after construction fail", true );
     return DEVICE_OK;
   }
 
-  delete VeryLowPower_;
-  VeryLowPower_ = nullptr;
-  delete Lasers_;
-  Lasers_ = nullptr;
+  if ( !Initialized_ )
+  {
+    LogMessage( "Integrated Laser Engine shutdown while not initialised", true );
+  }
+
+  if ( VeryLowPower_ )
+  {
+    delete VeryLowPower_;
+    VeryLowPower_ = nullptr;
+  }
+
+  if ( Lasers_ )
+  {
+    delete Lasers_;
+    Lasers_ = nullptr;
+  }
+
   DeleteILE();
   
   Initialized_ = false;
+  LogMessage( "Integrated Laser Engine shutdown done", true );
   return DEVICE_OK;
 }
 
@@ -442,11 +463,11 @@ int CIntegratedLaserEngine::OnResetDevice( MM::PropertyBase* Prop, MM::ActionTyp
       // Disconnect from the ILE interface
       LogMessage( "Disconnecting from the ILE interface", true );
       DisconnectILEInterfaces();
-      if( VeryLowPower_ != nullptr )
+      if ( VeryLowPower_ != nullptr )
       {
         VeryLowPower_->UpdateILEInterface( nullptr );
       }
-      if( Lasers_ != nullptr )
+      if ( Lasers_ != nullptr )
       {
         Lasers_->UpdateILEInterface( nullptr, nullptr, nullptr );
       }

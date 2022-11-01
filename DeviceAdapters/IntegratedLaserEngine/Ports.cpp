@@ -105,10 +105,12 @@ int CPorts::OnPortChange( MM::PropertyBase * Prop, MM::ActionType Act )
     Prop->Get( vValue );
     char vPortName = vValue[0];
     int vPortIndex = PortNameToIndex( vPortName );
+    MMILE_->LogMMMessage( "Set Port index to [" + std::to_string( vPortIndex ) + "]", true );
     if ( PortInterface_->SetPortIndex( vPortIndex ) )
     {
       CurrentPortIndex_ = vPortIndex;
       MMILE_->CheckAndUpdateLasers();
+      MMILE_->CheckAndUpdateLowPowerMode();
     }
     else
     {
