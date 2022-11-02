@@ -214,7 +214,10 @@ namespace MM {
    const char* const TriggerModeOn = "On";
    const char* const TriggerModeOff = "Off";
 
-   const char* const TriggerSourceHardware = "Hardware";
+   const char* const TriggerIOLine0 = "Line0";
+   const char* const TriggerIOLine1 = "Line1";
+   const char* const TriggerIOLine2 = "Line2";
+   const char* const TriggerIOLine3 = "Line3";
    const char* const TriggerSourceSoftware = "Software";
 
    const char* const TriggerActivationAnyEdge = "AnyEdge";
@@ -223,9 +226,41 @@ namespace MM {
    const char* const TriggerActivationLevelLow = "Low";
    const char* const TriggerActivationLevelHigh = "High";
 
-   const char* const TriggerOverlapOff = "Off";
-   const char* const TriggerOverlapReadout = "Readout";
-   const char* const TriggerOverlapPreviousFrame = "PreviousFrame";
+   const char* const ExposureModeTimed = "Timed";
+   const char* const ExposureModeTriggerWidth = "TriggerWidth";
+   const char* const ExposureModeTriggerControlled = "TriggerControlled";
+
+   const char* const CameraStatusAcquisitionTriggerWait = "AcquisitionTriggerWait";
+   const char* const CameraStatusFrameBurstTriggerWait = "FrameBurstTriggerWait";
+   const char* const CameraStatusFrameTriggerWait = "FrameTriggerWait";
+   const char* const CameraStatusExposureTriggerWait = "ExposureTriggerWait";
+   const char* const CameraStatusAcquisitionActive = "AcquisitionActive";
+   const char* const CameraStatusFrameBurstTriggerActive = "FrameBurstTriggerActive";
+   const char* const CameraStatusFrameActive = "FrameActive";
+   const char* const CameraStatusExposureActive = "ExposureActive";
+   const char* const CameraStatusAcquisitionTransfer = "AcquisitionTransfer";
+
+
+   const char* const OutputLineSourceOff = "Off";
+   const char* const OutputLineSourceAcquisitionTriggerWait = "AcquisitionTriggerWait";
+   const char* const OutputLineSourceAcquisitionTrigger = "AcquisitionTrigger";
+   const char* const OutputLineSourceAcquisitionTriggerMissed = "AcquisitionTriggerMissed";
+   const char* const OutputLineSourceAcquisitionActive = "AcquisitionActive";
+
+   const char* const OutputLineSourceFrameBurstTriggerWait = "FrameBurstTriggerWait";
+   const char* const OutputLineSourceFrameBurstTrigger = "FrameBurstTrigger";
+   const char* const OutputLineSourceFrameBurstTriggerMissed = "FrameBurstTriggerMissed";
+   const char* const OutputLineSourceFrameBurstActive = "FrameBurstTriggerActive";
+
+   const char* const OutputLineSourceFrameTriggerWait = "FrameTriggerWait";
+   const char* const OutputLineSourceFrameTrigger = "FrameTrigger";
+   const char* const OutputLineSourceFrameTriggerMissed = "FrameTriggerMissed";
+   const char* const OutputLineSourceFrameActive = "FrameActive";
+
+   const char* const OutputLineSourceExposureTriggerWait = "ExposureTriggerWait";
+   const char* const OutputLineSourceExposureTrigger = "ExposureTrigger";
+   const char* const OutputLineSourceExposureTriggerMissed = "ExposureTriggerMissed";
+   const char* const OutputLineSourceExposureActive = "ExposureActive";
 
 
    //////////////////////////////////////

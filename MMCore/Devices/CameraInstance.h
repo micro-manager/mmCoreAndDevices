@@ -92,27 +92,35 @@ public:
    int SetTriggerSource(const char* triggerSelector, const char* triggerSource);
    int SetTriggerDelay(const char* triggerSelector, int triggerDelay);
    int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation);
-   // int SetTriggerOverlap(const char* triggerSelector, const char* triggerOverlap);
 
    bool GetTriggerMode(const char* triggerSelector) const;
    std::string GetTriggerSource(const char* triggerSelector) const;
    int GetTriggerDelay(const char* triggerSelector) const;
    std::string GetTriggerActivation(const char* triggerSelector) const;
-   // std::string GetTriggerOverlap(const char* triggerSelector) const;
+
+   int SetBurstFrameCount(unsigned count);
+   unsigned GetBurstFrameCount() const;
+
+
+   bool HasExposureMode(const char* exposureMode);
+   int SetExposureMode(const char* exposureMode);
+   std::string GetExposureMode();
 
    int SendSoftwareTrigger(const char* triggerSelector);
-   int ArmAcquisition(int frameCount, double acquisitionFrameRate, int burstFrameCount);
-   int ArmAcquisition(int frameCount, int burstFrameCount);
-   int ArmAcquisition(int frameCount, double acquisitionFrameRate);
-   int ArmAcquisition(int frameCount);
+	int ArmAcquisition(int frameCount);
    int ArmAcquisition();
 
    int StartAcquisition();
    int StopAcquisition();
    int AbortAcquisition();
-   // TODO: add these later?
-   // enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
-   // bool readAcquisitionStatus(AcquisitionStatusType a);
+
+   int GetAcquisitionStatus(const char* statusSelector, bool& status);
+
+   int SetIOLineInverted(const char* lineSelector, bool invert);
+   int SetLineAsOutput(const char* lineSelector, bool output);
+   int SetOutputLineSource(const char* lineSelector, const char* source);
+   int GetLineStatus(const char* lineSelector, bool& status);
+
    double GetRollingShutterLineOffset();
    int SetRollingShutterLineOffset(double offset_us);
    unsigned GetRollingShutterActiveLines() const;

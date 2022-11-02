@@ -188,21 +188,58 @@ std::string CameraInstance::GetTriggerActivation(const char* triggerSelector) co
    char triggerActivation[MM::MaxStrLength];
    GetImpl()->GetTriggerActivation(triggerSelector, triggerActivation);
    return std::string(triggerActivation);
+}
+
+int CameraInstance::SetBurstFrameCount(unsigned count) {
+   GetImpl()->SetBurstFrameCount(count);
+   return DEVICE_OK;
+}
+
+unsigned CameraInstance::GetBurstFrameCount() const {
+   return GetImpl()->GetBurstFrameCount();
+}
+
+bool CameraInstance::HasExposureMode(const char* exposureMode) {
+   return GetImpl()->HasExposureMode(exposureMode);
+}
+
+int CameraInstance::SetExposureMode(const char* exposureMode) {
+   return GetImpl()->SetExposureMode(exposureMode);
+}
+
+std::string CameraInstance::GetExposureMode() {
+   char expMode[MM::MaxStrLength];
+   GetImpl()->GetExposureMode(expMode);
+   return std::string(expMode);
 };
 
 
 int CameraInstance::SendSoftwareTrigger(const char* triggerSelector) { return GetImpl()->TriggerSoftware(triggerSelector); }
-int CameraInstance::ArmAcquisition(int frameCount, double acquisitionFrameRate, int burstFrameCount)
-{ return GetImpl()->AcquisitionArm(frameCount, acquisitionFrameRate, burstFrameCount);}
-int CameraInstance::ArmAcquisition(int frameCount, int burstFrameCount) { return GetImpl()->AcquisitionArm(
-   frameCount, burstFrameCount); }
-int CameraInstance::ArmAcquisition(int frameCount, double acquisitionFrameRate){ return GetImpl()->AcquisitionArm(
-   frameCount, acquisitionFrameRate);}
-int CameraInstance::ArmAcquisition(int frameCount) { return GetImpl()->AcquisitionArm(frameCount); }
+int CameraInstance::ArmAcquisition(int frameCount) { return GetImpl()->AcquisitionArm(frameCount);}
 int CameraInstance::ArmAcquisition() { return GetImpl()->AcquisitionArm(); }
 int CameraInstance::StartAcquisition() { return GetImpl()->AcquisitionStart(); }
 int CameraInstance::StopAcquisition() { return GetImpl()->AcquisitionStop(); }
 int CameraInstance::AbortAcquisition() { return GetImpl()->AcquisitionAbort(); }
+
+int CameraInstance::GetAcquisitionStatus(const char* statusSelector, bool& status) {
+   return GetImpl()->GetAcquisitionStatus(statusSelector, status); }
+
+int CameraInstance::SetIOLineInverted(const char* lineSelector, bool invert) {
+   return GetImpl()->GetAcquisitionStatus(lineSelector, invert);
+}
+
+int CameraInstance::SetLineAsOutput(const char* lineSelector, bool output) {
+   return GetImpl()->SetLineAsOutput(lineSelector, output);
+}
+
+int CameraInstance::SetOutputLineSource(const char* lineSelector, const char* source) {
+   return GetImpl()->SetOutputLineSource(lineSelector, source);
+}
+
+int CameraInstance::GetLineStatus(const char* lineSelector, bool& status) {
+   return GetImpl()->GetLineStatus(lineSelector, status);
+}
+
 double CameraInstance::GetRollingShutterLineOffset() { return GetImpl()->GetRollingShutterLineOffset(); }
 int CameraInstance::SetRollingShutterLineOffset(double offset_us) { return GetImpl()->SetRollingShutterLineOffset(offset_us); }
 unsigned CameraInstance::GetRollingShutterActiveLines() const { return GetImpl()->GetRollingShutterActiveLines(); }

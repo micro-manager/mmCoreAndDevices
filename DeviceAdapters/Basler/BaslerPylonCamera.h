@@ -136,20 +136,23 @@ public:
 	int SetTriggerSource(const char* triggerSelector, const char* triggerSource);
 	int SetTriggerDelay(const char* triggerSelector, int triggerDelay);
 	int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation);
-	// int SetTriggerOverlap(const char* triggerSelector, const char* triggerOverlap);
 
 	int GetTriggerMode(const char* triggerSelector, bool& triggerMode);
 	int GetTriggerSource(const char* triggerSelector, char* triggerSource);
 	int GetTriggerDelay(const char* triggerSelector, int& triggerDelay);
 	int GetTriggerActivation(const char* triggerSelector, char* triggerActivation);
-	// int GetTriggerOverlap(const char* triggerSelector, char* triggerOverlap);
 
+	//NA for current camera
+	// virtual bool HasExposureMode(const char* exposureMode);
+	// virtual int SetExposureMode(const char* exposureMode);
+	// virtual int GetExposureMode(char* exposureMode);
+
+	// TODO probably want to replace these with properties
+	virtual int SetBurstFrameCount(unsigned count);
+	virtual unsigned GetBurstFrameCount() const;
 
 	int TriggerSoftware(const char* triggerSelector);
 
-	int AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount);
-	int AcquisitionArm(int frameCount, int burstFrameCount);
-	int AcquisitionArm(int frameCount, double acquisitionFrameRate);
 	int AcquisitionArm(int frameCount);
 	int AcquisitionArm();
 
@@ -157,9 +160,14 @@ public:
 	int AcquisitionStop();
 	int AcquisitionAbort();
 
-	// TODO: add these later?
-	// enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
-	// bool readAcquisitionStatus(AcquisitionStatusType a);
+	int GetAcquisitionStatus(const char* statusSelector, bool& status);
+
+	int SetIOLineInverted(const char* lineSelector, bool invert);
+	int SetLineAsOutput(const char* lineSelector, bool output);
+	int SetOutputLineSource(const char* lineSelector, const char* source);
+	int GetLineStatus(const char* lineSelector, bool& high);
+
+
 	double GetRollingShutterLineOffset() const;
 	int SetRollingShutterLineOffset(double offset_us);
 	unsigned GetRollingShutterActiveLines() const;
@@ -167,7 +175,7 @@ public:
 
 	// Convenience functions
 	std::string NodeToString(const char* str) const;
-	void SelectTrigger(const char* triggerSelector);
+	int SelectTrigger(const char* triggerSelector);
 
 	// action interface
 	// ----------------

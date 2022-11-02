@@ -377,13 +377,19 @@ namespace MM {
       virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) = 0;
       virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) = 0;
       virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) = 0;
-      // virtual int SetTriggerOverlap(const char* triggerSelector, const char* triggerOverlap) = 0;
 
       virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) = 0;
       virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) = 0;
       virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) = 0;
       virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) = 0;
-      // virtual int GetTriggerOverlap(const char* triggerSelector, char* triggerOverlap) = 0;
+
+      virtual bool HasExposureMode(const char* exposureMode) = 0;
+      virtual int SetExposureMode(const char* exposureMode) = 0;
+      virtual int GetExposureMode(char* exposureMode) = 0;
+
+      // TODO probably want to replace these with properties
+      virtual int SetBurstFrameCount(unsigned count) = 0;
+      virtual unsigned GetBurstFrameCount() const = 0;
 
       // Send of software of the supplied type
       virtual int TriggerSoftware(const char* triggerSelector) = 0;
@@ -391,28 +397,6 @@ namespace MM {
       //////////////////////////////
       // Acquisitions
       //////////////////////////////
-
-      // Some terminology form GenICam
-      //
-      // AcquisitionMode
-      //    SingleFrame: One frame is captured.
-      //    MultiFrame: The number of frames specified by AcquisitionFrameCount is captured.
-      //    Continuous: Frames are captured continuously until stopped with the AcquisitionStop command.
-      //
-      // AcquisitionFrameCount
-      //    Number of frames to acquire in MultiFrame Acquisition mode. 
-      //
-      // AcquisitionBurstFrameCount 
-      //    Number of frames to acquire for each FrameBurstStart trigger.
-      //    This feature is used only if the FrameBurstStart trigger is enabled and
-      //    the FrameBurstEnd trigger is disabled. Note that the total number of frames
-      //    captured is also conditioned by AcquisitionFrameCount if AcquisitionMode is
-      //    MultiFrame and ignored if AcquisitionMode is Single.
-      //
-      // AcquisitionFrameRate
-      //    Controls the acquisition rate (in Hertz) at which the frames are captured.
-      //    TriggerMode must be Off for the Frame trigger.
-
 
 
 
@@ -431,9 +415,6 @@ namespace MM {
       //                    > 1 --> acqMode is MultiFrame
       //                     -1 --> acqMode is continuous
 
-      virtual int AcquisitionArm(int frameCount, double acquisitionFrameRate, int burstFrameCount) = 0;
-      virtual int AcquisitionArm(int frameCount, int burstFrameCount) = 0;
-      virtual int AcquisitionArm(int frameCount, double acquisitionFrameRate) = 0;
       virtual int AcquisitionArm(int frameCount) = 0;
       virtual int AcquisitionArm() = 0;
 
@@ -455,18 +436,13 @@ namespace MM {
       // the current Frame or waiting on a trigger. If no Acquisition is in progress, the command is ignored.
       virtual int AcquisitionAbort() = 0;
 
+      virtual int GetAcquisitionStatus(const char* statusSelector, bool& status) = 0;
 
 
-      // Maybe: for querying acquisition status
-      // AcquisitionTriggerWait: Device is currently waiting for a trigger for the capture of one or many frames.
-      // AcquisitionActive: Device is currently doing an acquisition of one or many frames.
-      // AcquisitionTransfer: Device is currently transferring an acquisition of one or many frames.
-      // FrameTriggerWait: Device is currently waiting for a frame start trigger.
-      // FrameActive: Device is currently doing the capture of a frame.
-      // ExposureActive: Device is doing the exposure of a frame.
-
-      // enum AcquisitionStatusType = { AcquisitionTriggerWait, AcquisitionActive, AcquisitionTransfer, FrameTriggerWait, FrameActive, ExposureActive }
-      // bool readAcquisitionStatus(AcquisitionStatusType a);
+      virtual int SetIOLineInverted(const char* lineSelector, bool invert) = 0;
+      virtual int SetLineAsOutput(const char* lineSelector, bool output) = 0;
+      virtual int SetOutputLineSource(const char* lineSelector, const char* source) = 0;
+      virtual int GetLineStatus(const char* lineSelector, bool& status) = 0;
 
 
       // Rolling shutter/Lightsheet mode
@@ -551,7 +527,7 @@ namespace MM {
        * An implementation of this function is provided in DeviceBase.h.  It will return an empty string
        */
       virtual int GetChannelName(unsigned channel, char* name) = 0;
-      /**
+      /**f
        * Returns the size in bytes of the image buffer.
        * Required by the MM::Camera API.
        * For multi-channel cameras, return the size of a single channel
