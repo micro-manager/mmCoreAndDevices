@@ -79,7 +79,6 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CircularBlockCollection.cpp" />
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Configuration.cpp" />
     <ClCompile Include="CoreCallback.cpp" />
@@ -119,7 +118,6 @@
     <ClCompile Include="ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CircularBlockCollection.h" />
     <ClInclude Include="CircularBuffer.h" />
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />
