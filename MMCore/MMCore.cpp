@@ -6416,7 +6416,7 @@ string CMMCore::getGalvoChannel(const char* deviceLabel) throw (CMMError)
 */
 void CMMCore::startStream(const char* dataStreamerLabel) throw (CMMError)
 {
-    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+    std::shared_ptr<DataStreamerInstance> pDataStreamer =
         deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
     if (pDataStreamer)
     {
@@ -6435,7 +6435,7 @@ void CMMCore::startStream(const char* dataStreamerLabel) throw (CMMError)
 */
 void CMMCore::stopStream(const char* dataStreamerLabel) throw (CMMError)
 {
-    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+    std::shared_ptr<DataStreamerInstance> pDataStreamer =
         deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
     if (pDataStreamer)
     {
@@ -6460,7 +6460,7 @@ void CMMCore::stopStream(const char* dataStreamerLabel) throw (CMMError)
 void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow, 
                                   unsigned numberOfBlocks, double durationUs, double updatePeriodUs)
 {
-    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+    std::shared_ptr<DataStreamerInstance> pDataStreamer =
         deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
 
     LOG_DEBUG(coreLogger_) << "Setting stream parameters of " << dataStreamerLabel <<
@@ -6489,7 +6489,7 @@ void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOver
 void CMMCore::getStreamParameters(const char* label, bool& stopOnOverflow, 
     unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError)
 {
-    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+    std::shared_ptr<DataStreamerInstance> pDataStreamer =
         deviceManager_->GetDeviceOfType<DataStreamerInstance>(label);
 
     mm::DeviceModuleLockGuard guard(pDataStreamer);
@@ -6508,7 +6508,7 @@ void CMMCore::getStreamParameters(const char* label, bool& stopOnOverflow,
  */
 void CMMCore::setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, unsigned capacity)
 {
-    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+    std::shared_ptr<DataStreamerInstance> pDataStreamer =
         deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
 
     LOG_DEBUG(coreLogger_) << "Setting circular acquisition buffer capacity to" << capacity;
@@ -6528,7 +6528,7 @@ void CMMCore::setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel
  */
 long CMMCore::getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel)
 {
-    boost::shared_ptr<DataStreamerInstance> pDataStreamer =
+    std::shared_ptr<DataStreamerInstance> pDataStreamer =
         deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
 
     mm::DeviceModuleLockGuard guard(pDataStreamer);

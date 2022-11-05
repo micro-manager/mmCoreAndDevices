@@ -2378,7 +2378,7 @@ public:
             while (!(this->GetStopFlag() || //read externally set stop flag
                      blockCounter >= pDataStreamerBase_->numberOfBlocks_ || // stop if desired number of blocks have been collected
                      (cbc->GetOverflowStatus() && pDataStreamerBase_->stopOnOverflow_) || // buffer overflow
-                     timeSinceStart > pDataStreamerBase_->durationUs_) ) { // timeout
+                     timeSinceStart > MM::MMTime(pDataStreamerBase_->durationUs_)) ) { // timeout
                 Sleep(pDataStreamerBase_->updatePeriodUs_/1000);
                 timeSinceStart = pDataStreamerBase_->GetCurrentMMTime() - startTime;
                 ret = pDataStreamerBase_->GetBufferSize(expectedDataSize);
@@ -2403,7 +2403,7 @@ public:
             else if (blockCounter >= pDataStreamerBase_->numberOfBlocks_) {
                 ss << "desired number of blocks (" << blockCounter << ") have been collected";
             }
-            else if (timeSinceStart > pDataStreamerBase_->durationUs_) {
+            else if (timeSinceStart > MM::MMTime(pDataStreamerBase_->durationUs_)) {
                 ss << " acquisition time exceeded the set limit (" << pDataStreamerBase_->durationUs_ << " microseconds)";
             }
             pDataStreamerBase_->LogMessage(ss.str(), true);
