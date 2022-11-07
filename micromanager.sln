@@ -452,6 +452,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LightSheetManager", "Device
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XLightV3", "DeviceAdapters\XLightV3\XLightV3.vcxproj", "{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MicroFPGA", "DeviceAdapters\MicroFPGA\MicroFPGA.vcxproj", "{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1358,6 +1360,10 @@ Global
 		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Debug|x64.Build.0 = Debug|x64
 		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Release|x64.ActiveCfg = Release|x64
 		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Release|x64.Build.0 = Release|x64
+		{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}.Debug|x64.ActiveCfg = Debug|x64
+		{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}.Debug|x64.Build.0 = Debug|x64
+		{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}.Release|x64.ActiveCfg = Release|x64
+		{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
