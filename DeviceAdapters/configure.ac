@@ -516,6 +516,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    Marzhauser
    Marzhauser-LStep
    MarzhauserLStepOld
+   MicroFPGA
    MicroPoint
    Modbus
    Motic_mac

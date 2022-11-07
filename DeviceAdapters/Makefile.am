@@ -138,6 +138,7 @@ SUBDIRS = \
 	Marzhauser \
 	Marzhauser-LStep \
 	MarzhauserLStepOld \
+	MicroFPGA \
 	MicroPoint \
 	Motic_mac \
 	Neos \
