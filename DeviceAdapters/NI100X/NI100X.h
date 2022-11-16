@@ -195,9 +195,9 @@ public:
 private:
    void AddPorts(std::string deviceName);
    void AddPort(std::string line);
-   int SetupDigitalTriggering(uInt32* sequence, long numVals);
+   int SetupDigitalTriggering(const uInt32* sequence, long numVals);
    int TestTriggering();
-   int LoadBuffer(uInt32* sequence, long numVals);
+   int LoadBuffer(const uInt32* sequence, long numVals);
 
    bool busy_;
    long numPos_;

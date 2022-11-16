@@ -320,8 +320,8 @@ int DAQDevice::LogError(int error, const char* func)
    std::string funcStr(func ? func : "(unknown func)");
    // Note this call is only relevant for the most recent error.
    int bufSize = DAQmxGetExtendedErrorInfo(NULL, 0);
-   char* message = new char[bufSize];
-   int messageError = DAQmxGetExtendedErrorInfo(message, bufSize);
+   std::vector<char> message(bufSize);
+   int messageError = DAQmxGetExtendedErrorInfo(message.data(), bufSize);
    if (messageError)
    {
       // Recurse
@@ -330,7 +330,8 @@ int DAQDevice::LogError(int error, const char* func)
    else
    {
       // Log the message.
-      core_->LogMessage(device_, ("Error calling " + funcStr + ": " + std::string(message)).c_str(), false);
+      core_->LogMessage(device_,
+         ("Error calling " + funcStr + ": " + message.data()).c_str(), false);
    }
    return error;
 }
@@ -690,13 +691,14 @@ int DigitalIO::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          return DEVICE_SEQUENCE_TOO_LARGE;
       }
-      uInt32* values = new uInt32[sequence.size()];
-      for (unsigned long i = 0; i < sequence.size(); ++i)
+
+      std::vector<uInt32> values;
+      for (const auto& s : sequence)
       {
-         values[i] = static_cast<uInt32>(std::stoul(sequence[i]));
+         values.push_back(static_cast<uInt32>(std::stoul(s)));
       }
-      int error = SetupDigitalTriggering(values, (long) sequence.size());
-      delete values;
+
+      int error = SetupDigitalTriggering(values.data(), static_cast<long>(values.size()));
       if (error)
       {
          return error;
@@ -723,7 +725,7 @@ int DigitalIO::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 // Set up a digital triggering task: create the output channel,
 // load the sequence onto NI's buffer, and set up the triggering
 // rules.
-int DigitalIO::SetupDigitalTriggering(uInt32* sequence, long numVals)
+int DigitalIO::SetupDigitalTriggering(const uInt32* sequence, long numVals)
 {
    SetupTask();
    int error = DAQmxCreateDOChan(task_, channel_.c_str(), "",
@@ -741,7 +743,7 @@ int DigitalIO::SetupDigitalTriggering(uInt32* sequence, long numVals)
 }
 
 // Load a sequence of outputs onto NI's buffer.
-int DigitalIO::LoadBuffer(uInt32* sequence, long numVals)
+int DigitalIO::LoadBuffer(const uInt32* sequence, long numVals)
 {
    int32 numWritten = 0;
    // Wait 10s for writing to complete (maybe should vary based on length of
@@ -765,14 +767,12 @@ int DigitalIO::LoadBuffer(uInt32* sequence, long numVals)
 int DigitalIO::TestTriggering()
 {
    int numSamples = 32;
-   uInt32 *sequence = new uInt32[numSamples];
+   std::vector<uInt32> sequence;
    for (int i = 0; i < numSamples; ++i)
    {
-       sequence[i] = i % 16;
+       sequence.push_back(i % 16);
    }
-   int result = SetupDigitalTriggering(sequence, numSamples);
-   delete sequence;
-   return result;
+   return SetupDigitalTriggering(sequence.data(), numSamples);
 }
 
 int DigitalIO::OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -1159,15 +1159,9 @@ int AnalogIO::SendDASequence()
 // Load our analog sequence onto the NI buffer.
 int AnalogIO::LoadBuffer()
 {
-   float64* values = new float64[sequence_.size()];
-   for (unsigned int i = 0; i < sequence_.size(); ++i)
-   {
-      values[i] = sequence_[i];
-   }
    int32 numWritten = 0;
    int error = DAQmxWriteAnalogF64(task_, (int32) sequence_.size(), false, -1,
-      DAQmx_Val_GroupByChannel, values, &numWritten, NULL);
-   delete values;
+      DAQmx_Val_GroupByChannel, sequence_.data(), &numWritten, NULL);
    if (error)
    {
       return LogError(error, "WriteAnalogF64");
