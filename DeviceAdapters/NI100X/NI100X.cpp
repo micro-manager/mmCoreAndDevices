@@ -16,8 +16,7 @@
 #endif
 #include "FixSnprintf.h"
 
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string/replace.hpp>
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include "NI100X.h"
@@ -243,7 +242,7 @@ int DAQDevice::OnSequenceLength(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(boost::lexical_cast<std::string>(maxSequenceLength_).c_str());
+      pProp->Set(std::to_string(maxSequenceLength_).c_str());
    }
    else if (eAct == MM::AfterSet)
    {
@@ -257,7 +256,7 @@ int DAQDevice::OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set(boost::lexical_cast<std::string>(samplesPerSec_).c_str());
+        pProp->Set(std::to_string(samplesPerSec_).c_str());
     }
     else if (eAct == MM::AfterSet)
     {
@@ -308,9 +307,11 @@ int DAQDevice::SetupTask()
    task_ = 0;
    // Replace invalid (according to DAQmx) characters in our channel with
    // underscores.
-   std::string tmp = boost::replace_all_copy(channel_, "/", "_");
-   tmp = boost::replace_all_copy(tmp, ":", "_");
-   int niRet = DAQmxCreateTask(tmp.c_str(), &task_);
+   std::string chan(channel_);
+   std::replace(chan.begin(), chan.end(), '/', '_');
+   std::replace(chan.begin(), chan.end(), ':', '_');
+
+   int niRet = DAQmxCreateTask(chan.c_str(), &task_);
    if (niRet)
    {
        return LogError(niRet, "CreateTask");
@@ -322,7 +323,7 @@ int DAQDevice::SetupTask()
 // Return the passed-in error code.
 int DAQDevice::LogError(int error, const char* func)
 {
-   std::string funcStr = boost::lexical_cast<string>(func);
+   std::string funcStr(func ? func : "(unknown func)");
    // Note this call is only relevant for the most recent error.
    int bufSize = DAQmxGetExtendedErrorInfo(NULL, 0);
    char* message = new char[bufSize];
@@ -335,7 +336,7 @@ int DAQDevice::LogError(int error, const char* func)
    else
    {
       // Log the message.
-      core_->LogMessage(device_, ("Error calling " + funcStr + ": " + boost::lexical_cast<string>(message)).c_str(), false);
+      core_->LogMessage(device_, ("Error calling " + funcStr + ": " + std::string(message)).c_str(), false);
    }
    return error;
 }
@@ -419,7 +420,7 @@ DigitalIO::DigitalIO() : numPos_(16), busy_(false), open_(false), state_(0)
 
    pAct = new CPropertyAction(this, &DAQDevice::OnSequenceLength);
    nRet = CreateStringProperty(g_PropertySequenceLength,
-      boost::lexical_cast<std::string>(maxSequenceLength_).c_str(), false, pAct, true);
+      std::to_string(maxSequenceLength_).c_str(), false, pAct, true);
 
    assert(nRet == DEVICE_OK);
 }
@@ -700,7 +701,7 @@ int DigitalIO::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       uInt32* values = new uInt32[sequence.size()];
       for (unsigned long i = 0; i < sequence.size(); ++i)
       {
-         values[i] = boost::lexical_cast<uInt32>(sequence[i]);
+         values[i] = static_cast<uInt32>(std::stoul(sequence[i]));
       }
       int error = SetupDigitalTriggering(values, (long) sequence.size());
       delete values;
@@ -761,7 +762,7 @@ int DigitalIO::LoadBuffer(uInt32* sequence, long numVals)
    }
    if (numWritten != numVals)
    {
-       LogMessage(("Didn't write all of sequence; wrote only " + boost::lexical_cast<std::string>(numWritten)).c_str());
+       LogMessage(("Didn't write all of sequence; wrote only " + std::to_string(numWritten)).c_str());
        return 1;
    }
    return 0;
@@ -861,7 +862,7 @@ AnalogIO::AnalogIO() :
 
    pAct = new CPropertyAction(this, &DAQDevice::OnSequenceLength);
    nRet = CreateStringProperty(g_PropertySequenceLength,
-      boost::lexical_cast<std::string>(maxSequenceLength_).c_str(), false, pAct, true);
+      std::to_string(maxSequenceLength_).c_str(), false, pAct, true);
    assert(nRet == DEVICE_OK);
 
    // demo
@@ -1185,8 +1186,8 @@ int AnalogIO::LoadBuffer()
    if ((unsigned long) numWritten != sequence_.size())
    {
       LogMessage(("Didn't write complete analog sequence to buffer: wrote " +
-         boost::lexical_cast<string>(numWritten) + " of " +
-         boost::lexical_cast<string>(sequence_.size()) + " values").c_str());
+         std::to_string(numWritten) + " of " +
+         std::to_string(sequence_.size()) + " values").c_str());
       return 1;
    }
    return DEVICE_OK;
@@ -1262,7 +1263,7 @@ int AnalogIO::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       for (unsigned long i = 0; i < sequence.size(); ++i)
       {
-         AddToDASequence(boost::lexical_cast<float64>(sequence[i]));
+         AddToDASequence(std::stod(sequence[i]));
       }
    }
    else if (eAct == MM::StartSequence)
