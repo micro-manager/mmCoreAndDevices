@@ -85,8 +85,8 @@ protected:
    bool amPreparedToTrigger_;
 
 private:
-   MM::Core* core_;
-   MM::Device* device_;
+   MM::Core* core_ = nullptr;
+   MM::Device* device_ = nullptr;
 };
 
 //////////////////////////////////////////////////////////////////////////////

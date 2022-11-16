@@ -278,7 +278,7 @@ int DAQDevice::SetupClockInput(int numVals)
 // Cancel a running task.
 void DAQDevice::CancelTask()
 {
-   if (core_ != 0)
+   if (core_ != nullptr && device_ != nullptr)
    {
       core_->LogMessage(device_, ("Cancelling task for " + channel_).c_str(), false);
    }
