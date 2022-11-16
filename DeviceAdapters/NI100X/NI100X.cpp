@@ -584,15 +584,13 @@ int DigitalIO::Initialize()
       return nRet;
    }
 
-   initialized_ = true;
    return DEVICE_OK;
 }
 
 int DigitalIO::Shutdown()
 {
    CancelTask();
-   
-   initialized_ = false;
+
    return DEVICE_OK;
 }
 
@@ -1011,8 +1009,6 @@ int AnalogIO::Initialize()
    if (nRet != DEVICE_OK)
       return nRet;
 
-   initialized_ = true;
-
    return DEVICE_OK;
 }
 
@@ -1024,7 +1020,6 @@ int AnalogIO::Shutdown()
        DAQmxClearTask(task_);
    }
 
-   initialized_ = false;
    return DEVICE_OK;
 }
 

@@ -150,7 +150,6 @@ public:
 
 
 private:
-   bool initialized_;
    bool busy_;
    bool disable_;
    double minV_;
@@ -200,7 +199,6 @@ private:
    int TestTriggering();
    int LoadBuffer(uInt32* sequence, long numVals);
 
-   bool initialized_;
    bool busy_;
    long numPos_;
    bool open_;
