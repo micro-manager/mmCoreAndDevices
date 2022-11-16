@@ -50,8 +50,6 @@ const char* g_No = "No";
 unsigned int g_digitalState = 0;
 unsigned int g_shutterState = 0;
 
-using namespace std;
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -174,14 +172,14 @@ std::string DAQDevice::GetPort(std::string line)
    {
       // This should never happen. Note LogMessage is
       // not available at this time (still in the constructor)
-      std::cerr << "Attempted to add invalid line with no slashes in its name: " << line << endl;
+      std::cerr << "Attempted to add invalid line with no slashes in its name: " << line << std::endl;
       return "";
    }
    size_t secondIndex = line.find("/", firstIndex + 1);
    if (secondIndex == std::string::npos)
    {
       // This probably should never happen either.
-      std::cerr << "Attempted to add invalid line with only one slash in its name: " << line << endl;
+      std::cerr << "Attempted to add invalid line with only one slash in its name: " << line << std::endl;
       return "";
    }
    std::string channel = line.substr(0, secondIndex);
@@ -411,9 +409,9 @@ DigitalIO::DigitalIO() : numPos_(16), busy_(false), open_(false), state_(0)
       AddAllowedValue(g_PropertyPort, g_UseCustom);
       SetProperty(g_PropertyPort, g_UseCustom);
    }
-   for (std::vector<string>::iterator i = devices.begin(); i != devices.end(); ++i) {
-      std::vector<string> ports = GetDigitalPortsForDevice(*i);
-      for (std::vector<string>::iterator j = ports.begin(); j != ports.end(); ++j) {
+   for (std::vector<std::string>::iterator i = devices.begin(); i != devices.end(); ++i) {
+      std::vector<std::string> ports = GetDigitalPortsForDevice(*i);
+      for (std::vector<std::string>::iterator j = ports.begin(); j != ports.end(); ++j) {
          AddAllowedValue(g_PropertyPort, (*j).c_str());
       }
    }
@@ -853,9 +851,9 @@ AnalogIO::AnalogIO() :
       AddAllowedValue(g_PropertyPort, g_UseCustom);
       SetProperty(g_PropertyPort, g_UseCustom);
    }
-   for (std::vector<string>::iterator i = devices.begin(); i != devices.end(); ++i) {
-      std::vector<string> ports = GetAnalogPortsForDevice(*i);
-      for (std::vector<string>::iterator j = ports.begin(); j != ports.end(); ++j) {
+   for (std::vector<std::string>::iterator i = devices.begin(); i != devices.end(); ++i) {
+      std::vector<std::string> ports = GetAnalogPortsForDevice(*i);
+      for (std::vector<std::string>::iterator j = ports.begin(); j != ports.end(); ++j) {
          AddAllowedValue(g_PropertyPort, (*j).c_str());
       }
    }
@@ -1036,7 +1034,7 @@ int AnalogIO::Shutdown()
 
 int AnalogIO::SetSignal(double volts)
 {
-   ostringstream txt;
+   std::ostringstream txt;
    txt << "2P >>>> AnalogIO::SetVoltage() = " << volts; 
    LogMessage(txt.str());
    return SetProperty(g_PropertyVolts, CDeviceUtils::ConvertToString(volts));
@@ -1323,7 +1321,7 @@ int AnalogIO::OnDisable(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     else if (eAct == MM::AfterSet)
     {
-        string temp;
+        std::string temp;
         pProp->Get(temp);
         disable_ = (temp == "true");
         ApplyVoltage(gatedVolts_);
@@ -1373,7 +1371,7 @@ int AnalogIO::OnDemo(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      string val;
+      std::string val;
       pProp->Get(val);
       if (val.compare(g_Yes) == 0)
          demo_ = true;
