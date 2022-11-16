@@ -617,9 +617,9 @@ public:
    void startStream(const char* dataStreamerLabel) throw (CMMError);
    void stopStream(const char* dataStreamerLabel) throw (CMMError);
    void setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow,
-       unsigned numberOfBlocks, double durationUs, double updatePeriodUs) throw (CMMError);
+       int numberOfBlocks, double durationUs, double updatePeriodUs) throw (CMMError);
    void getStreamParameters(const char* label, bool& stopOnOverflow,
-       unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError);
+       int& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError);
    void setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, unsigned capacity) throw (CMMError);
    long getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel) throw (CMMError);
    ///@}

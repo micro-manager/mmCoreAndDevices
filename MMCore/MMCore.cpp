@@ -6458,7 +6458,7 @@ void CMMCore::stopStream(const char* dataStreamerLabel) throw (CMMError)
  * @param updatePeriodUs    update period in microseconds
  */
 void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow, 
-                                  unsigned numberOfBlocks, double durationUs, double updatePeriodUs)
+                                  int numberOfBlocks, double durationUs, double updatePeriodUs)
 {
     std::shared_ptr<DataStreamerInstance> pDataStreamer =
         deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
@@ -6470,7 +6470,7 @@ void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOver
         "updatePeriodUs=" << updatePeriodUs;
 
     mm::DeviceModuleLockGuard guard(pDataStreamer);
-    int ret = pDataStreamer->SetStreamParameters(stopOnOverflow, numberOfBlocks, durationUs, updatePeriodUs);
+    int ret = pDataStreamer->SetStreamParameters(stopOnOverflow, (unsigned)numberOfBlocks, durationUs, updatePeriodUs);
     if (ret != DEVICE_OK)
     {
         logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
@@ -6487,18 +6487,20 @@ void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOver
  * @param updatePeriodUs    a return parameter that gives the update rate of the stream
  */
 void CMMCore::getStreamParameters(const char* label, bool& stopOnOverflow, 
-    unsigned& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError)
+    int& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError)
 {
     std::shared_ptr<DataStreamerInstance> pDataStreamer =
         deviceManager_->GetDeviceOfType<DataStreamerInstance>(label);
 
     mm::DeviceModuleLockGuard guard(pDataStreamer);
-    int ret = pDataStreamer->GetStreamParameters(stopOnOverflow, numberOfBlocks, durationUs, updatePeriodUs);
+    unsigned int p2;
+    int ret = pDataStreamer->GetStreamParameters(stopOnOverflow, p2, durationUs, updatePeriodUs);
     if (ret != DEVICE_OK)
     {
         logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
         throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
     }
+    numberOfBlocks = (int)p2;
 }
 
 /**
