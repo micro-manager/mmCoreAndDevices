@@ -56,7 +56,6 @@ public:
 
 protected:
    void SetDeviceName();
-   int CreateTriggerProperties();
    int SetupTask();
    void CancelTask();
    int SetupClockInput(int numVals);
@@ -141,11 +140,9 @@ public:
    int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPercent(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMinVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDisable(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnVD(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDemo(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
@@ -164,7 +161,6 @@ private:
 
    int LoadBuffer();
    int ApplyVoltage(double v);
-   long GetListIndex();
 
    bool demo_;
 };
@@ -190,11 +186,8 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnSequenceLength(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   void AddPorts(std::string deviceName);
-   void AddPort(std::string line);
    int SetupDigitalTriggering(const uInt32* sequence, long numVals);
    int TestTriggering();
    int LoadBuffer(const uInt32* sequence, long numVals);
