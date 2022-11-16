@@ -10,17 +10,13 @@
 // COPYRIGHT:     100X Imaging Inc, 2010
 //                
 
-#ifdef WIN32
-   #define WIN32_LEAN_AND_MEAN
-   #include <windows.h>
-#endif
-#include "FixSnprintf.h"
+#include "NI100X.h"
+
+#include "ModuleInterface.h"
 
 #include <algorithm>
 #include <iostream>
 #include <sstream>
-#include "NI100X.h"
-#include "ModuleInterface.h"
 
 const char* g_DeviceNameDigitalIO = "DigitalIO";
 const char* g_DeviceNameShutter = "Shutter";

@@ -14,9 +14,9 @@
 
 #include "DeviceBase.h"
 #include "NIDAQmx.h"
+
 #include <string>
-#include <map>
-#include <set>
+#include <vector>
 
 
 //////////////////////////////////////////////////////////////////////////////
