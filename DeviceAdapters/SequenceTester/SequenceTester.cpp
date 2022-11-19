@@ -26,7 +26,7 @@
 
 #include "ModuleInterface.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/move/move.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
@@ -977,6 +977,7 @@ TesterAutofocus::GetLastFocusScore(double& score)
 int
 TesterAutofocus::GetCurrentFocusScore(double& score)
 {
+   (void)score;
    // This does not appear to be used by any of our non-dead code.
    return DEVICE_UNSUPPORTED_COMMAND;
 }

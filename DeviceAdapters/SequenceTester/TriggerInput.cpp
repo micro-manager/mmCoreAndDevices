@@ -24,7 +24,7 @@
 #include "TriggerInput.h"
 #include "SequenceTester.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <string>
 
 

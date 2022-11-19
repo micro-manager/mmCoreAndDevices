@@ -359,7 +359,7 @@ SettingLogger::DrawTextToBuffer(char* dest, size_t destWidth,
 {
    memset(dest, 0, destWidth * destHeight);
    TextImageCursor cursor(reinterpret_cast<uint8_t*>(dest),
-         destWidth, destHeight);
+         static_cast<int>(destWidth), static_cast<int>(destHeight));
 
    DrawStringOnImage(cursor, "HubGlobalPacketNr=" +
          boost::lexical_cast<std::string>(GetNextGlobalImageNr()));
@@ -389,7 +389,7 @@ SettingLogger::WriteSettingMap(msgpack::sbuffer& sbuf,
 {
    msgpack::packer<msgpack::sbuffer> pk(&sbuf);
 
-   pk.pack_array(values.size());
+   pk.pack_array(static_cast<uint32_t>(values.size()));
    for (SettingConstIterator it = values.begin(), end = values.end();
          it != end; ++it)
    {
@@ -428,7 +428,7 @@ SettingLogger::WriteHistory(msgpack::sbuffer& sbuf) const
 {
    msgpack::packer<msgpack::sbuffer> pk(&sbuf);
 
-   pk.pack_array(settingEvents_.size());
+   pk.pack_array(static_cast<uint32_t>(settingEvents_.size()));
    for (std::vector<SettingEvent>::const_iterator it = settingEvents_.begin(),
          end = settingEvents_.end(); it != end; ++it)
    {
