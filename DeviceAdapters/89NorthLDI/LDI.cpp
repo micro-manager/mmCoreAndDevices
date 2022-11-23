@@ -356,10 +356,8 @@ bool LDI::sendCOMMessage(const std::string & message, std::string& response)
 		return false;
 	}
 
-	
-	int mmResp = DEVICE_OK;
 	clock_t start = clock();
-	while (mmResp == DEVICE_OK)
+	while (true)
 	{
 		if ((clock() - start) / CLOCKS_PER_SEC >= 10)
 		{
@@ -369,11 +367,16 @@ bool LDI::sendCOMMessage(const std::string & message, std::string& response)
 		}
 
 		GetSerialAnswer(m_port.c_str(), "\n", response);
+
+		// handle unsolicited "ok"
+		if (response == "ok" && !(message.substr(0, 6) == "FAULT?"))
+			GetSerialAnswer(m_port.c_str(), "\n", response);
+		
 		if (response != "")
 			break;
 	}
 
-	LogMessage("RECIEVED: " + response);
+	LogMessage("RECEIVED: " + response);
 	return true;
 }
 
