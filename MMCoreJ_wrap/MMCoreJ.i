@@ -642,13 +642,13 @@
 %}
 
 %typemap(javacode) CMMCore %{
-   Boolean includeSystemCache_ = true;
+   private Boolean includeSystemStateCache_ = true;
 
-   public Boolean includeSystemCache() { 
-      return includeSystemCache_;
+   public Boolean getIncludeSystemStateCache() { 
+      return includeSystemStateCache_;
    }
-   public void setIncludeSystemCache(Boolean state) {
-      includeSystemCache_ = state;
+   public void setIncludeSystemStateCache(Boolean state) {
+      includeSystemStateCache_ = state;
    }
 
 
@@ -733,7 +733,7 @@
    private TaggedImage createTaggedImage(Object pixels, Metadata md) throws java.lang.Exception {
       JSONObject tags = metadataToMap(md);
       PropertySetting setting;
-      if (includeSystemCache_) {
+      if (includeSystemStateCache_) {
          Configuration config = getSystemStateCache();
          for (int i = 0; i < config.size(); ++i) {
             setting = config.getSetting(i);
