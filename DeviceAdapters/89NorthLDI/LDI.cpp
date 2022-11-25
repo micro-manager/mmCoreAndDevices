@@ -356,6 +356,7 @@ bool LDI::sendCOMMessage(const std::string & message, std::string& response)
 		return false;
 	}
 
+	response = "";
 	clock_t start = clock();
 	while (true)
 	{
