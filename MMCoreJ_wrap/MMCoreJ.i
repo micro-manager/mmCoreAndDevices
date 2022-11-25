@@ -642,12 +642,12 @@
 %}
 
 %typemap(javacode) CMMCore %{
-   private Boolean includeSystemStateCache_ = true;
+   private boolean includeSystemStateCache_ = true;
 
-   public Boolean getIncludeSystemStateCache() { 
+   public boolean getIncludeSystemStateCache() { 
       return includeSystemStateCache_;
    }
-   public void setIncludeSystemStateCache(Boolean state) {
+   public void setIncludeSystemStateCache(boolean state) {
       includeSystemStateCache_ = state;
    }
 
