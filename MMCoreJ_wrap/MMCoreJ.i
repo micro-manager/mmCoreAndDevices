@@ -642,6 +642,16 @@
 %}
 
 %typemap(javacode) CMMCore %{
+   private boolean includeSystemStateCache_ = true;
+
+   public boolean getIncludeSystemStateCache() { 
+      return includeSystemStateCache_;
+   }
+   public void setIncludeSystemStateCache(boolean state) {
+      includeSystemStateCache_ = state;
+   }
+
+
    private JSONObject metadataToMap(Metadata md) {
       JSONObject tags = new JSONObject();
       for (String key:md.GetKeys()) {
@@ -723,12 +733,14 @@
    private TaggedImage createTaggedImage(Object pixels, Metadata md) throws java.lang.Exception {
       JSONObject tags = metadataToMap(md);
       PropertySetting setting;
-      Configuration config = getSystemStateCache();
-      for (int i = 0; i < config.size(); ++i) {
-         setting = config.getSetting(i);
-         String key = setting.getDeviceLabel() + "-" + setting.getPropertyName();
-         String value = setting.getPropertyValue();
-          tags.put(key, value);
+      if (includeSystemStateCache_) {
+         Configuration config = getSystemStateCache();
+         for (int i = 0; i < config.size(); ++i) {
+            setting = config.getSetting(i);
+            String key = setting.getDeviceLabel() + "-" + setting.getPropertyName();
+            String value = setting.getPropertyValue();
+             tags.put(key, value);
+         }
       }
       tags.put("BitDepth", getImageBitDepth());
       tags.put("PixelSizeUm", getPixelSizeUm(true));
