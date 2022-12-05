@@ -2819,14 +2819,17 @@ int CDemoFilterWheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 CDemoStateDevice::CDemoStateDevice() : 
+numPatterns_(50),
 numPos_(10), 
-initialized_(false), 
-changedTime_(0.0),
-position_(0)
+initialized_(false),
+busy_(false),
+sequenceOn_(true),
+gateOpen_(true),
+position_(0),
+isClosed_(true)
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
-   EnableDelay(); // signals that the dealy setting will be used
 
    // Number of positions
    // -----
@@ -2875,13 +2878,12 @@ int CDemoStateDevice::Initialize()
    // Description
    ret = CreateStringProperty(MM::g_Keyword_Description, "Demo state device driver", true);
    if (DEVICE_OK != ret)
-      return ret;
-
-   // Set timer for the Busy signal, or we'll get a time-out the first time we check the state of the shutter, for good measure, go back 'delay' time into the past
-   changedTime_ = GetCurrentMMTime();   
+      return ret; 
 
    // Gate Closed Position
-   ret = CreateStringProperty(MM::g_Keyword_Closed_Position, "", false);
+   ret = CreateIntegerProperty(MM::g_Keyword_Closed_Position, 0, false);
+   if (ret != DEVICE_OK)
+       return ret;
 
    // create default positions and labels
    const int bufSize = 1024;
@@ -2890,6 +2892,7 @@ int CDemoStateDevice::Initialize()
    {
       snprintf(buf, bufSize, "State-%ld", i);
       SetPositionLabel(i, buf);
+      snprintf(buf, bufSize, "%ld", i);
       AddAllowedValue(MM::g_Keyword_Closed_Position, buf);
    }
 
@@ -2907,6 +2910,14 @@ int CDemoStateDevice::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
+   // Sequence
+   // -----
+   pAct = new CPropertyAction(this, &CDemoStateDevice::OnSequence);
+   ret = CreateProperty("Sequence", "On", MM::String, false, pAct);
+   if (ret != DEVICE_OK)
+       return ret;
+   AddAllowedValue("Sequence", "On");
+   AddAllowedValue("Sequence", "Off");
 
 
    ret = UpdateStatus();
@@ -2916,16 +2927,6 @@ int CDemoStateDevice::Initialize()
    initialized_ = true;
 
    return DEVICE_OK;
-}
-
-bool CDemoStateDevice::Busy()
-{
-   MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-   MM::MMTime delay(GetDelayMs()*1000.0);
-   if (interval < delay)
-      return true;
-   else
-      return false;
 }
 
 
@@ -2942,6 +2943,42 @@ int CDemoStateDevice::Shutdown()
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
 
+int CDemoStateDevice::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        if (sequenceOn_)
+            pProp->Set("On");
+        else
+            pProp->Set("Off");
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string state;
+        pProp->Get(state);
+        if (state == "On")
+            sequenceOn_ = true;
+        else
+            sequenceOn_ = false;
+    }
+    return DEVICE_OK;
+}
+
+int CDemoStateDevice::SetGateOpen(bool open)
+{
+    if (gateOpen_ != open) {
+        gateOpen_ = open;
+    }
+    return DEVICE_OK;
+}
+
+int CDemoStateDevice::GetGateOpen(bool& open)
+{
+    open = gateOpen_;
+    return DEVICE_OK;
+}
+
+
 int CDemoStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -2951,9 +2988,6 @@ int CDemoStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      // Set timer for the Busy signal
-      changedTime_ = GetCurrentMMTime();
-
       long pos;
       pProp->Get(pos);
       if (pos >= numPos_ || pos < 0)
@@ -2961,9 +2995,29 @@ int CDemoStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          pProp->Set(position_); // revert
          return ERR_UNKNOWN_POSITION;
       }
-      position_ = pos;
-   }
 
+      if (gateOpen_) {
+          if ((pos == position_ && !isClosed_)) {
+              return DEVICE_OK;
+          }
+          isClosed_ = false;
+      }
+
+      else if (!isClosed_) {
+          isClosed_ = true;
+      }
+
+      position_ = pos;
+      return DEVICE_OK;
+   }
+   else if (eAct == MM::IsSequenceable)
+   {
+       if (sequenceOn_)
+           pProp->SetSequenceable(numPatterns_);
+       else
+           pProp->SetSequenceable(0);
+       return DEVICE_OK;
+   }
    return DEVICE_OK;
 }
 

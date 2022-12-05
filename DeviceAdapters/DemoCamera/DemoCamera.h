@@ -432,18 +432,27 @@ public:
    int Shutdown();
   
    void GetName(char* pszName) const;
-   bool Busy();
-   unsigned long GetNumberOfPositions()const {return numPos_;}
+   bool Busy() { return busy_;  }
+  
 
    // action interface
    // ----------------
+   unsigned long GetNumberOfPositions()const { return numPos_; }
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnNumberOfStates(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   int OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int SetGateOpen(bool open);
+   int GetGateOpen(bool& open);
+
 private:
+   uint16_t numPatterns_;
    long numPos_;
    bool initialized_;
-   MM::MMTime changedTime_;
+   bool busy_;
+   bool sequenceOn_;
+   bool gateOpen_;
+   bool isClosed_;
    long position_;
 };
 
