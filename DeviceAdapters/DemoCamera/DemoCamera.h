@@ -432,12 +432,12 @@ public:
    int Shutdown();
   
    void GetName(char* pszName) const;
-   bool Busy() { return busy_;  }
+   bool Busy() { return busy_; };
   
 
    // action interface
    // ----------------
-   unsigned long GetNumberOfPositions()const { return numPos_; }
+   unsigned long GetNumberOfPositions()const { return numPos_; };
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnNumberOfStates(MM::PropertyBase* pProp, MM::ActionType eAct);
 
