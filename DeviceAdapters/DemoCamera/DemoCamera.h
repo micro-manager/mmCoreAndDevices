@@ -432,7 +432,7 @@ public:
    int Shutdown();
   
    void GetName(char* pszName) const;
-   bool Busy() { return busy_; };
+   bool Busy();
   
 
    // action interface
@@ -449,6 +449,7 @@ private:
    uint16_t numPatterns_;
    long numPos_;
    bool initialized_;
+   MM::MMTime changedTime_;
    bool busy_;
    bool sequenceOn_;
    bool gateOpen_;

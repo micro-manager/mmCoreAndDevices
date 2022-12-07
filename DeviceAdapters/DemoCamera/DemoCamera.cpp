@@ -2822,6 +2822,7 @@ CDemoStateDevice::CDemoStateDevice() :
 numPatterns_(50),
 numPos_(10), 
 initialized_(false),
+changedTime_(0.0),
 busy_(false),
 sequenceOn_(true),
 gateOpen_(true),
@@ -2830,6 +2831,7 @@ isClosed_(true)
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
+   EnableDelay(); // signals that the dealy setting will be used
 
    // Number of positions
    // -----
@@ -2880,6 +2882,9 @@ int CDemoStateDevice::Initialize()
    if (DEVICE_OK != ret)
       return ret; 
 
+   // Set timer for the Busy signal, or we'll get a time-out the first time we check the state of the shutter, for good measure, go back 'delay' time into the past
+   changedTime_ = GetCurrentMMTime();
+
    // Gate Closed Position
    ret = CreateIntegerProperty(MM::g_Keyword_Closed_Position, 0, false);
    if (ret != DEVICE_OK)
@@ -2929,6 +2934,15 @@ int CDemoStateDevice::Initialize()
    return DEVICE_OK;
 }
 
+bool CDemoStateDevice::Busy()
+{
+    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
+    MM::MMTime delay(GetDelayMs() * 1000.0);
+    if (interval < delay)
+        return true;
+    else
+        return false;
+}
 
 int CDemoStateDevice::Shutdown()
 {
@@ -2988,6 +3002,9 @@ int CDemoStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
+      // Set timer for the Busy signal
+      changedTime_ = GetCurrentMMTime();
+
       long pos;
       pProp->Get(pos);
       if (pos >= numPos_ || pos < 0)
