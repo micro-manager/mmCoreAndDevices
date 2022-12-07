@@ -2824,7 +2824,7 @@ numPos_(10),
 initialized_(false),
 changedTime_(0.0),
 busy_(false),
-sequenceOn_(true),
+sequenceOn_(false),
 gateOpen_(true),
 position_(0),
 isClosed_(true)
@@ -2918,7 +2918,7 @@ int CDemoStateDevice::Initialize()
    // Sequence
    // -----
    pAct = new CPropertyAction(this, &CDemoStateDevice::OnSequence);
-   ret = CreateProperty("Sequence", "On", MM::String, false, pAct);
+   ret = CreateProperty("Sequence", "Off", MM::String, false, pAct);
    if (ret != DEVICE_OK)
        return ret;
    AddAllowedValue("Sequence", "On");
