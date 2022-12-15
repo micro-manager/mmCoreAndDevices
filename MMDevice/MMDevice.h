@@ -1194,29 +1194,30 @@ namespace MM {
        // Calls that are specific to each DataStreamer device 
        // and should be implemented in the device adapter
        /**
-        * Get the size (in bytes) of the data buffer available for download from the hardware
+        * Get the expected size (in bytes) of the data buffer available for download from the hardware
         */
        virtual int GetBufferSize(unsigned& dataBufferSiize) = 0;
        /**
         * Receive data buffer from the hardware and place it at memory location
-        * specified by pDataBuffer
+        * specified by pDataBuffer; 
+        * update the size of the buffer and pass it as actualDataBufferSize
         */
        virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) = 0;
        /**
-        * Process the data buffer available at pDataBuffer and place
-        * resulting multidimensional array at pProcessedArray
+        * Process the data buffer available at pDataBuffer
         */
-       virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) = 0;
+       virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned actualDataBufferSize) = 0;
 
        // Calls that are implemented at the DeviceBase level and
        // remain the same for any DataStreamer device
-       virtual int SetStreamParameters(bool stopOnOverflow, unsigned numberOfBuffers, double durationUs, double updatePeriodUs) = 0;
-       virtual int GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBuffers, double& durationUs, double& updatePeriodUs) = 0;
+       virtual int SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, double durationUs, double updatePeriodUs) = 0;
+       virtual int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, double& durationUs, double& updatePeriodUs) = 0;
        virtual int StartStream() = 0;
        virtual int StopStream() = 0;
-       virtual int IsStreaming(unsigned& isStreaming) = 0;
-       virtual int SetCircularAcquisitionBufferCapacity(unsigned capacity) = 0;
-       virtual int GetCircularAcquisitionBufferCapacity(unsigned& capacity) = 0;
+       virtual int ResetStream() = 0;
+       virtual bool IsStreaming() = 0;
+       virtual int SetCircularAcquisitionBufferCapacity(int capacity) = 0;
+       virtual int GetCircularAcquisitionBufferCapacity() = 0;
    };
    
    /**

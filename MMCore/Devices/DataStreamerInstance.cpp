@@ -25,11 +25,12 @@
 int DataStreamerInstance::GetBufferSize(unsigned& dataBufferSiize) { return GetImpl()->GetBufferSize(dataBufferSiize); }
 std::unique_ptr<char[]> DataStreamerInstance::GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) { return GetImpl()->GetBuffer(expectedDataBufferSize,actualDataBufferSize); }
 int DataStreamerInstance::ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) { return GetImpl()->ProcessBuffer(pDataBuffer, dataSize); }
-int DataStreamerInstance::SetStreamParameters(bool stopOnOverflow, unsigned numberOfBuffers, double durationUs, double updatePeriodUs) { return GetImpl()->SetStreamParameters(stopOnOverflow, numberOfBuffers, durationUs, updatePeriodUs); }
-int DataStreamerInstance::GetStreamParameters(bool& stopOnOverflow, unsigned& numberOfBuffers, double& durationUs, double& updatePeriodUs) { return GetImpl()->GetStreamParameters(stopOnOverflow,numberOfBuffers,durationUs,updatePeriodUs); }
 int DataStreamerInstance::StartStream() { return GetImpl()->StartStream(); }
 int DataStreamerInstance::StopStream() { return GetImpl()->StopStream(); }
-int DataStreamerInstance::IsStreaming(unsigned& isStreaming) { return GetImpl()->IsStreaming(isStreaming); }
-int DataStreamerInstance::SetCircularAcquisitionBufferCapacity(unsigned capacity) { return GetImpl()->SetCircularAcquisitionBufferCapacity(capacity); }
-int DataStreamerInstance::GetCircularAcquisitionBufferCapacity(unsigned& capacity) { return GetImpl()->GetCircularAcquisitionBufferCapacity(capacity); }
+int DataStreamerInstance::ResetStream() { return GetImpl()->ResetStream(); }
+bool DataStreamerInstance::IsStreaming() { return GetImpl()->IsStreaming(); }
+int DataStreamerInstance::SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, double durationUs, double updatePeriodUs) { return GetImpl()->SetStreamParameters(stopOnOverflow, numberOfBuffers, durationUs, updatePeriodUs); }
+int DataStreamerInstance::GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, double& durationUs, double& updatePeriodUs) { return GetImpl()->GetStreamParameters(stopOnOverflow,numberOfBuffers,durationUs,updatePeriodUs); }
+int DataStreamerInstance::SetCircularAcquisitionBufferCapacity(int capacity) { return GetImpl()->SetCircularAcquisitionBufferCapacity(capacity); }
+int DataStreamerInstance::GetCircularAcquisitionBufferCapacity() { return GetImpl()->GetCircularAcquisitionBufferCapacity(); }
 

@@ -1205,7 +1205,8 @@ class DemoDataStreamer : public CDataStreamerBase<DemoDataStreamer>
 {
 public:
     DemoDataStreamer() :
-        mockDataSize_(1024*1024)
+        mockDataSize_(1024*1024),
+        initialized_(false)
     {
         // parent ID display
         CreateHubIDProperty();
@@ -1216,7 +1217,7 @@ public:
         // initialize mock data
         mockData_ = new char[mockDataSize_];
         char val = 0;
-        for (int ii = 0; ii < mockDataSize_; ii++) { mockData_[ii] = val; val++; }
+        for (unsigned ii = 0; ii < mockDataSize_; ii++) { mockData_[ii] = val; val++; }
 
         writeFile_.open("C:\\temp\\mybinaryfile.txt", std::ios::out | std::ios::binary);
 
@@ -1256,11 +1257,12 @@ public:
         // allocate a new data array and put data in it
         std::unique_ptr<char[]> data(new char[actualDataBufferSize]);
         memcpy(data.get(), mockData_, actualDataBufferSize);
+        LogMessage("Demo DataStreamer: finished GetBuffer", true);
 
         return data;
     }
     
-    int ProcessBuffer(std::unique_ptr<char[]> &pDataBuffer, unsigned dataSize) {
+    int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) {
 
         LogMessage("Demo DataStreamer: calling ProcessBuffer", true);
 
@@ -1269,6 +1271,7 @@ public:
             return 0;
         }
         writeFile_.write(pDataBuffer.get(), dataSize);
+        LogMessage("Demo DataStreamer: finished ProcessBuffer", true);
 
         return DEVICE_OK;
     }

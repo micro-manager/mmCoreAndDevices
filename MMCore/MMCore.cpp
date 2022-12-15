@@ -6416,18 +6416,11 @@ string CMMCore::getGalvoChannel(const char* deviceLabel) throw (CMMError)
 */
 void CMMCore::startStream(const char* dataStreamerLabel) throw (CMMError)
 {
-    std::shared_ptr<DataStreamerInstance> pDataStreamer =
-        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
-    if (pDataStreamer)
-    {
-        mm::DeviceModuleLockGuard guard(pDataStreamer);
-        int ret = pDataStreamer->StartStream();
-        if (ret != DEVICE_OK)
-        {
-            logError("CMMCore::startStream()", getDeviceErrorText(ret, pDataStreamer).c_str());
-            throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
-        }
-    }
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Starting streaming of " << dataStreamerLabel;
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->StartStream();
+    if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
 }
 
 /**
@@ -6435,18 +6428,35 @@ void CMMCore::startStream(const char* dataStreamerLabel) throw (CMMError)
 */
 void CMMCore::stopStream(const char* dataStreamerLabel) throw (CMMError)
 {
-    std::shared_ptr<DataStreamerInstance> pDataStreamer =
-        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
-    if (pDataStreamer)
-    {
-        mm::DeviceModuleLockGuard guard(pDataStreamer);
-        int ret = pDataStreamer->StopStream();
-        if (ret != DEVICE_OK)
-        {
-            logError("CMMCore::startStream()", getDeviceErrorText(ret, pDataStreamer).c_str());
-            throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
-        }
-    }
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Stopping streaming of " << dataStreamerLabel;
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->StopStream();
+    if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+/**
+* Reset acquisition with the specified data streamer.
+*/
+void CMMCore::resetStream(const char* dataStreamerLabel) throw (CMMError)
+{
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Reseting streaming of " << dataStreamerLabel;
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->ResetStream();
+    if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+/**
+* Get streaming status of the specified data streamer.
+*/
+bool CMMCore::isStreaming(const char* dataStreamerLabel) throw (CMMError)
+{
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Checking streaming status of " << dataStreamerLabel;
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->IsStreaming();
+    return ret;
 }
 
 /**
@@ -6460,8 +6470,7 @@ void CMMCore::stopStream(const char* dataStreamerLabel) throw (CMMError)
 void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow, 
                                   int numberOfBlocks, double durationUs, double updatePeriodUs)
 {
-    std::shared_ptr<DataStreamerInstance> pDataStreamer =
-        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
 
     LOG_DEBUG(coreLogger_) << "Setting stream parameters of " << dataStreamerLabel <<
         " to stopOnOverflow=" << stopOnOverflow << ", " <<
@@ -6471,11 +6480,7 @@ void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOver
 
     mm::DeviceModuleLockGuard guard(pDataStreamer);
     int ret = pDataStreamer->SetStreamParameters(stopOnOverflow, (unsigned)numberOfBlocks, durationUs, updatePeriodUs);
-    if (ret != DEVICE_OK)
-    {
-        logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
-        throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
-    }
+    if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
 }
 
 /**
@@ -6486,21 +6491,14 @@ void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOver
  * @param durationUs        a return parameter that gives duration of the stream
  * @param updatePeriodUs    a return parameter that gives the update rate of the stream
  */
-void CMMCore::getStreamParameters(const char* label, bool& stopOnOverflow, 
+void CMMCore::getStreamParameters(const char* dataStreamerLabel, bool& stopOnOverflow,
     int& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError)
 {
-    std::shared_ptr<DataStreamerInstance> pDataStreamer =
-        deviceManager_->GetDeviceOfType<DataStreamerInstance>(label);
-
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Getting stream parameters of " << dataStreamerLabel;
     mm::DeviceModuleLockGuard guard(pDataStreamer);
-    unsigned int p2;
-    int ret = pDataStreamer->GetStreamParameters(stopOnOverflow, p2, durationUs, updatePeriodUs);
-    if (ret != DEVICE_OK)
-    {
-        logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
-        throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
-    }
-    numberOfBlocks = (int)p2;
+    int ret = pDataStreamer->GetStreamParameters(stopOnOverflow, numberOfBlocks, durationUs, updatePeriodUs);
+    if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
 }
 
 /**
@@ -6508,20 +6506,13 @@ void CMMCore::getStreamParameters(const char* label, bool& stopOnOverflow,
  * @param label         the data streamer device label
  * @param capacity    number of data blocks in the circular buffer
  */
-void CMMCore::setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, unsigned capacity)
+void CMMCore::setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, int capacity)
 {
-    std::shared_ptr<DataStreamerInstance> pDataStreamer =
-        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
-
-    LOG_DEBUG(coreLogger_) << "Setting circular acquisition buffer capacity to" << capacity;
-
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Setting circular acquisition buffer capacity of " << dataStreamerLabel << " to " << capacity;
     mm::DeviceModuleLockGuard guard(pDataStreamer);
     int ret = pDataStreamer->SetCircularAcquisitionBufferCapacity(capacity);
-    if (ret != DEVICE_OK)
-    {
-        logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
-        throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
-    }
+    if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
 }
 
 /**
@@ -6530,18 +6521,11 @@ void CMMCore::setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel
  */
 long CMMCore::getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel)
 {
-    std::shared_ptr<DataStreamerInstance> pDataStreamer =
-        deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
-
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Getting circular acquisition buffer capacity of " << dataStreamerLabel;
     mm::DeviceModuleLockGuard guard(pDataStreamer);
-    long capacity;
-    int ret = pDataStreamer->GetCircularAcquisitionBufferCapacity((unsigned&)capacity);
-    if (ret <= 0)
-    {
-        logError(pDataStreamer->GetName().c_str(), getDeviceErrorText(ret, pDataStreamer).c_str());
-        throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
-    }
-    return capacity;
+    int ret = pDataStreamer->GetCircularAcquisitionBufferCapacity();
+    return ret;
 }
 
 

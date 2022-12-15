@@ -616,11 +616,13 @@ public:
     ///@{
    void startStream(const char* dataStreamerLabel) throw (CMMError);
    void stopStream(const char* dataStreamerLabel) throw (CMMError);
+   void resetStream(const char* dataStreamerLabel) throw (CMMError);
+   bool isStreaming(const char* dataStreamerLabel) throw (CMMError);
    void setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow,
        int numberOfBlocks, double durationUs, double updatePeriodUs) throw (CMMError);
-   void getStreamParameters(const char* label, bool& stopOnOverflow,
+   void getStreamParameters(const char* dataStreamerLabel, bool& stopOnOverflow,
        int& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError);
-   void setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, unsigned capacity) throw (CMMError);
+   void setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, int capacity) throw (CMMError);
    long getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel) throw (CMMError);
    ///@}
 
