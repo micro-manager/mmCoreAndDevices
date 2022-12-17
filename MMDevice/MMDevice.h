@@ -1214,7 +1214,8 @@ namespace MM {
        virtual int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, double& durationUs, double& updatePeriodUs) = 0;
        virtual int StartStream() = 0;
        virtual int StopStream() = 0;
-       virtual int ResetStream() = 0;
+       virtual bool GetOverflowStatus() = 0;
+       virtual int ResetOverflowStatus() = 0;
        virtual bool IsStreaming() = 0;
        virtual int SetCircularAcquisitionBufferCapacity(int capacity) = 0;
        virtual int GetCircularAcquisitionBufferCapacity() = 0;

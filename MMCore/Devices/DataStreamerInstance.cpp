@@ -27,7 +27,8 @@ std::unique_ptr<char[]> DataStreamerInstance::GetBuffer(unsigned expectedDataBuf
 int DataStreamerInstance::ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) { return GetImpl()->ProcessBuffer(pDataBuffer, dataSize); }
 int DataStreamerInstance::StartStream() { return GetImpl()->StartStream(); }
 int DataStreamerInstance::StopStream() { return GetImpl()->StopStream(); }
-int DataStreamerInstance::ResetStream() { return GetImpl()->ResetStream(); }
+bool DataStreamerInstance::GetOverflowStatus() { return GetImpl()->GetOverflowStatus(); }
+int DataStreamerInstance::ResetOverflowStatus() { return GetImpl()->ResetOverflowStatus(); }
 bool DataStreamerInstance::IsStreaming() { return GetImpl()->IsStreaming(); }
 int DataStreamerInstance::SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, double durationUs, double updatePeriodUs) { return GetImpl()->SetStreamParameters(stopOnOverflow, numberOfBuffers, durationUs, updatePeriodUs); }
 int DataStreamerInstance::GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, double& durationUs, double& updatePeriodUs) { return GetImpl()->GetStreamParameters(stopOnOverflow,numberOfBuffers,durationUs,updatePeriodUs); }

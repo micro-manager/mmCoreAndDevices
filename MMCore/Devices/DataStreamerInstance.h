@@ -41,7 +41,8 @@ public:
     int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize);
     int StartStream();
     int StopStream();
-    int ResetStream();
+    bool GetOverflowStatus();
+    int ResetOverflowStatus();
     bool IsStreaming();
     int SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, double durationUs, double updatePeriodUs);
     int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, double& durationUs, double& updatePeriodUs);

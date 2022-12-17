@@ -52,7 +52,7 @@
 
 const char* NoHubError = "Parent Hub not defined.";
 
-const char* g_DataStreamerDeviceName = "DSimulatedDataStreamer";
+const char* g_DataStreamerDeviceName = "DDataStreamer";
 
 // Defines which segments in a seven-segment display are lit up for each of
 // the numbers 0-9. Segments are:
@@ -1271,6 +1271,7 @@ public:
             return 0;
         }
         writeFile_.write(pDataBuffer.get(), dataSize);
+        Sleep(2000);
         LogMessage("Demo DataStreamer: finished ProcessBuffer", true);
 
         return DEVICE_OK;

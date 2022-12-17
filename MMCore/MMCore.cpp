@@ -6436,14 +6436,25 @@ void CMMCore::stopStream(const char* dataStreamerLabel) throw (CMMError)
 }
 
 /**
-* Reset acquisition with the specified data streamer.
+* Get overflow status of the specified data streamer.
 */
-void CMMCore::resetStream(const char* dataStreamerLabel) throw (CMMError)
+bool CMMCore::getOverflowStatus(const char* dataStreamerLabel) throw (CMMError)
 {
     std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
-    LOG_DEBUG(coreLogger_) << "Reseting streaming of " << dataStreamerLabel;
+    LOG_DEBUG(coreLogger_) << "Getting overflow status of " << dataStreamerLabel;
     mm::DeviceModuleLockGuard guard(pDataStreamer);
-    int ret = pDataStreamer->ResetStream();
+    return pDataStreamer->GetOverflowStatus();
+}
+
+/**
+* Reset acquisition with the specified data streamer.
+*/
+void CMMCore::resetOverflowStatus(const char* dataStreamerLabel) throw (CMMError)
+{
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Reseting overflow status of " << dataStreamerLabel;
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->ResetOverflowStatus();
     if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
 }
 

@@ -616,7 +616,8 @@ public:
     ///@{
    void startStream(const char* dataStreamerLabel) throw (CMMError);
    void stopStream(const char* dataStreamerLabel) throw (CMMError);
-   void resetStream(const char* dataStreamerLabel) throw (CMMError);
+   bool getOverflowStatus(const char* dataStreamerLabel) throw (CMMError);
+   void resetOverflowStatus(const char* dataStreamerLabel) throw (CMMError);
    bool isStreaming(const char* dataStreamerLabel) throw (CMMError);
    void setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow,
        int numberOfBlocks, double durationUs, double updatePeriodUs) throw (CMMError);
