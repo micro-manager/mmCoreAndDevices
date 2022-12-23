@@ -619,12 +619,15 @@ public:
    bool getOverflowStatus(const char* dataStreamerLabel) throw (CMMError);
    void resetOverflowStatus(const char* dataStreamerLabel) throw (CMMError);
    bool isStreaming(const char* dataStreamerLabel) throw (CMMError);
+   int getStreamExitStatus(const char* dataStreamerLabel) throw (CMMError);
    void setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow,
-       int numberOfBlocks, double durationUs, double updatePeriodUs) throw (CMMError);
+       int numberOfBlocks, int durationMs, int updatePeriodMs) throw (CMMError);
    void getStreamParameters(const char* dataStreamerLabel, bool& stopOnOverflow,
-       int& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError);
+       int& numberOfBlocks, int& durationMs, int& updatePeriodMs) throw (CMMError);
    void setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, int capacity) throw (CMMError);
    long getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel) throw (CMMError);
+
+   std::string getErrorMessage(const char* deviceLabel, int code) throw (CMMError);
    ///@}
 
    /** \name Device discovery. */

@@ -37,15 +37,16 @@ public:
    {}
 
     int GetBufferSize(unsigned& dataBufferSiize);
-    std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize);
+    std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitStatus);
     int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize);
     int StartStream();
     int StopStream();
     bool GetOverflowStatus();
     int ResetOverflowStatus();
+    int GetStreamExitStatus();
     bool IsStreaming();
-    int SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, double durationUs, double updatePeriodUs);
-    int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, double& durationUs, double& updatePeriodUs);
+    int SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, int durationUs, int updatePeriodUs);
+    int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, int& durationUs, int& updatePeriodUs);
     int SetCircularAcquisitionBufferCapacity(int capacity);
     int GetCircularAcquisitionBufferCapacity();
 };

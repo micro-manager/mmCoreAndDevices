@@ -6471,6 +6471,18 @@ bool CMMCore::isStreaming(const char* dataStreamerLabel) throw (CMMError)
 }
 
 /**
+* Get exit status of the stream
+*/
+int CMMCore::getStreamExitStatus(const char* dataStreamerLabel) throw (CMMError)
+{
+    std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
+    LOG_DEBUG(coreLogger_) << "Getting stream exit status of " << dataStreamerLabel;
+    mm::DeviceModuleLockGuard guard(pDataStreamer);
+    int ret = pDataStreamer->GetStreamExitStatus();
+    return ret;
+}
+
+/**
  * Sets data streamer parameters
  * @param label         the data streamer device label
  * @param stopOnOverflow    stop streaming if circular streaming buffer overflows
@@ -6479,18 +6491,18 @@ bool CMMCore::isStreaming(const char* dataStreamerLabel) throw (CMMError)
  * @param updatePeriodUs    update period in microseconds
  */
 void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow, 
-                                  int numberOfBlocks, double durationUs, double updatePeriodUs)
+                                  int numberOfBlocks, int durationMs, int updatePeriodMs)
 {
     std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
 
     LOG_DEBUG(coreLogger_) << "Setting stream parameters of " << dataStreamerLabel <<
         " to stopOnOverflow=" << stopOnOverflow << ", " <<
         "numberOfBlocks=" << numberOfBlocks << ", " <<
-        "durationUs=" << durationUs << ", " <<
-        "updatePeriodUs=" << updatePeriodUs;
+        "durationMs=" << durationMs << ", " <<
+        "updatePeriodMs=" << updatePeriodMs;
 
     mm::DeviceModuleLockGuard guard(pDataStreamer);
-    int ret = pDataStreamer->SetStreamParameters(stopOnOverflow, (unsigned)numberOfBlocks, durationUs, updatePeriodUs);
+    int ret = pDataStreamer->SetStreamParameters(stopOnOverflow, numberOfBlocks, durationMs, updatePeriodMs);
     if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
 }
 
@@ -6503,12 +6515,12 @@ void CMMCore::setStreamParameters(const char* dataStreamerLabel, bool stopOnOver
  * @param updatePeriodUs    a return parameter that gives the update rate of the stream
  */
 void CMMCore::getStreamParameters(const char* dataStreamerLabel, bool& stopOnOverflow,
-    int& numberOfBlocks, double& durationUs, double& updatePeriodUs) throw (CMMError)
+    int& numberOfBlocks, int& durationMs, int& updatePeriodMs) throw (CMMError)
 {
     std::shared_ptr<DataStreamerInstance> pDataStreamer = deviceManager_->GetDeviceOfType<DataStreamerInstance>(dataStreamerLabel);
     LOG_DEBUG(coreLogger_) << "Getting stream parameters of " << dataStreamerLabel;
     mm::DeviceModuleLockGuard guard(pDataStreamer);
-    int ret = pDataStreamer->GetStreamParameters(stopOnOverflow, numberOfBlocks, durationUs, updatePeriodUs);
+    int ret = pDataStreamer->GetStreamParameters(stopOnOverflow, numberOfBlocks, durationMs, updatePeriodMs);
     if (ret != DEVICE_OK) throw CMMError(getDeviceErrorText(ret, pDataStreamer).c_str(), MMERR_DEVICE_GENERIC);
 }
 
@@ -6539,6 +6551,20 @@ long CMMCore::getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel
     return ret;
 }
 
+/**
+* Get error code message
+*/
+std::string CMMCore::getErrorMessage(const char* deviceLabel, int code) throw (CMMError)
+{
+    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pDevice);
+    if (code == DEVICE_OK) {
+        return string("Device ok.");
+    }
+    else {
+        return pDevice->GetErrorText(code);
+    }
+}
 
 /**
  * Saves the current system state to a text file of the MM specific format.

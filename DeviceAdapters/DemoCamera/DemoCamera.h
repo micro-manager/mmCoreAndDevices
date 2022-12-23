@@ -1219,6 +1219,8 @@ public:
         char val = 0;
         for (unsigned ii = 0; ii < mockDataSize_; ii++) { mockData_[ii] = val; val++; }
 
+        SetErrorText(69, "My special error text.");
+
         writeFile_.open("C:\\temp\\mybinaryfile.txt", std::ios::out | std::ios::binary);
 
         initialized_ = true;
@@ -1237,6 +1239,19 @@ public:
         return false;
     }
 
+    int StartStream() {
+        int ret;
+        LogMessage("Pre-StartStream", true);
+        ret = this->StartDataStreamerThreads();
+        return ret;
+    }
+
+    int StopStream() {
+        int ret;
+        LogMessage("Pre-StoptStream", true);
+        ret = this->StopDataStreamerThreads();
+        return ret;
+    }
 
     int GetBufferSize(unsigned& dataBufferSize) { 
         LogMessage("Demo DataStreamer: calling GetBufferSize", true);
@@ -1244,7 +1259,7 @@ public:
         return DEVICE_OK;
     }
 
-    std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) {
+    std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitStatus) {
         
         LogMessage("Demo DataStreamer: calling GetBuffer", true);
 
@@ -1257,6 +1272,7 @@ public:
         // allocate a new data array and put data in it
         std::unique_ptr<char[]> data(new char[actualDataBufferSize]);
         memcpy(data.get(), mockData_, actualDataBufferSize);
+        exitStatus = DEVICE_OK;
         LogMessage("Demo DataStreamer: finished GetBuffer", true);
 
         return data;

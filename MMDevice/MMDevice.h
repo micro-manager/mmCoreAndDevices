@@ -1194,6 +1194,14 @@ namespace MM {
        // Calls that are specific to each DataStreamer device 
        // and should be implemented in the device adapter
        /**
+        * To implement, tell the hardware to start streaming data, then call StartDataStreamerThreads
+        */
+       virtual int StartStream() = 0;
+       /**
+        * To implement, tell the hardware to stop streaming data, then call StopDataStreamerThreads
+        */
+       virtual int StopStream() = 0;
+       /**
         * Get the expected size (in bytes) of the data buffer available for download from the hardware
         */
        virtual int GetBufferSize(unsigned& dataBufferSiize) = 0;
@@ -1202,7 +1210,7 @@ namespace MM {
         * specified by pDataBuffer; 
         * update the size of the buffer and pass it as actualDataBufferSize
         */
-       virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) = 0;
+       virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitCode) = 0;
        /**
         * Process the data buffer available at pDataBuffer
         */
@@ -1210,13 +1218,12 @@ namespace MM {
 
        // Calls that are implemented at the DeviceBase level and
        // remain the same for any DataStreamer device
-       virtual int SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, double durationUs, double updatePeriodUs) = 0;
-       virtual int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, double& durationUs, double& updatePeriodUs) = 0;
-       virtual int StartStream() = 0;
-       virtual int StopStream() = 0;
+       virtual int SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, int durationMs, int updatePeriodMs) = 0;
+       virtual int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, int& durationMs, int& updatePeriodMs) = 0;
        virtual bool GetOverflowStatus() = 0;
        virtual int ResetOverflowStatus() = 0;
        virtual bool IsStreaming() = 0;
+       virtual int GetStreamExitStatus() = 0;
        virtual int SetCircularAcquisitionBufferCapacity(int capacity) = 0;
        virtual int GetCircularAcquisitionBufferCapacity() = 0;
    };

@@ -23,15 +23,16 @@
 
 
 int DataStreamerInstance::GetBufferSize(unsigned& dataBufferSiize) { return GetImpl()->GetBufferSize(dataBufferSiize); }
-std::unique_ptr<char[]> DataStreamerInstance::GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize) { return GetImpl()->GetBuffer(expectedDataBufferSize,actualDataBufferSize); }
+std::unique_ptr<char[]> DataStreamerInstance::GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitStatus) { return GetImpl()->GetBuffer(expectedDataBufferSize,actualDataBufferSize,exitStatus); }
 int DataStreamerInstance::ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) { return GetImpl()->ProcessBuffer(pDataBuffer, dataSize); }
 int DataStreamerInstance::StartStream() { return GetImpl()->StartStream(); }
 int DataStreamerInstance::StopStream() { return GetImpl()->StopStream(); }
 bool DataStreamerInstance::GetOverflowStatus() { return GetImpl()->GetOverflowStatus(); }
 int DataStreamerInstance::ResetOverflowStatus() { return GetImpl()->ResetOverflowStatus(); }
+int DataStreamerInstance::GetStreamExitStatus() { return GetImpl()->GetStreamExitStatus(); }
 bool DataStreamerInstance::IsStreaming() { return GetImpl()->IsStreaming(); }
-int DataStreamerInstance::SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, double durationUs, double updatePeriodUs) { return GetImpl()->SetStreamParameters(stopOnOverflow, numberOfBuffers, durationUs, updatePeriodUs); }
-int DataStreamerInstance::GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, double& durationUs, double& updatePeriodUs) { return GetImpl()->GetStreamParameters(stopOnOverflow,numberOfBuffers,durationUs,updatePeriodUs); }
+int DataStreamerInstance::SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, int durationUs, int updatePeriodUs) { return GetImpl()->SetStreamParameters(stopOnOverflow, numberOfBuffers, durationUs, updatePeriodUs); }
+int DataStreamerInstance::GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, int& durationUs, int& updatePeriodUs) { return GetImpl()->GetStreamParameters(stopOnOverflow,numberOfBuffers,durationUs,updatePeriodUs); }
 int DataStreamerInstance::SetCircularAcquisitionBufferCapacity(int capacity) { return GetImpl()->SetCircularAcquisitionBufferCapacity(capacity); }
 int DataStreamerInstance::GetCircularAcquisitionBufferCapacity() { return GetImpl()->GetCircularAcquisitionBufferCapacity(); }
 
