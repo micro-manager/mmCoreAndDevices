@@ -618,11 +618,14 @@ public:
    void stopStream(const char* dataStreamerLabel) throw (CMMError);
    bool getOverflowStatus(const char* dataStreamerLabel) throw (CMMError);
    void resetOverflowStatus(const char* dataStreamerLabel) throw (CMMError);
+   bool getAcquisitionPause(const char* dataStreamerLabel) throw (CMMError);
+   void setAcquisitionPause(const char* dataStreamerLabel, bool pause) throw (CMMError);
    bool isStreaming(const char* dataStreamerLabel) throw (CMMError);
-   int getStreamExitStatus(const char* dataStreamerLabel) throw (CMMError);
-   void setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow,
+   int getAcquisitionExitStatus(const char* dataStreamerLabel) throw (CMMError);
+   int getProcessingExitStatus(const char* dataStreamerLabel) throw (CMMError);
+   void setStreamParameters(const char* dataStreamerLabel, bool stopOnOverflow, bool pauseAcquisitionBeforeOverflow,
        int numberOfBlocks, int durationMs, int updatePeriodMs) throw (CMMError);
-   void getStreamParameters(const char* dataStreamerLabel, bool& stopOnOverflow,
+   void getStreamParameters(const char* dataStreamerLabel, bool& stopOnOverflow, bool& pauseAcquisitionBeforeOverflow,
        int& numberOfBlocks, int& durationMs, int& updatePeriodMs) throw (CMMError);
    void setCircularAcquisitionBufferCapacity(const char* dataStreamerLabel, int capacity) throw (CMMError);
    long getCircularAcquisitionBufferCapacity(const char* dataStreamerLabel) throw (CMMError);

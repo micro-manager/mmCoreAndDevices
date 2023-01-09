@@ -43,10 +43,13 @@ public:
     int StopStream();
     bool GetOverflowStatus();
     int ResetOverflowStatus();
-    int GetStreamExitStatus();
+    int GetAcquisitionExitStatus();
+    int GetProcessingExitStatus();
+    int SetAcquisitionPause(bool pause);
+    bool GetAcquisitionPause();
     bool IsStreaming();
-    int SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, int durationUs, int updatePeriodUs);
-    int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, int& durationUs, int& updatePeriodUs);
+    int SetStreamParameters(bool stopOnOverflow, bool pauseAcquisitionBeforeOverflow, int numberOfBuffers, int durationUs, int updatePeriodUs);
+    int GetStreamParameters(bool& stopOnOverflow, bool& pauseAcquisitionBeforeOverflow, int& numberOfBuffers, int& durationUs, int& updatePeriodUs);
     int SetCircularAcquisitionBufferCapacity(int capacity);
     int GetCircularAcquisitionBufferCapacity();
 };

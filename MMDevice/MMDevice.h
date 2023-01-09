@@ -1218,12 +1218,15 @@ namespace MM {
 
        // Calls that are implemented at the DeviceBase level and
        // remain the same for any DataStreamer device
-       virtual int SetStreamParameters(bool stopOnOverflow, int numberOfBuffers, int durationMs, int updatePeriodMs) = 0;
-       virtual int GetStreamParameters(bool& stopOnOverflow, int& numberOfBuffers, int& durationMs, int& updatePeriodMs) = 0;
+       virtual int SetStreamParameters(bool stopOnOverflow, bool pauseAcquisitionBeforeOverflow, int numberOfBuffers, int durationMs, int updatePeriodMs) = 0;
+       virtual int GetStreamParameters(bool& stopOnOverflow, bool& pauseAcquisitionBeforeOverflow, int& numberOfBuffers, int& durationMs, int& updatePeriodMs) = 0;
+       virtual int SetAcquisitionPause(bool pause) = 0;
+       virtual bool GetAcquisitionPause() = 0;
        virtual bool GetOverflowStatus() = 0;
        virtual int ResetOverflowStatus() = 0;
        virtual bool IsStreaming() = 0;
-       virtual int GetStreamExitStatus() = 0;
+       virtual int GetAcquisitionExitStatus() = 0;
+       virtual int GetProcessingExitStatus() = 0;
        virtual int SetCircularAcquisitionBufferCapacity(int capacity) = 0;
        virtual int GetCircularAcquisitionBufferCapacity() = 0;
    };
