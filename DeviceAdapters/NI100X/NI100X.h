@@ -14,10 +14,9 @@
 
 #include "DeviceBase.h"
 #include "NIDAQmx.h"
+
 #include <string>
-#include <map>
-#include <set>
-#include <boost/lexical_cast.hpp>
+#include <vector>
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -57,7 +56,6 @@ public:
 
 protected:
    void SetDeviceName();
-   int CreateTriggerProperties();
    int SetupTask();
    void CancelTask();
    int SetupClockInput(int numVals);
@@ -87,8 +85,8 @@ protected:
    bool amPreparedToTrigger_;
 
 private:
-   MM::Core* core_;
-   MM::Device* device_;
+   MM::Core* core_ = nullptr;
+   MM::Device* device_ = nullptr;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -142,16 +140,13 @@ public:
    int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPercent(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMinVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDisable(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnVD(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDemo(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
 private:
-   bool initialized_;
    bool busy_;
    bool disable_;
    double minV_;
@@ -166,7 +161,6 @@ private:
 
    int LoadBuffer();
    int ApplyVoltage(double v);
-   long GetListIndex();
 
    bool demo_;
 };
@@ -192,16 +186,12 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnSequenceLength(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   void AddPorts(std::string deviceName);
-   void AddPort(std::string line);
-   int SetupDigitalTriggering(uInt32* sequence, long numVals);
+   int SetupDigitalTriggering(const uInt32* sequence, long numVals);
    int TestTriggering();
-   int LoadBuffer(uInt32* sequence, long numVals);
+   int LoadBuffer(const uInt32* sequence, long numVals);
 
-   bool initialized_;
    bool busy_;
    long numPos_;
    bool open_;

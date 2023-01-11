@@ -890,7 +890,7 @@ protected:
    {
       std::ostringstream os;
       MM::MMTime t = end-start;
-      os << message << t.sec_ << " seconds and " << t.uSec_ / 1000.0 << " msec";
+      os << message << t.toString() << " seconds";
       if (callback_)
          return callback_->LogMessage(this, os.str().c_str(), debugOnly);
       return DEVICE_NO_CALLBACK_REGISTERED;
@@ -1638,9 +1638,9 @@ protected:
          stop_ = false;
          suspend_=false;
          activate();
-         actualDuration_ = 0;
+         actualDuration_ = MM::MMTime{};
          startTime_= camera_->GetCurrentMMTime();
-         lastFrameTime_ = 0;
+         lastFrameTime_ = MM::MMTime{};
       }
       bool IsStopped(){
          MMThreadGuard g(this->stopLock_);

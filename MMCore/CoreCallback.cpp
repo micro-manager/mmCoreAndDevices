@@ -32,7 +32,8 @@
 #include "CoreCallback.h"
 #include "DeviceManager.h"
 
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <cassert>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -56,7 +57,7 @@ int
 CoreCallback::LogMessage(const MM::Device* caller, const char* msg,
       bool debugOnly) const
 {
-   boost::shared_ptr<DeviceInstance> device;
+   std::shared_ptr<DeviceInstance> device;
    try
    {
       device = core_->deviceManager_->GetDevice(caller);
@@ -94,7 +95,7 @@ CoreCallback::GetDevice(const MM::Device* caller, const char* label)
 MM::PortType
 CoreCallback::GetSerialPortType(const char* portName) const
 {
-   boost::shared_ptr<SerialInstance> pSerial;
+   std::shared_ptr<SerialInstance> pSerial;
    try
    {
       pSerial = core_->deviceManager_->GetDeviceOfType<SerialInstance>(portName);
@@ -111,7 +112,7 @@ CoreCallback::GetSerialPortType(const char* portName) const
 MM::ImageProcessor*
 CoreCallback::GetImageProcessor(const MM::Device*)
 {
-   boost::shared_ptr<ImageProcessorInstance> imageProcessor =
+   std::shared_ptr<ImageProcessorInstance> imageProcessor =
       core_->currentImageProcessor_.lock();
    if (imageProcessor)
    {
@@ -153,7 +154,7 @@ CoreCallback::GetSignalIODevice(const MM::Device*, const char* label)
 MM::AutoFocus*
 CoreCallback::GetAutoFocus(const MM::Device*)
 {
-   boost::shared_ptr<AutoFocusInstance> autofocus =
+   std::shared_ptr<AutoFocusInstance> autofocus =
       core_->currentAutofocusDevice_.lock();
    if (autofocus)
    {
@@ -169,7 +170,7 @@ CoreCallback::GetParentHub(const MM::Device* caller) const
    if (caller == 0)
       return 0;
 
-   boost::shared_ptr<HubInstance> hubDevice;
+   std::shared_ptr<HubInstance> hubDevice;
    try
    {
       hubDevice = core_->deviceManager_->GetParentDevice(core_->deviceManager_->GetDevice(caller));
@@ -216,8 +217,8 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
       newMD = *pMd;
    }
 
-   boost::shared_ptr<CameraInstance> camera =
-      boost::static_pointer_cast<CameraInstance>(
+   std::shared_ptr<CameraInstance> camera =
+      std::static_pointer_cast<CameraInstance>(
             core_->deviceManager_->GetDevice(caller));
 
    std::string label = camera->GetLabel();
@@ -364,7 +365,7 @@ int CoreCallback::InsertMultiChannel(const MM::Device* caller,
 
 int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
 {
-   boost::shared_ptr<DeviceInstance> camera;
+   std::shared_ptr<DeviceInstance> camera;
    try
    {
       camera = core_->deviceManager_->GetDevice(caller);
@@ -376,12 +377,12 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
       return DEVICE_ERR;
    }
 
-   boost::shared_ptr<DeviceInstance> currentCamera =
+   std::shared_ptr<DeviceInstance> currentCamera =
       core_->currentCameraDevice_.lock();
 
    if (core_->autoShutter_)
    {
-      boost::shared_ptr<ShutterInstance> shutter =
+      std::shared_ptr<ShutterInstance> shutter =
          core_->currentShutterDevice_.lock();
       if (shutter)
       {
@@ -429,7 +430,7 @@ int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
 {
    if (core_->autoShutter_)
    {
-      boost::shared_ptr<ShutterInstance> shutter =
+      std::shared_ptr<ShutterInstance> shutter =
          core_->currentShutterDevice_.lock();
       if (shutter)
       {
@@ -685,7 +686,7 @@ int CoreCallback::SetSerialProperties(const char* portName,
  */
 int CoreCallback::WriteToSerial(const MM::Device* caller, const char* portName, const unsigned char* buf, unsigned long length)
 {
-   boost::shared_ptr<SerialInstance> pSerial;
+   std::shared_ptr<SerialInstance> pSerial;
    try
    {
       pSerial = core_->deviceManager_->GetDeviceOfType<SerialInstance>(portName);
@@ -711,7 +712,7 @@ int CoreCallback::WriteToSerial(const MM::Device* caller, const char* portName, 
   */
 int CoreCallback::ReadFromSerial(const MM::Device* caller, const char* portName, unsigned char* buf, unsigned long bufLength, unsigned long &bytesRead)
 {
-   boost::shared_ptr<SerialInstance> pSerial;
+   std::shared_ptr<SerialInstance> pSerial;
    try
    {
       pSerial = core_->deviceManager_->GetDeviceOfType<SerialInstance>(portName);
@@ -737,7 +738,7 @@ int CoreCallback::ReadFromSerial(const MM::Device* caller, const char* portName,
  */
 int CoreCallback::PurgeSerial(const MM::Device* caller, const char* portName)
 {
-   boost::shared_ptr<SerialInstance> pSerial;
+   std::shared_ptr<SerialInstance> pSerial;
    try
    {
       pSerial = core_->deviceManager_->GetDeviceOfType<SerialInstance>(portName);
@@ -819,7 +820,7 @@ int CoreCallback::GetImageDimensions(int& width, int& height, int& depth)
 
 int CoreCallback::GetFocusPosition(double& pos)
 {
-   boost::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
+   std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
    if (focus)
    {
       return focus->GetPositionUm(pos);
@@ -830,7 +831,7 @@ int CoreCallback::GetFocusPosition(double& pos)
 
 int CoreCallback::SetFocusPosition(double pos)
 {
-   boost::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
+   std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
    if (focus)
    {
       int ret = focus->SetPositionUm(pos);
@@ -845,7 +846,7 @@ int CoreCallback::SetFocusPosition(double pos)
 
 int CoreCallback::MoveFocus(double velocity)
 {
-   boost::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
+   std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
    if (focus)
    {
       mm::DeviceModuleLockGuard g(focus);
@@ -860,7 +861,7 @@ int CoreCallback::MoveFocus(double velocity)
 
 int CoreCallback::GetXYPosition(double& x, double& y)
 {
-   boost::shared_ptr<XYStageInstance> xyStage =
+   std::shared_ptr<XYStageInstance> xyStage =
       core_->currentXYStageDevice_.lock();
    if (xyStage)
    {
@@ -873,7 +874,7 @@ int CoreCallback::GetXYPosition(double& x, double& y)
 
 int CoreCallback::SetXYPosition(double x, double y)
 {
-   boost::shared_ptr<XYStageInstance> xyStage =
+   std::shared_ptr<XYStageInstance> xyStage =
       core_->currentXYStageDevice_.lock();
    if (xyStage)
    {
@@ -888,7 +889,7 @@ int CoreCallback::SetXYPosition(double x, double y)
 
 int CoreCallback::MoveXYStage(double vx, double vy)
 {
-   boost::shared_ptr<XYStageInstance> xyStage =
+   std::shared_ptr<XYStageInstance> xyStage =
       core_->currentXYStageDevice_.lock();
    if (xyStage)
    {
@@ -1055,27 +1056,27 @@ void CoreCallback::ClearPostedErrors()
 }
 
 
-
-
-
+static long long SteadyMicroseconds()
+{
+   using namespace std::chrono;
+   auto now = steady_clock::now().time_since_epoch();
+   auto usec = duration_cast<microseconds>(now);
+   return usec.count();
+}
 
 /**
  * Returns the number of microsecond tick
  * N.B. an unsigned long microsecond count rolls over in just over an hour!!!!
- * NOTE: This method is 'obsolete.'
+ *
+ * This method is obsolete and deprecated.
+ * Prefer std::chrono::steady_clock for time delta measurements
  */
 unsigned long CoreCallback::GetClockTicksUs(const MM::Device* /*caller*/)
 {
-	using namespace boost::posix_time;
-	using namespace boost::gregorian;
-	boost::posix_time::ptime t = boost::posix_time::microsec_clock::local_time();
-	boost::gregorian::date today( day_clock::local_day());
-	boost::posix_time::ptime timet_start(today); 
-	time_duration diff = t - timet_start; 
-	return (unsigned long) diff.total_microseconds();
+   return static_cast<unsigned long>(SteadyMicroseconds());
 }
 
 MM::MMTime CoreCallback::GetCurrentMMTime()
-{		
-	return GetMMTimeNow();
+{
+   return MM::MMTime::fromUs(SteadyMicroseconds());
 }

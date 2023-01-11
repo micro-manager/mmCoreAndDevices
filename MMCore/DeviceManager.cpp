@@ -35,8 +35,8 @@ DeviceManager::~DeviceManager()
 }
 
 
-boost::shared_ptr<DeviceInstance>
-DeviceManager::LoadDevice(boost::shared_ptr<LoadedDeviceAdapter> module,
+std::shared_ptr<DeviceInstance>
+DeviceManager::LoadDevice(std::shared_ptr<LoadedDeviceAdapter> module,
       const std::string& deviceName, const std::string& label, CMMCore* core,
       mm::logging::Logger deviceLogger,
       mm::logging::Logger coreLogger)
@@ -50,7 +50,7 @@ DeviceManager::LoadDevice(boost::shared_ptr<LoadedDeviceAdapter> module,
       }
    }
 
-   boost::shared_ptr<DeviceInstance> device = module->LoadDevice(core,
+   std::shared_ptr<DeviceInstance> device = module->LoadDevice(core,
          deviceName, label, deviceLogger, coreLogger);
 
    std::string description;
@@ -79,7 +79,7 @@ DeviceManager::LoadDevice(boost::shared_ptr<LoadedDeviceAdapter> module,
 
 
 void
-DeviceManager::UnloadDevice(boost::shared_ptr<DeviceInstance> device)
+DeviceManager::UnloadDevice(std::shared_ptr<DeviceInstance> device)
 {
    if (device == 0)
       return;
@@ -107,8 +107,8 @@ DeviceManager::UnloadAllDevices()
    // device. Also, peripherals should explicitly be unloaded before hubs
    // instead of relying on the load order.
 
-   std::vector< boost::shared_ptr<DeviceInstance> > nonSerialDevices;
-   std::vector< boost::shared_ptr<DeviceInstance> > serialDevices;
+   std::vector< std::shared_ptr<DeviceInstance> > nonSerialDevices;
+   std::vector< std::shared_ptr<DeviceInstance> > serialDevices;
    for (DeviceIterator it = devices_.begin(), end = devices_.end(); it != end; ++it)
    {
       if (it->second->GetType() == MM::SerialDevice)
@@ -126,13 +126,13 @@ DeviceManager::UnloadAllDevices()
    // DeviceInstance.
    // TODO We need a mechanism to ensure automatic Shutdown (1:1 with
    // Initialize()).
-   for (std::vector< boost::shared_ptr<DeviceInstance> >::reverse_iterator
+   for (std::vector< std::shared_ptr<DeviceInstance> >::reverse_iterator
          it = nonSerialDevices.rbegin(), end = nonSerialDevices.rend();
          it != end; ++it)
    {
       (*it)->Shutdown();
    }
-   for (std::vector< boost::shared_ptr<DeviceInstance> >::reverse_iterator
+   for (std::vector< std::shared_ptr<DeviceInstance> >::reverse_iterator
          it = serialDevices.rbegin(), end = serialDevices.rend();
          it != end; ++it)
    {
@@ -163,13 +163,13 @@ namespace
    public:
       DevicePairMatcheslabel(const std::string& s) : s_(s) {}
       bool operator()(const std::pair< std::string,
-            boost::shared_ptr<DeviceInstance> >& p) const
+            std::shared_ptr<DeviceInstance> >& p) const
       { return p.first == s_; }
    };
 } // anonymous namespace
 
 
-boost::shared_ptr<DeviceInstance>
+std::shared_ptr<DeviceInstance>
 DeviceManager::GetDevice(const std::string& label) const
 {
    DeviceConstIterator found =
@@ -183,7 +183,7 @@ DeviceManager::GetDevice(const std::string& label) const
 }
 
 
-boost::shared_ptr<DeviceInstance>
+std::shared_ptr<DeviceInstance>
 DeviceManager::GetDevice(const char* label) const
 {
    if (!label)
@@ -194,10 +194,10 @@ DeviceManager::GetDevice(const char* label) const
 }
 
 
-boost::shared_ptr<DeviceInstance>
+std::shared_ptr<DeviceInstance>
 DeviceManager::GetDevice(const MM::Device* rawPtr) const
 {
-   typedef std::map< const MM::Device*, boost::weak_ptr<DeviceInstance> >::const_iterator Iterator;
+   typedef std::map< const MM::Device*, std::weak_ptr<DeviceInstance> >::const_iterator Iterator;
    Iterator it = deviceRawPtrIndex_.find(rawPtr);
    if (it == deviceRawPtrIndex_.end())
       throw CMMError("Invalid device pointer");
@@ -226,7 +226,7 @@ DeviceManager::GetLoadedPeripherals(const char* label) const
    std::vector<std::string> labels;
 
    // get hub
-   boost::shared_ptr<DeviceInstance> pDev;
+   std::shared_ptr<DeviceInstance> pDev;
    try
    {
       pDev = GetDevice(label);
@@ -251,8 +251,8 @@ DeviceManager::GetLoadedPeripherals(const char* label) const
 }
 
 
-boost::shared_ptr<HubInstance>
-DeviceManager::GetParentDevice(boost::shared_ptr<DeviceInstance> device) const
+std::shared_ptr<HubInstance>
+DeviceManager::GetParentDevice(std::shared_ptr<DeviceInstance> device) const
 {
    std::string parentLabel = device->GetParentID();
 
@@ -261,13 +261,13 @@ DeviceManager::GetParentDevice(boost::shared_ptr<DeviceInstance> device) const
       // no parent specified, but we will try to infer one anyway
       // TODO So what happens if there is more than one hub in a given device
       // adapter? Answer: bad things.
-      boost::shared_ptr<HubInstance> parentHub;
+      std::shared_ptr<HubInstance> parentHub;
       for (DeviceConstIterator it = devices_.begin(), end = devices_.end(); it != end; ++it)
       {
          if (it->second->GetType() == MM::HubDevice &&
                device->GetAdapterModule() == it->second->GetAdapterModule())
          {
-            parentHub = boost::static_pointer_cast<HubInstance>(it->second);
+            parentHub = std::static_pointer_cast<HubInstance>(it->second);
          }
       }
       // This returns the last matching hub; not sure why it was coded that
@@ -283,16 +283,16 @@ DeviceManager::GetParentDevice(boost::shared_ptr<DeviceInstance> device) const
                it->second->GetType() == MM::HubDevice &&
                it->second->GetAdapterModule() == device->GetAdapterModule())
          {
-            return boost::static_pointer_cast<HubInstance>(it->second);
+            return std::static_pointer_cast<HubInstance>(it->second);
          }
       }
       // TODO We should probably throw when the parent is missing.
-      return boost::shared_ptr<HubInstance>();
+      return std::shared_ptr<HubInstance>();
    }
 }
 
 
-DeviceModuleLockGuard::DeviceModuleLockGuard(boost::shared_ptr<DeviceInstance> device) :
+DeviceModuleLockGuard::DeviceModuleLockGuard(std::shared_ptr<DeviceInstance> device) :
    g_(device->GetAdapterModule()->GetLock())
 {}
 

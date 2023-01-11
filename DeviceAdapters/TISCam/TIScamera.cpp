@@ -2162,16 +2162,11 @@ int CTIScamera::PushImage()
    // Important:  metadata about the image are generated here:
    Metadata md;
    md.put("Camera", label);
-   md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
    md.put(MM::g_Keyword_Binning, binSize_);
    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
-
-   MetadataSingleTag mstStartTime(MM::g_Keyword_Metadata_StartTime, label, true);
-   mstStartTime.SetValue(CDeviceUtils::ConvertToString(startTime_.getMsec()));
-   md.SetTag(mstStartTime);
 
    MetadataSingleTag mst(MM::g_Keyword_Elapsed_Time_ms, label, true);
    mst.SetValue(CDeviceUtils::ConvertToString(timeStamp.getMsec()));

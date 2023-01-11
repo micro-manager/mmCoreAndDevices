@@ -207,7 +207,7 @@ int CTriggerScopeMMDAC::WriteSignal(double volts)
    if(bTS16_)
       dMaxCount = 65535;
 
-   long value = (long) ( (volts - minV_) / maxV_ * dMaxCount);
+   long value = (long) ( (volts - minV_) / (maxV_ - minV_) * dMaxCount);
 
    std::ostringstream os;
    os << "Volts: " << volts << " Max Voltage: " << maxV_ << " digital value: " << value;
@@ -453,7 +453,7 @@ int CTriggerScopeMMDAC::SendDASequence()
       if(volts > maxV_)
          volts = maxV_ ;
 
-     int  value = (int) ( (volts - minV_) / maxV_ * dMaxCount);
+     int  value = (int) ( (volts - minV_) / (maxV_ - minV_) * dMaxCount);
 
      os << "-" << value;
    }

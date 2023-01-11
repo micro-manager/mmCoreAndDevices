@@ -332,10 +332,7 @@ bool CArduinoNeoPixelShutter::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
 
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
-   else
-       return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 int CArduinoNeoPixelShutter::Initialize()

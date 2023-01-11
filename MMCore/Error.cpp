@@ -79,7 +79,7 @@ std::string
 CMMError::getMsg() const
 {
    if (message_.empty())
-      return "Error (code " + boost::lexical_cast<std::string>(code_) + ")";
+      return "Error (code " + std::to_string(code_) + ")";
    return message_;
 }
 

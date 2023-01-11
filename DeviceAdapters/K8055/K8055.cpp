@@ -506,11 +506,7 @@ void CK8055Shutter::GetName(char* name) const
 bool CK8055Shutter::Busy()
 {
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
-   else
-       return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 int CK8055Shutter::Initialize()

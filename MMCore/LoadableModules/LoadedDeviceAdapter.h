@@ -27,9 +27,8 @@
 #include "../../MMDevice/ModuleInterface.h"
 #include "../Logging/Logger.h"
 
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/utility.hpp>
+#include <cstring>
+#include <memory>
 
 class CMMCore;
 
@@ -38,10 +37,12 @@ class DeviceInstance;
 
 
 class LoadedDeviceAdapter /* final */ :
-	boost::noncopyable,
-	public boost::enable_shared_from_this<LoadedDeviceAdapter>
+	public std::enable_shared_from_this<LoadedDeviceAdapter>
 {
 public:
+   LoadedDeviceAdapter(const LoadedDeviceAdapter&) = delete;
+   LoadedDeviceAdapter& operator=(const LoadedDeviceAdapter&) = delete;
+
    LoadedDeviceAdapter(const std::string& name, const std::string& filename);
 
    // TODO Unload() should mark the instance invalid (or require instance
@@ -58,7 +59,7 @@ public:
    std::string GetDeviceDescription(const std::string& deviceName) const;
    MM::DeviceType GetAdvertisedDeviceType(const std::string& deviceName) const;
 
-   boost::shared_ptr<DeviceInstance> LoadDevice(CMMCore* core,
+   std::shared_ptr<DeviceInstance> LoadDevice(CMMCore* core,
          const std::string& name, const std::string& label,
          mm::logging::Logger deviceLogger,
          mm::logging::Logger coreLogger);
@@ -67,17 +68,20 @@ private:
    /**
     * \brief Utility class for getting fixed-length strings from the module
     */
-   class ModuleStringBuffer : boost::noncopyable
+   class ModuleStringBuffer
    {
       char buf_[MM::MaxStrLength + 1];
       const LoadedDeviceAdapter* module_;
       const std::string& funcName_;
 
    public:
+      ModuleStringBuffer(const ModuleStringBuffer&) = delete;
+      ModuleStringBuffer& operator=(const ModuleStringBuffer&) = delete;
+
       ModuleStringBuffer(const LoadedDeviceAdapter* module,
             const std::string& functionName) :
          module_(module), funcName_(functionName)
-      { memset(buf_, 0, sizeof(buf_)); }
+      { std::memset(buf_, 0, sizeof(buf_)); }
 
       char* GetBuffer() { return buf_; }
       size_t GetMaxStrLen() { return sizeof(buf_) - 1; }
@@ -105,7 +109,7 @@ private:
    void DeleteDevice(MM::Device* device);
 
    const std::string name_;
-   boost::shared_ptr<LoadedModule> module_;
+   std::shared_ptr<LoadedModule> module_;
 
    MMThreadLock lock_;
 

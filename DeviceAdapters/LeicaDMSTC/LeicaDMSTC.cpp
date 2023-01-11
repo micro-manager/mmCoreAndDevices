@@ -303,7 +303,7 @@ int XYStage::Initialize()
 	// Do not implement a position property as it can lead to trouble!
 
 	// Set timer for the Busy signal, or we'll get a time-out the first time we check the state of the shutter, for good measure, go back 5s into the past
-	changedTime_ = GetCurrentMMTime() - 5000000; 
+	changedTime_ = GetCurrentMMTime() - MM::MMTime::fromSeconds(5);
 
 	initialized_ = true;
 

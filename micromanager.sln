@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.31402.337
+VisualStudioVersion = 16.0.32802.440
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MMCore", "MMCore\MMCore.vcxproj", "{36571628-728C-4ACD-A47F-503BA91C5D43}"
 EndProject
@@ -441,6 +441,22 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UniversalMMHubUsb", "DeviceAdapters\UniversalMMHubUsb\UniversalMMHubUsb.vcxproj", "{9A33047E-4E1F-4C96-8BBA-FB9610D75373}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MeadowlarkLC", "DeviceAdapters\MeadowlarkLC\MeadowlarkLC.vcxproj", "{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Dragonfly", "DeviceAdapters\Dragonfly\Dragonfly.vcxproj", "{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IntegratedLaserEngine", "DeviceAdapters\IntegratedLaserEngine\IntegratedLaserEngine.vcxproj", "{5BCA72C1-C342-4272-A037-A94C73E4ACE8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Thorlabs_ELL14", "DeviceAdapters\Thorlabs_ELL14\Thorlabs_ELL14.vcxproj", "{03EEA700-F668-4F91-873F-E69A482A07E1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ETL", "DeviceAdapters\ETL\ETL.vcxproj", "{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LightSheetManager", "DeviceAdapters\LightSheetManager\LightSheetManager.vcxproj", "{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XLightV3", "DeviceAdapters\XLightV3\XLightV3.vcxproj", "{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MicroFPGA", "DeviceAdapters\MicroFPGA\MicroFPGA.vcxproj", "{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SequenceTester", "DeviceAdapters\SequenceTester\SequenceTester.vcxproj", "{7ECDC9D5-626B-4F5B-AD3D-E6EF249BAA6E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1328,6 +1344,38 @@ Global
 		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Debug|x64.Build.0 = Debug|x64
 		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Release|x64.ActiveCfg = Release|x64
 		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Release|x64.Build.0 = Release|x64
+		{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}.Debug|x64.ActiveCfg = Debug|x64
+		{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}.Debug|x64.Build.0 = Debug|x64
+		{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}.Release|x64.ActiveCfg = Release|x64
+		{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}.Release|x64.Build.0 = Release|x64
+		{5BCA72C1-C342-4272-A037-A94C73E4ACE8}.Debug|x64.ActiveCfg = Debug|x64
+		{5BCA72C1-C342-4272-A037-A94C73E4ACE8}.Debug|x64.Build.0 = Debug|x64
+		{5BCA72C1-C342-4272-A037-A94C73E4ACE8}.Release|x64.ActiveCfg = Release|x64
+		{5BCA72C1-C342-4272-A037-A94C73E4ACE8}.Release|x64.Build.0 = Release|x64
+		{03EEA700-F668-4F91-873F-E69A482A07E1}.Debug|x64.ActiveCfg = Debug|x64
+		{03EEA700-F668-4F91-873F-E69A482A07E1}.Debug|x64.Build.0 = Debug|x64
+		{03EEA700-F668-4F91-873F-E69A482A07E1}.Release|x64.ActiveCfg = Release|x64
+		{03EEA700-F668-4F91-873F-E69A482A07E1}.Release|x64.Build.0 = Release|x64
+		{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}.Debug|x64.ActiveCfg = Debug|x64
+		{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}.Debug|x64.Build.0 = Debug|x64
+		{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}.Release|x64.ActiveCfg = Release|x64
+		{F6AA40F0-4825-447A-8DE4-8704B6F7A3DB}.Release|x64.Build.0 = Release|x64
+		{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}.Debug|x64.ActiveCfg = Debug|x64
+		{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}.Debug|x64.Build.0 = Debug|x64
+		{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}.Release|x64.ActiveCfg = Release|x64
+		{698AC26E-0AA3-4BD5-8E29-11BC931A88CF}.Release|x64.Build.0 = Release|x64
+		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Debug|x64.ActiveCfg = Debug|x64
+		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Debug|x64.Build.0 = Debug|x64
+		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Release|x64.ActiveCfg = Release|x64
+		{3FD8CD0C-55F8-4292-99B3-3C6B5F1DE55E}.Release|x64.Build.0 = Release|x64
+		{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}.Debug|x64.ActiveCfg = Debug|x64
+		{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}.Debug|x64.Build.0 = Debug|x64
+		{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}.Release|x64.ActiveCfg = Release|x64
+		{ABE0F7CB-AEE4-4CD4-9447-9378E585B2F1}.Release|x64.Build.0 = Release|x64
+		{7ECDC9D5-626B-4F5B-AD3D-E6EF249BAA6E}.Debug|x64.ActiveCfg = Debug|x64
+		{7ECDC9D5-626B-4F5B-AD3D-E6EF249BAA6E}.Debug|x64.Build.0 = Debug|x64
+		{7ECDC9D5-626B-4F5B-AD3D-E6EF249BAA6E}.Release|x64.ActiveCfg = Release|x64
+		{7ECDC9D5-626B-4F5B-AD3D-E6EF249BAA6E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

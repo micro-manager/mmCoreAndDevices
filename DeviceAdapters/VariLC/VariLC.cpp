@@ -662,7 +662,7 @@ int VariLC::OnGetFromVariLC(MM::PropertyBase* pProp, MM::ActionType eAct)
 	  if (initializedDelay_) {
 		SetDelayMs(delayT);
 	  }
-	  delay = delayT*1000;
+	  delay = MM::MMTime::fromMs(delayT);
    }
    return DEVICE_OK;
 }

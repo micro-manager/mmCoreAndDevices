@@ -53,6 +53,7 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <map>
@@ -62,19 +63,19 @@
 // Typedefs for the following Zeiss datatypes:
 // TEXT (max 20 ascii characters, not null terminated)
 // BYTE - 1 byte
-typedef char ZeissByte;
+typedef int8_t ZeissByte;
 // UBYTE - 1 unsigned byte
-typedef unsigned char ZeissUByte;
+typedef uint8_t ZeissUByte;
 #define ZeissByteSize 1
 // SHORT - 2 Byte Motorola format
-typedef short ZeissShort;
+typedef int16_t ZeissShort;
 // USHORT - 2 Byte Motorola format, unsigned
-typedef unsigned short ZeissUShort;
+typedef uint16_t ZeissUShort;
 #define ZeissShortSize 2
 // LONG - 4 Byte Motorola format
-typedef int  ZeissLong;
+typedef int32_t  ZeissLong;
 // ULONG - 4 Byte Motorola format, unsigned
-typedef unsigned int  ZeissULong;
+typedef uint32_t  ZeissULong;
 #define ZeissLongSize 4
 // FLOAT - 4 Byte Float Motorola format
 typedef float  ZeissFloat;
@@ -130,8 +131,8 @@ class ZeissMonitoringThread;
  */
 struct ZeissDeviceInfo {
    ZeissDeviceInfo(){
-      lastUpdateTime = 0;
-      lastRequestTime = 0;
+      lastUpdateTime = MM::MMTime{};
+      lastRequestTime = MM::MMTime{};
       currentPos = 0;
       targetPos = 0;
       maxPos = 0;
@@ -540,7 +541,7 @@ class ZeissDevice
       virtual ~ZeissDevice();
 
       int GetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong& position);
-      int SetPosition(MM::Device& device, MM::Core& core, ZeissUByte commandGroup, ZeissUByte devId, int position);
+      int SetPosition(MM::Device& device, MM::Core& core, ZeissUByte commandGroup, ZeissUByte devId, ZeissLong position);
       int GetStatus(MM::Device& device, MM::Core& core, ZeissUByte commandGroup, ZeissUByte devId);
       int GetTargetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong& position);
       int GetMaxPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong& position);
@@ -559,7 +560,7 @@ class ZeissChanger : public ZeissDevice
       ZeissChanger();
       ~ZeissChanger();
 
-      int SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, int position);
+      int SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong position);
       ZeissUByte devId_;
 
    private:
@@ -572,7 +573,7 @@ class ZeissServo : public ZeissDevice
       ZeissServo();
       ~ZeissServo();
 
-      int SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, int position);
+      int SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong position);
       ZeissUByte devId_;
 
    private:
@@ -586,13 +587,13 @@ class ZeissAxis : public ZeissDevice
       ZeissAxis();
       ~ZeissAxis();
 
-      int SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, long position, ZeissByte moveMode);
-      int SetRelativePosition(MM::Device& device, MM::Core& core, ZeissUByte devId, long increment, ZeissByte moveMode);
+      int SetPosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong position, ZeissByte moveMode);
+      int SetRelativePosition(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong increment, ZeissByte moveMode);
       int FindHardwareStop(MM::Device& device, MM::Core& core, ZeissUByte devId, HardwareStops stop);
       int StopMove(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissByte moveMode);
       int HasTrajectoryVelocity(MM::Device& device, MM::Core& core, ZeissUByte devId, bool& hasTV);
-      int SetTrajectoryVelocity(MM::Device& device, MM::Core& core, ZeissUByte devId, long velocity);
-      int SetTrajectoryAcceleration(MM::Device& device, MM::Core& core, ZeissUByte devId, long acceleration);
+      int SetTrajectoryVelocity(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong velocity);
+      int SetTrajectoryAcceleration(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong acceleration);
       int GetTrajectoryVelocity(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong& velocity);
       int GetTrajectoryAcceleration(MM::Device& device, MM::Core& core, ZeissUByte devId, ZeissLong& acceleration);
 

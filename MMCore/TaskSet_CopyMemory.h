@@ -31,7 +31,7 @@ private:
     class ATask : public Task
     {
     public:
-        explicit ATask(boost::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount);
+        explicit ATask(std::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount);
 
         void SetUp(void* dst, const void* src, size_t bytes, size_t usedTaskCount);
 
@@ -44,7 +44,7 @@ private:
     };
 
 public:
-    explicit TaskSet_CopyMemory(boost::shared_ptr<ThreadPool> pool);
+    explicit TaskSet_CopyMemory(std::shared_ptr<ThreadPool> pool);
 
     void SetUp(void* dst, const void* src, size_t bytes);
 

@@ -23,12 +23,11 @@
 
 #include "TaskSet_CopyMemory.h"
 
-#include <boost/foreach.hpp>
-
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 
-TaskSet_CopyMemory::ATask::ATask(boost::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount)
+TaskSet_CopyMemory::ATask::ATask(std::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount)
     : Task(semDone, taskIndex, totalTaskCount),
     dst_(NULL),
     src_(NULL),
@@ -57,10 +56,10 @@ void TaskSet_CopyMemory::ATask::Execute()
     void* dst = static_cast<char*>(dst_) + chunkOffset;
     const void* src = static_cast<const char*>(src_) + chunkOffset;
 
-    memcpy(dst, src, chunkBytes);
+    std::memcpy(dst, src, chunkBytes);
 }
 
-TaskSet_CopyMemory::TaskSet_CopyMemory(boost::shared_ptr<ThreadPool> pool)
+TaskSet_CopyMemory::TaskSet_CopyMemory(std::shared_ptr<ThreadPool> pool)
     : TaskSet(pool)
 {
     CreateTasks<ATask>();
@@ -78,11 +77,11 @@ void TaskSet_CopyMemory::SetUp(void* dst, const void* src, size_t bytes)
     usedTaskCount_ = std::min<size_t>(1 + bytes / 1000000, tasks_.size());
     if (usedTaskCount_ == 1)
     {
-        memcpy(dst, src, bytes);
+        std::memcpy(dst, src, bytes);
         return;
     }
 
-    BOOST_FOREACH(Task* task, tasks_)
+    for (Task* task : tasks_)
         static_cast<ATask*>(task)->SetUp(dst, src, bytes, usedTaskCount_);
 }
 

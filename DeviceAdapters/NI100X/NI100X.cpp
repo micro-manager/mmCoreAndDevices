@@ -10,18 +10,13 @@
 // COPYRIGHT:     100X Imaging Inc, 2010
 //                
 
-#ifdef WIN32
-   #define WIN32_LEAN_AND_MEAN
-   #include <windows.h>
-#endif
-#include "FixSnprintf.h"
+#include "NI100X.h"
 
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string/replace.hpp>
+#include "ModuleInterface.h"
+
+#include <algorithm>
 #include <iostream>
 #include <sstream>
-#include "NI100X.h"
-#include "ModuleInterface.h"
 
 const char* g_DeviceNameDigitalIO = "DigitalIO";
 const char* g_DeviceNameShutter = "Shutter";
@@ -50,8 +45,6 @@ const char* g_No = "No";
 // The virtual shutter device uses this global variable to restore state of the switch
 unsigned int g_digitalState = 0;
 unsigned int g_shutterState = 0;
-
-using namespace std;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -175,14 +168,14 @@ std::string DAQDevice::GetPort(std::string line)
    {
       // This should never happen. Note LogMessage is
       // not available at this time (still in the constructor)
-      std::cerr << "Attempted to add invalid line with no slashes in its name: " << line << endl;
+      std::cerr << "Attempted to add invalid line with no slashes in its name: " << line << std::endl;
       return "";
    }
    size_t secondIndex = line.find("/", firstIndex + 1);
    if (secondIndex == std::string::npos)
    {
       // This probably should never happen either.
-      std::cerr << "Attempted to add invalid line with only one slash in its name: " << line << endl;
+      std::cerr << "Attempted to add invalid line with only one slash in its name: " << line << std::endl;
       return "";
    }
    std::string channel = line.substr(0, secondIndex);
@@ -243,7 +236,7 @@ int DAQDevice::OnSequenceLength(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(boost::lexical_cast<std::string>(maxSequenceLength_).c_str());
+      pProp->Set(std::to_string(maxSequenceLength_).c_str());
    }
    else if (eAct == MM::AfterSet)
    {
@@ -257,7 +250,7 @@ int DAQDevice::OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set(boost::lexical_cast<std::string>(samplesPerSec_).c_str());
+        pProp->Set(std::to_string(samplesPerSec_).c_str());
     }
     else if (eAct == MM::AfterSet)
     {
@@ -285,7 +278,7 @@ int DAQDevice::SetupClockInput(int numVals)
 // Cancel a running task.
 void DAQDevice::CancelTask()
 {
-   if (core_ != 0)
+   if (core_ != nullptr && device_ != nullptr)
    {
       core_->LogMessage(device_, ("Cancelling task for " + channel_).c_str(), false);
    }
@@ -308,9 +301,11 @@ int DAQDevice::SetupTask()
    task_ = 0;
    // Replace invalid (according to DAQmx) characters in our channel with
    // underscores.
-   std::string tmp = boost::replace_all_copy(channel_, "/", "_");
-   tmp = boost::replace_all_copy(tmp, ":", "_");
-   int niRet = DAQmxCreateTask(tmp.c_str(), &task_);
+   std::string chan(channel_);
+   std::replace(chan.begin(), chan.end(), '/', '_');
+   std::replace(chan.begin(), chan.end(), ':', '_');
+
+   int niRet = DAQmxCreateTask(chan.c_str(), &task_);
    if (niRet)
    {
        return LogError(niRet, "CreateTask");
@@ -322,11 +317,11 @@ int DAQDevice::SetupTask()
 // Return the passed-in error code.
 int DAQDevice::LogError(int error, const char* func)
 {
-   std::string funcStr = boost::lexical_cast<string>(func);
+   std::string funcStr(func ? func : "(unknown func)");
    // Note this call is only relevant for the most recent error.
    int bufSize = DAQmxGetExtendedErrorInfo(NULL, 0);
-   char* message = new char[bufSize];
-   int messageError = DAQmxGetExtendedErrorInfo(message, bufSize);
+   std::vector<char> message(bufSize);
+   int messageError = DAQmxGetExtendedErrorInfo(message.data(), bufSize);
    if (messageError)
    {
       // Recurse
@@ -335,7 +330,8 @@ int DAQDevice::LogError(int error, const char* func)
    else
    {
       // Log the message.
-      core_->LogMessage(device_, ("Error calling " + funcStr + ": " + boost::lexical_cast<string>(message)).c_str(), false);
+      core_->LogMessage(device_,
+         ("Error calling " + funcStr + ": " + message.data()).c_str(), false);
    }
    return error;
 }
@@ -410,16 +406,16 @@ DigitalIO::DigitalIO() : numPos_(16), busy_(false), open_(false), state_(0)
       AddAllowedValue(g_PropertyPort, g_UseCustom);
       SetProperty(g_PropertyPort, g_UseCustom);
    }
-   for (std::vector<string>::iterator i = devices.begin(); i != devices.end(); ++i) {
-      std::vector<string> ports = GetDigitalPortsForDevice(*i);
-      for (std::vector<string>::iterator j = ports.begin(); j != ports.end(); ++j) {
+   for (std::vector<std::string>::iterator i = devices.begin(); i != devices.end(); ++i) {
+      std::vector<std::string> ports = GetDigitalPortsForDevice(*i);
+      for (std::vector<std::string>::iterator j = ports.begin(); j != ports.end(); ++j) {
          AddAllowedValue(g_PropertyPort, (*j).c_str());
       }
    }
 
    pAct = new CPropertyAction(this, &DAQDevice::OnSequenceLength);
    nRet = CreateStringProperty(g_PropertySequenceLength,
-      boost::lexical_cast<std::string>(maxSequenceLength_).c_str(), false, pAct, true);
+      std::to_string(maxSequenceLength_).c_str(), false, pAct, true);
 
    assert(nRet == DEVICE_OK);
 }
@@ -589,15 +585,13 @@ int DigitalIO::Initialize()
       return nRet;
    }
 
-   initialized_ = true;
    return DEVICE_OK;
 }
 
 int DigitalIO::Shutdown()
 {
    CancelTask();
-   
-   initialized_ = false;
+
    return DEVICE_OK;
 }
 
@@ -697,13 +691,14 @@ int DigitalIO::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          return DEVICE_SEQUENCE_TOO_LARGE;
       }
-      uInt32* values = new uInt32[sequence.size()];
-      for (unsigned long i = 0; i < sequence.size(); ++i)
+
+      std::vector<uInt32> values;
+      for (const auto& s : sequence)
       {
-         values[i] = boost::lexical_cast<uInt32>(sequence[i]);
+         values.push_back(static_cast<uInt32>(std::stoul(s)));
       }
-      int error = SetupDigitalTriggering(values, (long) sequence.size());
-      delete values;
+
+      int error = SetupDigitalTriggering(values.data(), static_cast<long>(values.size()));
       if (error)
       {
          return error;
@@ -730,7 +725,7 @@ int DigitalIO::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 // Set up a digital triggering task: create the output channel,
 // load the sequence onto NI's buffer, and set up the triggering
 // rules.
-int DigitalIO::SetupDigitalTriggering(uInt32* sequence, long numVals)
+int DigitalIO::SetupDigitalTriggering(const uInt32* sequence, long numVals)
 {
    SetupTask();
    int error = DAQmxCreateDOChan(task_, channel_.c_str(), "",
@@ -748,7 +743,7 @@ int DigitalIO::SetupDigitalTriggering(uInt32* sequence, long numVals)
 }
 
 // Load a sequence of outputs onto NI's buffer.
-int DigitalIO::LoadBuffer(uInt32* sequence, long numVals)
+int DigitalIO::LoadBuffer(const uInt32* sequence, long numVals)
 {
    int32 numWritten = 0;
    // Wait 10s for writing to complete (maybe should vary based on length of
@@ -761,7 +756,7 @@ int DigitalIO::LoadBuffer(uInt32* sequence, long numVals)
    }
    if (numWritten != numVals)
    {
-       LogMessage(("Didn't write all of sequence; wrote only " + boost::lexical_cast<std::string>(numWritten)).c_str());
+       LogMessage(("Didn't write all of sequence; wrote only " + std::to_string(numWritten)).c_str());
        return 1;
    }
    return 0;
@@ -772,14 +767,12 @@ int DigitalIO::LoadBuffer(uInt32* sequence, long numVals)
 int DigitalIO::TestTriggering()
 {
    int numSamples = 32;
-   uInt32 *sequence = new uInt32[numSamples];
+   std::vector<uInt32> sequence;
    for (int i = 0; i < numSamples; ++i)
    {
-       sequence[i] = i % 16;
+       sequence.push_back(i % 16);
    }
-   int result = SetupDigitalTriggering(sequence, numSamples);
-   delete sequence;
-   return result;
+   return SetupDigitalTriggering(sequence.data(), numSamples);
 }
 
 int DigitalIO::OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -852,16 +845,16 @@ AnalogIO::AnalogIO() :
       AddAllowedValue(g_PropertyPort, g_UseCustom);
       SetProperty(g_PropertyPort, g_UseCustom);
    }
-   for (std::vector<string>::iterator i = devices.begin(); i != devices.end(); ++i) {
-      std::vector<string> ports = GetAnalogPortsForDevice(*i);
-      for (std::vector<string>::iterator j = ports.begin(); j != ports.end(); ++j) {
+   for (std::vector<std::string>::iterator i = devices.begin(); i != devices.end(); ++i) {
+      std::vector<std::string> ports = GetAnalogPortsForDevice(*i);
+      for (std::vector<std::string>::iterator j = ports.begin(); j != ports.end(); ++j) {
          AddAllowedValue(g_PropertyPort, (*j).c_str());
       }
    }
 
    pAct = new CPropertyAction(this, &DAQDevice::OnSequenceLength);
    nRet = CreateStringProperty(g_PropertySequenceLength,
-      boost::lexical_cast<std::string>(maxSequenceLength_).c_str(), false, pAct, true);
+      std::to_string(maxSequenceLength_).c_str(), false, pAct, true);
    assert(nRet == DEVICE_OK);
 
    // demo
@@ -1016,8 +1009,6 @@ int AnalogIO::Initialize()
    if (nRet != DEVICE_OK)
       return nRet;
 
-   initialized_ = true;
-
    return DEVICE_OK;
 }
 
@@ -1029,13 +1020,12 @@ int AnalogIO::Shutdown()
        DAQmxClearTask(task_);
    }
 
-   initialized_ = false;
    return DEVICE_OK;
 }
 
 int AnalogIO::SetSignal(double volts)
 {
-   ostringstream txt;
+   std::ostringstream txt;
    txt << "2P >>>> AnalogIO::SetVoltage() = " << volts; 
    LogMessage(txt.str());
    return SetProperty(g_PropertyVolts, CDeviceUtils::ConvertToString(volts));
@@ -1169,15 +1159,9 @@ int AnalogIO::SendDASequence()
 // Load our analog sequence onto the NI buffer.
 int AnalogIO::LoadBuffer()
 {
-   float64* values = new float64[sequence_.size()];
-   for (unsigned int i = 0; i < sequence_.size(); ++i)
-   {
-      values[i] = sequence_[i];
-   }
    int32 numWritten = 0;
    int error = DAQmxWriteAnalogF64(task_, (int32) sequence_.size(), false, -1,
-      DAQmx_Val_GroupByChannel, values, &numWritten, NULL);
-   delete values;
+      DAQmx_Val_GroupByChannel, sequence_.data(), &numWritten, NULL);
    if (error)
    {
       return LogError(error, "WriteAnalogF64");
@@ -1185,8 +1169,8 @@ int AnalogIO::LoadBuffer()
    if ((unsigned long) numWritten != sequence_.size())
    {
       LogMessage(("Didn't write complete analog sequence to buffer: wrote " +
-         boost::lexical_cast<string>(numWritten) + " of " +
-         boost::lexical_cast<string>(sequence_.size()) + " values").c_str());
+         std::to_string(numWritten) + " of " +
+         std::to_string(sequence_.size()) + " values").c_str());
       return 1;
    }
    return DEVICE_OK;
@@ -1262,7 +1246,7 @@ int AnalogIO::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       for (unsigned long i = 0; i < sequence.size(); ++i)
       {
-         AddToDASequence(boost::lexical_cast<float64>(sequence[i]));
+         AddToDASequence(std::stod(sequence[i]));
       }
    }
    else if (eAct == MM::StartSequence)
@@ -1322,7 +1306,7 @@ int AnalogIO::OnDisable(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     else if (eAct == MM::AfterSet)
     {
-        string temp;
+        std::string temp;
         pProp->Get(temp);
         disable_ = (temp == "true");
         ApplyVoltage(gatedVolts_);
@@ -1372,7 +1356,7 @@ int AnalogIO::OnDemo(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      string val;
+      std::string val;
       pProp->Get(val);
       if (val.compare(g_Yes) == 0)
          demo_ = true;

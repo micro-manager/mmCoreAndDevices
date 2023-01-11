@@ -146,7 +146,7 @@ namespace MM {
    const char* const g_Keyword_Meatdata_Exposure    = "Exposure-ms";
    const char* const g_Keyword_Metadata_Score       = "Score";
    const char* const g_Keyword_Metadata_ImageNumber = "ImageNumber";
-   const char* const g_Keyword_Metadata_StartTime   = "StartTime-ms";
+   // Removed: g_Keyword_Metadata_StartTime         = "StartTime-ms";
    const char* const g_Keyword_Metadata_ROI_X       = "ROI-X-start";
    const char* const g_Keyword_Metadata_ROI_Y       = "ROI-Y-start";
    const char* const g_Keyword_Metadata_TimeInCore  = "TimeReceivedByCore";

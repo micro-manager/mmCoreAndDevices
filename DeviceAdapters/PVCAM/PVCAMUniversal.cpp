@@ -1914,7 +1914,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     isAcquiring_ = true;
 
     std::ostringstream os;
-    os << "Started sequence on " << deviceLabel_ << ", at " << startTime_.serialize()
+    os << "Started sequence on " << deviceLabel_ << ", at " << startTime_.toString()
         << ", with " << numImages << " frames, " << interval_ms << " ms interval and "
         << (stopOnOverflow ? "" : "don't ") << "stop on overflow" << std::endl;
     LogAdapterMessage(os.str().c_str());
@@ -3814,9 +3814,6 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
 
         const double startTimeMsec   = startTime_.getMsec();
         const double elapsedTimeMsec = frameNfo.TimeStampMsec() - startTimeMsec;
-
-        // The start time of the acquisition
-        md.PutTag(MM::g_Keyword_Metadata_StartTime, deviceLabel_, CDeviceUtils::ConvertToString(startTimeMsec));
 
         // The time elapsed since start of the acquisition until current frame readout
         // Now added by MM automatically, no need to do it here.

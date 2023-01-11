@@ -1103,14 +1103,14 @@ int MeadowlarkLC::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::BeforeGet)
 	{
 		double delayT = GetDelayMs();
-		delay = delayT * 1000;
+		double delay = delayT * 1000;
 		pProp->Set(delayT);
 	}
 	else if (eAct == MM::AfterSet)
 	{
 		double delayT;
 		pProp->Get(delayT);
-		delay = delayT * 1000;
+		double delay = delayT * 1000;
 		SetDelayMs(delayT);
 	}
 

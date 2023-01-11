@@ -23,11 +23,11 @@
 #include "../Error.h"
 #include "../Logging/Logger.h"
 
+#include <cstring>
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
-#include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/utility.hpp>
 
 class CMMCore;
 class HubInstance;
@@ -38,7 +38,7 @@ namespace MM
    class Device;
 }
 
-typedef boost::function<void (MM::Device*)> DeleteDeviceFunction;
+typedef std::function<void (MM::Device*)> DeleteDeviceFunction;
 
 
 /// Device instance wrapper class
@@ -58,14 +58,14 @@ typedef boost::function<void (MM::Device*)> DeleteDeviceFunction;
  * DeviceInstance is an RAII class: the raw device instance is created in the
  * constructor, and destroyed in the destructor.
  */
-class DeviceInstance : boost::noncopyable
+class DeviceInstance
 {
 protected:
    MM::Device* pImpl_;
 
 private:
    CMMCore* core_; // Weak reference
-   boost::shared_ptr<LoadedDeviceAdapter> adapter_;
+   std::shared_ptr<LoadedDeviceAdapter> adapter_;
    const std::string label_;
    std::string description_;
    DeleteDeviceFunction deleteFunction_;
@@ -73,7 +73,10 @@ private:
    mm::logging::Logger coreLogger_;
 
 public:
-   boost::shared_ptr<LoadedDeviceAdapter> GetAdapterModule() const /* final */ { return adapter_; }
+   DeviceInstance(const DeviceInstance&) = delete;
+   DeviceInstance& operator=(const DeviceInstance&) = delete;
+
+   std::shared_ptr<LoadedDeviceAdapter> GetAdapterModule() const /* final */ { return adapter_; }
    std::string GetLabel() const /* final */ { return label_; }
    std::string GetDescription() const /* final */ { return description_; }
    void SetDescription(const std::string& description) /* final */ { description_ = description; }
@@ -89,7 +92,7 @@ protected:
    // The DeviceInstance object owns the raw device pointer (pDevice) as soon
    // as the constructor is called, even if the constructor throws.
    DeviceInstance(CMMCore* core,
-         boost::shared_ptr<LoadedDeviceAdapter> adapter,
+         std::shared_ptr<LoadedDeviceAdapter> adapter,
          const std::string& name,
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
@@ -119,20 +122,23 @@ protected:
     *
     * For usage, see, e.g., the definition for DeviceInstance::GetName().
     */
-   class DeviceStringBuffer : boost::noncopyable
+   class DeviceStringBuffer
    {
       char buf_[MM::MaxStrLength + 1];
       const DeviceInstance* instance_;
       const std::string& funcName_;
 
    public:
+      DeviceStringBuffer(const DeviceStringBuffer&) = delete;
+      DeviceStringBuffer& operator=(const DeviceStringBuffer&) = delete;
+
       /**
        * instance and functionName must stay in scope during the lifetime of
        * the DeviceStringBuffer.
        */
       DeviceStringBuffer(const DeviceInstance* instance, const std::string& functionName) :
          instance_(instance), funcName_(functionName)
-      { memset(buf_, 0, sizeof(buf_)); }
+      { std::memset(buf_, 0, sizeof(buf_)); }
 
       char* GetBuffer() { return buf_; }
       std::string Get() const { Check(); return buf_; }

@@ -499,7 +499,7 @@ int VarispecLCTF::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (initializedDelay_) {
          SetDelayMs(delayT);
       }
-      delay_ = delayT * 1000;
+      delay_ = MM::MMTime::fromMs(delayT);
    }
    return DEVICE_OK;
 }

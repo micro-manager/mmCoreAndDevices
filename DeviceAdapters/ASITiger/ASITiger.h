@@ -374,6 +374,7 @@ const char* const g_CRISPNumberSkipsPropertyName = "Number of Skips";
 const char* const g_CRISPInFocusRangePropertyName = "In Focus Range(um)";
 const char* const g_CRISPOffsetPropertyName = "Lock Offset";
 const char* const g_CRISPSumPropertyName = "Sum";
+const char* const g_CRISPStatePropertyName = "CRISP State Character";
 
 // ring buffer property names
 const char* const g_RB_DelayPropertyName = "RingBufferDelayBetweenPoints(ms)";

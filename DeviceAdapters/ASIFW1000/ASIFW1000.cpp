@@ -1001,10 +1001,7 @@ bool Shutter::Busy()
 {
    //TODO: using the SQ command and shutters with sensors, we can check wether the shutter is open or closed.  This need checking for sensors on initialization, and will also need caching of the last requested position
    MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-   if (interval < (1000.0 * GetDelayMs() ))
-      return true;
-   else
-      return false;
+   return interval < MM::MMTime::fromMs(GetDelayMs());
 }
 
 int Shutter::Shutdown()

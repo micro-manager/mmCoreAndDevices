@@ -129,6 +129,7 @@ SUBDIRS = \
 	LeicaDMI \
 	LeicaDMR \
 	LeicaDMSTC \
+	LightSheetManager \
 	Ludl \
 	LudlLow \
 	LumencorSpectra \
@@ -137,6 +138,7 @@ SUBDIRS = \
 	Marzhauser \
 	Marzhauser-LStep \
 	MarzhauserLStepOld \
+	MicroFPGA \
 	MicroPoint \
 	Motic_mac \
 	Neos \
@@ -180,6 +182,7 @@ SUBDIRS = \
 	ThorlabsElliptecSlider \
 	ThorlabsFilterWheel \
 	ThorlabsSC10 \
+	Thorlabs_ELL14 \
 	Tofra \
 	Toptica_iBeamSmartCW \
 	TriggerScope \
@@ -195,6 +198,7 @@ SUBDIRS = \
 	XCiteLed \
 	XCiteXT600 \
 	XLight \
+	XLightV3 \
 	Xcite \
 	YodnE600 \
 	Yokogawa \

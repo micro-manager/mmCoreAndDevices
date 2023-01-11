@@ -311,8 +311,7 @@ int XimeaCamera::SnapImage()
 		}
 
 		// store time stamp data
-		readoutStartTime_.sec_ = image.GetTimeStampSec();
-		readoutStartTime_.uSec_ = image.GetTimeStampUSec();
+		readoutStartTime_ = MM::MMTime(image.GetTimeStampSec(), image.GetTimeStampUSec());
 
 		if (!isAcqRunning)
 		{
@@ -332,7 +331,7 @@ int XimeaCamera::SnapImage()
 	}
 
 	// use time of first successfully captured frame for sequence start
-	if (sequenceStartTime_.sec_ == 0 && sequenceStartTime_.uSec_ == 0)
+	if (sequenceStartTime_ == MM::MMTime{})
 	{
 		sequenceStartTime_ = readoutStartTime_;
 	}
@@ -777,8 +776,7 @@ int XimeaCamera::StartSequenceAcquisition(long numImages, double interval_ms, bo
 		return DEVICE_ERR;
 	}
 
-	sequenceStartTime_.sec_ = 0;
-	sequenceStartTime_.uSec_ = 0;
+	sequenceStartTime_ = MM::MMTime{};
 
 	imageCounter_ = 0;
 	seq_thd_->Start(numImages, interval_ms);
@@ -801,8 +799,6 @@ int XimeaCamera::InsertImage()
 	Metadata md;
 	double exp_time = (double)image.GetExpTime() / 1000;
 	md.put(MM::g_Keyword_Meatdata_Exposure, CDeviceUtils::ConvertToString(exp_time));
-	md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
-	md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
 	md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
 	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
 	md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)roiX_));
@@ -1680,9 +1676,9 @@ void XiSequenceThread::Start(long numImages, double intervalMs)
 	stop_ = false;
 	suspend_ = false;
 	activate();
-	actualDuration_ = 0;
+	actualDuration_ = MM::MMTime{};
 	startTime_ = camera_->GetCurrentMMTime();
-	lastFrameTime_ = 0;
+	lastFrameTime_ = MM::MMTime{};
 }
 
 //***********************************************************************

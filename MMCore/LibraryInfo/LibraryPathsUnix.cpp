@@ -27,8 +27,6 @@
 
 #include "../Error.h"
 
-#include <boost/scoped_array.hpp>
-
 #if defined(__linux__) && !defined(_GNU_SOURCE)
 // Provide dladdr()
 #   define _GNU_SOURCE
@@ -37,26 +35,29 @@
 #include <dlfcn.h>
 
 #ifdef __linux__
-#   include <cstring> // for strcpy()
 #   include <libgen.h> // for basename()
 #   include <unistd.h> // for readlink()
 #endif
+
+#include <algorithm>
+#include <string>
+#include <vector>
 
 
 #ifdef __linux__
 
 static std::string GetExecutablePath()
 {
-   boost::scoped_array<char> path;
+   std::vector<char> path;
    for (size_t bufsize = 1024; bufsize <= 32768; bufsize *= 2)
    {
-      path.reset(new char[bufsize]);
-      size_t len = readlink("/proc/self/exe", path.get(), bufsize);
+      path.resize(bufsize);
+      size_t len = readlink("/proc/self/exe", path.data(), bufsize);
       if (!len)
          throw CMMError("Cannot get path to executable");
       if (len >= bufsize)
          continue;
-      return path.get();
+      return path.data();
    }
    throw CMMError("Path to executable too long");
 }
@@ -65,9 +66,9 @@ static std::string GetExecutableName()
 {
    const std::string path = GetExecutablePath();
    // basename() can modify the buffer, so make a copy
-   boost::scoped_array<char> mutablePath(new char[path.size() + 1]);
-   strcpy(mutablePath.get(), path.c_str());
-   const char* name = basename(mutablePath.get());
+   std::vector<char> mutablePath(path.size() + 1);
+   std::copy(path.begin(), path.end(), mutablePath.begin());
+   const char* name = basename(mutablePath.data());
    if (!name)
       throw CMMError("Cannot get executable name");
    return name;

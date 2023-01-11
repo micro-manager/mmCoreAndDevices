@@ -1016,9 +1016,9 @@ void OkolabThread::Start(double intervalMs)
 	_stop = false;
 	_suspend = false;
 	activate();
-	_actualDuration = 0;
+	_actualDuration = MM::MMTime{};
 	_startTime = _device->GetCurrentMMTime();
-	_lastFrameTime = 0;
+	_lastFrameTime = MM::MMTime{};
 	Sleep(THREAD_SLEEP_MS);
 }
 

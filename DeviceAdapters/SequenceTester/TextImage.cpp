@@ -168,7 +168,8 @@ void
 DrawTextImage(uint8_t* buffer, size_t width, size_t height,
       const std::string& text)
 {
-   TextImageCursor cursor(buffer, width, height);
+   TextImageCursor cursor(buffer,
+         static_cast<int>(width), static_cast<int>(height));
    Glyph::DrawString(text, cursor, true);
 }
 
