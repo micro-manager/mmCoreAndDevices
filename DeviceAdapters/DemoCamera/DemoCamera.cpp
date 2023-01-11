@@ -54,6 +54,7 @@ const char* g_DADeviceName = "D-DA";
 const char* g_DA2DeviceName = "D-DA2";
 const char* g_GalvoDeviceName = "DGalvo";
 const char* g_MagnifierDeviceName = "DOptovar";
+const char* g_DataStreamerDeviceName = "DDataStreamer";
 const char* g_HubDeviceName = "DHub";
 
 // constants for naming pixel types (allowed values of the "PixelType" property)
@@ -4673,6 +4674,237 @@ bool DemoGalvo::PointInTriangle(Point p, Point p0, Point p1, Point p2)
         A = -A;
     }
     return s > 0 && t > 0 && (s + t) < A;
+}
+
+///////////////////////////////////////////////////////////
+// DemoDataStreamer
+DemoDataStreamer::DemoDataStreamer() :
+    mockDataSize_(1024),
+    acqPeriod_(0),
+    procPeriod_(0),
+    errorGetBufferSizeAt_(65535),
+    errorGetBufferAt_(65535),
+    errorProcessBufferAt_(65535),
+    initialized_(false)
+{
+    // parent ID display
+    CreateHubIDProperty();
+}
+
+DemoDataStreamer::~DemoDataStreamer() 
+{
+    Shutdown();
+}
+
+void DemoDataStreamer::GetName(char* pszName) const {
+    CDeviceUtils::CopyLimitedString(pszName, g_DataStreamerDeviceName);
+}
+
+bool DemoDataStreamer::Busy() {
+    return false;
+}
+
+int DemoDataStreamer::Initialize()
+{
+
+    SetErrorText(errorCodeGetBufferSize, "GetBufferSize error message");
+    SetErrorText(errorCodeGetBuffer, "GetBuffer error message");
+    SetErrorText(errorCodeProcessBuffer, "ProcessBuffer error message");
+
+    int ret;
+    ret = CreateFloatProperty("Average data value", NAN, false);
+    assert(ret == DEVICE_OK);
+
+    CPropertyAction* pAct = pAct = new CPropertyAction(this, &DemoDataStreamer::OnAcquisitionPeriod);
+    ret = CreateIntegerProperty("Acquisition period in ms", acqPeriod_, false, pAct);
+    assert(ret == DEVICE_OK);
+    SetPropertyLimits("Acquisition period in ms", 0, 10000);
+
+    pAct = pAct = new CPropertyAction(this, &DemoDataStreamer::OnProcessingPeriod);
+    ret = CreateIntegerProperty("Processing period in ms", procPeriod_, false, pAct);
+    assert(ret == DEVICE_OK);
+    SetPropertyLimits("Processing period in ms", 0, 10000);
+
+    pAct = pAct = new CPropertyAction(this, &DemoDataStreamer::OnGenerateGetBufferSizeErrorAt);
+    ret = CreateIntegerProperty("Generate GetBufferSize error at", errorGetBufferSizeAt_, false, pAct);
+    assert(ret == DEVICE_OK);
+    SetPropertyLimits("Generate GetBufferSize error at", 1, 65535);
+
+    pAct = pAct = new CPropertyAction(this, &DemoDataStreamer::OnGenerateGetBufferErrorAt);
+    ret = CreateIntegerProperty("Generate GetBuffer error at", errorGetBufferAt_, false, pAct);
+    assert(ret == DEVICE_OK);
+    SetPropertyLimits("Generate GetBuffer error at", 1, 65535);
+
+    pAct = pAct = new CPropertyAction(this, &DemoDataStreamer::OnGenerateProcessBufferErrorAt);
+    ret = CreateIntegerProperty("Generate ProcessBuffer error at", errorProcessBufferAt_, false, pAct);
+    assert(ret == DEVICE_OK);
+    SetPropertyLimits("Generate ProcessBuffer error at", 1, 65535);
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int DemoDataStreamer::Shutdown() {
+    initialized_ = false;
+    return DEVICE_OK;
+}
+
+int DemoDataStreamer::StartStream() {
+    counter_ = 1;
+    int ret;
+    ret = this->StartDataStreamerThreads();
+    return ret;
+}
+
+int DemoDataStreamer::StopStream() {
+    int ret;
+    ret = this->StopDataStreamerThreads();
+    return ret;
+}
+
+int DemoDataStreamer::GetBufferSize(unsigned& dataBufferSize) {
+    if (counter_ == errorGetBufferSizeAt_) return errorCodeGetBufferSize;
+    dataBufferSize = mockDataSize_;
+    return DEVICE_OK;
+}
+
+std::unique_ptr<char[]> DemoDataStreamer::GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitStatus) {
+
+    if (counter_ == errorGetBufferAt_) {
+        actualDataBufferSize = 0;
+        exitStatus = errorCodeGetBuffer;
+        return 0;
+    }
+
+    if (expectedDataBufferSize <= mockDataSize_) {
+        actualDataBufferSize = expectedDataBufferSize;
+    }
+    else {
+        actualDataBufferSize = mockDataSize_;
+    }
+
+    // allocate a new data array and put data in it
+    std::unique_ptr<char[]> data(new char[actualDataBufferSize]);
+    int* ptr = (int*)data.get();
+    for (size_t ii = 0; ii < actualDataBufferSize/4; ii++) {
+        *ptr = counter_;
+        ptr++;
+    }
+    counter_++;
+    exitStatus = DEVICE_OK;
+    Sleep(acqPeriod_);
+
+    return data;
+}
+
+int DemoDataStreamer::ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) {
+    if (counter_ == errorProcessBufferAt_) return errorCodeProcessBuffer;
+    double ave = 0;
+    int* ptr = (int*)pDataBuffer.get();
+    for (size_t ii = 0; ii < dataSize/4; ii++) {
+        ave += *ptr;
+        ptr++;
+    }
+    ave = ave / (dataSize/4);
+    SetProperty("Average data value", to_string(ave).c_str());
+    Sleep(procPeriod_);
+    return DEVICE_OK;
+}
+
+/**
+* Handles "Acquisition period in ms" property.
+*/
+int DemoDataStreamer::OnAcquisitionPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(acqPeriod_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        if (this->IsStreaming()) return DEVICE_DATASTREAMER_BUSY_ACQUIRING;
+        long newPeriod;
+        pProp->Get(newPeriod);
+        if (newPeriod>pProp->GetUpperLimit() || newPeriod<pProp->GetLowerLimit())
+        {
+            pProp->Set(acqPeriod_); // revert
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        }
+        acqPeriod_ = newPeriod;
+    }
+    return DEVICE_OK;
+}
+
+/**
+* Handles "Acquisition period in ms" property.
+*/
+int DemoDataStreamer::OnProcessingPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(procPeriod_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        if (this->IsStreaming()) return DEVICE_DATASTREAMER_BUSY_ACQUIRING;
+        long newPeriod;
+        pProp->Get(newPeriod);
+        if (newPeriod > pProp->GetUpperLimit() || newPeriod < pProp->GetLowerLimit())
+        {
+            pProp->Set(procPeriod_); // revert
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        }
+        procPeriod_ = newPeriod;
+    }
+    return DEVICE_OK;
+}
+
+int DemoDataStreamer::OnGenerateGetBufferSizeErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(errorGetBufferSizeAt_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        if (this->IsStreaming()) return DEVICE_DATASTREAMER_BUSY_ACQUIRING;
+        long newval;
+        pProp->Get(newval);
+        errorGetBufferSizeAt_ = newval;
+    }
+    return DEVICE_OK;
+}
+
+int DemoDataStreamer::OnGenerateGetBufferErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(errorGetBufferAt_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        if (this->IsStreaming()) return DEVICE_DATASTREAMER_BUSY_ACQUIRING;
+        long newval;
+        pProp->Get(newval);
+        errorGetBufferAt_ = newval;
+    }
+    return DEVICE_OK;
+}
+
+int DemoDataStreamer::OnGenerateProcessBufferErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(errorProcessBufferAt_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        if (this->IsStreaming()) return DEVICE_DATASTREAMER_BUSY_ACQUIRING;
+        long newval;
+        pProp->Get(newval);
+        errorProcessBufferAt_ = newval;
+    }
+    return DEVICE_OK;
 }
 
 ////////// BEGINNING OF POORLY ORGANIZED CODE //////////////

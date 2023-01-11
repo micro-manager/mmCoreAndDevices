@@ -52,8 +52,6 @@
 
 const char* NoHubError = "Parent Hub not defined.";
 
-const char* g_DataStreamerDeviceName = "DDataStreamer";
-
 // Defines which segments in a seven-segment display are lit up for each of
 // the numbers 0-9. Segments are:
 //
@@ -1198,107 +1196,46 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////////
-// DemoShutter class
-// Simulation of shutter device
+// DemoDataStreamer class
+// Simulation of data streamer device
 //////////////////////////////////////////////////////////////////////////////
 class DemoDataStreamer : public CDataStreamerBase<DemoDataStreamer>
 {
 public:
-    DemoDataStreamer() :
-        mockDataSize_(1024*1024),
-        initialized_(false)
-    {
-        // parent ID display
-        CreateHubIDProperty();
-    }
-    ~DemoDataStreamer() {}
+    DemoDataStreamer();
+    ~DemoDataStreamer();
 
-    int Initialize() {
-        // initialize mock data
-        mockData_ = new char[mockDataSize_];
-        char val = 0;
-        for (unsigned ii = 0; ii < mockDataSize_; ii++) { mockData_[ii] = val; val++; }
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
 
-        SetErrorText(69, "My special error text.");
+    int StartStream();
+    int StopStream();
+    int GetBufferSize(unsigned& dataBufferSize);
+    std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitStatus);    
+    int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize);
 
-        writeFile_.open("C:\\temp\\mybinaryfile.txt", std::ios::out | std::ios::binary);
-
-        initialized_ = true;
-        return DEVICE_OK;
-    }
-    int Shutdown() {
-        writeFile_.close();
-        initialized_ = false;
-        return DEVICE_OK;
-    }
-
-    void GetName(char* pszName) const {
-        CDeviceUtils::CopyLimitedString(pszName, g_DataStreamerDeviceName);
-    }
-    bool Busy() {
-        return false;
-    }
-
-    int StartStream() {
-        int ret;
-        LogMessage("Pre-StartStream", true);
-        ret = this->StartDataStreamerThreads();
-        return ret;
-    }
-
-    int StopStream() {
-        int ret;
-        LogMessage("Pre-StoptStream", true);
-        ret = this->StopDataStreamerThreads();
-        return ret;
-    }
-
-    int GetBufferSize(unsigned& dataBufferSize) { 
-        LogMessage("Demo DataStreamer: calling GetBufferSize", true);
-        dataBufferSize = mockDataSize_;
-        return DEVICE_OK;
-    }
-
-    std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitStatus) {
-        
-        LogMessage("Demo DataStreamer: calling GetBuffer", true);
-
-        if (expectedDataBufferSize <= mockDataSize_) {
-            actualDataBufferSize = expectedDataBufferSize;
-        }
-        else {
-            actualDataBufferSize = mockDataSize_;
-        }
-        // allocate a new data array and put data in it
-        std::unique_ptr<char[]> data(new char[actualDataBufferSize]);
-        memcpy(data.get(), mockData_, actualDataBufferSize);
-        exitStatus = DEVICE_OK;
-        LogMessage("Demo DataStreamer: finished GetBuffer", true);
-
-        return data;
-    }
-    
-    int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize) {
-
-        LogMessage("Demo DataStreamer: calling ProcessBuffer", true);
-
-        if (!writeFile_) {
-            LogMessage("Demo DataStreamer: unable to wite into a file during ProcessBuffer call", false);
-            return 0;
-        }
-        writeFile_.write(pDataBuffer.get(), dataSize);
-        Sleep(2000);
-        LogMessage("Demo DataStreamer: finished ProcessBuffer", true);
-
-        return DEVICE_OK;
-    }
+    // action interface
+    // ----------------
+    int OnAcquisitionPeriod(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnProcessingPeriod(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGenerateGetBufferSizeErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGenerateGetBufferErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGenerateProcessBufferErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     bool initialized_;
     unsigned mockDataSize_;
-    char* mockData_;
-    std::ofstream writeFile_;
-    MM::MMTime changedTime_;
+    unsigned counter_;
+    long acqPeriod_;
+    long procPeriod_;
+    long errorGetBufferSizeAt_;
+    long errorGetBufferAt_;
+    long errorProcessBufferAt_;
+    const int errorCodeGetBufferSize = 901;
+    const int errorCodeGetBuffer = 902;
+    const int errorCodeProcessBuffer = 903;
 };
 
 

@@ -2332,6 +2332,7 @@ public:
     virtual int SetAcquisitionPause(bool pause) {
         if (!thdAcq_->IsRunning()) return DEVICE_OK;
         thdAcq_->SetPause(pause);
+        return DEVICE_OK;
     }
 
     virtual bool GetAcquisitionPause() {
@@ -2588,7 +2589,7 @@ public:
         int svc(void) throw ()
         {
             this->SetExitStatus(DEVICE_DATASTREAMER_BUSY_ACQUIRING);
-            int ret;
+            int ret = DEVICE_OK;
             AcquisitionThread* acqThr = pDataStreamerBase_->thdAcq_;
             AcquiredBlockCollection* acqCollection = pDataStreamerBase_->acqCollection_;
             std::stringstream ss;
