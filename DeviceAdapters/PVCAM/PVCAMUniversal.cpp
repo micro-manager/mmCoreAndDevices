@@ -37,7 +37,6 @@
 #include "PVCAMAdapter.h"
 
 // MMDevice
-#include "FixSnprintf.h"
 #include "ModuleInterface.h"
 
 // Local
@@ -440,7 +439,8 @@ int Universal::Initialize()
 #ifdef PVCAM_ADAPTER_CUSTOM_BUILD
         // If this is a custom build show a warning popup before initializing the adapter.
         char msg[256];
-        sprintf_s(msg, "You are using a Micro-Manager with custom PVCAM adapter build.\nAdapter version %u.%u.%u.",
+        snprintf(msg, sizeof(msg),
+            "You are using a Micro-Manager with custom PVCAM adapter build.\nAdapter version %u.%u.%u.",
             PVCAM_ADAPTER_VERSION_MAJOR, PVCAM_ADAPTER_VERSION_MINOR, PVCAM_ADAPTER_VERSION_REVISION);
         MessageBoxA(NULL, msg, "Warning", MB_OK | MB_ICONWARNING | MB_SETFOREGROUND);
 #endif
@@ -2139,7 +2139,7 @@ int Universal::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (eAct == MM::BeforeGet)
     {
         char buf[8];
-        snprintf(buf, 8, "%ubit", prmBitDepth_->Current()); // 12bit, 14bit, 16bit, ...
+        snprintf(buf, sizeof(buf), "%ubit", prmBitDepth_->Current()); // 12bit, 14bit, 16bit, ...
         pProp->Set(buf);
     }
 
