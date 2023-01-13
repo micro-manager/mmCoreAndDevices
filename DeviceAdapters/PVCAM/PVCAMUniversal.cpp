@@ -157,6 +157,9 @@ const char* g_Keyword_MetadataResetTimestamp  = "MetadataResetTimestamp"; // Yes
 const char* g_Keyword_CentroidsEnabled = "CentroidsEnabled"; // Yes/No
 const char* g_Keyword_CentroidsRadius  = "CentroidsRadius";
 const char* g_Keyword_CentroidsCount   = "CentroidsCount";
+const char* g_Keyword_CentroidsMode      = "CentroidsMode";
+const char* g_Keyword_CentroidsBgCount   = "CentroidsBgCount";
+const char* g_Keyword_CentroidsThreshold = "CentroidsThreshold";
 const char* g_Keyword_FanSpeedSetpoint = "FanSpeedSetpoint";
 const char* g_Keyword_PMode            = "PMode";
 
@@ -275,6 +278,9 @@ Universal::Universal(short cameraId, const char* deviceName)
     prmCentroidsEnabled_(NULL),
     prmCentroidsRadius_(NULL),
     prmCentroidsCount_(NULL),
+    prmCentroidsMode_(NULL),
+    prmCentroidsBgCount_(NULL),
+    prmCentroidsThreshold_(NULL),
     prmFanSpeedSetpoint_(NULL),
     prmTrigTabSignal_(NULL),
     prmLastMuxedSignal_(NULL),
@@ -329,7 +335,7 @@ Universal::Universal(short cameraId, const char* deviceName)
 }
 
 Universal::~Universal()
-{   
+{
     if (--refCount_ <= 0)
     {
         refCount_ = 0; // having the refCount as uint caused underflow and incorrect behavior in Shutdown()
@@ -380,6 +386,9 @@ Universal::~Universal()
     delete prmCentroidsEnabled_;
     delete prmCentroidsRadius_;
     delete prmCentroidsCount_;
+    delete prmCentroidsMode_;
+    delete prmCentroidsBgCount_;
+    delete prmCentroidsThreshold_;
     delete prmFanSpeedSetpoint_;
     delete prmTrigTabSignal_;
     delete prmLastMuxedSignal_;
@@ -638,30 +647,53 @@ int Universal::Initialize()
     }
 
     prmCentroidsRadius_ = new PvParam<uns16>("PARAM_CENTROIDS_RADIUS", PARAM_CENTROIDS_RADIUS, this, true);
-    if ( prmCentroidsRadius_->IsAvailable() )
+    if (prmCentroidsRadius_->IsAvailable())
     {
-        // Just read the current value, we don't have any specific setting to use
         acqCfgNew_.CentroidsRadius = prmCentroidsRadius_->Current();
-        // CentroidsRadius UI property
-        pAct = new CPropertyAction (this, &Universal::OnCentroidsRadius);
-        CreateProperty(g_Keyword_CentroidsRadius, 
-            CDeviceUtils::ConvertToString(prmCentroidsRadius_->Current()),
-            MM::Integer, false, pAct);
+        pAct = new CPropertyAction(this, &Universal::OnCentroidsRadius);
+        CreateIntegerProperty(g_Keyword_CentroidsRadius,  prmCentroidsRadius_->Current(), false, pAct);
         SetPropertyLimits(g_Keyword_CentroidsRadius,
             prmCentroidsRadius_->Min(), prmCentroidsRadius_->Max());
     }
     prmCentroidsCount_ = new PvParam<uns16>("PARAM_CENTROIDS_COUNT", PARAM_CENTROIDS_COUNT, this, true);
     if (prmCentroidsCount_->IsAvailable())
     {
-        // Just read the current value, we don't have any specific setting to use
         acqCfgNew_.CentroidsCount = prmCentroidsCount_->Current();
-        // CentroidsCount UI property
-        pAct = new CPropertyAction (this, &Universal::OnCentroidsCount);
-        CreateProperty(g_Keyword_CentroidsCount, 
-            CDeviceUtils::ConvertToString(prmCentroidsCount_->Current()),
-            MM::Integer, false, pAct);
+        pAct = new CPropertyAction(this, &Universal::OnCentroidsCount);
+        CreateIntegerProperty(g_Keyword_CentroidsCount, acqCfgNew_.CentroidsCount, false, pAct);
         SetPropertyLimits(g_Keyword_CentroidsCount,
             prmCentroidsCount_->Min(), prmCentroidsCount_->Max());
+    }
+    prmCentroidsMode_ = new PvEnumParam("PARAM_CENTROIDS_MODE", PARAM_CENTROIDS_MODE, this, true);
+    if (prmCentroidsMode_->IsAvailable())
+    {
+        pAct = new CPropertyAction(this, &Universal::OnCentroidsMode);
+        const char* currentMode = prmCentroidsMode_->GetEnumStrings()[0].c_str();
+        CreateStringProperty(g_Keyword_CentroidsMode, currentMode, false, pAct);
+        SetAllowedValues(g_Keyword_CentroidsMode, prmCentroidsMode_->GetEnumStrings());
+    }
+    prmCentroidsBgCount_ = new PvEnumParam("PARAM_CENTROIDS_BG_COUNT", PARAM_CENTROIDS_BG_COUNT, this, true);
+    if (prmCentroidsBgCount_->IsAvailable())
+    {
+        pAct = new CPropertyAction(this, &Universal::OnCentroidsBgCount);
+        const char* currentMode = prmCentroidsBgCount_->GetEnumStrings()[0].c_str();
+        CreateStringProperty(g_Keyword_CentroidsBgCount, currentMode, false, pAct);
+        SetAllowedValues(g_Keyword_CentroidsBgCount, prmCentroidsBgCount_->GetEnumStrings());
+    }
+    prmCentroidsThreshold_ = new PvParam<uns32>("PARAM_CENTROIDS_THRESHOLD", PARAM_CENTROIDS_THRESHOLD, this, true);
+    if (prmCentroidsThreshold_->IsAvailable())
+    {
+        const uns32 valCurFP = prmCentroidsThreshold_->Current();
+        const uns32 valMinFP = prmCentroidsThreshold_->Min();
+        const uns32 valMaxFP = prmCentroidsThreshold_->Max();
+        // Value from camera is fixed-point real number in Q8.4 format, convert it to double
+        const double valCurD = static_cast<double>(valCurFP & 0xFFF) / (0x00F + 1);
+        const double valMinD = static_cast<double>(valMinFP & 0xFFF) / (0x00F + 1);
+        const double valMaxD = static_cast<double>(valMaxFP & 0xFFF) / (0x00F + 1);
+        acqCfgNew_.CentroidsThreshold = valCurD;
+        pAct = new CPropertyAction(this, &Universal::OnCentroidsThreshold);
+        CreateFloatProperty(g_Keyword_CentroidsThreshold, valCurD, false, pAct);
+        SetPropertyLimits(g_Keyword_CentroidsThreshold, valMinD, valMaxD);
     }
 
     /// FAN SPEED SETPOINT
@@ -2758,6 +2790,61 @@ int Universal::OnCentroidsCount(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get( val );
         // The new settings will be applied once the acquisition is restarted
         acqCfgNew_.CentroidsCount = val;
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnCentroidsMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnCentroidsMode", eAct);
+
+    if (eAct == MM::AfterSet)
+    {
+        std::string valStr;
+        pProp->Get(valStr);
+        acqCfgNew_.CentroidsMode = prmCentroidsMode_->GetEnumValue(valStr);
+        return applyAcqConfig();
+    }
+    else if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(prmCentroidsMode_->GetEnumString(acqCfgCur_.CentroidsMode).c_str());
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnCentroidsBgCount(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnCentroidsBgCount", eAct);
+
+    if (eAct == MM::AfterSet)
+    {
+        std::string valStr;
+        pProp->Get(valStr);
+        acqCfgNew_.CentroidsBgCount = prmCentroidsBgCount_->GetEnumValue(valStr);
+        return applyAcqConfig();
+    }
+    else if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(prmCentroidsBgCount_->GetEnumString(acqCfgCur_.CentroidsBgCount).c_str());
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnCentroidsThreshold(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnCentroidsThreshold", eAct);
+
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(acqCfgCur_.CentroidsThreshold);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double val;
+        pProp->Get(val);
+        // The new settings will be applied once the acquisition is restarted
+        acqCfgNew_.CentroidsThreshold = val;
         return applyAcqConfig();
     }
     return DEVICE_OK;
@@ -5638,12 +5725,59 @@ int Universal::applyAcqConfig(bool forceSetup)
             return nRet; // Error logged in SetAndApply()
         }
     }
+    if (acqCfgNew_.CentroidsMode != acqCfgCur_.CentroidsMode)
+    {
+        configChanged = true;
+        bufferResizeRequired = true;
+        if ((nRet = prmCentroidsMode_->SetAndApply(acqCfgNew_.CentroidsMode)) != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+    }
+    if (acqCfgNew_.CentroidsBgCount != acqCfgCur_.CentroidsBgCount)
+    {
+        configChanged = true;
+        bufferResizeRequired = true;
+        if ((nRet = prmCentroidsBgCount_->SetAndApply(acqCfgNew_.CentroidsBgCount)) != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+    }
+    if (acqCfgNew_.CentroidsThreshold != acqCfgCur_.CentroidsThreshold)
+    {
+        configChanged = true;
+        bufferResizeRequired = true;
+        // Value in camera is fixed-point real number in Q8.4 format, convert it from double
+        const double valCurD = acqCfgNew_.CentroidsThreshold;
+        const uns32 valCurFP = static_cast<uns32>(std::round(valCurD * (0x00F + 1))) & 0xFFF;
+        if ((nRet = prmCentroidsThreshold_->SetAndApply(valCurFP)) != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+    }
 
     // Update the "output" ROI count so the md_frame structure can be reinitialized if needed
     if (acqCfgNew_.CentroidsEnabled)
-        acqCfgNew_.RoiCount = acqCfgNew_.CentroidsCount;
+    {
+        switch (acqCfgNew_.CentroidsMode)
+        {
+        case PL_CENTROIDS_MODE_LOCATE:
+            acqCfgNew_.RoiCount = acqCfgNew_.CentroidsCount;
+            break;
+        case PL_CENTROIDS_MODE_TRACK:
+        case PL_CENTROIDS_MODE_BLOB:
+        default:
+            acqCfgNew_.RoiCount = 1 + acqCfgNew_.CentroidsCount;
+            break;
+        }
+    }
     else
+    {
         acqCfgNew_.RoiCount = static_cast<int>(acqCfgNew_.Rois.Count());
+    }
 
     // Fan speed setpoint
     if (acqCfgNew_.FanSpeedSetpoint != acqCfgCur_.FanSpeedSetpoint)

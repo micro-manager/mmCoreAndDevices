@@ -401,6 +401,26 @@ public: // Action handlers
     */
     int OnCentroidsCount(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
+    * Gets or sets the currently configured Centroids mode.
+    * The default Locate mode sends each centroid as separate ROI.
+    * The other modes send all pixel data in first extra ROI and mark all objects
+    * in it with header-only ROIs.
+    */
+    int OnCentroidsMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured Centroids frame count for background removal.
+    * E.g. if 10 is set the camera will use first 10 frames from the
+    * acquisition for internal optimization of further processing.
+    */
+    int OnCentroidsBgCount(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured Centroids threshold.
+    * It is a fixed-point real number in Q8.4 format.
+    * E.g. the value 1234 (0x4D2) from camera means 77.2 (0x4D hex = 77 dec)
+    * that is shown to user in MM.
+    */
+    int OnCentroidsThreshold(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
     * Gets or sets the currently configured camera fan speed.
     */
     int OnFanSpeedSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -860,6 +880,9 @@ private:
     PvParam<rs_bool>* prmCentroidsEnabled_;
     PvParam<uns16>*   prmCentroidsRadius_;
     PvParam<uns16>*   prmCentroidsCount_;
+    PvEnumParam*      prmCentroidsMode_;
+    PvEnumParam*      prmCentroidsBgCount_;
+    PvParam<uns32>*   prmCentroidsThreshold_;
     PvEnumParam*      prmFanSpeedSetpoint_;
     PvEnumParam*      prmTrigTabSignal_;
     PvParam<uns8>*    prmLastMuxedSignal_;

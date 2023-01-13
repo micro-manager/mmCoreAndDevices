@@ -13,6 +13,9 @@ AcqConfig::AcqConfig() :
     CentroidsEnabled(false),
     CentroidsRadius(0),
     CentroidsCount(0),
+    CentroidsMode(PL_CENTROIDS_MODE_LOCATE),
+    CentroidsBgCount(0), // No enum related
+    CentroidsThreshold(100),
     RoiCount(1),
     FanSpeedSetpoint(0),
     Rois(),

@@ -73,6 +73,18 @@ public:
     */
     int CentroidsCount;
     /**
+    * Centroids mode.
+    */
+    int CentroidsMode;
+    /**
+    * Number of for dynamic background removal. It is enumeration without any enum type defined.
+    */
+    int CentroidsBgCount;
+    /**
+    * Threshold multiplier for specific object detection modes. A fixed-point real number in Q8.4 format.
+    */
+    double CentroidsThreshold;
+    /**
     * Total number of "output" ROIs for the current acquisition. This could be either
     * the Centroids Count or number of user defined ROIs (1 or more if supported)
     */
