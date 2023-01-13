@@ -4680,8 +4680,8 @@ bool DemoGalvo::PointInTriangle(Point p, Point p0, Point p1, Point p2)
 // DemoDataStreamer
 DemoDataStreamer::DemoDataStreamer() :
     mockDataSize_(1024),
-    acqPeriod_(0),
-    procPeriod_(0),
+    acqPeriod_(1000),
+    procPeriod_(1000),
     errorGetBufferSizeAt_(65535),
     errorGetBufferAt_(65535),
     errorProcessBufferAt_(65535),
@@ -4750,15 +4750,17 @@ int DemoDataStreamer::Shutdown() {
 }
 
 int DemoDataStreamer::StartStream() {
+    // calls to hardware should be implemented here
     counter_ = 1;
     int ret;
-    ret = this->StartDataStreamerThreads();
+    ret = this->StartDataStreamerThreads(); // this line must be present in every StartStream implementation
     return ret;
 }
 
 int DemoDataStreamer::StopStream() {
+    // calls to hardware should be implemented here
     int ret;
-    ret = this->StopDataStreamerThreads();
+    ret = this->StopDataStreamerThreads();  // this line must be present in every StopStream implementation
     return ret;
 }
 
