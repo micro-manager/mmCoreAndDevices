@@ -633,15 +633,14 @@ int Universal::Initialize()
     /// CENTROIDS FEATURE
     acqCfgNew_.CentroidsEnabled = false; // Disabled by default
     prmCentroidsEnabled_ = new PvParam<rs_bool>("PARAM_CENTROIDS_ENABLED", PARAM_CENTROIDS_ENABLED, this, true);
-    if ( prmCentroidsEnabled_->IsAvailable() )
+    if (prmCentroidsEnabled_->IsAvailable())
     {
         nRet = prmCentroidsEnabled_->SetAndApply(acqCfgNew_.CentroidsEnabled ? TRUE : FALSE);
         if (nRet != DEVICE_OK)
             return nRet;
-        // CentroidsEnabled UI property
-        pAct = new CPropertyAction (this, &Universal::OnCentroidsEnabled);
-        CreateProperty(g_Keyword_CentroidsEnabled,
-            acqCfgNew_.CentroidsEnabled ? g_Keyword_Yes : g_Keyword_No, MM::String, false, pAct);
+        pAct = new CPropertyAction(this, &Universal::OnCentroidsEnabled);
+        CreateStringProperty(g_Keyword_CentroidsEnabled,
+            acqCfgNew_.CentroidsEnabled ? g_Keyword_Yes : g_Keyword_No, false, pAct);
         AddAllowedValue(g_Keyword_CentroidsEnabled, g_Keyword_No);
         AddAllowedValue(g_Keyword_CentroidsEnabled, g_Keyword_Yes);
     }
@@ -667,33 +666,29 @@ int Universal::Initialize()
     prmCentroidsMode_ = new PvEnumParam("PARAM_CENTROIDS_MODE", PARAM_CENTROIDS_MODE, this, true);
     if (prmCentroidsMode_->IsAvailable())
     {
+        acqCfgNew_.CentroidsMode = prmCentroidsMode_->Current();
+        const std::string str = prmCentroidsMode_->GetEnumString(acqCfgNew_.CentroidsMode);
         pAct = new CPropertyAction(this, &Universal::OnCentroidsMode);
-        const char* currentMode = prmCentroidsMode_->GetEnumStrings()[0].c_str();
-        CreateStringProperty(g_Keyword_CentroidsMode, currentMode, false, pAct);
+        CreateStringProperty(g_Keyword_CentroidsMode, str.c_str(), false, pAct);
         SetAllowedValues(g_Keyword_CentroidsMode, prmCentroidsMode_->GetEnumStrings());
     }
     prmCentroidsBgCount_ = new PvEnumParam("PARAM_CENTROIDS_BG_COUNT", PARAM_CENTROIDS_BG_COUNT, this, true);
     if (prmCentroidsBgCount_->IsAvailable())
     {
+        acqCfgNew_.CentroidsBgCount = prmCentroidsBgCount_->Current();
+        const std::string str = prmCentroidsBgCount_->GetEnumString(acqCfgNew_.CentroidsBgCount);
         pAct = new CPropertyAction(this, &Universal::OnCentroidsBgCount);
-        const char* currentMode = prmCentroidsBgCount_->GetEnumStrings()[0].c_str();
-        CreateStringProperty(g_Keyword_CentroidsBgCount, currentMode, false, pAct);
+        CreateStringProperty(g_Keyword_CentroidsBgCount, str.c_str(), false, pAct);
         SetAllowedValues(g_Keyword_CentroidsBgCount, prmCentroidsBgCount_->GetEnumStrings());
     }
     prmCentroidsThreshold_ = new PvParam<uns32>("PARAM_CENTROIDS_THRESHOLD", PARAM_CENTROIDS_THRESHOLD, this, true);
     if (prmCentroidsThreshold_->IsAvailable())
     {
-        const uns32 valCurFP = prmCentroidsThreshold_->Current();
-        const uns32 valMinFP = prmCentroidsThreshold_->Min();
-        const uns32 valMaxFP = prmCentroidsThreshold_->Max();
-        // Value from camera is fixed-point real number in Q8.4 format, convert it to double
-        const double valCurD = static_cast<double>(valCurFP & 0xFFF) / (0x00F + 1);
-        const double valMinD = static_cast<double>(valMinFP & 0xFFF) / (0x00F + 1);
-        const double valMaxD = static_cast<double>(valMaxFP & 0xFFF) / (0x00F + 1);
-        acqCfgNew_.CentroidsThreshold = valCurD;
+        acqCfgNew_.CentroidsThreshold = prmCentroidsThreshold_->Current();
         pAct = new CPropertyAction(this, &Universal::OnCentroidsThreshold);
-        CreateFloatProperty(g_Keyword_CentroidsThreshold, valCurD, false, pAct);
-        SetPropertyLimits(g_Keyword_CentroidsThreshold, valMinD, valMaxD);
+        CreateIntegerProperty(g_Keyword_CentroidsThreshold, acqCfgNew_.CentroidsThreshold, false, pAct);
+        SetPropertyLimits(g_Keyword_CentroidsThreshold,
+            prmCentroidsThreshold_->Min(), prmCentroidsThreshold_->Max());
     }
 
     /// FAN SPEED SETPOINT
@@ -2763,14 +2758,14 @@ int Universal::OnCentroidsRadius(MM::PropertyBase* pProp, MM::ActionType eAct)
 
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set( (long)acqCfgCur_.CentroidsRadius );
+        pProp->Set(static_cast<long>(acqCfgCur_.CentroidsRadius));
     }
     else if (eAct == MM::AfterSet)
     {
         long val;
-        pProp->Get( val );
+        pProp->Get(val);
         // The new settings will be applied once the acquisition is restarted
-        acqCfgNew_.CentroidsRadius = val;
+        acqCfgNew_.CentroidsRadius = static_cast<int>(val);
         return applyAcqConfig();
     }
     return DEVICE_OK;
@@ -2782,14 +2777,14 @@ int Universal::OnCentroidsCount(MM::PropertyBase* pProp, MM::ActionType eAct)
 
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set( (long)acqCfgCur_.CentroidsCount );
+        pProp->Set(static_cast<long>(acqCfgCur_.CentroidsCount));
     }
     else if (eAct == MM::AfterSet)
     {
         long val;
-        pProp->Get( val );
+        pProp->Get(val);
         // The new settings will be applied once the acquisition is restarted
-        acqCfgNew_.CentroidsCount = val;
+        acqCfgNew_.CentroidsCount = static_cast<int>(val);
         return applyAcqConfig();
     }
     return DEVICE_OK;
@@ -2837,14 +2832,14 @@ int Universal::OnCentroidsThreshold(MM::PropertyBase* pProp, MM::ActionType eAct
 
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set(acqCfgCur_.CentroidsThreshold);
+        pProp->Set(static_cast<long>(acqCfgCur_.CentroidsThreshold));
     }
     else if (eAct == MM::AfterSet)
     {
-        double val;
+        long val;
         pProp->Get(val);
         // The new settings will be applied once the acquisition is restarted
-        acqCfgNew_.CentroidsThreshold = val;
+        acqCfgNew_.CentroidsThreshold = static_cast<int>(val);
         return applyAcqConfig();
     }
     return DEVICE_OK;
@@ -5749,10 +5744,8 @@ int Universal::applyAcqConfig(bool forceSetup)
     {
         configChanged = true;
         bufferResizeRequired = true;
-        // Value in camera is fixed-point real number in Q8.4 format, convert it from double
-        const double valCurD = acqCfgNew_.CentroidsThreshold;
-        const uns32 valCurFP = static_cast<uns32>(std::round(valCurD * (0x00F + 1))) & 0xFFF;
-        if ((nRet = prmCentroidsThreshold_->SetAndApply(valCurFP)) != DEVICE_OK)
+        nRet = prmCentroidsThreshold_->SetAndApply(static_cast<uns32>(acqCfgNew_.CentroidsThreshold));
+        if (nRet != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in SetAndApply()

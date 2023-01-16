@@ -416,8 +416,8 @@ public: // Action handlers
     /**
     * Gets or sets the currently configured Centroids threshold.
     * It is a fixed-point real number in Q8.4 format.
-    * E.g. the value 1234 (0x4D2) from camera means 77.2 (0x4D hex = 77 dec)
-    * that is shown to user in MM.
+    * E.g. the value 1234 (0x4D2) from camera means 77.2 (0x4D hex = 77 dec).
+    * MM shows the raw camera value to the user.
     */
     int OnCentroidsThreshold(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**

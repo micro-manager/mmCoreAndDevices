@@ -81,9 +81,10 @@ public:
     */
     int CentroidsBgCount;
     /**
-    * Threshold multiplier for specific object detection modes. A fixed-point real number in Q8.4 format.
+    * Threshold multiplier for specific object detection mode. A raw value from camera.
+    * A fixed-point real number in Q8.4 format.
     */
-    double CentroidsThreshold;
+    int CentroidsThreshold;
     /**
     * Total number of "output" ROIs for the current acquisition. This could be either
     * the Centroids Count or number of user defined ROIs (1 or more if supported)
