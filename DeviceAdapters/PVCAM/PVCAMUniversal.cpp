@@ -5631,7 +5631,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     }
 
     // VALIDATE Centroids (PrimeLocate), so far it works with 1x1 binning only
-    if (acqCfgNew_.CentroidsEnabled && acqCfgNew_.Rois.BinX() > 1 && acqCfgNew_.Rois.BinY() > 1)
+    if (acqCfgNew_.CentroidsEnabled && (acqCfgNew_.Rois.BinX() > 1 || acqCfgNew_.Rois.BinY() > 1))
     {
         acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
         return LogAdapterError( ERR_BINNING_INVALID, __LINE__,
