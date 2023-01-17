@@ -244,6 +244,7 @@ Universal::Universal(short cameraId, const char* deviceName)
     blueScale_(1.0),
 #ifdef PVCAM_METADATA_SUPPORTED
     metaFrameStruct_(NULL),
+    metaFrameExtData_(),
 #endif
     metaBlackFilledBuf_(NULL),
     metaBlackFilledBufSz_(0),
@@ -319,7 +320,9 @@ Universal::Universal(short cameraId, const char* deviceName)
 
     camName_[0] = '\0';
 
+#ifdef PVCAM_METADATA_SUPPORTED
     metaRoiStr_[0] = '\0';
+#endif
 
     // The notification thread will have slightly smaller queue than the circular buffer.
     // This is to reduce the risk of frames being overwritten by PVCAM when the circular
@@ -3920,7 +3923,11 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             // FMD stands for Frame-MetaData, we should somehow distinguish the embedded
             // metadata from other metadata and keep them grouped or close together.
             const md_frame_header* fHdr = metaFrameStruct_->header;
-            md.PutImageTag<uns16>( "PVCAM-FMD-BitDepth", fHdr->bitDepth); // Need to use uns16 because uns8 is displayed as char
+            // Selected metadata from the frame header
+            md.PutImageTag<uns16>("PVCAM-FMD-Version", fHdr->version); // Need to use uns16 because uns8 is displayed as char
+            md.PutImageTag<uns32>("PVCAM-FMD-FrameNr", fHdr->frameNr);
+            md.PutImageTag<uns16>("PVCAM-FMD-RoiCount", fHdr->roiCount);
+            md.PutImageTag<uns16>("PVCAM-FMD-BitDepth", fHdr->bitDepth); // Need to use uns16 because uns8 is displayed as char
             const char* cKeywordColorMask = "PVCAM-FMD-ColorMask";
             switch (fHdr->colorMask)
             {
@@ -3943,9 +3950,102 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
                 md.PutImageTag(cKeywordColorMask, "Unknown");
                 break;
             }
-            // Selected metadata from the frame header
-            md.PutImageTag<uns32>( "PVCAM-FMD-FrameNr",   fHdr->frameNr );
-            md.PutImageTag<uns16>( "PVCAM-FMD-RoiCount",  fHdr->roiCount );
+            md.PutImageTag<uns16>("PVCAM-FMD-Flags",  fHdr->flags); // Need to use uns16 because uns8 is displayed as char
+            if (fHdr->version >= 2)
+            {
+                const char* cKeywordImageFormat = "PVCAM-FMD-ImageFormat";
+                switch (fHdr->imageFormat)
+                {
+                case PL_IMAGE_FORMAT_MONO8:
+                    md.PutImageTag(cKeywordImageFormat, "Mono8");
+                    break;
+                case PL_IMAGE_FORMAT_MONO16:
+                    md.PutImageTag(cKeywordImageFormat, "Mono16");
+                    break;
+                case PL_IMAGE_FORMAT_MONO24:
+                    md.PutImageTag(cKeywordImageFormat, "Mono24");
+                    break;
+                case PL_IMAGE_FORMAT_MONO32:
+                    md.PutImageTag(cKeywordImageFormat, "Mono32");
+                    break;
+                case PL_IMAGE_FORMAT_BAYER8:
+                    md.PutImageTag(cKeywordImageFormat, "Bayer8");
+                    break;
+                case PL_IMAGE_FORMAT_BAYER16:
+                    md.PutImageTag(cKeywordImageFormat, "Bayer16");
+                    break;
+                case PL_IMAGE_FORMAT_BAYER24:
+                    md.PutImageTag(cKeywordImageFormat, "Bayer24");
+                    break;
+                case PL_IMAGE_FORMAT_BAYER32:
+                    md.PutImageTag(cKeywordImageFormat, "Bayer32");
+                    break;
+                case PL_IMAGE_FORMAT_RGB24:
+                    md.PutImageTag(cKeywordImageFormat, "RGB24");
+                    break;
+                case PL_IMAGE_FORMAT_RGB48:
+                    md.PutImageTag(cKeywordImageFormat, "RGB48");
+                    break;
+                case PL_IMAGE_FORMAT_RGB72:
+                    md.PutImageTag(cKeywordImageFormat, "RGB72");
+                    break;
+                case PL_IMAGE_FORMAT_RGB96:
+                    md.PutImageTag(cKeywordImageFormat, "RGB96");
+                    break;
+                default:
+                    md.PutImageTag(cKeywordImageFormat, "Unknown");
+                    break;
+                }
+                const char* cKeywordImageCompression = "PVCAM-FMD-ImageCompression";
+                switch (fHdr->imageCompression)
+                {
+                case PL_IMAGE_COMPRESSION_NONE:
+                    md.PutImageTag(cKeywordImageCompression, "None");
+                    break;
+                case PL_IMAGE_COMPRESSION_RESERVED8:
+                    md.PutImageTag(cKeywordImageCompression, "Reserved8");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK9:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack9");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK10:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack10");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK11:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack11");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK12:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack12");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK13:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack13");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK14:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack14");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK15:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack15");
+                    break;
+                case PL_IMAGE_COMPRESSION_RESERVED16:
+                    md.PutImageTag(cKeywordImageCompression, "Reserved16");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK17:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack17");
+                    break;
+                case PL_IMAGE_COMPRESSION_BITPACK18:
+                    md.PutImageTag(cKeywordImageCompression, "Bitpack18");
+                    break;
+                case PL_IMAGE_COMPRESSION_RESERVED24:
+                    md.PutImageTag(cKeywordImageCompression, "Reserved24");
+                    break;
+                case PL_IMAGE_COMPRESSION_RESERVED32:
+                    md.PutImageTag(cKeywordImageCompression, "Reserved32");
+                    break;
+                default:
+                    md.PutImageTag(cKeywordImageCompression, "Unknown");
+                    break;
+                }
+            }
             if (fHdr->version < 3)
             {
                 md.PutImageTag<ulong64>( "PVCAM-FMD-ExposureTimeNs",
@@ -3969,27 +4069,73 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             }
             // Implied ROI
             const rgn_type& iRoi = metaFrameStruct_->impliedRoi;
-            snprintf(metaRoiStr_, sizeof(metaRoiStr_),
-                    "[%u, %u, %u, %u, %u, %u]",
+            snprintf(metaRoiStr_, sizeof(metaRoiStr_), "[%u,%u,%u,%u,%u,%u]",
                     iRoi.s1, iRoi.s2, iRoi.sbin, iRoi.p1, iRoi.p2, iRoi.pbin);
             md.PutImageTag<std::string>("PVCAM-FMD-ImpliedRoi", metaRoiStr_); 
             // Per-ROI metadata
             metaAllRoisStr_ = "[";
             for (int i = 0; i < metaFrameStruct_->roiCount; ++i)
             {
-                const md_frame_roi_header* rHdr = metaFrameStruct_->roiArray[i].header;
                 // Since we cannot add per-ROI metadata we will format the MD to a simple JSON array
                 // and add it as a per-Frame metadata TAG. Example:
-                // "[{"nr":1,"coords":[0,0,0,0,0,0],"borNs":123,"eorNs":456},{"nr":2,"coords":[0,0,0,0,0,0],"borNs":123,"eorNs":456}]"
-                snprintf(metaRoiStr_, sizeof(metaRoiStr_),
-                        "{\"nr\":%u,\"coords\":[%u,%u,%u,%u,%u,%u],\"borNs\":%llu,\"eorNs\":%llu}",
-                        rHdr->roiNr,
-                        rHdr->roi.s1, rHdr->roi.s2, rHdr->roi.sbin, rHdr->roi.p1, rHdr->roi.p2, rHdr->roi.pbin,
-                        (ulong64)rHdr->timestampBOR * fHdr->roiTimestampResNs,
-                        (ulong64)rHdr->timestampEOR * fHdr->roiTimestampResNs);
-                metaAllRoisStr_.append(metaRoiStr_);
-                if (i != metaFrameStruct_->roiCount - 1)
+                // "[{"nr":1,"coords":[0,0,0,0,0,0]},{"nr":2,"coords":[0,0,0,0,0,0]}]"
+                const md_frame_roi& pRoi = metaFrameStruct_->roiArray[i];
+                const md_frame_roi_header* rHdr = pRoi.header;
+                if (rHdr->flags & PL_MD_ROI_FLAG_INVALID)
+                    continue; // Skip invalid regions
+                if (i > 0)
                     metaAllRoisStr_.append(",");
+                metaAllRoisStr_.append("{");
+                snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                        "\"nr\":%u,\"coords\":[%u,%u,%u,%u,%u,%u],\"flags\":%u",
+                        rHdr->roiNr,
+                        rHdr->roi.s1, rHdr->roi.s2, rHdr->roi.sbin,
+                        rHdr->roi.p1, rHdr->roi.p2, rHdr->roi.pbin,
+                        rHdr->flags);
+                metaAllRoisStr_.append(metaRoiStr_);
+                if (fHdr->flags & PL_MD_FRAME_FLAG_ROI_TS_SUPPORTED)
+                {
+                    if (fHdr->version < 3)
+                    {
+                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                                ",\"borNs\":%llu,\"eorNs\":%llu",
+                                (ulong64)rHdr->timestampBOR * fHdr->roiTimestampResNs,
+                                (ulong64)rHdr->timestampEOR * fHdr->roiTimestampResNs);
+                    }
+                    else
+                    {
+                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                                ",\"bor\":%u,\"eor\":%u",
+                                rHdr->timestampBOR, rHdr->timestampEOR);
+                    }
+                    metaAllRoisStr_.append(metaRoiStr_);
+                }
+                if (/*(rHdr->flags & PL_MD_ROI_FLAG_HEADER_ONLY) && */pRoi.extMdDataSize > 0)
+                {
+                    const md_ext_item_collection& collection = metaFrameExtData_.at(rHdr->roiNr);
+                    const md_ext_item* item_id = collection.map[PL_MD_EXT_TAG_PARTICLE_ID];
+                    if (item_id)
+                    {
+                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                                ",\"tagParticleId\":%u", *((uint32_t*)item_id->value));
+                        metaAllRoisStr_.append(metaRoiStr_);
+                    }
+                    const md_ext_item* item_m0 = collection.map[PL_MD_EXT_TAG_PARTICLE_M0];
+                    if (item_m0)
+                    {
+                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                                ",\"tagParticleM0\":%u", *((uint32_t*)item_m0->value));
+                        metaAllRoisStr_.append(metaRoiStr_);
+                    }
+                    const md_ext_item* item_m2 = collection.map[PL_MD_EXT_TAG_PARTICLE_M2];
+                    if (item_m2)
+                    {
+                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                                ",\"tagParticleM2\":%u", *((uint32_t*)item_m2->value));
+                        metaAllRoisStr_.append(metaRoiStr_);
+                    }
+                }
+                metaAllRoisStr_.append("}");
             }
             metaAllRoisStr_.append("]");
             md.PutImageTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
@@ -4894,7 +5040,9 @@ int Universal::resizeImageProcessingBuffers()
         // Metadata-enabled frames with single ROI don't need black-filling,
         // we can use the data of the single ROI directly.
         // With more ROIs we need black-filling into separate buffer
-        const size_t imgDataSz = acqCfgCur_.Rois.ImpliedRoi().ImageRgnWidth() * acqCfgCur_.Rois.ImpliedRoi().ImageRgnHeight() * sizeof(uns16);
+        const size_t imgDataSz = acqCfgCur_.Rois.ImpliedRoi().ImageRgnWidth()
+            * acqCfgCur_.Rois.ImpliedRoi().ImageRgnHeight()
+            * sizeof(uns16);
         if (metaBlackFilledBufSz_ != imgDataSz)
         {
             delete[] metaBlackFilledBuf_;
@@ -5171,24 +5319,46 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
     unsigned char* pixBuffer = pInBuf;
 
 #ifdef PVCAM_METADATA_SUPPORTED
+    metaFrameExtData_.clear();
     if (acqCfgCur_.FrameMetadataEnabled)
     {
-#if _DEBUG
-        md_frame_header* pFrameHdrTmp = (md_frame_header*)pInBuf;
-        md_frame_roi_header* pRoiHdrTmp = (md_frame_roi_header*)(pInBuf + sizeof(md_frame_header));
-#endif
         if (pl_md_frame_decode(metaFrameStruct_, pInBuf, (uns32)inBufSz) != PV_OK)
         {
             LogPvcamError(__LINE__, "Unable to decode the metadata-enabled frame");
             return ERR_BUFFER_PROCESSING_FAILED;
         }
-#if _DEBUG
-        for (int i = 0; i < metaFrameStruct_->roiCount; ++i)
+        for (uns16 i = 0; i < metaFrameStruct_->roiCount; ++i)
         {
-            md_frame_roi pRoi = metaFrameStruct_->roiArray[i];
-            md_frame_roi_header* pRoiHdr = pRoi.header;
+            const md_frame_roi& pRoi = metaFrameStruct_->roiArray[i];
+            if (/*(pRoi.header->flags & PL_MD_ROI_FLAG_HEADER_ONLY) && */pRoi.extMdDataSize > 0)
+            {
+                md_ext_item_collection* collection = &metaFrameExtData_[pRoi.header->roiNr];
+                if (PV_OK != pl_md_read_extended(collection, pRoi.extMdData, pRoi.extMdDataSize))
+                {
+                    LogPvcamError(__LINE__, "Unable to read ext. metadata from frame");
+                    return ERR_BUFFER_PROCESSING_FAILED;
+                }
+                // Validate known tags
+                const md_ext_item* item_id = collection->map[PL_MD_EXT_TAG_PARTICLE_ID];
+                if (item_id && (!item_id->value || !item_id->tagInfo
+                                || item_id->tagInfo->type != TYPE_UNS32
+                                || item_id->tagInfo->size != sizeof(uns32)))
+                    return LogAdapterError(ERR_BUFFER_PROCESSING_FAILED, __LINE__,
+                            "Unable to parse particle ID tag from ext. metadata");
+                const md_ext_item* item_m0 = collection->map[PL_MD_EXT_TAG_PARTICLE_M0];
+                if (item_m0 && (!item_m0->value || !item_m0->tagInfo
+                                || item_m0->tagInfo->type != TYPE_UNS32
+                                || item_m0->tagInfo->size != sizeof(uns32)))
+                    return LogAdapterError(ERR_BUFFER_PROCESSING_FAILED, __LINE__,
+                            "Unable to parse particle M0 tag from ext. metadata");
+                const md_ext_item* item_m2 = collection->map[PL_MD_EXT_TAG_PARTICLE_M2];
+                if (item_m2 && (!item_m2->value || !item_m2->tagInfo
+                                || item_m2->tagInfo->type != TYPE_UNS32
+                                || item_m2->tagInfo->size != sizeof(uns32)))
+                    return LogAdapterError(ERR_BUFFER_PROCESSING_FAILED, __LINE__,
+                            "Unable to parse particle M2 tag from ext. metadata");
+            }
         }
-#endif
         if (acqCfgCur_.RoiCount > 1)
         {
             // If there are more ROIs we need to black-fill...
@@ -5209,7 +5379,8 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
             // If we are running centroids we should black-fill the destination frame
             // before every use (to erase all previous centroids) because the new frame
             // may contain centroids on different positions.
-            if (acqCfgCur_.CentroidsEnabled)
+            // However, that applies to Locate mode only.
+            if (acqCfgCur_.CentroidsEnabled && acqCfgCur_.CentroidsMode == PL_CENTROIDS_MODE_LOCATE)
             {
                 // With centroids we also need to shift the ROis to their sensor
                 // positions (because with centroids we use full frame for display, not

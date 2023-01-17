@@ -828,6 +828,7 @@ private:
     // PVCAM helper structure for decoding an embedded-metadata-enabled frame buffer
 #ifdef PVCAM_METADATA_SUPPORTED
     md_frame*        metaFrameStruct_;
+    std::map<uns16, md_ext_item_collection> metaFrameExtData_; // The key is roiNr
 
     // For metadata serialization, optimization to not allocate the same for each frame
     std::string      metaAllRoisStr_;
