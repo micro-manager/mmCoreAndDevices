@@ -762,9 +762,9 @@ int Universal::Initialize()
     {
         pAct = new CPropertyAction(this, &Universal::OnClearMode);
         const int32 cur = prmClearMode_->Current();
-        const char* curStr = prmClearMode_->GetEnumString(cur).c_str();
+        const std::string curStr = prmClearMode_->GetEnumString(cur);
 
-        nRet = CreateProperty(g_Keyword_ClearMode, curStr, MM::String, prmClearMode_->IsReadOnly(), pAct);
+        nRet = CreateProperty(g_Keyword_ClearMode, curStr.c_str(), MM::String, prmClearMode_->IsReadOnly(), pAct);
         assert(nRet == DEVICE_OK);
         nRet = SetAllowedValues(g_Keyword_ClearMode, prmClearMode_->GetEnumStrings());
         assert(nRet == DEVICE_OK);
