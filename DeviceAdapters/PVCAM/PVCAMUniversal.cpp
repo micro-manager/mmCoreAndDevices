@@ -3374,8 +3374,8 @@ int Universal::OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eA
     // is represented in milli-seconds, the same as the generic exposure time value.
     if (eAct == MM::BeforeGet)
     {
-        const size_t exposureCount = acqCfgCur_.SmartStreamingExposures.size();
-        const std::vector<double>& exposures = acqCfgCur_.SmartStreamingExposures;
+        const size_t exposureCount = acqCfgCur_.SmartStreamingExposuresMs.size();
+        const std::vector<double>& exposures = acqCfgCur_.SmartStreamingExposuresMs;
         std::stringstream str;
         // Set precision to 0.000 and disable scientific notation
         str << std::setprecision(3) << std::fixed;
@@ -3466,7 +3466,7 @@ int Universal::OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eA
             oldFoundAt = ++foundAt;
         }
 
-        acqCfgNew_.SmartStreamingExposures = parsedValues;
+        acqCfgNew_.SmartStreamingExposuresMs = parsedValues;
         nRet = applyAcqConfig();
     }
 
@@ -6376,7 +6376,7 @@ int Universal::applyAcqConfig(bool forceSetup)
             doReconfigureSmart = true;
             configChanged = true;
         }
-        if (acqCfgNew_.SmartStreamingExposures != acqCfgCur_.SmartStreamingExposures)
+        if (acqCfgNew_.SmartStreamingExposuresMs != acqCfgCur_.SmartStreamingExposuresMs)
         {
             doReconfigureSmart = true;
             configChanged = true;
@@ -6385,7 +6385,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (doReconfigureSmart)
     {
         // Check if we have correct amount of exposures
-        if (acqCfgNew_.SmartStreamingExposures.size() > prmSmartStreamingValues_->Max().entries)
+        if (acqCfgNew_.SmartStreamingExposuresMs.size() > prmSmartStreamingValues_->Max().entries)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return LogAdapterError( DEVICE_CAN_NOT_SET_PROPERTY,
@@ -6407,14 +6407,14 @@ int Universal::applyAcqConfig(bool forceSetup)
     // and possibly switch the camera exposure resolution accordingly (see below)
     if (acqCfgNew_.SmartStreamingActive)
         exposureTimeDecisiveMs = *std::max_element(
-            acqCfgNew_.SmartStreamingExposures.begin(), acqCfgNew_.SmartStreamingExposures.end());
+            acqCfgNew_.SmartStreamingExposuresMs.begin(), acqCfgNew_.SmartStreamingExposuresMs.end());
 
     // Now we know for sure whether S.M.A.R.T is going to be used or not, so we have
     // the exposure time that should be used to select the right exposure resolution
 
     // If the exposure is smaller than 'microsecResMax' milliseconds (MM works in milliseconds but uses float type)
     // we switch the camera to microseconds so user can type 59.5 and we send 59500 to PVCAM.
-    if (exposureTimeDecisiveMs < (microsecResMax_/1000.0) && microsecResSupported_)
+    if (exposureTimeDecisiveMs < (microsecResMax_ / 1000.0) && microsecResSupported_)
         acqCfgNew_.ExposureRes = EXP_RES_ONE_MICROSEC;
     else
         acqCfgNew_.ExposureRes = EXP_RES_ONE_MILLISEC;
@@ -6441,7 +6441,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     // resolution that is important for S.M.A.R.T streaming exposure values conversion
     if (doReconfigureSmart)
     {
-        nRet = sendSmartStreamingToCamera(acqCfgNew_.SmartStreamingExposures, acqCfgNew_.ExposureRes);
+        nRet = sendSmartStreamingToCamera(acqCfgNew_.SmartStreamingExposuresMs, acqCfgNew_.ExposureRes);
         if (nRet != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state

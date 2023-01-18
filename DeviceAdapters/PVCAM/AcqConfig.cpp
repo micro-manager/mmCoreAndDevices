@@ -44,11 +44,11 @@ AcqConfig::AcqConfig() :
     DiskStreamingCoreSkipRatio(100),
     SmartStreamingEnabled(false),
     SmartStreamingActive(false),
-    SmartStreamingExposures()
+    SmartStreamingExposuresMs()
 {
     // S.M.A.R.T streaming exposures are in milliseconds, floating point.
-    SmartStreamingExposures.push_back(10);
-    SmartStreamingExposures.push_back(20);
-    SmartStreamingExposures.push_back(30);
-    SmartStreamingExposures.push_back(40);
+    SmartStreamingExposuresMs.push_back(10);
+    SmartStreamingExposuresMs.push_back(20);
+    SmartStreamingExposuresMs.push_back(30);
+    SmartStreamingExposuresMs.push_back(40);
 }

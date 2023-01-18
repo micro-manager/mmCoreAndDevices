@@ -216,9 +216,9 @@ public:
     */
     bool SmartStreamingActive;
     /**
-    * Exposure values for S.M.A.R.T streaming
+    * Exposure values for S.M.A.R.T streaming in milliseconds
     */
-    std::vector<double> SmartStreamingExposures;
+    std::vector<double> SmartStreamingExposuresMs;
 };
 
 #endif
