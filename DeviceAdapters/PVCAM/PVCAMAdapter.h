@@ -50,6 +50,7 @@
 // System
 #include <map>
 #include <string>
+#include <utility> // std::pair
 
 
 //=============================================================================
@@ -681,7 +682,7 @@ private:
     /**
     * Sends the S.M.A.R.T streaming configuration to the camera.
     */
-    int sendSmartStreamingToCamera(const std::vector<double>& exposures, int exposureRes);
+    int sendSmartStreamingToCamera(const std::vector<double>& exposuresMs, int exposureRes);
 #endif
 
     /**
@@ -779,8 +780,8 @@ private:
     bool            isAcquiring_;
 
     long            triggerTimeout_;       // Max time to wait for an external trigger
-    bool            microsecResSupported_; // True if camera supports microsecond exposures
-    uns32           microsecResMax_;       // Maximum value for microsecond resolution
+
+    std::map<int32, std::pair<uns32, uns32>> expTimeResLimits_{}; // [expTimeRes]={min,max}
 
     friend class    PollingThread;
     PollingThread*  pollingThd_;           // Pointer to the sequencing thread

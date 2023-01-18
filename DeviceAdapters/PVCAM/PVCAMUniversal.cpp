@@ -223,8 +223,6 @@ Universal::Universal(short cameraId, const char* deviceName)
     callPrepareForAcq_(true),
     isAcquiring_(false),
     triggerTimeout_(10),
-    microsecResSupported_(false),
-    microsecResMax_(1000000), // Will run in usec for up to 1 second
     pollingThd_(NULL),
     notificationThd_(NULL),
     acqThd_(NULL),
@@ -1022,60 +1020,74 @@ int Universal::Initialize()
     /// EXPOSURE RESOLUTION
     // The PARAM_EXP_RES_INDEX is used to get and set the current exposure resolution (usec, msec, sec, ...)
     // The PARAM_EXP_RES is only used to enumerate the supported exposure resolutions and their string names
-    microsecResSupported_ = false;
-    acqCfgNew_.ExposureMs  = 10.0;
-    acqCfgNew_.ExposureRes = EXP_RES_ONE_MILLISEC;
-    prmExpResIndex_ = new PvParam<uns16>( "PARAM_EXP_RES_INDEX", PARAM_EXP_RES_INDEX, this, true );
-    prmExpRes_ = new PvEnumParam( "PARAM_EXP_RES", PARAM_EXP_RES, this, true );
+    // The PARAM_EXP_RES was read-only in older PVCAMs
+    prmExpResIndex_ = new PvParam<uns16>("PARAM_EXP_RES_INDEX", PARAM_EXP_RES_INDEX, this, true);
+    prmExpRes_ = new PvEnumParam("PARAM_EXP_RES", PARAM_EXP_RES, this, true);
     // The PARAM_EXPOSURE_TIME also returns the camera actual exposure time, if supported
-    prmExposureTime_ = new PvParam<ulong64>( "PARAM_EXPOSURE_TIME", PARAM_EXPOSURE_TIME, this, true );
-    if ( prmExposureTime_->IsAvailable() )
+    prmExposureTime_ = new PvParam<ulong64>("PARAM_EXPOSURE_TIME", PARAM_EXPOSURE_TIME, this, true);
+    if (prmExposureTime_->IsAvailable())
     {
-        pAct = new CPropertyAction (this, &Universal::OnTimingExposureTimeNs);
-        nRet = CreateProperty(g_Keyword_TimingExposureTimeNs, "0", MM::Float, true, pAct);
+        pAct = new CPropertyAction(this, &Universal::OnTimingExposureTimeNs);
+        nRet = CreateFloatProperty(g_Keyword_TimingExposureTimeNs, 0.0, true, pAct);
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    if ( prmExpResIndex_->IsAvailable() )
+    expTimeResLimits_.clear();
+    // Add map keys with some default limits that might be updated later.
+    // By default, the camera will run in usec (if supported) for up to 1 second,
+    // then it gets switched to msec (if supported) for up to 1000 seconds,
+    // and then it gets switched to sec (if supported).
+    constexpr uns32 expTimeResDefaultMax = 1'000'000;
+    if (prmExpRes_->IsAvailable())
     {
-        if ( prmExpRes_->IsAvailable() )
-        {
-            std::vector<int32> enumVals = prmExpRes_->GetEnumValues();
-            for ( unsigned i = 0; i < enumVals.size(); ++i )
-            {
-                if ( enumVals[i] == EXP_RES_ONE_MICROSEC )
-                {
-                    // If microsec is supported and the camera reports the range,
-                    // we check what is the max microsec range and keep the camera
-                    // running in microsec up to the max range.
-                    if (prmExposureTime_->IsAvailable())
-                    {
-                        // Switch to microsec...
-                        nRet = prmExpRes_->SetAndApply(EXP_RES_ONE_MICROSEC);
-                        if (nRet != DEVICE_OK)
-                            return nRet; // Error logged in SetAndApply()
-                        // We need to re-read the exposure time parameter from PVCAM to
-                        // update the cached values.
-                        nRet = prmExposureTime_->Update();
-                        if (nRet != DEVICE_OK)
-                            return nRet; // Error logged in Update()
-                        // Read the microsec max range
-                        microsecResMax_ = static_cast<uns32>(prmExposureTime_->Max());
-                    }
+        const auto& expResValues = prmExpRes_->GetEnumValues();
+        for (auto expRes : expResValues)
+            expTimeResLimits_[expRes] = { 0, expTimeResDefaultMax };
+    }
+    else
+    {
+        expTimeResLimits_[EXP_RES_ONE_MILLISEC] = { 0, expTimeResDefaultMax };
+    }
 
-                    microsecResSupported_ = true;
-                    break;
-                }
-            }
-            // Switch the resolution to usec if available. We will later switch it
-            // back and forth dynamically based on exposure value and microsec max range
-            if (microsecResSupported_)
+    if (prmExpResIndex_->IsAvailable())
+    {
+        // Update the limits if supported
+        if (prmExposureTime_->IsAvailable())
+        {
+            for (const auto& expResIt : expTimeResLimits_)
             {
-                nRet = prmExpRes_->SetAndApply(EXP_RES_ONE_MICROSEC);
+                const uns16 expRes = static_cast<uns16>(expResIt.first);
+                nRet = prmExpResIndex_->SetAndApply(expRes);
+                if (nRet != DEVICE_OK)
+                    return nRet; // Error logged in SetAndApply()
+                // Re-read the exposure time from PVCAM to update cached values
+                nRet = prmExposureTime_->Update();
                 if (nRet != DEVICE_OK)
                     return nRet; // Error logged in Update()
-                acqCfgNew_.ExposureRes = EXP_RES_ONE_MICROSEC;
+
+                const auto min = static_cast<uns32>(std::min<ulong64>(
+                            prmExposureTime_->Min(), (std::numeric_limits<uns32>::max)()));
+                const auto max = static_cast<uns32>(std::min<ulong64>(
+                            prmExposureTime_->Max(), (std::numeric_limits<uns32>::max)()));
+                expTimeResLimits_[expRes] = { min, max };
             }
+        }
+
+        // Switch the resolution to the finest available. We will later switch it
+        // back and forth dynamically based on exposure value and max range
+        uns16 expRes = EXP_RES_ONE_MILLISEC;
+        if (expTimeResLimits_.count(EXP_RES_ONE_MICROSEC))
+            expRes = EXP_RES_ONE_MICROSEC;
+        else if (expTimeResLimits_.count(EXP_RES_ONE_MILLISEC))
+            expRes = EXP_RES_ONE_MILLISEC;
+        else if (expTimeResLimits_.count(EXP_RES_ONE_SEC))
+            expRes = EXP_RES_ONE_SEC;
+        if (expRes != prmExpResIndex_->Current())
+        {
+            nRet = prmExpResIndex_->SetAndApply(expRes);
+            if (nRet != DEVICE_OK)
+                return nRet; // Error logged in SetAndApply()
+            acqCfgNew_.ExposureRes = expRes;
         }
     }
 
@@ -1106,7 +1118,6 @@ int Universal::Initialize()
     {
         LogAdapterMessage("This Camera does not have EM Gain");
     }
-
 
     if (cameraModel_ == PvCameraModel_OptiMos_M1)
     {
@@ -3485,13 +3496,13 @@ int Universal::OnTimingExposureTimeNs(MM::PropertyBase* pProp, MM::ActionType eA
         switch (acqCfgCur_.ExposureRes)
         {
         case EXP_RES_ONE_SEC:
-            valNs = static_cast<double>(camVal) * 1000000000.0;
+            valNs = static_cast<double>(camVal) * 1e9;
             break;
         case EXP_RES_ONE_MILLISEC:
-            valNs = static_cast<double>(camVal) * 1000000.0;
+            valNs = static_cast<double>(camVal) * 1e6;
             break;
         case EXP_RES_ONE_MICROSEC:
-            valNs = static_cast<double>(camVal) * 1000.0;
+            valNs = static_cast<double>(camVal) * 1e3;
             break;
         default:
             valNs = static_cast<double>(camVal);
@@ -5479,26 +5490,38 @@ int Universal::abortAcquisitionInternal()
 }
 
 #ifdef PVCAM_SMART_STREAMING_SUPPORTED
-int Universal::sendSmartStreamingToCamera(const std::vector<double>& exposures, int exposureRes)
+int Universal::sendSmartStreamingToCamera(const std::vector<double>& exposuresMs, int exposureRes)
 {
     START_METHOD("Universal::SendSmartStreamingToCamera");
 
     int nRet = DEVICE_OK;
 
-    const size_t expCount = exposures.size();
-
-    // the SMART streaming exposure values sent to cameras are uns32 while internally we need
-    // to be working with doubles
-    // allocate and populate regular smart_stream_type structure with values received from the UI
+    // The SMART streaming exposure values sent to cameras are uns32 while internally we need
+    // to be working with doubles.
+    // Allocate and populate regular smart_stream_type structure with values received from the UI.
     smart_stream_type smartStreamInts = prmSmartStreamingValues_->Current();
-    smartStreamInts.entries = static_cast<uns16>(expCount);
+    smartStreamInts.entries = static_cast<uns16>(exposuresMs.size());
 
     // We need to properly fill the PVCAM S.M.A.R.T streaming structure, we keep the
     // exposure values in an array of doubles and milliseconds, however the PVCAM structure
     // needs to be filled based on current exposure resolution selection.
-    const double mult = (exposureRes == EXP_RES_ONE_MICROSEC) ? 1000.0 : 1.0;
-    for (size_t i = 0; i < expCount; i++)
-        smartStreamInts.params[i] = (uns32)(exposures[i] * mult);
+    double mult = 1;
+    switch (exposureRes)
+    {
+    case EXP_RES_ONE_MICROSEC:
+        mult = 1e3;
+        break;
+    case EXP_RES_ONE_SEC:
+        mult = 1e-3;
+        break;
+    case EXP_RES_ONE_MILLISEC:
+    default:
+        break;
+    }
+    for (uns16 i = 0; i < smartStreamInts.entries; ++i)
+    {
+        smartStreamInts.params[i] = static_cast<uns32>(std::round(exposuresMs.at(i) * mult));
+    }
 
     g_pvcamLock.Lock();
     // Send the SMART streaming structure to camera
@@ -5519,22 +5542,30 @@ int Universal::getPvcamExposureSetupConfig(int16& pvExposureMode, double inputEx
     int nRet = DEVICE_OK;
 
     // Prepare the exposure mode
-    int16 trigModeValue = (int16)prmTriggerMode_->Current();
+    int16 trigModeValue = static_cast<int16>(prmTriggerMode_->Current());
     // Some cameras like the OptiMos allow special expose-out modes.
     int16 exposeOutModeValue = 0;
-    if ( prmExposeOutMode_ && prmExposeOutMode_->IsAvailable() )
+    if (prmExposeOutMode_ && prmExposeOutMode_->IsAvailable())
     {
-        exposeOutModeValue = (int16)prmExposeOutMode_->Current();
+        exposeOutModeValue = static_cast<int16>(prmExposeOutMode_->Current());
     }
-
     pvExposureMode = (trigModeValue | exposeOutModeValue);
 
     // Prepare the exposure value
-
-    if (acqCfgCur_.ExposureRes == EXP_RES_ONE_MICROSEC)
-        pvExposureValue = (uns32)(1000 * inputExposureMs);
-    else
-        pvExposureValue = (uns32)inputExposureMs;
+    double mult = 1;
+    switch (acqCfgCur_.ExposureRes)
+    {
+    case EXP_RES_ONE_MICROSEC:
+        mult = 1e3;
+        break;
+    case EXP_RES_ONE_SEC:
+        mult = 1e-3;
+        break;
+    case EXP_RES_ONE_MILLISEC:
+    default:
+        break;
+    }
+    pvExposureValue = static_cast<uns32>(std::round(inputExposureMs * mult));
 
     return nRet;
 }
@@ -6418,12 +6449,40 @@ int Universal::applyAcqConfig(bool forceSetup)
     // Now we know for sure whether S.M.A.R.T is going to be used or not, so we have
     // the exposure time that should be used to select the right exposure resolution
 
-    // If the exposure is smaller than 'microsecResMax' milliseconds (MM works in milliseconds but uses float type)
+    // If the exposure is smaller than a 'max limit' milliseconds (MM works in milliseconds but uses float type)
     // we switch the camera to microseconds so user can type 59.5 and we send 59500 to PVCAM.
-    if (exposureTimeDecisiveMs < (microsecResMax_ / 1000.0) && microsecResSupported_)
-        acqCfgNew_.ExposureRes = EXP_RES_ONE_MICROSEC;
-    else
+    bool wasExpResSet = false;
+    if (!wasExpResSet && expTimeResLimits_.count(EXP_RES_ONE_MICROSEC))
+    {
+        const uns32 maxUs = expTimeResLimits_.at(EXP_RES_ONE_MICROSEC).second;
+        if (exposureTimeDecisiveMs < (maxUs / 1000.0))
+        {
+            acqCfgNew_.ExposureRes = EXP_RES_ONE_MICROSEC;
+            wasExpResSet = true;
+        }
+    }
+    if (!wasExpResSet && expTimeResLimits_.count(EXP_RES_ONE_MILLISEC))
+    {
+        const uns32 maxMs = expTimeResLimits_.at(EXP_RES_ONE_MILLISEC).second;
+        if (exposureTimeDecisiveMs < maxMs)
+        {
+            acqCfgNew_.ExposureRes = EXP_RES_ONE_MILLISEC;
+            wasExpResSet = true;
+        }
+    }
+    if (!wasExpResSet && expTimeResLimits_.count(EXP_RES_ONE_SEC))
+    {
+        const uns32 maxS = expTimeResLimits_.at(EXP_RES_ONE_SEC).second;
+        if (exposureTimeDecisiveMs < (maxS * 1000.0))
+        {
+            acqCfgNew_.ExposureRes = EXP_RES_ONE_SEC;
+            wasExpResSet = true;
+        }
+    }
+    if (!wasExpResSet)
+    {
         acqCfgNew_.ExposureRes = EXP_RES_ONE_MILLISEC;
+    }
 
     // The exposure resolution is switched automatically and depends on two features that are handled above:
     // The generic exposure value or the highest S.M.A.R.T streaming value. Because of that the order
