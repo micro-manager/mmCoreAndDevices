@@ -2237,15 +2237,15 @@ int Universal::OnReadoutRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnReadoutRate", eAct);
 
-    uns32 currentPort = prmReadoutPort_->Current();
-
     if (eAct == MM::AfterSet)
     {
+        int32 currentPort = prmReadoutPort_->Current();
+
         std::string selectedSpdString;
         pProp->Get(selectedSpdString);
 
         // Find the corresponding speed index from reverse speed table
-        const SpdTabEntry selectedSpd = camSpdTableReverse_[currentPort][selectedSpdString];
+        const SpdTabEntry& selectedSpd = camSpdTableReverse_[currentPort][selectedSpdString];
 
         acqCfgNew_.SpeedIndex = selectedSpd.spdIndex;
         return applyAcqConfig();
@@ -4519,75 +4519,82 @@ int Universal::initializePostProcessing()
 int Universal::initializeSpeedTable()
 {
     uns32 portCount = 0;  // Total number of readout ports
-    uns32 portCurIdx = 0; // Current PORT selected by the camera, we will restore it
-    int32 spdCount = 0;   // Number of speed choices for each port
+    int32 portCurVal = 0; // Current PORT selected by the camera, we will restore it
+    uns32 spdCount = 0;   // Number of speed choices for each port
     int16 spdCurIdx = 0;  // Current SPEED selected by the camera, we will restore it
     camSpdTable_.clear();
     camSpdTableReverse_.clear();
 
-    if (pl_get_param(hPVCAM_, PARAM_READOUT_PORT, ATTR_COUNT, (void*)&portCount) != PV_OK)
+    if (pl_get_param(hPVCAM_, PARAM_READOUT_PORT, ATTR_COUNT, &portCount) != PV_OK)
         return LogPvcamError(__LINE__, "pl_get_param PARAM_READOUT_PORT ATTR_COUNT" );
 
     // Read the current camera port and speed, we will want to restore the camera to this
     // configuration once we read out the entire speed table
-    if (pl_get_param(hPVCAM_, PARAM_READOUT_PORT, ATTR_CURRENT, (void*)&portCurIdx) != PV_OK)
+    if (pl_get_param(hPVCAM_, PARAM_READOUT_PORT, ATTR_CURRENT, &portCurVal) != PV_OK)
         return LogPvcamError(__LINE__, "pl_get_param PARAM_READOUT_PORT ATTR_CURRENT" );
-    if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_CURRENT, (void*)&spdCurIdx) != PV_OK)
+    if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_CURRENT, &spdCurIdx) != PV_OK)
         return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_CURRENT" );
 
     // Iterate through each port and fill in the speed table
-    for (uns32 portIndex = 0; portIndex < portCount; portIndex++)
+    for (uns32 portIndex = 0; portIndex < portCount; ++portIndex)
     {
-        if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, (void*)&portIndex) != PV_OK)
-            return LogPvcamError(__LINE__, "pl_set_param PARAM_READOUT_PORT" );
+        // The port in an enum parameter, pl_set_param takes a value not an index
+        int32 portValue = 0;
+        if (pl_get_enum_param(hPVCAM_, PARAM_READOUT_PORT, portIndex, &portValue, NULL, 0) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_READOUT_PORT");
 
-        if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_COUNT, (void*)&spdCount) != PV_OK)
-            return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_COUNT" );
+        if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, &portValue) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_set_param PARAM_READOUT_PORT");
+
+        if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_COUNT, &spdCount) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_COUNT");
 
         // Read the "default" speed for every port, we will select this one if port changes.
         // Please note we don't read the ATTR_DEFAULT as this one is not properly reported (PVCAM 3.1.9.1)
         int16 portDefaultSpdIdx = 0;
-        if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_CURRENT, (void*)&portDefaultSpdIdx) != PV_OK)
-            return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_CURRENT" );
+        if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_CURRENT, &portDefaultSpdIdx) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_CURRENT");
 
-        for (int16 spdIndex = 0; spdIndex < spdCount; spdIndex++)
+        for (int16 spdIndex = 0; static_cast<uns32>(spdIndex) < spdCount; ++spdIndex)
         {
             SpdTabEntry spdEntry;
-            spdEntry.portIndex = portIndex;
+            spdEntry.portValue = portValue;
             spdEntry.spdIndex = spdIndex;
             spdEntry.portDefaultSpdIdx = portDefaultSpdIdx;
             int16 bitDepth = 0;
 
-            if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, (void*)&spdEntry.spdIndex) != PV_OK)
-                return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX" );
+            if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, &spdEntry.spdIndex) != PV_OK)
+                return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX");
 
             // Read the pixel time for this speed choice
-            if (pl_get_param(hPVCAM_, PARAM_PIX_TIME, ATTR_CURRENT, (void*)&spdEntry.pixTime) != PV_OK)
+            if (pl_get_param(hPVCAM_, PARAM_PIX_TIME, ATTR_CURRENT, &spdEntry.pixTime) != PV_OK)
             {
-                LogPvcamError(__LINE__, "pl_get_param PARAM_PIX_TIME failed, using default pix time" );
+                LogPvcamError(__LINE__, "pl_get_param PARAM_PIX_TIME failed, using default pix time");
                 spdEntry.pixTime = MAX_PIX_TIME;
             }
             // Read the bit depth for this speed choice
-            if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK )
+            if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK)
             {
-                return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT" );
+                return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT");
             }
             // Read the sensor color mask for the current speed
             rs_bool colorAvail = FALSE;
             // Default values for cameras that do not support color mode
             spdEntry.colorMaskStr = "Grayscale";
             spdEntry.colorMask = COLOR_NONE;
-            if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_AVAIL, &colorAvail) == PV_OK && colorAvail == TRUE)
+            if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_AVAIL, &colorAvail) == PV_OK
+                && colorAvail == TRUE)
             {
-                int32 colorCount = 0;
-                if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_COUNT, &colorCount) != PV_OK || colorCount < 1)
+                uns32 colorCount = 0;
+                if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_COUNT, &colorCount) != PV_OK
+                    || colorCount < 1)
                 {
-                    return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_COUNT" );
+                    return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_COUNT");
                 }
                 int32 colorCur = 0;
                 if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_CURRENT, &colorCur) != PV_OK)
                 {
-                    return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_CURRENT" );
+                    return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_CURRENT");
                 }
                 // We need to find the value/string that corresponds to ATTR_CURRENT value
                 // First a couple of hacks for older cameras. Old PVCAM prior 3.0.5.2 (inclusive) reported
@@ -4604,7 +4611,7 @@ int Universal::initializeSpeedTable()
                 {
                     // Retiga 6000C with initial firmware had GRBG mask on slowest speed.
                     bFound = true;
-                    if (portIndex == 0 && spdIndex == 2)
+                    if (portValue == 0 && spdIndex == 2)
                     {
                         spdEntry.colorMask = COLOR_GRBG;
                         spdEntry.colorMaskStr.assign("Color (GRBG)");
@@ -4615,19 +4622,20 @@ int Universal::initializeSpeedTable()
                         spdEntry.colorMaskStr.assign("Color (RGGB)");
                     }
                 }
-                for (int32 i = 0; i < colorCount && !bFound; ++i)
+                for (uns32 colorIndex = 0; colorIndex < colorCount && !bFound; ++colorIndex)
                 {
                     uns32 enumStrLen = 0;
-                    if (pl_enum_str_length( hPVCAM_, PARAM_COLOR_MODE, i, &enumStrLen) != PV_OK)
+                    if (pl_enum_str_length(hPVCAM_, PARAM_COLOR_MODE, colorIndex, &enumStrLen) != PV_OK)
                     {
-                        return LogPvcamError(__LINE__, "pl_enum_str_length PARAM_COLOR_MODE" );
+                        return LogPvcamError(__LINE__, "pl_enum_str_length PARAM_COLOR_MODE");
                     }
-                    char* enumStrBuf = new char[enumStrLen+1];
+                    char* enumStrBuf = new char[enumStrLen + 1];
                     enumStrBuf[enumStrLen] = '\0';
                     int32 enumVal = 0;
-                    if (pl_get_enum_param(hPVCAM_, PARAM_COLOR_MODE, i, &enumVal, enumStrBuf, enumStrLen) != PV_OK)
+                    if (pl_get_enum_param(hPVCAM_, PARAM_COLOR_MODE, colorIndex, &enumVal, enumStrBuf, enumStrLen) != PV_OK)
                     {
-                        return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_COLOR_MODE" );
+                        delete[] enumStrBuf;
+                        return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_COLOR_MODE");
                     }
                     if (enumVal == colorCur)
                     {
@@ -4639,31 +4647,31 @@ int Universal::initializeSpeedTable()
                 }
                 if (!bFound)
                     return LogAdapterError(DEVICE_INTERNAL_INCONSISTENCY, __LINE__,
-                        "ATTR_CURRENT of PARAM_COLOR_MODE does not correspond to any reported ENUM value" );
+                        "ATTR_CURRENT of PARAM_COLOR_MODE does not correspond to any reported ENUM value");
             }
 
             // Read the gain range for this speed choice if applicable
-            if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_AVAIL, &spdEntry.gainAvail) != PV_OK )
+            if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_AVAIL, &spdEntry.gainAvail) != PV_OK)
             {
-                LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_AVAIL failed, not using gain at this speed" );
+                LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_AVAIL failed, not using gain at this speed");
                 spdEntry.gainAvail = FALSE;
             }
             if (spdEntry.gainAvail)
             {
-                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_MIN, &spdEntry.gainMin) != PV_OK )
+                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_DEFAULT, &spdEntry.gainDef) != PV_OK)
                 {
-                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_MIN failed, using default" );
-                    spdEntry.gainMin = 1;
+                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_DEFAULT failed, using 1");
+                    spdEntry.gainDef = 1;
                 }
-                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_MAX, &spdEntry.gainMax) != PV_OK )
+                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_MIN, &spdEntry.gainMin) != PV_OK)
                 {
-                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_MAX failed, using default" );
-                    spdEntry.gainMax = 1;
+                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_MIN failed, using default");
+                    spdEntry.gainMin = spdEntry.gainDef;
                 }
-                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_DEFAULT, &spdEntry.gainDef) != PV_OK )
+                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_MAX, &spdEntry.gainMax) != PV_OK)
                 {
-                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_DEFAULT failed, using min" );
-                    spdEntry.gainDef = spdEntry.gainMin;
+                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_MAX failed, using default");
+                    spdEntry.gainMax = spdEntry.gainDef;
                 }
 
                 // Reset the gain and re-read the bit depth. As some cameras may have different bit
@@ -4671,11 +4679,11 @@ int Universal::initializeSpeedTable()
                 // next to the readout rate.
                 if (pl_set_param(hPVCAM_, PARAM_GAIN_INDEX, &spdEntry.gainDef) != PV_OK)
                 {
-                    return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX" );
+                    return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX");
                 }
-                if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK )
+                if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK)
                 {
-                    return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT" );
+                    return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT");
                 }
 
                 // Iterate all gains and read each gain name if supported. If not supported or
@@ -4685,8 +4693,7 @@ int Universal::initializeSpeedTable()
                 {
                     // Let's assume we won't succeed and prepare the name as a simple number,
                     // this just makes the following code much easier.
-                    std::string gainNameStr = CDeviceUtils::ConvertToString(gainIdx);
-#ifdef PVCAM_METADATA_SUPPORTED
+                    std::string gainNameStr = std::to_string(gainIdx);
                     rs_bool gainNameAvail = FALSE;
                     if (pl_get_param(hPVCAM_, PARAM_GAIN_NAME, ATTR_AVAIL, &gainNameAvail) == PV_OK
                         && gainNameAvail == TRUE)
@@ -4697,7 +4704,7 @@ int Universal::initializeSpeedTable()
                             if (pl_get_param(hPVCAM_, PARAM_GAIN_NAME, ATTR_CURRENT, pvGainName) == PV_OK)
                             {
                                 // Workaround if for some reason PVCAM returns empty string
-                                if (strlen(pvGainName) != 0)
+                                if (pvGainName[0] != '\0')
                                 {
                                     gainNameStr.append("-");
                                     gainNameStr.append(pvGainName);
@@ -4705,7 +4712,6 @@ int Universal::initializeSpeedTable()
                             }
                         }
                     }
-#endif // PVCAM_METADATA_SUPPORTED
                     spdEntry.gainNameMap[gainNameStr] = gainIdx;
                     spdEntry.gainNameMapReverse[gainIdx] = gainNameStr;
                 }
@@ -4725,7 +4731,7 @@ int Universal::initializeSpeedTable()
             // if the camera has two speeds with the same bit depth, e.g. "100MHz 12bit" and "100MHz 12bit".
             // A proper way would be to add the speed index as: "0: 100MHz", "1: 100MHz", but again, this
             // breaks the expected scheme.
-            tmp << 1000.0f/spdEntry.pixTime << "MHz " << bitDepth << "bit";
+            tmp << 1000.0f / spdEntry.pixTime << "MHz " << bitDepth << "bit";
             spdEntry.spdString = tmp.str();
 
             // Let's assume we won't succeed reading speed name from camera,
@@ -4739,7 +4745,7 @@ int Universal::initializeSpeedTable()
                 if (pl_get_param(hPVCAM_, PARAM_SPDTAB_NAME, ATTR_CURRENT, spdName) == PV_OK)
                 {
                     // Workaround if for some reason PVCAM returns empty string
-                    if (strlen(spdName) != 0)
+                    if (spdName[0] != '\0')
                     {
                         spdNameStr = spdName;
                     }
@@ -4747,22 +4753,22 @@ int Universal::initializeSpeedTable()
             }
             spdEntry.spdName = spdNameStr;
 
-            camSpdTable_[portIndex][spdIndex] = spdEntry;
-            camSpdTableReverse_[portIndex][tmp.str()] = spdEntry;
+            camSpdTable_[portValue][spdIndex] = spdEntry;
+            camSpdTableReverse_[portValue][tmp.str()] = spdEntry;
         }
     }
 
     // Since we have iterated through all the ports/speeds/gains we should reset the cam to default state
-    const SpdTabEntry& spdDef = camSpdTable_[portCurIdx][spdCurIdx];
+    SpdTabEntry& spdDef = camSpdTable_[portCurVal][spdCurIdx];
 
-    if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, (void*)&spdDef.portIndex) != PV_OK)
-        return LogPvcamError(__LINE__, "pl_set_param PARAM_READOUT_PORT" );
-    if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, (void*)&spdDef.spdIndex) != PV_OK)
-        return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX" );
+    if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, &spdDef.portValue) != PV_OK)
+        return LogPvcamError(__LINE__, "pl_set_param PARAM_READOUT_PORT");
+    if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, &spdDef.spdIndex) != PV_OK)
+        return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX");
     if (spdDef.gainAvail)
     {
-        if (pl_set_param(hPVCAM_, PARAM_GAIN_INDEX, (void*)&spdDef.gainDef) != PV_OK)
-            return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX" );
+        if (pl_set_param(hPVCAM_, PARAM_GAIN_INDEX, &spdDef.gainDef) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX");
     }
     camCurrentSpeed_ = spdDef;
 
@@ -6067,7 +6073,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // Port has changed so we need to reset the speed
         // Read the available speeds for this port from our speed table
         std::vector<std::string> spdChoices;
-        const uns32 curPort = prmReadoutPort_->Current();
+        const int32 curPort = prmReadoutPort_->Current();
         std::map<int16, SpdTabEntry>::iterator i = camSpdTable_[curPort].begin();
         for(; i != camSpdTable_[curPort].end(); ++i)
             spdChoices.push_back(i->second.spdString);
