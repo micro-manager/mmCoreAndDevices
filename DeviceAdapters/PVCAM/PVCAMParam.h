@@ -106,9 +106,10 @@ template<>
 class PvParam <smart_stream_type>: public PvParamBase
 {
 public:
-    PvParam( const std::string& aDebugName, uns32 aParamId, Universal* aCamera, bool aDbgPrint ) : PvParamBase( aDebugName, aParamId, aCamera, aDbgPrint )
+    PvParam(const std::string& aDebugName, uns32 aParamId, Universal* aCamera, bool aDbgPrint)
+        : PvParamBase(aDebugName, aParamId, aCamera, aDbgPrint)
     {
-        mCurrent.entries=SMART_STREAM_MAX_EXPOSURES;
+        mCurrent.entries = SMART_STREAM_MAX_EXPOSURES;
         mCurrent.params = new uns32[SMART_STREAM_MAX_EXPOSURES];
         if (IsAvailable())
         {
@@ -125,7 +126,7 @@ public:
     smart_stream_type     Max()       { return mMax; }
     smart_stream_type     Min()       { return mMin; }
     smart_stream_type     Increment() { return mIncrement; }
-    smart_stream_type     Count()     { return mCount; }
+    uns32                 Count()     { return mCount; }
     smart_stream_type     Default()   { return mDefault; }
 
     /**
@@ -157,19 +158,20 @@ public:
     {
         if (aDbgPrint)
             mCamera->LogAdapterMessage("Updating " + mDebugName + "...");
+
         // must be set to max exposures number so we can retrieve current number of exposures
         // from the camera in case new requested exposures count is greater than the previous  
-        mCurrent.entries=SMART_STREAM_MAX_EXPOSURES;
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_CURRENT, &mCurrent ) != PV_OK)
+        mCurrent.entries = SMART_STREAM_MAX_EXPOSURES;
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_CURRENT, &mCurrent) != PV_OK)
         {
-            mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + "ATTR_CURRENT failed");
+            mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_CURRENT failed");
             mCurrent.entries = 0;
             return DEVICE_ERR;
         }
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_CURRENT (entries): " + CDeviceUtils::ConvertToString(mCurrent.entries));
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_MIN, &mMin ) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_MIN, &mMin) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_MIN failed");
             return DEVICE_ERR;
@@ -177,7 +179,7 @@ public:
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_MIN (entries): " + CDeviceUtils::ConvertToString(mMin.entries));
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_MAX, &mMax ) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_MAX, &mMax) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_MAX failed");
             return DEVICE_ERR;
@@ -185,15 +187,18 @@ public:
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_MAX (entries): " + CDeviceUtils::ConvertToString(mMax.entries));
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_COUNT, &mCount ) != PV_OK)
+        // Have to set the value here because in old PVCAM was a bug that returned
+        // the count as uns16 only. This way the upper two bytes stay zeroed.
+        mCount = 0;
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_COUNT, &mCount) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_COUNT failed");
             return DEVICE_ERR;
         }
         if (aDbgPrint)
-            mCamera->LogAdapterMessage(mDebugName + " ATTR_COUNT (entries): " + CDeviceUtils::ConvertToString(mCount.entries));
+            mCamera->LogAdapterMessage(mDebugName + " ATTR_COUNT (entries): " + CDeviceUtils::ConvertToString((long)mCount));
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_INCREMENT, &mIncrement ) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_INCREMENT, &mIncrement) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_INCREMENT failed");
             return DEVICE_ERR;
@@ -201,7 +206,7 @@ public:
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_INCREMENT (entries): " + CDeviceUtils::ConvertToString(mIncrement.entries));
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_DEFAULT, &mDefault ) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_DEFAULT, &mDefault) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_DEFAULT failed");
             return DEVICE_ERR;
@@ -238,13 +243,12 @@ public:
 
 protected:
 
-    smart_stream_type mCurrent;
-    smart_stream_type mMax;
-    smart_stream_type mMin;
-    smart_stream_type mCount;     // PARAM_SMART_STREAM_EXP_PARAMS is the only parameter where ATTR_COUNT is not uns32 type
-    smart_stream_type mIncrement;
-    smart_stream_type mDefault;
-
+    smart_stream_type mCurrent  { 0, NULL };
+    smart_stream_type mMax      { 0, NULL };
+    smart_stream_type mMin      { 0, NULL };
+    uns32             mCount; // ATTR_COUNT is always TYPE_UNS32
+    smart_stream_type mIncrement{ 0, NULL };
+    smart_stream_type mDefault  { 0, NULL };
 };
 #endif
 
