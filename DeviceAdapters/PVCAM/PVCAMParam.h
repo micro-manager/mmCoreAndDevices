@@ -78,6 +78,8 @@ public:
         return DEVICE_OK;
     }
 
+    virtual int Update(bool aDbgPrint = false) = 0;
+    virtual int Apply() = 0;
     virtual int Reset() = 0;
 
 protected:
@@ -144,7 +146,7 @@ public:
     /**
     * Reads the current parameter value and range from the camera
     */
-    int Update(bool aDbgPrint = false)
+    virtual int Update(bool aDbgPrint = false) override
     {
         if (aDbgPrint)
             mCamera->LogAdapterMessage("Updating " + mDebugName + "...");
@@ -212,7 +214,7 @@ public:
     /**
     * Sends the parameter value to the camera
     */
-    int Apply()
+    virtual int Apply() override
     {
         // Write the current value to camera
         if (pl_set_param(mCamera->Handle(), mId, &mCurrent) != PV_OK)
@@ -224,7 +226,7 @@ public:
         return DEVICE_OK;
     }
 
-    int Reset()
+    virtual int Reset() override
     {
         // Nothing
         return DEVICE_CAN_NOT_SET_PROPERTY;
@@ -296,7 +298,7 @@ public:
     /**
     * Reads the current parameter value and range from the camera
     */
-    int Update(bool aDbgPrint = false)
+    virtual int Update(bool aDbgPrint = false) override
     {
         if (aDbgPrint)
             mCamera->LogAdapterMessage("Updating " + mDebugName + "...");
@@ -357,7 +359,7 @@ public:
     /**
     * Sends the parameter value to the camera
     */
-    int Apply()
+    virtual int Apply() override
     {
         // Write the current value to camera
         if (pl_set_param(mCamera->Handle(), mId, &mCurrent) != PV_OK)
@@ -369,7 +371,7 @@ public:
         return DEVICE_OK;
     }
 
-    int Reset()
+    virtual int Reset() override
     {
         return SetAndApply(mDefault);
     }
@@ -424,7 +426,7 @@ public:
     /**
     * Reads the current parameter value and range from the camera
     */
-    int Update(bool aDbgPrint = false)
+    virtual int Update(bool aDbgPrint = false) override
     {
         if (aDbgPrint)
             mCamera->LogAdapterMessage("Updating " + mDebugName + "...");
@@ -487,7 +489,13 @@ public:
         return DEVICE_OK;
     }
 
-    int Reset()
+    virtual int Apply() override
+    {
+        // Char properties cannot be set
+        return DEVICE_CAN_NOT_SET_PROPERTY;
+    }
+
+    virtual int Reset() override
     {
         // Char properties cannot be set
         return DEVICE_CAN_NOT_SET_PROPERTY;
@@ -527,7 +535,7 @@ public:
     /**
     * Overridden function. Return the enum string instead of the value only.
     */
-    std::string ToString()
+    virtual std::string ToString() override
     {
         return mEnumMap[mCurrent];
     }
@@ -596,12 +604,12 @@ public:
     /**
     * Overridden function. If we want to re-read the parameter, we also need to re-enumerate the values.
     */
-    int Update()
+    virtual int Update(bool aDbgPrint = false) override
     {
-        int err = PvParam<int32>::Update();
+        int err = PvParam<int32>::Update(aDbgPrint);
         if (err != DEVICE_OK)
             return err;
-        enumerate(false);
+        enumerate(aDbgPrint);
         return DEVICE_OK;
     }
 
@@ -719,7 +727,10 @@ public:
     int Set(std::string aValue);
     int Set(double aValue);
     int Set(long aValue);
-    int Reset();
+
+    virtual int Update(bool aDbgPrint = false) override;
+    virtual int Apply() override;
+    virtual int Reset() override;
 
     int Read();
     int Write();
