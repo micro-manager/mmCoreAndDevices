@@ -180,6 +180,14 @@ public:
     */
     int GainNum{ 0 };
     /**
+    * Current image format.
+    */
+    int ImageFormat{ PL_IMAGE_FORMAT_MONO16 };
+    /**
+    * Current image compression.
+    */
+    int ImageCompression{ PL_IMAGE_COMPRESSION_NONE };
+    /**
     * Whether to use circular buffer for live acquisition or not
     */
     bool CircBufEnabled{ true };
@@ -225,6 +233,12 @@ public:
     * Exposure values for S.M.A.R.T streaming in milliseconds
     */
     std::vector<double> SmartStreamingExposuresMs{ 10, 20, 30, 40 };
+    /**
+    * Set to true whenever the PAPRAM_PP_PARAM value is set.
+    * It behaves like a trigger to initiate acq. setup because e.g. HW frame
+    * summing can change bit depth and pixel size (16-bit, 32-bit, ...).
+    */
+    bool PostProcParamSet{ false };
 };
 
 #endif
