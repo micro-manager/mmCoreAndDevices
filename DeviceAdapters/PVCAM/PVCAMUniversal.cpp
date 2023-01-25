@@ -5964,10 +5964,8 @@ int Universal::applyAcqConfig(bool forceSetup)
 
     // If we are not acquiring, we can configure the camera right away
 
-    // Some changes will require reallocation of our buffers
-    // TODO: Better name would be "setupRequired" or similar, setting this flag will
-    // force the call to pl_exp_setup() functions
-    bool bufferResizeRequired = false;
+    // Some changes will require new acq. setup and reallocation of our buffers
+    bool setupRequired = false;
     // This function is called on several places. After a change in property and
     // upon starting acquisition. If we are not running live mode the configuration
     // will get applied immediately. To avoid re-applying the configuration in
@@ -5988,7 +5986,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.ColorProcessingEnabled != acqCfgCur_.ColorProcessingEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     PvRoiCollection& newRois = acqCfgNew_.Rois;
@@ -6030,7 +6028,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // If binning has changed adjust the coordinates to the binning factor
         newRois.AdjustCoords();
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // Multi-ROIs require metadata
@@ -6049,7 +6047,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.FrameMetadataEnabled != acqCfgCur_.FrameMetadataEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         nRet = prmMetadataEnabled_->SetAndApply(acqCfgNew_.FrameMetadataEnabled ? TRUE : FALSE);
         if (nRet != DEVICE_OK)
         {
@@ -6076,7 +6074,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsEnabled != acqCfgCur_.CentroidsEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         nRet = prmCentroidsEnabled_->SetAndApply(acqCfgNew_.CentroidsEnabled ? TRUE : FALSE);
         if (nRet != DEVICE_OK)
         {
@@ -6087,7 +6085,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsRadius != acqCfgCur_.CentroidsRadius)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         if ((nRet = prmCentroidsRadius_->SetAndApply(static_cast<uns16>(acqCfgNew_.CentroidsRadius))) != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
@@ -6097,7 +6095,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsCount != acqCfgCur_.CentroidsCount)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         if ((nRet = prmCentroidsCount_->SetAndApply(static_cast<uns16>(acqCfgNew_.CentroidsCount))) != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
@@ -6107,7 +6105,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsMode != acqCfgCur_.CentroidsMode)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         if ((nRet = prmCentroidsMode_->SetAndApply(acqCfgNew_.CentroidsMode)) != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
@@ -6117,7 +6115,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsBgCount != acqCfgCur_.CentroidsBgCount)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         if ((nRet = prmCentroidsBgCount_->SetAndApply(acqCfgNew_.CentroidsBgCount)) != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
@@ -6127,7 +6125,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsThreshold != acqCfgCur_.CentroidsThreshold)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         nRet = prmCentroidsThreshold_->SetAndApply(static_cast<uns32>(acqCfgNew_.CentroidsThreshold));
         if (nRet != DEVICE_OK)
         {
@@ -6183,7 +6181,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // in pl_exp_setup_seq/cont getting called, which applies script, which then
         // forces the camera to update the "post-setup parameters" and this
         // results in GUI getting immediately updated with correct values for timing params.
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // Clear mode
@@ -6200,7 +6198,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // in pl_exp_setup_seq/cont getting called, which applies script, which then
         // forces the camera to update the "post-setup parameters" and this
         // results in GUI getting immediately updated with correct values for timing params.
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // Debayering algorithm selection
@@ -6290,7 +6288,7 @@ int Universal::applyAcqConfig(bool forceSetup)
 
         // Since Port has changed we need to reset the speed, which in turn resets gain
         portChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     bool speedChanged = false; // Speed change triggers gain change
@@ -6378,7 +6376,7 @@ int Universal::applyAcqConfig(bool forceSetup)
 
         speedChanged = true;
         // Speed may cause bit depth change, so buffer reallocation is recommended
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     bool gainChanged = false; // Gain change triggers update of various parameters
@@ -6415,13 +6413,13 @@ int Universal::applyAcqConfig(bool forceSetup)
 
         // Gain may cause bit depth change, so buffer reallocation is recommended
         gainChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     if (acqCfgNew_.PostProcParamSet != acqCfgCur_.PostProcParamSet)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
 
         paramsToUpdate.emplace(prmBitDepth_.get());
         paramsToUpdate.emplace(prmImageFormat_.get());
@@ -6443,7 +6441,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // in pl_exp_setup_seq/cont getting called, which applies script, which then
         // forces the camera to update the "post-setup parameters" and this
         // results in GUI getting immediately updated with correct values for image format + host.
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     if (acqCfgNew_.ImageCompression != acqCfgCur_.ImageCompression)
     {
@@ -6458,7 +6456,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // in pl_exp_setup_seq/cont getting called, which applies script, which then
         // forces the camera to update the "post-setup parameters" and this
         // results in GUI getting immediately updated with correct values for image compression + host.
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     if (acqCfgNew_.AdcOffset != acqCfgCur_.AdcOffset)
@@ -6623,18 +6621,18 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CircBufEnabled != acqCfgCur_.CircBufEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     if (acqCfgNew_.CircBufSizeAuto != acqCfgCur_.CircBufSizeAuto)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     if (acqCfgNew_.CallbacksEnabled != acqCfgCur_.CallbacksEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         g_pvcamLock.Lock();
         if (acqCfgNew_.CallbacksEnabled)
         {
@@ -6662,12 +6660,12 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.DiskStreamingEnabled != acqCfgCur_.DiskStreamingEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     if (acqCfgNew_.DiskStreamingPath != acqCfgCur_.DiskStreamingPath)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     if (acqCfgNew_.DiskStreamingCoreSkipRatio != acqCfgCur_.DiskStreamingCoreSkipRatio)
     {
@@ -6678,7 +6676,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.ExposureMs != acqCfgCur_.ExposureMs)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     // The exposure time value that will be used to decide which exposure
     // resolution to set, this depends on S.M.A.R.T streaming as well.
@@ -6800,14 +6798,14 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in sendSmartStreamingToCamera()
         }
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // If the acquisition type changes (Snap vs Live) we need to reconfigure buffer which
     // in turn reconfigures the camera with pl_exp_setup_xxx() calls.
     if (acqCfgNew_.AcquisitionType != acqCfgCur_.AcquisitionType)
     {
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // Refresh dependant parameters, reset their cache and update values
@@ -6836,7 +6834,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     // immediately the acqCfgCur_ must already contain correct configuration.
     acqCfgCur_ = acqCfgNew_;
 
-    if (bufferResizeRequired || forceSetup)
+    if (setupRequired || forceSetup)
     {
         // Automatically prepare the acquisition. This helps with following problem:
         // Some parameters (PARAM_TEMP_SETPOINT, PARAM_READOUT_TIME) update their values only
