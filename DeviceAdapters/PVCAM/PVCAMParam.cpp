@@ -228,7 +228,7 @@ int PvUniversalParam::Set(double aValue)
     }
 }
 
-int PvUniversalParam::Update(bool aDbgPrint)
+int PvUniversalParam::Update(bool /*aDbgPrint*/)
 {
     return initialize();
 }
