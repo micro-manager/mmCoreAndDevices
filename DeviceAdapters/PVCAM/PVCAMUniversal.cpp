@@ -1724,8 +1724,12 @@ unsigned Universal::GetImageHeight() const
 
 unsigned Universal::GetImageBytesPerPixel() const
 {
-    const unsigned int bpp = acqCfgCur_.ColorProcessingEnabled ? 4 : ((GetBitDepth() + 7) / 8);
-    return bpp;
+    const unsigned int channelsPerPixel = GetNumberOfComponents();
+    const unsigned int bytesPerChannel = acqCfgCur_.ColorProcessingEnabled
+        ? (GetBitDepth() + 7) / 8
+        : getPvcamImageBytesPerChannel();
+    const unsigned int bytesPerPixel = channelsPerPixel * bytesPerChannel;
+    return bytesPerPixel;
 }
 
 long Universal::GetImageBufferSize() const
@@ -1739,7 +1743,9 @@ long Universal::GetImageBufferSize() const
 
 unsigned Universal::GetBitDepth() const
 {
-    const unsigned int bitDepth = acqCfgCur_.ColorProcessingEnabled ? 8 : getPvcamBitDepth();
+    const unsigned int bitDepth = acqCfgCur_.ColorProcessingEnabled
+        ? 8
+        : getPvcamBitDepth();
     return bitDepth;
 }
 
@@ -1781,7 +1787,10 @@ int Universal::IsExposureSequenceable(bool& isSequenceable) const
 
 unsigned Universal::GetNumberOfComponents() const
 {
-    return acqCfgCur_.ColorProcessingEnabled ? 4 : 1;
+    const unsigned int channelsPerPixel = acqCfgCur_.ColorProcessingEnabled
+        ? 4
+        : getPvcamImageChannelsPerPixel();
+    return channelsPerPixel;
 }
 
 int Universal::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
@@ -5130,7 +5139,10 @@ int Universal::resizeImageProcessingBuffers()
         // Metadata-enabled frames with single ROI don't need black-filling,
         // we can use the data of the single ROI directly.
         // With more ROIs we need black-filling into separate buffer
-        const size_t imgDataSz = sizeof(uns16)
+        const size_t channelsPerPixel = getPvcamImageChannelsPerPixel();
+        const size_t bytesPerChannel = getPvcamImageBytesPerChannel();
+        const size_t bytesPerPixel = channelsPerPixel * bytesPerChannel;
+        const size_t imgDataSz = bytesPerPixel
             * acqCfgCur_.Rois.ImpliedRoi().ImageRgnWidth()
             * acqCfgCur_.Rois.ImpliedRoi().ImageRgnHeight();
         if (metaBlackFilledBufSz_ != imgDataSz)
@@ -5507,8 +5519,29 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
         // debayer the image and convert to color
         RGBscales rgbScales = {redScale_, greenScale_, blueScale_};
         debayer_.SetRGBScales(rgbScales);
-        debayer_.Process(*rgbImgBuf_, (unsigned short*)pixBuffer,
-            rgbImgBuf_->Width(), rgbImgBuf_->Height(), getPvcamBitDepth());
+        const size_t channelsPerPixel = getPvcamImageChannelsPerPixel();
+        if (channelsPerPixel != 1)
+            return LogAdapterError(DEVICE_UNSUPPORTED_DATA_FORMAT, __LINE__,
+                    "Debayering of multi-channel image not supported");
+        const size_t bytesPerChannel = getPvcamImageBytesPerChannel();
+        int nRet = DEVICE_OK;
+        switch (bytesPerChannel)
+        {
+        case sizeof(uns8):
+            nRet = debayer_.Process(*rgbImgBuf_, (unsigned char*)pixBuffer,
+                    rgbImgBuf_->Width(), rgbImgBuf_->Height(), getPvcamBitDepth());
+            break;
+        case sizeof(uns16):
+            nRet = debayer_.Process(*rgbImgBuf_, (unsigned short*)pixBuffer,
+                    rgbImgBuf_->Width(), rgbImgBuf_->Height(), getPvcamBitDepth());
+            break;
+        default:
+            return LogAdapterError(DEVICE_UNSUPPORTED_DATA_FORMAT, __LINE__,
+                    "Debayering of image with " + std::to_string(bytesPerChannel)
+                        + " bytes per pixel not supported");
+        }
+        if (nRet != DEVICE_OK)
+            return LogAdapterError(nRet, __LINE__, "Unable to debayer the frame data");
         pixBuffer = rgbImgBuf_->GetPixelsRW();
     }
 
@@ -5714,6 +5747,54 @@ const char* Universal::getPvcamImageCompressionString(int32 value) const
         return "Bitpack 18";
     default:
         return "Unknown";
+    }
+}
+
+unsigned int Universal::getPvcamImageChannelsPerPixel() const
+{
+    const int32 imageFormat = getPvcamImageFormat();
+    switch (imageFormat)
+    {
+    case PL_IMAGE_FORMAT_MONO8:
+    case PL_IMAGE_FORMAT_BAYER8:
+    case PL_IMAGE_FORMAT_MONO16:
+    case PL_IMAGE_FORMAT_BAYER16:
+    case PL_IMAGE_FORMAT_MONO24:
+    case PL_IMAGE_FORMAT_BAYER24:
+    case PL_IMAGE_FORMAT_MONO32:
+    case PL_IMAGE_FORMAT_BAYER32:
+    default:
+        return 1;
+    case PL_IMAGE_FORMAT_RGB24:
+    case PL_IMAGE_FORMAT_RGB48:
+    case PL_IMAGE_FORMAT_RGB72:
+    case PL_IMAGE_FORMAT_RGB96:
+        return 3;
+    }
+}
+
+unsigned int Universal::getPvcamImageBytesPerChannel() const
+{
+    const int32 imageFormat = getPvcamImageFormat();
+    switch (imageFormat)
+    {
+    case PL_IMAGE_FORMAT_MONO8:
+    case PL_IMAGE_FORMAT_BAYER8:
+    case PL_IMAGE_FORMAT_RGB24:
+        return 1;
+    case PL_IMAGE_FORMAT_MONO16:
+    case PL_IMAGE_FORMAT_BAYER16:
+    case PL_IMAGE_FORMAT_RGB48:
+    default:
+        return 2;
+    case PL_IMAGE_FORMAT_MONO24:
+    case PL_IMAGE_FORMAT_BAYER24:
+    case PL_IMAGE_FORMAT_RGB72:
+        return 3;
+    case PL_IMAGE_FORMAT_MONO32:
+    case PL_IMAGE_FORMAT_BAYER32:
+    case PL_IMAGE_FORMAT_RGB96:
+        return 4;
     }
 }
 

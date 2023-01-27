@@ -754,6 +754,15 @@ private:
     const char* getPvcamImageCompressionString(int32 value) const;
 
     /**
+    * This function gives number of channels per pixel based on image format reported by PVCAM.
+    */
+    unsigned int getPvcamImageChannelsPerPixel() const;
+    /**
+    * This function gives number of bytes per channel based on image format reported by PVCAM.
+    */
+    unsigned int getPvcamImageBytesPerChannel() const;
+
+    /**
     * This method is used to estimate how long it might take to read out one frame.
     * The calculation is very inaccurate, it is only used when calculating acquisition timeout.
     */
