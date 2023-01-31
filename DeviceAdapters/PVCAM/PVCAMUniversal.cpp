@@ -193,6 +193,10 @@ const char* g_Keyword_BitDepthHost          = "BitDepth"; // The "Host" suffix n
 const char* g_Keyword_ImageFormatHost       = "ImageFormat"; // The "Host" suffix not shown
 const char* g_Keyword_ImageCompressionHost  = "ImageCompression"; // The "Host" suffix not shown
 
+const char* g_Keyword_HostFrameSummingEnabled   = "FrameSummingEnabled";
+const char* g_Keyword_HostFrameSummingCount     = "FrameSummingCount";
+const char* g_Keyword_HostFrameSummingFormat    = "FrameSummingFormat";
+
 // Universal parameters
 // These parameters, their ranges or allowed values are read out from the camera automatically.
 // Use these parameters for simple camera properties that do not need special treatment when a
@@ -1484,6 +1488,62 @@ int Universal::Initialize()
         SetPropertyLimits(g_Keyword_ScanWidth, prmScanWidth_->Min(), prmScanWidth_->Max());
 
         acqCfgNew_.ScanWidth = prmScanWidth_->Current();
+    }
+
+    // Host-side post-processing - frame summing
+    prmHostFrameSummingEnabled_ = std::make_unique<PvParam<rs_bool>>("PARAM_HOST_FRAME_SUMMING_ENABLED",
+            PARAM_HOST_FRAME_SUMMING_ENABLED, this, true);
+    if (prmHostFrameSummingEnabled_->IsAvailable())
+    {
+        const rs_bool cur = prmHostFrameSummingEnabled_->Current();
+        pAct = new CPropertyAction(this, &Universal::OnHostFrameSummingEnabled);
+        nRet = CreateStringProperty(g_Keyword_HostFrameSummingEnabled,
+                cur ? g_Keyword_Yes : g_Keyword_No,
+                prmHostFrameSummingEnabled_->IsReadOnly(), pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!prmHostFrameSummingEnabled_->IsReadOnly())
+        {
+            AddAllowedValue(g_Keyword_HostFrameSummingEnabled, g_Keyword_Yes);
+            AddAllowedValue(g_Keyword_HostFrameSummingEnabled, g_Keyword_No);
+        }
+        acqCfgNew_.HostFrameSummingEnabled = cur;
+    }
+    prmHostFrameSummingCount_ = std::make_unique<PvParam<uns32>>("PARAM_HOST_FRAME_SUMMING_COUNT",
+            PARAM_HOST_FRAME_SUMMING_COUNT, this, true);
+    if (prmHostFrameSummingCount_->IsAvailable())
+    {
+        // The PVCAM type of this parameter is uns32, aka unsigned int.
+        // But the UI property supports long, double or string types only.
+        // On Windows the long type is 32-bit, so we have to limit the max. value
+        // of current, min. and max. attributes.
+        constexpr auto longMax = (std::numeric_limits<long>::max)();
+        const long cur = static_cast<long>(std::min<long long>(prmHostFrameSummingCount_->Current(), longMax));
+        const long min = static_cast<long>(std::min<long long>(prmHostFrameSummingCount_->Min(), longMax));
+        const long max = static_cast<long>(std::min<long long>(prmHostFrameSummingCount_->Max(), longMax));
+        pAct = new CPropertyAction(this, &Universal::OnHostFrameSummingCount);
+        nRet = CreateIntegerProperty(g_Keyword_HostFrameSummingCount, cur,
+                prmHostFrameSummingCount_->IsReadOnly(), pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!prmHostFrameSummingCount_->IsReadOnly())
+            SetPropertyLimits(g_Keyword_HostFrameSummingCount, min, max);
+        acqCfgNew_.HostFrameSummingCount = cur;
+    }
+    prmHostFrameSummingFormat_ = std::make_unique<PvEnumParam>("PARAM_HOST_FRAME_SUMMING_FORMAT",
+            PARAM_HOST_FRAME_SUMMING_FORMAT, this, true);
+    if (prmHostFrameSummingFormat_->IsAvailable())
+    {
+        const int32 cur = prmHostFrameSummingFormat_->Current();
+        const std::string curStr = prmHostFrameSummingFormat_->GetEnumString(cur);
+        pAct = new CPropertyAction(this, &Universal::OnHostFrameSummingFormat);
+        nRet = CreateStringProperty(g_Keyword_HostFrameSummingFormat, curStr.c_str(),
+                prmHostFrameSummingFormat_->IsReadOnly(), pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!prmHostFrameSummingFormat_->IsReadOnly())
+            SetAllowedValues(g_Keyword_HostFrameSummingFormat, prmHostFrameSummingFormat_->GetEnumStrings());
+        acqCfgNew_.HostFrameSummingFormat = cur;
     }
 
     nRet = initializePostSetupParams();
@@ -3738,6 +3798,55 @@ int Universal::OnTimingPostTriggerDelayNs(MM::PropertyBase* pProp, MM::ActionTyp
         pProp->Set(static_cast<double>(prmPostTriggerDelay_->Current()));
     }
     // Nothing to set, this is a read-only property
+    return DEVICE_OK;
+}
+
+int Universal::OnHostFrameSummingEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnHostFrameSummingEnabled", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set( acqCfgCur_.HostFrameSummingEnabled ? g_Keyword_Yes : g_Keyword_No);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        acqCfgNew_.HostFrameSummingEnabled = (0 == val.compare(g_Keyword_Yes));
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnHostFrameSummingCount(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnHostFrameSummingCount", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(acqCfgCur_.HostFrameSummingCount);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        pProp->Get(acqCfgNew_.HostFrameSummingCount);
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnHostFrameSummingFormat(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnHostFrameSummingFormat", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(prmHostFrameSummingFormat_->GetEnumString(acqCfgCur_.HostFrameSummingFormat).c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string valStr;
+        pProp->Get(valStr);
+        acqCfgNew_.HostFrameSummingFormat = prmHostFrameSummingFormat_->GetEnumValue(valStr);
+        return applyAcqConfig();
+    }
     return DEVICE_OK;
 }
 
@@ -6751,6 +6860,41 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.DiskStreamingCoreSkipRatio != acqCfgCur_.DiskStreamingCoreSkipRatio)
     {
         configChanged = true;
+    }
+
+    // Frame summing possibly requires buffer reallocation because the bit depth
+    // and host image format can change and those values are known after acq. setup.
+    if (acqCfgNew_.HostFrameSummingEnabled != acqCfgCur_.HostFrameSummingEnabled)
+    {
+        configChanged = true;
+        setupRequired = true;
+        nRet = prmHostFrameSummingEnabled_->SetAndApply(acqCfgNew_.HostFrameSummingEnabled ? TRUE : FALSE);
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+    }
+    if (acqCfgNew_.HostFrameSummingCount != acqCfgCur_.HostFrameSummingCount)
+    {
+        configChanged = true;
+        setupRequired = true;
+        nRet = prmHostFrameSummingCount_->SetAndApply(static_cast<uns32>(acqCfgNew_.HostFrameSummingCount));
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+    }
+    if (acqCfgNew_.HostFrameSummingFormat != acqCfgCur_.HostFrameSummingFormat)
+    {
+        configChanged = true;
+        setupRequired = true;
+        if ((nRet = prmHostFrameSummingFormat_->SetAndApply(acqCfgNew_.HostFrameSummingFormat)) != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
     }
 
     // Change in exposure only means to reconfigure the acquisition

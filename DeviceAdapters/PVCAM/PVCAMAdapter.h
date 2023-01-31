@@ -567,6 +567,22 @@ public: // Action handlers
     */
     int OnTimingPostTriggerDelayNs(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+    /**
+    * Enables or disables the Frame Summing feature on host side.
+    * It is a feature provided by PVCAM and available for all cameras.
+    */
+    int OnHostFrameSummingEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured frame count to sum.
+    */
+    int OnHostFrameSummingCount(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured output image format.
+    * When summing multiple frames, the result pixel value can go quickly out of
+    * 16-bit range. This allows to switch the output image format e.g. to 32-bit.
+    */
+    int OnHostFrameSummingFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 public: // Other published methods
     /**
     * Returns the PVCAM camera handle.
@@ -996,6 +1012,10 @@ private:
     PvParam<long64>*  prmClearingTime_; // Available/updated after pl_exp_setup_*()
     PvParam<long64>*  prmPostTriggerDelay_; // Available/updated after pl_exp_setup_*()
     PvParam<long64>*  prmPreTriggerDelay_; // Available/updated after pl_exp_setup_*()
+
+    std::unique_ptr<PvParam<rs_bool>> prmHostFrameSummingEnabled_;
+    std::unique_ptr<PvParam<uns32>>   prmHostFrameSummingCount_;
+    std::unique_ptr<PvEnumParam>      prmHostFrameSummingFormat_;
 
     // List of post processing features
     std::vector<PpParam> PostProc_; // PP_PARAM can change: BIT_DEPTH, IMAGE_FORMAT

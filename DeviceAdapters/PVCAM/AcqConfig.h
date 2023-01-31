@@ -234,6 +234,23 @@ public:
     */
     std::vector<double> SmartStreamingExposuresMs{ 10, 20, 30, 40 };
     /**
+    * SW frame summing in PVCAM - disabled by default.
+    */
+    bool HostFrameSummingEnabled{ false };
+    /**
+    * SW frame summing in PVCAM - number of frames to sum.
+    * It should be unsigned int type, but UI property supports long, double or
+    * string only. Using long type here covers all values on Linux and Unix-like
+    * systems, while for Windows (where long is 32-bit only) the max. value
+    * should be limited. However, it is questionable weather summing over
+    * 2 billion frames is real case or not.
+    */
+    long HostFrameSummingCount{ 5 };
+    /**
+    * SW frame summing in PVCAM - image format of output frame.
+    */
+    int HostFrameSummingFormat{ PL_FRAME_SUMMING_FORMAT_16_BIT };
+    /**
     * Set to true whenever the PAPRAM_PP_PARAM value is set.
     * It behaves like a trigger to initiate acq. setup because e.g. HW frame
     * summing can change bit depth and pixel size (16-bit, 32-bit, ...).
