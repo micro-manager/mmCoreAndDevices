@@ -102,6 +102,7 @@
 #define ERR_TOO_MANY_ROIS               10014 // Device does not support that many ROIs (uM 2.0)
 #define ERR_FILE_OPERATION_FAILED       10015
 #define ERR_SW_TRIGGER_NOT_SUPPORTED    10016
+#define ERR_PIXEL_TYPE_NOT_SUPPORTED    10017
 
 // PVCAM-specific error codes base. When a PVCAM error occurs we use the PVCAM
 // ID and PVCAM message to create a new uM error code, we call the SetErrorCode()
@@ -791,7 +792,7 @@ private:
     /**
     * Reverts a single setting that we know had an error
     */
-    int revertPostProcValue( long absoluteParamIdx, MM::PropertyBase* pProp);
+    void revertPostProcValue(long absoluteParamIdx, MM::PropertyBase* pProp);
     /**
     * This function is called right after pl_exp_setup_seq() and pl_exp_setup_cont()
     * After setup is called following parameters become available or may change their values:

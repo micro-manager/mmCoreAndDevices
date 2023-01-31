@@ -8,31 +8,30 @@
 * so the call back function in CPropertyActionEx can get to information about that particular feature in
 * the call back function
 */ 
-class PpParam 
+class PpParam
 {
 public:
-    PpParam(std::string name = "", int ppIndex = -1, int propIndex = -1);
+    PpParam(const std::string& name, short featIndex, short propIndex,
+            bool isBoolean, unsigned int featId, unsigned int propId);
 
-    std::string GetName();
-    int         GetppIndex();
-    int         GetpropIndex();
-    bool        IsBoolean();
-    double      GetcurValue();
-    void        SetName(std::string name);
-    void        SetppIndex(int ppIndex);
-    void        SetpropInex(int propIndex);
-    void        SetcurValue(double curValue);
-    void        SetBoolean(bool isBoolean);
+    const std::string& GetName() const;
+    short GetFeatIndex() const;
+    short GetPropIndex() const;
+    bool IsBoolean() const;
+    unsigned int GetFeatId() const;
+    unsigned int GetPropId() const;
 
-    void SetPostProc(PpParam& tmp);
+    unsigned int GetCurValue() const;
+    void SetCurValue(unsigned int value);
 
 protected:
-    std::string mName;
-    int         mppIndex;
-    int         mpropIndex;
-    double      mcurValue;
-    bool        mIsBoolean;
-
+    std::string mName{};
+    short mFeatIndex{ -1 };
+    short mPropIndex{ -1 };
+    bool mIsBoolean{ false };
+    unsigned int mFeatId{ (unsigned int)-1 };
+    unsigned int mPropId{ (unsigned int)-1 };
+    unsigned int mCurValue{ 0 };
 };
 
 #endif
