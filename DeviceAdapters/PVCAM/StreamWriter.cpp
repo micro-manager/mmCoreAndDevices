@@ -1,8 +1,5 @@
 #include "StreamWriter.h"
 
-// MMDevice
-#include "FixSnprintf.h"
-
 // Local
 #include "PVCAMAdapter.h"
 #include "TaskSet_CopyMemory.h"
