@@ -228,11 +228,20 @@ int PvUniversalParam::Set(double aValue)
     }
 }
 
+int PvUniversalParam::Update(bool /*aDbgPrint*/)
+{
+    return initialize();
+}
+
+int PvUniversalParam::Apply()
+{
+    return plSetParam(mValue);
+}
+
 int PvUniversalParam::Reset()
 {
     return plSetParam(mValueDefault);
 }
-
 
 int PvUniversalParam::Read()
 {

@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <set>
 #include <sstream>
 #include <string>
 
@@ -63,6 +64,11 @@
 #define START_METHOD(name)
 #define START_ONPROPERTY(name,action)
 #endif
+
+// Uncomment to see bit depth, image format and image compression properties
+// in GUI browser with values as it comes from camera HW in addition to existing
+// values reported by PVCAM to apps.
+//#define DEBUG_INTERNAL_IMAGE_PROPS
 
 
 // Number of references to this class
@@ -178,6 +184,15 @@ const char* g_Keyword_Ratio_1_100                = "1:100";
 const char* g_Keyword_Ratio_1_1000               = "1:1000";
 const char* g_Keyword_Ratio_1_10000              = "1:10000";
 
+#ifdef DEBUG_INTERNAL_IMAGE_PROPS
+const char* g_Keyword_BitDepth              = "BitDepth-HW";
+const char* g_Keyword_ImageFormat           = "ImageFormat-HW";
+const char* g_Keyword_ImageCompression      = "ImageCompression-HW";
+#endif
+const char* g_Keyword_BitDepthHost          = "BitDepth"; // The "Host" suffix not shown
+const char* g_Keyword_ImageFormatHost       = "ImageFormat"; // The "Host" suffix not shown
+const char* g_Keyword_ImageCompressionHost  = "ImageCompression"; // The "Host" suffix not shown
+
 // Universal parameters
 // These parameters, their ranges or allowed values are read out from the camera automatically.
 // Use these parameters for simple camera properties that do not need special treatment when a
@@ -230,12 +245,6 @@ Universal::Universal(short cameraId, const char* deviceName)
     customDiskWriterActive_(false),
     camParSize_(0),
     camSerSize_(0),
-    prmTemp_(NULL),
-    prmTempSetpoint_(NULL),
-    prmGainIndex_(NULL),
-    prmGainMultFactor_(NULL),
-    prmBinningSer_(NULL),
-    prmBinningPar_(NULL),
     binningRestricted_(false),
     redScale_(1.0),
     greenScale_(1.0),
@@ -268,9 +277,14 @@ Universal::Universal(short cameraId, const char* deviceName)
     prmClearMode_(NULL),
     prmReadoutPort_(NULL),
     prmSpdTabIndex_(NULL),
-    prmBitDepth_(NULL),
+    prmGainIndex_(NULL),
+    prmGainMultFactor_(NULL),
     prmColorMode_(NULL),
     prmFrameBufSize_(NULL),
+    prmTemp_(NULL),
+    prmTempSetpoint_(NULL),
+    prmBinningSer_(NULL),
+    prmBinningPar_(NULL),
     prmRoiCount_(NULL),
     prmMetadataEnabled_(NULL),
     prmMetadataResetTimestamp_(NULL),
@@ -289,8 +303,8 @@ Universal::Universal(short cameraId, const char* deviceName)
     prmScanDirection_(NULL),
     prmScanDirectionReset_(NULL),
     prmScanLineDelay_(NULL),
-    prmScanLineTime_(NULL),
     prmScanWidth_(NULL),
+    prmScanLineTime_(NULL),
     prmReadoutTime_(NULL),
     prmClearingTime_(NULL),
     prmPreTriggerDelay_(NULL),
@@ -376,7 +390,6 @@ Universal::~Universal()
     delete prmExposeOutMode_;
     delete prmClearCycles_;
     delete prmClearMode_;
-    delete prmBitDepth_;
     delete prmSpdTabIndex_;
     delete prmReadoutPort_;
     delete prmColorMode_;
@@ -399,8 +412,8 @@ Universal::~Universal()
     delete prmScanDirection_;
     delete prmScanDirectionReset_;
     delete prmScanLineDelay_;
-    delete prmScanLineTime_;
     delete prmScanWidth_;
+    delete prmScanLineTime_;
     delete prmReadoutTime_;
     delete prmClearingTime_;
     delete prmPreTriggerDelay_;
@@ -901,7 +914,7 @@ int Universal::Initialize()
         assert(nRet == DEVICE_OK);
     }
 
-    /// PIXEL TYPE (BIT DEPTH).  
+    /// PIXEL TYPE (BIT DEPTH).
     /// The value changes with selected port and speed
     pAct = new CPropertyAction (this, &Universal::OnPixelType);
     nRet = CreateProperty(MM::g_Keyword_PixelType, "", MM::String, true, pAct);
@@ -939,19 +952,17 @@ int Universal::Initialize()
     /// Changing the speed causes change in Gain range, Pixel time and current Bit depth
 
     /// READOUT PORT
-    prmReadoutPort_ = new PvEnumParam("PARAM_READOUT_PORT", PARAM_READOUT_PORT, this, true );
-    if ( prmReadoutPort_->IsAvailable() )
+    prmReadoutPort_ = new PvEnumParam("PARAM_READOUT_PORT", PARAM_READOUT_PORT, this, true);
+    if (prmReadoutPort_->IsAvailable())
     {
-        pAct = new CPropertyAction (this, &Universal::OnReadoutPort);
-        std::vector<std::string> portStrings = prmReadoutPort_->GetEnumStrings();
+        pAct = new CPropertyAction(this, &Universal::OnReadoutPort);
         // If there is more than 1 port we make it selectable, otherwise just display read-only value
-        if ( portStrings.size() > 1 )
-        {
-            nRet = CreateProperty(g_ReadoutPort, prmReadoutPort_->ToString().c_str(), MM::String, false, pAct);
-            nRet = SetAllowedValues(g_ReadoutPort, prmReadoutPort_->GetEnumStrings());
-        }
-        else
-            nRet = CreateProperty(g_ReadoutPort, prmReadoutPort_->ToString().c_str(), MM::String, true, pAct);
+        const bool isReadOnly = (prmReadoutPort_->Count() <= 1);
+        nRet = CreateStringProperty(g_ReadoutPort, prmReadoutPort_->ToString().c_str(), isReadOnly, pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!isReadOnly)
+            SetAllowedValues(g_ReadoutPort, prmReadoutPort_->GetEnumStrings());
     }
 
     /// SPEED
@@ -959,43 +970,42 @@ int Universal::Initialize()
     prmSpdTabIndex_ = new PvParam<int16>("PARAM_SPDTAB_INDEX", PARAM_SPDTAB_INDEX, this, true);
     if (prmSpdTabIndex_->IsAvailable())
     {
-        pAct = new CPropertyAction (this, &Universal::OnReadoutRate);
-        nRet = CreateProperty(g_ReadoutRate, camCurrentSpeed_.spdString.c_str(), MM::String, false, pAct);
+        pAct = new CPropertyAction(this, &Universal::OnReadoutRate);
+        nRet = CreateStringProperty(g_ReadoutRate, camCurrentSpeed_.spdString.c_str(), false, pAct);
         if (nRet != DEVICE_OK)
             return nRet;
 
         // Fill in the GUI speed choices
         std::vector<std::string> spdChoices;
-        uns32 curPort = prmReadoutPort_->IsAvailable() ? prmReadoutPort_->Current() : 0;
-        std::map<int16, SpdTabEntry>::iterator i = camSpdTable_[curPort].begin();
-        for( ; i != camSpdTable_[curPort].end(); ++i )
-            spdChoices.push_back(i->second.spdString);
-        // Set the allowed readout rates
+        const int32 curPort = prmReadoutPort_->IsAvailable() ? prmReadoutPort_->Current() : 0;
+        const auto& spdEntries = camSpdTable_.at(curPort);
+        for (const auto& entry : spdEntries)
+            spdChoices.push_back(entry.second.spdString);
         SetAllowedValues(g_ReadoutRate, spdChoices);
     }
     if (!camCurrentSpeed_.spdName.empty())
     {
         pAct = new CPropertyAction(this, &Universal::OnReadoutRateName);
-        nRet = CreateProperty(g_ReadoutRateName, camCurrentSpeed_.spdName.c_str(), MM::String, true, pAct);
+        nRet = CreateStringProperty(g_ReadoutRateName, camCurrentSpeed_.spdName.c_str(), true, pAct);
         if (nRet != DEVICE_OK)
             return nRet;
     }
 
     /// GAIN
     /// Note that this can change depending on output port, and readout rate.
-    prmGainIndex_ = new PvParam<int16>( "PARAM_GAIN_INDEX", PARAM_GAIN_INDEX, this, true );
+    prmGainIndex_ = new PvParam<int16>("PARAM_GAIN_INDEX", PARAM_GAIN_INDEX, this, true);
     if (prmGainIndex_->IsAvailable())
     {
-        pAct = new CPropertyAction (this, &Universal::OnGain);
+        pAct = new CPropertyAction(this, &Universal::OnGain);
         const int16 gainCur = prmGainIndex_->Current();
         std::string gainName = "";
         if (camCurrentSpeed_.gainNameMapReverse.find(gainCur) != camCurrentSpeed_.gainNameMapReverse.end())
-            gainName = camCurrentSpeed_.gainNameMapReverse.at(prmGainIndex_->Current());
+            gainName = camCurrentSpeed_.gainNameMapReverse.at(gainCur);
         else
-            // This must be a developer error, but let's just continue, the correct current 
+            // This must be a developer error, but let's just continue, the correct current
             // property value is reported in the OnGain() handler anyway.
-            LogAdapterError(DEVICE_ERR, __LINE__, "Current gain name not applicable!" );
-        nRet = CreateProperty(MM::g_Keyword_Gain, gainName.c_str(), MM::String, false, pAct);
+            LogAdapterError(DEVICE_ERR, __LINE__, "Current gain name not applicable!");
+        nRet = CreateStringProperty(MM::g_Keyword_Gain, gainName.c_str(), false, pAct);
         if (nRet != DEVICE_OK)
             return nRet;
 
@@ -1008,7 +1018,78 @@ int Universal::Initialize()
 
     /// BIT DEPTH
     /// Note that this can change depending on output port, speed and gain
-    prmBitDepth_ = new PvParam<int16>("PARAM_BIT_DEPTH", PARAM_BIT_DEPTH, this, true);
+    prmBitDepth_ = std::make_unique<PvParam<int16>>("PARAM_BIT_DEPTH", PARAM_BIT_DEPTH, this, true);
+#ifdef DEBUG_INTERNAL_IMAGE_PROPS
+    if (prmBitDepth_->IsAvailable())
+    {
+        pAct = new CPropertyAction(this, &Universal::OnBitDepth);
+        nRet = CreateIntegerProperty(g_Keyword_BitDepth, prmBitDepth_->Current(), true, pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+    }
+#endif
+
+    /// Other parameters that can change together with port, speed, gain and bit depth
+    prmImageFormat_ = std::make_unique<PvEnumParam>("PARAM_IMAGE_FORMAT", PARAM_IMAGE_FORMAT, this, true);
+    if (prmImageFormat_->IsAvailable())
+    {
+        const int32 cur = prmImageFormat_->Current();
+#ifdef DEBUG_INTERNAL_IMAGE_PROPS
+        const std::string curStr = prmImageFormat_->GetEnumString(cur);
+        pAct = new CPropertyAction(this, &Universal::OnImageFormat);
+        nRet = CreateStringProperty(g_Keyword_ImageFormat, curStr.c_str(), prmImageFormat_->IsReadOnly(), pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!prmImageFormat_->IsReadOnly())
+            SetAllowedValues(g_Keyword_ImageFormat, prmImageFormat_->GetEnumStrings());
+#endif
+        acqCfgNew_.ImageFormat = cur;
+    }
+    prmImageCompression_ = std::make_unique<PvEnumParam>("PARAM_IMAGE_COMPRESSION", PARAM_IMAGE_COMPRESSION, this, true);
+    if (prmImageCompression_->IsAvailable())
+    {
+        const int32 cur = prmImageCompression_->Current();
+#ifdef DEBUG_INTERNAL_IMAGE_PROPS
+        const std::string curStr = prmImageCompression_->GetEnumString(cur);
+        pAct = new CPropertyAction(this, &Universal::OnImageCompression);
+        nRet = CreateStringProperty(g_Keyword_ImageCompression, curStr.c_str(), prmImageCompression_->IsReadOnly(), pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!prmImageCompression_->IsReadOnly())
+            SetAllowedValues(g_Keyword_ImageCompression, prmImageCompression_->GetEnumStrings());
+#endif
+        acqCfgNew_.ImageCompression = cur;
+    }
+    prmBitDepthHost_ = std::make_unique<PvParam<int16>>("PARAM_BIT_DEPTH_HOST", PARAM_BIT_DEPTH_HOST, this, true);
+    if (prmBitDepthHost_->IsAvailable())
+    {
+        pAct = new CPropertyAction(this, &Universal::OnBitDepthHost);
+        nRet = CreateIntegerProperty(g_Keyword_BitDepthHost, prmBitDepthHost_->Current(), true, pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+    }
+    prmImageFormatHost_ = std::make_unique<PvEnumParam>("PARAM_IMAGE_FORMAT_HOST", PARAM_IMAGE_FORMAT_HOST, this, true);
+    if (prmImageFormatHost_->IsAvailable())
+    {
+        const int32 cur = prmImageFormatHost_->Current();
+        const std::string curStr = prmImageFormatHost_->GetEnumString(cur);
+        pAct = new CPropertyAction(this, &Universal::OnImageFormatHost);
+        nRet = CreateStringProperty(g_Keyword_ImageFormatHost, curStr.c_str(), true, pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+    }
+    prmImageCompressionHost_ = std::make_unique<PvEnumParam>("PARAM_IMAGE_COMPRESSION_HOST", PARAM_IMAGE_COMPRESSION_HOST, this, true);
+#ifdef DEBUG_INTERNAL_IMAGE_PROPS
+    if (prmImageCompressionHost_->IsAvailable())
+    {
+        const int32 cur = prmImageCompressionHost_->Current();
+        const std::string curStr = prmImageCompressionHost_->GetEnumString(cur);
+        pAct = new CPropertyAction(this, &Universal::OnImageCompressionHost);
+        nRet = CreateStringProperty(g_Keyword_ImageCompressionHost, curStr.c_str(), true, pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+    }
+#endif
 
     if (prmReadoutPort_->IsAvailable())
         acqCfgNew_.PortId = prmReadoutPort_->Current();
@@ -1643,28 +1724,28 @@ unsigned Universal::GetImageHeight() const
 
 unsigned Universal::GetImageBytesPerPixel() const
 {
-    if (GetBitDepth() == 8)
-    {
-        const unsigned int bpp = acqCfgCur_.ColorProcessingEnabled ? 4 : 1;
-        return bpp;
-    }
-    else
-    {
-        const unsigned int bpp = acqCfgCur_.ColorProcessingEnabled ? 4 : 2;
-        return bpp;
-    }
+    const unsigned int channelsPerPixel = GetNumberOfComponents();
+    const unsigned int bytesPerChannel = acqCfgCur_.ColorProcessingEnabled
+        ? (GetBitDepth() + 7) / 8
+        : getPvcamImageBytesPerChannel();
+    const unsigned int bytesPerPixel = channelsPerPixel * bytesPerChannel;
+    return bytesPerPixel;
 }
 
 long Universal::GetImageBufferSize() const
 {
-    const int bytesPerPixel = GetImageBytesPerPixel();
-    const long bufferSize = acqCfgCur_.Rois.ImpliedRoi().ImageRgnWidth() * acqCfgCur_.Rois.ImpliedRoi().ImageRgnHeight() * bytesPerPixel;
+    const long bytesPerPixel = GetImageBytesPerPixel();
+    const long bufferSize = bytesPerPixel
+        * acqCfgCur_.Rois.ImpliedRoi().ImageRgnWidth()
+        * acqCfgCur_.Rois.ImpliedRoi().ImageRgnHeight();
     return bufferSize;
 }
 
 unsigned Universal::GetBitDepth() const
 {
-    const unsigned int bitDepth = acqCfgCur_.ColorProcessingEnabled ? 8 : (unsigned)prmBitDepth_->Current();
+    const unsigned int bitDepth = acqCfgCur_.ColorProcessingEnabled
+        ? 8
+        : getPvcamBitDepth();
     return bitDepth;
 }
 
@@ -1706,7 +1787,10 @@ int Universal::IsExposureSequenceable(bool& isSequenceable) const
 
 unsigned Universal::GetNumberOfComponents() const
 {
-    return acqCfgCur_.ColorProcessingEnabled ? 4 : 1;
+    const unsigned int channelsPerPixel = acqCfgCur_.ColorProcessingEnabled
+        ? 4
+        : getPvcamImageChannelsPerPixel();
+    return channelsPerPixel;
 }
 
 int Universal::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
@@ -2180,7 +2264,7 @@ int Universal::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (eAct == MM::BeforeGet)
     {
         char buf[8];
-        snprintf(buf, sizeof(buf), "%ubit", prmBitDepth_->Current()); // 12bit, 14bit, 16bit, ...
+        snprintf(buf, sizeof(buf), "%ubit", getPvcamBitDepth()); // 12bit, 14bit, 16bit, ...
         pProp->Set(buf);
     }
 
@@ -2300,6 +2384,86 @@ int Universal::OnMultiplierGain(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         pProp->Set((long)prmGainMultFactor_->Current());
     }
+    return DEVICE_OK;
+}
+
+int Universal::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnBitDepth", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(static_cast<long>(prmBitDepth_->Current()));
+    }
+    // Nothing to set, this is a read-only property
+    return DEVICE_OK;
+}
+
+int Universal::OnImageFormat(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnImageFormat", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(prmImageFormat_->GetEnumString(acqCfgNew_.ImageFormat).c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string valStr;
+        pProp->Get(valStr);
+        acqCfgNew_.ImageFormat = prmImageFormat_->GetEnumValue(valStr);
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnImageCompression(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnImageCompression", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(prmImageCompression_->GetEnumString(acqCfgNew_.ImageCompression).c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string valStr;
+        pProp->Get(valStr);
+        acqCfgNew_.ImageCompression = prmImageCompression_->GetEnumValue(valStr);
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnBitDepthHost(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnBitDepthHost", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(static_cast<long>(prmBitDepthHost_->Current()));
+    }
+    // Nothing to set, this is a read-only property
+    return DEVICE_OK;
+}
+
+int Universal::OnImageFormatHost(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnImageFormatHost", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        const int32 cur = prmImageFormatHost_->Current();
+        pProp->Set(prmImageFormatHost_->GetEnumString(cur).c_str());
+    }
+    // Nothing to set, this is a read-only property
+    return DEVICE_OK;
+}
+
+int Universal::OnImageCompressionHost(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnImageCompressionHost", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        const int32 cur = prmImageCompressionHost_->Current();
+        pProp->Set(prmImageCompressionHost_->GetEnumString(cur).c_str());
+    }
+    // Nothing to set, this is a read-only property
     return DEVICE_OK;
 }
 
@@ -2440,6 +2604,7 @@ int Universal::OnScanDirectionReset(MM::PropertyBase* pProp, MM::ActionType eAct
 
     return DEVICE_OK;
 }
+
 int Universal::OnScanLineDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnScanLineDelay", eAct);
@@ -2462,6 +2627,7 @@ int Universal::OnScanLineDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     return DEVICE_OK;
 }
+
 int Universal::OnScanLineTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnScanLineTime", eAct);
@@ -2474,6 +2640,7 @@ int Universal::OnScanLineTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     // Nothing to set, this is a read-only property
     return DEVICE_OK;
 }
+
 int Universal::OnScanWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnScanWidth", eAct);
@@ -3296,6 +3463,10 @@ int Universal::OnPostProcProperties(MM::PropertyBase* pProp, MM::ActionType eAct
 
         // update the control in the user interface
         PostProc_[index].SetcurValue(ppValue);
+
+        // PARAM_PP_PARAM can change bit depth and image format
+        acqCfgNew_.PostProcParamSet = true;
+        return applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
     {
@@ -3330,6 +3501,8 @@ int Universal::OnResetPostProcProperties(MM::PropertyBase* pProp, MM::ActionType
 {
     START_METHOD("Universal::OnResetPostProcProperties");
 
+    int nRet = DEVICE_OK;
+
     if (eAct == MM::AfterSet)
     {
         std::string choice;
@@ -3344,7 +3517,14 @@ int Universal::OnResetPostProcProperties(MM::PropertyBase* pProp, MM::ActionType
                 LogPvcamError(__LINE__, "pl_pp_reset");
                 return DEVICE_CAN_NOT_SET_PROPERTY;
             }
-            refreshPostProcValues();
+
+            nRet = refreshPostProcValues();
+            if (nRet != DEVICE_OK)
+                return nRet;
+
+            // pl_pp_reset() basically touches PARAM_PP_PARAM that can change bit depth and image format
+            acqCfgNew_.PostProcParamSet = true;
+            return applyAcqConfig();
         }
     }
     else if (eAct == MM::BeforeGet)
@@ -3353,7 +3533,7 @@ int Universal::OnResetPostProcProperties(MM::PropertyBase* pProp, MM::ActionType
         pProp->Set(g_Keyword_No);
     }
 
-    return DEVICE_OK;
+    return nRet;
 }
 
 #ifdef PVCAM_SMART_STREAMING_SUPPORTED
@@ -3964,98 +4144,8 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             md.PutImageTag<uns16>("PVCAM-FMD-Flags",  fHdr->flags); // Need to use uns16 because uns8 is displayed as char
             if (fHdr->version >= 2)
             {
-                const char* cKeywordImageFormat = "PVCAM-FMD-ImageFormat";
-                switch (fHdr->imageFormat)
-                {
-                case PL_IMAGE_FORMAT_MONO8:
-                    md.PutImageTag(cKeywordImageFormat, "Mono8");
-                    break;
-                case PL_IMAGE_FORMAT_MONO16:
-                    md.PutImageTag(cKeywordImageFormat, "Mono16");
-                    break;
-                case PL_IMAGE_FORMAT_MONO24:
-                    md.PutImageTag(cKeywordImageFormat, "Mono24");
-                    break;
-                case PL_IMAGE_FORMAT_MONO32:
-                    md.PutImageTag(cKeywordImageFormat, "Mono32");
-                    break;
-                case PL_IMAGE_FORMAT_BAYER8:
-                    md.PutImageTag(cKeywordImageFormat, "Bayer8");
-                    break;
-                case PL_IMAGE_FORMAT_BAYER16:
-                    md.PutImageTag(cKeywordImageFormat, "Bayer16");
-                    break;
-                case PL_IMAGE_FORMAT_BAYER24:
-                    md.PutImageTag(cKeywordImageFormat, "Bayer24");
-                    break;
-                case PL_IMAGE_FORMAT_BAYER32:
-                    md.PutImageTag(cKeywordImageFormat, "Bayer32");
-                    break;
-                case PL_IMAGE_FORMAT_RGB24:
-                    md.PutImageTag(cKeywordImageFormat, "RGB24");
-                    break;
-                case PL_IMAGE_FORMAT_RGB48:
-                    md.PutImageTag(cKeywordImageFormat, "RGB48");
-                    break;
-                case PL_IMAGE_FORMAT_RGB72:
-                    md.PutImageTag(cKeywordImageFormat, "RGB72");
-                    break;
-                case PL_IMAGE_FORMAT_RGB96:
-                    md.PutImageTag(cKeywordImageFormat, "RGB96");
-                    break;
-                default:
-                    md.PutImageTag(cKeywordImageFormat, "Unknown");
-                    break;
-                }
-                const char* cKeywordImageCompression = "PVCAM-FMD-ImageCompression";
-                switch (fHdr->imageCompression)
-                {
-                case PL_IMAGE_COMPRESSION_NONE:
-                    md.PutImageTag(cKeywordImageCompression, "None");
-                    break;
-                case PL_IMAGE_COMPRESSION_RESERVED8:
-                    md.PutImageTag(cKeywordImageCompression, "Reserved8");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK9:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack9");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK10:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack10");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK11:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack11");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK12:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack12");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK13:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack13");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK14:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack14");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK15:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack15");
-                    break;
-                case PL_IMAGE_COMPRESSION_RESERVED16:
-                    md.PutImageTag(cKeywordImageCompression, "Reserved16");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK17:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack17");
-                    break;
-                case PL_IMAGE_COMPRESSION_BITPACK18:
-                    md.PutImageTag(cKeywordImageCompression, "Bitpack18");
-                    break;
-                case PL_IMAGE_COMPRESSION_RESERVED24:
-                    md.PutImageTag(cKeywordImageCompression, "Reserved24");
-                    break;
-                case PL_IMAGE_COMPRESSION_RESERVED32:
-                    md.PutImageTag(cKeywordImageCompression, "Reserved32");
-                    break;
-                default:
-                    md.PutImageTag(cKeywordImageCompression, "Unknown");
-                    break;
-                }
+                md.PutImageTag("PVCAM-FMD-ImageFormat", getPvcamImageFormatString(fHdr->imageFormat));
+                md.PutImageTag("PVCAM-FMD-ImageCompression", getPvcamImageCompressionString(fHdr->imageCompression));
             }
             if (fHdr->version < 3)
             {
@@ -4424,7 +4514,6 @@ int Universal::initializePostProcessing()
 
     if (pl_get_param(hPVCAM_, PARAM_PP_INDEX, ATTR_AVAIL, &bAvail) && bAvail)
     {
-
         long CntPP = 0;
         uns32 PP_count = 0;
         std::ostringstream resetName;
@@ -4839,12 +4928,8 @@ int Universal::resizeImageBufferContinuous()
 
     try
     {
-        // Obtain the PVCAM exposure time and trigger configuration for pl_exp_seup()
-        int16 pvExposureMode = 0;
-        uns32 pvExposure = 0;
-        nRet = getPvcamExposureSetupConfig( pvExposureMode, acqCfgCur_.ExposureMs, pvExposure );
-        if ( nRet != DEVICE_OK )
-            return nRet;
+        int16 pvExposureMode = getPvcamExpMode();
+        uns32 pvExposure = getPvcamExpTime(acqCfgCur_.ExposureMs, acqCfgCur_.ExposureRes);
 
         // However, if we are running S.M.A.R.T we need to make sure to send a non-zero exposure
         // value to the pl_exp_setup(). So we need to override it.
@@ -4931,7 +5016,7 @@ int Universal::resizeImageBufferContinuous()
         notificationThd_->SetQueueCapacity(static_cast<int>(circBufFrameCount_ * 0.7) + 1);
 
         nRet = customDiskWriter_->Setup(acqCfgCur_.DiskStreamingEnabled,
-                acqCfgCur_.DiskStreamingPath, prmBitDepth_->Current(), frameSize);
+                acqCfgCur_.DiskStreamingPath, getPvcamBitDepth(), frameSize);
         if (nRet != DEVICE_OK)
             return nRet; // Message logged in the failing method
 
@@ -4967,11 +5052,8 @@ int Universal::resizeImageBufferSingle()
 
     try
     {
-        int16 pvExposureMode = 0;
-        uns32 pvExposure = 0;
-        nRet = getPvcamExposureSetupConfig( pvExposureMode, acqCfgCur_.ExposureMs, pvExposure );
-        if ( nRet != DEVICE_OK )
-            return nRet;
+        int16 pvExposureMode = getPvcamExpMode();
+        uns32 pvExposure = getPvcamExpTime(acqCfgCur_.ExposureMs, acqCfgCur_.ExposureRes);
 
         g_pvcamLock.Lock();
         const rgn_type* rgnArr = acqCfgCur_.Rois.ToRgnArray();
@@ -5057,9 +5139,12 @@ int Universal::resizeImageProcessingBuffers()
         // Metadata-enabled frames with single ROI don't need black-filling,
         // we can use the data of the single ROI directly.
         // With more ROIs we need black-filling into separate buffer
-        const size_t imgDataSz = acqCfgCur_.Rois.ImpliedRoi().ImageRgnWidth()
-            * acqCfgCur_.Rois.ImpliedRoi().ImageRgnHeight()
-            * sizeof(uns16);
+        const size_t channelsPerPixel = getPvcamImageChannelsPerPixel();
+        const size_t bytesPerChannel = getPvcamImageBytesPerChannel();
+        const size_t bytesPerPixel = channelsPerPixel * bytesPerChannel;
+        const size_t imgDataSz = bytesPerPixel
+            * acqCfgCur_.Rois.ImpliedRoi().ImageRgnWidth()
+            * acqCfgCur_.Rois.ImpliedRoi().ImageRgnHeight();
         if (metaBlackFilledBufSz_ != imgDataSz)
         {
             delete[] metaBlackFilledBuf_;
@@ -5434,9 +5519,29 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
         // debayer the image and convert to color
         RGBscales rgbScales = {redScale_, greenScale_, blueScale_};
         debayer_.SetRGBScales(rgbScales);
-        //debayer_.Process(colorImg_, img_, (unsigned)camCurrentSpeed_.bitDepth);
-        debayer_.Process(*rgbImgBuf_, (unsigned short*)pixBuffer,
-            rgbImgBuf_->Width(), rgbImgBuf_->Height(), (unsigned)prmBitDepth_->Current());
+        const size_t channelsPerPixel = getPvcamImageChannelsPerPixel();
+        if (channelsPerPixel != 1)
+            return LogAdapterError(DEVICE_UNSUPPORTED_DATA_FORMAT, __LINE__,
+                    "Debayering of multi-channel image not supported");
+        const size_t bytesPerChannel = getPvcamImageBytesPerChannel();
+        int nRet = DEVICE_OK;
+        switch (bytesPerChannel)
+        {
+        case sizeof(uns8):
+            nRet = debayer_.Process(*rgbImgBuf_, (unsigned char*)pixBuffer,
+                    rgbImgBuf_->Width(), rgbImgBuf_->Height(), getPvcamBitDepth());
+            break;
+        case sizeof(uns16):
+            nRet = debayer_.Process(*rgbImgBuf_, (unsigned short*)pixBuffer,
+                    rgbImgBuf_->Width(), rgbImgBuf_->Height(), getPvcamBitDepth());
+            break;
+        default:
+            return LogAdapterError(DEVICE_UNSUPPORTED_DATA_FORMAT, __LINE__,
+                    "Debayering of image with " + std::to_string(bytesPerChannel)
+                        + " bytes per pixel not supported");
+        }
+        if (nRet != DEVICE_OK)
+            return LogAdapterError(nRet, __LINE__, "Unable to debayer the frame data");
         pixBuffer = rgbImgBuf_->GetPixelsRW();
     }
 
@@ -5505,22 +5610,9 @@ int Universal::sendSmartStreamingToCamera(const std::vector<double>& exposuresMs
     // We need to properly fill the PVCAM S.M.A.R.T streaming structure, we keep the
     // exposure values in an array of doubles and milliseconds, however the PVCAM structure
     // needs to be filled based on current exposure resolution selection.
-    double mult = 1;
-    switch (exposureRes)
-    {
-    case EXP_RES_ONE_MICROSEC:
-        mult = 1e3;
-        break;
-    case EXP_RES_ONE_SEC:
-        mult = 1e-3;
-        break;
-    case EXP_RES_ONE_MILLISEC:
-    default:
-        break;
-    }
     for (uns16 i = 0; i < smartStreamInts.entries; ++i)
     {
-        smartStreamInts.params[i] = static_cast<uns32>(std::round(exposuresMs.at(i) * mult));
+        smartStreamInts.params[i] = getPvcamExpTime(exposuresMs.at(i), exposureRes);
     }
 
     g_pvcamLock.Lock();
@@ -5537,23 +5629,20 @@ int Universal::sendSmartStreamingToCamera(const std::vector<double>& exposuresMs
 }
 #endif
 
-int Universal::getPvcamExposureSetupConfig(int16& pvExposureMode, double inputExposureMs, uns32& pvExposureValue)
+int16 Universal::getPvcamExpMode() const
 {
-    int nRet = DEVICE_OK;
+    const int16 exposureMode = static_cast<int16>(prmTriggerMode_->Current());
+    const int16 exposeOutMode =
+        (prmExposeOutMode_ && prmExposeOutMode_->IsAvailable())
+        ? static_cast<int16>(prmExposeOutMode_->Current())
+        : 0;
+    return (exposureMode | exposeOutMode);
+}
 
-    // Prepare the exposure mode
-    int16 trigModeValue = static_cast<int16>(prmTriggerMode_->Current());
-    // Some cameras like the OptiMos allow special expose-out modes.
-    int16 exposeOutModeValue = 0;
-    if (prmExposeOutMode_ && prmExposeOutMode_->IsAvailable())
-    {
-        exposeOutModeValue = static_cast<int16>(prmExposeOutMode_->Current());
-    }
-    pvExposureMode = (trigModeValue | exposeOutModeValue);
-
-    // Prepare the exposure value
+uns32 Universal::getPvcamExpTime(double expTimeMs, int expRes) const
+{
     double mult = 1;
-    switch (acqCfgCur_.ExposureRes)
+    switch (expRes)
     {
     case EXP_RES_ONE_MICROSEC:
         mult = 1e3;
@@ -5565,9 +5654,148 @@ int Universal::getPvcamExposureSetupConfig(int16& pvExposureMode, double inputEx
     default:
         break;
     }
-    pvExposureValue = static_cast<uns32>(std::round(inputExposureMs * mult));
+    return static_cast<uns32>(std::round(expTimeMs * mult));
+}
 
-    return nRet;
+int16 Universal::getPvcamBitDepth() const
+{
+    const int16 bitDepth =
+        (prmBitDepthHost_->IsAvailable())
+        ? prmBitDepthHost_->Current()
+        : prmBitDepth_->Current();
+    return bitDepth;
+}
+
+int32 Universal::getPvcamImageFormat() const
+{
+    const int32 imageFormat =
+        (prmImageFormatHost_->IsAvailable())
+        ? prmImageFormatHost_->Current()
+        : (prmImageFormat_->IsAvailable())
+            ? prmImageFormat_->Current()
+            : PL_IMAGE_FORMAT_MONO16;
+    return imageFormat;
+}
+
+const char* Universal::getPvcamImageFormatString(int32 value) const
+{
+    switch (value)
+    {
+    case PL_IMAGE_FORMAT_MONO8:
+        return "Mono8";
+    case PL_IMAGE_FORMAT_MONO16:
+        return "Mono16";
+    case PL_IMAGE_FORMAT_MONO24:
+        return "Mono24";
+    case PL_IMAGE_FORMAT_MONO32:
+        return "Mono32";
+    case PL_IMAGE_FORMAT_BAYER8:
+        return "Bayer8";
+    case PL_IMAGE_FORMAT_BAYER16:
+        return "Bayer16";
+    case PL_IMAGE_FORMAT_BAYER24:
+        return "Bayer24";
+    case PL_IMAGE_FORMAT_BAYER32:
+        return "Bayer32";
+    case PL_IMAGE_FORMAT_RGB24:
+        return "RGB24";
+    case PL_IMAGE_FORMAT_RGB48:
+        return "RGB48";
+    case PL_IMAGE_FORMAT_RGB72:
+        return "RGB72";
+    case PL_IMAGE_FORMAT_RGB96:
+        return "RGB96";
+    default:
+        return "Unknown";
+    }
+}
+
+int32 Universal::getPvcamImageCompression() const
+{
+    const int32 imageCompression =
+        (prmImageCompressionHost_->IsAvailable())
+        ? prmImageCompressionHost_->Current()
+        : (prmImageCompression_->IsAvailable())
+            ? prmImageCompression_->Current()
+            : PL_IMAGE_COMPRESSION_NONE;
+    return imageCompression;
+}
+
+const char* Universal::getPvcamImageCompressionString(int32 value) const
+{
+    switch (value)
+    {
+    case PL_IMAGE_COMPRESSION_NONE:
+        return "None";
+    case PL_IMAGE_COMPRESSION_BITPACK9:
+        return "Bitpack 9";
+    case PL_IMAGE_COMPRESSION_BITPACK10:
+        return "Bitpack 10";
+    case PL_IMAGE_COMPRESSION_BITPACK11:
+        return "Bitpack 11";
+    case PL_IMAGE_COMPRESSION_BITPACK12:
+        return "Bitpack 12";
+    case PL_IMAGE_COMPRESSION_BITPACK13:
+        return "Bitpack 13";
+    case PL_IMAGE_COMPRESSION_BITPACK14:
+        return "Bitpack 14";
+    case PL_IMAGE_COMPRESSION_BITPACK15:
+        return "Bitpack 15";
+    case PL_IMAGE_COMPRESSION_BITPACK17:
+        return "Bitpack 17";
+    case PL_IMAGE_COMPRESSION_BITPACK18:
+        return "Bitpack 18";
+    default:
+        return "Unknown";
+    }
+}
+
+unsigned int Universal::getPvcamImageChannelsPerPixel() const
+{
+    const int32 imageFormat = getPvcamImageFormat();
+    switch (imageFormat)
+    {
+    case PL_IMAGE_FORMAT_MONO8:
+    case PL_IMAGE_FORMAT_BAYER8:
+    case PL_IMAGE_FORMAT_MONO16:
+    case PL_IMAGE_FORMAT_BAYER16:
+    case PL_IMAGE_FORMAT_MONO24:
+    case PL_IMAGE_FORMAT_BAYER24:
+    case PL_IMAGE_FORMAT_MONO32:
+    case PL_IMAGE_FORMAT_BAYER32:
+    default:
+        return 1;
+    case PL_IMAGE_FORMAT_RGB24:
+    case PL_IMAGE_FORMAT_RGB48:
+    case PL_IMAGE_FORMAT_RGB72:
+    case PL_IMAGE_FORMAT_RGB96:
+        return 3;
+    }
+}
+
+unsigned int Universal::getPvcamImageBytesPerChannel() const
+{
+    const int32 imageFormat = getPvcamImageFormat();
+    switch (imageFormat)
+    {
+    case PL_IMAGE_FORMAT_MONO8:
+    case PL_IMAGE_FORMAT_BAYER8:
+    case PL_IMAGE_FORMAT_RGB24:
+        return 1;
+    case PL_IMAGE_FORMAT_MONO16:
+    case PL_IMAGE_FORMAT_BAYER16:
+    case PL_IMAGE_FORMAT_RGB48:
+    default:
+        return 2;
+    case PL_IMAGE_FORMAT_MONO24:
+    case PL_IMAGE_FORMAT_BAYER24:
+    case PL_IMAGE_FORMAT_RGB72:
+        return 3;
+    case PL_IMAGE_FORMAT_MONO32:
+    case PL_IMAGE_FORMAT_BAYER32:
+    case PL_IMAGE_FORMAT_RGB96:
+        return 4;
+    }
 }
 
 unsigned int Universal::getEstimatedMaxReadoutTimeMs() const
@@ -5628,43 +5856,59 @@ int Universal::postExpSetupInit(unsigned int frameSize)
 {
     int nRet = DEVICE_OK;
 
-    if (prmTempSetpoint_ != NULL && prmTempSetpoint_->IsAvailable())
+    if (prmBitDepthHost_->IsAvailable())
     {
-        nRet = prmTempSetpoint_->Update();
+        nRet = prmBitDepthHost_->Update();
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    if (prmExposureTime_ != NULL && prmExposureTime_->IsAvailable())
+    if (prmImageFormatHost_->IsAvailable())
+    {
+        nRet = prmImageFormatHost_->Update();
+        if (nRet != DEVICE_OK)
+            return nRet;
+    }
+    if (prmImageCompressionHost_->IsAvailable())
+    {
+        nRet = prmImageCompressionHost_->Update();
+        if (nRet != DEVICE_OK)
+            return nRet;
+    }
+
+    if (prmExposureTime_->IsAvailable())
     {
         nRet = prmExposureTime_->Update();
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    if (prmReadoutTime_ != NULL && prmReadoutTime_->IsAvailable())
+
+    if (prmReadoutTime_->IsAvailable())
     {
         nRet = prmReadoutTime_->Update();
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    if (prmClearingTime_ != NULL && prmClearingTime_->IsAvailable())
+    if (prmClearingTime_->IsAvailable())
     {
         nRet = prmClearingTime_->Update();
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    if (prmPostTriggerDelay_ != NULL && prmPostTriggerDelay_->IsAvailable())
+    if (prmPostTriggerDelay_->IsAvailable())
     {
         nRet = prmPostTriggerDelay_->Update();
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    if (prmPreTriggerDelay_ != NULL && prmPreTriggerDelay_->IsAvailable())
+    if (prmPreTriggerDelay_->IsAvailable())
     {
         nRet = prmPreTriggerDelay_->Update();
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    if (prmScanLineTime_ != NULL && prmScanLineTime_->IsAvailable())
+
+    // Scan mode takes into account also exposure time, so update these also after setup
+    if (prmScanLineTime_->IsAvailable())
     {
         nRet = prmScanLineTime_->Update();
         if (nRet != DEVICE_OK)
@@ -5672,7 +5916,7 @@ int Universal::postExpSetupInit(unsigned int frameSize)
     }
     // One of the PARAM_SCAN_LINE_WIDTH and PARAM_SCAN_LINE_DELAY may become
     // read-only depending on the PARAM_SCAN_MODE selection.
-    if (prmScanWidth_ != NULL && prmScanWidth_->IsAvailable())
+    if (prmScanWidth_->IsAvailable())
     {
         nRet = prmScanWidth_->Update();
         if (nRet != DEVICE_OK)
@@ -5683,7 +5927,7 @@ int Universal::postExpSetupInit(unsigned int frameSize)
         acqCfgCur_.ScanWidth = prmScanWidth_->Current();
         acqCfgNew_.ScanWidth = prmScanWidth_->Current();
     }
-    if (prmScanLineDelay_ != NULL && prmScanLineDelay_->IsAvailable())
+    if (prmScanLineDelay_->IsAvailable())
     {
         nRet = prmScanLineDelay_->Update();
         if (nRet != DEVICE_OK)
@@ -5694,6 +5938,15 @@ int Universal::postExpSetupInit(unsigned int frameSize)
         acqCfgCur_.ScanLineDelay = prmScanLineDelay_->Current();
         acqCfgNew_.ScanLineDelay = prmScanLineDelay_->Current();
     }
+
+    // Following parameters can also be updated after setup, but there is either no GUI related,
+    // or current value is not used, or all enum values are constant and already cached.
+    //      prmTriggerMode_
+    //      prmExposeOutMode_
+    //      prmFrameBufSize_ // Updated in resizeImageBufferContinuous() only
+    //      prmBinningSer_
+    //      prmBinningPar_
+    //      prmRoiCount_
 
     // This will update the CircularBufferFrameCount property in the Device/Property
     // browser. We need to call this because we need to reflect the change in circBufFrameCount_.
@@ -5792,16 +6045,18 @@ int Universal::applyAcqConfig(bool forceSetup)
 
     // If we are not acquiring, we can configure the camera right away
 
-    // Some changes will require reallocation of our buffers
-    // TODO: Better name would be "setupRequired" or similar, setting this flag will
-    // force the call to pl_exp_setup() functions
-    bool bufferResizeRequired = false;
+    // Some changes will require new acq. setup and reallocation of our buffers
+    bool setupRequired = false;
     // This function is called on several places. After a change in property and
     // upon starting acquisition. If we are not running live mode the configuration
     // will get applied immediately. To avoid re-applying the configuration in
     // StartSequenceAcquisition() we use the following flag.
     // TODO: Write custom comparer for AcqConfig class and use (cfgNew != cfgOld)
     bool configChanged = false;
+
+    // Dependant parameters to be updated at the end but still before acq. setup.
+    // This helps to eliminate multiple updates of the same parameter.
+    std::set<PvParamBase*> paramsToUpdate;
 
     // Please note the order of calls in this function may be important. For example,
     // when Centroiding is enabled the Metadata needs to be enabled automatically
@@ -5812,7 +6067,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.ColorProcessingEnabled != acqCfgCur_.ColorProcessingEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     PvRoiCollection& newRois = acqCfgNew_.Rois;
@@ -5854,7 +6109,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // If binning has changed adjust the coordinates to the binning factor
         newRois.AdjustCoords();
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // Multi-ROIs require metadata
@@ -5873,7 +6128,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.FrameMetadataEnabled != acqCfgCur_.FrameMetadataEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         nRet = prmMetadataEnabled_->SetAndApply(acqCfgNew_.FrameMetadataEnabled ? TRUE : FALSE);
         if (nRet != DEVICE_OK)
         {
@@ -5900,7 +6155,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsEnabled != acqCfgCur_.CentroidsEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         nRet = prmCentroidsEnabled_->SetAndApply(acqCfgNew_.CentroidsEnabled ? TRUE : FALSE);
         if (nRet != DEVICE_OK)
         {
@@ -5911,7 +6166,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsRadius != acqCfgCur_.CentroidsRadius)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         if ((nRet = prmCentroidsRadius_->SetAndApply(static_cast<uns16>(acqCfgNew_.CentroidsRadius))) != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
@@ -5921,7 +6176,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsCount != acqCfgCur_.CentroidsCount)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         if ((nRet = prmCentroidsCount_->SetAndApply(static_cast<uns16>(acqCfgNew_.CentroidsCount))) != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
@@ -5931,7 +6186,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsMode != acqCfgCur_.CentroidsMode)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         if ((nRet = prmCentroidsMode_->SetAndApply(acqCfgNew_.CentroidsMode)) != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
@@ -5941,7 +6196,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsBgCount != acqCfgCur_.CentroidsBgCount)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         if ((nRet = prmCentroidsBgCount_->SetAndApply(acqCfgNew_.CentroidsBgCount)) != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
@@ -5951,7 +6206,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.CentroidsThreshold != acqCfgCur_.CentroidsThreshold)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         nRet = prmCentroidsThreshold_->SetAndApply(static_cast<uns32>(acqCfgNew_.CentroidsThreshold));
         if (nRet != DEVICE_OK)
         {
@@ -5990,6 +6245,7 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in SetAndApply()
         }
+        paramsToUpdate.emplace(prmFanSpeedSetpoint_);
     }
 
     // Clear cycles
@@ -6006,7 +6262,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // in pl_exp_setup_seq/cont getting called, which applies script, which then
         // forces the camera to update the "post-setup parameters" and this
         // results in GUI getting immediately updated with correct values for timing params.
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // Clear mode
@@ -6023,7 +6279,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // in pl_exp_setup_seq/cont getting called, which applies script, which then
         // forces the camera to update the "post-setup parameters" and this
         // results in GUI getting immediately updated with correct values for timing params.
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // Debayering algorithm selection
@@ -6049,11 +6305,11 @@ int Universal::applyAcqConfig(bool forceSetup)
     }
 
     // Iterate over the trigger "last mux map" and check if any signal has changed the Mux value
-    for(std::map<int, int>::iterator it = acqCfgNew_.TrigTabLastMuxMap.begin(); it != acqCfgNew_.TrigTabLastMuxMap.end(); it++)
+    for(const auto& entry : acqCfgNew_.TrigTabLastMuxMap)
     {
-        const int32 trigSig = it->first;
-        const uns8  muxValNew  = static_cast<uns8>(it->second);
-        const uns8  muxValCur  = static_cast<uns8>(acqCfgCur_.TrigTabLastMuxMap[trigSig]);
+        const int32 trigSig = entry.first;
+        const uns8  muxValNew  = static_cast<uns8>(entry.second);
+        const uns8  muxValCur  = static_cast<uns8>(acqCfgCur_.TrigTabLastMuxMap.at(trigSig));
         if (muxValNew != muxValCur)
         {
             configChanged = true;
@@ -6083,11 +6339,8 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in SetAndApply()
         }
-        // Workaround: When PMODE changes we force buffer reinitialization (which results
-        // in pl_exp_setup_seq/cont getting called, which applies script, which then
-        // forces the camera to update the PARAM_TEMP_SETPOINT for DELTA LS and this
-        // results in GUI getting immediately updated with correct setpoint.
-        bufferResizeRequired = true;
+        // Delta LS camera changes the temperature setpoint on PMODE change
+        paramsToUpdate.emplace(prmTempSetpoint_);
     }
 
     bool portChanged = false; // Port change triggers speed change
@@ -6105,26 +6358,24 @@ int Universal::applyAcqConfig(bool forceSetup)
         // Read the available speeds for this port from our speed table
         std::vector<std::string> spdChoices;
         const int32 curPort = prmReadoutPort_->Current();
-        std::map<int16, SpdTabEntry>::iterator i = camSpdTable_[curPort].begin();
-        for(; i != camSpdTable_[curPort].end(); ++i)
-            spdChoices.push_back(i->second.spdString);
+        const auto& spdEntries = camSpdTable_.at(curPort);
+        for (const auto& entry : spdEntries)
+            spdChoices.push_back(entry.second.spdString);
         // Set the allowed readout rates
         SetAllowedValues(g_ReadoutRate, spdChoices);
 
         // Set the current speed to the default rate, this will cause the speed to be reset as well call.
-        acqCfgNew_.SpeedIndex = camSpdTable_[curPort][0].portDefaultSpdIdx;
+        acqCfgNew_.SpeedIndex = spdEntries.at(0).portDefaultSpdIdx;
 
         // Since Port has changed we need to reset the speed, which in turn resets gain
         portChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     bool speedChanged = false; // Speed change triggers gain change
     if (acqCfgNew_.SpeedIndex != acqCfgCur_.SpeedIndex || portChanged)
     {
         configChanged = true;
-        // TODO: This is not fully implemented, we still handle port/gain changes 
-        // directly via properties. We should move it here.
         nRet = prmSpdTabIndex_->SetAndApply((int16)acqCfgNew_.SpeedIndex);
         if (nRet != DEVICE_OK)
         {
@@ -6133,17 +6384,17 @@ int Universal::applyAcqConfig(bool forceSetup)
         }
 
         // Find the actual speed definition from the speed table
-        SpdTabEntry spd;
         const int32 curPort = prmReadoutPort_->Current();
-        for (int16 i = 0; i < (int16)camSpdTable_[curPort].size(); ++i)
+        const auto& spdEntries = camSpdTable_.at(curPort);
+        for (const auto& entry : spdEntries)
         {
-            if (camSpdTable_[curPort][i].spdIndex == acqCfgNew_.SpeedIndex)
+            if (entry.second.spdIndex == acqCfgNew_.SpeedIndex)
             {
-                spd = camSpdTable_[curPort][i];
+                camCurrentSpeed_ = entry.second;
                 break;
             }
         }
-        camCurrentSpeed_ = spd;
+        const SpdTabEntry& spd = camCurrentSpeed_;
 
         // When speed changes, the Gain range may need to be updated
         std::vector<std::string> gainChoices;
@@ -6156,30 +6407,60 @@ int Universal::applyAcqConfig(bool forceSetup)
         // We can use the prmGainIndex_->Current() because it still contains the previous
         // cached value (we didn't call Update/Apply yet)
         int16 curGain = prmGainIndex_->Current();
-        if ( curGain < spd.gainMin || curGain > spd.gainMax )
+        if (curGain < spd.gainMin || curGain > spd.gainMax)
             curGain = spd.gainDef; // The new speed does not support this gain index, so we reset it to the first available
 
         // The new value will be applied below
         acqCfgNew_.GainNum = curGain;
 
         // When speed changes the ADC offset may change as well, so update it
-        nRet = prmAdcOffset_->Update();
-        if (nRet != DEVICE_OK)
+        if (prmAdcOffset_->IsAvailable())
         {
-            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-            return nRet; // Error logged in Update()
+            nRet = prmAdcOffset_->Update();
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // Update failed, reset the settings back to previous state
+                return nRet; // Error logged in Update()
+            }
+            // TODO: Should we try to set the previous ADC offset? This will fail on modern
+            // cameras as they do not allow the ADC offset to be changed.
+            // Set both configurations to the same value to avoid the setter to be called later.
+            acqCfgNew_.AdcOffset = prmAdcOffset_->Current();
+            acqCfgCur_.AdcOffset = prmAdcOffset_->Current();
         }
-        // TODO: Should we try to set the previous ADC offset? This will fail on modern
-        // cameras as they do not allow the ADC offset to be changed.
-        // Set both configurations to the same value to avoid the setter to be called later.
-        acqCfgNew_.AdcOffset = prmAdcOffset_->Current();
-        acqCfgCur_.AdcOffset = prmAdcOffset_->Current();
+
+        // When speed changes, the image compression list may need to be updated.
+        // Needed mainly for Prime-BSI where it is r/w, but beside the current value
+        // it changes also a list of items in the enum.
+        if (prmImageCompression_->IsAvailable())
+        {
+            nRet = prmImageCompression_->Update();
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // Update failed, reset the settings back to previous state
+                return nRet; // Error logged in Update()
+            }
+#ifdef DEBUG_INTERNAL_IMAGE_PROPS
+            if (!prmImageCompression_->IsReadOnly())
+                SetAllowedValues(g_Keyword_ImageCompression, prmImageCompression_->GetEnumStrings());
+#endif
+        }
+
+        // This dependency cannot be handled directly because new and current
+        // AcqConfig::AdcOffset must be updated sooner, see above and below
+        //paramsToUpdate.emplace(prmAdcOffset_);
+        paramsToUpdate.emplace(prmColorMode_);
+        paramsToUpdate.emplace(prmImageFormat_.get());
+        // This dependency cannot be handled directly because allowed GUI items
+        // must be updated, see above and below
+        //paramsToUpdate.emplace(prmImageCompression_);
 
         speedChanged = true;
         // Speed may cause bit depth change, so buffer reallocation is recommended
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
+    bool gainChanged = false; // Gain change triggers update of various parameters
     if ((acqCfgNew_.GainNum != acqCfgCur_.GainNum) || speedChanged)
     {
         configChanged = true;
@@ -6189,16 +6470,74 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in SetAndApply()
         }
-        // When gain changes the bit depth may change as well, so update it
-        nRet = prmBitDepth_->Update();
+
+        // When gain changes the scan mode may change as well, so update it
+        if (prmScanMode_->IsAvailable())
+        {
+            nRet = prmScanMode_->Update();
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // Update failed, reset the settings back to previous state
+                return nRet; // Error logged in Update()
+            }
+            // Override both configurations to avoid the setter changing it to user value
+            acqCfgNew_.ScanMode = prmScanMode_->Current();
+            acqCfgCur_.ScanMode = prmScanMode_->Current();
+        }
+
+        paramsToUpdate.emplace(prmBitDepth_.get());
+        // PARAM_SCAN_MODE must update all its dependencies, see above and below
+        //paramsToUpdate.emplace(prmScanMode_);
+        // PARAM_GAIN_MULT_FACTOR can change on HQ2 camera
+        paramsToUpdate.emplace(prmGainMultFactor_);
+        paramsToUpdate.emplace(prmTempSetpoint_);
+
+        // Gain may cause bit depth change, so buffer reallocation is recommended
+        gainChanged = true;
+        setupRequired = true;
+    }
+
+    if (acqCfgNew_.PostProcParamSet != acqCfgCur_.PostProcParamSet)
+    {
+        configChanged = true;
+        setupRequired = true;
+
+        paramsToUpdate.emplace(prmBitDepth_.get());
+        paramsToUpdate.emplace(prmImageFormat_.get());
+
+        // It behaves like a trigger, the next transition will be again false->true
+        acqCfgNew_.PostProcParamSet = false;
+    }
+
+    if (acqCfgNew_.ImageFormat != acqCfgCur_.ImageFormat)
+    {
+        configChanged = true;
+        nRet = prmImageFormat_->SetAndApply(acqCfgNew_.ImageFormat);
         if (nRet != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-            return nRet; // Error logged in Update()
+            return nRet; // Error logged in SetAndApply()
         }
-
-        // Gain may cause bit depth change, so buffer reallocation is recommended
-        bufferResizeRequired = true;
+        // Workaround: When it changes we force buffer reinitialization (which results
+        // in pl_exp_setup_seq/cont getting called, which applies script, which then
+        // forces the camera to update the "post-setup parameters" and this
+        // results in GUI getting immediately updated with correct values for image format + host.
+        setupRequired = true;
+    }
+    if (acqCfgNew_.ImageCompression != acqCfgCur_.ImageCompression)
+    {
+        configChanged = true;
+        nRet = prmImageCompression_->SetAndApply(acqCfgNew_.ImageCompression);
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+        // Workaround: When it changes we force buffer reinitialization (which results
+        // in pl_exp_setup_seq/cont getting called, which applies script, which then
+        // forces the camera to update the "post-setup parameters" and this
+        // results in GUI getting immediately updated with correct values for image compression + host.
+        setupRequired = true;
     }
 
     if (acqCfgNew_.AdcOffset != acqCfgCur_.AdcOffset)
@@ -6212,66 +6551,82 @@ int Universal::applyAcqConfig(bool forceSetup)
         }
     }
 
-    if (acqCfgNew_.ScanMode != acqCfgCur_.ScanMode)
+    if (acqCfgNew_.ScanMode != acqCfgCur_.ScanMode || gainChanged)
     {
         configChanged = true;
-        nRet = prmScanMode_->SetAndApply(acqCfgNew_.ScanMode);
-        if (nRet != DEVICE_OK)
+
+        // We must check availability because the code can go here now even
+        // for cameras without scan mode support
+        if (prmScanMode_->IsAvailable())
         {
-            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-            return nRet; // Error logged in SetAndApply()
+            nRet = prmScanMode_->SetAndApply(acqCfgNew_.ScanMode);
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+                return nRet; // Error logged in SetAndApply()
+            }
         }
+
         // A change in ScanMode triggers write access to ScanLineDelay or ScanLineWidth parameters
         // We need to reinitialize these two and update GUI accordingly
-        prmScanWidth_->Initialize();
-        if (nRet != DEVICE_OK)
+        if (prmScanWidth_->IsAvailable())
         {
-            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-            return nRet; // Error logged in SetAndApply()
-        }
-        nRet = prmScanWidth_->Update();
-        if (nRet != DEVICE_OK)
-        {
-            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-            return nRet; // Error logged in SetAndApply()
-        }
-        if (prmScanWidth_->IsReadOnly())
-        {
-            // Disable the property, we will make it read-only in the OnScanWidth()
-            SetPropertyLimits(g_Keyword_ScanWidth, 0, 0);
-        }
-        else
-        {
-            SetPropertyLimits(g_Keyword_ScanWidth, prmScanWidth_->Min(), prmScanWidth_->Max());
-        }
-        // Update both configs to not trigger an update
-        acqCfgCur_.ScanWidth = prmScanWidth_->Current();
-        acqCfgNew_.ScanWidth = prmScanWidth_->Current();
-
-        prmScanLineDelay_->Initialize();
-        if (nRet != DEVICE_OK)
-        {
-            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-            return nRet; // Error logged in SetAndApply()
-        }
-        nRet = prmScanLineDelay_->Update();
-        if (nRet != DEVICE_OK)
-        {
-            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-            return nRet; // Error logged in SetAndApply()
+            prmScanWidth_->Initialize();
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+                return nRet; // Error logged in SetAndApply()
+            }
+            nRet = prmScanWidth_->Update();
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // Update failed, reset the settings back to previous state
+                return nRet; // Error logged in Update()
+            }
+            if (prmScanWidth_->IsReadOnly())
+            {
+                // Disable the property, we will make it read-only in the OnScanWidth()
+                SetPropertyLimits(g_Keyword_ScanWidth, 0, 0);
+            }
+            else
+            {
+                SetPropertyLimits(g_Keyword_ScanWidth, prmScanWidth_->Min(), prmScanWidth_->Max());
+            }
+            // Update both configs to not trigger an update
+            acqCfgCur_.ScanWidth = prmScanWidth_->Current();
+            acqCfgNew_.ScanWidth = prmScanWidth_->Current();
         }
 
-        if (prmScanLineDelay_->IsReadOnly())
+        if (prmScanLineDelay_->IsAvailable())
         {
-            // Disable the property, we will make it read-only in the OnScanLineDelay()
-            SetPropertyLimits(g_Keyword_ScanLineDelay, 0, 0);
+            prmScanLineDelay_->Initialize();
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+                return nRet; // Error logged in SetAndApply()
+            }
+            nRet = prmScanLineDelay_->Update();
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // Update failed, reset the settings back to previous state
+                return nRet; // Error logged in Update()
+            }
+            if (prmScanLineDelay_->IsReadOnly())
+            {
+                // Disable the property, we will make it read-only in the OnScanLineDelay()
+                SetPropertyLimits(g_Keyword_ScanLineDelay, 0, 0);
+            }
+            else
+            {
+                SetPropertyLimits(g_Keyword_ScanLineDelay, prmScanLineDelay_->Min(), prmScanLineDelay_->Max());
+            }
+            // Update both configs to not trigger an update
+            acqCfgCur_.ScanLineDelay = prmScanLineDelay_->Current();
+            acqCfgNew_.ScanLineDelay = prmScanLineDelay_->Current();
         }
-        else
-        {
-            SetPropertyLimits(g_Keyword_ScanLineDelay, prmScanLineDelay_->Min(), prmScanLineDelay_->Max());
-        }
-        acqCfgCur_.ScanLineDelay = prmScanLineDelay_->Current();
-        acqCfgNew_.ScanLineDelay = prmScanLineDelay_->Current();
+
+        paramsToUpdate.emplace(prmScanDirection_);
+        paramsToUpdate.emplace(prmScanDirectionReset_);
     }
     if (acqCfgNew_.ScanDirection != acqCfgCur_.ScanDirection)
     {
@@ -6302,15 +6657,21 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in SetAndApply()
         }
+
         // Depending on the ScanMode selection a change in ScanLineDelay triggers recalculation
         // of the ScanWidth in the camera so we need to update the other parameter value.
-        prmScanWidth_->Update();
+        nRet = prmScanWidth_->Update();
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // Update failed, reset the settings back to previous state
+            return nRet; // Error logged in Update()
+        }
         // Update both configs to not cause refresh because this change is not user triggered
         acqCfgNew_.ScanWidth = prmScanWidth_->Current();
         acqCfgCur_.ScanWidth = prmScanWidth_->Current();
+
         // Change in ScanLineDelay may change the total ScanLineTime
-        if (prmScanLineTime_->IsAvailable())
-            prmScanLineTime_->Update();
+        paramsToUpdate.emplace(prmScanLineTime_);
     }
     if (acqCfgNew_.ScanWidth != acqCfgCur_.ScanWidth)
     {
@@ -6321,32 +6682,38 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in SetAndApply()
         }
+
         // Depending on the ScanMode selection a change in ScanWidth triggers recalculation
         // of the ScanLineDelay in the camera so we need to update the other parameter value.
-        prmScanLineDelay_->Update();
+        nRet = prmScanLineDelay_->Update();
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // Update failed, reset the settings back to previous state
+            return nRet; // Error logged in Update()
+        }
         // Update both configs to not cause refresh because this change is not user triggered
         acqCfgNew_.ScanLineDelay = prmScanLineDelay_->Current();
         acqCfgCur_.ScanLineDelay = prmScanLineDelay_->Current();
+
         // Change in ScanWidth may change the total ScanLineTime
-        if (prmScanLineTime_->IsAvailable())
-            prmScanLineTime_->Update();
+        paramsToUpdate.emplace(prmScanLineTime_);
     }
 
     if (acqCfgNew_.CircBufEnabled != acqCfgCur_.CircBufEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     if (acqCfgNew_.CircBufSizeAuto != acqCfgCur_.CircBufSizeAuto)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     if (acqCfgNew_.CallbacksEnabled != acqCfgCur_.CallbacksEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
         g_pvcamLock.Lock();
         if (acqCfgNew_.CallbacksEnabled)
         {
@@ -6374,12 +6741,12 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.DiskStreamingEnabled != acqCfgCur_.DiskStreamingEnabled)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     if (acqCfgNew_.DiskStreamingPath != acqCfgCur_.DiskStreamingPath)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     if (acqCfgNew_.DiskStreamingCoreSkipRatio != acqCfgCur_.DiskStreamingCoreSkipRatio)
     {
@@ -6390,7 +6757,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.ExposureMs != acqCfgCur_.ExposureMs)
     {
         configChanged = true;
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
     // The exposure time value that will be used to decide which exposure
     // resolution to set, this depends on S.M.A.R.T streaming as well.
@@ -6510,16 +6877,30 @@ int Universal::applyAcqConfig(bool forceSetup)
         if (nRet != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-            return nRet; // Error logged in SetAndApply()
+            return nRet; // Error logged in sendSmartStreamingToCamera()
         }
-        bufferResizeRequired = true;
+        setupRequired = true;
     }
 
     // If the acquisition type changes (Snap vs Live) we need to reconfigure buffer which
     // in turn reconfigures the camera with pl_exp_setup_xxx() calls.
     if (acqCfgNew_.AcquisitionType != acqCfgCur_.AcquisitionType)
     {
-        bufferResizeRequired = true;
+        setupRequired = true;
+    }
+
+    // Refresh dependant parameters, reset their cache and update values
+    for (PvParamBase* param : paramsToUpdate)
+    {
+        if (param->IsAvailable())
+        {
+            nRet = param->Update();
+            if (nRet != DEVICE_OK)
+            {
+                acqCfgNew_ = acqCfgCur_; // Update failed, reset the settings back to previous state
+                return nRet; // Error logged in Update()
+            }
+        }
     }
 
     // Port change triggers speed change, so this happens any time port and/or speed changes.
@@ -6534,7 +6915,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     // immediately the acqCfgCur_ must already contain correct configuration.
     acqCfgCur_ = acqCfgNew_;
 
-    if (bufferResizeRequired || forceSetup)
+    if (setupRequired || forceSetup)
     {
         // Automatically prepare the acquisition. This helps with following problem:
         // Some parameters (PARAM_TEMP_SETPOINT, PARAM_READOUT_TIME) update their values only
