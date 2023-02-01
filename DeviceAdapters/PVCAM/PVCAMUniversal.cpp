@@ -223,8 +223,6 @@ Universal::Universal(short cameraId, const char* deviceName)
     callPrepareForAcq_(true),
     isAcquiring_(false),
     triggerTimeout_(10),
-    microsecResSupported_(false),
-    microsecResMax_(1000000), // Will run in usec for up to 1 second
     pollingThd_(NULL),
     notificationThd_(NULL),
     acqThd_(NULL),
@@ -1022,60 +1020,74 @@ int Universal::Initialize()
     /// EXPOSURE RESOLUTION
     // The PARAM_EXP_RES_INDEX is used to get and set the current exposure resolution (usec, msec, sec, ...)
     // The PARAM_EXP_RES is only used to enumerate the supported exposure resolutions and their string names
-    microsecResSupported_ = false;
-    acqCfgNew_.ExposureMs  = 10.0;
-    acqCfgNew_.ExposureRes = EXP_RES_ONE_MILLISEC;
-    prmExpResIndex_ = new PvParam<uns16>( "PARAM_EXP_RES_INDEX", PARAM_EXP_RES_INDEX, this, true );
-    prmExpRes_ = new PvEnumParam( "PARAM_EXP_RES", PARAM_EXP_RES, this, true );
+    // The PARAM_EXP_RES was read-only in older PVCAMs
+    prmExpResIndex_ = new PvParam<uns16>("PARAM_EXP_RES_INDEX", PARAM_EXP_RES_INDEX, this, true);
+    prmExpRes_ = new PvEnumParam("PARAM_EXP_RES", PARAM_EXP_RES, this, true);
     // The PARAM_EXPOSURE_TIME also returns the camera actual exposure time, if supported
-    prmExposureTime_ = new PvParam<ulong64>( "PARAM_EXPOSURE_TIME", PARAM_EXPOSURE_TIME, this, true );
-    if ( prmExposureTime_->IsAvailable() )
+    prmExposureTime_ = new PvParam<ulong64>("PARAM_EXPOSURE_TIME", PARAM_EXPOSURE_TIME, this, true);
+    if (prmExposureTime_->IsAvailable())
     {
-        pAct = new CPropertyAction (this, &Universal::OnTimingExposureTimeNs);
-        nRet = CreateProperty(g_Keyword_TimingExposureTimeNs, "0", MM::Float, true, pAct);
+        pAct = new CPropertyAction(this, &Universal::OnTimingExposureTimeNs);
+        nRet = CreateFloatProperty(g_Keyword_TimingExposureTimeNs, 0.0, true, pAct);
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    if ( prmExpResIndex_->IsAvailable() )
+    expTimeResLimits_.clear();
+    // Add map keys with some default limits that might be updated later.
+    // By default, the camera will run in usec (if supported) for up to 1 second,
+    // then it gets switched to msec (if supported) for up to 1000 seconds,
+    // and then it gets switched to sec (if supported).
+    constexpr uns32 expTimeResDefaultMax = 1'000'000;
+    if (prmExpRes_->IsAvailable())
     {
-        if ( prmExpRes_->IsAvailable() )
-        {
-            std::vector<int32> enumVals = prmExpRes_->GetEnumValues();
-            for ( unsigned i = 0; i < enumVals.size(); ++i )
-            {
-                if ( enumVals[i] == EXP_RES_ONE_MICROSEC )
-                {
-                    // If microsec is supported and the camera reports the range,
-                    // we check what is the max microsec range and keep the camera
-                    // running in microsec up to the max range.
-                    if (prmExposureTime_->IsAvailable())
-                    {
-                        // Switch to microsec...
-                        nRet = prmExpRes_->SetAndApply(EXP_RES_ONE_MICROSEC);
-                        if (nRet != DEVICE_OK)
-                            return nRet; // Error logged in SetAndApply()
-                        // We need to re-read the exposure time parameter from PVCAM to
-                        // update the cached values.
-                        nRet = prmExposureTime_->Update();
-                        if (nRet != DEVICE_OK)
-                            return nRet; // Error logged in Update()
-                        // Read the microsec max range
-                        microsecResMax_ = static_cast<uns32>(prmExposureTime_->Max());
-                    }
+        const auto& expResValues = prmExpRes_->GetEnumValues();
+        for (auto expRes : expResValues)
+            expTimeResLimits_[expRes] = { 0, expTimeResDefaultMax };
+    }
+    else
+    {
+        expTimeResLimits_[EXP_RES_ONE_MILLISEC] = { 0, expTimeResDefaultMax };
+    }
 
-                    microsecResSupported_ = true;
-                    break;
-                }
-            }
-            // Switch the resolution to usec if available. We will later switch it
-            // back and forth dynamically based on exposure value and microsec max range
-            if (microsecResSupported_)
+    if (prmExpResIndex_->IsAvailable())
+    {
+        // Update the limits if supported
+        if (prmExposureTime_->IsAvailable())
+        {
+            for (const auto& expResIt : expTimeResLimits_)
             {
-                nRet = prmExpRes_->SetAndApply(EXP_RES_ONE_MICROSEC);
+                const uns16 expRes = static_cast<uns16>(expResIt.first);
+                nRet = prmExpResIndex_->SetAndApply(expRes);
+                if (nRet != DEVICE_OK)
+                    return nRet; // Error logged in SetAndApply()
+                // Re-read the exposure time from PVCAM to update cached values
+                nRet = prmExposureTime_->Update();
                 if (nRet != DEVICE_OK)
                     return nRet; // Error logged in Update()
-                acqCfgNew_.ExposureRes = EXP_RES_ONE_MICROSEC;
+
+                const auto min = static_cast<uns32>(std::min<ulong64>(
+                            prmExposureTime_->Min(), (std::numeric_limits<uns32>::max)()));
+                const auto max = static_cast<uns32>(std::min<ulong64>(
+                            prmExposureTime_->Max(), (std::numeric_limits<uns32>::max)()));
+                expTimeResLimits_[expRes] = { min, max };
             }
+        }
+
+        // Switch the resolution to the finest available. We will later switch it
+        // back and forth dynamically based on exposure value and max range
+        uns16 expRes = EXP_RES_ONE_MILLISEC;
+        if (expTimeResLimits_.count(EXP_RES_ONE_MICROSEC))
+            expRes = EXP_RES_ONE_MICROSEC;
+        else if (expTimeResLimits_.count(EXP_RES_ONE_MILLISEC))
+            expRes = EXP_RES_ONE_MILLISEC;
+        else if (expTimeResLimits_.count(EXP_RES_ONE_SEC))
+            expRes = EXP_RES_ONE_SEC;
+        if (expRes != prmExpResIndex_->Current())
+        {
+            nRet = prmExpResIndex_->SetAndApply(expRes);
+            if (nRet != DEVICE_OK)
+                return nRet; // Error logged in SetAndApply()
+            acqCfgNew_.ExposureRes = expRes;
         }
     }
 
@@ -1106,7 +1118,6 @@ int Universal::Initialize()
     {
         LogAdapterMessage("This Camera does not have EM Gain");
     }
-
 
     if (cameraModel_ == PvCameraModel_OptiMos_M1)
     {
@@ -2237,15 +2248,15 @@ int Universal::OnReadoutRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnReadoutRate", eAct);
 
-    uns32 currentPort = prmReadoutPort_->Current();
-
     if (eAct == MM::AfterSet)
     {
+        int32 currentPort = prmReadoutPort_->Current();
+
         std::string selectedSpdString;
         pProp->Get(selectedSpdString);
 
         // Find the corresponding speed index from reverse speed table
-        const SpdTabEntry selectedSpd = camSpdTableReverse_[currentPort][selectedSpdString];
+        const SpdTabEntry& selectedSpd = camSpdTableReverse_[currentPort][selectedSpdString];
 
         acqCfgNew_.SpeedIndex = selectedSpd.spdIndex;
         return applyAcqConfig();
@@ -3374,8 +3385,8 @@ int Universal::OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eA
     // is represented in milli-seconds, the same as the generic exposure time value.
     if (eAct == MM::BeforeGet)
     {
-        const size_t exposureCount = acqCfgCur_.SmartStreamingExposures.size();
-        const std::vector<double>& exposures = acqCfgCur_.SmartStreamingExposures;
+        const size_t exposureCount = acqCfgCur_.SmartStreamingExposuresMs.size();
+        const std::vector<double>& exposures = acqCfgCur_.SmartStreamingExposuresMs;
         std::stringstream str;
         // Set precision to 0.000 and disable scientific notation
         str << std::setprecision(3) << std::fixed;
@@ -3466,7 +3477,7 @@ int Universal::OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eA
             oldFoundAt = ++foundAt;
         }
 
-        acqCfgNew_.SmartStreamingExposures = parsedValues;
+        acqCfgNew_.SmartStreamingExposuresMs = parsedValues;
         nRet = applyAcqConfig();
     }
 
@@ -3485,13 +3496,13 @@ int Universal::OnTimingExposureTimeNs(MM::PropertyBase* pProp, MM::ActionType eA
         switch (acqCfgCur_.ExposureRes)
         {
         case EXP_RES_ONE_SEC:
-            valNs = static_cast<double>(camVal) * 1000000000.0;
+            valNs = static_cast<double>(camVal) * 1e9;
             break;
         case EXP_RES_ONE_MILLISEC:
-            valNs = static_cast<double>(camVal) * 1000000.0;
+            valNs = static_cast<double>(camVal) * 1e6;
             break;
         case EXP_RES_ONE_MICROSEC:
-            valNs = static_cast<double>(camVal) * 1000.0;
+            valNs = static_cast<double>(camVal) * 1e3;
             break;
         default:
             valNs = static_cast<double>(camVal);
@@ -4519,75 +4530,82 @@ int Universal::initializePostProcessing()
 int Universal::initializeSpeedTable()
 {
     uns32 portCount = 0;  // Total number of readout ports
-    uns32 portCurIdx = 0; // Current PORT selected by the camera, we will restore it
-    int32 spdCount = 0;   // Number of speed choices for each port
+    int32 portCurVal = 0; // Current PORT selected by the camera, we will restore it
+    uns32 spdCount = 0;   // Number of speed choices for each port
     int16 spdCurIdx = 0;  // Current SPEED selected by the camera, we will restore it
     camSpdTable_.clear();
     camSpdTableReverse_.clear();
 
-    if (pl_get_param(hPVCAM_, PARAM_READOUT_PORT, ATTR_COUNT, (void*)&portCount) != PV_OK)
+    if (pl_get_param(hPVCAM_, PARAM_READOUT_PORT, ATTR_COUNT, &portCount) != PV_OK)
         return LogPvcamError(__LINE__, "pl_get_param PARAM_READOUT_PORT ATTR_COUNT" );
 
     // Read the current camera port and speed, we will want to restore the camera to this
     // configuration once we read out the entire speed table
-    if (pl_get_param(hPVCAM_, PARAM_READOUT_PORT, ATTR_CURRENT, (void*)&portCurIdx) != PV_OK)
+    if (pl_get_param(hPVCAM_, PARAM_READOUT_PORT, ATTR_CURRENT, &portCurVal) != PV_OK)
         return LogPvcamError(__LINE__, "pl_get_param PARAM_READOUT_PORT ATTR_CURRENT" );
-    if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_CURRENT, (void*)&spdCurIdx) != PV_OK)
+    if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_CURRENT, &spdCurIdx) != PV_OK)
         return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_CURRENT" );
 
     // Iterate through each port and fill in the speed table
-    for (uns32 portIndex = 0; portIndex < portCount; portIndex++)
+    for (uns32 portIndex = 0; portIndex < portCount; ++portIndex)
     {
-        if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, (void*)&portIndex) != PV_OK)
-            return LogPvcamError(__LINE__, "pl_set_param PARAM_READOUT_PORT" );
+        // The port in an enum parameter, pl_set_param takes a value not an index
+        int32 portValue = 0;
+        if (pl_get_enum_param(hPVCAM_, PARAM_READOUT_PORT, portIndex, &portValue, NULL, 0) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_READOUT_PORT");
 
-        if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_COUNT, (void*)&spdCount) != PV_OK)
-            return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_COUNT" );
+        if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, &portValue) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_set_param PARAM_READOUT_PORT");
+
+        if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_COUNT, &spdCount) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_COUNT");
 
         // Read the "default" speed for every port, we will select this one if port changes.
         // Please note we don't read the ATTR_DEFAULT as this one is not properly reported (PVCAM 3.1.9.1)
         int16 portDefaultSpdIdx = 0;
-        if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_CURRENT, (void*)&portDefaultSpdIdx) != PV_OK)
-            return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_CURRENT" );
+        if (pl_get_param(hPVCAM_, PARAM_SPDTAB_INDEX, ATTR_CURRENT, &portDefaultSpdIdx) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_get_param PARAM_SPDTAB_INDEX ATTR_CURRENT");
 
-        for (int16 spdIndex = 0; spdIndex < spdCount; spdIndex++)
+        for (int16 spdIndex = 0; static_cast<uns32>(spdIndex) < spdCount; ++spdIndex)
         {
             SpdTabEntry spdEntry;
-            spdEntry.portIndex = portIndex;
+            spdEntry.portValue = portValue;
             spdEntry.spdIndex = spdIndex;
             spdEntry.portDefaultSpdIdx = portDefaultSpdIdx;
             int16 bitDepth = 0;
 
-            if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, (void*)&spdEntry.spdIndex) != PV_OK)
-                return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX" );
+            if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, &spdEntry.spdIndex) != PV_OK)
+                return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX");
 
             // Read the pixel time for this speed choice
-            if (pl_get_param(hPVCAM_, PARAM_PIX_TIME, ATTR_CURRENT, (void*)&spdEntry.pixTime) != PV_OK)
+            if (pl_get_param(hPVCAM_, PARAM_PIX_TIME, ATTR_CURRENT, &spdEntry.pixTime) != PV_OK)
             {
-                LogPvcamError(__LINE__, "pl_get_param PARAM_PIX_TIME failed, using default pix time" );
+                LogPvcamError(__LINE__, "pl_get_param PARAM_PIX_TIME failed, using default pix time");
                 spdEntry.pixTime = MAX_PIX_TIME;
             }
             // Read the bit depth for this speed choice
-            if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK )
+            if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK)
             {
-                return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT" );
+                return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT");
             }
             // Read the sensor color mask for the current speed
             rs_bool colorAvail = FALSE;
             // Default values for cameras that do not support color mode
             spdEntry.colorMaskStr = "Grayscale";
             spdEntry.colorMask = COLOR_NONE;
-            if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_AVAIL, &colorAvail) == PV_OK && colorAvail == TRUE)
+            if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_AVAIL, &colorAvail) == PV_OK
+                && colorAvail == TRUE)
             {
-                int32 colorCount = 0;
-                if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_COUNT, &colorCount) != PV_OK || colorCount < 1)
+                uns32 colorCount = 0;
+                if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_COUNT, &colorCount) != PV_OK
+                    || colorCount < 1)
                 {
-                    return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_COUNT" );
+                    return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_COUNT");
                 }
                 int32 colorCur = 0;
                 if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_CURRENT, &colorCur) != PV_OK)
                 {
-                    return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_CURRENT" );
+                    return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_CURRENT");
                 }
                 // We need to find the value/string that corresponds to ATTR_CURRENT value
                 // First a couple of hacks for older cameras. Old PVCAM prior 3.0.5.2 (inclusive) reported
@@ -4604,7 +4622,7 @@ int Universal::initializeSpeedTable()
                 {
                     // Retiga 6000C with initial firmware had GRBG mask on slowest speed.
                     bFound = true;
-                    if (portIndex == 0 && spdIndex == 2)
+                    if (portValue == 0 && spdIndex == 2)
                     {
                         spdEntry.colorMask = COLOR_GRBG;
                         spdEntry.colorMaskStr.assign("Color (GRBG)");
@@ -4615,19 +4633,20 @@ int Universal::initializeSpeedTable()
                         spdEntry.colorMaskStr.assign("Color (RGGB)");
                     }
                 }
-                for (int32 i = 0; i < colorCount && !bFound; ++i)
+                for (uns32 colorIndex = 0; colorIndex < colorCount && !bFound; ++colorIndex)
                 {
                     uns32 enumStrLen = 0;
-                    if (pl_enum_str_length( hPVCAM_, PARAM_COLOR_MODE, i, &enumStrLen) != PV_OK)
+                    if (pl_enum_str_length(hPVCAM_, PARAM_COLOR_MODE, colorIndex, &enumStrLen) != PV_OK)
                     {
-                        return LogPvcamError(__LINE__, "pl_enum_str_length PARAM_COLOR_MODE" );
+                        return LogPvcamError(__LINE__, "pl_enum_str_length PARAM_COLOR_MODE");
                     }
-                    char* enumStrBuf = new char[enumStrLen+1];
+                    char* enumStrBuf = new char[enumStrLen + 1];
                     enumStrBuf[enumStrLen] = '\0';
                     int32 enumVal = 0;
-                    if (pl_get_enum_param(hPVCAM_, PARAM_COLOR_MODE, i, &enumVal, enumStrBuf, enumStrLen) != PV_OK)
+                    if (pl_get_enum_param(hPVCAM_, PARAM_COLOR_MODE, colorIndex, &enumVal, enumStrBuf, enumStrLen) != PV_OK)
                     {
-                        return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_COLOR_MODE" );
+                        delete[] enumStrBuf;
+                        return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_COLOR_MODE");
                     }
                     if (enumVal == colorCur)
                     {
@@ -4639,31 +4658,31 @@ int Universal::initializeSpeedTable()
                 }
                 if (!bFound)
                     return LogAdapterError(DEVICE_INTERNAL_INCONSISTENCY, __LINE__,
-                        "ATTR_CURRENT of PARAM_COLOR_MODE does not correspond to any reported ENUM value" );
+                        "ATTR_CURRENT of PARAM_COLOR_MODE does not correspond to any reported ENUM value");
             }
 
             // Read the gain range for this speed choice if applicable
-            if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_AVAIL, &spdEntry.gainAvail) != PV_OK )
+            if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_AVAIL, &spdEntry.gainAvail) != PV_OK)
             {
-                LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_AVAIL failed, not using gain at this speed" );
+                LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_AVAIL failed, not using gain at this speed");
                 spdEntry.gainAvail = FALSE;
             }
             if (spdEntry.gainAvail)
             {
-                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_MIN, &spdEntry.gainMin) != PV_OK )
+                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_DEFAULT, &spdEntry.gainDef) != PV_OK)
                 {
-                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_MIN failed, using default" );
-                    spdEntry.gainMin = 1;
+                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_DEFAULT failed, using 1");
+                    spdEntry.gainDef = 1;
                 }
-                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_MAX, &spdEntry.gainMax) != PV_OK )
+                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_MIN, &spdEntry.gainMin) != PV_OK)
                 {
-                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_MAX failed, using default" );
-                    spdEntry.gainMax = 1;
+                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_MIN failed, using default");
+                    spdEntry.gainMin = spdEntry.gainDef;
                 }
-                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_DEFAULT, &spdEntry.gainDef) != PV_OK )
+                if (pl_get_param(hPVCAM_, PARAM_GAIN_INDEX, ATTR_MAX, &spdEntry.gainMax) != PV_OK)
                 {
-                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_DEFAULT failed, using min" );
-                    spdEntry.gainDef = spdEntry.gainMin;
+                    LogPvcamError(__LINE__, "pl_get_param PARAM_GAIN_INDEX ATTR_MAX failed, using default");
+                    spdEntry.gainMax = spdEntry.gainDef;
                 }
 
                 // Reset the gain and re-read the bit depth. As some cameras may have different bit
@@ -4671,11 +4690,11 @@ int Universal::initializeSpeedTable()
                 // next to the readout rate.
                 if (pl_set_param(hPVCAM_, PARAM_GAIN_INDEX, &spdEntry.gainDef) != PV_OK)
                 {
-                    return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX" );
+                    return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX");
                 }
-                if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK )
+                if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK)
                 {
-                    return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT" );
+                    return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT");
                 }
 
                 // Iterate all gains and read each gain name if supported. If not supported or
@@ -4685,8 +4704,7 @@ int Universal::initializeSpeedTable()
                 {
                     // Let's assume we won't succeed and prepare the name as a simple number,
                     // this just makes the following code much easier.
-                    std::string gainNameStr = CDeviceUtils::ConvertToString(gainIdx);
-#ifdef PVCAM_METADATA_SUPPORTED
+                    std::string gainNameStr = std::to_string(gainIdx);
                     rs_bool gainNameAvail = FALSE;
                     if (pl_get_param(hPVCAM_, PARAM_GAIN_NAME, ATTR_AVAIL, &gainNameAvail) == PV_OK
                         && gainNameAvail == TRUE)
@@ -4697,7 +4715,7 @@ int Universal::initializeSpeedTable()
                             if (pl_get_param(hPVCAM_, PARAM_GAIN_NAME, ATTR_CURRENT, pvGainName) == PV_OK)
                             {
                                 // Workaround if for some reason PVCAM returns empty string
-                                if (strlen(pvGainName) != 0)
+                                if (pvGainName[0] != '\0')
                                 {
                                     gainNameStr.append("-");
                                     gainNameStr.append(pvGainName);
@@ -4705,7 +4723,6 @@ int Universal::initializeSpeedTable()
                             }
                         }
                     }
-#endif // PVCAM_METADATA_SUPPORTED
                     spdEntry.gainNameMap[gainNameStr] = gainIdx;
                     spdEntry.gainNameMapReverse[gainIdx] = gainNameStr;
                 }
@@ -4725,7 +4742,7 @@ int Universal::initializeSpeedTable()
             // if the camera has two speeds with the same bit depth, e.g. "100MHz 12bit" and "100MHz 12bit".
             // A proper way would be to add the speed index as: "0: 100MHz", "1: 100MHz", but again, this
             // breaks the expected scheme.
-            tmp << 1000.0f/spdEntry.pixTime << "MHz " << bitDepth << "bit";
+            tmp << 1000.0f / spdEntry.pixTime << "MHz " << bitDepth << "bit";
             spdEntry.spdString = tmp.str();
 
             // Let's assume we won't succeed reading speed name from camera,
@@ -4739,7 +4756,7 @@ int Universal::initializeSpeedTable()
                 if (pl_get_param(hPVCAM_, PARAM_SPDTAB_NAME, ATTR_CURRENT, spdName) == PV_OK)
                 {
                     // Workaround if for some reason PVCAM returns empty string
-                    if (strlen(spdName) != 0)
+                    if (spdName[0] != '\0')
                     {
                         spdNameStr = spdName;
                     }
@@ -4747,22 +4764,22 @@ int Universal::initializeSpeedTable()
             }
             spdEntry.spdName = spdNameStr;
 
-            camSpdTable_[portIndex][spdIndex] = spdEntry;
-            camSpdTableReverse_[portIndex][tmp.str()] = spdEntry;
+            camSpdTable_[portValue][spdIndex] = spdEntry;
+            camSpdTableReverse_[portValue][tmp.str()] = spdEntry;
         }
     }
 
     // Since we have iterated through all the ports/speeds/gains we should reset the cam to default state
-    const SpdTabEntry& spdDef = camSpdTable_[portCurIdx][spdCurIdx];
+    SpdTabEntry& spdDef = camSpdTable_[portCurVal][spdCurIdx];
 
-    if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, (void*)&spdDef.portIndex) != PV_OK)
-        return LogPvcamError(__LINE__, "pl_set_param PARAM_READOUT_PORT" );
-    if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, (void*)&spdDef.spdIndex) != PV_OK)
-        return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX" );
+    if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, &spdDef.portValue) != PV_OK)
+        return LogPvcamError(__LINE__, "pl_set_param PARAM_READOUT_PORT");
+    if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, &spdDef.spdIndex) != PV_OK)
+        return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX");
     if (spdDef.gainAvail)
     {
-        if (pl_set_param(hPVCAM_, PARAM_GAIN_INDEX, (void*)&spdDef.gainDef) != PV_OK)
-            return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX" );
+        if (pl_set_param(hPVCAM_, PARAM_GAIN_INDEX, &spdDef.gainDef) != PV_OK)
+            return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX");
     }
     camCurrentSpeed_ = spdDef;
 
@@ -5473,26 +5490,38 @@ int Universal::abortAcquisitionInternal()
 }
 
 #ifdef PVCAM_SMART_STREAMING_SUPPORTED
-int Universal::sendSmartStreamingToCamera(const std::vector<double>& exposures, int exposureRes)
+int Universal::sendSmartStreamingToCamera(const std::vector<double>& exposuresMs, int exposureRes)
 {
     START_METHOD("Universal::SendSmartStreamingToCamera");
 
     int nRet = DEVICE_OK;
 
-    const size_t expCount = exposures.size();
-
-    // the SMART streaming exposure values sent to cameras are uns32 while internally we need
-    // to be working with doubles
-    // allocate and populate regular smart_stream_type structure with values received from the UI
+    // The SMART streaming exposure values sent to cameras are uns32 while internally we need
+    // to be working with doubles.
+    // Allocate and populate regular smart_stream_type structure with values received from the UI.
     smart_stream_type smartStreamInts = prmSmartStreamingValues_->Current();
-    smartStreamInts.entries = static_cast<uns16>(expCount);
+    smartStreamInts.entries = static_cast<uns16>(exposuresMs.size());
 
     // We need to properly fill the PVCAM S.M.A.R.T streaming structure, we keep the
     // exposure values in an array of doubles and milliseconds, however the PVCAM structure
     // needs to be filled based on current exposure resolution selection.
-    const double mult = (exposureRes == EXP_RES_ONE_MICROSEC) ? 1000.0 : 1.0;
-    for (size_t i = 0; i < expCount; i++)
-        smartStreamInts.params[i] = (uns32)(exposures[i] * mult);
+    double mult = 1;
+    switch (exposureRes)
+    {
+    case EXP_RES_ONE_MICROSEC:
+        mult = 1e3;
+        break;
+    case EXP_RES_ONE_SEC:
+        mult = 1e-3;
+        break;
+    case EXP_RES_ONE_MILLISEC:
+    default:
+        break;
+    }
+    for (uns16 i = 0; i < smartStreamInts.entries; ++i)
+    {
+        smartStreamInts.params[i] = static_cast<uns32>(std::round(exposuresMs.at(i) * mult));
+    }
 
     g_pvcamLock.Lock();
     // Send the SMART streaming structure to camera
@@ -5513,22 +5542,30 @@ int Universal::getPvcamExposureSetupConfig(int16& pvExposureMode, double inputEx
     int nRet = DEVICE_OK;
 
     // Prepare the exposure mode
-    int16 trigModeValue = (int16)prmTriggerMode_->Current();
+    int16 trigModeValue = static_cast<int16>(prmTriggerMode_->Current());
     // Some cameras like the OptiMos allow special expose-out modes.
     int16 exposeOutModeValue = 0;
-    if ( prmExposeOutMode_ && prmExposeOutMode_->IsAvailable() )
+    if (prmExposeOutMode_ && prmExposeOutMode_->IsAvailable())
     {
-        exposeOutModeValue = (int16)prmExposeOutMode_->Current();
+        exposeOutModeValue = static_cast<int16>(prmExposeOutMode_->Current());
     }
-
     pvExposureMode = (trigModeValue | exposeOutModeValue);
 
     // Prepare the exposure value
-
-    if (acqCfgCur_.ExposureRes == EXP_RES_ONE_MICROSEC)
-        pvExposureValue = (uns32)(1000 * inputExposureMs);
-    else
-        pvExposureValue = (uns32)inputExposureMs;
+    double mult = 1;
+    switch (acqCfgCur_.ExposureRes)
+    {
+    case EXP_RES_ONE_MICROSEC:
+        mult = 1e3;
+        break;
+    case EXP_RES_ONE_SEC:
+        mult = 1e-3;
+        break;
+    case EXP_RES_ONE_MILLISEC:
+    default:
+        break;
+    }
+    pvExposureValue = static_cast<uns32>(std::round(inputExposureMs * mult));
 
     return nRet;
 }
@@ -6067,7 +6104,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // Port has changed so we need to reset the speed
         // Read the available speeds for this port from our speed table
         std::vector<std::string> spdChoices;
-        const uns32 curPort = prmReadoutPort_->Current();
+        const int32 curPort = prmReadoutPort_->Current();
         std::map<int16, SpdTabEntry>::iterator i = camSpdTable_[curPort].begin();
         for(; i != camSpdTable_[curPort].end(); ++i)
             spdChoices.push_back(i->second.spdString);
@@ -6376,7 +6413,7 @@ int Universal::applyAcqConfig(bool forceSetup)
             doReconfigureSmart = true;
             configChanged = true;
         }
-        if (acqCfgNew_.SmartStreamingExposures != acqCfgCur_.SmartStreamingExposures)
+        if (acqCfgNew_.SmartStreamingExposuresMs != acqCfgCur_.SmartStreamingExposuresMs)
         {
             doReconfigureSmart = true;
             configChanged = true;
@@ -6385,7 +6422,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (doReconfigureSmart)
     {
         // Check if we have correct amount of exposures
-        if (acqCfgNew_.SmartStreamingExposures.size() > prmSmartStreamingValues_->Max().entries)
+        if (acqCfgNew_.SmartStreamingExposuresMs.size() > prmSmartStreamingValues_->Max().entries)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return LogAdapterError( DEVICE_CAN_NOT_SET_PROPERTY,
@@ -6407,17 +6444,45 @@ int Universal::applyAcqConfig(bool forceSetup)
     // and possibly switch the camera exposure resolution accordingly (see below)
     if (acqCfgNew_.SmartStreamingActive)
         exposureTimeDecisiveMs = *std::max_element(
-            acqCfgNew_.SmartStreamingExposures.begin(), acqCfgNew_.SmartStreamingExposures.end());
+            acqCfgNew_.SmartStreamingExposuresMs.begin(), acqCfgNew_.SmartStreamingExposuresMs.end());
 
     // Now we know for sure whether S.M.A.R.T is going to be used or not, so we have
     // the exposure time that should be used to select the right exposure resolution
 
-    // If the exposure is smaller than 'microsecResMax' milliseconds (MM works in milliseconds but uses float type)
+    // If the exposure is smaller than a 'max limit' milliseconds (MM works in milliseconds but uses float type)
     // we switch the camera to microseconds so user can type 59.5 and we send 59500 to PVCAM.
-    if (exposureTimeDecisiveMs < (microsecResMax_/1000.0) && microsecResSupported_)
-        acqCfgNew_.ExposureRes = EXP_RES_ONE_MICROSEC;
-    else
+    bool wasExpResSet = false;
+    if (!wasExpResSet && expTimeResLimits_.count(EXP_RES_ONE_MICROSEC))
+    {
+        const uns32 maxUs = expTimeResLimits_.at(EXP_RES_ONE_MICROSEC).second;
+        if (exposureTimeDecisiveMs < (maxUs / 1000.0))
+        {
+            acqCfgNew_.ExposureRes = EXP_RES_ONE_MICROSEC;
+            wasExpResSet = true;
+        }
+    }
+    if (!wasExpResSet && expTimeResLimits_.count(EXP_RES_ONE_MILLISEC))
+    {
+        const uns32 maxMs = expTimeResLimits_.at(EXP_RES_ONE_MILLISEC).second;
+        if (exposureTimeDecisiveMs < maxMs)
+        {
+            acqCfgNew_.ExposureRes = EXP_RES_ONE_MILLISEC;
+            wasExpResSet = true;
+        }
+    }
+    if (!wasExpResSet && expTimeResLimits_.count(EXP_RES_ONE_SEC))
+    {
+        const uns32 maxS = expTimeResLimits_.at(EXP_RES_ONE_SEC).second;
+        if (exposureTimeDecisiveMs < (maxS * 1000.0))
+        {
+            acqCfgNew_.ExposureRes = EXP_RES_ONE_SEC;
+            wasExpResSet = true;
+        }
+    }
+    if (!wasExpResSet)
+    {
         acqCfgNew_.ExposureRes = EXP_RES_ONE_MILLISEC;
+    }
 
     // The exposure resolution is switched automatically and depends on two features that are handled above:
     // The generic exposure value or the highest S.M.A.R.T streaming value. Because of that the order
@@ -6441,7 +6506,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     // resolution that is important for S.M.A.R.T streaming exposure values conversion
     if (doReconfigureSmart)
     {
-        nRet = sendSmartStreamingToCamera(acqCfgNew_.SmartStreamingExposures, acqCfgNew_.ExposureRes);
+        nRet = sendSmartStreamingToCamera(acqCfgNew_.SmartStreamingExposuresMs, acqCfgNew_.ExposureRes);
         if (nRet != DEVICE_OK)
         {
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state

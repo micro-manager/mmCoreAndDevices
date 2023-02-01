@@ -50,6 +50,7 @@
 // System
 #include <map>
 #include <string>
+#include <utility> // std::pair
 
 
 //=============================================================================
@@ -113,21 +114,20 @@
 //=============================================================================
 //=========================================================== TYPE DECLARATIONS
 
-
 /**
-* Struct used for Universal Parameters definition
+* Structure used for Universal Parameters definition
 */
-typedef struct 
+struct ParamNameIdPair
 {
-    const char * name;
-    const char * debugName;
+    const char* name;
+    const char* debugName;
     uns32 id;
-} ParamNameIdPair;
+};
 
 /**
 * Speed table row
 */
-typedef struct
+struct SpdTabEntry
 {
     uns16 pixTime;         // Readout rate in ns
     rs_bool gainAvail;     // Gain available
@@ -136,31 +136,29 @@ typedef struct
     int16   gainDef;       // Default gain for this speed
     std::map<std::string, int16> gainNameMap; // Gain names (i.e., "name:index" map)
     std::map<int16, std::string> gainNameMapReverse; // Reverse lookup map
-    int16 spdIndex;           // Speed index 
-    uns32 portIndex;          // Port index
+    int16 spdIndex;           // Speed index
+    int32 portValue;          // Port index
     int16 portDefaultSpdIdx;  // Default speed index for given port (applied when port changes)
     std::string spdString;    // A string that describes this choice in GUI
     std::string spdName;      // A string received from camera, empty if not supported
-    int32       colorMask;    // Sensor color mask (PARAM_COLOR_MODE) 
+    int32       colorMask;    // Sensor color mask (PARAM_COLOR_MODE)
     std::string colorMaskStr; // Sensor color mask description (retrieved from PVCAM)
-} SpdTabEntry;
+};
 
 /**
 * Camera Model is identified mostly by Chip Name. Most of the cameras and every
 * unknown camera is treated as "Generic". PVCAM and this uM adapter is mostly
 * camera-agnostic, however a couple of camera models may need special treatment.
 */
-typedef enum PvCameraModel
+enum PvCameraModel
 {
     PvCameraModel_Generic = 0,
     PvCameraModel_OptiMos_M1,
     PvCameraModel_Retiga6000C
-} PvCameraModel;
-
+};
 
 //=============================================================================
 //======================================================== FORWARD DECLARATIONS
-
 
 class PollingThread;
 class NotificationThread;
@@ -170,10 +168,8 @@ template<class T> class PvParam;
 class PvUniversalParam;
 class PvEnumParam;
 
-
 //=============================================================================
 //========================================================== CLASS DECLARATIONS
-
 
 /**
 * Implementation of the MMDevice and MMCamera interfaces for all PVCAM cameras
@@ -512,6 +508,7 @@ public: // Action handlers
     */
     int OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eAct);
 #endif
+
     /**
     * Read-only: Shows the camera actual exposure time value in ns.
     */
@@ -608,8 +605,8 @@ protected:
 
 private:
     // Make object non-copyable
-    Universal(const Universal&)/* = delete*/;
-    Universal& operator=(const Universal&)/* = delete*/;
+    Universal(const Universal&) = delete;
+    Universal& operator=(const Universal&) = delete;
 
     /**
     * Read and create basic static camera properties that will be displayed in
@@ -685,7 +682,7 @@ private:
     /**
     * Sends the S.M.A.R.T streaming configuration to the camera.
     */
-    int sendSmartStreamingToCamera(const std::vector<double>& exposures, int exposureRes);
+    int sendSmartStreamingToCamera(const std::vector<double>& exposuresMs, int exposureRes);
 #endif
 
     /**
@@ -783,8 +780,8 @@ private:
     bool            isAcquiring_;
 
     long            triggerTimeout_;       // Max time to wait for an external trigger
-    bool            microsecResSupported_; // True if camera supports microsecond exposures
-    uns32           microsecResMax_;       // Maximum value for microsecond resolution
+
+    std::map<int32, std::pair<uns32, uns32>> expTimeResLimits_{}; // [expTimeRes]={min,max}
 
     friend class    PollingThread;
     PollingThread*  pollingThd_;           // Pointer to the sequencing thread
@@ -889,13 +886,14 @@ private:
     PvParam<uns8>*    prmLastMuxedSignal_;
     PvEnumParam*      prmPMode_;
     PvParam<int16>*   prmAdcOffset_;
-    // Scan mode
+
     PvEnumParam*      prmScanMode_;
     PvEnumParam*      prmScanDirection_;
     PvParam<rs_bool>* prmScanDirectionReset_;
     PvParam<uns16>*   prmScanLineDelay_; // Available after pl_exp_setup_seq()/pl_exp_setup_cont()
     PvParam<long64>*  prmScanLineTime_;
     PvParam<uns16>*   prmScanWidth_;
+
     // These parameters become valid after calling pl_exp_setup_seq()/pl_exp_setup_cont()
     PvParam<uns32>*   prmReadoutTime_;      // (PARAM_READOUT_TIME)
     PvParam<long64>*  prmClearingTime_;     // (PARAM_CLEARING_TIME)
@@ -907,10 +905,10 @@ private:
 
     // Camera speed table
     //  usage: SpdTabEntry e = camSpdTable_[port][speed];
-    std::map<uns32, std::map<int16, SpdTabEntry> > camSpdTable_;
+    std::map<int32, std::map<int16, SpdTabEntry>> camSpdTable_;
     // Reverse speed table to get the speed based on UI selection
     //  usage: SpdTabEntry e = camSpdTableReverse_[port][ui_selected_string];
-    std::map<uns32, std::map<std::string, SpdTabEntry> > camSpdTableReverse_;
+    std::map<int32, std::map<std::string, SpdTabEntry>> camSpdTableReverse_;
     // Currently selected speed
     SpdTabEntry camCurrentSpeed_;
 
