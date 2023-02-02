@@ -193,6 +193,10 @@ const char* g_Keyword_BitDepthHost          = "BitDepth"; // The "Host" suffix n
 const char* g_Keyword_ImageFormatHost       = "ImageFormat"; // The "Host" suffix not shown
 const char* g_Keyword_ImageCompressionHost  = "ImageCompression"; // The "Host" suffix not shown
 
+const char* g_Keyword_HostFrameSummingEnabled   = "FrameSummingEnabled";
+const char* g_Keyword_HostFrameSummingCount     = "FrameSummingCount";
+const char* g_Keyword_HostFrameSummingFormat    = "FrameSummingFormat";
+
 // Universal parameters
 // These parameters, their ranges or allowed values are read out from the camera automatically.
 // Use these parameters for simple camera properties that do not need special treatment when a
@@ -325,6 +329,7 @@ Universal::Universal(short cameraId, const char* deviceName)
     SetErrorText(ERR_TOO_MANY_ROIS, "Too many ROIs"); // Later overwritten by more specific message
     SetErrorText(ERR_FILE_OPERATION_FAILED, "File operation has failed");
     SetErrorText(ERR_SW_TRIGGER_NOT_SUPPORTED, "Selected SW trigger mode is not supported by the adapter");
+    SetErrorText(ERR_PIXEL_TYPE_NOT_SUPPORTED, "Micro-Manager does not support pixels with bit-depth over 16 bits");
 
     pollingThd_ = new PollingThread(this);             // Pointer to the sequencing thread
 
@@ -1484,6 +1489,62 @@ int Universal::Initialize()
         SetPropertyLimits(g_Keyword_ScanWidth, prmScanWidth_->Min(), prmScanWidth_->Max());
 
         acqCfgNew_.ScanWidth = prmScanWidth_->Current();
+    }
+
+    // Host-side post-processing - frame summing
+    prmHostFrameSummingEnabled_ = std::make_unique<PvParam<rs_bool>>("PARAM_HOST_FRAME_SUMMING_ENABLED",
+            PARAM_HOST_FRAME_SUMMING_ENABLED, this, true);
+    if (prmHostFrameSummingEnabled_->IsAvailable())
+    {
+        const rs_bool cur = prmHostFrameSummingEnabled_->Current();
+        pAct = new CPropertyAction(this, &Universal::OnHostFrameSummingEnabled);
+        nRet = CreateStringProperty(g_Keyword_HostFrameSummingEnabled,
+                cur ? g_Keyword_Yes : g_Keyword_No,
+                prmHostFrameSummingEnabled_->IsReadOnly(), pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!prmHostFrameSummingEnabled_->IsReadOnly())
+        {
+            AddAllowedValue(g_Keyword_HostFrameSummingEnabled, g_Keyword_Yes);
+            AddAllowedValue(g_Keyword_HostFrameSummingEnabled, g_Keyword_No);
+        }
+        acqCfgNew_.HostFrameSummingEnabled = cur;
+    }
+    prmHostFrameSummingCount_ = std::make_unique<PvParam<uns32>>("PARAM_HOST_FRAME_SUMMING_COUNT",
+            PARAM_HOST_FRAME_SUMMING_COUNT, this, true);
+    if (prmHostFrameSummingCount_->IsAvailable())
+    {
+        // The PVCAM type of this parameter is uns32, aka unsigned int.
+        // But the UI property supports long, double or string types only.
+        // On Windows the long type is 32-bit, so we have to limit the max. value
+        // of current, min. and max. attributes.
+        constexpr auto longMax = (std::numeric_limits<long>::max)();
+        const long cur = static_cast<long>(std::min<long long>(prmHostFrameSummingCount_->Current(), longMax));
+        const long min = static_cast<long>(std::min<long long>(prmHostFrameSummingCount_->Min(), longMax));
+        const long max = static_cast<long>(std::min<long long>(prmHostFrameSummingCount_->Max(), longMax));
+        pAct = new CPropertyAction(this, &Universal::OnHostFrameSummingCount);
+        nRet = CreateIntegerProperty(g_Keyword_HostFrameSummingCount, cur,
+                prmHostFrameSummingCount_->IsReadOnly(), pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!prmHostFrameSummingCount_->IsReadOnly())
+            SetPropertyLimits(g_Keyword_HostFrameSummingCount, min, max);
+        acqCfgNew_.HostFrameSummingCount = cur;
+    }
+    prmHostFrameSummingFormat_ = std::make_unique<PvEnumParam>("PARAM_HOST_FRAME_SUMMING_FORMAT",
+            PARAM_HOST_FRAME_SUMMING_FORMAT, this, true);
+    if (prmHostFrameSummingFormat_->IsAvailable())
+    {
+        const int32 cur = prmHostFrameSummingFormat_->Current();
+        const std::string curStr = prmHostFrameSummingFormat_->GetEnumString(cur);
+        pAct = new CPropertyAction(this, &Universal::OnHostFrameSummingFormat);
+        nRet = CreateStringProperty(g_Keyword_HostFrameSummingFormat, curStr.c_str(),
+                prmHostFrameSummingFormat_->IsReadOnly(), pAct);
+        if (nRet != DEVICE_OK)
+            return nRet;
+        if (!prmHostFrameSummingFormat_->IsReadOnly())
+            SetAllowedValues(g_Keyword_HostFrameSummingFormat, prmHostFrameSummingFormat_->GetEnumStrings());
+        acqCfgNew_.HostFrameSummingFormat = cur;
     }
 
     nRet = initializePostSetupParams();
@@ -3391,78 +3452,95 @@ int Universal::OnAcquisitionMethod(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int Universal::OnPostProcProperties(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-    // When user changes a PP property in UI this method is called twice: first with MM::AfterSet followed by 
+    START_ONPROPERTY("Universal::OnPostProcProperties", eAct);
+
+    // When user changes a PP property in UI this method is called twice: first with MM::AfterSet followed by
     // immediate MM::BeforeGet to obtain the actual value and display it back in UI.
     // When live mode is active and user sets the property the MM stops acquisition, calls this method with
     // MM::AfterSet, resumes the acquisition and asks for the value back with MM::BeforeGet. For this reason
     // we cannot get the actual property value directly from the camera with pl_get_param because the streaming
     // might be already active. (we cannot call pl_get or pl_set when continuous streaming mode is active)
 
-    START_ONPROPERTY("Universal::OnPostProcProperties", eAct);
-    uns32  ppValue = 0; // This is the actual value that will be sent to camera
-    int16  ppIndx;      // Used for PARAM_PP_INDEX and PARAM_PP_PARAM_INDEX
-    std::string valueStr;// Temporary variable used for converting the value from UI
-    long   valueLng;    //    representation to PVCAM value. 
+    if (index >= PostProc_.size())
+        return LogAdapterError(DEVICE_NO_PROPERTY_DATA, __LINE__, "Invalid PP index given");
+
+    PpParam& postProc = PostProc_.at(index);
+    uns32 ppValue; // This is the actual value that will be sent to camera
 
     if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
             StopSequenceAcquisition();
 
+        int16 ppIndx; // Used for both PARAM_PP_INDEX and PARAM_PP_PARAM_INDEX
+
         // The user just set a new value, find out what is the desired value,
         // convert it to PVCAM PP value and send it to the camera.
-        ppIndx = (int16)PostProc_[index].GetppIndex();
-
+        ppIndx = postProc.GetFeatIndex();
         if (!pl_set_param(hPVCAM_, PARAM_PP_INDEX, &ppIndx))
         {
             LogPvcamError(__LINE__, "pl_set_param PARAM_PP_INDEX");
-            revertPostProcValue( index, pProp );
+            revertPostProcValue(index, pProp);
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
-
-        ppIndx = (int16)PostProc_[index].GetpropIndex();
+        ppIndx = postProc.GetPropIndex();
         if (!pl_set_param(hPVCAM_, PARAM_PP_PARAM_INDEX, &ppIndx))
         {
             LogPvcamError(__LINE__, "pl_set_param PARAM_PP_PARAM_INDEX");
-            revertPostProcValue( index, pProp );
+            revertPostProcValue(index, pProp);
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
 
-        // translate the value from the actual control in MM
-        if (PostProc_[index].IsBoolean())
+        // Translate the value from the actual control in MM
+        if (postProc.IsBoolean())
         {
-            pProp->Get(valueStr);
-
-            if (valueStr == g_Keyword_Yes)
-                ppValue = 1;
-            else
-                ppValue = 0;
+            std::string value;
+            pProp->Get(value);
+            ppValue = (value == g_Keyword_Yes) ? 1 : 0;
         }
         else
         {
-            pProp->Get(valueLng);
-
-            ppValue = valueLng;
+            long value;
+            pProp->Get(value);
+            ppValue = static_cast<uns32>(value);
         }
 
-        // set the actual parameter value in the camera
+        switch (postProc.GetFeatId())
+        {
+        case PP_FEATURE_FRAME_SUMMING:
+            switch (postProc.GetPropId())
+            {
+            case PP_FEATURE_FRAME_SUMMING_32_BIT_MODE:
+                if (ppValue > 0)
+                    return LogAdapterError(ERR_PIXEL_TYPE_NOT_SUPPORTED, __LINE__,
+                            "Universal::OnPostProcProperties() - 32-bit mode not supported");
+                break;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+
+        // Set the actual parameter value in the camera
         if (!pl_set_param(hPVCAM_, PARAM_PP_PARAM, &ppValue))
         {
-            LogPvcamError( __LINE__, "pl_set_param PARAM_PP_PARAM" );
-            revertPostProcValue( index, pProp );
+            LogPvcamError(__LINE__, "pl_set_param PARAM_PP_PARAM");
+            revertPostProcValue(index, pProp);
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
 
         // Read the value back so we know what value was really applied
         if (!pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_CURRENT, &ppValue))
         {
-            LogPvcamError( __LINE__, "pl_get_param PARAM_PP_PARAM ATTR_CURRENT" );
-            revertPostProcValue( index, pProp );
+            LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM ATTR_CURRENT");
+            revertPostProcValue(index, pProp);
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
 
-        // update the control in the user interface
-        PostProc_[index].SetcurValue(ppValue);
+        // Update the cache for controls in the user interface
+        postProc.SetCurValue(ppValue);
 
         // PARAM_PP_PARAM can change bit depth and image format
         acqCfgNew_.PostProcParamSet = true;
@@ -3473,24 +3551,18 @@ int Universal::OnPostProcProperties(MM::PropertyBase* pProp, MM::ActionType eAct
         // Here we return the 'cached' parameter values only. We cannot ask camera directly
         // because this part of code might be called when sequence acquisition is active and
         // we cannot ask camera when streaming is on.
-        if (PostProc_[index].IsBoolean())
+        ppValue = postProc.GetCurValue();
+        if (postProc.IsBoolean())
         {
             // The property is of a Yes/No type
-            ppValue = (uns32)PostProc_[index].GetcurValue();
-
-            if (ppValue == 1)
-                valueStr = g_Keyword_Yes;
-            else 
-                valueStr = g_Keyword_No;
-
-            pProp->Set(valueStr.c_str());
+            const char* value = (ppValue == 1) ? g_Keyword_Yes : g_Keyword_No;
+            pProp->Set(value);
         }
         else
         {
             // The property is a range type
-            ppValue = (uns32)PostProc_[index].GetcurValue();
-
-            pProp->Set((long)ppValue);
+            // On Windows, the long type is 32-bit only thus the uns32 value might be misinterpret
+            pProp->Set(static_cast<long>(ppValue));
         }
     }
 
@@ -3738,6 +3810,67 @@ int Universal::OnTimingPostTriggerDelayNs(MM::PropertyBase* pProp, MM::ActionTyp
         pProp->Set(static_cast<double>(prmPostTriggerDelay_->Current()));
     }
     // Nothing to set, this is a read-only property
+    return DEVICE_OK;
+}
+
+int Universal::OnHostFrameSummingEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnHostFrameSummingEnabled", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set( acqCfgCur_.HostFrameSummingEnabled ? g_Keyword_Yes : g_Keyword_No);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        acqCfgNew_.HostFrameSummingEnabled = (0 == val.compare(g_Keyword_Yes));
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnHostFrameSummingCount(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnHostFrameSummingCount", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(acqCfgCur_.HostFrameSummingCount);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        pProp->Get(acqCfgNew_.HostFrameSummingCount);
+        return applyAcqConfig();
+    }
+    return DEVICE_OK;
+}
+
+int Universal::OnHostFrameSummingFormat(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    START_ONPROPERTY("Universal::OnHostFrameSummingFormat", eAct);
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(prmHostFrameSummingFormat_->GetEnumString(acqCfgCur_.HostFrameSummingFormat).c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string valStr;
+        pProp->Get(valStr);
+        const int value = prmHostFrameSummingFormat_->GetEnumValue(valStr);
+        switch (value)
+        {
+        case PL_FRAME_SUMMING_FORMAT_24_BIT:
+            return LogAdapterError(ERR_PIXEL_TYPE_NOT_SUPPORTED, __LINE__,
+                    "Universal::OnHostFrameSummingFormat() - PL_FRAME_SUMMING_FORMAT_24_BIT not supported");
+        case PL_FRAME_SUMMING_FORMAT_32_BIT:
+            return LogAdapterError(ERR_PIXEL_TYPE_NOT_SUPPORTED, __LINE__,
+                    "Universal::OnHostFrameSummingFormat() - PL_FRAME_SUMMING_FORMAT_32_BIT not supported");
+        default:
+            break;
+        }
+        acqCfgNew_.HostFrameSummingFormat = value;
+        return applyAcqConfig();
+    }
     return DEVICE_OK;
 }
 
@@ -4507,112 +4640,125 @@ int Universal::initializeUniversalParams()
 
 int Universal::initializePostProcessing()
 {
-    int nRet = DEVICE_OK;
-
     rs_bool bAvail;
-    CPropertyAction *pAct;
+    if (!pl_get_param(hPVCAM_, PARAM_PP_INDEX, ATTR_AVAIL, &bAvail))
+        return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_INDEX ATTR_AVAIL");
+    if (bAvail == FALSE)
+        return DEVICE_OK;
 
-    if (pl_get_param(hPVCAM_, PARAM_PP_INDEX, ATTR_AVAIL, &bAvail) && bAvail)
+    std::vector<std::string> boolValues;
+    boolValues.push_back(g_Keyword_No);
+    boolValues.push_back(g_Keyword_Yes);
+
+    int nRet = DEVICE_OK;
+    long ppCount = 0;
+
+    uns32 featCount = 0;
+    if (!pl_get_param(hPVCAM_, PARAM_PP_INDEX, ATTR_COUNT, &featCount))
+        return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_INDEX ATTR_COUNT");
+
+    for (int16 featIndex = 0; featIndex < static_cast<int16>(featCount); ++featIndex) 
     {
-        long CntPP = 0;
-        uns32 PP_count = 0;
-        std::ostringstream resetName;
+        if (!pl_set_param(hPVCAM_, PARAM_PP_INDEX, &featIndex))
+            return LogPvcamError(__LINE__, "pl_set_param PARAM_PP_INDEX");
 
-        // begin setup standard value names
-        std::vector<std::string> boolValues;
-        boolValues.push_back(g_Keyword_No);
-        boolValues.push_back(g_Keyword_Yes);
-        // end setup standard value names
+        char featName[MAX_PP_NAME_LEN];
+        if (!pl_get_param(hPVCAM_,PARAM_PP_FEAT_NAME, ATTR_CURRENT, featName))
+            return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_FEAT_NAME");
 
-        pAct = new CPropertyAction (this, &Universal::OnResetPostProcProperties);
+        uns32 featId;
+        if (!pl_get_param(hPVCAM_,PARAM_PP_FEAT_ID, ATTR_CURRENT, &featId))
+            featId = (uns32)-1; // PP feature ID might not be available, ignore error
 
-        assert(nRet == DEVICE_OK);
+        // Encourage a meaningful sort in the Micro-manager property browser window
+        std::ostringstream featNameStream;
+        featNameStream << "PP" << std::setw(3) << featIndex << " " << featName;
+        const std::string featNameStr = featNameStream.str();
 
-        if (pl_get_param(hPVCAM_, PARAM_PP_INDEX, ATTR_COUNT, &PP_count))
+        // Create a read-only property for the name of the feature
+        nRet = CreateStringProperty(featNameStr.c_str(), featName, true);
+        if (nRet != DEVICE_OK)
+            return nRet;
+
+        uns32 propCount =  0;
+        if (!pl_get_param(hPVCAM_, PARAM_PP_PARAM_INDEX, ATTR_COUNT, &propCount))
+            return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM_INDEX ATTR_COUNT");
+
+        for (int16 propIndex = 0; propIndex < static_cast<int16>(propCount); ++propIndex)
         {
-            for (int16 i = 0 ; i < (int16)PP_count; i++) 
+            if (!pl_set_param(hPVCAM_, PARAM_PP_PARAM_INDEX, &propIndex))
+                return LogPvcamError(__LINE__, "pl_set_param PARAM_PP_PARAM_INDEX");
+
+            char propName[MAX_PP_NAME_LEN];
+            if (!pl_get_param(hPVCAM_, PARAM_PP_PARAM_NAME, ATTR_CURRENT, propName))
+                return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM_NAME");
+
+            uns32 propId;
+            if (!pl_get_param(hPVCAM_,PARAM_PP_FEAT_ID, ATTR_CURRENT, &propId))
+                propId = (uns32)-1; // PP parameter ID might not be available, ignore error
+
+            // Encourage a meaningful sort in the Micro-manager property browser window
+            // Note that we want the properties to show up under their respective feature name
+            std::ostringstream propNameStream;
+            propNameStream << "PP" << std::setw(3) << featIndex + 1 << "   " << propName;
+            const std::string propNameStr = propNameStream.str();
+
+            uns32 min;
+            if (!pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_MIN, &min))
+                return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM ATTR_MIN");
+            uns32 max;
+            if (!pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_MAX, &max))
+                return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM ATTR_MAX");
+            uns32 cur;
+            if (!pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_CURRENT, &cur))
+                return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM ATTR_CURRENT");
+
+            const bool isBoolean = (min == 0 && max == 1);
+
+            PpParam ppParam(propNameStr, featIndex, propIndex, isBoolean, featId, propId);
+
+            CPropertyActionEx *pExAct = new CPropertyActionEx(this,
+                    &Universal::OnPostProcProperties, ppCount);
+
+            // On Windows, the long type is 32-bit only thus the uns32 value might be misinterpret
+            const long curValue = static_cast<long>(cur);
+
+            // Create a special drop-down control box for booleans
+            if (isBoolean)
             {
-                char featName[PARAM_NAME_LEN];
-                char propName[PARAM_NAME_LEN];
+                nRet = CreateStringProperty(propNameStr.c_str(),
+                        std::to_string(curValue).c_str(), false, pExAct);
+                if (nRet != DEVICE_OK)
+                    return nRet;
+                SetAllowedValues(propNameStr.c_str(), boolValues);
+            }
+            else
+            {
+                nRet = CreateIntegerProperty(propNameStr.c_str(), curValue, false, pExAct);
+                if (nRet != DEVICE_OK)
+                    return nRet;
+                SetPropertyLimits(propNameStr.c_str(), min, max);
+            }
 
-                uns32 min, max, curValueInt; 
-
-                if (pl_set_param(hPVCAM_, PARAM_PP_INDEX, &i))
-                {
-                    if (pl_get_param(hPVCAM_,PARAM_PP_FEAT_NAME, ATTR_CURRENT, featName))
-                    {
-                        uns32 paramCnt =  0;
-                        std::ostringstream featNameStream;
-
-                        // encourage a meaningful sort in the Micro-manager property browser window
-                        featNameStream << "PP" << std::setw(3) << i << " " << featName;
-
-                        // create a read-only property for the name of the feature
-                        nRet = CreateProperty(featNameStream.str().c_str(), featName, MM::String, true);
-
-                        if (pl_get_param(hPVCAM_, PARAM_PP_PARAM_INDEX, ATTR_COUNT, &paramCnt))
-                        {
-                            for (int16 j = 0; j < (int16)paramCnt; j++)
-                            {
-                                if (pl_set_param(hPVCAM_, PARAM_PP_PARAM_INDEX, &j))
-                                {
-                                    std::ostringstream paramNameStream;
-                                    std::ostringstream currentValueStream;
-
-                                    if( pl_get_param(hPVCAM_, PARAM_PP_PARAM_NAME, ATTR_CURRENT, propName) )
-                                    {
-                                        // encourage a meaningful sort in the Micro-manager property browser window
-                                        //  note that we want the properties to show up under their respective feature name
-                                        paramNameStream << "PP" << std::setw(3) << i+1 << "   " << propName;
-
-                                        pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_MIN, &min);
-                                        pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_MAX, &max);
-                                        pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_CURRENT, &curValueInt);
-
-                                        // convert current value of parameter to string
-                                        currentValueStream << curValueInt;
-
-                                        CPropertyActionEx *pExAct = new CPropertyActionEx(this, &Universal::OnPostProcProperties, CntPP++);
-
-                                        PpParam ppParam(paramNameStream.str().c_str(), i,j);
-
-                                        // create a special drop-down control box for booleans
-                                        if (min == 0 && max == 1)
-                                        {
-                                            ppParam.SetBoolean(true);
-                                            nRet = CreateProperty(paramNameStream.str().c_str(), currentValueStream.str().c_str(), MM::String, false, pExAct);
-                                            SetAllowedValues(paramNameStream.str().c_str(), boolValues);
-                                        }
-                                        else 
-                                        {
-                                            nRet = CreateProperty(paramNameStream.str().c_str(), currentValueStream.str().c_str(), MM::Integer, false, pExAct);
-                                            SetPropertyLimits(paramNameStream.str().c_str(), min, max);
-                                        }
-
-                                        PostProc_.push_back (ppParam);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }  
+            PostProc_.push_back(ppParam);
+            ppCount++;
         }
-
-        // encourage a meaningful sort in the Micro-manager property browser window
-        resetName << "PP" << std::setw(3) << PP_count+1 << " Reset";
-        nRet = CreateProperty(resetName.str().c_str(), g_Keyword_No, MM::String, false, pAct);
-        nRet = SetAllowedValues(resetName.str().c_str(), boolValues);
-
-        // Reset the post processing and reload all PP values
-        if(!pl_pp_reset(hPVCAM_))
-        {
-            LogPvcamError(__LINE__, "pl_pp_reset");
-        }
-
-        refreshPostProcValues();
     }
 
+    // Encourage a meaningful sort in the Micro-manager property browser window
+    std::ostringstream resetNameStream;
+    resetNameStream << "PP" << std::setw(3) << featCount + 1 << " Reset";
+    const std::string resetNameStr = resetNameStream.str();
+    CPropertyAction *pAct = new CPropertyAction(this, &Universal::OnResetPostProcProperties);
+    nRet = CreateStringProperty(resetNameStr.c_str(), g_Keyword_No, false, pAct);
+    if (nRet != DEVICE_OK)
+        return nRet;
+    SetAllowedValues(resetNameStr.c_str(), boolValues);
+
+    // Reset the post processing and reload all PP values
+    if(!pl_pp_reset(hPVCAM_))
+        return LogPvcamError(__LINE__, "pl_pp_reset");
+    nRet = refreshPostProcValues();
     return nRet;
 }
 
@@ -5811,45 +5957,38 @@ unsigned int Universal::getEstimatedMaxReadoutTimeMs() const
 
 int Universal::refreshPostProcValues()
 {
-    int16 ppIndx;
+    int16 ppIndex;
     uns32 ppValue;
-    for (uns32 i = 0; i < PostProc_.size(); i++)
+    for (auto& postProc : PostProc_)
     {
-        ppIndx = (int16)PostProc_[i].GetppIndex();
-        if (!pl_set_param(hPVCAM_, PARAM_PP_INDEX, &ppIndx))
-        {
-            LogPvcamError(__LINE__, "pl_set_param PARAM_PP_INDEX"); 
-            return DEVICE_ERR;
-        }
-        ppIndx = (int16)PostProc_[i].GetpropIndex();
-        if (!pl_set_param(hPVCAM_, PARAM_PP_PARAM_INDEX, &ppIndx))
-        {
-            LogPvcamError(__LINE__, "pl_set_param PARAM_PP_PARAM_INDEX"); 
-            return DEVICE_ERR;
-        }
+        ppIndex = postProc.GetFeatIndex();
+        if (!pl_set_param(hPVCAM_, PARAM_PP_INDEX, &ppIndex))
+            return LogPvcamError(__LINE__, "pl_set_param PARAM_PP_INDEX"); 
+        ppIndex = postProc.GetPropIndex();
+        if (!pl_set_param(hPVCAM_, PARAM_PP_PARAM_INDEX, &ppIndex))
+            return LogPvcamError(__LINE__, "pl_set_param PARAM_PP_PARAM_INDEX"); 
         if (!pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_CURRENT, &ppValue))
-        {
-            LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM ATTR_CURRENT"); 
-            return DEVICE_ERR;
-        }
-        PostProc_[i].SetcurValue(ppValue);
+            return LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM ATTR_CURRENT"); 
+        postProc.SetCurValue(ppValue);
     }
     return DEVICE_OK;
 }
 
-int Universal::revertPostProcValue( long absoluteParamIdx, MM::PropertyBase* pProp )
+void Universal::revertPostProcValue(long absoluteParamIdx, MM::PropertyBase* pProp)
 {
+    // Get previous value from PVCAM, and restore the value back into the control
+    // and other data structures
     uns32 ppValue;
-
-    // get previous value from PVCAM, and restore the value back into the control
-    //  and other data structures
-    if( pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_CURRENT, &ppValue) )
+    if (!pl_get_param(hPVCAM_, PARAM_PP_PARAM, ATTR_CURRENT, &ppValue))
     {
-        pProp->Set( (long) ppValue );
-        PostProc_[absoluteParamIdx].SetcurValue(ppValue);
+        LogPvcamError(__LINE__, "pl_get_param PARAM_PP_PARAM ATTR_CURRENT"); 
+        return; // Ignore nested errors
     }
 
-    return DEVICE_OK;
+    PostProc_.at(absoluteParamIdx).SetCurValue(ppValue);
+
+    // On Windows, the long type is 32-bit only thus the uns32 value might be misinterpret
+    pProp->Set(static_cast<long>(ppValue));
 }
 
 int Universal::postExpSetupInit(unsigned int frameSize)
@@ -6751,6 +6890,41 @@ int Universal::applyAcqConfig(bool forceSetup)
     if (acqCfgNew_.DiskStreamingCoreSkipRatio != acqCfgCur_.DiskStreamingCoreSkipRatio)
     {
         configChanged = true;
+    }
+
+    // Frame summing possibly requires buffer reallocation because the bit depth
+    // and host image format can change and those values are known after acq. setup.
+    if (acqCfgNew_.HostFrameSummingEnabled != acqCfgCur_.HostFrameSummingEnabled)
+    {
+        configChanged = true;
+        setupRequired = true;
+        nRet = prmHostFrameSummingEnabled_->SetAndApply(acqCfgNew_.HostFrameSummingEnabled ? TRUE : FALSE);
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+    }
+    if (acqCfgNew_.HostFrameSummingCount != acqCfgCur_.HostFrameSummingCount)
+    {
+        configChanged = true;
+        setupRequired = true;
+        nRet = prmHostFrameSummingCount_->SetAndApply(static_cast<uns32>(acqCfgNew_.HostFrameSummingCount));
+        if (nRet != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
+    }
+    if (acqCfgNew_.HostFrameSummingFormat != acqCfgCur_.HostFrameSummingFormat)
+    {
+        configChanged = true;
+        setupRequired = true;
+        if ((nRet = prmHostFrameSummingFormat_->SetAndApply(acqCfgNew_.HostFrameSummingFormat)) != DEVICE_OK)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            return nRet; // Error logged in SetAndApply()
+        }
     }
 
     // Change in exposure only means to reconfigure the acquisition

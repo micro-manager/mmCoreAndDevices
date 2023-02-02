@@ -102,6 +102,7 @@
 #define ERR_TOO_MANY_ROIS               10014 // Device does not support that many ROIs (uM 2.0)
 #define ERR_FILE_OPERATION_FAILED       10015
 #define ERR_SW_TRIGGER_NOT_SUPPORTED    10016
+#define ERR_PIXEL_TYPE_NOT_SUPPORTED    10017
 
 // PVCAM-specific error codes base. When a PVCAM error occurs we use the PVCAM
 // ID and PVCAM message to create a new uM error code, we call the SetErrorCode()
@@ -567,6 +568,22 @@ public: // Action handlers
     */
     int OnTimingPostTriggerDelayNs(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+    /**
+    * Enables or disables the Frame Summing feature on host side.
+    * It is a feature provided by PVCAM and available for all cameras.
+    */
+    int OnHostFrameSummingEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured frame count to sum.
+    */
+    int OnHostFrameSummingCount(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured output image format.
+    * When summing multiple frames, the result pixel value can go quickly out of
+    * 16-bit range. This allows to switch the output image format e.g. to 32-bit.
+    */
+    int OnHostFrameSummingFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 public: // Other published methods
     /**
     * Returns the PVCAM camera handle.
@@ -775,7 +792,7 @@ private:
     /**
     * Reverts a single setting that we know had an error
     */
-    int revertPostProcValue( long absoluteParamIdx, MM::PropertyBase* pProp);
+    void revertPostProcValue(long absoluteParamIdx, MM::PropertyBase* pProp);
     /**
     * This function is called right after pl_exp_setup_seq() and pl_exp_setup_cont()
     * After setup is called following parameters become available or may change their values:
@@ -996,6 +1013,10 @@ private:
     PvParam<long64>*  prmClearingTime_; // Available/updated after pl_exp_setup_*()
     PvParam<long64>*  prmPostTriggerDelay_; // Available/updated after pl_exp_setup_*()
     PvParam<long64>*  prmPreTriggerDelay_; // Available/updated after pl_exp_setup_*()
+
+    std::unique_ptr<PvParam<rs_bool>> prmHostFrameSummingEnabled_;
+    std::unique_ptr<PvParam<uns32>>   prmHostFrameSummingCount_;
+    std::unique_ptr<PvEnumParam>      prmHostFrameSummingFormat_;
 
     // List of post processing features
     std::vector<PpParam> PostProc_; // PP_PARAM can change: BIT_DEPTH, IMAGE_FORMAT
