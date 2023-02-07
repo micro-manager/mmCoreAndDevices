@@ -6,9 +6,9 @@
 
 #include "NotificationEntry.h"
 
-#include <boost/thread/condition_variable.hpp>
-
+#include <condition_variable>
 #include <deque>
+#include <mutex>
 
 class Universal;
 
@@ -94,8 +94,8 @@ private:
 
     Universal*                universal_;
 
-    boost::condition_variable frameReadyCondition_;
-    boost::mutex              threadMutex_;
+    std::condition_variable   frameReadyCondition_;
+    std::mutex                threadMutex_;
 
     std::deque<NotificationEntry> deque_;
     int                       maxSize_;

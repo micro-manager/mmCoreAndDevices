@@ -32,7 +32,7 @@ int  NotificationThread::Capacity() const
 
 bool NotificationThread::PushNotification( const NotificationEntry& entry )
 {
-    threadMutex_.lock();
+    std::lock_guard<std::mutex> lock(threadMutex_);
 
     bool bRet = true;
 
@@ -51,7 +51,6 @@ bool NotificationThread::PushNotification( const NotificationEntry& entry )
         frameReadyCondition_.notify_one();
     }
 
-    threadMutex_.unlock();
     return bRet;
 }
 
@@ -78,10 +77,11 @@ int NotificationThread::svc()
 void NotificationThread::requestStop()
 {
     // Request the thread to stop
-    threadMutex_.lock();
-    requestStop_ = true;
+    {
+        std::lock_guard<std::mutex> lock(threadMutex_);
+        requestStop_ = true;
+    }
     frameReadyCondition_.notify_one();
-    threadMutex_.unlock();
 
     // Wait for the thread function to exit
     this->wait();
@@ -89,7 +89,8 @@ void NotificationThread::requestStop()
 
 bool NotificationThread::waitNextNotification( NotificationEntry& e )
 {
-    boost::unique_lock<boost::mutex> threadLock(threadMutex_);
+    std::unique_lock<std::mutex> threadLock(threadMutex_);
+
     if (deque_.size() == 0 )
     {
         frameReadyCondition_.wait(threadLock);
