@@ -1,14 +1,12 @@
 #include "Event.h"
 
-Event::Event() : manualReset_(false), signalled_(false)
+Event::Event()
 {
 }
 
-Event::Event(bool manualReset, bool signalled) : manualReset_(manualReset), signalled_(signalled)
-{
-}
-
-Event::~Event()
+Event::Event(bool manualReset, bool signalled)
+    : manualReset_(manualReset),
+    signalled_(signalled)
 {
 }
 
@@ -27,7 +25,7 @@ void Event::Reset()
     signalled_ = false;
 }
 
-bool Event::Wait()
+void Event::Wait()
 {
     std::unique_lock<std::mutex> lock(mutex_);
 
@@ -35,8 +33,6 @@ bool Event::Wait()
 
     if (!manualReset_)
         signalled_ = false;
-
-    return true;
 }
 
 bool Event::Wait(unsigned int timeoutMs)
