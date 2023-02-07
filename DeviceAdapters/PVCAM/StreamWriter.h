@@ -1,10 +1,9 @@
 #ifndef _STREAMWRITER_H_
 #define _STREAMWRITER_H_
 
+#include <memory>
+#include <mutex>
 #include <string>
-
-#include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
 
 class StackFile;
 class TaskSet_CopyMemory;
@@ -99,12 +98,12 @@ private:
     const Universal* camera_;
 
     // TODO: Get some shared pool from outside
-    const boost::shared_ptr<ThreadPool> threadPool_;
-    const boost::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
+    const std::shared_ptr<ThreadPool> threadPool_;
+    const std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 
     size_t pageBytes_; // Set only once in constructor
 
-    mutable boost::mutex mx_; // For serialization of public method calls
+    mutable std::mutex mx_; // For serialization of public method calls
 
     bool isEnabled_; // User choice
     std::string dirRoot_; // User choice

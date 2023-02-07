@@ -7,10 +7,9 @@
 
 // Boost
 #include <boost/filesystem.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/thread/locks.hpp>
 
 // System
+#include <algorithm>
 #include <ctime>
 #include <cstdio>
 #include <cstring> // ::memset
@@ -94,8 +93,8 @@ private:
 
 StreamWriter::StreamWriter(Universal* camera)
     : camera_(camera),
-    threadPool_(boost::make_shared<ThreadPool>()),
-    tasksMemCopy_(boost::make_shared<TaskSet_CopyMemory>(threadPool_)),
+    threadPool_(std::make_shared<ThreadPool>()),
+    tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_)),
     pageBytes_(0),
     isEnabled_(false),
     dirRoot_(),
@@ -132,7 +131,7 @@ StreamWriter::StreamWriter(Universal* camera)
 
 StreamWriter::~StreamWriter()
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     StopInternal();
     FreePageAlignedBuffer(alignedBuffer_);
@@ -140,7 +139,7 @@ StreamWriter::~StreamWriter()
 
 int StreamWriter::Setup(bool enabled, const std::string& dirRoot, size_t bitDepth, size_t frameBytes)
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     StopInternal();
 
@@ -191,7 +190,7 @@ int StreamWriter::Setup(bool enabled, const std::string& dirRoot, size_t bitDept
 
 int StreamWriter::Start()
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     StopInternal();
 
@@ -235,21 +234,21 @@ int StreamWriter::Start()
 
 void StreamWriter::Stop()
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     StopInternal();
 }
 
 bool StreamWriter::IsActive() const
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     return isActive_;
 }
 
 int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     if (!isActive_)
         return DEVICE_OK;
@@ -397,6 +396,7 @@ int StreamWriter::CreateDirectories(const std::string& path) const
 {
     try
     {
+        // TODO: With C++17 use std::filesystem::create_directories(path)
         // Cannot rely on return value, it's false for path with trailing slash
         boost::filesystem::create_directories(path);
     }
