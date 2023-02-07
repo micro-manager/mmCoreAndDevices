@@ -96,16 +96,6 @@ StreamWriter::StreamWriter(Universal* camera)
     threadPool_(std::make_shared<ThreadPool>()),
     tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
-    // Optimized/non-buffered streaming requires all file writes aligned to page size
-#ifdef _WIN32
-    SYSTEM_INFO sysInfo;
-    ::GetSystemInfo(&sysInfo);
-    pageBytes_ = sysInfo.dwPageSize;
-#else
-    pageBytes_ = ::sysconf(_SC_PAGESIZE);
-#endif
-    if (pageBytes_ == 0)
-        pageBytes_ = 4096; // Use 4kB page size in case of any error
 }
 
 StreamWriter::~StreamWriter()
@@ -142,7 +132,7 @@ int StreamWriter::Setup(bool enabled, const std::string& dirRoot, size_t bitDept
     {
         frameBytes_ = frameBytes;
         const size_t frameBytesAligned =
-            ((frameBytes_ + pageBytes_ - 1) / pageBytes_) * pageBytes_;
+            ((frameBytes_ + bufferAlignment_ - 1) / bufferAlignment_) * bufferAlignment_;
 
         if (frameBytesAligned_ != frameBytesAligned)
         {
@@ -154,7 +144,7 @@ int StreamWriter::Setup(bool enabled, const std::string& dirRoot, size_t bitDept
 
             // Allocate page-aligned buffer as required by StackFile::Write.
             FreePageAlignedBuffer(alignedBuffer_);
-            alignedBuffer_ = AllocatePageAlignedBuffer(frameBytesAligned_, pageBytes_);
+            alignedBuffer_ = AllocatePageAlignedBuffer(frameBytesAligned_, bufferAlignment_);
             if (!alignedBuffer_)
             {
                 return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
@@ -265,7 +255,7 @@ int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
 
     const void* writeBuffer = pFrame;
     const bool isFrameAligned =
-        ((size_t)pFrame % pageBytes_ == 0 && frameBytes_ == frameBytesAligned_);
+        ((size_t)pFrame % bufferAlignment_ == 0 && frameBytes_ == frameBytesAligned_);
     if (!isFrameAligned)
     {
         // Standard memcpy is too slow for Kinetix, do parallel copy instead

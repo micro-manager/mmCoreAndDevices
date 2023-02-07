@@ -101,7 +101,11 @@ private:
     const std::shared_ptr<ThreadPool> threadPool_;
     const std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 
-    size_t pageBytes_{ 0 }; // Set only once in constructor
+    // Optimized/non-buffered streaming requires all file writes to be aligned.
+    // The O_DIRECT requires 512B alignment, the FILE_FLAG_NO_BUFFERING requires
+    // "physical sector size" alignment. Since most common disk sector sizes are
+    // 512B and 4k, we use the latter which will fits all the requirements.
+    const static size_t bufferAlignment_{ 4096 };
 
     mutable std::mutex mx_{}; // For serialization of public method calls
 
@@ -109,7 +113,7 @@ private:
     std::string dirRoot_{}; // User choice
     size_t bitDepth_{ 0 }; // Taken from PVCAM
     size_t frameBytes_{ 0 }; // Taken from PVCAM, may include metadata
-    size_t frameBytesAligned_{ 0 }; // frameBytes_ aligned to pageBytes_
+    size_t frameBytesAligned_{ 0 }; // frameBytes_ aligned to bufferAlignment_
     size_t maxFramesPerStack_{ 0 }; // Max. number of frames that fit in 3 GB
     void* alignedBuffer_{ nullptr }; // Allocated to frameBytesAligned_ if differs from frameBytes_
 
