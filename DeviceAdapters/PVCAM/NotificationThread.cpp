@@ -2,15 +2,12 @@
 
 #include "PVCAMAdapter.h"
 
-NotificationThread::NotificationThread(Universal* pCamera) :
-    universal_(pCamera),
-    requestStop_(false),
-    overflowed_(false),
-    maxSize_(0)
+NotificationThread::NotificationThread(Universal* pCamera)
+    : universal_(pCamera)
 {
 }
 
-NotificationThread::~NotificationThread(void)
+NotificationThread::~NotificationThread()
 {
     requestStop();
 }
@@ -30,14 +27,14 @@ int  NotificationThread::Capacity() const
     return maxSize_;
 }
 
-bool NotificationThread::PushNotification( const NotificationEntry& entry )
+bool NotificationThread::PushNotification(const NotificationEntry& entry)
 {
     std::lock_guard<std::mutex> lock(threadMutex_);
 
     bool bRet = true;
 
-    deque_.push_back( entry );
-    if ( static_cast<int>(deque_.size()) > maxSize_ )
+    deque_.push_back(entry);
+    if (static_cast<int>(deque_.size()) > maxSize_)
     {
         // We delete the first notification in the queue because it's the oldest
         // entry and there is a risk that the frame pointer will get soon overwritten
@@ -57,12 +54,12 @@ bool NotificationThread::PushNotification( const NotificationEntry& entry )
 // From MMDeviceThreadBase
 int NotificationThread::svc()
 {
-    while(!requestStop_)
+    while (!requestStop_)
     {
         NotificationEntry n;
-        if ( waitNextNotification( n ) )
+        if (waitNextNotification(n))
         {
-            universal_->ProcessNotification( n );
+            universal_->ProcessNotification(n);
         }
         else
         {   // Request stop flagged
@@ -87,14 +84,14 @@ void NotificationThread::requestStop()
     this->wait();
 }
 
-bool NotificationThread::waitNextNotification( NotificationEntry& e )
+bool NotificationThread::waitNextNotification(NotificationEntry& e)
 {
     std::unique_lock<std::mutex> threadLock(threadMutex_);
 
-    if (deque_.size() == 0 )
+    if (deque_.size() == 0)
     {
         frameReadyCondition_.wait(threadLock);
-        if ( requestStop_ )
+        if (requestStop_)
             return false;
     }
 
