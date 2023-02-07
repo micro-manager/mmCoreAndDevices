@@ -17,14 +17,14 @@ public:
     * Creates the writer. The streaming needs to be started with Start().
     * @param camera A pointer to the owner class.
     */
-    StreamWriter(Universal* camera);
+    explicit StreamWriter(Universal* camera);
     /**
     * Deletes the object, stops the streaming if active.
     */
     ~StreamWriter();
 
-    StreamWriter(const StreamWriter&)/* = delete*/;
-    StreamWriter& operator=(const StreamWriter&)/* = delete*/;
+    StreamWriter(const StreamWriter&) = delete;
+    StreamWriter& operator=(const StreamWriter&) = delete;
 
 public:
     /**
@@ -101,33 +101,33 @@ private:
     const std::shared_ptr<ThreadPool> threadPool_;
     const std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 
-    size_t pageBytes_; // Set only once in constructor
+    size_t pageBytes_{ 0 }; // Set only once in constructor
 
-    mutable std::mutex mx_; // For serialization of public method calls
+    mutable std::mutex mx_{}; // For serialization of public method calls
 
-    bool isEnabled_; // User choice
-    std::string dirRoot_; // User choice
-    size_t bitDepth_; // Taken from PVCAM
-    size_t frameBytes_; // Taken from PVCAM, may include metadata
-    size_t frameBytesAligned_; // frameBytes_ aligned to pageBytes_
-    size_t maxFramesPerStack_; // Max. number of frames that fit in 3 GB
-    void* alignedBuffer_; // Allocated to frameBytesAligned_ if differs from frameBytes_
+    bool isEnabled_{ false }; // User choice
+    std::string dirRoot_{}; // User choice
+    size_t bitDepth_{ 0 }; // Taken from PVCAM
+    size_t frameBytes_{ 0 }; // Taken from PVCAM, may include metadata
+    size_t frameBytesAligned_{ 0 }; // frameBytes_ aligned to pageBytes_
+    size_t maxFramesPerStack_{ 0 }; // Max. number of frames that fit in 3 GB
+    void* alignedBuffer_{ nullptr }; // Allocated to frameBytesAligned_ if differs from frameBytes_
 
-    std::string sessionId_; // Auto-generated as timestamp
-    std::string path_; // dirRoot_ + session_
-    bool isActive_; // True when set up and configured
+    std::string sessionId_{}; // Auto-generated as timestamp
+    std::string path_{}; // dirRoot_ + session_
+    bool isActive_{ false }; // True when set up and configured
 
-    StackFile* stackFile_;
-    std::string stackFileName_; // Only file name without path
-    size_t stackFileIndex_;
-    size_t stackFileFrameIndex_;
+    StackFile* stackFile_{ nullptr };
+    std::string stackFileName_{}; // Only file name without path
+    size_t stackFileIndex_{ 0 };
+    size_t stackFileFrameIndex_{ 0 };
 
-    mutable char convBuf_[1024];
-    size_t totalFramesLost_;
-    size_t stackFramesLost_;
-    std::string totalSummary_;
-    std::string stackSummary_;
-    size_t lastFrameNr_;
+    mutable char convBuf_[1024]{};
+    size_t totalFramesLost_{ 0 };
+    size_t stackFramesLost_{ 0 };
+    std::string totalSummary_{};
+    std::string stackSummary_{};
+    size_t lastFrameNr_{ 0 };
 };
 
 #endif // _STREAMWRITER_H_

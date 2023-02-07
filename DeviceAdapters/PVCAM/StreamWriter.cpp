@@ -88,34 +88,13 @@ public:
     }
 
 private:
-    FileHandle hFile_;
+    FileHandle hFile_{ cInvalidFileHandle };
 };
 
 StreamWriter::StreamWriter(Universal* camera)
     : camera_(camera),
     threadPool_(std::make_shared<ThreadPool>()),
-    tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_)),
-    pageBytes_(0),
-    isEnabled_(false),
-    dirRoot_(),
-    bitDepth_(0),
-    frameBytes_(0),
-    frameBytesAligned_(0),
-    maxFramesPerStack_(0),
-    alignedBuffer_(NULL),
-    sessionId_(),
-    path_(),
-    isActive_(false),
-    stackFile_(NULL),
-    stackFileName_(),
-    stackFileIndex_(0),
-    stackFileFrameIndex_(0),
-    //convBuf_(),
-    totalFramesLost_(0),
-    stackFramesLost_(0),
-    totalSummary_(),
-    stackSummary_(),
-    lastFrameNr_(0)
+    tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
     // Optimized/non-buffered streaming requires all file writes aligned to page size
 #ifdef _WIN32
@@ -255,10 +234,7 @@ int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
 
     if (stackFileFrameIndex_ == 0)
     {
-        // Cannot use "%zu" to build on Linux without C++11
-        //snprintf(convBuf_, sizeof(convBuf_), "stack-%05zu_fr-%06zu.raw", stackFileIndex_, frameNr);
-        snprintf(convBuf_, sizeof(convBuf_), "stack-%05llu_fr-%06llu.raw",
-                (unsigned long long)stackFileIndex_, (unsigned long long)frameNr);
+        snprintf(convBuf_, sizeof(convBuf_), "stack-%05zu_fr-%06zu.raw", stackFileIndex_, frameNr);
         stackFileName_ = convBuf_;
 
         const std::string fullStackFileName = path_ + convBuf_;
@@ -276,14 +252,11 @@ int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
     {
         if (framesLost == 1)
         {
-            snprintf(convBuf_, sizeof(convBuf_), "%llu\n",
-                    (unsigned long long)(lastFrameNr_ + 1));
+            snprintf(convBuf_, sizeof(convBuf_), "%zu\n", lastFrameNr_ + 1);
         }
         else
         {
-            snprintf(convBuf_, sizeof(convBuf_), "%llu-%llu\n",
-                    (unsigned long long)(lastFrameNr_ + 1),
-                    (unsigned long long)(frameNr - 1));
+            snprintf(convBuf_, sizeof(convBuf_), "%zu-%zu\n", lastFrameNr_ + 1, frameNr - 1);
         }
         stackSummary_ += convBuf_;
         stackFramesLost_ += framesLost;
@@ -432,8 +405,7 @@ int StreamWriter::GenerateImportHints_ImageJ(const std::string& fileName) const
     }
     else
     {
-        // Cannot use "%zu" to build on Linux without C++11
-        snprintf(convBuf_, sizeof(convBuf_), "%llu", (unsigned long long)bitDepth_);
+        snprintf(convBuf_, sizeof(convBuf_), "%zu", bitDepth_);
         return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
                 std::string("Unsupported bit depth for streaming: ") + convBuf_);
     }
@@ -517,7 +489,7 @@ void StreamWriter::MoveStackToTotalSummary()
     if (stackFramesLost_ == 0)
         return;
 
-    snprintf(convBuf_, sizeof(convBuf_), "%llu", (unsigned long long)stackFramesLost_);
+    snprintf(convBuf_, sizeof(convBuf_), "%zu", stackFramesLost_);
     totalSummary_ += "\n" + stackFileName_ + " - lost " + convBuf_ + " frames:\n" + stackSummary_;
     totalFramesLost_ += stackFramesLost_;
 
