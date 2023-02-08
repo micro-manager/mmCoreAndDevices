@@ -72,14 +72,14 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;LUMENERA_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\Lumenera\mm-luxapps\source\host\LuXApps\ThirdParty\json\src;$(MM_3RDPARTYPRIVATE)\Lumenera\mm-luxapps\source\inc;$(MM_3RDPARTYPRIVATE)\Lumenera\mm-luxapps\source\host\LuXApps\ThirdParty\include;$(MM_3RDPARTYPRIVATE)\Lumenera\mm-luxapps\source\host\LuXApps\Shared\include;$(MM_3RDPARTYPRIVATE)\Lumenera\mm-luxapps\source\host\LuXApps\lumenera_sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\third_party;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\third_party\json\src;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\inc;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\luxapps;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\lumenera_sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\Lumenera\mm-luxapps\source\host\LuXApps\lumenera_sdk\lib\win\lib64\Debug;$(MM_3RDPARTYPRIVATE)\Lumenera\mm-luxapps\source\host\LuXApps\Shared\lib\win\lib64;$(MM_3RDPARTYPRIVATE)\Lumenera\mm-luxapps\source\host\LuXApps\ThirdParty\lib\win\lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\Lumenera\mm\lib\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opencv_world331d.lib;lucamapi.lib;luxappsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
@@ -94,7 +94,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;LUMENERA_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\trunk\Lumenera\mm-luxapps\source\host\LuXApps\ThirdParty\json\src;$(MM_3RDPARTYPRIVATE)\trunk\Lumenera\mm-luxapps\source\inc;$(MM_3RDPARTYPRIVATE)\trunk\Lumenera\mm-luxapps\source\host\LuXApps\ThirdParty\include;$(MM_3RDPARTYPRIVATE)\trunk\Lumenera\mm-luxapps\source\host\LuXApps\Shared\include;$(MM_3RDPARTYPRIVATE)\trunk\Lumenera\mm-luxapps\source\host\LuXApps\lumenera_sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\third_party;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\third_party\json\src;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\inc;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\luxapps;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\lumenera_sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -102,7 +102,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\trunk\Lumenera\mm-luxapps\source\host\LuXApps\lumenera_sdk\lib\win\lib64\Release;$(MM_3RDPARTYPRIVATE)\trunk\Lumenera\mm-luxapps\source\host\LuXApps\Shared\lib\win\lib64;$(MM_3RDPARTYPRIVATE)\trunk\Lumenera\mm-luxapps\source\host\LuXApps\ThirdParty\lib\win\lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\Lumenera\mm\lib\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>lucamapi.lib;luxapps.lib;opencv_world331.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
