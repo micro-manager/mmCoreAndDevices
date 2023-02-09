@@ -126,7 +126,7 @@ private:
     size_t stackFileIndex_{ 0 };
     size_t stackFileFrameIndex_{ 0 };
 
-    mutable char convBuf_[1024]{};
+    char convBuf_[1024]{};
     size_t totalFramesLost_{ 0 };
     size_t stackFramesLost_{ 0 };
     std::string totalSummary_{};

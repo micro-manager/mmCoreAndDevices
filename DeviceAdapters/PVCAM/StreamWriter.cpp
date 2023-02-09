@@ -395,9 +395,8 @@ int StreamWriter::GenerateImportHints_ImageJ(const std::string& fileName) const
     }
     else
     {
-        snprintf(convBuf_, sizeof(convBuf_), "%zu", bitDepth_);
         return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
-                std::string("Unsupported bit depth for streaming: ") + convBuf_);
+                "Unsupported bit depth for streaming: " + std::to_string(bitDepth_));
     }
 
     // ImageJ requires to know a "gap" between images, rather than offset or
@@ -479,8 +478,8 @@ void StreamWriter::MoveStackToTotalSummary()
     if (stackFramesLost_ == 0)
         return;
 
-    snprintf(convBuf_, sizeof(convBuf_), "%zu", stackFramesLost_);
-    totalSummary_ += "\n" + stackFileName_ + " - lost " + convBuf_ + " frames:\n" + stackSummary_;
+    totalSummary_ += "\n" + stackFileName_ + " - lost "
+        + std::to_string(stackFramesLost_) + " frames:\n" + stackSummary_;
     totalFramesLost_ += stackFramesLost_;
 
     stackFramesLost_ = 0;
