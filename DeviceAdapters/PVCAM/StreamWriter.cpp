@@ -5,9 +5,6 @@
 #include "TaskSet_CopyMemory.h"
 #include "ThreadPool.h"
 
-// Boost
-#include <boost/filesystem.hpp>
-
 // System
 #include <algorithm>
 #include <ctime>
@@ -15,10 +12,14 @@
 #include <cstring> // ::memset
 #include <fstream>
 #include <limits>
+#include <stdexcept> // TODO: Remove once switched to C++17
 
 #ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
     #include <Windows.h>
     #include <malloc.h> // _aligned_malloc
+    #include <direct.h> // _mkdir, TODO: Remove once switched to C++17
+    #include <sys/stat.h> // TODO: Remove once switched to C++17
     typedef void* FileHandle;
     #define cInvalidFileHandle (INVALID_HANDLE_VALUE)
 #else
@@ -346,7 +347,7 @@ int StreamWriter::GenerateNewSessionId(std::string& sessionId) const
     char buffer[sizeof(format)];
     if (std::strftime(buffer, sizeof(buffer), formatStr, &tm) != sizeof(format) - 1)
     {
-        return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
+        return camera_->LogAdapterError(ERR_FILE_OPERATION_FAILED, __LINE__,
                 std::string("Failed to generate new streaming session ID"));
     }
 
@@ -359,13 +360,59 @@ int StreamWriter::CreateDirectories(const std::string& path) const
 {
     try
     {
-        // TODO: With C++17 use std::filesystem::create_directories(path)
-        // Cannot rely on return value, it's false for path with trailing slash
-        boost::filesystem::create_directories(path);
+        auto CreateDir = [](const char* path) -> bool {
+            struct stat st;
+            if (::stat(path, &st) != 0)
+            {
+#ifdef _WIN32
+                if (::_mkdir(path) != 0)
+#else
+                constexpr mode_t mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+                if (::mkdir(path, mode) != 0)
+#endif
+                {
+                    // Directory didn't exist but maybe was created between stat and mkdir
+                    // MacOS BigSur returns EISDIR when trying to create "/"
+                    if (errno != EEXIST && errno != EISDIR)
+                        return false;
+                }
+            }
+            else if ((st.st_mode & S_IFMT) != S_IFDIR)
+            {
+                return false;
+            }
+            return true;
+        };
+
+        std::string copy(path);
+        char* next = &copy[0];
+#ifdef _WIN32
+        if (copy.size() >= 3 && copy[1] == ':' && copy[2] == '/')
+            next = &copy[2]; // Skip the drive letter and colon
+#endif
+        char* found;
+        bool ok = true;
+        while (ok && (found = std::strchr(next, '/')) != nullptr)
+        {
+            if (found != next)
+            {
+                *found = '\0';
+                ok = CreateDir(copy.c_str());
+                *found = '/';
+            }
+            next = found + 1;
+        }
+        if (ok && path.back() != '/')
+            ok = CreateDir(path.c_str());
+        if (!ok)
+            throw std::runtime_error("failure");
+
+        // TODO: With C++17 use this line instead of all the code above:
+        //std::filesystem::create_directories(path);
     }
     catch (...)
     {
-        return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
+        return camera_->LogAdapterError(ERR_FILE_OPERATION_FAILED, __LINE__,
                 std::string("Failed to create folder structure '") + path + "'");
     }
     return DEVICE_OK;
@@ -395,7 +442,7 @@ int StreamWriter::GenerateImportHints_ImageJ(const std::string& fileName) const
     }
     else
     {
-        return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
+        return camera_->LogAdapterError(ERR_FILE_OPERATION_FAILED, __LINE__,
                 "Unsupported bit depth for streaming: " + std::to_string(bitDepth_));
     }
 
