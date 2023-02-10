@@ -17,8 +17,12 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
-#include "StCamD.h"
 #include "Camera.h"
+
+#define NOMINMAX
+#include <Windows.h> // Needed by StCamD.h
+#include "StCamD.h"
+
 using namespace std;
 
 // Constants 
