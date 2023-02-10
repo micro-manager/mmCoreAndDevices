@@ -23,26 +23,25 @@
 
 #pragma once
 
-#include <boost/smart_ptr/shared_ptr.hpp>
-
 #include <cstddef>
+#include <memory>
 
 class Semaphore;
 
 class Task
 {
 public:
-    explicit Task(boost::shared_ptr<Semaphore> semaphore, size_t taskIndex, size_t totalTaskCount);
+    explicit Task(std::shared_ptr<Semaphore> semaphore, size_t taskIndex, size_t totalTaskCount);
     virtual ~Task();
 
-    Task(const Task&)/* = delete*/;
-    Task& operator=(const Task&)/* = delete*/;
+    Task(const Task&) = delete;
+    Task& operator=(const Task&) = delete;
 
     virtual void Execute() = 0;
     void Done();
 
 private:
-    const boost::shared_ptr<Semaphore> semaphore_;
+    const std::shared_ptr<Semaphore> semaphore_;
 
 protected:
     const size_t taskIndex_;

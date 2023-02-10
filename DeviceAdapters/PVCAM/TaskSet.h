@@ -27,19 +27,17 @@
 #include "Task.h"
 #include "ThreadPool.h"
 
-#include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/utility/enable_if.hpp>
-
+#include <memory>
 #include <vector>
 
 class TaskSet
 {
 public:
-    explicit TaskSet(boost::shared_ptr<ThreadPool> pool);
+    explicit TaskSet(std::shared_ptr<ThreadPool> pool);
     virtual ~TaskSet();
 
-    TaskSet(const TaskSet&)/* = delete*/;
-    TaskSet& operator=(const TaskSet&)/* = delete*/;
+    TaskSet(const TaskSet&) = delete;
+    TaskSet& operator=(const TaskSet&) = delete;
 
     size_t GetUsedTaskCount() const;
 
@@ -47,10 +45,9 @@ public:
     virtual void Wait();
 
 protected:
-    //template<class T,
-    //    // Private param to enforce the type T derives from Task class
-    //    typename std::enable_if<std::is_base_of<Task, T>::value, int>::type = 0>
-    template<class T>
+    template<class T,
+        // Private param to enforce the type T derives from Task class
+        typename std::enable_if<std::is_base_of<Task, T>::value, int>::type = 0>
     void CreateTasks()
     {
         const size_t taskCount = pool_->GetSize();
@@ -66,8 +63,8 @@ protected:
     }
 
 protected:
-    const boost::shared_ptr<ThreadPool> pool_;
-    const boost::shared_ptr<Semaphore> semaphore_;
-    std::vector<Task*> tasks_;
-    size_t usedTaskCount_;
+    const std::shared_ptr<ThreadPool> pool_;
+    const std::shared_ptr<Semaphore> semaphore_;
+    std::vector<Task*> tasks_{};
+    size_t usedTaskCount_{ 0 };
 };

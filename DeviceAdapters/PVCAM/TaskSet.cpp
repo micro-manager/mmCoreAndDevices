@@ -23,21 +23,18 @@
 
 #include "TaskSet.h"
 
-#include <boost/foreach.hpp>
-#include <boost/make_shared.hpp>
+#include <cassert>
 
-TaskSet::TaskSet(boost::shared_ptr<ThreadPool> pool)
+TaskSet::TaskSet(std::shared_ptr<ThreadPool> pool)
     : pool_(pool),
-    semaphore_(boost::make_shared<Semaphore>()),
-    tasks_(),
-    usedTaskCount_(0)
+    semaphore_(std::make_shared<Semaphore>())
 {
-    assert(pool != NULL);
+    assert(pool);
 }
 
 TaskSet::~TaskSet()
 {
-    BOOST_FOREACH(Task* task, tasks_)
+    for (Task* task : tasks_)
         delete task;
 }
 

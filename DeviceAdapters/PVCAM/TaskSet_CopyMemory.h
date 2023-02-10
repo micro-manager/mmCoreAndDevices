@@ -31,25 +31,25 @@ private:
     class ATask : public Task
     {
     public:
-        explicit ATask(boost::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount);
+        explicit ATask(std::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount);
 
         void SetUp(void* dst, const void* src, size_t bytes, size_t usedTaskCount);
 
-        virtual void Execute()/* override*/;
+        virtual void Execute() override;
 
     private:
-        void* dst_;
-        const void* src_;
-        size_t bytes_;
+        void* dst_{ nullptr };
+        const void* src_{ nullptr };
+        size_t bytes_{ 0 };
     };
 
 public:
-    explicit TaskSet_CopyMemory(boost::shared_ptr<ThreadPool> pool);
+    explicit TaskSet_CopyMemory(std::shared_ptr<ThreadPool> pool);
 
     void SetUp(void* dst, const void* src, size_t bytes);
 
-    virtual void Execute()/* override*/;
-    virtual void Wait()/* override*/;
+    virtual void Execute() override;
+    virtual void Wait() override;
 
     // Helper blocking method calling SetUp, Execute and Wait
     void MemCopy(void* dst, const void* src, size_t bytes);
