@@ -165,6 +165,10 @@ int DigitalOutputPort::Shutdown()
    if (!initialized_)
       return DEVICE_OK;
 
+   if (blanking_)
+       GetHub()->StopDOBlankingAndSequence(portWidth_);
+   blanking_ = false; 
+
    SetState(0);
    int err = StopTask();
 
