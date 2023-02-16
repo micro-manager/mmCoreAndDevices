@@ -27,7 +27,7 @@
 #include <cstddef>
 #include <mutex>
 
-class Semaphore/* final*/
+class Semaphore final
 {
 public:
     explicit Semaphore();
@@ -37,7 +37,7 @@ public:
     void Release(size_t count = 1);
 
 private:
-    size_t count_;
-    std::mutex mx_;
-    std::condition_variable cv_;
+    size_t count_{ 0 };
+    std::mutex mx_{};
+    std::condition_variable cv_{};
 };

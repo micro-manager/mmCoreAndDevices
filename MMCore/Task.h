@@ -34,8 +34,8 @@ public:
     explicit Task(std::shared_ptr<Semaphore> semaphore, size_t taskIndex, size_t totalTaskCount);
     virtual ~Task();
 
-    Task(const Task&)/* = delete*/;
-    Task& operator=(const Task&)/* = delete*/;
+    Task(const Task&) = delete;
+    Task& operator=(const Task&) = delete;
 
     virtual void Execute() = 0;
     void Done();

@@ -24,15 +24,12 @@
 #include "TaskSet.h"
 
 #include <cassert>
-#include <memory>
 
 TaskSet::TaskSet(std::shared_ptr<ThreadPool> pool)
     : pool_(pool),
-    semaphore_(std::make_shared<Semaphore>()),
-    tasks_(),
-    usedTaskCount_(0)
+    semaphore_(std::make_shared<Semaphore>())
 {
-    assert(pool != NULL);
+    assert(pool);
 }
 
 TaskSet::~TaskSet()
