@@ -409,23 +409,6 @@ int BaslerCamera::Initialize()
 		//end of Sensor size
 
 
-#if (!_DEBUG)
-		ClearROI();// to be enabled for release
-#else 
-		{
-			ReduceImageSize(200, 200);
-			if (camera_->IsGigE())
-			{
-				CIntegerPtr(camera_->GetTLNodeMap().GetNode("HeartbeatTimeout"))->SetValue(24 * 1000);
-			}
-		}
-		if (IsAvailable(camera_->TestImageSelector))
-		{
-			camera_->TestImageSelector.TrySetValue(TestImageSelector_Testimage4);
-		}
-#endif
-
-
 		long bytes = (long)(height->GetValue() * width->GetValue() * 4);
 		Buffer4ContinuesShot = malloc(bytes);
 
