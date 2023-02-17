@@ -365,6 +365,7 @@ int CDemoCamera::Initialize()
    vector<string> bitDepths;
    bitDepths.push_back("8");
    bitDepths.push_back("10");
+   bitDepths.push_back("11");
    bitDepths.push_back("12");
    bitDepths.push_back("14");
    bitDepths.push_back("16");
@@ -1514,6 +1515,11 @@ int CDemoCamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
 					bytesPerComponent = 2;
                bitDepth_ = 10;
                ret=DEVICE_OK;
+            break;
+            case 11:
+                    bytesPerComponent = 2;
+                bitDepth_ = 11;
+                ret = DEVICE_OK;
             break;
             case 12:
 					bytesPerComponent = 2;
