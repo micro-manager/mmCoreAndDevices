@@ -456,6 +456,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SequenceTester", "DeviceAda
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SigmaKoki", "DeviceAdapters\SigmaKoki\SigmaKoki.vcxproj", "{39655236-2634-4ED3-AACD-0C9B032F805C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pixelink", "DeviceAdapters\Pixelink\Pixelink.vcxproj", "{899D6AEF-6BC3-4203-B566-4EA4B52D1E80}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1370,6 +1372,10 @@ Global
 		{39655236-2634-4ED3-AACD-0C9B032F805C}.Debug|x64.Build.0 = Debug|x64
 		{39655236-2634-4ED3-AACD-0C9B032F805C}.Release|x64.ActiveCfg = Release|x64
 		{39655236-2634-4ED3-AACD-0C9B032F805C}.Release|x64.Build.0 = Release|x64
+		{899D6AEF-6BC3-4203-B566-4EA4B52D1E80}.Debug|x64.ActiveCfg = Debug|x64
+		{899D6AEF-6BC3-4203-B566-4EA4B52D1E80}.Debug|x64.Build.0 = Debug|x64
+		{899D6AEF-6BC3-4203-B566-4EA4B52D1E80}.Release|x64.ActiveCfg = Release|x64
+		{899D6AEF-6BC3-4203-B566-4EA4B52D1E80}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
