@@ -2,8 +2,8 @@
 
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
-#include "ASICamera2.h"
-#include "EFW_filter.h"
+#include "./include/ASICamera2.h"
+#include "./include/EFW_filter.h"
 #include "ModuleInterface.h"
 #include "comdef.h"
 
