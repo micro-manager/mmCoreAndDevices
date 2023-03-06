@@ -1947,8 +1947,7 @@ bool CMyEFW::Busy()//返回true时不刷新label和state
 	if(bPosWait)//
 	{
 		MM::MMTime interval = GetCurrentMMTime() - changedTime_;
-//	MM::MMTime delay(GetDelayMs()*1000.0);
-		if (interval < 500*1000.0)
+		if (interval < MM::MMTime::fromMs(500))
 			return true;
 	}
 	int pos;

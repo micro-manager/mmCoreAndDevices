@@ -87,7 +87,7 @@ int SequenceThread::svc(void) throw()
 	 
       do
       {  
-         ret = camera_->RunSequenceOnThread(0);//startTime_
+         ret = camera_->RunSequenceOnThread(MM::MMTime{});//startTime_
       } while (!IsStopped() );//DEVICE_OK == ret &&           && imageCounter_++ < numImages_-1
 	  ASIStopVideoCapture(camera_->ASICameraInfo.CameraID);
    camera_->OnThreadExiting();
