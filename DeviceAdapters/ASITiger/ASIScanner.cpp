@@ -363,7 +363,7 @@ int CScanner::Initialize()
    if (hub_->IsDefinePresent(build, "DAC_4CH"))  // special galvo firmware with analog outputs
    {
       dac4ch_ = true;
-      if (hub->IsDefinePresent(build, "SIGNAL_DAC")
+      if (hub_->IsDefinePresent(build, "SIGNAL_DAC"))
       {
 	signalDAC_ = true;
 	// add output mode property, for SIGNAL_DAC a restart is required and use PR instead of PM
