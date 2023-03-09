@@ -11,42 +11,57 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Controller.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PI_GCS_2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PIGCSControllerCom.cpp">
+    <ClCompile Include="PIGCSCommandsDLL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PIGCSControllerDLL.cpp">
+    <ClCompile Include="PIController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PIXYStage_DLL.cpp">
+    <ClCompile Include="PIZStage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PIZStage_DLL.cpp">
+    <ClCompile Include="PIXYStage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PIGCSControllerDLLDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PIGCSControllerComDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PIGCSCommands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Controller.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PI_GCS_2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PIGCSControllerCom.h">
+    <ClInclude Include="PIGCSCommandsDLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PIGCSControllerDLL.h">
+    <ClInclude Include="PIController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PIXYStage_DLL.h">
+    <ClInclude Include="PIZStage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PIZStage_DLL.h">
+    <ClInclude Include="PIXYStage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PIGCSControllerDLLDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PIGCSControllerComDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PIGCSCommands.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PIControllerObserver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
