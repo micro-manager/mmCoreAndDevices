@@ -87,20 +87,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Controller.cpp" />
+    <ClCompile Include="PIController.cpp" />
+    <ClCompile Include="PIGCSCommands.cpp" />
+    <ClCompile Include="PIGCSCommandsDLL.cpp" />
+    <ClCompile Include="PIGCSControllerComDevice.cpp" />
+    <ClCompile Include="PIGCSControllerDLLDevice.cpp" />
+    <ClCompile Include="PIXYStage.cpp" />
+    <ClCompile Include="PIZStage.cpp" />
     <ClCompile Include="PI_GCS_2.cpp" />
-    <ClCompile Include="PIGCSControllerCom.cpp" />
-    <ClCompile Include="PIGCSControllerDLL.cpp" />
-    <ClCompile Include="PIXYStage_DLL.cpp" />
-    <ClCompile Include="PIZStage_DLL.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Controller.h" />
+    <ClInclude Include="PIController.h" />
+    <ClInclude Include="PIControllerObserver.h" />
+    <ClInclude Include="PIGCSCommands.h" />
+    <ClInclude Include="PIGCSCommandsDLL.h" />
+    <ClInclude Include="PIGCSControllerComDevice.h" />
+    <ClInclude Include="PIGCSControllerDLLDevice.h" />
+    <ClInclude Include="PIXYStage.h" />
+    <ClInclude Include="PIZStage.h" />
     <ClInclude Include="PI_GCS_2.h" />
-    <ClInclude Include="PIGCSControllerCom.h" />
-    <ClInclude Include="PIGCSControllerDLL.h" />
-    <ClInclude Include="PIXYStage_DLL.h" />
-    <ClInclude Include="PIZStage_DLL.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
