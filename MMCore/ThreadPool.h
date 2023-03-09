@@ -33,7 +33,7 @@
 
 class Task;
 
-class ThreadPool/* final*/
+class ThreadPool final
 {
 public:
     explicit ThreadPool();
@@ -48,10 +48,9 @@ private:
     void ThreadFunc();
 
 private:
-    // TODO: Should use unique_ptr
-    std::vector<std::shared_ptr<std::thread> > threads_;
-    bool abortFlag_;
-    std::mutex mx_;
-    std::condition_variable cv_;
-    std::deque<Task*> queue_;
+    std::vector<std::unique_ptr<std::thread>> threads_{};
+    bool abortFlag_{ false };
+    std::mutex mx_{};
+    std::condition_variable cv_{};
+    std::deque<Task*> queue_{};
 };

@@ -28,16 +28,17 @@
 
 #include <algorithm>
 #include <cassert>
-#include <memory>
 #include <mutex>
 #include <thread>
 
 ThreadPool::ThreadPool()
-    : abortFlag_(false)
 {
     const size_t hwThreadCount = std::max<size_t>(1, std::thread::hardware_concurrency());
     for (size_t n = 0; n < hwThreadCount; ++n)
-        threads_.push_back(std::make_shared<std::thread>(&ThreadPool::ThreadFunc, this));
+    {
+        auto thread = std::make_unique<std::thread>(&ThreadPool::ThreadFunc, this);
+        threads_.push_back(std::move(thread));
+    }
 }
 
 ThreadPool::~ThreadPool()
@@ -48,7 +49,7 @@ ThreadPool::~ThreadPool()
     }
     cv_.notify_all();
 
-    for (const std::shared_ptr<std::thread>& thread : threads_)
+    for (const auto& thread : threads_)
         thread->join();
 }
 
@@ -57,9 +58,9 @@ size_t ThreadPool::GetSize() const
     return threads_.size();
 }
 
-void ThreadPool::Execute(Task* task) 
+void ThreadPool::Execute(Task* task)
 {
-    assert(task != NULL);
+    assert(task);
     {
         std::lock_guard<std::mutex> lock(mx_);
         if (abortFlag_)
@@ -79,7 +80,7 @@ void ThreadPool::Execute(const std::vector<Task*>& tasks)
             return;
         for (Task* task : tasks)
         {
-            assert(task != NULL);
+            assert(task);
             queue_.push_back(task);
         }
     }
@@ -90,7 +91,7 @@ void ThreadPool::ThreadFunc()
 {
     for (;;)
     {
-        Task* task = NULL;
+        Task* task = nullptr;
         {
             std::unique_lock<std::mutex> lock(mx_);
             cv_.wait(lock, [&]() { return abortFlag_ || !queue_.empty(); });
