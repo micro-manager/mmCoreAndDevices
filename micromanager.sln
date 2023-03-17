@@ -460,6 +460,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pixelink", "DeviceAdapters\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Lumenera", "DeviceAdapters\Lumenera\Lumenera.vcxproj", "{A52B96CD-B86B-4963-BED4-CA3F5C515327}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZWO", "DeviceAdapters\ZWO\ZWO.vcxproj", "{3B7DC5D6-2FAB-4987-9274-EA5884414862}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1382,6 +1384,10 @@ Global
 		{A52B96CD-B86B-4963-BED4-CA3F5C515327}.Debug|x64.Build.0 = Debug|x64
 		{A52B96CD-B86B-4963-BED4-CA3F5C515327}.Release|x64.ActiveCfg = Release|x64
 		{A52B96CD-B86B-4963-BED4-CA3F5C515327}.Release|x64.Build.0 = Release|x64
+		{3B7DC5D6-2FAB-4987-9274-EA5884414862}.Debug|x64.ActiveCfg = Debug|x64
+		{3B7DC5D6-2FAB-4987-9274-EA5884414862}.Debug|x64.Build.0 = Debug|x64
+		{3B7DC5D6-2FAB-4987-9274-EA5884414862}.Release|x64.ActiveCfg = Release|x64
+		{3B7DC5D6-2FAB-4987-9274-EA5884414862}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
