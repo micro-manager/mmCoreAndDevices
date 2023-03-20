@@ -130,16 +130,16 @@ int PIGCSCommandsDLL::LoadDLL (const std::string& dllName, PIController* control
       printf ("load module failed\n");
       return ERR_DLL_PI_DLL_NOT_FOUND;
    }
-   GcsCommandset_ = static_cast<FP_GcsCommandset>(LoadDLLFunc ("GcsCommandset"));
-   GcsGetAnswer_ = static_cast<FP_GcsGetAnswer>(LoadDLLFunc ("GcsGetAnswer"));
-   GcsGetAnswerSize_ = static_cast<FP_GcsGetAnswerSize>(LoadDLLFunc ("GcsGetAnswerSize"));
-   ConnectRS232_ = static_cast<FP_ConnectRS232>(LoadDLLFunc ("ConnectRS232"));
-   Connect_ = static_cast<FP_Connect>(LoadDLLFunc ("Connect"));
-   IsConnected_ = static_cast<FP_IsConnected>(LoadDLLFunc ("IsConnected"));
-   CloseConnection_ = static_cast<FP_CloseConnection>(LoadDLLFunc ("CloseConnection"));
-   EnumerateUSB_ = static_cast<FP_EnumerateUSB>(LoadDLLFunc ("EnumerateUSB"));
-   ConnectUSB_ = static_cast<FP_ConnectUSB>(LoadDLLFunc ("ConnectUSB"));
-   ConnectTCPIP_ = static_cast<FP_ConnectTCPIP>(LoadDLLFunc ("ConnectTCPIP"));
+   GcsCommandset_ = reinterpret_cast<FP_GcsCommandset>(LoadDLLFunc ("GcsCommandset"));
+   GcsGetAnswer_ = reinterpret_cast<FP_GcsGetAnswer>(LoadDLLFunc ("GcsGetAnswer"));
+   GcsGetAnswerSize_ = reinterpret_cast<FP_GcsGetAnswerSize>(LoadDLLFunc ("GcsGetAnswerSize"));
+   ConnectRS232_ = reinterpret_cast<FP_ConnectRS232>(LoadDLLFunc ("ConnectRS232"));
+   Connect_ = reinterpret_cast<FP_Connect>(LoadDLLFunc ("Connect"));
+   IsConnected_ = reinterpret_cast<FP_IsConnected>(LoadDLLFunc ("IsConnected"));
+   CloseConnection_ = reinterpret_cast<FP_CloseConnection>(LoadDLLFunc ("CloseConnection"));
+   EnumerateUSB_ = reinterpret_cast<FP_EnumerateUSB>(LoadDLLFunc ("EnumerateUSB"));
+   ConnectUSB_ = reinterpret_cast<FP_ConnectUSB>(LoadDLLFunc ("ConnectUSB"));
+   ConnectTCPIP_ = reinterpret_cast<FP_ConnectTCPIP>(LoadDLLFunc ("ConnectTCPIP"));
 
    return DEVICE_OK;
 }
