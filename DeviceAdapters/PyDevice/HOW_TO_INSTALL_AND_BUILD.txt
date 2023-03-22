@@ -1,0 +1,23 @@
+:: Create a directory for micromanager
+mkdir micro-manager
+
+cd micro-manager :: Clone the main repository: 
+git clone https://github.com/micro-manager/micro-manager
+
+cd micro-manager :: Initialize all submodules:
+git submodule update --init --recursive 
+
+:: Add the Python binding submodule
+git submodule add https://github.com/ivovellekoop/mmPython mmCoreAndDevices/DeviceAdapters/PythonBinding 
+
+
+:: Open the solution file 'micromanager-bindings\micro-manager\mmCoreAndDevices' in visual Studio
+
+:: In the solution explorer, delete all projects, except for MMCore and MMDevice-SharedRuntime. (tip: select multiple projects using shift, and then press delete to remove them)
+
+:: Right-click on the Solution in the Solution explorer, choose 'add->existing item' and browse to micromanager-bindings\micro-manager\mmCoreAndDevices\DeviceAdapters\PythonBinding\PythonBinding.vcxproj
+:: If asked to convert to a newer version, press cancel
+
+:: Right-click on the Solution and choose 'Project dependencies...'. Make sure MMCore depends on MMDevice-SharedRuntime and PythonBinding depends on MMCore
+:: Right-click on the PythonBinding project and 'set as startup project' 
+:: Build the project (in Debug mode) ignore any warnings you may get
