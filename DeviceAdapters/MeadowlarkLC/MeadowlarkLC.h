@@ -56,7 +56,6 @@ public:
 
 	void GetName(char* pszName) const;
 	bool Busy();
-	int GetVLCSerialAnswer(const char* portName, const char* term, std::string& ans);
 
 
 	//      int Initialize(MM::Device& device, MM::Core& core);
@@ -68,10 +67,6 @@ public:
 
 	// action interface
 	// ---------------
-	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnBaud(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnBriefMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-
 	int OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDevAdapterVersionNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnActivationKey(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -169,7 +164,6 @@ private:
 
 	double VoltageToRetardance(double volt, long index);
 	double RetardanceToVoltage(double retardance, long index);
-	double RetardanceToVoltage(long wIndex, double AbsRetardance);
 	double GetVoltage(long index);
 
 	void SendVoltageToDevice(int volt16bit, long index);
