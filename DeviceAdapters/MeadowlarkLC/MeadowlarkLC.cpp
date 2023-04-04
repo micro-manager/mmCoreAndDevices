@@ -247,7 +247,7 @@ MeadowlarkLC::MeadowlarkLC() :
 		pAct = new CPropertyAction(this, &MeadowlarkLC::OnControllerLCType);
 		CreateProperty("Select LC Type", g_ControllerLCType_F001, MM::String, false, pAct, true);
 		AddAllowedValue("Select LC Type", g_ControllerLCType_F001);
-		//AddAllowedValue("Select LC Type", g_ControllerLCType_Internal);
+		AddAllowedValue("Select LC Type", g_ControllerLCType_Internal);
 		
 
 		pAct = new CPropertyAction(this, &MeadowlarkLC::OnSerialNumber);
@@ -290,11 +290,6 @@ int MeadowlarkLC::Initialize()
 
 	if (serialnum_ == "Undefined" || serialnum_ == "") {
 		return ERR_INVALID_SERIAL_NUMBER;
-	}
-
-	// Why do we raise an error here?
-	if (controllerLCType_ == g_ControllerLCType_Internal) {
-		return ERR_INVALID_LC_SELECTION;
 	}
 
 	if (controllerLCType_ == "Undefined" || controllerLCType_ == "") {
