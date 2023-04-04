@@ -43,6 +43,7 @@
 #include "MeadowlarkLC.h"
 #include "usbdrvd.h"
 #include "resource.h"
+#include "InternalCalibrationCurve.h"
 
 //////// Micro-manager interface //////////
 #include "ModuleInterface.h"
