@@ -164,7 +164,6 @@ MeadowlarkLC::MeadowlarkLC() :
 	RetToVoltageFactor(0),
 	wavelength_(546.0), // the cached value	
 	numberofCurves(1), // default is 1, will change based on import
-	activationKey_("OPS-MeadowlarkLcOpenSource"),
 	ArrayLength2(198)
 
 {
@@ -183,7 +182,6 @@ MeadowlarkLC::MeadowlarkLC() :
 	SetErrorText(ERR_INVALID_DEVICE, "The selected plugin does not fit for the device.");
 	SetErrorText(ERR_INVALID_SERIAL_NUMBER, "Invalid Serial Number. Please refer to your Meadowlark device unit.");
 	SetErrorText(ERR_INVALID_LCSERIAL_NUMBER, "Invalid LC-Serial Number. Calibration curve for this LC does not exist.");
-	SetErrorText(ERR_INVALID_ACTIVATION_KEY, "Invalid Activation Key. Please refer to your Meadowlark device unit.");
 	SetErrorText(ERR_INVALID_LC_UNPAIRED, "Invalid LC-Controller Pair. This Controller is not paired with an LC. Enter LC-S/N");
 	if (controllerLCType_ == g_ControllerLCType_F002) {
 		SetErrorText(ERR_INVALID_LC_FILE, ".csv File Invalid Selection. The calibration curve file does not exist or is invalid.");
@@ -291,9 +289,6 @@ MeadowlarkLC::MeadowlarkLC() :
 		pAct = new CPropertyAction(this, &MeadowlarkLC::OnSerialNumber);
 		CreateProperty("Controller S/N", "Undefined", MM::String, false, pAct, true);
 
-		pAct = new CPropertyAction(this, &MeadowlarkLC::OnActivationKey);
-		CreateProperty("Controller S/N-Activation Key", "Undefined", MM::String, true, pAct, true);
-
 		pAct = new CPropertyAction(this, &MeadowlarkLC::OnNumTotalLCs);
 		CreateProperty(g_ControllerTotalLCs, "0", MM::Integer, true, pAct, true);
 
@@ -331,11 +326,6 @@ int MeadowlarkLC::Initialize()
 
 	if (serialnum_ == "Undefined" || serialnum_ == "") {
 		return ERR_INVALID_SERIAL_NUMBER;
-	}
-
-	setSystemSpecificActivationKey(serialnum_);
-	if (activationKey_ == "Undefined" || activationKey_ == "" || activationKey_ != SystemSpecificActivationKey) {
-		return ERR_INVALID_ACTIVATION_KEY;
 	}
 
 	if (controllerLCType_ == g_ControllerLCType_Internal) {
@@ -1053,19 +1043,6 @@ int MeadowlarkLC::OnDevAdapterVersionNumber(MM::PropertyBase* pProp, MM::ActionT
 	if (eAct == MM::BeforeGet)
 	{
 		pProp->Set(g_Dev_Adapter_Ver);
-	}
-	return DEVICE_OK;
-}
-
-int MeadowlarkLC::OnActivationKey(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		pProp->Set(activationKey_.c_str());
-	}
-	else if (eAct == MM::AfterSet)
-	{
-		pProp->Get(activationKey_);
 	}
 	return DEVICE_OK;
 }
@@ -2582,11 +2559,6 @@ void  MeadowlarkLC::loadResource(int ID) {
 		}
 	}
 }
-
-void MeadowlarkLC::setSystemSpecificActivationKey(std::string serialNum) {
-	SystemSpecificActivationKey = "OPS-MeadowlarkLcOpenSource";
-}
-
 
 //////////////// ---- ToDo ---- //////////////////
 //
