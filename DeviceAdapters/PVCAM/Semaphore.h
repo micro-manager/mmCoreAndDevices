@@ -23,12 +23,11 @@
 
 #pragma once
 
-#include <boost/thread/condition_variable.hpp>
-#include <boost/thread/mutex.hpp>
-
+#include <condition_variable>
 #include <cstddef>
+#include <mutex>
 
-class Semaphore/* final*/
+class Semaphore final
 {
 public:
     explicit Semaphore();
@@ -38,7 +37,7 @@ public:
     void Release(size_t count = 1);
 
 private:
-    size_t count_;
-    boost::mutex mx_;
-    boost::condition_variable cv_;
+    size_t count_{ 0 };
+    std::mutex mx_{};
+    std::condition_variable cv_{};
 };

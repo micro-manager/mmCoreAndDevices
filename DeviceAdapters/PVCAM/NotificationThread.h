@@ -6,9 +6,9 @@
 
 #include "NotificationEntry.h"
 
-#include <boost/thread/condition_variable.hpp>
-
+#include <condition_variable>
 #include <deque>
+#include <mutex>
 
 class Universal;
 
@@ -57,8 +57,8 @@ class Universal;
 class NotificationThread : public MMDeviceThreadBase
 {
 public:
-    NotificationThread(Universal* pCamera);
-    ~NotificationThread(void);
+    explicit NotificationThread(Universal* pCamera);
+    virtual ~NotificationThread();
 
     /**
     * Resets the thread. This should be called before every sequence acquisition.
@@ -83,25 +83,26 @@ public:
     * the oldest notification is thrown away.
     * @param entry Notification to be pushed to the queue.
     */
-    bool PushNotification( const NotificationEntry& entry );
+    bool PushNotification(const NotificationEntry& entry);
 
 public: // From MMDeviceThreadBase
-    int svc();
+    virtual int svc() override;
 
 private:
     void requestStop();
-    bool waitNextNotification( NotificationEntry& e );
+    bool waitNextNotification(NotificationEntry& e);
 
-    Universal*                universal_;
+private:
+    Universal* const          universal_;
 
-    boost::condition_variable frameReadyCondition_;
-    boost::mutex              threadMutex_;
+    std::condition_variable   frameReadyCondition_{};
+    std::mutex                threadMutex_{};
 
-    std::deque<NotificationEntry> deque_;
-    int                       maxSize_;
+    std::deque<NotificationEntry> deque_{};
+    int                       maxSize_{ 0 };
 
-    bool                      overflowed_;
-    bool                      requestStop_;
+    bool                      overflowed_{ false };
+    bool                      requestStop_{ false };
 };
 
 #endif // _NOTIFICATIONTHREAD_H_

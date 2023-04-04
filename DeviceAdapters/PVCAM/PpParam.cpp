@@ -1,22 +1,52 @@
 #include "PpParam.h"
 
-PpParam::PpParam(std::string name, int ppIndex, int propIndex) : mIsBoolean(false)
+PpParam::PpParam(const std::string& name, short featIndex, short propIndex,
+        bool isBoolean, unsigned int featId, unsigned int propId)
+    : mName(name),
+    mFeatIndex(featIndex),
+    mPropIndex(propIndex),
+    mIsBoolean(isBoolean),
+    mFeatId(featId),
+    mPropId(propId)
 {
-    mName = name, mppIndex = ppIndex, mpropIndex = propIndex, mcurValue = ppIndex;
 }
 
-std::string PpParam::GetName()        { return mName; }
-int         PpParam::GetppIndex()     { return mppIndex; }
-int         PpParam::GetpropIndex()   { return mpropIndex; }
-bool        PpParam::IsBoolean()      { return mIsBoolean; }
-double      PpParam::GetcurValue()    { return mcurValue; }
-void        PpParam::SetName(std::string name)    { mName      = name; }
-void        PpParam::SetppIndex(int ppIndex)      { mppIndex   = ppIndex; }
-void        PpParam::SetpropInex(int propIndex)   { mpropIndex = propIndex; }
-void        PpParam::SetcurValue(double curValue) { mcurValue  = curValue; }
-void        PpParam::SetBoolean(bool isBoolean)   { mIsBoolean = isBoolean; }
-
-void PpParam::SetPostProc(PpParam& tmp)
+const std::string& PpParam::GetName() const
 {
-    mName = tmp.GetName(), mppIndex = tmp.GetppIndex(), mpropIndex = tmp.GetpropIndex();
+    return mName;
+}
+
+short PpParam::GetFeatIndex() const
+{
+    return mFeatIndex;
+}
+
+short PpParam::GetPropIndex() const
+{
+    return mPropIndex;
+}
+
+bool PpParam::IsBoolean() const
+{
+    return mIsBoolean;
+}
+
+unsigned int PpParam::GetFeatId() const
+{
+    return mFeatId;
+}
+
+unsigned int PpParam::GetPropId() const
+{
+    return mPropId;
+}
+
+unsigned int PpParam::GetCurValue() const
+{
+    return mCurValue;
+}
+
+void PpParam::SetCurValue(unsigned int value)
+{
+    mCurValue  = value;
 }

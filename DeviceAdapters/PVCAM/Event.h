@@ -1,17 +1,13 @@
 #ifndef _EVENT_H_
 #define _EVENT_H_
 
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
+#include <condition_variable>
+#include <mutex>
 
 /**
 * Simple synchronization primitive.
-* LW: MicroManager provides only one synchronization primitive: MMThreadLock
-* but no events, semaphores etc (at least I haven't found any). It looks like
-* boost is the way to go but boost also does not provide a real event so we
-* wrote our own.
 */
-class Event
+class Event final
 {
 public:
     /**
@@ -23,11 +19,7 @@ public:
     * @param manualReset Set this to true to make this a manual reset event
     * @param initialState True to set the event to initial signalled state
     */
-    Event(bool manualReset, bool initialState);
-    /**
-    * Destroys the event.
-    */
-    ~Event();
+    explicit Event(bool manualReset, bool initialState);
 
     /**
     * Sets the event to signalled state
@@ -42,9 +34,8 @@ public:
     * the function returns immediately. If the event is non-signalled
     * the function waits until the event becomes signaled.
     * In case of auto-reset event the event is reset automatically.
-    * @return Always true
     */
-    bool Wait();
+    void Wait();
     /**
     * Similar to the argument-less overload but allows to set an timeout.
     * @return False if the wait timed out. True otherwise.
@@ -52,10 +43,10 @@ public:
     bool Wait(unsigned int timeoutMs);
 
 private:
-    bool                      manualReset_;
-    bool                      signalled_;
-    boost::mutex              mutex_;
-    boost::condition_variable condVar_;
+    bool manualReset_{ false };
+    bool signalled_{ false };
+    std::mutex mutex_{};
+    std::condition_variable condVar_{};
 };
 
 #endif // _EVENT_H_

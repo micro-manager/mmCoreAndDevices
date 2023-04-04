@@ -49,7 +49,9 @@
 
 // System
 #include <map>
+#include <memory> // smart pointers
 #include <string>
+#include <utility> // std::pair
 
 
 //=============================================================================
@@ -100,6 +102,7 @@
 #define ERR_TOO_MANY_ROIS               10014 // Device does not support that many ROIs (uM 2.0)
 #define ERR_FILE_OPERATION_FAILED       10015
 #define ERR_SW_TRIGGER_NOT_SUPPORTED    10016
+#define ERR_PIXEL_TYPE_NOT_SUPPORTED    10017
 
 // PVCAM-specific error codes base. When a PVCAM error occurs we use the PVCAM
 // ID and PVCAM message to create a new uM error code, we call the SetErrorCode()
@@ -113,21 +116,20 @@
 //=============================================================================
 //=========================================================== TYPE DECLARATIONS
 
-
 /**
-* Struct used for Universal Parameters definition
+* Structure used for Universal Parameters definition
 */
-typedef struct 
+struct ParamNameIdPair
 {
-    const char * name;
-    const char * debugName;
+    const char* name;
+    const char* debugName;
     uns32 id;
-} ParamNameIdPair;
+};
 
 /**
 * Speed table row
 */
-typedef struct
+struct SpdTabEntry
 {
     uns16 pixTime;         // Readout rate in ns
     rs_bool gainAvail;     // Gain available
@@ -136,31 +138,29 @@ typedef struct
     int16   gainDef;       // Default gain for this speed
     std::map<std::string, int16> gainNameMap; // Gain names (i.e., "name:index" map)
     std::map<int16, std::string> gainNameMapReverse; // Reverse lookup map
-    int16 spdIndex;           // Speed index 
-    uns32 portIndex;          // Port index
+    int16 spdIndex;           // Speed index
+    int32 portValue;          // Port index
     int16 portDefaultSpdIdx;  // Default speed index for given port (applied when port changes)
     std::string spdString;    // A string that describes this choice in GUI
     std::string spdName;      // A string received from camera, empty if not supported
-    int32       colorMask;    // Sensor color mask (PARAM_COLOR_MODE) 
+    int32       colorMask;    // Sensor color mask (PARAM_COLOR_MODE)
     std::string colorMaskStr; // Sensor color mask description (retrieved from PVCAM)
-} SpdTabEntry;
+};
 
 /**
 * Camera Model is identified mostly by Chip Name. Most of the cameras and every
 * unknown camera is treated as "Generic". PVCAM and this uM adapter is mostly
 * camera-agnostic, however a couple of camera models may need special treatment.
 */
-typedef enum PvCameraModel
+enum PvCameraModel
 {
     PvCameraModel_Generic = 0,
     PvCameraModel_OptiMos_M1,
     PvCameraModel_Retiga6000C
-} PvCameraModel;
-
+};
 
 //=============================================================================
 //======================================================== FORWARD DECLARATIONS
-
 
 class PollingThread;
 class NotificationThread;
@@ -170,10 +170,8 @@ template<class T> class PvParam;
 class PvUniversalParam;
 class PvEnumParam;
 
-
 //=============================================================================
 //========================================================== CLASS DECLARATIONS
-
 
 /**
 * Implementation of the MMDevice and MMCamera interfaces for all PVCAM cameras
@@ -236,6 +234,7 @@ public: // Action handlers
     * So far only Enum and Integer values are supported. Other types should be implemented manually.
     */
     int OnUniversalProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
+
     /**
     * Gets or sets the current binning. Accepts and returns a string value
     * of "HxV" where H=horizontal and V=vertical binning
@@ -249,6 +248,7 @@ public: // Action handlers
     * Gets or sets the current vertical binning.
     */
     int OnBinningY(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     /**
     * Gets or sets the current exposure time, in milli seconds, floating point value.
     */
@@ -257,6 +257,7 @@ public: // Action handlers
     * Gets the current pixel type as string: "XXbit"
     */
     int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     /**
     * Gets or sets the current gain index.
     */
@@ -284,6 +285,31 @@ public: // Action handlers
     */
     int OnMultiplierGain(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
+    * Read-only: Shows the actual bit depth as it goes from the camera to PVCAM.
+    */
+    int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Read-only: Shows the actual image format as it goes from the camera to PVCAM.
+    */
+    int OnImageFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Read-only: Shows the actual image compression as it goes from the camera to PVCAM.
+    */
+    int OnImageCompression(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Read-only: Shows the actual bit depth as it goes from PVCAM to the app.
+    */
+    int OnBitDepthHost(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Read-only: Shows the actual image format as it goes from PVCAM to the app.
+    */
+    int OnImageFormatHost(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Read-only: Shows the actual image compression as it goes from PVCAM to the app.
+    */
+    int OnImageCompressionHost(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+    /**
     * Gets the current camera sensor temperature in degrees Celsius.
     */
     int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -291,6 +317,7 @@ public: // Action handlers
     * Gets or sets the desired camera sensor temperature, in degrees Celsius.
     */
     int OnTemperatureSetPoint(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     /**
     * Gets or sets the current PMode - i.e. Frame Transfer mode.
     */
@@ -299,6 +326,7 @@ public: // Action handlers
     * Gets or sets the current ADC offset
     */
     int OnAdcOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     /**
     * Get or sets the current Scan Mode.
     */
@@ -323,6 +351,7 @@ public: // Action handlers
     * Gets or sets the current scan width
     */
     int OnScanWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     /**
     * Gets or sets the current Trigger Mode - i.e. Internal, Bulb, Edge, etc.
     */
@@ -337,6 +366,7 @@ public: // Action handlers
     * Gets or sets the current Expose Out mode - i.e. First Row, Any Row, All Rows, etc.
     */
     int OnExposeOutMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     /**
     * Gets or sets the current number of sensor clear cycles.
     */
@@ -345,6 +375,7 @@ public: // Action handlers
     * Gets or sets the current sensor clear mode.
     */
     int OnClearMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     /**
     * Enables or disables the use of circular buffer. When disabled the live acquisition
     * runs as a repeated sequence (something like fast time-lapse). The PVCAM continuous
@@ -368,6 +399,7 @@ public: // Action handlers
     * greatly improved.
     */
     int OnCircBufferFrameRecovery(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     /**
     * Enables or disables the embedded frame metadata feature. Introduced with Prime
     * camera. When enabled the camera does not send RAW pixels anymore but the buffer
@@ -401,6 +433,27 @@ public: // Action handlers
     */
     int OnCentroidsCount(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
+    * Gets or sets the currently configured Centroids mode.
+    * The default Locate mode sends each centroid as separate ROI.
+    * The other modes send all pixel data in first extra ROI and mark all objects
+    * in it with header-only ROIs.
+    */
+    int OnCentroidsMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured Centroids frame count for background removal.
+    * E.g. if 10 is set the camera will use first 10 frames from the
+    * acquisition for internal optimization of further processing.
+    */
+    int OnCentroidsBgCount(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured Centroids threshold.
+    * It is a fixed-point real number in Q8.4 format.
+    * E.g. the value 1234 (0x4D2) from camera means 77.2 (0x4D hex = 77 dec).
+    * MM shows the raw camera value to the user.
+    */
+    int OnCentroidsThreshold(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+    /**
     * Gets or sets the currently configured camera fan speed.
     */
     int OnFanSpeedSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -408,6 +461,7 @@ public: // Action handlers
     * Gets or sets the camera trigger signal multiplexing.
     */
     int OnTrigTabLastMux(MM::PropertyBase* pProp, MM::ActionType eAct, long trigSignal);
+
     /**
     * Enables or disables the color mode processing.
     */
@@ -492,6 +546,7 @@ public: // Action handlers
     */
     int OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eAct);
 #endif
+
     /**
     * Read-only: Shows the camera actual exposure time value in ns.
     */
@@ -512,6 +567,22 @@ public: // Action handlers
     * Read-only: Shows the camera actual post-trigger delay value in ns.
     */
     int OnTimingPostTriggerDelayNs(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+    /**
+    * Enables or disables the Frame Summing feature on host side.
+    * It is a feature provided by PVCAM and available for all cameras.
+    */
+    int OnHostFrameSummingEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured frame count to sum.
+    */
+    int OnHostFrameSummingCount(MM::PropertyBase* pProp, MM::ActionType eAct);
+    /**
+    * Gets or sets the currently configured output image format.
+    * When summing multiple frames, the result pixel value can go quickly out of
+    * 16-bit range. This allows to switch the output image format e.g. to 32-bit.
+    */
+    int OnHostFrameSummingFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 public: // Other published methods
     /**
@@ -588,8 +659,8 @@ protected:
 
 private:
     // Make object non-copyable
-    Universal(const Universal&)/* = delete*/;
-    Universal& operator=(const Universal&)/* = delete*/;
+    Universal(const Universal&) = delete;
+    Universal& operator=(const Universal&) = delete;
 
     /**
     * Read and create basic static camera properties that will be displayed in
@@ -665,14 +736,49 @@ private:
     /**
     * Sends the S.M.A.R.T streaming configuration to the camera.
     */
-    int sendSmartStreamingToCamera(const std::vector<double>& exposures, int exposureRes);
+    int sendSmartStreamingToCamera(const std::vector<double>& exposuresMs, int exposureRes);
 #endif
 
     /**
-    * This function returns the correct exposure mode and exposure value to be used in both
+    * This function returns the correct exposure mode to be used in both
     * pl_exp_setup_seq() and pl_exp_setup_cont() functions.
     */
-    int getPvcamExposureSetupConfig(int16& pvExposureMode, double inputExposureMs, uns32& pvExposureValue);
+    int16 getPvcamExpMode() const;
+    /**
+    * This function returns the correct exposure time to be used in both
+    * pl_exp_setup_seq() and pl_exp_setup_cont() functions.
+    */
+    uns32 getPvcamExpTime(double expTimeMs, int expRes) const;
+    /**
+    * This function gives the bit depth of the image returned by PVCAM for current setup.
+    */
+    int16 getPvcamBitDepth() const;
+    /**
+    * This function gives the image format of the image returned by PVCAM for current setup.
+    */
+    int32 getPvcamImageFormat() const;
+    /**
+    * This function gives the name of image format of the image returned by PVCAM for current setup.
+    */
+    const char* getPvcamImageFormatString(int32 value) const;
+    /**
+    * This function gives the image compression of the image returned by PVCAM for current setup.
+    */
+    int32 getPvcamImageCompression() const;
+    /**
+    * This function gives the name image compression of the image returned by PVCAM for current setup.
+    */
+    const char* getPvcamImageCompressionString(int32 value) const;
+
+    /**
+    * This function gives number of channels per pixel based on image format reported by PVCAM.
+    */
+    unsigned int getPvcamImageChannelsPerPixel() const;
+    /**
+    * This function gives number of bytes per channel based on image format reported by PVCAM.
+    */
+    unsigned int getPvcamImageBytesPerChannel() const;
+
     /**
     * This method is used to estimate how long it might take to read out one frame.
     * The calculation is very inaccurate, it is only used when calculating acquisition timeout.
@@ -686,7 +792,7 @@ private:
     /**
     * Reverts a single setting that we know had an error
     */
-    int revertPostProcValue( long absoluteParamIdx, MM::PropertyBase* pProp);
+    void revertPostProcValue(long absoluteParamIdx, MM::PropertyBase* pProp);
     /**
     * This function is called right after pl_exp_setup_seq() and pl_exp_setup_cont()
     * After setup is called following parameters become available or may change their values:
@@ -763,8 +869,8 @@ private:
     bool            isAcquiring_;
 
     long            triggerTimeout_;       // Max time to wait for an external trigger
-    bool            microsecResSupported_; // True if camera supports microsecond exposures
-    uns32           microsecResMax_;       // Maximum value for microsecond resolution
+
+    std::map<int32, std::pair<uns32, uns32>> expTimeResLimits_{}; // [expTimeRes]={min,max}
 
     friend class    PollingThread;
     PollingThread*  pollingThd_;           // Pointer to the sequencing thread
@@ -782,12 +888,6 @@ private:
 
     char            camName_[CAM_NAME_LEN];
     std::string     camChipName_;
-    PvParam<int16>* prmTemp_;              // CCD temperature
-    PvParam<int16>* prmTempSetpoint_;      // Desired CCD temperature
-    PvParam<int16>* prmGainIndex_;
-    PvParam<uns16>* prmGainMultFactor_;
-    PvEnumParam*    prmBinningSer_;
-    PvEnumParam*    prmBinningPar_;
 
     std::vector<std::string>        binningLabels_;
     std::vector<int32>              binningValuesX_;
@@ -808,6 +908,7 @@ private:
     // PVCAM helper structure for decoding an embedded-metadata-enabled frame buffer
 #ifdef PVCAM_METADATA_SUPPORTED
     md_frame*        metaFrameStruct_;
+    std::map<uns16, md_ext_item_collection> metaFrameExtData_; // The key is roiNr
 
     // For metadata serialization, optimization to not allocate the same for each frame
     std::string      metaAllRoisStr_;
@@ -837,56 +938,95 @@ private:
 #endif
     int             lastPvFrameNr_;        // The last FrameNr reported by PVCAM
 
+    // All dependant parameters that should be updated after setting new value
+    // are listed in the comment after every parameter. For every listed parameter
+    // is needed to reset the cache and re-read at least the current value.
+    // If there is added '+range', also min/max/inc/def/count values should be updated,
+    // and for enum parameters list of valid items enumerated again.
+    // If 'all' is added, the parameter can change also remaining attributes,
+    // like availability or read-write to/from read-only.
+    // The dependencies should be treated recursively.
+
+    // TODO: Convert remaining PvParam pointers to unique_ptr
+
 #ifdef PVCAM_SMART_STREAMING_SUPPORTED
     PvParam<smart_stream_type>* prmSmartStreamingValues_;
     PvParam<rs_bool>* prmSmartStreamingEnabled_;
 #endif
-    PvEnumParam*      prmTriggerMode_;     // (PARAM_EXPOSURE_MODE)
-    PvParam<uns16>*   prmExpResIndex_;
-    PvEnumParam*      prmExpRes_;
-    PvParam<ulong64>* prmExposureTime_;    // (PARAM_EXPOSURE_TIME)
-    PvEnumParam*      prmExposeOutMode_;
+
+    PvEnumParam*      prmTriggerMode_; // Updated after pl_exp_setup_*()
+    PvParam<uns16>*   prmExpResIndex_; // Can change: EXP_RES, EXPOSURE_TIME(+range)
+    PvEnumParam*      prmExpRes_; // Can change: EXP_RES_INDEX, EXPOSURE_TIME(+range)
+    PvParam<ulong64>* prmExposureTime_; // Updated after pl_exp_setup_*()
+    PvEnumParam*      prmExposeOutMode_; // Updated after pl_exp_setup_*()
+
     PvParam<uns16>*   prmClearCycles_;
     PvEnumParam*      prmClearMode_;
-    PvEnumParam*      prmReadoutPort_;
-    PvParam<int16>*   prmSpdTabIndex_;
-    PvParam<int16>*   prmBitDepth_;
-    PvEnumParam*      prmColorMode_;
-    PvParam<ulong64>* prmFrameBufSize_;
 
-    PvParam<uns16>*   prmRoiCount_;
+    PvEnumParam*      prmReadoutPort_; // Can change: SPDTAB_INDEX(+range)
+    PvParam<int16>*   prmSpdTabIndex_; // Can change: PIX_TIME, SPDTAB_NAME, GAIN_INDEX(+range), ADC_OFFSET,
+                                       //     COLOR_MODE, IMAGE_FORMAT, IMAGE_COMPRESSION(+range), PP_INDEX
+    PvParam<int16>*   prmGainIndex_; // Can change: BIT_DEPTH, GAIN_NAME, SCAN_MODE, GAIN_MULT_FACTOR, TEMP_SETPOINT
+    PvParam<uns16>*   prmGainMultFactor_;
+    std::unique_ptr<PvParam<int16>>   prmBitDepth_;
+    std::unique_ptr<PvEnumParam>      prmImageFormat_;
+    std::unique_ptr<PvEnumParam>      prmImageCompression_;
+    std::unique_ptr<PvParam<int16>>   prmBitDepthHost_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmImageFormatHost_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmImageCompressionHost_; // Updated after pl_exp_setup_*()
+
+    PvEnumParam*      prmColorMode_;
+    PvParam<ulong64>* prmFrameBufSize_; // Updated after pl_exp_setup_*()
+
+    PvParam<int16>*   prmTemp_;
+    PvParam<int16>*   prmTempSetpoint_;
+
+    PvEnumParam*      prmBinningSer_; // Updated after pl_exp_setup_*()
+    PvEnumParam*      prmBinningPar_; // Updated after pl_exp_setup_*()
+
+    PvParam<uns16>*   prmRoiCount_; // Updated after pl_exp_setup_*()
     PvParam<rs_bool>* prmMetadataEnabled_;
     PvParam<rs_bool>* prmMetadataResetTimestamp_;
     PvParam<rs_bool>* prmCentroidsEnabled_;
     PvParam<uns16>*   prmCentroidsRadius_;
     PvParam<uns16>*   prmCentroidsCount_;
-    PvEnumParam*      prmFanSpeedSetpoint_;
-    PvEnumParam*      prmTrigTabSignal_;
+    PvEnumParam*      prmCentroidsMode_;
+    PvEnumParam*      prmCentroidsBgCount_;
+    PvParam<uns32>*   prmCentroidsThreshold_;
+
+    PvEnumParam*      prmFanSpeedSetpoint_; // Can change: TEMP_SETPOINT
+
+    PvEnumParam*      prmTrigTabSignal_; // Can change: LAST_MUXED_SIGNAL(+range)
     PvParam<uns8>*    prmLastMuxedSignal_;
-    PvEnumParam*      prmPMode_;
+
+    PvEnumParam*      prmPMode_; // Can change: TEMP_SETPOINT
     PvParam<int16>*   prmAdcOffset_;
-    // Scan mode
-    PvEnumParam*      prmScanMode_;
+
+    PvEnumParam*      prmScanMode_; // Can change: SCAN_LINE_DELAY(all)/SCAN_WIDTH(all), SCAN_DIRECTION, SCAN_DIRECTION_RESET
     PvEnumParam*      prmScanDirection_;
     PvParam<rs_bool>* prmScanDirectionReset_;
-    PvParam<uns16>*   prmScanLineDelay_; // Available after pl_exp_setup_seq()/pl_exp_setup_cont()
-    PvParam<long64>*  prmScanLineTime_;
-    PvParam<uns16>*   prmScanWidth_;
-    // These parameters become valid after calling pl_exp_setup_seq()/pl_exp_setup_cont()
-    PvParam<uns32>*   prmReadoutTime_;      // (PARAM_READOUT_TIME)
-    PvParam<long64>*  prmClearingTime_;     // (PARAM_CLEARING_TIME)
-    PvParam<long64>*  prmPostTriggerDelay_; // (PARAM_POST_TRIGGER_DELAY)
-    PvParam<long64>*  prmPreTriggerDelay_;  // (PARAM_PRE_TRIGGER_DELAY)
+    PvParam<uns16>*   prmScanLineDelay_; // Can change: SCAN_WIDTH, SCAN_LINE_TIME and updated after pl_exp_setup_*()
+    PvParam<uns16>*   prmScanWidth_; // Can change: SCAN_LINE_DELAY, SCAN_LINE_TIME and updated after pl_exp_setup_*()
+    PvParam<long64>*  prmScanLineTime_; // Updated after pl_exp_setup_*()
+
+    PvParam<uns32>*   prmReadoutTime_; // Available/updated after pl_exp_setup_*()
+    PvParam<long64>*  prmClearingTime_; // Available/updated after pl_exp_setup_*()
+    PvParam<long64>*  prmPostTriggerDelay_; // Available/updated after pl_exp_setup_*()
+    PvParam<long64>*  prmPreTriggerDelay_; // Available/updated after pl_exp_setup_*()
+
+    std::unique_ptr<PvParam<rs_bool>> prmHostFrameSummingEnabled_;
+    std::unique_ptr<PvParam<uns32>>   prmHostFrameSummingCount_;
+    std::unique_ptr<PvEnumParam>      prmHostFrameSummingFormat_;
 
     // List of post processing features
-    std::vector<PpParam> PostProc_;
+    std::vector<PpParam> PostProc_; // PP_PARAM can change: BIT_DEPTH, IMAGE_FORMAT
 
     // Camera speed table
     //  usage: SpdTabEntry e = camSpdTable_[port][speed];
-    std::map<uns32, std::map<int16, SpdTabEntry> > camSpdTable_;
+    std::map<int32, std::map<int16, SpdTabEntry>> camSpdTable_;
     // Reverse speed table to get the speed based on UI selection
     //  usage: SpdTabEntry e = camSpdTableReverse_[port][ui_selected_string];
-    std::map<uns32, std::map<std::string, SpdTabEntry> > camSpdTableReverse_;
+    std::map<int32, std::map<std::string, SpdTabEntry>> camSpdTableReverse_;
     // Currently selected speed
     SpdTabEntry camCurrentSpeed_;
 

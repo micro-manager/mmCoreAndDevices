@@ -27,7 +27,7 @@
 
 #include <cassert>
 
-Task::Task(boost::shared_ptr<Semaphore> semaphore, size_t taskIndex, size_t totalTaskCount)
+Task::Task(std::shared_ptr<Semaphore> semaphore, size_t taskIndex, size_t totalTaskCount)
     : semaphore_(semaphore),
     taskIndex_(taskIndex),
     totalTaskCount_(totalTaskCount),

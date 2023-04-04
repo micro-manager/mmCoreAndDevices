@@ -35,12 +35,12 @@ private:
 
         void SetUp(void* dst, const void* src, size_t bytes, size_t usedTaskCount);
 
-        virtual void Execute()/* override*/;
+        virtual void Execute() override;
 
     private:
-        void* dst_;
-        const void* src_;
-        size_t bytes_;
+        void* dst_{ nullptr };
+        const void* src_{ nullptr };
+        size_t bytes_{ 0 };
     };
 
 public:
@@ -48,8 +48,8 @@ public:
 
     void SetUp(void* dst, const void* src, size_t bytes);
 
-    virtual void Execute()/* override*/;
-    virtual void Wait()/* override*/;
+    virtual void Execute() override;
+    virtual void Wait() override;
 
     // Helper blocking method calling SetUp, Execute and Wait
     void MemCopy(void* dst, const void* src, size_t bytes);

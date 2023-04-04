@@ -1,28 +1,25 @@
 #include "StreamWriter.h"
 
-// MMDevice
-#include "FixSnprintf.h"
-
 // Local
 #include "PVCAMAdapter.h"
 #include "TaskSet_CopyMemory.h"
 #include "ThreadPool.h"
 
-// Boost
-#include <boost/filesystem.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/thread/locks.hpp>
-
 // System
+#include <algorithm>
 #include <ctime>
 #include <cstdio>
 #include <cstring> // ::memset
 #include <fstream>
 #include <limits>
+#include <stdexcept> // TODO: Remove once switched to C++17
 
 #ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
     #include <Windows.h>
     #include <malloc.h> // _aligned_malloc
+    #include <direct.h> // _mkdir, TODO: Remove once switched to C++17
+    #include <sys/stat.h> // TODO: Remove once switched to C++17
     typedef void* FileHandle;
     #define cInvalidFileHandle (INVALID_HANDLE_VALUE)
 #else
@@ -92,50 +89,19 @@ public:
     }
 
 private:
-    FileHandle hFile_;
+    FileHandle hFile_{ cInvalidFileHandle };
 };
 
 StreamWriter::StreamWriter(Universal* camera)
     : camera_(camera),
-    threadPool_(boost::make_shared<ThreadPool>()),
-    tasksMemCopy_(boost::make_shared<TaskSet_CopyMemory>(threadPool_)),
-    pageBytes_(0),
-    isEnabled_(false),
-    dirRoot_(),
-    bitDepth_(0),
-    frameBytes_(0),
-    frameBytesAligned_(0),
-    maxFramesPerStack_(0),
-    alignedBuffer_(NULL),
-    sessionId_(),
-    path_(),
-    isActive_(false),
-    stackFile_(NULL),
-    stackFileName_(),
-    stackFileIndex_(0),
-    stackFileFrameIndex_(0),
-    //convBuf_(),
-    totalFramesLost_(0),
-    stackFramesLost_(0),
-    totalSummary_(),
-    stackSummary_(),
-    lastFrameNr_(0)
+    threadPool_(std::make_shared<ThreadPool>()),
+    tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
-    // Optimized/non-buffered streaming requires all file writes aligned to page size
-#ifdef _WIN32
-    SYSTEM_INFO sysInfo;
-    ::GetSystemInfo(&sysInfo);
-    pageBytes_ = sysInfo.dwPageSize;
-#else
-    pageBytes_ = ::sysconf(_SC_PAGESIZE);
-#endif
-    if (pageBytes_ == 0)
-        pageBytes_ = 4096; // Use 4kB page size in case of any error
 }
 
 StreamWriter::~StreamWriter()
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     StopInternal();
     FreePageAlignedBuffer(alignedBuffer_);
@@ -143,7 +109,7 @@ StreamWriter::~StreamWriter()
 
 int StreamWriter::Setup(bool enabled, const std::string& dirRoot, size_t bitDepth, size_t frameBytes)
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     StopInternal();
 
@@ -167,7 +133,7 @@ int StreamWriter::Setup(bool enabled, const std::string& dirRoot, size_t bitDept
     {
         frameBytes_ = frameBytes;
         const size_t frameBytesAligned =
-            ((frameBytes_ + pageBytes_ - 1) / pageBytes_) * pageBytes_;
+            ((frameBytes_ + bufferAlignment_ - 1) / bufferAlignment_) * bufferAlignment_;
 
         if (frameBytesAligned_ != frameBytesAligned)
         {
@@ -179,7 +145,7 @@ int StreamWriter::Setup(bool enabled, const std::string& dirRoot, size_t bitDept
 
             // Allocate page-aligned buffer as required by StackFile::Write.
             FreePageAlignedBuffer(alignedBuffer_);
-            alignedBuffer_ = AllocatePageAlignedBuffer(frameBytesAligned_, pageBytes_);
+            alignedBuffer_ = AllocatePageAlignedBuffer(frameBytesAligned_, bufferAlignment_);
             if (!alignedBuffer_)
             {
                 return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
@@ -194,7 +160,7 @@ int StreamWriter::Setup(bool enabled, const std::string& dirRoot, size_t bitDept
 
 int StreamWriter::Start()
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     StopInternal();
 
@@ -238,31 +204,28 @@ int StreamWriter::Start()
 
 void StreamWriter::Stop()
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     StopInternal();
 }
 
 bool StreamWriter::IsActive() const
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     return isActive_;
 }
 
 int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
 {
-    boost::lock_guard<boost::mutex> lock(mx_);
+    std::lock_guard<std::mutex> lock(mx_);
 
     if (!isActive_)
         return DEVICE_OK;
 
     if (stackFileFrameIndex_ == 0)
     {
-        // Cannot use "%zu" to build on Linux without C++11
-        //snprintf(convBuf_, sizeof(convBuf_), "stack-%05zu_fr-%06zu.raw", stackFileIndex_, frameNr);
-        snprintf(convBuf_, sizeof(convBuf_), "stack-%05llu_fr-%06llu.raw",
-                (unsigned long long)stackFileIndex_, (unsigned long long)frameNr);
+        snprintf(convBuf_, sizeof(convBuf_), "stack-%05zu_fr-%06zu.raw", stackFileIndex_, frameNr);
         stackFileName_ = convBuf_;
 
         const std::string fullStackFileName = path_ + convBuf_;
@@ -280,14 +243,11 @@ int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
     {
         if (framesLost == 1)
         {
-            snprintf(convBuf_, sizeof(convBuf_), "%llu\n",
-                    (unsigned long long)(lastFrameNr_ + 1));
+            snprintf(convBuf_, sizeof(convBuf_), "%zu\n", lastFrameNr_ + 1);
         }
         else
         {
-            snprintf(convBuf_, sizeof(convBuf_), "%llu-%llu\n",
-                    (unsigned long long)(lastFrameNr_ + 1),
-                    (unsigned long long)(frameNr - 1));
+            snprintf(convBuf_, sizeof(convBuf_), "%zu-%zu\n", lastFrameNr_ + 1, frameNr - 1);
         }
         stackSummary_ += convBuf_;
         stackFramesLost_ += framesLost;
@@ -296,7 +256,7 @@ int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
 
     const void* writeBuffer = pFrame;
     const bool isFrameAligned =
-        ((size_t)pFrame % pageBytes_ == 0 && frameBytes_ == frameBytesAligned_);
+        ((size_t)pFrame % bufferAlignment_ == 0 && frameBytes_ == frameBytesAligned_);
     if (!isFrameAligned)
     {
         // Standard memcpy is too slow for Kinetix, do parallel copy instead
@@ -387,7 +347,7 @@ int StreamWriter::GenerateNewSessionId(std::string& sessionId) const
     char buffer[sizeof(format)];
     if (std::strftime(buffer, sizeof(buffer), formatStr, &tm) != sizeof(format) - 1)
     {
-        return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
+        return camera_->LogAdapterError(ERR_FILE_OPERATION_FAILED, __LINE__,
                 std::string("Failed to generate new streaming session ID"));
     }
 
@@ -400,12 +360,59 @@ int StreamWriter::CreateDirectories(const std::string& path) const
 {
     try
     {
-        // Cannot rely on return value, it's false for path with trailing slash
-        boost::filesystem::create_directories(path);
+        auto CreateDir = [](const char* path) -> bool {
+            struct stat st;
+            if (::stat(path, &st) != 0)
+            {
+#ifdef _WIN32
+                if (::_mkdir(path) != 0)
+#else
+                constexpr mode_t mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+                if (::mkdir(path, mode) != 0)
+#endif
+                {
+                    // Directory didn't exist but maybe was created between stat and mkdir
+                    // MacOS BigSur returns EISDIR when trying to create "/"
+                    if (errno != EEXIST && errno != EISDIR)
+                        return false;
+                }
+            }
+            else if ((st.st_mode & S_IFMT) != S_IFDIR)
+            {
+                return false;
+            }
+            return true;
+        };
+
+        std::string copy(path);
+        char* next = &copy[0];
+#ifdef _WIN32
+        if (copy.size() >= 3 && copy[1] == ':' && copy[2] == '/')
+            next = &copy[2]; // Skip the drive letter and colon
+#endif
+        char* found;
+        bool ok = true;
+        while (ok && (found = std::strchr(next, '/')) != nullptr)
+        {
+            if (found != next)
+            {
+                *found = '\0';
+                ok = CreateDir(copy.c_str());
+                *found = '/';
+            }
+            next = found + 1;
+        }
+        if (ok && path.back() != '/')
+            ok = CreateDir(path.c_str());
+        if (!ok)
+            throw std::runtime_error("failure");
+
+        // TODO: With C++17 use this line instead of all the code above:
+        //std::filesystem::create_directories(path);
     }
     catch (...)
     {
-        return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
+        return camera_->LogAdapterError(ERR_FILE_OPERATION_FAILED, __LINE__,
                 std::string("Failed to create folder structure '") + path + "'");
     }
     return DEVICE_OK;
@@ -435,10 +442,8 @@ int StreamWriter::GenerateImportHints_ImageJ(const std::string& fileName) const
     }
     else
     {
-        // Cannot use "%zu" to build on Linux without C++11
-        snprintf(convBuf_, sizeof(convBuf_), "%llu", (unsigned long long)bitDepth_);
-        return camera_->LogAdapterError(DEVICE_ERR, __LINE__,
-                std::string("Unsupported bit depth for streaming: ") + convBuf_);
+        return camera_->LogAdapterError(ERR_FILE_OPERATION_FAILED, __LINE__,
+                "Unsupported bit depth for streaming: " + std::to_string(bitDepth_));
     }
 
     // ImageJ requires to know a "gap" between images, rather than offset or
@@ -520,8 +525,8 @@ void StreamWriter::MoveStackToTotalSummary()
     if (stackFramesLost_ == 0)
         return;
 
-    snprintf(convBuf_, sizeof(convBuf_), "%llu", (unsigned long long)stackFramesLost_);
-    totalSummary_ += "\n" + stackFileName_ + " - lost " + convBuf_ + " frames:\n" + stackSummary_;
+    totalSummary_ += "\n" + stackFileName_ + " - lost "
+        + std::to_string(stackFramesLost_) + " frames:\n" + stackSummary_;
     totalFramesLost_ += stackFramesLost_;
 
     stackFramesLost_ = 0;

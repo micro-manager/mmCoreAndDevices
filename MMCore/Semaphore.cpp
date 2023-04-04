@@ -26,7 +26,6 @@
 #include <mutex>
 
 Semaphore::Semaphore()
-    : count_(0)
 {
 }
 

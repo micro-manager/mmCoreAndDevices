@@ -24,15 +24,16 @@
 
 #pragma once
 
-#include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/thread.hpp>
-
+#include <condition_variable>
 #include <deque>
+#include <memory>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 class Task;
 
-class ThreadPool/* final*/
+class ThreadPool final
 {
 public:
     explicit ThreadPool();
@@ -47,10 +48,9 @@ private:
     void ThreadFunc();
 
 private:
-    // TODO: Should use boost::unique_ptr but that's available since boost 1.57
-    std::vector<boost::shared_ptr<boost::thread> > threads_;
-    bool abortFlag_;
-    boost::mutex mx_;
-    boost::condition_variable cv_;
-    std::deque<Task*> queue_;
+    std::vector<std::unique_ptr<std::thread>> threads_{};
+    bool abortFlag_{ false };
+    std::mutex mx_{};
+    std::condition_variable cv_{};
+    std::deque<Task*> queue_{};
 };

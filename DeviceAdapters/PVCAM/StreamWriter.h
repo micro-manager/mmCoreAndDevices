@@ -1,10 +1,9 @@
 #ifndef _STREAMWRITER_H_
 #define _STREAMWRITER_H_
 
+#include <memory>
+#include <mutex>
 #include <string>
-
-#include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
 
 class StackFile;
 class TaskSet_CopyMemory;
@@ -18,14 +17,14 @@ public:
     * Creates the writer. The streaming needs to be started with Start().
     * @param camera A pointer to the owner class.
     */
-    StreamWriter(Universal* camera);
+    explicit StreamWriter(Universal* camera);
     /**
     * Deletes the object, stops the streaming if active.
     */
     ~StreamWriter();
 
-    StreamWriter(const StreamWriter&)/* = delete*/;
-    StreamWriter& operator=(const StreamWriter&)/* = delete*/;
+    StreamWriter(const StreamWriter&) = delete;
+    StreamWriter& operator=(const StreamWriter&) = delete;
 
 public:
     /**
@@ -99,36 +98,40 @@ private:
     const Universal* camera_;
 
     // TODO: Get some shared pool from outside
-    const boost::shared_ptr<ThreadPool> threadPool_;
-    const boost::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
+    const std::shared_ptr<ThreadPool> threadPool_;
+    const std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 
-    size_t pageBytes_; // Set only once in constructor
+    // Optimized/non-buffered streaming requires all file writes to be aligned.
+    // The O_DIRECT requires 512B alignment, the FILE_FLAG_NO_BUFFERING requires
+    // "physical sector size" alignment. Since most common disk sector sizes are
+    // 512B and 4k, we use the latter which will fits all the requirements.
+    const static size_t bufferAlignment_{ 4096 };
 
-    mutable boost::mutex mx_; // For serialization of public method calls
+    mutable std::mutex mx_{}; // For serialization of public method calls
 
-    bool isEnabled_; // User choice
-    std::string dirRoot_; // User choice
-    size_t bitDepth_; // Taken from PVCAM
-    size_t frameBytes_; // Taken from PVCAM, may include metadata
-    size_t frameBytesAligned_; // frameBytes_ aligned to pageBytes_
-    size_t maxFramesPerStack_; // Max. number of frames that fit in 3 GB
-    void* alignedBuffer_; // Allocated to frameBytesAligned_ if differs from frameBytes_
+    bool isEnabled_{ false }; // User choice
+    std::string dirRoot_{}; // User choice
+    size_t bitDepth_{ 0 }; // Taken from PVCAM
+    size_t frameBytes_{ 0 }; // Taken from PVCAM, may include metadata
+    size_t frameBytesAligned_{ 0 }; // frameBytes_ aligned to bufferAlignment_
+    size_t maxFramesPerStack_{ 0 }; // Max. number of frames that fit in 3 GB
+    void* alignedBuffer_{ nullptr }; // Allocated to frameBytesAligned_ if differs from frameBytes_
 
-    std::string sessionId_; // Auto-generated as timestamp
-    std::string path_; // dirRoot_ + session_
-    bool isActive_; // True when set up and configured
+    std::string sessionId_{}; // Auto-generated as timestamp
+    std::string path_{}; // dirRoot_ + session_
+    bool isActive_{ false }; // True when set up and configured
 
-    StackFile* stackFile_;
-    std::string stackFileName_; // Only file name without path
-    size_t stackFileIndex_;
-    size_t stackFileFrameIndex_;
+    StackFile* stackFile_{ nullptr };
+    std::string stackFileName_{}; // Only file name without path
+    size_t stackFileIndex_{ 0 };
+    size_t stackFileFrameIndex_{ 0 };
 
-    mutable char convBuf_[1024];
-    size_t totalFramesLost_;
-    size_t stackFramesLost_;
-    std::string totalSummary_;
-    std::string stackSummary_;
-    size_t lastFrameNr_;
+    char convBuf_[1024]{};
+    size_t totalFramesLost_{ 0 };
+    size_t stackFramesLost_{ 0 };
+    std::string totalSummary_{};
+    std::string stackSummary_{};
+    size_t lastFrameNr_{ 0 };
 };
 
 #endif // _STREAMWRITER_H_
