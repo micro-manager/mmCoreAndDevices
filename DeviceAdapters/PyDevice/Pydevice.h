@@ -41,7 +41,7 @@
 
 #ifdef _DEBUG
 #undef _DEBUG
-#include <Python.h>
+#include <Python.h> // if you get a compiler error here, try building again and see if magic happens
 #define _DEBUG
 #else
 #include <Python.h>

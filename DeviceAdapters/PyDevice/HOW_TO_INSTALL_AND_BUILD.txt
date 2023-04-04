@@ -20,4 +20,6 @@ git submodule add https://github.com/ivovellekoop/mmPython mmCoreAndDevices/Devi
 
 :: Right-click on the Solution and choose 'Project dependencies...'. Make sure MMCore depends on MMDevice-SharedRuntime and PythonBinding depends on MMCore
 :: Right-click on the PythonBinding project and 'set as startup project' 
-:: Build the project (in Debug mode) ignore any warnings you may get
+:: Build the project. You will get an error (Python.h not found)
+:: Build the project again, the error should have disappeared.
+
