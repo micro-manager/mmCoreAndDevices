@@ -49,8 +49,8 @@
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-const char* g_ControllerName = "MeadowlarkLcOpenSource";
-const char* g_ControllerAbout = "MeadowlarkLC Digital Device Controller/Interface";
+const char* g_ControllerName = "MeadowlarkLC";
+const char* g_ControllerAbout = "Meadowlark Optics D5020 Liquid Crystal Controller";
 const char* g_ControllerDevices = "Select Device #";
 const char* g_ControllerDeviceType = "Select Device Interface";
 const char* g_ControllerDeviceType10V = "10V (D3050) Controller";
@@ -97,9 +97,8 @@ const char* g_ControllerLCType_B14183_Curves = "CURVE_IDR_B14183";
 const char* g_ControllerDescription = "Description";
 const char* g_ControllerDescriptionInfo = "Description Info";
 const std::string g_Nonedetected = "None detected";
-const LPCSTR g_About = "MeadowlarkLC Device Adapter for Micro-Manager and use with OpenPolScope Micro-Manager plugin. \n Please refer to http://www.openpolscope.org for more information.";
 
-const char* g_Dev_Adapter_Ver = "1.1.0";
+const char* g_Dev_Adapter_Ver = "2.0.0";
 using namespace std;
 
 const HMODULE GetCurrentModule()
@@ -1473,18 +1472,7 @@ int MeadowlarkLC::OnSendToMeadowlarkLC(MM::PropertyBase* pProp, MM::ActionType e
 			SetProperty(propstring.c_str(), description_.c_str());
 
 		}
-		//else if (!searchQuestionMark && ((sendToMeadowlarkLC_ == "About") || sendToMeadowlarkLC_ == "about")) {
 
-		//	MessageBox(0, g_About, "About", 0);
-		//	SetProperty(propstring.c_str(), description_.c_str());
-
-		//}
-		//else if (!searchQuestionMark && ((sendToMeadowlarkLC_ == "Help") || sendToMeadowlarkLC_ == "help")) {
-
-		//	MessageBox(0, g_About, "About", 0);
-		//	SetProperty(propstring.c_str(), description_.c_str());
-
-		//}
 		else if (!searchQuestionMark && ((sendToMeadowlarkLC_ == "import") || sendToMeadowlarkLC_ == "IMPORT")) {
 
 			loadDefault();
