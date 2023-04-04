@@ -12,7 +12,6 @@
 // LICENSE:       ?
 
 #include "Pydevice.h"
-#include <Python.h>
 #include <numpy/arrayobject.h>
 #include <stdio.h>
 #include <cstdio>

@@ -24,6 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\..\..\source\repos\bridge_4\bridge_4\script.py" />
+    <None Include="autoconfig.py" />
     <None Include="Dummyscanner.py" />
     <None Include="Pyscanner.py" />
   </ItemGroup>
@@ -57,18 +58,23 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
     <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+    <Import Project="AutoConfig.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
     <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+    <Import Project="AutoConfig.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <CustomBuildBeforeTargets>BuildCompileTraverse</CustomBuildBeforeTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <LibraryPath>C:\Users\ivove\anaconda3\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -77,7 +83,8 @@
       <PreprocessorDefinitions>_DEBUG;PYDEVICE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\Jeroen Doornbos\AppData\Roaming\Python\Python310\site-packages\numpy\core\include;C:\Program Files\Python310\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -88,6 +95,12 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>python autoconfig.py &gt; AutoConfig.props</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Configures Python install path. Unfortunately only works from second build attempt!</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -98,7 +111,8 @@
       <PreprocessorDefinitions>NDEBUG;PYDEVICE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\Jeroen Doornbos\AppData\Roaming\Python\Python310\site-packages\numpy\core\include;C:\Program Files\Python310\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>@CONFIG %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -111,6 +125,12 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>python autoconfig.py &gt; AutoConfig.props</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Configures Python install path. Unfortunately only works from second build attempt!</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -37,5 +37,6 @@
     <None Include="Pyscanner.py">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="autoconfig.py" />
   </ItemGroup>
 </Project>
