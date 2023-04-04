@@ -53,12 +53,10 @@ const char* g_ControllerName = "MeadowlarkLC";
 const char* g_ControllerAbout = "Meadowlark Optics D5020 Liquid Crystal Controller";
 const char* g_ControllerDevices = "Select Device #";
 const char* g_ControllerDeviceType = "Select Device Interface";
-const char* g_ControllerDeviceType10V = "10V (D3050) Controller";
-const char* g_ControllerDeviceType20V_D3060HV = "20V (D3060HV) Controller";
-const char* g_ControllerDeviceType20V_D5020 = "20V (D5020) Controller";
-const double g_ControllerDeviceType10VFac = 6553.5;
+const char* g_ControllerDeviceType10V_D5020 = "D5020 Controller (untested)";
+const char* g_ControllerDeviceType20V_D5020 = "D5020-20V Controller";
+const double g_ControllerDeviceType10VFac_D5020 = 1000;
 const double g_ControllerDeviceType20VFac_D5020 = 1000;
-const double g_ControllerDeviceType20VFac_D3060HV = 655.35;
 const char* g_ControllerTotalLCs = "Total Number of LCs";
 
 const double g_ControllerDeviceRetardanceLowLimit = 0.001;
@@ -68,31 +66,10 @@ const double g_ControllerDeviceRetardanceAbsRetLow = 0.0;
 const double g_ControllerDeviceRetardanceAbsRetHigh = 1200.0;
 
 const char* g_ControllerLCType_Internal = "Internal (Single generic 546nm curve)";
-const char* g_ControllerLCType_Paired = "Use LC Paired with Controller";
 const char* g_ControllerLCType_F001 = "File (mmgr_dal_MeadowlarkLC.csv)"; //"Loaded From File (mmgr_dal_MeadowlarkLC.csv)";
-const char* g_ControllerLCType_F001b = "Loaded From File (mmgr_dal_MeadowlarkLC.csv)"; // retained for backward compatibility
-const char* g_ControllerLCType_F002 = "File (SERIAL_NO.csv)"; //"Loaded From File (SERIAL_NO.csv)";
-const char* g_ControllerLCType_B001 = "B001 (Non-Bonded)"; //"Non-Bonded LC Type";
-const char* g_ControllerLCType_B002 = "B002 (Bonded)"; // "Bonded LC Type";
-const char* g_ControllerLCType_T001 = "Thick 001 (Bonded)"; // "Thick Bonded LC Type";
-
-const char* g_ControllerLCType_B14181 = "B14181"; // "Bonded LC Type"; // L13009
-const char* g_ControllerSN_L13009 = "L13009"; // "Bonded LC Type"; // B14181 (A14001 & B14022)
-
-const char* g_ControllerLCType_B14182 = "B14182"; // "Bonded LC Type"; // L13010
-const char* g_ControllerSN_L13010 = "L13010"; // "Bonded LC Type"; // B14182 (A14004 & B14021)
-
-const char* g_ControllerLCType_B14183 = "B14183"; // "Bonded LC Type"; // L13011
-const char* g_ControllerSN_L13011 = "L13011"; // "Bonded LC Type"; // B14183 (A14004 & A14006)
 
 const char* g_ControllerLCType_F001_Curves = "mmgr_dal_MeadowlarkLC.csv";
 const char* g_ControllerLCType_F002_Curves = ".csv";
-const char* g_ControllerLCType_1_Curves = "CURVE_IDR_0_1";
-const char* g_ControllerLCType_2_Curves = "CURVE_IDR_0_2";
-const char* g_ControllerLCType_T001_Curves = "CURVE_IDR_T001";
-const char* g_ControllerLCType_B14181_Curves = "CURVE_IDR_B14181";
-const char* g_ControllerLCType_B14182_Curves = "CURVE_IDR_B14182";
-const char* g_ControllerLCType_B14183_Curves = "CURVE_IDR_B14183";
 
 const char* g_ControllerDescription = "Description";
 const char* g_ControllerDescriptionInfo = "Description Info";
@@ -168,8 +145,8 @@ MeadowlarkLC::MeadowlarkLC() :
 
 {
 	cur_dev = 0;
-	controllerType_ = g_ControllerDeviceType20V_D5020; // default to D5020
-	controllerLCType_ = g_ControllerLCType_F002; // USE FILE.csv by Default
+	controllerType_ = g_ControllerDeviceType20V_D5020; // default to D5020-20V
+	controllerLCType_ = g_ControllerLCType_F001; // use mmgr_dal_MeadowlarkLC.csv file by default
 	description_ = "Not found";
 	serialnum_ = "Undefined";
 	cur_dev_name = "1";
@@ -183,12 +160,7 @@ MeadowlarkLC::MeadowlarkLC() :
 	SetErrorText(ERR_INVALID_SERIAL_NUMBER, "Invalid Serial Number. Please refer to your Meadowlark device unit.");
 	SetErrorText(ERR_INVALID_LCSERIAL_NUMBER, "Invalid LC-Serial Number. Calibration curve for this LC does not exist.");
 	SetErrorText(ERR_INVALID_LC_UNPAIRED, "Invalid LC-Controller Pair. This Controller is not paired with an LC. Enter LC-S/N");
-	if (controllerLCType_ == g_ControllerLCType_F002) {
-		SetErrorText(ERR_INVALID_LC_FILE, ".csv File Invalid Selection. The calibration curve file does not exist or is invalid.");
-	}
-	else {
-		SetErrorText(ERR_INVALID_LC_SELECTION, "Invalid Selection. The calibration curve file (mmgr_dal_MeadowlarkLC.csv) does not exist or is invalid.");
-	}
+	SetErrorText(ERR_INVALID_LC_SELECTION, "Invalid Selection. The calibration curve file (mmgr_dal_MeadowlarkLC.csv) does not exist or is invalid.");
 
 	std::string str = IntToString(numTotalLCs_).c_str();
 	totalLCsMsg = "Invalid Active LCs. Number of Active LCs cannot be more than Total of " + str + " LCs";
@@ -267,24 +239,16 @@ MeadowlarkLC::MeadowlarkLC() :
 
 		// LC Controller Type
 		pAct = new CPropertyAction(this, &MeadowlarkLC::OnControllerType);
-		CreateProperty(g_ControllerDeviceType, g_ControllerDeviceType10V, MM::String, false, pAct, true);
-		AddAllowedValue(g_ControllerDeviceType, g_ControllerDeviceType10V);
-		AddAllowedValue(g_ControllerDeviceType, g_ControllerDeviceType20V_D3060HV);
+		CreateProperty(g_ControllerDeviceType, g_ControllerDeviceType20V_D5020, MM::String, false, pAct, true);
 		AddAllowedValue(g_ControllerDeviceType, g_ControllerDeviceType20V_D5020);
+		//AddAllowedValue(g_ControllerDeviceType, g_ControllerDeviceType10V_D5020);
 
 		// LC (Non-Bonded, Bonded, etc...)
 		pAct = new CPropertyAction(this, &MeadowlarkLC::OnControllerLCType);
-		CreateProperty("Select LC Type", g_ControllerLCType_Paired, MM::String, false, pAct, true);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_Paired);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_B001);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_B002);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_B14181);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_B14182);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_B14183);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_T001);
+		CreateProperty("Select LC Type", g_ControllerLCType_F001, MM::String, false, pAct, true);
 		AddAllowedValue("Select LC Type", g_ControllerLCType_F001);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_F001b);
-		AddAllowedValue("Select LC Type", g_ControllerLCType_F002);
+		//AddAllowedValue("Select LC Type", g_ControllerLCType_Internal);
+		
 
 		pAct = new CPropertyAction(this, &MeadowlarkLC::OnSerialNumber);
 		CreateProperty("Controller S/N", "Undefined", MM::String, false, pAct, true);
@@ -328,27 +292,11 @@ int MeadowlarkLC::Initialize()
 		return ERR_INVALID_SERIAL_NUMBER;
 	}
 
+	// Why do we raise an error here?
 	if (controllerLCType_ == g_ControllerLCType_Internal) {
 		return ERR_INVALID_LC_SELECTION;
 	}
 
-	if (controllerLCType_ == g_ControllerLCType_Paired) {
-		if (serialnum_ == g_ControllerSN_L13009) {
-			controllerLCType_ = g_ControllerLCType_B14181;
-
-		}
-		else if (serialnum_ == g_ControllerSN_L13010) {
-			controllerLCType_ = g_ControllerLCType_B14182;
-
-		}
-		else if (serialnum_ == g_ControllerSN_L13011) {
-			controllerLCType_ = g_ControllerLCType_B14183;
-
-		}
-		if (controllerLCType_ == g_ControllerLCType_Paired) {
-			return ERR_INVALID_LC_UNPAIRED;
-		}
-	}
 	if (controllerLCType_ == "Undefined" || controllerLCType_ == "") {
 		return ERR_INVALID_LCSERIAL_NUMBER;
 	}
@@ -383,17 +331,13 @@ int MeadowlarkLC::Initialize()
 		palEl_[i] = DoubleToString(wavelength_) + str;
 	}
 
-	if (controllerType_ == g_ControllerDeviceType10V) {
-		g_ControllerDeviceTypeVFac = g_ControllerDeviceType10VFac;
-		tneAmplitude_ = 10;
-	}
-	else if (controllerType_ == g_ControllerDeviceType20V_D5020) {
+	if (controllerType_ == g_ControllerDeviceType20V_D5020) {
 		g_ControllerDeviceTypeVFac = g_ControllerDeviceType20VFac_D5020;
 		tneAmplitude_ = 20;
 	}
-	else if (controllerType_ == g_ControllerDeviceType20V_D3060HV) {
-		g_ControllerDeviceTypeVFac = g_ControllerDeviceType20VFac_D3060HV;
-		tneAmplitude_ = 20;
+	else if (controllerType_ == g_ControllerDeviceType10V_D5020) {
+		g_ControllerDeviceTypeVFac = g_ControllerDeviceType10VFac_D5020;
+		tneAmplitude_ = 10;
 	}
 
 	// load curve based on LC Type
@@ -444,16 +388,7 @@ int MeadowlarkLC::Initialize()
 	// Controller LC Type
 	pAct = new CPropertyAction(this, &MeadowlarkLC::OnControllerLCType);
 	ret = CreateProperty("Controller LC Type", controllerLCType_.c_str(), MM::String, false, pAct);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_Paired);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_B001);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_B002);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_B14181);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_B14182);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_B14183);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_T001);
 	AddAllowedValue("Controller LC Type", g_ControllerLCType_F001);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_F001b);
-	AddAllowedValue("Controller LC Type", g_ControllerLCType_F002);
 	AddAllowedValue("Controller LC Type", g_ControllerLCType_Internal);
 	if (ret != DEVICE_OK)
 		return ret;
@@ -519,7 +454,7 @@ int MeadowlarkLC::Initialize()
 		pActX = new CPropertyActionEx(this, &MeadowlarkLC::OnVoltage, i);
 		CreateProperty(s.str().c_str(), "7.500", MM::Float, false, pActX);
 
-		if (controllerType_ == g_ControllerDeviceType10V) {
+		if (controllerType_ == g_ControllerDeviceType10V_D5020) {
 			SetPropertyLimits(s.str().c_str(), 0, 10.0);
 		}
 		else {
@@ -815,7 +750,7 @@ int MeadowlarkLC::OnRetardance(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 			double voltage = GetVoltage(index); // in mV
 			//double voltage = voltage_[index];
 			double maxV = 10000;
-			if (controllerType_ == g_ControllerDeviceType20V_D3060HV || controllerType_ == g_ControllerDeviceType20V_D5020) {
+			if (controllerType_ == g_ControllerDeviceType20V_D5020) {
 				maxV = 20000;
 			}
 
@@ -859,7 +794,7 @@ int MeadowlarkLC::OnRetardance(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 		retardanceT = ceilf(retardanceT * 10000) / 10000;
 		double voltage = round(RetardanceToVoltage(retardanceT, index));
 
-		if (controllerType_ == g_ControllerDeviceType10V) {
+		if (controllerType_ == g_ControllerDeviceType10V_D5020) {
 			if (voltage >= 0 && voltage <= 10000) {
 				voltLimitCheck = true;
 			}
@@ -882,7 +817,7 @@ int MeadowlarkLC::OnRetardance(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 		if (voltage < 0) {
 			voltage = 0;
 		}
-		else if (controllerType_ == g_ControllerDeviceType10V) {
+		else if (controllerType_ == g_ControllerDeviceType10V_D5020) {
 			if (voltage > 10000) {
 				voltage = 10000;
 			}
@@ -939,7 +874,7 @@ int MeadowlarkLC::OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct, long i
 			double voltage = GetVoltage(index); // in mV
 
 			double maxV = 10000;
-			if (controllerType_ == g_ControllerDeviceType20V_D3060HV || controllerType_ == g_ControllerDeviceType20V_D5020) {
+			if (controllerType_ == g_ControllerDeviceType20V_D5020) {
 				maxV = 20000;
 			}
 
@@ -962,7 +897,7 @@ int MeadowlarkLC::OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct, long i
 			voltage *= 1000; // now in mV
 
 			double maxV = 10000;
-			if (controllerType_ == g_ControllerDeviceType20V_D3060HV || controllerType_ == g_ControllerDeviceType20V_D5020) {
+			if (controllerType_ == g_ControllerDeviceType20V_D5020) {
 				maxV = 20000;
 			}
 
@@ -2346,43 +2281,8 @@ bool MeadowlarkLC::checkConfigFile(std::string configFilename) {
 void MeadowlarkLC::controllerLcTypeChange() {
 	// Add multiple curves switch and load from resource ID
 	//
-	if (controllerLCType_ == g_ControllerLCType_B001) {
-		controllerLCType_Curve = g_ControllerLCType_B001;
-		loadResource(IDR_TEXT1);
-		convertStringtoStringArray(lcCurve_);
-	}
-	else if (controllerLCType_ == g_ControllerLCType_B002) {
-		controllerLCType_Curve = g_ControllerLCType_B002;
-		loadResource(IDR_TEXT2);
-		convertStringtoStringArray(lcCurve_);
-	}
-	else if (controllerLCType_ == g_ControllerLCType_B14181) {
-		controllerLCType_Curve = g_ControllerLCType_B14181_Curves;
-		loadResource(IDR_B14181);
-		convertStringtoStringArray(lcCurve_);
-	}
-	else if (controllerLCType_ == g_ControllerLCType_B14182) {
-		controllerLCType_Curve = g_ControllerLCType_B14182_Curves;
-		loadResource(IDR_B14182);
-		convertStringtoStringArray(lcCurve_);
-	}
-	else if (controllerLCType_ == g_ControllerLCType_B14183) {
-		controllerLCType_Curve = g_ControllerLCType_B14183_Curves;
-		loadResource(IDR_B14183);
-		convertStringtoStringArray(lcCurve_);
-	}
-	else if (controllerLCType_ == g_ControllerLCType_T001) {
-		controllerLCType_Curve = g_ControllerLCType_T001_Curves;
-		loadResource(IDR_T001);
-		convertStringtoStringArray(lcCurve_);
-	}
-	else if (controllerLCType_ == g_ControllerLCType_F001 || controllerLCType_ == g_ControllerLCType_F001b) {
+	if (controllerLCType_ == g_ControllerLCType_F001) {
 		controllerLCType_Curve = g_ControllerLCType_F001_Curves;
-		loadDefault();
-		import(controllerLCType_Curve);
-	}
-	else if (controllerLCType_ == g_ControllerLCType_F002) {
-		controllerLCType_Curve = serialnum_ + g_ControllerLCType_F002_Curves;
 		loadDefault();
 		import(controllerLCType_Curve);
 	}
