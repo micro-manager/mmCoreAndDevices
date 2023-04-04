@@ -3,35 +3,24 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   MeadowlarkLC Device Adapter for Meadowlark Optics liquid crystal controllers
+// DESCRIPTION:   MeadowlarkLC Device Adapter for Meadowlark Optics D5020 liquid crystal controller
 //
-// Copyright © 2009 - 2014, Marine Biological Laboratory
+// AUTHOR:		  Amitabh Verma
+//				  Ivan Ivanov
 // 
-// LICENSE (Berkeley Software Distribution License): Redistribution and use in source and binary forms,
-// with or without modification, are permitted provided that the following conditions are met:
+// COPYRIGHT:	  Marine Biological Laboratory (2011 - 2017)
+//				  Chan Zuckerberg Biohub San Francisco (2017 - 2023)
+// 
+// LICENSE:       This file is distributed under the BSD license.
+//                License text is included with the source distribution.
 //
-// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer
-//    in the documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the Marine Biological Laboratory nor the names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
+//                This file is distributed in the hope that it will be useful,
+//                but WITHOUT ANY WARRANTY; without even the implied warranty
+//                of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-// COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// The views and conclusions contained in the software and documentation are those of the authors and should not be interpreted as 
-// representing official policies, either expressed or implied, of any organization.
-//
-// Developed at the Laboratory of Rudolf Oldenbourg at the Marine Biological Laboratory in Woods Hole, MA.
-//
-//
-// AUTHOR: Amitabh Verma
-//
-// Notes: Refer MeadowlarkLC.cpp for ChangeLog, ToDo and other information
+//                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+//                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+//                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
 #ifndef _MEADOWLARKLC_H_
 #define _MEADOWLARKLC_H_

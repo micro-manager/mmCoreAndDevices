@@ -3,105 +3,24 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   MeadowlarkLC Device Adapter for Meadowlark Optics liquid crystal controllers
-//
-// Copyright © 2009 - 2018, Marine Biological Laboratory
+// DESCRIPTION:   MeadowlarkLC Device Adapter for Meadowlark Optics D5020 liquid crystal controller
 // 
-// LICENSE (Berkeley Software Distribution License): Redistribution and use in source and binary forms,
-// with or without modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer
-//    in the documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the Marine Biological Laboratory nor the names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-// COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// The views and conclusions contained in the software and documentation are those of the authors and should not be interpreted as 
-// representing official policies, either expressed or implied, of any organization.
-//
-// Developed at the Laboratory of Rudolf Oldenbourg at the Marine Biological Laboratory in Woods Hole, MA.
-// LAST UPDATE:   Ivan Ivanov, Chan Zuckerberg Biohub - June, 2022
-//
-//
-// AUTHOR: Amitabh Verma, MBL - Dec. 05, 2012
-//
-// ToDo List at EOF
-//
-// Change Log - Ivan Ivanov - June 29, 2022 - 1.1.0
-// 1. Updated VS project files to allow compiling the device adapter along with MicroManager nightly builds.
-// 2. Fixed bug in OnVoltage function. Function input and output are now both in units of volts.
-// 3. Updated OnRetardance function to refresh the LC retardance once LC voltage is set. Similarly for OnVoltage.
-// 4. Renamed "Version Number" property to "Controller Serial Number", which is more accurate.
+// AUTHOR:		  Amitabh Verma
+//				  Ivan Ivanov
 // 
-// Change Log - Amitabh Verma - Aug. 21, 2018 - 1.00.03
-// 1. Implemented config file for device adapter that gets written out when not found based on serial number of device.
-// This config file can be updated with palette element values for different wavelengths and can be set using command eg. "sp 546"
-// The first defined palette in the csv file is loaded as default at startup when the device driver is loaded.
+// COPYRIGHT:	  Marine Biological Laboratory (2011 - 2017)
+//				  Chan Zuckerberg Biohub San Francisco (2017 - 2023)
+// 
+// LICENSE:       This file is distributed under the BSD license.
+//                License text is included with the source distribution.
 //
-// Change Log - Amitabh Verma - Aug. 06, 2018 - 1.00.02
-// 1. Option for LC - File (Serial_No.csv)
-// Note: This method will allow providing LCs with individual custom calibration curves and also allow multiple instances of the adapter to 
-// load individual calibration curves based on the device Serial No.
+//                This file is distributed in the hope that it will be useful,
+//                but WITHOUT ANY WARRANTY; without even the implied warranty
+//                of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //
-// Change Log - Amitabh Verma - Oct. 10, 2014
-// 1. Option for LC - Loaded From File (mmgr_dal_MeadowlarkLC.csv)
-// Note: This method will allow providing LCs with custom calibration curve and no further need to recompile this device adapter
-// with additional calibration curves.
-//
-// Change Log - Amitabh Verma - July. 24, 2014
-// 1. Replaced ',' comma with ';' semi-colon  in property names due to Micro-Manager warning during HW Config Wizard 'Contains reserved chars'
-// Note: This will break Pol-Acquisition (OpenPolScope) and requires compatible version which uses same name for Property
-//
-// Change Log
-// March 19, 2014
-// 1. Absolute retardance field
-// 2. Extended retardance range to minimum based on voltage and maximum 1.6 waves
-// 3. changedTime_ is called only when setting voltage - not for other operations
-//
-// Feb. 10, 2014
-// 1. Added support for D5020 (20V) Controller. Tested with actual unit.
-// - Set Max no. of LC based on controller type.
-// - Check for no. of Active LCs less than Max
-//
-// Nov. 21, 2013
-// 1. Calibration curves now part of dll and embedded as resource
-// - To add more curves add in resource.h and MeadownlarkLC.rc and then add selection case for LC Type and under Initialize()
-//
-// Nov. 19, 2013
-// 1. Added LC Calibration curve selection option
-//
-// Nov. 18, 2013
-// 1. Added scaling based of Controller type (D3050, D3060HV, D5020)
-//
-// Nov. 14, 2013
-// 1. Support for 20V controller - untested (D5020)
-// 2. Added TNE support with defaults 20ms pluse duration with 10V/20V Amplitude
-// 3. Added Exercise LC Code
-// 4a. Added characterization for 10V and 20V range device
-// 4b. Implemented range for Voltage and Retardance based on 10V/20V device 
-//
-// June 27, 2013
-// 1. Load calibration curves via csv file
-// 2. Generate interpolated calibration curves
-// 3. Export calibration curve being used
-//
-// June 23, 2013
-// 1. MeadowlarkLC beta release version 1.0
-//
-// Apr. 23, 2013
-// 1. MeadowlarkLC alpha release version 1.0
-//
-// Dec. 05, 2012
-// 1. Implementing MeadowlarkLC from VariLC device adapter
-//
-// http://stackoverflow.com/questions/4200189/how-to-use-cmake-to-generate-vs-project-which-link-to-some-dll-files
+//                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+//                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+//                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
 
 #ifdef WIN32
