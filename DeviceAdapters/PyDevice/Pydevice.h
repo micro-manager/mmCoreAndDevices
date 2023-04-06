@@ -176,6 +176,7 @@ public:
     // action interface
     // ----------------
     // Added by Jeroen:
+    int OnPythonPath(MM::PropertyBase* pProp, MM::ActionType);
     int OnZoomFactor(MM::PropertyBase* pProp, MM::ActionType);
     int OnDelay(MM::PropertyBase* pProp, MM::ActionType);
     int OnDwelltime(MM::PropertyBase* pProp, MM::ActionType);

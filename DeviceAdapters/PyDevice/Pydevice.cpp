@@ -14,11 +14,14 @@
 #include "Pydevice.h"
 #include <numpy/arrayobject.h>
 #include <stdio.h>
+#include <locale>
+#include <codecvt>
 #include <cstdio>
 #include <string>
 #include <math.h>
 #include "ModuleInterface.h"
 #include <sstream>
+#include <fstream>
 #include <algorithm>
 #include "WriteCompactTiffRGB.h"
 #include <iostream>
@@ -27,11 +30,13 @@
 #include <iomanip>
 #include <sstream>
 #include <Shlwapi.h>
-
+#include <Shlobj.h> 
+#include <Shlobj_core.h>
 
 using namespace std;
 const double CPydevice::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
+wstring g_PythonHome;
 
 // External names used used by the rest of the system
 // to load particular device from the "Pydevice.dll" library
@@ -50,43 +55,6 @@ const char* g_Unidirectional = "Unidirectional";
 
 
 enum { MODE_BIDIRECTIONAL, MODE_UNIDIRECTIONAL};
-
-///////////////////////////////////////////////////////////////////////////////
-// Exported MMDevice API
-///////////////////////////////////////////////////////////////////////////////
-BOOL WINAPI DllMain(
-    HINSTANCE hinstDLL,  // handle to DLL module
-    DWORD fdwReason,     // reason for calling function
-    LPVOID lpvReserved)  // reserved
-{
-    // Perform actions based on the reason for calling.
-    switch (fdwReason)
-    {
-    case DLL_PROCESS_ATTACH:
-        // Initialize once for each new process.
-        // Return FALSE to fail DLL load.
-        break;
-
-    case DLL_THREAD_ATTACH:
-        // Do thread-specific initialization.
-        break;
-
-    case DLL_THREAD_DETACH:
-        // Do thread-specific cleanup.
-        break;
-
-    case DLL_PROCESS_DETACH:
-
-        if (lpvReserved != nullptr)
-        {
-            break; // do not do cleanup if process termination scenario
-        }
-
-        // Perform any necessary cleanup.
-        break;
-    }
-    return TRUE;  // Successful DLL_PROCESS_ATTACH.
-}
 
 MODULE_API void InitializeModuleData()
 {
@@ -112,6 +80,50 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 MODULE_API void DeleteDevice(MM::Device* pDevice)
 {
     delete pDevice;
+}
+
+bool TrySetPythonHome(wstring path) {
+    if (path.empty())
+        return false;
+
+    if (path.back() != L'\\' && path.back() != L'/')
+        path += L'\\';
+
+    std::ifstream test(path + L"python3.dll");
+    if (test.good()) {
+        g_PythonHome = path;
+        return true;
+    }
+    return false;
+}
+
+bool FindPython() {
+    //cannot call GetPythonHome before Py_Initialize!!!
+    //if (Py_GetPythonHome() && TrySetPythonHome(Py_GetPythonHome()))
+    //    return true;
+    
+    std::wstring home;
+    std::wstringstream path(_wgetenv(L"PATH"));
+    while (std::getline(path, home, L';') && !home.empty()) {
+        if (TrySetPythonHome(home))
+            return true;
+        if (TrySetPythonHome(home + L"..\\lib\\"))
+            return true;
+        if (TrySetPythonHome(home + L"lib\\"))
+            return true;
+    }
+    return false;
+}
+
+string WStringToString(const wstring& w) {
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(w);
+}
+string WStringToString(const wchar_t* w) {
+    return w ? WStringToString(wstring(w)) : string();
+}
+
+wstring StringToWString(const string& a) {
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(a);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -168,6 +180,13 @@ CPydevice::CPydevice() :
 
     // parent ID display
     CreateHubIDProperty();
+
+    FindPython();
+
+    // convert path to ascii (because MM does not support unicode!??)
+    CreateStringProperty("Path for Python3.dll", WStringToString(g_PythonHome).c_str(), false,
+        new CPropertyAction(this, &CPydevice::OnPythonPath),
+        true);
 
     CreateStringProperty("DAC port analog out x", dacportoutx_.c_str(), false,
         new CPropertyAction(this, &CPydevice::OnDACPortOutx),
@@ -232,8 +251,9 @@ int CPydevice::Initialize()
     // set property list
     // -----------------
     // Python initialisation
-    auto old_path = Py_GetPythonHome();
-    Py_SetPythonHome(L"C:\\Users\\ivove\\anaconda3");
+    //auto old_path = Py_GetPythonHome();
+    //Py_SetPythonHome(L"C:\\Users\\ivove\\anaconda3");
+    Py_SetPythonHome(g_PythonHome.c_str());
     Py_Initialize();
     PyRun_SimpleString("import sys");
     PyRun_SimpleString("sys.path.append(\".\")");
@@ -1383,6 +1403,23 @@ int CPydevice::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
     else if (eAct == MM::AfterSet)
     {
         pProp->Get(triggerDevice_);
+    }
+    return DEVICE_OK;
+}
+
+
+int CPydevice::OnPythonPath(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(WStringToString(g_PythonHome).c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        string path;
+        pProp->Get(path);
+        if (!TrySetPythonHome(StringToWString(path)))
+            return DEVICE_INVALID_PROPERTY_VALUE; // could not find Python install here
     }
     return DEVICE_OK;
 }
