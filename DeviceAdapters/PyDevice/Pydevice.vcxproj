@@ -75,7 +75,7 @@
     <CustomBuildBeforeTargets>
     </CustomBuildBeforeTargets>
     <LibraryPath>$(LibraryPath)</LibraryPath>
-    <OutDir>..\..\..\..\..\..\Program Files\Micro-Manager-2.0</OutDir>
+    <OutDir>..\..\..\..\..\..\..\..\Program Files\Micro-Manager-2.0</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
