@@ -54,21 +54,31 @@ int PythonBridge::ConstructInternal(const char* pythonScript, const char* python
         "exec(code.read())\n"
         "code.close()\n"
         "device = " << pythonClass << "()\n"
-        "options = device.options\n";
-
+        "options = [p for p in type(device).__dict__.items() if isinstance(p[1], base_property)]";
+        
     auto code = bootstrap.str();
     auto result = PyObj(PyRun_String(code.c_str(), Py_file_input, g_Module, g_Module));
-    if (!result) {
-        auto msg = PyObj(PyRun_String("traceback.format_exc()", Py_single_input, g_Module, g_Module));
-        wchar_t buffer[2048] = { 0 };
-        auto sz = PyUnicode_AsWideChar(msg, buffer, std::size(buffer));
-        return ERR_BOOTSTRAP_COMPILATION_FAILED;
-    }
+    if (!result)
+        return PythonError();
 
     _object = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("device"))));
     _options = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("options"))));
-
+    auto option_count = PyList_Size(_options);
+    for (Py_ssize_t i = 0; i < option_count; i++) {
+        auto key_value = PyList_GetItem(_options, i); // note: borrowed reference, don't ref count (what a mess...)
+        auto cname = PyUnicode_AsUTF8(PyTuple_GetItem(key_value, 0));
+        if (!cname)
+            return PythonError();
+        auto name = string(cname);
+        auto property = PyTuple_GetItem(key_value, 1);
+    }
+    PyObject_Dir(_options);
     return DEVICE_OK;
+}
+
+int PythonBridge::PythonError() {
+    auto msg = PyUnicode_AsUTF8(PyObj(PyRun_String("traceback.format_exc()", Py_single_input, g_Module, g_Module)));
+    return ERR_BOOTSTRAP_COMPILATION_FAILED;
 }
 
 /*
@@ -162,3 +172,4 @@ wstring StringToWString(const string& a) {
     MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, a.c_str(), a.size(), converted.data(), resultLen);
     return converted;
 }
+

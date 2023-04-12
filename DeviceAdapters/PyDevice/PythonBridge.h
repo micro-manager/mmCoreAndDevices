@@ -60,6 +60,7 @@ public:
     //static string DefaultPluginPath();
 private:
     static bool HasPython(string path);
+    int PythonError();
     int ConstructInternal(const char* pythonScript, const char* pythonClass);
 };
 
