@@ -1,6 +1,8 @@
 #include <string>
-#include <map>
 #include <functional>
+#include <filesystem>
+namespace fs = std::filesystem;
+
 #define ERR_PYTHON_NOT_FOUND 101
 #define ERR_PYTHON_PATH_CONFLICT 102
 #define ERR_PYTHON_SCRIPT_NOT_FOUND 103
@@ -62,10 +64,10 @@ public:
     static bool PythonActive() {
         return g_ActiveDeviceCount > 0;
     }
-    static string FindPython();
+    static fs::path FindPython();
     //static string DefaultPluginPath();
 private:
-    static bool HasPython(string path);
+    static bool HasPython(const fs::path& path);
     int PythonError();
     int ConstructInternal(const char* pythonScript, const char* pythonClass);
     static string PyUTF8(PyObject* obj);

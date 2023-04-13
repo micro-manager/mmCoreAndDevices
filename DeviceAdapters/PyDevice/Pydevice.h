@@ -50,7 +50,7 @@ public:
         this->SetErrorText(ERR_PYTHON_NO_INFO, "A Python error occurred, but no further information was available");
 
         // Adds properties for locating the Python libraries, the Python script, and the name of the device class
-        this->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().c_str(), PythonBridge::PythonActive(), nullptr, true);
+        this->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), PythonBridge::PythonActive(), nullptr, true);
         this->CreateStringProperty(p_PythonScript, "", false, nullptr, true);
         this->CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
     }

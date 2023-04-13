@@ -2,20 +2,11 @@
 #include <fstream>
 #include <sstream>
 #include <windows.h>
-#include <algorithm>
-#include <sstream>
-#include <filesystem>
-#include <iterator>
-#include <memory>
 #include "MMDeviceConstants.h"
-namespace fs = std::filesystem;
+
 unsigned int PythonBridge::g_ActiveDeviceCount = 0;
 wstring PythonBridge::g_PythonHome;
 PyObj PythonBridge::g_Module;
-
-// wraps a PyObject* in a PyObj smart pointer. If the PyObject* is null, return a python error.
-#define _P(expression) PyObj(expression) || return PythonError();
-
 
 PythonBridge::PythonBridge() {
 }
@@ -26,9 +17,9 @@ PythonBridge::PythonBridge() {
 int PythonBridge::Construct(const char* pythonHome, const char* pythonScript, const char* pythonClass)
 {
     // Initialize Python interperter
-    auto homePath = StringToWString(pythonHome);
+    auto homePath = fs::path(StringToWString(pythonHome));
     if (PythonActive()) {
-        if (homePath != g_PythonHome)
+        if (homePath != fs::path(g_PythonHome))
             return ERR_PYTHON_PATH_CONFLICT;
     }
     else {
@@ -131,29 +122,27 @@ int PythonBridge::Destruct() {
 /// Helper functions for finding the Python installation folder
 ///
 /// 
-bool PythonBridge::HasPython(string path) {
+bool PythonBridge::HasPython(const fs::path& path) {
     if (path.empty())
         return false;
 
-    if (path.back() != L'\\' && path.back() != L'/')
-        path += L'\\';
-
-    std::ifstream test(path + "python3.dll");
+    std::ifstream test(path / "python3.dll");
     return test.good();
 }
 
 /// Tries to locate the Python library. 
 /// If Python is already initialized, returns the path used in the previous initialization.
 /// If Python could not be found, returns an empty string
-string PythonBridge::FindPython() {
+fs::path PythonBridge::FindPython() {
     if (PythonActive())
         return WStringToString(g_PythonHome);
 
-    std::string home;
+    std::string home_text;
     std::stringstream path(getenv("PATH"));
-    while (std::getline(path, home, ';') && !home.empty()) {
-        auto home_lib1 = home + "..\\lib\\";
-        auto home_lib2 = home + "lib\\";
+    while (std::getline(path, home_text, ';') && !home_text.empty()) {
+        auto home = fs::path(home_text);
+        auto home_lib1 = home.parent_path() / "lib";
+        auto home_lib2 = home / "lib";
         if (HasPython(home))
             return home;
         if (HasPython(home_lib1))
@@ -200,7 +189,7 @@ string PythonBridge::PyUTF8(PyObject* obj) {
     if (!obj)
         return string();
     const char* s = PyUnicode_AsUTF8(obj);
-    if (s)
+    if (!s)
         return string();
     return s;
 }
