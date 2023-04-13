@@ -7,13 +7,13 @@ unsigned int PythonBridge::g_ActiveDeviceCount = 0;
 fs::path PythonBridge::g_PythonHome;
 PyObj PythonBridge::g_Module;
 
-PythonBridge::PythonBridge() {
+PythonBridge::PythonBridge() : _core(nullptr) {
 }
 
 
 // set python path. The folder must contain the python dll. If Python is already initialized, the path must be the same
-        // as the path that was used for initializing it. So, multiple deviced must have the same python install path.
-int PythonBridge::Construct(const char* pythonHome, const char* pythonScript, const char* pythonClass)
+// as the path that was used for initializing it. So, multiple deviced must have the same python install path.
+int PythonBridge::Initialize(const char* pythonHome, const char* pythonScript, const char* pythonClass)
 {
     // Initialize Python interperter
     auto homePath = fs::path(pythonHome);
@@ -198,3 +198,4 @@ string PythonBridge::PyUTF8(PyObject* obj) {
         return string();
     return s;
 }
+
