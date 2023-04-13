@@ -5,8 +5,8 @@
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Generic device adapter that runs a Python script. Serves as base class for PyCamera, etc.
 //                
-// AUTHOR:        Jeroen Doornbos
-//                Ivo Vellekoop
+// AUTHOR:        Ivo Vellekoop
+//                Jeroen Doornbos
 //
 // COPYRIGHT:     University of Twente, Enschede, The Netherlands.
 //
@@ -46,7 +46,8 @@ public:
         this->SetErrorText(ERR_PYTHON_PATH_CONFLICT, "All Python devices must have the same Python library path");
         this->SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the python script at the specified location");
         this->SetErrorText(ERR_PYTHON_CLASS_NOT_FOUND, "Could not find a class definition with the specified name");
-        this->SetErrorText(ERR_BOOTSTRAP_COMPILATION_FAILED, "Could not compile Python loader script");
+        this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
+        this->SetErrorText(ERR_PYTHON_NO_INFO, "A Python error occurred, but no further information was available");
 
         // Adds properties for locating the Python libraries, the Python script, and the name of the device class
         this->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().c_str(), PythonBridge::PythonActive(), nullptr, true);
@@ -54,6 +55,10 @@ public:
         this->CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
     }
     ~CPyDeviceBase() {}
+    virtual void SetCallback(MM::Core* cbk) { 
+        BaseClass::SetCallback(cbk);
+        _python.SetErrorCallback([=](const string& message) { cbk->LogMessage(this, message.c_str(), false); });
+    }
 
     // MMDevice API
     // ------------
@@ -67,6 +72,7 @@ public:
         _check_(this->GetProperty(p_PythonScript, pythonScript));
         _check_(this->GetProperty(p_PythonDeviceClass, pythonDeviceClass));
         _check_(_python.Construct(pythonHome, pythonScript, pythonDeviceClass));
+
         return DEVICE_OK;
 //        for (const auto& option : _python.Options()) {
 //            this->CreateProperty(option.GetName(), option.GetValueString(), option.GetType(), false, new CPropertyAction(_python, &_python::OnPropertyAccess);

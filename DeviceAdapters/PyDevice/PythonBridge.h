@@ -1,10 +1,12 @@
 #include <string>
 #include <map>
+#include <functional>
 #define ERR_PYTHON_NOT_FOUND 101
 #define ERR_PYTHON_PATH_CONFLICT 102
 #define ERR_PYTHON_SCRIPT_NOT_FOUND 103
 #define ERR_PYTHON_CLASS_NOT_FOUND 104
-#define ERR_BOOTSTRAP_COMPILATION_FAILED 105
+#define ERR_PYTHON_EXCEPTION 105
+#define ERR_PYTHON_NO_INFO 106
 
 #pragma once
 #ifdef _DEBUG
@@ -49,10 +51,14 @@ class PythonBridge
     static PyObj g_Module;
     PyObj _object;
     PyObj _options;
+    std::function<void(const char*)> _errorCallback;
 public:
     PythonBridge();
     int Construct(const char* pythonHome, const char* pythonScript, const char* pythonClass);
     int Destruct();
+    void SetErrorCallback(const std::function<void(const char*)>& callback) {
+        _errorCallback = callback;
+    }
     static bool PythonActive() {
         return g_ActiveDeviceCount > 0;
     }
@@ -62,6 +68,7 @@ private:
     static bool HasPython(string path);
     int PythonError();
     int ConstructInternal(const char* pythonScript, const char* pythonClass);
+    static string PyUTF8(PyObject* obj);
 };
 
 

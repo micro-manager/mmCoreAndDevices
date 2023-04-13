@@ -13,6 +13,10 @@ unsigned int PythonBridge::g_ActiveDeviceCount = 0;
 wstring PythonBridge::g_PythonHome;
 PyObj PythonBridge::g_Module;
 
+// wraps a PyObject* in a PyObj smart pointer. If the PyObject* is null, return a python error.
+#define _P(expression) PyObj(expression) || return PythonError();
+
+
 PythonBridge::PythonBridge() {
 }
 
@@ -33,7 +37,7 @@ int PythonBridge::Construct(const char* pythonHome, const char* pythonScript, co
         g_PythonHome = homePath;
         Py_SetPythonHome(g_PythonHome.c_str());
         Py_Initialize();
-        g_Module = PyObj(PyDict_New());// PyObj(PyModule_New("PyDevice")); // create a global scope to execute the scripts in
+        g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
     }
     g_ActiveDeviceCount++;
     auto result = ConstructInternal(pythonScript, pythonClass);
@@ -55,9 +59,10 @@ int PythonBridge::ConstructInternal(const char* pythonScript, const char* python
         "code.close()\n"
         "device = " << pythonClass << "()\n"
         "options = [p for p in type(device).__dict__.items() if isinstance(p[1], base_property)]";
+       
         
     auto code = bootstrap.str();
-    auto result = PyObj(PyRun_String(code.c_str(), Py_file_input, g_Module, g_Module));
+    auto result = PyObj(PyRun_String(code.c_str(), Py_file_input, g_Module, g_Module)); 
     if (!result)
         return PythonError();
 
@@ -66,10 +71,9 @@ int PythonBridge::ConstructInternal(const char* pythonScript, const char* python
     auto option_count = PyList_Size(_options);
     for (Py_ssize_t i = 0; i < option_count; i++) {
         auto key_value = PyList_GetItem(_options, i); // note: borrowed reference, don't ref count (what a mess...)
-        auto cname = PyUnicode_AsUTF8(PyTuple_GetItem(key_value, 0));
-        if (!cname)
+        auto name = PyUTF8(PyTuple_GetItem(key_value, 0));
+        if (name.empty())
             return PythonError();
-        auto name = string(cname);
         auto property = PyTuple_GetItem(key_value, 1);
     }
     PyObject_Dir(_options);
@@ -77,8 +81,28 @@ int PythonBridge::ConstructInternal(const char* pythonScript, const char* python
 }
 
 int PythonBridge::PythonError() {
-    auto msg = PyUnicode_AsUTF8(PyObj(PyRun_String("traceback.format_exc()", Py_single_input, g_Module, g_Module)));
-    return ERR_BOOTSTRAP_COMPILATION_FAILED;
+    if (!PyErr_Occurred())
+        return ERR_PYTHON_NO_INFO;
+    if (_errorCallback) {
+        PyObject* type = nullptr;
+        PyObject* value = nullptr;
+        PyObject* traceback = nullptr;
+        PyErr_Fetch(&type, &value, &traceback);
+        auto msg = string("Python error. ");
+        if (type) {
+            msg += PyUTF8(PyObj(PyObject_Str(type)));
+            msg += " : ";
+        }
+        if (value)
+            msg += PyUTF8(PyObj(PyObject_Str(value)));
+        
+        _errorCallback(msg.c_str());
+        PyErr_Restore(type, value, traceback);
+        return ERR_PYTHON_EXCEPTION;
+    } else
+        return ERR_PYTHON_NO_INFO;
+    
+    PyErr_Clear();
 }
 
 /*
@@ -101,7 +125,6 @@ string PythonBridge::DefaultPluginPath()
 
 
 int PythonBridge::Destruct() {
-    //ERR_PYTHON_PATH_CONFLICT: ERR_PYTHON_NOT_FOUND
     return DEVICE_OK;
 }
 
@@ -147,12 +170,12 @@ string WStringToString(const wstring& w) {
     if (w.empty())
         return converted;
 
-    auto resultLen = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), w.size(), nullptr, 0, nullptr, nullptr);
+    auto resultLen = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), nullptr, 0, nullptr, nullptr);
     if (!resultLen)
         return "Error converting string";
 
     converted.resize(resultLen);
-    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), w.size(), converted.data(), resultLen, nullptr, nullptr);
+    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), converted.data(), resultLen, nullptr, nullptr);
     return converted;
 }
 string WStringToString(const wchar_t* w) {
@@ -164,12 +187,20 @@ wstring StringToWString(const string& a) {
     if (a.empty())
         return converted;
 
-    auto resultLen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, a.c_str(), a.size(), nullptr, 0);
+    auto resultLen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, a.c_str(), (int)a.size(), nullptr, 0);
     if (!resultLen)
         return L"Error converting string";
 
     converted.resize(resultLen);
-    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, a.c_str(), a.size(), converted.data(), resultLen);
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, a.c_str(), (int)a.size(), converted.data(), resultLen);
     return converted;
 }
 
+string PythonBridge::PyUTF8(PyObject* obj) {
+    if (!obj)
+        return string();
+    const char* s = PyUnicode_AsUTF8(obj);
+    if (s)
+        return string();
+    return s;
+}
