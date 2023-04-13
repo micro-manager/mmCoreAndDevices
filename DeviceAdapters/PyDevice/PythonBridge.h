@@ -35,6 +35,8 @@ public:
     PyObj() : _p(nullptr) {
     }
     explicit PyObj(PyObject* obj) : _p(obj) {
+        if (!obj)
+            throw new NullPointerException();
         Py_XINCREF(_p);
     }
     PyObj(const PyObj& other) : _p(other) {
@@ -52,17 +54,9 @@ public:
         Py_XINCREF(_p);
         return *this;
     }
-};
 
-struct PythonProperty {
-    string name;
-    MM::PropertyType type;
-    double lower_limit = -numeric_limits<double>::infinity();
-    double upper_limit = numeric_limits<double>::infinity();
-
-    bool HasLimits() const {
-        return isfinite(lower_limit) || isfinite(upper_limit);
-    }
+    class NullPointerException : public std::exception {
+    };
 };
 
 class PythonBridge
@@ -85,14 +79,13 @@ class PythonBridge
     
 public:
     PythonBridge();
-    int Initialize(const char* pythonHome, const char* pythonScript, const char* pythonClass);
+    int InitializeInterpreter(const char* pythonHome);
     int Destruct();
    
     int SetProperty(const string& name, long value);
     int SetProperty(const string& name, double value);
     int SetProperty(const string& name, const string& value);
 
-    std::vector<PythonProperty> EnumerateProperties();
     static bool PythonActive() {
         return g_ActiveDeviceCount > 0;
     }
@@ -106,8 +99,6 @@ public:
     }
 
     template <class T> int Initialize(CDeviceBase<T, PythonBridge>* device, MM::Core* core) {
-        using Action = typename CDeviceBase<T, PythonBridge>::CPropertyAction;
-
         // Set up error callback
         _core = core;
         if (_core)
@@ -119,23 +110,10 @@ public:
         _check_(device->GetProperty(p_PythonHome, pythonHome));
         _check_(device->GetProperty(p_PythonScript, pythonScript));
         _check_(device->GetProperty(p_PythonDeviceClass, pythonDeviceClass));
-        _check_(Initialize(pythonHome, pythonScript, pythonDeviceClass));
-
-        for (const auto& option : EnumerateProperties()) {
-            switch (option.type) {
-            case MM::String:
-                device->CreateStringProperty(option.name.c_str(), "", false, new Action(this, &PythonBridge::OnString));
-                break;
-            case MM::Integer:
-                device->CreateIntegerProperty(option.name.c_str(), 0, false, new Action(this, &PythonBridge::OnInteger));
-                break;
-            case MM::Float:
-                device->CreateFloatProperty(option.name.c_str(), 0.0, false, new Action(this, &PythonBridge::OnFloat));
-                break;
-            }
-            if (option.HasLimits())
-                device->SetPropertyLimits(option.name.c_str(), option.lower_limit, option.upper_limit);
-        }
+        _check_(InitializeInterpreter(pythonHome));
+        _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
+        g_ActiveDeviceCount++;
+        _check_(CreateProperties(device));
         return DEVICE_OK;
     }
 
@@ -178,7 +156,51 @@ public:
 private:
     static bool HasPython(const fs::path& path);
     int PythonError();
-    int ConstructInternal(const char* pythonScript, const char* pythonClass);
+    int ConstructPythonObject(const char* pythonScript, const char* pythonClass);
+    static PyObj GetAttr(PyObject* object, const char* string);
+    static long GetInt(PyObject* object, const char* string);
+    static double GetFloat(PyObject* object, const char* string);
+    static string GetString(PyObject* object, const char* string);
     static string PyUTF8(PyObject* obj);
+    template <class T> int CreateProperties(CDeviceBase<T, PythonBridge>* device) {
+        using Action = typename CDeviceBase<T, PythonBridge>::CPropertyAction;
+
+        try {
+            auto property_count = PyList_Size(_options);
+            for (Py_ssize_t i = 0; i < property_count; i++) {
+                auto key_value = PyList_GetItem(_options, i); // note: borrowed reference, don't ref count (what a mess...)
+                auto name = PyUTF8(PyTuple_GetItem(key_value, 0));
+                if (name.empty())
+                    continue;
+
+                // construct int/float/string property
+                auto property = PyTuple_GetItem(key_value, 1);
+                if (PyObject_IsInstance(property, _intPropertyType)) {
+                    auto defaultValue = GetInt(property, "default");
+                    device->CreateIntegerProperty(name.c_str(), defaultValue, false, new Action(this, &PythonBridge::OnInteger));
+                }
+                else if (PyObject_IsInstance(property, _floatPropertyType)) {
+                    auto defaultValue = GetFloat(property, "default");
+                    device->CreateFloatProperty(name.c_str(), defaultValue, false, new Action(this, &PythonBridge::OnFloat));
+                }
+                else if (PyObject_IsInstance(property, _stringPropertyType)) {
+                    auto defaultValue = GetString(property, "default");
+                    device->CreateStringProperty(name.c_str(), defaultValue.c_str(), false, new Action(this, &PythonBridge::OnString));
+                }
+                else
+                    continue;
+
+                // set limits
+                auto lower = PyObject_HasAttrString(property, "min") ? GetFloat(property, "min") : -std::numeric_limits<double>().infinity();
+                auto upper = PyObject_HasAttrString(property, "max") ? GetFloat(property, "max") : std::numeric_limits<double>().infinity();
+                if (isfinite(lower) || isfinite(upper))
+                    device->SetPropertyLimits(name.c_str(), lower, upper);
+            }
+        }
+        catch (PyObj::NullPointerException) {
+            return PythonError();
+        }
+        return DEVICE_OK;
+    }
 };
 

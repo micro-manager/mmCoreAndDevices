@@ -13,7 +13,7 @@ PythonBridge::PythonBridge() : _core(nullptr) {
 
 // set python path. The folder must contain the python dll. If Python is already initialized, the path must be the same
 // as the path that was used for initializing it. So, multiple deviced must have the same python install path.
-int PythonBridge::Initialize(const char* pythonHome, const char* pythonScript, const char* pythonClass)
+int PythonBridge::InitializeInterpreter(const char* pythonHome)
 {
     // Initialize Python interperter
     auto homePath = fs::path(pythonHome);
@@ -29,14 +29,10 @@ int PythonBridge::Initialize(const char* pythonHome, const char* pythonScript, c
         Py_Initialize();
         g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
     }
-    g_ActiveDeviceCount++;
-    auto result = ConstructInternal(pythonScript, pythonClass);
-    if (result == DEVICE_OK)
-        Destruct(); // if construction fails, clean up. If there are no more active devices, also de-initialize Python library
-    return result;
+    return DEVICE_OK;
 }
 
-int PythonBridge::ConstructInternal(const char* pythonScript, const char* pythonClass) {
+int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* pythonClass) {
 
     // Load python script
     // This is done by constructing a python loader script and executing it.
@@ -50,45 +46,20 @@ int PythonBridge::ConstructInternal(const char* pythonScript, const char* python
         "device = " << pythonClass << "()\n"
         "options = [p for p in type(device).__dict__.items() if isinstance(p[1], base_property)]";
 
-
-    auto code = bootstrap.str();
-    auto result = PyObj(PyRun_String(code.c_str(), Py_file_input, g_Module, g_Module));
-    if (!result)
+    try {
+        auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, g_Module, g_Module));
+        _object = PyObj(PyDict_GetItemString(g_Module, "device"));
+        _options = PyObj(PyDict_GetItemString(g_Module, "options"));
+        _intPropertyType = PyObj(PyDict_GetItemString(g_Module, "int_property"));
+        _floatPropertyType = PyObj(PyDict_GetItemString(g_Module, "float_property"));
+        _stringPropertyType = PyObj(PyDict_GetItemString(g_Module, "string_property"));
+    }
+    catch (PyObj::NullPointerException) {
         return PythonError();
-
-    _object = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("device"))));
-    _options = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("options"))));
-    _intPropertyType = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("int_property"))));
-    _floatPropertyType = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("float_property"))));
-    _stringPropertyType = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("string_property"))));
+    }
     return DEVICE_OK;
 }
 
-std::vector<PythonProperty> PythonBridge::EnumerateProperties() {
-    auto property_count = PyList_Size(_options);
-    auto properties = std::vector<PythonProperty>();
-    properties.reserve(property_count);
-
-    for (Py_ssize_t i = 0; i < property_count; i++) {
-        auto key_value = PyList_GetItem(_options, i); // note: borrowed reference, don't ref count (what a mess...)
-        auto name = PyUTF8(PyTuple_GetItem(key_value, 0));
-        if (name.empty())
-            continue;
-        auto property = PyTuple_GetItem(key_value, 1);
-        auto lower = PyObject_HasAttrString(property, "min") ? PyFloat_AsDouble(PyObj(PyObject_GetAttrString(property, "min"))) : -std::numeric_limits<double>().infinity();
-        auto upper = PyObject_HasAttrString(property, "max") ? PyFloat_AsDouble(PyObj(PyObject_GetAttrString(property, "max"))) : std::numeric_limits<double>().infinity();
-
-        if (PyObject_IsInstance(property, _intPropertyType)) {
-            properties.push_back({ name, MM::Integer, lower, upper });
-        } else if (PyObject_IsInstance(property, _floatPropertyType)) {
-            properties.push_back({ name, MM::Float, lower, upper });
-        } else if (PyObject_IsInstance(property, _stringPropertyType)) {
-            properties.push_back({ name, MM::String });
-        }
-
-    }
-    return properties;
-}
 
 int PythonBridge::SetProperty(const string& name, long value) {
     return PyObject_SetAttrString(_object, name.c_str(), PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
@@ -100,6 +71,22 @@ int PythonBridge::SetProperty(const string& name, double value) {
 
 int PythonBridge::SetProperty(const string& name, const string& value) {
     return PyObject_SetAttrString(_object, name.c_str(), PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
+}
+
+PyObj PythonBridge::GetAttr(PyObject* object, const char* string) {
+    return PyObj(PyObject_GetAttrString(object, string));
+}
+
+long PythonBridge::GetInt(PyObject* object, const char* string) {
+    return PyLong_AsLong(GetAttr(object, string));
+}
+
+double PythonBridge::GetFloat(PyObject* object, const char* string) {
+    return PyFloat_AsDouble(GetAttr(object, string));
+}
+
+string PythonBridge::GetString(PyObject* object, const char* string) {
+    return PyUTF8(GetAttr(object, string));
 }
 
 
@@ -129,24 +116,6 @@ int PythonBridge::PythonError() {
         return ERR_PYTHON_NO_INFO;
     }    
 }
-
-/*
-string PythonBridge::DefaultPluginPath()
-{
-    char path[MAX_PATH];
-    HMODULE hm = nullptr;
-
-    if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&DefaultPluginPath, &hm) == 0)
-        return string();
-    if (GetModuleFileNameA(hm, path, sizeof(path)) == 0)
-        return string();
-    auto path_string = string(path);
-    auto separator = path_string.rfind("\\");
-    if (separator != string::npos)
-        path_string = path_string.substr(0, separator);
-    return path_string;
-}*/
-
 
 
 int PythonBridge::Destruct() {
@@ -186,8 +155,6 @@ fs::path PythonBridge::FindPython() {
     }
     return string();
 }
-
-
 
 
 string PythonBridge::PyUTF8(PyObject* obj) {
