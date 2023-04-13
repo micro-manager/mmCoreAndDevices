@@ -7,8 +7,6 @@ unsigned int PythonBridge::g_ActiveDeviceCount = 0;
 fs::path PythonBridge::g_PythonHome;
 PyObj PythonBridge::g_Module;
 
-PythonBridge::PythonBridge() : _core(nullptr) {
-}
 
 
 // set python path. The folder must contain the python dll. If Python is already initialized, the path must be the same

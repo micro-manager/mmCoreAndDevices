@@ -74,7 +74,6 @@ class PythonBridge
     PyObj _floatPropertyType;
     PyObj _stringPropertyType;
     string _name;
-    MM::Core* _core;
     function<void(const char*)> _errorCallback;
     
 public:
@@ -91,6 +90,10 @@ public:
     }
     static fs::path FindPython();
 
+    PythonBridge(const function<void(const char*)>& errorCallback) : _errorCallback(errorCallback) {
+    }
+
+
     template <class T> void Construct(CDeviceBase<T, PythonBridge>* device) {
         // Adds properties for locating the Python libraries, the Python script, and the name of the device class
         device->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), false, nullptr, true);
@@ -98,12 +101,7 @@ public:
         device->CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
     }
 
-    template <class T> int Initialize(CDeviceBase<T, PythonBridge>* device, MM::Core* core) {
-        // Set up error callback
-        _core = core;
-        if (_core)
-            _errorCallback = [device, core](const char* message) { core->LogMessage(device, message, false); };
-
+    template <class T> int Initialize(CDeviceBase<T, PythonBridge>* device) {
         char pythonHome[MM::MaxStrLength] = { 0 };
         char pythonScript[MM::MaxStrLength] = { 0 };
         char pythonDeviceClass[MM::MaxStrLength] = { 0 };
