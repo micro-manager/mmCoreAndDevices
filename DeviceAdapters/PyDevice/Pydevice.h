@@ -75,15 +75,17 @@ public:
         for (const auto& option : _python.EnumerateProperties()) {
             switch (option.type) {
             case MM::String:
-                this->CreateStringProperty(option.name.c_str(), "", false, new CPropertyAction(this, &CPyDeviceBase::OnString));
+                CreateStringProperty(option.name.c_str(), "", false, new CPropertyAction(this, &CPyDeviceBase::OnString));
                 break;
             case MM::Integer:
-                this->CreateIntegerProperty(option.name.c_str(), 0, false, new CPropertyAction(this, &CPyDeviceBase::OnInteger));
+                CreateIntegerProperty(option.name.c_str(), 0, false, new CPropertyAction(this, &CPyDeviceBase::OnInteger));
                 break;
             case MM::Float:
-                this->CreateFloatProperty(option.name.c_str(), 0.0, false, new CPropertyAction(this, &CPyDeviceBase::OnFloat));
+                CreateFloatProperty(option.name.c_str(), 0.0, false, new CPropertyAction(this, &CPyDeviceBase::OnFloat));
                 break;
             }
+            if (option.HasLimits())
+                SetPropertyLimits(option.name.c_str(), option.lower_limit, option.upper_limit);
         }
         return DEVICE_OK;
     }

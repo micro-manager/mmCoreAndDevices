@@ -2,6 +2,7 @@
 #include <functional>
 #include <filesystem>
 #include <vector>
+#include <limits>
 #include "MMDeviceConstants.h"
 
 namespace fs = std::filesystem;
@@ -52,6 +53,12 @@ public:
 struct PythonProperty {
     string name;
     MM::PropertyType type;
+    double lower_limit = -std::numeric_limits<double>::infinity();
+    double upper_limit = std::numeric_limits<double>::infinity();
+
+    bool HasLimits() const {
+        return isfinite(lower_limit) || isfinite(upper_limit);
+    }
 };
 
 class PythonBridge

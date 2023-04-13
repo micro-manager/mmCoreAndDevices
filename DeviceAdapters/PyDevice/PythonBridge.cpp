@@ -75,10 +75,13 @@ std::vector<PythonProperty> PythonBridge::EnumerateProperties() {
         if (name.empty())
             continue;
         auto property = PyTuple_GetItem(key_value, 1);
+        auto lower = PyObject_HasAttrString(property, "min") ? PyFloat_AsDouble(PyObj(PyObject_GetAttrString(property, "min"))) : -std::numeric_limits<double>().infinity();
+        auto upper = PyObject_HasAttrString(property, "max") ? PyFloat_AsDouble(PyObj(PyObject_GetAttrString(property, "max"))) : std::numeric_limits<double>().infinity();
+
         if (PyObject_IsInstance(property, _intPropertyType)) {
-            properties.push_back({ name, MM::Integer });
+            properties.push_back({ name, MM::Integer, lower, upper });
         } else if (PyObject_IsInstance(property, _floatPropertyType)) {
-            properties.push_back({ name, MM::Float });
+            properties.push_back({ name, MM::Float, lower, upper });
         } else if (PyObject_IsInstance(property, _stringPropertyType)) {
             properties.push_back({ name, MM::String });
         }
