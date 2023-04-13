@@ -4,7 +4,7 @@
 #include <windows.h>
 
 unsigned int PythonBridge::g_ActiveDeviceCount = 0;
-wstring PythonBridge::g_PythonHome;
+fs::path PythonBridge::g_PythonHome;
 PyObj PythonBridge::g_Module;
 
 PythonBridge::PythonBridge() {
@@ -16,7 +16,7 @@ PythonBridge::PythonBridge() {
 int PythonBridge::Construct(const char* pythonHome, const char* pythonScript, const char* pythonClass)
 {
     // Initialize Python interperter
-    auto homePath = fs::path(StringToWString(pythonHome));
+    auto homePath = fs::path(pythonHome);
     if (PythonActive()) {
         if (homePath != fs::path(g_PythonHome))
             return ERR_PYTHON_PATH_CONFLICT;
@@ -25,7 +25,7 @@ int PythonBridge::Construct(const char* pythonHome, const char* pythonScript, co
         if (!HasPython(pythonHome))
             return ERR_PYTHON_NOT_FOUND;
         g_PythonHome = homePath;
-        Py_SetPythonHome(g_PythonHome.c_str());
+        Py_SetPythonHome(homePath.generic_wstring().c_str());
         Py_Initialize();
         g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
     }
@@ -169,7 +169,7 @@ bool PythonBridge::HasPython(const fs::path& path) {
 /// If Python could not be found, returns an empty string
 fs::path PythonBridge::FindPython() {
     if (PythonActive())
-        return WStringToString(g_PythonHome);
+        return g_PythonHome;
 
     std::string home_text;
     std::stringstream path(getenv("PATH"));
@@ -188,33 +188,7 @@ fs::path PythonBridge::FindPython() {
 }
 
 
-string WStringToString(const wstring& w) {
-    std::string converted;
-    if (w.empty())
-        return converted;
 
-    auto resultLen = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), nullptr, 0, nullptr, nullptr);
-    if (!resultLen)
-        return "Error converting string";
-
-    converted.resize(resultLen);
-    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), converted.data(), resultLen, nullptr, nullptr);
-    return converted;
-}
-
-wstring StringToWString(const string& a) {
-    std::wstring converted;
-    if (a.empty())
-        return converted;
-
-    auto resultLen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, a.c_str(), (int)a.size(), nullptr, 0);
-    if (!resultLen)
-        return L"Error converting string";
-
-    converted.resize(resultLen);
-    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, a.c_str(), (int)a.size(), converted.data(), resultLen);
-    return converted;
-}
 
 string PythonBridge::PyUTF8(PyObject* obj) {
     if (!obj)

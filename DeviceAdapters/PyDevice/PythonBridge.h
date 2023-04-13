@@ -23,7 +23,6 @@ namespace fs = std::filesystem;
 #include <Python.h>
 #endif
 using std::string;
-using std::wstring;
 
 class PyObj {
     PyObject* _p;
@@ -64,7 +63,7 @@ struct PythonProperty {
 class PythonBridge
 {
     static unsigned int g_ActiveDeviceCount;
-    static wstring g_PythonHome;
+    static fs::path g_PythonHome;
     static PyObj g_Module;
     PyObj _object;
     PyObj _options;
@@ -98,7 +97,3 @@ private:
     static string PyUTF8(PyObject* obj);
 };
 
-
-// helper functions for converting between Python and MM strings
-static string WStringToString(const wstring& w);
-static wstring StringToWString(const string& a);

@@ -49,7 +49,7 @@ public:
         SetErrorText(ERR_PYTHON_NO_INFO, "A Python error occurred, but no further information was available");
 
         // Adds properties for locating the Python libraries, the Python script, and the name of the device class
-        CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), PythonBridge::PythonActive(), nullptr, true);
+        CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), false, nullptr, true);
         CreateStringProperty(p_PythonScript, "", false, nullptr, true);
         CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
     }
