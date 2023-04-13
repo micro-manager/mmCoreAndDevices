@@ -87,6 +87,19 @@ std::vector<PythonProperty> PythonBridge::EnumerateProperties() {
     return properties;
 }
 
+int PythonBridge::SetProperty(const string& name, long value) {
+    return PyObject_SetAttrString(_object, name.c_str(), PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
+}
+
+int PythonBridge::SetProperty(const string& name, double value) {
+    return PyObject_SetAttrString(_object, name.c_str(), PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
+}
+
+int PythonBridge::SetProperty(const string& name, const char* value) {
+    return PyObject_SetAttrString(_object, name.c_str(), PyUnicode_FromString(value)) == 0 ? DEVICE_OK : PythonError();
+}
+
+
 int PythonBridge::PythonError() {
     if (!PyErr_Occurred())
         return ERR_PYTHON_NO_INFO;

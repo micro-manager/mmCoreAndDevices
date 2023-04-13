@@ -110,6 +110,13 @@ public:
     }
     int OnInteger(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
+        //if (eAct == MM::BeforeGet) // nothing to do, let the caller use cached property
+        if (eAct == MM::AfterSet)
+        {
+            long value;
+            pProp->Get(value);
+            return _python.SetProperty(pProp->GetName(), value);
+        }
         return DEVICE_OK;
     }
 

@@ -73,6 +73,9 @@ public:
     void SetErrorCallback(const std::function<void(const char*)>& callback) {
         _errorCallback = callback;
     }
+    int SetProperty(const string& name, long value);
+    int SetProperty(const string& name, double value);
+    int SetProperty(const string& name, const char* value);
     std::vector<PythonProperty> EnumerateProperties();
     static bool PythonActive() {
         return g_ActiveDeviceCount > 0;
