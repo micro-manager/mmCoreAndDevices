@@ -92,22 +92,24 @@ public:
 
     int OnString(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
-        /*if (eAct == MM::BeforeGet)
+        if (eAct == MM::AfterSet)
         {
-            // nothing to do, let the caller use cached property
+            string value;
+            pProp->Get(value);
+            return _python.SetProperty(pProp->GetName(), value);
         }
-        else if (eAct == MM::AfterSet)
-        {
-            double volts;
-            pProp->Get(volts);
-            return SetSignal(volts);
-        }*/
-
         return DEVICE_OK;
     }
 
     int OnFloat(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
+        //if (eAct == MM::BeforeGet) // nothing to do, let the caller use cached property
+        if (eAct == MM::AfterSet)
+        {
+            double value;
+            pProp->Get(value);
+            return _python.SetProperty(pProp->GetName(), value);
+        }
         return DEVICE_OK;
     }
     int OnInteger(MM::PropertyBase* pProp, MM::ActionType eAct)

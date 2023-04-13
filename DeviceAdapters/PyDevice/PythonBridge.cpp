@@ -98,8 +98,8 @@ int PythonBridge::SetProperty(const string& name, double value) {
     return PyObject_SetAttrString(_object, name.c_str(), PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
-int PythonBridge::SetProperty(const string& name, const char* value) {
-    return PyObject_SetAttrString(_object, name.c_str(), PyUnicode_FromString(value)) == 0 ? DEVICE_OK : PythonError();
+int PythonBridge::SetProperty(const string& name, const string& value) {
+    return PyObject_SetAttrString(_object, name.c_str(), PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
 }
 
 

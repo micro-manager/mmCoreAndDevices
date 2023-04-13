@@ -81,7 +81,7 @@ public:
     }
     int SetProperty(const string& name, long value);
     int SetProperty(const string& name, double value);
-    int SetProperty(const string& name, const char* value);
+    int SetProperty(const string& name, const string& value);
     std::vector<PythonProperty> EnumerateProperties();
     static bool PythonActive() {
         return g_ActiveDeviceCount > 0;
