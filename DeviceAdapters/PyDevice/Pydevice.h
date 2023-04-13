@@ -31,8 +31,7 @@
 #define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }
 // Base class for device adapters that are implement by a Python script.
 // 
-template <class BaseClass>
-class CPyDeviceBase : public BaseClass
+class CPyDeviceBase : public CGenericBase<CPyDeviceBase>
 {
 protected:
     PythonBridge _python;
@@ -42,21 +41,21 @@ protected:
     static constexpr const char* p_PythonDeviceClass = "Device class";
 public:
     CPyDeviceBase(const string& name, unsigned int count) : _python(), _name(count > 0 ? name + std::to_string(count) : name) {
-        this->SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not find python3.dll at the specified Python library path");
-        this->SetErrorText(ERR_PYTHON_PATH_CONFLICT, "All Python devices must have the same Python library path");
-        this->SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the python script at the specified location");
-        this->SetErrorText(ERR_PYTHON_CLASS_NOT_FOUND, "Could not find a class definition with the specified name");
-        this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
-        this->SetErrorText(ERR_PYTHON_NO_INFO, "A Python error occurred, but no further information was available");
+        SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not find python3.dll at the specified Python library path");
+        SetErrorText(ERR_PYTHON_PATH_CONFLICT, "All Python devices must have the same Python library path");
+        SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the python script at the specified location");
+        SetErrorText(ERR_PYTHON_CLASS_NOT_FOUND, "Could not find a class definition with the specified name");
+        SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
+        SetErrorText(ERR_PYTHON_NO_INFO, "A Python error occurred, but no further information was available");
 
         // Adds properties for locating the Python libraries, the Python script, and the name of the device class
-        this->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), PythonBridge::PythonActive(), nullptr, true);
-        this->CreateStringProperty(p_PythonScript, "", false, nullptr, true);
-        this->CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
+        CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), PythonBridge::PythonActive(), nullptr, true);
+        CreateStringProperty(p_PythonScript, "", false, nullptr, true);
+        CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
     }
     ~CPyDeviceBase() {}
     virtual void SetCallback(MM::Core* cbk) { 
-        BaseClass::SetCallback(cbk);
+        CGenericBase<CPyDeviceBase>::SetCallback(cbk);
         _python.SetErrorCallback([=](const string& message) { cbk->LogMessage(this, message.c_str(), false); });
     }
 
@@ -68,17 +67,52 @@ public:
         char pythonHome[MM::MaxStrLength] = { 0 };
         char pythonScript[MM::MaxStrLength] = { 0 };
         char pythonDeviceClass[MM::MaxStrLength] = { 0 };
-        _check_(this->GetProperty(p_PythonHome, pythonHome));
-        _check_(this->GetProperty(p_PythonScript, pythonScript));
-        _check_(this->GetProperty(p_PythonDeviceClass, pythonDeviceClass));
+        _check_(GetProperty(p_PythonHome, pythonHome));
+        _check_(GetProperty(p_PythonScript, pythonScript));
+        _check_(GetProperty(p_PythonDeviceClass, pythonDeviceClass));
         _check_(_python.Construct(pythonHome, pythonScript, pythonDeviceClass));
 
+        for (const auto& option : _python.EnumerateProperties()) {
+            switch (option.type) {
+            case MM::String:
+                this->CreateStringProperty(option.name.c_str(), "", false, new CPropertyAction(this, &CPyDeviceBase::OnString));
+                break;
+            case MM::Integer:
+                this->CreateIntegerProperty(option.name.c_str(), 0, false, new CPropertyAction(this, &CPyDeviceBase::OnInteger));
+                break;
+            case MM::Float:
+                this->CreateFloatProperty(option.name.c_str(), 0.0, false, new CPropertyAction(this, &CPyDeviceBase::OnFloat));
+                break;
+            }
+        }
         return DEVICE_OK;
-//        for (const auto& option : _python.Options()) {
-//            this->CreateProperty(option.GetName(), option.GetValueString(), option.GetType(), false, new CPropertyAction(_python, &_python::OnPropertyAccess);
-//        }
-//        MM::MaxStrLength
     }
+
+    int OnString(MM::PropertyBase* pProp, MM::ActionType eAct)
+    {
+        /*if (eAct == MM::BeforeGet)
+        {
+            // nothing to do, let the caller use cached property
+        }
+        else if (eAct == MM::AfterSet)
+        {
+            double volts;
+            pProp->Get(volts);
+            return SetSignal(volts);
+        }*/
+
+        return DEVICE_OK;
+    }
+
+    int OnFloat(MM::PropertyBase* pProp, MM::ActionType eAct)
+    {
+        return DEVICE_OK;
+    }
+    int OnInteger(MM::PropertyBase* pProp, MM::ActionType eAct)
+    {
+        return DEVICE_OK;
+    }
+
     int Shutdown() {
         return _python.Destruct();
     }
@@ -90,11 +124,11 @@ public:
 protected:
 };
 
-class CPyGenericDevice : public CPyDeviceBase<CGenericBase<PythonBridge>> {
+class CPyGenericDevice : public CPyDeviceBase {
     static int g_GenericDeviceCount;
     static constexpr const char* g_AdapterName = "Generic Python device";
 public:
-    CPyGenericDevice() : CPyDeviceBase<CGenericBase<PythonBridge>>(g_AdapterName, g_GenericDeviceCount++) {}
+    CPyGenericDevice() : CPyDeviceBase(g_AdapterName, g_GenericDeviceCount++) {}
     virtual bool Busy() { return false; }
 };
 #endif //_Pydevice_H_

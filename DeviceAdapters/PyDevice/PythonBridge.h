@@ -1,6 +1,9 @@
 #include <string>
 #include <functional>
 #include <filesystem>
+#include <vector>
+#include "MMDeviceConstants.h"
+
 namespace fs = std::filesystem;
 
 #define ERR_PYTHON_NOT_FOUND 101
@@ -46,6 +49,11 @@ public:
     }
 };
 
+struct PythonProperty {
+    string name;
+    MM::PropertyType type;
+};
+
 class PythonBridge
 {
     static unsigned int g_ActiveDeviceCount;
@@ -53,6 +61,7 @@ class PythonBridge
     static PyObj g_Module;
     PyObj _object;
     PyObj _options;
+
     std::function<void(const char*)> _errorCallback;
 public:
     PythonBridge();
@@ -61,10 +70,13 @@ public:
     void SetErrorCallback(const std::function<void(const char*)>& callback) {
         _errorCallback = callback;
     }
+    std::vector<PythonProperty> EnumerateProperties();
     static bool PythonActive() {
         return g_ActiveDeviceCount > 0;
     }
     static fs::path FindPython();
+
+
     //static string DefaultPluginPath();
 private:
     static bool HasPython(const fs::path& path);

@@ -2,7 +2,6 @@
 #include <fstream>
 #include <sstream>
 #include <windows.h>
-#include "MMDeviceConstants.h"
 
 unsigned int PythonBridge::g_ActiveDeviceCount = 0;
 wstring PythonBridge::g_PythonHome;
@@ -38,7 +37,7 @@ int PythonBridge::Construct(const char* pythonHome, const char* pythonScript, co
 }
 
 int PythonBridge::ConstructInternal(const char* pythonScript, const char* pythonClass) {
-    
+
     // Load python script
     // This is done by constructing a python loader script and executing it.
     auto scriptPath = fs::absolute(fs::path(pythonScript));
@@ -50,25 +49,32 @@ int PythonBridge::ConstructInternal(const char* pythonScript, const char* python
         "code.close()\n"
         "device = " << pythonClass << "()\n"
         "options = [p for p in type(device).__dict__.items() if isinstance(p[1], base_property)]";
-       
-        
+
+
     auto code = bootstrap.str();
-    auto result = PyObj(PyRun_String(code.c_str(), Py_file_input, g_Module, g_Module)); 
+    auto result = PyObj(PyRun_String(code.c_str(), Py_file_input, g_Module, g_Module));
     if (!result)
         return PythonError();
 
     _object = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("device"))));
     _options = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("options"))));
-    auto option_count = PyList_Size(_options);
-    for (Py_ssize_t i = 0; i < option_count; i++) {
+    return DEVICE_OK;
+}
+
+std::vector<PythonProperty> PythonBridge::EnumerateProperties() {
+    auto property_count = PyList_Size(_options);
+    auto properties = std::vector<PythonProperty>();
+    properties.reserve(property_count);
+
+    for (Py_ssize_t i = 0; i < property_count; i++) {
         auto key_value = PyList_GetItem(_options, i); // note: borrowed reference, don't ref count (what a mess...)
         auto name = PyUTF8(PyTuple_GetItem(key_value, 0));
         if (name.empty())
-            return PythonError();
+            continue;
         auto property = PyTuple_GetItem(key_value, 1);
+        properties.push_back({ name });
     }
-    PyObject_Dir(_options);
-    return DEVICE_OK;
+    return properties;
 }
 
 int PythonBridge::PythonError() {
@@ -89,11 +95,13 @@ int PythonBridge::PythonError() {
         
         _errorCallback(msg.c_str());
         PyErr_Restore(type, value, traceback);
+        PyErr_Clear();
         return ERR_PYTHON_EXCEPTION;
-    } else
+    }
+    else {
+        PyErr_Clear();
         return ERR_PYTHON_NO_INFO;
-    
-    PyErr_Clear();
+    }    
 }
 
 /*
