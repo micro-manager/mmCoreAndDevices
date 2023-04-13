@@ -58,6 +58,9 @@ int PythonBridge::ConstructInternal(const char* pythonScript, const char* python
 
     _object = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("device"))));
     _options = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("options"))));
+    _intPropertyType = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("int_property"))));
+    _floatPropertyType = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("float_property"))));
+    _stringPropertyType = PyObj(PyDict_GetItem(g_Module, PyObj(PyUnicode_FromString("string_property"))));
     return DEVICE_OK;
 }
 
@@ -72,7 +75,14 @@ std::vector<PythonProperty> PythonBridge::EnumerateProperties() {
         if (name.empty())
             continue;
         auto property = PyTuple_GetItem(key_value, 1);
-        properties.push_back({ name });
+        if (PyObject_IsInstance(property, _intPropertyType)) {
+            properties.push_back({ name, MM::Integer });
+        } else if (PyObject_IsInstance(property, _floatPropertyType)) {
+            properties.push_back({ name, MM::Float });
+        } else if (PyObject_IsInstance(property, _stringPropertyType)) {
+            properties.push_back({ name, MM::String });
+        }
+
     }
     return properties;
 }
@@ -174,9 +184,6 @@ string WStringToString(const wstring& w) {
     converted.resize(resultLen);
     WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), converted.data(), resultLen, nullptr, nullptr);
     return converted;
-}
-string WStringToString(const wchar_t* w) {
-    return w ? WStringToString(wstring(w)) : string();
 }
 
 wstring StringToWString(const string& a) {

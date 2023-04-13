@@ -61,6 +61,9 @@ class PythonBridge
     static PyObj g_Module;
     PyObj _object;
     PyObj _options;
+    PyObj _intPropertyType;
+    PyObj _floatPropertyType;
+    PyObj _stringPropertyType;
 
     std::function<void(const char*)> _errorCallback;
 public:
@@ -88,5 +91,4 @@ private:
 
 // helper functions for converting between Python and MM strings
 static string WStringToString(const wstring& w);
-static string WStringToString(const wchar_t* w);
 static wstring StringToWString(const string& a);
