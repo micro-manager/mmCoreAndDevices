@@ -1,0 +1,7 @@
+<project name="MeadowlarkLC">
+   <import file="../../../buildscripts/deviceadapter.xml"/>
+
+	<target name="install-x64">
+		<copy todir="${mm.dll.installdir}" file="mmgr_dal_MeadowlarkLC.csv"/>
+	</target>
+</project>
