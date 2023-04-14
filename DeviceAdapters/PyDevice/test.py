@@ -60,8 +60,16 @@ class string_property(base_property):
             self._ValueError(f"Value {value} is not a string, but has type {type(value)}")
         return value
         
+
+
 class Device:
-    width = int_property(min = 10, max = 11, default = 10)
+    width = int_property(min = 10, max = 11, default = 10, update = invalidate)
     height = int_property(min = 0, max = 10, default = 1)
+    def invalidate():
+        valid = false
+
     def __init__(self, **kwargs):
         parse_options(self, kwargs)
+
+
+# d = Device(width = 10)

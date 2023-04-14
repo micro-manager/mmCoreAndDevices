@@ -29,15 +29,30 @@ using std::numeric_limits;
 #define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }
 
 
+/**
+* Smart pointer object to automate reference counting of PyObject* pointers
+* todo: implement move constructor
+*/
 class PyObj {
     PyObject* _p;
 public:
     PyObj() : _p(nullptr) {
     }
+
+    /**
+    * Takes a new reference and wraps it into a PyObj smart pointer
+    * This does not increase the reference count of the object
+    * The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
+    * 
+    * Throws an exception when obj == NULL, because this is the common way of the Python API to report errors
+    */
     explicit PyObj(PyObject* obj) : _p(obj) {
         if (!obj)
             throw new NullPointerException();
-        Py_XINCREF(_p);
+    }
+    void Clear() {
+        Py_XDECREF(_p);
+        _p = nullptr;
     }
     PyObj(const PyObj& other) : _p(other) {
         Py_XINCREF(_p);
@@ -55,6 +70,17 @@ public:
         return *this;
     }
 
+    /**
+    * Takes a borrowed reference and wraps it into a PyObj smart pointer
+    * This increases the reference count of the object.
+    * The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
+    * 
+    * Throws an exception when obj == NULL, because this is the common way of the Python API to report errors
+    */
+    static PyObj FromBorrowed(PyObject* obj) {
+        Py_XINCREF(obj);
+        return PyObj(obj);
+    }
     class NullPointerException : public std::exception {
     };
 };
@@ -73,24 +99,29 @@ class PythonBridge
     PyObj _intPropertyType;
     PyObj _floatPropertyType;
     PyObj _stringPropertyType;
-    string _name;
-    function<void(const char*)> _errorCallback;
+    bool initialized_;
+    const string _name;
+    const function<void(const char*)> _errorCallback;
     
 public:
     PythonBridge();
     int InitializeInterpreter(const char* pythonHome);
     int Destruct();
    
-    int SetProperty(const string& name, long value);
-    int SetProperty(const string& name, double value);
-    int SetProperty(const string& name, const string& value);
+    int SetProperty(const char* name, long value);
+    int SetProperty(const char* name, double value);
+    int SetProperty(const char* name, const string& value);
+    int GetProperty(const char* name, long& value) const;
+    int GetProperty(const char* name, double& value) const;
+    int GetProperty(const char* name, string& value) const;
+    PyObj GetProperty(const char* name) const;
 
     static bool PythonActive() {
         return g_ActiveDeviceCount > 0;
     }
     static fs::path FindPython();
 
-    PythonBridge(const function<void(const char*)>& errorCallback) : _errorCallback(errorCallback) {
+    PythonBridge(const function<void(const char*)>& errorCallback) : _errorCallback(errorCallback), initialized_(false) {
     }
 
 
@@ -102,6 +133,9 @@ public:
     }
 
     template <class T> int Initialize(CDeviceBase<T, PythonBridge>* device) {
+        if (initialized_)
+            return DEVICE_OK;
+
         char pythonHome[MM::MaxStrLength] = { 0 };
         char pythonScript[MM::MaxStrLength] = { 0 };
         char pythonDeviceClass[MM::MaxStrLength] = { 0 };
@@ -112,6 +146,7 @@ public:
         _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
         g_ActiveDeviceCount++;
         _check_(CreateProperties(device));
+        initialized_ = true;
         return DEVICE_OK;
     }
 
@@ -121,7 +156,7 @@ public:
         {
             string value;
             pProp->Get(value);
-            return SetProperty(pProp->GetName(), value);
+            return SetProperty(pProp->GetName().c_str(), value);
         }
         return DEVICE_OK;
     }
@@ -133,7 +168,7 @@ public:
         {
             double value;
             pProp->Get(value);
-            return SetProperty(pProp->GetName(), value);
+            return SetProperty(pProp->GetName().c_str(), value);
         }
         return DEVICE_OK;
     }
@@ -144,19 +179,16 @@ public:
         {
             long value;
             pProp->Get(value);
-            return SetProperty(pProp->GetName(), value);
+            return SetProperty(pProp->GetName().c_str(), value);
         }
         return DEVICE_OK;
     }
-
-
-    //static string DefaultPluginPath();
 private:
     static bool HasPython(const fs::path& path);
     int PythonError();
     int ConstructPythonObject(const char* pythonScript, const char* pythonClass);
-    static PyObj GetAttr(PyObject* object, const char* string);
     static long GetInt(PyObject* object, const char* string);
+    static PyObj GetAttr(PyObject* object, const char* string);
     static double GetFloat(PyObject* object, const char* string);
     static string GetString(PyObject* object, const char* string);
     static string PyUTF8(PyObject* obj);
@@ -174,16 +206,13 @@ private:
                 // construct int/float/string property
                 auto property = PyTuple_GetItem(key_value, 1);
                 if (PyObject_IsInstance(property, _intPropertyType)) {
-                    auto defaultValue = GetInt(property, "default");
-                    device->CreateIntegerProperty(name.c_str(), defaultValue, false, new Action(this, &PythonBridge::OnInteger));
+                    device->CreateIntegerProperty(name.c_str(), GetInt(_object, name.c_str()), false, new Action(this, &PythonBridge::OnInteger));
                 }
                 else if (PyObject_IsInstance(property, _floatPropertyType)) {
-                    auto defaultValue = GetFloat(property, "default");
-                    device->CreateFloatProperty(name.c_str(), defaultValue, false, new Action(this, &PythonBridge::OnFloat));
+                    device->CreateFloatProperty(name.c_str(), GetFloat(_object, name.c_str()), false, new Action(this, &PythonBridge::OnFloat));
                 }
                 else if (PyObject_IsInstance(property, _stringPropertyType)) {
-                    auto defaultValue = GetString(property, "default");
-                    device->CreateStringProperty(name.c_str(), defaultValue.c_str(), false, new Action(this, &PythonBridge::OnString));
+                    device->CreateStringProperty(name.c_str(), GetString(_object, name.c_str()).c_str(), false, new Action(this, &PythonBridge::OnString));
                 }
                 else
                     continue;

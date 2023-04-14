@@ -27,6 +27,7 @@
 #include <string>
 #include "DeviceBase.h"
 #include "PythonBridge.h"
+#include "ImgBuffer.h"
 
 // Base class for device adapters that are implement by a Python script.
 // 
@@ -47,25 +48,57 @@ public:
         
         _python.Construct(this);
     }
-    ~CPyDeviceBase() {
+    virtual ~CPyDeviceBase() {
     }
-    int Initialize() {
+    int Initialize() override {
         return _python.Initialize(this);
     }
-    int Shutdown() {
+    int Shutdown() override {
         return _python.Destruct();
     }
-    void GetName(char* name) const {
+    void GetName(char* name) const override {
         CDeviceUtils::CopyLimitedString(name, _adapterName);
     }
-    virtual bool Busy() { return false; }
+    virtual bool Busy() override {
+        return false;
+    }
 };
 
 class CPyGenericDevice : public CPyDeviceBase<CGenericBase<PythonBridge>> {
+    using BaseClass = CPyDeviceBase<CGenericBase<PythonBridge>>;
 public:
-    CPyGenericDevice() : CPyDeviceBase<CGenericBase<PythonBridge>>("Generic Python device") {
-
+    constexpr static const char* g_adapterName = "Generic Python device";
+    CPyGenericDevice() : BaseClass(g_adapterName) {
     }
+};
 
+class CPyCamera : public CPyDeviceBase<CCameraBase<PythonBridge>> {
+    MM::MMTime readoutStartTime_;
+    using BaseClass = CPyDeviceBase<CCameraBase<PythonBridge>>;
+public:
+    constexpr static const char* g_adapterName = "Generic Python device";
+    CPyCamera() : BaseClass(g_adapterName), readoutStartTime_(0) {
+    }
+    const unsigned char* GetImageBuffer() override;
+    unsigned GetImageWidth() const override;
+    unsigned GetImageHeight() const override;
+    unsigned GetImageBytesPerPixel() const override;
+    unsigned GetBitDepth() const override;
+    long GetImageBufferSize() const override;
+    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) override;
+    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) override;
+    int ClearROI() override;
+
+    double GetExposure() const override;
+    void SetExposure(double exp) override;
+    int GetBinning() const override;
+    int SetBinning(int binF) override;
+
+    int StartSequenceAcquisition(double interval) override;
+    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) override;
+    int StopSequenceAcquisition() override;
+    int IsExposureSequenceable(bool& isSequenceable) const override;
+
+    int SnapImage() override;
 };
 #endif //_Pydevice_H_

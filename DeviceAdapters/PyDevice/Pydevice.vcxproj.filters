@@ -43,9 +43,6 @@
     <None Include="Dummyscanner.py">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="..\..\..\..\..\..\source\repos\bridge_4\bridge_4\script.py">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="Pyscanner.py">
       <Filter>Source Files</Filter>
     </None>

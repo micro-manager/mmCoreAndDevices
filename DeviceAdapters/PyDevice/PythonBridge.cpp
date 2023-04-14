@@ -59,21 +59,41 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
 }
 
 
-int PythonBridge::SetProperty(const string& name, long value) {
-    return PyObject_SetAttrString(_object, name.c_str(), PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
+int PythonBridge::SetProperty(const char* name, long value) {
+    return PyObject_SetAttrString(_object, name, PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
-int PythonBridge::SetProperty(const string& name, double value) {
-    return PyObject_SetAttrString(_object, name.c_str(), PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
+int PythonBridge::SetProperty(const char* name, double value) {
+    return PyObject_SetAttrString(_object, name, PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
-int PythonBridge::SetProperty(const string& name, const string& value) {
-    return PyObject_SetAttrString(_object, name.c_str(), PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
+int PythonBridge::SetProperty(const char* name, const string& value) {
+    return PyObject_SetAttrString(_object, name, PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
 }
 
 PyObj PythonBridge::GetAttr(PyObject* object, const char* string) {
     return PyObj(PyObject_GetAttrString(object, string));
 }
+
+int PythonBridge::GetProperty(const char* name, long &value) const {
+    value = GetInt(_object, name);
+    return DEVICE_OK;
+}
+
+int PythonBridge::GetProperty(const char* name, double& value) const {
+    value = GetFloat(_object, name);
+    return DEVICE_OK;
+}
+
+int PythonBridge::GetProperty(const char* name, string& value) const {
+    value = GetString(_object, name);
+    return DEVICE_OK;
+}
+
+PyObj PythonBridge::GetProperty(const char* name) const {
+    return GetAttr(_object, name);
+}
+
 
 long PythonBridge::GetInt(PyObject* object, const char* string) {
     return PyLong_AsLong(GetAttr(object, string));
@@ -117,6 +137,12 @@ int PythonBridge::PythonError() {
 
 
 int PythonBridge::Destruct() {
+    _object.Clear();
+    _options.Clear();
+    _intPropertyType.Clear();
+    _floatPropertyType.Clear();
+    _stringPropertyType.Clear();
+    initialized_ = false;
     return DEVICE_OK;
 }
 
