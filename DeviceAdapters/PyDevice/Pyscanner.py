@@ -167,7 +167,7 @@ def PMT_to_image(data,
         full_im = np.reshape(data, [y_nsteps, x_nsteps + depadsize])
         full_im = full_im[:, depadsize:]
 
-    return full_im
+    return -full_im
 
 
 def stringinterpret(input_list):
