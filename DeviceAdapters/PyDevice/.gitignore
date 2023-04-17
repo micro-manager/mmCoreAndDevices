@@ -1,3 +1,4 @@
 AutoConfig.props
 CoreLogs
 *.log
+*.idea

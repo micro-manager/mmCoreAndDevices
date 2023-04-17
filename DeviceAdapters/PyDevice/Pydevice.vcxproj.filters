@@ -15,12 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PyCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WriteCompactTiffRGB.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PyDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
