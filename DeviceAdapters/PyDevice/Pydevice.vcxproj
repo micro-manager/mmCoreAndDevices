@@ -18,8 +18,6 @@
   <ItemGroup>
     <ClInclude Include="PyDevice.h" />
     <ClInclude Include="PythonBridge.h" />
-    <ClInclude Include="WriteCompactTiffRGB.h" />
-    <ClInclude Include="PyCamera.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Module.cpp" />
