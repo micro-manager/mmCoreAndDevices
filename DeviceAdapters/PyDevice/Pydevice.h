@@ -45,14 +45,26 @@ public:
         this->SetErrorText(ERR_PYTHON_CLASS_NOT_FOUND, "Could not find a class definition with the specified name");
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
         this->SetErrorText(ERR_PYTHON_NO_INFO, "A Python error occurred, but no further information was available");
-        
+        this->SetErrorText(ERR_PYTHON_MISSING_PROPERTY, "The Python class is missing a required property, check CoreLog error log for details");
+
         _python.Construct(this);
     }
     virtual ~CPyDeviceBase() {
     }
     int Initialize() override {
-        return _python.Initialize(this);
+        auto result = _python.Initialize(this);
+        if (result != DEVICE_OK) {
+            Shutdown();
+            return result;
+        }
+        result = InitializeDevice();
+        if (result != DEVICE_OK) {
+            Shutdown();
+            return result;
+        }
+        return DEVICE_OK;
     }
+
     int Shutdown() override {
         return _python.Destruct();
     }
@@ -62,21 +74,33 @@ public:
     virtual bool Busy() override {
         return false;
     }
+protected:
+    /**
+    * Called after construction of the Python class to check if all required properties are present and have the correct type,
+    * and perform other initialization if needed.
+    */
+    virtual int InitializeDevice() {
+        return DEVICE_OK;
+    }
 };
 
 class CPyGenericDevice : public CPyDeviceBase<CGenericBase<PythonBridge>> {
     using BaseClass = CPyDeviceBase<CGenericBase<PythonBridge>>;
 public:
-    constexpr static const char* g_adapterName = "Generic Python device";
+    constexpr static const char* g_adapterName = "PyDevice";
     CPyGenericDevice() : BaseClass(g_adapterName) {
     }
 };
 
 class CPyCamera : public CPyDeviceBase<CCameraBase<PythonBridge>> {
     MM::MMTime readoutStartTime_;
+    PyObj lastImage_;       // numpy array corresponding to the last image (prevents deletion during processing)
+    PyObj triggerFunction_; // 'trigger' function of the camera object
+    PyObj waitFunction_;    // 'wait' function of the camera object
+    
     using BaseClass = CPyDeviceBase<CCameraBase<PythonBridge>>;
 public:
-    constexpr static const char* g_adapterName = "Generic Python device";
+    constexpr static const char* g_adapterName = "PyCamera";
     CPyCamera() : BaseClass(g_adapterName), readoutStartTime_(0) {
     }
     const unsigned char* GetImageBuffer() override;
@@ -100,5 +124,7 @@ public:
     int IsExposureSequenceable(bool& isSequenceable) const override;
 
     int SnapImage() override;
+protected:
+    int InitializeDevice() override;
 };
 #endif //_Pydevice_H_

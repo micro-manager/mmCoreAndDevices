@@ -41,6 +41,7 @@
     <ProjectGuid>{36cf524a-8214-404c-8e6b-b5dec1fdadf9}</ProjectGuid>
     <RootNamespace>Pydevice</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>PyDevice</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

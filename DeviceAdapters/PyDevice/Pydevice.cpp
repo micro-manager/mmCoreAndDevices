@@ -14,10 +14,6 @@
 #include "PyDevice.h"
 #include <numpy/arrayobject.h>
 
-// list of required properties for a camera object
-// note: width, height, top and left must all have have upper and lower limits.
-const auto required_properties = {"width", "height", "top", "left", "exposure_ms", "image"};
-const auto required_functions = { "trigger", "wait"};
 
 
 /**
@@ -29,11 +25,30 @@ const auto required_functions = { "trigger", "wait"};
 int CPyCamera::SnapImage()
 {
     readoutStartTime_ = GetCurrentMMTime();
-    //_python.Call("trigger");
-    //_python.Call("wait");
+    _python.CallMethod(triggerFunction_);
+    _python.CallMethod(waitFunction_);
     return DEVICE_OK;
 }
 
+int CPyCamera::InitializeDevice() {
+    const auto required_properties = { "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait"};
+    bool missing = false;
+    for (auto p : required_properties) {
+        try {
+            _python.GetProperty(p);
+        }
+        catch (PyObj::NullPointerException) {
+            _python.PythonError();
+            missing = true;
+        }
+    }
+    if (missing)
+        return ERR_PYTHON_MISSING_PROPERTY;
+    
+    triggerFunction_ = _python.GetProperty("trigger");
+    waitFunction_ = _python.GetProperty("wait");
+    return DEVICE_OK;
+}
 
 /**
 * Returns pixel data.
@@ -47,18 +62,38 @@ int CPyCamera::SnapImage()
 */
 const unsigned char* CPyCamera::GetImageBuffer()
 {
-    auto buffer = _python.GetProperty("image");
-    //assert(PyArray_Check(buffer)); // buffer should be a numpy array
-    //assert(PyArray_NDIM(buffer) == 2); //with 2 dimensions
-    //assert(PyArray_TYPE(buffer) == NPY_INT16); // of unsigned 16 bit numbers
-    //assert(PyArray_FLAGS(buffer) & NPY_ARRAY_C_CONTIGUOUS); // contiguous in memory
+    if (!PyArray_API)
+        import_array(); // initialize numpy again!
 
-    throw std::exception("not implemented");
+    lastImage_ = _python.GetProperty("image");
+    if (!PyArray_Check(lastImage_)) {
+        this->LogMessage("Error, 'image' property should return a numpy array");
+        return nullptr;
+    }
+    auto buffer = (PyArrayObject*)lastImage_.get();
+    if (PyArray_NDIM(buffer) != 2 || PyArray_TYPE(buffer) != NPY_UINT16 || !(PyArray_FLAGS(buffer) & NPY_ARRAY_C_CONTIGUOUS)) {
+        this->LogMessage("Error, 'image' property should be a 2-dimensional numpy array that is c-contiguous in memory and contains 16 bit  unsigned integers");
+        return nullptr;
+    }
+
+    // check if the array has the correct size
+    auto w = GetImageWidth();
+    auto h = GetImageHeight();
+    auto nw = PyArray_DIM(buffer, 0);
+    auto nh = PyArray_DIM(buffer, 1);
+    if (nw != w || nh != h) {
+        auto msg = "Error, 'image' dimensions should be (" + std::to_string(w) + ", " + std::to_string(h) + ") pixels, but were found to be (" + std::to_string(nw) + ", " + std::to_string(nh) + ") pixels";
+        this->LogMessage(msg.c_str());
+        return nullptr;
+    }
+
+    return (const unsigned char*)PyArray_DATA(buffer);
 }
 
 /**
 * Returns image buffer X-size in pixels.
 * Required by the MM::Camera API.
+* todo: cache width and height properties?
 */
 unsigned CPyCamera::GetImageWidth() const
 {

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <windows.h>
+#include <numpy/arrayobject.h>
 
 unsigned int PythonBridge::g_ActiveDeviceCount = 0;
 fs::path PythonBridge::g_PythonHome;
@@ -26,6 +27,7 @@ int PythonBridge::InitializeInterpreter(const char* pythonHome)
         Py_SetPythonHome(homePath.generic_wstring().c_str());
         Py_Initialize();
         g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
+        import_array(); // initialize numpy
     }
     return DEVICE_OK;
 }
@@ -37,7 +39,7 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
     auto scriptPath = fs::absolute(fs::path(pythonScript));
     auto bootstrap = std::stringstream();
     bootstrap <<
-        "import traceback\n"
+        "import numpy as np\n"
         "code = open('" << scriptPath.generic_string() << "')\n"
         "exec(code.read())\n"
         "code.close()\n"
@@ -51,6 +53,8 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
         _intPropertyType = PyObj(PyDict_GetItemString(g_Module, "int_property"));
         _floatPropertyType = PyObj(PyDict_GetItemString(g_Module, "float_property"));
         _stringPropertyType = PyObj(PyDict_GetItemString(g_Module, "string_property"));
+        if (!PyArray_API)
+            import_array(); // initialize numpy again!
     }
     catch (PyObj::NullPointerException) {
         return PythonError();
@@ -58,6 +62,20 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
     return DEVICE_OK;
 }
 
+int PythonBridge::Destruct() {
+    _object.Clear();
+    _options.Clear();
+    _intPropertyType.Clear();
+    _floatPropertyType.Clear();
+    _stringPropertyType.Clear();
+    if (initialized_) {
+        initialized_ = false;
+        g_ActiveDeviceCount--;
+//        if (!g_ActiveDeviceCount)
+//            DeinitializeInterpreter();
+    }
+    return DEVICE_OK;
+}
 
 int PythonBridge::SetProperty(const char* name, long value) {
     return PyObject_SetAttrString(_object, name, PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
@@ -108,7 +126,7 @@ string PythonBridge::GetString(PyObject* object, const char* string) {
 }
 
 
-int PythonBridge::PythonError() {
+int PythonBridge::PythonError() const {
     if (!PyErr_Occurred())
         return ERR_PYTHON_NO_INFO;
     if (_errorCallback) {
@@ -136,15 +154,7 @@ int PythonBridge::PythonError() {
 }
 
 
-int PythonBridge::Destruct() {
-    _object.Clear();
-    _options.Clear();
-    _intPropertyType.Clear();
-    _floatPropertyType.Clear();
-    _stringPropertyType.Clear();
-    initialized_ = false;
-    return DEVICE_OK;
-}
+
 
 /// Helper functions for finding the Python installation folder
 ///

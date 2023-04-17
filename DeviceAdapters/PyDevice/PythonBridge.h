@@ -14,6 +14,7 @@ namespace fs = std::filesystem;
 #define ERR_PYTHON_CLASS_NOT_FOUND 104
 #define ERR_PYTHON_EXCEPTION 105
 #define ERR_PYTHON_NO_INFO 106
+#define ERR_PYTHON_MISSING_PROPERTY 107
 
 #pragma once
 #ifdef _DEBUG
@@ -48,7 +49,7 @@ public:
     */
     explicit PyObj(PyObject* obj) : _p(obj) {
         if (!obj)
-            throw new NullPointerException();
+            throw NullPointerException();
     }
     void Clear() {
         Py_XDECREF(_p);
@@ -61,6 +62,9 @@ public:
         Py_XDECREF(_p);
     }
     operator PyObject* () const { 
+        return _p;
+    }
+    PyObject* get() const {
         return _p;
     }
     PyObj& operator = (const PyObj& other) {
@@ -124,6 +128,13 @@ public:
     PythonBridge(const function<void(const char*)>& errorCallback) : _errorCallback(errorCallback), initialized_(false) {
     }
 
+    PyObj CallMethod(const PyObj& boundMethod) {
+        auto result = PyObject_CallNoArgs(boundMethod);
+        if (!result) {
+            PythonError();
+        }
+        return PyObj(result);
+    }
 
     template <class T> void Construct(CDeviceBase<T, PythonBridge>* device) {
         // Adds properties for locating the Python libraries, the Python script, and the name of the device class
@@ -143,10 +154,11 @@ public:
         _check_(device->GetProperty(p_PythonScript, pythonScript));
         _check_(device->GetProperty(p_PythonDeviceClass, pythonDeviceClass));
         _check_(InitializeInterpreter(pythonHome));
-        _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
         g_ActiveDeviceCount++;
-        _check_(CreateProperties(device));
         initialized_ = true;
+        
+        _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
+        _check_(CreateProperties(device));
         return DEVICE_OK;
     }
 
@@ -183,9 +195,9 @@ public:
         }
         return DEVICE_OK;
     }
+    int PythonError() const;
 private:
     static bool HasPython(const fs::path& path);
-    int PythonError();
     int ConstructPythonObject(const char* pythonScript, const char* pythonClass);
     static long GetInt(PyObject* object, const char* string);
     static PyObj GetAttr(PyObject* object, const char* string);
