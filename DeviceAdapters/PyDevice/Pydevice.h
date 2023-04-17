@@ -117,10 +117,6 @@ public:
     void SetExposure(double exp) override;
     int GetBinning() const override;
     int SetBinning(int binF) override;
-
-    int StartSequenceAcquisition(double interval) override;
-    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) override;
-    int StopSequenceAcquisition() override;
     int IsExposureSequenceable(bool& isSequenceable) const override;
 
     int SnapImage() override;

@@ -62,6 +62,7 @@ int CPyCamera::InitializeDevice() {
 */
 const unsigned char* CPyCamera::GetImageBuffer()
 {
+    PyLock lock;
     if (!PyArray_API)
         import_array(); // initialize numpy again!
 
@@ -239,159 +240,9 @@ int CPyCamera::SetBinning(int binF)
 }
 
 
+
 int CPyCamera::IsExposureSequenceable(bool& isSequenceable) const
 {
-    isSequenceable = false;
+    isSequenceable = true;
     return DEVICE_OK;
 }
-
-/**
- * Required by the MM::Camera API
- * Please implement this yourself and do not rely on the base class implementation
- * The Base class implementation is deprecated and will be removed shortly
- */
-int CPyCamera::StartSequenceAcquisition(double interval)
-{
-    return DEVICE_NOT_SUPPORTED; // sequence mode is not supported yet
-}
-int CPyCamera::StopSequenceAcquisition()
-{
-    return DEVICE_NOT_SUPPORTED; // sequence mode is not supported yet
-}
-int CPyCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
-{
-    return DEVICE_NOT_SUPPORTED; // sequence mode is not supported yet
-}
-///////////////////////////////////////////////////////////////////////////////
-// Private CPyCamera methods
-///////////////////////////////////////////////////////////////////////////////
-
-/*
-int CPyCamera::GeneratePythonImage(ImgBuffer& img)
-{
-
-    MMThreadGuard g(imgPixelsLock_);
-
-    //std::string pixelType;
-    char buf[MM::MaxStrLength];
-    GetProperty(MM::g_Keyword_PixelType, buf);
-    std::string pixelType(buf);
-
-    if (img.Height() == 0 || img.Width() == 0 || img.Depth() == 0)
-        return 0;
-
-    unsigned imgWidth = img.Width();
-
-    // Define all neccesary for bridge:
-    auto modname = PyUnicode_FromString("Pyscanner");
-    auto funcname = "cpp_single_capture";
-
-    // define all the input variable seperately
-
-
-    auto input = PyUnicode_FromString(("['" + dacportin_ + "']").c_str());
-    auto output = PyUnicode_FromString(("['" + dacportoutx_ + "', '" + dacportouty_ + "']").c_str());
-
-    // read the image settings
-    auto height = std::to_string(ScanXSteps_);
-    auto width = std::to_string(ScanYSteps_);
-
-    auto resolution = PyUnicode_FromString(("[" + height + ", " + width + "]").c_str());
-
-    std::string zoomFactorString = std::to_string(zoomFactor_);
-    auto zoom = PyUnicode_FromString(("[" + zoomFactorString + "]").c_str());
-
-
-    std::string delayString = std::to_string(delay_);
-    auto delay = PyUnicode_FromString(("[" + delayString + "]").c_str());
-
-
-
-
-    auto dwelltimefactor = dwelltime_ / 1000000;
-    std::ostringstream stream;
-    stream << std::fixed << std::setprecision(12) << dwelltimefactor;
-    auto dwelltime = PyUnicode_FromString(("[" + stream.str() + "]").c_str());
-
-    std::string scanpaddingString = std::to_string(scanpadding_);
-    auto scanpadding = PyUnicode_FromString(("[" + scanpaddingString + "]").c_str());
-
-
-    std::string inputminString = std::to_string(inputmin_);
-    std::string inputmaxString = std::to_string(inputmax_);
-
-    auto input_range = PyUnicode_FromString(("[" + inputminString + ", " + inputmaxString + "]").c_str());
-
-    auto module = PyImport_Import(modname);
-
-    auto func = PyObject_GetAttrString(module, funcname);
-    auto args = PyTuple_New(8);
-
-    PyTuple_SetItem(args, 0, input);
-    PyTuple_SetItem(args, 1, output);
-    PyTuple_SetItem(args, 2, resolution);
-    PyTuple_SetItem(args, 3, zoom);
-    PyTuple_SetItem(args, 4, delay);
-    PyTuple_SetItem(args, 5, dwelltime);
-    PyTuple_SetItem(args, 6, scanpadding);
-    PyTuple_SetItem(args, 7, input_range);
-
-    auto returnvalue = PyObject_CallObject(func, args);
-    Py_DECREF(args);
-
-    import_array();
-
-    PyObject* numpy = PyImport_ImportModule("numpy");
-
-    // Convert the returnvalue to a numpy array
-    PyObject* array = PyArray_FROM_OTF(returnvalue, NPY_DOUBLE, NPY_IN_ARRAY);
-
-    npy_intp* dimensions = PyArray_DIMS(array);
-
-    // Get a pointer to the data of the numpy array
-    double* data = (double*)PyArray_DATA(array);
-    long maxValue = (1L << bitDepth_) - 1;
-    unsigned j, k;
-    if (pixelType.compare(g_PixelType_8bit) == 0)
-    {
-        unsigned char* pBuf = const_cast<unsigned char*>(img.GetPixels());
-        for (int i = 0; i < img.Height() * img.Width() * img.Depth(); i++)
-        {
-            pBuf[i] = (unsigned char)(data[i] * maxValue);
-        }
-        Py_DECREF(array);
-        Py_DECREF(func);
-        Py_DECREF(module);
-    }
-    else if (pixelType.compare(g_PixelType_16bit) == 0) // this is what we do with 16 bit images
-    {
-        unsigned short* pBuf = (unsigned short*) const_cast<unsigned char*>(img.GetPixels());
-
-        double min_val = inputmin_;
-        double max_val = inputmax_;
-
-
-        // Scale each input value to the range of 16-bit unsigned integers
-        for (int i = 0; i < imgWidth * img.Height(); i++) {
-            double scaled_val = (data[i] - min_val) / (max_val - min_val) * 65535.0;
-            pBuf[i] = (unsigned short)scaled_val;
-        }
-        //        for (j = 0; j < img.Height(); j++)
-        //        {
-        //            for (k = 0; k < imgWidth; k++)
-        //            {
-        //                long lIndex = imgWidth * j + k;
-        //                double val = data[imgWidth * j + k];
-        //                val = val * maxValue;
-        //                *(pBuf + lIndex) = (unsigned short)val;
-        //            }
-        //        }
-                // Decrement the reference count of the numpy array
-        Py_DECREF(array);
-        Py_DECREF(func);
-        Py_DECREF(module);
-    }
-
-
-    return 0;
-}*/

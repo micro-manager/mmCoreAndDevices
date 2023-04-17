@@ -30,6 +30,18 @@ using std::numeric_limits;
 #define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }
 
 
+class PyLock {
+    PyGILState_STATE gstate_;
+public:
+    PyLock() {
+        gstate_ = PyGILState_Ensure();
+    }
+    ~PyLock() {
+        PyGILState_Release(gstate_);
+    }
+};
+
+
 /**
 * Smart pointer object to automate reference counting of PyObject* pointers
 * todo: implement move constructor
@@ -38,6 +50,9 @@ class PyObj {
     PyObject* _p;
 public:
     PyObj() : _p(nullptr) {
+    }
+    PyObj(PyObj&& other) noexcept : _p(other._p)  {
+        other._p = nullptr;
     }
 
     /**
@@ -52,14 +67,20 @@ public:
             throw NullPointerException();
     }
     void Clear() {
-        Py_XDECREF(_p);
-        _p = nullptr;
+        if (_p) {
+            PyLock lock;
+            Py_DECREF(_p);
+            _p = nullptr;
+        }
     }
     PyObj(const PyObj& other) : _p(other) {
-        Py_XINCREF(_p);
+        if (_p) {
+            PyLock lock;
+            Py_INCREF(_p);
+        }
     }
     ~PyObj() {
-        Py_XDECREF(_p);
+        Clear();
     }
     operator PyObject* () const { 
         return _p;
@@ -67,12 +88,13 @@ public:
     PyObject* get() const {
         return _p;
     }
-    PyObj& operator = (const PyObj& other) {
-        Py_XDECREF(_p);
-        _p = other;
-        Py_XINCREF(_p);
+    PyObj& operator = (PyObj&& other) {
+        Clear();
+        _p = other._p;
+        other._p = nullptr;
         return *this;
     }
+    
 
     /**
     * Takes a borrowed reference and wraps it into a PyObj smart pointer
@@ -82,12 +104,28 @@ public:
     * Throws an exception when obj == NULL, because this is the common way of the Python API to report errors
     */
     static PyObj FromBorrowed(PyObject* obj) {
-        Py_XINCREF(obj);
+        if (obj) {
+            PyLock lock;
+            Py_INCREF(obj);
+        }
         return PyObj(obj);
     }
     class NullPointerException : public std::exception {
     };
+    PyObj& operator = (const PyObj& other) {
+        if (_p || other._p) {
+            PyLock lock;
+            Py_XDECREF(_p);
+            _p = other;
+            Py_XINCREF(_p);
+        }
+        return *this;
+    }
+private:
+    void incref();
+    void decref();
 };
+
 
 class PythonBridge
 {
@@ -104,11 +142,11 @@ class PythonBridge
     PyObj _floatPropertyType;
     PyObj _stringPropertyType;
     bool initialized_;
+    PyThreadState* threadState_;
     const string _name;
     const function<void(const char*)> _errorCallback;
     
 public:
-    PythonBridge();
     int InitializeInterpreter(const char* pythonHome);
     int Destruct();
    
@@ -125,10 +163,11 @@ public:
     }
     static fs::path FindPython();
 
-    PythonBridge(const function<void(const char*)>& errorCallback) : _errorCallback(errorCallback), initialized_(false) {
+    PythonBridge(const function<void(const char*)>& errorCallback) : _errorCallback(errorCallback), initialized_(false), threadState_(nullptr) {
     }
 
     PyObj CallMethod(const PyObj& boundMethod) {
+        PyLock lock;
         auto result = PyObject_CallNoArgs(boundMethod);
         if (!result) {
             PythonError();
@@ -156,7 +195,8 @@ public:
         _check_(InitializeInterpreter(pythonHome));
         g_ActiveDeviceCount++;
         initialized_ = true;
-        
+
+        PyLock lock;
         _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
         _check_(CreateProperties(device));
         return DEVICE_OK;

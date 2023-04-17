@@ -28,6 +28,7 @@ int PythonBridge::InitializeInterpreter(const char* pythonHome)
         Py_Initialize();
         g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
         import_array(); // initialize numpy
+        threadState_ = PyEval_SaveThread(); // allow multi threading
     }
     return DEVICE_OK;
 }
@@ -63,6 +64,7 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
 }
 
 int PythonBridge::Destruct() {
+    PyLock lock;
     _object.Clear();
     _options.Clear();
     _intPropertyType.Clear();
@@ -78,18 +80,22 @@ int PythonBridge::Destruct() {
 }
 
 int PythonBridge::SetProperty(const char* name, long value) {
+    PyLock lock;
     return PyObject_SetAttrString(_object, name, PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
 int PythonBridge::SetProperty(const char* name, double value) {
+    PyLock lock;
     return PyObject_SetAttrString(_object, name, PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
 int PythonBridge::SetProperty(const char* name, const string& value) {
+    PyLock lock;
     return PyObject_SetAttrString(_object, name, PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
 }
 
 PyObj PythonBridge::GetAttr(PyObject* object, const char* string) {
+    PyLock lock;
     return PyObj(PyObject_GetAttrString(object, string));
 }
 
@@ -114,19 +120,23 @@ PyObj PythonBridge::GetProperty(const char* name) const {
 
 
 long PythonBridge::GetInt(PyObject* object, const char* string) {
+    PyLock lock;
     return PyLong_AsLong(GetAttr(object, string));
 }
 
 double PythonBridge::GetFloat(PyObject* object, const char* string) {
+    PyLock lock;
     return PyFloat_AsDouble(GetAttr(object, string));
 }
 
 string PythonBridge::GetString(PyObject* object, const char* string) {
+    PyLock lock;
     return PyUTF8(GetAttr(object, string));
 }
 
 
 int PythonBridge::PythonError() const {
+    PyLock lock;
     if (!PyErr_Occurred())
         return ERR_PYTHON_NO_INFO;
     if (_errorCallback) {
@@ -192,6 +202,7 @@ fs::path PythonBridge::FindPython() {
 
 
 string PythonBridge::PyUTF8(PyObject* obj) {
+    PyLock lock;
     if (!obj)
         return string();
     const char* s = PyUnicode_AsUTF8(obj);
