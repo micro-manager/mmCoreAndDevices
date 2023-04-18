@@ -438,6 +438,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UniversalMMHubSerial", "Dev
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UniversalMMHubUsb", "DeviceAdapters\UniversalMMHubUsb\UniversalMMHubUsb.vcxproj", "{9A33047E-4E1F-4C96-8BBA-FB9610D75373}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MeadowlarkLC", "DeviceAdapters\MeadowlarkLC\MeadowlarkLC.vcxproj", "{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Dragonfly", "DeviceAdapters\Dragonfly\Dragonfly.vcxproj", "{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IntegratedLaserEngine", "DeviceAdapters\IntegratedLaserEngine\IntegratedLaserEngine.vcxproj", "{5BCA72C1-C342-4272-A037-A94C73E4ACE8}"
@@ -1340,6 +1342,10 @@ Global
 		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Debug|x64.Build.0 = Debug|x64
 		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Release|x64.ActiveCfg = Release|x64
 		{9A33047E-4E1F-4C96-8BBA-FB9610D75373}.Release|x64.Build.0 = Release|x64
+		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Debug|x64.ActiveCfg = Debug|x64
+		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Debug|x64.Build.0 = Debug|x64
+		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Release|x64.ActiveCfg = Release|x64
+		{BD7B178B-B026-48FC-B7BD-C5D5257B3A20}.Release|x64.Build.0 = Release|x64
 		{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}.Debug|x64.ActiveCfg = Debug|x64
 		{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}.Debug|x64.Build.0 = Debug|x64
 		{B301A051-2FA3-439F-BBC1-9D6FBBEDD2F2}.Release|x64.ActiveCfg = Release|x64
