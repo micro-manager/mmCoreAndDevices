@@ -64,7 +64,7 @@ public:
     */
     explicit PyObj(PyObject* obj) : _p(obj) {
         if (!obj)
-            throw NullPointerException();
+            throw PythonException();
     }
     void Clear() {
         if (_p) {
@@ -88,7 +88,7 @@ public:
     PyObject* get() const {
         return _p;
     }
-    PyObj& operator = (PyObj&& other) {
+    PyObj& operator = (PyObj&& other) noexcept {
         Clear();
         _p = other._p;
         other._p = nullptr;
@@ -110,7 +110,7 @@ public:
         }
         return PyObj(obj);
     }
-    class NullPointerException : public std::exception {
+    class PythonException : public std::exception {
     };
     PyObj& operator = (const PyObj& other) {
         if (_p || other._p) {
@@ -147,36 +147,35 @@ class PythonBridge
     const function<void(const char*)> _errorCallback;
     
 public:
-    int InitializeInterpreter(const char* pythonHome);
-    int Destruct();
+    int InitializeInterpreter(const char* pythonHome) noexcept;
+    int Destruct() noexcept;
    
-    int SetProperty(const char* name, long value);
-    int SetProperty(const char* name, double value);
-    int SetProperty(const char* name, const string& value);
-    int GetProperty(const char* name, long& value) const;
-    int GetProperty(const char* name, double& value) const;
-    int GetProperty(const char* name, string& value) const;
-    PyObj GetProperty(const char* name) const;
+    int SetProperty(const char* name, long value) noexcept;
+    int SetProperty(const char* name, double value) noexcept;
+    int SetProperty(const char* name, const string& value) noexcept;
+    int GetProperty(const char* name, long& value) const noexcept;
+    int GetProperty(const char* name, double& value) const noexcept;
+    int GetProperty(const char* name, string& value) const noexcept;
+    PyObj GetProperty(const char* name) const; //@todo: make noexcept
 
-    static bool PythonActive() {
+    static bool PythonActive() noexcept {
         return g_ActiveDeviceCount > 0;
     }
-    static fs::path FindPython();
 
     PythonBridge(const function<void(const char*)>& errorCallback) : _errorCallback(errorCallback), initialized_(false), threadState_(nullptr) {
     }
 
-    PyObj CallMethod(const PyObj& boundMethod) {
+    PyObj Call(const PyObj& callable) {
         PyLock lock;
-        auto result = PyObject_CallNoArgs(boundMethod);
-        if (!result) {
-            PythonError();
-        }
-        return PyObj(result);
+        return PyObj(PyObject_CallNoArgs(callable));
     }
 
+    /** Sets up init-only properties on the MM device
+    * Properties for locating the Python libraries, the Python script, and for the name of the device class are added. No Python calls are made
+      @todo: leave python home blank as default (meaning 'auto locate'). Add verification handler when home path set
+      @todo: add verification handler when script path set
+    */
     template <class T> void Construct(CDeviceBase<T, PythonBridge>* device) {
-        // Adds properties for locating the Python libraries, the Python script, and the name of the device class
         device->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), false, nullptr, true);
         device->CreateStringProperty(p_PythonScript, "", false, nullptr, true);
         device->CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
@@ -193,11 +192,11 @@ public:
         _check_(device->GetProperty(p_PythonScript, pythonScript));
         _check_(device->GetProperty(p_PythonDeviceClass, pythonDeviceClass));
         _check_(InitializeInterpreter(pythonHome));
+        PyLock lock;
+        _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
         g_ActiveDeviceCount++;
         initialized_ = true;
 
-        PyLock lock;
-        _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
         _check_(CreateProperties(device));
         return DEVICE_OK;
     }
@@ -237,14 +236,16 @@ public:
     }
     int PythonError() const;
 private:
-    static bool HasPython(const fs::path& path);
-    int ConstructPythonObject(const char* pythonScript, const char* pythonClass);
-    static long GetInt(PyObject* object, const char* string);
+    static fs::path FindPython() noexcept;
+    static bool HasPython(const fs::path& path) noexcept;
+    int ConstructPythonObject(const char* pythonScript, const char* pythonClass) noexcept;
+    static long GetInt(PyObject* object, const char* string); //todo: make noexcept
     static PyObj GetAttr(PyObject* object, const char* string);
     static double GetFloat(PyObject* object, const char* string);
     static string GetString(PyObject* object, const char* string);
     static string PyUTF8(PyObject* obj);
-    template <class T> int CreateProperties(CDeviceBase<T, PythonBridge>* device) {
+
+    template <class T> int CreateProperties(CDeviceBase<T, PythonBridge>* device) noexcept {
         using Action = typename CDeviceBase<T, PythonBridge>::CPropertyAction;
 
         try {
@@ -269,14 +270,14 @@ private:
                 else
                     continue;
 
-                // set limits
+                // Set limits. Only supported by MM if both upper and lower limit are present.
                 auto lower = PyObject_HasAttrString(property, "min") ? GetFloat(property, "min") : -std::numeric_limits<double>().infinity();
                 auto upper = PyObject_HasAttrString(property, "max") ? GetFloat(property, "max") : std::numeric_limits<double>().infinity();
-                if (isfinite(lower) || isfinite(upper))
+                if (isfinite(lower) && isfinite(upper))
                     device->SetPropertyLimits(name.c_str(), lower, upper);
             }
         }
-        catch (PyObj::NullPointerException) {
+        catch (PyObj::PythonException) {
             return PythonError();
         }
         return DEVICE_OK;

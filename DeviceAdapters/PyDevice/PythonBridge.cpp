@@ -8,35 +8,35 @@ unsigned int PythonBridge::g_ActiveDeviceCount = 0;
 fs::path PythonBridge::g_PythonHome;
 PyObj PythonBridge::g_Module;
 
-
-
 // set python path. The folder must contain the python dll. If Python is already initialized, the path must be the same
 // as the path that was used for initializing it. So, multiple deviced must have the same python install path.
-int PythonBridge::InitializeInterpreter(const char* pythonHome)
+int PythonBridge::InitializeInterpreter(const char* pythonHome) noexcept
 {
-    // Initialize Python interperter
+    // Check if Python already initialized
     auto homePath = fs::path(pythonHome);
     if (PythonActive()) {
-        if (homePath != fs::path(g_PythonHome))
+        if (homePath == fs::path(g_PythonHome))
+            return DEVICE_OK;
+        else
             return ERR_PYTHON_PATH_CONFLICT;
     }
-    else {
-        if (!HasPython(pythonHome))
-            return ERR_PYTHON_NOT_FOUND;
-        g_PythonHome = homePath;
-        Py_SetPythonHome(homePath.generic_wstring().c_str());
-        Py_Initialize();
-        g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
-        import_array(); // initialize numpy
-        threadState_ = PyEval_SaveThread(); // allow multi threading
-    }
+
+    if (!HasPython(pythonHome))
+        return ERR_PYTHON_NOT_FOUND;
+
+    g_PythonHome = homePath;
+    Py_SetPythonHome(homePath.generic_wstring().c_str());
+    Py_Initialize();
+    g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
+    import_array(); // initialize numpy
+    threadState_ = PyEval_SaveThread(); // allow multi threading
     return DEVICE_OK;
 }
 
-int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* pythonClass) {
-
-    // Load python script
-    // This is done by constructing a python loader script and executing it.
+// Load python script
+// This is done by constructing a python loader script and executing it.
+int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* pythonClass) noexcept {
+    //PyLock lock (already locked by caller)
     auto scriptPath = fs::absolute(fs::path(pythonScript));
     auto bootstrap = std::stringstream();
     bootstrap <<
@@ -57,13 +57,13 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
         if (!PyArray_API)
             import_array(); // initialize numpy again!
     }
-    catch (PyObj::NullPointerException) {
+    catch (PyObj::PythonException) {
         return PythonError();
     }
     return DEVICE_OK;
 }
 
-int PythonBridge::Destruct() {
+int PythonBridge::Destruct() noexcept {
     PyLock lock;
     _object.Clear();
     _options.Clear();
@@ -72,44 +72,44 @@ int PythonBridge::Destruct() {
     _stringPropertyType.Clear();
     if (initialized_) {
         initialized_ = false;
-        g_ActiveDeviceCount--;
+//        g_ActiveDeviceCount--;
 //        if (!g_ActiveDeviceCount)
 //            DeinitializeInterpreter();
     }
     return DEVICE_OK;
 }
 
-int PythonBridge::SetProperty(const char* name, long value) {
+int PythonBridge::SetProperty(const char* name, long value) noexcept {
     PyLock lock;
     return PyObject_SetAttrString(_object, name, PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
-int PythonBridge::SetProperty(const char* name, double value) {
+int PythonBridge::SetProperty(const char* name, double value) noexcept {
     PyLock lock;
     return PyObject_SetAttrString(_object, name, PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
-int PythonBridge::SetProperty(const char* name, const string& value) {
+int PythonBridge::SetProperty(const char* name, const string& value) noexcept {
     PyLock lock;
     return PyObject_SetAttrString(_object, name, PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
 }
 
-PyObj PythonBridge::GetAttr(PyObject* object, const char* string) {
+PyObj PythonBridge::GetAttr(PyObject* object, const char* name) {
     PyLock lock;
-    return PyObj(PyObject_GetAttrString(object, string));
+    return PyObj(PyObject_GetAttrString(object, name));
 }
 
-int PythonBridge::GetProperty(const char* name, long &value) const {
+int PythonBridge::GetProperty(const char* name, long &value) const noexcept {
     value = GetInt(_object, name);
     return DEVICE_OK;
 }
 
-int PythonBridge::GetProperty(const char* name, double& value) const {
+int PythonBridge::GetProperty(const char* name, double& value) const noexcept {
     value = GetFloat(_object, name);
     return DEVICE_OK;
 }
 
-int PythonBridge::GetProperty(const char* name, string& value) const {
+int PythonBridge::GetProperty(const char* name, string& value) const noexcept {
     value = GetString(_object, name);
     return DEVICE_OK;
 }
@@ -169,10 +169,7 @@ int PythonBridge::PythonError() const {
 /// Helper functions for finding the Python installation folder
 ///
 /// 
-bool PythonBridge::HasPython(const fs::path& path) {
-    if (path.empty())
-        return false;
-
+bool PythonBridge::HasPython(const fs::path& path) noexcept {
     std::ifstream test(path / "python3.dll");
     return test.good();
 }
@@ -180,7 +177,7 @@ bool PythonBridge::HasPython(const fs::path& path) {
 /// Tries to locate the Python library. 
 /// If Python is already initialized, returns the path used in the previous initialization.
 /// If Python could not be found, returns an empty string
-fs::path PythonBridge::FindPython() {
+fs::path PythonBridge::FindPython() noexcept {
     if (PythonActive())
         return g_PythonHome;
 

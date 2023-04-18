@@ -24,9 +24,13 @@
 */
 int CPyCamera::SnapImage()
 {
-    readoutStartTime_ = GetCurrentMMTime();
-    _python.CallMethod(triggerFunction_);
-    _python.CallMethod(waitFunction_);
+    try {
+        python_.Call(triggerFunction_);
+        python_.Call(waitFunction_);
+    }
+    catch (PyObj::PythonException) {
+        python_.PythonError();
+    }
     return DEVICE_OK;
 }
 
@@ -35,18 +39,18 @@ int CPyCamera::InitializeDevice() {
     bool missing = false;
     for (auto p : required_properties) {
         try {
-            _python.GetProperty(p);
+            python_.GetProperty(p);
         }
-        catch (PyObj::NullPointerException) {
-            _python.PythonError();
+        catch (PyObj::PythonException) {
+            python_.PythonError();
             missing = true;
         }
     }
     if (missing)
         return ERR_PYTHON_MISSING_PROPERTY;
     
-    triggerFunction_ = _python.GetProperty("trigger");
-    waitFunction_ = _python.GetProperty("wait");
+    triggerFunction_ = python_.GetProperty("trigger");
+    waitFunction_ = python_.GetProperty("wait");
     return DEVICE_OK;
 }
 
@@ -64,9 +68,9 @@ const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
     if (!PyArray_API)
-        import_array(); // initialize numpy again!
+        import_array(); // initialize numpy again! This is sometimes needed due to a 'feature' in the numpy library
 
-    lastImage_ = _python.GetProperty("image");
+    lastImage_ = python_.GetProperty("image");
     if (!PyArray_Check(lastImage_)) {
         this->LogMessage("Error, 'image' property should return a numpy array");
         return nullptr;
@@ -99,7 +103,7 @@ const unsigned char* CPyCamera::GetImageBuffer()
 unsigned CPyCamera::GetImageWidth() const
 {
     long width = 0;
-    _python.GetProperty("width", width);
+    python_.GetProperty("width", width);
     return width;
 }
 
@@ -110,7 +114,7 @@ unsigned CPyCamera::GetImageWidth() const
 unsigned CPyCamera::GetImageHeight() const
 {
     long height = 0;
-    _python.GetProperty("height", height);
+    python_.GetProperty("height", height);
     return height;
 }
 
@@ -156,10 +160,11 @@ int CPyCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
         return ClearROI();
 
     // apply ROI
-    _python.SetProperty("width", (long)xSize);
-    _python.SetProperty("height", (long)ySize);
-    _python.SetProperty("top", (long)y);
-    _python.SetProperty("left", (long)x);
+    PyLock lock; // make sure all four elements of the ROI are set without any other thread having access in between
+    python_.SetProperty("width", (long)xSize);
+    python_.SetProperty("height", (long)ySize);
+    python_.SetProperty("top", (long)y);
+    python_.SetProperty("left", (long)x);
     return DEVICE_OK;
 }
 
@@ -170,11 +175,12 @@ int CPyCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 */
 int CPyCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
+    PyLock lock; // make sure all four elements of the ROI are read without any other thread having access
     long txSize, tySize, tx, ty;
-    _python.GetProperty("width", txSize);
-    _python.GetProperty("height", tySize);
-    _python.GetProperty("top", ty);
-    _python.GetProperty("left", tx);
+    python_.GetProperty("width", txSize);
+    python_.GetProperty("height", tySize);
+    python_.GetProperty("top", ty);
+    python_.GetProperty("left", tx);
     x = tx; // not needed if we can be sure that unsigned has same size as long, but this is not guaranteed by c++
     y = ty;
     xSize = txSize;
@@ -188,15 +194,16 @@ int CPyCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize
 */
 int CPyCamera::ClearROI()
 {
+    PyLock lock; // make sure all four elements of the ROI are set without any other thread having access in between
     double width, height, top, left;
     GetPropertyLowerLimit("top", top);
     GetPropertyLowerLimit("left", left);
     GetPropertyUpperLimit("width", width);
     GetPropertyUpperLimit("height", height);
-    _python.SetProperty("width", (long)width);
-    _python.SetProperty("height", (long)height);
-    _python.SetProperty("top", (long)top);
-    _python.SetProperty("left", (long)left);
+    python_.SetProperty("width", (long)width);
+    python_.SetProperty("height", (long)height);
+    python_.SetProperty("top", (long)top);
+    python_.SetProperty("left", (long)left);
     return DEVICE_OK;
 }
 
@@ -207,7 +214,7 @@ int CPyCamera::ClearROI()
 double CPyCamera::GetExposure() const
 {
     double exposure = 0;
-    _python.GetProperty("exposure_ms", exposure); // cannot use GetProperty of CDeviceBase because that is not const !?
+    python_.GetProperty("exposure_ms", exposure); // cannot use GetProperty of CDeviceBase because that is not const !?
     return exposure;
 }
 
@@ -217,7 +224,7 @@ double CPyCamera::GetExposure() const
 */
 void CPyCamera::SetExposure(double exp)
 {
-    SetProperty("exposure_ms", std::to_string(exp).c_str()); // cannot directly call SetProperty on _python because that does not update cached value
+    SetProperty("exposure_ms", std::to_string(exp).c_str()); // cannot directly call SetProperty on python_ because that does not update cached value
     GetCoreCallback()->OnExposureChanged(this, exp);;
 }
 
@@ -238,8 +245,6 @@ int CPyCamera::SetBinning(int binF)
 {
     return binF == 1 ? DEVICE_OK : DEVICE_INVALID_PROPERTY_VALUE;
 }
-
-
 
 int CPyCamera::IsExposureSequenceable(bool& isSequenceable) const
 {
