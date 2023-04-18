@@ -1,12 +1,42 @@
+#pragma once
 #include <string>
 #include <functional>
 #include <filesystem>
-#include <vector>
 #include <limits>
 #include "MMDeviceConstants.h"
 #include "DeviceBase.h"
 
 namespace fs = std::filesystem;
+using std::string;
+using std::function;
+using std::numeric_limits;
+
+
+// the following lines are a workaround for the problem 'cannot open file python39_d.lib'. This occurs because Python tries
+// to link to the debug version of the library, even when that is not installed (and not really needed in our case).
+// as a workaround, we trick the python.h include to think we are always building a Release build.
+#ifdef _DEBUG
+#undef _DEBUG
+#define _HAD_DEBUG
+#endif
+
+// see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
+#include <Python.h> // if you get a compiler error here, try building again and see if magic happens
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define PY_ARRAY_UNIQUE_SYMBOL PyDevice_ARRAY_API
+#ifndef IMPORT_ARRAY_HERE
+#define NO_IMPORT_ARRAY
+#endif
+
+#include <numpy/arrayobject.h>
+
+// restore _DEBUG macro
+#ifdef _HAD_DEBUG
+#define _DEBUG
+#endif
+
+
+
 
 #define ERR_PYTHON_NOT_FOUND 101
 #define ERR_PYTHON_PATH_CONFLICT 102
@@ -15,18 +45,6 @@ namespace fs = std::filesystem;
 #define ERR_PYTHON_EXCEPTION 105
 #define ERR_PYTHON_NO_INFO 106
 #define ERR_PYTHON_MISSING_PROPERTY 107
-
-#pragma once
-#ifdef _DEBUG
-#undef _DEBUG
-#include <Python.h> // if you get a compiler error here, try building again and see if magic happens
-#define _DEBUG
-#else
-#include <Python.h>
-#endif
-using std::string;
-using std::function;
-using std::numeric_limits;
 #define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }
 
 

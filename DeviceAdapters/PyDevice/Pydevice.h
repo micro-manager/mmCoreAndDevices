@@ -50,7 +50,10 @@ public:
      * The device is not initialized, and no Python calls are made. This only sets up error messages, the error handler, and three 'pre-init' properties that hold the path of the Python libraries, the path of the Python script, and the name of the Python class that implements the device.
      * @param adapterName name of the adapter type, e.g. "PyCamera"
     */
-    CPyDeviceBase(const char* adapterName) : adapterName_(adapterName), python_([this](const char* message) { this->LogMessage(message, false); }) {
+    CPyDeviceBase(const char* adapterName) : adapterName_(adapterName), python_([this](const char* message) {
+        this->SetErrorText(ERR_PYTHON_EXCEPTION, message);
+        this->LogMessage(message, false);
+    }) {
         this->SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not find python3.dll at the specified Python library path");
         this->SetErrorText(ERR_PYTHON_PATH_CONFLICT, "All Python devices must have the same Python library path");
         this->SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the python script at the specified location");

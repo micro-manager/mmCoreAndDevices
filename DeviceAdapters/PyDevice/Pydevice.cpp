@@ -12,6 +12,10 @@
 // LICENSE:       ?
 
 #include "PyDevice.h"
+
+// see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
+#define NO_IMPORT_ARRAY
+#define PY_ARRAY_UNIQUE_SYMBOL PyDevice_ARRAY_API
 #include <numpy/arrayobject.h>
 
 
@@ -67,8 +71,8 @@ int CPyCamera::InitializeDevice() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    if (!PyArray_API)
-        import_array(); // initialize numpy again! This is sometimes needed due to a 'feature' in the numpy library
+    //if (!PyArray_API)
+    //    import_array(); // initialize numpy again! This is sometimes needed due to a 'feature' in the numpy library
 
     lastImage_ = python_.GetProperty("image");
     if (!PyArray_Check(lastImage_)) {

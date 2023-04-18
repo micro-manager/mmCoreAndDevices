@@ -1,8 +1,10 @@
+
+// see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
+#define IMPORT_ARRAY_HERE
 #include "PythonBridge.h"
 #include <fstream>
 #include <sstream>
 #include <windows.h>
-#include <numpy/arrayobject.h>
 
 unsigned int PythonBridge::g_ActiveDeviceCount = 0;
 fs::path PythonBridge::g_PythonHome;
@@ -29,6 +31,8 @@ int PythonBridge::InitializeInterpreter(const char* pythonHome) noexcept
     Py_Initialize();
     g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
     import_array(); // initialize numpy
+    if (PyErr_Occurred())
+        return PythonError();
     threadState_ = PyEval_SaveThread(); // allow multi threading
     return DEVICE_OK;
 }
@@ -54,8 +58,8 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
         _intPropertyType = PyObj(PyDict_GetItemString(g_Module, "int_property"));
         _floatPropertyType = PyObj(PyDict_GetItemString(g_Module, "float_property"));
         _stringPropertyType = PyObj(PyDict_GetItemString(g_Module, "string_property"));
-        if (!PyArray_API)
-            import_array(); // initialize numpy again!
+ //       if (!PyArray_API)
+ //           import_array(); // initialize numpy again!
     }
     catch (PyObj::PythonException) {
         return PythonError();
