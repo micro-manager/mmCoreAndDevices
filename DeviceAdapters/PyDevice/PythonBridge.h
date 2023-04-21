@@ -3,38 +3,13 @@
 #include <functional>
 #include <filesystem>
 #include <limits>
-#include "MMDeviceConstants.h"
-#include "DeviceBase.h"
+#include <MMDeviceConstants.h>
+#include <DeviceBase.h>
 
 namespace fs = std::filesystem;
 using std::string;
 using std::function;
 using std::numeric_limits;
-
-
-// the following lines are a workaround for the problem 'cannot open file python39_d.lib'. This occurs because Python tries
-// to link to the debug version of the library, even when that is not installed (and not really needed in our case).
-// as a workaround, we trick the python.h include to think we are always building a Release build.
-#ifdef _DEBUG
-#undef _DEBUG
-#define _HAD_DEBUG
-#endif
-
-// see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
-#include <Python.h> // if you get a compiler error here, try building again and see if magic happens
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#define PY_ARRAY_UNIQUE_SYMBOL PyDevice_ARRAY_API
-#ifndef IMPORT_ARRAY_HERE
-#define NO_IMPORT_ARRAY
-#endif
-
-#include <numpy/arrayobject.h>
-
-// restore _DEBUG macro
-#ifdef _HAD_DEBUG
-#define _DEBUG
-#endif
-
 
 #define ERR_PYTHON_NOT_FOUND 101
 #define ERR_PYTHON_PATH_CONFLICT 102
@@ -63,12 +38,12 @@ public:
 * todo: implement move constructor
 */
 class PyObj {
-    PyObject* _p;
+    PyObject* p_;
 public:
-    PyObj() : _p(nullptr) {
+    PyObj() : p_(nullptr) {
     }
-    PyObj(PyObj&& other) noexcept : _p(other._p)  {
-        other._p = nullptr;
+    PyObj(PyObj&& other) noexcept : p_(other.p_)  {
+        other.p_ = nullptr;
     }
 
     /**
@@ -78,36 +53,36 @@ public:
     * 
     * Throws an exception when obj == NULL, because this is the common way of the Python API to report errors
     */
-    explicit PyObj(PyObject* obj) : _p(obj) {
+    explicit PyObj(PyObject* obj) : p_(obj) {
         if (!obj)
             throw PythonException();
     }
     void Clear() {
-        if (_p) {
+        if (p_) {
             PyLock lock;
-            Py_DECREF(_p);
-            _p = nullptr;
+            Py_DECREF(p_);
+            p_ = nullptr;
         }
     }
-    PyObj(const PyObj& other) : _p(other) {
-        if (_p) {
+    PyObj(const PyObj& other) : p_(other) {
+        if (p_) {
             PyLock lock;
-            Py_INCREF(_p);
+            Py_INCREF(p_);
         }
     }
     ~PyObj() {
         Clear();
     }
     operator PyObject* () const { 
-        return _p;
+        return p_;
     }
     PyObject* get() const {
-        return _p;
+        return p_;
     }
     PyObj& operator = (PyObj&& other) noexcept {
         Clear();
-        _p = other._p;
-        other._p = nullptr;
+        p_ = other.p_;
+        other.p_ = nullptr;
         return *this;
     }
     
@@ -129,11 +104,11 @@ public:
     class PythonException : public std::exception {
     };
     PyObj& operator = (const PyObj& other) {
-        if (_p || other._p) {
+        if (p_ || other.p_) {
             PyLock lock;
-            Py_XDECREF(_p);
-            _p = other;
-            Py_XINCREF(_p);
+            Py_XDECREF(p_);
+            p_ = other;
+            Py_XINCREF(p_);
         }
         return *this;
     }

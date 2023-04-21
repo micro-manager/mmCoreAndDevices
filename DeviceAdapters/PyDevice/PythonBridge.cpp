@@ -1,10 +1,12 @@
 
-// see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
-#define IMPORT_ARRAY_HERE
+#include "pch.h"
 #include "PythonBridge.h"
 #include <fstream>
 #include <sstream>
-#include <windows.h>
+
+// see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
+#include <numpy/arrayobject.h>
+
 
 bool PythonBridge::g_initializedInterpreter = false;
 PyThreadState* PythonBridge::g_threadState = nullptr; // used to store the thread state when releasing the global interpreter lock for the first time. Currently this value is never used, but is may be used to properly shut down the Python interpreter.

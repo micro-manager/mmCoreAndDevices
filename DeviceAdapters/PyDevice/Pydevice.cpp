@@ -10,12 +10,11 @@
 //                Ivo Vellekoop
 // COPYRIGHT:     
 // LICENSE:       ?
-
+#include "pch.h"
 #include "PyDevice.h"
 
 // see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
 #define NO_IMPORT_ARRAY
-#define PY_ARRAY_UNIQUE_SYMBOL PyDevice_ARRAY_API
 #include <numpy/arrayobject.h>
 
 

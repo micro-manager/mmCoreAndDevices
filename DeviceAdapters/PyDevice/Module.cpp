@@ -1,3 +1,4 @@
+#include "pch.h"
 #include <ModuleInterface.h>
 #include "PyDevice.h"
 

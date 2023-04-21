@@ -25,9 +25,8 @@
 #define _Pydevice_H_
 
 #include <string>
-#include "DeviceBase.h"
+#include <DeviceBase.h>
 #include "PythonBridge.h"
-#include "ImgBuffer.h"
 
 
 /**
