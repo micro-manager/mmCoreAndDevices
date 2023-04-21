@@ -40,7 +40,7 @@ class CPyDeviceBase : public T
 protected:
     /** Object implementing all Python connectivity */
     PythonBridge python_;       
-
+    
     /** Name of the adapter type, for use in GetName only */
     const char* adapterName_;   
 public:
