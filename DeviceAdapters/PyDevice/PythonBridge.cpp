@@ -6,34 +6,52 @@
 #include <sstream>
 #include <windows.h>
 
-unsigned int PythonBridge::g_ActiveDeviceCount = 0;
+bool PythonBridge::g_initializedInterpreter = false;
+PyThreadState* PythonBridge::g_threadState = nullptr; // used to store the thread state when releasing the global interpreter lock for the first time. Currently this value is never used, but is may be used to properly shut down the Python interpreter.
 fs::path PythonBridge::g_PythonHome;
-PyObj PythonBridge::g_Module;
 
-// set python path. The folder must contain the python dll. If Python is already initialized, the path must be the same
-// as the path that was used for initializing it. So, multiple deviced must have the same python install path.
+
+/**
+ * Initialize the Python interpreter
+ * If a non-empty pythonHome path is specified, the python install from that path is used. All devices must use the same value for this path, or leave the value empty. If different values are provided, a ERR_PYTHON_PATH_CONFLICT is returned.
+ * If a Python iterpreter is already running, this function only checks if the path is consistent and does nothing else.
+ * Note: currently the Python interperter is never de-initialize (only when the process closes).
+ * @param pythonHome location of the Python (virtual) installation to use. The folder must contain the python dll. Leave at "" for default (note: crashes anaconda 3.9!!). Must not be NULL
+ * @todo test virtual environments
+ * @return MM error/success code
+*/
 int PythonBridge::InitializeInterpreter(const char* pythonHome) noexcept
 {
     // Check if Python already initialized
     auto homePath = fs::path(pythonHome);
-    if (PythonActive()) {
-        if (homePath == fs::path(g_PythonHome))
+    if (g_initializedInterpreter) {
+        if (homePath == g_PythonHome)
             return DEVICE_OK;
         else
             return ERR_PYTHON_PATH_CONFLICT;
     }
 
-    if (!HasPython(pythonHome))
+    // Initialize Python configuration (new style)
+    // The old style initialization (using Py_Initialize) does not have a way to report errors. In particular,
+    // if the Python installation cannot be found, the program just terminates!
+    // The new style initialization returns an error, that can then be shown to the user instead of crashing micro manager.
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+    if (!homePath.empty()) 
+        PyConfig_SetString(&config, &config.home, homePath.c_str());
+    auto status = Py_InitializeFromConfig(&config);
+    //PyConfig_Read(&config); // for debugging
+    PyConfig_Clear(&config);
+    if (PyStatus_Exception(status))
         return ERR_PYTHON_NOT_FOUND;
 
-    g_PythonHome = homePath;
-    Py_SetPythonHome(homePath.generic_wstring().c_str());
-    Py_Initialize();
-    g_Module = PyObj(PyDict_New()); // create a global scope to execute the scripts in
-    import_array(); // initialize numpy
+    _import_array(); // initialize numpy
     if (PyErr_Occurred())
         return PythonError();
-    threadState_ = PyEval_SaveThread(); // allow multi threading
+
+    g_threadState = PyEval_SaveThread(); // allow multi threading
+    g_PythonHome = homePath;
+    g_initializedInterpreter = true;
     return DEVICE_OK;
 }
 
@@ -52,14 +70,14 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
         "options = [p for p in type(device).__dict__.items() if isinstance(p[1], base_property)]";
 
     try {
-        auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, g_Module, g_Module));
-        _object = PyObj(PyDict_GetItemString(g_Module, "device"));
-        _options = PyObj(PyDict_GetItemString(g_Module, "options"));
-        _intPropertyType = PyObj(PyDict_GetItemString(g_Module, "int_property"));
-        _floatPropertyType = PyObj(PyDict_GetItemString(g_Module, "float_property"));
-        _stringPropertyType = PyObj(PyDict_GetItemString(g_Module, "string_property"));
- //       if (!PyArray_API)
- //           import_array(); // initialize numpy again!
+        module_ = PyObj(PyDict_New()); // create a scope to execute the scripts in
+
+        auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, module_, module_));
+        object_ = PyObj(PyDict_GetItemString(module_, "device"));
+        options_ = PyObj(PyDict_GetItemString(module_, "options"));
+        intPropertyType_ = PyObj(PyDict_GetItemString(module_, "int_property"));
+        floatPropertyType_ = PyObj(PyDict_GetItemString(module_, "float_property"));
+        stringPropertyType_ = PyObj(PyDict_GetItemString(module_, "string_property"));
     }
     catch (PyObj::PythonException) {
         return PythonError();
@@ -69,33 +87,29 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
 
 int PythonBridge::Destruct() noexcept {
     PyLock lock;
-    _object.Clear();
-    _options.Clear();
-    _intPropertyType.Clear();
-    _floatPropertyType.Clear();
-    _stringPropertyType.Clear();
-    if (initialized_) {
-        initialized_ = false;
-//        g_ActiveDeviceCount--;
-//        if (!g_ActiveDeviceCount)
-//            DeinitializeInterpreter();
-    }
+    object_.Clear();
+    options_.Clear();
+    intPropertyType_.Clear();
+    floatPropertyType_.Clear();
+    stringPropertyType_.Clear();
+    module_.Clear();
+    initialized_ = false;
     return DEVICE_OK;
 }
 
 int PythonBridge::SetProperty(const char* name, long value) noexcept {
     PyLock lock;
-    return PyObject_SetAttrString(_object, name, PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
+    return PyObject_SetAttrString(object_, name, PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
 int PythonBridge::SetProperty(const char* name, double value) noexcept {
     PyLock lock;
-    return PyObject_SetAttrString(_object, name, PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
+    return PyObject_SetAttrString(object_, name, PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
 }
 
 int PythonBridge::SetProperty(const char* name, const string& value) noexcept {
     PyLock lock;
-    return PyObject_SetAttrString(_object, name, PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
+    return PyObject_SetAttrString(object_, name, PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
 }
 
 PyObj PythonBridge::GetAttr(PyObject* object, const char* name) {
@@ -104,24 +118,23 @@ PyObj PythonBridge::GetAttr(PyObject* object, const char* name) {
 }
 
 int PythonBridge::GetProperty(const char* name, long &value) const noexcept {
-    value = GetInt(_object, name);
+    value = GetInt(object_, name);
     return DEVICE_OK;
 }
 
 int PythonBridge::GetProperty(const char* name, double& value) const noexcept {
-    value = GetFloat(_object, name);
+    value = GetFloat(object_, name);
     return DEVICE_OK;
 }
 
 int PythonBridge::GetProperty(const char* name, string& value) const noexcept {
-    value = GetString(_object, name);
+    value = GetString(object_, name);
     return DEVICE_OK;
 }
 
 PyObj PythonBridge::GetProperty(const char* name) const {
-    return GetAttr(_object, name);
+    return GetAttr(object_, name);
 }
-
 
 long PythonBridge::GetInt(PyObject* object, const char* string) {
     PyLock lock;
@@ -138,12 +151,11 @@ string PythonBridge::GetString(PyObject* object, const char* string) {
     return PyUTF8(GetAttr(object, string));
 }
 
-
 int PythonBridge::PythonError() const {
     PyLock lock;
     if (!PyErr_Occurred())
         return ERR_PYTHON_NO_INFO;
-    if (_errorCallback) {
+    if (errorCallback_) {
         PyObject* type = nullptr;
         PyObject* value = nullptr;
         PyObject* traceback = nullptr;
@@ -156,7 +168,7 @@ int PythonBridge::PythonError() const {
         if (value)
             msg += PyUTF8(PyObj(PyObject_Str(value)));
         
-        _errorCallback(msg.c_str());
+        errorCallback_(msg.c_str());
         PyErr_Restore(type, value, traceback);
         PyErr_Clear();
         return ERR_PYTHON_EXCEPTION;
@@ -182,7 +194,7 @@ bool PythonBridge::HasPython(const fs::path& path) noexcept {
 /// If Python is already initialized, returns the path used in the previous initialization.
 /// If Python could not be found, returns an empty string
 fs::path PythonBridge::FindPython() noexcept {
-    if (PythonActive())
+    if (g_initializedInterpreter)
         return g_PythonHome;
 
     std::string home_text;

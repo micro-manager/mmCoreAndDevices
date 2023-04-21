@@ -54,7 +54,7 @@ public:
         this->SetErrorText(ERR_PYTHON_EXCEPTION, message);
         this->LogMessage(message, false);
     }) {
-        this->SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not find python3.dll at the specified Python library path");
+        this->SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not initialize python interpreter, perhaps an incorrect path was specified?");
         this->SetErrorText(ERR_PYTHON_PATH_CONFLICT, "All Python devices must have the same Python library path");
         this->SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the python script at the specified location");
         this->SetErrorText(ERR_PYTHON_CLASS_NOT_FOUND, "Could not find a class definition with the specified name");
