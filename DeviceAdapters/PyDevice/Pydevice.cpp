@@ -70,9 +70,6 @@ int CPyCamera::InitializeDevice() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    //if (!PyArray_API)
-    //    import_array(); // initialize numpy again! This is sometimes needed due to a 'feature' in the numpy library
-
     lastImage_ = python_.GetProperty("image");
     if (!PyArray_Check(lastImage_)) {
         this->LogMessage("Error, 'image' property should return a numpy array");
@@ -228,7 +225,7 @@ double CPyCamera::GetExposure() const
 void CPyCamera::SetExposure(double exp)
 {
     SetProperty("exposure_ms", std::to_string(exp).c_str()); // cannot directly call SetProperty on python_ because that does not update cached value
-    GetCoreCallback()->OnExposureChanged(this, exp);;
+    GetCoreCallback()->OnExposureChanged(this, exp);
 }
 
 /**

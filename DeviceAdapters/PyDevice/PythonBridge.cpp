@@ -65,6 +65,7 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
     auto bootstrap = std::stringstream();
     bootstrap <<
         "import numpy as np\n"
+        "import traceback\n"
         "code = open('" << scriptPath.generic_string() << "')\n"
         "exec(code.read())\n"
         "code.close()\n"
@@ -162,7 +163,7 @@ int PythonBridge::PythonError() const {
         PyObject* value = nullptr;
         PyObject* traceback = nullptr;
         PyErr_Fetch(&type, &value, &traceback);
-        auto msg = string("Python error. ");
+        auto msg = string("Python error.");
         if (type) {
             msg += PyUTF8(PyObj(PyObject_Str(type)));
             msg += " : ";
@@ -170,6 +171,16 @@ int PythonBridge::PythonError() const {
         if (value)
             msg += PyUTF8(PyObj(PyObject_Str(value)));
         
+        if (traceback) {
+            try {
+                PyDict_SetItemString(module_, "_current_tb", traceback);
+                auto trace = PyObj(PyRun_String("''.join(traceback.format_tb(_current_tb))", Py_eval_input, module_, module_));
+                msg += PyUTF8(trace);
+            }
+            catch (PyObj::PythonException e) {
+                msg += "[could not get stack trace]";
+            }
+        }
         errorCallback_(msg.c_str());
         PyErr_Restore(type, value, traceback);
         PyErr_Clear();
