@@ -115,43 +115,84 @@ int PythonBridge::SetProperty(const char* name, const string& value) noexcept {
     return PyObject_SetAttrString(object_, name, PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
 }
 
-PyObj PythonBridge::GetAttr(PyObject* object, const char* name) {
-    PyLock lock;
-    return PyObj(PyObject_GetAttrString(object, name));
-}
 
 int PythonBridge::GetProperty(const char* name, long &value) const noexcept {
-    value = GetInt(object_, name);
-    return DEVICE_OK;
+    return GetInt(object_, name, value);
 }
 
 int PythonBridge::GetProperty(const char* name, double& value) const noexcept {
-    value = GetFloat(object_, name);
-    return DEVICE_OK;
+    return GetFloat(object_, name, value);
 }
 
 int PythonBridge::GetProperty(const char* name, string& value) const noexcept {
-    value = GetString(object_, name);
-    return DEVICE_OK;
+    return GetString(object_, name, value);
 }
 
-PyObj PythonBridge::GetProperty(const char* name) const {
-    return GetAttr(object_, name);
+int PythonBridge::GetProperty(const char* name, PyObj& value) const noexcept {
+    return GetAttr(object_, name, value);
 }
 
-long PythonBridge::GetInt(PyObject* object, const char* string) {
+/**
+ * Reads the value of an object attribute
+ *
+ * @param object Python object holding the attribute
+ * @param name name of the attribute
+ * @param value output that will hold the value on success
+ * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a long integer
+*/
+int PythonBridge::GetAttr(PyObject* object, const char* name, PyObj& value) const noexcept {
     PyLock lock;
-    return PyLong_AsLong(GetAttr(object, string));
+    value = PyObj(PyObject_GetAttrString(object, name));
+    return (PyErr_Occurred() || !value) ? PythonError() : DEVICE_OK;
 }
 
-double PythonBridge::GetFloat(PyObject* object, const char* string) {
+
+/**
+ * Reads the value of an integer attribute
+ * 
+ * @param object Python object holding the attribute
+ * @param name name of the attribute
+ * @param value output that will hold the value on success
+ * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a long integer
+*/
+int PythonBridge::GetInt(PyObject* object, const char* name, long& value) const noexcept {
     PyLock lock;
-    return PyFloat_AsDouble(GetAttr(object, string));
+    auto attr = PyObject_GetAttrString(object, name);
+    if (attr)
+        value = PyLong_AsLong(attr);
+    return PyErr_Occurred() ? PythonError() : DEVICE_OK;
 }
 
-string PythonBridge::GetString(PyObject* object, const char* string) {
+/**
+ * Reads the value of a float attribute
+ *
+ * @param object Python object holding the attribute
+ * @param name name of the attribute
+ * @param value output that will hold the value on success
+ * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a double
+*/
+int PythonBridge::GetFloat(PyObject* object, const char* name, double& value) const noexcept {
     PyLock lock;
-    return PyUTF8(GetAttr(object, string));
+    auto attr = PyObject_GetAttrString(object, name);
+    if (attr)
+        value = PyFloat_AsDouble(attr);
+    return PyErr_Occurred() ? PythonError() : DEVICE_OK;
+}
+
+/**
+ * Reads the value of a string attribute
+ *
+ * @param object Python object holding the attribute
+ * @param name name of the attribute
+ * @param value output that will hold the value on success
+ * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or does not hold a string
+*/
+int PythonBridge::GetString(PyObject* object, const char* name, std::string& value) const noexcept {
+    PyLock lock;
+    auto attr = PyObject_GetAttrString(object, name);
+    if (attr)
+        value = PyUTF8(attr);
+    return PyErr_Occurred() ? PythonError() : DEVICE_OK;
 }
 
 int PythonBridge::PythonError() const {

@@ -42,7 +42,8 @@ int CPyCamera::InitializeDevice() {
     bool missing = false;
     for (auto p : required_properties) {
         try {
-            python_.GetProperty(p);
+            PyObj value;
+            python_.GetProperty(p, value);
         }
         catch (PyObj::PythonException) {
             python_.PythonError();
@@ -52,8 +53,8 @@ int CPyCamera::InitializeDevice() {
     if (missing)
         return ERR_PYTHON_MISSING_PROPERTY;
     
-    triggerFunction_ = python_.GetProperty("trigger");
-    waitFunction_ = python_.GetProperty("wait");
+    _check_(python_.GetProperty("trigger", triggerFunction_));
+    _check_(python_.GetProperty("wait", waitFunction_));
     return DEVICE_OK;
 }
 
@@ -70,7 +71,10 @@ int CPyCamera::InitializeDevice() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    lastImage_ = python_.GetProperty("image");
+    if (python_.GetProperty("image", lastImage_) != DEVICE_OK) {
+        this->LogMessage("Error, could not read 'image' property");
+        return nullptr;
+    }
     if (!PyArray_Check(lastImage_)) {
         this->LogMessage("Error, 'image' property should return a numpy array");
         return nullptr;

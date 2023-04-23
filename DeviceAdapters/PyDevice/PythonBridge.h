@@ -1,15 +1,14 @@
 #pragma once
+#include "pch.h"
 #include <string>
 #include <functional>
 #include <filesystem>
-#include <limits>
 #include <MMDeviceConstants.h>
 #include <DeviceBase.h>
 
 namespace fs = std::filesystem;
 using std::string;
 using std::function;
-using std::numeric_limits;
 
 #define ERR_PYTHON_NOT_FOUND 101
 #define ERR_PYTHON_PATH_CONFLICT 102
@@ -144,7 +143,7 @@ public:
     int GetProperty(const char* name, long& value) const noexcept;
     int GetProperty(const char* name, double& value) const noexcept;
     int GetProperty(const char* name, string& value) const noexcept;
-    PyObj GetProperty(const char* name) const; //@todo: make noexcept
+    int GetProperty(const char* name, PyObj& value) const noexcept;
 
     PythonBridge(const function<void(const char*)>& errorCallback) : errorCallback_(errorCallback), initialized_(false) {
     }
@@ -222,46 +221,56 @@ private:
     static fs::path FindPython() noexcept;
     static bool HasPython(const fs::path& path) noexcept;
     int ConstructPythonObject(const char* pythonScript, const char* pythonClass) noexcept;
-    static long GetInt(PyObject* object, const char* string); //todo: make noexcept
-    static PyObj GetAttr(PyObject* object, const char* string);
-    static double GetFloat(PyObject* object, const char* string);
-    static string GetString(PyObject* object, const char* string);
+    int GetAttr(PyObject* object, const char* name, PyObj& value) const noexcept;
+    int GetInt(PyObject* object, const char* name, long& value) const noexcept;
+    int GetFloat(PyObject* object, const char* name, double& value) const noexcept;
+    int GetString(PyObject* object, const char* name, std::string& value) const noexcept;
     static string PyUTF8(PyObject* obj);
 
     template <class T> int CreateProperties(CDeviceBase<T, PythonBridge>* device) noexcept {
         using Action = typename CDeviceBase<T, PythonBridge>::CPropertyAction;
 
-        try {
-            auto property_count = PyList_Size(options_);
-            for (Py_ssize_t i = 0; i < property_count; i++) {
-                auto key_value = PyList_GetItem(options_, i); // note: borrowed reference, don't ref count (what a mess...)
-                auto name = PyUTF8(PyTuple_GetItem(key_value, 0));
-                if (name.empty())
-                    continue;
+        auto property_count = PyList_Size(options_);
+        for (Py_ssize_t i = 0; i < property_count; i++) {
+            auto key_value = PyList_GetItem(options_, i); // note: borrowed reference, don't ref count (what a mess...)
+            auto name = PyUTF8(PyTuple_GetItem(key_value, 0));
+            if (name.empty())
+                continue;
 
-                // construct int/float/string property
-                auto property = PyTuple_GetItem(key_value, 1);
-                if (PyObject_IsInstance(property, intPropertyType_)) {
-                    device->CreateIntegerProperty(name.c_str(), GetInt(object_, name.c_str()), false, new Action(this, &PythonBridge::OnInteger));
-                }
-                else if (PyObject_IsInstance(property, floatPropertyType_)) {
-                    device->CreateFloatProperty(name.c_str(), GetFloat(object_, name.c_str()), false, new Action(this, &PythonBridge::OnFloat));
-                }
-                else if (PyObject_IsInstance(property, stringPropertyType_)) {
-                    device->CreateStringProperty(name.c_str(), GetString(object_, name.c_str()).c_str(), false, new Action(this, &PythonBridge::OnString));
-                }
-                else
-                    continue;
+            // construct int/float/string property
+            auto property = PyTuple_GetItem(key_value, 1);
+            if (!property)
+                continue;
 
-                // Set limits. Only supported by MM if both upper and lower limit are present.
-                auto lower = PyObject_HasAttrString(property, "min") ? GetFloat(property, "min") : -std::numeric_limits<double>().infinity();
-                auto upper = PyObject_HasAttrString(property, "max") ? GetFloat(property, "max") : std::numeric_limits<double>().infinity();
-                if (isfinite(lower) && isfinite(upper))
-                    device->SetPropertyLimits(name.c_str(), lower, upper);
+            if (PyObject_IsInstance(property, intPropertyType_)) {
+                long value;
+                _check_(GetInt(object_, name.c_str(), value));
+                _check_(device->CreateIntegerProperty(name.c_str(), value, false, new Action(this, &PythonBridge::OnInteger)));
             }
-        }
-        catch (PyObj::PythonException) {
-            return PythonError();
+            else if (PyObject_IsInstance(property, floatPropertyType_)) {
+                double value;
+                _check_(GetFloat(object_, name.c_str(), value));
+                _check_(device->CreateFloatProperty(name.c_str(), value, false, new Action(this, &PythonBridge::OnFloat)));
+            }
+            else if (PyObject_IsInstance(property, stringPropertyType_)) {
+                string value;
+                _check_(GetString(object_, name.c_str(), value));
+                _check_(device->CreateStringProperty(name.c_str(), value.c_str(), false, new Action(this, &PythonBridge::OnString)));
+            }
+            else
+                continue;
+
+            // Set limits. Only supported by MM if both upper and lower limit are present.
+            // The min/max attributes are always present, we only need to check if they don't hold 'None'
+            PyObj lower, upper;
+            _check_(GetAttr(property, "min", lower));
+            _check_(GetAttr(property, "max", upper));
+            if (lower != Py_None && upper != Py_None) {
+                double lower_val, upper_val;
+                _check_(GetFloat(property, "min", lower_val));
+                _check_(GetFloat(property, "max", upper_val));
+                device->SetPropertyLimits(name.c_str(), lower_val, upper_val);
+            }
         }
         return DEVICE_OK;
     }
