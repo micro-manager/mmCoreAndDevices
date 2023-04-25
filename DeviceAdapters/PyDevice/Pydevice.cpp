@@ -32,7 +32,7 @@ int CPyCamera::SnapImage()
         python_.Call(waitFunction_);
     }
     catch (PyObj::PythonException) {
-        python_.PythonError();
+        return python_.PythonError();
     }
     return DEVICE_OK;
 }

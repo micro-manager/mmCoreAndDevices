@@ -1,5 +1,4 @@
 import numpy as np
-import math
 
 def parse_options(obj, values):
     for p in type(obj).__dict__.items():
@@ -53,6 +52,17 @@ class int_property(base_property):
             self._ValueError(f"Value {value} not in range [{self.min},{self.max}]")
         return value
 
+class object_property(base_property):
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None, default=None, on_update=None, type=None):
+        super().__init__(fget = fget, fset = fset, fdel = fdel, doc = doc, default = default, on_update = on_update)
+        self.type = type
+    def validate(self, value):
+        super().validate(value)
+        if self.type != None and not isinstance(value, self.type):
+            self._ValueError(f"Value {value} is not of type {self.type}")
+        return value
+
+
 class bool_property(int_property):
     def __init__(self, fget=None, fset=None, fdel=None, doc=None, default=0, on_update=None):
         super().__init__(fget = fget, fset = fset, fdel = fdel, doc = doc, default = default, on_update = on_update, allowed_values = [0, 1], min=0, max=1)
@@ -72,14 +82,26 @@ class string_property(base_property):
         if not isinstance(value, str):
             self._ValueError(f"Value {value} is not a string, but has type {type(value)}")
         return value
-
+    min = int_property(default = 0)
+    max = int_property(default = 1000)
+    
 class Device:
     width = int_property(min = 10, max = 11, default = 10)
     height = int_property(min = 0, max = 10, default = 1)
     def __init__(self, **kwargs):
         parse_options(self, kwargs)
 
+class RandomGenerator:
+    """Demo device, used to test building device graphs. It generates random numbers for use in the Camera"""
+    def __init__(self, **kwargs):
+        parse_options(self, kwargs)
+        self.resized = True
+    def generate_into(self, buffer):
+        buffer[:,:] = 2000 - np.random.randint(0, 1000, buffer.shape, dtype=np.uint16)
+        
+
 class Camera:
+    """Demo camera implementation that returns noise images. To test building device graphs, the random number generator is implemented as a separate object with its own properties."""
     def __init__(self, **kwargs):
         parse_options(self, kwargs)
         self.resized = True
@@ -95,11 +117,8 @@ class Camera:
         pass
 
     def wait(self):
-        if self.invert:
-            self.image[:,:] = 2000 - np.random.randint(0, 1000, (self.width, self.height), dtype=np.uint16)
-        else:
-            self.image[:,:] = np.random.randint(0, 1000, (self.width, self.height), dtype=np.uint16)
-    
+        self.random_generator.generate_into(self.image)
+
     def on_resized(self, value):
         self.resized = True
         return value
@@ -108,9 +127,8 @@ class Camera:
     left = int_property(min = -1000, max = 5000, default = 0)
     width = int_property(min = 1, max = 4096, default = 512, on_update = on_resized)
     height = int_property(min = 1, max = 4096, default = 512, on_update = on_resized)
-    exposure_ms = float_property(min = 0.0, max = math.inf, default = 100)
-    invert = bool_property(default = 0)
-    image = property(fget = get_image)
+    exposure_ms = float_property(min = 0.0, default = 100)
+    random_generator = object_property(default = RandomGenerator())
 
-    
-# d = Device(width = 10)
+    #invert = bool_property(default = 0)
+    image = property(fget = get_image)
