@@ -38,6 +38,7 @@ int CPyCamera::SnapImage()
 }
 
 int CPyCamera::InitializeDevice() {
+    PyLock lock;
     const auto required_properties = { "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait"};
     bool missing = false;
     for (auto p : required_properties) {
@@ -59,6 +60,7 @@ int CPyCamera::InitializeDevice() {
 }
 
 int CPyCamera::Shutdown() {
+    StopSequenceAcquisition();
     lastImage_.Clear();
     triggerFunction_.Clear();
     waitFunction_.Clear();

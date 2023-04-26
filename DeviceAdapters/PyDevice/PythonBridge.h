@@ -99,7 +99,7 @@ public:
     * 
     * Throws an exception when obj == NULL, because this is the common way of the Python API to report errors
     */
-    static PyObj FromBorrowed(PyObject* obj) {
+    static PyObj Borrow(PyObject* obj) {
         if (obj) {
             PyLock lock;
             Py_INCREF(obj);
@@ -136,7 +136,6 @@ class PythonBridge
     static std::unordered_map<string, PyObject*> g_Devices;
     static std::vector<Link> g_MissingLinks;
     
-    PyObj module_;
     PyObj object_;
     PyObj options_;
     PyObj intPropertyType_;

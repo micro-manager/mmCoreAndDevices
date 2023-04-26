@@ -92,15 +92,14 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
         "options = [p for p in type(device).__dict__.items() if isinstance(p[1], base_property)]";
 
     try {
-        module_ = PyObj(PyDict_New()); // create a scope to execute the scripts in
-
-        auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, module_, module_));
-        object_ = PyObj(PyDict_GetItemString(module_, "device"));
-        options_ = PyObj(PyDict_GetItemString(module_, "options"));
-        intPropertyType_ = PyObj(PyDict_GetItemString(module_, "int_property"));
-        floatPropertyType_ = PyObj(PyDict_GetItemString(module_, "float_property"));
-        stringPropertyType_ = PyObj(PyDict_GetItemString(module_, "string_property"));
-        objectPropertyType_ = PyObj(PyDict_GetItemString(module_, "object_property"));
+        auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
+        auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, scope, scope));
+        object_ = PyObj::Borrow(PyDict_GetItemString(scope, "device"));
+        options_ = PyObj::Borrow(PyDict_GetItemString(scope, "options"));
+        intPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "int_property"));
+        floatPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "float_property"));
+        stringPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "string_property"));
+        objectPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "object_property"));
     }
     catch (PyObj::PythonException) {
         return PythonError();
@@ -121,7 +120,6 @@ int PythonBridge::Destruct() noexcept {
     floatPropertyType_.Clear();
     stringPropertyType_.Clear();
     objectPropertyType_.Clear();
-    module_.Clear();
     initialized_ = false;
 
     // remove device from map
@@ -247,8 +245,9 @@ int PythonBridge::PythonError() const {
         
         if (traceback) {
             try {
-                PyDict_SetItemString(module_, "_current_tb", traceback);
-                auto trace = PyObj(PyRun_String("''.join(traceback.format_tb(_current_tb))", Py_eval_input, module_, module_));
+                auto scope = PyObj(PyDict_New());
+                PyDict_SetItemString(scope, "_current_tb", traceback);
+                auto trace = PyObj(PyRun_String("''.join(traceback.format_tb(_current_tb))", Py_eval_input, scope, scope));
                 msg += PyUTF8(trace);
             }
             catch (PyObj::PythonException e) {

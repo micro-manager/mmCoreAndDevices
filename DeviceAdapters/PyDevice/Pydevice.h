@@ -112,6 +112,8 @@ protected:
     virtual int InitializeDevice() {
         return DEVICE_OK;
     }
+    // disable copy
+    CPyDeviceBase(CPyDeviceBase& other) = delete;
 };
 
 /**
