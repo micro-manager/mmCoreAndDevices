@@ -155,6 +155,7 @@ public:
     int SetBinning(int binF) override;
     int IsExposureSequenceable(bool& isSequenceable) const override;
     int SnapImage() override;
+    int Shutdown() override;
 protected:
     int InitializeDevice() override;
 };

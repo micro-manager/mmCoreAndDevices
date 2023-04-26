@@ -3,13 +3,18 @@
 #include "PythonBridge.h"
 #include <fstream>
 #include <sstream>
-
-// see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
 #include <numpy/arrayobject.h>
 
 
 bool PythonBridge::g_initializedInterpreter = false;
-PyThreadState* PythonBridge::g_threadState = nullptr; // used to store the thread state when releasing the global interpreter lock for the first time. Currently this value is never used, but is may be used to properly shut down the Python interpreter.
+
+/** Stores the thread state when releasing the global interpreter lock for the first time. 
+* Currently this value is never used, but is may be used to properly shut down the Python interpreter.*/
+PyThreadState* PythonBridge::g_threadState = nullptr; 
+
+/** Path of the currently active Python interpreter
+* All devices must have the same Python interpreter path. This variable is set when the first device is initialized, and used to check if subsequent devices use the same path.
+*/
 fs::path PythonBridge::g_PythonHome;
 
 
@@ -47,7 +52,7 @@ int PythonBridge::InitializeInterpreter(const char* pythonHome) noexcept
     if (PyStatus_Exception(status))
         return ERR_PYTHON_NOT_FOUND;
 
-    _import_array(); // initialize numpy
+    _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error messsage that may occur.
     if (PyErr_Occurred())
         return PythonError();
 
@@ -59,8 +64,15 @@ int PythonBridge::InitializeInterpreter(const char* pythonHome) noexcept
 
 // Load python script
 // This is done by constructing a python loader script and executing it.
+
+/**
+ * Loads the Python script and creates a device object
+ * @param pythonScript path of the .py script file
+ * @param pythonClass name of the Python class to create an instance of
+ * @return MM return code
+*/
 int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* pythonClass) noexcept {
-    //PyLock lock (already locked by caller)
+    //PyLock lock (not needed, already locked by caller)
     auto scriptPath = fs::absolute(fs::path(pythonScript));
     auto bootstrap = std::stringstream();
     bootstrap <<
@@ -88,6 +100,11 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
     return DEVICE_OK;
 }
 
+/**
+ * Destroys the Python object by removing all references to it
+ * If there are other references
+ * @return 
+*/
 int PythonBridge::Destruct() noexcept {
     PyLock lock;
     object_.Clear();
@@ -116,21 +133,6 @@ int PythonBridge::SetProperty(const char* name, const string& value) noexcept {
 }
 
 
-int PythonBridge::GetProperty(const char* name, long &value) const noexcept {
-    return GetInt(object_, name, value);
-}
-
-int PythonBridge::GetProperty(const char* name, double& value) const noexcept {
-    return GetFloat(object_, name, value);
-}
-
-int PythonBridge::GetProperty(const char* name, string& value) const noexcept {
-    return GetString(object_, name, value);
-}
-
-int PythonBridge::GetProperty(const char* name, PyObj& value) const noexcept {
-    return GetAttr(object_, name, value);
-}
 
 /**
  * Reads the value of an object attribute
@@ -140,7 +142,7 @@ int PythonBridge::GetProperty(const char* name, PyObj& value) const noexcept {
  * @param value output that will hold the value on success
  * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a long integer
 */
-int PythonBridge::GetAttr(PyObject* object, const char* name, PyObj& value) const noexcept {
+int PythonBridge::Get(PyObject* object, const char* name, PyObj& value) const noexcept {
     PyLock lock;
     value = PyObj(PyObject_GetAttrString(object, name));
     return (PyErr_Occurred() || !value) ? PythonError() : DEVICE_OK;
@@ -155,7 +157,7 @@ int PythonBridge::GetAttr(PyObject* object, const char* name, PyObj& value) cons
  * @param value output that will hold the value on success
  * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a long integer
 */
-int PythonBridge::GetInt(PyObject* object, const char* name, long& value) const noexcept {
+int PythonBridge::Get(PyObject* object, const char* name, long& value) const noexcept {
     PyLock lock;
     auto attr = PyObject_GetAttrString(object, name);
     if (attr)
@@ -171,7 +173,7 @@ int PythonBridge::GetInt(PyObject* object, const char* name, long& value) const 
  * @param value output that will hold the value on success
  * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a double
 */
-int PythonBridge::GetFloat(PyObject* object, const char* name, double& value) const noexcept {
+int PythonBridge::Get(PyObject* object, const char* name, double& value) const noexcept {
     PyLock lock;
     auto attr = PyObject_GetAttrString(object, name);
     if (attr)
@@ -187,7 +189,7 @@ int PythonBridge::GetFloat(PyObject* object, const char* name, double& value) co
  * @param value output that will hold the value on success
  * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or does not hold a string
 */
-int PythonBridge::GetString(PyObject* object, const char* name, std::string& value) const noexcept {
+int PythonBridge::Get(PyObject* object, const char* name, std::string& value) const noexcept {
     PyLock lock;
     auto attr = PyObject_GetAttrString(object, name);
     if (attr)

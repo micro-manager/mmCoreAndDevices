@@ -58,6 +58,13 @@ int CPyCamera::InitializeDevice() {
     return DEVICE_OK;
 }
 
+int CPyCamera::Shutdown() {
+    lastImage_.Clear();
+    triggerFunction_.Clear();
+    waitFunction_.Clear();
+    return BaseClass::Shutdown();
+}
+
 /**
 * Returns pixel data.
 * Required by the MM::Camera API.

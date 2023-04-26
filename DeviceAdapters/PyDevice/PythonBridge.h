@@ -19,7 +19,11 @@ using std::function;
 #define ERR_PYTHON_MISSING_PROPERTY 107
 #define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }
 
-
+/**
+ * Helper class to automatically lock and unlock the global interpreter lock (GIL)
+ * This is needed because Python is single threaded (!) while MM is not. 
+ * Note that the GIL should be locked for any Python call, including Py_INCREF and Py_DECREF
+*/
 class PyLock {
     PyGILState_STATE gstate_;
 public:
@@ -34,7 +38,6 @@ public:
 
 /**
 * Smart pointer object to automate reference counting of PyObject* pointers
-* todo: implement move constructor
 */
 class PyObj {
     PyObject* p_;
@@ -140,10 +143,9 @@ public:
     int SetProperty(const char* name, long value) noexcept;
     int SetProperty(const char* name, double value) noexcept;
     int SetProperty(const char* name, const string& value) noexcept;
-    int GetProperty(const char* name, long& value) const noexcept;
-    int GetProperty(const char* name, double& value) const noexcept;
-    int GetProperty(const char* name, string& value) const noexcept;
-    int GetProperty(const char* name, PyObj& value) const noexcept;
+    template <class T> int GetProperty(const char* name, T& value) const noexcept {
+        return Get(object_, name, value);
+    }
 
     PythonBridge(const function<void(const char*)>& errorCallback) : errorCallback_(errorCallback), initialized_(false) {
     }
@@ -183,34 +185,12 @@ public:
         return DEVICE_OK;
     }
 
-    int OnString(MM::PropertyBase* pProp, MM::ActionType eAct)
-    {
-        if (eAct == MM::AfterSet)
-        {
-            string value;
-            pProp->Get(value);
-            return SetProperty(pProp->GetName().c_str(), value);
-        }
-        return DEVICE_OK;
-    }
-
-    int OnFloat(MM::PropertyBase* pProp, MM::ActionType eAct)
+    template <class T> int OnProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         //if (eAct == MM::BeforeGet) // nothing to do, let the caller use cached property
         if (eAct == MM::AfterSet)
         {
-            double value;
-            pProp->Get(value);
-            return SetProperty(pProp->GetName().c_str(), value);
-        }
-        return DEVICE_OK;
-    }
-    int OnInteger(MM::PropertyBase* pProp, MM::ActionType eAct)
-    {
-        //if (eAct == MM::BeforeGet) // nothing to do, let the caller use cached property
-        if (eAct == MM::AfterSet)
-        {
-            long value;
+            T value = {};
             pProp->Get(value);
             return SetProperty(pProp->GetName().c_str(), value);
         }
@@ -221,41 +201,41 @@ private:
     static fs::path FindPython() noexcept;
     static bool HasPython(const fs::path& path) noexcept;
     int ConstructPythonObject(const char* pythonScript, const char* pythonClass) noexcept;
-    int GetAttr(PyObject* object, const char* name, PyObj& value) const noexcept;
-    int GetInt(PyObject* object, const char* name, long& value) const noexcept;
-    int GetFloat(PyObject* object, const char* name, double& value) const noexcept;
-    int GetString(PyObject* object, const char* name, std::string& value) const noexcept;
+    int Get(PyObject* object, const char* name, PyObj& value) const noexcept;
+    int Get(PyObject* object, const char* name, long& value) const noexcept;
+    int Get(PyObject* object, const char* name, double& value) const noexcept;
+    int Get(PyObject* object, const char* name, std::string& value) const noexcept;
     static string PyUTF8(PyObject* obj);
 
     template <class T> int CreateProperties(CDeviceBase<T, PythonBridge>* device) noexcept {
         using Action = typename CDeviceBase<T, PythonBridge>::CPropertyAction;
 
+        // Traverse the options_ dictionary and find all properties of types we recognize.
+        // Convert these to MM int/float/string properties that will show up in the property browser.
+        // Note: we can be sure options_ is a PyDict. Therefore, we can be sure that the PyList and PyTuple functions succeed.
+        // we do need to check if the keys and values are of the correct type
         auto property_count = PyList_Size(options_);
         for (Py_ssize_t i = 0; i < property_count; i++) {
             auto key_value = PyList_GetItem(options_, i); // note: borrowed reference, don't ref count (what a mess...)
             auto name = PyUTF8(PyTuple_GetItem(key_value, 0));
             if (name.empty())
-                continue;
-
-            // construct int/float/string property
+                continue;   // key was not a string
             auto property = PyTuple_GetItem(key_value, 1);
-            if (!property)
-                continue;
 
             if (PyObject_IsInstance(property, intPropertyType_)) {
                 long value;
-                _check_(GetInt(object_, name.c_str(), value));
-                _check_(device->CreateIntegerProperty(name.c_str(), value, false, new Action(this, &PythonBridge::OnInteger)));
+                _check_(Get(object_, name.c_str(), value));
+                _check_(device->CreateIntegerProperty(name.c_str(), value, false, new Action(this, &PythonBridge::OnProperty<long>)));
             }
             else if (PyObject_IsInstance(property, floatPropertyType_)) {
                 double value;
-                _check_(GetFloat(object_, name.c_str(), value));
-                _check_(device->CreateFloatProperty(name.c_str(), value, false, new Action(this, &PythonBridge::OnFloat)));
+                _check_(Get(object_, name.c_str(), value));
+                _check_(device->CreateFloatProperty(name.c_str(), value, false, new Action(this, &PythonBridge::OnProperty<double>)));
             }
             else if (PyObject_IsInstance(property, stringPropertyType_)) {
                 string value;
-                _check_(GetString(object_, name.c_str(), value));
-                _check_(device->CreateStringProperty(name.c_str(), value.c_str(), false, new Action(this, &PythonBridge::OnString)));
+                _check_(Get(object_, name.c_str(), value));
+                _check_(device->CreateStringProperty(name.c_str(), value.c_str(), false, new Action(this, &PythonBridge::OnProperty<string>)));
             }
             else
                 continue;
@@ -263,12 +243,12 @@ private:
             // Set limits. Only supported by MM if both upper and lower limit are present.
             // The min/max attributes are always present, we only need to check if they don't hold 'None'
             PyObj lower, upper;
-            _check_(GetAttr(property, "min", lower));
-            _check_(GetAttr(property, "max", upper));
+            _check_(Get(property, "min", lower));
+            _check_(Get(property, "max", upper));
             if (lower != Py_None && upper != Py_None) {
                 double lower_val, upper_val;
-                _check_(GetFloat(property, "min", lower_val));
-                _check_(GetFloat(property, "max", upper_val));
+                _check_(Get(property, "min", lower_val));
+                _check_(Get(property, "max", upper_val));
                 device->SetPropertyLimits(name.c_str(), lower_val, upper_val);
             }
         }
