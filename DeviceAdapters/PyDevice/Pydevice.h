@@ -28,6 +28,7 @@
 #include <DeviceBase.h>
 #include "PythonBridge.h"
 
+static std::unordered_map<string, PyObject*> g_DeviceMap;
 
 /**
  * Base class for device adapters that are implement by a Python script.
@@ -83,6 +84,7 @@ public:
             Shutdown();
             return result;
         }
+//        this->UpdateStatus();
         return DEVICE_OK;
     }
 
@@ -100,7 +102,7 @@ public:
     void GetName(char* name) const override {
         CDeviceUtils::CopyLimitedString(name, adapterName_);
     }
-
+    
 protected:
     /**
     * Called after construction of the Python class

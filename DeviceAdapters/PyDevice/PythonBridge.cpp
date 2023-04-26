@@ -3,6 +3,8 @@
 #include "PythonBridge.h"
 #include <fstream>
 #include <sstream>
+#include <algorithm>
+#include <unordered_map>
 #include <numpy/arrayobject.h>
 
 
@@ -17,6 +19,11 @@ PyThreadState* PythonBridge::g_threadState = nullptr;
 */
 fs::path PythonBridge::g_PythonHome;
 
+/** Map of all PyDevice objects. Used to find an object by its label
+* Maintained by ConstructObject and Destruct. Updated by SetLabel
+*/
+std::unordered_map<string, PyObject*> PythonBridge::g_Devices;
+std::vector<PythonBridge::Link> PythonBridge::g_MissingLinks;
 
 /**
  * Initialize the Python interpreter
@@ -93,6 +100,7 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
         intPropertyType_ = PyObj(PyDict_GetItemString(module_, "int_property"));
         floatPropertyType_ = PyObj(PyDict_GetItemString(module_, "float_property"));
         stringPropertyType_ = PyObj(PyDict_GetItemString(module_, "string_property"));
+        objectPropertyType_ = PyObj(PyDict_GetItemString(module_, "object_property"));
     }
     catch (PyObj::PythonException) {
         return PythonError();
@@ -112,11 +120,31 @@ int PythonBridge::Destruct() noexcept {
     intPropertyType_.Clear();
     floatPropertyType_.Clear();
     stringPropertyType_.Clear();
+    objectPropertyType_.Clear();
     module_.Clear();
     initialized_ = false;
+
+    // remove device from map
+    g_Devices.erase(label_);
     return DEVICE_OK;
 }
 
+void PythonBridge::Register() const {
+    PyLock lock; // also acts as lock for g_Device and g_MissingLinks
+
+    // store device in global list
+    g_Devices[label_] = object_;
+
+    // check if there are unresolved links (c++ sucks)
+    g_MissingLinks.erase(std::remove_if(g_MissingLinks.begin(), g_MissingLinks.end(), [this](PythonBridge::Link& l) {
+        if (l.value == label_) {
+            PyObject_SetAttrString(l.object, l.attribute.c_str(), object_);
+            return true;
+        }
+        else
+            return false;
+    }), g_MissingLinks.end());
+}
 int PythonBridge::SetProperty(const char* name, long value) noexcept {
     PyLock lock;
     return PyObject_SetAttrString(object_, name, PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
@@ -132,6 +160,10 @@ int PythonBridge::SetProperty(const char* name, const string& value) noexcept {
     return PyObject_SetAttrString(object_, name, PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
 }
 
+int PythonBridge::SetProperty(const char* name, PyObject* value) noexcept {
+    PyLock lock;
+    return PyObject_SetAttrString(object_, name, value) == 0 ? DEVICE_OK : PythonError();
+}
 
 
 /**
@@ -147,7 +179,6 @@ int PythonBridge::Get(PyObject* object, const char* name, PyObj& value) const no
     value = PyObj(PyObject_GetAttrString(object, name));
     return (PyErr_Occurred() || !value) ? PythonError() : DEVICE_OK;
 }
-
 
 /**
  * Reads the value of an integer attribute

@@ -82,8 +82,6 @@ class string_property(base_property):
         if not isinstance(value, str):
             self._ValueError(f"Value {value} is not a string, but has type {type(value)}")
         return value
-    min = int_property(default = 0)
-    max = int_property(default = 1000)
     
 class Device:
     width = int_property(min = 10, max = 11, default = 10)
@@ -97,7 +95,9 @@ class RandomGenerator:
         parse_options(self, kwargs)
         self.resized = True
     def generate_into(self, buffer):
-        buffer[:,:] = 2000 - np.random.randint(0, 1000, buffer.shape, dtype=np.uint16)
+        buffer[:,:] = np.random.randint(self.min, self.max, buffer.shape, dtype=np.uint16)
+    min = int_property(default = 0)
+    max = int_property(default = 1000)
         
 
 class Camera:

@@ -2,6 +2,8 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
+#include <tuple>
 #include <functional>
 #include <filesystem>
 #pragma warning(disable: 5040) // disable warning we get because we are using C++17 for compilation.
