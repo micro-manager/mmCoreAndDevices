@@ -4,6 +4,10 @@ from nidaqmx.constants import TaskMode
 import pylab as plt
 import ast
 
+from nidaqmx.constants import Edge
+from nidaqmx.stream_readers import AnalogUnscaledReader
+from nidaqmx.stream_writers import AnalogMultiChannelWriter
+
 
 # this is all the most recently updated functions
 
@@ -79,6 +83,7 @@ def playrec(
 
     returns indata: measured signal from analog in channel (V)
     """
+    # TODO: Make a buffer-loading & trigger function seperately
 
     # in order to handle both singular and multiple channel output data:
     if len(output_mapping) > 1:
@@ -91,7 +96,7 @@ def playrec(
             aochan = write_task.ao_channels.add_ao_voltage_chan(o)
             aochan.ao_min = output_range[0]
             aochan.ao_max = output_range[1]  # output range
-            
+
         for i in input_mapping:
             aichan = read_task.ai_channels.add_ai_voltage_chan(i)
             aichan.ai_min = input_range[0]
@@ -104,6 +109,96 @@ def playrec(
         write_task.write(outdata, auto_start=True)
         indata = read_task.read(nsamples)
     return indata
+
+
+def readwrite(
+        outdata, sample_rate=500000, input_mapping=['Dev2/ai0'],
+        output_mapping=['Dev2/ao0', 'Dev2/ao1'], input_range=[-1, 1], output_range=[-1, 1]
+):
+    """Function adapted from NI forum that has an electrical output signal and a electrical input signal.
+    Because it goes into the dac, the input for the galvos is called output (analog out)
+    and the output of the PMT is called input (analog in)
+
+    It can handle only 1 in- and 2 outputs
+
+    outdata: numpy array or list, will be output in analog out channel (V)
+
+    sr: signal rate (/second), default is 500.000, the maximum of the NI USB-6341.
+    Note; the NI PCIe-6363 in the lab has a maximum of 2.000.000, so this function can be overclocked.
+
+    returns indata: measured signal from analog in channel (V)
+    """
+    # TODO: Make a buffer-loading & trigger function seperately
+    # TODO: Make the function robust for different channel numbers
+
+    # in order to handle both singular and multiple channel output data:
+    if len(output_mapping) > 1:
+        number_of_samples = outdata[0].shape[0]
+    else:
+        number_of_samples = outdata.shape[0]
+
+    with ni.Task() as write_task, ni.Task() as read_task, ni.Task() as sample_clk_task:
+        # Use a counter output pulse train task as the sample clock source
+        # for both the AI and AO tasks.
+
+        # We're stealing the device identifier for the clock from the input mapping string, because of backward
+        # compatibility
+        sample_clk_task.co_channels.add_co_pulse_chan_freq(
+            f"{input_mapping[0].split('/')[0]}/ctr0", freq=sample_rate
+        )
+        sample_clk_task.timing.cfg_implicit_timing(samps_per_chan=number_of_samples)
+
+        samp_clk_terminal = f"/{input_mapping[0].split('/')[0]}/Ctr0InternalOutput"
+
+        ao_args = {'min_val': output_range[0],
+                   'max_val': output_range[1]}
+
+        write_task.ao_channels.add_ao_voltage_chan(output_mapping[0], **ao_args)
+        write_task.ao_channels.add_ao_voltage_chan(output_mapping[1], **ao_args)
+
+        ai_args = {'min_val': input_range[0],
+                   'max_val': input_range[1],
+                   'terminal_config': ni.constants.TerminalConfiguration.RSE}
+
+        write_task.timing.cfg_samp_clk_timing(
+            sample_rate,
+            source=samp_clk_terminal,
+            active_edge=Edge.RISING,
+            samps_per_chan=number_of_samples,
+        )
+
+        read_task.ai_channels.add_ai_voltage_chan(input_mapping[0], **ai_args)
+
+        read_task.timing.cfg_samp_clk_timing(
+            sample_rate,
+            source=samp_clk_terminal,
+            active_edge=Edge.FALLING,
+            samps_per_chan=number_of_samples,
+        )
+        # for task in (read_task, write_task):
+        #     task.timing.cfg_samp_clk_timing(rate=sample_rate, source='OnboardClock', samps_per_chan=number_of_samples)
+
+        writer = AnalogMultiChannelWriter(write_task.out_stream)
+        reader = AnalogUnscaledReader(read_task.in_stream)
+
+        writer.write_many_sample(outdata)
+
+        # Start the read and write tasks before starting the sample clock
+        # source task.
+
+        read_task.start()
+        write_task.start()
+        sample_clk_task.start()
+
+        values_read = np.zeros([len(input_mapping), number_of_samples], dtype=np.int16)
+        reader.read_int16(
+            values_read, number_of_samples_per_channel=number_of_samples, timeout=30
+            # the timeout determines how long we'll wait for responses.
+            # (and with that determines the maximum exposure time.) Because we can imagine someone trying to make a VERY
+            # long exposure image, we've set this to 30. If you use more time than that, you've probably made an implementation error
+        )
+
+    return values_read[0]
 
 
 def make_voltage_zero(channels=["Dev4/ao2", "Dev4/ao3"]):
@@ -145,10 +240,8 @@ def PMT_to_image(data,
     delaybackward: "" during a right-to-left scan
 
 
-    ToDo: work in delay functionality
-    ToDo: work in cropping functionality
     ToDo: check inputs such that the length of data = x_nsteps * y_nsteps, throw error if not
-    ToDo: work the rectification into the playrec function
+
     """
     if ignore_first_point:
         data = data[1:]
@@ -167,7 +260,7 @@ def PMT_to_image(data,
         full_im = np.reshape(data, [y_nsteps, x_nsteps + depadsize])
         full_im = full_im[:, depadsize:]
 
-    return -full_im
+    return full_im
 
 
 def stringinterpret(input_list):
@@ -176,8 +269,8 @@ def stringinterpret(input_list):
 
 def single_capture(input_mapping=['Dev2/ai0'],
                    output_mapping=['Dev2/ao0', 'Dev2/ao1'],
-                   xlims=[-0.5, 0.5],  # full range of FoV
-                   ylims=[-0.5, 0.5],
+                   xlims=[-1, 1],  # full range of FoV
+                   ylims=[-1, 1],
                    resolution=[512, 512],
                    scanpaddingfactor=[1],
                    zoom=[1],
@@ -185,12 +278,13 @@ def single_capture(input_mapping=['Dev2/ai0'],
                    dwelltime=[],
                    duration=[],
                    bidirectional=[True],
-                   input_range=[-1.5,1.5],
+                   invert_values=[True],
+                   input_range=[-1, 1],
                    ):
     """One single capture, standalone function that returns an image
     It can run out-of-the-box (For a full FoV scan).
 
-
+    TODO: Make a buffer-loading & trigger function separately
     TODO: write this description
     """
 
@@ -201,7 +295,6 @@ def single_capture(input_mapping=['Dev2/ai0'],
 
     if len(dwelltime) + len(duration) > 1:
         raise Exception("Input EITHER a pixel dwelltime or a total duration")
-
 
     if bidirectional == []:
         raise Exception("Input true or false for bidirectional")
@@ -237,14 +330,15 @@ def single_capture(input_mapping=['Dev2/ai0'],
     # making scanpattern:
     xcoordinates, ycoordinates = scanpattern(xlims, ylims, stepsizes, bidirectional=bidirectional)
     sig = np.stack([xcoordinates, ycoordinates])
-    
+
     # setting the DAC range:
-    output_range = [min([xlims[0],ylims[0]]),max([xlims[1],ylims[1]])]
+    output_range = [min([xlims[0], ylims[0]]), max([xlims[1], ylims[1]])]
 
     # The DAC communication:
-    indata = playrec(sig, sr, output_mapping=output_mapping, input_mapping=input_mapping,input_range=input_range, output_range=output_range)
+    indata = readwrite(sig, sr, output_mapping=output_mapping, input_mapping=input_mapping, input_range=input_range,
+                       output_range=output_range)
     make_voltage_zero(output_mapping)
-    
+
     # Reconstruction:
     indata = np.array(indata)
     xlims = [xlims[0] / scanpaddingfactor[0], xlims[1] / scanpaddingfactor[0]]
@@ -253,17 +347,23 @@ def single_capture(input_mapping=['Dev2/ai0'],
     padsize = n_xsteps - x_n
     x_c = 1
     y_c = 1
-    paddinginduced_delay = int(round(padsize/2))
-    
-    image = PMT_to_image(indata, x_n, y_n, x_c, y_c, padsize, delayforward=delay[0]-paddinginduced_delay, bidirectional=bidirectional)
-    #    image = np.round((image - image.min()) * (1 / (image.max() - image.min()) * 255)).astype(int)
-    # image = np.round((image - image.min()) * (np.iinfo(np.int16).max / (image.max() - image.min()))).astype(np.int16)
-    #image = (image - image.min()) * (1 / (image.max() - image.min()))  # hopefully this scales it from 0 to 1
-    # hopefully this is now redundant
+    paddinginduced_delay = int(round(padsize / 2))
+
+    image = PMT_to_image(indata, x_n, y_n, x_c, y_c, padsize, delayforward=delay[0] - paddinginduced_delay,
+                         bidirectional=bidirectional)
+
+    # A bit of data modification such that the output will always be 0 to 2^16
+    if input_range[0] < 0:
+        image = image + (2**16)/2
+
+    if invert_values[0]:
+        image = (2**16)-image
+
     return image
 
 
-def cpp_single_capture(input_mapping_str, output_mapping_str, resolution_str, zoom_str, delay_str, dwelltime_str,scanpadding_str,input_range_str):
+def cpp_single_capture(input_mapping_str, output_mapping_str, resolution_str, zoom_str, delay_str, dwelltime_str,
+                       scanpadding_str, input_range_str):
     """Function written to connect the cpp call to the function. This is because c++ calls functions with the same
     data structure (uint8 strings). This could be fixed in c++, but this was considered clearer.
     If the call is changed in the device adapter, it should be changed here too.
@@ -281,13 +381,13 @@ def cpp_single_capture(input_mapping_str, output_mapping_str, resolution_str, zo
     input_range_str = np.array(ast.literal_eval(input_range_str), dtype=float)
 
     image = single_capture(input_mapping=input_mapping_str,
-        output_mapping=output_mapping_str,
-        resolution=resolution_str,
-        zoom=zoom_str,
-        delay=delay_str,
-        dwelltime=dwelltime_str,
-        scanpaddingfactor = scanpadding_str,
-        input_range = input_range_str
-    )
+                           output_mapping=output_mapping_str,
+                           resolution=resolution_str,
+                           zoom=zoom_str,
+                           delay=delay_str,
+                           dwelltime=dwelltime_str,
+                           scanpaddingfactor=scanpadding_str,
+                           input_range=input_range_str
+                           )
 
     return image
