@@ -1,9 +1,4 @@
-import nidaqmx as ni
 import numpy as np
-from nidaqmx.constants import TaskMode
-import pylab as plt
-import ast
-import os
 import sys
 
 # Add the directory to sys.path so Python can find modules in it
@@ -22,15 +17,16 @@ class GalvoScanner:
         parse_options(self, kwargs)
         self.resized = True
 
-    def galvo_scan(self,buffer):
-        # we need 2 things build here: a flip values bool, and an  interval bool (0 to 2^16, or -2^16/2 to 2^16/2)
-        # but maybe we need that in the scanning function
-        im = single_capture()
-        buffer[:, :] = im
+    def galvo_scan(self,buffer,invert,resolution,input,output,scanpadding,delay,bidirectional,zoom,input_range):
+
+        im = single_capture(invert_values=invert,resolution=resolution,input_mapping=input,output_mapping=output,
+                            scanpaddingfactor=scanpadding,delay=delay,bidirectional=bidirectional,zoom=zoom,
+                            input_range=input_range)
+        buffer[:, :] = np.reshape(im, resolution)
 
 
 class Camera:
-    """Demo camera implementation that returns noise images. To test building device graphs, the random number generator is implemented as a separate object with its own properties."""
+    """camera implementation that ."""
 
     def __init__(self, **kwargs):
         parse_options(self, kwargs)
@@ -41,24 +37,39 @@ class Camera:
             self._image = np.zeros((self._width, self._height), dtype=np.uint16)
             self.resized = False
 
+
         return self._image
 
     def trigger(self):
         pass
 
     def wait(self):
-        self.random_generator.galvo_scan(self.image)
+        self.galvo_scan.galvo_scan(self.image,[self._invert],[self._width, self._height],[self._input_mapping],
+                                   [self._xmirror_mapping,self._ymirror_mapping],[self._scan_padding],[self._delay],
+                                   [self._bidirectional],[self._zoom],[self._input_min, self._input_max])
 
     def on_resized(self, value):
         self.resized = True
         return value
 
+
+    input_mapping = string_property(default='Dev2/ai0')
+    xmirror_mapping = string_property(default='Dev2/ao0')
+    ymirror_mapping = string_property(default='Dev2/ao1')
     top = int_property(min=-1000, max=5000, default=0)
     left = int_property(min=-1000, max=5000, default=0)
     width = int_property(min=1, max=4096, default=512, on_update=on_resized)
     height = int_property(min=1, max=4096, default=512, on_update=on_resized)
-    exposure_ms = float_property(min=0.0, default=100)
-    random_generator = object_property(default=GalvoScanner())
 
-    # invert = bool_property(default = 0)
+    input_min = float_property(min=-1.5, max=1.5, default=-1)
+    input_max = float_property(min=-1.5, max=1.5, default=1)
+
+    delay = int_property(min=0, max=4096, default=0)
+    exposure_ms = float_property(min=0.0, default=100)
+    zoom = float_property(min=1, max=1000, default=1)
+    scan_padding = float_property(min=1, max=4, default=1)
+    galvo_scan = object_property(default=GalvoScanner())
+
+    bidirectional = bool_property(default=1)
+    invert = bool_property(default = 0)
     image = property(fget=get_image)
