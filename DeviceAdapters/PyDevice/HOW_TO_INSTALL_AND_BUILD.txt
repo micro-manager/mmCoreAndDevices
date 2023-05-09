@@ -23,3 +23,4 @@ git submodule add https://github.com/ivovellekoop/mmPython mmCoreAndDevices/Devi
 :: Build the project. You will get an error (Python.h not found)
 :: Build the project again, the error should have disappeared.
 
+:: If the build error python > autoconfig.props occurs, make sure your python install is in PATH
