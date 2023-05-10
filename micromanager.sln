@@ -464,6 +464,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Lumenera", "DeviceAdapters\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZWO", "DeviceAdapters\ZWO\ZWO.vcxproj", "{3B7DC5D6-2FAB-4987-9274-EA5884414862}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AtikMMCamera", "DeviceAdapters\Atik\AtikMMCamera.vcxproj", "{06301824-70DB-47F1-80AC-DBECCEE2EA99}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1394,6 +1396,10 @@ Global
 		{3B7DC5D6-2FAB-4987-9274-EA5884414862}.Debug|x64.Build.0 = Debug|x64
 		{3B7DC5D6-2FAB-4987-9274-EA5884414862}.Release|x64.ActiveCfg = Release|x64
 		{3B7DC5D6-2FAB-4987-9274-EA5884414862}.Release|x64.Build.0 = Release|x64
+		{06301824-70DB-47F1-80AC-DBECCEE2EA99}.Debug|x64.ActiveCfg = Debug|x64
+		{06301824-70DB-47F1-80AC-DBECCEE2EA99}.Debug|x64.Build.0 = Debug|x64
+		{06301824-70DB-47F1-80AC-DBECCEE2EA99}.Release|x64.ActiveCfg = Release|x64
+		{06301824-70DB-47F1-80AC-DBECCEE2EA99}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
