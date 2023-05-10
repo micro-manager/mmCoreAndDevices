@@ -21,7 +21,7 @@
     <ClCompile Include="SequenceThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(MM_3RDPARTYPRIVATE)\Atik\AtikCameras.cpp">
+    <ClCompile Include="AtikCamerasSDK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
