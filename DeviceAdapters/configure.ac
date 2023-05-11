@@ -512,6 +512,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    LudlLow
    LumencorSpectra
    MP285
+   MPBLaser
    MaestroServo
    Marzhauser
    Marzhauser-LStep
