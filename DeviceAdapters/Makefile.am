@@ -134,6 +134,7 @@ SUBDIRS = \
 	LudlLow \
 	LumencorSpectra \
 	MP285 \
+	MPBLaser \
 	MaestroServo \
 	Marzhauser \
 	Marzhauser-LStep \

@@ -18,8 +18,6 @@
 //
 
 #pragma once
-#ifndef _MPBLASER_H_
-#define _MPBLASER_H_
 
 #include "DeviceBase.h"
 #include <map>
@@ -55,9 +53,9 @@ public:
 
 private:
 	// Enumerations
-	enum LaserMode   { autoCurrentControl, autoPowerControl };
-	enum DeviceOnOff { off, on };
-	enum LaserState  { off, keylock, interlock, fault, startup,
+	enum class LaserMode   { autoCurrentControl, autoPowerControl };
+	enum class DeviceOnOff { off, on };
+	enum class LaserState  { off, keylock, interlock, fault, startup,
 					         manualTurningOn, manualOn, autoOn};
 
 	// Property labels
@@ -139,5 +137,3 @@ private:
 	const int ERR_PORT_CHANGE_FORBIDDEN = 101;
 	const int ERR_UNRECOGNIZED_KEYLOCK_STATE = 102;
 };
-
-#endif // _MPBLaser_H
