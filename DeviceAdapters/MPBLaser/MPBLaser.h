@@ -18,8 +18,6 @@
 //
 
 #pragma once
-#ifndef _MPBLASER_H_
-#define _MPBLASER_H_
 
 #include "DeviceBase.h"
 #include <map>
@@ -139,5 +137,3 @@ private:
 	const int ERR_PORT_CHANGE_FORBIDDEN = 101;
 	const int ERR_UNRECOGNIZED_KEYLOCK_STATE = 102;
 };
-
-#endif // _MPBLaser_H
