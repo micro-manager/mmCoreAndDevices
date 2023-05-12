@@ -111,6 +111,7 @@ class Camera:
             self._image = np.zeros((self._width, self._height), dtype=np.uint16)
             self.resized = False
 
+
         return self._image
 
     def trigger(self):
@@ -122,6 +123,11 @@ class Camera:
     def on_resized(self, value):
         self.resized = True
         return value
+
+    def on_invert(self, value):
+        self.resized = True
+        return value
+
             
     top = int_property(min = -1000, max = 5000, default = 0)
     left = int_property(min = -1000, max = 5000, default = 0)
@@ -130,5 +136,5 @@ class Camera:
     exposure_ms = float_property(min = 0.0, default = 100)
     random_generator = object_property(default = RandomGenerator())
 
-    #invert = bool_property(default = 0)
+    invert = bool_property(default = 0)
     image = property(fget = get_image)
