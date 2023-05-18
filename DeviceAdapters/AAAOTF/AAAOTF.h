@@ -67,12 +67,16 @@ public:
    int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxintensity(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnFrequency(MM::PropertyBase* pProp, MM::ActionType eAct);
+
    //int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 
    int SetIntensity(double intensity);
-	
+   int SetFrequency(double freqMHz);
+
+
    int SetShutterPosition(bool state);
    //int GetVersion();
 
@@ -87,6 +91,7 @@ private:
    std::string activeChannel_;
    //intensity
    double intensity_;
+   double freqMhz_;
    int maxintensity_; 
    
 };

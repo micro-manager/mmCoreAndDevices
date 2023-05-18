@@ -21,10 +21,12 @@
 
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 const char* g_AOTF = "AAAOTF";
 const char* g_mAOTF = "multiAAAOTF";
 const char* g_Int = "Power (% of max)";
+const char* g_Frequency = "Frequency (MHz)";
 const char* g_Maxint = "Maximum intensity (dB)";
 const char* g_mChannel = "Channels (8 bit word 1..255)";
 const char* g_Channel_1 = "1";	
@@ -99,6 +101,7 @@ AOTF::AOTF() :
    initialized_(false),
    activeChannel_(g_Channel_1),
    intensity_(100),
+   freqMhz_(100.0),
    maxintensity_(1900)
    /*,*/
    /*version_("Undefined")*/
@@ -164,6 +167,14 @@ int AOTF::Initialize()
 	   return ret;
    SetPropertyLimits(g_Int, 0, 100);
 
+   // Frequency
+   //------------------
+   pAct = new CPropertyAction(this, &AOTF::OnFrequency);
+   ret = CreateProperty(g_Frequency, "100", MM::Float, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   SetPropertyLimits(g_Frequency, 50, 200);
+
    // Maximumintensity (in dB)
    //-------------------
    pAct = new CPropertyAction(this, &AOTF::OnMaxintensity);
@@ -174,7 +185,6 @@ int AOTF::Initialize()
 
    // The Channel we will act on
    // -------
-
    pAct = new CPropertyAction (this, &AOTF::OnChannel);
    ret = CreateProperty(MM::g_Keyword_Channel, g_Channel_1, MM::String, false, pAct);  
 
@@ -254,13 +264,12 @@ int AOTF::SetShutterPosition(bool state)
 {                                                                            
 	ostringstream command;
 
-   int test;
-   test = atoi(activeChannel_.c_str());
+   int channelIndex = atoi(activeChannel_.c_str());
 
    if (state == false)
-	   command<< "L" << test << "O0";
+	   command<< "L" << channelIndex << "O0";
    else
-	   command<< "L" << test << "O1";
+	   command<< "L" << channelIndex << "O1";
 
    int ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
    if (ret!=DEVICE_OK)
@@ -273,34 +282,38 @@ int AOTF::SetShutterPosition(bool state)
 
 
 
-
-/**
- * Here we set the intensity
- */
 int AOTF::SetIntensity(double intensity)
 {                                                                            	
    ostringstream command;
-   int test;
-
-   test = atoi(activeChannel_.c_str());
-
-   //ofstream out("test.txt");
+   int channelIndex = atoi(activeChannel_.c_str());
 
    //divide intensity by 100 to get dBm
-   command<< "L" << test << "D" << intensity*maxintensity_/10000 ;
-
-   //out << command.str().c_str() << "\n";
-
+   command<< "L" << channelIndex << "D" << intensity*maxintensity_/10000 ;
+   
    int ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
    if (ret!=DEVICE_OK)
 	   return ret;
 
    intensity_ = intensity;
    return DEVICE_OK;
-   
-   //out.close();
-
 }
+
+int AOTF::SetFrequency(double freqMHz)
+{
+   ostringstream command;
+   int channelIndex = atoi(activeChannel_.c_str());
+   
+   //divide intensity by 100 to get dBm
+   command << "L" << channelIndex << "F" << std::fixed << std::setprecision(2) << freqMHz;
+   
+   int ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
+   if (ret != DEVICE_OK)
+      return ret;
+   
+   freqMhz_ = freqMHz;
+   return DEVICE_OK;
+}
+
 
 
 int AOTF::Shutdown()                                                
@@ -362,6 +375,21 @@ int AOTF::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int AOTF::OnFrequency(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+
+   if (eAct == MM::BeforeGet)
+   {
+      // instead of relying on stored state we could actually query the device
+      pProp->Set((double)freqMhz_);
+   } else if (eAct == MM::AfterSet)
+   {
+      double pos;
+      pProp->Get(pos);
+      return SetFrequency(pos);
+   }
+   return DEVICE_OK;
+}
 
 int AOTF::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -489,13 +517,6 @@ int multiAOTF::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
-   // Intensity
-   //--------------------
-   //pAct = new CPropertyAction(this, &AOTF::OnIntensity);
-   //ret = CreateProperty(g_Int, "200", MM::Integer, false, pAct);
-   //if (ret!=DEVICE_OK)
-	  // return ret;
-   //SetPropertyLimits(g_Int, 0, 2200);
 
    // The Channel we will act on
    // -------
