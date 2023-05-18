@@ -296,9 +296,6 @@ int AOTF::SetIntensity(double intensity)
 
    intensity_ = intensity;
    return DEVICE_OK;
-   
-   //out.close();
-
 }
 
 int AOTF::SetFrequency(double freqMHz)
@@ -309,17 +306,12 @@ int AOTF::SetFrequency(double freqMHz)
    //divide intensity by 100 to get dBm
    command << "L" << channelIndex << "F" << std::fixed << std::setprecision(2) << freqMHz;
    
-   //out << command.str().c_str() << "\n";
-   
    int ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
    if (ret != DEVICE_OK)
       return ret;
    
    freqMhz_ = freqMHz;
    return DEVICE_OK;
-   
-   //out.close();
-
 }
 
 
