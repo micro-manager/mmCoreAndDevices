@@ -183,12 +183,8 @@ int AOTF::Initialize()
 	   return ret;
    SetPropertyLimits(g_Maxint, 0, 2200);
 
-
-
-
    // The Channel we will act on
    // -------
-
    pAct = new CPropertyAction (this, &AOTF::OnChannel);
    ret = CreateProperty(MM::g_Keyword_Channel, g_Channel_1, MM::String, false, pAct);  
 
@@ -268,13 +264,12 @@ int AOTF::SetShutterPosition(bool state)
 {                                                                            
 	ostringstream command;
 
-   int test;
-   test = atoi(activeChannel_.c_str());
+   int channelIndex = atoi(activeChannel_.c_str());
 
    if (state == false)
-	   command<< "L" << test << "O0";
+	   command<< "L" << channelIndex << "O0";
    else
-	   command<< "L" << test << "O1";
+	   command<< "L" << channelIndex << "O1";
 
    int ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
    if (ret!=DEVICE_OK)
@@ -290,17 +285,11 @@ int AOTF::SetShutterPosition(bool state)
 int AOTF::SetIntensity(double intensity)
 {                                                                            	
    ostringstream command;
-   int test;
-
-   test = atoi(activeChannel_.c_str());
-
-   //ofstream out("test.txt");
+   int channelIndex = atoi(activeChannel_.c_str());
 
    //divide intensity by 100 to get dBm
-   command<< "L" << test << "D" << intensity*maxintensity_/10000 ;
-
-   //out << command.str().c_str() << "\n";
-
+   command<< "L" << channelIndex << "D" << intensity*maxintensity_/10000 ;
+   
    int ret = SendSerialCommand(port_.c_str(), command.str().c_str(), "\r");
    if (ret!=DEVICE_OK)
 	   return ret;
@@ -315,14 +304,10 @@ int AOTF::SetIntensity(double intensity)
 int AOTF::SetFrequency(double freqMHz)
 {
    ostringstream command;
-   int test;
-   
-   test = atoi(activeChannel_.c_str());
-   
-   //ofstream out("test.txt");
+   int channelIndex = atoi(activeChannel_.c_str());
    
    //divide intensity by 100 to get dBm
-   command << "L" << test << "F" << std::fixed << std::setprecision(2) << freqMHz;
+   command << "L" << channelIndex << "F" << std::fixed << std::setprecision(2) << freqMHz;
    
    //out << command.str().c_str() << "\n";
    
