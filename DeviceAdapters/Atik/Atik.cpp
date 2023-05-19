@@ -581,61 +581,6 @@ int Atik::Initialize()
 * Shutdown() may be called multiple times in a row.
 * Required by the MM::Device API.
 */
-
-int Atik::OnDarkMode(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-		pProp->Get(darkModeEnabled);
-
-		log("Dark Mode set to %d", darkModeEnabled);
-
-		CHECK_STRICT_ART(ArtemisSetDarkMode(handle, darkModeEnabled));
-	}
-	else if (eAct == MM::BeforeGet)
-	{
-		pProp->Set(darkModeEnabled);
-	}
-
-	return DEVICE_OK;
-}
-
-int Atik::OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-		pProp->Get(triggerEnabled);
-
-		log("Dark Mode set to %d", triggerEnabled);
-
-		CHECK_STRICT_ART(ArtemisTriggeredExposure(handle, triggerEnabled));
-	}
-	else if (eAct == MM::BeforeGet)
-	{
-		pProp->Set(triggerEnabled);
-	}
-
-	return DEVICE_OK;
-}
-
-int Atik::OnPreview(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-		pProp->Get(previewEnabled);
-
-		log("Preview mode set to %d", previewEnabled);
-
-		CHECK_STRICT_ART(ArtemisSetPreview(handle, previewEnabled));
-	}
-	else if (eAct == MM::BeforeGet)
-	{
-		pProp->Set(previewEnabled);
-	}
-
-	return DEVICE_OK;
-}
-
 int Atik::Shutdown()
 {
 	if (initialized_)
@@ -1151,6 +1096,60 @@ int Atik::OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 	else if (eAct == MM::BeforeGet)
 	{
 		pProp->Set(exposureMode_.c_str());
+	}
+
+	return DEVICE_OK;
+}
+
+int Atik::OnDarkMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		pProp->Get(darkModeEnabled);
+
+		log("Dark Mode set to %d", darkModeEnabled);
+
+		CHECK_STRICT_ART(ArtemisSetDarkMode(handle, darkModeEnabled));
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(darkModeEnabled);
+	}
+
+	return DEVICE_OK;
+}
+
+int Atik::OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		pProp->Get(triggerEnabled);
+
+		log("Dark Mode set to %d", triggerEnabled);
+
+		CHECK_STRICT_ART(ArtemisTriggeredExposure(handle, triggerEnabled));
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(triggerEnabled);
+	}
+
+	return DEVICE_OK;
+}
+
+int Atik::OnPreview(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		pProp->Get(previewEnabled);
+
+		log("Preview mode set to %d", previewEnabled);
+
+		CHECK_STRICT_ART(ArtemisSetPreview(handle, previewEnabled));
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(previewEnabled);
 	}
 
 	return DEVICE_OK;
