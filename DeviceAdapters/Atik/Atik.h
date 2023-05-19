@@ -85,6 +85,7 @@ public:
    int OnDarkMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPreview(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    friend class SequenceThread;
@@ -98,6 +99,7 @@ private:
    bool initialized_;
    ImgBuffer img_;
    int roiX_, roiY_;
+   std::string exposureMode_;
 
    ArtemisHandle handle;
    enum GO_Type {FX2, FX3};

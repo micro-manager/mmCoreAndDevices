@@ -502,6 +502,38 @@ int Atik::Initialize()
 		}
 	}
 
+	//Exposure 
+	{
+		if (ArtemisHasCameraSpecificOption(handle, ID_ExposureSpeed))
+		{
+			unsigned short expMode;
+			int actual = 0;
+			ArtemisCameraSpecificOptionGetData(handle, ID_ExposureSpeed, (unsigned char*)&expMode, 2, &actual);
+
+			std::string val;
+			switch (expMode)
+			{
+			case 0:
+				val = "Long Exposure";
+				break;
+			case 1:
+				val = "Short Exposure";
+				break;
+			default:
+				val = "Auto";
+				break;
+			}
+
+			auto pAct = new CPropertyAction(this, &Atik::OnExposureMode);
+			ret = CreateProperty("Exposure Mode", val.c_str(), MM::String, false, pAct);
+			exposureMode_ = val.c_str();
+
+			std::vector<std::string> expModeVals = { "Long Exposure", "Short Exposure", "Auto" };
+
+			SetAllowedValues("Exposure Mode", expModeVals);
+		}
+	}
+
 	// Trigger
 	{
 		if (hasTrigger)
@@ -1071,6 +1103,42 @@ int Atik::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 	else if (eAct == MM::BeforeGet)
 	{
 		pProp->Set((long)offset_);
+	}
+
+	return DEVICE_OK;
+}
+
+int Atik::OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		std::string expMode;
+		pProp->Get(expMode);
+
+		unsigned short expModeI = USHRT_MAX;
+		if (expMode.find("Long Exposure") != string::npos)
+		{
+			expModeI = 0;
+		}
+		else if (expMode.find("Short Exposure") != string::npos)
+		{
+			expModeI = 1;
+		}
+		else if (expMode.find("Auto") != string::npos)
+		{
+			expModeI = 3;
+		}
+
+		if (expModeI == USHRT_MAX)
+			return DEVICE_INVALID_PROPERTY_VALUE;
+
+		exposureMode_ = expMode;
+
+		CHECK_STRICT_ART(ArtemisCameraSpecificOptionSetData(handle, ID_ExposureSpeed, (unsigned char*)&expModeI, 2));
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(exposureMode_.c_str());
 	}
 
 	return DEVICE_OK;
