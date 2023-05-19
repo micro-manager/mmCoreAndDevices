@@ -349,6 +349,25 @@ int Atik::Initialize()
 	coolingEnabled = ((ARTEMIS_COOLING_INFO_COOLINGON & flags) == 64);
 	hasSetPoint = ((ARTEMIS_COOLING_INFO_SETPOINTCONTROL & flags) == 16);
 
+	// Sensor Temperature
+	{
+		int numSensors = 0;
+		ArtemisTemperatureSensorInfo(handle, 0, &numSensors);
+
+		if (numSensors > 0)
+		{
+			int temp = 0;
+			ArtemisTemperatureSensorInfo(handle, 1, &temp);
+			float tempF = static_cast<float>(temp);
+			tempF /= 100;
+
+			// Camera sensor temperature
+			auto pAct = new CPropertyAction(this, &Atik::OnSensorTemp);
+			ret = CreateFloatProperty("Camera Sensor Temperature", tempF, true, pAct);
+			assert(ret == DEVICE_OK);
+		}
+	}
+
 	// Cooling Enable
 	{
 		if (hasCooling && isControllable)
@@ -907,6 +926,20 @@ int Atik::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Set((long)binning_);
 	}
 
+	return DEVICE_OK;
+}
+
+int Atik::OnSensorTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		int temp = 0;
+		CHECK_STRICT_ART(ArtemisTemperatureSensorInfo(handle, 1, &temp));
+		float tempF = static_cast<float>(temp);
+		tempF /= 100;
+
+		pProp->Set(tempF);
+	}
 	return DEVICE_OK;
 }
 

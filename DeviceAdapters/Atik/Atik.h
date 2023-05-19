@@ -76,6 +76,7 @@ public:
    // action interface
    // ----------------
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSensorTemp(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnCoolingEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnCoolingTargetTemp(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnCoolingPower(MM::PropertyBase* pProp, MM::ActionType eAct);
