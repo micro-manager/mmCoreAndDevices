@@ -306,13 +306,6 @@ int Atik::Initialize()
 	if (ret != DEVICE_OK)
 		return ret;
 
-	int flags, level, minlevel, maxlevel, setpoint;
-	ArtemisCoolingInfo(handle, &flags, &level, &minlevel, &maxlevel, &setpoint);
-	bool hasCooling = ((ARTEMIS_COOLING_INFO_HASCOOLING & flags) == 1);
-	bool isControllable = ((ARTEMIS_COOLING_INFO_CONTROLLABLE & flags) == 2);
-	hasPowerlvl = ((ARTEMIS_COOLING_INFO_POWERLEVELCONTROL & flags) == 8);
-	hasSetPoint = ((ARTEMIS_COOLING_INFO_SETPOINTCONTROL & flags) == 16);
-
 	ARTEMISPROPERTIES prop;
 	ArtemisProperties(handle, &prop);
 
@@ -329,6 +322,10 @@ int Atik::Initialize()
 		int binX, binY;
 		ArtemisGetMaxBin(handle, &binX, &binY);
 
+		int curX, curY;
+		ArtemisGetBin(handle, &curX, &curY);
+		binning_ = curX; // symmetrical based on x bin
+
 		int maxBin = min(binX, binY);
 		log("Max bin reported by camera: %d", maxBin);
 
@@ -343,12 +340,40 @@ int Atik::Initialize()
 		assert(ret == DEVICE_OK);
 	}
 
+
+	int flags, minlevel, maxlevel;
+	ArtemisCoolingInfo(handle, &flags, (int*)&coolingPower, &minlevel, &maxlevel, (int*)&coolingTargetTemp);
+	bool hasCooling = ((ARTEMIS_COOLING_INFO_HASCOOLING & flags) == 1);
+	bool isControllable = ((ARTEMIS_COOLING_INFO_CONTROLLABLE & flags) == 2);
+	hasPowerlvl = ((ARTEMIS_COOLING_INFO_POWERLEVELCONTROL & flags) == 8);
+	coolingEnabled = ((ARTEMIS_COOLING_INFO_COOLINGON & flags) == 64);
+	hasSetPoint = ((ARTEMIS_COOLING_INFO_SETPOINTCONTROL & flags) == 16);
+
+	// Sensor Temperature
+	{
+		int numSensors = 0;
+		ArtemisTemperatureSensorInfo(handle, 0, &numSensors);
+
+		if (numSensors > 0)
+		{
+			int temp = 0;
+			ArtemisTemperatureSensorInfo(handle, 1, &temp);
+			float tempF = static_cast<float>(temp);
+			tempF /= 100;
+
+			// Camera sensor temperature
+			auto pAct = new CPropertyAction(this, &Atik::OnSensorTemp);
+			ret = CreateFloatProperty("Camera Sensor Temperature", tempF, true, pAct);
+			assert(ret == DEVICE_OK);
+		}
+	}
+
 	// Cooling Enable
 	{
 		if (hasCooling && isControllable)
 		{
 			CPropertyAction* pAct = new CPropertyAction(this, &Atik::OnCoolingEnable);
-			ret = CreateProperty("Cooling Enable", "0", MM::Integer, false, pAct);
+			ret = CreateIntegerProperty("Cooling Enable", coolingEnabled, false, pAct);
 			assert(ret == DEVICE_OK);
 
 			ret = SetPropertyLimits("Cooling Enable", 0, 1);
@@ -356,7 +381,6 @@ int Atik::Initialize()
 		}
 		else if (hasCooling && !isControllable)
 		{
-			ArtemisSetCooling(handle, 0);
 			ret = CreateProperty("Cooling Auto On", "1", MM::Integer, true);
 			assert(ret == DEVICE_OK);
 		}
@@ -366,8 +390,9 @@ int Atik::Initialize()
 	{
 		if (hasCooling && hasSetPoint)
 		{
+
 			CPropertyAction* pAct = new CPropertyAction(this, &Atik::OnCoolingTargetTemp);
-			ret = CreateProperty("Cooling Target Temp", "0", MM::Integer, false, pAct);
+			ret = CreateIntegerProperty("Cooling Target Temp", coolingTargetTemp, false, pAct);
 			assert(ret == DEVICE_OK);
 
 			ret = SetPropertyLimits("Cooling Target Temp", -40, 20);
@@ -380,7 +405,7 @@ int Atik::Initialize()
 		if (hasCooling && hasPowerlvl && !hasSetPoint)
 		{
 			CPropertyAction* pAct = new CPropertyAction(this, &Atik::OnCoolingPower);
-			ret = CreateProperty("Cooling Power", "0", MM::Integer, false, pAct);
+			ret = CreateIntegerProperty("Cooling Power", coolingPower, false, pAct);
 			assert(ret == DEVICE_OK);
 
 			ret = SetPropertyLimits("Cooling Power", minlevel, maxlevel);
@@ -392,8 +417,10 @@ int Atik::Initialize()
 	{
 		if (hasShutter) 
 		{
+			darkModeEnabled = ArtemisGetDarkMode(handle);
+
 			CPropertyAction* pAct = new CPropertyAction(this, &Atik::OnDarkMode);
-			ret = CreateProperty("Dark Mode Enabled", "0", MM::Integer, false, pAct);
+			ret = CreateIntegerProperty("Dark Mode Enabled", darkModeEnabled, false, pAct);
 			assert(ret == DEVICE_OK);
 
 			ret = SetPropertyLimits("Dark Mode Enabled", 0, 1);
@@ -427,9 +454,10 @@ int Atik::Initialize()
 			unsigned short* ptr = (unsigned short*)gData;
 			minG = *ptr;
 			maxG = ptr[1];
+			gain_ = ptr[2];
 
 			CPropertyAction* pAct = new CPropertyAction(this, &Atik::OnGain);
-			ret = CreateProperty(MM::g_Keyword_Gain, "0", MM::Integer, false, pAct);
+			ret = CreateIntegerProperty(MM::g_Keyword_Gain, gain_, false, pAct);
 			assert(ret == DEVICE_OK);
 
 			SetPropertyLimits(MM::g_Keyword_Gain, minG, maxG);
@@ -437,13 +465,12 @@ int Atik::Initialize()
 		}
 		else
 		{
-			int gain, offset;
-			auto res = ArtemisGetGain(handle, false, &gain, &offset);
+			auto res = ArtemisGetGain(handle, false, &gain_, &offset_);
 			if (res != ARTEMIS_INVALID_FUNCTION)
 			{
 				setGOType = FX2;
 				CPropertyAction* pAct = new CPropertyAction(this, &Atik::OnGain);
-				ret = CreateProperty(MM::g_Keyword_Gain, "0", MM::Integer, false, pAct);
+				ret = CreateIntegerProperty(MM::g_Keyword_Gain, gain_, false, pAct);
 				assert(ret == DEVICE_OK);
 
 				SetPropertyLimits(MM::g_Keyword_Gain, 0, 63);
@@ -474,12 +501,14 @@ int Atik::Initialize()
 			unsigned short minO, maxO;
 			unsigned char oData[6];
 			ArtemisCameraSpecificOptionGetData(handle, ID_GOCustomOffset, oData, 6, &actualLength);
+
 			unsigned short* ptr = (unsigned short*)oData;
 			minO = *ptr;
 			maxO = ptr[1];
+			offset_ = ptr[2];
 
 			CPropertyAction* pAct = new CPropertyAction(this, &Atik::OnOffset);
-			ret = CreateProperty(MM::g_Keyword_Offset, "0", MM::Integer, false, pAct);
+			ret = CreateIntegerProperty(MM::g_Keyword_Offset, offset_, false, pAct);
 			assert(ret == DEVICE_OK);
 
 			SetPropertyLimits(MM::g_Keyword_Offset, minO, maxO);
@@ -487,18 +516,52 @@ int Atik::Initialize()
 		}
 		else
 		{
-			int gain, offset;
-			auto res = ArtemisGetGain(handle, false, &gain, &offset);
+			auto res = ArtemisGetGain(handle, false, &gain_, &offset_);
 			if (res != ARTEMIS_INVALID_FUNCTION)
 			{
 				setGOType = FX2;
 				CPropertyAction* pAct = new CPropertyAction(this, &Atik::OnOffset);
-				ret = CreateProperty(MM::g_Keyword_Offset, "0", MM::Integer, false, pAct);
+				ret = CreateIntegerProperty(MM::g_Keyword_Offset, offset_, false, pAct);
 				assert(ret == DEVICE_OK);
 
 				SetPropertyLimits(MM::g_Keyword_Offset, 0, 512);
 				assert(ret == DEVICE_OK);
 			}
+		}
+	}
+
+	//Exposure Mode
+	{
+		if (ArtemisHasCameraSpecificOption(handle, ID_ExposureSpeed))
+		{
+			unsigned short expMode;
+			int actual = 0;
+			ArtemisCameraSpecificOptionGetData(handle, ID_ExposureSpeed, (unsigned char*)&expMode, 2, &actual);
+			
+			std::vector<std::string> expModeVals = { "Long Exposure",  "Short Exposure", "Auto" };
+			switch (expMode)
+			{
+			case 0:
+				exposureMode_ = expModeVals[0];
+				break;
+			case 1:
+				exposureMode_ = expModeVals[1];
+				break;
+			case 2: // Fast Mode not currently implemented in MM, force the camera into Auto(3) mode.
+			{
+				exposureMode_ = expModeVals[2];
+				unsigned short expS = 3;
+				ArtemisCameraSpecificOptionSetData(handle, ID_ExposureSpeed, (unsigned char*)&expS, 2);
+				break;
+			}
+			default:
+				exposureMode_ = expModeVals[2];
+				break;
+			}
+
+			auto pAct = new CPropertyAction(this, &Atik::OnExposureMode);
+			ret = CreateProperty("Exposure Mode", exposureMode_.c_str(), MM::String, false, pAct);
+			SetAllowedValues("Exposure Mode", expModeVals);
 		}
 	}
 
@@ -537,61 +600,6 @@ int Atik::Initialize()
 * Shutdown() may be called multiple times in a row.
 * Required by the MM::Device API.
 */
-
-int Atik::OnDarkMode(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-		pProp->Get(darkModeEnabled);
-
-		log("Dark Mode set to %d", darkModeEnabled);
-
-		CHECK_STRICT_ART(ArtemisSetDarkMode(handle, darkModeEnabled));
-	}
-	else if (eAct == MM::BeforeGet)
-	{
-		pProp->Set(darkModeEnabled);
-	}
-
-	return DEVICE_OK;
-}
-
-int Atik::OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-		pProp->Get(triggerEnabled);
-
-		log("Dark Mode set to %d", triggerEnabled);
-
-		CHECK_STRICT_ART(ArtemisTriggeredExposure(handle, triggerEnabled));
-	}
-	else if (eAct == MM::BeforeGet)
-	{
-		pProp->Set(triggerEnabled);
-	}
-
-	return DEVICE_OK;
-}
-
-int Atik::OnPreview(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-		pProp->Get(previewEnabled);
-
-		log("Preview mode set to %d", previewEnabled);
-
-		CHECK_STRICT_ART(ArtemisSetPreview(handle, previewEnabled));
-	}
-	else if (eAct == MM::BeforeGet)
-	{
-		pProp->Set(previewEnabled);
-	}
-
-	return DEVICE_OK;
-}
-
 int Atik::Shutdown()
 {
 	if (initialized_)
@@ -921,6 +929,20 @@ int Atik::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int Atik::OnSensorTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		int temp = 0;
+		CHECK_STRICT_ART(ArtemisTemperatureSensorInfo(handle, 1, &temp));
+		float tempF = static_cast<float>(temp);
+		tempF /= 100;
+
+		pProp->Set(tempF);
+	}
+	return DEVICE_OK;
+}
+
 int Atik::OnCoolingEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::AfterSet)
@@ -1027,7 +1049,7 @@ int Atik::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		switch (setGOType)
 		{
 		case FX2:
-			CHECK_STRICT_ART(ArtemisSetGain(handle, previewEnabled, gain_, 0));
+			CHECK_STRICT_ART(ArtemisSetGain(handle, previewEnabled, gain_, offset_));
 			break;
 		case FX3:
 			CHECK_STRICT_ART(ArtemisCameraSpecificOptionSetData(handle, ID_GOCustomGain, (unsigned char*)&gain_, 2));
@@ -1059,7 +1081,7 @@ int Atik::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 		switch (setGOType)
 		{
 		case FX2:
-			CHECK_STRICT_ART(ArtemisSetGain(handle, previewEnabled, 0, offset_));
+			CHECK_STRICT_ART(ArtemisSetGain(handle, previewEnabled, gain_, offset_));
 			break;
 		case FX3:
 			CHECK_STRICT_ART(ArtemisCameraSpecificOptionSetData(handle, ID_GOCustomOffset, (unsigned char*)&offset_, 2));
@@ -1071,6 +1093,96 @@ int Atik::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 	else if (eAct == MM::BeforeGet)
 	{
 		pProp->Set((long)offset_);
+	}
+
+	return DEVICE_OK;
+}
+
+int Atik::OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		std::string expMode;
+		pProp->Get(expMode);
+
+		unsigned short expModeI = USHRT_MAX;
+		if (expMode.find("Long Exposure") != string::npos)
+		{
+			expModeI = 0;
+		}
+		else if (expMode.find("Short Exposure") != string::npos)
+		{
+			expModeI = 1;
+		}
+		else if (expMode.find("Auto") != string::npos)
+		{
+			expModeI = 3;
+		}
+
+		if (expModeI == USHRT_MAX)
+			return DEVICE_INVALID_PROPERTY_VALUE;
+
+		exposureMode_ = expMode;
+
+		CHECK_STRICT_ART(ArtemisCameraSpecificOptionSetData(handle, ID_ExposureSpeed, (unsigned char*)&expModeI, 2));
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(exposureMode_.c_str());
+	}
+
+	return DEVICE_OK;
+}
+
+int Atik::OnDarkMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		pProp->Get(darkModeEnabled);
+
+		log("Dark Mode set to %d", darkModeEnabled);
+
+		CHECK_STRICT_ART(ArtemisSetDarkMode(handle, darkModeEnabled));
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(darkModeEnabled);
+	}
+
+	return DEVICE_OK;
+}
+
+int Atik::OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		pProp->Get(triggerEnabled);
+
+		log("Dark Mode set to %d", triggerEnabled);
+
+		CHECK_STRICT_ART(ArtemisTriggeredExposure(handle, triggerEnabled));
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(triggerEnabled);
+	}
+
+	return DEVICE_OK;
+}
+
+int Atik::OnPreview(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		pProp->Get(previewEnabled);
+
+		log("Preview mode set to %d", previewEnabled);
+
+		CHECK_STRICT_ART(ArtemisSetPreview(handle, previewEnabled));
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(previewEnabled);
 	}
 
 	return DEVICE_OK;
