@@ -446,6 +446,10 @@ int Atik::Initialize()
 		if (ArtemisHasCameraSpecificOption(handle, ID_GOCustomGain))
 		{
 			setGOType = FX3;
+
+			unsigned short mode = 0; // Put the camera into custom Gain/Offset mode
+			ArtemisCameraSpecificOptionSetData(handle, ID_GOPresetMode, (unsigned char*)&mode, 2);
+
 			int actualLength;
 			unsigned short minG, maxG;
 			unsigned char gData[6];
@@ -497,6 +501,10 @@ int Atik::Initialize()
 		if (ArtemisHasCameraSpecificOption(handle, ID_GOCustomOffset))
 		{
 			setGOType = FX3;
+
+			unsigned short mode = 0; // Put the camera into custom Gain/Offset mode
+			ArtemisCameraSpecificOptionSetData(handle, ID_GOPresetMode, (unsigned char*)&mode, 2);
+
 			int actualLength;
 			unsigned short minO, maxO;
 			unsigned char oData[6];
