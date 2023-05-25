@@ -35,6 +35,12 @@ public:
 
     int Call(const PyObj& callable, PyObj& retval) const noexcept;
 
+    template <class T> int Get(PyObject* object, const char* name, T& value) const noexcept {
+        PyLock lock;
+        value = PyObj(PyObject_GetAttrString(object, name)).as<T>();
+        return CheckError();
+    }
+
     template <class T> int GetProperty(const char* name, T& value) const noexcept {
         return Get(object_, name, value);
     }
@@ -93,16 +99,11 @@ public:
         label_ = label;
         return DEVICE_OK;
     }
-    static string PyUTF8(PyObject* obj);
 private:
     PythonBridge(const PythonBridge& other) = delete; // no copy constructor
     static fs::path FindPython() noexcept;
     static bool HasPython(const fs::path& path) noexcept;
     int ConstructPythonObject(const char* pythonScript, const char* pythonClass) noexcept;
-    int Get(PyObject* object, const char* name, PyObj& value) const noexcept;
-    int Get(PyObject* object, const char* name, long& value) const noexcept;
-    int Get(PyObject* object, const char* name, double& value) const noexcept;
-    int Get(PyObject* object, const char* name, std::string& value) const noexcept;
     int InitializeInterpreter(const char* pythonHome) noexcept;
     static void UpdateLastError();
     void Register() const;
@@ -117,7 +118,7 @@ private:
         auto property_count = PyList_Size(options_);
         for (Py_ssize_t i = 0; i < property_count; i++) {
             auto key_value = PyList_GetItem(options_, i); // note: borrowed reference, don't ref count (what a mess...)
-            auto name = PyUTF8(PyTuple_GetItem(key_value, 0));
+            auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
             if (name.empty())
                 continue;   // key was not a string
             auto property = PyTuple_GetItem(key_value, 1);
@@ -164,7 +165,7 @@ private:
                 auto value_count = PyList_Size(allowed_values);
                 for (Py_ssize_t j = 0; j < value_count; j++) {
                     auto value = PyList_GetItem(allowed_values, j); // borrowed reference, don't ref count
-                    allowed_value_strings.push_back(PyUTF8(PyObj(PyObject_Str(value))));
+                    allowed_value_strings.push_back(PyObj(PyObject_Str(value)).as<string>());
                 }
                 device->SetAllowedValues(name.c_str(), allowed_value_strings);
             }

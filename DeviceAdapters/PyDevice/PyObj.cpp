@@ -32,17 +32,17 @@ void PyObj::ReportError() {
     PyObject* traceback = nullptr;
     PyErr_Fetch(&type, &value, &traceback);
     if (type) {
-        msg += PythonBridge::PyUTF8(PyObj(PyObject_Str(type)));
+        msg += PyObj(PyObject_Str(type)).as<string>();
         msg += " : ";
     }
     if (value)
-        msg += PythonBridge::PyUTF8(PyObj(PyObject_Str(value)));
+        msg += PyObj(PyObject_Str(value)).as<string>();
 
     if (traceback) {
         auto scope = PyObj(PyDict_New());
         PyDict_SetItemString(scope, "_current_tb", traceback);
         auto trace = PyObj(PyRun_String("''.join(traceback.format_tb(_current_tb))", Py_eval_input, scope, scope));
-        msg += PythonBridge::PyUTF8(trace);
+        msg += trace.as<string>();
     }
     PyErr_Restore(type, value, traceback);
     PyErr_Clear();

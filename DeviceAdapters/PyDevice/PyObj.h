@@ -40,9 +40,33 @@ public:
     }
 
     // utility functions to construct new python object from primitive values
+    // note: the current thread must hold the GIL (see PyLock)
     explicit PyObj(double value) : PyObj(PyFloat_FromDouble(value)) {}
     explicit PyObj(const string& value) : PyObj(PyUnicode_FromString(value.c_str())) {}
     explicit PyObj(long value) : PyObj(PyLong_FromLong(value)) {}
+
+    // utility functions to convert to primitive types
+    // note: if an error occurred during these functions, it will be logged in the g_errorMessage (also see CheckErrors) check for python 
+    // note: the current thread must hold the GIL (see PyLock)
+    template <class T> T as() const;
+    template <> long as<long>() const {
+        auto retval = PyLong_AsLong(*this);
+        ReportError();
+        return retval;
+    }
+    template <> double as<double>() const {
+        auto retval = PyFloat_AsDouble(*this);
+        ReportError();
+        return retval;
+    }
+    template <> string as<string>() const {
+        auto retval = PyUnicode_AsUTF8(*this);
+        ReportError();
+        return retval;
+    }
+    template <> PyObj as<PyObj>() const {
+        return *this;
+    }
     
     void Clear() {
         if (p_) {
@@ -55,7 +79,7 @@ public:
         Clear();
     }
     operator PyObject* () const {
-        return p_;
+        return p_ ? p_ : Py_None;
     }
     operator bool() const {
         return p_ != nullptr;

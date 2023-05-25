@@ -143,67 +143,6 @@ void PythonBridge::Register() const {
     }), g_MissingLinks.end());
 }
 
-/**
- * Reads the value of an object attribute
- *
- * @param object Python object holding the attribute
- * @param name name of the attribute
- * @param value output that will hold the value on success
- * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a long integer
-*/
-int PythonBridge::Get(PyObject* object, const char* name, PyObj& value) const noexcept {
-    PyLock lock;
-    value = PyObj(PyObject_GetAttrString(object, name));
-    return CheckError();
-}
-
-/**
- * Reads the value of an integer attribute
- * 
- * @param object Python object holding the attribute
- * @param name name of the attribute
- * @param value output that will hold the value on success
- * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a long integer
-*/
-int PythonBridge::Get(PyObject* object, const char* name, long& value) const noexcept {
-    PyLock lock;
-    auto attr = PyObject_GetAttrString(object, name);
-    if (attr)
-        value = PyLong_AsLong(attr);
-    return CheckError();
-}
-
-/**
- * Reads the value of a float attribute
- *
- * @param object Python object holding the attribute
- * @param name name of the attribute
- * @param value output that will hold the value on success
- * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or could not be converted to a double
-*/
-int PythonBridge::Get(PyObject* object, const char* name, double& value) const noexcept {
-    PyLock lock;
-    auto attr = PyObject_GetAttrString(object, name);
-    if (attr)
-        value = PyFloat_AsDouble(attr);
-    return CheckError();
-}
-
-/**
- * Reads the value of a string attribute
- *
- * @param object Python object holding the attribute
- * @param name name of the attribute
- * @param value output that will hold the value on success
- * @return MM error code, DEVICE_OK on success, ERR_PYTHON if the attribute was missing or does not hold a string
-*/
-int PythonBridge::Get(PyObject* object, const char* name, std::string& value) const noexcept {
-    PyLock lock;
-    auto attr = PyObject_GetAttrString(object, name);
-    if (attr)
-        value = PyUTF8(attr);
-    return CheckError();
-}
 
 int PythonBridge::Call(const PyObj& callable, PyObj& return_value) const noexcept {
     PyLock lock;
@@ -247,20 +186,4 @@ fs::path PythonBridge::FindPython() noexcept {
     return string();
 }
 
-/**
- * @brief Converts a Python string object to an UTF-8 encoded c++ string
- * @param obj 
- * @return 
-*/
-string PythonBridge::PyUTF8(PyObject* obj) {
-    PyLock lock;
-    if (!obj)
-        return string();
-    const char* s = PyUnicode_AsUTF8(obj);
-    if (!s) {
-        PyObj::ReportError();
-        return string();
-    }
-    return s;
-}
 
