@@ -87,6 +87,8 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
     bootstrap <<
         "import numpy as np\n"
         "import traceback\n"
+        "import sys\n"
+        "sys.path.append('" << scriptPath.parent_path().generic_string() << "')\n"
         "code = open('" << scriptPath.generic_string() << "')\n"
         "exec(code.read())\n"
         "code.close()\n"
