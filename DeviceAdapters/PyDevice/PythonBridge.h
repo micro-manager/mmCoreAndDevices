@@ -154,17 +154,17 @@ private:
 
             // For enum-type objects (may be string, int or float), notify MM about the allowed values
             // The allowed_values attribute is always present, we only need to check if they don't hold 'None'
-            /*PyObj allowed_values;
+            PyObj allowed_values;
             _check_(Get(property, "allowed_values", allowed_values));
             if (allowed_values != Py_None) {
                 std::vector<std::string> allowed_value_strings;
                 auto value_count = PyList_Size(allowed_values);
                 for (Py_ssize_t j = 0; j < value_count; j++) {
-                    auto value = PyTuple_GetItem(allowed_values, j); // borrowed reference, don't ref count
+                    auto value = PyList_GetItem(allowed_values, j); // borrowed reference, don't ref count
                     allowed_value_strings.push_back(PyUTF8(PyObj(PyObject_Str(value))));
                 }
                 device->SetAllowedValues(name.c_str(), allowed_value_strings);
-            }*/
+            }
         }
         return CheckError();
     }

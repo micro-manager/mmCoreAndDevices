@@ -279,8 +279,10 @@ string PythonBridge::PyUTF8(PyObject* obj) {
     if (!obj)
         return string();
     const char* s = PyUnicode_AsUTF8(obj);
-    if (!s)
+    if (!s) {
+        PyObj::ReportError();
         return string();
+    }
     return s;
 }
 
