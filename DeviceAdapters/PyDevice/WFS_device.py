@@ -112,7 +112,7 @@ class WFS:
     def on_optimised_wf(self,value):
         if not value:
             if self.active_slm:
-                self.slm_object.delete_slm()
+                self.slm_object.delete_slm(self.slm)
                 self.active_slm = False
         else:
 
