@@ -40,15 +40,16 @@ class CPyDeviceBase : public T
 {
 protected:
     /** Object implementing all Python connectivity */
-    PythonBridge python_;       
-    
-    /** Name of the adapter type, for use in GetName only */
-    const char* adapterName_;   
+    PythonBridge python_;    
+
+public:
+    /** Name of the adapter type (e.g. PyCamera). MUST have a Py prefix */
+    const char* const adapterName_;
 public:
     /**
      * Constructs a new device
      * The device is not initialized, and no Python calls are made. This only sets up error messages, the error handler, and three 'pre-init' properties that hold the path of the Python libraries, the path of the Python script, and the name of the Python class that implements the device.
-     * @param adapterName name of the adapter type, e.g. "PyCamera"
+     * @param adapterName name of the adapter type, e.g. "Camera". This is the default name of the Python class. For use by MM (GetName), the adapterName is prefixed with "Py", 
     */
     CPyDeviceBase(const char* adapterName) : adapterName_(adapterName), python_([this](const char* message) {
            this->SetErrorText(ERR_PYTHON_EXCEPTION, message);
@@ -58,7 +59,7 @@ public:
         this->SetErrorText(ERR_PYTHON_PATH_CONFLICT, "All Python devices must have the same Python library path");
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
  
-        python_.Construct(this);
+        python_.Construct(this, &adapterName[2]); // remove the 'Py' prefix
     }
     virtual ~CPyDeviceBase() {
     }

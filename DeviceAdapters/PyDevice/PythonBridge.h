@@ -61,10 +61,10 @@ public:
       @todo: leave python home blank as default (meaning 'auto locate'). Add verification handler when home path set
       @todo: add verification handler when script path set
     */
-    template <class T> void Construct(CDeviceBase<T, PythonBridge>* device) {
+    template <class T> void Construct(CDeviceBase<T, PythonBridge>* device, const char* defaultClassName) {
         device->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), false, nullptr, true);
         device->CreateStringProperty(p_PythonScript, "", false, nullptr, true);
-        device->CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
+        device->CreateStringProperty(p_PythonDeviceClass, defaultClassName, false, nullptr, true); // remove 'Py' prefix
     }
     int Destruct() noexcept;   
 
