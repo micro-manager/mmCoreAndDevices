@@ -16,7 +16,7 @@ class PythonBridge
     static bool g_initializedInterpreter;
     static PyThreadState* g_threadState;
     static fs::path g_PythonHome;
-    static std::unordered_map<string, PyObject*> g_Devices;
+    static std::unordered_map<string, PyObj> g_Devices;
     static std::vector<Link> g_MissingLinks;
     
     PyObj object_;
@@ -32,15 +32,18 @@ class PythonBridge
 public:
     PythonBridge(const function<void(const char*)>& errorCallback) : errorCallback_(errorCallback), initialized_(false) {
     }
-    int SetProperty(const char* name, long value) noexcept;
-    int SetProperty(const char* name, double value) noexcept;
-    int SetProperty(const char* name, const string& value) noexcept;
-    int SetProperty(const char* name, PyObject* value) noexcept;
+
     int Call(const PyObj& callable, PyObj& retval) const noexcept;
+
     template <class T> int GetProperty(const char* name, T& value) const noexcept {
         return Get(object_, name, value);
     }
-
+    
+    template <class T> int SetProperty(const char* name, T value) const noexcept {
+        PyLock lock;
+        PyObject_SetAttrString(object_, name, PyObj(value));
+        return CheckError();
+    }
     /**
      * Checks if a Python error has occurred since the last call to CheckError
      * @return DEVICE_OK or ERR_PYTHON_EXCEPTION

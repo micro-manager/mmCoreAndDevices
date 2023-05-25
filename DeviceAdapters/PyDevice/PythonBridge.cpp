@@ -22,7 +22,7 @@ fs::path PythonBridge::g_PythonHome;
 /** Map of all PyDevice objects. Used to find an object by its label
 * Maintained by ConstructObject and Destruct. Updated by SetLabel
 */
-std::unordered_map<string, PyObject*> PythonBridge::g_Devices;
+std::unordered_map<string, PyObj> PythonBridge::g_Devices;
 std::vector<PythonBridge::Link> PythonBridge::g_MissingLinks;
 
 
@@ -142,30 +142,6 @@ void PythonBridge::Register() const {
             return false;
     }), g_MissingLinks.end());
 }
-int PythonBridge::SetProperty(const char* name, long value) noexcept {
-    PyLock lock;
-    PyObject_SetAttrString(object_, name, PyLong_FromLong(value));
-    return CheckError();
-}
-
-int PythonBridge::SetProperty(const char* name, double value) noexcept {
-    PyLock lock;
-    PyObject_SetAttrString(object_, name, PyFloat_FromDouble(value));
-    return CheckError();
-}
-
-int PythonBridge::SetProperty(const char* name, const string& value) noexcept {
-    PyLock lock;
-    PyObject_SetAttrString(object_, name, PyUnicode_FromString(value.c_str()));
-    return CheckError();
-}
-
-int PythonBridge::SetProperty(const char* name, PyObject* value) noexcept {
-    PyLock lock;
-    PyObject_SetAttrString(object_, name, value);
-    return CheckError();
-}
-
 
 /**
  * Reads the value of an object attribute

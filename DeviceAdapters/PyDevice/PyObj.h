@@ -38,6 +38,12 @@ public:
             Py_INCREF(p_);
         }
     }
+
+    // utility functions to construct new python object from primitive values
+    explicit PyObj(double value) : PyObj(PyFloat_FromDouble(value)) {}
+    explicit PyObj(const string& value) : PyObj(PyUnicode_FromString(value.c_str())) {}
+    explicit PyObj(long value) : PyObj(PyLong_FromLong(value)) {}
+    
     void Clear() {
         if (p_) {
             PyLock lock;
