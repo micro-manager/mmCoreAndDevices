@@ -86,7 +86,6 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
     auto bootstrap = std::stringstream();
     bootstrap <<
         "import numpy as np\n"
-        "import traceback\n"
         "import sys\n"
         "sys.path.append('" << scriptPath.parent_path().generic_string() << "')\n"
         "code = open('" << scriptPath.generic_string() << "')\n"
@@ -147,7 +146,7 @@ void PythonBridge::Register() const {
 int PythonBridge::Call(const PyObj& callable, PyObj& return_value) const noexcept {
     PyLock lock;
     return_value = PyObj(PyObject_CallNoArgs(callable));
-    return return_value ? DEVICE_OK : ERR_PYTHON_EXCEPTION;
+    return CheckError();
 }
 
 

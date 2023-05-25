@@ -41,6 +41,7 @@ void PyObj::ReportError() {
     if (traceback) {
         auto scope = PyObj(PyDict_New());
         PyDict_SetItemString(scope, "_current_tb", traceback);
+        PyObj(PyRun_String("import traceback\n", Py_file_input, scope, scope));
         auto trace = PyObj(PyRun_String("''.join(traceback.format_tb(_current_tb))", Py_eval_input, scope, scope));
         msg += trace.as<string>();
     }
