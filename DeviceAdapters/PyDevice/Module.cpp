@@ -1,5 +1,4 @@
 #include "pch.h"
-#include <ModuleInterface.h>
 #include "PyDevice.h"
 
 // Entry points for loading the dll and creating devices.

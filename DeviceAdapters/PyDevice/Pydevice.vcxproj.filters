@@ -46,15 +46,15 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="autoconfig.py" />
     <None Include="Dummyscanner.py">
-      <Filter>Source Files</Filter>
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="test.py">
+      <Filter>Resource Files</Filter>
     </None>
     <None Include="Pyscanner.py">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="autoconfig.py" />
-    <None Include="test.py">
-      <Filter>Source Files</Filter>
+      <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

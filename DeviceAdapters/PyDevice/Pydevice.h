@@ -20,15 +20,9 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-
-#ifndef _Pydevice_H_
-#define _Pydevice_H_
-
-#include <string>
-#include <DeviceBase.h>
+#pragma once
+#include "pch.h"
 #include "PythonBridge.h"
-
-static std::unordered_map<string, PyObject*> g_DeviceMap;
 
 /**
  * Base class for device adapters that are implement by a Python script.
@@ -160,4 +154,3 @@ public:
 protected:
     int InitializeDevice() override;
 };
-#endif //_Pydevice_H_

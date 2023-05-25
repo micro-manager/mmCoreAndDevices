@@ -34,6 +34,8 @@ public:
     }
 
     int Call(const PyObj& callable, PyObj& retval) const noexcept;
+    int CheckError() const;
+    int Destruct() noexcept;   
 
     template <class T> int Get(PyObject* object, const char* name, T& value) const noexcept {
         PyLock lock;
@@ -50,20 +52,7 @@ public:
         PyObject_SetAttrString(object_, name, PyObj(value));
         return CheckError();
     }
-    /**
-     * Checks if a Python error has occurred since the last call to CheckError
-     * @return DEVICE_OK or ERR_PYTHON_EXCEPTION
-    */
-    int CheckError() const {
-        PyObj::ReportError(); // check if any new errors happened
-        if (!PyObj::g_errorMessage.empty()) {
-            errorCallback_(PyObj::g_errorMessage.c_str());
-            PyObj::g_errorMessage.clear();
-            return ERR_PYTHON_EXCEPTION;
-        }
-        else
-            return DEVICE_OK;
-    }
+    
 
     /** Sets up init-only properties on the MM device
     * Properties for locating the Python libraries, the Python script, and for the name of the device class are added. No Python calls are made
@@ -75,7 +64,6 @@ public:
         device->CreateStringProperty(p_PythonScript, "", false, nullptr, true);
         device->CreateStringProperty(p_PythonDeviceClass, defaultClassName, false, nullptr, true); // remove 'Py' prefix
     }
-    int Destruct() noexcept;   
 
     template <class T> int Initialize(CDeviceBase<T, PythonBridge>* device) {
         if (initialized_)
@@ -105,7 +93,7 @@ private:
     static bool HasPython(const fs::path& path) noexcept;
     int ConstructPythonObject(const char* pythonScript, const char* pythonClass) noexcept;
     int InitializeInterpreter(const char* pythonHome) noexcept;
-    static void UpdateLastError();
+    int OnObjectProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
     void Register() const;
 
     template <class T> int CreateProperties(CDeviceBase<T, PythonBridge>* device) noexcept {
@@ -192,28 +180,5 @@ private:
         return DEVICE_OK;
     }
 
-    /**
-     * Callback that is called when an object property value is read or written
-     * This property holds a string corresponding to the MM label of a PyDevice object.
-     * When the property is set, look up the corresponding Python object and store a reference to that object in the Python property.
-     * Note: Unfortunately, we cannot use MM's built in object map because we cannot cast a MM::Device to a CPyDevice object because of the Curiously Recurring Template pattern used by CGenericBase. Therefore, we have to keep a list of devices ourselves.
-    */
-    int OnObjectProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
-    {
-        //if (eAct == MM::BeforeGet) // nothing to do, let the caller use cached property
-        if (eAct == MM::AfterSet)
-        {
-            string label;
-            pProp->Get(label);
-            auto device = g_Devices.find(label); // look up device by name
-            if (device != g_Devices.end()) {
-                return SetProperty(pProp->GetName().c_str(), device->second);
-            }
-            else { // label not found. This could be because the object is not constructed yet
-                g_MissingLinks.push_back({ object_, pProp->GetName(), label });
-            }
-        }
-        return DEVICE_OK;
-    }
 };
 

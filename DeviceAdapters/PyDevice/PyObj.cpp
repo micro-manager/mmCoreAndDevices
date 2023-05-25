@@ -1,5 +1,5 @@
 #include "PyObj.h"
-#include "PythonBridge.h" // todo: remove dependency
+
 /**
 * Takes a new reference and wraps it into a PyObj smart pointer.
 *

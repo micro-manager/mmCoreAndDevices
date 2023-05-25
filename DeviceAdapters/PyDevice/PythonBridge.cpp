@@ -1,10 +1,6 @@
 
 #include "pch.h"
 #include "PythonBridge.h"
-#include <fstream>
-#include <sstream>
-#include <algorithm>
-#include <unordered_map>
 #include <numpy/arrayobject.h>
 
 
@@ -105,6 +101,27 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
     return CheckError(); // check python errors one more time just to be sure
 }
 
+
+/**
+* Checks if a Python error has occurred since the last call to CheckError
+* @return DEVICE_OK or ERR_PYTHON_EXCEPTION
+*/
+
+/**
+* Checks if a Python error has occurred since the last call to CheckError
+* @return DEVICE_OK or ERR_PYTHON_EXCEPTION
+*/
+int PythonBridge::CheckError() const {
+    PyObj::ReportError(); // check if any new errors happened
+    if (!PyObj::g_errorMessage.empty()) {
+        errorCallback_(PyObj::g_errorMessage.c_str());
+        PyObj::g_errorMessage.clear();
+        return ERR_PYTHON_EXCEPTION;
+    }
+    else
+        return DEVICE_OK;
+}
+
 /**
  * Destroys the Python object by removing all references to it
  * If there are other references
@@ -140,6 +157,36 @@ void PythonBridge::Register() const {
         else
             return false;
     }), g_MissingLinks.end());
+}
+
+/**
+* Callback that is called when an object property value is read or written
+* This property holds a string corresponding to the MM label of a PyDevice object.
+* When the property is set, look up the corresponding Python object and store a reference to that object in the Python property.
+* Note: Unfortunately, we cannot use MM's built in object map because we cannot cast a MM::Device to a CPyDevice object because of the Curiously Recurring Template pattern used by CGenericBase. Therefore, we have to keep a list of devices ourselves.
+*/
+/**
+* Callback that is called when an object property value is read or written
+* This property holds a string corresponding to the MM label of a PyDevice object.
+* When the property is set, look up the corresponding Python object and store a reference to that object in the Python property.
+* Note: Unfortunately, we cannot use MM's built in object map because we cannot cast a MM::Device to a CPyDevice object because of the Curiously Recurring Template pattern used by CGenericBase. Therefore, we have to keep a list of devices ourselves.
+*/
+int PythonBridge::OnObjectProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    //if (eAct == MM::BeforeGet) // nothing to do, let the caller use cached property
+    if (eAct == MM::AfterSet)
+    {
+        string label;
+        pProp->Get(label);
+        auto device = g_Devices.find(label); // look up device by name
+        if (device != g_Devices.end()) {
+            return SetProperty(pProp->GetName().c_str(), device->second);
+        }
+        else { // label not found. This could be because the object is not constructed yet
+            g_MissingLinks.push_back({ object_, pProp->GetName(), label });
+        }
+    }
+    return DEVICE_OK;
 }
 
 
