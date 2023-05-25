@@ -51,17 +51,22 @@ public:
     template <class T> T as() const;
     template <> long as<long>() const {
         auto retval = PyLong_AsLong(*this);
-        ReportError();
+        if (retval == -1) // may be an error
+            ReportError();
         return retval;
     }
     template <> double as<double>() const {
         auto retval = PyFloat_AsDouble(*this);
-        ReportError();
+        if (retval == -1.0) // may be an error
+            ReportError();
         return retval;
     }
     template <> string as<string>() const {
         auto retval = PyUnicode_AsUTF8(*this);
-        ReportError();
+        if (!retval) { // error
+            ReportError();
+            return string();
+        }
         return retval;
     }
     template <> PyObj as<PyObj>() const {
