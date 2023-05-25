@@ -94,9 +94,9 @@ public:
         _check_(CreateProperties(device));
 
         device->GetLabel(label); // Note: it seems that SetLabel is only called once, and before device initialization, so we can safely read it here and consider it constant.
-        Register(); // register device in device map, and link to existing python objects if needed
         initialized_ = true;
         label_ = label;
+        Register(); // register device in device map, and link to existing python objects if needed
         return DEVICE_OK;
     }
 private:
