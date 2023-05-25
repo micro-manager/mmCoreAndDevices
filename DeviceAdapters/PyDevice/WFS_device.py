@@ -7,8 +7,8 @@ sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\wavefront_s
 
 from SSA import SSA
 from Fourier import FourierDualRef
-from SLMwrapper import SLM, set_circular_geometry, test
-from test_cam import float_property, int_property, string_property, object_property, base_property, bool_property, parse_options
+from SLMwrapper import SLM, set_circular_geometry
+from base_device_properties import float_property, int_property, string_property, object_property, base_property, bool_property, parse_options
 #from WFS_functions import manual_slm_setup, select_roi, take_image, single_capt, point_capt, make_point_mean, select_point, example_mean, full_experiment_ssa
 from WFS_functions import manual_slm_setup,select_point,full_experiment_fourier, full_experiment_ssa, wfs_procedure,slm_setup
 from galvo_scanner import Camera
@@ -19,10 +19,11 @@ class SLM_device:
         self.resized = True
 
     def make_slm(self):
-        self.s = SLM(self._slm_number)
-        return self.s
-    def delete_slm(self):
-        self.s.destroy()
+        s = SLM(self._slm_number)
+        return s
+    def delete_slm(self,s):
+        s.destroy()
+
 
     wavelength_nm = float_property(min=400, default=804, max=1600)
     slm_number = int_property(min = 0,default=0)
@@ -111,17 +112,21 @@ class WFS:
     def on_optimised_wf(self,value):
         if not value:
             if self.active_slm:
-                self.slm.destroy()
+                self.slm_object.delete_slm()
                 self.active_slm = False
         else:
+
             if not self.active_slm:
                 self.slm = self.slm_object.make_slm()
+
                 slm_setup(self.slm)
+                self.active_slm = True
+
 
             if isinstance(self.optimised_wf,np.ndarray):
                 self.slm.set_data(self.optimised_wf)
                 self.slm.update(10)
-                self.active_slm = True
+
 
             else:
                 self._ValueError(f"No optimised wavefront was found in memory")
@@ -131,16 +136,19 @@ class WFS:
     def on_flat_wf(self,value):
         if not value:
             if self.active_slm:
-                self.slm.destroy()
+
+                self.slm_object.delete_slm(self.slm)
                 self.active_slm = False
         else:
+
             if not self.active_slm:
                 self.slm = self.slm_object.make_slm()
                 slm_setup(self.slm)
+                self.active_slm = True
 
             self.slm.set_data(0)
             self.slm.update(10)
-            self.active_slm = True
+
 
         return value
 
