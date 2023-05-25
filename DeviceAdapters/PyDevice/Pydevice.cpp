@@ -36,7 +36,7 @@ int CPyCamera::SnapImage()
 int CPyCamera::InitializeDevice() {
     PyLock lock;
     const auto required_properties = { 
-        //MM::g_Keyword_Binning, // "Binning". e.g. Binning = int_property(allowed_values = {1,2,4}, default = 1)
+        MM::g_Keyword_Binning, // "Binning". e.g. Binning = int_property(allowed_values = {1,2,4}, default = 1)
         "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait"};
     bool missing = false;
     for (auto p : required_properties) {
