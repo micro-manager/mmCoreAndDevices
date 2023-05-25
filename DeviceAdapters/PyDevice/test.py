@@ -12,7 +12,7 @@ def parse_options(obj, values):
             setattr(obj, name, value)
 
 class base_property(property):
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None, default=0, min=None, max=None, on_update=None, allowed_values=None):
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None, default=None, min=None, max=None, on_update=None, allowed_values=None):
         """Add default implementations for getter and setter"""
         if on_update == None:
             on_update = lambda obj, value : value
@@ -20,6 +20,8 @@ class base_property(property):
             fget = lambda obj : getattr(obj, self._name)
         if fset == None:
             fset = lambda obj, value : setattr(obj, self._name, self.on_update(obj, self.validate(value)))
+        if default == None and allowed_values != None:
+            default = allowed_values[0]
         
         super().__init__(fget, fset, fdel, doc)
         self.min = min
@@ -64,7 +66,7 @@ class object_property(base_property):
 
 
 class bool_property(int_property):
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None, default=0, on_update=None):
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None, default=None, on_update=None):
         super().__init__(fget = fget, fset = fset, fdel = fdel, doc = doc, default = default, on_update = on_update, allowed_values = [0, 1], min=0, max=1)
 
 class float_property(base_property):        
@@ -135,6 +137,7 @@ class Camera:
     height = int_property(min = 1, max = 4096, default = 512, on_update = on_resized)
     exposure_ms = float_property(min = 0.0, default = 100)
     random_generator = object_property(default = RandomGenerator())
+    Binning = int_property(allowed_values = [1])
 
     invert = bool_property(default = 0)
     image = property(fget = get_image)
