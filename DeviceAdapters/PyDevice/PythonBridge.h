@@ -1,123 +1,6 @@
 #pragma once
 #include "pch.h"
-#include <string>
-#include <functional>
-#include <filesystem>
-#include <MMDeviceConstants.h>
-#include <DeviceBase.h>
-
-namespace fs = std::filesystem;
-using std::string;
-using std::function;
-
-#define ERR_PYTHON_NOT_FOUND 101
-#define ERR_PYTHON_PATH_CONFLICT 102
-#define ERR_PYTHON_SCRIPT_NOT_FOUND 103
-#define ERR_PYTHON_CLASS_NOT_FOUND 104
-#define ERR_PYTHON_EXCEPTION 105
-#define ERR_PYTHON_NO_INFO 106
-#define ERR_PYTHON_MISSING_PROPERTY 107
-#define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }
-
-/**
- * Helper class to automatically lock and unlock the global interpreter lock (GIL)
- * This is needed because Python is single threaded (!) while MM is not. 
- * Note that the GIL should be locked for any Python call, including Py_INCREF and Py_DECREF
-*/
-class PyLock {
-    PyGILState_STATE gstate_;
-public:
-    PyLock() {
-        gstate_ = PyGILState_Ensure();
-    }
-    ~PyLock() {
-        PyGILState_Release(gstate_);
-    }
-};
-
-
-/**
-* Smart pointer object to automate reference counting of PyObject* pointers
-*/
-class PyObj {
-    PyObject* p_;
-public:
-    PyObj() : p_(nullptr) {
-    }
-    PyObj(PyObj&& other) noexcept : p_(other.p_)  {
-        other.p_ = nullptr;
-    }
-
-    /**
-    * Takes a new reference and wraps it into a PyObj smart pointer
-    * This does not increase the reference count of the object
-    * The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
-    * 
-    * Throws an exception when obj == NULL, because this is the common way of the Python API to report errors
-    */
-    explicit PyObj(PyObject* obj) : p_(obj) {
-        if (!obj)
-            throw PythonException();
-    }
-    void Clear() {
-        if (p_) {
-            PyLock lock;
-            Py_DECREF(p_);
-            p_ = nullptr;
-        }
-    }
-    PyObj(const PyObj& other) : p_(other) {
-        if (p_) {
-            PyLock lock;
-            Py_INCREF(p_);
-        }
-    }
-    ~PyObj() {
-        Clear();
-    }
-    operator PyObject* () const { 
-        return p_;
-    }
-    operator bool () const {
-        return p_ != nullptr;
-    }
-    PyObject* get() const {
-        return p_;
-    }
-    PyObj& operator = (PyObj&& other) noexcept {
-        Clear();
-        p_ = other.p_;
-        other.p_ = nullptr;
-        return *this;
-    }
-    
-
-    /**
-    * Takes a borrowed reference and wraps it into a PyObj smart pointer
-    * This increases the reference count of the object.
-    * The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
-    * 
-    * Throws an exception when obj == NULL, because this is the common way of the Python API to report errors
-    */
-    static PyObj Borrow(PyObject* obj) {
-        if (obj) {
-            PyLock lock;
-            Py_INCREF(obj);
-        }
-        return PyObj(obj);
-    }
-    PyObj& operator = (const PyObj& other) {
-        if (p_ || other.p_) {
-            PyLock lock;
-            Py_XDECREF(p_);
-            p_ = other;
-            Py_XINCREF(p_);
-        }
-        return *this;
-    }
-    class PythonException : public std::exception {
-    };
-};
+#include "PyObj.h"
 
 
 class PythonBridge
@@ -147,23 +30,30 @@ class PythonBridge
     const function<void(const char*)> errorCallback_;
     
 public:
-    int InitializeInterpreter(const char* pythonHome) noexcept;
-    int Destruct() noexcept;
-   
+    PythonBridge(const function<void(const char*)>& errorCallback) : errorCallback_(errorCallback), initialized_(false) {
+    }
     int SetProperty(const char* name, long value) noexcept;
     int SetProperty(const char* name, double value) noexcept;
     int SetProperty(const char* name, const string& value) noexcept;
     int SetProperty(const char* name, PyObject* value) noexcept;
+    int Call(const PyObj& callable, PyObj& retval) const noexcept;
     template <class T> int GetProperty(const char* name, T& value) const noexcept {
         return Get(object_, name, value);
     }
 
-    PythonBridge(const function<void(const char*)>& errorCallback) : errorCallback_(errorCallback), initialized_(false) {
-    }
-
-    PyObj Call(const PyObj& callable) {
-        PyLock lock;
-        return PyObj(PyObject_CallNoArgs(callable));
+    /**
+     * Checks if a Python error has occurred since the last call to CheckError
+     * @return DEVICE_OK or ERR_PYTHON_EXCEPTION
+    */
+    int CheckError() const {
+        PyObj::ReportError(); // check if any new errors happened
+        if (!PyObj::g_errorMessage.empty()) {
+            errorCallback_(PyObj::g_errorMessage.c_str());
+            PyObj::g_errorMessage.clear();
+            return ERR_PYTHON_EXCEPTION;
+        }
+        else
+            return DEVICE_OK;
     }
 
     /** Sets up init-only properties on the MM device
@@ -176,6 +66,7 @@ public:
         device->CreateStringProperty(p_PythonScript, "", false, nullptr, true);
         device->CreateStringProperty(p_PythonDeviceClass, "Device", false, nullptr, true);
     }
+    int Destruct() noexcept;   
 
     template <class T> int Initialize(CDeviceBase<T, PythonBridge>* device) {
         if (initialized_)
@@ -191,17 +82,15 @@ public:
         _check_(InitializeInterpreter(pythonHome));
         PyLock lock;
         _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
-        initialized_ = true;
-
         _check_(CreateProperties(device));
 
         device->GetLabel(label); // Note: it seems that SetLabel is only called once, and before device initialization, so we can safely read it here and consider it constant.
-        label_ = label;
         Register(); // register device in device map, and link to existing python objects if needed
+        initialized_ = true;
+        label_ = label;
         return DEVICE_OK;
     }
-
-    int PythonError() const;
+    static string PyUTF8(PyObject* obj);
 private:
     PythonBridge(const PythonBridge& other) = delete; // no copy constructor
     static fs::path FindPython() noexcept;
@@ -211,7 +100,8 @@ private:
     int Get(PyObject* object, const char* name, long& value) const noexcept;
     int Get(PyObject* object, const char* name, double& value) const noexcept;
     int Get(PyObject* object, const char* name, std::string& value) const noexcept;
-    static string PyUTF8(PyObject* obj);
+    int InitializeInterpreter(const char* pythonHome) noexcept;
+    static void UpdateLastError();
     void Register() const;
 
     template <class T> int CreateProperties(CDeviceBase<T, PythonBridge>* device) noexcept {
@@ -243,8 +133,9 @@ private:
                 string value;
                 _check_(Get(object_, name.c_str(), value));
                 _check_(device->CreateStringProperty(name.c_str(), value.c_str(), false, new Action(this, &PythonBridge::OnProperty<string>)));
-            } if (PyObject_IsInstance(property, objectPropertyType_)) {
+            } else if (PyObject_IsInstance(property, objectPropertyType_)) {
                 _check_(device->CreateStringProperty(name.c_str(), "", false, new Action(this, &PythonBridge::OnObjectProperty)));
+                continue; // skip setting limits or enum
             }
             else
                 continue;
@@ -260,8 +151,22 @@ private:
                 _check_(Get(property, "max", upper_val));
                 device->SetPropertyLimits(name.c_str(), lower_val, upper_val);
             }
+
+            // For enum-type objects (may be string, int or float), notify MM about the allowed values
+            // The allowed_values attribute is always present, we only need to check if they don't hold 'None'
+            /*PyObj allowed_values;
+            _check_(Get(property, "allowed_values", allowed_values));
+            if (allowed_values != Py_None) {
+                std::vector<std::string> allowed_value_strings;
+                auto value_count = PyList_Size(allowed_values);
+                for (Py_ssize_t j = 0; j < value_count; j++) {
+                    auto value = PyTuple_GetItem(allowed_values, j); // borrowed reference, don't ref count
+                    allowed_value_strings.push_back(PyUTF8(PyObj(PyObject_Str(value))));
+                }
+                device->SetAllowedValues(name.c_str(), allowed_value_strings);
+            }*/
         }
-        return DEVICE_OK;
+        return CheckError();
     }
 
     /**

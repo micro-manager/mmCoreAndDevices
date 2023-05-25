@@ -51,17 +51,13 @@ public:
      * @param adapterName name of the adapter type, e.g. "PyCamera"
     */
     CPyDeviceBase(const char* adapterName) : adapterName_(adapterName), python_([this](const char* message) {
-        this->SetErrorText(ERR_PYTHON_EXCEPTION, message);
-        this->LogMessage(message, false);
-    }) {
+           this->SetErrorText(ERR_PYTHON_EXCEPTION, message);
+           this->LogMessage(message, false);
+        }) {
         this->SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not initialize python interpreter, perhaps an incorrect path was specified?");
         this->SetErrorText(ERR_PYTHON_PATH_CONFLICT, "All Python devices must have the same Python library path");
-        this->SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the python script at the specified location");
-        this->SetErrorText(ERR_PYTHON_CLASS_NOT_FOUND, "Could not find a class definition with the specified name");
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
-        this->SetErrorText(ERR_PYTHON_NO_INFO, "A Python error occurred, but no further information was available");
-        this->SetErrorText(ERR_PYTHON_MISSING_PROPERTY, "The Python class is missing a required property, check CoreLog error log for details");
-
+ 
         python_.Construct(this);
     }
     virtual ~CPyDeviceBase() {

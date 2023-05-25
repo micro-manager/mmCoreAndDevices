@@ -25,6 +25,7 @@ fs::path PythonBridge::g_PythonHome;
 std::unordered_map<string, PyObject*> PythonBridge::g_Devices;
 std::vector<PythonBridge::Link> PythonBridge::g_MissingLinks;
 
+
 /**
  * Initialize the Python interpreter
  * If a non-empty pythonHome path is specified, the python install from that path is used. All devices must use the same value for this path, or leave the value empty. If different values are provided, a ERR_PYTHON_PATH_CONFLICT is returned.
@@ -36,7 +37,7 @@ std::vector<PythonBridge::Link> PythonBridge::g_MissingLinks;
 */
 int PythonBridge::InitializeInterpreter(const char* pythonHome) noexcept
 {
-    // Check if Python already initialized
+    // Check if Python is already initialized
     auto homePath = fs::path(pythonHome);
     if (g_initializedInterpreter) {
         if (homePath == g_PythonHome)
@@ -54,19 +55,20 @@ int PythonBridge::InitializeInterpreter(const char* pythonHome) noexcept
     if (!homePath.empty()) 
         PyConfig_SetString(&config, &config.home, homePath.c_str());
     auto status = Py_InitializeFromConfig(&config);
+
     //PyConfig_Read(&config); // for debugging
     PyConfig_Clear(&config);
     if (PyStatus_Exception(status))
         return ERR_PYTHON_NOT_FOUND;
 
-    _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error messsage that may occur.
-    if (PyErr_Occurred())
-        return PythonError();
 
     g_threadState = PyEval_SaveThread(); // allow multi threading
     g_PythonHome = homePath;
     g_initializedInterpreter = true;
-    return DEVICE_OK;
+
+    PyLock lock;
+    _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
+    return CheckError();
 }
 
 // Load python script
@@ -79,7 +81,7 @@ int PythonBridge::InitializeInterpreter(const char* pythonHome) noexcept
  * @return MM return code
 */
 int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* pythonClass) noexcept {
-    //PyLock lock (not needed, already locked by caller)
+    //assert(PyLock::IsLocked())
     auto scriptPath = fs::absolute(fs::path(pythonScript));
     auto bootstrap = std::stringstream();
     bootstrap <<
@@ -91,20 +93,15 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
         "device = " << pythonClass << "()\n"
         "options = [p for p in type(device).__dict__.items() if isinstance(p[1], base_property)]";
 
-    try {
-        auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
-        auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, scope, scope));
-        object_ = PyObj::Borrow(PyDict_GetItemString(scope, "device"));
-        options_ = PyObj::Borrow(PyDict_GetItemString(scope, "options"));
-        intPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "int_property"));
-        floatPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "float_property"));
-        stringPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "string_property"));
-        objectPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "object_property"));
-    }
-    catch (PyObj::PythonException) {
-        return PythonError();
-    }
-    return DEVICE_OK;
+    auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
+    auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, scope, scope));
+    object_ = PyObj::Borrow(PyDict_GetItemString(scope, "device"));
+    options_ = PyObj::Borrow(PyDict_GetItemString(scope, "options"));
+    intPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "int_property"));
+    floatPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "float_property"));
+    stringPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "string_property"));
+    objectPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "object_property"));
+    return CheckError(); // check python errors one more time just to be sure
 }
 
 /**
@@ -145,22 +142,26 @@ void PythonBridge::Register() const {
 }
 int PythonBridge::SetProperty(const char* name, long value) noexcept {
     PyLock lock;
-    return PyObject_SetAttrString(object_, name, PyLong_FromLong(value)) == 0 ? DEVICE_OK : PythonError();
+    PyObject_SetAttrString(object_, name, PyLong_FromLong(value));
+    return CheckError();
 }
 
 int PythonBridge::SetProperty(const char* name, double value) noexcept {
     PyLock lock;
-    return PyObject_SetAttrString(object_, name, PyFloat_FromDouble(value)) == 0 ? DEVICE_OK : PythonError();
+    PyObject_SetAttrString(object_, name, PyFloat_FromDouble(value));
+    return CheckError();
 }
 
 int PythonBridge::SetProperty(const char* name, const string& value) noexcept {
     PyLock lock;
-    return PyObject_SetAttrString(object_, name, PyUnicode_FromString(value.c_str())) == 0 ? DEVICE_OK : PythonError();
+    PyObject_SetAttrString(object_, name, PyUnicode_FromString(value.c_str()));
+    return CheckError();
 }
 
 int PythonBridge::SetProperty(const char* name, PyObject* value) noexcept {
     PyLock lock;
-    return PyObject_SetAttrString(object_, name, value) == 0 ? DEVICE_OK : PythonError();
+    PyObject_SetAttrString(object_, name, value);
+    return CheckError();
 }
 
 
@@ -175,7 +176,7 @@ int PythonBridge::SetProperty(const char* name, PyObject* value) noexcept {
 int PythonBridge::Get(PyObject* object, const char* name, PyObj& value) const noexcept {
     PyLock lock;
     value = PyObj(PyObject_GetAttrString(object, name));
-    return (PyErr_Occurred() || !value) ? PythonError() : DEVICE_OK;
+    return CheckError();
 }
 
 /**
@@ -191,7 +192,7 @@ int PythonBridge::Get(PyObject* object, const char* name, long& value) const noe
     auto attr = PyObject_GetAttrString(object, name);
     if (attr)
         value = PyLong_AsLong(attr);
-    return PyErr_Occurred() ? PythonError() : DEVICE_OK;
+    return CheckError();
 }
 
 /**
@@ -207,7 +208,7 @@ int PythonBridge::Get(PyObject* object, const char* name, double& value) const n
     auto attr = PyObject_GetAttrString(object, name);
     if (attr)
         value = PyFloat_AsDouble(attr);
-    return PyErr_Occurred() ? PythonError() : DEVICE_OK;
+    return CheckError();
 }
 
 /**
@@ -223,47 +224,16 @@ int PythonBridge::Get(PyObject* object, const char* name, std::string& value) co
     auto attr = PyObject_GetAttrString(object, name);
     if (attr)
         value = PyUTF8(attr);
-    return PyErr_Occurred() ? PythonError() : DEVICE_OK;
+    return CheckError();
 }
 
-int PythonBridge::PythonError() const {
+int PythonBridge::Call(const PyObj& callable, PyObj& return_value) const noexcept {
     PyLock lock;
-    if (!PyErr_Occurred())
-        return ERR_PYTHON_NO_INFO;
-    if (errorCallback_) {
-        PyObject* type = nullptr;
-        PyObject* value = nullptr;
-        PyObject* traceback = nullptr;
-        PyErr_Fetch(&type, &value, &traceback);
-        auto msg = string("Python error.");
-        if (type) {
-            msg += PyUTF8(PyObj(PyObject_Str(type)));
-            msg += " : ";
-        }
-        if (value)
-            msg += PyUTF8(PyObj(PyObject_Str(value)));
-        
-        if (traceback) {
-            try {
-                auto scope = PyObj(PyDict_New());
-                PyDict_SetItemString(scope, "_current_tb", traceback);
-                auto trace = PyObj(PyRun_String("''.join(traceback.format_tb(_current_tb))", Py_eval_input, scope, scope));
-                msg += PyUTF8(trace);
-            }
-            catch (PyObj::PythonException e) {
-                msg += "[could not get stack trace]";
-            }
-        }
-        errorCallback_(msg.c_str());
-        PyErr_Restore(type, value, traceback);
-        PyErr_Clear();
-        return ERR_PYTHON_EXCEPTION;
-    }
-    else {
-        PyErr_Clear();
-        return ERR_PYTHON_NO_INFO;
-    }    
+    return_value = PyObj(PyObject_CallNoArgs(callable));
+    return return_value ? DEVICE_OK : ERR_PYTHON_EXCEPTION;
 }
+
+
 
 
 
@@ -299,7 +269,11 @@ fs::path PythonBridge::FindPython() noexcept {
     return string();
 }
 
-
+/**
+ * @brief Converts a Python string object to an UTF-8 encoded c++ string
+ * @param obj 
+ * @return 
+*/
 string PythonBridge::PyUTF8(PyObject* obj) {
     PyLock lock;
     if (!obj)

@@ -27,32 +27,25 @@
 */
 int CPyCamera::SnapImage()
 {
-    try {
-        python_.Call(triggerFunction_);
-        python_.Call(waitFunction_);
-    }
-    catch (PyObj::PythonException) {
-        return python_.PythonError();
-    }
+    PyObj retval;
+    _check_(python_.Call(triggerFunction_, retval));
+    _check_(python_.Call(waitFunction_, retval));
     return DEVICE_OK;
 }
 
 int CPyCamera::InitializeDevice() {
     PyLock lock;
-    const auto required_properties = { "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait"};
+    const auto required_properties = { 
+        //MM::g_Keyword_Binning, // "Binning". e.g. Binning = int_property(allowed_values = {1,2,4}, default = 1)
+        "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait"};
     bool missing = false;
     for (auto p : required_properties) {
-        try {
-            PyObj value;
-            python_.GetProperty(p, value);
-        }
-        catch (PyObj::PythonException) {
-            python_.PythonError();
+        PyObj value;
+        if (python_.GetProperty(p, value) != DEVICE_OK)
             missing = true;
-        }
     }
     if (missing)
-        return ERR_PYTHON_MISSING_PROPERTY;
+        return ERR_PYTHON_EXCEPTION;// ERR_PYTHON_MISSING_PROPERTY;
     
     _check_(python_.GetProperty("trigger", triggerFunction_));
     _check_(python_.GetProperty("wait", waitFunction_));
