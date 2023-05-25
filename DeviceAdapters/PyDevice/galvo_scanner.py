@@ -61,14 +61,22 @@ class Camera:
         self._dwelltime_us = (value*1000) / (self._width * self._height)
         return value
 
-
-    input_mapping = string_property(default='Dev2/ai0')
-    xmirror_mapping = string_property(default='Dev2/ao0')
-    ymirror_mapping = string_property(default='Dev2/ao1')
+    # required
     top = int_property(min=-1000, max=5000, default=0)
     left = int_property(min=-1000, max=5000, default=0)
     width = int_property(min=1, max=4096, default=512, on_update=on_resized)
     height = int_property(min=1, max=4096, default=512, on_update=on_resized)
+    Binning = int_property(min=1, default=1)
+    ActualExposure = float_property()
+    
+
+
+    # functional
+    input_mapping = string_property(default='Dev2/ai0')
+    xmirror_mapping = string_property(default='Dev2/ao0')
+    ymirror_mapping = string_property(default='Dev2/ao1')
+
+
 
     input_min = float_property(min=-1.5, max=1.5, default=-1)
     input_max = float_property(min=-1.5, max=1.5, default=1)
