@@ -4,30 +4,15 @@ import numpy as np
 sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\micro-manager\\mmCoreAndDevices\\DeviceAdapters\\MM_pydevice')
 sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\hardware\\generic_binding')
 sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\wavefront_shaping_python')
-
+sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\wavefront_shaping_python\\simulation')
 from SSA import SSA
 from Fourier import FourierDualRef
 from SLMwrapper import SLM, set_circular_geometry
 from base_device_properties import float_property, int_property, string_property, object_property, base_property, bool_property, parse_options
 #from WFS_functions import manual_slm_setup, select_roi, take_image, single_capt, point_capt, make_point_mean, select_point, example_mean, full_experiment_ssa
 from WFS_functions import manual_slm_setup,select_point,full_experiment_fourier, full_experiment_ssa, wfs_procedure,slm_setup
+from Simulation import SimulatedWFS
 from galvo_scanner import Camera
-class SLM_device:
-
-    def __init__(self, **kwargs):
-        parse_options(self, kwargs)
-        self.resized = True
-
-    def make_slm(self):
-        s = SLM(self._slm_number)
-        return s
-    def delete_slm(self,s):
-        s.destroy()
-
-
-    wavelength_nm = float_property(min=400, default=804, max=1600)
-    slm_number = int_property(min = 0,default=0)
-
 
 class SSA_device:
 
@@ -89,66 +74,24 @@ class WFS:
         return np.reshape(self.camera_object.image, [self.camera_object._height,self.camera_object._width],order='C')
 
     def on_execute(self,value):
-
-
-
         if value:
-
-            if self.slm_object == None:
-                self._ValueError(f"A SLM object needs to be connected in order to wavefront shape")
-
-            if self.camera_object == None:
-                self._ValueError(f"A Camera object needs to be added in order to wavefront shape")
-
-            if self.algorithm == None:
-                self._ValueError(f"An algorithm object needs to be added in order to wavefront shape")
 
             self.optimised_wf, _ = wfs_procedure(self.algorithm, self.slm_object,self.take_image)
 
-
-        self._execute = False
         return value
 
     def on_optimised_wf(self,value):
-        if not value:
-            if self.active_slm:
-                self.slm_object.delete_slm(self.slm)
-                self.active_slm = False
-        else:
-
-            if not self.active_slm:
-                self.slm = self.slm_object.make_slm()
-
-                slm_setup(self.slm)
-                self.active_slm = True
-
-
-            if isinstance(self.optimised_wf,np.ndarray):
-                self.slm.set_data(self.optimised_wf)
-                self.slm.update(10)
-
-
-            else:
-                self._ValueError(f"No optimised wavefront was found in memory")
-
+        if value:
+            plt.imshow(self.optimised_wf)
+            self.slm_object.set_data(self.optimised_wf)
+            self.slm_object.update(10)
+            plt.show()
         return value
 
     def on_flat_wf(self,value):
-        if not value:
-            if self.active_slm:
-
-                self.slm_object.delete_slm(self.slm)
-                self.active_slm = False
-        else:
-
-            if not self.active_slm:
-                self.slm = self.slm_object.make_slm()
-                slm_setup(self.slm)
-                self.active_slm = True
-
-            self.slm.set_data(0)
-            self.slm.update(10)
-
+        if value:
+            self.slm_object.set_data(0)
+            self.slm_object.update(10)
 
         return value
 
