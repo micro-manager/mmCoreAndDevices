@@ -1,10 +1,16 @@
 import sys
 import numpy as np
 
-sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\micro-manager\\mmCoreAndDevices\\DeviceAdapters\\MM_pydevice')
-sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\hardware\\generic_binding')
-sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\wavefront_shaping_python')
-sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\wavefront_shaping_python\\simulation')
+#sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\micro-manager\\mmCoreAndDevices\\DeviceAdapters\\MM_pydevice')
+#sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\hardware\\generic_binding')
+#sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\wavefront_shaping_python')
+#sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\wavefront_shaping_python\\simulation')
+
+sys.path.append('C:\\git\\micro-manager\\mmCoreAndDevices\\DeviceAdapters\\MM_pydevice')
+sys.path.append('C:\\git\\hardware\\generic_binding')
+sys.path.append('C:\\git\\wavefront_shaping_python')
+sys.path.append('C:\\git\\wavefront_shaping_python\\simulation')
+
 from SSA import SSA
 from Fourier import FourierDualRef
 from SLMwrapper import SLM, set_circular_geometry
