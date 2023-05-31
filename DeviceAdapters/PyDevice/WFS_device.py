@@ -76,16 +76,16 @@ class WFS:
     def on_execute(self,value):
         if value:
 
-            self.optimised_wf, _ = wfs_procedure(self.algorithm, self.slm_object,self.take_image)
+            self.optimised_wf, self.range = wfs_procedure(self.algorithm, self.slm_object,self.take_image)
 
         return value
 
     def on_optimised_wf(self,value):
         if value:
-            plt.imshow(self.optimised_wf)
+
             self.slm_object.set_data(self.optimised_wf)
             self.slm_object.update(10)
-            plt.show()
+
         return value
 
     def on_flat_wf(self,value):
@@ -108,3 +108,68 @@ class WFS:
     execute = bool_property(default=0, on_update=on_execute)
     show_optimised_wavefront = bool_property(default=0, on_update=on_optimised_wf)
     show_flat_wavefront = bool_property(default=0, on_update=on_flat_wf)
+
+if __name__ == "__main__":
+
+    from skimage import data
+    from matplotlib.patches import Rectangle
+
+    w = WFS()
+    sim = SimulatedWFS()
+    sim.set_ideal_wf(np.array(data.camera()))
+    w.slm_object = sim
+    w.camera_object = sim
+    fourier = fourier_device()
+
+
+    fourier.kx_angles_max = 5
+    fourier.kx_angles_min= -5
+    fourier.kx_angles_stepsize = 1
+
+    fourier.ky_angles_max = 5
+    fourier.ky_angles_min= -5
+    fourier.ky_angles_stepsize = 1
+
+    fourier.phase_steps = 3
+
+    w.algorithm = fourier
+
+    w.execute = 1
+
+
+    print(np.max(sim.image))
+
+
+    sim.set_data(0)
+    sim.trigger()
+    sim.wait()
+    plt.figure()
+    plt.imshow(sim.image)
+    plt.title('Image with flat correction')
+    plt.gca().add_patch(Rectangle((w.range[1][0],w.range[0][0]), w.range[1][1]-w.range[1][0], w.range[0][1]-w.range[0][0],
+                                  edgecolor='red',
+                                  facecolor='none',
+                                  lw=2))
+    plt.colorbar()
+    maxflat = np.max(sim.image)
+
+
+
+    sim.set_data(w.optimised_wf)
+    sim.trigger()
+    sim.wait()
+
+    plt.figure()
+    plt.imshow(w.optimised_wf)
+
+    plt.figure()
+    plt.imshow(sim.image)
+    plt.title('Image with optimised correction, max intensity magnification: '+str(np.max(sim.image)/maxflat))
+    plt.gca().add_patch(Rectangle((w.range[1][0],w.range[0][0]), w.range[1][1]-w.range[1][0], w.range[0][1]-w.range[0][0],
+                                  edgecolor='red',
+                                  facecolor='none',
+                                  lw=2))
+
+    plt.colorbar()
+
+    plt.show()
