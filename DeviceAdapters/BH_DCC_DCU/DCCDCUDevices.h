@@ -601,6 +601,12 @@ private:
 			}));
 		this->AddAllowedValue(name.c_str(), "No");
 		this->AddAllowedValue(name.c_str(), "Yes");
+
+		// Subscribe to changes:
+		module_->SetOverloadChangeHandler(connNo, [this, name](bool overloaded) {
+			this->OnPropertyChanged(name.c_str(), (overloaded ? "Yes" : "No"));
+		});
+
 		// Load current value:
 		std::array<char, MM::MaxStrLength + 1> buf;
 		this->GetProperty(name.c_str(), buf.data());
@@ -623,6 +629,12 @@ private:
 			}));
 		this->AddAllowedValue(name.c_str(), "No");
 		this->AddAllowedValue(name.c_str(), "Yes");
+
+		// Subscribe to changes:
+		module_->SetCurrLmtChangeHandler(connNo, [this, name](bool limitReached) {
+			this->OnPropertyChanged(name.c_str(), (limitReached ? "Yes" : "No"));
+		});
+
 		// Load current value:
 		std::array<char, MM::MaxStrLength + 1> buf;
 		this->GetProperty(name.c_str(), buf.data());

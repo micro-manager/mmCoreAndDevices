@@ -4,9 +4,13 @@
 
 #include <algorithm>
 #include <bitset>
+#include <condition_variable>
 #include <cstdio>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 
 // Wrap DCC or DCU device control as RAII objects.
 
@@ -62,7 +66,8 @@ public:
 template <DCCOrDCU Model>
 class DCCDCUInterface;
 
-// Used with std::shared_ptr
+// Used with std::shared_ptr. All interaction with hardware goes via the parent
+// DCCDCUInterface, so that it can be synchronized with the polling thread.
 template <DCCOrDCU Model>
 class DCCDCUModule {
 	using ParentType = DCCDCUInterface<Model>;
@@ -77,6 +82,7 @@ public:
 	{}
 
 	void Close() {
+		parent_->ClearChangeHandlers(moduleNo_);
 		parent_->CloseModule(moduleNo_);
 	}
 
@@ -145,13 +151,23 @@ public:
 	auto IsCoolerCurrentLimitReached(short connNo, short& error) -> bool {
 		return parent_->IsCoolerCurrentLimitReached(moduleNo_, connNo, error);
 	}
+
+	void SetOverloadChangeHandler(short connNo, std::function<void(bool)> func) {
+		parent_->SetOverloadChangeHandler(moduleNo_, connNo, func);
+	}
+
+	void SetCurrLmtChangeHandler(short connNo, std::function<void(bool)> func) {
+		parent_->SetCurrLmtChangeHandler(moduleNo_, connNo, func);
+	}
 };
 
-// Used with std::shared_ptr
+// Used with std::shared_ptr.
 template <DCCOrDCU Model>
 class DCCDCUInterface : public std::enable_shared_from_this<DCCDCUInterface<Model>> {
-	friend class DCCDCUModule<Model>;
 	using Config = DCCDCUConfig<Model>;
+
+	// Guard all interaction with DCC/DCU API after construction.
+	std::mutex mutex_;
 
 	short initError_;
 
@@ -159,6 +175,20 @@ class DCCDCUInterface : public std::enable_shared_from_this<DCCDCUInterface<Mode
 	// access to shared_from_this().
 	std::array<std::shared_ptr<DCCDCUModule<Model>>, Config::MaxNrModules> modules_;
 	bool modulesCreated_ = false;
+
+	std::thread pollingThread_;
+	std::mutex pollingMutex_; // Not to be held at the same time as mutex_
+	std::condition_variable pollingCondVar_;
+	bool stopPollingRequested_ = false;
+
+	// We allow at most one change handler per (module, connector).
+	struct ModulePollingInfo {
+		short prevOverload = 0;
+		short prevCurrLmt = 0;
+		std::array<std::function<void(bool)>, Config::NrConnectors> overloadChanged;
+		std::array<std::function<void(bool)>, Config::NrConnectors> currLmtChanged;
+	};
+	std::array<ModulePollingInfo, Config::MaxNrModules> pollingInfo_;
 
 	void CreateModules() {
 		auto shared_me = this->shared_from_this();
@@ -174,16 +204,29 @@ public:
 	explicit DCCDCUInterface(std::bitset<MaxNrModules> moduleSet, bool simulate) {
 		auto iniFile = DCCDCUIniFile<Model>(moduleSet, simulate);
 		initError_ = Config::Init(iniFile.GetFileName().c_str());
+
+		std::bitset<MaxNrModules> modulesToPoll;
+		for (short i = 0; i < MaxNrModules; ++i) {
+			if (Config::TestIfActive(i)) {
+				modulesToPoll.set(i);
+			}
+		}
+		StartPollingThread(modulesToPoll);
 	}
 
 	~DCCDCUInterface() {
 		if (std::any_of(modules_.begin(), modules_.end(), [](auto pm) { return !!pm; })) {
 			assert(false); // Modules must be closed first.
 		}
+
+		StopAndJoinPollingThread();
+
+		std::lock_guard<std::mutex> lock(mutex_);
 		(void)Config::Close();
 	}
 
-	auto IsSimulating() const -> bool {
+	auto IsSimulating() -> bool {
+		std::lock_guard<std::mutex> lock(mutex_);
 		return Config::GetMode() != 0;
 	}
 
@@ -193,6 +236,8 @@ public:
 
 	auto GetModule(int moduleNo) -> std::shared_ptr<DCCDCUModule<Model>> {
 		if (not modulesCreated_) {
+			// Done lazily because we cannot call shared_from_this() in
+			// constructor.
 			CreateModules();
 		}
 		return modules_[moduleNo];
@@ -209,16 +254,19 @@ public:
 	}
 
 	auto IsModuleActive(short moduleNo) -> bool {
+		std::lock_guard<std::mutex> lock(mutex_);
 		return Config::TestIfActive(moduleNo) != 0;
 	}
 
 	auto GetModuleInitStatus(short moduleNo, short& error) -> short {
+		std::lock_guard<std::mutex> lock(mutex_);
 		short ret{};
 		error = Config::GetInitStatus(moduleNo, &ret);
 		return ret;
 	}
 
 	auto GetModuleInfo(short moduleNo, short& error) -> typename Config::ModInfoType {
+		std::lock_guard<std::mutex> lock(mutex_);
 		typename Config::ModInfoType ret{};
 		error = Config::GetModuleInfo(moduleNo, &ret);
 		return ret;
@@ -226,6 +274,7 @@ public:
 
 	auto GetConnectorParameter(short moduleNo, short connNo, ConnectorFeature feature,
 		short& error) -> float {
+		std::lock_guard<std::mutex> lock(mutex_);
 		float ret{};
 		error = Config::GetParameter(moduleNo,
 			Config::ConnectorParameterId(connNo, feature),
@@ -235,42 +284,151 @@ public:
 
 	void SetConnectorParameter(short moduleNo, short connNo, ConnectorFeature feature,
 		float value, short& error) {
+		std::lock_guard<std::mutex> lock(mutex_);
 		error = Config::SetParameter(moduleNo,
 			Config::ConnectorParameterId(connNo, feature),
 			true, value);
 	}
 
 	auto GetGainHVLimit(short moduleNo, short connNo, short& error) -> float {
+		std::lock_guard<std::mutex> lock(mutex_);
 		short shortLimit{};
 		error = Config::GetGainHVLimit(moduleNo, connNo, &shortLimit);
 		return static_cast<float>(shortLimit);
 	}
 
 	void EnableAllOutputs(short moduleNo, bool enable, short& error) {
+		std::lock_guard<std::mutex> lock(mutex_);
 		error = Config::EnableAllOutputs(moduleNo, enable ? 1 : 0);
 	}
 
 	void EnableConnectorOutputs(short moduleNo, short connNo, bool enable, short& error) {
+		std::lock_guard<std::mutex> lock(mutex_);
 		error = Config::EnableOutput(moduleNo, connNo, enable ? 1 : 0);
 	}
 
 	void ClearAllOverloads(short moduleNo, short& error) {
-		error = Config::ClearAllOverloads(moduleNo);
+		{
+			std::lock_guard<std::mutex> lock(mutex_);
+			error = Config::ClearAllOverloads(moduleNo);
+		}
+		PollSoon();
 	}
 
 	void ClearConnectorOverload(short moduleNo, short connNo, short& error) {
-		error = Config::ClearOverload(moduleNo, connNo);
+		{
+			std::lock_guard<std::mutex> lock(mutex_);
+			error = Config::ClearOverload(moduleNo, connNo);
+		}
+		PollSoon();
 	}
 
 	auto IsOverloaded(short moduleNo, short connNo, short& error) -> bool {
+		std::lock_guard<std::mutex> lock(mutex_);
 		short state{};
 		error = Config::GetOverloadState(moduleNo, &state);
 		return state & (1 << connNo);
 	}
 
 	auto IsCoolerCurrentLimitReached(short moduleNo, short connNo, short& error) -> bool {
+		std::lock_guard<std::mutex> lock(mutex_);
 		short state{};
 		error = Config::GetCurrLmtState(moduleNo, &state);
 		return state & (1 << connNo);
+	}
+
+	// 'func' must not set change handlers.
+	void SetOverloadChangeHandler(short moduleNo, short connNo,
+		std::function<void(bool)> func) {
+		std::lock_guard<std::mutex> lock(pollingMutex_);
+		pollingInfo_[moduleNo].overloadChanged[connNo] = func;
+	}
+
+	// 'func' must not set change handlers.
+	void SetCurrLmtChangeHandler(short moduleNo, short connNo,
+		std::function<void(bool)> func) {
+		std::lock_guard<std::mutex> lock(pollingMutex_);
+		pollingInfo_[moduleNo].currLmtChanged[connNo] = func;
+	}
+
+	void ClearChangeHandlers(short moduleNo) {
+		std::lock_guard<std::mutex> lock(pollingMutex_);
+		for (short i = 0; i < Config::NrConnectors; ++i) {
+			pollingInfo_[moduleNo].overloadChanged[i] = {};
+			pollingInfo_[moduleNo].currLmtChanged[i] = {};
+		}
+	}
+
+	void PollSoon() {
+		// Interrupt polling thread's sleep so that changes will be sent soon.
+		pollingCondVar_.notify_one();
+	}
+
+private:
+	void StartPollingThread(std::bitset<MaxNrModules> modulesToPoll) {
+		pollingThread_ = std::thread([this, modulesToPoll]() {
+			std::unique_lock<std::mutex> pollingLock(pollingMutex_);
+			for (;;) {
+				if (stopPollingRequested_) {
+					break;
+				}
+				pollingCondVar_.wait_for(pollingLock, std::chrono::seconds(1));
+				if (stopPollingRequested_) {
+					break;
+				}
+
+				pollingLock.unlock();
+
+				std::array<short, MaxNrModules> overload;
+				std::array<short, MaxNrModules> currLmt;
+				{
+					std::lock_guard<std::mutex> lock(mutex_);
+					for (short i = 0; i < MaxNrModules; ++i) {
+						if (not modulesToPoll.test(i)) {
+							overload[i] = currLmt[i] = 0;
+							continue;
+						}
+						short err = Config::GetOverloadState(i, &overload[i]);
+						if (err) {
+							break; // Give up on polling
+						}
+						err = Config::GetCurrLmtState(i, &currLmt[i]);
+						if (err) {
+							break; // Give up on polling
+						}
+					}
+				}
+
+				pollingLock.lock();
+
+				for (short i = 0; i < MaxNrModules; ++i) {
+					auto& info = pollingInfo_[i];
+					for (short j = 0; j < Config::NrConnectors; ++j) {
+						const short bit = 1 << j;
+						if (Config::ConnectorHasFeature(j, ConnectorFeature::GainHV) &&
+							(overload[i] & bit) != (info.prevOverload & bit) &&
+							info.overloadChanged[j]) {
+							info.overloadChanged[j](overload[i] & bit);
+						}
+						if (Config::ConnectorHasFeature(j, ConnectorFeature::CoolerCurrentLimit) &&
+							(currLmt[i] & bit) != (info.prevCurrLmt & bit) &&
+							info.currLmtChanged[j]) {
+							info.currLmtChanged[j](currLmt[i] & bit);
+						}
+					}
+					info.prevOverload = overload[i];
+					info.prevCurrLmt = currLmt[i];
+				}
+			}
+		});
+	}
+
+	void StopAndJoinPollingThread() {
+		{
+			std::lock_guard<std::mutex> lock(pollingMutex_);
+			stopPollingRequested_ = true;
+		}
+		pollingCondVar_.notify_one();
+		pollingThread_.join();
 	}
 };
