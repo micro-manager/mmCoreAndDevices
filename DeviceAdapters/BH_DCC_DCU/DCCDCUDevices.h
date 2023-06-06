@@ -7,9 +7,23 @@
 #include <cassert>
 #include <cstddef>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
+
+// This can be moved to DeviceBase.h to make available generally.
+class ActionLambda final : public MM::ActionFunctor {
+	std::function<int(MM::PropertyBase*, MM::ActionType)> f_;
+
+public:
+	template <typename F>
+	explicit ActionLambda(F f) : f_(f) {}
+
+	auto Execute(MM::PropertyBase* pProp, MM::ActionType eAct) -> int {
+		return f_(pProp, eAct);
+	}
+};
 
 template <DCCOrDCU Model>
 inline auto ModelName() -> std::string {
@@ -35,9 +49,16 @@ inline auto ModelDescription() -> std::string {
 
 enum class Errors {
 	INIT_FAILED = 20001,
-	CANNOT_GET_MODULE_STATUS_OR_INFO,
+	CANNOT_GET_INIT_STATUS,
 	MODULE_IN_USE,
 	MODULE_INIT_MISC_FAILURE,
+	CANNOT_GET_MODULE_INFO,
+	CANNOT_GET_PARAMETER,
+	CANNOT_SET_PARAMETER,
+	CANNOT_ENABLE_OUTPUTS,
+	CANNOT_CLEAR_OVERLOADS,
+	CANNOT_GET_OVERLOAD_STATE,
+	CANNOT_GET_COOLER_CURRENT_LIMIT_STATE,
 };
 
 template <DCCOrDCU Model, typename SetFunc>
@@ -48,13 +69,27 @@ inline void RegisterErrorMessages(SetFunc f) {
 	const std::string model = ModelName<Model>();
 	f2(Errors::INIT_FAILED,
 		model + " init failed (see CoreLog for internal details)");
-	f2(Errors::CANNOT_GET_MODULE_STATUS_OR_INFO,
-		"Failed to get " + model + " init status or module info");
+	f2(Errors::CANNOT_GET_INIT_STATUS,
+		"Failed to get " + model + " init status");
 	f2(Errors::MODULE_IN_USE,
 		model + " module is in use by another application "
 		"(or needs to be reset using the BH " + model + " app)");
 	f2(Errors::MODULE_INIT_MISC_FAILURE,
 		model + " module init failed (see CoreLog for internal details)");
+	f2(Errors::CANNOT_GET_MODULE_INFO,
+		"Failed to get " + model + " module info");
+	f2(Errors::CANNOT_GET_PARAMETER,
+		"Failed to get " + model + " parameter");
+	f2(Errors::CANNOT_SET_PARAMETER,
+		"Failed to set " + model + " parameter");
+	f2(Errors::CANNOT_ENABLE_OUTPUTS,
+		"Failed to enable or disable " + model + " outputs");
+	f2(Errors::CANNOT_CLEAR_OVERLOADS,
+		"Failed to clear overloads");
+	f2(Errors::CANNOT_GET_OVERLOAD_STATE,
+		"Failed to get detector overload status");
+	f2(Errors::CANNOT_GET_COOLER_CURRENT_LIMIT_STATE,
+		"Failed to get cooler current limit status");
 }
 
 template <DCCOrDCU Model>
@@ -217,29 +252,40 @@ public:
 	auto Initialize() -> int final {
 		auto* hub = static_cast<DCCDCUHubDevice<Model>*>(this->GetParentHub());
 		auto iface = hub->GetDCCDCUInterface();
-		module_ = iface->GetModule(moduleNo_);
-		if (not module_->IsUsable()) {
-			if (module_->IsActive()) {
-				// Active but failed to get init status or module info; this is
-				// unexpected.
-				return static_cast<int>(Errors::CANNOT_GET_MODULE_STATUS_OR_INFO);
-			}
 
-			// The most common error is that the module is in use by another
-			// app, so give it a specific error code and message.
-			switch (module_->InitStatus()) {
-			case INIT_DCC_MOD_IN_USE:
-				return static_cast<int>(Errors::MODULE_IN_USE);
-			default:
-				this->LogMessage(ModelName<Model>() + " module init failed with init status " +
-					std::to_string(module_->InitStatus()));
-				return static_cast<int>(Errors::MODULE_INIT_MISC_FAILURE);
-			}
+		module_ = iface->GetModule(moduleNo_);
+
+		const bool isActive = module_->IsActive();
+		this->LogMessage(ModelName<Model>() + " module " +
+			(isActive ? "is" : "is NOT") + " active");
+
+		short err{};
+		const auto initStatus = module_->InitStatus(err);
+		if (err) {
+			return static_cast<int>(Errors::CANNOT_GET_INIT_STATUS);
+		}
+		this->LogMessage(ModelName<Model>() + " module init status is " +
+			std::to_string(initStatus));
+		switch (initStatus) {
+		case INIT_DCC_OK:
+			break;
+		case INIT_DCC_MOD_IN_USE:
+			return static_cast<int>(Errors::MODULE_IN_USE);
+		default:
+			return static_cast<int>(Errors::MODULE_INIT_MISC_FAILURE);
 		}
 
-		CreateModInfoProperties(module_->ModInfo());
+		const auto modInfo = module_->ModInfo(err);
+		if (err) {
+			return static_cast<int>(Errors::CANNOT_GET_MODULE_INFO);
+		}
 
-		CreateProperties();
+		CreateModInfoProperties(modInfo);
+		CreateConnectorProperties();
+		if (not Config::HasIndividualOutputAndClearOverload) {
+			CreateEnableAllOutputsProperty();
+			CreateClearAllOverloadsProperty();
+		}
 		return DEVICE_OK;
 	}
 
@@ -269,7 +315,316 @@ private:
 		this->CreateStringProperty("SerialNumber", modInfo.SerialNo().c_str(), true);
 	}
 
-	void CreateProperties() {
-		// TODO
+	void CreateConnectorProperties() {
+		for (short i = 0; i < Config::NrConnectors; ++i) {
+			CreateConnectorProperties(i);
+		}
+	}
+
+	void CreateConnectorProperties(short connNo) {
+		const std::string propPrefix = "C" + std::to_string(connNo + 1) + "_";
+		if (Config::ConnectorHasFeature(connNo, ConnectorFeature::Plus5V)) {
+			CreateConnectorOnOffProperty(connNo, ConnectorFeature::Plus5V,
+				propPrefix + "Plus5V");
+		}
+		if (Config::ConnectorHasFeature(connNo, ConnectorFeature::Minus5V)) {
+			CreateConnectorOnOffProperty(connNo, ConnectorFeature::Minus5V,
+				propPrefix + "Minus5V");
+		}
+		if (Config::ConnectorHasFeature(connNo, ConnectorFeature::Plus12V)) {
+			CreateConnectorOnOffProperty(connNo, ConnectorFeature::Plus12V,
+				propPrefix + "Plus12V");
+		}
+		if (Config::ConnectorHasFeature(connNo, ConnectorFeature::GainHV)) {
+			// The GainHV limit is set in the EEPROM, but in MM we treat it as
+			// a permanent limit. User can configure using the BH app.
+			short err{};
+			float lim = module_->GetGainHVLimit(connNo, err);
+			if (err) // Unlikely
+				lim = 100.0f;
+			CreateConnectorFloatProperty(connNo, ConnectorFeature::GainHV,
+				propPrefix + "GainHV", 0.0f, lim);
+			CreateConnectorOverloadedProperty(connNo, propPrefix + "Overloaded");
+			if (Config::HasIndividualOutputAndClearOverload) {
+				CreateConnectorClearOverloadProperty(connNo, propPrefix + "ClearOverload");
+			}
+		}
+		if (Config::ConnectorHasFeature(connNo, ConnectorFeature::DigitalOut)) {
+			CreateConnectorByteProperty(connNo, ConnectorFeature::DigitalOut,
+				propPrefix + "DigitalOut");
+		}
+		if (Config::ConnectorHasFeature(connNo, ConnectorFeature::Cooling)) {
+			CreateConnectorOnOffProperty(connNo, ConnectorFeature::Cooling,
+				propPrefix + "Cooling");
+		}
+		if (Config::ConnectorHasFeature(connNo, ConnectorFeature::CoolerVoltage)) {
+			CreateConnectorFloatProperty(connNo, ConnectorFeature::CoolerVoltage,
+				propPrefix + "CoolerVoltage", 0.0f, 5.0f);
+		}
+		if (Config::ConnectorHasFeature(connNo, ConnectorFeature::CoolerCurrentLimit)) {
+			CreateConnectorFloatProperty(connNo, ConnectorFeature::CoolerCurrentLimit,
+				propPrefix + "CoolerCurrentLimit", 0.0f, 2.0f);
+			CreateConnectorCurrentLimitReachedProperty(connNo,
+				propPrefix + "CoolerCurrentLimitReached");
+		}
+		if (Config::HasIndividualOutputAndClearOverload) {
+			CreateConnectorEnableOutputProperty(connNo, propPrefix + "EnableOutputs");
+		}
+	}
+
+	void CreateConnectorOnOffProperty(short connNo, ConnectorFeature feature,
+		const std::string& name) {
+		this->CreateStringProperty(name.c_str(), "Off", false,
+			new ActionLambda([this, connNo, feature, name](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					short err{};
+					const bool flag = module_->GetConnectorParameterBool(connNo,
+						feature, err);
+					if (err) {
+						this->LogMessage("Cannot get parameter for property " + name +
+							": " + DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_GET_PARAMETER);
+					}
+					pProp->Set(flag ? "On" : "Off");
+				}
+				else if (eAct == MM::AfterSet) {
+					std::string propVal;
+					pProp->Get(propVal);
+					const bool value = propVal == "On";
+					short err{};
+					module_->SetConnectorParameterBool(connNo, feature, value, err);
+					if (err) {
+						this->LogMessage("Cannot set parameter for property " + name +
+							" to value " + std::to_string(value) +
+							": " + DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_SET_PARAMETER);
+					}
+				}
+				return DEVICE_OK;
+			}));
+		this->AddAllowedValue(name.c_str(), "Off");
+		this->AddAllowedValue(name.c_str(), "On");
+		// Load current value:
+		std::array<char, MM::MaxStrLength + 1> buf;
+		this->GetProperty(name.c_str(), buf.data());
+	}
+
+	void CreateConnectorFloatProperty(short connNo, ConnectorFeature feature,
+		const std::string& name, float minValue, float maxValue) {
+		this->CreateFloatProperty(name.c_str(), minValue, false,
+			new ActionLambda([this, connNo, feature, name](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					short err{};
+					const float value = module_->GetConnectorParameterFloat(connNo,
+						feature, err);
+					if (err) {
+						this->LogMessage("Cannot get parameter for property " + name +
+							": " + DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_GET_PARAMETER);
+					}
+					pProp->Set(value);
+				}
+				else if (eAct == MM::AfterSet) {
+					double propVal{};
+					pProp->Get(propVal);
+					const auto value = static_cast<float>(propVal);
+					short err{};
+					module_->SetConnectorParameterFloat(connNo, feature, value, err);
+					if (err) {
+						this->LogMessage("Cannot set parameter for property " + name +
+							" to value " + std::to_string(value) +
+							": " + DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_SET_PARAMETER);
+					}
+				}
+				return DEVICE_OK;
+				}));
+		this->SetPropertyLimits(name.c_str(), minValue, maxValue);
+		// Load current value:
+		std::array<char, MM::MaxStrLength + 1> buf;
+		this->GetProperty(name.c_str(), buf.data());
+	}
+
+	void CreateConnectorByteProperty(short connNo, ConnectorFeature feature,
+		const std::string& name) {
+		this->CreateIntegerProperty(name.c_str(), 0, false,
+			new ActionLambda([this, connNo, feature, name](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					short err{};
+					const unsigned value = module_->GetConnectorParameterUInt(connNo,
+						feature, err);
+					if (err) {
+						this->LogMessage("Cannot get parameter for property " + name +
+							": " + DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_GET_PARAMETER);
+					}
+					pProp->Set(static_cast<long>(value));
+				}
+				else if (eAct == MM::AfterSet) {
+					long propVal{};
+					pProp->Get(propVal);
+					const auto value = static_cast<unsigned>(propVal);
+					short err{};
+					module_->SetConnectorParameterUInt(connNo, feature, value, err);
+					if (err) {
+						this->LogMessage("Cannot set parameter for property " + name +
+							" to value " + std::to_string(value) +
+							": " + DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_SET_PARAMETER);
+					}
+				}
+				return DEVICE_OK;
+				}));
+		for (long v = 0; v < 256; ++v) {
+			this->AddAllowedValue(name.c_str(), std::to_string(v).c_str());
+		}
+		// Load current value:
+		std::array<char, MM::MaxStrLength + 1> buf;
+		this->GetProperty(name.c_str(), buf.data());
+	}
+
+	void CreateConnectorEnableOutputProperty(short connNo, const std::string& name) {
+		this->CreateStringProperty(name.c_str(), "Off", false,
+			new ActionLambda([this, connNo](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				// There is no readout for enable_outputs, so we rely on the
+				// last-set value.
+				if (eAct == MM::AfterSet) {
+					std::string propVal;
+					pProp->Get(propVal);
+					const bool value = propVal == "On";
+					short err{};
+					module_->EnableConnectorOutputs(connNo, value, err);
+					if (err) {
+						pProp->Set("Unknown");
+						using namespace std::string_literals;
+						this->LogMessage("Cannot "s + (value ? "enable" : "disable") +
+							" outputs: " + DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_ENABLE_OUTPUTS);
+					}
+				}
+				return DEVICE_OK;
+			}));
+		this->AddAllowedValue(name.c_str(), "Off");
+		this->AddAllowedValue(name.c_str(), "On");
+		// Force off initially to ensure sync with property value:
+		this->SetProperty(name.c_str(), "Off");
+	}
+
+	void CreateEnableAllOutputsProperty() {
+		this->CreateStringProperty("EnableOutputs", "Off", false,
+			new ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				// There is no readout for enable_outputs, so we rely on the
+				// last-set value.
+				if (eAct == MM::AfterSet) {
+					std::string propVal;
+					pProp->Get(propVal);
+					const bool value = propVal == "On";
+					short err{};
+					module_->EnableAllOutputs(value, err);
+					if (err) {
+						pProp->Set("Unknown");
+						using namespace std::string_literals;
+						this->LogMessage("Cannot "s + (value ? "enable" : "disable") +
+							" outputs: " + DCCDCUGetErrorString(err));
+
+						return static_cast<int>(Errors::CANNOT_ENABLE_OUTPUTS);
+					}
+				}
+				return DEVICE_OK;
+			}));
+		this->AddAllowedValue("EnableOutputs", "Off");
+		this->AddAllowedValue("EnableOutputs", "On");
+		// Force off initially to ensure sync with property value:
+		this->SetProperty("EnableOutputs", "Off");
+	}
+
+	void CreateConnectorClearOverloadProperty(short connNo, const std::string& name) {
+		this->CreateStringProperty(name.c_str(), "", false,
+			new ActionLambda([this, connNo](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::AfterSet) {
+					std::string propVal;
+					pProp->Get(propVal);
+					if (propVal == "Clear") {
+						short err{};
+						module_->ClearConnectorOverload(connNo, err);
+						if (err) {
+							this->LogMessage("Cannot clear overloads: " +
+								DCCDCUGetErrorString(err));
+							return static_cast<int>(Errors::CANNOT_CLEAR_OVERLOADS);
+						}
+						pProp->Set("");
+					}
+				}
+				return DEVICE_OK;
+			}));
+		this->AddAllowedValue(name.c_str(), "");
+		this->AddAllowedValue(name.c_str(), "Clear");
+	}
+
+	void CreateClearAllOverloadsProperty() {
+		this->CreateStringProperty("ClearOverloads", "", false,
+			new ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::AfterSet) {
+					std::string propVal;
+					pProp->Get(propVal);
+					if (propVal == "Clear") {
+						short err{};
+						module_->ClearAllOverloads(err);
+						if (err) {
+							this->LogMessage("Cannot clear overloads: " +
+								DCCDCUGetErrorString(err));
+							return static_cast<int>(Errors::CANNOT_CLEAR_OVERLOADS);
+						}
+						pProp->Set("");
+					}
+				}
+				return DEVICE_OK;
+			}));
+		this->AddAllowedValue("ClearOverloads", "");
+		this->AddAllowedValue("ClearOverloads", "Clear");
+	}
+
+	void CreateConnectorOverloadedProperty(short connNo, const std::string& name) {
+		this->CreateStringProperty(name.c_str(), "No", true,
+			new ActionLambda([this, connNo](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					short err{};
+					const bool flag = module_->IsOverloaded(connNo, err);
+					if (err) {
+						this->LogMessage("Cannot get overload state: " +
+							DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_GET_OVERLOAD_STATE);
+					}
+					pProp->Set(flag ? "Yes" : "No");
+				}
+				return DEVICE_OK;
+			}));
+		this->AddAllowedValue(name.c_str(), "No");
+		this->AddAllowedValue(name.c_str(), "Yes");
+		// Load current value:
+		std::array<char, MM::MaxStrLength + 1> buf;
+		this->GetProperty(name.c_str(), buf.data());
+	}
+
+	void CreateConnectorCurrentLimitReachedProperty(short connNo, const std::string& name) {
+		this->CreateStringProperty(name.c_str(), "No", true,
+			new ActionLambda([this, connNo](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					short err{};
+					const bool flag = module_->IsCoolerCurrentLimitReached(connNo, err);
+					if (err) {
+						this->LogMessage("Cannot get cooler current limit state: " +
+							DCCDCUGetErrorString(err));
+						return static_cast<int>(Errors::CANNOT_GET_COOLER_CURRENT_LIMIT_STATE);
+					}
+					pProp->Set(flag ? "Yes" : "No");
+				}
+				return DEVICE_OK;
+			}));
+		this->AddAllowedValue(name.c_str(), "No");
+		this->AddAllowedValue(name.c_str(), "Yes");
+		// Load current value:
+		std::array<char, MM::MaxStrLength + 1> buf;
+		this->GetProperty(name.c_str(), buf.data());
 	}
 };

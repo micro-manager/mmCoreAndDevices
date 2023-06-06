@@ -70,47 +70,81 @@ class DCCDCUModule {
 	std::shared_ptr<ParentType> parent_;
 	short moduleNo_;
 
-	bool isActive_;
-	short errDuringConstruction_ = 0;
-	short initStatus_ = 0;
-	typename Config::ModInfoType modInfo_{};
-
 public:
 	explicit DCCDCUModule(std::shared_ptr<ParentType> parent, short moduleNo) :
 		parent_(parent),
-		moduleNo_(moduleNo),
-		isActive_(Config::TestIfActive(moduleNo_) != 0)
-	{
-		auto err = Config::GetInitStatus(moduleNo_, &initStatus_);
-		if (err) {
-			errDuringConstruction_ = err;
-			return;
-		}
-
-		if (initStatus_ == INIT_DCC_OK) {
-			err = Config::GetModuleInfo(moduleNo_, &modInfo_);
-			if (err) {
-				errDuringConstruction_ = err;
-				return;
-			}
-		}
-	}
+		moduleNo_(moduleNo)
+	{}
 
 	void Close() {
-		parent_->modules_[moduleNo_].reset();
+		parent_->CloseModule(moduleNo_);
 	}
 
-	auto IsActive() const -> bool { return isActive_; }
-
-	auto IsUsable() const -> bool {
-		return isActive_ && not errDuringConstruction_ && initStatus_ == INIT_DCC_OK;
+	auto IsActive() const -> bool {
+		return parent_->IsModuleActive(moduleNo_);
 	}
 
-	auto InitStatus() const -> short { return initStatus_; }
-	auto ModInfo() const { return modInfo_; }
+	auto InitStatus(short& error) const -> short {
+		return parent_->GetModuleInitStatus(moduleNo_, error);
+	}
 
-	// TODO Dynamic features should call DCC API via parent (so that we can
-	// add mutex)
+	auto ModInfo(short& error) const {
+		return parent_->GetModuleInfo(moduleNo_, error);;
+	}
+
+	auto GetConnectorParameterBool(short connNo, ConnectorFeature feature, short& error) -> bool {
+		return parent_->GetConnectorParameter(moduleNo_, connNo, feature, error) != 0.0f;
+	}
+
+	auto GetConnectorParameterUInt(short connNo, ConnectorFeature feature, short& error) -> unsigned {
+		return static_cast<unsigned>(parent_->GetConnectorParameter(moduleNo_, connNo, feature, error));
+	}
+
+	auto GetConnectorParameterFloat(short connNo, ConnectorFeature feature, short& error) -> float {
+		return parent_->GetConnectorParameter(moduleNo_, connNo, feature, error);
+	}
+
+	void SetConnectorParameterBool(short connNo, ConnectorFeature feature, bool value, short& error) {
+		parent_->SetConnectorParameter(moduleNo_, connNo, feature,
+			(value ? 1.0f : 0.0f), error);
+	}
+
+	void SetConnectorParameterUInt(short connNo, ConnectorFeature feature, unsigned value, short& error) {
+		parent_->SetConnectorParameter(moduleNo_, connNo, feature,
+			static_cast<float>(value), error);
+	}
+
+	void SetConnectorParameterFloat(short connNo, ConnectorFeature feature, float value, short& error) {
+		parent_->SetConnectorParameter(moduleNo_, connNo, feature, value, error);
+	}
+
+	auto GetGainHVLimit(short connNo, short& error) -> float {
+		return parent_->GetGainHVLimit(moduleNo_, connNo, error);
+	}
+
+	void EnableAllOutputs(bool enable, short& error) {
+		parent_->EnableAllOutputs(moduleNo_, enable, error);
+	}
+
+	void EnableConnectorOutputs(short connNo, bool enable, short& error) {
+		parent_->EnableConnectorOutputs(moduleNo_, connNo, enable, error);
+	}
+
+	void ClearAllOverloads(short& error) {
+		parent_->ClearAllOverloads(moduleNo_, error);
+	}
+
+	void ClearConnectorOverload(short connNo, short& error) {
+		parent_->ClearConnectorOverload(moduleNo_, connNo, error);
+	}
+
+	auto IsOverloaded(short connNo, short& error) -> bool {
+		return parent_->IsOverloaded(moduleNo_, connNo, error);
+	}
+
+	auto IsCoolerCurrentLimitReached(short connNo, short& error) -> bool {
+		return parent_->IsCoolerCurrentLimitReached(moduleNo_, connNo, error);
+	}
 };
 
 // Used with std::shared_ptr
@@ -164,9 +198,79 @@ public:
 		return modules_[moduleNo];
 	}
 
+	void CloseModule(short moduleNo) {
+		modules_[moduleNo].reset();
+	}
+
 	void CloseAllModules() {
 		for (short i = 0; i < MaxNrModules; ++i) {
 			modules_[i].reset();
 		}
+	}
+
+	auto IsModuleActive(short moduleNo) -> bool {
+		return Config::TestIfActive(moduleNo) != 0;
+	}
+
+	auto GetModuleInitStatus(short moduleNo, short& error) -> short {
+		short ret{};
+		error = Config::GetInitStatus(moduleNo, &ret);
+		return ret;
+	}
+
+	auto GetModuleInfo(short moduleNo, short& error) -> typename Config::ModInfoType {
+		typename Config::ModInfoType ret{};
+		error = Config::GetModuleInfo(moduleNo, &ret);
+		return ret;
+	}
+
+	auto GetConnectorParameter(short moduleNo, short connNo, ConnectorFeature feature,
+		short& error) -> float {
+		float ret{};
+		error = Config::GetParameter(moduleNo,
+			Config::ConnectorParameterId(connNo, feature),
+			&ret);
+		return ret;
+	}
+
+	void SetConnectorParameter(short moduleNo, short connNo, ConnectorFeature feature,
+		float value, short& error) {
+		error = Config::SetParameter(moduleNo,
+			Config::ConnectorParameterId(connNo, feature),
+			true, value);
+	}
+
+	auto GetGainHVLimit(short moduleNo, short connNo, short& error) -> float {
+		short shortLimit{};
+		error = Config::GetGainHVLimit(moduleNo, connNo, &shortLimit);
+		return static_cast<float>(shortLimit);
+	}
+
+	void EnableAllOutputs(short moduleNo, bool enable, short& error) {
+		error = Config::EnableAllOutputs(moduleNo, enable ? 1 : 0);
+	}
+
+	void EnableConnectorOutputs(short moduleNo, short connNo, bool enable, short& error) {
+		error = Config::EnableOutput(moduleNo, connNo, enable ? 1 : 0);
+	}
+
+	void ClearAllOverloads(short moduleNo, short& error) {
+		error = Config::ClearAllOverloads(moduleNo);
+	}
+
+	void ClearConnectorOverload(short moduleNo, short connNo, short& error) {
+		error = Config::ClearOverload(moduleNo, connNo);
+	}
+
+	auto IsOverloaded(short moduleNo, short connNo, short& error) -> bool {
+		short state{};
+		error = Config::GetOverloadState(moduleNo, &state);
+		return state & (1 << connNo);
+	}
+
+	auto IsCoolerCurrentLimitReached(short moduleNo, short connNo, short& error) -> bool {
+		short state{};
+		error = Config::GetCurrLmtState(moduleNo, &state);
+		return state & (1 << connNo);
 	}
 };

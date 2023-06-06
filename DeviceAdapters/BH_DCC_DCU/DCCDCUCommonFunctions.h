@@ -135,8 +135,23 @@ public:
 		return DCC_enable_outputs(mod_no, enable);
 	}
 
+	static auto EnableOutput(short mod_no, short con_no, short enable) noexcept -> short {
+		(void)mod_no;
+		(void)con_no;
+		(void)enable;
+		assert(false);
+		std::terminate();
+	}
+
 	static auto ClearAllOverloads(short mod_no) noexcept -> short {
 		return DCC_clear_overload(mod_no);
+	}
+
+	static auto ClearOverload(short mod_no, short con_no) noexcept -> short {
+		(void)mod_no;
+		(void)con_no;
+		assert(false);
+		std::terminate();
 	}
 
 	static auto GetOverloadState(short mod_no, short *state) noexcept -> short {
@@ -209,6 +224,7 @@ public:
 		if (p == std::make_pair(2, ConnectorFeature::CoolerCurrentLimit)) return C3_COOLCURR;
 
 		assert(false);
+		std::terminate();
 	}
 };
 
