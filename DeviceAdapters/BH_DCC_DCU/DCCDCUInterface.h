@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <cstdio>
 #include <functional>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -26,41 +27,48 @@ class DCCDCUIniFile {
 	using Config = DCCDCUConfig<Model>;
 
 	std::string fileName_;
-	std::FILE *fp_;
 
 public:
 	static constexpr std::size_t MaxNrModules = Config::MaxNrModules;
 
 	explicit DCCDCUIniFile(std::bitset<MaxNrModules> moduleSet, bool simulate) :
 		fileName_([] {
-			char nm[L_tmpnam];
-			std::tmpnam(nm);
-			return std::string(nm);
-		}()),
-		fp_(std::fopen(fileName_.c_str(), "w"))
+			std::array<char, L_tmpnam> name;
+			if (std::tmpnam(name.data()) == nullptr)
+				return std::string();
+			return std::string(name.data());
+		}())
 	{
-		using namespace std::string_literals;
-		std::string iniContent;
+		if (fileName_.empty()) {
+			return;
+		}
+
+		std::ofstream file(fileName_);
+		if (not file) {
+			fileName_.clear();
+			return;
+		}
+
 		// Undocumented: The first line must be a comment starting with
 		// "DCC100" or "DCCUSB"
-		iniContent += "; "s + Config::IniHeaderComment + "\n\n"s;
-		iniContent += "["s + Config::IniBaseTag + "]\n\n"s;
-		iniContent += Config::IniSimulationKey + " = "s +
-			std::to_string(simulate ? Config::SimulationMode : 0) + "\n\n"s;
+		file << "; " << Config::IniHeaderComment << "\n\n";
+		file << "[" << Config::IniBaseTag << "]\n\n";
+		file << Config::IniSimulationKey << " = " <<
+			std::to_string(simulate ? Config::SimulationMode : 0) << "\n\n";
 		for (int i = 0; i < MaxNrModules; ++i) {
-			iniContent += "["s + Config::IniModuleTagPrefix +
-				std::to_string(i + 1) + "]\n\n"s;
-			iniContent += "active = "s + (moduleSet[i] ? "1"s : "0"s) + "\n\n"s;
+			file << "[" << Config::IniModuleTagPrefix <<
+				std::to_string(i + 1) << "]\n\n";
+			file << "active = " << (moduleSet[i] ? "1" : "0") << "\n\n";
 		}
-		std::fwrite(iniContent.c_str(), 1, iniContent.size(), fp_);
-		std::fclose(fp_);
 	}
 
 	~DCCDCUIniFile() {
-		std::remove(fileName_.c_str());
+		if (not fileName_.empty()) {
+			std::remove(fileName_.c_str());
+		}
 	}
 
-	auto GetFileName() const -> std::string { return fileName_; }
+	auto FileName() const -> std::string { return fileName_; }
 };
 
 template <DCCOrDCU Model>
@@ -169,7 +177,8 @@ class DCCDCUInterface : public std::enable_shared_from_this<DCCDCUInterface<Mode
 	// Guard all interaction with DCC/DCU API after construction.
 	std::mutex mutex_;
 
-	short initError_;
+	bool failedBeforeInit_ = false;
+	short initError_ = 0;
 
 	// Module objects are created lazily after construction because they need
 	// access to shared_from_this().
@@ -203,7 +212,16 @@ public:
 
 	explicit DCCDCUInterface(std::bitset<MaxNrModules> moduleSet, bool simulate) {
 		auto iniFile = DCCDCUIniFile<Model>(moduleSet, simulate);
-		initError_ = Config::Init(iniFile.GetFileName().c_str());
+		auto iniFileName = iniFile.FileName();
+		if (iniFileName.empty()) {
+			failedBeforeInit_ = true;
+		}
+		else {
+			initError_ = Config::Init(iniFileName.c_str());
+		}
+
+		// We do not stop if there is an init error, because some modules might
+		// have initialized successfully (not entirely clear from documentation).
 
 		std::bitset<MaxNrModules> modulesToPoll;
 		for (short i = 0; i < MaxNrModules; ++i) {
@@ -230,7 +248,11 @@ public:
 		return Config::GetMode() != 0;
 	}
 
-	auto GetInitError() const -> short {
+	auto PreInitError() const -> bool {
+		return failedBeforeInit_;
+	}
+
+	auto InitError() const -> short {
 		return initError_;
 	}
 

@@ -359,5 +359,6 @@ public:
 		if (p == std::make_pair(4, ConnectorFeature::DigitalOut)) return C5U_DIGOUT;
 
 		assert(false);
+		std::terminate();
 	}
 };

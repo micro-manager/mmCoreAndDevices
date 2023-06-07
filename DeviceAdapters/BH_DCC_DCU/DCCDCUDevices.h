@@ -48,7 +48,8 @@ inline auto ModelDescription() -> std::string {
 }
 
 enum class Errors {
-	INIT_FAILED = 20001,
+	PRE_INIT_FAILURE = 20001,
+	INIT_FAILED,
 	CANNOT_GET_INIT_STATUS,
 	MODULE_IN_USE,
 	MODULE_INIT_MISC_FAILURE,
@@ -67,6 +68,9 @@ inline void RegisterErrorMessages(SetFunc f) {
 		f(static_cast<int>(code), text.c_str());
 	};
 	const std::string model = ModelName<Model>();
+	f2(Errors::PRE_INIT_FAILURE,
+		"Could not initialize " + model +
+		" because a temporary .ini file could not be created");
 	f2(Errors::INIT_FAILED,
 		model + " init failed (see CoreLog for internal details)");
 	f2(Errors::CANNOT_GET_INIT_STATUS,
@@ -158,15 +162,21 @@ public:
 		const bool simulate = RequestedSimulation();
 		const auto moduleSet = RequestedModuleSet();
 		interface_ = std::make_shared<DCCDCUInterface<Model>>(moduleSet, simulate);
-		const auto initErr = interface_->GetInitError();
-		// It is not clear whether we will get an error when some, but not all,
-		// of the modules failed to initialize. So generally we just log and
-		// continue and handle the init status in each module. But let's give
-		// up when it is clearly an error not specific to individual modules.
+		if (interface_->PreInitError()) {
+			this->LogMessage("Could not initialize " + ModelName<Model>() +
+				" because a temporary .ini file could not be created");
+			return static_cast<int>(Errors::PRE_INIT_FAILURE);
+		}
+
+		const auto initErr = interface_->InitError();
 		if (initErr) {
 			this->LogMessage(ModelName<Model>() + " init failed with error: " +
 				DCCDCUGetErrorString(initErr));
 		}
+		// It is not clear whether we will get an error when some, but not all,
+		// of the modules failed to initialize. So generally we just log and
+		// continue and handle the init status in each module. But let's give
+		// up when it is clearly an error not specific to individual modules.
 		switch (initErr) {
 		case DCC_OPEN_FILE:
 		case DCC_FILE_NVALID:
