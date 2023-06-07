@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DCCDCUAdapter.h" />
-    <ClInclude Include="DCCDCUCommonFunctions.h" />
+    <ClInclude Include="DCCDCUConfig.h" />
     <ClInclude Include="DCCDCUDevices.h" />
     <ClInclude Include="DCCDCUInterface.h" />
   </ItemGroup>

@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DCCDCUCommonFunctions.h">
+    <ClInclude Include="DCCDCUConfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DCCDCUInterface.h">

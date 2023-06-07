@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DCCDCUCommonFunctions.h"
+#include "DCCDCUConfig.h"
 
 #include <algorithm>
 #include <bitset>
