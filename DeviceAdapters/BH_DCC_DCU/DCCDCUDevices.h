@@ -158,9 +158,6 @@ class DCCDCUHubDevice : public HubBase<DCCDCUHubDevice<Model>> {
       interface_ =
           std::make_shared<DCCDCUInterface<Model>>(moduleSet, simulate);
       if (interface_->PreInitError()) {
-         this->LogMessage(
-             "Could not initialize " + ModelName<Model>() +
-             " because a temporary .ini file could not be created");
          return static_cast<int>(Errors::PRE_INIT_FAILURE);
       }
 
