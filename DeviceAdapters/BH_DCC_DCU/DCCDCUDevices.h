@@ -319,7 +319,19 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
  private:
    void CreateModInfoProperties(typename Config::ModInfoType modInfo) {
       this->CreateIntegerProperty("ModuleNumber", moduleNo_ + 1, true);
-      this->CreateIntegerProperty("ModuleType", modInfo.ModuleType(), true);
+      std::string model;
+      switch (modInfo.ModuleType()) {
+      case M_DCC100:
+         model = "DCC-100";
+         break;
+      case M_DCCUSB:
+         model = "DCC-USB (DCU)";
+         break;
+      default:
+         model = std::to_string(modInfo.ModuleType());
+         break;
+      }
+      this->CreateStringProperty("ModuleType", model.c_str(), true);
       if (Model == DCCOrDCU::DCC) {
          this->CreateIntegerProperty("BusNumber", modInfo.BusNumber(), true);
          this->CreateIntegerProperty("SlotNumber", modInfo.SlotNumber(), true);
