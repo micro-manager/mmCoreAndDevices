@@ -185,7 +185,7 @@ template <> class DCCDCUConfig<DCCOrDCU::DCC> {
       short const conn1bit = *state & 1;
       *state >>= 1;
       *state <<= 2;
-      *state &= conn1bit;
+      *state |= conn1bit;
       return ret;
    }
 
