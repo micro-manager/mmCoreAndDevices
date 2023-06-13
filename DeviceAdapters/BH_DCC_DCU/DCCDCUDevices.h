@@ -60,7 +60,8 @@ template <DCCOrDCU Model> inline auto ModelDescription() -> std::string {
 }
 
 enum class Errors {
-   PRE_INIT_FAILURE = 20001,
+   CANNOT_CREATE_TWO_HUBS = 20001,
+   PRE_INIT_FAILURE,
    INIT_FAILED,
    CANNOT_GET_INIT_STATUS,
    MODULE_IN_USE,
@@ -80,6 +81,8 @@ inline void RegisterErrorMessages(SetFunc f) {
       f(static_cast<int>(code), text.c_str());
    };
    const std::string model = ModelName<Model>();
+   f2(Errors::CANNOT_CREATE_TWO_HUBS,
+      "Cannot create more than one " + model + " hub at the same time");
    f2(Errors::PRE_INIT_FAILURE,
       "Could not initialize " + model +
           " because a temporary .ini file could not be created");
@@ -149,6 +152,9 @@ class DCCDCUHubDevice : public HubBase<DCCDCUHubDevice<Model>> {
    std::shared_ptr<DCCDCUInterface<Model>> interface_;
    std::string deviceName_;
 
+   // Forbid simultaneous creation of more than one instance (per model).
+   static int instanceCount_;
+
  public:
    DCCDCUHubDevice(std::string name) : deviceName_(std::move(name)) {
       RegisterErrorMessages<Model>([this](int code, const char* text) {
@@ -168,6 +174,11 @@ class DCCDCUHubDevice : public HubBase<DCCDCUHubDevice<Model>> {
    }
 
    auto Initialize() -> int final {
+      if (instanceCount_ >= 1) {
+         return static_cast<int>(Errors::CANNOT_CREATE_TWO_HUBS);
+      }
+      ++instanceCount_;
+
       const bool simulate = RequestedSimulation();
       const auto moduleSet = RequestedModuleSet();
       interface_ =
@@ -199,6 +210,7 @@ class DCCDCUHubDevice : public HubBase<DCCDCUHubDevice<Model>> {
 
    auto Shutdown() -> int final {
       interface_.reset();
+      --instanceCount_;
       return DEVICE_OK;
    }
 
@@ -249,6 +261,8 @@ class DCCDCUHubDevice : public HubBase<DCCDCUHubDevice<Model>> {
           "Simulated", interface_->IsSimulating() ? "Yes" : "No", true);
    }
 };
+
+template <DCCOrDCU Model> int DCCDCUHubDevice<Model>::instanceCount_ = 0;
 
 template <DCCOrDCU Model>
 class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {

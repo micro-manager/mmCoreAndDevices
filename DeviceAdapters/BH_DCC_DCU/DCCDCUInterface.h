@@ -191,6 +191,8 @@ template <DCCOrDCU Model> class DCCDCUModule {
 extern std::mutex apiMutex;
 
 // Used with std::shared_ptr.
+// Because the destructor calls DCC(U)_close(), creating more than one instance
+// for the same model will lead to crashes.
 template <DCCOrDCU Model>
 class DCCDCUInterface
     : public std::enable_shared_from_this<DCCDCUInterface<Model>> {
