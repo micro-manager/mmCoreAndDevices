@@ -185,14 +185,16 @@ template <DCCOrDCU Model> class DCCDCUModule {
    }
 };
 
+// Guard all interaction with DCC/DCU API. This mutex is shared between
+// DCCDCUInterface<DCC> and DCCDCUInterface<DCU>, since there is no thread
+// safety guarantee whatsoever by the BH DCC DLL.
+extern std::mutex apiMutex;
+
 // Used with std::shared_ptr.
 template <DCCOrDCU Model>
 class DCCDCUInterface
     : public std::enable_shared_from_this<DCCDCUInterface<Model>> {
    using Config = DCCDCUConfig<Model>;
-
-   // Guard all interaction with DCC/DCU API after construction.
-   std::mutex mutex_;
 
    bool failedBeforeInit_ = false;
    short initError_ = 0;
@@ -204,7 +206,7 @@ class DCCDCUInterface
    bool modulesCreated_ = false;
 
    std::thread pollingThread_;
-   std::mutex pollingMutex_; // Not to be held at the same time as mutex_
+   std::mutex pollingMutex_; // Not to be held at the same time as apiMutex
    std::condition_variable pollingCondVar_;
    bool stopPollingRequested_ = false;
 
@@ -260,12 +262,12 @@ class DCCDCUInterface
 
       StopAndJoinPollingThread();
 
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       (void)Config::Close();
    }
 
    auto IsSimulating() -> bool {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       return Config::GetMode() != 0;
    }
 
@@ -291,12 +293,12 @@ class DCCDCUInterface
    }
 
    auto IsModuleActive(short moduleNo) -> bool {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       return Config::TestIfActive(moduleNo) != 0;
    }
 
    auto GetModuleInitStatus(short moduleNo, short& error) -> short {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       short ret{};
       error = Config::GetInitStatus(moduleNo, &ret);
       return ret;
@@ -304,7 +306,7 @@ class DCCDCUInterface
 
    auto GetModuleInfo(short moduleNo, short& error) ->
        typename Config::ModInfoType {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       typename Config::ModInfoType ret{};
       error = Config::GetModuleInfo(moduleNo, &ret);
       return ret;
@@ -313,7 +315,7 @@ class DCCDCUInterface
    auto GetConnectorParameter(short moduleNo, short connNo,
                               ConnectorFeature feature, short& error)
        -> float {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       float ret{};
       error = Config::GetParameter(
           moduleNo, Config::ConnectorParameterId(connNo, feature), &ret);
@@ -323,33 +325,33 @@ class DCCDCUInterface
    void SetConnectorParameter(short moduleNo, short connNo,
                               ConnectorFeature feature, float value,
                               short& error) {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       error = Config::SetParameter(
           moduleNo, Config::ConnectorParameterId(connNo, feature), true,
           value);
    }
 
    auto GetGainHVLimit(short moduleNo, short connNo, short& error) -> float {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       short shortLimit{};
       error = Config::GetGainHVLimit(moduleNo, connNo, &shortLimit);
       return static_cast<float>(shortLimit);
    }
 
    void EnableAllOutputs(short moduleNo, bool enable, short& error) {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       error = Config::EnableAllOutputs(moduleNo, enable ? 1 : 0);
    }
 
    void EnableConnectorOutputs(short moduleNo, short connNo, bool enable,
                                short& error) {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       error = Config::EnableOutput(moduleNo, connNo, enable ? 1 : 0);
    }
 
    void ClearAllOverloads(short moduleNo, short& error) {
       {
-         std::lock_guard<std::mutex> lock(mutex_);
+         std::lock_guard<std::mutex> lock(apiMutex);
          error = Config::ClearAllOverloads(moduleNo);
       }
       PollSoon();
@@ -357,14 +359,14 @@ class DCCDCUInterface
 
    void ClearConnectorOverload(short moduleNo, short connNo, short& error) {
       {
-         std::lock_guard<std::mutex> lock(mutex_);
+         std::lock_guard<std::mutex> lock(apiMutex);
          error = Config::ClearOverload(moduleNo, connNo);
       }
       PollSoon();
    }
 
    auto IsOverloaded(short moduleNo, short connNo, short& error) -> bool {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       short state{};
       error = Config::GetOverloadState(moduleNo, &state);
       return state & (1 << connNo);
@@ -372,7 +374,7 @@ class DCCDCUInterface
 
    auto IsCoolerCurrentLimitReached(short moduleNo, short connNo, short& error)
        -> bool {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(apiMutex);
       short state{};
       error = Config::GetCurrLmtState(moduleNo, &state);
       return state & (1 << connNo);
@@ -423,7 +425,7 @@ class DCCDCUInterface
             std::array<short, MaxNrModules> overload;
             std::array<short, MaxNrModules> currLmt;
             {
-               std::lock_guard<std::mutex> lock(mutex_);
+               std::lock_guard<std::mutex> lock(apiMutex);
                for (short i = 0; i < MaxNrModules; ++i) {
                   if (not modulesToPoll.test(i)) {
                      overload[i] = currLmt[i] = 0;

@@ -17,6 +17,7 @@
     <ClInclude Include="DCCDCUInterface.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DCCDCUInterface.cpp" />
     <ClCompile Include="DCUAdapter.cpp" />
   </ItemGroup>
   <ItemGroup>
