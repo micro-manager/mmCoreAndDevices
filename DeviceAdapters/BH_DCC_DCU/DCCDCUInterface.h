@@ -239,6 +239,7 @@ class DCCDCUInterface
       if (iniFileName.empty()) {
          failedBeforeInit_ = true;
       } else {
+         std::lock_guard<std::mutex> lock(apiMutex);
          initError_ = Config::Init(iniFileName.c_str());
       }
 
@@ -246,9 +247,12 @@ class DCCDCUInterface
       // have initialized successfully (not entirely clear from documentation).
 
       std::bitset<MaxNrModules> modulesToPoll;
-      for (short i = 0; i < MaxNrModules; ++i) {
-         if (Config::TestIfActive(i)) {
-            modulesToPoll.set(i);
+      {
+         std::lock_guard<std::mutex> lock(apiMutex);
+         for (short i = 0; i < MaxNrModules; ++i) {
+            if (Config::TestIfActive(i)) {
+               modulesToPoll.set(i);
+            }
          }
       }
       StartPollingThread(modulesToPoll);
