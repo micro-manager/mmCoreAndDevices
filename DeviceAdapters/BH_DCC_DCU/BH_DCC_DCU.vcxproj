@@ -11,13 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DCCDCUAdapter.h" />
     <ClInclude Include="DCCDCUConfig.h" />
     <ClInclude Include="DCCDCUDevices.h" />
     <ClInclude Include="DCCDCUInterface.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DCCAdapter.cpp" />
+    <ClCompile Include="DCCDCUAdapter.cpp" />
     <ClCompile Include="DCCDCUInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -31,6 +30,7 @@
     <ProjectGuid>{9ae989af-f6b7-45d7-983b-a7629fbf8f1b}</ProjectGuid>
     <RootNamespace>BHDCC</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>BH_DCC_DCU</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

@@ -24,12 +24,9 @@
     <ClInclude Include="DCCDCUDevices.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DCCDCUAdapter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DCCAdapter.cpp">
+    <ClCompile Include="DCCDCUAdapter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DCCDCUInterface.cpp">

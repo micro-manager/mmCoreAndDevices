@@ -13,25 +13,37 @@
 // IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY
 // DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-// This file to be included after defining Model to
-// DCCOrDCU::DCC or DCCOrDCU::DCU.
+#include "DCCDCUDevices.h"
 
 #include "ModuleInterface.h"
 
 MODULE_API void InitializeModuleData() {
-   RegisterDevice(HubDeviceName<Model>().c_str(), MM::HubDevice,
-                  ModelDescription<Model>().c_str());
+   RegisterDevice(HubDeviceName<DCCOrDCU::DCC>().c_str(), MM::HubDevice,
+                  ModelDescription<DCCOrDCU::DCC>().c_str());
+   RegisterDevice(HubDeviceName<DCCOrDCU::DCU>().c_str(), MM::HubDevice,
+                  ModelDescription<DCCOrDCU::DCU>().c_str());
 }
 
 MODULE_API auto CreateDevice(const char* deviceName) -> MM::Device* {
    if (deviceName == nullptr)
       return nullptr;
+
    const std::string name = deviceName;
-   if (name == HubDeviceName<Model>())
-      return new DCCDCUHubDevice<Model>(name);
-   const short moduleNo = DeviceNameToModuleNo<Model>(name);
-   if (moduleNo >= 0)
-      return new DCCDCUModuleDevice<Model>(name, moduleNo);
+
+   if (name == HubDeviceName<DCCOrDCU::DCC>())
+      return new DCCDCUHubDevice<DCCOrDCU::DCC>(name);
+
+   if (name == HubDeviceName<DCCOrDCU::DCU>())
+      return new DCCDCUHubDevice<DCCOrDCU::DCU>(name);
+
+   const short dccModuleNo = DeviceNameToModuleNo<DCCOrDCU::DCC>(name);
+   if (dccModuleNo >= 0)
+      return new DCCDCUModuleDevice<DCCOrDCU::DCC>(name, dccModuleNo);
+
+   const short dcuModuleNo = DeviceNameToModuleNo<DCCOrDCU::DCU>(name);
+   if (dcuModuleNo >= 0)
+      return new DCCDCUModuleDevice<DCCOrDCU::DCU>(name, dcuModuleNo);
+
    return nullptr;
 }
 
