@@ -145,7 +145,7 @@ MicroFPGAHub::MicroFPGAHub() :
 	SetErrorText(ERR_PORT_OPEN_FAILED, "Failed to open MicroFPGA USB device.");
 	SetErrorText(ERR_BOARD_NOT_FOUND, "Did not find an MicroFPGA board with the correct firmware. Is the MicroFPGA board connected to port?");
 	SetErrorText(ERR_NO_PORT_SET, "Hub Device not found. The MicroFPGA Hub device is needed to create this device.");
-	SetErrorText(ERR_VERSION_MISMATCH, "The firmware version on the board is not compatible with this adapter. Please use firmware version 3.");
+	SetErrorText(ERR_VERSION_MISMATCH, "Wrong baudrate or incompatible firmware version. Please use the correct baud-rate (default 57600) and firmware version 3.");
 	SetErrorText(ERR_UNKNOWN_ID, "The board ID is unknown.");
 	SetErrorText(ERR_COMMAND_UNKNOWN, "An unknown command was sent to MicroFPGA.");
 
@@ -191,7 +191,7 @@ MM::DeviceDetectionStatus MicroFPGAHub::DetectDevice(void)
 
 			// device specific default communication parameters
 			GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_Handshaking, "0");
-			GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_BaudRate, "9600" );
+			GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_BaudRate, "57600" );
 			GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_StopBits, "1");
 			GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", "500.0");
 			GetCoreCallback()->SetDeviceProperty(port_.c_str(), "DelayBetweenCharsMs", "0");
