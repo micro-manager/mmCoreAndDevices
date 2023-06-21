@@ -77,9 +77,9 @@ public:
 	int OnDeviceAddressY (MM::PropertyBase* pProp, MM::ActionType eAct); // Composite XY (two controllers)
 
 private:
-	int SendXYMoveCommand(std::string type, long x, long y) const;
-	int OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct) const;
-	int OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct) const;
+	int SendXYMoveCommand(std::string type, long x, long y);
+	int OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct);
 	void GetOrientation(bool& mirrorX, bool& mirrorY);
 
 	inline bool IsSingleController() const
