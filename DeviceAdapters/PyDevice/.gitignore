@@ -2,3 +2,4 @@ AutoConfig.props
 CoreLogs
 *.log
 *.idea
+__pycache__
