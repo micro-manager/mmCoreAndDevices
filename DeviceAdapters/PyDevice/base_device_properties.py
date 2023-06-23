@@ -1,14 +1,27 @@
 def parse_options(obj, values):
+    """In this function, we set the properties. 
+    Because on_update functions may be interdependent on other properties, the property values are initialised first,
+    before actually making the properties"""
     for p in type(obj).__dict__.items():
         name = p[0]
         pp = p[1]
-        if isinstance(pp, base_property):  # test if this is one of the special property types (must have _name field)
+        if isinstance(pp, base_property):
             if name in values:
                 value = values[name]
             else:
                 value = pp.default
-            setattr(obj, name, value)
 
+            setattr(obj, "_" + name, value)  # Set the variable as an attribute of the object
+            
+    for p in type(obj).__dict__.items():
+        name = p[0]
+        pp = p[1]
+        if isinstance(pp, base_property):
+            if name in values:
+                value = values[name]
+            else:
+                value = pp.default
+            setattr(obj, name, value)  # Set the value using setattr(obj, name, value)
 
 class base_property(property):
     def __init__(self, fget=None, fset=None, fdel=None, doc=None, default=None, min=None, max=None, on_update=None,
