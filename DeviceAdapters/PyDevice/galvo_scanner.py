@@ -72,9 +72,9 @@ class Camera:
 
 
     # functional
-    input_mapping = string_property(default='Dev2/ai0')
-    xmirror_mapping = string_property(default='Dev2/ao0')
-    ymirror_mapping = string_property(default='Dev2/ao1')
+    input_mapping = string_property(default='Dev4/ai24')
+    xmirror_mapping = string_property(default='Dev4/ao2')
+    ymirror_mapping = string_property(default='Dev4/ao3')
 
 
 
