@@ -127,14 +127,28 @@ class VimbaXApi {
   decltype(VmbCaptureQueueFlush)* VmbCaptureQueueFlush_t = nullptr;
   decltype(VmbFrameRevokeAll)* VmbFrameRevokeAll_t = nullptr;
   decltype(VmbFeatureCommandRun)* VmbFeatureCommandRun_t = nullptr;
-  decltype(VmbFeatureEnumSet)* VmbFeatureEnumSet_t = nullptr;
   decltype(VmbFeaturesList)* VmbFeaturesList_t = nullptr;
   decltype(VmbFeatureBoolGet)* VmbFeatureBoolGet_t = nullptr;
+  decltype(VmbFeatureBoolSet)* VmbFeatureBoolSet_t = nullptr;
   decltype(VmbFeatureEnumGet)* VmbFeatureEnumGet_t = nullptr;
+  decltype(VmbFeatureEnumSet)* VmbFeatureEnumSet_t = nullptr;
   decltype(VmbFeatureFloatGet)* VmbFeatureFloatGet_t = nullptr;
+  decltype(VmbFeatureFloatSet)* VmbFeatureFloatSet_t = nullptr;
   decltype(VmbFeatureIntGet)* VmbFeatureIntGet_t = nullptr;
+  decltype(VmbFeatureIntSet)* VmbFeatureIntSet_t = nullptr;
   decltype(VmbFeatureStringGet)* VmbFeatureStringGet_t = nullptr;
+  decltype(VmbFeatureStringSet)* VmbFeatureStringSet_t = nullptr;
   decltype(VmbChunkDataAccess)* VmbChunkDataAccess_t = nullptr;
+  decltype(VmbFeatureEnumRangeQuery)* VmbFeatureEnumRangeQuery_t = nullptr;
+  decltype(VmbFeatureIntRangeQuery)* VmbFeatureIntRangeQuery_t = nullptr;
+  decltype(VmbFeatureStringMaxlengthQuery)* VmbFeatureStringMaxlengthQuery_t =
+      nullptr;
+  decltype(VmbFeatureRawLengthQuery)* VmbFeatureRawLengthQuery_t = nullptr;
+  decltype(VmbFeatureInfoQuery)* VmbFeatureInfoQuery_t = nullptr;
+  decltype(VmbFeatureFloatRangeQuery)* VmbFeatureFloatRangeQuery_t = nullptr;
+  decltype(VmbFeatureInvalidationRegister)* VmbFeatureInvalidationRegister_t =
+      nullptr;
+  decltype(VmbFeatureAccessQuery)* VmbFeatureAccessQuery_t = nullptr;
   // PRIVATE
  private:
   LibLoader m_sdk;  //<! SDK library

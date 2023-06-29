@@ -20,25 +20,39 @@
 #define ALLIEDVISIONCAMERA_H
 
 #include <array>
+#include <functional>
+#include <unordered_map>
 
 #include "DeviceBase.h"
 #include "Loader/LibLoader.h"
 
 /**
  * @brief Pointer to the Vimba API
-*/
+ */
 static std::unique_ptr<VimbaXApi> g_api;
+
+///////////////////////////////////////////////////////////////////////////////
+// STATIC FEATURE NAMES (FROM VIMBA)
+///////////////////////////////////////////////////////////////////////////////
+static constexpr const char* g_PixelFormatFeature = "PixelFormat";
+static constexpr const char* g_ExposureFeature = "ExposureTime";
+static constexpr const char* g_BinningHorizontalFeature = "BinningHorizontal";
+static constexpr const char* g_BinningVerticalFeature = "BinningVertical";
+static constexpr const char* g_Width = "Width";
+static constexpr const char* g_Height = "Height";
 
 /**
  * @brief Main Allied Vision Camera class
-*/
+ */
 class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
+  ///////////////////////////////////////////////////////////////////////////////
   // PUBLIC
+  ///////////////////////////////////////////////////////////////////////////////
  public:
   /**
    * @brief Contructor of Allied Vision Camera
    * @param[in] deviceName Device name
-  */
+   */
   AlliedVisionCamera(const char* deviceName);
   /**
    * @brief Allied Vision Camera destructor
@@ -48,10 +62,12 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   /**
    * @brief Get connected camera list
    * @return VmbError_t
-  */
+   */
   static VmbError_t getCamerasList();
 
-  // API Methods
+  ///////////////////////////////////////////////////////////////////////////////
+  // uMANAGER API METHODS
+  ///////////////////////////////////////////////////////////////////////////////
   int Initialize() override;
   int Shutdown() override;
   const unsigned char* GetImageBuffer() override;
@@ -77,56 +93,122 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   int StopSequenceAcquisition() override;
   bool IsCapturing() override;
 
-  // Callbacks
-  int OnPixelTypeChanged(MM::PropertyBase* pProp, MM::ActionType eAct);
-  int OnBinningChanged(MM::PropertyBase* pProp, MM::ActionType eAct);
+  ///////////////////////////////////////////////////////////////////////////////
+  // uMANAGER CALLBACKS
+  ///////////////////////////////////////////////////////////////////////////////
+  int OnPixelType(MM::PropertyBase* pProp,
+                  MM::ActionType eAct);  //!<< PixelType property callback
+  int OnBinning(MM::PropertyBase* pProp,
+                MM::ActionType eAct);  //!<< Binning property callback
+  int OnExposure(MM::PropertyBase* pProp,
+                 MM::ActionType eAct);  //!<< Exposure property callback
+  int onProperty(MM::PropertyBase* pProp,
+                 MM::ActionType eAct);  //!<< General property callback
 
-  // Static variables
-  static constexpr const VmbUint8_t MAX_FRAMES = 7;
-
+  ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
+  ///////////////////////////////////////////////////////////////////////////////
  private:
+  // Static variables
+  static constexpr const VmbUint8_t MAX_FRAMES =
+      7;  //!<< Max frame number in the buffer
+
   /**
    * @brief Setup error messages for Vimba API
-  */
+   */
   void setApiErrorMessages();
 
   /**
    * @brief Resize all buffers for image frames
    * @return VmbError_t
-  */
+   */
   VmbError_t resizeImageBuffer();
 
   /**
    * @brief Setup uManager properties from Vimba features
    * @return VmbError_t
-  */
+   */
   VmbError_t setupProperties();
 
   /**
    * @brief Helper method to create single uManager property from Vimba feature
-   * @param[in] feature Pointer to the Vimba feature 
+   * @param[in] feature Pointer to the Vimba feature
    * @return VmbError_t
-  */
-  VmbError_t createPropertyFromFeature(const VmbFeatureInfo_t* feature);
+   */
+  /**
+   * @brief Helper method to create single uManager property from Vimba feature
+   * @param[in] feature             Pointer to the Vimba feature
+   * @param[in] callback            uManager callback for given property
+   * @param[in] propertyName        uManager propery name (if differs from
+   * feature name). By default nullptr
+   * @param[in] skipVmbCallback     If set to true, VmbCallback will not be
+   * added to this feature. By default false
+   * @return VmbError_t
+   */
+  VmbError_t createPropertyFromFeature(const VmbFeatureInfo_t* feature,
+                                       MM::ActionFunctor* callback,
+                                       const char* propertyName = nullptr,
+                                       bool skipVmbCallback = false);
+
+  /**
+   * @brief Helper method to create core properties from feature.
+   * @return VmbError_t
+   *
+   * It is used to create properties which names does not match to the Vimba
+   * feature. As example these are Binning, Exposure, PixelType
+   */
+  VmbError_t createCoreProperties();
+
+  /**
+   * @brief Helper method to set allowed values for given property, based on
+   * its feature type
+   * @param[in] feature         Vimba feature name
+   * @param[in] propertyName    uManager propery name (if differs from
+   * feature name). By default nullptr
+   * @return
+   */
+  VmbError_t setAllowedValues(const VmbFeatureInfo_t* feature,
+                              const char* propertyName = nullptr);
 
   /**
    * @brief Insert ready frame to the uManager
    * @param[in] frame   Pointer to the frame
-  */
+   */
   void insertFrame(VmbFrame_t* frame);
 
+  /**
+   * @brief Method to get feature value, based on its type. Feature value is
+   * always a string type.
+   * @param[in] featureInfo     Feature info object
+   * @param[in] featureName     Feature name
+   * @param[out] value          Value of feature, read from device
+   * @return VmbError_t
+   */
+  VmbError_t getFeatureValue(VmbFeatureInfo_t* featureInfo,
+                             const char* featureName, std::string& value);
+
+  /**
+   * @brief Method to set a feature value, bases on its type. Feature value is
+   * always a string type.
+   * @param[in] featureInfo     Feature info object
+   * @param[in] featureName     Feature name
+   * @param[in] value           Value of feature to be set
+   * @return VmbError_t
+   */
+  VmbError_t setFeatureValue(VmbFeatureInfo_t* featureInfo,
+                             const char* featureName, std::string& value);
+
+  ///////////////////////////////////////////////////////////////////////////////
   // MEMBERS
-  VmbHandle_t m_handle;                         //<! Device handle
-  std::string m_cameraName;                     //<! Camera name
-  std::array<VmbFrame_t, MAX_FRAMES> m_frames;  //<! Frames array
-  std::array<VmbUint8_t*, MAX_FRAMES> m_buffer; //<! Images buffers
+  ///////////////////////////////////////////////////////////////////////////////
+  VmbHandle_t m_handle;                          //<! Device handle
+  std::string m_cameraName;                      //<! Camera name
+  std::array<VmbFrame_t, MAX_FRAMES> m_frames;   //<! Frames array
+  std::array<VmbUint8_t*, MAX_FRAMES> m_buffer;  //<! Images buffers
 
-  VmbUint32_t m_bufferSize;                     //<! Buffer size (the same for every frame)
-  VmbInt64_t m_imageWidth;                      //<! Image width size
-  VmbInt64_t m_imageHeight;                     //<! Image heigh size
-
-  bool m_isAcquisitionRunning;                  //<! Sequence acquisition status (true if running)
+  VmbUint32_t m_bufferSize;     //<! Buffer size (the same for every frame)
+  bool m_isAcquisitionRunning;  //<! Sequence acquisition status (true if
+                                // running)
 };
 
 #endif
