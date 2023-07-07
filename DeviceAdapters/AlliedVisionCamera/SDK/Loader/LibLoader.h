@@ -29,7 +29,9 @@
  * @brief Wrapper for single Windows process
  */
 class ProcWrapper {
+  ///////////////////////////////////////////////////////////////////////////////
   // PUBLIC
+  ///////////////////////////////////////////////////////////////////////////////
  public:
   /**
    * @brief Constructor of wrapper
@@ -44,7 +46,9 @@ class ProcWrapper {
   operator T*() const {
     return reinterpret_cast<T*>(m_funPtr);
   }
+  ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
+  ///////////////////////////////////////////////////////////////////////////////
  private:
   FARPROC m_funPtr;  //<! Function pointer
 };
@@ -53,7 +57,9 @@ class ProcWrapper {
  * @brief Class responsible for loading particular library
  */
 class LibLoader {
+  ///////////////////////////////////////////////////////////////////////////////
   // PUBLIC
+  ///////////////////////////////////////////////////////////////////////////////
  public:
   /**
    * @brief Constructor of lib loader
@@ -80,9 +86,10 @@ class LibLoader {
    * @return True if library is initialized
    */
   bool isInitialized() const;
+  ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
+  ///////////////////////////////////////////////////////////////////////////////
  private:
-  // MEMBERS
   const char* m_libName;  //<! Library name
   const char* m_libPath;  //<! Library path
   HMODULE m_module;       //<! Windows HMODULE object for loaded library
@@ -94,7 +101,9 @@ class LibLoader {
  * functions to be called
  */
 class VimbaXApi {
+  ///////////////////////////////////////////////////////////////////////////////
   // PUBLIC
+  ///////////////////////////////////////////////////////////////////////////////
  public:
   /**
    * @brief Constructor of class
@@ -149,7 +158,13 @@ class VimbaXApi {
   decltype(VmbFeatureInvalidationRegister)* VmbFeatureInvalidationRegister_t =
       nullptr;
   decltype(VmbFeatureAccessQuery)* VmbFeatureAccessQuery_t = nullptr;
+  decltype(VmbFeatureIntIncrementQuery)* VmbFeatureIntIncrementQuery_t =
+      nullptr;
+  decltype(VmbFeatureFloatIncrementQuery)* VmbFeatureFloatIncrementQuery_t =
+      nullptr;
+  ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
+  ///////////////////////////////////////////////////////////////////////////////
  private:
   LibLoader m_sdk;  //<! SDK library
 };

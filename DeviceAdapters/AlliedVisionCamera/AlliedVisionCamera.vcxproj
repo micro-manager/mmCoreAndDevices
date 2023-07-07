@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AlliedVisionCamera.h" />
+    <ClInclude Include="PropertyItem.h" />
     <ClInclude Include="SDK\Loader\Constants.h" />
     <ClInclude Include="SDK\Loader\LibLoader.h" />
     <ClInclude Include="SDK\VmbC\VmbC.h" />
@@ -31,6 +32,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AlliedVisionCamera.cpp" />
+    <ClCompile Include="PropertyItem.cpp" />
     <ClCompile Include="SDK\Loader\LibLoader.cpp" />
   </ItemGroup>
   <ItemGroup>

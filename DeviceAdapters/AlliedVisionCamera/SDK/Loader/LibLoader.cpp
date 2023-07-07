@@ -50,16 +50,22 @@ VimbaXApi::VimbaXApi() : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()) {
     VmbFeatureStringGet_t = m_sdk.resolveFunction("VmbFeatureStringGet");
     VmbFeatureStringSet_t = m_sdk.resolveFunction("VmbFeatureStringSet");
     VmbChunkDataAccess_t = m_sdk.resolveFunction("VmbChunkDataAccess");
-    VmbFeatureEnumRangeQuery_t = m_sdk.resolveFunction("VmbFeatureEnumRangeQuery");
+    VmbFeatureEnumRangeQuery_t =
+        m_sdk.resolveFunction("VmbFeatureEnumRangeQuery");
     VmbFeatureIntRangeQuery_t =
         m_sdk.resolveFunction("VmbFeatureIntRangeQuery");
-    VmbFeatureStringMaxlengthQuery_t = m_sdk.resolveFunction("VmbFeatureStringMaxlengthQuery");
+    VmbFeatureStringMaxlengthQuery_t =
+        m_sdk.resolveFunction("VmbFeatureStringMaxlengthQuery");
     VmbFeatureInfoQuery_t = m_sdk.resolveFunction("VmbFeatureInfoQuery");
     VmbFeatureFloatRangeQuery_t =
         m_sdk.resolveFunction("VmbFeatureFloatRangeQuery");
     VmbFeatureInvalidationRegister_t =
         m_sdk.resolveFunction("VmbFeatureInvalidationRegister");
     VmbFeatureAccessQuery_t = m_sdk.resolveFunction("VmbFeatureAccessQuery");
+    VmbFeatureIntIncrementQuery_t =
+        m_sdk.resolveFunction("VmbFeatureIntIncrementQuery");
+    VmbFeatureFloatIncrementQuery_t =
+        m_sdk.resolveFunction("VmbFeatureFloatIncrementQuery");
   }
 }
 

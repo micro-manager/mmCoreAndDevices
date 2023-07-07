@@ -25,6 +25,7 @@
 
 #include "DeviceBase.h"
 #include "Loader/LibLoader.h"
+#include "PropertyItem.h"
 
 /**
  * @brief Pointer to the Vimba API
@@ -41,6 +42,11 @@ static constexpr const char* g_BinningVerticalFeature = "BinningVertical";
 static constexpr const char* g_Width = "Width";
 static constexpr const char* g_Height = "Height";
 
+///////////////////////////////////////////////////////////////////////////////
+// STATIC VARIABLES
+///////////////////////////////////////////////////////////////////////////////
+static constexpr const char* g_True = "True";
+static constexpr const char* g_False = "False";
 /**
  * @brief Main Allied Vision Camera class
  */
@@ -100,8 +106,6 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
                   MM::ActionType eAct);  //!<< PixelType property callback
   int OnBinning(MM::PropertyBase* pProp,
                 MM::ActionType eAct);  //!<< Binning property callback
-  int OnExposure(MM::PropertyBase* pProp,
-                 MM::ActionType eAct);  //!<< Exposure property callback
   int onProperty(MM::PropertyBase* pProp,
                  MM::ActionType eAct);  //!<< General property callback
 
@@ -132,43 +136,23 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
 
   /**
    * @brief Helper method to create single uManager property from Vimba feature
-   * @param[in] feature Pointer to the Vimba feature
-   * @return VmbError_t
-   */
-  /**
-   * @brief Helper method to create single uManager property from Vimba feature
    * @param[in] feature             Pointer to the Vimba feature
    * @param[in] callback            uManager callback for given property
-   * @param[in] propertyName        uManager propery name (if differs from
-   * feature name). By default nullptr
-   * @param[in] skipVmbCallback     If set to true, VmbCallback will not be
-   * added to this feature. By default false
    * @return VmbError_t
    */
   VmbError_t createPropertyFromFeature(const VmbFeatureInfo_t* feature,
-                                       MM::ActionFunctor* callback,
-                                       const char* propertyName = nullptr,
-                                       bool skipVmbCallback = false);
-
-  /**
-   * @brief Helper method to create core properties from feature.
-   * @return VmbError_t
-   *
-   * It is used to create properties which names does not match to the Vimba
-   * feature. As example these are Binning, Exposure, PixelType
-   */
-  VmbError_t createCoreProperties();
+                                       MM::ActionFunctor* callback);
 
   /**
    * @brief Helper method to set allowed values for given property, based on
    * its feature type
    * @param[in] feature         Vimba feature name
    * @param[in] propertyName    uManager propery name (if differs from
-   * feature name). By default nullptr
+   * feature name)
    * @return
    */
   VmbError_t setAllowedValues(const VmbFeatureInfo_t* feature,
-                              const char* propertyName = nullptr);
+                              const char* propertyName);
 
   /**
    * @brief Insert ready frame to the uManager
@@ -198,6 +182,35 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   VmbError_t setFeatureValue(VmbFeatureInfo_t* featureInfo,
                              const char* featureName, std::string& value);
 
+  /**
+   * @brief Helper method to map feature name into property name of uManager
+   * @param[in] feature     Vimba Feature name
+   * @param property        uManager property name
+   */
+  void mapFeatureNameToPropertyName(const char* feature,
+                                    std::string& property) const;
+
+  /**
+   * @brief Helper method to map uManager property in Vimba feature or features
+   * name
+   * @param[in] property    uManager property name
+   * @param featureNames    Vimba feature or features name
+   */
+  void mapPropertyNameToFeatureNames(
+      const char* property, std::vector<std::string>& featureNames) const;
+
+  /**
+   * @brief In case trying to set invalid value, adjust it to the closest with
+   * inceremntal step
+   * @param[in] min     Minimum for given property
+   * @param[in] max     Maximum for given property
+   * @param[in] step    Incremental step
+   * @param[in] propertyValue   Value that was tried to be set
+   * @return Adjusted value resresented as a string
+   */
+  std::string adjustValue(double min, double max, double step,
+                          double propertyValue) const;
+
   ///////////////////////////////////////////////////////////////////////////////
   // MEMBERS
   ///////////////////////////////////////////////////////////////////////////////
@@ -209,6 +222,12 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   VmbUint32_t m_bufferSize;     //<! Buffer size (the same for every frame)
   bool m_isAcquisitionRunning;  //<! Sequence acquisition status (true if
                                 // running)
+  std::unordered_map<std::string, PropertyItem>
+      m_propertyItems;  //!< Internal map of properties
+  static const std::unordered_map<std::string, std::string>
+      m_featureToProperty;  //!< Map of features name into uManager properties
+  static const std::unordered_multimap<std::string, std::string>
+      m_propertyToFeature;  //!< Map of uManager properties into Vimba features
 };
 
 #endif

@@ -42,12 +42,18 @@
     <ClInclude Include="SDK\Loader\Constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PropertyItem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AlliedVisionCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SDK\Loader\LibLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PropertyItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
