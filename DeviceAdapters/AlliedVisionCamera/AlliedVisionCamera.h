@@ -47,6 +47,9 @@ static constexpr const char* g_Height = "Height";
 ///////////////////////////////////////////////////////////////////////////////
 static constexpr const char* g_True = "True";
 static constexpr const char* g_False = "False";
+static constexpr const char* g_Execute = "Execute";
+static constexpr const char* g_Command = "Command";
+
 /**
  * @brief Main Allied Vision Camera class
  */

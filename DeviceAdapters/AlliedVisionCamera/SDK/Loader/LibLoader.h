@@ -162,6 +162,7 @@ class VimbaXApi {
       nullptr;
   decltype(VmbFeatureFloatIncrementQuery)* VmbFeatureFloatIncrementQuery_t =
       nullptr;
+  decltype(VmbFeatureCommandIsDone)* VmbFeatureCommandIsDone_t = nullptr;
   ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
   ///////////////////////////////////////////////////////////////////////////////

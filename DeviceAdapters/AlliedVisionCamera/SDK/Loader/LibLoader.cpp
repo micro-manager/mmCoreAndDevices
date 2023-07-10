@@ -66,6 +66,8 @@ VimbaXApi::VimbaXApi() : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()) {
         m_sdk.resolveFunction("VmbFeatureIntIncrementQuery");
     VmbFeatureFloatIncrementQuery_t =
         m_sdk.resolveFunction("VmbFeatureFloatIncrementQuery");
+    VmbFeatureCommandIsDone_t =
+        m_sdk.resolveFunction("VmbFeatureCommandIsDone");
   }
 }
 

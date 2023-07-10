@@ -651,7 +651,8 @@ VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t* featureInfo,
       break;
     }
     case VmbFeatureDataCommand:
-      // TODO
+      value = std::string(g_Command);
+      break;
     case VmbFeatureDataUnknown:
     case VmbFeatureDataRaw:
     case VmbFeatureDataNone:
@@ -667,6 +668,8 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
                                                std::string& value) {
   VmbError_t err = VmbErrorSuccess;
   std::stringstream ss(value);
+  bool isDone = false;
+  VmbUint32_t maxLen = 0;
 
   switch (featureInfo->featureDataType) {
     case VmbFeatureDataBool: {
@@ -691,11 +694,33 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
       break;
     }
     case VmbFeatureDataString: {
-      err = g_api->VmbFeatureStringSet_t(m_handle, featureName, value.c_str());
+      err = g_api->VmbFeatureStringMaxlengthQuery_t(m_handle, featureName,
+                                                    &maxLen);
+      if (err != VmbErrorSuccess) {
+        LogMessageCode(err);
+        break;
+      }
+      if (value.size() > maxLen) {
+        err = VmbErrorInvalidValue;
+      } else {
+        err =
+            g_api->VmbFeatureStringSet_t(m_handle, featureName, value.c_str());
+      }
       break;
     }
     case VmbFeatureDataCommand:
-      // TODO
+      err = g_api->VmbFeatureCommandRun_t(m_handle, featureName);
+      if (err != VmbErrorSuccess) {
+        break;
+      }
+      while (!isDone) {
+        err = g_api->VmbFeatureCommandIsDone_t(m_handle, featureName, &isDone);
+        if (err != VmbErrorSuccess) {
+          LogMessageCode(err);
+          break;
+        }
+      }
+      break;
     case VmbFeatureDataUnknown:
     case VmbFeatureDataRaw:
     case VmbFeatureDataNone:
@@ -845,11 +870,13 @@ VmbError_t AlliedVisionCamera::setAllowedValues(const VmbFeatureInfo_t* feature,
       err = SetPropertyLimits(propertyName, min, max);
       break;
     }
-    case VmbFeatureDataString: {
+    case VmbFeatureDataCommand: {
+      AddAllowedValue(propertyName, g_Command);
+      AddAllowedValue(propertyName, g_Execute);
       break;
     }
+    case VmbFeatureDataString:
     case VmbFeatureDataRaw:
-    case VmbFeatureDataCommand:
     case VmbFeatureDataNone:
     default:
       // nothing
