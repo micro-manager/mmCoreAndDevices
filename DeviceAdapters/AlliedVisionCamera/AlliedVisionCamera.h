@@ -41,6 +41,10 @@ static constexpr const char* g_BinningHorizontalFeature = "BinningHorizontal";
 static constexpr const char* g_BinningVerticalFeature = "BinningVertical";
 static constexpr const char* g_Width = "Width";
 static constexpr const char* g_Height = "Height";
+static constexpr const char* g_OffsetX = "OffsetX";
+static constexpr const char* g_OffsetY = "OffsetY";
+static constexpr const char* g_WidthMax = "WidthMax";
+static constexpr const char* g_HeightMax = "HeightMax";
 
 ///////////////////////////////////////////////////////////////////////////////
 // STATIC VARIABLES
@@ -173,6 +177,14 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
    */
   VmbError_t getFeatureValue(VmbFeatureInfo_t* featureInfo,
                              const char* featureName, std::string& value);
+  /**
+   * @brief Method to get feature value, based on its type. Feature value is
+   * always a string type.
+   * @param[in] featureName     Feature name
+   * @param[out] value          Value of feature, read from device
+   * @return VmbError_t
+   */
+  VmbError_t getFeatureValue(const char* featureName, std::string& value);
 
   /**
    * @brief Method to set a feature value, bases on its type. Feature value is
@@ -184,6 +196,15 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
    */
   VmbError_t setFeatureValue(VmbFeatureInfo_t* featureInfo,
                              const char* featureName, std::string& value);
+
+  /**
+   * @brief Method to set a feature value, bases on its type. Feature value is
+   * always a string type.
+   * @param[in] featureName     Feature name
+   * @param[in] value           Value of feature to be set
+   * @return VmbError_t
+   */
+  VmbError_t setFeatureValue(const char* featureName, std::string& value);
 
   /**
    * @brief Helper method to map feature name into property name of uManager

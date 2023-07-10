@@ -352,19 +352,141 @@ void AlliedVisionCamera::SetExposure(double exp_ms) {
 
 int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize,
                                unsigned ySize) {
-  // TODO implement
-  return VmbErrorSuccess;
+  auto width = GetImageWidth();
+  auto height = GetImageHeight();
+  VmbError_t err = VmbErrorSuccess;
+
+  if (xSize > width) {
+    std::string strValueX = std::to_string(x);
+    err = SetProperty(g_OffsetX, strValueX.c_str());
+    if (err != DEVICE_OK) {
+      return err;
+    }
+
+    std::string strValueWidth = std::to_string(xSize);
+    err = SetProperty(g_Width, strValueWidth.c_str());
+    if (err != DEVICE_OK) {
+      return err;
+    }
+
+  } else {
+    std::string strValueWidth = std::to_string(xSize);
+    err = SetProperty(g_Width, strValueWidth.c_str());
+    if (err != DEVICE_OK) {
+      return err;
+    }
+
+    std::string strValueX = std::to_string(x);
+    err = SetProperty(g_OffsetX, strValueX.c_str());
+    if (err != DEVICE_OK) {
+      return err;
+    }
+  }
+
+  if (ySize > height) {
+    std::string strValueY = std::to_string(y);
+    err = SetProperty(g_OffsetY, strValueY.c_str());
+    if (err != DEVICE_OK) {
+      return err;
+    }
+
+    std::string strValueHeight = std::to_string(ySize);
+    err = SetProperty(g_Height, strValueHeight.c_str());
+    if (err != DEVICE_OK) {
+      return err;
+    }
+
+  } else {
+    std::string strValueHeight = std::to_string(ySize);
+    err = SetProperty(g_Height, strValueHeight.c_str());
+    if (err != DEVICE_OK) {
+      return err;
+    }
+
+    std::string strValueY = std::to_string(y);
+    err = SetProperty(g_OffsetY, strValueY.c_str());
+    if (err != DEVICE_OK) {
+      return err;
+    }
+  }
+
+  return resizeImageBuffer();
 }
 
 int AlliedVisionCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize,
                                unsigned& ySize) {
-  // TODO implement
-  return VmbErrorSuccess;
+  {
+    char strX[MM::MaxStrLength];
+    auto ret = GetProperty(g_OffsetX, strX);
+    if (ret != DEVICE_OK) {
+      return ret;
+    }
+    x = atoi(strX);
+  }
+  {
+    char strY[MM::MaxStrLength];
+    auto ret = GetProperty(g_OffsetY, strY);
+    if (ret != DEVICE_OK) {
+      return ret;
+    }
+    y = atoi(strY);
+  }
+  {
+    char strXSize[MM::MaxStrLength];
+    auto ret = GetProperty(g_Width, strXSize);
+    if (ret != DEVICE_OK) {
+      return ret;
+    }
+    xSize = atoi(strXSize);
+  }
+  {
+    char strYSize[MM::MaxStrLength];
+    auto ret = GetProperty(g_Height, strYSize);
+    if (ret != DEVICE_OK) {
+      return ret;
+    }
+    ySize = atoi(strYSize);
+  }
+
+  return DEVICE_OK;
 }
 
 int AlliedVisionCamera::ClearROI() {
-  // TODO implement
-  return 0;
+  std::string maxWidth, maxHeight;
+  VmbError_t err = getFeatureValue(g_WidthMax, maxWidth);
+  if (VmbErrorSuccess != err) {
+    return err;
+  }
+
+  err = getFeatureValue(g_HeightMax, maxHeight);
+  if (VmbErrorSuccess != err) {
+    return err;
+  }
+
+  std::string offsetXval = "0";
+  std::string offsetYval = "0";
+
+  err = setFeatureValue(g_OffsetX, offsetXval);
+  if (VmbErrorSuccess != err) {
+    return err;
+  }
+
+  err = setFeatureValue(g_OffsetY, offsetYval);
+  if (VmbErrorSuccess != err) {
+    return err;
+  }
+
+  err = setFeatureValue(g_Width, maxWidth);
+  if (VmbErrorSuccess != err) {
+    return err;
+  }
+
+  err = setFeatureValue(g_Height, maxHeight);
+  if (VmbErrorSuccess != err) {
+    return err;
+  }
+
+  return resizeImageBuffer();
 }
 
 int AlliedVisionCamera::IsExposureSequenceable(bool& isSequenceable) const {
@@ -578,7 +700,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
                     adjustValue(propertyItem.m_min, propertyItem.m_max,
                                 propertyItem.m_step, std::stod(propertyValue));
                 pProp->Set(adjustedValue.c_str());
-                (void)setFeatureValue(&featureInfo, featureName.c_str(),
+                err = setFeatureValue(&featureInfo, featureName.c_str(),
                                       adjustedValue);
               }
             }
@@ -663,6 +785,18 @@ VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t* featureInfo,
   return err;
 }
 
+VmbError_t AlliedVisionCamera::getFeatureValue(const char* featureName,
+                                               std::string& value) {
+  VmbFeatureInfo_t featureInfo;
+  VmbError_t err = g_api->VmbFeatureInfoQuery_t(
+      m_handle, featureName, &featureInfo, sizeof(featureInfo));
+  if (VmbErrorSuccess != err) {
+    return err;
+  }
+
+  return getFeatureValue(&featureInfo, featureName, value);
+}
+
 VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
                                                const char* featureName,
                                                std::string& value) {
@@ -729,6 +863,18 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
       break;
   }
   return err;
+}
+
+VmbError_t AlliedVisionCamera::setFeatureValue(const char* featureName,
+                                               std::string& value) {
+  VmbFeatureInfo_t featureInfo;
+  VmbError_t err = g_api->VmbFeatureInfoQuery_t(
+      m_handle, featureName, &featureInfo, sizeof(featureInfo));
+  if (VmbErrorSuccess != err) {
+    return err;
+  }
+
+  return setFeatureValue(&featureInfo, featureName, value);
 }
 
 void AlliedVisionCamera::mapFeatureNameToPropertyName(
