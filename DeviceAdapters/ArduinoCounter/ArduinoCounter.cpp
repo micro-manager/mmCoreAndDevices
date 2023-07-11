@@ -33,6 +33,7 @@ const int g_Max_MMVersion = 2;
 const char* g_versionProp = "Version";
 const char* g_normalLogicString = "Normal";
 const char* g_invertedLogicString = "Inverted";
+const char* g_Undefined = "Undefined";
 
 const char* g_On = "On";
 const char* g_Off = "Off";

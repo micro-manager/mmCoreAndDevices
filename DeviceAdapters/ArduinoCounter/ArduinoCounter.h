@@ -40,8 +40,6 @@
 #define MAX_NUMBER_PHYSICAL_CAMERAS       1
 
 
-extern const char* g_DeviceNameMultiCamera;
-extern const char* g_Undefined;
 
 /**
  * CameraSnapThread: helper thread for MultiCamera
