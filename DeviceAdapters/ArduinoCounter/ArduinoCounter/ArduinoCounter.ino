@@ -15,7 +15,7 @@ unsigned int version_ = 1;
 
 void setup() {
   // put your setup code here, to run once:
-   Serial.begin(57600);
+   Serial.begin(115200);
 
      
    pinMode(inPin, INPUT);
@@ -26,21 +26,19 @@ void setup() {
 }
 
 void loop() {
+  while(true){
   // put your main code here, to run repeatedly:
 
    if (Serial.available() > 0) {
      int inByte = Serial.read();
      switch (inByte) {
 
-        // go (i.e. start) 'g'
+        // go (i.e. start) 'g' followed by max number of TTLs to pass
        case 103: 
         if (waitForSerial(timeOut)) {          
           limit = Serial.parseInt();
           Serial.write("Starting with "); 
           Serial.println(limit, DEC);
-          // byte byte1 = Serial.read();
-          //if (waitForSerial(timeOut)) {
-          //  byte byte2 = Serial.read();
             // set limit here
           counting = true;
           counter = 0;
@@ -48,12 +46,13 @@ void loop() {
           break;
         }
 
-        // stop 's'
+        // stop 's'; i.e. operate in passthrough mode
         case 115:
           counting = false;
           Serial.println("Stopping"); 
           break;
 
+        // get info 'i'; what version are you?
         case 105:
           Serial.println("ArduinoCounter version 1.0");
       }
@@ -68,17 +67,16 @@ void loop() {
          counter++;
          inputWas = LOW;
          if (counter <= limit) {
-            // digitalWrite(outPin, LOW);
             PORTB = 0;
          }
       } else if (!inputWas && digitalRead(inPin)) {
           inputWas = HIGH;
-          // digitalWrite(outPin, HIGH);
           PORTB = 1;
       }
    } else {
        PORTB = (PIND & B00000100) >> 2;
    }
+  }
 }
 
 bool waitForSerial(unsigned long timeOut)
