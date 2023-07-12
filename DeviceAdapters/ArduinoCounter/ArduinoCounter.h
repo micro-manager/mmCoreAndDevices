@@ -120,6 +120,9 @@ private:
    int Logical2Physical(int logical);
    bool ImageSizesAreEqual();
    unsigned char* imageBuffer_;
+   int startCommunication();
+   int startCounting(int number);
+   int stopCounting();
 
    std::vector<std::string> availableCameras_;
    std::vector<std::string> usedCameras_;
@@ -128,6 +131,9 @@ private:
    unsigned int nrCamerasInUse_;
    bool initialized_;
    ImgBuffer img_;
+   std::string port_;
+   double version_;
+   bool portAvailable_;
 };
 
 

@@ -28,8 +28,8 @@ const char* g_DeviceNameArduinoCounterCamera = "ArduinoCounterCamera";
 
 
 // Global info about the state of the Arduino.  This should be folded into a class
-const int g_Min_MMVersion = 1;
-const int g_Max_MMVersion = 2;
+const double g_Min_MMVersion = 1.0;
+const double g_Max_MMVersion = 1.0;
 const char* g_versionProp = "Version";
 const char* g_normalLogicString = "Normal";
 const char* g_invertedLogicString = "Inverted";
@@ -146,6 +146,26 @@ int ArduinoCounterCamera::Initialize()
 
    CPropertyAction* pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnBinning);
    CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct, false);
+
+   // start Arduino
+   // The first second or so after opening the serial port, the Arduino is waiting for firmwareupgrades.  Simply sleep 1 second.
+   CDeviceUtils::SleepMs(1000);
+
+
+   // Check that we have a controller:
+   PurgeComPort(port_.c_str());
+   int ret = startCommunication();
+   if (DEVICE_OK != ret)
+      return ret;
+
+   if (version_ < g_Min_MMVersion || version_ > g_Max_MMVersion)
+      return ERR_VERSION_MISMATCH;
+
+   pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnVersion);
+   std::ostringstream sversion;
+   sversion << version_;
+   CreateProperty(g_versionProp, sversion.str().c_str(), MM::Float, true, pAct);
+
 
    initialized_ = true;
 
@@ -514,12 +534,16 @@ int ArduinoCounterCamera::StartSequenceAcquisition(long numImages, double interv
    if (nrCamerasInUse_ < 1)
       return ERR_NO_PHYSICAL_CAMERA;
 
+   int ret = startCounting(numImages);
+   if (ret != DEVICE_OK)
+      return ret;
+
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
       if (camera != 0)
       {
-         int ret = camera->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
+         ret = camera->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
          if (ret != DEVICE_OK)
             return ret;
       }
@@ -535,10 +559,13 @@ int ArduinoCounterCamera::StopSequenceAcquisition()
       if (camera != 0)
       {
          int ret = camera->StopSequenceAcquisition();
+         int ret2 = stopCounting();
 
-         // 
          if (ret != DEVICE_OK)
             return ret;
+         if (ret2 != DEVICE_OK)
+            return ret2;
+
          std::ostringstream os;
          os << i;
          camera->AddTag(MM::g_Keyword_CameraChannelName, usedCameras_[i].c_str(),
@@ -701,4 +728,81 @@ int ArduinoCounterCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct
          return ret;
    }
    return DEVICE_OK;
+}
+
+int ArduinoCounterCamera::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+   if (pAct == MM::BeforeGet)
+   {
+      pProp->Set(port_.c_str());
+   }
+   else if (pAct == MM::AfterSet)
+   {
+      pProp->Get(port_);
+      portAvailable_ = true;
+   }
+   return DEVICE_OK;
+}
+
+int ArduinoCounterCamera::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+   if (pAct == MM::BeforeGet)
+   {
+      pProp->Set((long)version_);
+   }
+   return DEVICE_OK;
+}
+
+int ArduinoCounterCamera::startCommunication() 
+{
+   int ret = DEVICE_OK;
+   unsigned char command[1];
+   command[0] = 'v';
+
+   ret = WriteToComPort(port_.c_str(), (const unsigned char*)command, 1);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   std::string answer;
+   ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.substr(0, 14) != "ArduinoCounter version 1.0")
+      return ERR_BOARD_NOT_FOUND;
+
+   
+   std::istringstream is(answer.substr(24, 3));
+   is >> version_;
+
+   return ret;
+}
+
+int ArduinoCounterCamera::startCounting(int number) 
+{
+   int ret = DEVICE_OK;
+   std::ostringstream os('g');
+   os << number;
+   std::string command = os.str();
+
+   ret = WriteToComPort(port_.c_str(), (const unsigned char*) command.c_str(), (unsigned int) command.length());
+   if (ret != DEVICE_OK)
+      return ret;
+
+   std::string answer;
+   ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+   // for now, ignore answer
+   return ret;
+}
+
+int ArduinoCounterCamera::stopCounting() 
+{
+   int ret = WriteToComPort(port_.c_str(), (const unsigned char*) 's', 1);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   std::string answer;
+   ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+   // for now, ignore answer
+   return ret;
 }
