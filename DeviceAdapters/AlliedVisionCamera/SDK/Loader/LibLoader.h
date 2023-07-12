@@ -82,10 +82,10 @@ class LibLoader {
   ProcWrapper resolveFunction(const char* functionName) const;
 
   /**
-   * @brief Getter to check if library is loaded and initialized
-   * @return True if library is initialized
+   * @brief Getter to check if library is loaded
+   * @return True if library is loaded
    */
-  bool isInitialized() const;
+  bool isLoaded() const;
   ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
   ///////////////////////////////////////////////////////////////////////////////
@@ -93,7 +93,7 @@ class LibLoader {
   const char* m_libName;  //<! Library name
   const char* m_libPath;  //<! Library path
   HMODULE m_module;       //<! Windows HMODULE object for loaded library
-  bool m_initialized;     //<! Is library initialized
+  bool m_loaded;          //<! Is library initialized
 };
 
 /**
@@ -113,7 +113,13 @@ class VimbaXApi {
   /**
    * @brief Destructor of class
    */
-  ~VimbaXApi() = default;
+  ~VimbaXApi();
+
+  /**
+   * @brief Is SDK initialized correctly
+   * @return True if initialized correctly, otherwise false
+   */
+  bool isInitialized() const;
 
   // Deleted methods
   VimbaXApi(const VimbaXApi&) = delete;
@@ -167,7 +173,8 @@ class VimbaXApi {
   // PRIVATE
   ///////////////////////////////////////////////////////////////////////////////
  private:
-  LibLoader m_sdk;  //<! SDK library
+  bool m_initialized;   //<! Flag if SDK is initialized
+  LibLoader m_sdk;      //<! SDK library
 };
 
 #endif

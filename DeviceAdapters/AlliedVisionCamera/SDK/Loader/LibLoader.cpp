@@ -20,8 +20,9 @@
 
 #include "Constants.h"
 
-VimbaXApi::VimbaXApi() : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()) {
-  if (m_sdk.isInitialized()) {
+VimbaXApi::VimbaXApi()
+    : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()), m_initialized(false) {
+  if (m_sdk.isLoaded()) {
     // TODO implement error handling if function not resolved
     VmbStartup_t = m_sdk.resolveFunction("VmbStartup");
     VmbVersionQuery_t = m_sdk.resolveFunction("VmbVersionQuery");
@@ -68,34 +69,42 @@ VimbaXApi::VimbaXApi() : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()) {
         m_sdk.resolveFunction("VmbFeatureFloatIncrementQuery");
     VmbFeatureCommandIsDone_t =
         m_sdk.resolveFunction("VmbFeatureCommandIsDone");
+    //TODO check all resolved symbols
+    auto err = VmbStartup_t(nullptr);
+    if(err == VmbErrorSuccess) {
+      m_initialized = true;
+    }
   }
 }
 
+bool VimbaXApi::isInitialized() const { return m_initialized; }
+
+VimbaXApi::~VimbaXApi() { 
+    m_initialized = false;
+    VmbShutdown_t(); }
+
 LibLoader::LibLoader(const char* lib, const char* libPath)
-    : m_libName(lib),
-      m_libPath(libPath),
-      m_module(nullptr),
-      m_initialized(false) {
+    : m_libName(lib), m_libPath(libPath), m_module(nullptr), m_loaded(false) {
   SetDllDirectoryA(m_libPath);
   m_module = LoadLibraryA(m_libName);
   if (m_module != nullptr) {
-    m_initialized = true;
+    m_loaded = true;
   }
 }
 
 LibLoader::~LibLoader() {
-  if (m_initialized) {
+  if (m_loaded) {
     FreeModule(m_module);
     m_module = nullptr;
-    m_initialized = false;
+    m_loaded = false;
     m_libName = nullptr;
   }
 }
 
-bool LibLoader::isInitialized() const { return m_initialized; }
+bool LibLoader::isLoaded() const { return m_loaded; }
 
 ProcWrapper LibLoader::resolveFunction(const char* functionName) const {
-  if (m_module && m_initialized) {
+  if (m_module && m_loaded) {
     return ProcWrapper(GetProcAddress((HMODULE)m_module, functionName));
   }
 

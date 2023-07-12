@@ -16,8 +16,8 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =============================================================================*/
-#ifndef ALLIEDVISIONCAMERA_H
-#define ALLIEDVISIONCAMERA_H
+#ifndef AlliedVisionCamera_H
+#define AlliedVisionCamera_H
 
 #include <array>
 #include <functional>
@@ -26,11 +26,6 @@
 #include "DeviceBase.h"
 #include "Loader/LibLoader.h"
 #include "PropertyItem.h"
-
-/**
- * @brief Pointer to the Vimba API
- */
-static std::unique_ptr<VimbaXApi> g_api;
 
 ///////////////////////////////////////////////////////////////////////////////
 // STATIC FEATURE NAMES (FROM VIMBA)
@@ -55,6 +50,12 @@ static constexpr const char* g_Execute = "Execute";
 static constexpr const char* g_Command = "Command";
 
 /**
+ * @brief Global pointer to the Vimba API, that needs to be released in a
+ * correct way at the end
+ */
+static std::unique_ptr<VimbaXApi> g_api{nullptr};
+
+/**
  * @brief Main Allied Vision Camera class
  */
 class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
@@ -64,19 +65,14 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
  public:
   /**
    * @brief Contructor of Allied Vision Camera
-   * @param[in] deviceName Device name
+   * @param[in] deviceName  Device name
+   * @param[in] sdk         Unique pointer to the SDK
    */
-  AlliedVisionCamera(const char* deviceName);
+  AlliedVisionCamera(const char* deviceName, std::unique_ptr<VimbaXApi>& sdk);
   /**
    * @brief Allied Vision Camera destructor
    */
-  ~AlliedVisionCamera();
-
-  /**
-   * @brief Get connected camera list
-   * @return VmbError_t
-   */
-  static VmbError_t getCamerasList();
+  virtual ~AlliedVisionCamera();
 
   ///////////////////////////////////////////////////////////////////////////////
   // uMANAGER API METHODS
@@ -238,6 +234,7 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   ///////////////////////////////////////////////////////////////////////////////
   // MEMBERS
   ///////////////////////////////////////////////////////////////////////////////
+  std::unique_ptr<VimbaXApi>& m_sdk;             //<! Unique pointer to the SDK
   VmbHandle_t m_handle;                          //<! Device handle
   std::string m_cameraName;                      //<! Camera name
   std::array<VmbFrame_t, MAX_FRAMES> m_frames;   //<! Frames array
