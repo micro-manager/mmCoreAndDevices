@@ -63,7 +63,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName) {
   if (g_api == nullptr) {
     g_api = std::make_unique<VimbaXApi>();
   }
-  if(g_api == nullptr || !g_api->isInitialized()){
+  if (g_api == nullptr || !g_api->isInitialized()) {
     return nullptr;
   }
 
@@ -98,6 +98,7 @@ AlliedVisionCamera::AlliedVisionCamera(const char* deviceName,
       m_buffer{},
       m_bufferSize{0},
       m_isAcquisitionRunning{false} {
+  CreateHubIDProperty();
   // [Rule] Create properties here (pre-init only)
   InitializeDefaultErrorMessages();
   setApiErrorMessages();
@@ -122,6 +123,7 @@ int AlliedVisionCamera::Initialize() {
 
 int AlliedVisionCamera::Shutdown() {
   // [Rule] Implement disconnection here
+  (void)StopSequenceAcquisition();
   LogMessage("Shutting down camera: " + m_cameraName);
   if (m_handle != nullptr) {
     VmbError_t err = m_sdk->VmbCameraClose_t(m_handle);
@@ -222,14 +224,30 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(
     return err;
   }
 
+  std::string featureCategory = feature->category;
+  if (featureCategory.find(g_EventCategory) != std::string::npos ||
+      featureCategory.find(g_ChunkCategory) != std::string::npos) {
+    return err;
+  }
+
   switch (feature->featureDataType) {
     case VmbFeatureDataInt: {
       err = CreateIntegerProperty(propName.c_str(), 0, true, callback);
       break;
     }
-    case VmbFeatureDataBool:
+    case VmbFeatureDataBool: {
+      err = CreateStringProperty(propName.c_str(), g_False, true, callback);
+      AddAllowedValue(propName.c_str(), g_False);
+      AddAllowedValue(propName.c_str(), g_True);
+      break;
+    }
+    case VmbFeatureDataCommand: {
+      err = CreateStringProperty(propName.c_str(), g_Command, true, callback);
+      AddAllowedValue(propName.c_str(), g_Command);
+      AddAllowedValue(propName.c_str(), g_Execute);
+      break;
+    }
     case VmbFeatureDataEnum:
-    case VmbFeatureDataCommand:
     case VmbFeatureDataString: {
       err = CreateStringProperty(propName.c_str(), "", true, callback);
       break;
@@ -494,30 +512,11 @@ int AlliedVisionCamera::OnBinning(MM::PropertyBase* pProp,
     return err;
   }
 
-  featureAvailable = (rMode || wMode);
-  if (!featureAvailable) {
-    return err;
-  }
-
-  readOnly = featureAvailable && (rMode && !wMode);
+  readOnly = (rMode && !wMode);
 
   // Get values of property and features
   std::string propertyValue, featureHorizontalValue, featureVerticalValue;
   pProp->Get(propertyValue);
-  err = getFeatureValue(&featureInfoHorizontal, g_BinningHorizontalFeature,
-                        featureHorizontalValue);
-  if (VmbErrorSuccess != err) {
-    return err;
-  }
-  err = getFeatureValue(&featureInfoVertical, g_BinningVerticalFeature,
-                        featureVerticalValue);
-  if (VmbErrorSuccess != err) {
-    return err;
-  }
-
-  std::string featureValue =
-      std::to_string(std::min(atoi(featureHorizontalValue.c_str()),
-                              atoi(featureVerticalValue.c_str())));
 
   MM::Property* pChildProperty = (MM::Property*)pProp;
   std::vector<std::string> strValues;
@@ -525,14 +524,32 @@ int AlliedVisionCamera::OnBinning(MM::PropertyBase* pProp,
 
   switch (eAct) {
     case MM::ActionType::BeforeGet:
-      // Update property
-      if (propertyValue != featureValue) {
-        pProp->Set(featureValue.c_str());
+      if (rMode) {
+        err =
+            getFeatureValue(&featureInfoHorizontal, g_BinningHorizontalFeature,
+                            featureHorizontalValue);
+        if (VmbErrorSuccess != err) {
+          return err;
+        }
+        err = getFeatureValue(&featureInfoVertical, g_BinningVerticalFeature,
+                              featureVerticalValue);
+        if (VmbErrorSuccess != err) {
+          return err;
+        }
+
+        std::string featureValue =
+            std::to_string(std::min(atoi(featureHorizontalValue.c_str()),
+                                    atoi(featureVerticalValue.c_str())));
+        // Update property
+        if (propertyValue != featureValue) {
+          pProp->Set(featureValue.c_str());
+        }
       }
+
       // Update property's access mode
       pChildProperty->SetReadOnly(readOnly);
       // Update property's limits and allowed values
-      if (!readOnly) {
+      if (wMode) {
         // Update binning limits
         err = m_sdk->VmbFeatureIntRangeQuery_t(m_handle,
                                                g_BinningHorizontalFeature,
@@ -559,7 +576,7 @@ int AlliedVisionCamera::OnBinning(MM::PropertyBase* pProp,
       }
       break;
     case MM::ActionType::AfterSet:
-      if (propertyValue != featureValue) {
+      if (wMode) {
         VmbError_t errHor = setFeatureValue(
             &featureInfoHorizontal, g_BinningHorizontalFeature, propertyValue);
         VmbError_t errVer = setFeatureValue(
@@ -618,12 +635,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
         return err;
       }
 
-      featureAvailable = (rMode || wMode);
-      if (!featureAvailable) {
-        return err;
-      }
-
-      readOnly = featureAvailable && (rMode && !wMode);
+      readOnly = (rMode && !wMode);
 
       // Get values
       std::string propertyValue, featureValue;
@@ -642,15 +654,15 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
             if (propertyValue != featureValue) {
               pProp->Set(featureValue.c_str());
             }
+          }
 
-            // Update property's access mode
-            pChildProperty->SetReadOnly(readOnly);
-            // Update property's limits and allowed values
-            if (!readOnly) {
-              err = setAllowedValues(&featureInfo, propertyName.c_str());
-              if (VmbErrorSuccess != err) {
-                return err;
-              }
+          // Update property's access mode
+          pChildProperty->SetReadOnly(readOnly);
+          // Update property's limits and allowed values
+          if (wMode) {
+            err = setAllowedValues(&featureInfo, propertyName.c_str());
+            if (VmbErrorSuccess != err) {
+              return err;
             }
           }
           break;
@@ -772,6 +784,7 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
   std::stringstream ss(value);
   bool isDone = false;
   VmbUint32_t maxLen = 0;
+  std::string property{};
 
   switch (featureInfo->featureDataType) {
     case VmbFeatureDataBool: {
@@ -811,15 +824,25 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
       break;
     }
     case VmbFeatureDataCommand:
-      err = m_sdk->VmbFeatureCommandRun_t(m_handle, featureName);
-      if (err != VmbErrorSuccess) {
-        break;
-      }
-      while (!isDone) {
-        err = m_sdk->VmbFeatureCommandIsDone_t(m_handle, featureName, &isDone);
-        if (err != VmbErrorSuccess) {
-          LogMessageCode(err);
-          break;
+      if (value == g_Execute) {
+        mapFeatureNameToPropertyName(featureName, property);
+        if (!property.empty()) {
+          err = m_sdk->VmbFeatureCommandRun_t(m_handle, featureName);
+          if (err != VmbErrorSuccess) {
+            break;
+          }
+          while (!isDone) {
+            err = m_sdk->VmbFeatureCommandIsDone_t(m_handle, featureName,
+                                                   &isDone);
+            if (err != VmbErrorSuccess) {
+              LogMessageCode(err);
+              break;
+            }
+          }
+          // Set back property to "Command"
+          SetProperty(property.c_str(), g_Command);
+        } else {
+          err = VmbErrorInvalidValue;
         }
       }
       break;
@@ -901,9 +924,9 @@ VmbError_t AlliedVisionCamera::setAllowedValues(const VmbFeatureInfo_t* feature,
   }
 
   switch (feature->featureDataType) {
+    case VmbFeatureDataCommand:
     case VmbFeatureDataBool: {
-      AddAllowedValue(propertyName, g_False);
-      AddAllowedValue(propertyName, g_True);
+      // Already set in creation
       break;
     }
     case VmbFeatureDataFloat: {
@@ -984,11 +1007,6 @@ VmbError_t AlliedVisionCamera::setAllowedValues(const VmbFeatureInfo_t* feature,
       err = SetPropertyLimits(propertyName, min, max);
       break;
     }
-    case VmbFeatureDataCommand: {
-      AddAllowedValue(propertyName, g_Command);
-      AddAllowedValue(propertyName, g_Execute);
-      break;
-    }
     case VmbFeatureDataString:
     case VmbFeatureDataRaw:
     case VmbFeatureDataNone:
@@ -1001,7 +1019,7 @@ VmbError_t AlliedVisionCamera::setAllowedValues(const VmbFeatureInfo_t* feature,
 }
 
 int AlliedVisionCamera::SnapImage() {
-  if (m_isAcquisitionRunning) {
+  if (IsCapturing()) {
     return DEVICE_CAMERA_BUSY_ACQUIRING;
   }
   resizeImageBuffer();
@@ -1012,57 +1030,27 @@ int AlliedVisionCamera::SnapImage() {
 
   VmbError_t err =
       m_sdk->VmbFrameAnnounce_t(m_handle, &frame, sizeof(VmbFrame_t));
-  if (err != VmbErrorSuccess) {
-    return err;
+  if (err == VmbErrorSuccess) {
+    err = m_sdk->VmbCaptureStart_t(m_handle);
+    if (err == VmbErrorSuccess) {
+      err = m_sdk->VmbCaptureFrameQueue_t(m_handle, &frame, nullptr);
+      if (err == VmbErrorSuccess) {
+        err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart);
+        m_isAcquisitionRunning = true;
+        if (err == VmbErrorSuccess) {
+          err = m_sdk->VmbCaptureFrameWait_t(m_handle, &frame, 3000);
+        }
+      }
+    }
   }
-
-  err = m_sdk->VmbCaptureStart_t(m_handle);
-  if (err != VmbErrorSuccess) {
-    return err;
-  }
-
-  err = m_sdk->VmbCaptureFrameQueue_t(m_handle, &frame, nullptr);
-  if (err != VmbErrorSuccess) {
-    return err;
-  }
-
-  err = m_sdk->VmbFeatureCommandRun_t(m_handle, "AcquisitionStart");
-  if (err != VmbErrorSuccess) {
-    return err;
-  }
-
-  err = m_sdk->VmbCaptureFrameWait_t(m_handle, &frame, 3000);
-  if (err != VmbErrorSuccess) {
-    return err;
-  }
-
-  err = m_sdk->VmbFeatureCommandRun_t(m_handle, "AcquisitionStop");
-  if (err != VmbErrorSuccess) {
-    return err;
-  }
-
-  err = m_sdk->VmbCaptureEnd_t(m_handle);
-  if (err != VmbErrorSuccess) {
-    return err;
-  }
-
-  err = m_sdk->VmbCaptureQueueFlush_t(m_handle);
-  if (err != VmbErrorSuccess) {
-    return err;
-  }
-
-  err = m_sdk->VmbFrameRevokeAll_t(m_handle);
-  if (err != VmbErrorSuccess) {
-    return err;
-  }
-
+  (void)StopSequenceAcquisition();
   return err;
 }
 
 int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
                                                  double interval_ms,
                                                  bool stopOnOverflow) {
-  if (m_isAcquisitionRunning) {
+  if (IsCapturing()) {
     return DEVICE_CAMERA_BUSY_ACQUIRING;
   }
 
@@ -1107,12 +1095,13 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
     return err;
   }
 
-  err = m_sdk->VmbFeatureCommandRun_t(m_handle, "AcquisitionStart");
+  err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart);
   if (err != VmbErrorSuccess) {
     return err;
   }
 
   m_isAcquisitionRunning = true;
+
   return err;
 }
 
@@ -1120,13 +1109,12 @@ int AlliedVisionCamera::StartSequenceAcquisition(double interval_ms) {
   return StartSequenceAcquisition(LONG_MAX, interval_ms, true);
 }
 int AlliedVisionCamera::StopSequenceAcquisition() {
-  if (m_isAcquisitionRunning) {
-    auto err = m_sdk->VmbFeatureCommandRun_t(m_handle, "AcquisitionStop");
+  if (IsCapturing()) {
+    auto err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStop);
+    m_isAcquisitionRunning = false;
     if (err != VmbErrorSuccess) {
       return err;
     }
-
-    m_isAcquisitionRunning = false;
   }
 
   auto err = m_sdk->VmbCaptureEnd_t(m_handle);
@@ -1168,7 +1156,7 @@ void AlliedVisionCamera::insertFrame(VmbFrame_t* frame) {
                                            md.Serialize().c_str(), false);
     }
 
-    if (m_isAcquisitionRunning) {
+    if (IsCapturing()) {
       m_sdk->VmbCaptureFrameQueue_t(
           m_handle, frame,
           [](const VmbHandle_t cameraHandle, const VmbHandle_t streamHandle,

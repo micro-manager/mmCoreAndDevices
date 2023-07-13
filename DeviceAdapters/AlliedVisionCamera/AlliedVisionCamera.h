@@ -48,6 +48,11 @@ static constexpr const char* g_True = "True";
 static constexpr const char* g_False = "False";
 static constexpr const char* g_Execute = "Execute";
 static constexpr const char* g_Command = "Command";
+static constexpr const char* g_ChunkCategory = "ChunkDataControl";
+static constexpr const char* g_EventCategory = "EventControl";
+static constexpr const char* g_AcquisitionStart = "AcquisitionStart";
+static constexpr const char* g_AcquisitionStop = "AcquisitionStop";
+static constexpr const char* g_AcqusitionStatus = "AcqusitionStatus";
 
 /**
  * @brief Global pointer to the Vimba API, that needs to be released in a
