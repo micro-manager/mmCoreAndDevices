@@ -25,7 +25,6 @@
 
 #include "DeviceBase.h"
 #include "Loader/LibLoader.h"
-#include "PropertyItem.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // STATIC FEATURE NAMES (FROM VIMBA)
@@ -138,11 +137,9 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   /**
    * @brief Helper method to create single uManager property from Vimba feature
    * @param[in] feature             Pointer to the Vimba feature
-   * @param[in] callback            uManager callback for given property
    * @return VmbError_t
    */
-  VmbError_t createPropertyFromFeature(const VmbFeatureInfo_t* feature,
-                                       MM::ActionFunctor* callback);
+  VmbError_t createPropertyFromFeature(const VmbFeatureInfo_t* feature);
 
   /**
    * @brief Helper method to set allowed values for given property, based on
@@ -220,13 +217,22 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   /**
    * @brief In case trying to set invalid value, adjust it to the closest with
    * inceremntal step
-   * @param[in] min     Minimum for given property
-   * @param[in] max     Maximum for given property
+
    * @param[in] step    Incremental step
+
+   * @return Adjusted value resresented as a string
+   */
+
+  /**
+   * @brief In case trying to set invalid value, adjust it to the closest with
+   * inceremntal step
+   * @param[in] featureInfo     Feature info object
+   * @param[in] min             Minimum for given property
+   * @param[in] max             Maximum for given property
    * @param[in] propertyValue   Value that was tried to be set
    * @return Adjusted value resresented as a string
    */
-  std::string adjustValue(double min, double max, double step,
+  std::string adjustValue(VmbFeatureInfo_t& featureInfo, double min, double max,
                           double propertyValue) const;
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -241,8 +247,6 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   VmbUint32_t m_bufferSize;     //<! Buffer size (the same for every frame)
   bool m_isAcquisitionRunning;  //<! Sequence acquisition status (true if
                                 // running)
-  std::unordered_map<std::string, PropertyItem>
-      m_propertyItems;  //!< Internal map of properties
   static const std::unordered_map<std::string, std::string>
       m_featureToProperty;  //!< Map of features name into uManager properties
   static const std::unordered_multimap<std::string, std::string>

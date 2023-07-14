@@ -42,9 +42,6 @@
     <ClInclude Include="SDK\Loader\Constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PropertyItem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AlliedVisionHub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -54,9 +51,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SDK\Loader\LibLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PropertyItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AlliedVisionHub.cpp">

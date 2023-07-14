@@ -5,6 +5,7 @@
 AlliedVisionHub::AlliedVisionHub() : m_sdk(std::make_shared<VimbaXApi>()) {}
 
 int AlliedVisionHub::DetectInstalledDevices() {
+  LogMessage("Detecting installed cameras...");
   VmbUint32_t camNum;
   // Get the number of connected cameras first
   VmbError_t err = m_sdk->VmbCamerasList_t(nullptr, 0, &camNum, 0);
