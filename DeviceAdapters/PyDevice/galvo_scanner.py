@@ -7,7 +7,7 @@ sys.path.append('C:\\Users\\Jeroen Doornbos\\Documents\\wfs_current\\micro-manag
 
 # Import the module
 from Pyscanner import single_capture
-from test_cam import float_property, int_property, string_property, object_property, base_property, bool_property, parse_options
+from base_device_properties import float_property, int_property, string_property, object_property, base_property, bool_property, parse_options
 # this is all the most recently updated functions
 
 
@@ -67,14 +67,14 @@ class Camera:
     width = int_property(min=1, max=4096, default=512, on_update=on_resized)
     height = int_property(min=1, max=4096, default=512, on_update=on_resized)
     Binning = int_property(min=1, default=1)
-    ActualExposure = float_property()
+
     
 
 
     # functional
-    input_mapping = string_property(default='Dev2/ai0')
-    xmirror_mapping = string_property(default='Dev2/ao0')
-    ymirror_mapping = string_property(default='Dev2/ao1')
+    input_mapping = string_property(default='Dev4/ai24')
+    xmirror_mapping = string_property(default='Dev4/ao2')
+    ymirror_mapping = string_property(default='Dev4/ao3')
 
 
 
