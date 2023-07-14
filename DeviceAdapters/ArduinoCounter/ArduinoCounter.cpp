@@ -4,12 +4,10 @@
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Arduino adapter.  Needs accompanying firmware
-// COPYRIGHT:     University of California, San Francisco, 2008
+// COPYRIGHT:     Altos Labs, 2023, based on code copyright UCSF 2008
 // LICENSE:       LGPL
 // 
-// AUTHOR:        Nico Stuurman, nico@cmp.ucsf.edu 11/09/2008
-//                automatic device detection by Karl Hoover
-//
+// AUTHOR:        Nico Stuurman, nstuurman@altoslabs.com, 7/13/2023
 //
 
 #include "ArduinoCounter.h"
@@ -27,16 +25,12 @@ const char* g_DeviceNameArduinoCounterCamera = "ArduinoCounterCamera";
 
 
 
-// Global info about the state of the Arduino.  This should be folded into a class
+// Global info about the state of the Arduino.  
 const double g_Min_MMVersion = 1.0;
 const double g_Max_MMVersion = 1.0;
 const char* g_versionProp = "Version";
-const char* g_normalLogicString = "Normal";
-const char* g_invertedLogicString = "Inverted";
 const char* g_Undefined = "Undefined";
 
-const char* g_On = "On";
-const char* g_Off = "Off";
 
 
 
@@ -88,6 +82,9 @@ ArduinoCounterCamera::ArduinoCounterCamera() :
    for (int i = 0; i < MAX_NUMBER_PHYSICAL_CAMERAS; i++) {
       usedCameras_.push_back(g_Undefined);
    }
+
+   CPropertyAction* pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnPort);
+   CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
 }
 
 ArduinoCounterCamera::~ArduinoCounterCamera()
@@ -148,8 +145,8 @@ int ArduinoCounterCamera::Initialize()
    CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct, false);
 
    // start Arduino
-   // The first second or so after opening the serial port, the Arduino is waiting for firmwareupgrades.  Simply sleep 1 second.
-   CDeviceUtils::SleepMs(1000);
+   // The first second or so after opening the serial port, the Arduino is waiting for firmwareupgrades.  Sleep 2 seconds
+   CDeviceUtils::SleepMs(2000);
 
 
    // Check that we have a controller:
@@ -757,9 +754,9 @@ int ArduinoCounterCamera::startCommunication()
 {
    int ret = DEVICE_OK;
    unsigned char command[1];
-   command[0] = 'v';
+   command[0] = 'i';
 
-   ret = WriteToComPort(port_.c_str(), (const unsigned char*)command, 1);
+   ret = WriteToComPort(port_.c_str(), (const unsigned char*) command, 1);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -768,11 +765,13 @@ int ArduinoCounterCamera::startCommunication()
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 14) != "ArduinoCounter version 1.0")
+   std::string boardName = answer.substr(0, 14);
+
+   if (boardName != "ArduinoCounter")
       return ERR_BOARD_NOT_FOUND;
 
-   
-   std::istringstream is(answer.substr(24, 3));
+   std::string versionString = answer.substr(23, 3);
+   std::istringstream is(versionString);
    is >> version_;
 
    return ret;
@@ -781,8 +780,8 @@ int ArduinoCounterCamera::startCommunication()
 int ArduinoCounterCamera::startCounting(int number) 
 {
    int ret = DEVICE_OK;
-   std::ostringstream os('g');
-   os << number;
+   std::ostringstream os;
+   os << 'g' << number  << '\n';
    std::string command = os.str();
 
    ret = WriteToComPort(port_.c_str(), (const unsigned char*) command.c_str(), (unsigned int) command.length());
@@ -797,7 +796,9 @@ int ArduinoCounterCamera::startCounting(int number)
 
 int ArduinoCounterCamera::stopCounting() 
 {
-   int ret = WriteToComPort(port_.c_str(), (const unsigned char*) 's', 1);
+   unsigned char command[1];
+   command[0] = 's';
+   int ret = WriteToComPort(port_.c_str(), (const unsigned char*) command, 1);
    if (ret != DEVICE_OK)
       return ret;
 
