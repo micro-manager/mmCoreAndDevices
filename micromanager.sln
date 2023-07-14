@@ -470,6 +470,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPBLaser", "DeviceAdapters\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BH_DCC_DCU", "DeviceAdapters\BH_DCC_DCU\BH_DCC_DCU.vcxproj", "{9AE989AF-F6B7-45D7-983B-A7629FBF8F1B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ArduinoCounter", "DeviceAdapters\ArduinoCounter\ArduinoCounter.vcxproj", "{58C0AED3-09EF-497B-869F-D7873D1BB99E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1412,6 +1414,10 @@ Global
 		{9AE989AF-F6B7-45D7-983B-A7629FBF8F1B}.Debug|x64.Build.0 = Debug|x64
 		{9AE989AF-F6B7-45D7-983B-A7629FBF8F1B}.Release|x64.ActiveCfg = Release|x64
 		{9AE989AF-F6B7-45D7-983B-A7629FBF8F1B}.Release|x64.Build.0 = Release|x64
+		{58C0AED3-09EF-497B-869F-D7873D1BB99E}.Debug|x64.ActiveCfg = Debug|x64
+		{58C0AED3-09EF-497B-869F-D7873D1BB99E}.Debug|x64.Build.0 = Debug|x64
+		{58C0AED3-09EF-497B-869F-D7873D1BB99E}.Release|x64.ActiveCfg = Release|x64
+		{58C0AED3-09EF-497B-869F-D7873D1BB99E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
