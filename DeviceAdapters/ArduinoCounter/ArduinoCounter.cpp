@@ -27,7 +27,7 @@ const char* g_DeviceNameArduinoCounterCamera = "ArduinoCounterCamera";
 
 // Global info about the state of the Arduino.  
 const double g_Min_MMVersion = 1.0;
-const double g_Max_MMVersion = 1.0;
+const double g_Max_MMVersion = 1.1;
 const char* g_versionProp = "Version";
 const char* g_Undefined = "Undefined";
 
@@ -72,6 +72,9 @@ ArduinoCounterCamera::ArduinoCounterCamera() :
    SetErrorText(ERR_INVALID_DEVICE_NAME, "Please select a valid camera");
    SetErrorText(ERR_NO_PHYSICAL_CAMERA, "No physical camera assigned");
    SetErrorText(ERR_NO_EQUAL_SIZE, "Cameras differ in image size");
+   SetErrorText(ERR_FIRMWARE_VERSION_TOO_NEW, "Firmware version is newer than expected");
+   SetErrorText(ERR_FIRMWARE_VERSION_TOO_OLD, "Firmware version is older than expected");
+   SetErrorText(ERR_BOARD_NOT_FOUND, "Board did not identify as ArduinoCounter");
 
    // Name                                                                   
    CreateProperty(MM::g_Keyword_Name, g_DeviceNameArduinoCounterCamera, MM::String, true);
@@ -155,8 +158,10 @@ int ArduinoCounterCamera::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
-   if (version_ < g_Min_MMVersion || version_ > g_Max_MMVersion)
-      return ERR_VERSION_MISMATCH;
+   if (version_ < g_Min_MMVersion)
+       return ERR_FIRMWARE_VERSION_TOO_OLD;
+   if (version_ > g_Max_MMVersion)
+       return ERR_FIRMWARE_VERSION_TOO_NEW;
 
    pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnVersion);
    std::ostringstream sversion;

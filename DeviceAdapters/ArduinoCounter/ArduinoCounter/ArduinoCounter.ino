@@ -63,13 +63,13 @@ void loop() {
 
 
    if (counting) {
-      if (inputWas && !digitalRead(inPin)) {
+      if (inputWas && !(PIND & B00000100)) {
          counter++;
          inputWas = LOW;
          if (counter <= limit) {
             PORTB = 0;
          }
-      } else if (!inputWas && digitalRead(inPin)) {
+      } else if (!inputWas && (PIND & B00000100)) {
           inputWas = HIGH;
           PORTB = 1;
       }

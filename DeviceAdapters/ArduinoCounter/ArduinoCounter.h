@@ -33,6 +33,8 @@
 #define ERR_INVALID_DEVICE_NAME            10001
 #define ERR_NO_PHYSICAL_CAMERA             10010
 #define ERR_NO_EQUAL_SIZE                  10011
+#define ERR_FIRMWARE_VERSION_TOO_NEW       10012
+#define ERR_FIRMWARE_VERSION_TOO_OLD       10013
 
 //////////////////////////////////////////////////////////////////////////////
 // Max number of physical cameras
