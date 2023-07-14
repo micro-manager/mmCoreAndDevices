@@ -37,14 +37,19 @@ class AlliedVisionHub : public HubBase<AlliedVisionHub> {
  public:
   /**
    * @brief Contructor of a HUB
-   * @param sdk     Unique pointer to the SDK
    */
-  AlliedVisionHub(std::unique_ptr<VimbaXApi>& sdk);
+  AlliedVisionHub();
 
   /**
    * @brief Destructor of a HUB
    */
-  virtual ~AlliedVisionHub();
+  virtual ~AlliedVisionHub() = default;
+
+  /**
+   * @brief SDK getter
+   * @return Pointer to SDK
+  */
+  std::shared_ptr<VimbaXApi>& getSDK();
 
   ///////////////////////////////////////////////////////////////////////////////
   // uMANAGER API METHODS
@@ -59,7 +64,7 @@ class AlliedVisionHub : public HubBase<AlliedVisionHub> {
   // PRIVATE
   ///////////////////////////////////////////////////////////////////////////////
  private:
-  std::unique_ptr<VimbaXApi>& m_sdk;  //<! Unique pointer to the SDK
+  std::shared_ptr<VimbaXApi> m_sdk;  //<! Shared pointer to the SDK
 };
 
 #endif

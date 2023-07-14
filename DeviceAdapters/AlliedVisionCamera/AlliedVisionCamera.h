@@ -55,12 +55,6 @@ static constexpr const char* g_AcquisitionStop = "AcquisitionStop";
 static constexpr const char* g_AcqusitionStatus = "AcqusitionStatus";
 
 /**
- * @brief Global pointer to the Vimba API, that needs to be released in a
- * correct way at the end
- */
-static std::unique_ptr<VimbaXApi> g_api{nullptr};
-
-/**
  * @brief Main Allied Vision Camera class
  */
 class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
@@ -71,9 +65,8 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   /**
    * @brief Contructor of Allied Vision Camera
    * @param[in] deviceName  Device name
-   * @param[in] sdk         Unique pointer to the SDK
    */
-  AlliedVisionCamera(const char* deviceName, std::unique_ptr<VimbaXApi>& sdk);
+  AlliedVisionCamera(const char* deviceName);
   /**
    * @brief Allied Vision Camera destructor
    */
@@ -239,7 +232,7 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   ///////////////////////////////////////////////////////////////////////////////
   // MEMBERS
   ///////////////////////////////////////////////////////////////////////////////
-  std::unique_ptr<VimbaXApi>& m_sdk;             //<! Unique pointer to the SDK
+  std::shared_ptr<VimbaXApi> m_sdk;              //<! Shared pointer to the SDK
   VmbHandle_t m_handle;                          //<! Device handle
   std::string m_cameraName;                      //<! Camera name
   std::array<VmbFrame_t, MAX_FRAMES> m_frames;   //<! Frames array

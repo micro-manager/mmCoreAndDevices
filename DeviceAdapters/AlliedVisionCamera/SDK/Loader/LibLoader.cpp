@@ -23,65 +23,84 @@
 VimbaXApi::VimbaXApi()
     : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()), m_initialized(false) {
   if (m_sdk.isLoaded()) {
-    // TODO implement error handling if function not resolved
-    VmbStartup_t = m_sdk.resolveFunction("VmbStartup");
-    VmbVersionQuery_t = m_sdk.resolveFunction("VmbVersionQuery");
-    VmbShutdown_t = m_sdk.resolveFunction("VmbShutdown");
-    VmbCamerasList_t = m_sdk.resolveFunction("VmbCamerasList");
-    VmbCameraOpen_t = m_sdk.resolveFunction("VmbCameraOpen");
-    VmbCameraClose_t = m_sdk.resolveFunction("VmbCameraClose");
-    VmbPayloadSizeGet_t = m_sdk.resolveFunction("VmbPayloadSizeGet");
-    VmbFrameAnnounce_t = m_sdk.resolveFunction("VmbFrameAnnounce");
-    VmbCaptureStart_t = m_sdk.resolveFunction("VmbCaptureStart");
-    VmbCaptureEnd_t = m_sdk.resolveFunction("VmbCaptureEnd");
-    VmbCaptureFrameQueue_t = m_sdk.resolveFunction("VmbCaptureFrameQueue");
-    VmbCaptureFrameWait_t = m_sdk.resolveFunction("VmbCaptureFrameWait");
-    VmbCaptureQueueFlush_t = m_sdk.resolveFunction("VmbCaptureQueueFlush");
-    VmbFrameRevokeAll_t = m_sdk.resolveFunction("VmbFrameRevokeAll");
-    VmbFeatureCommandRun_t = m_sdk.resolveFunction("VmbFeatureCommandRun");
-    VmbFeaturesList_t = m_sdk.resolveFunction("VmbFeaturesList");
-    VmbFeatureBoolGet_t = m_sdk.resolveFunction("VmbFeatureBoolGet");
-    VmbFeatureBoolSet_t = m_sdk.resolveFunction("VmbFeatureBoolSet");
-    VmbFeatureEnumGet_t = m_sdk.resolveFunction("VmbFeatureEnumGet");
-    VmbFeatureEnumSet_t = m_sdk.resolveFunction("VmbFeatureEnumSet");
-    VmbFeatureFloatGet_t = m_sdk.resolveFunction("VmbFeatureFloatGet");
-    VmbFeatureFloatSet_t = m_sdk.resolveFunction("VmbFeatureFloatSet");
-    VmbFeatureIntGet_t = m_sdk.resolveFunction("VmbFeatureIntGet");
-    VmbFeatureIntSet_t = m_sdk.resolveFunction("VmbFeatureIntSet");
-    VmbFeatureStringGet_t = m_sdk.resolveFunction("VmbFeatureStringGet");
-    VmbFeatureStringSet_t = m_sdk.resolveFunction("VmbFeatureStringSet");
-    VmbChunkDataAccess_t = m_sdk.resolveFunction("VmbChunkDataAccess");
+    bool allResolved = true;
+    VmbStartup_t = m_sdk.resolveFunction("VmbStartup", allResolved);
+    VmbVersionQuery_t = m_sdk.resolveFunction("VmbVersionQuery", allResolved);
+    VmbShutdown_t = m_sdk.resolveFunction("VmbShutdown", allResolved);
+    VmbCamerasList_t = m_sdk.resolveFunction("VmbCamerasList", allResolved);
+    VmbCameraOpen_t = m_sdk.resolveFunction("VmbCameraOpen", allResolved);
+    VmbCameraClose_t = m_sdk.resolveFunction("VmbCameraClose", allResolved);
+    VmbPayloadSizeGet_t =
+        m_sdk.resolveFunction("VmbPayloadSizeGet", allResolved);
+    VmbFrameAnnounce_t = m_sdk.resolveFunction("VmbFrameAnnounce", allResolved);
+    VmbCaptureStart_t = m_sdk.resolveFunction("VmbCaptureStart", allResolved);
+    VmbCaptureEnd_t = m_sdk.resolveFunction("VmbCaptureEnd", allResolved);
+    VmbCaptureFrameQueue_t =
+        m_sdk.resolveFunction("VmbCaptureFrameQueue", allResolved);
+    VmbCaptureFrameWait_t =
+        m_sdk.resolveFunction("VmbCaptureFrameWait", allResolved);
+    VmbCaptureQueueFlush_t =
+        m_sdk.resolveFunction("VmbCaptureQueueFlush", allResolved);
+    VmbFrameRevokeAll_t =
+        m_sdk.resolveFunction("VmbFrameRevokeAll", allResolved);
+    VmbFeatureCommandRun_t =
+        m_sdk.resolveFunction("VmbFeatureCommandRun", allResolved);
+    VmbFeaturesList_t = m_sdk.resolveFunction("VmbFeaturesList", allResolved);
+    VmbFeatureBoolGet_t =
+        m_sdk.resolveFunction("VmbFeatureBoolGet", allResolved);
+    VmbFeatureBoolSet_t =
+        m_sdk.resolveFunction("VmbFeatureBoolSet", allResolved);
+    VmbFeatureEnumGet_t =
+        m_sdk.resolveFunction("VmbFeatureEnumGet", allResolved);
+    VmbFeatureEnumSet_t =
+        m_sdk.resolveFunction("VmbFeatureEnumSet", allResolved);
+    VmbFeatureFloatGet_t =
+        m_sdk.resolveFunction("VmbFeatureFloatGet", allResolved);
+    VmbFeatureFloatSet_t =
+        m_sdk.resolveFunction("VmbFeatureFloatSet", allResolved);
+    VmbFeatureIntGet_t = m_sdk.resolveFunction("VmbFeatureIntGet", allResolved);
+    VmbFeatureIntSet_t = m_sdk.resolveFunction("VmbFeatureIntSet", allResolved);
+    VmbFeatureStringGet_t =
+        m_sdk.resolveFunction("VmbFeatureStringGet", allResolved);
+    VmbFeatureStringSet_t =
+        m_sdk.resolveFunction("VmbFeatureStringSet", allResolved);
+    VmbChunkDataAccess_t =
+        m_sdk.resolveFunction("VmbChunkDataAccess", allResolved);
     VmbFeatureEnumRangeQuery_t =
-        m_sdk.resolveFunction("VmbFeatureEnumRangeQuery");
+        m_sdk.resolveFunction("VmbFeatureEnumRangeQuery", allResolved);
     VmbFeatureIntRangeQuery_t =
-        m_sdk.resolveFunction("VmbFeatureIntRangeQuery");
+        m_sdk.resolveFunction("VmbFeatureIntRangeQuery", allResolved);
     VmbFeatureStringMaxlengthQuery_t =
-        m_sdk.resolveFunction("VmbFeatureStringMaxlengthQuery");
-    VmbFeatureInfoQuery_t = m_sdk.resolveFunction("VmbFeatureInfoQuery");
+        m_sdk.resolveFunction("VmbFeatureStringMaxlengthQuery", allResolved);
+    VmbFeatureInfoQuery_t =
+        m_sdk.resolveFunction("VmbFeatureInfoQuery", allResolved);
     VmbFeatureFloatRangeQuery_t =
-        m_sdk.resolveFunction("VmbFeatureFloatRangeQuery");
+        m_sdk.resolveFunction("VmbFeatureFloatRangeQuery", allResolved);
     VmbFeatureInvalidationRegister_t =
-        m_sdk.resolveFunction("VmbFeatureInvalidationRegister");
-    VmbFeatureAccessQuery_t = m_sdk.resolveFunction("VmbFeatureAccessQuery");
+        m_sdk.resolveFunction("VmbFeatureInvalidationRegister", allResolved);
+    VmbFeatureAccessQuery_t =
+        m_sdk.resolveFunction("VmbFeatureAccessQuery", allResolved);
     VmbFeatureIntIncrementQuery_t =
-        m_sdk.resolveFunction("VmbFeatureIntIncrementQuery");
+        m_sdk.resolveFunction("VmbFeatureIntIncrementQuery", allResolved);
     VmbFeatureFloatIncrementQuery_t =
-        m_sdk.resolveFunction("VmbFeatureFloatIncrementQuery");
+        m_sdk.resolveFunction("VmbFeatureFloatIncrementQuery", allResolved);
     VmbFeatureCommandIsDone_t =
-        m_sdk.resolveFunction("VmbFeatureCommandIsDone");
-    //TODO check all resolved symbols
-    auto err = VmbStartup_t(nullptr);
-    if(err == VmbErrorSuccess) {
-      m_initialized = true;
+        m_sdk.resolveFunction("VmbFeatureCommandIsDone", allResolved);
+    if (allResolved) {
+      auto err = VmbStartup_t(nullptr);
+      if (err == VmbErrorSuccess) {
+        m_initialized = true;
+      }
     }
   }
 }
 
 bool VimbaXApi::isInitialized() const { return m_initialized; }
 
-VimbaXApi::~VimbaXApi() { 
-    m_initialized = false;
-    VmbShutdown_t(); }
+VimbaXApi::~VimbaXApi() {
+  m_initialized = false;
+  VmbShutdown_t();
+}
 
 LibLoader::LibLoader(const char* lib, const char* libPath)
     : m_libName(lib), m_libPath(libPath), m_module(nullptr), m_loaded(false) {
@@ -103,10 +122,12 @@ LibLoader::~LibLoader() {
 
 bool LibLoader::isLoaded() const { return m_loaded; }
 
-ProcWrapper LibLoader::resolveFunction(const char* functionName) const {
-  if (m_module && m_loaded) {
-    return ProcWrapper(GetProcAddress((HMODULE)m_module, functionName));
+ProcWrapper LibLoader::resolveFunction(const char* functionName,
+                                       bool& allResolved) const {
+  FARPROC funPtr = nullptr;
+  if (allResolved) {
+    funPtr = GetProcAddress((HMODULE)m_module, functionName);
+    allResolved = allResolved && (funPtr != nullptr);
   }
-
-  return ProcWrapper(nullptr);
+  return ProcWrapper(funPtr);
 }

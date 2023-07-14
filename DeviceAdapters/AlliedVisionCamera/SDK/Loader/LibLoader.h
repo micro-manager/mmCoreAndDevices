@@ -75,11 +75,13 @@ class LibLoader {
 
   /**
    * @brief Resolve function from library
-   * @param[in] functionName Function name to be resolved
+   * @param[in] functionName    Function name to be resolved
+   * @param[out] allResolved     Bool flag to indicate if symbol was resolved
    * @return ProcWrapper object to the resolved function. NULLPTR if not
    * resolved
    */
-  ProcWrapper resolveFunction(const char* functionName) const;
+  ProcWrapper resolveFunction(const char* functionName,
+                              bool& allResolved) const;
 
   /**
    * @brief Getter to check if library is loaded

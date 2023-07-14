@@ -60,17 +60,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName) {
     return nullptr;
   }
 
-  if (g_api == nullptr) {
-    g_api = std::make_unique<VimbaXApi>();
-  }
-  if (g_api == nullptr || !g_api->isInitialized()) {
-    return nullptr;
-  }
-
   if (std::string(deviceName) == std::string(g_hubName)) {
-    return new AlliedVisionHub(g_api);
+    return new AlliedVisionHub();
   } else {
-    return new AlliedVisionCamera(deviceName, g_api);
+    return new AlliedVisionCamera(deviceName);
   }
 }
 
@@ -88,23 +81,29 @@ AlliedVisionCamera::~AlliedVisionCamera() {
   }
 }
 
-AlliedVisionCamera::AlliedVisionCamera(const char* deviceName,
-                                       std::unique_ptr<VimbaXApi>& sdk)
+AlliedVisionCamera::AlliedVisionCamera(const char* deviceName)
     : CCameraBase<AlliedVisionCamera>(),
-      m_sdk(sdk),
+      m_sdk(nullptr),
       m_handle{nullptr},
       m_cameraName{deviceName},
       m_frames{},
       m_buffer{},
       m_bufferSize{0},
       m_isAcquisitionRunning{false} {
-  CreateHubIDProperty();
   // [Rule] Create properties here (pre-init only)
+  CreateHubIDProperty();
   InitializeDefaultErrorMessages();
   setApiErrorMessages();
 }
 
 int AlliedVisionCamera::Initialize() {
+  auto parentHub = dynamic_cast<AlliedVisionHub*>(GetParentHub());
+  if (parentHub == nullptr) {
+    LogMessage("Parent HUB not found!");
+    return DEVICE_ERR;
+  }
+
+  m_sdk = parentHub->getSDK();
   // [Rule] Implement communication here
   LogMessage("Opening camera: " + m_cameraName);
   VmbError_t err = m_sdk->VmbCameraOpen_t(

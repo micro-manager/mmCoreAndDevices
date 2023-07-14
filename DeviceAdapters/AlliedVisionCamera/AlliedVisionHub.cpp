@@ -2,13 +2,7 @@
 
 #include "AlliedVisionCamera.h"
 
-AlliedVisionHub::AlliedVisionHub(std::unique_ptr<VimbaXApi>& sdk) : m_sdk(sdk) {}
-
-AlliedVisionHub::~AlliedVisionHub() {
-  // Release static SDK variable from DLL, otherwise process will not be
-  // killed, destructor not called
-  m_sdk.reset();
-}
+AlliedVisionHub::AlliedVisionHub() : m_sdk(std::make_shared<VimbaXApi>()) {}
 
 int AlliedVisionHub::DetectInstalledDevices() {
   VmbUint32_t camNum;
@@ -23,8 +17,7 @@ int AlliedVisionHub::DetectInstalledDevices() {
     if (err == VmbErrorSuccess) {
       for (VmbUint32_t i = 0; i < camNum; ++i) {
         if (camInfo[i].permittedAccess & VmbAccessModeFull) {
-          MM::Device* pDev =
-              new AlliedVisionCamera(camInfo[i].cameraIdString, m_sdk);
+          MM::Device* pDev = new AlliedVisionCamera(camInfo[i].cameraIdString);
           AddInstalledDevice(pDev);
         }
       }
@@ -37,7 +30,7 @@ int AlliedVisionHub::DetectInstalledDevices() {
 }
 
 int AlliedVisionHub::Initialize() {
-  LogMessage("Init HUB");  
+  LogMessage("Init HUB");
   return DEVICE_OK;
 }
 
@@ -51,3 +44,5 @@ void AlliedVisionHub::GetName(char* name) const {
 }
 
 bool AlliedVisionHub::Busy() { return false; }
+
+std::shared_ptr<VimbaXApi>& AlliedVisionHub::getSDK() { return m_sdk; }
