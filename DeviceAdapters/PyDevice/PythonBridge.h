@@ -105,10 +105,15 @@ private:
         // use reflection to locate all accessible properties of the device object.
         // Convert these to MM int/float/string properties that will show up in the property browser.
         auto type_info = PyObj(PyObject_Type(object_));
+        PyObj::ReportError();
         auto dict = PyObj(PyObject_GetAttrString(type_info, "__dict__"));
+        PyObj::ReportError();
         auto properties = PyObj(PyMapping_Items(dict)); // key-value pairs
+        PyObj::ReportError();
         auto property_count = PyList_Size(properties);
+        PyObj::ReportError();
         for (Py_ssize_t i = 0; i < property_count; i++) {
+            PyObj::ReportError();
             auto key_value = PyList_GetItem(properties, i); // note: borrowed reference, don't ref count (what a mess...)
             auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
             auto property = PyTuple_GetItem(key_value, 1);

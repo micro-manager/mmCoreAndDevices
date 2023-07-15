@@ -18,7 +18,8 @@
 #include <numpy/arrayobject.h>
 
 
-int CPyHub::InitializeDevice() {
+int CPyHub::DetectInstalledDevices() {
+    ClearInstalledDevices();
     PyLock lock;
     PyObj device_dict;
     _check_(python_.GetProperty("devices", device_dict));
@@ -31,7 +32,10 @@ int CPyHub::InitializeDevice() {
             auto device = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
             // find device type
             auto mm_device = new CPyGenericDevice(device);
+            auto cname = name.as<string>();
+            mm_device->SetLabel(cname.c_str());
             this->AddInstalledDevice(mm_device);
+            RegisterDevice(cname.c_str(), MM::GenericDevice, "Child of Hub");
         }
     }
     return python_.CheckError();

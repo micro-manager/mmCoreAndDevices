@@ -4,9 +4,9 @@
 // Entry points for loading the dll and creating devices.
 MODULE_API void InitializeModuleData()
 {
+    RegisterDevice(CPyHub::g_adapterName, MM::HubDevice, "Runs a Python script that constructs one or more device objects");
     RegisterDevice(CPyGenericDevice::g_adapterName, MM::GenericDevice, "Generic micro-manager device that is implemented by a Python script");
     RegisterDevice(CPyCamera::g_adapterName, MM::CameraDevice, "Camera device that obtains images from a Python script");
-    RegisterDevice(CPyHub::g_adapterName, MM::HubDevice, "Runs a Python script that constructs one or more device objects");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)

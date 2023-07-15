@@ -57,3 +57,8 @@ class Camera:
 
     invert = bool_property(default = 0)
     image = property(fget = get_image)
+
+
+class Hub:
+    def __init__(self):
+        self.devices = {'first_device': Device()}

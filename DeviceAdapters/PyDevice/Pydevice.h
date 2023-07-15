@@ -23,6 +23,7 @@
 #pragma once
 #include "pch.h"
 #include "PythonBridge.h"
+class CPyHub;
 
 /**
  * Base class for device adapters that are implement by a Python script.
@@ -65,6 +66,14 @@ public:
      * @return MM error code 
     */
     int Initialize() override {
+        auto hub = static_cast<CPyHub*>(this->GetParentHub());
+        if (hub)
+        {
+            char hubLabel[MM::MaxStrLength];
+            hub->GetLabel(hubLabel);
+            this->SetParentID(hubLabel); // for backward comp.
+        }
+
         auto result = python_.Initialize(this);
         if (result != DEVICE_OK) {
             Shutdown();
@@ -165,5 +174,5 @@ public:
         return false;
     }
 protected:
-    int InitializeDevice() override;
+    int DetectInstalledDevices() override;
 };
