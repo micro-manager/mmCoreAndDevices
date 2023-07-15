@@ -18,6 +18,26 @@
 #include <numpy/arrayobject.h>
 
 
+int CPyHub::InitializeDevice() {
+    PyLock lock;
+    PyObj device_dict;
+    _check_(python_.GetProperty("devices", device_dict));
+    auto devices = PyObj(PyDict_Items(device_dict));
+    if (PyList_Check(devices)) {
+        auto device_count = PyList_Size(devices);
+        for (Py_ssize_t i = 0; i < device_count; i++) {
+            auto key_value = PyObj::Borrow(PyList_GetItem(devices, i));
+            auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0));
+            auto device = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
+            // find device type
+            auto mm_device = new CPyGenericDevice(device);
+            this->AddInstalledDevice(mm_device);
+        }
+    }
+    return python_.CheckError();
+}
+
+
 
 /**
 * Performs exposure and grabs a single image.

@@ -32,7 +32,7 @@ public:
     }
 
     explicit PyObj(PyObject* obj);
-    PyObj(const PyObj& other) : p_(other) {
+    PyObj(const PyObj& other) : p_(other ? other : nullptr) {
         if (p_) {
             PyLock lock;
             Py_INCREF(p_);
@@ -112,8 +112,6 @@ public:
     * Takes a borrowed reference and wraps it into a PyObj smart pointer
     * This increases the reference count of the object.
     * The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
-    *
-    * Throws an exception when obj == NULL, because this is the common way of the Python API to report errors
     */
     static PyObj Borrow(PyObject* obj) {
         if (obj) {

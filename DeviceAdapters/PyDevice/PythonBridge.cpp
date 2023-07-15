@@ -87,13 +87,11 @@ int PythonBridge::ConstructPythonObject(const char* pythonScript, const char* py
         "code = open('" << scriptPath.generic_string() << "')\n"
         "exec(code.read())\n"
         "code.close()\n"
-        "device = " << pythonClass << "()\n"
-        "options = [p for p in type(device).__dict__.items() if isinstance(p[1], base_property)]";
+        "device = " << pythonClass << "()";
 
     auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
     auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, scope, scope));
     object_ = PyObj::Borrow(PyDict_GetItemString(scope, "device"));
-    options_ = PyObj::Borrow(PyDict_GetItemString(scope, "options"));
     intPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "int_property"));
     floatPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "float_property"));
     stringPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "string_property"));
@@ -130,7 +128,6 @@ int PythonBridge::CheckError() const {
 int PythonBridge::Destruct() noexcept {
     PyLock lock;
     object_.Clear();
-    options_.Clear();
     intPropertyType_.Clear();
     floatPropertyType_.Clear();
     stringPropertyType_.Clear();

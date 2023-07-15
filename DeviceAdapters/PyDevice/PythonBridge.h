@@ -10,9 +10,6 @@ class PythonBridge
         string attribute;
         string value;
     };
-    static constexpr const char* p_PythonHome = "Python library path";
-    static constexpr const char* p_PythonScript = "Device script";
-    static constexpr const char* p_PythonDeviceClass = "Device class";
     static bool g_initializedInterpreter;
     static PyThreadState* g_threadState;
     static fs::path g_PythonHome;
@@ -20,7 +17,6 @@ class PythonBridge
     static std::vector<Link> g_MissingLinks;
     
     PyObj object_;
-    PyObj options_;
     PyObj intPropertyType_;
     PyObj floatPropertyType_;
     PyObj stringPropertyType_;
@@ -30,7 +26,11 @@ class PythonBridge
     const function<void(const char*)> errorCallback_;
     
 public:
-    PythonBridge(const function<void(const char*)>& errorCallback) : errorCallback_(errorCallback), initialized_(false) {
+    static constexpr const char* p_PythonHome = "Python library path";
+    static constexpr const char* p_PythonScript = "Device script";
+    static constexpr const char* p_PythonDeviceClass = "Device class";
+    
+    PythonBridge(const function<void(const char*)>& errorCallback, const PyObj& existing_object = PyObj()) : errorCallback_(errorCallback), initialized_(false), object_(existing_object) {
     }
 
     int Call(const PyObj& callable, PyObj& retval) const noexcept;
@@ -60,30 +60,33 @@ public:
       @todo: add verification handler when script path set
     */
     template <class T> void Construct(CDeviceBase<T, PythonBridge>* device, const char* defaultClassName) {
-        device->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), false, nullptr, true);
-        device->CreateStringProperty(p_PythonScript, "", false, nullptr, true);
-        device->CreateStringProperty(p_PythonDeviceClass, defaultClassName, false, nullptr, true); // remove 'Py' prefix
+        if (!object_) {
+            device->CreateStringProperty(p_PythonHome, PythonBridge::FindPython().generic_string().c_str(), false, nullptr, true);
+            device->CreateStringProperty(p_PythonScript, "", false, nullptr, true);
+            device->CreateStringProperty(p_PythonDeviceClass, defaultClassName, false, nullptr, true); // remove 'Py' prefix
+        }
     }
 
     template <class T> int Initialize(CDeviceBase<T, PythonBridge>* device) {
         if (initialized_)
             return DEVICE_OK;
+        if (!object_) {
+            char pythonHome[MM::MaxStrLength] = { 0 };
+            char pythonScript[MM::MaxStrLength] = { 0 };
+            char pythonDeviceClass[MM::MaxStrLength] = { 0 };
+            char label[MM::MaxStrLength] = { 0 };
+            _check_(device->GetProperty(p_PythonHome, pythonHome));
+            _check_(device->GetProperty(p_PythonScript, pythonScript));
+            _check_(device->GetProperty(p_PythonDeviceClass, pythonDeviceClass));
+            _check_(InitializeInterpreter(pythonHome));
+            PyLock lock;
+            _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
+            _check_(CreateProperties(device));
+            device->GetLabel(label); // Note: it seems that SetLabel is only called once, and before device initialization, so we can safely read it here and consider it constant.
+            label_ = label;
+        }
 
-        char pythonHome[MM::MaxStrLength] = { 0 };
-        char pythonScript[MM::MaxStrLength] = { 0 };
-        char pythonDeviceClass[MM::MaxStrLength] = { 0 };
-        char label[MM::MaxStrLength] = { 0 };
-        _check_(device->GetProperty(p_PythonHome, pythonHome));
-        _check_(device->GetProperty(p_PythonScript, pythonScript));
-        _check_(device->GetProperty(p_PythonDeviceClass, pythonDeviceClass));
-        _check_(InitializeInterpreter(pythonHome));
-        PyLock lock;
-        _check_(ConstructPythonObject(pythonScript, pythonDeviceClass));
-        _check_(CreateProperties(device));
-
-        device->GetLabel(label); // Note: it seems that SetLabel is only called once, and before device initialization, so we can safely read it here and consider it constant.
         initialized_ = true;
-        label_ = label;
         Register(); // register device in device map, and link to existing python objects if needed
         return DEVICE_OK;
     }
@@ -99,16 +102,15 @@ private:
     template <class T> int CreateProperties(CDeviceBase<T, PythonBridge>* device) noexcept {
         using Action = typename CDeviceBase<T, PythonBridge>::CPropertyAction;
 
-        // Traverse the options_ dictionary and find all properties of types we recognize.
+        // use reflection to locate all accessible properties of the device object.
         // Convert these to MM int/float/string properties that will show up in the property browser.
-        // Note: we can be sure options_ is a PyDict. Therefore, we can be sure that the PyList and PyTuple functions succeed.
-        // we do need to check if the keys and values are of the correct type
-        auto property_count = PyList_Size(options_);
+        auto type_info = PyObj(PyObject_Type(object_));
+        auto dict = PyObj(PyObject_GetAttrString(type_info, "__dict__"));
+        auto properties = PyObj(PyMapping_Items(dict)); // key-value pairs
+        auto property_count = PyList_Size(properties);
         for (Py_ssize_t i = 0; i < property_count; i++) {
-            auto key_value = PyList_GetItem(options_, i); // note: borrowed reference, don't ref count (what a mess...)
+            auto key_value = PyList_GetItem(properties, i); // note: borrowed reference, don't ref count (what a mess...)
             auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
-            if (name.empty())
-                continue;   // key was not a string
             auto property = PyTuple_GetItem(key_value, 1);
 
             if (PyObject_IsInstance(property, intPropertyType_)) {

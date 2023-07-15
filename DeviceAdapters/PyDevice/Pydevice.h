@@ -45,10 +45,10 @@ public:
      * The device is not initialized, and no Python calls are made. This only sets up error messages, the error handler, and three 'pre-init' properties that hold the path of the Python libraries, the path of the Python script, and the name of the Python class that implements the device.
      * @param adapterName name of the adapter type, e.g. "Camera". This is the default name of the Python class. For use by MM (GetName), the adapterName is prefixed with "Py", 
     */
-    CPyDeviceBase(const char* adapterName) : adapterName_(adapterName), python_([this](const char* message) {
+    CPyDeviceBase(const char* adapterName, const PyObj& existing_object) : adapterName_(adapterName), python_([this](const char* message) {
            this->SetErrorText(ERR_PYTHON_EXCEPTION, message);
            this->LogMessage(message, false);
-        }) {
+        }, existing_object) {
         this->SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not initialize python interpreter, perhaps an incorrect path was specified?");
         this->SetErrorText(ERR_PYTHON_PATH_CONFLICT, "All Python devices must have the same Python library path");
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
@@ -115,7 +115,7 @@ class CPyGenericDevice : public CPyDeviceBase<CGenericBase<PythonBridge>> {
     using BaseClass = CPyDeviceBase<CGenericBase<PythonBridge>>;
 public:
     constexpr static const char* g_adapterName = "PyDevice";
-    CPyGenericDevice() : BaseClass(g_adapterName) {
+    CPyGenericDevice(const PyObj& existing_object = PyObj()) : BaseClass(g_adapterName, existing_object) {
     }
     virtual bool Busy() override {
         return false;
@@ -133,7 +133,7 @@ class CPyCamera : public CPyDeviceBase<CCameraBase<PythonBridge>> {
     using BaseClass = CPyDeviceBase<CCameraBase<PythonBridge>>;
 public:
     constexpr static const char* g_adapterName = "PyCamera";
-    CPyCamera() : BaseClass(g_adapterName) {
+    CPyCamera(const PyObj& existing_object = PyObj()) : BaseClass(g_adapterName, existing_object) {
     }
     const unsigned char* GetImageBuffer() override;
     unsigned GetImageWidth() const override;
@@ -151,6 +151,19 @@ public:
     int IsExposureSequenceable(bool& isSequenceable) const override;
     int SnapImage() override;
     int Shutdown() override;
+protected:
+    int InitializeDevice() override;
+};
+
+class CPyHub : public CPyDeviceBase<HubBase<PythonBridge>> {
+    using BaseClass = CPyDeviceBase<HubBase<PythonBridge>>;
+public:
+    constexpr static const char* g_adapterName = "PyHub";
+    CPyHub() : BaseClass(g_adapterName, PyObj()) {
+    }
+    virtual bool Busy() override {
+        return false;
+    }
 protected:
     int InitializeDevice() override;
 };
