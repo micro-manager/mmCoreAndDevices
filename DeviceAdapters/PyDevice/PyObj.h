@@ -50,18 +50,21 @@ public:
     // note: the current thread must hold the GIL (see PyLock)
     template <class T> T as() const;
     template <> long as<long>() const {
+        PyLock lock;
         auto retval = PyLong_AsLong(*this);
         if (retval == -1) // may be an error
             ReportError();
         return retval;
     }
     template <> double as<double>() const {
+        PyLock lock;
         auto retval = PyFloat_AsDouble(*this);
         if (retval == -1.0) // may be an error
             ReportError();
         return retval;
     }
     template <> string as<string>() const {
+        PyLock lock;
         auto retval = PyUnicode_AsUTF8(*this);
         if (!retval) { // error
             ReportError();
@@ -73,6 +76,7 @@ public:
         return *this;
     }
     template <class T> void Set(const char* attribute, T value) {
+        PyLock lock;
         PyObject_SetAttrString(p_, attribute, PyObj(value));
         ReportError();
     }

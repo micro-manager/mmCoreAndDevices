@@ -24,9 +24,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
         return new CPyHub();
 
     // else, we are (re)creating a MM Device wrapper for an existing Python object. To locate the object, we must first locate the hub
-    auto pyobj = CPyHub::GetDevice(deviceName);
-
-    return pyobj ? new CPyGenericDevice(deviceName, pyobj) : nullptr;
+    return new CPyGenericDevice(deviceName);
 }
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)

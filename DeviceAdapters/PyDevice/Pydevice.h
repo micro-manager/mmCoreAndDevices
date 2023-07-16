@@ -47,7 +47,7 @@ protected:
     string name_;
 
     int EnumerateProperties(const CPyHub& hub) noexcept;
-    CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& name, const PyObj& object) : errorCallback_(errorCallback), object_(object), name_(name) {
+    CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& name) : errorCallback_(errorCallback), object_(), name_(name) {
     }
 
 
@@ -56,22 +56,7 @@ protected:
         value = PyObj(PyObject_GetAttrString(object, name)).as<T>();
         return CheckError();
     }
-
-    /**
-    * Checks if a Python error has occurred since the last call to CheckError
-    * @return DEVICE_OK or ERR_PYTHON_EXCEPTION
-    */
-    int CheckError() const noexcept {
-        PyLock lock;
-        PyObj::ReportError(); // check if any new errors happened
-        if (!PyObj::g_errorMessage.empty()) {
-            errorCallback_(PyObj::g_errorMessage.c_str());
-            PyObj::g_errorMessage.clear();
-            return ERR_PYTHON_EXCEPTION;
-        }
-        else
-            return DEVICE_OK;
-    }
+    int CheckError() const noexcept;
 
 
 public:
@@ -114,10 +99,10 @@ public:
      * The device is not initialized, and no Python calls are made. This only sets up error messages, the error handler, and three 'pre-init' properties that hold the path of the Python libraries, the path of the Python script, and the name of the Python class that implements the device.
      * @param adapterName name of the adapter type, e.g. "Camera". This is the default name of the Python class. For use by MM (GetName), the adapterName is prefixed with "Py", 
     */
-    CPyDeviceTemplate(const string& name, const PyObj& object) : CPyDeviceBase([this](const char* message) {
+    CPyDeviceTemplate(const string& name) : CPyDeviceBase([this](const char* message) {
         this->SetErrorText(ERR_PYTHON_EXCEPTION, message);
         this->SetErrorText(ERR_PYTHON_EXCEPTION, PyObj::g_errorMessage.c_str());
-        }, name, object)
+        }, name)
     {
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
     }
@@ -142,17 +127,15 @@ public:
             };
 
             // Set limits. Only supported by MM if both upper and lower limit are present.
-            // The min/max attributes are always present, we only need to check if they don't hold 'None'
             if (property.has_limits)
                 this->SetPropertyLimits(property.name.c_str(), property.min, property.max);
             
 
             // For enum-type objects (may be string, int or float), notify MM about the allowed values
-            // The allowed_values attribute is always present, we only need to check if they don't hold 'None'
             if (!property.allowed_values.empty())
                 this->SetAllowedValues(property.name.c_str(), property.allowed_values);
         }
-        return CheckError();
+        return DEVICE_OK;
     }
 
     /**
@@ -173,6 +156,7 @@ public:
             hub->GetLabel(hubLabel);
             this->SetParentID(hubLabel); 
 
+            object_ = CPyHub::GetDevice(name_);
             if (object_) {
                 EnumerateProperties(*hub);
                 this->CreateProperties();
@@ -192,9 +176,6 @@ public:
         return DEVICE_OK;
     }
 
-    /**
-     * Required by MM::Device API. Returns name of the adapter type
-    */
     void GetName(char* name) const override {
         CDeviceUtils::CopyLimitedString(name, name_.c_str());
     }
@@ -220,7 +201,7 @@ protected:
 using PyGenericClass = CPyDeviceTemplate<CGenericBase>;
 class CPyGenericDevice : public PyGenericClass {
 public:
-    CPyGenericDevice(const string& name, const PyObj& object) :PyGenericClass(name, object) {
+    CPyGenericDevice(const string& name) :PyGenericClass(name) {
     }
     virtual bool Busy() override {
         return false;
@@ -237,7 +218,7 @@ class CPyCamera : public PyCameraClass {
     PyObj waitFunction_;    // 'wait' function of the camera object
     
 public:
-    CPyCamera(const string& name, const PyObj& object) : PyCameraClass(name, object) {
+    CPyCamera(const string& name) : PyCameraClass(name) {
     }
     const unsigned char* GetImageBuffer() override;
     unsigned GetImageWidth() const override;
@@ -265,7 +246,7 @@ class CPyHub : public PyHubClass {
     static constexpr const char* p_PythonScript = "Device script";
 public:
     static constexpr const char* g_adapterName = "PyHub";
-    CPyHub() : PyHubClass(g_adapterName, PyObj()) {
+    CPyHub() : PyHubClass(g_adapterName) {
         SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not initialize Python interpreter, perhaps an incorrect path was specified?");
         CreateStringProperty(p_PythonHome, PyObj::FindPython().generic_string().c_str(), false, nullptr, true);
         CreateStringProperty(p_PythonScript, "", false, nullptr, true);

@@ -25,31 +25,24 @@ std::map<string, CPyHub*> CPyHub::g_hubs;
  * @return 
 */
 int CPyHub::Shutdown() noexcept {
-    if (initialized_) {
-        PyLock lock;
-        devices_.clear();
-        intPropertyType_.Clear();
-        floatPropertyType_.Clear();
-        stringPropertyType_.Clear();
-        objectPropertyType_.Clear();
-        initialized_ = false;
+    PyLock lock;
+    devices_.clear();
+    intPropertyType_.Clear();
+    floatPropertyType_.Clear();
+    stringPropertyType_.Clear();
+    objectPropertyType_.Clear();
+    initialized_ = false;
 
-        g_hubs.erase(name_);
-       // if (g_hubs.empty()) {
-            // don't Py_Finalize, because this causes a crash (bug in numpy?)
-       // }
-
-    }
-    return DEVICE_OK;
+    g_hubs.erase(name_);
+    return PyHubClass::Shutdown();
 }
 
 int CPyHub::DetectInstalledDevices() {
     ClearInstalledDevices();
     for (const auto& key_value : devices_) {
-        //RegisterDevice(cname.c_str(), MM::GenericDevice, "Child of Hub");
         // todo: find device type
         auto name = (name_ + ':') + key_value.first;
-        auto mm_device = new CPyGenericDevice(name, key_value.second);
+        auto mm_device = new CPyGenericDevice(name);
         AddInstalledDevice(mm_device);
     }
     return CheckError();
@@ -166,6 +159,23 @@ int CPyDeviceBase::EnumerateProperties(const CPyHub& hub) noexcept
     }
     return CheckError();
 }
+
+/**
+* Checks if a Python error has occurred since the last call to CheckError
+* @return DEVICE_OK or ERR_PYTHON_EXCEPTION
+*/
+int CPyDeviceBase::CheckError() const noexcept {
+    PyLock lock;
+    PyObj::ReportError(); // check if any new errors happened
+    if (!PyObj::g_errorMessage.empty()) {
+        errorCallback_(PyObj::g_errorMessage.c_str());
+        PyObj::g_errorMessage.clear();
+        return ERR_PYTHON_EXCEPTION;
+    }
+    else
+        return DEVICE_OK;
+}
+
 
 int CPyDeviceBase::OnObjectProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
