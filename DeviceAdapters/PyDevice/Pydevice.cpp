@@ -14,7 +14,6 @@
 #include "PyDevice.h"
 #include <numpy/arrayobject.h>
 
-
 PyThreadState* CPyHub::g_threadState = nullptr;
 std::map<string, CPyHub*> CPyHub::g_hubs;
 
@@ -70,7 +69,6 @@ int CPyHub::InitializeInterpreter() noexcept
 {
     // Initilialize Python interpreter, if not already done
     if (g_threadState == nullptr) {
-
         // Initialize Python configuration (new style)
         // The old style initialization (using Py_Initialize) does not have a way to report errors. In particular,
         // if the Python installation cannot be found, the program just terminates!
@@ -133,7 +131,6 @@ int CPyDeviceBase::EnumerateProperties(const CPyHub& hub) noexcept
             auto lower = property.Get("min");
             auto upper = property.Get("max");
             if (lower != Py_None && upper != Py_None) {
-                double lower_val, upper_val;
                 descriptor.min = lower.as<double>();
                 descriptor.max = upper.as<double>();
                 descriptor.has_limits = true;
@@ -276,8 +273,10 @@ int CPyCamera::SnapImage()
     return CheckError();
 }
 
-int CPyCamera::InitializeDevice() {
+int CPyCamera::Initialize() {
     PyLock lock;
+    _check_(PyCameraClass::Initialize());
+
     const auto required_properties = { 
         MM::g_Keyword_Binning, // "Binning". e.g. Binning = int_property(allowed_values = {1,2,4}, default = 1)
         "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait"};
@@ -347,7 +346,6 @@ const unsigned char* CPyCamera::GetImageBuffer()
 /**
 * Returns image buffer X-size in pixels.
 * Required by the MM::Camera API.
-* todo: cache width and height properties?
 */
 unsigned CPyCamera::GetImageWidth() const
 {

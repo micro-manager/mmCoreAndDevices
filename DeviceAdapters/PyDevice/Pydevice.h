@@ -26,7 +26,7 @@
 
 struct PropertyDescriptor {
     string name;
-    int type;
+    int type = MM::Undef;
     double min = 0.0;
     double max = 0.0;
     bool has_limits = false;
@@ -174,15 +174,6 @@ public:
     }
     
 protected:
-    /**
-    * Called after construction of the Python class
-    * May be overridden by a derived class to check if all required properties are present and have the correct type,
-    * or to perform any other initialization if needed.
-    */
-    virtual int InitializeDevice() {
-        return DEVICE_OK;
-    }
-    
     // disable copy
     CPyDeviceTemplate(CPyDeviceTemplate& other) = delete;
 };
@@ -229,8 +220,7 @@ public:
     int IsExposureSequenceable(bool& isSequenceable) const override;
     int SnapImage() override;
     int Shutdown() override;
-protected:
-    int InitializeDevice() override;
+    int Initialize() override;
 };
 
 using PyHubClass = CPyDeviceTemplate<HubBase>;
