@@ -130,23 +130,19 @@ int CPyDeviceBase::EnumerateProperties(const CPyHub& hub) noexcept
         // Set limits. Only supported by MM if both upper and lower limit are present.
         // The min/max attributes are always present, we only need to check if they don't hold 'None'
         if (descriptor.type == MM::Integer || descriptor.type == MM::Float) {
-            PyObj lower, upper;
-            _check_(Get(property, "min", lower));
-            _check_(Get(property, "max", upper));
+            auto lower = property.Get("min");
+            auto upper = property.Get("max");
             if (lower != Py_None && upper != Py_None) {
                 double lower_val, upper_val;
-                _check_(Get(property, "min", lower_val));
-                _check_(Get(property, "max", upper_val));
-                descriptor.min = lower_val;
-                descriptor.max = upper_val;
+                descriptor.min = lower.as<double>();
+                descriptor.max = upper.as<double>();
                 descriptor.has_limits = true;
             }
         }
 
         // For enum-type objects (may be string, int or float), notify MM about the allowed values
         // The allowed_values attribute is always present, we only need to check if they don't hold 'None'
-        PyObj allowed_values;
-        _check_(Get(property, "allowed_values", allowed_values));
+        PyObj allowed_values = property.Get("allowed_values");
         if (allowed_values != Py_None) {
             auto value_count = PyList_Size(allowed_values);
             for (Py_ssize_t j = 0; j < value_count; j++) {
@@ -287,15 +283,15 @@ int CPyCamera::InitializeDevice() {
         "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait"};
     bool missing = false;
     for (auto p : required_properties) { // try to access the property, gives an exception (which contains the name of the missing property) if the property is missing
-        PyObj value;
-        if (Get(object_, p, value) != DEVICE_OK)
+        PyObj value = object_.Get(p);
+        if (value == Py_None)
             missing = true;
     }
     if (missing)
         return ERR_PYTHON_EXCEPTION;// ERR_PYTHON_MISSING_PROPERTY;
     
-    _check_(Get(object_, "trigger", triggerFunction_));
-    _check_(Get(object_, "wait", waitFunction_));
+    triggerFunction_ = object_.Get("trigger");
+    waitFunction_ = object_.Get("wait");
     return DEVICE_OK;
 }
 
@@ -320,10 +316,10 @@ int CPyCamera::Shutdown() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    if (Get(object_, "image", lastImage_) != DEVICE_OK) {
-        this->LogMessage("Error, could not read 'image' property");
+    lastImage_ = object_.Get("image");
+    if (CheckError() != DEVICE_OK)
         return nullptr;
-    }
+
     if (!PyArray_Check(lastImage_)) {
         this->LogMessage("Error, 'image' property should return a numpy array");
         return nullptr;
@@ -355,9 +351,7 @@ const unsigned char* CPyCamera::GetImageBuffer()
 */
 unsigned CPyCamera::GetImageWidth() const
 {
-    long width = 0;
-    Get(object_, "width", width);
-    return width;
+    return object_.Get("width").as<long>();
 }
 
 /**
@@ -366,9 +360,7 @@ unsigned CPyCamera::GetImageWidth() const
 */
 unsigned CPyCamera::GetImageHeight() const
 {
-    long height = 0;
-    Get(object_, "height", height);
-    return height;
+    return object_.Get("height").as<long>();
 }
 
 /**
@@ -429,15 +421,10 @@ int CPyCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 int CPyCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
     PyLock lock; // make sure all four elements of the ROI are read without any other thread having access
-    long txSize, tySize, tx, ty;
-    Get(object_, "width", txSize);
-    Get(object_, "height", tySize);
-    Get(object_, "top", ty);
-    Get(object_, "left", tx);
-    x = tx; // not needed if we can be sure that unsigned has same size as long, but this is not guaranteed by c++
-    y = ty;
-    xSize = txSize;
-    ySize = tySize;
+    xSize = object_.Get("width").as<long>();
+    ySize = object_.Get("height").as<long>();
+    x = object_.Get("left").as<long>();
+    y = object_.Get("top").as<long>();
     return DEVICE_OK;
 }
 
@@ -466,9 +453,7 @@ int CPyCamera::ClearROI()
 */
 double CPyCamera::GetExposure() const
 {
-    double exposure = 0;
-    Get(object_, "exposure_ms", exposure); // cannot use GetProperty of CDeviceBase because that is not const !?
-    return exposure;
+    return object_.Get("exposure_ms").as<double>();
 }
 
 /**
@@ -477,7 +462,7 @@ double CPyCamera::GetExposure() const
 */
 void CPyCamera::SetExposure(double exp)
 {
-    object_.Set("exposure_ms", std::to_string(exp).c_str()); // cannot directly call SetProperty on python_ because that does not update cached value
+    object_.Set("exposure_ms", exp); // cannot directly call SetProperty on python_ because that does not update cached value
     GetCoreCallback()->OnExposureChanged(this, exp);
 }
 

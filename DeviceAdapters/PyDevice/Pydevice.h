@@ -40,21 +40,14 @@ class CPyHub;
 class CPyDeviceBase {
 protected:
     /** Handle to the Python object */
-    PyObj object_;    
     bool initialized_ = false;
+    PyObj object_;    
+    string name_;
     vector<PropertyDescriptor> propertyDescriptors_;
     const function<void(const char*)> errorCallback_; // workaround for template madness
-    string name_;
 
     int EnumerateProperties(const CPyHub& hub) noexcept;
-    CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& name) : errorCallback_(errorCallback), object_(), name_(name) {
-    }
-
-
-    template <class T> int Get(const PyObj& object, const char* name, T& value) const noexcept {
-        PyLock lock;
-        value = PyObj(PyObject_GetAttrString(object, name)).as<T>();
-        return CheckError();
+    CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& name) : errorCallback_(errorCallback), object_(), name_(name), propertyDescriptors_() {
     }
     int CheckError() const noexcept;
 

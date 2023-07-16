@@ -45,6 +45,7 @@ public:
     explicit PyObj(const string& value) : PyObj(PyUnicode_FromString(value.c_str())) {}
     explicit PyObj(long value) : PyObj(PyLong_FromLong(value)) {}
 
+
     // utility functions to convert to primitive types
     // note: if an error occurred during these functions, it will be logged in the g_errorMessage (also see CheckErrors) check for python 
     // note: the current thread must hold the GIL (see PyLock)
@@ -80,6 +81,11 @@ public:
         PyObject_SetAttrString(p_, attribute, PyObj(value));
         ReportError();
     }
+    PyObj Get( const char* attribute) const noexcept {
+        PyLock lock;
+        return PyObj(PyObject_GetAttrString(p_, attribute));
+    }
+
     void Clear() {
         if (p_) {
             PyLock lock;
