@@ -202,13 +202,19 @@ int CPyHub::RunScript() noexcept {
     const fs::path& scriptPath(scriptPathString);
 
     auto bootstrap = std::stringstream();
-    bootstrap <<
-        "import numpy as np\n"
-        "import sys\n"
-        "sys.path.append('" << scriptPath.parent_path().generic_string() << "')\n"
-        "code = open('" << scriptPath.generic_string() << "', 'r')\n"
-        "exec(code.read())\n"
-        "code.close()\n";
+    bootstrap << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
+    bootstrap << "SCRIPT_FILE = '" << scriptPath.generic_string() << "'\n";
+    bootstrap << R"raw(
+import numpy as np
+import sys
+sys.path.append(SCRIPT_PATH)
+code = open(SCRIPT_FILE)
+exec(code.read())
+code.close()
+)raw";
+
+//    MM::g_Keyword_Binning, // "Binning". e.g. Binning = int_property(allowed_values = {1,2,4}, default = 1)
+//    "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait" };
 
     auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
     auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, scope, scope));
@@ -277,21 +283,9 @@ int CPyCamera::Initialize() {
     PyLock lock;
     _check_(PyCameraClass::Initialize());
 
-    const auto required_properties = { 
-        MM::g_Keyword_Binning, // "Binning". e.g. Binning = int_property(allowed_values = {1,2,4}, default = 1)
-        "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait"};
-    bool missing = false;
-    for (auto p : required_properties) { // try to access the property, gives an exception (which contains the name of the missing property) if the property is missing
-        PyObj value = object_.Get(p);
-        if (value == Py_None)
-            missing = true;
-    }
-    if (missing)
-        return ERR_PYTHON_EXCEPTION;// ERR_PYTHON_MISSING_PROPERTY;
-    
     triggerFunction_ = object_.Get("trigger");
     waitFunction_ = object_.Get("wait");
-    return DEVICE_OK;
+    return CheckError();
 }
 
 int CPyCamera::Shutdown() {

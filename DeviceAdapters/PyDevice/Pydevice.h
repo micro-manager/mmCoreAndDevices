@@ -156,11 +156,6 @@ public:
             if (!hub)
                 return DEVICE_COMM_HUB_MISSING;
 
-            // for backward comp (??)
-            char hubLabel[MM::MaxStrLength] = { 0 };
-            hub->GetLabel(hubLabel);
-            this->SetParentID(hubLabel); 
-
             object_ = CPyHub::GetDevice(name_);
             if (object_) {
                 EnumerateProperties(*hub);
