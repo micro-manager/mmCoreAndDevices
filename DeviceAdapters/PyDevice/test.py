@@ -59,6 +59,5 @@ class Camera:
     image = property(fget = get_image)
 
 
-class Hub:
-    def __init__(self):
-        self.devices = {'first_device': Device()}
+
+devices = {'first_device': Device()}

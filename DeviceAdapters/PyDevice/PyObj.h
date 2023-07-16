@@ -72,7 +72,10 @@ public:
     template <> PyObj as<PyObj>() const {
         return *this;
     }
-    
+    template <class T> void Set(const char* attribute, T value) {
+        PyObject_SetAttrString(p_, attribute, PyObj(value));
+        ReportError();
+    }
     void Clear() {
         if (p_) {
             PyLock lock;
@@ -128,5 +131,6 @@ public:
       The errors are all concatenated as a single string. Also see PythonBridge::CheckError, since this is the place where the error list is copied to the MM CoreDebug log and reported to the end user.
     */
     static void ReportError();
+    static fs::path FindPython() noexcept;
     static string g_errorMessage;
 };

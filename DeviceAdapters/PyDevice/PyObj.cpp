@@ -50,3 +50,34 @@ void PyObj::ReportError() {
     g_errorMessage += msg + '\n';
     reentrant = false;
 }
+
+
+
+/// Helper functions for finding the Python installation folder
+///
+/// 
+bool HasPython(const fs::path& path) noexcept {
+    std::ifstream test(path / "python3.dll");
+    return test.good();
+}
+
+/// Tries to locate the Python library. 
+/// If Python is already initialized, returns the path used in the previous initialization.
+/// If Python could not be found, returns an empty string
+fs::path PyObj::FindPython() noexcept {
+    std::string home_text;
+    std::stringstream path(getenv("PATH"));
+    while (std::getline(path, home_text, ';') && !home_text.empty()) {
+        auto home = fs::path(home_text);
+        auto home_lib1 = home.parent_path() / "lib";
+        auto home_lib2 = home / "lib";
+        if (HasPython(home))
+            return home;
+        if (HasPython(home_lib1))
+            return home_lib1;
+        if (HasPython(home_lib2))
+            return home_lib2;
+    }
+    return string();
+}
+
