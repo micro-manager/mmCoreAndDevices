@@ -43,6 +43,7 @@ public:
     // note: the current thread must hold the GIL (see PyLock)
     explicit PyObj(double value) : PyObj(PyFloat_FromDouble(value)) {}
     explicit PyObj(const string& value) : PyObj(PyUnicode_FromString(value.c_str())) {}
+    explicit PyObj(const char* value) : PyObj(PyUnicode_FromString(value)) {}
     explicit PyObj(long value) : PyObj(PyLong_FromLong(value)) {}
 
 

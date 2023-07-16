@@ -51,6 +51,14 @@ protected:
     }
     int CheckError() const noexcept;
 
+private:
+    // helper functions for OnProperty (needed because pProp->Set needs const char* while pProp->Get needs string)
+    template <class P> void PropSet(MM::PropertyBase* pProp, P value) {
+        pProp->Set(value);
+    }
+    template <> void PropSet(MM::PropertyBase* pProp, string value) {
+        pProp->Set(value.c_str());
+    }
 
 public:
     int OnObjectProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -64,7 +72,11 @@ public:
     */
     template <class T> int OnProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
-        //if (eAct == MM::BeforeGet) // nothing to do, let the caller use cached property
+        if (eAct == MM::BeforeGet) {
+            T value = object_.Get(pProp->GetName().c_str()).as<T>();
+            PropSet(pProp, value);
+            return CheckError();
+        }
         if (eAct == MM::AfterSet)
         {
             T value = {};
@@ -145,7 +157,7 @@ public:
                 return DEVICE_COMM_HUB_MISSING;
 
             // for backward comp (??)
-            char hubLabel[MM::MaxStrLength];
+            char hubLabel[MM::MaxStrLength] = { 0 };
             hub->GetLabel(hubLabel);
             this->SetParentID(hubLabel); 
 
@@ -153,6 +165,7 @@ public:
             if (object_) {
                 EnumerateProperties(*hub);
                 this->CreateProperties();
+                this->UpdateStatus(); // load value of all properties from the Python object
             }
             initialized_ = true;
         }
