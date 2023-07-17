@@ -230,7 +230,7 @@ class CPyCamera : public PyCameraClass {
     
     /** 'trigger' function of the camera object */
     PyObj triggerFunction_;
-    PyObj waitFunction_;    // 'wait' function of the camera object
+    PyObj readFunction_;    // 'wait' function of the camera object
     
 public:
     CPyCamera(const string& id) : PyCameraClass(id) {
@@ -301,7 +301,6 @@ public: // todo: will be obsolete
     PyObj floatPropertyType_;
     PyObj stringPropertyType_;
     PyObj objectPropertyType_;
-    PyObj cameraProtocol_;
 };
 
 

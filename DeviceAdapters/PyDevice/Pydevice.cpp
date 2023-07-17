@@ -31,7 +31,6 @@ int CPyHub::Shutdown() noexcept {
     floatPropertyType_.Clear();
     stringPropertyType_.Clear();
     objectPropertyType_.Clear();
-    cameraProtocol_.Clear();
     initialized_ = false;
 
     g_hubs.erase(id_);
@@ -225,21 +224,21 @@ import numpy as np
 from typing import Protocol, runtime_checkable
 
 @runtime_checkable
-class MMCamera(Protocol):
-    width: int
-    height: int
+class Camera(Protocol):
+    data_shape: tuple[int]
+    measurement_time: float
+    def trigger(self) -> None:
+        pass
+    def read(self) -> np.ndarray:
+        pass
     top: int
     left: int
+    height: int
+    width: int
     Binning: int
-    exposure_ms: float
-    image: np.ndarray
-    def trigger():
-        pass
-    def wait():
-        pass
 
 def extract_metadata(obj):
-    if isinstance(obj, MMCamera):
+    if isinstance(obj, Camera):
         type = "Camera"
     else:
         type = "Device"
@@ -254,7 +253,6 @@ metadata = {name:extract_metadata(device) for name,device in devices.items()}
     floatPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "float_property"));
     stringPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "string_property"));
     objectPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "object_property"));
-    cameraProtocol_ = PyObj::Borrow(PyDict_GetItemString(scope, "Camera"));
 
     // read the 'devices' field, which must be a dictionary of label->device
     auto deviceDict = PyObj::Borrow(PyDict_GetItemString(scope, "devices"));
@@ -313,7 +311,6 @@ int CPyCamera::SnapImage()
 {
     PyLock lock;
     auto return_value = PyObj(PyObject_CallNoArgs(triggerFunction_));
-    return_value = PyObj(PyObject_CallNoArgs(waitFunction_));
     return CheckError();
 }
 
@@ -322,7 +319,7 @@ int CPyCamera::Initialize() {
     _check_(PyCameraClass::Initialize());
 
     triggerFunction_ = object_.Get("trigger");
-    waitFunction_ = object_.Get("wait");
+    readFunction_ = object_.Get("read");
     return CheckError();
 }
 
@@ -330,7 +327,7 @@ int CPyCamera::Shutdown() {
     StopSequenceAcquisition();
     lastImage_.Clear();
     triggerFunction_.Clear();
-    waitFunction_.Clear();
+    readFunction_.Clear();
     return PyCameraClass::Shutdown();
 }
 
@@ -347,7 +344,7 @@ int CPyCamera::Shutdown() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    lastImage_ = object_.Get("image");
+    lastImage_ = PyObj(PyObject_CallNoArgs(readFunction_));
     if (CheckError() != DEVICE_OK)
         return nullptr;
 
@@ -483,7 +480,7 @@ int CPyCamera::ClearROI()
 */
 double CPyCamera::GetExposure() const
 {
-    return object_.Get("exposure_ms").as<double>();
+    return object_.Get("measurement_time").as<double>();
 }
 
 /**
@@ -492,7 +489,7 @@ double CPyCamera::GetExposure() const
 */
 void CPyCamera::SetExposure(double exp)
 {
-    object_.Set("exposure_ms", exp); // cannot directly call SetProperty on python_ because that does not update cached value
+    object_.Set("measurement_time", exp); // cannot directly call SetProperty on python_ because that does not update cached value
     GetCoreCallback()->OnExposureChanged(this, exp);
 }
 
