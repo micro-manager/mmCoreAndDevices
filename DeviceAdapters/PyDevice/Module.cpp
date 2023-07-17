@@ -20,12 +20,24 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     if (!deviceName)
         return nullptr;
 
-    if (strcmp(deviceName, CPyHub::g_adapterName) == 0)
+    auto path = string(deviceName);
+
+    if (path == CPyHub::g_adapterName)
         return new CPyHub();
 
-    // else, we are (re)creating a MM Device wrapper for an existing Python object. To locate the object, we must first locate the hub
-    return new CPyGenericDevice(deviceName);
+    // else, we are (re)creating a MM Device wrapper for an existing Python object. To locate the object, we must first extract the object type
+    auto separator = path.find(":");
+    if (separator == path.npos)
+        return nullptr;
+
+    auto deviceType = path.substr(0, separator);
+    auto name = path.substr(separator + 1);
+    if (deviceType == "Device")
+        return new CPyGenericDevice(name);
+    if (deviceType == "Camera")
+        return new CPyCamera(name);
 }
+
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)
 {

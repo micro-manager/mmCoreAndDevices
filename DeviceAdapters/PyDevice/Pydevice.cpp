@@ -41,7 +41,7 @@ int CPyHub::DetectInstalledDevices() {
     ClearInstalledDevices();
     for (const auto& key_value : devices_) {
         // todo: find device type
-        auto name = (name_ + ':') + key_value.first;
+        auto name = key_value.second.type + ":" + name_ + ':' + key_value.first;
         auto mm_device = new CPyGenericDevice(name);
         AddInstalledDevice(mm_device);
     }
@@ -151,12 +151,6 @@ int CPyDeviceBase::EnumerateProperties(const CPyHub& hub) noexcept
         
         propertyDescriptors_.push_back(descriptor);
     }
-
-    // determine what type of device object this is
-    if (PyObject_IsInstance(object_, hub.cameraProtocol_))
-
-
-
     return CheckError();
 }
 
@@ -265,8 +259,7 @@ metadata = {name:extract_metadata(device) for name,device in devices.items()}
         auto data = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
         auto type = PyObj::Borrow(PyTuple_GetItem(data, 0));
         auto device = PyObj::Borrow(PyTuple_GetItem(data, 1));
-        devices_[name.as<string>()] = device;
-        auto test = type.as<string>();
+        devices_[name.as<string>()] = { device, type.as<string>() };
     }
     name_ = scriptPath.stem().generic_string();
     g_hubs[name_] = this;
@@ -290,7 +283,7 @@ PyObj CPyHub::GetDevice(const string& device_id) noexcept {
     if (device_idx == hub->devices_.end())
         return PyObj(); // device not found
 
-    return device_idx->second; // object not found
+    return device_idx->second.object;
 }
 
 

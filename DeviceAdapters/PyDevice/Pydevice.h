@@ -231,6 +231,11 @@ public:
     int Initialize() override;
 };
 
+struct DeviceDescriptor {
+    PyObj object;
+    string type;
+};
+
 using PyHubClass = CPyDeviceTemplate<HubBase>;
 class CPyHub : public PyHubClass {
     static constexpr const char* p_PythonHome = "Python library path";
@@ -263,7 +268,7 @@ private:
     // Global interpreter lock (GIL) for the Python interpreter. Before doing anything Python, we need to obtain the GIL
     // Note that all CPyHub's share the same interpreter
     static PyThreadState* g_threadState;
-    std::map<string, PyObj> devices_;
+    std::map<string, DeviceDescriptor> devices_;
 
     // List of all Hub objects currently in existence. todo: when this number drops to 0, the Python interpreter is destroyed
     static std::map<string, CPyHub*> g_hubs;
