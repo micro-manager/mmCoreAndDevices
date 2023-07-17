@@ -90,8 +90,6 @@ AlliedVisionCamera::AlliedVisionCamera(const char* deviceName)
       m_bufferSize{0},
       m_isAcquisitionRunning{false} {
   CreateHubIDProperty();
-  InitializeDefaultErrorMessages();
-  setApiErrorMessages();
 }
 
 int AlliedVisionCamera::Initialize() {
@@ -119,34 +117,14 @@ int AlliedVisionCamera::Initialize() {
 int AlliedVisionCamera::Shutdown() {
   LogMessage("Shutting down camera: " + m_cameraName);
   VmbError_t err = VmbErrorSuccess;
-
-  (void)StopSequenceAcquisition();
-  if (m_handle != nullptr) {
-    err = m_sdk->VmbCameraClose_t(m_handle);
+  if (m_sdk != nullptr && m_sdk->isInitialized()) {
+    (void)StopSequenceAcquisition();
+    if (m_handle != nullptr) {
+      err = m_sdk->VmbCameraClose_t(m_handle);
+    }
   }
 
   return err;
-}
-
-void AlliedVisionCamera::setApiErrorMessages() {
-  SetErrorText(VmbErrorApiNotStarted, "Vimba X API not started");
-  SetErrorText(VmbErrorNotFound, "Device cannot be found");
-  SetErrorText(VmbErrorDeviceNotOpen, "Device cannot be opened");
-  SetErrorText(VmbErrorBadParameter,
-               "Invalid parameter passed to the function");
-  SetErrorText(VmbErrorNotImplemented, "Feature not implemented");
-  SetErrorText(VmbErrorNotSupported, "Feature not supported");
-  SetErrorText(VmbErrorUnknown, "Unknown error");
-  SetErrorText(VmbErrorInvalidValue,
-               "The value is not valid: either out of bounds or not an "
-               "increment of the minimum");
-  SetErrorText(VmbErrorBadHandle, "Given device handle is not valid");
-  SetErrorText(VmbErrorInvalidAccess,
-               "Operation is invalid with the current access mode");
-  SetErrorText(VmbErrorTimeout, "Timeout occured");
-  SetErrorText(VmbErrorNotAvailable, "Something is not available");
-  SetErrorText(VmbErrorNotInitialized, "Something is not initialized");
-  SetErrorText(VmbErrorAlready, "The operation has been already done");
 }
 
 VmbError_t AlliedVisionCamera::setupProperties() {
@@ -541,6 +519,7 @@ int AlliedVisionCamera::OnBinning(MM::PropertyBase* pProp,
             &featureInfoVertical, g_BinningVerticalFeature, propertyValue);
         if (VmbErrorSuccess != errHor || VmbErrorSuccess != errVer) {
           //[IMPORTANT] For binning, adjust value is ignored
+          err = errHor | errVer;
         }
       }
       break;
@@ -945,7 +924,8 @@ VmbError_t AlliedVisionCamera::setAllowedValues(const VmbFeatureInfo_t* feature,
         return err;
       }
 
-      err = SetPropertyLimits(propertyName, static_cast<double>(min), static_cast<double>(max));
+      err = SetPropertyLimits(propertyName, static_cast<double>(min),
+                              static_cast<double>(max));
       break;
     }
     case VmbFeatureDataString:

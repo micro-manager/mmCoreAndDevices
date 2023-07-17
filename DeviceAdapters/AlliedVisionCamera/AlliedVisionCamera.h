@@ -118,11 +118,6 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
       7;  //!<< Max frame number in the buffer
 
   /**
-   * @brief Setup error messages for Vimba API
-   */
-  void setApiErrorMessages();
-
-  /**
    * @brief Resize all buffers for image frames
    * @return VmbError_t
    */

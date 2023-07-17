@@ -98,8 +98,10 @@ VimbaXApi::VimbaXApi()
 bool VimbaXApi::isInitialized() const { return m_initialized; }
 
 VimbaXApi::~VimbaXApi() {
-  m_initialized = false;
-  VmbShutdown_t();
+  if (m_initialized) {
+    m_initialized = false;
+    VmbShutdown_t();
+  }
 }
 
 LibLoader::LibLoader(const char* lib, const char* libPath)

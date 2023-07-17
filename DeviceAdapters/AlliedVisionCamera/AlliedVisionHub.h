@@ -48,8 +48,13 @@ class AlliedVisionHub : public HubBase<AlliedVisionHub> {
   /**
    * @brief SDK getter
    * @return Pointer to SDK
-  */
+   */
   std::shared_ptr<VimbaXApi>& getSDK();
+
+  /**
+   * @brief Setup error messages for Vimba API
+   */
+  void setApiErrorMessages();
 
   ///////////////////////////////////////////////////////////////////////////////
   // uMANAGER API METHODS
