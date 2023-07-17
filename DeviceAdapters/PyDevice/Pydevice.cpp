@@ -30,6 +30,7 @@ int CPyHub::Shutdown() noexcept {
     floatPropertyType_.Clear();
     stringPropertyType_.Clear();
     objectPropertyType_.Clear();
+    cameraProtocol_.Clear();
     initialized_ = false;
 
     g_hubs.erase(name_);
@@ -150,6 +151,12 @@ int CPyDeviceBase::EnumerateProperties(const CPyHub& hub) noexcept
         
         propertyDescriptors_.push_back(descriptor);
     }
+
+    // determine what type of device object this is
+    if (PyObject_IsInstance(object_, hub.cameraProtocol_))
+
+
+
     return CheckError();
 }
 
@@ -205,16 +212,38 @@ int CPyHub::RunScript() noexcept {
     bootstrap << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
     bootstrap << "SCRIPT_FILE = '" << scriptPath.generic_string() << "'\n";
     bootstrap << R"raw(
-import numpy as np
 import sys
 sys.path.append(SCRIPT_PATH)
 code = open(SCRIPT_FILE)
 exec(code.read())
 code.close()
-)raw";
 
-//    MM::g_Keyword_Binning, // "Binning". e.g. Binning = int_property(allowed_values = {1,2,4}, default = 1)
-//    "width", "height", "top", "left", "exposure_ms", "image", "trigger", "wait" };
+import numpy as np
+from typing import Protocol, runtime_checkable
+
+@runtime_checkable
+class MMCamera(Protocol):
+    width: int
+    height: int
+    top: int
+    left: int
+    Binning: int
+    exposure_ms: float
+    image: np.ndarray
+    def trigger():
+        pass
+    def wait():
+        pass
+
+def extract_metadata(obj):
+    if isinstance(obj, MMCamera):
+        type = "Camera"
+    else:
+        type = "Device"
+    return (type, obj)
+    
+metadata = {name:extract_metadata(device) for name,device in devices.items()}
+)raw";
 
     auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
     auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, scope, scope));
@@ -222,20 +251,23 @@ code.close()
     floatPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "float_property"));
     stringPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "string_property"));
     objectPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "object_property"));
+    cameraProtocol_ = PyObj::Borrow(PyDict_GetItemString(scope, "Camera"));
 
     // read the 'devices' field, which must be a dictionary of label->device
     auto deviceDict = PyObj::Borrow(PyDict_GetItemString(scope, "devices"));
-    auto devices = PyObj(PyDict_Items(deviceDict));
-    if (PyList_Check(devices)) {
-        auto device_count = PyList_Size(devices);
-        for (Py_ssize_t i = 0; i < device_count; i++) {
-            auto key_value = PyObj::Borrow(PyList_GetItem(devices, i));
-            auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0));
-            auto device = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
-            devices_[name.as<string>()] = device;
-        }
-    }
+    auto metadataDict = PyObj::Borrow(PyDict_GetItemString(scope, "metadata"));
 
+    auto metadata = PyObj(PyDict_Items(metadataDict));
+    auto device_count = PyList_Size(metadata);
+    for (Py_ssize_t i = 0; i < device_count; i++) {
+        auto key_value = PyObj::Borrow(PyList_GetItem(metadata, i));
+        auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0));
+        auto data = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
+        auto type = PyObj::Borrow(PyTuple_GetItem(data, 0));
+        auto device = PyObj::Borrow(PyTuple_GetItem(data, 1));
+        devices_[name.as<string>()] = device;
+        auto test = type.as<string>();
+    }
     name_ = scriptPath.stem().generic_string();
     g_hubs[name_] = this;
 

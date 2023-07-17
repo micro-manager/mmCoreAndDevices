@@ -273,4 +273,5 @@ public: // todo: will be obsolete
     PyObj floatPropertyType_;
     PyObj stringPropertyType_;
     PyObj objectPropertyType_;
+    PyObj cameraProtocol_;
 };

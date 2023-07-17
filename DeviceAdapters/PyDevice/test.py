@@ -60,4 +60,4 @@ class Camera:
 
 
 
-devices = {'first_device': Device()}
+devices = {'first_device': Device(), 'cam': Camera()}
