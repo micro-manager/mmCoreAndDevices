@@ -77,6 +77,9 @@ public:
     template <> PyObj as<PyObj>() const {
         return *this;
     }
+    template <class T> void Set(const string& attribute, T value) {
+        Set(attribute.c_str(), value);
+    }
     template <class T> void Set(const char* attribute, T value) {
         PyLock lock;
         PyObject_SetAttrString(p_, attribute, PyObj(value));
@@ -85,6 +88,16 @@ public:
     PyObj Get( const char* attribute) const noexcept {
         PyLock lock;
         return PyObj(PyObject_GetAttrString(p_, attribute));
+    }
+    PyObj Get(const string& attribute) const noexcept {
+        return Get(attribute.c_str());
+    }
+    bool HasAttribute(const string& attribute) const noexcept {
+        return HasAttribute(attribute.c_str());
+    }
+    bool HasAttribute(const char* attribute) const noexcept {
+        PyLock lock;
+        return PyObject_HasAttrString(p_, attribute);
     }
 
     void Clear() {
@@ -103,9 +116,9 @@ public:
     operator bool() const {
         return p_ != nullptr;
     }
-    PyObject* get() const {
+ /*   PyObject* get() const {
         return p_ == nullptr ? Py_None : p_;
-    }
+    }*/
     PyObj& operator = (PyObj&& other) noexcept {
         Clear();
         p_ = other.p_;

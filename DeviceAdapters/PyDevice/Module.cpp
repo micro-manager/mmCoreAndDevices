@@ -36,6 +36,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
         return new CPyGenericDevice(name);
     if (deviceType == "Camera")
         return new CPyCamera(name);
+    return nullptr;
 }
 
 

@@ -43,10 +43,11 @@ protected:
     bool initialized_ = false;
     PyObj object_;    
     string name_;
+    CPyHub* hub_ = nullptr;
     vector<PropertyDescriptor> propertyDescriptors_;
     const function<void(const char*)> errorCallback_; // workaround for template madness
 
-    int EnumerateProperties(const CPyHub& hub) noexcept;
+    int EnumerateProperties() noexcept;
     CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& name) : errorCallback_(errorCallback), object_(), name_(name), propertyDescriptors_() {
     }
     int CheckError() const noexcept;
@@ -152,16 +153,17 @@ public:
     int Initialize() override {
         if (!initialized_) {
             // Locate parent hub 
-            auto hub = static_cast<CPyHub*>(this->GetParentHub());
-            if (!hub)
+            hub_ = static_cast<CPyHub*>(this->GetParentHub());
+            if (!hub_)
                 return DEVICE_COMM_HUB_MISSING;
 
             object_ = CPyHub::GetDevice(name_);
-            if (object_) {
-                EnumerateProperties(*hub);
-                this->CreateProperties();
-                this->UpdateStatus(); // load value of all properties from the Python object
-            }
+            if (!object_)
+                return DEVICE_ERR;
+
+            EnumerateProperties();
+            this->CreateProperties();
+            this->UpdateStatus(); // load value of all properties from the Python object
             initialized_ = true;
         }
         return DEVICE_OK;

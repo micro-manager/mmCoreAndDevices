@@ -59,5 +59,5 @@ class Camera:
     image = property(fget = get_image)
 
 
-
-devices = {'first_device': Device(), 'cam': Camera()}
+r = RandomGenerator()
+devices = {'first_device': Device(), 'cam': Camera(random_generator = r), 'rng': r}

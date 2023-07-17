@@ -39,9 +39,9 @@ int CPyHub::Shutdown() noexcept {
 
 int CPyHub::DetectInstalledDevices() {
     ClearInstalledDevices();
-    for (const auto& key_value : devices_) {
+    for (auto& key_value : devices_) {
         // todo: find device type
-        auto name = key_value.second.type + ":" + name_ + ':' + key_value.first;
+        auto name = key_value.second.type + ":"  + key_value.first;
         auto mm_device = new CPyGenericDevice(name);
         AddInstalledDevice(mm_device);
     }
@@ -100,7 +100,7 @@ int CPyHub::InitializeInterpreter() noexcept
 }
 
 // uses reflection to locate all accessible properties of the device object.
-int CPyDeviceBase::EnumerateProperties(const CPyHub& hub) noexcept
+int CPyDeviceBase::EnumerateProperties() noexcept
 {
     PyLock lock;
     propertyDescriptors_.clear();
@@ -115,13 +115,13 @@ int CPyDeviceBase::EnumerateProperties(const CPyHub& hub) noexcept
         descriptor.name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
         auto property = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
 
-        if (PyObject_IsInstance(property, hub.intPropertyType_))
+        if (PyObject_IsInstance(property, hub_->intPropertyType_))
             descriptor.type = MM::Integer;
-        else if (PyObject_IsInstance(property, hub.floatPropertyType_))
+        else if (PyObject_IsInstance(property, hub_->floatPropertyType_))
             descriptor.type = MM::Float;
-        else if (PyObject_IsInstance(property, hub.stringPropertyType_))
+        else if (PyObject_IsInstance(property, hub_->stringPropertyType_))
             descriptor.type = MM::String;
-        else if (PyObject_IsInstance(property, hub.objectPropertyType_))
+        else if (PyObject_IsInstance(property, hub_->objectPropertyType_))
             descriptor.type = MM::Undef;
         else
             continue;
@@ -173,21 +173,30 @@ int CPyDeviceBase::CheckError() const noexcept {
 
 int CPyDeviceBase::OnObjectProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    throw std::exception("not implemented");
-    //if (eAct == MM::BeforeGet) // nothing to do, let the caller use cached property
-   /* if (eAct == MM::AfterSet)
-    {
-        string label;
-        pProp->Get(label);
-        auto device = g_Devices.find(label); // look up device by name
-        if (device != g_Devices.end()) {
-            return SetProperty(pProp->GetName().c_str(), device->second);
+    if (eAct != MM::BeforeGet && eAct != MM::AfterSet)
+        return DEVICE_OK; // nothing to do.
+
+    auto attribute = pProp->GetName();
+
+    if (eAct == MM::BeforeGet) {
+        auto linked_object = object_.Get(attribute);
+        if (linked_object.HasAttribute("_MM_id")) {
+            auto id = linked_object.Get("_MM_id").as<string>();
+            pProp->Set(id.c_str());
         }
-        else { // label not found. This could be because the object is not constructed yet
-            g_MissingLinks.push_back({ object_, pProp->GetName(), label });
-        }
+        else
+            pProp->Set("{unknown object}");
     }
-    return DEVICE_OK;*/
+    if (eAct == MM::AfterSet)
+    {
+        string id;
+        pProp->Get(id);
+        auto linked_object = CPyHub::GetDevice(id);
+        if (!id.empty() && !linked_object)
+            return DEVICE_INVALID_PROPERTY_VALUE;
+        object_.Set(attribute, linked_object);
+    }
+    return DEVICE_OK;
 }
 
 /**
@@ -201,6 +210,7 @@ int CPyHub::RunScript() noexcept {
     char scriptPathString[MM::MaxStrLength] = { 0 };
     _check_(GetProperty(p_PythonScript, scriptPathString));
     const fs::path& scriptPath(scriptPathString);
+    name_ = scriptPath.stem().generic_string();
 
     auto bootstrap = std::stringstream();
     bootstrap << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
@@ -259,9 +269,10 @@ metadata = {name:extract_metadata(device) for name,device in devices.items()}
         auto data = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
         auto type = PyObj::Borrow(PyTuple_GetItem(data, 0));
         auto device = PyObj::Borrow(PyTuple_GetItem(data, 1));
-        devices_[name.as<string>()] = { device, type.as<string>() };
+        auto id = name_ + ':' + name.as<string>();
+        device.Set("_MM_id", id);
+        devices_[id] = { device, type.as<string>() };
     }
-    name_ = scriptPath.stem().generic_string();
     g_hubs[name_] = this;
 
     return CheckError();
@@ -273,13 +284,13 @@ PyObj CPyHub::GetDevice(const string& device_id) noexcept {
         return PyObj(); // invalid device string
 
     auto hub_name = device_id.substr(0, colon_pos);
-    auto object_name = device_id.substr(colon_pos + 1);
+
     auto hub_idx = g_hubs.find(hub_name);
     if (hub_idx == g_hubs.end())
         return PyObj(); // hub not found
     auto hub = hub_idx->second;
 
-    auto device_idx = hub->devices_.find(object_name);
+    auto device_idx = hub->devices_.find(device_id);
     if (device_idx == hub->devices_.end())
         return PyObj(); // device not found
 
@@ -342,7 +353,7 @@ const unsigned char* CPyCamera::GetImageBuffer()
         this->LogMessage("Error, 'image' property should return a numpy array");
         return nullptr;
     }
-    auto buffer = (PyArrayObject*)lastImage_.get();
+    auto buffer = (PyArrayObject*)(PyObject*)lastImage_;
     if (PyArray_NDIM(buffer) != 2 || PyArray_TYPE(buffer) != NPY_UINT16 || !(PyArray_FLAGS(buffer) & NPY_ARRAY_C_CONTIGUOUS)) {
         this->LogMessage("Error, 'image' property should be a 2-dimensional numpy array that is c-contiguous in memory and contains 16 bit  unsigned integers");
         return nullptr;
