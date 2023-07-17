@@ -24,6 +24,7 @@
 #include "pch.h"
 #include "PyObj.h"
 
+
 struct PropertyDescriptor {
     string name;
     int type = MM::Undef;
@@ -34,6 +35,26 @@ struct PropertyDescriptor {
 };
 class CPyHub;
 
+
+/*
+* A device id is of the form{ DeviceType }:{HubId} : {DeviceName}, where :
+*  {DeviceType} is the device type : "Device", "Camera", etc.
+*  {HubId} is the name of the script that was used to construct the device
+*  {DeviceName} is the key of the 'devices' dictionary that contains the object
+*/
+inline bool split_id(const string& id, string& deviceType, string& hubId, string& deviceName) {
+    auto colon1 = id.find(':');
+    auto colon2 = id.find(':', colon1 + 1);
+    if (colon1 != string::npos && colon2 != string::npos) {
+        deviceType = id.substr(0, colon1);
+        hubId = id.substr(colon1 + 1, colon2 - colon1 - 1);
+        deviceName = id.substr(colon2 + 1);
+        return true;
+    } else
+        return false;
+};
+
+
 /**
  * @brief Base class for all PyDevices, hold all common code that does not need call MM functions
 */
@@ -42,13 +63,13 @@ protected:
     /** Handle to the Python object */
     bool initialized_ = false;
     PyObj object_;    
-    string name_;
+    string id_;
     CPyHub* hub_ = nullptr;
     vector<PropertyDescriptor> propertyDescriptors_;
     const function<void(const char*)> errorCallback_; // workaround for template madness
 
     int EnumerateProperties() noexcept;
-    CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& name) : errorCallback_(errorCallback), object_(), name_(name), propertyDescriptors_() {
+    CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& id) : errorCallback_(errorCallback), object_(), id_(id), propertyDescriptors_() {
     }
     int CheckError() const noexcept;
 
@@ -105,10 +126,10 @@ public:
      * The device is not initialized, and no Python calls are made. This only sets up error messages, the error handler, and three 'pre-init' properties that hold the path of the Python libraries, the path of the Python script, and the name of the Python class that implements the device.
      * @param adapterName name of the adapter type, e.g. "Camera". This is the default name of the Python class. For use by MM (GetName), the adapterName is prefixed with "Py", 
     */
-    CPyDeviceTemplate(const string& name) : CPyDeviceBase([this](const char* message) {
+    CPyDeviceTemplate(const string& id) : CPyDeviceBase([this](const char* message) {
         this->SetErrorText(ERR_PYTHON_EXCEPTION, message);
         this->SetErrorText(ERR_PYTHON_EXCEPTION, PyObj::g_errorMessage.c_str());
-        }, name)
+        }, id)
     {
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
     }
@@ -157,7 +178,7 @@ public:
             if (!hub_)
                 return DEVICE_COMM_HUB_MISSING;
 
-            object_ = CPyHub::GetDevice(name_);
+            object_ = CPyHub::GetDevice(id_);
             if (!object_)
                 return DEVICE_ERR;
 
@@ -180,7 +201,7 @@ public:
     }
 
     void GetName(char* name) const override {
-        CDeviceUtils::CopyLimitedString(name, name_.c_str());
+        CDeviceUtils::CopyLimitedString(name, id_.c_str());
     }
     
 protected:
@@ -195,7 +216,7 @@ protected:
 using PyGenericClass = CPyDeviceTemplate<CGenericBase>;
 class CPyGenericDevice : public PyGenericClass {
 public:
-    CPyGenericDevice(const string& name) :PyGenericClass(name) {
+    CPyGenericDevice(const string& id) :PyGenericClass(id) {
     }
     virtual bool Busy() override {
         return false;
@@ -212,7 +233,7 @@ class CPyCamera : public PyCameraClass {
     PyObj waitFunction_;    // 'wait' function of the camera object
     
 public:
-    CPyCamera(const string& name) : PyCameraClass(name) {
+    CPyCamera(const string& id) : PyCameraClass(id) {
     }
     const unsigned char* GetImageBuffer() override;
     unsigned GetImageWidth() const override;
@@ -270,7 +291,7 @@ private:
     // Global interpreter lock (GIL) for the Python interpreter. Before doing anything Python, we need to obtain the GIL
     // Note that all CPyHub's share the same interpreter
     static PyThreadState* g_threadState;
-    std::map<string, DeviceDescriptor> devices_;
+    std::map<string, PyObj> devices_;
 
     // List of all Hub objects currently in existence. todo: when this number drops to 0, the Python interpreter is destroyed
     static std::map<string, CPyHub*> g_hubs;
@@ -282,3 +303,5 @@ public: // todo: will be obsolete
     PyObj objectPropertyType_;
     PyObj cameraProtocol_;
 };
+
+

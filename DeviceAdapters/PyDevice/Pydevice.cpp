@@ -18,6 +18,7 @@ PyThreadState* CPyHub::g_threadState = nullptr;
 std::map<string, CPyHub*> CPyHub::g_hubs;
 
 
+
 /**
  * Destroys all Python objects by releasing the references we currently have
  * 
@@ -33,16 +34,14 @@ int CPyHub::Shutdown() noexcept {
     cameraProtocol_.Clear();
     initialized_ = false;
 
-    g_hubs.erase(name_);
+    g_hubs.erase(id_);
     return PyHubClass::Shutdown();
 }
 
 int CPyHub::DetectInstalledDevices() {
     ClearInstalledDevices();
-    for (auto& key_value : devices_) {
-        // todo: find device type
-        auto name = key_value.second.type + ":"  + key_value.first;
-        auto mm_device = new CPyGenericDevice(name);
+    for (const auto& key_value : devices_) {
+        auto mm_device = new CPyGenericDevice(key_value.first);
         AddInstalledDevice(mm_device);
     }
     return CheckError();
@@ -210,7 +209,7 @@ int CPyHub::RunScript() noexcept {
     char scriptPathString[MM::MaxStrLength] = { 0 };
     _check_(GetProperty(p_PythonScript, scriptPathString));
     const fs::path& scriptPath(scriptPathString);
-    name_ = scriptPath.stem().generic_string();
+    id_ = scriptPath.stem().generic_string();
 
     auto bootstrap = std::stringstream();
     bootstrap << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
@@ -265,27 +264,30 @@ metadata = {name:extract_metadata(device) for name,device in devices.items()}
     auto device_count = PyList_Size(metadata);
     for (Py_ssize_t i = 0; i < device_count; i++) {
         auto key_value = PyObj::Borrow(PyList_GetItem(metadata, i));
-        auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0));
+        auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
         auto data = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
-        auto type = PyObj::Borrow(PyTuple_GetItem(data, 0));
-        auto device = PyObj::Borrow(PyTuple_GetItem(data, 1));
-        auto id = name_ + ':' + name.as<string>();
-        device.Set("_MM_id", id);
-        devices_[id] = { device, type.as<string>() };
+        auto type = PyObj::Borrow(PyTuple_GetItem(data, 0)).as<string>();
+        auto obj = PyObj::Borrow(PyTuple_GetItem(data, 1));
+        auto id = type + ":" + id_ + ':' + name; // construct device id
+        obj.Set("_MM_id", id);
+        devices_[id] = obj;
     }
-    g_hubs[name_] = this;
+    g_hubs[id_] = this;
 
     return CheckError();
 }
 
+/**
+* Locates a Python object by device id
+*/
 PyObj CPyHub::GetDevice(const string& device_id) noexcept {
-    auto colon_pos = device_id.find(':');
-    if (colon_pos == string::npos)
-        return PyObj(); // invalid device string
-
-    auto hub_name = device_id.substr(0, colon_pos);
-
-    auto hub_idx = g_hubs.find(hub_name);
+    // split device id
+    string deviceType;
+    string hubId;
+    string deviceName;
+    split_id(device_id, deviceType, hubId, deviceName);
+    
+    auto hub_idx = g_hubs.find(hubId);
     if (hub_idx == g_hubs.end())
         return PyObj(); // hub not found
     auto hub = hub_idx->second;
@@ -294,7 +296,7 @@ PyObj CPyHub::GetDevice(const string& device_id) noexcept {
     if (device_idx == hub->devices_.end())
         return PyObj(); // device not found
 
-    return device_idx->second.object;
+    return device_idx->second;
 }
 
 
