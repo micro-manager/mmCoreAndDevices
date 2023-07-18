@@ -27,10 +27,6 @@ std::map<string, CPyHub*> CPyHub::g_hubs;
 int CPyHub::Shutdown() noexcept {
     PyLock lock;
     devices_.clear();
-    intPropertyType_.Clear();
-    floatPropertyType_.Clear();
-    stringPropertyType_.Clear();
-    objectPropertyType_.Clear();
     initialized_ = false;
 
     g_hubs.erase(id_);
@@ -102,29 +98,34 @@ int CPyDeviceBase::EnumerateProperties() noexcept
 {
     PyLock lock;
     propertyDescriptors_.clear();
-    auto type_info = PyObj(PyObject_Type(object_));
-    auto dict = PyObj(PyObject_GetAttrString(type_info, "__dict__"));
-    auto properties = PyObj(PyMapping_Items(dict)); // key-value pairs
+
+    auto properties = object_.Get("_MM_properties");
     auto property_count = PyList_Size(properties);
     for (Py_ssize_t i = 0; i < property_count; i++) {
         PropertyDescriptor descriptor;
 
-        auto key_value = PyList_GetItem(properties, i); // note: borrowed reference, don't ref count (what a mess...)
-        descriptor.name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
-        auto property = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
+        auto pinfo = PyObj::Borrow(PyList_GetItem(properties, i));
+        descriptor.name = PyObj::Borrow(PyTuple_GetItem(pinfo, 0)).as<string>();
+        auto ptype = PyObj::Borrow(PyTuple_GetItem(pinfo, 1)).as<string>();
 
-        if (PyObject_IsInstance(property, hub_->intPropertyType_))
+        if (ptype == "int")
             descriptor.type = MM::Integer;
-        else if (PyObject_IsInstance(property, hub_->floatPropertyType_))
+        else if (ptype == "float")
             descriptor.type = MM::Float;
-        else if (PyObject_IsInstance(property, hub_->stringPropertyType_))
+        else if (ptype == "string")
             descriptor.type = MM::String;
-        else if (PyObject_IsInstance(property, hub_->objectPropertyType_))
-            descriptor.type = MM::Undef;
+        else if (ptype == "bool") {
+            descriptor.type = MM::Integer;
+            descriptor.allowed_values.push_back("0");
+            descriptor.allowed_values.push_back("1");
+        }
         else
-            continue;
+            descriptor.type = MM::Undef;
+        propertyDescriptors_.push_back(descriptor);
+    }
 
-        // Set limits. Only supported by MM if both upper and lower limit are present.
+    /*
+  // Set limits. Only supported by MM if both upper and lower limit are present.
         // The min/max attributes are always present, we only need to check if they don't hold 'None'
         if (descriptor.type == MM::Integer || descriptor.type == MM::Float) {
             auto lower = property.Get("min");
@@ -147,8 +148,7 @@ int CPyDeviceBase::EnumerateProperties() noexcept
             }
         }
         
-        propertyDescriptors_.push_back(descriptor);
-    }
+    }*/
     return CheckError();
 }
 
@@ -237,35 +237,43 @@ class Camera(Protocol):
     width: int
     Binning: int
 
-def extract_metadata(obj):
-    if isinstance(obj, Camera):
-        type = "Camera"
-    else:
-        type = "Device"
-    return (type, obj)
+def extract_property_metadata(p):
+    if not isinstance(p, property) or not hasattr(p, 'fget') or not hasattr(p.fget, '__annotations__'):
+        return None
+    return_type = p.fget.__annotations__.get('return', None)
+    if return_type is None:
+        return None
+    return (getattr(return_type, '__name__', 'any'), )
     
-metadata = {name:extract_metadata(device) for name,device in devices.items()}
+
+def set_metadata(obj):
+    if isinstance(obj, Camera):
+        dtype = "Camera"
+    else:
+        dtype = "Device"
+    properties = [(k,extract_property_metadata(v)) for (k,v) in type(obj).__dict__.items()]
+    properties = [(p[0],*p[1]) for p in properties if p[1] is not None]        
+    obj._MM_dtype = dtype
+    obj._MM_properties = properties
+    
+for d in devices.values():
+    set_metadata(d)
+
 )raw";
 
     auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
     auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, scope, scope));
-    intPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "int_property"));
-    floatPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "float_property"));
-    stringPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "string_property"));
-    objectPropertyType_ = PyObj::Borrow(PyDict_GetItemString(scope, "object_property"));
+    if (!bootstrap_result)
+        return CheckError();
 
     // read the 'devices' field, which must be a dictionary of label->device
-    auto deviceDict = PyObj::Borrow(PyDict_GetItemString(scope, "devices"));
-    auto metadataDict = PyObj::Borrow(PyDict_GetItemString(scope, "metadata"));
-
-    auto metadata = PyObj(PyDict_Items(metadataDict));
-    auto device_count = PyList_Size(metadata);
+    auto deviceDict = PyObj(PyDict_Items(PyObj::Borrow(PyDict_GetItemString(scope, "devices"))));
+    auto device_count = PyList_Size(deviceDict);
     for (Py_ssize_t i = 0; i < device_count; i++) {
-        auto key_value = PyObj::Borrow(PyList_GetItem(metadata, i));
+        auto key_value = PyObj::Borrow(PyList_GetItem(deviceDict, i));
         auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
-        auto data = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
-        auto type = PyObj::Borrow(PyTuple_GetItem(data, 0)).as<string>();
-        auto obj = PyObj::Borrow(PyTuple_GetItem(data, 1));
+        auto obj = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
+        auto type = obj.Get("_MM_dtype").as<string>();
         auto id = type + ":" + id_ + ':' + name; // construct device id
         obj.Set("_MM_id", id);
         devices_[id] = obj;
@@ -361,8 +369,8 @@ const unsigned char* CPyCamera::GetImageBuffer()
     // check if the array has the correct size
     auto w = GetImageWidth();
     auto h = GetImageHeight();
-    auto nw = PyArray_DIM(buffer, 0);
-    auto nh = PyArray_DIM(buffer, 1);
+    auto nh = PyArray_DIM(buffer, 0);
+    auto nw = PyArray_DIM(buffer, 1);
     if (nw != w || nh != h) {
         auto msg = "Error, 'image' dimensions should be (" + std::to_string(w) + ", " + std::to_string(h) + ") pixels, but were found to be (" + std::to_string(nw) + ", " + std::to_string(nh) + ") pixels";
         this->LogMessage(msg.c_str());
