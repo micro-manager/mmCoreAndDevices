@@ -1,36 +1,41 @@
 import numpy as np
-from typing import Any
-    
+from typing import Any, Annotated
+
+
 class RandomGenerator:
     """Demo device, used to test building device graphs. It generates random numbers for use in the Camera"""
+
     def __init__(self, min=0, max=1000):
         self._min = min
         self._max = max
 
     def generate_into(self, buffer):
-        buffer[:,:] = np.random.randint(self._min, self._max, buffer.shape, dtype=np.uint16)
-    
+        buffer[:, :] = np.random.randint(self._min, self._max, buffer.shape, dtype=np.uint16)
+
     @property
-    def min(self) -> int:
+    def min(self) -> Annotated[int, {'min': 0, 'max': 0xFFFF}]:
         return self._min
-    
+
     @min.setter
     def min(self, value):
         self._min = value
- 
+
     @property
-    def max(self) -> int:
+    def max(self) -> Annotated[int, {'min': 0, 'max': 0xFFFF}]:
         return self._max
-    
+
     @max.setter
     def max(self, value):
         self._max = value
- 
+
+
 class Camera:
-    """Demo camera implementation that returns noise images. To test building device graphs, the random number generator is implemented as a separate object with its own properties."""
-    def __init__(self, left = 0, top = 0, width = 100, height = 100, measurement_time = 100, random_generator = None):
+    """Demo camera implementation that returns noise images. To test building device graphs, the random number
+    generator is implemented as a separate object with its own properties."""
+
+    def __init__(self, left=0, top=0, width=100, height=100, measurement_time=100, random_generator=None):
         if random_generator is None:
-            random_generator = RandomGenerator() 
+            random_generator = RandomGenerator()
 
         self._resized = True
         self._image = None
@@ -40,7 +45,6 @@ class Camera:
         self._height = height
         self._measurement_time = measurement_time
         self._random_generator = random_generator
-
 
     def trigger(self):
         if self._resized:
@@ -53,7 +57,7 @@ class Camera:
 
     @property
     def data_shape(self):
-        return (self._height, self._width)
+        return self._height, self._width
 
     @property
     def left(self) -> int:
@@ -66,11 +70,11 @@ class Camera:
     @property
     def top(self) -> int:
         return self._top
-    
+
     @top.setter
     def top(self, value: int):
         self._top = value
-    
+
     @property
     def width(self) -> int:
         return self._width
@@ -79,7 +83,7 @@ class Camera:
     def width(self, value: int):
         self._width = value
         self._resized = True
-    
+
     @property
     def height(self) -> int:
         return self._height
@@ -98,13 +102,13 @@ class Camera:
         self._measurement_time = value
 
     @property
-    def Binning(self) -> float:
+    def Binning(self) -> int:
         return 1
-        
+
     @property
     def random_generator(self) -> Any:
-        return self._random_generator 
-        
+        return self._random_generator
+
 
 r = RandomGenerator()
-devices = {'cam': Camera(random_generator = r), 'rng': r}
+devices = {'cam': Camera(random_generator=r), 'rng': r}

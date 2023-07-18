@@ -121,21 +121,23 @@ int CPyDeviceBase::EnumerateProperties() noexcept
         }
         else
             descriptor.type = MM::Undef;
-        propertyDescriptors_.push_back(descriptor);
-    }
 
-    /*
-  // Set limits. Only supported by MM if both upper and lower limit are present.
-        // The min/max attributes are always present, we only need to check if they don't hold 'None'
         if (descriptor.type == MM::Integer || descriptor.type == MM::Float) {
-            auto lower = property.Get("min");
-            auto upper = property.Get("max");
+            auto lower = PyObj::Borrow(PyTuple_GetItem(pinfo, 2));
+            auto upper = PyObj::Borrow(PyTuple_GetItem(pinfo, 3));
             if (lower != Py_None && upper != Py_None) {
                 descriptor.min = lower.as<double>();
                 descriptor.max = upper.as<double>();
                 descriptor.has_limits = true;
             }
         }
+
+        propertyDescriptors_.push_back(descriptor);
+    }
+
+    /*
+  // Set limits. Only supported by MM if both upper and lower limit are present.
+        // The min/max attributes are always present, we only need to check if they don't hold 'None'
 
         // For enum-type objects (may be string, int or float), notify MM about the allowed values
         // The allowed_values attribute is always present, we only need to check if they don't hold 'None'
@@ -240,11 +242,23 @@ class Camera(Protocol):
 def extract_property_metadata(p):
     if not isinstance(p, property) or not hasattr(p, 'fget') or not hasattr(p.fget, '__annotations__'):
         return None
+
     return_type = p.fget.__annotations__.get('return', None)
     if return_type is None:
         return None
-    return (getattr(return_type, '__name__', 'any'), )
-    
+
+    if hasattr(return_type, '__metadata__'):
+        meta = return_type.__metadata__[0]
+        min = meta.get('min', None)
+        max = meta.get('max', None)
+        return_type = return_type.__origin__
+    else:
+        min = None
+        max = None
+
+    ptype = getattr(return_type, '__name__', 'any')
+    return (ptype, min, max)
+
 
 def set_metadata(obj):
     if isinstance(obj, Camera):
@@ -255,6 +269,8 @@ def set_metadata(obj):
     properties = [(p[0],*p[1]) for p in properties if p[1] is not None]        
     obj._MM_dtype = dtype
     obj._MM_properties = properties
+
+
     
 for d in devices.values():
     set_metadata(d)

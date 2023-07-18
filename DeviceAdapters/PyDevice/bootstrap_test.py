@@ -1,8 +1,8 @@
 import numpy as np
 from typing import Protocol, runtime_checkable
 import numpy as np
-from typing import Any
-
+from typing import Any, Annotated
+from pprint import pprint
 
 class RandomGenerator:
     """Demo device, used to test building device graphs. It generates random numbers for use in the Camera"""
@@ -15,7 +15,7 @@ class RandomGenerator:
         buffer[:, :] = np.random.randint(self._min, self._max, buffer.shape, dtype=np.uint16)
 
     @property
-    def min(self) -> int:
+    def min(self) -> Annotated[int, {'min': 0, 'max': 0xFFFF}]:
         return self._min
 
     @min.setter
@@ -23,7 +23,7 @@ class RandomGenerator:
         self._min = value
 
     @property
-    def max(self) -> int:
+    def max(self) -> Annotated[int, {'min': 0, 'max': 0xFFFF}]:
         return self._max
 
     @min.setter
@@ -139,10 +139,22 @@ class Camera(Protocol):
 def extract_property_metadata(p):
     if not isinstance(p, property) or not hasattr(p, 'fget') or not hasattr(p.fget, '__annotations__'):
         return None
+
     return_type = p.fget.__annotations__.get('return', None)
     if return_type is None:
         return None
-    return (getattr(return_type, '__name__', 'any'),)
+
+    if hasattr(return_type, '__metadata__'):
+        meta = return_type.__metadata__[0]
+        min = meta.get('min', None)
+        max = meta.get('max', None)
+        return_type = return_type.__origin__
+    else:
+        min = None
+        max = None
+
+    ptype = getattr(return_type, '__name__', 'any')
+    return (ptype, min, max)
 
 
 def set_metadata(obj):
@@ -159,4 +171,4 @@ def set_metadata(obj):
 for d in devices.values():
     set_metadata(d)
 
-devices['cam'].trigger()
+pprint([d._MM_properties for d in devices.values()], indent = 2)
