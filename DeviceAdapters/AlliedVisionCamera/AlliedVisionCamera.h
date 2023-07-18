@@ -162,7 +162,7 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
    * @return VmbError_t
    */
   VmbError_t getFeatureValue(VmbFeatureInfo_t* featureInfo,
-                             const char* featureName, std::string& value);
+                             const char* featureName, std::string& value) const;
   /**
    * @brief Method to get feature value, based on its type. Feature value is
    * always a string type.
@@ -170,7 +170,7 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
    * @param[out] value          Value of feature, read from device
    * @return VmbError_t
    */
-  VmbError_t getFeatureValue(const char* featureName, std::string& value);
+  VmbError_t getFeatureValue(const char* featureName, std::string& value) const;
 
   /**
    * @brief Method to set a feature value, bases on its type. Feature value is

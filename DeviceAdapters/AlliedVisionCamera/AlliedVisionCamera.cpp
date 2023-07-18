@@ -176,10 +176,11 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(
   }
 
   VmbError_t err = VmbErrorSuccess;
-  // Skip Event and Chunk features
+  // Skip Event, Chunk, RAW features
   std::string featureCategory = feature->category;
   if (featureCategory.find(g_EventCategory) != std::string::npos ||
-      featureCategory.find(g_ChunkCategory) != std::string::npos) {
+      featureCategory.find(g_ChunkCategory) != std::string::npos ||
+      feature->featureDataType == VmbFeatureDataRaw) {
     return err;
   }
 
@@ -259,23 +260,23 @@ const unsigned char* AlliedVisionCamera::GetImageBuffer() {
 }
 
 unsigned AlliedVisionCamera::GetImageWidth() const {
-  char value[MM::MaxStrLength];
-  int ret = GetProperty(g_Width, value);
+  std::string value{};
+  auto ret = getFeatureValue(g_Width, value);
   if (ret != VmbErrorSuccess) {
     return 0;
   }
 
-  return atoi(value);
+  return atoi(value.c_str());
 }
 
 unsigned AlliedVisionCamera::GetImageHeight() const {
-  char value[MM::MaxStrLength];
-  int ret = GetProperty(g_Height, value);
+  std::string value{};
+  auto ret = getFeatureValue(g_Height, value);
   if (ret != VmbErrorSuccess) {
     return 0;
   }
 
-  return atoi(value);
+  return atoi(value.c_str());
 }
 
 unsigned AlliedVisionCamera::GetImageBytesPerPixel() const {
@@ -306,13 +307,13 @@ int AlliedVisionCamera::SetBinning(int binSize) {
 }
 
 double AlliedVisionCamera::GetExposure() const {
-  char strExposure[MM::MaxStrLength];
-  int ret = GetProperty(MM::g_Keyword_Exposure, strExposure);
+  std::string value{};
+  auto ret = getFeatureValue(g_ExposureFeature, value);
   if (ret != VmbErrorSuccess) {
-    return 0.0;
+    return 0;
   }
 
-  return strtod(strExposure, nullptr);
+  return strtod(value.c_str(), nullptr);
 }
 
 void AlliedVisionCamera::SetExposure(double exp_ms) {
@@ -371,11 +372,10 @@ int AlliedVisionCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize,
   std::unordered_map<const char*, unsigned> fields = {
       {g_OffsetX, x}, {g_OffsetY, y}, {g_Width, xSize}, {g_Height, ySize}};
 
-  std::array<char, MM::MaxStrLength> value;
   VmbError_t err = VmbErrorSuccess;
   for (auto& field : fields) {
-    value.fill(0x00);  // Clean the buffer
-    err = GetProperty(field.first, value.data());
+    std::string value{};
+    err = getFeatureValue(field.first, value);
     if (err != VmbErrorSuccess) {
       break;
     }
@@ -584,11 +584,17 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
             // Update property
             if (propertyValue != featureValue) {
               pProp->Set(featureValue.c_str());
+              err = GetCoreCallback()->OnPropertyChanged(
+                  this, propertyName.c_str(), featureValue.c_str());
+              if (VmbErrorSuccess != err) {
+                return err;
+              }
             }
           }
 
           // Update property's access mode
           pChildProperty->SetReadOnly(readOnly);
+
           // Update property's limits and allowed values
           if (wMode) {
             err = setAllowedValues(&featureInfo, propertyName.c_str());
@@ -614,7 +620,6 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
               }
               std::string adjustedValue =
                   adjustValue(featureInfo, min, max, std::stod(propertyValue));
-              pProp->Set(adjustedValue.c_str());
               err = setFeatureValue(&featureInfo, featureName.c_str(),
                                     adjustedValue);
             }
@@ -632,7 +637,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
 
 VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t* featureInfo,
                                                const char* featureName,
-                                               std::string& value) {
+                                               std::string& value) const {
   VmbError_t err = VmbErrorSuccess;
   switch (featureInfo->featureDataType) {
     case VmbFeatureDataBool: {
@@ -700,7 +705,7 @@ VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t* featureInfo,
 }
 
 VmbError_t AlliedVisionCamera::getFeatureValue(const char* featureName,
-                                               std::string& value) {
+                                               std::string& value) const {
   VmbFeatureInfo_t featureInfo;
   VmbError_t err = m_sdk->VmbFeatureInfoQuery_t(
       m_handle, featureName, &featureInfo, sizeof(featureInfo));
