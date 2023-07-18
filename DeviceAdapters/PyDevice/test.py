@@ -76,7 +76,7 @@ class Camera:
         self._top = value
 
     @property
-    def width(self) -> int:
+    def width(self) -> Annotated[int, {'min': 1, 'max': 1200}]:
         return self._width
 
     @width.setter
@@ -85,7 +85,7 @@ class Camera:
         self._resized = True
 
     @property
-    def height(self) -> int:
+    def height(self) -> Annotated[int, {'min': 1, 'max': 960}]:
         return self._height
 
     @height.setter
