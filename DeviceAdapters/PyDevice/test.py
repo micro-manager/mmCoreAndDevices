@@ -102,7 +102,7 @@ class Camera:
         return 1
         
     @property
-    def random_generator(self):
+    def random_generator(self) -> Any:
         return self._random_generator 
         
 
