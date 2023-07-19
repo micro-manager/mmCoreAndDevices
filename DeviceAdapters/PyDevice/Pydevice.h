@@ -23,16 +23,8 @@
 #pragma once
 #include "pch.h"
 #include "PyObj.h"
+#include "actions.h"
 
-
-struct PropertyDescriptor {
-    string name;
-    int type = MM::Undef;
-    double min = 0.0;
-    double max = 0.0;
-    bool has_limits = false;
-    vector<string> allowed_values;
-};
 class CPyHub;
 
 
@@ -65,49 +57,12 @@ protected:
     PyObj object_;    
     string id_;
     CPyHub* hub_ = nullptr;
-    vector<PropertyDescriptor> propertyDescriptors_;
     const function<void(const char*)> errorCallback_; // workaround for template madness
 
-    int EnumerateProperties() noexcept;
-    CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& id) : errorCallback_(errorCallback), object_(), id_(id), propertyDescriptors_() {
+    int EnumerateProperties(vector<PyAction*>& propertyDescriptors) noexcept;
+    CPyDeviceBase(const function<void(const char*)>& errorCallback, const string& id) : errorCallback_(errorCallback), object_(), id_(id) {
     }
     int CheckError() const noexcept;
-
-private:
-    // helper functions for OnProperty (needed because pProp->Set needs const char* while pProp->Get needs string)
-    template <class P> void PropSet(MM::PropertyBase* pProp, P value) {
-        pProp->Set(value);
-    }
-    template <> void PropSet(MM::PropertyBase* pProp, string value) {
-        pProp->Set(value.c_str());
-    }
-
-public:
-    int OnObjectProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-    /**
-     * Callback that is called when a property value is read or written
-     * We respond to property writes by relaying the value to the Python object.
-     * In this implementation, we don't perform any action when the value is read. We just use the cached value in MM.
-     * Note that this is not correct if the property is changed by Python.
-     * @return MM result code
-    */
-    template <class T> int OnProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
-    {
-        if (eAct == MM::BeforeGet) {
-            T value = object_.Get(pProp->GetName().c_str()).as<T>();
-            PropSet(pProp, value);
-            return CheckError();
-        }
-        if (eAct == MM::AfterSet)
-        {
-            T value = {};
-            pProp->Get(value);
-            object_.Set(pProp->GetName().c_str(), value);
-            return CheckError();
-        }
-        return DEVICE_OK;
-    }
 };
 
 
@@ -135,33 +90,20 @@ public:
     }
     virtual ~CPyDeviceTemplate() {
     }
-    int CreateProperties() noexcept {
-        using Action = typename MM::Action<CPyDeviceBase>;
-        for (auto& property: propertyDescriptors_) { // note: should be const auto&, but that does not work because a wrong signature in 'SetAllowedValues' (missing const)
-            switch (property.type) {
-            case MM::Integer:
-                _check_(this->CreateIntegerProperty(property.name.c_str(), 0, false, new Action(this, &CPyDeviceBase::OnProperty<long>)));
-                break;
-            case MM::Float:
-                _check_(this->CreateFloatProperty(property.name.c_str(), 0.0, false, new Action(this, &CPyDeviceBase::OnProperty<double>)));
-                break;
-            case MM::String:
-                _check_(this->CreateStringProperty(property.name.c_str(), "", false, new Action(this, &CPyDeviceBase::OnProperty<string>)));
-                break;
-            case MM::Undef:
-                _check_(this->CreateStringProperty(property.name.c_str(), "", false, new Action(this, &CPyDeviceBase::OnObjectProperty)));
-                break;
-            };
+    int CreateProperties(vector<PyAction*>& propertyDescriptors) noexcept {
+        for (auto property: propertyDescriptors) { // note: should be const auto&, but that does not work because a wrong signature in 'SetAllowedValues' (missing const)
+            this->CreateProperty(property->name.c_str(), "", property->type, property->readOnly_, property, false);
 
             // Set limits. Only supported by MM if both upper and lower limit are present.
-            if (property.has_limits)
-                this->SetPropertyLimits(property.name.c_str(), property.min, property.max);
+            if (property->has_limits)
+                this->SetPropertyLimits(property->name.c_str(), property->min, property->max);
             
 
             // For enum-type objects (may be string, int or float), notify MM about the allowed values
-            if (!property.allowed_values.empty())
-                this->SetAllowedValues(property.name.c_str(), property.allowed_values);
+            if (!property->enum_keys.empty())
+                this->SetAllowedValues(property->name.c_str(), property->enum_keys);
         }
+        propertyDescriptors.clear(); // remove the pointers from the vector because we transfered ownership of the Action objects in CreateProperty
         return DEVICE_OK;
     }
 
@@ -182,8 +124,9 @@ public:
             if (!object_)
                 return DEVICE_ERR;
 
-            EnumerateProperties();
-            this->CreateProperties();
+            vector<PyAction*> propertyDescriptors;
+            _check_(EnumerateProperties(propertyDescriptors));
+            this->CreateProperties(propertyDescriptors);
             this->UpdateStatus(); // load value of all properties from the Python object
             initialized_ = true;
         }

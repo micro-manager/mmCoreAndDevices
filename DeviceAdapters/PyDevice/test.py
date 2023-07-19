@@ -1,13 +1,19 @@
 import numpy as np
-from typing import Any, Annotated
+from typing import Annotated
+from enum import Enum
 
+class NoiseType(Enum):
+    UNIFORM = 1
+    EXPONENTIAL = 2
+    GAUSSIAN = 3
 
 class RandomGenerator:
     """Demo device, used to test building device graphs. It generates random numbers for use in the Camera"""
 
-    def __init__(self, min=0, max=1000):
+    def __init__(self, min=0, max=1000, noise_type = NoiseType.UNIFORM):
         self._min = min
         self._max = max
+        self._noise_type = noise_type
 
     def generate_into(self, buffer):
         buffer[:, :] = np.random.randint(self._min, self._max, buffer.shape, dtype=np.uint16)
@@ -28,6 +34,15 @@ class RandomGenerator:
     def max(self, value):
         self._max = value
 
+    @property
+    def noise_type(self) -> NoiseType:
+        return self._noise_type
+
+    @noise_type.setter
+    def noise_type(self, value):
+        if not value == NoiseType.UNIFORM:
+            raise ValueError("Noise types other than uniform are not supported yet.")
+        self._noise_type = value
 
 class Camera:
     """Demo camera implementation that returns noise images. To test building device graphs, the random number
@@ -106,9 +121,8 @@ class Camera:
         return 1
 
     @property
-    def random_generator(self) -> Any:
+    def random_generator(self) -> object:
         return self._random_generator
-
 
 r = RandomGenerator()
 devices = {'cam': Camera(random_generator=r), 'rng': r}

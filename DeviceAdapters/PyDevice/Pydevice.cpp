@@ -14,6 +14,7 @@
 #include "PyDevice.h"
 #include <numpy/arrayobject.h>
 
+
 PyThreadState* CPyHub::g_threadState = nullptr;
 std::map<string, CPyHub*> CPyHub::g_hubs;
 
@@ -94,63 +95,52 @@ int CPyHub::InitializeInterpreter() noexcept
 }
 
 // uses reflection to locate all accessible properties of the device object.
-int CPyDeviceBase::EnumerateProperties() noexcept
+int CPyDeviceBase::EnumerateProperties(vector<PyAction*>& propertyDescriptors_) noexcept
 {
     PyLock lock;
-    propertyDescriptors_.clear();
 
     auto properties = object_.Get("_MM_properties");
     auto property_count = PyList_Size(properties);
     for (Py_ssize_t i = 0; i < property_count; i++) {
-        PropertyDescriptor descriptor;
+        PyAction* descriptor;
 
         auto pinfo = PyObj::Borrow(PyList_GetItem(properties, i));
-        descriptor.name = PyObj::Borrow(PyTuple_GetItem(pinfo, 0)).as<string>();
-        auto ptype = PyObj::Borrow(PyTuple_GetItem(pinfo, 1)).as<string>();
+        auto name = PyObj::Borrow(PyTuple_GetItem(pinfo, 0)).as<string>();
+        auto type = PyObj::Borrow(PyTuple_GetItem(pinfo, 1)).as<string>();
 
-        if (ptype == "int")
-            descriptor.type = MM::Integer;
-        else if (ptype == "float")
-            descriptor.type = MM::Float;
-        else if (ptype == "string")
-            descriptor.type = MM::String;
-        else if (ptype == "bool") {
-            descriptor.type = MM::Integer;
-            descriptor.allowed_values.push_back("0");
-            descriptor.allowed_values.push_back("1");
+        if (type == "int")
+            descriptor = new PyIntAction(object_, name, name);
+        else if (type == "float")
+            descriptor = new PyFloatAction(object_, name, name);
+        else if (type == "string")
+            descriptor = new PyStringAction(object_, name, name);
+        else if (type == "bool")
+            descriptor = new PyBoolAction(object_, name, name);
+        else if (type == "enum") {
+            descriptor = new PyEnumAction(object_, name, name);
+            auto options = PyObj(PyDict_Items(PyObj::Borrow(PyTuple_GetItem(pinfo, 4))));
+            auto option_count = PyList_Size(options);
+            for (Py_ssize_t j = 0; j < option_count; j++) {
+                auto key_value = PyObj::Borrow(PyList_GetItem(options, j));
+                descriptor->enum_keys.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>());
+                descriptor->enum_values.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 1)));
+            }
         }
         else
-            descriptor.type = MM::Undef;
+            continue; // unknwon property type: skip
 
-        if (descriptor.type == MM::Integer || descriptor.type == MM::Float) {
+        if (descriptor->type == MM::Integer || descriptor->type == MM::Float) {
             auto lower = PyObj::Borrow(PyTuple_GetItem(pinfo, 2));
             auto upper = PyObj::Borrow(PyTuple_GetItem(pinfo, 3));
             if (lower != Py_None && upper != Py_None) {
-                descriptor.min = lower.as<double>();
-                descriptor.max = upper.as<double>();
-                descriptor.has_limits = true;
+                descriptor->min = lower.as<double>();
+                descriptor->max = upper.as<double>();
+                descriptor->has_limits = true;
             }
         }
 
         propertyDescriptors_.push_back(descriptor);
     }
-
-    /*
-  // Set limits. Only supported by MM if both upper and lower limit are present.
-        // The min/max attributes are always present, we only need to check if they don't hold 'None'
-
-        // For enum-type objects (may be string, int or float), notify MM about the allowed values
-        // The allowed_values attribute is always present, we only need to check if they don't hold 'None'
-        PyObj allowed_values = property.Get("allowed_values");
-        if (allowed_values != Py_None) {
-            auto value_count = PyList_Size(allowed_values);
-            for (Py_ssize_t j = 0; j < value_count; j++) {
-                auto value = PyList_GetItem(allowed_values, j); // borrowed reference, don't ref count
-                descriptor.allowed_values.push_back(PyObj(PyObject_Str(value)).as<string>());
-            }
-        }
-        
-    }*/
     return CheckError();
 }
 
@@ -170,35 +160,6 @@ int CPyDeviceBase::CheckError() const noexcept {
         return DEVICE_OK;
 }
 
-
-int CPyDeviceBase::OnObjectProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct != MM::BeforeGet && eAct != MM::AfterSet)
-        return DEVICE_OK; // nothing to do.
-
-    auto attribute = pProp->GetName();
-
-    if (eAct == MM::BeforeGet) {
-        auto linked_object = object_.Get(attribute);
-        if (linked_object.HasAttribute("_MM_id")) {
-            auto id = linked_object.Get("_MM_id").as<string>();
-            pProp->Set(id.c_str());
-        }
-        else
-            pProp->Set("{unknown object}");
-    }
-    if (eAct == MM::AfterSet)
-    {
-        string id;
-        pProp->Get(id);
-        auto linked_object = CPyHub::GetDevice(id);
-        if (!id.empty() && !linked_object)
-            return DEVICE_INVALID_PROPERTY_VALUE;
-        object_.Set(attribute, linked_object);
-    }
-    return DEVICE_OK;
-}
-
 /**
  * Loads the Python script and creates a device object
  * @param pythonScript path of the .py script file
@@ -212,73 +173,15 @@ int CPyHub::RunScript() noexcept {
     const fs::path& scriptPath(scriptPathString);
     id_ = scriptPath.stem().generic_string();
 
-    auto bootstrap = std::stringstream();
-    bootstrap << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
-    bootstrap << "SCRIPT_FILE = '" << scriptPath.generic_string() << "'\n";
-    bootstrap << R"raw(
-import sys
-sys.path.append(SCRIPT_PATH)
-code = open(SCRIPT_FILE)
-exec(code.read())
-code.close()
-
-import numpy as np
-from typing import Protocol, runtime_checkable
-
-@runtime_checkable
-class Camera(Protocol):
-    data_shape: tuple[int]
-    measurement_time: float
-    def trigger(self) -> None:
-        pass
-    def read(self) -> np.ndarray:
-        pass
-    top: int
-    left: int
-    height: int
-    width: int
-    Binning: int
-
-def extract_property_metadata(p):
-    if not isinstance(p, property) or not hasattr(p, 'fget') or not hasattr(p.fget, '__annotations__'):
-        return None
-
-    return_type = p.fget.__annotations__.get('return', None)
-    if return_type is None:
-        return None
-
-    if hasattr(return_type, '__metadata__'):
-        meta = return_type.__metadata__[0]
-        min = meta.get('min', None)
-        max = meta.get('max', None)
-        return_type = return_type.__origin__
-    else:
-        min = None
-        max = None
-
-    ptype = getattr(return_type, '__name__', 'any')
-    return (ptype, min, max)
-
-
-def set_metadata(obj):
-    if isinstance(obj, Camera):
-        dtype = "Camera"
-    else:
-        dtype = "Device"
-    properties = [(k,extract_property_metadata(v)) for (k,v) in type(obj).__dict__.items()]
-    properties = [(p[0],*p[1]) for p in properties if p[1] is not None]        
-    obj._MM_dtype = dtype
-    obj._MM_properties = properties
-
-
-    
-for d in devices.values():
-    set_metadata(d)
-
-)raw";
+    auto code = std::stringstream();
+    code << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
+    code << "SCRIPT_FILE = '" << scriptPath.generic_string() << "'\n";
+    const char* bootstrap;
+    #include "bootstrap.py"
+    code << &bootstrap[1]; // skip leading ["]
 
     auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
-    auto bootstrap_result = PyObj(PyRun_String(bootstrap.str().c_str(), Py_file_input, scope, scope));
+    auto bootstrap_result = PyObj(PyRun_String(code.str().c_str(), Py_file_input, scope, scope));
     if (!bootstrap_result)
         return CheckError();
 

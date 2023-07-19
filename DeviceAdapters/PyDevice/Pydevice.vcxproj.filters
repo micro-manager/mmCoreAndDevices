@@ -24,6 +24,9 @@
     <ClInclude Include="PyObj.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="actions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PyDevice.cpp">
@@ -38,6 +41,9 @@
     <ClCompile Include="PyObj.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="actions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="autoconfig.py" />
@@ -50,6 +56,7 @@
     <None Include="Pyscanner.py">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="bootstrap.py" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="HOW_TO_INSTALL_AND_BUILD.txt" />

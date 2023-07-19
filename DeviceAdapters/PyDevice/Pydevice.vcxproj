@@ -16,11 +16,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="actions.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PyDevice.h" />
     <ClInclude Include="PyObj.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="actions.cpp" />
     <ClCompile Include="Module.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
@@ -37,6 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="autoconfig.py" />
+    <None Include="bootstrap.py" />
     <None Include="Dummyscanner.py" />
     <None Include="Pyscanner.py" />
     <None Include="test.py" />

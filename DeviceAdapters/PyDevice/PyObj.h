@@ -116,9 +116,6 @@ public:
     operator bool() const {
         return p_ != nullptr;
     }
- /*   PyObject* get() const {
-        return p_ == nullptr ? Py_None : p_;
-    }*/
     PyObj& operator = (PyObj&& other) noexcept {
         Clear();
         p_ = other.p_;
