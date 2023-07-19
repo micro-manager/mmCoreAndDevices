@@ -104,8 +104,6 @@ class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
   ///////////////////////////////////////////////////////////////////////////////
   int OnPixelType(MM::PropertyBase* pProp,
                   MM::ActionType eAct);  //!<< PixelType property callback
-  int OnBinning(MM::PropertyBase* pProp,
-                MM::ActionType eAct);  //!<< Binning property callback
   int onProperty(MM::PropertyBase* pProp,
                  MM::ActionType eAct);  //!<< General property callback
 

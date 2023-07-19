@@ -37,16 +37,12 @@
 const std::unordered_map<std::string, std::string>
     AlliedVisionCamera::m_featureToProperty = {
         {g_PixelFormatFeature, MM::g_Keyword_PixelType},
-        {g_ExposureFeature, MM::g_Keyword_Exposure},
-        {g_BinningHorizontalFeature, MM::g_Keyword_Binning},
-        {g_BinningVerticalFeature, MM::g_Keyword_Binning}};
+        {g_ExposureFeature, MM::g_Keyword_Exposure}};
 
 const std::unordered_multimap<std::string, std::string>
     AlliedVisionCamera::m_propertyToFeature = {
         {MM::g_Keyword_PixelType, g_PixelFormatFeature},
-        {MM::g_Keyword_Exposure, g_ExposureFeature},
-        {MM::g_Keyword_Binning, g_BinningHorizontalFeature},
-        {MM::g_Keyword_Binning, g_BinningVerticalFeature}};
+        {MM::g_Keyword_Exposure, g_ExposureFeature}};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -292,18 +288,13 @@ unsigned AlliedVisionCamera::GetBitDepth() const {
 }
 
 int AlliedVisionCamera::GetBinning() const {
-  char value[MM::MaxStrLength];
-  int ret = GetProperty(MM::g_Keyword_Binning, value);
-  if (ret != VmbErrorSuccess) {
-    return 0;
-  }
-
-  return atoi(value);
+  // Binning not supported. We support BinningVertical/Horizontal
+  return 1;
 }
 
 int AlliedVisionCamera::SetBinning(int binSize) {
-  return SetProperty(MM::g_Keyword_Binning,
-                     CDeviceUtils::ConvertToString(binSize));
+  // Binning not supported. We support BinningVertical/Horizontal
+  return DEVICE_OK;
 }
 
 double AlliedVisionCamera::GetExposure() const {
@@ -369,7 +360,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize,
 
 int AlliedVisionCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize,
                                unsigned& ySize) {
-  std::unordered_map<const char*, unsigned> fields = {
+  std::map<const char*, unsigned> fields = {
       {g_OffsetX, x}, {g_OffsetY, y}, {g_Width, xSize}, {g_Height, ySize}};
 
   VmbError_t err = VmbErrorSuccess;
@@ -393,10 +384,12 @@ int AlliedVisionCamera::ClearROI() {
     return err;
   }
 
-  std::unordered_map<const char*, std::string> fields = {{g_OffsetX, "0"},
-                                                         {g_OffsetY, "0"},
-                                                         {g_Width, maxWidth},
-                                                         {g_Height, maxHeight}};
+  // Keep the order of the fields
+  std::vector<std::pair<const char*, std::string>> fields = {
+      {g_OffsetX, "0"},
+      {g_OffsetY, "0"},
+      {g_Width, maxWidth},
+      {g_Height, maxHeight}};
 
   for (auto& field : fields) {
     err = setFeatureValue(field.first, field.second);
@@ -419,118 +412,6 @@ void AlliedVisionCamera::GetName(char* name) const {
 
 bool AlliedVisionCamera::IsCapturing() { return m_isAcquisitionRunning; }
 
-int AlliedVisionCamera::OnBinning(MM::PropertyBase* pProp,
-                                  MM::ActionType eAct) {
-  // Get horizonal binning
-  VmbFeatureInfo_t featureInfoHorizontal;
-  VmbError_t err = m_sdk->VmbFeatureInfoQuery_t(
-      m_handle, g_BinningHorizontalFeature, &featureInfoHorizontal,
-      sizeof(featureInfoHorizontal));
-  if (VmbErrorSuccess != err) {
-    return err;
-  }
-
-  // Get vertical binning
-  VmbFeatureInfo_t featureInfoVertical;
-  err = m_sdk->VmbFeatureInfoQuery_t(m_handle, g_BinningVerticalFeature,
-                                     &featureInfoVertical,
-                                     sizeof(featureInfoVertical));
-  if (VmbErrorSuccess != err) {
-    return err;
-  }
-
-  // Get read/write mode - assume binning horizontal and vertical has the same
-  // mode
-  bool rMode, wMode, readOnly;
-  err = m_sdk->VmbFeatureAccessQuery_t(m_handle, g_BinningVerticalFeature,
-                                       &rMode, &wMode);
-  if (VmbErrorSuccess != err) {
-    return err;
-  }
-
-  readOnly = (rMode && !wMode);
-
-  // Get values of property and features
-  std::string propertyValue, featureHorizontalValue, featureVerticalValue;
-  pProp->Get(propertyValue);
-
-  MM::Property* pChildProperty = (MM::Property*)pProp;
-  std::vector<std::string> strValues;
-  VmbInt64_t minHorizontal, maxHorizontal, minVertical, maxVertical, min, max;
-
-  switch (eAct) {
-    case MM::ActionType::BeforeGet:
-      if (rMode) {
-        err =
-            getFeatureValue(&featureInfoHorizontal, g_BinningHorizontalFeature,
-                            featureHorizontalValue);
-        if (VmbErrorSuccess != err) {
-          return err;
-        }
-        err = getFeatureValue(&featureInfoVertical, g_BinningVerticalFeature,
-                              featureVerticalValue);
-        if (VmbErrorSuccess != err) {
-          return err;
-        }
-
-        std::string featureValue =
-            std::to_string(std::min(atoi(featureHorizontalValue.c_str()),
-                                    atoi(featureVerticalValue.c_str())));
-        // Update property
-        if (propertyValue != featureValue) {
-          pProp->Set(featureValue.c_str());
-        }
-      }
-
-      // Update property's access mode
-      pChildProperty->SetReadOnly(readOnly);
-      // Update property's limits and allowed values
-      if (wMode) {
-        // Update binning limits
-        err = m_sdk->VmbFeatureIntRangeQuery_t(m_handle,
-                                               g_BinningHorizontalFeature,
-                                               &minHorizontal, &maxHorizontal);
-        if (VmbErrorSuccess != err) {
-          return err;
-        }
-
-        err = m_sdk->VmbFeatureIntRangeQuery_t(
-            m_handle, g_BinningVerticalFeature, &minVertical, &maxVertical);
-        if (VmbErrorSuccess != err) {
-          return err;
-        }
-
-        //[IMPORTANT] For binning, increment step is ignored
-
-        min = std::max(minHorizontal, minVertical);
-        max = std::min(maxHorizontal, maxVertical);
-
-        for (VmbInt64_t i = min; i <= max; i++) {
-          strValues.push_back(std::to_string(i));
-        }
-        err = SetAllowedValues(pProp->GetName().c_str(), strValues);
-      }
-      break;
-    case MM::ActionType::AfterSet:
-      if (wMode) {
-        VmbError_t errHor = setFeatureValue(
-            &featureInfoHorizontal, g_BinningHorizontalFeature, propertyValue);
-        VmbError_t errVer = setFeatureValue(
-            &featureInfoVertical, g_BinningVerticalFeature, propertyValue);
-        if (VmbErrorSuccess != errHor || VmbErrorSuccess != errVer) {
-          //[IMPORTANT] For binning, adjust value is ignored
-          err = errHor | errVer;
-        }
-      }
-      break;
-    default:
-      // nothing
-      break;
-  }
-
-  return err;
-}
-
 int AlliedVisionCamera::OnPixelType(MM::PropertyBase* pProp,
                                     MM::ActionType eAct) {
   // TODO implement
@@ -548,87 +429,85 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
   // Check property mapping
   mapPropertyNameToFeatureNames(propertyName.c_str(), featureNames);
 
-  if (propertyName == std::string(MM::g_Keyword_Binning)) {
-    // Binning requires special handling and combining two features into one
-    // property
-    OnBinning(pProp, eAct);
-  } else {
-    // Retrive each feature
-    for (const auto& featureName : featureNames) {
-      // Get Feature Info and Access Mode
-      VmbFeatureInfo_t featureInfo;
-      bool rMode{}, wMode{}, readOnly{};
-      err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(),
-                                         &featureInfo, sizeof(featureInfo)) ||
-            m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(),
-                                           &rMode, &wMode);
-      if (VmbErrorSuccess != err) {
-        return err;
-      }
+  // Retrive each feature
+  for (const auto& featureName : featureNames) {
+    // Get Feature Info and Access Mode
+    VmbFeatureInfo_t featureInfo;
+    bool rMode{}, wMode{}, readOnly{};
+    err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(),
+                                       &featureInfo, sizeof(featureInfo)) ||
+          m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(), &rMode,
+                                         &wMode);
+    if (VmbErrorSuccess != err) {
+      return err;
+    }
 
-      readOnly = (rMode && !wMode);
+    readOnly = (rMode && !wMode);
+    //TODO
+    //Set somehow property to be unavailable when there is no r and w modes
 
-      // Get values
-      std::string propertyValue, featureValue;
-      pProp->Get(propertyValue);
+    // Get values
+    std::string propertyValue{}, featureValue{};
+    pProp->Get(propertyValue);
 
-      // Handle property value change
-      switch (eAct) {
-        case MM::ActionType::BeforeGet:  //!< Update property from feature
-          if (rMode) {
-            err = getFeatureValue(&featureInfo, featureName.c_str(),
-                                  featureValue);
+    // Handle property value change
+    switch (eAct) {
+      case MM::ActionType::BeforeGet:  //!< Update property from feature
+        if (rMode) {
+          err =
+              getFeatureValue(&featureInfo, featureName.c_str(), featureValue);
+          if (VmbErrorSuccess != err) {
+            return err;
+          }
+
+          // Update property
+          if (propertyValue != featureValue) {
+            pProp->Set(featureValue.c_str());
+            err = GetCoreCallback()->OnPropertyChanged(
+                this, propertyName.c_str(), featureValue.c_str());
+
             if (VmbErrorSuccess != err) {
               return err;
             }
-            // Update property
-            if (propertyValue != featureValue) {
-              pProp->Set(featureValue.c_str());
-              err = GetCoreCallback()->OnPropertyChanged(
-                  this, propertyName.c_str(), featureValue.c_str());
-              if (VmbErrorSuccess != err) {
-                return err;
-              }
-            }
           }
+        }
 
-          // Update property's access mode
-          pChildProperty->SetReadOnly(readOnly);
+        // Update property's access mode
+        pChildProperty->SetReadOnly(readOnly);
 
-          // Update property's limits and allowed values
-          if (wMode) {
+        // Update property's limits and allowed values
+        if (wMode) {
+          err = setAllowedValues(&featureInfo, propertyName.c_str());
+        }
+        break;
+      case MM::ActionType::AfterSet:  //!< Update feature from property
+        if (wMode) {
+          err =
+              setFeatureValue(&featureInfo, featureName.c_str(), propertyValue);
+          if (err == VmbErrorInvalidValue) {
+            // Update limits first to have latest min and max
             err = setAllowedValues(&featureInfo, propertyName.c_str());
-          }
-          break;
-        case MM::ActionType::AfterSet:  //!< Update feature from property
-          if (wMode) {
-            err = setFeatureValue(&featureInfo, featureName.c_str(),
-                                  propertyValue);
-            if (err == VmbErrorInvalidValue) {
-              // Update limits first to have latest min and max
-              err = setAllowedValues(&featureInfo, propertyName.c_str());
-              if (VmbErrorSuccess != err) {
-                return err;
-              }
-
-              // Adjust value
-              double min{}, max{};
-              err = GetPropertyLowerLimit(propertyName.c_str(), min) ||
-                    GetPropertyUpperLimit(propertyName.c_str(), max);
-              if (VmbErrorSuccess != err) {
-                return err;
-              }
-              std::string adjustedValue =
-                  adjustValue(featureInfo, min, max, std::stod(propertyValue));
-              err = setFeatureValue(&featureInfo, featureName.c_str(),
-                                    adjustedValue);
+            if (VmbErrorSuccess != err) {
+              return err;
             }
+
+            // Adjust value
+            double min{}, max{};
+            err = GetPropertyLowerLimit(propertyName.c_str(), min) ||
+                  GetPropertyUpperLimit(propertyName.c_str(), max);
+            if (VmbErrorSuccess != err) {
+              return err;
+            }
+            std::string adjustedValue =
+                adjustValue(featureInfo, min, max, std::stod(propertyValue));
+            err = setFeatureValue(&featureInfo, featureName.c_str(),
+                                  adjustedValue);
           }
-          break;
-        default:
-          // nothing
-          break;
-      }
+        }
+        break;
+      default:
+        // nothing
+        break;
     }
   }
 
@@ -780,6 +659,8 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
           }
           // Set back property to "Command"
           err = SetProperty(property.c_str(), g_Command);
+          GetCoreCallback()->OnPropertyChanged(this, property.c_str(),
+                                               g_Command);
         } else {
           err = VmbErrorInvalidValue;
         }
@@ -1016,7 +897,7 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
     return err;
   }
 
-  return err;
+  return UpdateStatus();
 }
 
 int AlliedVisionCamera::StartSequenceAcquisition(double interval_ms) {
@@ -1035,8 +916,11 @@ int AlliedVisionCamera::StopSequenceAcquisition() {
   auto err = m_sdk->VmbCaptureEnd_t(m_handle) ||
              m_sdk->VmbCaptureQueueFlush_t(m_handle) ||
              m_sdk->VmbFrameRevokeAll_t(m_handle);
+  if (err != VmbErrorSuccess) {
+    return err;
+  }
 
-  return err;
+  return UpdateStatus();
 }
 
 void AlliedVisionCamera::insertFrame(VmbFrame_t* frame) {
