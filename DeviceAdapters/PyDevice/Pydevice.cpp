@@ -19,13 +19,31 @@ PyThreadState* CPyHub::g_threadState = nullptr;
 std::map<string, CPyHub*> CPyHub::g_hubs;
 
 
+int CPyDeviceBase::CheckError() noexcept {
+    PyLock lock;
+    PyObj::ReportError(); // check if any new errors happened
+    if (!PyObj::g_errorMessage.empty()) {
+        LogError(PyObj::g_errorMessage.c_str());
+        PyObj::g_errorMessage.clear();
+        return ERR_PYTHON_EXCEPTION;
+    }
+    else
+        return DEVICE_OK;
+}
+
+CPyHub::CPyHub() : PyHubClass(g_adapterName) {
+    SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not initialize Python interpreter, perhaps an incorrect path was specified?");
+    CreateStringProperty(p_PythonHome, PyObj::FindPython().generic_string().c_str(), false, nullptr, true);
+    CreateStringProperty(p_PythonScript, "", false, nullptr, true);
+}
+
 
 /**
  * Destroys all Python objects by releasing the references we currently have
  * 
  * @return 
 */
-int CPyHub::Shutdown() noexcept {
+int CPyHub::Shutdown() {
     PyLock lock;
     devices_.clear();
     initialized_ = false;
@@ -94,71 +112,8 @@ int CPyHub::InitializeInterpreter() noexcept
     return CheckError();
 }
 
-// uses reflection to locate all accessible properties of the device object.
-int CPyDeviceBase::EnumerateProperties(vector<PyAction*>& propertyDescriptors_) noexcept
-{
-    PyLock lock;
 
-    auto properties = object_.Get("_MM_properties");
-    auto property_count = PyList_Size(properties);
-    for (Py_ssize_t i = 0; i < property_count; i++) {
-        PyAction* descriptor;
 
-        auto pinfo = PyObj::Borrow(PyList_GetItem(properties, i));
-        auto name = PyObj::Borrow(PyTuple_GetItem(pinfo, 0)).as<string>();
-        auto type = PyObj::Borrow(PyTuple_GetItem(pinfo, 1)).as<string>();
-
-        if (type == "int")
-            descriptor = new PyIntAction(object_, name, name);
-        else if (type == "float")
-            descriptor = new PyFloatAction(object_, name, name);
-        else if (type == "string")
-            descriptor = new PyStringAction(object_, name, name);
-        else if (type == "bool")
-            descriptor = new PyBoolAction(object_, name, name);
-        else if (type == "enum") {
-            descriptor = new PyEnumAction(object_, name, name);
-            auto options = PyObj(PyDict_Items(PyObj::Borrow(PyTuple_GetItem(pinfo, 4))));
-            auto option_count = PyList_Size(options);
-            for (Py_ssize_t j = 0; j < option_count; j++) {
-                auto key_value = PyObj::Borrow(PyList_GetItem(options, j));
-                descriptor->enum_keys.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>());
-                descriptor->enum_values.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 1)));
-            }
-        }
-        else
-            continue; // unknwon property type: skip
-
-        if (descriptor->type == MM::Integer || descriptor->type == MM::Float) {
-            auto lower = PyObj::Borrow(PyTuple_GetItem(pinfo, 2));
-            auto upper = PyObj::Borrow(PyTuple_GetItem(pinfo, 3));
-            if (lower != Py_None && upper != Py_None) {
-                descriptor->min = lower.as<double>();
-                descriptor->max = upper.as<double>();
-                descriptor->has_limits = true;
-            }
-        }
-
-        propertyDescriptors_.push_back(descriptor);
-    }
-    return CheckError();
-}
-
-/**
-* Checks if a Python error has occurred since the last call to CheckError
-* @return DEVICE_OK or ERR_PYTHON_EXCEPTION
-*/
-int CPyDeviceBase::CheckError() const noexcept {
-    PyLock lock;
-    PyObj::ReportError(); // check if any new errors happened
-    if (!PyObj::g_errorMessage.empty()) {
-        errorCallback_(PyObj::g_errorMessage.c_str());
-        PyObj::g_errorMessage.clear();
-        return ERR_PYTHON_EXCEPTION;
-    }
-    else
-        return DEVICE_OK;
-}
 
 /**
  * Loads the Python script and creates a device object
@@ -202,6 +157,56 @@ int CPyHub::RunScript() noexcept {
     return CheckError();
 }
 
+vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
+{
+    PyLock lock;
+    auto propertyDescriptors = vector<PyAction*>();
+    auto properties = object_.Get("_MM_properties");
+    auto property_count = PyList_Size(properties);
+    for (Py_ssize_t i = 0; i < property_count; i++) {
+        PyAction* descriptor;
+
+        auto pinfo = PyObj::Borrow(PyList_GetItem(properties, i));
+        auto name = PyObj::Borrow(PyTuple_GetItem(pinfo, 0)).as<string>();
+        auto type = PyObj::Borrow(PyTuple_GetItem(pinfo, 1)).as<string>();
+
+        if (type == "int")
+            descriptor = new PyIntAction(this, name, name);
+        else if (type == "float")
+            descriptor = new PyFloatAction(this, name, name);
+        else if (type == "string")
+            descriptor = new PyStringAction(this, name, name);
+        else if (type == "bool")
+            descriptor = new PyBoolAction(this, name, name);
+        else if (type == "enum") {
+            descriptor = new PyEnumAction(this, name, name);
+            auto options = PyObj(PyDict_Items(PyObj::Borrow(PyTuple_GetItem(pinfo, 4))));
+            auto option_count = PyList_Size(options);
+            for (Py_ssize_t j = 0; j < option_count; j++) {
+                auto key_value = PyObj::Borrow(PyList_GetItem(options, j));
+                descriptor->enum_keys.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>());
+                descriptor->enum_values.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 1)));
+            }
+        }
+        else
+            continue; // unknown property type: skip
+
+        if (descriptor->type == MM::Integer || descriptor->type == MM::Float) {
+            auto lower = PyObj::Borrow(PyTuple_GetItem(pinfo, 2));
+            auto upper = PyObj::Borrow(PyTuple_GetItem(pinfo, 3));
+            if (lower != Py_None && upper != Py_None) {
+                descriptor->min = lower.as<double>();
+                descriptor->max = upper.as<double>();
+                descriptor->has_limits = true;
+            }
+        }
+
+        propertyDescriptors.push_back(descriptor);
+    }
+    return propertyDescriptors;
+}
+
+
 /**
 * Locates a Python object by device id
 */
@@ -210,7 +215,7 @@ PyObj CPyHub::GetDevice(const string& device_id) noexcept {
     string deviceType;
     string hubId;
     string deviceName;
-    split_id(device_id, deviceType, hubId, deviceName);
+    CPyHub::SplitId(device_id, deviceType, hubId, deviceName);
     
     auto hub_idx = g_hubs.find(hubId);
     if (hub_idx == g_hubs.end())

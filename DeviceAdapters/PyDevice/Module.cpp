@@ -28,7 +28,7 @@ MODULE_API MM::Device* CreateDevice(const char* id)
     string deviceType;
     string hubId;
     string deviceName;
-    if (!split_id(id, deviceType, hubId, deviceName))
+    if (!CPyHub::SplitId(id, deviceType, hubId, deviceName))
         return nullptr; // invalid id
 
     if (deviceType == "Device")

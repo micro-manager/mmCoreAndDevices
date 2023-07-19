@@ -2,24 +2,6 @@
 #include "actions.h"
 #include "PyDevice.h"
 
-void PyObjectAction::set(MM::PropertyBase* pProp, const PyObj& value) {
-    if (value.HasAttribute("_MM_id")) {
-        auto id = value.Get("_MM_id").as<string>();
-        pProp->Set(id.c_str());
-    }
-    else
-        pProp->Set("{unknown object}");
-}
-
-PyObj PyObjectAction::get(MM::PropertyBase* pProp) {
-    string id;
-    pProp->Get(id);
-    if (id.empty())
-        return PyObj(Py_None);
-    else
-        return CPyHub::GetDevice(id);
-}
-
 /**
 * Callback that is called when a property value is read or written
 * @return MM result code
@@ -30,64 +12,83 @@ int PyAction::Execute(MM::PropertyBase* pProp, MM::ActionType eAct) {
         return DEVICE_OK; // nothing to do.
 
     if (eAct == MM::BeforeGet) {
-        // reading a property from Python
-        auto value = object_.Get(attribute_.c_str());
+        auto value = device_->Object().Get(attribute_.c_str());
         set(pProp, value);
     }
-    else {
-        object_.Set(attribute_.c_str(), get(pProp));
-    }
-    return DEVICE_OK;// CheckError();
+    else 
+        device_->Object().Set(attribute_.c_str(), get(pProp));
+    
+    return device_->CheckError();
 }
 
-PyBoolAction::PyBoolAction(const PyObj& object, const string& attribute, const string& MM_property) : PyAction(object, attribute, MM_property, MM::Integer) {
+
+void PyObjectAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
+    if (value.HasAttribute("_MM_id")) {
+        auto id = value.Get("_MM_id").as<string>();
+        pProp->Set(id.c_str());
+    }
+    else
+        pProp->Set("{unknown object}");
+}
+
+PyObj PyObjectAction::get(MM::PropertyBase* pProp) const noexcept {
+    string id;
+    pProp->Get(id);
+    if (id.empty())
+        return PyObj(Py_None);
+    else
+        return CPyHub::GetDevice(id);
+}
+
+
+PyBoolAction::PyBoolAction(CPyDeviceBase* device, const string& attribute, const string& MM_property) : PyAction(device, attribute, MM_property, MM::Integer) {
     enum_keys.push_back("0");
     enum_values.push_back(PyObj::Borrow(Py_False));
     enum_keys.push_back("1");
     enum_values.push_back(PyObj::Borrow(Py_True));
 }
 
-void PyBoolAction::set(MM::PropertyBase* pProp, const PyObj& value) {
+void PyBoolAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
     pProp->Set(value.as<long>());
 }
 
-PyObj PyBoolAction::get(MM::PropertyBase* pProp) {
+PyObj PyBoolAction::get(MM::PropertyBase* pProp) const noexcept {
     long value;
     pProp->Get(value);
     return PyObj(value);
 }
 
-void PyFloatAction::set(MM::PropertyBase* pProp, const PyObj& value) {
+void PyFloatAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
     pProp->Set(value.as<double>());
 }
 
-PyObj PyFloatAction::get(MM::PropertyBase* pProp) {
+PyObj PyFloatAction::get(MM::PropertyBase* pProp) const noexcept {
     double value;
     pProp->Get(value);
     return PyObj(value);
 }
 
-void PyIntAction::set(MM::PropertyBase* pProp, const PyObj& value) {
+void PyIntAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
     pProp->Set(value.as<long>());
 }
 
-PyObj PyIntAction::get(MM::PropertyBase* pProp) {
+PyObj PyIntAction::get(MM::PropertyBase* pProp) const noexcept {
     long value;
     pProp->Get(value);
     return PyObj(value);
 }
 
-void PyStringAction::set(MM::PropertyBase* pProp, const PyObj& value) {
+void PyStringAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
     pProp->Set(value.as<string>().c_str());
 }
 
-PyObj PyStringAction::get(MM::PropertyBase* pProp) {
+PyObj PyStringAction::get(MM::PropertyBase* pProp) const noexcept {
     double value;
     pProp->Get(value);
     return PyObj(value);
 }
 
-void PyEnumAction::set(MM::PropertyBase* pProp, const PyObj& value) {
+void PyEnumAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
     for (int i = 0; i < enum_values.size(); i++) {
         if (PyObject_RichCompareBool(enum_values[i], value, Py_EQ)) {
             pProp->Set(enum_keys[i].c_str());
@@ -97,7 +98,7 @@ void PyEnumAction::set(MM::PropertyBase* pProp, const PyObj& value) {
     // value not found, do nothing
 }
 
-PyObj PyEnumAction::get(MM::PropertyBase* pProp) {
+PyObj PyEnumAction::get(MM::PropertyBase* pProp) const noexcept {
     string value;
     pProp->Get(value);
     for (int i = 0; i < enum_keys.size(); i++) {

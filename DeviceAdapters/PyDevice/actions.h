@@ -1,8 +1,9 @@
 #pragma once
 #include "pch.h"
 #include "PyObj.h"
+class CPyDeviceBase;
 class PyAction : public MM::ActionFunctor {
-    PyObj object_; // Python object
+    CPyDeviceBase* const device_;
     string attribute_; // Name of Python attribute
 public:
     const string name; // Name of MM property
@@ -14,55 +15,54 @@ public:
     vector<string> enum_keys;
     vector<PyObj> enum_values;
 public:
-    PyAction(const PyObj& object, const string& attribute, const string& MM_property, MM::PropertyType type) : object_(object), attribute_(attribute), name(MM_property), type(type) {}
+    PyAction(CPyDeviceBase* device, const string& attribute, const string& MM_property, MM::PropertyType type) : device_(device), attribute_(attribute), name(MM_property), type(type) {}
     virtual int Execute(MM::PropertyBase* pProp, MM::ActionType eAct);
-    virtual void set(MM::PropertyBase* pProp, const PyObj& value) = 0;
-    virtual PyObj get(MM::PropertyBase* pProp) = 0;
+    virtual void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept = 0;
+    virtual PyObj get(MM::PropertyBase* pProp)  const noexcept = 0;
 };
 
 class PyIntAction : public PyAction {
 public:
-    PyIntAction(const PyObj& object, const string& attribute, const string& MM_property) : PyAction(object, attribute, MM_property, MM::Integer) {}
-    void set(MM::PropertyBase* pProp, const PyObj& value);
-    PyObj get(MM::PropertyBase* pProp);
+    PyIntAction(CPyDeviceBase* device, const string& attribute, const string& MM_property) : PyAction(device, attribute, MM_property, MM::Integer) {}
+    void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept override;
+    PyObj get(MM::PropertyBase* pProp) const noexcept override;
 };
 
 class PyBoolAction : public PyAction {
 public:
-    PyBoolAction(const PyObj& object, const string& attribute, const string& MM_property);
-    
-    virtual void set(MM::PropertyBase* pProp, const PyObj& value);
-    virtual PyObj get(MM::PropertyBase* pProp);
+    PyBoolAction(CPyDeviceBase* device, const string& attribute, const string& MM_property);
+    void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept override;
+    PyObj get(MM::PropertyBase* pProp) const noexcept override;
 };
 
 class PyFloatAction : public PyAction {
 public:
-    PyFloatAction(const PyObj& object, const string& attribute, const string& MM_property) : PyAction(object, attribute, MM_property, MM::Float) {}
-    void set(MM::PropertyBase* pProp, const PyObj& value);
-    PyObj get(MM::PropertyBase* pProp);
+    PyFloatAction(CPyDeviceBase* device, const string& attribute, const string& MM_property) : PyAction(device, attribute, MM_property, MM::Float) {}
+    void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept override;
+    PyObj get(MM::PropertyBase* pProp) const noexcept override;
 };
 
 class PyStringAction : public PyAction {
 public:
-    PyStringAction(const PyObj& object, const string& attribute, const string& MM_property) : PyAction(object, attribute, MM_property, MM::String) {}
-    void set(MM::PropertyBase* pProp, const PyObj& value);
-    PyObj get(MM::PropertyBase* pProp);
+    PyStringAction(CPyDeviceBase* device, const string& attribute, const string& MM_property) : PyAction(device, attribute, MM_property, MM::String) {}
+    void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept override;
+    PyObj get(MM::PropertyBase* pProp) const noexcept override;
 };
 
 
 class PyEnumAction : public PyAction {
 public:
-    PyEnumAction(const PyObj& object, const string& attribute, const string& MM_property) : PyAction(object, attribute, MM_property, MM::String) {}
-    void set(MM::PropertyBase* pProp, const PyObj& value);
-    PyObj get(MM::PropertyBase* pProp);
+    PyEnumAction(CPyDeviceBase* device, const string& attribute, const string& MM_property) : PyAction(device, attribute, MM_property, MM::String) {}
+    void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept override;
+    PyObj get(MM::PropertyBase* pProp) const noexcept override;
 
 };
 
 
 class PyObjectAction : public PyAction {
 public:
-    PyObjectAction(const PyObj& object, const string& attribute, const string& MM_property) : PyAction(object, attribute, MM_property, MM::String) {}
-    void set(MM::PropertyBase* pProp, const PyObj& value);
-    PyObj get(MM::PropertyBase* pProp);
+    PyObjectAction(CPyDeviceBase* device, const string& attribute, const string& MM_property) : PyAction(device, attribute, MM_property, MM::String) {}
+    void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept override;
+    PyObj get(MM::PropertyBase* pProp) const noexcept override;
 };
 
