@@ -29,6 +29,11 @@ code.close()
 class Camera(Protocol):
     data_shape: tuple[int]
     measurement_time: float
+    top: int
+    left: int
+    height: int
+    width: int
+    binning: int
 
     def trigger(self) -> None:
         pass
@@ -36,11 +41,43 @@ class Camera(Protocol):
     def read(self) -> np.ndarray:
         pass
 
-    top: int
-    left: int
-    height: int
-    width: int
-    Binning: int
+
+@runtime_checkable
+class Stage(Protocol):
+    step_size: float
+    """Step size in μm"""
+
+    position: float
+    """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
+    current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
+    causes it to start moving to the new position. Also see :func:`~wait`.
+    Stages should use the step_size to convert positions in micrometers to positions in steps, using the equation
+    `steps = round(position / step_size)`. This way, code that uses the stage can also choose to make single steps by 
+    moving to a position n * step_size.
+    """
+
+    def home(self) -> None:
+        """Homes the stage. This function does not wait for homing to complete."""
+        pass
+
+    def wait(self) -> None:
+        """Wait until the stage has finished moving. This should include any time the stage may 'vibrate' after
+        stopping."""
+        pass
+
+
+@runtime_checkable
+class XYStage(Protocol):
+    position_x: float
+    position_y: float
+    step_size_x: float
+    step_size_y: float
+
+    def home(self) -> None:
+        pass
+
+    def wait(self) -> None:
+        pass
 
 
 def extract_property_metadata(p):
@@ -78,9 +115,14 @@ def to_title_case(str):
     # convert attribute name from snake_case to TitleCase
     return str.replace('_', ' ').title().replace(' ', '')
 
+
 def set_metadata(obj):
     if isinstance(obj, Camera):
         dtype = "Camera"
+    elif isinstance(obj, XYStage):
+        dtype = "XYStage"
+    elif isinstance(obj, Stage):
+        dtype = "Stage"
     else:
         dtype = "Device"
     properties = [(k, extract_property_metadata(v)) for (k, v) in type(obj).__dict__.items()]
