@@ -14,25 +14,13 @@
 */
 int CPyCamera::SnapImage()
 {
-    PyLock lock;
-    auto return_value = PyObj(PyObject_CallNoArgs(triggerFunction_));
-    return CheckError();
-}
-
-int CPyCamera::Initialize() {
-    PyLock lock;
-    _check_(PyCameraClass::Initialize());
-
-    triggerFunction_ = object_.Get("trigger");
-    readFunction_ = object_.Get("read");
+    object_.Call("trigger");
     return CheckError();
 }
 
 int CPyCamera::Shutdown() {
     StopSequenceAcquisition();
     lastImage_.Clear();
-    triggerFunction_.Clear();
-    readFunction_.Clear();
     return PyCameraClass::Shutdown();
 }
 
@@ -49,7 +37,7 @@ int CPyCamera::Shutdown() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    lastImage_ = PyObj(PyObject_CallNoArgs(readFunction_));
+    lastImage_ = object_.Call("read");
     if (CheckError() != DEVICE_OK)
         return nullptr;
 

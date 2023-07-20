@@ -5,7 +5,7 @@
 
 int CPyStage::Home()
 {
-    auto result = PyObj(PyObject_CallNoArgs(object_.Get("home")));
+    object_.Call("home");
     home_ = 0.0;
     OnStagePositionChanged(0.0);
     return CheckError();
@@ -13,7 +13,7 @@ int CPyStage::Home()
 
 int CPyXYStage::Home()
 {
-    auto result = PyObj(PyObject_CallNoArgs(object_.Get("home")));
+    object_.Call("home");
     home_x_ = 0.0;
     home_y_ = 0.0;
     OnXYStagePositionChanged(0.0, 0.0);
@@ -21,12 +21,12 @@ int CPyXYStage::Home()
 }
 
 int CPyStage::Wait() {
-    auto result = PyObj(PyObject_CallNoArgs(object_.Get("wait")));
+    object_.Call("wait");
     return CheckError();
 }
 
 int CPyXYStage::Wait() {
-    auto result = PyObj(PyObject_CallNoArgs(object_.Get("wait")));
+    object_.Call("wait");
     return CheckError();
 }
 
