@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "PyDevice.h"
+#include "PyCamera.h"
 
 // Entry points for loading the dll and creating devices.
 MODULE_API void InitializeModuleData()

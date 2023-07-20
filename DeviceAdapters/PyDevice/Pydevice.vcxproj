@@ -16,13 +16,14 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="actions.h" />
+    <ClInclude Include="Actions.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="PyCamera.h" />
     <ClInclude Include="PyDevice.h" />
     <ClInclude Include="PyObj.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="actions.cpp" />
+    <ClCompile Include="Actions.cpp" />
     <ClCompile Include="Module.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
@@ -31,6 +32,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="PyCamera.cpp" />
     <ClCompile Include="PyDevice.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>

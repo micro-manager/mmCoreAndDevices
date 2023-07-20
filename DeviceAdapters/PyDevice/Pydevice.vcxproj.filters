@@ -24,7 +24,10 @@
     <ClInclude Include="PyObj.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="actions.h">
+    <ClInclude Include="Actions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PyCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,7 +44,10 @@
     <ClCompile Include="PyObj.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="actions.cpp">
+    <ClCompile Include="Actions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PyCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
