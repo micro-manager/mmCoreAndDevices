@@ -74,13 +74,17 @@ def extract_property_metadata(p):
     return (ptype, min, max, options)
 
 
+def to_title_case(str):
+    # convert attribute name from snake_case to TitleCase
+    return str.replace('_', ' ').title().replace(' ', '')
+
 def set_metadata(obj):
     if isinstance(obj, Camera):
         dtype = "Camera"
     else:
         dtype = "Device"
     properties = [(k, extract_property_metadata(v)) for (k, v) in type(obj).__dict__.items()]
-    properties = [(p[0], *p[1]) for p in properties if p[1] is not None]
+    properties = [(p[0], to_title_case(p[0]), *p[1]) for p in properties if p[1] is not None]
     obj._MM_dtype = dtype
     obj._MM_properties = properties
 

@@ -183,25 +183,7 @@ public:
     int Shutdown() override;
 
     static PyObj GetDevice(const string& device_id) noexcept;
-
-    /*
-    * A device id is of the form{ DeviceType }:{HubId} : {DeviceName}, where :
-    *  {DeviceType} is the device type : "Device", "Camera", etc.
-    *  {HubId} is the name of the script that was used to construct the device
-    *  {DeviceName} is the key of the 'devices' dictionary that contains the object
-    */
-    static bool SplitId(const string& id, string& deviceType, string& hubId, string& deviceName) {
-        auto colon1 = id.find(':');
-        auto colon2 = id.find(':', colon1 + 1);
-        if (colon1 != string::npos && colon2 != string::npos) {
-            deviceType = id.substr(0, colon1);
-            hubId = id.substr(colon1 + 1, colon2 - colon1 - 1);
-            deviceName = id.substr(colon2 + 1);
-            return true;
-        }
-        else
-            return false;
-    };
+    static bool SplitId(const string& id, string& deviceType, string& hubId, string& deviceName) noexcept;
 
 protected:
     int DetectInstalledDevices() override;

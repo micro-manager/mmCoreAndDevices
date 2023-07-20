@@ -157,6 +157,13 @@ int CPyHub::RunScript() noexcept {
     return CheckError();
 }
 
+#define ATTRIBUTE_NAME 0    // internal name for Python (snake_case)
+#define PROPERTY_NAME 1     // property name in MM (TitleCase)
+#define TYPE 2
+#define MIN 3
+#define MAX 4
+#define ENUMS 5
+
 vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
 {
     PyLock lock;
@@ -167,20 +174,21 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
         PyAction* descriptor;
 
         auto pinfo = PyObj::Borrow(PyList_GetItem(properties, i));
-        auto name = PyObj::Borrow(PyTuple_GetItem(pinfo, 0)).as<string>();
-        auto type = PyObj::Borrow(PyTuple_GetItem(pinfo, 1)).as<string>();
+        auto attrName = PyObj::Borrow(PyTuple_GetItem(pinfo, ATTRIBUTE_NAME)).as<string>();
+        auto mmName = PyObj::Borrow(PyTuple_GetItem(pinfo, PROPERTY_NAME)).as<string>();
+        auto type = PyObj::Borrow(PyTuple_GetItem(pinfo, TYPE)).as<string>();
 
         if (type == "int")
-            descriptor = new PyIntAction(this, name, name);
+            descriptor = new PyIntAction(this, attrName, mmName);
         else if (type == "float")
-            descriptor = new PyFloatAction(this, name, name);
+            descriptor = new PyFloatAction(this, attrName, mmName);
         else if (type == "string")
-            descriptor = new PyStringAction(this, name, name);
+            descriptor = new PyStringAction(this, attrName, mmName);
         else if (type == "bool")
-            descriptor = new PyBoolAction(this, name, name);
+            descriptor = new PyBoolAction(this, attrName, mmName);
         else if (type == "enum") {
-            descriptor = new PyEnumAction(this, name, name);
-            auto options = PyObj(PyDict_Items(PyObj::Borrow(PyTuple_GetItem(pinfo, 4))));
+            descriptor = new PyEnumAction(this, attrName, mmName);
+            auto options = PyObj(PyDict_Items(PyObj::Borrow(PyTuple_GetItem(pinfo, ENUMS))));
             auto option_count = PyList_Size(options);
             for (Py_ssize_t j = 0; j < option_count; j++) {
                 auto key_value = PyObj::Borrow(PyList_GetItem(options, j));
@@ -188,12 +196,12 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
                 descriptor->enum_values.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 1)));
             }
         }
-        else
-            continue; // unknown property type: skip
-
+        else // other property type, treat as object
+            descriptor = new PyObjectAction(this, attrName, mmName);
+        
         if (descriptor->type == MM::Integer || descriptor->type == MM::Float) {
-            auto lower = PyObj::Borrow(PyTuple_GetItem(pinfo, 2));
-            auto upper = PyObj::Borrow(PyTuple_GetItem(pinfo, 3));
+            auto lower = PyObj::Borrow(PyTuple_GetItem(pinfo, MIN));
+            auto upper = PyObj::Borrow(PyTuple_GetItem(pinfo, MAX));
             if (lower != Py_None && upper != Py_None) {
                 descriptor->min = lower.as<double>();
                 descriptor->max = upper.as<double>();
@@ -229,6 +237,24 @@ PyObj CPyHub::GetDevice(const string& device_id) noexcept {
     return device_idx->second;
 }
 
+/*
+    * A device id is of the form{ DeviceType }:{HubId} : {DeviceName}, where :
+    *  {DeviceType} is the device type : "Device", "Camera", etc.
+    *  {HubId} is the name of the script that was used to construct the device
+    *  {DeviceName} is the key of the 'devices' dictionary that contains the object
+    */
+bool CPyHub::SplitId(const string& id, string& deviceType, string& hubId, string& deviceName) noexcept {
+    auto colon1 = id.find(':');
+    auto colon2 = id.find(':', colon1 + 1);
+    if (colon1 != string::npos && colon2 != string::npos) {
+        deviceType = id.substr(0, colon1);
+        hubId = id.substr(colon1 + 1, colon2 - colon1 - 1);
+        deviceName = id.substr(colon2 + 1);
+        return true;
+    }
+    else
+        return false;
+};
 
 
 
