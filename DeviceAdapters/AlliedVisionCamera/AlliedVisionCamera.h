@@ -16,13 +16,14 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =============================================================================*/
-#ifndef AlliedVisionCamera_H
-#define AlliedVisionCamera_H
+#ifndef ALLIEDVISIONCAMERA_H
+#define ALLIEDVISIONCAMERA_H
 
 #include <array>
 #include <functional>
 #include <unordered_map>
 
+#include "AlliedVisionDeviceBase.h"
 #include "DeviceBase.h"
 #include "Loader/LibLoader.h"
 
@@ -56,7 +57,9 @@ static constexpr const char* g_AcqusitionStatus = "AcqusitionStatus";
 /**
  * @brief Main Allied Vision Camera class
  */
-class AlliedVisionCamera : public CCameraBase<AlliedVisionCamera> {
+class AlliedVisionCamera
+    : public AlliedVisionDeviceBase<CCameraBase<AlliedVisionCamera>,
+                                    AlliedVisionCamera> {
   ///////////////////////////////////////////////////////////////////////////////
   // PUBLIC
   ///////////////////////////////////////////////////////////////////////////////

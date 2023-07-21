@@ -16,12 +16,12 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =============================================================================*/
-#ifndef AlliedVisionHub_H
-#define AlliedVisionHub_H
+#ifndef ALLIEDVISIONHUB_H
+#define ALLIEDVISIONHUB_H
 
+#include "AlliedVisionDeviceBase.h"
 #include "DeviceBase.h"
 #include "SDK/Loader/LibLoader.h"
-
 ///////////////////////////////////////////////////////////////////////////////
 // STATIC VARIABLES
 ///////////////////////////////////////////////////////////////////////////////
@@ -30,7 +30,8 @@ static constexpr const char* g_hubName = "AlliedVisionHub";
 /**
  * @brief Class that represents a HUB of supported devices
  */
-class AlliedVisionHub : public HubBase<AlliedVisionHub> {
+class AlliedVisionHub
+    : public AlliedVisionDeviceBase<HubBase<AlliedVisionHub>, AlliedVisionHub> {
   ///////////////////////////////////////////////////////////////////////////////
   // PUBLIC
   ///////////////////////////////////////////////////////////////////////////////
@@ -50,11 +51,6 @@ class AlliedVisionHub : public HubBase<AlliedVisionHub> {
    * @return Pointer to SDK
    */
   std::shared_ptr<VimbaXApi>& getSDK();
-
-  /**
-   * @brief Setup error messages for Vimba API
-   */
-  void setApiErrorMessages();
 
   ///////////////////////////////////////////////////////////////////////////////
   // uMANAGER API METHODS

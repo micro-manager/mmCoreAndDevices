@@ -45,6 +45,9 @@
     <ClInclude Include="AlliedVisionHub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AlliedVisionDeviceBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AlliedVisionCamera.cpp">
@@ -54,6 +57,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AlliedVisionHub.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AlliedVisionDeviceBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

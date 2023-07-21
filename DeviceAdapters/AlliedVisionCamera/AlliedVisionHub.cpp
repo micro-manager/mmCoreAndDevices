@@ -2,10 +2,7 @@
 
 #include "AlliedVisionCamera.h"
 
-AlliedVisionHub::AlliedVisionHub() : m_sdk(std::make_shared<VimbaXApi>()) {
-  InitializeDefaultErrorMessages(); 
-  setApiErrorMessages();
-}
+AlliedVisionHub::AlliedVisionHub() : m_sdk(std::make_shared<VimbaXApi>()) {}
 
 int AlliedVisionHub::DetectInstalledDevices() {
   LogMessage("Detecting installed cameras...");
@@ -28,6 +25,8 @@ int AlliedVisionHub::DetectInstalledDevices() {
     }
 
     delete[] camInfo;
+  } else {
+    LOG_ERROR(err, "Cannot get installed devices!");
   }
 
   return err;
@@ -38,7 +37,7 @@ int AlliedVisionHub::Initialize() {
   if (m_sdk->isInitialized()) {
     return DEVICE_OK;
   } else {
-    LogMessage("SDK not initialized!");
+    LOG_ERROR(VmbErrorApiNotStarted, "SDK not initialized!");
     return VmbErrorApiNotStarted;
   }
 }
@@ -55,24 +54,3 @@ void AlliedVisionHub::GetName(char* name) const {
 bool AlliedVisionHub::Busy() { return false; }
 
 std::shared_ptr<VimbaXApi>& AlliedVisionHub::getSDK() { return m_sdk; }
-
-void AlliedVisionHub::setApiErrorMessages() {
-  SetErrorText(VmbErrorApiNotStarted, "Vimba X API not started");
-  SetErrorText(VmbErrorNotFound, "Device cannot be found");
-  SetErrorText(VmbErrorDeviceNotOpen, "Device cannot be opened");
-  SetErrorText(VmbErrorBadParameter,
-               "Invalid parameter passed to the function");
-  SetErrorText(VmbErrorNotImplemented, "Feature not implemented");
-  SetErrorText(VmbErrorNotSupported, "Feature not supported");
-  SetErrorText(VmbErrorUnknown, "Unknown error");
-  SetErrorText(VmbErrorInvalidValue,
-               "The value is not valid: either out of bounds or not an "
-               "increment of the minimum");
-  SetErrorText(VmbErrorBadHandle, "Given device handle is not valid");
-  SetErrorText(VmbErrorInvalidAccess,
-               "Operation is invalid with the current access mode");
-  SetErrorText(VmbErrorTimeout, "Timeout occured");
-  SetErrorText(VmbErrorNotAvailable, "Something is not available");
-  SetErrorText(VmbErrorNotInitialized, "Something is not initialized");
-  SetErrorText(VmbErrorAlready, "The operation has been already done");
-}
