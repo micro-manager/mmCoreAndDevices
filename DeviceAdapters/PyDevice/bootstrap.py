@@ -91,6 +91,7 @@ def extract_property_metadata(p):
     min = None
     max = None
     options = None
+    readonly = not hasattr(p, 'fset')
 
     if hasattr(return_type, '__metadata__'):  # Annotated
         meta = return_type.__metadata__[0]
@@ -108,7 +109,7 @@ def extract_property_metadata(p):
         options = None
         ptype = return_type.__name__
 
-    return (ptype, min, max, options)
+    return (ptype, readonly, min, max, options)
 
 
 def to_title_case(str):
@@ -123,14 +124,13 @@ def set_metadata(obj):
         dtype = "Camera"
         if not hasattr(obj, 'binning'):
             obj.binning = 1
-            properties.append(('binning', 'Binning', 'int', 1, 1, None))
+            properties.append(('binning', 'Binning', 'int', False, 1, 1, None))
     elif isinstance(obj, XYStage):
         dtype = "XYStage"
     elif isinstance(obj, Stage):
         dtype = "Stage"
     else:
         dtype = "Device"
-
     obj._MM_dtype = dtype
     obj._MM_properties = properties
 

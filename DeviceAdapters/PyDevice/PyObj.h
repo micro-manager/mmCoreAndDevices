@@ -45,7 +45,7 @@ public:
     explicit PyObj(const string& value) : PyObj(PyUnicode_FromString(value.c_str())) {}
     explicit PyObj(const char* value) : PyObj(PyUnicode_FromString(value)) {}
     explicit PyObj(long value) : PyObj(PyLong_FromLong(value)) {}
-
+    explicit PyObj(bool value) : PyObj(value ? Py_True : Py_False) {}
 
     // utility functions to convert to primitive types
     // note: if an error occurred during these functions, it will be logged in the g_errorMessage (also see CheckErrors) check for python 
@@ -57,6 +57,9 @@ public:
         if (retval == -1) // may be an error
             ReportError();
         return retval;
+    }
+    template <> bool as<bool>() const {
+        return p_ == Py_True;
     }
     template <> double as<double>() const {
         PyLock lock;

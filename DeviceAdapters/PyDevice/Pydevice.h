@@ -68,7 +68,7 @@ public:
 
     int CreateProperties(vector<PyAction*>& propertyDescriptors) noexcept {
         for (auto property: propertyDescriptors) {
-            this->CreateProperty(property->name.c_str(), "", property->type, property->readOnly_, property, false);
+            this->CreateProperty(property->name.c_str(), "", property->type, property->readonly, property, false);
 
             // Set limits. Only supported by MM if both upper and lower limit are present.
             if (property->has_limits)
@@ -80,6 +80,10 @@ public:
                 this->SetAllowedValues(property->name.c_str(), property->enum_keys);
         }
         propertyDescriptors.clear(); // remove the pointers from the vector because we transfered ownership of the Action objects in CreateProperty
+
+        auto doc = object_.Get("__doc__").as<string>();
+        this->SetDescription(doc.c_str());
+        this->CreateStringProperty("Doc", doc.c_str(), true, nullptr, false);
         return DEVICE_OK;
     }
     

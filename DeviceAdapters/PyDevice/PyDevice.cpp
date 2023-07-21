@@ -160,9 +160,10 @@ int CPyHub::RunScript() noexcept {
 #define ATTRIBUTE_NAME 0    // internal name for Python (snake_case)
 #define PROPERTY_NAME 1     // property name in MM (TitleCase)
 #define TYPE 2
-#define MIN 3
-#define MAX 4
-#define ENUMS 5
+#define READ_ONLY 3
+#define MIN 4
+#define MAX 5
+#define ENUMS 6
 
 vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
 {
@@ -177,17 +178,18 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
         auto attrName = PyObj::Borrow(PyTuple_GetItem(pinfo, ATTRIBUTE_NAME)).as<string>();
         auto mmName = PyObj::Borrow(PyTuple_GetItem(pinfo, PROPERTY_NAME)).as<string>();
         auto type = PyObj::Borrow(PyTuple_GetItem(pinfo, TYPE)).as<string>();
+        auto readonly = PyObj::Borrow(PyTuple_GetItem(pinfo, READ_ONLY)).as<bool>();
 
         if (type == "int")
-            descriptor = new PyIntAction(this, attrName, mmName);
+            descriptor = new PyIntAction(this, attrName, mmName, readonly);
         else if (type == "float")
-            descriptor = new PyFloatAction(this, attrName, mmName);
+            descriptor = new PyFloatAction(this, attrName, mmName, readonly);
         else if (type == "string")
-            descriptor = new PyStringAction(this, attrName, mmName);
+            descriptor = new PyStringAction(this, attrName, mmName, readonly);
         else if (type == "bool")
-            descriptor = new PyBoolAction(this, attrName, mmName);
+            descriptor = new PyBoolAction(this, attrName, mmName, readonly);
         else if (type == "enum") {
-            descriptor = new PyEnumAction(this, attrName, mmName);
+            descriptor = new PyEnumAction(this, attrName, mmName, readonly);
             auto options = PyObj(PyDict_Items(PyObj::Borrow(PyTuple_GetItem(pinfo, ENUMS))));
             auto option_count = PyList_Size(options);
             for (Py_ssize_t j = 0; j < option_count; j++) {
@@ -197,7 +199,7 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
             }
         }
         else // other property type, treat as object
-            descriptor = new PyObjectAction(this, attrName, mmName);
+            descriptor = new PyObjectAction(this, attrName, mmName, readonly);
         
         if (descriptor->type == MM::Integer || descriptor->type == MM::Float) {
             auto lower = PyObj::Borrow(PyTuple_GetItem(pinfo, MIN));
