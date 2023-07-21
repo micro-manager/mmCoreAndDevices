@@ -85,6 +85,10 @@ public:
         PyObject_SetAttrString(p_, attribute, PyObj(value));
         ReportError();
     }
+    PyObj Call(const char* function) const noexcept {
+        PyLock lock;
+        return PyObj(PyObject_CallNoArgs(PyObject_GetAttrString(p_, function)));
+    }
     PyObj Get( const char* attribute) const noexcept {
         PyLock lock;
         return PyObj(PyObject_GetAttrString(p_, attribute));

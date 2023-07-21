@@ -21,6 +21,7 @@
     <ClInclude Include="PyCamera.h" />
     <ClInclude Include="PyDevice.h" />
     <ClInclude Include="PyObj.h" />
+    <ClInclude Include="PyStage.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actions.cpp" />
@@ -38,6 +39,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="PyObj.cpp" />
+    <ClCompile Include="PyStage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="autoconfig.py" />

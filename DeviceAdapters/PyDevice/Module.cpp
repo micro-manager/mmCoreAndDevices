@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "PyDevice.h"
 #include "PyCamera.h"
+#include "PyStage.h"
 
 // Entry points for loading the dll and creating devices.
 MODULE_API void InitializeModuleData()
@@ -36,6 +37,10 @@ MODULE_API MM::Device* CreateDevice(const char* id)
         return new CPyGenericDevice(id);
     if (deviceType == "Camera")
         return new CPyCamera(id);
+    if (deviceType == "Stage")
+        return new CPyStage(id);
+    if (deviceType == "XYStage")
+        return new CPyXYStage(id);
     return nullptr;
 }
 

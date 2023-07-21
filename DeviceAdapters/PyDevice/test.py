@@ -117,7 +117,7 @@ class Camera:
         self._measurement_time = value
 
     @property
-    def Binning(self) -> int:
+    def binning(self) -> int:
         return 1
 
     @property

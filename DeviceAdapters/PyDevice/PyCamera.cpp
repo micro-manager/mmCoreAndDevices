@@ -14,25 +14,13 @@
 */
 int CPyCamera::SnapImage()
 {
-    PyLock lock;
-    auto return_value = PyObj(PyObject_CallNoArgs(triggerFunction_));
-    return CheckError();
-}
-
-int CPyCamera::Initialize() {
-    PyLock lock;
-    _check_(PyCameraClass::Initialize());
-
-    triggerFunction_ = object_.Get("trigger");
-    readFunction_ = object_.Get("read");
+    object_.Call("trigger");
     return CheckError();
 }
 
 int CPyCamera::Shutdown() {
     StopSequenceAcquisition();
     lastImage_.Clear();
-    triggerFunction_.Clear();
-    readFunction_.Clear();
     return PyCameraClass::Shutdown();
 }
 
@@ -49,7 +37,7 @@ int CPyCamera::Shutdown() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    lastImage_ = PyObj(PyObject_CallNoArgs(readFunction_));
+    lastImage_ = object_.Call("read");
     if (CheckError() != DEVICE_OK)
         return nullptr;
 
@@ -195,7 +183,8 @@ double CPyCamera::GetExposure() const
 void CPyCamera::SetExposure(double exp)
 {
     object_.Set("measurement_time", exp); // cannot directly call SetProperty on python_ because that does not update cached value
-    GetCoreCallback()->OnExposureChanged(this, exp);
+    if (CheckError() == DEVICE_OK) // error is logged but not reported
+        GetCoreCallback()->OnExposureChanged(this, exp);
 }
 
 /**
@@ -204,7 +193,7 @@ void CPyCamera::SetExposure(double exp)
 */
 int CPyCamera::GetBinning() const
 {
-    return 1;
+    return object_.Get("binning").as<long>();
 }
 
 /**
@@ -213,7 +202,8 @@ int CPyCamera::GetBinning() const
 */
 int CPyCamera::SetBinning(int binF)
 {
-    return binF == 1 ? DEVICE_OK : DEVICE_INVALID_PROPERTY_VALUE;
+    object_.Set("binning", (long)binF);
+    return CheckError();
 }
 
 int CPyCamera::IsExposureSequenceable(bool& isSequenceable) const
