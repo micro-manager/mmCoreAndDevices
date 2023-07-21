@@ -81,9 +81,10 @@ public:
         }
         propertyDescriptors.clear(); // remove the pointers from the vector because we transfered ownership of the Action objects in CreateProperty
 
-        auto doc = object_.Get("__doc__").as<string>();
-        this->SetDescription(doc.c_str());
-        this->CreateStringProperty("Doc", doc.c_str(), true, nullptr, false);
+        if (object_.HasAttribute("__doc__")) {
+            auto doc = object_.Get("__doc__").as<string>();
+            this->SetDescription(doc.c_str());
+        }
         return DEVICE_OK;
     }
     
@@ -161,6 +162,7 @@ public:
 
     static PyObj GetDevice(const string& device_id) noexcept;
     static bool SplitId(const string& id, string& deviceType, string& hubId, string& deviceName) noexcept;
+    static string ComposeId(const string& deviceType, const string& hubId, const string& deviceName) noexcept;
 
 protected:
     int DetectInstalledDevices() override;

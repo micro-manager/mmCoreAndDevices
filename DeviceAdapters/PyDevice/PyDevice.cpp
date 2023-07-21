@@ -44,11 +44,12 @@ CPyHub::CPyHub() : PyHubClass(g_adapterName) {
  * @return 
 */
 int CPyHub::Shutdown() {
-    PyLock lock;
-    devices_.clear();
-    initialized_ = false;
-
-    g_hubs.erase(id_);
+    if (initialized_) {
+        PyLock lock;
+        devices_.clear();
+        initialized_ = false;
+        g_hubs.erase(id_);
+    }
     return PyHubClass::Shutdown();
 }
 
@@ -126,7 +127,7 @@ int CPyHub::RunScript() noexcept {
     char scriptPathString[MM::MaxStrLength] = { 0 };
     _check_(GetProperty(p_PythonScript, scriptPathString));
     const fs::path& scriptPath(scriptPathString);
-    id_ = scriptPath.stem().generic_string();
+    id_ = scriptPath.filename().generic_string();
 
     auto code = std::stringstream();
     code << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
@@ -148,8 +149,8 @@ int CPyHub::RunScript() noexcept {
         auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
         auto obj = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
         auto type = obj.Get("_MM_dtype").as<string>();
-        auto id = type + ":" + id_ + ':' + name; // construct device id
-        obj.Set("_MM_id", id);
+        auto id = ComposeId(type, id_, name);
+        obj.Set("_MM_id",id);
         devices_[id] = obj;
     }
     g_hubs[id_] = this;
@@ -240,21 +241,24 @@ PyObj CPyHub::GetDevice(const string& device_id) noexcept {
 }
 
 /*
-    * A device id is of the form{ DeviceType }:{HubId} : {DeviceName}, where :
-    *  {DeviceType} is the device type : "Device", "Camera", etc.
-    *  {HubId} is the name of the script that was used to construct the device
-    *  {DeviceName} is the key of the 'devices' dictionary that contains the object
+    * A device id is of the form DeviceType[name@hub], where :
+    *  DeviceType is the device type : "Device", "Camera", etc.
+    *  hub is the name of the script that was used to construct the device, including the .py suffix: "microscope.py"
+    *  name is the key of the 'devices' dictionary that contains the object
     */
 bool CPyHub::SplitId(const string& id, string& deviceType, string& hubId, string& deviceName) noexcept {
-    auto colon1 = id.find(':');
-    auto colon2 = id.find(':', colon1 + 1);
+    auto colon1 = id.find('[');
+    auto colon2 = id.find('@', colon1 + 1);
     if (colon1 != string::npos && colon2 != string::npos) {
         deviceType = id.substr(0, colon1);
-        hubId = id.substr(colon1 + 1, colon2 - colon1 - 1);
-        deviceName = id.substr(colon2 + 1);
+        deviceName = id.substr(colon1 + 1, colon2 - colon1 - 1);
+        hubId = id.substr(colon2 + 1, id.length() - colon2 - 2);
         return true;
     }
     else
         return false;
 };
 
+string CPyHub::ComposeId(const string& deviceType, const string& hubId, const string& deviceName) noexcept {
+    return deviceType + "[" + deviceName + "@" + hubId + "]";
+}
