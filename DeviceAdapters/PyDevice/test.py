@@ -117,12 +117,12 @@ class Camera:
         self._measurement_time = value
 
     @property
-    def binning(self) -> int:
-        return 1
-
-    @property
     def random_generator(self) -> object:
         return self._random_generator
+
+    @random_generator.setter
+    def random_generator(self, value):
+        self._random_generator = value
 
 r = RandomGenerator()
 devices = {'cam': Camera(random_generator=r), 'rng': r}

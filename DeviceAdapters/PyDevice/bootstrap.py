@@ -33,7 +33,7 @@ class Camera(Protocol):
     left: int
     height: int
     width: int
-    binning: int
+#    binning: int # the binning property is optional. If missing, a property binning = 1 will be added.
 
     def trigger(self) -> None:
         pass
@@ -117,16 +117,20 @@ def to_title_case(str):
 
 
 def set_metadata(obj):
+    properties = [(k, extract_property_metadata(v)) for (k, v) in type(obj).__dict__.items()]
+    properties = [(p[0], to_title_case(p[0]), *p[1]) for p in properties if p[1] is not None]
     if isinstance(obj, Camera):
         dtype = "Camera"
+        if not hasattr(obj, 'binning'):
+            obj.binning = 1
+            properties.append(('binning', 'Binning', 'int', 1, 1, None))
     elif isinstance(obj, XYStage):
         dtype = "XYStage"
     elif isinstance(obj, Stage):
         dtype = "Stage"
     else:
         dtype = "Device"
-    properties = [(k, extract_property_metadata(v)) for (k, v) in type(obj).__dict__.items()]
-    properties = [(p[0], to_title_case(p[0]), *p[1]) for p in properties if p[1] is not None]
+
     obj._MM_dtype = dtype
     obj._MM_properties = properties
 
