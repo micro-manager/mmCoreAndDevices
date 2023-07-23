@@ -42,6 +42,17 @@ public:
     PyObj get(MM::PropertyBase* pProp) const noexcept override;
 };
 
+class PyQuantityAction : public PyAction {
+public:
+    PyQuantityAction(CPyDeviceBase* device, const string& attribute, const string& MM_property, bool readonly, const PyObj& pre_set, const PyObj& post_get) : PyAction(device, attribute, MM_property, MM::Float, readonly), pre_set_(pre_set), post_get_(post_get) {}
+    void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept override;
+    PyObj get(MM::PropertyBase* pProp) const noexcept override;
+private:
+    PyObj pre_set_;  // function to add ms or um unit
+    PyObj post_get_; // function to remove ms or um unit
+};
+
+
 class PyStringAction : public PyAction {
 public:
     PyStringAction(CPyDeviceBase* device, const string& attribute, const string& MM_property, bool readonly) : PyAction(device, attribute, MM_property, MM::String, readonly) {}

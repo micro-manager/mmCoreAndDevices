@@ -88,10 +88,26 @@ public:
         PyObject_SetAttrString(p_, attribute, PyObj(value));
         ReportError();
     }
-    PyObj Call(const char* function) const noexcept {
+    PyObj CallMember(const char* function) noexcept {
         PyLock lock;
         return PyObj(PyObject_CallNoArgs(PyObject_GetAttrString(p_, function)));
     }
+    PyObj Call() const noexcept {
+        PyLock lock;
+        return PyObj(PyObject_CallNoArgs(p_));
+    }
+    PyObj Call(const PyObj& arg) const noexcept {
+        PyLock lock;
+        return PyObj(PyObject_CallOneArg(p_, arg));
+    }
+    /* for Python 3.9:
+    template <class ...Args> PyObj Call(const PyObj& arg1, const Args&... args) const
+    {
+        PyLock lock;
+        std::vector<PyObject*> arguments = { arg1, args... };
+        return PyObj(PyObject_VectorCall(p_, arguments.data(), sizeof...(args), nullptr));
+    }*/
+
     PyObj Get( const char* attribute) const noexcept {
         PyLock lock;
         return PyObj(PyObject_GetAttrString(p_, attribute));

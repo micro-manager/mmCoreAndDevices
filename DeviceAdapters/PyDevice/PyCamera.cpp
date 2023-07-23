@@ -14,7 +14,7 @@
 */
 int CPyCamera::SnapImage()
 {
-    object_.Call("trigger");
+    object_.CallMember("trigger");
     return CheckError();
 }
 
@@ -37,7 +37,7 @@ int CPyCamera::Shutdown() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    lastImage_ = object_.Call("read");
+    lastImage_ = object_.CallMember("read");
     if (CheckError() != DEVICE_OK)
         return nullptr;
 
@@ -173,18 +173,19 @@ int CPyCamera::ClearROI()
 */
 double CPyCamera::GetExposure() const
 {
-    return object_.Get("measurement_time").as<double>();
+    double value_ms;
+    const_cast<CPyCamera*>(this)->GetProperty("MeasurementTime", value_ms);
+    return value_ms;
 }
 
 /**
 * Sets exposure in milliseconds.
 * Required by the MM::Camera API.
 */
-void CPyCamera::SetExposure(double exp)
+void CPyCamera::SetExposure(double value_ms)
 {
-    object_.Set("measurement_time", exp); // cannot directly call SetProperty on python_ because that does not update cached value
-    if (CheckError() == DEVICE_OK) // error is logged but not reported
-        GetCoreCallback()->OnExposureChanged(this, exp);
+    if (SetProperty("MeasurementTime", std::to_string(value_ms).c_str()) == DEVICE_OK)
+        GetCoreCallback()->OnExposureChanged(this, value_ms);
 }
 
 /**

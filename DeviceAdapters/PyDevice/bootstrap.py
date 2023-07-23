@@ -4,7 +4,7 @@ bootstrap = R"raw("
 # See RunScript() in PyDevice.cpp for the code that loads this script as a c++ string.
 
 import numpy as np
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, get_origin
 import sys
 import os
 
@@ -28,12 +28,13 @@ code.close()
 @runtime_checkable
 class Camera(Protocol):
     data_shape: tuple[int]
-    measurement_time: float
+    measurement_time: Quantity[u.ms]
     top: int
     left: int
     height: int
     width: int
-#    binning: int # the binning property is optional. If missing, a property binning = 1 will be added.
+
+    #    binning: int # the binning property is optional. If missing, a property binning = 1 will be added.
 
     def trigger(self) -> None:
         pass
@@ -44,10 +45,10 @@ class Camera(Protocol):
 
 @runtime_checkable
 class Stage(Protocol):
-    step_size: float
+    step_size: Quantity[u.um]
     """Step size in μm"""
 
-    position: float
+    position: Quantity[u.um]
     """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
     current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
     causes it to start moving to the new position. Also see :func:`~wait`.
@@ -68,10 +69,10 @@ class Stage(Protocol):
 
 @runtime_checkable
 class XYStage(Protocol):
-    position_x: float
-    position_y: float
-    step_size_x: float
-    step_size_y: float
+    position_x: Quantity[u.um]
+    position_y: Quantity[u.um]
+    step_size_x: Quantity[u.um]
+    step_size_y: Quantity[u.um]
 
     def home(self) -> None:
         pass
@@ -92,29 +93,40 @@ def extract_property_metadata(p):
     max = None
     options = None
     readonly = not hasattr(p, 'fset')
+    pre_set = None
+    post_get = None
 
-    if hasattr(return_type, '__metadata__'):  # Annotated
+    if get_origin(return_type) is Annotated:  # Annotated
         meta = return_type.__metadata__[0]
-        min = meta.get('min', None)
-        max = meta.get('max', None)
-        ptype = return_type.__origin__.__name__
+        if isinstance(meta, u.Unit):
+            if meta.name == 'ms':
+                ptype = 'quantity'
+                pre_set = lambda value: u.Quantity(value, u.ms)
+                post_get = lambda value: value.to_value(u.ms)
+            elif meta.name == 'um':
+                ptype = 'quantity'
+                pre_set = lambda value: u.Quantity(value, u.um)
+                post_get = lambda value: value.to_value(u.um)
+            else:
+                raise ValueError('Only milliseconds and microsecond units are supported')
+        else:
+            min = meta.get('min', None)
+            max = meta.get('max', None)
+            ptype = return_type.__origin__.__name__
 
     elif issubclass(return_type, Enum):  # Enum
         options = {k.lower().capitalize(): v for (k, v) in return_type.__members__.items()}
         ptype = 'enum'
 
     else:
-        min = None
-        max = None
-        options = None
         ptype = return_type.__name__
 
-    return (ptype, readonly, min, max, options)
+    return ptype, readonly, min, max, options, pre_set, post_get
 
 
-def to_title_case(str):
+def to_title_case(name):
     # convert attribute name from snake_case to TitleCase
-    return str.replace('_', ' ').title().replace(' ', '')
+    return name.replace('_', ' ').title().replace(' ', '')
 
 
 def set_metadata(obj):
@@ -124,7 +136,7 @@ def set_metadata(obj):
         dtype = "Camera"
         if not hasattr(obj, 'binning'):
             obj.binning = 1
-            properties.append(('binning', 'Binning', 'int', False, 1, 1, None))
+            properties.append(('binning', 'Binning', 'int', False, 1, 1, None, None, None))
     elif isinstance(obj, XYStage):
         dtype = "XYStage"
     elif isinstance(obj, Stage):

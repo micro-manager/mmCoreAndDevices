@@ -1,11 +1,9 @@
 #include "pch.h"
 #include "PyStage.h"
-//#define NO_IMPORT_ARRAY
-//#include <numpy/arrayobject.h>
 
 int CPyStage::Home()
 {
-    object_.Call("home");
+    object_.CallMember("home");
     home_ = 0.0;
     OnStagePositionChanged(0.0);
     return CheckError();
@@ -13,7 +11,7 @@ int CPyStage::Home()
 
 int CPyXYStage::Home()
 {
-    object_.Call("home");
+    object_.CallMember("home");
     home_x_ = 0.0;
     home_y_ = 0.0;
     OnXYStagePositionChanged(0.0, 0.0);
@@ -21,12 +19,12 @@ int CPyXYStage::Home()
 }
 
 int CPyStage::Wait() {
-    object_.Call("wait");
+    object_.CallMember("wait");
     return CheckError();
 }
 
 int CPyXYStage::Wait() {
-    object_.Call("wait");
+    object_.CallMember("wait");
     return CheckError();
 }
 
@@ -53,8 +51,8 @@ int CPyStage::SetPositionUm(double pos) {
 int CPyXYStage::SetPositionUm(double x, double y) {
     object_.Set("position_x", x + home_x_);
     object_.Set("position_y", y + home_y_);
-    OnXYStagePositionChanged(x, y);
     _check_(Wait());
+    OnXYStagePositionChanged(x, y);
     return CheckError();
 }
 

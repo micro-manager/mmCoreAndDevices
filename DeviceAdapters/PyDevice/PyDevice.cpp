@@ -165,6 +165,8 @@ int CPyHub::RunScript() noexcept {
 #define MIN 4
 #define MAX 5
 #define ENUMS 6
+#define PRE_SET 7
+#define POST_GET 8
 
 vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
 {
@@ -185,6 +187,8 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
             descriptor = new PyIntAction(this, attrName, mmName, readonly);
         else if (type == "float")
             descriptor = new PyFloatAction(this, attrName, mmName, readonly);
+        else if (type == "quantity")
+            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, PyObj::Borrow(PyTuple_GetItem(pinfo, PRE_SET)), PyObj::Borrow(PyTuple_GetItem(pinfo, POST_GET)));
         else if (type == "string")
             descriptor = new PyStringAction(this, attrName, mmName, readonly);
         else if (type == "bool")
