@@ -12,6 +12,16 @@ namespace fs = std::filesystem;
 using std::string;
 using std::function;
 using std::vector;
+#ifdef _WIN32 
+#include <Windows.h>
+#endif
+
+/// Helper function for checking if a file exists
+inline bool FileExists(const fs::path& path) noexcept {
+    std::ifstream test(path);
+    return test.good();
+}
+
 
 // the following lines are a workaround for the problem 'cannot open file python39_d.lib'. This occurs because Python tries
 // to link to the debug version of the library, even when that is not installed (and not really needed in our case).

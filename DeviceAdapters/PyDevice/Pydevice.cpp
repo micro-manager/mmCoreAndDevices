@@ -126,9 +126,28 @@ int CPyHub::RunScript() noexcept {
     PyLock lock;
     char scriptPathString[MM::MaxStrLength] = { 0 };
     _check_(GetProperty(p_PythonScript, scriptPathString));
-    const fs::path& scriptPath(scriptPathString);
-    id_ = scriptPath.filename().generic_string();
+    fs::path scriptPath(scriptPathString);
 
+#ifdef _WIN32
+    while (!FileExists(scriptPath)) {
+        OPENFILENAMEA options = { 0 };
+        char file_name[MAX_PATH] = { 0 };
+        strncpy_s(file_name, scriptPath.generic_string().c_str(), MAX_PATH - 1);
+        options.lStructSize = sizeof(OPENFILENAMEA);
+        options.lpstrFilter = "Python scripts\0*.py\0\0";
+        options.lpstrFile = file_name;
+        options.lpstrTitle = "Select Python file to include as device";
+        options.nMaxFile = MAX_PATH;
+
+        if (!GetOpenFileNameA(&options))
+            return ERR_PYTHON_NOT_FOUND;
+
+        scriptPath = options.lpstrFile;
+    }
+#endif
+
+
+    id_ = scriptPath.filename().generic_string();
     auto code = std::stringstream();
     code << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
     code << "SCRIPT_FILE = '" << scriptPath.generic_string() << "'\n";

@@ -120,7 +120,7 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
-      <AdditionalDependencies>Shlwapi.lib</AdditionalDependencies>
+      <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>python autoconfig.py &gt; AutoConfig.props</Command>
@@ -149,8 +149,7 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>python autoconfig.py &gt; AutoConfig.props</Command>
