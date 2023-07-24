@@ -114,7 +114,6 @@ int AlliedVisionCamera::Shutdown() {
   LogMessage("Shutting down camera: " + m_cameraName);
   VmbError_t err = VmbErrorSuccess;
   if (m_sdk != nullptr && m_sdk->isInitialized()) {
-    (void)StopSequenceAcquisition();
     if (m_handle != nullptr) {
       err = m_sdk->VmbCameraClose_t(m_handle);
     }
@@ -219,19 +218,19 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(
 
   switch (feature->featureDataType) {
     case VmbFeatureDataInt: {
-      err = CreateIntegerProperty(propertyName.c_str(), 0, true,
+      err = CreateIntegerProperty(propertyName.c_str(), 0, false,
                                   uManagerCallback);
       break;
     }
     case VmbFeatureDataBool: {
-      err = CreateStringProperty(propertyName.c_str(), g_False, true,
+      err = CreateStringProperty(propertyName.c_str(), g_False, false,
                                  uManagerCallback);
       AddAllowedValue(propertyName.c_str(), g_False);
       AddAllowedValue(propertyName.c_str(), g_True);
       break;
     }
     case VmbFeatureDataCommand: {
-      err = CreateStringProperty(propertyName.c_str(), g_Command, true,
+      err = CreateStringProperty(propertyName.c_str(), g_Command, false,
                                  uManagerCallback);
       AddAllowedValue(propertyName.c_str(), g_Command);
       AddAllowedValue(propertyName.c_str(), g_Execute);
@@ -239,12 +238,12 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(
     }
     case VmbFeatureDataEnum:
     case VmbFeatureDataString: {
-      err = CreateStringProperty(propertyName.c_str(), "", true,
+      err = CreateStringProperty(propertyName.c_str(), "", false,
                                  uManagerCallback);
       break;
     }
     case VmbFeatureDataFloat: {
-      err = CreateFloatProperty(propertyName.c_str(), 0.0, true,
+      err = CreateFloatProperty(propertyName.c_str(), 0.0, false,
                                 uManagerCallback);
       break;
     }
@@ -335,44 +334,48 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize,
   VmbError_t err = VmbErrorSuccess;
 
   std::function<VmbError_t(unsigned)> setOffsetXProperty = [this](long x) {
-    return SetProperty(g_OffsetX, CDeviceUtils::ConvertToString(x));
+    auto err = SetProperty(g_OffsetX, CDeviceUtils::ConvertToString(x));
+    if (err) {
+      LOG_ERROR(err, "Error while ROI Offset X!");
+    }
+    return err;
   };
   std::function<VmbError_t(unsigned)> setOffsetYProperty = [this](long y) {
-    return SetProperty(g_OffsetY, CDeviceUtils::ConvertToString(y));
+    auto err = SetProperty(g_OffsetY, CDeviceUtils::ConvertToString(y));
+    if (err) {
+      LOG_ERROR(err, "Error while ROI Offset Y!");
+    }
+    return err;
   };
   std::function<VmbError_t(unsigned)> setWidthProperty = [this](long xSize) {
-    return SetProperty(g_Width, CDeviceUtils::ConvertToString(xSize));
+    auto err = SetProperty(g_Width, CDeviceUtils::ConvertToString(xSize));
+    if (err) {
+      LOG_ERROR(err, "Error while ROI X!");
+    }
+    return err;
   };
   std::function<VmbError_t(unsigned)> setHeightProperty = [this](long ySize) {
-    return SetProperty(g_Height, CDeviceUtils::ConvertToString(ySize));
+    auto err = SetProperty(g_Height, CDeviceUtils::ConvertToString(ySize));
+    if (err) {
+      LOG_ERROR(err, "Error while ROI Y!");
+    }
+    return err;
   };
 
   if (xSize > width) {
-    err = setOffsetXProperty(x) | setWidthProperty(xSize);
-    if (err != VmbErrorSuccess) {
-      LOG_ERROR(err, "Error while ROI X!");
-      return err;
-    }
+    err = setOffsetXProperty(x) || setWidthProperty(xSize);
   } else {
-    err = setWidthProperty(xSize) | setOffsetXProperty(x);
-    if (err != VmbErrorSuccess) {
-      LOG_ERROR(err, "Error while ROI X!");
-      return err;
-    }
+    err = setWidthProperty(xSize) || setOffsetXProperty(x);
   }
 
   if (ySize > height) {
-    err = setOffsetYProperty(y) | setHeightProperty(ySize);
-    if (err != VmbErrorSuccess) {
-      LOG_ERROR(err, "Error while ROI Y!");
-      return err;
-    }
+    err = setOffsetYProperty(y) || setHeightProperty(ySize);
   } else {
-    err = setHeightProperty(ySize) | setOffsetYProperty(y);
-    if (err != VmbErrorSuccess) {
-      LOG_ERROR(err, "Error while ROI Y!");
-      return err;
-    }
+    err = setHeightProperty(ySize) || setOffsetYProperty(y);
+  }
+
+  if (err != VmbErrorSuccess) {
+    return err;
   }
 
   return resizeImageBuffer();
@@ -446,7 +449,6 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
   // Init
   std::vector<std::string> featureNames = {};
   VmbError_t err = VmbErrorSuccess;
-  MM::Property* pChildProperty = (MM::Property*)pProp;
   const auto propertyName = pProp->GetName();
 
   // Check property mapping
@@ -456,7 +458,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
   for (const auto& featureName : featureNames) {
     // Get Feature Info and Access Mode
     VmbFeatureInfo_t featureInfo;
-    bool rMode{}, wMode{}, readOnly{}, featureAvailable{};
+    bool rMode{}, wMode{}, featureAvailable{};
     err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(),
                                        &featureInfo, sizeof(featureInfo)) |
           m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(), &rMode,
@@ -466,7 +468,6 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
       return err;
     }
 
-    readOnly = (rMode && !wMode);
     featureAvailable = rMode || wMode;
     if (!featureAvailable) {
       LOG_ERROR(VmbErrorFeaturesUnavailable,
@@ -506,40 +507,32 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
           }
         }
 
-        // Update property's access mode
-        pChildProperty->SetReadOnly(readOnly);
+        err = setAllowedValues(&featureInfo, propertyName.c_str());
 
-        // Update property's limits and allowed values
-        if (wMode) {
-          err = setAllowedValues(&featureInfo, propertyName.c_str());
-        }
         break;
       case MM::ActionType::AfterSet:  //!< Update feature from property
-        if (wMode) {
-          err =
-              setFeatureValue(&featureInfo, featureName.c_str(), propertyValue);
-          if (err == VmbErrorInvalidValue) {
-            // Update limits first to have latest min and max
-            err = setAllowedValues(&featureInfo, propertyName.c_str());
-            if (VmbErrorSuccess != err) {
-              LOG_ERROR(err, "Error while setting allowed values for feature " +
-                                 featureName);
-              return err;
-            }
-
-            // Adjust value
-            double min{}, max{};
-            err = GetPropertyLowerLimit(propertyName.c_str(), min) |
-                  GetPropertyUpperLimit(propertyName.c_str(), max);
-            if (VmbErrorSuccess != err) {
-              LOG_ERROR(err, "Error while getting limits for " + propertyName);
-              return err;
-            }
-            std::string adjustedValue =
-                adjustValue(featureInfo, min, max, std::stod(propertyValue));
-            err = setFeatureValue(&featureInfo, featureName.c_str(),
-                                  adjustedValue);
+        err = setFeatureValue(&featureInfo, featureName.c_str(), propertyValue);
+        if (err == VmbErrorInvalidValue) {
+          // Update limits first to have latest min and max
+          err = setAllowedValues(&featureInfo, propertyName.c_str());
+          if (VmbErrorSuccess != err) {
+            LOG_ERROR(err, "Error while setting allowed values for feature " +
+                               featureName);
+            return err;
           }
+
+          // Adjust value
+          double min{}, max{};
+          err = GetPropertyLowerLimit(propertyName.c_str(), min) |
+                GetPropertyUpperLimit(propertyName.c_str(), max);
+          if (VmbErrorSuccess != err) {
+            LOG_ERROR(err, "Error while getting limits for " + propertyName);
+            return err;
+          }
+          std::string adjustedValue =
+              adjustValue(featureInfo, min, max, std::stod(propertyValue));
+          err =
+              setFeatureValue(&featureInfo, featureName.c_str(), adjustedValue);
         }
         break;
       default:
@@ -899,14 +892,39 @@ int AlliedVisionCamera::SnapImage() {
   frame.buffer = m_buffer[0];
   frame.bufferSize = m_bufferSize;
 
-  VmbError_t err =
-      m_sdk->VmbFrameAnnounce_t(m_handle, &frame, sizeof(VmbFrame_t)) |
-      m_sdk->VmbCaptureStart_t(m_handle) |
-      m_sdk->VmbCaptureFrameQueue_t(m_handle, &frame, nullptr) |
-      m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart) |
-      m_sdk->VmbCaptureFrameWait_t(m_handle, &frame, 3000);
-
+  VmbError_t err = VmbErrorSuccess;
+  err = m_sdk->VmbFrameAnnounce_t(m_handle, &frame, sizeof(VmbFrame_t));
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error while snapping image!");
+    (void)StopSequenceAcquisition();
+    return err;
+  }
+  err = m_sdk->VmbCaptureStart_t(m_handle);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error while snapping image!");
+    (void)StopSequenceAcquisition();
+    return err;
+  }
+  err = m_sdk->VmbCaptureFrameQueue_t(m_handle, &frame, nullptr);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error while snapping image!");
+    (void)StopSequenceAcquisition();
+    return err;
+  }
+  err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error while snapping image!");
+    (void)StopSequenceAcquisition();
+    return err;
+  }
   m_isAcquisitionRunning = true;
+  err = m_sdk->VmbCaptureFrameWait_t(m_handle, &frame, 3000);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error while snapping image!");
+    (void)StopSequenceAcquisition();
+    return err;
+  }
+
   (void)StopSequenceAcquisition();
 
   if (VmbErrorSuccess != err) {
@@ -927,9 +945,15 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
     return DEVICE_CAMERA_BUSY_ACQUIRING;
   }
 
-  int err = GetCoreCallback()->PrepareForAcq(this) | resizeImageBuffer();
+  int err = GetCoreCallback()->PrepareForAcq(this);
   if (err != VmbErrorSuccess) {
     LOG_ERROR(err, "Error while preparing for acquisition!");
+    return err;
+  }
+
+  err = resizeImageBuffer();
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error during frame praparation for continous acquisition!");
     return err;
   }
 
@@ -950,8 +974,14 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
     };
 
     err =
-        m_sdk->VmbFrameAnnounce_t(m_handle, &(m_frames[i]),
-                                  sizeof(VmbFrame_t)) |
+        m_sdk->VmbFrameAnnounce_t(m_handle, &(m_frames[i]), sizeof(VmbFrame_t));
+    if (err != VmbErrorSuccess) {
+      LOG_ERROR(err,
+                "Error during frame praparation for continous acquisition!");
+      return err;
+    }
+
+    err =
         m_sdk->VmbCaptureFrameQueue_t(m_handle, &(m_frames[i]), frameCallback);
     if (err != VmbErrorSuccess) {
       LOG_ERROR(err,
@@ -960,8 +990,12 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
     }
   }
 
-  err = m_sdk->VmbCaptureStart_t(m_handle) |
-        m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart);
+  err = m_sdk->VmbCaptureStart_t(m_handle);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error during frame praparation for continous acquisition!");
+    return err;
+  }
+  err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart);
   m_isAcquisitionRunning = true;
 
   if (err != VmbErrorSuccess) {
@@ -977,8 +1011,9 @@ int AlliedVisionCamera::StartSequenceAcquisition(double interval_ms) {
 }
 int AlliedVisionCamera::StopSequenceAcquisition() {
   // This method shall never return any error
+  VmbError_t err = VmbErrorSuccess;
   if (IsCapturing()) {
-    auto err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStop);
+    err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStop);
     m_isAcquisitionRunning = false;
     if (err != VmbErrorSuccess) {
       LOG_ERROR(err, "Error during stopping acquisition command!");
@@ -986,11 +1021,21 @@ int AlliedVisionCamera::StopSequenceAcquisition() {
     }
   }
 
-  auto err = m_sdk->VmbCaptureEnd_t(m_handle) |
-             m_sdk->VmbCaptureQueueFlush_t(m_handle) |
-             m_sdk->VmbFrameRevokeAll_t(m_handle);
+  err = m_sdk->VmbCaptureEnd_t(m_handle);
   if (err != VmbErrorSuccess) {
-    LOG_ERROR(err, "Error in acquisition stop!");
+    LOG_ERROR(err, "Error during stop acquisition!");
+    return err;
+  }
+
+  err = m_sdk->VmbCaptureQueueFlush_t(m_handle);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error during stop acquisition!");
+    return err;
+  }
+
+  err = m_sdk->VmbFrameRevokeAll_t(m_handle);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error during stop acquisition!");
     return err;
   }
 
