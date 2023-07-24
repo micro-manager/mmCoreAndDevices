@@ -1,3 +1,6 @@
+#gtest
+/_deps/
+
 # Editors, etc.
 *~
 .*.swp
@@ -73,3 +76,43 @@ test-reports/
 *.pb.cc
 *.pb.h
 bin
+
+# CMake-generated files and directories
+/CMakeFiles/
+/MMCore/CMakeFiles/
+/MMDevice/CMakeFiles/
+/MMDevice/unittest/CMakeFiles/
+/CMakeCache.txt
+/CMakeScripts/
+/CMakeTmp/
+/Makefile
+/cmake_install.cmake
+/install_manifest.txt
+*.a
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.a
+*.cmake
+
+# Build directory
+/lib/
+
+# IDE-specific files and directories (if applicable)
+/.vscode/
+/.idea/
+
+# Compiled binaries and object files
+/*.exe
+/*.dll
+/*.so
+/*.dylib
+/*.o
+/*.a
+
+# Other generated files and directories (if applicable)
+/Debug/
+/Release/
+
