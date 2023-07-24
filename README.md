@@ -1,6 +1,3 @@
-# Conda environment
-
-conda create --name mmcore
 
 # mmCoreAndDevices
 The c++ code at the core of the Micro-Manager project.
