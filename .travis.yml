@@ -1,0 +1,29 @@
+os:
+  - linux
+  - osx
+  - windows
+
+language: cpp
+
+# Choose the C++ compiler based on the operating system
+compiler:
+  - gcc
+  - clang
+  - msvc
+
+# Specify the CMake build steps
+script:
+  - cmake .
+  - cmake --build .
+  - cmake --build . --target install
+
+# (Optional) Customize the build matrix to exclude certain configurations if needed
+matrix:
+  exclude:
+    - os: windows
+      compiler: gcc
+    - os: windows
+      compiler: clang
+    - os: osx
+      compiler: gcc
+    # Add any other exclusions as necessary based on your specific requirements
