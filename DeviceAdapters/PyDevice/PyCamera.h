@@ -23,4 +23,5 @@ public:
     int IsExposureSequenceable(bool& isSequenceable) const override;
     int SnapImage() override;
     int Shutdown() override;
+    int InsertImage() override;
 };

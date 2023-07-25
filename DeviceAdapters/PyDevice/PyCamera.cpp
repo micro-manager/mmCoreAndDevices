@@ -212,3 +212,29 @@ int CPyCamera::IsExposureSequenceable(bool& isSequenceable) const
     isSequenceable = true;
     return DEVICE_OK;
 }
+
+// overriding default implementation which is broken (does not check for nullptr return from buffer)
+int CPyCamera::InsertImage()
+{
+    char label[MM::MaxStrLength];
+    this->GetLabel(label);
+    Metadata md;
+    md.put("Camera", label);
+    auto buffer = GetImageBuffer();
+    if (!buffer)
+        return DEVICE_ERR;
+
+    int ret = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
+        GetImageHeight(), GetImageBytesPerPixel(),
+        md.Serialize().c_str());
+    if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW)
+    {
+        // do not stop on overflow - just reset the buffer
+        GetCoreCallback()->ClearImageBuffer(this);
+        return GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
+            GetImageHeight(), GetImageBytesPerPixel(),
+            md.Serialize().c_str());
+    }
+    else
+        return ret;
+}
