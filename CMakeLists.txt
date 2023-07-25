@@ -15,9 +15,10 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-# Add subdirectories for MMCore and MMDevice
+# Add subdirectories for MMCore, MMDevice, and DeviceAdapters
 add_subdirectory(MMCore)
 add_subdirectory(MMDevice)
+add_subdirectory(DeviceAdapters)
 
 # Optionally add other subdirectories if needed
 # add_subdirectory(OtherSubdirectory)

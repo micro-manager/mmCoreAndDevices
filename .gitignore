@@ -78,11 +78,12 @@ test-reports/
 bin
 
 # CMake-generated files and directories
-/CMakeFiles/
+CMakeFiles/
 /MMCore/CMakeFiles/
 /MMDevice/CMakeFiles/
 /MMDevice/unittest/CMakeFiles/
-/CMakeCache.txt
+/DeviceAdapters/CMakeFiles/
+CMakeCache.txt
 /CMakeScripts/
 /CMakeTmp/
 /Makefile

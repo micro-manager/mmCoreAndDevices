@@ -108,7 +108,7 @@ target_include_directories(MMCore
 )
 
 # Link MMCore with libMMDevice
-target_link_libraries(MMCore PRIVATE libMMDevice)
+target_link_libraries(MMCore PRIVATE MMDevice)
 
 # Set the output directory for the MMCore library
 set_target_properties(MMCore PROPERTIES

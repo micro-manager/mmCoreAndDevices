@@ -10,6 +10,9 @@ set(SOURCES
     ../../MMDevice/MMDevice.h
 )
 
+link_directories(../../MMCore)
+link_directories(../../lib)
+
 # Create the device adapter library
 add_library(${TARGET_NAME} MODULE ${SOURCES})
 
@@ -21,3 +24,13 @@ target_link_libraries(${TARGET_NAME}
     PRIVATE
         ${MMDEVAPI_LIBADD} # Assuming MMDEVAPI_LIBADD contains external libraries
 )
+
+target_link_libraries(${TARGET_NAME} MMCore MMDevice)
+
+# Include directories for the target
+target_include_directories(${TARGET_NAME}
+    PRIVATE
+        ../../MMDevice/ # Add this line to include the MMDevice directory
+)
+
+

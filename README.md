@@ -23,3 +23,10 @@ cmake .
 make
 make install
 ```
+
+If you encounter errors and had to manually fix something remember to rerun cmake with clean option:
+```
+cmake --build . --clean-first
+make
+make install
+```

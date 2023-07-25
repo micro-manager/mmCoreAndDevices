@@ -12,8 +12,8 @@ target_include_directories(FloatPropertyTruncation-Tests PRIVATE ${GMOCK_INCLUDE
 target_include_directories(MMTime-Tests PRIVATE ${GMOCK_INCLUDE_DIRS} ..)
 
 # Link libraries
-target_link_libraries(FloatPropertyTruncation-Tests gmock libMMDevice)
-target_link_libraries(MMTime-Tests gmock libMMDevice)
+target_link_libraries(FloatPropertyTruncation-Tests gmock MMDevice)
+target_link_libraries(MMTime-Tests gmock MMDevice)
 
 # Define tests
 add_test(NAME FloatPropertyTruncation-Tests COMMAND FloatPropertyTruncation-Tests)

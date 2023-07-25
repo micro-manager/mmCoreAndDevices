@@ -22,22 +22,22 @@ set(MMDEVICE_SOURCES
 )
 
 # Define the MMDevice library
-add_library(libMMDevice STATIC ${MMDEVICE_SOURCES})
+add_library(MMDevice STATIC ${MMDEVICE_SOURCES})
 
 # Include directories for libMMDevice
-target_include_directories(libMMDevice
+target_include_directories(MMDevice
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 # Set the output directory for libMMDevice
-set_target_properties(libMMDevice PROPERTIES
+set_target_properties(MMDevice PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
 
 # Optionally install libMMDevice
 if(INSTALL_MMDEVAPI)
-    install(TARGETS libMMDevice
+    install(TARGETS MMDevice
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
     install(FILES ${MMDEVICE_SOURCES}
