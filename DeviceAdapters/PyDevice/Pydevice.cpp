@@ -1,4 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // FILE:          Pydevice.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
@@ -16,7 +17,9 @@
 
 
 PyThreadState* CPyHub::g_threadState = nullptr;
+fs::path CPyHub::g_pythonExecutabePath;
 std::map<string, CPyHub*> CPyHub::g_hubs;
+
 
 
 int CPyDeviceBase::CheckError() noexcept {
@@ -33,8 +36,12 @@ int CPyDeviceBase::CheckError() noexcept {
 
 CPyHub::CPyHub() : PyHubClass(g_adapterName) {
     SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not initialize Python interpreter, perhaps an incorrect path was specified?");
-    CreateStringProperty(p_PythonHome, PyObj::FindPython().generic_string().c_str(), false, nullptr, true);
+    SetErrorText(ERR_PYTHON_MULTIPLE_INTERPRETERS, "A different Python interpreter was already started. Due to limitations in the Python runtime, it is not possible to switch interpeters or virtual environments. Please fix the Python library path, or leave it blank.\n"
+    "If you want to change the Python interpreter or virtual environment, you will have to restart Micro-Manager with a configuration of (none), and rebuild the configuration using the new interpreter.\n"
+    "Alternatively, you can edit the .cfg file manually with a text editor.");
     CreateStringProperty(p_PythonScript, "", false, nullptr, true);
+    auto pythonPath = g_pythonExecutabePath.empty() ? PyObj::FindPython() : g_pythonExecutabePath;
+    CreateStringProperty(p_PythonExecutablePath, pythonPath.generic_string().c_str(), false, nullptr, true);
 }
 
 
@@ -77,11 +84,19 @@ int CPyHub::Initialize() {
 /**
  * Initialize the Python interpreter
  * If a non-empty pythonHome path is specified, the Python install from that path is used, otherwise the Python API tries to find an interpreter itself. 
- * If a Python iterpreter is already running, the old one is used and the path is ignored
- * todo: can we use virtual environments?
+ * If a Python iterpreter is already running, this function only checks if the specified python home path is consistent with the already running interpreter.
+ * If not, an error is reported. We cannot run multiple interpreters at once. Unfortunately, we cannot de-initialize one interpreter and start a new one. This
+ * would require calling Py_FinalizeEx, and then Py_Initialize again. Unfortunatly, by the Python docs (https://docs.python.org/3/c-api/init.html#c.Py_FinalizeEx),
+ * some extension modules (apparanetly including numpy) may not support this behavior, making Py_Finalize followed by Py_Initialize completely undefined behavior,
+ * and weird numpy-related crashes were seen when trying it. 
+ * 
+ * To use a virtual environment, just specify a path to the python.exe in the virtual environment. 
 */
 int CPyHub::InitializeInterpreter() noexcept
 {
+    char pythonExecutablePath[MM::MaxStrLength] = { 0 };
+    _check_(GetProperty(p_PythonExecutablePath, pythonExecutablePath));
+    
     // Initilialize Python interpreter, if not already done
     if (g_threadState == nullptr) {
         // Initialize Python configuration (new style)
@@ -91,24 +106,29 @@ int CPyHub::InitializeInterpreter() noexcept
         PyConfig config;
         PyConfig_InitPythonConfig(&config);
 
-        char pythonHomeString[MM::MaxStrLength] = { 0 };
-        _check_(GetProperty(p_PythonHome, pythonHomeString));
-        const fs::path& pythonHome(pythonHomeString);
-        if (!pythonHome.empty())
-            PyConfig_SetString(&config, &config.home, pythonHome.c_str());
-
+        g_pythonExecutabePath = pythonExecutablePath;
+        PyConfig_SetString(&config, &config.executable, (g_pythonExecutabePath / "python.exe").c_str());
         auto status = Py_InitializeFromConfig(&config);
 
-        //PyConfig_Read(&config); // for debugging
         PyConfig_Clear(&config);
+        if (g_pythonExecutabePath.empty()) {
+            PyConfig_Read(&config); // for debugging
+            g_pythonExecutabePath = config.home;
+        }
+ 
         if (PyStatus_Exception(status))
             return ERR_PYTHON_NOT_FOUND;
-    
+
         _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
     
         // allow multi threading and store the thread state (global interpreter lock).
         // note: savethread releases the lock.
         g_threadState = PyEval_SaveThread();
+    }
+    else {
+        if (!g_pythonExecutabePath.empty() && fs::path(pythonExecutablePath) != g_pythonExecutabePath) {
+            return ERR_PYTHON_MULTIPLE_INTERPRETERS;
+        }
     }
     return CheckError();
 }
@@ -143,14 +163,15 @@ int CPyHub::RunScript() noexcept {
             return ERR_PYTHON_NOT_FOUND;
 
         scriptPath = options.lpstrFile;
+        _check_(SetProperty(p_PythonScript, scriptPath.generic_string().c_str()));
     }
 #endif
 
 
     id_ = scriptPath.filename().generic_string();
     auto code = std::stringstream();
-    code << "SCRIPT_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
-    code << "SCRIPT_FILE = '" << scriptPath.generic_string() << "'\n";
+    code << "MODULE_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
+    code << "MODULE_NAME = '" << scriptPath.stem().generic_string() << "'\n";
     const char* bootstrap;
     #include "bootstrap.py"
     code << &bootstrap[1]; // skip leading ["]

@@ -39,5 +39,6 @@ inline bool FileExists(const fs::path& path) noexcept {
 #define PY_ARRAY_UNIQUE_SYMBOL PyDevice_ARRAY_API
 
 #define ERR_PYTHON_NOT_FOUND 101
+#define ERR_PYTHON_MULTIPLE_INTERPRETERS 102
 #define ERR_PYTHON_EXCEPTION 105
 #define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }

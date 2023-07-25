@@ -7,23 +7,30 @@ import numpy as np
 from typing import Protocol, runtime_checkable, get_origin
 import sys
 import os
+import importlib
+import astropy.units as u
+from typing import Annotated
+from enum import Enum
+from astropy.units import Quantity
 
 # When running this code in Python directly (for debugging), set up the SCRIPT_PATH
 # Normally, this is done by the c++ code
-if 'SCRIPT_PATH' not in locals():
-    SCRIPT_PATH = os.path.dirname(__file__)
-    SCRIPT_FILE = SCRIPT_PATH + '\\test.py'
+if 'MODULE_PATH' not in locals():
+    MODULE_PATH = os.path.dirname(__file__)
+    MODULE_NAME = 'test'
     DEBUGGING = True
 else:
     DEBUGGING = False
 
 # Load and execute the script file. This script is expected to set up a dictionary object with the name 'devices',
 # which holds name -> device pairs for all devices we want to expose in MM.
-sys.path.append(SCRIPT_PATH)
-code = open(SCRIPT_FILE)
-exec(code.read())
-code.close()
-
+# The MODULE_PATH is inserted as the first entry of the sys.path, which typically is the path of the main module.
+# To have a module include a submodule in a parent directory, use `sys.path.insert(1, os.path.dirname(sys.path[0]))`
+# in order to also add the parent directory to the path.
+sys.path.insert(0, MODULE_PATH)
+with open(MODULE_NAME+".py") as code:
+    exec(code.read())
+devices = importlib.import_module(MODULE_NAME).devices
 
 @runtime_checkable
 class Camera(Protocol):
