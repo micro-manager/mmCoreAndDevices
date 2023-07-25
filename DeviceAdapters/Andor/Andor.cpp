@@ -1286,6 +1286,125 @@ int AndorCamera::GetListOfAvailableCameras()
           nRet = SetProperty("DDGGateWidth", "100");
         }
         assert(nRet == DEVICE_OK);
+
+
+        ExternalOutputStates_.clear();
+        ExternalOutputStates_.push_back("Enabled");
+        ExternalOutputStates_.push_back("Disabled");
+
+        if (!HasProperty("DDGExternalOutputA"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputEnabled);
+          nRet = CreateProperty("DDGExternalOutputA", "Disabled", MM::String, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        nRet = SetAllowedValues("DDGExternalOutputA", ExternalOutputStates_);
+        assert(nRet == DEVICE_OK);
+        nRet = SetProperty("DDGExternalOutputA", "Disabled");
+        ExternalOutputState_[0] = "Disabled";
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGExternalOutputB"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputEnabled);
+          nRet = CreateProperty("DDGExternalOutputB", "Disabled", MM::String, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        nRet = SetAllowedValues("DDGExternalOutputB", ExternalOutputStates_);
+        assert(nRet == DEVICE_OK);
+        nRet = SetProperty("DDGExternalOutputB", "Disabled");
+        ExternalOutputState_[1] = "Disabled";
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGExternalOutputC"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputEnabled);
+          nRet = CreateProperty("DDGExternalOutputC", "Disabled", MM::String, false, pAct);
+          assert(nRet == DEVICE_OK);
+        }
+        nRet = SetAllowedValues("DDGExternalOutputC", ExternalOutputStates_);
+        assert(nRet == DEVICE_OK);
+        nRet = SetProperty("DDGExternalOutputC", "Disabled");
+        ExternalOutputState_[3] = "Disabled";
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGExternalOutputADelay"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputTime);
+          nRet = CreateProperty("DDGExternalOutputADelay", "0", MM::Integer, false, pAct);
+          nRet = SetPropertyLimits("DDGExternalOutputADelay", 0, 10e9);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGExternalOutputADelay", "100");
+        }
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGExternalOutputAWidth"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputTime);
+          nRet = CreateProperty("DDGExternalOutputAWidth", "100", MM::Integer, false, pAct);
+          nRet = SetPropertyLimits("DDGExternalOutputAWidth", 2, 10e9);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGExternalOutputAWidth", "100");
+        }
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGExternalOutputBDelay"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputTime);
+          nRet = CreateProperty("DDGExternalOutputBDelay", "0", MM::Integer, false, pAct);
+          nRet = SetPropertyLimits("DDGExternalOutputBDelay", 0, 10e9);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGExternalOutputBDelay", "100");
+        }
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGExternalOutputBWidth"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputTime);
+          nRet = CreateProperty("DDGExternalOutputBWidth", "100", MM::Integer, false, pAct);
+          nRet = SetPropertyLimits("DDGExternalOutputBWidth", 2, 10e9);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGExternalOutputBWidth", "100");
+        }
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGExternalOutputCDelay"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputTime);
+          nRet = CreateProperty("DDGExternalOutputCDelay", "0", MM::Integer, false, pAct);
+          nRet = SetPropertyLimits("DDGExternalOutputCDelay", 0, 10e9);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGExternalOutputCDelay", "100");
+        }
+        assert(nRet == DEVICE_OK);
+
+        if (!HasProperty("DDGExternalOutputCWidth"))
+        {
+          pAct = new CPropertyAction(this, &AndorCamera::OnDDGExternalOutputTime);
+          nRet = CreateProperty("DDGExternalOutputCWidth", "100", MM::Integer, false, pAct);
+          nRet = SetPropertyLimits("DDGExternalOutputCWidth", 2, 10e9);
+          assert(nRet == DEVICE_OK);
+        }
+        else
+        {
+          nRet = SetProperty("DDGExternalOutputCWidth", "100");
+        }
+        assert(nRet == DEVICE_OK);
       }
 
       if (caps.ulSetFunctions & AC_SETFUNCTION_MCPGAIN) //some cameras might not support this
@@ -3569,6 +3688,128 @@ int AndorCamera::GetListOfAvailableCameras()
      {
        DriverGuard dg(this); //not even sure this is needed
        pProp->Set(gateWidth_);
+     }
+     return DEVICE_OK;
+   }
+
+   
+     int AndorCamera::OnDDGExternalOutputEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     unsigned long index = 0;
+     auto name = pProp->GetName();
+     if (name.find("OutputB") != string::npos) index = 1;
+     if (name.find("OutputC") != string::npos) index = 2;
+
+     if (eAct == MM::AfterSet)
+     {
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       {
+         DriverGuard dg(this);
+
+         if (sequenceRunning_)
+           return ERR_BUSY_ACQUIRING;
+
+         //added to use RTA
+         if (!(iCurrentTriggerMode_ == SOFTWARE))
+           SetToIdle();
+
+         string val;
+         pProp->Get(val);
+         for (unsigned i = 0; i < ExternalOutputStates_.size(); ++i)
+         {
+           if (ExternalOutputStates_[i].compare(val) == 0)
+           {
+             int iState = 1;
+             if (i == 0)
+               iState = 1;  //Enabled
+             if (i == 1)
+               iState = 0;  //Disabled
+             unsigned ret = SetDDGExternalOutputEnabled(index, iState);
+             if (DRV_SUCCESS != ret)
+               return (int)ret;
+             else
+             {
+               if (acquiring)
+                 StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+               PrepareSnap();
+               ExternalOutputState_[index] = val;
+               return DEVICE_OK;
+             }
+           }
+         }
+         assert(!"Unrecognized External Output State");
+       }
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       DriverGuard dg(this); //not even sure this is needed
+       pProp->Set(ExternalOutputState_[index].c_str());
+     }
+     return DEVICE_OK;
+   }
+
+   
+     int AndorCamera::OnDDGExternalOutputTime(MM::PropertyBase* pProp, MM::ActionType eAct)
+   {
+     unsigned long index = 0;
+     auto name = pProp->GetName();
+     if (name.find("OutputB") != string::npos) index = 1;
+     if (name.find("OutputC") != string::npos) index = 2;
+
+     if (eAct == MM::AfterSet)
+     {
+       bool acquiring = sequenceRunning_;
+       if (acquiring)
+         StopSequenceAcquisition(true);
+
+       {
+         DriverGuard dg(this);
+
+         if (sequenceRunning_)
+           return ERR_BUSY_ACQUIRING;
+
+         long val;
+         pProp->Get(val);
+         long delay = extOutputDelay_[index];
+         long width = extOutputWidth_[index];
+         if (name.find("Width") != string::npos)
+           if (val == extOutputWidth_[index])
+             return DEVICE_OK;
+           else
+             width = val;
+         if (name.find("Delay") != string::npos)
+           if (val == extOutputDelay_[index])
+             return DEVICE_OK;
+           else
+             delay = val;
+         pProp->Set(val);
+
+         //added to use RTA
+         if (!(iCurrentTriggerMode_ == SOFTWARE))
+           SetToIdle();
+
+         unsigned ret = SetDDGExternalOutputTime(index, delay * 1000, width * 1000);
+         if (DRV_SUCCESS != ret)
+           return (int)ret;
+
+         if (name.find("Width") != string::npos)
+           extOutputWidth_[index] = val;
+         else
+           extOutputDelay_[index] = val;
+
+         if (acquiring)
+           StartSequenceAcquisition(sequenceLength_ - imageCounter_, intervalMs_, stopOnOverflow_);
+
+         PrepareSnap();
+       }
+     }
+     else if (eAct == MM::BeforeGet)
+     {
+       DriverGuard dg(this); //not even sure this is needed
+       pProp->Set((name.find("Width") != string::npos) ? extOutputWidth_[index] : extOutputDelay_[index]);
      }
      return DEVICE_OK;
    }
