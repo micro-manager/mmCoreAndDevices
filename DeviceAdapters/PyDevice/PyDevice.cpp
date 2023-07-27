@@ -19,6 +19,8 @@
 PyThreadState* CPyHub::g_threadState = nullptr;
 fs::path CPyHub::g_pythonExecutabePath;
 std::map<string, CPyHub*> CPyHub::g_hubs;
+PyObj CPyHub::g_unit_ms;
+PyObj CPyHub::g_unit_um;
 
 
 
@@ -180,6 +182,10 @@ int CPyHub::RunScript() noexcept {
     if (!bootstrap_result)
         return CheckError();
 
+    // get the ms and um units
+    g_unit_ms = PyObj::Borrow(PyDict_GetItemString(scope, "unit_ms"));
+    g_unit_um = PyObj::Borrow(PyDict_GetItemString(scope, "unit_um"));
+
     // read the 'devices' field, which must be a dictionary of label->device
     auto deviceDict = PyObj(PyDict_Items(PyObj::Borrow(PyDict_GetItemString(scope, "devices"))));
     auto device_count = PyList_Size(deviceDict);
@@ -204,8 +210,6 @@ int CPyHub::RunScript() noexcept {
 #define MIN 4
 #define MAX 5
 #define ENUMS 6
-#define PRE_SET 7
-#define POST_GET 8
 
 vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
 {
@@ -226,8 +230,10 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
             descriptor = new PyIntAction(this, attrName, mmName, readonly);
         else if (type == "float")
             descriptor = new PyFloatAction(this, attrName, mmName, readonly);
-        else if (type == "quantity")
-            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, PyObj::Borrow(PyTuple_GetItem(pinfo, PRE_SET)), PyObj::Borrow(PyTuple_GetItem(pinfo, POST_GET)));
+        else if (type == "time")
+            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, CPyHub::g_unit_ms);
+        else if (type == "length")
+            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, CPyHub::g_unit_um);
         else if (type == "string")
             descriptor = new PyStringAction(this, attrName, mmName, readonly);
         else if (type == "bool")

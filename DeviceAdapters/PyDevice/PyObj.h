@@ -154,7 +154,14 @@ public:
         }
         return *this;
     }
-
+    PyObj operator * (const PyObj& other) const {
+        PyLock lock;
+        return PyObj(PyNumber_Multiply(p_, other));
+    }
+    PyObj operator / (const PyObj& other) const {
+        PyLock lock;
+        return PyObj(PyNumber_TrueDivide(p_, other));
+    }
     /**
     * Takes a borrowed reference and wraps it into a PyObj smart pointer
     * This increases the reference count of the object.
@@ -178,3 +185,4 @@ public:
     static fs::path FindPython() noexcept;
     static string g_errorMessage;
 };
+

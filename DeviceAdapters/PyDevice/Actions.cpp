@@ -109,12 +109,12 @@ PyObj PyEnumAction::get(MM::PropertyBase* pProp) const noexcept {
 }
 
 void PyQuantityAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
-    auto value_without_unit = post_get_.Call(value); // remove units, then convert to double
+    PyObj value_without_unit = value / unit_; // remove units, then convert to double
     pProp->Set(value_without_unit.as<double>()); 
 }
 
 PyObj PyQuantityAction::get(MM::PropertyBase* pProp) const noexcept {
     double value;
     pProp->Get(value);
-    return pre_set_.Call(PyObj(value)); // attach units, then return so that the Python attribute can be set
+    return PyObj(value) * unit_; // attach units, then return so that the Python attribute can be set
 }

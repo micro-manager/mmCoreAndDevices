@@ -178,6 +178,9 @@ private:
 
     // List of all Hub objects currently in existence. todo: when this number drops to 0, the Python interpreter is destroyed
     static std::map<string, CPyHub*> g_hubs;
+public:
+    static PyObj g_unit_ms;
+    static PyObj g_unit_um;
 };
 
 

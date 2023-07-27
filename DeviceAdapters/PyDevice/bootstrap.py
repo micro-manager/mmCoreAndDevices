@@ -73,8 +73,8 @@ class Stage(Protocol):
 
 @runtime_checkable
 class XYStage(Protocol):
-    position_x: Quantity[u.um]
-    position_y: Quantity[u.um]
+    x: Quantity[u.um]
+    y: Quantity[u.um]
     step_size_x: Quantity[u.um]
     step_size_y: Quantity[u.um]
 
@@ -97,22 +97,11 @@ def extract_property_metadata(p):
     max = None
     options = None
     readonly = not hasattr(p, 'fset')
-    pre_set = None
-    post_get = None
 
     if get_origin(return_type) is Annotated:  # Annotated
         meta = return_type.__metadata__[0]
         if isinstance(meta, u.Unit):
-            if meta.name == 'ms':
-                ptype = 'quantity'
-                pre_set = lambda value: u.Quantity(value, u.ms)
-                post_get = lambda value: value.to_value(u.ms)
-            elif meta.name == 'um':
-                ptype = 'quantity'
-                pre_set = lambda value: u.Quantity(value, u.um)
-                post_get = lambda value: value.to_value(u.um)
-            else:
-                raise ValueError('Only milliseconds and microsecond units are supported')
+            ptype = str(meta.physical_type) # 'time','length','mass', etc.
         else:
             min = meta.get('min', None)
             max = meta.get('max', None)
@@ -125,7 +114,7 @@ def extract_property_metadata(p):
     else:
         ptype = return_type.__name__
 
-    return ptype, readonly, min, max, options, pre_set, post_get
+    return ptype, readonly, min, max, options
 
 
 def to_title_case(name):
@@ -150,6 +139,9 @@ def set_metadata(obj):
     obj._MM_dtype = dtype
     obj._MM_properties = properties
 
+
+unit_ms = u.ms
+unit_um = u.um
 
 for d in devices.values():
     set_metadata(d)

@@ -1,6 +1,13 @@
 #include "pch.h"
 #include "PyStage.h"
 
+inline PyObj to_um(double value) {
+    return PyObj(value) * CPyHub::g_unit_um;
+}
+inline double from_um(const PyObj& value) {
+    return (value / CPyHub::g_unit_um).as<double>();
+}
+
 int CPyStage::Home()
 {
     object_.CallMember("home");
@@ -30,27 +37,30 @@ int CPyXYStage::Wait() {
 
 int CPyStage::GetPositionUm(double& pos) {
     _check_(Wait());
-    pos = object_.Get("position").as<double>() - home_;
+    pos = from_um(object_.Get("position")) - home_;
     return CheckError();
 }
 
 int CPyXYStage::GetPositionUm(double& x, double& y) {
+    PyLock lock;
     _check_(Wait());
-    x = object_.Get("position_x").as<double>() - home_x_;
-    y = object_.Get("position_y").as<double>() - home_y_;
+    x = from_um(object_.Get("x")) - home_x_;
+    y = from_um(object_.Get("y")) - home_y_;
     return CheckError();
 }
 
 int CPyStage::SetPositionUm(double pos) {
-    object_.Set("position", pos + home_);
+    PyLock lock;
+    object_.Set("position", to_um(pos + home_));
     _check_(Wait());
     OnStagePositionChanged(pos);
     return CheckError();
 }
 
 int CPyXYStage::SetPositionUm(double x, double y) {
-    object_.Set("position_x", x + home_x_);
-    object_.Set("position_y", y + home_y_);
+    PyLock lock;
+    object_.Set("x", to_um(x + home_x_));
+    object_.Set("x", to_um(y + home_x_));
     _check_(Wait());
     OnXYStagePositionChanged(x, y);
     return CheckError();
@@ -58,25 +68,30 @@ int CPyXYStage::SetPositionUm(double x, double y) {
 
 int CPyXYStage::Stop() {
     // similar to GetPositionUm, but don't wait for the stage to reach the end point
-    double x = object_.Get("position_x").as<double>() - home_x_;
-    double y = object_.Get("position_y").as<double>() - home_y_;
+    PyLock lock;
+    double x = from_um(object_.Get("x")) - home_x_;
+    double y = from_um(object_.Get("y")) - home_y_;
     return SetPositionUm(x, y);
 }
 
 double CPyStage::StepSizeUm() const {
-    return object_.Get("step_size").as<double>();
+    PyLock lock;
+    return from_um(object_.Get("step_size"));
 }
 
 double CPyXYStage::GetStepSizeXUm() {
-    return object_.Get("step_size_x").as<double>();
+    PyLock lock;
+    return from_um(object_.Get("step_size_x"));
 }
 
 double CPyXYStage::GetStepSizeYUm() {
-    return object_.Get("step_size_y").as<double>();
+    PyLock lock;
+    return from_um(object_.Get("step_size_y"));
 }
 
 // Sets current position as home
 int CPyStage::SetOrigin() {
+    PyLock lock;
     _check_(Wait());
     return GetPositionUm(home_);
 }
@@ -110,10 +125,10 @@ int CPyStage::GetLimits(double& lower, double& upper) {
 
 int CPyXYStage::GetLimitsUm(double& x_lower, double& x_upper, double& y_lower, double& y_upper) {
     _check_(Wait());
-    _check_(GetPropertyLowerLimit("PositionX", x_lower));
-    _check_(GetPropertyUpperLimit("PositionX", x_upper));
-    _check_(GetPropertyLowerLimit("PositionY", y_lower));
-    _check_(GetPropertyUpperLimit("PositionY", y_upper));
+    _check_(GetPropertyLowerLimit("X", x_lower));
+    _check_(GetPropertyUpperLimit("X", x_upper));
+    _check_(GetPropertyLowerLimit("Y", y_lower));
+    _check_(GetPropertyUpperLimit("Y", y_upper));
     x_lower -= home_x_;
     x_upper -= home_x_;
     y_lower -= home_y_;
