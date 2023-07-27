@@ -22,9 +22,7 @@ else:
 
 # Load and execute the script file. This script is expected to set up a dictionary object with the name 'devices',
 # which holds name -> device pairs for all devices we want to expose in MM.
-# The MODULE_PATH is inserted as the first entry of the sys.path, which typically is the path of the main module.
-# To have a module include a submodule in a parent directory, use `sys.path.insert(1, os.path.dirname(sys.path[0]))`
-# in order to also add the parent directory to the path.
+# The SCRIPT_PATH is inserted as the first entry of the sys.path.
 sys.path.insert(0, os.path.dirname(SCRIPT_PATH))
 with open(SCRIPT_PATH) as code:
     exec(code.read())
@@ -83,6 +81,36 @@ class XYStage(Protocol):
 
     def wait(self) -> None:
         pass
+
+@runtime_checkable
+class SLM(Protocol):
+    phases: np.ndarray
+    
+    def update(self, wait_factor=1.0, wait=True):
+    """Refresh the SLM to show the updates phase pattern.
+
+    If the SLM is currently reserved (see `reserve`), this function waits until the reservation is almost (*) over before updating the SLM.
+    The SLM waits for the pattern of the SLM to stabilize before returning.
+
+    *) In case of SLMs with an idle time (latency), the image may be sent to the hardware already before the reservation is over, as long as the actual image
+    on the SLM is guaranteed not to update until the reservation is over.
+
+    :param wait_factor: time to wait for the image to stabilize. Default = 1.0 should wait for a pre-defined time (the `settle_time`) that guarantees stability
+    for most practical cases. Use a higher value to allow for extra stabilization time, or a lower value if you want to trigger a measurement before the SLM is fully stable.
+
+    :param wait: when set to False, do not wait for the image to stabilize but reserve the SLM for this period instead. This can be used to pipeline measurements (see `Feedback`).
+    The client code needs to explicilty call `wait` to wait for stabilization of the image. 
+    """
+        pass
+
+    def wait(self):
+    """Wait for the SLM to become available. If there are no current reservations, return immediately."""
+        pass
+
+    def reserve(self, time: Quantity[u.ms]):
+    """Reserve the SLM for a specified amount of time. During this time, the SLM pattern cannot be changed."""
+        pass
+
 
 
 def extract_property_metadata(p):

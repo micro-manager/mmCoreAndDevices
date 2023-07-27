@@ -40,5 +40,6 @@ inline bool FileExists(const fs::path& path) noexcept {
 
 #define ERR_PYTHON_NOT_FOUND 101
 #define ERR_PYTHON_MULTIPLE_INTERPRETERS 102
+#define ERR_PYTHON_DEVICE_NOT_FOUND 103
 #define ERR_PYTHON_EXCEPTION 105
 #define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }

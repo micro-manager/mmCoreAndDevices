@@ -63,6 +63,7 @@ public:
     CPyDeviceTemplate(const string& id) : BaseType(), CPyDeviceBase(id)
     {
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
+        this->SetErrorText(ERR_PYTHON_DEVICE_NOT_FOUND, "");
     }
     virtual ~CPyDeviceTemplate() {}
 
@@ -107,8 +108,10 @@ public:
     int Initialize() override {
         if (!initialized_) {
             object_ = CPyHub::GetDevice(id_);
-            if (!object_)
-                return DEVICE_ERR;
+            if (!object_) {
+                this->SetErrorText(ERR_PYTHON_DEVICE_NOT_FOUND, ("Could not find the Python device id " + id_ + ". It may be that the Python script or the device object within it was renamed.").c_str());
+                return ERR_PYTHON_DEVICE_NOT_FOUND;
+            }
 
             auto propertyDescriptors = EnumerateProperties();
             _check_(CheckError());
