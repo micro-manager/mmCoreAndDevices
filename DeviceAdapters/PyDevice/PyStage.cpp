@@ -60,7 +60,7 @@ int CPyStage::SetPositionUm(double pos) {
 int CPyXYStage::SetPositionUm(double x, double y) {
     PyLock lock;
     object_.Set("x", to_um(x + home_x_));
-    object_.Set("x", to_um(y + home_x_));
+    object_.Set("y", to_um(y + home_y_));
     _check_(Wait());
     OnXYStagePositionChanged(x, y);
     return CheckError();
