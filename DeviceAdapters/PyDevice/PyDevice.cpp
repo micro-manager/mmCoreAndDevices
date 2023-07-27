@@ -170,8 +170,7 @@ int CPyHub::RunScript() noexcept {
 
     id_ = scriptPath.filename().generic_string();
     auto code = std::stringstream();
-    code << "MODULE_PATH = '" << scriptPath.parent_path().generic_string() << "'\n";
-    code << "MODULE_NAME = '" << scriptPath.stem().generic_string() << "'\n";
+    code << "SCRIPT_PATH = '" << scriptPath.generic_string() << "'\n";
     const char* bootstrap;
     #include "bootstrap.py"
     code << &bootstrap[1]; // skip leading ["]
