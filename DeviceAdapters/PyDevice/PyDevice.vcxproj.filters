@@ -70,8 +70,6 @@
     </None>
     <None Include="bootstrap.py" />
     <None Include="AutoConfig.props" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="HOW_TO_INSTALL_AND_BUILD.txt" />
+    <None Include="README.md" />
   </ItemGroup>
 </Project>

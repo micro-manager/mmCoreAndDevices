@@ -9,7 +9,7 @@ You can download the free Visual Studio Community edition here https://visualstu
 A list of required packages can be found in requirements.txt. Note that for the core functionality, only `numpy` needs to be installed. Make sure `python.exe` is on the search path.
 
 ### Micro-Manager 2.0 executable
-You can download the latest version (nightly build) here: https://micro-manager.org/Micro-Manager_Nightly_Builds. Alternatively, you can use an older, stable, version, with the caveat described below. We recommend installing in the default location: `C:\Program Files\Micro-Manager-2.0\'
+You can download the latest version (nightly build) here: https://micro-manager.org/Micro-Manager_Nightly_Builds. Alternatively, you can use an older, stable, version, with the caveat described below. We recommend installing in the default location: `C:\Program Files\Micro-Manager-2.0\`
 
 ### Micro-Manager SDK (mmCoreAndDevices)
 Clone the `mmCoreAndDevices` repository, which contains the source code needed to interface with Micro-Manager. We recommend cloning the mmCoreAndDevices repo in one of the following locations:
@@ -26,21 +26,25 @@ It is **essential** that the version of Micro-Manager and the mmCoreAndDevices m
 
 
 # Configure Visual Studio
+## Stand-alone build
 When configuring as a stand-alone build (recommended), run the auto-configuration script
 ~~~
 python autoconfig.py
 ~~~
 If the script cannot find all folders, you can configure them manually later by editing the AutoConfig.props file.
 
-When building as part of Visual Studio:
-    1. Open the solution file 'micro-manager/mmCoreAndDevices' in Visual Studio
-    2. In the solution explorer, delete all projects, except for MMCore and MMDevice-SharedRuntime. (tip: select multiple projects using shift, and then press delete to remove them)
-    3. Right-click on the Solution in the Solution explorer, choose 'add->existing item' and browse to micromanager-bindings\micro-manager\mmCoreAndDevices\DeviceAdapters\PythonBinding\PythonBinding.vcxproj
+
+## When building all Micro-Manager devices:
+This is the approach recommended by the Micro-Manager team
+
+1. Open the solution file `mmCoreAndDevices/micromanager.sln` in Visual Studio
+2. In the solution explorer, delete all projects, except for MMCore and MMDevice-SharedRuntime. (tip: select multiple projects using shift, and then press delete to remove them)
+3. Right-click on the Solution in the Solution explorer, choose 'add->existing item' and browse to `mmCoreAndDevices\DeviceAdapters\PythonBinding\PythonBinding.vcxproj`
  If asked to convert to a newer version, press cancel.
-    5. Right-click on the Solution and choose 'Project dependencies...'. Make sure MMCore depends on MMDevice-SharedRuntime and PythonBinding depends on MMCore
-    6. Right-click on the PythonBinding project and 'set as startup project' 
-    7. Build the project. You will get an error (Python.h not found)
-    8. Build the project again, the error should have disappeared. If the build error python > autoconfig.props occurs, make sure your Python install is in PATH
+5. Right-click on the Solution and choose 'Project dependencies...'. Make sure MMCore depends on MMDevice-SharedRuntime and PythonBinding depends on MMCore
+6. Right-click on the PythonBinding project and 'set as startup project' 
+7. Build the project. You will get an error (Python.h not found)
+8. Build the project again, the error should have disappeared. If the build error python > autoconfig.props occurs, make sure your Python install is in PATH
 
 
 # Troubleshooting
