@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <PYTHON_PATH>@python_path@</PYTHON_PATH>
+    <NUMPY_PATH>@numpy_path@</NUMPY_PATH>
+    <MICROMANAGER_EXECUTABLE_PATH>@mmexe_path@</MICROMANAGER_EXECUTABLE_PATH>
+    <MICROMANAGER_SOURCE_PATH>@mmsrc_path@</MICROMANAGER_SOURCE_PATH>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IncludePath>C:\Users\ivove\anaconda3\include;C:\Users\ivove\anaconda3\lib\site-packages\numpy\core\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\ivove\anaconda3\libs;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+</Project>

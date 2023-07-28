@@ -1,26 +1,38 @@
 # PyDevice
 Adapter to import Python scripts as devices in micro-manager
 
-# Installation
-1. Prerequisites
-   * Visual Studio with C++ build tools.
-   * Python
-   * Micro-manager (nightly build)
+# Install prerequisites
+### Visual Studio with C++ build tools.
+You can download the free Visual Studio Community edition here https://visualstudio.microsoft.com/free-developer-offers/. Make sure to include the c++ build tools during installation.
 
-2. If you don't have the micro-manager source installed yet, clone micro-manager and its submodules from github
-~~~
-git clone https://github.com/micro-manager/micro-manager
-cd micro-manager
-git submodule update --init --recursive 
-~~~
+### Python 3.9 or higher
+A list of required packages can be found in requirements.txt. Note that for the core functionality, only `numpy` needs to be installed. Make sure `python.exe` is on the search path.
 
-3. Add the Python binding submodule
+### Micro-Manager 2.0 executable
+You can download the latest version (nightly build) here: https://micro-manager.org/Micro-Manager_Nightly_Builds. Alternatively, you can use an older, stable, version, with the caveat described below. We recommend installing in the default location: `C:\Program Files\Micro-Manager-2.0\'
+
+### Micro-Manager SDK (mmCoreAndDevices)
+Clone the `mmCoreAndDevices` repository, which contains the source code needed to interface with Micro-Manager. We recommend cloning the mmCoreAndDevices repo in one of the following locations:
+* A sibbling directory of the OpenWFS repository (e.g. if this repo is cloned here: `c:\git\openwfs`, put the SDK in `c:\git\mmCoreAndDevices`)
+* Install OpenWFS as a subrepo of mmCoreAndDevices:
+
 ~~~
+git clone https://github.com/micro-manager/mmCoreAndDevices
 cd mmCoreAndDevices/DeviceAdapters
-git submodule add https://github.com/ivovellekoop/pydevice PyDevice
+git submodule add https://github.com/ivovellekoop/pydevice
 ~~~
 
-4. Set up the project in Visual studio
+It is **essential** that the version of Micro-Manager and the mmCoreAndDevices match. Different versions have a different 'device-interface', which results in the plugin not being shown in the list in Micro-Manager. If you want to compile for an older (non nightly-build) version of Micro-Manager, you can checkout an old version of mmCoreAndDevices (check the git tags to find the correct version for a given device interface version)
+
+
+# Configure Visual Studio
+When configuring as a stand-alone build (recommended), run the auto-configuration script
+~~~
+python autoconfig.py
+~~~
+If the script cannot find all folders, you can configure them manually later by editing the AutoConfig.props file.
+
+When building as part of Visual Studio:
     1. Open the solution file 'micro-manager/mmCoreAndDevices' in Visual Studio
     2. In the solution explorer, delete all projects, except for MMCore and MMDevice-SharedRuntime. (tip: select multiple projects using shift, and then press delete to remove them)
     3. Right-click on the Solution in the Solution explorer, choose 'add->existing item' and browse to micromanager-bindings\micro-manager\mmCoreAndDevices\DeviceAdapters\PythonBinding\PythonBinding.vcxproj
@@ -31,7 +43,6 @@ git submodule add https://github.com/ivovellekoop/pydevice PyDevice
     8. Build the project again, the error should have disappeared. If the build error python > autoconfig.props occurs, make sure your Python install is in PATH
 
 
-5. Note: make sure you have the same version of micro-manager as you cloned from github. If the versions are different, the plugin will not be recognized.
-
 # Troubleshooting
-....
+make sure you have the same version of micro-manager as you cloned from github. If the versions are different, the plugin will not be recognized.
+

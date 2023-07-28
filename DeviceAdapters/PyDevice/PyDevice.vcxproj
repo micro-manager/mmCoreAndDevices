@@ -11,11 +11,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
-      <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="Actions.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PyCamera.h" />
@@ -25,23 +20,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actions.cpp" />
-    <ClCompile Include="Module.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="Module.cpp" />
+    <ClCompile Include="pch.cpp" />
     <ClCompile Include="PyCamera.cpp" />
-    <ClCompile Include="PyDevice.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="PyDevice.cpp" />
     <ClCompile Include="PyObj.cpp" />
     <ClCompile Include="PyStage.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="AutoConfig.props" />
     <None Include="autoconfig.py" />
     <None Include="bootstrap.py" />
     <None Include="Dummyscanner.py" />
@@ -50,6 +37,11 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="HOW_TO_INSTALL_AND_BUILD.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(MICROMANAGER_SOURCE_PATH)\MMDevice\MMDevice-SharedRuntime.vcxproj">
+      <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -78,30 +70,28 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
-    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
     <Import Project="AutoConfig.props" />
+    <Import Project="$(MICROMANAGER_SOURCE_PATH)\buildscripts\VisualStudio\MMCommon.props" />
+    <Import Project="$(MICROMANAGER_SOURCE_PATH)\buildscripts\VisualStudio\MMDeviceAdapter.props" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
-    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
-    <Import Project="AutoConfig.props" />
-  </ImportGroup>
+  <PropertyGroup>
+    <IncludePath>$(PYTHON_PATH)\include;$(NUMPY_PATH)\core\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(PYTHON_PATH)\libs;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <CustomBuildBeforeTargets>
     </CustomBuildBeforeTargets>
     <LibraryPath>$(LibraryPath)</LibraryPath>
-    <OutDir>c:\Program Files\Micro-Manager-2.0\</OutDir>
+    <OutDir>$(MICROMANAGER_EXECUTABLE_PATH)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>$(LibraryPath)</LibraryPath>
-    <OutDir>c:\Program Files\Micro-Manager-2.0\</OutDir>
+    <OutDir>$(MICROMANAGER_EXECUTABLE_PATH)</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -123,10 +113,12 @@
       <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>python autoconfig.py &gt; AutoConfig.props</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <PreBuildEvent>
-      <Message>Configures Python install path. Unfortunately only works from second build attempt!</Message>
+      <Message>
+      </Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -151,12 +143,6 @@
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
     </Link>
-    <PreBuildEvent>
-      <Command>python autoconfig.py &gt; AutoConfig.props</Command>
-    </PreBuildEvent>
-    <PreBuildEvent>
-      <Message>Configures Python install path. Unfortunately only works from second build attempt!</Message>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
