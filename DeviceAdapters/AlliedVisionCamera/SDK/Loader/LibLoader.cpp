@@ -21,8 +21,10 @@
 #include "Constants.h"
 
 VimbaXApi::VimbaXApi()
-    : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()), m_initialized(false) {
-  if (m_sdk.isLoaded()) {
+    : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()),
+      m_initialized(false),
+      m_imageTransform(VIMBA_X_IMAGE_TRANSFORM_NAME, VIMBA_X_LIB_DIR.c_str()) {
+  if (m_sdk.isLoaded() && m_imageTransform.isLoaded()) {
     bool allResolved = true;
     VmbStartup_t = m_sdk.resolveFunction("VmbStartup", allResolved);
     VmbVersionQuery_t = m_sdk.resolveFunction("VmbVersionQuery", allResolved);
@@ -86,6 +88,10 @@ VimbaXApi::VimbaXApi()
         m_sdk.resolveFunction("VmbFeatureFloatIncrementQuery", allResolved);
     VmbFeatureCommandIsDone_t =
         m_sdk.resolveFunction("VmbFeatureCommandIsDone", allResolved);
+    VmbSetImageInfoFromPixelFormat_t = m_imageTransform.resolveFunction(
+        "VmbSetImageInfoFromPixelFormat", allResolved);
+    VmbImageTransform_t =
+        m_imageTransform.resolveFunction("VmbImageTransform", allResolved);
     if (allResolved) {
       auto err = VmbStartup_t(nullptr);
       if (err == VmbErrorSuccess) {

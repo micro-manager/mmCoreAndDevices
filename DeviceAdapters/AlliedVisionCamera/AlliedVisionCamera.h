@@ -21,6 +21,7 @@
 
 #include <array>
 #include <functional>
+#include <regex>
 #include <unordered_map>
 
 #include "AlliedVisionDeviceBase.h"
@@ -53,6 +54,172 @@ static constexpr const char* g_EventCategory = "EventControl";
 static constexpr const char* g_AcquisitionStart = "AcquisitionStart";
 static constexpr const char* g_AcquisitionStop = "AcquisitionStop";
 static constexpr const char* g_AcqusitionStatus = "AcqusitionStatus";
+
+/**
+ * @brief Pixel Format class that contains VMB Pixel Format info and contains
+ * helper methods to convert these information to the one that uManager
+ * supports.
+ *
+ * [IMPORTANT] uManager supports formats:
+ * 8bit GRAY    [no. component = 1]
+ * 16bit GRAY   [no. component = 1]
+ * 32bit RGB    [no. component = 4]
+ */
+class PixelFormatConverter {
+  ///////////////////////////////////////////////////////////////////////////////
+  // PUBLIC
+  ///////////////////////////////////////////////////////////////////////////////
+ public:
+  /**
+   * @brief Constructor
+   */
+  PixelFormatConverter()
+      : m_pixelType{"Mono8"},
+        m_components{1},
+        m_bitDepth{8},
+        m_bytesPerPixel{1},
+        m_isMono{true},
+        m_vmbFormat{VmbPixelFormatMono8} {}
+
+  /**
+   * @brief Destructor
+   */
+  virtual ~PixelFormatConverter() = default;
+
+  /**
+   * @brief Setter for pixel type
+   * @param[in] type    New pixel type (string value from VMB)
+   */
+  void setPixelType(const std::string& type) {
+    m_pixelType = type;
+    updateFields();
+  }
+
+  /**
+   * @brief Getter to check if given pixel type is Mono or Color
+   * @return True if Mono, otherwise false
+   */
+  bool isMono() const { return m_isMono; }
+
+  /**
+   * @brief Getter for number of components for given pixel type
+   * uManager supports only 1 or 4 components
+   * @return Number of components
+   */
+  unsigned getNumberOfComponents() const { return m_components; }
+
+  /**
+   * @brief Getter for bit depth for given pixel type
+   * @return Number of bits for one pixel
+   */
+  unsigned getBitDepth() const { return m_bitDepth; }
+
+  /**
+   * @brief Getter for bytes per pixel
+   * @return Bytes per pixel
+   */
+  unsigned getBytesPerPixel() const { return m_bytesPerPixel; }
+
+  /**
+   * @brief Getter of destination VmbPixelFormat that fits into the one, that
+   * uManager supports. In general uManager supports three pixelFormats:
+   * 1. Mono8
+   * 2. Mono16
+   * 3. RGB32
+   * These types fits into following VmbPixelTypes:
+   * 1. VmbPixelFormatMono8
+   * 2. VmbPixelFormatMono16
+   * 3. VmbPixelFormatBgra8
+   * @return Destination VmbPixelFormat
+   */
+  VmbPixelFormatType getVmbFormat() const { return m_vmbFormat; }
+
+  ///////////////////////////////////////////////////////////////////////////////
+  // PRIVATE
+  ///////////////////////////////////////////////////////////////////////////////
+ private:
+  /**
+   * @brief Helper method to update info if given format is Mono or Color
+   */
+  void updateMono() {
+    std::regex re("Mono(\\d+)");
+    std::smatch m;
+    m_isMono = std::regex_search(m_pixelType, m, re);
+  }
+
+  /**
+   * @brief Helper method to update number of components for given pixel type
+   * uManager supports only 1 or 4 components
+   */
+  void updateNumberOfComponents() { m_components = m_isMono ? 1 : 4; }
+
+  /**
+   * @brief Helper method to update bit depth for given pixel type
+   */
+  void updateBitDepth() {
+    m_bitDepth = 8;
+    if (isMono()) {
+      std::regex re("Mono(\\d+)");
+      std::smatch m;
+      std::regex_search(m_pixelType, m, re);
+      if (m.size() > 0) {
+        if (std::atoi(m[1].str().c_str()) == 8) {  // TODO check this condition
+          m_bitDepth = 8;
+        } else {
+          m_bitDepth = 16;
+        }
+      } else {
+        // ERROR
+      }
+    } else {
+      m_bitDepth = 32;
+    }
+  }
+
+  /**
+   * @brief Helper method to update bytes per pixel
+   */
+  void updateBytesPerPixel() { m_bytesPerPixel = m_bitDepth / 8; }
+
+  /**
+   * @brief Helper method to update destination VmbPixelFormatType
+   */
+  void updateVmbFormat() {
+    switch (m_bytesPerPixel) {
+      case 1:
+        m_vmbFormat = VmbPixelFormatMono8;
+        break;
+      case 2:
+        m_vmbFormat = VmbPixelFormatMono16;
+        break;
+      case 4:
+        m_vmbFormat =
+            VmbPixelFormatBgra8;  // TODO check if this is a valid format
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * @brief Helper method to update all required fields
+   */
+  void updateFields() {
+    // [IMPORTANT] Keep order of the calls
+    updateMono();
+    updateNumberOfComponents();
+    updateBitDepth();
+    updateBytesPerPixel();
+    updateVmbFormat();
+  }
+
+  std::string m_pixelType;         //!< Pixel type (in string) - value from VMB
+  unsigned m_components;           //!< Number of components
+  unsigned m_bitDepth;             //<! Bit depth
+  unsigned m_bytesPerPixel;        //!< Bytes per pixel
+  bool m_isMono;                   //!< Mono or Color
+  VmbPixelFormatType m_vmbFormat;  //!< Destination VmbPixelFormatType
+};
 
 /**
  * @brief Main Allied Vision Camera class
@@ -101,12 +268,11 @@ class AlliedVisionCamera
                                bool stopOnOverflow) override;
   int StopSequenceAcquisition() override;
   bool IsCapturing() override;
+  unsigned GetNumberOfComponents() const override;
 
   ///////////////////////////////////////////////////////////////////////////////
   // uMANAGER CALLBACKS
   ///////////////////////////////////////////////////////////////////////////////
-  int OnPixelType(MM::PropertyBase* pProp,
-                  MM::ActionType eAct);  //!<< PixelType property callback
   int onProperty(MM::PropertyBase* pProp,
                  MM::ActionType eAct);  //!<< General property callback
 
@@ -117,6 +283,12 @@ class AlliedVisionCamera
   // Static variables
   static constexpr const VmbUint8_t MAX_FRAMES =
       7;  //!<< Max frame number in the buffer
+
+  /**
+   * @brief Helper method to handle change of pixel type
+   * @param[in] pixelType   New pixel type (as string)
+  */
+  void handlePixelFormatChange(const std::string& pixelType);
 
   /**
    * @brief Resize all buffers for image frames
@@ -231,18 +403,24 @@ class AlliedVisionCamera
   std::string adjustValue(VmbFeatureInfo_t& featureInfo, double min, double max,
                           double propertyValue) const;
 
+  VmbError_t transformImage(VmbFrame_t* frame, size_t frameIndex);
+
   ///////////////////////////////////////////////////////////////////////////////
   // MEMBERS
   ///////////////////////////////////////////////////////////////////////////////
-  std::shared_ptr<VimbaXApi> m_sdk;              //<! Shared pointer to the SDK
-  VmbHandle_t m_handle;                          //<! Device handle
-  std::string m_cameraName;                      //<! Camera name
-  std::array<VmbFrame_t, MAX_FRAMES> m_frames;   //<! Frames array
-  std::array<VmbUint8_t*, MAX_FRAMES> m_buffer;  //<! Images buffers
+  std::shared_ptr<VimbaXApi> m_sdk;             //<! Shared pointer to the SDK
+  VmbHandle_t m_handle;                         //<! Device handle
+  std::string m_cameraName;                     //<! Camera name
+  std::array<VmbFrame_t, MAX_FRAMES> m_frames;  //<! Frames array for uManager
+  std::array<VmbUint8_t*, MAX_FRAMES>
+      m_buffer;  //<! Images buffers for uManager
 
-  VmbUint32_t m_bufferSize;     //<! Buffer size (the same for every frame)
+  VmbUint32_t m_bufferSize;     //<! Buffer size of image for uManager
+  VmbUint32_t m_payloadSize;    //<! Payload size of image for Vimba
   bool m_isAcquisitionRunning;  //<! Sequence acquisition status (true if
                                 // running)
+  PixelFormatConverter
+      m_currentPixelFormat;  //<! Current Pixel Format information
   static const std::unordered_map<std::string, std::string>
       m_featureToProperty;  //!< Map of features name into uManager properties
   static const std::unordered_multimap<std::string, std::string>

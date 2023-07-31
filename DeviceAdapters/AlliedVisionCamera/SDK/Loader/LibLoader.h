@@ -24,6 +24,7 @@
 #include <string>
 
 #include "VmbC/VmbC.h"
+#include "VmbImageTransform/VmbTransform.h"
 
 /**
  * @brief Wrapper for single Windows process
@@ -171,12 +172,16 @@ class VimbaXApi {
   decltype(VmbFeatureFloatIncrementQuery)* VmbFeatureFloatIncrementQuery_t =
       nullptr;
   decltype(VmbFeatureCommandIsDone)* VmbFeatureCommandIsDone_t = nullptr;
+  decltype(VmbSetImageInfoFromPixelFormat)*
+      VmbSetImageInfoFromPixelFormat_t = nullptr;
+  decltype(VmbImageTransform)* VmbImageTransform_t = nullptr;
   ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
   ///////////////////////////////////////////////////////////////////////////////
  private:
-  bool m_initialized;   //<! Flag if SDK is initialized
-  LibLoader m_sdk;      //<! SDK library
+  bool m_initialized;           //<! Flag if SDK is initialized
+  LibLoader m_sdk;              //<! SDK library
+  LibLoader m_imageTransform;   //<! Image Transform library
 };
 
 #endif

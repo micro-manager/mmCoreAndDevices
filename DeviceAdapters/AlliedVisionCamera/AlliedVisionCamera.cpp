@@ -83,8 +83,12 @@ AlliedVisionCamera::AlliedVisionCamera(const char* deviceName)
       m_frames{},
       m_buffer{},
       m_bufferSize{0},
-      m_isAcquisitionRunning{false} {
+      m_payloadSize{0},
+      m_isAcquisitionRunning{false},
+      m_currentPixelFormat{} {
   CreateHubIDProperty();
+  // Binning property is a Core Property, we will have a dummy one
+  CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, nullptr);
 }
 
 int AlliedVisionCamera::Initialize() {
@@ -154,18 +158,21 @@ VmbError_t AlliedVisionCamera::setupProperties() {
 }
 
 VmbError_t AlliedVisionCamera::resizeImageBuffer() {
-  VmbError_t err = m_sdk->VmbPayloadSizeGet_t(m_handle, &m_bufferSize);
+  VmbError_t err = m_sdk->VmbPayloadSizeGet_t(m_handle, &m_payloadSize);
   if (err != VmbErrorSuccess) {
     LOG_ERROR(err, "Error while reading payload size");
     return err;
   }
+
+  m_bufferSize = GetImageWidth() * GetImageHeight() *
+                 m_currentPixelFormat.getBytesPerPixel();
 
   for (size_t i = 0; i < MAX_FRAMES; i++) {
     delete[] m_buffer[i];
     m_buffer[i] = new VmbUint8_t[m_bufferSize];
   }
 
-  return err;
+  return VmbErrorSuccess;
 }
 
 VmbError_t AlliedVisionCamera::createPropertyFromFeature(
@@ -290,15 +297,17 @@ unsigned AlliedVisionCamera::GetImageHeight() const {
 }
 
 unsigned AlliedVisionCamera::GetImageBytesPerPixel() const {
-  // TODO implement
-  return 1;
+  return m_currentPixelFormat.getBytesPerPixel();
 }
 
 long AlliedVisionCamera::GetImageBufferSize() const { return m_bufferSize; }
 
 unsigned AlliedVisionCamera::GetBitDepth() const {
-  // TODO implement
-  return 8;
+  return m_currentPixelFormat.getBitDepth();
+}
+
+unsigned AlliedVisionCamera::GetNumberOfComponents() const {
+  return m_currentPixelFormat.getNumberOfComponents();
 }
 
 int AlliedVisionCamera::GetBinning() const {
@@ -438,12 +447,6 @@ void AlliedVisionCamera::GetName(char* name) const {
 
 bool AlliedVisionCamera::IsCapturing() { return m_isAcquisitionRunning; }
 
-int AlliedVisionCamera::OnPixelType(MM::PropertyBase* pProp,
-                                    MM::ActionType eAct) {
-  // TODO implement
-  return 0;
-}
-
 int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
                                    MM::ActionType eAct) {
   // Init
@@ -497,6 +500,9 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
             pProp->Set(featureValue.c_str());
             err = GetCoreCallback()->OnPropertyChanged(
                 this, propertyName.c_str(), featureValue.c_str());
+            if (propertyName == MM::g_Keyword_PixelType) {
+              handlePixelFormatChange(featureValue);
+            }
 
             if (VmbErrorSuccess != err) {
               LOG_ERROR(err,
@@ -534,6 +540,10 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
           err =
               setFeatureValue(&featureInfo, featureName.c_str(), adjustedValue);
         }
+
+        if (propertyName == MM::g_Keyword_PixelType) {
+          handlePixelFormatChange(propertyValue);
+        }
         break;
       default:
         // nothing
@@ -546,6 +556,11 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
   }
 
   return err;
+}
+
+void AlliedVisionCamera::handlePixelFormatChange(const std::string& pixelType) {
+  m_currentPixelFormat.setPixelType(pixelType);
+  resizeImageBuffer();
 }
 
 VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t* featureInfo,
@@ -889,8 +904,15 @@ int AlliedVisionCamera::SnapImage() {
   resizeImageBuffer();
 
   VmbFrame_t frame;
-  frame.buffer = m_buffer[0];
-  frame.bufferSize = m_bufferSize;
+  std::shared_ptr<VmbUint8_t> buffer{nullptr};
+  if (m_currentPixelFormat.getNumberOfComponents() > 1) {
+    buffer = std::shared_ptr<VmbUint8_t>(new VmbUint8_t[m_payloadSize]);
+    frame.buffer = buffer.get();
+    frame.bufferSize = m_payloadSize;
+  } else {
+    frame.buffer = m_buffer[0];
+    frame.bufferSize = m_bufferSize;
+  }
 
   VmbError_t err = VmbErrorSuccess;
   err = m_sdk->VmbFrameAnnounce_t(m_handle, &frame, sizeof(VmbFrame_t));
@@ -923,6 +945,15 @@ int AlliedVisionCamera::SnapImage() {
     LOG_ERROR(err, "Error while snapping image!");
     (void)StopSequenceAcquisition();
     return err;
+  }
+
+  if (m_currentPixelFormat.getNumberOfComponents() > 1) {
+    err = transformImage(&frame, 0);
+    if (err != VmbErrorSuccess) {
+      LOG_ERROR(err, "Error while snapping image - cannot transform image!");
+      (void)StopSequenceAcquisition();
+      return err;
+    }
   }
 
   (void)StopSequenceAcquisition();
@@ -959,8 +990,13 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
 
   for (size_t i = 0; i < MAX_FRAMES; i++) {
     // Setup frame with buffer
-    m_frames[i].buffer = new uint8_t[m_bufferSize];
-    m_frames[i].bufferSize = m_bufferSize;
+    if (m_currentPixelFormat.getNumberOfComponents() > 1) {
+      m_frames[i].buffer = new VmbUint8_t[m_payloadSize];
+      m_frames[i].bufferSize = m_payloadSize;
+    } else {
+      m_frames[i].buffer = m_buffer[i];
+      m_frames[i].bufferSize = m_bufferSize;
+    }
     m_frames[i].context[0] = this;  //<! Pointer to camera
     m_frames[i].context[1] =
         reinterpret_cast<void*>(i);  //<! Pointer to frame index
@@ -1042,25 +1078,75 @@ int AlliedVisionCamera::StopSequenceAcquisition() {
   return UpdateStatus();
 }
 
+VmbError_t AlliedVisionCamera::transformImage(VmbFrame_t* frame,
+                                              size_t frameIndex) {
+  VmbError_t err = VmbErrorSuccess;
+  VmbImage src{}, dest{};
+  VmbTransformInfo info{};
+
+  src.Data = frame->buffer;
+  src.Size = sizeof(src);
+
+  dest.Data = m_buffer[frameIndex];
+  dest.Size = sizeof(dest);
+
+  err = m_sdk->VmbSetImageInfoFromPixelFormat_t(
+      frame->pixelFormat, frame->width, frame->height, &src);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Cannot set image info from pixel format!");
+    return err;
+  }
+
+  err = m_sdk->VmbSetImageInfoFromPixelFormat_t(
+      m_currentPixelFormat.getVmbFormat(), frame->width, frame->height, &dest);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Cannot set image info from pixel format!");
+    return err;
+  }
+
+  err = m_sdk->VmbImageTransform_t(&src, &dest, &info, 0);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Cannot transform image!");
+    return err;
+  }
+
+  return err;
+}
+
 void AlliedVisionCamera::insertFrame(VmbFrame_t* frame) {
   if (frame != nullptr && frame->receiveStatus == VmbFrameStatusComplete) {
-    VmbUint8_t* buffer = reinterpret_cast<VmbUint8_t*>(frame->imageData);
+    VmbUint8_t* buffer = nullptr;
+    size_t frameIndex = reinterpret_cast<size_t>(frame->context[1]);
+    VmbError_t err = VmbErrorSuccess;
+
+    if (m_currentPixelFormat.getNumberOfComponents() > 1) {
+      err = transformImage(frame, frameIndex);
+      buffer = m_buffer[frameIndex];
+      if (err != VmbErrorSuccess) {
+        // Error logged in transformImage
+        return;
+      }
+    } else {
+      // For GRAY_SCALE copy as it is without any transform
+      buffer = reinterpret_cast<VmbUint8_t*>(frame->buffer);
+    }
 
     // TODO implement metadata
     Metadata md;
     md.put("Camera", m_cameraName);
 
-    // TODO implement parameters
-    auto err = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
-                                              GetImageHeight(), 1, 1,
-                                              md.Serialize().c_str());
+    err = GetCoreCallback()->InsertImage(
+        this, buffer, GetImageWidth(), GetImageHeight(),
+        m_currentPixelFormat.getBytesPerPixel(),
+        m_currentPixelFormat.getNumberOfComponents(), md.Serialize().c_str());
 
     if (err == DEVICE_BUFFER_OVERFLOW) {
       GetCoreCallback()->ClearImageBuffer(this);
-      // TODO implement parameters
-      err = GetCoreCallback()->InsertImage(this, buffer, frame->width,
-                                           frame->height, 1, 1,
-                                           md.Serialize().c_str(), false);
+      err = GetCoreCallback()->InsertImage(
+          this, buffer, GetImageWidth(), GetImageHeight(),
+          m_currentPixelFormat.getBytesPerPixel(),
+          m_currentPixelFormat.getNumberOfComponents(), md.Serialize().c_str(),
+          false);
     }
 
     if (IsCapturing()) {

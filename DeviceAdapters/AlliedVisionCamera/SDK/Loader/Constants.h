@@ -19,9 +19,15 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-static constexpr const char* VIMBA_X_ENV_VAR = "VIMBA_X_HOME";  //<! Vimba X Environmental variable name
+static constexpr const char* VIMBA_X_ENV_VAR =
+    "VIMBA_X_HOME";  //<! Vimba X Environmental variable name
 static std::string VIMBA_X_LIB_DIR =
-    std::string(std::getenv(VIMBA_X_ENV_VAR)) + std::string("\\api\\bin");  //<! Vimba X library path within installation directory
-static constexpr const char* VIMBA_X_LIB_NAME = "VmbC.dll"; //<! Vimba X library name
+    std::string(std::getenv(VIMBA_X_ENV_VAR)) +
+    std::string(
+        "\\api\\bin");  //<! Vimba X library path within installation directory
+static constexpr const char* VIMBA_X_LIB_NAME =
+    "VmbC.dll";  //<! Vimba X library name
+static constexpr const char* VIMBA_X_IMAGE_TRANSFORM_NAME =
+    "VmbImageTransform.dll";  //<! Vimba X Image Transform library name
 
 #endif
