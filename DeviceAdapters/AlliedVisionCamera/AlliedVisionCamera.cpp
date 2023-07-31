@@ -107,10 +107,8 @@ int AlliedVisionCamera::Initialize() {
     return err;
   }
 
-  // Init properties and buffer
-  // TODO handle error
-  setupProperties();
-
+  // Ignore errors from setting up properties
+  (void)setupProperties();
   return resizeImageBuffer();
 }
 
@@ -164,8 +162,9 @@ VmbError_t AlliedVisionCamera::resizeImageBuffer() {
     return err;
   }
 
-  m_bufferSize = GetImageWidth() * GetImageHeight() *
-                 m_currentPixelFormat.getBytesPerPixel();
+  m_bufferSize = std::max(GetImageWidth() * GetImageHeight() *
+                              m_currentPixelFormat.getBytesPerPixel(),
+                          m_payloadSize);
 
   for (size_t i = 0; i < MAX_FRAMES; i++) {
     delete[] m_buffer[i];
@@ -560,7 +559,6 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
 
 void AlliedVisionCamera::handlePixelFormatChange(const std::string& pixelType) {
   m_currentPixelFormat.setPixelType(pixelType);
-  resizeImageBuffer();
 }
 
 VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t* featureInfo,
@@ -904,15 +902,8 @@ int AlliedVisionCamera::SnapImage() {
   resizeImageBuffer();
 
   VmbFrame_t frame;
-  std::shared_ptr<VmbUint8_t> buffer{nullptr};
-  if (m_currentPixelFormat.getNumberOfComponents() > 1) {
-    buffer = std::shared_ptr<VmbUint8_t>(new VmbUint8_t[m_payloadSize]);
-    frame.buffer = buffer.get();
-    frame.bufferSize = m_payloadSize;
-  } else {
-    frame.buffer = m_buffer[0];
-    frame.bufferSize = m_bufferSize;
-  }
+  frame.buffer = m_buffer[0];
+  frame.bufferSize = m_payloadSize;
 
   VmbError_t err = VmbErrorSuccess;
   err = m_sdk->VmbFrameAnnounce_t(m_handle, &frame, sizeof(VmbFrame_t));
@@ -947,21 +938,14 @@ int AlliedVisionCamera::SnapImage() {
     return err;
   }
 
-  if (m_currentPixelFormat.getNumberOfComponents() > 1) {
-    err = transformImage(&frame, 0);
-    if (err != VmbErrorSuccess) {
-      LOG_ERROR(err, "Error while snapping image - cannot transform image!");
-      (void)StopSequenceAcquisition();
-      return err;
-    }
+  err = transformImage(&frame);
+  if (err != VmbErrorSuccess) {
+    LOG_ERROR(err, "Error while snapping image - cannot transform image!");
+    (void)StopSequenceAcquisition();
+    return err;
   }
 
   (void)StopSequenceAcquisition();
-
-  if (VmbErrorSuccess != err) {
-    LOG_ERROR(err, "Error while snapping image!");
-  }
-
   return err;
 }
 
@@ -989,14 +973,8 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
   }
 
   for (size_t i = 0; i < MAX_FRAMES; i++) {
-    // Setup frame with buffer
-    if (m_currentPixelFormat.getNumberOfComponents() > 1) {
-      m_frames[i].buffer = new VmbUint8_t[m_payloadSize];
-      m_frames[i].bufferSize = m_payloadSize;
-    } else {
-      m_frames[i].buffer = m_buffer[i];
-      m_frames[i].bufferSize = m_bufferSize;
-    }
+    m_frames[i].buffer = m_buffer[i];
+    m_frames[i].bufferSize = m_payloadSize;
     m_frames[i].context[0] = this;  //<! Pointer to camera
     m_frames[i].context[1] =
         reinterpret_cast<void*>(i);  //<! Pointer to frame index
@@ -1031,6 +1009,7 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages,
     LOG_ERROR(err, "Error during frame praparation for continous acquisition!");
     return err;
   }
+
   err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart);
   m_isAcquisitionRunning = true;
 
@@ -1078,16 +1057,18 @@ int AlliedVisionCamera::StopSequenceAcquisition() {
   return UpdateStatus();
 }
 
-VmbError_t AlliedVisionCamera::transformImage(VmbFrame_t* frame,
-                                              size_t frameIndex) {
+VmbError_t AlliedVisionCamera::transformImage(VmbFrame_t* frame) {
   VmbError_t err = VmbErrorSuccess;
   VmbImage src{}, dest{};
   VmbTransformInfo info{};
+  std::shared_ptr<VmbUint8_t> tempBuff =
+      std::shared_ptr<VmbUint8_t>(new VmbUint8_t[m_bufferSize]);
+  auto srcBuff = reinterpret_cast<VmbUint8_t*>(frame->buffer);
 
-  src.Data = frame->buffer;
+  src.Data = srcBuff;
   src.Size = sizeof(src);
 
-  dest.Data = m_buffer[frameIndex];
+  dest.Data = tempBuff.get();
   dest.Size = sizeof(dest);
 
   err = m_sdk->VmbSetImageInfoFromPixelFormat_t(
@@ -1110,31 +1091,25 @@ VmbError_t AlliedVisionCamera::transformImage(VmbFrame_t* frame,
     return err;
   }
 
+  memcpy(srcBuff, tempBuff.get(), m_bufferSize);
   return err;
 }
 
 void AlliedVisionCamera::insertFrame(VmbFrame_t* frame) {
   if (frame != nullptr && frame->receiveStatus == VmbFrameStatusComplete) {
-    VmbUint8_t* buffer = nullptr;
-    size_t frameIndex = reinterpret_cast<size_t>(frame->context[1]);
     VmbError_t err = VmbErrorSuccess;
 
-    if (m_currentPixelFormat.getNumberOfComponents() > 1) {
-      err = transformImage(frame, frameIndex);
-      buffer = m_buffer[frameIndex];
-      if (err != VmbErrorSuccess) {
-        // Error logged in transformImage
-        return;
-      }
-    } else {
-      // For GRAY_SCALE copy as it is without any transform
-      buffer = reinterpret_cast<VmbUint8_t*>(frame->buffer);
+    err = transformImage(frame);
+    if (err != VmbErrorSuccess) {
+      // Error logged in transformImage
+      return;
     }
 
     // TODO implement metadata
     Metadata md;
     md.put("Camera", m_cameraName);
 
+    VmbUint8_t* buffer = reinterpret_cast<VmbUint8_t*>(frame->buffer);
     err = GetCoreCallback()->InsertImage(
         this, buffer, GetImageWidth(), GetImageHeight(),
         m_currentPixelFormat.getBytesPerPixel(),

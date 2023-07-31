@@ -163,10 +163,12 @@ class PixelFormatConverter {
       std::smatch m;
       std::regex_search(m_pixelType, m, re);
       if (m.size() > 0) {
-        if (std::atoi(m[1].str().c_str()) == 8) {  // TODO check this condition
-          m_bitDepth = 8;
-        } else {
+        if (std::atoi(m[1].str().c_str()) == 16) {
+          // We do transformation to Mono16 only for Mono16, otherwise
+          // it will always be Mono8
           m_bitDepth = 16;
+        } else {
+          m_bitDepth = 8;
         }
       } else {
         // ERROR
@@ -287,7 +289,7 @@ class AlliedVisionCamera
   /**
    * @brief Helper method to handle change of pixel type
    * @param[in] pixelType   New pixel type (as string)
-  */
+   */
   void handlePixelFormatChange(const std::string& pixelType);
 
   /**
@@ -403,7 +405,14 @@ class AlliedVisionCamera
   std::string adjustValue(VmbFeatureInfo_t& featureInfo, double min, double max,
                           double propertyValue) const;
 
-  VmbError_t transformImage(VmbFrame_t* frame, size_t frameIndex);
+  /**
+   * @brief Internal method to transform image to the destination format that
+   * uManager supports (see \ref PixelFormatConverter) and replaces input frame
+   * with output (transformed) frame
+   * @param[in] frame   Frame with image to transform from and into
+   * @return Error in case of failure
+   */
+  VmbError_t transformImage(VmbFrame_t* frame);
 
   ///////////////////////////////////////////////////////////////////////////////
   // MEMBERS
