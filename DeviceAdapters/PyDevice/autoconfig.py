@@ -5,8 +5,7 @@ import numpy
 def locate(p, description, should_have):
     while not path.isdir(p) or not path.isfile(path.join(p, should_have)):
         p = input(
-            f"Could not find {description} in folder {p}, please type the path to the folder "
-            f"containing the executable, or press Enter to skip.")
+            f"Could not find {description} in folder {p}, please type the path to the folder or press Enter to skip.")
         if not p:
             print("You can manually configure the path later in the AutoConfig.props file.")
             return
