@@ -48,22 +48,17 @@ class Camera:
     def read(self):
         return self._image
 
-    def get_image(self):
-        if self.resized:
-            self._image = np.zeros((self._width, self._height), dtype=np.uint16)
-            self.resized = False
-
-
-        return self._image
 
     def trigger(self):
-        pass
-
-    def wait(self):
+        if self._resized:
+            self._image = np.zeros((self._width, self._height), dtype=np.uint16)
+            self._resized = False
         self.galvo_scanner.galvo_scan(self._image,[self._invert],[self._width, self._height],[self._input_mapping],
                                    [self._x_mirror_mapping,self._y_mirror_mapping],[self._scan_padding],[self._delay],
                                    [self._bidirectional],[self._zoom],[self._input_min, self._input_max],
                                       [self._exposure_ms/1000])
+
+
 
     def on_resized(self, value):
         self.resized = True
@@ -225,4 +220,6 @@ class Camera:
     def invert(self, value: bool):
         self._invert = value
 
+
+devices = {'cam': Camera(x_mirror_mapping='Dev2/ao0', y_mirror_mapping='Dev2/ao1', input_mapping='Dev2/ai0')}
 
