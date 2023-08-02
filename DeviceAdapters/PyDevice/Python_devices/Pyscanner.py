@@ -1,8 +1,6 @@
 import nidaqmx as ni
 import numpy as np
 from nidaqmx.constants import TaskMode
-import pylab as plt
-import ast
 
 from nidaqmx.constants import Edge
 from nidaqmx.stream_readers import AnalogUnscaledReader
@@ -64,51 +62,6 @@ def query_devices():
     for device in local_system.devices:
         print('Device Name: {0}, Product Category: {1}, Product Type: {2}'.format(
             device.name, device.product_category, device.product_type))
-
-
-def playrec(
-        outdata, sr=500000, input_mapping=['Dev2/ai0'],
-        output_mapping=['Dev2/ao0'], input_range=[-1.5, 1.5], output_range=[-1.5, 1.5]
-):
-    """Function adapted from NI forum that has an electrical output signal and a electrical input signal.
-    Because it goes into the dac, the input for the galvos is called output (analog out)
-    and the output of the PMT is called input (analog in)
-
-    It can handle multiple in- and outputs, default is 1 each.
-
-    outdata: numpy array or list, will be output in analog out channel (V)
-
-    sr: signal rate (/second), default is 500.000, the maximum of the NI USB-6341.
-    Note; the NI PCIe-6363 in the lab has a maximum of 2.000.000, so this function can be overclocked.
-
-    returns indata: measured signal from analog in channel (V)
-    """
-    # TODO: Make a buffer-loading & trigger function seperately
-
-    # in order to handle both singular and multiple channel output data:
-    if len(output_mapping) > 1:
-        nsamples = outdata[0].shape[0]
-    else:
-        nsamples = outdata.shape[0]
-
-    with ni.Task() as read_task, ni.Task() as write_task:
-        for o in output_mapping:
-            aochan = write_task.ao_channels.add_ao_voltage_chan(o)
-            aochan.ao_min = output_range[0]
-            aochan.ao_max = output_range[1]  # output range
-
-        for i in input_mapping:
-            aichan = read_task.ai_channels.add_ai_voltage_chan(i)
-            aichan.ai_min = input_range[0]
-            aichan.ai_max = input_range[1]
-
-        for task in (read_task, write_task):
-            task.timing.cfg_samp_clk_timing(rate=sr, source='OnboardClock', samps_per_chan=nsamples)
-
-        write_task.triggers.start_trigger.cfg_dig_edge_start_trig(read_task.triggers.start_trigger.term)
-        write_task.write(outdata, auto_start=True)
-        indata = read_task.read(nsamples)
-    return indata
 
 
 def readwrite(
@@ -262,11 +215,6 @@ def PMT_to_image(data,
 
     return full_im
 
-
-def stringinterpret(input_list):
-    input_list = [str(x) for x in input_list]
-
-
 def single_capture(input_mapping=['Dev2/ai0'],
                    output_mapping=['Dev2/ao0', 'Dev2/ao1'],
                    xlims=[-1, 1],  # full range of FoV
@@ -306,8 +254,8 @@ def single_capture(input_mapping=['Dev2/ai0'],
     ylims = [ylims[0] / zoom[0], ylims[1] / zoom[0]]
 
     #    if not stepsizes:  # if no manual stepsize was selected, calculate from required resolution
-    stepx = (xlims[1] - xlims[0]) / (resolution[0] - 1)
-    stepy = (ylims[1] - ylims[0]) / (resolution[1] - 1)
+    stepx = (xlims[1] - xlims[0]) / (resolution[1] - 1)
+    stepy = (ylims[1] - ylims[0]) / (resolution[0] - 1)
     stepsizes = [stepx, stepy]
 
     # apply padding scanning factor AFTER stepsize determination, and BEFORE n steps determination
@@ -358,36 +306,5 @@ def single_capture(input_mapping=['Dev2/ai0'],
 
     if invert_values[0]:
         image = (2**16)-image
-
-    return image
-
-
-def cpp_single_capture(input_mapping_str, output_mapping_str, resolution_str, zoom_str, delay_str, dwelltime_str,
-                       scanpadding_str, input_range_str):
-    """Function written to connect the cpp call to the function. This is because c++ calls functions with the same
-    data structure (uint8 strings). This could be fixed in c++, but this was considered clearer.
-    If the call is changed in the device adapter, it should be changed here too.
-    Inputs: uint8 strings
-    Outputs: other data types
-    """
-    # change the type of the c++ inputs
-    input_mapping_str = ast.literal_eval(input_mapping_str)
-    output_mapping_str = ast.literal_eval(output_mapping_str)
-    resolution_str = np.array(ast.literal_eval(resolution_str), dtype=int)
-    zoom_str = np.array(ast.literal_eval(zoom_str), dtype=int)
-    delay_str = np.array(ast.literal_eval(delay_str), dtype=int)
-    dwelltime_str = np.array(ast.literal_eval(dwelltime_str), dtype=float)
-    scanpadding_str = np.array(ast.literal_eval(scanpadding_str), dtype=float)
-    input_range_str = np.array(ast.literal_eval(input_range_str), dtype=float)
-
-    image = single_capture(input_mapping=input_mapping_str,
-                           output_mapping=output_mapping_str,
-                           resolution=resolution_str,
-                           zoom=zoom_str,
-                           delay=delay_str,
-                           dwelltime=dwelltime_str,
-                           scanpaddingfactor=scanpadding_str,
-                           input_range=input_range_str
-                           )
 
     return image
