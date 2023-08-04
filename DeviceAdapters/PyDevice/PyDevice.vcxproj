@@ -75,7 +75,7 @@
     <Import Project="$(MICROMANAGER_SOURCE_PATH)\buildscripts\VisualStudio\MMDeviceAdapter.props" />
   </ImportGroup>
   <PropertyGroup>
-    <IncludePath>$(PYTHON_PATH)\include;$(NUMPY_PATH)\core\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(PYTHON_PATH)include;$(NUMPY_PATH)core\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(PYTHON_PATH)\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Label="UserMacros" />

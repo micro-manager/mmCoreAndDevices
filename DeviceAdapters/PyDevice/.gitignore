@@ -7,3 +7,4 @@ build
 .vs
 PyDevice.sln
 AutoConfig.props
+x64
