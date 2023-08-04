@@ -29,7 +29,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="AutoConfig.props" />
-    <None Include="autoconfig.py" />
     <None Include="bootstrap.py" />
     <None Include="Dummyscanner.py" />
     <None Include="Pyscanner.py" />

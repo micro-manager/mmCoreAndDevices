@@ -52,6 +52,5 @@ rewrite('AutoConfig.props')
 rewrite('PyDevice.sln')
 
 # we don't want git to track changes to this file, but an empty template should be in the repository or VS will not open the Project
-system(f"git update-index --assume-unchanged {path.join(project_path, 'AutoConfig', 'AutoConfig.props')}")
 system(f"git update-index --assume-unchanged {path.join(project_path, 'PyDevice.sln')}")
 
