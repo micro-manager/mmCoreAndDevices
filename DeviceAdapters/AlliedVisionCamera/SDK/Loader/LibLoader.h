@@ -19,8 +19,6 @@
 #ifndef LIBLOADER_H
 #define LIBLOADER_H
 
-#include <Windows.h>
-
 #include <string>
 
 #include "VmbC/VmbC.h"

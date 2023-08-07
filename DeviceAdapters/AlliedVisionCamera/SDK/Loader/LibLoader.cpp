@@ -18,6 +18,8 @@
 =============================================================================*/
 #include "LibLoader.h"
 
+#include <Windows.h>
+
 #include "Constants.h"
 
 VimbaXApi::VimbaXApi()
@@ -131,7 +133,7 @@ LibLoader::~LibLoader() {
 bool LibLoader::isLoaded() const { return m_loaded; }
 
 SymbolWrapper LibLoader::resolveFunction(const char* functionName,
-                                       bool& allResolved) const {
+                                         bool& allResolved) const {
   void* funPtr = nullptr;
   if (allResolved) {
     funPtr = GetProcAddress(static_cast<HMODULE>(m_module), functionName);

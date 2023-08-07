@@ -21,8 +21,10 @@
 
 static constexpr const char* VIMBA_X_ENV_VAR =
     "VIMBA_X_HOME";  //<! Vimba X Environmental variable name
+static const char* ENV_VALUE =
+    std::getenv(VIMBA_X_ENV_VAR);  //<! Vimba environment variable value
 static std::string VIMBA_X_LIB_DIR =
-    std::string(std::getenv(VIMBA_X_ENV_VAR)) +
+    std::string(ENV_VALUE != nullptr ? ENV_VALUE : "") +
     std::string(
         "\\api\\bin");  //<! Vimba X library path within installation directory
 static constexpr const char* VIMBA_X_LIB_NAME =
