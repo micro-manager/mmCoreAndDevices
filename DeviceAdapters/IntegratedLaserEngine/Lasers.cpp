@@ -244,6 +244,32 @@ int CLasers::OnPowerSetpoint(MM::PropertyBase* Prop, MM::ActionType Act, long  L
           return vRet;
         }
       }
+      else
+      {
+        // Update HW setpoint even when shutter closed
+        double vPercentScale = PowerSetpoint( LaserIndex );
+        double vPower = ( vPercentScale / 100. ) * ( LasersState_[LaserIndex].LaserRange_.PowerMax - LasersState_[LaserIndex].LaserRange_.PowerMin ) + LasersState_[LaserIndex].LaserRange_.PowerMin;
+
+        MMILE_->LogMMMessage( "SetLas" + std::to_string( static_cast<long long>( LaserIndex ) ) + "  = " + std::to_string( static_cast<long double>( vPower ) ), true );
+
+        TLaserState vLaserState;
+        if ( LaserInterface_->GetLaserState( LaserIndex, &vLaserState ) )
+        {
+          if ( vLaserState > ALC_NOT_AVAILABLE )
+          {
+            MMILE_->LogMMMessage( "Setting Laser " + std::to_string( static_cast<long long>( Wavelength( LaserIndex ) ) ) + " to " + std::to_string( static_cast<long double>( vPower ) ) + "% full scale", true );
+            if ( !LaserInterface_->SetLas_I( LaserIndex, vPower, false ) )
+            {
+              MMILE_->LogMMMessage( std::string( "Setting Laser power for laser " + std::to_string( static_cast<long long>( LaserIndex ) ) + " failed with value [" ) + std::to_string( static_cast<long double>( vPower ) ) + "]" );
+              return ERR_LASER_SET;
+            }
+          }
+        }
+        else
+        {
+          return ERR_LASER_STATE_READ;
+        }
+      }
     }
 
     //Prop->Set(achievedSetpoint);  ---- for quantization....
