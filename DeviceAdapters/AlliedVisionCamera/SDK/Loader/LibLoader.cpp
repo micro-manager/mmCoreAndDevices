@@ -121,7 +121,7 @@ LibLoader::LibLoader(const char* lib, const char* libPath)
 
 LibLoader::~LibLoader() {
   if (m_loaded) {
-    FreeModule(m_module);
+    FreeModule(static_cast<HMODULE>(m_module));
     m_module = nullptr;
     m_loaded = false;
     m_libName = nullptr;
@@ -130,12 +130,12 @@ LibLoader::~LibLoader() {
 
 bool LibLoader::isLoaded() const { return m_loaded; }
 
-ProcWrapper LibLoader::resolveFunction(const char* functionName,
+SymbolWrapper LibLoader::resolveFunction(const char* functionName,
                                        bool& allResolved) const {
-  FARPROC funPtr = nullptr;
+  void* funPtr = nullptr;
   if (allResolved) {
-    funPtr = GetProcAddress((HMODULE)m_module, functionName);
+    funPtr = GetProcAddress(static_cast<HMODULE>(m_module), functionName);
     allResolved = allResolved && (funPtr != nullptr);
   }
-  return ProcWrapper(funPtr);
+  return SymbolWrapper(funPtr);
 }

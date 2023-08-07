@@ -20,7 +20,7 @@
 #define ALLIEDVISIONDEVICEBASE_H
 
 #include "DeviceBase.h"
-#include "Loader/LibLoader.h"
+#include "SDK/Loader/LibLoader.h"
 
 #define LOG_ERROR(err, message) logError(err, message, __FUNCTION__, __LINE__)
 

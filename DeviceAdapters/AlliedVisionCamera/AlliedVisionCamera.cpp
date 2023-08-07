@@ -20,8 +20,6 @@
 
 #include "AlliedVisionCamera.h"
 
-#include <Windows.h>
-
 #include <algorithm>
 #include <iostream>
 #include <sstream>

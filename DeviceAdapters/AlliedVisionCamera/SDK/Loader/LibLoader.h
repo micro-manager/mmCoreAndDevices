@@ -29,16 +29,16 @@
 /**
  * @brief Wrapper for single Windows process
  */
-class ProcWrapper {
+class SymbolWrapper {
   ///////////////////////////////////////////////////////////////////////////////
   // PUBLIC
   ///////////////////////////////////////////////////////////////////////////////
  public:
   /**
    * @brief Constructor of wrapper
-   * @param[in] funPtr  Pointer to the process
+   * @param[in] funPtr  Pointer to the resolved symbol
    */
-  explicit ProcWrapper(FARPROC funPtr) : m_funPtr(funPtr) {}
+  explicit SymbolWrapper(void* funPtr) : m_funPtr(funPtr) {}
 
   /**
    * @brief Operator () overload to call function
@@ -51,7 +51,7 @@ class ProcWrapper {
   // PRIVATE
   ///////////////////////////////////////////////////////////////////////////////
  private:
-  FARPROC m_funPtr;  //<! Function pointer
+  void* m_funPtr;  //<! Function pointer
 };
 
 /**
@@ -78,11 +78,11 @@ class LibLoader {
    * @brief Resolve function from library
    * @param[in] functionName    Function name to be resolved
    * @param[out] allResolved     Bool flag to indicate if symbol was resolved
-   * @return ProcWrapper object to the resolved function. NULLPTR if not
+   * @return SymbolWrapper object to the resolved function. NULLPTR if not
    * resolved
    */
-  ProcWrapper resolveFunction(const char* functionName,
-                              bool& allResolved) const;
+  SymbolWrapper resolveFunction(const char* functionName,
+                                bool& allResolved) const;
 
   /**
    * @brief Getter to check if library is loaded
@@ -95,7 +95,7 @@ class LibLoader {
  private:
   const char* m_libName;  //<! Library name
   const char* m_libPath;  //<! Library path
-  HMODULE m_module;       //<! Windows HMODULE object for loaded library
+  void* m_module;         //<! Handle for loaded library
   bool m_loaded;          //<! Is library initialized
 };
 
@@ -172,16 +172,16 @@ class VimbaXApi {
   decltype(VmbFeatureFloatIncrementQuery)* VmbFeatureFloatIncrementQuery_t =
       nullptr;
   decltype(VmbFeatureCommandIsDone)* VmbFeatureCommandIsDone_t = nullptr;
-  decltype(VmbSetImageInfoFromPixelFormat)*
-      VmbSetImageInfoFromPixelFormat_t = nullptr;
+  decltype(VmbSetImageInfoFromPixelFormat)* VmbSetImageInfoFromPixelFormat_t =
+      nullptr;
   decltype(VmbImageTransform)* VmbImageTransform_t = nullptr;
   ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
   ///////////////////////////////////////////////////////////////////////////////
  private:
-  bool m_initialized;           //<! Flag if SDK is initialized
-  LibLoader m_sdk;              //<! SDK library
-  LibLoader m_imageTransform;   //<! Image Transform library
+  bool m_initialized;          //<! Flag if SDK is initialized
+  LibLoader m_sdk;             //<! SDK library
+  LibLoader m_imageTransform;  //<! Image Transform library
 };
 
 #endif
