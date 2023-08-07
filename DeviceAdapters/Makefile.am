@@ -91,6 +91,7 @@ SUBDIRS = \
 	$(USBMANAGER) \
 	$(V4L) \
 	AAAOTF \
+	AlliedVisionCamera \
 	AOTF \
 	ASIFW1000 \
 	ASIStage \

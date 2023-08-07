@@ -463,6 +463,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    ASITiger
    ASIWPTR
    Aladdin
+   AlliedVisionCamera
    Andor
    AndorLaserCombiner
    AndorSDK3

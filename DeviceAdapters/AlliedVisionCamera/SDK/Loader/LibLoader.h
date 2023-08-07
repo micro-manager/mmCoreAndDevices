@@ -19,6 +19,13 @@
 #ifndef LIBLOADER_H
 #define LIBLOADER_H
 
+#ifdef __linux__ 
+    #include <dlfcn.h>
+#elif _WIN32
+    #include <Windows.h>
+#else
+
+#endif
 #include <string>
 
 #include "VmbC/VmbC.h"
