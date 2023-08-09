@@ -10,7 +10,7 @@ int AlliedVisionHub::DetectInstalledDevices() {
   // Get the number of connected cameras first
   VmbError_t err = m_sdk->VmbCamerasList_t(nullptr, 0, &camNum, 0);
   if (VmbErrorSuccess == err) {
-    VmbCameraInfo_t* camInfo = new VmbCameraInfo_t[camNum];
+    VmbCameraInfo_t *camInfo = new VmbCameraInfo_t[camNum];
 
     // Get the cameras
     err = m_sdk->VmbCamerasList_t(camInfo, camNum, &camNum, sizeof *camInfo);
@@ -18,7 +18,7 @@ int AlliedVisionHub::DetectInstalledDevices() {
     if (err == VmbErrorSuccess) {
       for (VmbUint32_t i = 0; i < camNum; ++i) {
         if (camInfo[i].permittedAccess & VmbAccessModeFull) {
-          MM::Device* pDev = new AlliedVisionCamera(camInfo[i].cameraIdString);
+          MM::Device *pDev = new AlliedVisionCamera(camInfo[i].cameraIdString);
           AddInstalledDevice(pDev);
         }
       }
@@ -47,10 +47,10 @@ int AlliedVisionHub::Shutdown() {
   return DEVICE_OK;
 }
 
-void AlliedVisionHub::GetName(char* name) const {
+void AlliedVisionHub::GetName(char *name) const {
   CDeviceUtils::CopyLimitedString(name, g_hubName);
 }
 
 bool AlliedVisionHub::Busy() { return false; }
 
-std::shared_ptr<VimbaXApi>& AlliedVisionHub::getSDK() { return m_sdk; }
+std::shared_ptr<VimbaXApi> &AlliedVisionHub::getSDK() { return m_sdk; }

@@ -18,13 +18,18 @@
 =============================================================================*/
 #include "LibLoader.h"
 
+#ifdef __linux__
+#include <dlfcn.h>
+#elif _WIN32
 #include <Windows.h>
+#else
+// nothing
+#endif
 
 #include "Constants.h"
 
 VimbaXApi::VimbaXApi()
-    : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()),
-      m_initialized(false),
+    : m_sdk(VIMBA_X_LIB_NAME, VIMBA_X_LIB_DIR.c_str()), m_initialized(false),
       m_imageTransform(VIMBA_X_IMAGE_TRANSFORM_NAME, VIMBA_X_LIB_DIR.c_str()) {
   if (m_sdk.isLoaded() && m_imageTransform.isLoaded()) {
     bool allResolved = true;
@@ -112,7 +117,39 @@ VimbaXApi::~VimbaXApi() {
   }
 }
 
-LibLoader::LibLoader(const char* lib, const char* libPath)
+bool LibLoader::isLoaded() const { return m_loaded; }
+#ifdef __linux__
+LibLoader::LibLoader(const char *lib, const char *libPath)
+    : m_libName(lib), m_libPath(libPath), m_module(nullptr), m_loaded(false) {
+  std::string path = std::string(m_libPath) + std::string(m_libName);
+  dlerror();
+  m_module = dlopen(path.c_str(), RTLD_NOW);
+  if (m_module != nullptr) {
+    m_loaded = true;
+  }
+}
+
+LibLoader::~LibLoader() {
+  if (m_loaded) {
+    dlclose(m_module);
+    m_module = nullptr;
+    m_loaded = false;
+    m_libName = nullptr;
+  }
+}
+
+SymbolWrapper LibLoader::resolveFunction(const char *functionName,
+                                         bool &allResolved) const {
+  dlerror();
+  void *funPtr = nullptr;
+  if (allResolved) {
+    funPtr = dlsym(m_module, functionName);
+    allResolved = allResolved && (funPtr != nullptr);
+  }
+  return SymbolWrapper(funPtr);
+}
+#elif _WIN32
+LibLoader::LibLoader(const char *lib, const char *libPath)
     : m_libName(lib), m_libPath(libPath), m_module(nullptr), m_loaded(false) {
   SetDllDirectoryA(m_libPath);
   m_module = LoadLibraryA(m_libName);
@@ -130,14 +167,15 @@ LibLoader::~LibLoader() {
   }
 }
 
-bool LibLoader::isLoaded() const { return m_loaded; }
-
-SymbolWrapper LibLoader::resolveFunction(const char* functionName,
-                                         bool& allResolved) const {
-  void* funPtr = nullptr;
+SymbolWrapper LibLoader::resolveFunction(const char *functionName,
+                                         bool &allResolved) const {
+  void *funPtr = nullptr;
   if (allResolved) {
     funPtr = GetProcAddress(static_cast<HMODULE>(m_module), functionName);
     allResolved = allResolved && (funPtr != nullptr);
   }
   return SymbolWrapper(funPtr);
 }
+#else
+// nothing
+#endif

@@ -19,14 +19,8 @@
 #ifndef LIBLOADER_H
 #define LIBLOADER_H
 
-#ifdef __linux__ 
-    #include <dlfcn.h>
-#elif _WIN32
-    #include <Windows.h>
-#else
-
-#endif
 #include <string>
+#include <type_traits>
 
 #include "VmbC/VmbC.h"
 #include "VmbImageTransform/VmbTransform.h"
@@ -48,7 +42,7 @@ class SymbolWrapper {
   /**
    * @brief Operator () overload to call function
    */
-  template <typename T, typename = std::enable_if_t<std::is_function_v<T>>>
+  template <typename T, typename = std::enable_if_t<std::is_function<T>::value>>
   operator T*() const {
     return reinterpret_cast<T*>(m_funPtr);
   }

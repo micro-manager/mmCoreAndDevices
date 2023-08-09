@@ -20,7 +20,7 @@
 #define ALLIEDVISIONDEVICEBASE_H
 
 #include "DeviceBase.h"
-#include "SDK/Loader/LibLoader.h"
+#include "Loader/LibLoader.h"
 
 #define LOG_ERROR(err, message) logError(err, message, __FUNCTION__, __LINE__)
 
@@ -32,7 +32,7 @@ class AlliedVisionDeviceBase : public CDeviceBase<T, U> {
   ///////////////////////////////////////////////////////////////////////////////
   // PUBLIC
   ///////////////////////////////////////////////////////////////////////////////
- public:
+public:
   /**
    * @brief Constructor
    */
@@ -56,7 +56,7 @@ class AlliedVisionDeviceBase : public CDeviceBase<T, U> {
   ///////////////////////////////////////////////////////////////////////////////
   // PRIVATE
   ///////////////////////////////////////////////////////////////////////////////
- private:
+private:
   /**
    * @brief Setup error messages for Vimba API
    */
