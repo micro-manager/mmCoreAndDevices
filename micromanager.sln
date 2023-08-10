@@ -474,6 +474,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ArduinoCounter", "DeviceAda
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ESP32", "DeviceAdapters\ESP32\ESP32.vcxproj", "{0C72846A-BCFA-4F75-91AF-D9F5CA01E6B2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WOSM", "DeviceAdapters\WOSM\WOSM.vcxproj", "{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1424,6 +1426,10 @@ Global
 		{0C72846A-BCFA-4F75-91AF-D9F5CA01E6B2}.Debug|x64.Build.0 = Debug|x64
 		{0C72846A-BCFA-4F75-91AF-D9F5CA01E6B2}.Release|x64.ActiveCfg = Release|x64
 		{0C72846A-BCFA-4F75-91AF-D9F5CA01E6B2}.Release|x64.Build.0 = Release|x64
+		{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}.Debug|x64.ActiveCfg = Debug|x64
+		{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}.Debug|x64.Build.0 = Debug|x64
+		{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}.Release|x64.ActiveCfg = Release|x64
+		{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

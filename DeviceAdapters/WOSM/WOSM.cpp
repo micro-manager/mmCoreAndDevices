@@ -110,14 +110,8 @@
 #include <string>
 #include <sstream>
 #include <cstdio>
-#include "FixSnprintf.h"
 using namespace std;
 //$$
-
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
 
 // Name the Devices something short and sensible
 const char* g_DeviceNameWOSMHub = "WOSM-Hub";
@@ -1621,7 +1615,7 @@ int CWOSMDA::WriteToPort(double value)
     unsigned int leng;
     char chan[2];
     if ( ( channel_ >= 0 ) && ( channel_ < 4 ) ) {
-        chan[0] = 's'+channel_ ; chan[1] = 0;     // set s,t,u or v lines on WOSM
+        chan[0] = 's' + static_cast<char>(channel_) ; chan[1] = 0;     // set s,t,u or v lines on WOSM
 
         leng = snprintf(( char* ) command, 50, "dac_out p%s %3.3f\r\n", ( char* ) chan, value);
 
