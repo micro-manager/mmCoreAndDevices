@@ -65,14 +65,7 @@
 #include <string>
 #include <sstream>
 #include <cstdio>
-#include "FixSnprintf.h"
 using namespace std;
-
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-#include "../../MMCore/CoreCallback.h"
 
 // Name the Devices something short and sensible
 const char* g_DeviceNameESP32Hub =     "ESP32-Hub";
