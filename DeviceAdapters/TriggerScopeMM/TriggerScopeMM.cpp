@@ -256,39 +256,39 @@ MM::DeviceDetectionStatus CTriggerScopeMMHub::DetectDevice(void)
          MMThreadGuard myLock(lock_);
          PurgeComPort(port_.c_str());
 
-         std::string answer;
-         int ret = SendAndReceiveNoCheck("*", answer);
+std::string answer;
+int ret = SendAndReceiveNoCheck("*", answer);
 
-         if(answer.length() > 0)
-	      {
-            size_t idx = answer.find("ARC TRIGGERSCOPE 16");
-            if(idx!=string::npos)
-            {
-               if (answer.substr(answer.length() - 2, 2) == "MM") 
-               {
-                  result = MM::CanCommunicate;
-               }
-            }
-         }
-            
-         if( DEVICE_OK != ret )
-         {
-            LogMessageCode(ret,true);
-         }
-         else
-         {
-            // to succeed must reach here....
-            result = MM::CanCommunicate;
-         }
-         pS->Shutdown();
-         // always restore the AnswerTimeout to the default
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
+if (answer.length() > 0)
+{
+   size_t idx = answer.find("ARC TRIGGERSCOPE 16");
+   if (idx != string::npos)
+   {
+      if (answer.substr(answer.length() - 2, 2) == "MM")
+      {
+         result = MM::CanCommunicate;
+      }
+   }
+}
+
+if (DEVICE_OK != ret)
+{
+   LogMessageCode(ret, true);
+}
+else
+{
+   // to succeed must reach here....
+   result = MM::CanCommunicate;
+}
+pS->Shutdown();
+// always restore the AnswerTimeout to the default
+GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
 
       }
    }
-   catch(...)
+   catch (...)
    {
-      LogMessage("Exception in DetectDevice!",false);
+      LogMessage("Exception in DetectDevice!", false);
    }
 
    return result;
@@ -303,7 +303,7 @@ MM::DeviceDetectionStatus CTriggerScopeMMHub::DetectDevice(void)
 * Shutdown() was not called.
 */
 CTriggerScopeMMHub::~CTriggerScopeMMHub(void)
-{                                                             
+{
    Shutdown();
    delete pResourceLock_;
 }
@@ -338,7 +338,7 @@ int CTriggerScopeMMHub::Initialize()
    ret = Purge();
    if (ret != DEVICE_OK)
       return ret;
-	firmwareVer_  = 0.0;
+   firmwareVer_ = 0.0;
    std::string answer = "";
    ret = SendAndReceiveNoCheck("*", answer);
    int attempts = 1;
@@ -351,30 +351,42 @@ int CTriggerScopeMMHub::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
-   if(answer.length()>0)
+   if (answer.length() > 0) {
+      // first check if the device returned an error.  This can happen
+      // when something else send bytes to the port before we did
+      size_t idx = answer.find("ERROR_UNKNOWN_COMMAND");
+      if (idx != string::npos) {
+         ret = SendAndReceiveNoCheck("*", answer);
+         if (ret != DEVICE_OK) {
+            return ret;
+         }
+      }
+   }
+
+   if (answer.length() > 0)
 	{
       size_t idx = answer.find("ARC TRIGGERSCOPE 16");
-      if(idx!=string::npos)
+      if (idx != string::npos)
          bTS16_ = true;			
 
       idx = answer.find("ARC_LED 16");
-      if (idx!=string::npos)
+      if (idx != string::npos)
       bTS16_ = true;			
 				
       idx = answer.find("ARC TRIGGERSCOPE");
 
-      if (idx==string::npos)   
+      if (idx == string::npos)   
          idx = answer.find("ARC_LED");
 
-      if (idx!=string::npos)
+      if (idx != string::npos)
       {
          idx = answer.find("v.");
-         if (idx!=string::npos)
+         if (idx != string::npos)
             firmwareVer_ = atof(&(answer.c_str()[idx+2]));
          else
          {
             idx = answer.find("v");
-            if (idx!=string::npos)
+            if (idx != string::npos)
                firmwareVer_ = atof(&(answer.c_str()[idx+1]));
          }
          if (answer.substr(answer.length() - 2, 2) != "MM") 
