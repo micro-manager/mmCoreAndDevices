@@ -801,7 +801,7 @@ int LeicaScopeInterface::GetDevicesPresent(MM::Device& device, MM::Core& core)
          while (ss >> devId) {
             std::ostringstream cmd2;
             cmd2 << devId << "001";
-            int ret = core.SetSerialCommand(&device, port_.c_str(), cmd2.str().c_str(), "\r");
+            ret = core.SetSerialCommand(&device, port_.c_str(), cmd2.str().c_str(), "\r");
             if (ret != DEVICE_OK)
                return ret;
             char resp2[RCV_BUF_LENGTH] = "";
@@ -1073,8 +1073,10 @@ int LeicaScopeInterface::GetRevolverInfo(MM::Device& device, MM::Core& core)
    int minPos;
    ts >> minPos;
    ts >> minPos;
-   if ( 0 < minPos && minPos < 10)
-   scopeModel_->ObjectiveTurret_.SetMinPosition(minPos);
+   if (minPos < 1 || minPos > 9)
+      minPos = 1;
+   if (0 < minPos && minPos < 10) 
+      scopeModel_->ObjectiveTurret_.SetMinPosition(minPos);
    ts.clear();
    ts.seekg(0,std::ios::beg);
 
@@ -1089,6 +1091,8 @@ int LeicaScopeInterface::GetRevolverInfo(MM::Device& device, MM::Core& core)
    std::stringstream tt (answer);
    tt >> maxPos;
    tt >> maxPos;
+   if (maxPos < minPos || maxPos >= 10)
+      maxPos = 7;
    if ( 0 < maxPos && maxPos < 10)
       scopeModel_->ObjectiveTurret_.SetMaxPosition(maxPos);
 
