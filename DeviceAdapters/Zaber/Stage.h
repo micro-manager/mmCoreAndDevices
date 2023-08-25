@@ -74,7 +74,6 @@ private:
 	long deviceAddress_;
 	long axisNumber_;
 	long lockstepGroup_;
-	int homingTimeoutMs_;
 	double stepSizeUm_;
 	double convFactor_; // not very informative name
 	std::string cmdPrefix_;

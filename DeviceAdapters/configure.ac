@@ -39,9 +39,24 @@ AC_SUBST(MMDEVAPI_LDFLAGS)
 
 # Location of third party public files
 thirdpartypublic="${micromanager_path}/../3rdpartypublic"
-
+MMTHIRDPARTYPUBLIC="${thirdpartypublic}"
+AC_SUBST(MMTHIRDPARTYPUBLIC)
 
 MM_INSTALL_DIRS
+
+
+# Detect the target system
+build_linux=no
+build_osx=no
+
+case $host in
+    *linux*) build_linux=yes ;;
+    *apple-darwin*) build_osx=yes ;;
+    *) AC_MSG_ERROR(["Host $host is not supported"]) ;;
+esac
+
+AM_CONDITIONAL([HOST_LINUX], [test "x$build_linux" = xyes])
+AM_CONDITIONAL([HOST_OSX], [test "x$build_osx" = xyes])
 
 
 # libusb 0.1 or libusb-compat
