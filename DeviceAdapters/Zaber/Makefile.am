@@ -1,4 +1,4 @@
-AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) -I$(MMTHIRDPARTYPUBLIC)/zaber-motion/include
+AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) -I$(MMTHIRDPARTYPUBLIC)/Zaber/zaber-motion/include
 deviceadapter_LTLIBRARIES = libmmgr_dal_Zaber.la
 libmmgr_dal_Zaber_la_SOURCES = \
 	ObjectiveChanger.cpp \
@@ -20,7 +20,7 @@ libmmgr_dal_Zaber_la_SOURCES = \
 libmmgr_dal_Zaber_la_LIBADD = $(MMDEVAPI_LIBADD)
 
 if HOST_LINUX
-ZML_DIR_LIB = $(MMTHIRDPARTYPUBLIC)/zaber-motion/linux-amd64/lib
+ZML_DIR_LIB = $(MMTHIRDPARTYPUBLIC)/Zaber/zaber-motion/linux-amd64/lib
 RPATH_FLAGS = -Wl,-rpath -Wl,\$$ORIGIN
 dist_deviceadapter_DATA = \
 	$(ZML_DIR_LIB)/libzml.so.3.4 \
@@ -28,7 +28,7 @@ dist_deviceadapter_DATA = \
 endif
 
 if HOST_OSX
-ZML_DIR_LIB = $(MMTHIRDPARTYPUBLIC)/zaber-motion/darwin/lib
+ZML_DIR_LIB = $(MMTHIRDPARTYPUBLIC)/Zaber/zaber-motion/darwin/lib
 RPATH_FLAGS = -Wl,-rpath -Wl,@loader_path
 dist_deviceadapter_DATA = \
 	$(ZML_DIR_LIB)/libzaber-motion-lib-darwin-uni.3.4.3.dylib \
