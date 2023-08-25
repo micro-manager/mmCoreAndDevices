@@ -28,8 +28,6 @@
 
 #include <Windows.h>
 
-#include "FixSnprintf.h"
-
 #define __PIPER_API_EXPORT __declspec(dllimport)
 
 #include "PiperApiErrors.h"

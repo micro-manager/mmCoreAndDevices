@@ -31,8 +31,6 @@
    #include <unistd.h>
 #endif
 
-#include "FixSnprintf.h"
-
 char CDeviceUtils::m_pszBuffer[MM::MaxStrLength]={""};
 
 /**

@@ -21,7 +21,6 @@
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 const char* g_DeviceNameArduinoHub = "Arduino-Hub";
 const char* g_DeviceNameArduinoSwitch = "Arduino-Switch";

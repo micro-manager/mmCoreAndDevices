@@ -23,8 +23,6 @@
 #else
 #include <netinet/in.h>
 #endif
-#include "FixSnprintf.h"
-
 
 #include "MMDevice.h"
 #include "DeviceBase.h"

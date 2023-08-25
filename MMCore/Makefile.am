@@ -7,7 +7,6 @@ noinst_LTLIBRARIES = libMMCore.la
 libMMCore_la_LIBADD = ../MMDevice/libMMDevice.la
 
 libMMCore_la_SOURCES = \
-	../MMDevice/FixSnprintf.h \
 	../MMDevice/MMDevice.h \
 	../MMDevice/MMDeviceConstants.h \
 	../MMDevice/ModuleInterface.h \

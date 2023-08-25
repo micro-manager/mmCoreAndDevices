@@ -23,8 +23,6 @@
 // AUTHOR:        Vikram Kopuri, based on Code by Nenad Amodaj Nico Stuurman and Jizhen Zhao
 //
 
-#include "FixSnprintf.h"
-
 #include "wptr.h"
 #include <string>
 #include <math.h>

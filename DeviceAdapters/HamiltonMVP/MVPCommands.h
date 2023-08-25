@@ -41,9 +41,6 @@
 #include <string>
 #include <vector>
 
-#include "FixSnprintf.h"
-
-
 const char* const MVP_TERM = "\r";
 const char MVP_ACK = 6;
 const char MVP_NAK = 21;

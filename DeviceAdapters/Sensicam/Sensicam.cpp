@@ -40,12 +40,8 @@
 #include <sstream>
 #include <cmath>	// Liisa: for ceil
 
-
-
 // temp
 #include "stdio.h"
-
-#include "FixSnprintf.h"
 
 using namespace std;
 

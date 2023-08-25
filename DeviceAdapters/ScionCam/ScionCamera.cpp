@@ -37,12 +37,10 @@
 // CVS:           $Id: ScionCamera.c,v 1.33 2009/08/19 22:40:57 nenad Exp $
 //
 
-
 #ifdef WIN32
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "ScionCamera.h"
 #include <string>
