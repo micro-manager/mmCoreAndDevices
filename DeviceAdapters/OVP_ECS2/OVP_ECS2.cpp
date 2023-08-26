@@ -20,9 +20,6 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 06/2014
 //
 
-
-#include "FixSnprintf.h"
-
 #include "OVP_ECS2.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"

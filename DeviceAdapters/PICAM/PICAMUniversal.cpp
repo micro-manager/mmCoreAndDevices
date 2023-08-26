@@ -70,8 +70,6 @@ using namespace std;
 #define START_ONPROPERTY(name,action)
 #endif
 
-#include "FixSnprintf.h"
-
 // Number of references to this class
 int  Universal::refCount_ = 0;
 bool Universal::PICAM_initialized_ = false;

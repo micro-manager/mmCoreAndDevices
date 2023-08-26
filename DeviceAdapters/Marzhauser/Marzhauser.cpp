@@ -34,7 +34,6 @@
 #ifdef WIN32
 #pragma warning(disable: 4355)
 #endif
-#include "FixSnprintf.h"
 
 #include "Marzhauser.h"
 #include <string>

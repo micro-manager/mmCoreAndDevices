@@ -26,7 +26,6 @@
    #include <windows.h>   
    #pragma warning(disable : 4996) // disable warning for deperecated CRT functions on Windows 
 #endif
-#include "FixSnprintf.h"
 
 #include "ccmfilestd.h"
 #include "memoryinifile.h"

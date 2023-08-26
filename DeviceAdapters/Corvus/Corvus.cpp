@@ -37,8 +37,6 @@
 
 // "st" gives 8bit value. bit 0 tells if ready to execute; busy if "1"
 
-#include "FixSnprintf.h"
-
 #include <stdio.h>
 #include <string>
 #include <sstream>

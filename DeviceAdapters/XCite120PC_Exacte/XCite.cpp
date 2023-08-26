@@ -24,7 +24,6 @@
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "XCite120PC.h"
 #include "XCiteExacte.h"

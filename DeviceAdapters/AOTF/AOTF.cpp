@@ -29,7 +29,6 @@
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "AOTF.h"
 #include "ModuleInterface.h"

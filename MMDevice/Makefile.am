@@ -5,7 +5,6 @@ noinst_HEADERS = \
 	DeviceBase.h \
 	DeviceThreads.h \
 	DeviceUtils.h \
-	FixSnprintf.h \
 	ImageMetadata.h \
 	ImgBuffer.h \
 	MMDevice.h \

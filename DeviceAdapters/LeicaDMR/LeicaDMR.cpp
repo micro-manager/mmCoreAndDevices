@@ -26,8 +26,6 @@
 // AUTHOR:        Nico Stuurman (based on code by Nenad Amodaj), nico@cmp.ucsf.edu, April 2007
 //
 
-#include "FixSnprintf.h"
-
 #include "LeicaDMR.h"
 #include "LeicaDMRHub.h"
 #include <cstdio>

@@ -20,12 +20,10 @@
 // AUTHOR:        Nenad Amodaj, http://nenad.amodaj.com, 2011
 //
 
-
 #ifdef WIN32
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 // Prevent "unused variable" warnings.
 #ifdef __GNUC__

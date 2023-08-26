@@ -33,7 +33,6 @@
 #else
 	#include <errno.h>
 #endif
-#include "FixSnprintf.h"
 
 MT20hub::MT20hub() :
 	connected_(false),

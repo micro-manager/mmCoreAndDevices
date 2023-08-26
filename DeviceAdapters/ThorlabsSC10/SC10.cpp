@@ -13,7 +13,6 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "SC10.h"
 #include <string>

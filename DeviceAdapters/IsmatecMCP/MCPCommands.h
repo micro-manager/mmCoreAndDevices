@@ -39,9 +39,6 @@
 #include <cstdlib>
 #include <string>
 
-#include "FixSnprintf.h"
-
-
 const char* const MCP_CMD_TERM = "\r";
 const char* const MCP_RESP_TERM = "\r\n";
 

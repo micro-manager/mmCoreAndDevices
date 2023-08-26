@@ -15,7 +15,6 @@
 #else
     #include <dlfcn.h> 
 #endif
-#include "FixSnprintf.h"
 
 #include "MMITC18.h"
 #include "ModuleInterface.h"
