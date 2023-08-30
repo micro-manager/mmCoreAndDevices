@@ -1,7 +1,4 @@
-# We require C++17 because libzml is C++17. Setting the C++ standard for
-# individual device adapters is a hack and should not be imitated except when
-# there is no other option.
-AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) -I$(MMTHIRDPARTYPUBLIC)/Zaber/zaber-motion/include -std=c++17 -Wno-dynamic-exception-spec
+AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) -I$(MMTHIRDPARTYPUBLIC)/Zaber/zaber-motion/include
 
 deviceadapter_LTLIBRARIES = libmmgr_dal_Zaber.la
 libmmgr_dal_Zaber_la_SOURCES = \
