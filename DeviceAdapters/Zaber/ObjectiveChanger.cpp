@@ -60,8 +60,8 @@ ObjectiveChanger::ObjectiveChanger()
 	SetPropertyLimits("Objective Changer Device Number", 1, 99);
 
 	pAct = new CPropertyAction(this, &ObjectiveChanger::XLdaAddressGetSet);
-	CreateIntegerProperty("Focus State Device Number", xLdaAddress_, false, pAct, true);
-	SetPropertyLimits("Focus State Device Number", 1, 99);
+	CreateIntegerProperty("Focus Stage Device Number", xLdaAddress_, false, pAct, true);
+	SetPropertyLimits("Focus Stage Device Number", 1, 99);
 }
 
 
