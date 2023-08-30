@@ -39,8 +39,6 @@ AC_SUBST(MMDEVAPI_LDFLAGS)
 
 # Location of third party public files
 thirdpartypublic="${micromanager_path}/../3rdpartypublic"
-MMTHIRDPARTYPUBLIC="${thirdpartypublic}"
-AC_SUBST(MMTHIRDPARTYPUBLIC)
 
 MM_INSTALL_DIRS
 
@@ -395,6 +393,27 @@ AS_IF([test "x$want_opencv" != xno],
 
 
 AM_CONDITIONAL([BUILD_OPENCV], [test "x$use_opencv" = xyes])
+
+# Zaber Motion Library (hack: only support 3rdpartypublic copy currently)
+AC_MSG_CHECKING([for Zaber Motion Library in 3rdpartypublic])
+zml_header_to_check="${thirdpartypublic}/Zaber/zaber-motion/include/zaber/motion/library.h"
+AM_CONDITIONAL([BUILD_ZABER], [test -f $zml_header_to_check])
+if test -f "$zml_header_to_check"; then
+   AC_MSG_RESULT([found])
+   ZML_CPPFLAGS="-I${thirdpartypublic}/Zaber/zaber-motion/include"
+   ZML_LIBS="-lzml"
+   case $host in
+      *linux*)
+         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion/linux-amd64/lib" ;;
+      *apple-darwin*)
+         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion/darwin/lib" ;;
+   esac
+else
+   AC_MSG_RESULT([not found])
+fi
+AC_SUBST(ZML_CPPFLAGS)
+AC_SUBST(ZML_LIBS)
+AC_SUBST(ZML_LDFLAGS)
 
 
 # Only build ... when the code is there

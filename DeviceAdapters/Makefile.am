@@ -65,6 +65,9 @@ endif
 if BUILD_V4L2
    V4L = Video4Linux
 endif
+if BUILD_ZABER
+   ZABER = Zaber
+endif
 
 # Please keep these ASCII-lexically sorted (pass through sort(1)).
 SUBDIRS = \
@@ -90,6 +93,7 @@ SUBDIRS = \
 	$(SPOT) \
 	$(USBMANAGER) \
 	$(V4L) \
+	$(ZABER) \
 	AAAOTF \
 	AOTF \
 	ASIFW1000 \
@@ -203,7 +207,6 @@ SUBDIRS = \
 	Xcite \
 	YodnE600 \
 	Yokogawa \
-	Zaber \
 	ZeissCAN \
 	ZeissCAN29 \
 	kdv \
