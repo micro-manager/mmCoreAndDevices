@@ -21,4 +21,6 @@ libmmgr_dal_Zaber_la_SOURCES = \
 libmmgr_dal_Zaber_la_LIBADD = $(MMDEVAPI_LIBADD) $(ZML_LIBS)
 libmmgr_dal_Zaber_la_LDFLAGS = $(MMDEVAPI_LDFLAGS) $(ZML_LDFLAGS)
 
+dist_deviceadapter_DATA = $(ZML_LIBS_TO_COPY)
+
 EXTRA_DIST = Zaber.vcxproj Zaber.vcxproj.filters license.txt

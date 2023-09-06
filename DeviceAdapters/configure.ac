@@ -404,9 +404,17 @@ if test -f "$zml_header_to_check"; then
    ZML_LIBS="-lzml"
    case $host in
       *linux*)
-         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion/linux-amd64/lib" ;;
+         # Linux builds by users should install ZML libs
+         zml_linux_libdir="${thirdpartypublic}/Zaber/zaber-motion/linux-amd64/lib"
+         ZML_LDFLAGS="-L${zml_linux_libdir} -Wl,-rpath,"'\$$ORIGIN'
+         ZML_LIBS_TO_COPY="${zml_linux_libdir}/libzml.so.3.4 ${zml_linux_libdir}/libzaber-motion-lib-linux-amd64.so.3.4.3"
+         ;;
+
       *apple-darwin*)
-         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion/darwin/lib" ;;
+         # macOS build for packaging does not ship ZML
+         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion/darwin/lib"
+         ZML_LIBS_TO_COPY=""
+         ;;
    esac
 else
    AC_MSG_RESULT([not found])
@@ -414,6 +422,7 @@ fi
 AC_SUBST(ZML_CPPFLAGS)
 AC_SUBST(ZML_LIBS)
 AC_SUBST(ZML_LDFLAGS)
+AC_SUBST(ZML_LIBS_TO_COPY)
 
 
 # Only build ... when the code is there
