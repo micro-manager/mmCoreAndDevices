@@ -397,7 +397,7 @@ public:
    { 
       if (affineMatrix.size() != 6) 
       {
-         throw new CMMError("PixelConfig affineMatrix must have 6 elements");
+         throw CMMError("PixelConfig affineMatrix must have 6 elements");
       }
       for (unsigned int i=0; i < affineMatrix.size(); i++) 
       {
