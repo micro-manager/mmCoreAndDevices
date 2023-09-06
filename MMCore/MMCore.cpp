@@ -6707,6 +6707,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
    {
       os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreFocus << ',' << focus->GetLabel() << endl;
    }
+   os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreAutoShutter << ',' << (getAutoShutter() ? '1' : '0') << endl;
 }
 
 /**
