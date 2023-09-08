@@ -1,5 +1,5 @@
 /*=============================================================================
-  Copyright (C) 2012 - 2023 Allied Vision Technologies.  All Rights Reserved.
+  Copyright (C) 2023 Allied Vision Technologies.  All Rights Reserved.
 
   Redistribution of this header file, in original or modified form, without
   prior written consent of Allied Vision Technologies is prohibited.
@@ -121,7 +121,7 @@ bool LibLoader::isLoaded() const { return m_loaded; }
 #ifdef __linux__
 LibLoader::LibLoader(const char *lib, const char *libPath)
     : m_libName(lib), m_libPath(libPath), m_module(nullptr), m_loaded(false) {
-  std::string path = std::string(m_libPath) + std::string(m_libName);
+  std::string path = std::string(m_libName);
   dlerror();
   m_module = dlopen(path.c_str(), RTLD_NOW);
   if (m_module != nullptr) {
