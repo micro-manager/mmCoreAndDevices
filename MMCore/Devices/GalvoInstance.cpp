@@ -22,25 +22,26 @@
 #include "GalvoInstance.h"
 
 
-int GalvoInstance::PointAndFire(double x, double y, double time_us) { return GetImpl()->PointAndFire(x, y, time_us); }
-int GalvoInstance::SetSpotInterval(double pulseInterval_us) { return GetImpl()->SetSpotInterval(pulseInterval_us); }
-int GalvoInstance::SetPosition(double x, double y) { return GetImpl()->SetPosition(x, y); }
-int GalvoInstance::GetPosition(double& x, double& y) { return GetImpl()->GetPosition(x, y); }
-int GalvoInstance::SetIlluminationState(bool on) { return GetImpl()->SetIlluminationState(on); }
-double GalvoInstance::GetXRange() { return GetImpl()->GetXRange(); }
-double GalvoInstance::GetXMinimum() { return GetImpl()->GetXMinimum(); }
-double GalvoInstance::GetYRange() { return GetImpl()->GetYRange(); }
-double GalvoInstance::GetYMinimum() { return GetImpl()->GetYMinimum(); }
-int GalvoInstance::AddPolygonVertex(int polygonIndex, double x, double y) { return GetImpl()->AddPolygonVertex(polygonIndex, x, y); }
-int GalvoInstance::DeletePolygons() { return GetImpl()->DeletePolygons(); }
-int GalvoInstance::RunSequence() { return GetImpl()->RunSequence(); }
-int GalvoInstance::LoadPolygons() { return GetImpl()->LoadPolygons(); }
-int GalvoInstance::SetPolygonRepetitions(int repetitions) { return GetImpl()->SetPolygonRepetitions(repetitions); }
-int GalvoInstance::RunPolygons() { return GetImpl()->RunPolygons(); }
-int GalvoInstance::StopSequence() { return GetImpl()->StopSequence(); }
+int GalvoInstance::PointAndFire(double x, double y, double time_us) { RequireInitialized(); return GetImpl()->PointAndFire(x, y, time_us); }
+int GalvoInstance::SetSpotInterval(double pulseInterval_us) { RequireInitialized(); return GetImpl()->SetSpotInterval(pulseInterval_us); }
+int GalvoInstance::SetPosition(double x, double y) { RequireInitialized(); return GetImpl()->SetPosition(x, y); }
+int GalvoInstance::GetPosition(double& x, double& y) { RequireInitialized(); return GetImpl()->GetPosition(x, y); }
+int GalvoInstance::SetIlluminationState(bool on) { RequireInitialized(); return GetImpl()->SetIlluminationState(on); }
+double GalvoInstance::GetXRange() { RequireInitialized(); return GetImpl()->GetXRange(); }
+double GalvoInstance::GetXMinimum() { RequireInitialized(); return GetImpl()->GetXMinimum(); }
+double GalvoInstance::GetYRange() { RequireInitialized(); return GetImpl()->GetYRange(); }
+double GalvoInstance::GetYMinimum() { RequireInitialized(); return GetImpl()->GetYMinimum(); }
+int GalvoInstance::AddPolygonVertex(int polygonIndex, double x, double y) { RequireInitialized(); return GetImpl()->AddPolygonVertex(polygonIndex, x, y); }
+int GalvoInstance::DeletePolygons() { RequireInitialized(); return GetImpl()->DeletePolygons(); }
+int GalvoInstance::RunSequence() { RequireInitialized(); return GetImpl()->RunSequence(); }
+int GalvoInstance::LoadPolygons() { RequireInitialized(); return GetImpl()->LoadPolygons(); }
+int GalvoInstance::SetPolygonRepetitions(int repetitions) { RequireInitialized(); return GetImpl()->SetPolygonRepetitions(repetitions); }
+int GalvoInstance::RunPolygons() { RequireInitialized(); return GetImpl()->RunPolygons(); }
+int GalvoInstance::StopSequence() { RequireInitialized(); return GetImpl()->StopSequence(); }
 
 std::string GalvoInstance::GetChannel()
 {
+   RequireInitialized();
    DeviceStringBuffer nameBuf(this, "GetChannel");
    int err = GetImpl()->GetChannel(nameBuf.GetBuffer());
    ThrowIfError(err, "Cannot get current channel name");

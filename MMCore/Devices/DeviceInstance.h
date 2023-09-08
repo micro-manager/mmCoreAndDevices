@@ -71,6 +71,8 @@ private:
    DeleteDeviceFunction deleteFunction_;
    mm::logging::Logger deviceLogger_;
    mm::logging::Logger coreLogger_;
+   bool initializeCalled_ = false;
+   bool initialized_ = false;
 
 public:
    DeviceInstance(const DeviceInstance&) = delete;
@@ -112,6 +114,7 @@ protected:
    void ThrowError(const std::string& message) const;
    void ThrowIfError(int code) const;
    void ThrowIfError(int code, const std::string& message) const;
+   void RequireInitialized() const;
 
    /// Utility class for getting fixed-length strings from the device interface.
    /**
