@@ -22,12 +22,13 @@
 #include "StateInstance.h"
 
 
-int StateInstance::SetPosition(long pos) { return GetImpl()->SetPosition(pos); }
-int StateInstance::SetPosition(const char* label) { return GetImpl()->SetPosition(label); }
-int StateInstance::GetPosition(long& pos) const { return GetImpl()->GetPosition(pos); }
+int StateInstance::SetPosition(long pos) { RequireInitialized(); return GetImpl()->SetPosition(pos); }
+int StateInstance::SetPosition(const char* label) { RequireInitialized(); return GetImpl()->SetPosition(label); }
+int StateInstance::GetPosition(long& pos) const { RequireInitialized(); return GetImpl()->GetPosition(pos); }
 
 std::string StateInstance::GetPositionLabel() const
 {
+   RequireInitialized();
    DeviceStringBuffer labelBuf(this, "GetPosition");
    int err = GetImpl()->GetPosition(labelBuf.GetBuffer());
    ThrowIfError(err, "Cannot get current position label");
@@ -36,14 +37,15 @@ std::string StateInstance::GetPositionLabel() const
 
 std::string StateInstance::GetPositionLabel(long pos) const
 {
+   RequireInitialized();
    DeviceStringBuffer labelBuf(this, "GetPositionLabel");
    int err = GetImpl()->GetPositionLabel(pos, labelBuf.GetBuffer());
    ThrowIfError(err, "Cannot get position label at index " + ToString(pos));
    return labelBuf.Get();
 }
 
-int StateInstance::GetLabelPosition(const char* label, long& pos) const { return GetImpl()->GetLabelPosition(label, pos); }
-int StateInstance::SetPositionLabel(long pos, const char* label) { return GetImpl()->SetPositionLabel(pos, label); }
-unsigned long StateInstance::GetNumberOfPositions() const { return GetImpl()->GetNumberOfPositions(); }
-int StateInstance::SetGateOpen(bool open) { return GetImpl()->SetGateOpen(open); }
-int StateInstance::GetGateOpen(bool& open) { return GetImpl()->GetGateOpen(open); }
+int StateInstance::GetLabelPosition(const char* label, long& pos) const { RequireInitialized(); return GetImpl()->GetLabelPosition(label, pos); }
+int StateInstance::SetPositionLabel(long pos, const char* label) { RequireInitialized(); return GetImpl()->SetPositionLabel(pos, label); }
+unsigned long StateInstance::GetNumberOfPositions() const { RequireInitialized(); return GetImpl()->GetNumberOfPositions(); }
+int StateInstance::SetGateOpen(bool open) { RequireInitialized(); return GetImpl()->SetGateOpen(open); }
+int StateInstance::GetGateOpen(bool& open) { RequireInitialized(); return GetImpl()->GetGateOpen(open); }

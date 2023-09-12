@@ -22,9 +22,9 @@
 #include "SerialInstance.h"
 
 
-MM::PortType SerialInstance::GetPortType() const { return GetImpl()->GetPortType(); }
-int SerialInstance::SetCommand(const char* command, const char* term) { return GetImpl()->SetCommand(command, term); }
-int SerialInstance::GetAnswer(char* txt, unsigned maxChars, const char* term) { return GetImpl()->GetAnswer(txt, maxChars, term); }
-int SerialInstance::Write(const unsigned char* buf, unsigned long bufLen) { return GetImpl()->Write(buf, bufLen); }
-int SerialInstance::Read(unsigned char* buf, unsigned long bufLen, unsigned long& charsRead) { return GetImpl()->Read(buf, bufLen, charsRead); }
-int SerialInstance::Purge() { return GetImpl()->Purge(); }
+MM::PortType SerialInstance::GetPortType() const { RequireInitialized(); return GetImpl()->GetPortType(); }
+int SerialInstance::SetCommand(const char* command, const char* term) { RequireInitialized(); return GetImpl()->SetCommand(command, term); }
+int SerialInstance::GetAnswer(char* txt, unsigned maxChars, const char* term) { RequireInitialized(); return GetImpl()->GetAnswer(txt, maxChars, term); }
+int SerialInstance::Write(const unsigned char* buf, unsigned long bufLen) { RequireInitialized(); return GetImpl()->Write(buf, bufLen); }
+int SerialInstance::Read(unsigned char* buf, unsigned long bufLen, unsigned long& charsRead) { RequireInitialized(); return GetImpl()->Read(buf, bufLen, charsRead); }
+int SerialInstance::Purge() { RequireInitialized(); return GetImpl()->Purge(); }

@@ -22,4 +22,4 @@
 #include "ImageProcessorInstance.h"
 
 
-int ImageProcessorInstance::Process(unsigned char* buffer, unsigned width, unsigned height, unsigned byteDepth) { return GetImpl()->Process(buffer, width, height, byteDepth); }
+int ImageProcessorInstance::Process(unsigned char* buffer, unsigned width, unsigned height, unsigned byteDepth) { RequireInitialized(); return GetImpl()->Process(buffer, width, height, byteDepth); }

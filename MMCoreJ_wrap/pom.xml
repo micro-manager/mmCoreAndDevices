@@ -3,7 +3,7 @@
    <groupId>org.micro-manager.mmcorej</groupId>
    <artifactId>MMCoreJ</artifactId>
    <packaging>jar</packaging>
-   <version>10.4.0</version>
+   <version>10.5.0</version>
    <name>Micro-Manager Java Interface to MMCore</name>
    <description>Micro-Manager is open source software for control of automated/motorized microscopes.  This specific packages provides the Java interface to the device abstractino layer (MMCore) that is written in C++ with a C-interface</description>
    <url>http://micro-manager.org</url>
