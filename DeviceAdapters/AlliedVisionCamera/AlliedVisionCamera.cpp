@@ -86,7 +86,8 @@ AlliedVisionCamera::AlliedVisionCamera(const char* deviceName)
       m_currentPixelFormat{} {
   CreateHubIDProperty();
   // Binning property is a Core Property, we will have a dummy one
-  CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, nullptr);
+  CreateProperty(MM::g_Keyword_Binning, "N/A", MM::String, true, nullptr);
+  AddAllowedValue(MM::g_Keyword_Binning, "N/A");
 }
 
 int AlliedVisionCamera::Initialize() {
@@ -314,7 +315,7 @@ int AlliedVisionCamera::GetBinning() const {
 
 int AlliedVisionCamera::SetBinning(int binSize) {
   // Binning not supported. We support BinningVertical/Horizontal
-  return DEVICE_OK;
+  return DEVICE_ERR;
 }
 
 double AlliedVisionCamera::GetExposure() const {
