@@ -450,6 +450,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
   // Init
   std::vector<std::string> featureNames = {};
   VmbError_t err = VmbErrorSuccess;
+  MM::Property* pChildProperty = (MM::Property*)pProp;
   const auto propertyName = pProp->GetName();
 
   // Check property mapping
@@ -459,7 +460,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
   for (const auto& featureName : featureNames) {
     // Get Feature Info and Access Mode
     VmbFeatureInfo_t featureInfo;
-    bool rMode{}, wMode{}, featureAvailable{};
+    bool rMode{}, wMode{}, readOnly{}, featureAvailable{};
     err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(),
                                        &featureInfo, sizeof(featureInfo)) |
           m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(), &rMode,
@@ -469,15 +470,9 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
       return err;
     }
 
+    readOnly = (rMode && !wMode);
     featureAvailable = rMode || wMode;
-    if (!featureAvailable) {
-      LOG_ERROR(VmbErrorFeaturesUnavailable,
-                "Feature is currently not available! Feature: " + featureName);
-      return err;
-    }
-    // TODO
-    // Set somehow property to be unavailable when there is no r and w modes
-
+   
     // Get values
     std::string propertyValue{}, featureValue{};
     pProp->Get(propertyValue);
@@ -485,6 +480,35 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
     // Handle property value change
     switch (eAct) {
       case MM::ActionType::BeforeGet:  //!< Update property from feature
+        
+        // Update feature range
+        if (featureAvailable)
+        {
+          err = setAllowedValues(&featureInfo, propertyName.c_str());
+        }
+        // Feature not available -> clear value and range
+        else {
+          switch (featureInfo.featureDataType) {
+            case VmbFeatureDataInt:
+            case VmbFeatureDataFloat:
+              err = SetPropertyLimits(propertyName.c_str(), 0.0, 0.0);
+              pProp->Set("0");
+              break;
+            case VmbFeatureDataEnum:
+            case VmbFeatureDataString:
+            case VmbFeatureDataBool:
+            case VmbFeatureDataCommand:
+              ClearAllowedValues(propertyName.c_str());
+              pProp->Set("");
+              break;
+            case VmbFeatureDataRaw:
+            case VmbFeatureDataNone:
+            default:
+              // feature type not supported
+              break;
+          }
+        }
+          
         if (rMode) {
           err =
               getFeatureValue(&featureInfo, featureName.c_str(), featureValue);
@@ -511,7 +535,8 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
           }
         }
 
-        err = setAllowedValues(&featureInfo, propertyName.c_str());
+        // Set property to readonly (grey out in GUI) if it is readonly or unavailable
+        pChildProperty->SetReadOnly(readOnly || !featureAvailable);
 
         break;
       case MM::ActionType::AfterSet:  //!< Update feature from property
@@ -831,9 +856,20 @@ VmbError_t AlliedVisionCamera::setAllowedValues(const VmbFeatureInfo_t* feature,
   VmbError_t err = VmbErrorSuccess;
 
   switch (feature->featureDataType) {
-    case VmbFeatureDataCommand:
     case VmbFeatureDataBool: {
-      // Already set in creation
+      // Already set in creation, but maybe reset when become unavailable
+      if (GetNumberOfPropertyValues(propertyName) == 0) {
+          AddAllowedValue(propertyName, g_False);
+          AddAllowedValue(propertyName, g_True);
+      }
+      break;
+    }
+    case VmbFeatureDataCommand: {
+      // Already set in creation, but maybe reset when become unavailable
+      if (GetNumberOfPropertyValues(propertyName) == 0) {
+        AddAllowedValue(propertyName, g_Command);
+        AddAllowedValue(propertyName, g_Execute);
+      }
       break;
     }
     case VmbFeatureDataFloat: {
