@@ -28,11 +28,13 @@
 #include "DeviceBase.h"
 #include "Loader/LibLoader.h"
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // STATIC FEATURE NAMES (FROM VIMBA)
 ///////////////////////////////////////////////////////////////////////////////
 static constexpr const char* g_PixelFormatFeature = "PixelFormat";
 static constexpr const char* g_ExposureFeature = "ExposureTime";
+static constexpr const char* g_ExposureAbsFeature = "ExposureTimeAbs";
 static constexpr const char* g_BinningHorizontalFeature = "BinningHorizontal";
 static constexpr const char* g_BinningVerticalFeature = "BinningVertical";
 static constexpr const char* g_Width = "Width";
@@ -54,6 +56,8 @@ static constexpr const char* g_EventCategory = "EventControl";
 static constexpr const char* g_AcquisitionStart = "AcquisitionStart";
 static constexpr const char* g_AcquisitionStop = "AcquisitionStop";
 static constexpr const char* g_AcqusitionStatus = "AcqusitionStatus";
+
+static constexpr const double MS_TO_US = 1000.0;
 
 /**
  * @brief Pixel Format class that contains VMB Pixel Format info and contains
@@ -370,10 +374,9 @@ class AlliedVisionCamera
   /**
    * @brief Helper method to map feature name into property name of uManager
    * @param[in] feature     Vimba Feature name
-   * @param property        uManager property name
+   * @return                uManager property name
    */
-  void mapFeatureNameToPropertyName(const char* feature,
-                                    std::string& property) const;
+  std::string mapFeatureNameToPropertyName(const char* feature) const;
 
   /**
    * @brief Helper method to map uManager property in Vimba feature or features
@@ -381,8 +384,7 @@ class AlliedVisionCamera
    * @param[in] property    uManager property name
    * @param featureNames    Vimba feature or features name
    */
-  void mapPropertyNameToFeatureNames(
-      const char* property, std::vector<std::string>& featureNames) const;
+  std::string mapPropertyNameToFeatureName(const char* property) const;
 
   /**
    * @brief In case trying to set invalid value, adjust it to the closest with
@@ -428,12 +430,17 @@ class AlliedVisionCamera
   VmbUint32_t m_payloadSize;    //<! Payload size of image for Vimba
   bool m_isAcquisitionRunning;  //<! Sequence acquisition status (true if
                                 // running)
+
+  std::string m_exposureFeatureName;
+
+  
   PixelFormatConverter
       m_currentPixelFormat;  //<! Current Pixel Format information
   static const std::unordered_map<std::string, std::string>
       m_featureToProperty;  //!< Map of features name into uManager properties
-  static const std::unordered_multimap<std::string, std::string>
+  std::unordered_map<std::string, std::string>
       m_propertyToFeature;  //!< Map of uManager properties into Vimba features
+
 };
 
 #endif
