@@ -450,17 +450,24 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
   // Init
   std::vector<std::string> featureNames = {};
   VmbError_t err = VmbErrorSuccess;
-  MM::Property* pChildProperty = (MM::Property*)pProp;
+  
+  auto pChildProperty = dynamic_cast<MM::Property*>(pProp);
+  if (pChildProperty == nullptr) {
+    err = VmbErrorBadParameter;
+    LOG_ERROR(err, "Could not get Property from PropertyBase object");
+    return err;
+  }
+
   const auto propertyName = pProp->GetName();
 
   // Check property mapping
   mapPropertyNameToFeatureNames(propertyName.c_str(), featureNames);
 
-  // Retrive each feature
+  // Retrieve each feature
   for (const auto& featureName : featureNames) {
     // Get Feature Info and Access Mode
     VmbFeatureInfo_t featureInfo;
-    bool rMode{}, wMode{}, readOnly{}, featureAvailable{};
+    bool rMode{}, wMode{};
     err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(),
                                        &featureInfo, sizeof(featureInfo)) |
           m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(), &rMode,
@@ -470,8 +477,8 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
       return err;
     }
 
-    readOnly = (rMode && !wMode);
-    featureAvailable = rMode || wMode;
+    const bool readOnly = (rMode && !wMode);
+    const bool featureAvailable = (rMode || wMode);
    
     // Get values
     std::string propertyValue{}, featureValue{};
@@ -487,22 +494,17 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
           err = setAllowedValues(&featureInfo, propertyName.c_str());
         }
         // Feature not available -> clear value and range
-        else {
-          switch (featureInfo.featureDataType) {
-            case VmbFeatureDataInt:
-            case VmbFeatureDataFloat:
+        else {            
+          switch (pProp->GetType()) {
+            case MM::Float:
+            case MM::Integer:
               err = SetPropertyLimits(propertyName.c_str(), 0.0, 0.0);
               pProp->Set("0");
               break;
-            case VmbFeatureDataEnum:
-            case VmbFeatureDataString:
-            case VmbFeatureDataBool:
-            case VmbFeatureDataCommand:
+            case MM::String:
               ClearAllowedValues(propertyName.c_str());
               pProp->Set("");
               break;
-            case VmbFeatureDataRaw:
-            case VmbFeatureDataNone:
             default:
               // feature type not supported
               break;
