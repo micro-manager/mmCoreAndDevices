@@ -32,15 +32,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 // STATIC VALUES
 ///////////////////////////////////////////////////////////////////////////////
-const std::unordered_map<std::string, std::string>
-    AlliedVisionCamera::m_featureToProperty = {
-        {g_PixelFormatFeature, MM::g_Keyword_PixelType},
-        {g_ExposureFeature, MM::g_Keyword_Exposure}};
 
-const std::unordered_multimap<std::string, std::string>
-    AlliedVisionCamera::m_propertyToFeature = {
-        {MM::g_Keyword_PixelType, g_PixelFormatFeature},
-        {MM::g_Keyword_Exposure, g_ExposureFeature}};
+const std::unordered_map<std::string, std::string> AlliedVisionCamera::m_featureToProperty = 
+{
+    {g_PixelFormatFeature, MM::g_Keyword_PixelType }
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -83,7 +79,9 @@ AlliedVisionCamera::AlliedVisionCamera(const char* deviceName)
       m_bufferSize{0},
       m_payloadSize{0},
       m_isAcquisitionRunning{false},
-      m_currentPixelFormat{} {
+      m_currentPixelFormat{},
+      m_propertyToFeature{},
+      m_exposureFeatureName{} {
   CreateHubIDProperty();
   // Binning property is a Core Property, we will have a dummy one
   CreateProperty(MM::g_Keyword_Binning, "N/A", MM::String, true, nullptr);
@@ -132,23 +130,47 @@ VmbError_t AlliedVisionCamera::setupProperties() {
     return err;
   }
 
-  std::shared_ptr<VmbFeatureInfo_t> features =
-      std::shared_ptr<VmbFeatureInfo_t>(new VmbFeatureInfo_t[featureCount]);
-  err = m_sdk->VmbFeaturesList_t(m_handle, features.get(), featureCount,
+  std::vector<VmbFeatureInfo_t> features{featureCount};
+
+  err = m_sdk->VmbFeaturesList_t(m_handle, features.data(), featureCount,
                                  &featureCount, sizeof(VmbFeatureInfo_t));
   if (err != VmbErrorSuccess) {
     LOG_ERROR(err, "Error occurred when obtaining features!");
     return err;
   }
 
-  const VmbFeatureInfo_t* end = features.get() + featureCount;
-  for (VmbFeatureInfo_t* feature = features.get(); feature != end; ++feature) {
-    err = createPropertyFromFeature(feature);
-    if (err != VmbErrorSuccess) {
-      LOG_ERROR(err,
-                "Error while creating property" + std::string(feature->name));
-      continue;
-    }
+  const auto exposureTime = std::find_if(features.begin(), features.end(), [](const auto& feat) 
+  {
+      return std::string(feat.name) == g_ExposureFeature;
+  });
+
+  if (exposureTime != features.end()) 
+  {
+      m_exposureFeatureName = std::string{ exposureTime->name };
+  }
+  else
+  {
+      const auto exposureTimeAbs = std::find_if(features.begin(), features.end(), [](const auto& feat)
+      {
+            return std::string(feat.name) == g_ExposureAbsFeature;
+      });
+
+      if (exposureTimeAbs != features.end())
+      {
+          m_exposureFeatureName = std::string{ exposureTimeAbs->name };
+      }
+  }
+  
+
+
+  for (const auto & feature : features) {
+      if (feature.visibility != VmbFeatureVisibilityInvisible)
+      {
+          err = createPropertyFromFeature(&feature);
+          if (err != VmbErrorSuccess) {
+              LOG_ERROR(err, "Error while creating property" + std::string(feature.name));
+          }
+      }
   }
 
   return VmbErrorSuccess;
@@ -191,8 +213,20 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(
   }
 
   // Map feature to property name
-  std::string propertyName = {};
-  mapFeatureNameToPropertyName(feature->name, propertyName);
+  const auto propertyName = [&] {
+      const auto tempName = mapFeatureNameToPropertyName(feature->name);
+
+      if (tempName != feature->name)
+      {
+          if (!m_propertyToFeature.count(tempName))
+          {
+              m_propertyToFeature.emplace(tempName, feature->name);
+              return tempName;
+          }
+      }
+
+      return std::string(feature->name);
+  }();
 
   // uManager callback
   CPropertyAction* uManagerCallback =
@@ -204,8 +238,7 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(
     (void)handle;
     AlliedVisionCamera* camera =
         reinterpret_cast<AlliedVisionCamera*>(userContext);
-    std::string propertyName;
-    camera->mapFeatureNameToPropertyName(name, propertyName);
+    const auto propertyName = camera->mapFeatureNameToPropertyName(name);
     auto err = camera->UpdateProperty(propertyName.c_str());
     if (err != VmbErrorSuccess) {
       camera->LOG_ERROR(err, "Property: " + propertyName + " update failed");
@@ -320,17 +353,17 @@ int AlliedVisionCamera::SetBinning(int binSize) {
 
 double AlliedVisionCamera::GetExposure() const {
   std::string value{};
-  auto ret = getFeatureValue(g_ExposureFeature, value);
+  auto ret = getFeatureValue(m_exposureFeatureName.c_str(), value);
   if (ret != VmbErrorSuccess) {
     LOG_ERROR(ret, "Error while getting exposure!");
     return 0;
   }
 
-  return strtod(value.c_str(), nullptr);
+  return std::stod(value) / MS_TO_US;
 }
 
 void AlliedVisionCamera::SetExposure(double exp_ms) {
-  SetProperty(MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(exp_ms));
+  SetProperty(m_exposureFeatureName.c_str(), CDeviceUtils::ConvertToString(exp_ms * MS_TO_US));
   GetCoreCallback()->OnExposureChanged(this, exp_ms);
 }
 
@@ -452,7 +485,6 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
 
   const auto res = [&] {
 	  // Init
-	  std::vector<std::string> featureNames = {};
 	  VmbError_t err = VmbErrorSuccess;
 
 	  auto pChildProperty = dynamic_cast<MM::Property*>(pProp);
@@ -465,120 +497,117 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase* pProp,
 	  const auto propertyName = pProp->GetName();
 
 	  // Check property mapping
-	  mapPropertyNameToFeatureNames(propertyName.c_str(), featureNames);
+	  auto const featureName = mapPropertyNameToFeatureName(propertyName.c_str());
 
-	  // Retrieve each feature
-	  for (const auto& featureName : featureNames) {
-		  // Get Feature Info and Access Mode
-		  VmbFeatureInfo_t featureInfo;
-		  bool rMode{}, wMode{};
-		  err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(),
-			  &featureInfo, sizeof(featureInfo)) |
-			  m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(), &rMode,
-				  &wMode);
-		  if (VmbErrorSuccess != err) {
-			  LOG_ERROR(err, "Error while getting info or access query!");
-			  return err;
-		  }
+      // Get Feature Info and Access Mode
+      VmbFeatureInfo_t featureInfo;
+      bool rMode{}, wMode{};
+      err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(),
+          &featureInfo, sizeof(featureInfo)) |
+          m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(), &rMode,
+              &wMode);
+      if (VmbErrorSuccess != err) {
+          LOG_ERROR(err, "Error while getting info or access query!");
+          return err;
+      }
 
-		  const bool readOnly = (rMode && !wMode);
-		  const bool featureAvailable = (rMode || wMode);
+      const bool readOnly = (rMode && !wMode);
+      const bool featureAvailable = (rMode || wMode);
 
-		  // Get values
-		  std::string propertyValue{}, featureValue{};
-		  pProp->Get(propertyValue);
+      // Get values
+      std::string propertyValue{}, featureValue{};
+      pProp->Get(propertyValue);
 
-		  // Handle property value change
-		  switch (eAct) {
-		  case MM::ActionType::BeforeGet:  //!< Update property from feature
+      // Handle property value change
+      switch (eAct) {
+      case MM::ActionType::BeforeGet:  //!< Update property from feature
 
-			// Update feature range
-			  if (featureAvailable)
-			  {
-				  err = setAllowedValues(&featureInfo, propertyName.c_str());
-			  }
-			  // Feature not available -> clear value and range
-			  else {
-				  switch (pProp->GetType()) {
-				  case MM::Float:
-				  case MM::Integer:
-					  err = SetPropertyLimits(propertyName.c_str(), 0.0, 0.0);
-					  pProp->Set("0");
-					  break;
-				  case MM::String:
-					  ClearAllowedValues(propertyName.c_str());
-					  pProp->Set("");
-					  break;
-				  default:
-					  // feature type not supported
-					  break;
-				  }
-			  }
+        // Update feature range
+          if (featureAvailable)
+          {
+              err = setAllowedValues(&featureInfo, propertyName.c_str());
+          }
+          // Feature not available -> clear value and range
+          else {
+              switch (pProp->GetType()) {
+              case MM::Float:
+              case MM::Integer:
+                  err = SetPropertyLimits(propertyName.c_str(), 0.0, 0.0);
+                  pProp->Set("0");
+                  break;
+              case MM::String:
+                  ClearAllowedValues(propertyName.c_str());
+                  pProp->Set("");
+                  break;
+              default:
+                  // feature type not supported
+                  break;
+              }
+          }
 
-			  if (rMode) {
-				  err =
-					  getFeatureValue(&featureInfo, featureName.c_str(), featureValue);
-				  if (VmbErrorSuccess != err) {
-					  LOG_ERROR(err, "Error while getting feature value " + featureName);
-					  return err;
-				  }
+          if (rMode) {
+              err =
+                  getFeatureValue(&featureInfo, featureName.c_str(), featureValue);
+              if (VmbErrorSuccess != err) {
+                  LOG_ERROR(err, "Error while getting feature value " + featureName);
+                  return err;
+              }
 
-				  // Update property
-				  if (propertyValue != featureValue) {
-					  pProp->Set(featureValue.c_str());
-					  err = GetCoreCallback()->OnPropertyChanged(
-						  this, propertyName.c_str(), featureValue.c_str());
-					  if (propertyName == MM::g_Keyword_PixelType) {
-						  handlePixelFormatChange(featureValue);
-					  }
+              // Update property
+              if (propertyValue != featureValue) {
+                  pProp->Set(featureValue.c_str());
+                  err = GetCoreCallback()->OnPropertyChanged(
+                      this, propertyName.c_str(), featureValue.c_str());
+                  if (propertyName == MM::g_Keyword_PixelType) {
+                      handlePixelFormatChange(featureValue);
+                  }
 
-					  if (VmbErrorSuccess != err) {
-						  LOG_ERROR(err,
-							  "Error while calling OnPropertyChanged callback for " +
-							  featureName);
-						  return err;
-					  }
-				  }
-			  }
+                  if (VmbErrorSuccess != err) {
+                      LOG_ERROR(err,
+                          "Error while calling OnPropertyChanged callback for " +
+                          featureName);
+                      return err;
+                  }
+              }
+          }
 
-			  // Set property to readonly (grey out in GUI) if it is readonly or unavailable
-			  pChildProperty->SetReadOnly(readOnly || !featureAvailable);
+          // Set property to readonly (grey out in GUI) if it is readonly or unavailable
+          pChildProperty->SetReadOnly(readOnly || !featureAvailable);
 
-			  break;
-		  case MM::ActionType::AfterSet:  //!< Update feature from property
-			  err = setFeatureValue(&featureInfo, featureName.c_str(), propertyValue);
-			  if (err == VmbErrorInvalidValue) {
-				  // Update limits first to have latest min and max
-				  err = setAllowedValues(&featureInfo, propertyName.c_str());
-				  if (VmbErrorSuccess != err) {
-					  LOG_ERROR(err, "Error while setting allowed values for feature " +
-						  featureName);
-					  return err;
-				  }
+          break;
+      case MM::ActionType::AfterSet:  //!< Update feature from property
+          err = setFeatureValue(&featureInfo, featureName.c_str(), propertyValue);
+          if (err == VmbErrorInvalidValue) {
+              // Update limits first to have latest min and max
+              err = setAllowedValues(&featureInfo, propertyName.c_str());
+              if (VmbErrorSuccess != err) {
+                  LOG_ERROR(err, "Error while setting allowed values for feature " +
+                      featureName);
+                  return err;
+              }
 
-				  // Adjust value
-				  double min{}, max{};
-				  err = GetPropertyLowerLimit(propertyName.c_str(), min) |
-					  GetPropertyUpperLimit(propertyName.c_str(), max);
-				  if (VmbErrorSuccess != err) {
-					  LOG_ERROR(err, "Error while getting limits for " + propertyName);
-					  return err;
-				  }
-				  std::string adjustedValue =
-					  adjustValue(featureInfo, min, max, std::stod(propertyValue));
-				  err =
-					  setFeatureValue(&featureInfo, featureName.c_str(), adjustedValue);
-			  }
+              // Adjust value
+              double min{}, max{};
+              err = GetPropertyLowerLimit(propertyName.c_str(), min) |
+                  GetPropertyUpperLimit(propertyName.c_str(), max);
+              if (VmbErrorSuccess != err) {
+                  LOG_ERROR(err, "Error while getting limits for " + propertyName);
+                  return err;
+              }
+              std::string adjustedValue =
+                  adjustValue(featureInfo, min, max, std::stod(propertyValue));
+              err =
+                  setFeatureValue(&featureInfo, featureName.c_str(), adjustedValue);
+          }
 
-			  if (propertyName == MM::g_Keyword_PixelType) {
-				  handlePixelFormatChange(propertyValue);
-			  }
-			  break;
-		  default:
-			  // nothing
-			  break;
-		  }
-	  }
+          if (propertyName == MM::g_Keyword_PixelType) {
+              handlePixelFormatChange(propertyValue);
+          }
+          break;
+      default:
+          // nothing
+          break;
+      }
 
 	  if (VmbErrorSuccess != err) {
 		  LOG_ERROR(err, "Error while updating property " + propertyName);
@@ -693,7 +722,6 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
   std::stringstream ss(value);
   bool isDone = false;
   VmbUint32_t maxLen = 0;
-  std::string property{};
 
   switch (featureInfo->featureDataType) {
     case VmbFeatureDataBool: {
@@ -733,8 +761,8 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
     }
     case VmbFeatureDataCommand:
       if (value == g_Execute) {
-        mapFeatureNameToPropertyName(featureName, property);
-        if (!property.empty()) {
+        const auto propertyName = mapFeatureNameToPropertyName(featureName);
+        if (!propertyName.empty()) {
           err = m_sdk->VmbFeatureCommandRun_t(m_handle, featureName);
           if (err != VmbErrorSuccess) {
             break;
@@ -747,8 +775,8 @@ VmbError_t AlliedVisionCamera::setFeatureValue(VmbFeatureInfo_t* featureInfo,
             }
           }
           // Set back property to "Command"
-          err = SetProperty(property.c_str(), g_Command);
-          GetCoreCallback()->OnPropertyChanged(this, property.c_str(),
+          err = SetProperty(propertyName.c_str(), g_Command);
+          GetCoreCallback()->OnPropertyChanged(this, propertyName.c_str(),
                                                g_Command);
           if (err != VmbErrorSuccess) {
             break;
@@ -788,27 +816,23 @@ VmbError_t AlliedVisionCamera::setFeatureValue(const char* featureName,
   return setFeatureValue(&featureInfo, featureName, value);
 }
 
-void AlliedVisionCamera::mapFeatureNameToPropertyName(
-    const char* feature, std::string& property) const {
-  property = std::string(feature);
-  auto search = m_featureToProperty.find(property);
+std::string AlliedVisionCamera::mapFeatureNameToPropertyName(
+    const char* feature) const {
+  
+  auto search = m_featureToProperty.find(feature);
   if (search != m_featureToProperty.end()) {
-    property = search->second;
+    return search->second;
   }
+
+  return feature;
 }
-void AlliedVisionCamera::mapPropertyNameToFeatureNames(
-    const char* property, std::vector<std::string>& featureNames) const {
-  // Check property mapping
-  auto searchRange = m_propertyToFeature.equal_range(property);
-  if (searchRange.first != m_propertyToFeature.end()) {
-    // Features that are mapped from property
-    for (auto it = searchRange.first; it != searchRange.second; ++it) {
-      featureNames.push_back(it->second);
+std::string AlliedVisionCamera::mapPropertyNameToFeatureName(const char* property) const {
+    auto search = m_propertyToFeature.find(property);
+    if (search != m_propertyToFeature.end()) {
+        return search->second;
     }
-  } else {
-    // for rest
-    featureNames.push_back(property);
-  }
+
+    return property;
 }
 
 std::string AlliedVisionCamera::adjustValue(VmbFeatureInfo_t& featureInfo,
