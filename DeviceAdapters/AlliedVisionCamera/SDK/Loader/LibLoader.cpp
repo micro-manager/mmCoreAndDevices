@@ -42,6 +42,7 @@ VimbaXApi::VimbaXApi() :
         VmbCamerasList_t = m_sdk.resolveFunction("VmbCamerasList", allResolved);
         VmbCameraOpen_t = m_sdk.resolveFunction("VmbCameraOpen", allResolved);
         VmbCameraClose_t = m_sdk.resolveFunction("VmbCameraClose", allResolved);
+        VmbCameraInfoQuery_t = m_sdk.resolveFunction("VmbCameraInfoQuery", allResolved);
         VmbPayloadSizeGet_t = m_sdk.resolveFunction("VmbPayloadSizeGet", allResolved);
         VmbFrameAnnounce_t = m_sdk.resolveFunction("VmbFrameAnnounce", allResolved);
         VmbCaptureStart_t = m_sdk.resolveFunction("VmbCaptureStart", allResolved);

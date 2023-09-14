@@ -140,6 +140,7 @@ public:
     decltype(VmbCamerasList) *VmbCamerasList_t = nullptr;
     decltype(VmbCameraOpen) *VmbCameraOpen_t = nullptr;
     decltype(VmbCameraClose) *VmbCameraClose_t = nullptr;
+    decltype(VmbCameraInfoQuery) *VmbCameraInfoQuery_t = nullptr;
     decltype(VmbPayloadSizeGet) *VmbPayloadSizeGet_t = nullptr;
     decltype(VmbFrameAnnounce) *VmbFrameAnnounce_t = nullptr;
     decltype(VmbCaptureStart) *VmbCaptureStart_t = nullptr;

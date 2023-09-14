@@ -21,10 +21,10 @@
 #include "AlliedVisionCamera.h"
 
 #include <algorithm>
+#include <clocale>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <clocale>
 
 #include "AlliedVisionHub.h"
 #include "ModuleInterface.h"
@@ -33,6 +33,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 // STATIC VALUES
 ///////////////////////////////////////////////////////////////////////////////
+
+constexpr const char *ADJUST_PACKAGE_SIZE_COMMAND = "GVSPAdjustPacketSize";
 
 const std::unordered_map<std::string, std::string> AlliedVisionCamera::m_featureToProperty = { { g_PixelFormatFeature,
                                                                                                  MM::g_Keyword_PixelType } };
@@ -115,6 +117,25 @@ int AlliedVisionCamera::Initialize()
     {
         LOG_ERROR(err, "Error while opening camera or handle is NULL!");
         return err;
+    }
+
+    // Try to execute custom command available to Allied Vision GigE Cameras to ensure the packet size is chosen well
+    VmbCameraInfo_t info;
+    err = m_sdk->VmbCameraInfoQuery_t(m_cameraName.c_str(), &info, sizeof(info));
+    if (err == VmbErrorSuccess && info.streamCount > 0)
+    {
+        VmbHandle_t stream = info.streamHandles[0];
+        if (m_sdk->VmbFeatureCommandRun_t(stream, ADJUST_PACKAGE_SIZE_COMMAND) == VmbErrorSuccess)
+        {
+            VmbBool_t isCommandDone = VmbBoolFalse;
+            do
+            {
+                if (m_sdk->VmbFeatureCommandIsDone_t(stream, ADJUST_PACKAGE_SIZE_COMMAND, &isCommandDone) != VmbErrorSuccess)
+                {
+                    break;
+                }
+            } while (isCommandDone == VmbBoolFalse);
+        }
     }
 
     // Ignore errors from setting up properties

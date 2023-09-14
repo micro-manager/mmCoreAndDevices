@@ -456,8 +456,7 @@ private:
 
     VmbUint32_t m_bufferSize;    //<! Buffer size of image for uManager
     VmbUint32_t m_payloadSize;   //<! Payload size of image for Vimba
-    bool m_isAcquisitionRunning; //<! Sequence acquisition status (true if
-                                 // running)
+    bool m_isAcquisitionRunning; //<! Sequence acquisition status (true if running)
 
     std::string m_exposureFeatureName;
 
