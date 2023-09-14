@@ -24,6 +24,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <clocale>
 
 #include "AlliedVisionHub.h"
 #include "ModuleInterface.h"
