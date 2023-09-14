@@ -605,7 +605,8 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
             return err;
         }
 
-        if (m_ipAddressFeatures.count(featureName)) {
+        if (m_ipAddressFeatures.count(featureName))
+        {
             wMode = false;
         }
 
