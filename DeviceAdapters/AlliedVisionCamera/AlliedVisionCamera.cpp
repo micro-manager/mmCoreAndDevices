@@ -634,7 +634,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
                 {
                 case MM::Float:
                 case MM::Integer:
-                    err = SetPropertyLimits(propertyName.c_str(), 0.0, 0.0);
+                    SetPropertyLimits(propertyName.c_str(), 0.0, 0.0);
                     pProp->Set("0");
                     break;
                 case MM::String:
