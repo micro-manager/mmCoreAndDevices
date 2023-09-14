@@ -38,6 +38,19 @@ constexpr const char *ADJUST_PACKAGE_SIZE_COMMAND = "GVSPAdjustPacketSize";
 
 const std::unordered_map<std::string, std::string> AlliedVisionCamera::m_featureToProperty = { { g_PixelFormatFeature,
                                                                                                  MM::g_Keyword_PixelType } };
+const std::unordered_set<std::string> AlliedVisionCamera::m_ipAddressFeatures = {
+    "MulticastIPAddress",
+    "GevCurrentSubnetMask",
+    "GevCurrentIPAddress",
+    "GevCurrentDefaultGateway",
+    "GevPersistentIPAddress",
+    "GevPersistentDefaultGateway",
+    "GevPersistentSubnetMask",
+};
+
+const std::unordered_set<std::string> AlliedVisionCamera::m_macAddressFeatures = {
+    "GevMACAddress"
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -288,6 +301,12 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(const VmbFeatureInfo_t 
         LOG_ERROR(err, "Error while registering invalidation callback for " + std::string(feature->name));
         return err;
     }
+
+    if (m_ipAddressFeatures.count(feature->name) || m_macAddressFeatures.count(feature->name)) 
+    {
+        err = CreateStringProperty(propertyName.c_str(), "", true, uManagerCallback);
+        return err;
+    }    
 
     switch (feature->featureDataType)
     {
@@ -586,6 +605,10 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
             return err;
         }
 
+        if (m_ipAddressFeatures.count(featureName)) {
+            wMode = false;
+        }
+
         const bool readOnly = (rMode && !wMode);
         const bool featureAvailable = (rMode || wMode);
 
@@ -752,7 +775,29 @@ VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t *featureInfo, co
         {
             break;
         }
-        value = std::to_string(out);
+        if (m_ipAddressFeatures.count(featureName)) 
+        {
+            std::stringstream ipAddressStream;
+            ipAddressStream << (0xFF & (out >> 24)) << "." << (0xFF & (out >> 16)) << "." << (0xFF & (out >> 8)) << "." << (0xFF & out);
+
+            value = ipAddressStream.str();
+        }
+        else if (m_macAddressFeatures.count(featureName))
+        {
+            std::stringstream macAddressStream;
+            macAddressStream << std::hex 
+                << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & (out >> 40)) << ":"
+                << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & (out >> 32)) << ":"
+                << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & (out >> 24)) << ":"
+                << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & (out >> 16)) << ":"
+                << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & (out >> 8)) << ":"
+                << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & out);
+            value = macAddressStream.str();
+        }
+        else
+        {
+            value = std::to_string(out);
+        }
         break;
     }
     case VmbFeatureDataString:

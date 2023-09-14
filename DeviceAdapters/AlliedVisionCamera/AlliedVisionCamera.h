@@ -23,6 +23,7 @@
 #include <functional>
 #include <regex>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "AlliedVisionDeviceBase.h"
 #include "DeviceBase.h"
@@ -463,6 +464,9 @@ private:
     PixelFormatConverter m_currentPixelFormat;                                     //<! Current Pixel Format information
     static const std::unordered_map<std::string, std::string> m_featureToProperty; //!< Map of features name into uManager properties
     std::unordered_map<std::string, std::string> m_propertyToFeature;              //!< Map of uManager properties into Vimba features
+    
+    static const std::unordered_set<std::string> m_ipAddressFeatures;
+    static const std::unordered_set<std::string> m_macAddressFeatures;
 };
 
 #endif
