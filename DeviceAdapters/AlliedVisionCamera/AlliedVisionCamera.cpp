@@ -573,156 +573,152 @@ bool AlliedVisionCamera::IsCapturing()
 
 int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
 {
-    // Set locale to current system locale
-    const auto oldLocale = std::setlocale(LC_ALL, "");
+    // Init
+    VmbError_t err = VmbErrorSuccess;
 
-    const auto res = [&]
+    auto pChildProperty = dynamic_cast<MM::Property*>(pProp);
+    if (pChildProperty == nullptr)
     {
-        // Init
-        VmbError_t err = VmbErrorSuccess;
-
-        auto pChildProperty = dynamic_cast<MM::Property *>(pProp);
-        if (pChildProperty == nullptr)
-        {
-            err = VmbErrorBadParameter;
-            LOG_ERROR(err, "Could not get Property from PropertyBase object");
-            return err;
-        }
-
-        const auto propertyName = pProp->GetName();
-
-        // Check property mapping
-        auto const featureName = mapPropertyNameToFeatureName(propertyName.c_str());
-
-        // Get Feature Info and Access Mode
-        VmbFeatureInfo_t featureInfo;
-        bool rMode{}, wMode{};
-        err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(), &featureInfo, sizeof(featureInfo)) |
-              m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(), &rMode, &wMode);
-        if (VmbErrorSuccess != err)
-        {
-            LOG_ERROR(err, "Error while getting info or access query!");
-            return err;
-        }
-
-        if (m_ipAddressFeatures.count(featureName))
-        {
-            wMode = false;
-        }
-
-        const bool readOnly = (rMode && !wMode);
-        const bool featureAvailable = (rMode || wMode);
-
-        // Get values
-        std::string propertyValue{}, featureValue{};
-        pProp->Get(propertyValue);
-
-        // Handle property value change
-        switch (eAct)
-        {
-        case MM::ActionType::BeforeGet: //!< Update property from feature
-
-            // Update feature range
-            if (featureAvailable)
-            {
-                err = setAllowedValues(&featureInfo, propertyName.c_str());
-            }
-            // Feature not available -> clear value and range
-            else
-            {
-                switch (pProp->GetType())
-                {
-                case MM::Float:
-                case MM::Integer:
-                    SetPropertyLimits(propertyName.c_str(), 0.0, 0.0);
-                    pProp->Set("0");
-                    break;
-                case MM::String:
-                    ClearAllowedValues(propertyName.c_str());
-                    pProp->Set("");
-                    break;
-                default:
-                    // feature type not supported
-                    break;
-                }
-            }
-
-            if (rMode)
-            {
-                err = getFeatureValue(&featureInfo, featureName.c_str(), featureValue);
-                if (VmbErrorSuccess != err)
-                {
-                    LOG_ERROR(err, "Error while getting feature value " + featureName);
-                    return err;
-                }
-
-                // Update property
-                if (propertyValue != featureValue)
-                {
-                    pProp->Set(featureValue.c_str());
-                    err = GetCoreCallback()->OnPropertyChanged(this, propertyName.c_str(), featureValue.c_str());
-                    if (propertyName == MM::g_Keyword_PixelType)
-                    {
-                        handlePixelFormatChange(featureValue);
-                    }
-
-                    if (VmbErrorSuccess != err)
-                    {
-                        LOG_ERROR(err, "Error while calling OnPropertyChanged callback for " + featureName);
-                        return err;
-                    }
-                }
-            }
-
-            // Set property to readonly (grey out in GUI) if it is readonly or unavailable
-            pChildProperty->SetReadOnly(readOnly || !featureAvailable);
-
-            break;
-        case MM::ActionType::AfterSet: //!< Update feature from property
-            err = setFeatureValue(&featureInfo, featureName.c_str(), propertyValue);
-            if (err == VmbErrorInvalidValue)
-            {
-                // Update limits first to have latest min and max
-                err = setAllowedValues(&featureInfo, propertyName.c_str());
-                if (VmbErrorSuccess != err)
-                {
-                    LOG_ERROR(err, "Error while setting allowed values for feature " + featureName);
-                    return err;
-                }
-
-                // Adjust value
-                double min{}, max{};
-                err = GetPropertyLowerLimit(propertyName.c_str(), min) | GetPropertyUpperLimit(propertyName.c_str(), max);
-                if (VmbErrorSuccess != err)
-                {
-                    LOG_ERROR(err, "Error while getting limits for " + propertyName);
-                    return err;
-                }
-                std::string adjustedValue = adjustValue(featureInfo, min, max, std::stod(propertyValue));
-                err = setFeatureValue(&featureInfo, featureName.c_str(), adjustedValue);
-            }
-
-            if (propertyName == MM::g_Keyword_PixelType)
-            {
-                handlePixelFormatChange(propertyValue);
-            }
-            break;
-        default:
-            // nothing
-            break;
-        }
-
-        if (VmbErrorSuccess != err)
-        {
-            LOG_ERROR(err, "Error while updating property " + propertyName);
-        }
-
+        err = VmbErrorBadParameter;
+        LOG_ERROR(err, "Could not get Property from PropertyBase object");
         return err;
-    }();
+    }
 
-    std::setlocale(LC_ALL, oldLocale);
+    const auto propertyName = pProp->GetName();
 
-    return res;
+    // Check property mapping
+    auto const featureName = mapPropertyNameToFeatureName(propertyName.c_str());
+
+    // Get Feature Info and Access Mode
+    VmbFeatureInfo_t featureInfo;
+    bool rMode{}, wMode{};
+    err = m_sdk->VmbFeatureInfoQuery_t(m_handle, featureName.c_str(), &featureInfo, sizeof(featureInfo)) |
+        m_sdk->VmbFeatureAccessQuery_t(m_handle, featureName.c_str(), &rMode, &wMode);
+    if (VmbErrorSuccess != err)
+    {
+        LOG_ERROR(err, "Error while getting info or access query!");
+        return err;
+    }
+
+    if (m_ipAddressFeatures.count(featureName))
+    {
+        wMode = false;
+    }
+
+    const bool readOnly = (rMode && !wMode);
+    const bool featureAvailable = (rMode || wMode);
+
+    // Get values
+    std::string propertyValue{}, featureValue{};
+    pProp->Get(propertyValue);
+
+    // Handle property value change
+    switch (eAct)
+    {
+    case MM::ActionType::BeforeGet: //!< Update property from feature
+
+        // Update feature range
+        if (featureAvailable)
+        {
+            err = setAllowedValues(&featureInfo, propertyName.c_str());
+        }
+        // Feature not available -> clear value and range
+        else
+        {
+            switch (pProp->GetType())
+            {
+            case MM::Float:
+            case MM::Integer:
+                SetPropertyLimits(propertyName.c_str(), 0.0, 0.0);
+                pProp->Set("0");
+                break;
+            case MM::String:
+                ClearAllowedValues(propertyName.c_str());
+                pProp->Set("");
+                break;
+            default:
+                // feature type not supported
+                break;
+            }
+        }
+
+        if (rMode)
+        {
+            err = getFeatureValue(&featureInfo, featureName.c_str(), featureValue);
+            if (VmbErrorSuccess != err)
+            {
+                LOG_ERROR(err, "Error while getting feature value " + featureName);
+                return err;
+            }
+
+            // Update property
+            if (propertyValue != featureValue)
+            {
+                pProp->Set(featureValue.c_str());
+                err = GetCoreCallback()->OnPropertyChanged(this, propertyName.c_str(), featureValue.c_str());
+                if (propertyName == MM::g_Keyword_PixelType)
+                {
+                    handlePixelFormatChange(featureValue);
+                }
+
+                if (VmbErrorSuccess != err)
+                {
+                    LOG_ERROR(err, "Error while calling OnPropertyChanged callback for " + featureName);
+                    return err;
+                }
+
+                if (m_exposureFeatureName == featureName)
+                {
+                    GetCoreCallback()->OnExposureChanged(this, std::stod(featureValue) / MS_TO_US);
+                }
+            }
+        }
+
+        // Set property to readonly (grey out in GUI) if it is readonly or unavailable
+        pChildProperty->SetReadOnly(readOnly || !featureAvailable);
+
+        break;
+    case MM::ActionType::AfterSet: //!< Update feature from property
+        err = setFeatureValue(&featureInfo, featureName.c_str(), propertyValue);
+        if (err == VmbErrorInvalidValue)
+        {
+            // Update limits first to have latest min and max
+            err = setAllowedValues(&featureInfo, propertyName.c_str());
+            if (VmbErrorSuccess != err)
+            {
+                LOG_ERROR(err, "Error while setting allowed values for feature " + featureName);
+                return err;
+            }
+
+            // Adjust value
+            double min{}, max{};
+            err = GetPropertyLowerLimit(propertyName.c_str(), min) | GetPropertyUpperLimit(propertyName.c_str(), max);
+            if (VmbErrorSuccess != err)
+            {
+                LOG_ERROR(err, "Error while getting limits for " + propertyName);
+                return err;
+            }
+            std::string adjustedValue = adjustValue(featureInfo, min, max, std::stod(propertyValue));
+            err = setFeatureValue(&featureInfo, featureName.c_str(), adjustedValue);
+        }
+
+        if (propertyName == MM::g_Keyword_PixelType)
+        {
+            handlePixelFormatChange(propertyValue);
+        }
+        break;
+    default:
+        // nothing
+        break;
+    }
+
+    if (VmbErrorSuccess != err)
+    {
+        LOG_ERROR(err, "Error while updating property " + propertyName);
+    }
+
+    return err;
+
 }
 
 void AlliedVisionCamera::handlePixelFormatChange(const std::string &pixelType)
