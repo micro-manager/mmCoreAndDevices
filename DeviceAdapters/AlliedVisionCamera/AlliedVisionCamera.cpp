@@ -585,6 +585,24 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
     }
 
     const auto propertyName = pProp->GetName();
+   
+    auto valueEqual = [pProp](const std::string& newValue) -> bool {
+        switch (pProp->GetType())
+        {
+        case MM::PropertyType::Float:
+        {
+            double oldValue{};
+            pProp->Get(oldValue);
+            return oldValue == std::stod(newValue);
+        }
+        default:
+        {
+            std::string oldValue{};
+            pProp->Get(oldValue);
+            return oldValue == newValue;
+        }
+        }
+    };
 
     // Check property mapping
     auto const featureName = mapPropertyNameToFeatureName(propertyName.c_str());
@@ -652,7 +670,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
             }
 
             // Update property
-            if (propertyValue != featureValue)
+            if (!valueEqual(featureValue))
             {
                 pProp->Set(featureValue.c_str());
                 err = GetCoreCallback()->OnPropertyChanged(this, propertyName.c_str(), featureValue.c_str());
@@ -700,7 +718,16 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
             }
             std::string adjustedValue = adjustValue(featureInfo, min, max, std::stod(propertyValue));
             err = setFeatureValue(&featureInfo, featureName.c_str(), adjustedValue);
+            if (err == VmbErrorSuccess)
+            {
+                err = GetCoreCallback()->OnPropertyChanged(this, propertyName.c_str(), adjustedValue.c_str());
+            }
         }
+        else if (err == VmbErrorSuccess)
+        {
+            err = GetCoreCallback()->OnPropertyChanged(this, propertyName.c_str(), propertyValue.c_str());
+        }
+           
 
         if (propertyName == MM::g_Keyword_PixelType)
         {
