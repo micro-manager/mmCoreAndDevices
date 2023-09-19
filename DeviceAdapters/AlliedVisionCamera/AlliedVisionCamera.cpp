@@ -1280,7 +1280,7 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages, double interval
         return err;
     }
 
-    GetCoreCallback()->OnPropertiesChanged();
+    GetCoreCallback()->OnPropertiesChanged(this);
 
     return UpdateStatus();
 }
@@ -1325,7 +1325,7 @@ int AlliedVisionCamera::StopSequenceAcquisition()
         return err;
     }
 
-    GetCoreCallback()->OnPropertiesChanged();
+    GetCoreCallback()->OnPropertiesChanged(this);
 
     return UpdateStatus();
 }
