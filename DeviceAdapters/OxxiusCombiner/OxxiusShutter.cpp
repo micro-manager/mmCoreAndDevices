@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <string>
 #include <map>
-#include "../../MMDevice/ModuleInterface.h"
 using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////

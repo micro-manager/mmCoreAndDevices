@@ -2,9 +2,7 @@
 
 #include "OxxiusCombinerHub.h"
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "DeviceBase.h"
 #include <cstdlib>
 #include <string>
 #include <map>

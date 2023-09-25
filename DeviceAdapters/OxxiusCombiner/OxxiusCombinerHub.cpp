@@ -7,6 +7,9 @@
 #include "OxxiusLCX.h"
 #include "CoherentObis.h"
 #include "Cobolt08_01.h"
+
+#include "ModuleInterface.h"
+
 using namespace std;
 
 

@@ -1,7 +1,5 @@
 #pragma once
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "DeviceBase.h"
 #include <cstdlib>
 #include <string>
 #include <map>
@@ -18,8 +16,7 @@ using namespace std;
 #ifdef WIN32
 	#include <windows.h>
 #endif
-#include "../../MMDevice/DeviceUtils.h"
-#include "FixSnprintf.h"
+#include "DeviceUtils.h"
 #include <algorithm>
 #include <math.h>
 //
