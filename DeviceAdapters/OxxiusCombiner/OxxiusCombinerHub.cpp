@@ -585,12 +585,12 @@ int OxxiusCombinerHub::QueryCommand(MM::Device* device, MM::Core* core, const un
 		// Keep track of how often we tried
 		int counter = 1;
 		bool done = false;
-		MM::MMTime startTime(core->GetCurrentMMTime()); // Let's keep in mind that MMTime is counted in microseconds
+		MM::MMTime startTime(GetCurrentMMTime());
 
 		while (!done) {
 			counter++;
 			ret = core->GetSerialAnswer(device, port_.c_str(), RCV_BUF_LENGTH, rcvBuf_, "\r\n");
-			if ((ret == DEVICE_OK) || ((core->GetCurrentMMTime() - startTime) > (maxTimeMs * 1000.0)))
+			if ((ret == DEVICE_OK) || ((GetCurrentMMTime() - startTime) > MM::MMTime::fromMs(maxTimeMs)))
 				done = true;
 			else {
 				CDeviceUtils::SleepMs(delayMs);
