@@ -91,21 +91,31 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="OnBoardHW.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Oxxius_combiner.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="OnBoardHW.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Oxxius_combiner.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
       <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Cobolt08_01.h" />
+    <ClInclude Include="CoherentObis.h" />
+    <ClInclude Include="GenericLaser.h" />
+    <ClInclude Include="OxxiusCombinerHub.h" />
+    <ClInclude Include="OxxiusFlipMirror.h" />
+    <ClInclude Include="OxxiusLBX.h" />
+    <ClInclude Include="OxxiusLCX.h" />
+    <ClInclude Include="OxxiusMDual.h" />
+    <ClInclude Include="OxxiusShutter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Cobolt08_01.cpp" />
+    <ClCompile Include="CoherentObis.cpp" />
+    <ClCompile Include="GenericLaser.cpp" />
+    <ClCompile Include="OxxiusCombinerHub.cpp" />
+    <ClCompile Include="OxxiusFlipMirror.cpp" />
+    <ClCompile Include="OxxiusLBX.cpp" />
+    <ClCompile Include="OxxiusLCX.cpp" />
+    <ClCompile Include="OxxiusMDual.cpp" />
+    <ClCompile Include="OxxiusShutter.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
