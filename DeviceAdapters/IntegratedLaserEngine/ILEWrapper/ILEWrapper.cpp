@@ -118,11 +118,8 @@ CILEWrapper::CILEWrapper() :
     throw std::runtime_error( "GetProcAddress GetILEPowerManagementInterface_ failed\n" );
   }
 
+  // HLE specific interface not required for ILE
   GetILEPowerManagement2Interface_ = ( TGetILEPowerManagement2Interface ) GetProcAddress( DLL_, "GetILEPowerManagement2Interface" );
-  if ( GetILEPowerManagement2Interface_ == nullptr )
-  {
-    throw std::runtime_error( "GetProcAddress GetILEPowerManagement2Interface_ failed\n" );
-  }
 
   GetILEInterface2_ = (TGetILEInterface2)GetProcAddress( DLL_, "GetILEInterface2" );
   if ( GetILEInterface2_ == nullptr )
@@ -323,7 +320,8 @@ IALC_REV_ILEPowerManagement2* CILEWrapper::GetILEPowerManagement2Interface( IALC
     IALC_REV_ILEPowerManagement2* vILEPowerManagement2 = nullptr;
     {
       CILESDKLock vSDKLock;
-      vILEPowerManagement2 = GetILEPowerManagement2Interface_( vILEObject );
+      if ( GetILEPowerManagement2Interface_ != nullptr )
+        vILEPowerManagement2 = GetILEPowerManagement2Interface_( vILEObject );
     }
     if ( vILEPowerManagement2 != nullptr )
     {
