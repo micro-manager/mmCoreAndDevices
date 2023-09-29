@@ -22,13 +22,13 @@
 #include "AutoFocusInstance.h"
 
 
-int AutoFocusInstance::SetContinuousFocusing(bool state) { RequireInitialized(); return GetImpl()->SetContinuousFocusing(state); }
-int AutoFocusInstance::GetContinuousFocusing(bool& state) { RequireInitialized(); return GetImpl()->GetContinuousFocusing(state); }
-bool AutoFocusInstance::IsContinuousFocusLocked() { RequireInitialized(); return GetImpl()->IsContinuousFocusLocked(); }
-int AutoFocusInstance::FullFocus() { RequireInitialized(); return GetImpl()->FullFocus(); }
-int AutoFocusInstance::IncrementalFocus() { RequireInitialized(); return GetImpl()->IncrementalFocus(); }
-int AutoFocusInstance::GetLastFocusScore(double& score) { RequireInitialized(); return GetImpl()->GetLastFocusScore(score); }
-int AutoFocusInstance::GetCurrentFocusScore(double& score) { RequireInitialized(); return GetImpl()->GetCurrentFocusScore(score); }
-int AutoFocusInstance::AutoSetParameters() { RequireInitialized(); return GetImpl()->AutoSetParameters(); }
-int AutoFocusInstance::GetOffset(double &offset) { RequireInitialized(); return GetImpl()->GetOffset(offset); }
-int AutoFocusInstance::SetOffset(double offset) { RequireInitialized(); return GetImpl()->SetOffset(offset); }
+int AutoFocusInstance::SetContinuousFocusing(bool state) { RequireInitialized(__func__); return GetImpl()->SetContinuousFocusing(state); }
+int AutoFocusInstance::GetContinuousFocusing(bool& state) { RequireInitialized(__func__); return GetImpl()->GetContinuousFocusing(state); }
+bool AutoFocusInstance::IsContinuousFocusLocked() { RequireInitialized(__func__); return GetImpl()->IsContinuousFocusLocked(); }
+int AutoFocusInstance::FullFocus() { RequireInitialized(__func__); return GetImpl()->FullFocus(); }
+int AutoFocusInstance::IncrementalFocus() { RequireInitialized(__func__); return GetImpl()->IncrementalFocus(); }
+int AutoFocusInstance::GetLastFocusScore(double& score) { RequireInitialized(__func__); return GetImpl()->GetLastFocusScore(score); }
+int AutoFocusInstance::GetCurrentFocusScore(double& score) { RequireInitialized(__func__); return GetImpl()->GetCurrentFocusScore(score); }
+int AutoFocusInstance::AutoSetParameters() { RequireInitialized(__func__); return GetImpl()->AutoSetParameters(); }
+int AutoFocusInstance::GetOffset(double &offset) { RequireInitialized(__func__); return GetImpl()->GetOffset(offset); }
+int AutoFocusInstance::SetOffset(double offset) { RequireInitialized(__func__); return GetImpl()->SetOffset(offset); }

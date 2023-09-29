@@ -22,15 +22,15 @@
 #include "SignalIOInstance.h"
 
 
-int SignalIOInstance::SetGateOpen(bool open) { RequireInitialized(); return GetImpl()->SetGateOpen(open); }
-int SignalIOInstance::GetGateOpen(bool& open) { RequireInitialized(); return GetImpl()->GetGateOpen(open); }
-int SignalIOInstance::SetSignal(double volts) { RequireInitialized(); return GetImpl()->SetSignal(volts); }
-int SignalIOInstance::GetSignal(double& volts) { RequireInitialized(); return GetImpl()->GetSignal(volts); }
-int SignalIOInstance::GetLimits(double& minVolts, double& maxVolts) { RequireInitialized(); return GetImpl()->GetLimits(minVolts, maxVolts); }
-int SignalIOInstance::IsDASequenceable(bool& isSequenceable) const { RequireInitialized(); return GetImpl()->IsDASequenceable(isSequenceable); }
-int SignalIOInstance::GetDASequenceMaxLength(long& nrEvents) const { RequireInitialized(); return GetImpl()->GetDASequenceMaxLength(nrEvents); }
-int SignalIOInstance::StartDASequence() { RequireInitialized(); return GetImpl()->StartDASequence(); }
-int SignalIOInstance::StopDASequence() { RequireInitialized(); return GetImpl()->StopDASequence(); }
-int SignalIOInstance::ClearDASequence() { RequireInitialized(); return GetImpl()->ClearDASequence(); }
-int SignalIOInstance::AddToDASequence(double voltage) { RequireInitialized(); return GetImpl()->AddToDASequence(voltage); }
-int SignalIOInstance::SendDASequence() { RequireInitialized(); return GetImpl()->SendDASequence(); }
+int SignalIOInstance::SetGateOpen(bool open) { RequireInitialized(__func__); return GetImpl()->SetGateOpen(open); }
+int SignalIOInstance::GetGateOpen(bool& open) { RequireInitialized(__func__); return GetImpl()->GetGateOpen(open); }
+int SignalIOInstance::SetSignal(double volts) { RequireInitialized(__func__); return GetImpl()->SetSignal(volts); }
+int SignalIOInstance::GetSignal(double& volts) { RequireInitialized(__func__); return GetImpl()->GetSignal(volts); }
+int SignalIOInstance::GetLimits(double& minVolts, double& maxVolts) { RequireInitialized(__func__); return GetImpl()->GetLimits(minVolts, maxVolts); }
+int SignalIOInstance::IsDASequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsDASequenceable(isSequenceable); }
+int SignalIOInstance::GetDASequenceMaxLength(long& nrEvents) const { RequireInitialized(__func__); return GetImpl()->GetDASequenceMaxLength(nrEvents); }
+int SignalIOInstance::StartDASequence() { RequireInitialized(__func__); return GetImpl()->StartDASequence(); }
+int SignalIOInstance::StopDASequence() { RequireInitialized(__func__); return GetImpl()->StopDASequence(); }
+int SignalIOInstance::ClearDASequence() { RequireInitialized(__func__); return GetImpl()->ClearDASequence(); }
+int SignalIOInstance::AddToDASequence(double voltage) { RequireInitialized(__func__); return GetImpl()->AddToDASequence(voltage); }
+int SignalIOInstance::SendDASequence() { RequireInitialized(__func__); return GetImpl()->SendDASequence(); }

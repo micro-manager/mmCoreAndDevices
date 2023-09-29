@@ -22,17 +22,17 @@
 #include "StageInstance.h"
 
 
-int StageInstance::SetPositionUm(double pos) { RequireInitialized(); return GetImpl()->SetPositionUm(pos); }
-int StageInstance::SetRelativePositionUm(double d) { RequireInitialized(); return GetImpl()->SetRelativePositionUm(d); }
-int StageInstance::Move(double velocity) { RequireInitialized(); return GetImpl()->Move(velocity); }
-int StageInstance::Stop() { RequireInitialized(); return GetImpl()->Stop(); }
-int StageInstance::Home() { RequireInitialized(); return GetImpl()->Home(); }
-int StageInstance::SetAdapterOriginUm(double d) { RequireInitialized(); return GetImpl()->SetAdapterOriginUm(d); }
-int StageInstance::GetPositionUm(double& pos) { RequireInitialized(); return GetImpl()->GetPositionUm(pos); }
-int StageInstance::SetPositionSteps(long steps) { RequireInitialized(); return GetImpl()->SetPositionSteps(steps); }
-int StageInstance::GetPositionSteps(long& steps) { RequireInitialized(); return GetImpl()->GetPositionSteps(steps); }
-int StageInstance::SetOrigin() { RequireInitialized(); return GetImpl()->SetOrigin(); }
-int StageInstance::GetLimits(double& lower, double& upper) { RequireInitialized(); return GetImpl()->GetLimits(lower, upper); }
+int StageInstance::SetPositionUm(double pos) { RequireInitialized(__func__); return GetImpl()->SetPositionUm(pos); }
+int StageInstance::SetRelativePositionUm(double d) { RequireInitialized(__func__); return GetImpl()->SetRelativePositionUm(d); }
+int StageInstance::Move(double velocity) { RequireInitialized(__func__); return GetImpl()->Move(velocity); }
+int StageInstance::Stop() { RequireInitialized(__func__); return GetImpl()->Stop(); }
+int StageInstance::Home() { RequireInitialized(__func__); return GetImpl()->Home(); }
+int StageInstance::SetAdapterOriginUm(double d) { RequireInitialized(__func__); return GetImpl()->SetAdapterOriginUm(d); }
+int StageInstance::GetPositionUm(double& pos) { RequireInitialized(__func__); return GetImpl()->GetPositionUm(pos); }
+int StageInstance::SetPositionSteps(long steps) { RequireInitialized(__func__); return GetImpl()->SetPositionSteps(steps); }
+int StageInstance::GetPositionSteps(long& steps) { RequireInitialized(__func__); return GetImpl()->GetPositionSteps(steps); }
+int StageInstance::SetOrigin() { RequireInitialized(__func__); return GetImpl()->SetOrigin(); }
+int StageInstance::GetLimits(double& lower, double& upper) { RequireInitialized(__func__); return GetImpl()->GetLimits(lower, upper); }
 
 MM::FocusDirection
 StageInstance::GetFocusDirection()
@@ -57,14 +57,14 @@ StageInstance::SetFocusDirection(MM::FocusDirection direction)
    focusDirectionHasBeenSet_ = true;
 }
 
-int StageInstance::IsStageSequenceable(bool& isSequenceable) const { RequireInitialized(); return GetImpl()->IsStageSequenceable(isSequenceable); }
-int StageInstance::IsStageLinearSequenceable(bool& isSequenceable) const { RequireInitialized(); return GetImpl()->IsStageLinearSequenceable(isSequenceable); }
-bool StageInstance::IsContinuousFocusDrive() const { RequireInitialized(); return GetImpl()->IsContinuousFocusDrive(); }
-int StageInstance::GetStageSequenceMaxLength(long& nrEvents) const { RequireInitialized(); return GetImpl()->GetStageSequenceMaxLength(nrEvents); }
-int StageInstance::StartStageSequence() { RequireInitialized(); return GetImpl()->StartStageSequence(); }
-int StageInstance::StopStageSequence() { RequireInitialized(); return GetImpl()->StopStageSequence(); }
-int StageInstance::ClearStageSequence() { RequireInitialized(); return GetImpl()->ClearStageSequence(); }
-int StageInstance::AddToStageSequence(double position) { RequireInitialized(); return GetImpl()->AddToStageSequence(position); }
-int StageInstance::SendStageSequence() { RequireInitialized(); return GetImpl()->SendStageSequence(); }
+int StageInstance::IsStageSequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsStageSequenceable(isSequenceable); }
+int StageInstance::IsStageLinearSequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsStageLinearSequenceable(isSequenceable); }
+bool StageInstance::IsContinuousFocusDrive() const { RequireInitialized(__func__); return GetImpl()->IsContinuousFocusDrive(); }
+int StageInstance::GetStageSequenceMaxLength(long& nrEvents) const { RequireInitialized(__func__); return GetImpl()->GetStageSequenceMaxLength(nrEvents); }
+int StageInstance::StartStageSequence() { RequireInitialized(__func__); return GetImpl()->StartStageSequence(); }
+int StageInstance::StopStageSequence() { RequireInitialized(__func__); return GetImpl()->StopStageSequence(); }
+int StageInstance::ClearStageSequence() { RequireInitialized(__func__); return GetImpl()->ClearStageSequence(); }
+int StageInstance::AddToStageSequence(double position) { RequireInitialized(__func__); return GetImpl()->AddToStageSequence(position); }
+int StageInstance::SendStageSequence() { RequireInitialized(__func__); return GetImpl()->SendStageSequence(); }
 int StageInstance::SetStageLinearSequence(double dZ_um, long nSlices)
-{ RequireInitialized(); return GetImpl()->SetStageLinearSequence(dZ_um, nSlices); }
+{ RequireInitialized(__func__); return GetImpl()->SetStageLinearSequence(dZ_um, nSlices); }
