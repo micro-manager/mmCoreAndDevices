@@ -22,4 +22,4 @@
 #include "MagnifierInstance.h"
 
 
-double MagnifierInstance::GetMagnification() { RequireInitialized(); return GetImpl()->GetMagnification(); }
+double MagnifierInstance::GetMagnification() { RequireInitialized(__func__); return GetImpl()->GetMagnification(); }

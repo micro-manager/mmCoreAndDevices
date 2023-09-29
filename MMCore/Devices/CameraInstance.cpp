@@ -22,15 +22,15 @@
 #include "CameraInstance.h"
 
 
-int CameraInstance::SnapImage() { RequireInitialized(); return GetImpl()->SnapImage(); }
-const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(); return GetImpl()->GetImageBuffer(); }
-const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(); return GetImpl()->GetImageBuffer(channelNr); }
-const unsigned int* CameraInstance::GetImageBufferAsRGB32() { RequireInitialized(); return GetImpl()->GetImageBufferAsRGB32(); }
-unsigned CameraInstance::GetNumberOfComponents() const { RequireInitialized(); return GetImpl()->GetNumberOfComponents(); }
+int CameraInstance::SnapImage() { RequireInitialized(__func__); return GetImpl()->SnapImage(); }
+const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(); }
+const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(channelNr); }
+const unsigned int* CameraInstance::GetImageBufferAsRGB32() { RequireInitialized(__func__); return GetImpl()->GetImageBufferAsRGB32(); }
+unsigned CameraInstance::GetNumberOfComponents() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfComponents(); }
 
 std::string CameraInstance::GetComponentName(unsigned component)
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    DeviceStringBuffer nameBuf(this, "GetComponentName");
    int err = GetImpl()->GetComponentName(component, nameBuf.GetBuffer());
    ThrowIfError(err, "Cannot get component name at index " +
@@ -38,37 +38,37 @@ std::string CameraInstance::GetComponentName(unsigned component)
    return nameBuf.Get();
 }
 
-int unsigned CameraInstance::GetNumberOfChannels() const { RequireInitialized(); return GetImpl()->GetNumberOfChannels(); }
+int unsigned CameraInstance::GetNumberOfChannels() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfChannels(); }
 
 std::string CameraInstance::GetChannelName(unsigned channel)
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    DeviceStringBuffer nameBuf(this, "GetChannelName");
    int err = GetImpl()->GetChannelName(channel, nameBuf.GetBuffer());
    ThrowIfError(err, "Cannot get channel name at index " + ToString(channel));
    return nameBuf.Get();
 }
 
-long CameraInstance::GetImageBufferSize() const { RequireInitialized(); return GetImpl()->GetImageBufferSize(); }
-unsigned CameraInstance::GetImageWidth() const { RequireInitialized(); return GetImpl()->GetImageWidth(); }
-unsigned CameraInstance::GetImageHeight() const { RequireInitialized(); return GetImpl()->GetImageHeight(); }
-unsigned CameraInstance::GetImageBytesPerPixel() const { RequireInitialized(); return GetImpl()->GetImageBytesPerPixel(); }
-unsigned CameraInstance::GetBitDepth() const { RequireInitialized(); return GetImpl()->GetBitDepth(); }
-double CameraInstance::GetPixelSizeUm() const { RequireInitialized(); return GetImpl()->GetPixelSizeUm(); }
-int CameraInstance::GetBinning() const { RequireInitialized(); return GetImpl()->GetBinning(); }
-int CameraInstance::SetBinning(int binSize) { RequireInitialized(); return GetImpl()->SetBinning(binSize); }
-void CameraInstance::SetExposure(double exp_ms) { RequireInitialized(); return GetImpl()->SetExposure(exp_ms); }
-double CameraInstance::GetExposure() const { RequireInitialized(); return GetImpl()->GetExposure(); }
-int CameraInstance::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) { RequireInitialized(); return GetImpl()->SetROI(x, y, xSize, ySize); }
-int CameraInstance::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) { RequireInitialized(); return GetImpl()->GetROI(x, y, xSize, ySize); }
-int CameraInstance::ClearROI() { RequireInitialized(); return GetImpl()->ClearROI(); }
+long CameraInstance::GetImageBufferSize() const { RequireInitialized(__func__); return GetImpl()->GetImageBufferSize(); }
+unsigned CameraInstance::GetImageWidth() const { RequireInitialized(__func__); return GetImpl()->GetImageWidth(); }
+unsigned CameraInstance::GetImageHeight() const { RequireInitialized(__func__); return GetImpl()->GetImageHeight(); }
+unsigned CameraInstance::GetImageBytesPerPixel() const { RequireInitialized(__func__); return GetImpl()->GetImageBytesPerPixel(); }
+unsigned CameraInstance::GetBitDepth() const { RequireInitialized(__func__); return GetImpl()->GetBitDepth(); }
+double CameraInstance::GetPixelSizeUm() const { RequireInitialized(__func__); return GetImpl()->GetPixelSizeUm(); }
+int CameraInstance::GetBinning() const { RequireInitialized(__func__); return GetImpl()->GetBinning(); }
+int CameraInstance::SetBinning(int binSize) { RequireInitialized(__func__); return GetImpl()->SetBinning(binSize); }
+void CameraInstance::SetExposure(double exp_ms) { RequireInitialized(__func__); return GetImpl()->SetExposure(exp_ms); }
+double CameraInstance::GetExposure() const { RequireInitialized(__func__); return GetImpl()->GetExposure(); }
+int CameraInstance::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) { RequireInitialized(__func__); return GetImpl()->SetROI(x, y, xSize, ySize); }
+int CameraInstance::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) { RequireInitialized(__func__); return GetImpl()->GetROI(x, y, xSize, ySize); }
+int CameraInstance::ClearROI() { RequireInitialized(__func__); return GetImpl()->ClearROI(); }
 
 /**
  * Queries if the camera supports multiple simultaneous ROIs.
  */
 bool CameraInstance::SupportsMultiROI()
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    return GetImpl()->SupportsMultiROI();
 }
 
@@ -79,7 +79,7 @@ bool CameraInstance::SupportsMultiROI()
  */
 bool CameraInstance::IsMultiROISet()
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    return GetImpl()->IsMultiROISet();
 }
 
@@ -89,7 +89,7 @@ bool CameraInstance::IsMultiROISet()
  */
 int CameraInstance::GetMultiROICount(unsigned int& count)
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    return GetImpl()->GetMultiROICount(count);
 }
 
@@ -106,7 +106,7 @@ int CameraInstance::SetMultiROI(const unsigned int* xs, const unsigned int* ys,
       const unsigned* widths, const unsigned int* heights,
       unsigned numROIs)
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    return GetImpl()->SetMultiROI(xs, ys, widths, heights, numROIs);
 }
 
@@ -123,19 +123,19 @@ int CameraInstance::SetMultiROI(const unsigned int* xs, const unsigned int* ys,
 int CameraInstance::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
       unsigned* heights, unsigned* length)
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    return GetImpl()->GetMultiROI(xs, ys, widths, heights, length);
 }
 
-int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) { RequireInitialized(); return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); }
-int CameraInstance::StartSequenceAcquisition(double interval_ms) { RequireInitialized(); return GetImpl()->StartSequenceAcquisition(interval_ms); }
-int CameraInstance::StopSequenceAcquisition() { RequireInitialized(); return GetImpl()->StopSequenceAcquisition(); }
-int CameraInstance::PrepareSequenceAcqusition() { RequireInitialized(); return GetImpl()->PrepareSequenceAcqusition(); }
-bool CameraInstance::IsCapturing() { RequireInitialized(); return GetImpl()->IsCapturing(); }
+int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); }
+int CameraInstance::StartSequenceAcquisition(double interval_ms) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(interval_ms); }
+int CameraInstance::StopSequenceAcquisition() { RequireInitialized(__func__); return GetImpl()->StopSequenceAcquisition(); }
+int CameraInstance::PrepareSequenceAcqusition() { RequireInitialized(__func__); return GetImpl()->PrepareSequenceAcqusition(); }
+bool CameraInstance::IsCapturing() { RequireInitialized(__func__); return GetImpl()->IsCapturing(); }
 
 std::string CameraInstance::GetTags()
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    // TODO Probably makes sense to deserialize here.
    // Also note the danger of limiting serialized metadata to MM::MaxStrLength
    // (CCameraBase takes no precaution to limit string length; it is an
@@ -145,12 +145,12 @@ std::string CameraInstance::GetTags()
    return serializedMetadataBuf.Get();
 }
 
-void CameraInstance::AddTag(const char* key, const char* deviceLabel, const char* value) { RequireInitialized(); return GetImpl()->AddTag(key, deviceLabel, value); }
-void CameraInstance::RemoveTag(const char* key) { RequireInitialized(); return GetImpl()->RemoveTag(key); }
-int CameraInstance::IsExposureSequenceable(bool& isSequenceable) const { RequireInitialized(); return GetImpl()->IsExposureSequenceable(isSequenceable); }
-int CameraInstance::GetExposureSequenceMaxLength(long& nrEvents) const { RequireInitialized(); return GetImpl()->GetExposureSequenceMaxLength(nrEvents); }
-int CameraInstance::StartExposureSequence() { RequireInitialized(); return GetImpl()->StartExposureSequence(); }
-int CameraInstance::StopExposureSequence() { RequireInitialized(); return GetImpl()->StopExposureSequence(); }
-int CameraInstance::ClearExposureSequence() { RequireInitialized(); return GetImpl()->ClearExposureSequence(); }
-int CameraInstance::AddToExposureSequence(double exposureTime_ms) { RequireInitialized(); return GetImpl()->AddToExposureSequence(exposureTime_ms); }
-int CameraInstance::SendExposureSequence() const { RequireInitialized(); return GetImpl()->SendExposureSequence(); }
+void CameraInstance::AddTag(const char* key, const char* deviceLabel, const char* value) { RequireInitialized(__func__); return GetImpl()->AddTag(key, deviceLabel, value); }
+void CameraInstance::RemoveTag(const char* key) { RequireInitialized(__func__); return GetImpl()->RemoveTag(key); }
+int CameraInstance::IsExposureSequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsExposureSequenceable(isSequenceable); }
+int CameraInstance::GetExposureSequenceMaxLength(long& nrEvents) const { RequireInitialized(__func__); return GetImpl()->GetExposureSequenceMaxLength(nrEvents); }
+int CameraInstance::StartExposureSequence() { RequireInitialized(__func__); return GetImpl()->StartExposureSequence(); }
+int CameraInstance::StopExposureSequence() { RequireInitialized(__func__); return GetImpl()->StopExposureSequence(); }
+int CameraInstance::ClearExposureSequence() { RequireInitialized(__func__); return GetImpl()->ClearExposureSequence(); }
+int CameraInstance::AddToExposureSequence(double exposureTime_ms) { RequireInitialized(__func__); return GetImpl()->AddToExposureSequence(exposureTime_ms); }
+int CameraInstance::SendExposureSequence() const { RequireInitialized(__func__); return GetImpl()->SendExposureSequence(); }

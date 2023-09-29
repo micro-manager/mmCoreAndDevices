@@ -33,7 +33,7 @@
 std::vector<std::string>
 HubInstance::GetInstalledPeripheralNames()
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
 
    std::vector<MM::Device*> peripherals = GetInstalledPeripherals();
 
@@ -61,7 +61,7 @@ HubInstance::GetInstalledPeripheralNames()
 std::string
 HubInstance::GetInstalledPeripheralDescription(const std::string& peripheralName)
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
 
    std::vector<MM::Device*> peripherals = GetInstalledPeripherals();
    for (std::vector<MM::Device*>::iterator it = peripherals.begin(), end = peripherals.end();

@@ -114,7 +114,7 @@ protected:
    void ThrowError(const std::string& message) const;
    void ThrowIfError(int code) const;
    void ThrowIfError(int code, const std::string& message) const;
-   void RequireInitialized() const;
+   void RequireInitialized(const char *) const;
 
    /// Utility class for getting fixed-length strings from the device interface.
    /**

@@ -122,10 +122,17 @@ DeviceInstance::ThrowIfError(int code, const std::string& message) const
 }
 
 void
-DeviceInstance::RequireInitialized() const
+DeviceInstance::RequireInitialized(const char *operation) const
 {
-   if (!initialized_)
-      ThrowError("Operation not permitted on uninitialized device");
+   if (!initialized_) {
+      // This is an error, but existing application code (in particular,
+      // the Hardware Configuration Wizard) breaks if we enforce it strictly.
+      // Until such code is fixed, we only log.
+      LOG_WARNING(Logger()) << "Operation (" << operation <<
+         ") not permitted on uninitialized device (this will be an error in a future version of MMCore; for now we continue with the operation anyway, even though it might not be safe)";
+      // Eventually to be replaced with:
+      // ThrowError("Operation not permitted on uninitialized device");
+   }
 }
 
 void
@@ -326,7 +333,7 @@ DeviceInstance::GetErrorText(int code) const
 bool
 DeviceInstance::Busy()
 {
-   RequireInitialized();
+   RequireInitialized(__func__);
    return pImpl_->Busy();
 }
 
