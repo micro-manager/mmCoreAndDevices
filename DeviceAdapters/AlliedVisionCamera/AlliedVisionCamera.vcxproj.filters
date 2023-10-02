@@ -18,34 +18,16 @@
     <ClInclude Include="AlliedVisionCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SDK\VmbImageTransform\VmbTransform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDK\VmbImageTransform\VmbTransformTypes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDK\VmbC\VmbC.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDK\VmbC\VmbCommonTypes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDK\VmbC\VmbConstants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDK\VmbC\VmbCTypeDefinitions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDK\Loader\LibLoader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDK\Loader\Constants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AlliedVisionHub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AlliedVisionDeviceBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\Constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\LibLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -53,13 +35,13 @@
     <ClCompile Include="AlliedVisionCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SDK\Loader\LibLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AlliedVisionHub.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AlliedVisionDeviceBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\LibLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

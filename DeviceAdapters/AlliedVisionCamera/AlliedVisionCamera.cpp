@@ -1,8 +1,8 @@
 /*=============================================================================
   Copyright (C) 2023 Allied Vision Technologies.  All Rights Reserved.
 
-  Redistribution of this header file, in original or modified form, without
-  prior written consent of Allied Vision Technologies is prohibited.
+  This file is distributed under the BSD license.
+  License text is included with the source distribution.
 
   THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF TITLE,
