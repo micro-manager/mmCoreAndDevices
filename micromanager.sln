@@ -476,6 +476,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ESP32", "DeviceAdapters\ESP
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WOSM", "DeviceAdapters\WOSM\WOSM.vcxproj", "{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsCHROLIS", "DeviceAdapters\ThorlabsCHROLIS\ThorlabsCHROLIS.vcxproj", "{F93128A5-B344-4662-BFB8-B4CAECF1FE52}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1430,6 +1432,10 @@ Global
 		{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}.Debug|x64.Build.0 = Debug|x64
 		{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}.Release|x64.ActiveCfg = Release|x64
 		{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}.Release|x64.Build.0 = Release|x64
+		{F93128A5-B344-4662-BFB8-B4CAECF1FE52}.Debug|x64.ActiveCfg = Debug|x64
+		{F93128A5-B344-4662-BFB8-B4CAECF1FE52}.Debug|x64.Build.0 = Debug|x64
+		{F93128A5-B344-4662-BFB8-B4CAECF1FE52}.Release|x64.ActiveCfg = Release|x64
+		{F93128A5-B344-4662-BFB8-B4CAECF1FE52}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
