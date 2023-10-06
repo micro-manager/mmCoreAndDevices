@@ -169,7 +169,8 @@ public:
 class ChrolisStateDevice : public CStateDeviceBase<ChrolisStateDevice>
 {
 public:
-    ChrolisStateDevice()
+    ChrolisStateDevice():
+        numPos_(6)
     {}
 
     ~ChrolisStateDevice()

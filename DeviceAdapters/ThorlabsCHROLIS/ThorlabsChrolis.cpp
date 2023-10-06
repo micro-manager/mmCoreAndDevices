@@ -41,7 +41,7 @@ MODULE_API MM::Device* CreateDevice(char const* name) {
 MODULE_API void DeleteDevice(MM::Device* device) {
     delete device;
 }
-
+//Hub Methods
 int ChrolisHub::DetectInstalledDevices()
 {
     ClearInstalledDevices();
@@ -80,6 +80,93 @@ void ChrolisHub::GetName(char* name) const
 }
 
 bool ChrolisHub::Busy()
+{
+    return false;
+}
+
+bool ChrolisHub::IsInitialized()
+{
+    return initialized_ && deviceHandle_ != -1;
+}
+
+int ChrolisHub::GetDeviceHandle(ViPSession deviceHandle)
+{
+    deviceHandle = &deviceHandle_;
+    return DEVICE_OK;
+}
+
+
+//Chrolis State Device Methods
+int ChrolisStateDevice::Initialize()
+{
+    return DEVICE_OK;
+}
+
+int ChrolisStateDevice::Shutdown()
+{
+    return DEVICE_OK;
+}
+
+void ChrolisStateDevice::GetName(char* name) const
+{
+    CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
+}
+
+bool ChrolisStateDevice::Busy()
+{
+    return false;
+}
+
+int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return DEVICE_OK;
+}
+
+int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return DEVICE_OK;
+}
+
+
+//Chrolis Shutter Methods
+int ChrolisShutter::Initialize()
+{
+    return DEVICE_OK;
+}
+
+int ChrolisShutter::Shutdown()
+{
+    return DEVICE_OK;
+}
+
+void ChrolisShutter::GetName(char* name) const
+{
+    CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
+}
+
+bool ChrolisShutter::Busy()
+{
+    return false;
+}
+
+
+//Chrolis Power Control (Genric Device) Methods
+int ChrolisPowerControl::Initialize()
+{
+    return DEVICE_OK;
+}
+
+int ChrolisPowerControl::Shutdown()
+{
+    return DEVICE_OK;
+}
+
+void ChrolisPowerControl::GetName(char* name) const
+{
+    CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
+}
+
+bool ChrolisPowerControl::Busy()
 {
     return false;
 }
