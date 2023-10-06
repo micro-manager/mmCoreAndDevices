@@ -1,7 +1,37 @@
 #pragma once
 #include <TL6WL.h>
 #include "DeviceBase.h"
+#define  CHROLIS_HUB_NAME  "CHROLIS_Hub"
 #define  CHROLIS_SHUTTER_NAME  "CHROLIS_Shutter"
+#define  CHROLIS_STATE_NAME  "CHROLIS_State_Device"
+#define  CHROLIS_GENERIC_DEVICE_NAME "CHROLIS_Generic_Device"
+
+class ChrolisHub : public HubBase <ChrolisHub>
+{
+public:
+    ChrolisHub() :
+        initialized_(false),
+        busy_(false),
+        deviceHandle_(-1)
+    {}
+    ~ChrolisHub() {}
+
+    int Initialize(); //TODO: Create property for serial number
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+
+    // HUB api
+    int DetectInstalledDevices();
+
+    int GetDeviceHandle(ViPSession deviceHandle);
+    bool IsInitialized();
+
+private:
+    bool initialized_;
+    bool busy_;
+    ViSession deviceHandle_;
+};
 
 class ChrolisShutter : public CShutterBase <ChrolisShutter> //CRTP
 {
@@ -134,5 +164,48 @@ public:
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
+};
+
+class ChrolisStateDevice : public CStateDeviceBase<ChrolisStateDevice>
+{
+public:
+    ChrolisStateDevice()
+    {}
+
+    ~ChrolisStateDevice()
+    {}
+
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+
+    unsigned long GetNumberOfPositions()const { return numPos_; }
+
+    // action interface
+    // ----------------
+    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+    long numPos_;
+};
+
+class ChrolisPowerControl : public CGenericBase <ChrolisPowerControl>
+{
+public:
+    ChrolisPowerControl()
+    {}
+
+    ~ChrolisPowerControl()
+    {}
+
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+    
+private:
+
 };
 
