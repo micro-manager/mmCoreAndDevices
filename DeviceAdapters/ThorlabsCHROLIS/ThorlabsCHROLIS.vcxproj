@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ThorlabsChrolis.cpp" />
+    <ClCompile Include="ThorlabsChrolisDeviceWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">

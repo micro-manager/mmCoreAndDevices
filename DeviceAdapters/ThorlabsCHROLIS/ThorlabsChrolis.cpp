@@ -66,35 +66,7 @@ int ChrolisHub::DetectInstalledDevices()
 
 int ChrolisHub::Initialize()
 {
-    int err = 0;
-    ViUInt32 numDevices;
-    CDeviceUtils::SleepMs(2000);
-    err = TL6WL_findRsrc(NULL, &numDevices);
-    if (err != 0)
-    {
-        LogMessage("Find Resource Failed: " + std::to_string(err));
-        return DEVICE_ERR;
-    }
-    if (numDevices == 0)
-    {
-        LogMessage("Chrolis devices not found"); // to log file 
-        return DEVICE_ERR;
-    }
 
-    ViChar resource[512] = "";
-    err = TL6WL_getRsrcName(NULL, 0, resource);
-    if (err != 0)
-    {
-        LogMessage("Get Resource Failed: " + std::to_string(err));
-        return DEVICE_ERR;
-    }
-
-    err = TL6WL_init(resource, false, false, &deviceHandle_);
-    if (err != 0)
-    {
-        LogMessage("Initialize Failed: " + std::to_string(err));
-        return DEVICE_ERR;
-    }
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -136,6 +108,65 @@ int ChrolisHub::GetDeviceHandle(ViPSession deviceHandle)
 }
 
 
+//Chrolis Shutter Methods
+int ChrolisShutter::Initialize()
+{
+    return DEVICE_OK;
+}
+
+int ChrolisShutter::Shutdown()
+{
+    return DEVICE_OK;
+}
+
+void ChrolisShutter::GetName(char* name) const
+{
+    CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
+}
+
+bool ChrolisShutter::Busy()
+{
+    return false;
+}
+
+int ChrolisShutter::SetOpen(bool open = true)
+{
+    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+    if (!pHub || !pHub->IsInitialized())
+    {
+        return DEVICE_ERR; // TODO Add custom error messages
+    }
+    ViSession deviceHandle = -1;
+    pHub->GetDeviceHandle(&deviceHandle);
+
+    if (!open)
+    {
+        if (int err = TL6WL_setLED_HeadPowerStates(deviceHandle, false, false, false, false, false, false) != 0)
+        {
+            LogMessage("Set Enable States Failed: " + std::to_string(err));
+            return DEVICE_ERR;
+        }
+        masterShutterState = false;
+    }
+    else
+    {
+        if (int err = TL6WL_setLED_HeadPowerStates(deviceHandle, true, true, true, true, true, true) != 0)
+        {
+            LogMessage("Set Enable States Failed: " + std::to_string(err));
+            return DEVICE_ERR;
+        }
+        masterShutterState = true;
+    }
+    return DEVICE_OK;
+}
+
+int ChrolisShutter::GetOpen(bool& open)
+{
+    open = masterShutterState;
+    return DEVICE_OK;
+}
+
+
 //Chrolis State Device Methods
 int ChrolisStateDevice::Initialize()
 {
@@ -165,28 +196,6 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     return DEVICE_OK;
-}
-
-
-//Chrolis Shutter Methods
-int ChrolisShutter::Initialize()
-{
-    return DEVICE_OK;
-}
-
-int ChrolisShutter::Shutdown()
-{
-    return DEVICE_OK;
-}
-
-void ChrolisShutter::GetName(char* name) const
-{
-    CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
-}
-
-bool ChrolisShutter::Busy()
-{
-    return false;
 }
 
 
