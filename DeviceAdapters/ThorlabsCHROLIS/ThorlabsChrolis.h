@@ -13,7 +13,9 @@ public:
         initialized_(false),
         busy_(false),
         deviceHandle_(-1)
-    {}
+    {
+        CreateHubIDProperty();
+    }
     ~ChrolisHub() {}
 
     int Initialize(); //TODO: Create property for serial number

@@ -66,11 +66,51 @@ int ChrolisHub::DetectInstalledDevices()
 
 int ChrolisHub::Initialize()
 {
+    int err = 0;
+    ViUInt32 numDevices;
+    CDeviceUtils::SleepMs(2000);
+    err = TL6WL_findRsrc(NULL, &numDevices);
+    if (err != 0)
+    {
+        LogMessage("Find Resource Failed: " + std::to_string(err));
+        return DEVICE_ERR;
+    }
+    if (numDevices == 0)
+    {
+        LogMessage("Chrolis devices not found"); // to log file 
+        return DEVICE_ERR;
+    }
+
+    ViChar resource[512] = "";
+    err = TL6WL_getRsrcName(NULL, 0, resource);
+    if (err != 0)
+    {
+        LogMessage("Get Resource Failed: " + std::to_string(err));
+        return DEVICE_ERR;
+    }
+
+    err = TL6WL_init(resource, false, false, &deviceHandle_);
+    if (err != 0)
+    {
+        LogMessage("Initialize Failed: " + std::to_string(err));
+        return DEVICE_ERR;
+    }
+    initialized_ = true;
     return DEVICE_OK;
 }
 
 int ChrolisHub::Shutdown()
 {
+    if (initialized_)
+    {
+        auto err = TL6WL_close(deviceHandle_);
+        if (err != 0)
+        {
+            LogMessage("Close Failed: " + std::to_string(err));
+            return DEVICE_ERR;
+        }
+        initialized_ = false;
+    }
     return DEVICE_OK;
 }
 
