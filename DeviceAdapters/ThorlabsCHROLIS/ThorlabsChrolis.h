@@ -9,16 +9,10 @@
 class ChrolisHub : public HubBase <ChrolisHub>
 {
 public:
-    ChrolisHub() :
-        initialized_(false),
-        busy_(false),
-        deviceHandle_(-1)
-    {
-        CreateHubIDProperty();
-    }
+    ChrolisHub();
     ~ChrolisHub() {}
 
-    int Initialize(); //TODO: Create property for serial number
+    int Initialize();
     int Shutdown();
     void GetName(char* pszName) const;
     bool Busy();
@@ -26,13 +20,13 @@ public:
     // HUB api
     int DetectInstalledDevices();
 
-    int GetDeviceHandle(ViPSession deviceHandle);
     bool IsInitialized();
+    void* GetChrolisDeviceInstance();
 
 private:
+    void* chrolisDeviceInstance_;
     bool initialized_;
     bool busy_;
-    ViSession deviceHandle_;
 };
 
 class ChrolisShutter : public CShutterBase <ChrolisShutter> //CRTP
@@ -46,25 +40,13 @@ public:
     }
     ~ChrolisShutter() {}
 
-    int Initialize()
-    {
-        return DEVICE_OK;
-    }
+    int Initialize();
 
-    int Shutdown()
-    { 
-        return DEVICE_OK; 
-    }
+    int Shutdown();
 
-    void GetName(char* name) const
-    {
-        CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
-    }
+    void GetName(char* name)const;
 
-    bool Busy()
-    {
-        return false;
-    }
+    bool Busy();
 
     // Shutter API
     int SetOpen(bool open = true);
@@ -121,6 +103,7 @@ private:
 
 };
 
+//Wrapper for the basic functions used in this device adapter
 class ThorlabsChrolisDeviceWrapper
 {
 public:
@@ -129,17 +112,22 @@ public:
 
     int InitializeDevice(std::string serialNumber = "");
     int ShutdownDevice();
-    int GetDeviceHandle();
+    bool IsDeviceConnected();
     int SetLEDEnableStates(ViBoolean states[6]);
-    int SetLEDPowerStates(ViUInt32 states[6]);
-    int SetShutterState(bool state);
-    int GetShutterState(bool& state);
+    int SetLEDPowerStates(ViInt16 states[6]);
+    int SetShutterState(bool open);
+    int GetShutterState(bool& open);
 
 private:
+    int numLEDs_;
+    bool deviceConnected_;
     ViSession deviceHandle_;
+    ViBoolean deviceInUse_; //only used by the chrolis API
+    ViChar deviceName_[256];
+    ViChar serialNumber_[256];
+    ViChar manufacturerName_[256];
     bool masterSwitchState_;
     ViBoolean savedEnabledStates[6]{false,false,false,false,false,false};
-    ViUInt32 savedPowerStates[6]{0,0,0,0,0,0};
-
+    ViInt16 savedPowerStates[6]{0,0,0,0,0,0};
 };
 

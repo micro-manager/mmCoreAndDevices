@@ -42,6 +42,14 @@ MODULE_API void DeleteDevice(MM::Device* device) {
     delete device;
 }
 //Hub Methods
+ChrolisHub::ChrolisHub() :
+    initialized_(false),
+    busy_(false)
+{
+    CreateHubIDProperty();
+    chrolisDeviceInstance_ = new ThorlabsChrolisDeviceWrapper();
+}
+
 int ChrolisHub::DetectInstalledDevices()
 {
     ClearInstalledDevices();
@@ -66,7 +74,11 @@ int ChrolisHub::DetectInstalledDevices()
 
 int ChrolisHub::Initialize()
 {
-
+    auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->InitializeDevice();
+    if (err != 0)
+    {
+        return DEVICE_ERR;
+    }
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -75,10 +87,9 @@ int ChrolisHub::Shutdown()
 {
     if (initialized_)
     {
-        auto err = TL6WL_close(deviceHandle_);
+        auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->ShutdownDevice();
         if (err != 0)
         {
-            LogMessage("Close Failed: " + std::to_string(err));
             return DEVICE_ERR;
         }
         initialized_ = false;
@@ -98,15 +109,13 @@ bool ChrolisHub::Busy()
 
 bool ChrolisHub::IsInitialized()
 {
-    return initialized_ && deviceHandle_ != -1;
+    return initialized_;
 }
 
-int ChrolisHub::GetDeviceHandle(ViPSession deviceHandle)
+void* ChrolisHub::GetChrolisDeviceInstance()
 {
-    deviceHandle = &deviceHandle_;
-    return DEVICE_OK;
+    return chrolisDeviceInstance_;
 }
-
 
 //Chrolis Shutter Methods
 int ChrolisShutter::Initialize()
@@ -129,40 +138,40 @@ bool ChrolisShutter::Busy()
     return false;
 }
 
-int ChrolisShutter::SetOpen(bool open = true)
+int ChrolisShutter::SetOpen(bool open)
 {
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (!pHub || !pHub->IsInitialized())
     {
         return DEVICE_ERR; // TODO Add custom error messages
     }
-    ViSession deviceHandle = -1;
-    pHub->GetDeviceHandle(&deviceHandle);
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    if (!wrapperInstance->IsDeviceConnected())
+    {
+        return DEVICE_ERR;
+    }
+    auto err = wrapperInstance->SetShutterState(open);
+    if (err != 0)
+    {
+        return DEVICE_ERR;
+    }
 
-    if (!open)
-    {
-        if (int err = TL6WL_setLED_HeadPowerStates(deviceHandle, false, false, false, false, false, false) != 0)
-        {
-            LogMessage("Set Enable States Failed: " + std::to_string(err));
-            return DEVICE_ERR;
-        }
-        masterShutterState = false;
-    }
-    else
-    {
-        if (int err = TL6WL_setLED_HeadPowerStates(deviceHandle, true, true, true, true, true, true) != 0)
-        {
-            LogMessage("Set Enable States Failed: " + std::to_string(err));
-            return DEVICE_ERR;
-        }
-        masterShutterState = true;
-    }
     return DEVICE_OK;
 }
 
 int ChrolisShutter::GetOpen(bool& open)
 {
-    open = masterShutterState;
+    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+    if (!pHub || !pHub->IsInitialized())
+    {
+        return DEVICE_ERR; // TODO Add custom error messages
+    }
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    if (!wrapperInstance->IsDeviceConnected())
+    {
+        return DEVICE_ERR;
+    }
+    wrapperInstance->GetShutterState(open);
     return DEVICE_OK;
 }
 
