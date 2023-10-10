@@ -11,6 +11,14 @@
 * 4- Non-default property states for state devices
 */
 
+/*TODO
+* Set states of properties based on current LED states
+* Properties for device ID and stuff
+* Error handling on device control methods
+* custom errors and messages
+* logs for errors
+*/
+
 MODULE_API void InitializeModuleData() {
     RegisterDevice(CHROLIS_HUB_NAME, // deviceName: model identifier and default device label
         MM::HubDevice, 
@@ -82,12 +90,17 @@ int ChrolisHub::DetectInstalledDevices()
 
 int ChrolisHub::Initialize()
 {
-    auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->InitializeDevice();
-    if (err != 0)
+    if (!initialized_)
     {
-        return DEVICE_ERR;
+
+        auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->InitializeDevice();
+        if (err != 0)
+        {
+            LogMessage("Error in CHROLIS Initialization");
+            return DEVICE_ERR;
+        }
+        initialized_ = true;
     }
-    initialized_ = true;
     return DEVICE_OK;
 }
 
@@ -98,6 +111,7 @@ int ChrolisHub::Shutdown()
         auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->ShutdownDevice();
         if (err != 0)
         {
+            LogMessage("Error shutting down device");
             return DEVICE_ERR;
         }
         initialized_ = false;
@@ -107,7 +121,7 @@ int ChrolisHub::Shutdown()
 
 void ChrolisHub::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
+    CDeviceUtils::CopyLimitedString(name, CHROLIS_HUB_NAME);
 }
 
 bool ChrolisHub::Busy()
@@ -145,7 +159,7 @@ int ChrolisShutter::Initialize()
         SetParentID(hubLabel); // for backward comp.
     }
     else
-        LogMessage(NoHubError);
+        LogMessage("No Hub");
 
     return DEVICE_OK;
 }
@@ -224,7 +238,7 @@ int ChrolisStateDevice::Initialize()
         SetParentID(hubLabel); // for backward comp.
     }
     else
-        LogMessage(NoHubError);
+        LogMessage("No Hub");
 
     // create default positions and labels
     const int bufSize = 1024;
@@ -251,7 +265,7 @@ int ChrolisStateDevice::Shutdown()
 
 void ChrolisStateDevice::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
+    CDeviceUtils::CopyLimitedString(name, CHROLIS_STATE_NAME);
 }
 
 bool ChrolisStateDevice::Busy()
@@ -315,7 +329,8 @@ int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 
 //Chrolis Power Control (Genric Device) Methods
-ChrolisPowerControl::ChrolisPowerControl() : ledMaxPower_(100), ledMinPower_(0), ledPower_(0)
+ChrolisPowerControl::ChrolisPowerControl() : 
+    ledMaxPower_(100), ledMinPower_(0), led1Power_(0), led2Power_(0), led3Power_(0), led4Power_(0), led5Power_(0), led6Power_(0)
 {
     InitializeDefaultErrorMessages();
     //SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
@@ -334,11 +349,18 @@ int ChrolisPowerControl::Initialize()
         SetParentID(hubLabel); // for backward comp.
     }
     else
-        LogMessage(NoHubError);
+        LogMessage("No Hub");
 
-    //State Property
+    //Properties for power control
     CPropertyAction* pAct = new CPropertyAction(this, &ChrolisPowerControl::OnPowerChange);
-    auto err = CreateIntegerProperty(MM::g_Keyword_Label, 0, false, pAct);
+    auto err = CreateFloatProperty("LED 1", 0, false, pAct);
+    SetPropertyLimits("LED 1 Power", ledMinPower_, ledMaxPower_);
+    if (err != 0)
+    {
+        return DEVICE_ERR;
+        LogMessage("Error with property set in power control");
+    }
+
     return DEVICE_OK;
 }
 
@@ -349,7 +371,7 @@ int ChrolisPowerControl::Shutdown()
 
 void ChrolisPowerControl::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(name, CHROLIS_SHUTTER_NAME);
+    CDeviceUtils::CopyLimitedString(name, CHROLIS_GENERIC_DEVICE_NAME);
 }
 
 bool ChrolisPowerControl::Busy()
@@ -361,16 +383,16 @@ int ChrolisPowerControl::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType e
 {
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set((long)ledPower_);
+        pProp->Set((long)led1Power_);
         // nothing to do, let the caller to use cached property
     }
     else if (eAct == MM::AfterSet)
     {
-        long val;
+        double val;
         pProp->Get(val);
         if (val > ledMaxPower_ || val < ledMinPower_)
         {
-            pProp->Set((long)ledPower_); // revert
+            pProp->Set((long)led1Power_); // revert
             return ERR_UNKNOWN_LED_STATE;
         }
         // Do something with the incoming state info  
@@ -385,7 +407,10 @@ int ChrolisPowerControl::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType e
             return DEVICE_ERR;
         }
 
-        //TODO Add code for power control
+        ViInt16 states[] = {0,(int)val,(int)val,(int)val,(int)val,0};
+        wrapperInstance->SetLEDPowerStates(states);
+        led1Power_ = (int)val;
+
 
         return DEVICE_OK;
     }

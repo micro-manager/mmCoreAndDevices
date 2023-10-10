@@ -3,6 +3,7 @@
 
 ThorlabsChrolisDeviceWrapper::ThorlabsChrolisDeviceWrapper()
 {
+    deviceInUse_ = false;
     deviceConnected_ = false;
 	masterSwitchState_ = false;
 	deviceHandle_ = -1;
@@ -100,6 +101,7 @@ bool ThorlabsChrolisDeviceWrapper::IsDeviceConnected()
 int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(ViBoolean(&states)[6])
 {
     *states = *savedEnabledStates;
+    return DEVICE_OK;
 }
 
 int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(ViBoolean states[6])

@@ -1,10 +1,10 @@
 #pragma once
 #include <TL6WL.h>
 #include "DeviceBase.h"
-#define  CHROLIS_HUB_NAME  "CHROLIS_Hub"
+#define  CHROLIS_HUB_NAME  "CHROLIS"
 #define  CHROLIS_SHUTTER_NAME  "CHROLIS_Shutter"
-#define  CHROLIS_STATE_NAME  "CHROLIS_State_Device"
-#define  CHROLIS_GENERIC_DEVICE_NAME "CHROLIS_Generic_Device"
+#define  CHROLIS_STATE_NAME  "CHROLIS_Enable_States"
+#define  CHROLIS_GENERIC_DEVICE_NAME "CHROLIS_Power_Control"
 
 //Custom Error Codes
 #define ERR_UNKNOWN_MODE         102
@@ -13,8 +13,6 @@
 #define ERR_SEQUENCE_INACTIVE    105
 #define ERR_STAGE_MOVING         106
 #define HUB_NOT_AVAILABLE        107
-
-const char* NoHubError = "Parent Hub not defined.";
 
 class ChrolisHub : public HubBase <ChrolisHub>
 {
@@ -109,7 +107,13 @@ public:
     int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
     
 private:
-    ViInt16 ledPower_;
+    ViInt16 led1Power_;
+    ViInt16 led2Power_;
+    ViInt16 led3Power_;
+    ViInt16 led4Power_;
+    ViInt16 led5Power_;
+    ViInt16 led6Power_;
+
     ViInt16 ledMaxPower_;
     ViInt16 ledMinPower_;
 };
