@@ -87,14 +87,19 @@ int ThorlabsChrolisDeviceWrapper::ShutdownDevice()
         {
             return DEVICE_ERR;
         }
-        deviceConnected_ = false;
     }
+    deviceConnected_ = false;
 	return DEVICE_OK;
 }
 
 bool ThorlabsChrolisDeviceWrapper::IsDeviceConnected()
 {
     return deviceConnected_;
+}
+
+int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(ViBoolean(&states)[6])
+{
+    *states = *savedEnabledStates;
 }
 
 int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(ViBoolean states[6])
@@ -140,6 +145,43 @@ int ThorlabsChrolisDeviceWrapper::SetLEDPowerStates(ViInt16 states[6])
     }
 
 	return DEVICE_OK;
+}
+
+int ThorlabsChrolisDeviceWrapper::SetSingleLEDEnableState(int LED, ViBoolean state)
+{
+    if (LED < 6 && LED >= 0)
+    {
+        savedEnabledStates[LED] = state;
+        if (SetLEDEnableStates(savedEnabledStates))
+        {
+            return DEVICE_OK;
+        }
+        else
+        {
+            //revert in case of error
+            savedEnabledStates[LED] = !state;
+        }
+    }
+    return DEVICE_ERR;
+}
+
+int ThorlabsChrolisDeviceWrapper::SetSingleLEDPowerState(int LED, ViInt16 state)
+{
+    if (LED < 6 && LED >= 0)
+    {
+        ViInt16 tmpPower = savedPowerStates[LED];
+        savedPowerStates[LED] = state;
+        if (SetLEDPowerStates(savedPowerStates))
+        {
+            return DEVICE_OK;
+        }
+        else
+        {
+            //revert in case of error
+            savedPowerStates[LED] = tmpPower;
+        }
+    }
+    return DEVICE_ERR;
 }
 
 int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)

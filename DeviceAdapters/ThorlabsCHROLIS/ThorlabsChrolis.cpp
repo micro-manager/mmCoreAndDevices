@@ -3,6 +3,14 @@
 
 #include <string>
 
+/*
+* Questions for Mark
+* 1- Pre-init properties
+* 2- Sequencer action for properties and utilizing the sequencer
+* 3- Slider bars?
+* 4- Non-default property states for state devices
+*/
+
 MODULE_API void InitializeModuleData() {
     RegisterDevice(CHROLIS_HUB_NAME, // deviceName: model identifier and default device label
         MM::HubDevice, 
@@ -118,8 +126,27 @@ void* ChrolisHub::GetChrolisDeviceInstance()
 }
 
 //Chrolis Shutter Methods
+//TODO test on property change with label for shutter state
+ChrolisShutter::ChrolisShutter()
+{
+    InitializeDefaultErrorMessages();
+    //SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
+    //EnableDelay(); // signals that the delay setting will be used
+    CreateHubIDProperty();
+}
+
 int ChrolisShutter::Initialize()
 {
+    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+    if (pHub)
+    {
+        char hubLabel[MM::MaxStrLength];
+        pHub->GetLabel(hubLabel);
+        SetParentID(hubLabel); // for backward comp.
+    }
+    else
+        LogMessage(NoHubError);
+
     return DEVICE_OK;
 }
 
@@ -177,8 +204,43 @@ int ChrolisShutter::GetOpen(bool& open)
 
 
 //Chrolis State Device Methods
+ChrolisStateDevice::ChrolisStateDevice() :
+    numPos_(6),
+    curLedState_(0)
+{
+    InitializeDefaultErrorMessages();
+    //SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
+    //EnableDelay(); // signals that the delay setting will be used
+    CreateHubIDProperty();
+}
+
 int ChrolisStateDevice::Initialize()
 {
+    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+    if (pHub)
+    {
+        char hubLabel[MM::MaxStrLength];
+        pHub->GetLabel(hubLabel);
+        SetParentID(hubLabel); // for backward comp.
+    }
+    else
+        LogMessage(NoHubError);
+
+    // create default positions and labels
+    const int bufSize = 1024;
+    char buf[bufSize];
+    for (long i = 0; i < numPos_; i++)
+    {
+        snprintf(buf, bufSize, "-%ld", i);
+        SetPositionLabel(i, buf);
+    }
+
+    //State Property
+    CPropertyAction* pAct = new CPropertyAction(this, &ChrolisStateDevice::OnState);
+    auto err = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
+    if (err != DEVICE_OK)
+        return err;
+
     return DEVICE_OK;
 }
 
@@ -199,6 +261,50 @@ bool ChrolisStateDevice::Busy()
 
 int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(curLedState_);
+        // nothing to do, let the caller to use cached property
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+        if (pos >= numPos_ || pos < 0)
+        {
+            pProp->Set(curLedState_); // revert
+            return ERR_UNKNOWN_LED_STATE;
+        }
+        // Do something with the incoming state info  
+        ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+        if (!pHub || !pHub->IsInitialized())
+        {
+            return DEVICE_ERR; // TODO Add custom error messages
+        }
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        if (!wrapperInstance->IsDeviceConnected())
+        {
+            return DEVICE_ERR;
+        }
+
+        ViBoolean curStates[6];
+        wrapperInstance->GetLEDEnableStates(curStates);
+        for (int i = 0; i < 6; i++)
+        {
+            curStates[i] = false;
+        }
+        curStates[pos] = true;
+        int err = wrapperInstance->SetLEDEnableStates(curStates);
+        if (err != 0)
+        {
+            return DEVICE_ERR;
+        }
+
+        curLedState_ = pos;
+        return DEVICE_OK;
+    }
+    else if (eAct == MM::IsSequenceable)
+    {}
     return DEVICE_OK;
 }
 
@@ -209,8 +315,30 @@ int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 
 //Chrolis Power Control (Genric Device) Methods
+ChrolisPowerControl::ChrolisPowerControl() : ledMaxPower_(100), ledMinPower_(0), ledPower_(0)
+{
+    InitializeDefaultErrorMessages();
+    //SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
+    //EnableDelay(); // signals that the delay setting will be used
+    CreateHubIDProperty();
+}
+
+
 int ChrolisPowerControl::Initialize()
 {
+    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+    if (pHub)
+    {
+        char hubLabel[MM::MaxStrLength];
+        pHub->GetLabel(hubLabel);
+        SetParentID(hubLabel); // for backward comp.
+    }
+    else
+        LogMessage(NoHubError);
+
+    //State Property
+    CPropertyAction* pAct = new CPropertyAction(this, &ChrolisPowerControl::OnPowerChange);
+    auto err = CreateIntegerProperty(MM::g_Keyword_Label, 0, false, pAct);
     return DEVICE_OK;
 }
 
@@ -228,3 +356,42 @@ bool ChrolisPowerControl::Busy()
 {
     return false;
 }
+
+int ChrolisPowerControl::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set((long)ledPower_);
+        // nothing to do, let the caller to use cached property
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long val;
+        pProp->Get(val);
+        if (val > ledMaxPower_ || val < ledMinPower_)
+        {
+            pProp->Set((long)ledPower_); // revert
+            return ERR_UNKNOWN_LED_STATE;
+        }
+        // Do something with the incoming state info  
+        ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+        if (!pHub || !pHub->IsInitialized())
+        {
+            return DEVICE_ERR; // TODO Add custom error messages
+        }
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        if (!wrapperInstance->IsDeviceConnected())
+        {
+            return DEVICE_ERR;
+        }
+
+        //TODO Add code for power control
+
+        return DEVICE_OK;
+    }
+    else if (eAct == MM::IsSequenceable)
+    {
+    }
+    return DEVICE_OK;
+}
+

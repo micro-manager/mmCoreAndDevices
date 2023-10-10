@@ -6,6 +6,16 @@
 #define  CHROLIS_STATE_NAME  "CHROLIS_State_Device"
 #define  CHROLIS_GENERIC_DEVICE_NAME "CHROLIS_Generic_Device"
 
+//Custom Error Codes
+#define ERR_UNKNOWN_MODE         102
+#define ERR_UNKNOWN_LED_STATE    103
+#define ERR_IN_SEQUENCE          104
+#define ERR_SEQUENCE_INACTIVE    105
+#define ERR_STAGE_MOVING         106
+#define HUB_NOT_AVAILABLE        107
+
+const char* NoHubError = "Parent Hub not defined.";
+
 class ChrolisHub : public HubBase <ChrolisHub>
 {
 public:
@@ -35,9 +45,7 @@ class ChrolisShutter : public CShutterBase <ChrolisShutter> //CRTP
     bool masterShutterState = false;
 
 public:
-    ChrolisShutter()
-    {
-    }
+    ChrolisShutter();
     ~ChrolisShutter() {}
 
     int Initialize();
@@ -62,9 +70,7 @@ public:
 class ChrolisStateDevice : public CStateDeviceBase<ChrolisStateDevice>
 {
 public:
-    ChrolisStateDevice():
-        numPos_(6)
-    {}
+    ChrolisStateDevice();
 
     ~ChrolisStateDevice()
     {}
@@ -82,14 +88,14 @@ public:
     int OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+    long curLedState_;
     long numPos_;
 };
 
 class ChrolisPowerControl : public CGenericBase <ChrolisPowerControl>
 {
 public:
-    ChrolisPowerControl()
-    {}
+    ChrolisPowerControl();
 
     ~ChrolisPowerControl()
     {}
@@ -98,9 +104,14 @@ public:
     int Shutdown();
     void GetName(char* pszName) const;
     bool Busy();
+
+    //Label Update
+    int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
     
 private:
-
+    ViInt16 ledPower_;
+    ViInt16 ledMaxPower_;
+    ViInt16 ledMinPower_;
 };
 
 //Wrapper for the basic functions used in this device adapter
@@ -113,8 +124,11 @@ public:
     int InitializeDevice(std::string serialNumber = "");
     int ShutdownDevice();
     bool IsDeviceConnected();
+    int GetLEDEnableStates(ViBoolean (&states)[6]);
     int SetLEDEnableStates(ViBoolean states[6]);
     int SetLEDPowerStates(ViInt16 states[6]);
+    int SetSingleLEDEnableState(int LED, ViBoolean state);
+    int SetSingleLEDPowerState(int LED, ViInt16 state);
     int SetShutterState(bool open);
     int GetShutterState(bool& open);
 
