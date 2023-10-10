@@ -136,6 +136,7 @@ private:
    std::string port_;
    double version_;
    bool portAvailable_;
+   bool invert_;
 };
 
 

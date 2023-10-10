@@ -7,7 +7,7 @@
 // COPYRIGHT:     Altos Labs, 2023, based on code copyright UCSF 2008
 // LICENSE:       LGPL
 // 
-// AUTHOR:        Nico Stuurman, nstuurman@altoslabs.com, 7/13/2023
+// AUTHOR:        Nico Stuurman, nstuurman@altoslabs.com, 7/13/2023, 10/10/2023
 //
 
 #include "ArduinoCounter.h"
@@ -25,10 +25,13 @@ const char* g_DeviceNameArduinoCounterCamera = "ArduinoCounterCamera";
 
 
 // Global info about the state of the Arduino.  
-const double g_Min_MMVersion = 1.0;
-const double g_Max_MMVersion = 1.1;
+const double g_Min_MMVersion = 2.0;
+const double g_Max_MMVersion = 2.0;
 const char* g_versionProp = "Version";
 const char* g_Undefined = "Undefined";
+const char* g_Logic = "Output Logic";
+const char* g_Direct = "Direct";
+const char* g_Invert = "Invert";
 
 
 
@@ -64,7 +67,8 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 ArduinoCounterCamera::ArduinoCounterCamera() :
    imageBuffer_(0),
    nrCamerasInUse_(0),
-   initialized_(false)
+   initialized_(false),
+   invert_(false)
 {
    InitializeDefaultErrorMessages();
 
@@ -166,6 +170,11 @@ int ArduinoCounterCamera::Initialize()
    std::ostringstream sversion;
    sversion << version_;
    CreateProperty(g_versionProp, sversion.str().c_str(), MM::Float, true, pAct);
+
+   pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnLogic);
+   CreateProperty(g_Logic, g_Direct, MM::String, false, pAct);
+   AddAllowedValue(g_Logic, g_Direct);
+   AddAllowedValue(g_Logic, g_Invert);
 
 
    initialized_ = true;
@@ -741,6 +750,60 @@ int ArduinoCounterCamera::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
    {
       pProp->Get(port_);
       portAvailable_ = true;
+   }
+   return DEVICE_OK;
+}
+
+int ArduinoCounterCamera::OnLogic(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+   int ret = DEVICE_OK;
+   unsigned char command[2];
+   command[0] = 'p';
+   std::string answer;
+   if (pAct == MM::BeforeGet)
+   {
+      command[1] = '?';
+      ret = WriteToComPort(port_.c_str(), (const unsigned char*)command, 2);
+      if (ret != DEVICE_OK)
+         return ret;
+      ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+      if (ret != DEVICE_OK)
+         return ret;
+      if (answer == g_Invert)
+         invert_ = true;
+      else if (answer == g_Direct)
+         invert_ = false;
+      else
+         return DEVICE_SERIAL_INVALID_RESPONSE;
+   }
+   else if (pAct == MM::AfterSet)
+   {
+      std::string cmd;
+      pProp->Get(cmd);
+      if (cmd == g_Invert) {
+         command[1] = 'i';
+         ret = WriteToComPort(port_.c_str(), (const unsigned char*)command, 2);
+         if (ret != DEVICE_OK)
+            return ret;
+         ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+         if (ret != DEVICE_OK)
+            return ret;
+         if (answer != g_Invert)
+            return DEVICE_SERIAL_INVALID_RESPONSE;
+         invert_ = true;
+      }
+      else if (cmd == g_Direct) {
+         command[1] = 'd';
+         ret = WriteToComPort(port_.c_str(), (const unsigned char*)command, 2);
+         if (ret != DEVICE_OK)
+            return ret;
+         ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+         if (ret != DEVICE_OK)
+            return ret;
+         if (answer != g_Direct)
+            return DEVICE_SERIAL_INVALID_RESPONSE;
+         invert_ = false;
+      }
    }
    return DEVICE_OK;
 }
