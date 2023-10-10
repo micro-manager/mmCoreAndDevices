@@ -99,34 +99,34 @@ void loop() {
           }
       }
     }
-  }
 
-  if (counting) {
-    if (invert) {
-      if (inputWas && !(PIND & B00000100)) {
-        counter++;
-        inputWas = LOW;
-        PORTB = 1;
-      } else if (!inputWas && (PIND & B00000100)) {        
-        counter++;
-        inputWas = HIGH;
-        if (counter <= limit) {
-          PORTB = 0;
+
+    if (counting) {
+      if (invert) {
+        if (inputWas && !(PIND & B00000100)) {
+          counter++;
+          inputWas = LOW;
+          PORTB = 1;
+        } else if (!inputWas && (PIND & B00000100)) {
+          counter++;
+          inputWas = HIGH;
+          if (counter <= limit) {
+            PORTB = 0;
+          }
+        }
+      } else {  // do not invert output
+        if (inputWas && !(PIND & B00000100)) {
+          counter++;
+          inputWas = LOW;
+          if (counter <= limit) {
+            PORTB = 0;
+          }
+        } else if (!inputWas && (PIND & B00000100)) {
+          inputWas = HIGH;
+          PORTB = 1;
         }
       }
-    } else { // do not invert output
-      if (inputWas && !(PIND & B00000100)) {
-        counter++;
-        inputWas = LOW;
-        if (counter <= limit) {
-          PORTB = 0;
-        }
-      } else if (!inputWas && (PIND & B00000100)) {
-        inputWas = HIGH;
-        PORTB = 1;
-      }
-    }
-  } else {  // not counting
+    } else {  // not counting
       if (invert) {
         PORTB = !(PIND & B00000100);
       } else {
@@ -134,11 +134,12 @@ void loop() {
       }
     }
   }
+}
 
-  bool waitForSerial(unsigned long timeOut) {
-    unsigned long startTime = millis();
-    while (Serial.available() == 0 && (millis() - startTime < timeOut)) {}
-    if (Serial.available() > 0)
-      return true;
-    return false;
-  }
+bool waitForSerial(unsigned long timeOut) {
+  unsigned long startTime = millis();
+  while (Serial.available() == 0 && (millis() - startTime < timeOut)) {}
+  if (Serial.available() > 0)
+    return true;
+  return false;
+}
