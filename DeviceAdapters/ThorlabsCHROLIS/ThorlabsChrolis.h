@@ -85,28 +85,13 @@ public:
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+    //LED Control Methods
+    int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 private:
     long curLedState_;
     long numPos_;
-};
 
-class ChrolisPowerControl : public CGenericBase <ChrolisPowerControl>
-{
-public:
-    ChrolisPowerControl();
-
-    ~ChrolisPowerControl()
-    {}
-
-    int Initialize();
-    int Shutdown();
-    void GetName(char* pszName) const;
-    bool Busy();
-
-    //Label Update
-    int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
-    
-private:
     ViInt16 led1Power_;
     ViInt16 led2Power_;
     ViInt16 led3Power_;
@@ -117,6 +102,34 @@ private:
     ViInt16 ledMaxPower_;
     ViInt16 ledMinPower_;
 };
+
+//class ChrolisPowerControl : public CGenericBase <ChrolisPowerControl>
+//{
+//public:
+//    ChrolisPowerControl();
+//
+//    ~ChrolisPowerControl()
+//    {}
+//
+//    int Initialize();
+//    int Shutdown();
+//    void GetName(char* pszName) const;
+//    bool Busy();
+//
+//    //Label Update
+//    int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
+//    
+//private:
+//    ViInt16 led1Power_;
+//    ViInt16 led2Power_;
+//    ViInt16 led3Power_;
+//    ViInt16 led4Power_;
+//    ViInt16 led5Power_;
+//    ViInt16 led6Power_;
+//
+//    ViInt16 ledMaxPower_;
+//    ViInt16 ledMinPower_;
+//};
 
 //Wrapper for the basic functions used in this device adapter
 class ThorlabsChrolisDeviceWrapper
