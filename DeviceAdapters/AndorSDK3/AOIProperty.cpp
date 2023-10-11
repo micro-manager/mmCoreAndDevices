@@ -82,10 +82,11 @@ void TAOIProperty::populateWidthMaps(bool fullAoiControl)
 
    if (fullAoiControl)
    {
+      auto height = sensor_height_->Get();
       aoiWidthIndexMap_[2560] = 0;
       aoiWidthHeightMap_[2560] = 2160;
       aoiWidthIndexMap_[2048] = 1;
-      aoiWidthHeightMap_[2048] = 2048;
+      aoiWidthHeightMap_[2048] = (height > 2046) ? 2048 : 2046 ;
       aoiWidthIndexMap_[1920] = 2;
       aoiWidthHeightMap_[1920] = 1080;
       aoiWidthIndexMap_[1400] = 3;
