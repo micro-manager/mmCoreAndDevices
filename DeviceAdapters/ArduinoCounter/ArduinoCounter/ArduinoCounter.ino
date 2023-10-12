@@ -104,7 +104,6 @@ void loop() {
     if (counting) {
       if (invert) {
         if (inputWas && !(PIND & B00000100)) {
-          counter++;
           inputWas = LOW;
           PORTB = 1;
         } else if (!inputWas && (PIND & B00000100)) {
