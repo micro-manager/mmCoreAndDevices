@@ -9,10 +9,15 @@
 //Custom Error Codes
 #define ERR_UNKNOWN_MODE         102
 #define ERR_UNKNOWN_LED_STATE    103
-#define ERR_IN_SEQUENCE          104
-#define ERR_SEQUENCE_INACTIVE    105
-#define ERR_STAGE_MOVING         106
-#define HUB_NOT_AVAILABLE        107
+#define HUB_NOT_AVAILABLE        104
+#define ERR_CHROLIS_NOT_AVAIL    105
+#define ERR_CHROLIS_SET          106
+#define ERR_CHROLIS_GET          107
+#define ERR_PARAM_NOT_VALID      108
+
+//CHROLIS Specific Error Codes
+#define ERR_UNKOWN_HW_STATE     -1073676421
+#define ERR_VAL_OVERFLOW        -1073481985
 
 class ChrolisHub : public HubBase <ChrolisHub>
 {
@@ -90,7 +95,7 @@ public:
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-    long curLedState_;
+    uint8_t curLedState_;
     long numPos_;
 
     ViUInt16 led1Power_;

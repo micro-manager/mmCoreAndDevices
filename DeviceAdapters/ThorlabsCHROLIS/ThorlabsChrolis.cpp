@@ -5,27 +5,19 @@
 #include <regex>
 using namespace std;
 
-/*
-* Questions for Mark
-* 1- Pre-init properties
-* 2- Sequencer action for properties and utilizing the sequencer
-* 3- Slider bars?
-* 4- Non-default property states for state devices
-*/
-
 /*TODO
-* Set states of properties based on current LED states
-* Properties for device ID and stuff
+* Set states of properties based on current LED states - x
+* Properties for device ID and stuff - x
 * Error handling on device control methods
 * custom errors and messages
 * logs for errors
 * Remove HubID Property 
-* Integer property range 0 to 1 for each LED on off
+* Integer property range 0 to 1 for each LED on off - x
 * Is sequencable property for each device check arduino implementation
 * No need for sequence stuff in CHROLIS. Should check if breakout box needs to be enabled in software
 * no need for event callbacks in UI for triggering
-* Keep LED control in State Device
-* Maybe keep triggering in Generic if that gets implemented
+* Keep LED control in State Device - x
+* Maybe keep triggering in Generic if that gets implemented 
 * pre-init properties in constructor
 * set error text in constructor
 * enumerate in constructor 
@@ -36,7 +28,8 @@ using namespace std;
 * state device allowed values added individually for drop down
 * leave state as text box - integer property
 * put wavelength in property name
-* position labels?
+* handle cases for initialization failing
+* Julian tester
 */
 
 MODULE_API void InitializeModuleData() {
@@ -141,14 +134,18 @@ int ChrolisHub::Initialize()
         std::string wavelengthList = "";
         ViUInt16 wavelengths[6];
         err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetLEDWavelengths(wavelengths);
-        if (err == NULL)
+        if (err != 0)
         {
             LogMessage("Error with property set in hub control");
             return DEVICE_ERR;
         }
         for (int i = 0; i < 6; i ++)
         {
-            wavelengthList += wavelengths[i] + ",";
+            wavelengthList += std::to_string(wavelengths[i]);
+            if (i != 5)
+            {
+                wavelengthList += ", ";
+            }
         }
         err = CreateStringProperty("Available Wavelengths", wavelengthList.c_str(), true);
         if (err != 0)
@@ -218,6 +215,16 @@ int ChrolisShutter::Initialize()
     }
     else
         LogMessage("No Hub");
+
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    if (wrapperInstance->IsDeviceConnected())
+    {
+        auto err = wrapperInstance->SetShutterState(false);
+        if (err != 0)
+        {
+            LogMessage("Could not close shutter on it");
+        }
+    }
 
     return DEVICE_OK;
 }
@@ -314,11 +321,14 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     {
         err = wrapperInstance->GetLEDEnableStates(led1State_, led2State_, led3State_, led4State_, led5State_, led6State_);
         err = wrapperInstance->GetLEDPowerStates(led1Power_, led2Power_, led3Power_, led4Power_, led5Power_, led6Power_);
+        curLedState_ =
+            ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
+                | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5));
     }
 
     //State Property
     CPropertyAction* pAct = new CPropertyAction(this, &ChrolisStateDevice::OnState);
-    err = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
+    err = CreateIntegerProperty(MM::g_Keyword_State, curLedState_, false, pAct);
     if (err != DEVICE_OK)
         return err;
 
@@ -466,16 +476,16 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set(curLedState_);
+        pProp->Set((long)curLedState_);
         // nothing to do, let the caller to use cached property
     }
     else if (eAct == MM::AfterSet)
     {
-        long pos;
-        pProp->Get(pos);
-        if (pos >= numPos_ || pos < 0)
+        long val;
+        pProp->Get(val);
+        if (val >= pow(2, numPos_) || val < 0)
         {
-            pProp->Set(curLedState_); // revert
+            pProp->Set((long)curLedState_); // revert
             return ERR_UNKNOWN_LED_STATE;
         }
         // Do something with the incoming state info  
@@ -490,24 +500,32 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             return DEVICE_ERR;
         }
 
-        ViBoolean curStates[6];
-        wrapperInstance->GetLEDEnableStates(curStates);
-        for (int i = 0; i < 6; i++)
+        ViBoolean newStates[6]
         {
-            curStates[i] = false;
-        }
-        curStates[pos] = true;
-        int err = wrapperInstance->SetLEDEnableStates(curStates);
+            static_cast<bool>(val & (1 << 0)),
+            static_cast<bool>(val & (1 << 1)),
+            static_cast<bool>(val & (1 << 2)),
+            static_cast<bool>(val & (1 << 3)),
+            static_cast<bool>(val & (1 << 4)),
+            static_cast<bool>(val & (1 << 5))
+        };
+        int err = wrapperInstance->SetLEDEnableStates(newStates);
         if (err != 0)
         {
             return DEVICE_ERR;
         }
 
-        curLedState_ = pos;
+        led1State_ = static_cast<bool>(val & (1 << 0));
+        led2State_ = static_cast<bool>(val & (1 << 1));
+        led3State_ = static_cast<bool>(val & (1 << 2));
+        led4State_ = static_cast<bool>(val & (1 << 3));
+        led5State_ = static_cast<bool>(val & (1 << 4));
+        led6State_ = static_cast<bool>(val & (1 << 5));
+
+        OnPropertiesChanged();
+
+        curLedState_ = val;
         return DEVICE_OK;
-    }
-    else if (eAct == MM::IsSequenceable)
-    {
     }
     return DEVICE_OK;
 }
@@ -589,12 +607,13 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
 
         wrapperInstance->SetSingleLEDEnableState(numFromName-1, (ViBoolean)val);
         *ledBeingControlled = (ViBoolean)val;
-
+        curLedState_ = 
+            ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2) 
+                | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5));
+        OnPropertiesChanged();
         return DEVICE_OK;
     }
-    else if (eAct == MM::IsSequenceable)
-    {
-    }
+
     return DEVICE_OK;
 }
 
@@ -675,12 +694,9 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
 
         wrapperInstance->SetSingleLEDPowerState(numFromName-1, val);
         *ledBeingControlled = (int)val;
-
+        OnPropertiesChanged();
 
         return DEVICE_OK;
-    }
-    else if (eAct == MM::IsSequenceable)
-    {
     }
     return DEVICE_OK;
 }

@@ -21,11 +21,11 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
     err = TL6WL_findRsrc(NULL, &numDevices);
     if (err != 0)
     {
-        return DEVICE_ERR;
+        return err;
     }
     if (numDevices == 0)
     {
-        return DEVICE_ERR;
+        return err;
     }
 
     ViChar resource[512] = "";
@@ -34,12 +34,12 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
         err = TL6WL_getRsrcName(NULL, 0, resource);
         if (err != 0)
         {
-            return DEVICE_ERR;
+            return err;
         }
         err = TL6WL_getRsrcInfo(NULL, 0, deviceName_, serialNumber_, manufacturerName_, &deviceInUse_);
         if (err != 0)
         {
-            return DEVICE_ERR;
+            return err;
         }
     }
     else
@@ -56,7 +56,7 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
             err = TL6WL_getRsrcInfo(NULL, i, deviceName_, serialNumber_, manufacturerName_, &deviceInUse_);
             if (err != 0)
             {
-                return DEVICE_ERR;
+                return err;
             }
             if (strcmp((char*)serialNumber_, serialNumber.c_str()))
             {
@@ -66,23 +66,22 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
         }
         if(!found)
         { 
-            return DEVICE_ERR;
+            return err;
         }
     }
     err = TL6WL_init(resource, false, false, &deviceHandle_);
     if (err != 0)
     {
-        return DEVICE_ERR;
+        return err;
     }
     deviceConnected_ = true;
 
     for (int i = 0; i < numLEDs_; i++)
     {
-        err = TL6WL_readLED_HeadCentroidWL(deviceHandle_, i, &ledWavelengths[i]);
+        err = TL6WL_readLED_HeadPeakWL(deviceHandle_, i+1, &ledWavelengths[i]);
         if (err != 0)
         {
-            //Error reading head wavelengths
-            return DEVICE_ERR;
+            return err;
         }
     }
     VerifyLEDStates();
@@ -97,7 +96,7 @@ int ThorlabsChrolisDeviceWrapper::ShutdownDevice()
         auto err = TL6WL_close(deviceHandle_);
         if (err != 0)
         {
-            return DEVICE_ERR;
+            return err;
         }
     }
     deviceConnected_ = false;
@@ -113,11 +112,11 @@ int ThorlabsChrolisDeviceWrapper::GetSerialNumber(ViChar* serialNumber)
 {
     if (deviceConnected_)
     {
-        serialNumber = serialNumber_;
+        strcpy(serialNumber, serialNumber_);
     }
     else
     {
-        serialNumber = (ViChar*)"NOT INITIALIZED";
+        strcpy(serialNumber, "Not Initialized");
     }
     return DEVICE_OK;
 }
@@ -126,11 +125,11 @@ int ThorlabsChrolisDeviceWrapper::GetManufacturerName(ViChar* manfName)
 {
     if (deviceConnected_)
     {
-        manfName = manufacturerName_;
+        strcpy(manfName, manufacturerName_);
     }
     else
     {
-        manfName = (ViChar*)"NOT INITIALIZED";
+        strcpy(manfName, "Not Initialized");
     }
     return DEVICE_OK;
 }
@@ -140,9 +139,15 @@ int ThorlabsChrolisDeviceWrapper::GetLEDWavelengths(ViUInt16(&wavelengths)[6])
     if (!deviceConnected_)
     {
         *wavelengths = NULL;
-        return DEVICE_ERR;
+        return ERR_CHROLIS_NOT_AVAIL;
     }
-    *wavelengths = *ledWavelengths;
+    wavelengths[0] = ledWavelengths[0];
+    wavelengths[1] = ledWavelengths[1];
+    wavelengths[2] = ledWavelengths[2];
+    wavelengths[3] = ledWavelengths[3];
+    wavelengths[4] = ledWavelengths[4];
+    wavelengths[5] = ledWavelengths[5];
+
     return DEVICE_OK;
 }
 
@@ -150,10 +155,16 @@ int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(ViBoolean(&states)[6])
 {
     if (!deviceConnected_)
     {
-        *states = NULL;
-        return DEVICE_ERR;
+        for (int i = 0; i < 6; i++)
+        {
+            states[i] = false;
+        }
+        return ERR_CHROLIS_NOT_AVAIL;
     }
-    *states = *savedEnabledStates;
+    for (int i = 0; i < 6; i++)
+    {
+        states[i] = savedEnabledStates[i];
+    }
     return DEVICE_OK;
 }
 
@@ -161,7 +172,13 @@ int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(ViBoolean& led1State, ViBoo
 {
     if (!deviceConnected_)
     {
-        return DEVICE_ERR;
+        led1State = false;
+        led2State = false;
+        led3State = false;
+        led4State = false;
+        led5State = false;
+        led6State = false;
+        return ERR_CHROLIS_NOT_AVAIL;
     }
     led1State = savedEnabledStates[0];
     led2State = savedEnabledStates[1];
@@ -175,9 +192,9 @@ int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(ViBoolean& led1State, ViBoo
 
 int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(ViBoolean states[6])
 {
-    if (states == NULL)
+    if (!deviceConnected_)
     {
-        return DEVICE_ERR;
+        return ERR_CHROLIS_NOT_AVAIL;
     }
     int i;
     for (i = 0; i < numLEDs_; i++)
@@ -201,10 +218,16 @@ int ThorlabsChrolisDeviceWrapper::GetLEDPowerStates(ViUInt16(&states)[6])
 {
     if (!deviceConnected_)
     {
-        *states = NULL;
-        return DEVICE_ERR;
+        for (int i = 0; i < 6; i++)
+        {
+            states[i] = 0;
+        }
+        return ERR_CHROLIS_NOT_AVAIL;
     }
-    *states = *savedPowerStates;
+    for (int i = 0; i < 6; i++)
+    {
+        states[i] = savedPowerStates[i];
+    }
     return DEVICE_OK;
 }
 
@@ -212,7 +235,13 @@ int ThorlabsChrolisDeviceWrapper::GetLEDPowerStates(ViUInt16& led1Power, ViUInt1
 {
     if (!deviceConnected_)
     {
-        return DEVICE_ERR;
+        led1Power = 0;
+        led2Power = 0;
+        led3Power = 0;
+        led4Power = 0;
+        led5Power = 0;
+        led6Power = 0;
+        return ERR_CHROLIS_NOT_AVAIL;
     }
     led1Power = savedPowerStates[0];
     led2Power = savedPowerStates[1];
@@ -226,9 +255,9 @@ int ThorlabsChrolisDeviceWrapper::GetLEDPowerStates(ViUInt16& led1Power, ViUInt1
 
 int ThorlabsChrolisDeviceWrapper::SetLEDPowerStates(ViUInt16 states[6])
 {
-    if (states == NULL)
+    if (!deviceConnected_)
     {
-        return DEVICE_ERR;
+        return ERR_CHROLIS_NOT_AVAIL;
     }
     int i;
     for (i = 0; i < numLEDs_; i++)
@@ -249,54 +278,63 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDEnableState(int LED, ViBoolean sta
 {
     if (LED < 6 && LED >= 0)
     {
+        int err = 0;
         savedEnabledStates[LED] = state;
-        if (!SetLEDEnableStates(savedEnabledStates))
-        {
-            return DEVICE_OK;
-        }
-        else
+        err = SetLEDEnableStates(savedEnabledStates);
+        if (err != 0)
         {
             //revert in case of error
             savedEnabledStates[LED] = !state;
+            return err;
         }
+        return DEVICE_OK;
     }
-    return DEVICE_ERR;
+    else
+    {
+        return ERR_PARAM_NOT_VALID;
+    }
 }
 
 int ThorlabsChrolisDeviceWrapper::SetSingleLEDPowerState(int LED, ViUInt16 state)
 {
     if (LED < 6 && LED >= 0)
     {
+        int err = 0;
         ViInt16 tmpPower = savedPowerStates[LED];
         savedPowerStates[LED] = state;
-        if (!SetLEDPowerStates(savedPowerStates))
-        {
-            return DEVICE_OK;
-        }
-        else
+        err = SetLEDPowerStates(savedPowerStates);
+        if (err != 0)
         {
             //revert in case of error
             savedPowerStates[LED] = tmpPower;
+            return err;
         }
+        return DEVICE_OK;
     }
-    return DEVICE_ERR;
+    else
+    {
+        return ERR_PARAM_NOT_VALID;
+    }
 }
 
 int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)
 {
+    int err;
     if (!open)
     {
-        if (int err = TL6WL_setLED_HeadPowerStates(deviceHandle_, false, false, false, false, false, false) != 0)
+        err = TL6WL_setLED_HeadPowerStates(deviceHandle_, false, false, false, false, false, false);
+        if (err != 0)
         {
-            return DEVICE_ERR;
+            return err;
         }
         masterSwitchState_ = false;
     }
     else
     {
-        if (int err = TL6WL_setLED_HeadPowerStates(deviceHandle_, savedEnabledStates[0], savedEnabledStates[1], savedEnabledStates[2], savedEnabledStates[3], savedEnabledStates[4], savedEnabledStates[5]) != 0)
+        err = TL6WL_setLED_HeadPowerStates(deviceHandle_, savedEnabledStates[0], savedEnabledStates[1], savedEnabledStates[2], savedEnabledStates[3], savedEnabledStates[4], savedEnabledStates[5]);
+        if (err != 0)
         {
-            return DEVICE_ERR;
+            return err;
         }
         masterSwitchState_ = true;
     }
@@ -305,6 +343,11 @@ int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)
 
 int ThorlabsChrolisDeviceWrapper::GetShutterState(bool& open)
 {
+    if (!deviceConnected_)
+    {
+        open = false;
+        return ERR_CHROLIS_NOT_AVAIL;
+    }
     open = masterSwitchState_;
 	return DEVICE_OK;
 }
@@ -335,9 +378,4 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDStates()
     }
 
     return stateCorrect;
-}
-
-long GetIntegerStateValue()
-{
-    return 0;
 }
