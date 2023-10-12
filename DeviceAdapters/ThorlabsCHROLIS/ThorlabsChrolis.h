@@ -39,7 +39,7 @@ private:
 
 class ChrolisShutter : public CShutterBase <ChrolisShutter> //CRTP
 {
-    ViBoolean savedEnabledStates[6]{ false,false,false,false,false,false};
+    ViBoolean savedEnabledStates[6]{ false,false,false,false,false,false}; // should remove these
     bool masterShutterState = false;
 
 public:
@@ -93,12 +93,12 @@ private:
     long curLedState_;
     long numPos_;
 
-    ViInt16 led1Power_;
-    ViInt16 led2Power_;
-    ViInt16 led3Power_;
-    ViInt16 led4Power_;
-    ViInt16 led5Power_;
-    ViInt16 led6Power_;
+    ViUInt16 led1Power_;
+    ViUInt16 led2Power_;
+    ViUInt16 led3Power_;
+    ViUInt16 led4Power_;
+    ViUInt16 led5Power_;
+    ViUInt16 led6Power_;
 
     ViBoolean led1State_;
     ViBoolean led2State_;
@@ -152,13 +152,17 @@ public:
     int GetSerialNumber(ViChar* serialNumber);
     int GetManufacturerName(ViChar* manfName);
     int GetLEDWavelengths(ViUInt16(&wavelengths)[6]);
-    int GetLEDEnableStates(ViBoolean (&states)[6]);
+    int GetLEDEnableStates(ViBoolean(&states)[6]);
+    int GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State);
     int SetLEDEnableStates(ViBoolean states[6]);
-    int SetLEDPowerStates(ViInt16 states[6]);
+    int GetLEDPowerStates(ViUInt16(&states)[6]);
+    int GetLEDPowerStates(ViUInt16 &led1Power, ViUInt16&led2Power, ViUInt16&led3Power, ViUInt16&led4Power, ViUInt16&led5Power, ViUInt16&led6Power);
+    int SetLEDPowerStates(ViUInt16 states[6]);
     int SetSingleLEDEnableState(int LED, ViBoolean state);
-    int SetSingleLEDPowerState(int LED, ViInt16 state);
+    int SetSingleLEDPowerState(int LED, ViUInt16 state);
     int SetShutterState(bool open);
     int GetShutterState(bool& open);
+    bool VerifyLEDStates();
 
 private:
     int numLEDs_;
@@ -170,7 +174,7 @@ private:
     ViChar manufacturerName_[256];
     bool masterSwitchState_;
     ViBoolean savedEnabledStates[6]{false,false,false,false,false,false};
-    ViInt16 savedPowerStates[6]{0,0,0,0,0,0};
+    ViUInt16 savedPowerStates[6]{0,0,0,0,0,0};
     ViUInt16 ledWavelengths[6]{0,0,0,0,0,0};
 };
 

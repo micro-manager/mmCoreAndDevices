@@ -307,17 +307,25 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
         snprintf(buf, bufSize, "-%ld", i);
         SetPositionLabel(i, buf);
     }
+    int err;
+
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    if (wrapperInstance->IsDeviceConnected())
+    {
+        err = wrapperInstance->GetLEDEnableStates(led1State_, led2State_, led3State_, led4State_, led5State_, led6State_);
+        err = wrapperInstance->GetLEDPowerStates(led1Power_, led2Power_, led3Power_, led4Power_, led5Power_, led6Power_);
+    }
 
     //State Property
     CPropertyAction* pAct = new CPropertyAction(this, &ChrolisStateDevice::OnState);
-    auto err = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
+    err = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
     if (err != DEVICE_OK)
         return err;
 
 
     ////Properties for power control
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateFloatProperty("LED 1 Power", 0.0, false, pAct);
+    err = CreateIntegerProperty("LED 1 Power", led1Power_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in power control");
@@ -326,7 +334,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     SetPropertyLimits("LED 1 Power", ledMinPower_, ledMaxPower_);
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateFloatProperty("LED 2 Power", 0, false, pAct);
+    err = CreateIntegerProperty("LED 2 Power", led2Power_, false, pAct);
     SetPropertyLimits("LED 2 Power", ledMinPower_, ledMaxPower_);
     if (err != 0)
     {
@@ -335,7 +343,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     }
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateFloatProperty("LED 3 Power", 0, false, pAct);
+    err = CreateIntegerProperty("LED 3 Power", led3Power_, false, pAct);
     SetPropertyLimits("LED 3 Power", ledMinPower_, ledMaxPower_);
     if (err != 0)
     {
@@ -344,7 +352,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     }
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateFloatProperty("LED 4 Power", 0, false, pAct);
+    err = CreateIntegerProperty("LED 4 Power", led4Power_, false, pAct);
     SetPropertyLimits("LED 4 Power", ledMinPower_, ledMaxPower_);
     if (err != 0)
     {
@@ -353,7 +361,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     }
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateFloatProperty("LED 5 Power", 0, false, pAct);
+    err = CreateIntegerProperty("LED 5 Power", led5Power_, false, pAct);
     SetPropertyLimits("LED 5 Power", ledMinPower_, ledMaxPower_);
     if (err != 0)
     {
@@ -362,7 +370,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     }
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateFloatProperty("LED 6 Power", 0, false, pAct);
+    err = CreateIntegerProperty("LED 6 Power", led6Power_, false, pAct);
     SetPropertyLimits("LED 6 Power", ledMinPower_, ledMaxPower_);
     if (err != 0)
     {
@@ -373,7 +381,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
 
     //Properties for state control
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 1", 0, false, pAct);
+    err = CreateIntegerProperty("LED Enable State 1", led1State_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in state control");
@@ -382,7 +390,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     SetPropertyLimits("LED Enable State 1", 0, 1);
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 2", 0, false, pAct);
+    err = CreateIntegerProperty("LED Enable State 2", led2State_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in state control");
@@ -391,7 +399,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     SetPropertyLimits("LED Enable State 2", 0, 1);
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 3", 0, false, pAct);
+    err = CreateIntegerProperty("LED Enable State 3", led3State_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in state control");
@@ -400,7 +408,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     SetPropertyLimits("LED Enable State 3", 0, 1);
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 4", 0, false, pAct);
+    err = CreateIntegerProperty("LED Enable State 4", led4State_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in state control");
@@ -409,7 +417,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     SetPropertyLimits("LED Enable State 4", 0, 1);
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 5", 0, false, pAct);
+    err = CreateIntegerProperty("LED Enable State 5", led5State_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in state control");
@@ -418,7 +426,7 @@ int ChrolisStateDevice::Initialize() //TODO: Initialized property?
     SetPropertyLimits("LED Enable State 5", 0, 1);
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 6", 0, false, pAct);
+    err = CreateIntegerProperty("LED Enable State 6", led6Power_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in state control");
@@ -592,7 +600,7 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
 
 int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    ViPInt16 ledBeingControlled;
+    ViPUInt16 ledBeingControlled;
     int numFromName = -1;
     std::string searchString = pProp->GetName();
     regex regexp("[-+]?([0-9]*\.[0-9]+|[0-9]+)");    
