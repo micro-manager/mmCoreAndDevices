@@ -154,7 +154,7 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDEnableState(int LED, ViBoolean sta
     if (LED < 6 && LED >= 0)
     {
         savedEnabledStates[LED] = state;
-        if (SetLEDEnableStates(savedEnabledStates))
+        if (!SetLEDEnableStates(savedEnabledStates))
         {
             return DEVICE_OK;
         }
@@ -173,7 +173,7 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDPowerState(int LED, ViInt16 state)
     {
         ViInt16 tmpPower = savedPowerStates[LED];
         savedPowerStates[LED] = state;
-        if (SetLEDPowerStates(savedPowerStates))
+        if (!SetLEDPowerStates(savedPowerStates))
         {
             return DEVICE_OK;
         }
@@ -211,4 +211,9 @@ int ThorlabsChrolisDeviceWrapper::GetShutterState(bool& open)
 {
     open = masterSwitchState_;
 	return DEVICE_OK;
+}
+
+long GetIntegerStateValue()
+{
+    return 0;
 }

@@ -3,8 +3,8 @@
 #include "DeviceBase.h"
 #define  CHROLIS_HUB_NAME  "CHROLIS"
 #define  CHROLIS_SHUTTER_NAME  "CHROLIS_Shutter"
-#define  CHROLIS_STATE_NAME  "CHROLIS_Enable_States"
-#define  CHROLIS_GENERIC_DEVICE_NAME "CHROLIS_Power_Control"
+#define  CHROLIS_STATE_NAME  "CHROLIS_LED_Control"
+//#define  CHROLIS_GENERIC_DEVICE_NAME "CHROLIS_Power_Control"
 
 //Custom Error Codes
 #define ERR_UNKNOWN_MODE         102
@@ -87,6 +87,7 @@ public:
 
     //LED Control Methods
     int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     long curLedState_;
@@ -98,6 +99,13 @@ private:
     ViInt16 led4Power_;
     ViInt16 led5Power_;
     ViInt16 led6Power_;
+
+    ViBoolean led1State_;
+    ViBoolean led2State_;
+    ViBoolean led3State_;
+    ViBoolean led4State_;
+    ViBoolean led5State_;
+    ViBoolean led6State_;
 
     ViInt16 ledMaxPower_;
     ViInt16 ledMinPower_;

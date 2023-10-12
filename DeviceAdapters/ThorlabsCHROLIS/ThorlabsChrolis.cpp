@@ -36,6 +36,7 @@ using namespace std;
 * state device allowed values added individually for drop down
 * leave state as text box - integer property
 * put wavelength in property name
+* position labels?
 */
 
 MODULE_API void InitializeModuleData() {
@@ -47,7 +48,7 @@ MODULE_API void InitializeModuleData() {
         "Thorlabs CHROLIS Shutter"); 
     RegisterDevice(CHROLIS_STATE_NAME,
         MM::StateDevice,
-        "Thorlabs CHROLIS Enable State");
+        "Thorlabs CHROLIS LED Control");
     //RegisterDevice(CHROLIS_GENERIC_DEVICE_NAME,
     //    MM::GenericDevice,
     //    "Thorlabs CHROLIS Power Control");
@@ -238,8 +239,9 @@ int ChrolisShutter::GetOpen(bool& open)
 
 //Chrolis State Device Methods
 ChrolisStateDevice::ChrolisStateDevice() :
-    numPos_(6),
-    curLedState_(0)
+    numPos_(6),curLedState_(0), ledMaxPower_(100), ledMinPower_(0), 
+    led1Power_(0), led2Power_(0), led3Power_(0), led4Power_(0), led5Power_(0), led6Power_(0),
+    led1State_(false), led2State_(false), led3State_(false), led4State_(false), led5State_(false), led6State_(false)
 {
     InitializeDefaultErrorMessages();
     //SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
@@ -247,7 +249,7 @@ ChrolisStateDevice::ChrolisStateDevice() :
     CreateHubIDProperty();
 }
 
-int ChrolisStateDevice::Initialize()
+int ChrolisStateDevice::Initialize() //TODO: Initialized property?
 {
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (pHub)
@@ -258,16 +260,6 @@ int ChrolisStateDevice::Initialize()
     }
     else
         LogMessage("No Hub");
-
-    //Properties for power control
-    CPropertyAction* pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    auto err = CreateFloatProperty("LED 1", 0, false, pAct);
-    SetPropertyLimits("LED 1 Power", ledMinPower_, ledMaxPower_);
-    if (err != 0)
-    {
-        return DEVICE_ERR;
-        LogMessage("Error with property set in power control");
-    }
 
     // create default positions and labels
     const int bufSize = 1024;
@@ -283,6 +275,118 @@ int ChrolisStateDevice::Initialize()
     auto err = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
     if (err != DEVICE_OK)
         return err;
+
+
+    ////Properties for power control
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
+    err = CreateFloatProperty("LED 1 Power", 0.0, false, pAct);
+    if (err != 0)
+    {
+        LogMessage("Error with property set in power control");
+        return DEVICE_ERR;
+    }
+    SetPropertyLimits("LED 1 Power", ledMinPower_, ledMaxPower_);
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
+    err = CreateFloatProperty("LED 2 Power", 0, false, pAct);
+    SetPropertyLimits("LED 2 Power", ledMinPower_, ledMaxPower_);
+    if (err != 0)
+    {
+        return DEVICE_ERR;
+        LogMessage("Error with property set in state control");
+    }
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
+    err = CreateFloatProperty("LED 3 Power", 0, false, pAct);
+    SetPropertyLimits("LED 3 Power", ledMinPower_, ledMaxPower_);
+    if (err != 0)
+    {
+        return DEVICE_ERR;
+        LogMessage("Error with property set in state control");
+    }
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
+    err = CreateFloatProperty("LED 4 Power", 0, false, pAct);
+    SetPropertyLimits("LED 4 Power", ledMinPower_, ledMaxPower_);
+    if (err != 0)
+    {
+        return DEVICE_ERR;
+        LogMessage("Error with property set in state control");
+    }
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
+    err = CreateFloatProperty("LED 5 Power", 0, false, pAct);
+    SetPropertyLimits("LED 5 Power", ledMinPower_, ledMaxPower_);
+    if (err != 0)
+    {
+        return DEVICE_ERR;
+        LogMessage("Error with property set in state control");
+    }
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
+    err = CreateFloatProperty("LED 6 Power", 0, false, pAct);
+    SetPropertyLimits("LED 6 Power", ledMinPower_, ledMaxPower_);
+    if (err != 0)
+    {
+        return DEVICE_ERR;
+        LogMessage("Error with property set in state control");
+    }
+
+
+    //Properties for state control
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
+    err = CreateIntegerProperty("LED Enable State 1", 0, false, pAct);
+    if (err != 0)
+    {
+        LogMessage("Error with property set in state control");
+        return DEVICE_ERR;
+    }
+    SetPropertyLimits("LED Enable State 1", 0, 1);
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
+    err = CreateIntegerProperty("LED Enable State 2", 0, false, pAct);
+    if (err != 0)
+    {
+        LogMessage("Error with property set in state control");
+        return DEVICE_ERR;
+    }
+    SetPropertyLimits("LED Enable State 2", 0, 1);
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
+    err = CreateIntegerProperty("LED Enable State 3", 0, false, pAct);
+    if (err != 0)
+    {
+        LogMessage("Error with property set in state control");
+        return DEVICE_ERR;
+    }
+    SetPropertyLimits("LED Enable State 3", 0, 1);
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
+    err = CreateIntegerProperty("LED Enable State 4", 0, false, pAct);
+    if (err != 0)
+    {
+        LogMessage("Error with property set in state control");
+        return DEVICE_ERR;
+    }
+    SetPropertyLimits("LED Enable State 4", 0, 1);
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
+    err = CreateIntegerProperty("LED Enable State 5", 0, false, pAct);
+    if (err != 0)
+    {
+        LogMessage("Error with property set in state control");
+        return DEVICE_ERR;
+    }
+    SetPropertyLimits("LED Enable State 5", 0, 1);
+
+    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
+    err = CreateIntegerProperty("LED Enable State 6", 0, false, pAct);
+    if (err != 0)
+    {
+        LogMessage("Error with property set in state control");
+        return DEVICE_ERR;
+    }
+    SetPropertyLimits("LED Enable State 6", 0, 1);
 
     return DEVICE_OK;
 }
@@ -302,6 +406,16 @@ bool ChrolisStateDevice::Busy()
     return false;
 }
 
+int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return DEVICE_OK;
+}
+
+//OnPropertyChanged("AsyncPropertyFollower", leaderValue.c_str());
+//Update onState to use binary value
+//single state changes should modify the single led, verify that it was changed, update global state long, onchange OnState
+// Update states of properties based on initial values
+//Error check hardware calls and revert properties if something fails
 int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
@@ -347,31 +461,63 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         return DEVICE_OK;
     }
     else if (eAct == MM::IsSequenceable)
-    {}
-    return DEVICE_OK;
-}
-
-int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    return DEVICE_OK;
-}
-
-int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    regex regexp("s[a-z_]+");
-    match_results<char> m;
-    regex_search(pProp->GetName().c_str(), m, regexp);
-
-    ViPInt16 ledBeingControlled;
-    switch ()
     {
+    }
+    return DEVICE_OK;
+}
+
+int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    ViPBoolean ledBeingControlled;
+    int numFromName = -1;
+    std::string searchString = pProp->GetName();
+    regex regexp("[-+]?([0-9]*\.[0-9]+|[0-9]+)");
+    std::smatch sm;
+    regex_search(searchString, sm, regexp);
+
+    //The names for the LED's should contain only a single number representing the LED
+    //Use this to set the power
+    if (sm.size() > 0)
+    {
+        if (sm[0].str().length() > 0)
+        {
+            numFromName = stoi(sm[0].str());
+        }
+    }
+    else
+    {
+        LogMessage("Regex match failed");
+        return DEVICE_ERR;
+    }
+
+    switch (numFromName)
+    {
+    case 1:
+        ledBeingControlled = &led1State_;
+        break;
+    case 2:
+        ledBeingControlled = &led2State_;
+        break;
+    case 3:
+        ledBeingControlled = &led3State_;
+        break;
+    case 4:
+        ledBeingControlled = &led4State_;
+        break;
+    case 5:
+        ledBeingControlled = &led5State_;
+        break;
+    case 6:
+        ledBeingControlled = &led6State_;
+        break;
     default:
+        return DEVICE_ERR;
         break;
     }
 
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set((long)led1Power_);
+        pProp->Set((long)*ledBeingControlled);
         // nothing to do, let the caller to use cached property
     }
     else if (eAct == MM::AfterSet)
@@ -380,7 +526,7 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         pProp->Get(val);
         if (val > ledMaxPower_ || val < ledMinPower_)
         {
-            pProp->Set((long)led1Power_); // revert
+            pProp->Set((long)*ledBeingControlled); // revert
             return ERR_UNKNOWN_LED_STATE;
         }
         // Do something with the incoming state info  
@@ -395,9 +541,94 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
             return DEVICE_ERR;
         }
 
-        ViInt16 states[] = { 0,(int)val,(int)val,(int)val,(int)val,0 };
-        wrapperInstance->SetLEDPowerStates(states);
-        led1Power_ = (int)val;
+        wrapperInstance->SetSingleLEDEnableState(numFromName-1, (ViBoolean)val);
+        *ledBeingControlled = (ViBoolean)val;
+
+        return DEVICE_OK;
+    }
+    else if (eAct == MM::IsSequenceable)
+    {
+    }
+    return DEVICE_OK;
+}
+
+int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    ViPInt16 ledBeingControlled;
+    int numFromName = -1;
+    std::string searchString = pProp->GetName();
+    regex regexp("[-+]?([0-9]*\.[0-9]+|[0-9]+)");    
+    std::smatch sm;
+    regex_search(searchString, sm, regexp);
+
+    //The names for the LED's should contain only a single number representing the LED
+    //Use this to set the power
+    if (sm.size() > 0)
+    {
+        if (sm[0].str().length() > 0)
+        {
+            numFromName = stoi(sm[0].str());
+        }
+    }
+    else
+    {
+        LogMessage("Regex match failed");
+        return DEVICE_ERR;
+    }
+
+    switch (numFromName)
+    {
+    case 1:
+        ledBeingControlled = &led1Power_;
+        break;
+    case 2:
+        ledBeingControlled = &led2Power_;
+        break;
+    case 3:
+        ledBeingControlled = &led3Power_;
+        break;
+    case 4:
+        ledBeingControlled = &led4Power_;
+        break;
+    case 5:
+        ledBeingControlled = &led5Power_;
+        break;
+    case 6:
+        ledBeingControlled = &led6Power_;
+        break;
+    default:
+        return DEVICE_ERR;
+        break;
+    }
+
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set((long)*ledBeingControlled);
+        // nothing to do, let the caller to use cached property
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double val;
+        pProp->Get(val);
+        if (val > ledMaxPower_ || val < ledMinPower_)
+        {
+            pProp->Set((long)*ledBeingControlled); // revert
+            return ERR_UNKNOWN_LED_STATE;
+        }
+        // Do something with the incoming state info  
+        ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+        if (!pHub || !pHub->IsInitialized())
+        {
+            return DEVICE_ERR; // TODO Add custom error messages
+        }
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        if (!wrapperInstance->IsDeviceConnected())
+        {
+            return DEVICE_ERR;
+        }
+
+        wrapperInstance->SetSingleLEDPowerState(numFromName-1, val);
+        *ledBeingControlled = (int)val;
 
 
         return DEVICE_OK;
