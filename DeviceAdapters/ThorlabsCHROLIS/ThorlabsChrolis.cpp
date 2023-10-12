@@ -119,6 +119,44 @@ int ChrolisHub::Initialize()
             LogMessage("Error in CHROLIS Initialization");
             return DEVICE_ERR;
         }
+
+        ViChar sNum[256]; 
+        static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetSerialNumber(sNum);
+        err = CreateStringProperty("Serial Number", sNum, true);
+        if (err != 0)
+        {
+            LogMessage("Error with property set in hub control");
+            return DEVICE_ERR;
+        }
+
+        ViChar manfName[256];
+        static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetManufacturerName(manfName);
+        err = CreateStringProperty("Manufacturer Name", manfName, true);
+        if (err != 0)
+        {
+            LogMessage("Error with property set in hub control");
+            return DEVICE_ERR;
+        }
+
+        std::string wavelengthList = "";
+        ViUInt16 wavelengths[6];
+        err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetLEDWavelengths(wavelengths);
+        if (err == NULL)
+        {
+            LogMessage("Error with property set in hub control");
+            return DEVICE_ERR;
+        }
+        for (int i = 0; i < 6; i ++)
+        {
+            wavelengthList += wavelengths[i] + ",";
+        }
+        err = CreateStringProperty("Available Wavelengths", wavelengthList.c_str(), true);
+        if (err != 0)
+        {
+            LogMessage("Error with property set in hub control");
+            return DEVICE_ERR;
+        }
+
         initialized_ = true;
     }
     return DEVICE_OK;

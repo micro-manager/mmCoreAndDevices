@@ -149,6 +149,9 @@ public:
     int InitializeDevice(std::string serialNumber = "");
     int ShutdownDevice();
     bool IsDeviceConnected();
+    int GetSerialNumber(ViChar* serialNumber);
+    int GetManufacturerName(ViChar* manfName);
+    int GetLEDWavelengths(ViUInt16(&wavelengths)[6]);
     int GetLEDEnableStates(ViBoolean (&states)[6]);
     int SetLEDEnableStates(ViBoolean states[6]);
     int SetLEDPowerStates(ViInt16 states[6]);
@@ -168,5 +171,6 @@ private:
     bool masterSwitchState_;
     ViBoolean savedEnabledStates[6]{false,false,false,false,false,false};
     ViInt16 savedPowerStates[6]{0,0,0,0,0,0};
+    ViUInt16 ledWavelengths[6]{0,0,0,0,0,0};
 };
 
