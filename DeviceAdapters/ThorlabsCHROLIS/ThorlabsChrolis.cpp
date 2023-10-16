@@ -8,7 +8,7 @@ using namespace std;
 /*TODO
 * Set states of properties based on current LED states - x
 * Properties for device ID and stuff - x
-* Error handling on device control methods
+* Error handling on device control methods - x
 * custom errors and messages
 * logs for errors
 * Remove HubID Property 
@@ -24,7 +24,7 @@ using namespace std;
 * no logging in constructor
 * store error in device instance
 * after constructor, needs to be safe to call shutdown or destructor- x
-* device specific properties in the hub
+* device specific properties in the hub - x
 * state device allowed values added individually for drop down
 * leave state as text box - integer property - X
 * put wavelength in property name - X
@@ -121,14 +121,14 @@ int ChrolisHub::Initialize()
             return err;
         }
 
-        //ViChar sNum[TL6WL_LONG_STRING_SIZE];
-        //static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetSerialNumber(sNum);
-        //err = CreateStringProperty("Serial Number", sNum, true);
-        //if (err != 0)
-        //{
-        //    LogMessage("Error with property set in hub initialize");
-        //    return DEVICE_ERR;
-        //}
+        ViChar sNum[TL6WL_LONG_STRING_SIZE];
+        static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetSerialNumber(sNum);
+        err = CreateStringProperty("Device Serial Number", sNum, true);
+        if (err != 0)
+        {
+            LogMessage("Error with property set in hub initialize");
+            return DEVICE_ERR;
+        }
 
         ViChar manfName[TL6WL_LONG_STRING_SIZE];
         static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetManufacturerName(manfName);
