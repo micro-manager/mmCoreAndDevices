@@ -23,13 +23,12 @@ using namespace std;
 * enumerate in constructor 
 * no logging in constructor
 * store error in device instance
-* after constructor, needs to be safe to call shutdown or destructor
+* after constructor, needs to be safe to call shutdown or destructor- x
 * device specific properties in the hub
 * state device allowed values added individually for drop down
 * leave state as text box - integer property - X
 * put wavelength in property name - X
 * handle cases for initialization failing
-* Julian tester
 */
 
 MODULE_API void InitializeModuleData() {
@@ -69,11 +68,11 @@ ChrolisHub::ChrolisHub() :
     initialized_(false),
     busy_(false),
     threadRunning_(false), 
-    currentDeviceStatusCode_(0), 
     deviceStatusMessage_("No Errors")
 {
     CreateHubIDProperty();
     chrolisDeviceInstance_ = new ThorlabsChrolisDeviceWrapper();
+    atomic_init(&currentDeviceStatusCode_, 0);
 }
 
 int ChrolisHub::DetectInstalledDevices()
@@ -96,7 +95,6 @@ int ChrolisHub::DetectInstalledDevices()
     return DEVICE_OK;
 }
 
-//Should have boolean to indicate device is initialized so it can be cleaned up in case of other errors in init
 int ChrolisHub::Initialize()
 {
     if (!initialized_)
@@ -157,7 +155,7 @@ int ChrolisHub::Initialize()
         }
 
         threadRunning_ = true;
-        updateThread_ = thread(&StatusChangedPollingThread);
+        updateThread_ = thread(&ChrolisHub::StatusChangedPollingThread, this);
         initialized_ = true;
     }
     return DEVICE_OK;
@@ -165,7 +163,6 @@ int ChrolisHub::Initialize()
 
 int ChrolisHub::Shutdown()
 {
-    //Shutdown thread before anything else
     if (threadRunning_)
     {
         threadRunning_ = false;
@@ -230,36 +227,36 @@ void ChrolisHub::StatusChangedPollingThread()
             }
             else
             {
-                currentDeviceStatusCode_ = tempStatus;
-                if (currentDeviceStatusCode_ == 0)
+                currentDeviceStatusCode_.store(tempStatus);
+                if (currentDeviceStatusCode_.load() == 0)
                 {
                     OnPropertyChanged("Device Status", "No Error");
                 }
-                else if (currentDeviceStatusCode_ & 0x01 == 1)
+                else if (currentDeviceStatusCode_.load() & 0x01 == 1)
                 {
                     OnPropertyChanged("Device Status", "Box is Open");
                 }
-                else if (currentDeviceStatusCode_ & 0x02 == 1)
+                else if (currentDeviceStatusCode_.load() & 0x02 == 1)
                 {
                     OnPropertyChanged("Device Status", "LLG not connected");
                 }
-                else if (currentDeviceStatusCode_ & 0x04 == 1)
+                else if (currentDeviceStatusCode_.load() & 0x04 == 1)
                 {
                     OnPropertyChanged("Device Status", "Interlock is Open");
                 }
-                else if (currentDeviceStatusCode_ & 0x08 == 1)
+                else if (currentDeviceStatusCode_.load() & 0x08 == 1)
                 {
                     OnPropertyChanged("Device Status", "Using default adjustment");
                 }
-                else if (currentDeviceStatusCode_ & 0x10 == 1)
+                else if (currentDeviceStatusCode_.load() & 0x10 == 1)
                 {
                     OnPropertyChanged("Device Status", "Box overheated");
                 }
-                else if (currentDeviceStatusCode_ & 0x20 == 1)
+                else if (currentDeviceStatusCode_.load() & 0x20 == 1)
                 {
                     OnPropertyChanged("Device Status", "LED overheated");
                 }
-                else if (currentDeviceStatusCode_ & 0x40 == 1)
+                else if (currentDeviceStatusCode_.load() & 0x40 == 1)
                 {
                     OnPropertyChanged("Device Status", "Invalid  box setup");
                 }

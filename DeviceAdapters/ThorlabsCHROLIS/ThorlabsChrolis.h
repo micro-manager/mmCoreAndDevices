@@ -1,6 +1,7 @@
 #pragma once
 #include<thread>
 #include <TL6WL.h>
+#include <atomic>
 #include "DeviceBase.h"
 
 #define  CHROLIS_HUB_NAME  "CHROLIS"
@@ -35,7 +36,6 @@ public:
     int DetectInstalledDevices();
 
     bool IsInitialized();
-    //void TL6WL_StatusChangedHandler(ViUInt32 statRegist);
     void* GetChrolisDeviceInstance();
     void StatusChangedPollingThread();
 
@@ -46,7 +46,7 @@ private:
     bool busy_;
     bool threadRunning_;
     std::thread updateThread_;
-    atomic_uint32_t currentDeviceStatusCode_;
+    std::atomic_uint32_t currentDeviceStatusCode_;
     std::string deviceStatusMessage_;
 };
 
