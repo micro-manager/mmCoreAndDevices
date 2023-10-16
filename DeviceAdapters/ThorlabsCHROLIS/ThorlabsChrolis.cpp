@@ -71,8 +71,20 @@ ChrolisHub::ChrolisHub() :
     deviceStatusMessage_("No Errors")
 {
     CreateHubIDProperty();
+    SetErrorText(ERR_INSUF_INFO, "Insufficient location information of the device or the resource is not present on the system");
+
     chrolisDeviceInstance_ = new ThorlabsChrolisDeviceWrapper();
     atomic_init(&currentDeviceStatusCode_, 0);
+
+    std::vector<std::string> serialNumbers;
+    static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetAvailableSerialNumbers(serialNumbers);
+
+    CreateStringProperty("Serial Number", "DEFAULT", false, 0, true);
+    for (int i = 0; i < serialNumbers.size(); i++)
+    {
+        AddAllowedValue("Serial Number", serialNumbers[i].c_str());
+    }
+
 }
 
 int ChrolisHub::DetectInstalledDevices()
@@ -99,21 +111,24 @@ int ChrolisHub::Initialize()
 {
     if (!initialized_)
     {
-        auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->InitializeDevice();
+        char buf[MM::MaxStrLength];
+        int ret = GetProperty("Serial Number", buf);       
+
+        auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->InitializeDevice(buf);
         if (err != 0)
         {
             LogMessage("Error in CHROLIS Initialization");
             return err;
         }
 
-        ViChar sNum[TL6WL_LONG_STRING_SIZE];
-        static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetSerialNumber(sNum);
-        err = CreateStringProperty("Serial Number", sNum, true);
-        if (err != 0)
-        {
-            LogMessage("Error with property set in hub initialize");
-            return DEVICE_ERR;
-        }
+        //ViChar sNum[TL6WL_LONG_STRING_SIZE];
+        //static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetSerialNumber(sNum);
+        //err = CreateStringProperty("Serial Number", sNum, true);
+        //if (err != 0)
+        //{
+        //    LogMessage("Error with property set in hub initialize");
+        //    return DEVICE_ERR;
+        //}
 
         ViChar manfName[TL6WL_LONG_STRING_SIZE];
         static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetManufacturerName(manfName);
@@ -232,31 +247,31 @@ void ChrolisHub::StatusChangedPollingThread()
                 {
                     OnPropertyChanged("Device Status", "No Error");
                 }
-                else if (currentDeviceStatusCode_.load() & 0x01 == 1)
+                else if ((currentDeviceStatusCode_.load() & 0x01) == 1)
                 {
                     OnPropertyChanged("Device Status", "Box is Open");
                 }
-                else if (currentDeviceStatusCode_.load() & 0x02 == 1)
+                else if ((currentDeviceStatusCode_.load() & 0x02) == 1)
                 {
                     OnPropertyChanged("Device Status", "LLG not connected");
                 }
-                else if (currentDeviceStatusCode_.load() & 0x04 == 1)
+                else if ((currentDeviceStatusCode_.load() & 0x04) == 1)
                 {
                     OnPropertyChanged("Device Status", "Interlock is Open");
                 }
-                else if (currentDeviceStatusCode_.load() & 0x08 == 1)
+                else if ((currentDeviceStatusCode_.load() & 0x08) == 1)
                 {
                     OnPropertyChanged("Device Status", "Using default adjustment");
                 }
-                else if (currentDeviceStatusCode_.load() & 0x10 == 1)
+                else if ((currentDeviceStatusCode_.load() & 0x10) == 1)
                 {
                     OnPropertyChanged("Device Status", "Box overheated");
                 }
-                else if (currentDeviceStatusCode_.load() & 0x20 == 1)
+                else if ((currentDeviceStatusCode_.load() & 0x20) == 1)
                 {
                     OnPropertyChanged("Device Status", "LED overheated");
                 }
-                else if (currentDeviceStatusCode_.load() & 0x40 == 1)
+                else if ((currentDeviceStatusCode_.load() & 0x40) == 1)
                 {
                     OnPropertyChanged("Device Status", "Invalid  box setup");
                 }

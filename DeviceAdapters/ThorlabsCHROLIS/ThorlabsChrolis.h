@@ -2,6 +2,7 @@
 #include<thread>
 #include <TL6WL.h>
 #include <atomic>
+#include <vector>
 #include "DeviceBase.h"
 
 #define  CHROLIS_HUB_NAME  "CHROLIS"
@@ -16,8 +17,12 @@
 #define ERR_CHROLIS_SET          106
 #define ERR_CHROLIS_GET          107
 #define ERR_PARAM_NOT_VALID      108
+#define ERR_NO_AVAIL_DEVICES     109
 
 //CHROLIS Specific Error Codes
+
+//VISA Error Codes
+#define ERR_INSUF_INFO          -1073807343
 #define ERR_UNKOWN_HW_STATE     -1073676421
 #define ERR_VAL_OVERFLOW        -1073481985
 
@@ -131,6 +136,7 @@ public:
     ThorlabsChrolisDeviceWrapper();
     ~ThorlabsChrolisDeviceWrapper();
 
+    int GetAvailableSerialNumbers(std::vector<std::string> &serialNumbers);
     int InitializeDevice(std::string serialNumber = "");
     int ShutdownDevice();
     bool IsDeviceConnected();
@@ -154,6 +160,7 @@ public:
 
 private:
     int numLEDs_;
+    std::vector<std::string> serialNumberList_;
     bool deviceConnected_;
     ViSession deviceHandle_;
     ViBoolean deviceInUse_; //only used by the chrolis API

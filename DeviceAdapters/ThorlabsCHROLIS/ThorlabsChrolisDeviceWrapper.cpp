@@ -13,6 +13,31 @@ ThorlabsChrolisDeviceWrapper::ThorlabsChrolisDeviceWrapper()
 ThorlabsChrolisDeviceWrapper::~ThorlabsChrolisDeviceWrapper()
 {}
 
+int ThorlabsChrolisDeviceWrapper::GetAvailableSerialNumbers(std::vector<std::string> &serialNumbers)
+{
+    int err = 0;
+    ViUInt32 numDevices;
+    CDeviceUtils::SleepMs(2000);
+    err = TL6WL_findRsrc(NULL, &numDevices);
+    if (err != 0)
+    {
+        return err;
+    }
+    if (numDevices == 0)
+    {
+        return ERR_NO_AVAIL_DEVICES;
+    }
+    for (int i = 0; i < numDevices; i++)
+    {
+        err = TL6WL_getRsrcInfo(NULL, i, deviceName_, serialNumber_, manufacturerName_, &deviceInUse_);
+        if (err != 0)
+        {
+            return err;
+        }
+        serialNumbers.push_back(serialNumber_);
+    }
+}
+
 int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
 {
     int err = 0;
@@ -25,11 +50,11 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
     }
     if (numDevices == 0)
     {
-        return err;
+        return ERR_NO_AVAIL_DEVICES;
     }
 
     ViChar resource[512] = "";
-    if(serialNumber.compare(""))
+    if(serialNumber.compare("") || serialNumber.compare("DEFAULT"))
     {
         err = TL6WL_getRsrcName(NULL, 0, resource);
         if (err != 0)
@@ -51,7 +76,7 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
             err = TL6WL_getRsrcName(NULL, i, resource);
             if (err != 0)
             {
-                return DEVICE_ERR;
+                return err;
             }
             err = TL6WL_getRsrcInfo(NULL, i, deviceName_, serialNumber_, manufacturerName_, &deviceInUse_);
             if (err != 0)
