@@ -12,7 +12,7 @@
 //Custom Error Codes
 #define ERR_UNKNOWN_MODE         102
 #define ERR_UNKNOWN_LED_STATE    103
-#define HUB_NOT_AVAILABLE        104
+#define ERR_HUB_NOT_AVAILABLE        104
 #define ERR_CHROLIS_NOT_AVAIL    105
 #define ERR_CHROLIS_SET          106
 #define ERR_CHROLIS_GET          107

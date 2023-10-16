@@ -338,7 +338,7 @@ int ChrolisShutter::SetOpen(bool open)
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (!pHub || !pHub->IsInitialized())
     {
-        return HUB_NOT_AVAILABLE; 
+        return ERR_HUB_NOT_AVAILABLE;
     }
     ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
     if (!wrapperInstance->IsDeviceConnected())
@@ -359,12 +359,12 @@ int ChrolisShutter::GetOpen(bool& open)
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (!pHub || !pHub->IsInitialized())
     {
-        return DEVICE_ERR;
+        return ERR_HUB_NOT_AVAILABLE;
     }
     ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
     if (!wrapperInstance->IsDeviceConnected())
     {
-        return DEVICE_ERR;
+        return ERR_CHROLIS_NOT_AVAIL;
     }
     wrapperInstance->GetShutterState(open);
     return DEVICE_OK;
@@ -566,7 +566,6 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (eAct == MM::BeforeGet)
     {
         pProp->Set((long)curLedState_);
-        // nothing to do, let the caller to use cached property
     }
     else if (eAct == MM::AfterSet)
     {
@@ -581,12 +580,13 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
-            return DEVICE_ERR; // TODO Add custom error messages
+            return ERR_HUB_NOT_AVAILABLE; // TODO Add custom error messages
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
         {
-            return DEVICE_ERR;
+            pProp->Set((long)curLedState_);
+            return ERR_CHROLIS_NOT_AVAIL;
         }
 
         ViBoolean newStates[6]
@@ -612,9 +612,11 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         led5State_ = static_cast<bool>(val & (1 << 4));
         led6State_ = static_cast<bool>(val & (1 << 5));
 
+        pProp->Set((long)val);
+        curLedState_ = val;
+
         OnPropertiesChanged();
 
-        curLedState_ = val;
         return DEVICE_OK;
     }
     return DEVICE_OK;
@@ -686,7 +688,7 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
-            return HUB_NOT_AVAILABLE;
+            return ERR_HUB_NOT_AVAILABLE;
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
@@ -772,14 +774,14 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         pProp->Get(val);
         if (val > ledMaxPower_ || val < ledMinPower_)
         {
-            pProp->Set((long)*ledBeingControlled); // revert
+            pProp->Set((long)*ledBeingControlled);
             return ERR_UNKNOWN_LED_STATE;
         }
-        // Do something with the incoming state info  
+
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
-            return HUB_NOT_AVAILABLE; // TODO Add custom error messages
+            return ERR_HUB_NOT_AVAILABLE; 
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
