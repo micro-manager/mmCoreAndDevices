@@ -57,9 +57,6 @@ private:
 
 class ChrolisShutter : public CShutterBase <ChrolisShutter> //CRTP
 {
-    ViBoolean savedEnabledStates[6]{ false,false,false,false,false,false}; // should remove these
-    bool masterShutterState = false;
-
 public:
     ChrolisShutter();
     ~ChrolisShutter() {}

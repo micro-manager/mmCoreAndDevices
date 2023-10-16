@@ -338,7 +338,7 @@ int ChrolisShutter::SetOpen(bool open)
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (!pHub || !pHub->IsInitialized())
     {
-        return HUB_NOT_AVAILABLE; // TODO Add custom error messages
+        return HUB_NOT_AVAILABLE; 
     }
     ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
     if (!wrapperInstance->IsDeviceConnected())
@@ -359,7 +359,7 @@ int ChrolisShutter::GetOpen(bool& open)
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (!pHub || !pHub->IsInitialized())
     {
-        return DEVICE_ERR; // TODO Add custom error messages
+        return DEVICE_ERR;
     }
     ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
     if (!wrapperInstance->IsDeviceConnected())
@@ -383,7 +383,7 @@ ChrolisStateDevice::ChrolisStateDevice() :
     CreateHubIDProperty();
 }
 
-int ChrolisStateDevice::Initialize() //TODO: Initialized property?
+int ChrolisStateDevice::Initialize()
 {
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (pHub)
@@ -577,7 +577,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             pProp->Set((long)curLedState_); // revert
             return ERR_UNKNOWN_LED_STATE;
         }
-        // Do something with the incoming state info  
+
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
@@ -601,7 +601,8 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         int err = wrapperInstance->SetLEDEnableStates(newStates);
         if (err != 0)
         {
-            return DEVICE_ERR;
+            pProp->Set((long)curLedState_);
+            return err;
         }
 
         led1State_ = static_cast<bool>(val & (1 << 0));
@@ -679,22 +680,27 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         pProp->Get(val);
         if (val > ledMaxPower_ || val < ledMinPower_)
         {
-            pProp->Set((long)*ledBeingControlled); // revert
+            pProp->Set((long)*ledBeingControlled);
             return ERR_UNKNOWN_LED_STATE;
         }
-        // Do something with the incoming state info  
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
-            return DEVICE_ERR; // TODO Add custom error messages
+            return HUB_NOT_AVAILABLE;
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
         {
-            return DEVICE_ERR;
+            pProp->Set((long)*ledBeingControlled);
+            return ERR_CHROLIS_NOT_AVAIL;
         }
 
-        wrapperInstance->SetSingleLEDEnableState(numFromName-1, (ViBoolean)val);
+        int err = wrapperInstance->SetSingleLEDEnableState(numFromName-1, (ViBoolean)val);
+        if (err != 0)
+        {
+            pProp->Set((long)*ledBeingControlled);
+            return err;
+        }
         *ledBeingControlled = (ViBoolean)val;
         curLedState_ = 
             ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2) 
@@ -773,15 +779,21 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
-            return DEVICE_ERR; // TODO Add custom error messages
+            return HUB_NOT_AVAILABLE; // TODO Add custom error messages
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
         {
-            return DEVICE_ERR;
+            pProp->Set((long)*ledBeingControlled);
+            return ERR_CHROLIS_NOT_AVAIL;
         }
 
-        wrapperInstance->SetSingleLEDPowerState(numFromName-1, val);
+        int err = wrapperInstance->SetSingleLEDPowerState(numFromName-1, val);
+        if (err != 0)
+        {
+            pProp->Set((long)*ledBeingControlled);
+            return err;
+        }
         *ledBeingControlled = (int)val;
         OnPropertiesChanged();
 
@@ -789,57 +801,3 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
     }
     return DEVICE_OK;
 }
-
-
-//Chrolis Power Control (Genric Device) Methods
-//ChrolisPowerControl::ChrolisPowerControl() : 
-//    ledMaxPower_(100), ledMinPower_(0), led1Power_(0), led2Power_(0), led3Power_(0), led4Power_(0), led5Power_(0), led6Power_(0)
-//{
-//    InitializeDefaultErrorMessages();
-//    //SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
-//    //EnableDelay(); // signals that the delay setting will be used
-//    CreateHubIDProperty();
-//}
-//
-
-//int ChrolisPowerControl::Initialize()
-//{
-//    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
-//    if (pHub)
-//    {
-//        char hubLabel[MM::MaxStrLength];
-//        pHub->GetLabel(hubLabel);
-//        SetParentID(hubLabel); // for backward comp.
-//    }
-//    else
-//        LogMessage("No Hub");
-//
-//    //Properties for power control
-//    CPropertyAction* pAct = new CPropertyAction(this, &ChrolisPowerControl::OnPowerChange);
-//    auto err = CreateFloatProperty("LED 1", 0, false, pAct);
-//    SetPropertyLimits("LED 1 Power", ledMinPower_, ledMaxPower_);
-//    if (err != 0)
-//    {
-//        return DEVICE_ERR;
-//        LogMessage("Error with property set in power control");
-//    }
-//
-//    return DEVICE_OK;
-//}
-//
-//int ChrolisPowerControl::Shutdown()
-//{
-//    return DEVICE_OK;
-//}
-//
-//void ChrolisPowerControl::GetName(char* name) const
-//{
-//    CDeviceUtils::CopyLimitedString(name, CHROLIS_GENERIC_DEVICE_NAME);
-//}
-//
-//bool ChrolisPowerControl::Busy()
-//{
-//    return false;
-//}
-
-
