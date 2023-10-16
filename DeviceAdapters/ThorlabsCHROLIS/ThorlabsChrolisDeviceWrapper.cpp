@@ -98,6 +98,7 @@ int ThorlabsChrolisDeviceWrapper::ShutdownDevice()
         {
             return err;
         }
+        deviceHandle_ = -1;
     }
     deviceConnected_ = false;
 	return DEVICE_OK;
@@ -138,7 +139,10 @@ int ThorlabsChrolisDeviceWrapper::GetLEDWavelengths(ViUInt16(&wavelengths)[6])
 {
     if (!deviceConnected_)
     {
-        *wavelengths = NULL;
+        for (int i = 0; i < 6; i++)
+        {
+            wavelengths[i] = 0;
+        }
         return ERR_CHROLIS_NOT_AVAIL;
     }
     wavelengths[0] = ledWavelengths[0];
@@ -350,6 +354,35 @@ int ThorlabsChrolisDeviceWrapper::GetShutterState(bool& open)
     }
     open = masterSwitchState_;
 	return DEVICE_OK;
+}
+
+int ThorlabsChrolisDeviceWrapper::GetDeviceStatus(ViUInt32& status)
+{
+    if (!deviceConnected_)
+    {
+        status = 0;
+        return ERR_CHROLIS_NOT_AVAIL;
+    }
+    auto err = TL6WL_getBoxStatus(deviceHandle_, &status);
+    if (err != 0)
+    {
+        return err;
+    }
+    return DEVICE_OK;
+}
+
+int ThorlabsChrolisDeviceWrapper::RegisterStatusChangedHandler(void* handler)
+{
+    if (!deviceConnected_)
+    {
+        return ERR_CHROLIS_NOT_AVAIL;
+    }
+    auto err = TL6WL_registerBoxStatusChangedHandler(deviceHandle_, (Box6WL_StatusChangedHandler)handler);
+    if (err != 0)
+    {
+        return err;
+    }
+    return DEVICE_OK;
 }
 
 //set or fix any issues with the stored led vals. Return if a correction needed to be made

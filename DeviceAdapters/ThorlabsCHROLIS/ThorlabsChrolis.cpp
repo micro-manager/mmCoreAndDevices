@@ -26,8 +26,8 @@ using namespace std;
 * after constructor, needs to be safe to call shutdown or destructor
 * device specific properties in the hub
 * state device allowed values added individually for drop down
-* leave state as text box - integer property
-* put wavelength in property name
+* leave state as text box - integer property - X
+* put wavelength in property name - X
 * handle cases for initialization failing
 * Julian tester
 */
@@ -42,9 +42,6 @@ MODULE_API void InitializeModuleData() {
     RegisterDevice(CHROLIS_STATE_NAME,
         MM::StateDevice,
         "Thorlabs CHROLIS LED Control");
-    //RegisterDevice(CHROLIS_GENERIC_DEVICE_NAME,
-    //    MM::GenericDevice,
-    //    "Thorlabs CHROLIS Power Control");
 }
 
 MODULE_API MM::Device* CreateDevice(char const* name) {
@@ -60,9 +57,6 @@ MODULE_API MM::Device* CreateDevice(char const* name) {
     if (name == std::string(CHROLIS_STATE_NAME))
         return new ChrolisStateDevice();
 
-    //if (name == std::string(CHROLIS_GENERIC_DEVICE_NAME))
-    //    return new ChrolisPowerControl();
-
     return nullptr;
 }
 
@@ -73,7 +67,10 @@ MODULE_API void DeleteDevice(MM::Device* device) {
 //Hub Methods
 ChrolisHub::ChrolisHub() :
     initialized_(false),
-    busy_(false)
+    busy_(false),
+    threadRunning_(false), 
+    currentDeviceStatusCode_(0), 
+    deviceStatusMessage_("No Errors")
 {
     CreateHubIDProperty();
     chrolisDeviceInstance_ = new ThorlabsChrolisDeviceWrapper();
@@ -82,12 +79,10 @@ ChrolisHub::ChrolisHub() :
 int ChrolisHub::DetectInstalledDevices()
 {
     ClearInstalledDevices();
-
-    // make sure this method is called before we look for available devices
-    InitializeModuleData();
+    InitializeModuleData();// make sure this method is called before we look for available devices
 
     char hubName[MM::MaxStrLength];
-    GetName(hubName); // this device name
+    GetName(hubName);
     for (unsigned i = 0; i < GetNumberOfDevices(); i++)
     {
         char deviceName[MM::MaxStrLength];
@@ -101,33 +96,33 @@ int ChrolisHub::DetectInstalledDevices()
     return DEVICE_OK;
 }
 
+//Should have boolean to indicate device is initialized so it can be cleaned up in case of other errors in init
 int ChrolisHub::Initialize()
 {
     if (!initialized_)
     {
-
         auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->InitializeDevice();
         if (err != 0)
         {
             LogMessage("Error in CHROLIS Initialization");
-            return DEVICE_ERR;
+            return err;
         }
 
-        ViChar sNum[256]; 
+        ViChar sNum[TL6WL_LONG_STRING_SIZE];
         static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetSerialNumber(sNum);
         err = CreateStringProperty("Serial Number", sNum, true);
         if (err != 0)
         {
-            LogMessage("Error with property set in hub control");
+            LogMessage("Error with property set in hub initialize");
             return DEVICE_ERR;
         }
 
-        ViChar manfName[256];
+        ViChar manfName[TL6WL_LONG_STRING_SIZE];
         static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetManufacturerName(manfName);
         err = CreateStringProperty("Manufacturer Name", manfName, true);
         if (err != 0)
         {
-            LogMessage("Error with property set in hub control");
+            LogMessage("Error with property set in hub initialize");
             return DEVICE_ERR;
         }
 
@@ -136,8 +131,8 @@ int ChrolisHub::Initialize()
         err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetLEDWavelengths(wavelengths);
         if (err != 0)
         {
-            LogMessage("Error with property set in hub control");
-            return DEVICE_ERR;
+            LogMessage("Unable to get wavelengths from device");
+            return err;
         }
         for (int i = 0; i < 6; i ++)
         {
@@ -150,10 +145,19 @@ int ChrolisHub::Initialize()
         err = CreateStringProperty("Available Wavelengths", wavelengthList.c_str(), true);
         if (err != 0)
         {
-            LogMessage("Error with property set in hub control");
+            LogMessage("Error with property set in hub initialize");
             return DEVICE_ERR;
         }
 
+        err = CreateStringProperty("Device Status", deviceStatusMessage_.c_str(), true);
+        if (err != 0)
+        {
+            LogMessage("Error with property set in hub initialize");
+            return DEVICE_ERR;
+        }
+
+        threadRunning_ = true;
+        updateThread_ = thread(&StatusChangedPollingThread);
         initialized_ = true;
     }
     return DEVICE_OK;
@@ -161,7 +165,14 @@ int ChrolisHub::Initialize()
 
 int ChrolisHub::Shutdown()
 {
-    if (initialized_)
+    //Shutdown thread before anything else
+    if (threadRunning_)
+    {
+        threadRunning_ = false;
+        updateThread_.join();
+    }
+
+    if (initialized_ || static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->IsDeviceConnected())
     {
         auto err = static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->ShutdownDevice();
         if (err != 0)
@@ -194,13 +205,79 @@ void* ChrolisHub::GetChrolisDeviceInstance()
     return chrolisDeviceInstance_;
 }
 
+void ChrolisHub::StatusChangedPollingThread()
+{
+    while (threadRunning_)
+    {
+        ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+        if (pHub)
+        {
+            char hubLabel[MM::MaxStrLength];
+            pHub->GetLabel(hubLabel);
+            SetParentID(hubLabel);
+        }
+        else
+            LogMessage("No Hub");
+
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        if (wrapperInstance->IsDeviceConnected())
+        {
+            ViUInt32 tempStatus;
+            auto err = wrapperInstance->GetDeviceStatus(tempStatus);
+            if (err != 0)
+            {
+                LogMessage("Error Getting Status");
+            }
+            else
+            {
+                currentDeviceStatusCode_ = tempStatus;
+                if (currentDeviceStatusCode_ == 0)
+                {
+                    OnPropertyChanged("Device Status", "No Error");
+                }
+                else if (currentDeviceStatusCode_ & 0x01 == 1)
+                {
+                    OnPropertyChanged("Device Status", "Box is Open");
+                }
+                else if (currentDeviceStatusCode_ & 0x02 == 1)
+                {
+                    OnPropertyChanged("Device Status", "LLG not connected");
+                }
+                else if (currentDeviceStatusCode_ & 0x04 == 1)
+                {
+                    OnPropertyChanged("Device Status", "Interlock is Open");
+                }
+                else if (currentDeviceStatusCode_ & 0x08 == 1)
+                {
+                    OnPropertyChanged("Device Status", "Using default adjustment");
+                }
+                else if (currentDeviceStatusCode_ & 0x10 == 1)
+                {
+                    OnPropertyChanged("Device Status", "Box overheated");
+                }
+                else if (currentDeviceStatusCode_ & 0x20 == 1)
+                {
+                    OnPropertyChanged("Device Status", "LED overheated");
+                }
+                else if (currentDeviceStatusCode_ & 0x40 == 1)
+                {
+                    OnPropertyChanged("Device Status", "Invalid  box setup");
+                }
+                else
+                {
+                    OnPropertyChanged("Device Status", "Unkown Status");
+                }
+            }
+
+        }
+        Sleep(2000);
+    }
+}
+
 //Chrolis Shutter Methods
-//TODO test on property change with label for shutter state
 ChrolisShutter::ChrolisShutter()
 {
     InitializeDefaultErrorMessages();
-    //SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
-    //EnableDelay(); // signals that the delay setting will be used
     CreateHubIDProperty();
 }
 
@@ -211,7 +288,7 @@ int ChrolisShutter::Initialize()
     {
         char hubLabel[MM::MaxStrLength];
         pHub->GetLabel(hubLabel);
-        SetParentID(hubLabel); // for backward comp.
+        SetParentID(hubLabel);
     }
     else
         LogMessage("No Hub");
@@ -222,7 +299,7 @@ int ChrolisShutter::Initialize()
         auto err = wrapperInstance->SetShutterState(false);
         if (err != 0)
         {
-            LogMessage("Could not close shutter on it");
+            LogMessage("Could not close shutter on init");
         }
     }
 
@@ -249,17 +326,17 @@ int ChrolisShutter::SetOpen(bool open)
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (!pHub || !pHub->IsInitialized())
     {
-        return DEVICE_ERR; // TODO Add custom error messages
+        return HUB_NOT_AVAILABLE; // TODO Add custom error messages
     }
     ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
     if (!wrapperInstance->IsDeviceConnected())
     {
-        return DEVICE_ERR;
+        return ERR_CHROLIS_NOT_AVAIL;
     }
     auto err = wrapperInstance->SetShutterState(open);
     if (err != 0)
     {
-        return DEVICE_ERR;
+        return err;
     }
 
     return DEVICE_OK;

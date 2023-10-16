@@ -1,10 +1,11 @@
 #pragma once
+#include<thread>
 #include <TL6WL.h>
 #include "DeviceBase.h"
+
 #define  CHROLIS_HUB_NAME  "CHROLIS"
 #define  CHROLIS_SHUTTER_NAME  "CHROLIS_Shutter"
 #define  CHROLIS_STATE_NAME  "CHROLIS_LED_Control"
-//#define  CHROLIS_GENERIC_DEVICE_NAME "CHROLIS_Power_Control"
 
 //Custom Error Codes
 #define ERR_UNKNOWN_MODE         102
@@ -34,12 +35,19 @@ public:
     int DetectInstalledDevices();
 
     bool IsInitialized();
+    //void TL6WL_StatusChangedHandler(ViUInt32 statRegist);
     void* GetChrolisDeviceInstance();
+    void StatusChangedPollingThread();
+
 
 private:
     void* chrolisDeviceInstance_;
     bool initialized_;
     bool busy_;
+    bool threadRunning_;
+    std::thread updateThread_;
+    atomic_uint32_t currentDeviceStatusCode_;
+    std::string deviceStatusMessage_;
 };
 
 class ChrolisShutter : public CShutterBase <ChrolisShutter> //CRTP
@@ -116,34 +124,6 @@ private:
     ViInt16 ledMinPower_;
 };
 
-//class ChrolisPowerControl : public CGenericBase <ChrolisPowerControl>
-//{
-//public:
-//    ChrolisPowerControl();
-//
-//    ~ChrolisPowerControl()
-//    {}
-//
-//    int Initialize();
-//    int Shutdown();
-//    void GetName(char* pszName) const;
-//    bool Busy();
-//
-//    //Label Update
-//    int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
-//    
-//private:
-//    ViInt16 led1Power_;
-//    ViInt16 led2Power_;
-//    ViInt16 led3Power_;
-//    ViInt16 led4Power_;
-//    ViInt16 led5Power_;
-//    ViInt16 led6Power_;
-//
-//    ViInt16 ledMaxPower_;
-//    ViInt16 ledMinPower_;
-//};
-
 //Wrapper for the basic functions used in this device adapter
 class ThorlabsChrolisDeviceWrapper
 {
@@ -167,6 +147,9 @@ public:
     int SetSingleLEDPowerState(int LED, ViUInt16 state);
     int SetShutterState(bool open);
     int GetShutterState(bool& open);
+    int RegisterStatusChangedHandler(void* handler);
+    int RegisterStatusChangedHandler(Box6WL_StatusChangedHandler& handler);
+    int GetDeviceStatus(ViUInt32& status);
     bool VerifyLEDStates();
 
 private:
@@ -174,9 +157,9 @@ private:
     bool deviceConnected_;
     ViSession deviceHandle_;
     ViBoolean deviceInUse_; //only used by the chrolis API
-    ViChar deviceName_[256];
-    ViChar serialNumber_[256];
-    ViChar manufacturerName_[256];
+    ViChar deviceName_[TL6WL_LONG_STRING_SIZE];
+    ViChar serialNumber_[TL6WL_LONG_STRING_SIZE];
+    ViChar manufacturerName_[TL6WL_LONG_STRING_SIZE];
     bool masterSwitchState_;
     ViBoolean savedEnabledStates[6]{false,false,false,false,false,false};
     ViUInt16 savedPowerStates[6]{0,0,0,0,0,0};
