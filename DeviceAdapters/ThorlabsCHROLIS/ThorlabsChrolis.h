@@ -105,7 +105,6 @@ public:
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-    uint8_t curLedState_;
     long numPos_;
 
     ViUInt16 led1Power_;
@@ -157,7 +156,6 @@ public:
 
 private:
     int numLEDs_;
-    uint8_t curLedState_;
     std::vector<std::string> serialNumberList_;
     bool deviceConnected_;
     ViSession deviceHandle_;

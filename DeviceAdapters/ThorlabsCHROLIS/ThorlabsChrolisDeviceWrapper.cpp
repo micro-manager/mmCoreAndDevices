@@ -8,7 +8,6 @@ ThorlabsChrolisDeviceWrapper::ThorlabsChrolisDeviceWrapper()
 	masterSwitchState_ = false;
 	deviceHandle_ = -1;
     numLEDs_ = 6;
-    curLedState_ = 0;
 }
 
 ThorlabsChrolisDeviceWrapper::~ThorlabsChrolisDeviceWrapper()
