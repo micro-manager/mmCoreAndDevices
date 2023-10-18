@@ -231,7 +231,10 @@ void ChrolisHub::StatusChangedPollingThread()
             SetParentID(hubLabel);
         }
         else
+        {
             LogMessage("No Hub");
+            threadRunning_ = false;
+        }
 
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (wrapperInstance->IsDeviceConnected())
@@ -241,6 +244,7 @@ void ChrolisHub::StatusChangedPollingThread()
             if (err != 0)
             {
                 LogMessage("Error Getting Status");
+                threadRunning_ = false;
             }
             else
             {   
@@ -314,7 +318,7 @@ void ChrolisHub::StatusChangedPollingThread()
             }
 
         }
-        Sleep(100);
+        Sleep(500);
     }
 }
 
