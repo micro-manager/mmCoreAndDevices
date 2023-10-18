@@ -29,6 +29,8 @@ using namespace std;
 * leave state as text box - integer property - X
 * put wavelength in property name - X
 * handle cases for initialization failing - x 
+* Verify LED's all turned off with Shutter button
+* Shutter off in case of Device Status LLG open
 */
 
 MODULE_API void InitializeModuleData() {
@@ -68,7 +70,7 @@ ChrolisHub::ChrolisHub() :
     initialized_(false),
     busy_(false),
     threadRunning_(false), 
-    deviceStatusMessage_("No Errors")
+    deviceStatusMessage_("No Error")
 {
     CreateHubIDProperty();
     SetErrorText(ERR_INSUF_INFO, "Insufficient location information of the device or the resource is not present on the system");
@@ -241,48 +243,78 @@ void ChrolisHub::StatusChangedPollingThread()
                 LogMessage("Error Getting Status");
             }
             else
-            {
+            {   
+                bool verified = wrapperInstance->VerifyLEDStates();
+                std::string message = "";
                 currentDeviceStatusCode_.store(tempStatus);
                 if (currentDeviceStatusCode_.load() == 0)
                 {
-                    OnPropertyChanged("Device Status", "No Error");
-                }
-                else if ((currentDeviceStatusCode_.load() & 0x01) == 1)
-                {
-                    OnPropertyChanged("Device Status", "Box is Open");
-                }
-                else if ((currentDeviceStatusCode_.load() & 0x02) == 1)
-                {
-                    OnPropertyChanged("Device Status", "LLG not connected");
-                }
-                else if ((currentDeviceStatusCode_.load() & 0x04) == 1)
-                {
-                    OnPropertyChanged("Device Status", "Interlock is Open");
-                }
-                else if ((currentDeviceStatusCode_.load() & 0x08) == 1)
-                {
-                    OnPropertyChanged("Device Status", "Using default adjustment");
-                }
-                else if ((currentDeviceStatusCode_.load() & 0x10) == 1)
-                {
-                    OnPropertyChanged("Device Status", "Box overheated");
-                }
-                else if ((currentDeviceStatusCode_.load() & 0x20) == 1)
-                {
-                    OnPropertyChanged("Device Status", "LED overheated");
-                }
-                else if ((currentDeviceStatusCode_.load() & 0x40) == 1)
-                {
-                    OnPropertyChanged("Device Status", "Invalid  box setup");
+                    message += "No Error";
                 }
                 else
                 {
-                    OnPropertyChanged("Device Status", "Unkown Status");
+                    if ((currentDeviceStatusCode_.load() & (1 << 0)) >= 1)
+                    {
+                        message += "Box is Open";
+                    }
+                    if ((currentDeviceStatusCode_.load() & (1 << 1)) >= 1)
+                    {
+                        if (message.length() > 0)
+                        {
+                            message += ", ";
+                        }
+                        message += "LLG not Connected";
+                    }
+                    if ((currentDeviceStatusCode_.load() & (1 << 2)) >= 1)
+                    {
+                        if (message.length() > 0)
+                        {
+                            message += ", ";
+                        }
+                        message += "Interlock is Open";
+                    }
+                    if ((currentDeviceStatusCode_.load() & (1 << 3)) >= 1)
+                    {
+                        if (message.length() > 0)
+                        {
+                            message += ", ";
+                        }
+                        message += "Using Default Adjustment";
+                    }
+                    if ((currentDeviceStatusCode_.load() & (1 << 4)) >= 1)
+                    {
+                        if (message.length() > 0)
+                        {
+                            message += ", ";
+                        }
+                        message += "Box Overheated";
+                    }
+                    if ((currentDeviceStatusCode_.load() & (1 << 5)) >= 1)
+                    {
+                        if (message.length() > 0)
+                        {
+                            message += ", ";
+                        }
+                        message += "LED Overheated";
+                    }
+                    if ((currentDeviceStatusCode_.load() & (1 << 6)) >= 1)
+                    {
+                        if (message.length() > 0)
+                        {
+                            message += ", ";
+                        }
+                        message += "Invalid Box Setup";
+                    }
+                    if(message.length() == 0)
+                    {
+                        message = "Unknown Status";
+                    }
                 }
+                OnPropertyChanged("Device Status", message.c_str());
             }
 
         }
-        Sleep(2000);
+        Sleep(100);
     }
 }
 
@@ -298,9 +330,6 @@ int ChrolisShutter::Initialize()
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (pHub)
     {
-        char hubLabel[MM::MaxStrLength];
-        pHub->GetLabel(hubLabel);
-        SetParentID(hubLabel);
     }
     else
         LogMessage("No Hub");
@@ -393,9 +422,6 @@ int ChrolisStateDevice::Initialize()
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (pHub)
     {
-        char hubLabel[MM::MaxStrLength];
-        pHub->GetLabel(hubLabel);
-        SetParentID(hubLabel); // for backward comp.
     }
     else
     {
@@ -589,7 +615,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
-            return ERR_HUB_NOT_AVAILABLE; // TODO Add custom error messages
+            return ERR_HUB_NOT_AVAILABLE;
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
