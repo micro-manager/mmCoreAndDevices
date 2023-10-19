@@ -31,6 +31,7 @@ using namespace std;
 * handle cases for initialization failing - x 
 * Verify LED's all turned off with Shutter button
 * Shutter off in case of Device Status LLG open
+* Can a message be displayed in popup box without a return code?
 */
 
 MODULE_API void InitializeModuleData() {
@@ -86,7 +87,6 @@ ChrolisHub::ChrolisHub() :
     {
         AddAllowedValue("Serial Number", serialNumbers[i].c_str());
     }
-
 }
 
 int ChrolisHub::DetectInstalledDevices()
@@ -195,6 +195,7 @@ int ChrolisHub::Shutdown()
             return DEVICE_ERR;
         }
         initialized_ = false;
+        delete chrolisDeviceInstance_;
     }
     return DEVICE_OK;
 }
@@ -852,7 +853,7 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
     return DEVICE_OK;
 }
 
-void ChrolisStateDevice::VerifyLedStates()
+bool ChrolisStateDevice::VerifyLedStates()
 {
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (!pHub || !pHub->IsInitialized())
@@ -865,11 +866,27 @@ void ChrolisStateDevice::VerifyLedStates()
         LogMessage("CHROLIS not available");
     }
 
-    if (!wrapperInstance->VerifyLEDStates())
+    bool statesCorrect = true;
+    ViBoolean tmpEnableStates[6];
+    ViUInt16 tmpPowerStates[6];
+
+    int err = wrapperInstance->GetLEDEnableStates(tmpEnableStates);
+    if (err != 0)
     {
-        LogMessage("LED States not valid... resetting");
-        wrapperInstance->GetLEDEnableStates(led1State_, led2State_, led3State_, led4State_, led5State_, led6State_);
-        wrapperInstance->GetLEDPowerStates(led1Power_, led2Power_, led3Power_, led4Power_, led5Power_, led6Power_);
-        OnPropertiesChanged();
+        return false;
     }
+    int err = wrapperInstance->GetLEDPowerStates(tmpPowerStates);
+    if (err != 0)
+    {
+        return false;
+    }
+
+    if (tmpEnableStates[0] != led1State_ || tmpPowerStates[0] != led1Power_)
+    {
+    }
+
+    delete tmpEnableStates;
+    delete tmpPowerStates;
+    
+    return statesCorrect;
 }

@@ -12,14 +12,16 @@
 //Custom Error Codes
 #define ERR_UNKNOWN_MODE         102
 #define ERR_UNKNOWN_LED_STATE    103
-#define ERR_HUB_NOT_AVAILABLE        104
+#define ERR_HUB_NOT_AVAILABLE    104
 #define ERR_CHROLIS_NOT_AVAIL    105
 #define ERR_CHROLIS_SET          106
 #define ERR_CHROLIS_GET          107
 #define ERR_PARAM_NOT_VALID      108
 #define ERR_NO_AVAIL_DEVICES     109
+#define ERR_IMPROPER_SET         110
 
 //CHROLIS Specific Error Codes
+//TODO See if these need to be filled out
 
 //VISA Error Codes
 #define ERR_INSUF_INFO          -1073807343
@@ -103,7 +105,7 @@ public:
     //LED Control Methods
     int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
-    void VerifyLedStates();
+    bool VerifyLedStates();
 
 private:
     long numPos_;
@@ -139,20 +141,23 @@ public:
     bool IsDeviceConnected();
     int GetSerialNumber(ViChar* serialNumber);
     int GetManufacturerName(ViChar* manfName);
+    int GetDeviceStatus(ViUInt32& status);
     int GetLEDWavelengths(ViUInt16(&wavelengths)[6]);
+    int GetShutterState(bool& open);
     int GetLEDEnableStates(ViBoolean(&states)[6]);
     int GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State);
-    int SetLEDEnableStates(ViBoolean states[6]);
     int GetLEDPowerStates(ViUInt16(&states)[6]);
     int GetLEDPowerStates(ViUInt16 &led1Power, ViUInt16&led2Power, ViUInt16&led3Power, ViUInt16&led4Power, ViUInt16&led5Power, ViUInt16&led6Power);
-    int SetLEDPowerStates(ViUInt16 states[6]);
-    int SetSingleLEDEnableState(int LED, ViBoolean state);
-    int SetSingleLEDPowerState(int LED, ViUInt16 state);
+
     int SetShutterState(bool open);
-    int GetShutterState(bool& open);
-    int RegisterStatusChangedHandler(void* handler);
-    int GetDeviceStatus(ViUInt32& status);
+    int SetLEDEnableStates(ViBoolean states[6]);
+    int SetSingleLEDEnableState(int LED, ViBoolean state);
+    int SetLEDPowerStates(ViUInt16 states[6]);
+    int SetSingleLEDPowerState(int LED, ViUInt16 state);
+
     bool VerifyLEDStates();
+    bool VerifyLEDPowerStates();
+    bool VerifyLEDEnableStates();
 
 private:
     int numLEDs_;
