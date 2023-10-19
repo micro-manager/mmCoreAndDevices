@@ -103,6 +103,7 @@ public:
     //LED Control Methods
     int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
+    void VerifyLedStates();
 
 private:
     long numPos_;
@@ -150,7 +151,6 @@ public:
     int SetShutterState(bool open);
     int GetShutterState(bool& open);
     int RegisterStatusChangedHandler(void* handler);
-    int RegisterStatusChangedHandler(Box6WL_StatusChangedHandler& handler);
     int GetDeviceStatus(ViUInt32& status);
     bool VerifyLEDStates();
 

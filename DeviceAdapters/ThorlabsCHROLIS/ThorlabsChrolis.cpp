@@ -248,7 +248,6 @@ void ChrolisHub::StatusChangedPollingThread()
             }
             else
             {   
-                bool verified = wrapperInstance->VerifyLEDStates();
                 std::string message = "";
                 currentDeviceStatusCode_.store(tempStatus);
                 if (currentDeviceStatusCode_.load() == 0)
@@ -609,12 +608,14 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
     else if (eAct == MM::AfterSet)
     {
         long val;
+        uint8_t currentLEDState = ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
+            | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5));
+
         pProp->Get(val);
         if (val >= pow(2, numPos_) || val < 0)
         {
             LogMessage("Requested state out of bounds");
-            pProp->Set((long)((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
-                | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5)));
+            pProp->Set((long)currentLEDState);
             return ERR_UNKNOWN_LED_STATE;
         }
 
@@ -628,8 +629,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
-            pProp->Set((long)((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
-                | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5)));
+            pProp->Set((long)currentLEDState);
             return ERR_CHROLIS_NOT_AVAIL;
         }
 
@@ -646,8 +646,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (err != 0)
         {
             LogMessage("Error Setting LED state");
-            pProp->Set((long)((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
-                | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5)));
+            pProp->Set((long)currentLEDState);
             return err;
         }
 
@@ -659,8 +658,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         led6State_ = static_cast<bool>(val & (1 << 5));
 
         pProp->Set((long)val);
-        OnPropertiesChanged();
-
+        VerifyLedStates();
         return DEVICE_OK;
     }
     return DEVICE_OK;
@@ -752,7 +750,8 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
             return err;
         }
         *ledBeingControlled = (ViBoolean)val;
-        OnPropertiesChanged();
+        pProp->Set((long)*ledBeingControlled);
+        VerifyLedStates();
         return DEVICE_OK;
     }
 
@@ -846,9 +845,31 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
             return err;
         }
         *ledBeingControlled = (int)val;
-        OnPropertiesChanged();
-
+        pProp->Set((long)*ledBeingControlled);
+        VerifyLedStates();
         return DEVICE_OK;
     }
     return DEVICE_OK;
+}
+
+void ChrolisStateDevice::VerifyLedStates()
+{
+    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+    if (!pHub || !pHub->IsInitialized())
+    {
+        LogMessage("Hub not available");
+    }
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    if (!wrapperInstance->IsDeviceConnected())
+    {
+        LogMessage("CHROLIS not available");
+    }
+
+    if (!wrapperInstance->VerifyLEDStates())
+    {
+        LogMessage("LED States not valid... resetting");
+        wrapperInstance->GetLEDEnableStates(led1State_, led2State_, led3State_, led4State_, led5State_, led6State_);
+        wrapperInstance->GetLEDPowerStates(led1Power_, led2Power_, led3Power_, led4Power_, led5Power_, led6Power_);
+        OnPropertiesChanged();
+    }
 }
