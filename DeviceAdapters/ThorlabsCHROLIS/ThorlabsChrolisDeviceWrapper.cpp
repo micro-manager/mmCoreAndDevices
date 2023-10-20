@@ -310,18 +310,30 @@ int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)
 
 int ThorlabsChrolisDeviceWrapper::SetSingleLEDEnableState(int LED, ViBoolean state)
 {
-    if (LED < 6 && LED >= 0)
+    if (LED < numLEDs_ && LED >= 0)
     {
+        if (!deviceConnected_)
+        {
+            return ERR_CHROLIS_NOT_AVAIL;
+        }
+
         int err = 0;
         savedEnabledStates[LED] = state;
-        err = SetLEDEnableStates(savedEnabledStates);
-        if (err != 0)
+
+        if (masterSwitchState_)
         {
-            //revert in case of error
-            savedEnabledStates[LED] = !state;
-            return err;
+            err = TL6WL_setLED_HeadPowerStates(deviceHandle_, savedEnabledStates[0], savedEnabledStates[1], savedEnabledStates[2],
+                savedEnabledStates[3], savedEnabledStates[4], savedEnabledStates[5]);
+            if (err != 0)
+            {
+                return err;
+            }
+            if (!VerifyLEDEnableStates())
+            {
+                err = ERR_IMPROPER_SET;
+            }
         }
-        return DEVICE_OK;
+        return err;
     }
     else
     {
@@ -335,22 +347,26 @@ int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(ViBoolean states[6])
     {
         return ERR_CHROLIS_NOT_AVAIL;
     }
-    int i;
-    for (i = 0; i < numLEDs_; i++)
+    int err = 0;
+    for (int i = 0; i < numLEDs_; i++)
     {
         savedEnabledStates[i] = states[i];
     }
-
     if (masterSwitchState_)
     {
-        if (auto err = TL6WL_setLED_HeadPowerStates(deviceHandle_, savedEnabledStates[0], savedEnabledStates[1], savedEnabledStates[2],
-            savedEnabledStates[3], savedEnabledStates[4], savedEnabledStates[5]) != 0)
+        err = TL6WL_setLED_HeadPowerStates(deviceHandle_, savedEnabledStates[0], savedEnabledStates[1], savedEnabledStates[2],
+            savedEnabledStates[3], savedEnabledStates[4], savedEnabledStates[5]);
+        if (err != 0)
         {
-            return DEVICE_ERR;
+            return err;
+        }
+        if (!VerifyLEDEnableStates())
+        {
+            err = ERR_IMPROPER_SET;
         }
     }
 
-	return DEVICE_OK;
+	return err;
 }
 
 int ThorlabsChrolisDeviceWrapper::SetSingleLEDPowerState(int LED, ViUInt16 state)
@@ -444,6 +460,7 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDEnableStates()
             savedEnabledStates[i] = tempEnableStates[i];
         }
     }
+    delete tempEnableStates;
 
     return stateCorrect;
 }
@@ -468,6 +485,7 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDPowerStates()
             savedPowerStates[i] = tempPowerStates[i];
         }
     }
-
+    delete tempPowerStates;
+    
     return stateCorrect;
 }

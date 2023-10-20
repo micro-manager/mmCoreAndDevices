@@ -105,7 +105,7 @@ public:
     //LED Control Methods
     int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
-    bool VerifyLedStates();
+    bool SyncLEDStates();
 
 private:
     long numPos_;

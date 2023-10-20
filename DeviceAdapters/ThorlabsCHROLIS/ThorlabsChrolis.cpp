@@ -644,7 +644,13 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             static_cast<bool>(val & (1 << 5))
         };
         int err = wrapperInstance->SetLEDEnableStates(newStates);
-        if (err != 0)
+        if (err == ERR_IMPROPER_SET)
+        {
+            LogMessage("LED(s) were not able to set as requested");
+            SyncLEDStates();
+            return err;
+        }
+        else if (err != 0)
         {
             LogMessage("Error Setting LED state");
             pProp->Set((long)currentLEDState);
@@ -659,7 +665,6 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         led6State_ = static_cast<bool>(val & (1 << 5));
 
         pProp->Set((long)val);
-        VerifyLedStates();
         return DEVICE_OK;
     }
     return DEVICE_OK;
@@ -744,15 +749,21 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         }
 
         int err = wrapperInstance->SetSingleLEDEnableState(numFromName-1, (ViBoolean)val);
-        if (err != 0)
+        if (err == ERR_IMPROPER_SET)
+        {
+            SyncLEDStates();
+            LogMessage("LED(s) were not able to set as requested");
+            return err;
+        }
+        else if (err != 0)
         {
             LogMessage("Error Setting LED state");
             pProp->Set((long)*ledBeingControlled);
             return err;
         }
+
         *ledBeingControlled = (ViBoolean)val;
         pProp->Set((long)*ledBeingControlled);
-        VerifyLedStates();
         return DEVICE_OK;
     }
 
@@ -847,13 +858,12 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         }
         *ledBeingControlled = (int)val;
         pProp->Set((long)*ledBeingControlled);
-        VerifyLedStates();
         return DEVICE_OK;
     }
     return DEVICE_OK;
 }
 
-bool ChrolisStateDevice::VerifyLedStates()
+bool ChrolisStateDevice::SyncLEDStates()
 {
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (!pHub || !pHub->IsInitialized())
