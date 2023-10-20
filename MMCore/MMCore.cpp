@@ -113,7 +113,7 @@ using namespace std;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 10, MMCore_versionMinor = 6, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 10, MMCore_versionMinor = 7, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -960,6 +960,29 @@ void CMMCore::initializeDevice(const char* label ///< the device to initialize
    LOG_INFO(coreLogger_) << "Did initialize device " << label;
 
    updateCoreProperties();
+}
+
+
+/**
+ * Queries the initialization state of the given device.
+ *
+ * @param label the device label
+ */
+DeviceInitializationState
+CMMCore::getDeviceInitializationState(const char* label) const throw (CMMError)
+{
+   std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
+
+   mm::DeviceModuleLockGuard guard(pDevice);
+   if (pDevice->IsInitialized())
+   {
+      return DeviceInitializationState::InitializedSuccessfully;
+   }
+   if (pDevice->HasInitializationBeenAttempted())
+   {
+      return DeviceInitializationState::InitializationFailed;
+   }
+   return DeviceInitializationState::Uninitialized;
 }
 
 

@@ -112,6 +112,12 @@ namespace mm {
 
 typedef unsigned int* imgRGB32;
 
+enum DeviceInitializationState {
+   Uninitialized,
+   InitializedSuccessfully,
+   InitializationFailed,
+};
+
 
 /// The Micro-Manager Core.
 /**
@@ -147,6 +153,7 @@ public:
    void unloadAllDevices() throw (CMMError);
    void initializeAllDevices() throw (CMMError);
    void initializeDevice(const char* label) throw (CMMError);
+   DeviceInitializationState getDeviceInitializationState(const char* label) const throw (CMMError);
    void reset() throw (CMMError);
 
    void unloadLibrary(const char* moduleName) throw (CMMError);

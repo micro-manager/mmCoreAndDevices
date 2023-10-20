@@ -90,6 +90,9 @@ public:
    // Callback API
    int LogMessage(const char* msg, bool debugOnly);
 
+   bool IsInitialized() const { return initialized_; }
+   bool HasInitializationBeenAttempted() const { return initializeCalled_; }
+
 protected:
    // The DeviceInstance object owns the raw device pointer (pDevice) as soon
    // as the constructor is called, even if the constructor throws.
