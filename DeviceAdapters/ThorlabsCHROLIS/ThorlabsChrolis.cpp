@@ -599,7 +599,7 @@ int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 // Get: pull instances of hub and chrolis, get the latest led states and set local vars to these states, if error use stored vals. 
 //      This ensures UI is always updated with the current chrolis vals when possible 
 // Set: use local stored vals as a fallback if the instances cannot be retrieved, set the val in the wrapper, wrapper takes care of hardware verification. 
-// In the event of an error, leave property unset and let OnChange handle update. The get uses the current instance so this would keep values synced
+//      In the event of an error, leave property unset and let OnChange handle update. The get uses the current instance so this would keep values synced
 int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
