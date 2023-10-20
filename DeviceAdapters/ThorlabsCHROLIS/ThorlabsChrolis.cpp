@@ -594,36 +594,47 @@ int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-//OnPropertyChanged("AsyncPropertyFollower", leaderValue.c_str());
-//Update onState to use binary value
-//single state changes should modify the single led, verify that it was changed, update global state long, onchange OnState
-// Update states of properties based on initial values
-//Error check hardware calls and revert properties if something fails
+
+// Get set process
+// Get: pull instances of hub and chrolis, get the latest led states and set local vars to these states, if error use stored vals. 
+//      This ensures UI is always updated with the current chrolis vals when possible 
+// Set: use local stored vals as a fallback if the instances cannot be retrieved, set the val in the wrapper, wrapper takes care of hardware verification. 
+// In the event of an error, leave property unset and let OnChange handle update. The get uses the current instance so this would keep values synced
 int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
+        ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+        if (!pHub || !pHub->IsInitialized())
+        {
+            LogMessage("Hub not available");
+        }
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        if (!wrapperInstance->IsDeviceConnected())
+        {
+            LogMessage("CHROLIS not available");
+        }
+        if (wrapperInstance->GetLEDEnableStates(led1State_, led2State_, led3State_, led4State_, led5State_, led6State_) != 0)
+        {
+            LogMessage("Error getting info from chrolis");
+        }
+
         pProp->Set((long)((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
             | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5)));
     }
     else if (eAct == MM::AfterSet)
     {
-        long val;
+        //temp state from last set used as fallback
         uint8_t currentLEDState = ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
             | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5));
 
-        pProp->Get(val);
-        if (val >= pow(2, numPos_) || val < 0)
-        {
-            LogMessage("Requested state out of bounds");
-            pProp->Set((long)currentLEDState);
-            return ERR_UNKNOWN_LED_STATE;
-        }
-
+        //Get the current instances for hub and chrolis
+        //In the event of error do not set the property. Set old value. Updated values will be pulled from getters if possible
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
+            pProp->Set((long)currentLEDState);
             return ERR_HUB_NOT_AVAILABLE;
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
@@ -632,6 +643,16 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             LogMessage("CHROLIS not available");
             pProp->Set((long)currentLEDState);
             return ERR_CHROLIS_NOT_AVAIL;
+        }
+
+
+        long val; // incoming value from user
+        pProp->Get(val);
+        if (val >= pow(2, numPos_) || val < 0)
+        {
+            LogMessage("Requested state out of bounds");
+            pProp->Set((long)currentLEDState);
+            return ERR_UNKNOWN_LED_STATE;
         }
 
         ViBoolean newStates[6]
@@ -644,27 +665,25 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             static_cast<bool>(val & (1 << 5))
         };
         int err = wrapperInstance->SetLEDEnableStates(newStates);
-        if (err == ERR_IMPROPER_SET)
+        if (err != 0)
         {
-            LogMessage("LED(s) were not able to set as requested");
-            SyncLEDStates();
-            return err;
-        }
-        else if (err != 0)
-        {
+            //Do not set the property in the case of this error. Let the property change handle it. 
+            //This will cover error where LED failed to set but chrolis is still ok
             LogMessage("Error Setting LED state");
-            pProp->Set((long)currentLEDState);
+            OnPropertiesChanged();
             return err;
         }
-
-        led1State_ = static_cast<bool>(val & (1 << 0));
-        led2State_ = static_cast<bool>(val & (1 << 1));
-        led3State_ = static_cast<bool>(val & (1 << 2));
-        led4State_ = static_cast<bool>(val & (1 << 3));
-        led5State_ = static_cast<bool>(val & (1 << 4));
-        led6State_ = static_cast<bool>(val & (1 << 5));
-
         pProp->Set((long)val);
+        
+        //Probably don't need these but leaving for now
+        //led1State_ = static_cast<bool>(val & (1 << 0));
+        //led2State_ = static_cast<bool>(val & (1 << 1));
+        //led3State_ = static_cast<bool>(val & (1 << 2));
+        //led4State_ = static_cast<bool>(val & (1 << 3));
+        //led5State_ = static_cast<bool>(val & (1 << 4));
+        //led6State_ = static_cast<bool>(val & (1 << 5));
+
+        delete newStates;
         return DEVICE_OK;
     }
     return DEVICE_OK;
@@ -722,22 +741,32 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
 
     if (eAct == MM::BeforeGet)
     {
+        ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+        if (!pHub || !pHub->IsInitialized())
+        {
+            LogMessage("Hub not available");
+        }
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        if (!wrapperInstance->IsDeviceConnected())
+        {
+            LogMessage("CHROLIS not available");
+        }
+        if (wrapperInstance->GetSingleLEDEnableState(numFromName, *ledBeingControlled) != 0)
+        {
+            LogMessage("Error getting info from chrolis");
+        }
         pProp->Set((long)*ledBeingControlled);
     }
     else if (eAct == MM::AfterSet)
     {
         double val;
         pProp->Get(val);
-        if (val > ledMaxPower_ || val < ledMinPower_)
-        {
-            LogMessage("Error Setting LED state");
-            pProp->Set((long)*ledBeingControlled);
-            return ERR_UNKNOWN_LED_STATE;
-        }
+
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
+            pProp->Set((long)*ledBeingControlled);
             return ERR_HUB_NOT_AVAILABLE;
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
@@ -748,17 +777,19 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
             return ERR_CHROLIS_NOT_AVAIL;
         }
 
+        //int err = wrapperInstance->GetSingleLEDEnableState(numFromName - 1, *ledBeingControlled);
+        //if (err != 0)
+        //{
+        //    LogMessage("Error Setting LED state");
+        //    pProp->Set((long)*ledBeingControlled);
+        //    return err;
+        //}
+
         int err = wrapperInstance->SetSingleLEDEnableState(numFromName-1, (ViBoolean)val);
-        if (err == ERR_IMPROPER_SET)
-        {
-            SyncLEDStates();
-            LogMessage("LED(s) were not able to set as requested");
-            return err;
-        }
-        else if (err != 0)
+        if (err != 0)
         {
             LogMessage("Error Setting LED state");
-            pProp->Set((long)*ledBeingControlled);
+            OnPropertiesChanged();
             return err;
         }
 
@@ -885,7 +916,7 @@ bool ChrolisStateDevice::SyncLEDStates()
     {
         return false;
     }
-    int err = wrapperInstance->GetLEDPowerStates(tmpPowerStates);
+    err = wrapperInstance->GetLEDPowerStates(tmpPowerStates);
     if (err != 0)
     {
         return false;

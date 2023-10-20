@@ -144,8 +144,10 @@ public:
     int GetDeviceStatus(ViUInt32& status);
     int GetLEDWavelengths(ViUInt16(&wavelengths)[6]);
     int GetShutterState(bool& open);
+    int GetSingleLEDEnableState(int led, ViBoolean& state);
     int GetLEDEnableStates(ViBoolean(&states)[6]);
     int GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State);
+    int GetSingleLEDPowerState(int led, ViUInt16& state);
     int GetLEDPowerStates(ViUInt16(&states)[6]);
     int GetLEDPowerStates(ViUInt16 &led1Power, ViUInt16&led2Power, ViUInt16&led3Power, ViUInt16&led4Power, ViUInt16&led5Power, ViUInt16&led6Power);
 
