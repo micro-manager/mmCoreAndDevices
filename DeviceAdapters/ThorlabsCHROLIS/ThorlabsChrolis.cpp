@@ -342,7 +342,7 @@ void ChrolisHub::StatusChangedPollingThread()
             {
                 if (currentDeviceStatusCode_.load() != 0)
                 {
-                    wrapperInstance->SyncLEDEnableStates();
+                    wrapperInstance->VerifyLEDEnableStatesWithLock();
                     if (wrapperInstance->GetLEDEnableStates(tempEnableStates[0], 
                         tempEnableStates[1], tempEnableStates[2], tempEnableStates[3], tempEnableStates[4], tempEnableStates[5]) != 0)
                     {

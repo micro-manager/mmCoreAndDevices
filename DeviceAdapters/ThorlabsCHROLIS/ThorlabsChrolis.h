@@ -157,7 +157,7 @@ public:
     int SetLEDPowerStates(ViUInt16 states[6]);
     int SetSingleLEDPowerState(int LED, ViUInt16 state);
 
-    bool SyncLEDEnableStates();
+    bool VerifyLEDEnableStatesWithLock();
 
 private:
     int numLEDs_;

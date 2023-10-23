@@ -489,7 +489,7 @@ int ThorlabsChrolisDeviceWrapper::SetLEDPowerStates(ViUInt16 states[6])
 	return DEVICE_OK;
 }
 
-bool ThorlabsChrolisDeviceWrapper::SyncLEDEnableStates()
+bool ThorlabsChrolisDeviceWrapper::VerifyLEDEnableStatesWithLock()
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
     return VerifyLEDEnableStates();
