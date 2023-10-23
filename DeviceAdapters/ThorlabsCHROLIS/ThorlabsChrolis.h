@@ -3,6 +3,7 @@
 #include <TL6WL.h>
 #include <atomic>
 #include <vector>
+#include<mutex>
 #include "DeviceBase.h"
 
 #define  CHROLIS_HUB_NAME  "CHROLIS"
@@ -10,18 +11,18 @@
 #define  CHROLIS_STATE_NAME  "CHROLIS_LED_Control"
 
 //Custom Error Codes
-#define ERR_UNKNOWN_MODE         102
-#define ERR_UNKNOWN_LED_STATE    103
+#define ERR_UNKNOWN_MODE         102 // not currently used
+#define ERR_UNKNOWN_LED_STATE    103// don't think this is used
 #define ERR_HUB_NOT_AVAILABLE    104
 #define ERR_CHROLIS_NOT_AVAIL    105
-#define ERR_CHROLIS_SET          106
-#define ERR_CHROLIS_GET          107
+#define ERR_CHROLIS_SET          106 //don't think this is used
+#define ERR_CHROLIS_GET          107 // don't think this is used
 #define ERR_PARAM_NOT_VALID      108
 #define ERR_NO_AVAIL_DEVICES     109
 #define ERR_IMPROPER_SET         110
 
 //CHROLIS Specific Error Codes
-//TODO See if these need to be filled out
+#define ERR_HARDWARE_FAULT      -1074001669
 
 //VISA Error Codes
 #define ERR_INSUF_INFO          -1073807343
@@ -51,7 +52,7 @@ private:
     void* chrolisDeviceInstance_;
     bool initialized_;
     bool busy_;
-    bool threadRunning_;
+    std::atomic_bool threadRunning_;
     std::thread updateThread_;
     std::atomic_uint32_t currentDeviceStatusCode_;
     std::string deviceStatusMessage_;
@@ -105,7 +106,6 @@ public:
     //LED Control Methods
     int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
-    bool SyncLEDStates();
 
 private:
     long numPos_;
@@ -157,13 +157,12 @@ public:
     int SetLEDPowerStates(ViUInt16 states[6]);
     int SetSingleLEDPowerState(int LED, ViUInt16 state);
 
-    bool VerifyLEDStates();
-    bool VerifyLEDPowerStates();
-    bool VerifyLEDEnableStates();
+    bool SyncLEDEnableStates();
 
 private:
     int numLEDs_;
     std::vector<std::string> serialNumberList_;
+    std::mutex instanceMutex_;
     bool deviceConnected_;
     ViSession deviceHandle_;
     ViBoolean deviceInUse_; //only used by the chrolis API
@@ -174,5 +173,9 @@ private:
     ViBoolean savedEnabledStates[6]{false,false,false,false,false,false};
     ViUInt16 savedPowerStates[6]{0,0,0,0,0,0};
     ViUInt16 ledWavelengths[6]{0,0,0,0,0,0};
+
+    bool VerifyLEDStates();
+    bool VerifyLEDPowerStates();
+    bool VerifyLEDEnableStates();
 };
 

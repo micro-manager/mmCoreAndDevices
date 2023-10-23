@@ -3,7 +3,6 @@
 
 #include <string>
 #include <regex>
-using namespace std;
 
 /*TODO
 * Set states of properties based on current LED states - x
@@ -11,7 +10,7 @@ using namespace std;
 * Error handling on device control methods - x
 * custom errors and messages
 * logs for errors - x
-* Remove HubID Property 
+* Remove HubID Property -x
 * Integer property range 0 to 1 for each LED on off - x
 * Is sequencable property for each device check arduino implementation
 * No need for sequence stuff in CHROLIS. Should check if breakout box needs to be enabled in software
@@ -19,7 +18,7 @@ using namespace std;
 * Keep LED control in State Device - x
 * Maybe keep triggering in Generic if that gets implemented 
 * pre-init properties in constructor - x
-* set error text in constructor
+* set error text in constructor -x
 * enumerate in constructor 
 * no logging in constructor
 * store error in device instance
@@ -29,9 +28,10 @@ using namespace std;
 * leave state as text box - integer property - X
 * put wavelength in property name - X
 * handle cases for initialization failing - x 
-* Verify LED's all turned off with Shutter button
-* Shutter off in case of Device Status LLG open
+* Verify LED's all turned off with Shutter button -x
+* Shutter off in case of Device Status LLG open -x
 * Can a message be displayed in popup box without a return code?
+* Check if lock is needed for multi threading -x
 */
 
 MODULE_API void InitializeModuleData() {
@@ -73,11 +73,34 @@ ChrolisHub::ChrolisHub() :
     threadRunning_(false), 
     deviceStatusMessage_("No Error")
 {
-    CreateHubIDProperty();
+    //Custom Errors
+    SetErrorText(ERR_HUB_NOT_AVAILABLE, "Hub is not available");
+    SetErrorText(ERR_CHROLIS_NOT_AVAIL, "CHROLIS Device is not available");
+    SetErrorText(ERR_IMPROPER_SET, "Error setting property value. Value will be reset");
+    SetErrorText(ERR_PARAM_NOT_VALID, "Value passed to property was out of bounds.");
+    SetErrorText(ERR_NO_AVAIL_DEVICES, "No available devices were found on the system.");
+    
+    //VISA Errors
     SetErrorText(ERR_INSUF_INFO, "Insufficient location information of the device or the resource is not present on the system");
+    SetErrorText(ERR_UNKOWN_HW_STATE, "Unknown Hardware State");
+    SetErrorText(ERR_VAL_OVERFLOW, "Parameter Value Overflow");
+
+
+    //CHROLIS Device Specific Errors. Located in TL6WL.h
+    SetErrorText(INSTR_RUNTIME_ERROR, "CHROLIS Instrument Runtime Error");
+    SetErrorText(INSTR_REM_INTER_ERROR, "CHROLIS Instrument Internal Error");
+    SetErrorText(INSTR_AUTHENTICATION_ERROR, "CHROLIS Instrument Authentication Error");
+    SetErrorText(INSTR_PARAM_ERROR, "CHROLIS Invalid Parameter Error");
+    SetErrorText(INSTR_HW_ERROR, "CHROLIS Instrument Hardware Error. Please verify that no hardware faults are present.");
+    SetErrorText(INSTR_PARAM_CHNG_ERROR, "CHROLIS Instrument Parameter Error");
+    SetErrorText(INSTR_INTERNAL_TX_ERR, "CHROLIS Instrument Internal Command Sending Error");
+    SetErrorText(INSTR_INTERNAL_RX_ERR, "CHROLIS Instrument Internal Command Receiving Error");
+    SetErrorText(INSTR_INVAL_MODE_ERR, "CHROLIS Instrument Invalid Mode Error");
+    SetErrorText(INSTR_SERVICE_ERR, "CHROLIS Instrument Service Error");
 
     chrolisDeviceInstance_ = new ThorlabsChrolisDeviceWrapper();
     atomic_init(&currentDeviceStatusCode_, 0);
+    atomic_init(&threadRunning_, false);
 
     std::vector<std::string> serialNumbers;
     static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetAvailableSerialNumbers(serialNumbers);
@@ -171,8 +194,8 @@ int ChrolisHub::Initialize()
             return DEVICE_ERR;
         }
 
-        threadRunning_ = true;
-        updateThread_ = thread(&ChrolisHub::StatusChangedPollingThread, this);
+        threadRunning_.store(true);
+        updateThread_ = std::thread(&ChrolisHub::StatusChangedPollingThread, this);
         initialized_ = true;
     }
     return DEVICE_OK;
@@ -180,9 +203,9 @@ int ChrolisHub::Initialize()
 
 int ChrolisHub::Shutdown()
 {
-    if (threadRunning_)
+    if (threadRunning_.load())
     {
-        threadRunning_ = false;
+        threadRunning_.store(false); // TODO make this atmoic or mutex
         updateThread_.join();
     }
 
@@ -222,101 +245,145 @@ void* ChrolisHub::GetChrolisDeviceInstance()
 
 void ChrolisHub::StatusChangedPollingThread()
 {
-    while (threadRunning_)
+    bool statusChangedFlag = false;
+    ViUInt32 tempStatus = 0;
+    std::string message = "";
+    ViBoolean tempEnableStates[6];
+    while (threadRunning_.load())
     {
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
-        if (pHub)
+        if (!pHub || !pHub->IsInitialized())
         {
-            char hubLabel[MM::MaxStrLength];
-            pHub->GetLabel(hubLabel);
-            SetParentID(hubLabel);
-        }
-        else
-        {
-            LogMessage("No Hub");
-            threadRunning_ = false;
+            LogMessage("Hub not available");
+            threadRunning_.store(false);
+            continue;
         }
 
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (wrapperInstance->IsDeviceConnected())
         {
-            ViUInt32 tempStatus;
+            message = "";
             auto err = wrapperInstance->GetDeviceStatus(tempStatus);
             if (err != 0)
             {
                 LogMessage("Error Getting Status");
-                threadRunning_ = false;
+                threadRunning_.store(false);
+                continue;
+            }
+            if (currentDeviceStatusCode_.load() != tempStatus)
+            {
+                statusChangedFlag = true;
+            }
+            currentDeviceStatusCode_.store(tempStatus);
+            if (currentDeviceStatusCode_.load() == 0)
+            {
+                message += "No Error";
             }
             else
-            {   
-                std::string message = "";
-                currentDeviceStatusCode_.store(tempStatus);
-                if (currentDeviceStatusCode_.load() == 0)
+            {
+                if ((currentDeviceStatusCode_.load() & (1 << 0)) >= 1)
                 {
-                    message += "No Error";
+                    message += "Box is Open";
                 }
-                else
+                if ((currentDeviceStatusCode_.load() & (1 << 1)) >= 1)
                 {
-                    if ((currentDeviceStatusCode_.load() & (1 << 0)) >= 1)
+                    if (message.length() > 0)
                     {
-                        message += "Box is Open";
+                        message += ", ";
                     }
-                    if ((currentDeviceStatusCode_.load() & (1 << 1)) >= 1)
-                    {
-                        if (message.length() > 0)
-                        {
-                            message += ", ";
-                        }
-                        message += "LLG not Connected";
-                    }
-                    if ((currentDeviceStatusCode_.load() & (1 << 2)) >= 1)
-                    {
-                        if (message.length() > 0)
-                        {
-                            message += ", ";
-                        }
-                        message += "Interlock is Open";
-                    }
-                    if ((currentDeviceStatusCode_.load() & (1 << 3)) >= 1)
-                    {
-                        if (message.length() > 0)
-                        {
-                            message += ", ";
-                        }
-                        message += "Using Default Adjustment";
-                    }
-                    if ((currentDeviceStatusCode_.load() & (1 << 4)) >= 1)
-                    {
-                        if (message.length() > 0)
-                        {
-                            message += ", ";
-                        }
-                        message += "Box Overheated";
-                    }
-                    if ((currentDeviceStatusCode_.load() & (1 << 5)) >= 1)
-                    {
-                        if (message.length() > 0)
-                        {
-                            message += ", ";
-                        }
-                        message += "LED Overheated";
-                    }
-                    if ((currentDeviceStatusCode_.load() & (1 << 6)) >= 1)
-                    {
-                        if (message.length() > 0)
-                        {
-                            message += ", ";
-                        }
-                        message += "Invalid Box Setup";
-                    }
-                    if(message.length() == 0)
-                    {
-                        message = "Unknown Status";
-                    }
+                    message += "LLG not Connected";
                 }
-                OnPropertyChanged("Device Status", message.c_str());
+                if ((currentDeviceStatusCode_.load() & (1 << 2)) >= 1)
+                {
+                    if (message.length() > 0)
+                    {
+                        message += ", ";
+                    }
+                    message += "Interlock is Open";
+                }
+                if ((currentDeviceStatusCode_.load() & (1 << 3)) >= 1)
+                {
+                    if (message.length() > 0)
+                    {
+                        message += ", ";
+                    }
+                    message += "Using Default Adjustment";
+                }
+                if ((currentDeviceStatusCode_.load() & (1 << 4)) >= 1)
+                {
+                    if (message.length() > 0)
+                    {
+                        message += ", ";
+                    }
+                    message += "Box Overheated";
+                }
+                if ((currentDeviceStatusCode_.load() & (1 << 5)) >= 1)
+                {
+                    if (message.length() > 0)
+                    {
+                        message += ", ";
+                    }
+                    message += "LED Overheated";
+                }
+                if ((currentDeviceStatusCode_.load() & (1 << 6)) >= 1)
+                {
+                    if (message.length() > 0)
+                    {
+                        message += ", ";
+                    }
+                    message += "Invalid Box Setup";
+                }
+                if (message.length() == 0)
+                {
+                    message = "Unknown Status";
+                }
             }
+            if (statusChangedFlag)
+            {
+                if (currentDeviceStatusCode_.load() != 0)
+                {
+                    wrapperInstance->SyncLEDEnableStates();
+                    if (wrapperInstance->GetLEDEnableStates(tempEnableStates[0], 
+                        tempEnableStates[1], tempEnableStates[2], tempEnableStates[3], tempEnableStates[4], tempEnableStates[5]) != 0)
+                    {
+                        LogMessage("Error getting info from chrolis");
+                    }
+                    else 
+                    {
+                        std::ostringstream os;
+                        os << tempEnableStates[0];
+                        pHub->GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 1", os.str().c_str());
 
+                        os.clear();
+                        os << tempEnableStates[1];
+                        pHub->GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 2", os.str().c_str());
+
+                        os.clear();
+                        os << tempEnableStates[2];
+                        pHub->GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 3", os.str().c_str());
+
+                        os.clear();
+                        os << tempEnableStates[3];
+                        pHub->GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 4", os.str().c_str());
+
+                        os.clear();
+                        os << tempEnableStates[4];
+                        pHub->GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 5", os.str().c_str());
+
+                        os.clear();
+                        os << tempEnableStates[5];
+                        pHub->GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 6", os.str().c_str());
+
+                        os.clear();
+                        os << ((static_cast<uint8_t>(tempEnableStates[0]) << 0) | (static_cast<uint8_t>(tempEnableStates[1]) << 1) | (static_cast<uint8_t>(tempEnableStates[2]) << 2)
+                            | (static_cast<uint8_t>(tempEnableStates[3]) << 3) | (static_cast<uint8_t>(tempEnableStates[4]) << 4 | (static_cast<uint8_t>(tempEnableStates[5]) << 5)));
+                        pHub->GetDevice(CHROLIS_STATE_NAME)->SetProperty("State", os.str().c_str());
+
+                    }
+                }
+                statusChangedFlag = false;
+            }
+            OnPropertyChanged("Device Status", message.c_str());
         }
         Sleep(500);
     }
@@ -326,7 +393,6 @@ void ChrolisHub::StatusChangedPollingThread()
 ChrolisShutter::ChrolisShutter()
 {
     InitializeDefaultErrorMessages();
-    CreateHubIDProperty();
 }
 
 int ChrolisShutter::Initialize()
@@ -342,6 +408,7 @@ int ChrolisShutter::Initialize()
     if (wrapperInstance->IsDeviceConnected())
     {
         auto err = wrapperInstance->SetShutterState(false);
+        //return error but reset if needed
         if (err != 0)
         {
             LogMessage("Could not close shutter on init");
@@ -418,7 +485,6 @@ ChrolisStateDevice::ChrolisStateDevice() :
     InitializeDefaultErrorMessages();
     //SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
     //EnableDelay(); // signals that the delay setting will be used
-    CreateHubIDProperty();
 }
 
 int ChrolisStateDevice::Initialize()
@@ -634,14 +700,18 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
-            pProp->Set((long)currentLEDState);
+            std::ostringstream os;
+            os << currentLEDState;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_HUB_NOT_AVAILABLE;
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
-            pProp->Set((long)currentLEDState);
+            std::ostringstream os;
+            os << currentLEDState;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_CHROLIS_NOT_AVAIL;
         }
 
@@ -651,8 +721,10 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (val >= pow(2, numPos_) || val < 0)
         {
             LogMessage("Requested state out of bounds");
-            pProp->Set((long)currentLEDState);
-            return ERR_UNKNOWN_LED_STATE;
+            std::ostringstream os;
+            os << currentLEDState;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
+            return ERR_PARAM_NOT_VALID;
         }
 
         ViBoolean newStates[6]
@@ -670,10 +742,28 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             //Do not set the property in the case of this error. Let the property change handle it. 
             //This will cover error where LED failed to set but chrolis is still ok
             LogMessage("Error Setting LED state");
-            OnPropertiesChanged();
+            if (err != ERR_CHROLIS_NOT_AVAIL)
+            {
+                if (wrapperInstance->GetLEDEnableStates(led1State_, led2State_, led3State_, led4State_, led5State_, led6State_) != 0)
+                {
+                    LogMessage("Error getting info from chrolis");
+                }
+                currentLEDState = ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
+                    | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5));
+
+                std::ostringstream os;
+                os << currentLEDState;
+                OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
+            }
+
             return err;
         }
-        pProp->Set((long)val);
+
+        std::ostringstream os;
+        os << val;
+        OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
+
+        //pProp->Set((long)val);
         
         //Probably don't need these but leaving for now
         //led1State_ = static_cast<bool>(val & (1 << 0));
@@ -683,20 +773,21 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         //led5State_ = static_cast<bool>(val & (1 << 4));
         //led6State_ = static_cast<bool>(val & (1 << 5));
 
-        delete newStates;
+        //delete newStates;
         return DEVICE_OK;
     }
     return DEVICE_OK;
 }
 
+//On properties change only way to update range of property
 int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     ViPBoolean ledBeingControlled;
     int numFromName = -1;
     std::string searchString = pProp->GetName();
-    regex regexp("[-+]?([0-9]*\.[0-9]+|[0-9]+)");
+    std::regex regexp("[-+]?([0-9]*\.[0-9]+|[0-9]+)");
     std::smatch sm;
-    regex_search(searchString, sm, regexp);
+    std::regex_search(searchString, sm, regexp);
 
     //The names for the LED's should contain only a single number representing the LED
     //Use this to set the power
@@ -751,7 +842,7 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         {
             LogMessage("CHROLIS not available");
         }
-        if (wrapperInstance->GetSingleLEDEnableState(numFromName, *ledBeingControlled) != 0)
+        if (wrapperInstance->GetSingleLEDEnableState(numFromName-1, *ledBeingControlled) != 0)
         {
             LogMessage("Error getting info from chrolis");
         }
@@ -766,35 +857,36 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
-            pProp->Set((long)*ledBeingControlled);
+            std::ostringstream os;
+            os << *ledBeingControlled;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_HUB_NOT_AVAILABLE;
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
-            pProp->Set((long)*ledBeingControlled);
+            std::ostringstream os;
+            os << *ledBeingControlled;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_CHROLIS_NOT_AVAIL;
         }
-
-        //int err = wrapperInstance->GetSingleLEDEnableState(numFromName - 1, *ledBeingControlled);
-        //if (err != 0)
-        //{
-        //    LogMessage("Error Setting LED state");
-        //    pProp->Set((long)*ledBeingControlled);
-        //    return err;
-        //}
 
         int err = wrapperInstance->SetSingleLEDEnableState(numFromName-1, (ViBoolean)val);
         if (err != 0)
         {
             LogMessage("Error Setting LED state");
-            OnPropertiesChanged();
+            wrapperInstance->GetSingleLEDEnableState(numFromName - 1, *ledBeingControlled);
+            std::ostringstream os;
+            os << *ledBeingControlled;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return err;
         }
 
         *ledBeingControlled = (ViBoolean)val;
-        pProp->Set((long)*ledBeingControlled);
+        std::ostringstream os;
+        os << *ledBeingControlled;
+        OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
         return DEVICE_OK;
     }
 
@@ -806,9 +898,9 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
     ViPUInt16 ledBeingControlled;
     int numFromName = -1;
     std::string searchString = pProp->GetName();
-    regex regexp("[-+]?([0-9]*\.[0-9]+|[0-9]+)");    
+    std::regex regexp("[-+]?([0-9]*\.[0-9]+|[0-9]+)");    
     std::smatch sm;
-    regex_search(searchString, sm, regexp);
+    std::regex_search(searchString, sm, regexp);
 
     //The names for the LED's should contain only a single number representing the LED
     //Use this to set the power
@@ -853,81 +945,63 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
 
     if (eAct == MM::BeforeGet)
     {
+        ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+        if (!pHub || !pHub->IsInitialized())
+        {
+            LogMessage("Hub not available");
+        }
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        if (!wrapperInstance->IsDeviceConnected())
+        {
+            LogMessage("CHROLIS not available");
+        }
+        if (wrapperInstance->GetSingleLEDPowerState(numFromName - 1, *ledBeingControlled) != 0)
+        {
+            LogMessage("Error getting info from chrolis");
+        }
         pProp->Set((long)*ledBeingControlled);
     }
     else if (eAct == MM::AfterSet)
     {
         double val;
         pProp->Get(val);
-        if (val > ledMaxPower_ || val < ledMinPower_)
-        {
-            LogMessage("Requested power value out of range");
-            pProp->Set((long)*ledBeingControlled);
-            return ERR_UNKNOWN_LED_STATE;
-        }
 
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
-            return ERR_HUB_NOT_AVAILABLE; 
+            std::ostringstream os;
+            os << *ledBeingControlled;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
+            return ERR_HUB_NOT_AVAILABLE;
         }
         ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
-            pProp->Set((long)*ledBeingControlled);
+            std::ostringstream os;
+            os << *ledBeingControlled;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_CHROLIS_NOT_AVAIL;
         }
 
-        int err = wrapperInstance->SetSingleLEDPowerState(numFromName-1, val);
+        int err = wrapperInstance->SetSingleLEDPowerState(numFromName - 1, (ViUInt16)val);
         if (err != 0)
         {
-            LogMessage("Error setting LED power");
-            pProp->Set((long)*ledBeingControlled);
+            LogMessage("Error Setting LED state");
+            wrapperInstance->GetSingleLEDPowerState(numFromName - 1, *ledBeingControlled);
+            std::ostringstream os;
+            os << *ledBeingControlled;
+            OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return err;
         }
-        *ledBeingControlled = (int)val;
-        pProp->Set((long)*ledBeingControlled);
+
+        *ledBeingControlled = (ViUInt16)val;
+        std::ostringstream os;
+        os << *ledBeingControlled;
+        OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
         return DEVICE_OK;
     }
     return DEVICE_OK;
 }
 
-bool ChrolisStateDevice::SyncLEDStates()
-{
-    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
-    if (!pHub || !pHub->IsInitialized())
-    {
-        LogMessage("Hub not available");
-    }
-    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
-    if (!wrapperInstance->IsDeviceConnected())
-    {
-        LogMessage("CHROLIS not available");
-    }
-
-    bool statesCorrect = true;
-    ViBoolean tmpEnableStates[6];
-    ViUInt16 tmpPowerStates[6];
-
-    int err = wrapperInstance->GetLEDEnableStates(tmpEnableStates);
-    if (err != 0)
-    {
-        return false;
-    }
-    err = wrapperInstance->GetLEDPowerStates(tmpPowerStates);
-    if (err != 0)
-    {
-        return false;
-    }
-
-    if (tmpEnableStates[0] != led1State_ || tmpPowerStates[0] != led1Power_)
-    {
-    }
-
-    delete tmpEnableStates;
-    delete tmpPowerStates;
-    
-    return statesCorrect;
-}
