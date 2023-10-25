@@ -448,8 +448,8 @@ int ChrolisShutter::GetOpen(bool& open)
 
 //Chrolis State Device Methods
 ChrolisStateDevice::ChrolisStateDevice() :
-    numPos_(6), ledMaxPower_(1000), ledMinPower_(0), 
-    led1Power_(0), led2Power_(0), led3Power_(0), led4Power_(0), led5Power_(0), led6Power_(0),
+    numPos_(6), ledMaxBrightness_(1000), ledMinBrightness_(0),
+    led1Brightness_(0), led2Brightness_(0), led3Brightness_(0), led4Brightness_(0), led5Brightness_(0), led6Brightness_(0),
     led1State_(false), led2State_(false), led3State_(false), led4State_(false), led5State_(false), led6State_(false)
 {
     InitializeDefaultErrorMessages();
@@ -483,7 +483,7 @@ int ChrolisStateDevice::Initialize()
     if (wrapperInstance->IsDeviceConnected())
     {
         err = wrapperInstance->GetLEDEnableStates(led1State_, led2State_, led3State_, led4State_, led5State_, led6State_);
-        err = wrapperInstance->GetLEDPowerStates(led1Power_, led2Power_, led3Power_, led4Power_, led5Power_, led6Power_);
+        err = wrapperInstance->GetLEDBrightnessStates(led1Brightness_, led2Brightness_, led3Brightness_, led4Brightness_, led5Brightness_, led6Brightness_);
         tmpLedState =
             ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
                 | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5));
@@ -498,17 +498,17 @@ int ChrolisStateDevice::Initialize()
 
     ////Properties for power control
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 1 Power", led1Power_, false, pAct);
+    err = CreateIntegerProperty("LED 1 Power", led1Brightness_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in power control");
         return DEVICE_ERR;
     }
-    SetPropertyLimits("LED 1 Power", ledMinPower_, ledMaxPower_);
+    SetPropertyLimits("LED 1 Power", ledMinBrightness_, ledMaxBrightness_);
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 2 Power", led2Power_, false, pAct);
-    SetPropertyLimits("LED 2 Power", ledMinPower_, ledMaxPower_);
+    err = CreateIntegerProperty("LED 2 Power", led2Brightness_, false, pAct);
+    SetPropertyLimits("LED 2 Power", ledMinBrightness_, ledMaxBrightness_);
     if (err != 0)
     {
         return DEVICE_ERR;
@@ -516,8 +516,8 @@ int ChrolisStateDevice::Initialize()
     }
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 3 Power", led3Power_, false, pAct);
-    SetPropertyLimits("LED 3 Power", ledMinPower_, ledMaxPower_);
+    err = CreateIntegerProperty("LED 3 Power", led3Brightness_, false, pAct);
+    SetPropertyLimits("LED 3 Power", ledMinBrightness_, ledMaxBrightness_);
     if (err != 0)
     {
         return DEVICE_ERR;
@@ -525,8 +525,8 @@ int ChrolisStateDevice::Initialize()
     }
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 4 Power", led4Power_, false, pAct);
-    SetPropertyLimits("LED 4 Power", ledMinPower_, ledMaxPower_);
+    err = CreateIntegerProperty("LED 4 Power", led4Brightness_, false, pAct);
+    SetPropertyLimits("LED 4 Power", ledMinBrightness_, ledMaxBrightness_);
     if (err != 0)
     {
         return DEVICE_ERR;
@@ -534,8 +534,8 @@ int ChrolisStateDevice::Initialize()
     }
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 5 Power", led5Power_, false, pAct);
-    SetPropertyLimits("LED 5 Power", ledMinPower_, ledMaxPower_);
+    err = CreateIntegerProperty("LED 5 Power", led5Brightness_, false, pAct);
+    SetPropertyLimits("LED 5 Power", ledMinBrightness_, ledMaxBrightness_);
     if (err != 0)
     {
         return DEVICE_ERR;
@@ -543,8 +543,8 @@ int ChrolisStateDevice::Initialize()
     }
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 6 Power", led6Power_, false, pAct);
-    SetPropertyLimits("LED 6 Power", ledMinPower_, ledMaxPower_);
+    err = CreateIntegerProperty("LED 6 Power", led6Brightness_, false, pAct);
+    SetPropertyLimits("LED 6 Power", ledMinBrightness_, ledMaxBrightness_);
     if (err != 0)
     {
         return DEVICE_ERR;
@@ -599,7 +599,7 @@ int ChrolisStateDevice::Initialize()
     SetPropertyLimits("LED Enable State 5", 0, 1);
 
     pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 6", led6Power_, false, pAct);
+    err = CreateIntegerProperty("LED Enable State 6", led6Brightness_, false, pAct);
     if (err != 0)
     {
         LogMessage("Error with property set in state control");
@@ -872,22 +872,22 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
     switch (numFromName)
     {
     case 1:
-        ledBeingControlled = &led1Power_;
+        ledBeingControlled = &led1Brightness_;
         break;
     case 2:
-        ledBeingControlled = &led2Power_;
+        ledBeingControlled = &led2Brightness_;
         break;
     case 3:
-        ledBeingControlled = &led3Power_;
+        ledBeingControlled = &led3Brightness_;
         break;
     case 4:
-        ledBeingControlled = &led4Power_;
+        ledBeingControlled = &led4Brightness_;
         break;
     case 5:
-        ledBeingControlled = &led5Power_;
+        ledBeingControlled = &led5Brightness_;
         break;
     case 6:
-        ledBeingControlled = &led6Power_;
+        ledBeingControlled = &led6Brightness_;
         break;
     default:
         LogMessage("Error selecting LED state");
@@ -907,7 +907,7 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         {
             LogMessage("CHROLIS not available");
         }
-        if (wrapperInstance->GetSingleLEDPowerState(numFromName - 1, *ledBeingControlled) != 0)
+        if (wrapperInstance->GetSingleLEDBrightnessState(numFromName - 1, *ledBeingControlled) != 0)
         {
             LogMessage("Error getting info from chrolis");
         }
@@ -936,11 +936,11 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
             return ERR_CHROLIS_NOT_AVAIL;
         }
 
-        int err = wrapperInstance->SetSingleLEDPowerState(numFromName - 1, (ViUInt16)val);
+        int err = wrapperInstance->SetSingleLEDBrightnessState(numFromName - 1, (ViUInt16)val);
         if (err != 0)
         {
             LogMessage("Error Setting LED state");
-            wrapperInstance->GetSingleLEDPowerState(numFromName - 1, *ledBeingControlled);
+            wrapperInstance->GetSingleLEDBrightnessState(numFromName - 1, *ledBeingControlled);
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return err;

@@ -110,12 +110,12 @@ public:
 private:
     long numPos_;
 
-    ViUInt16 led1Power_;
-    ViUInt16 led2Power_;
-    ViUInt16 led3Power_;
-    ViUInt16 led4Power_;
-    ViUInt16 led5Power_;
-    ViUInt16 led6Power_;
+    ViUInt16 led1Brightness_;
+    ViUInt16 led2Brightness_;
+    ViUInt16 led3Brightness_;
+    ViUInt16 led4Brightness_;
+    ViUInt16 led5Brightness_;
+    ViUInt16 led6Brightness_;
 
     ViBoolean led1State_;
     ViBoolean led2State_;
@@ -124,8 +124,8 @@ private:
     ViBoolean led5State_;
     ViBoolean led6State_;
 
-    ViInt16 ledMaxPower_;
-    ViInt16 ledMinPower_;
+    ViInt16 ledMaxBrightness_;
+    ViInt16 ledMinBrightness_;
 };
 
 //Wrapper for the basic functions used in this device adapter
@@ -147,15 +147,15 @@ public:
     int GetSingleLEDEnableState(int led, ViBoolean& state);
     int GetLEDEnableStates(ViBoolean(&states)[6]);
     int GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State);
-    int GetSingleLEDPowerState(int led, ViUInt16& state);
-    int GetLEDPowerStates(ViUInt16(&states)[6]);
-    int GetLEDPowerStates(ViUInt16 &led1Power, ViUInt16&led2Power, ViUInt16&led3Power, ViUInt16&led4Power, ViUInt16&led5Power, ViUInt16&led6Power);
+    int GetSingleLEDBrightnessState(int led, ViUInt16& state);
+    int GetLEDBrightnessStates(ViUInt16(&states)[6]);
+    int GetLEDBrightnessStates(ViUInt16 &led1Brightness, ViUInt16&led2Brightness, ViUInt16&led3Brightness, ViUInt16&led4Brightness, ViUInt16&led5Brightness, ViUInt16&led6Brightness);
 
     int SetShutterState(bool open);
     int SetLEDEnableStates(ViBoolean states[6]);
     int SetSingleLEDEnableState(int LED, ViBoolean state);
-    int SetLEDPowerStates(ViUInt16 states[6]);
-    int SetSingleLEDPowerState(int LED, ViUInt16 state);
+    int SetLEDBrightnessStates(ViUInt16 states[6]);
+    int SetSingleLEDBrightnessState(int LED, ViUInt16 state);
 
     bool VerifyLEDEnableStatesWithLock();
 
@@ -170,12 +170,12 @@ private:
     ViChar serialNumber_[TL6WL_LONG_STRING_SIZE];
     ViChar manufacturerName_[TL6WL_LONG_STRING_SIZE];
     bool masterSwitchState_;
-    ViBoolean savedEnabledStates[6]{false,false,false,false,false,false};
-    ViUInt16 savedPowerStates[6]{0,0,0,0,0,0};
-    ViUInt16 ledWavelengths[6]{0,0,0,0,0,0};
+    ViBoolean savedEnabledStates_[6]{false,false,false,false,false,false};
+    ViUInt16 savedBrightnessStates_[6]{0,0,0,0,0,0};
+    ViUInt16 ledWavelengths_[6]{0,0,0,0,0,0};
 
     bool VerifyLEDStates();
     bool VerifyLEDPowerStates();
     bool VerifyLEDEnableStates();
-};
 
+};
