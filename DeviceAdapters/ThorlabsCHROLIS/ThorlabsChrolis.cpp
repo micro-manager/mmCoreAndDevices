@@ -478,7 +478,7 @@ int ChrolisShutter::GetOpen(bool& open)
 
 //Chrolis State Device Methods
 ChrolisStateDevice::ChrolisStateDevice() :
-    numPos_(6), ledMaxPower_(100), ledMinPower_(0), 
+    numPos_(6), ledMaxPower_(1000), ledMinPower_(0), 
     led1Power_(0), led2Power_(0), led3Power_(0), led4Power_(0), led5Power_(0), led6Power_(0),
     led1State_(false), led2State_(false), led3State_(false), led4State_(false), led5State_(false), led6State_(false)
 {
