@@ -4,40 +4,10 @@
 #include <string>
 #include <regex>
 
-/*TODO
-* Set states of properties based on current LED states - x
-* Properties for device ID and stuff - x
-* Error handling on device control methods - x
-* custom errors and messages
-* logs for errors - x
-* Remove HubID Property -x
-* Integer property range 0 to 1 for each LED on off - x
-* Is sequencable property for each device check arduino implementation
-* No need for sequence stuff in CHROLIS. Should check if breakout box needs to be enabled in software
-* no need for event callbacks in UI for triggering
-* Keep LED control in State Device - x
-* Maybe keep triggering in Generic if that gets implemented 
-* pre-init properties in constructor - x
-* set error text in constructor -x
-* enumerate in constructor 
-* no logging in constructor
-* store error in device instance
-* after constructor, needs to be safe to call shutdown or destructor- x
-* device specific properties in the hub - x
-* state device allowed values added individually for drop down
-* leave state as text box - integer property - X
-* put wavelength in property name - X
-* handle cases for initialization failing - x 
-* Verify LED's all turned off with Shutter button -x
-* Shutter off in case of Device Status LLG open -x
-* Can a message be displayed in popup box without a return code?
-* Check if lock is needed for multi threading -x
-*/
-
 MODULE_API void InitializeModuleData() {
-    RegisterDevice(CHROLIS_HUB_NAME, // deviceName: model identifier and default device label
+    RegisterDevice(CHROLIS_HUB_NAME,
         MM::HubDevice, 
-        "Thorlabs CHROLIS Hub"); // description
+        "Thorlabs CHROLIS Hub");
     RegisterDevice(CHROLIS_SHUTTER_NAME,
         MM::ShutterDevice,
         "Thorlabs CHROLIS Shutter"); 
@@ -690,6 +660,8 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     else if (eAct == MM::AfterSet)
     {
+        std::ostringstream os;
+
         //temp state from last set used as fallback
         uint8_t currentLEDState = ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
             | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5));
@@ -700,7 +672,6 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
-            std::ostringstream os;
             os << currentLEDState;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_HUB_NOT_AVAILABLE;
@@ -709,7 +680,6 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
-            std::ostringstream os;
             os << currentLEDState;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_CHROLIS_NOT_AVAIL;
@@ -721,7 +691,6 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (val >= pow(2, numPos_) || val < 0)
         {
             LogMessage("Requested state out of bounds");
-            std::ostringstream os;
             os << currentLEDState;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_PARAM_NOT_VALID;
@@ -751,7 +720,6 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
                 currentLEDState = ((static_cast<uint8_t>(led1State_) << 0) | (static_cast<uint8_t>(led2State_) << 1) | (static_cast<uint8_t>(led3State_) << 2)
                     | (static_cast<uint8_t>(led4State_) << 3) | (static_cast<uint8_t>(led5State_) << 4) | (static_cast<uint8_t>(led6State_) << 5));
 
-                std::ostringstream os;
                 os << currentLEDState;
                 OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             }
@@ -759,27 +727,14 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             return err;
         }
 
-        std::ostringstream os;
         os << val;
         OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
 
-        //pProp->Set((long)val);
-        
-        //Probably don't need these but leaving for now
-        //led1State_ = static_cast<bool>(val & (1 << 0));
-        //led2State_ = static_cast<bool>(val & (1 << 1));
-        //led3State_ = static_cast<bool>(val & (1 << 2));
-        //led4State_ = static_cast<bool>(val & (1 << 3));
-        //led5State_ = static_cast<bool>(val & (1 << 4));
-        //led6State_ = static_cast<bool>(val & (1 << 5));
-
-        //delete newStates;
         return DEVICE_OK;
     }
     return DEVICE_OK;
 }
 
-//On properties change only way to update range of property
 int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     ViPBoolean ledBeingControlled;
@@ -852,12 +807,12 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
     {
         double val;
         pProp->Get(val);
+        std::ostringstream os;
 
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
-            std::ostringstream os;
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_HUB_NOT_AVAILABLE;
@@ -866,7 +821,6 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
-            std::ostringstream os;
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_CHROLIS_NOT_AVAIL;
@@ -877,14 +831,12 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         {
             LogMessage("Error Setting LED state");
             wrapperInstance->GetSingleLEDEnableState(numFromName - 1, *ledBeingControlled);
-            std::ostringstream os;
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return err;
         }
 
         *ledBeingControlled = (ViBoolean)val;
-        std::ostringstream os;
         os << *ledBeingControlled;
         OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
         return DEVICE_OK;
@@ -965,12 +917,12 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
     {
         double val;
         pProp->Get(val);
+        std::ostringstream os;
 
         ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
         if (!pHub || !pHub->IsInitialized())
         {
             LogMessage("Hub not available");
-            std::ostringstream os;
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_HUB_NOT_AVAILABLE;
@@ -979,7 +931,6 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
-            std::ostringstream os;
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_CHROLIS_NOT_AVAIL;
@@ -990,14 +941,12 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         {
             LogMessage("Error Setting LED state");
             wrapperInstance->GetSingleLEDPowerState(numFromName - 1, *ledBeingControlled);
-            std::ostringstream os;
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return err;
         }
 
         *ledBeingControlled = (ViUInt16)val;
-        std::ostringstream os;
         os << *ledBeingControlled;
         OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
         return DEVICE_OK;

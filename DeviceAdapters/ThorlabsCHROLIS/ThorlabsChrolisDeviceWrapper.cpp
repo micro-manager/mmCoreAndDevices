@@ -346,7 +346,6 @@ int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)
                 break;
             }
         }
-        //delete tempEnableStates;
         masterSwitchState_ = false;
     }
     else
@@ -495,7 +494,6 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDEnableStatesWithLock()
     return VerifyLEDEnableStates();
 }
 
-//set or fix any issues with the stored led vals. Return if a correction needed to be made
 bool ThorlabsChrolisDeviceWrapper::VerifyLEDStates()
 {
     if (!deviceConnected_)
@@ -543,7 +541,6 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDEnableStates()
             savedEnabledStates[i] = tempEnableStates[i];
         }
     }
-    //delete tempEnableStates;
 
     return stateCorrect;
 }
@@ -568,7 +565,6 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDPowerStates()
             savedPowerStates[i] = tempPowerStates[i];
         }
     }
-    //delete tempPowerStates;
     
     return stateCorrect;
 }
