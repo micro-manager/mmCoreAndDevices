@@ -193,6 +193,8 @@ int ThorlabsChrolisDeviceWrapper::GetShutterState(bool& open)
 
 int ThorlabsChrolisDeviceWrapper::GetLEDWavelengths(ViUInt16(&wavelengths)[6])
 {
+    std::lock_guard<std::mutex> lock(instanceMutex_);
+
     if (!deviceConnected_)
     {
         for (int i = 0; i < 6; i++)
@@ -340,7 +342,6 @@ int ThorlabsChrolisDeviceWrapper::GetLEDBrightnessStates(ViUInt16& led1Brightnes
 int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)
 {
     int err = DEVICE_OK;
-    //TODO add checks for device not being open here
     std::lock_guard<std::mutex> lock(instanceMutex_);
     if (!open)
     {
@@ -384,11 +385,12 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDEnableState(int LED, ViBoolean sta
 {
     if (LED < numLEDs_ && LED >= 0)
     {
+        std::lock_guard<std::mutex> lock(instanceMutex_);
+
         if (!deviceConnected_)
         {
             return ERR_CHROLIS_NOT_AVAIL;
         }
-        std::lock_guard<std::mutex> lock(instanceMutex_);
         int err = 0;
         savedEnabledStates_[LED] = state;
 
@@ -416,11 +418,13 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDEnableState(int LED, ViBoolean sta
 
 int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(ViBoolean states[6])
 {
+    std::lock_guard<std::mutex> lock(instanceMutex_);
+
     if (!deviceConnected_)
     {
         return ERR_CHROLIS_NOT_AVAIL;
     }
-    std::lock_guard<std::mutex> lock(instanceMutex_);
+
     int err = 0;
     for (int i = 0; i < numLEDs_; i++)
     {
@@ -448,11 +452,13 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDBrightnessState(int LED, ViUInt16 
 {
     if (LED < 6 && LED >= 0)
     {
+        std::lock_guard<std::mutex> lock(instanceMutex_);
+
         if (!deviceConnected_)
         {
             return ERR_CHROLIS_NOT_AVAIL;
         }
-        std::lock_guard<std::mutex> lock(instanceMutex_);
+
         int err = 0;
         savedBrightnessStates_[LED] = state;
         err = TL6WL_setLED_HeadBrightness(deviceHandle_, savedBrightnessStates_[0], savedBrightnessStates_[1], savedBrightnessStates_[2], 
@@ -476,11 +482,13 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDBrightnessState(int LED, ViUInt16 
 
 int ThorlabsChrolisDeviceWrapper::SetLEDBrightnessStates(ViUInt16 states[6])
 {
+    std::lock_guard<std::mutex> lock(instanceMutex_);
+
     if (!deviceConnected_)
     {
         return ERR_CHROLIS_NOT_AVAIL;
     }
-    std::lock_guard<std::mutex> lock(instanceMutex_);
+
     int i;
     for (i = 0; i < numLEDs_; i++)
     {
