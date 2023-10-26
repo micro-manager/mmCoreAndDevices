@@ -54,7 +54,7 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
     }
 
     ViChar resource[512] = "";
-    if(serialNumber.compare("") || serialNumber.compare("DEFAULT"))
+    if(serialNumber.compare("") == 0 || serialNumber.compare("DEFAULT") == 0)
     {
         err = TL6WL_getRsrcName(NULL, 0, resource);
         if (err != 0)
