@@ -29,7 +29,6 @@
 #ifdef WIN32
 #pragma warning(disable: 4355)
 #endif
-#include "FixSnprintf.h"
 
 #include "MicroPoint.h"
 #include <cstdio>

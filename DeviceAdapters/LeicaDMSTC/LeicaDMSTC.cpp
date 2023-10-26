@@ -22,8 +22,6 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 
-#include "FixSnprintf.h"
-
 #include "LeicaDMSTC.h"
 #include "LeicaDMSTCHub.h"
 #include <cstdio>

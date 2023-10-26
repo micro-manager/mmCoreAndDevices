@@ -20,11 +20,9 @@
 //                This code is based on the Vincent Uniblitz controller adapter
 //                by Nico Stuurman, 2006
 
-
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "Xcite.h"
 #include <string>

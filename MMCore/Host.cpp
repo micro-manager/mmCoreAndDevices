@@ -20,7 +20,6 @@
 //
 // AUTHOR:        Karl Hoover  karl.hoover@gmail.com 2011
 
-
 #include "Host.h"
 
 #ifdef _WINDOWS
@@ -28,8 +27,6 @@
 #include "Iphlpapi.h"
 #include <stdio.h>
 #endif //_WINDOWS
-
-#include "../MMDevice/FixSnprintf.h"
 
 #ifdef __APPLE__
 

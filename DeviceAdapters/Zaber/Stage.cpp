@@ -23,7 +23,6 @@
 #ifdef WIN32
 #pragma warning(disable: 4355)
 #endif
-#include "FixSnprintf.h"
 
 #include "Stage.h"
 
@@ -37,7 +36,6 @@ Stage::Stage() :
 	deviceAddress_(1),
 	axisNumber_(1),
 	lockstepGroup_(0),
-	homingTimeoutMs_(20000),
 	stepSizeUm_(0.15625),
 	convFactor_(1.6384), // not very informative name
 	cmdPrefix_("/"),
@@ -48,13 +46,7 @@ Stage::Stage() :
 	this->LogMessage("Stage::Stage\n", true);
 
 	InitializeDefaultErrorMessages();
-	SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, g_Msg_PORT_CHANGE_FORBIDDEN);
-	SetErrorText(ERR_DRIVER_DISABLED, g_Msg_DRIVER_DISABLED);
-	SetErrorText(ERR_BUSY_TIMEOUT, g_Msg_BUSY_TIMEOUT);
-	SetErrorText(ERR_COMMAND_REJECTED, g_Msg_COMMAND_REJECTED);
-	SetErrorText(ERR_SETTING_FAILED, g_Msg_SETTING_FAILED);
-	SetErrorText(ERR_PERIPHERAL_DISCONNECTED, g_Msg_PERIPHERAL_DISCONNECTED);
-	SetErrorText(ERR_PERIPHERAL_UNSUPPORTED, g_Msg_PERIPHERAL_UNSUPPORTED);
+	ZaberBase::setErrorMessages([&](auto code, auto message) { this->SetErrorText(code, message); });
 
 	// Pre-initialization properties
 	CreateProperty(MM::g_Keyword_Name, g_StageName, MM::String, true);
@@ -62,7 +54,7 @@ Stage::Stage() :
 	CreateProperty(MM::g_Keyword_Description, "Zaber stage driver adapter", MM::String, true);
 
 	CPropertyAction* pAct = new CPropertyAction (this, &Stage::OnPort);
-	CreateProperty(MM::g_Keyword_Port, "COM1", MM::String, false, pAct, true);
+	CreateProperty("Zaber Serial Port", port_.c_str(), MM::String, false, pAct, true);
 
 	pAct = new CPropertyAction (this, &Stage::OnDeviceAddress);
 	CreateIntegerProperty("Controller Device Number", deviceAddress_, false, pAct, true);
@@ -103,33 +95,20 @@ int Stage::Initialize()
 	if (initialized_) return DEVICE_OK;
 
 	core_ = GetCoreCallback();
-	
+
 	this->LogMessage("Stage::Initialize\n", true);
 
-	int ret = ClearPort();
-	if (ret != DEVICE_OK) 
-	{
-		return ret;
-	}
-
 	// Activate any recently changed peripherals.
-	ret = ActivatePeripheralsIfNeeded(deviceAddress_);
-	if (ret != DEVICE_OK) 
+	auto ret = ActivatePeripheralsIfNeeded(deviceAddress_);
+	if (ret != DEVICE_OK)
 	{
 		LogMessage("Peripheral activation check failed.\n", true);
 		return ret;
 	}
 
-	// Disable alert messages.
-	ret = SetSetting(deviceAddress_, 0, "comm.alert", 0);
-	if (ret != DEVICE_OK) 
-	{
-		return ret;
-	}
-
 	// Calculate step size.
 	ret = GetSetting(deviceAddress_, axisNumber_, "resolution", resolution_);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -139,21 +118,21 @@ int Stage::Initialize()
 	// Initialize Speed (in mm/s)
 	pAct = new CPropertyAction (this, &Stage::OnSpeed);
 	ret = CreateFloatProperty("Speed [mm/s]", 0.0, false, pAct);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
 
-	// Initialize Acceleration (in m/s²)
+	// Initialize Acceleration (in m/sÂ²)
 	pAct = new CPropertyAction (this, &Stage::OnAccel);
 	ret = CreateFloatProperty("Acceleration [m/s^2]", 0.0, false, pAct);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
 
 	ret = UpdateStatus();
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -185,10 +164,10 @@ bool Stage::Busy()
 int Stage::GetPositionUm(double& pos)
 {
 	this->LogMessage("Stage::GetPositionUm\n", true);
-	
+
 	long steps;
 	int ret =  GetSetting(deviceAddress_, axisNumber_, "pos", steps);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -261,11 +240,11 @@ int Stage::Home()
 	{
 		ostringstream cmd;
 		cmd << "lockstep " << lockstepGroup_ << " home";
-		return SendAndPollUntilIdle(deviceAddress_, 0, cmd.str().c_str(), homingTimeoutMs_);
+		return SendAndPollUntilIdle(deviceAddress_, 0, cmd.str());
 	}
 	else
 	{
-		return SendAndPollUntilIdle(deviceAddress_, axisNumber_, "home", homingTimeoutMs_);
+		return SendAndPollUntilIdle(deviceAddress_, axisNumber_, "home");
 	}
 }
 
@@ -382,7 +361,7 @@ int Stage::OnSpeed (MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		long speedData;
 		int ret = GetSetting(deviceAddress_, axisNumber_, "maxspeed", speedData);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
@@ -401,7 +380,7 @@ int Stage::OnSpeed (MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (speedData == 0 && speed != 0) speedData = 1; // Avoid clipping to 0.
 
 		int ret = SetSetting(deviceAddress_, axisNumber_, "maxspeed", speedData);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
@@ -417,12 +396,12 @@ int Stage::OnAccel (MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		long accelData;
 		int ret = GetSetting(deviceAddress_, axisNumber_, "accel", accelData);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
 
-		// convert to m/s²
+		// convert to m/sÂ²
 		double accel = (accelData*10/convFactor_)*stepSizeUm_/1000;
 		pProp->Set(accel);
 	}
@@ -436,7 +415,7 @@ int Stage::OnAccel (MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (accelData == 0 && accel != 0) accelData = 1; // Only set accel to 0 if user intended it.
 
 		int ret = SetSetting(deviceAddress_, axisNumber_, "accel", accelData);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}

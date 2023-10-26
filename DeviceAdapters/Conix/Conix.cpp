@@ -15,7 +15,6 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "Conix.h"
 #include <cstdio>

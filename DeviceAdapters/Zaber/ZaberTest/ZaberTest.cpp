@@ -1,6 +1,4 @@
 #include "../../../MMCore/MMCore.h"
-#include "../../../DeviceKit/Common/PropertyTypes.h"
-#include "../../../DeviceKit/Common/DeviceTypes.h"
 #include <iostream>
 #include <iomanip>
 #include <assert.h>
@@ -35,16 +33,12 @@ int main(int argc, char* argv[])
    {
       // Initialize the device
       // ---------------------
-	  cout << "Loading " << portName << " from library SerialManager..." << endl;
-	  core.loadDevice(portName.c_str(), "SerialManager", portName.c_str());
-      cout << "Done." << endl;
 
       cout << "Loading " << deviceName << " from library " << moduleName << "..." << endl;
       core.loadDevice(label.c_str(), moduleName.c_str(), deviceName.c_str());
       cout << "Done." << endl;
 
-	  core.setProperty(label.c_str(), "Port", portName.c_str());
-	  core.setProperty(portName.c_str(), MM::g_Keyword_BaudRate, "115200");
+      core.setProperty(label.c_str(), "Zaber Serial Port", portName.c_str());
 
       cout << "Initializing..." << endl;
       core.initializeAllDevices();
@@ -55,10 +49,10 @@ int main(int argc, char* argv[])
       vector<string> props(core.getDevicePropertyNames(label.c_str()));
       for (unsigned i=0; i < props.size(); i++)
       {
-         cout << props[i] << " (" << ::getPropertyTypeVerbose(core.getPropertyType(label.c_str(), props[i].c_str())) << ") = "
+         cout << props[i] << " (" << core.getPropertyType(label.c_str(), props[i].c_str()) << ") = "
                           << core.getProperty(label.c_str(), props[i].c_str()) << endl;
       }
-   
+
       // unload the device
       // -----------------
       core.unloadAllDevices();

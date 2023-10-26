@@ -20,7 +20,6 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "MaestroServo.h"
 #include <string>

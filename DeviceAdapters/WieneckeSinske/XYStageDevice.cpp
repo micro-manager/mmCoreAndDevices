@@ -32,7 +32,6 @@
 #else
 #include <arpa/inet.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "XYStageDevice.h"
 #include <string>

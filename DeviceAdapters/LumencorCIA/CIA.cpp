@@ -24,7 +24,6 @@
    #include <windows.h>
    #include <iostream>
 #endif
-#include "FixSnprintf.h"
 
 #define DEBUG
 

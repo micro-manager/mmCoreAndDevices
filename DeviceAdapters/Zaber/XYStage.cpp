@@ -4,9 +4,9 @@
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   XYStage Device Adapter
-//                
+//
 // AUTHOR:        Soleil Lapierre, David Goosen & Athabasca Witschi (contact@zaber.com)
-//                
+//
 // COPYRIGHT:     Zaber Technologies Inc., 2017
 //
 // LICENSE:       This file is distributed under the BSD license.
@@ -24,7 +24,6 @@
 #ifdef WIN32
 #pragma warning(disable: 4355)
 #endif
-#include "FixSnprintf.h"
 
 #include "XYStage.h"
 
@@ -62,28 +61,19 @@ XYStage::XYStage() :
 	this->LogMessage("XYStage::XYStage\n", true);
 
 	InitializeDefaultErrorMessages();
-	SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, g_Msg_PORT_CHANGE_FORBIDDEN);
-	SetErrorText(ERR_DRIVER_DISABLED, g_Msg_DRIVER_DISABLED);
-	SetErrorText(ERR_BUSY_TIMEOUT, g_Msg_BUSY_TIMEOUT);
-	SetErrorText(ERR_AXIS_COUNT, g_Msg_AXIS_COUNT);
-	SetErrorText(ERR_COMMAND_REJECTED, g_Msg_COMMAND_REJECTED);
-	SetErrorText(ERR_NO_REFERENCE_POS, g_Msg_NO_REFERENCE_POS);
-	SetErrorText(ERR_SETTING_FAILED, g_Msg_SETTING_FAILED);
-	SetErrorText(ERR_INVALID_DEVICE_NUM, g_Msg_INVALID_DEVICE_NUM);
-	SetErrorText(ERR_PERIPHERAL_DISCONNECTED, g_Msg_PERIPHERAL_DISCONNECTED);
-	SetErrorText(ERR_PERIPHERAL_UNSUPPORTED, g_Msg_PERIPHERAL_UNSUPPORTED);
+	ZaberBase::setErrorMessages([&](auto code, auto message) { this->SetErrorText(code, message); });
 
 	// Pre-initialization properties
 	CreateProperty(MM::g_Keyword_Name, g_XYStageName, MM::String, true);
 	CreateProperty(MM::g_Keyword_Description, "Zaber XY stage driver adapter", MM::String, true);
 
 	CPropertyAction* pAct = new CPropertyAction (this, &XYStage::OnPort);
-	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+	CreateProperty("Zaber Serial Port", port_.c_str(), MM::String, false, pAct, true);
 
 	pAct = new CPropertyAction (this, &XYStage::OnDeviceAddress);
 	CreateIntegerProperty("Controller Device Number", deviceAddressX_, false, pAct, true);
 	SetPropertyLimits("Controller Device Number", 1, 99);
-	
+
 	pAct = new CPropertyAction (this, &XYStage::OnDeviceAddressY);
 	CreateStringProperty("Controller Device Number (Y Axis)", "", false, pAct, true);
 
@@ -133,47 +123,28 @@ XYStage::~XYStage()
 
 int XYStage::Initialize()
 {
-	if (initialized_) 
+	if (initialized_)
 	{
 		return DEVICE_OK;
 	}
 
 	core_ = GetCoreCallback();
-	
+
 	this->LogMessage("XYStage::Initialize\n", true);
 
-	int ret = ClearPort();
-	if (ret != DEVICE_OK) 
-	{
-		return ret;
-	}
-
 	// Activate any recently changed peripherals.
-	ret = ActivatePeripheralsIfNeeded(deviceAddressX_);
-	if (ret != DEVICE_OK) 
+	auto ret = ActivatePeripheralsIfNeeded(deviceAddressX_);
+	if (ret != DEVICE_OK)
 	{
 		LogMessage("Peripheral activation check failed.\n", true);
 		return ret;
 	}
 
-	// Disable alert messages.
-	ret = SetSetting(deviceAddressX_, 0, "comm.alert", 0);
-	if (ret != DEVICE_OK) 
-	{
-		return ret;
-	}
-
 	if (!IsSingleController())
 	{
-		ret = SetSetting(deviceAddressY_, 0, "comm.alert", 0);
-		if (ret != DEVICE_OK) 
-		{
-			return ret;
-		}
-
 		// Activate any recently changed peripherals.
 		ret = ActivatePeripheralsIfNeeded(deviceAddressY_);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			LogMessage("Peripheral activation check failed.\n", true);
 			return ret;
@@ -184,26 +155,26 @@ int XYStage::Initialize()
 		// Ensure dual-axis controller.
 		long axisCount;
 		ret = GetSetting(deviceAddressX_, 0, "system.axiscount", axisCount);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
 
 		if (axisCount < 2)
 		{
-			return ERR_AXIS_COUNT;
+			return DEVICE_NOT_SUPPORTED;
 		}
 	}
 
 	// Calculate step size.
 	ret = GetSetting(deviceAddressX_, axisX_, "resolution", resolutionX_);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
 
 	ret = GetSetting(deviceAddressY_, axisY_, "resolution", resolutionY_);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -215,35 +186,35 @@ int XYStage::Initialize()
 	// Initialize Speed (in mm/s)
 	pAct = new CPropertyAction (this, &XYStage::OnSpeedX);
 	ret = CreateFloatProperty("Speed X [mm/s]", 0.0, false, pAct);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
 
 	pAct = new CPropertyAction (this, &XYStage::OnSpeedY);
 	ret = CreateFloatProperty("Speed Y [mm/s]", 0.0, false, pAct);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
 
-	// Initialize Acceleration (in m/s²)
+	// Initialize Acceleration (in m/sÂ²)
 	pAct = new CPropertyAction (this, &XYStage::OnAccelX);
 	ret = CreateFloatProperty("Acceleration X [m/s^2]", 0.0, false, pAct);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
 
 	pAct = new CPropertyAction (this, &XYStage::OnAccelY);
 	ret = CreateFloatProperty("Acceleration Y [m/s^2]", 0.0, false, pAct);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
 
 	ret = UpdateStatus();
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -285,7 +256,7 @@ int XYStage::GetPositionSteps(long& x, long& y)
 	this->LogMessage("XYStage::GetPositionSteps\n", true);
 
 	int ret = GetSetting(deviceAddressX_, axisX_, "pos", x);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -302,7 +273,7 @@ int XYStage::SetPositionSteps(long x, long y)
 
 
 int XYStage::SetRelativePositionSteps(long x, long y)
-{   
+{
 	this->LogMessage("XYStage::SetRelativePositionSteps\n", true);
 	return SendXYMoveCommand("rel", x, y);
 }
@@ -345,7 +316,7 @@ int XYStage::Stop()
 
 
 /** Calibrates the stage then moves it to Micro-Manager's origin.
- * 
+ *
  * Assumes the stage is oriented with the long/X axis travelling left-right.
  * "Default" orientation is with cable connectors at the top right,
  * transposeMirrorX = 0, and transposeMirrorY = 0.
@@ -367,14 +338,14 @@ int XYStage::Home()
 	{
 		ostringstream cmd;
 		cmd << "lockstep " << lockstepGroupX_ << " home";
-		ret = SendAndPollUntilIdle(deviceAddressX_, 0, cmd.str().c_str(), homingTimeoutMs_);
+		ret = SendAndPollUntilIdle(deviceAddressX_, 0, cmd.str());
 	}
 	else
 	{
-		ret = SendAndPollUntilIdle(deviceAddressX_, 0, "tools findrange", homingTimeoutMs_);
-		if (ret == ERR_COMMAND_REJECTED) // Some stages don't support the findrange command. Instead we have to home them before moving.
+		ret = SendAndPollUntilIdle(deviceAddressX_, 0, "tools findrange");
+		if (ret == DEVICE_UNSUPPORTED_COMMAND) // Some stages don't support the findrange command. Instead we have to home them before moving.
 		{
-			ret = SendAndPollUntilIdle(deviceAddressX_, 0, "home", homingTimeoutMs_);
+			ret = SendAndPollUntilIdle(deviceAddressX_, 0, "home");
 		}
 	}
 
@@ -389,14 +360,14 @@ int XYStage::Home()
 		{
 			ostringstream cmd;
 			cmd << "lockstep " << lockstepGroupY_ << " home";
-			ret = SendAndPollUntilIdle(deviceAddressY_, 0, cmd.str().c_str(), homingTimeoutMs_);
+			ret = SendAndPollUntilIdle(deviceAddressY_, 0, cmd.str());
 		}
 		else
 		{
-			ret = SendAndPollUntilIdle(deviceAddressY_, 0, "tools findrange", homingTimeoutMs_);
-			if (ret == ERR_COMMAND_REJECTED) // Some stages don't support the findrange command. Instead we have to home them before moving.
+			ret = SendAndPollUntilIdle(deviceAddressY_, 0, "tools findrange");
+			if (ret == DEVICE_UNSUPPORTED_COMMAND) // Some stages don't support the findrange command. Instead we have to home them before moving.
 			{
-				ret = SendAndPollUntilIdle(deviceAddressY_, 0, "home", homingTimeoutMs_);
+				ret = SendAndPollUntilIdle(deviceAddressY_, 0, "home");
 			}
 
 			if (ret != DEVICE_OK)
@@ -421,8 +392,8 @@ int XYStage::Home()
 	}
 
 	cmdX << (mirrorX ? "move max" : "move min");
-	ret = SendAndPollUntilIdle(deviceAddressX_, xAxis, cmdX.str().c_str(), homingTimeoutMs_);
-	if (ret != DEVICE_OK) 
+	ret = SendAndPollUntilIdle(deviceAddressX_, xAxis, cmdX.str().c_str());
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -434,13 +405,13 @@ int XYStage::Home()
 		cmdY << "lockstep " << lockstepGroupY_ << " ";
 		yAxis = 0;
 	}
-	
+
 	cmdY << (mirrorY ? "move max" : "move min");
-	ret = SendAndPollUntilIdle(deviceAddressY_, yAxis, cmdY.str().c_str(), homingTimeoutMs_);
-	if (ret != DEVICE_OK) 
+	ret = SendAndPollUntilIdle(deviceAddressY_, yAxis, cmdY.str().c_str());
+	if (ret != DEVICE_OK)
 	{
 		return ret;
-	}	
+	}
 
 	this->LogMessage("XYStage::Home COMPLETE!\n", true);
 	return DEVICE_OK;
@@ -452,8 +423,8 @@ int XYStage::SetOrigin()
  * The Zaber coordinate system is NOT zeroed.
  */
 {
-	this->LogMessage("XYStage::SetOrigin\n", true); 
-	this->LogMessage("XYStage::SetOrigin calling SetAdapterOriginUm(0,0)\n", true); 
+	this->LogMessage("XYStage::SetOrigin\n", true);
+	this->LogMessage("XYStage::SetOrigin calling SetAdapterOriginUm(0,0)\n", true);
 	return SetAdapterOriginUm(0,0);
 }
 
@@ -466,9 +437,9 @@ int XYStage::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax)
 	{
 		return ERR_NO_REFERENCE_POS;
 	}
-  
+
 	int ret = GetLimits(deviceAddressX_, axisX_, xMin, xMax);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -479,13 +450,13 @@ int XYStage::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax)
 
 int XYStage::GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
 {
-	this->LogMessage("XYStage::GetLimitsUm\n", true); 
+	this->LogMessage("XYStage::GetLimitsUm\n", true);
 
 	if (!rangeMeasured_) return ERR_NO_REFERENCE_POS;
 
 	long xMinSteps, xMaxSteps, yMinSteps, yMaxSteps;
 	int ret = GetStepLimits(xMinSteps, xMaxSteps, yMinSteps, yMaxSteps);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -504,14 +475,14 @@ int XYStage::GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
 // Private helper functions
 ///////////////////////////////////////////////////////////////////////////////
 
-int XYStage::SendXYMoveCommand(string type, long x, long y) const
+int XYStage::SendXYMoveCommand(string type, long x, long y)
 {
 	this->LogMessage("XYStage::SendXYMoveCommand\n", true);
 	bool lockstepX = (lockstepGroupX_ > 0);
 	long xAxis = lockstepX ? lockstepGroupX_ : axisX_;
 
 	int ret = SendMoveCommand(deviceAddressX_, xAxis, type, x, lockstepX);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -522,7 +493,7 @@ int XYStage::SendXYMoveCommand(string type, long x, long y) const
 }
 
 
-int XYStage::OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct) const
+int XYStage::OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	this->LogMessage("XYStage::OnSpeed\n", true);
 
@@ -532,7 +503,7 @@ int XYStage::OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::Actio
 	{
 		long speedData;
 		int ret = GetSetting(address, axis, "maxspeed", speedData);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
@@ -551,7 +522,7 @@ int XYStage::OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::Actio
 		if (speedData == 0 && speed != 0) speedData = 1; // Avoid clipping to 0.
 
 		int ret = SetSetting(address, axis, "maxspeed", speedData);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
@@ -561,7 +532,7 @@ int XYStage::OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::Actio
 }
 
 
-int XYStage::OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct) const
+int XYStage::OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	this->LogMessage("XYStage::OnAccel\n", true);
 
@@ -571,12 +542,12 @@ int XYStage::OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::Actio
 	{
 		long accelData;
 		int ret = GetSetting(address, axis, "accel", accelData);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
 
-		// convert to m/s²
+		// convert to m/sÂ²
 		double accel = (accelData*10/convFactor_)*stepSize/1000;
 		pProp->Set(accel);
 	}
@@ -590,7 +561,7 @@ int XYStage::OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::Actio
 		if (accelData == 0 && accel != 0) accelData = 1; // Only set accel to 0 if user intended it.
 
 		int ret = SetSetting(address, axis, "accel", accelData);
-		if (ret != DEVICE_OK) 
+		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
@@ -600,7 +571,7 @@ int XYStage::OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::Actio
 }
 
 
-void XYStage::GetOrientation(bool& mirrorX, bool& mirrorY) 
+void XYStage::GetOrientation(bool& mirrorX, bool& mirrorY)
 {
 	// copied from DeviceBase.h
 	this->LogMessage("XYStage::GetOrientation\n", true);
@@ -622,7 +593,7 @@ void XYStage::GetOrientation(bool& mirrorX, bool& mirrorY)
 ///////////////////////////////////////////////////////////////////////////////
 
 int XYStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
-{  
+{
 	ostringstream os;
 	os << "XYStage::OnPort(" << pProp << ", " << eAct << ")\n";
 	this->LogMessage(os.str().c_str(), false);
@@ -648,7 +619,7 @@ int XYStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 
 int XYStage::OnSpeedX(MM::PropertyBase* pProp, MM::ActionType eAct)
-{ 
+{
 	this->LogMessage("XYStage::OnSpeedX\n", true);
 
 	return OnSpeed(deviceAddressX_, axisX_, pProp, eAct);
@@ -858,7 +829,7 @@ int XYStage::OnDeviceAddressY(MM::PropertyBase* pProp, MM::ActionType eAct)
 			long val = atol(numBuf.c_str());
 			if ((val < 1) || (val > 99))
 			{
-				return ERR_INVALID_DEVICE_NUM;
+				return DEVICE_INVALID_PROPERTY_VALUE;
 			}
 
 			deviceAddressY_ = val;

@@ -70,7 +70,6 @@
 #   define MM_DEPRECATED(prototype) prototype
 #endif
 
-
 #ifdef WIN32
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
@@ -80,12 +79,7 @@
    typedef void* HDEVMODULE;
 #endif
 
-#include "FixSnprintf.h"
-
-
 class ImgBuffer;
-
-
 
 namespace MM {
 

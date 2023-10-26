@@ -38,7 +38,6 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.  
 
-
 #ifndef _ZEISSCAN29_H_
 #define _ZEISSCAN29_H_
 
@@ -48,7 +47,6 @@
 #else
 #include <netinet/in.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "MMDevice.h"
 #include "DeviceBase.h"

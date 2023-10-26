@@ -122,6 +122,20 @@ DeviceInstance::ThrowIfError(int code, const std::string& message) const
 }
 
 void
+DeviceInstance::RequireInitialized(const char *operation) const
+{
+   if (!initialized_) {
+      // This is an error, but existing application code (in particular,
+      // the Hardware Configuration Wizard) breaks if we enforce it strictly.
+      // Until such code is fixed, we only log.
+      LOG_WARNING(Logger()) << "Operation (" << operation <<
+         ") not permitted on uninitialized device (this will be an error in a future version of MMCore; for now we continue with the operation anyway, even though it might not be safe)";
+      // Eventually to be replaced with:
+      // ThrowError("Operation not permitted on uninitialized device");
+   }
+}
+
+void
 DeviceInstance::DeviceStringBuffer::ThrowBufferOverflowError() const
 {
    std::string label(instance_ ? instance_->GetLabel() : "<unknown>");
@@ -159,6 +173,9 @@ void
 DeviceInstance::SetProperty(const std::string& name,
       const std::string& value) const
 {
+   if (initialized_ && GetPropertyInitStatus(name.c_str()))
+      ThrowError("Cannot set pre-init property after initialization");
+
    LOG_DEBUG(Logger()) << "Will set property \"" << name << "\" to \"" <<
       value << "\"";
 
@@ -315,7 +332,10 @@ DeviceInstance::GetErrorText(int code) const
 
 bool
 DeviceInstance::Busy()
-{ return pImpl_->Busy(); }
+{
+   RequireInitialized(__func__);
+   return pImpl_->Busy();
+}
 
 double
 DeviceInstance::GetDelayMs() const
@@ -332,12 +352,19 @@ DeviceInstance::UsesDelay()
 void
 DeviceInstance::Initialize()
 {
+   // Device initialization can only be attempted once per instance lifetime.
+   if (initializeCalled_)
+      ThrowError("Device already initialized (or initialization already attempted)");
+   initializeCalled_ = true;
    ThrowIfError(pImpl_->Initialize());
+   initialized_ = true;
 }
 
 void
 DeviceInstance::Shutdown()
 {
+   // Note we do not require device to be initialized before calling Shutdown().
+   initialized_ = false;
    ThrowIfError(pImpl_->Shutdown());
 }
 
@@ -357,7 +384,6 @@ void
 DeviceInstance::SetCallback(MM::Core* callback) { 
    pImpl_->SetCallback(callback); 
 }
-
 
 bool
 DeviceInstance::SupportsDeviceDetection()

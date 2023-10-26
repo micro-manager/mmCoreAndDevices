@@ -7,11 +7,9 @@
 // Zeiss CAN bus controller for Axioscop 2 MOT, Z-stage
 //                
 
-
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "ZeissCAN.h"
 using namespace std;

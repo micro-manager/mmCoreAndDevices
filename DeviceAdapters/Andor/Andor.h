@@ -187,6 +187,9 @@ public:
    int OnDDGGateDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDDGGateWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   int OnDDGExternalOutputEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDDGExternalOutputTime(MM::PropertyBase* pProp, MM::ActionType eAct);
+
    int OnOptAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnROI(MM::PropertyBase* pProp, MM::ActionType eAct);
    void UpdateOAParams(const char*  OAModeName);
@@ -258,6 +261,11 @@ private:
    std::string IOCTrigger_;
    long mcpGain_;
    long gateDelay_, gateWidth_;
+   
+   long extOutputDelay_[3], extOutputWidth_[3];
+   std::vector<std::string> ExternalOutputStates_;
+   std::string ExternalOutputState_[3];
+
    double countConvertWavelength_;
 
    std::string optAcquireModeStr_;

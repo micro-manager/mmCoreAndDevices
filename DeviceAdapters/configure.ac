@@ -40,8 +40,21 @@ AC_SUBST(MMDEVAPI_LDFLAGS)
 # Location of third party public files
 thirdpartypublic="${micromanager_path}/../3rdpartypublic"
 
-
 MM_INSTALL_DIRS
+
+
+# Detect the target system
+build_linux=no
+build_osx=no
+
+case $host in
+    *linux*) build_linux=yes ;;
+    *apple-darwin*) build_osx=yes ;;
+    *) AC_MSG_ERROR(["Host $host is not supported"]) ;;
+esac
+
+AM_CONDITIONAL([HOST_LINUX], [test "x$build_linux" = xyes])
+AM_CONDITIONAL([HOST_OSX], [test "x$build_osx" = xyes])
 
 
 # libusb 0.1 or libusb-compat
@@ -380,6 +393,36 @@ AS_IF([test "x$want_opencv" != xno],
 
 
 AM_CONDITIONAL([BUILD_OPENCV], [test "x$use_opencv" = xyes])
+
+# Zaber Motion Library (hack: only support 3rdpartypublic copy currently)
+AC_MSG_CHECKING([for Zaber Motion Library in 3rdpartypublic])
+zml_header_to_check="${thirdpartypublic}/Zaber/zaber-motion/include/zaber/motion/library.h"
+AM_CONDITIONAL([BUILD_ZABER], [test -f $zml_header_to_check])
+if test -f "$zml_header_to_check"; then
+   AC_MSG_RESULT([found])
+   ZML_CPPFLAGS="-I${thirdpartypublic}/Zaber/zaber-motion/include"
+   ZML_LIBS="-lzml"
+   case $host in
+      *linux*)
+         # Linux builds by users should install ZML libs
+         zml_linux_libdir="${thirdpartypublic}/Zaber/zaber-motion/linux-amd64/lib"
+         ZML_LDFLAGS="-L${zml_linux_libdir} -Wl,-rpath,"'\$$ORIGIN'
+         ZML_LIBS_TO_COPY="${zml_linux_libdir}/libzml.so.3.4 ${zml_linux_libdir}/libzaber-motion-lib-linux-amd64.so.3.4.3"
+         ;;
+
+      *apple-darwin*)
+         # macOS build for packaging does not ship ZML
+         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion/darwin/lib"
+         ZML_LIBS_TO_COPY=""
+         ;;
+   esac
+else
+   AC_MSG_RESULT([not found])
+fi
+AC_SUBST(ZML_CPPFLAGS)
+AC_SUBST(ZML_LIBS)
+AC_SUBST(ZML_LDFLAGS)
+AC_SUBST(ZML_LIBS_TO_COPY)
 
 
 # Only build ... when the code is there

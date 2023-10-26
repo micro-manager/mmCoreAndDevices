@@ -23,7 +23,6 @@
 #ifdef WIN32
 #pragma warning(disable: 4355)
 #endif
-#include "FixSnprintf.h"
 
 #include "Illuminator.h"
 
@@ -31,8 +30,6 @@ const char* g_IlluminatorName = "Illuminator";
 const char* g_IlluminatorDescription = "Zaber Illuminator";
 
 using namespace std;
-
-const char* g_Msg_FIRMWARE_UNSUPPORTED = "The Zaber Illuminator driver only works with Firmware version 7.14 or later; please see the documentation for information on how to update the firmware.";
 
 Illuminator::Illuminator()
 : ZaberBase(this)
@@ -48,18 +45,7 @@ Illuminator::Illuminator()
 	LogMessage("Illuminator::Illuminator\n", true);
 
 	InitializeDefaultErrorMessages();
-	SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, g_Msg_PORT_CHANGE_FORBIDDEN);
-	SetErrorText(ERR_DRIVER_DISABLED, g_Msg_DRIVER_DISABLED);
-	SetErrorText(ERR_BUSY_TIMEOUT, g_Msg_BUSY_TIMEOUT);
-	SetErrorText(ERR_COMMAND_REJECTED, g_Msg_COMMAND_REJECTED);
-	SetErrorText(ERR_SETTING_FAILED, g_Msg_SETTING_FAILED);
-	SetErrorText(ERR_AXIS_COUNT, g_Msg_AXIS_COUNT);
-	SetErrorText(ERR_LAMP_DISCONNECTED, g_Msg_LAMP_DISCONNECTED);
-	SetErrorText(ERR_LAMP_OVERHEATED, g_Msg_LAMP_OVERHEATED);
-	SetErrorText(ERR_PERIPHERAL_DISCONNECTED, g_Msg_PERIPHERAL_DISCONNECTED);
-	SetErrorText(ERR_PERIPHERAL_UNSUPPORTED, g_Msg_PERIPHERAL_UNSUPPORTED);
-	SetErrorText(ERR_DRIVER_DISABLED, g_Msg_DRIVER_DISABLED);
-	SetErrorText(ERR_FIRMWARE_UNSUPPORTED, g_Msg_FIRMWARE_UNSUPPORTED);
+	ZaberBase::setErrorMessages([&](auto code, auto message) { this->SetErrorText(code, message); });
 
 	// Pre-initialization properties
 	CreateProperty(MM::g_Keyword_Name, g_IlluminatorName, MM::String, true);
@@ -67,7 +53,7 @@ Illuminator::Illuminator()
 	CreateProperty(MM::g_Keyword_Description, "Zaber illuminator device adapter", MM::String, true);
 
 	CPropertyAction* pAct = new CPropertyAction(this, &Illuminator::PortGetSet);
-	CreateProperty(MM::g_Keyword_Port, "COM1", MM::String, false, pAct, true);
+	CreateProperty("Zaber Serial Port", port_.c_str(), MM::String, false, pAct, true);
 
 	pAct = new CPropertyAction (this, &Illuminator::DeviceAddressGetSet);
 	CreateIntegerProperty("Controller Device Number", deviceAddress_, false, pAct, true);
@@ -94,29 +80,22 @@ void Illuminator::GetName(char* name) const
 
 int Illuminator::Initialize()
 {
-	if (initialized_) 
+	if (initialized_)
 	{
 		return DEVICE_OK;
 	}
 
 	core_ = GetCoreCallback();
-    
-	LogMessage("Illuminator::Initialize\n", true);
 
-	int ret = ClearPort();
-	if (ret != DEVICE_OK) 
-	{
-		LogMessage("Clearing the serial port receive buffer failed. Are the port settings correct?\n", true);
-		return ret;
-	}
+	LogMessage("Illuminator::Initialize\n", true);
 
 	// Check the firmware version, ignoring any warning flags.
 	double version;
-	ret = GetFirmwareVersion(deviceAddress_, version); // Error code deliberately ignored; the version is sufficient.
-	if (version == 0.0)
+	auto ret = GetFirmwareVersion(deviceAddress_, version);
+	if (ret != DEVICE_OK)
 	{
 		LogMessage("Firmware version read failed.\n", true);
-		return (ret == DEVICE_OK) ? ERR_COMMAND_REJECTED : ret;
+		return ret;
 	}
 	else if (version < 7.14)
 	{
@@ -126,24 +105,16 @@ int Illuminator::Initialize()
 
 	// Activate any recently changed peripherals.
 	ret = ActivatePeripheralsIfNeeded(deviceAddress_);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		LogMessage("Peripheral activation check failed.\n", true);
-		return ret;
-	}
-
-	// Disable alert messages.
-	ret = SetSetting(deviceAddress_, 0, "comm.alert", 0);
-	if (ret != DEVICE_OK) 
-	{
-		LogMessage("Initial attempt to communicate with device failed.\n", true);
 		return ret;
 	}
 
 	// Detect the number of LEDs.
 	long data = 0;
 	ret = GetSetting(deviceAddress_, 0, "system.axiscount", data);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		LogMessage("Failed to detect the number of lamps in the illuminator.\n", true);
 		return ret;
@@ -151,10 +122,10 @@ int Illuminator::Initialize()
 	else if ((data < 1) || (data > 256)) // Arbitrary upper limit.
 	{
 		LogMessage("Number of lamps is out of range.\n", true);
-		return ERR_AXIS_COUNT;
+		return DEVICE_NOT_SUPPORTED;
 	}
-   
-	numLamps_ = (int)data; 
+
+	numLamps_ = (int)data;
 	currentFlux_ = new double[numLamps_];
 	maxFlux_ = new double[numLamps_];
 	lampExists_ = new bool[numLamps_];
@@ -187,7 +158,7 @@ int Illuminator::Initialize()
 		if (lampExists_[i])
 		{
 			ret = GetSetting(deviceAddress_, i + 1, "lamp.wavelength.peak", data);
-			if (ret != DEVICE_OK) 
+			if (ret != DEVICE_OK)
 			{
 				LogMessage("Failed to detect the peak wavelength of a lamp.\n", true);
 				return ret;
@@ -201,7 +172,7 @@ int Illuminator::Initialize()
 		if (lampExists_[i])
 		{
 			ret = GetSetting(deviceAddress_, i + 1, "lamp.wavelength.fwhm", data);
-			if (ret != DEVICE_OK) 
+			if (ret != DEVICE_OK)
 			{
 				LogMessage("Failed to detect the full-width half-magnitude of a lamp.\n", true);
 				return ret;
@@ -216,7 +187,7 @@ int Illuminator::Initialize()
 		if (lampExists_[i])
 		{
 			ret = GetSetting(deviceAddress_, i + 1, "lamp.flux", analogData);
-			if (ret != DEVICE_OK) 
+			if (ret != DEVICE_OK)
 			{
 				LogMessage("Failed to read flux of a lamp.\n", true);
 				return ret;
@@ -228,7 +199,7 @@ int Illuminator::Initialize()
 		if (lampExists_[i])
 		{
 			ret = GetSetting(deviceAddress_, i + 1, "lamp.flux.max", analogData);
-			if (ret != DEVICE_OK) 
+			if (ret != DEVICE_OK)
 			{
 				LogMessage("Failed to read max flux of a lamp.\n", true);
 				return ret;
@@ -244,7 +215,7 @@ int Illuminator::Initialize()
 	}
 
 	ret = UpdateStatus();
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
@@ -313,7 +284,7 @@ int Illuminator::SetOpen(bool open)
 	{
 		if (canUseDeviceLampOnCommand_)
 		{
-			int ret = SendCommand(deviceAddress_, 0, "lamp on");
+			int ret = Command(deviceAddress_, 0, "lamp on");
 			if (ret == DEVICE_OK)
 			{
 				isOpen_ = true;
@@ -331,10 +302,10 @@ int Illuminator::SetOpen(bool open)
 		else
 		{
 			for (int i = 0; i < numLamps_; ++i)
-			{ 
+			{
 				if (lampExists_[i] && !lampIsOn_[i] && (currentFlux_[i] > 0.0))
 				{
-					int ret = SendCommand(deviceAddress_, i + 1, "lamp on");
+					int ret = Command(deviceAddress_, i + 1, "lamp on");
 					if (ret != DEVICE_OK)
 					{
 						return ret;
@@ -350,7 +321,7 @@ int Illuminator::SetOpen(bool open)
 	}
 	else
 	{
-		int ret = SendCommand(deviceAddress_, 0, "lamp off"); // Always works at device scope.
+		int ret = Command(deviceAddress_, 0, "lamp off"); // Always works at device scope.
 		if (ret == DEVICE_OK)
 		{
 			isOpen_ = false;
@@ -441,7 +412,7 @@ int Illuminator::IntensityGetSet(MM::PropertyBase* pProp, MM::ActionType eAct, l
       if (initialized_ && lampExists_[index])
       {
          int ret = GetSetting(deviceAddress_, index + 1, "lamp.flux", flux);
-         if (ret != DEVICE_OK) 
+         if (ret != DEVICE_OK)
          {
 			return ret;
          }
@@ -460,7 +431,7 @@ int Illuminator::IntensityGetSet(MM::PropertyBase* pProp, MM::ActionType eAct, l
 		double flux = (maxFlux_[index] * intensity) / 100.0;
 
         int ret = SetSetting(deviceAddress_, index + 1, "lamp.flux", flux, 3);
-        if (ret != DEVICE_OK) 
+        if (ret != DEVICE_OK)
         {
             return ret;
         }
@@ -470,8 +441,8 @@ int Illuminator::IntensityGetSet(MM::PropertyBase* pProp, MM::ActionType eAct, l
 		// Turn the lamp on if the shutter is open.
 		if (isOpen_ && !lampIsOn_[index] && (flux > 0.0))
 		{
-			ret = SendCommand(deviceAddress_, index + 1, "lamp on");
-			if (ret != DEVICE_OK) 
+			ret = Command(deviceAddress_, index + 1, "lamp on");
+			if (ret != DEVICE_OK)
 			{
 				return ret;
 			}
@@ -489,58 +460,51 @@ int Illuminator::IntensityGetSet(MM::PropertyBase* pProp, MM::ActionType eAct, l
 
 int Illuminator::RefreshLampStatus()
 {
-	ostringstream cmd;
-	cmd << cmdPrefix_ << deviceAddress_ << " get lamp.status";
-	vector<string> resp;
-	int ret = QueryCommand(cmd.str().c_str(), resp);
+	std::vector<double> statusAll;
+	int ret = GetSettings(deviceAddress_, 0, "lamp.status", statusAll);
 	int secondaryResult = DEVICE_OK;
-
 	if (ret != DEVICE_OK)
 	{
-		// BADCOMMAND in response to "get lamp.status" means no lamps are connected.
-		if ((ret == ERR_COMMAND_REJECTED) && (resp.size() > 5) && (resp[5] == "BADCOMMAND"))
-		{
-			canUseDeviceLampOnCommand_ = false;
-			for (int i = 0; i < numLamps_; i++)
-			{
-				lampExists_[i] = false;
-				lampIsOn_[i] = false;
-			}
+		return ret;
+	}
 
-			return DEVICE_OK;
-		}
-		else
+	if (statusAll.empty())
+	{
+		canUseDeviceLampOnCommand_ = false;
+		for (int i = 0; i < numLamps_; i++)
 		{
-			return ret;
+			lampExists_[i] = false;
+			lampIsOn_[i] = false;
 		}
+
+		return DEVICE_OK;
 	}
 
 	isOpen_ = false;
 	canUseDeviceLampOnCommand_ = true;
 
-	for (int i = 5; i < resp.size(); ++i)
+	for (int index = 0; index < statusAll.size(); index++)
 	{
-		int index = i - 5;
-
-		if (resp[i] == "NA") // Inactive axis.
+		auto status = statusAll[index];
+		if (status != status) // Inactive axis.
 		{
 			lampExists_[index] = false;
 			lampIsOn_[index] = false;
 		}
 		else
 		{
-			switch (resp[i][0])
+			switch (static_cast<int>(status))
 			{
-				case '1':
+				case 1:
 					lampExists_[index] = true;
 					lampIsOn_[index] = false;
 					break;
-				case '2':
+				case 2:
 					lampExists_[index] = true;
 					lampIsOn_[index] = true;
 					isOpen_ = true;
 					break;
-				case '3':
+				case 3:
 					secondaryResult = ERR_LAMP_OVERHEATED;
 					lampExists_[index] = true;
 					lampIsOn_[index] = false;

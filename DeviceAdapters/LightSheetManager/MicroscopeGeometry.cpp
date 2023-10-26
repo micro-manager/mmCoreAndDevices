@@ -129,7 +129,8 @@ void MicroscopeGeometry::CreateDeviceMap()
                 {"IllumSlice", MM::GalvoDevice},
                 {"IllumBeam", MM::GalvoDevice},
                 {"ImagingFocus", MM::StageDevice},
-                {"ImagingCamera", MM::CameraDevice}
+                {"ImagingCamera", MM::CameraDevice},
+                {"PreviewCamera", MM::CameraDevice}
             }
         }
     };

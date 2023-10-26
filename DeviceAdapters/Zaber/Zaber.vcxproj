@@ -59,24 +59,31 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;MODULE_EXPORTS;_USRDLL;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\Zaber\zaber-motion\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>zml.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Zaber\zaber-motion\win64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ConnectionManager.cpp" />
     <ClCompile Include="FilterCubeTurret.cpp" />
     <ClCompile Include="FilterWheel.cpp" />
     <ClCompile Include="Illuminator.cpp" />
+    <ClCompile Include="ObjectiveChanger.cpp" />
     <ClCompile Include="Stage.cpp" />
     <ClCompile Include="XYStage.cpp" />
     <ClCompile Include="Zaber.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConnectionManager.h" />
     <ClInclude Include="FilterCubeTurret.h" />
     <ClInclude Include="FilterWheel.h" />
     <ClInclude Include="Illuminator.h" />
+    <ClInclude Include="ObjectiveChanger.h" />
     <ClInclude Include="Stage.h" />
     <ClInclude Include="XYStage.h" />
     <ClInclude Include="Zaber.h" />

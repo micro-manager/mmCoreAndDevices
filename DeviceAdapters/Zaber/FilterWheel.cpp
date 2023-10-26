@@ -23,7 +23,6 @@
 #ifdef WIN32
 #pragma warning(disable: 4355)
 #endif
-#include "FixSnprintf.h"
 
 #include "FilterWheel.h"
 
@@ -41,11 +40,7 @@ FilterWheel::FilterWheel()
    this->LogMessage("FilterWheel::FilterWheel\n", true);
 
    InitializeDefaultErrorMessages();
-   SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, g_Msg_PORT_CHANGE_FORBIDDEN);
-   SetErrorText(ERR_DRIVER_DISABLED, g_Msg_DRIVER_DISABLED);
-   SetErrorText(ERR_BUSY_TIMEOUT, g_Msg_BUSY_TIMEOUT);
-   SetErrorText(ERR_COMMAND_REJECTED, g_Msg_COMMAND_REJECTED);
-   SetErrorText(ERR_SETTING_FAILED, g_Msg_SETTING_FAILED);
+   ZaberBase::setErrorMessages([&](auto code, auto message) { this->SetErrorText(code, message); });
 
    EnableDelay(); // signals that the delay setting will be used
 
@@ -55,7 +50,7 @@ FilterWheel::FilterWheel()
    CreateProperty(MM::g_Keyword_Description, "Zaber filter wheel device adapter", MM::String, true);
 
    CPropertyAction* pAct = new CPropertyAction(this, &FilterWheel::PortGetSet);
-   CreateProperty(MM::g_Keyword_Port, "COM1", MM::String, false, pAct, true);
+   CreateProperty("Zaber Serial Port", port_.c_str(), MM::String, false, pAct, true);
 
    pAct = new CPropertyAction (this, &FilterWheel::DeviceAddressGetSet);
    CreateIntegerProperty("Controller Device Number", deviceAddress_, false, pAct, true);
@@ -82,33 +77,18 @@ void FilterWheel::GetName(char* name) const
 
 int FilterWheel::Initialize()
 {
-   if (initialized_) 
+   if (initialized_)
    {
       return DEVICE_OK;
    }
 
    core_ = GetCoreCallback();
-    
+
    this->LogMessage("FilterWheel::Initialize\n", true);
 
-   int ret = ClearPort();
-   if (ret != DEVICE_OK) 
-   {
-      this->LogMessage("Clearing the serial port receive buffer failed. Are the port settings correct?\n", true);
-      return ret;
-   }
-
-   // Disable alert messages.
-   ret = SetSetting(deviceAddress_, 0, "comm.alert", 0);
-   if (ret != DEVICE_OK) 
-   {
-      this->LogMessage("Initial attempt to communicate with device failed.\n", true);
-      return ret;
-   }
-
    // Make the Filter Wheel detect the current holder.
-   ret = SendAndPollUntilIdle(deviceAddress_, 0, "tools detectholder", 60000);
-   if (ret != DEVICE_OK) 
+   auto ret = SendAndPollUntilIdle(deviceAddress_, 0, "tools detectholder");
+   if (ret != DEVICE_OK)
    {
       this->LogMessage("Attempt to detect filter holder type failed; is this device an X-FWR?\n", true);
       return ret;
@@ -117,7 +97,7 @@ int FilterWheel::Initialize()
    // Get the number of positions and the current position.
    long index = -1;
    ret = GetRotaryIndexedDeviceInfo(deviceAddress_, 0, numPositions_, index);
-   if (ret != DEVICE_OK) 
+   if (ret != DEVICE_OK)
    {
       this->LogMessage("Attempt to detect filter wheel state and number of positions failed.\n", true);
       return ret;
@@ -143,7 +123,7 @@ int FilterWheel::Initialize()
    }
 
    ret = UpdateStatus();
-   if (ret != DEVICE_OK) 
+   if (ret != DEVICE_OK)
    {
       return ret;
    }
@@ -193,7 +173,7 @@ int FilterWheel::GetPositionLabel(long pos, char* label) const
    {
       std::string str("Filter ");
       char numBuf[15];
-      snprintf(numBuf, 15, "%ld", pos);
+      snprintf(numBuf, 15, "%ld", pos + 1);
       str.append(numBuf);
       CDeviceUtils::CopyLimitedString(label, str.c_str());
    }
@@ -276,7 +256,7 @@ int FilterWheel::PositionGetSet(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (initialized_)
       {
          int ret = GetSetting(deviceAddress_, 0, "motion.index.num", index);
-         if (ret != DEVICE_OK) 
+         if (ret != DEVICE_OK)
          {
             return ret;
          }
@@ -296,7 +276,7 @@ int FilterWheel::PositionGetSet(MM::PropertyBase* pProp, MM::ActionType eAct)
          if ((index >= 0) && (index < numPositions_))
 		 {
             int ret = SendMoveCommand(deviceAddress_, 0, "index", index + 1);
-            if (ret != DEVICE_OK) 
+            if (ret != DEVICE_OK)
             {
                return ret;
             }
@@ -312,4 +292,3 @@ int FilterWheel::PositionGetSet(MM::PropertyBase* pProp, MM::ActionType eAct)
 
    return DEVICE_OK;
 }
-

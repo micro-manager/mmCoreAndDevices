@@ -58,8 +58,6 @@
 #include <iomanip>
 #include <stdint.h>
 
-#include "FixSnprintf.h"
-
 using namespace std;
 unsigned Universal::refCount_ = 0;
 bool Universal::PVCAM_initialized_ = false;

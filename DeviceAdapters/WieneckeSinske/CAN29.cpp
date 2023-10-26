@@ -31,7 +31,6 @@
 #else
 #include <arpa/inet.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "CAN29.h"
 #include <string>

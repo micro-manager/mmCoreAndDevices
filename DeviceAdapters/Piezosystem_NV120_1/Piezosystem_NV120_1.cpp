@@ -34,7 +34,6 @@
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "Piezosystem_NV120_1.h"
 #include "ModuleInterface.h"

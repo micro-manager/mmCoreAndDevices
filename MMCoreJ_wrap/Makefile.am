@@ -31,7 +31,6 @@ swig_sources = MMCoreJ.i \
 	../MMCore/MMCore.h  \
 	../MMCore/MMEventCallback.h \
 	../MMCore/PluginManager.h \
-	../MMDevice/FixSnprintf.h \
 	../MMDevice/ImageMetadata.h \
 	../MMDevice/MMDevice.h \
 	../MMDevice/MMDeviceConstants.h

@@ -22,6 +22,6 @@
 #include "ShutterInstance.h"
 
 
-int ShutterInstance::SetOpen(bool open) { return GetImpl()->SetOpen(open); }
-int ShutterInstance::GetOpen(bool& open) { return GetImpl()->GetOpen(open); }
-int ShutterInstance::Fire(double deltaT) { return GetImpl()->Fire(deltaT); }
+int ShutterInstance::SetOpen(bool open) { RequireInitialized(__func__); return GetImpl()->SetOpen(open); }
+int ShutterInstance::GetOpen(bool& open) { RequireInitialized(__func__); return GetImpl()->GetOpen(open); }
+int ShutterInstance::Fire(double deltaT) { RequireInitialized(__func__); return GetImpl()->Fire(deltaT); }

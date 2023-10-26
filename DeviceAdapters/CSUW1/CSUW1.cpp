@@ -34,7 +34,6 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "CSUW1.h"
 #include "CSUW1Hub.h"
