@@ -1,6 +1,9 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I ../m4
 
+if BUILD_ALLIED_VISION_CAMERA
+   ALLIED_VISION_CAMERA = AlliedVisionCamera
+endif
 if BUILD_ANDOR
    ANDOR = Andor
 endif
@@ -71,6 +74,7 @@ endif
 
 # Please keep these ASCII-lexically sorted (pass through sort(1)).
 SUBDIRS = \
+	$(ALLIED_VISION_CAMERA) \
 	$(ANDOR) \
 	$(ANDORLASERCOMBINER) \
 	$(ANDORSDK3) \

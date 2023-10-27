@@ -394,6 +394,22 @@ AS_IF([test "x$want_opencv" != xno],
 
 AM_CONDITIONAL([BUILD_OPENCV], [test "x$use_opencv" = xyes])
 
+# Vimba X (Allied Vision) SDK
+MM_ARG_WITH_OPTIONAL_LIB([Vimba X], [vimba-x], [VIMBA_X])
+AS_IF([test "x$want_vimba_x" != xno],
+[
+   MM_LIB_VIMBA_X([$VIMBA_X_PREFIX],
+                  [use_vimba_x=yes],
+                  [
+                     use_vimba_x=no
+                     AS_IF([test "x$want_vimba_x" = xyes],
+                           [MM_MSG_OPTIONAL_LIB_FAILURE([Vimba X], [vimba-x])])
+                  ])
+],
+[use_vimba_x=no])
+
+AM_CONDITIONAL([BUILD_ALLIED_VISION_CAMERA], [test "x$use_vimba_x" = xyes])
+
 # Zaber Motion Library (hack: only support 3rdpartypublic copy currently)
 AC_MSG_CHECKING([for Zaber Motion Library in 3rdpartypublic])
 zml_header_to_check="${thirdpartypublic}/Zaber/zaber-motion/include/zaber/motion/library.h"
@@ -506,6 +522,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    ASITiger
    ASIWPTR
    Aladdin
+   AlliedVisionCamera
    Andor
    AndorLaserCombiner
    AndorSDK3
@@ -676,4 +693,7 @@ echo "m4_text_wrap([$use_libusb_0_1],
 echo "m4_text_wrap([$use_opencv],
                    [                                            ],
                    [    Build with OpenCV:                      ])"
+echo "m4_text_wrap([$use_vimba_x],
+                   [                                            ],
+                   [    Build with Vimba X:                     ])"
 echo ""

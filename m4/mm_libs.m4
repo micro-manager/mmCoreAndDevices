@@ -105,3 +105,14 @@ AC_DEFUN([MM_LIB_USB_0_1], [
       [$1], [-lusb], [usb.h], [usb_init],
       [$2], [$3])
 ])
+
+
+# Check for Allied Vision Vimba X SDK
+#
+# MM_LIB_VIMBA_X([Vimba X api prefix], [action-if-found], [action-if-not-found])
+#
+# Defines variable VIMBA_X_CPPFLAGS.
+#
+AC_DEFUN([MM_LIB_VIMBA_X], [
+   MM_LIB_SIMPLE([VIMBA_X], [Vimba X], [$1], [], [VmbC/VmbC.h], [], [$2], [$3])
+])
