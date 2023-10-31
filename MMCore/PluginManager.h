@@ -42,12 +42,11 @@ public:
 
    void UnloadPluginLibrary(const char* moduleName);
 
-   // Device adapter search paths (there are two sets of search paths; see
-   // CMMCore method documentation)
+   // Device adapter search paths
    template <typename TStringIter>
    void SetSearchPaths(TStringIter begin, TStringIter end)
-   { preferredSearchPaths_.assign(begin, end); }
-   std::vector<std::string> GetSearchPaths() const { return preferredSearchPaths_; }
+   { searchPaths_.assign(begin, end); }
+   std::vector<std::string> GetSearchPaths() const { return searchPaths_; }
    std::vector<std::string> GetAvailableDeviceAdapters();
 
    /**
@@ -60,11 +59,10 @@ public:
 
 private:
    static std::vector<std::string> GetDefaultSearchPaths();
-   std::vector<std::string> GetActualSearchPaths() const;
    static void GetModules(std::vector<std::string> &modules, const char *path);
    std::string FindInSearchPath(std::string filename);
 
-   std::vector<std::string> preferredSearchPaths_;
+   std::vector<std::string> searchPaths_;
 
    std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> > moduleMap_;
 };

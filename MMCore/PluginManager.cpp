@@ -84,15 +84,8 @@ CPluginManager::~CPluginManager()
 std::string
 CPluginManager::FindInSearchPath(std::string filename)
 {
-   std::vector<std::string> searchPaths = GetActualSearchPaths();
-
-   // look in search paths, if there are any
-   if (searchPaths.size() == 0)
-      return filename;
-
-   std::vector<std::string>::const_iterator it;
-   for (it = searchPaths.begin(); it != searchPaths.end(); it++) {
-      std::string path(*it);
+   for (const auto& p : searchPaths_) {
+      std::string path = p;
       #ifdef WIN32
       path += "\\" + filename + ".dll";
       #else
@@ -104,11 +97,8 @@ CPluginManager::FindInSearchPath(std::string filename)
       in.close();
 
       if (!in.fail())
-         // we found it!
          return path;
    }
-
-   // not found!
    return filename;
 }
 
@@ -235,13 +225,6 @@ CPluginManager::GetDefaultSearchPaths()
 }
 
 
-std::vector<std::string>
-CPluginManager::GetActualSearchPaths() const
-{
-   return preferredSearchPaths_;
-}
-
-
 /**
  * List all modules (device libraries) at a given path.
  */
@@ -303,12 +286,9 @@ CPluginManager::GetModules(std::vector<std::string> &modules, const char* search
 std::vector<std::string>
 CPluginManager::GetAvailableDeviceAdapters()
 {
-   std::vector<std::string> searchPaths = GetActualSearchPaths();
-
    std::vector<std::string> modules;
-
-   for (std::vector<std::string>::const_iterator it = searchPaths.begin(), end = searchPaths.end(); it != end; ++it)
-      GetModules(modules, it->c_str());
+   for (const auto& path : searchPaths_)
+      GetModules(modules, path.c_str());
 
    // Check for duplicates
    // XXX Is this the right place to be doing this checking? Shouldn't it be an
