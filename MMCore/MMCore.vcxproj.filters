@@ -45,9 +45,6 @@
     <ClCompile Include="CoreProperty.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Host.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MMCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -165,9 +162,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FrameBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Host.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MMCore.h">

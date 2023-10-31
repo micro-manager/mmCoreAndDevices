@@ -50,7 +50,6 @@
 #include "CoreUtils.h"
 #include "DeviceManager.h"
 #include "Devices/DeviceInstances.h"
-#include "Host.h"
 #include "LogManager.h"
 #include "MMCore.h"
 #include "MMEventCallback.h"
@@ -64,17 +63,6 @@
 #include <set>
 #include <sstream>
 #include <vector>
-
-
-#ifndef _WINDOWS
-// Needed on Unix for getcwd() and gethostname()
-#include <pwd.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// for _getcwd
-#include <direct.h>
-#endif
 
 using namespace std;
 
@@ -307,40 +295,6 @@ void CMMCore::stopSecondaryLogFile(int handle) throw (CMMError)
    typedef mm::LogManager::LogFileHandle LogFileHandle;
    LogFileHandle h = static_cast<LogFileHandle>(handle);
    logManager_->RemoveSecondaryLogFile(h);
-}
-
-
-/*!
- Displays current user name.
- */
-string CMMCore::getUserId() const
-{
-   char buf[8192];
-#ifndef _WINDOWS
-   struct passwd* ppw = getpwuid(geteuid());
-   strcpy( buf, ppw->pw_name);
-#else
-   DWORD bufCharCount = 8192;
-   if( !GetUserName( buf, &bufCharCount ) )
-      buf[0] = 0;
-#endif
-   return string(buf);
-}
-
-/**
- * return current computer name.
- */
-string CMMCore::getHostName() const
-{
-   char buf[8192];
-#ifndef _WINDOWS
-   gethostname(buf, 8192);
-#else
-   DWORD bufCharCount = 8192;
-   if( !GetComputerName( buf, &bufCharCount ) )
-      buf[0] = 0;
-#endif
-   return string(buf);
 }
 
 /**
@@ -7575,39 +7529,3 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
    }
    return description.empty() ? "N/A" : description;
 }
-
-// at least on OS X, there is a 'primary' MAC address, so we'll
-// assume that is the first one.
-/**
-* Retrieve vector of MAC addresses for the Ethernet cards in the current computer
-* formatted xx-xx-xx-xx-xx-xx
-*
-*/
-std::vector<std::string> CMMCore::getMACAddresses(void)
-{
-   std::vector<std::string> retv;
-   try
-   {
-
-      Host* pHost = new Host();
-      if(NULL != pHost)
-      {
-         long status;
-         retv =  pHost->MACAddresses(status);
-
-         if( 0 != status)
-         {
-            LOG_ERROR(coreLogger_) << "Error " << status <<
-               " while getting MAC address";
-         }
-         delete pHost;
-      }
-   }
-   catch(...)
-   {
-
-   }
-   return retv;
-}
-
-

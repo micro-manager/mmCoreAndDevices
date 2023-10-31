@@ -615,13 +615,6 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
 
-   /** \name Miscellaneous. */
-   ///@{
-   MMCORE_DEPRECATED(std::string getUserId() const);
-   MMCORE_DEPRECATED(std::string getHostName() const);
-   MMCORE_DEPRECATED(std::vector<std::string> getMACAddresses(void));
-   ///@}
-
 private:
    // make object non-copyable
    CMMCore(const CMMCore&);
