@@ -1303,25 +1303,6 @@ void CMMCore::waitForConfig(const char* group, const char* configName) throw (CM
 }
 
 /**
- * Wait for the slowest device in the ImageSynchro list.
- *
- * @deprecated ImageSynchro will not be supported in the future.
- */
-void CMMCore::waitForImageSynchro() throw (CMMError)
-{
-   for (std::vector< std::weak_ptr<DeviceInstance> >::iterator
-         it = imageSynchroDevices_.begin(), end = imageSynchroDevices_.end();
-         it != end; ++it)
-   {
-      std::shared_ptr<DeviceInstance> device = it->lock();
-      if (device)
-      {
-         waitForDevice(device);
-      }
-   }
-}
-
-/**
  * Sets the position of the stage in microns.
  * @param label     the stage device label
  * @param position  the desired stage position, in microns
@@ -2372,10 +2353,6 @@ void CMMCore::snapImage() throw (CMMError)
 
       int ret = DEVICE_OK;
       try {
-
-         // wait for all synchronized devices to stop before taking an image
-         waitForImageSynchro();
-
          // open the shutter
          std::shared_ptr<ShutterInstance> shutter =
             currentShutterDevice_.lock();
@@ -2432,72 +2409,6 @@ void CMMCore::snapImage() throw (CMMError)
    {
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
-}
-
-
-// Predicate used by assignImageSynchro() and removeImageSynchro()
-namespace
-{
-   class DeviceWeakPtrInvalidOrMatches
-   {
-      std::shared_ptr<DeviceInstance> theDevice_;
-   public:
-      explicit DeviceWeakPtrInvalidOrMatches(
-            std::shared_ptr<DeviceInstance> theDevice) :
-         theDevice_(theDevice)
-      {}
-
-      bool operator()(const std::weak_ptr<DeviceInstance>& ptr)
-      {
-         std::shared_ptr<DeviceInstance> aDevice = ptr.lock();
-         return (!aDevice || aDevice == theDevice_);
-      }
-   };
-} // anonymous namespace
-
-/**
- * Add device to the image-synchro list. Image acquisition waits for all devices
- * in this list.
- * @param label   the device label
- *
- * @deprecated ImageSynchro will not be supported in the future.
- */
-void CMMCore::assignImageSynchro(const char* label) throw (CMMError)
-{
-   std::shared_ptr<DeviceInstance> device = deviceManager_->GetDevice(label);
-
-   imageSynchroDevices_.erase(std::remove_if(imageSynchroDevices_.begin(),
-            imageSynchroDevices_.end(), DeviceWeakPtrInvalidOrMatches(device)),
-         imageSynchroDevices_.end());
-
-   imageSynchroDevices_.push_back(device);
-   LOG_DEBUG(coreLogger_) << "Added " << label << " to image-synchro list";
-}
-
-/**
- * Removes device from the image-synchro list.
- * @param label   the device label
- *
- * @deprecated ImageSynchro will not be supported in the future.
- */
-void CMMCore::removeImageSynchro(const char* label) throw (CMMError)
-{
-   std::shared_ptr<DeviceInstance> device = deviceManager_->GetDevice(label);
-   imageSynchroDevices_.erase(std::remove_if(imageSynchroDevices_.begin(),
-            imageSynchroDevices_.end(), DeviceWeakPtrInvalidOrMatches(device)),
-         imageSynchroDevices_.end());
-   LOG_DEBUG(coreLogger_) << "Removed " << label << " from image-synchro list";
-}
-
-/**
- * Clears the image synchro device list.
- *
- * @deprecated ImageSynchro will not be supported in the future.
- */
-void CMMCore::removeImageSynchroAll()
-{
-   imageSynchroDevices_.clear();
-   LOG_DEBUG(coreLogger_) << "Cleared image-synchro list";
 }
 
 /**
@@ -6994,13 +6905,10 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
             }
             else if(tokens[0].compare(MM::g_CFGCommand_ImageSynchro) == 0)
             {
-               // define image synchro
-               // --------------------
-               if (tokens.size() != 2)
-                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
-                        ToQuotedString(line) + ")",
-                        MMERR_InvalidCFGEntry);
-               assignImageSynchro(tokens[1].c_str());
+               // ImageSynchro has been removed
+               throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                     ToQuotedString(line) + ")",
+                     MMERR_InvalidCFGEntry);
             }
             else if(tokens[0].compare(MM::g_CFGCommand_ParentID) == 0)
             {
