@@ -791,9 +791,6 @@ void CMMCore::unloadAllDevices() throw (CMMError)
       LOG_INFO(coreLogger_) << "Did unload all devices";
 
 	   properties_->Refresh();
-
-      // TODO
-      // clear equipment definitions ???
    }
    catch (CMMError& err) {
       logError("MMCore::unloadAllDevices", err.getMsg().c_str());
@@ -802,7 +799,7 @@ void CMMCore::unloadAllDevices() throw (CMMError)
 }
 
 /**
- * Unloads all devices from the core, clears all configuration data and property blocks.
+ * Unloads all devices from the core, clears all configuration data.
  */
 void CMMCore::reset() throw (CMMError)
 {
@@ -828,12 +825,6 @@ void CMMCore::reset() throw (CMMError)
 
    // unload devices
    unloadAllDevices();
-
-   // clear property blocks
-   CPropBlockMap::const_iterator i;
-   for (i = propBlocks_.begin(); i != propBlocks_.end(); i++)
-      delete i->second;
-   propBlocks_.clear();
 
    properties_->Refresh();
 
@@ -5604,136 +5595,6 @@ bool CMMCore::isGroupDefined(const char* groupName)
 }
 
 /**
- * Defines a reference for the collection of property-value pairs.
- * This construct is useful for defining
- * interchangeable equipment features, such as objective magnifications, filter wavelengths, etc.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-void CMMCore::definePropertyBlock(const char* blockName, const char* propertyName, const char* propertyValue)
-{
-   CheckPropertyBlockName(blockName);
-   CheckPropertyName(propertyName);
-   CheckPropertyValue(propertyValue);
-
-   // check if the block already exists
-   CPropBlockMap::const_iterator it = propBlocks_.find(blockName);
-   PropertyBlock* pBlock;
-   if (it == propBlocks_.end())
-   {
-      pBlock = new PropertyBlock();
-      propBlocks_[blockName] = pBlock; // add new block
-   }
-   else
-      pBlock = it->second;
-
-   // add the pair
-   PropertyPair pair(propertyName, propertyValue);
-   pBlock->addPair(pair);
-
-   LOG_DEBUG(coreLogger_) << "Property block " << blockName <<
-      ": added setting " << propertyName << " = " << propertyValue;
-}
-
-/**
- * Returns all defined property block identifiers.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-std::vector<std::string> CMMCore::getAvailablePropertyBlocks() const
-{
-   vector<string> blkList;
-   CPropBlockMap::const_iterator it = propBlocks_.begin();
-   while(it != propBlocks_.end())
-      blkList.push_back(it++->first);
-
-   return blkList;
-}
-
-/**
- * Returns the collection of property-value pairs defined in this block.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-PropertyBlock CMMCore::getPropertyBlockData(const char* blockName)
-{
-   CheckPropertyBlockName(blockName);
-
-   CPropBlockMap::const_iterator it = propBlocks_.find(blockName);
-   if (it == propBlocks_.end())
-   {
-      logError(blockName, getCoreErrorText(MMERR_InvalidPropertyBlock).c_str());
-      throw CMMError(ToQuotedString(blockName) + ": " + getCoreErrorText(MMERR_InvalidPropertyBlock),
-            MMERR_InvalidPropertyBlock);
-   }
-   return *it->second;
-}
-
-/**
- * Returns the collection of property-value pairs defined for the specific device and state label.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-PropertyBlock CMMCore::getStateLabelData(const char* deviceLabel, const char* stateLabel)
-{
-   std::shared_ptr<StateInstance> pStateDev =
-      deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
-   CheckStateLabel(stateLabel);
-
-   mm::DeviceModuleLockGuard guard(pStateDev);
-
-   // check if corresponding label exists
-   long pos;
-   int nRet = pStateDev->GetLabelPosition(stateLabel, pos);
-   if (nRet != DEVICE_OK)
-   {
-      logError(deviceLabel, getDeviceErrorText(nRet, pStateDev).c_str());
-      throw CMMError(getDeviceErrorText(nRet, pStateDev));
-   }
-
-   PropertyBlock blk;
-   try {
-      blk = getPropertyBlockData(stateLabel);
-   } catch (...) {
-      ;
-      // if getting data did not succeed for any reason we will assume
-      // that there is no connection between state label and property block.
-      // In this context it is not an error, we'll just say there is no data.
-   }
-   return blk;
-}
-
-/**
- * Returns the collection of property-value pairs defined for the current state.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-PropertyBlock CMMCore::getData(const char* deviceLabel)
-{
-   std::shared_ptr<StateInstance> pStateDev =
-      deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
-
-   // here we could have written simply:
-   // return getStateLabelData(deviceLabel, getStateLabel(deviceLabel).c_str());
-   // but that would be inefficient because of the multiple index lookup, so we'll
-   // do it explicitly:
-
-   mm::DeviceModuleLockGuard guard(pStateDev);
-
-   // obtain the current state label
-   std::string pos = pStateDev->GetPositionLabel();
-
-   PropertyBlock blk;
-   try {
-      blk = getPropertyBlockData(pos.c_str());
-   } catch (...) {
-      ;
-      // not an error here - there is just no data for this entry.
-   }
-   return blk;
-}
-
-/**
  * Sets all com port properties in a single call
  */
 void CMMCore::setSerialProperties(const char* portName,
@@ -6483,7 +6344,7 @@ void CMMCore::loadSystemState(const char* fileName) throw (CMMError)
 /**
  * Saves the current system configuration to a text file of the MM specific format.
  * The configuration file records only the information essential to the hardware
- * setup: devices, labels, equipment pre-initialization properties, and configurations.
+ * setup: devices, labels, pre-initialization properties, and configurations.
  * The file format is the same as for the system state.
  */
 void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
@@ -6514,20 +6375,6 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*it);
       mm::DeviceModuleLockGuard guard(pDev);
       os << MM::g_CFGCommand_Device << "," << *it << "," << pDev->GetAdapterModule()->GetName() << "," << pDev->GetName() << endl;
-   }
-
-   // save equipment
-   os << "# Equipment attributes" << endl;
-   vector<string> propBlocks = getAvailablePropertyBlocks();
-   for (size_t i=0; i<propBlocks.size(); i++)
-   {
-      PropertyBlock pb = getPropertyBlockData(propBlocks[i].c_str());
-      PropertyPair p;
-      for (size_t j=0; j<pb.size(); j++)
-      {
-         p = pb.getPair(j);
-         os << MM::g_CFGCommand_Equipment << ',' << propBlocks[i] << ',' << p.getPropertyName() << ',' << p.getPropertyValue() << endl;
-      }
    }
 
    // save the pre-initialization properties
@@ -6668,7 +6515,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
 /**
  * Loads the system configuration from the text file conforming to the MM specific format.
  * The configuration contains a list of commands to build the desired system state:
- * devices, labels, equipment, properties, and configurations.
+ * devices, labels, properties, and configurations.
  *
  * Format specification:
  * Each line consists of a number of string fields separated by "," (comma) characters.
@@ -6678,7 +6525,6 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
  * The first field in the line always specifies the command from the following set of values:
  *    Device - executes loadDevice()
  *    Label - executes defineStateLabel() command
- *    Equipment - executes definePropertyBlockCommand()
  *    Property - executes setPropertyCommand()
  *    Configuration - ignored for backward compatibility
  *
@@ -6895,13 +6741,10 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
             }
             else if(tokens[0].compare(MM::g_CFGCommand_Equipment) == 0)
             {
-               // define configuration command
-               // ----------------------------
-               if (tokens.size() != 4)
-                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
-                        ToQuotedString(line) + ")",
-                        MMERR_InvalidCFGEntry);
-               definePropertyBlock(tokens[1].c_str(), tokens[2].c_str(), tokens[3].c_str());
+              // Property blocks have been removed
+              throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                    ToQuotedString(line) + ")",
+                    MMERR_InvalidCFGEntry);
             }
             else if(tokens[0].compare(MM::g_CFGCommand_ImageSynchro) == 0)
             {
@@ -7234,7 +7077,7 @@ void CMMCore::InitializeErrorMessages()
    errorText_[MMERR_CameraNotAvailable] = "Camera not loaded or initialized.";
    errorText_[MMERR_InvalidStateDevice] = "Unsupported API. This device is not a state device";
    errorText_[MMERR_NoConfiguration] = "Configuration not defined";
-   errorText_[MMERR_InvalidPropertyBlock] = "Property block not defined";
+   errorText_[MMERR_InvalidPropertyBlock] = "Property block not defined"; // No longer used
    errorText_[MMERR_UnhandledException] =
       "Internal inconsistency: unknown system exception encountered";
    errorText_[MMERR_DevicePollingTimeout] = "Device timed out";
@@ -7392,15 +7235,6 @@ void CMMCore::CheckConfigPresetName(const char* presetName) throw (CMMError)
       throw CMMError("Configuration preset name " + ToQuotedString(nameString) +
             " contains reserved or invalid characters",
             MMERR_BadConfigName);
-}
-
-void CMMCore::CheckPropertyBlockName(const char* blockName) throw (CMMError)
-{
-   if (!blockName)
-      throw CMMError("Null property block name", MMERR_NullPointerException);
-   if (ContainsForbiddenCharacters(blockName))
-      throw CMMError("Property block name " + ToQuotedString(blockName) + " contains reserved characters",
-            MMERR_InvalidContents);
 }
 
 bool CMMCore::IsCoreDeviceLabel(const char* label) const throw (CMMError)
