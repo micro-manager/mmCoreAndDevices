@@ -101,7 +101,7 @@ using namespace std;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 10, MMCore_versionMinor = 7, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 0, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
