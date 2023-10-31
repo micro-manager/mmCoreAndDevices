@@ -197,10 +197,8 @@ public:
    ///@{
    std::vector<std::string> getDeviceAdapterSearchPaths();
    void setDeviceAdapterSearchPaths(const std::vector<std::string>& paths);
-   MMCORE_DEPRECATED(static void addSearchPath(const char *path));
 
    std::vector<std::string> getDeviceAdapterNames() throw (CMMError);
-   MMCORE_DEPRECATED(static std::vector<std::string> getDeviceLibraries() throw (CMMError));
 
    std::vector<std::string> getAvailableDevices(const char* library) throw (CMMError);
    std::vector<std::string> getAvailableDeviceDescriptions(const char* library) throw (CMMError);

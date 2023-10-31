@@ -50,10 +50,6 @@ public:
    std::vector<std::string> GetSearchPaths() const { return preferredSearchPaths_; }
    std::vector<std::string> GetAvailableDeviceAdapters();
 
-   // Legacy search path support
-   static void AddLegacyFallbackSearchPath(const std::string& path);
-   static std::vector<std::string> GetModulesInLegacyFallbackSearchPaths();
-
    /**
     * Return a device adapter module, loading it if necessary
     */
@@ -69,7 +65,6 @@ private:
    std::string FindInSearchPath(std::string filename);
 
    std::vector<std::string> preferredSearchPaths_;
-   static std::vector<std::string> fallbackSearchPaths_;
 
    std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> > moduleMap_;
 };

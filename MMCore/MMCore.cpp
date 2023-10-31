@@ -647,43 +647,6 @@ std::vector<std::string> CMMCore::getDeviceAdapterNames() throw (CMMError)
 }
 
 /**
- * Add a list of paths to the legacy device adapter search path list.
- *
- * Do not use in new code. This adds to a global (static) fallback list that is
- * only searched when a device adapter is not located in any of the directories
- * set by setDeviceAdapterSearchPaths(). The list is initially empty.
- *
- * @deprecated Use the non-static setDeviceAdapterSearchPaths() instead.
- *
- * @param path   a list of search paths in a single string
- */
-void CMMCore::addSearchPath(const char *path)
-{
-   if (!path)
-      return;
-
-   CPluginManager::AddLegacyFallbackSearchPath(path);
-}
-
-/**
- * Returns a list of library names available in the search path.
- *
- * Do not use in new code. For backward compatibility, this method returns the
- * list of device adapters available in the default search path(s) and the
- * paths added via addSearchPath(). For obvious reasons (since this method is
- * static), it will not return device adapters found in the search paths set by
- * setDeviceAdapterSearchPaths(). Thus, this method will only work as expected
- * when called from legacy code that does not make use of
- * setDeviceAdapterSearchPaths().
- *
- * @deprecated Use the non-static getDeviceAdapterNames() instead.
- */
-vector<string> CMMCore::getDeviceLibraries() throw (CMMError)
-{
-   return CPluginManager::GetModulesInLegacyFallbackSearchPaths();
-}
-
-/**
  * Loads a device from the plugin library.
  * @param label    assigned name for the device during the core session
  * @param moduleName  the name of the device adapter module (short name, not full file name)
