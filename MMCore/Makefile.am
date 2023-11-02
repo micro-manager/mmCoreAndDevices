@@ -15,6 +15,8 @@ libMMCore_la_SOURCES = \
 	Configuration.h \
 	CoreCallback.cpp \
 	CoreCallback.h \
+	CoreFeatures.cpp \
+	CoreFeatures.h \
 	CoreProperty.cpp \
 	CoreProperty.h \
 	CoreUtils.h \
