@@ -37,9 +37,7 @@ MODULE_API void DeleteDevice(MM::Device* device) {
     delete device;
 }
 //Hub Methods
-ChrolisHub::ChrolisHub() :
-    threadRunning_(false), 
-    deviceStatusMessage_("No Error")
+ChrolisHub::ChrolisHub()
 {
     for (const auto& errMessage : ErrorMessages())
     {
@@ -47,8 +45,8 @@ ChrolisHub::ChrolisHub() :
     }
 
     chrolisDeviceInstance_ = new ThorlabsChrolisDeviceWrapper();
-    atomic_init(&currentDeviceStatusCode_, 0);
     atomic_init(&threadRunning_, false);
+    atomic_init(&currentDeviceStatusCode_, 0);
 
     std::vector<std::string> serialNumbers;
     static_cast<ThorlabsChrolisDeviceWrapper*>(chrolisDeviceInstance_)->GetAvailableSerialNumbers(serialNumbers);
@@ -429,10 +427,7 @@ int ChrolisShutter::GetOpen(bool& open)
 
 
 //Chrolis State Device Methods
-ChrolisStateDevice::ChrolisStateDevice() :
-    numPos_(6), ledMaxBrightness_(1000), ledMinBrightness_(0),
-    led1Brightness_(0), led2Brightness_(0), led3Brightness_(0), led4Brightness_(0), led5Brightness_(0), led6Brightness_(0),
-    led1State_(false), led2State_(false), led3State_(false), led4State_(false), led5State_(false), led6State_(false)
+ChrolisStateDevice::ChrolisStateDevice() 
 {
     for (const auto& errMessage : ErrorMessages())
     {

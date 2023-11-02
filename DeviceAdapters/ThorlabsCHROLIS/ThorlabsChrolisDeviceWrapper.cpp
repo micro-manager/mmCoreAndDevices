@@ -2,13 +2,7 @@
 #include <string>
 
 ThorlabsChrolisDeviceWrapper::ThorlabsChrolisDeviceWrapper()
-{
-    deviceInUse_ = false;
-    deviceConnected_ = false;
-	masterSwitchState_ = false;
-	deviceHandle_ = -1;
-    numLEDs_ = 6;
-}
+{}
 
 ThorlabsChrolisDeviceWrapper::~ThorlabsChrolisDeviceWrapper()
 {}

@@ -79,7 +79,7 @@ private:
     std::atomic_bool threadRunning_;
     std::thread updateThread_;
     std::atomic_uint32_t currentDeviceStatusCode_;
-    std::string deviceStatusMessage_;
+    std::string deviceStatusMessage_ = "No Error";
     std::function<void(int, int)> shutterCallback_;
     std::function<void(int, int)> stateCallback_;
 };
@@ -129,24 +129,24 @@ public:
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-    long numPos_;
+    long numPos_= 6;
 
-    ViUInt16 led1Brightness_;
-    ViUInt16 led2Brightness_;
-    ViUInt16 led3Brightness_;
-    ViUInt16 led4Brightness_;
-    ViUInt16 led5Brightness_;
-    ViUInt16 led6Brightness_;
+    ViUInt16 led1Brightness_ = 0;
+    ViUInt16 led2Brightness_ = 0;
+    ViUInt16 led3Brightness_ = 0;
+    ViUInt16 led4Brightness_ = 0;
+    ViUInt16 led5Brightness_ = 0;
+    ViUInt16 led6Brightness_ = 0;
 
-    ViBoolean led1State_;
-    ViBoolean led2State_;
-    ViBoolean led3State_;
-    ViBoolean led4State_;
-    ViBoolean led5State_;
-    ViBoolean led6State_;
+    ViBoolean led1State_ = false;
+    ViBoolean led2State_ = false;
+    ViBoolean led3State_ = false;
+    ViBoolean led4State_ = false;
+    ViBoolean led5State_ = false;
+    ViBoolean led6State_ = false;
 
-    ViInt16 ledMaxBrightness_;
-    ViInt16 ledMinBrightness_;
+    ViInt16 ledMaxBrightness_ = 1000;
+    ViInt16 ledMinBrightness_ = 0;
 };
 
 //Wrapper for the basic functions used in this device adapter
@@ -181,16 +181,16 @@ public:
     bool VerifyLEDEnableStatesWithLock();
 
 private:
-    int numLEDs_;
+    int numLEDs_ = 6;
     std::vector<std::string> serialNumberList_;
     std::mutex instanceMutex_;
-    bool deviceConnected_;
+    bool deviceConnected_ = false;
     ViSession deviceHandle_;
-    ViBoolean deviceInUse_; //only used by the chrolis API
-    ViChar deviceName_[TL6WL_LONG_STRING_SIZE];
-    ViChar serialNumber_[TL6WL_LONG_STRING_SIZE];
-    ViChar manufacturerName_[TL6WL_LONG_STRING_SIZE];
-    bool masterSwitchState_;
+    ViBoolean deviceInUse_ = false; //only used by the chrolis API
+    ViChar deviceName_[TL6WL_LONG_STRING_SIZE] = "";
+    ViChar serialNumber_[TL6WL_LONG_STRING_SIZE] = "";
+    ViChar manufacturerName_[TL6WL_LONG_STRING_SIZE] = "";
+    bool masterSwitchState_ = false;
     ViBoolean savedEnabledStates_[6]{false,false,false,false,false,false};
     ViUInt16 savedBrightnessStates_[6]{0,0,0,0,0,0};
     ViUInt16 ledWavelengths_[6]{0,0,0,0,0,0};
