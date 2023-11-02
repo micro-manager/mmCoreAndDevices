@@ -5,6 +5,7 @@
 #include <vector>
 #include<mutex>
 #include "DeviceBase.h"
+#include <functional>
 
 #define  CHROLIS_HUB_NAME  "CHROLIS"
 #define  CHROLIS_SHUTTER_NAME  "CHROLIS_Shutter"
@@ -29,6 +30,30 @@
 #define ERR_UNKOWN_HW_STATE     -1073676421
 #define ERR_VAL_OVERFLOW        -1073481985
 
+static std::map<int, std::string> ErrorMessages()
+{
+    return {
+        {ERR_HUB_NOT_AVAILABLE, "Hub is not available"},
+        {ERR_CHROLIS_NOT_AVAIL, "CHROLIS Device is not available"},
+        {ERR_IMPROPER_SET, "Error setting property value. Value will be reset"},
+        {ERR_PARAM_NOT_VALID, "Value passed to property was out of bounds."},
+        {ERR_NO_AVAIL_DEVICES, "No available devices were found on the system."},
+        {ERR_INSUF_INFO, "Insufficient location information of the device or the resource is not present on the system"},
+        {ERR_UNKOWN_HW_STATE, "Unknown Hardware State"},
+        {ERR_VAL_OVERFLOW, "Parameter Value Overflow"},
+        {INSTR_RUNTIME_ERROR, "CHROLIS Instrument Runtime Error"},
+        {INSTR_REM_INTER_ERROR, "CHROLIS Instrument Internal Error"},
+        {INSTR_AUTHENTICATION_ERROR, "CHROLIS Instrument Authentication Error"},
+        {INSTR_PARAM_ERROR, "CHROLIS Invalid Parameter Error"},
+        {INSTR_INTERNAL_TX_ERR, "CHROLIS Instrument Internal Command Sending Error"},
+        {INSTR_INTERNAL_RX_ERR, "CHROLIS Instrument Internal Command Receiving Error"},
+        {INSTR_INVAL_MODE_ERR, "CHROLIS Instrument Invalid Mode Error"},
+        {INSTR_SERVICE_ERR, "CHROLIS Instrument Service Error"}
+    };
+}
+
+// TODO: add mutex
+
 class ChrolisHub : public HubBase <ChrolisHub>
 {
 public:
@@ -43,19 +68,19 @@ public:
     // HUB api
     int DetectInstalledDevices();
 
-    bool IsInitialized();
     void* GetChrolisDeviceInstance();
     void StatusChangedPollingThread();
-
+    void SetShutterCallback(std::function<void(int, int)>);
+    void SetStateCallback(std::function<void(int, int)>);
 
 private:
     void* chrolisDeviceInstance_;
-    bool initialized_;
-    bool busy_;
     std::atomic_bool threadRunning_;
     std::thread updateThread_;
     std::atomic_uint32_t currentDeviceStatusCode_;
     std::string deviceStatusMessage_;
+    std::function<void(int, int)> shutterCallback_;
+    std::function<void(int, int)> stateCallback_;
 };
 
 class ChrolisShutter : public CShutterBase <ChrolisShutter> //CRTP
@@ -65,18 +90,13 @@ public:
     ~ChrolisShutter() {}
 
     int Initialize();
-
     int Shutdown();
-
     void GetName(char* name)const;
-
     bool Busy();
 
     // Shutter API
     int SetOpen(bool open = true);
-
     int GetOpen(bool& open);
-
     int Fire(double /*deltaT*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;

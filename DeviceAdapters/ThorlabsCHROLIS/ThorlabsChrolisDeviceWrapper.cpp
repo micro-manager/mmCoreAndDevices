@@ -137,6 +137,7 @@ bool ThorlabsChrolisDeviceWrapper::IsDeviceConnected()
 
 int ThorlabsChrolisDeviceWrapper::GetSerialNumber(ViChar* serialNumber)
 {
+    std::lock_guard<std::mutex> lock(instanceMutex_);
     if (deviceConnected_)
     {
         strcpy(serialNumber, serialNumber_);
@@ -150,6 +151,7 @@ int ThorlabsChrolisDeviceWrapper::GetSerialNumber(ViChar* serialNumber)
 
 int ThorlabsChrolisDeviceWrapper::GetManufacturerName(ViChar* manfName)
 {
+    std::lock_guard<std::mutex> lock(instanceMutex_);
     if (deviceConnected_)
     {
         strcpy(manfName, manufacturerName_);
@@ -164,7 +166,6 @@ int ThorlabsChrolisDeviceWrapper::GetManufacturerName(ViChar* manfName)
 int ThorlabsChrolisDeviceWrapper::GetDeviceStatus(ViUInt32& status)
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
-
     if (!deviceConnected_)
     {
         status = 0;
