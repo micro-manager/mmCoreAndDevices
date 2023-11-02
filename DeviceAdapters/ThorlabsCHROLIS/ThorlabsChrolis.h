@@ -48,8 +48,57 @@ static std::map<int, std::string> ErrorMessages()
     };
 }
 
-// TODO: add mutex
-class ThorlabsChrolisDeviceWrapper;
+//Wrapper for the basic functions used in this device adapter
+class ThorlabsChrolisDeviceWrapper
+{
+public:
+    ThorlabsChrolisDeviceWrapper();
+    ~ThorlabsChrolisDeviceWrapper();
+
+    int GetAvailableSerialNumbers(std::vector<std::string>& serialNumbers);
+    int InitializeDevice(std::string serialNumber = "");
+    int ShutdownDevice();
+    bool IsDeviceConnected();
+    int GetSerialNumber(ViChar* serialNumber);
+    int GetManufacturerName(ViChar* manfName);
+    int GetDeviceStatus(ViUInt32& status);
+    int GetLEDWavelengths(ViUInt16(&wavelengths)[6]);
+    int GetShutterState(bool& open);
+    int GetSingleLEDEnableState(int led, ViBoolean& state);
+    int GetLEDEnableStates(ViBoolean(&states)[6]);
+    int GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State);
+    int GetSingleLEDBrightnessState(int led, ViUInt16& state);
+    int GetLEDBrightnessStates(ViUInt16(&states)[6]);
+    int GetLEDBrightnessStates(ViUInt16& led1Brightness, ViUInt16& led2Brightness, ViUInt16& led3Brightness, ViUInt16& led4Brightness, ViUInt16& led5Brightness, ViUInt16& led6Brightness);
+
+    int SetShutterState(bool open);
+    int SetLEDEnableStates(ViBoolean states[6]);
+    int SetSingleLEDEnableState(int LED, ViBoolean state);
+    int SetLEDBrightnessStates(ViUInt16 states[6]);
+    int SetSingleLEDBrightnessState(int LED, ViUInt16 state);
+
+    bool VerifyLEDEnableStatesWithLock();
+
+private:
+    int numLEDs_ = 6;
+    std::vector<std::string> serialNumberList_;
+    std::mutex instanceMutex_;
+    bool deviceConnected_ = false;
+    ViSession deviceHandle_;
+    ViBoolean deviceInUse_ = false; //only used by the chrolis API
+    ViChar deviceName_[TL6WL_LONG_STRING_SIZE] = "";
+    ViChar serialNumber_[TL6WL_LONG_STRING_SIZE] = "";
+    ViChar manufacturerName_[TL6WL_LONG_STRING_SIZE] = "";
+    bool masterSwitchState_ = false;
+    ViBoolean savedEnabledStates_[6]{ false,false,false,false,false,false };
+    ViUInt16 savedBrightnessStates_[6]{ 0,0,0,0,0,0 };
+    ViUInt16 ledWavelengths_[6]{ 0,0,0,0,0,0 };
+
+    bool VerifyLEDStates();
+    bool VerifyLEDPowerStates();
+    bool VerifyLEDEnableStates();
+
+};
 
 class ChrolisHub : public HubBase <ChrolisHub>
 {
@@ -77,10 +126,10 @@ private:
     std::atomic_uint32_t currentDeviceStatusCode_;
     std::string deviceStatusMessage_ = "No Error";
     std::function<void(int, int)> shutterCallback_;
-    std::function<void(int, int)> stateCallback_;
+    std::function<void(int, ViBoolean)> stateCallback_;
 };
 
-class ChrolisShutter : public CShutterBase <ChrolisShutter> //CRTP
+class ChrolisShutter : public CShutterBase <ChrolisShutter>
 {
 public:
     ChrolisShutter();
@@ -143,56 +192,4 @@ private:
 
     ViInt16 ledMaxBrightness_ = 1000;
     ViInt16 ledMinBrightness_ = 0;
-};
-
-//Wrapper for the basic functions used in this device adapter
-class ThorlabsChrolisDeviceWrapper
-{
-public:
-    ThorlabsChrolisDeviceWrapper();
-    ~ThorlabsChrolisDeviceWrapper();
-
-    int GetAvailableSerialNumbers(std::vector<std::string> &serialNumbers);
-    int InitializeDevice(std::string serialNumber = "");
-    int ShutdownDevice();
-    bool IsDeviceConnected();
-    int GetSerialNumber(ViChar* serialNumber);
-    int GetManufacturerName(ViChar* manfName);
-    int GetDeviceStatus(ViUInt32& status);
-    int GetLEDWavelengths(ViUInt16(&wavelengths)[6]);
-    int GetShutterState(bool& open);
-    int GetSingleLEDEnableState(int led, ViBoolean& state);
-    int GetLEDEnableStates(ViBoolean(&states)[6]);
-    int GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State);
-    int GetSingleLEDBrightnessState(int led, ViUInt16& state);
-    int GetLEDBrightnessStates(ViUInt16(&states)[6]);
-    int GetLEDBrightnessStates(ViUInt16 &led1Brightness, ViUInt16&led2Brightness, ViUInt16&led3Brightness, ViUInt16&led4Brightness, ViUInt16&led5Brightness, ViUInt16&led6Brightness);
-
-    int SetShutterState(bool open);
-    int SetLEDEnableStates(ViBoolean states[6]);
-    int SetSingleLEDEnableState(int LED, ViBoolean state);
-    int SetLEDBrightnessStates(ViUInt16 states[6]);
-    int SetSingleLEDBrightnessState(int LED, ViUInt16 state);
-
-    bool VerifyLEDEnableStatesWithLock();
-
-private:
-    int numLEDs_ = 6;
-    std::vector<std::string> serialNumberList_;
-    std::mutex instanceMutex_;
-    bool deviceConnected_ = false;
-    ViSession deviceHandle_;
-    ViBoolean deviceInUse_ = false; //only used by the chrolis API
-    ViChar deviceName_[TL6WL_LONG_STRING_SIZE] = "";
-    ViChar serialNumber_[TL6WL_LONG_STRING_SIZE] = "";
-    ViChar manufacturerName_[TL6WL_LONG_STRING_SIZE] = "";
-    bool masterSwitchState_ = false;
-    ViBoolean savedEnabledStates_[6]{false,false,false,false,false,false};
-    ViUInt16 savedBrightnessStates_[6]{0,0,0,0,0,0};
-    ViUInt16 ledWavelengths_[6]{0,0,0,0,0,0};
-
-    bool VerifyLEDStates();
-    bool VerifyLEDPowerStates();
-    bool VerifyLEDEnableStates();
-
 };

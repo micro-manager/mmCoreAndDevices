@@ -275,35 +275,15 @@ void ChrolisHub::StatusChangedPollingThread()
                     }
                     else 
                     {
-                        std::ostringstream os;
-                        os << tempEnableStates[0];
-                        GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 1", os.str().c_str());
+                        stateCallback_(0, ((static_cast<uint8_t>(tempEnableStates[0]) << 0) | (static_cast<uint8_t>(tempEnableStates[1]) << 1) | (static_cast<uint8_t>(tempEnableStates[2]) << 2)
+                            | (static_cast<uint8_t>(tempEnableStates[3]) << 3) | (static_cast<uint8_t>(tempEnableStates[4]) << 4 | (static_cast<uint8_t>(tempEnableStates[5]) << 5))));
 
-                        os.clear();
-                        os << tempEnableStates[1];
-                        GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 2", os.str().c_str());
-
-                        os.clear();
-                        os << tempEnableStates[2];
-                        GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 3", os.str().c_str());
-
-                        os.clear();
-                        os << tempEnableStates[3];
-                        GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 4", os.str().c_str());
-
-                        os.clear();
-                        os << tempEnableStates[4];
-                        GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 5", os.str().c_str());
-
-                        os.clear();
-                        os << tempEnableStates[5];
-                        GetDevice(CHROLIS_STATE_NAME)->SetProperty("LED Enable State 6", os.str().c_str());
-
-                        os.clear();
-                        os << ((static_cast<uint8_t>(tempEnableStates[0]) << 0) | (static_cast<uint8_t>(tempEnableStates[1]) << 1) | (static_cast<uint8_t>(tempEnableStates[2]) << 2)
-                            | (static_cast<uint8_t>(tempEnableStates[3]) << 3) | (static_cast<uint8_t>(tempEnableStates[4]) << 4 | (static_cast<uint8_t>(tempEnableStates[5]) << 5)));
-                        GetDevice(CHROLIS_STATE_NAME)->SetProperty("State", os.str().c_str());
-
+                        stateCallback_(1, tempEnableStates[0]);
+                        stateCallback_(2, tempEnableStates[1]);
+                        stateCallback_(3, tempEnableStates[2]);
+                        stateCallback_(4, tempEnableStates[3]);
+                        stateCallback_(5, tempEnableStates[4]);
+                        stateCallback_(6, tempEnableStates[5]);
                     }
                 }
             }
@@ -441,11 +421,45 @@ int ChrolisStateDevice::Initialize()
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (pHub)
     {
+
     }
     else
     {
         LogMessage("Hub not available");
+        return ERR_HUB_NOT_AVAILABLE;
     }
+
+    pHub->SetStateCallback([this](int ledNum, int state)
+        {
+            std::ostringstream os;
+            os << (ledNum == 0 ? state : (ViBoolean)state);
+            switch (ledNum)
+            {
+            case 0:
+                OnPropertyChanged("state", os.str().c_str());
+                break;
+            case 1:
+                OnPropertyChanged("LED Enable State 1", os.str().c_str());
+                break;
+            case 2:
+                OnPropertyChanged("LED Enable State 2", os.str().c_str());
+                break;
+            case 3:
+                OnPropertyChanged("LED Enable State 3", os.str().c_str());
+                break;
+            case 4:
+                OnPropertyChanged("LED Enable State 4", os.str().c_str());
+                break;
+            case 5:
+                OnPropertyChanged("LED Enable State 5", os.str().c_str());
+                break;
+            case 6:
+                OnPropertyChanged("LED Enable State 6", os.str().c_str());
+                break;
+            default:
+                break;
+            }
+        });
 
     // create default positions and labels
     const int bufSize = 1024;
@@ -456,7 +470,6 @@ int ChrolisStateDevice::Initialize()
         SetPositionLabel(i, buf);
     }
     int err;
-
     ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
     uint32_t tmpLedState = 0;
     if (wrapperInstance->IsDeviceConnected())
@@ -591,6 +604,11 @@ int ChrolisStateDevice::Initialize()
 
 int ChrolisStateDevice::Shutdown()
 {
+    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
+    if (pHub)
+    {
+        pHub->SetStateCallback([](int, int) {});
+    }
     return DEVICE_OK;
 }
 
