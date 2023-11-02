@@ -12,15 +12,11 @@
 #define  CHROLIS_STATE_NAME  "CHROLIS_LED_Control"
 
 //Custom Error Codes
-#define ERR_UNKNOWN_MODE         102 // not currently used
-#define ERR_UNKNOWN_LED_STATE    103// don't think this is used
-#define ERR_HUB_NOT_AVAILABLE    104
-#define ERR_CHROLIS_NOT_AVAIL    105
-#define ERR_CHROLIS_SET          106 //don't think this is used
-#define ERR_CHROLIS_GET          107 // don't think this is used
-#define ERR_PARAM_NOT_VALID      108
-#define ERR_NO_AVAIL_DEVICES     109
-#define ERR_IMPROPER_SET         110
+#define ERR_HUB_NOT_AVAILABLE    101
+#define ERR_CHROLIS_NOT_AVAIL    102
+#define ERR_PARAM_NOT_VALID      103
+#define ERR_NO_AVAIL_DEVICES     104
+#define ERR_IMPROPER_SET         105
 
 //CHROLIS Specific Error Codes
 #define ERR_HARDWARE_FAULT      -1074001669
