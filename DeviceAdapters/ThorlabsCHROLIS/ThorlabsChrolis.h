@@ -53,6 +53,7 @@ static std::map<int, std::string> ErrorMessages()
 }
 
 // TODO: add mutex
+class ThorlabsChrolisDeviceWrapper;
 
 class ChrolisHub : public HubBase <ChrolisHub>
 {
@@ -68,13 +69,13 @@ public:
     // HUB api
     int DetectInstalledDevices();
 
-    void* GetChrolisDeviceInstance();
+    ThorlabsChrolisDeviceWrapper* GetChrolisDeviceInstance();
     void StatusChangedPollingThread();
     void SetShutterCallback(std::function<void(int, int)>);
     void SetStateCallback(std::function<void(int, int)>);
 
 private:
-    void* chrolisDeviceInstance_;
+    ThorlabsChrolisDeviceWrapper* chrolisDeviceInstance_;
     std::atomic_bool threadRunning_;
     std::thread updateThread_;
     std::atomic_uint32_t currentDeviceStatusCode_;

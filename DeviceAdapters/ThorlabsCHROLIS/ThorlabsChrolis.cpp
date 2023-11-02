@@ -176,7 +176,7 @@ bool ChrolisHub::Busy()
     return false;
 }
 
-void* ChrolisHub::GetChrolisDeviceInstance()
+ThorlabsChrolisDeviceWrapper* ChrolisHub::GetChrolisDeviceInstance()
 {
     return chrolisDeviceInstance_;
 }
@@ -188,7 +188,7 @@ void ChrolisHub::StatusChangedPollingThread()
     ViBoolean tempEnableStates[6];
     while (threadRunning_.load())
     {
-        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(GetChrolisDeviceInstance());
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = GetChrolisDeviceInstance();
         if (wrapperInstance->IsDeviceConnected())
         {
             message.clear();
@@ -347,7 +347,7 @@ int ChrolisShutter::Initialize()
         return ERR_HUB_NOT_AVAILABLE;
     }
 
-    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
     if (wrapperInstance->IsDeviceConnected())
     {
         auto err = wrapperInstance->SetShutterState(false);
@@ -393,7 +393,7 @@ int ChrolisShutter::SetOpen(bool open)
         LogMessage("Hub not available");
         return ERR_HUB_NOT_AVAILABLE;
     }
-    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
     if (!wrapperInstance->IsDeviceConnected())
     {
         LogMessage("CHROLIS not available");
@@ -417,7 +417,7 @@ int ChrolisShutter::GetOpen(bool& open)
         LogMessage("Hub not available");
         return ERR_HUB_NOT_AVAILABLE;
     }
-    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
     if (!wrapperInstance->IsDeviceConnected())
     {
         LogMessage("CHROLIS not available");
@@ -462,7 +462,7 @@ int ChrolisStateDevice::Initialize()
     }
     int err;
 
-    ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+    ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
     uint32_t tmpLedState = 0;
     if (wrapperInstance->IsDeviceConnected())
     {
@@ -629,7 +629,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             LogMessage("Hub not available");
         }
-        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
@@ -660,7 +660,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_HUB_NOT_AVAILABLE;
         }
-        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
@@ -776,7 +776,7 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         {
             LogMessage("Hub not available");
         }
-        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
@@ -801,7 +801,7 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_HUB_NOT_AVAILABLE;
         }
-        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
@@ -886,7 +886,7 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         {
             LogMessage("Hub not available");
         }
-        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
@@ -911,7 +911,7 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return ERR_HUB_NOT_AVAILABLE;
         }
-        ThorlabsChrolisDeviceWrapper* wrapperInstance = static_cast<ThorlabsChrolisDeviceWrapper*>(pHub->GetChrolisDeviceInstance());
+        ThorlabsChrolisDeviceWrapper* wrapperInstance = pHub->GetChrolisDeviceInstance();
         if (!wrapperInstance->IsDeviceConnected())
         {
             LogMessage("CHROLIS not available");
