@@ -91,7 +91,6 @@ class CorePropertyCollection;
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
-class PropertyBlock;
 
 class AutoFocusInstance;
 class CameraInstance;
@@ -197,10 +196,8 @@ public:
    ///@{
    std::vector<std::string> getDeviceAdapterSearchPaths();
    void setDeviceAdapterSearchPaths(const std::vector<std::string>& paths);
-   MMCORE_DEPRECATED(static void addSearchPath(const char *path));
 
    std::vector<std::string> getDeviceAdapterNames() throw (CMMError);
-   MMCORE_DEPRECATED(static std::vector<std::string> getDeviceLibraries() throw (CMMError));
 
    std::vector<std::string> getAvailableDevices(const char* library) throw (CMMError);
    std::vector<std::string> getAvailableDeviceDescriptions(const char* library) throw (CMMError);
@@ -247,7 +244,6 @@ public:
    void waitForConfig(const char* group, const char* configName) throw (CMMError);
    bool systemBusy() throw (CMMError);
    void waitForSystem() throw (CMMError);
-   MMCORE_DEPRECATED(void waitForImageSynchro() throw (CMMError));
    bool deviceTypeBusy(MM::DeviceType devType) throw (CMMError);
    void waitForDeviceType(MM::DeviceType devType) throw (CMMError);
 
@@ -348,14 +344,6 @@ public:
    Configuration getPixelSizeConfigData(const char* configName) throw (CMMError);
    ///@}
 
-   /** \name Property blocks. */
-   ///@{
-   MMCORE_DEPRECATED(void definePropertyBlock(const char* blockName, const char* propertyName,
-         const char* propertyValue));
-   MMCORE_DEPRECATED(std::vector<std::string> getAvailablePropertyBlocks() const);
-   MMCORE_DEPRECATED(PropertyBlock getPropertyBlockData(const char* blockName));
-   ///@}
-
    /** \name Image acquisition. */
    ///@{
    void setROI(int x, int y, int xSize, int ySize) throw (CMMError);
@@ -390,10 +378,6 @@ public:
    unsigned getNumberOfCameraChannels();
    std::string getCameraChannelName(unsigned int channelNr);
    long getImageBufferSize();
-
-   MMCORE_DEPRECATED(void assignImageSynchro(const char* deviceLabel) throw (CMMError));
-   MMCORE_DEPRECATED(void removeImageSynchro(const char* deviceLabel) throw (CMMError));
-   MMCORE_DEPRECATED(void removeImageSynchroAll());
 
    void setAutoShutter(bool state);
    bool getAutoShutter();
@@ -469,9 +453,6 @@ public:
       throw (CMMError);
    long getStateFromLabel(const char* stateDeviceLabel,
          const char* stateLabel) throw (CMMError);
-   MMCORE_DEPRECATED(PropertyBlock getStateLabelData(const char* stateDeviceLabel,
-         const char* stateLabel));
-   MMCORE_DEPRECATED(PropertyBlock getData(const char* stateDeviceLabel));
    ///@}
 
    /** \name Focus (Z) stage control. */
@@ -634,19 +615,10 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
 
-   /** \name Miscellaneous. */
-   ///@{
-   MMCORE_DEPRECATED(std::string getUserId() const);
-   MMCORE_DEPRECATED(std::string getHostName() const);
-   MMCORE_DEPRECATED(std::vector<std::string> getMACAddresses(void));
-   ///@}
-
 private:
    // make object non-copyable
    CMMCore(const CMMCore&);
    CMMCore& operator=(const CMMCore&);
-
-   typedef std::map<std::string, PropertyBlock*> CPropBlockMap;
 
 private:
    // LogManager should be the first data member, so that it is available for
@@ -678,11 +650,9 @@ private:
    PixelSizeConfigGroup* pixelSizeGroup_;
    CircularBuffer* cbuf_;
 
-   std::vector< std::weak_ptr<DeviceInstance> > imageSynchroDevices_;
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
-   CPropBlockMap propBlocks_;
 
    // Must be unlocked when calling MMEventCallback or calling device methods
    // or acquiring a module lock
@@ -703,7 +673,6 @@ private:
    static void CheckStateLabel(const char* stateLabel) throw (CMMError);
    static void CheckConfigGroupName(const char* groupName) throw (CMMError);
    static void CheckConfigPresetName(const char* presetName) throw (CMMError);
-   static void CheckPropertyBlockName(const char* blockName) throw (CMMError);
    bool IsCoreDeviceLabel(const char* label) const throw (CMMError);
 
    void applyConfiguration(const Configuration& config) throw (CMMError);

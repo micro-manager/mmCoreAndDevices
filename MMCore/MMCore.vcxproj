@@ -59,7 +59,6 @@
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)MMCore.lib</OutputFile>
-      <AdditionalDependencies>Iphlpapi.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -75,7 +74,6 @@
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)MMCore.lib</OutputFile>
-      <AdditionalDependencies>Iphlpapi.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -100,7 +98,6 @@
     <ClCompile Include="Devices\XYStageInstance.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
-    <ClCompile Include="Host.cpp" />
     <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp" />
     <ClCompile Include="LoadableModules\LoadedModule.cpp" />
@@ -143,7 +140,6 @@
     <ClInclude Include="Devices\XYStageInstance.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="FrameBuffer.h" />
-    <ClInclude Include="Host.h" />
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h" />
     <ClInclude Include="LoadableModules\LoadedModule.h" />

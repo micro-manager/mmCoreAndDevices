@@ -50,7 +50,6 @@
 #include "CoreUtils.h"
 #include "DeviceManager.h"
 #include "Devices/DeviceInstances.h"
-#include "Host.h"
 #include "LogManager.h"
 #include "MMCore.h"
 #include "MMEventCallback.h"
@@ -64,17 +63,6 @@
 #include <set>
 #include <sstream>
 #include <vector>
-
-
-#ifndef _WINDOWS
-// Needed on Unix for getcwd() and gethostname()
-#include <pwd.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// for _getcwd
-#include <direct.h>
-#endif
 
 using namespace std;
 
@@ -113,7 +101,7 @@ using namespace std;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 10, MMCore_versionMinor = 7, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 0, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -307,40 +295,6 @@ void CMMCore::stopSecondaryLogFile(int handle) throw (CMMError)
    typedef mm::LogManager::LogFileHandle LogFileHandle;
    LogFileHandle h = static_cast<LogFileHandle>(handle);
    logManager_->RemoveSecondaryLogFile(h);
-}
-
-
-/*!
- Displays current user name.
- */
-string CMMCore::getUserId() const
-{
-   char buf[8192];
-#ifndef _WINDOWS
-   struct passwd* ppw = getpwuid(geteuid());
-   strcpy( buf, ppw->pw_name);
-#else
-   DWORD bufCharCount = 8192;
-   if( !GetUserName( buf, &bufCharCount ) )
-      buf[0] = 0;
-#endif
-   return string(buf);
-}
-
-/**
- * return current computer name.
- */
-string CMMCore::getHostName() const
-{
-   char buf[8192];
-#ifndef _WINDOWS
-   gethostname(buf, 8192);
-#else
-   DWORD bufCharCount = 8192;
-   if( !GetComputerName( buf, &bufCharCount ) )
-      buf[0] = 0;
-#endif
-   return string(buf);
 }
 
 /**
@@ -647,43 +601,6 @@ std::vector<std::string> CMMCore::getDeviceAdapterNames() throw (CMMError)
 }
 
 /**
- * Add a list of paths to the legacy device adapter search path list.
- *
- * Do not use in new code. This adds to a global (static) fallback list that is
- * only searched when a device adapter is not located in any of the directories
- * set by setDeviceAdapterSearchPaths(). The list is initially empty.
- *
- * @deprecated Use the non-static setDeviceAdapterSearchPaths() instead.
- *
- * @param path   a list of search paths in a single string
- */
-void CMMCore::addSearchPath(const char *path)
-{
-   if (!path)
-      return;
-
-   CPluginManager::AddLegacyFallbackSearchPath(path);
-}
-
-/**
- * Returns a list of library names available in the search path.
- *
- * Do not use in new code. For backward compatibility, this method returns the
- * list of device adapters available in the default search path(s) and the
- * paths added via addSearchPath(). For obvious reasons (since this method is
- * static), it will not return device adapters found in the search paths set by
- * setDeviceAdapterSearchPaths(). Thus, this method will only work as expected
- * when called from legacy code that does not make use of
- * setDeviceAdapterSearchPaths().
- *
- * @deprecated Use the non-static getDeviceAdapterNames() instead.
- */
-vector<string> CMMCore::getDeviceLibraries() throw (CMMError)
-{
-   return CPluginManager::GetModulesInLegacyFallbackSearchPaths();
-}
-
-/**
  * Loads a device from the plugin library.
  * @param label    assigned name for the device during the core session
  * @param moduleName  the name of the device adapter module (short name, not full file name)
@@ -828,9 +745,6 @@ void CMMCore::unloadAllDevices() throw (CMMError)
       LOG_INFO(coreLogger_) << "Did unload all devices";
 
 	   properties_->Refresh();
-
-      // TODO
-      // clear equipment definitions ???
    }
    catch (CMMError& err) {
       logError("MMCore::unloadAllDevices", err.getMsg().c_str());
@@ -839,7 +753,7 @@ void CMMCore::unloadAllDevices() throw (CMMError)
 }
 
 /**
- * Unloads all devices from the core, clears all configuration data and property blocks.
+ * Unloads all devices from the core, clears all configuration data.
  */
 void CMMCore::reset() throw (CMMError)
 {
@@ -865,12 +779,6 @@ void CMMCore::reset() throw (CMMError)
 
    // unload devices
    unloadAllDevices();
-
-   // clear property blocks
-   CPropBlockMap::const_iterator i;
-   for (i = propBlocks_.begin(); i != propBlocks_.end(); i++)
-      delete i->second;
-   propBlocks_.clear();
 
    properties_->Refresh();
 
@@ -1336,25 +1244,6 @@ void CMMCore::waitForConfig(const char* group, const char* configName) throw (CM
    } catch (CMMError& err) {
       // trap MM exceptions and keep quiet - this is not a good time to blow up
       logError("waitForConfig", err.getMsg().c_str());
-   }
-}
-
-/**
- * Wait for the slowest device in the ImageSynchro list.
- *
- * @deprecated ImageSynchro will not be supported in the future.
- */
-void CMMCore::waitForImageSynchro() throw (CMMError)
-{
-   for (std::vector< std::weak_ptr<DeviceInstance> >::iterator
-         it = imageSynchroDevices_.begin(), end = imageSynchroDevices_.end();
-         it != end; ++it)
-   {
-      std::shared_ptr<DeviceInstance> device = it->lock();
-      if (device)
-      {
-         waitForDevice(device);
-      }
    }
 }
 
@@ -2409,10 +2298,6 @@ void CMMCore::snapImage() throw (CMMError)
 
       int ret = DEVICE_OK;
       try {
-
-         // wait for all synchronized devices to stop before taking an image
-         waitForImageSynchro();
-
          // open the shutter
          std::shared_ptr<ShutterInstance> shutter =
             currentShutterDevice_.lock();
@@ -2469,72 +2354,6 @@ void CMMCore::snapImage() throw (CMMError)
    {
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
-}
-
-
-// Predicate used by assignImageSynchro() and removeImageSynchro()
-namespace
-{
-   class DeviceWeakPtrInvalidOrMatches
-   {
-      std::shared_ptr<DeviceInstance> theDevice_;
-   public:
-      explicit DeviceWeakPtrInvalidOrMatches(
-            std::shared_ptr<DeviceInstance> theDevice) :
-         theDevice_(theDevice)
-      {}
-
-      bool operator()(const std::weak_ptr<DeviceInstance>& ptr)
-      {
-         std::shared_ptr<DeviceInstance> aDevice = ptr.lock();
-         return (!aDevice || aDevice == theDevice_);
-      }
-   };
-} // anonymous namespace
-
-/**
- * Add device to the image-synchro list. Image acquisition waits for all devices
- * in this list.
- * @param label   the device label
- *
- * @deprecated ImageSynchro will not be supported in the future.
- */
-void CMMCore::assignImageSynchro(const char* label) throw (CMMError)
-{
-   std::shared_ptr<DeviceInstance> device = deviceManager_->GetDevice(label);
-
-   imageSynchroDevices_.erase(std::remove_if(imageSynchroDevices_.begin(),
-            imageSynchroDevices_.end(), DeviceWeakPtrInvalidOrMatches(device)),
-         imageSynchroDevices_.end());
-
-   imageSynchroDevices_.push_back(device);
-   LOG_DEBUG(coreLogger_) << "Added " << label << " to image-synchro list";
-}
-
-/**
- * Removes device from the image-synchro list.
- * @param label   the device label
- *
- * @deprecated ImageSynchro will not be supported in the future.
- */
-void CMMCore::removeImageSynchro(const char* label) throw (CMMError)
-{
-   std::shared_ptr<DeviceInstance> device = deviceManager_->GetDevice(label);
-   imageSynchroDevices_.erase(std::remove_if(imageSynchroDevices_.begin(),
-            imageSynchroDevices_.end(), DeviceWeakPtrInvalidOrMatches(device)),
-         imageSynchroDevices_.end());
-   LOG_DEBUG(coreLogger_) << "Removed " << label << " from image-synchro list";
-}
-
-/**
- * Clears the image synchro device list.
- *
- * @deprecated ImageSynchro will not be supported in the future.
- */
-void CMMCore::removeImageSynchroAll()
-{
-   imageSynchroDevices_.clear();
-   LOG_DEBUG(coreLogger_) << "Cleared image-synchro list";
 }
 
 /**
@@ -5730,136 +5549,6 @@ bool CMMCore::isGroupDefined(const char* groupName)
 }
 
 /**
- * Defines a reference for the collection of property-value pairs.
- * This construct is useful for defining
- * interchangeable equipment features, such as objective magnifications, filter wavelengths, etc.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-void CMMCore::definePropertyBlock(const char* blockName, const char* propertyName, const char* propertyValue)
-{
-   CheckPropertyBlockName(blockName);
-   CheckPropertyName(propertyName);
-   CheckPropertyValue(propertyValue);
-
-   // check if the block already exists
-   CPropBlockMap::const_iterator it = propBlocks_.find(blockName);
-   PropertyBlock* pBlock;
-   if (it == propBlocks_.end())
-   {
-      pBlock = new PropertyBlock();
-      propBlocks_[blockName] = pBlock; // add new block
-   }
-   else
-      pBlock = it->second;
-
-   // add the pair
-   PropertyPair pair(propertyName, propertyValue);
-   pBlock->addPair(pair);
-
-   LOG_DEBUG(coreLogger_) << "Property block " << blockName <<
-      ": added setting " << propertyName << " = " << propertyValue;
-}
-
-/**
- * Returns all defined property block identifiers.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-std::vector<std::string> CMMCore::getAvailablePropertyBlocks() const
-{
-   vector<string> blkList;
-   CPropBlockMap::const_iterator it = propBlocks_.begin();
-   while(it != propBlocks_.end())
-      blkList.push_back(it++->first);
-
-   return blkList;
-}
-
-/**
- * Returns the collection of property-value pairs defined in this block.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-PropertyBlock CMMCore::getPropertyBlockData(const char* blockName)
-{
-   CheckPropertyBlockName(blockName);
-
-   CPropBlockMap::const_iterator it = propBlocks_.find(blockName);
-   if (it == propBlocks_.end())
-   {
-      logError(blockName, getCoreErrorText(MMERR_InvalidPropertyBlock).c_str());
-      throw CMMError(ToQuotedString(blockName) + ": " + getCoreErrorText(MMERR_InvalidPropertyBlock),
-            MMERR_InvalidPropertyBlock);
-   }
-   return *it->second;
-}
-
-/**
- * Returns the collection of property-value pairs defined for the specific device and state label.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-PropertyBlock CMMCore::getStateLabelData(const char* deviceLabel, const char* stateLabel)
-{
-   std::shared_ptr<StateInstance> pStateDev =
-      deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
-   CheckStateLabel(stateLabel);
-
-   mm::DeviceModuleLockGuard guard(pStateDev);
-
-   // check if corresponding label exists
-   long pos;
-   int nRet = pStateDev->GetLabelPosition(stateLabel, pos);
-   if (nRet != DEVICE_OK)
-   {
-      logError(deviceLabel, getDeviceErrorText(nRet, pStateDev).c_str());
-      throw CMMError(getDeviceErrorText(nRet, pStateDev));
-   }
-
-   PropertyBlock blk;
-   try {
-      blk = getPropertyBlockData(stateLabel);
-   } catch (...) {
-      ;
-      // if getting data did not succeed for any reason we will assume
-      // that there is no connection between state label and property block.
-      // In this context it is not an error, we'll just say there is no data.
-   }
-   return blk;
-}
-
-/**
- * Returns the collection of property-value pairs defined for the current state.
- *
- * @deprecated Property blocks will not be supported in the future.
- */
-PropertyBlock CMMCore::getData(const char* deviceLabel)
-{
-   std::shared_ptr<StateInstance> pStateDev =
-      deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
-
-   // here we could have written simply:
-   // return getStateLabelData(deviceLabel, getStateLabel(deviceLabel).c_str());
-   // but that would be inefficient because of the multiple index lookup, so we'll
-   // do it explicitly:
-
-   mm::DeviceModuleLockGuard guard(pStateDev);
-
-   // obtain the current state label
-   std::string pos = pStateDev->GetPositionLabel();
-
-   PropertyBlock blk;
-   try {
-      blk = getPropertyBlockData(pos.c_str());
-   } catch (...) {
-      ;
-      // not an error here - there is just no data for this entry.
-   }
-   return blk;
-}
-
-/**
  * Sets all com port properties in a single call
  */
 void CMMCore::setSerialProperties(const char* portName,
@@ -6609,7 +6298,7 @@ void CMMCore::loadSystemState(const char* fileName) throw (CMMError)
 /**
  * Saves the current system configuration to a text file of the MM specific format.
  * The configuration file records only the information essential to the hardware
- * setup: devices, labels, equipment pre-initialization properties, and configurations.
+ * setup: devices, labels, pre-initialization properties, and configurations.
  * The file format is the same as for the system state.
  */
 void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
@@ -6640,20 +6329,6 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*it);
       mm::DeviceModuleLockGuard guard(pDev);
       os << MM::g_CFGCommand_Device << "," << *it << "," << pDev->GetAdapterModule()->GetName() << "," << pDev->GetName() << endl;
-   }
-
-   // save equipment
-   os << "# Equipment attributes" << endl;
-   vector<string> propBlocks = getAvailablePropertyBlocks();
-   for (size_t i=0; i<propBlocks.size(); i++)
-   {
-      PropertyBlock pb = getPropertyBlockData(propBlocks[i].c_str());
-      PropertyPair p;
-      for (size_t j=0; j<pb.size(); j++)
-      {
-         p = pb.getPair(j);
-         os << MM::g_CFGCommand_Equipment << ',' << propBlocks[i] << ',' << p.getPropertyName() << ',' << p.getPropertyValue() << endl;
-      }
    }
 
    // save the pre-initialization properties
@@ -6794,7 +6469,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
 /**
  * Loads the system configuration from the text file conforming to the MM specific format.
  * The configuration contains a list of commands to build the desired system state:
- * devices, labels, equipment, properties, and configurations.
+ * devices, labels, properties, and configurations.
  *
  * Format specification:
  * Each line consists of a number of string fields separated by "," (comma) characters.
@@ -6804,7 +6479,6 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
  * The first field in the line always specifies the command from the following set of values:
  *    Device - executes loadDevice()
  *    Label - executes defineStateLabel() command
- *    Equipment - executes definePropertyBlockCommand()
  *    Property - executes setPropertyCommand()
  *    Configuration - ignored for backward compatibility
  *
@@ -7021,23 +6695,17 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
             }
             else if(tokens[0].compare(MM::g_CFGCommand_Equipment) == 0)
             {
-               // define configuration command
-               // ----------------------------
-               if (tokens.size() != 4)
-                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
-                        ToQuotedString(line) + ")",
-                        MMERR_InvalidCFGEntry);
-               definePropertyBlock(tokens[1].c_str(), tokens[2].c_str(), tokens[3].c_str());
+              // Property blocks have been removed
+              throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                    ToQuotedString(line) + ")",
+                    MMERR_InvalidCFGEntry);
             }
             else if(tokens[0].compare(MM::g_CFGCommand_ImageSynchro) == 0)
             {
-               // define image synchro
-               // --------------------
-               if (tokens.size() != 2)
-                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
-                        ToQuotedString(line) + ")",
-                        MMERR_InvalidCFGEntry);
-               assignImageSynchro(tokens[1].c_str());
+               // ImageSynchro has been removed
+               throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                     ToQuotedString(line) + ")",
+                     MMERR_InvalidCFGEntry);
             }
             else if(tokens[0].compare(MM::g_CFGCommand_ParentID) == 0)
             {
@@ -7363,7 +7031,7 @@ void CMMCore::InitializeErrorMessages()
    errorText_[MMERR_CameraNotAvailable] = "Camera not loaded or initialized.";
    errorText_[MMERR_InvalidStateDevice] = "Unsupported API. This device is not a state device";
    errorText_[MMERR_NoConfiguration] = "Configuration not defined";
-   errorText_[MMERR_InvalidPropertyBlock] = "Property block not defined";
+   errorText_[MMERR_InvalidPropertyBlock] = "Property block not defined"; // No longer used
    errorText_[MMERR_UnhandledException] =
       "Internal inconsistency: unknown system exception encountered";
    errorText_[MMERR_DevicePollingTimeout] = "Device timed out";
@@ -7521,15 +7189,6 @@ void CMMCore::CheckConfigPresetName(const char* presetName) throw (CMMError)
       throw CMMError("Configuration preset name " + ToQuotedString(nameString) +
             " contains reserved or invalid characters",
             MMERR_BadConfigName);
-}
-
-void CMMCore::CheckPropertyBlockName(const char* blockName) throw (CMMError)
-{
-   if (!blockName)
-      throw CMMError("Null property block name", MMERR_NullPointerException);
-   if (ContainsForbiddenCharacters(blockName))
-      throw CMMError("Property block name " + ToQuotedString(blockName) + " contains reserved characters",
-            MMERR_InvalidContents);
 }
 
 bool CMMCore::IsCoreDeviceLabel(const char* label) const throw (CMMError)
@@ -7870,39 +7529,3 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
    }
    return description.empty() ? "N/A" : description;
 }
-
-// at least on OS X, there is a 'primary' MAC address, so we'll
-// assume that is the first one.
-/**
-* Retrieve vector of MAC addresses for the Ethernet cards in the current computer
-* formatted xx-xx-xx-xx-xx-xx
-*
-*/
-std::vector<std::string> CMMCore::getMACAddresses(void)
-{
-   std::vector<std::string> retv;
-   try
-   {
-
-      Host* pHost = new Host();
-      if(NULL != pHost)
-      {
-         long status;
-         retv =  pHost->MACAddresses(status);
-
-         if( 0 != status)
-         {
-            LOG_ERROR(coreLogger_) << "Error " << status <<
-               " while getting MAC address";
-         }
-         delete pHost;
-      }
-   }
-   catch(...)
-   {
-
-   }
-   return retv;
-}
-
-
