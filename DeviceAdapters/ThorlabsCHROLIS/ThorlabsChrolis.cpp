@@ -77,7 +77,7 @@ int ChrolisHub::DetectInstalledDevices()
     return DEVICE_OK;
 }
 
-int ChrolisHub::Initialize() // only gets called once
+int ChrolisHub::Initialize()
 {
     char buf[MM::MaxStrLength];
     int ret = GetProperty("Serial Number", buf);
@@ -146,7 +146,7 @@ int ChrolisHub::Shutdown()
 {
     if (threadRunning_.load())
     {
-        threadRunning_.store(false); // TODO make this atmoic or mutex
+        threadRunning_.store(false);
         updateThread_.join();
     }
 
@@ -308,10 +308,7 @@ ChrolisShutter::ChrolisShutter()
 int ChrolisShutter::Initialize()
 {
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
-    if (pHub)
-    {
-    }
-    else
+    if (!pHub)
     {
         LogMessage("No Hub");
         return ERR_HUB_NOT_AVAILABLE;
@@ -329,6 +326,7 @@ int ChrolisShutter::Initialize()
 
     pHub->SetShutterCallback([this](int ledNum, int state) 
         {
+            //Might not be needed
         });
 
     return DEVICE_OK;
@@ -408,11 +406,7 @@ ChrolisStateDevice::ChrolisStateDevice()
 int ChrolisStateDevice::Initialize()
 {
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
-    if (pHub)
-    {
-
-    }
-    else
+    if (!pHub)
     {
         LogMessage("Hub not available");
         return ERR_HUB_NOT_AVAILABLE;
@@ -629,6 +623,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!pHub)
         {
             LogMessage("Hub not available");
+            return ERR_HUB_NOT_AVAILABLE;
         }
         if (!pHub->ChrolisDevice.IsDeviceConnected())
         {
@@ -774,6 +769,7 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         if (!pHub)
         {
             LogMessage("Hub not available");
+            return ERR_HUB_NOT_AVAILABLE;
         }
         if (!pHub->ChrolisDevice.IsDeviceConnected())
         {
@@ -882,6 +878,7 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         if (!pHub)
         {
             LogMessage("Hub not available");
+            return ERR_HUB_NOT_AVAILABLE;
         }
         if (!pHub->ChrolisDevice.IsDeviceConnected())
         {

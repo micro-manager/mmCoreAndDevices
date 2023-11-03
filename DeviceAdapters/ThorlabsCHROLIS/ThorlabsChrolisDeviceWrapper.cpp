@@ -126,6 +126,7 @@ int ThorlabsChrolisDeviceWrapper::ShutdownDevice()
 
 bool ThorlabsChrolisDeviceWrapper::IsDeviceConnected()
 {
+    std::lock_guard<std::mutex> lock(instanceMutex_);
     return deviceConnected_;
 }
 
