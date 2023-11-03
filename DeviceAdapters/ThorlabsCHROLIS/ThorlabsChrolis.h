@@ -106,6 +106,8 @@ public:
     ChrolisHub();
     ~ChrolisHub() {}
 
+    ThorlabsChrolisDeviceWrapper ChrolisDevice;
+
     int Initialize();
     int Shutdown();
     void GetName(char* pszName) const;
@@ -114,13 +116,11 @@ public:
     // HUB api
     int DetectInstalledDevices();
 
-    ThorlabsChrolisDeviceWrapper* GetChrolisDeviceInstance();
     void StatusChangedPollingThread();
     void SetShutterCallback(std::function<void(int, int)>);
     void SetStateCallback(std::function<void(int, int)>);
 
 private:
-    ThorlabsChrolisDeviceWrapper* chrolisDeviceInstance_;
     std::atomic_bool threadRunning_;
     std::thread updateThread_;
     std::atomic_uint32_t currentDeviceStatusCode_;
