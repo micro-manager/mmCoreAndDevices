@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <stdint.h>
 #include <future>
+#include <fstream>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -1194,6 +1195,48 @@ private:
    double vMaxY_;
 };
 
+//////////////////////////////////////////////////////////////////////////////
+// DemoDataStreamer class
+// Simulation of data streamer device
+//////////////////////////////////////////////////////////////////////////////
+class DemoDataStreamer : public CDataStreamerBase<DemoDataStreamer>
+{
+public:
+    DemoDataStreamer();
+    ~DemoDataStreamer();
+
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+
+    int StartStream();
+    int StopStream();
+    int GetBufferSize(unsigned& dataBufferSize);
+    std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitStatus);    
+    int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned dataSize);
+
+    // action interface
+    // ----------------
+    int OnAcquisitionPeriod(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnProcessingPeriod(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGenerateGetBufferSizeErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGenerateGetBufferErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGenerateProcessBufferErrorAt(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+    bool initialized_;
+    unsigned mockDataSize_;
+    unsigned counter_;
+    long acqPeriod_;
+    long procPeriod_;
+    long errorGetBufferSizeAt_;
+    long errorGetBufferAt_;
+    long errorProcessBufferAt_;
+    const int errorCodeGetBufferSize = 901;
+    const int errorCodeGetBuffer = 902;
+    const int errorCodeProcessBuffer = 903;
+};
 
 
 #endif //_DEMOCAMERA_H_

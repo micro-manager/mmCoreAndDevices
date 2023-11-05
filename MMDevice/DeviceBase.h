@@ -34,6 +34,8 @@
 #include "ModuleInterface.h"
 #include "DeviceThreads.h"
 
+#include <boost/circular_buffer.hpp>
+
 #include <math.h>
 #include <assert.h>
 
@@ -80,6 +82,11 @@ const char* const g_Msg_DEVICE_DUPLICATE_LIBRARY="Duplicate Device Library Name"
 const char* const g_Msg_DEVICE_PROPERTY_NOT_SEQUENCEABLE="This property is not sequenceable";
 const char* const g_Msg_DEVICE_SEQUENCE_TOO_LARGE="Sequence is too large for this device";
 const char* const g_Msg_DEVICE_NOT_YET_IMPLEMENTED="This command has not yet been implemented for this device.";
+const char* const g_Msg_DEVICE_DATASTREAMER_BUSY_ACQUIRING = "Data streamer is running";
+const char* const g_Msg_DEVICE_DATASTREAMER_STOPPED_ON_USER_SELECTION = "Stopped on user request";
+const char* const g_Msg_DEVICE_DATASTREAMER_STOPPED_ON_OVERFLOW = "Stopped on circular acquisition buffer overflow";
+const char* const g_Msg_DEVICE_DATASTREAMER_STOPPED_ON_NBLOCKS_COLLECTED = "Stopped on collecting specified number of blocks";
+const char* const g_Msg_DEVICE_DATASTREAMER_STOPPED_ON_TIME_ELAPSED = "Stopped on DataStreamer time elapsed";
 
 inline long nint( double value )
 {
@@ -947,6 +954,11 @@ protected:
       SetErrorText(DEVICE_PROPERTY_NOT_SEQUENCEABLE, g_Msg_DEVICE_PROPERTY_NOT_SEQUENCEABLE);
       SetErrorText(DEVICE_SEQUENCE_TOO_LARGE, g_Msg_DEVICE_SEQUENCE_TOO_LARGE);
       SetErrorText(DEVICE_NOT_YET_IMPLEMENTED, g_Msg_DEVICE_NOT_YET_IMPLEMENTED);
+      SetErrorText(DEVICE_DATASTREAMER_BUSY_ACQUIRING, g_Msg_DEVICE_DATASTREAMER_BUSY_ACQUIRING);
+      SetErrorText(DEVICE_DATASTREAMER_STOPPED_ON_USER_SELECTION, g_Msg_DEVICE_DATASTREAMER_STOPPED_ON_USER_SELECTION);
+      SetErrorText(DEVICE_DATASTREAMER_STOPPED_ON_OVERFLOW, g_Msg_DEVICE_DATASTREAMER_STOPPED_ON_OVERFLOW);
+      SetErrorText(DEVICE_DATASTREAMER_STOPPED_ON_NBLOCKS_COLLECTED, g_Msg_DEVICE_DATASTREAMER_STOPPED_ON_NBLOCKS_COLLECTED);
+      SetErrorText(DEVICE_DATASTREAMER_STOPPED_ON_TIME_ELAPSED, g_Msg_DEVICE_DATASTREAMER_STOPPED_ON_TIME_ELAPSED);
    }
 
    /**
@@ -2159,6 +2171,494 @@ class CGalvoBase : public CDeviceBase<MM::Galvo, U>
 {
    double GetXMinimum() { return 0.0;};
    double GetYMinimum() { return 0.0;};
+};
+
+typedef struct {
+    std::unique_ptr<char[]> data;
+    unsigned int expectedSize;
+    unsigned int actualSize;
+} acquired_block;
+
+/**
+* Helper class for storing data blocks acquired by DataStreamer devices
+*/
+class AcquiredBlockCollection {
+public:
+    AcquiredBlockCollection(unsigned int maxNumberOfBlocks, bool stopOnOverflow) :
+        overflowStatus_(false)
+    {
+        maxNumberOfBlocks_ = maxNumberOfBlocks;
+        cb_.set_capacity(maxNumberOfBlocks_);
+        stopOnOverflow_ = stopOnOverflow;
+    }
+
+    ~AcquiredBlockCollection() {}
+
+    void Add(std::unique_ptr<acquired_block> &pDataBlock)
+    {
+        MMThreadGuard g(this->executeLock_);
+        if ((cb_.capacity() - cb_.size()) == 0) {
+            overflowStatus_ = true;
+            if (stopOnOverflow_) return;
+        }
+        cb_.push_back(std::move(pDataBlock));
+    }
+
+    int GetCapacity() {
+        MMThreadGuard g(this->executeLock_);
+        return (int)cb_.capacity();
+    }
+    
+    int GetSize() {
+        MMThreadGuard g(this->executeLock_);
+        return (int)cb_.size();
+    }
+
+    std::unique_ptr<acquired_block> Remove()
+    {
+        MMThreadGuard g(this->executeLock_);
+        if (cb_.size() == 0) {
+            return 0;
+        }
+        else {
+            std::unique_ptr<acquired_block> dataBlock = std::move(cb_.at(0));
+            cb_.pop_front();
+            return dataBlock;
+        }
+    }
+
+    void SetOverflowStatus(bool status)
+    {
+        MMThreadGuard g(this->executeLock_);
+        overflowStatus_ = status;
+    }
+
+    bool GetOverflowStatus()
+    {
+        MMThreadGuard g(this->executeLock_);
+        return overflowStatus_;
+    }
+private:
+    boost::circular_buffer<std::unique_ptr<acquired_block>> cb_;
+    MMThreadLock executeLock_;
+    unsigned long maxNumberOfBlocks_;
+    bool stopOnOverflow_;
+    bool overflowStatus_;
+};
+
+
+/**
+* Base class for creating DataStreamer devices.
+*/
+template <class U>
+class CDataStreamerBase : public CDeviceBase<MM::DataStreamer, U>
+{
+    friend class AcquiredBlockCollection;
+public:
+    CDataStreamerBase() : numberOfBlocks_(1), durationMs_(1000), updatePeriodMs_(100),
+        stopOnOverflow_(true), stopFlag_(false), acqCollectionCapacity_(10)
+    {
+        acqCollection_ = new AcquiredBlockCollection(acqCollectionCapacity_, stopOnOverflow_);
+        thdAcq_ = new AcquisitionThread(this);
+        thdProc_ = new ProcessingThread(this);
+    }
+
+    virtual ~CDataStreamerBase()
+    {
+        if (thdAcq_->IsRunning()) {
+            thdAcq_->Stop();
+            thdAcq_->wait();
+        }
+        if (thdProc_->IsRunning()) {
+            thdProc_->wait();
+        }
+        delete thdAcq_;
+        delete thdProc_;
+        delete acqCollection_;
+    }
+
+    virtual int StartStream() = 0;
+
+    int StartDataStreamerThreads()
+    {
+        if (IsStreaming()) return DEVICE_DATASTREAMER_BUSY_ACQUIRING;
+        delete acqCollection_;
+        acqCollection_ = new AcquiredBlockCollection(acqCollectionCapacity_, stopOnOverflow_);
+        thdAcq_->Start();
+        thdProc_->Start();
+        return DEVICE_OK;
+    }
+
+    virtual int StopStream() = 0;
+
+    int StopDataStreamerThreads() {
+        // a non-blocking implementaion
+        if (thdAcq_->IsRunning()) {
+            thdAcq_->Stop();
+            //thdAcq_->wait();
+        }
+        if (thdProc_->IsRunning()) {
+            //thdProc_->wait();
+        }
+        return DEVICE_OK;
+    }
+
+    virtual int GetBufferSize(unsigned& dataBufferSiize) = 0;
+    virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitCode) = 0;
+    virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned actualDataBufferSize) = 0;
+
+    virtual int SetStreamParameters(bool stopOnOverflow, bool pauseAcquisitionBeforeOverflow, int numberOfBlocks, int durationMs, int updatePeriodMs)
+    {
+        if (IsStreaming()) return DEVICE_DATASTREAMER_BUSY_ACQUIRING;
+        if (numberOfBlocks <= 0 || durationMs <= 0 || updatePeriodMs < 0) return DEVICE_INVALID_INPUT_PARAM;
+        stopOnOverflow_ = stopOnOverflow;
+        pauseAcquisitionBeforeOverflow_ = pauseAcquisitionBeforeOverflow;
+        numberOfBlocks_ = numberOfBlocks;
+        durationMs_ = durationMs;
+        updatePeriodMs_ = updatePeriodMs;
+        return DEVICE_OK;
+    }
+
+    virtual int GetStreamParameters(bool& stopOnOverflow, bool& pauseAcquisitionBeforeOverflow, int& numberOfBlocks, int& durationMs, int& updatePeriodMs)
+    {
+        stopOnOverflow = stopOnOverflow_;
+        pauseAcquisitionBeforeOverflow = pauseAcquisitionBeforeOverflow_;
+        numberOfBlocks = numberOfBlocks_;
+        durationMs = durationMs_;
+        updatePeriodMs = updatePeriodMs_;
+        return DEVICE_OK;
+    }
+
+    virtual int SetAcquisitionPause(bool pause) {
+        if (!thdAcq_->IsRunning()) return DEVICE_OK;
+        thdAcq_->SetPause(pause);
+        return DEVICE_OK;
+    }
+
+    virtual bool GetAcquisitionPause() {
+        return thdAcq_->GetPause();
+    }
+
+    virtual bool GetOverflowStatus() {
+        return acqCollection_->GetOverflowStatus();
+    }
+
+    virtual int ResetOverflowStatus() {
+        acqCollection_->SetOverflowStatus(false);
+        return DEVICE_OK;
+    }
+
+    virtual bool IsStreaming() {
+        if (thdAcq_->IsRunning() || thdProc_->IsRunning()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    virtual int GetAcquisitionExitStatus() {
+        return thdAcq_->GetExitStatus();
+    }
+
+    virtual int GetProcessingExitStatus() {
+        return thdProc_->GetExitStatus();
+    }
+
+    virtual int SetCircularAcquisitionBufferCapacity(int capacity) {
+        if (IsStreaming()) return DEVICE_DATASTREAMER_BUSY_ACQUIRING;
+        if (capacity <= 0) return DEVICE_INVALID_INPUT_PARAM;
+        acqCollectionCapacity_ = capacity;
+        delete acqCollection_;
+        acqCollection_ = new AcquiredBlockCollection(acqCollectionCapacity_, stopOnOverflow_);
+        return DEVICE_OK;
+    }
+
+    virtual int GetCircularAcquisitionBufferCapacity() {
+        return acqCollectionCapacity_;
+    }
+
+    class AcquisitionThread : public MMDeviceThreadBase
+    {
+        friend class CDataStreamerBase;
+        friend class AcquiredBlockCollection;
+    public:
+        AcquisitionThread(CDataStreamerBase* p) : isRunning_(false),stopFlag_(false),pause_(false)
+        {
+            pDataStreamerBase_ = p;
+        }
+        ~AcquisitionThread() {}
+
+        void Start() {
+            this->SetIsRunning(true);
+            this->activate();
+        }
+
+        void Stop() {
+            if (this->GetIsRunning()) {
+                this->SetStopFlag(true);
+            }
+        }
+
+        bool IsRunning() {
+            return this->GetIsRunning();
+        }
+
+    private:
+        CDataStreamerBase* pDataStreamerBase_;
+        bool isRunning_;
+        bool stopFlag_;
+        bool pause_;
+        int exitStatus_;
+        MMThreadLock stopLock_;
+        MMThreadLock isRunningLock_;
+        MMThreadLock pauseLock_;
+        MMThreadLock exitStatusLock_;
+
+        // Provide description here
+        int svc(void) throw ()
+        {
+            this->SetExitStatus(DEVICE_DATASTREAMER_BUSY_ACQUIRING);
+            int retGetBufferSize = DEVICE_OK;
+            unsigned int expectedDataSize, actualDataSize;
+            int exitStatus = DEVICE_OK;
+            unsigned int blockCounter = 0;
+            AcquiredBlockCollection* acqCollection = pDataStreamerBase_->acqCollection_;
+            MM::MMTime startTime = pDataStreamerBase_->GetCurrentMMTime();
+            MM::MMTime timeSinceStart = pDataStreamerBase_->GetCurrentMMTime() - startTime;
+            MM::MMTime lastCallTime = pDataStreamerBase_->GetCurrentMMTime();
+            std::stringstream ss;
+            try {
+                // check all stopping conditions
+                while (!(this->GetStopFlag() || //read externally set stop flag
+                    blockCounter >= pDataStreamerBase_->numberOfBlocks_ || // stop if desired number of blocks have been collected
+                    (acqCollection->GetOverflowStatus() && pDataStreamerBase_->stopOnOverflow_) || // buffer overflow
+                    timeSinceStart > MM::MMTime(pDataStreamerBase_->durationMs_*1000))) { // collection time elapsed
+
+                    if (pDataStreamerBase_->pauseAcquisitionBeforeOverflow_) {
+                        // request a pause before overflow happens
+                        if (acqCollection->GetSize() == acqCollection->GetCapacity()) {
+                            this->SetPause(true);
+                        }
+                        else {
+                            this->SetPause(false);
+                        }
+                    }
+                    // pause if requested
+                    if (this->GetPause()) {
+                        Sleep((int)(pDataStreamerBase_->GetCurrentMMTime().getMsec() - lastCallTime.getMsec()));
+                        continue;
+                    }
+                    // check for new data only if updatePeriodMs has elapsed
+                    if (pDataStreamerBase_->updatePeriodMs_ > pDataStreamerBase_->GetCurrentMMTime().getMsec() - lastCallTime.getMsec()) {
+                        Sleep((int)(pDataStreamerBase_->GetCurrentMMTime().getMsec() - lastCallTime.getMsec()));
+                        continue;
+                    }
+                    lastCallTime = pDataStreamerBase_->GetCurrentMMTime();
+                    // check for new data
+                    retGetBufferSize = pDataStreamerBase_->GetBufferSize(expectedDataSize);
+                    if (retGetBufferSize != DEVICE_OK) break;
+                    if (expectedDataSize != 0) {
+                        std::unique_ptr<acquired_block> newBlock(new acquired_block);
+                        newBlock->data = pDataStreamerBase_->GetBuffer(expectedDataSize, actualDataSize, exitStatus);
+                        if (newBlock->data != 0) {
+                            newBlock->expectedSize = expectedDataSize;
+                            newBlock->actualSize = actualDataSize;
+                            acqCollection->Add(newBlock);
+                            blockCounter++;
+                        }
+                        if (exitStatus != DEVICE_OK) break;
+                    }
+                    timeSinceStart = pDataStreamerBase_->GetCurrentMMTime() - startTime;
+
+                }
+            }
+            catch (...) {
+                pDataStreamerBase_->LogMessage("Unknown acquisition thread exception.", true);
+                this->SetIsRunning(false);
+                this->SetStopFlag(false);
+                return DEVICE_ERR;
+            }
+
+            ss << "Terminating acuisition thread for the following reason: ";
+            if (this->GetStopFlag()) {
+                ss << " user selection";
+                this->SetExitStatus(DEVICE_DATASTREAMER_STOPPED_ON_USER_SELECTION);
+            }
+            else if (acqCollection->GetOverflowStatus() && pDataStreamerBase_->stopOnOverflow_) {
+                ss << "acquisition buffer overflow";
+                this->SetExitStatus(DEVICE_DATASTREAMER_STOPPED_ON_OVERFLOW);
+            }
+            else if (blockCounter >= pDataStreamerBase_->numberOfBlocks_) {
+                ss << "desired number of blocks (" << blockCounter << ") have been collected";
+                this->SetExitStatus(DEVICE_DATASTREAMER_STOPPED_ON_NBLOCKS_COLLECTED);
+            }
+            else if (timeSinceStart > MM::MMTime(pDataStreamerBase_->durationMs_*1000)) {
+                ss << "acquisition time exceeded the set limit (" << pDataStreamerBase_->durationMs_ << " milliseconds)";
+                this->SetExitStatus(DEVICE_DATASTREAMER_STOPPED_ON_TIME_ELAPSED);
+            }
+            else if (retGetBufferSize != DEVICE_OK) {
+                ss << "GetBufferSize call returned code " << retGetBufferSize;
+                this->SetExitStatus(retGetBufferSize);
+            }
+            else if (exitStatus != DEVICE_OK) {
+                ss << "GetBuffer call reported exit status " << exitStatus;
+                this->SetExitStatus(exitStatus);
+            }
+            else {
+                ss << "unknown";
+            }
+            pDataStreamerBase_->LogMessage(ss.str(), true);
+
+            this->SetIsRunning(false);
+            this->SetStopFlag(false);
+            return this->GetExitStatus();
+        }
+
+        void SetStopFlag(bool stop) {
+            MMThreadGuard g(this->stopLock_);
+            stopFlag_ = stop;
+        }
+
+        bool GetStopFlag() {
+            MMThreadGuard g(this->stopLock_);
+            return stopFlag_;
+        }
+
+        void SetIsRunning(bool isRunning) {
+            MMThreadGuard g(this->isRunningLock_);
+            isRunning_ = isRunning;
+        }
+
+        bool GetIsRunning() {
+            MMThreadGuard g(this->isRunningLock_);
+            return isRunning_;
+        }
+
+        void SetPause(bool pause) {
+            MMThreadGuard g(this->pauseLock_);
+            pause_ = pause;
+        }
+
+        bool GetPause() {
+            MMThreadGuard g(this->pauseLock_);
+            return pause_;
+        }
+
+        void SetExitStatus(int exitStatus) {
+            MMThreadGuard g(this->exitStatusLock_);
+            exitStatus_ = exitStatus;
+        }
+
+        int GetExitStatus() {
+            MMThreadGuard g(this->exitStatusLock_);
+            return exitStatus_;
+        }
+
+    };
+
+    class ProcessingThread : public MMDeviceThreadBase
+    {
+        friend class CDataStreamerBase;
+        friend class AcquiredBlockCollection;
+        friend class AcquisitionThread;
+    public:
+        ProcessingThread(CDataStreamerBase* p) : isRunning_(false)
+        {
+            pDataStreamerBase_ = p;
+        }
+        ~ProcessingThread() {}
+
+        void Start() {
+            this->SetIsRunning(true);
+            this->activate();
+        }
+
+        bool IsRunning() {
+            return this->GetIsRunning();
+        }
+
+    private:
+        CDataStreamerBase* pDataStreamerBase_;
+        bool isRunning_;
+        int exitStatus_;
+        MMThreadLock isRunningLock_;
+        MMThreadLock exitStatusLock_;
+
+        // Provide description here
+        int svc(void) throw ()
+        {
+            this->SetExitStatus(DEVICE_DATASTREAMER_BUSY_ACQUIRING);
+            int ret = DEVICE_OK;
+            AcquisitionThread* acqThr = pDataStreamerBase_->thdAcq_;
+            AcquiredBlockCollection* acqCollection = pDataStreamerBase_->acqCollection_;
+            std::stringstream ss;
+            try {
+                // give the device time to acquire data
+                Sleep(pDataStreamerBase_->updatePeriodMs_);
+                // run while the acquisition thread is active or
+                // there is unprocessed data in the circular acquisition buffer
+                while (acqThr->GetIsRunning() || acqCollection->GetSize() != 0) {
+                    if (acqCollection->GetSize() != 0) {
+                        std::unique_ptr<acquired_block> newBlock = acqCollection->Remove();
+                        ret = pDataStreamerBase_->ProcessBuffer(std::move(newBlock->data), newBlock->actualSize);
+                        if (ret != DEVICE_OK) break;
+                    }
+                    else {
+                        Sleep(pDataStreamerBase_->updatePeriodMs_);
+                    }
+                }
+            }
+            catch (...) {
+                pDataStreamerBase_->LogMessage("Unknown processing thread exception.", true);
+                this->SetIsRunning(false);
+                this->SetExitStatus(DEVICE_ERR);
+                return DEVICE_ERR;
+            }
+
+            if (ret != DEVICE_OK) {
+                ss << "ProcessBuffer call returned code " << ret;
+                pDataStreamerBase_->LogMessage(ss.str(), true);
+            }
+
+            this->SetExitStatus(ret);
+            pDataStreamerBase_->LogMessage("Terminating processing thread.", true);
+            this->SetIsRunning(false);
+            return ret;
+        }
+
+        void SetIsRunning(bool isRunning) {
+            MMThreadGuard g(this->isRunningLock_);
+            isRunning_ = isRunning;
+        }
+
+        bool GetIsRunning() {
+            MMThreadGuard g(this->isRunningLock_);
+            return isRunning_;
+        }
+
+        void SetExitStatus(int exitStatus) {
+            MMThreadGuard g(this->exitStatusLock_);
+            exitStatus_ = exitStatus;
+        }
+
+        int GetExitStatus() {
+            MMThreadGuard g(this->exitStatusLock_);
+            return exitStatus_;
+        }
+    };
+
+private:
+    unsigned numberOfBlocks_;
+    int durationMs_;
+    int updatePeriodMs_;
+    bool stopOnOverflow_;
+    bool stopFlag_;
+    bool pauseAcquisitionBeforeOverflow_;
+    AcquiredBlockCollection* acqCollection_;
+    unsigned acqCollectionCapacity_;
+    AcquisitionThread* thdAcq_;
+    ProcessingThread* thdProc_;
 };
 
 /**

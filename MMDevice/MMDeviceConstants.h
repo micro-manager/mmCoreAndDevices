@@ -78,7 +78,11 @@
 #define DEVICE_SEQUENCE_TOO_LARGE      39
 #define DEVICE_OUT_OF_MEMORY           40
 #define DEVICE_NOT_YET_IMPLEMENTED     41
-
+#define DEVICE_DATASTREAMER_BUSY_ACQUIRING     42
+#define DEVICE_DATASTREAMER_STOPPED_ON_USER_SELECTION     43
+#define DEVICE_DATASTREAMER_STOPPED_ON_OVERFLOW     44
+#define DEVICE_DATASTREAMER_STOPPED_ON_NBLOCKS_COLLECTED     45
+#define DEVICE_DATASTREAMER_STOPPED_ON_TIME_ELAPSED     46
 
 namespace MM {
    const int MaxStrLength = 1024;
@@ -216,7 +220,8 @@ namespace MM {
       MagnifierDevice,
       SLMDevice,
       HubDevice,
-      GalvoDevice
+      GalvoDevice,
+      DataStreamerDevice
    };
 
    enum PropertyType {

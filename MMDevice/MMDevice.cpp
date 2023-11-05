@@ -46,6 +46,7 @@ const DeviceType SignalIO::Type = SignalIODevice;
 const DeviceType Magnifier::Type = MagnifierDevice;
 const DeviceType SLM::Type = SLMDevice;
 const DeviceType Galvo::Type = GalvoDevice;
+const DeviceType DataStreamer::Type = DataStreamerDevice;
 const DeviceType Hub::Type = HubDevice;
 
 } // namespace MM

@@ -1171,6 +1171,61 @@ namespace MM {
    };
 
    /**
+   * DataStreamer API
+   */
+   class DataStreamer : public Device
+   {
+   public:
+       DataStreamer() {}
+       virtual ~DataStreamer() {}
+
+       // Device API
+       virtual DeviceType GetType() const { return Type; }
+       static const DeviceType Type;
+
+       // DataStreamer API
+
+       // Calls that are specific to each DataStreamer device 
+       // and should be implemented in the device adapter
+       /**
+        * To implement, tell the hardware to start streaming data, then call StartDataStreamerThreads
+        */
+       virtual int StartStream() = 0;
+       /**
+        * To implement, tell the hardware to stop streaming data, then call StopDataStreamerThreads
+        */
+       virtual int StopStream() = 0;
+       /**
+        * Get the expected size (in bytes) of the data buffer available for download from the hardware
+        */
+       virtual int GetBufferSize(unsigned& dataBufferSiize) = 0;
+       /**
+        * Receive data buffer from the hardware and place it at memory location
+        * specified by pDataBuffer; 
+        * update the size of the buffer and pass it as actualDataBufferSize
+        */
+       virtual std::unique_ptr<char[]> GetBuffer(unsigned expectedDataBufferSize, unsigned& actualDataBufferSize, int& exitCode) = 0;
+       /**
+        * Process the data buffer available at pDataBuffer
+        */
+       virtual int ProcessBuffer(std::unique_ptr<char[]>& pDataBuffer, unsigned actualDataBufferSize) = 0;
+
+       // Calls that are implemented at the DeviceBase level and
+       // remain the same for any DataStreamer device
+       virtual int SetStreamParameters(bool stopOnOverflow, bool pauseAcquisitionBeforeOverflow, int numberOfBuffers, int durationMs, int updatePeriodMs) = 0;
+       virtual int GetStreamParameters(bool& stopOnOverflow, bool& pauseAcquisitionBeforeOverflow, int& numberOfBuffers, int& durationMs, int& updatePeriodMs) = 0;
+       virtual int SetAcquisitionPause(bool pause) = 0;
+       virtual bool GetAcquisitionPause() = 0;
+       virtual bool GetOverflowStatus() = 0;
+       virtual int ResetOverflowStatus() = 0;
+       virtual bool IsStreaming() = 0;
+       virtual int GetAcquisitionExitStatus() = 0;
+       virtual int GetProcessingExitStatus() = 0;
+       virtual int SetCircularAcquisitionBufferCapacity(int capacity) = 0;
+       virtual int GetCircularAcquisitionBufferCapacity() = 0;
+   };
+   
+   /**
     * HUB device. Used for complex uber-device functionality in microscope stands
     * and managing auto-configuration (discovery) of other devices
     */

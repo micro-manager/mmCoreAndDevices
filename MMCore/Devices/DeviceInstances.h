@@ -32,4 +32,5 @@
 #include "MagnifierInstance.h"
 #include "SLMInstance.h"
 #include "GalvoInstance.h"
+#include "DataStreamerInstance.h"
 #include "HubInstance.h"

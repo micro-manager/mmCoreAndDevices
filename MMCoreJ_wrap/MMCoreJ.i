@@ -287,6 +287,11 @@
 %apply int &OUTPUT { int &y };
 %apply int &OUTPUT { int &xSize };
 %apply int &OUTPUT { int &ySize };
+%apply bool &OUTPUT { bool &stopOnOverflow };
+%apply bool &OUTPUT { bool &pauseBeforeOverflow };
+%apply int &OUTPUT { int &numberOfBlocks };
+%apply int &OUTPUT { int &durationMs };
+%apply int &OUTPUT { int &updatePeriodMs };
 
 
 // Java typemap
