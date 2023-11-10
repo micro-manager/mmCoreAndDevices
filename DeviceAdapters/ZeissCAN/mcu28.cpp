@@ -389,7 +389,7 @@ int XYStage::OnY(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       double yUm;
       pProp->Get(yUm);
-      SetPositionUm(GetCachedYUm(), yUm);
+      SetPositionUm(GetCachedXUm(), yUm);
    }
 
    return DEVICE_OK;
