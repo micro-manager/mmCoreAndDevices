@@ -46,6 +46,7 @@
 #include "ConfigGroup.h"
 #include "Configuration.h"
 #include "CoreCallback.h"
+#include "CoreFeatures.h"
 #include "CoreProperty.h"
 #include "CoreUtils.h"
 #include "DeviceManager.h"
@@ -101,7 +102,7 @@ using namespace std;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 0, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 1, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -175,6 +176,56 @@ CMMCore::~CMMCore()
    delete pPostedErrorsLock_;
 
    LOG_INFO(coreLogger_) << "Core session ended";
+}
+
+/**
+ * Enable or disable the given Core feature.
+ *
+ * Core features control whether experimental functionality (which is subject
+ * to breaking changes) is exposed, or whether stricter API usage is enforced.
+ *
+ * Currently switchable features:
+ * - "StrictInitializationChecks" (default: disabled) When enabled, an
+ *   exception is thrown when an operation requiring an initialized device is
+ *   attempted on a device that is not successfully initialized. When disabled,
+ *   no exception is thrown and a warning is logged (and the operation may
+ *   potentially cause incorrect behavior or a crash).
+ *
+ * Permanently enabled features:
+ * - None so far.
+ *
+ * Permanently disabled features:
+ * - None so far.
+ *
+ * @param name the feature name.
+ * @param enable whether to enable or disable the feature.
+ *
+ * @throws CMMError if the feature name is null or unknown, or attempting to
+ * disable a permanently enabled feature, or attempting to enable a permanently
+ * disabled feature.
+ */
+void CMMCore::enableFeature(const char* name, bool enable) throw (CMMError)
+{
+    if (name == nullptr)
+        throw CMMError("Null feature name", MMERR_NullPointerException);
+    mm::features::enableFeature(name, enable);
+}
+
+/**
+ * Return whether the given Core feature is currently enabled.
+ *
+ * See enableFeature() for the available features.
+ *
+ * @param name the feature name.
+ * @returns whether the feature is enabled.
+ *
+ * @throws CMMError if the feature name is null or unknown.
+ */
+bool CMMCore::isFeatureEnabled(const char* name) throw (CMMError)
+{
+    if (name == nullptr)
+        throw CMMError("Null feature name", MMERR_NullPointerException);
+    return mm::features::isFeatureEnabled(name);
 }
 
 /**

@@ -80,6 +80,7 @@
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Configuration.cpp" />
     <ClCompile Include="CoreCallback.cpp" />
+    <ClCompile Include="CoreFeatures.cpp" />
     <ClCompile Include="CoreProperty.cpp" />
     <ClCompile Include="DeviceManager.cpp" />
     <ClCompile Include="Devices\AutoFocusInstance.cpp" />
@@ -118,6 +119,7 @@
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="CoreCallback.h" />
+    <ClInclude Include="CoreFeatures.h" />
     <ClInclude Include="CoreProperty.h" />
     <ClInclude Include="CoreUtils.h" />
     <ClInclude Include="DeviceManager.h" />

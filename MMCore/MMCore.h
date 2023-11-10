@@ -144,6 +144,12 @@ public:
     */
    static void noop() {}
 
+   /** \name Core feature control. */
+   ///@{
+   static void enableFeature(const char* name, bool enable) throw (CMMError);
+   static bool isFeatureEnabled(const char* name) throw (CMMError);
+   ///@}
+
    /** \name Initialization and setup. */
    ///@{
    void loadDevice(const char* label, const char* moduleName,
