@@ -50,3 +50,4 @@ This is the approach recommended by the Micro-Manager team
 # Troubleshooting
 make sure you have the same version of micro-manager as you cloned from github. If the versions are different, the plugin will not be recognized.
 
+For debugging, let Visual Studio start the Micromanager executable (ImageJ.exe). Make sure to enable Debug -> Other Debug Targets -> Child Process Debug Settings -> Enable Child Process Debugging.

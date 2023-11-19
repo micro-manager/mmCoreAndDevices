@@ -17,10 +17,18 @@ public:
     }
 };
 
+
+
 /**
-* Smart pointer object to automate reference counting of PyObject* pointers
-*
-* Because the common way of the Python API to report errors is to return a null pointer, the PyObj constructor is the main point where errors raised by the Python code are captured.
+@brief A smart pointer to a Python object
+
+A PyObj wraps a PyObject* pointer in a smart pointer, taking care of automatic reference counting, GIL locking, and type conversions.
+Access to the attributes of the Python object is provided through Get, Set, and HasAttribute.
+Member functions can be called using CallMethod, and callable Python objects can be invoked using Call.
+
+Because the common way of the Python API to report errors is to return a null pointer, the PyObj constructor is the main point where errors raised by the Python code are captured.
+
+PyObj has static functions to initialize the Python interpreter and run scripts.
 */
 class PyObj {
     PyObject* p_;
@@ -70,12 +78,18 @@ public:
     }
     template <> string as<string>() const {
         PyLock lock;
-        auto retval = PyUnicode_AsUTF8(*this);
-        if (!retval) { // error
-            ReportError();
-            return string();
+        auto as_str = PyObj(PyObject_Str(*this)); // convert any object to a to Python string by calling the str() function
+        if (as_str) {
+            auto as_bytes = PyObj(PyObject_CallMethod(as_str, "encode", "s", "UTF-8"));
+            if (as_bytes) {
+                auto retval = PyBytes_AsString(as_bytes);
+                if (retval) {
+                    return retval;
+                }
+            }
         }
-        return retval;
+        ReportError();
+        return string();
     }
     template <> PyObj as<PyObj>() const {
         return *this;
@@ -98,8 +112,12 @@ public:
     }
     PyObj Call(const PyObj& arg) const noexcept {
         PyLock lock;
-        return PyObj(PyObject_CallOneArg(p_, arg));
+        return PyObj(PyObject_CallFunctionObjArgs(p_, *arg));
     }
+    //    PyObj Call(const PyObj& arg) const noexcept {
+//        PyLock lock;
+//        return PyObj(PyObject_CallOneArg(p_, arg));
+//    }
     /* for Python 3.9:
     template <class ...Args> PyObj Call(const PyObj& arg1, const Args&... args) const
     {
@@ -123,6 +141,9 @@ public:
         return PyObject_HasAttrString(p_, attribute);
     }
 
+    /**
+     * @brief Clear the reference (setting it to nullptr). If this is the last reference to the object, the object is destroyed.
+    */
     void Clear() {
         if (p_) {
             PyLock lock;
@@ -133,6 +154,10 @@ public:
     ~PyObj() {
         Clear();
     }
+
+    /**
+     * @brief Used to access the contained PyObject pointer
+    */
     operator PyObject* () const {
         return p_ ? p_ : Py_None;
     }
@@ -163,7 +188,7 @@ public:
         return PyObj(PyNumber_TrueDivide(p_, other));
     }
     /**
-    * Takes a borrowed reference and wraps it into a PyObj smart pointer
+    * Takes a borrowed reference and wraps it in a PyObj smart pointer
     * This increases the reference count of the object.
     * The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
     */
@@ -175,14 +200,24 @@ public:
         return PyObj(obj);
     }
 
+   
+    static bool InitializeInterpreter(const fs::path& python_home) noexcept;
+    static PyObj RunScript(const fs::path& script_path) noexcept;
+
     /**
     * Checks if a Python error has occurred. If so, logs the error and resets the error state.
     * Note: Python error handling is very fragile, and it is essential to check for errors after every call to a Python API function. This usually happens automatically by converting the result to a PyObj (see PyObj constructor). Failure to reset the error state after a Python exception has occurred results in very strange behavior (unrelated fake errors popping up in unrelated parts of the program) or a complete crash of the program (this happens in some cases when throwing an exception without resetting the error state first).
     
       The errors are all concatenated as a single string. Also see PythonBridge::CheckError, since this is the place where the error list is copied to the MM CoreDebug log and reported to the end user.
     */
-    static void ReportError();
+    static bool ReportError();
     static fs::path FindPython() noexcept;
     static string g_errorMessage;
+    static PyThreadState* g_threadState;
+    static PyObj g_unit_ms;
+    static PyObj g_unit_um;
+    static PyObj g_traceback_to_string;
+    static PyObj g_execute_script;
+    static fs::path g_python_home;
 };
 

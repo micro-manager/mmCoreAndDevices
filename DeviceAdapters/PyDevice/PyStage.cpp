@@ -2,10 +2,10 @@
 #include "PyStage.h"
 
 inline PyObj to_um(double value) {
-    return PyObj(value) * CPyHub::g_unit_um;
+    return PyObj(value) * PyObj::g_unit_um;
 }
 inline double from_um(const PyObj& value) {
-    return (value / CPyHub::g_unit_um).as<double>();
+    return (value / PyObj::g_unit_um).as<double>();
 }
 
 int CPyStage::Home()

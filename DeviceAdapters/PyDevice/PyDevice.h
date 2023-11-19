@@ -156,7 +156,7 @@ public:
 
 using PyHubClass = CPyDeviceTemplate<HubBase<std::monostate>>;
 class CPyHub : public PyHubClass {
-    static constexpr const char* p_PythonExecutablePath = "PythonExecutablePath";
+    static constexpr const char* p_PythonHomePath = "PythonHomePath";
     static constexpr const char* p_PythonScript = "ScriptPath";
 public:
     static constexpr const char* g_adapterName = "PyHub";
@@ -170,20 +170,14 @@ public:
 
 protected:
     int DetectInstalledDevices() override;
-    int InitializeInterpreter() noexcept;
-    int RunScript() noexcept;
 private:
     std::map<string, PyObj> devices_;
     // Global interpreter lock (GIL) for the Python interpreter. Before doing anything Python, we need to obtain the GIL
     // Note that all CPyHub's share the same interpreter
-    static PyThreadState* g_threadState;
     static fs::path g_pythonExecutabePath;
 
     // List of all Hub objects currently in existence. todo: when this number drops to 0, the Python interpreter is destroyed
     static std::map<string, CPyHub*> g_hubs;
-public:
-    static PyObj g_unit_ms;
-    static PyObj g_unit_um;
 };
 
 
