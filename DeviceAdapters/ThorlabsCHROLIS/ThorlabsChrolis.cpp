@@ -446,7 +446,7 @@ int ChrolisStateDevice::Initialize()
     // create default positions and labels
     const int bufSize = 1024;
     char buf[bufSize];
-    for (long i = 0; i < numPos_; i++)
+    for (long i = 0; i < NUM_LEDS; i++)
     {
         snprintf(buf, bufSize, "-%ld", i);
         SetPositionLabel(i, buf);
@@ -665,7 +665,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         long val; // incoming value from user
         pProp->Get(val);
-        if (val >= pow(2, numPos_) || val < 0)
+        if (val >= pow(2, NUM_LEDS) || val < 0)
         {
             LogMessage("Requested state out of bounds");
             os << currentLEDState;

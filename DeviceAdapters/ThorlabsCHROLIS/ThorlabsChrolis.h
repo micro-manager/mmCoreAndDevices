@@ -166,7 +166,7 @@ public:
     void GetName(char* pszName) const;
     bool Busy();
 
-    unsigned long GetNumberOfPositions()const { return numPos_; }
+    unsigned long GetNumberOfPositions()const { return NUM_LEDS; }
 
     // action interface
     // ----------------
@@ -178,8 +178,6 @@ public:
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-    long numPos_= 6;
-
     ViUInt16 led1Brightness_ = 0;
     ViUInt16 led2Brightness_ = 0;
     ViUInt16 led3Brightness_ = 0;
