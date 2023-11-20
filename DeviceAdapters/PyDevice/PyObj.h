@@ -80,7 +80,7 @@ public:
         PyLock lock;
         auto as_str = PyObj(PyObject_Str(*this)); // convert any object to a to Python string by calling the str() function
         if (as_str) {
-            auto as_bytes = PyObj(PyObject_CallMethod(as_str, "encode", "s", "UTF-8"));
+            auto as_bytes = PyObj(PyUnicode_AsUTF8String(as_str));
             if (as_bytes) {
                 auto retval = PyBytes_AsString(as_bytes);
                 if (retval) {
@@ -112,7 +112,8 @@ public:
     }
     PyObj Call(const PyObj& arg) const noexcept {
         PyLock lock;
-        return PyObj(PyObject_CallFunctionObjArgs(p_, *arg));
+        PyObject* arg0 = arg;
+        return PyObj(PyObject_CallFunctionObjArgs(p_, arg0, NULL));
     }
     //    PyObj Call(const PyObj& arg) const noexcept {
 //        PyLock lock;
@@ -202,7 +203,7 @@ public:
 
    
     static bool InitializeInterpreter(const fs::path& python_home) noexcept;
-    static PyObj RunScript(const fs::path& script_path) noexcept;
+    static bool RunScript(const char* code, const char* file_name, const PyObj& locals) noexcept;
 
     /**
     * Checks if a Python error has occurred. If so, logs the error and resets the error state.
@@ -211,13 +212,15 @@ public:
       The errors are all concatenated as a single string. Also see PythonBridge::CheckError, since this is the place where the error list is copied to the MM CoreDebug log and reported to the end user.
     */
     static bool ReportError();
-    static fs::path FindPython() noexcept;
     static string g_errorMessage;
     static PyThreadState* g_threadState;
     static PyObj g_unit_ms;
     static PyObj g_unit_um;
     static PyObj g_traceback_to_string;
-    static PyObj g_execute_script;
+    static PyObj g_scan_devices;
+    static PyObj g_main_module;
+    static PyObj g_global_scope;
+    static PyObj g_add_to_path;
     static fs::path g_python_home;
 };
 

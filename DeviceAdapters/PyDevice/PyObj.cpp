@@ -7,14 +7,18 @@
 PyObj PyObj::g_unit_ms;
 PyObj PyObj::g_unit_um;
 PyObj PyObj::g_traceback_to_string;
-PyObj PyObj::g_execute_script;
+PyObj PyObj::g_add_to_path;
+PyObj PyObj::g_scan_devices;
+PyObj PyObj::g_main_module;
+PyObj PyObj::g_global_scope;
+
 fs::path PyObj::g_python_home;
 PyThreadState* PyObj::g_threadState = nullptr;
 
 /**
 * Takes a new reference and wraps it into a PyObj smart pointer.
 *
-* This function does not increase the reference count of the object (also see PyObj::Borrow). The reference count is decreased when the PyObj smart pointer is destroyed (e.g. when it goes out of scope).
+* This function does not increase the reference count of the object (also see Borrow). The reference count is decreased when the PyObj smart pointer is destroyed (e.g. when it goes out of scope).
 *
 */
 PyObj::PyObj(PyObject* obj) : p_(obj) {
@@ -58,44 +62,50 @@ bool PyObj::InitializeInterpreter(const fs::path& python_home) noexcept
         // allow multi threading and store the thread state (global interpreter lock).
         // note: savethread releases the lock.
         g_threadState = PyEval_SaveThread();
-        PyObj::g_python_home = Py_GetPythonHome();
+        g_python_home = Py_GetPythonHome();
 
         // run the bootstrapping script
         const char* bootstrap;
         #include "bootstrap.py"
             
         PyLock lock;
-        auto scope = PyObj(PyDict_New()); // create a scope to execute the scripts in
-        auto test = Py_CompileString("test=1", "test.py", Py_single_input);
-        auto bootstrap_code = PyObj(Py_CompileString(&bootstrap[1], "bootstrap.py", Py_file_input));
-        auto bootstrap_result = PyObj(PyEval_EvalCode(bootstrap_code, scope, scope));
-        if (!bootstrap_result)
-            return PyObj::ReportError();
+        g_main_module = PyObj(PyImport_AddModule("__main__"));
+        g_global_scope = PyObj(PyModule_GetDict(g_main_module));
+        if (!RunScript(&bootstrap[1], "bootstrap.py", g_global_scope))
+            return false;
 
         // get the ms and um units
-        g_unit_ms = PyObj::Borrow(PyDict_GetItemString(scope, "unit_ms"));
-        g_unit_um = PyObj::Borrow(PyDict_GetItemString(scope, "unit_um"));
-        g_traceback_to_string = PyObj::Borrow(PyDict_GetItemString(scope, "traceback_to_string"));
-        g_execute_script = PyObj::Borrow(PyDict_GetItemString(scope, "execute_script"));
+        g_unit_ms = Borrow(PyDict_GetItemString(g_global_scope, "unit_ms"));
+        g_unit_um = Borrow(PyDict_GetItemString(g_global_scope, "unit_um"));
+        g_traceback_to_string = Borrow(PyDict_GetItemString(g_global_scope, "traceback_to_string"));
+        g_add_to_path = Borrow(PyDict_GetItemString(g_global_scope, "add_to_path"));
+        g_scan_devices = Borrow(PyDict_GetItemString(g_global_scope, "scan_devices"));
+        return ReportError();
     }
     else {
-        if (!python_home.empty() && python_home != PyObj::g_python_home) {
-            return ERR_PYTHON_MULTIPLE_INTERPRETERS;
-        }
+        if (!python_home.empty() && python_home != g_python_home) {
+            g_errorMessage += "A different Python interpreter was already started. "
+                "Due to limitations in the Python runtime, it is not possible to switch virtual environments. Please fix the Python library path, or leave it blank.\n"
+                "If you want to change the Python interpreter or virtual environment, you will have to restart Micro-Manager with a configuration of (none), and rebuild the configuration using the new interpreter.\n";
+            return false;
+        } else
+            return true;
     }
-    return 0;
 }
 
 /**
- * Loads the Python script and creates a device object
- * @param pythonScript path of the .py script file
- * @param pythonClass name of the Python class to create an instance of
- * @return MM return code
+ * @brief Compiles and executes the Python code
+ * @param code Python source code 
+ * @param file_name Value of __file__. Also used in tracebacks
+ * @param locals Dictionary object that holds the local variables of the script. Can be used to 'return' values from the script
+ * @return true on success, false on failure (g_errorMessage will be set)
 */
-PyObj PyObj::RunScript(const fs::path& script_path) noexcept {
+bool PyObj::RunScript(const char* code, const char* file_name, const PyObj& locals) noexcept {
     PyLock lock;
-    auto path = PyObj(script_path.generic_u8string().c_str());
-    return PyObj::g_execute_script.Call(path);
+    auto bootstrap_code = PyObj(Py_CompileString(code, file_name, Py_file_input));
+    if (!bootstrap_code)
+        return false;
+    return PyObj(PyEval_EvalCode(bootstrap_code, g_global_scope, locals)); // Py_None on success (->true), NULL on failure (->false)
 }
 
 
@@ -128,38 +138,13 @@ bool PyObj::ReportError() {
     if (value)
         msg += PyObj(value).as<string>();
 
-    if (traceback) {
-        auto trace = PyObj::g_traceback_to_string.Call(PyObj::Borrow(traceback));
-//        PyDict_SetItemString(scope, "_current_tb", traceback);
-//        auto import_result = PyObj(PyRun_String("import traceback\n", Py_file_input, scope, scope));
-//        auto trace = PyObj(PyRun_String("''.join(traceback.format_tb(_current_tb))", Py_eval_input, scope, scope));
-        msg += trace.as<string>();
-    }
+    if (traceback)
+        msg += g_traceback_to_string.Call(Borrow(traceback)).as<string>();
+
     PyErr_Restore(type, value, traceback);
     PyErr_Clear();
     g_errorMessage += msg + '\n';
     reentrant = false;
     return false;
 }
-
-
-/// Tries to locate the Python library. 
-/// If Python is already initialized, returns the path used in the previous initialization.
-/// If Python could not be found, returns an empty string
-/*fs::path PyObj::FindPython() noexcept {
-    std::string home_text;
-    std::stringstream path(getenv("PATH"));
-    while (std::getline(path, home_text, ';') && !home_text.empty()) {
-        auto home = fs::path(home_text);
-        auto home_lib1 = home.parent_path() / "lib";
-        auto home_lib2 = home / "lib";
-        if (FileExists(home / "python3.dll"))
-            return home;
-        if (FileExists(home_lib1 / "python3.dll"))
-            return home_lib1;
-        if (FileExists(home_lib2 / "python3.dll"))
-            return home_lib2;
-    }
-    return string();
-}*/
 

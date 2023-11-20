@@ -7,25 +7,11 @@ import numpy as np
 from typing import Protocol, runtime_checkable, get_origin
 import sys
 import os
+import traceback
 import astropy.units as u
 from typing import Annotated
 from enum import Enum
 from astropy.units import Quantity
-
-# When running this code in Python directly (for debugging), set up the SCRIPT_PATH
-# Normally, this is done by the c++ code
-if 'SCRIPT_PATH' not in locals():
-    SCRIPT_PATH = os.path.join(os.path.dirname(__file__), 'test.py')
-    DEBUGGING = True
-else:
-    DEBUGGING = False
-
-# Load and execute the script file. This script is expected to set up a dictionary object with the name 'devices',
-# which holds name -> device pairs for all devices we want to expose in MM.
-# The SCRIPT_PATH is inserted as the first entry of the sys.path.
-sys.path.insert(0, os.path.dirname(SCRIPT_PATH))
-with open(SCRIPT_PATH) as code:
-    exec(code.read())
 
 @runtime_checkable
 class Camera(Protocol):
@@ -171,8 +157,19 @@ def set_metadata(obj):
 unit_ms = u.ms
 unit_um = u.um
 
-for d in devices.values():
-    set_metadata(d)
-    if DEBUGGING:
-        print(d._MM_properties)
+
+def scan_devices(devices):
+    # Scans the device dictionary and inserts metadata for each item
+    for d in devices.values():
+        set_metadata(d)    
+    return devices
+
+
+def traceback_to_string(tb):
+    return ''.join(traceback.format_tb(_current_tb))
+
+def add_to_path(directory):
+    if not directory in sys.path:
+        sys.path.insert(0, directory)
+
 # )raw";

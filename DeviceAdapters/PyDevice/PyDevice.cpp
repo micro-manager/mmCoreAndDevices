@@ -32,10 +32,7 @@ int CPyDeviceBase::CheckError() noexcept {
 }
 
 CPyHub::CPyHub() : PyHubClass(g_adapterName) {
-    SetErrorText(ERR_PYTHON_NOT_FOUND, "Could not initialize Python interpreter, perhaps an incorrect path was specified?");
-    SetErrorText(ERR_PYTHON_MULTIPLE_INTERPRETERS, "A different Python interpreter was already started. Due to limitations in the Python runtime, it is not possible to switch interpeters or virtual environments. Please fix the Python library path, or leave it blank.\n"
-    "If you want to change the Python interpreter or virtual environment, you will have to restart Micro-Manager with a configuration of (none), and rebuild the configuration using the new interpreter.\n"
-    "Alternatively, you can edit the .cfg file manually with a text editor.");
+    SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the Python script.");
     CreateStringProperty(p_PythonScript, "", false, nullptr, true);
     CreateStringProperty(p_PythonHomePath, "", false, nullptr, true);
 }
@@ -70,14 +67,18 @@ int CPyHub::DetectInstalledDevices() {
 */
 int CPyHub::Initialize() {
     if (!initialized_) {
-        char pythonExecutablePath[MM::MaxStrLength] = { 0 };
+        //
+        // Read path to the Python script, and optional path to the Python home directory (virtual environment)
+        // If the Python script is not found, a dialog box is shown so that the user can select a file.
+        //
+        char pythonHomePath[MM::MaxStrLength] = { 0 };
         char scriptPathString[MM::MaxStrLength] = { 0 };
-        _check_(GetProperty(p_PythonHomePath, pythonExecutablePath));
+        _check_(GetProperty(p_PythonHomePath, pythonHomePath));
         _check_(GetProperty(p_PythonScript, scriptPathString));
 
         fs::path scriptPath(scriptPathString);
         #ifdef _WIN32
-        while (!FileExists(scriptPath)) {
+        if (!FileExists(scriptPath)) {
             OPENFILENAMEA options = { 0 };
             char file_name[MAX_PATH] = { 0 };
             strncpy_s(file_name, scriptPath.generic_string().c_str(), MAX_PATH - 1);
@@ -87,21 +88,41 @@ int CPyHub::Initialize() {
             options.lpstrTitle = "Select Python file that includes the `devices` dictionary";
             options.nMaxFile = MAX_PATH;
 
-            if (!GetOpenFileNameA(&options))
-                return ERR_PYTHON_NOT_FOUND;
-
-            scriptPath = options.lpstrFile;
-            _check_(SetProperty(p_PythonScript, scriptPath.generic_string().c_str()));
+            if (GetOpenFileNameA(&options)) {
+                _check_(SetProperty(p_PythonScript, scriptPath.generic_string().c_str()));
+               scriptPath = options.lpstrFile;
+            }            
         }
         #endif
 
-        PyObj::InitializeInterpreter(pythonExecutablePath);
-        auto variables = PyObj::RunScript(scriptPathString);
+        // load the python script from disk
+        auto stream = std::ifstream(scriptPath);
+        if (!stream)
+            return ERR_PYTHON_SCRIPT_NOT_FOUND; 
+
+        auto code = std::string();
+        char buffer[1024];
+        while (stream.read(buffer, sizeof(buffer))) {
+            code.append(buffer, 0, stream.gcount());
+        }
+        code.append(buffer, 0, stream.gcount());
+
         id_ = scriptPath.filename().generic_string();
 
-        // read the 'devices' field, which must be a dictionary of label->device
-        PyLock lock; // so that we can call bare Python API functions
-        auto deviceDict = PyObj(PyDict_Items(PyObj::Borrow(PyDict_GetItemString(variables, "devices"))));
+        if (!PyObj::InitializeInterpreter(pythonHomePath))
+            return CheckError(); // initializing the interpreter failed, abort initialization and report the error
+
+        // execute the Python script, and read the 'devices' field,
+        // which must be a dictionary of {label: device}
+        PyLock lock; // lock, so that we can call bare Python API functions
+        auto locals = PyObj(PyDict_New());
+        PyObj::g_add_to_path.Call(PyObj(scriptPath.parent_path().generic_u8string().c_str()));
+        if (!PyObj::RunScript(code.c_str(), id_.c_str(), locals))
+            return CheckError();
+
+        auto deviceDict = PyObj::Borrow(PyDict_GetItemString(locals, "devices"));
+        if (!deviceDict)
+            return ERR_PYTHON_SCRIPT_NOT_FOUND; // todo: replace by proper error message, no 'devices' dictionary found
         auto device_count = PyList_Size(deviceDict);
         for (Py_ssize_t i = 0; i < device_count; i++) {
             auto key_value = PyObj::Borrow(PyList_GetItem(deviceDict, i));
