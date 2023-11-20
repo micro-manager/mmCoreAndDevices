@@ -33,8 +33,10 @@ int CPyDeviceBase::CheckError() noexcept {
 
 CPyHub::CPyHub() : PyHubClass(g_adapterName) {
     SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the Python script.");
-    CreateStringProperty(p_PythonScript, "", false, nullptr, true);
-    CreateStringProperty(p_PythonHomePath, "", false, nullptr, true);
+    SetErrorText(ERR_PYTHON_NO_DEVICE_DICT, "Script did not generate a global `device` variable holding a dictionary.");
+    
+    CreateStringProperty(p_PythonScriptPath, "", false, nullptr, true);
+    CreateStringProperty(p_PythonModulePath, "", false, nullptr, true);
 }
 
 
@@ -71,10 +73,10 @@ int CPyHub::Initialize() {
         // Read path to the Python script, and optional path to the Python home directory (virtual environment)
         // If the Python script is not found, a dialog box is shown so that the user can select a file.
         //
-        char pythonHomePath[MM::MaxStrLength] = { 0 };
+        char modulePathString[MM::MaxStrLength] = { 0 };
         char scriptPathString[MM::MaxStrLength] = { 0 };
-        _check_(GetProperty(p_PythonHomePath, pythonHomePath));
-        _check_(GetProperty(p_PythonScript, scriptPathString));
+        _check_(GetProperty(p_PythonModulePath, modulePathString));
+        _check_(GetProperty(p_PythonScriptPath, scriptPathString));
 
         fs::path scriptPath(scriptPathString);
         #ifdef _WIN32
@@ -89,7 +91,7 @@ int CPyHub::Initialize() {
             options.nMaxFile = MAX_PATH;
 
             if (GetOpenFileNameA(&options)) {
-                _check_(SetProperty(p_PythonScript, scriptPath.generic_string().c_str()));
+                _check_(SetProperty(p_PythonScriptPath, scriptPath.generic_string().c_str()));
                scriptPath = options.lpstrFile;
             }            
         }
@@ -109,7 +111,7 @@ int CPyHub::Initialize() {
 
         id_ = scriptPath.filename().generic_string();
 
-        if (!PyObj::InitializeInterpreter(pythonHomePath))
+        if (!PyObj::InitializeInterpreter(modulePathString))
             return CheckError(); // initializing the interpreter failed, abort initialization and report the error
 
         // execute the Python script, and read the 'devices' field,
@@ -122,10 +124,16 @@ int CPyHub::Initialize() {
 
         auto deviceDict = PyObj::Borrow(PyDict_GetItemString(locals, "devices"));
         if (!deviceDict)
-            return ERR_PYTHON_SCRIPT_NOT_FOUND; // todo: replace by proper error message, no 'devices' dictionary found
-        auto device_count = PyList_Size(deviceDict);
+            return ERR_PYTHON_NO_DEVICE_DICT;
+        
+        // process device list and add metadata
+        auto deviceList = PyObj(PyDict_Items(PyObj::g_scan_devices.Call(deviceDict)));
+        if (!deviceList)
+            return CheckError();
+
+        auto device_count = PyList_Size(deviceList);
         for (Py_ssize_t i = 0; i < device_count; i++) {
-            auto key_value = PyObj::Borrow(PyList_GetItem(deviceDict, i));
+            auto key_value = PyObj::Borrow(PyList_GetItem(deviceList, i));
             auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
             auto obj = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
             auto type = obj.Get("_MM_dtype").as<string>();

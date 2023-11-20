@@ -202,7 +202,7 @@ public:
     }
 
    
-    static bool InitializeInterpreter(const fs::path& python_home) noexcept;
+    static bool InitializeInterpreter(const fs::path& module_path) noexcept;
     static bool RunScript(const char* code, const char* file_name, const PyObj& locals) noexcept;
 
     /**
@@ -221,6 +221,5 @@ public:
     static PyObj g_main_module;
     static PyObj g_global_scope;
     static PyObj g_add_to_path;
-    static fs::path g_python_home;
 };
 

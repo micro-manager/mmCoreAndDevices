@@ -11,8 +11,6 @@ PyObj PyObj::g_add_to_path;
 PyObj PyObj::g_scan_devices;
 PyObj PyObj::g_main_module;
 PyObj PyObj::g_global_scope;
-
-fs::path PyObj::g_python_home;
 PyThreadState* PyObj::g_threadState = nullptr;
 
 /**
@@ -35,62 +33,52 @@ string PyObj::g_errorMessage;
 
 If the interpreter is already initialized, this function checks if venv is either empty, or equal to the previously passed venv path. If not, anerror is reported. We cannot run multiple interpreters at once. Unfortunately, we cannot de - initialize one interpreter and start a new one. Thiswould require calling Py_FinalizeEx, and then Py_Initialize again.Unfortunatly, by the Python docs(https://docs.python.org/3/c-apiinit.html#c.Py_FinalizeEx), some extension modules(apparanetly including numpy) may not support this behavior, making Py_Finalize followed by Py_Initialize completely undefined behavior, and weird numpy - related crashes were seen when trying it.
 */
-bool PyObj::InitializeInterpreter(const fs::path& python_home) noexcept
+bool PyObj::InitializeInterpreter(const fs::path& module_path) noexcept
 {
     // Initilialize Python interpreter, if not already done
-    auto path = python_home;
-    if (g_threadState == nullptr) {
-        if (path.empty()) {
-            // get from env variable
-            auto env_path = getenv("PYTHONPATH");
-            if (env_path && env_path[0] != 0) {
-                path = env_path;
-            }
-            else {
-                // fallback: use python3.dll location
-                HMODULE hModule = GetModuleHandle(L"python3.dll");
-                TCHAR dllPath[_MAX_PATH];
-                GetModuleFileName(hModule, dllPath, _MAX_PATH);
-                path = fs::path(dllPath).parent_path();
-            }      
-        }
-        Py_SetPythonHome(path.generic_wstring().c_str());
-
-        Py_InitializeEx(0);
-        _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
-
-        // allow multi threading and store the thread state (global interpreter lock).
-        // note: savethread releases the lock.
-        g_threadState = PyEval_SaveThread();
-        g_python_home = Py_GetPythonHome();
-
-        // run the bootstrapping script
-        const char* bootstrap;
-        #include "bootstrap.py"
-            
-        PyLock lock;
-        g_main_module = PyObj(PyImport_AddModule("__main__"));
-        g_global_scope = PyObj(PyModule_GetDict(g_main_module));
-        if (!RunScript(&bootstrap[1], "bootstrap.py", g_global_scope))
-            return false;
-
-        // get the ms and um units
-        g_unit_ms = Borrow(PyDict_GetItemString(g_global_scope, "unit_ms"));
-        g_unit_um = Borrow(PyDict_GetItemString(g_global_scope, "unit_um"));
-        g_traceback_to_string = Borrow(PyDict_GetItemString(g_global_scope, "traceback_to_string"));
-        g_add_to_path = Borrow(PyDict_GetItemString(g_global_scope, "add_to_path"));
-        g_scan_devices = Borrow(PyDict_GetItemString(g_global_scope, "scan_devices"));
-        return ReportError();
+    if (g_threadState != nullptr)
+        return true;
+    
+    auto path = fs::path();// python_home;
+    auto env_path = getenv("PYTHONPATH");
+    if (env_path && env_path[0] != 0) {
+        path = env_path;
     }
     else {
-        if (!python_home.empty() && python_home != g_python_home) {
-            g_errorMessage += "A different Python interpreter was already started. "
-                "Due to limitations in the Python runtime, it is not possible to switch virtual environments. Please fix the Python library path, or leave it blank.\n"
-                "If you want to change the Python interpreter or virtual environment, you will have to restart Micro-Manager with a configuration of (none), and rebuild the configuration using the new interpreter.\n";
-            return false;
-        } else
-            return true;
+        // fallback: use python3.dll location
+        HMODULE hModule = GetModuleHandle(L"python3.dll");
+        TCHAR dllPath[_MAX_PATH];
+        GetModuleFileName(hModule, dllPath, _MAX_PATH);
+        path = fs::path(dllPath).parent_path();
     }
+    Py_SetPythonHome(path.generic_wstring().c_str());
+
+    Py_InitializeEx(0);
+    _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
+
+    // allow multi threading and store the thread state (global interpreter lock).
+    // note: savethread releases the lock.
+    g_threadState = PyEval_SaveThread();
+
+    // run the bootstrapping script
+    const char* bootstrap;
+    #include "bootstrap.py"
+            
+    PyLock lock;
+    g_main_module = PyObj(PyImport_AddModule("__main__"));
+    g_global_scope = PyObj(PyModule_GetDict(g_main_module));
+
+    if (!RunScript(&bootstrap[1], "bootstrap.py", g_global_scope))
+        return false;
+
+    // get the ms and um units
+    g_unit_ms = Borrow(PyDict_GetItemString(g_global_scope, "unit_ms"));
+    g_unit_um = Borrow(PyDict_GetItemString(g_global_scope, "unit_um"));
+    g_traceback_to_string = Borrow(PyDict_GetItemString(g_global_scope, "traceback_to_string"));
+    g_add_to_path = Borrow(PyDict_GetItemString(g_global_scope, "add_to_path"));
+    g_scan_devices = Borrow(PyDict_GetItemString(g_global_scope, "scan_devices"));
+    g_add_to_path.Call(PyObj(module_path.generic_u8string().c_str()));
+    return ReportError();
 }
 
 /**

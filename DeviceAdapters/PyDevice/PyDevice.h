@@ -156,8 +156,8 @@ public:
 
 using PyHubClass = CPyDeviceTemplate<HubBase<std::monostate>>;
 class CPyHub : public PyHubClass {
-    static constexpr const char* p_PythonHomePath = "PythonHomePath";
-    static constexpr const char* p_PythonScript = "ScriptPath";
+    static constexpr const char* p_PythonScriptPath = "ScriptPath";
+    static constexpr const char* p_PythonModulePath = "ModulePath";
 public:
     static constexpr const char* g_adapterName = "PyHub";
     CPyHub();
