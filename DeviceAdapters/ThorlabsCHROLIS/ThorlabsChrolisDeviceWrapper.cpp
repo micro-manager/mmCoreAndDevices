@@ -95,7 +95,7 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
     }
     deviceConnected_ = true;
 
-    for (int i = 0; i < numLEDs_; i++)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
         err = TL6WL_readLED_HeadPeakWL(deviceHandle_, i+1, &ledWavelengths_[i]);
         if (err != 0)
@@ -187,13 +187,13 @@ int ThorlabsChrolisDeviceWrapper::GetShutterState(bool& open)
     return DEVICE_OK;
 }
 
-int ThorlabsChrolisDeviceWrapper::GetLEDWavelengths(ViUInt16(&wavelengths)[6])
+int ThorlabsChrolisDeviceWrapper::GetLEDWavelengths(ViUInt16(&wavelengths)[ThorlabsChrolisDeviceWrapper::NUM_LEDS])
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
 
     if (!deviceConnected_)
     {
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < NUM_LEDS; i++)
         {
             wavelengths[i] = 0;
         }
@@ -213,7 +213,7 @@ int ThorlabsChrolisDeviceWrapper::GetSingleLEDEnableState(int led, ViBoolean& st
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
 
-    if (led < numLEDs_ && led >= 0)
+    if (led < NUM_LEDS && led >= 0)
     {
         if (!deviceConnected_)
         {
@@ -235,13 +235,13 @@ int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(ViBoolean(&states)[6])
 
     if (!deviceConnected_)
     {
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < NUM_LEDS; i++)
         {
             states[i] = false;
         }
         return ERR_CHROLIS_NOT_AVAIL;
     }
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
         states[i] = savedEnabledStates_[i];
     }
@@ -276,7 +276,7 @@ int ThorlabsChrolisDeviceWrapper::GetSingleLEDBrightnessState(int led, ViUInt16&
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
 
-    if (led < numLEDs_ && led >= 0)
+    if (led < NUM_LEDS && led >= 0)
     {
         if (!deviceConnected_)
         {
@@ -298,13 +298,13 @@ int ThorlabsChrolisDeviceWrapper::GetLEDBrightnessStates(ViUInt16(&states)[6])
 
     if (!deviceConnected_)
     {
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < NUM_LEDS; i++)
         {
             states[i] = 0;
         }
         return ERR_CHROLIS_NOT_AVAIL;
     }
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
         states[i] = savedBrightnessStates_[i];
     }
@@ -341,14 +341,14 @@ int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)
     std::lock_guard<std::mutex> lock(instanceMutex_);
     if (!open)
     {
-        ViBoolean tempEnableStates[6];
+        ViBoolean tempEnableStates[NUM_LEDS];
         err = TL6WL_setLED_HeadPowerStates(deviceHandle_, false, false, false, false, false, false);
         if (err != 0)
         {
             return err;
         }
         err = TL6WL_getLED_HeadPowerStates(deviceHandle_, &tempEnableStates[0], &tempEnableStates[1], &tempEnableStates[2], &tempEnableStates[3], &tempEnableStates[4], &tempEnableStates[5]);
-        for (int i = 0; i < numLEDs_; i++)
+        for (int i = 0; i < NUM_LEDS; i++)
         {
             if (tempEnableStates[i])
             {
@@ -379,7 +379,7 @@ int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)
 
 int ThorlabsChrolisDeviceWrapper::SetSingleLEDEnableState(int LED, ViBoolean state)
 {
-    if (LED < numLEDs_ && LED >= 0)
+    if (LED < NUM_LEDS && LED >= 0)
     {
         std::lock_guard<std::mutex> lock(instanceMutex_);
 
@@ -422,7 +422,7 @@ int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(ViBoolean states[6])
     }
 
     int err = 0;
-    for (int i = 0; i < numLEDs_; i++)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
         savedEnabledStates_[i] = states[i];
     }
@@ -446,7 +446,7 @@ int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(ViBoolean states[6])
 
 int ThorlabsChrolisDeviceWrapper::SetSingleLEDBrightnessState(int LED, ViUInt16 state)
 {
-    if (LED < 6 && LED >= 0)
+    if (LED < NUM_LEDS && LED >= 0)
     {
         std::lock_guard<std::mutex> lock(instanceMutex_);
 
@@ -486,7 +486,7 @@ int ThorlabsChrolisDeviceWrapper::SetLEDBrightnessStates(ViUInt16 states[6])
     }
 
     int i;
-    for (i = 0; i < numLEDs_; i++)
+    for (i = 0; i < NUM_LEDS; i++)
     {
         savedBrightnessStates_[i] = states[i];
     }
@@ -521,13 +521,13 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDStates()
     }
 
     bool stateCorrect = true;
-    ViUInt16 tempPowerStates[6] = {0,0,0,0,0,0};
-    ViBoolean tempEnableStates[6] = { false, false, false, false, false, false };
+    ViUInt16 tempPowerStates[NUM_LEDS]{};
+    ViBoolean tempEnableStates[NUM_LEDS]{};
 
     TL6WL_getLED_HeadPowerStates(deviceHandle_, &tempEnableStates[0], &tempEnableStates[1], &tempEnableStates[2], &tempEnableStates[3], &tempEnableStates[4], &tempEnableStates[5]);
     TL6WL_getLED_HeadBrightness(deviceHandle_, &tempPowerStates[0], &tempPowerStates[1], &tempPowerStates[2], &tempPowerStates[3], &tempPowerStates[4], &tempPowerStates[5]);
 
-    for (int i = 0; i < numLEDs_; i++)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
         if (tempEnableStates[i] != savedEnabledStates_[i] || tempPowerStates[i] != savedBrightnessStates_[i])
         {
@@ -548,11 +548,11 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDEnableStates()
     }
 
     bool stateCorrect = true;
-    ViBoolean tempEnableStates[6] = { false, false, false, false, false, false };
+    ViBoolean tempEnableStates[NUM_LEDS]{};
 
     TL6WL_getLED_HeadPowerStates(deviceHandle_, &tempEnableStates[0], &tempEnableStates[1], &tempEnableStates[2], &tempEnableStates[3], &tempEnableStates[4], &tempEnableStates[5]);
 
-    for (int i = 0; i < numLEDs_; i++)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
         if (tempEnableStates[i] != savedEnabledStates_[i])
         {
@@ -572,11 +572,11 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDPowerStates()
     }
 
     bool stateCorrect = true;
-    ViUInt16 tempPowerStates[6] = { 0,0,0,0,0,0 };
+    ViUInt16 tempPowerStates[NUM_LEDS]{};
 
     TL6WL_getLED_HeadBrightness(deviceHandle_, &tempPowerStates[0], &tempPowerStates[1], &tempPowerStates[2], &tempPowerStates[3], &tempPowerStates[4], &tempPowerStates[5]);
 
-    for (int i = 0; i < numLEDs_; i++)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
         if (tempPowerStates[i] != savedBrightnessStates_[i])
         {

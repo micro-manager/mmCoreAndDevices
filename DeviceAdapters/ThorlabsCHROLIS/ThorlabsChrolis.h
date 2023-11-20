@@ -80,7 +80,7 @@ public:
     bool VerifyLEDEnableStatesWithLock();
 
 private:
-    int numLEDs_ = 6;
+    static constexpr int NUM_LEDS = 6;
     std::vector<std::string> serialNumberList_;
     std::mutex instanceMutex_;
     bool deviceConnected_ = false;
@@ -90,9 +90,9 @@ private:
     ViChar serialNumber_[TL6WL_LONG_STRING_SIZE] = "";
     ViChar manufacturerName_[TL6WL_LONG_STRING_SIZE] = "";
     bool masterSwitchState_ = false;
-    ViBoolean savedEnabledStates_[6]{ false,false,false,false,false,false };
-    ViUInt16 savedBrightnessStates_[6]{ 0,0,0,0,0,0 };
-    ViUInt16 ledWavelengths_[6]{ 0,0,0,0,0,0 };
+    ViBoolean savedEnabledStates_[NUM_LEDS]{};
+    ViUInt16 savedBrightnessStates_[NUM_LEDS]{};
+    ViUInt16 ledWavelengths_[NUM_LEDS]{};
 
     bool VerifyLEDStates();
     bool VerifyLEDPowerStates();
