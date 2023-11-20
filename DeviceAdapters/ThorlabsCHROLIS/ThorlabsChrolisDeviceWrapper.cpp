@@ -187,24 +187,16 @@ int ThorlabsChrolisDeviceWrapper::GetShutterState(bool& open)
     return DEVICE_OK;
 }
 
-int ThorlabsChrolisDeviceWrapper::GetLEDWavelengths(ViUInt16(&wavelengths)[ThorlabsChrolisDeviceWrapper::NUM_LEDS])
+int ThorlabsChrolisDeviceWrapper::GetLEDWavelengths(std::array<ViUInt16, NUM_LEDS> &wavelengths)
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
 
     if (!deviceConnected_)
     {
-        for (int i = 0; i < NUM_LEDS; i++)
-        {
-            wavelengths[i] = 0;
-        }
+        wavelengths.fill(false);
         return ERR_CHROLIS_NOT_AVAIL;
     }
-    wavelengths[0] = ledWavelengths_[0];
-    wavelengths[1] = ledWavelengths_[1];
-    wavelengths[2] = ledWavelengths_[2];
-    wavelengths[3] = ledWavelengths_[3];
-    wavelengths[4] = ledWavelengths_[4];
-    wavelengths[5] = ledWavelengths_[5];
+    wavelengths = ledWavelengths_;
 
     return DEVICE_OK;
 }
@@ -229,22 +221,16 @@ int ThorlabsChrolisDeviceWrapper::GetSingleLEDEnableState(int led, ViBoolean& st
     return DEVICE_OK;
 }
 
-int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(ViBoolean(&states)[6])
+int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(std::array<ViBoolean, NUM_LEDS> &states)
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
 
     if (!deviceConnected_)
     {
-        for (int i = 0; i < NUM_LEDS; i++)
-        {
-            states[i] = false;
-        }
+        states.fill(false);
         return ERR_CHROLIS_NOT_AVAIL;
     }
-    for (int i = 0; i < NUM_LEDS; i++)
-    {
-        states[i] = savedEnabledStates_[i];
-    }
+	states = savedEnabledStates_;
     return DEVICE_OK;
 }
 
@@ -292,22 +278,16 @@ int ThorlabsChrolisDeviceWrapper::GetSingleLEDBrightnessState(int led, ViUInt16&
     return DEVICE_OK;
 }
 
-int ThorlabsChrolisDeviceWrapper::GetLEDBrightnessStates(ViUInt16(&states)[6])
+int ThorlabsChrolisDeviceWrapper::GetLEDBrightnessStates(std::array<ViUInt16, NUM_LEDS> &states)
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
 
     if (!deviceConnected_)
     {
-        for (int i = 0; i < NUM_LEDS; i++)
-        {
-            states[i] = 0;
-        }
+        states.fill(0);
         return ERR_CHROLIS_NOT_AVAIL;
     }
-    for (int i = 0; i < NUM_LEDS; i++)
-    {
-        states[i] = savedBrightnessStates_[i];
-    }
+    states = savedBrightnessStates_;
     return DEVICE_OK;
 }
 
@@ -412,7 +392,7 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDEnableState(int LED, ViBoolean sta
     }
 }
 
-int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(ViBoolean states[6])
+int ThorlabsChrolisDeviceWrapper::SetLEDEnableStates(std::array<ViBoolean, NUM_LEDS> states)
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
 
@@ -476,7 +456,7 @@ int ThorlabsChrolisDeviceWrapper::SetSingleLEDBrightnessState(int LED, ViUInt16 
     }
 }
 
-int ThorlabsChrolisDeviceWrapper::SetLEDBrightnessStates(ViUInt16 states[6])
+int ThorlabsChrolisDeviceWrapper::SetLEDBrightnessStates(std::array<ViUInt16, NUM_LEDS> states)
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
 

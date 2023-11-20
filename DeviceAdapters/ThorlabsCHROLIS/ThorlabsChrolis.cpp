@@ -108,7 +108,7 @@ int ChrolisHub::Initialize()
     }
 
     std::string wavelengthList = "";
-    ViUInt16 wavelengths[6];
+    std::array<ViUInt16, NUM_LEDS> wavelengths;
     err = ChrolisDevice.GetLEDWavelengths(wavelengths);
     if (err != 0)
     {
@@ -176,7 +176,6 @@ void ChrolisHub::StatusChangedPollingThread()
 {
     ViUInt32 tempStatus = 0;
     std::string message;
-    ViBoolean tempEnableStates[6];
     while (threadRunning_.load())
     {
         if (ChrolisDevice.IsDeviceConnected())
@@ -259,9 +258,9 @@ void ChrolisHub::StatusChangedPollingThread()
             {
                 if (curStatus != 0)
                 {
+                    std::array<ViBoolean, NUM_LEDS> tempEnableStates{};
                     ChrolisDevice.VerifyLEDEnableStatesWithLock();
-                    if (ChrolisDevice.GetLEDEnableStates(tempEnableStates[0],
-                        tempEnableStates[1], tempEnableStates[2], tempEnableStates[3], tempEnableStates[4], tempEnableStates[5]) != 0)
+                    if (ChrolisDevice.GetLEDEnableStates(tempEnableStates) != 0)
                     {
                         LogMessage("Error getting info from chrolis");
                     }
@@ -674,7 +673,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ERR_PARAM_NOT_VALID;
         }
 
-        ViBoolean newStates[6]
+        std::array<ViBoolean, NUM_LEDS> newStates
         {
             static_cast<bool>(val & (1 << 0)),
             static_cast<bool>(val & (1 << 1)),

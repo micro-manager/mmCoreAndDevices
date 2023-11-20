@@ -1,11 +1,14 @@
 #pragma once
-#include<thread>
-#include <TL6WL.h>
-#include <atomic>
-#include <vector>
-#include<mutex>
+
 #include "DeviceBase.h"
+#include <TL6WL.h>
+
+#include <array>
+#include <atomic>
 #include <functional>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 #define  CHROLIS_HUB_NAME  "CHROLIS"
 #define  CHROLIS_SHUTTER_NAME  "CHROLIS_Shutter"
@@ -25,6 +28,8 @@
 #define ERR_INSUF_INFO          -1073807343
 #define ERR_UNKOWN_HW_STATE     -1073676421
 #define ERR_VAL_OVERFLOW        -1073481985
+
+constexpr int NUM_LEDS = 6;
 
 static std::map<int, std::string> ErrorMessages()
 {
@@ -62,25 +67,24 @@ public:
     int GetSerialNumber(ViChar* serialNumber);
     int GetManufacturerName(ViChar* manfName);
     int GetDeviceStatus(ViUInt32& status);
-    int GetLEDWavelengths(ViUInt16(&wavelengths)[6]);
+    int GetLEDWavelengths(std::array<ViUInt16, NUM_LEDS> &wavelengths);
     int GetShutterState(bool& open);
     int GetSingleLEDEnableState(int led, ViBoolean& state);
-    int GetLEDEnableStates(ViBoolean(&states)[6]);
+    int GetLEDEnableStates(std::array<ViBoolean, NUM_LEDS> &states);
     int GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State);
     int GetSingleLEDBrightnessState(int led, ViUInt16& state);
-    int GetLEDBrightnessStates(ViUInt16(&states)[6]);
+    int GetLEDBrightnessStates(std::array<ViUInt16, NUM_LEDS> &states);
     int GetLEDBrightnessStates(ViUInt16& led1Brightness, ViUInt16& led2Brightness, ViUInt16& led3Brightness, ViUInt16& led4Brightness, ViUInt16& led5Brightness, ViUInt16& led6Brightness);
 
     int SetShutterState(bool open);
-    int SetLEDEnableStates(ViBoolean states[6]);
+    int SetLEDEnableStates(std::array<ViBoolean, NUM_LEDS> states);
     int SetSingleLEDEnableState(int LED, ViBoolean state);
-    int SetLEDBrightnessStates(ViUInt16 states[6]);
+    int SetLEDBrightnessStates(std::array<ViUInt16, NUM_LEDS> states);
     int SetSingleLEDBrightnessState(int LED, ViUInt16 state);
 
     bool VerifyLEDEnableStatesWithLock();
 
 private:
-    static constexpr int NUM_LEDS = 6;
     std::vector<std::string> serialNumberList_;
     std::mutex instanceMutex_;
     bool deviceConnected_ = false;
@@ -90,9 +94,9 @@ private:
     ViChar serialNumber_[TL6WL_LONG_STRING_SIZE] = "";
     ViChar manufacturerName_[TL6WL_LONG_STRING_SIZE] = "";
     bool masterSwitchState_ = false;
-    ViBoolean savedEnabledStates_[NUM_LEDS]{};
-    ViUInt16 savedBrightnessStates_[NUM_LEDS]{};
-    ViUInt16 ledWavelengths_[NUM_LEDS]{};
+    std::array<ViBoolean, NUM_LEDS> savedEnabledStates_{};
+    std::array<ViUInt16, NUM_LEDS> savedBrightnessStates_{};
+    std::array<ViUInt16, NUM_LEDS> ledWavelengths_{};
 
     bool VerifyLEDStates();
     bool VerifyLEDPowerStates();
