@@ -321,7 +321,7 @@ int ThorlabsChrolisDeviceWrapper::SetShutterState(bool open)
     std::lock_guard<std::mutex> lock(instanceMutex_);
     if (!open)
     {
-        ViBoolean tempEnableStates[NUM_LEDS];
+        std::array<ViBoolean, NUM_LEDS> tempEnableStates;
         err = TL6WL_setLED_HeadPowerStates(deviceHandle_, false, false, false, false, false, false);
         if (err != 0)
         {
@@ -500,23 +500,16 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDStates()
         return false;
     }
 
-    bool stateCorrect = true;
-    ViUInt16 tempPowerStates[NUM_LEDS]{};
-    ViBoolean tempEnableStates[NUM_LEDS]{};
+    std::array<ViUInt16, NUM_LEDS> tempPowerStates{};
+    std::array<ViBoolean , NUM_LEDS>tempEnableStates{};
 
     TL6WL_getLED_HeadPowerStates(deviceHandle_, &tempEnableStates[0], &tempEnableStates[1], &tempEnableStates[2], &tempEnableStates[3], &tempEnableStates[4], &tempEnableStates[5]);
     TL6WL_getLED_HeadBrightness(deviceHandle_, &tempPowerStates[0], &tempPowerStates[1], &tempPowerStates[2], &tempPowerStates[3], &tempPowerStates[4], &tempPowerStates[5]);
 
-    for (int i = 0; i < NUM_LEDS; i++)
-    {
-        if (tempEnableStates[i] != savedEnabledStates_[i] || tempPowerStates[i] != savedBrightnessStates_[i])
-        {
-            stateCorrect = false;
-            savedEnabledStates_[i] = tempEnableStates[i];
-            savedBrightnessStates_[i] = tempPowerStates[i];
-        }
-    }
-
+    bool stateCorrect = (tempEnableStates == savedEnabledStates_ &&
+        tempPowerStates == savedBrightnessStates_);
+    savedEnabledStates_ = tempEnableStates;
+    savedBrightnessStates_ = tempPowerStates;
     return stateCorrect;
 }
 
@@ -527,20 +520,12 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDEnableStates()
         return false;
     }
 
-    bool stateCorrect = true;
-    ViBoolean tempEnableStates[NUM_LEDS]{};
+    std::array<ViBoolean, NUM_LEDS> tempEnableStates{};
 
     TL6WL_getLED_HeadPowerStates(deviceHandle_, &tempEnableStates[0], &tempEnableStates[1], &tempEnableStates[2], &tempEnableStates[3], &tempEnableStates[4], &tempEnableStates[5]);
 
-    for (int i = 0; i < NUM_LEDS; i++)
-    {
-        if (tempEnableStates[i] != savedEnabledStates_[i])
-        {
-            stateCorrect = false;
-            savedEnabledStates_[i] = tempEnableStates[i];
-        }
-    }
-
+    bool stateCorrect = (tempEnableStates == savedEnabledStates_);
+    savedEnabledStates_ = tempEnableStates;
     return stateCorrect;
 }
 
@@ -551,19 +536,11 @@ bool ThorlabsChrolisDeviceWrapper::VerifyLEDPowerStates()
         return false;
     }
 
-    bool stateCorrect = true;
-    ViUInt16 tempPowerStates[NUM_LEDS]{};
+    std::array<ViUInt16, NUM_LEDS> tempPowerStates{};
 
     TL6WL_getLED_HeadBrightness(deviceHandle_, &tempPowerStates[0], &tempPowerStates[1], &tempPowerStates[2], &tempPowerStates[3], &tempPowerStates[4], &tempPowerStates[5]);
 
-    for (int i = 0; i < NUM_LEDS; i++)
-    {
-        if (tempPowerStates[i] != savedBrightnessStates_[i])
-        {
-            stateCorrect = false;
-            savedBrightnessStates_[i] = tempPowerStates[i];
-        }
-    }
-    
+    bool stateCorrect = (tempPowerStates == savedBrightnessStates_);
+    savedBrightnessStates_ = tempPowerStates;
     return stateCorrect;
 }
