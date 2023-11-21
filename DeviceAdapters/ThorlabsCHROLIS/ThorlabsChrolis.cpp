@@ -85,9 +85,6 @@ ChrolisHub::ChrolisHub()
         SetErrorText(errMessage.first, errMessage.second.c_str());
     }
 
-    atomic_init(&threadRunning_, false);
-    atomic_init(&currentDeviceStatusCode_, 0);
-
     std::vector<std::string> serialNumbers;
     ChrolisDevice.GetAvailableSerialNumbers(serialNumbers);
 
@@ -178,16 +175,21 @@ int ChrolisHub::Initialize()
         return DEVICE_ERR;
     }
 
-    threadRunning_.store(true);
+    threadRunning_ = true;
     updateThread_ = std::thread(&ChrolisHub::StatusChangedPollingThread, this);
     return DEVICE_OK;
 }
 
 int ChrolisHub::Shutdown()
 {
-    if (threadRunning_.load())
     {
-        threadRunning_.store(false);
+        // Tell the polling thread to exit if running.
+        std::lock_guard<std::mutex> lock(pollingMutex_);
+		threadRunning_ = false;
+    }
+
+    if (updateThread_.joinable())
+    {
         updateThread_.join();
     }
 
@@ -217,8 +219,16 @@ void ChrolisHub::StatusChangedPollingThread()
 {
     ViUInt32 tempStatus = 0;
     std::string message;
-    while (threadRunning_.load())
+    for (;;)
     {
+        {
+            std::lock_guard<std::mutex> lock(pollingMutex_);
+            if (!threadRunning_)
+            {
+                return;
+            }
+        }
+
         if (ChrolisDevice.IsDeviceConnected())
         {
             message.clear();
@@ -226,12 +236,15 @@ void ChrolisHub::StatusChangedPollingThread()
             if (err != 0)
             {
                 LogMessage("Error Getting Status");
-                threadRunning_.store(false);
+                {
+                    std::lock_guard<std::mutex> lock(pollingMutex_);
+                    threadRunning_ = false;
+                }
                 return;
             }
-            const auto curStatus = currentDeviceStatusCode_.load();
+            const auto curStatus = currentDeviceStatusCode_;
             const bool statusChanged = curStatus != tempStatus;
-            currentDeviceStatusCode_.store(tempStatus);
+            currentDeviceStatusCode_ = tempStatus;
             if (curStatus == 0)
             {
                 message += "No Error";
@@ -305,8 +318,13 @@ void ChrolisHub::StatusChangedPollingThread()
                     {
                         LogMessage("Error getting info from chrolis");
                     }
-                    else 
+                    else
                     {
+                        std::lock_guard<std::mutex> lock(pollingMutex_);
+                        // Usually it is not a good idea to call arbitrary
+                        // functions with a mutex held, but in this case we
+                        // need to ensure that the callback remains valid.
+
                         stateCallback_(0, EncodeLEDStatesInBits(tempEnableStates));
 
                         stateCallback_(1, tempEnableStates[0]);
@@ -326,11 +344,13 @@ void ChrolisHub::StatusChangedPollingThread()
 
 void ChrolisHub::SetShutterCallback(std::function<void(int, int)> function)
 {
+    std::lock_guard<std::mutex> lock(pollingMutex_);
     shutterCallback_ = function;
 }
 
 void ChrolisHub::SetStateCallback(std::function<void(int, int)> function)
 {
+    std::lock_guard<std::mutex> lock(pollingMutex_);
     stateCallback_ = function;
 }
 

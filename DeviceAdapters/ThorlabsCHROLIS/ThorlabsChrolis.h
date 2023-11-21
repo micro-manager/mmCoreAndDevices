@@ -4,7 +4,6 @@
 #include <TL6WL.h>
 
 #include <array>
-#include <atomic>
 #include <functional>
 #include <mutex>
 #include <thread>
@@ -101,11 +100,18 @@ public:
     void SetStateCallback(std::function<void(int, int)>);
 
 private:
-    std::atomic_bool threadRunning_;
     std::thread updateThread_;
-    std::atomic_uint32_t currentDeviceStatusCode_;
+
+    // The following variables are shared with the polling thread and must only
+    // be accessed with pollingMutex_ held.
+    std::mutex pollingMutex_;
+    bool threadRunning_ = false;
     std::function<void(int, int)> shutterCallback_;
     std::function<void(int, ViBoolean)> stateCallback_;
+
+    // The following variable is only accessed from the polling thread (once
+    // started).
+    std::uint32_t currentDeviceStatusCode_ = 0;
 };
 
 class ChrolisShutter : public CShutterBase <ChrolisShutter>
