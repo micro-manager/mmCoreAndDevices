@@ -21,7 +21,7 @@ int ThorlabsChrolisDeviceWrapper::GetAvailableSerialNumbers(std::vector<std::str
     {
         return ERR_NO_AVAIL_DEVICES;
     }
-    for (int i = 0; i < numDevices; i++)
+    for (ViUInt32 i = 0; i < numDevices; i++)
     {
         err = TL6WL_getRsrcInfo(NULL, i, deviceName_, serialNumber_, manufacturerName_, &deviceInUse_);
         if (err != 0)
@@ -64,8 +64,7 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
     else
     {
         bool found = false;
-        int i = 0;
-        for (i = 0; i < numDevices; i++)
+        for (ViUInt32 i = 0; i < numDevices; i++)
         {
             err = TL6WL_getRsrcName(NULL, i, resource);
             if (err != 0)
@@ -97,7 +96,7 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
 
     for (int i = 0; i < NUM_LEDS; i++)
     {
-        err = TL6WL_readLED_HeadPeakWL(deviceHandle_, i+1, &ledWavelengths_[i]);
+        err = TL6WL_readLED_HeadPeakWL(deviceHandle_, static_cast<ViUInt8>(i + 1), &ledWavelengths_[i]);
         if (err != 0)
         {
             return err;
@@ -110,7 +109,7 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
 
 int ThorlabsChrolisDeviceWrapper::ShutdownDevice()
 {
-    if (deviceHandle_ != -1)
+    if (deviceHandle_ != ViSession(-1))
     {
         std::lock_guard<std::mutex> lock(instanceMutex_);
         auto err = TL6WL_close(deviceHandle_);
@@ -118,7 +117,7 @@ int ThorlabsChrolisDeviceWrapper::ShutdownDevice()
         {
             return err;
         }
-        deviceHandle_ = -1;
+        deviceHandle_ = ViSession(-1);
     }
     deviceConnected_ = false;
 	return DEVICE_OK;

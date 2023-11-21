@@ -35,6 +35,29 @@ MODULE_API MM::Device* CreateDevice(char const* name) {
 MODULE_API void DeleteDevice(MM::Device* device) {
     delete device;
 }
+
+static std::map<int, std::string> ErrorMessages()
+{
+    return {
+        {ERR_HUB_NOT_AVAILABLE, "Hub is not available"},
+        {ERR_CHROLIS_NOT_AVAIL, "CHROLIS Device is not available"},
+        {ERR_IMPROPER_SET, "Error setting property value. Value will be reset"},
+        {ERR_PARAM_NOT_VALID, "Value passed to property was out of bounds."},
+        {ERR_NO_AVAIL_DEVICES, "No available devices were found on the system."},
+        {ERR_INSUF_INFO, "Insufficient location information of the device or the resource is not present on the system"},
+        {ERR_UNKOWN_HW_STATE, "Unknown Hardware State"},
+        {ERR_VAL_OVERFLOW, "Parameter Value Overflow"},
+        {INSTR_RUNTIME_ERROR, "CHROLIS Instrument Runtime Error"},
+        {INSTR_REM_INTER_ERROR, "CHROLIS Instrument Internal Error"},
+        {INSTR_AUTHENTICATION_ERROR, "CHROLIS Instrument Authentication Error"},
+        {INSTR_PARAM_ERROR, "CHROLIS Invalid Parameter Error"},
+        {INSTR_INTERNAL_TX_ERR, "CHROLIS Instrument Internal Command Sending Error"},
+        {INSTR_INTERNAL_RX_ERR, "CHROLIS Instrument Internal Command Receiving Error"},
+        {INSTR_INVAL_MODE_ERR, "CHROLIS Instrument Invalid Mode Error"},
+        {INSTR_SERVICE_ERR, "CHROLIS Instrument Service Error"}
+    };
+}
+
 //Hub Methods
 ChrolisHub::ChrolisHub()
 {
@@ -79,7 +102,7 @@ int ChrolisHub::DetectInstalledDevices()
 int ChrolisHub::Initialize()
 {
     char buf[MM::MaxStrLength];
-    int ret = GetProperty("Serial Number", buf);
+    (void)GetProperty("Serial Number", buf);
 
     int err = ChrolisDevice.InitializeDevice(buf);
     if (err != 0)
@@ -325,6 +348,8 @@ int ChrolisShutter::Initialize()
     pHub->SetShutterCallback([this](int ledNum, int state) 
         {
             //Might not be needed
+            (void)ledNum;
+            (void)state;
         });
 
     return DEVICE_OK;
@@ -513,11 +538,6 @@ void ChrolisStateDevice::GetName(char* name) const
 bool ChrolisStateDevice::Busy()
 {
     return false;
-}
-
-int ChrolisStateDevice::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    return DEVICE_OK;
 }
 
 

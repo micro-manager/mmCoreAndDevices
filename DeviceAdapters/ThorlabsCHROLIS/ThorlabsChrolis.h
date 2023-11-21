@@ -31,28 +31,6 @@
 
 constexpr int NUM_LEDS = 6;
 
-static std::map<int, std::string> ErrorMessages()
-{
-    return {
-        {ERR_HUB_NOT_AVAILABLE, "Hub is not available"},
-        {ERR_CHROLIS_NOT_AVAIL, "CHROLIS Device is not available"},
-        {ERR_IMPROPER_SET, "Error setting property value. Value will be reset"},
-        {ERR_PARAM_NOT_VALID, "Value passed to property was out of bounds."},
-        {ERR_NO_AVAIL_DEVICES, "No available devices were found on the system."},
-        {ERR_INSUF_INFO, "Insufficient location information of the device or the resource is not present on the system"},
-        {ERR_UNKOWN_HW_STATE, "Unknown Hardware State"},
-        {ERR_VAL_OVERFLOW, "Parameter Value Overflow"},
-        {INSTR_RUNTIME_ERROR, "CHROLIS Instrument Runtime Error"},
-        {INSTR_REM_INTER_ERROR, "CHROLIS Instrument Internal Error"},
-        {INSTR_AUTHENTICATION_ERROR, "CHROLIS Instrument Authentication Error"},
-        {INSTR_PARAM_ERROR, "CHROLIS Invalid Parameter Error"},
-        {INSTR_INTERNAL_TX_ERR, "CHROLIS Instrument Internal Command Sending Error"},
-        {INSTR_INTERNAL_RX_ERR, "CHROLIS Instrument Internal Command Receiving Error"},
-        {INSTR_INVAL_MODE_ERR, "CHROLIS Instrument Invalid Mode Error"},
-        {INSTR_SERVICE_ERR, "CHROLIS Instrument Service Error"}
-    };
-}
-
 //Wrapper for the basic functions used in this device adapter
 class ThorlabsChrolisDeviceWrapper
 {
@@ -86,7 +64,7 @@ private:
     std::vector<std::string> serialNumberList_;
     std::mutex instanceMutex_;
     bool deviceConnected_ = false;
-    ViSession deviceHandle_;
+    ViSession deviceHandle_ = ViSession(-1);
     ViBoolean deviceInUse_ = false; //only used by the chrolis API
     ViChar deviceName_[TL6WL_LONG_STRING_SIZE] = "";
     ViChar serialNumber_[TL6WL_LONG_STRING_SIZE] = "";
@@ -169,7 +147,6 @@ public:
     // action interface
     // ----------------
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     //LED Control Methods
     int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct, long ledIndex);
