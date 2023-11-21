@@ -168,7 +168,8 @@ int ChrolisHub::Initialize()
         return DEVICE_ERR;
     }
 
-    err = CreateStringProperty("Device Status", "No Error", true);
+    err = CreateStringProperty("Device Status", deviceStatus_.c_str(), true,
+        new CPropertyAction(this, &ChrolisHub::OnDeviceStatus));
     if (err != 0)
     {
         LogMessage("Error with property set in hub initialize");
@@ -211,6 +212,20 @@ void ChrolisHub::GetName(char* name) const
 bool ChrolisHub::Busy()
 {
     return false;
+}
+
+int ChrolisHub::OnDeviceStatus(MM::PropertyBase *pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        std::string status;
+        {
+            std::lock_guard<std::mutex> lock(pollingMutex_);
+            status = deviceStatus_;
+        }
+        pProp->Set(status.c_str());
+    }
+    return DEVICE_OK;
 }
 
 void ChrolisHub::StatusChangedPollingThread()
@@ -331,6 +346,11 @@ void ChrolisHub::StatusChangedPollingThread()
                         }
                     }
                 }
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(pollingMutex_);
+                deviceStatus_ = message;
             }
             OnPropertyChanged("Device Status", message.c_str());
         }

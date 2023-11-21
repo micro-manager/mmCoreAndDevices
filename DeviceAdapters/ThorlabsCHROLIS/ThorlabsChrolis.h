@@ -95,6 +95,8 @@ public:
     // HUB api
     int DetectInstalledDevices();
 
+    int OnDeviceStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     void StatusChangedPollingThread();
     void SetStateBitsCallback(std::function<void(std::uint8_t)>);
     void SetStateCallback(std::function<void(int, ViBoolean)>);
@@ -103,9 +105,10 @@ private:
     std::thread updateThread_;
 
     // The following variables are shared with the polling thread and must only
-    // be accessed with pollingMutex_ held.
+    // be accessed with pollingMutex_ held (once the thread is started).
     std::mutex pollingMutex_;
     bool pollingStopRequested_ = false;
+    std::string deviceStatus_ = "No Error";
     std::function<void(std::uint8_t)> stateBitsCallback_;
     std::function<void(int, ViBoolean)> stateCallback_;
 
