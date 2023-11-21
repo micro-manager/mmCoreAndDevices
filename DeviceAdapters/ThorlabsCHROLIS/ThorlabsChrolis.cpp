@@ -288,8 +288,13 @@ void ChrolisHub::StatusChangedPollingThread()
                     }
                     else 
                     {
-                        stateCallback_(0, ((static_cast<uint8_t>(tempEnableStates[0]) << 0) | (static_cast<uint8_t>(tempEnableStates[1]) << 1) | (static_cast<uint8_t>(tempEnableStates[2]) << 2)
-                            | (static_cast<uint8_t>(tempEnableStates[3]) << 3) | (static_cast<uint8_t>(tempEnableStates[4]) << 4 | (static_cast<uint8_t>(tempEnableStates[5]) << 5))));
+                        stateCallback_(0,
+                            ((static_cast<uint8_t>(tempEnableStates[0]) << 0) |
+                             (static_cast<uint8_t>(tempEnableStates[1]) << 1) |
+                             (static_cast<uint8_t>(tempEnableStates[2]) << 2) |
+                             (static_cast<uint8_t>(tempEnableStates[3]) << 3) |
+                             (static_cast<uint8_t>(tempEnableStates[4]) << 4) |
+                             (static_cast<uint8_t>(tempEnableStates[5]) << 5)));
 
                         stateCallback_(1, tempEnableStates[0]);
                         stateCallback_(2, tempEnableStates[1]);
