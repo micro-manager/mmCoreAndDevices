@@ -178,19 +178,8 @@ public:
     int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-    ViUInt16 led1Brightness_ = 0;
-    ViUInt16 led2Brightness_ = 0;
-    ViUInt16 led3Brightness_ = 0;
-    ViUInt16 led4Brightness_ = 0;
-    ViUInt16 led5Brightness_ = 0;
-    ViUInt16 led6Brightness_ = 0;
-
-    ViBoolean led1State_ = false;
-    ViBoolean led2State_ = false;
-    ViBoolean led3State_ = false;
-    ViBoolean led4State_ = false;
-    ViBoolean led5State_ = false;
-    ViBoolean led6State_ = false;
+    std::array<ViUInt16, NUM_LEDS> ledBrightnesses_{};
+    std::array<ViBoolean, NUM_LEDS> ledStates_{};
 
     ViInt16 ledMaxBrightness_ = 1000;
     ViInt16 ledMinBrightness_ = 0;
