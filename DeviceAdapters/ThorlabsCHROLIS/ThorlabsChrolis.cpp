@@ -58,6 +58,25 @@ static std::map<int, std::string> ErrorMessages()
     };
 }
 
+static std::uint8_t EncodeLEDStatesInBits(std::array<ViBoolean, NUM_LEDS> states) {
+    std::uint8_t ret = 0;
+    for (auto i = 0; i < NUM_LEDS; i++)
+    {
+        bool state = states[i] != VI_FALSE; // Ensure 0 or 1, just in case
+        ret |= static_cast<std::uint8_t>(static_cast<int>(state) << i);
+    }
+    return ret;
+}
+
+static std::array<ViBoolean, NUM_LEDS> DecodeLEDStatesFromBits(std::uint8_t bits) {
+    std::array<ViBoolean, NUM_LEDS> ret{};
+    for (auto i = 0; i < NUM_LEDS; i++)
+    {
+        ret[i] = ((bits & (1 << i)) != 0);
+    }
+    return ret;
+}
+
 //Hub Methods
 ChrolisHub::ChrolisHub()
 {
@@ -288,13 +307,7 @@ void ChrolisHub::StatusChangedPollingThread()
                     }
                     else 
                     {
-                        stateCallback_(0,
-                            ((static_cast<uint8_t>(tempEnableStates[0]) << 0) |
-                             (static_cast<uint8_t>(tempEnableStates[1]) << 1) |
-                             (static_cast<uint8_t>(tempEnableStates[2]) << 2) |
-                             (static_cast<uint8_t>(tempEnableStates[3]) << 3) |
-                             (static_cast<uint8_t>(tempEnableStates[4]) << 4) |
-                             (static_cast<uint8_t>(tempEnableStates[5]) << 5)));
+                        stateCallback_(0, EncodeLEDStatesInBits(tempEnableStates));
 
                         stateCallback_(1, tempEnableStates[0]);
                         stateCallback_(2, tempEnableStates[1]);
@@ -477,13 +490,7 @@ int ChrolisStateDevice::Initialize()
     {
         err = pHub->ChrolisDevice.GetLEDEnableStates(ledStates_);
         err = pHub->ChrolisDevice.GetLEDBrightnessStates(ledBrightnesses_);
-        tmpLedState =
-            ((static_cast<uint8_t>(ledStates_[0]) << 0) |
-             (static_cast<uint8_t>(ledStates_[1]) << 1) |
-             (static_cast<uint8_t>(ledStates_[2]) << 2) |
-             (static_cast<uint8_t>(ledStates_[3]) << 3) |
-             (static_cast<uint8_t>(ledStates_[4]) << 4) |
-             (static_cast<uint8_t>(ledStates_[5]) << 5));
+        tmpLedState = EncodeLEDStatesInBits(ledStates_);
     }
 
     //State Property
@@ -570,26 +577,14 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             LogMessage("Error getting info from chrolis");
         }
 
-        pProp->Set((long)(
-            (static_cast<uint8_t>(ledStates_[0]) << 0) |
-            (static_cast<uint8_t>(ledStates_[1]) << 1) |
-            (static_cast<uint8_t>(ledStates_[2]) << 2) |
-            (static_cast<uint8_t>(ledStates_[3]) << 3) |
-            (static_cast<uint8_t>(ledStates_[4]) << 4) |
-            (static_cast<uint8_t>(ledStates_[5]) << 5)));
+        pProp->Set(static_cast<long>(EncodeLEDStatesInBits(ledStates_)));
     }
     else if (eAct == MM::AfterSet)
     {
         std::ostringstream os;
 
         //temp state from last set used as fallback
-        uint8_t currentLEDState =
-            ((static_cast<uint8_t>(ledStates_[0]) << 0) |
-             (static_cast<uint8_t>(ledStates_[1]) << 1) |
-             (static_cast<uint8_t>(ledStates_[2]) << 2) |
-             (static_cast<uint8_t>(ledStates_[3]) << 3) |
-             (static_cast<uint8_t>(ledStates_[4]) << 4) |
-             (static_cast<uint8_t>(ledStates_[5]) << 5));
+        uint8_t currentLEDState = EncodeLEDStatesInBits(ledStates_);
 
         //Get the current instances for hub and chrolis
         //In the event of error do not set the property. Set old value. Updated values will be pulled from getters if possible
@@ -620,15 +615,8 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ERR_PARAM_NOT_VALID;
         }
 
-        std::array<ViBoolean, NUM_LEDS> newStates
-        {
-            static_cast<bool>(val & (1 << 0)),
-            static_cast<bool>(val & (1 << 1)),
-            static_cast<bool>(val & (1 << 2)),
-            static_cast<bool>(val & (1 << 3)),
-            static_cast<bool>(val & (1 << 4)),
-            static_cast<bool>(val & (1 << 5))
-        };
+        std::array<ViBoolean, NUM_LEDS> newStates =
+            DecodeLEDStatesFromBits(static_cast<std::uint8_t>(val));
         int err = pHub->ChrolisDevice.SetLEDEnableStates(newStates);
         if (err != 0)
         {
@@ -641,13 +629,7 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
                 {
                     LogMessage("Error getting info from chrolis");
                 }
-                currentLEDState =
-                    ((static_cast<uint8_t>(ledStates_[0]) << 0) |
-                     (static_cast<uint8_t>(ledStates_[1]) << 1) |
-                     (static_cast<uint8_t>(ledStates_[2]) << 2) |
-                     (static_cast<uint8_t>(ledStates_[3]) << 3) |
-                     (static_cast<uint8_t>(ledStates_[4]) << 4) |
-                     (static_cast<uint8_t>(ledStates_[5]) << 5));
+                currentLEDState = EncodeLEDStatesInBits(ledStates_);
 
                 os << currentLEDState;
                 OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
