@@ -417,7 +417,7 @@ int ChrolisStateDevice::Initialize()
             switch (ledNum)
             {
             case 0:
-                OnPropertyChanged("state", os.str().c_str());
+                OnPropertyChanged(MM::g_Keyword_State, os.str().c_str());
                 break;
             case 1:
             case 2:
