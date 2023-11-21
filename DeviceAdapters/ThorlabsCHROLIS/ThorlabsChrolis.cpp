@@ -171,7 +171,7 @@ int ChrolisHub::Initialize()
         return DEVICE_ERR;
     }
 
-    err = CreateStringProperty("Device Status", deviceStatusMessage_.c_str(), true);
+    err = CreateStringProperty("Device Status", "No Error", true);
     if (err != 0)
     {
         LogMessage("Error with property set in hub initialize");

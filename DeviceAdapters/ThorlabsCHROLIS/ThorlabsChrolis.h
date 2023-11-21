@@ -104,7 +104,6 @@ private:
     std::atomic_bool threadRunning_;
     std::thread updateThread_;
     std::atomic_uint32_t currentDeviceStatusCode_;
-    std::string deviceStatusMessage_ = "No Error";
     std::function<void(int, int)> shutterCallback_;
     std::function<void(int, ViBoolean)> stateCallback_;
 };
