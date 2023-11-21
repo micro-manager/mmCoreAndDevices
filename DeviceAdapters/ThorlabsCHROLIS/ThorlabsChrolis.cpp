@@ -318,16 +318,16 @@ void ChrolisHub::StatusChangedPollingThread()
                         // Usually it is not a good idea to call arbitrary
                         // functions with a mutex held, but in this case we
                         // need to ensure that the callback remains valid.
+                        if (stateBitsCallback_)
+                        {
+                            stateBitsCallback_(EncodeLEDStatesInBits(tempEnableStates));
+                        }
                         if (stateCallback_)
                         {
-                            stateCallback_(0, EncodeLEDStatesInBits(tempEnableStates));
-
-                            stateCallback_(1, tempEnableStates[0]);
-                            stateCallback_(2, tempEnableStates[1]);
-                            stateCallback_(3, tempEnableStates[2]);
-                            stateCallback_(4, tempEnableStates[3]);
-                            stateCallback_(5, tempEnableStates[4]);
-                            stateCallback_(6, tempEnableStates[5]);
+                            for (int i = 0; i < NUM_LEDS; i++)
+                            {
+                                stateCallback_(i, tempEnableStates[i]);
+                            }
                         }
                     }
                 }
@@ -344,7 +344,13 @@ void ChrolisHub::SetShutterCallback(std::function<void(int, int)> function)
     shutterCallback_ = function;
 }
 
-void ChrolisHub::SetStateCallback(std::function<void(int, int)> function)
+void ChrolisHub::SetStateBitsCallback(std::function<void(std::uint8_t)> function)
+{
+    std::lock_guard<std::mutex> lock(pollingMutex_);
+    stateBitsCallback_ = function;
+}
+
+void ChrolisHub::SetStateCallback(std::function<void(int, ViBoolean)> function)
 {
     std::lock_guard<std::mutex> lock(pollingMutex_);
     stateCallback_ = function;
@@ -469,27 +475,16 @@ int ChrolisStateDevice::Initialize()
         return ERR_HUB_NOT_AVAILABLE;
     }
 
-    pHub->SetStateCallback([this](int ledNum, int state)
+    pHub->SetStateBitsCallback([this](std::uint8_t bits)
         {
-            std::ostringstream os;
-            os << (ledNum == 0 ? state : (ViBoolean)state);
-            switch (ledNum)
-            {
-            case 0:
-                OnPropertyChanged(MM::g_Keyword_State, os.str().c_str());
-                break;
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-                OnPropertyChanged(("LED Enable State " + std::to_string(ledNum)).c_str(),
-                    os.str().c_str());
-                break;
-            default:
-                break;
-            }
+            OnPropertyChanged(MM::g_Keyword_State, std::to_string(bits).c_str());
+        });
+
+    pHub->SetStateCallback([this](int ledIndex, ViBoolean state)
+        {
+            int ledNum = ledIndex + 1;
+            OnPropertyChanged(("LED Enable State " + std::to_string(ledNum)).c_str(),
+                std::to_string(state).c_str());
         });
 
     // create default positions and labels
@@ -553,7 +548,8 @@ int ChrolisStateDevice::Shutdown()
     ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
     if (pHub)
     {
-        pHub->SetStateCallback([](int, int) {});
+        pHub->SetStateCallback([](auto, auto) {});
+        pHub->SetStateBitsCallback([](auto) {});
     }
     return DEVICE_OK;
 }

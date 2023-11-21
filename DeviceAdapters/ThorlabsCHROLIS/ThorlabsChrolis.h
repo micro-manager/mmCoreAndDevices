@@ -97,7 +97,8 @@ public:
 
     void StatusChangedPollingThread();
     void SetShutterCallback(std::function<void(int, int)>);
-    void SetStateCallback(std::function<void(int, int)>);
+    void SetStateBitsCallback(std::function<void(std::uint8_t)>);
+    void SetStateCallback(std::function<void(int, ViBoolean)>);
 
 private:
     std::thread updateThread_;
@@ -107,6 +108,7 @@ private:
     std::mutex pollingMutex_;
     bool pollingStopRequested_ = false;
     std::function<void(int, int)> shutterCallback_;
+    std::function<void(std::uint8_t)> stateBitsCallback_;
     std::function<void(int, ViBoolean)> stateCallback_;
 
     // The following variable is only accessed from the polling thread (once
