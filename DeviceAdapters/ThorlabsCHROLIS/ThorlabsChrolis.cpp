@@ -324,15 +324,17 @@ void ChrolisHub::StatusChangedPollingThread()
                         // Usually it is not a good idea to call arbitrary
                         // functions with a mutex held, but in this case we
                         // need to ensure that the callback remains valid.
+                        if (stateCallback_)
+                        {
+                            stateCallback_(0, EncodeLEDStatesInBits(tempEnableStates));
 
-                        stateCallback_(0, EncodeLEDStatesInBits(tempEnableStates));
-
-                        stateCallback_(1, tempEnableStates[0]);
-                        stateCallback_(2, tempEnableStates[1]);
-                        stateCallback_(3, tempEnableStates[2]);
-                        stateCallback_(4, tempEnableStates[3]);
-                        stateCallback_(5, tempEnableStates[4]);
-                        stateCallback_(6, tempEnableStates[5]);
+                            stateCallback_(1, tempEnableStates[0]);
+                            stateCallback_(2, tempEnableStates[1]);
+                            stateCallback_(3, tempEnableStates[2]);
+                            stateCallback_(4, tempEnableStates[3]);
+                            stateCallback_(5, tempEnableStates[4]);
+                            stateCallback_(6, tempEnableStates[5]);
+                        }
                     }
                 }
             }
