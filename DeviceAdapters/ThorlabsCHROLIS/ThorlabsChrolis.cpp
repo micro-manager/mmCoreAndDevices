@@ -77,6 +77,42 @@ static std::array<ViBoolean, NUM_LEDS> DecodeLEDStatesFromBits(std::uint8_t bits
     return ret;
 }
 
+static std::string DeviceStatusAsString(std::uint32_t status)
+{
+    if (status == 0)
+    {
+        return "No Error";
+    }
+
+    static const std::array<std::string, 7> bitToMsg{
+        "Box is Open",
+        "LLG not Connected",
+        "Interlock is Open",
+        "Using Default Adjustment",
+        "Box Overheated",
+        "LED Overheated",
+        "Invalid Box Setup",
+    };
+
+    std::string message;
+    for (int i = 0; i < bitToMsg.size(); i++)
+    {
+        if ((status & (1 << i)) != 0)
+        {
+            if (!message.empty())
+            {
+                message += ", ";
+            }
+            message += bitToMsg[i];
+        }
+    }
+    if (!message.empty())
+    {
+        return message;
+    }
+    return "Unknown Status";
+}
+
 //Hub Methods
 ChrolisHub::ChrolisHub()
 {
@@ -230,8 +266,6 @@ int ChrolisHub::OnDeviceStatus(MM::PropertyBase *pProp, MM::ActionType eAct)
 
 void ChrolisHub::StatusChangedPollingThread()
 {
-    ViUInt32 tempStatus = 0;
-    std::string message;
     for (;;)
     {
         {
@@ -244,7 +278,7 @@ void ChrolisHub::StatusChangedPollingThread()
 
         if (ChrolisDevice.IsDeviceConnected())
         {
-            message.clear();
+            ViUInt32 tempStatus = 0;
             auto err = ChrolisDevice.GetDeviceStatus(tempStatus);
             if (err != 0)
             {
@@ -254,69 +288,6 @@ void ChrolisHub::StatusChangedPollingThread()
             const auto curStatus = currentDeviceStatusCode_;
             const bool statusChanged = curStatus != tempStatus;
             currentDeviceStatusCode_ = tempStatus;
-            if (curStatus == 0)
-            {
-                message += "No Error";
-            }
-            else
-            {
-                if ((curStatus & (1 << 0)) >= 1)
-                {
-                    message += "Box is Open";
-                }
-                if ((curStatus & (1 << 1)) >= 1)
-                {
-                    if (message.length() > 0)
-                    {
-                        message += ", ";
-                    }
-                    message += "LLG not Connected";
-                }
-                if ((curStatus & (1 << 2)) >= 1)
-                {
-                    if (message.length() > 0)
-                    {
-                        message += ", ";
-                    }
-                    message += "Interlock is Open";
-                }
-                if ((curStatus & (1 << 3)) >= 1)
-                {
-                    if (message.length() > 0)
-                    {
-                        message += ", ";
-                    }
-                    message += "Using Default Adjustment";
-                }
-                if ((curStatus & (1 << 4)) >= 1)
-                {
-                    if (message.length() > 0)
-                    {
-                        message += ", ";
-                    }
-                    message += "Box Overheated";
-                }
-                if ((curStatus & (1 << 5)) >= 1)
-                {
-                    if (message.length() > 0)
-                    {
-                        message += ", ";
-                    }
-                    message += "LED Overheated";
-                }
-                if ((curStatus & (1 << 6)) >= 1)
-                {
-                    if (message.length() > 0)
-                    {
-                        message += ", ";
-                    }
-                    message += "Invalid Box Setup";
-                }
-                if (message.length() == 0)
-                {
-                    message = "Unknown Status";
-                }
-            }
             if (statusChanged)
             {
                 if (curStatus != 0)
@@ -348,6 +319,7 @@ void ChrolisHub::StatusChangedPollingThread()
                 }
             }
 
+            std::string message = DeviceStatusAsString(curStatus);
             {
                 std::lock_guard<std::mutex> lock(pollingMutex_);
                 deviceStatus_ = message;
