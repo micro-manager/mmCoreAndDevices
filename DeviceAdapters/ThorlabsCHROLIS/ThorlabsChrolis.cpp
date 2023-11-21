@@ -338,12 +338,6 @@ void ChrolisHub::StatusChangedPollingThread()
     }
 }
 
-void ChrolisHub::SetShutterCallback(std::function<void(int, int)> function)
-{
-    std::lock_guard<std::mutex> lock(pollingMutex_);
-    shutterCallback_ = function;
-}
-
 void ChrolisHub::SetStateBitsCallback(std::function<void(std::uint8_t)> function)
 {
     std::lock_guard<std::mutex> lock(pollingMutex_);
@@ -385,23 +379,11 @@ int ChrolisShutter::Initialize()
         }
     }
 
-    pHub->SetShutterCallback([this](int ledNum, int state) 
-        {
-            //Might not be needed
-            (void)ledNum;
-            (void)state;
-        });
-
     return DEVICE_OK;
 }
 
 int ChrolisShutter::Shutdown()
 {
-    ChrolisHub* pHub = static_cast<ChrolisHub*>(GetParentHub());
-    if (pHub)
-    {
-        pHub->SetShutterCallback([](int , int) {});
-    }
     return DEVICE_OK;
 }
 
