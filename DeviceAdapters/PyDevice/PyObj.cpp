@@ -26,12 +26,11 @@ PyObj::PyObj(PyObject* obj) : p_(obj) {
 
 string PyObj::g_errorMessage;
 
+
 /**
 @brief Initializes the Python interpreter.
 @param venv Optional path to a venv virtual environment folder.
 @return true on success, false on failure (the g_errorMessage field will be set).
-
-If the interpreter is already initialized, this function checks if venv is either empty, or equal to the previously passed venv path. If not, anerror is reported. We cannot run multiple interpreters at once. Unfortunately, we cannot de - initialize one interpreter and start a new one. Thiswould require calling Py_FinalizeEx, and then Py_Initialize again.Unfortunatly, by the Python docs(https://docs.python.org/3/c-apiinit.html#c.Py_FinalizeEx), some extension modules(apparanetly including numpy) may not support this behavior, making Py_Finalize followed by Py_Initialize completely undefined behavior, and weird numpy - related crashes were seen when trying it.
 */
 bool PyObj::InitializeInterpreter(const fs::path& module_path) noexcept
 {
@@ -53,8 +52,9 @@ bool PyObj::InitializeInterpreter(const fs::path& module_path) noexcept
     }
     Py_SetPythonHome(path.generic_wstring().c_str());
 
-    Py_InitializeEx(0);
+    Py_InitializeEx(0); // Python may cause a crash here (all exit()) if the runtime cannot be initialized. There seems to be nothing we can do about this in the LIMITED api.
     _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
+
 
     // allow multi threading and store the thread state (global interpreter lock).
     // note: savethread releases the lock.

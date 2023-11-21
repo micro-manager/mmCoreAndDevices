@@ -91,8 +91,8 @@ int CPyHub::Initialize() {
             options.nMaxFile = MAX_PATH;
 
             if (GetOpenFileNameA(&options)) {
-                _check_(SetProperty(p_PythonScriptPath, scriptPath.generic_string().c_str()));
                scriptPath = options.lpstrFile;
+                _check_(SetProperty(p_PythonScriptPath, scriptPath.generic_string().c_str()));
             }            
         }
         #endif
@@ -110,6 +110,10 @@ int CPyHub::Initialize() {
         code.append(buffer, 0, stream.gcount());
 
         id_ = scriptPath.filename().generic_string();
+        
+        this->LogMessage("Initializing the Python runtime. The Python runtime (especially Anaconda) may crash if Python is not installed correctly."
+            "If so, verify thatthe HOMEPATH environment is set to the correct value, or remove it."
+            "Also, make sure that the desired Python installation is the first that is listed in the PATH environment variable.\n", true);
 
         if (!PyObj::InitializeInterpreter(modulePathString))
             return CheckError(); // initializing the interpreter failed, abort initialization and report the error
