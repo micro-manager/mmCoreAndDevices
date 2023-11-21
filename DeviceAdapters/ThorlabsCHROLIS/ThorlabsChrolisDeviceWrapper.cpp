@@ -30,6 +30,7 @@ int ThorlabsChrolisDeviceWrapper::GetAvailableSerialNumbers(std::vector<std::str
         }
         serialNumbers.push_back(serialNumber_);
     }
+    return DEVICE_OK;
 }
 
 int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
