@@ -421,22 +421,13 @@ int ChrolisStateDevice::Initialize()
                 OnPropertyChanged("state", os.str().c_str());
                 break;
             case 1:
-                OnPropertyChanged("LED Enable State 1", os.str().c_str());
-                break;
             case 2:
-                OnPropertyChanged("LED Enable State 2", os.str().c_str());
-                break;
             case 3:
-                OnPropertyChanged("LED Enable State 3", os.str().c_str());
-                break;
             case 4:
-                OnPropertyChanged("LED Enable State 4", os.str().c_str());
-                break;
             case 5:
-                OnPropertyChanged("LED Enable State 5", os.str().c_str());
-                break;
             case 6:
-                OnPropertyChanged("LED Enable State 6", os.str().c_str());
+                OnPropertyChanged(("LED Enable State " + std::to_string(ledNum)).c_str(),
+                    os.str().c_str());
                 break;
             default:
                 break;
@@ -474,115 +465,33 @@ int ChrolisStateDevice::Initialize()
 
 
     ////Properties for power control
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 1 Power", ledBrightnesses_[0], false, pAct);
-    if (err != 0)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
-        LogMessage("Error with property set in power control");
-        return DEVICE_ERR;
-    }
-    SetPropertyLimits("LED 1 Power", ledMinBrightness_, ledMaxBrightness_);
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 2 Power", ledBrightnesses_[1], false, pAct);
-    SetPropertyLimits("LED 2 Power", ledMinBrightness_, ledMaxBrightness_);
-    if (err != 0)
-    {
-        return DEVICE_ERR;
-        LogMessage("Error with property set in state control");
-    }
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 3 Power", ledBrightnesses_[2], false, pAct);
-    SetPropertyLimits("LED 3 Power", ledMinBrightness_, ledMaxBrightness_);
-    if (err != 0)
-    {
-        return DEVICE_ERR;
-        LogMessage("Error with property set in state control");
-    }
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 4 Power", ledBrightnesses_[3], false, pAct);
-    SetPropertyLimits("LED 4 Power", ledMinBrightness_, ledMaxBrightness_);
-    if (err != 0)
-    {
-        return DEVICE_ERR;
-        LogMessage("Error with property set in state control");
-    }
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 5 Power", ledBrightnesses_[4], false, pAct);
-    SetPropertyLimits("LED 5 Power", ledMinBrightness_, ledMaxBrightness_);
-    if (err != 0)
-    {
-        return DEVICE_ERR;
-        LogMessage("Error with property set in state control");
-    }
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
-    err = CreateIntegerProperty("LED 6 Power", ledBrightnesses_[5], false, pAct);
-    SetPropertyLimits("LED 6 Power", ledMinBrightness_, ledMaxBrightness_);
-    if (err != 0)
-    {
-        return DEVICE_ERR;
-        LogMessage("Error with property set in state control");
+		pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
+        std::string propName = "LED " + std::to_string(i + 1) + " Power";
+		err = CreateIntegerProperty(propName.c_str(), ledBrightnesses_[i], false, pAct);
+		if (err != 0)
+		{
+			LogMessage("Error with property set in power control");
+			return DEVICE_ERR;
+		}
+		SetPropertyLimits(propName.c_str(), ledMinBrightness_, ledMaxBrightness_);
     }
 
 
     //Properties for state control
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 1", ledStates_[0], false, pAct);
-    if (err != 0)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
-        LogMessage("Error with property set in state control");
-        return DEVICE_ERR;
+        pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
+        std::string propName = "LED Enable State " + std::to_string(i + 1);
+        err = CreateIntegerProperty(propName.c_str(), ledStates_[i], false, pAct);
+        if (err != 0)
+        {
+            LogMessage("Error with property set in state control");
+            return DEVICE_ERR;
+        }
+        SetPropertyLimits(propName.c_str(), 0, 1);
     }
-    SetPropertyLimits("LED Enable State 1", 0, 1);
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 2", ledStates_[1], false, pAct);
-    if (err != 0)
-    {
-        LogMessage("Error with property set in state control");
-        return DEVICE_ERR;
-    }
-    SetPropertyLimits("LED Enable State 2", 0, 1);
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 3", ledStates_[2], false, pAct);
-    if (err != 0)
-    {
-        LogMessage("Error with property set in state control");
-        return DEVICE_ERR;
-    }
-    SetPropertyLimits("LED Enable State 3", 0, 1);
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 4", ledStates_[3], false, pAct);
-    if (err != 0)
-    {
-        LogMessage("Error with property set in state control");
-        return DEVICE_ERR;
-    }
-    SetPropertyLimits("LED Enable State 4", 0, 1);
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 5", ledStates_[4], false, pAct);
-    if (err != 0)
-    {
-        LogMessage("Error with property set in state control");
-        return DEVICE_ERR;
-    }
-    SetPropertyLimits("LED Enable State 5", 0, 1);
-
-    pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
-    err = CreateIntegerProperty("LED Enable State 6", ledStates_[5], false, pAct);
-    if (err != 0)
-    {
-        LogMessage("Error with property set in state control");
-        return DEVICE_ERR;
-    }
-    SetPropertyLimits("LED Enable State 6", 0, 1);
 
     return DEVICE_OK;
 }
