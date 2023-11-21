@@ -172,8 +172,8 @@ public:
     int OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     //LED Control Methods
-    int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct, long ledIndex);
+    int OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct, long ledIndex);
 
 private:
     std::array<ViUInt16, NUM_LEDS> ledBrightnesses_{};

@@ -2,7 +2,6 @@
 #include "ModuleInterface.h"
 
 #include <string>
-#include <regex>
 
 MODULE_API void InitializeModuleData() {
     RegisterDevice(CHROLIS_HUB_NAME,
@@ -467,9 +466,9 @@ int ChrolisStateDevice::Initialize()
     ////Properties for power control
     for (int i = 0; i < NUM_LEDS; i++)
     {
-		pAct = new CPropertyAction(this, &ChrolisStateDevice::OnPowerChange);
+		auto* pActEx = new CPropertyActionEx(this, &ChrolisStateDevice::OnPowerChange, i);
         std::string propName = "LED " + std::to_string(i + 1) + " Power";
-		err = CreateIntegerProperty(propName.c_str(), ledBrightnesses_[i], false, pAct);
+		err = CreateIntegerProperty(propName.c_str(), ledBrightnesses_[i], false, pActEx);
 		if (err != 0)
 		{
 			LogMessage("Error with property set in power control");
@@ -482,9 +481,9 @@ int ChrolisStateDevice::Initialize()
     //Properties for state control
     for (int i = 0; i < NUM_LEDS; i++)
     {
-        pAct = new CPropertyAction(this, &ChrolisStateDevice::OnEnableStateChange);
+        auto* pActEx = new CPropertyActionEx(this, &ChrolisStateDevice::OnEnableStateChange, i);
         std::string propName = "LED Enable State " + std::to_string(i + 1);
-        err = CreateIntegerProperty(propName.c_str(), ledStates_[i], false, pAct);
+        err = CreateIntegerProperty(propName.c_str(), ledStates_[i], false, pActEx);
         if (err != 0)
         {
             LogMessage("Error with property set in state control");
@@ -640,39 +639,9 @@ int ChrolisStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionType eAct, long ledIndex)
 {
-    ViPBoolean ledBeingControlled;
-    int numFromName = -1;
-    std::string searchString = pProp->GetName();
-    std::regex regexp(R"([-+]?([0-9]*\.[0-9]+|[0-9]+))");
-    std::smatch sm;
-    std::regex_search(searchString, sm, regexp);
-
-    //The names for the LED's should contain only a single number representing the LED
-    //Use this to set the power
-    if (sm.size() > 0)
-    {
-        if (sm[0].str().length() > 0)
-        {
-            numFromName = stoi(sm[0].str());
-        }
-    }
-    else
-    {
-        LogMessage("Regex match failed");
-        return DEVICE_ERR;
-    }
-
-    if (numFromName > 0 && numFromName <= NUM_LEDS)
-    {
-        ledBeingControlled = &ledStates_[numFromName - 1];
-    }
-    else
-    {
-        LogMessage("Error selecting LED state");
-        return DEVICE_ERR;
-    }
+    ViPBoolean ledBeingControlled = &ledStates_[ledIndex];
 
     if (eAct == MM::BeforeGet)
     {
@@ -686,7 +655,7 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
         {
             LogMessage("CHROLIS not available");
         }
-        if (pHub->ChrolisDevice.GetSingleLEDEnableState(numFromName-1, *ledBeingControlled) != 0)
+        if (pHub->ChrolisDevice.GetSingleLEDEnableState(ledIndex, *ledBeingControlled) != 0)
         {
             LogMessage("Error getting info from chrolis");
         }
@@ -714,11 +683,11 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
             return ERR_CHROLIS_NOT_AVAIL;
         }
 
-        int err = pHub->ChrolisDevice.SetSingleLEDEnableState(numFromName-1, (ViBoolean)val);
+        int err = pHub->ChrolisDevice.SetSingleLEDEnableState(ledIndex, (ViBoolean)val);
         if (err != 0)
         {
             LogMessage("Error Setting LED state");
-            pHub->ChrolisDevice.GetSingleLEDEnableState(numFromName - 1, *ledBeingControlled);
+            pHub->ChrolisDevice.GetSingleLEDEnableState(ledIndex, *ledBeingControlled);
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return err;
@@ -733,39 +702,9 @@ int ChrolisStateDevice::OnEnableStateChange(MM::PropertyBase* pProp, MM::ActionT
     return DEVICE_OK;
 }
 
-int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eAct, long ledIndex)
 {
-    ViPUInt16 ledBeingControlled;
-    int numFromName = -1;
-    std::string searchString = pProp->GetName();
-    std::regex regexp(R"([-+]?([0-9]*\.[0-9]+|[0-9]+))");    
-    std::smatch sm;
-    std::regex_search(searchString, sm, regexp);
-
-    //The names for the LED's should contain only a single number representing the LED
-    //Use this to set the power
-    if (sm.size() > 0)
-    {
-        if (sm[0].str().length() > 0)
-        {
-            numFromName = stoi(sm[0].str());
-        }
-    }
-    else
-    {
-        LogMessage("Regex match failed");
-        return DEVICE_ERR;
-    }
-
-    if (numFromName > 0 && numFromName <= NUM_LEDS)
-    {
-        ledBeingControlled = &ledBrightnesses_[numFromName - 1];
-    }
-    else
-    {
-        LogMessage("Error selecting LED state");
-        return DEVICE_ERR;
-    }
+    ViPUInt16 ledBeingControlled = &ledBrightnesses_[ledIndex];
 
     if (eAct == MM::BeforeGet)
     {
@@ -779,7 +718,7 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
         {
             LogMessage("CHROLIS not available");
         }
-        if (pHub->ChrolisDevice.GetSingleLEDBrightnessState(numFromName - 1, *ledBeingControlled) != 0)
+        if (pHub->ChrolisDevice.GetSingleLEDBrightnessState(ledIndex, *ledBeingControlled) != 0)
         {
             LogMessage("Error getting info from chrolis");
         }
@@ -807,11 +746,11 @@ int ChrolisStateDevice::OnPowerChange(MM::PropertyBase* pProp, MM::ActionType eA
             return ERR_CHROLIS_NOT_AVAIL;
         }
 
-        int err = pHub->ChrolisDevice.SetSingleLEDBrightnessState(numFromName - 1, (ViUInt16)val);
+        int err = pHub->ChrolisDevice.SetSingleLEDBrightnessState(ledIndex, (ViUInt16)val);
         if (err != 0)
         {
             LogMessage("Error Setting LED state");
-            pHub->ChrolisDevice.GetSingleLEDBrightnessState(numFromName - 1, *ledBeingControlled);
+            pHub->ChrolisDevice.GetSingleLEDBrightnessState(ledIndex, *ledBeingControlled);
             os << *ledBeingControlled;
             OnPropertyChanged(pProp->GetName().c_str(), os.str().c_str());
             return err;
