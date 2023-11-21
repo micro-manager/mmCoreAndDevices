@@ -234,30 +234,6 @@ int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(std::array<ViBoolean, NUM_L
     return DEVICE_OK;
 }
 
-int ThorlabsChrolisDeviceWrapper::GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State)
-{
-    std::lock_guard<std::mutex> lock(instanceMutex_);
-
-    if (!deviceConnected_)
-    {
-        led1State = false;
-        led2State = false;
-        led3State = false;
-        led4State = false;
-        led5State = false;
-        led6State = false;
-        return ERR_CHROLIS_NOT_AVAIL;
-    }
-    led1State = savedEnabledStates_[0];
-    led2State = savedEnabledStates_[1];
-    led3State = savedEnabledStates_[2];
-    led4State = savedEnabledStates_[3];
-    led5State = savedEnabledStates_[4];
-    led6State = savedEnabledStates_[5];
-
-    return DEVICE_OK;
-}
-
 int ThorlabsChrolisDeviceWrapper::GetSingleLEDBrightnessState(int led, ViUInt16& state)
 {
     std::lock_guard<std::mutex> lock(instanceMutex_);
@@ -288,30 +264,6 @@ int ThorlabsChrolisDeviceWrapper::GetLEDBrightnessStates(std::array<ViUInt16, NU
         return ERR_CHROLIS_NOT_AVAIL;
     }
     states = savedBrightnessStates_;
-    return DEVICE_OK;
-}
-
-int ThorlabsChrolisDeviceWrapper::GetLEDBrightnessStates(ViUInt16& led1Brightness, ViUInt16& led2Brightness, ViUInt16& led3Brightness, ViUInt16& led4Brightness, ViUInt16& led5Brightness, ViUInt16& led6Brightness)
-{
-    std::lock_guard<std::mutex> lock(instanceMutex_);
-
-    if (!deviceConnected_)
-    {
-        led1Brightness = 0;
-        led2Brightness = 0;
-        led3Brightness = 0;
-        led4Brightness = 0;
-        led5Brightness = 0;
-        led6Brightness = 0;
-        return ERR_CHROLIS_NOT_AVAIL;
-    }
-    led1Brightness = savedBrightnessStates_[0];
-    led2Brightness = savedBrightnessStates_[1];
-    led3Brightness = savedBrightnessStates_[2];
-    led4Brightness = savedBrightnessStates_[2];
-    led5Brightness = savedBrightnessStates_[4];
-    led6Brightness = savedBrightnessStates_[5];
-
     return DEVICE_OK;
 }
 

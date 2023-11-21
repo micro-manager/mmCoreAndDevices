@@ -71,10 +71,8 @@ public:
     int GetShutterState(bool& open);
     int GetSingleLEDEnableState(int led, ViBoolean& state);
     int GetLEDEnableStates(std::array<ViBoolean, NUM_LEDS> &states);
-    int GetLEDEnableStates(ViBoolean& led1State, ViBoolean& led2State, ViBoolean& led3State, ViBoolean& led4State, ViBoolean& led5State, ViBoolean& led6State);
     int GetSingleLEDBrightnessState(int led, ViUInt16& state);
     int GetLEDBrightnessStates(std::array<ViUInt16, NUM_LEDS> &states);
-    int GetLEDBrightnessStates(ViUInt16& led1Brightness, ViUInt16& led2Brightness, ViUInt16& led3Brightness, ViUInt16& led4Brightness, ViUInt16& led5Brightness, ViUInt16& led6Brightness);
 
     int SetShutterState(bool open);
     int SetLEDEnableStates(std::array<ViBoolean, NUM_LEDS> states);
