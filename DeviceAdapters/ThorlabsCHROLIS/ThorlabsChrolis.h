@@ -105,7 +105,7 @@ private:
     // The following variables are shared with the polling thread and must only
     // be accessed with pollingMutex_ held.
     std::mutex pollingMutex_;
-    bool threadRunning_ = false;
+    bool pollingStopRequested_ = false;
     std::function<void(int, int)> shutterCallback_;
     std::function<void(int, ViBoolean)> stateCallback_;
 

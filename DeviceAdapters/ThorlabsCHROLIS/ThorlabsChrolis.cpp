@@ -175,7 +175,6 @@ int ChrolisHub::Initialize()
         return DEVICE_ERR;
     }
 
-    threadRunning_ = true;
     updateThread_ = std::thread(&ChrolisHub::StatusChangedPollingThread, this);
     return DEVICE_OK;
 }
@@ -183,9 +182,8 @@ int ChrolisHub::Initialize()
 int ChrolisHub::Shutdown()
 {
     {
-        // Tell the polling thread to exit if running.
         std::lock_guard<std::mutex> lock(pollingMutex_);
-		threadRunning_ = false;
+		pollingStopRequested_ = true;
     }
 
     if (updateThread_.joinable())
@@ -223,7 +221,7 @@ void ChrolisHub::StatusChangedPollingThread()
     {
         {
             std::lock_guard<std::mutex> lock(pollingMutex_);
-            if (!threadRunning_)
+            if (pollingStopRequested_)
             {
                 return;
             }
@@ -236,10 +234,6 @@ void ChrolisHub::StatusChangedPollingThread()
             if (err != 0)
             {
                 LogMessage("Error Getting Status");
-                {
-                    std::lock_guard<std::mutex> lock(pollingMutex_);
-                    threadRunning_ = false;
-                }
                 return;
             }
             const auto curStatus = currentDeviceStatusCode_;
