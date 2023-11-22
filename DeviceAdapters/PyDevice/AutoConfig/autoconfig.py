@@ -37,7 +37,7 @@ mm_exe_path = locate(mm_exe_path, "the Micro-Manager executable", "ImageJ.exe")
 # Locate Micro-Manager source code
 mm_src_path = path.join(path.dirname(project_path), "mmCoreAndDevices")
 if not path.isdir(mm_src_path):
-    mm_src_path = path.dirname(project_path)
+    mm_src_path = path.dirname(path.dirname(project_path))
 
 mm_src_path = locate(mm_src_path, "the mmCoreAndDevices repository", "micromanager.sln")
 # add option to automatically check out repository in the correct location?
