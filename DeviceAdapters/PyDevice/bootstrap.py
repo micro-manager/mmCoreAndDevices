@@ -3,9 +3,15 @@ bootstrap = R"raw("
 # in the c++ code.
 # See RunScript() in PyDevice.cpp for the code that loads this script as a c++ string.
 
+import sys
+_original_path = sys.path.copy()
+def set_path(path):
+    sys.path = [*_original_path, *path.split(';')]
+if '_EXTRA_SEARCH_PATH' in locals():
+    set_path(_EXTRA_SEARCH_PATH)
+
 import numpy as np
 from typing import Protocol, runtime_checkable, get_origin
-import sys
 import os
 import traceback
 import astropy.units as u
@@ -168,8 +174,6 @@ def scan_devices(devices):
 def traceback_to_string(tb):
     return ''.join(traceback.format_tb(_current_tb))
 
-def add_to_path(directory):
-    if not directory in sys.path:
-        sys.path.insert(0, directory)
+
 
 # )raw";

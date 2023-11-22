@@ -34,7 +34,8 @@ CPyHub::CPyHub() : PyHubClass(g_adapterName) {
     SetErrorText(ERR_PYTHON_ONLY_ONE_HUB_ALLOWED, "Only one PyHub device may be active at a time. To combine multiple Python devices, write a script that combines them in a single `devices` dictionary.");
     
     CreateStringProperty(p_PythonScriptPath, "", false, nullptr, true);
-    CreateStringProperty(p_PythonModulePath, "", false, nullptr, true);
+    CreateStringProperty(p_PythonModulePath, "(auto)", false, nullptr, true);
+    id_ = "PyHub";
 }
 
 
@@ -62,6 +63,89 @@ int CPyHub::DetectInstalledDevices() {
 }
 
 /**
+ * @brief Loads the Python script specified in ScriptPath
+ * If the script is not found, a dialog box file browser is shown so that the user can select a file (Windows only).
+ * @return Script text string read from the file, or an empty string if the user cancelled the load. 
+*/
+string CPyHub::LoadScript() noexcept {
+    char scriptPathString[MM::MaxStrLength] = { 0 };
+    if (GetProperty(p_PythonScriptPath, scriptPathString) != DEVICE_OK)
+        return string();
+
+    script_path_ = scriptPathString;
+#ifdef _WIN32
+    if (!FileExists(script_path_)) { // file not found, let the user select one
+        OPENFILENAMEW options = { 0 };
+        wchar_t file_name[MAX_PATH] = { 0 };
+        wcsncpy(file_name, script_path_.generic_wstring().c_str(), MAX_PATH - 1);
+        options.lStructSize = sizeof(OPENFILENAMEW);
+        options.lpstrFilter = L"Python scripts\0*.py\0\0";
+        options.lpstrFile = file_name;
+        options.lpstrTitle = L"Select Python file that includes the `devices` dictionary";
+        options.nMaxFile = MAX_PATH;
+
+        if (GetOpenFileName(&options)) {
+            script_path_ = options.lpstrFile;
+            if (SetProperty(p_PythonScriptPath, script_path_.generic_u8string().c_str()) != DEVICE_OK)
+                return string();
+        }
+    }
+#endif
+
+    // load the python script from disk
+    auto stream = std::ifstream(script_path_);
+    if (!stream)
+        return nullptr; // file not found
+
+    auto code = std::string();
+    char buffer[1024];
+    while (stream.read(buffer, sizeof(buffer)))
+        code.append(buffer, 0, stream.gcount());
+    
+    code.append(buffer, 0, stream.gcount());
+    return code;
+}
+
+/**
+  @brief Initializes additional paths where Python looks for modules.
+  The module search path always includes the default paths as set up by Py_Initialize.
+  This includes the site-packages folder of the Python installation that is currently used.
+
+  If ModulePath is set to "(auto)" (the default), the following search paths are added at the start of the module search path:
+  - The directory where the script is located
+  - If that directory, or any of the parent directories, holds a `venv` folder, use the site-packages in that virtual environment
+
+  If ModulePath is not set to "(auto)", the paths set in the ModulePath (separated by ';') are added at the start of the module search path.
+
+  Note: these paths are set *before* calling the bootstrap script. That script should be able to locate the numpy and astropy packages.
+  Note: if the hub is de-initialized and initialized again, the paths are reset.
+*/
+string CPyHub::ComputeModulePath() noexcept {
+    char modulePathString[MM::MaxStrLength] = { 0 };
+    if (GetProperty(p_PythonModulePath, modulePathString) != DEVICE_OK)
+        return string();
+
+    auto path = string(modulePathString);
+    if (path == "(auto)") {
+        path = script_path_.parent_path().generic_u8string(); // always include the folder of the current script
+
+        // see if the script is 'in' a virtual environment
+        // todo: test with non-ascii folder names
+        struct stat info;
+        fs::path dir = script_path_;
+        for (int depth = 0; depth < 10 && dir.has_relative_path(); depth++) {
+            dir = dir.parent_path();
+            stat((dir / "venv").generic_u8string().c_str(), &info);
+            if (info.st_mode & S_IFDIR) {
+                path = path + ";" + dir.generic_u8string() + "/venv/Lib/site-packages";
+                break;
+            }
+        }
+    }
+    return path;
+}
+
+/**
  * @brief Initialize the Python interpreter, run the script, and convert the 'devices' dictionary into a c++ map
 */
 int CPyHub::Initialize() {
@@ -72,57 +156,26 @@ int CPyHub::Initialize() {
         // Read path to the Python script, and optional path to the Python home directory (virtual environment)
         // If the Python script is not found, a dialog box is shown so that the user can select a file.
         //
-        char modulePathString[MM::MaxStrLength] = { 0 };
-        char scriptPathString[MM::MaxStrLength] = { 0 };
-        _check_(GetProperty(p_PythonModulePath, modulePathString));
-        _check_(GetProperty(p_PythonScriptPath, scriptPathString));
 
-        fs::path scriptPath(scriptPathString);
-        #ifdef _WIN32
-        if (!FileExists(scriptPath)) {
-            OPENFILENAMEA options = { 0 };
-            char file_name[MAX_PATH] = { 0 };
-            strncpy_s(file_name, scriptPath.generic_string().c_str(), MAX_PATH - 1);
-            options.lStructSize = sizeof(OPENFILENAMEA);
-            options.lpstrFilter = "Python scripts\0*.py\0\0";
-            options.lpstrFile = file_name;
-            options.lpstrTitle = "Select Python file that includes the `devices` dictionary";
-            options.nMaxFile = MAX_PATH;
+        auto script = LoadScript();
+        if (script.empty())
+            return ERR_PYTHON_SCRIPT_NOT_FOUND;
+       
 
-            if (GetOpenFileNameA(&options)) {
-               scriptPath = options.lpstrFile;
-                _check_(SetProperty(p_PythonScriptPath, scriptPath.generic_string().c_str()));
-            }            
-        }
-        #endif
+        auto modulePath = ComputeModulePath();
 
-        // load the python script from disk
-        auto stream = std::ifstream(scriptPath);
-        if (!stream)
-            return ERR_PYTHON_SCRIPT_NOT_FOUND; 
-
-        auto code = std::string();
-        char buffer[1024];
-        while (stream.read(buffer, sizeof(buffer))) {
-            code.append(buffer, 0, stream.gcount());
-        }
-        code.append(buffer, 0, stream.gcount());
-
-        id_ = scriptPath.filename().generic_string();
-        
         this->LogMessage("Initializing the Python runtime. The Python runtime (especially Anaconda) may crash if Python is not installed correctly."
             "If so, verify thatthe HOMEPATH environment is set to the correct value, or remove it."
             "Also, make sure that the desired Python installation is the first that is listed in the PATH environment variable.\n", true);
 
-        if (!PyObj::InitializeInterpreter(modulePathString))
+        if (!PyObj::InitializeInterpreter(modulePath))
             return CheckError(); // initializing the interpreter failed, abort initialization and report the error
 
         // execute the Python script, and read the 'devices' field,
         // which must be a dictionary of {label: device}
         PyLock lock; // lock, so that we can call bare Python API functions
         auto locals = PyObj(PyDict_New());
-        PyObj::g_add_to_path.Call(PyObj(scriptPath.parent_path().generic_u8string().c_str()));
-        if (!PyObj::RunScript(code.c_str(), id_.c_str(), locals))
+        if (!PyObj::RunScript(script.c_str(), script_path_.filename().generic_u8string().c_str(), locals))
             return CheckError();
 
         auto deviceDict = PyObj::Borrow(PyDict_GetItemString(locals, "devices"));
@@ -227,7 +280,9 @@ PyObj CPyHub::GetDevice(const string& device_id) noexcept {
     string deviceType;
     string deviceName;
     CPyHub::SplitId(device_id, deviceType, deviceName);
-    
+    if (!g_the_hub)
+        return PyObj(); // no hub initialized
+
     auto device_idx = g_the_hub->devices_.find(device_id);
     if (device_idx == g_the_hub->devices_.end())
         return PyObj(); // device not found

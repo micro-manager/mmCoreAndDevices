@@ -202,8 +202,8 @@ public:
     }
 
    
-    static bool InitializeInterpreter(const fs::path& module_path) noexcept;
-    static bool RunScript(const char* code, const char* file_name, const PyObj& locals) noexcept;
+    static bool InitializeInterpreter(const string& module_path) noexcept;
+    static bool RunScript(const string& code, const string& file_name, const PyObj& locals) noexcept;
 
     /**
     * Checks if a Python error has occurred. If so, logs the error and resets the error state.
@@ -220,6 +220,6 @@ public:
     static PyObj g_scan_devices;
     static PyObj g_main_module;
     static PyObj g_global_scope;
-    static PyObj g_add_to_path;
+    static PyObj g_set_path;
 };
 

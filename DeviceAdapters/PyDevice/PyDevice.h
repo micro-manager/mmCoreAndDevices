@@ -181,8 +181,14 @@ public:
 protected:
     int DetectInstalledDevices() override;
 private:
+    string LoadScript() noexcept;
+    string ComputeModulePath() noexcept;
+    
     // list of devices read from the `devices` dictionary that the Python script returns.
     std::map<string, PyObj> devices_;
+
+    // Location of the currently loaded script
+    fs::path script_path_;
 
     // Pointer to the current (only) active Hub, or nullptr if no Hub is active.
     static CPyHub* g_the_hub;
