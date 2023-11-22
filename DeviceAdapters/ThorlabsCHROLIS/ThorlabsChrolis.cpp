@@ -134,20 +134,13 @@ ChrolisHub::ChrolisHub()
 int ChrolisHub::DetectInstalledDevices()
 {
     ClearInstalledDevices();
-    InitializeModuleData();// make sure this method is called before we look for available devices
 
-    char hubName[MM::MaxStrLength];
-    GetName(hubName);
-    for (unsigned i = 0; i < GetNumberOfDevices(); i++)
-    {
-        char deviceName[MM::MaxStrLength];
-        bool success = GetDeviceName(i, deviceName, MM::MaxStrLength);
-        if (success && (strcmp(hubName, deviceName) != 0))
-        {
-            MM::Device* pDev = CreateDevice(deviceName);
-            AddInstalledDevice(pDev);
-        }
-    }
+    MM::Device* pDev = CreateDevice(CHROLIS_SHUTTER_NAME);
+    AddInstalledDevice(pDev);
+
+    pDev = CreateDevice(CHROLIS_STATE_NAME);
+    AddInstalledDevice(pDev);
+
     return DEVICE_OK;
 }
 
