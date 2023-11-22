@@ -14,10 +14,7 @@
 #include "pch.h"
 #include "PyDevice.h"
 
-
-std::map<string, CPyHub*> CPyHub::g_hubs;
-
-
+CPyHub* CPyHub::g_the_hub = nullptr;
 
 int CPyDeviceBase::CheckError() noexcept {
     PyLock lock;
@@ -34,6 +31,7 @@ int CPyDeviceBase::CheckError() noexcept {
 CPyHub::CPyHub() : PyHubClass(g_adapterName) {
     SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the Python script.");
     SetErrorText(ERR_PYTHON_NO_DEVICE_DICT, "Script did not generate a global `device` variable holding a dictionary.");
+    SetErrorText(ERR_PYTHON_ONLY_ONE_HUB_ALLOWED, "Only one PyHub device may be active at a time. To combine multiple Python devices, write a script that combines them in a single `devices` dictionary.");
     
     CreateStringProperty(p_PythonScriptPath, "", false, nullptr, true);
     CreateStringProperty(p_PythonModulePath, "", false, nullptr, true);
@@ -49,8 +47,7 @@ int CPyHub::Shutdown() {
     if (initialized_) {
         PyLock lock;
         devices_.clear();
-        initialized_ = false;
-        g_hubs.erase(id_);
+        g_the_hub = nullptr;
     }
     return PyHubClass::Shutdown();
 }
@@ -69,6 +66,8 @@ int CPyHub::DetectInstalledDevices() {
 */
 int CPyHub::Initialize() {
     if (!initialized_) {
+        if (g_the_hub)
+            return ERR_PYTHON_ONLY_ONE_HUB_ALLOWED;
         //
         // Read path to the Python script, and optional path to the Python home directory (virtual environment)
         // If the Python script is not found, a dialog box is shown so that the user can select a file.
@@ -141,13 +140,13 @@ int CPyHub::Initialize() {
             auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
             auto obj = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
             auto type = obj.Get("_MM_dtype").as<string>();
-            auto id = ComposeId(type, id_, name);
+            auto id = ComposeId(type, name);
             obj.Set("_MM_id", id);
             devices_[id] = obj;
         }
-        g_hubs[id_] = this;
 
         initialized_ = true;
+        g_the_hub = this;
     }
     return CheckError();
 }
@@ -226,41 +225,32 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
 PyObj CPyHub::GetDevice(const string& device_id) noexcept {
     // split device id
     string deviceType;
-    string hubId;
     string deviceName;
-    CPyHub::SplitId(device_id, deviceType, hubId, deviceName);
+    CPyHub::SplitId(device_id, deviceType, deviceName);
     
-    auto hub_idx = g_hubs.find(hubId);
-    if (hub_idx == g_hubs.end())
-        return PyObj(); // hub not found
-    auto hub = hub_idx->second;
-
-    auto device_idx = hub->devices_.find(device_id);
-    if (device_idx == hub->devices_.end())
+    auto device_idx = g_the_hub->devices_.find(device_id);
+    if (device_idx == g_the_hub->devices_.end())
         return PyObj(); // device not found
 
     return device_idx->second;
 }
 
 /*
-    * A device id is of the form DeviceType[name@hub], where :
+    * A device id is of the form DeviceType:name, where :
     *  DeviceType is the device type : "Device", "Camera", etc.
-    *  hub is the name of the script that was used to construct the device, including the .py suffix: "microscope.py"
     *  name is the key of the 'devices' dictionary that contains the object
     */
-bool CPyHub::SplitId(const string& id, string& deviceType, string& hubId, string& deviceName) noexcept {
-    auto colon1 = id.find('[');
-    auto colon2 = id.find('@', colon1 + 1);
-    if (colon1 != string::npos && colon2 != string::npos) {
+bool CPyHub::SplitId(const string& id, string& deviceType, string& deviceName) noexcept {
+    auto colon1 = id.find(':');
+    if (colon1 != string::npos) {
         deviceType = id.substr(0, colon1);
-        deviceName = id.substr(colon1 + 1, colon2 - colon1 - 1);
-        hubId = id.substr(colon2 + 1, id.length() - colon2 - 2);
+        deviceName = id.substr(colon1 + 1);
         return true;
     }
     else
         return false;
 };
 
-string CPyHub::ComposeId(const string& deviceType, const string& hubId, const string& deviceName) noexcept {
-    return deviceType + "[" + deviceName + "@" + hubId + "]";
+string CPyHub::ComposeId(const string& deviceType, const string& deviceName) noexcept {
+    return deviceType + ":" + deviceName;
 }

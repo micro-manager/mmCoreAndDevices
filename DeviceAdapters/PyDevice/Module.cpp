@@ -28,9 +28,8 @@ MODULE_API MM::Device* CreateDevice(const char* id)
     // else, we are (re)creating a MM Device wrapper for an existing Python object. To locate the object, we must first extract the object type
     
     string deviceType;
-    string hubId;
     string deviceName;
-    if (!CPyHub::SplitId(id, deviceType, hubId, deviceName))
+    if (!CPyHub::SplitId(id, deviceType, deviceName))
         return nullptr; // invalid id
 
     if (deviceType == "Device")

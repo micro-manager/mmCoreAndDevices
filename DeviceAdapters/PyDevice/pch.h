@@ -26,7 +26,7 @@ inline bool FileExists(const fs::path& path) noexcept {
 // Use the limited Python API. Not all functions are available, but the advantage is that we can use python3.dll, which will be available
 // on any system with python 3.2 or higher installed (and findable, meaning python3.dll is in the system dir, or in a directory in the PATH variable)
 // Since we only tested with Python 3.9 and higher, we make this the minimum version. 
-// Using 0x03020000 or even just 3 allows to work with lowever Python versions, but is currently untested.
+// Using 0x03020000 or even just 3 allows to work with lower Python versions, but is currently untested.
 #define Py_LIMITED_API 0x03090000
 
 // the following lines are a workaround for the problem 'cannot open file python39_d.lib'. This occurs because Python tries
@@ -47,5 +47,6 @@ inline bool FileExists(const fs::path& path) noexcept {
 #define ERR_PYTHON_SCRIPT_NOT_FOUND 101
 #define ERR_PYTHON_NO_DEVICE_DICT 102
 #define ERR_PYTHON_DEVICE_NOT_FOUND 103
+#define ERR_PYTHON_ONLY_ONE_HUB_ALLOWED 104
 #define ERR_PYTHON_EXCEPTION 105
 #define _check_(expression) { auto result = expression; if (result != DEVICE_OK) return result; }
