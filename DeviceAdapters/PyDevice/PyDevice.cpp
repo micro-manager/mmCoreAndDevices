@@ -247,8 +247,8 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
             auto option_count = PyList_Size(options);
             for (Py_ssize_t j = 0; j < option_count; j++) {
                 auto key_value = options.GetListItem(j);
-                descriptor->enum_keys.push_back(options.GetTupleItem(0).as<string>());
-                descriptor->enum_values.push_back(options.GetTupleItem(1));
+                descriptor->enum_keys.push_back(key_value.GetTupleItem(0).as<string>());
+                descriptor->enum_values.push_back(key_value.GetTupleItem(1));
             }
         }
         else // other property type, treat as object
