@@ -266,7 +266,7 @@ int ChrolisHub::OnDeviceStatus(MM::PropertyBase *pProp, MM::ActionType eAct)
 
 void ChrolisHub::StatusChangedPollingThread()
 {
-    for (;;)
+    for (;;) 
     {
         {
             std::lock_guard<std::mutex> lock(pollingMutex_);
@@ -278,19 +278,19 @@ void ChrolisHub::StatusChangedPollingThread()
 
         if (ChrolisDevice.IsDeviceConnected())
         {
-            ViUInt32 tempStatus = 0;
-            auto err = ChrolisDevice.GetDeviceStatus(tempStatus);
+            ViUInt32 newStatus = 0;
+            auto err = ChrolisDevice.GetDeviceStatus(newStatus);
             if (err != 0)
             {
                 LogMessage("Error Getting Status");
                 return;
             }
-            const auto curStatus = currentDeviceStatusCode_;
-            const bool statusChanged = curStatus != tempStatus;
-            currentDeviceStatusCode_ = tempStatus;
+            const auto oldStatus = currentDeviceStatusCode_;
+            const bool statusChanged = oldStatus != newStatus;
+            currentDeviceStatusCode_ = newStatus;
             if (statusChanged)
             {
-                if (curStatus != 0)
+                if (newStatus != 0)
                 {
                     std::array<ViBoolean, NUM_LEDS> tempEnableStates{};
                     ChrolisDevice.VerifyLEDEnableStatesWithLock();
@@ -316,15 +316,14 @@ void ChrolisHub::StatusChangedPollingThread()
                             }
                         }
                     }
+                    std::string message = DeviceStatusAsString(newStatus);
+                    {
+                        std::lock_guard<std::mutex> lock(pollingMutex_);
+                        deviceStatus_ = message;
+                    }
+                    OnPropertyChanged("Device Status", message.c_str());
                 }
             }
-
-            std::string message = DeviceStatusAsString(curStatus);
-            {
-                std::lock_guard<std::mutex> lock(pollingMutex_);
-                deviceStatus_ = message;
-            }
-            OnPropertyChanged("Device Status", message.c_str());
         }
         Sleep(500);
     }
