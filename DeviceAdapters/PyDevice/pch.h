@@ -34,6 +34,7 @@ inline bool FileExists(const fs::path& path) noexcept {
 // as a workaround, we trick the python.h include to think we are always building a Release build.
 #ifdef _DEBUG
 #undef _DEBUG
+#pragma warning (disable: 4996)
 #include <Python.h> // if you get a compiler error here, try building again and see if magic happens
 #define _DEBUG
 #else
