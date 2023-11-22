@@ -43,9 +43,9 @@ PyObj PyObjectAction::get(MM::PropertyBase* pProp) const noexcept {
 
 PyBoolAction::PyBoolAction(CPyDeviceBase* device, const string& attribute, const string& MM_property, bool readonly) : PyAction(device, attribute, MM_property, MM::Integer, readonly) {
     enum_keys.push_back("0");
-    enum_values.push_back(PyObj::Borrow(Py_False));
+    enum_values.push_back(PyObj(false));
     enum_keys.push_back("1");
-    enum_values.push_back(PyObj::Borrow(Py_True));
+    enum_values.push_back(PyObj(true));
 }
 
 void PyBoolAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {

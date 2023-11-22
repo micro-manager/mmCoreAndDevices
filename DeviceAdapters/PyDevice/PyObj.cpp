@@ -83,11 +83,11 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
         return false;
 
     // get the ms and um units
-    g_unit_ms = Borrow(PyDict_GetItemString(g_global_scope, "unit_ms"));
-    g_unit_um = Borrow(PyDict_GetItemString(g_global_scope, "unit_um"));
-    g_traceback_to_string = Borrow(PyDict_GetItemString(g_global_scope, "traceback_to_string"));
-    g_set_path = Borrow(PyDict_GetItemString(g_global_scope, "set_path"));
-    g_scan_devices = Borrow(PyDict_GetItemString(g_global_scope, "scan_devices"));
+    g_unit_ms = g_global_scope.GetDictItem("unit_ms");
+    g_unit_um = g_global_scope.GetDictItem("unit_um");
+    g_traceback_to_string = g_global_scope.GetDictItem("traceback_to_string");
+    g_set_path = g_global_scope.GetDictItem("set_path");
+    g_scan_devices = g_global_scope.GetDictItem("scan_devices");
     return ReportError();
 }
 
@@ -113,15 +113,16 @@ bool PyObj::RunScript(const string& code, const string& file_name, const PyObj& 
  *
 */
 bool PyObj::ReportError() {
-    // prevent infinite recusion if an error happens in the CheckError function itself
-    static bool reentrant = false;
-    
-    // assert(PyLock.IsLocked()); // we can only call Python functions if we hold the GIL
-    if (reentrant)
-        return false;
     PyLock lock; // todo: should not be needed. If we don't hold the GIL, ReportError is undefined behavior in a multi-threaded context?
     if (!PyErr_Occurred())
         return true;
+    
+    // prevent infinite recusion if an error happens in the CheckError function itself
+    static bool reentrant = false;
+    if (reentrant) {
+        PyErr_Clear();
+        return false;
+    }
     reentrant = true;
 
     auto msg = string("Python error.");
@@ -130,15 +131,15 @@ bool PyObj::ReportError() {
     PyObject* traceback = nullptr;
     PyErr_Fetch(&type, &value, &traceback);
     if (type) {
-        msg += PyObj(type).as<string>();
+        msg += Borrow(type).as<string>();
         msg += " : ";
     }
     if (value)
-        msg += PyObj(value).as<string>();
+        msg += Borrow(value).as<string>();
 
     if (traceback)
         msg += g_traceback_to_string.Call(Borrow(traceback)).as<string>();
-
+    
     PyErr_Restore(type, value, traceback);
     PyErr_Clear();
     g_errorMessage += msg + '\n';

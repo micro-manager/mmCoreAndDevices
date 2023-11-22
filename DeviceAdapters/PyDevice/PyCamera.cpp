@@ -34,6 +34,7 @@ int CPyCamera::Shutdown() {
 * The calling program allso assumes that camera never changes the size of
 * the pixel buffer on its own. In other words, the buffer can change only if
 * appropriate properties are set (such as binning, pixel type, etc.)
+* 
 */
 const unsigned char* CPyCamera::GetImageBuffer()
 {

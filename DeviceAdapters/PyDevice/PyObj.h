@@ -47,13 +47,29 @@ public:
         }
     }
 
-    // utility functions to construct new python object from primitive values
-    // note: the current thread must hold the GIL (see PyLock)
-    explicit PyObj(double value) : PyObj(PyFloat_FromDouble(value)) {}
-    explicit PyObj(const string& value) : PyObj(PyUnicode_FromString(value.c_str())) {}
-    explicit PyObj(const char* value) : PyObj(PyUnicode_FromString(value)) {}
-    explicit PyObj(long value) : PyObj(PyLong_FromLong(value)) {}
-    explicit PyObj(bool value) : PyObj(value ? Py_True : Py_False) {}
+    // utility functions to construct new Python object from primitive values
+    explicit PyObj(double value) {
+        PyLock lock;
+        p_ = PyFloat_FromDouble(value);
+        if (!p_)
+            ReportError();
+    }
+    explicit PyObj(const char* value) {
+        PyLock lock;
+        p_ = PyUnicode_FromString(value);
+        if (!p_)
+            ReportError();
+    }
+
+    explicit PyObj(long value) {
+        PyLock lock;
+        p_ = PyLong_FromLong(value);
+        if (!p_)
+            ReportError();
+    }
+
+    explicit PyObj(bool value) : PyObj(Borrow(value ? Py_True : Py_False)) {}
+    explicit PyObj(const string& value) : PyObj(value.c_str()) {}
 
     // utility functions to convert to primitive types
     // note: if an error occurred during these functions, it will be logged in the g_errorMessage (also see CheckErrors) check for python 
@@ -78,17 +94,19 @@ public:
     }
     template <> string as<string>() const {
         PyLock lock;
-        auto as_str = PyObj(PyObject_Str(*this)); // convert any object to a to Python string by calling the str() function
+        auto as_str = PyObj(PyObject_Str(*this)); // convert any object to a Python string by calling the str() function
         if (as_str) {
             auto as_bytes = PyObj(PyUnicode_AsUTF8String(as_str));
             if (as_bytes) {
-                auto retval = PyBytes_AsString(as_bytes);
-                if (retval) {
+                auto string_bytes = PyBytes_AsString(as_bytes);
+                if (string_bytes) {
+                    auto retval = string(string_bytes); // copies the string (before releasing lock)
                     return retval;
                 }
+                else
+                    ReportError();
             }
         }
-        ReportError();
         return string();
     }
     template <> PyObj as<PyObj>() const {
@@ -99,51 +117,48 @@ public:
     }
     template <class T> void Set(const char* attribute, T value) {
         PyLock lock;
-        PyObject_SetAttrString(p_, attribute, PyObj(value));
-        ReportError();
+        if (PyObject_SetAttrString(*this, attribute, PyObj(value)) != 0)
+            ReportError();
     }
     PyObj CallMember(const char* function) noexcept {
         PyLock lock;
-        auto member = Borrow(PyObject_GetAttrString(p_, function));
-        if (member)
-            return PyObj(PyObject_CallNoArgs(member));
-        else
-            return member;
+        return Get(function).Call();
     }
     PyObj Call() const noexcept {
         PyLock lock;
-        return PyObj(PyObject_CallNoArgs(p_));
+        return PyObj(PyObject_CallNoArgs(*this));
     }
     PyObj Call(const PyObj& arg) const noexcept {
         PyLock lock;
         PyObject* arg0 = arg;
-        return PyObj(PyObject_CallFunctionObjArgs(p_, arg0, NULL));
+        return PyObj(PyObject_CallFunctionObjArgs(*this, arg0, NULL));
     }
-    //    PyObj Call(const PyObj& arg) const noexcept {
-//        PyLock lock;
-//        return PyObj(PyObject_CallOneArg(p_, arg));
-//    }
-    /* for Python 3.9:
-    template <class ...Args> PyObj Call(const PyObj& arg1, const Args&... args) const
-    {
+    PyObj Get(const char* attribute) const noexcept {
         PyLock lock;
-        std::vector<PyObject*> arguments = { arg1, args... };
-        return PyObj(PyObject_VectorCall(p_, arguments.data(), sizeof...(args), nullptr));
-    }*/
-
-    PyObj Get( const char* attribute) const noexcept {
-        PyLock lock;
-        return PyObj(PyObject_GetAttrString(p_, attribute));
+        return PyObj(PyObject_GetAttrString(*this, attribute));
     }
     PyObj Get(const string& attribute) const noexcept {
         return Get(attribute.c_str());
+    }
+    PyObj GetDictItem(const char* key) const noexcept {
+        PyLock lock;
+        return Borrow(PyDict_GetItemString(*this, key));
+    }
+    PyObj GetDictItem(const string& key) const noexcept {
+        return GetDictItem(key.c_str());
+    }
+    PyObj GetListItem(Py_ssize_t index) const noexcept {
+        return Borrow(PyList_GetItem(*this, index));
+    }
+    PyObj GetTupleItem(Py_ssize_t index) const noexcept {
+        return Borrow(PyTuple_GetItem(*this, index));
     }
     bool HasAttribute(const string& attribute) const noexcept {
         return HasAttribute(attribute.c_str());
     }
     bool HasAttribute(const char* attribute) const noexcept {
         PyLock lock;
-        return PyObject_HasAttrString(p_, attribute);
+        return PyObject_HasAttrString(*this, attribute);
     }
 
     /**
@@ -192,19 +207,6 @@ public:
         PyLock lock;
         return PyObj(PyNumber_TrueDivide(p_, other));
     }
-    /**
-    * Takes a borrowed reference and wraps it in a PyObj smart pointer
-    * This increases the reference count of the object.
-    * The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
-    */
-    static PyObj Borrow(PyObject* obj) {
-        if (obj) {
-            PyLock lock;
-            Py_INCREF(obj);
-        }
-        return PyObj(obj);
-    }
-
    
     static bool InitializeInterpreter(const string& module_path) noexcept;
     static bool RunScript(const string& code, const string& file_name, const PyObj& locals) noexcept;
@@ -225,5 +227,19 @@ public:
     static PyObj g_main_module;
     static PyObj g_global_scope;
     static PyObj g_set_path;
+
+private:
+    /**
+* Takes a borrowed reference and wraps it in a PyObj smart pointer
+* This increases the reference count of the object.
+* The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
+*/
+    static PyObj Borrow(PyObject* obj) {
+        if (obj) {
+            PyLock lock;
+            Py_INCREF(obj);
+        }
+        return PyObj(obj);
+    }
 };
 

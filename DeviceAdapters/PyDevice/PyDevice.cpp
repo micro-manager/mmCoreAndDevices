@@ -19,8 +19,8 @@ CPyHub* CPyHub::g_the_hub = nullptr;
 int CPyDeviceBase::CheckError() noexcept {
     PyLock lock;
     PyObj::ReportError(); // check if any new errors happened
-    if (!PyObj::g_errorMessage.empty()) {
-        LogError(PyObj::g_errorMessage.c_str());
+    if (!PyObj::g_errorMessage.empty()) { // note: thread safety of this part relies on the PyLock
+        LogError(PyObj::g_errorMessage.c_str()); //note: is this function thread safe??
         PyObj::g_errorMessage.clear();
         return ERR_PYTHON_EXCEPTION;
     }
@@ -95,7 +95,7 @@ string CPyHub::LoadScript() noexcept {
     // load the python script from disk
     auto stream = std::ifstream(script_path_);
     if (!stream)
-        return nullptr; // file not found
+        return string(); // file not found
 
     auto code = std::string();
     char buffer[1024];
@@ -178,7 +178,7 @@ int CPyHub::Initialize() {
         if (!PyObj::RunScript(script.c_str(), script_path_.filename().generic_u8string().c_str(), locals))
             return CheckError();
 
-        auto deviceDict = PyObj::Borrow(PyDict_GetItemString(locals, "devices"));
+        auto deviceDict = locals.GetDictItem("devices");
         if (!deviceDict)
             return ERR_PYTHON_NO_DEVICE_DICT;
         
@@ -187,11 +187,11 @@ int CPyHub::Initialize() {
         if (!deviceList)
             return CheckError();
 
-        auto device_count = PyList_Size(deviceList);
+        auto device_count = PyList_Size(deviceList); // todo: move to PyObj? to assert lock?
         for (Py_ssize_t i = 0; i < device_count; i++) {
-            auto key_value = PyObj::Borrow(PyList_GetItem(deviceList, i));
-            auto name = PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>();
-            auto obj = PyObj::Borrow(PyTuple_GetItem(key_value, 1));
+            auto key_value = deviceList.GetListItem(i);
+            auto name = key_value.GetTupleItem(0).as<string>();
+            auto obj = key_value.GetTupleItem(1);
             auto type = obj.Get("_MM_dtype").as<string>();
             auto id = ComposeId(type, name);
             obj.Set("_MM_id", id);
@@ -203,8 +203,6 @@ int CPyHub::Initialize() {
     }
     return CheckError();
 }
-
-
 
 
 
@@ -225,11 +223,11 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
     for (Py_ssize_t i = 0; i < property_count; i++) {
         PyAction* descriptor;
 
-        auto pinfo = PyObj::Borrow(PyList_GetItem(properties, i));
-        auto attrName = PyObj::Borrow(PyTuple_GetItem(pinfo, ATTRIBUTE_NAME)).as<string>();
-        auto mmName = PyObj::Borrow(PyTuple_GetItem(pinfo, PROPERTY_NAME)).as<string>();
-        auto type = PyObj::Borrow(PyTuple_GetItem(pinfo, TYPE)).as<string>();
-        auto readonly = PyObj::Borrow(PyTuple_GetItem(pinfo, READ_ONLY)).as<bool>();
+        auto pinfo = properties.GetListItem(i);
+        auto attrName = pinfo.GetTupleItem(ATTRIBUTE_NAME).as<string>();
+        auto mmName = pinfo.GetTupleItem(PROPERTY_NAME).as<string>();
+        auto type = pinfo.GetTupleItem(TYPE).as<string>();
+        auto readonly = pinfo.GetTupleItem(READ_ONLY).as<bool>();
 
         if (type == "int")
             descriptor = new PyIntAction(this, attrName, mmName, readonly);
@@ -245,20 +243,20 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
             descriptor = new PyBoolAction(this, attrName, mmName, readonly);
         else if (type == "enum") {
             descriptor = new PyEnumAction(this, attrName, mmName, readonly);
-            auto options = PyObj(PyDict_Items(PyObj::Borrow(PyTuple_GetItem(pinfo, ENUMS))));
+            auto options = PyObj(PyDict_Items(pinfo.GetTupleItem(ENUMS))); // TODO: move to PyObj?
             auto option_count = PyList_Size(options);
             for (Py_ssize_t j = 0; j < option_count; j++) {
-                auto key_value = PyObj::Borrow(PyList_GetItem(options, j));
-                descriptor->enum_keys.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 0)).as<string>());
-                descriptor->enum_values.push_back(PyObj::Borrow(PyTuple_GetItem(key_value, 1)));
+                auto key_value = options.GetListItem(j);
+                descriptor->enum_keys.push_back(options.GetTupleItem(0).as<string>());
+                descriptor->enum_values.push_back(options.GetTupleItem(1));
             }
         }
         else // other property type, treat as object
             descriptor = new PyObjectAction(this, attrName, mmName, readonly);
         
         if (descriptor->type == MM::Integer || descriptor->type == MM::Float) {
-            auto lower = PyObj::Borrow(PyTuple_GetItem(pinfo, MIN));
-            auto upper = PyObj::Borrow(PyTuple_GetItem(pinfo, MAX));
+            auto lower = pinfo.GetTupleItem(MIN);
+            auto upper = pinfo.GetTupleItem(MAX);
             if (lower != Py_None && upper != Py_None) {
                 descriptor->min = lower.as<double>();
                 descriptor->max = upper.as<double>();
