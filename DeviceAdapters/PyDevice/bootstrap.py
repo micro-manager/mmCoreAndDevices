@@ -15,14 +15,14 @@ from typing import Protocol, runtime_checkable, get_origin
 import os
 import traceback
 import astropy.units as u
+import concurrent.futures
 from typing import Annotated
 from enum import Enum
 from astropy.units import Quantity
 
 @runtime_checkable
 class Camera(Protocol):
-    data_shape: tuple[int]
-    measurement_time: Quantity[u.ms]
+    duration: Quantity[u.ms]
     top: int
     left: int
     height: int
@@ -30,11 +30,9 @@ class Camera(Protocol):
 
     #    binning: int # the binning property is optional. If missing, a property binning = 1 will be added.
 
-    def trigger(self) -> None:
+    def trigger(self) -> concurrent.futures:
         pass
 
-    def read(self) -> np.ndarray:
-        pass
 
 
 @runtime_checkable

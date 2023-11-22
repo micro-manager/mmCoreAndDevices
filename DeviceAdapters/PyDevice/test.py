@@ -52,7 +52,7 @@ class Camera:
     """Demo camera implementation that returns noise images. To test building device graphs, the random number
     generator is implemented as a separate object with its own properties."""
 
-    def __init__(self, left=0, top=0, width=100, height=100, measurement_time: Quantity[u.ms] = 100 * u.ms,
+    def __init__(self, left=0, top=0, width=100, height=100, duration: Quantity[u.ms] = 100 * u.ms,
                  random_generator=None):
         if random_generator is None:
             random_generator = RandomGenerator()
@@ -63,7 +63,7 @@ class Camera:
         self._top = top
         self._width = width
         self._height = height
-        self._measurement_time = measurement_time.to(u.ms)
+        self._duration = duration.to(u.ms)
         self._random_generator = random_generator
 
     def trigger(self):
@@ -114,12 +114,12 @@ class Camera:
         self._resized = True
 
     @property
-    def measurement_time(self) -> Quantity[u.ms]:
-        return self._measurement_time
+    def duration(self) -> Quantity[u.ms]:
+        return self._duration
 
-    @measurement_time.setter
-    def measurement_time(self, value):
-        self._measurement_time = value.to(u.ms)
+    @duration.setter
+    def duration(self, value):
+        self._duration = value.to(u.ms)
 
     @property
     def random_generator(self) -> object:
