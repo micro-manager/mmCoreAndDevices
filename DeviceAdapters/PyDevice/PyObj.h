@@ -140,6 +140,14 @@ public:
     PyObj Get(const string& attribute) const noexcept {
         return Get(attribute.c_str());
     }
+    template <class T> void SetDictItem(const string& key, T value) {
+        SetDictItem(key.c_str(), value);
+    }
+    template <class T> void SetDictItem(const char* key, T value) {
+        PyLock lock;
+        if (PyDict_SetItemString(*this, key, PyObj(value)) != 0)
+            ReportError();
+    }
     PyObj GetDictItem(const char* key) const noexcept {
         PyLock lock;
         return Borrow(PyDict_GetItemString(*this, key));

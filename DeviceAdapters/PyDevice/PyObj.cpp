@@ -77,9 +77,8 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
     PyLock lock;
     g_main_module = PyObj(PyImport_AddModule("__main__"));
     g_global_scope = PyObj(PyModule_GetDict(g_main_module));
-
-    string code = "_EXTRA_SEARCH_PATH = \"" + module_path + "\"\n" + &bootstrap[1];
-    if (!RunScript(code, "bootstrap.py", g_global_scope))
+    g_global_scope.SetDictItem("_EXTRA_SEARCH_PATH", module_path);
+    if (!RunScript(&bootstrap[1], "bootstrap.py", g_global_scope))
         return false;
 
     // get the ms and um units
