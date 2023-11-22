@@ -104,7 +104,11 @@ public:
     }
     PyObj CallMember(const char* function) noexcept {
         PyLock lock;
-        return PyObj(PyObject_CallNoArgs(PyObject_GetAttrString(p_, function)));
+        auto member = Borrow(PyObject_GetAttrString(p_, function));
+        if (member)
+            return PyObj(PyObject_CallNoArgs(member));
+        else
+            return member;
     }
     PyObj Call() const noexcept {
         PyLock lock;

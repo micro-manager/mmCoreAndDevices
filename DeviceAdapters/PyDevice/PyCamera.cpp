@@ -14,13 +14,14 @@
 */
 int CPyCamera::SnapImage()
 {
-    object_.CallMember("trigger");
+    lastTrigger_ = object_.CallMember("trigger"); // trigger the camera and store the Future object that will receive the result
     return CheckError();
 }
 
 int CPyCamera::Shutdown() {
     StopSequenceAcquisition();
-    lastImage_.Clear();
+    lastFrame_.Clear();
+    lastTrigger_.Clear();
     return PyCameraClass::Shutdown();
 }
 
@@ -29,7 +30,7 @@ int CPyCamera::Shutdown() {
 * Required by the MM::Camera API.
 * The calling program will assume the size of the buffer based on the values
 * obtained from GetImageBufferSize(), which in turn should be consistent with
-* values returned by GetImageWidth(), GetImageHight() and GetImageBytesPerPixel().
+* values returned by GetImageWidth(), GetImageHeight() and GetImageBytesPerPixel().
 * The calling program allso assumes that camera never changes the size of
 * the pixel buffer on its own. In other words, the buffer can change only if
 * appropriate properties are set (such as binning, pixel type, etc.)
@@ -37,15 +38,15 @@ int CPyCamera::Shutdown() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    lastImage_ = object_.CallMember("read");
+    lastFrame_ = lastTrigger_.CallMember("result");
     if (CheckError() != DEVICE_OK)
         return nullptr;
 
-    if (!PyArray_Check(lastImage_)) {
+    if (!PyArray_Check(lastFrame_)) {
         this->LogMessage("Error, 'image' property should return a numpy array");
         return nullptr;
     }
-    auto buffer = (PyArrayObject*)(PyObject*)lastImage_;
+    auto buffer = (PyArrayObject*)(PyObject*)lastFrame_;
     if (PyArray_NDIM(buffer) != 2 || PyArray_TYPE(buffer) != NPY_UINT16 || !(PyArray_FLAGS(buffer) & NPY_ARRAY_C_CONTIGUOUS)) {
         this->LogMessage("Error, 'image' property should be a 2-dimensional numpy array that is c-contiguous in memory and contains 16 bit  unsigned integers");
         return nullptr;

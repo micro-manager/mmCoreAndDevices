@@ -119,7 +119,7 @@ bool PyObj::ReportError() {
     // assert(PyLock.IsLocked()); // we can only call Python functions if we hold the GIL
     if (reentrant)
         return false;
-    PyLock lock;
+    PyLock lock; // todo: should not be needed. If we don't hold the GIL, ReportError is undefined behavior in a multi-threaded context?
     if (!PyErr_Occurred())
         return true;
     reentrant = true;
