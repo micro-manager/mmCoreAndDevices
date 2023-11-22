@@ -1,53 +1,20 @@
-# PyDevice
-Adapter to import Python scripts as devices in micro-manager
+## PyDevice; The MicroManager device to load Python scripts as MicroManager devices.
 
-# Install prerequisites
-### Visual Studio with C++ build tools.
-You can download the free Visual Studio Community edition here https://visualstudio.microsoft.com/free-developer-offers/. Make sure to include the c++ build tools during installation.
+## How does it work?
+ - The PyDevice runs a Python interpreter in which the Python functions are executed. 
+   Due to following specific naming conventions, the properties and methods of objects can be translated to MicroManager properties and methods
 
-### Python 3.9 or higher
-A list of required packages can be found in requirements.txt. Note that for the core functionality, only `numpy` needs to be installed. Make sure `python.exe` is on the search path.
+## How do I build it? 
+ - We are hoping to integrate this device into the main MicroManager distribution, in that case, it might already be available to you.
+   Else: Read the BUILD_INSTRUCTION.md file. 
 
-### Micro-Manager 2.0 executable
-You can download the latest version (nightly build) here: https://micro-manager.org/Micro-Manager_Nightly_Builds. Alternatively, you can use an older, stable, version, with the caveat described below. We recommend installing in the default location: `C:\Program Files\Micro-Manager-2.0\`
+## How do I use it?
+ - If the device is available in your MicroManager install, you can test it by loading the test.py file. 
+   When adding the PyHub in the config. manager, the boxes 'ModulePath' and 'ScriptPath' appear. ModulePath signifies the location of your Python  
+   home. This can be a virtual environment, an Anaconda install or just a Python install, as long as its Python 3.
+ 
+   If you leave the ModulePath on '(auto)' it will most likely find a Python install for you. If the script you load is in a virtual environment,
+   It will find the virtual environment for you. This is important as it contains specific packages (like NumPy) that your scripts need to run.
 
-### Micro-Manager SDK (mmCoreAndDevices)
-Clone the `mmCoreAndDevices` repository, which contains the source code needed to interface with Micro-Manager. We recommend cloning the mmCoreAndDevices repo in one of the following locations:
-* A sibbling directory of the OpenWFS repository (e.g. if this repo is cloned here: `c:\git\openwfs`, put the SDK in `c:\git\mmCoreAndDevices`)
-* Install OpenWFS as a subrepo of mmCoreAndDevices:
-
-~~~
-git clone https://github.com/micro-manager/mmCoreAndDevices
-cd mmCoreAndDevices/DeviceAdapters
-git submodule add https://github.com/ivovellekoop/pydevice
-~~~
-
-It is **essential** that the version of Micro-Manager and the mmCoreAndDevices match. Different versions have a different 'device-interface', which results in the plugin not being shown in the list in Micro-Manager. If you want to compile for an older (non nightly-build) version of Micro-Manager, you can checkout an old version of mmCoreAndDevices (check the git tags to find the correct version for a given device interface version)
-
-
-# Configure Visual Studio
-## Stand-alone build
-When configuring as a stand-alone build (recommended), run the auto-configuration script
-~~~
-python autoconfig.py
-~~~
-If the script cannot find all folders, you can configure them manually later by editing the AutoConfig.props file.
-
-
-## When building all Micro-Manager devices:
-This is the approach recommended by the Micro-Manager team
-
-1. Open the solution file `mmCoreAndDevices/micromanager.sln` in Visual Studio
-2. In the solution explorer, delete all projects, except for MMCore and MMDevice-SharedRuntime. (tip: select multiple projects using shift, and then press delete to remove them)
-3. Right-click on the Solution in the Solution explorer, choose 'add->existing item' and browse to `mmCoreAndDevices\DeviceAdapters\PythonBinding\PythonBinding.vcxproj`
- If asked to convert to a newer version, press cancel.
-5. Right-click on the Solution and choose 'Project dependencies...'. Make sure MMCore depends on MMDevice-SharedRuntime and PythonBinding depends on MMCore
-6. Right-click on the PythonBinding project and 'set as startup project' 
-7. Build the project. You will get an error (Python.h not found)
-8. Build the project again, the error should have disappeared. If the build error python > autoconfig.props occurs, make sure your Python install is in PATH
-
-
-# Troubleshooting
-make sure you have the same version of micro-manager as you cloned from github. If the versions are different, the plugin will not be recognized.
-
-For debugging, let Visual Studio start the Micromanager executable (ImageJ.exe). Make sure to enable Debug -> Other Debug Targets -> Child Process Debug Settings -> Enable Child Process Debugging.
+## How do I build my own devices?
+ - We have clarified that in more detail in the subfolder Python_devices,  starting with HOW_TO_MAKE_A_DEVICE.md. 
