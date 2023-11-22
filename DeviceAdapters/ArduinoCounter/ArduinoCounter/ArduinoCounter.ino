@@ -25,8 +25,8 @@ const int outPin = 8;
 
 const unsigned long timeOut = 1000;
 
-unsigned int counter = 0;
-unsigned int limit;
+unsigned long counter = 0;
+unsigned long limit;
 boolean counting = false;
 boolean inputWas;
 boolean invert = false;
