@@ -173,11 +173,12 @@ int CPyHub::Initialize() {
         // execute the Python script, and read the 'devices' field,
         // which must be a dictionary of {label: device}
         PyLock lock; // lock, so that we can call bare Python API functions
-        auto locals = PyObj(PyDict_New());
-        if (!PyObj::RunScript(script.c_str(), script_path_.filename().generic_u8string().c_str(), locals))
+        module_ = PyObj(PyImport_AddModule("__main__"));
+        locals_ = PyObj(PyModule_GetDict(module_));
+        if (!PyObj::RunScript(script.c_str(), script_path_.filename().generic_u8string().c_str(), locals_))
             return CheckError();
 
-        auto deviceDict = locals.GetDictItem("devices");
+        auto deviceDict = locals_.GetDictItem("devices");
         if (!deviceDict)
             return ERR_PYTHON_NO_DEVICE_DICT;
         

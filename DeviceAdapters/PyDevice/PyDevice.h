@@ -186,6 +186,8 @@ private:
     
     // list of devices read from the `devices` dictionary that the Python script returns.
     std::map<string, PyObj> devices_;
+    PyObj locals_;
+    PyObj module_;
 
     // Location of the currently loaded script
     fs::path script_path_;

@@ -104,7 +104,7 @@ bool PyObj::RunScript(const string& code, const string& file_name, const PyObj& 
     auto bootstrap_code = PyObj(Py_CompileString(code.c_str(), file_name.c_str(), Py_file_input));
     if (!bootstrap_code)
         return false;
-    return PyObj(PyEval_EvalCode(bootstrap_code, g_global_scope, locals)); // Py_None on success (->true), NULL on failure (->false)
+    return PyObj(PyEval_EvalCode(bootstrap_code, locals, locals)); // Py_None on success (->true), NULL on failure (->false)
 }
 
 

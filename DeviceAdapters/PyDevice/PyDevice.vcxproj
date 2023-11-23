@@ -33,7 +33,7 @@
     <None Include="Dummyscanner.py" />
     <None Include="Pyscanner.py" />
     <None Include="README.md" />
-    <None Include="test.py" />
+    <None Include="test_devices.py" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(MICROMANAGER_SOURCE_PATH)\MMDevice\MMDevice-SharedRuntime.vcxproj">
