@@ -86,6 +86,8 @@ public:
         return p_ == Py_True;
     }
     template <> double as<double>() const {
+        if (p_ == Py_None)
+            return NAN;
         PyLock lock;
         auto retval = PyFloat_AsDouble(*this);
         if (retval == -1.0) // may be an error
@@ -120,18 +122,17 @@ public:
         if (PyObject_SetAttrString(*this, attribute, PyObj(value)) != 0)
             ReportError();
     }
-    PyObj CallMember(const char* function) noexcept {
+    template <typename... Arguments> PyObj CallMember(const char* function, Arguments... arguments) const noexcept {
         PyLock lock;
-        return Get(function).Call();
+        return Get(function).Call(arguments...);
     }
     PyObj Call() const noexcept {
         PyLock lock;
         return PyObj(PyObject_CallNoArgs(*this));
     }
-    PyObj Call(const PyObj& arg) const noexcept {
+    template <typename... Arguments> PyObj Call(Arguments... arguments) const noexcept {
         PyLock lock;
-        PyObject* arg0 = arg;
-        return PyObj(PyObject_CallFunctionObjArgs(*this, arg0, NULL));
+        return PyObj(PyObject_CallFunctionObjArgs(*this, static_cast<PyObject*>(arguments)..., NULL));
     }
     PyObj Get(const char* attribute) const noexcept {
         PyLock lock;
@@ -230,6 +231,7 @@ public:
     static PyThreadState* g_threadState;
     static PyObj g_unit_ms;
     static PyObj g_unit_um;
+    static PyObj g_unit_Hz;
     static PyObj g_traceback_to_string;
     static PyObj g_scan_devices;
     static PyObj g_main_module;

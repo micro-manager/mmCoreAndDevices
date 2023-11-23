@@ -63,6 +63,8 @@ This will create a micromanager int property that you can see in the property ma
 
     This forces the user to use units, and is required by some of the device checks.
 
+   d) `None`. MicroManager does not support `None` values, but they may be useful to indicate that a parameter is not set. As a workaround for floating point properties, a `None` in Python is converted to a `nan` in MicroManager, and vice-versa.
+
 7. Specific devices need to follow specific structures. MicroManager has internal requirements of what a device should have to be such a device.
 If that is a bit vague: a MicroManager stage needs properties like GetPositionUm, SetPositionUm etc. Otherwise it is not a stage. 
 Bootstrap.py checks your Python objects if they meet any of the requirements of any specific object, and marks them as such.
