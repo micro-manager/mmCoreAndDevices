@@ -137,7 +137,7 @@ bool PyObj::ReportError() {
         msg += Borrow(value).as<string>();
 
     if (traceback)
-        msg += g_traceback_to_string.Call(Borrow(traceback)).as<string>();
+        msg += "\n" + g_traceback_to_string.Call(Borrow(traceback)).as<string>();
     
     PyErr_Restore(type, value, traceback);
     PyErr_Clear();
