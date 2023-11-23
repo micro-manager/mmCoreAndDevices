@@ -11,17 +11,23 @@
 * This function should block during the actual exposure and return immediately afterwards
 * (i.e., before readout).  This behavior is needed for proper synchronization with the shutter.
 * Required by the MM::Camera API.
+* 
+* Todo: since the Python code returns a future object, far more advanced timing schemes are possible
+* (such as sending the next trigger before the data from the current frame has been tranferred from the camera
+* hardware to the PC). However, in the current implementation of the grab thread, grabbing is fully sequential
+* so with that implementation it is not possible to use advanced timing. Therefore, we just simply wait for the frame
+* to arrive.
 */
 int CPyCamera::SnapImage()
 {
-    lastTrigger_ = object_.CallMember("trigger"); // trigger the camera and store the Future object that will receive the result
+    auto future = object_.CallMember("trigger"); // trigger the camera and store the Future object that will receive the result
+    lastFrame_ = future.CallMember("result");
     return CheckError();
 }
 
 int CPyCamera::Shutdown() {
     StopSequenceAcquisition();
     lastFrame_.Clear();
-    lastTrigger_.Clear();
     return PyCameraClass::Shutdown();
 }
 
@@ -39,7 +45,6 @@ int CPyCamera::Shutdown() {
 const unsigned char* CPyCamera::GetImageBuffer()
 {
     PyLock lock;
-    lastFrame_ = lastTrigger_.CallMember("result");
     if (CheckError() != DEVICE_OK)
         return nullptr;
 
@@ -176,7 +181,7 @@ int CPyCamera::ClearROI()
 double CPyCamera::GetExposure() const
 {
     double value_ms;
-    const_cast<CPyCamera*>(this)->GetProperty("MeasurementTime", value_ms);
+    const_cast<CPyCamera*>(this)->GetProperty("Duration", value_ms);
     return value_ms;
 }
 
@@ -186,7 +191,7 @@ double CPyCamera::GetExposure() const
 */
 void CPyCamera::SetExposure(double value_ms)
 {
-    if (SetProperty("MeasurementTime", std::to_string(value_ms).c_str()) == DEVICE_OK)
+    if (SetProperty("Duration", std::to_string(value_ms).c_str()) == DEVICE_OK)
         GetCoreCallback()->OnExposureChanged(this, value_ms);
 }
 

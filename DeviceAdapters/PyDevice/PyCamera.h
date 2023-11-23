@@ -3,8 +3,7 @@
 
 using PyCameraClass = CPyDeviceTemplate<CCameraBase<std::monostate>>;
 class CPyCamera : public PyCameraClass {
-    PyObj lastTrigger_;        // numpy array corresponding to the last image, we hold a reference count so that we are sure the array does not get deleted during processing */
-    PyObj lastFrame_;
+    PyObj lastFrame_; // numpy array corresponding to the last image, we hold a reference count so that we are sure the array does not get deleted during processing */
 
 public:
     CPyCamera(const string& id) : PyCameraClass(id) {}
