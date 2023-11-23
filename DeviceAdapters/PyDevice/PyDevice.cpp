@@ -173,8 +173,9 @@ int CPyHub::Initialize() {
         // execute the Python script, and read the 'devices' field,
         // which must be a dictionary of {label: device}
         PyLock lock; // lock, so that we can call bare Python API functions
-        module_ = PyObj(PyImport_AddModule("__main__"));
-        locals_ = PyObj(PyModule_GetDict(module_));
+        auto module = PyImport_AddModule("__main__");
+        Py_INCREF(module);
+        auto locals_ = PyObj(PyModule_GetDict(module));
         if (!PyObj::RunScript(script.c_str(), script_path_.filename().generic_u8string().c_str(), locals_))
             return CheckError();
 
@@ -200,10 +201,11 @@ int CPyHub::Initialize() {
 
         initialized_ = true;
         g_the_hub = this;
+
+        locals_.Clear();
     }
     return CheckError();
 }
-
 
 
 #define ATTRIBUTE_NAME 0    // internal name for Python (snake_case)

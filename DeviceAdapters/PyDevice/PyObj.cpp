@@ -77,6 +77,7 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
             
     PyLock lock;
     g_main_module = PyObj(PyImport_AddModule("__main__"));
+    Py_INCREF(g_main_module);
     g_global_scope = PyObj(PyModule_GetDict(g_main_module));
     g_global_scope.SetDictItem("_EXTRA_SEARCH_PATH", module_path);
     if (!RunScript(&bootstrap[1], "bootstrap.py", g_global_scope))
@@ -99,12 +100,12 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
  * @param locals Dictionary object that holds the local variables of the script. Can be used to 'return' values from the script
  * @return true on success, false on failure (g_errorMessage will be set)
 */
-bool PyObj::RunScript(const string& code, const string& file_name, const PyObj& locals) noexcept {
+bool PyObj::RunScript(const string& code, const string& file_name, const PyObj& scope) noexcept {
     PyLock lock;
     auto bootstrap_code = PyObj(Py_CompileString(code.c_str(), file_name.c_str(), Py_file_input));
     if (!bootstrap_code)
         return false;
-    return PyObj(PyEval_EvalCode(bootstrap_code, locals, locals)); // Py_None on success (->true), NULL on failure (->false)
+    return PyObj(PyEval_EvalCode(bootstrap_code, g_global_scope, scope)); // Py_None on success (->true), NULL on failure (->false)
 }
 
 
