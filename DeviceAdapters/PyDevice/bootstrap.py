@@ -62,8 +62,8 @@ class Stage(Protocol):
         """Homes the stage. This function does not wait for homing to complete."""
         pass
 
-    def wait(self) -> None:
-        """Wait until the stage has finished moving. This should include any time the stage may 'vibrate' after
+    def busy(self) -> bool:
+        """Returns False if the stage has finished moving. This should include any time the stage may 'vibrate' after
         stopping."""
         pass
 
@@ -98,9 +98,10 @@ class XYStage(Protocol):
         """Homes the stage. This function does not wait for homing to complete."""
         pass
 
-    def wait(self) -> None:
+    def busy(self) -> bool:
+        """Returns False if the stage has finished moving. This should include any time the stage may 'vibrate' after
+        stopping."""
         pass
-
 
 
 def extract_property_metadata(p):
@@ -170,7 +171,7 @@ def scan_devices(devices):
 
 
 def traceback_to_string(tb):
-    return ''.join(traceback.format_tb(_current_tb))
+    return ''.join(traceback.format_tb(tb))
 
 
 
