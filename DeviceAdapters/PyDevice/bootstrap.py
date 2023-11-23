@@ -35,11 +35,11 @@ class Camera(Protocol):
     # binning: int 
 
     def trigger(self) -> concurrent.futures.Future:
-    """Triggers the Camera
+        """Triggers the Camera
 
-    This function returns a `concurrent.future.Future` object that receives the grabbed camera frame as a numpy array. 
-    Calling code can call `results()` on the future to retrieve the array.
-    The array must have `shape = (height, width)` and hold `uint16` data."""
+        This function returns a `concurrent.future.Future` object that receives the grabbed camera frame as a numpy array. 
+        Calling code can call `results()` on the future to retrieve the array.
+        The array must have `shape = (height, width)` and hold `uint16` data."""
         pass
 
 
