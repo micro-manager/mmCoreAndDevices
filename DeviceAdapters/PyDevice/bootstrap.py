@@ -22,21 +22,31 @@ from astropy.units import Quantity
 
 @runtime_checkable
 class Camera(Protocol):
+    """A camera or other source of 2-D image data"""
+
     duration: Quantity[u.ms]
+    """Shutter time / exposure time of the camera"""
+
     top: int
     left: int
     height: int
     width: int
+    # the binning property is optional. If missing, an attribute with fixed value binning = 1 will be added.
+    # binning: int 
 
-    #    binning: int # the binning property is optional. If missing, a property binning = 1 will be added.
+    def trigger(self) -> concurrent.futures.Future:
+    """Triggers the Camera
 
-    def trigger(self) -> concurrent.futures:
+    This function returns a `concurrent.future.Future` object that receives the grabbed camera frame as a numpy array. 
+    Calling code can call `results()` on the future to retrieve the array.
+    The array must have `shape = (height, width)` and hold `uint16` data."""
         pass
-
 
 
 @runtime_checkable
 class Stage(Protocol):
+    """A 1-D translation stage"""
+
     step_size: Quantity[u.um]
     """Step size in μm"""
 
@@ -44,9 +54,8 @@ class Stage(Protocol):
     """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
     current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
     causes it to start moving to the new position. Also see :func:`~wait`.
-    Stages should use the step_size to convert positions in micrometers to positions in steps, using the equation
-    `steps = round(position / step_size)`. This way, code that uses the stage can also choose to make single steps by 
-    moving to a position n * step_size.
+    Stages may use the step_size to convert positions in micrometers to positions in steps, using the equation
+    `steps = round(position / step_size)`.
     """
 
     def home(self) -> None:
@@ -61,44 +70,35 @@ class Stage(Protocol):
 
 @runtime_checkable
 class XYStage(Protocol):
+    """A 1-D translation stage"""
+
     x: Quantity[u.um]
+    """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
+    current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
+    causes it to start moving to the new position. Also see :func:`~wait`.
+    Stages may use the step_size to convert positions in micrometers to positions in steps, using the equation
+    `steps = round(position / step_size)`.
+    """
+
     y: Quantity[u.um]
+    """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
+    current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
+    causes it to start moving to the new position. Also see :func:`~wait`.
+    Stages may use the step_size to convert positions in micrometers to positions in steps, using the equation
+    `steps = round(position / step_size)`.
+    """
+
     step_size_x: Quantity[u.um]
+    """Step size in μm"""
+
     step_size_y: Quantity[u.um]
+    """Step size in μm"""
 
     def home(self) -> None:
+        """Homes the stage. This function does not wait for homing to complete."""
         pass
 
     def wait(self) -> None:
-        pass
-
-@runtime_checkable
-class SLM(Protocol):
-    phases: np.ndarray
-    
-    def update(self, wait_factor=1.0, wait=True):
-        """Refresh the SLM to show the updates phase pattern.
-
-        If the SLM is currently reserved (see `reserve`), this function waits until the reservation is almost (*) over before updating the SLM.
-        The SLM waits for the pattern of the SLM to stabilize before returning.
-
-        *) In case of SLMs with an idle time (latency), the image may be sent to the hardware already before the reservation is over, as long as the actual image
-        on the SLM is guaranteed not to update until the reservation is over.
-
-        :param wait_factor: time to wait for the image to stabilize. Default = 1.0 should wait for a pre-defined time (the `settle_time`) that guarantees stability
-        for most practical cases. Use a higher value to allow for extra stabilization time, or a lower value if you want to trigger a measurement before the SLM is fully stable.
-
-        :param wait: when set to False, do not wait for the image to stabilize but reserve the SLM for this period instead. This can be used to pipeline measurements (see `Feedback`).
-        The client code needs to explicilty call `wait` to wait for stabilization of the image. 
-        """
-        pass
-
-    def wait(self):
-        """Wait for the SLM to become available. If there are no current reservations, return immediately."""
-        pass
-
-    def reserve(self, time: Quantity[u.ms]):
-        """Reserve the SLM for a specified amount of time. During this time, the SLM pattern cannot be changed."""
         pass
 
 
