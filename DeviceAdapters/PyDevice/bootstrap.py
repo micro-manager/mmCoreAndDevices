@@ -115,7 +115,7 @@ def extract_property_metadata(p):
     min = None
     max = None
     options = None
-    readonly = not hasattr(p, 'fset')
+    readonly = (not hasattr(p, 'fset')) or p.fset is None
 
     if get_origin(return_type) is Annotated:  # Annotated
         meta = return_type.__metadata__[0]
@@ -130,8 +130,11 @@ def extract_property_metadata(p):
         options = {k.lower().capitalize(): v for (k, v) in return_type.__members__.items()}
         ptype = 'enum'
 
-    else:
+    elif issubclass(return_type, int) or issubclass(return_type, float) or issubclass(return_type, str):
         ptype = return_type.__name__
+
+    else:
+        return None  # unsupported type
 
     return ptype, readonly, min, max, options
 
@@ -161,6 +164,7 @@ def set_metadata(obj):
 
 unit_ms = u.ms
 unit_um = u.um
+unit_Hz = u.Hz
 
 
 def scan_devices(devices):

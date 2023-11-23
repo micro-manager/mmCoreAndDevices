@@ -234,6 +234,8 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
             descriptor = new PyFloatAction(this, attrName, mmName, readonly);
         else if (type == "time")
             descriptor = new PyQuantityAction(this, attrName, mmName, readonly, PyObj::g_unit_ms);
+        else if (type == "frequency")
+            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, PyObj::g_unit_Hz);
         else if (type == "length")
             descriptor = new PyQuantityAction(this, attrName, mmName, readonly, PyObj::g_unit_um);
         else if (type == "string")

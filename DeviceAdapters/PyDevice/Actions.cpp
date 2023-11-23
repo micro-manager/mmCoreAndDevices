@@ -109,8 +109,10 @@ PyObj PyEnumAction::get(MM::PropertyBase* pProp) const noexcept {
 }
 
 void PyQuantityAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
-    PyObj value_without_unit = value / unit_; // remove units, then convert to double
-    pProp->Set(value_without_unit.as<double>()); 
+    PyObj v = value;
+    if (v != Py_None)
+        v = value.CallMember("to_value", unit_); // remove units, then convert to double
+    pProp->Set(v.as<double>()); 
 }
 
 PyObj PyQuantityAction::get(MM::PropertyBase* pProp) const noexcept {

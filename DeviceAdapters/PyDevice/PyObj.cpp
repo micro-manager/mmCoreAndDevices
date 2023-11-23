@@ -6,6 +6,7 @@
 
 PyObj PyObj::g_unit_ms;
 PyObj PyObj::g_unit_um;
+PyObj PyObj::g_unit_Hz;
 PyObj PyObj::g_traceback_to_string;
 PyObj PyObj::g_set_path;
 PyObj PyObj::g_scan_devices;
@@ -84,6 +85,7 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
     // get the ms and um units
     g_unit_ms = g_global_scope.GetDictItem("unit_ms");
     g_unit_um = g_global_scope.GetDictItem("unit_um");
+    g_unit_Hz = g_global_scope.GetDictItem("unit_Hz");
     g_traceback_to_string = g_global_scope.GetDictItem("traceback_to_string");
     g_set_path = g_global_scope.GetDictItem("set_path");
     g_scan_devices = g_global_scope.GetDictItem("scan_devices");
