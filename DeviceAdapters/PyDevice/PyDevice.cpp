@@ -129,8 +129,7 @@ string CPyHub::ComputeModulePath() noexcept {
     if (path == "(auto)") {
         path = script_path_.parent_path().generic_u8string(); // always include the folder of the current script
 
-        // see if the script is 'in' a virtual environment
-        // todo: test with non-ascii folder names
+        // see if the script is 'in' a virtual environment. If so, use that environment
         struct stat info;
         fs::path dir = script_path_;
         for (int depth = 0; depth < 10 && dir.has_relative_path(); depth++) {
