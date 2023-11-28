@@ -18,7 +18,7 @@ To make sure that you are minimally confused; you need to follow the rules for d
 
 3. a) Set the python home folder by the 'ModulePath' variable during initialisation. E.g. for my Anaconda install: C:\ProgramData\Anaconda3
 	This path should contain the standard library and the site-packages (for packages).
-   b) A Virtual environment is also seen as a seperate interpreter. Make sure it contains the neccesary packages to run the code.
+   b) A Virtual environment is also seen as a separate interpreter. Make sure it contains the necessary packages to run the code.
    c) If 'ModulePath' was not set, it will find a python home folder itself. If the selected script was inside a virtual environment, it will select it.
 
 5. Use only 1 interpreter. If you have loaded an interpreter in MicroManager this session and you want to use another interpreter: Restart the program.
@@ -48,7 +48,7 @@ This will create a micromanager int property that you can see in the property ma
         self._height = value
         self._resized = True
 
-   This creates a range with minima and maxima that you cannot cross. Useful to saveguard your hardware.
+   This creates a range with minima and maxima that you cannot cross. Useful to safeguard your hardware.
 
 
    c) astropy conventions. In order to get rid of unit errors in your devices, we sometimes require astropy units. For example:
@@ -66,7 +66,7 @@ This will create a micromanager int property that you can see in the property ma
    d) `None`. MicroManager does not support `None` values, but they may be useful to indicate that a parameter is not set. As a workaround for floating point properties, a `None` in Python is converted to a `nan` in MicroManager, and vice-versa.
 
 7. Specific devices need to follow specific structures. MicroManager has internal requirements of what a device should have to be such a device.
-If that is a bit vague: a MicroManager stage needs properties like GetPositionUm, SetPositionUm etc. Otherwise it is not a stage. 
+If that is a bit vague: a MicroManager stage needs properties like GetPositionUm, SetPositionUm etc. Otherwise, it is not a stage. 
 Bootstrap.py checks your Python objects if they meet any of the requirements of any specific object, and marks them as such.
 
 This allows you to build a script returning a numpy array, while MicroManager thinks it is a camera. 
