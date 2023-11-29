@@ -10,12 +10,10 @@
 	<target name="compile" depends="prepare" description="Compile Java sources">
 		<mkdir dir="${intdir}"/>
 
-		<copy todir="${srcdir}/${package}" file="TaggedImage.java"/>
-
 		<mm-javac destdir="${intdir}">
 			<src path="${json.srcdir}"/>
+			<include name="mmcorej/*"/>
 			<include name="mmcorej/org/json/**"/>
-
 			<src path="${srcdir}"/>
 			<include name="${package}/**"/>
 		</mm-javac>
