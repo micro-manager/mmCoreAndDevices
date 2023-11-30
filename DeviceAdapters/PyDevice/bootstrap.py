@@ -11,12 +11,12 @@ if '_EXTRA_SEARCH_PATH' in locals():
     set_path(_EXTRA_SEARCH_PATH)
 
 import numpy as np
-from typing import Protocol, runtime_checkable, get_origin
+from typing import Protocol, runtime_checkable, get_origin, Annotated
 import os
 import traceback
 import astropy.units as u
 import concurrent.futures
-from typing import Annotated
+import inspect
 from enum import Enum
 from astropy.units import Quantity
 
@@ -145,7 +145,13 @@ def to_title_case(name):
 
 
 def set_metadata(obj):
-    properties = [(k, extract_property_metadata(v)) for (k, v) in type(obj).__dict__.items()]
+    # get a list of all properties, including the ones in base classes
+    classes = inspect.getmro(type(obj))
+    alldict = {}
+    for c in classes[::-1]:
+       alldict.update(c.__dict__)  
+
+    properties = [(k, extract_property_metadata(v)) for (k, v) in alldict.items()]
     properties = [(p[0], to_title_case(p[0]), *p[1]) for p in properties if p[1] is not None]
     if isinstance(obj, Camera):
         dtype = "Camera"
