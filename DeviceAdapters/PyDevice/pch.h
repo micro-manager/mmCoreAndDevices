@@ -38,6 +38,7 @@ inline bool FileExists(const fs::path& path) noexcept {
 #include <Python.h> // if you get a compiler error here, try building again and see if magic happens
 #define _DEBUG
 #else
+#pragma warning (disable: 4996)
 #include <Python.h> // if you get a compiler error here, try building again and see if magic happens
 #endif
 

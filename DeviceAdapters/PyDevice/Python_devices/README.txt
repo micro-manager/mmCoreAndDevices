@@ -1,9 +1,9 @@
 ::In this folder are the examples of devices that can be loaded into MicroManager.
 
-::To test one out without hardware, the test.py is reccomended.
+::To test one out without hardware, the test.py is recommended.
 
 ::This folder contains:
-- gain.py: A device responsible for controlling the gain of a PMT controller using a Nidaq DAC.
-- galvo_scanner.py: A device responsible for laser scanning using a Nidaq DAC.
-- Pyscanner.py: The functions neccesary for galvo_scanner.py, Cannot be loaded into micromanager
-
+- example_camera: A camera object returning noise. Also shows how object inheritance works.
+- example_device: A simple device showing all the available types of properties.
+- example_stage: A stage object that is registered as a stage. For simulated stage-microscope-camera interactions,
+    check out the OpenWFS repository on github.com/IvoVellekoop/openwfs.

@@ -3,9 +3,9 @@ from typing import Annotated
 import astropy.units as u
 from astropy.units import Quantity
 from enum import Enum
-
 from concurrent.futures import Future
-print(Enum)
+
+
 class NoiseType(Enum):
     UNIFORM = 1
     EXPONENTIAL = 2
@@ -15,10 +15,6 @@ class NoiseType(Enum):
 class RandomGenerator:
     """Demo device, used to test building device graphs. It generates random numbers for use in the Camera"""
 
-    class NoiseType(Enum):
-        UNIFORM = 1
-        EXPONENTIAL = 2
-        GAUSSIAN = 3
     def __init__(self, min=0, max=1000, noise_type=NoiseType.UNIFORM):
         self._min = min
         self._max = max

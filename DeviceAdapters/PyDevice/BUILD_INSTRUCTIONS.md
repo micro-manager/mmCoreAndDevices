@@ -13,7 +13,7 @@ You can download the latest version (nightly build) here: https://micro-manager.
 
 ### Micro-Manager SDK (mmCoreAndDevices)
 Clone the `mmCoreAndDevices` repository, which contains the source code needed to interface with Micro-Manager. We recommend cloning the mmCoreAndDevices repo in one of the following locations:
-* A sibbling directory of the OpenWFS repository (e.g. if this repo is cloned here: `c:\git\openwfs`, put the SDK in `c:\git\mmCoreAndDevices`)
+* A sibling directory of the OpenWFS repository (e.g. if this repo is cloned here: `c:\git\openwfs`, put the SDK in `c:\git\mmCoreAndDevices`)
 * Install OpenWFS as a subrepo of mmCoreAndDevices:
 
 ~~~
