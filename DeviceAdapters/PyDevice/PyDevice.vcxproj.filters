@@ -58,17 +58,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Dummyscanner.py">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="Pyscanner.py">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="bootstrap.py" />
-    <None Include="AutoConfig.props" />
     <None Include="README.md" />
-    <None Include="test_devices.py">
-      <Filter>Resource Files</Filter>
-    </None>
   </ItemGroup>
 </Project>

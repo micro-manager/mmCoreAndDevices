@@ -11,27 +11,9 @@ A list of required packages can be found in requirements.txt. Note that for the 
 ### Micro-Manager 2.0 executable
 You can download the latest version (nightly build) here: https://micro-manager.org/Micro-Manager_Nightly_Builds. Alternatively, you can use an older, stable, version, with the caveat described below. We recommend installing in the default location: `C:\Program Files\Micro-Manager-2.0\`
 
-### Micro-Manager SDK (mmCoreAndDevices)
-Clone the `mmCoreAndDevices` repository, which contains the source code needed to interface with Micro-Manager. We recommend cloning the mmCoreAndDevices repo in one of the following locations:
-* A sibling directory of the OpenWFS repository (e.g. if this repo is cloned here: `c:\git\openwfs`, put the SDK in `c:\git\mmCoreAndDevices`)
-* Install OpenWFS as a subrepo of mmCoreAndDevices:
-
-~~~
-git clone https://github.com/micro-manager/mmCoreAndDevices
-cd mmCoreAndDevices/DeviceAdapters
-git submodule add https://github.com/ivovellekoop/pydevice
-~~~
-
-It is **essential** that the version of Micro-Manager and the mmCoreAndDevices match. Different versions have a different 'device-interface', which results in the plugin not being shown in the list in Micro-Manager. If you want to compile for an older (non nightly-build) version of Micro-Manager, you can checkout an old version of mmCoreAndDevices (check the git tags to find the correct version for a given device interface version)
-
-
-# Configure Visual Studio
-## Stand-alone build
-When configuring as a stand-alone build (recommended), run the auto-configuration script
-~~~
-python autoconfig.py
-~~~
-If the script cannot find all folders, you can configure them manually later by editing the AutoConfig.props file.
+### 3rd party public repository
+This needs to have access to a Python install in order to build correctly. The required files are present in the 3rdpartypublic repository which hosts multiple build requirement files.
+In theory this device could be built against any Python 3 install.
 
 
 ## When building all Micro-Manager devices:

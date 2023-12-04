@@ -28,15 +28,11 @@
     <ClCompile Include="PyStage.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="AutoConfig.props" />
     <None Include="bootstrap.py" />
-    <None Include="Dummyscanner.py" />
-    <None Include="Pyscanner.py" />
     <None Include="README.md" />
-    <None Include="test_devices.py" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(MICROMANAGER_SOURCE_PATH)\MMDevice\MMDevice-SharedRuntime.vcxproj">
+    <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
       <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
     </ProjectReference>
   </ItemGroup>
@@ -69,26 +65,37 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="AutoConfig.props" />
-    <Import Project="$(MICROMANAGER_SOURCE_PATH)\buildscripts\VisualStudio\MMCommon.props" />
-    <Import Project="$(MICROMANAGER_SOURCE_PATH)\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="..\..\buildscripts\VisualStudio\MMCommon.props" />
+    <Import Project="..\..\buildscripts\VisualStudio\MMDeviceAdapter.props" />
   </ImportGroup>
   <PropertyGroup>
-    <IncludePath>$(PYTHON_PATH)include;$(NUMPY_PATH)core\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(PYTHON_PATH)\libs;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(MM_3RDPARTYPUBLIC)include;$(MM_3RDPARTYPUBLIC)numpy\core\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(MM_3RDPARTYPUBLIC)\Python\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <CustomBuildBeforeTargets>
     </CustomBuildBeforeTargets>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
-    <OutDir>$(MICROMANAGER_EXECUTABLE_PATH)</OutDir>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <OutDir>$(MM_BUILDDIR)\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(MM_BUILDDIR)\intermediates\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
+    <TargetName>mmgr_dal_$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>$(LibraryPath)</LibraryPath>
-    <OutDir>$(MICROMANAGER_EXECUTABLE_PATH)</OutDir>
+    <OutDir>$(MM_BUILDDIR)\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(MM_BUILDDIR)\intermediates\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
+    <TargetName>mmgr_dal_$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -97,7 +104,7 @@
       <PreprocessorDefinitions>_DEBUG;PYDEVICE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\Python\numpy\core\include;$(MM_3RDPARTYPUBLIC)\Python\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -105,8 +112,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Python\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
@@ -127,7 +133,7 @@
       <PreprocessorDefinitions>NDEBUG;PYDEVICE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%$(MM_3RDPARTYPUBLIC)\Python\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -136,8 +142,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Python\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
