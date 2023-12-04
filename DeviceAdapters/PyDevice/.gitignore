@@ -1,0 +1,10 @@
+AutoConfig.props
+CoreLogs
+*.log
+*.idea
+__pycache__
+build
+.vs
+PyDevice.sln
+AutoConfig.props
+x64
