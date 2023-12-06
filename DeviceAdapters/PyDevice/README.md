@@ -1,12 +1,36 @@
-## PyDevice; The MicroManager device to load Python scripts as MicroManager devices.
+# PyDevice
+PyDevice is a MicroManager device adapter that loads Python scripts as MicroManager devices.
 
 ## How does it work?
  - The PyDevice runs a Python interpreter in which the Python functions are executed. 
    Due to following specific naming conventions, the properties and methods of objects can be translated to MicroManager properties and methods
 
-## How do I build it? 
- - We are hoping to integrate this device into the main MicroManager distribution, in that case, it might already be available to you.
-   Else: Read the BUILD_INSTRUCTION.md file. 
+# Known limitations
+* PyDevice was developed and tested on Windows. If you are interested in porting the plugin to Linux, please contact the developers. 
+
+# Build instructions
+## Prerequisites
+First, install the following prerequisites
+* **Visual Studio with C++ build tools**.
+You can download the free Visual Studio Community edition here https://visualstudio.microsoft.com/free-developer-offers/. Make sure to include the c++ build tools during installation.
+* **Python 3**.
+To build PyDevice, Python 3.9 or later and the `numpy` package need to be installed. The compiler looks for the Python installation in a folder `3rdpartypublic/Python`, where `3rdpartypublic` is a sibling folder of `mmCoreAndDevices`. Instead of installing Python in that folder directly, it is recommended to make a symbolic link to the Python install. First, open a terminal window with administrator privileges, and navigate to the `3rdpartypublic` directory. Then create the symbolic link to the Python install, e.g. using `mklink /D Python C:\Users\{username}\anaconda3`.
+
+
+* **Micro-Manager 2.0**
+You can download the latest version (nightly build) here: https://micro-manager.org/Micro-Manager_Nightly_Builds. Alternatively, you can build the micro-manager application from source, or use an older, stable, version, with the caveat described below.
+
+
+## Building the plugin
+1. Open the solution file `mmCoreAndDevices/micromanager.sln` in Visual Studio
+ If asked to convert to a newer version, press cancel.
+2. Not all plugins will build correctly. To build just the PyDevice plugin, right-click the PyDevice in the Solution Explorer and select `build`.
+
+
+# Troubleshooting
+make sure you have the same version of micro-manager as you cloned from github. If the versions are different, the plugin will not be recognized.
+
+For debugging, let Visual Studio start the Micromanager executable (ImageJ.exe). Make sure to enable Debug -> Other Debug Targets -> Child Process Debug Settings -> Enable Child Process Debugging.
 
 ## How do I use it?
  - If the device is available in your MicroManager install, you can test it by loading the test.py file. 
