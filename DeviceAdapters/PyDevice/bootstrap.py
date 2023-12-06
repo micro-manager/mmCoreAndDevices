@@ -104,7 +104,7 @@ class XYStage(Protocol):
         pass
 
 
-def extract_property_metadata(p):
+def extract_property_metadata(name, p):
     if not isinstance(p, property) or not hasattr(p, 'fget') or not hasattr(p.fget, '__annotations__'):
         return None
 
@@ -116,11 +116,14 @@ def extract_property_metadata(p):
     max = None
     options = None
     readonly = (not hasattr(p, 'fset')) or p.fset is None
+    mm_name = to_title_case(name)
 
     if get_origin(return_type) is Annotated:  # Annotated
         meta = return_type.__metadata__[0]
         if isinstance(meta, u.Unit):
-            ptype = str(meta.physical_type) # 'time','length','mass', etc.
+            ptype = 'quantity'
+            options = meta
+            mm_name = mm_name + '_' + str(meta)
         else:
             min = meta.get('min', None)
             max = meta.get('max', None)
@@ -136,7 +139,7 @@ def extract_property_metadata(p):
     else:
         return None  # unsupported type
 
-    return ptype, readonly, min, max, options
+    return name, mm_name, ptype, readonly, min, max, options
 
 
 def to_title_case(name):
@@ -151,8 +154,8 @@ def set_metadata(obj):
     for c in classes[::-1]:
        alldict.update(c.__dict__)  
 
-    properties = [(k, extract_property_metadata(v)) for (k, v) in alldict.items()]
-    properties = [(p[0], to_title_case(p[0]), *p[1]) for p in properties if p[1] is not None]
+    properties = [extract_property_metadata(k, v) for (k, v) in alldict.items()]
+    properties = [p for p in properties if p is not None]
     if isinstance(obj, Camera):
         dtype = "Camera"
         if not hasattr(obj, 'binning'):
@@ -167,11 +170,7 @@ def set_metadata(obj):
     obj._MM_dtype = dtype
     obj._MM_properties = properties
 
-
-unit_ms = u.ms
 unit_um = u.um
-unit_Hz = u.Hz
-
 
 def scan_devices(devices):
     # Scans the device dictionary and inserts metadata for each item
@@ -182,7 +181,5 @@ def scan_devices(devices):
 
 def traceback_to_string(tb):
     return ''.join(traceback.format_tb(tb))
-
-
 
 # )raw";

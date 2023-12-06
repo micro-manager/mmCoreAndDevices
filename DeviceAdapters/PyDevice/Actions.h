@@ -48,7 +48,7 @@ public:
     void set(MM::PropertyBase* pProp, const PyObj& value) const noexcept override;
     PyObj get(MM::PropertyBase* pProp) const noexcept override;
 private:
-    PyObj unit_;  // um or ms
+    PyObj unit_;  // astropy unit
 };
 
 

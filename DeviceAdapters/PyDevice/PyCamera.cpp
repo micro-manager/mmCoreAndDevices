@@ -181,7 +181,7 @@ int CPyCamera::ClearROI()
 double CPyCamera::GetExposure() const
 {
     double value_ms;
-    const_cast<CPyCamera*>(this)->GetProperty("Duration", value_ms);
+    const_cast<CPyCamera*>(this)->GetProperty("Duration_ms", value_ms);
     return value_ms;
 }
 

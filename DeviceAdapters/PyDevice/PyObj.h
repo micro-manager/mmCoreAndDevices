@@ -229,9 +229,7 @@ public:
     static bool ReportError();
     static string g_errorMessage;
     static PyThreadState* g_threadState;
-    static PyObj g_unit_ms;
     static PyObj g_unit_um;
-    static PyObj g_unit_Hz;
     static PyObj g_traceback_to_string;
     static PyObj g_scan_devices;
     static PyObj g_main_module;

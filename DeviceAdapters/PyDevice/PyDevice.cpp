@@ -214,7 +214,7 @@ int CPyHub::Initialize() {
 #define READ_ONLY 3
 #define MIN 4
 #define MAX 5
-#define ENUMS 6
+#define OPTIONS 6
 
 vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
 {
@@ -235,19 +235,15 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
             descriptor = new PyIntAction(this, attrName, mmName, readonly);
         else if (type == "float")
             descriptor = new PyFloatAction(this, attrName, mmName, readonly);
-        else if (type == "time")
-            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, PyObj::g_unit_ms);
-        else if (type == "frequency")
-            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, PyObj::g_unit_Hz);
-        else if (type == "length")
-            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, PyObj::g_unit_um);
+        else if (type == "quantity")
+            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, pinfo.GetTupleItem(OPTIONS));
         else if (type == "string")
             descriptor = new PyStringAction(this, attrName, mmName, readonly);
         else if (type == "bool")
             descriptor = new PyBoolAction(this, attrName, mmName, readonly);
         else if (type == "enum") {
             descriptor = new PyEnumAction(this, attrName, mmName, readonly);
-            auto options = PyObj(PyDict_Items(pinfo.GetTupleItem(ENUMS))); // TODO: move to PyObj?
+            auto options = PyObj(PyDict_Items(pinfo.GetTupleItem(OPTIONS))); // TODO: move to PyObj?
             auto option_count = PyList_Size(options);
             for (Py_ssize_t j = 0; j < option_count; j++) {
                 auto key_value = options.GetListItem(j);
