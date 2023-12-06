@@ -60,5 +60,8 @@
   <ItemGroup>
     <None Include="README.md" />
     <None Include="bootstrap.py" />
+    <None Include="debug_helper.bat">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
