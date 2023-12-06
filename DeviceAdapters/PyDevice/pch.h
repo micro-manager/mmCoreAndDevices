@@ -35,11 +35,11 @@ inline bool FileExists(const fs::path& path) noexcept {
 #ifdef _DEBUG
 #undef _DEBUG
 #pragma warning (disable: 4996)
-#include <Python.h> // if you get a compiler error here, try building again and see if magic happens
+#include <Python.h>
 #define _DEBUG
 #else
 #pragma warning (disable: 4996)
-#include <Python.h> // if you get a compiler error here, try building again and see if magic happens
+#include <Python.h>
 #endif
 
 // see https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array

@@ -59,5 +59,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+    <None Include="bootstrap.py" />
   </ItemGroup>
 </Project>
