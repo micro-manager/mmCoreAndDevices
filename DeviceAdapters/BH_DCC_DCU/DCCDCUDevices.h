@@ -27,18 +27,6 @@
 #include <string>
 #include <utility>
 
-// This can be moved to DeviceBase.h to make available generally.
-class ActionLambda final : public MM::ActionFunctor {
-   std::function<int(MM::PropertyBase*, MM::ActionType)> f_;
-
- public:
-   template <typename F> explicit ActionLambda(F f) : f_(f) {}
-
-   auto Execute(MM::PropertyBase* pProp, MM::ActionType eAct) -> int {
-      return f_(pProp, eAct);
-   }
-};
-
 template <DCCOrDCU Model> inline auto ModelName() -> std::string {
    if (Model == DCCOrDCU::DCC) {
       return "DCC";
@@ -426,8 +414,9 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
                                      const std::string& name) {
       this->CreateStringProperty(
           name.c_str(), "Off", false,
-          new ActionLambda([this, connNo, feature, name](
-                               MM::PropertyBase* pProp, MM::ActionType eAct) {
+          new MM::ActionLambda([this, connNo, feature,
+                                name](MM::PropertyBase* pProp,
+                                      MM::ActionType eAct) {
              if (eAct == MM::BeforeGet) {
                 short err{};
                 const bool flag =
@@ -467,8 +456,9 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
                                      float maxValue) {
       this->CreateFloatProperty(
           name.c_str(), minValue, false,
-          new ActionLambda([this, connNo, feature, name](
-                               MM::PropertyBase* pProp, MM::ActionType eAct) {
+          new MM::ActionLambda([this, connNo, feature,
+                                name](MM::PropertyBase* pProp,
+                                      MM::ActionType eAct) {
              if (eAct == MM::BeforeGet) {
                 short err{};
                 const float value =
@@ -506,8 +496,9 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
                                     const std::string& name) {
       this->CreateIntegerProperty(
           name.c_str(), 0, false,
-          new ActionLambda([this, connNo, feature, name](
-                               MM::PropertyBase* pProp, MM::ActionType eAct) {
+          new MM::ActionLambda([this, connNo, feature,
+                                name](MM::PropertyBase* pProp,
+                                      MM::ActionType eAct) {
              if (eAct == MM::BeforeGet) {
                 short err{};
                 const unsigned value =
@@ -547,8 +538,8 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
                                             const std::string& name) {
       this->CreateStringProperty(
           name.c_str(), "Off", false,
-          new ActionLambda([this, connNo](MM::PropertyBase* pProp,
-                                          MM::ActionType eAct) {
+          new MM::ActionLambda([this, connNo](MM::PropertyBase* pProp,
+                                              MM::ActionType eAct) {
              // There is no readout for enable_outputs, so we rely on the
              // last-set value.
              if (eAct == MM::AfterSet) {
@@ -577,8 +568,8 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
    void CreateEnableAllOutputsProperty() {
       this->CreateStringProperty(
           "EnableOutputs", "Off", false,
-          new ActionLambda([this](MM::PropertyBase* pProp,
-                                  MM::ActionType eAct) {
+          new MM::ActionLambda([this](MM::PropertyBase* pProp,
+                                      MM::ActionType eAct) {
              // There is no readout for enable_outputs, so we rely on the
              // last-set value.
              if (eAct == MM::AfterSet) {
@@ -609,8 +600,8 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
                                              const std::string& name) {
       this->CreateStringProperty(
           name.c_str(), "", false,
-          new ActionLambda([this, connNo](MM::PropertyBase* pProp,
-                                          MM::ActionType eAct) {
+          new MM::ActionLambda([this, connNo](MM::PropertyBase* pProp,
+                                              MM::ActionType eAct) {
              if (eAct == MM::AfterSet) {
                 std::string propVal;
                 pProp->Get(propVal);
@@ -634,8 +625,8 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
    void CreateClearAllOverloadsProperty() {
       this->CreateStringProperty(
           "ClearOverloads", "", false,
-          new ActionLambda([this](MM::PropertyBase* pProp,
-                                  MM::ActionType eAct) {
+          new MM::ActionLambda([this](MM::PropertyBase* pProp,
+                                      MM::ActionType eAct) {
              if (eAct == MM::AfterSet) {
                 std::string propVal;
                 pProp->Get(propVal);
@@ -660,8 +651,8 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
                                           const std::string& name) {
       this->CreateStringProperty(
           name.c_str(), "No", true,
-          new ActionLambda([this, connNo](MM::PropertyBase* pProp,
-                                          MM::ActionType eAct) {
+          new MM::ActionLambda([this, connNo](MM::PropertyBase* pProp,
+                                              MM::ActionType eAct) {
              if (eAct == MM::BeforeGet) {
                 short err{};
                 const bool flag = module_->IsOverloaded(connNo, err);
@@ -691,8 +682,8 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
                                                    const std::string& name) {
       this->CreateStringProperty(
           name.c_str(), "No", true,
-          new ActionLambda([this, connNo](MM::PropertyBase* pProp,
-                                          MM::ActionType eAct) {
+          new MM::ActionLambda([this, connNo](MM::PropertyBase* pProp,
+                                              MM::ActionType eAct) {
              if (eAct == MM::BeforeGet) {
                 short err{};
                 const bool flag =
