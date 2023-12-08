@@ -33,9 +33,6 @@
 #include <iostream>
 #include <future>
 
-
-
-using namespace std;
 const double CDemoCamera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 
@@ -346,7 +343,7 @@ int CDemoCamera::Initialize()
    nRet = CreateStringProperty(MM::g_Keyword_PixelType, g_PixelType_8bit, false, pAct);
    assert(nRet == DEVICE_OK);
 
-   vector<string> pixelTypeValues;
+   std::vector<std::string> pixelTypeValues;
    pixelTypeValues.push_back(g_PixelType_8bit);
    pixelTypeValues.push_back(g_PixelType_16bit); 
 	pixelTypeValues.push_back(g_PixelType_32bitRGB);
@@ -362,7 +359,7 @@ int CDemoCamera::Initialize()
    nRet = CreateIntegerProperty("BitDepth", 8, false, pAct);
    assert(nRet == DEVICE_OK);
 
-   vector<string> bitDepths;
+   std::vector<std::string> bitDepths;
    bitDepths.push_back("8");
    bitDepths.push_back("10");
    bitDepths.push_back("11");
@@ -1021,7 +1018,7 @@ int CDemoCamera::SendExposureSequence() const {
 
 int CDemoCamera::SetAllowedBinning() 
 {
-   vector<string> binValues;
+   std::vector<std::string> binValues;
    binValues.push_back("1");
    binValues.push_back("2");
    if (scanMode_ < 3)
@@ -1400,7 +1397,7 @@ int CDemoCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
          if(IsCapturing())
             return DEVICE_CAMERA_BUSY_ACQUIRING;
 
-         string pixelType;
+         std::string pixelType;
          pProp->Get(pixelType);
 
          if (pixelType.compare(g_PixelType_8bit) == 0)
@@ -3991,8 +3988,8 @@ gatedVolts_(0),
 open_(true),
 sequenceRunning_(false),
 sequenceIndex_(0),
-sentSequence_(vector<double>()),
-nascentSequence_(vector<double>())
+sentSequence_(std::vector<double>()),
+nascentSequence_(std::vector<double>())
 {
    SetErrorText(ERR_SEQUENCE_INACTIVE, "Sequence triggered, but sequence is not running");
 
@@ -4063,7 +4060,7 @@ int DemoDA::SetSignal(double volts)
    volt_ = volts; 
    if (open_)
       gatedVolts_ = volts;
-   stringstream s;
+   std::stringstream s;
    s << "Voltage set to " << volts;
    LogMessage(s.str(), false);
    return DEVICE_OK;
