@@ -21,18 +21,18 @@
 
 #include "Property.h"
 
+#include <cmath>
 #include <cstdio>
-#include <math.h>
+#include <cstdlib>
+#include <cstdio>
 
-using namespace std;
-
-const int BUFSIZE = 60; // For number-to-string conversion
+static const int BUFSIZE = 60; // For number-to-string conversion
 
 
-vector<string> MM::Property::GetAllowedValues() const
+std::vector<std::string> MM::Property::GetAllowedValues() const
 {
-   vector<string> vals;
-   map<string, long>::const_iterator it;
+   std::vector<std::string> vals;
+   std::map<std::string, long>::const_iterator it;
    for (it=values_.begin(); it != values_.end(); it++)
       vals.push_back(it->first);
    return vals;
@@ -40,13 +40,13 @@ vector<string> MM::Property::GetAllowedValues() const
 
 void MM::Property::AddAllowedValue(const char* value)
 {
-   values_.insert(make_pair(value, 0L));
+   values_.insert(std::make_pair(value, 0L));
    limits_ = false;
 }
 
 void MM::Property::AddAllowedValue(const char* value, long data)
 {
-   values_.insert(make_pair(value, data));
+   values_.insert(std::make_pair(value, data));
    hasData_ = true;
    limits_ = false;
 }
@@ -57,7 +57,7 @@ bool MM::Property::IsAllowed(const char* value) const
    if (values_.size() == 0)
       return true; // any value is allowed
 
-   map<string, long>::const_iterator it = values_.find(value);
+   std::map<std::string, long>::const_iterator it = values_.find(value);
    if (it == values_.end())
       return false; // not found
    else
@@ -69,7 +69,7 @@ bool MM::Property::GetData(const char* value, long& data) const
    if (!hasData_)
       return false;
 
-   map<string, long>::const_iterator it = values_.find(value);
+   std::map<std::string, long>::const_iterator it = values_.find(value);
    if (it == values_.end())
       return false; // not found
    else
@@ -93,7 +93,7 @@ void MM::Property::SetSequenceable(long sequenceMaxSize)
 bool MM::StringProperty::Set(double val)
 {
    char buf[BUFSIZE];
-   snprintf(buf, BUFSIZE, "%.2g", val); 
+   std::snprintf(buf, BUFSIZE, "%.2g", val); 
    value_ = buf;
    return true;
 }
@@ -101,7 +101,7 @@ bool MM::StringProperty::Set(double val)
 bool MM::StringProperty::Set(long val)
 {
    char buf[BUFSIZE];
-   snprintf(buf, BUFSIZE, "%ld", val); 
+   std::snprintf(buf, BUFSIZE, "%ld", val); 
    value_ = buf;
    return true;
 }
@@ -114,13 +114,13 @@ bool MM::StringProperty::Set(const char* val)
 
 bool MM::StringProperty::Get(double& val) const
 {
-   val = atof(value_.c_str());
+   val = std::atof(value_.c_str());
    return true;
 }
 
 bool MM::StringProperty::Get(long& val) const
 {
-   val = atol(value_.c_str());
+   val = std::atol(value_.c_str());
    return true;
 }
 
@@ -138,19 +138,19 @@ bool MM::StringProperty::Get(std::string& strVal) const
 double MM::FloatProperty::Truncate(double dVal)
 {
    if (dVal >= 0)
-      return floor(dVal * reciprocalMinimalStep_ + 0.5) / reciprocalMinimalStep_;
+      return std::floor(dVal * reciprocalMinimalStep_ + 0.5) / reciprocalMinimalStep_;
    else
-      return ceil(dVal * reciprocalMinimalStep_ - 0.5) / reciprocalMinimalStep_;
+      return std::ceil(dVal * reciprocalMinimalStep_ - 0.5) / reciprocalMinimalStep_;
 }
 
 double MM::FloatProperty::TruncateDown(double dVal)
 {
-   return floor(dVal * reciprocalMinimalStep_) / reciprocalMinimalStep_;
+   return std::floor(dVal * reciprocalMinimalStep_) / reciprocalMinimalStep_;
 }
 
 double MM::FloatProperty::TruncateUp(double dVal)
 {
-   return ceil(dVal * reciprocalMinimalStep_) / reciprocalMinimalStep_;
+   return std::ceil(dVal * reciprocalMinimalStep_) / reciprocalMinimalStep_;
 }
 
 bool MM::FloatProperty::Set(double dVal)
@@ -191,8 +191,8 @@ bool MM::FloatProperty::Get(std::string& strVal) const
 {
    char fmtStr[20];
    char buf[BUFSIZE];
-   sprintf(fmtStr, "%%.%df", decimalPlaces_);
-   snprintf(buf, BUFSIZE, fmtStr, value_);
+   std::sprintf(fmtStr, "%%.%df", decimalPlaces_);
+   std::snprintf(buf, BUFSIZE, fmtStr, value_);
    strVal = buf;
    return true;
 }
@@ -225,7 +225,7 @@ bool MM::IntegerProperty::Set(long lVal)
 
 bool MM::IntegerProperty::Set(const char* pszVal)
 {
-   return Set(atol(pszVal));
+   return Set(std::atol(pszVal));
 }
 
 bool MM::IntegerProperty::Get(double& dVal) const
@@ -243,7 +243,7 @@ bool MM::IntegerProperty::Get(long& lVal) const
 bool MM::IntegerProperty::Get(std::string& strVal) const
 {
    char pszBuf[BUFSIZE];
-   snprintf(pszBuf, BUFSIZE, "%ld", value_); 
+   std::snprintf(pszBuf, BUFSIZE, "%ld", value_); 
    strVal = pszBuf;
    return true;
 }
@@ -286,7 +286,7 @@ int MM::PropertyCollection::Set(const char* pszPropName, const char* pszValue)
       return DEVICE_INVALID_PROPERTY_VALUE;
 }
 
-int MM::PropertyCollection::Get(const char* pszPropName, string& strValue) const
+int MM::PropertyCollection::Get(const char* pszPropName, std::string& strValue) const
 {
    MM::Property* pProp = Find(pszPropName);
    if (!pProp)
@@ -310,9 +310,9 @@ MM::Property* MM::PropertyCollection::Find(const char* pszName) const
    return it->second;
 }
 
-vector<string> MM::PropertyCollection::GetNames() const
+std::vector<std::string> MM::PropertyCollection::GetNames() const
 {
-   vector<string> nameList;
+   std::vector<std::string> nameList;
 
    CPropArray::const_iterator it;
    for (it = properties_.begin(); it != properties_.end(); it++)
@@ -363,7 +363,7 @@ int MM::PropertyCollection::CreateProperty(const char* pszName, const char* pszV
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::SetAllowedValues(const char* pszName, vector<string>& values)
+int MM::PropertyCollection::SetAllowedValues(const char* pszName, std::vector<std::string>& values)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
@@ -425,7 +425,7 @@ int MM::PropertyCollection::GetCurrentPropertyData(const char* name, long& data)
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
 
-   string value;
+   std::string value;
    pProp->Get(value);
    if (!pProp->GetData(value.c_str(), data))
       return DEVICE_NO_PROPERTY_DATA;
@@ -433,7 +433,7 @@ int MM::PropertyCollection::GetCurrentPropertyData(const char* name, long& data)
    return DEVICE_OK;
 }
 
-bool MM::PropertyCollection::GetName(unsigned uIdx, string& strName) const
+bool MM::PropertyCollection::GetName(unsigned uIdx, std::string& strName) const
 {
    if (uIdx >= properties_.size())
       return false; // unknown index

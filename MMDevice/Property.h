@@ -25,8 +25,6 @@
 
 #include "MMDeviceConstants.h"
 
-#include <cstdlib>
-#include <cstring>
 #include <functional>
 #include <map>
 #include <string>

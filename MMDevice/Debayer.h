@@ -28,6 +28,9 @@
 
 #include "ImgBuffer.h"
 
+#include <string>
+#include <vector>
+
 /**
  * Utility class to build color image from the Bayer grayscale image
  * Based on the Debayer_Image plugin for ImageJ, by Jennifer West, University of Manitoba

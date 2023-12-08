@@ -24,9 +24,7 @@
 #define _IMG_BUFFER_
 
 #include <string>
-#include <vector>
-#include <map>
-#include "MMDevice.h"
+
 #include "ImageMetadata.h"
 
 ///////////////////////////////////////////////////////////////////////////////

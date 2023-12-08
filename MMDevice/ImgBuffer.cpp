@@ -19,9 +19,9 @@
 // NOTE:          Imported from ADVI for use in Micro-Manager
 ///////////////////////////////////////////////////////////////////////////////
 #include "ImgBuffer.h"
-#include <math.h>
-#include <assert.h>
-using namespace std;
+
+#include <cassert>
+#include <cstring>
 
 ///////////////////////////////////////////////////////////////////////////////
 // ImgBuffer class
@@ -31,7 +31,7 @@ ImgBuffer::ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
 {
    pixels_ = new unsigned char[xSize * ySize * pixDepth];
    assert(pixels_);
-   memset(pixels_, 0, xSize * ySize * pixDepth);
+   std::memset(pixels_, 0, xSize * ySize * pixDepth);
 }
 
 ImgBuffer::ImgBuffer() :
@@ -65,7 +65,7 @@ unsigned char* ImgBuffer::GetPixelsRW()
 
 void ImgBuffer::SetPixels(const void* pix)
 {
-   memcpy((void*)pixels_, pix, width_ * height_ * pixDepth_);
+   std::memcpy((void*)pixels_, pix, width_ * height_ * pixDepth_);
 }
 
 // Set pixels, from a source that has extra bytes at the end of each scanline
@@ -78,7 +78,7 @@ void ImgBuffer::SetPixelsPadded(const void* pixArray, int paddingBytesPerLine)
 
    for(size_t i = 0; i < height_; i++)
    {
-      memcpy(dst, src, lineSize);
+      std::memcpy(dst, src, lineSize);
       src += lineSize + paddingBytesPerLine;
       dst += lineSize;
    }
@@ -87,7 +87,7 @@ void ImgBuffer::SetPixelsPadded(const void* pixArray, int paddingBytesPerLine)
 void ImgBuffer::ResetPixels()
 {
    if (pixels_)
-      memset(pixels_, 0, width_ * height_ * pixDepth_);
+      std::memset(pixels_, 0, width_ * height_ * pixDepth_);
 }
 
 bool ImgBuffer::Compatible(const ImgBuffer& img) const
@@ -127,7 +127,7 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize)
    width_ = xSize;
    height_ = ySize;
 
-   memset(pixels_, 0, width_ * height_ * pixDepth_);
+   std::memset(pixels_, 0, width_ * height_ * pixDepth_);
 }
 
 void ImgBuffer::Copy(const ImgBuffer& right)
