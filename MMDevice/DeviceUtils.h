@@ -17,13 +17,10 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// CVS:           $Id$
-//
 
-#ifndef _DEVICEUTILS_H_
-#define _DEVICEUTILS_H_
+#pragma once
 
-#include "../MMDevice/MMDeviceConstants.h"
+#include "MMDeviceConstants.h"
 #include <vector>
 #include <string>
 #ifdef _WIN32
@@ -69,5 +66,3 @@ public:
 private:
    static char m_pszBuffer[MM::MaxStrLength];
 };
-
-#endif //_DEVICEUTILS_H_

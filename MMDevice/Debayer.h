@@ -21,10 +21,8 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-///////////////////////////////////////////////////////////////////////////////
 
-#if !defined(_DEBAYER_)
-#define _DEBAYER_
+#pragma once
 
 #include "ImgBuffer.h"
 
@@ -74,5 +72,3 @@ private:
    int orderIndex;
    int algoIndex;
 };
-
-#endif // !defined(_DEBAYER_)
