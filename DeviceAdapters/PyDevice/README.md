@@ -34,7 +34,7 @@ To debug the plugin in Micro-Manager, select a `Debug` build configuration in Vi
 | Command Arguments | $(TargetPath) |
 | Environment |MM_EXECUTABLE_PATH="C:\Program Files\Micro-Manager-2.0"|
 
-Here, adjust the `MM_EXECUTABLE_PATH` if you installed Micro-Manager somewherre else.
+Here, adjust the `MM_EXECUTABLE_PATH` if you installed Micro-Manager somewhere else.
 Finally, in the menu select `Debug->Other Debug Targets->Child Process Debug Settings...` and tick `Enable child process debugging`.
 You can now press F5 to build and install the plugin, and start Micro-Manager with the debugger attached. Note: you can safely ignore the segmentation faults occuring in the java virtual machine.
 
@@ -50,6 +50,8 @@ make sure you have the same version of micro-manager as you cloned from github. 
  
    If you leave the ModulePath on '(auto)' it will most likely find a Python install for you. If the script you load is in a virtual environment,
    It will find the virtual environment for you. This is important as it contains specific packages (like NumPy) that your scripts need to run.
+   
+   Further documentation is shown in example_devices/PyDevice.md
 
 ## How do I build my own devices?
- - We have clarified that in more detail in the subfolder Python_devices,  starting with HOW_TO_MAKE_A_DEVICE.md. 
+ - We have clarified that in more detail in the subfolder example_devices, starting with PyDevice.md. 

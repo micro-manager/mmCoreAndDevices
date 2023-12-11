@@ -51,11 +51,13 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
         GetModuleFileName(hModule, dllPath, _MAX_PATH);
         path = fs::path(dllPath).parent_path();
     }
+    #pragma warning(disable: 4996)
     Py_SetPythonHome(path.generic_wstring().c_str());
 
     // set the module search path if it is specified in an environmental variable
     auto base_module_path = _wgetenv(L"PYTHONPATH");
     if (base_module_path && base_module_path[0] != 0) {
+        #pragma warning(disable: 4996)
         Py_SetPath(base_module_path);
     }
 
