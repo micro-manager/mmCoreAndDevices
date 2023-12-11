@@ -83,7 +83,7 @@ void PyStringAction::set(MM::PropertyBase* pProp, const PyObj& value) const noex
 }
 
 PyObj PyStringAction::get(MM::PropertyBase* pProp) const noexcept {
-    double value;
+    string value;
     pProp->Get(value);
     return PyObj(value);
 }
