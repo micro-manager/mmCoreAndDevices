@@ -603,6 +603,7 @@ void HIDDeviceLister::ListHIDDevices(std::vector<std::string> &availableDevices)
 // lists all HID Devices on this system that we know about
 void HIDDeviceLister::FindHIDDevices(std::vector<std::string> &availableDevices)
 {
+   // see https://github.com/micro-manager/mmCoreAndDevices/issues/402
    // printf("Discovering HID Devices......\n");
 
    struct hid_device_info *devs, *curDev;
