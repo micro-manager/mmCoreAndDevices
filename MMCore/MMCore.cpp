@@ -65,8 +65,6 @@
 #include <sstream>
 #include <vector>
 
-using namespace std;
-
 /*
  * Important! Read this before changing this file:
  *
@@ -351,10 +349,10 @@ void CMMCore::stopSecondaryLogFile(int handle) throw (CMMError)
 /**
  * Displays core version.
  */
-string CMMCore::getVersionInfo() const
+std::string CMMCore::getVersionInfo() const
 {
-   ostringstream txt;
-   string debug;
+   std::ostringstream txt;
+   std::string debug;
    txt << "MMCore version " << MMCore_versionMajor << "." << MMCore_versionMinor << "." << MMCore_versionPatch;
    #ifdef _DEBUG
    txt << " (debug)";
@@ -419,9 +417,9 @@ CMMCore::getAvailableDeviceTypes(const char* moduleName) throw (CMMError)
 /**
  * Returns the module and device interface versions.
  */
-string CMMCore::getAPIVersionInfo() const
+std::string CMMCore::getAPIVersionInfo() const
 {
-   ostringstream txt;
+   std::ostringstream txt;
    txt << "Device API version " << DEVICE_INTERFACE_VERSION << ", " << "Module API version " << MODULE_INTERFACE_VERSION;
    return txt.str();
 }
@@ -438,8 +436,8 @@ string CMMCore::getAPIVersionInfo() const
 Configuration CMMCore::getSystemState()
 {
    Configuration config;
-   vector<string> devices = deviceManager_->GetDeviceList();
-   for (vector<string>::const_iterator i = devices.begin(), dend = devices.end(); i != dend; ++i)
+   std::vector<std::string> devices = deviceManager_->GetDeviceList();
+   for (std::vector<std::string>::const_iterator i = devices.begin(), dend = devices.end(); i != dend; ++i)
    {
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*i);
       mm::DeviceModuleLockGuard guard(pDev);
@@ -473,11 +471,11 @@ Configuration CMMCore::getSystemState()
    }
 
    // add core properties
-   vector<string> coreProps = properties_->GetNames();
+   std::vector<std::string> coreProps = properties_->GetNames();
    for (unsigned i=0; i < coreProps.size(); i++)
    {
-      string name = coreProps[i];
-      string val = properties_->Get(name.c_str());
+      std::string name = coreProps[i];
+      std::string val = properties_->Get(name.c_str());
       config.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, name.c_str(), val.c_str(), properties_->IsReadOnly(name.c_str())));
    }
 
@@ -507,7 +505,7 @@ Configuration CMMCore::getConfigState(const char* group, const char* config) thr
    for (size_t i=0; i < cfgData.size(); i++)
    {
       PropertySetting cs = cfgData.getSetting(i); // config setting
-      string value = getProperty(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str());
+      std::string value = getProperty(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str());
       PropertySetting ss(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str(), value.c_str()); // state setting
       state.addSetting(ss);
    }
@@ -844,7 +842,7 @@ void CMMCore::reset() throw (CMMError)
  */
 void CMMCore::initializeAllDevices() throw (CMMError)
 {
-   vector<string> devices = deviceManager_->GetDeviceList();
+   std::vector<std::string> devices = deviceManager_->GetDeviceList();
    LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
 
    for (size_t i=0; i<devices.size(); i++)
@@ -895,7 +893,7 @@ void CMMCore::updateCoreProperty(const char* propName, MM::DeviceType devType) t
 {
    CheckPropertyName(propName);
 
-   vector<string> devices = getLoadedDevicesOfType(devType);
+   std::vector<std::string> devices = getLoadedDevicesOfType(devType);
    devices.push_back(""); // add empty value
    properties_->ClearAllowedValues(propName);
    for (size_t i=0; i<devices.size(); i++)
@@ -996,8 +994,8 @@ void CMMCore::unloadLibrary(const char* moduleName) throw (CMMError)
       throw CMMError(errorText_[MMERR_NullPointerException],  MMERR_NullPointerException);
 
    try {
-      vector<string> devices = deviceManager_->GetDeviceList();
-      vector<string>::reverse_iterator it;
+      std::vector<std::string> devices = deviceManager_->GetDeviceList();
+      std::vector<std::string>::reverse_iterator it;
       for (it=devices.rbegin(); it != devices.rend(); it++)
       {
          std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*it);
@@ -1205,7 +1203,7 @@ void CMMCore::waitForDevice(std::shared_ptr<DeviceInstance> pDev) throw (CMMErro
 
       if (std::chrono::steady_clock::now() > deadline)
       {
-         string label = pDev->GetLabel();
+         std::string label = pDev->GetLabel();
          std::ostringstream mez;
          mez << "wait timed out after " << timeoutMs_ << " ms. ";
          logError(label.c_str(), mez.str().c_str());
@@ -1248,7 +1246,7 @@ void CMMCore::waitForSystem() throw (CMMError)
  */
 bool CMMCore::deviceTypeBusy(MM::DeviceType devType) throw (CMMError)
 {
-   vector<string> devices = deviceManager_->GetDeviceList(devType);
+   std::vector<std::string> devices = deviceManager_->GetDeviceList(devType);
    for (size_t i=0; i<devices.size(); i++)
    {
       try {
@@ -1273,7 +1271,7 @@ bool CMMCore::deviceTypeBusy(MM::DeviceType devType) throw (CMMError)
  */
 void CMMCore::waitForDeviceType(MM::DeviceType devType) throw (CMMError)
 {
-   vector<string> devices = deviceManager_->GetDeviceList(devType);
+   std::vector<std::string> devices = deviceManager_->GetDeviceList(devType);
    for (size_t i=0; i<devices.size(); i++)
       waitForDevice(devices[i].c_str());
 }
@@ -2687,10 +2685,10 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
 			if (nRet != DEVICE_OK)
 				throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
 		}
-		catch( bad_alloc& ex)
+		catch (std::bad_alloc& ex)
 		{
-			ostringstream messs;
-			messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << endl;
+			std::ostringstream messs;
+			messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
 			throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
 		}
    }
@@ -3063,11 +3061,11 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
 	{
 		cbuf_ = new CircularBuffer(sizeMB);
 	}
-	catch(bad_alloc& ex)
+	catch (std::bad_alloc& ex)
 	{
       // This is an out-of-memory error before even allocating the buffers.
-		ostringstream messs;
-		messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << endl;
+		std::ostringstream messs;
+		messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
 		throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
 	}
 	if (NULL == cbuf_) throw CMMError(getCoreErrorText(MMERR_OutOfMemory).c_str(), MMERR_OutOfMemory);
@@ -3088,10 +3086,10 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
       LOG_DEBUG(coreLogger_) << "Did set circular buffer size to " <<
          sizeMB << " MB";
 	}
-	catch(bad_alloc& ex)
+	catch (std::bad_alloc& ex)
 	{
-		ostringstream messs;
-		messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << endl;
+		std::ostringstream messs;
+		messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
 		throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
 	}
 	if (NULL == cbuf_)
@@ -3160,7 +3158,7 @@ bool CMMCore::isBufferOverflowed() const
  * Returns the label of the currently selected camera device.
  * @return camera name
  */
-string CMMCore::getCameraDevice()
+std::string CMMCore::getCameraDevice()
 {
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
@@ -3174,7 +3172,7 @@ string CMMCore::getCameraDevice()
  * Returns the label of the currently selected shutter device.
  * @return shutter name
  */
-string CMMCore::getShutterDevice()
+std::string CMMCore::getShutterDevice()
 {
    std::shared_ptr<ShutterInstance> shutter = currentShutterDevice_.lock();
    if (shutter)
@@ -3188,7 +3186,7 @@ string CMMCore::getShutterDevice()
  * Returns the label of the currently selected focus device.
  * @return focus stage name
  */
-string CMMCore::getFocusDevice()
+std::string CMMCore::getFocusDevice()
 {
    std::shared_ptr<StageInstance> focus = currentFocusDevice_.lock();
    if (focus)
@@ -3201,7 +3199,7 @@ string CMMCore::getFocusDevice()
 /**
  * Returns the label of the currently selected XYStage device.
  */
-string CMMCore::getXYStageDevice()
+std::string CMMCore::getXYStageDevice()
 {
    std::shared_ptr<XYStageInstance> xyStage = currentXYStageDevice_.lock();
    if (xyStage)
@@ -3214,7 +3212,7 @@ string CMMCore::getXYStageDevice()
 /**
  * Returns the label of the currently selected auto-focus device.
  */
-string CMMCore::getAutoFocusDevice()
+std::string CMMCore::getAutoFocusDevice()
 {
    std::shared_ptr<AutoFocusInstance> autofocus =
       currentAutofocusDevice_.lock();
@@ -3252,7 +3250,7 @@ void CMMCore::setAutoFocusDevice(const char* autofocusLabel) throw (CMMError)
 /**
  * Returns the label of the currently selected image processor device.
  */
-string CMMCore::getImageProcessorDevice()
+std::string CMMCore::getImageProcessorDevice()
 {
    std::shared_ptr<ImageProcessorInstance> imageProcessor =
       currentImageProcessor_.lock();
@@ -3267,7 +3265,7 @@ string CMMCore::getImageProcessorDevice()
  * Returns the label of the currently selected SLM device.
  * @return slm name
  */
-string CMMCore::getSLMDevice()
+std::string CMMCore::getSLMDevice()
 {
    std::shared_ptr<SLMInstance> slm = currentSLMDevice_.lock();
    if (slm)
@@ -3281,7 +3279,7 @@ string CMMCore::getSLMDevice()
  * Returns the label of the currently selected Galvo device.
  * @return galvo name
  */
-string CMMCore::getGalvoDevice()
+std::string CMMCore::getGalvoDevice()
 {
    std::shared_ptr<GalvoInstance> galvos = currentGalvoDevice_.lock();
    if (galvos)
@@ -3399,7 +3397,7 @@ void CMMCore::setChannelGroup(const char* chGroup) throw (CMMError)
 /**
  * Returns the group determining the channel selection.
  */
-string CMMCore::getChannelGroup()
+std::string CMMCore::getChannelGroup()
 {
 
    return channelGroup_;
@@ -3547,7 +3545,7 @@ void CMMCore::setCameraDevice(const char* cameraLabel) throw (CMMError)
  * @return property name array
  * @param label    the device label
  */
-vector<string> CMMCore::getDevicePropertyNames(const char* label) throw (CMMError)
+std::vector<std::string> CMMCore::getDevicePropertyNames(const char* label) throw (CMMError)
 {
    if (IsCoreDeviceLabel(label))
       return properties_->GetNames();
@@ -3563,9 +3561,9 @@ vector<string> CMMCore::getDevicePropertyNames(const char* label) throw (CMMErro
  * Returns an array of labels for currently loaded devices.
  * @return array of labels
  */
-vector<string> CMMCore::getLoadedDevices() const
+std::vector<std::string> CMMCore::getLoadedDevices() const
 {
-  vector<string> deviceList = deviceManager_->GetDeviceList();
+  std::vector<std::string> deviceList = deviceManager_->GetDeviceList();
   deviceList.push_back(MM::g_Keyword_CoreDevice);
   return deviceList;
 }
@@ -3575,10 +3573,10 @@ vector<string> CMMCore::getLoadedDevices() const
  * @param devType    the device type identifier
  * @return array of labels
  */
-vector<string> CMMCore::getLoadedDevicesOfType(MM::DeviceType devType) const
+std::vector<std::string> CMMCore::getLoadedDevicesOfType(MM::DeviceType devType) const
 {
    if (devType == MM::CoreDevice) {
-      vector<string> coreDev;
+      std::vector<std::string> coreDev;
       coreDev.push_back(MM::g_Keyword_CoreDevice);
       return coreDev;
    }
@@ -3626,7 +3624,7 @@ std::vector<std::string> CMMCore::getAllowedPropertyValues(const char* label, co
  * @param label      the device label
  * @param propName   the property name
  */
-string CMMCore::getProperty(const char* label, const char* propName) throw (CMMError)
+std::string CMMCore::getProperty(const char* label, const char* propName) throw (CMMError)
 {
    if (IsCoreDeviceLabel(label))
       return properties_->Get(propName);
@@ -3654,7 +3652,7 @@ string CMMCore::getProperty(const char* label, const char* propName) throw (CMME
  * @param label       the device label
  * @param propName    the property name
  */
-string CMMCore::getPropertyFromCache(const char* label, const char* propName) const throw (CMMError)
+std::string CMMCore::getPropertyFromCache(const char* label, const char* propName) const throw (CMMError)
 {
    if (IsCoreDeviceLabel(label))
       return properties_->Get(propName);
@@ -4116,7 +4114,7 @@ unsigned CMMCore::getNumberOfCameraChannels()
 /**
  * Returns the name of the requested channel as known by the default camera
  */
-string CMMCore::getCameraChannelName(unsigned int channelNr)
+std::string CMMCore::getCameraChannelName(unsigned int channelNr)
 {
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
@@ -4661,7 +4659,7 @@ void CMMCore::setStateLabel(const char* deviceLabel, const char* stateLabel) thr
  * @return   the current state's label
  * @param deviceLabel     the device label
  */
-string CMMCore::getStateLabel(const char* deviceLabel) throw (CMMError)
+std::string CMMCore::getStateLabel(const char* deviceLabel) throw (CMMError)
 {
    std::shared_ptr<StateInstance> pStateDev =
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
@@ -4738,13 +4736,13 @@ void CMMCore::defineStateLabel(const char* deviceLabel, long state, const char* 
  * @return  an array of state labels
  * @param deviceLabel       the device label
  */
-vector<string> CMMCore::getStateLabels(const char* deviceLabel) throw (CMMError)
+std::vector<std::string> CMMCore::getStateLabels(const char* deviceLabel) throw (CMMError)
 {
    std::shared_ptr<StateInstance> pStateDev =
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
 
    mm::DeviceModuleLockGuard guard(pStateDev);
-   vector<string> stateLabels;
+   std::vector<std::string> stateLabels;
    for (unsigned i=0; i<pStateDev->GetNumberOfPositions(); i++)
    {
       stateLabels.push_back(pStateDev->GetPositionLabel(i));
@@ -4995,7 +4993,7 @@ void CMMCore::setPixelSizeConfig(const char* resolutionID) throw (CMMError)
    CheckConfigPresetName(resolutionID);
 
    PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
-   ostringstream os;
+   std::ostringstream os;
    os << resolutionID;
    if (!psc)
    {
@@ -5027,7 +5025,7 @@ void CMMCore::setConfig(const char* groupName, const char* configName) throw (CM
    CheckConfigPresetName(configName);
 
    Configuration* pCfg = configGroups_->Find(groupName, configName);
-   ostringstream os;
+   std::ostringstream os;
    os << groupName << "/" << configName;
    if (!pCfg)
    {
@@ -5082,7 +5080,7 @@ void CMMCore::deleteConfig(const char* groupName, const char* configName) throw 
    CheckConfigGroupName(groupName);
    CheckConfigPresetName(configName);
 
-   ostringstream os;
+   std::ostringstream os;
    os << groupName << "/" << configName;
    if (!configGroups_->Delete(groupName, configName)) {
       logError("deleteConfig", getCoreErrorText(MMERR_NoConfiguration).c_str());
@@ -5107,7 +5105,7 @@ void CMMCore::deleteConfig(const char* groupName, const char* configName, const 
    CheckDeviceLabel(deviceLabel);
    CheckPropertyName(propName);
 
-   ostringstream os;
+   std::ostringstream os;
    os << groupName << "/" << configName << "/" << deviceLabel << "/" << propName;
    if (!configGroups_->Delete(groupName, configName, deviceLabel, propName)) {
       logError("deleteConfig", getCoreErrorText(MMERR_NoConfiguration).c_str());
@@ -5134,7 +5132,7 @@ void CMMCore::deleteConfig(const char* groupName, const char* configName, const 
  *
  * @return an array of configuration names
  */
-vector<string> CMMCore::getAvailableConfigs(const char* group) const
+std::vector<std::string> CMMCore::getAvailableConfigs(const char* group) const
 {
    std::vector<std::string> ret;
    try
@@ -5153,7 +5151,7 @@ vector<string> CMMCore::getAvailableConfigs(const char* group) const
  * Returns the names of all defined configuration groups
  * @return  an array of names of configuration groups
  */
-vector<string> CMMCore::getAvailableConfigGroups() const
+std::vector<std::string> CMMCore::getAvailableConfigGroups() const
 {
    return configGroups_->GetAvailableGroups();
 }
@@ -5162,7 +5160,7 @@ vector<string> CMMCore::getAvailableConfigGroups() const
  * Returns all defined resolution preset names
  * @return an array of resolution presets
  */
-vector<string> CMMCore::getAvailablePixelSizeConfigs() const
+std::vector<std::string> CMMCore::getAvailablePixelSizeConfigs() const
 {
    return pixelSizeGroup_->GetAvailable();
 }
@@ -5176,11 +5174,11 @@ vector<string> CMMCore::getAvailablePixelSizeConfigs() const
  *
  * @return The current configuration preset's name
  */
-string CMMCore::getCurrentConfig(const char* groupName) throw (CMMError)
+std::string CMMCore::getCurrentConfig(const char* groupName) throw (CMMError)
 {
    CheckConfigGroupName(groupName);
 
-   vector<string> cfgs = configGroups_->GetAvailableConfigs(groupName);
+   std::vector<std::string> cfgs = configGroups_->GetAvailableConfigs(groupName);
    if (cfgs.empty())
       return "";
 
@@ -5206,11 +5204,11 @@ string CMMCore::getCurrentConfig(const char* groupName) throw (CMMError)
  *
  * @return The cache's current configuration preset name
  */
-string CMMCore::getCurrentConfigFromCache(const char* groupName) throw (CMMError)
+std::string CMMCore::getCurrentConfigFromCache(const char* groupName) throw (CMMError)
 {
    CheckConfigGroupName(groupName);
 
-   vector<string> cfgs = configGroups_->GetAvailableConfigs(groupName);
+   std::vector<std::string> cfgs = configGroups_->GetAvailableConfigs(groupName);
    if (cfgs.empty())
       return "";
 
@@ -5241,7 +5239,7 @@ Configuration CMMCore::getConfigData(const char* groupName, const char* configNa
    if (!pCfg)
    {
       // not found
-      ostringstream os;
+      std::ostringstream os;
       os << groupName << "/" << configName;
       logError(os.str().c_str(), getCoreErrorText(MMERR_NoConfiguration).c_str());
       throw CMMError("Configuration group " + ToQuotedString(groupName) +
@@ -5264,7 +5262,7 @@ Configuration CMMCore::getPixelSizeConfigData(const char* configName) throw (CMM
    if (!pCfg)
    {
       // not found
-      ostringstream os;
+      std::ostringstream os;
       os << "Pixel size" << "/" << configName;
       logError(os.str().c_str(), getCoreErrorText(MMERR_NoConfiguration).c_str());
       throw CMMError("Pixel size configuration preset " + ToQuotedString(configName) +
@@ -5318,7 +5316,7 @@ void CMMCore::deletePixelSizeConfig(const char* configName) throw (CMMError)
 /**
  * Get the current pixel configuration name
  **/
-string CMMCore::getCurrentPixelSizeConfig() throw (CMMError)
+std::string CMMCore::getCurrentPixelSizeConfig() throw (CMMError)
 {
 	return getCurrentPixelSizeConfig(false);
 }
@@ -5326,10 +5324,10 @@ string CMMCore::getCurrentPixelSizeConfig() throw (CMMError)
 /**
  * Get the current pixel configuration name
  **/
-string CMMCore::getCurrentPixelSizeConfig(bool cached) throw (CMMError)
+std::string CMMCore::getCurrentPixelSizeConfig(bool cached) throw (CMMError)
 {
    // get a list of configuration names
-   vector<string> cfgs = pixelSizeGroup_->GetAvailable();
+   std::vector<std::string> cfgs = pixelSizeGroup_->GetAvailable();
    if (cfgs.empty())
       return "";
 
@@ -5346,7 +5344,7 @@ string CMMCore::getCurrentPixelSizeConfig(bool cached) throw (CMMError)
          {
             try
             {
-				string value;
+				std::string value;
 				if (!cached)
 				{
                    value = getProperty(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str());
@@ -5553,7 +5551,7 @@ std::vector<double> CMMCore::getPixelSizeAffineByID(const char* resolutionID) th
 double CMMCore::getMagnificationFactor() const
 {
    double magnification = 1.0;
-   vector<string> magnifiers = getLoadedDevicesOfType(MM::MagnifierDevice);
+   std::vector<std::string> magnifiers = getLoadedDevicesOfType(MM::MagnifierDevice);
    for (size_t i=0; i<magnifiers.size(); i++)
    {
       std::shared_ptr<MagnifierInstance> magnifier =
@@ -5655,12 +5653,12 @@ std::string CMMCore::getSerialPortAnswer(const char* portLabel, const char* term
    int ret = pSerial->GetAnswer(answerBuf, bufLen, term);
    if (ret != DEVICE_OK)
    {
-      string errText = getDeviceErrorText(ret, pSerial).c_str();
+      std::string errText = getDeviceErrorText(ret, pSerial).c_str();
       logError(portLabel, errText.c_str());
       throw CMMError(errText);
    }
 
-   return string(answerBuf);
+   return std::string(answerBuf);
 }
 
 /**
@@ -5682,7 +5680,7 @@ void CMMCore::writeToSerialPort(const char* portLabel, const std::vector<char> &
 /**
  * Reads the contents of the Rx buffer.
  */
-vector<char> CMMCore::readFromSerialPort(const char* portLabel) throw (CMMError)
+std::vector<char> CMMCore::readFromSerialPort(const char* portLabel) throw (CMMError)
 {
    std::shared_ptr<SerialInstance> pSerial =
       deviceManager_->GetDeviceOfType<SerialInstance>(portLabel);
@@ -5697,7 +5695,7 @@ vector<char> CMMCore::readFromSerialPort(const char* portLabel) throw (CMMError)
       throw CMMError(getDeviceErrorText(ret, pSerial));
    }
 
-   vector<char> data;
+   std::vector<char> data;
    data.resize(read, 0);
    if (read > 0)
       std::memcpy(&(data[0]), answerBuf, read);
@@ -6228,7 +6226,7 @@ void CMMCore::runGalvoSequence(const char* deviceLabel) throw (CMMError)
 /**
  * Get the name of the active galvo channel (for a multi-laser galvo device).
  */
-string CMMCore::getGalvoChannel(const char* deviceLabel) throw (CMMError)
+std::string CMMCore::getGalvoChannel(const char* deviceLabel) throw (CMMError)
 {
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
@@ -6250,8 +6248,8 @@ void CMMCore::saveSystemState(const char* fileName) throw (CMMError)
    if (!fileName)
       throw CMMError("Null filename");
 
-   ofstream os;
-   os.open(fileName, ios_base::out | ios_base::trunc);
+   std::ofstream os;
+   os.open(fileName, std::ios_base::out | std::ios_base::trunc);
    if (!os.is_open())
    {
       logError(fileName, getCoreErrorText(MMERR_FileOpenFailed).c_str());
@@ -6267,7 +6265,7 @@ void CMMCore::saveSystemState(const char* fileName) throw (CMMError)
       if (!isPropertyReadOnly(s.getDeviceLabel().c_str(), s.getPropertyName().c_str()))
       {
          os << MM::g_CFGCommand_Property << ',' << s.getDeviceLabel()
-            << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << endl;
+            << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << '\n';
       }
    }
 }
@@ -6284,8 +6282,8 @@ void CMMCore::loadSystemState(const char* fileName) throw (CMMError)
    if (!fileName)
       throw CMMError("Null filename");
 
-   ifstream is;
-   is.open(fileName, ios_base::in);
+   std::ifstream is;
+   is.open(fileName, std::ios_base::in);
    if (!is.is_open())
    {
       logError(fileName, getCoreErrorText(MMERR_FileOpenFailed).c_str());
@@ -6296,11 +6294,11 @@ void CMMCore::loadSystemState(const char* fileName) throw (CMMError)
    // Process commands
    const int maxLineLength = 4 * MM::MaxStrLength + 4; // accommodate up to 4 strings and delimiters
    char line[maxLineLength+1];
-   vector<string> tokens;
+   std::vector<std::string> tokens;
    while(is.getline(line, maxLineLength, '\n'))
    {
       // strip a potential Windows/dos CR
-      istringstream il(line);
+      std::istringstream il(line);
       il.getline(line, maxLineLength, '\r');
       if (strlen(line) > 0)
       {
@@ -6357,8 +6355,8 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
    if (!fileName)
       throw CMMError("Null filename");
 
-   ofstream os;
-   os.open(fileName, ios_base::out | ios_base::trunc);
+   std::ofstream os;
+   os.open(fileName, std::ios_base::out | std::ios_base::trunc);
    if (!os.is_open())
    {
       logError(fileName, getCoreErrorText(MMERR_FileOpenFailed).c_str());
@@ -6368,22 +6366,22 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
 
    // insert the system reset command
    // this will unload all current devices
-   os << "# Unload all devices" << endl;
-   os << "Property,Core,Initialize,0" << endl;
+   os << "# Unload all devices\n";
+   os << "Property,Core,Initialize,0\n";
 
    // save device list
-   os << "# Load devices" << endl;
-   vector<string> devices = deviceManager_->GetDeviceList();
-   vector<string>::const_iterator it;
+   os << "# Load devices\n";
+   std::vector<std::string> devices = deviceManager_->GetDeviceList();
+   std::vector<std::string>::const_iterator it;
    for (it=devices.begin(); it != devices.end(); it++)
    {
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*it);
       mm::DeviceModuleLockGuard guard(pDev);
-      os << MM::g_CFGCommand_Device << "," << *it << "," << pDev->GetAdapterModule()->GetName() << "," << pDev->GetName() << endl;
+      os << MM::g_CFGCommand_Device << "," << *it << "," << pDev->GetAdapterModule()->GetName() << "," << pDev->GetName() << '\n';
    }
 
    // save the pre-initialization properties
-   os << "# Pre-initialization properties" << endl;
+   os << "# Pre-initialization properties\n";
    Configuration config = getSystemState();
    for (size_t i=0; i<config.size(); i++)
    {
@@ -6400,13 +6398,13 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
          if (isPreInit)
          {
             os << MM::g_CFGCommand_Property << ',' << s.getDeviceLabel()
-               << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << endl;
+               << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << '\n';
          }
       }
    }
 
    // save the parent (hub) references
-   os << "# Hub references" << endl;
+   os << "# Hub references" << '\n';
    for (it=devices.begin(); it != devices.end(); it++)
    {
       std::shared_ptr<DeviceInstance> device = deviceManager_->GetDevice(*it);
@@ -6414,22 +6412,22 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
       std::string parentID = device->GetParentID();
       if (!parentID.empty())
       {
-         os << MM::g_CFGCommand_ParentID << ',' << device->GetLabel() << ',' << parentID << endl;
+         os << MM::g_CFGCommand_ParentID << ',' << device->GetLabel() << ',' << parentID << '\n';
       }
    }
 
 
    // insert the initialize command
-   os << "Property,Core,Initialize,1" << endl;
+   os << "Property,Core,Initialize,1\n";
 
    // save delays
-   os << "# Delays" << endl;
+   os << "# Delays\n";
    for (it=devices.begin(); it != devices.end(); it++)
    {
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*it);
       mm::DeviceModuleLockGuard guard(pDev);
       if (pDev->GetDelayMs() > 0.0)
-         os << MM::g_CFGCommand_Delay << "," << *it << "," << pDev->GetDelayMs() << endl;
+         os << MM::g_CFGCommand_Delay << "," << *it << "," << pDev->GetDelayMs() << '\n';
    }
 
    // save focus directions
@@ -6448,8 +6446,8 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
    }
 
    // save labels
-   os << "# Labels" << endl;
-   vector<string> deviceLabels = deviceManager_->GetDeviceList(MM::StateDevice);
+   os << "# Labels\n";
+   std::vector<std::string> deviceLabels = deviceManager_->GetDeviceList(MM::StateDevice);
    for (size_t i=0; i<deviceLabels.size(); i++)
    {
       std::shared_ptr<StateInstance> pSD =
@@ -6470,20 +6468,20 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
          }
          if (!stateLabel.empty())
          {
-            os << MM::g_CFGCommand_Label << ',' << deviceLabels[i] << ',' << j << ',' << stateLabel << endl;
+            os << MM::g_CFGCommand_Label << ',' << deviceLabels[i] << ',' << j << ',' << stateLabel << '\n';
          }
       }
    }
 
    // save configuration groups
-   os << "# Group configurations" << endl;
-   vector<string> groups = getAvailableConfigGroups();
+   os << "# Group configurations\n";
+   std::vector<std::string> groups = getAvailableConfigGroups();
    for (size_t i=0; i<groups.size(); i++)
    {
       // empty group record
-      vector<string> configs = getAvailableConfigs(groups[i].c_str());
+      std::vector<std::string> configs = getAvailableConfigs(groups[i].c_str());
       if (configs.size() == 0)
-            os << MM::g_CFGCommand_ConfigGroup << ',' << groups[i] << endl;
+            os << MM::g_CFGCommand_ConfigGroup << ',' << groups[i] << '\n';
 
       // normal group records
       for (size_t j=0; j<configs.size(); j++)
@@ -6493,27 +6491,27 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
          {
             PropertySetting s = c.getSetting(k);
             os << MM::g_CFGCommand_ConfigGroup << ',' << groups[i] << ','
-               << configs[j] << ',' << s.getDeviceLabel() << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << endl;
+               << configs[j] << ',' << s.getDeviceLabel() << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << '\n';
          }
       }
    }
 
    // save device roles
-   os << "# Roles" << endl;
+   os << "# Roles\n";
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
-      os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreCamera << ',' << camera->GetLabel() << endl;
+      os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreCamera << ',' << camera->GetLabel() << '\n';
    }
    std::shared_ptr<ShutterInstance> shutter = currentShutterDevice_.lock();
    if (shutter)
    {
-      os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreShutter << ',' << shutter->GetLabel() << endl;
+      os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreShutter << ',' << shutter->GetLabel() << '\n';
    }
    std::shared_ptr<StageInstance> focus = currentFocusDevice_.lock();
    if (focus)
    {
-      os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreFocus << ',' << focus->GetLabel() << endl;
+      os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreFocus << ',' << focus->GetLabel() << '\n';
    }
 }
 
@@ -6575,8 +6573,8 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
    if (!fileName)
       throw CMMError("Null filename");
 
-   ifstream is;
-   is.open(fileName, ios_base::in);
+   std::ifstream is;
+   is.open(fileName, std::ios_base::in);
    if (!is.is_open())
    {
       logError(fileName, getCoreErrorText(MMERR_FileOpenFailed).c_str());
@@ -6587,14 +6585,14 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
    // Process commands
    const int maxLineLength = 4 * MM::MaxStrLength + 4; // accommodate up to 4 strings and delimiters
    char line[maxLineLength+1];
-   vector<string> tokens;
+   std::vector<std::string> tokens;
 
    int lineCount = 0;
 
    while(is.getline(line, maxLineLength, '\n'))
    {
       // strip a potential Windows/dos CR
-      istringstream il(line);
+      std::istringstream il(line);
       il.getline(line, maxLineLength, '\r');
 
       lineCount++;
@@ -6776,8 +6774,8 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
             if (externalCallback_)
                externalCallback_->onSystemConfigurationLoaded();
             std::ostringstream errorText;
-            errorText << "Line " << lineCount << ": " << line << endl;
-            errorText << err.getFullMsg() << endl << endl;
+            errorText << "Line " << lineCount << ": " << line << '\n';
+            errorText << err.getFullMsg() << "\n\n";
             throw CMMError(errorText.str().c_str(), MMERR_InvalidConfigurationFile);
          }
       }
@@ -7259,7 +7257,7 @@ void CMMCore::applyConfiguration(const Configuration& config) throw (CMMError)
 {
    std::ostringstream sall;
    bool error = false;
-   vector<PropertySetting> failedProps;
+   std::vector<PropertySetting> failedProps;
    for (size_t i=0; i<config.size(); i++)
    {
       PropertySetting setting = config.getSetting(i);
@@ -7298,7 +7296,7 @@ void CMMCore::applyConfiguration(const Configuration& config) throw (CMMError)
    }
    if (error)
    {
-      string errorString;
+      std::string errorString;
       while (failedProps.size() > (unsigned) applyProperties(failedProps, errorString) )
       {
          if (failedProps.size() == 0)
@@ -7316,10 +7314,10 @@ void CMMCore::applyConfiguration(const Configuration& config) throw (CMMError)
  * properties until there are none left or none succeed
  * returns number of properties successfully set
  */
-int CMMCore::applyProperties(vector<PropertySetting>& props, string& lastError)
+int CMMCore::applyProperties(std::vector<PropertySetting>& props, std::string& lastError)
 {
   // int succeeded = 0;
-   vector<PropertySetting> failedProps;
+   std::vector<PropertySetting> failedProps;
    for (size_t i=0; i<props.size(); i++)
    {
       // normal processing
@@ -7351,7 +7349,7 @@ int CMMCore::applyProperties(vector<PropertySetting>& props, string& lastError)
 
 
 
-string CMMCore::getDeviceErrorText(int deviceCode, std::shared_ptr<DeviceInstance> device)
+std::string CMMCore::getDeviceErrorText(int deviceCode, std::shared_ptr<DeviceInstance> device)
 {
    if (!device)
    {
@@ -7366,11 +7364,11 @@ string CMMCore::getDeviceErrorText(int deviceCode, std::shared_ptr<DeviceInstanc
 /**
  * Returns a pre-defined error test with the given error code
  */
-string CMMCore::getCoreErrorText(int code) const
+std::string CMMCore::getCoreErrorText(int code) const
 {
    // core info
-   string txt;
-   map<int, string>::const_iterator it;
+   std::string txt;
+   std::map<int, std::string>::const_iterator it;
    it = errorText_.find(code);
    if (it != errorText_.end())
       txt = it->second;
@@ -7384,7 +7382,7 @@ void CMMCore::logError(const char* device, const char* msg)
    LOG_ERROR(coreLogger_) << "Error occurred in device " << device << ": " << msg;
 }
 
-string CMMCore::getDeviceName(std::shared_ptr<DeviceInstance> pDev)
+std::string CMMCore::getDeviceName(std::shared_ptr<DeviceInstance> pDev)
 {
    mm::DeviceModuleLockGuard guard(pDev);
    return pDev->GetName();

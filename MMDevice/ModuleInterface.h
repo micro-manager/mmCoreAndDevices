@@ -25,8 +25,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-#ifndef _MODULE_INTERFACE_H_
-#define _MODULE_INTERFACE_H_
+#pragma once
 
 #include "MMDevice.h"
 
@@ -136,6 +135,3 @@ extern "C" {
  * \see InitializeModuleData()
  */
 void RegisterDevice(const char* deviceName, MM::DeviceType deviceType, const char* description);
-
-
-#endif //_MODULE_INTERFACE_H_

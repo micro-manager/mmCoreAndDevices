@@ -29,14 +29,14 @@
 #include "MMCore.h"
 #include "Error.h"
 #include "../MMDevice/DeviceUtils.h"
-#include <assert.h>
-#include <stdlib.h>
-using namespace std;
 
-vector<string> CoreProperty::GetAllowedValues() const
+#include <cassert>
+#include <cstdlib>
+
+std::vector<std::string> CoreProperty::GetAllowedValues() const
 {
-   vector<string> allowedVals;
-   for (set<string>::const_iterator it=values_.begin(); it!=values_.end(); ++it)
+   std::vector<std::string> allowedVals;
+   for (std::set<std::string>::const_iterator it=values_.begin(); it!=values_.end(); ++it)
       allowedVals.push_back(*it);
    return allowedVals;
 }
@@ -51,7 +51,7 @@ bool CoreProperty::IsAllowed(const char* value) const
    if (values_.size() == 0)
       return true;
 
-   set<string>::const_iterator it;
+   std::set<std::string>::const_iterator it;
    if (values_.find(value) == values_.end())
       return false;
    else
@@ -67,14 +67,14 @@ bool CoreProperty::Set(const char* value)
    return true;
 }
 
-string CoreProperty::Get() const
+std::string CoreProperty::Get() const
 {
    return value_;
 }
 
 void CorePropertyCollection::Set(const char* propName, const char* value)
 {
-   map<string, CoreProperty>::iterator it = properties_.find(propName);
+   std::map<std::string, CoreProperty>::iterator it = properties_.find(propName);
    if (it == properties_.end())
       throw CMMError("Cannot set invalid Core property (" + ToString(propName) +
             ") to value \"" + ToString(value) + "\"",
@@ -173,9 +173,9 @@ void CorePropertyCollection::Execute(const char* propName, const char* value)
    }
 }
 
-string CorePropertyCollection::Get(const char* propName) const
+std::string CorePropertyCollection::Get(const char* propName) const
 {
-   map<string, CoreProperty>::const_iterator it = properties_.find(propName);
+   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
    if (it == properties_.end())
       throw CMMError("Cannot get value of invalid Core property (" +
             ToString(propName) + ")",
@@ -186,17 +186,17 @@ string CorePropertyCollection::Get(const char* propName) const
 
 bool CorePropertyCollection::Has(const char* propName) const
 {
-   map<string, CoreProperty>::const_iterator it = properties_.find(propName);
+   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
    if (it == properties_.end())
       return false; // not defined
 
    return true;
 }
 
-vector<string> CorePropertyCollection::GetNames() const
+std::vector<std::string> CorePropertyCollection::GetNames() const
 {
-   vector<string> names;
-   for (map<string, CoreProperty>::const_iterator it=properties_.begin(); it!=properties_.end(); ++it)
+   std::vector<std::string> names;
+   for (std::map<std::string, CoreProperty>::const_iterator it=properties_.begin(); it!=properties_.end(); ++it)
       names.push_back(it->first);
    return names;
 }
@@ -245,7 +245,7 @@ void CorePropertyCollection::Refresh()
 
 bool CorePropertyCollection::IsReadOnly(const char* propName) const
 {
-   map<string, CoreProperty>::const_iterator it = properties_.find(propName);
+   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
    if (it == properties_.end())
       throw CMMError("Invalid Core property (" + ToString(propName) + ")",
             MMERR_InvalidCoreProperty);
@@ -253,9 +253,9 @@ bool CorePropertyCollection::IsReadOnly(const char* propName) const
    return it->second.IsReadOnly();
 }
 
-vector<string> CorePropertyCollection::GetAllowedValues(const char* propName) const
+std::vector<std::string> CorePropertyCollection::GetAllowedValues(const char* propName) const
 {
-   map<string, CoreProperty>::const_iterator it = properties_.find(propName);
+   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
    if (it == properties_.end())
       throw CMMError("Invalid Core property (" + ToString(propName) + ")",
             MMERR_InvalidCoreProperty);
@@ -265,7 +265,7 @@ vector<string> CorePropertyCollection::GetAllowedValues(const char* propName) co
 
 void CorePropertyCollection::ClearAllowedValues(const char* propName)
 {
-   map<string, CoreProperty>::iterator it = properties_.find(propName);
+   std::map<std::string, CoreProperty>::iterator it = properties_.find(propName);
    if (it == properties_.end())
       throw CMMError("Invalid Core property (" + ToString(propName) + ")",
             MMERR_InvalidCoreProperty);
@@ -275,7 +275,7 @@ void CorePropertyCollection::ClearAllowedValues(const char* propName)
 
 void CorePropertyCollection::AddAllowedValue(const char* propName, const char* value)
 {
-   map<string, CoreProperty>::iterator it = properties_.find(propName);
+   std::map<std::string, CoreProperty>::iterator it = properties_.find(propName);
    if (it == properties_.end())
       throw CMMError("Invalid Core property (" + ToString(propName) + ")",
             MMERR_InvalidCoreProperty);

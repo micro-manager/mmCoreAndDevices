@@ -18,11 +18,8 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// CVS:           $Id$
-//
 
-#ifndef _MMDEVICE_CONSTANTS_H_
-#define _MMDEVICE_CONSTANTS_H_
+#pragma once
 
 ///////////////////////////////////////////////////////////////////////////////
 // Global error codes
@@ -267,5 +264,3 @@ namespace MM {
    };
 
 } // namespace MM
-
-#endif //_MMDEVICE_CONSTANTS_H_

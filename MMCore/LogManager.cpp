@@ -11,21 +11,19 @@
 namespace mm
 {
 
-using namespace mm::logging;
-
 namespace
 {
 
-const char* StringForLogLevel(LogLevel level)
+const char* StringForLogLevel(logging::LogLevel level)
 {
    switch (level)
    {
-      case LogLevelTrace: return "trace";
-      case LogLevelDebug: return "debug";
-      case LogLevelInfo: return "info";
-      case LogLevelWarning: return "warning";
-      case LogLevelError: return "error";
-      case LogLevelFatal: return "fatal";
+      case logging::LogLevelTrace: return "trace";
+      case logging::LogLevelDebug: return "debug";
+      case logging::LogLevelInfo: return "info";
+      case logging::LogLevelWarning: return "warning";
+      case logging::LogLevelError: return "error";
+      case logging::LogLevelFatal: return "fatal";
       default: return "(unknown)";
    }
 }
@@ -35,9 +33,9 @@ const char* StringForLogLevel(LogLevel level)
 const logging::SinkMode LogManager::PrimarySinkMode = logging::SinkModeAsynchronous;
 
 LogManager::LogManager() :
-   loggingCore_(std::make_shared<LoggingCore>()),
+   loggingCore_(std::make_shared<logging::LoggingCore>()),
    internalLogger_(loggingCore_->NewLogger("LogManager")),
-   primaryLogLevel_(LogLevelInfo),
+   primaryLogLevel_(logging::LogLevelInfo),
    usingStdErr_(false),
    nextSecondaryHandle_(0)
 {}
@@ -56,9 +54,9 @@ LogManager::SetUseStdErr(bool flag)
    {
       if (!stdErrSink_)
       {
-         stdErrSink_ = std::make_shared<StdErrLogSink>();
+         stdErrSink_ = std::make_shared<logging::StdErrLogSink>();
          stdErrSink_->SetFilter(
-               std::make_shared<LevelFilter>(primaryLogLevel_));
+               std::make_shared<logging::LevelFilter>(primaryLogLevel_));
       }
       loggingCore_->AddSink(stdErrSink_, PrimarySinkMode);
 
@@ -102,12 +100,12 @@ LogManager::SetPrimaryLogFilename(const std::string& filename, bool truncate)
       return;
    }
 
-   std::shared_ptr<LogSink> newSink;
+   std::shared_ptr<logging::LogSink> newSink;
    try
    {
-      newSink = std::make_shared<FileLogSink>(primaryFilename_, !truncate);
+      newSink = std::make_shared<logging::FileLogSink>(primaryFilename_, !truncate);
    }
-   catch (const CannotOpenFileException&)
+   catch (const logging::CannotOpenFileException&)
    {
       LOG_ERROR(internalLogger_) << "Failed to open file " <<
          filename << " as primary log file";
@@ -121,7 +119,7 @@ LogManager::SetPrimaryLogFilename(const std::string& filename, bool truncate)
       throw CMMError("Cannot open file " + ToQuotedString(filename));
    }
 
-   newSink->SetFilter(std::make_shared<LevelFilter>(primaryLogLevel_));
+   newSink->SetFilter(std::make_shared<logging::LevelFilter>(primaryLogLevel_));
 
    if (!primaryFileSink_)
    {
@@ -137,8 +135,8 @@ LogManager::SetPrimaryLogFilename(const std::string& filename, bool truncate)
       // rotation.
 
       LOG_INFO(internalLogger_) << "Switching primary log file";
-      std::vector< std::pair<std::shared_ptr<LogSink>, SinkMode> > toRemove;
-      std::vector< std::pair<std::shared_ptr<LogSink>, SinkMode> > toAdd;
+      std::vector<std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>> toRemove;
+      std::vector<std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>> toAdd;
       toRemove.push_back(
             std::make_pair(primaryFileSink_, PrimarySinkMode));
       toAdd.push_back(std::make_pair(newSink, PrimarySinkMode));
@@ -169,26 +167,26 @@ LogManager::IsUsingPrimaryLogFile() const
 
 
 void
-LogManager::SetPrimaryLogLevel(LogLevel level)
+LogManager::SetPrimaryLogLevel(logging::LogLevel level)
 {
    std::lock_guard<std::mutex> lock(mutex_);
 
    if (level == primaryLogLevel_)
       return;
 
-   LogLevel oldLevel = primaryLogLevel_;
+   logging::LogLevel oldLevel = primaryLogLevel_;
    primaryLogLevel_ = level;
 
    LOG_INFO(internalLogger_) << "Switching primary log level from " <<
       StringForLogLevel(oldLevel) << " to " << StringForLogLevel(level);
 
-   std::shared_ptr<EntryFilter> filter =
-      std::make_shared<LevelFilter>(level);
+   std::shared_ptr<logging::EntryFilter> filter =
+      std::make_shared<logging::LevelFilter>(level);
 
    std::vector<
       std::pair<
-         std::pair<std::shared_ptr<LogSink>, SinkMode>,
-         std::shared_ptr<EntryFilter>
+         std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>,
+         std::shared_ptr<logging::EntryFilter>
       >
    > changes;
    if (stdErrSink_)
@@ -211,7 +209,7 @@ LogManager::SetPrimaryLogLevel(LogLevel level)
 }
 
 
-LogLevel
+logging::LogLevel
 LogManager::GetPrimaryLogLevel() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
@@ -220,24 +218,24 @@ LogManager::GetPrimaryLogLevel() const
 
 
 LogManager::LogFileHandle
-LogManager::AddSecondaryLogFile(LogLevel level,
-      const std::string& filename, bool truncate, SinkMode mode)
+LogManager::AddSecondaryLogFile(logging::LogLevel level,
+      const std::string& filename, bool truncate, logging::SinkMode mode)
 {
    std::lock_guard<std::mutex> lock(mutex_);
 
-   std::shared_ptr<LogSink> sink;
+   std::shared_ptr<logging::LogSink> sink;
    try
    {
-      sink = std::make_shared<FileLogSink>(filename, !truncate);
+      sink = std::make_shared<logging::FileLogSink>(filename, !truncate);
    }
-   catch (const CannotOpenFileException&)
+   catch (const logging::CannotOpenFileException&)
    {
       LOG_ERROR(internalLogger_) << "Failed to open file " <<
          filename << " as secondary log file";
       throw CMMError("Cannot open file " + ToQuotedString(filename));
    }
 
-   sink->SetFilter(std::make_shared<LevelFilter>(level));
+   sink->SetFilter(std::make_shared<logging::LevelFilter>(level));
 
    LogFileHandle handle = nextSecondaryHandle_++;
    secondaryLogFiles_.insert(std::make_pair(handle,
@@ -273,7 +271,7 @@ LogManager::RemoveSecondaryLogFile(LogManager::LogFileHandle handle)
 }
 
 
-Logger
+logging::Logger
 LogManager::NewLogger(const std::string& label)
 {
    return loggingCore_->NewLogger(label);

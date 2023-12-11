@@ -20,12 +20,8 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//
 
-#ifndef _DEVICE_BASE_H_
-#define _DEVICE_BASE_H_
-
-
+#pragma once
 
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
@@ -2500,6 +2496,3 @@ private:
       _end_time = GetCurrentMMTime(); \
       LogTimeDiff(_start_time,_end_time, true); \
    }
-
-#endif //_DEVICE_BASE_H_
-

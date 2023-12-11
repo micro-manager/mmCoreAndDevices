@@ -22,6 +22,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
+#pragma once
 
 ///////////////////////////////////////////////////////////////////////////////
 // Header version
@@ -30,7 +31,6 @@
 #define DEVICE_INTERFACE_VERSION 71
 ///////////////////////////////////////////////////////////////////////////////
 
-
 // N.B.
 //
 // Never add parameters or return values that are not POD
@@ -38,11 +38,6 @@
 // derived classes defined in this file. For example, a std::string parameter
 // is not acceptable (use const char*). This is to prevent inter-DLL
 // incompatibilities.
-
-
-#pragma once
-#ifndef MMMMDEVICE_H
-#define MMMMDEVICE_H
 
 #include "MMDeviceConstants.h"
 #include "DeviceUtils.h"
@@ -1364,6 +1359,3 @@ namespace MM {
    };
 
 } // namespace MM
-
-#endif //MMMMDEVICE_H
-

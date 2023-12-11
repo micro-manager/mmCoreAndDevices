@@ -17,10 +17,8 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-// CVS:           $Id: Configuration.h 16305 2017-02-11 05:01:12Z mark $
-//
-#ifndef _CONFIGURATION_H_
-#define _CONFIGURATION_H_
+
+#pragma once
 
 #ifdef WIN32
 // disable exception scpecification warnings in MSVC
@@ -120,5 +118,3 @@ private:
    std::vector<PropertySetting> settings_;
    std::map<std::string, int> index_;
 };
-
-#endif //_CONFIGURATION_H_

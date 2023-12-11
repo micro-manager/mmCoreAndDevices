@@ -17,16 +17,12 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-// CVS:           $Id$
 //
 
-#ifndef _MMPROPERTY_H_
-#define _MMPROPERTY_H_
+#pragma once
 
 #include "MMDeviceConstants.h"
 
-#include <cstdlib>
-#include <cstring>
 #include <functional>
 #include <map>
 #include <string>
@@ -467,4 +463,3 @@ private:
 
 
 } // namespace MM
-#endif //_MMPROPERTY_H_
