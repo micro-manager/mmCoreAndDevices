@@ -261,8 +261,7 @@ PyDevice recognizes public properties of the types `int`, `float`, `str`, as wel
 
 Combining these property in an example device, produces the following GUI in MicroManager:
 
-  ![example device full](example_device_full.png)
-
+  ![example device full](example_device_full.png)   
 
 ## Developing new components:
 In order to expose Python object as a device in MicroManager, the class should have one or more annotated public properties, as described above, and the script should create the object and include it in the `devices` dictionary.
