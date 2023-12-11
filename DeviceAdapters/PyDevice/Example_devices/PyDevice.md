@@ -154,7 +154,7 @@ PyDevice recognizes public properties of the types `int`, `float`, `str`, as wel
   ```
   
 
-- **`float` Type Hint:**
+- **`float` type hint:**
   Properties annotated with the `-> float` type hint are exposed as floating point properties in MicroManger:
 
   ```python
@@ -269,18 +269,20 @@ In order to expose Python object as a device in MicroManager, the class should h
 
 In addition, when PyDevice loads the Python objects, it checks if they match the requirements to be exposed as a camera, stage, or xystage. This inspection is done using the script `bootstrap.py`, which can be found in the PyDevice source repository, so for more detail; check this file. Examples of each implementation exists in the documentation folders. The file containing the templates is bootstrap.py
 
-Specifically, the bootstrap script recognizes the folliwing types of devices.
+Specifically, the bootstrap script recognizes the following types of devices.
 
 1. Device
 2. Camera
 3. Stage
 4. XYStage
 
+If a device implements the required properties and methods for a certain device class (see below for a description per device type), the object is automatically converted to the corresponding MicroManager device, and it can be used as a Camera, Stage, etc.
 
-**1. Device**
+
+### Device
 This is the default device type, if none of the requirements for a specific device are met, the device type will be set to this.
 
-**2. Camera**
+### Camera
 Required properties:
 
     duration: Quantity[u.ms]
@@ -294,11 +296,11 @@ Required methods:
     trigger(self) -> concurrent.futures.Future
 
     
-**Important note:** The trigger method needs to return a Future object. For more information regarding synchronization of these camera objects, check out the OpenWFS repository. In short, setting the result of the future directly using Future.set_result(`numpy_array`) is the simplest method for setting the numpy array as the image.
+**Important note:** The trigger method needs to return an object with a method `result()` that returns an `uint16` numpy array of shape `(height,width)` containing the image data. This approach is compatible with the `concurrent.futures.Future` object in the standard Python library, and enables advanced scenarios for multi-threaded synchronization. See the OpenWFS repository for examples.
+  When not using multi-threading, the simplest approach is to create a `Future` object, call `set_result(data)` to store the data in the object, and return the `Future` from the `trigger` method.
 
 
-
-**3. Stage**
+### Stage
 Required properties:
 
     step_size: Quantity[u.um]
@@ -308,7 +310,7 @@ Required methods:
     home(self) -> None
     busy(self) -> bool
 
-**4. XYStage**
+### XYStage
 Required properties:
 
     x: Quantity[u.um]
@@ -322,4 +324,17 @@ Required methods:
 
 # Call for collaborations
 We would like to set up a database containing implementations of hardware control scripts, simulated devices, wavefront shaping algorithms, and other re-usable scripts. Our current collection of devices is included in the OpenWFS repository. If you would like to contribute; please contact i.m.vellekoop@utwente.nl.
+
+# Troubleshooting
+If an error occurs in the Python script, that error is displayed in the MicroManager GUI, and logged in the CoreLog if logging is enabled in MicroManager. Often, the error is helpful in finding what whent wrong, and in correcting the Python script. For more complicated problems, we recommend testing the Python script in a Python IDE and using the associated debugger. Due to the way the MicroManager / Python bridge is set up, it is always possible to execute the script that creates the device objects as a stand-alone script.
+
+Common sources of error are:
+* **An object is not recognised as a Camera/Stage/etc.**. This happens when not all required properties and methods are implemented (see a description of the required attributes above). Due to a current limitation in the implementation, it is not possible to inherit the required properties from a super class. All properties should be *implemented explicitly*.
+
+* **An error occurs when reading a property set to None**. Currently, MicroManager does not support missing values for properties. Instead, if `None` is found in a float property, it is silently converted to `nan`. For other property types, if the getter returns `None`, an error is given.
+
+* **A property does not show up in MicroManager**. This is typically caused by a missing type annotation. Also note that properties should have an explicit 'getter', in the form of a `@property` decorator, see examples above. 
+
+
+
 
