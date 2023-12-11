@@ -12,7 +12,7 @@ MODULE_API void InitializeModuleData()
 
 /**
  * @brief Creates a hub device of MM device wrapper for a Python object
- * @param deviceName "PyHub" or "{hubname}:{objectname}"
+ * @param deviceName "PyHub" or "{devicetype}:{objectname}"
  * @return newly created device, or nullptr if device name is not found
 */
 MODULE_API MM::Device* CreateDevice(const char* id)
