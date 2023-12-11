@@ -334,6 +334,7 @@ Common sources of error are:
 
 * **A property does not show up in MicroManager**. This is typically caused by a missing type annotation. Also note that properties should have an explicit 'getter', in the form of a `@property` decorator, see examples above. 
 
+* **The PyDevice plugin is shown in the list of device adapters, but it grayed out and cannot be loaded**. This happens if Python is not installed, or the Python install cannot be located through the `PATH` environment variable. Also, if you built PyDevice yourself, this problem can be caused by a version difference between MicroManager executable and the source code used to build PyDevice.
 
-
+* **MicroManager crashes when the plugin is loaded**. This behavior was observed when an incorrectly configured Anaconda installation was used. If the base packages for the the Python library cannot be found in the folder containing `python3.dll`, the Python runtime exits the current process. Unfortunately, there currently is no way to have the Python runtime just report an error. As a solution, make sure Python is installed correctly and can be run from the command prompt.
 
