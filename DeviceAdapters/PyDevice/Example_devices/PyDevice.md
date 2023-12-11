@@ -290,7 +290,7 @@ Required properties:
     height: int
     width: int
 
-Duration is the exposure time of the camera. Binning is required in MicroManager, so if it is not present, a property `binning = 1` will be created. Height and Width are the dimentions of the images returned.
+Duration is the exposure time of the camera. Binning is required in MicroManager, so if it is not present, a property `binning = 1` will be created. Height and Width are the dimensions of the images returned.
 
 Required methods:
 
