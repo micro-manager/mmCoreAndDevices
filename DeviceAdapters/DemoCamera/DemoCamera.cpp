@@ -2136,7 +2136,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          for (k=0; k<imgWidth; k++)
          {
             long lIndex = imgWidth*j + k;
-            unsigned char val = (unsigned char) (g_IntensityFactor_ * min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod))));
+            unsigned char val = (unsigned char) (g_IntensityFactor_ * std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod))));
             if (val > maxDrawnVal) {
                 maxDrawnVal = val;
             }
@@ -2169,7 +2169,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          for (k=0; k<imgWidth; k++)
          {
             long lIndex = imgWidth*j + k;
-            unsigned short val = (unsigned short) (g_IntensityFactor_ * min((double)maxValue, pedestal + dAmp16 * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
+            unsigned short val = (unsigned short) (g_IntensityFactor_ * std::min((double)maxValue, pedestal + dAmp16 * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
             if (val > maxDrawnVal) {
                 maxDrawnVal = val;
             }
@@ -2204,7 +2204,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          for (k=0; k<imgWidth; k++)
          {
             long lIndex = imgWidth*j + k;
-            double value =  (g_IntensityFactor_ * min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod))));
+            double value =  (g_IntensityFactor_ * std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod))));
             if (value > maxDrawnVal) {
                 maxDrawnVal = value;
             }
@@ -2273,15 +2273,15 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          {
             long lIndex = imgWidth*j + k;
             double factor = (2.0 * lSinePeriod * k) / lPeriod;
-            unsigned char value0 =   (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + factor)));
+            unsigned char value0 =   (unsigned char) std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + factor)));
             theBytes[0] = value0;
             if( NULL != pTmpBuffer)
                pTmp2[1] = value0;
-            unsigned char value1 =   (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*2 + factor)));
+            unsigned char value1 =   (unsigned char) std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*2 + factor)));
             theBytes[1] = value1;
             if( NULL != pTmpBuffer)
                pTmp2[2] = value1;
-            unsigned char value2 = (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*4 + factor)));
+            unsigned char value2 = (unsigned char) std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*4 + factor)));
             theBytes[2] = value2;
 
             if( NULL != pTmpBuffer){
@@ -2325,9 +2325,9 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          for (k=0; k<imgWidth; k++)
          {
             long lIndex = imgWidth*j + k;
-            unsigned long long value0 = (unsigned short) min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
-            unsigned long long value1 = (unsigned short) min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase*2 + (2.0 * lSinePeriod * k) / lPeriod)));
-            unsigned long long value2 = (unsigned short) min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase*4 + (2.0 * lSinePeriod * k) / lPeriod)));
+            unsigned long long value0 = (unsigned short) std::min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
+            unsigned long long value1 = (unsigned short) std::min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase*2 + (2.0 * lSinePeriod * k) / lPeriod)));
+            unsigned long long value2 = (unsigned short) std::min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase*4 + (2.0 * lSinePeriod * k) / lPeriod)));
             unsigned long long tval = value0+(value1<<16)+(value2<<32);
             if (tval > maxDrawnVal) {
                 maxDrawnVal = static_cast<double>(tval);
@@ -3470,7 +3470,7 @@ int CDemoStage::SetPositionUm(double pos)
 void CDemoStage::SetIntensityFactor(double pos)
 {
    pos = fabs(pos);
-   g_IntensityFactor_ = max(.1, min(1.0, 1.0 - .2 * log(pos)));
+   g_IntensityFactor_ = std::max(.1, std::min(1.0, 1.0 - .2 * log(pos)));
 }
 
 int CDemoStage::IsStageSequenceable(bool& isSequenceable) const
