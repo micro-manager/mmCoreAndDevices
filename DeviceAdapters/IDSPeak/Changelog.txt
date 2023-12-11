@@ -1,0 +1,8 @@
+Changelog IDSPeak:
+
+2023.09.25
+- First commit to Micro-Manager
+
+2023.10.10
+- Changed .dll to Release version (no longer requires MS Visual Studio to work)
+- Added multi-camera support
