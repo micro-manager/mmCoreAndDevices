@@ -237,7 +237,7 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
             descriptor = new PyFloatAction(this, attrName, mmName, readonly);
         else if (type == "quantity")
             descriptor = new PyQuantityAction(this, attrName, mmName, readonly, pinfo.GetTupleItem(OPTIONS));
-        else if (type == "string")
+        else if (type == "str")
             descriptor = new PyStringAction(this, attrName, mmName, readonly);
         else if (type == "bool")
             descriptor = new PyBoolAction(this, attrName, mmName, readonly);
