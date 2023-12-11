@@ -18,9 +18,6 @@
     <ClInclude Include="IDSPeak.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WriteCompactTiffRGB.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IDSPeak.cpp">

@@ -17,7 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="IDSPeak.h" />
-    <ClInclude Include="WriteCompactTiffRGB.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IDSPeak.cpp" />
@@ -74,12 +73,13 @@
       <PreprocessorDefinitions>_DEBUG;IDSPEAK_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Program Files\IDS\ids_peak\comfort_sdk\api\lib\x86_64;C:\Program Files\IDS\ids_peak\comfort_sdk\api\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.6.2.0\comfort_sdk\api\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.6.2.0\comfort_sdk\api\lib\x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -90,7 +90,7 @@
       <PreprocessorDefinitions>NDEBUG;IDSPEAK_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Program Files\IDS\ids_peak\comfort_sdk\api\lib\x86_64;C:\Program Files\IDS\ids_peak\comfort_sdk\api\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.6.2.0\comfort_sdk\api\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -98,6 +98,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.6.2.0\comfort_sdk\api\lib\x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

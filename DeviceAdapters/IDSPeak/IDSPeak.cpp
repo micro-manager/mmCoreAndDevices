@@ -35,7 +35,6 @@
 #include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm>
-#include "WriteCompactTiffRGB.h"
 #include <iostream>
 #include <future>
 
