@@ -58,10 +58,41 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="README.md" />
     <None Include="bootstrap.py" />
     <None Include="debug_helper.bat">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="Example_devices\PyDevice.md">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="README.md">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Example_devices\example_camera.py">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Example_devices\example_device.py">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Example_devices\example_xystage.py">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Example_devices\example_zstage.py">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Example_devices\camera_selection_screen.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Example_devices\config_manager_screen.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Example_devices\example_device.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Example_devices\example_device_full.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

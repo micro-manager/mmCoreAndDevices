@@ -15,7 +15,7 @@ layout: page
 </td>
 <td markdown="1">
 
-Device adapter for control of Python objects in MicroManager
+Device adapter for the integration of Python objects in MicroManager
 
 </td>
 </tr>
@@ -58,21 +58,23 @@ Stage, XYStage, Camera, Generic device
 </table>
 
 
-# How it works
+# Introduction
+PyDevice is an adapter that imports objects from a Python script, and integrates them into MicroManager as devices (e.g. a camera or a stage). This integration enables the use of Python scripts to control microscope hardware, without requiring any programming experience from the end user. Essentially, PyDevice acts as a translator, allowing Python-developed objects to be used in MicroManager with almost no interfacing code required.
 
-PyDevice is an adapter that enables seamless integration of Python objects with MicroManager. This integration facilitates the use and development of microscope devices, making it accessible even for those with minimal Python experience.
+# Getting started
+## Requirements
+To use PyDevice, the following software needs to be installed:
 
-The adapter operates by running its own Python instance, within which it identifies and interprets specific structures in your Python code. These structures are then transformed into compatible MicroManager objects. Essentially, PyDevice acts as a translator, allowing Python-developed class objects, that control hardware such as cameras or stages, to be recognized and controlled by MicroManager.
+* **Windows 10 or 11**. PyDevice was developed and tested in Windows. Although it _should_ work on Linux, this is not tested. Please contact the developers if you are interested in testing and using PyDevice in Linux.
 
-In essence, PyDevice provides a practical solution for bridging Python programming with the technical requirements of MicroManager, enhancing the flexibility and capability of microscope imaging systems.
+* **Python 3.9 or higher**. PyDevice will use the Python installation it finds through the system **PATH** variable. We will refer to this as the *main* Python install. To check if Python is installed correctly, open a command prompt and type `python --version`. 
 
-It has been developed in order to enable wavefront shaping in MicroManager, an optical technique that requires control of multiple hardware devices. Using this workflow, both developers and users have the control they need.
-
+* **`numpy` and `astropy`** Python packages. These packages should be installed in the main Python install, or in the virtual environment that is used to run the script (see below). We recommend using the Anaconda distribution, which has these packages installed by default. Otherwise, use `pip` to install them.
 
 # Documentation & examples
-Examples of these objects can be found in:
+Examples of Python scripts that can be loaded by PyDevice can be found in:
 
-- https://github.com/micro-manager/mmCoreAndDevices/tree/main/DeviceAdapters/PyDevice, this contains simple example devices that show the requirements of the Python objects. It also contains bootstrap.py; the script that reads and recognizes specific types of devices.
+- https://github.com/micro-manager/mmCoreAndDevices/tree/main/DeviceAdapters/PyDevice, this contains simple example devices that show the requirements of the Python objects.
 
 - https://github.com/IvoVellekoop/openwfs/tree/master/openwfs/devices, A more extensive repository containing the simple examples and actual implementations, like a laser scanning object.
 
@@ -85,47 +87,33 @@ Examples of these objects can be found in:
         from OpenWFS.devices.example_camera import Camera
         devices = {'cam': Camera()}
     
+
 # Using existing devices
-If you want to configure a device which has been developed already, you select PyDevice in the configuration manager. This will open the following screen:
+To use a Python device, add `PyDevice` in the hardware configuration manager. This will open the following screen:
 
 ![config manager screen](config_manager_screen.png)
 
-ModulePath signifies which Python install the PyDevice will use as its interpreter. It will automatically find a Python install found in the system environment variables (PATH). Virtual environments require different ModulePaths. This is important: this determines which packages are available to the Python interpreter. By leaving it on auto, it will automatically detect if the loaded script is in a virtual environment, and if one is found, sets it as the ModulePath.
+**ScriptPath** is the path to the Python script that constructs the device objects. The requirements for writing a device script are described in the section *Developing new components*. When the ScriptPath is left blank (recommended), a file browser pops up when you select `OK`, so that you can select the script through the GUI.
 
-ScriptPath is the path to the script that contains the devices. It cannot be any .py file; more on the requirements for making devices in the next chapter *Developing new components*. In the case for the example_camera shown in the previous chapter, the following screen will show:
+**ModulePath** is the search path that Python will use to load packages/modules. When set to the default value of `(auto)` (recommended) PyDevice will automatically detect if the loaded script is in a virtual environment, and if one is found, attempts to load the modules from that virtual environment first before searching in the `site-packages` folder of the main Python install. Optionally, a module search path may be added manually. Multiple path names should be separated by a semicolon.
+
+PyDevice now loads and executes the Python script. All recognized devices can now be selected, and later configured through the Property Browser. For example, when selecting the `example_camera.py` script, the following screen is shown:
 
 ![camera selection screen](camera_selection_screen.png)
 
-Which can be selected and used as the camera.
+Where you can select the camera so that it is imported as a device in MicroManager. Currently, PyDevice automatically recognizes `Camera`, `Stage`, `XYStage` and generic `Device` object types. These objects are transformed into compatible MicroManager objects.
 
-# Developing new components:
-
-In order to expose a device in Python to MicroManager, 4 things need to be considered:
-
-## **1.** *Make your device available with the 'devices' dict object.*
-
-When loading the .py in the initialization of the device, the .py is run. If this file produces a dictionary object called devices, it will make all the objects in this dict available to micromanager. For example:
+# How it works
+## Basics
+PyDevice runs its own Python interpreter and executes the selected script. The script should set up a variable `devices`, which contains a dictionary of all objects to be exposed as devices in MicroManager. For example:
     
     devices = {'cam': Camera()}
     
-Will result in the creation of an object called cam in MicroManager, linked to the Camera object in Python. Loading multiple devices is done by adding more entries in the dict object:
+Will result in the creation of an object called `cam` in MicroManager, linked to an object of type `Camera` in Python. Loading multiple devices is done by adding more entries in the dict object:
 
     devices = {'cam': Camera(),'stage': XYStage()}
 
-Of course, the devices need to be declared somewhere in the file as well. A completer example would be:
-    
-    class GenericDevice:
-
-        def __init__(self,floating_point):
-            self._floating_point = floating_point
-        
-    devices = {'some_device': GenericDevice(2.5)}
-    
-
-## **2.** *Make properties available using @property and @name.setter decorators*
-
-Declaring devices makes PyDevice recognize the objects, but not necessarily its properties. 
-Properties of objects are recognised with @property and @name.setter decorators. For example:
+PyDevice scans the objects in the `devices` dictionary for public properties, and automatically exposes these properties in the MicroManager property browser. For example, the following code shows how to create an object that exposes a single property with the name `floating_point`.
 
     class GenericDevice:
 
@@ -134,7 +122,7 @@ Properties of objects are recognised with @property and @name.setter decorators.
             
         @property
         def floating_point(self) -> float:
-            return self._floating_point
+            return self._floating_point`flo
     
         @floating_point.setter
         def floating_point(self, value):
@@ -143,18 +131,75 @@ Properties of objects are recognised with @property and @name.setter decorators.
         
     devices = {'some_device': GenericDevice(2.5)}
     
-Will appear as such in MicroManager:
+Which will appear in MicroManager as:
 
 ![example device](example_device.png)
 
-As can be seen here, the naming conventions will also be adapted. Properties that follow the snake_case convention will be transformed into CamelCase.
+As can be seen here, the naming conventions will also be adapted. Properties that follow Python's snake_case convention will be transformed into tghe CamelCase convenstion used in MicroManager.
 
-## **3.** *Signify property type using type hints*
+## Property types
+PyDevice recognizes public properties of the types `int`, `float`, `str`, as well as `Enum`'s and quantities with an `astropy` unit. In order to expose a propety to MicroManager, the property should have a getter with the appropriate type hint. To have a property that can be modified from MicroManager, also a setter has to be provided, as illustrated in the examples below.
+
+- **`int` type hint:**
+  Properties annotated with the `-> int` type hint are exposed as integer properties in MicroManger:
+
+  ```python
+  @property
+  def x(self) -> int:
+      return self._x
+
+  @x.setter
+  def x(self, value):
+      self._x = int(value)
+  ```
+  
+
+- **`float` Type Hint:**
+  Properties annotated with the `-> float` type hint are exposed as floating point properties in MicroManger:
+
+  ```python
+  @property
+  def floating_point(self) -> float:
+      return self._floating_point
+
+  @floating_point.setter
+  def floating_point(self, value):
+      self._floating_point = float(value)
+  ```
+
+  Note: MicroManager does not support `None` values, but they may be useful to indicate that a parameter is not set. As a workaround for floating point properties and floating point properties with a unit of measure, a `None` in Python is converted to a `nan` in MicroManager, and vice-versa. Other property types cannot be set to `None`
 
 
-Type hints in Python are not just annotations but are crucial for ensuring that MicroManager receives the correct property information for Python objects. Here's a detailed breakdown of how type hints are used in the example provided:
+- **`str` type hint:**
+  Properties annotated with the `-> str` type hint are exposed as textual properties in MicroManger:
 
-- **Enum Type Hint:**
+  ```python
+  @property
+  def command(self) -> str:
+      return self._command
+
+  @command.setter
+  def command(self, value):
+      self._command = str(value)
+  ```
+
+- **`bool` type hint:**
+  The annotation, `-> bool` is used for properties that are meant to represent binary states (`True`/`False`). Booleans are represented as `0` or `1` in the MicroManager GUI.
+
+  ```python
+  @property
+  def boolean(self) -> bool:
+      return self._boolean
+
+  @boolean.setter
+  def boolean(self, value):
+      self._boolean = bool(value)
+  ```
+
+- **Enum type hints:**
+  Any class that subclasses `Enum` can be used as a type hint for a property. These properties are converted to drop-down menus in the property browser.
+
+  In the example below, the type hint specifies that the `options` property can only take values defined in the `SomeOptions` enumeration. This restriction guarantees that users can only set `options` to either `Orange`, `Red`, or `Blue`.
 
   ```python
   from enum import Enum
@@ -173,23 +218,17 @@ Type hints in Python are not just annotations but are crucial for ensuring that 
       self._options = value
   ```
 
-  This `Enum` type hint specifies that the `options` property can only take values defined in the `SomeOptions` enumeration. This restriction guarantees that users can only set `options` to either `Orange`, `Red`, or `Blue`, enhancing the predictability and safety of the device's operation.
+- **Astropy unit type hint:**
+    The `astropy.unit` package makes it possible to attach units to numerical variables in Python. The enforcement of units avoids confusion, and setting this property with a differently scaled unit (e.g. nanometers instead of micrometers) will automatically adjust the scaling appropriately. The astropy unit package also handles unit multiplication, e.g.
+    ```
+    a = 3 * u.m / u.s
+    b = 2 * u.s
+    print(a*b)
+    ```
+    will correctly output `6.0 m`. 
+    
+    PyDevice recognises Atropy units, and appends the suffix `_{unit}` to the property name used in MicroManager. The use of unit annotations is highly recommended if possible, and it is required for some of the properties of camera's and stages, see below.
 
-- **Float Type Hint:**
-
-  ```python
-  @property
-  def floating_point(self) -> float:
-      return self._floating_point
-
-  @floating_point.setter
-  def floating_point(self, value):
-      self._floating_point = value
-  ```
-
-  The `-> float` type hint indicates that the `floating_point` property is a floating-point number. It ensures that any value assigned to this property in MicroManager is a valid float, preventing type mismatch errors.
-
-- **Astropy Unit Type Hint:**
     ```
     import astropy.units as u
     
@@ -202,32 +241,11 @@ Type hints in Python are not just annotations but are crucial for ensuring that 
         self._distance = value.to(u.mm)
     ```
     
-    The unit type hint enforces a unit to your property. Especially recommended during development of devices. The enforcement of units avoids confusion, and setting this property with a differently prefixed units will automatically set the internal to the right prefix. The astropy unit package also handles unit multiplication, e.g.
-    
-    ```
-    a = 3 * u.m / u.s
-    b = 2 * u.s
-    print(a*b)
-    ```
-    will correctly output `6.0 m`. 
-    
-    Additionally, PyDevice recognises this unit, and sets it in the property name in MicroManager, as the suffix `_{unit}`. Highly recommended if possible.
-    
-- **Boolean Type Hint:**
 
-  ```python
-  @property
-  def boolean(self) -> bool:
-      return self._boolean
-
-  @boolean.setter
-  def boolean(self, value: bool):
-      self._boolean = value
-  ```
-
-  Here, `-> bool` enforces that the `boolean` property is a boolean value. This clarity is vital for properties that are meant to represent binary states (true/false).
-
-- **Annotated Integer Type Hint:**
+- **Specifying ranges:**
+  `Annotated[int, {'min': 0, 'max': 42}]` goes beyond a simple integer type hint by specifying a range. This annotation tells MicroManager that `integer` is not just any integer but must fall within the specified range (0 to 42). It's particularly useful for setting safety limits on device properties to prevent hardware damage or other errors.
+  
+  `Annotated` can be used for integers, floats and units. `int` can also be used without `Annotated`.
 
   ```python
   from typing import Annotated
@@ -241,32 +259,24 @@ Type hints in Python are not just annotations but are crucial for ensuring that 
       self._integer = value
   ```
 
-  `Annotated[int, {'min': 0, 'max': 42}]` goes beyond a simple integer type hint by specifying a range. This annotation tells MicroManager that `integer` is not just any integer but must fall within the specified range (0 to 42). It's particularly useful for setting safety limits on device properties to prevent hardware damage or other errors.
-  
-  `Annotated` can be used for integers, floats and units. `int` can also be used without `Annotated`.
-
-    Combining these property in an example device, produces this in MicroManager:
+Combining these property in an example device, produces the following GUI in MicroManager:
 
   ![example device full](example_device_full.png)
 
 
-- **Initialisation:**
+## Developing new components:
+In order to expose Python object as a device in MicroManager, the class should have one or more annotated public properties, as described above, and the script should create the object and include it in the `devices` dictionary.
 
-    Setting default values in the Python class in the `__init__` declaration will set the default during the initialisation of the MicroManager device.
-   MicroManager does not support `None` values, but they may be useful to indicate that a parameter is not set. As a workaround for floating point properties, a `None` in Python is converted to a `nan` in MicroManager, and vice-versa.
+In addition, when PyDevice loads the Python objects, it checks if they match the requirements to be exposed as a camera, stage, or xystage. This inspection is done using the script `bootstrap.py`, which can be found in the PyDevice source repository, so for more detail; check this file. Examples of each implementation exists in the documentation folders. The file containing the templates is bootstrap.py
 
-In summary, these type hints, along with the Python structures used (like `astropy`, `Enum` and `Annotated`), provide a powerful way to control and validate the data that flows between Python objects and MicroManager. This level of detail in specifying property types is critical for creating robust, reliable, and easy-to-use devices in the MicroManager ecosystem.
-
-## **4.** *Specific device templates*
-
-Some devices in MicroManager have specific functionality and requirements. A camera, for example, needs to have methods to obtain or create an image. PyDevice checks if the required properties and methods are found in each object it encounters and labels them if any template matches. Currently, the supported device types are:
+Specifically, the bootstrap script recognizes the folliwing types of devices.
 
 1. Device
 2. Camera
 3. Stage
 4. XYStage
 
-Examples of each implementation exists in the documentation folders. The file containing the templates is bootstrap.py, so for more detail; check this file.
+TODO: UPDATE DESCRIPTION BELOW!
 
 **1. Device**
 This is the default device type, if none of the requirements for a specific device are met, the device type will be set to this.
@@ -280,6 +290,7 @@ Required properties:
     left: int
     height: int
     width: int
+
 Required methods:
 
     trigger(self) -> None
@@ -311,6 +322,6 @@ Required methods:
     home(self) -> None
     wait(self) -> None
 
-# Existing devices repository
+# Call for collaborations
+We would like to set up a database containing implementations of hardware control scripts, simulated devices, wavefront shaping algorithms, and other re-usable scripts. Our current collection of devices is included in the OpenWFS repository. If you would like to contribute; please contact i.m.vellekoop@utwente.nl.
 
-Ideally, we would like to set up a database containing implementations. All current devices are included in the OpenWFS repository. If you would like to contribute; please contact i.m.vellekoop@utwente.nl, open an issue on the MicroManager or OpenWFS repositories or open a topic on https://forum.image.sc.
