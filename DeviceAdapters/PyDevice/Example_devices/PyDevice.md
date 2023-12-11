@@ -122,7 +122,7 @@ PyDevice scans the objects in the `devices` dictionary for public properties, an
             
         @property
         def floating_point(self) -> float:
-            return self._floating_point`flo
+            return self._floating_point
     
         @floating_point.setter
         def floating_point(self, value):
@@ -276,7 +276,6 @@ Specifically, the bootstrap script recognizes the folliwing types of devices.
 3. Stage
 4. XYStage
 
-TODO: UPDATE DESCRIPTION BELOW!
 
 **1. Device**
 This is the default device type, if none of the requirements for a specific device are met, the device type will be set to this.
@@ -284,8 +283,7 @@ This is the default device type, if none of the requirements for a specific devi
 **2. Camera**
 Required properties:
 
-    data_shape: tuple[int]
-    measurement_time: Quantity[u.ms]
+    duration: Quantity[u.ms]
     top: int
     left: int
     height: int
@@ -293,10 +291,10 @@ Required properties:
 
 Required methods:
 
-    trigger(self) -> None
-    read(self) -> np.ndarray()
+    trigger(self) -> concurrent.futures.Future
+
     
-**Important note:** The read method needs to return a uint16 type array. Check OpenWFS for analogue-to-digital converters, or force the data type yourself.
+**Important note:** The trigger method needs to return a Future object. For more information regarding synchronization of these camera objects, check out the OpenWFS repository. In short, setting the result of the future directly using Future.set_result(`numpy_array`) is the simplest method for setting the numpy array as the image.
 
 
 
@@ -308,7 +306,7 @@ Required properties:
 Required methods:
 
     home(self) -> None
-    wait(self) -> None
+    busy(self) -> bool
 
 **4. XYStage**
 Required properties:
@@ -320,7 +318,7 @@ Required properties:
 Required methods:
 
     home(self) -> None
-    wait(self) -> None
+    busy(self) -> bool
 
 # Call for collaborations
 We would like to set up a database containing implementations of hardware control scripts, simulated devices, wavefront shaping algorithms, and other re-usable scripts. Our current collection of devices is included in the OpenWFS repository. If you would like to contribute; please contact i.m.vellekoop@utwente.nl.
