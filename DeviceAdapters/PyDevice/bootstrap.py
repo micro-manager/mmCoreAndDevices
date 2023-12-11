@@ -53,7 +53,7 @@ class Stage(Protocol):
     position: Quantity[u.um]
     """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
     current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
-    causes it to start moving to the new position. Also see :func:`~wait`.
+    causes it to start moving to the new position. Also see :func:`~busy`.
     Stages may use the step_size to convert positions in micrometers to positions in steps, using the equation
     `steps = round(position / step_size)`.
     """

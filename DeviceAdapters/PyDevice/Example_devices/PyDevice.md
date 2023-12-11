@@ -290,6 +290,8 @@ Required properties:
     height: int
     width: int
 
+Duration is the exposure time of the camera. Binning is required in MicroManager, so if it is not present, a property `binning = 1` will be created. Height and Width are the dimentions of the images returned.
+
 Required methods:
 
     trigger(self) -> concurrent.futures.Future
@@ -304,10 +306,15 @@ Required properties:
 
     step_size: Quantity[u.um]
     position: Quantity[u.um]
+    
+Setting the position should cause the stage to move. Overwriting this attribute while the stage is moving should cause it to start moving to the new position. 
+
 Required methods:
 
     home(self) -> None
     busy(self) -> bool
+    
+`busy` should return True if moving, this should include any time the stage may 'vibrate' after stopping. `home` should set the stage to a home. For example x & y = 0
 
 ### XYStage
 Required properties:
@@ -316,10 +323,15 @@ Required properties:
     y: Quantity[u.um]
     step_size_x: Quantity[u.um]
     step_size_y: Quantity[u.um]
+    
+Setting the positions should cause the stage to move. Overwriting this attribute while the stage is moving should cause it to start moving to the new position. 
+
 Required methods:
 
     home(self) -> None
     busy(self) -> bool
+
+`busy` should return True if moving, this should include any time the stage may 'vibrate' after stopping. `home` should set the stage to a home. For example x & y = 0
 
 # Call for collaborations
 We would like to set up a database containing implementations of hardware control scripts, simulated devices, wavefront shaping algorithms, and other re-usable scripts. Our current collection of devices is included in the OpenWFS repository. If you would like to contribute; please contact i.m.vellekoop@utwente.nl.
