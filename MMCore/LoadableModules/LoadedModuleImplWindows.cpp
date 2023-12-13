@@ -22,6 +22,8 @@
 
 #include "LoadedModuleImplWindows.h"
 
+#ifdef _WIN32
+
 #include "../Error.h"
 
 #include <string>
@@ -104,3 +106,5 @@ LoadedModuleImplWindows::GetFunction(const char* funcName)
       ThrowLastError();
    return proc;
 }
+
+#endif // _WIN32
