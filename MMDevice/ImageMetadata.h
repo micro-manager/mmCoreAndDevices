@@ -473,7 +473,7 @@ public:
          if (it->second->ToArrayTag())
             id = "a";
          std::string ser = it->second->Serialize();
-         os << id << " : " << ser << std::endl;
+         os << id << " : " << ser << '\n';
       }
 
       return os.str();
