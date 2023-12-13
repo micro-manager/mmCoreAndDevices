@@ -20,7 +20,7 @@
 // Note: This code must reside in the same binary image as the rest of the
 // Core.
 
-#ifdef WIN32 // whole file
+#ifdef _WIN32 // whole file
 
 #include "LibraryPaths.h"
 
@@ -87,4 +87,4 @@ std::string GetPathOfThisModule()
 
 } // namespace MMCorePrivate
 
-#endif // WIN32
+#endif // _WIN32

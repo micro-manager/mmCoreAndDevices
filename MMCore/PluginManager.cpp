@@ -20,14 +20,14 @@
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 08/10/2005
 
-#ifdef WIN32
+#ifdef _WIN32
    #define WIN32_LEAN_AND_MEAN
    #include <Windows.h>
    #include <io.h>
 #else
    #include <sys/types.h>
    #include <dirent.h>
-#endif // WIN32
+#endif // _WIN32
 
 #include "../MMDevice/ModuleInterface.h"
 #include "CoreUtils.h"
@@ -47,7 +47,7 @@
 #include <vector>
 
 
-#ifdef WIN32
+#ifdef _WIN32
 const char* const LIB_NAME_PREFIX = "mmgr_dal_";
 #else
 const char* const LIB_NAME_PREFIX = "libmmgr_dal_";
@@ -86,7 +86,7 @@ CPluginManager::FindInSearchPath(std::string filename)
 {
    for (const auto& p : searchPaths_) {
       std::string path = p;
-      #ifdef WIN32
+      #ifdef _WIN32
       path += "\\" + filename + ".dll";
       #else
       path += "/" + filename;
@@ -183,7 +183,7 @@ CPluginManager::UnloadPluginLibrary(const char* moduleName)
 static std::string
 GetDirName(const std::string& path)
 {
-#ifdef WIN32
+#ifdef _WIN32
    const char* pathSep = "\\/";
 #else
    const char* pathSep = "/";
@@ -232,7 +232,7 @@ void
 CPluginManager::GetModules(std::vector<std::string> &modules, const char* searchPath)
 {
 
-#ifdef WIN32
+#ifdef _WIN32
    std::string path = searchPath;
    path += "\\";
    path += LIB_NAME_PREFIX;

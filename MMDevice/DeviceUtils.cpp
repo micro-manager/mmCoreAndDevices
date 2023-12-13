@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <sstream>
 
-#ifdef WIN32
+#ifdef _WIN32
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #else
@@ -151,7 +151,7 @@ void CDeviceUtils::Tokenize(const std::string& str, std::vector<std::string>& to
  */
 void CDeviceUtils::SleepMs(long periodMs)
 {
-#ifdef WIN32
+#ifdef _WIN32
    Sleep(periodMs);
 #else
    usleep(periodMs * 1000);
@@ -163,7 +163,7 @@ void CDeviceUtils::SleepMs(long periodMs)
  */
 void CDeviceUtils::NapMicros(unsigned long period)
 {
-#ifdef WIN32
+#ifdef _WIN32
    Sleep(period/1000);
 #else
    usleep(period);
