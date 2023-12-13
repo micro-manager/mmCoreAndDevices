@@ -22,9 +22,9 @@
 
 #pragma once
 
-#ifdef WIN32
-// disable exception scpecification warnings in MSVC
-#pragma warning( disable : 4290 )
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
 #endif
 
 #include "MMDeviceConstants.h"
@@ -473,7 +473,7 @@ public:
          if (it->second->ToArrayTag())
             id = "a";
          std::string ser = it->second->Serialize();
-         os << id << " : " << ser << std::endl;
+         os << id << " : " << ser << '\n';
       }
 
       return os.str();
@@ -493,3 +493,7 @@ private:
    typedef std::map<std::string, MetadataTag*>::iterator TagIter;
    typedef std::map<std::string, MetadataTag*>::const_iterator TagConstIter;
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

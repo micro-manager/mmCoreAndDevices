@@ -36,7 +36,8 @@
 #include <vector>
 
 #ifdef _MSC_VER
-#pragma warning( disable : 4290 ) // exception declaration warning
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
 #endif
 
 
@@ -99,3 +100,7 @@ private:
    std::shared_ptr<ThreadPool> threadPool_;
    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

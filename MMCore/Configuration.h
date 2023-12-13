@@ -20,9 +20,9 @@
 
 #pragma once
 
-#ifdef WIN32
-// disable exception scpecification warnings in MSVC
-#pragma warning( disable : 4290 )
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
 #endif
 
 #include <string>
@@ -118,3 +118,7 @@ private:
    std::vector<PropertySetting> settings_;
    std::map<std::string, int> index_;
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

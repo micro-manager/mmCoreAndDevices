@@ -45,11 +45,11 @@
  * file (MMCore.cpp).
  */
 
-#ifdef _MSC_VER
 // We use exception specifications to instruct SWIG to generate the correct
-// exception specifications for Java. Turn off the warnings that VC++ issues by
-// the mere use of exception specifications (which VC++ does not implement).
-#pragma warning(disable : 4290)
+// exception specifications for Java.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
 #endif
 
 #include "../MMDevice/DeviceThreads.h"
@@ -604,8 +604,8 @@ public:
 
    /** \name Device discovery. */
    ///@{
-   bool supportsDeviceDetection(char* deviceLabel);
-   MM::DeviceDetectionStatus detectDevice(char* deviceLabel);
+   bool supportsDeviceDetection(const char* deviceLabel);
+   MM::DeviceDetectionStatus detectDevice(const char* deviceLabel);
    ///@}
 
    /** \name Hub and peripheral devices. */
@@ -692,3 +692,7 @@ private:
    void updateCoreProperty(const char* propName, MM::DeviceType devType) throw (CMMError);
    void loadSystemConfigurationImpl(const char* fileName) throw (CMMError);
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

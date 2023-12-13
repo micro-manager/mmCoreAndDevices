@@ -69,12 +69,12 @@ public:
    {
       Logger lgr =
          c_->NewLogger("thread" + std::to_string(n_));
-      char ch = '0' + n_;
+      auto ch = '0' + n_;
       if (ch < '0' || ch > 'z')
          ch = '~';
       for (size_t j = 0; j < 50; ++j)
       {
-         LOG_TRACE(lgr) << j << ' ' << std::string(n_ * j, ch);
+         LOG_TRACE(lgr) << j << ' ' << std::string(n_ * j, char(ch));
       }
    }
 };

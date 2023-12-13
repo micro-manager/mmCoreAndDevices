@@ -7413,7 +7413,7 @@ void CMMCore::updateAllowedChannelGroups()
  * For legacy reasons, an exception is not thrown if there is an error.
  * Instead, false is returned if label is not a valid device.
  */
-bool CMMCore::supportsDeviceDetection(char* label)
+bool CMMCore::supportsDeviceDetection(const char* label)
 {
    try
    {
@@ -7438,7 +7438,7 @@ bool CMMCore::supportsDeviceDetection(char* label)
  *
  * @param label  the label of the device for which the serial port should be found
  */
-MM::DeviceDetectionStatus CMMCore::detectDevice(char* label)
+MM::DeviceDetectionStatus CMMCore::detectDevice(const char* label)
 {
    try
    {
