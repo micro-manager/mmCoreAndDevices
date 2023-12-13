@@ -56,8 +56,8 @@ TEST(MMTimeTests, Comparison)
 
 TEST(MMTimeTests, FromNumbers)
 {
-    ASSERT_EQ(MMTime(1.0), MMTime::fromUs(1.0));
-    ASSERT_EQ(MMTime(1'000.0), MMTime::fromMs(1.0));
+    ASSERT_EQ(MMTime(1.0), MMTime::fromUs(1));
+    ASSERT_EQ(MMTime(1'000.0), MMTime::fromMs(1));
     ASSERT_EQ(MMTime(1'000'000.0), MMTime::fromSeconds(1));
 }
 
