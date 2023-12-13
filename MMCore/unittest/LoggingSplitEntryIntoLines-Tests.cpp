@@ -66,7 +66,7 @@ TEST_P(SplitEntryIntoPacketsEmptyResultTest, EmptyResult)
    EXPECT_STREQ("", result_[0].GetText());
 }
 
-INSTANTIATE_TEST_CASE_P(NewlinesCase, SplitEntryIntoPacketsEmptyResultTest,
+INSTANTIATE_TEST_SUITE_P(NewlinesCase, SplitEntryIntoPacketsEmptyResultTest,
       ::testing::Values("", "\r", "\n", "\r\r", "\r\n", "\n\n",
          "\r\r\r", "\r\r\n", "\r\n\r", "\r\n\n",
          "\n\r\r", "\n\r\n", "\n\n\r", "\n\n\n"));
@@ -82,7 +82,7 @@ TEST_P(SplitEntryIntoPacketsSingleCharResultTest, SingleXResult)
    EXPECT_STREQ("X", result_[0].GetText());
 }
 
-INSTANTIATE_TEST_CASE_P(XFollowedByNewlinesCase,
+INSTANTIATE_TEST_SUITE_P(XFollowedByNewlinesCase,
       SplitEntryIntoPacketsSingleCharResultTest,
       ::testing::Values("X", "X\r", "X\n", "X\r\r", "X\r\n", "X\n\n",
          "X\r\r\r", "X\r\r\n", "X\r\n\r", "X\r\n\n",
@@ -102,11 +102,11 @@ TEST_P(SplitEntryIntoPacketsTwoLineResultTest, TwoLineXYResult)
    EXPECT_STREQ("Y", result_[1].GetText());
 }
 
-INSTANTIATE_TEST_CASE_P(XNewlineYCase,
+INSTANTIATE_TEST_SUITE_P(XNewlineYCase,
       SplitEntryIntoPacketsTwoLineResultTest,
       ::testing::Values("X\rY", "X\nY", "X\r\nY"));
 
-INSTANTIATE_TEST_CASE_P(XLinefeedYNewlinesCase,
+INSTANTIATE_TEST_SUITE_P(XLinefeedYNewlinesCase,
       SplitEntryIntoPacketsTwoLineResultTest,
       ::testing::Values("X\nY\r", "X\nY\n", "X\nY\r\r", "X\nY\r\n", "X\nY\n\n",
          "X\nY\r\r\r", "X\nY\r\r\n", "X\nY\r\n\r", "X\nY\r\n\n",
@@ -128,7 +128,7 @@ TEST_P(SplitEntryIntoPacketsXEmptyYResultTest, XEmptyYResult)
    EXPECT_STREQ("Y", result_[2].GetText());
 }
 
-INSTANTIATE_TEST_CASE_P(XNewlineNewlineYCase,
+INSTANTIATE_TEST_SUITE_P(XNewlineNewlineYCase,
       SplitEntryIntoPacketsXEmptyYResultTest,
       ::testing::Values("X\r\rY", "X\n\nY", "X\n\rY",
          "X\r\n\rY", "X\r\n\nY", "X\r\r\nY", "X\n\r\nY",
@@ -162,7 +162,7 @@ TEST_P(SplitEntryIntoPacketsLeadingNewlineTest, CorrectLeadingNewlines)
    EXPECT_STREQ("X", result_[expected_].GetText());
 }
 
-INSTANTIATE_TEST_CASE_P(LeadingNewlinesCase,
+INSTANTIATE_TEST_SUITE_P(LeadingNewlinesCase,
       SplitEntryIntoPacketsLeadingNewlineTest,
       ::testing::Values(std::make_pair(0, "X"),
          std::make_pair(1, "\rX"),
@@ -201,20 +201,20 @@ TEST_P(SplitEntryIntoPacketsSoftNewlineTest, CorrectSplit)
    }
 }
 
-INSTANTIATE_TEST_CASE_P(NoSoftSplitCase,
+INSTANTIATE_TEST_SUITE_P(NoSoftSplitCase,
       SplitEntryIntoPacketsSoftNewlineTest,
       ::testing::Values(
          std::string(MaxLogLineLen - 1, 'x'),
          std::string(MaxLogLineLen, 'x')));
 
-INSTANTIATE_TEST_CASE_P(OneSoftSplitCase,
+INSTANTIATE_TEST_SUITE_P(OneSoftSplitCase,
       SplitEntryIntoPacketsSoftNewlineTest,
       ::testing::Values(
          std::string(MaxLogLineLen + 1, 'x'),
          std::string(2 * MaxLogLineLen - 1, 'x'),
          std::string(2 * MaxLogLineLen, 'x')));
 
-INSTANTIATE_TEST_CASE_P(TwoSoftSplitCase,
+INSTANTIATE_TEST_SUITE_P(TwoSoftSplitCase,
       SplitEntryIntoPacketsSoftNewlineTest,
       ::testing::Values(
          std::string(2 * MaxLogLineLen + 1, 'x'),
