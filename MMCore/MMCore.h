@@ -604,8 +604,8 @@ public:
 
    /** \name Device discovery. */
    ///@{
-   bool supportsDeviceDetection(char* deviceLabel);
-   MM::DeviceDetectionStatus detectDevice(char* deviceLabel);
+   bool supportsDeviceDetection(const char* deviceLabel);
+   MM::DeviceDetectionStatus detectDevice(const char* deviceLabel);
    ///@}
 
    /** \name Hub and peripheral devices. */
