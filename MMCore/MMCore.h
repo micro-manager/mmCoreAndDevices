@@ -62,7 +62,6 @@
 #include "../MMDevice/MMDevice.h"
 #include "../MMDevice/MMDeviceConstants.h"
 #include "Configuration.h"
-#include "CoreUtils.h"
 #include "Error.h"
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"

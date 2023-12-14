@@ -71,7 +71,7 @@ mmcore_public_headers = files(
     'ErrorCodes.h',
     'MMCore.h',
     'MMEventCallback.h',
-    # TODO MMCore.h currently includes Logging/Logger.h and CoreUtils.h, which
+    # TODO MMCore.h currently includes Logging/Logger.h, which
     # should not be public. That will need to be fixed before we support
     # installing the public headers.
 )
