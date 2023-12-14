@@ -4458,23 +4458,10 @@ void CMMCore::setMultiROI(std::vector<unsigned> xs, std::vector<unsigned> ys,
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
    mm::DeviceModuleLockGuard guard(camera);
-   unsigned numROI = (unsigned) xs.size();
-   unsigned* xsArr = new unsigned[numROI];
-   unsigned* ysArr = new unsigned[numROI];
-   unsigned* widthsArr = new unsigned[numROI];
-   unsigned* heightsArr = new unsigned[numROI];
-   for (unsigned i = 0; i < numROI; ++i)
-   {
-      xsArr[i] = xs[i];
-      ysArr[i] = ys[i];
-      widthsArr[i] = widths[i];
-      heightsArr[i] = heights[i];
-   }
-   int nRet = camera->SetMultiROI(xsArr, ysArr, widthsArr, heightsArr, numROI);
-   free(xsArr);
-   free(ysArr);
-   free(widthsArr);
-   free(heightsArr);
+   const unsigned numROI = (unsigned) xs.size();
+   int nRet = camera->SetMultiROI(xs.data(), ys.data(),
+                                  widths.data(), heights.data(),
+                                  numROI);
    if (nRet != DEVICE_OK)
    {
       throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
@@ -4507,18 +4494,16 @@ void CMMCore::getMultiROI(std::vector<unsigned>& xs, std::vector<unsigned>& ys,
       throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
    }
 
-   unsigned* xsArr = new unsigned[numROI];
-   unsigned* ysArr = new unsigned[numROI];
-   unsigned* widthsArr = new unsigned[numROI];
-   unsigned* heightsArr = new unsigned[numROI];
+   std::vector<unsigned> xsTmp(numROI);
+   std::vector<unsigned> ysTmp(numROI);
+   std::vector<unsigned> widthsTmp(numROI);
+   std::vector<unsigned> heightsTmp(numROI);
    unsigned newNum = numROI;
-   nRet = camera->GetMultiROI(xsArr, ysArr, widthsArr, heightsArr, &newNum);
+   nRet = camera->GetMultiROI(xsTmp.data(), ysTmp.data(),
+                              widthsTmp.data(), heightsTmp.data(),
+                              &newNum);
    if (nRet != DEVICE_OK)
    {
-      free(xsArr);
-      free(ysArr);
-      free(widthsArr);
-      free(heightsArr);
       throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
    }
    if (newNum > numROI)
@@ -4527,21 +4512,10 @@ void CMMCore::getMultiROI(std::vector<unsigned>& xs, std::vector<unsigned>& ys,
       throw CMMError("Camera returned too many ROIs");
    }
 
-   xs.clear();
-   ys.clear();
-   widths.clear();
-   heights.clear();
-   for (unsigned i = 0; i < newNum; ++i)
-   {
-      xs.push_back(xsArr[i]);
-      ys.push_back(ysArr[i]);
-      widths.push_back(widthsArr[i]);
-      heights.push_back(heightsArr[i]);
-   }
-   free(xsArr);
-   free(ysArr);
-   free(widthsArr);
-   free(heightsArr);
+   xs.swap(xsTmp);
+   ys.swap(ysTmp);
+   widths.swap(widthsTmp);
+   heights.swap(heightsTmp);
 }
 
 /**
