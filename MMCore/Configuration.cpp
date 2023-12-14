@@ -27,6 +27,15 @@
 #include <sstream>
 #include <string>
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
+
 std::string PropertySetting::generateKey(const char* device, const char* prop)
 {
    std::string key(device);

@@ -15,7 +15,6 @@ cxx = meson.get_compiler('cpp')
 
 if cxx.get_id() in ['msvc', 'clang-cl']
     add_project_arguments('-DNOMINMAX', language: 'cpp')
-    add_project_arguments('/wd4290', language: 'cpp')
 endif
 
 # MMDevice must be copied into subprojects/ for this experimental build to work

@@ -52,6 +52,12 @@
 #pragma warning(disable: 4290) // 'C++ exception specification ignored'
 #endif
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
+
 #include "../MMDevice/DeviceThreads.h"
 #include "../MMDevice/MMDevice.h"
 #include "../MMDevice/MMDeviceConstants.h"
@@ -692,6 +698,10 @@ private:
    void updateCoreProperty(const char* propName, MM::DeviceType devType) throw (CMMError);
    void loadSystemConfigurationImpl(const char* fileName) throw (CMMError);
 };
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef _MSC_VER
 #pragma warning(pop)
