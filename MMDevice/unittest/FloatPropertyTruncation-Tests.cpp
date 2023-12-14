@@ -66,10 +66,3 @@ TEST(FloatPropertyTruncationTests, UpperLimitIsTruncatedDown)
    ASSERT_TRUE(fp.SetLimits(-1000.0, -0.00011));
    ASSERT_DOUBLE_EQ(-0.0002, fp.GetUpperLimit());
 }
-
-
-int main(int argc, char **argv)
-{
-   ::testing::InitGoogleTest(&argc, argv);
-   return RUN_ALL_TESTS();
-}

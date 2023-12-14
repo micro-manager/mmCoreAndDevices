@@ -220,10 +220,3 @@ INSTANTIATE_TEST_SUITE_P(TwoSoftSplitCase,
          std::string(2 * MaxLogLineLen + 1, 'x'),
          std::string(3 * MaxLogLineLen - 1, 'x'),
          std::string(3 * MaxLogLineLen, 'x')));
-
-
-int main(int argc, char **argv)
-{
-   ::testing::InitGoogleTest(&argc, argv);
-   return RUN_ALL_TESTS();
-}

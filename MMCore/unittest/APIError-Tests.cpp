@@ -85,9 +85,3 @@ TEST(APIErrorTests, DetectDeviceWithInvalidDevice)
    EXPECT_EQ(MM::Unimplemented, c.detectDevice("Blah"));
    EXPECT_EQ(MM::Unimplemented, c.detectDevice("Core"));
 }
-
-int main(int argc, char **argv)
-{
-   ::testing::InitGoogleTest(&argc, argv);
-   return RUN_ALL_TESTS();
-}

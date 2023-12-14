@@ -67,9 +67,3 @@ TEST(MMTimeTests, ToNumbers)
     ASSERT_DOUBLE_EQ(1.0, MMTime(1.0).getUsec());
     ASSERT_DOUBLE_EQ(1.0, MMTime(1000.0).getMsec());
 }
-
-int main(int argc, char **argv)
-{
-   ::testing::InitGoogleTest(&argc, argv);
-   return RUN_ALL_TESTS();
-}

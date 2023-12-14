@@ -118,10 +118,3 @@ TEST(LoggerTests, AsyncAndThreaded)
    for (unsigned i = 0; i < threads.size(); ++i)
       threads[i]->join();
 }
-
-
-int main(int argc, char **argv)
-{
-   ::testing::InitGoogleTest(&argc, argv);
-   return RUN_ALL_TESTS();
-}

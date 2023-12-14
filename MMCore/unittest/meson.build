@@ -2,28 +2,18 @@
 # of the supported build system for Micro-Manager or mmCoreAndDevices.
 
 gtest_proj = subproject('gtest')
-gtest_dep = gtest_proj.get_variable('gtest_dep')
+gtest_dep = gtest_proj.get_variable('gtest_main_dep')
 
-# TODO: Use a single executable for all tests -- but that requires modifying
-# the sources (to remove main()), so needs to wait until we remove these tests
-# from the Automake build.
-
-mmcore_apierror_test_exe = executable(
-    'MMCoreAPIErrorTest',
-    sources: 'APIError-Tests.cpp',
-    include_directories: mmcore_include_dir,
-    link_with: mmcore_lib,
-    dependencies: [
-        mmdevice_dep,
-        gtest_dep,
-    ],
+mmcore_test_sources = files(
+    'APIError-Tests.cpp',
+    'CoreSanity-Tests.cpp',
+    'Logger-Tests.cpp',
+    'LoggingSplitEntryIntoLines-Tests.cpp',
 )
 
-test('MMCore APIError test', mmcore_apierror_test_exe)
-
-mmcore_logger_test_exe = executable(
-    'MMCoreLoggerTest',
-    sources: 'Logger-Tests.cpp',
+mmcore_test_exe = executable(
+    'MMCoreTests',
+    sources: mmcore_test_sources,
     include_directories: mmcore_include_dir,
     link_with: mmcore_lib,
     dependencies: [
@@ -35,23 +25,4 @@ mmcore_logger_test_exe = executable(
     ],
 )
 
-test('MMCore Logger test', mmcore_logger_test_exe)
-
-mmcore_loggingsplitentryintolines_test_exe = executable(
-    'MMCoreLoggingSplitEntryIntoLinesTest',
-    sources: 'LoggingSplitEntryIntoLines-Tests.cpp',
-    include_directories: mmcore_include_dir,
-    link_with: mmcore_lib,
-    dependencies: [
-        mmdevice_dep,
-        gtest_dep,
-    ],
-    cpp_args: [
-        '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
-    ],
-)
-
-test(
-    'MMCore LoggingSplitEntryIntoLines test',
-    mmcore_loggingsplitentryintolines_test_exe
-)
+test('MMCore tests', mmcore_test_exe)
