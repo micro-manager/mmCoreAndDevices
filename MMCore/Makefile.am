@@ -99,10 +99,4 @@ libMMCore_la_SOURCES = \
 	ThreadPool.cpp \
 	ThreadPool.h
 
-if BUILD_CPP_TESTS
-UNITTESTS = unittest
-endif
-
-SUBDIRS = . $(UNITTESTS)
-
 EXTRA_DIST = license.txt
