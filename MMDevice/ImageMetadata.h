@@ -101,7 +101,7 @@ public:
       str.append(name_);
       return str;
    }
-   const bool IsReadOnly() const  {return readOnly_;}
+   bool IsReadOnly() const  {return readOnly_;}
 
    void SetDevice(const char* device) {deviceLabel_ = device;}
    void SetName(const char* name) {name_ = name;}
