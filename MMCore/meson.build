@@ -69,12 +69,15 @@ mmcore_public_headers = files(
     'Configuration.h',
     'Error.h',
     'ErrorCodes.h',
+    'Logging/GenericLogger.h',
+    'Logging/Logger.h',
+    'Logging/Metadata.h',
+    'Logging/GenericMetadata.h',
     'MMCore.h',
     'MMEventCallback.h',
-    # TODO MMCore.h currently includes Logging/Logger.h and CoreUtils.h, which
-    # should not be public. That will need to be fixed before we support
-    # installing the public headers.
 )
+# Note that the MMDevice headers are also needed; which of those are part of
+# MMCore's public interface is poorly defined at the moment.
 
 # TODO Allow MMCore to be built as a shared library, too. For that, we'd need
 # to define the exported symbols on Windows (__declspec(dllexport)).
