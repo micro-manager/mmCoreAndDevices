@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include <catch2/catch_all.hpp>
 
 #include "Logging/GenericLinePacket.h"
 #include "Logging/Logging.h"
@@ -9,214 +9,171 @@
 #include <string>
 #include <vector>
 
-using namespace mm::logging;
+namespace mm {
+namespace logging {
 
-typedef Metadata MetadataType;
-typedef internal::GenericPacketArray<Metadata> PacketArrayType;
-const size_t MaxLogLineLen =
-   internal::GenericLinePacket<MetadataType>::PacketTextLen;
-
-
-class SplitEntryIntoPacketsTest : public ::testing::Test
+TEST_CASE("split entry into lines", "[Logging]")
 {
-public:
-   SplitEntryIntoPacketsTest() :
-      loggerData_("component"),
-      entryData_(LogLevelInfo)
-   {}
+   Metadata::LoggerDataType loggerData("component");
+   Metadata::EntryDataType entryData(LogLevelInfo);
+   Metadata::StampDataType stampData;
+   stampData.Stamp();
 
-protected:
-   MetadataType::LoggerDataType loggerData_;
-   MetadataType::EntryDataType entryData_;
-   MetadataType::StampDataType stampData_;
-
-   std::vector< internal::GenericLinePacket<MetadataType> > result_;
-   virtual void SetUp()
+   SECTION("empty result")
    {
-      stampData_.Stamp();
-   }
-   virtual void Split(const char* s)
-   {
-      PacketArrayType array;
-      array.AppendEntry(loggerData_, entryData_, stampData_, s);
-      std::copy(array.Begin(), array.End(), std::back_inserter(result_));
-   }
-};
-
-
-class SplitEntryIntoPacketsParameterizedTest :
-   public SplitEntryIntoPacketsTest,
-   public ::testing::WithParamInterface<std::string>
-{
-   virtual void SetUp()
-   {
-      SplitEntryIntoPacketsTest::SetUp();
-      Split(GetParam().c_str());
-   }
-};
-
-
-class SplitEntryIntoPacketsEmptyResultTest :
-   public SplitEntryIntoPacketsParameterizedTest
-{};
-
-TEST_P(SplitEntryIntoPacketsEmptyResultTest, EmptyResult)
-{
-   ASSERT_EQ(1, result_.size());
-   EXPECT_STREQ("", result_[0].GetText());
-}
-
-INSTANTIATE_TEST_SUITE_P(NewlinesCase, SplitEntryIntoPacketsEmptyResultTest,
-      ::testing::Values("", "\r", "\n", "\r\r", "\r\n", "\n\n",
+      const char *testStr = GENERATE(
+         "", "\r", "\n", "\r\r", "\r\n", "\n\n",
          "\r\r\r", "\r\r\n", "\r\n\r", "\r\n\n",
-         "\n\r\r", "\n\r\n", "\n\n\r", "\n\n\n"));
+         "\n\r\r", "\n\r\n", "\n\n\r", "\n\n\n");
+      internal::GenericPacketArray<Metadata> array;
+      array.AppendEntry(loggerData, entryData, stampData, testStr);
+      std::vector<internal::GenericLinePacket<Metadata>> result;
+      std::copy(array.Begin(), array.End(), std::back_inserter(result));
+      CHECK(result.size() == 1);
+      CHECK_THAT(result[0].GetText(), Catch::Matchers::Equals(""));
+   }
 
-
-class SplitEntryIntoPacketsSingleCharResultTest :
-   public SplitEntryIntoPacketsParameterizedTest
-{};
-
-TEST_P(SplitEntryIntoPacketsSingleCharResultTest, SingleXResult)
-{
-   ASSERT_EQ(1, result_.size());
-   EXPECT_STREQ("X", result_[0].GetText());
-}
-
-INSTANTIATE_TEST_SUITE_P(XFollowedByNewlinesCase,
-      SplitEntryIntoPacketsSingleCharResultTest,
-      ::testing::Values("X", "X\r", "X\n", "X\r\r", "X\r\n", "X\n\n",
+   SECTION("single-char result")
+   {
+      const char *testStr = GENERATE(
+         "X", "X\r", "X\n", "X\r\r", "X\r\n", "X\n\n",
          "X\r\r\r", "X\r\r\n", "X\r\n\r", "X\r\n\n",
-         "X\n\r\r", "X\n\r\n", "X\n\n\r", "X\n\n\n"));
+         "X\n\r\r", "X\n\r\n", "X\n\n\r", "X\n\n\n");
+      internal::GenericPacketArray<Metadata> array;
+      array.AppendEntry(loggerData, entryData, stampData, testStr);
+      std::vector<internal::GenericLinePacket<Metadata>> result;
+      std::copy(array.Begin(), array.End(), std::back_inserter(result));
+      CHECK(result.size() == 1);
+      CHECK_THAT(result[0].GetText(), Catch::Matchers::Equals("X"));
+   }
 
-
-class SplitEntryIntoPacketsTwoLineResultTest :
-   public SplitEntryIntoPacketsParameterizedTest
-{};
-
-TEST_P(SplitEntryIntoPacketsTwoLineResultTest, TwoLineXYResult)
-{
-   ASSERT_EQ(2, result_.size());
-   EXPECT_EQ(internal::PacketStateEntryFirstLine, result_[0].GetPacketState());
-   EXPECT_STREQ("X", result_[0].GetText());
-   EXPECT_EQ(internal::PacketStateNewLine, result_[1].GetPacketState());
-   EXPECT_STREQ("Y", result_[1].GetText());
-}
-
-INSTANTIATE_TEST_SUITE_P(XNewlineYCase,
-      SplitEntryIntoPacketsTwoLineResultTest,
-      ::testing::Values("X\rY", "X\nY", "X\r\nY"));
-
-INSTANTIATE_TEST_SUITE_P(XLinefeedYNewlinesCase,
-      SplitEntryIntoPacketsTwoLineResultTest,
-      ::testing::Values("X\nY\r", "X\nY\n", "X\nY\r\r", "X\nY\r\n", "X\nY\n\n",
+   SECTION("two-line result")
+   {
+      const char *testStr = GENERATE(
+         "X\rY", "X\nY", "X\r\nY",
+         "X\nY\r", "X\nY\n", "X\nY\r\r", "X\nY\r\n", "X\nY\n\n",
          "X\nY\r\r\r", "X\nY\r\r\n", "X\nY\r\n\r", "X\nY\r\n\n",
-         "X\nY\n\r\r", "X\nY\n\r\n", "X\nY\n\n\r", "X\nY\n\n\n"));
-
-
-class SplitEntryIntoPacketsXEmptyYResultTest :
-   public SplitEntryIntoPacketsParameterizedTest
-{};
-
-TEST_P(SplitEntryIntoPacketsXEmptyYResultTest, XEmptyYResult)
-{
-   ASSERT_EQ(3, result_.size());
-   EXPECT_EQ(internal::PacketStateEntryFirstLine, result_[0].GetPacketState());
-   EXPECT_STREQ("X", result_[0].GetText());
-   EXPECT_EQ(internal::PacketStateNewLine, result_[1].GetPacketState());
-   EXPECT_STREQ("", result_[1].GetText());
-   EXPECT_EQ(internal::PacketStateNewLine, result_[2].GetPacketState());
-   EXPECT_STREQ("Y", result_[2].GetText());
-}
-
-INSTANTIATE_TEST_SUITE_P(XNewlineNewlineYCase,
-      SplitEntryIntoPacketsXEmptyYResultTest,
-      ::testing::Values("X\r\rY", "X\n\nY", "X\n\rY",
-         "X\r\n\rY", "X\r\n\nY", "X\r\r\nY", "X\n\r\nY",
-         "X\r\n\r\nY"));
-
-
-class SplitEntryIntoPacketsLeadingNewlineTest :
-   public SplitEntryIntoPacketsTest,
-   public ::testing::WithParamInterface< std::pair<size_t, std::string> >
-{
-protected:
-   size_t expected_;
-
-   virtual void SetUp()
-   {
-      SplitEntryIntoPacketsTest::SetUp();
-      expected_ = GetParam().first;
-      Split(GetParam().second.c_str());
+         "X\nY\n\r\r", "X\nY\n\r\n", "X\nY\n\n\r", "X\nY\n\n\n");
+      internal::GenericPacketArray<Metadata> array;
+      array.AppendEntry(loggerData, entryData, stampData, testStr);
+      std::vector<internal::GenericLinePacket<Metadata>> result;
+      std::copy(array.Begin(), array.End(), std::back_inserter(result));
+      CHECK(result.size() == 2);
+      CHECK(result[0].GetPacketState() == internal::PacketStateEntryFirstLine);
+      CHECK_THAT(result[0].GetText(), Catch::Matchers::Equals("X"));
+      CHECK(result[1].GetPacketState() == internal::PacketStateNewLine);
+      CHECK_THAT(result[1].GetText(), Catch::Matchers::Equals("Y"));
    }
-};
 
-TEST_P(SplitEntryIntoPacketsLeadingNewlineTest, CorrectLeadingNewlines)
-{
-   ASSERT_EQ(expected_ + 1, result_.size());
-   EXPECT_EQ(internal::PacketStateEntryFirstLine, result_[0].GetPacketState());
-   for (size_t i = 0; i < expected_; ++i)
+   SECTION("three-line result with empty middle line")
    {
-      EXPECT_STREQ("", result_[i].GetText());
-      EXPECT_EQ(internal::PacketStateNewLine, result_[i + 1].GetPacketState());
+      const char *testStr = GENERATE(
+         "X\r\rY", "X\n\nY", "X\n\rY", "X\r\n\rY", "X\r\n\nY",
+         "X\r\r\nY", "X\n\r\nY", "X\r\n\r\nY");
+      internal::GenericPacketArray<Metadata> array;
+      array.AppendEntry(loggerData, entryData, stampData, testStr);
+      std::vector<internal::GenericLinePacket<Metadata>> result;
+      std::copy(array.Begin(), array.End(), std::back_inserter(result));
+      CHECK(result.size() == 3);
+      CHECK(result[0].GetPacketState() == internal::PacketStateEntryFirstLine);
+      CHECK_THAT(result[0].GetText(), Catch::Matchers::Equals("X"));
+      CHECK(result[1].GetPacketState() == internal::PacketStateNewLine);
+      CHECK_THAT(result[1].GetText(), Catch::Matchers::Equals(""));
+      CHECK(result[2].GetPacketState() == internal::PacketStateNewLine);
+      CHECK_THAT(result[2].GetText(), Catch::Matchers::Equals("Y"));
    }
-   EXPECT_STREQ("X", result_[expected_].GetText());
-}
 
-INSTANTIATE_TEST_SUITE_P(LeadingNewlinesCase,
-      SplitEntryIntoPacketsLeadingNewlineTest,
-      ::testing::Values(std::make_pair(0, "X"),
-         std::make_pair(1, "\rX"),
-         std::make_pair(1, "\nX"),
-         std::make_pair(1, "\r\nX"),
-         std::make_pair(2, "\r\rX"),
-         std::make_pair(2, "\n\rX"),
-         std::make_pair(2, "\n\nX"),
-         std::make_pair(2, "\r\n\rX"),
-         std::make_pair(2, "\r\n\nX"),
-         std::make_pair(2, "\r\r\nX"),
-         std::make_pair(2, "\n\r\nX")));
-
-
-class SplitEntryIntoPacketsSoftNewlineTest :
-   public SplitEntryIntoPacketsParameterizedTest
-{};
-
-TEST_P(SplitEntryIntoPacketsSoftNewlineTest, CorrectSplit)
-{
-   // We are assuming input did not contain hard newlines
-   size_t inputLen = GetParam().size();
-   size_t nLines = inputLen ? (inputLen - 1) / MaxLogLineLen + 1 : 1;
-   ASSERT_EQ(nLines, result_.size());
-   EXPECT_EQ(internal::PacketStateEntryFirstLine, result_[0].GetPacketState());
-   for (size_t i = 0; i < nLines; ++i)
+   SECTION("one leading newline")
    {
-      if (i > 0)
+      const char *testStr = GENERATE("\rX", "\nX", "\r\nX");
+      internal::GenericPacketArray<Metadata> array;
+      array.AppendEntry(loggerData, entryData, stampData, testStr);
+      std::vector<internal::GenericLinePacket<Metadata>> result;
+      std::copy(array.Begin(), array.End(), std::back_inserter(result));
+      CHECK(result.size() == 2);
+      CHECK(result[0].GetPacketState() == internal::PacketStateEntryFirstLine);
+      CHECK_THAT(result[0].GetText(), Catch::Matchers::Equals(""));
+      CHECK(result[1].GetPacketState() == internal::PacketStateNewLine);
+      CHECK_THAT(result[1].GetText(), Catch::Matchers::Equals("X"));
+
+   }
+
+   SECTION("two leading newlines")
+   {
+      const char *testStr = GENERATE(
+         "\r\rX", "\n\rX", "\n\nX", "\r\n\rX", "\r\n\nX",
+         "\r\r\nX", "\n\r\nX");
+      internal::GenericPacketArray<Metadata> array;
+      array.AppendEntry(loggerData, entryData, stampData, testStr);
+      std::vector<internal::GenericLinePacket<Metadata>> result;
+      std::copy(array.Begin(), array.End(), std::back_inserter(result));
+      CHECK(result.size() == 3);
+      CHECK(result[0].GetPacketState() == internal::PacketStateEntryFirstLine);
+      CHECK_THAT(result[0].GetText(), Catch::Matchers::Equals(""));
+      CHECK(result[1].GetPacketState() == internal::PacketStateNewLine);
+      CHECK_THAT(result[1].GetText(), Catch::Matchers::Equals(""));
+      CHECK(result[2].GetPacketState() == internal::PacketStateNewLine);
+      CHECK_THAT(result[2].GetText(), Catch::Matchers::Equals("X"));
+   }
+
+   SECTION("soft newlines")
+   {
+      static const std::size_t MaxLogLineLen =
+          internal::GenericLinePacket<Metadata>::PacketTextLen;
+      SECTION("no soft split")
       {
-         EXPECT_EQ(internal::PacketStateLineContinuation,
-               result_[i].GetPacketState());
+         std::size_t repeatCount = GENERATE(MaxLogLineLen - 1, MaxLogLineLen);
+         std::string testStr(repeatCount, 'x');
+         internal::GenericPacketArray<Metadata> array;
+         array.AppendEntry(loggerData, entryData, stampData, testStr.c_str());
+         std::vector<internal::GenericLinePacket<Metadata>> result;
+         std::copy(array.Begin(), array.End(), std::back_inserter(result));
+         CHECK(result.size() == 1);
+         CHECK(result[0].GetPacketState() == internal::PacketStateEntryFirstLine);
+         CHECK(result[0].GetText() == testStr);
       }
-      EXPECT_STREQ(
-            GetParam().substr(i * MaxLogLineLen, MaxLogLineLen).c_str(),
-            result_[i].GetText());
+
+      SECTION("one soft split")
+      {
+         std::size_t charCount = GENERATE(
+            MaxLogLineLen + 1,
+            2 * MaxLogLineLen - 1,
+            2 * MaxLogLineLen);
+         std::string testStr(charCount, 'x');
+         internal::GenericPacketArray<Metadata> array;
+         array.AppendEntry(loggerData, entryData, stampData, testStr.c_str());
+         std::vector<internal::GenericLinePacket<Metadata>> result;
+         std::copy(array.Begin(), array.End(), std::back_inserter(result));
+         CHECK(result.size() == 2);
+         CHECK(result[0].GetPacketState() == internal::PacketStateEntryFirstLine);
+         CHECK(result[0].GetText() == std::string(MaxLogLineLen, 'x'));
+         CHECK(result[1].GetPacketState() == internal::PacketStateLineContinuation);
+         CHECK(result[1].GetText() ==
+            std::string(testStr.size() - MaxLogLineLen, 'x'));
+      }
+
+      SECTION("two soft splits")
+      {
+         std::size_t charCount = GENERATE(
+            2 * MaxLogLineLen + 1,
+            3 * MaxLogLineLen - 1,
+            3 * MaxLogLineLen);
+         std::string testStr(charCount, 'x');
+         internal::GenericPacketArray<Metadata> array;
+         array.AppendEntry(loggerData, entryData, stampData, testStr.c_str());
+         std::vector<internal::GenericLinePacket<Metadata>> result;
+         std::copy(array.Begin(), array.End(), std::back_inserter(result));
+         CHECK(result.size() == 3);
+         CHECK(result[0].GetPacketState() == internal::PacketStateEntryFirstLine);
+         CHECK(result[0].GetText() == std::string(MaxLogLineLen, 'x'));
+         CHECK(result[1].GetPacketState() == internal::PacketStateLineContinuation);
+         CHECK(result[1].GetText() == std::string(MaxLogLineLen, 'x'));
+         CHECK(result[2].GetPacketState() == internal::PacketStateLineContinuation);
+         CHECK(result[2].GetText() ==
+            std::string(testStr.size() - 2 * MaxLogLineLen, 'x'));
+      }
    }
 }
 
-INSTANTIATE_TEST_SUITE_P(NoSoftSplitCase,
-      SplitEntryIntoPacketsSoftNewlineTest,
-      ::testing::Values(
-         std::string(MaxLogLineLen - 1, 'x'),
-         std::string(MaxLogLineLen, 'x')));
-
-INSTANTIATE_TEST_SUITE_P(OneSoftSplitCase,
-      SplitEntryIntoPacketsSoftNewlineTest,
-      ::testing::Values(
-         std::string(MaxLogLineLen + 1, 'x'),
-         std::string(2 * MaxLogLineLen - 1, 'x'),
-         std::string(2 * MaxLogLineLen, 'x')));
-
-INSTANTIATE_TEST_SUITE_P(TwoSoftSplitCase,
-      SplitEntryIntoPacketsSoftNewlineTest,
-      ::testing::Values(
-         std::string(2 * MaxLogLineLen + 1, 'x'),
-         std::string(3 * MaxLogLineLen - 1, 'x'),
-         std::string(3 * MaxLogLineLen, 'x')));
+} // namespace logging
+} // namespace mm

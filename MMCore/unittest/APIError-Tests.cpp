@@ -1,8 +1,8 @@
-#include <gtest/gtest.h>
+#include <catch2/catch_all.hpp>
 
 #include "MMCore.h"
 
-TEST(APIErrorTests, SetFocusDirectionWithInvalidDevice)
+TEST_CASE("setFocusDirection with invalid device", "[APIError]")
 {
    CMMCore c;
    // Must not throw or crash
@@ -20,68 +20,68 @@ TEST(APIErrorTests, SetFocusDirectionWithInvalidDevice)
    c.setFocusDirection("Core", -1);
 }
 
-TEST(APIErrorTests, GetNumberOfStatesWithInvalidDevice)
+TEST_CASE("getNumberOfStates with invalid device", "[APIError]")
 {
    CMMCore c;
    // Must not throw or crash
-   EXPECT_EQ(-1, c.getNumberOfStates(nullptr));
-   EXPECT_EQ(-1, c.getNumberOfStates(""));
-   EXPECT_EQ(-1, c.getNumberOfStates("Blah"));
-   EXPECT_EQ(-1, c.getNumberOfStates("Core"));
+   CHECK(c.getNumberOfStates(nullptr) == -1);
+   CHECK(c.getNumberOfStates("") == -1);
+   CHECK(c.getNumberOfStates("Blah") == -1);
+   CHECK(c.getNumberOfStates("Core") == -1);
 }
 
-TEST(APIErrorTests, GetAvailableConfigsWithInvalidGroup)
+TEST_CASE("getAvailableConfigs with invalid group", "[APIError]")
 {
    CMMCore c;
-   EXPECT_TRUE(c.getAvailableConfigs(nullptr).empty());
-   EXPECT_TRUE(c.getAvailableConfigs("").empty());
-   EXPECT_TRUE(c.getAvailableConfigs("Blah").empty());
+   CHECK(c.getAvailableConfigs(nullptr).empty());
+   CHECK(c.getAvailableConfigs("").empty());
+   CHECK(c.getAvailableConfigs("Blah").empty());
 }
 
-TEST(APIErrorTests, GetPixelSizeUmWithNoConfig)
+TEST_CASE("getPixelSizeUm with no config", "[APIError]")
 {
    CMMCore c;
-   EXPECT_EQ(0.0, c.getPixelSizeUm(false));
-   EXPECT_EQ(0.0, c.getPixelSizeUm(true));
+   CHECK(c.getPixelSizeUm(false) == 0.0);
+   CHECK(c.getPixelSizeUm(true) == 0.0);
 }
 
-TEST(APIErrorTests, IsConfigDefinedWithNullArgs)
+TEST_CASE("isConfigDefined with null args", "[APIError]")
 {
    CMMCore c;
-   EXPECT_FALSE(c.isConfigDefined(nullptr, "Blah"));
-   EXPECT_FALSE(c.isConfigDefined("Blah", nullptr));
-   EXPECT_FALSE(c.isConfigDefined(nullptr, nullptr));
-   EXPECT_FALSE(c.isConfigDefined("Blah", "Blah"));
-   EXPECT_FALSE(c.isConfigDefined(nullptr, ""));
-   EXPECT_FALSE(c.isConfigDefined("", nullptr));
-   EXPECT_FALSE(c.isConfigDefined(nullptr, nullptr));
-   EXPECT_FALSE(c.isConfigDefined("", ""));
-   EXPECT_FALSE(c.isConfigDefined("", "Blah"));
-   EXPECT_FALSE(c.isConfigDefined("Blah", ""));
+   CHECK_FALSE(c.isConfigDefined(nullptr, "Blah"));
+   CHECK_FALSE(c.isConfigDefined("Blah", nullptr));
+   CHECK_FALSE(c.isConfigDefined(nullptr, nullptr));
+   CHECK_FALSE(c.isConfigDefined("Blah", "Blah"));
+   CHECK_FALSE(c.isConfigDefined(nullptr, ""));
+   CHECK_FALSE(c.isConfigDefined("", nullptr));
+   CHECK_FALSE(c.isConfigDefined(nullptr, nullptr));
+   CHECK_FALSE(c.isConfigDefined("", ""));
+   CHECK_FALSE(c.isConfigDefined("", "Blah"));
+   CHECK_FALSE(c.isConfigDefined("Blah", ""));
 }
 
-TEST(APIErrorTests, IsGroupDefinedWithNullArg)
+TEST_CASE("isGroupDefined with null arg", "[APIError]")
 {
    CMMCore c;
-   EXPECT_FALSE(c.isGroupDefined(nullptr));
-   EXPECT_FALSE(c.isGroupDefined(""));
-   EXPECT_FALSE(c.isGroupDefined("Blah"));
+   CHECK_FALSE(c.isGroupDefined(nullptr));
+   CHECK_FALSE(c.isGroupDefined(""));
+   CHECK_FALSE(c.isGroupDefined("Blah"));
 }
 
-TEST(APIErrorTests, SupportsDeviceDetectionWithInvalidDevice)
+TEST_CASE("supportsDeviceDetection with invalid device", "[APIError]")
 {
    CMMCore c;
-   EXPECT_FALSE(c.supportsDeviceDetection(nullptr));
-   EXPECT_FALSE(c.supportsDeviceDetection(""));
-   EXPECT_FALSE(c.supportsDeviceDetection("Blah"));
-   EXPECT_FALSE(c.supportsDeviceDetection("Core"));
+   CHECK_FALSE(c.supportsDeviceDetection(nullptr));
+   CHECK_FALSE(c.supportsDeviceDetection(""));
+   CHECK_FALSE(c.supportsDeviceDetection("Blah"));
+   CHECK_FALSE(c.supportsDeviceDetection("Core"));
 }
 
-TEST(APIErrorTests, DetectDeviceWithInvalidDevice)
+TEST_CASE("detectDevice with invalid device", "[APIError]")
 {
    CMMCore c;
-   EXPECT_EQ(MM::Unimplemented, c.detectDevice(nullptr));
-   EXPECT_EQ(MM::Unimplemented, c.detectDevice(""));
-   EXPECT_EQ(MM::Unimplemented, c.detectDevice("Blah"));
-   EXPECT_EQ(MM::Unimplemented, c.detectDevice("Core"));
+   CHECK(c.detectDevice(nullptr) == MM::Unimplemented);
+   CHECK(c.detectDevice("") == MM::Unimplemented);
+   CHECK(c.detectDevice("Blah") == MM::Unimplemented);
+   CHECK(c.detectDevice("Core") == MM::Unimplemented);
 }
