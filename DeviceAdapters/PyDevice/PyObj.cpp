@@ -36,38 +36,45 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
         g_set_path.Call(PyObj(module_path));
         return true;
     }
-    
-    auto path = fs::path();// python_home;
-    
-    //todo: windows specific
-    auto env_path = _wgetenv(L"PYTHONHOME");
-    if (env_path && env_path[0] != 0) {
-        path = env_path;
+
+    if (!Py_IsInitialized()) {
+        //todo: windows specific
+        auto path = fs::path();// python_home;
+        auto env_path = _wgetenv(L"PYTHONHOME");
+        if (env_path && env_path[0] != 0) {
+            path = env_path;
+        }
+        else {
+            // fallback: use python3.dll location
+            HMODULE hModule = GetModuleHandle(L"python3.dll");
+            TCHAR dllPath[_MAX_PATH];
+            GetModuleFileName(hModule, dllPath, _MAX_PATH);
+            path = fs::path(dllPath).parent_path();
+        }
+#pragma warning(disable: 4996)
+        Py_SetPythonHome(path.generic_wstring().c_str());
+
+        // set the module search path if it is specified in an environmental variable
+        auto base_module_path = _wgetenv(L"PYTHONPATH");
+        if (base_module_path && base_module_path[0] != 0) {
+#pragma warning(disable: 4996)
+            Py_SetPath(base_module_path);
+        }
+
+        Py_InitializeEx(0); // Python may cause a crash here (all exit()) if the runtime cannot be initialized. There seems to be nothing we can do about this in the LIMITED api.
+        _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
+
+        // allow multi threading and store the thread state (global interpreter lock).
+        // note: savethread releases the GIL lock we currently have.
+        g_threadState = PyEval_SaveThread();
     }
     else {
-        // fallback: use python3.dll location
-        HMODULE hModule = GetModuleHandle(L"python3.dll");
-        TCHAR dllPath[_MAX_PATH];
-        GetModuleFileName(hModule, dllPath, _MAX_PATH);
-        path = fs::path(dllPath).parent_path();
+        // If a Python interpreter is already running (this happens when running from pymmcore), don't start a new interpreter again
+        // The path and home variables are ignored
+        PyLock lock;
+        _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
     }
-    #pragma warning(disable: 4996)
-    Py_SetPythonHome(path.generic_wstring().c_str());
-
-    // set the module search path if it is specified in an environmental variable
-    auto base_module_path = _wgetenv(L"PYTHONPATH");
-    if (base_module_path && base_module_path[0] != 0) {
-        #pragma warning(disable: 4996)
-        Py_SetPath(base_module_path);
-    }
-
-    Py_InitializeEx(0); // Python may cause a crash here (all exit()) if the runtime cannot be initialized. There seems to be nothing we can do about this in the LIMITED api.
-    _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
-
-
-    // allow multi threading and store the thread state (global interpreter lock).
-    // note: savethread releases the lock.
-    g_threadState = PyEval_SaveThread();
+    
 
     // run the bootstrapping script
     const char* bootstrap;
