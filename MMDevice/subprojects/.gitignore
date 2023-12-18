@@ -7,4 +7,4 @@
 /*.wrap
 
 # Do not ignore wraps we provide
-!/gtest.wrap
+!/catch2.wrap

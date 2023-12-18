@@ -1,68 +1,67 @@
-#include <gtest/gtest.h>
+#include <catch2/catch_all.hpp>
 
 #include "Property.h"
 
-using namespace MM;
+namespace MM {
 
-
-TEST(FloatPropertyTruncationTests, SetValueIsTruncatedTo4Digits)
+TEST_CASE("Set value is truncated to 4 digits", "[FloatPropertyTruncation]")
 {
    FloatProperty fp("TestProp");
    double v;
 
-   ASSERT_TRUE(fp.Set(0.00004));
-   ASSERT_TRUE(fp.Get(v));
-   ASSERT_DOUBLE_EQ(0.0, v);
+   CHECK(fp.Set(0.00004));
+   CHECK(fp.Get(v));
+   CHECK(v == 0.0);
 
-   ASSERT_TRUE(fp.Set(0.00005));
-   ASSERT_TRUE(fp.Get(v));
-   ASSERT_DOUBLE_EQ(0.0001, v);
+   CHECK(fp.Set(0.00005));
+   CHECK(fp.Get(v));
+   CHECK(v == 0.0001);
 
-   ASSERT_TRUE(fp.Set(-0.00004));
-   ASSERT_TRUE(fp.Get(v));
-   ASSERT_DOUBLE_EQ(0.0, v);
+   CHECK(fp.Set(-0.00004));
+   CHECK(fp.Get(v));
+   CHECK(v == 0.0);
 
-   ASSERT_TRUE(fp.Set(-0.00005));
-   ASSERT_TRUE(fp.Get(v));
-   ASSERT_DOUBLE_EQ(-0.0001, v);
+   CHECK(fp.Set(-0.00005));
+   CHECK(fp.Get(v));
+   CHECK(v == -0.0001);
 }
 
-
-TEST(FloatPropertyTruncationTests, LowerLimitIsTruncatedUp)
+TEST_CASE("Lower limit is truncated up", "[FloatPropertyTruncation]")
 {
    FloatProperty fp("TestProp");
 
-   ASSERT_TRUE(fp.SetLimits(0.0, 1000.0));
-   ASSERT_DOUBLE_EQ(0.0, fp.GetLowerLimit());
-   ASSERT_TRUE(fp.SetLimits(0.00001, 1000.0));
-   ASSERT_DOUBLE_EQ(0.0001, fp.GetLowerLimit());
-   ASSERT_TRUE(fp.SetLimits(0.00011, 1000.0));
-   ASSERT_DOUBLE_EQ(0.0002, fp.GetLowerLimit());
+   CHECK(fp.SetLimits(0.0, 1000.0));
+   CHECK(fp.GetLowerLimit() == 0.0);
+   CHECK(fp.SetLimits(0.00001, 1000.0));
+   CHECK(fp.GetLowerLimit() == 0.0001);
+   CHECK(fp.SetLimits(0.00011, 1000.0));
+   CHECK(fp.GetLowerLimit() == 0.0002);
 
-   ASSERT_TRUE(fp.SetLimits(-0.0, 1000.0));
-   ASSERT_DOUBLE_EQ(0.0, fp.GetLowerLimit());
-   ASSERT_TRUE(fp.SetLimits(-0.00001, 1000.0));
-   ASSERT_DOUBLE_EQ(0.0, fp.GetLowerLimit());
-   ASSERT_TRUE(fp.SetLimits(-0.00011, 1000.0));
-   ASSERT_DOUBLE_EQ(-0.0001, fp.GetLowerLimit());
+   CHECK(fp.SetLimits(-0.0, 1000.0));
+   CHECK(fp.GetLowerLimit() == 0.0);
+   CHECK(fp.SetLimits(-0.00001, 1000.0));
+   CHECK(fp.GetLowerLimit() == 0.0);
+   CHECK(fp.SetLimits(-0.00011, 1000.0));
+   CHECK(fp.GetLowerLimit() == -0.0001);
 }
 
-
-TEST(FloatPropertyTruncationTests, UpperLimitIsTruncatedDown)
+TEST_CASE("Upper limit is truncated down", "[FloatPropertyTruncation]")
 {
    FloatProperty fp("TestProp");
 
-   ASSERT_TRUE(fp.SetLimits(-1000.0, 0.0));
-   ASSERT_DOUBLE_EQ(0.0, fp.GetUpperLimit());
-   ASSERT_TRUE(fp.SetLimits(-1000.0, 0.00001));
-   ASSERT_DOUBLE_EQ(0.0, fp.GetUpperLimit());
-   ASSERT_TRUE(fp.SetLimits(-1000.0, 0.00011));
-   ASSERT_DOUBLE_EQ(0.0001, fp.GetUpperLimit());
+   CHECK(fp.SetLimits(-1000.0, 0.0));
+   CHECK(fp.GetUpperLimit() == 0.0);
+   CHECK(fp.SetLimits(-1000.0, 0.00001));
+   CHECK(fp.GetUpperLimit() == 0.0);
+   CHECK(fp.SetLimits(-1000.0, 0.00011));
+   CHECK(fp.GetUpperLimit() == 0.0001);
 
-   ASSERT_TRUE(fp.SetLimits(-1000.0, -0.0));
-   ASSERT_DOUBLE_EQ(0.0, fp.GetUpperLimit());
-   ASSERT_TRUE(fp.SetLimits(-1000.0, -0.00001));
-   ASSERT_DOUBLE_EQ(-0.0001, fp.GetUpperLimit());
-   ASSERT_TRUE(fp.SetLimits(-1000.0, -0.00011));
-   ASSERT_DOUBLE_EQ(-0.0002, fp.GetUpperLimit());
+   CHECK(fp.SetLimits(-1000.0, -0.0));
+   CHECK(fp.GetUpperLimit() == 0.0);
+   CHECK(fp.SetLimits(-1000.0, -0.00001));
+   CHECK(fp.GetUpperLimit() == -0.0001);
+   CHECK(fp.SetLimits(-1000.0, -0.00011));
+   CHECK(fp.GetUpperLimit() == -0.0002);
 }
+
+} // namespace MM

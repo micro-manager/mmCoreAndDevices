@@ -1,8 +1,11 @@
 # This Meson script is experimental and potentially incomplete. It is not part
 # of the supported build system for Micro-Manager or mmCoreAndDevices.
 
-gtest_proj = subproject('gtest')
-gtest_dep = gtest_proj.get_variable('gtest_main_dep')
+catch2_with_main_dep = dependency(
+    'catch2-with-main',
+    allow_fallback: true,
+    include_type: 'system',
+)
 
 mmdevice_test_sources = files(
     'FloatPropertyTruncation-Tests.cpp',
@@ -14,7 +17,7 @@ mmdevice_test_exe = executable(
     sources: mmdevice_test_sources,
     include_directories: mmdevice_include_dir,
     link_with: mmdevice_lib,
-    dependencies: gtest_dep,
+    dependencies: catch2_with_main_dep,
 )
 
 test(
