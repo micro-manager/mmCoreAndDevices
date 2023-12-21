@@ -1,6 +1,7 @@
 // Mock device adapter for testing of device sequencing
 //
 // Copyright (C) 2014 University of California, San Francisco.
+//               2023 Board of Regents of the University of Wisconsin System
 //
 // This library is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License as published by the
@@ -27,7 +28,6 @@
 
 #include <msgpack.hpp>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <map>
@@ -60,9 +60,9 @@ class BoolSettingValue : public SettingValue
    const bool value_;
 public:
    BoolSettingValue(bool value) : value_(value) {}
-   virtual void Write(msgpack::sbuffer& sbuf) const;
-   virtual bool GetBool() const { return value_; }
-   virtual std::string GetString() const { return value_ ? "true" : "false"; }
+   void Write(msgpack::sbuffer& sbuf) const override;
+   bool GetBool() const override { return value_; }
+   std::string GetString() const override { return value_ ? "true" : "false"; }
 };
 
 
@@ -71,10 +71,10 @@ class IntegerSettingValue : public SettingValue
    const long value_;
 public:
    IntegerSettingValue(long value) : value_(value) {}
-   virtual void Write(msgpack::sbuffer& sbuf) const;
-   virtual long GetInteger() const { return value_; }
-   virtual std::string GetString() const
-   { return boost::lexical_cast<std::string>(value_); }
+   void Write(msgpack::sbuffer& sbuf) const override;
+   long GetInteger() const override { return value_; }
+   std::string GetString() const override
+   { return std::to_string(value_); }
 };
 
 
@@ -83,10 +83,10 @@ class FloatSettingValue : public SettingValue
    const double value_;
 public:
    FloatSettingValue(double value) : value_(value) {}
-   virtual void Write(msgpack::sbuffer& sbuf) const;
-   virtual double GetFloat() const { return value_; }
-   virtual std::string GetString() const
-   { return boost::lexical_cast<std::string>(value_); }
+   void Write(msgpack::sbuffer& sbuf) const override;
+   double GetFloat() const override { return value_; }
+   std::string GetString() const override
+   { return std::to_string(value_); }
 };
 
 
@@ -95,8 +95,8 @@ class StringSettingValue : public SettingValue
    const std::string value_;
 public:
    StringSettingValue(const std::string& value) : value_(value) {}
-   virtual void Write(msgpack::sbuffer& sbuf) const;
-   virtual std::string GetString() const { return value_; }
+   void Write(msgpack::sbuffer& sbuf) const override;
+   std::string GetString() const override { return value_; }
 };
 
 
@@ -104,8 +104,8 @@ class OneShotSettingValue : public SettingValue
 {
 public:
    OneShotSettingValue() {}
-   virtual void Write(msgpack::sbuffer& sbuf) const;
-   virtual std::string GetString() const { return "(one-shot)"; }
+   void Write(msgpack::sbuffer& sbuf) const override;
+   std::string GetString() const override { return "(one-shot)"; }
 };
 
 
@@ -118,7 +118,7 @@ public:
    SettingKey(const std::string& device, const std::string& key) :
       device_(device), key_(key)
    {}
-   virtual void Write(msgpack::sbuffer& sbuf) const;
+   void Write(msgpack::sbuffer& sbuf) const override;
    bool operator<(const SettingKey& rhs) const
    {
       return (this->device_ < rhs.device_) ||
@@ -139,8 +139,8 @@ public:
          uint64_t counterValue) :
       key_(key), value_(value), count_(counterValue)
    {}
-   virtual void Write(msgpack::sbuffer& sbuf) const;
-   virtual void Draw(TextImageCursor& cursor) const;
+   void Write(msgpack::sbuffer& sbuf) const override;
+   std::string AsText() const;
 };
 
 
@@ -160,8 +160,8 @@ public:
       cumulativeNr_(cumulativeNr),
       frameNr_(frameNr)
    {}
-   virtual void Write(msgpack::sbuffer& sbuf) const;
-   virtual void Draw(TextImageCursor& cursor) const;
+   void Write(msgpack::sbuffer& sbuf) const override;
+   std::string AsText() const;
 };
 
 
@@ -223,8 +223,7 @@ private:
    uint64_t GetNextCount() { return counter_++; }
    uint64_t GetNextGlobalImageNr() { return nextGlobalImageNr_++; }
    void WriteSettingMap(msgpack::sbuffer& sbuf, const SettingMap& values) const;
-   void DrawSettingMap(TextImageCursor& cursor,
-         const SettingMap& values) const;
+   std::string SettingMapAsText(const SettingMap& values) const;
    void WriteHistory(msgpack::sbuffer& sbuf) const;
-   void DrawHistory(TextImageCursor& cursor) const;
+   std::string HistoryAsText() const;
 };
