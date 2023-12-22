@@ -1,32 +1,26 @@
 # This Meson script is experimental and potentially incomplete. It is not part
 # of the supported build system for Micro-Manager or mmCoreAndDevices.
 
-gtest_proj = subproject('gtest')
-gtest_dep = gtest_proj.get_variable('gtest_dep')
+catch2_with_main_dep = dependency(
+    'catch2-with-main',
+    allow_fallback: true,
+    include_type: 'system',
+)
 
-# TODO: Use a single executable for all tests -- but that requires modifying
-# the sources (to remove main()), so needs to wait until we remove these tests
-# from the Automake build.
+mmdevice_test_sources = files(
+    'FloatPropertyTruncation-Tests.cpp',
+    'MMTime-Tests.cpp',
+)
 
-mmdevice_floatpropertytruncation_test_exe = executable(
-    'MMDeviceFloatPropertyTruncationTest',
-    sources: 'FloatPropertyTruncation-Tests.cpp',
+mmdevice_test_exe = executable(
+    'MMDeviceTests',
+    sources: mmdevice_test_sources,
     include_directories: mmdevice_include_dir,
     link_with: mmdevice_lib,
-    dependencies: gtest_dep,
+    dependencies: catch2_with_main_dep,
 )
 
 test(
-    'MMDevice FloatPropertyTruncation test',
-    mmdevice_floatpropertytruncation_test_exe,
+    'MMDevice unit tests',
+    mmdevice_test_exe,
 )
-
-mmdevice_mmtime_test_exe = executable(
-    'MMDeviceMMTimeTest',
-    sources: 'MMTime-Tests.cpp',
-    include_directories: mmdevice_include_dir,
-    link_with: mmdevice_lib,
-    dependencies: gtest_dep,
-)
-
-test('MMDevice MMTime test', mmdevice_mmtime_test_exe)

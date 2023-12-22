@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include <catch2/catch_all.hpp>
 
 #include "Logging/Logging.h"
 
@@ -8,10 +8,10 @@
 #include <thread>
 #include <vector>
 
-using namespace mm::logging;
+namespace mm {
+namespace logging {
 
-
-TEST(LoggerTests, BasicSynchronous)
+TEST_CASE("synchronous logger basics", "[Logger]")
 {
    std::shared_ptr<LoggingCore> c =
       std::make_shared<LoggingCore>();
@@ -26,7 +26,7 @@ TEST(LoggerTests, BasicSynchronous)
 }
 
 
-TEST(LoggerTests, BasicAsynchronous)
+TEST_CASE("asynchronous logger basics", "[Logger]")
 {
    std::shared_ptr<LoggingCore> c =
       std::make_shared<LoggingCore>();
@@ -41,7 +41,7 @@ TEST(LoggerTests, BasicAsynchronous)
 }
 
 
-TEST(LoggerTests, BasicLogStream)
+TEST_CASE("log stream basics", "[Logger]")
 {
    std::shared_ptr<LoggingCore> c =
       std::make_shared<LoggingCore>();
@@ -80,7 +80,7 @@ public:
 };
 
 
-TEST(LoggerTests, SyncAndThreaded)
+TEST_CASE("sync logger on thread", "[Logger]")
 {
    std::shared_ptr<LoggingCore> c =
       std::make_shared<LoggingCore>();
@@ -100,7 +100,7 @@ TEST(LoggerTests, SyncAndThreaded)
 }
 
 
-TEST(LoggerTests, AsyncAndThreaded)
+TEST_CASE("async logger on thread", "[Logger]")
 {
    std::shared_ptr<LoggingCore> c =
       std::make_shared<LoggingCore>();
@@ -119,9 +119,5 @@ TEST(LoggerTests, AsyncAndThreaded)
       threads[i]->join();
 }
 
-
-int main(int argc, char **argv)
-{
-   ::testing::InitGoogleTest(&argc, argv);
-   return RUN_ALL_TESTS();
-}
+} // namespace logging
+} // namespace mm
