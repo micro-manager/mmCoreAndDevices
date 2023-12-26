@@ -31,13 +31,8 @@ string PyObj::g_errorMessage;
 */
 bool PyObj::InitializeInterpreter(const string& module_path) noexcept
 {
-    // If the interpreter is already initialized, only change the search path
-    if (g_threadState != nullptr) {
-        g_set_path.Call(PyObj(module_path));
-        return true;
-    }
-
     if (!Py_IsInitialized()) {
+        // Start the Python interperter if it is not running yet
         //todo: windows specific
         auto path = fs::path();// python_home;
         auto env_path = _wgetenv(L"PYTHONHOME");
@@ -69,8 +64,7 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
         g_threadState = PyEval_SaveThread();
     }
     else {
-        // If a Python interpreter is already running (this happens when running from pymmcore), don't start a new interpreter again
-        // The path and home variables are ignored
+        // If a Python interpreter is already running (this also happens when running from pymmcore), don't start a new interpreter again
         PyLock lock;
         _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
     }
@@ -96,6 +90,23 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
     g_scan_devices = g_global_scope.GetDictItem("scan_devices");
     return ReportError();
 }
+
+/**
+ * @brief Clears all referencences to Python objects.
+ * Note, this does _not_ call Py_Finalize() because deinitializing/initializing Python multiple times is undefined behavior.
+ * Instead, we clean up as much as we can, making sure that this dll does not hold any refcount anymore.
+*/
+void PyObj::DeinitializeInterpreter() noexcept
+{
+    PyLock lock;
+    g_unit_um.Clear();
+    g_traceback_to_string.Clear();
+    g_scan_devices.Clear();
+    g_main_module.Clear();
+    g_global_scope.Clear();
+    g_set_path.Clear();
+}
+
 
 /**
  * @brief Compiles and executes the Python code

@@ -49,6 +49,7 @@ int CPyHub::Shutdown() {
         PyLock lock;
         devices_.clear();
         g_the_hub = nullptr;
+        PyObj::DeinitializeInterpreter();
     }
     return PyHubClass::Shutdown();
 }

@@ -218,6 +218,7 @@ public:
     }
    
     static bool InitializeInterpreter(const string& module_path) noexcept;
+    static void DeinitializeInterpreter() noexcept;
     static bool RunScript(const string& code, const string& file_name, const PyObj& locals) noexcept;
 
     /**
