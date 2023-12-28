@@ -133,3 +133,21 @@ class Camera:
 
 
 devices = {'cam': Camera()}
+
+# Code to test the device outside of micro-manager
+# Note: this code is likely to change since bootstrap.py
+# is not stable yet
+if __name__ == "__main__":
+    import sys
+    import os
+
+    # Get the parent directory of the current file
+    parent_dir = os.path.dirname(os.path.abspath(__file__))
+    # Add the parent directory to the search path
+    sys.path.insert(0, parent_dir)
+    import bootstrap
+
+    devices = bootstrap.scan_devices(devices)
+    c = devices['cam']
+    assert c._MM_dtype == 'Camera'
+

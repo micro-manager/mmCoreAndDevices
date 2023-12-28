@@ -168,27 +168,17 @@ int CPyHub::Initialize() {
             "If so, verify thatthe HOMEPATH environment is set to the correct value, or remove it."
             "Also, make sure that the desired Python installation is the first that is listed in the PATH environment variable.\n", true);
 
-        if (!PyObj::InitializeInterpreter(modulePath))
+        if (!PyObj::InitializeInterpreter())
             return CheckError(); // initializing the interpreter failed, abort initialization and report the error
 
+        PyLock lock;
         // execute the Python script, and read the 'devices' field,
-        // which must be a dictionary of {label: device}
-        PyLock lock; // lock, so that we can call bare Python API functions
-        auto module = PyImport_AddModule("__main__");
-        Py_INCREF(module);
-        auto locals_ = PyObj(PyModule_GetDict(module));
-        if (!PyObj::RunScript(script.c_str(), script_path_.filename().generic_u8string().c_str(), locals_))
-            return CheckError();
-
-        auto deviceDict = locals_.GetDictItem("devices");
+        auto deviceDict = PyObj::g_load_devices.Call(PyObj(modulePath), PyObj(script_path_.parent_path().generic_u8string()), PyObj(script_path_.stem().generic_u8string()));
         if (!deviceDict)
-            return ERR_PYTHON_NO_DEVICE_DICT;
+            return CheckError();
         
         // process device list and add metadata
-        auto deviceList = PyObj(PyDict_Items(PyObj::g_scan_devices.Call(deviceDict)));
-        if (!deviceList)
-            return CheckError();
-
+        auto deviceList = PyObj(PyDict_Items(deviceDict));
         auto device_count = PyList_Size(deviceList); // todo: move to PyObj? to assert lock?
         for (Py_ssize_t i = 0; i < device_count; i++) {
             auto key_value = deviceList.GetListItem(i);
@@ -202,8 +192,6 @@ int CPyHub::Initialize() {
 
         initialized_ = true;
         g_the_hub = this;
-
-        locals_.Clear();
     }
     return CheckError();
 }

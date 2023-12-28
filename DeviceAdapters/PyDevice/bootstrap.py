@@ -4,15 +4,8 @@ bootstrap = R"raw("
 # See RunScript() in PyDevice.cpp for the code that loads this script as a c++ string.
 
 import sys
-_original_path = sys.path.copy()
-def set_path(path):
-    sys.path = [*_original_path, *path.split(';')]
-if '_EXTRA_SEARCH_PATH' in locals():
-    set_path(_EXTRA_SEARCH_PATH)
-
-import numpy as np
+import importlib
 from typing import Protocol, runtime_checkable, get_origin, Annotated
-import os
 import traceback
 import astropy.units as u
 import concurrent.futures
@@ -181,5 +174,14 @@ def scan_devices(devices):
 
 def traceback_to_string(tb):
     return ''.join(traceback.format_tb(tb))
+
+def load_devices(module_path, script_path, script_name) -> dict:
+    _original_path = sys.path.copy()
+    try:
+        sys.path = [*_original_path, *module_path.split(';'), script_path]
+        script = importlib.import_module(script_name)
+        return scan_devices(script.devices)
+    finally:
+        sys.path = _original_path
 
 # )raw";

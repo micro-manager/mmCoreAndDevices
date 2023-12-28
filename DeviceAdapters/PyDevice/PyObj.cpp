@@ -4,8 +4,7 @@
 PyObj PyObj::g_unit_um;
 
 PyObj PyObj::g_traceback_to_string;
-PyObj PyObj::g_set_path;
-PyObj PyObj::g_scan_devices;
+PyObj PyObj::g_load_devices;
 PyObj PyObj::g_main_module;
 PyObj PyObj::g_global_scope;
 PyThreadState* PyObj::g_threadState = nullptr;
@@ -29,7 +28,7 @@ string PyObj::g_errorMessage;
 @param module_path Additional folders to search for modules, separated by ';'.
 @return true on success, false on failure (the g_errorMessage field will be set).
 */
-bool PyObj::InitializeInterpreter(const string& module_path) noexcept
+bool PyObj::InitializeInterpreter() noexcept
 {
     if (!Py_IsInitialized()) {
         // Start the Python interperter if it is not running yet
@@ -46,17 +45,22 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
             GetModuleFileName(hModule, dllPath, _MAX_PATH);
             path = fs::path(dllPath).parent_path();
         }
+        // To initialize Python using the stable API, some functions (SetPythonHome, SetPath, InitializeEx) are needed.
+        // Strangely, these functions are deprecated since Python 3.11 and no alternatives are provided.
+        // As a workaround, suppress the warning.
+#pragma warning(push)
 #pragma warning(disable: 4996)
         Py_SetPythonHome(path.generic_wstring().c_str());
 
         // set the module search path if it is specified in an environmental variable
+        // note that additional search paths can be specified by the user. These paths are only used during the 'load_script' call.
         auto base_module_path = _wgetenv(L"PYTHONPATH");
-        if (base_module_path && base_module_path[0] != 0) {
-#pragma warning(disable: 4996)
+        if (base_module_path && base_module_path[0] != 0)
             Py_SetPath(base_module_path);
-        }
 
         Py_InitializeEx(0); // Python may cause a crash here (all exit()) if the runtime cannot be initialized. There seems to be nothing we can do about this in the LIMITED api.
+
+#pragma warning(pop)
         _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
 
         // allow multi threading and store the thread state (global interpreter lock).
@@ -68,26 +72,33 @@ bool PyObj::InitializeInterpreter(const string& module_path) noexcept
         PyLock lock;
         _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
     }
-    
 
     // run the bootstrapping script
     const char* bootstrap;
     #include "bootstrap.py"
             
     PyLock lock;
-    g_main_module = PyObj(PyImport_AddModule("__main__"));
-    Py_INCREF(g_main_module);
-    g_global_scope = PyObj(PyModule_GetDict(g_main_module));
-    g_global_scope.SetDictItem("_EXTRA_SEARCH_PATH", module_path);
-    if (!RunScript(&bootstrap[1], "bootstrap.py", g_global_scope))
-        return false;
-    
+    auto module = PyObj(PyModule_New("pydevice"));
+    // Set properties on the new module object
+    if (PyModule_AddStringConstant(module, "__file__", "pydevice") != 0)
+        return ReportError();
+
+    g_global_scope = PyObj::Borrow(PyModule_GetDict(module));   // Returns a borrowed reference: no need to Py_DECREF() it once we are done
+    auto builtins = PyObj::Borrow(PyEval_GetBuiltins());  // Returns a borrowed reference: no need to Py_DECREF() it once we are done
+    if (PyDict_SetItemString(g_global_scope, "__builtins__", builtins) != 0)
+        return ReportError();
+
+    auto bootstrap_code = PyObj(Py_CompileString(&bootstrap[1], "bootstrap.py", Py_file_input));
+    if (!bootstrap_code)
+        return ReportError();
+
+    if (PyEval_EvalCode(bootstrap_code, g_global_scope, g_global_scope) == nullptr)
+        return ReportError();
+
     // get the um unit for use with stages
     g_unit_um = g_global_scope.GetDictItem("unit_um");
-
     g_traceback_to_string = g_global_scope.GetDictItem("traceback_to_string");
-    g_set_path = g_global_scope.GetDictItem("set_path");
-    g_scan_devices = g_global_scope.GetDictItem("scan_devices");
+    g_load_devices = g_global_scope.GetDictItem("load_devices");
     return ReportError();
 }
 
@@ -101,10 +112,9 @@ void PyObj::DeinitializeInterpreter() noexcept
     PyLock lock;
     g_unit_um.Clear();
     g_traceback_to_string.Clear();
-    g_scan_devices.Clear();
+    g_load_devices.Clear();
     g_main_module.Clear();
     g_global_scope.Clear();
-    g_set_path.Clear();
 }
 
 

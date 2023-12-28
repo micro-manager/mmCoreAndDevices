@@ -217,7 +217,7 @@ public:
         return PyObj(PyNumber_TrueDivide(p_, other));
     }
    
-    static bool InitializeInterpreter(const string& module_path) noexcept;
+    static bool InitializeInterpreter() noexcept;
     static void DeinitializeInterpreter() noexcept;
     static bool RunScript(const string& code, const string& file_name, const PyObj& locals) noexcept;
 
@@ -232,17 +232,15 @@ public:
     static PyThreadState* g_threadState;
     static PyObj g_unit_um;
     static PyObj g_traceback_to_string;
-    static PyObj g_scan_devices;
+    static PyObj g_load_devices;
     static PyObj g_main_module;
     static PyObj g_global_scope;
-    static PyObj g_set_path;
-
-private:
-    /**
-* Takes a borrowed reference and wraps it in a PyObj smart pointer
-* This increases the reference count of the object.
-* The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
-*/
+ private:
+     /**
+    * Takes a borrowed reference and wraps it in a PyObj smart pointer
+    * This increases the reference count of the object.
+    * The reference count is decreased when the PyObj smart pointer is destroyed (or goes out of scope).
+    */
     static PyObj Borrow(PyObject* obj) {
         if (obj) {
             PyLock lock;
