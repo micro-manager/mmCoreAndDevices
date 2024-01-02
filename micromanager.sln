@@ -479,6 +479,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WOSM", "DeviceAdapters\WOSM\WOSM.vcxproj", "{64E94A9E-B3AE-47EF-8F5A-0356B0E6B9DA}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IDSPeak", "DeviceAdapters\IDSPeak\IDSPeak.vcxproj", "{823CF77E-8120-41B1-9B25-823A79C93198}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QSI", "DeviceAdapters\QSI\QSI.vcxproj", "{320AF64E-C4FC-4A97-A7D1-F8233A8A44C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1442,6 +1443,10 @@ Global
 		{823CF77E-8120-41B1-9B25-823A79C93198}.Debug|x64.Build.0 = Debug|x64
 		{823CF77E-8120-41B1-9B25-823A79C93198}.Release|x64.ActiveCfg = Release|x64
 		{823CF77E-8120-41B1-9B25-823A79C93198}.Release|x64.Build.0 = Release|x64
+		{320AF64E-C4FC-4A97-A7D1-F8233A8A44C7}.Debug|x64.ActiveCfg = Debug|x64
+		{320AF64E-C4FC-4A97-A7D1-F8233A8A44C7}.Debug|x64.Build.0 = Debug|x64
+		{320AF64E-C4FC-4A97-A7D1-F8233A8A44C7}.Release|x64.ActiveCfg = Release|x64
+		{320AF64E-C4FC-4A97-A7D1-F8233A8A44C7}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
