@@ -1,6 +1,6 @@
 /*
 File:		MCL_NanoDrive_ZStage.cpp
-Copyright:	Mad City Labs Inc., 2019
+Copyright:	Mad City Labs Inc., 2023
 License:	Distributed under the BSD license.
 */
 #include "MCL_Common.h"
@@ -10,6 +10,13 @@ License:	Distributed under the BSD license.
 #include <string>
 
 MCL_NanoDrive_ZStage::MCL_NanoDrive_ZStage() :	
+	axis_(0),
+	calibration_(0.0),
+	dacBits_(0),
+	lowerLimit_(0.0),
+	upperLimit_(0.0),
+	serialNumber_(0),
+	stepSize_um_(0.0),
 	axisUsedForTirfControl_(false),
 	canSupportSeq_(false),
 	commandedZ_(0),
@@ -645,6 +652,8 @@ int MCL_NanoDrive_ZStage::InitDeviceAdapter()
 	}
 	supportsLastCommanded_ = (pi.FirmwareProfile & PROFILE_BIT_SUPPORTS_LASTCOMMANDED) != 0;
 
+	productID_ = pi.Product_id;
+
 	int err = CreateZStageProperties();
 	if (err != DEVICE_OK)
 		return err;
@@ -693,8 +702,15 @@ int MCL_NanoDrive_ZStage::CreateZStageProperties()
 
 	// Device serial number (read-only)
 	memset(valueBuffer, 0, valueBufferSize);
-	sprintf_s(valueBuffer, valueBufferSize, "%d", MCL_GetSerialNumber(handle_));
+	sprintf_s(valueBuffer, valueBufferSize, "%d",serialNumber_);
 	err = CreateProperty(g_Keyword_SerialNumber, valueBuffer, MM::String, true);
+	if (err != DEVICE_OK)
+		return err;
+
+	// Product ID (read-only)
+	memset(valueBuffer, 0, valueBufferSize);
+	sprintf_s(valueBuffer, valueBufferSize, "%d", productID_);
+	err = CreateProperty(g_Keyword_ProductID, valueBuffer, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 

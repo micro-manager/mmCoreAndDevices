@@ -1,6 +1,6 @@
 /*
 File:		MCL_NanoDrive_XYStage.h
-Copyright:	Mad City Labs Inc., 2019
+Copyright:	Mad City Labs Inc., 2023
 License:	Distributed under the BSD license.
 */
 #pragma once 
@@ -71,6 +71,7 @@ private:
 
 	int handle_;
 	int serialNumber_;
+	int productID_;
 	int axisX_;
 	int axisY_;
 	double calibrationX_;

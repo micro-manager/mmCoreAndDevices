@@ -29,6 +29,12 @@
     <ClCompile Include="mdutils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AcquireDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MadTweezer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MCL_MicroDrive.h">
@@ -50,6 +56,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="mdutils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AcquireDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MadTweezer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
