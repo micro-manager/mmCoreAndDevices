@@ -155,6 +155,7 @@ SUBDIRS = \
 	NewportSMC \
 	Nikon \
 	NikonTE2000 \
+	NotificationTester \
 	OVP_ECS2 \
 	Omicron \
 	Oxxius \
