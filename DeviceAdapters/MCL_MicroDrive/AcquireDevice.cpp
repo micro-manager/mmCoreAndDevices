@@ -1,21 +1,26 @@
 /*
-File:		MCL_Common.cpp
+File:		AcquireDevice.cpp
 Copyright:	Mad City Labs Inc., 2023
 License:	Distributed under the BSD license.
 */
 
 // MCL headers
-#include "Madlib.h"
-#include "MCL_Common.h"
-#include "MCL_NanoDrive.h"
+#include "MicroDrive.h"
+#include "AcquireDevice.h"
+#include "MCL_MicroDrive.h"
 
 // List/heap headers
 #include "handle_list_if.h"
 #include "HandleListType.h"
 
+#include <vector>
+using namespace std;
+
 static int ChooseAvailableXYStageAxes(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices);
 
 static int ChooseAvailableZStageAxis(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices);
+
+static int ChooseAvailableMadTweezerStageAxis(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices);
 
 static bool FindMatchingDevice(int deviceAdapterType, int &deviceAdapterHandle, int &deviceAdapterAxis);
 
@@ -34,7 +39,7 @@ int AcquireDeviceHandle(int deviceType, int &deviceAdapterHandle, int &deviceAda
 	if (foundDevice)
 	{
 		// If we found a device add it to our list.
-		HandleListType newDeviceAdapter(deviceAdapterHandle, deviceType, deviceAdapterAxis, (deviceType == Z_TYPE ? 0 : (deviceAdapterAxis + 1)));
+		HandleListType newDeviceAdapter(deviceAdapterHandle, deviceType, deviceAdapterAxis, (deviceType == XYSTAGE_TYPE ? (deviceAdapterAxis + 1) : 0));
 		HandleListAddToLockedList(newDeviceAdapter);
 	}
 
@@ -63,7 +68,7 @@ bool FindMatchingDevice(int deviceAdapterType, int &deviceAdapterHandle, int &de
 			return true;
 	}
 
-	// Next search through all available Nano-Drive systems.
+	// Next search through all available Micro-Drive systems.
 	int handlesCount = MCL_GrabAllHandles();
 	if (handlesCount == 0)
 	{
@@ -88,14 +93,20 @@ bool FindMatchingDeviceInList(int deviceAdapterType, int *handles, int handlesCo
 	deviceAdapterAxis = 0;
 	for (int ii = 0; ii < handlesCount; ii++)
 	{
-		ProductInformation pi;
-		if (MCL_GetProductInfo(&pi, handles[ii]) != MCL_SUCCESS)
+		unsigned short pid = 0;
+		unsigned char axisBitmap = 0;
+
+		if (MCL_GetProductID(&pid, handles[ii]) != MCL_SUCCESS)
+			continue;
+		if (MCL_GetAxisInfo(&axisBitmap, handles[ii]) != MCL_SUCCESS)
 			continue;
 
-		if (deviceAdapterType == XY_TYPE)
-			deviceAdapterAxis = ChooseAvailableXYStageAxes(pi.Product_id, pi.axis_bitmap, handles[ii], useStrictMatcingCriteria);
-		else if (deviceAdapterType == Z_TYPE)
-			deviceAdapterAxis = ChooseAvailableZStageAxis(pi.Product_id, pi.axis_bitmap, handles[ii], useStrictMatcingCriteria);
+		if (deviceAdapterType == XYSTAGE_TYPE)
+			deviceAdapterAxis = ChooseAvailableXYStageAxes(pid, axisBitmap, handles[ii], useStrictMatcingCriteria);
+		else if (deviceAdapterType == STAGE_TYPE)
+			deviceAdapterAxis = ChooseAvailableZStageAxis(pid, axisBitmap, handles[ii], useStrictMatcingCriteria);
+		else if(deviceAdapterType == MADTWEEZER_TYPE)
+			deviceAdapterAxis = ChooseAvailableMadTweezerStageAxis(pid, axisBitmap, handles[ii], useStrictMatcingCriteria);
 
 		if (deviceAdapterAxis != 0)
 		{
@@ -126,32 +137,26 @@ void ReleaseUnusedDevices()
 	}
 }
 
+
 int ChooseAvailableXYStageAxes(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices)
 {
-	int ordersize = 2;
-	int order[] = { XAXIS, 0 };
-	int strictOrder[] = { XAXIS, 0 };
+	int ordersize = 3;
+	int order[] = { M1AXIS, M4AXIS};
+	int strictOrder[] = { M1AXIS, 0 };
 
 	switch (pid)
 	{
-		// These devices should not be used as a XY Stage device.
-		case NANODRIVE_FX_Z_ENCODER:
-		case NANOGAUGE_FX2:
-		case NANODRIVE_FX2_DDS:
-		case NANODRIVE_FX_1AXIS:
-		case NANODRIVE_FX2_1AXIS:
-		case NANODRIVE_FX2_1AXIS_20:
-		case NANODRIVE_FX2_CFOCUS:
-			return 0;
-
-		// Four axis systems can have two XY Stage adapters.
-		case NANODRIVE_FX2_4AXIS:
-			order[1] = ZAXIS;
-			break;
-
+	case MADTWEEZER:
+		return 0;
+	case MICRODRIVE:
+	case NC_MICRODRIVE:
+	case MICRODRIVE3:
+	case MICRODRIVE4:
+		order[1] = 0;
+		break;
 		// Use the standard order.
-		default:
-			break;
+	default:
+		break;
 	}
 
 	int *chosenOrder = useStrictChoices ? strictOrder : order;
@@ -168,7 +173,7 @@ int ChooseAvailableXYStageAxes(unsigned short pid, unsigned char axisBitmap, int
 			((axisBitmap & yBitmap) != yBitmap))
 			continue;
 
-		HandleListType device(handle, XY_TYPE, chosenOrder[ii], chosenOrder[ii] + 1);
+		HandleListType device(handle, XYSTAGE_TYPE, chosenOrder[ii], chosenOrder[ii] + 1);
 		if (HandleExistsOnLockedList(device) == false)
 		{
 			axis = chosenOrder[ii];
@@ -178,31 +183,56 @@ int ChooseAvailableXYStageAxes(unsigned short pid, unsigned char axisBitmap, int
 	return axis;
 }
 
+
 int ChooseAvailableZStageAxis(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices)
 {
-	int ordersize = 4;
-	int order[] = { ZAXIS, AAXIS, XAXIS, YAXIS };
-	int strictOrder[] = { ZAXIS, AAXIS, 0, 0 };
+	int ordersize = 6;
+	int order[] = { M1AXIS, M2AXIS, M3AXIS, M4AXIS, M5AXIS, M6AXIS };
+	int strictOrder[] = { M3AXIS, M4AXIS, M5AXIS, M6AXIS, 0, 0 };
 
 	switch (pid)
 	{
-		// These devices should not be used as Z Stage devices.
-		case NANODRIVE_FX_Z_ENCODER:
-		case NANOGAUGE_FX2:
-		case NANODRIVE_FX2_DDS:
-			return 0;
-		// Single axis devices should use the default order for their strict implementation.
-		case NANODRIVE_FX_1AXIS:
-		case NANODRIVE_FX2_1AXIS:
-		case NANODRIVE_FX2_1AXIS_20:
-		case NANODRIVE_FX2_CFOCUS:
-			strictOrder[2] = XAXIS;
-			strictOrder[3] = YAXIS;
-			break;
-		// In all other cases uses the standard order.
-		default:
-			break;
+		// These devices should be used as XY Stage devices.
+	case MICRODRIVE:
+	case NC_MICRODRIVE:
+		return 0;
+	case MICRODRIVE3:
+	{
+		int neworder[] = { M3AXIS, M2AXIS, M1AXIS, 0, 0, 0 };
+		copy(neworder, neworder + ordersize, order);
+		break;
 	}
+	// For 4 and 6 axis systems leave M1/M2 for an XY Stage.
+	case MICRODRIVE4:
+	{
+		int neworder[] = { M3AXIS, M4AXIS, 0, 0, 0, 0 };
+		copy(neworder, neworder + ordersize, order);
+		break;
+	}
+	case MICRODRIVE6:
+	{
+		int neworder[] = { M3AXIS, M6AXIS, M4AXIS, M5AXIS, 0, 0 };
+		copy(neworder, neworder + ordersize, order);
+		break;
+	}
+	case MICRODRIVE1:
+	{
+		int neworder[] = { M1AXIS, M2AXIS, M3AXIS, 0, 0, 0 };
+		copy(neworder, neworder + ordersize, order);
+		break;
+	}
+	case MADTWEEZER:
+	{
+		// The strictOrder and order for MadTweezer are identical.
+		int neworder[] = { M1AXIS, 0, 0, 0, 0, 0 };
+		copy(neworder, neworder + ordersize, order);		
+		copy(neworder, neworder + ordersize, strictOrder);
+		break;
+	}
+	// Use the standard order.
+	default:
+		break;
+	}	
 
 	int *chosenOrder = useStrictChoices ? strictOrder : order;
 	int axis = 0;
@@ -217,7 +247,40 @@ int ChooseAvailableZStageAxis(unsigned short pid, unsigned char axisBitmap, int 
 			continue;
 
 		// Check if a matching device is already in our list of controlled devices.
-		HandleListType device(handle, Z_TYPE, chosenOrder[ii], 0);
+		HandleListType device(handle, STAGE_TYPE, chosenOrder[ii], 0);
+		if (HandleExistsOnLockedList(device) == false)
+		{
+			// If there is no conflict we can choose 
+			axis = chosenOrder[ii];
+			break;
+		}
+	}
+	return axis;
+}
+
+int ChooseAvailableMadTweezerStageAxis(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices)
+{
+	int ordersize = 1;
+	int order[] = { M2AXIS };
+	int strictOrder[] = { M2AXIS };
+
+	if (pid != MADTWEEZER)
+		return 0;
+
+	int *chosenOrder = useStrictChoices ? strictOrder : order;
+	int axis = 0;
+	for (int ii = 0; ii < ordersize; ii++)
+	{
+		if (chosenOrder[ii] == 0)
+			break;
+
+		// Check that the axis is valid.
+		int bitmap = 0x1 << (chosenOrder[ii] - 1);
+		if ((axisBitmap & bitmap) != bitmap)
+			continue;
+
+		// Check if a matching device is already in our list of controlled devices.
+		HandleListType device(handle, MADTWEEZER_TYPE, chosenOrder[ii], 0);
 		if (HandleExistsOnLockedList(device) == false)
 		{
 			// If there is no conflict we can choose 

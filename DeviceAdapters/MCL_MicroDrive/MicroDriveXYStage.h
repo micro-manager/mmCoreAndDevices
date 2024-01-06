@@ -1,6 +1,6 @@
 /*
 File:		MicroDriveXYStage.h
-Copyright:	Mad City Labs Inc., 2019
+Copyright:	Mad City Labs Inc., 2023
 License:	Distributed under the BSD license.
 */
 #ifndef _MICRODRIVEXYSTAGE_H_
@@ -24,6 +24,7 @@ License:	Distributed under the BSD license.
 #define ERR_UNKNOWN_POSITION     103
 #define ERR_NOT_VALID_INPUT      104
 
+
 class MicroDriveXYStage : public CXYStageBase<MicroDriveXYStage>
 {
 public:
@@ -41,7 +42,6 @@ public:
    virtual int SetPositionSteps(long x, long y);
    virtual int GetPositionSteps(long& x, long& y);
    virtual int Home();
-   virtual int Stop();
    virtual int SetOrigin();
    virtual int GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax);
    virtual int GetStepLimits(long &xMin, long &xMax, long &yMin, long &yMax);
@@ -58,7 +58,7 @@ public:
    int OnMoveXmm(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMoveYmm(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSetOriginHere(MM::PropertyBase* pProp, MM::ActionType eAct);  
-   int OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct);      
+   int OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct);  
    int OnReturnToOrigin(MM::PropertyBase* pProp, MM::ActionType eAct);  
    int OnPositionXYmm(MM::PropertyBase* pProp, MM::ActionType eAct);  
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);  
@@ -69,27 +69,30 @@ public:
    int OnIsTirfModuleAxis1(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnIsTirfModuleAxis2(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFindEpi(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnStop(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    // Initialization
    int CreateMicroDriveXYProperties();
+   int InitDeviceAdapter();
 
    // Set/Get positions
-   int SetPositionMm(double x, double y);
+   int SetPositionMmSync(double x, double y);
    int GetPositionMm(double& x, double& y);
-   int SetRelativePositionMm(double x, double y);
-   int SetPositionXSteps(long x);
-   int SetPositionYSteps(long y);
+   int SetRelativePositionMmSync(double x, double y);
 
    // Calibration & origin methods
-   int Calibrate();
-   int MoveToForwardLimits();
-   int ReturnToOrigin();
-   int FindEpi();
+   int CalibrateSync();
+   int MoveToForwardLimitsSync();
+   int ReturnToOriginSync();
+   int FindEpiSync();
+   int SetOriginSync();
+
+   int ConvertRelativeToAbsoluteMm(double relX, double relY, double &absX, double &absY);
 
    // Pause devices
-   void PauseDevice(); 
-   int ChooseAvailableXYStageAxes(unsigned short pid, unsigned char axisBitmap, int handle);
+   void PauseDevice();
+   int Stop();
 
    // Check if blocked
    bool XMoveBlocked(double possNewPos);
@@ -97,12 +100,17 @@ private:
 
    void GetOrientation(bool& mirrorX, bool& mirrorY);
 
+   // Threading
+   int BeginMovementThread(int type, double distanceX, double distanceY);
+   static DWORD WINAPI ExecuteMovement(LPVOID lpParam);   
+
    // Device Information
    int handle_;
    int serialNumber_;
    unsigned short pid_;
    int axis1_;
    int axis2_;
+   unsigned char axisBitmap_;
    double stepSize_mm_;
    double encoderResolution_; 
    double maxVelocity_;
@@ -111,7 +119,6 @@ private:
    double minVelocity_;
    double velocity_;
    // Device State
-   bool busy_;
    bool initialized_;
    bool encoded_;
    double lastX_;
@@ -126,6 +133,13 @@ private:
    bool axis2IsTirfModule_;
    bool hasUnknownTirfModuleAxis_;
    double tirfModCalibrationMm_;
+   // Threading
+   bool stopCommanded_;
+   int movementType_;
+   double movementDistanceX_;
+   double movementDistanceY_;
+   HANDLE movementThread_;
+   HANDLE threadStartMutex_;
 };
 
 

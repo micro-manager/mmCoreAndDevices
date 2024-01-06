@@ -85,16 +85,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AcquireDevice.cpp" />
     <ClCompile Include="HandleListType.cpp" />
     <ClCompile Include="handle_list_if.cpp" />
+    <ClCompile Include="MadTweezer.cpp" />
     <ClCompile Include="MCL_MicroDrive.cpp" />
     <ClCompile Include="mdutils.cpp" />
     <ClCompile Include="MicroDriveXYStage.cpp" />
     <ClCompile Include="MicroDriveZStage.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AcquireDevice.h" />
     <ClInclude Include="HandleListType.h" />
     <ClInclude Include="handle_list_if.h" />
+    <ClInclude Include="MadTweezer.h" />
     <ClInclude Include="MCL_MicroDrive.h" />
     <ClInclude Include="mdutils.h" />
     <ClInclude Include="MicroDrive.h" />
