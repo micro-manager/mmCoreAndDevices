@@ -54,18 +54,9 @@ public:
                return;
             }
          }
-         // Avoid delay scheduling for async zero-delay, for close (though not
-         // quite atomic) sync with busy state. (Atomicity between device state
-         // and notifications is not meaningfully achievable with the MMDevice
-         // API, nor is it what notifications are meant for.)
-         if (isAsync_ && delayer_.Delay().count() > 0) {
-            delayer_.Schedule([this, pv = std::to_string(pv)] {
-               this->OnPropertyChanged(PROPNAME_TEST_PROPERTY, pv.c_str());
-            });
-         } else {
-            this->OnPropertyChanged(PROPNAME_TEST_PROPERTY,
-                                    std::to_string(pv).c_str());
-         }
+         delayer_.Schedule([this, pv = std::to_string(pv)]{
+            this->OnPropertyChanged(PROPNAME_TEST_PROPERTY, pv.c_str());
+         });
       })
    {}
 

@@ -27,7 +27,8 @@
 
 // DelayedNotifier calls scheduled callables after a delay relative to when
 // they are scheduled. The delay is fixed at the time of scheduling, and
-// actions are always called on a background thread, even if the delay is zero.
+// actions are always called on a background thread, except when the delay is
+// zero, in which case the action is called on the scheduling thread.
 // Member functions are thread-safe.
 
 class DelayedNotifier {
@@ -112,16 +113,25 @@ public:
 
    void Schedule(std::function<void()> action) {
       assert(action);
-      std::call_once(threadStarted_, [this] { // Lazy-start thread
-         notifyThread_ = std::thread([this] { IssueNotifications(); });
-	  });
+      bool callSync{};
       bool needToInterruptWait{};
       {
          std::lock_guard<std::mutex> lock(mut_);
-         const auto prevTimeout = NextTimeout();
-         const auto timeout = Clock::now() + delay_;
-         scheduledItems_.emplace(timeout, action);
-         needToInterruptWait = timeout < prevTimeout;
+         if (delay_.count() == 0) {
+            callSync = true;
+         } else {
+            const auto prevTimeout = NextTimeout();
+            const auto timeout = Clock::now() + delay_;
+            scheduledItems_.emplace(timeout, action);
+            needToInterruptWait = timeout < prevTimeout;
+         }
+      }
+      if (callSync) {
+         action();
+      } else {
+         std::call_once(threadStarted_, [this] { // Lazy-start thread
+            notifyThread_ = std::thread([this] { IssueNotifications(); });
+         });
       }
       if (needToInterruptWait) {
          cv_.notify_one();
