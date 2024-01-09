@@ -102,6 +102,21 @@ public:
                return DEVICE_OK;
             }));
 
+      this->CreateFloatProperty("ExternallySet", model_.Setpoint(), false,
+            new MM::ActionLambda([this](MM::PropertyBase* pProp,
+                                        MM::ActionType eAct) {
+               if (eAct == MM::BeforeGet) {
+                  // Keep last-set value
+               } else if (eAct == MM::AfterSet) {
+                  double value{};
+                  pProp->Get(value);
+                  this->LogMessage(("sp = " + std::to_string(value) +
+                                    " (external)").c_str(), true);
+                  model_.Setpoint(value);
+               }
+               return DEVICE_OK;
+            }));
+
       if (isAsync_) {
          this->CreateFloatProperty("SlewTimePerUnit_s",
                model_.ReciprocalSlewRateSeconds(), false,
