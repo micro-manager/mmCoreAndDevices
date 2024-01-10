@@ -24,7 +24,6 @@
 #include <cmath>
 #include <mutex>
 #include <string>
-#include <type_traits>
 #include <utility>
 
 constexpr char DEVNAME_SYNC_PROPERTY[] = "NTSyncProperty";
@@ -36,9 +35,6 @@ constexpr char PROPNAME_TEST_PROPERTY[] = "TestProperty";
 template <typename ProcModel>
 class NTestProp : public CGenericBase<NTestProp<ProcModel>>
 {
-   static constexpr bool isAsync_ =
-         std::is_same<ProcModel, AsyncProcessModel>::value;
-
    std::string name_;
    ProcModel model_;
    DelayedNotifier delayer_;
@@ -49,15 +45,15 @@ class NTestProp : public CGenericBase<NTestProp<ProcModel>>
 public:
    explicit NTestProp(std::string name) :
       name_(std::move(name)),
-      model_([this](double pv) {
-         this->LogMessage(("PV = " + std::to_string(pv)).c_str(), true);
+      model_([this](std::array<double, 1> pv) {
+         this->LogMessage(("PV = " + std::to_string(pv[0])).c_str(), true);
          {
             std::lock_guard<std::mutex> lock(notificationMut_);
             if (!notificationsEnabled_) {
                return;
             }
          }
-         delayer_.Schedule([this, pv = std::to_string(pv)]{
+         delayer_.Schedule([this, pv = std::to_string(pv[0])]{
             this->LogMessage(("Notifying: PV = " + pv).c_str(), true);
             this->OnPropertyChanged(PROPNAME_TEST_PROPERTY, pv.c_str());
          });
@@ -82,22 +78,22 @@ public:
       this->AddAllowedValue("NotificationsEnabled", "Yes");
 
       this->CreateFloatProperty(PROPNAME_TEST_PROPERTY,
-            model_.ProcessVariable(), false,
+            model_.ProcessVariable()[0], false,
             new MM::ActionLambda([this](MM::PropertyBase* pProp,
                                         MM::ActionType eAct) {
                if (eAct == MM::BeforeGet) {
-                  pProp->Set(model_.ProcessVariable());
+                  pProp->Set(model_.ProcessVariable()[0]);
                } else if (eAct == MM::AfterSet) {
                   double value{};
                   pProp->Get(value);
                   this->LogMessage(
                         ("sp = " + std::to_string(value)).c_str(), true);
-                  model_.Setpoint(value);
+                  model_.Setpoint({value});
                }
                return DEVICE_OK;
             }));
 
-      this->CreateFloatProperty("ExternallySet", model_.Setpoint(), false,
+      this->CreateFloatProperty("ExternallySet", model_.Setpoint()[0], false,
             new MM::ActionLambda([this](MM::PropertyBase* pProp,
                                         MM::ActionType eAct) {
                if (eAct == MM::BeforeGet) {
@@ -107,12 +103,12 @@ public:
                   pProp->Get(value);
                   this->LogMessage(("sp = " + std::to_string(value) +
                                     " (external)").c_str(), true);
-                  model_.Setpoint(value);
+                  model_.Setpoint({value});
                }
                return DEVICE_OK;
             }));
 
-      if (isAsync_) {
+      if (ProcModel::isAsync) {
          this->CreateFloatProperty("SlewTimePerUnit_s",
                model_.ReciprocalSlewRateSeconds(), false,
                new MM::ActionLambda([this](MM::PropertyBase* pProp,
@@ -185,9 +181,6 @@ public:
 template <typename ProcModel>
 class NTestStage : public CStageBase<NTestStage<ProcModel>>
 {
-   static constexpr bool isAsync_ =
-         std::is_same<ProcModel, AsyncProcessModel>::value;
-
    // The process model operates in steps (only set to integers; round upon
    // readout).
    static constexpr double umPerStep_ = 0.1;
@@ -202,8 +195,8 @@ class NTestStage : public CStageBase<NTestStage<ProcModel>>
 public:
    explicit NTestStage(std::string name) :
       name_(std::move(name)),
-      model_([this](double pv) {
-         long ipv = std::lround(pv);
+      model_([this](std::array<double, 1> pv) {
+         const long ipv = std::lround(pv[0]);
          this->LogMessage(("PV = " + std::to_string(ipv)).c_str(), true);
          {
             std::lock_guard<std::mutex> lock(notificationMut_);
@@ -242,7 +235,7 @@ public:
       this->AddAllowedValue("NotificationsEnabled", "Yes");
 
       this->CreateIntegerProperty("ExternallySetSteps",
-            static_cast<long>(model_.Setpoint()), false,
+            static_cast<long>(model_.Setpoint()[0]), false,
             new MM::ActionLambda([this](MM::PropertyBase* pProp,
                                         MM::ActionType eAct) {
                if (eAct == MM::BeforeGet) {
@@ -252,12 +245,12 @@ public:
                   pProp->Get(value);
                   this->LogMessage(("sp = " + std::to_string(value) +
                                     " (external)").c_str(), true);
-                  model_.Setpoint(value);
+                  model_.Setpoint({double(value)});
                }
                return DEVICE_OK;
             }));
 
-      if (isAsync_) {
+      if (ProcModel::isAsync) {
          this->CreateFloatProperty("SlewTimePerStep_s",
                model_.ReciprocalSlewRateSeconds(), false,
                new MM::ActionLambda([this](MM::PropertyBase* pProp,
@@ -347,12 +340,12 @@ public:
 
    int SetPositionSteps(long steps) final {
       this->LogMessage(("sp = " + std::to_string(steps)).c_str(), true);
-      model_.Setpoint(steps);
+      model_.Setpoint({double(steps)});
       return DEVICE_OK;
    }
 
    int GetPositionSteps(long& steps) final {
-      steps = std::lround(model_.ProcessVariable());
+      steps = std::lround(model_.ProcessVariable()[0]);
       return DEVICE_OK;
    }
 
@@ -394,13 +387,13 @@ MODULE_API MM::Device *CreateDevice(const char *deviceName)
 {
    const std::string name(deviceName);
    if (name == DEVNAME_SYNC_PROPERTY)
-      return new NTestProp<SyncProcessModel>(name);
+      return new NTestProp<SyncProcessModel<1>>(name);
    if (name == DEVNAME_ASYNC_PROPERTY)
-      return new NTestProp<AsyncProcessModel>(name);
+      return new NTestProp<AsyncProcessModel<1>>(name);
    if (name == DEVNAME_SYNC_STAGE)
-      return new NTestStage<SyncProcessModel>(name);
+      return new NTestStage<SyncProcessModel<1>>(name);
    if (name == DEVNAME_ASYNC_STAGE)
-      return new NTestStage<AsyncProcessModel>(name);
+      return new NTestStage<AsyncProcessModel<1>>(name);
    return nullptr;
 }
 
