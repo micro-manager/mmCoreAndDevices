@@ -586,6 +586,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    NewportSMC
    Nikon
    NikonTE2000
+   NotificationTester
    OVP_ECS2
    Omicron
    OpenCVgrabber
