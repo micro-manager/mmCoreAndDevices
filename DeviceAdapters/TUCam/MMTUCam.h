@@ -8,12 +8,12 @@
 //                microscope devices and enables testing of the rest of the
 //                system without the need to connect to the actual hardware. 
 //                
-// AUTHOR:        fandayu, fandayu@tucsen.com 2022
+// AUTHOR:        fandayu, fandayu@tucsen.com 2024
 //                
 //                Karl Hoover (stuff such as programmable CCD size  & the various image processors)
 //                Arther Edelstein ( equipment error simulation)
 //
-// COPYRIGHT:     Tucsen Photonics Co., Ltd., 2022
+// COPYRIGHT:     Tucsen Photonics Co., Ltd., 2024
 //               
 //
 // LICENSE:       This file is distributed under the BSD license.
@@ -91,7 +91,13 @@ const int SEVEN_SEGMENT_Y_OFFSET[] = {0, 0, 0, 1, 1, 1, 2};
 #define DHYANA_4040BSI      0xE413    
 #define DHYANA_400BSIV3     0xE419
 #define DHYANA_XF4040BSI    0xE41B  
+#define PID_FL_20           0xEC0D
+#define PID_FL_9BW          0xE422
+#define PID_FL_9BW_LT       0xE426
+#define PID_FL_26BW         0xE423
 
+#define PID_ARIES16LT       0xE424
+#define PID_ARIES16         0xE425
 ///////////////////////
 // ImgMode
 ///////////////////////
@@ -251,8 +257,11 @@ public:
     int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
 
     int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBinningSum(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnPixelClock(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnBrightness(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnPixelRatio(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnGlobalGain(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSensorReset(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -270,11 +279,14 @@ public:
 	int OnRollingScanReset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTestImageMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+    int OnGlobalGainMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnGAINMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnShutterMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnModeSelect(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnImageMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnBitDepthEum(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnFlipH(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnFlipV(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -285,7 +297,9 @@ public:
     int OnRedGain(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnGreenGain(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnBlueGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnATExpMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnATExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTimeStamp(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnFan(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFanState(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -296,7 +310,9 @@ public:
 	int OnTriggerExpMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerEdgeMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerFilter(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerFrames(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnTriggerTotalFrames(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerDoSoftware(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSharpness(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDPCLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -327,7 +343,9 @@ public:
 
 
 private:
+	int SetAllowedDepth();
     int SetAllowedBinning();
+    int SetAllowedBinningSum();
     int SetAllowedPixelClock();
     int SetAllowedFanGear();
 
@@ -338,11 +356,20 @@ private:
 	int SetAllowedRSReset();
 	int SetAllowedTestImg();
 	int SetAllowedClrTemp();
+    int SetAllowedShutterMode();
 
     void TestResourceLocking(const bool);
     void GenerateEmptyImage(ImgBuffer& img);
     void GenerateSyntheticImage(ImgBuffer& img, double exp);
     int ResizeImageBuffer();
+
+    void ResizeBinImageBufferFL9BW(int &width, int &height);
+    void ResizeBinImageBufferFL26BW(int &width, int &height);
+
+	bool IsSupport95V2New()     { return DHYANA_D95_V2   == m_nPID && m_nBCD >= 0x2000; }
+	bool IsSupport401DNew()     { return DHYANA_401D     == m_nPID && m_nBCD >= 0x2000; }
+	bool IsSupport400BSIV3New() { return DHYANA_400BSIV3 == m_nPID && m_nBCD >= 0x2000; }
+	bool IsSupportAries16()     { return 0xE424 == m_nPID || 0xE425 == m_nPID; }
 
     static const double nominalPixelSizeUm_;
 
@@ -410,12 +437,17 @@ private:
     int WaitForFrame(ImgBuffer& img);
 
     bool SaveRaw(char *pfileName, unsigned char *pData, unsigned long ulSize);
-	bool isSupportFanWaterCool();
 	bool isSupportFanCool();
+	bool isSupportFanWaterCool();
+	bool isSupportSoftProtect();
 
 	void UpdateSlitHeightRange();
 	void UpdateExpRange();
-
+    void UpdateLevelsRange();
+/*
+    void LoadProfile();
+    void SaveProfile();
+*/
 	static int   	s_nNumCam;				// The number of cameras
 	static int		s_nCntCam;				// The count of camera
 
@@ -425,10 +457,12 @@ private:
     int             m_nIdxGain;             // The gain mode
     int             m_nMaxHeight;           // The max height size
 	int             m_nTriType;             // The trigger type   
+	int             m_nZeroTemp;            // The zero temperature reference value
 
     char            m_szImgPath[MAX_PATH];  // The save image path
     float           m_fCurTemp;             // The current temperature
-    float           m_fValTemp;             // The temperature value
+    float           m_fValTemp;             // The current temperature
+    float           m_fScaTemp;             // The scale of temperature
     int             m_nMidTemp;             // The middle value of temperature
     bool            m_bROI;                 // The ROI state
     bool            m_bSaving;              // The tag of save image            
