@@ -5,6 +5,8 @@ catch2_with_main_dep = dependency(
     'catch2-with-main',
     allow_fallback: true,
     include_type: 'system',
+    required: get_option('tests'),
+    disabler: true,
 )
 
 mmdevice_test_sources = files(

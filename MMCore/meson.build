@@ -19,7 +19,21 @@ endif
 
 # MMDevice must be copied into subprojects/ for this experimental build to work
 # (unless MMCore is itself being used as a subproject).
-mmdevice_proj = subproject('MMDevice')
+if get_option('tests').enabled()
+    tests_option = 'enabled'
+elif get_option('tests').disabled()
+    tests_option = 'disabled'
+else
+    tests_option = 'auto'
+endif
+mmdevice_proj = subproject(
+    'MMDevice',
+    # Propagate value of 'tests' option ('yield: true' in MMDeivce's 'tests'
+    # option did not seem to work; Meson 1.3.1).
+    default_options: {
+        'tests': tests_option,
+    },
+)
 mmdevice_dep = mmdevice_proj.get_variable('mmdevice')
 
 mmcore_sources = files(
