@@ -1928,7 +1928,7 @@ int PointGrey::CameraID(PGRGuid id, std::string* camIdString)
  */
 int PointGrey::CameraGUIDfromOurID(BusManager* busMgr, PGRGuid* guid, std::string ourId)
 {
-   boolean found = false;
+   bool found = false;
    unsigned int numCameras;
    PGRGuid localGuid;
    Error error = busMgr->GetNumOfCameras(&numCameras);
@@ -1984,7 +1984,7 @@ int PointGrey::VideoModeAndFrameRateEnumsFromString(std::string readableString,
    }
 
    // find matching Videomode and Framerate by cycling brute force through our arrays
-   boolean found = false;
+   bool found = false;
    unsigned int counter = 0;
    while (!found && counter < g_NumVideoModes) {
       if (parts[0] == g_VideoModes[counter]) {

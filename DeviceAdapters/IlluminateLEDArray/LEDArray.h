@@ -271,7 +271,7 @@ public:
 	  int OnBrightness(MM::PropertyBase* pPropt, MM::ActionType eAct);
 
 
-	  int SetShutter(boolean open);
+	  int SetShutter(bool open);
 	  bool GetShutter();
 
 private:
