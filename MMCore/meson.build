@@ -99,7 +99,10 @@ mmcore_lib = static_library(
     'MMCore',
     sources: mmcore_sources,
     include_directories: mmcore_include_dir,
-    dependencies: mmdevice_dep,
+    dependencies: [
+        mmdevice_dep,
+        dependency('threads'),
+    ],
     cpp_args: [
         '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
     ],

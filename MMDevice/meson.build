@@ -50,6 +50,9 @@ mmdevice_lib = static_library(
     # MMDevice does not depend on any external library. This is a big advantage
     # in simplifing its usage (given hundreds of device adapters depending on
     # MMDevice), so think twice before adding dependencies.
+    dependencies: [
+        dependency('threads'),
+    ],
 )
 
 subdir('unittest')
