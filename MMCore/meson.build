@@ -19,7 +19,21 @@ endif
 
 # MMDevice must be copied into subprojects/ for this experimental build to work
 # (unless MMCore is itself being used as a subproject).
-mmdevice_proj = subproject('MMDevice')
+if get_option('tests').enabled()
+    tests_option = 'enabled'
+elif get_option('tests').disabled()
+    tests_option = 'disabled'
+else
+    tests_option = 'auto'
+endif
+mmdevice_proj = subproject(
+    'MMDevice',
+    # Propagate value of 'tests' option ('yield: true' in MMDeivce's 'tests'
+    # option did not seem to work; Meson 1.3.1).
+    default_options: {
+        'tests': tests_option,
+    },
+)
 mmdevice_dep = mmdevice_proj.get_variable('mmdevice')
 
 mmcore_sources = files(
@@ -85,7 +99,10 @@ mmcore_lib = static_library(
     'MMCore',
     sources: mmcore_sources,
     include_directories: mmcore_include_dir,
-    dependencies: mmdevice_dep,
+    dependencies: [
+        mmdevice_dep,
+        dependency('threads'),
+    ],
     cpp_args: [
         '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
     ],
@@ -98,3 +115,8 @@ mmcore = declare_dependency(
     link_with: mmcore_lib,
     dependencies: mmdevice_dep,
 )
+
+# For providing include dir to SWIG when using this project as a subproject
+swig_include_dirs = mmdevice_proj.get_variable('swig_include_dirs') + [
+    meson.current_source_dir(),
+]

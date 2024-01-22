@@ -50,6 +50,9 @@ mmdevice_lib = static_library(
     # MMDevice does not depend on any external library. This is a big advantage
     # in simplifing its usage (given hundreds of device adapters depending on
     # MMDevice), so think twice before adding dependencies.
+    dependencies: [
+        dependency('threads'),
+    ],
 )
 
 subdir('unittest')
@@ -58,3 +61,6 @@ mmdevice = declare_dependency(
     include_directories: mmdevice_include_dir,
     link_with: mmdevice_lib,
 )
+
+# For providing include dir to SWIG when using this project as a subproject
+swig_include_dirs = [meson.current_source_dir()]
