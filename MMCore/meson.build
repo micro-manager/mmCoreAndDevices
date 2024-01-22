@@ -98,3 +98,8 @@ mmcore = declare_dependency(
     link_with: mmcore_lib,
     dependencies: mmdevice_dep,
 )
+
+# For providing include dir to SWIG when using this project as a subproject
+swig_include_dirs = mmdevice_proj.get_variable('swig_include_dirs') + [
+    meson.current_source_dir(),
+]

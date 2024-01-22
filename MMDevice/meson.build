@@ -58,3 +58,6 @@ mmdevice = declare_dependency(
     include_directories: mmdevice_include_dir,
     link_with: mmdevice_lib,
 )
+
+# For providing include dir to SWIG when using this project as a subproject
+swig_include_dirs = [meson.current_source_dir()]
