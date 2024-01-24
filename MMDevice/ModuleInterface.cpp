@@ -23,10 +23,11 @@
 
 #include "ModuleInterface.h"
 
+#ifndef MMDEVICE_CLIENT_BUILD
+
 #include <algorithm>
 #include <string>
 #include <vector>
-
 
 namespace {
 
@@ -135,3 +136,5 @@ void RegisterDevice(const char* deviceName, MM::DeviceType deviceType, const cha
 
    g_registeredDevices.push_back(DeviceInfo(deviceName, deviceType, deviceDescription));
 }
+
+#endif // MMDEVICE_CLIENT_BUILD

@@ -53,7 +53,10 @@
 #include <vector>
 
 
-#ifdef MODULE_EXPORTS
+#ifdef MMDEVICE_CLIENT_BUILD
+// Hide deprecation warnings when building MMCore
+#   define MM_DEPRECATED(prototype) prototype
+#else
 #   ifdef _MSC_VER
 #      define MM_DEPRECATED(prototype) __declspec(deprecated) prototype
 #   elif defined(__GNUC__)
@@ -61,8 +64,6 @@
 #   else
 #      define MM_DEPRECATED(prototype) prototype
 #   endif
-#else
-#   define MM_DEPRECATED(prototype) prototype
 #endif
 
 #ifdef _WIN32

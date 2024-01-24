@@ -10,9 +10,8 @@ AUTOMAKE_OPTIONS = foreign subdir-objects
 # (We used to globally use -O by default, rather than -O2, on Linux, presumably
 # for the above reason (though the intent was never documented). But there is
 # nothing Linux-specific about this.)
-# TODO The flag should come from configure.
 AM_CXXFLAGS = -fno-strict-aliasing
-AM_CPPFLAGS = $(JNI_CPPFLAGS)
+AM_CPPFLAGS = $(JNI_CPPFLAGS) -DMMDEVICE_CLIENT_BUILD
 
 
 # This ugly list of headers is necessary to trigger the rebuild of the
