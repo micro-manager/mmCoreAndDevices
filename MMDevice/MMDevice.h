@@ -66,6 +66,7 @@
 #   endif
 #endif
 
+// To be removed once the deprecated Get/SetModuleHandle() is removed:
 #ifdef _WIN32
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
@@ -279,13 +280,9 @@ namespace MM {
       virtual void SetDelayMs(double delay) = 0;
       virtual bool UsesDelay() = 0;
 
-      /**
-       * library handle management (for use only in the client code)
-       */
-      // TODO Get/SetModuleHandle() is no longer used; can remove at a
-      // convenient time.
-      virtual HDEVMODULE GetModuleHandle() const = 0;
-      virtual void SetModuleHandle(HDEVMODULE hLibraryHandle) = 0;
+      MM_DEPRECATED(virtual HDEVMODULE GetModuleHandle() const) = 0;
+      MM_DEPRECATED(virtual void SetModuleHandle(HDEVMODULE hLibraryHandle)) = 0;
+
       virtual void SetLabel(const char* label) = 0;
       virtual void GetLabel(char* name) const = 0;
       virtual void SetModuleName(const char* moduleName) = 0;
@@ -1313,44 +1310,32 @@ namespace MM {
       /// \deprecated Use the other forms instead.
       virtual int InsertMultiChannel(const Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* md = 0) = 0;
 
-      // autofocus
-      // TODO This interface needs improvement: the caller pointer should be
-      // passed, and it should be clarified whether the use of these methods is
-      // to be limited to autofocus or not. - Mark T.
-      virtual const char* GetImage() = 0;
-      virtual int GetImageDimensions(int& width, int& height, int& depth) = 0;
-      virtual int GetFocusPosition(double& pos) = 0;
-      virtual int SetFocusPosition(double pos) = 0;
-      virtual int MoveFocus(double velocity) = 0;
-      virtual int SetXYPosition(double x, double y) = 0;
-      virtual int GetXYPosition(double& x, double& y) = 0;
-      virtual int MoveXYStage(double vX, double vY) = 0;
-      virtual int SetExposure(double expMs) = 0;
-      virtual int GetExposure(double& expMs) = 0;
-      virtual int SetConfig(const char* group, const char* name) = 0;
-      virtual int GetCurrentConfig(const char* group, int bufLen, char* name) = 0;
-      virtual int GetChannelConfig(char* channelConfigName, const unsigned int channelConfigIterator) = 0;
+      // Formerly intended for use by autofocus
+      MM_DEPRECATED(virtual const char* GetImage()) = 0;
+      MM_DEPRECATED(virtual int GetImageDimensions(int& width, int& height, int& depth)) = 0;
+      MM_DEPRECATED(virtual int GetFocusPosition(double& pos)) = 0;
+      MM_DEPRECATED(virtual int SetFocusPosition(double pos)) = 0;
+      MM_DEPRECATED(virtual int MoveFocus(double velocity)) = 0;
+      MM_DEPRECATED(virtual int SetXYPosition(double x, double y)) = 0;
+      MM_DEPRECATED(virtual int GetXYPosition(double& x, double& y)) = 0;
+      MM_DEPRECATED(virtual int MoveXYStage(double vX, double vY)) = 0;
+      MM_DEPRECATED(virtual int SetExposure(double expMs)) = 0;
+      MM_DEPRECATED(virtual int GetExposure(double& expMs)) = 0;
+      MM_DEPRECATED(virtual int SetConfig(const char* group, const char* name)) = 0;
+      MM_DEPRECATED(virtual int GetCurrentConfig(const char* group, int bufLen, char* name)) = 0;
+      MM_DEPRECATED(virtual int GetChannelConfig(char* channelConfigName, const unsigned int channelConfigIterator)) = 0;
 
-      // direct access to specific device types
-      // TODO With the exception of GetParentHub(), these should be removed in
-      // favor of methods providing indirect access to the required
-      // functionality. Eventually we should completely avoid access to raw
-      // pointers to devices of other device adapters (because we loose
-      // information on errors, because direct access ignores any
-      // synchronization implemented in the Core, and because it would be bad
-      // if device adapters stored the returned pointer). - Mark T.
-      virtual MM::ImageProcessor* GetImageProcessor(const MM::Device* caller) = 0; // Use not recommended
-      virtual MM::AutoFocus* GetAutoFocus(const MM::Device* caller) = 0; // Use not recommended
+      // Direct (and dangerous) access to specific device types
+      MM_DEPRECATED(virtual MM::ImageProcessor* GetImageProcessor(const MM::Device* caller)) = 0;
+      MM_DEPRECATED(virtual MM::AutoFocus* GetAutoFocus(const MM::Device* caller)) = 0;
 
       virtual MM::Hub* GetParentHub(const MM::Device* caller) const = 0;
 
-      virtual MM::State* GetStateDevice(const MM::Device* caller, const char* deviceName) = 0; // Use not recommended
-      virtual MM::SignalIO* GetSignalIODevice(const MM::Device* caller, const char* deviceName) = 0; // Use not recommended
+      // More direct (and dangerous) access to specific device types
+      MM_DEPRECATED(virtual MM::State* GetStateDevice(const MM::Device* caller, const char* deviceName)) = 0;
+      MM_DEPRECATED(virtual MM::SignalIO* GetSignalIODevice(const MM::Device* caller, const char* deviceName)) = 0;
 
-      // asynchronous error handling
-      // TODO We do need a framework for handling asynchronous errors, but this
-      // interface is poorly thought through. I'm working on a better design.
-      // - Mark T.
+      // Asynchronous error handling (never implemented)
       /// \deprecated Not sure what this was meant to do.
       MM_DEPRECATED(virtual void NextPostedError(int& /*errorCode*/, char* /*pMessage*/, int /*maxlen*/, int& /*messageLength*/)) = 0;
       /// \deprecated Better handling of asynchronous errors to be developed.
