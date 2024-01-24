@@ -11,6 +11,11 @@ project(
     ],
 )
 
+build_mode_args = []
+if get_option('client_interface')
+    build_mode_args += '-DMMDEVICE_CLIENT_BUILD'
+endif
+
 # We intentionally do NOT define NOMINMAX on Windows. MMDevice should compile
 # correctly with or without Windows.h's min()/max() macros.
 
@@ -43,8 +48,7 @@ mmdevice_lib = static_library(
     'MMDevice',
     sources: mmdevice_sources,
     include_directories: mmdevice_include_dir,
-    cpp_args: [
-        '-DMODULE_EXPORTS',
+    cpp_args: build_mode_args + [
         '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
     ],
     # MMDevice does not depend on any external library. This is a big advantage
@@ -58,6 +62,7 @@ mmdevice_lib = static_library(
 subdir('unittest')
 
 mmdevice = declare_dependency(
+    compile_args: build_mode_args,
     include_directories: mmdevice_include_dir,
     link_with: mmdevice_lib,
 )

@@ -29,17 +29,6 @@
 
 #include "MMDevice.h"
 
-#ifdef _WIN32
-   #ifdef MODULE_EXPORTS
-      #define MODULE_API __declspec(dllexport)
-   #else
-      #define MODULE_API __declspec(dllimport)
-   #endif
-#else
-   #define MODULE_API
-#endif
-
-
 /// Module interface version.
 /**
  * The Core ensures that any loaded device adapter modules have a matching
@@ -50,11 +39,20 @@
 // GetModuleVersion() must never change.
 #define MODULE_INTERFACE_VERSION 10
 
-
-/*
- * Exported module interface
- */
 extern "C" {
+#ifndef MMDEVICE_CLIENT_BUILD
+
+// Make the module interface functions visible from outside the module.
+#ifdef _MSC_VER
+#   define MODULE_API __declspec(dllexport)
+#else
+#   define MODULE_API __attribute__((visibility("default")))
+#endif
+
+   /*
+    * Exported module interface
+    */
+
    /// Initialize the device adapter module.
    /**
     * Device adapter modules must provide an implementation of this function.
@@ -103,10 +101,10 @@ extern "C" {
    MODULE_API bool GetDeviceName(unsigned deviceIndex, char* name, unsigned bufferLength);
    MODULE_API bool GetDeviceType(const char* deviceName, int* type);
    MODULE_API bool GetDeviceDescription(const char* deviceName, char* name, unsigned bufferLength);
+#endif // MMDEVICE_CLIENT_BUILD
 
+#ifdef MMDEVICE_CLIENT_BUILD
    // Function pointer types for module interface functions
-   // (Not for use by device adapters)
-#ifndef MODULE_EXPORTS
    typedef void (*fnInitializeModuleData)();
    typedef MM::Device* (*fnCreateDevice)(const char*);
    typedef void (*fnDeleteDevice)(MM::Device*);
@@ -116,9 +114,10 @@ extern "C" {
    typedef bool (*fnGetDeviceName)(unsigned, char*, unsigned);
    typedef bool (*fnGetDeviceType)(const char*, int*);
    typedef bool (*fnGetDeviceDescription)(const char*, char*, unsigned);
-#endif
+#endif // MMDEVICE_CLIENT_BUILD
 }
 
+#ifndef MMDEVICE_CLIENT_BUILD
 
 /*
  * Functions for use by the device adapter module
@@ -135,3 +134,5 @@ extern "C" {
  * \see InitializeModuleData()
  */
 void RegisterDevice(const char* deviceName, MM::DeviceType deviceType, const char* description);
+
+#endif // MMDEVICE_CLIENT_BUILD

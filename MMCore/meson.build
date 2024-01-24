@@ -4,7 +4,7 @@
 project(
     'MMCore',
     'cpp',
-    meson_version: '>=1.1.0', # May relax
+    meson_version: '>=1.2.0',
     default_options: [
         'cpp_std=c++14',
         'warning_level=3',
@@ -28,9 +28,10 @@ else
 endif
 mmdevice_proj = subproject(
     'MMDevice',
-    # Propagate value of 'tests' option ('yield: true' in MMDeivce's 'tests'
-    # option did not seem to work; Meson 1.3.1).
     default_options: {
+        'client_interface': true,
+        # Propagate value of 'tests' option ('yield: true' in MMDeivce's
+        # 'tests' option did not seem to work; Meson 1.3.1).
         'tests': tests_option,
     },
 )

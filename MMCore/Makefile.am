@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 
+AM_CPPFLAGS = -DMMDEVICE_CLIENT_BUILD
+
 noinst_LTLIBRARIES = libMMCore.la
 
 libMMCore_la_LIBADD = ../MMDevice/libMMDevice.la
