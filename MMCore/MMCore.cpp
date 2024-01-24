@@ -362,9 +362,6 @@ std::string CMMCore::getVersionInfo() const
    std::ostringstream txt;
    std::string debug;
    txt << "MMCore version " << MMCore_versionMajor << "." << MMCore_versionMinor << "." << MMCore_versionPatch;
-   #ifdef _DEBUG
-   txt << " (debug)";
-   #endif
    return txt.str();
 }
 
