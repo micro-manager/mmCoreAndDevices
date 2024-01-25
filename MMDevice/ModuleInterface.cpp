@@ -85,7 +85,7 @@ MODULE_API bool GetDeviceName(unsigned deviceIndex, char* name, unsigned bufLen)
    if (deviceName.size() >= bufLen)
       return false; // buffer too small, can't truncate the name
 
-   strcpy(name, deviceName.c_str());
+   std::snprintf(name, bufLen, "%s", deviceName.c_str());
    return true;
 }
 
@@ -115,8 +115,7 @@ MODULE_API bool GetDeviceDescription(const char* deviceName, char* description, 
    if (it == g_registeredDevices.end())
       return false;
 
-   strncpy(description, it->description_.c_str(), bufLen - 1);
-
+   std::snprintf(description, bufLen, "%s", it->description_.c_str());
    return true;
 }
 
