@@ -48,9 +48,7 @@ mmdevice_lib = static_library(
     'MMDevice',
     sources: mmdevice_sources,
     include_directories: mmdevice_include_dir,
-    cpp_args: build_mode_args + [
-        '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
-    ],
+    cpp_args: build_mode_args,
     # MMDevice does not depend on any external library. This is a big advantage
     # in simplifing its usage (given hundreds of device adapters depending on
     # MMDevice), so think twice before adding dependencies.

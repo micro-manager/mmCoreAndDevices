@@ -34,18 +34,16 @@
 char CDeviceUtils::m_pszBuffer[MM::MaxStrLength]={""};
 
 /**
- * Copies strings with predefined size limit.
+ * Copies string up to MM::MaxStrLength - 1 characters, truncating if necessary
+ * and ensuring the result is null-terminated.
+ * 
+ * Behavior is undefined unless dest points to a buffer with size at least
+ * MM::MaxStrLength and src points to a null-terminated string.
  */
-bool CDeviceUtils::CopyLimitedString(char* target, const char* source)
+bool CDeviceUtils::CopyLimitedString(char* dest, const char* src)
 {
-   strncpy(target, source, MM::MaxStrLength - 1);
-   if ((MM::MaxStrLength - 1) < strlen(source))
-   {
-      target[MM::MaxStrLength - 1] = 0;
-      return false; // string truncated
-   }
-   else
-      return true;
+   snprintf(dest, MM::MaxStrLength, "%s", src);
+   return strlen(src) <= MM::MaxStrLength;
 }
 
 /**
@@ -168,23 +166,4 @@ void CDeviceUtils::NapMicros(unsigned long period)
 #else
    usleep(period);
 #endif
-}
-
-
-bool CDeviceUtils::CheckEnvironment(std::string env)
-{
-   bool bvalue = false;
-   if( 0 < env.length())
-   {
-      char *pvalue = ::getenv(env.c_str());
-      if( 0 != pvalue)
-      {
-         if( 0 != *pvalue)
-         {
-            char initial =  (char)tolower(*pvalue);
-            bvalue = ('0' != initial) && ('f' != initial) && ( 'n' != initial);
-         }
-      }
-   }
-   return bvalue;
 }

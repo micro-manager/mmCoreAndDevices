@@ -78,6 +78,9 @@
 
 
 namespace MM {
+   // Maximum length copied into various char buffers.
+   // Code providing buffer should assume excludes null terminator.
+   // Code filling buffer should assume includes null terminator.
    const int MaxStrLength = 1024;
 
    // system-wide property names

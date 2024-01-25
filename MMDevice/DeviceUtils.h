@@ -37,7 +37,6 @@ public:
    static void SleepMs(long ms);
    static void NapMicros(unsigned long microsecs);
    static std::string HexRep(std::vector<unsigned char>  );
-   static bool CheckEnvironment(std::string environment);
 private:
    static char m_pszBuffer[MM::MaxStrLength];
 };
