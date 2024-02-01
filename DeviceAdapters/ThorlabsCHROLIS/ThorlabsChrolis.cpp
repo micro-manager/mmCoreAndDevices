@@ -283,39 +283,36 @@ void ChrolisHub::StatusChangedPollingThread()
             currentDeviceStatusCode_ = newStatus;
             if (statusChanged)
             {
-                if (newStatus != 0)
+                std::array<ViBoolean, NUM_LEDS> tempEnableStates{};
+                ChrolisDevice.VerifyLEDEnableStatesWithLock();
+                if (ChrolisDevice.GetLEDEnableStates(tempEnableStates) != 0)
                 {
-                    std::array<ViBoolean, NUM_LEDS> tempEnableStates{};
-                    ChrolisDevice.VerifyLEDEnableStatesWithLock();
-                    if (ChrolisDevice.GetLEDEnableStates(tempEnableStates) != 0)
-                    {
-                        LogMessage("Error getting info from chrolis");
-                    }
-                    else
-                    {
-                        std::lock_guard<std::mutex> lock(pollingMutex_);
-                        // Usually it is not a good idea to call arbitrary
-                        // functions with a mutex held, but in this case we
-                        // need to ensure that the callback remains valid.
-                        if (stateBitsCallback_)
-                        {
-                            stateBitsCallback_(EncodeLEDStatesInBits(tempEnableStates));
-                        }
-                        if (stateCallback_)
-                        {
-                            for (int i = 0; i < NUM_LEDS; i++)
-                            {
-                                stateCallback_(i, tempEnableStates[i]);
-                            }
-                        }
-                    }
-                    std::string message = DeviceStatusAsString(newStatus);
-                    {
-                        std::lock_guard<std::mutex> lock(pollingMutex_);
-                        deviceStatus_ = message;
-                    }
-                    OnPropertyChanged("Device Status", message.c_str());
+                    LogMessage("Error getting info from chrolis");
                 }
+                else
+                {
+                    std::lock_guard<std::mutex> lock(pollingMutex_);
+                    // Usually it is not a good idea to call arbitrary
+                    // functions with a mutex held, but in this case we
+                    // need to ensure that the callback remains valid.
+                    if (stateBitsCallback_)
+                    {
+                        stateBitsCallback_(EncodeLEDStatesInBits(tempEnableStates));
+                    }
+                    if (stateCallback_)
+                    {
+                        for (int i = 0; i < NUM_LEDS; i++)
+                        {
+                            stateCallback_(i, tempEnableStates[i]);
+                        }
+                    }
+                }
+                std::string message = DeviceStatusAsString(newStatus);
+                {
+                    std::lock_guard<std::mutex> lock(pollingMutex_);
+                    deviceStatus_ = message;
+                }
+                OnPropertyChanged("Device Status", message.c_str());
             }
         }
         Sleep(500);

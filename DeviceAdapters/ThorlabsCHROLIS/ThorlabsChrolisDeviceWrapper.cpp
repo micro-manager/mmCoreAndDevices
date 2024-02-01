@@ -77,7 +77,7 @@ int ThorlabsChrolisDeviceWrapper::InitializeDevice(std::string serialNumber)
             {
                 return err;
             }
-            if (strcmp((char*)serialNumber_, serialNumber.c_str()))
+            if (serialNumber.compare(serialNumber_) == 0)
             {
                 found = true;
                 break;
