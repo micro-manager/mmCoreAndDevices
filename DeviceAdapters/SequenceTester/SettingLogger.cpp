@@ -1,6 +1,7 @@
 // Mock device adapter for testing of device sequencing
 //
 // Copyright (C) 2014 University of California, San Francisco.
+//               2023 Board of Regents of the University of Wisconsin System
 //
 // This library is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License as published by the
@@ -25,7 +26,6 @@
 
 #include <msgpack.hpp>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/shared_ptr.hpp>
 #include <string>
@@ -123,12 +123,11 @@ SettingEvent::Write(msgpack::sbuffer& sbuf) const
 }
 
 
-void
-SettingEvent::Draw(TextImageCursor& cursor) const
+std::string
+SettingEvent::AsText() const
 {
-   DrawStringOnImage(cursor,
-         "[" + boost::lexical_cast<std::string>(count_) + "]" +
-         key_.GetStringRep() + "=" + value_->GetString());
+   return "[" + std::to_string(count_) + "]" +
+         key_.GetStringRep() + "=" + value_->GetString();
 }
 
 
@@ -150,26 +149,35 @@ CameraInfo::Write(msgpack::sbuffer& sbuf) const
 }
 
 
-void
-CameraInfo::Draw(TextImageCursor& cursor) const
+std::string
+CameraInfo::AsText() const
 {
-   DrawStringOnImage(cursor, "camera,name=" + camera_);
-   cursor.Space();
-   DrawStringOnImage(cursor, "camera,serialImageNr=" +
-         boost::lexical_cast<std::string>(serialNr_));
-   cursor.Space();
-   DrawStringOnImage(cursor, "camera,isSequence=" +
-         std::string(isSequence_ ? "true" : "false"));
-   cursor.Space();
-   DrawStringOnImage(cursor,
-         (isSequence_ ? "camera,sequenceImageNr=" : "camera,snapImageNr=") +
-         boost::lexical_cast<std::string>(cumulativeNr_));
+   std::string ret;
+   ret.reserve(256);
+
+   ret += "camera,name=";
+   ret += camera_;
+   ret += ' ';
+
+   ret += "camera,serialImageNr=";
+   ret += std::to_string(serialNr_);
+   ret += ' ';
+
+   ret += "camera,isSequence=";
+   ret += isSequence_ ? "true" : "false";
+   ret += ' ';
+
+   ret += isSequence_ ? "camera,sequenceImageNr=" : "camera,snapImageNr=";
+   ret += std::to_string(cumulativeNr_);
+
    if (isSequence_)
    {
-      cursor.Space();
-      DrawStringOnImage(cursor, "camera,frameNr=" +
-            boost::lexical_cast<std::string>(frameNr_));
+      ret += ' ';
+      ret += "camera,frameNr=";
+      ret += std::to_string(frameNr_);
    }
+
+   return ret;
 }
 
 
@@ -357,29 +365,25 @@ SettingLogger::DrawTextToBuffer(char* dest, size_t destWidth,
       size_t destHeight, const std::string& camera, bool isSequenceImage,
       size_t serialImageNr, size_t cumulativeImageNr, size_t frameNr)
 {
-   memset(dest, 0, destWidth * destHeight);
-   TextImageCursor cursor(reinterpret_cast<uint8_t*>(dest),
-         static_cast<int>(destWidth), static_cast<int>(destHeight));
+   std::string text;
 
-   DrawStringOnImage(cursor, "HubGlobalPacketNr=" +
-         boost::lexical_cast<std::string>(GetNextGlobalImageNr()));
-   cursor.NewLine();
+   text += "HubGlobalPacketNr=";
+   text += std::to_string(GetNextGlobalImageNr());
+   text += '\n';
 
    CameraInfo cameraInfo(camera, isSequenceImage,
          serialImageNr, cumulativeImageNr, frameNr);
-   cameraInfo.Draw(cursor);
-   cursor.NewLine();
-   cursor.NewLine();
+   text += cameraInfo.AsText();
+   text += "\n\n";
 
-   DrawStringOnImage(cursor, "State");
-   cursor.NewLine();
-   DrawSettingMap(cursor, settingValues_);
-   cursor.NewLine();
-   cursor.NewLine();
+   text += "State\n";
+   text += SettingMapAsText(settingValues_);
+   text += "\n\n";
 
-   DrawStringOnImage(cursor, "History");
-   cursor.NewLine();
-   DrawHistory(cursor);
+   text += "History\n";
+   text += HistoryAsText();
+
+   DrawTextImage(text, reinterpret_cast<uint8_t*>(dest), destWidth, destHeight);
 }
 
 
@@ -402,10 +406,11 @@ SettingLogger::WriteSettingMap(msgpack::sbuffer& sbuf,
 }
 
 
-void
-SettingLogger::DrawSettingMap(TextImageCursor& cursor,
-      const SettingMap& values) const
+std::string
+SettingLogger::SettingMapAsText(const SettingMap& values) const
 {
+   std::string ret;
+   ret.reserve(20 * values.size());
    bool first = true;
    for (SettingConstIterator it = values.begin(), end = values.end();
          it != end; ++it)
@@ -416,10 +421,12 @@ SettingLogger::DrawSettingMap(TextImageCursor& cursor,
       if (first)
          first = false;
       else
-         cursor.Space();
-      DrawStringOnImage(cursor, it->first.GetStringRep() + '=' +
-            it->second->GetString());
+         ret += ' ';
+      ret += it->first.GetStringRep();
+      ret += '=';
+      ret += it->second->GetString();
    }
+   return ret;
 }
 
 
@@ -437,15 +444,16 @@ SettingLogger::WriteHistory(msgpack::sbuffer& sbuf) const
 }
 
 
-void
-SettingLogger::DrawHistory(TextImageCursor& cursor) const
+std::string
+SettingLogger::HistoryAsText() const
 {
-   for (std::vector<SettingEvent>::const_iterator
-         begin = settingEvents_.begin(), it = begin,
-         end = settingEvents_.end(); it != end; ++it)
+   std::string ret;
+   ret.reserve(20 * settingEvents_.size());
+   for (const auto& evt : settingEvents_)
    {
-      if (it != begin)
-         cursor.Space();
-      it->Draw(cursor);
+      if (!ret.empty())
+         ret += ' ';
+      ret += evt.AsText();
    }
+   return ret;
 }

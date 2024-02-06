@@ -1,6 +1,6 @@
 /*
 File:		MCL_NanoDrive_XYStage.cpp
-Copyright:	Mad City Labs Inc., 2019
+Copyright:	Mad City Labs Inc., 2023
 License:	Distributed under the BSD license.
 */
 #include "MCL_Common.h"
@@ -520,6 +520,8 @@ int MCL_NanoDrive_XYStage::InitDeviceAdapter()
 	}
 	supportsLastCommanded_ = (pi.FirmwareProfile & PROFILE_BIT_SUPPORTS_LASTCOMMANDED) != 0;
 
+	productID_ = pi.Product_id;
+
 	int err = CreateDeviceProperties();
 	if (err != DEVICE_OK)
 		return err;
@@ -567,8 +569,15 @@ int MCL_NanoDrive_XYStage::CreateDeviceProperties()
 
 	// Device serial number (read-only)
 	memset(valueBuffer, 0, valueBufferSize);
-	sprintf_s(valueBuffer, valueBufferSize, "%d", MCL_GetSerialNumber(handle_));
+	sprintf_s(valueBuffer, valueBufferSize, "%d", serialNumber_);
 	err = CreateProperty(g_Keyword_SerialNumber, valueBuffer, MM::String, true);
+	if (err != DEVICE_OK)
+		return err;
+
+	// Product ID (read-only)
+	memset(valueBuffer, 0, valueBufferSize);
+	sprintf_s(valueBuffer, valueBufferSize, "%d", productID_);
+	err = CreateProperty(g_Keyword_ProductID, valueBuffer, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 

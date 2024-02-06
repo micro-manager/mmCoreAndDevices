@@ -7,6 +7,7 @@ License:	Distributed under the BSD license.
 
 #define XYSTAGE_TYPE 1
 #define STAGE_TYPE  2
+#define MADTWEEZER_TYPE 3
 #define IGNORED_AXIS 0
 
 class HandleListType

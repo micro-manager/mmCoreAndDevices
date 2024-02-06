@@ -17,14 +17,18 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-// CVS:           $Id: Configuration.h 16305 2017-02-11 05:01:12Z mark $
-//
-#ifndef _CONFIGURATION_H_
-#define _CONFIGURATION_H_
 
-#ifdef WIN32
-// disable exception scpecification warnings in MSVC
-#pragma warning( disable : 4290 )
+#pragma once
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
 #endif
 
 #include <string>
@@ -87,36 +91,6 @@ private:
 };
 
 /**
- * Property pair defined as doublet:
- * property - value.
- */
-struct PropertyPair
-{
-   /**
-    * Constructor for the struct specifying the entire contents.
-    * @param prop
-    * @param value 
-    */
-   PropertyPair(const char* prop, const char* value) :
-      propertyName_(prop), value_(value) {}
-
-   PropertyPair() {}
-   ~PropertyPair() {}
-   /**
-    * Returns the property name.
-    */
-   std::string getPropertyName() const {return propertyName_;}
-   /**
-    * Returns the property value.
-    */
-   std::string getPropertyValue() const {return value_;}
-
-private:
-   std::string propertyName_;
-   std::string value_;
-};
-
-/**
  * Encapsulation of the configuration information. Designed to be wrapped
  * by SWIG. A collection of configuration settings.
  */
@@ -151,27 +125,10 @@ private:
    std::map<std::string, int> index_;
 };
 
-/**
- * Encapsulation of the property collection. Designed to be wrapped
- * by SWIG. A collection of property pairs.
- */
-class PropertyBlock
-{
-public:
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
-   PropertyBlock() {}
-   ~PropertyBlock() {}
-
-   void addPair(const PropertyPair& pair);
-   PropertyPair getPair(size_t index) const throw (CMMError);
-   /**
-    * Returns the number of contained property parts.
-    */
-   size_t size() const {return pairs_.size();}
-   std::string getValue(const char* key) const throw (CMMError);
- 
-private:
-   std::map<std::string, PropertyPair> pairs_;
-};
-
-#endif //_CONFIGURATION_H_
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

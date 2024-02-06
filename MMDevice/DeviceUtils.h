@@ -17,40 +17,12 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// CVS:           $Id$
-//
 
-#ifndef _DEVICEUTILS_H_
-#define _DEVICEUTILS_H_
+#pragma once
 
-#include "../MMDevice/MMDeviceConstants.h"
+#include "MMDeviceConstants.h"
 #include <vector>
 #include <string>
-#ifdef _WIN32
-#include <time.h>
-#include <windows.h>
-#endif
-
-#if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
-  #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
-#else
-  #define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
-#endif
- 
-// Definition of struct timezone and gettimeofday can be disabled in case
-// interfacing with some other system that also tries to define conflicting
-// symbols (e.g. Python <= 3.6).
-#if defined(_WIN32) && !defined(MMDEVICE_NO_GETTIMEOFDAY)
-struct timezone 
-{
-  int  tz_minuteswest; /* minutes W of Greenwich */
-  int  tz_dsttime;     /* type of dst correction */
-};
- 
-int gettimeofday(struct timeval *tv__, struct timezone *tz__);
-
-#endif
-
 
 class CDeviceUtils
 {
@@ -65,9 +37,6 @@ public:
    static void SleepMs(long ms);
    static void NapMicros(unsigned long microsecs);
    static std::string HexRep(std::vector<unsigned char>  );
-   static bool CheckEnvironment(std::string environment);
 private:
    static char m_pszBuffer[MM::MaxStrLength];
 };
-
-#endif //_DEVICEUTILS_H_

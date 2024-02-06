@@ -777,8 +777,8 @@ int CAndorSDK3Camera::Initialize()
    DDGStepWidthMode_property = new TEnumProperty(TAndorSDK3Strings::DDG_STEP_WIDTH_MODE, cameraDevice->GetEnum(L"DDGStepWidthMode"),
                                             this, thd_, snapShotController_, false, true);
 
-   // SRRF (for Sona only) 
-   if (0 == s_cameraName.compare(0, 4, "Sona"))
+   // SRRF (for Sona or Zyla) 
+   if ((0 == s_cameraName.compare(0, 4, "Sona")) || (0 == s_cameraName.compare(0, 4, "Zyla")))
    {
       SRRFCamera_ = new SRRFAndorSDK3Camera(this);
       if (SRRFCamera_) {

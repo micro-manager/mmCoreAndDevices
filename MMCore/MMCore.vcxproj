@@ -50,16 +50,14 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MMDEVICE_CLIENT_BUILD;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)MMCore.lib</OutputFile>
-      <AdditionalDependencies>Iphlpapi.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -67,21 +65,20 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MMDEVICE_CLIENT_BUILD;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)MMCore.lib</OutputFile>
-      <AdditionalDependencies>Iphlpapi.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Configuration.cpp" />
     <ClCompile Include="CoreCallback.cpp" />
+    <ClCompile Include="CoreFeatures.cpp" />
     <ClCompile Include="CoreProperty.cpp" />
     <ClCompile Include="DeviceManager.cpp" />
     <ClCompile Include="Devices\AutoFocusInstance.cpp" />
@@ -100,7 +97,6 @@
     <ClCompile Include="Devices\XYStageInstance.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
-    <ClCompile Include="Host.cpp" />
     <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp" />
     <ClCompile Include="LoadableModules\LoadedModule.cpp" />
@@ -121,6 +117,7 @@
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="CoreCallback.h" />
+    <ClInclude Include="CoreFeatures.h" />
     <ClInclude Include="CoreProperty.h" />
     <ClInclude Include="CoreUtils.h" />
     <ClInclude Include="DeviceManager.h" />
@@ -143,7 +140,6 @@
     <ClInclude Include="Devices\XYStageInstance.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="FrameBuffer.h" />
-    <ClInclude Include="Host.h" />
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h" />
     <ClInclude Include="LoadableModules\LoadedModule.h" />

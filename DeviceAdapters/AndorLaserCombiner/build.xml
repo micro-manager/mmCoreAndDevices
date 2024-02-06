@@ -1,13 +1,10 @@
 <project name="AndorLaserCombiner">
    <import file="../../../buildscripts/deviceadapter.xml"/>
-
-	<target name="install-Win32">
-		<copy todir="${mm.dll.installdir}" file="lib/AB_ALC_REV.dll"/>
-	</target>
-
+   <!-- Important: AB_ALC_REV64.dll (but not usbi2cio64.dll) is also used
+   by the AndorILE (IntegratedLaserEngine) device adapter. -->
 	<target name="install-x64">
 		<copy todir="${mm.dll.installdir}">
-			<filelist dir="lib">
+			<filelist dir="${mm.basedir}/../3rdparty/Andor/ALC/DLL-1.2.0.32">
 				<file name="AB_ALC_REV64.dll"/>
 				<file name="usbi2cio64.dll"/>
 			</filelist>

@@ -1,3 +1,9 @@
+/*
+File:		MCL_Common.cpp
+Copyright:	Mad City Labs Inc., 2023
+License:	Distributed under the BSD license.
+*/
+
 // MCL headers
 #include "Madlib.h"
 #include "MCL_Common.h"
@@ -94,6 +100,7 @@ bool FindMatchingDeviceInList(int deviceAdapterType, int *handles, int handlesCo
 		if (deviceAdapterAxis != 0)
 		{
 			deviceAdapterHandle = handles[ii];
+			break;
 		}
 	}
 	return deviceAdapterAxis != 0;

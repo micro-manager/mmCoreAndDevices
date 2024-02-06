@@ -20,9 +20,7 @@
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 08/10/2005
 
-#ifndef _PLUGIN_MANAGER_H_
-#define _PLUGIN_MANAGER_H_
-
+#pragma once
 
 #include "../MMDevice/DeviceThreads.h"
 
@@ -42,17 +40,12 @@ public:
 
    void UnloadPluginLibrary(const char* moduleName);
 
-   // Device adapter search paths (there are two sets of search paths; see
-   // CMMCore method documentation)
+   // Device adapter search paths
    template <typename TStringIter>
    void SetSearchPaths(TStringIter begin, TStringIter end)
-   { preferredSearchPaths_.assign(begin, end); }
-   std::vector<std::string> GetSearchPaths() const { return preferredSearchPaths_; }
+   { searchPaths_.assign(begin, end); }
+   std::vector<std::string> GetSearchPaths() const { return searchPaths_; }
    std::vector<std::string> GetAvailableDeviceAdapters();
-
-   // Legacy search path support
-   static void AddLegacyFallbackSearchPath(const std::string& path);
-   static std::vector<std::string> GetModulesInLegacyFallbackSearchPaths();
 
    /**
     * Return a device adapter module, loading it if necessary
@@ -64,14 +57,10 @@ public:
 
 private:
    static std::vector<std::string> GetDefaultSearchPaths();
-   std::vector<std::string> GetActualSearchPaths() const;
    static void GetModules(std::vector<std::string> &modules, const char *path);
    std::string FindInSearchPath(std::string filename);
 
-   std::vector<std::string> preferredSearchPaths_;
-   static std::vector<std::string> fallbackSearchPaths_;
+   std::vector<std::string> searchPaths_;
 
    std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> > moduleMap_;
 };
-
-#endif //_PLUGIN_MANAGER_H_

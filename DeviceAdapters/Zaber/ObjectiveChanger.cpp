@@ -188,8 +188,8 @@ int ObjectiveChanger::GetPositionLabel(long pos, char* label) const
 {
 	if (DEVICE_OK != CStateDeviceBase<ObjectiveChanger>::GetPositionLabel(pos, label))
 	{
-		std::stringstream labelStr("Objective ");
-		labelStr << pos + 1;
+		std::stringstream labelStr;
+		labelStr << "Objective " << pos + 1;
 		CDeviceUtils::CopyLimitedString(label, labelStr.str().c_str());
 	}
 
@@ -312,17 +312,15 @@ int ObjectiveChanger::PositionGetSet(MM::PropertyBase* pProp, MM::ActionType eAc
 		long indexToSet;
 		pProp->Get(indexToSet);
 
-		if (initialized_)
+		if (initialized_ && (indexToSet + 1) != currentObjective_)
 		{
-			if ((indexToSet >= 0) && (indexToSet < numPositions_))
-			{
-				return setObjective(indexToSet + 1, false);
-			}
-			else
+			if (indexToSet < 0 || indexToSet >= numPositions_)
 			{
 				this->LogMessage("Requested position is outside the legal range.\n", true);
 				return DEVICE_UNKNOWN_POSITION;
 			}
+
+			return setObjective(indexToSet + 1, false);
 		}
 	}
 
@@ -335,12 +333,17 @@ int ObjectiveChanger::FocusOffsetGetSet(MM::PropertyBase* pProp, MM::ActionType 
 
 	if (eAct == MM::AfterSet)
 	{
-		pProp->Get(focusOffset_);
+		double newOffset;
+		pProp->Get(newOffset);
+		auto update = focusOffset_ != newOffset;
+		focusOffset_ = newOffset;
+		if (update) {
+			return setObjective(currentObjective_, true);
+		}
 	}
 	else if (eAct == MM::BeforeGet)
 	{
 		pProp->Set(focusOffset_);
-		return setObjective(currentObjective_, true);
 	}
 
 	return DEVICE_OK;

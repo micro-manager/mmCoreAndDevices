@@ -908,7 +908,7 @@ int LedArray::ReadResponse() {
 	return DEVICE_ERR;
 }
 
-int LedArray::SetShutter(boolean open)
+int LedArray::SetShutter(bool open)
 {
 	//TODO maybe update property?
 	shutterOpen_ = open;

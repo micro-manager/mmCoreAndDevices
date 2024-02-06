@@ -48,7 +48,7 @@
 #define MMERR_NoConfiguration          20
 #define MMERR_InvalidConfigurationIndex 21
 #define MMERR_DEVICE_GENERIC           22
-#define MMERR_InvalidPropertyBlock     23
+#define MMERR_InvalidPropertyBlock     23 // No longer used
 #define MMERR_UnhandledException       24
 #define MMERR_DevicePollingTimeout     25
 #define MMERR_InvalidShutterDevice     26

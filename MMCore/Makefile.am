@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 
-AM_LDFLAGS = $(MMCORE_APPLEHOST_LDFLAGS)
+AM_CPPFLAGS = -DMMDEVICE_CLIENT_BUILD
 
 noinst_LTLIBRARIES = libMMCore.la
 
@@ -10,7 +10,6 @@ libMMCore_la_SOURCES = \
 	../MMDevice/MMDevice.h \
 	../MMDevice/MMDeviceConstants.h \
 	../MMDevice/ModuleInterface.h \
-	AppleHost.h \
 	CircularBuffer.cpp \
 	CircularBuffer.h \
 	ConfigGroup.h \
@@ -18,6 +17,8 @@ libMMCore_la_SOURCES = \
 	Configuration.h \
 	CoreCallback.cpp \
 	CoreCallback.h \
+	CoreFeatures.cpp \
+	CoreFeatures.h \
 	CoreProperty.cpp \
 	CoreProperty.h \
 	CoreUtils.h \
@@ -59,8 +60,6 @@ libMMCore_la_SOURCES = \
 	ErrorCodes.h \
 	FrameBuffer.cpp \
 	FrameBuffer.h \
-	Host.cpp \
-	Host.h \
 	LibraryInfo/LibraryPaths.h \
 	LibraryInfo/LibraryPathsUnix.cpp \
 	LoadableModules/LoadedDeviceAdapter.cpp \
@@ -101,11 +100,5 @@ libMMCore_la_SOURCES = \
 	TaskSet_CopyMemory.h \
 	ThreadPool.cpp \
 	ThreadPool.h
-
-if BUILD_CPP_TESTS
-UNITTESTS = unittest
-endif
-
-SUBDIRS = . $(UNITTESTS)
 
 EXTRA_DIST = license.txt

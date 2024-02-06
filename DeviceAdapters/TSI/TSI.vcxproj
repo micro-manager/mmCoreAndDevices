@@ -56,7 +56,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)/Thorlabs/Scientific_Camera_Interfaces_Windows-2.1/Scientific Camera Interfaces/SDK/Native Toolkit/load_dll_helpers;$(MM_3RDPARTYPRIVATE)/Thorlabs/Scientific_Camera_Interfaces_Windows-2.1/Scientific Camera Interfaces/SDK/Native Toolkit/include;$(MM_3RDPARTYPRIVATE)/Thorlabs/Scientific_Camera_Interfaces_Windows-2.1/Scientific Camera Interfaces/SDK/Legacy (Obsolete)/Native Scientific CCD Camera Toolkit/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -74,7 +74,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)/Thorlabs/Scientific_Camera_Interfaces_Windows-2.1/Scientific Camera Interfaces/SDK/Native Toolkit/load_dll_helpers;$(MM_3RDPARTYPRIVATE)/Thorlabs/Scientific_Camera_Interfaces_Windows-2.1/Scientific Camera Interfaces/SDK/Native Toolkit/include;$(MM_3RDPARTYPRIVATE)/Thorlabs/Scientific_Camera_Interfaces_Windows-2.1/Scientific Camera Interfaces/SDK/Legacy (Obsolete)/Native Scientific CCD Camera Toolkit/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MODULE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
       </PrecompiledHeader>

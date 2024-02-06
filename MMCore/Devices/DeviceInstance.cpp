@@ -22,6 +22,7 @@
 #include "DeviceInstance.h"
 
 #include "../../MMDevice/MMDevice.h"
+#include "../CoreFeatures.h"
 #include "../CoreUtils.h"
 #include "../Error.h"
 #include "../LoadableModules/LoadedDeviceAdapter.h"
@@ -122,16 +123,22 @@ DeviceInstance::ThrowIfError(int code, const std::string& message) const
 }
 
 void
-DeviceInstance::RequireInitialized(const char *operation) const
+DeviceInstance::RequireInitialized(const char* operation) const
 {
-   if (!initialized_) {
-      // This is an error, but existing application code (in particular,
-      // the Hardware Configuration Wizard) breaks if we enforce it strictly.
-      // Until such code is fixed, we only log.
-      LOG_WARNING(Logger()) << "Operation (" << operation <<
-         ") not permitted on uninitialized device (this will be an error in a future version of MMCore; for now we continue with the operation anyway, even though it might not be safe)";
-      // Eventually to be replaced with:
-      // ThrowError("Operation not permitted on uninitialized device");
+   if (!initialized_)
+   {
+      if (mm::features::flags().strictInitializationChecks)
+      {
+         std::ostringstream stream;
+         stream << "Operation (" << operation <<
+            ") not permitted on uninitialized device";
+         ThrowError(stream.str());
+      }
+      else
+      {
+         LOG_WARNING(Logger()) << "Operation (" << operation <<
+            ") not permitted on uninitialized device (this will be an error in a future version of MMCore; for now we continue with the operation anyway, even though it might not be safe)";
+      }
    }
 }
 
@@ -173,8 +180,20 @@ void
 DeviceInstance::SetProperty(const std::string& name,
       const std::string& value) const
 {
-   if (initialized_ && GetPropertyInitStatus(name.c_str()))
-      ThrowError("Cannot set pre-init property after initialization");
+   if (initialized_ && GetPropertyInitStatus(name.c_str())) {
+      // Note: Some features (port scanning) may depend on setting serial port
+      // properties post-init. We may want to exclude SerialManager from this
+      // check (regardless of whether strictInitializationChecks is enabled).
+      if (mm::features::flags().strictInitializationChecks)
+      {
+         ThrowError("Cannot set pre-init property after initialization");
+      }
+      else
+      {
+         LOG_WARNING(Logger()) << "Setting of pre-init property (" << name <<
+            ") not permitted on initialized device (this will be an error in a future version of MMCore; for now we continue with the operation anyway, even though it might not be safe)";
+      }
+   }
 
    LOG_DEBUG(Logger()) << "Will set property \"" << name << "\" to \"" <<
       value << "\"";

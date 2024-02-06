@@ -20,14 +20,14 @@
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 08/10/2005
 
-#ifdef WIN32
+#ifdef _WIN32
    #define WIN32_LEAN_AND_MEAN
    #include <Windows.h>
    #include <io.h>
 #else
    #include <sys/types.h>
    #include <dirent.h>
-#endif // WIN32
+#endif // _WIN32
 
 #include "../MMDevice/ModuleInterface.h"
 #include "CoreUtils.h"
@@ -47,7 +47,7 @@
 #include <vector>
 
 
-#ifdef WIN32
+#ifdef _WIN32
 const char* const LIB_NAME_PREFIX = "mmgr_dal_";
 #else
 const char* const LIB_NAME_PREFIX = "libmmgr_dal_";
@@ -62,8 +62,6 @@ const char* const LIB_NAME_SUFFIX = "";
 ///////////////////////////////////////////////////////////////////////////////
 // CPluginManager class
 // --------------------
-
-std::vector<std::string> CPluginManager::fallbackSearchPaths_;
 
 CPluginManager::CPluginManager()
 {
@@ -86,16 +84,9 @@ CPluginManager::~CPluginManager()
 std::string
 CPluginManager::FindInSearchPath(std::string filename)
 {
-   std::vector<std::string> searchPaths = GetActualSearchPaths();
-
-   // look in search paths, if there are any
-   if (searchPaths.size() == 0)
-      return filename;
-
-   std::vector<std::string>::const_iterator it;
-   for (it = searchPaths.begin(); it != searchPaths.end(); it++) {
-      std::string path(*it);
-      #ifdef WIN32
+   for (const auto& p : searchPaths_) {
+      std::string path = p;
+      #ifdef _WIN32
       path += "\\" + filename + ".dll";
       #else
       path += "/" + filename;
@@ -106,11 +97,8 @@ CPluginManager::FindInSearchPath(std::string filename)
       in.close();
 
       if (!in.fail())
-         // we found it!
          return path;
    }
-
-   // not found!
    return filename;
 }
 
@@ -188,29 +176,6 @@ CPluginManager::UnloadPluginLibrary(const char* moduleName)
 }
 
 
-void
-CPluginManager::AddLegacyFallbackSearchPath(const std::string& path)
-{
-   // TODO Should normalize slashes and cases (depending on platform) before
-   // comparing.
-
-   // When this function is used, the instance search path
-   // (preferredSearchPaths_) remains equal to the default. Do not add
-   // duplicate paths.
-   std::vector<std::string> defaultPaths(GetDefaultSearchPaths());
-   if (std::find(defaultPaths.begin(), defaultPaths.end(), path) !=
-         defaultPaths.end())
-      return;
-
-   // Again, do not add duplicate paths.
-   if (std::find(fallbackSearchPaths_.begin(), fallbackSearchPaths_.end(), path) !=
-         fallbackSearchPaths_.end())
-      return;
-
-   fallbackSearchPaths_.push_back(path);
-}
-
-
 // TODO Use std::filesystem instead of this.
 // This stop-gap implementation makes the assumption that the argument is in
 // the format that could be returned from MMCorePrivate::GetPathOfThisModule()
@@ -218,7 +183,7 @@ CPluginManager::AddLegacyFallbackSearchPath(const std::string& path)
 static std::string
 GetDirName(const std::string& path)
 {
-#ifdef WIN32
+#ifdef _WIN32
    const char* pathSep = "\\/";
 #else
    const char* pathSep = "/";
@@ -260,15 +225,6 @@ CPluginManager::GetDefaultSearchPaths()
 }
 
 
-std::vector<std::string>
-CPluginManager::GetActualSearchPaths() const
-{
-   std::vector<std::string> paths(preferredSearchPaths_);
-   paths.insert(paths.end(), fallbackSearchPaths_.begin(), fallbackSearchPaths_.end());
-   return paths;
-}
-
-
 /**
  * List all modules (device libraries) at a given path.
  */
@@ -276,7 +232,7 @@ void
 CPluginManager::GetModules(std::vector<std::string> &modules, const char* searchPath)
 {
 
-#ifdef WIN32
+#ifdef _WIN32
    std::string path = searchPath;
    path += "\\";
    path += LIB_NAME_PREFIX;
@@ -330,46 +286,9 @@ CPluginManager::GetModules(std::vector<std::string> &modules, const char* search
 std::vector<std::string>
 CPluginManager::GetAvailableDeviceAdapters()
 {
-   std::vector<std::string> searchPaths = GetActualSearchPaths();
-
    std::vector<std::string> modules;
-
-   for (std::vector<std::string>::const_iterator it = searchPaths.begin(), end = searchPaths.end(); it != end; ++it)
-      GetModules(modules, it->c_str());
-
-   // Check for duplicates
-   // XXX Is this the right place to be doing this checking? Shouldn't it be an
-   // error to have duplicates even if we're not listing all libraries?
-   std::set<std::string> moduleSet;
-   for (std::vector<std::string>::const_iterator it = modules.begin(), end = modules.end(); it != end; ++it) {
-      if (moduleSet.count(*it)) {
-         std::string msg("Duplicate libraries found with name \"" + *it + "\"");
-         throw CMMError(msg.c_str(), DEVICE_DUPLICATE_LIBRARY);
-      }
-   }
-
-   return modules;
-}
-
-
-std::vector<std::string>
-CPluginManager::GetModulesInLegacyFallbackSearchPaths()
-{
-   // Search in default search paths and any that were added to the legacy path
-   // list.
-   std::vector<std::string> paths(GetDefaultSearchPaths());
-   for (std::vector<std::string>::const_iterator it = fallbackSearchPaths_.begin(),
-         end = fallbackSearchPaths_.end();
-         it != end; ++it)
-   {
-      if (std::find(paths.begin(), paths.end(), *it) == paths.end())
-         paths.push_back(*it);
-   }
-
-   std::vector<std::string> modules;
-   for (std::vector<std::string>::const_iterator it = paths.begin(), end = paths.end();
-         it != end; ++it)
-      GetModules(modules, it->c_str());
+   for (const auto& path : searchPaths_)
+      GetModules(modules, path.c_str());
 
    // Check for duplicates
    // XXX Is this the right place to be doing this checking? Shouldn't it be an

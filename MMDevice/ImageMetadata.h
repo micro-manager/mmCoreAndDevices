@@ -19,14 +19,18 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-// CVS:           $Id: Configuration.h 2 2007-02-27 23:33:17Z nenad $
-//
-#ifndef _IMAGE_METADATA_H_
-#define _IMAGE_METADATA_H_
 
-#ifdef WIN32
-// disable exception scpecification warnings in MSVC
-#pragma warning( disable : 4290 )
+#pragma once
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
 #endif
 
 #include "MMDeviceConstants.h"
@@ -103,7 +107,7 @@ public:
       str.append(name_);
       return str;
    }
-   const bool IsReadOnly() const  {return readOnly_;}
+   bool IsReadOnly() const  {return readOnly_;}
 
    void SetDevice(const char* device) {deviceLabel_ = device;}
    void SetName(const char* name) {name_ = name;}
@@ -321,7 +325,7 @@ public:
       else
          return false;
    }
-   
+
    MetadataSingleTag GetSingleTag(const char* key) const throw (MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
@@ -475,7 +479,7 @@ public:
          if (it->second->ToArrayTag())
             id = "a";
          std::string ser = it->second->Serialize();
-         os << id << " : " << ser << std::endl;
+         os << id << " : " << ser << '\n';
       }
 
       return os.str();
@@ -496,4 +500,10 @@ private:
    typedef std::map<std::string, MetadataTag*>::const_iterator TagConstIter;
 };
 
-#endif //_IMAGE_METADATA_H_
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

@@ -42,10 +42,10 @@
     <ClCompile Include="CoreCallback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CoreProperty.cpp">
+    <ClCompile Include="CoreFeatures.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Host.cpp">
+    <ClCompile Include="CoreProperty.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MMCore.cpp">
@@ -155,6 +155,9 @@
     <ClInclude Include="CoreCallback.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CoreFeatures.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="CoreProperty.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -165,9 +168,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FrameBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Host.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MMCore.h">

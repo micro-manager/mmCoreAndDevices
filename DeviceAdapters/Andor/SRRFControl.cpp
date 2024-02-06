@@ -1,6 +1,7 @@
 #include "SRRFControl.h"
 #include <boost/filesystem/operations.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
+#include "DeviceUtils.h"
 #include "ImgBuffer.h"
 
 #ifdef WIN32
