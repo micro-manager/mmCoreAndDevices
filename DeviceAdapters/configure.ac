@@ -619,6 +619,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    SmarActHCU-3D
    SouthPort
    SpectralLMM5
+   Spinnaker
    Spot
    StarlightXpress
    SutterLambda

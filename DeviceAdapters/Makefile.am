@@ -182,6 +182,7 @@ SUBDIRS = \
 	SmarActHCU-3D \
 	SouthPort \
 	SpectralLMM5 \
+        Spinnaker \
 	StarlightXpress \
 	SutterLambda \
 	SutterLambda2 \
