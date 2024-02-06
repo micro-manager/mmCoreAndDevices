@@ -70,6 +70,43 @@ using namespace std;
 const char* NoHubError = "Parent Hub not defined.";
 
 //////////////////////////////////////////////////////////////////////////////
+// IDSPeakHub class
+// Hub for IDS Peak cameras
+//////////////////////////////////////////////////////////////////////////////
+
+class IDSPeakHub : public HubBase<IDSPeakHub>
+{
+public:
+    IDSPeakHub();
+    ~IDSPeakHub();
+
+    // Device API
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pName) const;
+    bool Busy();
+
+    // HUB api
+    int DetectInstalledDevices();
+
+    // Hub parameters
+    peak_status status = PEAK_STATUS_SUCCESS;
+    size_t nCameras_ = 0;
+    vector<peak_camera_handle> hCams;
+    int testVal;
+
+    // Hub action handlers
+
+    // Hub members
+
+private:
+    bool initialized_;
+    bool busy_;
+    unsigned char errorCode_;
+    string unit_;
+};
+
+//////////////////////////////////////////////////////////////////////////////
 // CIDSPeak class
 //////////////////////////////////////////////////////////////////////////////
 
@@ -78,7 +115,7 @@ class MySequenceThread;
 class CIDSPeak : public CCameraBase<CIDSPeak>
 {
 public:
-    CIDSPeak();
+    CIDSPeak(int deviceIdx);
     ~CIDSPeak();
 
     // MMDevice API
@@ -86,11 +123,10 @@ public:
     int Initialize();
     int Shutdown();
 
-    vector<peak_camera_handle> hCams;
     peak_camera_handle hCam = PEAK_INVALID_HANDLE;
     peak_status status = PEAK_STATUS_SUCCESS;
     void GetName(char* name) const;
-    int CamID_;
+    int deviceIdx_;
 
     // MMCamera API
     // ------------
