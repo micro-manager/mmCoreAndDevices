@@ -6,3 +6,6 @@ Changelog IDSPeak:
 2023.10.10
 - Changed .dll to Release version (no longer requires MS Visual Studio to work)
 - Added multi-camera support
+
+2024.02.06
+- Multi-camera support is now compatible with the multicam utility

@@ -47,35 +47,140 @@ const char* g_PixelType_32bitRGBA = "32bit RGBA";
 // External names used used by the rest of the system
 // to load particular device from the "IDSPeak.dll" library
 const char* g_CameraDeviceName = "IDSCam";
+const char* g_IDSPeakHubName = "IDS Peak Hub";
 
 ///////////////////////////////////////////////////////////////////////////////
-// Exported MMDevice API
+//  MMDevice API
 ///////////////////////////////////////////////////////////////////////////////
 
 MODULE_API void InitializeModuleData()
 {
-    RegisterDevice(g_CameraDeviceName, MM::CameraDevice, "IDS camera");
+    RegisterDevice(g_IDSPeakHubName, MM::HubDevice, "Hub for IDS cameras");
+    RegisterDevice(g_CameraDeviceName, MM::CameraDevice, "Device adapter for IDS peak cameras");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
-    if (deviceName == 0)
-        return 0;
-
-    // decide which device class to create based on the deviceName parameter
-    if (strcmp(deviceName, g_CameraDeviceName) == 0)
+    cout << deviceName << endl;
+    if (!deviceName)
     {
-        // create camera
-        return new CIDSPeak();
+        return 0; // Trying to create nothing, return nothing
     }
-
-    // ...supplied name not recognized
-    return 0;
+    if (strcmp(deviceName, g_IDSPeakHubName) == 0)
+    {
+        return new IDSPeakHub(); // Create Hub
+    }
+    if (strncmp(deviceName, g_CameraDeviceName, strlen(g_CameraDeviceName)) == 0)
+    {
+        string name_s = deviceName;
+        string substr = name_s.substr(strlen(g_CameraDeviceName), strlen(deviceName));
+        int deviceIdx = stoi(substr);
+        //if (!deviceIdx) { return 0; } // If somehow the channel index is incorrect, return nothing
+        return new CIDSPeak(deviceIdx); // Create channel
+    }
+    return 0; // If an unexpected name is provided, return nothing
 }
 
-MODULE_API void DeleteDevice(MM::Device* pDevice)
+MODULE_API void DeleteDevice(MM::Device* device)
 {
-    delete pDevice;
+    delete device;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// IDSPeakHub class
+// Hub for IDS Peak cameras
+//////////////////////////////////////////////////////////////////////////////
+
+IDSPeakHub::IDSPeakHub() :
+    initialized_(false),
+    busy_(false),
+    nCameras_(0),
+    errorCode_(0),
+    testVal(10)
+{
+    CreateIntegerProperty("Test", testVal, false);
+}
+
+IDSPeakHub::~IDSPeakHub() {
+    Shutdown();
+}
+
+/**
+* Obtains device name.
+* Required by the MM::Device API.
+*/
+void IDSPeakHub::GetName(char* name) const
+{
+    // Return the name used to refer to this device adapter
+    string deviceName = g_IDSPeakHubName;
+    CDeviceUtils::CopyLimitedString(name, deviceName.c_str());
+}
+
+int IDSPeakHub::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    // Initalize peak status
+    status = PEAK_STATUS_SUCCESS;
+
+    // Initialize peak library
+    status = peak_Library_Init();
+    if (status != PEAK_STATUS_SUCCESS) { return ERR_LIBRARY_NOT_INIT; }
+
+    // Name
+    int ret = CreateStringProperty(MM::g_Keyword_Name, g_IDSPeakHubName, true);
+    if (DEVICE_OK != ret)
+        return ret;
+
+    // Description
+    ret = CreateStringProperty(MM::g_Keyword_Description, "Hub for IDS Peak cameras", true);
+    if (DEVICE_OK != ret)
+        return ret;
+
+    // Detect number of cameras
+    status = peak_CameraList_Update(NULL);
+    if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; }
+    
+    status = peak_CameraList_Get(NULL, &nCameras_); // get length of camera list
+    if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; } // exit program if no camera was found
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+/**
+* Shuts down (unloads) the device.
+* Required by the MM::Device API.
+* Ideally this method will completely unload the device and release all resources.
+* Shutdown() may be called multiple times in a row.
+* After Shutdown() we should be allowed to call Initialize() again to load the device
+* without causing problems.
+*/
+int IDSPeakHub::Shutdown()
+{
+    peak_Library_Exit();
+    initialized_ = false;
+    return DEVICE_OK;
+}
+
+int IDSPeakHub::DetectInstalledDevices()
+{
+    ClearInstalledDevices();
+    for (int i = 0; i < nCameras_; i++)
+    {
+        MM::Device* device = new CIDSPeak(i);
+        if (device)
+        {
+            AddInstalledDevice(device);
+        }
+    }
+    return DEVICE_OK;
+}
+
+bool IDSPeakHub::Busy()
+{
+    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -92,7 +197,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * the constructor. We should do as little as possible in the constructor and
 * perform most of the initialization in the Initialize() method.
 */
-CIDSPeak::CIDSPeak() :
+CIDSPeak::CIDSPeak(int idx) :
     CCameraBase<CIDSPeak> (),
     initialized_(false),
     readoutUs_(0.0),
@@ -121,7 +226,7 @@ CIDSPeak::CIDSPeak() :
     exposureInc_(1.0),
     exposureCur_(10.0),
     framerateCur_(10),
-    framerateMax_(200),
+    framerateMax_(1000),
     framerateMin_(0.1),
     framerateInc_(0.1),
     imageCounter_(0),
@@ -134,6 +239,10 @@ CIDSPeak::CIDSPeak() :
     InitializeDefaultErrorMessages();
     readoutStartTime_ = GetCurrentMMTime();
     thd_ = new MySequenceThread(this);
+    deviceIdx_ = idx;
+
+    // parent ID display
+    CreateHubIDProperty();
 }
 
 /**
@@ -145,6 +254,7 @@ CIDSPeak::CIDSPeak() :
 */
 CIDSPeak::~CIDSPeak()
 {
+    Shutdown();
     StopSequenceAcquisition();
     delete thd_;
 }
@@ -156,7 +266,9 @@ CIDSPeak::~CIDSPeak()
 void CIDSPeak::GetName(char* name) const
 {
     // Return the name used to referr to this device adapte
-    CDeviceUtils::CopyLimitedString(name, g_CameraDeviceName);
+    string deviceName = g_CameraDeviceName;
+    deviceName.append(std::to_string(deviceIdx_));
+    CDeviceUtils::CopyLimitedString(name, deviceName.c_str());
 }
 
 /**
@@ -173,58 +285,35 @@ int CIDSPeak::Initialize()
     if (initialized_)
         return DEVICE_OK;
 
+    IDSPeakHub* pHub = static_cast<IDSPeakHub*>(GetParentHub());
+    if (pHub)
+    {
+        char hubLabel[MM::MaxStrLength];
+        pHub->GetLabel(hubLabel);
+        SetParentID(hubLabel); // for backward comp.
+    }
+    else
+        LogMessage(NoHubError);
+
     // Initalize peak status
     status = PEAK_STATUS_SUCCESS;
 
-    // Initialize peak library
-    status = peak_Library_Init();
-    if (status != PEAK_STATUS_SUCCESS) { return ERR_LIBRARY_NOT_INIT; }
-
-    // update camera list
+    // Retrieve Cam handle
+    size_t nCameras = 0;
     status = peak_CameraList_Update(NULL);
     if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; }
 
-    // get length of camera list
-    size_t cameraListLength = 0;
-    status = peak_CameraList_Get(NULL, &cameraListLength);
+    status = peak_CameraList_Get(NULL, &nCameras); // get length of camera list
+    if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; } // exit program if no camera was found
 
-    // exit program if no camera was found
-    if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; }
-
-    // allocate memory for the camera list
     peak_camera_descriptor* cameraList = (peak_camera_descriptor*)calloc(
-        cameraListLength, sizeof(peak_camera_descriptor));
+        nCameras, sizeof(peak_camera_descriptor)); // allocate memory for the camera list
+    status = peak_CameraList_Get(cameraList, &nCameras); // get the camera list
+    if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; } // exit program if no camera was found
 
-    // get the camera list
-    status = peak_CameraList_Get(cameraList, &cameraListLength);
-    if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; }
-    
-    // Open the cameras and assign cameraIDs
-    vector<string> cameraIndices;
-    CPropertyAction* pAct = new CPropertyAction(this, &CIDSPeak::OnChangeCamera);
-    int nRet = CreateStringProperty(MM::g_Keyword_CameraID, "0", false, pAct);
-    for (int i = 0; i < cameraListLength; i++)
-    {
-        if (peak_Camera_GetAccessStatus(cameraList[i].cameraID) == PEAK_ACCESS_READWRITE)
-        {
-            hCams.push_back(PEAK_INVALID_HANDLE);
-            status = peak_Camera_Open(cameraList[i].cameraID, &hCams[i]);
-            if (status == PEAK_STATUS_SUCCESS)
-            {
-                cameraIndices.push_back(CDeviceUtils::ConvertToString(i));
-            }
-        }
-    }
-    // free the camera list, not needed any longer
-    free(cameraList);
-    if (cameraIndices.size() == 0) { return ERR_CAMERA_NOT_FOUND; }
-    
-    CamID_ = stoi(cameraIndices[0]);
-    
-    nRet = SetAllowedValues(MM::g_Keyword_CameraID, cameraIndices);
-    nCameras_ = cameraIndices.size();
-    nRet = CreateIntegerProperty("nCameras", (long)nCameras_, true);
-    hCam = hCams[CamID_];
+    status = peak_Camera_Open(cameraList[deviceIdx_].cameraID, &hCam); // Get the camera handle
+    if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; } // exit if this is unsuccessful
+    free(cameraList); // free the camera list, not needed any longer
     
     // check which camera was actually opened
     peak_camera_descriptor cameraInfo;
@@ -234,8 +323,28 @@ int CIDSPeak::Initialize()
     // set property list
     // -----------------
 
+
+
+
+
+
+
+
+    
+
+    
+
+
+
+
+
+
+
+
+
+
     // Name
-    nRet = CreateStringProperty(MM::g_Keyword_Name, g_CameraDeviceName, true);
+    int nRet = CreateStringProperty(MM::g_Keyword_Name, g_CameraDeviceName, true);
     assert(nRet == DEVICE_OK);
 
     // Description
@@ -244,34 +353,72 @@ int CIDSPeak::Initialize()
 
     // CameraName
     modelName_ = cameraInfo.modelName;
-    pAct = new CPropertyAction(this, &CIDSPeak::OnModelName);
-    nRet = CreateStringProperty(MM::g_Keyword_CameraName, "model name placeholder", true, pAct);
+    nRet = CreateStringProperty(MM::g_Keyword_CameraName, modelName_.c_str(), true);
     assert(nRet == DEVICE_OK);
 
     // SerialNumber
     serialNum_ = cameraInfo.serialNumber;
-    pAct = new CPropertyAction(this, &CIDSPeak::OnSerialNumber);
-    nRet = CreateStringProperty("Serial Number", "serial number placeholder", true, pAct);
+    nRet = CreateStringProperty("Serial Number", serialNum_.c_str(), true);
     assert(nRet == DEVICE_OK);
 
-    // binning
-    pAct = new CPropertyAction(this, &CIDSPeak::OnBinning);
+    // Binning
+    CPropertyAction* pAct = new CPropertyAction(this, &CIDSPeak::OnBinning);
     nRet = CreateIntegerProperty(MM::g_Keyword_Binning, 0, false, pAct);
     assert(nRet == DEVICE_OK);
+    nRet = SetAllowedBinning();
+    if (nRet != DEVICE_OK) { return nRet; }
 
-    // pixel type
+    // Pixel type
     pAct = new CPropertyAction(this, &CIDSPeak::OnPixelType);
     nRet = CreateStringProperty(MM::g_Keyword_PixelType, "pixeltype placeholder", false, pAct);
     assert(nRet == DEVICE_OK);
+    vector<string> pixelTypeValues;
+    pixelTypeValues.push_back(g_PixelType_8bit);
+    if (isColorCamera())
+    {
+        pixelTypeValues.push_back(g_PixelType_32bitRGBA);
+    }
+    nRet = ClearAllowedValues(MM::g_Keyword_PixelType);
+    nRet = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
+    if (nRet != DEVICE_OK)
+        return nRet;
+
+    //peak_pixel_format format;
+    //status = peak_PixelFormat_Get(hCam, &format);
+    //if (format == PEAK_PIXEL_FORMAT_MONO8)
+    //{
+    //    pixelType_ = g_PixelType_8bit;
+    //    nComponents_ = 1;
+    //    SetProperty(MM::g_Keyword_PixelType, g_PixelType_8bit);
+    //}
+    //else
+    //{
+    //    pixelType_ = g_PixelType_32bitRGBA;
+    //    nComponents_ = 8;
+    //    SetProperty(MM::g_Keyword_PixelType, g_PixelType_32bitRGBA);
+    //}
 
     // Exposure time
     nRet = CreateFloatProperty(MM::g_Keyword_Exposure, exposureCur_, false);
     assert(nRet == DEVICE_OK);
+    status = peak_ExposureTime_GetRange(hCam, &exposureMin_, &exposureMax_, &exposureInc_);
+    if (status != PEAK_STATUS_SUCCESS) { return ERR_DEVICE_NOT_AVAILABLE; }
+    exposureMin_ /= 1000;
+    exposureMax_ /= 1000;
+    exposureInc_ /= 1000;
+    nRet = SetPropertyLimits(MM::g_Keyword_Exposure, exposureMin_, exposureMax_);
+    assert(nRet == DEVICE_OK);
+    status = peak_ExposureTime_Get(hCam, &exposureCur_);
+    exposureCur_ /= 1000;
 
     // Frame rate
     pAct = new CPropertyAction(this, &CIDSPeak::OnFrameRate);
     nRet = CreateFloatProperty("MDA framerate", 1, false, pAct);
     assert(nRet == DEVICE_OK);
+    status = peak_FrameRate_GetRange(hCam, &framerateMin_, &framerateMax_, &framerateInc_);
+    nRet = SetPropertyLimits("MDA framerate", framerateMin_, framerateMax_);
+    assert(nRet == DEVICE_OK);
+    status = peak_FrameRate_Get(hCam, &framerateCur_);
 
     // Auto white balance
     initializeAutoWBConversion();
@@ -339,6 +486,7 @@ int CIDSPeak::Initialize()
     // CCD size of the camera we are modeling
     // getSensorInfo needs to be called before the CreateIntegerProperty
     // calls, othewise the default (512) values will be displayed.
+    nRet = getSensorInfo();
     pAct = new CPropertyAction(this, &CIDSPeak::OnCameraCCDXSize);
     nRet = CreateIntegerProperty("OnCameraCCDXSize", 512, true, pAct);
     assert(nRet == DEVICE_OK);
@@ -378,8 +526,26 @@ int CIDSPeak::Initialize()
     // initialize image buffer
     GenerateEmptyImage(img_);
 
-    // initialize first camera
-    nRet = cameraChanged();
+    // Obtain ROI properties
+    // The SetROI function used the CCD size, so this function should
+    // always be put after the getSensorInfo call
+    // It is assumed that the maximum ROI size is the size of the CCD
+    // and that the increment in X and Y are identical
+    // Also the ROI needs to be initialized beforehand, hence it should be 
+    // placed after GenerateEmptyImage()
+    peak_size roi_size_min;
+    peak_size roi_size_max;
+    peak_size roi_size_inc;
+    peak_roi roi;
+    status = peak_ROI_Size_GetRange(hCam, &roi_size_min, &roi_size_max, &roi_size_inc);
+    if (status != PEAK_STATUS_SUCCESS) { return DEVICE_ERR; }
+    roiMinSizeX_ = roi_size_min.width;
+    roiMinSizeY_ = roi_size_min.height;
+    roiInc_ = roi_size_inc.height;
+    status = peak_ROI_Get(hCam, &roi);
+    SetROI(roi.offset.x, roi.offset.y, roi.size.width, roi.size.height);
+    img_.Resize(roi.size.width, roi.size.height, nComponents_ * (bitDepth_ / 8));
+
     if (nRet != DEVICE_OK) { return nRet; }
 
     // synchronize all properties
@@ -402,17 +568,9 @@ int CIDSPeak::Initialize()
 */
 int CIDSPeak::Shutdown()
 {
-    // Close open camera and set pointer to NULL
-    for (size_t i = 0; i < nCameras_; i++)
-        peak_Camera_Close(hCams[i]);
-    nCameras_ = 0;
-    hCam = NULL;
-
-    // Close peak library
-    status = peak_Library_Exit();
-
+    if (initialized_ == false) { return DEVICE_OK; }
+    cleanExit();
     initialized_ = false;
-
     return DEVICE_OK;
 }
 
@@ -914,6 +1072,13 @@ int CIDSPeak::SendExposureSequence() const {
     return DEVICE_OK;
 }
 
+/**
+* Function that requests the possible binning values from the camera driver
+* It implicitly assumes that the allowed binning factors in X and Y are the same
+* It then restricts the allowed binning values to the possible ones
+* It also checks whether the current binning value is allowed. If, somehow, it
+* is not, it will set it to 1 (which it assumes is always available)
+**/
 int CIDSPeak::SetAllowedBinning()
 {
     int nRet = DEVICE_OK;
@@ -1062,7 +1227,7 @@ int CIDSPeak::RunSequenceOnThread()
         }
     }
 
-    uint32_t three_frame_times_timeout_ms = (uint32_t)(3000 / framerateCur_ + 10);
+    uint32_t three_frame_times_timeout_ms = (uint32_t)(3000 / framerateCur_);
 
     peak_frame_handle hFrame;
     status = peak_Acquisition_WaitForFrame(hCam, three_frame_times_timeout_ms, &hFrame);
@@ -1251,9 +1416,9 @@ int CIDSPeak::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
     case MM::AfterSet:
     {
-        if (IsCapturing())
-            return DEVICE_CAMERA_BUSY_ACQUIRING;
-
+        // Should not change binning during acquisition
+        if (IsCapturing()) { return DEVICE_CAMERA_BUSY_ACQUIRING; }
+            
         // the user just set the new value for the property, so we have to
         // apply this value to the 'hardware'.
         long binFactor;
@@ -1688,24 +1853,6 @@ int CIDSPeak::OnIsSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-int CIDSPeak::OnChangeCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    int nRet = DEVICE_OK;
-    if (eAct == MM::BeforeGet)
-    {
-        pProp->Set(CDeviceUtils::ConvertToString(CamID_));
-    }
-    else if (eAct == MM::AfterSet)
-    {
-        string CamID_temp;
-        pProp->Get(CamID_temp);
-        CamID_ = stoi(CamID_temp);
-        hCam = hCams[CamID_];
-        cameraChanged();
-    }
-    return nRet;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // Private CIDSPeak methods
 ///////////////////////////////////////////////////////////////////////////////
@@ -1752,31 +1899,21 @@ peak_status CIDSPeak::getTemperature(double* sensorTemp)
     return status;
 }
 
+/**
+* Cleanly exit camera, called during Shutdown()
+**/
 int CIDSPeak::cleanExit()
 {
-
-    // Clean up before exit
-    // Stop acquisition, if running
-    if (peak_Acquisition_IsStarted(hCam))
+    if (hCam != PEAK_INVALID_HANDLE && hCam != NULL) // Check if camera is open
     {
-        // Stop acquisition
-        status = peak_Acquisition_Stop(hCam);
-        checkForSuccess(status, PEAK_TRUE);
+        if (peak_Acquisition_IsStarted(hCam)) // Check if camera is acquiring data
+        {
+            status = peak_Acquisition_Stop(hCam); // Stop acquisition
+        }
+        status = peak_Camera_Close(hCam); // Close Camera
     }
-
-    // Close camera, if open
-    if (hCam != PEAK_INVALID_HANDLE)
-    {
-        // Close Camera
-        status = peak_Camera_Close(hCam);
-        checkForSuccess(status, PEAK_TRUE);
-    }
-
-    // Exit library
-    status = peak_Library_Exit();
-    checkForSuccess(status, PEAK_TRUE);
-
-    return status;
+    hCam = NULL;
+    return DEVICE_OK;
 }
 
 //Returns PEAK_TRUE, if function was successful.
@@ -1993,95 +2130,7 @@ int CIDSPeak::framerateSet(double framerate)
 // Actual initialization of the camera (is called every time camera is swapped).
 int CIDSPeak::cameraChanged()
 {
-    int nRet = DEVICE_OK;
-    peak_camera_descriptor cameraInfo;
-    status = peak_Camera_GetDescriptor(peak_Camera_ID_FromHandle(hCam), &cameraInfo);
-    if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; }
 
-    // CameraName
-    modelName_ = cameraInfo.modelName;
-
-    // CameraID
-    serialNum_ = cameraInfo.serialNumber;
-
-    // Binning
-    nRet = SetAllowedBinning();
-    if (nRet != DEVICE_OK)
-        return nRet;
-    uint32_t binx;
-    uint32_t biny;
-    status = peak_Binning_Get(hCam, &binx, &biny);
-    binSize_ = (long)binx;
-    nRet = SetBinning(binSize_);
-
-    // PixelType, assumes 8bit mono is always possible
-    vector<string> pixelTypeValues;
-    pixelTypeValues.push_back(g_PixelType_8bit);
-    if (isColorCamera())
-    {
-        pixelTypeValues.push_back(g_PixelType_32bitRGBA);
-    }
-    nRet = ClearAllowedValues(MM::g_Keyword_PixelType);
-    nRet = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
-    if (nRet != DEVICE_OK)
-        return nRet;
-
-    peak_pixel_format format;
-    status = peak_PixelFormat_Get(hCam, &format);
-    if (format == PEAK_PIXEL_FORMAT_MONO8)
-    {
-        pixelType_ = g_PixelType_8bit;
-        nComponents_ = 1;
-        SetProperty(MM::g_Keyword_PixelType, g_PixelType_8bit);
-    }
-    else
-    {
-        pixelType_ = g_PixelType_32bitRGBA;
-        nComponents_ = 8;
-        SetProperty(MM::g_Keyword_PixelType, g_PixelType_32bitRGBA);
-    }
-
-    // Exposure time
-    status = peak_ExposureTime_GetRange(hCam, &exposureMin_, &exposureMax_, &exposureInc_);
-    if (status != PEAK_STATUS_SUCCESS) { return ERR_DEVICE_NOT_AVAILABLE; }
-    exposureMin_ /= 1000;
-    exposureMax_ /= 1000;
-    exposureInc_ /= 1000;
-    nRet = SetPropertyLimits(MM::g_Keyword_Exposure, exposureMin_, exposureMax_);
-    if (nRet != DEVICE_OK)
-        return nRet;
-    status = peak_ExposureTime_Get(hCam, &exposureCur_);
-    exposureCur_ /= 1000;
-
-    // Framerate range
-    status = peak_FrameRate_GetRange(hCam, &framerateMin_, &framerateMax_, &framerateInc_);
-    nRet = SetPropertyLimits("MDA framerate", framerateMin_, framerateMax_);
-    status = peak_FrameRate_Get(hCam, &framerateCur_);
-
-    // Get sensor size
-    nRet = getSensorInfo();
-
-    // Obtain ROI properties
-    // The SetROI function used the CCD size, so this function should
-    // always be put after the getSensorInfo call
-    // It is assumed that the maximum ROI size is the size of the CCD
-    // and that the increment in X and Y are identical
-    peak_size roi_size_min;
-    peak_size roi_size_max;
-    peak_size roi_size_inc;
-    peak_roi roi;
-    status = peak_ROI_Size_GetRange(hCam, &roi_size_min, &roi_size_max, &roi_size_inc);
-    if (status != PEAK_STATUS_SUCCESS) { return DEVICE_ERR; }
-    roiMinSizeX_ = roi_size_min.width;
-    roiMinSizeY_ = roi_size_min.height;
-    roiInc_ = roi_size_inc.height;
-    status = peak_ROI_Get(hCam, &roi);
-    SetROI(roi.offset.x, roi.offset.y, roi.size.width, roi.size.height);
-    img_.Resize(roi.size.width, roi.size.height, nComponents_ * (bitDepth_ / 8));
-
-    if (nRet != DEVICE_OK)
-        return nRet;
-    return nRet;
 }
 
 // Checks if camera supportes color image formats
