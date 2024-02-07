@@ -395,9 +395,9 @@ AS_IF([test "x$want_opencv" != xno],
 AM_CONDITIONAL([BUILD_OPENCV], [test "x$use_opencv" = xyes])
 
 
-# Spinnaker (FLIR).
-AC_MSG_CHECKING(for Spinnaker_Linux)
-AM_CONDITIONAL([BUILD_SPINNAKER_LINUX],[test -f "/opt/spinnaker/include/Spinnaker.h"])
+# Spinnaker SDK (FLIR).
+AC_MSG_CHECKING(for Spinnaker)
+AM_CONDITIONAL([BUILD_SPINNAKER],[test -f "/opt/spinnaker/include/Spinnaker.h"])
 if test -f "/opt/spinnaker/include/Spinnaker.h"; then
    AC_MSG_RESULT([found])
 else
