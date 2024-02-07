@@ -394,6 +394,17 @@ AS_IF([test "x$want_opencv" != xno],
 
 AM_CONDITIONAL([BUILD_OPENCV], [test "x$use_opencv" = xyes])
 
+
+# Spinnaker (FLIR).
+AC_MSG_CHECKING(for Spinnaker_Linux)
+AM_CONDITIONAL([BUILD_SPINNAKER_LINUX],[test -f "/opt/spinnaker/include/Spinnaker.h"])
+if test -f "/opt/spinnaker/include/Spinnaker.h"; then
+   AC_MSG_RESULT([found])
+else
+   AC_MSG_RESULT([not found])
+fi
+
+
 # Vimba X (Allied Vision) SDK
 MM_ARG_WITH_OPTIONAL_LIB([Vimba X], [vimba-x], [VIMBA_X])
 AS_IF([test "x$want_vimba_x" != xno],
