@@ -11,6 +11,10 @@
 #define GENICAM Spinnaker::GenICam
 #define SPKR_ERROR 10002
 
+
+class SpinnakerAcquisitionThread;
+
+
 class SpinnakerCamera : public CCameraBase<SpinnakerCamera>
 {
 public:

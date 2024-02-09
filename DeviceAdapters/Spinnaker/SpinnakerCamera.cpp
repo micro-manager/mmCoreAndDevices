@@ -88,7 +88,7 @@ std::vector<CamNameAndSN> GetSpinnakeerCameraNamesAndSNs()
    }
 
    camList.Clear();
-   system = NULL;
+   system = nullptr;
    return out;
 }
 
@@ -124,10 +124,10 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 SpinnakerCamera::SpinnakerCamera(GENICAM::gcstring name)
    : CCameraBase<SpinnakerCamera>(),
-   m_system(NULL),
-   m_cam(NULL),
-   m_imageBuff(NULL),
-   m_aqThread(NULL)
+   m_system(nullptr),
+   m_cam(nullptr),
+   m_imageBuff(nullptr),
+   m_aqThread(nullptr)
 {
    InitializeDefaultErrorMessages();
 
@@ -178,7 +178,7 @@ int SpinnakerCamera::Initialize()
    }
 
    m_system = SPKR::System::GetInstance();
-   if (m_system == NULL)
+   if (m_system == nullptr)
    {
       SetErrorText(SPKR_ERROR, "Spinnaker System Object Pointer is Null!");
       return SPKR_ERROR;
@@ -215,7 +215,7 @@ int SpinnakerCamera::Initialize()
    }
    camList.Clear();
 
-   if (m_cam == NULL)
+   if (m_cam == nullptr)
    {
       this->Shutdown();
       SetErrorText(SPKR_ERROR, "Could not find camera with serial number: " + m_SN);
@@ -489,10 +489,10 @@ int SpinnakerCamera::Shutdown()
       if (m_imageBuff)
          delete[] m_imageBuff;
       m_imageBuff = NULL;
-      m_cam = NULL;
-      if (m_system != NULL)
+      m_cam = nullptr;
+      if (m_system != nullptr)
          m_system->ReleaseInstance();
-      m_system = NULL;
+      m_system = nullptr;
    }
    catch (SPKR::Exception ex)
    {
@@ -923,7 +923,7 @@ const unsigned char* SpinnakerCamera::GetImageBuffer()
          LogMessage(SPKR::Image::GetImageStatusDescription(m_imagePtr->GetImageStatus()));
       }
 
-      if (m_imagePtr != NULL)
+      if (m_imagePtr != nullptr)
          m_imagePtr->Release();
    }
    catch (SPKR::Exception &ex)
@@ -1076,15 +1076,15 @@ int SpinnakerCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySi
       m_cam->OffsetY.SetValue(m_cam->OffsetY.GetMin());
         
       // Force width and height to be multiple of Width.GetInc() and Height.GetInc()
-      xSize = (unsigned) min(xSize - xSize % m_cam->Width.GetInc(), m_cam->Width.GetMax());
-      ySize = (unsigned) min(ySize - ySize % m_cam->Height.GetInc(), m_cam->Height.GetMax());
+      xSize = (unsigned) std::min(xSize - xSize % m_cam->Width.GetInc(), m_cam->Width.GetMax());
+      ySize = (unsigned) std::min(ySize - ySize % m_cam->Height.GetInc(), m_cam->Height.GetMax());
 
       m_cam->Width.SetValue(xSize);
       m_cam->Height.SetValue(ySize);
 
       //Force offsets to be multiples of OffsetX.GetInc() and OffsetY.GetInc()
-      x = (unsigned) min(x - x % m_cam->OffsetX.GetInc(), m_cam->OffsetX.GetMax());
-      y = (unsigned) min(y - y % m_cam->OffsetY.GetInc(), m_cam->OffsetY.GetMax());
+      x = (unsigned) std::min(x - x % m_cam->OffsetX.GetInc(), m_cam->OffsetX.GetMax());
+      y = (unsigned) std::min(y - y % m_cam->OffsetY.GetInc(), m_cam->OffsetY.GetMax());
 
       m_cam->OffsetX.SetValue(x); 
       m_cam->OffsetY.SetValue(y);
@@ -1661,7 +1661,7 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          }
          else
          {
-            if (ip != NULL)
+            if (ip != nullptr)
                ip->Release();
 
             return ret;
@@ -1672,7 +1672,7 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          LogMessage(SPKR::Image::GetImageStatusDescription(ip->GetImageStatus()));
       }
 
-      if (ip != NULL)
+      if (ip != nullptr)
          ip->Release();
    }
    catch (SPKR::Exception &ex)
