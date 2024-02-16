@@ -4,9 +4,6 @@
 
 #include "AravisCamera.h"
 #include "ModuleInterface.h"
-#include <vector>
-#include <string>
-#include <algorithm>
 
 
 /*
@@ -27,9 +24,10 @@ MODULE_API void InitializeModuleData()
   }
 }
 
-MODULE_API MM::Device* CreateDevice(const char* deviceId)
+MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
-  return new AravisCamera(deviceId);
+  printf("ArvCreateDevice %s\n", deviceName);
+  return new AravisCamera(deviceName);
 }
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)
@@ -42,20 +40,27 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
  * Camera class and methods.
  */
 
-AravisCamera::AravisCamera(const char *name) : CCameraBase<AravisCamera>()
+AravisCamera::AravisCamera(const char *name) :
+  CCameraBase<AravisCamera>(),
+  img_buffer(nullptr),
+  img_buffer_size(0),
+  initialized_(false)
 {
-  a_cam_name = name;
+  printf("ArvCamera %s\n", name);
+  arv_cam_name = (char *)malloc(sizeof(char) * strlen(name));
+  CDeviceUtils::CopyLimitedString(arv_cam_name, name);
 }
 
 AravisCamera::~AravisCamera()
 {
-  g_clear_object(&a_cam);
+  g_clear_object(&arv_cam);
 }
 
 // These supposed to be in alphabetical order.
 
 int AravisCamera::ClearROI()
 {
+  printf("ArvClearROI\n");
   return DEVICE_OK;
 }
 
@@ -64,8 +69,9 @@ int AravisCamera::GetBinning() const
   gint dx;
   gint dy;
   GError *error = NULL;
-  
-  arv_camera_get_binning(a_cam, &dx, &dy, &error);
+
+  printf("ArvGetBinning\n");
+  arv_camera_get_binning(arv_cam, &dx, &dy, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
@@ -79,13 +85,15 @@ unsigned AravisCamera::GetBitDepth() const
 {
   guint32 arvPixelFormat;
   GError *error = NULL;
-  
-  arvPixelFormat = arv_camera_get_pixel_format(a_cam, &error);
+
+  printf("ArvGetBitDepth\n");
+  arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
   }
-  
+  printf("  %d\n", arvPixelFormat);
+    
   switch (arvPixelFormat){
   case ARV_PIXEL_FORMAT_MONO_8: {
     return 8;
@@ -111,35 +119,43 @@ unsigned AravisCamera::GetBitDepth() const
 
 double AravisCamera::GetExposure() const
 {
+  double expTimeUs;
   GError *error = NULL;
-  
-  return arv_camera_get_exposure_time(a_cam, &error);
+
+  printf("ArvGetExposure\n");
+  expTimeUs = arv_camera_get_exposure_time(arv_cam, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
   }
+  return expTimeUs * 1.0e3;
 }
 
+// This at least needs to allocate mm_buffer..
 const unsigned char* AravisCamera::GetImageBuffer()
 {
   int i;
   gint w,h;
   size_t size;
-  unsigned char *mm_buffer;
-  unsigned char *cam_data;
+  unsigned char *arv_buffer_data;
 
-  printf("get image buffer\n");
-  if (ARV_IS_BUFFER (a_buffer)) {
-    w = arv_buffer_get_image_width(a_buffer);
-    h = arv_buffer_get_image_height(a_buffer);
-    cam_data = (unsigned char *)arv_buffer_get_data(a_buffer, &size);
-    printf("buffer is %ld, %d x %d\n", (long)size, (int)w, (int)h); 
+  printf("ArvGetImageBuffer\n");
+  if (ARV_IS_BUFFER (arv_buffer)) {
+    w = arv_buffer_get_image_width(arv_buffer);
+    h = arv_buffer_get_image_height(arv_buffer);
+    arv_buffer_data = (unsigned char *)arv_buffer_get_data(arv_buffer, &size);
+    printf("buffer is %ld, %d x %d\n", (long)size, (int)w, (int)h);
+    printf("buffer size %ld\n", GetImageBufferSize());
 
-    for(i=0;i<(w*h);i++){
-      mm_buffer[i] = cam_data[i];
+    if (img_buffer_size != size){
+      if (img_buffer != nullptr){
+	free(img_buffer);
+      }
+      printf("malloc %ld\n", size);
+      img_buffer = (unsigned char *)malloc(size);
     }
-    g_clear_object(&a_buffer);
-    return mm_buffer;
+    memcpy(img_buffer, arv_buffer_data, size);
+    return img_buffer;
   }
   return NULL;
 }
@@ -148,16 +164,20 @@ long AravisCamera::GetImageBufferSize() const
 {
   gint gx,gy,gwidth,gheight;
   GError *error = NULL;
-  arv_camera_get_region(a_cam, &gx, &gy, &gwidth, &gheight, &error);
+
+  printf("ArvGetImageBufferSize\n");
+  arv_camera_get_region(arv_cam, &gx, &gy, &gwidth, &gheight, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
-  }  
-  return (long) gwidth * gheight * this->GetImageBytesPerPixel(); 
+  }
+  printf("  %d %d\n", gwidth, gheight);
+  return (long) gwidth * gheight * GetImageBytesPerPixel(); 
 }
 
 unsigned AravisCamera::GetImageBytesPerPixel() const
 {
+  printf("ArvGetImageBytesPerPixel\n");
   return 1;
 }
 
@@ -166,12 +186,14 @@ unsigned AravisCamera::GetImageWidth() const
   gint w;
   gint h;
   GError *error = NULL;
-  
-  arv_camera_get_sensor_size(a_cam, &w, &h, &error);
+
+  printf("ArvGetImageWidth\n");
+  arv_camera_get_sensor_size(arv_cam, &w, &h, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
-  }  
+  }
+  printf("  %d %d\n", w, h);
   return (unsigned)w;
 }
 
@@ -181,7 +203,8 @@ unsigned AravisCamera::GetImageHeight() const
   gint h;
   GError *error = NULL;
   
-  arv_camera_get_sensor_size(a_cam, &w, &h, &error);
+  printf("ArvGetImageHeight\n");
+  arv_camera_get_sensor_size(arv_cam, &w, &h, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
@@ -191,11 +214,13 @@ unsigned AravisCamera::GetImageHeight() const
 
 void AravisCamera::GetName(char *name) const
 {
-  CDeviceUtils::CopyLimitedString(name, a_cam_name); 
+  printf("ArvGetName\n");
+  CDeviceUtils::CopyLimitedString(name, arv_cam_name);
 }
 
 unsigned AravisCamera::GetNumberOfComponents() const
 {
+  printf("ArvGetNumberOfComponents\n");
   // Add support for RGB cameras.
   return 1;
 }
@@ -204,8 +229,9 @@ int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& yS
 {
   gint gx,gy,gwidth,gheight;
   GError *error = NULL;
-  
-  arv_camera_get_region(a_cam, &gx, &gy, &gwidth, &gheight, &error);
+
+  printf("ArvGetROI\n");
+  arv_camera_get_region(arv_cam, &gx, &gy, &gwidth, &gheight, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
@@ -220,33 +246,51 @@ int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& yS
 
 int AravisCamera::Initialize()
 {
+  int ret;
   GError *error = NULL;
-  a_cam = arv_camera_new(a_cam_name, &error);
+
+  if(initialized_){
+    return DEVICE_OK;
+  }
+  printf("ArvInitialize %s\n", arv_cam_name);
+  
+  arv_cam = arv_camera_new(arv_cam_name, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
     return ARV_ERROR;
   }
 
-  arv_camera_set_exposure_time_auto(a_cam, ARV_AUTO_OFF, &error);
+  // Turn off auto exposure.
+  arv_camera_set_exposure_time_auto(arv_cam, ARV_AUTO_OFF, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
   }
+  initialized_ = true;
+
+  //void arv_camera_get_x_binning_bounds (ArvCamera* camera, gint* min, gint* max, GError** error);
+  ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
+  SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
+  assert(ret == DEVICE_OK);
+		
   return DEVICE_OK;
 }
 
 int AravisCamera::IsExposureSequenceable(bool &isSequencable) const
 {
   isSequencable = false;
+
+  printf("ArvIsExposureSequencable\n");
   return DEVICE_OK;
 }
 
 int AravisCamera::SetBinning(int binSize)
 {
   GError *error;
-  
-  arv_camera_set_binning(a_cam, (gint)binSize, (gint)binSize, &error);
+
+  printf("ArvSetBinning\n");
+  arv_camera_set_binning(arv_cam, (gint)binSize, (gint)binSize, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
@@ -260,14 +304,15 @@ void AravisCamera::SetExposure(double exp)
   double frameRate = 1.0/exp;
   GError *error;
 
+  printf("ArvSetExposure\n");
   // Range checking?
   // Frame rate should be slightly slower than exposure time?
-  arv_camera_set_frame_rate(a_cam, frameRate, &error);
+  arv_camera_set_frame_rate(arv_cam, frameRate, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
   }  
-  arv_camera_set_exposure_time(a_cam, expUs, &error);
+  arv_camera_set_exposure_time(arv_cam, expUs, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
@@ -277,7 +322,9 @@ void AravisCamera::SetExposure(double exp)
 int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
   GError *error;
-  arv_camera_set_region(a_cam, (gint)x, (gint)y, (gint)xSize, (gint)ySize, &error);
+
+  printf("ArvSetROI\n");
+  arv_camera_set_region(arv_cam, (gint)x, (gint)y, (gint)xSize, (gint)ySize, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
@@ -287,15 +334,19 @@ int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 
 int AravisCamera::Shutdown()
 {
+  printf("Shutdown\n");
+  
   return DEVICE_OK;
 }
 
+// This should wait until the image is acquired?
 int AravisCamera::SnapImage()
 {
   GError *error = NULL;
+
+  printf("SnapImage\n");
   // arv_camera_set_acquisition_mode(a_cam, ARV_ACQUISITION_MODE_SINGLE_FRAME);
-  
-  AravisCamera::a_buffer = arv_camera_acquisition(a_cam, 0, &error);
+  arv_buffer = arv_camera_acquisition(arv_cam, 0, &error);
 
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);
