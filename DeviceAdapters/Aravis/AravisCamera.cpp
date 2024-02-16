@@ -128,23 +128,22 @@ double AravisCamera::GetExposure() const
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
   }
-  return expTimeUs * 1.0e3;
+  return expTimeUs * 1.0e-3;
 }
 
 // This at least needs to allocate mm_buffer..
 const unsigned char* AravisCamera::GetImageBuffer()
 {
   int i;
-  gint w,h;
   size_t size;
   unsigned char *arv_buffer_data;
 
   printf("ArvGetImageBuffer\n");
   if (ARV_IS_BUFFER (arv_buffer)) {
-    w = arv_buffer_get_image_width(arv_buffer);
-    h = arv_buffer_get_image_height(arv_buffer);
+    img_buffer_width = (int)arv_buffer_get_image_width(arv_buffer);
+    img_buffer_height = (int)arv_buffer_get_image_height(arv_buffer);
     arv_buffer_data = (unsigned char *)arv_buffer_get_data(arv_buffer, &size);
-    printf("buffer is %ld, %d x %d\n", (long)size, (int)w, (int)h);
+    printf("buffer is %ld, %d x %d\n", (long)size, (int)img_buffer_width, (int)img_buffer_height);
     printf("buffer size %ld\n", GetImageBufferSize());
 
     if (img_buffer_size != size){
@@ -183,22 +182,12 @@ unsigned AravisCamera::GetImageBytesPerPixel() const
 
 unsigned AravisCamera::GetImageWidth() const
 {
-  gint w;
-  gint h;
-  GError *error = NULL;
-
-  printf("ArvGetImageWidth\n");
-  arv_camera_get_sensor_size(arv_cam, &w, &h, &error);
-  if (error != NULL) {
-    printf ("Aravis Error: %s\n", error->message);
-    g_clear_error(&error);
-  }
-  printf("  %d %d\n", w, h);
-  return (unsigned)w;
+  return (unsigned)img_buffer_width;
 }
 
 unsigned AravisCamera::GetImageHeight() const
 {
+  /*
   gint w;
   gint h;
   GError *error = NULL;
@@ -210,6 +199,8 @@ unsigned AravisCamera::GetImageHeight() const
     g_clear_error(&error);
   }
   return (unsigned)h;
+  */
+  return (unsigned)img_buffer_height;
 }
 
 void AravisCamera::GetName(char *name) const
@@ -247,6 +238,7 @@ int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& yS
 int AravisCamera::Initialize()
 {
   int ret;
+  gint h,w,tmp;
   GError *error = NULL;
 
   if(initialized_){
@@ -269,6 +261,24 @@ int AravisCamera::Initialize()
   }
   initialized_ = true;
 
+  // Start at full (accessible) chip size. This doesn't work. IDK.
+  //SetROI(0, 0, 128, 128);  
+  arv_camera_get_height_bounds(arv_cam, &tmp, &h, &error);
+  if (error != NULL) {
+    printf ("Aravis Error: %s\n", error->message);
+    g_clear_error(&error);
+  }
+  arv_camera_get_width_bounds(arv_cam, &tmp, &w, &error);
+  if (error != NULL) {
+    printf ("Aravis Error: %s\n", error->message);
+    g_clear_error(&error);
+  }
+  printf("  %d %d\n", w, h);
+  //SetROI(0, 0, 1616, 1240);
+
+  img_buffer_height = (int)h;
+  img_buffer_width = (int)w;
+  
   //void arv_camera_get_x_binning_bounds (ArvCamera* camera, gint* min, gint* max, GError** error);
   ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
   SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
@@ -323,7 +333,7 @@ int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
   GError *error;
 
-  printf("ArvSetROI\n");
+  printf("ArvSetROI %d %d %d %d\n", x, y, xSize, ySize);
   arv_camera_set_region(arv_cam, (gint)x, (gint)y, (gint)xSize, (gint)ySize, &error);
   if (error != NULL) {
     printf ("Aravis Error: %s\n", error->message);

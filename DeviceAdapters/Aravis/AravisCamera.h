@@ -50,6 +50,8 @@ public:
 
 private:
   bool initialized_;
+  int img_buffer_height;
+  int img_buffer_width;
   long img_buffer_size;
   
   ArvBuffer *arv_buffer;
