@@ -6,6 +6,13 @@
 #include "ModuleInterface.h"
 
 
+typedef struct {
+  long counter;
+  AravisCamera *camera;
+  ArvStream *stream;
+} ArvStreamCallbackData;
+
+
 /*
  * Module functions.
  */
@@ -13,6 +20,9 @@ MODULE_API void InitializeModuleData()
 {
   uint64_t nDevices=0;
 
+  // Debugging.
+  //arv_debug_enable("all:3,device");
+   
   // Update and get number of aravis compatible cameras.
   arv_update_device_list();
   nDevices = arv_get_n_devices();
@@ -36,6 +46,64 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 
+// Sequence acquisition callback.
+static void
+stream_callback (void *user_data, ArvStreamCallbackType type, ArvBuffer *arv_buffer)
+{
+  size_t size;
+  unsigned char *arv_buffer_data;
+  unsigned char *img_buffer;
+  ArvStreamCallbackData *callback_data = (ArvStreamCallbackData *) user_data;
+  AravisCamera *camera;
+  Metadata md;
+
+  printf("stream_callback %ld\n", callback_data->counter);
+
+  if (!callback_data->camera->capturing_){
+    return;
+  }
+      
+  switch (type) {
+  case ARV_STREAM_CALLBACK_TYPE_BUFFER_DONE:
+    camera = callback_data->camera;
+    
+    g_assert (arv_buffer == arv_stream_pop_buffer(callback_data->stream));
+    g_assert (arv_buffer != NULL);
+
+    camera->img_buffer_width = (int)arv_buffer_get_image_width(arv_buffer);
+    camera->img_buffer_height = (int)arv_buffer_get_image_height(arv_buffer);
+    arv_buffer_data = (unsigned char *)arv_buffer_get_data(arv_buffer, &size);
+    img_buffer = (unsigned char *)malloc(size);
+    
+    memcpy(img_buffer, arv_buffer_data, size);
+
+    // Image metadata.
+    md.put("Camera", "");
+    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)camera->img_buffer_width));
+    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)camera->img_buffer_height));
+    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(callback_data->counter));
+    //md.put(MM::g_Keyword_Meatdata_Exposure, camera->GetExposure());
+    md.put(MM::g_Keyword_Meatdata_Exposure, 997.0);
+    
+    // Copy to intermediate buffer
+    int ret = camera->GetCoreCallback()->InsertImage(camera,
+						     img_buffer,
+						     camera->img_buffer_width,
+						     camera->img_buffer_height,
+						     camera->GetImageBytesPerPixel(),
+						     1,
+						     md.Serialize().c_str(),
+						     FALSE);
+    if (ret == DEVICE_BUFFER_OVERFLOW) {
+      //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
+      camera->GetCoreCallback()->ClearImageBuffer(camera);
+    }
+    arv_stream_push_buffer(callback_data->stream, arv_buffer);
+    callback_data->counter += 1;
+    break;
+  }
+}
+
 /*
  * Camera class and methods.
  */
@@ -44,6 +112,7 @@ AravisCamera::AravisCamera(const char *name) :
   CCameraBase<AravisCamera>(),
   img_buffer(nullptr),
   img_buffer_size(0),
+  capturing_(false),
   initialized_(false)
 {
   printf("ArvCamera %s\n", name);
@@ -128,13 +197,13 @@ double AravisCamera::GetExposure() const
     printf ("Aravis Error: %s\n", error->message);
     g_clear_error(&error);
   }
+  printf("  %f\n", expTimeUs);
   return expTimeUs * 1.0e-3;
 }
 
 // This at least needs to allocate mm_buffer..
 const unsigned char* AravisCamera::GetImageBuffer()
 {
-  int i;
   size_t size;
   unsigned char *arv_buffer_data;
 
@@ -295,6 +364,16 @@ int AravisCamera::IsExposureSequenceable(bool &isSequencable) const
   return DEVICE_OK;
 }
 
+bool AravisCamera::IsCapturing()
+{
+  return capturing_;
+}
+
+int AravisCamera::PrepareSequenceAcqusition()
+{
+   return DEVICE_OK;
+}
+
 int AravisCamera::SetBinning(int binSize)
 {
   GError *error;
@@ -310,7 +389,7 @@ int AravisCamera::SetBinning(int binSize)
 
 void AravisCamera::SetExposure(double exp)
 {
-  double expUs = 1.0e6*exp;
+  double expUs = 1000.0*exp;
   double frameRate = 1.0/exp;
   GError *error;
 
@@ -364,6 +443,91 @@ int AravisCamera::SnapImage()
     return ARV_ERROR;
   }
 
+  return DEVICE_OK;
+}
+
+// FIXME: callback_data should not be static.
+int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+{
+  GError  *error = NULL;
+  static ArvStreamCallbackData callback_data;  
+  arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &error);
+
+  printf("StartSequenceAcquisition1 %ld %f %d\n", numImages, interval_ms, stopOnOverflow);
+
+  callback_data.counter = 0;
+  callback_data.camera = this;
+  callback_data.stream = NULL;
+
+  if (error == NULL)
+    callback_data.stream = arv_camera_create_stream(arv_cam, stream_callback, &callback_data, &error);
+
+  if (ARV_IS_STREAM(callback_data.stream)){
+    int i;
+    size_t payload;
+
+    arv_stream = callback_data.stream;
+    payload = arv_camera_get_payload(arv_cam, &error);
+    if (error == NULL) {
+      for (i = 0; i < 20; i++)
+	arv_stream_push_buffer(callback_data.stream, arv_buffer_new(payload, NULL));
+    }
+    arv_camera_start_acquisition(arv_cam, &error);
+  }
+  else{
+    printf("stream creation failed.\n");
+  }
+  capturing_ = true;
+  printf("  started1\n");
+  return DEVICE_OK;
+}
+
+int AravisCamera::StartSequenceAcquisition(double interval_ms) {
+  GError *error = NULL;
+  static ArvStreamCallbackData callback_data;  
+  arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &error);
+
+  printf("StartSequenceAcquisition2 %f\n", interval_ms);
+
+  callback_data.counter = 0;
+  callback_data.camera = this;
+  callback_data.stream = NULL;
+
+  if (error == NULL)
+    callback_data.stream = arv_camera_create_stream(arv_cam, stream_callback, &callback_data, &error);
+
+  if (ARV_IS_STREAM(callback_data.stream)){
+    int i;
+    size_t payload;
+
+    arv_stream = callback_data.stream;
+    payload = arv_camera_get_payload(arv_cam, &error);
+    if (error == NULL) {
+      for (i = 0; i < 20; i++)
+	arv_stream_push_buffer(callback_data.stream, arv_buffer_new(payload, NULL));
+    }
+    arv_camera_start_acquisition(arv_cam, &error);
+  }
+  else{
+    printf("stream creation failed.\n");
+  }
+  capturing_ = true;
+  printf("  started2\n");
+  return DEVICE_OK;
+}
+
+int AravisCamera::StopSequenceAcquisition()
+{
+  GError *error = NULL;
+
+  printf("StopSequenceAcquisition\n");
+  if (capturing_){
+    capturing_ = false;
+    arv_camera_stop_acquisition(arv_cam, &error);
+    g_clear_object(&arv_stream);
+    
+    GetCoreCallback()->AcqFinished(this, 0);
+  }
   return DEVICE_OK;
 }
 

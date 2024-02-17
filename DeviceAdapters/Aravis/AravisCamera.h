@@ -48,16 +48,27 @@ public:
   int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
   int SnapImage();
 
-private:
-  bool initialized_;
+  // Continuous acquisition.
+  bool IsCapturing();
+  int PrepareSequenceAcqusition();
+  int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+  int StartSequenceAcquisition(double interval_ms);
+  int StopSequenceAcquisition();
+
+  bool capturing_;
   int img_buffer_height;
   int img_buffer_width;
+
+private:
+  bool initialized_;
   long img_buffer_size;
   
-  ArvBuffer *arv_buffer;
-  ArvCamera *arv_cam;
   char *arv_cam_name;
   unsigned char *img_buffer;
+
+  ArvBuffer *arv_buffer;
+  ArvCamera *arv_cam;
+  ArvStream *arv_stream;
 };
 
 
