@@ -58,7 +58,9 @@ public:
   bool capturing_;
   int img_buffer_height;
   int img_buffer_width;
-
+  long counter_;
+  ArvStream *arv_stream;
+  
 private:
   bool initialized_;
   long img_buffer_size;
@@ -68,15 +70,6 @@ private:
 
   ArvBuffer *arv_buffer;
   ArvCamera *arv_cam;
-  ArvStream *arv_stream;
-};
-
-
-class AravisAcquisitionThread : public MMDeviceThreadBase
-{
-public:
-   AravisAcquisitionThread(AravisCamera *aCam);
-   ~AravisAcquisitionThread();
 };
 
 #endif // !_ARAVIS_CAMERA_H_
