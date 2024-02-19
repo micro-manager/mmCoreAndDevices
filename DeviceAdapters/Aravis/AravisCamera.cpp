@@ -54,56 +54,9 @@ int arvCheckError(GError *gerror){
 static void
 stream_callback (void *user_data, ArvStreamCallbackType type, ArvBuffer *arv_buffer)
 {
-  size_t size;
-  unsigned char *arv_buffer_data;
-  unsigned char *img_buffer;
   AravisCamera *camera = (AravisCamera *) user_data;
-  Metadata md;
 
-  printf("stream_callback %ld\n", camera->counter_);
-
-  if (!camera->capturing_){
-    return;
-  }
-      
-  switch (type) {
-  case ARV_STREAM_CALLBACK_TYPE_BUFFER_DONE:
-    
-    g_assert (arv_buffer == arv_stream_pop_buffer(camera->arv_stream));
-    g_assert (arv_buffer != NULL);
-
-    camera->img_buffer_width = (int)arv_buffer_get_image_width(arv_buffer);
-    camera->img_buffer_height = (int)arv_buffer_get_image_height(arv_buffer);
-    arv_buffer_data = (unsigned char *)arv_buffer_get_data(arv_buffer, &size);
-    img_buffer = (unsigned char *)malloc(size);
-    
-    memcpy(img_buffer, arv_buffer_data, size);
-
-    // Image metadata.
-    md.put("Camera", "");
-    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)camera->img_buffer_width));
-    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)camera->img_buffer_height));
-    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(camera->counter_));
-    //md.put(MM::g_Keyword_Meatdata_Exposure, camera->GetExposure());
-    md.put(MM::g_Keyword_Meatdata_Exposure, 997.0);
-    
-    // Copy to intermediate buffer
-    int ret = camera->GetCoreCallback()->InsertImage(camera,
-						     img_buffer,
-						     camera->img_buffer_width,
-						     camera->img_buffer_height,
-						     camera->GetImageBytesPerPixel(),
-						     1,
-						     md.Serialize().c_str(),
-						     FALSE);
-    if (ret == DEVICE_BUFFER_OVERFLOW) {
-      //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
-      camera->GetCoreCallback()->ClearImageBuffer(camera);
-    }
-    arv_stream_push_buffer(camera->arv_stream, arv_buffer);
-    camera->counter_ += 1;
-    break;
-  }
+  camera->AcquisitionCallback(type, arv_buffer);
 }
 
 /*
@@ -112,15 +65,19 @@ stream_callback (void *user_data, ArvStreamCallbackType type, ArvBuffer *arv_buf
 
 AravisCamera::AravisCamera(const char *name) :
   CCameraBase<AravisCamera>(),
+  capturing(false),
+  counter(0),
+  exposure_time(0.0),
+  img_buffer_bytes_per_pixel(0),
+  img_buffer_height(0),
+  img_buffer_size(0),
+  img_buffer_width(0),
+  initialized(false),
   arv_buffer(nullptr),
   arv_cam(nullptr),
   arv_cam_name(nullptr),
   arv_stream(nullptr),
-  capturing_(false),
-  counter_(0),
-  img_buffer(nullptr),
-  img_buffer_size(0),
-  initialized_(false)
+  img_buffer(nullptr)
 {
   printf("ArvCamera %s\n", name);
   arv_cam_name = (char *)malloc(sizeof(char) * strlen(name));
@@ -132,7 +89,75 @@ AravisCamera::~AravisCamera()
   g_clear_object(&arv_cam);
 }
 
-// These supposed to be in alphabetical order.
+// These in alphabetical order.
+
+// This leaks alot of memory. Images should be freed?
+void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb_arv_buffer)
+{
+  size_t size;
+  unsigned char *cb_arv_buffer_data;
+  //  unsigned char *cb_img_buffer;
+
+  Metadata md;
+
+  printf("stream_callback %ld\n", counter);
+
+  if (!capturing){
+    return;
+  }
+      
+  switch (type) {
+  case ARV_STREAM_CALLBACK_TYPE_BUFFER_DONE:
+    
+    g_assert(cb_arv_buffer == arv_stream_pop_buffer(arv_stream));
+    g_assert(cb_arv_buffer != NULL);
+
+    img_buffer_width = (int)arv_buffer_get_image_width(cb_arv_buffer);
+    img_buffer_height = (int)arv_buffer_get_image_height(cb_arv_buffer);
+    cb_arv_buffer_data = (unsigned char *)arv_buffer_get_data(cb_arv_buffer, &size);
+    //    cb_img_buffer = (unsigned char *)malloc(size);
+    //memcpy(cb_img_buffer, cb_arv_buffer_data, size);
+
+    // Image metadata.
+    md.put("Camera", "");
+    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)img_buffer_width));
+    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)img_buffer_height));
+    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(counter));
+    md.put(MM::g_Keyword_Meatdata_Exposure, exposure_time);
+    
+    // Copy to intermediate buffer
+    int ret = GetCoreCallback()->InsertImage(this,
+					     //					     cb_img_buffer,
+					     cb_arv_buffer_data,
+					     img_buffer_width,
+					     img_buffer_height,
+					     GetImageBytesPerPixel(),
+					     1,
+					     md.Serialize().c_str(),
+					     FALSE);
+    if (ret == DEVICE_BUFFER_OVERFLOW) {
+      //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
+      GetCoreCallback()->ClearImageBuffer(this);
+    }
+    //free(cb_img_buffer);
+    
+    arv_stream_push_buffer(arv_stream, cb_arv_buffer);
+    counter += 1;
+    break;
+  }
+}
+
+// Call the Aravis library to check exposure time only as needed.
+void AravisCamera::ArvGetExposure()
+{
+  double expTimeUs;
+  GError *gerror = NULL;
+
+  expTimeUs = arv_camera_get_exposure_time(arv_cam, &gerror);
+  if(!arvCheckError(gerror)){
+    exposure_time = expTimeUs * 1.0e-3;
+  }
+}
 
 int AravisCamera::ClearROI()
 {
@@ -189,14 +214,7 @@ unsigned AravisCamera::GetBitDepth() const
 
 double AravisCamera::GetExposure() const
 {
-  double expTimeUs;
-  GError *gerror = NULL;
-
-  printf("ArvGetExposure\n");
-  expTimeUs = arv_camera_get_exposure_time(arv_cam, &gerror);
-  arvCheckError(gerror);
-  printf("  %f\n", expTimeUs);
-  return expTimeUs * 1.0e-3;
+  return exposure_time;
 }
 
 // This at least needs to allocate mm_buffer..
@@ -291,7 +309,7 @@ int AravisCamera::Initialize()
   gint h,w,tmp;
   GError *gerror = NULL;
 
-  if(initialized_){
+  if(initialized){
     return DEVICE_OK;
   }
   printf("ArvInitialize %s\n", arv_cam_name);
@@ -302,7 +320,7 @@ int AravisCamera::Initialize()
   // Turn off auto exposure.
   arv_camera_set_exposure_time_auto(arv_cam, ARV_AUTO_OFF, &gerror);
   arvCheckError(gerror);
-  initialized_ = true;
+  initialized = true;
 
   // Start at full (accessible) chip size. This doesn't work. IDK.
   arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);
@@ -321,10 +339,13 @@ int AravisCamera::Initialize()
   ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
   SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
   assert(ret == DEVICE_OK);
+  
+  ArvGetExposure();
 		
   return DEVICE_OK;
 }
 
+// Not sure if these cameras are sequencable or not, going with not.
 int AravisCamera::IsExposureSequenceable(bool &isSequencable) const
 {
   isSequencable = false;
@@ -335,7 +356,7 @@ int AravisCamera::IsExposureSequenceable(bool &isSequencable) const
 
 bool AravisCamera::IsCapturing()
 {
-  return capturing_;
+  return capturing;
 }
 
 int AravisCamera::PrepareSequenceAcqusition()
@@ -368,6 +389,8 @@ void AravisCamera::SetExposure(double exp)
 
   arv_camera_set_exposure_time(arv_cam, expUs, &gerror);
   arvCheckError(gerror);
+
+  ArvGetExposure();
 }
 
 int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
@@ -406,7 +429,7 @@ int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, b
   GError  *gerror = NULL;
 
   printf("StartSequenceAcquisition1 %ld %f %d\n", numImages, interval_ms, stopOnOverflow);
-  counter_ = 0;
+  counter = 0;
   
   arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &gerror);
   if (!arvCheckError(gerror)){
@@ -429,7 +452,7 @@ int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, b
   else{
     printf("arv error, stream creation failed.\n");
   }
-  capturing_ = true;
+  capturing = true;
   printf("  started1\n");
   return DEVICE_OK;
 }
@@ -440,7 +463,7 @@ int AravisCamera::StartSequenceAcquisition(double interval_ms) {
   GError *gerror = NULL;
 
   printf("StartSequenceAcquisition2 %f\n", interval_ms);
-  counter_ = 0;
+  counter = 0;
     
   arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &gerror);
   if (!arvCheckError(gerror)){
@@ -460,7 +483,7 @@ int AravisCamera::StartSequenceAcquisition(double interval_ms) {
   else{
     printf("stream creation failed.\n");
   }
-  capturing_ = true;
+  capturing = true;
   printf("  started2\n");
   return DEVICE_OK;
 }
@@ -470,8 +493,8 @@ int AravisCamera::StopSequenceAcquisition()
   GError *gerror = NULL;
 
   printf("StopSequenceAcquisition\n");
-  if (capturing_){
-    capturing_ = false;
+  if (capturing){
+    capturing = false;
     arv_camera_stop_acquisition(arv_cam, &gerror);
     arvCheckError(gerror);
     g_clear_object(&arv_stream);
@@ -482,4 +505,3 @@ int AravisCamera::StopSequenceAcquisition()
 }
 
 
-// #pragma warning(pop)

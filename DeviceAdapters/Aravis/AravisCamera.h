@@ -49,27 +49,31 @@ public:
   int SnapImage();
 
   // Continuous acquisition.
+  void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
   bool IsCapturing();
   int PrepareSequenceAcqusition();
   int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
   int StartSequenceAcquisition(double interval_ms);
   int StopSequenceAcquisition();
 
-  bool capturing_;
-  int img_buffer_height;
-  int img_buffer_width;
-  long counter_;
-  ArvStream *arv_stream;
-  
+  // Internal.
+  void ArvGetExposure();
+
 private:
-  bool initialized_;
-  long img_buffer_size;
-  
-  char *arv_cam_name;
-  unsigned char *img_buffer;
+  bool capturing;
+  long counter;
+  double exposure_time;
+  int img_buffer_bytes_per_pixel;
+  int img_buffer_height;
+  size_t img_buffer_size;
+  int img_buffer_width;
+  bool initialized;
 
   ArvBuffer *arv_buffer;
   ArvCamera *arv_cam;
+  char *arv_cam_name;
+  ArvStream *arv_stream;
+  unsigned char *img_buffer;
 };
 
 #endif // !_ARAVIS_CAMERA_H_
