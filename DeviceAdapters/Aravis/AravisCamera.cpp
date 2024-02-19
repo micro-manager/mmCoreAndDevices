@@ -96,7 +96,6 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 {
   size_t size;
   unsigned char *cb_arv_buffer_data;
-  //  unsigned char *cb_img_buffer;
 
   Metadata md;
 
@@ -115,8 +114,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
     img_buffer_width = (int)arv_buffer_get_image_width(cb_arv_buffer);
     img_buffer_height = (int)arv_buffer_get_image_height(cb_arv_buffer);
     cb_arv_buffer_data = (unsigned char *)arv_buffer_get_data(cb_arv_buffer, &size);
-    //    cb_img_buffer = (unsigned char *)malloc(size);
-    //memcpy(cb_img_buffer, cb_arv_buffer_data, size);
+    ArvSetBytesPerPixel(size);
 
     // Image metadata.
     md.put("Camera", "");
@@ -127,7 +125,6 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
     
     // Copy to intermediate buffer
     int ret = GetCoreCallback()->InsertImage(this,
-					     //					     cb_img_buffer,
 					     cb_arv_buffer_data,
 					     img_buffer_width,
 					     img_buffer_height,
@@ -136,10 +133,8 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 					     md.Serialize().c_str(),
 					     FALSE);
     if (ret == DEVICE_BUFFER_OVERFLOW) {
-      //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
       GetCoreCallback()->ClearImageBuffer(this);
     }
-    //free(cb_img_buffer);
     
     arv_stream_push_buffer(arv_stream, cb_arv_buffer);
     counter += 1;
@@ -157,6 +152,11 @@ void AravisCamera::ArvGetExposure()
   if(!arvCheckError(gerror)){
     exposure_time = expTimeUs * 1.0e-3;
   }
+}
+
+void AravisCamera::ArvSetBytesPerPixel(size_t size)
+{
+  img_buffer_bytes_per_pixel = size/(img_buffer_width*img_buffer_height);  
 }
 
 int AravisCamera::ClearROI()
@@ -217,7 +217,6 @@ double AravisCamera::GetExposure() const
   return exposure_time;
 }
 
-// This at least needs to allocate mm_buffer..
 const unsigned char* AravisCamera::GetImageBuffer()
 {
   size_t size;
@@ -228,14 +227,12 @@ const unsigned char* AravisCamera::GetImageBuffer()
     img_buffer_width = (int)arv_buffer_get_image_width(arv_buffer);
     img_buffer_height = (int)arv_buffer_get_image_height(arv_buffer);
     arv_buffer_data = (unsigned char *)arv_buffer_get_data(arv_buffer, &size);
-    printf("buffer is %ld, %d x %d\n", (long)size, (int)img_buffer_width, (int)img_buffer_height);
-    printf("buffer size %ld\n", GetImageBufferSize());
+    ArvSetBytesPerPixel(size);
 
     if (img_buffer_size != size){
       if (img_buffer != nullptr){
 	free(img_buffer);
       }
-      printf("malloc %ld\n", size);
       img_buffer = (unsigned char *)malloc(size);
     }
     memcpy(img_buffer, arv_buffer_data, size);
@@ -259,8 +256,7 @@ long AravisCamera::GetImageBufferSize() const
 
 unsigned AravisCamera::GetImageBytesPerPixel() const
 {
-  printf("ArvGetImageBytesPerPixel\n");
-  return 1;
+  return img_buffer_bytes_per_pixel;
 }
 
 unsigned AravisCamera::GetImageWidth() const
@@ -306,7 +302,7 @@ int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& yS
 int AravisCamera::Initialize()
 {
   int ret;
-  gint h,w,tmp;
+  gint h,payload,tmp,w;
   GError *gerror = NULL;
 
   if(initialized){
@@ -329,16 +325,19 @@ int AravisCamera::Initialize()
   arv_camera_get_width_bounds(arv_cam, &tmp, &w, &gerror);
   arvCheckError(gerror);
 
-  printf("  %d %d\n", w, h);
-  //SetROI(0, 0, 1616, 1240);
-
-  img_buffer_height = (int)h;
-  img_buffer_width = (int)w;
-  
+  //SetROI(0, 0, 1616, 1240);  
   //void arv_camera_get_x_binning_bounds (ArvCamera* camera, gint* min, gint* max, GError** error);
   ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
   SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
   assert(ret == DEVICE_OK);
+
+  //
+  img_buffer_height = (int)h;
+  img_buffer_width = (int)w;
+  
+  payload = arv_camera_get_payload(arv_cam, &gerror);
+  arvCheckError(gerror);
+  ArvSetBytesPerPixel(payload);
   
   ArvGetExposure();
 		

@@ -58,6 +58,7 @@ public:
 
   // Internal.
   void ArvGetExposure();
+  void ArvSetBytesPerPixel(size_t size);
 
 private:
   bool capturing;
