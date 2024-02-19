@@ -154,9 +154,81 @@ void AravisCamera::ArvGetExposure()
   }
 }
 
+void AravisCamera::ArvGetBitDepth()
+{
+  guint32 arvPixelFormat;
+  GError *gerror = NULL;
+
+  printf("ArvGetBitDepth\n");
+  arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
+  if (!arvCheckError(gerror)){
+    printf("  %d\n", arvPixelFormat);
+    
+    switch (arvPixelFormat){
+    case ARV_PIXEL_FORMAT_MONO_8:
+      img_bit_depth = 8;
+      break;
+    case ARV_PIXEL_FORMAT_MONO_10:
+      img_bit_depth = 10;
+      break;
+    case ARV_PIXEL_FORMAT_MONO_12:
+      img_bit_depth = 10;
+      break;
+    case ARV_PIXEL_FORMAT_MONO_14:
+      img_bit_depth = 14;
+      break;
+    case ARV_PIXEL_FORMAT_MONO_16:
+      img_bit_depth = 16;
+      break;
+    default:
+      printf ("Aravis Error: Pixel Format %d is not implemented\n", (int)arvPixelFormat);
+      break;
+    }
+    printf("  %d\n", img_bit_depth);
+  }
+}
+
 void AravisCamera::ArvSetBytesPerPixel(size_t size)
 {
   img_buffer_bytes_per_pixel = size/(img_buffer_width*img_buffer_height);  
+}
+
+int AravisCamera::ArvStartSequenceAcquisition()
+{
+  int i;
+  size_t payload;
+  GError *gerror = NULL;
+
+  ArvGetBitDepth();   
+  counter = 0;
+    
+  arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &gerror);
+  if (!arvCheckError(gerror)){
+    arv_stream = arv_camera_create_stream(arv_cam, stream_callback, this, &gerror);
+    if (arvCheckError(gerror)){
+      return 1;
+    }
+  }
+  else{
+    return 1;
+  }
+  
+  if (ARV_IS_STREAM(arv_stream)){
+    payload = arv_camera_get_payload(arv_cam, &gerror);
+    if (!arvCheckError(gerror)){
+      for (i = 0; i < 20; i++)
+	arv_stream_push_buffer(arv_stream, arv_buffer_new(payload, NULL));
+    }
+    arv_camera_start_acquisition(arv_cam, &gerror);
+    if (arvCheckError(gerror)){
+      return 1;
+    }
+  }
+  else{
+    return 1;
+  }
+  capturing = true;
+  return 0;
 }
 
 int AravisCamera::ClearROI()
@@ -181,35 +253,8 @@ int AravisCamera::GetBinning() const
 
 unsigned AravisCamera::GetBitDepth() const
 {
-  guint32 arvPixelFormat;
-  GError *gerror = NULL;
-
-  printf("ArvGetBitDepth\n");
-  arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
-  arvCheckError(gerror);
-  printf("  %d\n", arvPixelFormat);
-    
-  switch (arvPixelFormat){
-  case ARV_PIXEL_FORMAT_MONO_8: {
-    return 8;
-  }
-  case ARV_PIXEL_FORMAT_MONO_10: {
-    return 10;
-  }
-  case ARV_PIXEL_FORMAT_MONO_12: {
-    return 12;
-  }
-  case ARV_PIXEL_FORMAT_MONO_14: {
-    return 14;
-  }
-  case ARV_PIXEL_FORMAT_MONO_16: {
-    return 16;
-  }
-  default:{
-    printf ("Aravis Error: Pixel Format %d is not implemented\n", (int)arvPixelFormat);
-  }    
-  }
-  return 0;
+  printf("ArvGetBitDepth %d\n", img_bit_depth);
+  return img_bit_depth;
 }
 
 double AravisCamera::GetExposure() const
@@ -334,12 +379,13 @@ int AravisCamera::Initialize()
   //
   img_buffer_height = (int)h;
   img_buffer_width = (int)w;
+
+  ArvGetExposure();
+  ArvGetBitDepth();
   
   payload = arv_camera_get_payload(arv_cam, &gerror);
   arvCheckError(gerror);
   ArvSetBytesPerPixel(payload);
-  
-  ArvGetExposure();
 		
   return DEVICE_OK;
 }
@@ -415,8 +461,8 @@ int AravisCamera::SnapImage()
 {
   GError *gerror = NULL;
 
-  printf("SnapImage\n");
-  // arv_camera_set_acquisition_mode(a_cam, ARV_ACQUISITION_MODE_SINGLE_FRAME);
+  printf("ArvSnapImage\n");
+  ArvGetBitDepth();
   arv_buffer = arv_camera_acquisition(arv_cam, 0, &gerror);
   if (arvCheckError(gerror)) return ARV_ERROR;
 
@@ -425,66 +471,25 @@ int AravisCamera::SnapImage()
 
 int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
-  GError  *gerror = NULL;
-
   printf("StartSequenceAcquisition1 %ld %f %d\n", numImages, interval_ms, stopOnOverflow);
-  counter = 0;
-  
-  arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &gerror);
-  if (!arvCheckError(gerror)){
-    arv_stream = arv_camera_create_stream(arv_cam, stream_callback, this, &gerror);
-    arvCheckError(gerror);
-  }
-  
-  if (ARV_IS_STREAM(arv_stream)){
-    int i;
-    size_t payload;
-    
-    payload = arv_camera_get_payload(arv_cam, &gerror);
-    if (!arvCheckError(gerror)){
-      for (i = 0; i < 20; i++)
-	arv_stream_push_buffer(arv_stream, arv_buffer_new(payload, NULL));
-    }
-    arv_camera_start_acquisition(arv_cam, &gerror);
-    arvCheckError(gerror);
+
+  if (!ArvStartSequenceAcquisition()){    
+    return DEVICE_OK;
   }
   else{
-    printf("arv error, stream creation failed.\n");
+    return ARV_ERROR;
   }
-  capturing = true;
-  printf("  started1\n");
-  return DEVICE_OK;
 }
 
 int AravisCamera::StartSequenceAcquisition(double interval_ms) {
-  int i;
-  size_t payload;
-  GError *gerror = NULL;
-
   printf("StartSequenceAcquisition2 %f\n", interval_ms);
-  counter = 0;
-    
-  arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &gerror);
-  if (!arvCheckError(gerror)){
-    arv_stream = arv_camera_create_stream(arv_cam, stream_callback, this, &gerror);
-    arvCheckError(gerror);
-  }
 
-  if (ARV_IS_STREAM(arv_stream)){
-    payload = arv_camera_get_payload(arv_cam, &gerror);
-    if (!arvCheckError(gerror)){
-      for (i = 0; i < 20; i++)
-	arv_stream_push_buffer(arv_stream, arv_buffer_new(payload, NULL));
-    }
-    arv_camera_start_acquisition(arv_cam, &gerror);
-    arvCheckError(gerror);
+  if (!ArvStartSequenceAcquisition()){    
+    return DEVICE_OK;
   }
   else{
-    printf("stream creation failed.\n");
+    return ARV_ERROR;
   }
-  capturing = true;
-  printf("  started2\n");
-  return DEVICE_OK;
 }
 
 int AravisCamera::StopSequenceAcquisition()

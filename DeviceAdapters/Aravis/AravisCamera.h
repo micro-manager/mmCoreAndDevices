@@ -58,12 +58,15 @@ public:
 
   // Internal.
   void ArvGetExposure();
+  void ArvGetBitDepth();
   void ArvSetBytesPerPixel(size_t size);
+  int ArvStartSequenceAcquisition();
 
 private:
   bool capturing;
   long counter;
   double exposure_time;
+  unsigned img_bit_depth;
   int img_buffer_bytes_per_pixel;
   int img_buffer_height;
   size_t img_buffer_size;
