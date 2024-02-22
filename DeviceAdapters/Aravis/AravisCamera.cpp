@@ -5,6 +5,13 @@
 #include "AravisCamera.h"
 #include "ModuleInterface.h"
 
+#include <vector>
+#include <string>
+#include <algorithm>
+
+
+std::vector<std::string> supported_pixel_formats = {"Mono8", "Mono10", "Mono12", "Mono14", "Mono16"};
+
 
 /*
  * Module functions.
@@ -27,11 +34,13 @@ MODULE_API void InitializeModuleData()
   }
 }
 
+
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
   printf("ArvCreateDevice %s\n", deviceName);
   return new AravisCamera(deviceName);
 }
+
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)
 {
@@ -40,8 +49,10 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 
 int arvCheckError(GError *gerror){
-  printf("check\n");
   if (gerror != NULL) {
+    //std::stringstream ss;
+    //ss << "Aravis Error: " << gerror->message << std::endl;
+    //LogMessage(ss, false);
     printf("Aravis Error: %s\n", gerror->message);
     g_clear_error(&gerror);
     return 1;
@@ -59,10 +70,10 @@ stream_callback (void *user_data, ArvStreamCallbackType type, ArvBuffer *arv_buf
   camera->AcquisitionCallback(type, arv_buffer);
 }
 
+
 /*
  * Camera class and methods.
  */
-
 AravisCamera::AravisCamera(const char *name) :
   CCameraBase<AravisCamera>(),
   capturing(false),
@@ -84,14 +95,14 @@ AravisCamera::AravisCamera(const char *name) :
   CDeviceUtils::CopyLimitedString(arv_cam_name, name);
 }
 
+
 AravisCamera::~AravisCamera()
 {
   g_clear_object(&arv_cam);
 }
 
-// These in alphabetical order.
 
-// This leaks alot of memory. Images should be freed?
+// These are in alphabetical order.
 void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb_arv_buffer)
 {
   size_t size;
@@ -142,6 +153,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
   }
 }
 
+
 // Call the Aravis library to check exposure time only as needed.
 void AravisCamera::ArvGetExposure()
 {
@@ -153,6 +165,7 @@ void AravisCamera::ArvGetExposure()
     exposure_time = expTimeUs * 1.0e-3;
   }
 }
+
 
 void AravisCamera::ArvGetBitDepth()
 {
@@ -188,10 +201,12 @@ void AravisCamera::ArvGetBitDepth()
   }
 }
 
+
 void AravisCamera::ArvSetBytesPerPixel(size_t size)
 {
   img_buffer_bytes_per_pixel = size/(img_buffer_width*img_buffer_height);  
 }
+
 
 int AravisCamera::ArvStartSequenceAcquisition()
 {
@@ -231,11 +246,13 @@ int AravisCamera::ArvStartSequenceAcquisition()
   return 0;
 }
 
+
 int AravisCamera::ClearROI()
 {
   printf("ArvClearROI\n");
   return DEVICE_OK;
 }
+
 
 int AravisCamera::GetBinning() const
 {
@@ -251,16 +268,19 @@ int AravisCamera::GetBinning() const
   return (int)dx;
 }
 
+
 unsigned AravisCamera::GetBitDepth() const
 {
   printf("ArvGetBitDepth %d\n", img_bit_depth);
   return img_bit_depth;
 }
 
+
 double AravisCamera::GetExposure() const
 {
   return exposure_time;
 }
+
 
 const unsigned char* AravisCamera::GetImageBuffer()
 {
@@ -286,6 +306,7 @@ const unsigned char* AravisCamera::GetImageBuffer()
   return NULL;
 }
 
+
 long AravisCamera::GetImageBufferSize() const
 {
   gint gx,gy,gwidth,gheight;
@@ -299,20 +320,24 @@ long AravisCamera::GetImageBufferSize() const
   return (long) gwidth * gheight * GetImageBytesPerPixel(); 
 }
 
+
 unsigned AravisCamera::GetImageBytesPerPixel() const
 {
   return img_buffer_bytes_per_pixel;
 }
+
 
 unsigned AravisCamera::GetImageWidth() const
 {
   return (unsigned)img_buffer_width;
 }
 
+
 unsigned AravisCamera::GetImageHeight() const
 {
   return (unsigned)img_buffer_height;
 }
+
 
 void AravisCamera::GetName(char *name) const
 {
@@ -320,12 +345,14 @@ void AravisCamera::GetName(char *name) const
   CDeviceUtils::CopyLimitedString(name, arv_cam_name);
 }
 
+
 unsigned AravisCamera::GetNumberOfComponents() const
 {
   printf("ArvGetNumberOfComponents\n");
   // Add support for RGB cameras.
   return 1;
 }
+
 
 int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
@@ -344,10 +371,11 @@ int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& yS
   return DEVICE_OK;
 }
 
+
 int AravisCamera::Initialize()
 {
-  int ret;
-  gint h,payload,tmp,w;
+  int i,ret;
+  gint tmp;
   GError *gerror = NULL;
 
   if(initialized){
@@ -364,7 +392,8 @@ int AravisCamera::Initialize()
   initialized = true;
 
   // Start at full (accessible) chip size. This doesn't work. IDK.
-  arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);
+  gint h,w;
+  arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);  
   arvCheckError(gerror);
 
   arv_camera_get_width_bounds(arv_cam, &tmp, &w, &gerror);
@@ -372,9 +401,6 @@ int AravisCamera::Initialize()
 
   //SetROI(0, 0, 1616, 1240);  
   //void arv_camera_get_x_binning_bounds (ArvCamera* camera, gint* min, gint* max, GError** error);
-  ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
-  SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
-  assert(ret == DEVICE_OK);
 
   //
   img_buffer_height = (int)h;
@@ -382,13 +408,46 @@ int AravisCamera::Initialize()
 
   ArvGetExposure();
   ArvGetBitDepth();
-  
+
+  gint payload;
   payload = arv_camera_get_payload(arv_cam, &gerror);
   arvCheckError(gerror);
   ArvSetBytesPerPixel(payload);
-		
+
+  // Pixel formats.
+  const char *pixel_format;
+  pixel_format = arv_camera_get_pixel_format_as_string (arv_cam, &gerror);
+  arvCheckError(gerror);
+  
+  CPropertyAction* pAct = new CPropertyAction(this, &AravisCamera::OnPixelType);
+  ret = CreateProperty(MM::g_Keyword_PixelType, pixel_format, MM::String, false, pAct);
+  assert(ret == DEVICE_OK);
+
+  guint n_pixel_formats;
+  std::vector<std::string> pixelTypeValues;
+  const char **pixel_formats;
+      
+  pixel_formats = arv_camera_dup_available_pixel_formats_as_strings(arv_cam, &n_pixel_formats, &gerror);
+  arvCheckError(gerror);
+  for(i=0;i<n_pixel_formats;i++){
+    printf("%d %s\n", i, pixel_formats[i]);
+    if (std::find(supported_pixel_formats.begin(), supported_pixel_formats.end(), pixel_formats[i]) != supported_pixel_formats.end()){
+      printf("  supported\n");
+      pixelTypeValues.push_back(pixel_formats[i]);
+    }
+  }
+  g_free(pixel_formats);
+  SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
+  
+  // Binning.
+  ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
+  SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
+  assert(ret == DEVICE_OK);
+
+  printf("ArvInitializeEnd %s\n", arv_cam_name);
   return DEVICE_OK;
 }
+
 
 // Not sure if these cameras are sequencable or not, going with not.
 int AravisCamera::IsExposureSequenceable(bool &isSequencable) const
@@ -399,15 +458,36 @@ int AravisCamera::IsExposureSequenceable(bool &isSequencable) const
   return DEVICE_OK;
 }
 
+
 bool AravisCamera::IsCapturing()
 {
   return capturing;
 }
 
+
+int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  std::string pixelType;
+  GError *gerror;
+  
+  pProp->Get(pixelType);
+  
+  printf("OnPixelType '%s'\n", pixelType.c_str());
+  arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), NULL);
+  /* Checking for an error causes a crash, IDK why.
+     arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
+     arvCheckError(gerror);
+  */
+
+  return DEVICE_OK;
+}
+  
+
 int AravisCamera::PrepareSequenceAcqusition()
 {
    return DEVICE_OK;
 }
+
 
 int AravisCamera::SetBinning(int binSize)
 {
@@ -419,6 +499,7 @@ int AravisCamera::SetBinning(int binSize)
 
   return DEVICE_OK;
 }
+
 
 void AravisCamera::SetExposure(double exp)
 {
@@ -438,6 +519,7 @@ void AravisCamera::SetExposure(double exp)
   ArvGetExposure();
 }
 
+
 int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
   GError *gerror;
@@ -449,6 +531,7 @@ int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
   return DEVICE_OK;
 }
 
+
 int AravisCamera::Shutdown()
 {
   printf("Shutdown\n");
@@ -456,7 +539,8 @@ int AravisCamera::Shutdown()
   return DEVICE_OK;
 }
 
-// This should wait until the image is acquired?
+
+// This should wait until the image is acquired? Maybe it does?
 int AravisCamera::SnapImage()
 {
   GError *gerror = NULL;
@@ -468,6 +552,7 @@ int AravisCamera::SnapImage()
 
   return DEVICE_OK;
 }
+
 
 int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
@@ -481,6 +566,7 @@ int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, b
   }
 }
 
+
 int AravisCamera::StartSequenceAcquisition(double interval_ms) {
   printf("StartSequenceAcquisition2 %f\n", interval_ms);
 
@@ -491,6 +577,7 @@ int AravisCamera::StartSequenceAcquisition(double interval_ms) {
     return ARV_ERROR;
   }
 }
+
 
 int AravisCamera::StopSequenceAcquisition()
 {
@@ -507,5 +594,3 @@ int AravisCamera::StopSequenceAcquisition()
   }
   return DEVICE_OK;
 }
-
-

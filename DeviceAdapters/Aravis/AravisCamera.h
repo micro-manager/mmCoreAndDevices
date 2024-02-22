@@ -1,10 +1,11 @@
 #ifndef _ARAVIS_CAMERA_H_
 #define _ARAVIS_CAMERA_H_
 
+/*
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
-
+*/
 
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
@@ -56,6 +57,9 @@ public:
   int StartSequenceAcquisition(double interval_ms);
   int StopSequenceAcquisition();
 
+  // Properties.
+  int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
+  
   // Internal.
   void ArvGetExposure();
   void ArvGetBitDepth();
