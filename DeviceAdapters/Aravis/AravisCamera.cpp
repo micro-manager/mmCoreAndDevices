@@ -473,8 +473,6 @@ int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
   pProp->Get(pixelType);
   
   printf("OnPixelType '%s'\n", pixelType.c_str());
-  //arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), NULL);
-  /* Checking for an error causes a crash, IDK why. */
   arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
   arvCheckError(gerror);
 
