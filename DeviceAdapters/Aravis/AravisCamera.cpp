@@ -158,7 +158,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 void AravisCamera::ArvGetExposure()
 {
   double expTimeUs;
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   expTimeUs = arv_camera_get_exposure_time(arv_cam, &gerror);
   if(!arvCheckError(gerror)){
@@ -170,7 +170,7 @@ void AravisCamera::ArvGetExposure()
 void AravisCamera::ArvGetBitDepth()
 {
   guint32 arvPixelFormat;
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   printf("ArvGetBitDepth\n");
   arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
@@ -212,7 +212,7 @@ int AravisCamera::ArvStartSequenceAcquisition()
 {
   int i;
   size_t payload;
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   ArvGetBitDepth();   
   counter = 0;
@@ -258,7 +258,7 @@ int AravisCamera::GetBinning() const
 {
   gint dx;
   gint dy;
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   printf("ArvGetBinning\n");
   arv_camera_get_binning(arv_cam, &dx, &dy, &gerror);
@@ -310,7 +310,7 @@ const unsigned char* AravisCamera::GetImageBuffer()
 long AravisCamera::GetImageBufferSize() const
 {
   gint gx,gy,gwidth,gheight;
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   printf("ArvGetImageBufferSize\n");
   arv_camera_get_region(arv_cam, &gx, &gy, &gwidth, &gheight, &gerror);
@@ -357,7 +357,7 @@ unsigned AravisCamera::GetNumberOfComponents() const
 int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
   gint gx,gy,gwidth,gheight;
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   printf("ArvGetROI\n");
   arv_camera_get_region(arv_cam, &gx, &gy, &gwidth, &gheight, &gerror);
@@ -376,7 +376,7 @@ int AravisCamera::Initialize()
 {
   int i,ret;
   gint tmp;
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   if(initialized){
     return DEVICE_OK;
@@ -468,16 +468,15 @@ bool AravisCamera::IsCapturing()
 int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
   std::string pixelType;
-  GError *gerror;
+  GError *gerror = nullptr;
   
   pProp->Get(pixelType);
   
   printf("OnPixelType '%s'\n", pixelType.c_str());
-  arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), NULL);
-  /* Checking for an error causes a crash, IDK why.
-     arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
-     arvCheckError(gerror);
-  */
+  //arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), NULL);
+  /* Checking for an error causes a crash, IDK why. */
+  arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
+  arvCheckError(gerror);
 
   return DEVICE_OK;
 }
@@ -491,7 +490,7 @@ int AravisCamera::PrepareSequenceAcqusition()
 
 int AravisCamera::SetBinning(int binSize)
 {
-  GError *gerror;
+  GError *gerror = nullptr;
 
   printf("ArvSetBinning\n");
   arv_camera_set_binning(arv_cam, (gint)binSize, (gint)binSize, &gerror);
@@ -501,28 +500,31 @@ int AravisCamera::SetBinning(int binSize)
 }
 
 
-void AravisCamera::SetExposure(double exp)
+void AravisCamera::SetExposure(double expMs)
 {
-  double expUs = 1000.0*exp;
-  double frameRate = 1.0/exp;
-  GError *gerror;
-
-  printf("ArvSetExposure\n");
-  // Range checking?
-  // Frame rate should be slightly slower than exposure time?
-  arv_camera_set_frame_rate(arv_cam, frameRate, &gerror);
-  arvCheckError(gerror);
-
+  double expUs = 1000.0*expMs;
+  double min, max;
+  GError *gerror = nullptr;
+  
+  printf("ArvSetExposure %f\n", expMs);
   arv_camera_set_exposure_time(arv_cam, expUs, &gerror);
   arvCheckError(gerror);
 
+  // This always returns the same bounds, independent of exposure time..
+  arv_camera_get_frame_rate_bounds(arv_cam, &min, &max, &gerror);
+  arvCheckError(gerror);
+    
+  arv_camera_set_frame_rate(arv_cam, max, &gerror);
+  arvCheckError(gerror);
+
+  printf("%f %f\n", min, max);
   ArvGetExposure();
 }
 
 
 int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
-  GError *gerror;
+  GError *gerror = nullptr;
 
   printf("ArvSetROI %d %d %d %d\n", x, y, xSize, ySize);
   arv_camera_set_region(arv_cam, (gint)x, (gint)y, (gint)xSize, (gint)ySize, &gerror);
@@ -543,7 +545,7 @@ int AravisCamera::Shutdown()
 // This should wait until the image is acquired? Maybe it does?
 int AravisCamera::SnapImage()
 {
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   printf("ArvSnapImage\n");
   ArvGetBitDepth();
@@ -581,7 +583,7 @@ int AravisCamera::StartSequenceAcquisition(double interval_ms) {
 
 int AravisCamera::StopSequenceAcquisition()
 {
-  GError *gerror = NULL;
+  GError *gerror = nullptr;
 
   printf("StopSequenceAcquisition\n");
   if (capturing){
