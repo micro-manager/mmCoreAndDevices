@@ -400,6 +400,7 @@ int AravisCamera::Initialize()
   arv_cam = arv_camera_new(arv_cam_name, &gerror);
   if (arvCheckError(gerror)) return ARV_ERROR;
 
+  // Clear ROI settings that may still be present from a previous session.
   ClearROI();
 
   // Turn off auto exposure.
@@ -452,11 +453,32 @@ int AravisCamera::Initialize()
   SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
   
   // Binning.
-  //void arv_camera_get_x_binning_bounds (ArvCamera* camera, gint* min, gint* max, GError** error);
-  ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
-  SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
-  assert(ret == DEVICE_OK);
+  gboolean has_binning;
+  has_binning = arv_camera_is_binning_available(arv_cam, &gerror);
+  arvCheckError(gerror);
+  if (has_binning){
+    gint bmin,bmax,binc;
 
+    //Assuming X/Y symmetric..
+    arv_camera_get_x_binning_bounds(arv_cam, &bmin, &bmax, &gerror);
+    arvCheckError(gerror);
+
+    binc = arv_camera_get_x_binning_increment(arv_cam, &gerror);
+    arvCheckError(gerror);
+    printf("Binning %d %d %d\n", bmin, bmax, binc);
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnBinning);
+    ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);    
+    SetPropertyLimits(MM::g_Keyword_Binning, bmin, bmax);
+    assert(ret == DEVICE_OK);
+
+    for (int x = bmin; x <= bmax; x += binc){
+      std::ostringstream oss;
+      oss << x;
+      AddAllowedValue(MM::g_Keyword_Binning, oss.str().c_str());
+    }
+  }
+  
   printf("ArvInitializeEnd %s\n", arv_cam_name);
   return DEVICE_OK;
 }
@@ -477,7 +499,22 @@ bool AravisCamera::IsCapturing()
   return capturing;
 }
 
-
+int AravisCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  gint b;
+  std::string binning;
+  GError *gerror = nullptr;
+  
+  pProp->Get(binning);
+  b = std::stoi(binning);
+  printf("OnBinning '%d'\n", b);
+  
+  arv_camera_set_binning(arv_cam, b, b, &gerror);
+  arvCheckError(gerror);
+  
+  return DEVICE_OK;
+}
+  
 int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
   std::string pixelType;
