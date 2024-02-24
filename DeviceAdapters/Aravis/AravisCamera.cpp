@@ -26,7 +26,6 @@ MODULE_API void InitializeModuleData()
   // Update and get number of aravis compatible cameras.
   arv_update_device_list();
   nDevices = arv_get_n_devices();
-  printf("AAAAA: Aravis Found %d\n", (int)nDevices);
   
   for (int i = 0; i < nDevices; i++)
   {
@@ -249,7 +248,22 @@ int AravisCamera::ArvStartSequenceAcquisition()
 
 int AravisCamera::ClearROI()
 {
+  gint h,tmp,w;
+  GError *gerror = nullptr;
+  
   printf("ArvClearROI\n");
+  arv_camera_set_region(arv_cam, 0, 0, 64, 64, &gerror);
+  arvCheckError(gerror);
+      
+  arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);  
+  arvCheckError(gerror);
+
+  arv_camera_get_width_bounds(arv_cam, &tmp, &w, &gerror);
+  arvCheckError(gerror);
+
+  arv_camera_set_region(arv_cam, 0, 0, w, h, &gerror);
+  arvCheckError(gerror);
+    
   return DEVICE_OK;
 }
 
@@ -386,12 +400,14 @@ int AravisCamera::Initialize()
   arv_cam = arv_camera_new(arv_cam_name, &gerror);
   if (arvCheckError(gerror)) return ARV_ERROR;
 
+  ClearROI();
+
   // Turn off auto exposure.
   arv_camera_set_exposure_time_auto(arv_cam, ARV_AUTO_OFF, &gerror);
   arvCheckError(gerror);
   initialized = true;
-
-  // Start at full (accessible) chip size. This doesn't work. IDK.
+  
+  // Get starting image size.
   gint h,w;
   arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);  
   arvCheckError(gerror);
@@ -399,10 +415,6 @@ int AravisCamera::Initialize()
   arv_camera_get_width_bounds(arv_cam, &tmp, &w, &gerror);
   arvCheckError(gerror);
 
-  //SetROI(0, 0, 1616, 1240);  
-  //void arv_camera_get_x_binning_bounds (ArvCamera* camera, gint* min, gint* max, GError** error);
-
-  //
   img_buffer_height = (int)h;
   img_buffer_width = (int)w;
 
@@ -440,6 +452,7 @@ int AravisCamera::Initialize()
   SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
   
   // Binning.
+  //void arv_camera_get_x_binning_bounds (ArvCamera* camera, gint* min, gint* max, GError** error);
   ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true);
   SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
   assert(ret == DEVICE_OK);
@@ -522,10 +535,27 @@ void AravisCamera::SetExposure(double expMs)
 
 int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
+  gint inc, ix, iy, ixs, iys;
   GError *gerror = nullptr;
 
   printf("ArvSetROI %d %d %d %d\n", x, y, xSize, ySize);
-  arv_camera_set_region(arv_cam, (gint)x, (gint)y, (gint)xSize, (gint)ySize, &gerror);
+  inc = arv_camera_get_x_offset_increment(arv_cam, &gerror);
+  arvCheckError(gerror);
+  ix = ((gint)x/inc)*inc;
+
+  inc = arv_camera_get_y_offset_increment(arv_cam, &gerror);
+  arvCheckError(gerror);
+  iy = ((gint)y/inc)*inc;
+
+  inc = arv_camera_get_width_increment(arv_cam, &gerror);
+  arvCheckError(gerror);
+  ixs = ((gint)xSize/inc)*inc;
+
+  inc = arv_camera_get_height_increment(arv_cam, &gerror);
+  arvCheckError(gerror);
+  iys = ((gint)ySize/inc)*inc;
+  
+  arv_camera_set_region(arv_cam, ix, iy, ixs, iys, &gerror);
   arvCheckError(gerror);
 
   return DEVICE_OK;
