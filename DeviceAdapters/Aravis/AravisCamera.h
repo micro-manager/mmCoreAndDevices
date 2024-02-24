@@ -58,6 +58,7 @@ public:
   int StopSequenceAcquisition();
 
   // Properties.
+  int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
   
   // Internal.
