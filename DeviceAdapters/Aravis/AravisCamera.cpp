@@ -48,7 +48,6 @@ MODULE_API void InitializeModuleData()
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
-  printf("ArvCreateDevice %s\n", deviceName);
   return new AravisCamera(deviceName);
 }
 
@@ -118,7 +117,6 @@ AravisCamera::AravisCamera(const char *name) :
   img_buffer(nullptr),
   pixel_type(nullptr)
 {
-  printf("ArvCamera %s\n", name);
   arv_cam_name = (char *)malloc(sizeof(char) * strlen(name));
   CDeviceUtils::CopyLimitedString(arv_cam_name, name);
 }
@@ -555,7 +553,6 @@ int AravisCamera::Initialize()
 
     binc = arv_camera_get_x_binning_increment(arv_cam, &gerror);
     arvCheckError(gerror);
-    printf("Binning %d %d %d\n", bmin, bmax, binc);
 
     SetPropertyLimits(MM::g_Keyword_Binning, bmin, bmax);
 
