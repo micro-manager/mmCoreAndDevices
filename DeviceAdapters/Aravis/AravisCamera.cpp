@@ -565,7 +565,6 @@ int AravisCamera::Initialize()
 
   initialized = true;
     
-  printf("ArvInitializeEnd %s\n", arv_cam_name);
   return DEVICE_OK;
 }
 
