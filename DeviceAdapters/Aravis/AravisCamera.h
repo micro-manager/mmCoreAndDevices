@@ -50,7 +50,6 @@ public:
   int SnapImage();
 
   // Continuous acquisition.
-  void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
   bool IsCapturing();
   int PrepareSequenceAcqusition();
   int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
@@ -62,21 +61,24 @@ public:
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
   
   // Internal.
+  void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
+  void ArvBufferUpdate(ArvBuffer *aBuffer);
   void ArvGetExposure();
-  void ArvGetBitDepth();
-  //void ArvSetBytesPerPixel(size_t size);
+  void ArvPixelFormatUpdate(guint32 arvPixelFormat);
   int ArvStartSequenceAcquisition();
 
+  
 private:
   bool capturing;
   long counter;
   double exposure_time;
-  unsigned img_bit_depth;
+  unsigned img_buffer_bit_depth;
   int img_buffer_bytes_per_pixel;
   int img_buffer_height;
+  unsigned img_buffer_number_components;
+  size_t img_buffer_number_pixels;
   size_t img_buffer_size;
   int img_buffer_width;
-  unsigned img_number_components;
   bool initialized;
 
   ArvBuffer *arv_buffer;
