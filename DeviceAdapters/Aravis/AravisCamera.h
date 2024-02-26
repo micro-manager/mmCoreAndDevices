@@ -64,7 +64,7 @@ public:
   // Internal.
   void ArvGetExposure();
   void ArvGetBitDepth();
-  void ArvSetBytesPerPixel(size_t size);
+  //void ArvSetBytesPerPixel(size_t size);
   int ArvStartSequenceAcquisition();
 
 private:
@@ -76,6 +76,7 @@ private:
   int img_buffer_height;
   size_t img_buffer_size;
   int img_buffer_width;
+  unsigned img_number_components;
   bool initialized;
 
   ArvBuffer *arv_buffer;
@@ -83,6 +84,7 @@ private:
   char *arv_cam_name;
   ArvStream *arv_stream;
   unsigned char *img_buffer;
+  const char *pixel_type;
 };
 
 #endif // !_ARAVIS_CAMERA_H_

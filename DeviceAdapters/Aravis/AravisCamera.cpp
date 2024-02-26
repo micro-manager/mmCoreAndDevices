@@ -10,7 +10,19 @@
 #include <algorithm>
 
 
-std::vector<std::string> supported_pixel_formats = {"Mono8", "Mono10", "Mono12", "Mono14", "Mono16"};
+std::vector<std::string> supported_pixel_formats = {
+  "Mono8",
+  "Mono10",
+  "Mono12",
+  "Mono14",
+  "Mono16",
+  "BayerRG8",
+  "BayerRG10",
+  "BayerRG12",
+  "BayerRG16",
+  "RGB8",
+  "BGR8"
+};
 
 
 /*
@@ -21,8 +33,8 @@ MODULE_API void InitializeModuleData()
   uint64_t nDevices=0;
 
   // Debugging.
-  //arv_debug_enable("all:3,device");
-   
+  arv_debug_enable("all:1,device");
+
   // Update and get number of aravis compatible cameras.
   arv_update_device_list();
   nDevices = arv_get_n_devices();
@@ -49,14 +61,27 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 int arvCheckError(GError *gerror){
   if (gerror != NULL) {
-    //std::stringstream ss;
-    //ss << "Aravis Error: " << gerror->message << std::endl;
-    //LogMessage(ss, false);
     printf("Aravis Error: %s\n", gerror->message);
     g_clear_error(&gerror);
     return 1;
   }
   return 0;
+}
+
+
+// RGB unpacker.
+void rgb_to_rgba(unsigned char *dest, unsigned char *source, size_t size)
+{
+  size_t i;
+  size_t dOffset = 0;
+  size_t sOffset = 0;
+  
+  for (i = 0; i < size; i++){
+    memcpy(dest + dOffset, source + sOffset, 3);
+    //dest[dOffset + 3] = 0;
+    sOffset += 3;
+    dOffset += 4;
+  }
 }
 
 
@@ -82,6 +107,7 @@ AravisCamera::AravisCamera(const char *name) :
   img_buffer_height(0),
   img_buffer_size(0),
   img_buffer_width(0),
+  img_number_components(0),
   initialized(false),
   arv_buffer(nullptr),
   arv_cam(nullptr),
@@ -116,6 +142,11 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
   }
       
   switch (type) {
+    /* Do we need this? IDK. */
+  case ARV_STREAM_CALLBACK_TYPE_INIT:
+    arv_make_thread_realtime (10);
+    arv_make_thread_high_priority(-10);
+    break;
   case ARV_STREAM_CALLBACK_TYPE_BUFFER_DONE:
     
     g_assert(cb_arv_buffer == arv_stream_pop_buffer(arv_stream));
@@ -123,8 +154,9 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 
     img_buffer_width = (int)arv_buffer_get_image_width(cb_arv_buffer);
     img_buffer_height = (int)arv_buffer_get_image_height(cb_arv_buffer);
+    printf("ac %d %d\n", img_buffer_width, img_buffer_height);
     cb_arv_buffer_data = (unsigned char *)arv_buffer_get_data(cb_arv_buffer, &size);
-    ArvSetBytesPerPixel(size);
+    //ArvSetBytesPerPixel(size);
 
     // Image metadata.
     md.put("Camera", "");
@@ -179,19 +211,73 @@ void AravisCamera::ArvGetBitDepth()
     switch (arvPixelFormat){
     case ARV_PIXEL_FORMAT_MONO_8:
       img_bit_depth = 8;
+      img_buffer_bytes_per_pixel = 1;
+      img_number_components = 1;
+      pixel_type = "8bit mono";
       break;
     case ARV_PIXEL_FORMAT_MONO_10:
       img_bit_depth = 10;
+      img_buffer_bytes_per_pixel = 2;
+      img_number_components = 1;
+      pixel_type = "10bit mono";
       break;
     case ARV_PIXEL_FORMAT_MONO_12:
       img_bit_depth = 10;
+      img_buffer_bytes_per_pixel = 2;
+      img_number_components = 1;
+      pixel_type = "12bit mono";
       break;
     case ARV_PIXEL_FORMAT_MONO_14:
       img_bit_depth = 14;
+      img_buffer_bytes_per_pixel = 2;
+      img_number_components = 1;
+      pixel_type = "14bit mono";
       break;
     case ARV_PIXEL_FORMAT_MONO_16:
       img_bit_depth = 16;
+      img_buffer_bytes_per_pixel = 2;
+      img_number_components = 1;
+      pixel_type = "16bit mono";
       break;
+
+    case ARV_PIXEL_FORMAT_BAYER_RG_8:
+      img_bit_depth = 8;
+      img_buffer_bytes_per_pixel = 1;
+      img_number_components = 1;
+      pixel_type = "8bit mono";
+      break;
+    case ARV_PIXEL_FORMAT_BAYER_RG_10:
+      img_bit_depth = 10;
+      img_buffer_bytes_per_pixel = 2;
+      img_number_components = 1;
+      pixel_type = "10bit mono";
+      break;
+    case ARV_PIXEL_FORMAT_BAYER_RG_12:
+      img_bit_depth = 12;
+      img_buffer_bytes_per_pixel = 2;
+      img_number_components = 1;
+      pixel_type = "12bit mono";
+      break;
+    case ARV_PIXEL_FORMAT_BAYER_RG_16:
+      img_bit_depth = 16;
+      img_buffer_bytes_per_pixel = 2;
+      img_number_components = 1;
+      pixel_type = "16bit mono";
+      break;
+	
+    case ARV_PIXEL_FORMAT_RGB_8_PACKED:
+      img_bit_depth = 8;
+      img_buffer_bytes_per_pixel = 4;
+      img_number_components = 4;
+      pixel_type = "8bitRGB";
+      break;
+    case ARV_PIXEL_FORMAT_BGR_8_PACKED:
+      img_bit_depth = 8;
+      img_buffer_bytes_per_pixel = 4;
+      img_number_components = 4;
+      pixel_type = "8bitBGR";
+      break;
+
     default:
       printf ("Aravis Error: Pixel Format %d is not implemented\n", (int)arvPixelFormat);
       break;
@@ -201,11 +287,12 @@ void AravisCamera::ArvGetBitDepth()
 }
 
 
+/*
 void AravisCamera::ArvSetBytesPerPixel(size_t size)
 {
   img_buffer_bytes_per_pixel = size/(img_buffer_width*img_buffer_height);  
 }
-
+*/
 
 int AravisCamera::ArvStartSequenceAcquisition()
 {
@@ -298,23 +385,40 @@ double AravisCamera::GetExposure() const
 
 const unsigned char* AravisCamera::GetImageBuffer()
 {
-  size_t size;
+  int status;
+  size_t arv_size, size;
+  gboolean chunks;
   unsigned char *arv_buffer_data;
 
   printf("ArvGetImageBuffer\n");
   if (ARV_IS_BUFFER (arv_buffer)) {
+    status = arv_buffer_get_status(arv_buffer);
+    if (status != 0){
+      return NULL;
+    }
+    
     img_buffer_width = (int)arv_buffer_get_image_width(arv_buffer);
     img_buffer_height = (int)arv_buffer_get_image_height(arv_buffer);
-    arv_buffer_data = (unsigned char *)arv_buffer_get_data(arv_buffer, &size);
-    ArvSetBytesPerPixel(size);
+    arv_buffer_data = (unsigned char *)arv_buffer_get_data(arv_buffer, &arv_size);
+    size = img_buffer_width * img_buffer_height * img_buffer_bytes_per_pixel * img_number_components;
+    printf("gib: %d x %d, %ld %ld\n", img_buffer_width, img_buffer_height, arv_size, size);
 
     if (img_buffer_size != size){
       if (img_buffer != nullptr){
 	free(img_buffer);
       }
       img_buffer = (unsigned char *)malloc(size);
+      img_buffer_size = size;
     }
-    memcpy(img_buffer, arv_buffer_data, size);
+    if (img_number_components == 1){     
+      memcpy(img_buffer, arv_buffer_data, size);
+    }
+    else{
+      rgb_to_rgba(img_buffer, arv_buffer_data, img_buffer_width*img_buffer_height);
+    }
+    g_clear_object(&arv_buffer);
+    printf("%s\n", pixel_type);
+    SetProperty(MM::g_Keyword_PixelType, pixel_type);
     return img_buffer;
   }
   return NULL;
@@ -337,6 +441,8 @@ long AravisCamera::GetImageBufferSize() const
 
 unsigned AravisCamera::GetImageBytesPerPixel() const
 {
+  printf("ArvGetImageBytesPerPixel %d\n", img_buffer_bytes_per_pixel);
+
   return img_buffer_bytes_per_pixel;
 }
 
@@ -362,9 +468,9 @@ void AravisCamera::GetName(char *name) const
 
 unsigned AravisCamera::GetNumberOfComponents() const
 {
-  printf("ArvGetNumberOfComponents\n");
-  // Add support for RGB cameras.
-  return 1;
+  printf("ArvGetNumberOfComponents %d\n", img_number_components);
+
+  return img_number_components;
 }
 
 
@@ -399,15 +505,14 @@ int AravisCamera::Initialize()
   
   arv_cam = arv_camera_new(arv_cam_name, &gerror);
   if (arvCheckError(gerror)) return ARV_ERROR;
-
+  
   // Clear ROI settings that may still be present from a previous session.
   ClearROI();
 
   // Turn off auto exposure.
   arv_camera_set_exposure_time_auto(arv_cam, ARV_AUTO_OFF, &gerror);
   arvCheckError(gerror);
-  initialized = true;
-  
+
   // Get starting image size.
   gint h,w;
   arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);  
@@ -425,7 +530,7 @@ int AravisCamera::Initialize()
   gint payload;
   payload = arv_camera_get_payload(arv_cam, &gerror);
   arvCheckError(gerror);
-  ArvSetBytesPerPixel(payload);
+  // ArvSetBytesPerPixel(payload);
 
   // Pixel formats.
   const char *pixel_format;
@@ -453,6 +558,11 @@ int AravisCamera::Initialize()
   SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
   
   // Binning.
+  pAct = new CPropertyAction(this, &AravisCamera::OnBinning);
+  ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);    
+  SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
+  assert(ret == DEVICE_OK);
+    
   gboolean has_binning;
   has_binning = arv_camera_is_binning_available(arv_cam, &gerror);
   arvCheckError(gerror);
@@ -467,10 +577,7 @@ int AravisCamera::Initialize()
     arvCheckError(gerror);
     printf("Binning %d %d %d\n", bmin, bmax, binc);
 
-    pAct = new CPropertyAction(this, &AravisCamera::OnBinning);
-    ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);    
     SetPropertyLimits(MM::g_Keyword_Binning, bmin, bmax);
-    assert(ret == DEVICE_OK);
 
     for (int x = bmin; x <= bmax; x += binc){
       std::ostringstream oss;
@@ -478,7 +585,9 @@ int AravisCamera::Initialize()
       AddAllowedValue(MM::g_Keyword_Binning, oss.str().c_str());
     }
   }
-  
+
+  initialized = true;
+    
   printf("ArvInitializeEnd %s\n", arv_cam_name);
   return DEVICE_OK;
 }
@@ -508,7 +617,7 @@ int AravisCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
   pProp->Get(binning);
   b = std::stoi(binning);
   printf("OnBinning '%d'\n", b);
-  
+
   arv_camera_set_binning(arv_cam, b, b, &gerror);
   arvCheckError(gerror);
   
@@ -561,8 +670,9 @@ void AravisCamera::SetExposure(double expMs)
   // This always returns the same bounds, independent of exposure time..
   arv_camera_get_frame_rate_bounds(arv_cam, &min, &max, &gerror);
   arvCheckError(gerror);
-    
-  arv_camera_set_frame_rate(arv_cam, max, &gerror);
+
+  // arv_camera_set_frame_rate(arv_cam, max, &gerror);
+  arv_camera_set_frame_rate(arv_cam, -1.0, &gerror);
   arvCheckError(gerror);
 
   printf("%f %f\n", min, max);
