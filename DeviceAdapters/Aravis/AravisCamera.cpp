@@ -33,7 +33,7 @@ MODULE_API void InitializeModuleData()
   uint64_t nDevices=0;
 
   // Debugging.
-  arv_debug_enable("all:1,device");
+  //arv_debug_enable("all:1,device");
 
   // Update and get number of aravis compatible cameras.
   arv_update_device_list();
@@ -592,12 +592,17 @@ int AravisCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
   gint b;
   std::string binning;
   GError *gerror = nullptr;
-  
-  pProp->Get(binning);
-  b = std::stoi(binning);
 
-  arv_camera_set_binning(arv_cam, b, b, &gerror);
-  arvCheckError(gerror);
+  if (!capturing){
+    pProp->Get(binning);
+    b = std::stoi(binning);
+    
+    arv_camera_set_binning(arv_cam, b, b, &gerror);
+    arvCheckError(gerror);
+
+    // This restores the image size when we decrease the binning.
+    ClearROI();
+  }
   
   return DEVICE_OK;
 }
@@ -607,15 +612,17 @@ int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
   guint32 arvPixelFormat;
   std::string pixelType;
   GError *gerror = nullptr;
-  
-  pProp->Get(pixelType);
-  
-  arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
-  arvCheckError(gerror);
 
-  arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
-  arvCheckError(gerror);
-  ArvPixelFormatUpdate(arvPixelFormat);
+  if (!capturing){
+    pProp->Get(pixelType);
+    
+    arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
+    arvCheckError(gerror);
+    
+    arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
+    arvCheckError(gerror);
+    ArvPixelFormatUpdate(arvPixelFormat);
+  }
   
   return DEVICE_OK;
 }
@@ -720,11 +727,9 @@ int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, b
 
 int AravisCamera::StartSequenceAcquisition(double interval_ms) {
   if (!ArvStartSequenceAcquisition()){
-    printf("Started\n");
     return DEVICE_OK;
   }
   else{
-    printf("Failed\n");
     return ARV_ERROR;
   }
 }
