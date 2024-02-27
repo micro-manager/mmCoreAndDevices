@@ -10,7 +10,7 @@
 #include <algorithm>
 
 
-std::vector<std::string> supported_pixel_formats = {
+std::vector<std::string> supportedPixelFormats = {
   "Mono8",
   "Mono10",
   "Mono12",
@@ -487,10 +487,6 @@ int AravisCamera::Initialize()
   // Clear ROI settings that may still be present from a previous session.
   ClearROI();
 
-  // Turn off auto exposure.
-  arv_camera_set_exposure_time_auto(arv_cam, ARV_AUTO_OFF, &gerror);
-  arvCheckError(gerror);
-
   // Get starting image size.
   gint h,w;
   arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);  
@@ -507,7 +503,11 @@ int AravisCamera::Initialize()
   arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
   arvCheckError(gerror);
   ArvPixelFormatUpdate(arvPixelFormat);
-  
+
+  // Turn off auto exposure.
+  arv_camera_set_exposure_time_auto(arv_cam, ARV_AUTO_OFF, &gerror);
+  arvCheckError(gerror);
+
   // Get current exposure time.
   ArvGetExposure();
   
@@ -521,18 +521,18 @@ int AravisCamera::Initialize()
   ret = CreateProperty(MM::g_Keyword_PixelType, pixel_format, MM::String, false, pAct);
   assert(ret == DEVICE_OK);
 
-  guint n_pixel_formats;
+  guint nPixelFormats;
   std::vector<std::string> pixelTypeValues;
-  const char **pixel_formats;
+  const char **pixelFormats;
       
-  pixel_formats = arv_camera_dup_available_pixel_formats_as_strings(arv_cam, &n_pixel_formats, &gerror);
+  pixelFormats = arv_camera_dup_available_pixel_formats_as_strings(arv_cam, &nPixelFormats, &gerror);
   arvCheckError(gerror);
-  for(i=0;i<n_pixel_formats;i++){
-    if (std::find(supported_pixel_formats.begin(), supported_pixel_formats.end(), pixel_formats[i]) != supported_pixel_formats.end()){
-      pixelTypeValues.push_back(pixel_formats[i]);
+  for(i=0;i<nPixelFormats;i++){
+    if (std::find(supportedPixelFormats.begin(), supportedPixelFormats.end(), pixelFormats[i]) != supportedPixelFormats.end()){
+      pixelTypeValues.push_back(pixelFormats[i]);
     }
   }
-  g_free(pixel_formats);
+  g_free(pixelFormats);
   SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
   
   // Binning.
@@ -541,10 +541,10 @@ int AravisCamera::Initialize()
   SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
   assert(ret == DEVICE_OK);
     
-  gboolean has_binning;
-  has_binning = arv_camera_is_binning_available(arv_cam, &gerror);
+  gboolean hasBinning;
+  hasBinning = arv_camera_is_binning_available(arv_cam, &gerror);
   arvCheckError(gerror);
-  if (has_binning){
+  if (hasBinning){
     gint bmin,bmax,binc;
 
     //Assuming X/Y symmetric..
@@ -557,12 +557,39 @@ int AravisCamera::Initialize()
     SetPropertyLimits(MM::g_Keyword_Binning, bmin, bmax);
 
     for (int x = bmin; x <= bmax; x += binc){
-      std::ostringstream oss;
-      oss << x;
-      AddAllowedValue(MM::g_Keyword_Binning, oss.str().c_str());
+      std::string xs = std::to_string(x);
+      AddAllowedValue(MM::g_Keyword_Binning, xs.c_str());
     }
   }
+  
+  // Auto gain.
+  gboolean hasAutoGain;
+  hasAutoGain = arv_camera_is_gain_auto_available(arv_cam, &gerror);
+  arvCheckError(gerror);
 
+  if (hasAutoGain){
+    pAct = new CPropertyAction(this, &AravisCamera::OnAutoGain);
+    ret = CreateProperty("GainAuto", "NA", MM::String, false, pAct);
+    std::vector<std::string> autoGainValues = {"AUTO_OFF", "AUTO_ONCE", "AUTO_CONTINUOUS"};
+    SetAllowedValues("GainAuto", autoGainValues);
+  }
+
+  // Gain.
+  gboolean hasGain;
+  hasGain = arv_camera_is_gain_available(arv_cam, &gerror);
+  arvCheckError(gerror);  
+
+  if (hasGain){
+    double gmin,gmax;
+
+    arv_camera_get_gain_bounds(arv_cam, &gmin, &gmax, &gerror);
+    arvCheckError(gerror);
+    
+    pAct = new CPropertyAction(this, &AravisCamera::OnGain);
+    ret = CreateProperty(MM::g_Keyword_Gain, "1.0", MM::Float, false, pAct);
+    SetPropertyLimits(MM::g_Keyword_Gain, gmin, gmax);
+  }
+  
   initialized = true;
     
   return DEVICE_OK;
@@ -583,41 +610,131 @@ bool AravisCamera::IsCapturing()
   return capturing;
 }
 
-int AravisCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
+
+int AravisCamera::OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-  gint b;
-  std::string binning;
   GError *gerror = nullptr;
 
-  if (!capturing){
-    pProp->Get(binning);
-    b = std::stoi(binning);
-    
-    arv_camera_set_binning(arv_cam, b, b, &gerror);
+  if (eAct == MM::AfterSet){
+    if (!capturing){
+      std::string autoGainMode;
+      pProp->Get(autoGainMode);
+      
+      if (!autoGainMode.compare("AUTO_OFF")){
+	arv_camera_set_gain_auto(arv_cam, ARV_AUTO_OFF, &gerror);
+      }
+      else if (!autoGainMode.compare("AUTO_ONCE")){
+	arv_camera_set_gain_auto(arv_cam, ARV_AUTO_ONCE, &gerror);
+      }
+      else if (!autoGainMode.compare("AUTO_CONTINUOUS")){
+	arv_camera_set_gain_auto(arv_cam, ARV_AUTO_CONTINUOUS, &gerror);
+      }
+      else{
+	printf("Unrecognized auto gain mode %s", autoGainMode.c_str());
+      }
+      arvCheckError(gerror);
+    }
+  }
+  else if (eAct == MM::BeforeGet) {
+    int mode;
+    mode = arv_camera_get_gain_auto(arv_cam, &gerror);
     arvCheckError(gerror);
 
-    // This restores the image size when we decrease the binning.
-    ClearROI();
+    if (mode == ARV_AUTO_OFF){
+      pProp->Set("AUTO_OFF");
+    }
+    else if (mode == ARV_AUTO_ONCE){
+      pProp->Set("AUTO_ONCE");
+    }
+    else if (mode == ARV_AUTO_CONTINUOUS){
+      pProp->Set("AUTO_CONTINUOUS");
+    }
   }
   
   return DEVICE_OK;
 }
+
   
-int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
+int AravisCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-  guint32 arvPixelFormat;
-  std::string pixelType;
+  gint bx,by;
+  std::string binning;
   GError *gerror = nullptr;
 
-  if (!capturing){
-    pProp->Get(pixelType);
-    
-    arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
+  if (eAct == MM::AfterSet){
+    if (!capturing){
+      pProp->Get(binning);
+      bx = std::stoi(binning);
+      
+      arv_camera_set_binning(arv_cam, bx, bx, &gerror);
+      arvCheckError(gerror);
+      
+      // This restores the image size when we decrease the binning.
+      ClearROI();
+    }    
+  }
+  else if (eAct == MM::BeforeGet) {
+    arv_camera_get_binning(arv_cam, &bx, &by, &gerror);
     arvCheckError(gerror);
-    
-    arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
+
+    std::string bxs = std::to_string(bx);
+    pProp->Set(bxs.c_str());
+  }
+  
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  double gain;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    int mode;
+    mode = arv_camera_get_gain_auto(arv_cam, &gerror);
     arvCheckError(gerror);
-    ArvPixelFormatUpdate(arvPixelFormat);
+
+    if (mode == ARV_AUTO_OFF){
+      pProp->Get(gain);	  
+      arv_camera_set_gain(arv_cam, gain, &gerror);
+      arvCheckError(gerror);
+    }
+  }
+  else if (eAct == MM::BeforeGet) {
+    gain = arv_camera_get_gain(arv_cam, &gerror);
+    arvCheckError(gerror);
+
+    pProp->Set(gain);
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    if (!capturing){
+      guint32 arvPixelFormat;
+      std::string pixelType;
+      pProp->Get(pixelType);
+      
+      arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
+      arvCheckError(gerror);
+      
+      arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
+      arvCheckError(gerror);
+      ArvPixelFormatUpdate(arvPixelFormat);
+    }
+  }
+  else if (eAct == MM::BeforeGet) {
+    const char *pixelFormat;
+    pixelFormat = arv_camera_get_pixel_format_as_string(arv_cam, &gerror);
+    arvCheckError(gerror);
+
+    pProp->Set(pixelFormat);
   }
   
   return DEVICE_OK;
@@ -646,6 +763,12 @@ void AravisCamera::SetExposure(double expMs)
   double expUs = 1000.0*expMs;
   double min, max;
   GError *gerror = nullptr;
+
+  arv_camera_get_exposure_time_bounds(arv_cam, &min, &max, &gerror);
+  arvCheckError(gerror);
+
+  if (expUs < min){ expUs = min; }
+  if (expUs > max){ expUs = max; }
   
   arv_camera_set_exposure_time(arv_cam, expUs, &gerror);
   arvCheckError(gerror);
