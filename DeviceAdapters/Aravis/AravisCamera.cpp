@@ -589,6 +589,34 @@ int AravisCamera::Initialize()
     ret = CreateProperty(MM::g_Keyword_Gain, "1.0", MM::Float, false, pAct);
     SetPropertyLimits(MM::g_Keyword_Gain, gmin, gmax);
   }
+
+  // Auto black level.
+  gboolean hasAutoBlackLevel;
+  hasAutoBlackLevel = arv_camera_is_black_level_auto_available(arv_cam, &gerror);
+  arvCheckError(gerror);
+
+  if (hasAutoBlackLevel){
+    pAct = new CPropertyAction(this, &AravisCamera::OnAutoBlackLevel);
+    ret = CreateProperty("BlackLevelAuto", "NA", MM::String, false, pAct);
+    std::vector<std::string> autoBlackLevelValues = {"AUTO_OFF", "AUTO_ONCE", "AUTO_CONTINUOUS"};
+    SetAllowedValues("BlackLevelAuto", autoBlackLevelValues);
+  }
+  
+  // Black level.
+  gboolean hasBlackLevel;
+  hasBlackLevel = arv_camera_is_black_level_available(arv_cam, &gerror);
+  arvCheckError(gerror);  
+
+  if (hasBlackLevel){
+    double bmin,bmax;
+
+    arv_camera_get_black_level_bounds(arv_cam, &bmin, &bmax, &gerror);
+    arvCheckError(gerror);
+    
+    pAct = new CPropertyAction(this, &AravisCamera::OnBlackLevel);
+    ret = CreateProperty(MM::g_Keyword_Offset, "1.0", MM::Float, false, pAct);
+    SetPropertyLimits(MM::g_Keyword_Offset, bmin, bmax);
+  }
   
   initialized = true;
     
@@ -608,6 +636,50 @@ int AravisCamera::IsExposureSequenceable(bool &isSequencable) const
 bool AravisCamera::IsCapturing()
 {
   return capturing;
+}
+
+
+int AravisCamera::OnAutoBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    if (!capturing){
+      std::string autoBlackLevelMode;
+      pProp->Get(autoBlackLevelMode);
+      
+      if (!autoBlackLevelMode.compare("AUTO_OFF")){
+	arv_camera_set_black_level_auto(arv_cam, ARV_AUTO_OFF, &gerror);
+      }
+      else if (!autoBlackLevelMode.compare("AUTO_ONCE")){
+	arv_camera_set_black_level_auto(arv_cam, ARV_AUTO_ONCE, &gerror);
+      }
+      else if (!autoBlackLevelMode.compare("AUTO_CONTINUOUS")){
+	arv_camera_set_black_level_auto(arv_cam, ARV_AUTO_CONTINUOUS, &gerror);
+      }
+      else{
+	printf("Unrecognized auto black level mode %s", autoBlackLevelMode.c_str());
+      }
+      arvCheckError(gerror);
+    }
+  }
+  else if (eAct == MM::BeforeGet) {
+    int mode;
+    mode = arv_camera_get_black_level_auto(arv_cam, &gerror);
+    arvCheckError(gerror);
+
+    if (mode == ARV_AUTO_OFF){
+      pProp->Set("AUTO_OFF");
+    }
+    else if (mode == ARV_AUTO_ONCE){
+      pProp->Set("AUTO_ONCE");
+    }
+    else if (mode == ARV_AUTO_CONTINUOUS){
+      pProp->Set("AUTO_CONTINUOUS");
+    }
+  }
+  
+  return DEVICE_OK;
 }
 
 
@@ -681,6 +753,32 @@ int AravisCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
     pProp->Set(bxs.c_str());
   }
   
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  double blackLevel;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    int mode;
+    mode = arv_camera_get_black_level_auto(arv_cam, &gerror);
+    arvCheckError(gerror);
+
+    if (mode == ARV_AUTO_OFF){
+      pProp->Get(blackLevel);
+      arv_camera_set_black_level(arv_cam, blackLevel, &gerror);
+      arvCheckError(gerror);
+    }
+  }
+  else if (eAct == MM::BeforeGet){
+    blackLevel = arv_camera_get_black_level(arv_cam, &gerror);
+    arvCheckError(gerror);
+
+    pProp->Set(blackLevel);
+  }
   return DEVICE_OK;
 }
 
