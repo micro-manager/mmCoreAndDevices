@@ -63,7 +63,10 @@ public:
   int OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
-  
+  int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+
   // Internal.
   void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
   void ArvBufferUpdate(ArvBuffer *aBuffer);
@@ -88,9 +91,11 @@ private:
   ArvBuffer *arv_buffer;
   ArvCamera *arv_cam;
   char *arv_cam_name;
+  ArvDevice *arv_device;
   ArvStream *arv_stream;
   unsigned char *img_buffer;
   const char *pixel_type;
+  const char *trigger;
 };
 
 #endif // !_ARAVIS_CAMERA_H_

@@ -483,6 +483,8 @@ int AravisCamera::Initialize()
   
   arv_cam = arv_camera_new(arv_cam_name, &gerror);
   if (arvCheckError(gerror)) return ARV_ERROR;
+
+  arv_device = arv_camera_get_device(arv_cam);
   
   // Clear ROI settings that may still be present from a previous session.
   ClearROI();
@@ -617,7 +619,66 @@ int AravisCamera::Initialize()
     ret = CreateProperty(MM::g_Keyword_Offset, "1.0", MM::Float, false, pAct);
     SetPropertyLimits(MM::g_Keyword_Offset, bmin, bmax);
   }
+
+  // Trigger mode.
+  guint nTriggerModes;
+  const char **triggerModes;
+  triggerModes = arv_device_dup_available_enumeration_feature_values_as_strings(arv_device, "TriggerMode", &nTriggerModes, &gerror);
+  arvCheckError(gerror);
+
+  if (nTriggerModes > 1){
+    CPropertyAction* pAct = new CPropertyAction(this, &AravisCamera::OnTriggerMode);
+    ret = CreateProperty("TriggerMode", "NA", MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+
+    std::vector<std::string> triggerModeValues;
+    for(i=0;i<nTriggerModes;i++){
+      triggerModeValues.push_back(triggerModes[i]);
+    }
+    SetAllowedValues("TriggerMode", triggerModeValues);
+  }
+  g_free(triggerModes);
   
+  // Trigger selector.
+  guint nTriggerSelectors;
+  const char **triggerSelectors;
+  triggerSelectors = arv_camera_dup_available_triggers(arv_cam, &nTriggerSelectors, &gerror);
+  arvCheckError(gerror);
+
+  if (nTriggerSelectors > 1){
+    CPropertyAction* pAct = new CPropertyAction(this, &AravisCamera::OnTriggerSelector);
+    ret = CreateProperty("TriggerSelector", "NA", MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+
+    std::vector<std::string> triggerSelectorValues;
+    for(i=0;i<nTriggerSelectors;i++){
+      triggerSelectorValues.push_back(triggerSelectors[i]);
+    }
+    SetAllowedValues("TriggerSelector", triggerSelectorValues);
+  }
+  g_free(triggerSelectors);
+  
+  // Trigger sources.
+  guint nTriggerSources = 0;
+  const char **triggerSources;
+  triggerSources = arv_camera_dup_available_trigger_sources(arv_cam, &nTriggerSources, &gerror);
+  arvCheckError(gerror);
+
+  if (nTriggerSources > 1){
+    CPropertyAction* pAct = new CPropertyAction(this, &AravisCamera::OnTriggerSource);
+    ret = CreateProperty("TriggerSource", "NA", MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+    
+    std::vector<std::string> triggerSourceValues;
+    for(i=0;i<nTriggerSources;i++){
+      triggerSourceValues.push_back(triggerSources[i]);
+    }
+    SetAllowedValues("TriggerSource", triggerSourceValues);
+  }
+  g_free(triggerSources);
+
+
+
   initialized = true;
     
   return DEVICE_OK;
@@ -837,7 +898,83 @@ int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
   
   return DEVICE_OK;
 }
+
+
+int AravisCamera::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    if (!capturing){
+      std::string mode;
+      pProp->Get(mode);
+
+      arv_device_set_string_feature_value(arv_device, "TriggerMode", mode.c_str(), &gerror);
+      arvCheckError(gerror);
+    }
+  }
+  else if (eAct == MM::BeforeGet) {
+    const char *mode;
+    mode = arv_device_get_string_feature_value(arv_device, "TriggerMode", &gerror);
+    arvCheckError(gerror);
+
+    pProp->Set(mode);
+  }
   
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    if (!capturing){
+      std::string trigger;
+      pProp->Get(trigger);
+
+      arv_device_set_string_feature_value(arv_device, "TriggerSelector", trigger.c_str(), &gerror);
+      //arv_camera_set_trigger(arv_cam, trigger.c_str(), &gerror);
+      arvCheckError(gerror);
+    }
+  }
+  else if (eAct == MM::BeforeGet) {
+    const char *trigger;
+    trigger = arv_device_get_string_feature_value(arv_device, "TriggerSelector", &gerror);
+    arvCheckError(gerror);
+
+    pProp->Set(trigger);
+  }
+  
+  return DEVICE_OK;
+}
+  
+
+int AravisCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    if (!capturing){
+      std::string triggerSource;
+      pProp->Get(triggerSource);
+
+      arv_camera_set_trigger_source(arv_cam, triggerSource.c_str(), &gerror);
+      arvCheckError(gerror);
+    }
+  }
+  else if (eAct == MM::BeforeGet) {
+    const char *triggerSource;
+    triggerSource = arv_camera_get_trigger_source(arv_cam, &gerror);
+    arvCheckError(gerror);
+
+    pProp->Set(triggerSource);
+  }
+  
+  return DEVICE_OK;
+}
+
 
 int AravisCamera::PrepareSequenceAcqusition()
 {
