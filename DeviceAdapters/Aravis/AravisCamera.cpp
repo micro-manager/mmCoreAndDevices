@@ -1070,22 +1070,26 @@ int AravisCamera::SnapImage()
 
 int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
-  if (!ArvStartSequenceAcquisition()){    
+  if (!ArvStartSequenceAcquisition()){
+    int ret = GetCoreCallback()->PrepareForAcq(this);
+    if (ret != DEVICE_OK) {
+      return ret;
+    }
     return DEVICE_OK;
   }
-  else{
-    return ARV_ERROR;
-  }
+  return ARV_ERROR;
 }
 
 
 int AravisCamera::StartSequenceAcquisition(double interval_ms) {
   if (!ArvStartSequenceAcquisition()){
+    int ret = GetCoreCallback()->PrepareForAcq(this);
+    if (ret != DEVICE_OK) {
+      return ret;
+    }    
     return DEVICE_OK;
   }
-  else{
-    return ARV_ERROR;
-  }
+  return ARV_ERROR;
 }
 
 
