@@ -6,10 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 */
-
 #include "DeviceBase.h"
-#include "ImgBuffer.h"
-#include "DeviceThreads.h"
 #include "arv.h"
 #include "glib.h"
 
@@ -72,6 +69,7 @@ public:
   // Internal.
   void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
   void ArvBufferUpdate(ArvBuffer *aBuffer);
+  int ArvCheckError(GError *gerror) const;
   void ArvGetExposure();
   void ArvPixelFormatUpdate(guint32 arvPixelFormat);
   int ArvStartSequenceAcquisition();
