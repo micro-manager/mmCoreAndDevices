@@ -600,6 +600,7 @@ int AravisCamera::Initialize()
   if (hasAutoBlackLevel){
     pAct = new CPropertyAction(this, &AravisCamera::OnAutoBlackLevel);
     ret = CreateProperty("BlackLevelAuto", "NA", MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
     std::vector<std::string> autoBlackLevelValues = {"AUTO_OFF", "AUTO_ONCE", "AUTO_CONTINUOUS"};
     SetAllowedValues("BlackLevelAuto", autoBlackLevelValues);
   }
@@ -617,11 +618,44 @@ int AravisCamera::Initialize()
     
     pAct = new CPropertyAction(this, &AravisCamera::OnBlackLevel);
     ret = CreateProperty(MM::g_Keyword_Offset, "1.0", MM::Float, false, pAct);
+    assert(ret == DEVICE_OK);
     SetPropertyLimits(MM::g_Keyword_Offset, bmin, bmax);
   }
 
+  // Gamma.
+  //
+  // Check by getting the feature because if "GammaEnable" is turned off the
+  // feature won't appear as available with arv_device_is_feature_avaialable().
+  //
+  ArvGcNode *hasGamma;
+  hasGamma = arv_device_get_feature(arv_device, "Gamma");
+  if (hasGamma != NULL){
+    double gmin,gmax;
+
+    arv_device_get_float_feature_bounds(arv_device, "Gamma", &gmin, &gmax, &gerror);
+    arvCheckError(gerror);
+    
+    pAct = new CPropertyAction(this, &AravisCamera::OnGamma);
+    ret = CreateProperty("Gamma", "1.0", MM::Float, false, pAct);
+    assert(ret == DEVICE_OK);
+    SetPropertyLimits("Gamma", gmin, gmax);    
+  }
+
+  // Gamma enable.
+  gboolean hasGammaEnable;
+  hasGammaEnable = arv_device_is_feature_available(arv_device, "GammaEnable", &gerror);
+  arvCheckError(gerror);
+
+  if (hasGammaEnable){
+    pAct = new CPropertyAction(this, &AravisCamera::OnGammaEnable);
+    ret = CreateProperty("GammaEnable", "0", MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+    std::vector<std::string> gammaEnableValues = {"0", "1"};
+    SetAllowedValues("GammaEnable", gammaEnableValues);
+  }
+    
   // Trigger mode.
-  guint nTriggerModes;
+  guint nTriggerModes = 0;
   const char **triggerModes;
   triggerModes = arv_device_dup_available_enumeration_feature_values_as_strings(arv_device, "TriggerMode", &nTriggerModes, &gerror);
   arvCheckError(gerror);
@@ -640,7 +674,7 @@ int AravisCamera::Initialize()
   g_free(triggerModes);
   
   // Trigger selector.
-  guint nTriggerSelectors;
+  guint nTriggerSelectors = 0;
   const char **triggerSelectors;
   triggerSelectors = arv_camera_dup_available_triggers(arv_cam, &nTriggerSelectors, &gerror);
   arvCheckError(gerror);
@@ -865,6 +899,47 @@ int AravisCamera::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
     arvCheckError(gerror);
 
     pProp->Set(gain);
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  double gamma;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(gamma);
+    arv_device_set_float_feature_value(arv_device, "Gamma", gamma, &gerror);
+    arvCheckError(gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    gamma = arv_device_get_float_feature_value(arv_device, "Gamma", &gerror);
+    arvCheckError(gerror);
+    pProp->Set(gamma);
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  gboolean ge;
+  std::string gammaEnable;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(gammaEnable);
+    ge = std::stoi(gammaEnable);
+    arv_device_set_boolean_feature_value(arv_device, "GammaEnable", ge, &gerror);
+    arvCheckError(gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    ge = arv_device_get_boolean_feature_value(arv_device, "GammaEnable", &gerror);
+    arvCheckError(gerror);
+    gammaEnable = std::to_string(ge);
+    pProp->Set(gammaEnable.c_str());
   }
   return DEVICE_OK;
 }

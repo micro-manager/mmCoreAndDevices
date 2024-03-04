@@ -62,6 +62,8 @@ public:
   int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
