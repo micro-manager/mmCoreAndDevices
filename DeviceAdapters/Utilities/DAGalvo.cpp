@@ -34,6 +34,7 @@
 
 #include <chrono>
 #include <thread>
+#include <vector>
 
 
 extern const char* g_NoDevice;
@@ -46,6 +47,7 @@ DAGalvo::DAGalvo() :
    pulseIntervalUs_(100000),
    initialized_(false)
 {
+   polygons_ = new std::vector<DAPolygon*>();
 }
 
 DAGalvo::~DAGalvo()
@@ -236,21 +238,40 @@ double DAGalvo::GetYMinimum()
    return yMin;
 }
 
-int DAGalvo::AddPolygonVertex(int /* polygonIndex */, double /* x */, double /* y */)
+int DAGalvo::AddPolygonVertex(int index, double x, double y)
 {
-   return DEVICE_NOT_YET_IMPLEMENTED;
+   if (index > 0) {
+      size_t nrPolygons = polygons_->size();
+      if (index < nrPolygons) {
+         DAPolygon* polygon = polygons_->at(index);
+         polygon->addVertex(x, y);
+         return true;
+      }
+      else if (index == nrPolygons) {
+         DAPolygon* polygon = new DAPolygon(x, y);
+         polygons_->push_back(polygon);
+         return true;
+      }
+   }
+   return false; // the index is more than nrPolygons and our vector does not accomodate this
 }
+
 int DAGalvo::DeletePolygons()
 {
-   return DEVICE_NOT_YET_IMPLEMENTED;
+   for (int i = 0; i < polygons_->size(); i++) {
+      delete(polygons_->at(i));
+   }
+   return polygons_->empty();
 }
+
 int DAGalvo::RunSequence()
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
+
 int DAGalvo::LoadPolygons()
 {
-   return DEVICE_NOT_YET_IMPLEMENTED;
+   return DEVICE_OK; // Not sure how we can benefit, this is supposed to load the polygons to the device
 }
 
 int DAGalvo::SetPolygonRepetitions(int repetitions)
@@ -262,8 +283,14 @@ int DAGalvo::SetPolygonRepetitions(int repetitions)
 
 int DAGalvo::RunPolygons()
 {
-   return DEVICE_NOT_YET_IMPLEMENTED;
+   for (int i = 0; i < polygons_->size(); i++) {
+      DAPolygon* polygon = polygons_->at(i);
+      std::pair<double, double> xyPair = polygon->getVertex(0);
+      this->PointAndFire(xyPair.first, xyPair.second, pulseIntervalUs_);
+   }
+   return DEVICE_OK;
 }
+
 int DAGalvo::StopSequence()
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
