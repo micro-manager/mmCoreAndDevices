@@ -29,6 +29,7 @@
 #include "ImgBuffer.h"
 #include <string>
 #include <map>
+#include <vector>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -632,6 +633,37 @@ private:
    MM::MMTime lastChangeTime_;
 };
 
+class DAPolygon
+{
+private:
+   std::vector<std::pair<double, double>> polygon_;
+public:
+   DAPolygon(double x, double y) {
+      polygon_.push_back(std::make_pair(x, y));
+   }
+   void addVertex(double x, double y) {
+      polygon_.push_back(std::make_pair(x, y));
+   }
+
+   boolean hasVertex(size_t index) {
+      return polygon_.size() <= index + 1;
+   }
+
+   std::pair<double, double> getVertex(size_t index) {
+      if (polygon_.size() <= index + 1) {
+         return polygon_[index];
+      }
+      else { 
+         // TODO: throw exception
+      }
+   }
+
+   size_t getNumberOfVertices() {
+      return polygon_.size();
+   }
+};
+
+      
 
 class DAGalvo : public CGalvoBase<DAGalvo>
 {
@@ -673,6 +705,7 @@ private:
    long nrRepetitions_;
    double pulseIntervalUs_;
    std::string shutter_;
+   std::vector<DAPolygon*> *polygons_;
 
 };
 

@@ -1191,4 +1191,5 @@ private:
    double vMaxX_;
    int offsetY_;
    double vMaxY_;
+   double pulseTime_Us_;
 };
