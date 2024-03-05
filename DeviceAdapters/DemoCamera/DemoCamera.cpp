@@ -33,6 +33,14 @@
 #include <iostream>
 #include <future>
 
+#ifdef _WIN32
+#include <Windows.h>
+
+static NTSTATUS(__stdcall* NtDelayExecution)(BOOL Alertable, PLARGE_INTEGER DelayInterval) = (NTSTATUS(__stdcall*)(BOOL, PLARGE_INTEGER)) GetProcAddress(GetModuleHandle("ntdll.dll"), "NtDelayExecution");
+static NTSTATUS(__stdcall* ZwSetTimerResolution)(IN ULONG RequestedResolution, IN BOOLEAN Set, OUT PULONG ActualResolution) = (NTSTATUS(__stdcall*)(ULONG, BOOLEAN, PULONG)) GetProcAddress(GetModuleHandle("ntdll.dll"), "ZwSetTimerResolution");
+
+#endif
+
 
 
 using namespace std;
@@ -612,7 +620,11 @@ int CDemoCamera::SnapImage()
    {
       while (exp > (GetCurrentMMTime() - startTime).getMsec())
       {
+#ifdef _WIN32
+         // SleepShort(1);
+#elif
          CDeviceUtils::SleepMs(1);
+#endif
       }		
    }
    else
@@ -2413,17 +2425,17 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
       // this function.
       for (unsigned int i = 0; i < imgWidth; ++i)
       {
-         for (unsigned j = 0; j < img.Height(); ++j)
+         for (unsigned h = 0; h < img.Height(); ++h)
          {
             bool shouldKeep = false;
-            for (unsigned int k = 0; k < multiROIXs_.size(); ++k)
+            for (unsigned int mr = 0; mr < multiROIXs_.size(); ++mr)
             {
-               unsigned xOffset = multiROIXs_[k] - roiX_;
-               unsigned yOffset = multiROIYs_[k] - roiY_;
-               unsigned width = multiROIWidths_[k];
-               unsigned height = multiROIHeights_[k];
+               unsigned xOffset = multiROIXs_[mr] - roiX_;
+               unsigned yOffset = multiROIYs_[mr] - roiY_;
+               unsigned width = multiROIWidths_[mr];
+               unsigned height = multiROIHeights_[mr];
                if (i >= xOffset && i < xOffset + width &&
-                        j >= yOffset && j < yOffset + height)
+                        h >= yOffset && h < yOffset + height)
                {
                   // Pixel is inside an ROI.
                   shouldKeep = true;
@@ -2433,7 +2445,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
             if (!shouldKeep)
             {
                // Blank the pixel.
-               long lIndex = imgWidth * j + i;
+               long lIndex = imgWidth * h + i;
                if (pixelType.compare(g_PixelType_8bit) == 0)
                {
                   *((unsigned char*) rawBuf + lIndex) = static_cast<unsigned char>(multiROIFillValue_);
@@ -4224,7 +4236,8 @@ DemoGalvo::DemoGalvo() :
    offsetX_(20),
    vMaxX_(10.0),
    offsetY_(15),
-   vMaxY_(10.0)
+   vMaxY_(10.0),
+   pulseTime_Us_(100000.0)
 {
    // handwritten 5x5 gaussian kernel, no longer used
    /*
@@ -4312,8 +4325,9 @@ int DemoGalvo::PointAndFire(double x, double y, double pulseTime_us)
    return DEVICE_OK;
 }
 
-int DemoGalvo::SetSpotInterval(double /* pulseInterval_us */) 
+int DemoGalvo::SetSpotInterval(double pulseTime_Us) 
 {
+   pulseTime_Us_ = pulseTime_Us;
    return DEVICE_OK;
 }
 
@@ -4371,17 +4385,19 @@ int DemoGalvo::SetPolygonRepetitions(int /* repetitions */)
 
 int DemoGalvo::RunPolygons()
 {
-   /*
    std::ostringstream os;
    os << "# of polygons: " << vertices_.size() << std::endl;
    for (std::map<int, std::vector<PointD> >::iterator it = vertices_.begin();
          it != vertices_.end(); ++it)
    {
       os << "ROI " << it->first << " has " << it->second.size() << " points" << std::endl;
+      // illuminate just the first point
+      this->PointAndFire(it->second.at(0).x, it->second.at(0).y, pulseTime_Us_);
+      CDeviceUtils::SleepMs(pulseTime_Us_ / 1000);
    }
    LogMessage(os.str().c_str());
-   */
-   runROIS_ = true;
+
+   //runROIS_ = true;
    return DEVICE_OK;
 }
 
