@@ -142,11 +142,15 @@ int DAGalvo::PointAndFire(double x, double y, double timeUs)
       return ERR_NO_SHUTTER_DEVICE_FOUND;
 
    // Should we do this non-blocking instead?
+   bool open = false;
+   ret = s->GetOpen(open);
+   if (ret != DEVICE_OK)
+       return ret;
    ret = s->SetOpen(true);
    if (ret != DEVICE_OK)
       return ret;
    std::this_thread::sleep_for(std::chrono::microseconds((long long)timeUs));
-   return s->SetOpen(false);
+   return s->SetOpen(open);
 
 }
 
@@ -240,20 +244,20 @@ double DAGalvo::GetYMinimum()
 
 int DAGalvo::AddPolygonVertex(int index, double x, double y)
 {
-   if (index > 0) {
+   if (index >= 0) {
       size_t nrPolygons = polygons_->size();
       if (index < nrPolygons) {
          DAPolygon* polygon = polygons_->at(index);
          polygon->addVertex(x, y);
-         return true;
+         return DEVICE_OK;
       }
       else if (index == nrPolygons) {
          DAPolygon* polygon = new DAPolygon(x, y);
          polygons_->push_back(polygon);
-         return true;
+         return DEVICE_OK;
       }
    }
-   return false; // the index is more than nrPolygons and our vector does not accomodate this
+   return DEVICE_UNKNOWN_POSITION; // the index is more than nrPolygons and our vector does not accomodate this
 }
 
 int DAGalvo::DeletePolygons()
@@ -261,7 +265,8 @@ int DAGalvo::DeletePolygons()
    for (int i = 0; i < polygons_->size(); i++) {
       delete(polygons_->at(i));
    }
-   return polygons_->empty();
+   polygons_->clear();
+   return DEVICE_OK;
 }
 
 int DAGalvo::RunSequence()
