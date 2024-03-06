@@ -13,6 +13,9 @@ endif
 if BUILD_ANDORSDK3
    ANDORSDK3 = AndorSDK3
 endif
+if BUILD_ARAVIS_LINUX
+   ARAVIS = Aravis
+endif
 if BUILD_BASLER_LINUX
    BASLER = Basler
 endif
@@ -81,6 +84,7 @@ SUBDIRS = \
 	$(ANDOR) \
 	$(ANDORLASERCOMBINER) \
 	$(ANDORSDK3) \
+        $(ARAVIS) \
 	$(BASLER) \
 	$(DC1394) \
 	$(FAKECAMERA) \

@@ -1,0 +1,104 @@
+#ifndef _ARAVIS_CAMERA_H_
+#define _ARAVIS_CAMERA_H_
+
+/*
+#include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
+*/
+
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
+#include "arv.h"
+#include "glib.h"
+
+
+#define ARV_ERROR 3141  // Should this be something specific?
+
+
+class AravisAcquisitionThread;
+
+
+class AravisCamera : public CCameraBase<AravisCamera>
+{
+public:
+  AravisCamera(const char *);
+  ~AravisCamera();
+
+  // MMDevice API.
+  void GetName(char* name) const;  
+  int Initialize();
+  int Shutdown();
+  
+  // MMCamera API.
+  int ClearROI();
+  int GetBinning() const;
+  unsigned GetBitDepth() const;
+  double GetExposure() const;
+  const unsigned char* GetImageBuffer();
+  long GetImageBufferSize() const;
+  unsigned GetImageBytesPerPixel() const;
+  unsigned GetImageWidth() const;
+  unsigned GetImageHeight() const;
+  unsigned GetNumberOfComponents() const;
+  int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
+  int IsExposureSequenceable(bool& isSequenceable) const;  
+  int SetBinning(int binSize);
+  void SetExposure(double exp);
+  int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
+  int SnapImage();
+
+  // Continuous acquisition.
+  bool IsCapturing();
+  int PrepareSequenceAcqusition();
+  int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+  int StartSequenceAcquisition(double interval_ms);
+  int StopSequenceAcquisition();
+
+  // Properties.
+  int OnAutoBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+  // Internal.
+  void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
+  void ArvBufferUpdate(ArvBuffer *aBuffer);
+  void ArvGetExposure();
+  void ArvPixelFormatUpdate(guint32 arvPixelFormat);
+  int ArvStartSequenceAcquisition();
+
+  
+private:
+  bool capturing;
+  long counter;
+  double exposure_time;
+  unsigned img_buffer_bit_depth;
+  int img_buffer_bytes_per_pixel;
+  int img_buffer_height;
+  unsigned img_buffer_number_components;
+  size_t img_buffer_number_pixels;
+  size_t img_buffer_size;
+  int img_buffer_width;
+  bool initialized;
+
+  ArvBuffer *arv_buffer;
+  ArvCamera *arv_cam;
+  char *arv_cam_name;
+  ArvDevice *arv_device;
+  ArvStream *arv_stream;
+  unsigned char *img_buffer;
+  const char *pixel_type;
+  const char *trigger;
+};
+
+#endif // !_ARAVIS_CAMERA_H_
+
