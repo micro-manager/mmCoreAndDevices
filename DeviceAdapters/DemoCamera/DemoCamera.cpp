@@ -609,11 +609,7 @@ int CDemoCamera::SnapImage()
    {
       while (exp > (GetCurrentMMTime() - startTime).getMsec())
       {
-#ifdef _WIN32
-         // SleepShort(1);
-#else
          CDeviceUtils::SleepMs(1);
-#endif
       }
    }
    else
