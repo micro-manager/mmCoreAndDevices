@@ -645,7 +645,7 @@ public:
       polygon_.push_back(std::make_pair(x, y));
    }
 
-   boolean hasVertex(size_t index) {
+   bool hasVertex(size_t index) {
       return polygon_.size() <= index + 1;
    }
 

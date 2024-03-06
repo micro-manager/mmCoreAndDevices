@@ -611,10 +611,10 @@ int CDemoCamera::SnapImage()
       {
 #ifdef _WIN32
          // SleepShort(1);
-#elif
+#else
          CDeviceUtils::SleepMs(1);
 #endif
-      }		
+      }
    }
    else
    {
