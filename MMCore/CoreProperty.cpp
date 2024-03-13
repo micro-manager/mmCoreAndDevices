@@ -166,6 +166,10 @@ void CorePropertyCollection::Execute(const char* propName, const char* value)
       // should never get here...
       assert(!"Unable to execute set property command.\n");
    }
+   
+   // Note to developers. If you add a new propName case here, you must add a corresponding
+   // externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice
+   // call to respective core_->setX method
 }
 
 std::string CorePropertyCollection::Get(const char* propName) const
