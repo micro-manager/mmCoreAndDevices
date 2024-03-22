@@ -36,6 +36,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 
 CoreCallback::CoreCallback(CMMCore* c) :
