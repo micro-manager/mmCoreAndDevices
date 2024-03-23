@@ -741,7 +741,7 @@ int Tsi3Cam::ClearROI()
    return ResizeImageBuffer();
 }
 
-int Tsi3Cam::PrepareSequenceAcqusition()
+int Tsi3Cam::PrepareSequenceAcquisition()
 {
    if (IsCapturing())
    {
@@ -765,7 +765,7 @@ int Tsi3Cam::StartSequenceAcquisition(long numImages, double /*interval_ms*/, bo
    }
    if (!prepared) 
    {
-      this->PrepareSequenceAcqusition();
+      this->PrepareSequenceAcquisition();
    }
 
    // the camera ignores interval, running at the rate dictated by the exposure
@@ -785,7 +785,7 @@ int Tsi3Cam::StartSequenceAcquisition(double /*interval_ms*/)
    }
    if (!prepared) 
    {
-      this->PrepareSequenceAcqusition();
+      this->PrepareSequenceAcquisition();
    }
 
    // the camera ignores interval, running at the rate dictated by the exposure

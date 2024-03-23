@@ -6,7 +6,7 @@
 // DESCRIPTION:   XIMEA camera module.
 //
 // AUTHOR:        Marian Zajko, <marian.zajko@ximea.com>
-// COPYRIGHT:     Marian Zajko and XIMEA GmbH, Münster, 2011
+// COPYRIGHT:     Marian Zajko and XIMEA GmbH, Mï¿½nster, 2011
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -89,7 +89,7 @@ public:
 	int      SetMultiROI(const unsigned* xs, const unsigned* ys, const unsigned* widths, const unsigned* heights, unsigned numROIs);
 	int      GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths, unsigned* heights, unsigned* length);
 	//////////////////////////////////////////////////////////////
-	int      PrepareSequenceAcqusition() { return DEVICE_OK; }
+	int      PrepareSequenceAcquisition() { return DEVICE_OK; }
 	int      StartSequenceAcquisition(double interval);
 	int      StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int      StopSequenceAcquisition();

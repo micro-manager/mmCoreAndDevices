@@ -716,7 +716,7 @@ int CFLICamera::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return ret; 
 }
 
-int CFLICamera::PrepareSequenceAcqusition()
+int CFLICamera::PrepareSequenceAcquisition()
 {
 	return DEVICE_OK;
 }

@@ -1237,7 +1237,7 @@ int BaslerCamera::StopSequenceAcquisition()
 	return DEVICE_OK;
 }
 
-int BaslerCamera::PrepareSequenceAcqusition()
+int BaslerCamera::PrepareSequenceAcquisition()
 {
 	// nothing to prepare
 	return DEVICE_OK;
