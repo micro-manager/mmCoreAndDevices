@@ -41,7 +41,7 @@ public:
 	int SetBinning(int binSize);
 
 	int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
-	int PrepareSequenceAcqusition();
+	int PrepareSequenceAcquisition();
 	int StartSequenceAcquisition(double interval);
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();
@@ -99,10 +99,10 @@ private:
 	unsigned long iBufSize;
 
 
-	int iPixBytes;//Ã¿¸öÏñËØ×Ö½ÚÊý	  
+	int iPixBytes;//Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½	  
 	int iComponents;
-	int   iROIWidth, iROIHeight, iBin;//sensorµÄ×ø±ê³ß´çÐÅÏ¢
-	int   iSetWid, iSetHei, iSetBin, iSetX, iSetY; //ÒªÉèÖÃµÄ×ø±ê³ß´çÐÅÏ¢
+	int   iROIWidth, iROIHeight, iBin;//sensorï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß´ï¿½ï¿½ï¿½Ï¢
+	int   iSetWid, iSetHei, iSetBin, iSetX, iSetY; //Òªï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ß´ï¿½ï¿½ï¿½Ï¢
 
 	ASI_IMG_TYPE ImgType;
 	friend class SequenceThread;
@@ -111,7 +111,7 @@ private:
 	ASI_CAMERA_INFO ASICameraInfo;
 	int iCtrlNum;
 	ASI_FLIP_STATUS ImgFlip;
-	int ImgStartX, ImgStartY, ImgBin, ImgWid, ImgHei;//ËùÏÔÊ¾Í¼ÏñµÄ×ø±ê³ß´çÐÅÏ¢
+	int ImgStartX, ImgStartY, ImgBin, ImgWid, ImgHei;//ï¿½ï¿½ï¿½ï¿½Ê¾Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß´ï¿½ï¿½ï¿½Ï¢
 
 
 //	int iCamIndex;
@@ -190,4 +190,4 @@ private:
 	bool bPosWait;
 //	long position_;
 };
-//2.0.0.0->20170113:Ôö¼Óanti-dewºÍEFW
+//2.0.0.0->20170113:ï¿½ï¿½ï¿½ï¿½anti-dewï¿½ï¿½EFW

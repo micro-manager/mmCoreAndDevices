@@ -93,7 +93,7 @@ public:
   int SetROI(unsigned uX, unsigned uY, unsigned uXSize, unsigned uYSize); 
   int GetROI(unsigned& uX, unsigned& uY, unsigned& uXSize, unsigned& uYSize); 
   int ClearROI();
-  int PrepareSequenceAcqusition();
+  int PrepareSequenceAcquisition();
   int StartSequenceAcquisition(long numImages, double /*interval_ms*/, bool stopOnOverflow);
   int StopSequenceAcquisition();
   int StoppedByThread();

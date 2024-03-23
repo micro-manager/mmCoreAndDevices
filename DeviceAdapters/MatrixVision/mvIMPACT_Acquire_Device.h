@@ -96,7 +96,7 @@ public:
       return SetProperty( MM::g_Keyword_Binning, CDeviceUtils::ConvertToString( binSize ) );
    }
 
-   virtual int PrepareSequenceAcqusition( void )
+   virtual int PrepareSequenceAcquisition( void )
    {
       return DEVICE_OK;
    }

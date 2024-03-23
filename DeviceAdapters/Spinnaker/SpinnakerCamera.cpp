@@ -1532,7 +1532,7 @@ int SpinnakerCamera::allocateImageBuffer(const std::size_t size, const SPKR::Pix
 }
 
 
-int SpinnakerCamera::PrepareSequenceAcqusition()
+int SpinnakerCamera::PrepareSequenceAcquisition()
 {
    return DEVICE_OK;
 }

@@ -2754,7 +2754,7 @@ void CMMCore::prepareSequenceAcquisition(const char* label) throw (CMMError)
 
    LOG_DEBUG(coreLogger_) << "Will prepare camera " << label <<
       " for sequence acquisition";
-   int nRet = pCam->PrepareSequenceAcqusition();
+   int nRet = pCam->PrepareSequenceAcquisition();
    if (nRet != DEVICE_OK)
       throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
 

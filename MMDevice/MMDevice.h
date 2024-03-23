@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 71
+#define DEVICE_INTERFACE_VERSION 72
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -503,7 +503,7 @@ namespace MM {
       /**
        * Sets up the camera so that Sequence acquisition can start without delay
        */
-      virtual int PrepareSequenceAcqusition() = 0;
+      virtual int PrepareSequenceAcquisition() = 0;
       /**
        * Flag to indicate whether Sequence Acquisition is currently running.
        * Return true when Sequence acquisition is active, false otherwise

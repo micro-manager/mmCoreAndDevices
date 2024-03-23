@@ -694,7 +694,7 @@ int AmScope::SetBinning(int binF)
    return SetProperty("Binning-Software", CDeviceUtils::ConvertToString(binF));
 }
 
-//int AmScope::PrepareSequenceAcqusition()
+//int AmScope::PrepareSequenceAcquisition()
 //{
 //   if (IsCapturing())
 //      return DEVICE_CAMERA_BUSY_ACQUIRING;

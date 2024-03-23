@@ -492,7 +492,7 @@ int ArduinoCounterCamera::ClearROI()
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::PrepareSequenceAcqusition()
+int ArduinoCounterCamera::PrepareSequenceAcquisition()
 {
    if (nrCamerasInUse_ < 1)
       return ERR_NO_PHYSICAL_CAMERA;
@@ -502,7 +502,7 @@ int ArduinoCounterCamera::PrepareSequenceAcqusition()
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
       if (camera != 0)
       {
-         int ret = camera->PrepareSequenceAcqusition();
+         int ret = camera->PrepareSequenceAcquisition();
          if (ret != DEVICE_OK)
             return ret;
       }
