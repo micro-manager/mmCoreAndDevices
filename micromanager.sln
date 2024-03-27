@@ -485,6 +485,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QSI", "DeviceAdapters\QSI\Q
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NotificationTester", "DeviceAdapters\NotificationTester\NotificationTester.vcxproj", "{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DahengGalaxy", "DeviceAdapters\DahengGalaxy\DahengGalaxy.vcxproj", "{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1459,6 +1461,10 @@ Global
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Debug|x64.Build.0 = Debug|x64
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Release|x64.ActiveCfg = Release|x64
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Release|x64.Build.0 = Release|x64
+		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Debug|x64.ActiveCfg = Debug|x64
+		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Debug|x64.Build.0 = Debug|x64
+		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x64.ActiveCfg = Release|x64
+		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
