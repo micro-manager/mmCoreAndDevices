@@ -1,0 +1,12 @@
+{
+  "solution": {
+    "path": "micromanager.sln",
+    "projects": [
+      "DeviceAdapters\\DemoCamera\\DemoCamera.vcxproj",
+      "MMCoreJ_wrap\\MMCoreJ_wrap.vcxproj",
+      "MMCore\\MMCore.vcxproj",
+      "MMDevice\\MMDevice-SharedRuntime.vcxproj",
+      "MMDevice\\MMDevice-StaticRuntime.vcxproj"
+    ]
+  }
+}
