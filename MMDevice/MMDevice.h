@@ -1344,4 +1344,222 @@ namespace MM {
       MM_DEPRECATED(virtual void ClearPostedErrors(void)) = 0;
    };
 
+   /**
+    * Storage API
+    * Dev Notes:
+    *    - all "meta" variables refer to JSON encoded strings
+    *    - we can create multiple datasets in parallel
+    */
+   class Storage : public Device {
+   public:
+      Storage() {}
+      virtual ~Storage() {}
+
+      virtual DeviceType GetType() const { return Type; }
+      static const DeviceType Type;
+
+      // Storage API
+      /**
+       * Create
+       * Create new dataset in the location path/name. Fails if the path already exists, or if the number of dimensions less than 1.
+       * The caller should save the "handle" output parameter to refer to this dataset in subsequent code.
+       */
+      virtual int Create(const char* path, const char* name, int numberOfDimensions, const char* meta, char* handle) = 0;
+      
+      /**
+       * Close
+       * Closes the dataset. After the dataset is closed its handle becomes invalid.
+       */
+      virtual int Close(const char* handle) = 0;
+
+      /**
+       * Load
+       * Load an existing dataset.
+       * Loaded datasets are immutable; any attempt to add images will fail.
+       * "Loading" the dataset does not mean it resides in program memory,
+       * it just means we can access its images and metadata. "Lazy" loading
+       * is a preffered way of implementation.
+       */
+      virtual int Load(const char* path, const char* name, char* handle) = 0;
+
+      /**
+       * Deletes a dataset with a given handle
+       */
+      virtual int Delete(char* handle) = 0;
+      
+      /**
+       * Returns a list of dataset names located in a given path.
+       * TODO: exact behavior of this call should be elaborated
+       */
+      virtual int List(const char* path, const char** listOfDatasets) const = 0;
+
+      /**
+       * Returns the name for each component
+       */
+      virtual int AddImage(unsigned component, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
+
+      /**
+       * Returns the number of simultaneous channels that camera is capable of.
+       * This should be used by devices capable of generating multiple channels of imagedata simultaneously.
+       * Note: this should not be used by color cameras (use getNumberOfComponents instead).
+       */
+      virtual int unsigned GetNumberOfChannels() const = 0;
+      /**
+       * Returns the name for each Channel.
+       * An implementation of this function is provided in DeviceBase.h.  It will return an empty string
+       */
+      virtual int GetChannelName(unsigned channel, char* name) = 0;
+      /**
+       * Returns the size in bytes of the image buffer.
+       * Required by the MM::Camera API.
+       * For multi-channel cameras, return the size of a single channel
+       */
+      virtual long GetImageBufferSize() const = 0;
+      /**
+       * Returns image buffer X-size in pixels.
+       * Required by the MM::Camera API.
+       */
+      virtual unsigned GetImageWidth() const = 0;
+      /**
+       * Returns image buffer Y-size in pixels.
+       * Required by the MM::Camera API.
+       */
+      virtual unsigned GetImageHeight() const = 0;
+      /**
+       * Returns image buffer pixel depth in bytes.
+       * Required by the MM::Camera API.
+       */
+      virtual unsigned GetImageBytesPerPixel() const = 0;
+      /**
+       * Returns the bit depth (dynamic range) of the pixel.
+       * This does not affect the buffer size, it just gives the client application
+       * a guideline on how to interpret pixel values.
+       * Required by the MM::Camera API.
+       */
+      virtual unsigned GetBitDepth() const = 0;
+      /**
+       * Returns binnings factor.  Used to calculate current pixelsize
+       * Not appropriately named.  Implemented in DeviceBase.h
+       */
+      virtual double GetPixelSizeUm() const = 0;
+      /**
+       * Returns the current binning factor.
+       */
+      virtual int GetBinning() const = 0;
+      /**
+       * Sets binning factor.
+       */
+      virtual int SetBinning(int binSize) = 0;
+      /**
+       * Sets exposure in milliseconds.
+       */
+      virtual void SetExposure(double exp_ms) = 0;
+      /**
+       * Returns the current exposure setting in milliseconds.
+       */
+      virtual double GetExposure() const = 0;
+      /**
+       * Sets the camera Region Of Interest.
+       * Required by the MM::Camera API.
+       * This command will change the dimensions of the image.
+       * Depending on the hardware capabilities the camera may not be able to configure the
+       * exact dimensions requested - but should try do as close as possible.
+       * If the hardware does not have this capability the software should simulate the ROI by
+       * appropriately cropping each frame.
+       * @param x - top-left corner coordinate
+       * @param y - top-left corner coordinate
+       * @param xSize - width
+       * @param ySize - height
+       */
+      virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
+      /**
+       * Returns the actual dimensions of the current ROI.
+       */
+      virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) = 0;
+      /**
+       * Resets the Region of Interest to full frame.
+       */
+      virtual int ClearROI() = 0;
+      virtual bool SupportsMultiROI() = 0;
+      virtual bool IsMultiROISet() = 0;
+      virtual int GetMultiROICount(unsigned& count) = 0;
+      virtual int SetMultiROI(const unsigned* xs, const unsigned* ys,
+         const unsigned* widths, const unsigned* heights,
+         unsigned numROIs) = 0;
+      virtual int GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
+         unsigned* heights, unsigned* length) = 0;
+      /**
+       * Starts continuous acquisition.
+       */
+      virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) = 0;
+      /**
+       * Starts Sequence Acquisition with given interval.
+       * Most camera adapters will ignore this number
+       * */
+      virtual int StartSequenceAcquisition(double interval_ms) = 0;
+      /**
+       * Stops an ongoing sequence acquisition
+       */
+      virtual int StopSequenceAcquisition() = 0;
+      /**
+       * Sets up the camera so that Sequence acquisition can start without delay
+       */
+      virtual int PrepareSequenceAcqusition() = 0;
+      /**
+       * Flag to indicate whether Sequence Acquisition is currently running.
+       * Return true when Sequence acquisition is active, false otherwise
+       */
+      virtual bool IsCapturing() = 0;
+
+      /**
+       * Get the metadata tags stored in this device.
+       * These tags will automatically be add to the metadata of an image inserted
+       * into the circular buffer
+       *
+       */
+      virtual void GetTags(char* serializedMetadata) = 0;
+
+      /**
+       * Adds new tag or modifies the value of an existing one
+       * These will automatically be added to images inserted into the circular buffer.
+       * Use this mechanism for tags that do not change often.  For metadata that
+       * change often, create an instance of metadata yourself and add to one of
+       * the versions of the InsertImage function
+       */
+      virtual void AddTag(const char* key, const char* deviceLabel, const char* value) = 0;
+
+      /**
+       * Removes an existing tag from the metadata associated with this device
+       * These tags will automatically be add to the metadata of an image inserted
+       * into the circular buffer
+       */
+      virtual void RemoveTag(const char* key) = 0;
+
+      /**
+       * Returns whether a camera's exposure time can be sequenced.
+       * If returning true, then a Camera adapter class should also inherit
+       * the SequenceableExposure class and implement its methods.
+       */
+      virtual int IsExposureSequenceable(bool& isSequenceable) const = 0;
+
+      // Sequence functions
+      // Sequences can be used for fast acquisitions, synchronized by TTLs rather than
+      // computer commands.
+      // Sequences of exposures can be uploaded to the camera.  The camera will cycle through
+      // the uploaded list of exposures (triggered by either an internal or
+      // external trigger).  If the device is capable (and ready) to do so isSequenceable will
+      // be true. If your device can not execute this (true for most cameras)
+      // simply set IsExposureSequenceable to false
+      virtual int GetExposureSequenceMaxLength(long& nrEvents) const = 0;
+      virtual int StartExposureSequence() = 0;
+      virtual int StopExposureSequence() = 0;
+      // Remove all values in the sequence
+      virtual int ClearExposureSequence() = 0;
+      // Add one value to the sequence
+      virtual int AddToExposureSequence(double exposureTime_ms) = 0;
+      // Signal that we are done sending sequence values so that the adapter can send the whole sequence to the device
+      virtual int SendExposureSequence() const = 0;
+   };
+
+
 } // namespace MM
