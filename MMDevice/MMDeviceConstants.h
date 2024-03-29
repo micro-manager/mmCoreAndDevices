@@ -242,7 +242,8 @@ namespace MM {
       MagnifierDevice,
       SLMDevice,
       HubDevice,
-      GalvoDevice
+      GalvoDevice,
+      StorageDevice
    };
 
    enum PropertyType {
