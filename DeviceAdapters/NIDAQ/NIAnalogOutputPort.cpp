@@ -36,6 +36,7 @@ NIAnalogOutputPort::NIAnalogOutputPort(const std::string& port) :
    minVolts_(0.0),
    maxVolts_(5.0),
    neverSequenceable_(false),
+   transitionPostExposure_(false),
    task_(0)
 {
    InitializeDefaultErrorMessages();
@@ -87,6 +88,13 @@ int NIAnalogOutputPort::Initialize()
    err = SetPropertyLimits("Voltage", minVolts_, maxVolts_);
    if (err != DEVICE_OK)
       return err;
+
+   pAct = new CPropertyAction(this, &NIAnalogOutputPort::OnSequenceTransition);
+   err = CreateStringProperty("Sequence Transition Pre-Post Exposure", g_Pre, false, pAct);
+   if (err != DEVICE_OK)
+      return err;
+   AddAllowedValue("Sequence Transition Pre-Post Exposure", g_Pre);
+   AddAllowedValue("Sequence Transition Pre-Post Exposure", g_Post);
 
    err = StartOnDemandTask(gateOpen_ ? gatedVoltage_ : 0.0);
    if (err != DEVICE_OK)
@@ -288,6 +296,21 @@ int NIAnalogOutputPort::OnSequenceable(MM::PropertyBase* pProp, MM::ActionType e
       std::string s;
       pProp->Get(s);
       neverSequenceable_ = (s == g_Never);
+   }
+   return DEVICE_OK;
+}
+
+int NIAnalogOutputPort::OnSequenceTransition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(transitionPostExposure_ ? g_Post : g_Pre);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string s;
+      pProp->Get(s);
+      transitionPostExposure_ = (s == g_Post);
    }
    return DEVICE_OK;
 }

@@ -39,8 +39,9 @@ extern const char* g_On;
 extern const char* g_Off;
 extern const char* g_Low;
 extern const char* g_High;
-
 extern const char* g_Never;
+extern const char* g_Pre;
+extern const char* g_Post;
 extern const char* g_UseHubSetting;
 
 extern const int ERR_SEQUENCE_RUNNING;
@@ -286,6 +287,7 @@ private:
    int OnMinVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSequenceTransition(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Post-init property action handlers
    int OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -309,6 +311,8 @@ private:
    double minVolts_; // User-selected for this port
    double maxVolts_; // User-selected for this port
    bool neverSequenceable_;
+   bool transitionPostExposure_; // when to transition in a sequence, not that we always transition on a rising flank
+      // it can be advantaguous to transition post exposure, in which case we have to modify our sequence 
 
    TaskHandle task_;
 
