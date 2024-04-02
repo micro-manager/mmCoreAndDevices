@@ -199,6 +199,16 @@ int NIAnalogOutputPort::StartDASequence()
    if (task_)
       StopTask();
 
+   // probably beneficial in all cases to move to the first position,
+   // essential if we are transitioning post-exposure
+   double volt0 = sentSequence_[0];
+   SetSignal(volt0);
+
+   if (transitionPostExposure_) {
+      for (int i = 0; i < sentSequence_.size() - 1; i++) {
+         sentSequence_[i] = sentSequence_[i + 1];
+      }
+   }
    sequenceRunning_ = true;
 
    int err = GetHub()->StartAOSequenceForPort(niPort_, sentSequence_);
