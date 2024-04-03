@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.32802.440
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MMCore", "MMCore\MMCore.vcxproj", "{36571628-728C-4ACD-A47F-503BA91C5D43}"
 EndProject
@@ -481,9 +481,12 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsCHROLIS", "DeviceAdapters\ThorlabsCHROLIS\ThorlabsCHROLIS.vcxproj", "{F93128A5-B344-4662-BFB8-B4CAECF1FE52}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IDSPeak", "DeviceAdapters\IDSPeak\IDSPeak.vcxproj", "{823CF77E-8120-41B1-9B25-823A79C93198}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QSI", "DeviceAdapters\QSI\QSI.vcxproj", "{320AF64E-C4FC-4A97-A7D1-F8233A8A44C7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NotificationTester", "DeviceAdapters\NotificationTester\NotificationTester.vcxproj", "{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Go2Scope", "DeviceAdapters\go2scope\go2scope.vcxproj", "{2916E620-1157-4154-8223-887D383E9DE6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1459,6 +1462,10 @@ Global
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Debug|x64.Build.0 = Debug|x64
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Release|x64.ActiveCfg = Release|x64
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Release|x64.Build.0 = Release|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.ActiveCfg = Debug|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.Build.0 = Debug|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.ActiveCfg = Release|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
