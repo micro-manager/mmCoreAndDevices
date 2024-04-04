@@ -8032,6 +8032,60 @@ std::vector<std::string> CMMCore::getLoadedPeripheralDevices(const char* hubLabe
    return deviceManager_->GetLoadedPeripherals(hubLabel);
 }
 
+void CMMCore::setStorageDevice(const char* storageLabel) throw(CMMError)
+{
+   // TODO: prevent setting storage device if the current one has any datasets open
+ 
+   if (storageLabel && strlen(storageLabel) > 0)
+   {
+      currentStorage_ =
+         deviceManager_->GetDeviceOfType<StorageInstance>(storageLabel);
+      LOG_INFO(coreLogger_) << "Default storage set to " << storageLabel;
+   }
+   else
+   {
+      currentStorage_.reset();
+      LOG_INFO(coreLogger_) << "Default storage unset";
+   }
+   properties_->Refresh();
+
+   std::string newStorageLabel = getStorageDevice();
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, newStorageLabel.c_str()));
+   }
+
+}
+
+std::string CMMCore::getStorageDevice() throw(CMMError)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      return storage->GetLabel();
+   }
+   return std::string();
+}
+
+/**
+ * Creates a new dataset in the current storage device.
+ */
+std::string CMMCore::createDataset(const char* path, const char* name, std::vector<int> shape, const char* meta)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      std::string handle;
+      int ret = storage->Create(path, name, shape, meta, handle);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+   }
+ }
+
 std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const char* deviceLabel) throw (CMMError)
 {
    std::shared_ptr<HubInstance> pHub =

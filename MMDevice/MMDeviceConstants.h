@@ -143,6 +143,7 @@ namespace MM {
    const char* const g_Keyword_CoreImageProcessor = "ImageProcessor";
    const char* const g_Keyword_CoreSLM          = "SLM";
    const char* const g_Keyword_CoreGalvo        = "Galvo";
+   const char* const g_Keyword_CoreStorage      = "Storage";
    const char* const g_Keyword_CoreTimeoutMs    = "TimeoutMs";
    const char* const g_Keyword_Channel          = "Channel";
    const char* const g_Keyword_Version          = "Version";
