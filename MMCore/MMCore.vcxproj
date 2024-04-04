@@ -94,6 +94,7 @@
     <ClCompile Include="Devices\SLMInstance.cpp" />
     <ClCompile Include="Devices\StageInstance.cpp" />
     <ClCompile Include="Devices\StateInstance.cpp" />
+    <ClCompile Include="Devices\StorageInstance.cpp" />
     <ClCompile Include="Devices\XYStageInstance.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
@@ -137,6 +138,7 @@
     <ClInclude Include="Devices\SLMInstance.h" />
     <ClInclude Include="Devices\StageInstance.h" />
     <ClInclude Include="Devices\StateInstance.h" />
+    <ClInclude Include="Devices\StorageInstance.h" />
     <ClInclude Include="Devices\XYStageInstance.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="FrameBuffer.h" />
