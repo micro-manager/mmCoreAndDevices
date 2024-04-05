@@ -36,19 +36,19 @@ public:
       mm::logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Storage>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger) {}
 
-   int Create(const char* path, const char* name, std::vector<int> shape, const char* meta, std::string& handle);
+   int Create(const char* path, const char* name, const std::vector<int>& shape, const char* meta, std::string& handle);
    int ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
    int Close(const char* handle);
-   int Load(const char* path, const char* name, char* handle);
+   int Load(const char* path, const char* name, std::string& handle);
    int Delete(char* handle);
-   int List(const char* path, char** listOfDatasets);
-   int AddImage(unsigned component, int coordinates[], int numCoordinates, const char* imageMeta);
+   int List(const char* path, std::vector<std::string>& datasets);
+   int AddImage(const std::vector<uint8_t>& pixels, const std::vector<int>& coordinates, const char* imageMeta);
    int GetSummaryMeta(const char* handle, char* meta);
-   int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta);
-   const unsigned char* GetImage(const char* handle, int coordinates[], int numCoordinates);
-   int GetNumberOfDimensions(const char* handle, int& numDimensions);
-   int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength);
-   int GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength);
+   int GetImageMeta(const char* handle, const std::vector<int>& coordinates, char* meta);
+   const unsigned char* GetImage(const char* handle, const std::vector<int>& coordinates);
+   int GetNumberOfDimensions(const char* handle);
+   int GetDimension(const char* handle, int dimension, std::string& name, std::string& meaning);
+   int GetCoordinate(const char* handle, int dimension, int coordinate, std::string& name);
 
 };
