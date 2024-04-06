@@ -148,12 +148,12 @@ int MMV1Storage::Delete(char* handle)
    return 0;
 }
 
-int MMV1Storage::List(const char* path, char** listOfDatasets)
+int MMV1Storage::List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength)
 {
    return 0;
 }
 
-int MMV1Storage::AddImage(unsigned component, int coordinates[], int numCoordinates, const char* imageMeta)
+int MMV1Storage::AddImage(unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta)
 {
    return 0;
 }
