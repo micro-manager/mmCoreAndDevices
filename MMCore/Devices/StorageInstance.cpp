@@ -3,8 +3,7 @@
 //
 // DESCRIPTION:   Camera device instance wrapper
 //
-// COPYRIGHT:     University of California, San Francisco, 2014,
-//                Nenad Amodaj 2024
+// COPYRIGHT:     Nenad Amodaj 2024
 //                All Rights reserved
 //
 // LICENSE:       This file is distributed under the "Lesser GPL" (LGPL) license.
@@ -77,14 +76,35 @@ int StorageInstance::Delete(char* handle)
 int StorageInstance::List(const char* path, std::vector<std::string>& listOfDatasets)
 {
    RequireInitialized(__func__);
-   char** cList;
-   // TODO allocate and populate the list
-   return GetImpl()->List(path, cList);
+   const int maxItems(5000);
+   const int maxItemLength(1024);
+   std::vector<char*> cList(maxItems, nullptr);
+   for (auto c : cList)
+   {
+      c = new char[maxItemLength];
+      memset(c, 0, maxItemLength);
+   }
+   int ret = GetImpl()->List(path, &cList[0], maxItems, maxItemLength);
+   if (ret == DEVICE_OK)
+   {
+      listOfDatasets.clear();
+
+      for (auto c : cList)
+      {
+         if (strlen(c) == 0) break;
+         listOfDatasets.push_back(std::string(c));
+      }
+   }
+
+   for (auto c : cList) delete[] c;
+
+   return ret;
 }
 
-int StorageInstance::AddImage(const std::vector<uint8_t>& pixels, const std::vector<int>& coordinates, const char* imageMeta)
+int StorageInstance::AddImage(std::vector<uint8_t>& pixels, int width, int height, int depth, std::vector<int>& coordinates, const char* imageMeta)
 {
-   return 0;
+   RequireInitialized(__func__);
+   return GetImpl()->AddImage(&pixels[0], width, height, depth, &coordinates[0], coordinates.size(), imageMeta);
 }
 
 int StorageInstance::GetSummaryMeta(const char* handle, char* meta)

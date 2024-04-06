@@ -8083,7 +8083,9 @@ std::string CMMCore::createDataset(const char* path, const char* name, std::vect
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
          throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
       }
+      return handle;
    }
+   throw CMMError("No storage device selected.");
  }
 
 std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const char* deviceLabel) throw (CMMError)

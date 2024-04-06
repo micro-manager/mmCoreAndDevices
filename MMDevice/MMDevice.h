@@ -1489,12 +1489,12 @@ namespace MM {
        * TODO: exact behavior of this call should be elaborated, including
        * the format and memory management of the returned list.
        */
-      virtual int List(const char* path, char** listOfDatasets) = 0;
+      virtual int List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength) = 0;
 
       /**
        * Inserts an image into the dataset
        */
-      virtual int AddImage(unsigned component, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
+      virtual int AddImage(unsigned char*, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
 
       /**
        * Returns summary metadata

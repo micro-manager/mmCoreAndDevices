@@ -63,8 +63,8 @@ public:
    int Close(const char* handle);
    int Load(const char* path, const char* name, char* handle);
    int Delete(char* handle);
-   int List(const char* path, char** listOfDatasets);
-   int AddImage(unsigned component, int coordinates[], int numCoordinates, const char* imageMeta);
+   int List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength);
+   int AddImage(unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta);
    int GetSummaryMeta(const char* handle, char* meta);
    int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta);
    const unsigned char* GetImage(const char* handle, int coordinates[], int numCoordinates);
