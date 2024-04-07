@@ -37,9 +37,10 @@ const char* g_On = "On";
 const char* g_Off = "Off";
 const char* g_Low = "Low";
 const char* g_High = "High";
-
 const char* g_Never = "Never";
 const char* g_UseHubSetting = "Use hub setting";
+const char* g_Post = "Post";
+const char* g_Pre = "Pre";
 
 const int ERR_SEQUENCE_RUNNING = 2001;
 const int ERR_SEQUENCE_TOO_LONG = 2002;
