@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "PyObj.h"
 #include <numpy/arrayobject.h>
-PyObj PyObj::g_unit_um;
 
 PyObj PyObj::g_traceback_to_string;
 PyObj PyObj::g_load_devices;
@@ -96,7 +95,6 @@ bool PyObj::InitializeInterpreter() noexcept
         return ReportError();
 
     // get the um unit for use with stages
-    g_unit_um = g_global_scope.GetDictItem("unit_um");
     g_traceback_to_string = g_global_scope.GetDictItem("traceback_to_string");
     g_load_devices = g_global_scope.GetDictItem("load_devices");
     return ReportError();
@@ -110,7 +108,6 @@ bool PyObj::InitializeInterpreter() noexcept
 void PyObj::DeinitializeInterpreter() noexcept
 {
     PyLock lock;
-    g_unit_um.Clear();
     g_traceback_to_string.Clear();
     g_load_devices.Clear();
     g_main_module.Clear();

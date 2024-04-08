@@ -25,24 +25,24 @@
 #include "PyObj.h"
 #include "Actions.h"
 
+const char* const g_Method_Busy = "busy";
+
 class CPyHub;
 
 class CPyDeviceBase {
 protected:
     bool initialized_ = false;
-    PyObj object_;    
+    PyObj busy_; // busy() method
     string id_;
-    CPyDeviceBase(const string& id) : id_(id), object_() {}
+
+    CPyDeviceBase(const string& id) : id_(id), busy_() {}
 public:
     int CheckError() noexcept;
-    PyObj Object() const {
-        return object_;
-    }
-    vector<PyAction*> EnumerateProperties() noexcept;
 protected:
     virtual void LogError(const char*) = 0;
 };
 
+tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& pydevice, CPyDeviceBase* callback) noexcept;
 
 /**
  * Base class for device adapters that are implement by a Python script.
@@ -80,13 +80,15 @@ public:
             if (!property->enum_keys.empty())
                 this->SetAllowedValues(property->name.c_str(), property->enum_keys);
         }
+        /*
+        
         propertyDescriptors.clear(); // remove the pointers from the vector because we transfered ownership of the Action objects in CreateProperty
-
+        
         if (object_.HasAttribute("__doc__")) {
             auto doc = object_.Get("__doc__");
             if (doc != Py_None)
                 this->SetDescription(doc.as<string>().c_str());
-        }
+        }*/
         return DEVICE_OK;
     }
     
@@ -107,19 +109,43 @@ public:
     */
     int Initialize() override {
         if (!initialized_) {
-            object_ = CPyHub::GetDevice(id_);
+            auto object_ = CPyHub::GetDevice(id_);
             if (!object_) {
                 this->SetErrorText(ERR_PYTHON_DEVICE_NOT_FOUND, ("Could not find the Python device id " + id_ + ". It may be that the Python script or the device object within it was renamed.").c_str());
                 return ERR_PYTHON_DEVICE_NOT_FOUND;
             }
-
-            auto propertyDescriptors = EnumerateProperties();
+            auto [properties, methods] = EnumerateProperties(object_, this);
             _check_(CheckError());
-            CreateProperties(propertyDescriptors);
+            _check_(CreateProperties(properties));
+            _check_(ConnectMethods(methods));
             _check_(this->UpdateStatus()); // load value of all properties from the Python object
             initialized_ = true;
         }
         return DEVICE_OK;
+    }
+
+    long GetLongProperty(const char* property) const {
+        long value = 0;
+        // Unfortunately, GetProperty is 'const' for some (historical?) reason.
+        // Therefore, we need to manually remove the const qualifier from 'this'
+        const_cast<BaseType*>(static_cast<const BaseType*>(this))->GetProperty(property, value);
+        return value;
+    }
+    int SetLongProperty(const char* property, long value) {
+        return this->SetProperty(property, std::to_string(value).c_str());
+    }
+    double GetFloatProperty(const char* property) const {
+        double value = 0.0;
+        const_cast<BaseType*>(static_cast<const BaseType*>(this))->GetProperty(property, value);
+        return value;
+    }
+    int SetFloatProperty(const char* property, double value) {
+        return this->SetProperty(property, std::to_string(value).c_str());
+    }
+
+    virtual int ConnectMethods(const PyObj& methods) {
+        busy_ = methods.GetDictItem("busy");
+        return CheckError();
     }
 
     /**
@@ -127,7 +153,6 @@ public:
      * @todo Currently, the Python interperter is nver de-initialized, even if all devices have been destroyed.
     */
     int Shutdown() override {
-        object_.Clear();
         initialized_ = false;
         return DEVICE_OK;
     }

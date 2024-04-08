@@ -4,7 +4,8 @@
 using PyCameraClass = CPyDeviceTemplate<CCameraBase<std::monostate>>;
 class CPyCamera : public PyCameraClass {
     PyObj lastFrame_; // numpy array corresponding to the last image, we hold a reference count so that we are sure the array does not get deleted during processing */
-
+    PyObj read_; // the read() method of the camera object
+    
 public:
     CPyCamera(const string& id) : PyCameraClass(id) {}
     const unsigned char* GetImageBuffer() override;
@@ -24,4 +25,5 @@ public:
     int SnapImage() override;
     int Shutdown() override;
     int InsertImage() override;
+    int ConnectMethods(const PyObj& methods) override;
 };

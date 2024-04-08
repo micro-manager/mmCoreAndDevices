@@ -15,7 +15,7 @@ class GenericXYStage:
         self._y = 0.0 * u.um
 
     def busy(self):
-        pass
+        return False
 
     @property
     def x(self) -> Quantity[u.um]:
@@ -52,6 +52,15 @@ class GenericXYStage:
         self._step_size_y = value.to(u.um)
 
 
-
-
 devices = {'stage': GenericXYStage(1 * u.um, 1 * u.um)}
+
+if __name__ == "__main__":
+    import sys
+    import os
+
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from bootstrap import PyDevice
+
+    device = PyDevice(devices['stage'])
+    print(device)
+    assert device.device_type == 'XYStage'

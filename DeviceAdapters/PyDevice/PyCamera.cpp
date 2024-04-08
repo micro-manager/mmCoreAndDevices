@@ -3,25 +3,30 @@
 #define NO_IMPORT_ARRAY
 #include <numpy/arrayobject.h>
 
-
-
+const char* g_Keyword_Width = "Width";
+const char* g_Keyword_Height = "Height";
+const char* g_Keyword_Top = "Top";
+const char* g_Keyword_Left = "Left";
+const char* g_Keyword_Exposure = "Exposure-ms";
+const char* g_Keyword_Binning = "Binning";
+const char* g_Method_Read = "read";
 
 /**
 * Performs exposure and grabs a single image.
 * This function should block during the actual exposure and return immediately afterwards
 * (i.e., before readout).  This behavior is needed for proper synchronization with the shutter.
 * Required by the MM::Camera API.
-* 
-* Todo: since the Python code returns a future object, far more advanced timing schemes are possible
-* (such as sending the next trigger before the data from the current frame has been tranferred from the camera
-* hardware to the PC). However, in the current implementation of the grab thread, grabbing is fully sequential
-* so with that implementation it is not possible to use advanced timing. Therefore, we just simply wait for the frame
-* to arrive.
 */
+
+int CPyCamera::ConnectMethods(const PyObj& methods) {
+    _check_(PyCameraClass::ConnectMethods(methods));
+    read_ = methods.GetDictItem("read");
+    return CheckError();
+}
+
 int CPyCamera::SnapImage()
 {
-    auto future = object_.CallMember("trigger"); // trigger the camera and store the Future object that will receive the result
-    lastFrame_ = future.CallMember("result");
+    lastFrame_ = read_.Call();
     return CheckError();
 }
 
@@ -78,7 +83,7 @@ const unsigned char* CPyCamera::GetImageBuffer()
 */
 unsigned CPyCamera::GetImageWidth() const
 {
-    return object_.Get("width").as<long>();
+    return GetLongProperty(g_Keyword_Width);
 }
 
 /**
@@ -87,7 +92,7 @@ unsigned CPyCamera::GetImageWidth() const
 */
 unsigned CPyCamera::GetImageHeight() const
 {
-    return object_.Get("height").as<long>();
+    return GetLongProperty(g_Keyword_Height);
 }
 
 /**
@@ -133,10 +138,10 @@ int CPyCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 
     // apply ROI
     PyLock lock; // make sure all four elements of the ROI are set without any other thread having access in between
-    object_.Set("width", (long)xSize);
-    object_.Set("height", (long)ySize);
-    object_.Set("top", (long)y);
-    object_.Set("left", (long)x);
+    SetLongProperty(g_Keyword_Left, x);
+    SetLongProperty(g_Keyword_Top, y);
+    SetLongProperty(g_Keyword_Width, xSize);
+    SetLongProperty(g_Keyword_Height, ySize);
     return DEVICE_OK;
 }
 
@@ -148,10 +153,10 @@ int CPyCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 int CPyCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
     PyLock lock; // make sure all four elements of the ROI are read without any other thread having access
-    xSize = object_.Get("width").as<long>();
-    ySize = object_.Get("height").as<long>();
-    x = object_.Get("left").as<long>();
-    y = object_.Get("top").as<long>();
+    x = GetLongProperty(g_Keyword_Left);
+    y = GetLongProperty(g_Keyword_Top);
+    xSize = GetLongProperty(g_Keyword_Width);
+    ySize = GetLongProperty(g_Keyword_Height);
     return DEVICE_OK;
 }
 
@@ -163,16 +168,18 @@ int CPyCamera::ClearROI()
 {
     PyLock lock; // make sure all four elements of the ROI are set without any other thread having access in between
     double width, height, top, left;
-    GetPropertyLowerLimit("top", top);
-    GetPropertyLowerLimit("left", left);
-    GetPropertyUpperLimit("width", width);
-    GetPropertyUpperLimit("height", height);
-    object_.Set("width", (long)width);
-    object_.Set("height", (long)height);
-    object_.Set("top", (long)top);
-    object_.Set("left", (long)left);
+    GetPropertyLowerLimit(g_Keyword_Top, top);
+    GetPropertyLowerLimit(g_Keyword_Left, left);
+    GetPropertyUpperLimit(g_Keyword_Width, width);
+    GetPropertyUpperLimit(g_Keyword_Height, height);
+    SetLongProperty(g_Keyword_Top, (long)top);
+    SetLongProperty(g_Keyword_Left, (long)left);
+    SetLongProperty(g_Keyword_Width, (long)width);
+    SetLongProperty(g_Keyword_Height, (long)height);
     return DEVICE_OK;
 }
+
+
 
 /**
 * Returns the current exposure setting in milliseconds.
@@ -180,9 +187,7 @@ int CPyCamera::ClearROI()
 */
 double CPyCamera::GetExposure() const
 {
-    double value_ms;
-    const_cast<CPyCamera*>(this)->GetProperty("Duration_ms", value_ms);
-    return value_ms;
+    return GetFloatProperty(g_Keyword_Exposure);
 }
 
 /**
@@ -191,7 +196,7 @@ double CPyCamera::GetExposure() const
 */
 void CPyCamera::SetExposure(double value_ms)
 {
-    if (SetProperty("Duration", std::to_string(value_ms).c_str()) == DEVICE_OK)
+    if (SetFloatProperty(g_Keyword_Exposure, value_ms) == DEVICE_OK)
         GetCoreCallback()->OnExposureChanged(this, value_ms);
 }
 
@@ -201,7 +206,7 @@ void CPyCamera::SetExposure(double value_ms)
 */
 int CPyCamera::GetBinning() const
 {
-    return object_.Get("binning").as<long>();
+    return GetLongProperty(g_Keyword_Binning);
 }
 
 /**
@@ -210,8 +215,7 @@ int CPyCamera::GetBinning() const
 */
 int CPyCamera::SetBinning(int binF)
 {
-    object_.Set("binning", (long)binF);
-    return CheckError();
+    return SetLongProperty(g_Keyword_Binning, binF);
 }
 
 int CPyCamera::IsExposureSequenceable(bool& isSequenceable) const

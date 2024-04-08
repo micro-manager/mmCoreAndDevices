@@ -33,6 +33,7 @@
     <ClInclude Include="PyStage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="bootstrap.py" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PyDevice.cpp">
@@ -58,7 +59,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="bootstrap.py" />
     <None Include="debug_helper.bat">
       <Filter>Source Files</Filter>
     </None>

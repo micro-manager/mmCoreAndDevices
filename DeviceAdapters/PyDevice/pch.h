@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include <map>
 #include <functional>
 #include <filesystem>
 #pragma warning(disable: 5040) // disable warning we get because we are using C++17 for compilation.
@@ -12,6 +13,8 @@ namespace fs = std::filesystem;
 using std::string;
 using std::function;
 using std::vector;
+using std::tuple;
+using std::map;
 #ifdef _WIN32 
 #include <Windows.h>
 #endif

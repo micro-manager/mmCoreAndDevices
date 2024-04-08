@@ -12,82 +12,43 @@ class NoiseType(Enum):
     GAUSSIAN = 3
 
 
-class RandomGenerator:
-    """Demo device, used to test building device graphs. It generates random numbers for use in the Camera"""
-
-    def __init__(self, min=0, max=1000, noise_type=NoiseType.UNIFORM):
-        self._min = min
-        self._max = max
-        self._noise_type = noise_type
-
-    def generate_into(self, buffer):
-        buffer[:, :] = np.random.randint(self._min, self._max, buffer.shape, dtype=np.uint16)
-
-    @property
-    def min(self) -> Annotated[int, {'min': 0, 'max': 0xFFFF}]:
-        return self._min
-
-    @min.setter
-    def min(self, value):
-        self._min = value
-
-    @property
-    def max(self) -> Annotated[int, {'min': 0, 'max': 0xFFFF}]:
-        return self._max
-
-    @max.setter
-    def max(self, value):
-        self._max = value
-
-    @property
-    def noise_type(self) -> NoiseType:
-        return self._noise_type
-
-    @noise_type.setter
-    def noise_type(self, value):
-        if not value == NoiseType.UNIFORM:
-            raise ValueError("Noise types other than uniform are not supported yet.")
-        self._noise_type = value
-
-
 class Camera:
     """Demo camera implementation that returns noise images. To test building device graphs, the random number
     generator is implemented as a separate object with its own properties."""
 
-    def __init__(self, left=0, top=0, width=100, height=100, duration: Quantity[u.ms] = 100 * u.ms,
-                 random_generator=None):
-        if random_generator is None:
-            random_generator = RandomGenerator()
-
-        self._resized = True
-        self._image = None
+    def __init__(self, left=0, top=0, width=100, height=100):
+        self._rng = np.random.default_rng()
+        self._low = 1.0
+        self._high = 1000.0
         self._left = left
         self._top = top
         self._width = width
         self._height = height
-        self._duration = duration.to(u.ms)
-        self._random_generator = random_generator
+        self._exposure = 1 * u.ms
+        self._noise_type = NoiseType.UNIFORM
 
-    def trigger(self):
-        if self._resized:
-            self._image = np.zeros(self.data_shape, dtype=np.uint16)
-            self._resized = False
-        self.random_generator.generate_into(self._image)
-        result = Future()
-        result.set_result(self._image)  # noqa
-        return result
+    def read(self):
+        size = (self._height, self._width)
+        if self._noise_type == NoiseType.UNIFORM:
+            image = self._rng.uniform(self._low, self._high, size)
+        elif self._noise_type == NoiseType.EXPONENTIAL:
+            image = self._rng.exponential(self._high - self._low, size) + self._low
+        else:
+            mean = 0.5 * (self._high + self._low)
+            std = 0.5 * (self._high - self._low)
+            image = self._rng.normal(mean, std, size)
+        return image.astype(np.uint16)
 
-    @property
-    def data_shape(self):
-        return self._height, self._width
+    def busy(self):
+        return False
 
     @property
     def left(self) -> int:
-        return self._top
+        return self._left
 
     @left.setter
     def left(self, value: int):
-        self._top = value
+        self._left = value
 
     @property
     def top(self) -> int:
@@ -98,56 +59,63 @@ class Camera:
         self._top = value
 
     @property
-    def width(self) -> Annotated[int, {'min': 1, 'max': 1200}]:
+    def width(self) -> int:
         return self._width
 
     @width.setter
     def width(self, value: int):
         self._width = value
-        self._resized = True
 
     @property
-    def height(self) -> Annotated[int, {'min': 1, 'max': 960}]:
+    def height(self) -> int:
         return self._height
 
     @height.setter
     def height(self, value: int):
         self._height = value
-        self._resized = True
 
     @property
-    def duration(self) -> Quantity[u.ms]:
-        return self._duration
+    def exposure(self) -> Quantity[u.ms]:
+        return self._exposure
 
-    @duration.setter
-    def duration(self, value):
-        self._duration = value.to(u.ms)
+    @exposure.setter
+    def exposure(self, value):
+        self._exposure = value.to(u.ms)
 
     @property
-    def random_generator(self) -> object:
-        return self._random_generator
+    def noise_type(self) -> NoiseType:
+        return self._noise_type
 
-    @random_generator.setter
-    def random_generator(self, value):
-        self._random_generator = value
+    @noise_type.setter
+    def noise_type(self, value: NoiseType):
+        self._noise_type = value
+
+    @property
+    def low(self) -> float:
+        return self._low
+
+    @low.setter
+    def low(self, value: float):
+        self._low = value
+
+    @property
+    def high(self) -> float:
+        return self._high
+
+    @high.setter
+    def high(self, value: float):
+        self._high = value
 
 
 devices = {'cam': Camera()}
 
-# Code to test the device outside of micro-manager
-# Note: this code is likely to change since bootstrap.py
-# is not stable yet
 if __name__ == "__main__":
     import sys
     import os
 
-    # Get the parent directory of the current file
-    parent_dir = os.path.dirname(os.path.abspath(__file__))
-    # Add the parent directory to the search path
-    sys.path.insert(0, parent_dir)
-    import bootstrap
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from bootstrap import PyDevice
 
-    devices = bootstrap.scan_devices(devices)
-    c = devices['cam']
-    assert c._MM_dtype == 'Camera'
-
+    device = PyDevice(devices['cam'])
+    print(device)
+    assert device.device_type == 'Camera'

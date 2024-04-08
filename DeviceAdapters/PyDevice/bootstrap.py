@@ -2,186 +2,199 @@ bootstrap = R"raw("
 # This file is formatted so that it can be run by the Python interpreter directly, and that it can also be included
 # in the c++ code.
 # See RunScript() in PyDevice.cpp for the code that loads this script as a c++ string.
-
 import sys
 import importlib
-from typing import Protocol, runtime_checkable, get_origin, Annotated
+from typing import get_origin, Annotated
+from types import MethodType
 import traceback
-import astropy.units as u
-import concurrent.futures
 import inspect
 from enum import Enum
-from astropy.units import Quantity
 
-@runtime_checkable
-class Camera(Protocol):
-    """A camera or other source of 2-D image data"""
-
-    duration: Quantity[u.ms]
-    """Shutter time / exposure time of the camera"""
-
-    top: int
-    left: int
-    height: int
-    width: int
-    # the binning property is optional. If missing, an attribute with fixed value binning = 1 will be added.
-    # binning: int 
-
-    def trigger(self) -> concurrent.futures.Future:
-        """Triggers the Camera
-
-        This function returns a `concurrent.future.Future` object that receives the grabbed camera frame as a numpy array. 
-        Calling code can call `results()` on the future to retrieve the array.
-        The array must have `shape = (height, width)` and hold `uint16` data."""
-        pass
-
-
-@runtime_checkable
-class Stage(Protocol):
-    """A 1-D translation stage"""
-
-    step_size: Quantity[u.um]
-    """Step size in μm"""
-
-    position: Quantity[u.um]
-    """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
-    current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
-    causes it to start moving to the new position. Also see :func:`~busy`.
-    Stages may use the step_size to convert positions in micrometers to positions in steps, using the equation
-    `steps = round(position / step_size)`.
-    """
-
-    def home(self) -> None:
-        """Homes the stage. This function does not wait for homing to complete."""
-        pass
-
-    def busy(self) -> bool:
-        """Returns False if the stage has finished moving. This should include any time the stage may 'vibrate' after
-        stopping."""
-        pass
-
-
-@runtime_checkable
-class XYStage(Protocol):
-    """A 1-D translation stage"""
-
-    x: Quantity[u.um]
-    """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
-    current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
-    causes it to start moving to the new position. Also see :func:`~wait`.
-    Stages may use the step_size to convert positions in micrometers to positions in steps, using the equation
-    `steps = round(position / step_size)`.
-    """
-
-    y: Quantity[u.um]
-    """Position in μm. Setting the position causes the stage to start moving to that position. Reading it returns the 
-    current position (note that the stage may still be moving!). Overwriting this attribute while the stage is moving 
-    causes it to start moving to the new position. Also see :func:`~wait`.
-    Stages may use the step_size to convert positions in micrometers to positions in steps, using the equation
-    `steps = round(position / step_size)`.
-    """
-
-    step_size_x: Quantity[u.um]
-    """Step size in μm"""
-
-    step_size_y: Quantity[u.um]
-    """Step size in μm"""
-
-    def home(self) -> None:
-        """Homes the stage. This function does not wait for homing to complete."""
-        pass
-
-    def busy(self) -> bool:
-        """Returns False if the stage has finished moving. This should include any time the stage may 'vibrate' after
-        stopping."""
-        pass
-
-
-def extract_property_metadata(name, p):
-    if not isinstance(p, property) or not hasattr(p, 'fget') or not hasattr(p.fget, '__annotations__'):
-        return None
-
-    return_type = p.fget.__annotations__.get('return', None)
-    if return_type is None:
-        return None
-
-    min = None
-    max = None
-    options = None
-    readonly = (not hasattr(p, 'fset')) or p.fset is None
-    mm_name = to_title_case(name)
-
-    if get_origin(return_type) is Annotated:  # Annotated
-        meta = return_type.__metadata__[0]
-        if isinstance(meta, u.Unit):
-            ptype = 'quantity'
-            options = meta
-            mm_name = mm_name + '_' + str(meta)
-        else:
-            min = meta.get('min', None)
-            max = meta.get('max', None)
-            ptype = return_type.__origin__.__name__
-
-    elif issubclass(return_type, Enum):  # Enum
-        options = {k.lower().capitalize(): v for (k, v) in return_type.__members__.items()}
-        ptype = 'enum'
-
-    elif issubclass(return_type, int) or issubclass(return_type, float) or issubclass(return_type, str):
-        ptype = return_type.__name__
-
-    else:
-        return None  # unsupported type
-
-    return name, mm_name, ptype, readonly, min, max, options
-
-
-def to_title_case(name):
-    # convert attribute name from snake_case to TitleCase
-    return name.replace('_', ' ').title().replace(' ', '')
-
-
-def set_metadata(obj):
-    # get a list of all properties, including the ones in base classes
-    classes = inspect.getmro(type(obj))
-    alldict = {}
-    for c in classes[::-1]:
-       alldict.update(c.__dict__)  
-
-    properties = [extract_property_metadata(k, v) for (k, v) in alldict.items()]
-    properties = [p for p in properties if p is not None]
-    if isinstance(obj, Camera):
-        dtype = "Camera"
-        if not hasattr(obj, 'binning'):
-            obj.binning = 1
-            properties.append(('binning', 'Binning', 'int', False, 1, 1, None, None, None))
-    elif isinstance(obj, XYStage):
-        dtype = "XYStage"
-    elif isinstance(obj, Stage):
-        dtype = "Stage"
-    else:
-        dtype = "Device"
-    obj._MM_dtype = dtype
-    obj._MM_properties = properties
-
-unit_um = u.um
-
-def scan_devices(devices):
-    # Scans the device dictionary and inserts metadata for each item
-    for d in devices.values():
-        set_metadata(d)    
-    return devices
+# the presence of the astropy.units module is optional.
+try:
+    from astropy.units import UnitBase
+except ImportError:
+    class UnitBase:
+        pass  # dummy class to prevent errors when the astropy.units module is not available
 
 
 def traceback_to_string(tb):
+    """Helper function to convert a traceback object to a string. This function is called from the C++ code."""
     return ''.join(traceback.format_tb(tb))
 
+
 def load_devices(module_path, script_path, script_name) -> dict:
+    """Helper function to load the Python script that defines the devices. This function is called from the C++ code."""
     _original_path = sys.path.copy()
     try:
         sys.path = [*_original_path, *module_path.split(';'), script_path]
         script = importlib.import_module(script_name)
-        return scan_devices(script.devices)
+        return {k: PyDevice(v) for k, v in script.devices.items()}
     finally:
         sys.path = _original_path
 
+
+def _to_title_case(name: str) -> str:
+    for suffix in ['_s', '_ms', '_us', '_ns', '_m', '_cm', '_mm', '_um', '_nm', '_A', '_mA', '_uA', '_V', '_mV', '_uV',
+                   '_Hz', '_kHz', '_MHz', '_GHz']:
+        if name.endswith(suffix):
+            return name[:-len(suffix)].title().replace('_', '') + '-' + suffix[1:]
+
+    return name.title().replace('_', '')  # convert to TitleCase
+
+
+class PyProperty:
+    def __init__(self, obj, name: str, p: property):
+        self.python_name = name
+        fset = getattr(p, 'fset', None)
+        self.get = lambda: p.fget(obj)
+        self.set = (lambda value: fset(obj, value)) if fset is not None else None
+        self.mm_name = _to_title_case(name)
+        self.min = None
+        self.max = None
+        self.options = None
+        self.unit = None
+
+        # get the return type from the annotations.
+        # Note: this will raise an error if p is not gettable or has no return type annotation
+        return_type = p.fget.__annotations__['return']  # noqa: ok to raise an error here
+        self.data_type = self._process_return_type(return_type)
+
+    def _process_return_type(self, return_type) -> str:
+        if get_origin(return_type) is Annotated:  # Annotated
+            meta = return_type.__metadata__[0]
+            if isinstance(meta, UnitBase):
+                self.unit = meta
+                self.mm_name = self.mm_name + '-' + str(self.unit)
+                if self.set is not None:
+                    set_original = self.set
+                    self.set = lambda value: set_original(value * self.unit)
+                get_original = self.get
+                self.get = lambda: get_original().to_value(self.unit)
+                return 'float'
+            else:
+                self.min = meta.get('min', None)
+                self.max = meta.get('max', None)
+                return self._process_return_type(return_type.__origin__)  # recursively process the base type
+
+        elif return_type == bool:
+            return 'bool'
+
+        elif issubclass(return_type, Enum):  # Enum
+            self.options = {k.lower().capitalize(): v for (k, v) in return_type.__members__.items()}
+            return 'enum'
+
+        elif issubclass(return_type, int):
+            return 'int'
+
+        elif issubclass(return_type, float):
+            return 'float'
+
+        elif issubclass(return_type, str):
+            return 'str'
+
+        else:
+            raise ValueError(return_type)  # unsupported property type
+
+    def __str__(self):
+        return f"{self.mm_name}({self.data_type}{', readonly' if self.set is None else ''})"
+
+
+class PyDevice:
+    """Wrapper class for a device that provides metadata about the device's properties
+     and methods in a format accessible to the C++ code."""
+
+    def __init__(self, device):
+
+        # get a list of all properties and methods, including the ones in base classes
+        class_hierarchy = inspect.getmro(device.__class__)
+        all_dict = {}
+        for c in class_hierarchy[::-1]:
+            all_dict.update(c.__dict__)
+
+        # extract metadata for each property and method
+        self.properties = []
+        self.methods = {}
+        for name, p in all_dict.items():
+            if not name.startswith('_'):
+                if isinstance(p, property):
+                    try:
+                        self.properties.append(PyProperty(device, name, p))
+                    except (AttributeError, KeyError, ValueError):
+                        pass  # property does not have a getter or annotations, or is of an incorrect type
+                else:
+                    self.methods[name] = MethodType(p, device)
+
+        # detect the device type
+        if self._init_camera():
+            self.device_type = 'Camera'
+        elif self._init_xy_stage():
+            self.device_type = 'XYStage'
+        elif self._init_stage():
+            self.device_type = 'Stage'
+        else:
+            # 'busy' is optional for generic device types
+            if not self._has_methods('busy'):
+                self.methods['busy'] = lambda: False
+            self.device_type = 'Device'
+
+        if not self._has_methods('busy'):
+            raise Exception(f"Device type '{self.device_type}' must have a 'busy' method")
+
+    def _init_camera(self) -> bool:
+        """Checks if the device corresponds to a Camera, and prepares the camera object if it does"""
+
+        # check required properties and methods
+        if not self._has_properties(('Exposure-ms', 'float'), ('Top', 'int'), ('Left', 'int'), ('Height', 'int'),
+                                    ('Width', 'int')) or not self._has_methods('read'):
+            return False
+
+        # add a read-only binning property if it does not exist
+        if not self._has_properties(('Binning', 'int')):
+            @property
+            def binning(obj) -> int:
+                return 1
+
+            self.properties.append(PyProperty(self, 'binning', binning))
+
+        return True
+
+    def _init_xy_stage(self) -> bool:
+        """Checks if the device corresponds to an XYStage, and prepares the stage object if it does"""
+        return self._has_properties(('X-um', 'float'), ('Y-um', 'float'), ('StepSizeX-um', 'float'),
+                                    ('StepSizeY-um', 'float')) and self._has_methods('home')
+
+    def _init_stage(self) -> bool:
+        """Checks if the device corresponds to an XYStage, and prepares the stage object if it does"""
+        return self._has_properties(('Position-um', 'float'), ('StepSize-um', 'float')) and self._has_methods('home')
+
+    def _has_properties(self, *properties) -> bool:
+        """Checks if the device has the specified properties of the specified types
+
+        Returns:
+            bool: True if the device has the specified properties, False otherwise
+
+        Raises:
+            ValueError: if the device has one of the specified properties, but with a different type
+        """
+        for name, data_type in properties:
+            # find the property with the specified name
+            p = next((p for p in self.properties if p.mm_name == name), None)
+            if p is None:
+                print(f"Property '{name}' not found")
+                return False
+            if p.data_type != data_type:
+                raise ValueError(f"Property '{name}' is of type {p.data_type}, expected {data_type}")
+        return True
+
+    def _has_methods(self, *required_methods) -> bool:
+        """Checks if the device has the specified methods
+
+        Returns:
+            bool: True if the device has the specified methods, False otherwise
+        """
+        return all(m in self.methods.keys() for m in required_methods)
+
+    def __str__(self):
+        return f"{self.device_type}({', '.join(str(p) for p in self.properties)})"
 # )raw";

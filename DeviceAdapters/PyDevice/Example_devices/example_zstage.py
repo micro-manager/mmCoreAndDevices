@@ -13,7 +13,7 @@ class GenericZStage:
         self._position = 0.0 * u.um
 
     def busy(self):
-        pass
+        return False
 
     @property
     def position(self) -> Quantity[u.um]:
@@ -34,3 +34,14 @@ class GenericZStage:
 
 
 devices = {'stage': GenericZStage(1 * u.um)}
+
+if __name__ == "__main__":
+    import sys
+    import os
+
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from bootstrap import PyDevice
+
+    device = PyDevice(devices['stage'])
+    print(device)
+    assert device.device_type == 'Stage'

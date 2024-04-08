@@ -12,11 +12,11 @@ int PyAction::Execute(MM::PropertyBase* pProp, MM::ActionType eAct) {
         return DEVICE_OK; // nothing to do.
 
     if (eAct == MM::BeforeGet) {
-        auto value = device_->Object().Get(attribute_.c_str());
+        auto value = getter_.Call();
         set(pProp, value);
     }
     else 
-        device_->Object().Set(attribute_.c_str(), get(pProp));
+        setter_.Call(get(pProp));
     
     return device_->CheckError();
 }
@@ -38,14 +38,6 @@ PyObj PyObjectAction::get(MM::PropertyBase* pProp) const noexcept {
         return PyObj(Py_None);
     else
         return CPyHub::GetDevice(id);
-}
-
-
-PyBoolAction::PyBoolAction(CPyDeviceBase* device, const string& attribute, const string& MM_property, bool readonly) : PyAction(device, attribute, MM_property, MM::Integer, readonly) {
-    enum_keys.push_back("0");
-    enum_values.push_back(PyObj(false));
-    enum_keys.push_back("1");
-    enum_values.push_back(PyObj(true));
 }
 
 void PyBoolAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
@@ -106,17 +98,4 @@ PyObj PyEnumAction::get(MM::PropertyBase* pProp) const noexcept {
             return enum_values[i];
     }
     return PyObj(); // value not found
-}
-
-void PyQuantityAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
-    PyObj v = value;
-    if (v != Py_None)
-        v = value.CallMember("to_value", unit_); // remove units, then convert to double
-    pProp->Set(v.as<double>()); 
-}
-
-PyObj PyQuantityAction::get(MM::PropertyBase* pProp) const noexcept {
-    double value;
-    pProp->Get(value);
-    return PyObj(value) * unit_; // attach units, then return so that the Python attribute can be set
 }

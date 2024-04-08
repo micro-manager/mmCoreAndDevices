@@ -5,8 +5,6 @@ VisualStudioVersion = 17.5.33424.131
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PyDevice", "PyDevice.vcxproj", "{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AutoConfig", "AutoConfig\AutoConfig.vcxproj", "{F5B6356F-222D-429C-8230-80BC0E8F6AC0}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -23,14 +21,6 @@ Global
 		{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}.Release|x64.Build.0 = Release|x64
 		{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}.Release|x86.ActiveCfg = Release|x64
 		{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}.Release|x86.Build.0 = Release|x64
-		{F5B6356F-222D-429C-8230-80BC0E8F6AC0}.Debug|x64.ActiveCfg = Debug|x64
-		{F5B6356F-222D-429C-8230-80BC0E8F6AC0}.Debug|x64.Build.0 = Debug|x64
-		{F5B6356F-222D-429C-8230-80BC0E8F6AC0}.Debug|x86.ActiveCfg = Debug|Win32
-		{F5B6356F-222D-429C-8230-80BC0E8F6AC0}.Debug|x86.Build.0 = Debug|Win32
-		{F5B6356F-222D-429C-8230-80BC0E8F6AC0}.Release|x64.ActiveCfg = Release|x64
-		{F5B6356F-222D-429C-8230-80BC0E8F6AC0}.Release|x64.Build.0 = Release|x64
-		{F5B6356F-222D-429C-8230-80BC0E8F6AC0}.Release|x86.ActiveCfg = Release|Win32
-		{F5B6356F-222D-429C-8230-80BC0E8F6AC0}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

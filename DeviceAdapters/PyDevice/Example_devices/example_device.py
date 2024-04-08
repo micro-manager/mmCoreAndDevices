@@ -72,3 +72,14 @@ class GenericDevice:
 
 device = GenericDevice(SomeOptions.Blue, 23.7, 0.039 * u.m, True, 4, 'Something')
 devices = {'some_device': device}
+
+if __name__ == "__main__":
+    import sys
+    import os
+
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from bootstrap import PyDevice
+
+    device = PyDevice(devices['some_device'])
+    print(device)
+    assert device.device_type == 'Device'

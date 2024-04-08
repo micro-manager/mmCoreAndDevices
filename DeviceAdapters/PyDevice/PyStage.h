@@ -37,6 +37,8 @@ protected:
     double StepSizeUm() const;
     double origin_ = 0.0;
     double set_pos_ = NAN;
+    PyObj home_;
+    PyObj busy_;
 };
 
 
@@ -124,4 +126,6 @@ protected:
     double origin_y_ = 0.0;
     double set_pos_x_ = NAN;
     double set_pos_y_ = NAN;
+    PyObj home_;
+    PyObj busy_;
 };

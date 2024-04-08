@@ -184,7 +184,7 @@ int CPyHub::Initialize() {
             auto key_value = deviceList.GetListItem(i);
             auto name = key_value.GetTupleItem(0).as<string>();
             auto obj = key_value.GetTupleItem(1);
-            auto type = obj.Get("_MM_dtype").as<string>();
+            auto type = obj.Get("device_type").as<string>();
             auto id = ComposeId(type, name);
             obj.Set("_MM_id", id);
             devices_[id] = obj;
@@ -196,43 +196,35 @@ int CPyHub::Initialize() {
     return CheckError();
 }
 
-
-#define ATTRIBUTE_NAME 0    // internal name for Python (snake_case)
-#define PROPERTY_NAME 1     // property name in MM (TitleCase)
-#define TYPE 2
-#define READ_ONLY 3
-#define MIN 4
-#define MAX 5
-#define OPTIONS 6
-
-vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
+std::tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& pydevice, CPyDeviceBase* callback) noexcept
 {
     PyLock lock;
+
+    // Loop over all properties in the PyDevice Python object, and convert the properties to Action objects
+    // These objects can be used as callbacks for the MM property system, and used directly to get/set property values.
+    //
     auto propertyDescriptors = vector<PyAction*>();
-    auto properties = object_.Get("_MM_properties");
+    auto properties = pydevice.Get("properties");
     auto property_count = PyList_Size(properties);
     for (Py_ssize_t i = 0; i < property_count; i++) {
         PyAction* descriptor;
-
         auto pinfo = properties.GetListItem(i);
-        auto attrName = pinfo.GetTupleItem(ATTRIBUTE_NAME).as<string>();
-        auto mmName = pinfo.GetTupleItem(PROPERTY_NAME).as<string>();
-        auto type = pinfo.GetTupleItem(TYPE).as<string>();
-        auto readonly = pinfo.GetTupleItem(READ_ONLY).as<bool>();
+        auto mmName = pinfo.Get("mm_name").as<string>();
+        auto getter = pinfo.Get("get");
+        auto setter = pinfo.Get("set");
+        auto type = pinfo.Get("data_type").as<string>();
 
         if (type == "int")
-            descriptor = new PyIntAction(this, attrName, mmName, readonly);
+            descriptor = new PyIntAction(getter, setter, mmName, callback);
         else if (type == "float")
-            descriptor = new PyFloatAction(this, attrName, mmName, readonly);
-        else if (type == "quantity")
-            descriptor = new PyQuantityAction(this, attrName, mmName, readonly, pinfo.GetTupleItem(OPTIONS));
+            descriptor = new PyFloatAction(getter, setter, mmName, callback);
         else if (type == "str")
-            descriptor = new PyStringAction(this, attrName, mmName, readonly);
+            descriptor = new PyStringAction(getter, setter, mmName, callback);
         else if (type == "bool")
-            descriptor = new PyBoolAction(this, attrName, mmName, readonly);
+            descriptor = new PyBoolAction(getter, setter, mmName, callback);
         else if (type == "enum") {
-            descriptor = new PyEnumAction(this, attrName, mmName, readonly);
-            auto options = PyObj(PyDict_Items(pinfo.GetTupleItem(OPTIONS))); // TODO: move to PyObj?
+            descriptor = new PyEnumAction(getter, setter, mmName, callback);
+            auto options = PyObj(PyDict_Items(pinfo.Get("options")));
             auto option_count = PyList_Size(options);
             for (Py_ssize_t j = 0; j < option_count; j++) {
                 auto key_value = options.GetListItem(j);
@@ -240,12 +232,12 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
                 descriptor->enum_values.push_back(key_value.GetTupleItem(1));
             }
         }
-        else // other property type, treat as object
-            descriptor = new PyObjectAction(this, attrName, mmName, readonly);
+        else // other property type, skip
+            continue;
         
         if (descriptor->type == MM::Integer || descriptor->type == MM::Float) {
-            auto lower = pinfo.GetTupleItem(MIN);
-            auto upper = pinfo.GetTupleItem(MAX);
+            auto lower = pinfo.Get("min");
+            auto upper = pinfo.Get("max");
             if (lower != Py_None && upper != Py_None) {
                 descriptor->min = lower.as<double>();
                 descriptor->max = upper.as<double>();
@@ -255,7 +247,10 @@ vector<PyAction*> CPyDeviceBase::EnumerateProperties() noexcept
 
         propertyDescriptors.push_back(descriptor);
     }
-    return propertyDescriptors;
+
+    auto methods = pydevice.Get("methods");
+    
+    return tuple(propertyDescriptors, methods);
 }
 
 

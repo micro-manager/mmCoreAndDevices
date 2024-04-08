@@ -17,6 +17,9 @@
     <ClInclude Include="PyDevice.h" />
     <ClInclude Include="PyObj.h" />
     <ClInclude Include="PyStage.h" />
+    <ClInclude Include="bootstrap.py">
+      <FileType>CppHeader</FileType>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actions.cpp" />
@@ -31,7 +34,6 @@
     <ClCompile Include="PyStage.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="bootstrap.py" />
     <None Include="debug_helper.bat" />
     <None Include="Example_devices\example_camera.py" />
     <None Include="Example_devices\example_device.py" />

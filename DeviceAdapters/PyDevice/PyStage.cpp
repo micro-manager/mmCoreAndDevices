@@ -1,12 +1,12 @@
 #include "pch.h"
 #include "PyStage.h"
 
-inline PyObj to_um(double value) {
-    return PyObj(value) * PyObj::g_unit_um;
-}
-inline double from_um(const PyObj& value) {
-    return (value / PyObj::g_unit_um).as<double>();
-}
+const char* g_Keyword_Position = "Position-um";
+const char* g_Keyword_X = "X-um";
+const char* g_Keyword_Y = "Y-um";
+const char* g_Keyword_StepSize = "StepSize-um";
+const char* g_Keyword_StepSizeX = "StepSizeX-um";
+const char* g_Keyword_StepSizeY = "StepSizeY-um";
 
 /**
  * Home the stage
@@ -17,7 +17,7 @@ inline double from_um(const PyObj& value) {
 */
 int CPyStage::Home()
 {
-    object_.CallMember("home");
+    home_.Call();
     origin_ = 0.0;
     set_pos_ = 0.0;
     OnStagePositionChanged(0.0);
@@ -26,7 +26,7 @@ int CPyStage::Home()
 
 int CPyXYStage::Home()
 {
-    object_.CallMember("home");
+    home_.Call();
     origin_x_ = 0.0;
     origin_y_ = 0.0;
     set_pos_x_ = 0.0;
@@ -39,13 +39,13 @@ int CPyXYStage::Home()
  * Returns 'true' if the stage is still moving or settling
 */
 bool CPyStage::Busy() {
-    auto retval = object_.CallMember("busy").as<bool>();
+    auto retval = busy_.Call().as<bool>();
     CheckError();
     return retval;
 }
 
 bool CPyXYStage::Busy() {
-    auto retval = object_.CallMember("busy").as<bool>();
+    auto retval = busy_.Call().as<bool>();
     CheckError();
     return retval;
 }
@@ -55,14 +55,14 @@ bool CPyXYStage::Busy() {
  * This function does _not_ wait for the stage to reach a stable position, so it may still be moving at this point.
 */
 int CPyStage::GetPositionUm(double& pos) {
-    pos = from_um(object_.Get("position")) - origin_;
+    pos = GetFloatProperty(g_Keyword_Position) - origin_;
     return CheckError();
 }
 
 int CPyXYStage::GetPositionUm(double& x, double& y) {
     PyLock lock;
-    x = from_um(object_.Get("x")) - origin_x_;
-    y = from_um(object_.Get("y")) - origin_y_;
+    x = GetFloatProperty(g_Keyword_X) - origin_x_;
+    y = GetFloatProperty(g_Keyword_Y) - origin_y_;
     return CheckError();
 }
 
@@ -72,7 +72,7 @@ int CPyXYStage::GetPositionUm(double& x, double& y) {
 */
 int CPyStage::SetPositionUm(double pos) {
     PyLock lock;
-    object_.Set("position", to_um(pos + origin_));
+    SetFloatProperty(g_Keyword_Position, pos + origin_);
     set_pos_ = pos;
     OnStagePositionChanged(pos);
     return CheckError();
@@ -80,8 +80,8 @@ int CPyStage::SetPositionUm(double pos) {
 
 int CPyXYStage::SetPositionUm(double x, double y) {
     PyLock lock;
-    object_.Set("x", to_um(x + origin_x_));
-    object_.Set("y", to_um(y + origin_y_));
+    SetFloatProperty(g_Keyword_X, x + origin_x_);
+    SetFloatProperty(g_Keyword_Y, y + origin_y_);
     set_pos_x_ = x;
     set_pos_y_ = y;
     OnXYStagePositionChanged(x, y);
@@ -129,17 +129,17 @@ int CPyXYStage::Stop() {
 
 double CPyStage::StepSizeUm() const {
     PyLock lock;
-    return from_um(object_.Get("step_size"));
+    return GetFloatProperty(g_Keyword_StepSize);
 }
 
 double CPyXYStage::GetStepSizeXUm() {
     PyLock lock;
-    return from_um(object_.Get("step_size_x"));
+    return GetFloatProperty(g_Keyword_StepSizeX);
 }
 
 double CPyXYStage::GetStepSizeYUm() {
     PyLock lock;
-    return from_um(object_.Get("step_size_y"));
+    return GetFloatProperty(g_Keyword_StepSizeY);
 }
 
 // Sets current position as home. Returns DEVICE_UNKNOWN_POSITION if the device is still moving
@@ -171,22 +171,21 @@ int CPyXYStage::SetOrigin() {
 }
 
 int CPyStage::GetLimits(double& lower, double& upper) {
-    _check_(GetPropertyLowerLimit("Position", lower));
-    _check_(GetPropertyUpperLimit("Position", upper));
+    _check_(GetPropertyLowerLimit(g_Keyword_Position, lower));
+    _check_(GetPropertyUpperLimit(g_Keyword_Position, upper));
     lower -= origin_;
     upper -= origin_;
     return upper == lower ? DEVICE_UNSUPPORTED_COMMAND : DEVICE_OK;
 }
 
 int CPyXYStage::GetLimitsUm(double& x_lower, double& x_upper, double& y_lower, double& y_upper) {
-    _check_(GetPropertyLowerLimit("X", x_lower));
-    _check_(GetPropertyUpperLimit("X", x_upper));
-    _check_(GetPropertyLowerLimit("Y", y_lower));
-    _check_(GetPropertyUpperLimit("Y", y_upper));
+    _check_(GetPropertyLowerLimit(g_Keyword_X, x_lower));
+    _check_(GetPropertyUpperLimit(g_Keyword_X, x_upper));
+    _check_(GetPropertyLowerLimit(g_Keyword_Y, y_lower));
+    _check_(GetPropertyUpperLimit(g_Keyword_Y, y_upper));
     x_lower -= origin_x_;
     x_upper -= origin_x_;
     y_lower -= origin_y_;
     y_upper -= origin_y_;
     return x_upper == x_lower ? DEVICE_UNSUPPORTED_COMMAND : DEVICE_OK;
-
 }
