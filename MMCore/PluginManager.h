@@ -20,9 +20,7 @@
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 08/10/2005
 
-#ifndef _PLUGIN_MANAGER_H_
-#define _PLUGIN_MANAGER_H_
-
+#pragma once
 
 #include "../MMDevice/DeviceThreads.h"
 
@@ -66,5 +64,3 @@ private:
 
    std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> > moduleMap_;
 };
-
-#endif //_PLUGIN_MANAGER_H_

@@ -1,11 +1,12 @@
 /*
 File:		MCL_MicroDrive.cpp
-Copyright:	Mad City Labs Inc., 2019
+Copyright:	Mad City Labs Inc., 2023
 License:	Distributed under the BSD license.
 */
 
 #include "MicroDriveZStage.h"
 #include "MicroDriveXYStage.h"
+#include "MadTweezer.h"
 #include "ModuleInterface.h"
 #include "handle_list_if.h"
 
@@ -40,6 +41,7 @@ MODULE_API void InitializeModuleData()
 {
    RegisterDevice(g_XYStageDeviceName, MM::XYStageDevice, "XY positioning");
    RegisterDevice(g_StageDeviceName, MM::StageDevice, "Z positioning");
+   RegisterDevice(g_DeviceMadTweezerName, MM::GenericDevice, "Rotational Axis");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -52,6 +54,9 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 
    if (strcmp(deviceName, g_XYStageDeviceName) == 0) 
 	   return new MicroDriveXYStage();
+
+   if (strcmp(deviceName, g_DeviceMadTweezerName) == 0)
+	   return new MadTweezer();
    
    // ...supplied name not recognized
    return 0;

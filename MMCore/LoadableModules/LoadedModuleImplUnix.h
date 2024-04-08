@@ -20,8 +20,11 @@
 // AUTHOR:        Mark Tsuchida,
 //                based on parts of CPluginManager by Nenad Amodaj
 
-#include "LoadedModuleImpl.h"
+#pragma once
 
+#ifndef _WIN32
+
+#include "LoadedModuleImpl.h"
 
 class LoadedModuleImplUnix : public LoadedModuleImpl
 {
@@ -34,3 +37,5 @@ public:
 private:
    void* handle_;
 };
+
+#endif // !defined(_WIN32)

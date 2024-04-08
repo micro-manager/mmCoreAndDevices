@@ -36,5 +36,3 @@ install: install-am
 uninstall: uninstall-am
 	rm -f $(DESTDIR)${libdir}/libMMDevice.a
 endif
-
-SUBDIRS = . unittest

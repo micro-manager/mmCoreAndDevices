@@ -22,6 +22,8 @@
 
 #pragma once
 
+#ifdef _WIN32
+
 #include "LoadedModuleImpl.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -39,3 +41,5 @@ public:
 private:
    HMODULE handle_;
 };
+
+#endif // _WIN32

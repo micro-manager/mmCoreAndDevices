@@ -27,8 +27,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-#ifndef _DEMOCAMERA_H_
-#define _DEMOCAMERA_H_
+#pragma once
 
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
@@ -1192,8 +1191,5 @@ private:
    double vMaxX_;
    int offsetY_;
    double vMaxY_;
+   double pulseTime_Us_;
 };
-
-
-
-#endif //_DEMOCAMERA_H_

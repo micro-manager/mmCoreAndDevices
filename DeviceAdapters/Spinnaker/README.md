@@ -18,3 +18,8 @@ For support with installation and use of the cameras/adapters in MicroManager pl
 These device adapters were initially developed by Elliot Steele as part of a final year masters project in Electrical and Electronic Engineering at Imperial College London. The project was undertaken with the Photonics Group in Imperial College's Department of Physics and in conjunction with Cairn Research Ltd. Since the completion of the project maintenance has continued and the drivers have been made freely available by Cairn Research. The code was integrated into MicroManager's source on TODO
 
 Special acknowledgements and thanks go to Professor Paul French and the rest of the Photonics Group for hosting the project and to Cairn Research for distribution of the device adapters before their integration into the MicroManager project and their continued support in the adapters' development. 
+
+
+## Linux
+
+These device adapters can also be used on a linux system. This was developed and tested with Spinnaker SDK version 3.1.0. The Spinnaker SDK should be installed in `/opt/spinnaker/`.

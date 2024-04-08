@@ -17,14 +17,18 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-// CVS:           $Id: Configuration.h 16305 2017-02-11 05:01:12Z mark $
-//
-#ifndef _CONFIGURATION_H_
-#define _CONFIGURATION_H_
 
-#ifdef WIN32
-// disable exception scpecification warnings in MSVC
-#pragma warning( disable : 4290 )
+#pragma once
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
 #endif
 
 #include <string>
@@ -121,4 +125,10 @@ private:
    std::map<std::string, int> index_;
 };
 
-#endif //_CONFIGURATION_H_
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

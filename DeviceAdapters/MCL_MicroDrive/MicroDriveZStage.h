@@ -1,6 +1,6 @@
 /*
 File:		MicroDriveZStage.h
-Copyright:	Mad City Labs Inc., 2019
+Copyright:	Mad City Labs Inc., 2023
 License:	Distributed under the BSD license.
 */
 #pragma once
@@ -22,6 +22,9 @@ License:	Distributed under the BSD license.
 #define ERR_UNKNOWN_MODE         102
 #define ERR_UNKNOWN_POSITION     103
 #define ERR_NOT_VALID_INPUT      104
+
+#define STANDARD_MOVE_TYPE			1
+#define CALIBRATE_TYPE				2
 
 class MCL_MicroDrive_ZStage : public CStageBase<MCL_MicroDrive_ZStage>
 {
@@ -64,38 +67,46 @@ public:
 	int OnImToleranceUm(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnIsTirfModule(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFindEpi(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnStop(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
 private:
 	// Initialization
 	int CreateZStageProperties();
+	int InitDeviceAdapter();
 
 	// Set/Get positions
-	int SetPositionMm(double z);
+	int SetPositionMmSync(double z);
 	int GetPositionMm(double& z);
-	int SetRelativePositionMm(double z);
+	int SetRelativePositionMmSync(double z);
+	int ConvertRelativeToAbsoluteMm(double relZ, double &absZ);
 
 	// Calibration & origin methods
-	int Calibrate();
-	int MoveToForwardLimit();
-	int ReturnToOrigin();
-	int FindEpi();
+	int CalibrateSync();
+	int MoveToForwardLimitSync();
+	int ReturnToOriginSync();
+	int FindEpiSync();
+	int SetOriginSync();
 
 	void PauseDevice();
-	int ChooseAvailableStageAxis(unsigned short pid, unsigned char axisBitmap, int handle);
+	int Stop();
+
+	// Threading
+	int BeginMovementThread(int type, double distance);
+	static DWORD WINAPI ExecuteMovement(LPVOID lpParam);
 
 	// Device Information
 	int handle_;
 	int serialNumber_;
 	unsigned short pid_;
 	int axis_;
+	unsigned char axisBitmap_;
 	double stepSize_mm_;
 	double encoderResolution_; 
 	double maxVelocity_;
 	double minVelocity_;
 	double velocity_;
 	// Device State
-	bool busy_;
 	bool initialized_;
 	bool encoded_;
 	double lastZ_;
@@ -108,4 +119,10 @@ private:
 	bool axisIsTirfModule_;
 	bool hasUnknownTirfModuleAxis_;
 	double tirfModCalibrationMm_;
+	// Threading
+	bool stopCommanded_;
+	int movementType_;
+	double movementDistance_;
+	HANDLE movementThread_;
+	HANDLE threadStartMutex_;
 };

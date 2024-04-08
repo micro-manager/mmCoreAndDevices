@@ -21,12 +21,13 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-///////////////////////////////////////////////////////////////////////////////
 
-#if !defined(_DEBAYER_)
-#define _DEBAYER_
+#pragma once
 
 #include "ImgBuffer.h"
+
+#include <string>
+#include <vector>
 
 /**
  * Utility class to build color image from the Bayer grayscale image
@@ -71,5 +72,3 @@ private:
    int orderIndex;
    int algoIndex;
 };
-
-#endif // !defined(_DEBAYER_)

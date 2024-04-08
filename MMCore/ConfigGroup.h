@@ -19,11 +19,19 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-//
-// CVS:           $Id: ConfigGroup.h 17248 2020-01-25 19:49:51Z nico $
-//
-#ifndef _CONFIG_GROUP_H_
-#define _CONFIG_GROUP_H_
+
+#pragma once
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
 
 #include "Configuration.h"
 #include "Error.h"
@@ -440,5 +448,10 @@ public:
    }
 };
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
 #endif
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

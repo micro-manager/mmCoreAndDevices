@@ -21,17 +21,24 @@
 #include "Configuration.h"
 #include "../MMDevice/MMDevice.h"
 #include "Error.h"
-#include <assert.h>
-#include <sstream>
-#include <string>
+
 #include <cstring>
 #include <fstream>
+#include <sstream>
+#include <string>
 
-using namespace std;
+#ifdef _MSC_VER
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
 
-string PropertySetting::generateKey(const char* device, const char* prop)
+#if defined(__GNUC__) && !defined(__clang__)
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
+
+std::string PropertySetting::generateKey(const char* device, const char* prop)
 {
-   string key(device);
+   std::string key(device);
    key += "-";
    key += prop;
    return key;
@@ -40,9 +47,9 @@ string PropertySetting::generateKey(const char* device, const char* prop)
 /**
  * Returns verbose description of the object's contents.
  */
-string PropertySetting::getVerbose() const
+std::string PropertySetting::getVerbose() const
 {
-   ostringstream txt;
+   std::ostringstream txt;
    txt << deviceLabel_ << ":" << propertyName_ << "=" << value_;
    return txt.str();
 }
@@ -93,7 +100,7 @@ PropertySetting Configuration::getSetting(size_t index) const throw (CMMError)
 
 bool Configuration::isPropertyIncluded(const char* device, const char* prop)
 {
-   map<string, int>::iterator it = index_.find(PropertySetting::generateKey(device, prop));
+   std::map<std::string, int>::iterator it = index_.find(PropertySetting::generateKey(device, prop));
    if (it != index_.end())
       return true;
    else
@@ -106,7 +113,7 @@ bool Configuration::isPropertyIncluded(const char* device, const char* prop)
 
 PropertySetting Configuration::getSetting(const char* device, const char* prop)
 {
-   map<string, int>::iterator it = index_.find(PropertySetting::generateKey(device, prop));
+   std::map<std::string, int>::iterator it = index_.find(PropertySetting::generateKey(device, prop));
    if (it == index_.end())
    {
       std::ostringstream errTxt;
@@ -128,7 +135,7 @@ PropertySetting Configuration::getSetting(const char* device, const char* prop)
 
 bool Configuration::isSettingIncluded(const PropertySetting& ps)
 {
-   map<string, int>::iterator it = index_.find(ps.getKey());
+   std::map<std::string, int>::iterator it = index_.find(ps.getKey());
    if (it != index_.end() && settings_[it->second].getPropertyValue().compare(ps.getPropertyValue()) == 0)
       return true;
    else
@@ -143,7 +150,7 @@ bool Configuration::isSettingIncluded(const PropertySetting& ps)
 
 bool Configuration::isConfigurationIncluded(const Configuration& cfg)
 {
-   vector<PropertySetting>::const_iterator it;
+   std::vector<PropertySetting>::const_iterator it;
    for (it=cfg.settings_.begin(); it!=cfg.settings_.end(); ++it)
       if (!isSettingIncluded(*it))
          return false;
@@ -156,7 +163,7 @@ bool Configuration::isConfigurationIncluded(const Configuration& cfg)
  */
 void Configuration::addSetting(const PropertySetting& setting)
 {
-   map<string, int>::iterator it = index_.find(setting.getKey());
+   std::map<std::string, int>::iterator it = index_.find(setting.getKey());
    if (it != index_.end())
    {
       // replace
@@ -175,7 +182,7 @@ void Configuration::addSetting(const PropertySetting& setting)
  */
 void Configuration::deleteSetting(const char* device, const char* prop)
 {
-   map<string, int>::iterator it = index_.find(PropertySetting::generateKey(device, prop));
+   std::map<std::string, int>::iterator it = index_.find(PropertySetting::generateKey(device, prop));
    if (it == index_.end())
    {
       std::ostringstream errTxt;

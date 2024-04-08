@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 
+AM_CPPFLAGS = -DMMDEVICE_CLIENT_BUILD
+
 noinst_LTLIBRARIES = libMMCore.la
 
 libMMCore_la_LIBADD = ../MMDevice/libMMDevice.la
@@ -98,11 +100,5 @@ libMMCore_la_SOURCES = \
 	TaskSet_CopyMemory.h \
 	ThreadPool.cpp \
 	ThreadPool.h
-
-if BUILD_CPP_TESTS
-UNITTESTS = unittest
-endif
-
-SUBDIRS = . $(UNITTESTS)
 
 EXTRA_DIST = license.txt

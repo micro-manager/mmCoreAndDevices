@@ -603,7 +603,8 @@ void HIDDeviceLister::ListHIDDevices(std::vector<std::string> &availableDevices)
 // lists all HID Devices on this system that we know about
 void HIDDeviceLister::FindHIDDevices(std::vector<std::string> &availableDevices)
 {
-   printf("Discovering HID Devices......\n");
+   // see https://github.com/micro-manager/mmCoreAndDevices/issues/402
+   // printf("Discovering HID Devices......\n");
 
    struct hid_device_info *devs, *curDev;
 
@@ -613,14 +614,14 @@ void HIDDeviceLister::FindHIDDevices(std::vector<std::string> &availableDevices)
 
    while (curDev)
    {
-      printf ("HID Device pid: %04hx vid: %04hx\n", curDev->product_id, curDev->product_id);
+      // printf ("HID Device pid: %04hx vid: %04hx\n", curDev->product_id, curDev->product_id);
       for (int i=0; i<g_numberKnownDevices; i++) 
       {
          if ( (curDev->vendor_id == g_knownDevices[i].idVendor) &&
             (curDev->product_id == g_knownDevices[i].idProduct) ) 
          {
             availableDevices.push_back(g_knownDevices[i].name);
-            printf ("HID Device found: %s\n", g_knownDevices[i].name.c_str());
+            // printf ("HID Device found: %s\n", g_knownDevices[i].name.c_str());
          }
       }
       curDev = curDev->next;

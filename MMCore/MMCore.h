@@ -36,6 +36,8 @@
 //                because public method names appear as wrapped methods in other
 //                languages, in particular Java.
 
+#pragma once
+
 /*
  * Important! Read this before changing this file.
  *
@@ -43,21 +45,23 @@
  * file (MMCore.cpp).
  */
 
-#ifndef _MMCORE_H_
-#define _MMCORE_H_
-
-#ifdef _MSC_VER
 // We use exception specifications to instruct SWIG to generate the correct
-// exception specifications for Java. Turn off the warnings that VC++ issues by
-// the mere use of exception specifications (which VC++ does not implement).
-#pragma warning(disable : 4290)
+// exception specifications for Java.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
 #endif
 
 #include "../MMDevice/DeviceThreads.h"
 #include "../MMDevice/MMDevice.h"
 #include "../MMDevice/MMDeviceConstants.h"
 #include "Configuration.h"
-#include "CoreUtils.h"
 #include "Error.h"
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"
@@ -605,8 +609,8 @@ public:
 
    /** \name Device discovery. */
    ///@{
-   bool supportsDeviceDetection(char* deviceLabel);
-   MM::DeviceDetectionStatus detectDevice(char* deviceLabel);
+   bool supportsDeviceDetection(const char* deviceLabel);
+   MM::DeviceDetectionStatus detectDevice(const char* deviceLabel);
    ///@}
 
    /** \name Hub and peripheral devices. */
@@ -694,4 +698,10 @@ private:
    void loadSystemConfigurationImpl(const char* fileName) throw (CMMError);
 };
 
-#endif //_MMCORE_H_
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

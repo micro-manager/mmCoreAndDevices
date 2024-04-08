@@ -22,8 +22,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-#ifndef _CORECALLBACK_H_
-#define _CORECALLBACK_H_
+#pragma once
 
 #include "Devices/DeviceInstances.h"
 #include "CoreUtils.h"
@@ -147,5 +146,3 @@ private:
    int OnPixelSizeChanged(double newPixelSizeUm);
    int OnPixelSizeAffineChanged(std::vector<double> newPixelSizeAffine);
 };
-
-#endif // _CORECALLBACK_H_

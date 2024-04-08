@@ -1156,7 +1156,7 @@ int Camera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	BOOL ans = TRUE;
 	WORD mode = 0;
-	byte skippH, skippV, hBin, vBin;
+	BYTE skippH, skippV, hBin, vBin;
 
 	cout << "Product is   " << productName_ << endl;
 

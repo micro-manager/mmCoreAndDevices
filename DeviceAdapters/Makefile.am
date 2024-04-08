@@ -59,6 +59,9 @@ endif
 if BUILD_SIMPLECAM
    SIMPLECAM = SimpleCam
 endif
+if BUILD_SPINNAKER
+   SPINNAKER = Spinnaker
+endif
 if BUILD_SPOT
    SPOT = Spot
 endif
@@ -94,6 +97,7 @@ SUBDIRS = \
 	$(SENSICAM) \
 	$(SEQUENCE_TESTER) \
 	$(SIMPLECAM) \
+        $(SPINNAKER) \
 	$(SPOT) \
 	$(USBMANAGER) \
 	$(V4L) \
@@ -155,6 +159,7 @@ SUBDIRS = \
 	NewportSMC \
 	Nikon \
 	NikonTE2000 \
+	NotificationTester \
 	OVP_ECS2 \
 	Omicron \
 	Oxxius \
