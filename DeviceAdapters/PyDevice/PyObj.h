@@ -17,6 +17,11 @@ public:
     }
 };
 
+/**
+ * @brief Signature of a function that checks for Python errors and reports them to micro-manager.
+ * @returns MM error code or Device_OK
+*/
+using ErrorCallback = function<int()>;
 
 
 /**

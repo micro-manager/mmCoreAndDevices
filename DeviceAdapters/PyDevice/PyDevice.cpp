@@ -16,18 +16,6 @@
 
 CPyHub* CPyHub::g_the_hub = nullptr;
 
-int CPyDeviceBase::CheckError() noexcept {
-    PyLock lock;
-    PyObj::ReportError(); // check if any new errors happened
-    if (!PyObj::g_errorMessage.empty()) { // note: thread safety of this part relies on the PyLock
-        LogError(PyObj::g_errorMessage.c_str()); //note: is this function thread safe??
-        PyObj::g_errorMessage.clear();
-        return ERR_PYTHON_EXCEPTION;
-    }
-    else
-        return DEVICE_OK;
-}
-
 CPyHub::CPyHub() : PyHubClass(g_adapterName) {
     SetErrorText(ERR_PYTHON_SCRIPT_NOT_FOUND, "Could not find the Python script.");
     SetErrorText(ERR_PYTHON_NO_DEVICE_DICT, "Script did not generate a global `device` variable holding a dictionary.");
@@ -196,7 +184,7 @@ int CPyHub::Initialize() {
     return CheckError();
 }
 
-std::tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& pydevice, CPyDeviceBase* callback) noexcept
+tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& deviceInfo, const ErrorCallback& callback) noexcept
 {
     PyLock lock;
 
@@ -204,7 +192,7 @@ std::tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& pydevice, 
     // These objects can be used as callbacks for the MM property system, and used directly to get/set property values.
     //
     auto propertyDescriptors = vector<PyAction*>();
-    auto properties = pydevice.Get("properties");
+    auto properties = deviceInfo.Get("properties");
     auto property_count = PyList_Size(properties);
     for (Py_ssize_t i = 0; i < property_count; i++) {
         PyAction* descriptor;
@@ -248,7 +236,7 @@ std::tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& pydevice, 
         propertyDescriptors.push_back(descriptor);
     }
 
-    auto methods = pydevice.Get("methods");
+    auto methods = deviceInfo.Get("methods");
     
     return tuple(propertyDescriptors, methods);
 }

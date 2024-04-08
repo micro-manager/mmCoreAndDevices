@@ -28,21 +28,7 @@
 const char* const g_Method_Busy = "busy";
 
 class CPyHub;
-
-class CPyDeviceBase {
-protected:
-    bool initialized_ = false;
-    PyObj busy_; // busy() method
-    string id_;
-
-    CPyDeviceBase(const string& id) : id_(id), busy_() {}
-public:
-    int CheckError() noexcept;
-protected:
-    virtual void LogError(const char*) = 0;
-};
-
-tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& pydevice, CPyDeviceBase* callback) noexcept;
+tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& deviceInfo, const ErrorCallback& callback) noexcept;
 
 /**
  * Base class for device adapters that are implement by a Python script.
@@ -50,9 +36,12 @@ tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& pydevice, CPyDe
  * @tparam T Base type to implement. Should be CCameraBase, CGenericDevice, etc.
 */
 template <class BaseType>
-class CPyDeviceTemplate : public BaseType, public CPyDeviceBase
+class CPyDeviceTemplate : public BaseType
 {
 protected:
+    bool initialized_ = false;
+    PyObj busy_; // busy() method
+    string id_;
 
 public:
     /**
@@ -60,7 +49,7 @@ public:
      * The device is not initialized, and no Python calls are made. This only sets up error messages, the error handler, and three 'pre-init' properties that hold the path of the Python libraries, the path of the Python script, and the name of the Python class that implements the device.
      * @param adapterName name of the adapter type, e.g. "Camera". This is the default name of the Python class. For use by MM (GetName), the adapterName is prefixed with "Py", 
     */
-    CPyDeviceTemplate(const string& id) : BaseType(), CPyDeviceBase(id)
+    CPyDeviceTemplate(const string& id) : BaseType(), id_(id), busy_()
     {
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
         this->SetErrorText(ERR_PYTHON_DEVICE_NOT_FOUND, "");
@@ -84,8 +73,8 @@ public:
         
         propertyDescriptors.clear(); // remove the pointers from the vector because we transfered ownership of the Action objects in CreateProperty
         
-        if (object_.HasAttribute("__doc__")) {
-            auto doc = object_.Get("__doc__");
+        if (deviceInfo.HasAttribute("__doc__")) {
+            auto doc = deviceInfo.Get("__doc__");
             if (doc != Py_None)
                 this->SetDescription(doc.as<string>().c_str());
         }*/
@@ -96,9 +85,18 @@ public:
     * Checks if a Python error has occurred since the last call to CheckError
     * @return DEVICE_OK or ERR_PYTHON_EXCEPTION
     */
-    void LogError(const char* err) {
-        this->SetErrorText(ERR_PYTHON_EXCEPTION, err);
-        this->LogMessage(err);
+    int CheckError() noexcept {
+        PyLock lock;
+        PyObj::ReportError(); // check if any new errors happened
+        if (!PyObj::g_errorMessage.empty()) { // note: thread safety of this part relies on the PyLock
+            auto& err = PyObj::g_errorMessage; 
+            this->SetErrorText(ERR_PYTHON_EXCEPTION, err.c_str());
+            this->LogMessage(err.c_str()); //note: is this function thread safe??
+            PyObj::g_errorMessage.clear();
+            return ERR_PYTHON_EXCEPTION;
+        }
+        else
+            return DEVICE_OK;
     }
 
     /**
@@ -109,12 +107,12 @@ public:
     */
     int Initialize() override {
         if (!initialized_) {
-            auto object_ = CPyHub::GetDevice(id_);
-            if (!object_) {
+            auto deviceInfo = CPyHub::GetDevice(id_);
+            if (!deviceInfo) {
                 this->SetErrorText(ERR_PYTHON_DEVICE_NOT_FOUND, ("Could not find the Python device id " + id_ + ". It may be that the Python script or the device object within it was renamed.").c_str());
                 return ERR_PYTHON_DEVICE_NOT_FOUND;
             }
-            auto [properties, methods] = EnumerateProperties(object_, this);
+            auto [properties, methods] = EnumerateProperties(deviceInfo, [this]() {return this->CheckError(); });
             _check_(CheckError());
             _check_(CreateProperties(properties));
             _check_(ConnectMethods(methods));

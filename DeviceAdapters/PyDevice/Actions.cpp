@@ -18,26 +18,7 @@ int PyAction::Execute(MM::PropertyBase* pProp, MM::ActionType eAct) {
     else 
         setter_.Call(get(pProp));
     
-    return device_->CheckError();
-}
-
-
-void PyObjectAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
-    if (value.HasAttribute("_MM_id")) {
-        auto id = value.Get("_MM_id").as<string>();
-        pProp->Set(id.c_str());
-    }
-    else
-        pProp->Set("{unknown object}");
-}
-
-PyObj PyObjectAction::get(MM::PropertyBase* pProp) const noexcept {
-    string id;
-    pProp->Get(id);
-    if (id.empty())
-        return PyObj(Py_None);
-    else
-        return CPyHub::GetDevice(id);
+    return check_errors_();
 }
 
 void PyBoolAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
