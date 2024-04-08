@@ -17,6 +17,7 @@ using std::tuple;
 using std::map;
 #ifdef _WIN32 
 #include <Windows.h>
+#include <commdlg.h>
 #endif
 
 /// Helper function for checking if a file exists
