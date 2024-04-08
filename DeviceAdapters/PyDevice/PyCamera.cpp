@@ -18,7 +18,8 @@ const char* g_Method_Read = "read";
 * Required by the MM::Camera API.
 */
 
-int CPyCamera::ConnectMethods(const PyObj& methods) {
+int CPyCamera::ConnectMethods(const PyObj& methods)
+{
     _check_(PyCameraClass::ConnectMethods(methods));
     read_ = methods.GetDictItem("read");
     return CheckError();
@@ -30,7 +31,8 @@ int CPyCamera::SnapImage()
     return CheckError();
 }
 
-int CPyCamera::Shutdown() {
+int CPyCamera::Shutdown()
+{
     StopSequenceAcquisition();
     lastFrame_.Clear();
     return PyCameraClass::Shutdown();
@@ -53,13 +55,17 @@ const unsigned char* CPyCamera::GetImageBuffer()
     if (CheckError() != DEVICE_OK)
         return nullptr;
 
-    if (!PyArray_Check(lastFrame_)) {
+    if (!PyArray_Check(lastFrame_))
+    {
         this->LogMessage("Error, 'image' property should return a numpy array");
         return nullptr;
     }
-    auto buffer = (PyArrayObject*)(PyObject*)lastFrame_;
-    if (PyArray_NDIM(buffer) != 2 || PyArray_TYPE(buffer) != NPY_UINT16 || !(PyArray_FLAGS(buffer) & NPY_ARRAY_C_CONTIGUOUS)) {
-        this->LogMessage("Error, 'image' property should be a 2-dimensional numpy array that is c-contiguous in memory and contains 16 bit  unsigned integers");
+    auto buffer = (PyArrayObject*)static_cast<PyObject*>(lastFrame_);
+    if (PyArray_NDIM(buffer) != 2 || PyArray_TYPE(buffer) != NPY_UINT16 || !(PyArray_FLAGS(buffer) &
+        NPY_ARRAY_C_CONTIGUOUS))
+    {
+        this->LogMessage(
+            "Error, 'image' property should be a 2-dimensional numpy array that is c-contiguous in memory and contains 16 bit  unsigned integers");
         return nullptr;
     }
 
@@ -68,13 +74,15 @@ const unsigned char* CPyCamera::GetImageBuffer()
     auto h = GetImageHeight();
     auto nh = PyArray_DIM(buffer, 0);
     auto nw = PyArray_DIM(buffer, 1);
-    if (nw != w || nh != h) {
-        auto msg = "Error, 'image' dimensions should be (" + std::to_string(w) + ", " + std::to_string(h) + ") pixels, but were found to be (" + std::to_string(nw) + ", " + std::to_string(nh) + ") pixels";
+    if (nw != w || nh != h)
+    {
+        auto msg = "Error, 'image' dimensions should be (" + std::to_string(w) + ", " + std::to_string(h) +
+            ") pixels, but were found to be (" + std::to_string(nw) + ", " + std::to_string(nh) + ") pixels";
         this->LogMessage(msg.c_str());
         return nullptr;
     }
 
-    return (const unsigned char*)PyArray_DATA(buffer);
+    return static_cast<const unsigned char*>(PyArray_DATA(buffer));
 }
 
 /**
@@ -172,13 +180,12 @@ int CPyCamera::ClearROI()
     GetPropertyLowerLimit(g_Keyword_Left, left);
     GetPropertyUpperLimit(g_Keyword_Width, width);
     GetPropertyUpperLimit(g_Keyword_Height, height);
-    SetLongProperty(g_Keyword_Top, (long)top);
-    SetLongProperty(g_Keyword_Left, (long)left);
-    SetLongProperty(g_Keyword_Width, (long)width);
-    SetLongProperty(g_Keyword_Height, (long)height);
+    SetLongProperty(g_Keyword_Top, static_cast<long>(top));
+    SetLongProperty(g_Keyword_Left, static_cast<long>(left));
+    SetLongProperty(g_Keyword_Width, static_cast<long>(width));
+    SetLongProperty(g_Keyword_Height, static_cast<long>(height));
     return DEVICE_OK;
 }
-
 
 
 /**
@@ -236,16 +243,15 @@ int CPyCamera::InsertImage()
         return DEVICE_ERR;
 
     int ret = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
-        GetImageHeight(), GetImageBytesPerPixel(),
-        md.Serialize().c_str());
+                                             GetImageHeight(), GetImageBytesPerPixel(),
+                                             md.Serialize().c_str());
     if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW)
     {
         // do not stop on overflow - just reset the buffer
         GetCoreCallback()->ClearImageBuffer(this);
         return GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
-            GetImageHeight(), GetImageBytesPerPixel(),
-            md.Serialize().c_str());
+                                              GetImageHeight(), GetImageBytesPerPixel(),
+                                              md.Serialize().c_str());
     }
-    else
-        return ret;
+    return ret;
 }
