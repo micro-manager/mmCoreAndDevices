@@ -44,7 +44,7 @@ int CPyCamera::Shutdown()
 * The calling program will assume the size of the buffer based on the values
 * obtained from GetImageBufferSize(), which in turn should be consistent with
 * values returned by GetImageWidth(), GetImageHeight() and GetImageBytesPerPixel().
-* The calling program allso assumes that camera never changes the size of
+* The calling program also assumes that camera never changes the size of
 * the pixel buffer on its own. In other words, the buffer can change only if
 * appropriate properties are set (such as binning, pixel type, etc.)
 * 
