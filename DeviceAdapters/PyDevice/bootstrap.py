@@ -181,7 +181,6 @@ class PyDevice:
             # find the property with the specified name
             p = next((p for p in self.properties if p.mm_name == name), None)
             if p is None:
-                print(f"Property '{name}' not found")
                 return False
             if p.data_type != data_type:
                 raise ValueError(f"Property '{name}' is of type {p.data_type}, expected {data_type}")
