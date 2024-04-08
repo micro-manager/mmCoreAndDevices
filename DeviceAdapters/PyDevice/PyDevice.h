@@ -32,8 +32,7 @@ tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& deviceInfo, con
 
 /**
  * Base class for device adapters that are implement by a Python script.
- * Note: the MM API uses the Curiously Recurring Template pattern (antipattern). This strongly complicates everything. This is the reason for the class parameter T, the 'this->' prefixes, and the fact that all methods are declared in the header file.  
- * @tparam T Base type to implement. Should be CCameraBase, CGenericDevice, etc.
+ * @tparam BaseType Base type to implement. Should be CCameraBase, CGenericDevice, etc.
 */
 template <class BaseType>
 class CPyDeviceTemplate : public BaseType
@@ -47,16 +46,16 @@ public:
     /**
      * Constructs a new device
      * The device is not initialized, and no Python calls are made. This only sets up error messages, the error handler, and three 'pre-init' properties that hold the path of the Python libraries, the path of the Python script, and the name of the Python class that implements the device.
-     * @param adapterName name of the adapter type, e.g. "Camera". This is the default name of the Python class. For use by MM (GetName), the adapterName is prefixed with "Py", 
+     * @param id device type, e.g. "Camera:cam". 
     */
-    CPyDeviceTemplate(const string& id) : BaseType(), id_(id), busy_()
+    CPyDeviceTemplate(const string& id) : BaseType(), id_(id)
     {
         this->SetErrorText(ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
         this->SetErrorText(ERR_PYTHON_DEVICE_NOT_FOUND, "");
     }
     virtual ~CPyDeviceTemplate() {}
 
-    int CreateProperties(vector<PyAction*>& propertyDescriptors) noexcept {
+    int CreateProperties(const vector<PyAction*>& propertyDescriptors) noexcept {
         for (auto property: propertyDescriptors) {
             this->CreateProperty(property->name.c_str(), "", property->type, property->readonly, property, false);
 
@@ -107,7 +106,7 @@ public:
     */
     int Initialize() override {
         if (!initialized_) {
-            auto deviceInfo = CPyHub::GetDevice(id_);
+            auto deviceInfo = CPyHub::GetDeviceInfo(id_);
             if (!deviceInfo) {
                 this->SetErrorText(ERR_PYTHON_DEVICE_NOT_FOUND, ("Could not find the Python device id " + id_ + ". It may be that the Python script or the device object within it was renamed.").c_str());
                 return ERR_PYTHON_DEVICE_NOT_FOUND;
@@ -159,10 +158,11 @@ public:
         CDeviceUtils::CopyLimitedString(name, id_.c_str());
     }
     bool Busy() override {
-        return false;
+        auto retval = busy_.Call().as<bool>();
+        CheckError();
+        return retval;
     }
-    
-protected:
+
     CPyDeviceTemplate(CPyDeviceTemplate& other) = delete; // disable copy
 };
 
@@ -197,7 +197,7 @@ public:
     int Initialize() override;
     int Shutdown() override;
 
-    static PyObj GetDevice(const string& device_id) noexcept;
+    static PyObj GetDeviceInfo(const string& device_id) noexcept;
     static bool SplitId(const string& id, string& deviceType, string& deviceName) noexcept;
     static string ComposeId(const string& deviceType, const string& deviceName) noexcept;
 

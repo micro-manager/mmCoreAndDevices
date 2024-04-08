@@ -15,6 +15,9 @@ public:
     ~PyLock() {
         PyGILState_Release(gstate_);
     }
+
+    PyLock(const PyLock&) = delete; // cannot copy this object
+    PyLock& operator=(const PyLock&) = delete;
 };
 
 /**
@@ -101,12 +104,9 @@ public:
     }
     template <> string as<string>() const {
         PyLock lock;
-        auto as_str = PyObj(PyObject_Str(*this)); // convert any object to a Python string by calling the str() function
-        if (as_str) {
-            auto as_bytes = PyObj(PyUnicode_AsUTF8String(as_str));
-            if (as_bytes) {
-                auto string_bytes = PyBytes_AsString(as_bytes);
-                if (string_bytes) {
+        if (auto as_str = PyObj(PyObject_Str(*this))) { // convert any object to a Python string by calling the str() function
+            if (auto as_bytes = PyObj(PyUnicode_AsUTF8String(as_str))) {
+                if (auto string_bytes = PyBytes_AsString(as_bytes)) {
                     auto retval = string(string_bytes); // copies the string (before releasing lock)
                     return retval;
                 }
@@ -205,7 +205,7 @@ public:
         return *this;
     }
     PyObj& operator = (const PyObj& other) {
-        if (p_ || other.p_) {
+        if ((p_ || other.p_) && p_ != other.p_) {
             PyLock lock;
             Py_XDECREF(p_);
             p_ = other;

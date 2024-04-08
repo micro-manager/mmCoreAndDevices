@@ -62,7 +62,7 @@ PyObj PyStringAction::get(MM::PropertyBase* pProp) const noexcept {
 }
 
 void PyEnumAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexcept {
-    for (int i = 0; i < enum_values.size(); i++) {
+    for (size_t i = 0; i < enum_values.size(); i++) {
         if (PyObject_RichCompareBool(enum_values[i], value, Py_EQ)) {
             pProp->Set(enum_keys[i].c_str());
             return;
@@ -74,7 +74,7 @@ void PyEnumAction::set(MM::PropertyBase* pProp, const PyObj& value) const noexce
 PyObj PyEnumAction::get(MM::PropertyBase* pProp) const noexcept {
     string value;
     pProp->Get(value);
-    for (int i = 0; i < enum_keys.size(); i++) {
+    for (size_t i = 0; i < enum_keys.size(); i++) {
         if (enum_keys[i] == value)
             return enum_values[i];
     }

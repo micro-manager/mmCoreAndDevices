@@ -194,10 +194,10 @@ double CPyCamera::GetExposure() const
 * Sets exposure in milliseconds.
 * Required by the MM::Camera API.
 */
-void CPyCamera::SetExposure(double value_ms)
+void CPyCamera::SetExposure(double exp_ms)
 {
-    if (SetFloatProperty(g_Keyword_Exposure, value_ms) == DEVICE_OK)
-        GetCoreCallback()->OnExposureChanged(this, value_ms);
+    if (SetFloatProperty(g_Keyword_Exposure, exp_ms) == DEVICE_OK)
+        GetCoreCallback()->OnExposureChanged(this, exp_ms);
 }
 
 /**

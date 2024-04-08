@@ -125,7 +125,9 @@ string CPyHub::ComputeModulePath() noexcept {
             dir = dir.parent_path();
             stat((dir / "venv").generic_u8string().c_str(), &info);
             if (info.st_mode & S_IFDIR) {
-                path = path + ";" + dir.generic_u8string() + "/venv/Lib/site-packages";
+                path += ';';
+                path += dir.generic_u8string();
+                path += "/venv/Lib/site-packages";
                 break;
             }
         }
@@ -245,7 +247,7 @@ tuple<vector<PyAction*>, PyObj> EnumerateProperties(const PyObj& deviceInfo, con
 /**
 * Locates a Python object by device id
 */
-PyObj CPyHub::GetDevice(const string& device_id) noexcept {
+PyObj CPyHub::GetDeviceInfo(const string& device_id) noexcept {
     // split device id
     string deviceType;
     string deviceName;

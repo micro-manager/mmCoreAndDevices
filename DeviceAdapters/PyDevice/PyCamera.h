@@ -18,7 +18,7 @@ public:
     int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) override;
     int ClearROI() override;
     double GetExposure() const override;
-    void SetExposure(double exp) override;
+    void SetExposure(double exp_ms) override;
     int GetBinning() const override;
     int SetBinning(int binF) override;
     int IsExposureSequenceable(bool& isSequenceable) const override;

@@ -24,7 +24,6 @@ string PyObj::g_errorMessage;
 
 /**
 @brief Initializes the Python interpreter.
-@param module_path Additional folders to search for modules, separated by ';'.
 @return true on success, false on failure (the g_errorMessage field will be set).
 */
 bool PyObj::InitializeInterpreter() noexcept
@@ -122,12 +121,12 @@ void PyObj::DeinitializeInterpreter() noexcept
  * @param locals Dictionary object that holds the local variables of the script. Can be used to 'return' values from the script
  * @return true on success, false on failure (g_errorMessage will be set)
 */
-bool PyObj::RunScript(const string& code, const string& file_name, const PyObj& scope) noexcept {
+bool PyObj::RunScript(const string& code, const string& file_name, const PyObj& locals) noexcept {
     PyLock lock;
     auto bootstrap_code = PyObj(Py_CompileString(code.c_str(), file_name.c_str(), Py_file_input));
     if (!bootstrap_code)
         return false;
-    return PyObj(PyEval_EvalCode(bootstrap_code, g_global_scope, scope)); // Py_None on success (->true), NULL on failure (->false)
+    return PyObj(PyEval_EvalCode(bootstrap_code, g_global_scope, locals)); // Py_None on success (->true), NULL on failure (->false)
 }
 
 

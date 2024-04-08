@@ -17,7 +17,7 @@ const char* g_Keyword_StepSizeY = "StepSizeY-um";
 */
 int CPyStage::Home()
 {
-    home_.Call();
+    _check_(home_.Call());
     origin_ = 0.0;
     set_pos_ = 0.0;
     OnStagePositionChanged(0.0);
@@ -26,7 +26,7 @@ int CPyStage::Home()
 
 int CPyXYStage::Home()
 {
-    home_.Call();
+    _check_(home_.Call());
     origin_x_ = 0.0;
     origin_y_ = 0.0;
     set_pos_x_ = 0.0;
@@ -35,20 +35,6 @@ int CPyXYStage::Home()
     return CheckError();
 }
 
-/**
- * Returns 'true' if the stage is still moving or settling
-*/
-bool CPyStage::Busy() {
-    auto retval = busy_.Call().as<bool>();
-    CheckError();
-    return retval;
-}
-
-bool CPyXYStage::Busy() {
-    auto retval = busy_.Call().as<bool>();
-    CheckError();
-    return retval;
-}
 
 /**
  * Returns the current position of the stage in micrometers.

@@ -10,7 +10,7 @@ def test_generic_device():
     mmc = pymmcore.CMMCore()
     mmc.setDeviceAdapterSearchPaths([mm_dir])
     mmc.loadSystemConfiguration(os.path.join(config_dir, "generic_device.cfg"))
-    assert mmc.getProperty("Device:some_device", "Integer") == '4'
+    assert mmc.getProperty("some_device", "Integer") == '4'
 
 
 def test_camera():

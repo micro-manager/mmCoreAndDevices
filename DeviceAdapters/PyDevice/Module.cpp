@@ -12,7 +12,7 @@ MODULE_API void InitializeModuleData()
 
 /**
  * @brief Creates a hub device of MM device wrapper for a Python object
- * @param deviceName "PyHub" or "{devicetype}:{objectname}"
+ * @param id "PyHub" or "{devicetype}:{objectname}"
  * @return newly created device, or nullptr if device name is not found
 */
 MODULE_API MM::Device* CreateDevice(const char* id)
@@ -25,7 +25,7 @@ MODULE_API MM::Device* CreateDevice(const char* id)
     if (path == CPyHub::g_adapterName)
         return new CPyHub();
 
-    // else, we are (re)creating a MM Device wrapper for an existing Python object. To locate the object, we must first extract the object type
+    // else, we are (re)creating an MM Device wrapper for an existing Python object. To locate the object, we must first extract the object type
     
     string deviceType;
     string deviceName;

@@ -20,7 +20,7 @@ public:
     }
     int Stop() override;
     int SetOrigin() override;
-    int SetAdapterOriginUm(double value) {
+    int SetAdapterOriginUm(double value) override {
         origin_ = value;
         return DEVICE_OK;
     }
@@ -32,13 +32,11 @@ public:
     bool IsContinuousFocusDrive() const override {
         return true;
     }
-    bool Busy();
 protected:
     double StepSizeUm() const;
     double origin_ = 0.0;
     double set_pos_ = NAN;
     PyObj home_;
-    PyObj busy_;
 };
 
 
@@ -61,7 +59,7 @@ public:
     int SetOrigin() override;
     int SetXOrigin() override;
     int SetYOrigin() override;
-    int SetAdapterOriginUm(double x, double y) {
+    int SetAdapterOriginUm(double x, double y) override {
         origin_x_ = x;
         origin_y_ = y;
         return DEVICE_OK;
@@ -77,7 +75,7 @@ public:
         yMin = std::lround((y_lower + origin_y_) / y_step);
         yMax = std::lround((y_lower + origin_y_) / y_step);
         return DEVICE_OK;
-    };
+    }
     int GetPositionSteps(long& x_steps, long& y_steps) override {
         double x, y;
         _check_(GetPositionUm(x, y));
@@ -92,34 +90,33 @@ public:
     }
     double GetStepSizeXUm() override;
     double GetStepSizeYUm() override;
-    virtual int Move(double /*x_velocity*/, double /*y_velocity*/) {
+    int Move(double /*x_velocity*/, double /*y_velocity*/) override {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    virtual int GetXYStageSequenceMaxLength(long& /*nrEvents*/) const {
+    int GetXYStageSequenceMaxLength(long& /*nrEvents*/) const override {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    virtual int StartXYStageSequence() {
+    int StartXYStageSequence() override {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    virtual int StopXYStageSequence() {
+    int StopXYStageSequence() override {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    virtual int ClearXYStageSequence() {
+    int ClearXYStageSequence() override {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    virtual int AddToXYStageSequence(double /*positionX*/, double /*positionY*/) {
+    int AddToXYStageSequence(double /*positionX*/, double /*positionY*/) override {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    virtual int SendXYStageSequence() {
+    int SendXYStageSequence() override {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
-    bool Busy();
 
 protected:
     double origin_x_ = 0.0;
@@ -127,5 +124,4 @@ protected:
     double set_pos_x_ = NAN;
     double set_pos_y_ = NAN;
     PyObj home_;
-    PyObj busy_;
 };
