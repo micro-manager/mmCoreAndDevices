@@ -7581,6 +7581,7 @@ void CMMCore::InitializeErrorMessages()
    errorText_[MMERR_NullPointerException] = "Null Pointer Exception.";
    errorText_[MMERR_CreatePeripheralFailed] = "Hub failed to create specified peripheral device.";
    errorText_[MMERR_BadAffineTransform] = "Bad affine transform.  Affine transforms need to have 6 numbers; 2 rows of 3 column.";
+   errorText_[MMERR_StorageNotAvailable] = "Storage not loaded or initialized.";
 }
 
 void CMMCore::CreateCoreProperties()
@@ -8068,7 +8069,13 @@ std::string CMMCore::getStorageDevice() throw(CMMError)
 }
 
 /**
- * Creates a new dataset in the current storage device.
+ * Create new dataset in the specifed path. Fails if the path already exists.
+ * 
+ * \param path - parent directory for the dataset
+ * \param name - name for the dataset
+ * \param shape - array of max coordinates for each dimension (not counting image x and y)
+ * \param meta - serialized JSON metadata
+ * \return - handle for the new dataset
  */
 std::string CMMCore::createDataset(const char* path, const char* name, std::vector<int> shape, const char* meta)
 {
@@ -8085,8 +8092,107 @@ std::string CMMCore::createDataset(const char* path, const char* name, std::vect
       }
       return handle;
    }
-   throw CMMError("No storage device selected.");
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
  }
+
+/**
+ * Close the currently open dataset to prevent further changes.
+ * After closing the handle becomes invalid.
+ * 
+ * \param handle - handle to the open dataset
+ */
+void CMMCore::acqCloseDataset(const char* handle)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      int ret = storage->Close(handle);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Adds a new image to the dataset. Width, hight and depth define the expected pixel array size.
+ * Fails if coordinates do not fit into the dataset shape, or if the image dimenions are not supported.
+ * It can also fail if the underlying implementation does not support the order of image coordinates.
+ * 
+ * \param handle - handle to the open dataset
+ * \param pixels - pixel array
+ * \param width - width of the image
+ * \param height - height of the image
+ * \param depth - pixel size in bytes
+ * \param coordinates - coordinates of the image in the dimension space
+ * \param imageMeta - serialized JSON with image specific metadata
+ */
+void CMMCore::acqAddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<int> coordinates, const char* imageMeta)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      int ret = storage->AddImage(handle, pixels, width, height, depth, coordinates, imageMeta);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Configure metadata for a given dimension.
+ * 
+ * \param handle - handle for the dataset
+ * \param dimension - dimension index
+ * \param name - name of the dimension
+ * \param meaning - Z,T,C, etc. (physical meaning)
+ */
+void CMMCore::configureDimension(const char* handle, int dimension, const char* name, const char* meaning)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      int ret = storage->ConfigureDimension(handle, dimension, name, meaning);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Configure a particular coordinate name. E.g. channel name or position name.
+ * 
+ * \param handle - dataset handle
+ * \param dimension - dimension index
+ * \param coordinate - coordinate index
+ * \param name - coordinate name
+ */
+void CMMCore::configureCoordinate(const char* handle, int dimension, int coordinate, const char* name)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      int ret = storage->ConfigureCoordinate(handle, dimension, coordinate, name);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
 
 std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const char* deviceLabel) throw (CMMError)
 {

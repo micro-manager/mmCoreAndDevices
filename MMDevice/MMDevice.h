@@ -1494,7 +1494,7 @@ namespace MM {
       /**
        * Inserts an image into the dataset
        */
-      virtual int AddImage(unsigned char*, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
+      virtual int AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
 
       /**
        * Returns summary metadata

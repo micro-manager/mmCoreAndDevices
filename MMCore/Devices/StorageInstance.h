@@ -43,7 +43,7 @@ public:
    int Load(const char* path, const char* name, std::string& handle);
    int Delete(char* handle);
    int List(const char* path, std::vector<std::string>& datasets);
-   int AddImage(std::vector<uint8_t>& pixels, int width, int height, int depth, std::vector<int>& coordinates, const char* imageMeta);
+   int AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<int>& coordinates, const char* imageMeta);
    int GetSummaryMeta(const char* handle, char* meta);
    int GetImageMeta(const char* handle, const std::vector<int>& coordinates, char* meta);
    const unsigned char* GetImage(const char* handle, const std::vector<int>& coordinates);
