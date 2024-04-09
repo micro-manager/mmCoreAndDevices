@@ -153,7 +153,7 @@ int MMV1Storage::List(const char* path, char** listOfDatasets, int maxItems, int
    return 0;
 }
 
-int MMV1Storage::AddImage(unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta)
+int MMV1Storage::AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta)
 {
    return 0;
 }

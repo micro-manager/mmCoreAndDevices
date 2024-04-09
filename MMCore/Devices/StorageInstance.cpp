@@ -101,10 +101,10 @@ int StorageInstance::List(const char* path, std::vector<std::string>& listOfData
    return ret;
 }
 
-int StorageInstance::AddImage(std::vector<uint8_t>& pixels, int width, int height, int depth, std::vector<int>& coordinates, const char* imageMeta)
+int StorageInstance::AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<int>& coordinates, const char* imageMeta)
 {
    RequireInitialized(__func__);
-   return GetImpl()->AddImage(&pixels[0], width, height, depth, &coordinates[0], coordinates.size(), imageMeta);
+   return GetImpl()->AddImage(handle, pixels, width, height, depth, &coordinates[0], coordinates.size(), imageMeta);
 }
 
 int StorageInstance::GetSummaryMeta(const char* handle, char* meta)
