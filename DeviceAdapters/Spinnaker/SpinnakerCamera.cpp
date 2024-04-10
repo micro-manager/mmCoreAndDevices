@@ -403,6 +403,8 @@ int SpinnakerCamera::Initialize()
    CreatePropertyFromFloat("Gamma", m_cam->Gamma, &SpinnakerCamera::OnGamma);
    CreatePropertyFromFloat("Black Level", m_cam->BlackLevel, &SpinnakerCamera::OnBlackLevel);
    CreatePropertyFromEnum("Black Level Auto", m_cam->BlackLevelAuto, &SpinnakerCamera::OnBlackLevelAuto);
+   CreatePropertyFromBool("Reverse X", m_cam->ReverseX, &SpinnakerCamera::OnReverseX);
+   CreatePropertyFromBool("Reverse Y", m_cam->ReverseY, &SpinnakerCamera::OnReverseY);
 
    try
    {
