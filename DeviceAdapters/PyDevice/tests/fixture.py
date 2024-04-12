@@ -167,3 +167,14 @@ class Camera1:
 
     def busy(self) -> bool:
         return False
+
+
+class GenericDeviceDirect:
+    float_value: float = 0.0
+    int_value: int = 0
+    string_value: str = ""
+    bool_value: bool = False
+    enum_value: Options = Options.A
+    meters: u.Quantity[u.m] = 0.0 * u.m
+    millimeters: u.Quantity[u.mm] = 0.0 * u.mm
+    not_detected = 0  # This property should not be detected because it has no type annotation

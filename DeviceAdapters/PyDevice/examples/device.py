@@ -3,7 +3,7 @@ from enum import Enum
 import astropy.units as u
 
 
-class SomeOptions(Enum):
+class Color(Enum):
     Orange = 1
     Red = 2
     Blue = 3
@@ -11,8 +11,8 @@ class SomeOptions(Enum):
 
 class GenericDevice:
 
-    def __init__(self, options, floating_point, distance, boolean, integer, command):
-        self._options = options
+    def __init__(self, color, floating_point, distance, boolean, integer, command):
+        self._color = color
         self._floating_point = floating_point
         self._distance = distance
         self._boolean = boolean
@@ -20,12 +20,12 @@ class GenericDevice:
         self._command = command
 
     @property
-    def options(self) -> SomeOptions:
-        return self._options
+    def color(self) -> Color:
+        return self._color
 
-    @options.setter
+    @color.setter
     def options(self, value):
-        self._options = value
+        self._color = value
 
     @property
     def floating_point(self) -> float:
@@ -70,7 +70,7 @@ class GenericDevice:
         self._command = str(value)
 
 
-device = GenericDevice(SomeOptions.Blue, 23.7, 0.039 * u.m, True, 4, 'Something')
+device = GenericDevice(Color.Blue, 23.7, 0.039 * u.m, True, 4, 'Something')
 devices = {'some_device': device}
 
 if __name__ == "__main__":

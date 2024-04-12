@@ -85,3 +85,20 @@ def test_camera():
     assert properties[-1].python_name == 'binning'
     assert properties[-1].mm_name == 'Binning'
     assert properties[0].mm_name == 'Exposure-ms'
+
+    # test if the binning property works
+    assert properties[-1].get() == 1
+
+
+def test_direct():
+    device = GenericDeviceDirect()
+    pydevice = PyDevice(device)
+    properties = pydevice.properties
+    assert properties[0].python_name == 'float_value'
+    assert properties[1].python_name == 'int_value'
+    assert properties[2].python_name == 'string_value'
+    assert properties[3].python_name == 'bool_value'
+    assert properties[4].python_name == 'enum_value'
+    assert properties[5].python_name == 'meters'
+    assert properties[6].python_name == 'millimeters'
+    assert len(properties) == 7
