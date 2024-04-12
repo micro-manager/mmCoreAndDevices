@@ -126,24 +126,28 @@ string CPyHub::ComputeModulePath() noexcept
     if (GetProperty(p_PythonModulePath, modulePathString) != DEVICE_OK)
         return string();
 
+    // always add the path to the file being loaded
     auto path = string(modulePathString);
-    if (path == "(auto)")
-    {
-        path = script_path_.parent_path().generic_u8string(); // always include the folder of the current script
+    auto current_path = ';' + script_path_.parent_path().generic_u8string();
+    if (path != "(auto)")
+        return path + current_path;
 
-        // see if the script is 'in' a virtual environment. If so, use that environment
-        struct stat info;
-        fs::path dir = script_path_;
-        for (int depth = 0; depth < 10 && dir.has_relative_path(); depth++)
+    // (auto)
+    // Check if the script is 'in' a virtual environment. If so, add that environment to the module search path
+    struct stat info;
+    fs::path dir = script_path_;
+    for (int depth = 0; depth < 10 && dir.has_relative_path(); depth++)
+    {
+        dir = dir.parent_path();
+        const auto venv_paths = { "venv", ".venv" };
+        for (auto& dir_name: venv_paths)
         {
-            dir = dir.parent_path();
-            stat((dir / "venv").generic_u8string().c_str(), &info);
-            if (info.st_mode & S_IFDIR)
-            {
-                path += ';';
-                path += dir.generic_u8string();
-                path += "/venv/Lib/site-packages";
-                break;
+            auto test_path = (dir / dir_name).generic_u8string();
+            stat(test_path.c_str(), &info);
+            if (info.st_mode & S_IFDIR) {
+                // found a virtual environment
+                path = test_path + "/Lib/site-packages";
+                return path + current_path;
             }
         }
     }
