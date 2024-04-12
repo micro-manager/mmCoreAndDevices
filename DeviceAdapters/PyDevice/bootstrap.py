@@ -45,19 +45,29 @@ def _to_title_case(name: str) -> str:
 
 class PyProperty:
     def __init__(self, obj, name: str, p: property):
+        """Extracts metadata from a property object and stores it in a format accessible to the C++ code.
+
+        Recognizes properties, as well as attributes.
+        """
         self.python_name = name
-        fset = getattr(p, 'fset', None)
-        self.get = lambda: p.fget(obj)
-        self.set = (lambda value: fset(obj, value)) if fset is not None else None
         self.mm_name = _to_title_case(name)
         self.min = None
         self.max = None
         self.options = None
         self.unit = None
 
-        # get the return type from the annotations.
-        # Note: this will raise an error if p is not gettable or has no return type annotation
-        return_type = p.fget.__annotations__['return']  # noqa: ok to raise an error here
+        if isinstance(p, property):  # property
+            fset = getattr(p, 'fset', None)
+            self.get = lambda: p.fget(obj)
+            self.set = (lambda value: fset(obj, value)) if fset is not None else None
+            # get the return type from the annotations.
+            # Note: this will raise an error if p is not gettable or has no return type annotation
+            return_type = p.fget.__annotations__['return']  # noqa: ok to raise an error here
+        else:  # attribute
+            self.get = lambda: getattr(obj, name)
+            self.set = lambda value: setattr(obj, name, value)
+            return_type = p
+
         self.data_type = self._process_return_type(return_type)
 
     def _process_return_type(self, return_type) -> str:
@@ -79,6 +89,9 @@ class PyProperty:
 
         elif return_type == bool:
             return 'bool'
+
+        elif not inspect.isclass(return_type):  # for example, Optional[...]
+            raise ValueError(return_type)  # unsupported property type
 
         elif issubclass(return_type, Enum):  # Enum
             self.options = {k.lower().capitalize(): v for (k, v) in return_type.__members__.items()}
@@ -105,25 +118,27 @@ class PyDevice:
      and methods in a format accessible to the C++ code."""
 
     def __init__(self, device):
-
         # get a list of all properties and methods, including the ones in base classes
+        # Also process class annotations, for attributes that are not properties
         class_hierarchy = inspect.getmro(device.__class__)
         all_dict = {}
         for c in class_hierarchy[::-1]:
             all_dict.update(c.__dict__)
+            annotations = c.__dict__.get('__annotations__', {})
+            all_dict.update(annotations)
 
         # extract metadata for each property and method
         self.properties = []
         self.methods = {}
         for name, p in all_dict.items():
             if not name.startswith('_'):
-                if isinstance(p, property):
+                if inspect.isfunction(p):
+                    self.methods[name] = MethodType(p, device)
+                else:
                     try:
                         self.properties.append(PyProperty(device, name, p))
                     except (AttributeError, KeyError, ValueError):
                         pass  # property does not have a getter or annotations, or is of an incorrect type
-                else:
-                    self.methods[name] = MethodType(p, device)
 
         # detect the device type
         if self._init_camera():
