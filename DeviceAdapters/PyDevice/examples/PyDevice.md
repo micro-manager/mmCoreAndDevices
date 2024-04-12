@@ -4,58 +4,6 @@ layout: page
 ---
 
 
-## Summary
-
-<table>
-<tr>
-<td markdown="1">
-
-**Summary:**
-
-</td>
-<td markdown="1">
-
-Device adapter for the integration of Python objects in MicroManager
-
-</td>
-</tr>
-<tr>
-<td markdown="1">
-
-**Author:**
-
-</td>
-<td markdown="1">
-
-Ivo Vellekoop and Jeroen Doornbos
-
-</td>
-</tr>
-<tr>
-<td markdown="1">
-
-**License:**
-
-</td>
-<td markdown="1">
-
-BSD-3
-
-</td>
-</tr>
-<tr>
-<td markdown="1">
-
-**Devices:**
-
-</td>
-<td markdown="1">
-
-Stage, XYStage, Camera, Generic device
-
-</td>
-</tr>
-</table>
 
 
 # Introduction
@@ -91,7 +39,7 @@ Examples of Python scripts that can be loaded by PyDevice can be found in:
 # Using existing devices
 To use a Python device, add `PyDevice` in the hardware configuration manager. This will open the following screen:
 
-![config manager screen](config_manager_screen.png)
+![config manager screen](../docs/config_manager_screen.png)
 
 **ScriptPath** is the path to the Python script that constructs the device objects. The requirements for writing a device script are described in the section *Developing new components*. When the ScriptPath is left blank (recommended), a file browser pops up when you select `OK`, so that you can select the script through the GUI.
 
@@ -99,7 +47,7 @@ To use a Python device, add `PyDevice` in the hardware configuration manager. Th
 
 PyDevice now loads and executes the Python script. All recognized devices can now be selected, and later configured through the Property Browser. For example, when selecting the `example_camera.py` script, the following screen is shown:
 
-![camera selection screen](camera_selection_screen.png)
+![camera selection screen](../docs/camera_selection_screen.png)
 
 Where you can select the camera so that it is imported as a device in MicroManager. Currently, PyDevice automatically recognizes `Camera`, `Stage`, `XYStage` and generic `Device` object types. These objects are transformed into compatible MicroManager objects.
 
@@ -242,22 +190,7 @@ PyDevice recognizes public properties of the types `int`, `float`, `str`, as wel
     ```
     
 
-- **Specifying ranges:**
-  `Annotated[int, {'min': 0, 'max': 42}]` goes beyond a simple integer type hint by specifying a range. This annotation tells MicroManager that `integer` is not just any integer but must fall within the specified range (0 to 42). It's particularly useful for setting safety limits on device properties to prevent hardware damage or other errors.
-  
-  `Annotated` can be used for integers, floats and units. `int` can also be used without `Annotated`.
 
-  ```python
-  from typing import Annotated
-
-  @property
-  def integer(self) -> Annotated[int, {'min': 0, 'max': 42}]:
-      return self._integer
-
-  @integer.setter
-  def integer(self, value):
-      self._integer = value
-  ```
 
 Combining these property in an example device, produces the following GUI in MicroManager:
 
@@ -338,15 +271,4 @@ We would like to set up a database containing implementations of hardware contro
 
 # Troubleshooting
 If an error occurs in the Python script, that error is displayed in the MicroManager GUI, and logged in the CoreLog if logging is enabled in MicroManager. Often, the error is helpful in finding what whent wrong, and in correcting the Python script. For more complicated problems, we recommend testing the Python script in a Python IDE and using the associated debugger. Due to the way the MicroManager / Python bridge is set up, it is always possible to execute the script that creates the device objects as a stand-alone script.
-
-Common sources of error are:
-* **An object is not recognised as a Camera/Stage/etc.**. This happens when not all required properties and methods are implemented (see a description of the required attributes above). Due to a current limitation in the implementation, it is not possible to inherit the required properties from a super class. All properties should be *implemented explicitly*.
-
-* **An error occurs when reading a property set to None**. Currently, MicroManager does not support missing values for properties. Instead, if `None` is found in a float property, it is silently converted to `nan`. For other property types, if the getter returns `None`, an error is given.
-
-* **A property does not show up in MicroManager**. This is typically caused by a missing type annotation. Also note that properties should have an explicit 'getter', in the form of a `@property` decorator, see examples above. 
-
-* **The PyDevice plugin is shown in the list of device adapters, but it grayed out and cannot be loaded**. This happens if Python is not installed, or the Python install cannot be located through the `PATH` environment variable. Also, if you built PyDevice yourself, this problem can be caused by a version difference between MicroManager executable and the source code used to build PyDevice.
-
-* **MicroManager crashes when the plugin is loaded**. This behavior was observed when an incorrectly configured Anaconda installation was used. If the base packages for the the Python library cannot be found in the folder containing `python3.dll`, the Python runtime exits the current process. Unfortunately, there currently is no way to have the Python runtime just report an error. As a solution, make sure Python is installed correctly and can be run from the command prompt.
 
