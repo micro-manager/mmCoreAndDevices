@@ -76,7 +76,7 @@ string CPyHub::LoadScript() noexcept
         // file not found, let the user select one
         OPENFILENAMEW options = {0};
         wchar_t file_name[MAX_PATH] = {0};
-        wcsncpy(file_name, script_path_.generic_wstring().c_str(), MAX_PATH - 1);
+        wcsncpy(file_name, script_path_.filename().generic_wstring().c_str(), MAX_PATH - 1);
         options.lStructSize = sizeof(OPENFILENAMEW);
         options.lpstrFilter = L"Python scripts\0*.py\0\0";
         options.lpstrFile = file_name;
