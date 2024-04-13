@@ -115,11 +115,21 @@ public:
             auto deviceInfo = CPyHub::GetDeviceInfo(id_);
             if (!deviceInfo)
             {
-                this->SetErrorText(
-                    ERR_PYTHON_DEVICE_NOT_FOUND,
-                    ("Could not find the Python device id " + id_ +
-                        ". It may be that the Python script or the device object within it was renamed.").c_str());
-                return ERR_PYTHON_DEVICE_NOT_FOUND;
+                string deviceType, deviceName;
+                CPyHub::SplitId(id_, deviceType, deviceName);
+                auto altId = CPyHub::ComposeId("Device",deviceName);
+                deviceInfo = CPyHub::GetDeviceInfo(altId);
+                if (!deviceInfo) {
+                    this->SetErrorText(
+                        ERR_PYTHON_DEVICE_NOT_FOUND,
+                        ("Could not find the Python device id " + id_ +
+                            ". It may be that the Python script or the device object within it was renamed.").c_str());
+                    return ERR_PYTHON_DEVICE_NOT_FOUND;
+                } else
+                {
+                    auto msg = "Did not recognize device type " + deviceType;
+                    this->CreateProperty("WARNING", msg.c_str(), MM::String, true, nullptr, false);
+                }
             }
             auto [properties, methods] = EnumerateProperties(deviceInfo, [this]() { return this->CheckError(); });
             _check_(CheckError());
