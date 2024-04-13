@@ -34,6 +34,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bootstrap.py" />
+    <ClInclude Include="stable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PyDevice.cpp">
@@ -56,6 +62,9 @@
     </ClCompile>
     <ClCompile Include="PyStage.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stable.cpp">
+      <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

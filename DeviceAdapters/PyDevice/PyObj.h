@@ -119,9 +119,9 @@ public:
     template <> PyObj as<PyObj>() const {
         return *this;
     }
-    template <class T> void Set(const string& attribute, T value) {
+/*    template <class T> void Set(const string& attribute, T value) {
         Set(attribute.c_str(), value);
-    }
+    }*/
     template <class T> void Set(const char* attribute, T value) {
         PyLock lock;
         if (PyObject_SetAttrString(*this, attribute, PyObj(value)) != 0)
@@ -131,10 +131,6 @@ public:
         PyLock lock;
         return Get(function).Call(arguments...);
     }
-    PyObj Call() const noexcept {
-        PyLock lock;
-        return PyObj(PyObject_CallNoArgs(*this));
-    }
     template <typename... Arguments> PyObj Call(Arguments... arguments) const noexcept {
         PyLock lock;
         return PyObj(PyObject_CallFunctionObjArgs(*this, static_cast<PyObject*>(arguments)..., NULL));
@@ -143,9 +139,10 @@ public:
         PyLock lock;
         return PyObj(PyObject_GetAttrString(*this, attribute));
     }
-    PyObj Get(const string& attribute) const noexcept {
+    /*PyObj Get(const string& attribute) const noexcept {
         return Get(attribute.c_str());
-    }
+    }*/
+    /*
     template <class T> void SetDictItem(const string& key, T value) {
         SetDictItem(key.c_str(), value);
     }
@@ -153,7 +150,7 @@ public:
         PyLock lock;
         if (PyDict_SetItemString(*this, key, PyObj(value)) != 0)
             ReportError();
-    }
+    }*/
     PyObj GetDictItem(const char* key) const noexcept {
         PyLock lock;
         return Borrow(PyDict_GetItemString(*this, key));
@@ -167,13 +164,14 @@ public:
     PyObj GetTupleItem(Py_ssize_t index) const noexcept {
         return Borrow(PyTuple_GetItem(*this, index));
     }
+    /*
     bool HasAttribute(const string& attribute) const noexcept {
         return HasAttribute(attribute.c_str());
     }
     bool HasAttribute(const char* attribute) const noexcept {
         PyLock lock;
         return PyObject_HasAttrString(*this, attribute);
-    }
+    }*/
 
     /**
      * @brief Clear the reference (setting it to nullptr). If this is the last reference to the object, the object is destroyed.
@@ -213,14 +211,14 @@ public:
         }
         return *this;
     }
-    PyObj operator * (const PyObj& other) const {
+/*    PyObj operator * (const PyObj& other) const {
         PyLock lock;
         return PyObj(PyNumber_Multiply(p_, other));
     }
     PyObj operator / (const PyObj& other) const {
         PyLock lock;
         return PyObj(PyNumber_TrueDivide(p_, other));
-    }
+    }*/
    
     static bool InitializeInterpreter() noexcept;
     static void DeinitializeInterpreter() noexcept;

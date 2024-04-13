@@ -1,13 +1,18 @@
 #pragma once
 #include "PyDevice.h"
+#include "buffer.h"
 
 using PyCameraClass = CPyDeviceTemplate<CCameraBase<std::monostate>>;
 class CPyCamera : public PyCameraClass {
-    PyObj lastFrame_; // numpy array corresponding to the last image, we hold a reference count so that we are sure the array does not get deleted during processing */
+    Py_buffer lastFrame_;
     PyObj read_; // the read() method of the camera object
     
 public:
-    CPyCamera(const string& id) : PyCameraClass(id) {}
+    CPyCamera(const string& id) : PyCameraClass(id)
+    {
+        lastFrame_.obj = nullptr;
+        lastFrame_.buf = nullptr;
+    }
     const unsigned char* GetImageBuffer() override;
     unsigned GetImageWidth() const override;
     unsigned GetImageHeight() const override;
@@ -26,4 +31,12 @@ public:
     int Shutdown() override;
     int InsertImage() override;
     int ConnectMethods(const PyObj& methods) override;
+
+private:
+    void ReleaseBuffer()
+    {
+        if (lastFrame_.obj) 
+            PyBuffer_Release(&lastFrame_);
+        lastFrame_.buf = nullptr;
+    }
 };

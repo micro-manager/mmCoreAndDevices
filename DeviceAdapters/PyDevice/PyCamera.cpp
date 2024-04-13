@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "PyCamera.h"
-#define NO_IMPORT_ARRAY
-#include <numpy/arrayobject.h>
+
+#include "buffer.h"
 
 const char* g_Keyword_Width = "Width";
 const char* g_Keyword_Height = "Height";
@@ -27,14 +27,17 @@ int CPyCamera::ConnectMethods(const PyObj& methods)
 
 int CPyCamera::SnapImage()
 {
-    lastFrame_ = read_.Call();
+    auto frame = read_.Call();
+    ReleaseBuffer();
+    if (PyObject_GetBuffer(frame, &lastFrame_, PyBUF_C_CONTIGUOUS) == -1)
+        this->LogMessage("Error, 'image' property should return a numpy array");
     return CheckError();
 }
 
 int CPyCamera::Shutdown()
 {
     StopSequenceAcquisition();
-    lastFrame_.Clear();
+    ReleaseBuffer();
     return PyCameraClass::Shutdown();
 }
 
@@ -55,15 +58,7 @@ const unsigned char* CPyCamera::GetImageBuffer()
     if (CheckError() != DEVICE_OK)
         return nullptr;
 
-    if (!PyArray_Check(lastFrame_))
-    {
-        this->LogMessage("Error, 'image' property should return a numpy array");
-        return nullptr;
-    }
-    auto buffer = (PyArrayObject*)static_cast<PyObject*>(lastFrame_);
-    if (PyArray_NDIM(buffer) != 2 || PyArray_TYPE(buffer) != NPY_UINT16 || !(PyArray_FLAGS(buffer) &
-        NPY_ARRAY_C_CONTIGUOUS))
-    {
+    if (lastFrame_.buf == nullptr || lastFrame_.ndim != 2 || lastFrame_.itemsize != 2) {
         this->LogMessage(
             "Error, 'image' property should be a 2-dimensional numpy array that is c-contiguous in memory and contains 16 bit  unsigned integers");
         return nullptr;
@@ -72,8 +67,8 @@ const unsigned char* CPyCamera::GetImageBuffer()
     // check if the array has the correct size
     auto w = GetImageWidth();
     auto h = GetImageHeight();
-    auto nh = PyArray_DIM(buffer, 0);
-    auto nw = PyArray_DIM(buffer, 1);
+    auto nw = lastFrame_.shape[1];
+    auto nh = lastFrame_.shape[0];
     if (nw != w || nh != h)
     {
         auto msg = "Error, 'image' dimensions should be (" + std::to_string(w) + ", " + std::to_string(h) +
@@ -82,7 +77,7 @@ const unsigned char* CPyCamera::GetImageBuffer()
         return nullptr;
     }
 
-    return static_cast<const unsigned char*>(PyArray_DATA(buffer));
+    return static_cast<const unsigned char*>(lastFrame_.buf);
 }
 
 /**

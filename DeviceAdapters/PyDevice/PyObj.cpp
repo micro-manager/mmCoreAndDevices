@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "PyObj.h"
-#include <numpy/arrayobject.h>
+//#include <numpy/arrayobject.h>
 
 PyObj PyObj::g_traceback_to_string;
 PyObj PyObj::g_load_devices;
@@ -38,7 +38,7 @@ bool PyObj::InitializeInterpreter() noexcept
         }
         else {
             // fallback: use python3.dll location
-            HMODULE hModule = GetModuleHandle(L"python3.dll");
+            HMODULE hModule = GetModuleHandle(L"python39.dll");
             TCHAR dllPath[_MAX_PATH];
             GetModuleFileName(hModule, dllPath, _MAX_PATH);
             path = fs::path(dllPath).parent_path();
@@ -59,17 +59,12 @@ bool PyObj::InitializeInterpreter() noexcept
         Py_InitializeEx(0); // Python may cause a crash here (all exit()) if the runtime cannot be initialized. There seems to be nothing we can do about this in the LIMITED api.
 
 #pragma warning(pop)
-        _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
-
         // allow multi threading and store the thread state (global interpreter lock).
         // note: savethread releases the GIL lock we currently have.
         g_threadState = PyEval_SaveThread();
     }
-    else {
-        // If a Python interpreter is already running (this also happens when running from pymmcore), don't start a new interpreter again
-        PyLock lock;
-        _import_array(); // initialize numpy. We don't use import_array (without _) because it hides any error message that may occur.
-    }
+    // If a Python interpreter is already running (this also happens when running from pymmcore), don't start a new interpreter again
+    LoadPythonData();
 
     // run the bootstrapping script
     const char* bootstrap;

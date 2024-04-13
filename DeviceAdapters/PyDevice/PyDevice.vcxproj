@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Actions.h" />
+    <ClInclude Include="buffer.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PyCamera.h" />
     <ClInclude Include="PyDevice.h" />
@@ -20,6 +21,7 @@
     <ClInclude Include="bootstrap.py">
       <FileType>CppHeader</FileType>
     </ClInclude>
+    <ClInclude Include="stable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actions.cpp" />
@@ -32,6 +34,7 @@
     <ClCompile Include="PyDevice.cpp" />
     <ClCompile Include="PyObj.cpp" />
     <ClCompile Include="PyStage.cpp" />
+    <ClCompile Include="stable.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="debug_helper.bat" />
@@ -126,6 +129,7 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Python\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
+      <DelayLoadDLLs>python39.dll</DelayLoadDLLs>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -157,6 +161,7 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Python\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
+      <DelayLoadDLLs>python39.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
