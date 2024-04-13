@@ -24,7 +24,7 @@ class GenericDevice:
         return self._color
 
     @color.setter
-    def options(self, value):
+    def color(self, value):
         self._color = value
 
     @property
