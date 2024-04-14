@@ -107,10 +107,12 @@ bool SetupPaths(const fs::path& venv, bool search)
     }
 
     // option 3: check the PYTHONHOME environmental variable
-    pythonHome = _wgetenv(L"PYTHONHOME");
+    auto pythonHomeVariable = _wgetenv(L"PYTHONHOME");
+    pythonHome = pythonHomeVariable ? pythonHomeVariable : L"";
     if (!pythonHome.empty())
     {
-        pythonPath = _wgetenv(L"PYTHONPATH");
+        auto pythonPathVariable = _wgetenv(L"PYTHONPATH");
+        pythonPath = pythonPathVariable ? pythonPathVariable : L"";
         return true;
     }
 
