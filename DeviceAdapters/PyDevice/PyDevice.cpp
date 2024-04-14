@@ -23,9 +23,10 @@ CPyHub::CPyHub() : PyHubClass(g_adapterName)
     SetErrorText(
         ERR_PYTHON_ONLY_ONE_HUB_ALLOWED,
         "Only one PyHub device may be active at a time. To combine multiple Python devices, write a script that combines them in a single `devices` dictionary.");
+    SetErrorText(ERR_PYTHON_RUNTIME_NOT_FOUND, "Could not locate the Python runtime. Make sure Python is installed and that the Python path is set to a virtual environment folder a with 'pyvenv.cfg' in it, or use the value '(auto)'.");
 
     CreateStringProperty(p_PythonScriptPath, "", false, nullptr, true);
-    CreateStringProperty(p_PythonModulePath, "(auto)", false, nullptr, true);
+    CreateStringProperty(p_PythonPath, "(auto)", false, nullptr, true);
     id_ = "PyHub";
 }
 
@@ -106,53 +107,8 @@ string CPyHub::LoadScript() noexcept
     return code;
 }
 
-/**
-  @brief Initializes additional paths where Python looks for modules.
-  The module search path always includes the default paths as set up by Py_Initialize.
-  This includes the site-packages folder of the Python installation that is currently used.
 
-  If ModulePath is set to "(auto)" (the default), the following search paths are added at the start of the module search path:
-  - The directory where the script is located
-  - If that directory, or any of the parent directories, holds a `venv` folder, use the site-packages in that virtual environment
 
-  If ModulePath is not set to "(auto)", the paths set in the ModulePath (separated by ';') are added at the start of the module search path.
-
-  Note: these paths are set *before* calling the bootstrap script. That script should be able to locate the numpy and astropy packages.
-  Note: if the hub is de-initialized and initialized again, the paths are reset.
-*/
-string CPyHub::ComputeModulePath() noexcept
-{
-    char modulePathString[MM::MaxStrLength] = {0};
-    if (GetProperty(p_PythonModulePath, modulePathString) != DEVICE_OK)
-        return string();
-
-    // always add the path to the file being loaded
-    auto path = string(modulePathString);
-    auto current_path = ';' + script_path_.parent_path().generic_u8string();
-    if (path != "(auto)")
-        return path + current_path;
-
-    // (auto)
-    // Check if the script is 'in' a virtual environment. If so, add that environment to the module search path
-    struct stat info;
-    fs::path dir = script_path_;
-    for (int depth = 0; depth < 10 && dir.has_relative_path(); depth++)
-    {
-        dir = dir.parent_path();
-        const auto venv_paths = { "venv", ".venv" };
-        for (auto& dir_name: venv_paths)
-        {
-            auto test_path = (dir / dir_name).generic_u8string();
-            stat(test_path.c_str(), &info);
-            if (info.st_mode & S_IFDIR) {
-                // found a virtual environment
-                path = test_path + "/Lib/site-packages";
-                return path + current_path;
-            }
-        }
-    }
-    return path;
-}
 
 /**
  * @brief Initialize the Python interpreter, run the script, and convert the 'devices' dictionary into a c++ map
@@ -163,30 +119,25 @@ int CPyHub::Initialize()
     {
         if (g_the_hub)
             return ERR_PYTHON_ONLY_ONE_HUB_ALLOWED;
-        //
-        // Read path to the Python script, and optional path to the Python home directory (virtual environment)
-        // If the Python script is not found, a dialog box is shown so that the user can select a file.
-        //
-
+        
         auto script = LoadScript();
         if (script.empty())
             return ERR_PYTHON_SCRIPT_NOT_FOUND;
 
+        char pythonPathStr[MM::MaxStrLength] = { 0 };
+        if (GetProperty(p_PythonPath, pythonPathStr) != DEVICE_OK)
+            return {}; // could not read path property, this is an error!
 
-        auto modulePath = ComputeModulePath();
+        bool search = strcmp(pythonPathStr, "(auto)") == 0;
+        if (!InitializePython(search ? script_path_.parent_path() : pythonPathStr, search))
+            return ERR_PYTHON_RUNTIME_NOT_FOUND;
 
-        this->LogMessage(
-            "Initializing the Python runtime. The Python runtime (especially Anaconda) may crash if Python is not installed correctly."
-            "If so, verify thatthe HOMEPATH environment is set to the correct value, or remove it."
-            "Also, make sure that the desired Python installation is the first that is listed in the PATH environment variable.\n",
-            true);
-
-        if (!PyObj::InitializeInterpreter())
+        if (!PyObj::Bootstrap())
             return CheckError(); // initializing the interpreter failed, abort initialization and report the error
 
         PyLock lock;
         // execute the Python script, and read the 'devices' field,
-        auto deviceDict = PyObj::g_load_devices.Call(PyObj(modulePath),
+        auto deviceDict = PyObj::g_load_devices.Call(PyObj(""),
                                                      PyObj(script_path_.parent_path().generic_u8string()),
                                                      PyObj(script_path_.stem().generic_u8string()));
         if (!deviceDict)

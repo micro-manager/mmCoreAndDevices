@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="Actions.h" />
     <ClInclude Include="buffer.h" />
+    <ClInclude Include="config.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PyCamera.h" />
     <ClInclude Include="PyDevice.h" />

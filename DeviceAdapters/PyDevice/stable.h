@@ -1,6 +1,9 @@
 #pragma once
-//#include <windows.h>
 #include <cstdint>
+#include <filesystem>
+namespace fs = std::filesystem;
+bool InitializePython(const fs::path& venv, bool search) noexcept;
+
 typedef uintptr_t       Py_uintptr_t;
 typedef intptr_t        Py_intptr_t;
 typedef intptr_t        Py_ssize_t;

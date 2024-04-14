@@ -211,16 +211,8 @@ public:
         }
         return *this;
     }
-/*    PyObj operator * (const PyObj& other) const {
-        PyLock lock;
-        return PyObj(PyNumber_Multiply(p_, other));
-    }
-    PyObj operator / (const PyObj& other) const {
-        PyLock lock;
-        return PyObj(PyNumber_TrueDivide(p_, other));
-    }*/
    
-    static bool InitializeInterpreter() noexcept;
+    static bool Bootstrap() noexcept;
     static void DeinitializeInterpreter() noexcept;
     static bool RunScript(const string& code, const string& file_name, const PyObj& locals) noexcept;
 

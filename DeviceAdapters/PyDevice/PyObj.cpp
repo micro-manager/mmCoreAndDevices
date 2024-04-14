@@ -26,45 +26,10 @@ string PyObj::g_errorMessage;
 @brief Initializes the Python interpreter.
 @return true on success, false on failure (the g_errorMessage field will be set).
 */
-bool PyObj::InitializeInterpreter() noexcept
+bool PyObj::Bootstrap() noexcept
 {
-    if (!Py_IsInitialized()) {
-        // Start the Python interperter if it is not running yet
-        //todo: windows specific
-        auto path = fs::path();// python_home;
-        auto env_path = _wgetenv(L"PYTHONHOME");
-        if (env_path && env_path[0] != 0) {
-            path = env_path;
-        }
-        else {
-            // fallback: use python3.dll location
-            HMODULE hModule = GetModuleHandle(L"python39.dll");
-            TCHAR dllPath[_MAX_PATH];
-            GetModuleFileName(hModule, dllPath, _MAX_PATH);
-            path = fs::path(dllPath).parent_path();
-        }
-        // To initialize Python using the stable API, some functions (SetPythonHome, SetPath, InitializeEx) are needed.
-        // Strangely, these functions are deprecated since Python 3.11 and no alternatives are provided.
-        // As a workaround, suppress the warning.
-#pragma warning(push)
-#pragma warning(disable: 4996)
-        Py_SetPythonHome(path.generic_wstring().c_str());
-
-        // set the module search path if it is specified in an environmental variable
-        // note that additional search paths can be specified by the user. These paths are only used during the 'load_script' call.
-        auto base_module_path = _wgetenv(L"PYTHONPATH");
-        if (base_module_path && base_module_path[0] != 0)
-            Py_SetPath(base_module_path);
-
-        Py_InitializeEx(0); // Python may cause a crash here (all exit()) if the runtime cannot be initialized. There seems to be nothing we can do about this in the LIMITED api.
-
-#pragma warning(pop)
-        // allow multi threading and store the thread state (global interpreter lock).
-        // note: savethread releases the GIL lock we currently have.
-        g_threadState = PyEval_SaveThread();
-    }
-    // If a Python interpreter is already running (this also happens when running from pymmcore), don't start a new interpreter again
-    LoadPythonData();
+    // enable multi-threading
+    g_threadState = PyEval_SaveThread();
 
     // run the bootstrapping script
     const char* bootstrap;
@@ -135,7 +100,7 @@ bool PyObj::ReportError() {
     if (!PyErr_Occurred())
         return true;
     
-    // prevent infinite recusion if an error happens in the CheckError function itself
+    // prevent infinite recursion if an error happens in the CheckError function itself
     static bool reentrant = false;
     if (reentrant) {
         PyErr_Clear();

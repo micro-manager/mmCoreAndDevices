@@ -52,7 +52,7 @@ public:
     {
         this->SetErrorText(
             ERR_PYTHON_EXCEPTION, "The Python code threw an exception, check the CoreLog error log for details");
-        this->SetErrorText(ERR_PYTHON_DEVICE_NOT_FOUND, "");
+        this->SetErrorText(ERR_PYTHON_RUNTIME_NOT_FOUND, "");
     }
 
     int CreateProperties(const vector<PyAction*>& propertyDescriptors) noexcept
@@ -121,10 +121,10 @@ public:
                 deviceInfo = CPyHub::GetDeviceInfo(altId);
                 if (!deviceInfo) {
                     this->SetErrorText(
-                        ERR_PYTHON_DEVICE_NOT_FOUND,
+                        ERR_PYTHON_RUNTIME_NOT_FOUND,
                         ("Could not find the Python device id " + id_ +
                             ". It may be that the Python script or the device object within it was renamed.").c_str());
-                    return ERR_PYTHON_DEVICE_NOT_FOUND;
+                    return ERR_PYTHON_RUNTIME_NOT_FOUND;
                 } else
                 {
                     auto msg = "Did not recognize device type " + deviceType;
@@ -227,7 +227,7 @@ using PyHubClass = CPyDeviceTemplate<HubBase<std::monostate>>;
 class CPyHub : public PyHubClass
 {
     static constexpr const char* p_PythonScriptPath = "ScriptPath";
-    static constexpr const char* p_PythonModulePath = "ModulePath";
+    static constexpr const char* p_PythonPath = "PythonEnvironment";
 
 public:
     static constexpr const char* g_adapterName = "PyHub";
@@ -244,7 +244,6 @@ protected:
 
 private:
     string LoadScript() noexcept;
-    string ComputeModulePath() noexcept;
 
     // list of devices read from the `devices` dictionary that the Python script returns.
     std::map<string, PyObj> devices_;
