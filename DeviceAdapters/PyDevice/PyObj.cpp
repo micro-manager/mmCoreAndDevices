@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "PyObj.h"
-//#include <numpy/arrayobject.h>
 
 PyObj PyObj::g_traceback_to_string;
 PyObj PyObj::g_load_devices;

@@ -171,31 +171,20 @@ bool InitializePython(const fs::path& venv, bool search) noexcept
     if (!Py_IsInitialized()) {
         PyConfig config;
         PyConfig_InitPythonConfig(&config);
-        config.isolated = 0;
+        config.isolated = 1;
         config.site_import = 1;
-        // if the line below is left out, Python adds the micro-manager bin folder to the path,
-        // because this is the current executable. This is incorrect, but causes little harm.
-        // if the line below is included, Python does _not+ add the virtual environment folder to the path! (perhaps it parses pyvenv.cfg and
-        // uses that 'home' entry?), so it is useless anyway.
-        //
-        // There seems to be no way to have Python add the search path to the virtual environment.
-        // We do this manually using PSys_SetPath below
-        // PyConfig_SetString(&config, &config.executable, (pythonVenv / "Scripts" / "python.exe").make_preferred().c_str());
+
+        // after a lot of trial and error, the method below seems to work
+        // it makes the Python runtime open the pyvenv.cfg file and parse it,
+        // and add the pythonVenv / "Lib" / "site-packages" to the system path
+
+        auto program = (pythonVenv / "Scripts" / "python.exe").make_preferred();
+        PyConfig_SetString(&config, &config.program_name, program.c_str());
+        PyConfig_SetString(&config, &config.executable, program.c_str());
         auto status = Py_InitializeFromConfig(&config);
         PyConfig_Read(&config);
         if (PyStatus_Exception(status))
             return false;
-
-        if (!pythonPath.empty())
-        {
-            auto allpath = pythonPath.make_preferred();
-            for (int i=0; i < config.module_search_paths.length; i++)
-            {
-                allpath += ';';
-                allpath += config.module_search_paths.items[i];
-            }
-            PySys_SetPath(allpath.c_str());
-        }
     }
     return true;
 }
