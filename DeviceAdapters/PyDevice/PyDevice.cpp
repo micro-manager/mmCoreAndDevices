@@ -153,7 +153,6 @@ int CPyHub::Initialize()
             auto obj = key_value.GetTupleItem(1);
             auto type = obj.Get("device_type").as<string>();
             auto id = ComposeId(type, name);
-            obj.Set("_MM_id", id);
             devices_[id] = obj;
         }
 

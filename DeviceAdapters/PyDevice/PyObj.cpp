@@ -5,7 +5,6 @@ PyObj PyObj::g_traceback_to_string;
 PyObj PyObj::g_load_devices;
 PyObj PyObj::g_main_module;
 PyObj PyObj::g_global_scope;
-PyThreadState* PyObj::g_threadState = nullptr;
 
 /**
 * Takes a new reference and wraps it into a PyObj smart pointer.
@@ -27,9 +26,6 @@ string PyObj::g_errorMessage;
 */
 bool PyObj::Bootstrap() noexcept
 {
-    // enable multi-threading
-    g_threadState = PyEval_SaveThread();
-
     // run the bootstrapping script
     const char* bootstrap;
     #include "bootstrap.py"

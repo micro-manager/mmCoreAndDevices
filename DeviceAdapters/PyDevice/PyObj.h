@@ -119,14 +119,6 @@ public:
     template <> PyObj as<PyObj>() const {
         return *this;
     }
-/*    template <class T> void Set(const string& attribute, T value) {
-        Set(attribute.c_str(), value);
-    }*/
-    template <class T> void Set(const char* attribute, T value) {
-        PyLock lock;
-        if (PyObject_SetAttrString(*this, attribute, PyObj(value)) != 0)
-            ReportError();
-    }
     template <typename... Arguments> PyObj CallMember(const char* function, Arguments... arguments) const noexcept {
         PyLock lock;
         return Get(function).Call(arguments...);
@@ -224,7 +216,6 @@ public:
     */
     static bool ReportError();
     static string g_errorMessage;
-    static PyThreadState* g_threadState;
     static PyObj g_traceback_to_string;
     static PyObj g_load_devices;
     static PyObj g_main_module;
