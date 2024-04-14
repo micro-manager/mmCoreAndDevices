@@ -167,25 +167,33 @@ bool InitializePython(const fs::path& venv, bool search) noexcept
     // all paths are set up. When using the first function from the python dll (Py_IsInitialized below),
     // the delay-load mechanism will now load the correct dll
     if (!Py_IsInitialized()) {
-        //setlocale(LC_ALL, "");
         PyConfig config;
         PyConfig_InitPythonConfig(&config);
         config.isolated = 0;
         config.site_import = 1;
-        PyConfig_SetString(&config, &config.home, pythonHome.make_preferred().c_str());
-        PyConfig_SetString(&config, &config.executable, (pythonVenv / "Scripts" / "python.exe").make_preferred().c_str());
+        // if the line below is left out, Python adds the micro-manager bin folder to the path,
+        // because this is the current executable. This is incorrect, but causes little harm.
+        // if the line below is included, Python does _not+ add the virtual environment folder to the path! (perhaps it parses pyvenv.cfg and
+        // uses that 'home' entry?), so it is useless anyway.
+        //
+        // There seems to be no way to have Python add the search path to the virtual environment.
+        // We do this manually using PSys_SetPath below
+        // PyConfig_SetString(&config, &config.executable, (pythonVenv / "Scripts" / "python.exe").make_preferred().c_str());
         auto status = Py_InitializeFromConfig(&config);
         PyConfig_Read(&config);
         if (PyStatus_Exception(status))
             return false;
 
-        auto allpath = (pythonVenv / "Lib" / "site-packages").make_preferred();
-        for (int i=0; i < config.module_search_paths.length; i++)
+        if (!pythonPath.empty())
         {
-            allpath += ';';
-            allpath += config.module_search_paths.items[i];
+            auto allpath = pythonPath.make_preferred();
+            for (int i=0; i < config.module_search_paths.length; i++)
+            {
+                allpath += ';';
+                allpath += config.module_search_paths.items[i];
+            }
+            PySys_SetPath(allpath.c_str());
         }
-        PySys_SetPath(allpath.c_str());
     }
     return true;
 }
