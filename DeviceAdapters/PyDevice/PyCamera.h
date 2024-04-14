@@ -35,6 +35,7 @@ public:
 private:
     void ReleaseBuffer()
     {
+        PyLock lock;
         if (lastFrame_.obj) 
             PyBuffer_Release(&lastFrame_);
         lastFrame_.buf = nullptr;
