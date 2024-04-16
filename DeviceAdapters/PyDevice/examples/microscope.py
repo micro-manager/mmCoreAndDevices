@@ -7,7 +7,7 @@ processed images dynamically, demonstrating how changes in optical parameters af
 import astropy.units as u
 import numpy as np
 from openwfs.plot_utilities import grab_and_show, imshow
-from openwfs.simulation import Microscope, StaticSource
+from openwfs.simulation import Microscope, StaticSource, ADCProcessor
 from openwfs.utilities import set_pixel_size
 
 # Parameters that can be altered
@@ -47,11 +47,14 @@ cam = mic.get_camera(shot_noise=True, digital_max=255, data_shape=camera_resolut
 stage = mic.xy_stage
 
 # todo: remove when fixed in openwfs
-cam.__class__.exposure = cam.__class__.duration
-stage.__class__.step_size_x_um = float
+cam.__class__.exposure = cam.__class__.duration  # old version of openwfs does not yet have exposure property.
+cam.gaussian_noise_std = 0  # old version of openwfs has bug where gaussian noise was specified as integer. Make sure it actually _is_ an integer.
+stage.__class__.step_size_x_um = float  # old versiom of openwfs does not yet have step size properties.
 stage.step_size_x_um = 0.001
 stage.__class__.step_size_y_um = float
 stage.step_size_y_um = 0.001
+
+# construct dictionary of objects to expose to Micro-Manager
 devices = {'camera': cam, 'stage': stage}
 
 if __name__ == "__main__":
