@@ -645,6 +645,7 @@ public:
    ///@{
    std::string createDataset(const char* path, const char* name, std::vector<int> shape, const char* meta);
    void acqCloseDataset(const char* handle);
+   std::string loadDataset(const char* path, const char* name);
    void acqAddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<int> coordinates, const char* imageMeta);
    void configureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
