@@ -7630,6 +7630,31 @@ void CMMCore::acqCloseDataset(const char* handle)
 }
 
 /**
+ * Open an existing dataset in the specifed path.
+ *
+ * \param path - parent directory for the dataset
+ * \param name - name for the dataset
+ * \return - handle for the opened dataset
+ */
+std::string CMMCore::loadDataset(const char* path, const char* name)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      std::string handle;
+      int ret = storage->Load(path, name, handle);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+      return handle;
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
  * Adds a new image to the dataset. Width, hight and depth define the expected pixel array size.
  * Fails if coordinates do not fit into the dataset shape, or if the image dimenions are not supported.
  * It can also fail if the underlying implementation does not support the order of image coordinates.
