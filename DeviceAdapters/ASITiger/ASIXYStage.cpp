@@ -857,6 +857,9 @@ int CXYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
          CPropertyAction* pAct;
          advancedPropsEnabled_ = true;
 
+         // make sure that the new properties are initialized, set to true at the end of creating them
+         initialized_ = false;
+
          // overshoot (OS)
          pAct = new CPropertyAction (this, &CXYStage::OnOvershoot);
          CreateProperty(g_OvershootPropertyName, "0", MM::Float, false, pAct);
@@ -904,6 +907,8 @@ int CXYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
          CreateProperty(g_NrExtraMoveRepsPropertyName, "0", MM::Integer, false, pAct);
          SetPropertyLimits(g_NrExtraMoveRepsPropertyName, 0, 3);  // don't let the user set too high, though there is no actual limit
          UpdateProperty(g_NrExtraMoveRepsPropertyName);
+
+         initialized_ = true;
       }
    }
    return DEVICE_OK;
