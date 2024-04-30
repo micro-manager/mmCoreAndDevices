@@ -7615,7 +7615,7 @@ std::string CMMCore::createDataset(const char* path, const char* name, std::vect
  * 
  * \param handle - handle to the open dataset
  */
-void CMMCore::acqCloseDataset(const char* handle)
+void CMMCore::closeDataset(const char* handle)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -7669,7 +7669,7 @@ std::string CMMCore::loadDataset(const char* path, const char* name)
  * \param coordinates - coordinates of the image in the dimension space
  * \param imageMeta - serialized JSON with image specific metadata
  */
-void CMMCore::acqAddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta)
+void CMMCore::addImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
