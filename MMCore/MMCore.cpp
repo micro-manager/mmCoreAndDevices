@@ -8077,14 +8077,16 @@ std::string CMMCore::getStorageDevice() throw(CMMError)
  * \param meta - serialized JSON metadata
  * \return - handle for the new dataset
  */
-std::string CMMCore::createDataset(const char* path, const char* name, std::vector<int> shape, const char* meta)
+std::string CMMCore::createDataset(const char* path, const char* name, std::vector<long> shape, const char* meta)
 {
+   // NOTE: vector<long> is used instead of vector<int> in the signature because of Swig idiosyncracies
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
       std::string handle;
-      int ret = storage->Create(path, name, shape, meta, handle);
+      std::vector<int> intShape(shape.begin(), shape.end());
+      int ret = storage->Create(path, name, intShape, meta, handle);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8155,13 +8157,14 @@ std::string CMMCore::loadDataset(const char* path, const char* name)
  * \param coordinates - coordinates of the image in the dimension space
  * \param imageMeta - serialized JSON with image specific metadata
  */
-void CMMCore::acqAddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<int> coordinates, const char* imageMeta)
+void CMMCore::acqAddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
-      int ret = storage->AddImage(handle, pixels, width, height, depth, coordinates, imageMeta);
+      std::vector<int> coords(coordinates.begin(), coordinates.end());
+      int ret = storage->AddImage(handle, pixels, width, height, depth, coords, imageMeta);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
