@@ -644,9 +644,9 @@ public:
    /** \name Storage API */
    ///@{
    std::string createDataset(const char* path, const char* name, std::vector<long> shape, const char* meta);
-   void acqCloseDataset(const char* handle);
+   void closeDataset(const char* handle);
    std::string loadDataset(const char* path, const char* name);
-   void acqAddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta);
+   void addImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta);
    void configureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
    ///@}
