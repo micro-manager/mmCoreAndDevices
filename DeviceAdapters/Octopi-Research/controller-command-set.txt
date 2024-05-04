@@ -1,0 +1,132 @@
+The Cephla Octopi-Research controller has an Arduino Teensy inside that communicates with the computer through a USB-serial interace.  I had no problem getting it detected by my Windows OS.  The command interface can be gleaned from  https://github.com/hongquanli/octopi-research.  This is an attempt to document the interface while getting the device to do something.
+
+   Commands are send to the device in binary.  Command Length is defined in _def.py/MicrocontrollerDef.CMD_LENGTH and currently is set to 8.  A checksum is calculated fo each command using the CRC8.CCITT protocol.  The last byte of the 8 byte command is set to the value of this checksum.  So far, I have been unable to find an online calculator to generate this checksum, I'll have to get a Python terminal going to do this.  Otherwise, XCTU (https://hub.digi.com/support/products/xctu/?path=/support/asset/xctu-v-659-windows-x86x64/) is pretty good at sending commands to the controller.
+
+
+
+from: https://github.com/hongquanli/octopi-research/blob/master/software/control/_def.py
+
+class MicrocontrollerDef:
+    MSG_LENGTH = 24
+    CMD_LENGTH = 8
+    N_BYTES_POS = 4
+
+class Microcontroller2Def:
+    MSG_LENGTH = 4
+    CMD_LENGTH = 8
+    N_BYTES_POS = 4
+class MCU_PINS:
+    PWM1 = 5
+    PWM2 = 4
+    PWM3 = 22
+    PWM4 = 3
+    PWM5 = 23
+    PWM6 = 2
+    PWM7 = 1
+    PWM9 = 6
+    PWM10 = 7
+    PWM11 = 8
+    PWM12 = 9
+    PWM13 = 10
+    PWM14 = 15
+    PWM15 = 24
+    PWM16 = 25
+    AF_LASER = 15
+
+class CMD_SET:
+    MOVE_X = 0
+    MOVE_Y = 1
+    MOVE_Z = 2
+    MOVE_THETA = 3
+    HOME_OR_ZERO = 5
+    TURN_ON_ILLUMINATION = 10
+    TURN_OFF_ILLUMINATION = 11
+    SET_ILLUMINATION = 12
+    SET_ILLUMINATION_LED_MATRIX = 13
+    ACK_JOYSTICK_BUTTON_PRESSED = 14
+    ANALOG_WRITE_ONBOARD_DAC = 15
+    SET_DAC80508_REFDIV_GAIN = 16
+    SET_ILLUMINATION_INTENSITY_FACTOR = 17
+    MOVETO_X = 6
+    MOVETO_Y = 7
+    MOVETO_Z = 8
+    SET_LIM = 9
+    SET_LIM_SWITCH_POLARITY = 20
+    CONFIGURE_STEPPER_DRIVER = 21
+    SET_MAX_VELOCITY_ACCELERATION = 22
+    SET_LEAD_SCREW_PITCH = 23
+    SET_OFFSET_VELOCITY = 24
+    CONFIGURE_STAGE_PID = 25
+    ENABLE_STAGE_PID = 26
+    DISABLE_STAGE_PID = 27
+    SET_HOME_SAFETY_MERGIN = 28
+    SET_PID_ARGUMENTS = 29
+    SEND_HARDWARE_TRIGGER = 30
+    SET_STROBE_DELAY = 31
+    SET_PIN_LEVEL = 41
+    INITIALIZE = 254
+    RESET = 255
+
+class CMD_SET2:
+    ANALOG_WRITE_DAC8050X = 0
+    SET_CAMERA_TRIGGER_FREQUENCY = 1
+    START_CAMERA_TRIGGERING = 2
+    STOP_CAMERA_TRIGGERING = 3
+
+BIT_POS_JOYSTICK_BUTTON = 0
+BIT_POS_SWITCH = 1
+
+class HOME_OR_ZERO:
+    HOME_NEGATIVE = 1 # motor moves along the negative direction (MCU coordinates)
+    HOME_POSITIVE = 0 # motor moves along the negative direction (MCU coordinates)
+    ZERO = 2
+
+class AXIS:
+    X = 0
+    Y = 1
+    Z = 2
+    THETA = 3
+    XY = 4
+
+class LIMIT_CODE:
+    X_POSITIVE = 0
+    X_NEGATIVE = 1
+    Y_POSITIVE = 2
+    Y_NEGATIVE = 3
+    Z_POSITIVE = 4
+    Z_NEGATIVE = 5
+
+class LIMIT_SWITCH_POLARITY:
+    ACTIVE_LOW = 0
+    ACTIVE_HIGH = 1
+    DISABLED = 2
+    X_HOME= 1
+    Y_HOME= 1
+    Z_HOME= 2
+
+
+class ILLUMINATION_CODE:
+    ILLUMINATION_SOURCE_LED_ARRAY_FULL = 0;
+    ILLUMINATION_SOURCE_LED_ARRAY_LEFT_HALF = 1
+    ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_HALF = 2
+    ILLUMINATION_SOURCE_LED_ARRAY_LEFTB_RIGHTR = 3
+    ILLUMINATION_SOURCE_LED_ARRAY_LOW_NA = 4;
+    ILLUMINATION_SOURCE_LED_ARRAY_LEFT_DOT = 5;
+    ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_DOT = 6;
+    ILLUMINATION_SOURCE_LED_EXTERNAL_FET = 20
+    ILLUMINATION_SOURCE_405NM = 11
+    ILLUMINATION_SOURCE_488NM = 12
+    ILLUMINATION_SOURCE_638NM = 13
+    ILLUMINATION_SOURCE_561NM = 14
+    ILLUMINATION_SOURCE_730NM = 15
+
+class VOLUMETRIC_IMAGING:
+    NUM_PLANES_PER_VOLUME = 20
+
+class CMD_EXECUTION_STATUS:
+    COMPLETED_WITHOUT_ERRORS = 0
+    IN_PROGRESS = 1
+    CMD_CHECKSUM_ERROR = 2
+    CMD_INVALID = 3
+    CMD_EXECUTION_ERROR = 4
+    ERROR_CODE_EMPTYING_THE_FLUDIIC_LINE_FAILED = 10
