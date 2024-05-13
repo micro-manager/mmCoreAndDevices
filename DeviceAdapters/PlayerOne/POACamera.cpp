@@ -251,9 +251,8 @@ POACamera::POACamera() :
         selectCamName_ = "No POA camera found";
     }
 
-    int ret = CreateStringProperty(g_SelectCamera, selectCamName_.c_str(), false, pAct, true);
+    CreateStringProperty(g_SelectCamera, selectCamName_.c_str(), false, pAct, true);
     SetAllowedValues(g_SelectCamera, connectCamerasName_);
-    assert(ret == DEVICE_OK);
 
     CreateFloatProperty("MaximumExposureMs", exposureMaximum_, false,
         new CPropertyAction(this, &POACamera::OnMaxExposure),
@@ -860,7 +859,7 @@ int POACamera::SnapImage()
                 return DEVICE_SNAP_IMAGE_FAILED;
             }
             std::memcpy(pRGB24, pImgBuffer, RGB24BufSize_);
-            BGR888ToRGB32(pRGB24, pImgBuffer, RGB24BufSize_, isEnableGamma);
+            BGR888ToRGB32(pRGB24, pImgBuffer, (int) RGB24BufSize_, isEnableGamma);
         }
         else
         {
@@ -1410,7 +1409,7 @@ int POACamera::InsertImage()
  * Do actual capturing
  * Called from inside the thread
  */
-int POACamera::RunSequenceOnThread(MM::MMTime startTime)
+int POACamera::RunSequenceOnThread(MM::MMTime /* startTime */)
 {
     LOG("RunSequenceOnThread")
 
@@ -1444,7 +1443,7 @@ int POACamera::RunSequenceOnThread(MM::MMTime startTime)
                 return DEVICE_ERR;
             }
             std::memcpy(pRGB24, pImgBuffer, RGB24BufSize_);
-            BGR888ToRGB32(pRGB24, pImgBuffer, RGB24BufSize_, isEnableGamma);
+            BGR888ToRGB32(pRGB24, pImgBuffer, (int) RGB24BufSize_, isEnableGamma);
         }
         else
         {
@@ -1813,7 +1812,7 @@ int POACamera::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
             dblExp = exposureMaximum_;
         }
 
-        long lExp = dblExp * 1000;
+        long lExp = (long) (dblExp * 1000.0);
         POASetConfig(camProp_.cameraID, POA_EXPOSURE, lExp, POA_FALSE);
 
         ret = DEVICE_OK;
@@ -3118,9 +3117,8 @@ POAFilterWheel::POAFilterWheel() :
         selectPWName_ = "No POA filter wheel found";
     }
 
-    int ret = CreateStringProperty(g_SelectFilterWheel, selectPWName_.c_str(), false, pAct, true);
+    CreateStringProperty(g_SelectFilterWheel, selectPWName_.c_str(), false, pAct, true);
     SetAllowedValues(g_SelectFilterWheel, connectPWsName_);
-    assert(ret == DEVICE_OK);
 }
 
 POAFilterWheel::~POAFilterWheel()

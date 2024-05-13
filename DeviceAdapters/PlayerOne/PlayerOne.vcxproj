@@ -71,13 +71,13 @@
 ;WIN32;_DEBUG;PLAYERONE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\PlayerOne\FilterWheelSDK\include;$(MM_3RDPARTYPRIVATE)\PlayerOne\CameraSDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\PlayerOne\FilterWheelSDK\include;$(MM_3RDPARTYPUBLIC)\PlayerOne\CameraSDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\PlayerOne\FilterWheelSDK\lib\Win\x64;$(MM_3RDPARTYPRIVATE)\PlayerOne\CameraSDK\lib\Win\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\PlayerOne\FilterWheelSDK\lib\Win\x64;$(MM_3RDPARTYPRIVATE)\PlayerOne\CameraSDK\lib\Win\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>PlayerOneCamera.lib;PlayerOnePW.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -90,7 +90,7 @@
 WIN32;NDEBUG;PLAYERONE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\PlayerOne\FilterWheelSDK\include;$(MM_3RDPARTYPRIVATE)\PlayerOne\CameraSDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPUBLIC)\PlayerOne\FilterWheelSDK\include;$(MM_3RDPARTYPUBLIC)\PlayerOne\CameraSDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -98,7 +98,7 @@ WIN32;NDEBUG;PLAYERONE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</Prep
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\PlayerOne\FilterWheelSDK\lib\Win\x64;$(MM_3RDPARTYPRIVATE)\PlayerOne\CameraSDK\lib\Win\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\PlayerOne\FilterWheelSDK\lib\Win\x64;$(MM_3RDPARTYPUBLIC)\PlayerOne\CameraSDK\lib\Win\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>PlayerOneCamera.lib;PlayerOnePW.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
