@@ -487,6 +487,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NotificationTester", "Devic
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DahengGalaxy", "DeviceAdapters\DahengGalaxy\DahengGalaxy.vcxproj", "{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HikRobot", "DeviceAdapters\HikRobot\HikRobot.vcxproj", "{38DCD378-83FE-4C42-8916-1C477A35F65F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1465,6 +1467,10 @@ Global
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Debug|x64.Build.0 = Debug|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x64.ActiveCfg = Release|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x64.Build.0 = Release|x64
+		{38DCD378-83FE-4C42-8916-1C477A35F65F}.Debug|x64.ActiveCfg = Debug|x64
+		{38DCD378-83FE-4C42-8916-1C477A35F65F}.Debug|x64.Build.0 = Debug|x64
+		{38DCD378-83FE-4C42-8916-1C477A35F65F}.Release|x64.ActiveCfg = Release|x64
+		{38DCD378-83FE-4C42-8916-1C477A35F65F}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
