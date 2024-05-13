@@ -964,7 +964,11 @@ namespace MM {
 
 
    /**
-    * SLM API
+    * Spatial Ligh Modulator (SLM) API.  An SLM is a device that can display images.
+    * It is expected to represent a rectangular grid (i.e. it has width and height) 
+    * of pixels that can be either 8 bit or 32 bit.  Illumination (light source on 
+    * or off) is logically independent of displaying the image.  Likely the most 
+    * widely used implmentation is the GenericSLM.
     */
    class SLM : public Device
    {
@@ -1113,6 +1117,17 @@ namespace MM {
 
    /**
     * Galvo API
+    * A Galvo in Micro-Manager is a two-axis (conveniently labeled x and y) that can illuminate
+    * a sample in the microscope.  It therefore also has the capability to switch a light source 
+    * on and off (note that this functionality can be offloaded to a shutter device 
+    * that can be obtained through a callback).  Galvos can illuminate a point, or 
+    * possibly be directed to illuminate a polygon by scanning the two axis and controlling
+    * the light source so that only the area with the polygon is illuminated.
+    * Currently known implementations are Utilities-DAGalvo (which uses two DAs to 
+    * control a Galvo), Democamera-Galvo, ASITiger-ASIScanner, and Rapp.
+    * There is no integration with a detector as would be needed for a confocal microscope,
+    * and there is also no support for waveforms.
+    * 
     */
    class Galvo : public Device
    {
@@ -1128,15 +1143,40 @@ namespace MM {
       /**
        * Moves the galvo devices to the requested position, activates the light
        * source, waits for the specified amount of time (in microseconds), and
-       * deactivates the light source
+       * deactivates the light source.
+       * @return errorcode (DEVICE_OK if no error)
        */
       virtual int PointAndFire(double x, double y, double time_us) = 0;
+      /**
+       * This function seems to be misnamed.  Its name suggest that it is the 
+       * interval between illuminating two consecutive spots, but in practice it 
+       * is used to set the time a single spot is illuminated (and the time 
+       * to move between two spots is usually extremely short).
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int SetSpotInterval(double pulseInterval_us) = 0;
+      /**
+       * Sets the position of the two axes of the Galvo device in native 
+       * unit (usually through a voltage that controls the galvo posiution).
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int SetPosition(double x, double y) = 0;
+      /**
+       * Returns the current position of the two axes (usually the last position 
+       * that was set, although this may be different for Galvo devices that also
+       * can be controlled through another source). 
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int GetPosition(double& x, double& y) = 0;
+      /**
+       * Switches the light source under control of this device on or off.  If light control
+       * through a Shutter device is desired, a property should be added that can be set 
+       * to the name of the lightsource. 
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int SetIlluminationState(bool on) = 0;
       /**
-       * X range of the device in native units
+       * X range of the device in native units.
        */
       virtual double GetXRange() = 0;
       /**
@@ -1145,21 +1185,69 @@ namespace MM {
        */
       virtual double GetXMinimum() = 0;
       /**
-       * Y range of the device in native units
+       * Y range of the device in native units.
        */
       virtual double GetYRange() = 0;
       /**
-       * Minimum Y value for the device in native units
-       * Must be implemented if it is not 0.0
+       * Minimum Y value for the device in native units.
+       * Must be implemented if it is not 0.0.
        */
       virtual double GetYMinimum() = 0;
+      /**
+       * A galvo device in principle can draw arbitrary polygons.  Polygons are 
+       * added added here point by point.  There is nothing in the API that prevents
+       * adding polygons in random order, but most implementations so far
+       * do not deal with that well (i.e. expect polygons to be added in incremental
+       * order).  Vertex points are added in order and can not be modified through the API
+       * after adding (only way is to delete all polygons and start anew).
+       * 
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int AddPolygonVertex(int polygonIndex, double x, double y) = 0;
+      /**
+       * Deletes all polygons previously stored in the device adapater.
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int DeletePolygons() = 0;
+      /**
+       * Presumably the idea of this function is to have the Galvo draw the 
+       * each polygon in the pre-loaded sequence after its controller receives
+       * a TTL trigger.  This is not likely to be supported by all Galvo devices.
+       * There currently is no API method to query whether Sequences are supported.
+       * When the number of TTLs exceeds the number of polygons, the desired behavior
+       * is to repeat the sequence from the beginning.
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int RunSequence() = 0;
+      /**
+       * Transfers the polygons from the device adapter memory to the Galvo controller.
+       * Should be called before RunPolygons() or RunSequence(). This is mainly an 
+       * optimization so that the device adapter does not need to transfer each vertex
+       * individually.  Some Galvo device adapters will do nothing in this function.
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int LoadPolygons() = 0;
+      /**
+       * Sets the number of times the polygons should be displayed in the RunPolygons
+       * function.
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int SetPolygonRepetitions(int repetitions) = 0;
+      /**
+       * Displays each pre-loaded polygon in sequence, each illuminated for pulseinterval_us
+       * micro-seconds.
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int RunPolygons() = 0;
+      /**
+       * Stops the TTL triggered transitions of drawing polygons started in RunSequence().
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int StopSequence() = 0;
+      /**
+       * It is completely unclear what this function is supposed to do.  Deprecate?.
+       * @return errorcode (DEVICE_OK if no error)
+       */
       virtual int GetChannel(char* channelName) = 0;
    };
 
@@ -1228,7 +1316,17 @@ namespace MM {
       Core() {}
       virtual ~Core() {}
 
+      /**
+       * Logs a message (msg) in the Corelog output, labeled with the device name (derived 
+       * from caller).  If debugOnly flag is true, the output will only be logged if the 
+       * general system has been set to output debug logging.
+       */
       virtual int LogMessage(const Device* caller, const char* msg, bool debugOnly) const = 0;
+      /**
+       * Callback that allows this device adapter to get a pointer to another device.  Be aware of
+       * potential threading issues. Provide a valid label for the device and receive a pointer 
+       * to the desired device.
+       */
       virtual Device* GetDevice(const Device* caller, const char* label) = 0;
       virtual int GetDeviceProperty(const char* deviceName, const char* propName, char* value) = 0;
       virtual int SetDeviceProperty(const char* deviceName, const char* propName, const char* value) = 0;
