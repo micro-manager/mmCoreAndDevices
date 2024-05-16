@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "config.h"
 
 fs::path pythonHome; // location of python3xx.dll
 fs::path pythonVenv; // location of pyvenv.cfg
@@ -160,29 +159,15 @@ bool InitializePython(const fs::path& venv, bool search) noexcept
     // all paths are set up. When using the first function from the python dll (Py_IsInitialized below),
     // the delay-load mechanism will now load the correct dll
     if (!Py_IsInitialized()) {
-        PyConfig config;
-        PyConfig_InitPythonConfig(&config);
-        config.site_import = 1;
-
-        // after a lot of trial and error, the method below seems to work
-        // it makes the Python runtime open the pyvenv.cfg file and parse it,
-        // and add the pythonVenv / "Lib" / "site-packages" to the system path
         if (!pythonVenv.empty())
         {
-            config.isolated = 1;
             auto program = (pythonVenv / "Scripts" / "python.exe").make_preferred();
-            PyConfig_SetString(&config, &config.program_name, program.c_str());
-            PyConfig_SetString(&config, &config.executable, program.c_str());
-        } else
-        {
-            // not using a virtual environment. Let Python figure out the paths itself.
-            config.isolated = 0;
+            Py_SetProgramName(program.c_str());
         }
-        auto status = Py_InitializeFromConfig(&config);
-        PyConfig_Read(&config);
-        if (PyStatus_Exception(status))
-            return false;
-
+        // else: not using a virtual environment. Let Python figure out the paths itself.
+        
+        Py_InitializeEx(0); // note: some Python distributions just crash here if there is a configuration error
+        
         // enable multi-threading
         if (!g_threadState)
             g_threadState = PyEval_SaveThread();

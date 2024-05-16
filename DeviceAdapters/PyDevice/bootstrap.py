@@ -148,13 +148,9 @@ class PyDevice:
         elif self._init_stage():
             self.device_type = 'Stage'
         else:
-            # 'busy' is optional for generic device types
-            if not self._has_methods('busy'):
-                self.methods['busy'] = lambda: False
             self.device_type = 'Device'
-
-        if not self._has_methods('busy'):
-            raise Exception(f"Device type '{self.device_type}' must have a 'busy' method")
+        
+        # The 'busy' method is optional
 
     def _init_camera(self) -> bool:
         """Checks if the device corresponds to a Camera, and prepares the camera object if it does"""

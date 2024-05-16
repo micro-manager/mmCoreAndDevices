@@ -190,6 +190,9 @@ public:
 
     bool Busy() override
     {
+        if (!busy_)
+            return false; // device does not have a busy() method
+
         auto retval = busy_.Call().as<bool>();
         CheckError();
         return retval;

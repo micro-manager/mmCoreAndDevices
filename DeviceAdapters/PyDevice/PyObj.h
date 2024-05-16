@@ -143,13 +143,16 @@ public:
         if (PyDict_SetItemString(*this, key, PyObj(value)) != 0)
             ReportError();
     }*/
+    // Returns the dictionary item indicated by 'key'
+    // returns an empty PyObj if the key is missing
     PyObj GetDictItem(const char* key) const noexcept {
         PyLock lock;
         return Borrow(PyDict_GetItemString(*this, key));
     }
+    /*
     PyObj GetDictItem(const string& key) const noexcept {
         return GetDictItem(key.c_str());
-    }
+    }*/
     PyObj GetListItem(Py_ssize_t index) const noexcept {
         return Borrow(PyList_GetItem(*this, index));
     }
