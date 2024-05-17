@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <filesystem>
 namespace fs = std::filesystem;
-bool InitializePython(const fs::path& venv, bool search) noexcept;
+fs::path InitializePython(fs::path& venv, bool search) noexcept;
 
 typedef uintptr_t       Py_uintptr_t;
 typedef intptr_t        Py_intptr_t;

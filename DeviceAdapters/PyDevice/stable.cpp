@@ -1,7 +1,5 @@
 #include "pch.h"
 
-fs::path pythonHome; // location of python3xx.dll
-fs::path pythonVenv; // location of pyvenv.cfg
 HMODULE pythonDll = nullptr; // handle to loaded python3xx.dll
 PyThreadState* g_threadState = nullptr; // pointer to the thread state
 
@@ -16,28 +14,27 @@ PyObject* Py_False = nullptr;
 /**
     @brief Tries to open and parse pyvenv.cfg
 
+
     When running in a virtual environment, we need to read the 'home' entry of the pyvenv.cfg configuration file,
     since it points to the location of the pythonxx.dll that we need to load.
     We have to load this dll before calling any Python API function, and we must load the correct one (there may be multiple python dlls,
     and we don't know the version number in advance).
 */
-bool TryParsePyvenv(const fs::path& venv) noexcept
+fs::path TryParsePyvenv(const fs::path& venv) noexcept
 {
     auto configFile = std::ifstream(venv / "pyvenv.cfg");
     if (!configFile.is_open())
-        return false; // file not found or could not be opened
+        return {}; // file not found or could not be opened
 
     // locate the `home = ...` value
     string line;
     while (std::getline(configFile, line)) {
         std::smatch matches;
         if (std::regex_search(line, matches, key_value)) {
-            pythonVenv = venv;
-            pythonHome = matches.str(1);
-            return true;
+            return matches.str(1);
         }
     }
-    return false; // pyvenv.cfg did not contain a 'home', we cannot use it
+    return {}; // pyvenv.cfg did not contain a 'home', we cannot use it
 }
 
 // Hook for the delay-loading the python dll. Instead of loading the dll, we return a handle to the pre-loaded dll
@@ -54,6 +51,8 @@ ExternC const PfnDliHook __pfnDliNotifyHook2 = delayHook;
 /**
  * \brief Loads the python3xx.dll runtime library using the specified folder to locate it
  *
+ * Updates the venv path, and returns the home path
+ *
  * If search is false, `venv` should be the root folder of a Python virtual environment. It should hold an `pyvenv.cfg` file
  * with a `home` variable that points to the folder holding python3xx.dll (i.e. PYTHONHOME).
  *
@@ -66,14 +65,15 @@ ExternC const PfnDliHook __pfnDliNotifyHook2 = delayHook;
  * \param venv 
  * \param search 
  */
-bool SetupPaths(const fs::path& venv, bool search)
+fs::path SetupPaths(fs::path& venv, bool search)
 {
     // option 1: load the specified virtual environment
-    if (TryParsePyvenv(venv))
-        return true;
+    auto pythonHome = TryParsePyvenv(venv);
+    if (!pythonHome.empty())
+        return pythonHome;
 
     if (!search)
-        return false;
+        return {};
 
     // option 2: look in parent folders for venv or .venv and load that virtual environment
     fs::path searchPath = venv;
@@ -83,16 +83,24 @@ bool SetupPaths(const fs::path& venv, bool search)
         if (searchPath.empty())
             break;
 
-        if (TryParsePyvenv(searchPath / "venv") || TryParsePyvenv(searchPath / ".venv"))
-            return true;
+        for (auto dir : { "venv", ".venv" })
+        {
+            venv = searchPath / dir;
+            pythonHome = TryParsePyvenv(venv);
+            if (!pythonHome.empty())
+               return pythonHome;
+        }
     }
+
+    venv.clear(); // we could not locate a virtual environment
 
     // option 3: check the PYTHONHOME environmental variable
     // in this case, there is no virtual environment
     if (auto pythonHomeVariable = _wgetenv(L"PYTHONHOME"))
     {
         pythonHome = pythonHomeVariable;
-        return true;
+        if (!pythonHome.empty())
+            return pythonHome;
     }
 
     // option 4: check if the OS can find python3.dll. If so, use that folder
@@ -103,22 +111,22 @@ bool SetupPaths(const fs::path& venv, bool search)
         if (GetModuleFileName(handle, dllPath, MAX_PATH))
             pythonHome = fs::path(dllPath).parent_path();
         FreeLibrary(handle);
-        return !pythonHome.empty();
+        return pythonHome;
     }
 
-    return false;
+    return {};
 }
 
 
 
 /**
  * \brief Locates and loads the python3xx.dll runtime library
- * \param scriptPath
+ * \param venv location of the virtual environment to use. When 'search' = true, 'venv' may be updated to the location the virtual environment was found.
+ * \returns The path of the python3x.dll that was loaded, or an empty path if no python3x.dll was found or if it could not be loaded
  */
-bool InitializePython(const fs::path& venv, bool search) noexcept
+fs::path InitializePython(fs::path& venv, bool search) noexcept
 {
-    pythonHome.clear();
-    pythonVenv.clear();
+    fs::path dllPath;
     if (pythonDll)
     {
         FreeLibrary(pythonDll);
@@ -127,41 +135,43 @@ bool InitializePython(const fs::path& venv, bool search) noexcept
 
     try {
         // Locate python home and python path
-        if (!SetupPaths(venv, search))
-            return false;
+        auto pythonHome = SetupPaths(venv, search);
+        if (pythonHome.empty())
+            return {};
 
         // Search the home folder for a file of the name python3xx.dll
         // When found, load the dll
         for (const auto& entry : fs::directory_iterator(pythonHome))
             if (entry.is_regular_file() && std::regex_match(entry.path().filename().string(), filenamePattern))
             {
-                pythonDll = LoadLibrary(entry.path().generic_wstring().c_str());
+                dllPath = entry.path();
+                pythonDll = LoadLibrary(dllPath.generic_wstring().c_str());
                 if (!pythonDll)
-                    return false; // could not load the python dll!
+                    return {}; // could not load the python dll!
 
                 // Load the data members from the DLL
                 Py_None = reinterpret_cast<PyObject*>(GetProcAddress(pythonDll, "_Py_NoneStruct"));
                 Py_True = reinterpret_cast<PyObject*>(GetProcAddress(pythonDll, "_Py_TrueStruct"));
                 Py_False = reinterpret_cast<PyObject*>(GetProcAddress(pythonDll, "_Py_FalseStruct"));
                 if (Py_None == nullptr || Py_False == nullptr || Py_True == nullptr) 
-                    return false; // we loaded the dll, but it does not hold the none true and false data members!?
+                    return {}; // we loaded the dll, but it does not hold the none true and false data members!?
                 break;
             }
         if (!pythonDll)
-            return false; // there was no python dll in the home folder
+            return {}; // there was no python dll in the home folder
     }
     catch (const fs::filesystem_error&)
     {
-        return false; // there was an error accessing one of the files or iterating one of the folders
+        return {}; // there was an error accessing one of the files or iterating one of the folders
     }
 
     // Start the Python interpreter if it is not running yet
     // all paths are set up. When using the first function from the python dll (Py_IsInitialized below),
     // the delay-load mechanism will now load the correct dll
     if (!Py_IsInitialized()) {
-        if (!pythonVenv.empty())
+        if (!venv.empty())
         {
-            auto program = (pythonVenv / "Scripts" / "python.exe").make_preferred();
+            auto program = (venv / "Scripts" / "python.exe").make_preferred();
             Py_SetProgramName(program.c_str());
         }
         // else: not using a virtual environment. Let Python figure out the paths itself.
@@ -173,6 +183,6 @@ bool InitializePython(const fs::path& venv, bool search) noexcept
             g_threadState = PyEval_SaveThread();
     }
 
-    return true;
+    return dllPath;
 }
 

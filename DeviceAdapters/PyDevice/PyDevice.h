@@ -231,6 +231,8 @@ class CPyHub : public PyHubClass
 {
     static constexpr const char* p_PythonScriptPath = "ScriptPath";
     static constexpr const char* p_PythonPath = "PythonEnvironment";
+    static constexpr const char* p_DllPath = "Python executable";
+    static constexpr const char* p_VirtualEnvironment = "Virtual environment";
 
 public:
     static constexpr const char* g_adapterName = "PyHub";

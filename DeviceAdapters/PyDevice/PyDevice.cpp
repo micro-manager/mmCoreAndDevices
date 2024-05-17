@@ -129,8 +129,13 @@ int CPyHub::Initialize()
             return {}; // could not read path property, this is an error!
 
         bool search = strcmp(pythonPathStr, "(auto)") == 0;
-        if (!InitializePython(search ? script_path_.parent_path() : pythonPathStr, search))
+        auto venvPath = search ? script_path_.parent_path() : fs::path(pythonPathStr);
+        auto pythonDllPath = InitializePython(venvPath, search);
+        if (pythonDllPath.empty())
             return ERR_PYTHON_RUNTIME_NOT_FOUND;
+        CreateStringProperty(p_DllPath, pythonDllPath.generic_u8string().c_str(), true, nullptr, false);
+        CreateStringProperty(p_VirtualEnvironment, venvPath.generic_u8string().c_str(), true, nullptr, false);
+        
 
         if (!PyObj::Bootstrap())
             return CheckError(); // initializing the interpreter failed, abort initialization and report the error
