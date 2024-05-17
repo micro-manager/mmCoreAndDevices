@@ -529,9 +529,7 @@ std::string NIDAQHub::GetPhysicalChannelListForSequencing(std::vector<std::strin
 template<typename T>
 inline int NIDAQHub::GetLCMSamplesPerChannel(size_t& seqLen, std::vector<std::vector<T>> channelSequences) const
 {
-   // Use an arbitrary but reasonable limit to prevent
-   // overflow or excessive memory consumption.
-   const uint64_t factorLimit = 2 << 14;
+   const uint64_t factorLimit = channelSequences.size() * maxSequenceLength_;
 
    uint64_t len = 1;
    for (unsigned int i = 0; i < channelSequences.size(); ++i)

@@ -481,13 +481,18 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsCHROLIS", "DeviceAdapters\ThorlabsCHROLIS\ThorlabsCHROLIS.vcxproj", "{F93128A5-B344-4662-BFB8-B4CAECF1FE52}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IDSPeak", "DeviceAdapters\IDSPeak\IDSPeak.vcxproj", "{823CF77E-8120-41B1-9B25-823A79C93198}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QSI", "DeviceAdapters\QSI\QSI.vcxproj", "{320AF64E-C4FC-4A97-A7D1-F8233A8A44C7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NotificationTester", "DeviceAdapters\NotificationTester\NotificationTester.vcxproj", "{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PlayerOne", "DeviceAdapters\PlayerOne\PlayerOne.vcxproj", "{46F4FFAF-79FD-45D9-A2C5-9E16B46787C5}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DahengGalaxy", "DeviceAdapters\DahengGalaxy\DahengGalaxy.vcxproj", "{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PyDevice", "DeviceAdapters\PyDevice\PyDevice.vcxproj", "{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HikRobot", "DeviceAdapters\HikRobot\HikRobot.vcxproj", "{38DCD378-83FE-4C42-8916-1C477A35F65F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1463,10 +1468,18 @@ Global
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Debug|x64.Build.0 = Debug|x64
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Release|x64.ActiveCfg = Release|x64
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Release|x64.Build.0 = Release|x64
+		{46F4FFAF-79FD-45D9-A2C5-9E16B46787C5}.Debug|x64.ActiveCfg = Debug|x64
+		{46F4FFAF-79FD-45D9-A2C5-9E16B46787C5}.Debug|x64.Build.0 = Debug|x64
+		{46F4FFAF-79FD-45D9-A2C5-9E16B46787C5}.Release|x64.ActiveCfg = Release|x64
+		{46F4FFAF-79FD-45D9-A2C5-9E16B46787C5}.Release|x64.Build.0 = Release|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Debug|x64.ActiveCfg = Debug|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Debug|x64.Build.0 = Debug|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x64.ActiveCfg = Release|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x64.Build.0 = Release|x64
+		{38DCD378-83FE-4C42-8916-1C477A35F65F}.Debug|x64.ActiveCfg = Debug|x64
+		{38DCD378-83FE-4C42-8916-1C477A35F65F}.Debug|x64.Build.0 = Debug|x64
+		{38DCD378-83FE-4C42-8916-1C477A35F65F}.Release|x64.ActiveCfg = Release|x64
+		{38DCD378-83FE-4C42-8916-1C477A35F65F}.Release|x64.Build.0 = Release|x64
 		{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}.Debug|x64.ActiveCfg = Debug|x64
 		{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}.Debug|x64.Build.0 = Debug|x64
 		{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}.Release|x64.ActiveCfg = Release|x64

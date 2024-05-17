@@ -715,6 +715,9 @@ int CZStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
          CPropertyAction* pAct;
          advancedPropsEnabled_ = true;
 
+         // make sure that the new properties are initialized, set to true at the end of creating them
+         initialized_ = false;
+
          // overshoot (OS)
          pAct = new CPropertyAction (this, &CZStage::OnOvershoot);
          CreateProperty(g_OvershootPropertyName, "0", MM::Float, false, pAct);
@@ -754,6 +757,8 @@ int CZStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
          pAct = new CPropertyAction (this, &CZStage::OnAZero);
          CreateProperty(g_AZeroXPropertyName, "0", MM::String, false, pAct);
          UpdateProperty(g_AZeroXPropertyName);
+
+         initialized_ = true;
       }
    }
    return DEVICE_OK;

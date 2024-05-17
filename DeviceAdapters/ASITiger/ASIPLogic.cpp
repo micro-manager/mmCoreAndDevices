@@ -74,14 +74,16 @@ CPLogic::CPLogic(const char* name) :
    CPropertyAction* pAct;
 
    // pre-init property to say how PLogic card is used
-   // original option is have shutter functionality for diSPIM (laser controls on BNCs 5-8)
-   // second option to have similar function with laser controls on BNCs 5-8 but not use diSPIM beam enable
+   // diSPIM shutter has shutter functionality for diSPIM (laser controls on BNCs 5-8)
+   // 7-channel shutter has laser controls on BNCs 1-7
+   // 7-channel TTL shutter has laser controls on BNCs 1-7 and single camera control on BNC 8
    pAct = new CPropertyAction (this, &CPLogic::OnPLogicMode);
    CreateProperty(g_PLogicModePropertyName, g_PLogicModeNone, MM::String, false, pAct, true);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicModeNone);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicModediSPIMShutter);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicMode4ChShutter);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicMode7ChShutter);
+   AddAllowedValue(g_PLogicModePropertyName, g_PLogicMode7ChTTLShutter);
 }
 
 int CPLogic::Initialize()
@@ -157,7 +159,7 @@ int CPLogic::Initialize()
    AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode2, 2);
    AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode3, 3);
    AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode4, 4);
-   if (useAs4ChShutter_)  // includes useAsdiSPIMShutter_
+   if (useAs4ChShutter_)
    {
       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode5, 5);
       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode6, 6);
@@ -351,61 +353,71 @@ int CPLogic::Initialize()
       // special masked preset selector for shutter channel
       pAct = new CPropertyAction (this, &CPLogic::OnSetShutterChannel);
       CreateProperty(g_SetChannelPropertyName, g_7ChannelNone, MM::String, false, pAct);
-      // use (CCA X) card presets here, just under a different name
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly1, 37);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly2, 38);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly3, 39);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly4, 40);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly5, 41);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly6, 42);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly7, 43);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel2And4, 44);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel3And5, 45);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel4And6, 46);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel5And7, 47);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel1And3And5, 48);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel2And4And6, 49);
-      AddAllowedValue(g_SetChannelPropertyName, g_7ChannelNone, 50);
-      if (FirmwareVersionAtLeast(3.35)) {
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel1And6, 53);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel1And4And6, 54);
-      }
-      if (FirmwareVersionAtLeast(3.37)) {
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel1And4, 55);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel2And5, 56);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel3And6, 57);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel1And5, 58);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel2And6, 59);
+      if (FirmwareVersionAtLeast(3.29)) {
+          // use (CCA X) card presets here, just under a different name
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly1, 37);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly2, 38);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly3, 39);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly4, 40);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly5, 41);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly6, 42);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly7, 43);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel2And4, 44);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel3And5, 45);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel4And6, 46);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel5And7, 47);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel1And3And5, 48);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel2And4And6, 49);
+          AddAllowedValue(g_SetChannelPropertyName, g_7ChannelNone, 50);
+          if (FirmwareVersionAtLeast(3.35)) {
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel1And6, 53);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel1And4And6, 54);
+          }
+          if (FirmwareVersionAtLeast(3.37)) {
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel1And4, 55);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel2And5, 56);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel3And6, 57);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel1And5, 58);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel2And6, 59);
+          }
       }
       UpdateProperty(g_SetChannelPropertyName);               // doesn't do anything right now
       SetProperty(g_SetChannelPropertyName, g_7ChannelNone);  // makes sure card actually gets initialized
       SetOpen(false);                                         // always start shutter in closed state
    }
 
-   if (useAsdiSPIMShutter_) {
-      // set up card up for diSPIM shutter
-      // this sets up all 8 BNC outputs including 4 lasers
-      SetProperty(g_SetCardPresetPropertyName, g_PresetCode14);
-
-      // set to be triggered by micro-mirror card for diSPIM case
+   if (useAsdiSPIMShutter_) { // true if it is triggered by backplane TTL1 like in diSPIM
+      // set PLC clock/trigger source to be micro-mirror card
       SetProperty(g_TriggerSourcePropertyName, g_TriggerSourceCode1);
-   }
 
-   // things for shutter when not a diSPIM
-   if ((useAs4ChShutter_ || useAs7ChShutter_) && !useAsdiSPIMShutter_) {
-      // sets up 4 lasers triggered by cell 10
-      SetProperty(g_SetCardPresetPropertyName, g_PresetCode12);
-
-      // make it ignore the TTL backplane signal usually from the micro-mirror card
-      if (FirmwareVersionAtLeast(3.27)) {
-         SetProperty(g_SetCardPresetPropertyName, g_PresetCode36);
-      } else {
-         // have to replicate preset behavior ourselves: cell 10 will reflect cell 8
-         SetProperty(g_PointerPositionPropertyName, "10");
-         SetProperty(g_EditCellTypePropertyName, g_CellTypeCode5);
-         SetProperty(g_EditCellInput1PropertyName, "64");
-         SetProperty(g_EditCellInput2PropertyName, "8");
+      if (useAs4ChShutter_) { // original diSPIM use case
+          // set up card up for diSPIM shutter
+          // this sets up all 8 BNC outputs including 4 lasers, sets cell 10 as the "hardware shutter open" indicator, etc.
+          // NB this sets up camera and laser triggers too
+          SetProperty(g_SetCardPresetPropertyName, g_PresetCode14);
       }
+
+      if (useAs7ChShutter_) {
+          // sets cell 10 as "hardware shutter open" indicator combining the TTL1 line and cell 8 which is "software shutter open"
+          SetProperty(g_SetCardPresetPropertyName, g_PresetCode12);
+
+          // set output #8 to be Camera0 trigger which is on the internal TTL0 line
+          SetProperty(g_PointerPositionPropertyName, "40");
+          SetProperty(g_EditCellTypePropertyName, g_IOTypeCode2);
+          SetProperty(g_EditCellConfigPropertyName, "41");
+      }
+
+   } else if (useAs4ChShutter_ || useAs7ChShutter_) { // things for shutter when a shutter but not TTL1-triggered
+       // make it ignore the TTL backplane signal usually from the micro-mirror card
+       if (FirmwareVersionAtLeast(3.27)) {
+           SetProperty(g_SetCardPresetPropertyName, g_PresetCode36);
+       } else {
+           // have to replicate preset behavior ourselves: cell 10 will reflect cell 8
+           SetProperty(g_PointerPositionPropertyName, "10");
+           SetProperty(g_EditCellTypePropertyName, g_CellTypeCode5);
+           SetProperty(g_EditCellInput1PropertyName, "64");
+           SetProperty(g_EditCellInput2PropertyName, "8");
+       }
    }
 
 
@@ -419,6 +431,7 @@ int CPLogic::SetOpen(bool open)
    {
       ostringstream command; command.str("");
       shutterOpen_ = open;
+      // sets cell 8 which is "software shutter open" indicator via preset 11 (sets high) or preset 10 (sets low)
       if (open) {
          SetProperty(g_SetCardPresetPropertyName, g_PresetCode11);
       } else {
@@ -442,32 +455,38 @@ int CPLogic::OnPLogicMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::BeforeGet) {
       // do nothing for now
    } else if (eAct == MM::AfterSet) {
-      string tmpstr;
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_PLogicModediSPIMShutter) == 0)
-      {
-         useAsdiSPIMShutter_ = true;
-         useAs4ChShutter_ = true;
-         useAs7ChShutter_ = false;
-      }
-      else if (tmpstr.compare(g_PLogicMode4ChShutter) == 0)
-      {
-         useAsdiSPIMShutter_ = false;
-         useAs4ChShutter_ = true;
-         useAs7ChShutter_ = false;
-      }
-      else if (tmpstr.compare(g_PLogicMode7ChShutter) == 0)
-      {
-         useAsdiSPIMShutter_ = false;
-         useAs4ChShutter_ = false;
-         useAs7ChShutter_ = true;
-      }
-      else
-      {
-         useAsdiSPIMShutter_ = false;
-         useAs4ChShutter_ = false;
-         useAs7ChShutter_ = false;
-      }
+       string tmpstr;
+       pProp->Get(tmpstr);
+       if (tmpstr.compare(g_PLogicModediSPIMShutter) == 0)
+       {
+           useAsdiSPIMShutter_ = true;
+           useAs4ChShutter_ = true;
+           useAs7ChShutter_ = false;
+       }
+       else if (tmpstr.compare(g_PLogicMode4ChShutter) == 0)
+       {
+           useAsdiSPIMShutter_ = false;
+           useAs4ChShutter_ = true;
+           useAs7ChShutter_ = false;
+       }
+       else if (tmpstr.compare(g_PLogicMode7ChShutter) == 0)
+       {
+           useAsdiSPIMShutter_ = false;
+           useAs4ChShutter_ = false;
+           useAs7ChShutter_ = true;
+       }
+       else if (tmpstr.compare(g_PLogicMode7ChTTLShutter) == 0)
+       {
+           useAsdiSPIMShutter_ = true;
+           useAs4ChShutter_ = false;
+           useAs7ChShutter_ = true;
+       }
+       else
+       {
+           useAsdiSPIMShutter_ = false;
+           useAs4ChShutter_ = false;
+           useAs7ChShutter_ = false;
+       }
    }
    return DEVICE_OK;
 }
@@ -807,6 +826,9 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
          advancedPropsEnabled_ = true;
 
+         // make sure that the new properties are initialized, set to true at the end of creating them
+         initialized_ = false;
+
          // force-on refresh
          char refreshPropValsStr[MM::MaxStrLength];
          GetProperty(g_RefreshPropValsPropertyName, refreshPropValsStr);
@@ -885,8 +907,11 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
          // restore refresh setting
          SetProperty(g_RefreshPropValsPropertyName, refreshPropValsStr);
+
+         initialized_ = true;
       }
    }
+
    return DEVICE_OK;
 }
 

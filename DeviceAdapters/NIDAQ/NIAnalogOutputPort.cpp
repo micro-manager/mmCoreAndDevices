@@ -199,6 +199,12 @@ int NIAnalogOutputPort::StartDASequence()
    if (task_)
       StopTask();
 
+   // not checkint the size of the array will lead to a crash in the next line
+   if (sentSequence_.size() < 1) {
+      // Do we neet to return an error code?  Probably...
+      return DEVICE_OK;
+   }
+
    // probably beneficial in all cases to move to the first position,
    // essential if we are transitioning post-exposure
    double volt0 = sentSequence_[0];
