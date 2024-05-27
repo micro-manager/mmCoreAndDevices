@@ -1,6 +1,12 @@
 The Cephla Octopi-Research controller has an Arduino Teensy inside that communicates with the computer through a USB-serial interace.  I had no problem getting it detected by my Windows OS.  The command interface can be gleaned from  https://github.com/hongquanli/octopi-research.  This is an attempt to document the interface while getting the device to do something.
 
-   Commands are send to the device in binary.  Command Length is defined in _def.py/MicrocontrollerDef.CMD_LENGTH and currently is set to 8.  A checksum is calculated fo each command using the CRC8.CCITT protocol.  The last byte of the 8 byte command is set to the value of this checksum.  So far, I have been unable to find an online calculator to generate this checksum, I'll have to get a Python terminal going to do this.  Otherwise, XCTU (https://hub.digi.com/support/products/xctu/?path=/support/asset/xctu-v-659-windows-x86x64/) is pretty good at sending commands to the controller.
+   Commands are send to the device in binary.  Command Length is defined in _def.py/MicrocontrollerDef.CMD_LENGTH and currently is set to 8.  
+   A checksum is calculated fo each command using the CRC8.CCITT protocol.  The last byte of the 8 byte command is set to the value of this checksum.  
+   So far, I have been unable to find an online calculator to generate this checksum, I'll have to get a Python terminal going to do this.  
+   Otherwise, XCTU (https://hub.digi.com/support/products/xctu/?path=/support/asset/xctu-v-659-windows-x86x64/) is pretty good at sending 
+   commands to the controller.
+
+   Public domain code at https://www.3dbrew.org/wiki/CRC-8-CCITT can likely be used to calculate checksums in C(C++)
 
 
 
