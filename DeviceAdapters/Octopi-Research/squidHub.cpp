@@ -5,14 +5,17 @@ const char* g_Squid = "Squid";
 
 
 SquidHub::SquidHub() :
-   initialized_(false)
+   initialized_(false),
+   port_("Undefined")
 {
    InitializeDefaultErrorMessages();
 
+   CPropertyAction* pAct = new CPropertyAction(this, &SquidHub::OnPort);
+   CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
 
 }
 
-SquidHub::~SquidHub()
+SquidHub::~SquidHub()   
 {
 }
 
