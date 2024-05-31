@@ -200,19 +200,19 @@ The user can now select an action from a drop-down box in Micro-Manager to activ
 
 
 ### Specifying ranges (experimental!)
-  `Annotated[int, {'min': 0, 'max': 42}]` goes beyond a simple integer type hint by specifying a range. This annotation tells Micro-Manager that the property is not just any integer but must fall within the specified range (0 to 42). It's particularly useful for setting safety limits on device properties to prevent hardware damage or other errors.
-  
-  `Annotated` can be used for integers and floats.
+PyDevice supports specifying a range for integer and float properties using the `Annotated` type hint and the `Ge`, `Le` and `Interval` classes defined in the `annotated_types` package. For example, the type hint
+  `Annotated[int, Ge(1), Le(42)}]` specifies that the property holds an integer between 1 and 42 inclusive. If both upper and lower limits are set, the Micro-Manager GUI displays a slider that the user can adjust the value with.
 
 ```python
 from typing import Annotated
+from annotated_types import Interval
 
 class DeviceWithInteger:
     def __init__(self):
         self._integer = 0
 
     @property
-    def integer(self) -> Annotated[int, {'min': 0, 'max': 42}]:
+    def integer(self) -> Annotated[int, Interval(ge=0,le=0)]:
         return self._integer
     
     @integer.setter
