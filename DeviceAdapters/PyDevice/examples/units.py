@@ -84,7 +84,7 @@ class DeviceWithUnits:
         self._command = str(value)
 
 
-device = DeviceWithUnits(Color.Blue, 23.7, 0.039 * u.m, True, 4, 'Something')
+device = DeviceWithUnits(Color.Blue, 23.7, 0.039 * u.m, True, 4, 5, 'Something')
 devices = {'some_device': device}
 
 if __name__ == "__main__":
