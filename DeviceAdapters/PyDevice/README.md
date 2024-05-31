@@ -8,17 +8,21 @@
 
 
 # PyDevice
+PyDevice is a Micro-Manager device adapter that imports objects from a Python script, and integrates them into MicroManager as devices (e.g. a camera or a stage). This integration enables the use of Python scripts to control microscope hardware, without requiring any programming experience from the end user. Essentially, PyDevice acts as a translator, allowing Python-developed objects to be used in MicroManager with almost no interfacing code required.
 
-PyDevice is a Micro-Manager device adapter that loads Python scripts as Micro-Manager devices. PyDevice is currently **experimental**. It may still change significantly, and it is not fully tested under all circumstances. Please feel free to try it out and provide feedback.
+PyDevice is currently **experimental**. It may still change significantly, and it is not fully tested under all circumstances. Please feel free to try it out and provide feedback.
+
+## Requirements
+To use PyDevice, the following software needs to be installed:
+
+* **Windows 10 or 11**. PyDevice was developed and tested in Windows. Although it _should_ work on Linux, this is not tested. Please contact the developers if you are interested in testing and using PyDevice in Linux.
+
+* **Python 3.9 or higher**. 
+
+* **Micro-Manager 2.0** with the PyDevice device adapter installed. Until PyDevice is included in the nightly build (https://micro-manager.org/Micro-Manager_Nightly_Builds), it is still required to build the device adapter from source, as described below.
 
 ## Getting started
-
-The easiest way to use PyDevice is to install the latest nightly build of Micro-Manager 2.0 and check if the PyDevice
-plugin is included. You can download the latest version here: https://micro-manager.org/Micro-Manager_Nightly_Builds.
-Alternatively, you can build the device adapter from source, as described below. The steps below give a simple example
-to get you started
-
-1. Make sure you have **Python 3.9** or later installed on your system. Note: **the Python interpreter should be in your system path**, which you can easily check by typing `python` in a command prompt. PyDevice also requires **numpy** to be installed, either in the base Python install, or in a virtual environment (see [Virtual environments](#virtual-environments) for more information).
+1. PyDevice needs to be able to locate the Python runtime. It is recommended to set up a virtual environment for your project, as described in [Virtual environments](#virtual-environments). Alternatively, if PyDevice does not find a virtual environment, it will try to locate the global Python installation, which should be included in the system path. To verify that a global Python installation is configured correctly, type `python --version` in a command prompt.
 
 2. Create a script that defines a class with properties and methods that you want to use in Micro-Manager. For example, create a file `hello_device.py` with the following content:
 
@@ -41,7 +45,7 @@ devices = {'hello': HelloDevice()}
 
 3. In Micro-Manager, create a new hardware configuration. In the Hardware Configuration Wizard select `PyDevice->PyHub` from the list of devices and `Add` the device. 
 
-4. There is no need to set the `PythonEnvironment` or `ScriptPath` properties . Instead, just press `Ok` to get a file browser dialog. Select the `hello_device.py` script you just created. This will execute the script and import all objects in the `devices` dictionary into Micro-Manager. You will now see a list of the objects that were successfully recognized, similar to the following screen:
+4. There is no need to set the `PythonEnvironment` or `ScriptPath` properties. Instead, just press `Ok` to get a file browser dialog. Select the `hello_device.py` script you just created. This will execute the script and import all objects in the `devices` dictionary into Micro-Manager. You will now see a list of the objects that were successfully recognized, similar to the following screen:
 
 ![camera_selection_screen](docs/camera_selection_screen.png)
 
@@ -55,13 +59,12 @@ If all went well, you should now see the device in the Device Property Browser, 
 
 The PyDevice device adapter runs a Python interpreter in which the Python script is executed. It then looks for a dictionary called `devices`, and adds the objects in this dictionary as devices to Micro-Manager.
 
-To make a property available in Micro-Manager, it should be public (not `_`-prefixed), and declared with the `@property` decorator, as shown in the example. Moreover, the property getter should have a type annotation for the return value (`-> str`), so that PyDevice can determine the type of the property. PyDevice supports `str`, `int`, `float`, `bool`, as well as `Enum` types and floats with units (see [Advanced use](#advanced-use)). If you want to make the property writable, you should also define a setter method (`@message.setter` in the example). 
+To make a property available in Micro-Manager, it should be public (i. e., not `_`-prefixed), and declared with the `@property` decorator, as shown in the example. Moreover, the property getter should have a type annotation for the return value (`-> str`), so that PyDevice can determine the type of the property. PyDevice supports `str`, `int`, `float`, `bool`, as well as `Enum` types and floats with units (see [Advanced use](#advanced-use)). If you want to make the property writable, you should also define a setter method (`@message.setter` in the example). 
 
-Note that the property name was converted from `message` to `Message` in Micro-Manager to comply with the naming conventions in both Python and Micro-Manager. Also note that, except for the construction of the dictionary object, there is no special code to interact with Micro-Manager. The Python script can be used and tested independently of Micro-Manager.
+Note that the property name in the example was converted from `message` to `Message` in Micro-Manager to comply with the naming conventions in both Python and Micro-Manager. Also note that, except for the construction of the dictionary object, there is no special code to interact with Micro-Manager. The Python script can be used and tested independently of Micro-Manager.
 
 
 ## Other device types
-
 It is also possible to define other device types. PyDevice will automatically detect the device type by examining the properties and methods present on the object. Currently, the following device types are supported:
 
 - `Camera`: requires the following properties and methods:
@@ -95,7 +98,7 @@ It is considered good practice to use virtual environments to manage Python pack
 
 When creating a PyDevice object, the `PythonEnvironment` variable may be used to specify the path to the virtual environment that should be used. It should point to a folder that has a `pyvenv.cfg` file, which is the configuration file that is part of a Python virtual environment. For example, Poetry stores the virtual environments in `C:\Users\{username}\AppData\Local\pypoetry\Cache\virtualenvs\{virtual-environment-name}\Lib\site-packages`.
 
-To facilitate the use of virtual environments, the `ModulePath` property can be set to `(auto)` (the default value). In this case, PyDevice will look in the parent folders of the loaded script for a `venv` or `.venv` directory. If this directory is found and contains a `pyvenv.cfg` file, this virtual environment is used for running the Python code in the device script. 
+To facilitate the use of virtual environments, the `PythonEnvironment` property is set to `(auto)` by default. In this case, PyDevice will look in the parent folders of the loaded script for a `venv` or `.venv` directory. If this directory is found and contains a `pyvenv.cfg` file, this virtual environment is used for running the Python code in the device script. 
 
 If no virtual environment is found, the base Python installation of the system is used. To locate this install, first the `PYTHONHOME` environment variable is checked, and if that is not set, the system path is searched for the `python3.dll` file. Although using the system-wide Python installation can be convenient, it may lead to conflicts with other packages that are installed in the base Python installation. Therefore, it is recommended to use a virtual environment.
 
@@ -141,7 +144,7 @@ class Camera:
 
     ...
 ```
-PyDevice detects properties of type `astropy.units.Quantity` and automatically converts them to properties of the name `Exposure-ms`, etc. in Micro-Manager. Currently, the following units are recognized: s, ms, us, ns, m, cm, mm, um, nm, A, mA, uA, V, mV, uV, Hz, kHz, MHz, GHz. The benefit of using this approach is that the user can specify the exposure time in the units they prefer (e.g. `camera.exposure = 1 * u.s`), with astropy taking care of the unit conversion.
+PyDevice detects properties of type `astropy.units.Quantity` and automatically postfixes the unit in Micro-Manager (e. g., `Exposure-ms`). Currently, the following units are recognized: s, ms, us, ns, m, cm, mm, um, nm, A, mA, uA, V, mV, uV, Hz, kHz, MHz, GHz. One of the benefit of using this approach is that the user can specify the exposure time in the units they prefer (e.g. `camera.exposure = 1 * u.s`), with astropy taking care of the unit conversion.
 
 ### Enum types
 PyDevice supports properties with Enum types. For example, the following code defines a property `color` with an Enum type:
@@ -165,8 +168,13 @@ class DeviceWithColor:
     @color.setter
     def options(self, value: Color):
         self._color = Color(value)
+
+    ...
 ```
-PyDevice will detect that the `color` property returns an Enum, and create a property `Color` in Micro-Manager with the options `Orange`, `Red`, and `Blue` shown in a drop-down box.
+PyDevice will detect that the `color` property returns an Enum, and create a property `Color` in Micro-Manager with the options `Orange`, `Red`, and `Blue` shown in a drop-down box as shown below
+
+  ![example device full](docs/example_device_full.png)   
+
 
 ### Actions
 `Camera` objects define a method to read a frame, and `Stage` and `XYStage` devices define methods to home the stage. These actions are started by Micro-Manager. Currently, there is no direct support for user-defined actions that can be started from the GUI. As a work-around, one can define a property that triggers an action when set. For example, the following code defines a property `capture` that triggers the `read` method of the `Camera` object:
@@ -199,7 +207,7 @@ The user can now select an action from a drop-down box in Micro-Manager to activ
 
 
 
-### Specifying ranges (experimental!)
+### Specifying ranges (experimental)
 PyDevice supports specifying a range for integer and float properties using the `Annotated` type hint and the `Ge`, `Le` and `Interval` classes defined in the `annotated_types` package. For example, the type hint
   `Annotated[int, Ge(1), Le(42)}]` specifies that the property holds an integer between 1 and 42 inclusive. If both upper and lower limits are set, the Micro-Manager GUI displays a slider that the user can adjust the value with.
 
@@ -220,6 +228,17 @@ class DeviceWithInteger:
         self._integer = int(value)
 ```
 
+### Using attributes instead of properties (experimental)
+It is now possible to use attributes instead of properties. This can be useful when the property does not require any additional logic in the getter or setter. For example, the following code defines a device with an attribute `value`:
+
+```python
+class DeviceDirect:
+    value: float
+    def __init__(self):
+        self.value = 0.0
+```
+Just as when using properties, the attribute should be public and have an appropriate type hint.    
+    
 ## Known limitations
 * PyDevice was developed and tested on Windows. If you are interested in porting the plugin to Linux, please contact the developers.
 * It is not yet possible to link an action to a push button in the GUI. 
