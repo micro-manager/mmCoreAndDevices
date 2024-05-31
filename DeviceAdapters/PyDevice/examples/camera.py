@@ -1,10 +1,8 @@
 import numpy as np
-from typing import Annotated
-import astropy.units as u
-from astropy.units import Quantity
 from enum import Enum
-from concurrent.futures import Future
 
+
+# Note: this example requires numpy to be installed
 
 class NoiseType(Enum):
     UNIFORM = 1
@@ -24,7 +22,7 @@ class Camera:
         self._top = top
         self._width = width
         self._height = height
-        self._exposure = 1 * u.ms
+        self._exposure_ms = 1
         self._noise_type = NoiseType.UNIFORM
 
     def read(self):
@@ -75,12 +73,12 @@ class Camera:
         self._height = value
 
     @property
-    def exposure(self) -> Quantity[u.ms]:
-        return self._exposure
+    def exposure_ms(self) -> float:
+        return self._exposure_ms
 
-    @exposure.setter
-    def exposure(self, value):
-        self._exposure = value.to(u.ms)
+    @exposure_ms.setter
+    def exposure_ms(self, value):
+        self._exposure_ms = float(value)
 
     @property
     def noise_type(self) -> NoiseType:

@@ -1,5 +1,8 @@
 """Collection of device classes for testing"""
 from enum import Enum
+from typing import Annotated
+
+import annotated_types
 import astropy.units as u
 import os
 import sys
@@ -24,6 +27,8 @@ class GenericDevice:
         self._enum_value = Options.A
         self._meters = 0.0 * u.m
         self._millimeters = 0.0 * u.mm
+        self._annotated_unit = 0.0
+        self._ranged_int = 0
 
     @property
     def read_only_float(self) -> float:
@@ -100,6 +105,22 @@ class GenericDevice:
     @millimeters.setter
     def millimeters(self, value: u.Quantity[u.mm]):
         self._millimeters = value.to(u.mm)
+
+    @property
+    def annotated_unit(self) -> Annotated[int, annotated_types.Unit("s")]:
+        return self._annotated_unit
+
+    @annotated_unit.setter
+    def annotated_unit(self, value):
+        self._annotated_unit = int(value)
+
+    @property
+    def ranged_int(self) -> Annotated[int, annotated_types.Ge(1), annotated_types.Le(42)]:
+        return self._ranged_int
+
+    @ranged_int.setter
+    def ranged_int(self, value):
+        self._ranged_int = int(value)
 
     @property
     def not_detected(self):

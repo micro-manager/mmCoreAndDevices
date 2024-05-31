@@ -10,12 +10,27 @@ import traceback
 import inspect
 from enum import Enum
 
-# the presence of the astropy.units module is optional.
+
+# the presence of the astropy.units and annotated_types modules is optional.
+class Dummy:
+    pass
+
+
 try:
     from astropy.units import UnitBase
+
+    has_astropy = True
 except ImportError:
-    class UnitBase:
-        pass  # dummy class to prevent errors when the astropy.units module is not available
+    UnitBase = Dummy
+    has_astropy = False
+
+try:
+    from annotated_types import Ge, Le, Gt, Lt, Interval, Unit as AnnotatedUnit
+
+    has_annotated_types = True
+except ImportError:
+    Ge = Le = Gt = Lt = Interval = AnnotatedUnit = Dummy
+    has_annotated_types = False
 
 
 def traceback_to_string(tb):
@@ -71,43 +86,58 @@ class PyProperty:
         self.data_type = self._process_return_type(return_type)
 
     def _process_return_type(self, return_type) -> str:
-        if get_origin(return_type) is Annotated:  # Annotated
-            meta = return_type.__metadata__[0]
-            if isinstance(meta, UnitBase):
-                self.unit = meta
-                self.mm_name = self.mm_name + '-' + str(self.unit)
-                if self.set is not None:
-                    set_original = self.set
-                    self.set = lambda value: set_original(value * self.unit)
-                get_original = self.get
-                self.get = lambda: get_original().to_value(self.unit)
-                return 'float'
-            else:
-                self.min = meta.get('min', None)
-                self.max = meta.get('max', None)
-                return self._process_return_type(return_type.__origin__)  # recursively process the base type
+        if get_origin(return_type) is Annotated:
+            return_type = self._process_annotations(return_type)
 
+        if not inspect.isclass(return_type):  # for example, Optional[...]
+            raise ValueError(f"Unsupported property type: {return_type}")
         elif return_type == bool:
             return 'bool'
-
-        elif not inspect.isclass(return_type):  # for example, Optional[...]
-            raise ValueError(return_type)  # unsupported property type
-
+        elif issubclass(return_type, int):
+            return 'int'
+        elif issubclass(return_type, float):
+            return 'float'
+        elif issubclass(return_type, str):
+            return 'str'
         elif issubclass(return_type, Enum):  # Enum
             self.options = {k.lower().capitalize(): v for (k, v) in return_type.__members__.items()}
             return 'enum'
-
-        elif issubclass(return_type, int):
-            return 'int'
-
-        elif issubclass(return_type, float):
-            return 'float'
-
-        elif issubclass(return_type, str):
-            return 'str'
-
         else:
             raise ValueError(return_type)  # unsupported property type
+
+    def _process_annotations(self, return_type):
+        # Process annotations for range and unit
+        annotations = return_type.__metadata__
+        return_type = return_type.__origin__  # remove the Annotated wrapper
+
+        for meta in annotations:
+            if has_annotated_types:
+                if isinstance(meta, Ge):
+                    self.min = meta.ge
+                    continue
+                elif isinstance(meta, Le):
+                    self.max = meta.le
+                    continue
+                elif isinstance(meta, Interval):
+                    self.min = meta.ge
+                    self.max = meta.le
+                    continue
+                elif isinstance(meta, AnnotatedUnit):
+                    self.unit = meta.unit
+                    self.mm_name = self.mm_name + '-' + self.unit
+                    continue
+            if has_astropy and isinstance(meta, UnitBase):
+                # for astropy units, create wrapper functions to convert between float and quantity
+                self.unit = str(meta)
+                self.mm_name = self.mm_name + '-' + self.unit
+                if self.set is not None:
+                    set_original = self.set
+                    self.set = lambda value: set_original(value * meta)
+                get_original = self.get
+                self.get = lambda: get_original().to_value(meta)
+                return_type = float
+                continue
+        return return_type  # updated return type
 
     def __str__(self):
         return f"{self.mm_name}({self.data_type}{', readonly' if self.set is None else ''})"
@@ -149,7 +179,7 @@ class PyDevice:
             self.device_type = 'Stage'
         else:
             self.device_type = 'Device'
-        
+
         # The 'busy' method is optional
 
     def _init_camera(self) -> bool:

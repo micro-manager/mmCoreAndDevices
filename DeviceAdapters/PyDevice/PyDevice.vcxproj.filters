@@ -33,11 +33,13 @@
     <ClInclude Include="PyStage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bootstrap.py" />
     <ClInclude Include="stable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bootstrap.py">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

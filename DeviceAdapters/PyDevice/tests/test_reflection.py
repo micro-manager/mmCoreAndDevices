@@ -67,10 +67,27 @@ def test_properties():
     assert p_millimeters.python_name == 'millimeters'
     assert p_millimeters.mm_name == 'Millimeters-mm'
     assert p_millimeters.data_type == 'float'
-    assert p_millimeters.unit == u.mm
+    assert p_millimeters.unit == 'mm'
     p_millimeters.set(12)
     assert p_millimeters.get() == 12
     assert device.millimeters == 12 * u.mm
+
+    p_annotated_unit = properties[12]
+    assert p_annotated_unit.python_name == 'annotated_unit'
+    assert p_annotated_unit.mm_name == 'AnnotatedUnit-s'
+    assert p_annotated_unit.data_type == 'int'
+    assert p_annotated_unit.unit == 's'
+    p_annotated_unit.set(1.5)
+    assert p_annotated_unit.get() == 1  # converted to int
+
+    p_ranged_int = properties[13]
+    assert p_ranged_int.python_name == 'ranged_int'
+    assert p_ranged_int.mm_name == 'RangedInt'
+    assert p_ranged_int.data_type == 'int'
+    assert p_ranged_int.min == 1
+    assert p_ranged_int.max == 42
+
+    assert len(properties) == 14  # don't detect anything else
 
     assert pydevice.methods['add_one'](5) == 6
 

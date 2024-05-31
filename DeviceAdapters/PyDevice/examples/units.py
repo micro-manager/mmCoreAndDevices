@@ -1,7 +1,10 @@
-from enum import Enum
 from typing import Annotated
+from enum import Enum
+import astropy.units as u
+from annotated_types import Ge, Le, Gt, Lt
 
-from annotated_types import Ge, Le
+
+# Note: this example requires astropy and annotatedtypes to be installed
 
 
 class Color(Enum):
@@ -10,14 +13,15 @@ class Color(Enum):
     Blue = 3
 
 
-class GenericDevice:
+class DeviceWithUnits:
 
-    def __init__(self, color, floating_point, distance, boolean, integer, command):
+    def __init__(self, color, floating_point, distance, boolean, integer, integer2, command):
         self._color = color
         self._floating_point = floating_point
-        self._distance_mm = distance
+        self._distance = distance
         self._boolean = boolean
         self._integer = integer
+        self._integer2 = integer2
         self._command = command
 
     @property
@@ -29,8 +33,7 @@ class GenericDevice:
         self._color = value
 
     @property
-    def floating_point(self) -> Annotated[float, Ge(0.0), Le(1.0)]:
-        # setting a range, also sets this range in MicroManager
+    def floating_point(self) -> float:
         return self._floating_point
 
     @floating_point.setter
@@ -38,12 +41,12 @@ class GenericDevice:
         self._floating_point = value
 
     @property
-    def distance_mm(self) -> float:
-        return self._distance_mm
+    def distance(self) -> u.Quantity[u.mm]:
+        return self._distance
 
-    @distance_mm.setter
-    def distance_mm(self, value):
-        self._distance_mm = float(value)
+    @distance.setter
+    def distance(self, value):
+        self._distance = value.to(u.mm)
 
     @property
     def boolean(self) -> bool:
@@ -55,12 +58,22 @@ class GenericDevice:
         self._boolean = value
 
     @property
-    def integer(self) -> int:
+    # setting a range, also sets this range in MicroManager, also optional.
+    def integer(self) -> Annotated[int, Ge(1), Le(42)]:
         return self._integer
 
     @integer.setter
     def integer(self, value):
         self._integer = value
+
+    @property
+    # setting a range, also sets this range in MicroManager, also optional.
+    def integer2(self) -> Annotated[int, Gt(0), Lt(43)]:
+        return self._integer2
+
+    @integer2.setter
+    def integer2(self, value):
+        self._integer2 = value
 
     @property
     def command(self) -> str:
@@ -71,7 +84,7 @@ class GenericDevice:
         self._command = str(value)
 
 
-device = GenericDevice(Color.Blue, 23.7, 0.039, True, 4, 'Something')
+device = DeviceWithUnits(Color.Blue, 23.7, 0.039 * u.m, True, 4, 'Something')
 devices = {'some_device': device}
 
 if __name__ == "__main__":
