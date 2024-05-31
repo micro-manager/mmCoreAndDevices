@@ -268,7 +268,7 @@ First, install the following prerequisites
    Explorer and select `build`.
 
 ### Implementation of loading the Python runtime
-By far the hardest part of developing PyDevice was starting the Python runtime. Starting a virtual environment from c++ code is not trivial, and the process is poorly documented and extremely complex (a partial documentation of how the Python runtime locates dependencies can be found [here](https://github.com/python/cpython/blob/main/Modules/getpath.py)). The compication is, in part, caused by the following:
+By far the hardest part of developing PyDevice was starting the Python runtime. Starting a virtual environment from c++ code is not trivial, and the process is poorly documented and extremely complex (a partial documentation of how the Python runtime locates dependencies can be found [here](https://github.com/python/cpython/blob/main/Modules/getpath.py)). The complication is, in part, caused by the following:
 
 * c++ code that interfaces with Python should load the Python runtime. The standard way to do this is to link the code with an import library, which causes the Python runtime to be loaded when the c++ code is loaded. The caveats here are: 
   1) the OS needs to locate the Python dll, which is only possible if Python is on the system path or installed globally.
@@ -277,18 +277,16 @@ By far the hardest part of developing PyDevice was starting the Python runtime. 
 
 * To work around the second issues, Python defines a 'stable' API that allows linking against a generic `python3.dll` file, which then loads the runtime that is available on the system. This approach, however, has many problems on its own:
   1) With this approach, the plugin always loads the Python version that is present on the system path. There is no way to configure it to use a different Python version. So, a global Python installation must be available and there is no option to choose a different Python version (e.g. when using a virtual environment).
-  2) The 'stable' API is not very stable. In particular, the way the Python runtime is initialized is now deprecated, with no alternative provided.
-  3) The 'stable' API does not support the buffer protocol, meaning that it is not possible to pass arrays to Python code except when explicitly relying on the `numpy` C API, which is very sensitive to a correct configuration of the Python paths and Python version, and version of the C-API (see [here](https://numpy.org/devdocs/user/troubleshooting-importerror.html)). 
+  2) The 'stable' API is not very stable. In particular, the way the Python runtime is initialized is now deprecated, with no stable alternative provided. Therefore, like most projects, PyDevice uses the deprecated functions, which still work. The drawback of these functions is that the Python runtime does not report an error when initialization fails. Instead, it terminates (crashes) the program.
+  3) The 'stable' API does not support the buffer protocol for all Python versions, meaning that it is not possible to pass arrays to Python code except when explicitly relying on the `numpy` C API, which is very sensitive to a correct configuration of the Python paths and Python version, and version of the C-API (see [here](https://numpy.org/devdocs/user/troubleshooting-importerror.html)). 
 
-To work around these issues, PyDevice imports the python runtime dynamically. This way, the Python runtime is loaded only when the plugin is loaded, and the exact version of Python is not known at compile time.
+To work around these issues, PyDevice imports the python runtime dynamically (known as delay loading). This way, the Python runtime is loaded only when the plugin is loaded, and the exact version of Python does not need to be known at compile time.
 
 1) First, the `PythonEnvironment` is used to locate the correct virtual environment or global installation. 
 2) The `pyvenv.cfg` configuration file is then used to locate the Python runtime, allowing the correct version of Python to be used.
-3) The `pythonXX.dll` file is then loaded dynamically using `LoadLibrary` and `GetProcAddress`. This way, the Python runtime is loaded only when the plugin is loaded, and the exact version of Python need not be known at compile time.
+3) The `pythonXX.dll` runtime is loaded dynamically using `LoadLibrary`. 
 
-To facilitate delay-loading the dll, the `DELAYLOAD` support of Visual Studio is used. This way, there is almost no overhead in the c++ code. Instead of using `Python.h`, a list of function signatures for the stable API is included in `stable.h`, and functions for the buffer protocol and advanced initialization are included in `buffer.h` and `config.h`. Have a look at `stable.cpp` to see how the Python runtime is loaded. For this automatic delay loading to work, the linker needs access to the file `python39.lib`. Note that this file is not actually used for linking anything, only to provide the linker with the information about which functions are present in the delay-loaded Python dll.
-
-Unfortunately, this approach is not without risk. Especially the data structure used for loading and configuring Python (`PyConfig`)  is not part of the stable API. To make things worse, the layout of the data structure is system-dependent, and gets influenced by compile flags and the version of Python. There is not even a way to reliably determine the size of the structure in advance, which may cause the Python runtime dll to trash the stack. This means that the plugin may break with a future version of Python. Hopefully, the Python developers will provide a stable way to load the Python runtime in the future.
+To facilitate delay-loading the dll, the `DELAYLOAD` support of Visual Studio is used. This way, there is almost no overhead in the c++ code. Instead of using `Python.h`, a list of function signatures for the stable API is included in `stable.h`, and functions for the buffer protocol are included in `buffer.h`. Have a look at `stable.cpp` to see how the Python runtime is loaded. For this automatic delay loading to work, the linker needs access to the file `python39.lib`. Note that this file is not actually used for linking anything, only to provide the linker with the information about which functions are present in the delay-loaded Python dll. Therefore, the result will not depend on the version of Python that was used to build the plugin.
 
 ### Debugging
 
@@ -308,4 +306,6 @@ You can now press F5 to build and install the plugin, and start Micro-Manager wi
 For device scripts, we recommend debugging and testing the scripts outside Micro-Manager first. The scripts should simply as standalone Python scripts, since they do not contain any Micro-Manager specific code. This way, you can test the scripts in an environment that is easier to debug and test. After testing the devices, you can also load them in `pymmcore` to test the interaction with Micro-Manager while maintaining the ability to debug the Python code.
 
 Finally, it is also possible to debug the c++ code while running pymmcore. To do so, attach the debugger to your Python IDE (e.g. PyCharm). This way, you can set breakpoints in the c++ code and inspect the state of the program while running pymmcore.
+
+When debugging PyDevice, be aware that any changes to the c++ code, or to `bootstrap.py`, require the code to be re-compiled and the device adapter to be installed again (which is done automatically by the debug helper). At the moment, Visual Studio does not detect changes in `bootstrap.py` and does not recompile the plugin when this file is changed. Therefore, you need to manually rebuild the device adapter in Visual Studio to see the changes. 
 
