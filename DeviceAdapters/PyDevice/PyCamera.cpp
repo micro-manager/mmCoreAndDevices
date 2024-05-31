@@ -222,7 +222,7 @@ int CPyCamera::SetBinning(int binF)
 
 int CPyCamera::IsExposureSequenceable(bool& isSequenceable) const
 {
-    isSequenceable = true;
+    isSequenceable = false;
     return DEVICE_OK;
 }
 
