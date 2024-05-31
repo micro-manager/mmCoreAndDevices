@@ -191,11 +191,20 @@ class Camera1:
 
 
 class GenericDeviceDirect:
-    float_value: float = 0.0
-    int_value: int = 0
-    string_value: str = ""
-    bool_value: bool = False
-    enum_value: Options = Options.A
-    meters: u.Quantity[u.m] = 0.0 * u.m
-    millimeters: u.Quantity[u.mm] = 0.0 * u.mm
+    float_value: float
+    int_value: int
+    string_value: str
+    bool_value: bool
+    enum_value: Options
+    meters: u.Quantity[u.m]
+    millimeters: u.Quantity[u.mm]
     not_detected = 0  # This property should not be detected because it has no type annotation
+
+    def __init__(self):
+        self._float_value = 0.0
+        self._int_value = 0
+        self._string_value = ""
+        self._bool_value = False
+        self._enum_value = Options.A
+        self._meters = 0.0 * u.m
+        self._millimeters = 0.0 * u.mm
