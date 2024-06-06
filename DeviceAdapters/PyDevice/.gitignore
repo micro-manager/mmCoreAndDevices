@@ -8,3 +8,4 @@ build
 PyDevice.sln
 AutoConfig.props
 x64
+*.dll
