@@ -1,7 +1,7 @@
 from typing import Annotated
 from enum import Enum
 import astropy.units as u
-from annotated_types import Ge, Le, Gt, Lt
+from annotated_types import Ge, Le, Gt, Lt, Interval
 
 
 # Note: this example requires astropy and annotatedtypes to be installed
@@ -15,14 +15,15 @@ class Color(Enum):
 
 class DeviceWithUnits:
 
-    def __init__(self, color, floating_point, distance, boolean, integer, integer2, command):
+    def __init__(self, color, floating_point, distance, boolean, integer, integer2, voltage1, voltage2):
         self._color = color
         self._floating_point = floating_point
         self._distance = distance
         self._boolean = boolean
         self._integer = integer
         self._integer2 = integer2
-        self._command = command
+        self._voltage1 = voltage1
+        self._voltage2 = voltage2
 
     @property
     def color(self) -> Color:
@@ -76,15 +77,23 @@ class DeviceWithUnits:
         self._integer2 = value
 
     @property
-    def command(self) -> str:
-        return self._command
+    def voltage1(self) -> u.Quantity[u.V]:
+        return self._voltage1
 
-    @command.setter
-    def command(self, value):
-        self._command = str(value)
+    @voltage1.setter
+    def voltage1(self, value: u.Quantity[u.V]):
+        self._voltage1 = value.to(u.V)
+
+    @property
+    def voltage2(self) -> Annotated[u.Quantity[u.V], Interval(ge=0 * u.V, le=0.9 * u.V)]:
+        return self._voltage2
+
+    @voltage2.setter
+    def voltage2(self, value: u.Quantity[u.V]):
+        self._voltage2 = value.to(u.V)
 
 
-device = DeviceWithUnits(Color.Blue, 23.7, 0.039 * u.m, True, 4, 5, 'Something')
+device = DeviceWithUnits(Color.Blue, 23.7, 0.039 * u.m, True, 4, 5, 0.5 * u.V, 0.6 * u.V)
 devices = {'some_device': device}
 
 if __name__ == "__main__":
@@ -95,5 +104,6 @@ if __name__ == "__main__":
     from bootstrap import PyDevice
 
     device = PyDevice(devices['some_device'])
+    device.properties[-1].get()
     print(device)
     assert device.device_type == 'Device'

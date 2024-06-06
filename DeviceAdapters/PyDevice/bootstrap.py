@@ -130,11 +130,12 @@ class PyProperty:
                 # for astropy units, create wrapper functions to convert between float and quantity
                 self.unit = str(meta)
                 self.mm_name = self.mm_name + '-' + self.unit
+                unit = meta  # note: this copy is needed so that the lambda's capture the current value of meta
                 if self.set is not None:
                     set_original = self.set
-                    self.set = lambda value: set_original(value * meta)
+                    self.set = lambda value: set_original(value * unit)
                 get_original = self.get
-                self.get = lambda: get_original().to_value(meta)
+                self.get = lambda: get_original().to_value(unit)
                 return_type = float
                 continue
         return return_type  # updated return type
