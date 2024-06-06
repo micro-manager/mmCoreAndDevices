@@ -79,6 +79,7 @@ fs::path SetupPaths(fs::path& venv, bool search)
     fs::path searchPath = venv;
     for (int depth = 0; depth < 10; depth++)
     {
+        searchPath = searchPath.parent_path();
         if (searchPath.empty())
             break;
 
@@ -89,7 +90,6 @@ fs::path SetupPaths(fs::path& venv, bool search)
             if (!pythonHome.empty())
                return pythonHome;
         }
-        searchPath = searchPath.parent_path();
     }
 
     venv.clear(); // we could not locate a virtual environment
