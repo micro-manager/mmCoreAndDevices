@@ -100,16 +100,10 @@
     <CustomBuildBeforeTargets>
     </CustomBuildBeforeTargets>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
-    <OutDir>$(MM_BUILDDIR)\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(MM_BUILDDIR)\intermediates\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
-    <TargetName>mmgr_dal_$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <LibraryPath>$(LibraryPath)</LibraryPath>
-    <OutDir>$(MM_BUILDDIR)\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(MM_BUILDDIR)\intermediates\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
-    <TargetName>mmgr_dal_$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -127,7 +121,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Python\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Python\cp39-win_amd64\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
       <DelayLoadDLLs>python39.dll</DelayLoadDLLs>
     </Link>
@@ -159,7 +153,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Python\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\Python\cp39-win_amd64\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Comdlg32.lib</AdditionalDependencies>
       <DelayLoadDLLs>python39.dll</DelayLoadDLLs>
     </Link>
