@@ -243,7 +243,6 @@ Just as when using properties, the attribute should be public and have an approp
 * PyDevice was developed and tested on Windows. If you are interested in porting the plugin to Linux, please contact the developers.
 * It is not yet possible to link an action to a push button in the GUI. 
 * Only a single PyHub device can be active at a time. If you want to combine multiple Python devices, just create a single Python scripts that collects all devices in a single `devices` dictionary.
-* At the moment, the Python runtime library is not unloaded after use, and it is not possible to switch the Python virtual environment after the first use of PyDevice. To switch to a configuration that uses a different Python virtual environment, Micro-Manager needs to be restarted.
 * Inheriting property definitions from a base class may work, but this aspect is not fully tested yet.
 
 ## Troubleshooting
@@ -251,19 +250,17 @@ Just as when using properties, the attribute should be public and have an approp
 
 * **The PyDevice plugin is shown in the list of device adapters, but it grayed out and cannot be loaded**. If you built PyDevice yourself, this problem can be caused by a version difference between MicroManager executable and the source code used to build PyDevice.
 
-* **The plugin crashes when it tries to load a script.** To find out what is the exact problem, enable logging in Micro-Manager and examine the core log file. One of the reasons may be an incorrect configuration of the system path or the `PYTHONHOME` environment variable. We found that this can cause some Python distributions to crash under certain circumstances. Try setting up a virtual environment as described above. 
+* **The plugin crashes when it tries to load a script.** To find out what is the exact problem, enable logging in Micro-Manager and examine the core log file. The most likely cause is a problem in initializing the Python runtime. Unfortunately, in the case of an initialization problem, the Python runtime terminates the program instead of reporting an error. One of the causes may be an incorrect configuration of the system path or the `PYTHONHOME` environment variable. Try setting up a virtual environment as described above. 
 
-* **My device script is recognized as `Device` instead of a `Camera`, `Stage`, etc.**. PyDevice determines the device type by examining the properties and methods of the object. If the object has all the required properties and methods of a `Camera`, it will be recognized as such. If the object is recognized as a `Device`, it means that one or more of the required properties or methods are missing. Check the spelling of the property names, and make sure that the property getters have the correct type annotation for the return value.
+* **My device script is recognized as `Device` instead of a `Camera`, `Stage`, etc.**. PyDevice determines the device type by examining the properties and methods of the object. If the object has all the required properties and methods of a `Camera`, it will be recognized as such. If the object is recognized as a `Device`, it means that one or more of the required properties or methods are missing. Check the spelling of the property names, and make sure that the property getters have the correct type annotation for the return value. For troubleshooting, you can construct a `PyDevice` wrapper object in Python, using the definition in `bootstrap.py`, which is included in the GitHub repository. See `tests_reflection.py` for an example. 
 
 * **A property does not show up in MicroManager**. This is typically caused by a missing type annotation. Also note that properties should have an explicit 'getter', in the form of a `@property` decorator, see examples above. 
-
-* **An object is not recognised as a Camera/Stage/etc.**. This happens when not all required properties and methods are implemented (see a description of the required attributes above). 
 
 * **An error occurs when reading a property set to None**. Currently, MicroManager does not support missing values for properties. Instead, if `None` is found in a float property, it is silently converted to `nan`. For other property types, if the getter returns `None`, an error is given.
 
 * * **<TypeError>**. Python does not enforce correct data types. This means that a property that is declaredw with a `-> int` type hint, may just as well return a `float`, `None`, or any other object. PyDevice will try to convert the returned value to the expected type, but if this fails, a `TypeError` is raised. To prevent this, make sure that the property holds a value of the correct type, which can be done by explictly converting a value to the correct type using the property setters, (e.g. `self._value = int(value)`, see examples above).
 
-* **MicroManager crashes when the plugin is loaded**. This behavior was observed when an incorrectly configured Anaconda installation was used. If the base packages for the Python library cannot be found in the folder containing `python3.dll`, the Python runtime exits the current process. Unfortunately, there currently is no way to have the Python runtime just report an error. As a solution, make sure Python is installed correctly and can be run from the command prompt.
+
 
 
 ## Building from source code
@@ -271,10 +268,10 @@ First, install the following prerequisites
 
 * **Visual Studio with C++ build tools**.
   You can download the free Visual Studio Community edition
-  here https://visualstudio.microsoft.com/free-developer-offers/. Make sure to include the c++ build tools during
+  here <https://visualstudio.microsoft.com/free-developer-offers/>. Make sure to include the c++ build tools during
   installation.
 * **Python 3**.
-  To build PyDevice, the file `python39.lib` is needed. This file should be located in the folder `3rdpartypublic/Python/libs`, where `3rdpartypublic` is located in the parent folder of the parent folder of `mmCoreAndDevices`. For example, if the repository is located in `c:\git\mmCoreAndDevices`, we expect to find the file at `c:\3rdpartypublic\Python\libs\python39.lib`. Instead of installing Python in that folder directly, it is also possible to make a symbolic link to the Python install. First, open a terminal window with administrator privileges, and navigate to the `3rdpartypublic` directory. Then create the symbolic link to the Python install, e.g. `mklink /D Python C:\Users\{username}\anaconda3`. 
+  To build PyDevice, the file `python39.lib` is needed. This file should be located in the folder `3rdpartypublic/Python/cp39-win_amd64libs/libs`, where `3rdpartypublic` is located in the parent folder of the parent folder of `mmCoreAndDevices`. For example, if the repository is located in `c:\git\mmCoreAndDevices`, we expect to find the file at `c:\3rdpartypublic\Python\cp39-win_amd64libs\libs\python39.lib`. This file can be copied from the installation directory of a Python 3.9 installation (e. g. <https://www.python.org/ftp/python/3.9.1/>).
 
 * **Micro-Manager 2.0**
   You can download the latest version (nightly build) here: https://micro-manager.org/Micro-Manager_Nightly_Builds. Alternatively, you can build the micro-manager application from source, or use an older, stable, version. Note that Micro-Manager only recognizes plugins with the correct internal version number, so if the Mirco-Manager version is too old, it will not recognize the plugin.
@@ -289,21 +286,21 @@ First, install the following prerequisites
 ### Implementation of loading the Python runtime
 By far the hardest part of developing PyDevice was starting the Python runtime. Starting a virtual environment from c++ code is not trivial, and the process is poorly documented and extremely complex (a partial documentation of how the Python runtime locates dependencies can be found [here](https://github.com/python/cpython/blob/main/Modules/getpath.py)). The complication is, in part, caused by the following:
 
-* c++ code that interfaces with Python should load the Python runtime. The standard way to do this is to link the code with an import library, which causes the Python runtime to be loaded when the c++ code is loaded. The caveats here are: 
-  1) the OS needs to locate the Python dll, which is only possible if Python is on the system path or installed globally.
-  2) the exact version of Python needs to be known at compile time. This means that if the plugin is built using Python 3.10, it will not work with Python 3.9, or Python 3.10 or any other Python version on the system of the user.
+* c++ code that interfaces with Python should load the Python runtime. The _standard_ way to do this is to link the code with an import library, which causes the Python runtime to be loaded when the c++ code is loaded. The caveats here are: 
+  1) the exact version of Python needs to be known at compile time. This means that if the plugin is built using Python 3.10, it will not work with Python 3.9, or Python 3.10 or any other Python version on the system of the user.
+  2) The OS should be able to locate the runtime dll for exactly that version, or it should be distributed along with the device adapter.
   3) If the Python runtime cannot be found, the plugin fails to load altogether, without any error message, making it hard for the user to find out what is going on.
 
-* To work around the second issues, Python defines a 'stable' API that allows linking against a generic `python3.dll` file, which then loads the runtime that is available on the system. This approach, however, has many problems on its own:
+* In an attempt to mitigate these issues, Python defines a 'stable' API that allows linking against a generic `python3.dll` file, which then loads the runtime that is available on the system. This approach, however, has many problems on its own:
   1) With this approach, the plugin always loads the Python version that is present on the system path. There is no way to configure it to use a different Python version. So, a global Python installation must be available and there is no option to choose a different Python version (e.g. when using a virtual environment).
   2) The 'stable' API is not very stable. In particular, the way the Python runtime is initialized is now deprecated, with no stable alternative provided. Therefore, like most projects, PyDevice uses the deprecated functions, which still work. The drawback of these functions is that the Python runtime does not report an error when initialization fails. Instead, it terminates (crashes) the program.
   3) The 'stable' API does not support the buffer protocol for all Python versions, meaning that it is not possible to pass arrays to Python code except when explicitly relying on the `numpy` C API, which is very sensitive to a correct configuration of the Python paths and Python version, and version of the C-API (see [here](https://numpy.org/devdocs/user/troubleshooting-importerror.html)). 
 
-To work around these issues, PyDevice imports the python runtime dynamically (known as delay loading). This way, the Python runtime is loaded only when the plugin is loaded, and the exact version of Python does not need to be known at compile time.
+To work around all the issues above, PyDevice imports the python runtime dynamically (known as delay loading). This way, the Python runtime is loaded only when the plugin is loaded, and the user can specify which version of Python to use exactly. Here are the steps that PyDevice takes to load the runtime:
 
 1) First, the `PythonEnvironment` is used to locate the correct virtual environment or global installation. 
-2) The `pyvenv.cfg` configuration file is then used to locate the Python runtime, allowing the correct version of Python to be used.
-3) The `pythonXX.dll` runtime is loaded dynamically using `LoadLibrary`. 
+2) The `home` entry in the `pyvenv.cfg` configuration file in that virtual environment is then used to locate the Python runtime, allowing the correct version of Python to be used.
+3) The `pythonXX.dll` runtime from that location is loaded dynamically using `LoadLibrary`. 
 
 To facilitate delay-loading the dll, the `DELAYLOAD` support of Visual Studio is used. This way, there is almost no overhead in the c++ code. Instead of using `Python.h`, a list of function signatures for the stable API is included in `stable.h`, and functions for the buffer protocol are included in `buffer.h`. Have a look at `stable.cpp` to see how the Python runtime is loaded. For this automatic delay loading to work, the linker needs access to the file `python39.lib`. Note that this file is not actually used for linking anything, only to provide the linker with the information about which functions are present in the delay-loaded Python dll. Therefore, the result will not depend on the version of Python that was used to build the plugin.
 
