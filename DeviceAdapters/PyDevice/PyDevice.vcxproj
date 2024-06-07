@@ -38,23 +38,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="debug_helper.bat" />
-    <None Include="Example_devices\example_camera.py" />
-    <None Include="Example_devices\example_device.py" />
-    <None Include="Example_devices\example_xystage.py" />
-    <None Include="Example_devices\example_zstage.py" />
-    <None Include="Example_devices\PyDevice.md" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
       <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Example_devices\camera_selection_screen.png" />
-    <Image Include="Example_devices\config_manager_screen.png" />
-    <Image Include="Example_devices\example_device.png" />
-    <Image Include="Example_devices\example_device_full.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
