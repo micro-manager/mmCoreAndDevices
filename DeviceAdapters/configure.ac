@@ -306,6 +306,15 @@ else
    AC_MSG_RESULT([not found])
 fi
 
+# Aravis (v0.10).
+AC_MSG_CHECKING(for Aravis_Linux)
+AM_CONDITIONAL([BUILD_ARAVIS_LINUX],[test -f "/usr/local/include/aravis-0.10/arv.h"])
+if test -f "/usr/local/include/aravis-0.10/arv.h"; then
+   AC_MSG_RESULT([found])
+else 
+   AC_MSG_RESULT([not found])
+fi
+
 # BaslerPylon
 AC_MSG_CHECKING(for Basler_Linux)
 AM_CONDITIONAL([BUILD_BASLER_LINUX],[test -f "/opt/pylon/include/pylon/PylonIncludes.h"])
@@ -538,6 +547,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    AndorLaserCombiner
    AndorSDK3
    Aquinas
+   Aravis
    Arduino
    Arduino32bitBoards
    Basler
