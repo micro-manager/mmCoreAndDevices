@@ -22,6 +22,7 @@ public:
 
 
 private:
+   uint8_t crc8ccitt(const void* data, size_t size);
    bool initialized_;
    std::string port_;
 };
