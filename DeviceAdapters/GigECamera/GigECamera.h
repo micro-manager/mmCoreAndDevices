@@ -182,7 +182,7 @@ public:
 	int ClearROI();
 
 	// sequence-acquisition-related functions
-	int PrepareSequenceAcqusition() { return DEVICE_OK; }
+	int PrepareSequenceAcquisition() { return DEVICE_OK; }
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();
 	bool IsCapturing();

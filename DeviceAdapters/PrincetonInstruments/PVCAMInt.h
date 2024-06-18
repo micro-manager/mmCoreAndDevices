@@ -175,7 +175,7 @@ public:
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
    // temporary debug methods
-   int PrepareSequenceAcqusition();
+   int PrepareSequenceAcquisition();
 #endif
 
    // action interface

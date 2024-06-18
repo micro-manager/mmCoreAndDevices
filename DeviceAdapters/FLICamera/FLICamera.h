@@ -58,7 +58,7 @@ class CFLICamera : public CCameraBase<CFLICamera>
 		int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
 		int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
 		int ClearROI();
-		int PrepareSequenceAcqusition();
+		int PrepareSequenceAcquisition();
 		double GetNominalPixelSizeUm() const;
 		double GetPixelSizeUm() const;
 		int GetBinning() const;

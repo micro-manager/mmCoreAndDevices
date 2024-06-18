@@ -635,7 +635,7 @@ int BitFlowCamera::StopSequenceAcquisition()
    return DEVICE_OK;
 }
 
-int BitFlowCamera::PrepareSequenceAcqusition()
+int BitFlowCamera::PrepareSequenceAcquisition()
 {
    // nothing to prepare
    return DEVICE_OK;
@@ -1194,8 +1194,8 @@ void BitFlowCamera::GetCosineWarpLUT(vector<int> &new_pixel, int image_width, in
    
    /*
    Again this code can be replaced by simpler code 
-   The correction factor = ø /sin ø where  ø = pixel number (from the correct center pixel) * ?ø 
-   ?ø = 2?/freq*127. The corretion factor is calculated for each pixel and applied to the pixel
+   The correction factor = ï¿½ /sin ï¿½ where  ï¿½ = pixel number (from the correct center pixel) * ?ï¿½ 
+   ?ï¿½ = 2?/freq*127. The corretion factor is calculated for each pixel and applied to the pixel
    */
 
    /*9 Loop to shift pixels to new image LUT*/

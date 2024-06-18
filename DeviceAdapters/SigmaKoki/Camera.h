@@ -85,7 +85,7 @@ public:
 	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
 	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
 	int ClearROI();
-	int PrepareSequenceAcqusition() { return DEVICE_OK; };
+	int PrepareSequenceAcquisition() { return DEVICE_OK; };
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StartSequenceAcquisition(double interval_ms);
 	int StopSequenceAcquisition();

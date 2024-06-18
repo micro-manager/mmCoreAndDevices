@@ -749,7 +749,7 @@ int JAICamera::ClearROI()
 	return ResizeImageBuffer();
 }
 
-int JAICamera::PrepareSequenceAcqusition()
+int JAICamera::PrepareSequenceAcquisition()
 {
    if (IsCapturing())
    {

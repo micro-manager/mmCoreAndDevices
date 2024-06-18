@@ -1415,7 +1415,7 @@ public:
    }
 
    // temporary debug methods
-   virtual int PrepareSequenceAcqusition() {return DEVICE_OK;}
+   virtual int PrepareSequenceAcquisition() {return DEVICE_OK;}
 
    /**
    * Default implementation.
