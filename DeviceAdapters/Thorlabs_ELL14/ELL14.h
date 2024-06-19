@@ -7,7 +7,7 @@
 //// https://www.thorlabs.de/newgrouppage9.cfm?objectgroup_ID=12829
 ////           	 
 //// AUTHOR: Manon Paillat, 2022
-//// developped under the supervision of Florian Ströhl
+//// developped under the supervision of Florian StrÃ¶hl
 //// Contact: florian.strohl@uit.no
 //
 
@@ -102,7 +102,7 @@ private:
 	double pulsesPerRev_;
 	double maxReplyTimeMs_;
 
-	double pos_;                	// in °
+	double pos_;                	// in Â°
 	double offset_;             	//  "  
 	double jogStep_;            	//  "  
 	double relativeMove_;       	//  "

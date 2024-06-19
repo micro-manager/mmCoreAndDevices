@@ -45,7 +45,7 @@ You may extract these files from TIS development environment "IC Imaging Control
 IMPORTANT: Use build 3.3.0.1796 or later
 
 System:
-Use the VC runtime installations from Microsoft™.
+Use the VC runtime installations from Microsoftâ„¢.
 The files VC100*.* shall be reachable from the path specifier.
 */
 

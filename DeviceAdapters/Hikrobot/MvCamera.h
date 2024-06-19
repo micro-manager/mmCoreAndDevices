@@ -1,5 +1,5 @@
 /************************************************************************/
-/* ÒÔC++½Ó¿ÚÎª»ù´¡£¬¶Ô³£ÓÃº¯Êı½øĞĞ¶ş´Î·â×°£¬·½±ãÓÃ»§Ê¹ÓÃ                */
+/* ä»¥C++æ¥å£ä¸ºåŸºç¡€ï¼Œå¯¹å¸¸ç”¨å‡½æ•°è¿›è¡ŒäºŒæ¬¡å°è£…ï¼Œæ–¹ä¾¿ç”¨æˆ·ä½¿ç”¨                */
 /************************************************************************/
 
 #ifndef _MV_CAMERA_H_
@@ -18,116 +18,116 @@ public:
     CMvCamera();
     ~CMvCamera();
 
-    // ch:»ñÈ¡SDK°æ±¾ºÅ | en:Get SDK Version
+    // ch:è·å–SDKç‰ˆæœ¬å· | en:Get SDK Version
     static int GetSDKVersion();
 
-    // ch:Ã¶¾ÙÉè±¸ | en:Enumerate Device
+    // ch:æšä¸¾è®¾å¤‡ | en:Enumerate Device
     static int EnumDevices(unsigned int nTLayerType, MV_CC_DEVICE_INFO_LIST* pstDevList);
 
-    // ch:ÅĞ¶ÏÉè±¸ÊÇ·ñ¿É´ï | en:Is the device accessible
+    // ch:åˆ¤æ–­è®¾å¤‡æ˜¯å¦å¯è¾¾ | en:Is the device accessible
     static bool IsDeviceAccessible(MV_CC_DEVICE_INFO* pstDevInfo, unsigned int nAccessMode);
 
-    // ch:´ò¿ªÉè±¸ | en:Open Device
+    // ch:æ‰“å¼€è®¾å¤‡ | en:Open Device
     int Open(MV_CC_DEVICE_INFO* pstDeviceInfo);
 
-    // ch:¹Ø±ÕÉè±¸ | en:Close Device
+    // ch:å…³é—­è®¾å¤‡ | en:Close Device
     int Close();
 
-    // ch:ÅĞ¶ÏÏà»úÊÇ·ñ´¦ÓÚÁ¬½Ó×´Ì¬ | en:Is The Device Connected
+    // ch:åˆ¤æ–­ç›¸æœºæ˜¯å¦å¤„äºè¿æ¥çŠ¶æ€ | en:Is The Device Connected
     bool IsDeviceConnected();
 
-    // ch:×¢²áÍ¼ÏñÊı¾İ»Øµ÷ | en:Register Image Data CallBack
+    // ch:æ³¨å†Œå›¾åƒæ•°æ®å›è°ƒ | en:Register Image Data CallBack
     int RegisterImageCallBack(void(__stdcall* cbOutput)(unsigned char * pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser), void* pUser);
 
-    // ch:¿ªÆô×¥Í¼ | en:Start Grabbing
+    // ch:å¼€å¯æŠ“å›¾ | en:Start Grabbing
     int StartGrabbing();
 
-    // ch:Í£Ö¹×¥Í¼ | en:Stop Grabbing
+    // ch:åœæ­¢æŠ“å›¾ | en:Stop Grabbing
     int StopGrabbing();
 
-    // ch:Ö÷¶¯»ñÈ¡Ò»Ö¡Í¼ÏñÊı¾İ | en:Get one frame initiatively
+    // ch:ä¸»åŠ¨è·å–ä¸€å¸§å›¾åƒæ•°æ® | en:Get one frame initiatively
     int GetImageBuffer(MV_FRAME_OUT* pFrame, int nMsec);
 
-    // ch:ÊÍ·ÅÍ¼Ïñ»º´æ | en:Free image buffer
+    // ch:é‡Šæ”¾å›¾åƒç¼“å­˜ | en:Free image buffer
     int FreeImageBuffer(MV_FRAME_OUT* pFrame);
 
-    // ch:ÏÔÊ¾Ò»Ö¡Í¼Ïñ | en:Display one frame image
+    // ch:æ˜¾ç¤ºä¸€å¸§å›¾åƒ | en:Display one frame image
     int DisplayOneFrame(MV_DISPLAY_FRAME_INFO* pDisplayInfo);
 
-    // ch:ÉèÖÃSDKÄÚ²¿Í¼Ïñ»º´æ½Úµã¸öÊı | en:Set the number of the internal image cache nodes in SDK
+    // ch:è®¾ç½®SDKå†…éƒ¨å›¾åƒç¼“å­˜èŠ‚ç‚¹ä¸ªæ•° | en:Set the number of the internal image cache nodes in SDK
     int SetImageNodeNum(unsigned int nNum);
 
-    // ch:»ñÈ¡Éè±¸ĞÅÏ¢ | en:Get device information
+    // ch:è·å–è®¾å¤‡ä¿¡æ¯ | en:Get device information
     int GetDeviceInfo(MV_CC_DEVICE_INFO* pstDevInfo);
 
-    // ch:»ñÈ¡GEVÏà»úµÄÍ³¼ÆĞÅÏ¢ | en:Get detect info of GEV camera
+    // ch:è·å–GEVç›¸æœºçš„ç»Ÿè®¡ä¿¡æ¯ | en:Get detect info of GEV camera
     int GetGevAllMatchInfo(MV_MATCH_INFO_NET_DETECT* pMatchInfoNetDetect);
 
-    // ch:»ñÈ¡U3VÏà»úµÄÍ³¼ÆĞÅÏ¢ | en:Get detect info of U3V camera
+    // ch:è·å–U3Vç›¸æœºçš„ç»Ÿè®¡ä¿¡æ¯ | en:Get detect info of U3V camera
     int GetU3VAllMatchInfo(MV_MATCH_INFO_USB_DETECT* pMatchInfoUSBDetect);
 
-    // ch:»ñÈ¡ºÍÉèÖÃIntĞÍ²ÎÊı£¬Èç WidthºÍHeight£¬ÏêÏ¸ÄÚÈİ²Î¿¼SDK°²×°Ä¿Â¼ÏÂµÄ MvCameraNode.xlsx ÎÄ¼ş
+    // ch:è·å–å’Œè®¾ç½®Intå‹å‚æ•°ï¼Œå¦‚ Widthå’ŒHeightï¼Œè¯¦ç»†å†…å®¹å‚è€ƒSDKå®‰è£…ç›®å½•ä¸‹çš„ MvCameraNode.xlsx æ–‡ä»¶
     // en:Get Int type parameters, such as Width and Height, for details please refer to MvCameraNode.xlsx file under SDK installation directory
     int GetIntValue(IN const char* strKey, OUT MVCC_INTVALUE_EX *pIntValue);
     int SetIntValue(IN const char* strKey, IN int64_t nValue);
 
-    // ch:»ñÈ¡ºÍÉèÖÃEnumĞÍ²ÎÊı£¬Èç PixelFormat£¬ÏêÏ¸ÄÚÈİ²Î¿¼SDK°²×°Ä¿Â¼ÏÂµÄ MvCameraNode.xlsx ÎÄ¼ş
+    // ch:è·å–å’Œè®¾ç½®Enumå‹å‚æ•°ï¼Œå¦‚ PixelFormatï¼Œè¯¦ç»†å†…å®¹å‚è€ƒSDKå®‰è£…ç›®å½•ä¸‹çš„ MvCameraNode.xlsx æ–‡ä»¶
     // en:Get Enum type parameters, such as PixelFormat, for details please refer to MvCameraNode.xlsx file under SDK installation directory
     int GetEnumValue(IN const char* strKey, OUT MVCC_ENUMVALUE *pEnumValue);
     int SetEnumValue(IN const char* strKey, IN unsigned int nValue);
     int SetEnumValueByString(IN const char* strKey, IN const char* sValue);
     int GetEnumEntrySymbolic(IN const char* strKey, IN MVCC_ENUMENTRY* pstEnumEntry);
 
-    // ch:»ñÈ¡ºÍÉèÖÃFloatĞÍ²ÎÊı£¬Èç ExposureTimeºÍGain£¬ÏêÏ¸ÄÚÈİ²Î¿¼SDK°²×°Ä¿Â¼ÏÂµÄ MvCameraNode.xlsx ÎÄ¼ş
+    // ch:è·å–å’Œè®¾ç½®Floatå‹å‚æ•°ï¼Œå¦‚ ExposureTimeå’ŒGainï¼Œè¯¦ç»†å†…å®¹å‚è€ƒSDKå®‰è£…ç›®å½•ä¸‹çš„ MvCameraNode.xlsx æ–‡ä»¶
     // en:Get Float type parameters, such as ExposureTime and Gain, for details please refer to MvCameraNode.xlsx file under SDK installation directory
     int GetFloatValue(IN const char* strKey, OUT MVCC_FLOATVALUE *pFloatValue);
     int SetFloatValue(IN const char* strKey, IN float fValue);
 
-    // ch:»ñÈ¡ºÍÉèÖÃBoolĞÍ²ÎÊı£¬Èç ReverseX£¬ÏêÏ¸ÄÚÈİ²Î¿¼SDK°²×°Ä¿Â¼ÏÂµÄ MvCameraNode.xlsx ÎÄ¼ş
+    // ch:è·å–å’Œè®¾ç½®Boolå‹å‚æ•°ï¼Œå¦‚ ReverseXï¼Œè¯¦ç»†å†…å®¹å‚è€ƒSDKå®‰è£…ç›®å½•ä¸‹çš„ MvCameraNode.xlsx æ–‡ä»¶
     // en:Get Bool type parameters, such as ReverseX, for details please refer to MvCameraNode.xlsx file under SDK installation directory
     int GetBoolValue(IN const char* strKey, OUT bool *pbValue);
     int SetBoolValue(IN const char* strKey, IN bool bValue);
 
-    // ch:»ñÈ¡ºÍÉèÖÃStringĞÍ²ÎÊı£¬Èç DeviceUserID£¬ÏêÏ¸ÄÚÈİ²Î¿¼SDK°²×°Ä¿Â¼ÏÂµÄ MvCameraNode.xlsx ÎÄ¼şUserSetSave
+    // ch:è·å–å’Œè®¾ç½®Stringå‹å‚æ•°ï¼Œå¦‚ DeviceUserIDï¼Œè¯¦ç»†å†…å®¹å‚è€ƒSDKå®‰è£…ç›®å½•ä¸‹çš„ MvCameraNode.xlsx æ–‡ä»¶UserSetSave
     // en:Get String type parameters, such as DeviceUserID, for details please refer to MvCameraNode.xlsx file under SDK installation directory
     int GetStringValue(IN const char* strKey, MVCC_STRINGVALUE *pStringValue);
     int SetStringValue(IN const char* strKey, IN const char * strValue);
 
-    // ch:Ö´ĞĞÒ»´ÎCommandĞÍÃüÁî£¬Èç UserSetSave£¬ÏêÏ¸ÄÚÈİ²Î¿¼SDK°²×°Ä¿Â¼ÏÂµÄ MvCameraNode.xlsx ÎÄ¼ş
+    // ch:æ‰§è¡Œä¸€æ¬¡Commandå‹å‘½ä»¤ï¼Œå¦‚ UserSetSaveï¼Œè¯¦ç»†å†…å®¹å‚è€ƒSDKå®‰è£…ç›®å½•ä¸‹çš„ MvCameraNode.xlsx æ–‡ä»¶
     // en:Execute Command once, such as UserSetSave, for details please refer to MvCameraNode.xlsx file under SDK installation directory
     int CommandExecute(IN const char* strKey);
 
-    // ch:Ì½²âÍøÂç×î¼Ñ°ü´óĞ¡(Ö»¶ÔGigEÏà»úÓĞĞ§) | en:Detection network optimal package size(It only works for the GigE camera)
+    // ch:æ¢æµ‹ç½‘ç»œæœ€ä½³åŒ…å¤§å°(åªå¯¹GigEç›¸æœºæœ‰æ•ˆ) | en:Detection network optimal package size(It only works for the GigE camera)
     int GetOptimalPacketSize(unsigned int* pOptimalPacketSize);
 
-    // ch:×¢²áÏûÏ¢Òì³£»Øµ÷ | en:Register Message Exception CallBack
+    // ch:æ³¨å†Œæ¶ˆæ¯å¼‚å¸¸å›è°ƒ | en:Register Message Exception CallBack
     int RegisterExceptionCallBack(void(__stdcall* cbException)(unsigned int nMsgType, void* pUser), void* pUser);
 
-    // ch:×¢²áµ¥¸öÊÂ¼ş»Øµ÷ | en:Register Event CallBack
+    // ch:æ³¨å†Œå•ä¸ªäº‹ä»¶å›è°ƒ | en:Register Event CallBack
     int RegisterEventCallBack(const char* pEventName, void(__stdcall* cbEvent)(MV_EVENT_OUT_INFO * pEventInfo, void* pUser), void* pUser);
 
-    // ch:Ç¿ÖÆIP | en:Force IP
+    // ch:å¼ºåˆ¶IP | en:Force IP
     int ForceIp(unsigned int nIP, unsigned int nSubNetMask, unsigned int nDefaultGateWay);
 
-    // ch:ÅäÖÃIP·½Ê½ | en:IP configuration method
+    // ch:é…ç½®IPæ–¹å¼ | en:IP configuration method
     int SetIpConfig(unsigned int nType);
 
-    // ch:ÉèÖÃÍøÂç´«ÊäÄ£Ê½ | en:Set Net Transfer Mode
+    // ch:è®¾ç½®ç½‘ç»œä¼ è¾“æ¨¡å¼ | en:Set Net Transfer Mode
     int SetNetTransMode(unsigned int nType);
 
-    // ch:ÏñËØ¸ñÊ½×ª»» | en:Pixel format conversion
+    // ch:åƒç´ æ ¼å¼è½¬æ¢ | en:Pixel format conversion
     int ConvertPixelType(MV_CC_PIXEL_CONVERT_PARAM* pstCvtParam);
 
-    // ch:±£´æÍ¼Æ¬ | en:save image
+    // ch:ä¿å­˜å›¾ç‰‡ | en:save image
     int SaveImage(MV_SAVE_IMAGE_PARAM_EX* pstParam);
 
-    // ch:±£´æÍ¼Æ¬ÎªÎÄ¼ş | en:Save the image as a file
+    // ch:ä¿å­˜å›¾ç‰‡ä¸ºæ–‡ä»¶ | en:Save the image as a file
     int SaveImageToFile(MV_SAVE_IMG_TO_FILE_PARAM* pstParam);
 
-    // ch:»æÖÆÔ²ĞÎ¸¨ÖúÏß | en:Draw circle auxiliary line
+    // ch:ç»˜åˆ¶åœ†å½¢è¾…åŠ©çº¿ | en:Draw circle auxiliary line
     int DrawCircle(MVCC_CIRCLE_INFO* pCircleInfo);
 
-    // ch:»æÖÆÏßĞÎ¸¨ÖúÏß | en:Draw lines auxiliary line
+    // ch:ç»˜åˆ¶çº¿å½¢è¾…åŠ©çº¿ | en:Draw lines auxiliary line
     int DrawLines(MVCC_LINES_INFO* pLinesInfo);
 
     int SetGrabStrategy(MV_GRAB_STRATEGY enGrabStrategy);
