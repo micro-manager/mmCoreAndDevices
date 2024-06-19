@@ -25,21 +25,21 @@ static const  char* g_PixelType_8bitBGR = "8bitBGR";
 
 
 
-#define MONO_COMPONENTS  1			//mono8 Õ¼ÓÃ1¸ö×é¼ş£¬Ã¿¸öÍ¨µÀÊÇ1¸ö×é¼ş
-#define MONO_CONVERTED_DEPTH 8		//  mono8Õ¼ÓÃ8×Ö½Ú
-#define MONO_IMAGE_BYTES_PERPIXEL  1	// Ê¹ÓÃmono8µÄ×Ö½ÚÊı
+#define MONO_COMPONENTS  1			//mono8 å ç”¨1ä¸ªç»„ä»¶ï¼Œæ¯ä¸ªé€šé“æ˜¯1ä¸ªç»„ä»¶
+#define MONO_CONVERTED_DEPTH 8		//  mono8å ç”¨8å­—èŠ‚
+#define MONO_IMAGE_BYTES_PERPIXEL  1	// ä½¿ç”¨mono8çš„å­—èŠ‚æ•°
 #define MONO_CONVERTED_FORMAT	 PixelType_Gvsp_Mono8
 
 
-#define COLOR_COMPONENTS  4				//RGBA Õ¼ÓÃ4¸ö×é¼ş£¬Ã¿¸öÍ¨µÀÊÇ1¸ö×é¼ş
-#define COLOR_CONVERTED_DEPTH 32		//RGBA µÄ×Ö½ÚÊıÁ¿
-#define COLOR_IMAGE_BYTES_PERPIXEL  4	// Ê¹ÓÃRGBA8µÄ×Ö½ÚÊı
-#define COLOR_CONVERTED_FORMAT  PixelType_Gvsp_RGBA8_Packed			//32Î»£¬ ¿ÉÄÜµ×²ã CircularBuffer::InsertMultiChannel ÏŞÖÆ »òÕßÆäËûÔ­Òò£¬µ¼ÖÂ ×ª»»³ÉRGB32Òì³££¬´ı·ÖÎö
+#define COLOR_COMPONENTS  4				//RGBA å ç”¨4ä¸ªç»„ä»¶ï¼Œæ¯ä¸ªé€šé“æ˜¯1ä¸ªç»„ä»¶
+#define COLOR_CONVERTED_DEPTH 32		//RGBA çš„å­—èŠ‚æ•°é‡
+#define COLOR_IMAGE_BYTES_PERPIXEL  4	// ä½¿ç”¨RGBA8çš„å­—èŠ‚æ•°
+#define COLOR_CONVERTED_FORMAT  PixelType_Gvsp_RGBA8_Packed			//32ä½ï¼Œ å¯èƒ½åº•å±‚ CircularBuffer::InsertMultiChannel é™åˆ¶ æˆ–è€…å…¶ä»–åŸå› ï¼Œå¯¼è‡´ è½¬æ¢æˆRGB32å¼‚å¸¸ï¼Œå¾…åˆ†æ
 
 
 #if 0
-/* ÏÂÃæÅäÖÃ pok  */
-#define COLOR_COMPONENTS  3				//RGB Ã¿¸öÍ¨µÀÊÇ1¸ö×é¼ş
+/* ä¸‹é¢é…ç½® pok  */
+#define COLOR_COMPONENTS  3				//RGB æ¯ä¸ªé€šé“æ˜¯1ä¸ªç»„ä»¶
 #define COLOR_CONVERTED_DEPTH 24
 #define COLOR_IMAGE_BYTES_PERPIXEL  3 
 #define COLOR_CONVERTED_FORMAT  PixelType_Gvsp_RGB8_Packed
@@ -201,7 +201,7 @@ int HikrobotCamera::EnumDevice()
 */
 void HikrobotCamera::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(name, g_HikrobotCameraDeviceName);		//Ôö¼ÓËµÃ÷£º ´Ë´¦ÊÇ²å¼şµÄÃû×Ö£¬¾ßÌåÏà»úĞòÁĞºÅÊÇĞèÒª £¨GetProperty("SerialNumber", serialNumber);£© ÖĞÑ¡ÔñµÄ¡£ £¨baslerÒ²ÊÇÍ¬ÑùµÄÂß¼­£©
+	CDeviceUtils::CopyLimitedString(name, g_HikrobotCameraDeviceName);		//å¢åŠ è¯´æ˜ï¼š æ­¤å¤„æ˜¯æ’ä»¶çš„åå­—ï¼Œå…·ä½“ç›¸æœºåºåˆ—å·æ˜¯éœ€è¦ ï¼ˆGetProperty("SerialNumber", serialNumber);ï¼‰ ä¸­é€‰æ‹©çš„ã€‚ ï¼ˆbaslerä¹Ÿæ˜¯åŒæ ·çš„é€»è¾‘ï¼‰
 }
 
 /**
@@ -307,7 +307,7 @@ int HikrobotCamera::Initialize()
 	string strBasiceLog = " [ "+ strModeName + " " + strSerialNumber + " ] ";
 	SetLogBasicInfo(strBasiceLog);
 
-	sprintf_s(m_chDevID, sizeof(m_chDevID), " %s(%s) ", strModeName.c_str(), strSerialNumber.c_str());	//±£´æÏà»úµÄĞòÁĞºÅ£¬ĞÍºÅĞÅÏ¢
+	sprintf_s(m_chDevID, sizeof(m_chDevID), " %s(%s) ", strModeName.c_str(), strSerialNumber.c_str());	//ä¿å­˜ç›¸æœºçš„åºåˆ—å·ï¼Œå‹å·ä¿¡æ¯
 
 
 	//Sensor size
@@ -390,7 +390,7 @@ int HikrobotCamera::Initialize()
 			pAct = new CPropertyAction(this, &HikrobotCamera::OnTestPattern);
 			ret = CreateProperty("TestPattern", "NA", MM::String, false, pAct);
 			vector<string> TestPatternVals;
-			TestPatternVals.push_back("Off");		//²Î¿¼basler£¬ÏÈ°Ñoff·ÅÈëvector£» ÔÚÑ­»·ÖĞ·ÅÈëoff£¬Ó¦¸ÃÒ²OK£» 
+			TestPatternVals.push_back("Off");		//å‚è€ƒbaslerï¼Œå…ˆæŠŠoffæ”¾å…¥vectorï¼› åœ¨å¾ªç¯ä¸­æ”¾å…¥offï¼Œåº”è¯¥ä¹ŸOKï¼› 
 			MVCC_ENUMENTRY Entry = { 0 };
 
 			for (unsigned int i = 0; i < stTestPattern.nSupportedNum; i++)
@@ -524,7 +524,7 @@ int HikrobotCamera::Initialize()
 		pAct = new CPropertyAction(this, &HikrobotCamera::OnSensorReadoutMode);
 		ret = CreateProperty("SensorReadoutMode", "NA", MM::String, false, pAct);  
 		vector<string> vals;
-		// vals.push_back("Off");	// º£¿µÏà»úÎŞÕâ¸ö½Úµã£¬²»»á×ßµ½Õâ¸ö·ÖÖ§ÖĞ; ²Î¿¼basler·ÖÖ§£¬baslerÎŞÌí¼Óoff½Úµã
+		// vals.push_back("Off");	// æµ·åº·ç›¸æœºæ— è¿™ä¸ªèŠ‚ç‚¹ï¼Œä¸ä¼šèµ°åˆ°è¿™ä¸ªåˆ†æ”¯ä¸­; å‚è€ƒbasleråˆ†æ”¯ï¼Œbasleræ— æ·»åŠ offèŠ‚ç‚¹
 		MVCC_ENUMVALUE SensorReadoutMode = { 0 };
 		m_pCamera->GetEnumValue("SensorReadoutMode", &SensorReadoutMode);
 		
@@ -874,10 +874,10 @@ int HikrobotCamera::SnapImage()
 {
 
 	/*
-	baslerÔÚsnapimageÖĞµ÷ÓÃµÄÊÇ virtual void StartGrabbing( size_t maxImages, EGrabStrategy strategy = GrabStrategy_OneByOne, EGrabLoop grabLoopType = GrabLoop_ProvidedByUser );
-	Õâ¸ö½Ó¿ÚµÄÃèÊöÊÇ£º¡±Extends the StartGrabbing(EStrategy, EGrabLoop) by a number of images to grab. If the passed count of images has been reached, StopGrabbing is called
-    automatically. The images are counted according to the grab strategy. Skipped images are not taken into account.¡°£»  ¾ÍÊÇËµ»ñÈ¡Í¼Ïñ¸öÊıÂú×ãºó£¬ºóÌ¨»á×Ô¶¯Í£Ö¹È¡Á÷£»
-	º£¿µSDKÎŞ´ËÀà½Ó¿Ú£¬ËùÒÔĞèÒª start £¬»ñÈ¡Í¼Ïñ£¬ stop 
+	basleråœ¨snapimageä¸­è°ƒç”¨çš„æ˜¯ virtual void StartGrabbing( size_t maxImages, EGrabStrategy strategy = GrabStrategy_OneByOne, EGrabLoop grabLoopType = GrabLoop_ProvidedByUser );
+	è¿™ä¸ªæ¥å£çš„æè¿°æ˜¯ï¼šâ€Extends the StartGrabbing(EStrategy, EGrabLoop) by a number of images to grab. If the passed count of images has been reached, StopGrabbing is called
+    automatically. The images are counted according to the grab strategy. Skipped images are not taken into account.â€œï¼›  å°±æ˜¯è¯´è·å–å›¾åƒä¸ªæ•°æ»¡è¶³åï¼Œåå°ä¼šè‡ªåŠ¨åœæ­¢å–æµï¼›
+	æµ·åº·SDKæ— æ­¤ç±»æ¥å£ï¼Œæ‰€ä»¥éœ€è¦ start ï¼Œè·å–å›¾åƒï¼Œ stop 
 	*/
 
 	MvWriteLog(__FILE__, __LINE__, m_chDevID, "SnapImage Begin");
@@ -891,8 +891,8 @@ int HikrobotCamera::SnapImage()
 
 	do 
 	{
-		//´Ë´¦ÔİÊ±Éè¶¨1s, ÈôÏà»úÖ¡ÂÊ¹ıµÍ£¬Ôò¿ÉÄÜÒì³££¬ĞèÒªµ÷Õû; 
-		// ³¬Ê±Ê±¼ä²»ÄÜÌ«³¤£¬ÈİÒ×µ¼ÖÂ½Ó¿Ú¿¨ËÀÒì³£;
+		//æ­¤å¤„æš‚æ—¶è®¾å®š1s, è‹¥ç›¸æœºå¸§ç‡è¿‡ä½ï¼Œåˆ™å¯èƒ½å¼‚å¸¸ï¼Œéœ€è¦è°ƒæ•´; 
+		// è¶…æ—¶æ—¶é—´ä¸èƒ½å¤ªé•¿ï¼Œå®¹æ˜“å¯¼è‡´æ¥å£å¡æ­»å¼‚å¸¸;
 		nRet = m_pCamera->GetImageBuffer(&stOutFrame, 1000);		
 		if (nRet == MV_OK)
 		{
@@ -905,7 +905,7 @@ int HikrobotCamera::SnapImage()
 			break;
 		}
 
-		ResizeSnapBuffer();	//·ÖÅäÄÚ´æ¿Õ¼ä
+		ResizeSnapBuffer();	//åˆ†é…å†…å­˜ç©ºé—´
 		CopyToImageBuffer(&stOutFrame);
 
 		nRet = m_pCamera->FreeImageBuffer(&stOutFrame);
@@ -915,7 +915,7 @@ int HikrobotCamera::SnapImage()
 		}
 
 		
-		break;	// »ñÈ¡Ò»ÕÅÍ¼Ïñ½áÊø.
+		break;	// è·å–ä¸€å¼ å›¾åƒç»“æŸ.
 	} while (0);
 
 	m_pCamera->StopGrabbing();
@@ -979,17 +979,17 @@ void HikrobotCamera::CopyToImageBuffer(MV_FRAME_OUT* pstFrameOut)
 			m_nConvertDataLen = nNeedSize;
 		}
 
-		// ch:ÏñËØ¸ñÊ½×ª»» | en:Convert pixel format 
+		// ch:åƒç´ æ ¼å¼è½¬æ¢ | en:Convert pixel format 
 		MV_CC_PIXEL_CONVERT_PARAM stConvertParam = { 0 };
 
-		stConvertParam.nWidth = pstFrameOut->stFrameInfo.nWidth;                 //ch:Í¼Ïñ¿í | en:image width
-		stConvertParam.nHeight = pstFrameOut->stFrameInfo.nHeight;               //ch:Í¼Ïñ¸ß | en:image height
-		stConvertParam.pSrcData = pstFrameOut->pBufAddr;                         //ch:ÊäÈëÊı¾İ»º´æ | en:input data buffer
-		stConvertParam.nSrcDataLen = pstFrameOut->stFrameInfo.nFrameLen;         //ch:ÊäÈëÊı¾İ´óĞ¡ | en:input data size
-		stConvertParam.enSrcPixelType = pstFrameOut->stFrameInfo.enPixelType;    //ch:ÊäÈëÏñËØ¸ñÊ½ | en:input pixel format
-		stConvertParam.enDstPixelType = enDstPixelType;                         //ch:Êä³öÏñËØ¸ñÊ½ | en:output pixel format
-		stConvertParam.pDstBuffer = m_pConvertData;                               //ch:Êä³öÊı¾İ»º´æ | en:output data buffer
-		stConvertParam.nDstBufferSize = nNeedSize;                       //ch:Êä³ö»º´æ´óĞ¡ | en:output buffer size
+		stConvertParam.nWidth = pstFrameOut->stFrameInfo.nWidth;                 //ch:å›¾åƒå®½ | en:image width
+		stConvertParam.nHeight = pstFrameOut->stFrameInfo.nHeight;               //ch:å›¾åƒé«˜ | en:image height
+		stConvertParam.pSrcData = pstFrameOut->pBufAddr;                         //ch:è¾“å…¥æ•°æ®ç¼“å­˜ | en:input data buffer
+		stConvertParam.nSrcDataLen = pstFrameOut->stFrameInfo.nFrameLen;         //ch:è¾“å…¥æ•°æ®å¤§å° | en:input data size
+		stConvertParam.enSrcPixelType = pstFrameOut->stFrameInfo.enPixelType;    //ch:è¾“å…¥åƒç´ æ ¼å¼ | en:input pixel format
+		stConvertParam.enDstPixelType = enDstPixelType;                         //ch:è¾“å‡ºåƒç´ æ ¼å¼ | en:output pixel format
+		stConvertParam.pDstBuffer = m_pConvertData;                               //ch:è¾“å‡ºæ•°æ®ç¼“å­˜ | en:output data buffer
+		stConvertParam.nDstBufferSize = nNeedSize;                       //ch:è¾“å‡ºç¼“å­˜å¤§å° | en:output buffer size
 		nRet = GetCamera()->ConvertPixelType(&stConvertParam);
 		if (MV_OK != nRet)
 		{
@@ -1006,7 +1006,7 @@ unsigned HikrobotCamera::PixTypeProc(MvGvspPixelType enPixelType, unsigned int &
 {
 	int nRet = MV_OK;
 
-	//Èç¹ûÊÇ²ÊÉ«Ôò×ª³ÉRGB8
+	//å¦‚æœæ˜¯å½©è‰²åˆ™è½¬æˆRGB8
 	if (IsColor(enPixelType))
 	{
 		nChannelNum = COLOR_CONVERTED_DEPTH / 8;
@@ -1017,7 +1017,7 @@ unsigned HikrobotCamera::PixTypeProc(MvGvspPixelType enPixelType, unsigned int &
 		m_nbitDepth = COLOR_CONVERTED_DEPTH;
 
 	}
-	//Èç¹ûÊÇºÚ°×Ôò×ª»»³ÉMono8
+	//å¦‚æœæ˜¯é»‘ç™½åˆ™è½¬æ¢æˆMono8
 	else if (IsMono(enPixelType))
 	{
 		nChannelNum = 1;
@@ -1072,7 +1072,7 @@ unsigned HikrobotCamera::GetImageBytesPerPixel() const
 	std::size_t found = pixelType_.find(subject);
 	unsigned int ret = 0;
 
-	//monoÍ³Ò»×ª»»³Émon8,ÆäËûÀàĞÍ×ª»»ÎªRGBA32
+	//monoç»Ÿä¸€è½¬æ¢æˆmon8,å…¶ä»–ç±»å‹è½¬æ¢ä¸ºRGBA32
 	if (pixelType_ == "Mono8" || pixelType_ == "Mono10" || pixelType_ == "Mono12" || pixelType_ == "Mono10Packed" || pixelType_ == "Mono12Packed" || pixelType_ == "Mono16")
 	{
 		ret = MONO_IMAGE_BYTES_PERPIXEL;
@@ -1102,7 +1102,7 @@ unsigned int HikrobotCamera::GetBitDepth() const
 	const char* subject("Bayer");
 	std::size_t found = pixelType_.find(subject);
 	unsigned int ret = 0;
-	//monoÍ³Ò»×ª»»³Émon8,ÆäËûÀàĞÍ×ª»»ÎªRGBA32
+	//monoç»Ÿä¸€è½¬æ¢æˆmon8,å…¶ä»–ç±»å‹è½¬æ¢ä¸ºRGBA32
 	if (pixelType_ == "Mono8" || pixelType_ == "Mono10" || pixelType_ == "Mono12" || pixelType_ == "Mono10Packed" || pixelType_ == "Mono12Packed" || pixelType_ == "Mono16")
 	{
 		ret = MONO_CONVERTED_DEPTH;
@@ -1421,7 +1421,7 @@ int HikrobotCamera::StartSequenceAcquisition(double /* interval_ms */) {
 	if (m_bGrabbing)
 	{
 		MvWriteLog(__FILE__, __LINE__, m_chDevID, "StartSequenceAcquisition Begin, but Already Start.");
-		return DEVICE_NOT_SUPPORTED;   //Éè±¸ÒÑ¾­start£¬²»ÄÜÔÙ´Îstart; ImageJ ÖĞ½ØÍ¼ºÍÈ¡Á÷²»ÄÜÍ¬Ê±Ê¹ÓÃ  [½ØÍ¼ºó£¬¿ìËÙstart¿ÉÄÜ»á±¨´í]
+		return DEVICE_NOT_SUPPORTED;   //è®¾å¤‡å·²ç»startï¼Œä¸èƒ½å†æ¬¡start; ImageJ ä¸­æˆªå›¾å’Œå–æµä¸èƒ½åŒæ—¶ä½¿ç”¨  [æˆªå›¾åï¼Œå¿«é€Ÿstartå¯èƒ½ä¼šæŠ¥é”™]
 	}
 
 	MvWriteLog(__FILE__, __LINE__, m_chDevID, "StartSequenceAcquisition Begin");
@@ -1431,7 +1431,7 @@ int HikrobotCamera::StartSequenceAcquisition(double /* interval_ms */) {
 	m_pCamera->StartGrabbing();
 
 
-	m_bRecvRuning = true;	//È¡Á÷Ïß³Ì¹¤×÷
+	m_bRecvRuning = true;	//å–æµçº¿ç¨‹å·¥ä½œ
 	unsigned int nThreadID = 0;
 	if (NULL == m_hImageRecvThreadHandle)
 	{
@@ -1443,13 +1443,13 @@ int HikrobotCamera::StartSequenceAcquisition(double /* interval_ms */) {
 		}
 	}
 
-	m_bGrabbing = true; //È¡Á÷×´Ì¬
+	m_bGrabbing = true; //å–æµçŠ¶æ€
 	MvWriteLog(__FILE__, __LINE__, m_chDevID, "StartSequenceAcquisition End");
 
 	return DEVICE_OK;
 }
 
-// È¡Á÷´¦ÀíÏß³Ì
+// å–æµå¤„ç†çº¿ç¨‹
 unsigned int  __stdcall HikrobotCamera::ImageRecvThread(void* pUser)
 {
 	if (NULL == pUser)
@@ -1522,16 +1522,16 @@ void HikrobotCamera::ImageRecvThreadProc()
 			}
 
 
-			// ch:ÏñËØ¸ñÊ½×ª»» | en:Convert pixel format 
+			// ch:åƒç´ æ ¼å¼è½¬æ¢ | en:Convert pixel format 
 			MV_CC_PIXEL_CONVERT_PARAM stConvertParam = { 0 };
-			stConvertParam.nWidth = stOutFrame.stFrameInfo.nWidth;                 //ch:Í¼Ïñ¿í | en:image width
-			stConvertParam.nHeight = stOutFrame.stFrameInfo.nHeight;               //ch:Í¼Ïñ¸ß | en:image height
-			stConvertParam.pSrcData = stOutFrame.pBufAddr;                         //ch:ÊäÈëÊı¾İ»º´æ | en:input data buffer
-			stConvertParam.nSrcDataLen = stOutFrame.stFrameInfo.nFrameLen;         //ch:ÊäÈëÊı¾İ´óĞ¡ | en:input data size
-			stConvertParam.enSrcPixelType = stOutFrame.stFrameInfo.enPixelType;    //ch:ÊäÈëÏñËØ¸ñÊ½ | en:input pixel format
-			stConvertParam.enDstPixelType = enDstPixelType;                         //ch:Êä³öÏñËØ¸ñÊ½ | en:output pixel format
-			stConvertParam.pDstBuffer = m_pConvertData;                               //ch:Êä³öÊı¾İ»º´æ | en:output data buffer
-			stConvertParam.nDstBufferSize = m_nConvertDataLen;                       //ch:Êä³ö»º´æ´óĞ¡ | en:output buffer size
+			stConvertParam.nWidth = stOutFrame.stFrameInfo.nWidth;                 //ch:å›¾åƒå®½ | en:image width
+			stConvertParam.nHeight = stOutFrame.stFrameInfo.nHeight;               //ch:å›¾åƒé«˜ | en:image height
+			stConvertParam.pSrcData = stOutFrame.pBufAddr;                         //ch:è¾“å…¥æ•°æ®ç¼“å­˜ | en:input data buffer
+			stConvertParam.nSrcDataLen = stOutFrame.stFrameInfo.nFrameLen;         //ch:è¾“å…¥æ•°æ®å¤§å° | en:input data size
+			stConvertParam.enSrcPixelType = stOutFrame.stFrameInfo.enPixelType;    //ch:è¾“å…¥åƒç´ æ ¼å¼ | en:input pixel format
+			stConvertParam.enDstPixelType = enDstPixelType;                         //ch:è¾“å‡ºåƒç´ æ ¼å¼ | en:output pixel format
+			stConvertParam.pDstBuffer = m_pConvertData;                               //ch:è¾“å‡ºæ•°æ®ç¼“å­˜ | en:output data buffer
+			stConvertParam.nDstBufferSize = m_nConvertDataLen;                       //ch:è¾“å‡ºç¼“å­˜å¤§å° | en:output buffer size
 			nRet = GetCamera()->ConvertPixelType(&stConvertParam);
 			if (MV_OK != nRet)
 			{
@@ -2010,7 +2010,7 @@ int HikrobotCamera::OnReverseX(MM::PropertyBase* pProp, MM::ActionType eAct)
 		bool reverseX = false;
 		m_pCamera->GetBoolValue("ReverseX", &reverseX);
 		//reverseX->FromString(reverseX_.c_str());
-		istringstream(reverseX_) >> boolalpha >> reverseX;//boolalpha>>±ØĞëÒª¼Ó 
+		istringstream(reverseX_) >> boolalpha >> reverseX;//boolalpha>>å¿…é¡»è¦åŠ  
 		m_pCamera->SetBoolValue("ReverseX", &reverseX);
 	}
 	else if (eAct == MM::BeforeGet) {
@@ -2033,7 +2033,7 @@ int HikrobotCamera::OnReverseY(MM::PropertyBase* pProp, MM::ActionType eAct)
 		//reverseY->FromString(reverseY_.c_str());
 		bool ReverseY = false;
 		m_pCamera->GetBoolValue("ReverseY", &ReverseY);
-		istringstream(reverseX_) >> boolalpha >> ReverseY;//boolalpha>>±ØĞëÒª¼Ó 
+		istringstream(reverseX_) >> boolalpha >> ReverseY;//boolalpha>>å¿…é¡»è¦åŠ  
 		m_pCamera->SetBoolValue("ReverseX", &ReverseY);
 	}
 	else if (eAct == MM::BeforeGet) {
@@ -2057,7 +2057,7 @@ int HikrobotCamera::OnAcqFramerateEnable(MM::PropertyBase* pProp, MM::ActionType
 
 		bool setAcqFrm = false;
 		m_pCamera->GetBoolValue("AcquisitionFrameRateEnable", &setAcqFrm);
-		istringstream(setAcqFrm_) >> boolalpha >> setAcqFrm;//boolalpha>>±ØĞëÒª¼Ó 
+		istringstream(setAcqFrm_) >> boolalpha >> setAcqFrm;//boolalpha>>å¿…é¡»è¦åŠ  
 		m_pCamera->SetBoolValue("AcquisitionFrameRateEnable", &setAcqFrm);
 
 	}
@@ -2438,7 +2438,7 @@ void HikrobotCamera::ReduceImageSize(int64_t Width, int64_t Height)
 
 void HikrobotCamera::SetLogBasicInfo(std::string msg) 
 {
-	// ¼ÇÂ¼ĞÍºÅ£¬ĞòÁĞºÅ;
+	// è®°å½•å‹å·ï¼Œåºåˆ—å·;
 	m_strBasiceLog = msg;
 }
 
@@ -2446,7 +2446,7 @@ void HikrobotCamera::SetLogBasicInfo(std::string msg)
 
 void HikrobotCamera::AddToLog(std::string msg) const
 {
-	// Ôö¼ÓÏÂĞÍºÅ£¬ĞòÁĞºÅ;
+	// å¢åŠ ä¸‹å‹å·ï¼Œåºåˆ—å·;
 	LogMessage(m_strBasiceLog + msg, false);
 }
 
