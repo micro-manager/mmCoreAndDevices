@@ -2525,7 +2525,7 @@ int Universal::BuildMetadata( Metadata& md )
 
    MM::MMTime timestamp = GetCurrentMMTime();
    md.Clear();
-   md.put("Camera", label);
+   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
 
 #ifdef PICAM_FRAME_INFO_SUPPORTED
    md.PutImageTag<int32>("PICAM-FrameNr", pFrameInfo_->FrameNr);

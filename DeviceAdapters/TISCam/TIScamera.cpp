@@ -45,7 +45,7 @@ You may extract these files from TIS development environment "IC Imaging Control
 IMPORTANT: Use build 3.3.0.1796 or later
 
 System:
-Use the VC runtime installations from Microsoft™.
+Use the VC runtime installations from Microsoftï¿½.
 The files VC100*.* shall be reachable from the path specifier.
 */
 
@@ -2161,7 +2161,7 @@ int CTIScamera::PushImage()
  
    // Important:  metadata about the image are generated here:
    Metadata md;
-   md.put("Camera", label);
+   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
    md.put(MM::g_Keyword_Binning, binSize_);

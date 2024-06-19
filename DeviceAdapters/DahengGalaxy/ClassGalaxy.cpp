@@ -28,7 +28,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     if (deviceName == 0)
         return 0;
 
-    // decide which device class to create based on the deviceName parameter ±È½Ï½á¹û
+    // decide which device class to create based on the deviceName parameter ï¿½È½Ï½ï¿½ï¿½
     if (strcmp(deviceName, g_CameraDeviceName) == 0) {
         // create camera
         return new ClassGalaxy();
@@ -144,19 +144,19 @@ int ClassGalaxy::Initialize()
 
 
         vectorDeviceInfo.clear();
-        //Ã¶¾ÙÉè±¸
+        //Ã¶ï¿½ï¿½ï¿½è±¸
         IGXFactory::GetInstance().UpdateDeviceList(1000, vectorDeviceInfo);
 
-        //ÅÐ¶ÏÃ¶¾Ùµ½µÄÉè±¸ÊÇ·ñ´óÓÚÁã£¬Èç¹û²»ÊÇÔòµ¯¿òÌáÊ¾
+        //ï¿½Ð¶ï¿½Ã¶ï¿½Ùµï¿½ï¿½ï¿½ï¿½è±¸ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½òµ¯¿ï¿½ï¿½ï¿½Ê¾
         if (vectorDeviceInfo.size() <= 0)
         {
             return DEVICE_NOT_CONNECTED;
         }
-        //»ñÈ¡¿ÉÖ´ÐÐ³ÌÐòµÄµ±Ç°Â·¾¶,Ä¬ÈÏ¿ªÆôµÚÒ»¸ö
+        //ï¿½ï¿½È¡ï¿½ï¿½Ö´ï¿½Ð³ï¿½ï¿½ï¿½Äµï¿½Ç°Â·ï¿½ï¿½,Ä¬ï¿½Ï¿ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
         initialized_ = false;
         // This checks, among other things, that the camera is not already in use.
         // Without that check, the following CreateDevice() may crash on duplicate
-        // serial number. Unfortunately, this call is slow. Ä¬ÈÏ´ò¿ªµÚÒ»¸öÉè±¸
+        // serial number. Unfortunately, this call is slow. Ä¬ï¿½Ï´ò¿ªµï¿½Ò»ï¿½ï¿½ï¿½è±¸
         int index = 0;
 
         string serialNumberstr = vectorDeviceInfo[index].GetSN().c_str();
@@ -166,13 +166,13 @@ int ClassGalaxy::Initialize()
         if (strlen(serialNumber) == 0 || strcmp(serialNumber, "Undefined") == 0)
             return 0;
         SetProperty("SerialNumber", serialNumber);
-        //´ò¿ªÉè±¸
+        //ï¿½ï¿½ï¿½è±¸
         m_objDevicePtr = IGXFactory::GetInstance().OpenDeviceBySN(vectorDeviceInfo[index].GetSN(), GX_ACCESS_MODE::GX_ACCESS_EXCLUSIVE);
 
         m_objFeatureControlPtr = m_objDevicePtr->GetRemoteFeatureControl();
 
         //m_objFeatureControlPtr->GetEnumFeature("StreamBufferHandlingMode")->SetValue("NewestOnly");
-        //ÅÐ¶ÏÉè±¸Á÷ÊÇ·ñ´óÓÚÁã£¬Èç¹û´óÓÚÁãÔò´ò¿ªÁ÷
+        //ï¿½Ð¶ï¿½ï¿½è±¸ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
         int nStreamCount = m_objDevicePtr->GetStreamCount();
         //CPropertyAction* pAct;
@@ -187,19 +187,19 @@ int ClassGalaxy::Initialize()
         }
         else
         {
-            throw exception("Î´·¢ÏÖÉè±¸Á÷!");
+            throw exception("Î´ï¿½ï¿½ï¿½ï¿½ï¿½è±¸ï¿½ï¿½!");
         }
 
 
         GX_DEVICE_CLASS_LIST objDeviceClass = m_objDevicePtr->GetDeviceInfo().GetDeviceClass();
         if (GX_DEVICE_CLASS_GEV == objDeviceClass)
         {
-            // ÅÐ¶ÏÉè±¸ÊÇ·ñÖ§³ÖÁ÷Í¨µÀÊý¾Ý°ü¹¦ÄÜ
+            // ï¿½Ð¶ï¿½ï¿½è±¸ï¿½Ç·ï¿½Ö§ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½Ý°ï¿½ï¿½ï¿½ï¿½ï¿½
             if (true == m_objFeatureControlPtr->IsImplemented("GevSCPSPacketSize"))
             {
-                // »ñÈ¡µ±Ç°ÍøÂç»·¾³µÄ×îÓÅ°ü³¤Öµ
+                // ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ç»·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å°ï¿½ï¿½ï¿½Öµ
                 int nPacketSize = m_objStreamPtr->GetOptimalPacketSize();
-                // ½«×îÓÅ°ü³¤ÖµÉèÖÃÎªµ±Ç°Éè±¸µÄÁ÷Í¨µÀ°ü³¤Öµ
+                // ï¿½ï¿½ï¿½ï¿½ï¿½Å°ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ç°ï¿½è±¸ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
                 CIntFeaturePointer GevSCPD = m_objFeatureControlPtr->GetIntFeature("GevSCPSPacketSize");
                 m_objFeatureControlPtr->GetIntFeature("GevSCPSPacketSize")->SetValue(nPacketSize);
                 m_objFeatureControlPtr->GetIntFeature("GevHeartbeatTimeout")->SetValue(300000);
@@ -209,7 +209,7 @@ int ClassGalaxy::Initialize()
                 SetPropertyLimits("InterPacketDelay", (double)GevSCPD->GetMin(), (double)GevSCPD->GetMax());
                 assert(ret == DEVICE_OK);
             }
-            //µÚ¶þ¸ö²ÎÊýÎªÓÃ»§Ë½ÓÐ²ÎÊý£¬ÓÃ»§¿ÉÒÔÔÚ»Øµ÷º¯ÊýÄÚ²¿½«Æä»¹Ô­È»Ê¹ÓÃ£¬Èç¹û²»ÐèÒªÔò¿É´«Èë NULL ¼´¿É
+            //ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½Ã»ï¿½Ë½ï¿½Ð²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú»Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ä»¹Ô­È»Ê¹ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½É´ï¿½ï¿½ï¿½ NULL ï¿½ï¿½ï¿½ï¿½
             //hDeviceOffline = m_objDevicePtr->RegisterDeviceOfflineCallback(pDeviceOfflineEventHandler, this);
         }
         else if (GX_DEVICE_CLASS_U3V == objDeviceClass)
@@ -226,7 +226,7 @@ int ClassGalaxy::Initialize()
             }
         }
 
-        //ÑÕÉ«ÅÐ¶Ï
+        //ï¿½ï¿½É«ï¿½Ð¶ï¿½
         gxstring strValue = "";
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("PixelColorFilter"))
         {
@@ -243,7 +243,7 @@ int ClassGalaxy::Initialize()
         //AddToLog(msg.str());
         msg << "using camera " << m_objFeatureControlPtr->GetStringFeature("DeviceUserID")->GetValue();
         AddToLog(msg.str());
-        // initialize the pylon image formatter. ÅÐ¶ÏÏà»úÍ¼ÏñÊä³ö¸ñÊ½-ÕÔÎ°¸¦
+        // initialize the pylon image formatter. ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½-ï¿½ï¿½Î°ï¿½ï¿½
         // 
         // Name
         int ret = CreateProperty(MM::g_Keyword_Name, g_CameraDeviceName, MM::String, true);
@@ -262,12 +262,12 @@ int ClassGalaxy::Initialize()
 
         //Get information about camera (e.g. height, width, byte depth)
         //check if given Camera support event. //Register Camera events
-        //ÕÔÎ°¸¦£º×¢²áÏà»úÊÂ¼þ£¬×¢²á²É¼¯»Øµ÷-Î´¼Ó ÎÂ¶ÈÊÂ¼þ
+        //ï¿½ï¿½Î°ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½×¢ï¿½ï¿½É¼ï¿½ï¿½Øµï¿½-Î´ï¿½ï¿½ ï¿½Â¶ï¿½ï¿½Â¼ï¿½
 
         CIntFeaturePointer width = m_objFeatureControlPtr->GetIntFeature("Width");
         CIntFeaturePointer height = m_objFeatureControlPtr->GetIntFeature("Height");
 
-        //×ÜÊôÐÔÆ÷
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (1)
         {
             CPropertyAction* pAct = new CPropertyAction(this, &ClassGalaxy::OnWidth);
@@ -290,7 +290,7 @@ int ClassGalaxy::Initialize()
 
         //end of Sensor size
         long bytes = (long)(height->GetValue() * width->GetValue() * 4);
-        //20221020ÕÔÎ°¸¦
+        //20221020ï¿½ï¿½Î°ï¿½ï¿½
         //Buffer4ContinuesShot = malloc(bytes);
 
 
@@ -309,7 +309,7 @@ int ClassGalaxy::Initialize()
         vector<string> pixelTypeValues;
         CEnumFeaturePointer PixelFormatList = m_objFeatureControlPtr->GetEnumFeature("PixelFormat");
         gxstring_vector LisePixelFormat = PixelFormatList->GetEnumEntryList();
-        //ÎªÁË¸³ÖµÓÃ
+        //Îªï¿½Ë¸ï¿½Öµï¿½ï¿½
         for (size_t i = 0; i < LisePixelFormat.size(); i++)
         {
             string strValue(LisePixelFormat[i]);
@@ -388,7 +388,7 @@ int ClassGalaxy::Initialize()
             }
             SetAllowedValues("TriggerSource", LSPVals);
         }
-        //20230217ÉèÖÃÆÚÍûÖ¡ÂÊÊ¹ÄÜ
+        //20230217ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¡ï¿½ï¿½Ê¹ï¿½ï¿½
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("AcquisitionFrameRateMode"))
         {
             CEnumFeaturePointer AdjFrameRateMode = m_objFeatureControlPtr->GetEnumFeature("AcquisitionFrameRateMode");
@@ -409,7 +409,7 @@ int ClassGalaxy::Initialize()
             CFloatFeaturePointer AdjFrameRate = m_objFeatureControlPtr->GetFloatFeature("AcquisitionFrameRate");
             pAct = new CPropertyAction(this, &ClassGalaxy::OnAcquisitionFrameRate);
             ret = CreateProperty("AcquisitionFrameRate", CDeviceUtils::ConvertToString((float)0), MM::Float, false, pAct);
-            //µ±Ç°²É¼¯Ö¡ÂÊÐèÖØÐÂ¼ÆËã
+            //ï¿½ï¿½Ç°ï¿½É¼ï¿½Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½
             SetPropertyLimits("AcquisitionFrameRate", (double)AdjFrameRate->GetMin(), (double)AdjFrameRate->GetMax());
             assert(ret == DEVICE_OK);
         }
@@ -455,7 +455,7 @@ int ClassGalaxy::Initialize()
             assert(ret == DEVICE_OK);
 
         }
-        //ÔöÒæ
+        //ï¿½ï¿½ï¿½ï¿½
         m_objFeatureControlPtr->GetEnumFeature("GainSelector")->SetValue("AnalogAll");
         m_objFeatureControlPtr->GetFloatFeature("Gain")->SetValue(0.0000);
         double d = m_objFeatureControlPtr->GetFloatFeature("Gain")->GetValue();
@@ -468,7 +468,7 @@ int ClassGalaxy::Initialize()
             SetPropertyLimits("Gain", (double)Gain->GetMin(), (double)Gain->GetMax());
             assert(ret == DEVICE_OK);
         }
-        //20230220ÉèÖÃÍ¼Ïñ×ª»»RGBA8
+        //20230220ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½×ªï¿½ï¿½RGBA8
         ret = UpdateStatus();
 
         if (ret != DEVICE_OK)
@@ -500,7 +500,7 @@ void ClassGalaxy::CoverToRGB(GX_PIXEL_FORMAT_ENTRY emDstFormat,void* DstBuffer, 
         TestFormatConvertPtr->SetAlphaValue(255);
         uint64_t Size = TestFormatConvertPtr->GetBufferSizeForConversion(pObjSrcImageData);
         TestFormatConvertPtr->Convert(pObjSrcImageData, DstBuffer, Size, false); //modify by LXM in 20240305
-        //×¢Òâ¶¼ÄÜÏÔÊ¾16Î»Í¼ÏñRGB
+        //×¢ï¿½â¶¼ï¿½ï¿½ï¿½ï¿½Ê¾16Î»Í¼ï¿½ï¿½RGB
     }
     catch (CGalaxyException& e)
     {
@@ -524,7 +524,7 @@ int ClassGalaxy::CheckForBinningMode(CPropertyAction* pAct)
     vector<string> LSPVals;
 
     gxstring_vector LiseBinningHorizontalMode = BinningHorizontalMode->GetEnumEntryList();
-    //ÎªÁË¸³ÖµÓÃ
+    //Îªï¿½Ë¸ï¿½Öµï¿½ï¿½
     for (size_t i = 0; i < LiseBinningHorizontalMode.size(); i++)
     {
         string strValue(LiseBinningHorizontalMode[i]);
@@ -574,17 +574,17 @@ int ClassGalaxy::OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 int ClassGalaxy::Shutdown()
 {
-    //¹Ø±ÕÏà»ú
+    //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½
     try
     {
-        //ÅÐ¶ÏÊÇ·ñÍ£Ö¹²É¼¯
+        //ï¿½Ð¶ï¿½ï¿½Ç·ï¿½Í£Ö¹ï¿½É¼ï¿½
         if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
         {
-            //·¢ËÍÍ£²ÉÃüÁî
+            //ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-            //¹Ø±ÕÁ÷²ã²É¼¯
+            //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
             m_objStreamPtr->StopGrab();
-            //×¢Ïú²É¼¯»Øµ÷º¯Êý
+            //×¢ï¿½ï¿½ï¿½É¼ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½
             m_objStreamPtr->UnregisterCaptureCallback();
 
         }
@@ -595,10 +595,10 @@ int ClassGalaxy::Shutdown()
     }
     try
     {
-        //¹Ø±ÕÁ÷¶ÔÏó
+        //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         m_objStreamPtr->Close();
 
-        //¹Ø±ÕÉè±¸
+        //ï¿½Ø±ï¿½ï¿½è±¸
         m_objDevicePtr->Close();
     }
     catch (CGalaxyException& e)
@@ -625,7 +625,7 @@ int ClassGalaxy::SnapImage()
         // modify by LXM in 20240305
         //if (m_bIsOpen)
         {
-            //AddToLog("---------------ÅÐ¶ÏÊÇ·ñ¿ª²É");
+            //AddToLog("---------------ï¿½Ð¶ï¿½ï¿½Ç·ñ¿ª²ï¿½");
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
             m_objStreamPtr->StopGrab();
             //camera_->DeregisterImageEventHandler(ImageHandler_);
@@ -640,13 +640,13 @@ int ClassGalaxy::SnapImage()
         //end modify
 
             int timeout_ms = 5000;	
-            //¿ªÆôÁ÷²ã²É¼¯
+            //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
             m_objStreamPtr->StartGrab();
-            //·¢ËÍ¿ª²ÉÃüÁî
+            //ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
             m_bIsOpen = true;//modify by LXM
             m_objStreamPtr->FlushQueue();
-            //¿ÉÒÔÊ¹ÓÃ²Éµ¥Ö¡À´»ñÈ¡
+            //ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ã²Éµï¿½Ö¡ï¿½ï¿½ï¿½ï¿½È¡
             CImageDataPointer ptrGrabResult = m_objStreamPtr->GetImage(timeout_ms);
             uint64_t length = ptrGrabResult->GetPayloadSize();
             
@@ -663,7 +663,7 @@ int ClassGalaxy::SnapImage()
         string a = e.what();
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //¹Ø±ÕÁ÷²ã²É¼¯
+        //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -671,7 +671,7 @@ int ClassGalaxy::SnapImage()
     {
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //¹Ø±ÕÁ÷²ã²É¼¯
+        //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -690,9 +690,9 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
 
         std::size_t found = pixelType_.find(subject);
         //pixelType_.assign(pixelFormat_gx);
-        //Ïà»úÀàÐÍ-Ã÷È·Ïà»úµÄÊä³öÐÎÊ½--´ýÈ·ÈÏ
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½-ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½--ï¿½ï¿½È·ï¿½ï¿½
         GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
-        //Ã÷È·Ïà»úµÄ²ÉÍ¼¸ñÊ½
+        //ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ä²ï¿½Í¼ï¿½ï¿½Ê½
         emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
 
         if (found != std::string::npos)
@@ -707,10 +707,10 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
             memcpy(imgBuffer_, buffer, GetImageBufferSize());
             SetProperty(MM::g_Keyword_PixelType, g_PixelType_8bit);
         }
-        //20221025´ý¶¨ÆäËûÑÕÉ«¸ñÊ½
+        //20221025ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½Ê½
         else if (pixelType_.compare("Mono16") == 0 || pixelType_.compare("Mono12") == 0 || pixelType_.compare("Mono10") == 0)
         {
-            //ºÚ°×8-16Î»
+            //ï¿½Ú°ï¿½8-16Î»
             //copy image buffer to a snap buffer allocated by device adapter
             void* buffer = objImageDataPointer->GetBuffer();
             memcpy(imgBuffer_, buffer, GetImageBufferSize());
@@ -761,7 +761,7 @@ int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interv
 
         //camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-        //¿ªÆôÁ÷²ã²É¼¯
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StartGrab();
 
         int ret = GetCoreCallback()->PrepareForAcq(this);
@@ -776,7 +776,7 @@ int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interv
         string a = e.what();
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //¹Ø±ÕÁ÷²ã²É¼¯
+        //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -784,7 +784,7 @@ int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interv
     {
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //¹Ø±ÕÁ÷²ã²É¼¯
+        //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -797,7 +797,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         //modify by LXM in 20240306
         //if (m_bIsOpen)
         {
-            //AddToLog("---------------ÅÐ¶ÏÊÇ·ñ¿ª²É");
+            //AddToLog("---------------ï¿½Ð¶ï¿½ï¿½Ç·ñ¿ª²ï¿½");
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
             m_objStreamPtr->StopGrab();
         }
@@ -813,7 +813,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         }
         //camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-        //¿ªÆôÁ÷²ã²É¼¯
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StartGrab();
         AddToLog("StartSequenceAcquisition");
     }
@@ -822,7 +822,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         string a = e.what();
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //¹Ø±ÕÁ÷²ã²É¼¯
+        //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -830,7 +830,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
     {
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //¹Ø±ÕÁ÷²ã²É¼¯
+        //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -863,14 +863,14 @@ void ClassGalaxy::ResizeSnapBuffer() {
 
     free(imgBuffer_);
     GetImageSize();
-    imageBufferSize_ = Width_ * Height_ * GetImageBytesPerPixel();//Ô­ÏÈÊÇbuffersize
+    imageBufferSize_ = Width_ * Height_ * GetImageBytesPerPixel();//Ô­ï¿½ï¿½ï¿½ï¿½buffersize
     imgBuffer_ = malloc(imageBufferSize_);
 }
 
 bool ClassGalaxy::__IsPixelFormat8(GX_PIXEL_FORMAT_ENTRY emPixelFormatEntry)
 {
     bool bIsPixelFormat8 = false;
-    const unsigned  PIXEL_FORMATE_BIT = 0x00FF0000;  ///<ÓÃÓÚÓëµ±Ç°µÄÊý¾Ý¸ñÊ½½øÐÐÓëÔËËãµÃµ½µ±Ç°µÄÊý¾ÝÎ»Êý
+    const unsigned  PIXEL_FORMATE_BIT = 0x00FF0000;  ///<ï¿½ï¿½ï¿½ï¿½ï¿½ëµ±Ç°ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
     unsigned uiPixelFormatEntry = (unsigned)emPixelFormatEntry;
     if ((uiPixelFormatEntry & PIXEL_FORMATE_BIT) == GX_PIXEL_8BIT)
     {
@@ -886,9 +886,9 @@ unsigned char* ClassGalaxy::GetImageBufferFromCallBack(CImageDataPointer& objIma
     INT64 Width_ = m_objFeatureControlPtr->GetIntFeature("Width")->GetValue();
 
     INT64 Height_ = m_objFeatureControlPtr->GetIntFeature("Height")->GetValue();
-     //Ïà»úÀàÐÍ-Ã÷È·Ïà»úµÄÊä³öÐÎÊ½--´ýÈ·ÈÏ
+     //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½-ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½--ï¿½ï¿½È·ï¿½ï¿½
      GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
-     //Ã÷È·Ïà»úµÄ²ÉÍ¼¸ñÊ½
+     //ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ä²ï¿½Í¼ï¿½ï¿½Ê½
     emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
 
     if (colorCamera_)
@@ -906,22 +906,22 @@ unsigned char* ClassGalaxy::GetImageBufferFromCallBack(CImageDataPointer& objIma
             imgBuffer_2 = (BYTE*)objImageDataPointer->ConvertToRaw8(emValidBits);
         }
 
-        // ºÚ°×Ïà»úÐèÒª·­×ªÊý¾ÝºóÏÔÊ¾
+        // ï¿½Ú°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½×ªï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ê¾
         for (int i = 0; i < Height_; i++)
         {
-            //º¬Òå
+            //ï¿½ï¿½ï¿½ï¿½
             memcpy(m_pImageBuffer + i * Width_, imgBuffer_2 + (Height_ - i - 1) * Width_, (size_t)Width_);
             return (unsigned char*)imgBuffer_;
         }
     }
-    //»ñÈ¡Í¼Ïñbuffer
+    //ï¿½ï¿½È¡Í¼ï¿½ï¿½buffer
     return (unsigned char*)imgBuffer_;
 
 }
 
 const unsigned char* ClassGalaxy::GetImageBuffer()
 {
-    //°´ÕÕºÚ°×ÏÔÊ¾
+    //ï¿½ï¿½ï¿½ÕºÚ°ï¿½ï¿½ï¿½Ê¾
     return (unsigned char*)imgBuffer_;
 
 }
@@ -980,7 +980,7 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
                 if (Isgrabbing)
                 {
                     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-                    //¹Ø±ÕÁ÷²ã²É¼¯
+                    //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
                     m_objStreamPtr->StopGrab();
                 }
                 pProp->Get(binningFactor_);
@@ -989,7 +989,7 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
                 BinningVertical->SetValue(val);
                 if (Isgrabbing)
                 {
-                    //ÖØ¿ª
+                    //ï¿½Ø¿ï¿½
                     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
                     m_objStreamPtr->StartGrab();
 
@@ -1123,7 +1123,7 @@ int ClassGalaxy::OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct)
                 if (Isgrabbing)
                 {
                     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-                    //¹Ø±ÕÁ÷²ã²É¼¯
+                    //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
                     m_objStreamPtr->StopGrab();
                     //camera_->StopGrabbing();
                 }
@@ -1181,7 +1181,7 @@ int ClassGalaxy::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
     {
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //¹Ø±ÕÁ÷²ã²É¼¯
+        //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
         m_objStreamPtr->StopGrab();
     }
     //CEnumerationPtr pixelFormat(nodeMap_->GetNode("PixelFormat"));
@@ -1192,9 +1192,9 @@ int ClassGalaxy::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get(pixelType_);
         try
         {
-                //´úÂë±¨´í
+                //ï¿½ï¿½ï¿½ë±¨ï¿½ï¿½
                           
-                //ÉèÖÃÐÂÖµ
+                //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
                 pixelFormat_->SetValue(pixelType_.c_str());
                 const char* subject("Bayer");
                 std::size_t found = pixelType_.find(subject);
@@ -1262,7 +1262,7 @@ int ClassGalaxy::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
        
         if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
         {
-            //ÖØ¿ª
+            //ï¿½Ø¿ï¿½
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
             m_objStreamPtr->StartGrab();
         }
@@ -1413,7 +1413,7 @@ int ClassGalaxy::OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
                 if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
                 {
                     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-                    //¹Ø±ÕÁ÷²ã²É¼¯
+                    //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
                     m_objStreamPtr->StopGrab();
                     //camera_->StopGrabbing();
                 }
@@ -1641,7 +1641,7 @@ int ClassGalaxy::ClearROI()
 
 void ClassGalaxy::ReduceImageSize(int64_t Width, int64_t Height)
 {
-    //´ý¶¨
+    //ï¿½ï¿½ï¿½ï¿½
 
     return ;
 }
@@ -1666,7 +1666,7 @@ void ClassGalaxy::RGB24PackedToRGBA(void* destbuffer, void* srcbuffer, CImageDat
     unsigned int dstOffset = 0;
     GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
     uint64_t Payloadsize=objImageDataPointer->GetPayloadSize();
-    //Ã÷È·Ïà»úµÄ²ÉÍ¼¸ñÊ½
+    //ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ä²ï¿½Í¼ï¿½ï¿½Ê½
     emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
     if (emValidBits!= GX_BIT_0_7)
     {
@@ -1698,15 +1698,15 @@ void ClassGalaxy::RG8ToRGB24Packed(void* destbuffer,CImageDataPointer& objImageD
     try
     {
         GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
-        //Ã÷È·Ïà»úµÄ²ÉÍ¼¸ñÊ½
+        //ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ä²ï¿½Í¼ï¿½ï¿½Ê½
         emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
 
-        //ÎªÁËÏÔÊ¾£¬ÐèÒª¶¼×ª³ÉRaw8Î»
+        //Îªï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½×ªï¿½ï¿½Raw8Î»
         if (emValidBits!= GX_BIT_0_7)
         {
             return;
         }
-        //RGB24Packed-´óÐ¡³ËÒÔ3
+        //RGB24Packed-ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½3
         void* buffer = objImageDataPointer->ConvertToRGB24(emValidBits, GX_RAW2RGB_NEIGHBOUR, false);
         RGB24PackedToRGBA(destbuffer, buffer, objImageDataPointer);
         AddToLog("RG8ToRGB24Packed");
@@ -1740,7 +1740,7 @@ void ClassGalaxy::RG10ToRGB24Packed(void* pRGB24Bufdest, CImageDataPointer& objI
 {
     if (0)
     {
-        //×ª³ÉRGB8*2£¬ÔÚ×ª³ÉRGBA8*2*4
+        //×ªï¿½ï¿½RGB8*2ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½RGBA8*2*4
         size_t BufferSize = GetImageSizeLarge() * 3 * sizeof(unsigned short int);
         void* RGB16 = malloc(BufferSize);
 
@@ -1761,7 +1761,7 @@ void ClassGalaxy::RG10ToRGB24Packed(void* pRGB24Bufdest, CImageDataPointer& objI
 
 
     GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
-    //Ã÷È·Ïà»úµÄ²ÉÍ¼¸ñÊ½
+    //ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ä²ï¿½Í¼ï¿½ï¿½Ê½
     emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
 
     BYTE* pRGB24Buf2 = (BYTE*)objImageDataPointer->ConvertToRGB24(emValidBits, GX_RAW2RGB_NEIGHBOUR, false);
@@ -1820,7 +1820,7 @@ GX_VALID_BIT_LIST ClassGalaxy::GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelForm
     }
     case GX_PIXEL_FORMAT_MONO14:
     {
-        //ÔÝÊ±Ã»ÓÐÕâÑùµÄÊý¾Ý¸ñÊ½´ýÉý¼¶
+        //ï¿½ï¿½Ê±Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         break;
     }
     case GX_PIXEL_FORMAT_MONO16:
@@ -1829,7 +1829,7 @@ GX_VALID_BIT_LIST ClassGalaxy::GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelForm
     case GX_PIXEL_FORMAT_BAYER_GB16:
     case GX_PIXEL_FORMAT_BAYER_BG16:
     {
-        //ÔÝÊ±Ã»ÓÐÕâÑùµÄÊý¾Ý¸ñÊ½´ýÉý¼¶
+        //ï¿½ï¿½Ê±Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (emPixelFormatEntry != GX_PIXEL_FORMAT_MONO16)
         {
             IsByerFormat = true;
@@ -1847,10 +1847,10 @@ CircularBufferInserter::CircularBufferInserter(ClassGalaxy* dev) :
 {}
     //---------------------------------------------------------------------------------
     /**
-    \brief   ²É¼¯»Øµ÷º¯Êý
-    \param   objImageDataPointer      Í¼Ïñ´¦Àí²ÎÊý
-    \param   pFrame                   ÓÃ»§²ÎÊý
-    \return  ÎÞ
+    \brief   ï¿½É¼ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½
+    \param   objImageDataPointer      Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    \param   pFrame                   ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½
+    \return  ï¿½ï¿½
     */
     //----------------------------------------------------------------------------------
 void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam)
@@ -1859,7 +1859,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
     //dev_->AddToLog("OnImageGrabbed");
     // Important:  meta data about the image are generated here:
     Metadata md;
-    md.put("Camera", "");
+    md.put(MM::g_Keyword_Metadata_CameraLabel, "");
     md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetWidth()));
     md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetHeight()));
     md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetFrameID()));
@@ -1867,11 +1867,11 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
     // Image grabbed successfully ?
     if (objImageDataPointer->GetStatus()== GX_FRAME_STATUS_SUCCESS)
     {
-        //²éÑ¯Í¼Ïñ¸ñÊ½
+        //ï¿½ï¿½Ñ¯Í¼ï¿½ï¿½ï¿½Ê½
         GX_PIXEL_FORMAT_ENTRY pixelFormat_gx = objImageDataPointer->GetPixelFormat();
 
         dev_->ResizeSnapBuffer();
-        //ºÚ°×
+        //ï¿½Ú°ï¿½
         if (!dev_->colorCamera_)
         {
             //copy to intermediate buffer
@@ -1885,7 +1885,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
         }
         else if (dev_->colorCamera_)
         {
-            //²ÊÉ«£¬×¢ÒâÕâÀïÈ«²¿×ª³É8Î»RGB
+            //ï¿½ï¿½É«ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½×ªï¿½ï¿½8Î»RGB
             if (dev_->__IsPixelFormat8(pixelFormat_gx))
             {
                 dev_->RG8ToRGB24Packed(dev_->imgBuffer_, objImageDataPointer);
@@ -1905,7 +1905,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
     }
     else
     {
-        dev_->AddToLog("²ÐÖ¡");
+        dev_->AddToLog("ï¿½ï¿½Ö¡");
     }
 
 
@@ -1932,7 +1932,7 @@ bool ClassGalaxy::__IsCompatible(BITMAPINFO* pBmpInfo, uint64_t nWidth, uint64_t
 void ClassGalaxy::__ColorPrepareForShowImg()
 {
     //--------------------------------------------------------------------
-    //---------------------------³õÊ¼»¯bitmapÍ·---------------------------
+    //---------------------------ï¿½ï¿½Ê¼ï¿½ï¿½bitmapÍ·---------------------------
     m_pBmpInfo = (BITMAPINFO*)m_chBmpBuf;
     m_pBmpInfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     m_pBmpInfo->bmiHeader.biWidth = (LONG)Width_;
@@ -1972,7 +1972,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer, const std::st
         throw std::runtime_error("Argument is error");
     }
 
-    //¼ì²éÍ¼ÏñÊÇ·ñ¸Ä±ä²¢¸üÐÂBuffer
+    //ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ç·ï¿½Ä±ä²¢ï¿½ï¿½ï¿½ï¿½Buffer
     __UpdateBitmap(objCImageDataPointer);
 
     emValidBits = GetBestValudBit(objCImageDataPointer->GetPixelFormat());
@@ -1993,7 +1993,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer, const std::st
         {
             pBuffer = (BYTE*)objCImageDataPointer->ConvertToRaw8(emValidBits);
         }
-        // ºÚ°×Ïà»úÐèÒª·­×ªÊý¾ÝºóÏÔÊ¾
+        // ï¿½Ú°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½×ªï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ê¾
         for (unsigned int i = 0; i < Height_; i++)
         {
             memcpy(m_pImageBuffer + i * Width_, pBuffer + (Height_ - i - 1) * Width_, (size_t)Width_);
@@ -2005,23 +2005,23 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer, const std::st
         BITMAPFILEHEADER     stBfh = { 0 };
         DWORD		         dwBytesRead = 0;
 
-        stBfh.bfType = (WORD)'M' << 8 | 'B';			 //¶¨ÒåÎÄ¼þÀàÐÍ
+        stBfh.bfType = (WORD)'M' << 8 | 'B';			 //ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
         stBfh.bfOffBits = colorCamera_ ? sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)
-            : sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (256 * 4);	//¶¨ÒåÎÄ¼þÍ·´óÐ¡trueÎª²ÊÉ«,falseÎªºÚ°×
-        stBfh.bfSize = stBfh.bfOffBits + dwImageSize; //ÎÄ¼þ´óÐ¡
+            : sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (256 * 4);	//ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Í·ï¿½ï¿½Ð¡trueÎªï¿½ï¿½É«,falseÎªï¿½Ú°ï¿½
+        stBfh.bfSize = stBfh.bfOffBits + dwImageSize; //ï¿½Ä¼ï¿½ï¿½ï¿½Ð¡
 
         DWORD dwBitmapInfoHeader = colorCamera_ ? sizeof(BITMAPINFOHEADER)
-            : sizeof(BITMAPINFOHEADER) + (256 * 4);	//¶¨ÒåBitmapInfoHeader´óÐ¡trueÎª²ÊÉ«,falseÎªºÚ°×
+            : sizeof(BITMAPINFOHEADER) + (256 * 4);	//ï¿½ï¿½ï¿½ï¿½BitmapInfoHeaderï¿½ï¿½Ð¡trueÎªï¿½ï¿½É«,falseÎªï¿½Ú°ï¿½
         const char* strEn = strFilePath.c_str();
 
-        //½«const char*×ª»¯ÎªLPCTSTR
+        //ï¿½ï¿½const char*×ªï¿½ï¿½ÎªLPCTSTR
         size_t length = sizeof(TCHAR) * (strlen(strEn) + 1);
         LPTSTR tcBuffer = new TCHAR[length];
         memset(tcBuffer, 0, length);
         MultiByteToWideChar(CP_ACP, 0, strEn, (int) strlen(strEn), tcBuffer, (int) length);
         LPCTSTR  pDest = (LPCTSTR)tcBuffer;
 
-        //´´½¨ÎÄ¼þ
+        //ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
         HANDLE hFile = ::CreateFile(pDest,
             GENERIC_WRITE,
             0,
@@ -2035,7 +2035,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer, const std::st
             throw std::runtime_error("Handle is invalid");
         }
         ::WriteFile(hFile, &stBfh, sizeof(BITMAPFILEHEADER), &dwBytesRead, NULL);
-        ::WriteFile(hFile, m_pBmpInfo, dwBitmapInfoHeader, &dwBytesRead, NULL); //ºÚ°×ºÍ²ÊÉ«×ÔÊÊÓ¦
+        ::WriteFile(hFile, m_pBmpInfo, dwBitmapInfoHeader, &dwBytesRead, NULL); //ï¿½Ú°×ºÍ²ï¿½É«ï¿½ï¿½ï¿½ï¿½Ó¦
         ::WriteFile(hFile, pBuffer, dwImageSize, &dwBytesRead, NULL);
         CloseHandle(hFile);
 }
@@ -2049,7 +2049,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer,void* buffer,c
         throw std::runtime_error("Argument is error");
     }
 
-    //¼ì²éÍ¼ÏñÊÇ·ñ¸Ä±ä²¢¸üÐÂBuffer
+    //ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ç·ï¿½Ä±ä²¢ï¿½ï¿½ï¿½ï¿½Buffer
     __UpdateBitmap(objCImageDataPointer);
 
     emValidBits = GetBestValudBit(objCImageDataPointer->GetPixelFormat());
@@ -2070,7 +2070,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer,void* buffer,c
         {
             pBuffer = (BYTE*)objCImageDataPointer->ConvertToRaw8(emValidBits);
         }
-        // ºÚ°×Ïà»úÐèÒª·­×ªÊý¾ÝºóÏÔÊ¾
+        // ï¿½Ú°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½×ªï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ê¾
         for (unsigned int i = 0; i < Height_; i++)
         {
             memcpy(m_pImageBuffer + i * Width_, pBuffer + (Height_ - i - 1) * Width_, (size_t)Width_);
@@ -2082,23 +2082,23 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer,void* buffer,c
     BITMAPFILEHEADER     stBfh = { 0 };
     DWORD		         dwBytesRead = 0;
 
-    stBfh.bfType = (WORD)'M' << 8 | 'B';			 //¶¨ÒåÎÄ¼þÀàÐÍ
+    stBfh.bfType = (WORD)'M' << 8 | 'B';			 //ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
     stBfh.bfOffBits = colorCamera_ ? sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)
-        : sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (256 * 4);	//¶¨ÒåÎÄ¼þÍ·´óÐ¡trueÎª²ÊÉ«,falseÎªºÚ°×
-    stBfh.bfSize = stBfh.bfOffBits + dwImageSize; //ÎÄ¼þ´óÐ¡
+        : sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (256 * 4);	//ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Í·ï¿½ï¿½Ð¡trueÎªï¿½ï¿½É«,falseÎªï¿½Ú°ï¿½
+    stBfh.bfSize = stBfh.bfOffBits + dwImageSize; //ï¿½Ä¼ï¿½ï¿½ï¿½Ð¡
 
     DWORD dwBitmapInfoHeader = colorCamera_ ? sizeof(BITMAPINFOHEADER)
-        : sizeof(BITMAPINFOHEADER) + (256 * 4);	//¶¨ÒåBitmapInfoHeader´óÐ¡trueÎª²ÊÉ«,falseÎªºÚ°×
+        : sizeof(BITMAPINFOHEADER) + (256 * 4);	//ï¿½ï¿½ï¿½ï¿½BitmapInfoHeaderï¿½ï¿½Ð¡trueÎªï¿½ï¿½É«,falseÎªï¿½Ú°ï¿½
     const char* strEn = strFilePath.c_str();
 
-    //½«const char*×ª»¯ÎªLPCTSTR
+    //ï¿½ï¿½const char*×ªï¿½ï¿½ÎªLPCTSTR
     size_t length = sizeof(TCHAR) * (strlen(strEn) + 1);
     LPTSTR tcBuffer = new TCHAR[length];
     memset(tcBuffer, 0, length);
     MultiByteToWideChar(CP_ACP, 0, strEn, (int) strlen(strEn), tcBuffer, (int) length);
     LPCTSTR  pDest = (LPCTSTR)tcBuffer;
 
-    //´´½¨ÎÄ¼þ
+    //ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
     HANDLE hFile = ::CreateFile(pDest,
         GENERIC_WRITE,
         0,
@@ -2112,7 +2112,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer,void* buffer,c
         throw std::runtime_error("Handle is invalid");
     }
     ::WriteFile(hFile, &stBfh, sizeof(BITMAPFILEHEADER), &dwBytesRead, NULL);
-    ::WriteFile(hFile, m_pBmpInfo, dwBitmapInfoHeader, &dwBytesRead, NULL); //ºÚ°×ºÍ²ÊÉ«×ÔÊÊÓ¦
+    ::WriteFile(hFile, m_pBmpInfo, dwBitmapInfoHeader, &dwBytesRead, NULL); //ï¿½Ú°×ºÍ²ï¿½É«ï¿½ï¿½ï¿½ï¿½Ó¦
     //::WriteFile(hFile, pBuffer, dwImageSize, &dwBytesRead, NULL);
     
     ::WriteFile(hFile, buffer, dwImageSize, &dwBytesRead, NULL);
@@ -2126,23 +2126,23 @@ void ClassGalaxy::SaveRaw(CImageDataPointer& objCImageDataPointer, const std::st
         throw std::runtime_error("Argument is error");
     }
 
-    //¼ì²éÍ¼ÏñÊÇ·ñ¸Ä±ä²¢¸üÐÂBuffer
+    //ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ç·ï¿½Ä±ä²¢ï¿½ï¿½ï¿½ï¿½Buffer
     __UpdateBitmap(objCImageDataPointer);
 
-    DWORD   dwImageSize = (DWORD)objCImageDataPointer->GetPayloadSize();  // Ð´ÈëÎÄ¼þµÄ³¤¶È
-    DWORD   dwBytesRead = 0;                // ÎÄ¼þ¶ÁÈ¡µÄ³¤¶È
+    DWORD   dwImageSize = (DWORD)objCImageDataPointer->GetPayloadSize();  // Ð´ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ä³ï¿½ï¿½ï¿½
+    DWORD   dwBytesRead = 0;                // ï¿½Ä¼ï¿½ï¿½ï¿½È¡ï¿½Ä³ï¿½ï¿½ï¿½
 
     BYTE* pbuffer = (BYTE*)objCImageDataPointer->GetBuffer();
 
     const char* strEn = strFilePath.c_str();
 
-    //½«const char*×ª»¯ÎªLPCTSTR
+    //ï¿½ï¿½const char*×ªï¿½ï¿½ÎªLPCTSTR
     size_t length = sizeof(TCHAR) * (strlen(strEn) + 1);
     LPTSTR tcBuffer = new TCHAR[length];
     memset(tcBuffer, 0, length);
     MultiByteToWideChar(CP_ACP, 0, strEn, (int) strlen(strEn), tcBuffer, (int) length);
     LPCTSTR  pDest = (LPCTSTR)tcBuffer;
-    // ´´½¨ÎÄ¼þ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
     HANDLE hFile = ::CreateFile(pDest,
         GENERIC_WRITE,
         FILE_SHARE_READ,
@@ -2151,11 +2151,11 @@ void ClassGalaxy::SaveRaw(CImageDataPointer& objCImageDataPointer, const std::st
         FILE_ATTRIBUTE_NORMAL,
         NULL);
 
-    if (hFile == INVALID_HANDLE_VALUE)   // ´´½¨Ê§°ÜÔò·µ»Ø
+    if (hFile == INVALID_HANDLE_VALUE)   // ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½ï¿½ò·µ»ï¿½
     {
         throw std::runtime_error("Handle is invalid");
     }
-    else                                 // ±£´æRawÍ¼Ïñ          
+    else                                 // ï¿½ï¿½ï¿½ï¿½RawÍ¼ï¿½ï¿½          
     {
         ::WriteFile(hFile, pbuffer, dwImageSize, &dwBytesRead, NULL);
         CloseHandle(hFile);

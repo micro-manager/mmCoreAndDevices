@@ -93,9 +93,9 @@ inline static void OutputDbgPrint(const char* strOutPutString, ...)
 MODULE_API void InitializeModuleData()
 {
 #ifdef _VEROPTICS
-	RegisterDevice(g_CameraName, MM::CameraDevice, "Micro-manager Veroptics camera");//³öÏÖÔÚdevice listÀï
+	RegisterDevice(g_CameraName, MM::CameraDevice, "Micro-manager Veroptics camera");//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½device listï¿½ï¿½
 #else
-	RegisterDevice(g_CameraName, MM::CameraDevice, "ZWO ASI camera");//³öÏÖÔÚdevice listÀï
+	RegisterDevice(g_CameraName, MM::CameraDevice, "ZWO ASI camera");//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½device listï¿½ï¿½
 #endif
 	RegisterDevice(g_StateDeviceName, MM::StateDevice, "ZWO EFW filter wheel");
 }
@@ -218,19 +218,19 @@ CMyASICam::CMyASICam() :
 	{		
 		ASIGetCameraProperty(&ASICameraInfo, i);
 #ifdef _VEROPTICS
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ZWO", "Veroptics");//Çø·Ö´óÐ¡Ð´
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ASI", "VER");//Çø·Ö´óÐ¡Ð´
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mc", "C", false);//²»Çø·Ö´óÐ¡Ð´
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mm", "M", false);//²»Çø·Ö´óÐ¡Ð´
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ZWO", "Veroptics");//ï¿½ï¿½ï¿½Ö´ï¿½Ð¡Ð´
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ASI", "VER");//ï¿½ï¿½ï¿½Ö´ï¿½Ð¡Ð´
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mc", "C", false);//ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð¡Ð´
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mm", "M", false);//ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð¡Ð´
 #endif
-		strcpy(ConnectedCamName[i], ASICameraInfo.Name);//±£´æÁ¬½ÓµÄÉãÏñÍ·Ãû×Ö		
+		strcpy(ConnectedCamName[i], ASICameraInfo.Name);//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½		
 		CamIndexValues.push_back(ConnectedCamName[i]);
 	}
 
-	CPropertyAction *pAct = new CPropertyAction (this, &CMyASICam::OnSelectCamIndex);//Í¨¹ýÃû×ÖÑ¡Ôñ´ò¿ªµÄÐòºÅ
+	CPropertyAction *pAct = new CPropertyAction (this, &CMyASICam::OnSelectCamIndex);//Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ò¿ªµï¿½ï¿½ï¿½ï¿½
 	if(iConnectedCamNum > 0)
 	{
-		strcpy(sz_ModelIndex, ConnectedCamName[0]);//Ä¬ÈÏ´ò¿ªµÚÒ»¸öcamera
+		strcpy(sz_ModelIndex, ConnectedCamName[0]);//Ä¬ï¿½Ï´ò¿ªµï¿½Ò»ï¿½ï¿½camera
 		//iCamIndex = 0;
 		ASIGetCameraProperty(&ASICameraInfo, 0);
 	}
@@ -244,7 +244,7 @@ CMyASICam::CMyASICam() :
 		
 	}
 //	strcpy(sz_ModelIndex, "DropDown");
-	ret = CreateProperty(g_DeviceIndex, sz_ModelIndex, MM::String, false, pAct, true); //Ñ¡ÔñÉãÏñÍ·ÐòºÅ
+	ret = CreateProperty(g_DeviceIndex, sz_ModelIndex, MM::String, false, pAct, true); //Ñ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½
 	SetAllowedValues(g_DeviceIndex, CamIndexValues);
 	assert(ret == DEVICE_OK);
 
@@ -310,10 +310,10 @@ int CMyASICam::Initialize()
 		
 	//	ASIGetCameraProperty(&ASICameraInfo, iCamIndex);
 #ifdef _VEROPTICS
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ZWO", "Veroptics");//Çø·Ö´óÐ¡Ð´
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ASI", "VER");//Çø·Ö´óÐ¡Ð´
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mc", "C", false);//²»Çø·Ö´óÐ¡Ð´
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mm", "M", false);//²»Çø·Ö´óÐ¡Ð´
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ZWO", "Veroptics");//ï¿½ï¿½ï¿½Ö´ï¿½Ð¡Ð´
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ASI", "VER");//ï¿½ï¿½ï¿½Ö´ï¿½Ð¡Ð´
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mc", "C", false);//ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð¡Ð´
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mm", "M", false);//ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð¡Ð´
 #endif
 		char *sz_Name = ASICameraInfo.Name;
 		int nRet = CreateStringProperty(MM::g_Keyword_CameraName, sz_Name, true);
@@ -666,7 +666,7 @@ int CMyASICam::Shutdown()
 * (i.e., before readout).  This behavior is needed for proper synchronization with the shutter.
 * Required by the MM::Camera API.
 */
-int CMyASICam::SnapImage()//ÆØ¹âÆÚ¼äÒª×èÈû
+int CMyASICam::SnapImage()//ï¿½Ø¹ï¿½ï¿½Ú¼ï¿½Òªï¿½ï¿½ï¿½ï¿½
 {
 	//  GenerateImage();
 //	ASIGetStartPos(iCamIndex, &iStartXImg, &iStartYImg);
@@ -830,7 +830,7 @@ unsigned CMyASICam::GetImageHeight() const
 * Returns image buffer pixel depth in bytes.
 * Required by the MM::Camera API.
 */
-unsigned CMyASICam::GetImageBytesPerPixel() const //Ã¿¸öÏñËØµÄ×Ö½ÚÊý
+unsigned CMyASICam::GetImageBytesPerPixel() const //Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½Ö½ï¿½ï¿½ï¿½
 {
 	return iPixBytes;
 } 
@@ -841,7 +841,7 @@ unsigned CMyASICam::GetImageBytesPerPixel() const //Ã¿¸öÏñËØµÄ×Ö½ÚÊý
 * a guideline on how to interpret pixel values.
 * Required by the MM::Camera API.
 */
-unsigned CMyASICam::GetBitDepth() const//ÑÕÉ«µÄ·¶Î§ 8bit »ò 16bit
+unsigned CMyASICam::GetBitDepth() const//ï¿½ï¿½É«ï¿½Ä·ï¿½Î§ 8bit ï¿½ï¿½ 16bit
 {
 	if(ImgType == ASI_IMG_RAW16)
 	{
@@ -931,16 +931,16 @@ void CMyASICam::DeleteImgBuf()
 		pRGB64 = 0;
 	}
 }
-int CMyASICam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)//bin2Ê±µÄÖµÊÇÏà¶ÔÓÚbin2ºóÍ¼ÏñÉÏµÄ, ¶øASISetStartPos¶¼ÊÇÏà¶ÔÓÚbin1µÄ
+int CMyASICam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)//bin2Ê±ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½bin2ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ïµï¿½, ï¿½ï¿½ASISetStartPosï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½bin1ï¿½ï¿½
 {
 	if (xSize == 0 && ySize == 0)
 		;
 	else
 	{
 		/*20160107
-		ÉèÖÃROIÊÇÒÔÏÔÊ¾Í¼Æ¬Îª²ÎÕÕµÄ,³ÌÐò´«½øÀ´µÄÆðÊ¼µã(x, y)ÊÇÓÃÒÑÏÔÊ¾Í¼Æ¬µÄÆðÊ¼µã(µ÷ÓÃGetROI()µÃµ½)¼ÓÉÏÊó±êÑ¡ÔñµÄÆ«ÒÆ£¬
-		³ß´çºÍÆðÊ¼µã¶¼ÒÔImgBin/iSetBinËõ·Å, iSetBinÊÇÒªÉèÖÃµÄbinÖµ
-		Èç¹ûÓÐ·­×ª, ÔòÒª»»Ëã»ØÕý³£µÄÆðµã×ø±ê
+		ï¿½ï¿½ï¿½ï¿½ROIï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾Í¼Æ¬Îªï¿½ï¿½ï¿½Õµï¿½,ï¿½ï¿½ï¿½ò´«½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½(x, y)ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾Í¼Æ¬ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½GetROI()ï¿½Ãµï¿½)ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½Æ«ï¿½Æ£ï¿½
+		ï¿½ß´ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ã¶¼ï¿½ï¿½ImgBin/iSetBinï¿½ï¿½ï¿½ï¿½, iSetBinï¿½ï¿½Òªï¿½ï¿½ï¿½Ãµï¿½binÖµ
+		ï¿½ï¿½ï¿½ï¿½Ð·ï¿½×ª, ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		*/
 		switch(ImgFlip)
 		{
@@ -964,15 +964,15 @@ int CMyASICam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)//b
 		iSetHei = iSetHei/2*2;
 
 
-		iSetX = x*ImgBin/iSetBin;//bin¸Ä±äºó, startposÊÇÏà¶ÔÓÚbinºóµÄ»­ÃæµÄ£¬Ò²Òª°´ÕÕ±ÈÀý¸Ä±ä
+		iSetX = x*ImgBin/iSetBin;//binï¿½Ä±ï¿½ï¿½, startposï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½binï¿½ï¿½Ä»ï¿½ï¿½ï¿½Ä£ï¿½Ò²Òªï¿½ï¿½ï¿½Õ±ï¿½ï¿½ï¿½ï¿½Ä±ï¿½
 		iSetY = y*ImgBin/iSetBin;		
 		iSetX = iSetX/4*4;
 		iSetY = iSetY/2*2;	
 
-		if(ASISetROIFormat(ASICameraInfo.CameraID, iSetWid, iSetHei, iSetBin, ImgType)  == ASI_SUCCESS)//Èç¹ûÉèÖÃ³É¹¦
+		if(ASISetROIFormat(ASICameraInfo.CameraID, iSetWid, iSetHei, iSetBin, ImgType)  == ASI_SUCCESS)//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã³É¹ï¿½
 		{
 			OutputDbgPrint("wid:%d hei:%d bin:%d\n", xSize, ySize, iBin);
-			DeleteImgBuf();//buff´óÐ¡¸Ä±ä
+			DeleteImgBuf();//buffï¿½ï¿½Ð¡ï¿½Ä±ï¿½
 			ASISetStartPos(ASICameraInfo.CameraID, iSetX, iSetY);			
 		}
 		ASIGetROIFormat(ASICameraInfo.CameraID, &iROIWidth, &iROIHeight, &iBin, &ImgType);
@@ -984,11 +984,11 @@ int CMyASICam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)//b
 * Returns the actual dimensions of the current ROI.
 * Required by the MM::Camera API.
 */
-int CMyASICam::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)//³ÌÐòµ÷ÓÃÕâÀïµÃµ½µ±Ç°ROIÆðµã£¬¼ÓÉÏROIÀïµÄ¾ØÐÎÆðµã£¬µÃµ½ROIÔÙROIµÄÆðµã
+int CMyASICam::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½Ç°ROIï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ROIï¿½ï¿½Ä¾ï¿½ï¿½ï¿½ï¿½ï¿½ã£¬ï¿½Ãµï¿½ROIï¿½ï¿½ROIï¿½ï¿½ï¿½ï¿½ï¿½
 {
 	/* 20160107
-	µÃµ½ÏÔÊ¾Í¼ÏñµÄROIÐÅÏ¢
-		Èç¹ûÓÐ·­×ª, Òª»»Ëã³É·´·½Ïò±ßµÄ×ø±ê, ·½±ã³ÌÐòÏà¼ÓµÃµ½ÐÂROI,ÔÙ»»Ëã»ØÕý³£·½ÏòµÄ×ø±ê*/
+	ï¿½Ãµï¿½ï¿½ï¿½Ê¾Í¼ï¿½ï¿½ï¿½ROIï¿½ï¿½Ï¢
+		ï¿½ï¿½ï¿½ï¿½Ð·ï¿½×ª, Òªï¿½ï¿½ï¿½ï¿½É·ï¿½ï¿½ï¿½ï¿½ï¿½ßµï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÓµÃµï¿½ï¿½ï¿½ROI,ï¿½Ù»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 
 	x = ImgStartX;
 	y = ImgStartY;
@@ -1070,7 +1070,7 @@ int CMyASICam::GetBinning() const
 */
 int CMyASICam::SetBinning(int binF)
 {
-	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));//¾ÍÊÇonBinning(, afterSet)
+	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));//ï¿½ï¿½ï¿½ï¿½onBinning(, afterSet)
 }
 
 int CMyASICam::PrepareSequenceAcqusition()
@@ -1108,7 +1108,7 @@ int CMyASICam::StartSequenceAcquisition(long numImages, double interval_ms, bool
 	Status = capturing;
 
 	OutputDbgPrint("StartSeqAcq\n");
-	thd_->Start(numImages,interval_ms);//¿ªÊ¼Ïß³Ì
+	thd_->Start(numImages,interval_ms);//ï¿½ï¿½Ê¼ï¿½ß³ï¿½
 
 	return DEVICE_OK;
 }
@@ -1147,7 +1147,7 @@ int CMyASICam::InsertImage()
 
 	// Important:  metadata about the image are generated here:
 	Metadata md;
-	md.put("Camera", label);
+	md.put(MM::g_Keyword_Metadata_CameraLabel, label);
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);
@@ -1159,7 +1159,7 @@ int CMyASICam::InsertImage()
 	pI = GetImageBuffer();
 	int ret = 0;
 	ret  = GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize().c_str());
-	if (ret == DEVICE_BUFFER_OVERFLOW)//»º³åÇøÂúÁËÒªÇå¿Õ, ·ñÔò²»ÄÜ¼ÌÐø²åÈëÍ¼Ïñ¶ø¿¨×¡
+	if (ret == DEVICE_BUFFER_OVERFLOW)//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½×¡
 	{
 		// do not stop on overflow - just reset the buffer
 		GetCoreCallback()->ClearImageBuffer(this);
@@ -1177,10 +1177,10 @@ int CMyASICam::StopSequenceAcquisition()
 {                                                                         
 	if (!thd_->IsStopped())
 	{
-		thd_->Stop();//Í£Ö¹Ïß³Ì
+		thd_->Stop();//Í£Ö¹ï¿½ß³ï¿½
 		OutputDbgPrint("StopSeqAcq bf wait\n");
 //		if(!thd_->IsStopped())
-		thd_->wait();//µÈ´ýÏß³ÌÍË³ö
+		thd_->wait();//ï¿½È´ï¿½ï¿½ß³ï¿½ï¿½Ë³ï¿½
 		OutputDbgPrint("StopSeqAcq af wait\n");
 	}                                                                    
 //	if(Status == capturing)
@@ -1220,21 +1220,21 @@ int CMyASICam::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 		char binF;
 		binF = binSize;
 		
-		if( !thd_->IsStopped() )//micro managerÖ÷Ãæ°åÀïbinÊ±»áÏÈÓÉ³ÌÐòÍ£Ö¹ÔÙÉèÖÃ£¬¶øÔÚpropertyÀïÉèÖÃbin²»»áÍ£Ö¹£¬µ¼ÖÂ´íÎó£¬ËùÒÔ²»Í£Ö¹Ê±²»ÄÜÉèÖÃ
+		if( !thd_->IsStopped() )//micro managerï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½binÊ±ï¿½ï¿½ï¿½ï¿½ï¿½É³ï¿½ï¿½ï¿½Í£Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½propertyï¿½ï¿½ï¿½ï¿½ï¿½ï¿½binï¿½ï¿½ï¿½ï¿½Í£Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô²ï¿½Í£Ö¹Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		   return DEVICE_CAMERA_BUSY_ACQUIRING;
-		/* binºóµÄ ÆðÊ¼µãºÍ³ß´çÊÇ °ÑÉèÖÃÖµ°´ÕÕ old Bin/new Bin Ëõ·ÅµÄ*/
+		/* binï¿½ï¿½ï¿½ ï¿½ï¿½Ê¼ï¿½ï¿½Í³ß´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ old Bin/new Bin ï¿½ï¿½ï¿½Åµï¿½*/
 		 iSetWid = iSetWid*iSetBin/binF;// 2->1, *2
 		iSetHei = iSetHei*iSetBin/binF;//1->2. *0.5
 		iSetWid = iSetWid/8*8;
 		iSetHei = iSetHei/2*2;	
 
-		iSetX = iSetX*iSetBin/binF;//bin¸Ä±äºó, startposÊÇÏà¶ÔÓÚbinºóµÄ»­ÃæµÄ£¬Ò²Òª°´ÕÕ±ÈÀý¸Ä±ä
+		iSetX = iSetX*iSetBin/binF;//binï¿½Ä±ï¿½ï¿½, startposï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½binï¿½ï¿½Ä»ï¿½ï¿½ï¿½Ä£ï¿½Ò²Òªï¿½ï¿½ï¿½Õ±ï¿½ï¿½ï¿½ï¿½Ä±ï¿½
 		iSetY = iSetY*iSetBin/binF;
 
 		if(ASISetROIFormat(ASICameraInfo.CameraID, iSetWid, iSetHei, binF, ImgType) == ASI_SUCCESS)
 		{
 			DeleteImgBuf();
-			ASISetStartPos(ASICameraInfo.CameraID, iSetX, iSetY);//»áÖØÐÂ¼ÆËãstartx ºÍstarty£¬ºÍËùÑ¡ÇøÓò²»Í¬£¬Òò´ËÒªÖØÐÂÉèÖÃ
+			ASISetStartPos(ASICameraInfo.CameraID, iSetX, iSetY);//ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½startx ï¿½ï¿½startyï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		}
 		ASIGetROIFormat(ASICameraInfo.CameraID, &iROIWidth, &iROIHeight, &iBin, &ImgType);
 		iSetBin = binF;
@@ -1253,7 +1253,7 @@ int CMyASICam::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CMyASICam::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ
 	{
 		string val;
 		pProp->Get(val);
@@ -1295,7 +1295,7 @@ int CMyASICam::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 
 	}
-	else if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetROIFormat(ASICameraInfo.CameraID, &iROIWidth, &iROIHeight, &iBin, &ImgType);
 
@@ -1354,7 +1354,7 @@ int CMyASICam::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CMyASICam::OnSelectCamIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	string str;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ
 	{
 		pProp->Get(str);
 		for(int i = 0; i < iConnectedCamNum; i++)
@@ -1368,7 +1368,7 @@ int CMyASICam::OnSelectCamIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 	}
-	else if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		pProp->Set(sz_ModelIndex);
 	}
@@ -1402,12 +1402,12 @@ int CMyASICam::OnBrightness(MM::PropertyBase* pProp,MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ
 	{
 		pProp->Get(lVal);
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_BRIGHTNESS, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID, ASI_BRIGHTNESS, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1423,12 +1423,12 @@ int CMyASICam::OnUSBTraffic(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ
 	{
 		pProp->Get(lVal);
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1444,7 +1444,7 @@ int CMyASICam::OnUSB_Auto(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, &lVal, &bAuto);
 		string strVal;
@@ -1453,7 +1453,7 @@ int CMyASICam::OnUSB_Auto(MM::PropertyBase* pProp, MM::ActionType eAct)
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, lVal, bAuto);
 //		SetPropertyReadOnly(g_Keyword_USBTraffic, bAuto);
 	}
-	else if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, &lVal, &bAuto);
 		pProp->Set(bAuto==ASI_TRUE?g_Keyword_on:g_Keyword_off);
@@ -1473,11 +1473,11 @@ int CMyASICam::OnCoolerOn(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 	//	ASIGetControlValue(iCamIndex, ASI_TARGET_TEMP, &lVal, &bAuto);
 		string strVal;
-		pProp->Get(strVal);//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ
+		pProp->Get(strVal);//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ
 		lVal = !strVal.compare(g_Keyword_on);
 		ASISetControlValue(ASICameraInfo.CameraID, ASI_COOLER_ON, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID, ASI_COOLER_ON, &lVal, &bAuto);
 		pProp->Set(lVal > 0?g_Keyword_on:g_Keyword_off);
@@ -1495,11 +1495,11 @@ int CMyASICam::OnHeater(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		//	ASIGetControlValue(iCamIndex, ASI_TARGET_TEMP, &lVal, &bAuto);
 		string strVal;
-		pProp->Get(strVal);//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ
+		pProp->Get(strVal);//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ
 		lVal = !strVal.compare(g_Keyword_on);
 		ASISetControlValue(ASICameraInfo.CameraID, ASI_ANTI_DEW_HEATER, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID, ASI_ANTI_DEW_HEATER, &lVal, &bAuto);
 		pProp->Set(lVal > 0?g_Keyword_on:g_Keyword_off);
@@ -1516,10 +1516,10 @@ int CMyASICam::OnTargetTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::AfterSet)
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_TARGET_TEMP, &lVal, &bAuto);
-		pProp->Get(lVal);//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+		pProp->Get(lVal);//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_TARGET_TEMP, lVal, bAuto);
 	}
-	else if (eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_TARGET_TEMP, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1535,10 +1535,10 @@ int CMyASICam::OnCoolerPowerPerc(MM::PropertyBase* pProp, MM::ActionType eAct)
 	ASI_BOOL bAuto;
 	if (eAct == MM::AfterSet)
 	{
-		pProp->Get(lVal);//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+		pProp->Get(lVal);//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 
 	}
-	else if (eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_COOLER_POWER_PERC, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1554,10 +1554,10 @@ int CMyASICam::OnWB_R(MM::PropertyBase* pProp, MM::ActionType eAct)
 	ASI_BOOL bAuto;
 	if (eAct == MM::AfterSet)
 	{
-		pProp->Get(lVal);//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+		pProp->Get(lVal);//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_WB_R, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_WB_R, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1573,10 +1573,10 @@ int CMyASICam::OnWB_B(MM::PropertyBase* pProp, MM::ActionType eAct)
 	ASI_BOOL bAuto;
 	if (eAct == MM::AfterSet)
 	{
-		pProp->Get(lVal);//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+		pProp->Get(lVal);//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_WB_B, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_WB_B, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1594,14 +1594,14 @@ int CMyASICam::OnAutoWB(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::AfterSet)
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_WB_B, &lVal, &bAuto);
-		pProp->Get(strVal);//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+		pProp->Get(strVal);//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 		bAuto = strVal.compare(g_Keyword_on)?ASI_FALSE:ASI_TRUE;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_WB_B, lVal, bAuto);
 	//	SetPropertyReadOnly(g_Keyword_WB_R,bAuto );
 	//	SetPropertyReadOnly(g_Keyword_WB_B,bAuto );
 		
 	}
-	else if (eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_WB_B, &lVal, &bAuto);
 		pProp->Set(bAuto?g_Keyword_on:g_Keyword_off);
@@ -1617,13 +1617,13 @@ int CMyASICam::OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 	{
 		
 		pProp->Get(lVal);
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_GAMMA, lVal, ASI_FALSE);
 	}
-	else if(eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if(eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_GAMMA, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1637,7 +1637,7 @@ int CMyASICam::OnAutoExp(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_EXPOSURE, &lVal, &bAuto);
 		string strVal;
@@ -1645,7 +1645,7 @@ int CMyASICam::OnAutoExp(MM::PropertyBase* pProp, MM::ActionType eAct)
 		bAuto = strVal.compare(g_Keyword_on)?ASI_FALSE:ASI_TRUE;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_EXPOSURE, lVal, bAuto);
 	}
-	else if(eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if(eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_EXPOSURE, &lVal, &bAuto);
 		pProp->Set(bAuto?g_Keyword_on:g_Keyword_off);
@@ -1660,7 +1660,7 @@ int CMyASICam::OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_GAIN, &lVal, &bAuto);
 		string strVal;
@@ -1668,7 +1668,7 @@ int CMyASICam::OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		bAuto = strVal.compare(g_Keyword_on)?ASI_FALSE:ASI_TRUE;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_GAIN, lVal, bAuto);
 	}
-	else if(eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if(eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_GAIN, &lVal, &bAuto);
 		pProp->Set(bAuto?g_Keyword_on:g_Keyword_off);
@@ -1683,7 +1683,7 @@ int CMyASICam::OnFlip(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID, ASI_FLIP, &lVal, &bAuto);
 		string strVal;
@@ -1698,7 +1698,7 @@ int CMyASICam::OnFlip(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		
 	}
-	else if(eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if(eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_FLIP, &lVal, &bAuto);
 		pProp->Set(FlipArr[lVal]);
@@ -1712,14 +1712,14 @@ int CMyASICam::OnHighSpeedMod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 	{
 		string strVal;
 		pProp->Get(strVal);
 		lVal = strVal.compare(g_Keyword_on)?0:1;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_HIGH_SPEED_MODE, lVal, ASI_FALSE);
 	}
-	else if(eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if(eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_HIGH_SPEED_MODE, &lVal, &bAuto);
 		pProp->Set(lVal?g_Keyword_on:g_Keyword_off);
@@ -1733,14 +1733,14 @@ int CMyASICam::OnHardwareBin(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 	{
 		string strVal;
 		pProp->Get(strVal);
 		lVal = strVal.compare(g_Keyword_on)?0:1;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_HARDWARE_BIN, lVal, ASI_FALSE);
 	}
-	else if(eAct == MM::BeforeGet)//±äÁ¿Öµ->¿Ø¼þÏÔÊ¾
+	else if(eAct == MM::BeforeGet)//ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_HARDWARE_BIN, &lVal, &bAuto);
 		pProp->Set(lVal?g_Keyword_on:g_Keyword_off);
@@ -1850,14 +1850,14 @@ CMyEFW::CMyEFW() :
 	for(int i = 0; i < iConnectedEFWNum; i++)
 	{		
 		EFWGetID(i, &EFWInfo.ID);
-		sprintf(ConnectedEFWName[i], "EFW (ID %d)", EFWInfo.ID);//±£´æÃû×Ö		
+		sprintf(ConnectedEFWName[i], "EFW (ID %d)", EFWInfo.ID);//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½		
 		EFWIndexValues.push_back(ConnectedEFWName[i]);
 	}
 
-	CPropertyAction *pAct = new CPropertyAction (this, &CMyEFW::OnSelectEFWIndex);//Í¨¹ýÃû×ÖÑ¡Ôñ´ò¿ªµÄÐòºÅ
+	CPropertyAction *pAct = new CPropertyAction (this, &CMyEFW::OnSelectEFWIndex);//Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ò¿ªµï¿½ï¿½ï¿½ï¿½
 	if(iConnectedEFWNum > 0)
 	{
-		strcpy(sz_ModelIndex, ConnectedEFWName[0]);//Ä¬ÈÏ´ò¿ªµÚÒ»¸ö
+		strcpy(sz_ModelIndex, ConnectedEFWName[0]);//Ä¬ï¿½Ï´ò¿ªµï¿½Ò»ï¿½ï¿½
 		//iCamIndex = 0;
 		EFWGetID(0, &EFWInfo.ID);
 	}
@@ -1866,7 +1866,7 @@ CMyEFW::CMyEFW() :
 		strcpy(sz_ModelIndex,"no EFW connected");
 	}
 	//	strcpy(sz_ModelIndex, "DropDown");
-	ret = CreateProperty(g_DeviceIndex, sz_ModelIndex, MM::String, false, pAct, true); //Ñ¡ÔñÉãÏñÍ·ÐòºÅ
+	ret = CreateProperty(g_DeviceIndex, sz_ModelIndex, MM::String, false, pAct, true); //Ñ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½
 	SetAllowedValues(g_DeviceIndex, EFWIndexValues);
 	assert(ret == DEVICE_OK);
 }
@@ -1942,7 +1942,7 @@ int CMyEFW::Initialize()
 	return DEVICE_OK;
 }
 
-bool CMyEFW::Busy()//·µ»ØtrueÊ±²»Ë¢ÐÂlabelºÍstate
+bool CMyEFW::Busy()//ï¿½ï¿½ï¿½ï¿½trueÊ±ï¿½ï¿½Ë¢ï¿½ï¿½labelï¿½ï¿½state
 {
 	if(bPosWait)//
 	{
@@ -1983,9 +1983,9 @@ int CMyEFW::Shutdown()
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
 
-int CMyEFW::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)//CStateDeviceBase::OnLabel »áµ÷ÓÃÕâÀï
+int CMyEFW::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)//CStateDeviceBase::OnLabel ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 {
-	if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		int pos;
 		EFWGetPosition(EFWInfo.ID, &pos);	
@@ -1998,7 +1998,7 @@ int CMyEFW::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)//CStateDeviceB
 		}
 		// nothing to do, let the caller to use cached property
 	}
-	else if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ->±äÁ¿
+	else if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ->ï¿½ï¿½ï¿½ï¿½
 	{
 		// Set timer for the Busy signal
 //		changedTime_ = GetCurrentMMTime();
@@ -2024,7 +2024,7 @@ int CMyEFW::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)//CStateDeviceB
 int CMyEFW::OnSelectEFWIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	string str;
-	if (eAct == MM::AfterSet)//´Ó¿Ø¼þµÃµ½Ñ¡¶¨µÄÖµ
+	if (eAct == MM::AfterSet)//ï¿½Ó¿Ø¼ï¿½ï¿½Ãµï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Öµ
 	{
 		pProp->Get(str);
 		for(int i = 0; i < iConnectedEFWNum; i++)
@@ -2038,7 +2038,7 @@ int CMyEFW::OnSelectEFWIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 	}
-	else if (eAct == MM::BeforeGet)//Öµ¸ø¿Ø¼þÏÔÊ¾
+	else if (eAct == MM::BeforeGet)//Öµï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ê¾
 	{
 		pProp->Set(sz_ModelIndex);
 	}

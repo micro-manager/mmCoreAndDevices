@@ -1542,7 +1542,7 @@ protected:
       char label[MM::MaxStrLength];
       this->GetLabel(label);
       Metadata md;
-      md.put("Camera", label);
+      md.put(MM::g_Keyword_Metadata_CameraLabel, label);
       int ret = GetCoreCallback()->InsertImage(this, GetImageBuffer(), GetImageWidth(),
          GetImageHeight(), GetImageBytesPerPixel(),
          md.Serialize().c_str());
