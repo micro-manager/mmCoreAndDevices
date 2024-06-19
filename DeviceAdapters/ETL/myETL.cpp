@@ -238,7 +238,7 @@ void myETL::DecToHexa(int n, char* output)
    char hexaDeciNum[100];
 
    // counter for hexadecimal number array
-   uint32_t num = n; // format très important pour les valeurs négatives
+   uint32_t num = n; // format trÃ¨s important pour les valeurs nÃ©gatives
    int i = 0;
    while (num != 0)
    {
@@ -265,7 +265,7 @@ void myETL::DecToHexa(int n, char* output)
 
    int k = 0;
 
-   // on s'attend à un hexa en 2 octets
+   // on s'attend Ã  un hexa en 2 octets
    if (i < 4)
    {
       output[0] = '0';

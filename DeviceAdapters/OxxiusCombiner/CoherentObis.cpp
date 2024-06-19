@@ -324,7 +324,7 @@ int CoherentObis::OnOperatingMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 
 		std::ostringstream Info;   /////DEBUG
-		Info << "DEBUG OPERATING MODE: " << rep << "avec la commande encoyée suivante: " << command;
+		Info << "DEBUG OPERATING MODE: " << rep << "avec la commande encoyÃ©e suivante: " << command;
 		GetCoreCallback()->LogMessage(this, Info.str().c_str(), false);
 
 	}

@@ -78,9 +78,9 @@
 // Strings
 //
 
-const char * g_DeviceVendorName = "HÜBNER Photonics";
+const char * g_DeviceVendorName = "HÃœBNER Photonics";
 const char * g_DeviceSkyraName = "Skyra";
-const char * g_DeviceSkyraDescription = "Skyra/Cobolt Controller by Karl Bellvé";
+const char * g_DeviceSkyraDescription = "Skyra/Cobolt Controller by Karl BellvÃ©";
 
 
 const char * g_SendTerm = "\r";

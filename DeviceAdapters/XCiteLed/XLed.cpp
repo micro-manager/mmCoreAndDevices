@@ -403,9 +403,9 @@ XLed::XLed()
     XLed::m_sXLedStr[XLed::XL_TriggerDelayTimeLabel]    = "L.16 Trigger Delay Time (0-65535)";        // 47: Led device trigger delay time label
     XLed::m_sXLedStr[XLed::XL_PWMUnitsLabel]            = "L.17 IPG Units (0:uS/1:mS/2:S)";           // 48: Led device PWM units label
     XLed::m_sXLedStr[XLed::XL_LedTempLabel]             = "L.18 Current Temperature (Deg.C)";                 // 49: Led device temperature label
-    XLed::m_sXLedStr[XLed::XL_LedMaxTempLabel]          = "L.19 Max Allowed Temperature (Deg.C)";     // 50: Led device max allowed temperature label [°C]
-    XLed::m_sXLedStr[XLed::XL_LedMinTempLabel]          = "L.20 Min Allowed Temperature (Deg.C)";     // 51: Led device min allowed temperature label [°C]
-    XLed::m_sXLedStr[XLed::XL_LedTempHystLabel]         = "L.21 Temperature Hysteresis (Deg.C)";      // 52: Led device temperature hysteresis label [°C]
+    XLed::m_sXLedStr[XLed::XL_LedMaxTempLabel]          = "L.19 Max Allowed Temperature (Deg.C)";     // 50: Led device max allowed temperature label [Â°C]
+    XLed::m_sXLedStr[XLed::XL_LedMinTempLabel]          = "L.20 Min Allowed Temperature (Deg.C)";     // 51: Led device min allowed temperature label [Â°C]
+    XLed::m_sXLedStr[XLed::XL_LedTempHystLabel]         = "L.21 Temperature Hysteresis (Deg.C)";      // 52: Led device temperature hysteresis label [Â°C]
     XLed::m_sXLedStr[XLed::XL_Reserved]                 = "Reserved";                                 // 53: Led device software version label
 }
 

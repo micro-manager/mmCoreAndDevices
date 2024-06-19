@@ -56,9 +56,9 @@
 // Strings
 //
 
-const char * g_DeviceVendorName = "HÜBNER Photonics";
+const char * g_DeviceVendorName = "HÃœBNER Photonics";
 const char * g_DeviceCoboltName = "Cobolt";
-const char * g_DeviceCoboltDescription = "Cobolt Controller by Karl Bellvé with contribution from Alexis Maizel";
+const char * g_DeviceCoboltDescription = "Cobolt Controller by Karl BellvÃ© with contribution from Alexis Maizel";
 
 
 const char * g_SendTerm = "\r";

@@ -28,7 +28,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     if (deviceName == 0)
         return 0;
 
-    // decide which device class to create based on the deviceName parameter �ȽϽ��
+    // decide which device class to create based on the deviceName parameter 比较结果
     if (strcmp(deviceName, g_CameraDeviceName) == 0) {
         // create camera
         return new ClassGalaxy();
@@ -144,19 +144,19 @@ int ClassGalaxy::Initialize()
 
 
         vectorDeviceInfo.clear();
-        //ö���豸
+        //枚举设备
         IGXFactory::GetInstance().UpdateDeviceList(1000, vectorDeviceInfo);
 
-        //�ж�ö�ٵ����豸�Ƿ�����㣬��������򵯿���ʾ
+        //判断枚举到的设备是否大于零，如果不是则弹框提示
         if (vectorDeviceInfo.size() <= 0)
         {
             return DEVICE_NOT_CONNECTED;
         }
-        //��ȡ��ִ�г���ĵ�ǰ·��,Ĭ�Ͽ�����һ��
+        //获取可执行程序的当前路径,默认开启第一个
         initialized_ = false;
         // This checks, among other things, that the camera is not already in use.
         // Without that check, the following CreateDevice() may crash on duplicate
-        // serial number. Unfortunately, this call is slow. Ĭ�ϴ򿪵�һ���豸
+        // serial number. Unfortunately, this call is slow. 默认打开第一个设备
         int index = 0;
 
         string serialNumberstr = vectorDeviceInfo[index].GetSN().c_str();
@@ -166,13 +166,13 @@ int ClassGalaxy::Initialize()
         if (strlen(serialNumber) == 0 || strcmp(serialNumber, "Undefined") == 0)
             return 0;
         SetProperty("SerialNumber", serialNumber);
-        //���豸
+        //打开设备
         m_objDevicePtr = IGXFactory::GetInstance().OpenDeviceBySN(vectorDeviceInfo[index].GetSN(), GX_ACCESS_MODE::GX_ACCESS_EXCLUSIVE);
 
         m_objFeatureControlPtr = m_objDevicePtr->GetRemoteFeatureControl();
 
         //m_objFeatureControlPtr->GetEnumFeature("StreamBufferHandlingMode")->SetValue("NewestOnly");
-        //�ж��豸���Ƿ�����㣬��������������
+        //判断设备流是否大于零，如果大于零则打开流
 
         int nStreamCount = m_objDevicePtr->GetStreamCount();
         //CPropertyAction* pAct;
@@ -187,19 +187,19 @@ int ClassGalaxy::Initialize()
         }
         else
         {
-            throw exception("δ�����豸��!");
+            throw exception("未发现设备流!");
         }
 
 
         GX_DEVICE_CLASS_LIST objDeviceClass = m_objDevicePtr->GetDeviceInfo().GetDeviceClass();
         if (GX_DEVICE_CLASS_GEV == objDeviceClass)
         {
-            // �ж��豸�Ƿ�֧����ͨ�����ݰ�����
+            // 判断设备是否支持流通道数据包功能
             if (true == m_objFeatureControlPtr->IsImplemented("GevSCPSPacketSize"))
             {
-                // ��ȡ��ǰ���绷�������Ű���ֵ
+                // 获取当前网络环境的最优包长值
                 int nPacketSize = m_objStreamPtr->GetOptimalPacketSize();
-                // �����Ű���ֵ����Ϊ��ǰ�豸����ͨ������ֵ
+                // 将最优包长值设置为当前设备的流通道包长值
                 CIntFeaturePointer GevSCPD = m_objFeatureControlPtr->GetIntFeature("GevSCPSPacketSize");
                 m_objFeatureControlPtr->GetIntFeature("GevSCPSPacketSize")->SetValue(nPacketSize);
                 m_objFeatureControlPtr->GetIntFeature("GevHeartbeatTimeout")->SetValue(300000);
@@ -209,7 +209,7 @@ int ClassGalaxy::Initialize()
                 SetPropertyLimits("InterPacketDelay", (double)GevSCPD->GetMin(), (double)GevSCPD->GetMax());
                 assert(ret == DEVICE_OK);
             }
-            //�ڶ�������Ϊ�û�˽�в������û������ڻص������ڲ����仹ԭȻʹ�ã��������Ҫ��ɴ��� NULL ����
+            //第二个参数为用户私有参数，用户可以在回调函数内部将其还原然使用，如果不需要则可传入 NULL 即可
             //hDeviceOffline = m_objDevicePtr->RegisterDeviceOfflineCallback(pDeviceOfflineEventHandler, this);
         }
         else if (GX_DEVICE_CLASS_U3V == objDeviceClass)
@@ -226,7 +226,7 @@ int ClassGalaxy::Initialize()
             }
         }
 
-        //��ɫ�ж�
+        //颜色判断
         gxstring strValue = "";
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("PixelColorFilter"))
         {
@@ -243,7 +243,7 @@ int ClassGalaxy::Initialize()
         //AddToLog(msg.str());
         msg << "using camera " << m_objFeatureControlPtr->GetStringFeature("DeviceUserID")->GetValue();
         AddToLog(msg.str());
-        // initialize the pylon image formatter. �ж����ͼ�������ʽ-��ΰ��
+        // initialize the pylon image formatter. 判断相机图像输出格式-赵伟甫
         // 
         // Name
         int ret = CreateProperty(MM::g_Keyword_Name, g_CameraDeviceName, MM::String, true);
@@ -262,12 +262,12 @@ int ClassGalaxy::Initialize()
 
         //Get information about camera (e.g. height, width, byte depth)
         //check if given Camera support event. //Register Camera events
-        //��ΰ����ע������¼���ע��ɼ��ص�-δ�� �¶��¼�
+        //赵伟甫：注册相机事件，注册采集回调-未加 温度事件
 
         CIntFeaturePointer width = m_objFeatureControlPtr->GetIntFeature("Width");
         CIntFeaturePointer height = m_objFeatureControlPtr->GetIntFeature("Height");
 
-        //��������
+        //总属性器
         if (1)
         {
             CPropertyAction* pAct = new CPropertyAction(this, &ClassGalaxy::OnWidth);
@@ -290,7 +290,7 @@ int ClassGalaxy::Initialize()
 
         //end of Sensor size
         long bytes = (long)(height->GetValue() * width->GetValue() * 4);
-        //20221020��ΰ��
+        //20221020赵伟甫
         //Buffer4ContinuesShot = malloc(bytes);
 
 
@@ -309,7 +309,7 @@ int ClassGalaxy::Initialize()
         vector<string> pixelTypeValues;
         CEnumFeaturePointer PixelFormatList = m_objFeatureControlPtr->GetEnumFeature("PixelFormat");
         gxstring_vector LisePixelFormat = PixelFormatList->GetEnumEntryList();
-        //Ϊ�˸�ֵ��
+        //为了赋值用
         for (size_t i = 0; i < LisePixelFormat.size(); i++)
         {
             string strValue(LisePixelFormat[i]);
@@ -388,7 +388,7 @@ int ClassGalaxy::Initialize()
             }
             SetAllowedValues("TriggerSource", LSPVals);
         }
-        //20230217��������֡��ʹ��
+        //20230217设置期望帧率使能
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("AcquisitionFrameRateMode"))
         {
             CEnumFeaturePointer AdjFrameRateMode = m_objFeatureControlPtr->GetEnumFeature("AcquisitionFrameRateMode");
@@ -409,7 +409,7 @@ int ClassGalaxy::Initialize()
             CFloatFeaturePointer AdjFrameRate = m_objFeatureControlPtr->GetFloatFeature("AcquisitionFrameRate");
             pAct = new CPropertyAction(this, &ClassGalaxy::OnAcquisitionFrameRate);
             ret = CreateProperty("AcquisitionFrameRate", CDeviceUtils::ConvertToString((float)0), MM::Float, false, pAct);
-            //��ǰ�ɼ�֡�������¼���
+            //当前采集帧率需重新计算
             SetPropertyLimits("AcquisitionFrameRate", (double)AdjFrameRate->GetMin(), (double)AdjFrameRate->GetMax());
             assert(ret == DEVICE_OK);
         }
@@ -455,7 +455,7 @@ int ClassGalaxy::Initialize()
             assert(ret == DEVICE_OK);
 
         }
-        //����
+        //增益
         m_objFeatureControlPtr->GetEnumFeature("GainSelector")->SetValue("AnalogAll");
         m_objFeatureControlPtr->GetFloatFeature("Gain")->SetValue(0.0000);
         double d = m_objFeatureControlPtr->GetFloatFeature("Gain")->GetValue();
@@ -468,7 +468,7 @@ int ClassGalaxy::Initialize()
             SetPropertyLimits("Gain", (double)Gain->GetMin(), (double)Gain->GetMax());
             assert(ret == DEVICE_OK);
         }
-        //20230220����ͼ��ת��RGBA8
+        //20230220设置图像转换RGBA8
         ret = UpdateStatus();
 
         if (ret != DEVICE_OK)
@@ -500,7 +500,7 @@ void ClassGalaxy::CoverToRGB(GX_PIXEL_FORMAT_ENTRY emDstFormat,void* DstBuffer, 
         TestFormatConvertPtr->SetAlphaValue(255);
         uint64_t Size = TestFormatConvertPtr->GetBufferSizeForConversion(pObjSrcImageData);
         TestFormatConvertPtr->Convert(pObjSrcImageData, DstBuffer, Size, false); //modify by LXM in 20240305
-        //ע�ⶼ����ʾ16λͼ��RGB
+        //注意都能显示16位图像RGB
     }
     catch (CGalaxyException& e)
     {
@@ -524,7 +524,7 @@ int ClassGalaxy::CheckForBinningMode(CPropertyAction* pAct)
     vector<string> LSPVals;
 
     gxstring_vector LiseBinningHorizontalMode = BinningHorizontalMode->GetEnumEntryList();
-    //Ϊ�˸�ֵ��
+    //为了赋值用
     for (size_t i = 0; i < LiseBinningHorizontalMode.size(); i++)
     {
         string strValue(LiseBinningHorizontalMode[i]);
@@ -574,17 +574,17 @@ int ClassGalaxy::OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 int ClassGalaxy::Shutdown()
 {
-    //�ر����
+    //关闭相机
     try
     {
-        //�ж��Ƿ�ֹͣ�ɼ�
+        //判断是否停止采集
         if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
         {
-            //����ͣ������
+            //发送停采命令
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-            //�ر�����ɼ�
+            //关闭流层采集
             m_objStreamPtr->StopGrab();
-            //ע���ɼ��ص�����
+            //注销采集回调函数
             m_objStreamPtr->UnregisterCaptureCallback();
 
         }
@@ -595,10 +595,10 @@ int ClassGalaxy::Shutdown()
     }
     try
     {
-        //�ر�������
+        //关闭流对象
         m_objStreamPtr->Close();
 
-        //�ر��豸
+        //关闭设备
         m_objDevicePtr->Close();
     }
     catch (CGalaxyException& e)
@@ -625,7 +625,7 @@ int ClassGalaxy::SnapImage()
         // modify by LXM in 20240305
         //if (m_bIsOpen)
         {
-            //AddToLog("---------------�ж��Ƿ񿪲�");
+            //AddToLog("---------------判断是否开采");
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
             m_objStreamPtr->StopGrab();
             //camera_->DeregisterImageEventHandler(ImageHandler_);
@@ -640,13 +640,13 @@ int ClassGalaxy::SnapImage()
         //end modify
 
             int timeout_ms = 5000;	
-            //��������ɼ�
+            //开启流层采集
             m_objStreamPtr->StartGrab();
-            //���Ϳ�������
+            //发送开采命令
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
             m_bIsOpen = true;//modify by LXM
             m_objStreamPtr->FlushQueue();
-            //����ʹ�òɵ�֡����ȡ
+            //可以使用采单帧来获取
             CImageDataPointer ptrGrabResult = m_objStreamPtr->GetImage(timeout_ms);
             uint64_t length = ptrGrabResult->GetPayloadSize();
             
@@ -663,7 +663,7 @@ int ClassGalaxy::SnapImage()
         string a = e.what();
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //�ر�����ɼ�
+        //关闭流层采集
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -671,7 +671,7 @@ int ClassGalaxy::SnapImage()
     {
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //�ر�����ɼ�
+        //关闭流层采集
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -690,9 +690,9 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
 
         std::size_t found = pixelType_.find(subject);
         //pixelType_.assign(pixelFormat_gx);
-        //�������-��ȷ����������ʽ--��ȷ��
+        //相机类型-明确相机的输出形式--待确认
         GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
-        //��ȷ����Ĳ�ͼ��ʽ
+        //明确相机的采图格式
         emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
 
         if (found != std::string::npos)
@@ -707,10 +707,10 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
             memcpy(imgBuffer_, buffer, GetImageBufferSize());
             SetProperty(MM::g_Keyword_PixelType, g_PixelType_8bit);
         }
-        //20221025����������ɫ��ʽ
+        //20221025待定其他颜色格式
         else if (pixelType_.compare("Mono16") == 0 || pixelType_.compare("Mono12") == 0 || pixelType_.compare("Mono10") == 0)
         {
-            //�ڰ�8-16λ
+            //黑白8-16位
             //copy image buffer to a snap buffer allocated by device adapter
             void* buffer = objImageDataPointer->GetBuffer();
             memcpy(imgBuffer_, buffer, GetImageBufferSize());
@@ -761,7 +761,7 @@ int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interv
 
         //camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-        //��������ɼ�
+        //开启流层采集
         m_objStreamPtr->StartGrab();
 
         int ret = GetCoreCallback()->PrepareForAcq(this);
@@ -776,7 +776,7 @@ int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interv
         string a = e.what();
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //�ر�����ɼ�
+        //关闭流层采集
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -784,7 +784,7 @@ int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interv
     {
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //�ر�����ɼ�
+        //关闭流层采集
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -797,7 +797,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         //modify by LXM in 20240306
         //if (m_bIsOpen)
         {
-            //AddToLog("---------------�ж��Ƿ񿪲�");
+            //AddToLog("---------------判断是否开采");
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
             m_objStreamPtr->StopGrab();
         }
@@ -813,7 +813,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         }
         //camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-        //��������ɼ�
+        //开启流层采集
         m_objStreamPtr->StartGrab();
         AddToLog("StartSequenceAcquisition");
     }
@@ -822,7 +822,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         string a = e.what();
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //�ر�����ɼ�
+        //关闭流层采集
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -830,7 +830,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
     {
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //�ر�����ɼ�
+        //关闭流层采集
         m_objStreamPtr->StopGrab();
         return DEVICE_ERR;
     }
@@ -863,14 +863,14 @@ void ClassGalaxy::ResizeSnapBuffer() {
 
     free(imgBuffer_);
     GetImageSize();
-    imageBufferSize_ = Width_ * Height_ * GetImageBytesPerPixel();//ԭ����buffersize
+    imageBufferSize_ = Width_ * Height_ * GetImageBytesPerPixel();//原先是buffersize
     imgBuffer_ = malloc(imageBufferSize_);
 }
 
 bool ClassGalaxy::__IsPixelFormat8(GX_PIXEL_FORMAT_ENTRY emPixelFormatEntry)
 {
     bool bIsPixelFormat8 = false;
-    const unsigned  PIXEL_FORMATE_BIT = 0x00FF0000;  ///<�����뵱ǰ�����ݸ�ʽ����������õ���ǰ������λ��
+    const unsigned  PIXEL_FORMATE_BIT = 0x00FF0000;  ///<用于与当前的数据格式进行与运算得到当前的数据位数
     unsigned uiPixelFormatEntry = (unsigned)emPixelFormatEntry;
     if ((uiPixelFormatEntry & PIXEL_FORMATE_BIT) == GX_PIXEL_8BIT)
     {
@@ -886,9 +886,9 @@ unsigned char* ClassGalaxy::GetImageBufferFromCallBack(CImageDataPointer& objIma
     INT64 Width_ = m_objFeatureControlPtr->GetIntFeature("Width")->GetValue();
 
     INT64 Height_ = m_objFeatureControlPtr->GetIntFeature("Height")->GetValue();
-     //�������-��ȷ����������ʽ--��ȷ��
+     //相机类型-明确相机的输出形式--待确认
      GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
-     //��ȷ����Ĳ�ͼ��ʽ
+     //明确相机的采图格式
     emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
 
     if (colorCamera_)
@@ -906,22 +906,22 @@ unsigned char* ClassGalaxy::GetImageBufferFromCallBack(CImageDataPointer& objIma
             imgBuffer_2 = (BYTE*)objImageDataPointer->ConvertToRaw8(emValidBits);
         }
 
-        // �ڰ������Ҫ��ת���ݺ���ʾ
+        // 黑白相机需要翻转数据后显示
         for (int i = 0; i < Height_; i++)
         {
-            //����
+            //含义
             memcpy(m_pImageBuffer + i * Width_, imgBuffer_2 + (Height_ - i - 1) * Width_, (size_t)Width_);
             return (unsigned char*)imgBuffer_;
         }
     }
-    //��ȡͼ��buffer
+    //获取图像buffer
     return (unsigned char*)imgBuffer_;
 
 }
 
 const unsigned char* ClassGalaxy::GetImageBuffer()
 {
-    //���պڰ���ʾ
+    //按照黑白显示
     return (unsigned char*)imgBuffer_;
 
 }
@@ -980,7 +980,7 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
                 if (Isgrabbing)
                 {
                     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-                    //�ر�����ɼ�
+                    //关闭流层采集
                     m_objStreamPtr->StopGrab();
                 }
                 pProp->Get(binningFactor_);
@@ -989,7 +989,7 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
                 BinningVertical->SetValue(val);
                 if (Isgrabbing)
                 {
-                    //�ؿ�
+                    //重开
                     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
                     m_objStreamPtr->StartGrab();
 
@@ -1123,7 +1123,7 @@ int ClassGalaxy::OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct)
                 if (Isgrabbing)
                 {
                     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-                    //�ر�����ɼ�
+                    //关闭流层采集
                     m_objStreamPtr->StopGrab();
                     //camera_->StopGrabbing();
                 }
@@ -1181,7 +1181,7 @@ int ClassGalaxy::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
     {
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //�ر�����ɼ�
+        //关闭流层采集
         m_objStreamPtr->StopGrab();
     }
     //CEnumerationPtr pixelFormat(nodeMap_->GetNode("PixelFormat"));
@@ -1192,9 +1192,9 @@ int ClassGalaxy::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get(pixelType_);
         try
         {
-                //���뱨��
+                //代码报错
                           
-                //������ֵ
+                //设置新值
                 pixelFormat_->SetValue(pixelType_.c_str());
                 const char* subject("Bayer");
                 std::size_t found = pixelType_.find(subject);
@@ -1262,7 +1262,7 @@ int ClassGalaxy::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
        
         if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
         {
-            //�ؿ�
+            //重开
             m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
             m_objStreamPtr->StartGrab();
         }
@@ -1413,7 +1413,7 @@ int ClassGalaxy::OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
                 if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
                 {
                     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-                    //�ر�����ɼ�
+                    //关闭流层采集
                     m_objStreamPtr->StopGrab();
                     //camera_->StopGrabbing();
                 }
@@ -1641,7 +1641,7 @@ int ClassGalaxy::ClearROI()
 
 void ClassGalaxy::ReduceImageSize(int64_t Width, int64_t Height)
 {
-    //����
+    //待定
 
     return ;
 }
@@ -1666,7 +1666,7 @@ void ClassGalaxy::RGB24PackedToRGBA(void* destbuffer, void* srcbuffer, CImageDat
     unsigned int dstOffset = 0;
     GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
     uint64_t Payloadsize=objImageDataPointer->GetPayloadSize();
-    //��ȷ����Ĳ�ͼ��ʽ
+    //明确相机的采图格式
     emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
     if (emValidBits!= GX_BIT_0_7)
     {
@@ -1694,19 +1694,19 @@ void ClassGalaxy::RG8ToRGB24Packed(void* destbuffer,CImageDataPointer& objImageD
     return;*/
     //end modify
 
-    //RG8תRGB24
+    //RG8转RGB24
     try
     {
         GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
-        //��ȷ����Ĳ�ͼ��ʽ
+        //明确相机的采图格式
         emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
 
-        //Ϊ����ʾ����Ҫ��ת��Raw8λ
+        //为了显示，需要都转成Raw8位
         if (emValidBits!= GX_BIT_0_7)
         {
             return;
         }
-        //RGB24Packed-��С����3
+        //RGB24Packed-大小乘以3
         void* buffer = objImageDataPointer->ConvertToRGB24(emValidBits, GX_RAW2RGB_NEIGHBOUR, false);
         RGB24PackedToRGBA(destbuffer, buffer, objImageDataPointer);
         AddToLog("RG8ToRGB24Packed");
@@ -1740,7 +1740,7 @@ void ClassGalaxy::RG10ToRGB24Packed(void* pRGB24Bufdest, CImageDataPointer& objI
 {
     if (0)
     {
-        //ת��RGB8*2����ת��RGBA8*2*4
+        //转成RGB8*2，在转成RGBA8*2*4
         size_t BufferSize = GetImageSizeLarge() * 3 * sizeof(unsigned short int);
         void* RGB16 = malloc(BufferSize);
 
@@ -1761,7 +1761,7 @@ void ClassGalaxy::RG10ToRGB24Packed(void* pRGB24Bufdest, CImageDataPointer& objI
 
 
     GX_VALID_BIT_LIST emValidBits = GX_BIT_0_7;
-    //��ȷ����Ĳ�ͼ��ʽ
+    //明确相机的采图格式
     emValidBits = GetBestValudBit(objImageDataPointer->GetPixelFormat());
 
     BYTE* pRGB24Buf2 = (BYTE*)objImageDataPointer->ConvertToRGB24(emValidBits, GX_RAW2RGB_NEIGHBOUR, false);
@@ -1820,7 +1820,7 @@ GX_VALID_BIT_LIST ClassGalaxy::GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelForm
     }
     case GX_PIXEL_FORMAT_MONO14:
     {
-        //��ʱû�����������ݸ�ʽ������
+        //暂时没有这样的数据格式待升级
         break;
     }
     case GX_PIXEL_FORMAT_MONO16:
@@ -1829,7 +1829,7 @@ GX_VALID_BIT_LIST ClassGalaxy::GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelForm
     case GX_PIXEL_FORMAT_BAYER_GB16:
     case GX_PIXEL_FORMAT_BAYER_BG16:
     {
-        //��ʱû�����������ݸ�ʽ������
+        //暂时没有这样的数据格式待升级
         if (emPixelFormatEntry != GX_PIXEL_FORMAT_MONO16)
         {
             IsByerFormat = true;
@@ -1847,10 +1847,10 @@ CircularBufferInserter::CircularBufferInserter(ClassGalaxy* dev) :
 {}
     //---------------------------------------------------------------------------------
     /**
-    \brief   �ɼ��ص�����
-    \param   objImageDataPointer      ͼ��������
-    \param   pFrame                   �û�����
-    \return  ��
+    \brief   采集回调函数
+    \param   objImageDataPointer      图像处理参数
+    \param   pFrame                   用户参数
+    \return  无
     */
     //----------------------------------------------------------------------------------
 void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam)
@@ -1867,11 +1867,11 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
     // Image grabbed successfully ?
     if (objImageDataPointer->GetStatus()== GX_FRAME_STATUS_SUCCESS)
     {
-        //��ѯͼ���ʽ
+        //查询图像格式
         GX_PIXEL_FORMAT_ENTRY pixelFormat_gx = objImageDataPointer->GetPixelFormat();
 
         dev_->ResizeSnapBuffer();
-        //�ڰ�
+        //黑白
         if (!dev_->colorCamera_)
         {
             //copy to intermediate buffer
@@ -1885,7 +1885,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
         }
         else if (dev_->colorCamera_)
         {
-            //��ɫ��ע������ȫ��ת��8λRGB
+            //彩色，注意这里全部转成8位RGB
             if (dev_->__IsPixelFormat8(pixelFormat_gx))
             {
                 dev_->RG8ToRGB24Packed(dev_->imgBuffer_, objImageDataPointer);
@@ -1905,7 +1905,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
     }
     else
     {
-        dev_->AddToLog("��֡");
+        dev_->AddToLog("残帧");
     }
 
 
@@ -1932,7 +1932,7 @@ bool ClassGalaxy::__IsCompatible(BITMAPINFO* pBmpInfo, uint64_t nWidth, uint64_t
 void ClassGalaxy::__ColorPrepareForShowImg()
 {
     //--------------------------------------------------------------------
-    //---------------------------��ʼ��bitmapͷ---------------------------
+    //---------------------------初始化bitmap头---------------------------
     m_pBmpInfo = (BITMAPINFO*)m_chBmpBuf;
     m_pBmpInfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     m_pBmpInfo->bmiHeader.biWidth = (LONG)Width_;
@@ -1972,7 +1972,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer, const std::st
         throw std::runtime_error("Argument is error");
     }
 
-    //���ͼ���Ƿ�ı䲢����Buffer
+    //检查图像是否改变并更新Buffer
     __UpdateBitmap(objCImageDataPointer);
 
     emValidBits = GetBestValudBit(objCImageDataPointer->GetPixelFormat());
@@ -1993,7 +1993,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer, const std::st
         {
             pBuffer = (BYTE*)objCImageDataPointer->ConvertToRaw8(emValidBits);
         }
-        // �ڰ������Ҫ��ת���ݺ���ʾ
+        // 黑白相机需要翻转数据后显示
         for (unsigned int i = 0; i < Height_; i++)
         {
             memcpy(m_pImageBuffer + i * Width_, pBuffer + (Height_ - i - 1) * Width_, (size_t)Width_);
@@ -2005,23 +2005,23 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer, const std::st
         BITMAPFILEHEADER     stBfh = { 0 };
         DWORD		         dwBytesRead = 0;
 
-        stBfh.bfType = (WORD)'M' << 8 | 'B';			 //�����ļ�����
+        stBfh.bfType = (WORD)'M' << 8 | 'B';			 //定义文件类型
         stBfh.bfOffBits = colorCamera_ ? sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)
-            : sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (256 * 4);	//�����ļ�ͷ��СtrueΪ��ɫ,falseΪ�ڰ�
-        stBfh.bfSize = stBfh.bfOffBits + dwImageSize; //�ļ���С
+            : sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (256 * 4);	//定义文件头大小true为彩色,false为黑白
+        stBfh.bfSize = stBfh.bfOffBits + dwImageSize; //文件大小
 
         DWORD dwBitmapInfoHeader = colorCamera_ ? sizeof(BITMAPINFOHEADER)
-            : sizeof(BITMAPINFOHEADER) + (256 * 4);	//����BitmapInfoHeader��СtrueΪ��ɫ,falseΪ�ڰ�
+            : sizeof(BITMAPINFOHEADER) + (256 * 4);	//定义BitmapInfoHeader大小true为彩色,false为黑白
         const char* strEn = strFilePath.c_str();
 
-        //��const char*ת��ΪLPCTSTR
+        //将const char*转化为LPCTSTR
         size_t length = sizeof(TCHAR) * (strlen(strEn) + 1);
         LPTSTR tcBuffer = new TCHAR[length];
         memset(tcBuffer, 0, length);
         MultiByteToWideChar(CP_ACP, 0, strEn, (int) strlen(strEn), tcBuffer, (int) length);
         LPCTSTR  pDest = (LPCTSTR)tcBuffer;
 
-        //�����ļ�
+        //创建文件
         HANDLE hFile = ::CreateFile(pDest,
             GENERIC_WRITE,
             0,
@@ -2035,7 +2035,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer, const std::st
             throw std::runtime_error("Handle is invalid");
         }
         ::WriteFile(hFile, &stBfh, sizeof(BITMAPFILEHEADER), &dwBytesRead, NULL);
-        ::WriteFile(hFile, m_pBmpInfo, dwBitmapInfoHeader, &dwBytesRead, NULL); //�ڰ׺Ͳ�ɫ����Ӧ
+        ::WriteFile(hFile, m_pBmpInfo, dwBitmapInfoHeader, &dwBytesRead, NULL); //黑白和彩色自适应
         ::WriteFile(hFile, pBuffer, dwImageSize, &dwBytesRead, NULL);
         CloseHandle(hFile);
 }
@@ -2049,7 +2049,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer,void* buffer,c
         throw std::runtime_error("Argument is error");
     }
 
-    //���ͼ���Ƿ�ı䲢����Buffer
+    //检查图像是否改变并更新Buffer
     __UpdateBitmap(objCImageDataPointer);
 
     emValidBits = GetBestValudBit(objCImageDataPointer->GetPixelFormat());
@@ -2070,7 +2070,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer,void* buffer,c
         {
             pBuffer = (BYTE*)objCImageDataPointer->ConvertToRaw8(emValidBits);
         }
-        // �ڰ������Ҫ��ת���ݺ���ʾ
+        // 黑白相机需要翻转数据后显示
         for (unsigned int i = 0; i < Height_; i++)
         {
             memcpy(m_pImageBuffer + i * Width_, pBuffer + (Height_ - i - 1) * Width_, (size_t)Width_);
@@ -2082,23 +2082,23 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer,void* buffer,c
     BITMAPFILEHEADER     stBfh = { 0 };
     DWORD		         dwBytesRead = 0;
 
-    stBfh.bfType = (WORD)'M' << 8 | 'B';			 //�����ļ�����
+    stBfh.bfType = (WORD)'M' << 8 | 'B';			 //定义文件类型
     stBfh.bfOffBits = colorCamera_ ? sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)
-        : sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (256 * 4);	//�����ļ�ͷ��СtrueΪ��ɫ,falseΪ�ڰ�
-    stBfh.bfSize = stBfh.bfOffBits + dwImageSize; //�ļ���С
+        : sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (256 * 4);	//定义文件头大小true为彩色,false为黑白
+    stBfh.bfSize = stBfh.bfOffBits + dwImageSize; //文件大小
 
     DWORD dwBitmapInfoHeader = colorCamera_ ? sizeof(BITMAPINFOHEADER)
-        : sizeof(BITMAPINFOHEADER) + (256 * 4);	//����BitmapInfoHeader��СtrueΪ��ɫ,falseΪ�ڰ�
+        : sizeof(BITMAPINFOHEADER) + (256 * 4);	//定义BitmapInfoHeader大小true为彩色,false为黑白
     const char* strEn = strFilePath.c_str();
 
-    //��const char*ת��ΪLPCTSTR
+    //将const char*转化为LPCTSTR
     size_t length = sizeof(TCHAR) * (strlen(strEn) + 1);
     LPTSTR tcBuffer = new TCHAR[length];
     memset(tcBuffer, 0, length);
     MultiByteToWideChar(CP_ACP, 0, strEn, (int) strlen(strEn), tcBuffer, (int) length);
     LPCTSTR  pDest = (LPCTSTR)tcBuffer;
 
-    //�����ļ�
+    //创建文件
     HANDLE hFile = ::CreateFile(pDest,
         GENERIC_WRITE,
         0,
@@ -2112,7 +2112,7 @@ void ClassGalaxy::SaveBmp(CImageDataPointer& objCImageDataPointer,void* buffer,c
         throw std::runtime_error("Handle is invalid");
     }
     ::WriteFile(hFile, &stBfh, sizeof(BITMAPFILEHEADER), &dwBytesRead, NULL);
-    ::WriteFile(hFile, m_pBmpInfo, dwBitmapInfoHeader, &dwBytesRead, NULL); //�ڰ׺Ͳ�ɫ����Ӧ
+    ::WriteFile(hFile, m_pBmpInfo, dwBitmapInfoHeader, &dwBytesRead, NULL); //黑白和彩色自适应
     //::WriteFile(hFile, pBuffer, dwImageSize, &dwBytesRead, NULL);
     
     ::WriteFile(hFile, buffer, dwImageSize, &dwBytesRead, NULL);
@@ -2126,23 +2126,23 @@ void ClassGalaxy::SaveRaw(CImageDataPointer& objCImageDataPointer, const std::st
         throw std::runtime_error("Argument is error");
     }
 
-    //���ͼ���Ƿ�ı䲢����Buffer
+    //检查图像是否改变并更新Buffer
     __UpdateBitmap(objCImageDataPointer);
 
-    DWORD   dwImageSize = (DWORD)objCImageDataPointer->GetPayloadSize();  // д���ļ��ĳ���
-    DWORD   dwBytesRead = 0;                // �ļ���ȡ�ĳ���
+    DWORD   dwImageSize = (DWORD)objCImageDataPointer->GetPayloadSize();  // 写入文件的长度
+    DWORD   dwBytesRead = 0;                // 文件读取的长度
 
     BYTE* pbuffer = (BYTE*)objCImageDataPointer->GetBuffer();
 
     const char* strEn = strFilePath.c_str();
 
-    //��const char*ת��ΪLPCTSTR
+    //将const char*转化为LPCTSTR
     size_t length = sizeof(TCHAR) * (strlen(strEn) + 1);
     LPTSTR tcBuffer = new TCHAR[length];
     memset(tcBuffer, 0, length);
     MultiByteToWideChar(CP_ACP, 0, strEn, (int) strlen(strEn), tcBuffer, (int) length);
     LPCTSTR  pDest = (LPCTSTR)tcBuffer;
-    // �����ļ�
+    // 创建文件
     HANDLE hFile = ::CreateFile(pDest,
         GENERIC_WRITE,
         FILE_SHARE_READ,
@@ -2151,11 +2151,11 @@ void ClassGalaxy::SaveRaw(CImageDataPointer& objCImageDataPointer, const std::st
         FILE_ATTRIBUTE_NORMAL,
         NULL);
 
-    if (hFile == INVALID_HANDLE_VALUE)   // ����ʧ���򷵻�
+    if (hFile == INVALID_HANDLE_VALUE)   // 创建失败则返回
     {
         throw std::runtime_error("Handle is invalid");
     }
-    else                                 // ����Rawͼ��          
+    else                                 // 保存Raw图像          
     {
         ::WriteFile(hFile, pbuffer, dwImageSize, &dwBytesRead, NULL);
         CloseHandle(hFile);

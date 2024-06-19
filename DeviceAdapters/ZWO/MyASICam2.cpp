@@ -93,9 +93,9 @@ inline static void OutputDbgPrint(const char* strOutPutString, ...)
 MODULE_API void InitializeModuleData()
 {
 #ifdef _VEROPTICS
-	RegisterDevice(g_CameraName, MM::CameraDevice, "Micro-manager Veroptics camera");//������device list��
+	RegisterDevice(g_CameraName, MM::CameraDevice, "Micro-manager Veroptics camera");//出现在device list里
 #else
-	RegisterDevice(g_CameraName, MM::CameraDevice, "ZWO ASI camera");//������device list��
+	RegisterDevice(g_CameraName, MM::CameraDevice, "ZWO ASI camera");//出现在device list里
 #endif
 	RegisterDevice(g_StateDeviceName, MM::StateDevice, "ZWO EFW filter wheel");
 }
@@ -218,19 +218,19 @@ CMyASICam::CMyASICam() :
 	{		
 		ASIGetCameraProperty(&ASICameraInfo, i);
 #ifdef _VEROPTICS
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ZWO", "Veroptics");//���ִ�Сд
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ASI", "VER");//���ִ�Сд
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mc", "C", false);//�����ִ�Сд
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mm", "M", false);//�����ִ�Сд
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ZWO", "Veroptics");//区分大小写
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ASI", "VER");//区分大小写
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mc", "C", false);//不区分大小写
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mm", "M", false);//不区分大小写
 #endif
-		strcpy(ConnectedCamName[i], ASICameraInfo.Name);//�������ӵ�����ͷ����		
+		strcpy(ConnectedCamName[i], ASICameraInfo.Name);//保存连接的摄像头名字		
 		CamIndexValues.push_back(ConnectedCamName[i]);
 	}
 
-	CPropertyAction *pAct = new CPropertyAction (this, &CMyASICam::OnSelectCamIndex);//ͨ������ѡ��򿪵����
+	CPropertyAction *pAct = new CPropertyAction (this, &CMyASICam::OnSelectCamIndex);//通过名字选择打开的序号
 	if(iConnectedCamNum > 0)
 	{
-		strcpy(sz_ModelIndex, ConnectedCamName[0]);//Ĭ�ϴ򿪵�һ��camera
+		strcpy(sz_ModelIndex, ConnectedCamName[0]);//默认打开第一个camera
 		//iCamIndex = 0;
 		ASIGetCameraProperty(&ASICameraInfo, 0);
 	}
@@ -244,7 +244,7 @@ CMyASICam::CMyASICam() :
 		
 	}
 //	strcpy(sz_ModelIndex, "DropDown");
-	ret = CreateProperty(g_DeviceIndex, sz_ModelIndex, MM::String, false, pAct, true); //ѡ������ͷ���
+	ret = CreateProperty(g_DeviceIndex, sz_ModelIndex, MM::String, false, pAct, true); //选择摄像头序号
 	SetAllowedValues(g_DeviceIndex, CamIndexValues);
 	assert(ret == DEVICE_OK);
 
@@ -310,10 +310,10 @@ int CMyASICam::Initialize()
 		
 	//	ASIGetCameraProperty(&ASICameraInfo, iCamIndex);
 #ifdef _VEROPTICS
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ZWO", "Veroptics");//���ִ�Сд
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ASI", "VER");//���ִ�Сд
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mc", "C", false);//�����ִ�Сд
-		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mm", "M", false);//�����ִ�Сд
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ZWO", "Veroptics");//区分大小写
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "ASI", "VER");//区分大小写
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mc", "C", false);//不区分大小写
+		StrReplace(ASICameraInfo.Name, ASICameraInfo.Name, "mm", "M", false);//不区分大小写
 #endif
 		char *sz_Name = ASICameraInfo.Name;
 		int nRet = CreateStringProperty(MM::g_Keyword_CameraName, sz_Name, true);
@@ -666,7 +666,7 @@ int CMyASICam::Shutdown()
 * (i.e., before readout).  This behavior is needed for proper synchronization with the shutter.
 * Required by the MM::Camera API.
 */
-int CMyASICam::SnapImage()//�ع��ڼ�Ҫ����
+int CMyASICam::SnapImage()//曝光期间要阻塞
 {
 	//  GenerateImage();
 //	ASIGetStartPos(iCamIndex, &iStartXImg, &iStartYImg);
@@ -830,7 +830,7 @@ unsigned CMyASICam::GetImageHeight() const
 * Returns image buffer pixel depth in bytes.
 * Required by the MM::Camera API.
 */
-unsigned CMyASICam::GetImageBytesPerPixel() const //ÿ�����ص��ֽ���
+unsigned CMyASICam::GetImageBytesPerPixel() const //每个像素的字节数
 {
 	return iPixBytes;
 } 
@@ -841,7 +841,7 @@ unsigned CMyASICam::GetImageBytesPerPixel() const //ÿ�����ص��ֽ�
 * a guideline on how to interpret pixel values.
 * Required by the MM::Camera API.
 */
-unsigned CMyASICam::GetBitDepth() const//��ɫ�ķ�Χ 8bit �� 16bit
+unsigned CMyASICam::GetBitDepth() const//颜色的范围 8bit 或 16bit
 {
 	if(ImgType == ASI_IMG_RAW16)
 	{
@@ -931,16 +931,16 @@ void CMyASICam::DeleteImgBuf()
 		pRGB64 = 0;
 	}
 }
-int CMyASICam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)//bin2ʱ��ֵ�������bin2��ͼ���ϵ�, ��ASISetStartPos���������bin1��
+int CMyASICam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)//bin2时的值是相对于bin2后图像上的, 而ASISetStartPos都是相对于bin1的
 {
 	if (xSize == 0 && ySize == 0)
 		;
 	else
 	{
 		/*20160107
-		����ROI������ʾͼƬΪ���յ�,���򴫽�������ʼ��(x, y)��������ʾͼƬ����ʼ��(����GetROI()�õ�)�������ѡ���ƫ�ƣ�
-		�ߴ����ʼ�㶼��ImgBin/iSetBin����, iSetBin��Ҫ���õ�binֵ
-		����з�ת, ��Ҫ������������������
+		设置ROI是以显示图片为参照的,程序传进来的起始点(x, y)是用已显示图片的起始点(调用GetROI()得到)加上鼠标选择的偏移，
+		尺寸和起始点都以ImgBin/iSetBin缩放, iSetBin是要设置的bin值
+		如果有翻转, 则要换算回正常的起点坐标
 		*/
 		switch(ImgFlip)
 		{
@@ -964,15 +964,15 @@ int CMyASICam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)//b
 		iSetHei = iSetHei/2*2;
 
 
-		iSetX = x*ImgBin/iSetBin;//bin�ı��, startpos�������bin��Ļ���ģ�ҲҪ���ձ����ı�
+		iSetX = x*ImgBin/iSetBin;//bin改变后, startpos是相对于bin后的画面的，也要按照比例改变
 		iSetY = y*ImgBin/iSetBin;		
 		iSetX = iSetX/4*4;
 		iSetY = iSetY/2*2;	
 
-		if(ASISetROIFormat(ASICameraInfo.CameraID, iSetWid, iSetHei, iSetBin, ImgType)  == ASI_SUCCESS)//������óɹ�
+		if(ASISetROIFormat(ASICameraInfo.CameraID, iSetWid, iSetHei, iSetBin, ImgType)  == ASI_SUCCESS)//如果设置成功
 		{
 			OutputDbgPrint("wid:%d hei:%d bin:%d\n", xSize, ySize, iBin);
-			DeleteImgBuf();//buff��С�ı�
+			DeleteImgBuf();//buff大小改变
 			ASISetStartPos(ASICameraInfo.CameraID, iSetX, iSetY);			
 		}
 		ASIGetROIFormat(ASICameraInfo.CameraID, &iROIWidth, &iROIHeight, &iBin, &ImgType);
@@ -984,11 +984,11 @@ int CMyASICam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)//b
 * Returns the actual dimensions of the current ROI.
 * Required by the MM::Camera API.
 */
-int CMyASICam::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)//�����������õ���ǰROI��㣬����ROI��ľ�����㣬�õ�ROI��ROI�����
+int CMyASICam::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)//程序调用这里得到当前ROI起点，加上ROI里的矩形起点，得到ROI再ROI的起点
 {
 	/* 20160107
-	�õ���ʾͼ���ROI��Ϣ
-		����з�ת, Ҫ����ɷ�����ߵ�����, ���������ӵõ���ROI,�ٻ�����������������*/
+	得到显示图像的ROI信息
+		如果有翻转, 要换算成反方向边的坐标, 方便程序相加得到新ROI,再换算回正常方向的坐标*/
 
 	x = ImgStartX;
 	y = ImgStartY;
@@ -1070,7 +1070,7 @@ int CMyASICam::GetBinning() const
 */
 int CMyASICam::SetBinning(int binF)
 {
-	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));//����onBinning(, afterSet)
+	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));//就是onBinning(, afterSet)
 }
 
 int CMyASICam::PrepareSequenceAcqusition()
@@ -1108,7 +1108,7 @@ int CMyASICam::StartSequenceAcquisition(long numImages, double interval_ms, bool
 	Status = capturing;
 
 	OutputDbgPrint("StartSeqAcq\n");
-	thd_->Start(numImages,interval_ms);//��ʼ�߳�
+	thd_->Start(numImages,interval_ms);//开始线程
 
 	return DEVICE_OK;
 }
@@ -1159,7 +1159,7 @@ int CMyASICam::InsertImage()
 	pI = GetImageBuffer();
 	int ret = 0;
 	ret  = GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize().c_str());
-	if (ret == DEVICE_BUFFER_OVERFLOW)//����������Ҫ���, �����ܼ�������ͼ�����ס
+	if (ret == DEVICE_BUFFER_OVERFLOW)//缓冲区满了要清空, 否则不能继续插入图像而卡住
 	{
 		// do not stop on overflow - just reset the buffer
 		GetCoreCallback()->ClearImageBuffer(this);
@@ -1177,10 +1177,10 @@ int CMyASICam::StopSequenceAcquisition()
 {                                                                         
 	if (!thd_->IsStopped())
 	{
-		thd_->Stop();//ֹͣ�߳�
+		thd_->Stop();//停止线程
 		OutputDbgPrint("StopSeqAcq bf wait\n");
 //		if(!thd_->IsStopped())
-		thd_->wait();//�ȴ��߳��˳�
+		thd_->wait();//等待线程退出
 		OutputDbgPrint("StopSeqAcq af wait\n");
 	}                                                                    
 //	if(Status == capturing)
@@ -1220,21 +1220,21 @@ int CMyASICam::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 		char binF;
 		binF = binSize;
 		
-		if( !thd_->IsStopped() )//micro manager�������binʱ�����ɳ���ֹͣ�����ã�����property������bin����ֹͣ�����´������Բ�ֹͣʱ��������
+		if( !thd_->IsStopped() )//micro manager主面板里bin时会先由程序停止再设置，而在property里设置bin不会停止，导致错误，所以不停止时不能设置
 		   return DEVICE_CAMERA_BUSY_ACQUIRING;
-		/* bin��� ��ʼ��ͳߴ��� ������ֵ���� old Bin/new Bin ���ŵ�*/
+		/* bin后的 起始点和尺寸是 把设置值按照 old Bin/new Bin 缩放的*/
 		 iSetWid = iSetWid*iSetBin/binF;// 2->1, *2
 		iSetHei = iSetHei*iSetBin/binF;//1->2. *0.5
 		iSetWid = iSetWid/8*8;
 		iSetHei = iSetHei/2*2;	
 
-		iSetX = iSetX*iSetBin/binF;//bin�ı��, startpos�������bin��Ļ���ģ�ҲҪ���ձ����ı�
+		iSetX = iSetX*iSetBin/binF;//bin改变后, startpos是相对于bin后的画面的，也要按照比例改变
 		iSetY = iSetY*iSetBin/binF;
 
 		if(ASISetROIFormat(ASICameraInfo.CameraID, iSetWid, iSetHei, binF, ImgType) == ASI_SUCCESS)
 		{
 			DeleteImgBuf();
-			ASISetStartPos(ASICameraInfo.CameraID, iSetX, iSetY);//�����¼���startx ��starty������ѡ����ͬ�����Ҫ��������
+			ASISetStartPos(ASICameraInfo.CameraID, iSetX, iSetY);//会重新计算startx 和starty，和所选区域不同，因此要重新设置
 		}
 		ASIGetROIFormat(ASICameraInfo.CameraID, &iROIWidth, &iROIHeight, &iBin, &ImgType);
 		iSetBin = binF;
@@ -1253,7 +1253,7 @@ int CMyASICam::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CMyASICam::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ
+	if (eAct == MM::AfterSet)//从控件得到选定的值
 	{
 		string val;
 		pProp->Get(val);
@@ -1295,7 +1295,7 @@ int CMyASICam::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 
 	}
-	else if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		ASIGetROIFormat(ASICameraInfo.CameraID, &iROIWidth, &iROIHeight, &iBin, &ImgType);
 
@@ -1354,7 +1354,7 @@ int CMyASICam::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CMyASICam::OnSelectCamIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	string str;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ
+	if (eAct == MM::AfterSet)//从控件得到选定的值
 	{
 		pProp->Get(str);
 		for(int i = 0; i < iConnectedCamNum; i++)
@@ -1368,7 +1368,7 @@ int CMyASICam::OnSelectCamIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 	}
-	else if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		pProp->Set(sz_ModelIndex);
 	}
@@ -1402,12 +1402,12 @@ int CMyASICam::OnBrightness(MM::PropertyBase* pProp,MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ
+	if (eAct == MM::AfterSet)//从控件得到选定的值
 	{
 		pProp->Get(lVal);
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_BRIGHTNESS, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID, ASI_BRIGHTNESS, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1423,12 +1423,12 @@ int CMyASICam::OnUSBTraffic(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ
+	if (eAct == MM::AfterSet)//从控件得到选定的值
 	{
 		pProp->Get(lVal);
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1444,7 +1444,7 @@ int CMyASICam::OnUSB_Auto(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ
+	if (eAct == MM::AfterSet)//从控件得到选定的值
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, &lVal, &bAuto);
 		string strVal;
@@ -1453,7 +1453,7 @@ int CMyASICam::OnUSB_Auto(MM::PropertyBase* pProp, MM::ActionType eAct)
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, lVal, bAuto);
 //		SetPropertyReadOnly(g_Keyword_USBTraffic, bAuto);
 	}
-	else if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_BANDWIDTHOVERLOAD, &lVal, &bAuto);
 		pProp->Set(bAuto==ASI_TRUE?g_Keyword_on:g_Keyword_off);
@@ -1473,11 +1473,11 @@ int CMyASICam::OnCoolerOn(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 	//	ASIGetControlValue(iCamIndex, ASI_TARGET_TEMP, &lVal, &bAuto);
 		string strVal;
-		pProp->Get(strVal);//�ӿؼ��õ�ѡ����ֵ
+		pProp->Get(strVal);//从控件得到选定的值
 		lVal = !strVal.compare(g_Keyword_on);
 		ASISetControlValue(ASICameraInfo.CameraID, ASI_COOLER_ON, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID, ASI_COOLER_ON, &lVal, &bAuto);
 		pProp->Set(lVal > 0?g_Keyword_on:g_Keyword_off);
@@ -1495,11 +1495,11 @@ int CMyASICam::OnHeater(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		//	ASIGetControlValue(iCamIndex, ASI_TARGET_TEMP, &lVal, &bAuto);
 		string strVal;
-		pProp->Get(strVal);//�ӿؼ��õ�ѡ����ֵ
+		pProp->Get(strVal);//从控件得到选定的值
 		lVal = !strVal.compare(g_Keyword_on);
 		ASISetControlValue(ASICameraInfo.CameraID, ASI_ANTI_DEW_HEATER, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID, ASI_ANTI_DEW_HEATER, &lVal, &bAuto);
 		pProp->Set(lVal > 0?g_Keyword_on:g_Keyword_off);
@@ -1516,10 +1516,10 @@ int CMyASICam::OnTargetTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::AfterSet)
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_TARGET_TEMP, &lVal, &bAuto);
-		pProp->Get(lVal);//�ӿؼ��õ�ѡ����ֵ->����
+		pProp->Get(lVal);//从控件得到选定的值->变量
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_TARGET_TEMP, lVal, bAuto);
 	}
-	else if (eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_TARGET_TEMP, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1535,10 +1535,10 @@ int CMyASICam::OnCoolerPowerPerc(MM::PropertyBase* pProp, MM::ActionType eAct)
 	ASI_BOOL bAuto;
 	if (eAct == MM::AfterSet)
 	{
-		pProp->Get(lVal);//�ӿؼ��õ�ѡ����ֵ->����
+		pProp->Get(lVal);//从控件得到选定的值->变量
 
 	}
-	else if (eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_COOLER_POWER_PERC, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1554,10 +1554,10 @@ int CMyASICam::OnWB_R(MM::PropertyBase* pProp, MM::ActionType eAct)
 	ASI_BOOL bAuto;
 	if (eAct == MM::AfterSet)
 	{
-		pProp->Get(lVal);//�ӿؼ��õ�ѡ����ֵ->����
+		pProp->Get(lVal);//从控件得到选定的值->变量
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_WB_R, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_WB_R, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1573,10 +1573,10 @@ int CMyASICam::OnWB_B(MM::PropertyBase* pProp, MM::ActionType eAct)
 	ASI_BOOL bAuto;
 	if (eAct == MM::AfterSet)
 	{
-		pProp->Get(lVal);//�ӿؼ��õ�ѡ����ֵ->����
+		pProp->Get(lVal);//从控件得到选定的值->变量
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_WB_B, lVal, ASI_FALSE);
 	}
-	else if (eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_WB_B, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1594,14 +1594,14 @@ int CMyASICam::OnAutoWB(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::AfterSet)
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_WB_B, &lVal, &bAuto);
-		pProp->Get(strVal);//�ӿؼ��õ�ѡ����ֵ->����
+		pProp->Get(strVal);//从控件得到选定的值->变量
 		bAuto = strVal.compare(g_Keyword_on)?ASI_FALSE:ASI_TRUE;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_WB_B, lVal, bAuto);
 	//	SetPropertyReadOnly(g_Keyword_WB_R,bAuto );
 	//	SetPropertyReadOnly(g_Keyword_WB_B,bAuto );
 		
 	}
-	else if (eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_WB_B, &lVal, &bAuto);
 		pProp->Set(bAuto?g_Keyword_on:g_Keyword_off);
@@ -1617,13 +1617,13 @@ int CMyASICam::OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ->����
+	if (eAct == MM::AfterSet)//从控件得到选定的值->变量
 	{
 		
 		pProp->Get(lVal);
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_GAMMA, lVal, ASI_FALSE);
 	}
-	else if(eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if(eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_GAMMA, &lVal, &bAuto);
 		pProp->Set(lVal);
@@ -1637,7 +1637,7 @@ int CMyASICam::OnAutoExp(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ->����
+	if (eAct == MM::AfterSet)//从控件得到选定的值->变量
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_EXPOSURE, &lVal, &bAuto);
 		string strVal;
@@ -1645,7 +1645,7 @@ int CMyASICam::OnAutoExp(MM::PropertyBase* pProp, MM::ActionType eAct)
 		bAuto = strVal.compare(g_Keyword_on)?ASI_FALSE:ASI_TRUE;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_EXPOSURE, lVal, bAuto);
 	}
-	else if(eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if(eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_EXPOSURE, &lVal, &bAuto);
 		pProp->Set(bAuto?g_Keyword_on:g_Keyword_off);
@@ -1660,7 +1660,7 @@ int CMyASICam::OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ->����
+	if (eAct == MM::AfterSet)//从控件得到选定的值->变量
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_GAIN, &lVal, &bAuto);
 		string strVal;
@@ -1668,7 +1668,7 @@ int CMyASICam::OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		bAuto = strVal.compare(g_Keyword_on)?ASI_FALSE:ASI_TRUE;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_GAIN, lVal, bAuto);
 	}
-	else if(eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if(eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_GAIN, &lVal, &bAuto);
 		pProp->Set(bAuto?g_Keyword_on:g_Keyword_off);
@@ -1683,7 +1683,7 @@ int CMyASICam::OnFlip(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ->����
+	if (eAct == MM::AfterSet)//从控件得到选定的值->变量
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID, ASI_FLIP, &lVal, &bAuto);
 		string strVal;
@@ -1698,7 +1698,7 @@ int CMyASICam::OnFlip(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		
 	}
-	else if(eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if(eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_FLIP, &lVal, &bAuto);
 		pProp->Set(FlipArr[lVal]);
@@ -1712,14 +1712,14 @@ int CMyASICam::OnHighSpeedMod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ->����
+	if (eAct == MM::AfterSet)//从控件得到选定的值->变量
 	{
 		string strVal;
 		pProp->Get(strVal);
 		lVal = strVal.compare(g_Keyword_on)?0:1;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_HIGH_SPEED_MODE, lVal, ASI_FALSE);
 	}
-	else if(eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if(eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_HIGH_SPEED_MODE, &lVal, &bAuto);
 		pProp->Set(lVal?g_Keyword_on:g_Keyword_off);
@@ -1733,14 +1733,14 @@ int CMyASICam::OnHardwareBin(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	long lVal;
 	ASI_BOOL bAuto;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ->����
+	if (eAct == MM::AfterSet)//从控件得到选定的值->变量
 	{
 		string strVal;
 		pProp->Get(strVal);
 		lVal = strVal.compare(g_Keyword_on)?0:1;
 		ASISetControlValue(ASICameraInfo.CameraID,ASI_HARDWARE_BIN, lVal, ASI_FALSE);
 	}
-	else if(eAct == MM::BeforeGet)//����ֵ->�ؼ���ʾ
+	else if(eAct == MM::BeforeGet)//变量值->控件显示
 	{
 		ASIGetControlValue(ASICameraInfo.CameraID,ASI_HARDWARE_BIN, &lVal, &bAuto);
 		pProp->Set(lVal?g_Keyword_on:g_Keyword_off);
@@ -1850,14 +1850,14 @@ CMyEFW::CMyEFW() :
 	for(int i = 0; i < iConnectedEFWNum; i++)
 	{		
 		EFWGetID(i, &EFWInfo.ID);
-		sprintf(ConnectedEFWName[i], "EFW (ID %d)", EFWInfo.ID);//��������		
+		sprintf(ConnectedEFWName[i], "EFW (ID %d)", EFWInfo.ID);//保存名字		
 		EFWIndexValues.push_back(ConnectedEFWName[i]);
 	}
 
-	CPropertyAction *pAct = new CPropertyAction (this, &CMyEFW::OnSelectEFWIndex);//ͨ������ѡ��򿪵����
+	CPropertyAction *pAct = new CPropertyAction (this, &CMyEFW::OnSelectEFWIndex);//通过名字选择打开的序号
 	if(iConnectedEFWNum > 0)
 	{
-		strcpy(sz_ModelIndex, ConnectedEFWName[0]);//Ĭ�ϴ򿪵�һ��
+		strcpy(sz_ModelIndex, ConnectedEFWName[0]);//默认打开第一个
 		//iCamIndex = 0;
 		EFWGetID(0, &EFWInfo.ID);
 	}
@@ -1866,7 +1866,7 @@ CMyEFW::CMyEFW() :
 		strcpy(sz_ModelIndex,"no EFW connected");
 	}
 	//	strcpy(sz_ModelIndex, "DropDown");
-	ret = CreateProperty(g_DeviceIndex, sz_ModelIndex, MM::String, false, pAct, true); //ѡ������ͷ���
+	ret = CreateProperty(g_DeviceIndex, sz_ModelIndex, MM::String, false, pAct, true); //选择摄像头序号
 	SetAllowedValues(g_DeviceIndex, EFWIndexValues);
 	assert(ret == DEVICE_OK);
 }
@@ -1942,7 +1942,7 @@ int CMyEFW::Initialize()
 	return DEVICE_OK;
 }
 
-bool CMyEFW::Busy()//����trueʱ��ˢ��label��state
+bool CMyEFW::Busy()//返回true时不刷新label和state
 {
 	if(bPosWait)//
 	{
@@ -1983,9 +1983,9 @@ int CMyEFW::Shutdown()
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
 
-int CMyEFW::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)//CStateDeviceBase::OnLabel ���������
+int CMyEFW::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)//CStateDeviceBase::OnLabel 会调用这里
 {
-	if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		int pos;
 		EFWGetPosition(EFWInfo.ID, &pos);	
@@ -1998,7 +1998,7 @@ int CMyEFW::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)//CStateDeviceB
 		}
 		// nothing to do, let the caller to use cached property
 	}
-	else if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ->����
+	else if (eAct == MM::AfterSet)//从控件得到选定的值->变量
 	{
 		// Set timer for the Busy signal
 //		changedTime_ = GetCurrentMMTime();
@@ -2024,7 +2024,7 @@ int CMyEFW::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)//CStateDeviceB
 int CMyEFW::OnSelectEFWIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	string str;
-	if (eAct == MM::AfterSet)//�ӿؼ��õ�ѡ����ֵ
+	if (eAct == MM::AfterSet)//从控件得到选定的值
 	{
 		pProp->Get(str);
 		for(int i = 0; i < iConnectedEFWNum; i++)
@@ -2038,7 +2038,7 @@ int CMyEFW::OnSelectEFWIndex(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 	}
-	else if (eAct == MM::BeforeGet)//ֵ���ؼ���ʾ
+	else if (eAct == MM::BeforeGet)//值给控件显示
 	{
 		pProp->Set(sz_ModelIndex);
 	}

@@ -25,21 +25,21 @@ static const  char* g_PixelType_8bitBGR = "8bitBGR";
 
 
 
-#define MONO_COMPONENTS  1			//mono8 ռ��1�������ÿ��ͨ����1�����
-#define MONO_CONVERTED_DEPTH 8		//  mono8ռ��8�ֽ�
-#define MONO_IMAGE_BYTES_PERPIXEL  1	// ʹ��mono8���ֽ���
+#define MONO_COMPONENTS  1			//mono8 占用1个组件，每个通道是1个组件
+#define MONO_CONVERTED_DEPTH 8		//  mono8占用8字节
+#define MONO_IMAGE_BYTES_PERPIXEL  1	// 使用mono8的字节数
 #define MONO_CONVERTED_FORMAT	 PixelType_Gvsp_Mono8
 
 
-#define COLOR_COMPONENTS  4				//RGBA ռ��4�������ÿ��ͨ����1�����
-#define COLOR_CONVERTED_DEPTH 32		//RGBA ���ֽ�����
-#define COLOR_IMAGE_BYTES_PERPIXEL  4	// ʹ��RGBA8���ֽ���
-#define COLOR_CONVERTED_FORMAT  PixelType_Gvsp_RGBA8_Packed			//32λ�� ���ܵײ� CircularBuffer::InsertMultiChannel ���� ��������ԭ�򣬵��� ת����RGB32�쳣��������
+#define COLOR_COMPONENTS  4				//RGBA 占用4个组件，每个通道是1个组件
+#define COLOR_CONVERTED_DEPTH 32		//RGBA 的字节数量
+#define COLOR_IMAGE_BYTES_PERPIXEL  4	// 使用RGBA8的字节数
+#define COLOR_CONVERTED_FORMAT  PixelType_Gvsp_RGBA8_Packed			//32位， 可能底层 CircularBuffer::InsertMultiChannel 限制 或者其他原因，导致 转换成RGB32异常，待分析
 
 
 #if 0
-/* �������� pok  */
-#define COLOR_COMPONENTS  3				//RGB ÿ��ͨ����1�����
+/* 下面配置 pok  */
+#define COLOR_COMPONENTS  3				//RGB 每个通道是1个组件
 #define COLOR_CONVERTED_DEPTH 24
 #define COLOR_IMAGE_BYTES_PERPIXEL  3 
 #define COLOR_CONVERTED_FORMAT  PixelType_Gvsp_RGB8_Packed
@@ -201,7 +201,7 @@ int HikrobotCamera::EnumDevice()
 */
 void HikrobotCamera::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(name, g_HikrobotCameraDeviceName);		//����˵���� �˴��ǲ�������֣�����������к�����Ҫ ��GetProperty("SerialNumber", serialNumber);�� ��ѡ��ġ� ��baslerҲ��ͬ�����߼���
+	CDeviceUtils::CopyLimitedString(name, g_HikrobotCameraDeviceName);		//增加说明： 此处是插件的名字，具体相机序列号是需要 （GetProperty("SerialNumber", serialNumber);） 中选择的。 （basler也是同样的逻辑）
 }
 
 /**
@@ -307,7 +307,7 @@ int HikrobotCamera::Initialize()
 	string strBasiceLog = " [ "+ strModeName + " " + strSerialNumber + " ] ";
 	SetLogBasicInfo(strBasiceLog);
 
-	sprintf_s(m_chDevID, sizeof(m_chDevID), " %s(%s) ", strModeName.c_str(), strSerialNumber.c_str());	//������������кţ��ͺ���Ϣ
+	sprintf_s(m_chDevID, sizeof(m_chDevID), " %s(%s) ", strModeName.c_str(), strSerialNumber.c_str());	//保存相机的序列号，型号信息
 
 
 	//Sensor size
@@ -390,7 +390,7 @@ int HikrobotCamera::Initialize()
 			pAct = new CPropertyAction(this, &HikrobotCamera::OnTestPattern);
 			ret = CreateProperty("TestPattern", "NA", MM::String, false, pAct);
 			vector<string> TestPatternVals;
-			TestPatternVals.push_back("Off");		//�ο�basler���Ȱ�off����vector�� ��ѭ���з���off��Ӧ��ҲOK�� 
+			TestPatternVals.push_back("Off");		//参考basler，先把off放入vector； 在循环中放入off，应该也OK； 
 			MVCC_ENUMENTRY Entry = { 0 };
 
 			for (unsigned int i = 0; i < stTestPattern.nSupportedNum; i++)
@@ -524,7 +524,7 @@ int HikrobotCamera::Initialize()
 		pAct = new CPropertyAction(this, &HikrobotCamera::OnSensorReadoutMode);
 		ret = CreateProperty("SensorReadoutMode", "NA", MM::String, false, pAct);  
 		vector<string> vals;
-		// vals.push_back("Off");	// �������������ڵ㣬�����ߵ������֧��; �ο�basler��֧��basler������off�ڵ�
+		// vals.push_back("Off");	// 海康相机无这个节点，不会走到这个分支中; 参考basler分支，basler无添加off节点
 		MVCC_ENUMVALUE SensorReadoutMode = { 0 };
 		m_pCamera->GetEnumValue("SensorReadoutMode", &SensorReadoutMode);
 		
@@ -874,10 +874,10 @@ int HikrobotCamera::SnapImage()
 {
 
 	/*
-	basler��snapimage�е��õ��� virtual void StartGrabbing( size_t maxImages, EGrabStrategy strategy = GrabStrategy_OneByOne, EGrabLoop grabLoopType = GrabLoop_ProvidedByUser );
-	����ӿڵ������ǣ���Extends the StartGrabbing(EStrategy, EGrabLoop) by a number of images to grab. If the passed count of images has been reached, StopGrabbing is called
-    automatically. The images are counted according to the grab strategy. Skipped images are not taken into account.����  ����˵��ȡͼ���������󣬺�̨���Զ�ֹͣȡ����
-	����SDK�޴���ӿڣ�������Ҫ start ����ȡͼ�� stop 
+	basler在snapimage中调用的是 virtual void StartGrabbing( size_t maxImages, EGrabStrategy strategy = GrabStrategy_OneByOne, EGrabLoop grabLoopType = GrabLoop_ProvidedByUser );
+	这个接口的描述是：”Extends the StartGrabbing(EStrategy, EGrabLoop) by a number of images to grab. If the passed count of images has been reached, StopGrabbing is called
+    automatically. The images are counted according to the grab strategy. Skipped images are not taken into account.“；  就是说获取图像个数满足后，后台会自动停止取流；
+	海康SDK无此类接口，所以需要 start ，获取图像， stop 
 	*/
 
 	MvWriteLog(__FILE__, __LINE__, m_chDevID, "SnapImage Begin");
@@ -891,8 +891,8 @@ int HikrobotCamera::SnapImage()
 
 	do 
 	{
-		//�˴���ʱ�趨1s, �����֡�ʹ��ͣ�������쳣����Ҫ����; 
-		// ��ʱʱ�䲻��̫�������׵��½ӿڿ����쳣;
+		//此处暂时设定1s, 若相机帧率过低，则可能异常，需要调整; 
+		// 超时时间不能太长，容易导致接口卡死异常;
 		nRet = m_pCamera->GetImageBuffer(&stOutFrame, 1000);		
 		if (nRet == MV_OK)
 		{
@@ -905,7 +905,7 @@ int HikrobotCamera::SnapImage()
 			break;
 		}
 
-		ResizeSnapBuffer();	//�����ڴ�ռ�
+		ResizeSnapBuffer();	//分配内存空间
 		CopyToImageBuffer(&stOutFrame);
 
 		nRet = m_pCamera->FreeImageBuffer(&stOutFrame);
@@ -915,7 +915,7 @@ int HikrobotCamera::SnapImage()
 		}
 
 		
-		break;	// ��ȡһ��ͼ�����.
+		break;	// 获取一张图像结束.
 	} while (0);
 
 	m_pCamera->StopGrabbing();
@@ -979,17 +979,17 @@ void HikrobotCamera::CopyToImageBuffer(MV_FRAME_OUT* pstFrameOut)
 			m_nConvertDataLen = nNeedSize;
 		}
 
-		// ch:���ظ�ʽת�� | en:Convert pixel format 
+		// ch:像素格式转换 | en:Convert pixel format 
 		MV_CC_PIXEL_CONVERT_PARAM stConvertParam = { 0 };
 
-		stConvertParam.nWidth = pstFrameOut->stFrameInfo.nWidth;                 //ch:ͼ��� | en:image width
-		stConvertParam.nHeight = pstFrameOut->stFrameInfo.nHeight;               //ch:ͼ��� | en:image height
-		stConvertParam.pSrcData = pstFrameOut->pBufAddr;                         //ch:�������ݻ��� | en:input data buffer
-		stConvertParam.nSrcDataLen = pstFrameOut->stFrameInfo.nFrameLen;         //ch:�������ݴ�С | en:input data size
-		stConvertParam.enSrcPixelType = pstFrameOut->stFrameInfo.enPixelType;    //ch:�������ظ�ʽ | en:input pixel format
-		stConvertParam.enDstPixelType = enDstPixelType;                         //ch:������ظ�ʽ | en:output pixel format
-		stConvertParam.pDstBuffer = m_pConvertData;                               //ch:������ݻ��� | en:output data buffer
-		stConvertParam.nDstBufferSize = nNeedSize;                       //ch:��������С | en:output buffer size
+		stConvertParam.nWidth = pstFrameOut->stFrameInfo.nWidth;                 //ch:图像宽 | en:image width
+		stConvertParam.nHeight = pstFrameOut->stFrameInfo.nHeight;               //ch:图像高 | en:image height
+		stConvertParam.pSrcData = pstFrameOut->pBufAddr;                         //ch:输入数据缓存 | en:input data buffer
+		stConvertParam.nSrcDataLen = pstFrameOut->stFrameInfo.nFrameLen;         //ch:输入数据大小 | en:input data size
+		stConvertParam.enSrcPixelType = pstFrameOut->stFrameInfo.enPixelType;    //ch:输入像素格式 | en:input pixel format
+		stConvertParam.enDstPixelType = enDstPixelType;                         //ch:输出像素格式 | en:output pixel format
+		stConvertParam.pDstBuffer = m_pConvertData;                               //ch:输出数据缓存 | en:output data buffer
+		stConvertParam.nDstBufferSize = nNeedSize;                       //ch:输出缓存大小 | en:output buffer size
 		nRet = GetCamera()->ConvertPixelType(&stConvertParam);
 		if (MV_OK != nRet)
 		{
@@ -1006,7 +1006,7 @@ unsigned HikrobotCamera::PixTypeProc(MvGvspPixelType enPixelType, unsigned int &
 {
 	int nRet = MV_OK;
 
-	//����ǲ�ɫ��ת��RGB8
+	//如果是彩色则转成RGB8
 	if (IsColor(enPixelType))
 	{
 		nChannelNum = COLOR_CONVERTED_DEPTH / 8;
@@ -1017,7 +1017,7 @@ unsigned HikrobotCamera::PixTypeProc(MvGvspPixelType enPixelType, unsigned int &
 		m_nbitDepth = COLOR_CONVERTED_DEPTH;
 
 	}
-	//����Ǻڰ���ת����Mono8
+	//如果是黑白则转换成Mono8
 	else if (IsMono(enPixelType))
 	{
 		nChannelNum = 1;
@@ -1072,7 +1072,7 @@ unsigned HikrobotCamera::GetImageBytesPerPixel() const
 	std::size_t found = pixelType_.find(subject);
 	unsigned int ret = 0;
 
-	//monoͳһת����mon8,��������ת��ΪRGBA32
+	//mono统一转换成mon8,其他类型转换为RGBA32
 	if (pixelType_ == "Mono8" || pixelType_ == "Mono10" || pixelType_ == "Mono12" || pixelType_ == "Mono10Packed" || pixelType_ == "Mono12Packed" || pixelType_ == "Mono16")
 	{
 		ret = MONO_IMAGE_BYTES_PERPIXEL;
@@ -1102,7 +1102,7 @@ unsigned int HikrobotCamera::GetBitDepth() const
 	const char* subject("Bayer");
 	std::size_t found = pixelType_.find(subject);
 	unsigned int ret = 0;
-	//monoͳһת����mon8,��������ת��ΪRGBA32
+	//mono统一转换成mon8,其他类型转换为RGBA32
 	if (pixelType_ == "Mono8" || pixelType_ == "Mono10" || pixelType_ == "Mono12" || pixelType_ == "Mono10Packed" || pixelType_ == "Mono12Packed" || pixelType_ == "Mono16")
 	{
 		ret = MONO_CONVERTED_DEPTH;
@@ -1421,7 +1421,7 @@ int HikrobotCamera::StartSequenceAcquisition(double /* interval_ms */) {
 	if (m_bGrabbing)
 	{
 		MvWriteLog(__FILE__, __LINE__, m_chDevID, "StartSequenceAcquisition Begin, but Already Start.");
-		return DEVICE_NOT_SUPPORTED;   //�豸�Ѿ�start�������ٴ�start; ImageJ �н�ͼ��ȡ������ͬʱʹ��  [��ͼ�󣬿���start���ܻᱨ��]
+		return DEVICE_NOT_SUPPORTED;   //设备已经start，不能再次start; ImageJ 中截图和取流不能同时使用  [截图后，快速start可能会报错]
 	}
 
 	MvWriteLog(__FILE__, __LINE__, m_chDevID, "StartSequenceAcquisition Begin");
@@ -1431,7 +1431,7 @@ int HikrobotCamera::StartSequenceAcquisition(double /* interval_ms */) {
 	m_pCamera->StartGrabbing();
 
 
-	m_bRecvRuning = true;	//ȡ���̹߳���
+	m_bRecvRuning = true;	//取流线程工作
 	unsigned int nThreadID = 0;
 	if (NULL == m_hImageRecvThreadHandle)
 	{
@@ -1443,13 +1443,13 @@ int HikrobotCamera::StartSequenceAcquisition(double /* interval_ms */) {
 		}
 	}
 
-	m_bGrabbing = true; //ȡ��״̬
+	m_bGrabbing = true; //取流状态
 	MvWriteLog(__FILE__, __LINE__, m_chDevID, "StartSequenceAcquisition End");
 
 	return DEVICE_OK;
 }
 
-// ȡ�������߳�
+// 取流处理线程
 unsigned int  __stdcall HikrobotCamera::ImageRecvThread(void* pUser)
 {
 	if (NULL == pUser)
@@ -1522,16 +1522,16 @@ void HikrobotCamera::ImageRecvThreadProc()
 			}
 
 
-			// ch:���ظ�ʽת�� | en:Convert pixel format 
+			// ch:像素格式转换 | en:Convert pixel format 
 			MV_CC_PIXEL_CONVERT_PARAM stConvertParam = { 0 };
-			stConvertParam.nWidth = stOutFrame.stFrameInfo.nWidth;                 //ch:ͼ��� | en:image width
-			stConvertParam.nHeight = stOutFrame.stFrameInfo.nHeight;               //ch:ͼ��� | en:image height
-			stConvertParam.pSrcData = stOutFrame.pBufAddr;                         //ch:�������ݻ��� | en:input data buffer
-			stConvertParam.nSrcDataLen = stOutFrame.stFrameInfo.nFrameLen;         //ch:�������ݴ�С | en:input data size
-			stConvertParam.enSrcPixelType = stOutFrame.stFrameInfo.enPixelType;    //ch:�������ظ�ʽ | en:input pixel format
-			stConvertParam.enDstPixelType = enDstPixelType;                         //ch:������ظ�ʽ | en:output pixel format
-			stConvertParam.pDstBuffer = m_pConvertData;                               //ch:������ݻ��� | en:output data buffer
-			stConvertParam.nDstBufferSize = m_nConvertDataLen;                       //ch:��������С | en:output buffer size
+			stConvertParam.nWidth = stOutFrame.stFrameInfo.nWidth;                 //ch:图像宽 | en:image width
+			stConvertParam.nHeight = stOutFrame.stFrameInfo.nHeight;               //ch:图像高 | en:image height
+			stConvertParam.pSrcData = stOutFrame.pBufAddr;                         //ch:输入数据缓存 | en:input data buffer
+			stConvertParam.nSrcDataLen = stOutFrame.stFrameInfo.nFrameLen;         //ch:输入数据大小 | en:input data size
+			stConvertParam.enSrcPixelType = stOutFrame.stFrameInfo.enPixelType;    //ch:输入像素格式 | en:input pixel format
+			stConvertParam.enDstPixelType = enDstPixelType;                         //ch:输出像素格式 | en:output pixel format
+			stConvertParam.pDstBuffer = m_pConvertData;                               //ch:输出数据缓存 | en:output data buffer
+			stConvertParam.nDstBufferSize = m_nConvertDataLen;                       //ch:输出缓存大小 | en:output buffer size
 			nRet = GetCamera()->ConvertPixelType(&stConvertParam);
 			if (MV_OK != nRet)
 			{
@@ -2010,7 +2010,7 @@ int HikrobotCamera::OnReverseX(MM::PropertyBase* pProp, MM::ActionType eAct)
 		bool reverseX = false;
 		m_pCamera->GetBoolValue("ReverseX", &reverseX);
 		//reverseX->FromString(reverseX_.c_str());
-		istringstream(reverseX_) >> boolalpha >> reverseX;//boolalpha>>����Ҫ�� 
+		istringstream(reverseX_) >> boolalpha >> reverseX;//boolalpha>>必须要加 
 		m_pCamera->SetBoolValue("ReverseX", &reverseX);
 	}
 	else if (eAct == MM::BeforeGet) {
@@ -2033,7 +2033,7 @@ int HikrobotCamera::OnReverseY(MM::PropertyBase* pProp, MM::ActionType eAct)
 		//reverseY->FromString(reverseY_.c_str());
 		bool ReverseY = false;
 		m_pCamera->GetBoolValue("ReverseY", &ReverseY);
-		istringstream(reverseX_) >> boolalpha >> ReverseY;//boolalpha>>����Ҫ�� 
+		istringstream(reverseX_) >> boolalpha >> ReverseY;//boolalpha>>必须要加 
 		m_pCamera->SetBoolValue("ReverseX", &ReverseY);
 	}
 	else if (eAct == MM::BeforeGet) {
@@ -2057,7 +2057,7 @@ int HikrobotCamera::OnAcqFramerateEnable(MM::PropertyBase* pProp, MM::ActionType
 
 		bool setAcqFrm = false;
 		m_pCamera->GetBoolValue("AcquisitionFrameRateEnable", &setAcqFrm);
-		istringstream(setAcqFrm_) >> boolalpha >> setAcqFrm;//boolalpha>>����Ҫ�� 
+		istringstream(setAcqFrm_) >> boolalpha >> setAcqFrm;//boolalpha>>必须要加 
 		m_pCamera->SetBoolValue("AcquisitionFrameRateEnable", &setAcqFrm);
 
 	}
@@ -2438,7 +2438,7 @@ void HikrobotCamera::ReduceImageSize(int64_t Width, int64_t Height)
 
 void HikrobotCamera::SetLogBasicInfo(std::string msg) 
 {
-	// ��¼�ͺţ����к�;
+	// 记录型号，序列号;
 	m_strBasiceLog = msg;
 }
 
@@ -2446,7 +2446,7 @@ void HikrobotCamera::SetLogBasicInfo(std::string msg)
 
 void HikrobotCamera::AddToLog(std::string msg) const
 {
-	// �������ͺţ����к�;
+	// 增加下型号，序列号;
 	LogMessage(m_strBasiceLog + msg, false);
 }
 

@@ -103,8 +103,8 @@ public:
 	int SetProperty(const char* name, const char* value);
 	int CheckForBinningMode(CPropertyAction *pAct);
 
-	void AddToLog(std::string msg) const;			//²»ÍÆ¼öÊ¹ÓÃ
-	void MvWriteLog(char* file, int line, char* pDevID, const char* fmt, ...) const ;	//ÍÆ¼öÊ¹ÓÃ
+	void AddToLog(std::string msg) const;			//ä¸æ¨èä½¿ç”¨
+	void MvWriteLog(char* file, int line, char* pDevID, const char* fmt, ...) const ;	//æ¨èä½¿ç”¨
 
 
 	void CopyToImageBuffer(MV_FRAME_OUT* pstFrameOut);
@@ -187,16 +187,16 @@ private:
 	unsigned PixTypeProc(MvGvspPixelType enPixelType, unsigned int& nChannelNum, MvGvspPixelType& enDstPixelType);
 private:
 
-	// »ù´¡ÈÕÖ¾¼ÇÂ¼ĞÅÏ¢
+	// åŸºç¡€æ—¥å¿—è®°å½•ä¿¡æ¯
 	std::string m_strBasiceLog;
-	char      m_chDevID[128];// Éè±¸ID
+	char      m_chDevID[128];// è®¾å¤‡ID
 
 	MV_CC_DEVICE_INFO_LIST  m_stDevList;
 	CMvCamera * m_pCamera;
 
 
-    int m_nComponents;		//×é¼ş¸öÊı£¨Í¨µÀ¸öÊı£©
-	unsigned m_nbitDepth;    //Í¼Ïñ Õ¼µÄ×Ö½Ú¸öÊı
+    int m_nComponents;		//ç»„ä»¶ä¸ªæ•°ï¼ˆé€šé“ä¸ªæ•°ï¼‰
+	unsigned m_nbitDepth;    //å›¾åƒ å çš„å­—èŠ‚ä¸ªæ•°
 
 	unsigned maxWidth_, maxHeight_;
 	int64_t DeviceLinkThroughputLimit_;
@@ -230,10 +230,10 @@ private:
 	bool m_bInitialized;
 
 	void ResizeSnapBuffer();
-	bool m_bGrabbing;			//È¡Á÷¹¤×÷×´Ì¬
+	bool m_bGrabbing;			//å–æµå·¥ä½œçŠ¶æ€
 
-	bool  m_bRecvRuning;		//È¡Á÷Ïß³Ì×´Ì¬
-	HANDLE m_hImageRecvThreadHandle;	//È¡Á÷Ïß³Ì¾ä±ú
+	bool  m_bRecvRuning;		//å–æµçº¿ç¨‹çŠ¶æ€
+	HANDLE m_hImageRecvThreadHandle;	//å–æµçº¿ç¨‹å¥æŸ„
 	
 };
 

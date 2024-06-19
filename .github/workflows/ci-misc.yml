@@ -1,0 +1,14 @@
+name: Misc checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-utf8-encoding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./tools/check-utf8.sh
