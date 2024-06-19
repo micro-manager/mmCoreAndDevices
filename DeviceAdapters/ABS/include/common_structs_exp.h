@@ -476,7 +476,7 @@ typedef struct {
 
 //! \brief  Camera Exposure Data\n
 //! Returned in "pData" by #CamUSB_GetFunctionCaps => functionID => #FUNC_EXPOSURE \n
-//! The exposure unit is in micro seconds (µs).
+//! The exposure unit is in micro seconds (Âµs).
 typedef struct
 {
   u32   dwCountRanges;      //!< count exposure ranges
@@ -493,7 +493,7 @@ typedef struct
 //! => functionID => #FUNC_EXPOSURE
 typedef struct
 {
-  u32   dwExposure_us;        //!< exposure time in µs
+  u32   dwExposure_us;        //!< exposure time in Âµs
 
 } STRUCT_PACKED S_EXPOSURE_PARAMS, S_EXPOSURE_RETVALS;
 
@@ -695,7 +695,7 @@ typedef struct
   u16   wPortType;            //!< port type setting (e.g. #PORT_TYPE_OUTPUT)
   u16   wPortFeatures;        //!< port features setting (e.g. #PORT_FEATURE_POL_ACTHIGH)
   u16   wPortState;           //!< port state setting (e.g. #PORT_STATE_SET)
-  u32   dwDelay;              //!< port delay setting (µs)
+  u32   dwDelay;              //!< port delay setting (Âµs)
 
 } STRUCT_PACKED S_IO_PORT_PARAMS, S_IO_PORT_RETVALS;
 
@@ -983,9 +983,9 @@ typedef struct
   u08   bHysterese;           //!< (ignored) 0 => use internal default; use 1..100%
   u08   bSpeed;               //!< (ignored) 0 => use internal default; use 1..100% of max speed
   u16   wOptions;             //!< see #AEXP_OPTION_BRIGHNESSOFFSET
-  u32   dwMinExposure;        //!< min. allowed exposure value for exposure control in µs (0 => default value)
+  u32   dwMinExposure;        //!< min. allowed exposure value for exposure control in Âµs (0 => default value)
 
-  //! \brief max. allowed exposure value for exposure control in µs (0 => default value)\n
+  //! \brief max. allowed exposure value for exposure control in Âµs (0 => default value)\n
   //! if value != 0 the current framerate settings may be affected, if you switch AutoExposure == off
   //! it is recommended to read out the currently used framerate\n
   u32   dwMaxExposure;
@@ -1081,7 +1081,7 @@ typedef struct
   i32   dwOffset_y;           //!< ROI vertical (y) offset
   u08   bBitShift;            //!< bitshift setting
   u08   bTempSensorIndex;     //!< index of sensor to get (see #S_TEMPERATURE_CAPS::dwSensors)
-  i16   wTemperature;         //!< temperature sensor value in 1/100°C
+  i16   wTemperature;         //!< temperature sensor value in 1/100Â°C
   f32   fGain;                //!< green or global gain value (during capture)
   u32   dwReserved[9];        //!< reserved
 
@@ -1147,9 +1147,9 @@ typedef struct
 //! returned by #CamUSB_GetFunctionCaps => functionID => #FUNC_HUE_SATURATION
 typedef struct
 {
-  i16   wHueMin;              //!< minimum value    (-180° default)
-  i16   wHueMax;              //!< maximum value    (+180° default)
-  i16   wHueStep;             //!< modify at count of dwStep (1° default)
+  i16   wHueMin;              //!< minimum value    (-180Â° default)
+  i16   wHueMax;              //!< maximum value    (+180Â° default)
+  i16   wHueStep;             //!< modify at count of dwStep (1Â° default)
   i16   wSatMin;              //!< minimum value    (-100 default)
   i16   wSatMax;              //!< maximum value    (+100 default)
   i16   wSatStep;             //!< modify at count of dwStep (1 default)
@@ -1256,7 +1256,7 @@ typedef struct
 {
   u32   dwTriggerOptions;     //!< bitfield of available trigger options, see #TRIG_OPTION_NONE
   u32   dwMaxCycleTime_ms;    //!< max. trigger cycle time (in ms), used for timed CCD clear
-  u32   dwMaxMinPulseWidth_us;//!< max. value for minimum trigger pulse width settings (in µs)
+  u32   dwMaxMinPulseWidth_us;//!< max. value for minimum trigger pulse width settings (in Âµs)
   u32   dwReserved[5];        //!< reserved
 
 } STRUCT_PACKED S_TRIGGER_OPTION_CAPS;
@@ -1269,7 +1269,7 @@ typedef struct
 {
   u32   dwTriggerOptions;     //!< bitfield of used trigger options, see #TRIG_OPTION_NONE
   u32   dwCycleTime_ms;       //!< trigger cycle time (in ms), used for timed CCD clear
-  u32   dwMinPulseWidth_us;   //!< minimum trigger pulse width settings (in µs)
+  u32   dwMinPulseWidth_us;   //!< minimum trigger pulse width settings (in Âµs)
   u32   dwReserved[5];        //!< reserved
 
 } STRUCT_PACKED S_TRIGGER_OPTION_PARAMS, S_TRIGGER_OPTION_RETVALS;
@@ -1627,7 +1627,7 @@ typedef struct
 typedef struct
 {
   u64   qwFunctionMask;
-  u32   dwExposure_us;        //!< exposure time in µs
+  u32   dwExposure_us;        //!< exposure time in Âµs
   u16   wGainChannel;         //!< gain channel to set, more than one channel possible (e.g.#GAIN_RED | #GAIN_BLUE)
   u08   bReserved[2];         //!< reserved
   u32   dwGain[MAX_GAIN_CHANNELS_ONCE]; //!< gain values
@@ -1839,7 +1839,7 @@ typedef struct
   u08   bCoolingLevelStep;    //!< cooling level step size in percent, e.g. 1 corresponds 1% and 100 => 100% (only for #CM_TEC_AUTOMATIC)
   i16   wTargetTempMin;       //!< minimum supported target temperature value for automatic cooling
   i16   wTargetTempMax;       //!< maximum supported target temperature value for automatic cooling
-  u16   wTargetTempStep;      //!< possible temperature step size (e.g. 10 corresponds 1.0°C and 5 => 0.5°C and -124 = -12.4°C)
+  u16   wTargetTempStep;      //!< possible temperature step size (e.g. 10 corresponds 1.0Â°C and 5 => 0.5Â°C and -124 = -12.4Â°C)
   u16   wMinPeltierVoltage;   //!< obsolate don't use (minimum peltier voltage e.g. 600 mean 0.6 V)
   u16   wMaxPeltierVoltage;   //!< obsolate don't use (maximum peltier voltage 9400 mean 9.4 V)
 
@@ -1847,9 +1847,9 @@ typedef struct
   u08   bFanLevelMin;         //!< minimum supported Fan level in percent (only for #CM_FAN_MANUAL)
   u08   bFanLevelMax;         //!< maximum supported Fan level in percent (only for #CM_FAN_MANUAL)
   u08   bFanLevelStep;        //!< Fan level step size in percent, e.g. 1 means 1% and 100 => 100% (only for #CM_FAN_MANUAL)
-  i16   wFanThreshTempMin;    //!< minimum supported threshold temperature in 0.1°C, e.g. 10 => 1.0°C (only for #CM_FAN_AUTOMATIC)
-  i16   wFanThreshTempMax;    //!< maximum supported threshold temperature in 0.1°C (only for #CM_FAN_AUTOMATIC)
-  i16   wFanThreshTempStep;   //!< minimum supported threshold temperature in 0.1°C(only for #CM_FAN_AUTOMATIC)
+  i16   wFanThreshTempMin;    //!< minimum supported threshold temperature in 0.1Â°C, e.g. 10 => 1.0Â°C (only for #CM_FAN_AUTOMATIC)
+  i16   wFanThreshTempMax;    //!< maximum supported threshold temperature in 0.1Â°C (only for #CM_FAN_AUTOMATIC)
+  i16   wFanThreshTempStep;   //!< minimum supported threshold temperature in 0.1Â°C(only for #CM_FAN_AUTOMATIC)
   u08   bReserved[40];        //!< reserved
 
 } STRUCT_PACKED S_COOLING_CAPS;
@@ -1861,14 +1861,14 @@ typedef struct
 {
   u08   bCoolingMode;         //!< #CM_TEC_OFF, #CM_TEC_AUTOMATIC or #CM_TEC_MANUAL
   u08   bReserved1[3];        //!< reserved
-  i16   wTargetTemp;          //!< in 1/10 °C (10 => 1.0°C) only used with cooling mode #CM_TEC_AUTOMATIC
+  i16   wTargetTemp;          //!< in 1/10 Â°C (10 => 1.0Â°C) only used with cooling mode #CM_TEC_AUTOMATIC
   u08   bReserved2[2];        //!< reserved
   u08   bCoolingLevel;        //!< in percent (%) (15 => 15 %) only used with cooling mode #CM_TEC_MANUAL
   
   u08   bReserved3[3];        //!< reserved
   u08   bFanMode;             //!< current Fan mode (#CM_FAN_OFF, #CM_FAN_AUTOMATIC or #CM_FAN_MANUAL), must be #CM_FAN_AUTOMATIC if #CM_TEC_AUTOMATIC is active)
   u08   bReserved4[3];        //!< reserved
-  i16   wFanThreshTemp;       //!< current threshold temperature in 0.1°C (only used with fan mode #CM_FAN_AUTOMATIC)
+  i16   wFanThreshTemp;       //!< current threshold temperature in 0.1Â°C (only used with fan mode #CM_FAN_AUTOMATIC)
   u08   bReserved5[2];        //!< reserved
   u08   bFanLevel;            //!< current Fan level in percent (only used with fan mode #CM_FAN_MANUAL)
   u08   bReserved[43];        //!< reserved

@@ -704,7 +704,7 @@ int CABSCamera::Initialize()
         temperatureIndex_ = 0;
 
         pAct = new CPropertyAction (this, &CABSCamera::OnTemperature);
-        nRet = CreateProperty(MM::g_Keyword_CCDTemperature, "20.0 °C", MM::String, true, pAct);
+        nRet = CreateProperty(MM::g_Keyword_CCDTemperature, "20.0 Â°C", MM::String, true, pAct);
         assert(nRet == DEVICE_OK);
       }
     }
@@ -2956,7 +2956,7 @@ int CABSCamera::OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
     if ( IsNoError( rc ) )
     {
       string temperature;
-      str::sprintf( temperature, "%3.2f °C \0\0", sTR.wSensorValue / temperatureUnit_ );
+      str::sprintf( temperature, "%3.2f Â°C \0\0", sTR.wSensorValue / temperatureUnit_ );
       pProp->Set( temperature.c_str() );
     }
     return convertApiErrorCode( rc, __FUNCTION__ );

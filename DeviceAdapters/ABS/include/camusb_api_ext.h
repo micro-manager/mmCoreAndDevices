@@ -147,7 +147,7 @@ USBAPI BOOL CCONV CamUSB_GetCameraResolutionInfo (  S_RESOLUTION_INFO* pResInfo,
  * 
  *        Valid from the next image on.
  * 
- *  \param    pdwExposure_us  Exposure / Integration time value in µs (us).
+ *  \param    pdwExposure_us  Exposure / Integration time value in Âµs (us).
  *   \param    nDevNr      Camera index number, that identifies the 
  *                 camera device which should be used with this
  *                 function
@@ -176,7 +176,7 @@ USBAPI BOOL CCONV CamUSB_GetCameraResolutionInfo (  S_RESOLUTION_INFO* pResInfo,
     // nExposure contains now actual exposure time
  }
 
- nExposure = 20000;  // 20000µs = 20ms
+ nExposure = 20000;  // 20000Âµs = 20ms
  if (CamUSB_SetExposureTime( &nExposure ) != TRUE)
  {  
    // error see CamUSB_GetLastError
@@ -197,7 +197,7 @@ USBAPI BOOL CCONV CamUSB_SetExposureTime( LPDWORD pdwExposure_us,
 // CamUSB_GetExposureTime
 //! \brief    returns the active Exposure Time.
 //!
-//! \param    pdwExposure_us  Exposure / Integration time value in µs (us).
+//! \param    pdwExposure_us  Exposure / Integration time value in Âµs (us).
 //!  \param    nDevNr      Camera index number, that identifies the 
 //!                camera device which should be used with this
 //!                function
