@@ -168,7 +168,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
     ArvBufferUpdate(cb_arv_buffer);
 
     // Image metadata.
-    md.put("Camera", "");
+    md.put(MM::g_Keyword_Metadata_CameraLabel, "");
     md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)img_buffer_width));
     md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)img_buffer_height));
     md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(counter));

@@ -5885,7 +5885,7 @@ int CRaptorEPIX::InsertImage()
       md.PutTag(mst.GetName(), mst.GetDevice(), mst.GetValue());
    }
 */
-   md.put("Camera", label);
+   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
    //md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));

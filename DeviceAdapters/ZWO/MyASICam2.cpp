@@ -1147,7 +1147,7 @@ int CMyASICam::InsertImage()
 
 	// Important:  metadata about the image are generated here:
 	Metadata md;
-	md.put("Camera", label);
+	md.put(MM::g_Keyword_Metadata_CameraLabel, label);
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);

@@ -1541,7 +1541,7 @@ void HikrobotCamera::ImageRecvThreadProc()
 
 			//!fix , md must assign something
 			Metadata md;
-			md.put("Camera", "");
+			md.put(MM::g_Keyword_Metadata_CameraLabel, "");
 
 			nRet = GetCoreCallback()->InsertImage(this, (const unsigned char*)stConvertParam.pDstBuffer,
 				stOutFrame.stFrameInfo.nWidth,
