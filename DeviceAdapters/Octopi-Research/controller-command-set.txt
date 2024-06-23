@@ -10,10 +10,12 @@ The Cephla Octopi-Research controller has an Arduino Teensy inside that communic
 
    The Teensy serial port is set to 2,000,000 baud (sleep 200ms, after opening port).
 
+   The Controller will answer each command with a message that contains the command ID.  The python code reads the messages in a differen thread
+   (i.e., asynchronously).  Unclear whether this is essential or not.
+
    Currently unclear when/how the (obligatory?) answer from the controller is read.
 
    
-
    Public domain code at https://www.3dbrew.org/wiki/CRC-8-CCITT can likely be used to calculate checksums in C(C++)
 
 
@@ -27,6 +29,20 @@ def initialize_drivers(self):
 def turn_on_illumination(self):
         cmd = bytearray(self.tx_buffer_length)
         cmd[1] = CMD_SET.TURN_ON_ILLUMINATION
+        self.send_command(cmd)
+
+def turn_off_illumination(self):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.TURN_OFF_ILLUMINATION
+        self.send_command(cmd)
+
+def set_illumination_led_matrix(self,illumination_source,r,g,b):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.SET_ILLUMINATION_LED_MATRIX
+        cmd[2] = illumination_source
+        cmd[3] = min(int(r*255),255)
+        cmd[4] = min(int(g*255),255)
+        cmd[5] = min(int(b*255),255)
         self.send_command(cmd)
 
 def send_command(self,command):

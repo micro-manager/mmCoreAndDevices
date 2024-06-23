@@ -74,6 +74,7 @@ SquidHub::SquidHub() :
 
 SquidHub::~SquidHub()   
 {
+   LogMessage("Destructor called");
 }
 
 void SquidHub::GetName(char* name) const
@@ -88,13 +89,44 @@ int SquidHub::Initialize() {
    const unsigned cmdSize = 8;
    unsigned char cmd[cmdSize];
    cmd[0] = 0x00;
-   cmd[1] = 254; // CMD_SET.INITIALIZE
+   cmd[1] = 255; // CMD_SET.RESET
    for (unsigned i = 2; i < cmdSize; i++) {
       cmd[i] = 0;
    }
    cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
-
    int ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   if (ret != DEVICE_OK) {
+      return ret;
+   }
+
+   cmd[0] = 1; 
+   cmd[1] = 254; // CMD_INITIALIZE_DRIVERS
+   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
+   ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   if (ret != DEVICE_OK) {
+      return ret;
+   }
+
+   //SET_ILLUMINATION_LED_MATRIX = 13
+   cmd[0] = 2; 
+   cmd[1] = 13; 
+   cmd[2] = 1;
+   cmd[3] = 128;
+   cmd[4] = 128;
+   cmd[5] = 0;
+   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
+   ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   if (ret != DEVICE_OK) {
+      return ret;
+   }
+
+   cmd[0] = 0x03;
+   cmd[1] = 10; // CMD_SET. TURN_ON_ILLUMINATION 
+   for (unsigned i = 2; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
+    ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -109,6 +141,9 @@ int SquidHub::Initialize() {
       tries++;
       if (read > 0) {
          LogMessage("Read something from serial port", false);
+         std::ostringstream os;
+         os << "Tries: " << tries << ", Read # of bytes: " << read;
+         LogMessage(os.str().c_str(), false);
       }
    }
    if (tries >= 20) {
