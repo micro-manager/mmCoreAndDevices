@@ -1,6 +1,11 @@
 #include "squid.h"
 #include "crc8.h"
 
+#ifdef WIN32
+   #define WIN32_LEAN_AND_MEAN
+   #include <windows.h>
+#endif
+
 
 static const uint8_t CRC_TABLE[256] = {
     0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15,
@@ -60,6 +65,11 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    return 0;
 }
 
+MODULE_API void DeleteDevice(MM::Device* pDevice)
+{
+   delete pDevice;
+}
+
 
 SquidHub::SquidHub() :
    initialized_(false),
@@ -83,7 +93,6 @@ void SquidHub::GetName(char* name) const
 }
 
 int SquidHub::Initialize() {
-
    Sleep(200);
    
    const unsigned cmdSize = 8;
@@ -93,8 +102,7 @@ int SquidHub::Initialize() {
    for (unsigned i = 2; i < cmdSize; i++) {
       cmd[i] = 0;
    }
-   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
-   int ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   int ret = sendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -174,6 +182,24 @@ bool SquidHub::Busy()
     return false;
 }
 
+bool SquidHub::SupportsDeviceDetection(void)
+{
+   return false;  // can implement this later
+
+}
+
+MM::DeviceDetectionStatus SquidHub::DetectDevice(void)
+{
+   return MM::CanCommunicate;
+}
+
+
+int SquidHub::DetectInstalledDevices()
+{
+   return DEVICE_OK;
+}
+
+
 
 int SquidHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -206,4 +232,11 @@ uint8_t SquidHub::crc8ccitt(const void* data, size_t size) {
    }
 
    return val;
+}
+
+
+int SquidHub::sendCommand(unsigned char* cmd, unsigned cmdSize)
+{
+   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
+   return WriteToComPort(port_.c_str(), cmd, cmdSize);
 }
