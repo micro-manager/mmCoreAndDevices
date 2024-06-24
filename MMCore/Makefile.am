@@ -41,6 +41,8 @@ libMMCore_la_SOURCES = \
 	Devices/ImageProcessorInstance.h \
 	Devices/MagnifierInstance.cpp \
 	Devices/MagnifierInstance.h \
+	Devices/PressurePumpInstance.cpp \
+	Devices/PressurePumpInstance.h \
 	Devices/SLMInstance.cpp \
 	Devices/SLMInstance.h \
 	Devices/SerialInstance.cpp \
@@ -53,6 +55,8 @@ libMMCore_la_SOURCES = \
 	Devices/StageInstance.h \
 	Devices/StateInstance.cpp \
 	Devices/StateInstance.h \
+	Devices/VolumetricPumpInstance.cpp \
+	Devices/VolumetricPumpInstance.h \
 	Devices/XYStageInstance.cpp \
 	Devices/XYStageInstance.h \
 	Error.cpp \

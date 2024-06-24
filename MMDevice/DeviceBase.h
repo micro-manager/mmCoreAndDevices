@@ -2480,6 +2480,95 @@ private:
    std::map<std::string, long> labels_;
 };
 
+/**
+* Base class for creating pump device adapters.
+*/
+template <class U>
+class CVolumetricPumpBase : public CDeviceBase<MM::VolumetricPump, U>
+{
+    int Home()
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int InvertDirection(bool /*state*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int IsDirectionInverted(bool& /*state*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int SetVolumeUl(double /*volume*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int GetVolumeUl(double& /*volume*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int SetMaxVolumeUl(double /*volume*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int GetMaxVolumeUl(double& /*volume*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int SetFlowrateUlPerSecond(double /*flowrate*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int GetFlowrateUlPerSecond(double& /*flowrate*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int Start()
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int DispenseDuration(double /*durSec*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int DispenseVolume(double /*volUl*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+};
+
+/**
+* Base class for creating pump device adapters.
+*/
+template <class U>
+class CPressurePumpBase : public CDeviceBase<MM::PressurePump, U>
+{
+    int Calibrate()
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int SetPressure(double /*pressure*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int GetPressure(double& /*pressure*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+};
+
 
 // _t, a macro for timing single lines.
 // This macros logs the text of the line, x, measures

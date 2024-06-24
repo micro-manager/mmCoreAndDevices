@@ -105,6 +105,8 @@ class SLMInstance;
 class ShutterInstance;
 class StageInstance;
 class XYStageInstance;
+class PressurePumpInstance;
+class VolumetricPumpInstance;
 
 class CMMCore;
 
@@ -277,6 +279,8 @@ public:
    std::string getImageProcessorDevice();
    std::string getSLMDevice();
    std::string getGalvoDevice();
+   std::string getPressurePumpDevice();
+   std::string getVolumetricPumpDevice();
    std::string getChannelGroup();
    void setCameraDevice(const char* cameraLabel) throw (CMMError);
    void setShutterDevice(const char* shutterLabel) throw (CMMError);
@@ -286,6 +290,8 @@ public:
    void setImageProcessorDevice(const char* procLabel) throw (CMMError);
    void setSLMDevice(const char* slmLabel) throw (CMMError);
    void setGalvoDevice(const char* galvoLabel) throw (CMMError);
+   void setPressurePumpDevice(const char* pumpLabel) throw (CMMError);
+   void setVolumetricPumpDevice(const char* pumpLabel) throw (CMMError);
    void setChannelGroup(const char* channelGroup) throw (CMMError);
    ///@}
 
@@ -605,6 +611,39 @@ public:
    void runGalvoPolygons(const char* galvoLabel) throw (CMMError);
    void runGalvoSequence(const char* galvoLabel) throw (CMMError);
    std::string getGalvoChannel(const char* galvoLabel) throw (CMMError);
+   ///@}
+
+   /** \name PressurePump control
+   *
+   * Control of pressure pumps
+   */
+   ///@{
+   void PressurePumpStop(const char* pumpLabel) throw (CMMError);
+   void PressurePumpCalibrate(const char* pumpLabel) throw (CMMError);
+   bool PressurePumpRequiresCalibration(const char* pumpLabel) throw (CMMError);
+   void setPumpPressure(const char* pumplabel, double pressure) throw (CMMError);
+   double getPumpPressure(const char* pumplabel) throw (CMMError);
+   ///@}
+
+   /** \name VolumetricPump control
+   *
+   * Control of volumetric pumps
+   */
+   ///@{
+   void VolumetricPumpStop(const char* pumpLabel) throw (CMMError);
+   void VolumetricPumpHome(const char* pumpLabel) throw (CMMError);
+   bool VolumetricPumpRequiresHoming(const char* pumpLabel) throw (CMMError);
+   void invertPumpDirection(const char* pumpLabel, bool invert) throw (CMMError);
+   bool isPumpDirectionInverted(const char* pumpLabel) throw (CMMError);
+   void setPumpVolume(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpVolume(const char* pumpLabel) throw (CMMError);
+   void setPumpMaxVolume(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpMaxVolume(const char* pumpLabel) throw (CMMError);
+   void setPumpFlowrate(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpFlowrate(const char* pumpLabel) throw (CMMError);
+   void PumpStart(const char* pumpLabel) throw (CMMError);
+   void PumpDispenseDuration(const char* pumpLabel, double seconds) throw (CMMError);
+   void PumpDispenseVolume(const char* pumpLabel, double microLiter) throw (CMMError);
    ///@}
 
    /** \name Device discovery. */
