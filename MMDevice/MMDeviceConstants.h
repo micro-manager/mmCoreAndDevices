@@ -75,6 +75,7 @@
 #define DEVICE_SEQUENCE_TOO_LARGE      39
 #define DEVICE_OUT_OF_MEMORY           40
 #define DEVICE_NOT_YET_IMPLEMENTED     41
+#define DEVICE_PUMP_IS_RUNNING         42
 
 
 namespace MM {
@@ -130,6 +131,8 @@ namespace MM {
    const char* const g_Keyword_CoreImageProcessor = "ImageProcessor";
    const char* const g_Keyword_CoreSLM          = "SLM";
    const char* const g_Keyword_CoreGalvo        = "Galvo";
+   const char* const g_Keyword_CorePressurePump = "PressurePump";
+   const char* const g_Keyword_CoreVolumetricPump = "VolumetricPump";
    const char* const g_Keyword_CoreTimeoutMs    = "TimeoutMs";
    const char* const g_Keyword_Channel          = "Channel";
    const char* const g_Keyword_Version          = "Version";
@@ -138,9 +141,14 @@ namespace MM {
    const char* const g_Keyword_Transpose_MirrorX = "TransposeMirrorX";
    const char* const g_Keyword_Transpose_MirrorY = "TransposeMirrorY";
    const char* const g_Keyword_Transpose_Correction = "TransposeCorrection";
-   const char* const g_Keyword_Closed_Position = "ClosedPosition";
-   const char* const g_Keyword_HubID = "HubID";
-
+   const char* const g_Keyword_Closed_Position  = "ClosedPosition";
+   const char* const g_Keyword_HubID            = "HubID";
+   const char* const g_Keyword_Current_Volume   = "Volume_uL";
+   const char* const g_Keyword_Min_Volume       = "Min_Volume_uL";
+   const char* const g_Keyword_Max_Volume       = "Max_Volume_uL";
+   const char* const g_Keyword_Flowrate         = "Flowrate_uL_per_sec";
+   const char* const g_Keyword_Pressure_Imposed = "Pressure Imposed";
+   const char* const g_Keyword_Pressure_Measured = "Pressure Measured";
 
    // image annotations
    const char* const g_Keyword_Metadata_CameraLabel = "Camera";
@@ -201,23 +209,25 @@ namespace MM {
    // Type constants
    //
    enum DeviceType {
-      UnknownType=0,
-      AnyType,
-      CameraDevice,
-      ShutterDevice,
-      StateDevice,
-      StageDevice,
-      XYStageDevice,
-      SerialDevice,
-      GenericDevice,
-      AutoFocusDevice,
-      CoreDevice,
-      ImageProcessorDevice,
-      SignalIODevice,
-      MagnifierDevice,
-      SLMDevice,
-      HubDevice,
-      GalvoDevice
+        UnknownType = 0,
+        AnyType,
+        CameraDevice,
+        ShutterDevice,
+        StateDevice,
+        StageDevice,
+        XYStageDevice,
+        SerialDevice,
+        GenericDevice,
+        AutoFocusDevice,
+        CoreDevice,
+        ImageProcessorDevice,
+        SignalIODevice,
+        MagnifierDevice,
+        SLMDevice,
+        HubDevice,
+        GalvoDevice,
+        PressurePumpDevice,
+        VolumetricPumpDevice
    };
 
    enum PropertyType {
