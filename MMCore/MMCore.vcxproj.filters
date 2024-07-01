@@ -147,12 +147,6 @@
     <ClCompile Include="Devices\VolumetricPumpInstance.cpp">
       <Filter>Source Files\Devices</Filter>
     </ClCompile>
-    <ClCompile Include="Devices\PressurePumpInstance.cpp">
-      <Filter>Source Files\Devices</Filter>
-    </ClCompile>
-    <ClCompile Include="Devices\VolumetricPumpInstance.cpp">
-      <Filter>Source Files\Devices</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CircularBuffer.h">

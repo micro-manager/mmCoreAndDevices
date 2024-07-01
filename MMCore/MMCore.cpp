@@ -6279,39 +6279,6 @@ void CMMCore::setPressurePumpDevice(const char* deviceLabel) throw (CMMError)
 }
 
 /**
- * Sets the current pump device.
- * @param pump    the shutter device label
- */
-void CMMCore::setPressurePumpDevice(const char* deviceLabel) throw (CMMError)
-{
-    if (!deviceLabel || strlen(deviceLabel) > 0) // Allow empty label
-        CheckDeviceLabel(deviceLabel);
-
-    // Nothing to do if this is the current shutter device:
-    if (getPressurePumpDevice().compare(deviceLabel) == 0)
-        return;
-
-    if (strlen(deviceLabel) > 0)
-    {
-        currentPressurePump_ =
-            deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
-
-        LOG_INFO(coreLogger_) << "Default shutter set to " << deviceLabel;
-    }
-    else
-    {
-        currentPressurePump_.reset();
-        LOG_INFO(coreLogger_) << "Default pump unset";
-    }
-    properties_->Refresh(); // TODO: more efficient
-    std::string newPumpLabel = getPressurePumpDevice();
-    {
-        MMThreadGuard scg(stateCacheLock_);
-        stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CorePressurePump, newPumpLabel.c_str()));
-    }
-}
-
-/**
 * Stops the pressure pump
 */
 void CMMCore::PressurePumpStop(const char* deviceLabel) throw (CMMError)
@@ -6357,24 +6324,6 @@ bool CMMCore::PressurePumpRequiresCalibration(const char* deviceLabel) throw (CM
     mm::DeviceModuleLockGuard guard(pPump);
 
     return pPump->requiresCalibration();
-}
-
-/**
-* Sets the pressure of the pump in kPa
-*/
-void CMMCore::setPumpPressure(const char* deviceLabel, double pressurekPa) throw (CMMError)
-{
-    std::shared_ptr<PressurePumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
-
-    int ret = pPump->setPressure(pressurekPa);
-
-    if (ret != DEVICE_OK)
-    {
-        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
-        throw CMMError(getDeviceErrorText(ret, pPump));
-    }
 }
 
 /**
