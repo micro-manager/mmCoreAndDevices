@@ -35,11 +35,16 @@
 #define ERR_NOT_READY_FOR_SOFTWARE_TRIGGER      12301
 #define ERR_UNAVAILABLE_TRIGGER_MODE_REQUESTED  12302
 #define ERR_UNKNOWN_TRIGGER_MODE_STRING         12303
+#define ERR_INVALID_TRIGGER_POLARITY            12304
 
 // Trigger modes
 #define TRIGGER_INTERNAL   0
 #define TRIGGER_EXTERNAL   1
 #define TRIGGER_SOFTWARE   2
+
+// Trigger polarities
+#define TRIGGER_POLARITY_LOW 0
+#define TRIGGER_POLARITY_HIGH 1
 
 using namespace FlyCapture2;
 
@@ -112,6 +117,7 @@ public:
    int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFormat7Mode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTriggerPolarity(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    void updatePixelFormats(unsigned int pixelFormatBitField);
@@ -121,6 +127,7 @@ private:
    int PollForTriggerReady(const unsigned long timeoutMs);
    bool FireSoftwareTrigger();
    int SetTriggerMode(const unsigned short newMode);
+   int SetTriggerPolarity(const unsigned short newPolarity);
    int SetGrabTimeout(const unsigned long timeoutMs);
    int PowerCameraOn(const unsigned int timeoutMs);
    int TriggerModeFromString(std::string mode, unsigned short& tMode);
@@ -148,6 +155,7 @@ private:
    bool f7InUse_;
    double exposureTimeMs_;
    unsigned short triggerMode_;
+   unsigned short triggerPolarity_;
    unsigned short snapTriggerMode_;
    unsigned long externalTriggerGrabTimeout_;
    unsigned short bytesPerPixel_;
