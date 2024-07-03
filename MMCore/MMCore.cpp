@@ -7529,8 +7529,18 @@ MM::DeviceDetectionStatus CMMCore::detectDevice(const char* label)
  *
  * @param hubDeviceLabel    the label for the device of type Hub
  */
-std::vector<std::string> CMMCore::getInstalledDevices(const char* hubDeviceLabel) throw (CMMError)
+std::vector<std::string> CMMCore::getInstalledDevices(const char* hubDeviceLabel, bool force = false) throw (CMMError)
 {
+   if (isFeatureEnabled("StrictInitializationChecks") && !force) {
+      DeviceInitializationState initState = getDeviceInitializationState(hubDeviceLabel);
+      if (initState == DeviceInitializationState::Uninitialized) {
+         throw CMMError("Device " + ToQuotedString(hubDeviceLabel) +
+                        " is not yet initialized, and you may only call this method once. " +
+                        "This may not be what you want to do. "
+                        "Use force=true to call it anyway.");
+      }
+   }
+
    std::shared_ptr<HubInstance> pHub =
       deviceManager_->GetDeviceOfType<HubInstance>(hubDeviceLabel);
 
