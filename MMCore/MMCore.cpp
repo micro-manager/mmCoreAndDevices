@@ -7529,7 +7529,7 @@ MM::DeviceDetectionStatus CMMCore::detectDevice(const char* label)
  *
  * @param hubDeviceLabel    the label for the device of type Hub
  */
-std::vector<std::string> CMMCore::getInstalledDevices(const char* hubDeviceLabel, bool force = false) throw (CMMError)
+std::vector<std::string> CMMCore::getInstalledDevices(const char* hubDeviceLabel, bool force) throw (CMMError)
 {
    if (isFeatureEnabled("StrictInitializationChecks") && !force) {
       DeviceInitializationState initState = getDeviceInitializationState(hubDeviceLabel);
