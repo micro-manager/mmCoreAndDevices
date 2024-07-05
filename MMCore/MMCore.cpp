@@ -7526,11 +7526,19 @@ MM::DeviceDetectionStatus CMMCore::detectDevice(const char* label)
  * device. Doing otherwise results in undefined behavior. This function was
  * intended for use during initial configuration, not routine loading of
  * devices. These restrictions may be relaxed in the future if possible.
+ * 
+ * Throws an exception if the hub device is not initialized.
  *
  * @param hubDeviceLabel    the label for the device of type Hub
  */
 std::vector<std::string> CMMCore::getInstalledDevices(const char* hubDeviceLabel) throw (CMMError)
 {
+   if (isFeatureEnabled("StrictInitializationChecks")) {
+      if (getDeviceInitializationState(hubDeviceLabel) == DeviceInitializationState::Uninitialized) {
+         throw CMMError("Device " + ToQuotedString(hubDeviceLabel) + " is not yet initialized.");
+      }
+   }
+
    std::shared_ptr<HubInstance> pHub =
       deviceManager_->GetDeviceOfType<HubInstance>(hubDeviceLabel);
 
