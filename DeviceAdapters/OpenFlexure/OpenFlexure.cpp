@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////////////////////////////
+﻿//////////////////////////////////////////////////////////////////////////////
 // FILE:          OpenFlexure.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
@@ -341,7 +341,7 @@ int SangaBoardHub::SyncState()
 
 	// Update ramp time
 	cmd = "ramp_time?";
-	this->SendCommand(cmd, _serial_answer); // Output is something like "ramp_time 0�
+	this->SendCommand(cmd, _serial_answer); // Output is something like "ramp_time 0”
 
 	// Get the ramp time from response
 	ramp_time_ = ExtractNumber(_serial_answer);
