@@ -73,6 +73,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 SquidHub::SquidHub() :
    initialized_(false),
+   monitoringThread_(0),
    port_("Undefined")
 {
    InitializeDefaultErrorMessages();
@@ -94,6 +95,9 @@ void SquidHub::GetName(char* name) const
 
 int SquidHub::Initialize() {
    Sleep(200);
+
+   monitoringThread_ = new SquidMonitoringThread(*this->GetCoreCallback(), *this, true);
+   monitoringThread_->Start();
    
    const unsigned cmdSize = 8;
    unsigned char cmd[cmdSize];
@@ -134,11 +138,12 @@ int SquidHub::Initialize() {
       cmd[i] = 0;
    }
    cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
-    ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
 
+   /*
    const unsigned msgLength = 24;
    unsigned char msg[msgLength];
    unsigned long read = 0;
@@ -157,6 +162,7 @@ int SquidHub::Initialize() {
    if (tries >= 20) {
       LogMessage("Read nothing from serial port", false);
    }
+   */
 
    const unsigned TURN_ON_ILLUMINATION = 10;
    for (unsigned i = 0; i < cmdSize; i++) {

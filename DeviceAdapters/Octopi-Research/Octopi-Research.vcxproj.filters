@@ -21,6 +21,9 @@
     <ClCompile Include="squidHub.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="squidMonitoringThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="crc8.h">

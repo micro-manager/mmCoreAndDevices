@@ -92,6 +92,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="crc8.c" />
+    <ClCompile Include="squidMonitoringThread.cpp" />
     <ClCompile Include="squidHub.cpp" />
   </ItemGroup>
   <ItemGroup>
