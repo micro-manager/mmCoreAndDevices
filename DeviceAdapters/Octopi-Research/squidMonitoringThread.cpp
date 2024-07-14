@@ -47,6 +47,17 @@ SquidMonitoringThread::~SquidMonitoringThread()
 
 void SquidMonitoringThread::interpretMessage(unsigned char* message)
 {
+   if (message[1] != 0x2) {
+      if (debug_) {
+         std::ostringstream os;
+         os << "Monitoring Thread incoming message: ";
+         for (int i = 0; i < SquidMessageParser::messageMaxLength_; i++) {
+            os << std::hex << (unsigned int)message[i] << " ";
+         }
+         core_.LogMessage(&hub_, os.str().c_str(), false);
+      }
+   }
+
 }
 
 
@@ -93,14 +104,6 @@ int SquidMonitoringThread::svc() {
                ret = parser.GetNextMessage(message, messageLength);
                if (ret == 0) {
                   // Report 
-                  if (debug_) {
-                     std::ostringstream os;
-                     os << "Monitoring Thread incoming message: ";
-                     for (int i = 0; i < messageLength; i++) {
-                        os << std::hex << (unsigned int)message[i] << " ";
-                     }
-                     core_.LogMessage(&hub_, os.str().c_str(), false);
-                  }
                   // and do the real stuff
                   interpretMessage(message);
                }

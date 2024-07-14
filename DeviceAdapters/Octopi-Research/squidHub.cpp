@@ -113,8 +113,7 @@ int SquidHub::Initialize() {
 
    cmd[0] = 1; 
    cmd[1] = 254; // CMD_INITIALIZE_DRIVERS
-   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
-   ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   ret = sendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -126,8 +125,7 @@ int SquidHub::Initialize() {
    cmd[3] = 128;
    cmd[4] = 128;
    cmd[5] = 0;
-   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
-   ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   ret = sendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -137,8 +135,7 @@ int SquidHub::Initialize() {
    for (unsigned i = 2; i < cmdSize; i++) {
       cmd[i] = 0;
    }
-   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
-   ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   ret = sendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -169,9 +166,7 @@ int SquidHub::Initialize() {
       cmd[i] = 0;
    }
    cmd[1] = TURN_ON_ILLUMINATION;
-   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
-
-   ret = WriteToComPort(port_.c_str(), cmd, cmdSize);
+   ret = sendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -214,7 +209,7 @@ int SquidHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet) {
       if (initialized_) {
-         // revert
+         // revert}
          pProp->Set(port_.c_str());
          return ERR_PORT_CHANGE_FORBIDDEN;
       }
@@ -243,6 +238,14 @@ uint8_t SquidHub::crc8ccitt(const void* data, size_t size) {
 
 int SquidHub::sendCommand(unsigned char* cmd, unsigned cmdSize)
 {
-   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize);
+   cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize - 1);
+   if (true) {
+      std::ostringstream os;
+      os << "Sending message: ";
+      for (unsigned int i = 0; i < cmdSize; i++) {
+         os << std::hex << (unsigned int)cmd[i] << " ";
+      }
+      LogMessage(os.str().c_str(), false);
+   }
    return WriteToComPort(port_.c_str(), cmd, cmdSize);
 }
