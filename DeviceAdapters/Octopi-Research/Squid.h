@@ -6,6 +6,45 @@
 
 
 #define ERR_PORT_CHANGE_FORBIDDEN    21001 
+#define ERR_NO_PORT_SET 21002
+
+
+const char* g_HubDeviceName = "SquidHub";
+const char* g_ShutterName = "LEDs";
+
+const int CMD_MOVE_X = 0;
+const int CMD_MOVE_Y = 1;
+const int CMD_MOVE_Z = 2;
+const int CMD_MOVE_THETA = 3;
+const int CMD_HOME_OR_ZERO = 5;
+const int CMD_TURN_ON_ILLUMINATION = 10;
+const int CMD_TURN_OFF_ILLUMINATION = 11;
+const int CMD_SET_ILLUMINATION = 12;
+const int CMD_SET_ILLUMINATION_LED_MATRIX = 13;
+const int CMD_ACK_JOYSTICK_BUTTON_PRESSED = 14;
+const int CMD_ANALOG_WRITE_ONBOARD_DAC = 15;
+const int CMD_SET_DAC80508_REFDIV_GAIN = 16;
+const int CMD_SET_ILLUMINATION_INTENSITY_FACTOR = 17;
+const int CMD_MOVETO_X = 6;
+const int CMD_MOVETO_Y = 7;
+const int CMD_MOVETO_Z = 8;
+const int CMD_SET_LIM = 9;
+const int CMD_SET_LIM_SWITCH_POLARITY = 20;
+const int CMD_CONFIGURE_STEPPER_DRIVER = 21;
+const int CMD_SET_MAX_VELOCITY_ACCELERATION = 22;
+const int CMD_SET_LEAD_SCREW_PITCH = 23;
+const int CMD_SET_OFFSET_VELOCITY = 24;
+const int CMD_CONFIGURE_STAGE_PID = 25;
+const int CMD_ENABLE_STAGE_PID = 26;
+const int CMD_DISABLE_STAGE_PID = 27;
+const int CMD_SET_HOME_SAFETY_MERGIN = 28;
+const int CMD_SET_PID_ARGUMENTS = 29;
+const int CMD_SEND_HARDWARE_TRIGGER = 30;
+const int CMD_SET_STROBE_DELAY = 31;
+const int CMD_SET_PIN_LEVEL = 41;
+const int CMD_INITIALIZE = 254;
+const int CMD_RESET = 255;
+
 
 class SquidMonitoringThread;
 
@@ -26,19 +65,21 @@ public:
 
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   bool IsPortAvailable() { return (port_ != ""); };
+   int SendCommand(unsigned char* cmd, unsigned cmdSize);
+
    static const int RCV_BUF_LENGTH = 1024;
    unsigned char rcvBuf_[RCV_BUF_LENGTH];
    std::string port_;
 
 private:
    uint8_t crc8ccitt(const void* data, size_t size);
-   int sendCommand(unsigned char* cmd, unsigned cmdSize);
    bool initialized_;
    SquidMonitoringThread* monitoringThread_;
 };
 
 
-/*
+
 class SquidShutter : public CShutterBase<SquidShutter>
 {
    public:
@@ -50,7 +91,6 @@ class SquidShutter : public CShutterBase<SquidShutter>
 
       void GetName(char* pszName) const;
       bool Busy();
-      unsigned long GetShutterNr() const { return shutterNr_; }
 
       // Shutter API
       int SetOpen(bool open = true);
@@ -59,8 +99,7 @@ class SquidShutter : public CShutterBase<SquidShutter>
 
       // action interface
       int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-      int OnShutterNr(MM::PropertyBase* pProp, MM::ActionType eAct);
-      int OnExternal(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    private:
       bool initialized_;
@@ -70,7 +109,7 @@ class SquidShutter : public CShutterBase<SquidShutter>
       bool state_;
       MM::MMTime changedTime_;
 }
-*/
+
 
 class SquidMessageParser {
 public:

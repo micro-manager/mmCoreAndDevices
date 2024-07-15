@@ -44,7 +44,7 @@ static const uint8_t CRC_TABLE[256] = {
 
 
 
-const char* g_HubDeviceName = "SquidHub";
+extern const char* g_HubDeviceName;
 
 
 MODULE_API void InitializeModuleData() 
