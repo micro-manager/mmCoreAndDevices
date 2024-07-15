@@ -2,7 +2,13 @@
 #include <cstdint>
 
 
-const char* g_ShutterName = "LEDs";
+const char* g_LEDShutterName = "LEDs";
+const char* g_OnOff = "OnOff";
+const char* g_Pattern = "Pattern";
+const char* g_Intensity = "Intensity";
+const char* g_Red = "Red";
+const char* g_Green = "Green";
+const char* g_Blue = "Blue";
 
 extern const int CMD_TURN_ON_ILLUMINATION;
 extern const int CMD_TURN_OFF_ILLUMINATION;
@@ -29,9 +35,9 @@ const std::string ILLUMINATIONS[7] = {
 const int illumination_source = 1; // presumably this is the lED, with lasers something else
 
 
-SquidShutter::SquidShutter() :
+SquidLEDShutter::SquidLEDShutter() :
    initialized_(false),
-   name_(g_ShutterName),
+   name_(g_LEDShutterName),
    pattern_(0),
    changedTime_(), 
    intensity_ (1),
@@ -45,7 +51,7 @@ SquidShutter::SquidShutter() :
    SetErrorText(ERR_NO_PORT_SET, "Hub Device not found.  The Squid Hub device is needed to create this device");
 
    // Name
-   int ret = CreateProperty(MM::g_Keyword_Name, g_ShutterName, MM::String, true);
+   int ret = CreateProperty(MM::g_Keyword_Name, g_LEDShutterName, MM::String, true);
    assert(DEVICE_OK == ret);
 
    // Description
@@ -58,7 +64,7 @@ SquidShutter::SquidShutter() :
 }
 
 
-SquidShutter::~SquidShutter()
+SquidLEDShutter::~SquidLEDShutter()
 {
    if (initialized_)
    {
@@ -67,7 +73,7 @@ SquidShutter::~SquidShutter()
 }
 
 
-int SquidShutter::Shutdown()
+int SquidLEDShutter::Shutdown()
 {
    if (initialized_) {
       initialized_ = false;
@@ -76,13 +82,13 @@ int SquidShutter::Shutdown()
 }
 
 
-void SquidShutter::GetName(char* pszName) const
+void SquidLEDShutter::GetName(char* pszName) const
 {
-   CDeviceUtils::CopyLimitedString(pszName, g_ShutterName);
+   CDeviceUtils::CopyLimitedString(pszName, g_LEDShutterName);
 }
 
 
-int SquidShutter::Initialize()
+int SquidLEDShutter::Initialize()
 {
    SquidHub* hub = static_cast<SquidHub*>(GetParentHub());
    if (!hub || !hub->IsPortAvailable()) {
@@ -93,7 +99,7 @@ int SquidShutter::Initialize()
 
    // OnOff
   // ------
-   CPropertyAction* pAct = new CPropertyAction(this, &SquidShutter::OnOnOff);
+   CPropertyAction* pAct = new CPropertyAction(this, &SquidLEDShutter::OnOnOff);
    int ret = CreateProperty("OnOff", "0", MM::Integer, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
@@ -108,6 +114,51 @@ int SquidShutter::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
+   // Pattern
+   // ------
+   pAct = new CPropertyAction(this, &SquidLEDShutter::OnPattern);
+   ret = CreateProperty(g_Pattern, ILLUMINATIONS[0].c_str(), MM::String, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   for (uint8_t i = 0; i < 7; i++)
+   {
+      AddAllowedValue(g_Pattern, ILLUMINATIONS[i].c_str());
+   }
+
+   // Intensity
+   // ------
+   pAct = new CPropertyAction(this, &SquidLEDShutter::OnIntensity);
+   ret = CreateProperty(g_Intensity, "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   SetPropertyLimits(g_Intensity, 0, 255);
+
+   // Red
+   // ------
+   pAct = new CPropertyAction(this, &SquidLEDShutter::OnRed);
+   ret = CreateProperty(g_Red, "255", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   SetPropertyLimits(g_Red, 0, 255);
+
+   // Green
+   // ------
+   pAct = new CPropertyAction(this, &SquidLEDShutter::OnGreen);
+   ret = CreateProperty(g_Green, "255", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   SetPropertyLimits(g_Green, 0, 255);
+
+   // Blue
+   // ------
+   pAct = new CPropertyAction(this, &SquidLEDShutter::OnBlue);
+   ret = CreateProperty(g_Blue, "255", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   SetPropertyLimits(g_Blue, 0, 255);
+
+
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
@@ -119,7 +170,7 @@ int SquidShutter::Initialize()
 }
 
 
-bool SquidShutter::Busy()
+bool SquidLEDShutter::Busy()
 {
    // TODO:
    return false;
@@ -127,7 +178,7 @@ bool SquidShutter::Busy()
 
 
 
-int SquidShutter::SetOpen(bool open)
+int SquidLEDShutter::SetOpen(bool open)
 {
    std::ostringstream os;
    os << "Request " << open;
@@ -139,7 +190,7 @@ int SquidShutter::SetOpen(bool open)
       return SetProperty("OnOff", "0");
 }
 
-int SquidShutter::GetOpen(bool& open)
+int SquidLEDShutter::GetOpen(bool& open)
 {
    char buf[MM::MaxStrLength];
    int ret = GetProperty("OnOff", buf);
@@ -151,7 +202,7 @@ int SquidShutter::GetOpen(bool& open)
    return DEVICE_OK;
 }
 
-int SquidShutter::Fire(double /*deltaT*/)
+int SquidLEDShutter::Fire(double /*deltaT*/)
 {
    return DEVICE_UNSUPPORTED_COMMAND;
 }
@@ -160,7 +211,7 @@ int SquidShutter::Fire(double /*deltaT*/)
 // action interface
 //int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-int SquidShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
+int SquidLEDShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    SquidHub* hub = static_cast<SquidHub*>(GetParentHub());
    if (eAct == MM::BeforeGet)
@@ -193,7 +244,7 @@ int SquidShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int SquidShutter::OnPattern(MM::PropertyBase* pProp, MM::ActionType eAct) 
+int SquidLEDShutter::OnPattern(MM::PropertyBase* pProp, MM::ActionType eAct) 
 {
    if (eAct == MM::BeforeGet)
    {
@@ -212,7 +263,7 @@ int SquidShutter::OnPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int SquidShutter::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
+int SquidLEDShutter::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -231,7 +282,7 @@ int SquidShutter::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int SquidShutter::OnRed(MM::PropertyBase* pProp, MM::ActionType eAct)
+int SquidLEDShutter::OnRed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -250,7 +301,7 @@ int SquidShutter::OnRed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int SquidShutter::OnGreen(MM::PropertyBase* pProp, MM::ActionType eAct)
+int SquidLEDShutter::OnGreen(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -268,7 +319,7 @@ int SquidShutter::OnGreen(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
-int SquidShutter::OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
+int SquidLEDShutter::OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -288,7 +339,7 @@ int SquidShutter::OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int SquidShutter::sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t red, uint8_t green, uint8_t blue)
+int SquidLEDShutter::sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t red, uint8_t green, uint8_t blue)
 {
    SquidHub* hub = static_cast<SquidHub*>(GetParentHub());
 

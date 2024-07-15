@@ -24,7 +24,7 @@
     <ClCompile Include="SquidMonitoringThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SquidShutter.cpp">
+    <ClCompile Include="SquidLEDShutter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

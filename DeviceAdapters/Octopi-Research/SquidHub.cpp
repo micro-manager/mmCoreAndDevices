@@ -50,6 +50,7 @@ const char* g_HubDeviceName = "SquidHub";
 MODULE_API void InitializeModuleData() 
 {
    RegisterDevice(g_HubDeviceName, MM::HubDevice, g_HubDeviceName);
+   RegisterDevice(g_LEDShutterName, MM::ShutterDevice, "LEDs");
 }
 
 
@@ -58,7 +59,11 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 
    if (strcmp(deviceName, g_HubDeviceName) == 0)
    {
-   return new SquidHub();
+      return new SquidHub();
+   }
+   else if (strcmp(deviceName, g_LEDShutterName) == 0)
+   {
+      return new SquidLEDShutter();
    }
 
    // ...supplied name not recognized
@@ -118,7 +123,11 @@ int SquidHub::Initialize() {
       return ret;
    }
 
+
+   return DEVICE_OK;
+
    //SET_ILLUMINATION_LED_MATRIX = 13
+   /*
    cmd[0] = 2; 
    cmd[1] = 13; 
    cmd[2] = 1;
@@ -140,7 +149,7 @@ int SquidHub::Initialize() {
       return ret;
    }
 
-   /*
+   
    const unsigned msgLength = 24;
    unsigned char msg[msgLength];
    unsigned long read = 0;
@@ -159,7 +168,7 @@ int SquidHub::Initialize() {
    if (tries >= 20) {
       LogMessage("Read nothing from serial port", false);
    }
-   */
+   
 
    const unsigned TURN_ON_ILLUMINATION = 10;
    for (unsigned i = 0; i < cmdSize; i++) {
@@ -170,8 +179,7 @@ int SquidHub::Initialize() {
    if (ret != DEVICE_OK) {
       return ret;
    }
-   
-   return DEVICE_OK;
+   */
 }
 
 int SquidHub::Shutdown() {
@@ -191,12 +199,28 @@ bool SquidHub::SupportsDeviceDetection(void)
 
 MM::DeviceDetectionStatus SquidHub::DetectDevice(void)
 {
-   return MM::CanCommunicate;
+   // TODO
+   return MM::CanCommunicate;  
 }
 
 
 int SquidHub::DetectInstalledDevices()
 {
+   if (MM::CanCommunicate == DetectDevice())
+   {
+      std::vector<std::string> peripherals;
+      peripherals.clear();
+      peripherals.push_back(g_LEDShutterName);
+      for (size_t i = 0; i < peripherals.size(); i++)
+      {
+         MM::Device* pDev = ::CreateDevice(peripherals[i].c_str());
+         if (pDev)
+         {
+            AddInstalledDevice(pDev);
+         }
+      }
+   }
+
    return DEVICE_OK;
 }
 

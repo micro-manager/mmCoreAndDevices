@@ -9,7 +9,8 @@
 #define ERR_PORT_CHANGE_FORBIDDEN    21001 
 #define ERR_NO_PORT_SET 21002
 
-
+extern const char* g_HubDeviceName;
+extern const char* g_LEDShutterName;
 
 const int CMD_MOVE_X = 0;
 const int CMD_MOVE_Y = 1;
@@ -87,11 +88,11 @@ private:
 
 
 
-class SquidShutter : public CShutterBase<SquidShutter>
+class SquidLEDShutter : public CShutterBase<SquidLEDShutter>
 {
 public:
-   SquidShutter();
-   ~SquidShutter();
+   SquidLEDShutter();
+   ~SquidLEDShutter();
 
    int Initialize();
    int Shutdown();
