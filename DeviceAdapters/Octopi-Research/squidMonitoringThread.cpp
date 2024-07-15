@@ -1,5 +1,6 @@
 #include "squid.h"
 
+
 /*
  * Utility class for ZeissMonitoringThread
  * Takes an input stream and returns CAN29 messages in the GetNextMessage method

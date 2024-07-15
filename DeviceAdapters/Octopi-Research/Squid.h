@@ -3,14 +3,13 @@
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
+#include <cstdint>
 
 
 #define ERR_PORT_CHANGE_FORBIDDEN    21001 
 #define ERR_NO_PORT_SET 21002
 
 
-const char* g_HubDeviceName = "SquidHub";
-const char* g_ShutterName = "LEDs";
 
 const int CMD_MOVE_X = 0;
 const int CMD_MOVE_Y = 1;
@@ -44,6 +43,14 @@ const int CMD_SET_STROBE_DELAY = 31;
 const int CMD_SET_PIN_LEVEL = 41;
 const int CMD_INITIALIZE = 254;
 const int CMD_RESET = 255;
+
+const int ILLUMINATION_SOURCE_LED_ARRAY_FULL = 0;
+const int ILLUMINATION_SOURCE_LED_ARRAY_LEFT_HALF = 1;
+const int ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_HALF = 2;
+const int ILLUMINATION_SOURCE_LED_ARRAY_LEFTB_RIGHTR = 3;
+const int ILLUMINATION_SOURCE_LED_ARRAY_LOW_NA = 4;
+const int ILLUMINATION_SOURCE_LED_ARRAY_LEFT_DOT = 5;
+const int ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_DOT = 6;
 
 
 class SquidMonitoringThread;
@@ -82,33 +89,42 @@ private:
 
 class SquidShutter : public CShutterBase<SquidShutter>
 {
-   public:
-      SquidShutter();
-      ~SquidShutter();
+public:
+   SquidShutter();
+   ~SquidShutter();
 
-      int Initialize();
-      int Shutdown();
+   int Initialize();
+   int Shutdown();
 
-      void GetName(char* pszName) const;
-      bool Busy();
+   void GetName(char* pszName) const;
+   bool Busy();
 
-      // Shutter API
-      int SetOpen(bool open = true);
-      int GetOpen(bool& open);
-      int Fire(double deltaT);
+   // Shutter API
+   int SetOpen(bool open = true);
+   int GetOpen(bool& open);
+   int Fire(double deltaT);
 
-      // action interface
-      int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-      int OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct);
+   // action interface
+   int OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-   private:
-      bool initialized_;
-      std::string name_;
-      unsigned shutterNr_;
-      bool external_;
-      bool state_;
-      MM::MMTime changedTime_;
-}
+   int OnPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnRed(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnGreen(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+
+private:
+   int sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t red, uint8_t green, uint8_t blue);
+   bool initialized_;
+   std::string name_;
+   MM::MMTime changedTime_;
+   uint8_t pattern_;
+   uint8_t intensity_;
+   uint8_t red_;
+   uint8_t green_;
+   uint8_t blue_;
+};
 
 
 class SquidMessageParser {

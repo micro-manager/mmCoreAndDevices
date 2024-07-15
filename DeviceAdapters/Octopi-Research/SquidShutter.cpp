@@ -1,18 +1,43 @@
 #include "squid.h"
+#include <cstdint>
 
-extern const char* g_ShutterName;
 
-extern const int CMD_TURN_ON_ILLUMINATION = 10;
-extern const int CMD_TURN_OFF_ILLUMINATION = 11;
-extern const int CMD_SET_ILLUMINATION = 12;
-extern const int CMD_SET_ILLUMINATION_LED_MATRIX = 13;
-extern const int CMD_SET_ILLUMINATION_INTENSITY_FACTOR = 17;
+const char* g_ShutterName = "LEDs";
+
+extern const int CMD_TURN_ON_ILLUMINATION;
+extern const int CMD_TURN_OFF_ILLUMINATION;
+extern const int CMD_SET_ILLUMINATION_LED_MATRIX;
+
+extern const int ILLUMINATION_SOURCE_LED_ARRAY_FULL;
+extern const int ILLUMINATION_SOURCE_LED_ARRAY_LEFT_HALF;
+extern const int ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_HALF;
+extern const int ILLUMINATION_SOURCE_LED_ARRAY_LEFTB_RIGHTR;
+extern const int ILLUMINATION_SOURCE_LED_ARRAY_LOW_NA;
+extern const int ILLUMINATION_SOURCE_LED_ARRAY_LEFT_DOT;
+extern const int ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_DOT;
+
+const std::string ILLUMINATIONS[7] = {
+   "Full",
+   "Left_Half",
+   "Right_Half",
+   "Left-Blue_Right-Red",
+   "Low_NA",
+   "Left_Dot",
+   "Right_Dot"
+};
+
+const int illumination_source = 1; // presumably this is the lED, with lasers something else
 
 
 SquidShutter::SquidShutter() :
    initialized_(false),
    name_(g_ShutterName),
-   changedTime_()
+   pattern_(0),
+   changedTime_(), 
+   intensity_ (1),
+   red_(255),
+   green_(255),
+   blue_(255)
 {
    InitializeDefaultErrorMessages();
    EnableDelay();
@@ -47,6 +72,7 @@ int SquidShutter::Shutdown()
    if (initialized_) {
       initialized_ = false;
    }
+   return DEVICE_OK;
 }
 
 
@@ -140,7 +166,8 @@ int SquidShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::BeforeGet)
    {
       // use cached state
-      pProp->Set((long)hub->GetShutterState());
+      //pProp->Set((long)hub->GetShutterState());
+      pProp->Set(1l);
    }
    else if (eAct == MM::AfterSet)
    {
@@ -157,11 +184,130 @@ int SquidShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
          cmd[1] = CMD_TURN_ON_ILLUMINATION; 
 
-      ret = hub->sendCommand(cmd, cmdSize);
+      ret = hub->SendCommand(cmd, cmdSize);
       if (ret != DEVICE_OK)
          return ret;
       changedTime_ = GetCurrentMMTime();
    }
+   return DEVICE_OK;
+}
+
+
+int SquidShutter::OnPattern(MM::PropertyBase* pProp, MM::ActionType eAct) 
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(ILLUMINATIONS[pattern_].c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+      if (pos >= 0 && pos <= 7)
+      {
+         pattern_ = (uint8_t) pos;
+      }
+      return sendIllumination(pattern_, intensity_, red_, green_, blue_);
+   }
+   return DEVICE_OK;
+}
+
+int SquidShutter::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long) intensity_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+      if (pos >= 0 && pos <= 255)
+      {
+         intensity_ = (uint8_t)pos;
+      }
+      return sendIllumination(pattern_, intensity_, red_, green_, blue_);
+   }
+   return DEVICE_OK;
+}
+
+int SquidShutter::OnRed(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long) red_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+      if (pos >= 0 && pos <= 255)
+      {
+         red_ = (uint8_t) pos;
+      }
+      return sendIllumination(pattern_, intensity_, red_, green_, blue_);
+   }
+   return DEVICE_OK;
+}
+
+int SquidShutter::OnGreen(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long) green_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+      if (pos >= 0 && pos <= 255)
+      {
+         green_ = (uint8_t) pos;
+      }
+      return sendIllumination(pattern_, intensity_, red_, green_, blue_);
+   }
+   return DEVICE_OK;
+}
+int SquidShutter::OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long) blue_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+      if (pos >= 0 && pos <= 255)
+      {
+         blue_ = (uint8_t) pos;
+      }
+      return sendIllumination(pattern_, intensity_, red_, green_, blue_);
+   }
+   return DEVICE_OK;
+}
+
+
+int SquidShutter::sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t red, uint8_t green, uint8_t blue)
+{
+   SquidHub* hub = static_cast<SquidHub*>(GetParentHub());
+
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_SET_ILLUMINATION_LED_MATRIX;
+   cmd[2] = pattern;
+   cmd[3] = intensity / 255 * red;
+   cmd[4] = intensity / 255 * green;
+   cmd[5] = intensity / 255 * blue;
+
+   int ret = hub->SendCommand(cmd, cmdSize);
+   if (ret != DEVICE_OK)
+      return ret;
+   changedTime_ = GetCurrentMMTime();
+
    return DEVICE_OK;
 }
 

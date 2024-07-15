@@ -18,10 +18,13 @@
     <ClCompile Include="crc8.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="squidHub.cpp">
+    <ClCompile Include="SquidHub.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="squidMonitoringThread.cpp">
+    <ClCompile Include="SquidMonitoringThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SquidShutter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,7 +32,7 @@
     <ClInclude Include="crc8.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="squid.h">
+    <ClInclude Include="Squid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

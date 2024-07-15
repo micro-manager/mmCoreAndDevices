@@ -44,12 +44,12 @@ static const uint8_t CRC_TABLE[256] = {
 
 
 
-extern const char* g_HubDeviceName;
+const char* g_HubDeviceName = "SquidHub";
 
 
 MODULE_API void InitializeModuleData() 
 {
-   RegisterDevice(g_HubDeviceName, MM::HubDevice, "SquidHub");
+   RegisterDevice(g_HubDeviceName, MM::HubDevice, g_HubDeviceName);
 }
 
 
@@ -106,14 +106,14 @@ int SquidHub::Initialize() {
    for (unsigned i = 2; i < cmdSize; i++) {
       cmd[i] = 0;
    }
-   int ret = sendCommand(cmd, cmdSize);
+   int ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
 
    cmd[0] = 1; 
    cmd[1] = 254; // CMD_INITIALIZE_DRIVERS
-   ret = sendCommand(cmd, cmdSize);
+   ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -125,7 +125,7 @@ int SquidHub::Initialize() {
    cmd[3] = 128;
    cmd[4] = 128;
    cmd[5] = 0;
-   ret = sendCommand(cmd, cmdSize);
+   ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -135,7 +135,7 @@ int SquidHub::Initialize() {
    for (unsigned i = 2; i < cmdSize; i++) {
       cmd[i] = 0;
    }
-   ret = sendCommand(cmd, cmdSize);
+   ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -166,7 +166,7 @@ int SquidHub::Initialize() {
       cmd[i] = 0;
    }
    cmd[1] = TURN_ON_ILLUMINATION;
-   ret = sendCommand(cmd, cmdSize);
+   ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -236,7 +236,7 @@ uint8_t SquidHub::crc8ccitt(const void* data, size_t size) {
 }
 
 
-int SquidHub::sendCommand(unsigned char* cmd, unsigned cmdSize)
+int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize)
 {
    cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize - 1);
    if (true) {
