@@ -183,6 +183,13 @@ int SquidHub::Initialize() {
 }
 
 int SquidHub::Shutdown() {
+   if (initialized_)
+   {
+      monitoringThread_->Stop();
+      monitoringThread_->wait();
+      delete(monitoringThread_);
+      initialized_ = false;
+   }
    return DEVICE_OK;
 }
 
