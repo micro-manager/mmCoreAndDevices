@@ -252,13 +252,15 @@ int SquidLEDShutter::OnPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      long pos;
-      pProp->Get(pos);
-      if (pos >= 0 && pos <= 7)
+      std::string pattern;
+      pProp->Get(pattern);
+      for (uint8_t i = 0; i < 7; i++)
       {
-         pattern_ = (uint8_t) pos;
+         if (ILLUMINATIONS[i] == pattern) {
+            pattern_ = i;
+            return sendIllumination(pattern_, intensity_, red_, green_, blue_);
+         }
       }
-      return sendIllumination(pattern_, intensity_, red_, green_, blue_);
    }
    return DEVICE_OK;
 }
@@ -350,9 +352,9 @@ int SquidLEDShutter::sendIllumination(uint8_t pattern, uint8_t intensity, uint8_
    }
    cmd[1] = CMD_SET_ILLUMINATION_LED_MATRIX;
    cmd[2] = pattern;
-   cmd[3] = intensity / 255 * red;
-   cmd[4] = intensity / 255 * green;
-   cmd[5] = intensity / 255 * blue;
+   cmd[3] = (uint8_t) ((double) intensity / 255 * green);
+   cmd[4] = (uint8_t) ((double) intensity / 255 * red);
+   cmd[5] = (uint8_t) ((double) intensity / 255 * blue);
 
    int ret = hub->SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK)

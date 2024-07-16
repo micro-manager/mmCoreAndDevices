@@ -2,7 +2,7 @@
 
 
 /*
- * Utility class for ZeissMonitoringThread
+ * Utility class for SquidMonitoringThread
  * Takes an input stream and returns CAN29 messages in the GetNextMessage method
  */
 SquidMessageParser::SquidMessageParser(unsigned char* inputStream, long inputStreamLength) :
@@ -48,7 +48,7 @@ SquidMonitoringThread::~SquidMonitoringThread()
 
 void SquidMonitoringThread::interpretMessage(unsigned char* message)
 {
-   if (message[1] != 0x2) {
+   if (message[1] != 0x0) {
       if (debug_) {
          std::ostringstream os;
          os << "Monitoring Thread incoming message: ";
