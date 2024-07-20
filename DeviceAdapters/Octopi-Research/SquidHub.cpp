@@ -123,6 +123,8 @@ int SquidHub::Initialize() {
       return ret;
    }
 
+   initialized_ = true;
+
 
    return DEVICE_OK;
 
