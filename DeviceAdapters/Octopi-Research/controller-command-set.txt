@@ -19,13 +19,13 @@ The Cephla Octopi-Research controller has an Arduino Teensy inside that communic
    2-5 - uint32_t x pos in Big Endian
    6-9 - uint32_t y pos in Big Endian
    10-13 - uint32_t Z pos in Big Endian
-   14-7 - ?
+   14-17 - ?
    18 - Joystick Button
 
    Currently unclear when/how the (obligatory?) answer from the controller is read.
 
    
-   Public domain code at https://www.3dbrew.org/wiki/CRC-8-CCITT can likely be used to calculate checksums in C(C++)
+   Public domain code from https://www.3dbrew.org/wiki/CRC-8-CCITT is used to calculate checksums in C(C++)
 
 
 def initialize_drivers(self):

@@ -237,7 +237,7 @@ uint8_t SquidHub::crc8ccitt(const void* data, size_t size) {
 bool SquidHub::IsCommandPending(uint8_t cmdNr)
 {
    std::lock_guard<std::recursive_mutex> locker(lock_);
-   return (pendingCmd_ == cmdNr);
+   return pendingCmd_ != cmdNr;
 }
 
 void SquidHub::ReceivedCommand(uint8_t cmdNr)
