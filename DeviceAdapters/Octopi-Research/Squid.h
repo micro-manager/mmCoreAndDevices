@@ -4,6 +4,7 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include <cstdint>
+#include <thread>
 
 
 #define ERR_PORT_CHANGE_FORBIDDEN    21001 
@@ -84,6 +85,7 @@ private:
    uint8_t crc8ccitt(const void* data, size_t size);
    bool initialized_;
    SquidMonitoringThread* monitoringThread_;
+   uint8_t cmdNr_;
 };
 
 
@@ -142,14 +144,11 @@ private:
 };
 
 
-class SquidMonitoringThread : public MMDeviceThreadBase
-{
+class SquidMonitoringThread {
 public:
    SquidMonitoringThread(MM::Core& core, SquidHub& hub, bool debug);
    ~SquidMonitoringThread();
    int svc();
-   int open(void*) { return 0; }
-   int close(unsigned long) { return 0; }
 
    void Start();
    void Stop() { stop_ = true; }
@@ -162,6 +161,7 @@ private:
    bool debug_;
    bool stop_;
    long intervalUs_;
+   std::thread* ourThread_;
    SquidMonitoringThread& operator=(SquidMonitoringThread& /*rhs*/) { assert(false); return *this; }
 };
 

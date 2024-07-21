@@ -34,15 +34,16 @@ SquidMonitoringThread::SquidMonitoringThread(MM::Core& core, SquidHub& hub, bool
    hub_(hub),
    debug_(debug),
    stop_(true),
-   intervalUs_(10000) // check every 10 ms for new messages, 
+   intervalUs_(10000), // check every 10 ms for new messages, 
+   ourThread_(0)
 {
    //deviceInfo = deviceInfo_;
 }
 
 SquidMonitoringThread::~SquidMonitoringThread()
 {
-   Stop();
-   wait();
+   stop_ = true;
+   ourThread_->join();
    //hub_.LogMessage("Destructing MonitoringThread", true);
 }
 
@@ -137,5 +138,5 @@ int SquidMonitoringThread::svc() {
 void SquidMonitoringThread::Start()
 {
    stop_ = false;
-   activate();
+   ourThread_ = new std::thread(&SquidMonitoringThread::svc, this);
 }

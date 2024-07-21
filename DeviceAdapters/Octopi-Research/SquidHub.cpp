@@ -79,7 +79,8 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 SquidHub::SquidHub() :
    initialized_(false),
    monitoringThread_(0),
-   port_("Undefined")
+   port_("Undefined"),
+   cmdNr_(1)
 {
    InitializeDefaultErrorMessages();
 
@@ -187,8 +188,6 @@ int SquidHub::Initialize() {
 int SquidHub::Shutdown() {
    if (initialized_)
    {
-      monitoringThread_->Stop();
-      monitoringThread_->wait();
       delete(monitoringThread_);
       initialized_ = false;
    }
@@ -271,6 +270,11 @@ uint8_t SquidHub::crc8ccitt(const void* data, size_t size) {
 
 int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize)
 {
+   cmd[0] = cmdNr_;
+   if (cmdNr_ < 255) 
+      cmdNr_++;
+   else 
+      cmdNr_ = 1;
    cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize - 1);
    if (true) {
       std::ostringstream os;
