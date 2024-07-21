@@ -70,6 +70,7 @@ int SquidHub::Initialize() {
    monitoringThread_ = new SquidMonitoringThread(*this->GetCoreCallback(), *this, true);
    monitoringThread_->Start();
    
+   uint8_t pendingCmd;
    const unsigned cmdSize = 8;
    unsigned char cmd[cmdSize];
    cmd[0] = 0x00;
@@ -77,14 +78,14 @@ int SquidHub::Initialize() {
    for (unsigned i = 2; i < cmdSize; i++) {
       cmd[i] = 0;
    }
-   int ret = SendCommand(cmd, cmdSize);
+   int ret = SendCommand(cmd, cmdSize, &pendingCmd_);
    if (ret != DEVICE_OK) {
       return ret;
    }
 
    cmd[0] = 1; 
    cmd[1] = 254; // CMD_INITIALIZE_DRIVERS
-   ret = SendCommand(cmd, cmdSize);
+   ret = SendCommand(cmd, cmdSize, &pendingCmd_);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -233,7 +234,28 @@ uint8_t SquidHub::crc8ccitt(const void* data, size_t size) {
 }
 */
 
-int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize)
+bool SquidHub::IsCommandPending(uint8_t cmdNr)
+{
+   std::lock_guard<std::recursive_mutex> locker(lock_);
+   return (pendingCmd_ == cmdNr);
+}
+
+void SquidHub::ReceivedCommand(uint8_t cmdNr)
+{
+   std::lock_guard<std::recursive_mutex> locker(lock_);
+   if (pendingCmd_ == cmdNr)
+   {
+      pendingCmd_ = 0;
+   }
+}
+
+void SquidHub::SetCommandPending(uint8_t cmdNr)
+{
+   std::lock_guard<std::recursive_mutex> locker(lock_);
+   pendingCmd_ = cmdNr;
+}
+
+int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr)
 {
    cmd[0] = cmdNr_;
    if (cmdNr_ < 255) 
@@ -249,5 +271,7 @@ int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize)
       }
       LogMessage(os.str().c_str(), false);
    }
+   *cmdNr = cmdNr_;
+   SetCommandPending(cmdNr_);
    return WriteToComPort(port_.c_str(), cmd, cmdSize);
 }

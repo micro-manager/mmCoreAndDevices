@@ -5,6 +5,7 @@
 #include "DeviceBase.h"
 #include <cstdint>
 #include <thread>
+#include <mutex>
 
 
 #define ERR_PORT_CHANGE_FORBIDDEN    21001 
@@ -75,17 +76,19 @@ public:
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    bool IsPortAvailable() { return (port_ != ""); };
-   int SendCommand(unsigned char* cmd, unsigned cmdSize);
+   int SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr);
+   bool IsCommandPending(uint8_t cmdNr);
+   void ReceivedCommand(uint8_t cmdNr);
 
-   static const int RCV_BUF_LENGTH = 1024;
-   unsigned char rcvBuf_[RCV_BUF_LENGTH];
    std::string port_;
 
 private:
-   // uint8_t crc8ccitt(const void* data, size_t size);
+   void SetCommandPending(uint8_t cmdNr);
    bool initialized_;
    SquidMonitoringThread* monitoringThread_;
    uint8_t cmdNr_;
+   uint8_t pendingCmd_;
+   std::recursive_mutex lock_;
 };
 
 
@@ -119,6 +122,7 @@ public:
 
 private:
    int sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t red, uint8_t green, uint8_t blue);
+   SquidHub* hub_;
    bool initialized_;
    std::string name_;
    MM::MMTime changedTime_;
@@ -127,6 +131,8 @@ private:
    uint8_t red_;
    uint8_t green_;
    uint8_t blue_;
+   bool isOpen_;
+   uint8_t cmdNr_;
 };
 
 
@@ -154,8 +160,8 @@ public:
    void Stop() { stop_ = true; }
 
 private:
-   void interpretMessage(unsigned char* message);
-   //MM::Device& device_;
+   void InterpretMessage(unsigned char* message);
+   static const int RCV_BUF_LENGTH = 1024;
    MM::Core& core_;
    SquidHub& hub_;
    bool debug_;

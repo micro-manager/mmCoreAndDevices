@@ -43,7 +43,9 @@ SquidLEDShutter::SquidLEDShutter() :
    intensity_ (1),
    red_(255),
    green_(255),
-   blue_(255)
+   blue_(255),
+   isOpen_(false),
+   cmdNr_(0)
 {
    InitializeDefaultErrorMessages();
    EnableDelay();
@@ -90,12 +92,12 @@ void SquidLEDShutter::GetName(char* pszName) const
 
 int SquidLEDShutter::Initialize()
 {
-   SquidHub* hub = static_cast<SquidHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable()) {
+   hub_ = static_cast<SquidHub*>(GetParentHub());
+   if (!hub_ || !hub_->IsPortAvailable()) {
       return ERR_NO_PORT_SET;
    }
    char hubLabel[MM::MaxStrLength];
-   hub->GetLabel(hubLabel);
+   hub_->GetLabel(hubLabel);
 
    // OnOff
   // ------
@@ -158,6 +160,7 @@ int SquidLEDShutter::Initialize()
       return ret;
    SetPropertyLimits(g_Blue, 0, 255);
 
+   SetOpen(isOpen_);  // we can not read the state from the device, at least get it in sync with us
 
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
@@ -172,8 +175,7 @@ int SquidLEDShutter::Initialize()
 
 bool SquidLEDShutter::Busy()
 {
-   // TODO:
-   return false;
+   return hub_->IsCommandPending(cmdNr_);
 }
 
 
@@ -209,16 +211,13 @@ int SquidLEDShutter::Fire(double /*deltaT*/)
 
 
 // action interface
-//int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 int SquidLEDShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   SquidHub* hub = static_cast<SquidHub*>(GetParentHub());
    if (eAct == MM::BeforeGet)
    {
-      // use cached state
-      //pProp->Set((long)hub->GetShutterState());
-      pProp->Set(1l);
+      // use cached state, there is no way to query
+      pProp->Set(isOpen_ ? 1l : 0l);
    }
    else if (eAct == MM::AfterSet)
    {
@@ -235,7 +234,9 @@ int SquidLEDShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
       else
          cmd[1] = CMD_TURN_ON_ILLUMINATION; 
 
-      ret = hub->SendCommand(cmd, cmdSize);
+      isOpen_ = pos == 1;
+
+      ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
       if (ret != DEVICE_OK)
          return ret;
       changedTime_ = GetCurrentMMTime();
@@ -343,8 +344,6 @@ int SquidLEDShutter::OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int SquidLEDShutter::sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t red, uint8_t green, uint8_t blue)
 {
-   SquidHub* hub = static_cast<SquidHub*>(GetParentHub());
-
    const unsigned cmdSize = 8;
    unsigned char cmd[cmdSize];
    for (unsigned i = 0; i < cmdSize; i++) {
@@ -356,15 +355,10 @@ int SquidLEDShutter::sendIllumination(uint8_t pattern, uint8_t intensity, uint8_
    cmd[4] = (uint8_t) ((double) intensity / 255 * red);
    cmd[5] = (uint8_t) ((double) intensity / 255 * blue);
 
-   int ret = hub->SendCommand(cmd, cmdSize);
+   int ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
    if (ret != DEVICE_OK)
       return ret;
    changedTime_ = GetCurrentMMTime();
 
    return DEVICE_OK;
 }
-
-
-
-
-

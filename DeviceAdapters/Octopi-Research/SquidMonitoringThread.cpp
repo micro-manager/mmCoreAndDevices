@@ -1,10 +1,9 @@
 #include "squid.h"
-#include "crc8.h"
 
 
 /*
  * Utility class for SquidMonitoringThread
- * Takes an input stream and returns CAN29 messages in the GetNextMessage method
+ * Takes an input stream and returns messages in the GetNextMessage method
  */
 SquidMessageParser::SquidMessageParser(unsigned char* inputStream, long inputStreamLength) :
    index_(0)
@@ -14,6 +13,8 @@ SquidMessageParser::SquidMessageParser(unsigned char* inputStream, long inputStr
 }
 
 /*
+ * Provides the next message in the inputStream.
+ * Returns 0 on success, -1 when no message was found
  */
 int SquidMessageParser::GetNextMessage(unsigned char* nextMessage, int& nextMessageLength) {
 
@@ -59,9 +60,10 @@ SquidMonitoringThread::~SquidMonitoringThread()
    //hub_.LogMessage("Destructing MonitoringThread", true);
 }
 
-void SquidMonitoringThread::interpretMessage(unsigned char* message)
+void SquidMonitoringThread::InterpretMessage(unsigned char* message)
 {
    if (message[0] != 0x0) {
+      hub_.ReceivedCommand((uint8_t) message[0]);
       if (debug_) {
          std::ostringstream os;
          os << "Monitoring Thread incoming message: ";
@@ -82,17 +84,17 @@ int SquidMonitoringThread::svc() {
    unsigned long dataLength;
    unsigned long charsRead = 0;
    unsigned long charsRemaining = 0;
-   unsigned char rcvBuf[SquidHub::RCV_BUF_LENGTH];
-   memset(rcvBuf, 0, SquidHub::RCV_BUF_LENGTH);
+   unsigned char rcvBuf[RCV_BUF_LENGTH];
+   memset(rcvBuf, 0, RCV_BUF_LENGTH);
 
    while (!stop_)
    {
       do {
-         if (charsRemaining > (SquidHub::RCV_BUF_LENGTH - SquidMessageParser::messageMaxLength_)) {
+         if (charsRemaining > (RCV_BUF_LENGTH - SquidMessageParser::messageMaxLength_)) {
             // for one reason or another, our buffer is overflowing.  Empty it out before we crash
             charsRemaining = 0;
          }
-         dataLength = SquidHub::RCV_BUF_LENGTH - charsRemaining;
+         dataLength = RCV_BUF_LENGTH - charsRemaining;
 
          // Do the scope monitoring stuff here
          // MM::MMTime _start = core_.GetCurrentMMTime();
@@ -120,13 +122,13 @@ int SquidMonitoringThread::svc() {
          else if (charsRead > 0) {
             SquidMessageParser parser(rcvBuf, charsRead + charsRemaining);
             do {
-               unsigned char message[SquidHub::RCV_BUF_LENGTH];
+               unsigned char message[RCV_BUF_LENGTH];
                int messageLength;
                ret = parser.GetNextMessage(message, messageLength);
                if (ret == 0) {
                   // Report 
                   // and do the real stuff
-                  interpretMessage(message);
+                  InterpretMessage(message);
                }
                else {
                   // no more messages, copy remaining (if any) back to beginning of buffer
@@ -139,7 +141,7 @@ int SquidMonitoringThread::svc() {
                      }
                      //core_.LogMessage(&hub_, os.str().c_str(), false);
                   }
-                  memset(rcvBuf, 0, SquidHub::RCV_BUF_LENGTH);
+                  memset(rcvBuf, 0, RCV_BUF_LENGTH);
                   for (int i = 0; i < messageLength; i++) {
                      rcvBuf[i] = message[i];
                   }
