@@ -16,34 +16,28 @@ SquidMessageParser::SquidMessageParser(unsigned char* inputStream, long inputStr
 /*
  */
 int SquidMessageParser::GetNextMessage(unsigned char* nextMessage, int& nextMessageLength) {
-   unsigned int startPos = 0;
+
    bool msgFound = false;
    while (!msgFound)
    {
       nextMessageLength = 0;
       while ((index_ < inputStreamLength_) && (nextMessageLength < messageMaxLength_)) {
-         nextMessage[startPos + nextMessageLength] = inputStream_[index_];
+         nextMessage[nextMessageLength] = inputStream_[index_];
          nextMessageLength++;
          index_++;
       }
 
       if (nextMessageLength == messageMaxLength_)
       {
-         if (crc8ccitt(nextMessage, messageMaxLength_ - 1) == nextMessage[messageMaxLength_])
-         {
-            msgFound = true;
-            return 0;
-         }
-         else
-         {
-            startPos++;
-         }
+         msgFound = true;
+         return 0;
       }
-      if (index_ >= inputStreamLength_)
+      else //  index_ == inputStreamLength_
       {
          return -1;
       }
    }
+   return -1; // should never be reached
 }
 
 
@@ -67,7 +61,7 @@ SquidMonitoringThread::~SquidMonitoringThread()
 
 void SquidMonitoringThread::interpretMessage(unsigned char* message)
 {
-   if (message[1] != 0x0) {
+   if (message[0] != 0x0) {
       if (debug_) {
          std::ostringstream os;
          os << "Monitoring Thread incoming message: ";
@@ -105,6 +99,13 @@ int SquidMonitoringThread::svc() {
 
          int ret = core_.ReadFromSerial(&hub_, hub_.port_.c_str(), rcvBuf + charsRemaining, dataLength, charsRead);
 
+         //std::ostringstream os;
+         //os << "Monitoring Thread read from Serial: ";
+         //for (int i = 0; i < charsRead; i++) {
+         //   os << std::hex << (unsigned int)rcvBuf[i] << " ";
+         //}
+         //core_.LogMessage(&hub_, os.str().c_str(), false);
+  
          // MM::MMTime _end = core_.GetCurrentMMTime();
          // std::ostringstream os;
          // MM::MMTime t = _end-_start;
@@ -130,10 +131,10 @@ int SquidMonitoringThread::svc() {
                else {
                   // no more messages, copy remaining (if any) back to beginning of buffer
                   if (debug_ && messageLength > 0) {
-                     std::ostringstream os;
-                     os << "Monitoring Thread no message found!: ";
+                     std::ostringstream oos;
+                     oos << "Monitoring Thread no message found!: ";
                      for (int i = 0; i < messageLength; i++) {
-                        os << std::hex << (unsigned int)message[i] << " ";
+                        oos << std::hex << (unsigned int)message[i] << " ";
                         rcvBuf[i] = message[i];
                      }
                      //core_.LogMessage(&hub_, os.str().c_str(), false);
