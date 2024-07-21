@@ -91,7 +91,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="crc8.c" />
     <ClCompile Include="SquidLEDShutter.cpp" />
     <ClCompile Include="SquidMonitoringThread.cpp" />
     <ClCompile Include="SquidHub.cpp" />

@@ -1,4 +1,5 @@
 #include "squid.h"
+#include "crc8.h"
 
 
 /*
@@ -15,16 +16,33 @@ SquidMessageParser::SquidMessageParser(unsigned char* inputStream, long inputStr
 /*
  */
 int SquidMessageParser::GetNextMessage(unsigned char* nextMessage, int& nextMessageLength) {
-   nextMessageLength = 0;
-   while ((index_ < inputStreamLength_) && (nextMessageLength < messageMaxLength_) ) {
-      nextMessage[nextMessageLength] = inputStream_[index_];
-      nextMessageLength++;
-      index_++;
-   }
-   if (nextMessageLength == messageMaxLength_)
-      return 0;
-   else {
-      return -1;
+   unsigned int startPos = 0;
+   bool msgFound = false;
+   while (!msgFound)
+   {
+      nextMessageLength = 0;
+      while ((index_ < inputStreamLength_) && (nextMessageLength < messageMaxLength_)) {
+         nextMessage[startPos + nextMessageLength] = inputStream_[index_];
+         nextMessageLength++;
+         index_++;
+      }
+
+      if (nextMessageLength == messageMaxLength_)
+      {
+         if (crc8ccitt(nextMessage, messageMaxLength_ - 1) == nextMessage[messageMaxLength_])
+         {
+            msgFound = true;
+            return 0;
+         }
+         else
+         {
+            startPos++;
+         }
+      }
+      if (index_ >= inputStreamLength_)
+      {
+         return -1;
+      }
    }
 }
 

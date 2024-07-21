@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="crc8.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="SquidHub.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
