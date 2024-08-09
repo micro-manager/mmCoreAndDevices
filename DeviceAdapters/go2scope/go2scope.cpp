@@ -26,6 +26,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "go2scope.h"
 #include "ModuleInterface.h"
+#include "acquire-zarr.hh"
 
 using namespace std;
 
@@ -61,13 +62,15 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // Lida
 
 MMV1Storage::MMV1Storage() :
-   initialized(false)
+   initialized(false), zarrWriter(nullptr)
 {
    InitializeDefaultErrorMessages();
 
 	// set device specific error messages
    SetErrorText(ERR_INTERNAL, "Internal driver error, see log file for details");
 
+   // create the writer
+   zarrWriter = new AcquireZarrWriter();
                                                                              
    // create pre-initialization properties                                   
    // ------------------------------------
@@ -82,7 +85,8 @@ MMV1Storage::MMV1Storage() :
                                                                              
 MMV1Storage::~MMV1Storage()                                                            
 {                                                                            
-   Shutdown();                                                               
+   Shutdown();
+   delete zarrWriter;
 } 
 
 void MMV1Storage::GetName(char* Name) const
