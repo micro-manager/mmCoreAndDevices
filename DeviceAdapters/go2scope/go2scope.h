@@ -40,6 +40,7 @@
 static const char* g_Go2Scope = "Go2Scope";
 static const char* g_MMV1Storage = "MMV1Storage";
 
+class AcquireZarrWriter;
 
 class MMV1Storage : public CStorageBase<MMV1Storage>
 {
@@ -77,5 +78,6 @@ public:
 
 private:
    bool initialized;
+   AcquireZarrWriter* zarrWriter;
 };
 
