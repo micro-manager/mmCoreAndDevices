@@ -100,6 +100,7 @@ const char* g_PropNameFrameRate = "Frame Rate";
 
 const char* g_PropNameTestImg = "Test Image";
 
+const char* g_PropNameWaitTimeOut= "GetFrame TimeOut"; 
 const char* g_PropNameBrightness = "Targeting Level"; //"Brightness";
 const char* g_PropNamePixelRatio = "Metering Level";  //"Pixel Ratio";
 const char* g_PropNameImgMetadata= "Image Metadata";  
@@ -140,16 +141,16 @@ const char* g_FAN_OFF = "Off";
 const char* g_OT_ON = "On";
 const char* g_OT_OFF = "Off";
 
-const char* g_CMSBIT_ON  = "CMS";
-const char* g_HDRBIT_ON  = "HDR";
-const char* g_HIGHBIT_ON = "HIGH";
-const char* g_LOWBIT_ON  = "LOW";
-const char* g_GRHIGH_ON  = "GLOBALRESETHIGH";
-const char* g_GRLOW_ON   = "GLOBALRESETLOW";
-const char* g_HSHIGH_ON  = "HIGHSPEEDHG";
-const char* g_HSLOW_ON   = "HIGHSPEEDLG";
-const char* g_STDHIGH_ON = "STDHIGH";
-const char* g_STDLOW_ON  = "STDLOW";
+const char* g_CMSBIT_ON  = "High Sensitivity"; /// CMS
+const char* g_HDRBIT_ON  = "High Dynamic";
+const char* g_HIGHBIT_ON = "High Gain";
+const char* g_LOWBIT_ON  = "Low Gain";
+const char* g_GRHIGH_ON  = "Global Reset(High)";
+const char* g_GRLOW_ON   = "Global Reset(Low)";
+const char* g_HSHIGH_ON  = "High Speed(High)";
+const char* g_HSLOW_ON   = "High Speed(Low)";
+const char* g_STDHIGH_ON = "High Gain_HS";
+const char* g_STDLOW_ON  = "Low Gain_HS";
 
 const char* g_HIGHDYNAMIC_ON  = "High Dynamic";      /// HDR
 const char* g_HIGHSPEED_ON    = "High Speed";        /// HighSpeedHg
@@ -342,6 +343,7 @@ CMMTUCam::CMMTUCam() :
 	m_rsPara.nSlitHeightMin = 1;
 	m_rsPara.nSlitHeightStep = 1;
 	m_rsPara.dbLineInvalTm = 1.0;
+	m_nWaitForFrameTimeOut = 10000;
 	m_nDriverType = 0;
 	m_bCC1Support = false;
 	m_nTriType    = TRITYPE_SMA;
@@ -480,6 +482,7 @@ int CMMTUCam::Initialize()
 	if (TUCAMRET_SUCCESS == TUCAM_Dev_GetInfo(m_opCam.hIdxTUCam, &valInfo))
 	{
 		m_nPID   = valInfo.nValue;
+//      LoadProfile();
 	}
 
 	if (DHYANA_201D == m_nPID || DHYANA_401D == m_nPID)
@@ -527,8 +530,8 @@ int CMMTUCam::Initialize()
 
 	if (TRITYPE_HR == m_nTriType)
 	{
-		m_tgrOutPara.TgrPort1.nTgrOutMode = 3;
-		m_tgrOutPara.TgrPort2.nTgrOutMode = 5;
+		m_tgrOutPara.TgrPort1.nTgrOutMode = 5; ///3
+		m_tgrOutPara.TgrPort2.nTgrOutMode = 3; ///5
 	}
 
     // binning
@@ -565,13 +568,13 @@ int CMMTUCam::Initialize()
 					TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_BITOFDEPTH, 8);
 				}
 
-			pAct = new CPropertyAction (this, &CMMTUCam::OnBitDepth);
-			nRet = CreateProperty(g_PropNameBODP, "8", MM::String, false, pAct);
-			assert(nRet == DEVICE_OK);
+				pAct = new CPropertyAction(this, &CMMTUCam::OnBitDepth);
+				nRet = CreateProperty(g_PropNameBODP, "8", MM::String, false, pAct);
+				assert(nRet == DEVICE_OK);
 
-			vector<string> bitDepths;
-			bitDepths.push_back("8");
-			bitDepths.push_back("16");
+				vector<string> bitDepths;
+				bitDepths.push_back("8");
+				bitDepths.push_back("16");
 
 				nRet = SetAllowedValues(g_PropNameBODP, bitDepths);
 				if (nRet != DEVICE_OK)
@@ -633,10 +636,10 @@ int CMMTUCam::Initialize()
 	if (TUCAMRET_SUCCESS == TUCAM_Prop_GetAttr(m_opCam.hIdxTUCam, &propAttr))
 	{
 		pAct = new CPropertyAction(this, &CMMTUCam::OnPixelRatio);
-		nRet = CreateProperty(g_PropNamePixelRatio, "0", MM::Integer, false, pAct);
+		nRet = CreateProperty(g_PropNamePixelRatio, "0", MM::Float, false, pAct);
 		assert(nRet == DEVICE_OK);
 
-		SetPropertyLimits(g_PropNamePixelRatio, propAttr.dbValMin, propAttr.dbValMax);
+		SetPropertyLimits(g_PropNamePixelRatio, propAttr.dbValMin / 100, propAttr.dbValMax / 100);
 	}
 
     // Global Gain
@@ -703,7 +706,7 @@ int CMMTUCam::Initialize()
 	capaAttr.idCapa = TUIDC_ENABLETIMESTAMP;
 	if (TUCAMRET_SUCCESS == TUCAM_Capa_GetAttr(m_opCam.hIdxTUCam, &capaAttr))
 	{
-		if (IsSupport401DNew() || IsSupport95V2New() || IsSupport400BSIV3New())
+		if (IsSupport401DNew() || IsSupport201DNew() || IsSupport95V2New() || IsSupport400BSIV3New())
 		{
 			pAct = new CPropertyAction(this, &CMMTUCam::OnTimeStamp);
 			nRet = CreateProperty(g_PropNameImgMetadata, "FALSE", MM::String, false, pAct);
@@ -792,7 +795,8 @@ int CMMTUCam::Initialize()
     }
 
     // Shutter
-    if (PID_FL_26BW == m_nPID)
+	capaAttr.idCapa = TUIDC_SHUTTER;
+	if (TUCAMRET_SUCCESS == TUCAM_Capa_GetAttr(m_opCam.hIdxTUCam, &capaAttr))    // if (PID_FL_26BW == m_nPID)
     {
         pAct = new CPropertyAction(this, &CMMTUCam::OnShutterMode);
         nRet = CreateProperty(g_PropNameShutter, "", MM::String, false, pAct);
@@ -1047,12 +1051,12 @@ int CMMTUCam::Initialize()
             {
                 pAct = new CPropertyAction(this, &CMMTUCam::OnCMSMode);
 
-			nRet = CreateProperty(g_PropNameCMS, g_CMS_ON, MM::String, false, pAct);
-			assert(nRet == DEVICE_OK);
-			vector<string>CMSValues;
+                nRet = CreateProperty(g_PropNameCMS, g_CMS_ON, MM::String, false, pAct);
+                assert(nRet == DEVICE_OK);
+                vector<string>CMSValues;
 
-			CMSValues.push_back(g_CMS_OFF);
-			CMSValues.push_back(g_CMS_ON);
+                CMSValues.push_back(g_CMS_OFF);
+                CMSValues.push_back(g_CMS_ON);
 
                 nRet = SetAllowedValues(g_PropNameCMS, CMSValues);
 
@@ -1224,7 +1228,7 @@ int CMMTUCam::Initialize()
 			vector<string>ModTgrValues;
 			ModTgrValues.push_back(g_TRIGGER_OFF);
 
-			if (IsSupport95V2New() || IsSupport401DNew() || IsSupport400BSIV3New())
+			if (IsSupport95V2New() || IsSupport401DNew() || IsSupport201DNew() || IsSupport400BSIV3New())
 			{
 				ModTgrValues.push_back(g_TRIGGER_STDOVERLAP);
 				ModTgrValues.push_back(g_TRIGGER_STDNONOVERLAP);
@@ -1311,6 +1315,7 @@ int CMMTUCam::Initialize()
 			pAct = new CPropertyAction (this, &CMMTUCam::OnTriggerDelay);
 			nRet = CreateProperty(g_PropNameMdDly, "0", MM::Integer, false, pAct);
 			assert(nRet == DEVICE_OK);
+			SetPropertyLimits(g_PropNameMdDly, 0, 10000000);
 
 			// Trigger Filter
 			capaAttr.idCapa = TUIDC_SIGNALFILTER;
@@ -1319,7 +1324,7 @@ int CMMTUCam::Initialize()
 				pAct = new CPropertyAction(this, &CMMTUCam::OnTriggerFilter);
 				nRet = CreateProperty(g_PropNameFilter, "0", MM::Integer, false, pAct);
 				assert(nRet == DEVICE_OK);
-				SetPropertyLimits(g_PropNameFilter, 1, 1000000);
+				SetPropertyLimits(g_PropNameFilter, 0, 1000000);
 			}
 
             if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID)
@@ -1332,7 +1337,8 @@ int CMMTUCam::Initialize()
 
             SetPropertyLimits(g_PropNameMdTFrames, 1, 0xFFFF);
 
-			if (TUCAMRET_SUCCESS == TUCAM_Capa_GetValue(m_opCam.hIdxTUCam, TUIDC_ROLLINGSCANMODE, &m_rsPara.nMode))
+			double dbPixelRatio = 0;
+			if (TUCAMRET_SUCCESS == TUCAM_Capa_GetValue(m_opCam.hIdxTUCam, TUIDC_ROLLINGSCANMODE, &m_rsPara.nMode) || TUCAMRET_SUCCESS == TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_PIXELRATIO, &dbPixelRatio))
 			{
 				// Trigger frames
 				pAct = new CPropertyAction(this, &CMMTUCam::OnTriggerFrames);
@@ -1502,19 +1508,20 @@ int CMMTUCam::Initialize()
 
 		vector<string>ModPortValues;
 		ModPortValues.push_back(g_TRIGGER_PORT1);
-		ModPortValues.push_back(g_TRIGGER_PORT2);
 
-		if (TRITYPE_SMA == m_nTriType)
-		{
-			ModPortValues.push_back(g_TRIGGER_PORT3);
-		}
+        ModPortValues.push_back(g_TRIGGER_PORT2);
+
+        if (TRITYPE_SMA == m_nTriType)
+        {
+            ModPortValues.push_back(g_TRIGGER_PORT3);
+        }
 
 		nRet = SetAllowedValues(g_PropNamePort, ModPortValues);
 		if (nRet != DEVICE_OK)
 			return nRet;
 
 		// OutPutTrigger Kind Mode
-		if (TRITYPE_SMA == m_nTriType)
+		if (TRITYPE_SMA == m_nTriType || IsSupport401DNew() || IsSupport201DNew())
 		{
 			pAct = new CPropertyAction (this, &CMMTUCam::OnTrgOutKindMode);
 			nRet = CreateProperty(g_PropNameKind, g_TRIGGER_READEND, MM::String, false, pAct);
@@ -1524,7 +1531,7 @@ int CMMTUCam::Initialize()
 			ModKindValues.push_back(g_TRIGGER_EXPSTART);
 			ModKindValues.push_back(g_TRIGGER_READEND);
 			ModKindValues.push_back(g_TRIGGER_GLBEXP);
-			if (IsSupport95V2New() || IsSupport401DNew() || IsSupport400BSIV3New())
+			if (IsSupport95V2New() || IsSupport401DNew() || IsSupport201DNew() || IsSupport400BSIV3New())
 			{
 				ModKindValues.push_back(g_TRIGGER_TRIREADY);
 			}
@@ -1562,8 +1569,12 @@ int CMMTUCam::Initialize()
 		assert(nRet == DEVICE_OK);
 
 		SetPropertyLimits(g_PropNameWidth, 1, 10000000);
-
 	}
+
+	// WaitForFrame TimeOut
+	pAct = new CPropertyAction(this, &CMMTUCam::OnWaitForTimeOut);
+	nRet = CreateProperty(g_PropNameWaitTimeOut, "10000", MM::Integer, false, pAct);
+	assert(nRet == DEVICE_OK);
 
     // initialize image buffer
     nRet = StartCapture();
@@ -1692,6 +1703,8 @@ int CMMTUCam::Shutdown()
     }
 
     StopSequenceAcquisition();
+
+//  SaveProfile();
 
     UninitTUCamApi();
     initialized_ = false;
@@ -1899,10 +1912,11 @@ int CMMTUCam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
     if (xSize == 0 && ySize == 0)
     {
         // effectively clear ROI
-        ResizeImageBuffer();
         roiX_ = 0;
         roiY_ = 0;
         m_bROI = false;
+
+        ResizeImageBuffer();
     }
     else
     {
@@ -1918,7 +1932,7 @@ int CMMTUCam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
         roiAttr.bEnable = TRUE;
         roiAttr.nHOffset= ((x >> 2) << 2);
         roiAttr.nVOffset= ((y >> 2) << 2);
-//        roiAttr.nVOffset= (((m_nMaxHeight/*img_.Height()*/ - y - ySize) >> 2) << 2);
+//      roiAttr.nVOffset= (((m_nMaxHeight/*img_.Height()*/ - y - ySize) >> 2) << 2);
         roiAttr.nWidth  = (xSize >> 3) << 3;    //// roiAttr.nWidth  = (xSize >> 2) << 2;
         roiAttr.nHeight = (ySize >> 3) << 3;    //// roiAttr.nHeight = (ySize >> 2) << 2;
 
@@ -2031,14 +2045,17 @@ double CMMTUCam::GetSequenceExposure()
 */
 void CMMTUCam::SetExposure(double exp)
 {
+	double dbVal = 0;
     if (exp < exposureMinimum_)
     {
        exp = exposureMinimum_;
     } else if (exp > exposureMaximum_) {
        exp = exposureMaximum_;
     }
-    SetProperty(MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(exp));
-    GetCoreCallback()->OnExposureChanged(this, exp);
+	TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, exp);
+	TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, &dbVal);
+	SetProperty(MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(dbVal));
+	GetCoreCallback()->OnExposureChanged(this, dbVal);
 }
 
 /**
@@ -2497,7 +2514,7 @@ int CMMTUCam::SetAllowedGainMode()
 	else
 	{
 		pAct = new CPropertyAction(this, &CMMTUCam::OnImageMode);
-		nRet = CreateProperty(g_PropNameGain, "HDR", MM::String, false, pAct);
+		nRet = CreateProperty(g_PropNameGain, g_HDRBIT_ON, MM::String, false, pAct);
 		assert(nRet == DEVICE_OK);
 		nRet = SetAllowedImageMode();
 	}
@@ -2518,22 +2535,13 @@ int CMMTUCam::SetAllowedImageMode()
         return DEVICE_NOT_SUPPORTED;
     }
 
-    char szBuf[64] = {0};
-    TUCAM_VALUE_TEXT valText;
-    valText.nID       = TUIDP_GLOBALGAIN;
-    valText.nTextSize = 64;
-    valText.pText     = &szBuf[0];
+	vector<string> modValues;
 
-    vector<string> modValues;
-    int nCnt = 2/*(int)propAttr.dbValMax*/ - (int)propAttr.dbValMin + 1;
+	modValues.push_back(g_HDRBIT_ON);
+	modValues.push_back(g_HIGHBIT_ON);
+	modValues.push_back(g_LOWBIT_ON);
 
-    for (int i=0; i<nCnt; i++)
-    {
-        valText.dbValue = i;
-        TUCAM_Prop_GetValueText(m_opCam.hIdxTUCam, &valText); 
-        modValues.push_back(string(valText.pText));
-    }
-
+	TUDBG_PRINTF("Setting allowed image mode settings");
     LogMessage("Setting allowed image mode settings", true);
 	return SetAllowedValues(g_PropNameGain, modValues);
 }
@@ -2836,6 +2844,7 @@ int CMMTUCam::StartSequenceAcquisition(long numImages, double interval_ms, bool 
     thd_->Start(numImages,interval_ms);
     stopOnOverflow_ = stopOnOverflow;
 	m_bAcquisition = true;
+
     return DEVICE_OK;
 }
 
@@ -2850,7 +2859,8 @@ int CMMTUCam::InsertImage()
 
     // Important:  metadata about the image are generated here:
     Metadata md;
-    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+    md.put("Camera", label);
+    ///md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
     md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
     md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
     md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
@@ -2864,7 +2874,7 @@ int CMMTUCam::InsertImage()
     char szTemp[256] = {0};
     sprintf(szTemp, "%.3f", m_fCurTemp);
     md.put("Temperature", szTemp); 
-
+    
     MMThreadGuard g(imgPixelsLock_);
 
     const unsigned char* pI;
@@ -2875,7 +2885,7 @@ int CMMTUCam::InsertImage()
     unsigned int b = GetImageBytesPerPixel();
 
     int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-
+    
     if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
     {
         // do not stop on overflow - just reset the buffer
@@ -2905,8 +2915,7 @@ int CMMTUCam::RunSequenceOnThread(MM::MMTime startTime)
         }
     }
 
-    ret = WaitForFrame(img_);
-
+	ret = WaitForFrame(img_, INFINITE);
 /*   
     if (!fastImage_)
     {
@@ -2983,9 +2992,9 @@ void CTUCamThread::Start(long numImages, double intervalMs)
     stop_ = false;
     suspend_=false;
     activate();
-    actualDuration_ = MM::MMTime{};
+	actualDuration_ = MM::MMTime{};
     startTime_= camera_->GetCurrentMMTime();
-    lastFrameTime_ = MM::MMTime{};
+	lastFrameTime_ = MM::MMTime{};
 }
 
 bool CTUCamThread::IsStopped()
@@ -3308,7 +3317,8 @@ int CMMTUCam::OnBinningSum(MM::PropertyBase* pProp, MM::ActionType eAct)
     default:
         break;
     }
-    return ret; 
+
+    return ret;
 }
 
 /**
@@ -3413,9 +3423,11 @@ int CMMTUCam::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
             {
                dblExp = exposureMinimum_;
             }
-            else if (dblExp > exposureMaximum_) {
+            else if (dblExp > exposureMaximum_) 
+			{
                dblExp = exposureMaximum_;
             }
+
             TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, dblExp);
 
             ret = DEVICE_OK;
@@ -3493,7 +3505,7 @@ int CMMTUCam::OnPixelRatio(MM::PropertyBase* pProp, MM::ActionType eAct)
 		double dbVal = 0.0f;
 		pProp->Get(dbVal);
 
-		TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_PIXELRATIO, dbVal);
+		TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_PIXELRATIO, dbVal * 100);
 
 		ret = DEVICE_OK;
 	}
@@ -3504,7 +3516,7 @@ int CMMTUCam::OnPixelRatio(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_PIXELRATIO, &dbVal);
 
-		pProp->Set(dbVal);
+		pProp->Set(dbVal / 100);
 
 		ret = DEVICE_OK;
 	}
@@ -4600,61 +4612,63 @@ int CMMTUCam::OnGAINMode(MM::PropertyBase* pProp, MM::ActionType eAct)
                                 nImgMode = 2; //STDL
                             }
 
-						if (nImgMode != nVal)
-						{
-							if (bLiving){ StopCapture(); }
-							TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_IMGMODESELECT, nImgMode);  
-							if (bLiving){ StartCapture(); }
-						}
-						TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_GLOBALGAIN, nGain);
-						
-					}
-					else
-					{
-						TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, &dblExp);
+                            if (nImgMode != nVal)
+                            {
+                                if (bLiving){ StopCapture(); }
+                                TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_IMGMODESELECT, nImgMode);
+                                if (bLiving){ StartCapture(); }
+                            }
+                            TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_GLOBALGAIN, nGain);
 
-						if (0 == val.compare(g_CMSBIT_ON)){
-							nImgMode = 1;  //CMS
-							nGain    = 0;
-						}
-						else if(0 == val.compare(g_HDRBIT_ON)){
-							nImgMode = 2;  //HDR
-							nGain    = 0;
-						}
-						else if(0 == val.compare(g_HIGHBIT_ON)){
-							nImgMode = 2;  //High Gain
-							nGain    = 1;
-						}
-						else if (0 == val.compare(g_LOWBIT_ON)){
-							nImgMode = 2;  //High Gain
-							nGain    = 2;
-						}
-						else if(0 == val.compare(g_GRHIGH_ON)){
-							nImgMode = 3;  //Global Reset High Gain
-							nGain    = 1;
-						}
-						else if(0 == val.compare(g_GRLOW_ON)){
-							nImgMode = 3;  //Global Reset Low Gain
-							nGain    = 2;
-						}
-						else if (0 == val.compare(g_HSHIGH_ON)){
-							nImgMode = 3;  //HighSpeed High Gain
-							nGain    = 1;
-						}
-						else if (0 == val.compare(g_HSLOW_ON)){
-							nImgMode = 4;  //HighSpeed Low Gain
-							nGain    = 2;
-						}
+							if (IsSupport95V2New())
+								UpdateLevelsRange();
+                        }
+                        else
+                        {
+                            TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, &dblExp);
 
-						if (nImgMode != nVal)
-						{
-							TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_IMGMODESELECT, nImgMode);
-						}
-					    TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_GLOBALGAIN, nGain);
+                            if (0 == val.compare(g_CMSBIT_ON)){
+                                nImgMode = 1;  //CMS
+                                nGain = 0;
+                            }
+                            else if (0 == val.compare(g_HDRBIT_ON)){
+                                nImgMode = 2;  //HDR
+                                nGain = 0;
+                            }
+                            else if (0 == val.compare(g_HIGHBIT_ON)){
+                                nImgMode = 2;  //High Gain
+                                nGain = 1;
+                            }
+                            else if (0 == val.compare(g_LOWBIT_ON)){
+                                nImgMode = 2;  //High Gain
+                                nGain = 2;
+                            }
+                            else if (0 == val.compare(g_GRHIGH_ON)){
+                                nImgMode = 3;  //Global Reset High Gain
+                                nGain = 1;
+                            }
+                            else if (0 == val.compare(g_GRLOW_ON)){
+                                nImgMode = 3;  //Global Reset Low Gain
+                                nGain = 2;
+                            }
+                            else if (0 == val.compare(g_HSHIGH_ON)){
+                                nImgMode = 3;  //HighSpeed High Gain
+                                nGain = 1;
+                            }
+                            else if (0 == val.compare(g_HSLOW_ON)){
+                                nImgMode = 4;  //HighSpeed Low Gain
+                                nGain = 2;
+                            }
 
-						TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, dblExp);
+                            if (nImgMode != nVal)
+                            {
+                                TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_IMGMODESELECT, nImgMode);
+                            }
+                            TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_GLOBALGAIN, nGain);
 
-						UpdateExpRange();
+                            TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, dblExp);
+
+                            UpdateExpRange();
 
                             if ((DHYANA_400BSIV2 == m_nPID && m_nBCD > 0x04))
                             {
@@ -4869,8 +4883,8 @@ int CMMTUCam::OnModeSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 					nGain    = 0;
 				}
 				else if (0 == val.compare(g_GLOBALRESET_ON)){
-					nImgMode = 5;  //GlobalReset Hg
-					nGain    = 1;
+					nImgMode = 5;  //GlobalReset HDR or HG
+					nGain    =  (m_nBCD >= 0x2002) ? 0x00 : 0x01;
 					m_rsPara.nMode = 0x00;
 					TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_ROLLINGSCANMODE, m_rsPara.nMode);
 				}
@@ -4884,6 +4898,9 @@ int CMMTUCam::OnModeSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 				UpdateExpRange();
 
+				if (IsSupport400BSIV3New())
+					UpdateLevelsRange();
+
 				TUCAM_CAPA_ATTR  capaAttr;
 				capaAttr.idCapa = TUIDC_ROLLINGSCANLTD;
 				TUCAM_Capa_GetAttr(m_opCam.hIdxTUCam, &capaAttr);
@@ -4896,15 +4913,22 @@ int CMMTUCam::OnModeSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 				vector<string>ModTgrValues;
 				ModTgrValues.push_back(g_TRIGGER_OFF);
-				if (0 == val.compare(g_GLOBALRESET_ON))
+
+				if (IsSupport400BSIV3New())
 				{
-					ModTgrValues.push_back(g_TRIGGER_STD);
+					ModTgrValues.push_back(g_TRIGGER_STDOVERLAP);
+					ModTgrValues.push_back(g_TRIGGER_STDNONOVERLAP);
 				}
 				else
 				{
 					ModTgrValues.push_back(g_TRIGGER_STD);
+				}
+
+				if (0 != val.compare(g_GLOBALRESET_ON))
+				{
 					ModTgrValues.push_back(g_TRIGGER_SYN);
 				}
+
 				ModTgrValues.push_back(g_TRIGGER_SWF);
 				ClearAllowedValues(g_PropNameMdTgr);
 				SetAllowedValues(g_PropNameMdTgr, ModTgrValues);
@@ -4917,7 +4941,9 @@ int CMMTUCam::OnModeSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 	case MM::BeforeGet:
 	{
 		int nVal = 0;
+		double dbValue = 0;
 		TUCAM_Capa_GetValue(m_opCam.hIdxTUCam, TUIDC_IMGMODESELECT, &nVal);
+		TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_GLOBALGAIN, &dbValue);
 		m_rsPara.nSlitHeightMin = 1;
 		m_rsPara.nSlitHeightStep = 1;
 		if (1 == nVal)      // CMS
@@ -4930,7 +4956,7 @@ int CMMTUCam::OnModeSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 			m_rsPara.nSlitHeightMin = 2;
 			m_rsPara.nSlitHeightStep = 2;
 		}
-		else if (5 == nVal){ // GlobaelReset HG
+		else if (5 == nVal){ // GlobaelReset 
 			pProp->Set(g_GLOBALRESET_ON);
 			m_rsPara.nMode = 0x00;
 		}
@@ -4957,81 +4983,65 @@ int CMMTUCam::OnImageMode(MM::PropertyBase* pProp, MM::ActionType eAct)
         return DEVICE_NOT_CONNECTED;
 
     int ret = DEVICE_ERR;
-    switch(eAct)
-    {
-    case MM::AfterSet:
-        {
-            string val;
-            pProp->Get(val);            
+	switch (eAct)
+	{
+	case MM::AfterSet:
+	{
+		string val;
+		pProp->Get(val);
 
-            if (val.length() != 0)
-            {
-                TUCAM_PROP_ATTR propAttr;
-                propAttr.nIdxChn= 0;
-                propAttr.idProp = TUIDP_GLOBALGAIN;
+		if (val.length() != 0)
+		{
+			if (0 == val.compare(g_HDRBIT_ON))
+			{
+				m_nIdxGain = 0;
+			}
 
-                if (TUCAMRET_SUCCESS == TUCAM_Prop_GetAttr(m_opCam.hIdxTUCam, &propAttr))
-                {
-                    char szBuf[64] = {0};
-                    TUCAM_VALUE_TEXT valText;
-                    valText.nID       = TUIDP_GLOBALGAIN;
-                    valText.nTextSize = 64;
-                    valText.pText     = &szBuf[0];
+			if (0 == val.compare(g_HIGHBIT_ON))
+			{
+				m_nIdxGain = 1;
+			}
 
-                    int nCnt = 2/*(int)propAttr.dbValMax*/ - (int)propAttr.dbValMin + 1;
+			if (0 == val.compare(g_LOWBIT_ON))
+			{
+				m_nIdxGain = 2;
+			}
 
-                    for (int i=0; i<nCnt; i++)
-                    {
-                        valText.dbValue = i;
-                        TUCAM_Prop_GetValueText(m_opCam.hIdxTUCam, &valText);   
+			TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_GLOBALGAIN, m_nIdxGain);
 
-                        if (0 == val.compare(valText.pText))
-                        {
-                            TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_GLOBALGAIN, i);
-                            m_nIdxGain = i;
+			if (IsSupport401DNew() || IsSupport201DNew())
+			{
+				SetAllowedDepth();
+				UpdateLevelsRange();
+			}
+		}
 
-                            int nVal = 0;
-                            if (TUCAMRET_SUCCESS == TUCAM_Capa_GetValue(m_opCam.hIdxTUCam, TUIDC_IMGMODESELECT, &nVal))
-                            {
-								TUCAM_CAPA_ATTR  capaAttr;
-								capaAttr.idCapa = TUIDC_IMGMODESELECT;
-								TUCAM_Capa_GetAttr(m_opCam.hIdxTUCam, &capaAttr);
-                                nCnt = capaAttr.nValMax - capaAttr.nValMin;
-                                if (0 != nVal && nCnt < 2)
-                                {
-                                    TUCAM_Capa_SetValue(m_opCam.hIdxTUCam,TUIDC_IMGMODESELECT, 0);
-                                }                                
-                            }
+		OnPropertyChanged(g_PropNameGain, val.c_str());
 
-                            break;
-                        }                         
-                    }
-                }
-
-				OnPropertyChanged(g_PropNameGain, val.c_str());
-
-                ret = DEVICE_OK;
-            }
-        }
+		ret = DEVICE_OK;
+	}
         break;
     case MM::BeforeGet:
         {
             double dblVal = 0;
             TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_GLOBALGAIN, &dblVal);
 
-            char szBuf[64] = {0};
-            TUCAM_VALUE_TEXT valText;
-            valText.nID       = TUIDP_GLOBALGAIN;
-            valText.nTextSize = 64;
-            valText.pText     = &szBuf[0];
-
-            valText.dbValue = dblVal;
-            TUCAM_Prop_GetValueText(m_opCam.hIdxTUCam, &valText); 
-
             m_nIdxGain = (int)dblVal;
 
-            pProp->Set(valText.pText);
+			if (0 == m_nIdxGain)
+			{
+				pProp->Set(g_HDRBIT_ON);
+			}
+            
+			if (1 == m_nIdxGain)
+			{
+				pProp->Set(g_HIGHBIT_ON);
+			}
 
+			if (2 == m_nIdxGain)
+			{
+				pProp->Set(g_LOWBIT_ON);
+			}
             ret = DEVICE_OK;
         }
         break;
@@ -5183,7 +5193,8 @@ int CMMTUCam::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
                         TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_BITOFDEPTH, 16);
                         SetPropertyLimits(g_PropNameLLev, 0, 65534);
                         SetPropertyLimits(g_PropNameRLev, 1, 65535);
-						SetProperty(MM::g_Keyword_PixelType, g_PixelType_16bit);
+                        SetProperty(MM::g_Keyword_PixelType, g_PixelType_16bit);
+						m_frame.ucElemBytes = 2;
                     }
                     else
                     {
@@ -5191,6 +5202,7 @@ int CMMTUCam::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
                         SetPropertyLimits(g_PropNameLLev, 0, 254);
                         SetPropertyLimits(g_PropNameRLev, 1, 255);
 						SetProperty(MM::g_Keyword_PixelType, g_PixelType_8bit);
+						m_frame.ucElemBytes = 1;
                     }
 
                     if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || m_nPID == PID_FL_20BW || m_nPID == PID_FL_26BW)
@@ -5283,6 +5295,8 @@ int CMMTUCam::OnBitDepthEum(MM::PropertyBase* pProp, MM::ActionType eAct)
 					if (0 == val.compare(valText.pText))
 					{
 						TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_BITOFDEPTH, i);
+						m_frame.ucElemBytes = (0 == val.compare(g_PixelType_8bit)) ? 1 : 2;
+						SetProperty(MM::g_Keyword_PixelType, (0 == val.compare(g_PixelType_8bit)) ? g_PixelType_8bit : g_PixelType_16bit);
 						break;
 					}
 				}
@@ -5316,14 +5330,14 @@ int CMMTUCam::OnBitDepthEum(MM::PropertyBase* pProp, MM::ActionType eAct)
 		TUCAM_Capa_GetValueText(m_opCam.hIdxTUCam, &valText);
 		pProp->Set(valText.pText);
 
-            ret = DEVICE_OK;
-        }
-        break;
-    default:
-        break;
-    }
+		ret = DEVICE_OK;
+	}
+	break;
+	default:
+		break;
+	}
 
-    return ret;
+	return ret;
 }
 
 /**
@@ -6377,7 +6391,7 @@ int CMMTUCam::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 					m_tgrAttr.nTgrMode = TUCCM_TRIGGER_SOFTWARE;
 				}
 
-				if (TUCCM_TRIGGER_STANDARD != m_tgrAttr.nTgrMode || TUCTE_EXPTM != m_tgrAttr.nExpMode)
+				if ((TUCCM_TRIGGER_STANDARD != m_tgrAttr.nTgrMode && TUCCM_TRIGGER_STANDARD_NONOVERLAP != m_tgrAttr.nTgrMode) || TUCTE_EXPTM != m_tgrAttr.nExpMode)
 					m_tgrAttr.nFrames = 1;
 
 				if (m_bLiving)
@@ -6406,7 +6420,7 @@ int CMMTUCam::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 			else if (TUCCM_TRIGGER_STANDARD == m_tgrAttr.nTgrMode)
 			{
-				if (IsSupport95V2New() || IsSupport401DNew() || IsSupport400BSIV3New())
+				if (IsSupport95V2New() || IsSupport401DNew() || IsSupport201DNew() || IsSupport400BSIV3New())
 				{
 					pProp->Set(g_TRIGGER_STDOVERLAP);
 				}
@@ -6478,7 +6492,7 @@ int CMMTUCam::OnTriggerExpMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 				if(m_tgrAttr.nTgrMode == TUCCM_TRIGGER_SYNCHRONOUS)
 					m_tgrAttr.nExpMode = TUCTE_WIDTH;
 
-				if (TUCCM_TRIGGER_STANDARD != m_tgrAttr.nTgrMode || TUCTE_EXPTM != m_tgrAttr.nExpMode)
+				if ((TUCCM_TRIGGER_STANDARD != m_tgrAttr.nTgrMode && TUCCM_TRIGGER_STANDARD_NONOVERLAP != m_tgrAttr.nTgrMode) || TUCTE_EXPTM != m_tgrAttr.nExpMode)
 					m_tgrAttr.nFrames = 1;
 
 				TUCAM_Cap_SetTrigger(m_opCam.hIdxTUCam, m_tgrAttr);
@@ -6658,7 +6672,7 @@ int CMMTUCam::OnTriggerFrames(MM::PropertyBase* pProp, MM::ActionType eAct)
 		long lVal = 0;
 		pProp->Get(lVal);
 
-		if (TUCCM_TRIGGER_STANDARD == m_tgrAttr.nTgrMode  && TUCTE_EXPTM == m_tgrAttr.nExpMode)
+		if ((TUCCM_TRIGGER_STANDARD == m_tgrAttr.nTgrMode || TUCCM_TRIGGER_STANDARD_NONOVERLAP == m_tgrAttr.nTgrMode) && TUCTE_EXPTM == m_tgrAttr.nExpMode)
 			m_tgrAttr.nFrames = lVal;
 		else
 			m_tgrAttr.nFrames = 1;
@@ -6702,25 +6716,25 @@ int CMMTUCam::OnTriggerTotalFrames(MM::PropertyBase* pProp, MM::ActionType eAct)
             m_tgrAttr.nFrames = lVal;
         }
 
-		TUCAM_Cap_SetTrigger(m_opCam.hIdxTUCam, m_tgrAttr);
+        TUCAM_Cap_SetTrigger(m_opCam.hIdxTUCam, m_tgrAttr);
 
-		ret = DEVICE_OK;
-	}
-	break;
-	case  MM::BeforeGet:
-	{
-		TUCAM_Cap_GetTrigger(m_opCam.hIdxTUCam, &m_tgrAttr);
+        ret = DEVICE_OK;
+    }
+    break;
+    case  MM::BeforeGet:
+    {
+        TUCAM_Cap_GetTrigger(m_opCam.hIdxTUCam, &m_tgrAttr);
 
-		pProp->Set((long)(m_tgrAttr.nFrames));
+        pProp->Set((long)(m_tgrAttr.nFrames));
 
-		ret = DEVICE_OK;
-	}
-	break;
-	default:
-		break;
-	}
+        ret = DEVICE_OK;
+    }
+    break;
+    default:
+        break;
+    }
 
-	return ret;
+    return ret;
 }
 
 int CMMTUCam::OnTriggerDoSoftware(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -7394,6 +7408,41 @@ int CMMTUCam::OnTrgOutWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 /**
+* Handles "OnWaitForTimeOut" property.
+*/
+int CMMTUCam::OnWaitForTimeOut(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (NULL == m_opCam.hIdxTUCam)
+		return DEVICE_NOT_CONNECTED;
+
+	int ret = DEVICE_ERR;
+	switch (eAct)
+	{
+	case MM::AfterSet:
+	{
+		long lVal = 0;
+		pProp->Get(lVal);
+		m_nWaitForFrameTimeOut = max(lVal, 10000);
+
+		ret = DEVICE_OK;
+	}
+	break;
+	case  MM::BeforeGet:
+	{
+
+		pProp->Set((long)(m_nWaitForFrameTimeOut));
+
+		ret = DEVICE_OK;
+	}
+	break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
+/**
 * Handles "ReadoutTime" property.
 */
 int CMMTUCam::OnReadoutTime(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -7719,7 +7768,7 @@ int CMMTUCam::ResizeImageBuffer()
     }
 
     char sz[256] = {0};
-    sprintf(sz, "[ResizeImageBuffer]:Width:%d, Height:%d, BytesPerPixel:%d\n", valWidth.nValue, valHeight.nValue, m_frame.ucElemBytes * nChnnels);
+	sprintf(sz, "[ResizeImageBuffer]:Width:%d, Height:%d, BytesPerPixel:%d, %d\n", valWidth.nValue, valHeight.nValue, byteDepth, m_frame.ucElemBytes * nChnnels);
     OutputDebugString(sz);
 
     if (!m_bROI)
@@ -7728,7 +7777,7 @@ int CMMTUCam::ResizeImageBuffer()
     }
 
 #ifdef _WIN64
-    img_.Resize(valWidth.nValue, valHeight.nValue, (m_frame.ucElemBytes * nChnnels));
+	img_.Resize(valWidth.nValue, valHeight.nValue, m_frame.ucElemBytes * nChnnels); 
 #else
     img_.Resize(valWidth.nValue, valHeight.nValue, (4 == nChnnels ? 4 : (m_frame.ucElemBytes * nChnnels)));
 #endif
@@ -8165,7 +8214,7 @@ void CMMTUCam::RunTemperature()
 
             dw = GetTickCount();
 
-			if (isSupportSoftProtect())   // 400BSIV2 BCD = 0x05, 0x07, 0x09 ²»¿Éµ÷·çÉÈÏà»ú
+			if (isSupportSoftProtect())   // 400BSIV2 BCD = 0x05, 0x07, 0x09 不可调风扇相机
 			{    
 				int nFan = 0;
 				TUCAM_Capa_GetValue(m_opCam.hIdxTUCam, TUIDC_FAN_GEAR, &nFan);
@@ -8360,12 +8409,21 @@ int CMMTUCam::StartCapture()
 
 }
 
-int CMMTUCam::WaitForFrame(ImgBuffer& img)
+int CMMTUCam::WaitForFrame(ImgBuffer& img, int timeOut)
 {
     MMThreadGuard g(imgPixelsLock_);
 
+	///double exp = GetExposure();
+	int time = timeOut;
+
+	if (INFINITE != timeOut)
+	{
+		time = max(m_nWaitForFrameTimeOut, timeOut);///10000 + (int)exp;
+	}
+	
+	///TUDBG_PRINTF("timeout = %d, m_nWaitForFrameTimeOut = %d", timeout, m_nWaitForFrameTimeOut);
     m_frame.ucFormatGet = TUFRM_FMT_USUAl;  // Set usual format
-    if (TUCAMRET_SUCCESS == TUCAM_Buf_WaitForFrame(m_opCam.hIdxTUCam, &m_frame, 1000))
+	if (TUCAMRET_SUCCESS == TUCAM_Buf_WaitForFrame(m_opCam.hIdxTUCam, &m_frame, time))
     {
         if (img.Height() == 0 || img.Width() == 0 || img.Depth() == 0)
             return DEVICE_OUT_OF_MEMORY;
@@ -8524,7 +8582,7 @@ int CMMTUCam::WaitForFrame(ImgBuffer& img)
         return DEVICE_OK;
     }
 
-    return DEVICE_NATIVE_MODULE_FAILED;
+	return DEVICE_NATIVE_MODULE_FAILED;
 }
 
 bool CMMTUCam::SaveRaw(char *pfileName, unsigned char *pData, unsigned long ulSize)
@@ -8633,7 +8691,7 @@ void CMMTUCam::UpdateExpRange()
 	propAttr.nIdxChn = 0;
 	propAttr.idProp = TUIDP_EXPOSURETM;
 	TUCAM_Prop_GetAttr(m_opCam.hIdxTUCam, &propAttr);
-	exposureMinimum_ = propAttr.dbValMin;
+	exposureMinimum_ = (propAttr.dbValMin - 0.0001);
 	exposureMaximum_ = propAttr.dbValMax;
 
     if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_20BW == m_nPID || PID_FL_26BW == m_nPID)
