@@ -324,6 +324,16 @@ public:
 	int OnTrgOutEdgeMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTrgOutDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTrgOutWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnWaitForTimeOut(MM::PropertyBase* pProp, MM::ActionType eAct);
+/*
+   int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);             // 设置曝光最大值上限
+ 
+   int OnMono(MM::PropertyBase* pProp, MM::ActionType eAct);					// 彩色模式
+
+   int OnTemperatureState(MM::PropertyBase* pProp, MM::ActionType eAct);        // 温控开关
+   int OnTemperatureCurrent(MM::PropertyBase* pProp, MM::ActionType eAct);      // 当前温度
+   int OnTemperatureCooling(MM::PropertyBase* pProp, MM::ActionType eAct);      // 目标温度
+*/ 
 
     int OnReadoutTime(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -368,6 +378,7 @@ private:
 
 	bool IsSupport95V2New()     { return DHYANA_D95_V2   == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupport401DNew()     { return DHYANA_401D     == m_nPID && m_nBCD >= 0x2000; }
+	bool IsSupport201DNew()     { return DHYANA_201D     == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupport400BSIV3New() { return DHYANA_400BSIV3 == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupportAries16()     { return 0xE424 == m_nPID || 0xE425 == m_nPID; }
 
@@ -434,7 +445,7 @@ private:
 
     int StopCapture();
     int StartCapture();
-    int WaitForFrame(ImgBuffer& img);
+    int WaitForFrame(ImgBuffer& img, int timeOut = 10000);
 
     bool SaveRaw(char *pfileName, unsigned char *pData, unsigned long ulSize);
 	bool isSupportFanCool();
@@ -451,6 +462,7 @@ private:
 	static int   	s_nNumCam;				// The number of cameras
 	static int		s_nCntCam;				// The count of camera
 
+	int             m_nWaitForFrameTimeOut; // The WaitForFrameTimeOut
 	int             m_nDriverType;          // The Driver Type
 	int             m_nPID;                 // The PID 
 	int             m_nBCD;                 // The BCD
@@ -518,7 +530,7 @@ class CTUCamThread : public MMDeviceThreadBase
       MM::MMTime lastFrameTime_;                                                
       MMThreadLock stopLock_;                                                   
       MMThreadLock suspendLock_;                                                
-}; 
+};  
 
 
 #endif //_MMTUCAM_H_
