@@ -3304,7 +3304,7 @@ int CScanner::OnSPIMSmoothSliceEnable(MM::PropertyBase* pProp, MM::ActionType eA
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
-         return DEVICE_OK
+         return DEVICE_OK;
       command << addressChar_ << "NR Z?";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A Z="));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
