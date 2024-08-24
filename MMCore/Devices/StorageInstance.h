@@ -44,8 +44,8 @@ public:
    int Delete(char* handle);
    int List(const char* path, std::vector<std::string>& datasets);
    int AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<int>& coordinates, const char* imageMeta);
-   int GetSummaryMeta(const char* handle, char* meta);
-   int GetImageMeta(const char* handle, const std::vector<int>& coordinates, char* meta);
+   int GetSummaryMeta(const char* handle, char* meta, int maxSize);
+   int GetImageMeta(const char* handle, const std::vector<int>& coordinates, char* meta, int maxSize);
    const unsigned char* GetImage(const char* handle, const std::vector<int>& coordinates);
    int GetNumberOfDimensions(const char* handle);
    int GetDimension(const char* handle, int dimension, std::string& name, std::string& meaning);

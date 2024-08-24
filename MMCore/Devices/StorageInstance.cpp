@@ -107,12 +107,13 @@ int StorageInstance::AddImage(const char* handle, unsigned char* pixels, int wid
    return GetImpl()->AddImage(handle, pixels, width, height, depth, &coordinates[0], coordinates.size(), imageMeta);
 }
 
-int StorageInstance::GetSummaryMeta(const char* handle, char* meta)
+int StorageInstance::GetSummaryMeta(const char* handle, char* meta, int maxSize)
 {
-   return 0;
+   RequireInitialized(__func__);
+   return GetImpl()->GetSummaryMeta(handle, meta);
 }
 
-int StorageInstance::GetImageMeta(const char* handle, const std::vector<int>& coordinates, char* meta)
+int StorageInstance::GetImageMeta(const char* handle, const std::vector<int>& coordinates, char* meta, int maxSize)
 {
    return 0;
 }

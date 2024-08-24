@@ -66,8 +66,8 @@ public:
    int Delete(char* handle);
    int List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength);
    int AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta);
-   int GetSummaryMeta(const char* handle, char* meta);
-   int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta);
+   int GetSummaryMeta(const char* handle, char* meta, int bufSize);
+   int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta, int bufSize);
    const unsigned char* GetImage(const char* handle, int coordinates[], int numCoordinates);
    int GetNumberOfDimensions(const char* handle, int& numDimensions);
    int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength);
