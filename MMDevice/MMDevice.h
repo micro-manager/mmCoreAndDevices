@@ -1499,12 +1499,12 @@ namespace MM {
       /**
        * Returns summary metadata
        */
-      virtual int GetSummaryMeta(const char* handle, char* meta) = 0;
+      virtual int GetSummaryMeta(const char* handle, char* meta, int bufSize) = 0;
 
       /**
        * Returns summary metadata
        */
-      virtual int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta) = 0;
+      virtual int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta, int bufSize) = 0;
 
       /**
        * Returns image pixels

@@ -96,6 +96,9 @@ namespace MM {
    // Code filling buffer should assume includes null terminator.
    const int MaxStrLength = 1024;
 
+   // Maximum length of serialized metadata strings
+   const int MaxMetadataLength = 200000;
+
    // system-wide property names
    const char* const g_Keyword_Name             = "Name";
    const char* const g_Keyword_Description      = "Description";

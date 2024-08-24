@@ -69,7 +69,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\CZI\acquire-zarr\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>acquire-zarr-cpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>acquire-zarr-cpp.lib;acquire-core-logger.lib;acquire-core-platform.lib;acquire-device-hal.lib;acquire-device-properties.lib;acquire-video-runtime.lib;miniocpp-debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -92,7 +92,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\CZI\acquire-zarr\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>acquire-zarr-cpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>acquire-zarr-cpp.lib;acquire-core-logger.lib;acquire-core-platform.lib;acquire-device-hal.lib;acquire-device-properties.lib;acquire-video-runtime.lib;miniocpp-debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
