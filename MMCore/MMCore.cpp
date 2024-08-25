@@ -7741,15 +7741,14 @@ std::string CMMCore::getSummaryMeta(const char* handle)
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
-      const int maxMetaSize(100000);
-      std::vector<char> meta(maxMetaSize);
-      int ret = storage->GetSummaryMeta(handle, &meta[0], maxMetaSize);
+      std::string meta;
+      int ret = storage->GetSummaryMeta(handle, meta);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
          throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
       }
-      return std::string(meta.begin(), meta.end());
+      return meta;
    }
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
@@ -7760,15 +7759,14 @@ std::string CMMCore::getImageMeta(const char* handle, const std::vector<int>& co
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
-      const int maxMetaSize(100000);
-      std::vector<char> meta(maxMetaSize);
-      int ret = storage->GetImageMeta(handle, coordinates, &meta[0], maxMetaSize);
+      std::string meta;
+      int ret = storage->GetImageMeta(handle, coordinates, meta);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
          throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
       }
-      return std::string(meta.begin(), meta.end());
+      return meta;
    }
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
