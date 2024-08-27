@@ -92,8 +92,8 @@ public:
 	int SetOrigin();
 	int SetXOrigin();
 	int SetYOrigin();
-	int GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax) { return DEVICE_UNSUPPORTED_COMMAND; }
-	int GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax) { return DEVICE_UNSUPPORTED_COMMAND; }
+	int GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax);
+	int GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax);
 	double GetStepSizeXUm() { return 0.01; }
 	double GetStepSizeYUm() { return 0.01; }
 	int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
@@ -122,7 +122,7 @@ public:
 	int Home();
 	int Stop();
 	int SetOrigin();
-	int GetLimits(double& min, double& max) { return DEVICE_UNSUPPORTED_COMMAND; }
+	int GetLimits(double& min, double& max);
 	int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
 	bool IsContinuousFocusDrive() const { return false; }
 private:

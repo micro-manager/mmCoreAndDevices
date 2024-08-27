@@ -62,14 +62,14 @@ unsigned char* ScientificaTxPacket::GetPacketToSend()
 
         if ((block_length == 0xFF) || (packet_[i] == 0))
         {
-            encoded_[block_start] = block_length;
+            encoded_[block_start] = (uint8_t)block_length;
             block_start = write;
             encoded_[write] = 0;
             write++;
             block_length = 1;
         }
     }
-    encoded_[block_start] = block_length;
+    encoded_[block_start] = (uint8_t)block_length;
     encoded_[write] = 0x0; //Add packet deliminator
     write++;
 

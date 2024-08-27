@@ -249,7 +249,7 @@ ScientificaRxPacket* ScientificaMotion8Hub::WriteRead(ScientificaTxPacket* tx, i
         if (return_status != DEVICE_OK)
             break;
 
-        for (int i = bufferIndex; i < (bufferIndex + actualBytesRead); i++)
+        for (unsigned int i = bufferIndex; i < (bufferIndex + actualBytesRead); i++)
         {
             if (rxBuffer[i] == 0)
             {
@@ -324,6 +324,7 @@ int ScientificaMotion8Hub::Stop(uint8_t device)
 
     int ret = DEVICE_OK;
 
+    txPacket->AddUInt8(device);
     rxPacket = WriteRead(txPacket, 0);
 
     if (rxPacket == NULL)
@@ -419,7 +420,7 @@ int ScientificaMotion8Hub::ReadControllerMap(void)
     }
     else
     {
-        for (int ch = 0; ch < 8; ch++)
+        for (uint8_t ch = 0; ch < 8; ch++)
         {
             uint8_t device;
             uint8_t axis;
@@ -565,11 +566,11 @@ bool M8XYStage::Busy()
 
     MM::Hub* hub = GetParentHub();
     if (!hub)
-        return DEVICE_INTERNAL_INCONSISTENCY;
+        return true;
 
     ScientificaMotion8Hub* parentHub = dynamic_cast<ScientificaMotion8Hub*>(hub);
     if (!parentHub)
-        return DEVICE_INTERNAL_INCONSISTENCY;
+        return true;
 
     ret = parentHub->IsMoving(device_, &is_moving);
 
@@ -723,6 +724,27 @@ int M8XYStage::SetYOrigin()
         return DEVICE_INTERNAL_INCONSISTENCY;
 
     ret = parentHub->SetPosition(device_, AXIS_Y, 0);
+    return ret;
+}
+
+int M8XYStage::GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax) 
+{ 
+    (void)xMin;
+    (void)xMax;
+    (void)yMin;
+    (void)yMax;
+
+    return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+int M8XYStage::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax)
+{
+    (void)xMin;
+    (void)xMax;
+    (void)yMin;
+    (void)yMax;
+
+    return DEVICE_UNSUPPORTED_COMMAND; 
 }
 
 M8ZStage::M8ZStage(uint8_t device)
@@ -747,11 +769,11 @@ bool M8ZStage::Busy()
 
     MM::Hub* hub = GetParentHub();
     if (!hub)
-        return DEVICE_INTERNAL_INCONSISTENCY;
+        return true;
 
     ScientificaMotion8Hub* parentHub = dynamic_cast<ScientificaMotion8Hub*>(hub);
     if (!parentHub)
-        return DEVICE_INTERNAL_INCONSISTENCY;
+        return true;
 
     ret = parentHub->IsMoving(device_, &is_moving);
 
@@ -775,7 +797,7 @@ int M8ZStage::Shutdown()
 
 int M8ZStage::SetPositionUm(double pos)
 {
-    long steps = round(pos / 0.01);
+    long steps = (long)round(pos / 0.01);
 	return SetPositionSteps(steps);
 
 }
@@ -902,6 +924,15 @@ int M8ZStage::SetOrigin()
         return DEVICE_INTERNAL_INCONSISTENCY;
 
     ret = parentHub->SetPosition(device_, AXIS_Z, 0);
+
+    return ret;
+}
+
+int M8ZStage::GetLimits(double& min, double& max) 
+{ 
+    (void)min;
+    (void)max;
+    return DEVICE_UNSUPPORTED_COMMAND; 
 }
 
 M8FilterCubeTurret::M8FilterCubeTurret(uint8_t device)
@@ -948,8 +979,6 @@ bool M8FilterCubeTurret::Busy()
 
     ScientificaTxPacket* txPacket = new ScientificaTxPacket(0xBB, 0, 0x11);
     ScientificaRxPacket* rxPacket = NULL;
-
-    int ret = DEVICE_OK;
 
     rxPacket = parentHub->WriteRead(txPacket, 18);
 
@@ -1014,7 +1043,7 @@ int M8FilterCubeTurret::SetFilter(int filterIndex)
 
     ScientificaTxPacket* txPacket = new ScientificaTxPacket(0xBB, 2, 0x0E);
     txPacket->AddUInt8(device_);
-    txPacket->AddUInt8(filterIndex);
+    txPacket->AddUInt8((uint8_t)filterIndex);
 
     ScientificaRxPacket* rxPacket = NULL;
 
@@ -1048,6 +1077,7 @@ int M8FilterCubeTurret::GetFilter(int& filterIndex)
 
     int ret = DEVICE_OK;
 
+    txPacket->AddUInt8((uint8_t)filterIndex);
     rxPacket = parentHub->WriteRead(txPacket, 2);
 
     if (rxPacket == NULL)
