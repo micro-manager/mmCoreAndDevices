@@ -75,6 +75,7 @@
     <ClCompile Include="Illuminator.cpp" />
     <ClCompile Include="ObjectiveChanger.cpp" />
     <ClCompile Include="Stage.cpp" />
+    <ClCompile Include="WdiAutofocus.cpp" />
     <ClCompile Include="XYStage.cpp" />
     <ClCompile Include="Zaber.cpp" />
   </ItemGroup>
@@ -85,6 +86,7 @@
     <ClInclude Include="Illuminator.h" />
     <ClInclude Include="ObjectiveChanger.h" />
     <ClInclude Include="Stage.h" />
+    <ClInclude Include="WdiAutofocus.h" />
     <ClInclude Include="XYStage.h" />
     <ClInclude Include="Zaber.h" />
   </ItemGroup>
