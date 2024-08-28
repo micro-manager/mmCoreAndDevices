@@ -96,10 +96,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="G2SDataSet.cpp" />
     <ClCompile Include="go2scope.cpp" />
+    <ClCompile Include="StorageManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="G2SBoundedBuffer.h" />
+    <ClInclude Include="G2SDataSet.h" />
     <ClInclude Include="go2scope.h" />
+    <ClInclude Include="StorageManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-StaticRuntime.vcxproj">

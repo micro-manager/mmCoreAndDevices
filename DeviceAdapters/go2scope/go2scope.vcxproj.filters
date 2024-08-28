@@ -12,9 +12,24 @@
     <ClCompile Include="go2scope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="StorageManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="G2SDataSet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="go2scope.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StorageManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="G2SBoundedBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="G2SDataSet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
