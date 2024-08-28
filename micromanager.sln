@@ -496,6 +496,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Hikrobot", "DeviceAdapters\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenFlexure", "DeviceAdapters\OpenFlexure\OpenFlexure.vcxproj", "{149B6A9D-40FB-4FDF-BC0C-6B68E3BC4938}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScientificaMotion8", "DeviceAdapters\ScientificaMotion8\ScientificaMotion8.vcxproj", "{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1988,6 +1990,12 @@ Global
 		{149B6A9D-40FB-4FDF-BC0C-6B68E3BC4938}.Release|x64.Build.0 = Release|x64
 		{149B6A9D-40FB-4FDF-BC0C-6B68E3BC4938}.Release|x86.ActiveCfg = Release|Win32
 		{149B6A9D-40FB-4FDF-BC0C-6B68E3BC4938}.Release|x86.Build.0 = Release|Win32
+		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Debug|x64.ActiveCfg = Debug|x64
+		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Debug|x64.Build.0 = Debug|x64
+		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Debug|x86.ActiveCfg = Debug|x64
+		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x64.ActiveCfg = Release|x64
+		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x64.Build.0 = Release|x64
+		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
