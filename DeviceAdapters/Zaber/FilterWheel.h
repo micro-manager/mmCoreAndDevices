@@ -37,21 +37,21 @@ public:
 
    // Device API
    // ----------
-   int Initialize();
-   int Shutdown();
-   void GetName(char* name) const;
-   bool Busy();
+   int Initialize() override;
+   int Shutdown() override;
+   void GetName(char* name) const override;
+   bool Busy() override;
 
    // Stage API
    // ---------
-   unsigned long GetNumberOfPositions() const
+   unsigned long GetNumberOfPositions() const override
    {
       return numPositions_;
    }
 
    // Base class overrides
    // ----------------
-   virtual int GetPositionLabel(long pos, char* label) const;
+   int GetPositionLabel(long pos, char* label) const override;
 
    // Properties
    // ----------------

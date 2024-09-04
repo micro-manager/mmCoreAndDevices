@@ -217,9 +217,7 @@ int FilterWheel::PortGetSet(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       if (initialized_)
       {
-         // revert
-         pProp->Set(port_.c_str());
-         return ERR_PORT_CHANGE_FORBIDDEN;
+			resetConnection();
       }
 
       pProp->Get(port_);
