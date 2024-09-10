@@ -108,6 +108,10 @@ int DigitalOutputPort::Initialize()
       if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
          supportsBlankingAndSequencing_ = true;
       GetHub()->StopDOBlankingAndSequence(portWidth_);
+      if (!supportsBlankingAndSequencing_)
+      {
+         portWidth_ = oldPortWidth;
+      }
    }
 
    CPropertyAction* pAct;
