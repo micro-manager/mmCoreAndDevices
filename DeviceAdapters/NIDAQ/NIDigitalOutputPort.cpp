@@ -98,6 +98,16 @@ int DigitalOutputPort::Initialize()
       supportsBlankingAndSequencing_ = true;
    GetHub()->StopDOBlankingAndSequence(portWidth_);
 
+   // Some cards lie about their portwidth, if blanking does not work, try 32 bits
+   if (!supportsBlankingAndSequencing_)
+   {
+      uInt32 oldPortWidth = portWidth_;
+      portWidth_ = 32;
+      if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
+         supportsBlankingAndSequencing_ = true;
+      GetHub()->StopDOBlankingAndSequence(portWidth_);
+   }
+
    CPropertyAction* pAct;
    if (supportsBlankingAndSequencing_)
    {
