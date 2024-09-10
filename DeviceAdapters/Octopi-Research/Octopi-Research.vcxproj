@@ -94,6 +94,7 @@
     <ClCompile Include="SquidLEDShutter.cpp" />
     <ClCompile Include="SquidMonitoringThread.cpp" />
     <ClCompile Include="SquidHub.cpp" />
+    <ClCompile Include="SquidXYStage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="crc8.h" />
