@@ -148,7 +148,7 @@ public:
 
    bool Busy();
 
-   double GetStepSize() { return stepSize_um_; }
+   //double GetStepSize() { return stepSize_um_; }
    int SetPositionSteps(long x, long y);
    int GetPositionSteps(long& x, long& y);
    int SetRelativePositionSteps(long x, long y);
@@ -165,9 +165,9 @@ public:
 
    int GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
    {
-      xMin = lowerLimit_; xMax = upperLimit_;
-      yMin = lowerLimit_; yMax = upperLimit_;
-      return DEVICE_OK;
+      //xMin = lowerLimit_; xMax = upperLimit_;
+      //yMin = lowerLimit_; yMax = upperLimit_;
+      return DEVICE_UNSUPPORTED_COMMAND;
    }
 
    int GetStepLimits(long& /*xMin*/, long& /*xMax*/, long& /*yMin*/, long& /*yMax*/)
@@ -175,8 +175,8 @@ public:
       return DEVICE_UNSUPPORTED_COMMAND;
    }
 
-   double GetStepSizeXUm() { return stepSize_um_; }
-   double GetStepSizeYUm() { return stepSize_um_; }
+   double GetStepSizeXUm() { return stepSizeX_um_; }
+   double GetStepSizeYUm() { return stepSizeY_um_; }
    int Move(double /*vx*/, double /*vy*/) { return DEVICE_OK; }
 
    int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
@@ -185,22 +185,27 @@ public:
    // action interface
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnScrewPitch_mm(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnFullStepsPerRev(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnModel(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
 private:
-   double stepSize_um_;
-   double screwPitchmm_;
-   double fullStepsPerRev_;
+   SquidHub* hub_;
+   MM::MMTime changedTime_;
+   double stepSizeX_um_;
+   double stepSizeY_um_;
+   double screwPitchXmm_;
+   double screwPitchYmm_;
+   double fullStepsPerRevX_;
+   double fullStepsPerRevY_;
+   int microSteppingDefaultX_;  // needs to be set as pre-init tied to model
+   int microSteppingDefaultY_;  // needs to be set as pre-init tied to model
    double posX_um_;
    double posY_um_;
    bool busy_;
    MM::TimeoutMs* timeOutTimer_;
    double velocity_;
    bool initialized_;
-   double lowerLimit_;
-   double upperLimit_;
+   uint8_t cmdNr_;
 
 };
 

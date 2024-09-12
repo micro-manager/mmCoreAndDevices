@@ -36,6 +36,7 @@ const int illumination_source = 1; // presumably this is the lED, with lasers so
 
 
 SquidLEDShutter::SquidLEDShutter() :
+   hub_(0),
    initialized_(false),
    name_(g_LEDShutterName),
    pattern_(0),

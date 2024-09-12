@@ -14,7 +14,7 @@ This is an attempt to document the interface while getting the device to do some
    The Controller will answer each command with a message that contains the command ID.  The python code reads the messages in a differen thread
    (i.e., asynchronously).  Unclear whether this is essential or not.
 
-   Messages are send at reular intervals (>= interval_send_pos_updatem which is currently set to ). The 24 bytes in the messages have teh following meanings
+   Messages are send at regular intervals (>= interval_send_pos_updatem which is currently set to ). The 24 bytes in the messages have teh following meanings
    0 - command id of the last received command
    1 - either COMMAND_CHECKSUM_ERROR (2), IN_PROGRESS (1), or COMPLETED_WITHOUT_ERRORS(0)
    2-5 - uint32_t x pos in Big Endian
@@ -29,6 +29,26 @@ This is an attempt to document the interface while getting the device to do some
 
    
    Public domain code from https://www.3dbrew.org/wiki/CRC-8-CCITT is used to calculate checksums in C(C++)
+
+    Motion.STEPS_PER_MM_XY is no longer used. Below is how distance in mm is translated to microsteps. The constants are defined in _def.py / ini configuration files:
+    HCS_V2: fullsteps_per_rev_x = 200
+            fullsteps_per_rev_y = 200
+            fullsteps_per_rev_z = 200
+            fullsteps_per_rev_theta = 200
+            screw_pitch_x_mm = 2.54
+            screw_pitch_y_mm = 2.54
+            screw_pitch_z_mm = 0.3
+    Squid+ and octopi_v2 have the same values
+
+    microstepping_default_x HCS_V2: 32, Squid+ 16, Squid+_H117_ORCA 256, octopi_v2 256, squid_6060 256
+
+    def move_x(self, delta) =  move_x_usteps((int) delta / (screw_pitch_x_mm / (x_microstepping*fullsteps_per_rev_x)))
+
+
+
+
+
+
 
 
 def initialize_drivers(self):

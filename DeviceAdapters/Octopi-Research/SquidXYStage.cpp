@@ -67,11 +67,104 @@ sleep_time_s = 0.005
 
 # include "Squid.h"
 
+
+const char* g_XYStageName = "XYStage";
+
 SquidXYStage::SquidXYStage() :
-   stepSize_um_(0.05),
+   fullStepsPerRevX_(200),
+   fullStepsPerRevY_(200),
+   screwPitchXmm_(2.54),
+   screwPitchYmm_(2.54),
+   microSteppingDefaultX_(256),
+   microSteppingDefaultY_(256),
    posX_um_(0.0),
    posY_um_(0.0),
-   busy_(false)
+   busy_(false),
+   initialized_(false),
+   cmdNr_(0)
 {
-
+   InitializeDefaultErrorMessages();
 }
+
+SquidXYStage::~SquidXYStage()
+{
+   if (initialized_)
+   {
+      Shutdown();
+   }
+}
+
+int SquidXYStage::Shutdown()
+{
+   initialized_ = false;
+   return DEVICE_OK;
+}
+
+void SquidXYStage::GetName(char* pszName) const
+{
+   CDeviceUtils::CopyLimitedString(pszName, g_XYStageName);
+}
+
+int SquidXYStage::Initialize()
+{
+   if (initialized_)
+   {
+      return DEVICE_ERR;
+   }
+
+
+
+   stepSizeX_um_ = 0.001 / (screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_));
+   stepSizeY_um_ = 0.001 / (screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_));
+
+   hub_ = static_cast<SquidHub*>(GetParentHub());
+   if (!hub_ || !hub_->IsPortAvailable()) {
+      return ERR_NO_PORT_SET;
+   }
+   char hubLabel[MM::MaxStrLength];
+   hub_->GetLabel(hubLabel);
+
+   initialized_ = true;
+
+   return DEVICE_OK;
+}
+
+bool SquidXYStage::Busy() 
+{
+   // TODO!
+   return false;
+}
+
+/*
+* Sets the position of the stage in steps
+* I believe these are the microsteps of the device
+*/
+int SquidXYStage::SetPositionSteps(long xSteps, long ySteps)
+{
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_MOVETO_X;
+   long payLoad = 0;
+   int numberOfBytes = 4;
+   if (xSteps >= 0)
+      payLoad = xSteps;
+   else
+      //  payLoad = 2**(8 * 4) + xSteps; //find two's completement
+      payLoad = xSteps;
+   cmd[2] = xSteps >> 24;
+   cmd[3] = (xSteps >> 16) & 0xFF;
+   cmd[4] = (xSteps >> 8) & 0xFF;
+   cmd[5] = xSteps & 0xFF;
+
+   int ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
+   if (ret != DEVICE_OK)
+      return ret;
+   changedTime_ = GetCurrentMMTime();
+
+   return DEVICE_OK;
+}
+
+
