@@ -19,20 +19,13 @@
 #include <sstream>
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
-#include "G2SCore/G2SConfig.h"
-#include "G2SCore/G2SUtil.h"
-#include "G2SCore/G2SLogger.h"
-#include "G2SReferenceImageDB/G2SReferenceImageDB.h"
-#include "G2SData/G2SImage.h"
-#include "G2SServer/G2SConfigManager.h"
-#include "G2SAcquisitionEngine/G2SAcquisitionDefs.h"
 
 #include <windows.h>
 
 #define HOUSEKEEPING_INTERVAL_SEC		60
 
-g2s::device::StorageManager::StorageManager(g2s::G2SLogger& l) noexcept :
-	dirPath("file-storage"), saveBuffer(saveBufferDepth), execThd(nullptr), workerActive(false), logger(l), asyncError(false), shutdownFlag(false)
+g2s::device::StorageManager::StorageManager(MM::Device* parentDevice) noexcept :
+	dirPath("file-storage"), saveBuffer(saveBufferDepth), execThd(nullptr), workerActive(false), asyncError(false), shutdownFlag(false), mmDevice
 {
 }
 

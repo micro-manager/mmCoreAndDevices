@@ -15,8 +15,6 @@
 #include <vector>
 #include <map>
 #include <set>
-#include "G2SData/G2SImage.h"
-#include "G2SAcquisitionEngine/G2SSequenceSettings.h"
 
 /**
  * Micro-manage compatible data set on disk 

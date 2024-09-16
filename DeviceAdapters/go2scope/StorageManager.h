@@ -128,6 +128,7 @@ namespace g2s {
 			std::string asyncErrorDataset;
 			mutable std::mutex storageLock;
 			mutable std::mutex indexLock;
+         MM::Device* mmDevice;
 
 			const static int saveBufferDepth = 4;
 			const static int threadSleepMs = 300;
