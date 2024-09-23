@@ -22,17 +22,6 @@
 
 #pragma once
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4290) // 'C++ exception specification ignored'
-#endif
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
-#pragma GCC diagnostic ignored "-Wdeprecated"
-#endif
-
 #include "MMDeviceConstants.h"
 
 #include <string>
@@ -41,6 +30,12 @@
 #include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef SWIG
+#define MMDEVICE_LEGACY_THROW(ex) throw (ex)
+#else
+#define MMDEVICE_LEGACY_THROW(ex)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // MetadataError
@@ -326,14 +321,14 @@ public:
          return false;
    }
 
-   MetadataSingleTag GetSingleTag(const char* key) const throw (MetadataKeyError)
+   MetadataSingleTag GetSingleTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataSingleTag* stag = tag->ToSingleTag();
       return *stag;
    }
 
-   MetadataArrayTag GetArrayTag(const char* key) const throw (MetadataKeyError)
+   MetadataArrayTag GetArrayTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataArrayTag* atag = tag->ToArrayTag();
@@ -499,11 +494,3 @@ private:
    typedef std::map<std::string, MetadataTag*>::iterator TagIter;
    typedef std::map<std::string, MetadataTag*>::const_iterator TagConstIter;
 };
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif

@@ -37,15 +37,15 @@ public:
 
 	// Device API
 	// ----------
-	int Initialize();
-	int Shutdown();
+	int Initialize() override;
+	int Shutdown() override;
 
-	void GetName(char* pszName) const;
-	bool Busy();
+	void GetName(char* pszName) const override;
+	bool Busy() override;
 
-	int SetOpen(bool open = true);
-	int GetOpen(bool& open);
-	int Fire(double deltaT);
+	int SetOpen(bool open = true) override;
+	int GetOpen(bool& open) override;
+	int Fire(double deltaT) override;
 
 	// Properties
 	// ----------------
@@ -66,7 +66,7 @@ private:
 	bool *lampExists_;
 
 	// Enables the optimization of using the device-scope lamp on command.
-	bool canUseDeviceLampOnCommand_; 
+	bool canUseDeviceLampOnCommand_;
 
 	// Enables the optimization of only turning on individual axes that
 	// have nonzero flux when the shutter opens.
@@ -76,9 +76,9 @@ private:
 	double* maxFlux_;
 
 	// These variables exist only to enable good UX in the absence of
-	// a device-scope lamp on command. The specific behavior these are 
+	// a device-scope lamp on command. The specific behavior these are
 	// for is when you are tuning presets, you leave the shutter open
-	// and adjust intensities. If you change a zero intensity to 
+	// and adjust intensities. If you change a zero intensity to
 	// nonzero, it must turn that axis on, only if the shutter is open.
 	bool *lampIsOn_;
 	bool isOpen_;

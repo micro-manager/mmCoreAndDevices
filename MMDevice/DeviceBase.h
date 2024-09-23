@@ -1562,7 +1562,7 @@ protected:
    virtual long GetNumberOfImages() {return thd_->GetNumberOfImages();}
 
    // called from the thread function before exit
-   virtual void OnThreadExiting() throw()
+   virtual void OnThreadExiting()
    {
       try
       {
@@ -1668,7 +1668,7 @@ protected:
       void UpdateActualDuration() {actualDuration_ = camera_->GetCurrentMMTime() - startTime_;}
 
    private:
-      virtual int svc(void) throw()
+      virtual int svc()
       {
          int ret=DEVICE_ERR;
          try
