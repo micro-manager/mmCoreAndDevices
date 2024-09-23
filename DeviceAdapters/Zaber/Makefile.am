@@ -2,6 +2,8 @@ AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) $(ZML_CPPFLAGS)
 
 deviceadapter_LTLIBRARIES = libmmgr_dal_Zaber.la
 libmmgr_dal_Zaber_la_SOURCES = \
+	WdiAutofocus.cpp \
+	WdiAutofocus.h \
 	ObjectiveChanger.cpp \
 	ObjectiveChanger.h \
 	Illuminator.cpp \

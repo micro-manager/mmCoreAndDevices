@@ -1,14 +1,14 @@
 #pragma once
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          ObjectiveChanger.h
+// FILE:          WdiAutofocus.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Device adapter for Zaber's X-MOR objective changer.
+// DESCRIPTION:   Device adapter for WDI autofocus.
 //
 // AUTHOR:        Martin Zak (contact@zaber.com)
 
-// COPYRIGHT:     Zaber Technologies, 2023
+// COPYRIGHT:     Zaber Technologies, 2024
 
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -23,18 +23,18 @@
 
 #include "Zaber.h"
 
-extern const char* g_ObjectiveChangerName;
-extern const char* g_ObjectiveChangerDescription;
+extern const char* g_WdiAutofocusName;
+extern const char* g_WdiAutofocusDescription;
 
-namespace ObjectiveChanger_ {
+namespace WdiAutofocus_ {
 	const double xLdaNativePerMm = 1000000.0;
 }
 
-class ObjectiveChanger : public CStateDeviceBase<ObjectiveChanger>, public ZaberBase
+class WdiAutofocus : public CAutoFocusBase<WdiAutofocus>, public ZaberBase
 {
 public:
-	ObjectiveChanger();
-	~ObjectiveChanger();
+	WdiAutofocus();
+	~WdiAutofocus();
 
 	// Device API
 	// ----------
@@ -43,38 +43,36 @@ public:
 	void GetName(char* name) const override;
 	bool Busy() override;
 
-	// Stage API
-	// ---------
-	unsigned long GetNumberOfPositions() const override
-	{
-		return numPositions_;
-	}
+	// AutoFocus API
+	// ----------
+	bool IsContinuousFocusLocked() override;
+	int FullFocus() override;
+	int IncrementalFocus() override;
+	int GetLastFocusScore(double& score) override;
+	int GetCurrentFocusScore(double& score) override;
+	int GetOffset(double& offset) override;
+	int SetOffset(double offset) override;
+	int SetContinuousFocusing(bool state) override;
+	int GetContinuousFocusing(bool& state) override;
 
-	// Base class overrides
-	// ----------------
-	int GetPositionLabel(long pos, char* label) const override;
-
-	// ZaverBase class overrides
+	// ZaberBase class overrides
 	// ----------------
 	void onNewConnection() override;
 
 	// Properties
 	// ----------------
-	int DelayGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int PortGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int XMorAddressGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int XLdaAddressGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int PositionGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int FocusOffsetGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int FocusAddressGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int FocusAxisGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int LimitMinGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int LimitMaxGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int LimitGetSet(MM::PropertyBase* pProp, MM::ActionType eAct, double& limit, const char* setting);
+
 private:
-	int setObjective(long objective, bool applyOffset);
+	long focusAddress_;
+	long focusAxis_;
+	zml::Axis axis_;
 
-	long xMorAddress_;
-	long xLdaAddress_;
-	long numPositions_;
-	double focusOffset_;
-	long currentObjective_;
-	MM::MMTime changedTime_;
-
-	zmlmi::ObjectiveChanger changer_;
+	double limitMin_;
+	double limitMax_;
 };
