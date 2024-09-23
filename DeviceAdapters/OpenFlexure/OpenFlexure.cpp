@@ -72,7 +72,8 @@ SangaBoardHub::SangaBoardHub() : initialized_(false), port_("Undefined"), portAv
 
 	// Pre-initialization property: port name
 	CPropertyAction* pAct = new CPropertyAction(this, &SangaBoardHub::OnPort);
-	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+	int ret = CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+
 }
 
 SangaBoardHub::~SangaBoardHub()
@@ -82,16 +83,25 @@ SangaBoardHub::~SangaBoardHub()
 
 int SangaBoardHub::Initialize()
 {
+	// Send a command to check if Sangaboard is connected
+	SendCommand("version", _serial_answer); // Example response is "Sangaboard v0.5.x"
+
+	// Check if the response contains "Sangaboard"
+	if (_serial_answer.find("Sangaboard") == std::string::npos) {
+		// If not found, return an error code
+		return DEVICE_NOT_CONNECTED; 
+	}
+
 	initialized_ = true;
 
 	// Set up Manual Command Interface to send command directly to SangaBoard
 	CPropertyAction* pCommand = new CPropertyAction(this, &SangaBoardHub::OnManualCommand);
 	int ret = CreateProperty(g_Keyword_Command, "", MM::String, false, pCommand);
-	assert(DEVICE_OK == ret);
+	if (DEVICE_OK != ret) return DEVICE_CAN_NOT_SET_PROPERTY;
 
 	// Set up property to display most recent serial response (read-only)
 	ret = CreateProperty(g_Keyword_Response, "", MM::String, false);
-	assert(DEVICE_OK == ret);
+	if (DEVICE_OK != ret) return DEVICE_CAN_NOT_SET_PROPERTY;
 
 	// Initialize the cache values to the current values stored on hardware
 	this->SyncState();
@@ -99,7 +109,7 @@ int SangaBoardHub::Initialize()
 	// Set up Step Delay property for changing velocity
 	CPropertyAction* pStepDel = new CPropertyAction(this, &SangaBoardHub::OnStepDelay);
 	ret = CreateIntegerProperty(g_Keyword_StepDelay, step_delay_, false, pStepDel);
-	assert(DEVICE_OK == ret);
+	if (DEVICE_OK != ret) return DEVICE_CAN_NOT_SET_PROPERTY;
 	AddAllowedValue(g_Keyword_StepDelay, "1000"); 
 	AddAllowedValue(g_Keyword_StepDelay, "2000");
 	AddAllowedValue(g_Keyword_StepDelay, "3000");
@@ -109,7 +119,7 @@ int SangaBoardHub::Initialize()
 	// Set up Ramp Time property for changing acceleration
 	CPropertyAction* pRampTime = new CPropertyAction(this, &SangaBoardHub::OnRampTime);
 	ret = CreateIntegerProperty(g_Keyword_RampTime, ramp_time_, false, pRampTime);
-	assert(DEVICE_OK == ret);
+	if (DEVICE_OK != ret) return DEVICE_CAN_NOT_SET_PROPERTY;
 	AddAllowedValue(g_Keyword_RampTime, "0", 0);
 	AddAllowedValue(g_Keyword_RampTime, "100000"); // Not really sure if these values really do much for acceleration...
 	AddAllowedValue(g_Keyword_RampTime, "200000");
@@ -118,7 +128,7 @@ int SangaBoardHub::Initialize()
 	// Set up extra functions drop down menu
 	CPropertyAction* pExtras= new CPropertyAction(this, &SangaBoardHub::OnExtraCommands);
 	ret = CreateStringProperty(g_Keyword_Extras, g_Keyword_None, false, pExtras);
-	assert(DEVICE_OK == ret);
+	if (DEVICE_OK != ret) return DEVICE_CAN_NOT_SET_PROPERTY;
 	AddAllowedValue(g_Keyword_Extras, g_ExtraCommand_Stop);
 	AddAllowedValue(g_Keyword_Extras, g_ExtraCommand_Zero);
 	AddAllowedValue(g_Keyword_Extras, g_ExtraCommand_Release);
@@ -321,7 +331,8 @@ int SangaBoardHub::SendCommand(std::string cmd, std::string& ans)
 	}
 
 	// Reflect the command in the serial response property
-	SetProperty(g_Keyword_Response, ans.c_str());
+	ret = SetProperty(g_Keyword_Response, ans.c_str());
+	if (DEVICE_OK != ret) return DEVICE_CAN_NOT_SET_PROPERTY;
 
 	return DEVICE_OK;
 
@@ -447,7 +458,7 @@ int XYStage::Initialize()
 	std::string cmd = "blocking_moves false";
 	pHub->SendCommand(cmd, _serial_answer);
 	if (_serial_answer.find("done") == -1) {
-		return DEVICE_ERR;
+		return DEVICE_SERIAL_INVALID_RESPONSE;
 	}
 
 	// Set the current stage position
@@ -653,7 +664,7 @@ int ZStage::Initialize()
 	std::string cmd = "blocking_moves false";
 	pHub->SendCommand(cmd, _serial_answer);
 	if (_serial_answer.find("done") == -1) {
-		return DEVICE_ERR;
+		return DEVICE_SERIAL_INVALID_RESPONSE;
 	}
 
 	// Set the current stagePosition
