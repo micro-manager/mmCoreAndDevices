@@ -4,11 +4,9 @@
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Adapter for the OpenFlexure Microscope. This adapter is used on the v5 Sangaboard. 
+//					- Tested with Sangaboard Firmware v1.0.1-dev || Sangaboard v0.5.x
 //                
-// AUTHOR:        Samdrea Hsu, samdreahsu@gmail.com, 06/22/2024
-//                
-//                Karl Hoover (stuff such as programmable CCD size  & the various image processors)
-//                Arther Edelstein ( equipment error simulation)
+// AUTHOR:        Samdrea Hsu, samdreahsu@gmail.com, 09/23/2024
 //
 // COPYRIGHT:     Samdrea Hsu
 //
