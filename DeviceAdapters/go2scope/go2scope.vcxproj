@@ -68,8 +68,8 @@
       <SubSystem>Windows</SubSystem>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\CZI\acquire-zarr\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>acquire-zarr-cpp.lib;acquire-core-logger.lib;acquire-core-platform.lib;acquire-device-hal.lib;acquire-device-properties.lib;acquire-video-runtime.lib;miniocpp-debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\CZI\acquire-zarr\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>acquire-zarr.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -91,20 +91,15 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\CZI\acquire-zarr\$(Configuration)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>acquire-zarr-cpp.lib;acquire-core-logger.lib;acquire-core-platform.lib;acquire-device-hal.lib;acquire-device-properties.lib;acquire-video-runtime.lib;miniocpp-debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\CZI\acquire-zarr\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>acquire-zarr.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="G2SDataSet.cpp" />
     <ClCompile Include="go2scope.cpp" />
-    <ClCompile Include="StorageManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="G2SBoundedBuffer.h" />
-    <ClInclude Include="G2SDataSet.h" />
     <ClInclude Include="go2scope.h" />
-    <ClInclude Include="StorageManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-StaticRuntime.vcxproj">
