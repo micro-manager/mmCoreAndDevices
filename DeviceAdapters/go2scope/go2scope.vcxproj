@@ -97,6 +97,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="go2scope.cpp" />
+    <ClCompile Include="zarr.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="go2scope.h" />
