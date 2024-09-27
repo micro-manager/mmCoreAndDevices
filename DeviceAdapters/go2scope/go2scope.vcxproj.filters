@@ -12,6 +12,9 @@
     <ClCompile Include="go2scope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="zarr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="go2scope.h">
