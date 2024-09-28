@@ -1449,7 +1449,7 @@ namespace MM {
        * Create new dataset in the location path/name. Fails if the path already exists, or if the number of dimensions less than 1.
        * The caller should save the "handle" output parameter to refer to this dataset in subsequent code.
        */
-      virtual int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], const char* meta, char* handle) = 0;
+      virtual int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle) = 0;
 
       /**
        * Configure dimension

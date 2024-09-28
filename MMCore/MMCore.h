@@ -122,7 +122,6 @@ enum DeviceInitializationState {
    InitializationFailed,
 };
 
-
 /// The Micro-Manager Core.
 /**
  * Provides a device-independent interface for hardware control. Additionally,
@@ -643,7 +642,7 @@ public:
 
    /** \name Storage API */
    ///@{
-   std::string createDataset(const char* path, const char* name, std::vector<long> shape, const char* meta);
+   std::string createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta);
    void closeDataset(const char* handle);
    std::string loadDataset(const char* path, const char* name);
    void addImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta);
