@@ -254,6 +254,20 @@ namespace MM {
       FocusDirectionAwayFromSample,
    };
 
+   enum StorageDataType
+   {
+      StorageDataType_uint8 = 0,
+      StorageDataType_uint32,
+      StorageDataType_uint64,
+      StorageDataType_int8,
+      StorageDataType_int16,
+      StorageDataType_int32,
+      StorageDataType_int64,
+      StorageDataType_float32,
+      StorageDataType_float64
+   };
+
+
    //////////////////////////////////////////////////////////////////////////////
    // Notification constants
    //

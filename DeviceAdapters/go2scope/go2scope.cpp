@@ -26,8 +26,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "go2scope.h"
 #include "ModuleInterface.h"
-#include "zarr.h"
-#include "nlohmann/json.hpp"
 
 using namespace std;
 

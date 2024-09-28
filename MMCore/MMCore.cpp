@@ -7589,7 +7589,7 @@ std::string CMMCore::getStorageDevice() throw(CMMError)
  * \param meta - serialized JSON metadata
  * \return - handle for the new dataset
  */
-std::string CMMCore::createDataset(const char* path, const char* name, std::vector<long> shape, const char* meta)
+std::string CMMCore::createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta)
 {
    // NOTE: vector<long> is used instead of vector<int> in the signature because of Swig idiosyncracies
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
@@ -7598,7 +7598,7 @@ std::string CMMCore::createDataset(const char* path, const char* name, std::vect
       mm::DeviceModuleLockGuard guard(storage);
       std::string handle;
       std::vector<int> intShape(shape.begin(), shape.end());
-      int ret = storage->Create(path, name, intShape, meta, handle);
+      int ret = storage->Create(path, name, intShape, pixelType, meta, handle);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());

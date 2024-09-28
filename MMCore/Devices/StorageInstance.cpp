@@ -21,12 +21,12 @@
 
 #include "StorageInstance.h"
 
-int StorageInstance::Create(const char* path, const char* name, const std::vector<int>& shape, const char* meta, std::string& handle)
+int StorageInstance::Create(const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, std::string& handle)
 {
    RequireInitialized(__func__);
 
    char cHandle[MM::MaxStrLength];
-   int ret = GetImpl()->Create(path, name, (int)shape.size(), &shape[0], meta, cHandle);
+   int ret = GetImpl()->Create(path, name, (int)shape.size(), &shape[0], pixType, meta, cHandle);
    if (ret == DEVICE_OK)
       handle = cHandle;
 

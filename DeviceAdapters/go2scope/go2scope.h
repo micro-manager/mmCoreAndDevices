@@ -38,12 +38,15 @@
 #define ERR_INTERNAL						 144002
 #define ERR_ZARR                     140100
 #define ERR_ZARR_SETTINGS            140101
+#define ERR_ZARR_NUMDIMS             140102
 
 #define ERR_TIFF                     140500
 
 static const char* g_Go2Scope = "Go2Scope";
 static const char* g_MMV1Storage = "MMV1Storage";
 static const char* g_AcqZarrStorage = "AcquireZarrStorage";
+
+//enum class ZarrStatus;
 
 class AcqZarrStorage : public CStorageBase<AcqZarrStorage>
 {
@@ -61,7 +64,7 @@ public:
 
    // Storage API
    // -----------
-   int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], const char* meta, char* handle);
+   int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle);
    int ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
    int Close(const char* handle);
@@ -81,5 +84,6 @@ public:
 
 private:
    bool initialized;
+   std::string getErrorMessage(int code);
 };
 
