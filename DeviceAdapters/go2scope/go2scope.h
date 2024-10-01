@@ -39,6 +39,12 @@
 #define ERR_ZARR                     140100
 #define ERR_ZARR_SETTINGS            140101
 #define ERR_ZARR_NUMDIMS             140102
+#define ERR_ZARR_STREAM_CREATE       140103
+#define ERR_ZARR_STREAM_CLOSE        140104
+#define ERR_ZARR_STREAM_LOAD         140105
+#define ERR_ZARR_STREAM_APPEND       140106
+#define ERR_ZARR_STREAM_ACCESS       140107
+
 
 #define ERR_TIFF                     140500
 
@@ -46,7 +52,7 @@ static const char* g_Go2Scope = "Go2Scope";
 static const char* g_MMV1Storage = "MMV1Storage";
 static const char* g_AcqZarrStorage = "AcquireZarrStorage";
 
-//enum class ZarrStatus;
+struct ZarrStream_s;
 
 class AcqZarrStorage : public CStorageBase<AcqZarrStorage>
 {
@@ -84,6 +90,12 @@ public:
 
 private:
    bool initialized;
+   ZarrStream_s* zarrStream;
+   std::vector<int> streamDimensions;
+   std::vector<int> currentCoordinate;
+   int currentImageNumber;
+   std::string streamHandle;
    std::string getErrorMessage(int code);
+   void destroyStream();
 };
 
