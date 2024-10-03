@@ -637,6 +637,10 @@ public:
    void addImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta);
    void configureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
+   std::string getSummaryMeta(const char* handle);
+   std::string getImageMeta(const char* handle, const std::vector<int>& coordinates);
+   void* getImage(const char* handle, const std::vector<int>& coordinates);
+
    ///@}
 
 private:

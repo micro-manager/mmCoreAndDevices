@@ -7734,6 +7734,55 @@ void CMMCore::configureCoordinate(const char* handle, int dimension, int coordin
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
+
+std::string CMMCore::getSummaryMeta(const char* handle)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      std::string meta;
+      int ret = storage->GetSummaryMeta(handle, meta);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+      return meta;
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+std::string CMMCore::getImageMeta(const char* handle, const std::vector<int>& coordinates)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      std::string meta;
+      int ret = storage->GetImageMeta(handle, coordinates, meta);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+      return meta;
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+void* CMMCore::getImage(const char* handle, const std::vector<int>& coordinates)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      const unsigned char* img = storage->GetImage(handle, coordinates);
+      return const_cast<unsigned char*>(img);
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
 std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const char* deviceLabel) throw (CMMError)
 {
    std::shared_ptr<HubInstance> pHub =

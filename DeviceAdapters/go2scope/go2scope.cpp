@@ -26,7 +26,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "go2scope.h"
 #include "ModuleInterface.h"
-#include "acquire-zarr.hh"
+// #include "zarr.h"
+#include "nlohmann/json.hpp"
 
 using namespace std;
 
@@ -46,7 +47,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 
    if (strcmp(deviceName, g_MMV1Storage) == 0)
    {
-      return new MMV1Storage();
+      return new AcqZarrStorage();
    }
 
    return 0;
@@ -59,42 +60,42 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Lida
+// MMV1Storage
 
-MMV1Storage::MMV1Storage() :
-   initialized(false), zarrWriter(nullptr)
+AcqZarrStorage::AcqZarrStorage() :
+   initialized(false)
 {
    InitializeDefaultErrorMessages();
 
 	// set device specific error messages
    SetErrorText(ERR_INTERNAL, "Internal driver error, see log file for details");
 
-   // create the writer
-   zarrWriter = new AcquireZarrWriter();
+   auto ver = 0; //  Zarr_get_api_version();
                                                                              
    // create pre-initialization properties                                   
    // ------------------------------------
    //
                                                                           
    // Name                                                                   
-   CreateProperty(MM::g_Keyword_Name, g_MMV1Storage, MM::String, true);
+   CreateProperty(MM::g_Keyword_Name, g_AcqZarrStorage, MM::String, true);
    //
-   // Description                                                            
-   CreateProperty(MM::g_Keyword_Description, "Storage for old MM format", MM::String, true);
+   // Description
+   ostringstream os;
+   os << "Acquire Zarr Storage v" << ver;
+   CreateProperty(MM::g_Keyword_Description, os.str().c_str(), MM::String, true);
 }                                                                            
                                                                              
-MMV1Storage::~MMV1Storage()                                                            
+AcqZarrStorage::~AcqZarrStorage()                                                            
 {                                                                            
    Shutdown();
-   delete zarrWriter;
 } 
 
-void MMV1Storage::GetName(char* Name) const
+void AcqZarrStorage::GetName(char* Name) const
 {
    CDeviceUtils::CopyLimitedString(Name, g_MMV1Storage);
 }  
 
-int MMV1Storage::Initialize()
+int AcqZarrStorage::Initialize()
 {
    if (initialized)
       return DEVICE_OK;
@@ -107,7 +108,7 @@ int MMV1Storage::Initialize()
    return DEVICE_OK;
 }
 
-int MMV1Storage::Shutdown()
+int AcqZarrStorage::Shutdown()
 {
    if (initialized)
    {
@@ -117,77 +118,77 @@ int MMV1Storage::Shutdown()
 }
 
 // Never busy because all commands block
-bool MMV1Storage::Busy()
+bool AcqZarrStorage::Busy()
 {
    return false;
 }
 
-int MMV1Storage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], const char* meta, char* handle)
+int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], const char* meta, char* handle)
 {
    return 0;
 }
 
-int MMV1Storage::ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning)
+int AcqZarrStorage::ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning)
 {
    return 0;
 }
 
-int MMV1Storage::ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name)
+int AcqZarrStorage::ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name)
 {
    return 0;
 }
 
-int MMV1Storage::Close(const char* handle)
+int AcqZarrStorage::Close(const char* handle)
 {
    return 0;
 }
 
-int MMV1Storage::Load(const char* path, const char* name, char* handle)
+int AcqZarrStorage::Load(const char* path, const char* name, char* handle)
 {
    return 0;
 }
 
-int MMV1Storage::Delete(char* handle)
+int AcqZarrStorage::Delete(char* handle)
 {
    return 0;
 }
 
-int MMV1Storage::List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength)
+int AcqZarrStorage::List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength)
 {
    return 0;
 }
 
-int MMV1Storage::AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta)
+int AcqZarrStorage::AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta)
 {
    return 0;
 }
 
-int MMV1Storage::GetSummaryMeta(const char* handle, char* meta)
+int AcqZarrStorage::GetSummaryMeta(const char* handle, char* meta, int bufSize)
 {
    return 0;
 }
 
-int MMV1Storage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta)
+int AcqZarrStorage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta, int bufSize)
 {
    return 0;
 }
 
-const unsigned char* MMV1Storage::GetImage(const char* handle, int coordinates[], int numCoordinates)
+const unsigned char* AcqZarrStorage::GetImage(const char* handle, int coordinates[], int numCoordinates)
 {
    return nullptr;
 }
 
-int MMV1Storage::GetNumberOfDimensions(const char* handle, int& numDimensions)
+int AcqZarrStorage::GetNumberOfDimensions(const char* handle, int& numDimensions)
 {
    return 0;
 }
 
-int MMV1Storage::GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength)
+int AcqZarrStorage::GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength)
 {
    return 0;
 }
 
-int MMV1Storage::GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength)
+int AcqZarrStorage::GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength)
 {
    return 0;
 }
