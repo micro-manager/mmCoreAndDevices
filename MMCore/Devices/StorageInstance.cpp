@@ -107,32 +107,49 @@ int StorageInstance::AddImage(const char* handle, unsigned char* pixels, int wid
    return GetImpl()->AddImage(handle, pixels, width, height, depth, &coordinates[0], coordinates.size(), imageMeta);
 }
 
-int StorageInstance::GetSummaryMeta(const char* handle, char* meta)
+int StorageInstance::GetSummaryMeta(const char* handle, std::string& meta)
 {
-   return 0;
+   RequireInitialized(__func__);
+   std::vector<char> metaCharArray(MM::MaxMetadataLength);
+   int ret = GetImpl()->GetSummaryMeta(handle, &metaCharArray[0], MM::MaxMetadataLength);
+   meta = std::string(metaCharArray.begin(), metaCharArray.end());
+   return ret;
 }
 
-int StorageInstance::GetImageMeta(const char* handle, const std::vector<int>& coordinates, char* meta)
+int StorageInstance::GetImageMeta(const char* handle, const std::vector<int>& coordinates, std::string& meta)
 {
-   return 0;
+   RequireInitialized(__func__);
+   std::vector<char> metaCharArray(MM::MaxMetadataLength);
+   int ret = GetImpl()->GetImageMeta(handle, const_cast<int*>(&coordinates[0]), coordinates.size(), &metaCharArray[0], MM::MaxMetadataLength);
+   meta = std::string(metaCharArray.begin(), metaCharArray.end());
+   return ret;
 }
 
 const unsigned char* StorageInstance::GetImage(const char* handle, const std::vector<int>& coordinates)
 {
-   return nullptr;
+   RequireInitialized(__func__);
+   return GetImpl()->GetImage(handle, const_cast<int*>(&coordinates[0]), coordinates.size());
 }
 
-int StorageInstance::GetNumberOfDimensions(const char* handle)
+int StorageInstance::GetNumberOfDimensions(const char* handle, int& numDim)
 {
-   return 0;
+   RequireInitialized(__func__);
+   return GetImpl()->GetNumberOfDimensions(handle, numDim);
 }
 
 int StorageInstance::GetDimension(const char* handle, int dimension, std::string& name, std::string& meaning)
 {
-   return 0;
+   std::vector<char> nameStr(MM::MaxStrLength), meaningStr(MM::MaxMetadataLength);
+   int ret = GetImpl()->GetDimension(handle, dimension, &nameStr[0], nameStr.size(), &meaningStr[0], meaningStr.size());
+   name = std::string(nameStr.begin(), nameStr.end());
+   meaning = std::string(meaningStr.begin(), meaningStr.end());
+   return ret;
 }
 
 int StorageInstance::GetCoordinate(const char* handle, int dimension, int coordinate, std::string& name)
 {
-   return 0;
+   std::vector<char> nameStr(MM::MaxStrLength);
+   int ret = GetImpl()->GetCoordinate(handle, dimension, coordinate, &nameStr[0], nameStr.size());
+   name = std::string(nameStr.begin(), nameStr.end());
+   return ret;
 }
