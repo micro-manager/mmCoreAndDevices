@@ -100,8 +100,8 @@ private:
    bool advancedPropsEnabled_; // flag to only create advanced properties once
 
    int SetPositionDirectly(unsigned int position);
-   int GetCellPropertyName(long index, std::string suffix, char* name);
-   int GetIOPropertyName(long index, std::string suffix, char* name);
+   int GetCellPropertyName(long index, const std::string& suffix, char* name);
+   int GetIOPropertyName(long index, const std::string& suffix, char* name);
    int RefreshAdvancedCellPropertyValues(long index);
    int RefreshCurrentPosition();
    int RefreshEditCellPropertyValues();
