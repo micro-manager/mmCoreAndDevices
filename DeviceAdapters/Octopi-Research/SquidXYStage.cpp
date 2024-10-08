@@ -112,8 +112,6 @@ int SquidXYStage::Initialize()
       return DEVICE_ERR;
    }
 
-
-
    stepSizeX_um_ = 0.001 / (screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_));
    stepSizeY_um_ = 0.001 / (screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_));
 
@@ -141,30 +139,24 @@ bool SquidXYStage::Busy()
 */
 int SquidXYStage::SetPositionSteps(long xSteps, long ySteps)
 {
-   const unsigned cmdSize = 8;
-   unsigned char cmd[cmdSize];
-   for (unsigned i = 0; i < cmdSize; i++) {
-      cmd[i] = 0;
-   }
-   cmd[1] = CMD_MOVETO_X;
-   long payLoad = 0;
-   int numberOfBytes = 4;
-   if (xSteps >= 0)
-      payLoad = xSteps;
-   else
-      //  payLoad = 2**(8 * 4) + xSteps; //find two's completement
-      payLoad = xSteps;
-   cmd[2] = xSteps >> 24;
-   cmd[3] = (xSteps >> 16) & 0xFF;
-   cmd[4] = (xSteps >> 8) & 0xFF;
-   cmd[5] = xSteps & 0xFF;
 
-   int ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
+   int ret = hub_->SendMoveCommand(CMD_MOVETO_X, xSteps);
    if (ret != DEVICE_OK)
       return ret;
-   changedTime_ = GetCurrentMMTime();
+   return hub_->SendMoveCommand(CMD_MOVETO_Y, ySteps);
+}
 
-   return DEVICE_OK;
+
+/*
+* Sets the position of the stage in steps
+* I believe these are the microsteps of the device
+*/
+int SquidXYStage::SetRelativePositionSteps(long xSteps, long ySteps)
+{
+   int ret = hub_->SendMoveCommand(CMD_MOVE_X, xSteps);
+   if (ret != DEVICE_OK)
+      return ret;
+   return hub_->SendMoveCommand(CMD_MOVE_Y, ySteps);
 }
 
 

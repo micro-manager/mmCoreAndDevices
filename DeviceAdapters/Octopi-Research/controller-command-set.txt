@@ -2,7 +2,7 @@ The Cephla Octopi-Research controller has an Arduino Teensy inside that communic
 I had no problem getting it detected by my Windows OS.  The command interface can be gleaned from  https://github.com/hongquanli/octopi-research.  
 This is an attempt to document the interface while getting the device to do something.
 
-   Commands are send to the device in binary.  Command Length is defined in _def.py/MicrocontrollerDef.CMD_LENGTH and currently is set to 8.  
+   Commands are send to the device in binary.  Command Length is defined in _def.py/MicrocontrollerDef.CMD_LENGTH which currently is set to 8.  
    A checksum is calculated fro each command using the CRC8.CCITT protocol.  The last byte of the 8 byte command is set to the value of this checksum.  
    XCTU (https://hub.digi.com/support/products/xctu/?path=/support/asset/xctu-v-659-windows-x86x64/) is pretty good at sending 
    commands to the controller (but does not calculate the CRC checksum).
@@ -30,7 +30,8 @@ This is an attempt to document the interface while getting the device to do some
    
    Public domain code from https://www.3dbrew.org/wiki/CRC-8-CCITT is used to calculate checksums in C(C++)
 
-    Motion.STEPS_PER_MM_XY is no longer used. Below is how distance in mm is translated to microsteps. The constants are defined in _def.py / ini configuration files:
+   Motion.STEPS_PER_MM_XY is no longer used. Below is how distance in mm is translated to microsteps. 
+   The constants are defined in _def.py / ini configuration files:
     HCS_V2: fullsteps_per_rev_x = 200
             fullsteps_per_rev_y = 200
             fullsteps_per_rev_z = 200

@@ -77,8 +77,13 @@ public:
 
    bool IsPortAvailable() { return (port_ != ""); };
    int SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr);
+   int SendMoveCommand(const int cmd, long steps);
    bool IsCommandPending(uint8_t cmdNr);
    void ReceivedCommand(uint8_t cmdNr);
+   int GetPositionSteps(long& x, long& y);
+   int SetPositionXSteps(long x);
+   int SetPositionYSteps(long y);
+   int SetPositionZSteps(long z);
 
    std::string port_;
 
@@ -89,6 +94,10 @@ private:
    uint8_t cmdNr_;
    uint8_t pendingCmd_;
    std::recursive_mutex lock_;
+   std::recursive_mutex positionLock_;
+   std::atomic_long x_;
+   std::atomic_long y_;
+   std::atomic_long z_;
 };
 
 
@@ -150,10 +159,19 @@ public:
 
    //double GetStepSize() { return stepSize_um_; }
    int SetPositionSteps(long x, long y);
-   int GetPositionSteps(long& x, long& y);
+   int GetPositionSteps(long& x, long& y)
+   {
+      return hub_->GetPositionSteps(x, y);
+   }
    int SetRelativePositionSteps(long x, long y);
-   int Home();
-   int Stop();
+   int Home()
+   {
+      return DEVICE_UNSUPPORTED_COMMAND;
+   }
+   int Stop()
+   {
+      return DEVICE_UNSUPPORTED_COMMAND;
+   }
 
    /* This sets the 0,0 position of the adapter to the current position.
     * If possible, the stage controller itself should also be set to 0,0
@@ -163,7 +181,7 @@ public:
     */
    int SetOrigin() { return DEVICE_OK; }
 
-   int GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
+   int GetLimitsUm(double& /*xMin*/, double& /* xMax */, double& /* yMin */, double& /* yMax */)
    {
       //xMin = lowerLimit_; xMax = upperLimit_;
       //yMin = lowerLimit_; yMax = upperLimit_;
@@ -190,7 +208,6 @@ public:
 
 private:
    SquidHub* hub_;
-   MM::MMTime changedTime_;
    double stepSizeX_um_;
    double stepSizeY_um_;
    double screwPitchXmm_;
@@ -235,6 +252,7 @@ public:
 
 private:
    void InterpretMessage(unsigned char* message);
+   bool IsBigEndian(void);
    static const int RCV_BUF_LENGTH = 1024;
    MM::Core& core_;
    SquidHub& hub_;
@@ -242,6 +260,7 @@ private:
    bool stop_;
    long intervalUs_;
    std::thread* ourThread_;
+   bool isBigEndian_;
    SquidMonitoringThread& operator=(SquidMonitoringThread& /*rhs*/) { assert(false); return *this; }
 };
 

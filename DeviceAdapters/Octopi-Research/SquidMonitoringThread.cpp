@@ -1,4 +1,5 @@
 #include "squid.h"
+#define SWAP_INT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24));
 
 
 /*
@@ -51,6 +52,7 @@ SquidMonitoringThread::SquidMonitoringThread(MM::Core& core, SquidHub& hub, bool
    ourThread_(0)
 {
    //deviceInfo = deviceInfo_;
+   isBigEndian_ = IsBigEndian();
 }
 
 SquidMonitoringThread::~SquidMonitoringThread()
@@ -59,6 +61,18 @@ SquidMonitoringThread::~SquidMonitoringThread()
    ourThread_->join();
    //hub_.LogMessage("Destructing MonitoringThread", true);
 }
+
+/*
+0 - command id of the last received command
+1 - either COMMAND_CHECKSUM_ERROR(2), IN_PROGRESS(1), or COMPLETED_WITHOUT_ERRORS(0)
+2 - 5 - uint32_t x pos in Big Endian
+6 - 9 - uint32_t y pos in Big Endian
+10 - 13 - uint32_t Z pos in Big Endian
+14 - 17 - uint32_t Theta position
+18 - Joystick Button
+19 - 22 - Reserved
+23 - CRC checksum(appears not to be set)
+*/
 
 void SquidMonitoringThread::InterpretMessage(unsigned char* message)
 {
@@ -72,6 +86,28 @@ void SquidMonitoringThread::InterpretMessage(unsigned char* message)
          }
          core_.LogMessage(&hub_, os.str().c_str(), false);
       }
+
+      std::uint32_t ux;
+      memcpy(&ux, &message[2], 4);
+      if (!isBigEndian_)
+      {
+         ux = SWAP_INT32(ux);
+      }
+      hub_.SetPositionXSteps(ux);
+      std::uint32_t uy;
+      memcpy(&uy, &message[6], 4);
+      if (!isBigEndian_)
+      {
+         uy = SWAP_INT32(uy);
+      }
+      hub_.SetPositionXSteps(uy);
+      std::uint32_t uz;
+      memcpy(&uz, &message[6], 4);
+      if (!isBigEndian_)
+      {
+         uz = SWAP_INT32(uz);
+      }
+      hub_.SetPositionXSteps(uz);
    }
 
 }
@@ -160,4 +196,14 @@ void SquidMonitoringThread::Start()
 {
    stop_ = false;
    ourThread_ = new std::thread(&SquidMonitoringThread::svc, this);
+}
+
+bool SquidMonitoringThread::IsBigEndian(void)
+{
+   union {
+      uint32_t i;
+      char c[4];
+   } bint = { 0x01020304 };
+
+   return bint.c[0] == 1;
 }

@@ -51,6 +51,10 @@ SquidHub::SquidHub() :
 
    CPropertyAction* pAct = new CPropertyAction(this, &SquidHub::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+   x_ = 0l;
+   y_ = 0l;
+   z_ = 0l;
+
 
 }
 
@@ -70,7 +74,6 @@ int SquidHub::Initialize() {
    monitoringThread_ = new SquidMonitoringThread(*this->GetCoreCallback(), *this, true);
    monitoringThread_->Start();
    
-   uint8_t pendingCmd;
    const unsigned cmdSize = 8;
    unsigned char cmd[cmdSize];
    cmd[0] = 0x00;
@@ -274,4 +277,60 @@ int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr)
    *cmdNr = cmdNr_;
    SetCommandPending(cmdNr_);
    return WriteToComPort(port_.c_str(), cmd, cmdSize);
+}
+
+/**
+* Helper function to send Move or Move Relative command to relevant Stage
+  MOVE_X = 0
+  MOVE_Y = 1
+  MOVE_Z = 2
+  MOVE_THETA = 3
+  MOVETO_X = 6
+  MOVETO_Y = 7
+  MOVETO_Z = 8
+*/
+int SquidHub::SendMoveCommand(const int command, long steps)
+{
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = (unsigned char)command;
+   // TODO: Fix in case we are running on a Big Endian system
+   cmd[2] = steps >> 24;
+   cmd[3] = (steps >> 16) & 0xFF;
+   cmd[4] = (steps >> 8) & 0xFF;
+   cmd[5] = steps & 0xFF;
+
+   int ret = SendCommand(cmd, cmdSize, &cmdNr_);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   return DEVICE_OK;
+}
+
+int SquidHub::GetPositionSteps(long& x, long& y)
+{
+   x = x_.load();
+   y = y_.load();
+   return DEVICE_OK;
+}
+
+int SquidHub::SetPositionXSteps(long x)
+{
+   x_.store(x);
+   return DEVICE_OK;
+}
+
+int SquidHub::SetPositionYSteps(long y)
+{
+   y_.store(y);
+   return DEVICE_OK;
+}
+
+int SquidHub::SetPositionZSteps(long z)
+{
+   z_.store(z);
+   return DEVICE_OK;
 }
