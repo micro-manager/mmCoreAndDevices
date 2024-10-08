@@ -786,15 +786,15 @@ int CPLogic::OnEditCellUpdates(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPLogic::GetCellPropertyName(long index, std::string suffix, char* name)
+int CPLogic::GetCellPropertyName(long index, const std::string& suffix, char* name)
 {
    std::ostringstream os;
-   os << "PCell_" << setw(2) << setfill('0') << index << suffix;
+   os << "PCell_" << std::setw(2) << std::setfill('0') << index << suffix;
    CDeviceUtils::CopyLimitedString(name, os.str().c_str());
    return DEVICE_OK;
 }
 
-int CPLogic::GetIOPropertyName(long index, std::string suffix, char* name)
+int CPLogic::GetIOPropertyName(long index, const std::string& suffix, char* name)
 {
    std::ostringstream os;
    if (index < PLOGIC_BACKPLANE_START_ADDRESS) {  // front panel
