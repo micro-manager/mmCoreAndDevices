@@ -285,6 +285,10 @@ int CPLogic::Initialize()
    AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode13, 13);
    AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode14, 14);
    AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode15, 15);
+   if (FirmwareVersionAtLeast(3.50)) {
+      AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode16, 16);
+      AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode17, 17);
+   }
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode0, 100);
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode1, 101);
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode2, 102);
