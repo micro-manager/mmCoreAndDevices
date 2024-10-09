@@ -36,17 +36,17 @@
 #include <string>
 #include <vector>
 
-#define PLOGIC_NUM_ADDRESSES     128
-#define PLOGIC_INVERT_ADDRESS    64
-#define PLOGIC_FRONTPANEL_START_ADDRESS  33
-#define PLOGIC_FRONTPANEL_END_ADDRESS    40
-#define PLOGIC_FRONTPANEL_NUM            (PLOGIC_FRONTPANEL_END_ADDRESS - PLOGIC_FRONTPANEL_START_ADDRESS + 1)
-#define PLOGIC_BACKPLANE_START_ADDRESS   41
-#define PLOGIC_BACKPLANE_END_ADDRESS     48
-#define PLOGIC_BACKPLANE_NUM             (PLOGIC_BACKPLANE_END_ADDRESS - PLOGIC_BACKPLANE_START_ADDRESS + 1)
-#define PLOGIC_PHYSICAL_IO_START_ADDRESS   PLOGIC_FRONTPANEL_START_ADDRESS
-#define PLOGIC_PHYSICAL_IO_END_ADDRESS     PLOGIC_BACKPLANE_END_ADDRESS
-#define PLOGIC_PHYSICAL_IO_NUM            (PLOGIC_PHYSICAL_IO_END_ADDRESS - PLOGIC_PHYSICAL_IO_START_ADDRESS + 1)
+constexpr unsigned int PLOGIC_NUM_ADDRESSES = 128;
+constexpr unsigned int PLOGIC_INVERT_ADDRESS = 64;
+constexpr unsigned int PLOGIC_FRONTPANEL_START_ADDRESS = 33;
+constexpr unsigned int PLOGIC_FRONTPANEL_END_ADDRESS = 40;
+constexpr unsigned int PLOGIC_FRONTPANEL_NUM = PLOGIC_FRONTPANEL_END_ADDRESS - PLOGIC_FRONTPANEL_START_ADDRESS + 1;
+constexpr unsigned int PLOGIC_BACKPLANE_START_ADDRESS = 41;
+constexpr unsigned int PLOGIC_BACKPLANE_END_ADDRESS = 48;
+constexpr unsigned int PLOGIC_BACKPLANE_NUM = PLOGIC_BACKPLANE_END_ADDRESS - PLOGIC_BACKPLANE_START_ADDRESS + 1;
+constexpr unsigned int PLOGIC_PHYSICAL_IO_START_ADDRESS = PLOGIC_FRONTPANEL_START_ADDRESS;
+constexpr unsigned int PLOGIC_PHYSICAL_IO_END_ADDRESS = PLOGIC_BACKPLANE_END_ADDRESS;
+constexpr unsigned int PLOGIC_PHYSICAL_IO_NUM = PLOGIC_PHYSICAL_IO_END_ADDRESS - PLOGIC_PHYSICAL_IO_START_ADDRESS + 1;
 
 // ASI Tiger Programmable Logic Card
 CPLogic::CPLogic(const char* name) :
@@ -266,7 +266,8 @@ int CPLogic::Initialize()
    AddAllowedValue(g_SaveSettingsPropertyName, g_SaveSettingsOrig);
    AddAllowedValue(g_SaveSettingsPropertyName, g_SaveSettingsDone);
 
-   // edits cell wherever current pointer position is
+   // edits cell type wherever current pointer position is
+   // Note: also add new cell types to OnAdvancedProperties
    pAct = new CPropertyAction (this, &CPLogic::OnEditCellType);
    CreateProperty(g_EditCellTypePropertyName, g_CellTypeCode0, MM::String, false, pAct);
    AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode0, 0);
@@ -835,7 +836,7 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
          GetProperty(g_RefreshPropValsPropertyName, refreshPropValsStr);
          SetProperty(g_RefreshPropValsPropertyName, g_YesState);
 
-         for (long i=1; i<=(long)numCells_; i++) {
+         for (long i = 1; i <= (long)numCells_; i++) {
             // logic cell type
             GetCellPropertyName(i, "_CellType", propName);
             pActEx = new CPropertyActionEx (this, &CPLogic::OnCellType, i);
@@ -856,6 +857,10 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
             AddAllowedValue(propName, g_CellTypeCode13, 13);
             AddAllowedValue(propName, g_CellTypeCode14, 14);
             AddAllowedValue(propName, g_CellTypeCode15, 15);
+            if (FirmwareVersionAtLeast(3.50)) {
+               AddAllowedValue(propName, g_CellTypeCode16, 16);
+               AddAllowedValue(propName, g_CellTypeCode17, 17);
+            }
             UpdateProperty(propName);
 
             // logic cell CCA Z code
@@ -889,7 +894,7 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
             UpdateProperty(propName);
          }
 
-         for (long i=PLOGIC_FRONTPANEL_START_ADDRESS; i<=PLOGIC_BACKPLANE_END_ADDRESS; i++) {
+         for (long i = PLOGIC_FRONTPANEL_START_ADDRESS; i <= (long)PLOGIC_BACKPLANE_END_ADDRESS; i++) {
             GetIOPropertyName(i, "_IOType", propName);
             pActEx = new CPropertyActionEx (this, &CPLogic::OnIOType, i);
             CreateProperty(propName, "0", MM::String, false, pActEx);
