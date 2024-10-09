@@ -98,7 +98,7 @@ public:
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) final ;
 	int StartSequenceAcquisition(double interval_ms) final;
 	int StopSequenceAcquisition() final;
-	int PrepareSequenceAcqusition() final;
+	int PrepareSequenceAcquisition() final;
 
 	///**
 	//* Flag to indicate whether Sequence Acquisition is currently running.

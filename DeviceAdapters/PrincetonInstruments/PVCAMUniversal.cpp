@@ -1964,7 +1964,7 @@ int Universal::ThreadRun(void)
    return ret;
 }
 
-int Universal::PrepareSequenceAcqusition()
+int Universal::PrepareSequenceAcquisition()
 {
    if (IsCapturing())
       return ERR_BUSY_ACQUIRING;
@@ -1996,7 +1996,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
 {
    if (!sequenceModeReady_)
    {
-      int ret = PrepareSequenceAcqusition();
+      int ret = PrepareSequenceAcquisition();
       if (ret != DEVICE_OK)
          return ret;
    }

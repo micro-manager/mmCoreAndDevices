@@ -739,10 +739,10 @@ int CMoticCamera::SetBinning(int binF)
   return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));
 }
 
-int CMoticCamera::PrepareSequenceAcqusition()
+int CMoticCamera::PrepareSequenceAcquisition()
 {
 #ifdef _LOG_OUT_
-  OutputDebugString("PrepareSequenceAcqusition");
+  OutputDebugString("PrepareSequenceAcquisition");
 #endif
    if (IsCapturing())
       return DEVICE_CAMERA_BUSY_ACQUIRING;
@@ -751,7 +751,7 @@ int CMoticCamera::PrepareSequenceAcqusition()
    if (ret != DEVICE_OK)
       return ret;
 #ifdef _LOG_OUT_
-   OutputDebugString("PrepareSequenceAcqusition OK");
+   OutputDebugString("PrepareSequenceAcquisition OK");
 #endif
    return DEVICE_OK;
 }

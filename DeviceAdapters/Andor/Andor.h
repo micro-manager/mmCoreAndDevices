@@ -110,7 +110,7 @@ public:
    void ResizeSRRFImage(long radiality);
 
    // high-speed interface
-   int PrepareSequenceAcqusition()
+   int PrepareSequenceAcquisition()
    { 
       return DEVICE_OK; 
    }

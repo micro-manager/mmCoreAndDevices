@@ -689,7 +689,7 @@ int TsiCam::ClearROI()
    return ResizeImageBuffer(roiBinData);
 }
 
-int TsiCam::PrepareSequenceAcqusition()
+int TsiCam::PrepareSequenceAcquisition()
 {
    if (IsCapturing())
    {

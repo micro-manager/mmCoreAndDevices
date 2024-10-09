@@ -823,7 +823,7 @@ int Atik::SetBinning(int binF)
 	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));
 }
 
-int Atik::PrepareSequenceAcqusition()
+int Atik::PrepareSequenceAcquisition()
 {
 	//log("");
 	if (IsCapturing())

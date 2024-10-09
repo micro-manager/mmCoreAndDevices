@@ -1611,7 +1611,7 @@ int HikrobotCamera::StopSequenceAcquisition()
 	return DEVICE_OK;
 }
 
-int HikrobotCamera::PrepareSequenceAcqusition()
+int HikrobotCamera::PrepareSequenceAcquisition()
 {
 	// nothing to prepare
 	return DEVICE_OK;

@@ -223,7 +223,7 @@ public: // MMCamera API
     /**
     * Micro-manager calls the "live" acquisition a "sequence". PVCAM calls this "continuous - circular buffer" mode.
     */
-    int PrepareSequenceAcqusition();
+    int PrepareSequenceAcquisition();
     int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
     int StopSequenceAcquisition();
 

@@ -148,7 +148,7 @@ public:
            unsigned numROIs);
    int GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
            unsigned* heights, unsigned* length);
-   int PrepareSequenceAcqusition() { return DEVICE_OK; }
+   int PrepareSequenceAcquisition() { return DEVICE_OK; }
    int StartSequenceAcquisition(double interval);
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();

@@ -84,7 +84,7 @@ public:
    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    int ClearROI();
-   int PrepareSequenceAcqusition()
+   int PrepareSequenceAcquisition()
    {
       return DEVICE_OK;
    }

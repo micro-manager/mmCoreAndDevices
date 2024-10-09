@@ -2227,7 +2227,7 @@ int CPCOCam::ResizeImageBuffer()
   return DEVICE_OK;
 }
 
-int CPCOCam::PrepareSequenceAcqusition()
+int CPCOCam::PrepareSequenceAcquisition()
 {
   return DEVICE_OK;
 }

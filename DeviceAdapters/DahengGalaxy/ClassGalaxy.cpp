@@ -852,9 +852,9 @@ int ClassGalaxy::StopSequenceAcquisition()
     return DEVICE_OK;
 }
 
-int ClassGalaxy::PrepareSequenceAcqusition()
+int ClassGalaxy::PrepareSequenceAcquisition()
 {
-    AddToLog("PrepareSequenceAcqusition");
+    AddToLog("PrepareSequenceAcquisition");
     // nothing to prepare
     return DEVICE_OK;
 }

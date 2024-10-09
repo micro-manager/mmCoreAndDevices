@@ -1073,7 +1073,7 @@ int CMyASICam::SetBinning(int binF)
 	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));//就是onBinning(, afterSet)
 }
 
-int CMyASICam::PrepareSequenceAcqusition()
+int CMyASICam::PrepareSequenceAcquisition()
 {
 	if (IsCapturing())
 		return DEVICE_CAMERA_BUSY_ACQUIRING;

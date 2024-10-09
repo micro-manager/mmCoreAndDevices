@@ -256,7 +256,7 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
   int ClearROI();
   
-  int PrepareSequenceAcqusition()
+  int PrepareSequenceAcquisition()
   {
     return DEVICE_OK;
   }

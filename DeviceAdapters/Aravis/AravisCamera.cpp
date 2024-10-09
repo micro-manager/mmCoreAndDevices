@@ -1076,7 +1076,7 @@ int AravisCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int AravisCamera::PrepareSequenceAcqusition()
+int AravisCamera::PrepareSequenceAcquisition()
 {
    return DEVICE_OK;
 }

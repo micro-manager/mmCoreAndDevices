@@ -235,7 +235,7 @@ class Universal : public CCameraBase<Universal>
 #ifndef linux
       // micromanager calls the "live" acquisition a "sequence"
       //  don't get this confused with a PICAM sequence acquisition, it's actually circular buffer mode
-      int PrepareSequenceAcqusition();
+      int PrepareSequenceAcquisition();
       int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
       int StopSequenceAcquisition();
 #endif
