@@ -26,31 +26,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
-
 #include "MMDevice.h"
 #include "DeviceBase.h"
-
-//////////////////////////////////////////////////////////////////////////////
-// Error codes
-//
-
-#define ERR_PARAMETER_ERROR          144001
-#define ERR_INTERNAL						 144002
-#define ERR_ZARR                     140100
-#define ERR_ZARR_SETTINGS            140101
-#define ERR_ZARR_NUMDIMS             140102
-#define ERR_ZARR_STREAM_CREATE       140103
-#define ERR_ZARR_STREAM_CLOSE        140104
-#define ERR_ZARR_STREAM_LOAD         140105
-#define ERR_ZARR_STREAM_APPEND       140106
-#define ERR_ZARR_STREAM_ACCESS       140107
-
-
-#define ERR_TIFF                     140500
-
-static const char* g_Go2Scope = "Go2Scope";
-static const char* g_MMV1Storage = "MMV1Storage";
-static const char* g_AcqZarrStorage = "AcquireZarrStorage";
 
 struct ZarrStream_s;
 
