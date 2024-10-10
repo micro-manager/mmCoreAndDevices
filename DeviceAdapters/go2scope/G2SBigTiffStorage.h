@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////
-// FILE:          Go2Scope.cpp
+// FILE:          G2SBigTiffStorage.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -89,4 +89,5 @@ private:
    std::map<std::string, G2SStorageEntry>          cache;                                 ///< Storage entries cache
    std::vector<std::string>                        supportedFormats;                      ///< Supported file formats
    bool                                            initialized;                           ///< Is driver initialized
+	bool															directIo;										///< Use direct I/O
 };

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          Go2Scope.cpp
+// FILE:          G2SBigTiffStorage.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -24,6 +24,7 @@
 //                Chan Zuckerberg Initiative (CZI)
 // 
 ///////////////////////////////////////////////////////////////////////////////
+#include "G2STiffFile.h"
 #include <filesystem>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -37,6 +38,7 @@
 G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
 {
    supportedFormats = { "tif", "tiff", "tf8" };
+	directIo = true;
 
    InitializeDefaultErrorMessages();
 
@@ -89,9 +91,13 @@ int G2SBigTiffStorage::Shutdown()
    initialized = false;
    for(auto it = cache.begin(); it != cache.end(); it++)
    {
-      /*if(it->second.isOpen())
-         TIFFClose((TIFF*)it->second.FileHandle);
-      it->second.close();*/
+      if(it->second.isOpen())
+		{
+			auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+			fs->close();
+			it->second.close();
+			delete fs;
+		}
    }
    cache.clear();
    return DEVICE_OK;
@@ -127,23 +133,40 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
    // Check if the file already exists
    if(std::filesystem::exists(std::filesystem::u8path(path)))
       return DEVICE_DUPLICATE_PROPERTY;
+	
+	// Create dataset storage descriptor
+	std::string guid = boost::lexical_cast<std::string>(boost::uuids::random_generator()());           // Entry UUID
+	if(guid.size() > MM::MaxStrLength)
+		return DEVICE_INVALID_PROPERTY_LIMTS;
    
    // Create a file on disk and store the file handle
-   /*TIFF* fhandle = TIFFOpen(path, "w");
+   auto fhandle = new G2STiffFile(path);
    if(fhandle == nullptr)
-      return DEVICE_OUT_OF_MEMORY;*/
+      return DEVICE_OUT_OF_MEMORY;
+	
+	try
+	{
+		fhandle->open(true, directIo);
+		if(!fhandle->isOpen())
+			return DEVICE_OUT_OF_MEMORY;
+	}
+	catch(std::exception&)
+	{
+		delete fhandle;
+		return DEVICE_OUT_OF_MEMORY;
+	}
    
-   // Create dataset storage descriptor
-   std::string guid = boost::lexical_cast<std::string>(boost::uuids::random_generator()());           // Entry UUID
    G2SStorageEntry sdesc(path, name, numberOfDimensions, shape, meta);
-   //sdesc.FileHandle = fhandle;
+   sdesc.FileHandle = fhandle;
+	fhandle->setUID(guid);
 
    // Append dataset storage descriptor to cache
    auto it = cache.insert(std::make_pair(guid, sdesc));
    if(!it.second)
+	{
+		delete fhandle;
       return DEVICE_OUT_OF_MEMORY;
-   if(guid.size() > MM::MaxStrLength)
-      return DEVICE_INVALID_PROPERTY_LIMTS;
+	}
 
    // Copy UUID string to the GUID buffer
    guid.copy(handle, guid.size());
@@ -170,20 +193,41 @@ int G2SBigTiffStorage::Load(const char* path, const char* name, char* handle)
       return DEVICE_INVALID_INPUT_PARAM;
 
    // Open a file on disk and store the file handle
-   // TODO:
+	auto fhandle = new G2STiffFile(path);
+	if(fhandle == nullptr)
+		return DEVICE_OUT_OF_MEMORY;
 
+	try
+	{
+		fhandle->open(false, directIo);
+		if(!fhandle->isOpen())
+			return DEVICE_OUT_OF_MEMORY;
+	}
+	catch(std::exception&)
+	{
+		delete fhandle;
+		return DEVICE_OUT_OF_MEMORY;
+	}
+	
+	// Obtain / generate dataset UID
+   std::string guid = fhandle->getUID().empty() ? boost::lexical_cast<std::string>(boost::uuids::random_generator()()) : fhandle->getUID();
+	if(guid.size() > MM::MaxStrLength)
+	{
+		delete fhandle;
+		return DEVICE_INVALID_PROPERTY_LIMTS;
+	}
 
-   // Create dataset storage descriptor
-   std::string guid = boost::lexical_cast<std::string>(boost::uuids::random_generator()());
-   /*G2SStorageEntry sdesc(path, name, ndim, &shape[0], meta.c_str());
-   sdesc.FileHandle = fhandle;*/
+	// Create dataset storage descriptor
+   G2SStorageEntry sdesc(path, name, (int)fhandle->getDimension(), reinterpret_cast<int*>(&fhandle->getShape()[0]), fhandle->getMetadata().empty() ? nullptr : fhandle->getMetadata().c_str());
+   sdesc.FileHandle = fhandle;
 
    // Append dataset storage descriptor to cache
-   /*auto it = cache.insert(std::make_pair(guid, sdesc));
+   auto it = cache.insert(std::make_pair(guid, sdesc));
    if(!it.second)
+	{
+		delete fhandle;
       return DEVICE_OUT_OF_MEMORY;
-   if(guid.size() > MM::MaxStrLength)
-      return DEVICE_INVALID_PROPERTY_LIMTS;*/
+	}
 
    // Copy UUID string to the GUID buffer
    guid.copy(handle, guid.size());
@@ -205,8 +249,10 @@ int G2SBigTiffStorage::Close(const char* handle)
       return DEVICE_INVALID_INPUT_PARAM;
    if(it->second.isOpen())
    {
-      /*TIFFClose((TIFF*)it->second.FileHandle);
-      it->second.close();*/
+		auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+		fs->close();
+		it->second.close();
+		delete fs;
    }
    return DEVICE_OK;
 }
@@ -234,8 +280,10 @@ int G2SBigTiffStorage::Delete(char* handle)
    // Close the file handle
    if(it->second.isOpen())
    {
-     /* TIFFClose((TIFF*)it->second.FileHandle);
-      it->second.close();*/
+		auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+		fs->close();
+		it->second.close();
+		delete fs;
    }
    
    // Delete the file
