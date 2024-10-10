@@ -503,7 +503,7 @@ namespace MM {
       /**
        * Sets up the camera so that Sequence acquisition can start without delay
        */
-      virtual int PrepareSequenceAcqusition() = 0;
+      virtual int PrepareSequenceAcquisition() = 0;
       /**
        * Flag to indicate whether Sequence Acquisition is currently running.
        * Return true when Sequence acquisition is active, false otherwise

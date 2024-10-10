@@ -798,7 +798,7 @@ int XimeaCamera::InsertImage()
 	// Important:  metadata about the image are generated here:
 	Metadata md;
 	double exp_time = (double)image.GetExpTime() / 1000;
-	md.put(MM::g_Keyword_Meatdata_Exposure, CDeviceUtils::ConvertToString(exp_time));
+	md.put(MM::g_Keyword_Metadata_Exposure, CDeviceUtils::ConvertToString(exp_time));
 	md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
 	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
 	md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)roiX_));

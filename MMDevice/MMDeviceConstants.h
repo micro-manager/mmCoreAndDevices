@@ -144,7 +144,7 @@ namespace MM {
 
    // image annotations
    const char* const g_Keyword_Metadata_CameraLabel = "Camera";
-   const char* const g_Keyword_Meatdata_Exposure    = "Exposure-ms";
+   const char* const g_Keyword_Metadata_Exposure    = "Exposure-ms";
    const char* const g_Keyword_Metadata_Score       = "Score";
    const char* const g_Keyword_Metadata_ImageNumber = "ImageNumber";
    // Removed: g_Keyword_Metadata_StartTime         = "StartTime-ms";

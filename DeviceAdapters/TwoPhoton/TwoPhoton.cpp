@@ -635,7 +635,7 @@ int BitFlowCamera::StopSequenceAcquisition()
    return DEVICE_OK;
 }
 
-int BitFlowCamera::PrepareSequenceAcqusition()
+int BitFlowCamera::PrepareSequenceAcquisition()
 {
    // nothing to prepare
    return DEVICE_OK;

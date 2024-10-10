@@ -1237,7 +1237,7 @@ int BaslerCamera::StopSequenceAcquisition()
 	return DEVICE_OK;
 }
 
-int BaslerCamera::PrepareSequenceAcqusition()
+int BaslerCamera::PrepareSequenceAcquisition()
 {
 	// nothing to prepare
 	return DEVICE_OK;
@@ -2131,7 +2131,7 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 	md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetWidth()));
 	md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetHeight()));
 	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetImageNumber()));
-	md.put(MM::g_Keyword_Meatdata_Exposure, dev_->GetExposure());
+	md.put(MM::g_Keyword_Metadata_Exposure, dev_->GetExposure());
 	// Image grabbed successfully?
 	if (ptrGrabResult->GrabSucceeded())
 	{

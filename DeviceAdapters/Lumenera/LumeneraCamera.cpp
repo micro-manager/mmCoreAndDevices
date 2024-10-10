@@ -1277,7 +1277,7 @@ int LumeneraCamera::StopSequenceAcquisition()
 	return DEVICE_OK;
 }
 
-int LumeneraCamera::PrepareSequenceAcqusition()
+int LumeneraCamera::PrepareSequenceAcquisition()
 {
 	// nothing to prepare
 	return DEVICE_OK;

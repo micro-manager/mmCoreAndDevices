@@ -1284,9 +1284,9 @@ int POACamera::SendExposureSequence() const {
 }
 
 
-int POACamera::PrepareSequenceAcqusition()
+int POACamera::PrepareSequenceAcquisition()
 {
-    LOG("PrepareSequenceAcqusition")
+    LOG("PrepareSequenceAcquisition")
     if (IsCapturing())
         return DEVICE_CAMERA_BUSY_ACQUIRING;
 
