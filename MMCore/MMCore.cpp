@@ -1903,7 +1903,6 @@ void CMMCore::setAdapterOriginXY(double newXUm, double newYUm) throw (CMMError)
  * The returned value is determined by the most recent call to
  * setFocusDirection() for the stage, or defaults to what the stage device
  * adapter declares (often 0, for unknown).
- * adapter declares (often 0, for unknown).
  *
  * An exception is thrown if the direction has not been set and the device
  * encounters an error when determining the default direction.
