@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASIPLOGIC_H_
-#define _ASIPLOGIC_H_
+#ifndef ASIPLOGIC_H
+#define ASIPLOGIC_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -36,7 +36,6 @@ public:
    ~CPLogic() { }
   
    // Device API
-   // ----------
    int Initialize();
    bool Busy() { return false; }
 
@@ -46,7 +45,6 @@ public:
    int Fire(double /*deltaT*/) { return DEVICE_UNSUPPORTED_COMMAND; }
 
    // action interface
-   // ----------------
    int OnPLogicMode           (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSetShutterChannel    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPLogicOutputState    (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -78,24 +76,35 @@ public:
 
 
 private:
-   string axisLetter_;
+   std::string axisLetter_;
    unsigned int numCells_;
    unsigned int currentPosition_;  // cached value of current position
-//   static const int NUM_CELLS = 16;
-   bool useAsdiSPIMShutter_;  // used together with either useAs4ChShutter_ or useAs7ChShutter_, takes into account address 41 backplane (TTL0 for CameraA)
+   
+   // PLogic Mode Table
+   // --------------------
+   // diSPIM | 4ch | 7ch | (useAsdiSPIMShutter_, useAs4ChShutter_, useAs7ChShutter_)
+   // --------------------
+   //     0  |  0  |  0  | "None"
+   //     1  |  1  |  0  | "diSPIM Shutter"
+   //     0  |  1  |  0  | "Four-channel shutter"
+   //     0  |  0  |  1  | "Seven-channel shutter"
+   //     1  |  0  |  1  | "Seven-channel TTL shutter"
+   bool useAsdiSPIMShutter_;
    bool useAs4ChShutter_;
    bool useAs7ChShutter_;
-   bool shutterOpen_;
-   bool advancedPropsEnabled_;
-   bool editCellUpdates_;
+   // used together with either useAs4ChShutter_ or useAs7ChShutter_,
+   // takes into account address 41 backplane (TTL0 for CameraA)
 
-   int SetShutterChannel();
+   bool shutterOpen_;
+   bool editCellUpdates_;
+   bool advancedPropsEnabled_; // flag to only create advanced properties once
+
    int SetPositionDirectly(unsigned int position);
-   int GetCellPropertyName(long index, string suffix, char* name);
-   int GetIOPropertyName(long index, string suffix, char* name);
+   int GetCellPropertyName(long index, const std::string& suffix, char* name);
+   int GetIOPropertyName(long index, const std::string& suffix, char* name);
    int RefreshAdvancedCellPropertyValues(long index);
    int RefreshCurrentPosition();
    int RefreshEditCellPropertyValues();
 };
 
-#endif //_ASIPLOGIC_H_
+#endif // ASIPLOGIC_H
