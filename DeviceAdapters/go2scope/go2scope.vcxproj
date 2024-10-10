@@ -63,6 +63,7 @@
       <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\czi\acquire-zarr\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -84,6 +85,7 @@
       <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\czi\acquire-zarr\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -96,11 +98,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="go2scope.cpp" />
-    <ClCompile Include="zarr.cpp" />
+    <ClCompile Include="G2SBigTiffStorage.cpp" />
+    <ClCompile Include="G2SStorage.cpp" />
+    <ClCompile Include="AcqZarrStorage.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="go2scope.h" />
+    <ClInclude Include="AcqZarrStorage.h" />
+    <ClInclude Include="G2SBigTiffStorage.h" />
+    <ClInclude Include="G2SStorage.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-StaticRuntime.vcxproj">
