@@ -2,10 +2,10 @@
 #define _SRRF_H_
 
 #include "SRRF_Stream.h"
-#include "Property.h"
+#include "../../MMDevice/Property.h"
 #include <fstream>
 
-class ISRRFCamera;
+class AndorCamera;
 class ImgBuffer;
 
 // SRRF Function typedefs
@@ -24,11 +24,6 @@ typedef char*(*AT_SRRF_GetLibraryVersionFn)();
 
 #ifdef __linux__
 
-#define GCC_VERSION (__GNUC__ * 10000 \
-                     + __GNUC_MINOR__ * 100 \
-                     + __GNUC_PATCHLEVEL__)
-// Only define nullptr if GCC version is < 4.6.0, nullptr is defined in later versions
-#if GCC_VERSION < 40600
 const                        // this is a const object...
 class {
 public:
@@ -41,7 +36,6 @@ public:
 private:
   void operator&() const;    // whose address can't be taken
 } nullptr = {}; 
-#endif
 
 #endif
 
@@ -57,7 +51,7 @@ public:
       READY
    };
 
-   SRRFControl(ISRRFCamera* camera);
+   SRRFControl(AndorCamera* camera);
    ~SRRFControl();
 
    int ApplySRRFParameters(ImgBuffer* cameraImageBuffer, bool liveMode);
@@ -70,7 +64,6 @@ public:
    AT_SRRF_U16 GetRadiality();
    bool ProcessSingleFrameOnCPU(void * imagePtr, AT_SRRF_U64 imageSize);
    void GetSRRFResult(void * outputBuffer, AT_SRRF_U64 bufferSize);
-   const char* GetSRRFFrameTimeMetadataName() const { return String_Keyword_Metadata_SRRF_Frame_Time; }
 
 private:
 #ifdef __linux__
@@ -108,7 +101,6 @@ private:
    static const char* String_OriginalDataNone_;
    static const char* String_OriginalDataAll_;
    static const char* String_OriginalDataAveraged_;
-   static const char* String_Keyword_Metadata_SRRF_Frame_Time;
 
    // Not required so far.
    //static const char* String_RawDataFormatType_;
@@ -136,9 +128,8 @@ private:
    int OnRawDataPathChange(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSaveDataTypeChange(MM::PropertyBase* pProp, MM::ActionType eAct);
    void SetPropertyReadOnly(MM::PropertyBase* pProp, bool readOnly);
-   bool IsOldSRRFLibrary() const;
-   
-   ISRRFCamera* camera_;
+
+   AndorCamera* camera_;
    DLLHANDLE SRRFLibrary_;
    LIBRARYSTATUS libraryStatus_;
    char* szMessage_;

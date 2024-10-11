@@ -39,11 +39,11 @@
 #ifndef _ANDOR_H_
 #define _ANDOR_H_
 
-#include "DeviceBase.h"
-#include "MMDevice.h"
-#include "ImgBuffer.h"
-#include "DeviceUtils.h"
-#include "DeviceThreads.h"
+#include "../../MMDevice/DeviceBase.h"
+#include "../../MMDevice/MMDevice.h"
+#include "../../MMDevice/ImgBuffer.h"
+#include "../../MMDevice/DeviceUtils.h"
+#include "../../MMDevice/DeviceThreads.h"
 #include <string>
 #include <sstream>
 #include <map>
@@ -70,7 +70,6 @@ class AcqSequenceThread;
 class SpuriousNoiseFilterControl;
 class ReadModeControl;
 class SRRFControl;
-class SRRFAndorCamera;
 //////////////////////////////////////////////////////////////////////////////
 // Implementation of the MMDevice and MMCamera interfaces
 //
@@ -176,19 +175,6 @@ public:
    int OnTimeOut(MM::PropertyBase* pProp, MM::ActionType eAct);  // kdb July-30-2009
    int OnCountConvert(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnCountConvertWavelength(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnForceRunTillAbort(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-   int OnGateMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnMCPGain(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDDGInsertionDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDDGIntelligate(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDDGIOC(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDDGIOCTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDDGGateDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDDGGateWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-   int OnDDGExternalOutputEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnDDGExternalOutputTime(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    int OnOptAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnROI(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -198,8 +184,7 @@ public:
 
    // custom interface for the thread
    void CalculateAndSetupCameraImageBuffer(at_u32 & width, at_u32 & height, at_u32 & bytesPerPixel);
-   int PushImage(at_u32 width, at_u32 height, at_u32 bytesPerPixel, at_32& imageCountFirst, at_32& imageCountLast);
-   int InsertImage(at_u32 width, at_u32 height, at_u32 bytesPerPixel, unsigned char* imagePtr);
+   int PushImage(at_u32 width, at_u32 height, at_u32 bytesPerPixel, at_32 imageCountFirst, at_32 imageCountLast);
    unsigned char * GetCameraImageBuffer() const { return pImgBuffer_; }
    void SetCameraImageBuffer(unsigned char * pBuffer) { pImgBuffer_ = pBuffer; }
 
@@ -245,7 +230,6 @@ private:
    bool initialized_;
    bool snapInProgress_;
    bool sequenceRunning_;
-   bool Live_;
    long imageCounter_;
    MM::MMTime startTime_;
    MM::MMTime startSRRFImageTime_;
@@ -254,18 +238,6 @@ private:
    bool stopOnOverflow_;
    double intervalMs_;
    std::string countConvertMode_;
-   std::string gateMode_;
-   std::string insertionDelay_;
-   std::string intelligate_;
-   std::string IOC_;
-   std::string IOCTrigger_;
-   long mcpGain_;
-   long gateDelay_, gateWidth_;
-   
-   long extOutputDelay_[3], extOutputWidth_[3];
-   std::vector<std::string> ExternalOutputStates_;
-   std::string ExternalOutputState_[3];
-
    double countConvertWavelength_;
 
    std::string optAcquireModeStr_;
@@ -273,7 +245,7 @@ private:
 
    long lSnapImageCnt_;
    std::vector<std::string> PreAmpGains_;
-   long currentGain_;
+   long currentGain_;   
 
    enum CROPMODE {
       OFF,
@@ -286,7 +258,7 @@ private:
    long currentCropHeight_;
    std::vector<std::string> VSpeeds_;
 
-   MMThreadLock imgPixelsLock_;
+
    double currentExpMS_;
 
    float ReadoutTime_, KeepCleanTime_;
@@ -435,7 +407,6 @@ private:
    void AddSRRFMetadataInfo(Metadata & md);
    int SnapImageNormal();
    int SnapImageSRRF();
-   bool IsSRRFEnabled() const;
 
    bool NeedToAllocateExtraBuffers(unsigned long bufferSizePixels) { return (unsigned long)(fullFrameX_ * fullFrameY_) < bufferSizePixels; }
 
@@ -449,9 +420,6 @@ private:
    SpuriousNoiseFilterControl* spuriousNoiseFilterControl_;
    ReadModeControl* readModeControl_;
    SRRFControl *SRRFControl_;
-   SRRFAndorCamera *SRRFAndorCamera_;
-
-   bool forceRunTillAbort;
 };
 
 

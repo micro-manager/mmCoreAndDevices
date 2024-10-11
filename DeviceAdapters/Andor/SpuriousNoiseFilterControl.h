@@ -1,7 +1,7 @@
 #ifndef _SPURIOUSNOISEFILTERCONTROL_H_
 #define _SPURIOUSNOISEFILTERCONTROL_H_
 
-#include "Property.h"
+#include "../../MMDevice/Property.h"
 
 class AndorCamera;
 

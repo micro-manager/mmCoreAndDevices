@@ -27,9 +27,6 @@
     <ClCompile Include="SRRFControl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SRRFAndorCamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Andor.h">
@@ -42,12 +39,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SRRFControl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SRRFCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SRRFAndorCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

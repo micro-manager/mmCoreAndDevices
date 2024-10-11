@@ -1,7 +1,7 @@
 #ifndef _READMODECONTOL_H_
 #define _READMODECONTROL_H_
 
-#include "Property.h"
+#include "../../MMDevice/Property.h"
 
 class AndorCamera;
 
