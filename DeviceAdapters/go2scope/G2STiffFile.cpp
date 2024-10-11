@@ -256,7 +256,6 @@ void G2STiffFile::open(bool trunc, bool dio)
 
 			// Locate first IFD
 			currentifdpos = readInt(&header[bigTiff ? 8 : 4], bigTiff ? 8 : 4);
-			nextifdpos = currentifdpos;
 
 			// Set write position at the metadata section start or at the end of the file stream
 			writepos = metaoffset == 0 ? fsize : metaoffset;
@@ -310,6 +309,7 @@ void G2STiffFile::open(bool trunc, bool dio)
 			configset = true;
 		}
 	}
+	nextifdpos = currentifdpos;
 }
 
 /**
@@ -562,7 +562,8 @@ std::string G2STiffFile::getMetadata()
  * This method won't change the current image
  * If no metadata is defined this method will return an empty string
  * If no images are defined this method will return an empty string
- * Image IFD will be loaded if this method is called before getImage()
+ * Image IFD will be loaded if this method is called before getImage() (only for the first image)
+ * For other images getImage() should always be called prior to calling getImageMetadata()
  * @return Image metadata
  */
 std::string G2STiffFile::getImageMetadata()
@@ -574,10 +575,7 @@ std::string G2STiffFile::getImageMetadata()
 	
 	// Load IFD
 	if(currentifd.empty())
-	{
-		seek(currentifdpos);
-		nextifdpos = loadIFD(currentifd, currentifdsize);
-	}
+		loadNextIFD();
 
 	// Check IFD tag count
 	auto tagcount = readInt(&currentifd[0], bigTiff ? 8 : 2);
@@ -644,7 +642,7 @@ void G2STiffFile::addImage(const unsigned char* buff, std::size_t len, const std
 		moveReadCursor(currpos);
 
 		// Load last IFD and change the next IFD offset
-		auto nextoff = loadIFD(lastifd, lastifdsize);
+		auto nextoff = parseIFD(lastifd, lastifdsize);
 		if(nextoff == 0)
 			writeInt(&lastifd[lastifdsize - (bigTiff ? 8 : 4)], bigTiff ? 8 : 4, writepos);
 
@@ -691,19 +689,22 @@ std::vector<unsigned char> G2STiffFile::getImage()
 		throw std::runtime_error("Invalid operation. No open file stream available");
 	if(imgcounter == 0 || (currentimage + 1 > imgcounter) || nextifdpos == 0)
 		throw std::runtime_error("Invalid operation. No images available");
-	
-	// Advance current image
+
+	// Clear current IFD before advancing
+	// In a case where getImageMetadata() is called before any getImage() call
+	// we should skip clearing of current IFD, this works only for the first image
 	if(currentimage > 0)
+	{
 		currentifd.clear();
-	currentifdpos = nextifdpos;
+		currentifdpos = nextifdpos;
+	}
+
+	// Advance current image
 	currentimage++;
 
-	// Load IFD
+	// Load IFD (skip if already loaded by the getImageMetadata())
 	if(currentifd.empty())
-	{
-		seek(currentifdpos);
-		nextifdpos = loadIFD(currentifd, currentifdsize);
-	}
+		loadNextIFD();
 
 	// Obtain pixel data strip locations
 	auto offind = (bigTiff ? 8 : 2) + 5 * (bigTiff ? 20 : 12);
@@ -1115,14 +1116,38 @@ void G2STiffFile::appendIFD(std::size_t imagelen, const std::string& meta)
 }
 
 /**
- * Load / parse next IFD
- * Current (next) IFD offset will be updated
- * @param ifd IFD buffer
+* Load next IFD for reading
+* Next IFD will become the current IFD
+* Next IFD offset will be updated
+* If the last (written) IFD offset is the same as the current 
+* IFD offset no file operation will be performed (IFD will be copied from cache)
+* @throws std::runtime_error
+*/
+void G2STiffFile::loadNextIFD()
+{
+	if(!lastifd.empty() && lastifdpos == currentifdpos)
+	{
+		// Copy IFD from cache
+		currentifd = lastifd;
+		currentifdsize = lastifdsize;
+		nextifdpos = readInt(&currentifd[currentifdsize - (bigTiff ? 8 : 4)], bigTiff ? 8 : 4);
+	}
+	else
+	{
+		// Load IFD from the file stream
+		moveReadCursor(seek(currentifdpos));
+		nextifdpos = parseIFD(currentifd, currentifdsize);
+	}
+}
+
+/**
+ * Parse IFD at the current read cursor
+ * @param ifd IFD buffer [out]
  * @param ifdsz IFD size [out]
  * @return Next IFD offset
  * @throws std::runtime_error
  */
-std::uint64_t G2STiffFile::loadIFD(std::vector<unsigned char>& ifd, std::uint32_t& ifdsz)
+std::uint64_t G2STiffFile::parseIFD(std::vector<unsigned char>& ifd, std::uint32_t& ifdsz)
 {
 	if(readpos != currpos)
 		seek(readpos);

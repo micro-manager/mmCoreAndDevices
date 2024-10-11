@@ -351,10 +351,10 @@ int G2SBigTiffStorage::AddImage(const char* handle, unsigned char* pixels, int w
 
 	// Validate image dimensions
 	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
-	if(numCoordinates != (int)fs->getDimension() || width != fs->getWidth() || height != fs->getHeight())
+	if((std::size_t)numCoordinates != fs->getDimension() || (std::uint32_t)width != fs->getWidth() || (std::uint32_t)height != fs->getHeight())
 		return DEVICE_INVALID_INPUT_PARAM;
 	if(fs->getImageCount() == 0)
-		fs->setPixelFormat(depth);
+		fs->setPixelFormat((std::uint8_t)depth);
 	else if(depth != fs->getBitDepth())
 		return DEVICE_INVALID_INPUT_PARAM;
 	for(int i = 0; i < numCoordinates; i++)

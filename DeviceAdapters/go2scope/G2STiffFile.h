@@ -111,7 +111,8 @@ private:
 	std::uint64_t												offset(std::int64_t off);
 	void															formHeader() noexcept;
 	void															appendIFD(std::size_t imagelen, const std::string& meta);
-	std::uint64_t												loadIFD(std::vector<unsigned char>& ifd, std::uint32_t& ifdsz);
+	void															loadNextIFD();
+	std::uint64_t												parseIFD(std::vector<unsigned char>& ifd, std::uint32_t& ifdsz);
 	std::size_t													setIFDTag(unsigned char* ifd, std::uint16_t tag, std::uint16_t dtype, std::uint64_t val, std::uint64_t cnt = 1) const noexcept;
 	std::uint32_t												getTagCount(const std::string& meta) const noexcept { return meta.empty() ? G2STIFF_TAG_COUNT_NOMETA : G2STIFF_TAG_COUNT; }
 	void															calcDescSize(std::size_t metalen, std::uint32_t tags, std::uint32_t* ifd, std::uint32_t* desc, std::uint32_t* tot) noexcept;
