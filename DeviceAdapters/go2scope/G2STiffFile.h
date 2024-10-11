@@ -84,7 +84,8 @@ public:
 	void															setUID(const std::string& val);
 	std::string													getUID() const noexcept { return datasetuid; }
 	std::string													getImageMetadata();
-	void															addImage(const std::vector<unsigned char>& buff, const std::string& meta = "");
+	void															addImage(const std::vector<unsigned char>& buff, const std::string& meta = "") { addImage(&buff[0], buff.size(), meta); }
+	void															addImage(const unsigned char* buff, std::size_t len, const std::string& meta = "");
 	std::vector<unsigned char>								getImage();
 	std::uint32_t												getDatasetImageCount() const noexcept { std::uint32_t ret = 1; for(std::size_t i = 2; i < shape.size(); i++) ret *= shape[i]; return ret; }
 	std::uint32_t												getImageCount() const noexcept { return imgcounter; }

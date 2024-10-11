@@ -129,8 +129,8 @@ void G2STiffFile::open(bool trunc, bool dio)
 		auto apath = std::filesystem::absolute(xpath);
 		auto dsepind = apath.u8string().find_first_of('\\');	
 		auto drivepath = dsepind == std::string::npos ? apath.u8string() : apath.u8string().substr(0, dsepind + 1);
-		int slength = (int)drivepath.length() + 1;
-		int len = MultiByteToWideChar(CP_UTF8, 0, drivepath.c_str(), slength, nullptr, 0);
+		slength = (int)drivepath.length() + 1;
+		len = MultiByteToWideChar(CP_UTF8, 0, drivepath.c_str(), slength, nullptr, 0);
 		wchar_t* dbuf = new wchar_t[len];
 		MultiByteToWideChar(CP_UTF8, 0, drivepath.c_str(), slength, dbuf, len);
 
@@ -279,7 +279,7 @@ void G2STiffFile::open(bool trunc, bool dio)
 						throw std::runtime_error("File '" + fpath + "' open failed. IFD " + std::to_string(i) + " is corrupted");
 					std::uint32_t tagcount = (std::uint32_t)readInt(&lbuff[0], bigTiff ? 8 : 2);
 					
-					std::uint32_t ifdsz = 0, basesz = 0, totsz = 0;
+					std::uint32_t ifdsz = 0, basesz = 0;
 					calcDescSize(0, tagcount, &ifdsz, &basesz, nullptr);
 					lbuff.resize(basesz);
 					nb = fetch(&lbuff[8], lbuff.size() - 8);
@@ -535,8 +535,8 @@ void G2STiffFile::setUID(const std::string& val)
 			char cv2 = datasetuid[cind + 1];
 			std::uint8_t vx1 = cv1 >= 48 && cv1 <= 57 ? cv1 - 48 : (cv1 >= 65 && cv1 <= 70 ? cv1 - 55 : cv1 - 87);
 			std::uint8_t vx2 = cv2 >= 48 && cv2 <= 57 ? cv2 - 48 : (cv2 >= 65 && cv2 <= 70 ? cv2 - 55 : cv2 - 87);
-			auto val = (std::uint8_t)(((vx1 & 0x0f) << 4) | (vx2 & 0x0f));
-			header[startind + i] = val;
+			auto xval = (std::uint8_t)(((vx1 & 0x0f) << 4) | (vx2 & 0x0f));
+			header[startind + i] = xval;
 		}
 	}
 }
@@ -610,13 +610,13 @@ std::string G2STiffFile::getImageMetadata()
  * @param meta Image metadata (optional)
  * @throws std::runtime_error
  */
-void G2STiffFile::addImage(const std::vector<unsigned char>& buff, const std::string& meta)
+void G2STiffFile::addImage(const unsigned char* buff, std::size_t len, const std::string& meta)
 {
 	if(!isOpen())
 		throw std::runtime_error("Invalid operation. No open file stream available");
 	if(shape.size() < 2)
 		throw std::runtime_error("Invalid operation. Dataset shape is not defined");
-	if(!bigTiff && buff.size() > TIFF_MAX_BUFFER_SIZE)
+	if(!bigTiff && len > TIFF_MAX_BUFFER_SIZE)
 		throw std::runtime_error("Invalid operation. Image data is too long");
 	if(!bigTiff && meta.size() > TIFF_MAX_BUFFER_SIZE)
 		throw std::runtime_error("Invalid operation. Metadata string is too large");
@@ -624,7 +624,7 @@ void G2STiffFile::addImage(const std::vector<unsigned char>& buff, const std::st
 	// Check file size limits
 	std::uint32_t tot = 0;
 	calcDescSize(meta.empty() ? 0 : meta.size() + 1, getTagCount(meta), nullptr, nullptr, &tot);
-	if(meta.size() + buff.size() + currpos + tot > getMaxFileSize())
+	if(meta.size() + len + currpos + tot > getMaxFileSize())
 		throw std::runtime_error("Invalid operation. File size limit exceeded");
 
 	// Commit header if empty file
@@ -662,16 +662,16 @@ void G2STiffFile::addImage(const std::vector<unsigned char>& buff, const std::st
 		seek(writepos);
 
 	// Compose next IFD and write image metadata
-	appendIFD(buff.size(), meta);
+	appendIFD(len, meta);
 
 	// Write pixel data
-	commit(&buff[0], buff.size());
+	commit(buff, len);
 
 	// Add padding bytes
 	auto alignsz = directIo ? ssize : 2;
-	if(buff.size() % alignsz != 0)
+	if(len % alignsz != 0)
 	{
-		auto padsize = buff.size() - (buff.size() / alignsz) * alignsz;
+		auto padsize = len - (len / alignsz) * alignsz;
 		std::vector<unsigned char> pbuff(padsize);
 		commit(&pbuff[0], pbuff.size());
 	}
