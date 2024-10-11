@@ -36,6 +36,7 @@
 //
 // CVS:           $Id$
 //
+// Version as of github commit fbd4c650.
 #ifndef _ANDOR_H_
 #define _ANDOR_H_
 
