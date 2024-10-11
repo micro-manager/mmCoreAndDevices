@@ -112,8 +112,8 @@ int SquidXYStage::Initialize()
       return DEVICE_ERR;
    }
 
-   stepSizeX_um_ = 0.001 / (screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_));
-   stepSizeY_um_ = 0.001 / (screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_));
+   stepSizeX_um_ = 0.00001 / (screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_));
+   stepSizeY_um_ = 0.00001 / (screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_));
 
    hub_ = static_cast<SquidHub*>(GetParentHub());
    if (!hub_ || !hub_->IsPortAvailable()) {

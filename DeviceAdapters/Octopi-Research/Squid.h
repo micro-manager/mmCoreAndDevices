@@ -13,6 +13,7 @@
 
 extern const char* g_HubDeviceName;
 extern const char* g_LEDShutterName;
+extern const char* g_XYStageName;
 
 const int CMD_MOVE_X = 0;
 const int CMD_MOVE_Y = 1;
