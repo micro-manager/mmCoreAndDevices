@@ -1863,6 +1863,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
     md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetWidth()));
     md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetHeight()));
     md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetFrameID()));
+    md.put(MM::g_Keyword_Metadata_Exposure, dev_->GetExposure());
     md.put(MM::g_Keyword_Meatdata_Exposure, dev_->GetExposure());
     // Image grabbed successfully ?
     if (objImageDataPointer->GetStatus()== GX_FRAME_STATUS_SUCCESS)
