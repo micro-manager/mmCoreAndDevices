@@ -71,7 +71,7 @@ std::string generate_guid() {
 // Zarr storage
 
 AcqZarrStorage::AcqZarrStorage() :
-   initialized(false), zarrStream(nullptr)
+   initialized(false), zarrStream(nullptr), currentImageNumber(0)
 {
    InitializeDefaultErrorMessages();
 
