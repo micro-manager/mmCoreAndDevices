@@ -27,9 +27,10 @@ int StorageInstance::Create(const char* path, const char* name, const std::vecto
 
    char cHandle[MM::MaxStrLength];
    int ret = GetImpl()->Create(path, name, (int)shape.size(), &shape[0], pixType, meta, cHandle);
-   if (ret == DEVICE_OK)
-      handle = cHandle;
-
+   if (ret != DEVICE_OK)
+      return ret;
+   
+   handle = cHandle;
    return DEVICE_OK;
 }
 
@@ -60,10 +61,11 @@ int StorageInstance::Load(const char* path, const char* name, std::string& handl
 
    char cHandle[MM::MaxStrLength];
    int ret = GetImpl()->Load(path, name, cHandle);
-   if (ret == DEVICE_OK)
-      handle = cHandle;
-
-   return ret;
+   if (ret != DEVICE_OK)
+      return ret;
+   
+   handle = cHandle;
+   return DEVICE_OK;
 }
 
 int StorageInstance::Delete(char* handle)
