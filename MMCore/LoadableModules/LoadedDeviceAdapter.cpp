@@ -185,6 +185,9 @@ LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
          return std::make_shared<GalvoInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
       case MM::HubDevice:
          return std::make_shared<HubInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+      case MM::StorageDevice:
+         return std::make_shared<StorageInstance>(core, shared_this, name, pDevice, deleter, label, deviceLogger, coreLogger);
+
       default:
          deleter(pDevice);
          throw CMMError("Device " + ToQuotedString(name) +

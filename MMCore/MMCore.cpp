@@ -745,6 +745,13 @@ void CMMCore::assignDefaultRole(std::shared_ptr<DeviceInstance> pDevice)
          LOG_INFO(coreLogger_) << "Default galvo set to " << label;
          break;
 
+      case MM::StorageDevice:
+         currentStorage_ =
+            std::static_pointer_cast<StorageInstance>(pDevice);
+         LOG_INFO(coreLogger_) << "Default storage set to " << label;
+         break;
+
+
       default:
          // no action on unrecognized device
          break;
