@@ -282,15 +282,10 @@ namespace MM {
 
    enum StorageDataType
    {
-      StorageDataType_uint8 = 0,
-      StorageDataType_uint32,
-      StorageDataType_uint64,
-      StorageDataType_int8,
-      StorageDataType_int16,
-      StorageDataType_int32,
-      StorageDataType_int64,
-      StorageDataType_float32,
-      StorageDataType_float64
+      StorageDataType_UNKNOWN = 0,
+      StorageDataType_GRAY8,     // uint8
+      StorageDataType_GRAY16,    // uint16
+      StorageDataType_RGB32      // RGBA, 8bits per color, A ignored defaults to 0
    };
 
 

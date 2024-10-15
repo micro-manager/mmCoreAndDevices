@@ -68,6 +68,34 @@ int StorageInstance::Load(const char* path, const char* name, std::string& handl
    return DEVICE_OK;
 }
 
+int StorageInstance::GetShape(const char* handle, std::vector<long>& shape)
+{
+   RequireInitialized(__func__);
+   int numDim(0);
+   int ret = GetImpl()->GetNumberOfDimensions(handle, numDim);
+   if (ret != DEVICE_OK)
+      return ret;
+   int* shapeArray = new int[numDim];
+   ret = GetImpl()->GetShape(handle, shapeArray);
+   if (ret != DEVICE_OK)
+      return ret;
+   shape.clear();
+   for (int i = 0; i < numDim; i++)
+      shape.push_back(shapeArray[i]);
+
+   return DEVICE_OK;
+}
+
+int StorageInstance::GetPixelType(const char* handle, MM::StorageDataType& dataType)
+{
+   RequireInitialized(__func__);
+   int ret = GetImpl()->GetDataType(handle, dataType);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   return DEVICE_OK;
+}
+
 int StorageInstance::Delete(char* handle)
 {
    RequireInitialized(__func__);
@@ -103,10 +131,10 @@ int StorageInstance::List(const char* path, std::vector<std::string>& listOfData
    return ret;
 }
 
-int StorageInstance::AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<int>& coordinates, const char* imageMeta)
+int StorageInstance::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, std::vector<int>& coordinates, const char* imageMeta)
 {
    RequireInitialized(__func__);
-   return GetImpl()->AddImage(handle, pixels, width, height, depth, &coordinates[0], coordinates.size(), imageMeta);
+   return GetImpl()->AddImage(handle, sizeInBytes, pixels, &coordinates[0], coordinates.size(), imageMeta);
 }
 
 int StorageInstance::GetSummaryMeta(const char* handle, std::string& meta)

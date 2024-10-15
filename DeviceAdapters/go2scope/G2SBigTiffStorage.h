@@ -59,9 +59,11 @@ public:
    int                                             ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
    int                                             Close(const char* handle);
    int                                             Load(const char* path, const char* name, char* handle);
+   int                                             GetShape(const char* handle, int shape[]);
+   int                                             GetDataType(const char* handle, MM::StorageDataType& pixelDataType);
    int                                             Delete(char* handle);
    int                                             List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength);
-   int                                             AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta);
+   int                                             AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta);
    int                                             GetSummaryMeta(const char* handle, char* meta, int bufSize);
    int                                             GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta, int bufSize);
    const unsigned char*                            GetImage(const char* handle, int coordinates[], int numCoordinates);

@@ -240,6 +240,21 @@ int G2SBigTiffStorage::Load(const char* path, const char* name, char* handle)
    return DEVICE_OK;
 }
 
+int G2SBigTiffStorage::GetShape(const char* handle, int shape[])
+{
+   // TODO:
+   // shape must have the size that includes x and y
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
+int G2SBigTiffStorage::GetDataType(const char* handle, MM::StorageDataType& pixelDataType)
+{
+   // TODO:
+   // in the case where the data type in file is not supported, return MM::StorageDataType_UNKNOWN
+
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
 /**
  * Close the dataset
  * File handle will be closed
@@ -329,19 +344,15 @@ int G2SBigTiffStorage::List(const char* path, char** listOfDatasets, int maxItem
  * Image metadata will be stored in cache
  * @param handle Entry GUID
  * @param pixels Pixel data buffer
- * @param width Image width
- * @param height Image height
- * @param depth Image bit depth
+ * @param sizeInBytes pixel array size
  * @param coordinates Image coordinates
  * @param numCoordinates Coordinate count
  * @param imageMeta Image metadata
  * @return Status code
  */
-int G2SBigTiffStorage::AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta)
+int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta)
 {
-	if(handle == nullptr || pixels == nullptr || width <= 0 || height <= 0 || numCoordinates <= 0 || sizeof(coordinates) != numCoordinates * sizeof(int))
-		return DEVICE_INVALID_INPUT_PARAM;
-	if(depth > 16 || depth < 8)
+	if(handle == nullptr || pixels == nullptr || sizeInBytes <= 0 || numCoordinates <= 0 || sizeof(coordinates) != numCoordinates * sizeof(int))
 		return DEVICE_INVALID_INPUT_PARAM;
 
 	// Obtain dataset descriptor from cache
@@ -351,21 +362,19 @@ int G2SBigTiffStorage::AddImage(const char* handle, unsigned char* pixels, int w
 
 	// Validate image dimensions
 	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
-	if((std::size_t)numCoordinates != fs->getDimension() || (std::uint32_t)width != fs->getWidth() || (std::uint32_t)height != fs->getHeight())
+	if((std::size_t)numCoordinates != fs->getDimension())
 		return DEVICE_INVALID_INPUT_PARAM;
 	if(fs->getImageCount() == 0)
-		fs->setPixelFormat((std::uint8_t)depth);
-	else if(depth != fs->getBitDepth())
-		return DEVICE_INVALID_INPUT_PARAM;
-	for(int i = 0; i < numCoordinates; i++)
+		fs->setPixelFormat((std::uint8_t) fs->getBpp());
+
+   for(int i = 0; i < numCoordinates; i++)
 	{
 		if(coordinates[i] < 0 || coordinates[i] >= (int)fs->getShape()[i + 2])
 			return DEVICE_INVALID_INPUT_PARAM;
 	}
 
 	// Add image
-	std::size_t bpp = depth == 8 ? 1 : 2;
-	fs->addImage(pixels, bpp * width * height, imageMeta);
+	fs->addImage(pixels, sizeInBytes, imageMeta);
    return DEVICE_OK;
 }
 

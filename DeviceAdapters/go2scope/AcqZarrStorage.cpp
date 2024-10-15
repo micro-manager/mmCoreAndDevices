@@ -71,7 +71,7 @@ std::string generate_guid() {
 // Zarr storage
 
 AcqZarrStorage::AcqZarrStorage() :
-   initialized(false), zarrStream(nullptr), currentImageNumber(0)
+   initialized(false), zarrStream(nullptr), currentImageNumber(0), dataType(MM::StorageDataType_UNKNOWN)
 {
    InitializeDefaultErrorMessages();
 
@@ -170,8 +170,16 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       return ERR_ZARR_SETTINGS;
    }
 
-   // set data type
-   status = ZarrStreamSettings_set_data_type(settings, (ZarrDataType)pixType);
+   // set data type and convert to zarr
+   int ztype = ConvertToZarrType(pixType);
+   if (ztype == -1)
+   {
+      LogMessage("Pixel data type is not supported by Zarr writer " + pixType);
+      ZarrStreamSettings_destroy(settings);
+      return ERR_ZARR_SETTINGS;
+   }
+
+   status = ZarrStreamSettings_set_data_type(settings, (ZarrDataType)ztype);
    if (status != ZarrStatus_Success)
    {
       LogMessage(getErrorMessage(status));
@@ -263,6 +271,7 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       return ERR_ZARR_STREAM_CREATE;
    }
 
+   dataType = pixType;
    streamHandle = generate_guid();
    // TODO: allow many streams
 
@@ -309,17 +318,7 @@ int AcqZarrStorage::Load(const char* path, const char* name, char* handle)
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
 
-int AcqZarrStorage::Delete(char* handle)
-{
-   return DEVICE_NOT_YET_IMPLEMENTED;
-}
-
-int AcqZarrStorage::List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength)
-{
-   return DEVICE_NOT_YET_IMPLEMENTED;
-}
-
-int AcqZarrStorage::AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta)
+int AcqZarrStorage::GetShape(const char* handle, int shape[])
 {
    if (zarrStream == nullptr)
    {
@@ -332,13 +331,42 @@ int AcqZarrStorage::AddImage(const char* handle, unsigned char* pixels, int widt
       return ERR_ZARR_STREAM_ACCESS;
    }
 
-   if (streamDimensions[0] != width || streamDimensions[1] != height)
+   int i(0);
+   for (auto d : streamDimensions) shape[i++] = d;
+
+   return DEVICE_OK;
+}
+
+int AcqZarrStorage::Delete(char* handle)
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
+int AcqZarrStorage::List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength)
+{
+   return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
+int AcqZarrStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta)
+{
+   if (zarrStream == nullptr)
+   {
+      LogMessage("No stream is currently open.");
+      return ERR_ZARR_STREAM_ACCESS;
+   }
+   if (streamHandle.compare(handle) != 0)
+   {
+      LogMessage("Handle is not valid.");
+      return ERR_ZARR_STREAM_ACCESS;
+   }
+
+   if (streamDimensions[0] * streamDimensions[1] != sizeInBytes)
    {
       LogMessage("Stream dimensions do not match image size");
       return ERR_ZARR_STREAM_APPEND;
    }
 
-   size_t bytesIn((size_t)width * height * depth);
+   size_t bytesIn(sizeInBytes);
    size_t bytesOut(0);
    ZarrStatus status = ZarrStream_append(zarrStream, pixels, bytesIn, &bytesOut);
    if (status != ZarrStatus_Success)
@@ -469,6 +497,25 @@ void AcqZarrStorage::destroyStream()
       zarrStream = nullptr;
       streamHandle = "";
    }
+}
+
+int AcqZarrStorage::ConvertToZarrType(MM::StorageDataType type)
+{
+   ZarrDataType ztype;
+   switch (type)
+   {
+      case MM::StorageDataType_GRAY8:
+         ztype = ZarrDataType_uint8;
+      break;
+
+      case MM::StorageDataType_GRAY16:
+         ztype = ZarrDataType_int16;  // why is there no uint16?
+      break;
+
+      default:
+         return -1;
+   }
+   return (int)ztype;
 }
 
 
