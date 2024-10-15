@@ -8164,7 +8164,7 @@ std::string CMMCore::loadDataset(const char* path, const char* name)
  * \param coordinates - coordinates of the image in the dimension space
  * \param imageMeta - serialized JSON with image specific metadata
  */
-void CMMCore::addImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta)
+void CMMCore::addImage(const char* handle, int width, int height, int depth, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)

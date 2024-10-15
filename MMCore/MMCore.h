@@ -86,6 +86,8 @@
 #   define MMCORE_DEPRECATED(prototype) prototype
 #endif
 
+typedef unsigned char* STORAGEIMG;
+typedef unsigned char* STORAGEMETA;
 
 class CPluginManager;
 class CircularBuffer;
@@ -645,7 +647,7 @@ public:
    std::string createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta);
    void closeDataset(const char* handle);
    std::string loadDataset(const char* path, const char* name);
-   void addImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<long> coordinates, const char* imageMeta);
+   void addImage(const char* handle, int width, int height, int depth, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta);
    void configureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
    std::string getSummaryMeta(const char* handle);
