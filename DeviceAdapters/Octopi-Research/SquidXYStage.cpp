@@ -144,8 +144,8 @@ int SquidXYStage::Initialize()
    SetPropertyLimits(g_Acceleration, 1.0, 6553.5);
 
    pAct = new CPropertyAction(this, &SquidXYStage::OnMaxVelocity);
-CreateFloatProperty(g_Max_Velocity, maxVelocity_, false, pAct);
-SetPropertyLimits(g_Max_Velocity, 1.0, 655.35);
+   CreateFloatProperty(g_Max_Velocity, maxVelocity_, false, pAct);
+   SetPropertyLimits(g_Max_Velocity, 1.0, 655.35);
 
 if (autoHome_)
 {

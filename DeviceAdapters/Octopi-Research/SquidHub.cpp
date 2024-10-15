@@ -8,7 +8,6 @@
 
 
 
-
 const char* g_HubDeviceName = "SquidHub";
 
 
@@ -102,63 +101,7 @@ int SquidHub::Initialize() {
 
    initialized_ = true;
 
-
    return DEVICE_OK;
-
-   //SET_ILLUMINATION_LED_MATRIX = 13
-   /*
-   cmd[0] = 2; 
-   cmd[1] = 13; 
-   cmd[2] = 1;
-   cmd[3] = 128;
-   cmd[4] = 128;
-   cmd[5] = 0;
-   ret = SendCommand(cmd, cmdSize);
-   if (ret != DEVICE_OK) {
-      return ret;
-   }
-
-   cmd[0] = 0x03;
-   cmd[1] = 10; // CMD_SET. TURN_ON_ILLUMINATION 
-   for (unsigned i = 2; i < cmdSize; i++) {
-      cmd[i] = 0;
-   }
-   ret = SendCommand(cmd, cmdSize);
-   if (ret != DEVICE_OK) {
-      return ret;
-   }
-
-   
-   const unsigned msgLength = 24;
-   unsigned char msg[msgLength];
-   unsigned long read = 0;
-   unsigned tries = 0;
-   while (read == 0 && tries < 20) {
-      Sleep(20);
-      ReadFromComPort(port_.c_str(), msg, msgLength, read);
-      tries++;
-      if (read > 0) {
-         LogMessage("Read something from serial port", false);
-         std::ostringstream os;
-         os << "Tries: " << tries << ", Read # of bytes: " << read;
-         LogMessage(os.str().c_str(), false);
-      }
-   }
-   if (tries >= 20) {
-      LogMessage("Read nothing from serial port", false);
-   }
-   
-
-   const unsigned TURN_ON_ILLUMINATION = 10;
-   for (unsigned i = 0; i < cmdSize; i++) {
-      cmd[i] = 0;
-   }
-   cmd[1] = TURN_ON_ILLUMINATION;
-   ret = SendCommand(cmd, cmdSize);
-   if (ret != DEVICE_OK) {
-      return ret;
-   }
-   */
 }
 
 
@@ -171,16 +114,19 @@ int SquidHub::Shutdown() {
    return DEVICE_OK;
 }
 
+
 bool SquidHub::Busy()
 {
     return false;
 }
+
 
 bool SquidHub::SupportsDeviceDetection(void)
 {
    return false;  // can implement this later
 
 }
+
 
 MM::DeviceDetectionStatus SquidHub::DetectDevice(void)
 {
@@ -229,22 +175,6 @@ int SquidHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 
    return DEVICE_OK;
 }
-
-/*
-uint8_t SquidHub::crc8ccitt(const void* data, size_t size) {
-   uint8_t val = 0;
-
-   uint8_t* pos = (uint8_t*)data;
-   uint8_t* end = pos + size;
-
-   while (pos < end) {
-      val = CRC_TABLE[val ^ *pos];
-      pos++;
-   }
-
-   return val;
-}
-*/
 
 
 int SquidHub::assignXYStageDevice(SquidXYStage* xyStageDevice)
