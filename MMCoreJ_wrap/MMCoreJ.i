@@ -314,6 +314,23 @@
    $result = data;
 }
 
+// Map input argument: java byte[] -> C++ STORAGEIMG
+%typemap(in) STORAGEIMG
+{
+   long expectedLength = arg3 * arg4 * (arg5 <= 8 ? 1 : (arg5 <= 16 ? 2 : (arg5 / 8)));
+   long receivedLength = JCALL1(GetArrayLength, jenv, $input);
+   
+   if (receivedLength != expectedLength)
+   {
+      jclass excep = jenv->FindClass("java/lang/Exception");
+      if (excep)
+         jenv->ThrowNew(excep, "Image dimensions are wrong for this SLM.");
+      return;
+   }
+   
+   $1 = (unsigned char *) JCALL2(GetByteArrayElements, jenv, $input, 0);
+}
+
 // Map input argument: java byte[] -> C++ unsigned char *
 %typemap(in) unsigned char*
 {
