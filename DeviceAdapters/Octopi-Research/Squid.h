@@ -15,11 +15,11 @@ extern const char* g_HubDeviceName;
 extern const char* g_LEDShutterName;
 extern const char* g_XYStageName;
 
-const int CMD_MOVE_X = 0;
-const int CMD_MOVE_Y = 1;
-const int CMD_MOVE_Z = 2;
-const int CMD_MOVE_THETA = 3;
-const int CMD_HOME_OR_ZERO = 5;
+const unsigned char CMD_MOVE_X = 0;
+const unsigned char CMD_MOVE_Y = 1;
+const unsigned char CMD_MOVE_Z = 2;
+const unsigned char CMD_MOVE_THETA = 3;
+const unsigned char CMD_HOME_OR_ZERO = 5;
 const int CMD_TURN_ON_ILLUMINATION = 10;
 const int CMD_TURN_OFF_ILLUMINATION = 11;
 const int CMD_SET_ILLUMINATION = 12;
@@ -56,6 +56,15 @@ const int ILLUMINATION_SOURCE_LED_ARRAY_LOW_NA = 4;
 const int ILLUMINATION_SOURCE_LED_ARRAY_LEFT_DOT = 5;
 const int ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_DOT = 6;
 
+const unsigned char AXIS_X = 0;
+const unsigned char AXIS_Y = 1;
+const unsigned char AXIS_Z = 2;
+const unsigned char AXIS_THETA = 3;
+const unsigned char AXIS_XY = 4;
+
+const int STAGE_MOVEMENT_SIGN_X = -1;
+const int STAGE_MOVEMENT_SIGN_Y = -1;
+const int STAGE_MOVEMENT_SIGN_Z = -1;
 
 class SquidMonitoringThread;
 class SquidXYStage;
@@ -169,10 +178,7 @@ public:
       return hub_->GetPositionSteps(x, y);
    }
    int SetRelativePositionSteps(long x, long y);
-   int Home()
-   {
-      return DEVICE_UNSUPPORTED_COMMAND;
-   }
+   int Home();
    int Stop()
    {
       return DEVICE_UNSUPPORTED_COMMAND;

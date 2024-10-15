@@ -112,8 +112,8 @@ int SquidXYStage::Initialize()
       return DEVICE_ERR;
    }
 
-   stepSizeX_um_ = 1000.0 * screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_);
-   stepSizeY_um_ = 1000.0 * screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_);
+   stepSizeX_um_ = -1000.0 * screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_);
+   stepSizeY_um_ = -1000.0 * screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_);
     
    hub_ = static_cast<SquidHub*>(GetParentHub());
    if (!hub_ || !hub_->IsPortAvailable()) {
@@ -135,6 +135,31 @@ bool SquidXYStage::Busy()
    // TODO!
    return false;
 }
+
+int SquidXYStage::Home()
+{
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_HOME_OR_ZERO;
+   cmd[2] = AXIS_X;
+   cmd[3] = int((STAGE_MOVEMENT_SIGN_X + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   int ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   cmd[1] = CMD_HOME_OR_ZERO;
+   cmd[2] = AXIS_Y;
+   cmd[3] = int((STAGE_MOVEMENT_SIGN_Y + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   return DEVICE_OK;
+}
+
 
 /*
 * Sets the position of the stage in steps

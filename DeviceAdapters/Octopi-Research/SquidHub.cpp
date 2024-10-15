@@ -275,6 +275,7 @@ void SquidHub::SetCommandPending(uint8_t cmdNr)
    pendingCmd_ = cmdNr;
 }
 
+
 int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr)
 {
    cmd[0] = cmdNr_;
@@ -295,6 +296,7 @@ int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr)
    SetCommandPending(cmdNr_);
    return WriteToComPort(port_.c_str(), cmd, cmdSize);
 }
+
 
 /**
 * Helper function to send Move or Move Relative command to relevant Stage
@@ -327,12 +329,14 @@ int SquidHub::SendMoveCommand(const int command, long steps)
    return DEVICE_OK;
 }
 
+
 int SquidHub::GetPositionSteps(long& x, long& y)
 {
    x = x_.load();
    y = y_.load();
    return DEVICE_OK;
 }
+
 
 int SquidHub::SetPositionXSteps(long x)
 {
