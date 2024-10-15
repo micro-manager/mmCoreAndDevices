@@ -157,9 +157,11 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    // set store
    ostringstream osZarrStreamPath;
    osZarrStreamPath << path << "/" << name;
+   char* streamPathName = new char[osZarrStreamPath.str().size() + 1];
+   strcpy(streamPathName, osZarrStreamPath.str().c_str());
    ZarrStatus status = ZarrStreamSettings_set_store(settings,
-                                                    osZarrStreamPath.str().c_str(),
-                                                    osZarrStreamPath.str().size(),
+                                                    streamPathName,
+                                                    osZarrStreamPath.str().size() + 1,
                                                     nullptr);
    if (status != ZarrStatus_Success)
    {
@@ -187,8 +189,9 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
 
    ZarrDimensionProperties dimPropsX;
    string nameX("x");
-   dimPropsX.name = nameX.c_str();
-   dimPropsX.bytes_of_name = nameX.size();
+   dimPropsX.name = new char[nameX.size() + 1];
+   strcpy(const_cast<char*>(dimPropsX.name), nameX.c_str());
+   dimPropsX.bytes_of_name = nameX.size() + 1;
    dimPropsX.array_size_px = shape[0];
    dimPropsX.chunk_size_px = dimPropsX.array_size_px;
    dimPropsX.shard_size_chunks = 1;
@@ -204,13 +207,14 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
 
    ZarrDimensionProperties dimPropsY;
    string nameY("y");
-   dimPropsY.name = nameY.c_str();
-   dimPropsY.bytes_of_name = nameY.size();
+   dimPropsY.name = new char[nameX.size() + 1];
+   strcpy(const_cast<char*>(dimPropsY.name), nameY.c_str());
+   dimPropsY.bytes_of_name = nameY.size() + 1;
    dimPropsY.array_size_px = shape[1];
    dimPropsY.chunk_size_px = dimPropsY.array_size_px;
    dimPropsY.shard_size_chunks = 1;
 
-   status = ZarrStreamSettings_set_dimension(settings, 0, &dimPropsX);
+   status = ZarrStreamSettings_set_dimension(settings, 1, &dimPropsY);
    if (status != ZarrStatus_Success)
    {
       LogMessage(getErrorMessage(status));
@@ -224,8 +228,10 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       ZarrDimensionProperties dimProps;
       ostringstream osd;
       osd << "dim-" << 1;
-      dimProps.name = osd.str().c_str();
-      dimProps.bytes_of_name = osd.str().size();
+      auto dimName(osd.str());
+      dimProps.name = new char[dimName.size()+1];
+      strcpy(const_cast<char*>(dimProps.name), osd.str().c_str());
+      dimProps.bytes_of_name = dimName.size()+1;
       dimProps.array_size_px = shape[i];
       dimProps.chunk_size_px = 1;
       dimProps.shard_size_chunks = 1;
@@ -238,12 +244,15 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       }
    }
 
-   status = ZarrStreamSettings_set_custom_metadata(settings, meta, strlen(meta));
-   if (status != ZarrStatus_Success)
+   if (strlen(meta))
    {
-      LogMessage("Invalid summary metadata.");
-      ZarrStreamSettings_destroy(settings);
-      return ERR_ZARR_SETTINGS;
+      status = ZarrStreamSettings_set_custom_metadata(settings, meta, strlen(meta) + 1);
+      if (status != ZarrStatus_Success)
+      {
+         LogMessage("Invalid summary metadata.");
+         ZarrStreamSettings_destroy(settings);
+         return ERR_ZARR_SETTINGS;
+      }
    }
 
    zarrStream = ZarrStream_create(settings, ZarrVersion_2);
@@ -260,6 +269,7 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    streamDimensions = std::vector<int>(shape, shape + numberOfDimensions);
    currentCoordinate = std::vector<int>(numberOfDimensions, 0);
    currentImageNumber = 0;
+   strncpy(handle, streamHandle.c_str(), MM::MaxStrLength);
 
    ZarrStreamSettings_destroy(settings);
 
