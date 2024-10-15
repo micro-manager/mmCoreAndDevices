@@ -93,6 +93,7 @@ public:
    bool IsPortAvailable() { return (port_ != ""); };
    int SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr);
    int SendMoveCommand(const int cmd, long steps);
+   int SetMaxVelocityAndAcceleration(unsigned char axis, double maxVelocity, double acceleration);
    bool IsCommandPending(uint8_t cmdNr);
    void ReceivedCommand(uint8_t cmdNr);
    int GetPositionSteps(long& x, long& y);
@@ -217,8 +218,8 @@ public:
 
    // action interface
    // ----------------
-   int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnModel(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnMaxVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    int Callback(long xSteps, long ySteps);
@@ -237,7 +238,8 @@ private:
    double posY_um_;
    bool busy_;
    MM::TimeoutMs* timeOutTimer_;
-   double velocity_;
+   double maxVelocity_;
+   double acceleration_;
    bool autoHome_;
    bool initialized_;
    uint8_t cmdNr_;

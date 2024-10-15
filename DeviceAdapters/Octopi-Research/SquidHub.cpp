@@ -322,11 +322,29 @@ int SquidHub::SendMoveCommand(const int command, long steps)
    cmd[4] = (steps >> 8) & 0xFF;
    cmd[5] = steps & 0xFF;
 
-   int ret = SendCommand(cmd, cmdSize, &cmdNr_);
-   if (ret != DEVICE_OK)
-      return ret;
+   return SendCommand(cmd, cmdSize, &cmdNr_);
+}
 
-   return DEVICE_OK;
+
+/**
+ * Velocity: max 65535/100 mm/s
+ * Acceleration: max 65535/10 mm/s^2
+ */
+int SquidHub::SetMaxVelocityAndAcceleration(unsigned char axis, double maxVelocity, double acceleration)
+{
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_SET_MAX_VELOCITY_ACCELERATION;
+   cmd[2] = axis;
+   cmd[3] = uint16_t (maxVelocity * 100) >> 8;
+   cmd[4] = uint16_t (maxVelocity * 100) & 0xff;
+   cmd[5] = uint16_t (acceleration * 10) >> 8;
+   cmd[6] = uint16_t (acceleration * 10) & 0xff;
+
+   return SendCommand(cmd, cmdSize, &cmdNr_);
 }
 
 

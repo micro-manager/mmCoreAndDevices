@@ -72,6 +72,8 @@ const char* g_XYStageName = "XYStage";
 const char* g_AutoHome = "Home on startup";
 const char* g_Yes = "Yes";
 const char* g_No = "No";
+const char* g_Acceleration = "Acceleration(mm/s^2)";
+const char* g_Max_Velocity = "Max Velocity(mm/s)";
 
 SquidXYStage::SquidXYStage() :
    fullStepsPerRevX_(200),
@@ -83,6 +85,8 @@ SquidXYStage::SquidXYStage() :
    posX_um_(0.0),
    posY_um_(0.0),
    busy_(false),
+   maxVelocity_(25.0),
+   acceleration_(500.0),
    autoHome_(false),
    initialized_(false),
    cmdNr_(0)
@@ -135,24 +139,33 @@ int SquidXYStage::Initialize()
    char hubLabel[MM::MaxStrLength];
    hub_->GetLabel(hubLabel);
 
-   if (autoHome_)
-   {
-      ret = Home();
-      if (ret != DEVICE_OK)
-         return ret;
-   }
+   CPropertyAction* pAct = new CPropertyAction(this, &SquidXYStage::OnAcceleration);
+   CreateFloatProperty(g_Acceleration, acceleration_, false, pAct);
+   SetPropertyLimits(g_Acceleration, 1.0, 6553.5);
 
+   pAct = new CPropertyAction(this, &SquidXYStage::OnMaxVelocity);
+CreateFloatProperty(g_Max_Velocity, maxVelocity_, false, pAct);
+SetPropertyLimits(g_Max_Velocity, 1.0, 655.35);
 
-   initialized_ = true;
-
-   return DEVICE_OK;
+if (autoHome_)
+{
+   ret = Home();
+   if (ret != DEVICE_OK)
+      return ret;
 }
 
-bool SquidXYStage::Busy() 
+initialized_ = true;
+
+return DEVICE_OK;
+}
+
+
+bool SquidXYStage::Busy()
 {
    // TODO!
    return false;
 }
+
 
 int SquidXYStage::Home()
 {
@@ -162,16 +175,10 @@ int SquidXYStage::Home()
       cmd[i] = 0;
    }
    cmd[1] = CMD_HOME_OR_ZERO;
-   cmd[2] = AXIS_X;
+   cmd[2] = AXIS_XY;
    cmd[3] = int((STAGE_MOVEMENT_SIGN_X + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   cmd[4] = int((STAGE_MOVEMENT_SIGN_Y + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
    int ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   cmd[1] = CMD_HOME_OR_ZERO;
-   cmd[2] = AXIS_Y;
-   cmd[3] = int((STAGE_MOVEMENT_SIGN_Y + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
-   ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -208,7 +215,7 @@ int SquidXYStage::SetRelativePositionSteps(long xSteps, long ySteps)
 
 int SquidXYStage::Callback(long xSteps, long ySteps)
 {
-   this->GetCoreCallback()->OnXYStagePositionChanged(this, 
+   this->GetCoreCallback()->OnXYStagePositionChanged(this,
       xSteps * stepSizeX_um_, ySteps * stepSizeY_um_);
    return DEVICE_OK;
 }
@@ -226,6 +233,42 @@ int SquidXYStage::OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(response);
       autoHome_ = response == g_Yes;
+   }
+   return DEVICE_OK;
+}
+
+
+int SquidXYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(acceleration_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(acceleration_);
+      int ret = hub_->SetMaxVelocityAndAcceleration(AXIS_X, maxVelocity_, acceleration_);
+      if (ret != DEVICE_OK)
+         return ret;
+      return hub_->SetMaxVelocityAndAcceleration(AXIS_Y, maxVelocity_, acceleration_);
+   }
+   return DEVICE_OK;
+}
+
+
+int SquidXYStage::OnMaxVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(maxVelocity_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(maxVelocity_);
+      int ret = hub_->SetMaxVelocityAndAcceleration(AXIS_X, maxVelocity_, acceleration_);
+      if (ret != DEVICE_OK)
+         return ret;
+      return hub_->SetMaxVelocityAndAcceleration(AXIS_Y, maxVelocity_, acceleration_);
    }
    return DEVICE_OK;
 }
