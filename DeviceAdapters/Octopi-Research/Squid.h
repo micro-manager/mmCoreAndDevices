@@ -176,7 +176,6 @@ public:
 
    bool Busy();
 
-   //double GetStepSize() { return stepSize_um_; }
    int SetPositionSteps(long x, long y);
    int GetPositionSteps(long& x, long& y)
    {
@@ -244,6 +243,35 @@ private:
    bool initialized_;
    uint8_t cmdNr_;
 
+};
+
+class SquidZStage : public CStageBase<SquidZStage>
+{
+public:
+   SquidZStage();
+   ~SquidZStage();
+   int Shutdown();
+   void GetName(char* pszName) const;
+
+   int Initialize();
+
+   bool Busy();
+
+   double GetStepSize() { return stepSize_um_; }
+   int SetPositionSteps(long z);
+   int GetPositionSteps(long& z);
+   int SetRelativePositionSteps(long z);
+   int Home();
+   int Stop();
+
+private:
+   SquidHub* hub_;
+   double stepSize_um_;
+   double screwPitchZmm_;
+   double microSteppingDefaultZ_; 
+   double fullStepsPerRevZ_;
+   double stepSize_um_;
+   bool initialized_;
 };
 
 
