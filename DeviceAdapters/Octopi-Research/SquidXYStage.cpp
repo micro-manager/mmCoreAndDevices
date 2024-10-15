@@ -192,7 +192,6 @@ int SquidXYStage::Home()
 */
 int SquidXYStage::SetPositionSteps(long xSteps, long ySteps)
 {
-
    int ret = hub_->SendMoveCommand(CMD_MOVETO_X, xSteps);
    if (ret != DEVICE_OK)
       return ret;

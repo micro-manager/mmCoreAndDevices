@@ -27,6 +27,9 @@
     <ClCompile Include="SquidXYStage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SquidZStage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="crc8.h">

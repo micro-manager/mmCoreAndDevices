@@ -14,6 +14,7 @@
 extern const char* g_HubDeviceName;
 extern const char* g_LEDShutterName;
 extern const char* g_XYStageName;
+extern const char* g_ZStageName;
 
 const unsigned char CMD_MOVE_X = 0;
 const unsigned char CMD_MOVE_Y = 1;
@@ -96,7 +97,8 @@ public:
    int SetMaxVelocityAndAcceleration(unsigned char axis, double maxVelocity, double acceleration);
    bool IsCommandPending(uint8_t cmdNr);
    void ReceivedCommand(uint8_t cmdNr);
-   int GetPositionSteps(long& x, long& y);
+   int GetPositionXYSteps(long& x, long& y);
+   int GetPositionZSteps(long& z);
    int SetPositionXSteps(long x);
    int SetPositionYSteps(long y);
    int SetPositionZSteps(long z);
@@ -179,7 +181,7 @@ public:
    int SetPositionSteps(long x, long y);
    int GetPositionSteps(long& x, long& y)
    {
-      return hub_->GetPositionSteps(x, y);
+      return hub_->GetPositionXYSteps(x, y);
    }
    int SetRelativePositionSteps(long x, long y);
    int Home();
@@ -245,6 +247,7 @@ private:
 
 };
 
+
 class SquidZStage : public CStageBase<SquidZStage>
 {
 public:
@@ -252,17 +255,37 @@ public:
    ~SquidZStage();
    int Shutdown();
    void GetName(char* pszName) const;
-
    int Initialize();
 
    bool Busy();
 
    double GetStepSize() { return stepSize_um_; }
+   int SetPositionUm(double pos);
+   int GetPositionUm(double& pos);
+   int SetRelativePositionUm(double d);
    int SetPositionSteps(long z);
    int GetPositionSteps(long& z);
    int SetRelativePositionSteps(long z);
    int Home();
    int Stop();
+
+   int SetOrigin()
+   {
+      return DEVICE_UNSUPPORTED_COMMAND;
+   };
+   int SetOrigin(double&)
+   {
+      return DEVICE_UNSUPPORTED_COMMAND;
+   };
+   int GetLimits(double&, double&)
+   {
+      return DEVICE_UNSUPPORTED_COMMAND;
+   };
+   int IsStageSequenceable(bool& sequenceable) const {
+      sequenceable = false;
+      return DEVICE_OK;
+   }
+   bool IsContinuousFocusDrive() const { return false; };
 
 private:
    SquidHub* hub_;
@@ -270,7 +293,6 @@ private:
    double screwPitchZmm_;
    double microSteppingDefaultZ_; 
    double fullStepsPerRevZ_;
-   double stepSize_um_;
    bool initialized_;
 };
 

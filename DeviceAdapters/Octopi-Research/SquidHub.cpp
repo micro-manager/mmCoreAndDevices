@@ -16,6 +16,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_HubDeviceName, MM::HubDevice, g_HubDeviceName);
    RegisterDevice(g_LEDShutterName, MM::ShutterDevice, "LEDs");
    RegisterDevice(g_XYStageName, MM::XYStageDevice, "XY-Stage");
+   RegisterDevice(g_ZStageName, MM::StageDevice, "Z-Stage");
 }
 
 
@@ -34,10 +35,15 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new SquidXYStage();
    }
+   else if (strcmp(deviceName, g_ZStageName) == 0)
+   {
+      return new SquidZStage();
+   }
 
    // ...supplied name not recognized
    return 0;
 }
+
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)
 {
@@ -278,10 +284,17 @@ int SquidHub::SetMaxVelocityAndAcceleration(unsigned char axis, double maxVeloci
 }
 
 
-int SquidHub::GetPositionSteps(long& x, long& y)
+int SquidHub::GetPositionXYSteps(long& x, long& y)
 {
    x = x_.load();
    y = y_.load();
+   return DEVICE_OK;
+}
+
+
+int SquidHub::GetPositionZSteps(long& z)
+{
+   z = z_.load();
    return DEVICE_OK;
 }
 
