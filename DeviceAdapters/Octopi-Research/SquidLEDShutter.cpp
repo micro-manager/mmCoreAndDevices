@@ -174,9 +174,11 @@ int SquidLEDShutter::Initialize()
 }
 
 
+// TODO: figure out how to get a real Busy signal
 bool SquidLEDShutter::Busy()
 {
-   return hub_->IsCommandPending(cmdNr_);
+   return false;
+   //return hub_->IsCommandPending(cmdNr_);
 }
 
 

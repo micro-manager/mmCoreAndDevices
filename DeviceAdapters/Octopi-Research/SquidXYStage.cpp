@@ -69,6 +69,9 @@ sleep_time_s = 0.005
 
 
 const char* g_XYStageName = "XYStage";
+const char* g_AutoHome = "Home on startup";
+const char* g_Yes = "Yes";
+const char* g_No = "No";
 
 SquidXYStage::SquidXYStage() :
    fullStepsPerRevX_(200),
@@ -80,10 +83,16 @@ SquidXYStage::SquidXYStage() :
    posX_um_(0.0),
    posY_um_(0.0),
    busy_(false),
+   autoHome_(false),
    initialized_(false),
    cmdNr_(0)
 {
    InitializeDefaultErrorMessages();
+
+   CPropertyAction* pAct = new CPropertyAction(this, &SquidXYStage::OnAutoHome);
+   CreateProperty(g_AutoHome, g_No, MM::String, false, pAct, true);
+   AddAllowedValue(g_AutoHome, g_Yes);
+   AddAllowedValue(g_AutoHome, g_No);
 }
 
 SquidXYStage::~SquidXYStage()
@@ -112,7 +121,8 @@ int SquidXYStage::Initialize()
       return DEVICE_ERR;
    }
 
-   stepSizeX_um_ = -1000.0 * screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_);
+   // minus sign is there to enforce compatibility with MM sense of direction
+   stepSizeX_um_ = -1000.0 * screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_); 
    stepSizeY_um_ = -1000.0 * screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_);
     
    hub_ = static_cast<SquidHub*>(GetParentHub());
@@ -124,6 +134,14 @@ int SquidXYStage::Initialize()
       return ret;
    char hubLabel[MM::MaxStrLength];
    hub_->GetLabel(hubLabel);
+
+   if (autoHome_)
+   {
+      ret = Home();
+      if (ret != DEVICE_OK)
+         return ret;
+   }
+
 
    initialized_ = true;
 
@@ -195,3 +213,19 @@ int SquidXYStage::Callback(long xSteps, long ySteps)
    return DEVICE_OK;
 }
 
+
+int SquidXYStage::OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   std::string response;
+   if (eAct == MM::BeforeGet)
+   {
+      response = autoHome_ ? g_Yes : g_No;
+      pProp->Set(response.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(response);
+      autoHome_ = response == g_Yes;
+   }
+   return DEVICE_OK;
+}

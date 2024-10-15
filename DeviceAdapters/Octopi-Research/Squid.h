@@ -66,6 +66,10 @@ const int STAGE_MOVEMENT_SIGN_X = -1;
 const int STAGE_MOVEMENT_SIGN_Y = -1;
 const int STAGE_MOVEMENT_SIGN_Z = -1;
 
+extern const char* g_AutoHome;
+extern const char* g_Yes;
+extern const char* g_No;
+
 class SquidMonitoringThread;
 class SquidXYStage;
 
@@ -215,6 +219,7 @@ public:
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnModel(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    int Callback(long xSteps, long ySteps);
 
@@ -233,6 +238,7 @@ private:
    bool busy_;
    MM::TimeoutMs* timeOutTimer_;
    double velocity_;
+   bool autoHome_;
    bool initialized_;
    uint8_t cmdNr_;
 
