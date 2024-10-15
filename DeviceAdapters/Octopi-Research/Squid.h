@@ -73,6 +73,7 @@ extern const char* g_No;
 
 class SquidMonitoringThread;
 class SquidXYStage;
+class SquidZStage;
 
 class SquidHub : public HubBase<SquidHub>
 {
@@ -106,12 +107,17 @@ public:
    std::string port_;
 
    int assignXYStageDevice(SquidXYStage* xyStageDevice);
+   int assignZStageDevice(SquidZStage* zStageDevice);
+
+   bool XYStageBusy();
+   bool ZStageBusy();
 
 private:
    void SetCommandPending(uint8_t cmdNr);
    bool initialized_;
    SquidMonitoringThread* monitoringThread_;
    SquidXYStage* xyStageDevice_;
+   SquidZStage* zStageDevice_;
    uint8_t cmdNr_;
    uint8_t pendingCmd_;
    std::recursive_mutex lock_;
@@ -119,6 +125,9 @@ private:
    std::atomic_long x_;
    std::atomic_long y_;
    std::atomic_long z_;
+   std::atomic_bool xStageBusy_;
+   std::atomic_bool yStageBusy_;
+   std::atomic_bool zStageBusy_;
 };
 
 
@@ -238,7 +247,6 @@ private:
    double posX_um_;
    double posY_um_;
    bool busy_;
-   MM::TimeoutMs* timeOutTimer_;
    double maxVelocity_;
    double acceleration_;
    bool autoHome_;
@@ -286,6 +294,8 @@ public:
       return DEVICE_OK;
    }
    bool IsContinuousFocusDrive() const { return false; };
+
+   int Callback(long zSteps);
 
 private:
    SquidHub* hub_;

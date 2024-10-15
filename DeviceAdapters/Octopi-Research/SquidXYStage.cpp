@@ -76,6 +76,9 @@ const char* g_Acceleration = "Acceleration(mm/s^2)";
 const char* g_Max_Velocity = "Max Velocity(mm/s)";
 
 SquidXYStage::SquidXYStage() :
+   hub_(0),
+   stepSizeX_um_(0.0),
+   stepSizeY_um_(0.0),
    fullStepsPerRevX_(200),
    fullStepsPerRevY_(200),
    screwPitchXmm_(2.54),
@@ -162,8 +165,7 @@ return DEVICE_OK;
 
 bool SquidXYStage::Busy()
 {
-   // TODO!
-   return false;
+   return hub_->XYStageBusy();
 }
 
 

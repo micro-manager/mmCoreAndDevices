@@ -53,7 +53,7 @@ int SquidZStage::Initialize()
 // TODO: implement
 bool SquidZStage::Busy()
 {
-   return false;
+   return hub_->ZStageBusy();
 }
 
 
@@ -107,5 +107,12 @@ int SquidZStage::Home()
 int SquidZStage::Stop()
 {
    return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+
+int SquidZStage::Callback(long zSteps)
+{
+   this->GetCoreCallback()->OnStagePositionChanged(this, zSteps * stepSize_um_);
+   return DEVICE_OK;
 }
 

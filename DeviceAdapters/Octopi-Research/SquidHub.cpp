@@ -55,6 +55,7 @@ SquidHub::SquidHub() :
    initialized_(false),
    monitoringThread_(0),
    xyStageDevice_(0),
+   zStageDevice_(0),
    port_("Undefined"),
    cmdNr_(1)
 {
@@ -65,6 +66,9 @@ SquidHub::SquidHub() :
    x_ = 0l;
    y_ = 0l;
    z_ = 0l;
+   xStageBusy_ = false;
+   yStageBusy_ = false;
+   zStageBusy_ = false;
 }
 
 
@@ -187,14 +191,22 @@ int SquidHub::assignXYStageDevice(SquidXYStage* xyStageDevice)
 {
    xyStageDevice_ = xyStageDevice;
    return DEVICE_OK;
-
 }
+
+
+int SquidHub::assignZStageDevice(SquidZStage* zStageDevice)
+{
+   zStageDevice_ = zStageDevice;
+   return DEVICE_OK;
+}
+
 
 bool SquidHub::IsCommandPending(uint8_t cmdNr)
 {
    std::lock_guard<std::recursive_mutex> locker(lock_);
    return pendingCmd_ != cmdNr;
 }
+
 
 void SquidHub::ReceivedCommand(uint8_t cmdNr)
 {
@@ -204,6 +216,7 @@ void SquidHub::ReceivedCommand(uint8_t cmdNr)
       pendingCmd_ = 0;
    }
 }
+
 
 void SquidHub::SetCommandPending(uint8_t cmdNr)
 {
@@ -258,6 +271,13 @@ int SquidHub::SendMoveCommand(const int command, long steps)
    cmd[4] = (steps >> 8) & 0xFF;
    cmd[5] = steps & 0xFF;
 
+   if (command == CMD_MOVETO_X || command == CMD_MOVE_X)
+      xStageBusy_ = true;
+   else if (command == CMD_MOVETO_Y || command == CMD_MOVE_Y)
+      yStageBusy_ = true;
+   else if (command == CMD_MOVETO_Z || command == CMD_MOVE_Z)
+      zStageBusy_ = true;
+
    return SendCommand(cmd, cmdSize, &cmdNr_);
 }
 
@@ -303,9 +323,13 @@ int SquidHub::SetPositionXSteps(long x)
 {
    if (x_.load() != x)
    {
+      xStageBusy_ = true;
       x_.store(x);
       if (xyStageDevice_ != 0)
          xyStageDevice_->Callback(x, y_.load());
+   }
+   else {
+      xStageBusy_ = false;
    }
    return DEVICE_OK;
 }
@@ -315,9 +339,13 @@ int SquidHub::SetPositionYSteps(long y)
 {
    if (y_.load() != y)
    {
+      yStageBusy_ = true;
       y_.store(y);
       if (xyStageDevice_ != 0)
          xyStageDevice_->Callback(x_.load(), y);
+   }
+   else {
+      yStageBusy_ = false;
    }
    return DEVICE_OK;
 }
@@ -327,8 +355,25 @@ int SquidHub::SetPositionZSteps(long z)
 {
    if (z_.load() != z)
    {
+      zStageBusy_ = true;
       z_.store(z);
-   //   this->GetCoreCallback()->OnStagePositionChanged(zStageDevice_, z);
+      if (zStageDevice_ != 0)
+         zStageDevice_->Callback(z_.load());
+   }
+   else {
+      zStageBusy_ = false;
    }
    return DEVICE_OK;
+}
+
+
+bool SquidHub::XYStageBusy()
+{
+   return xStageBusy_ || yStageBusy_;
+}
+
+
+bool SquidHub::ZStageBusy()
+{
+   return zStageBusy_;
 }
