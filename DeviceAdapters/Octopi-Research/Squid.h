@@ -58,6 +58,7 @@ const int ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_DOT = 6;
 
 
 class SquidMonitoringThread;
+class SquidXYStage;
 
 class SquidHub : public HubBase<SquidHub>
 {
@@ -88,10 +89,13 @@ public:
 
    std::string port_;
 
+   int assignXYStageDevice(SquidXYStage* xyStageDevice);
+
 private:
    void SetCommandPending(uint8_t cmdNr);
    bool initialized_;
    SquidMonitoringThread* monitoringThread_;
+   SquidXYStage* xyStageDevice_;
    uint8_t cmdNr_;
    uint8_t pendingCmd_;
    std::recursive_mutex lock_;
@@ -206,6 +210,7 @@ public:
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnModel(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   int Callback(long xSteps, long ySteps);
 
 private:
    SquidHub* hub_;
@@ -254,7 +259,7 @@ public:
 private:
    void InterpretMessage(unsigned char* message);
    bool IsBigEndian(void);
-   static const int RCV_BUF_LENGTH = 1024;
+   static const int RCV_BUF_LENGTH = 48; // contains 2 messages.  If set to 24, we crash...
    MM::Core& core_;
    SquidHub& hub_;
    bool debug_;

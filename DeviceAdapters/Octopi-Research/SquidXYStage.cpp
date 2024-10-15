@@ -111,9 +111,7 @@ int SquidXYStage::Initialize()
    {
       return DEVICE_ERR;
    }
-   
-   //stepSizeX_um_ = 0.0001 / (screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_));
-   //stepSizeY_um_ = 0.001 / (screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_));
+
    stepSizeX_um_ = 1000.0 * screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_);
    stepSizeY_um_ = 1000.0 * screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_);
     
@@ -121,6 +119,9 @@ int SquidXYStage::Initialize()
    if (!hub_ || !hub_->IsPortAvailable()) {
       return ERR_NO_PORT_SET;
    }
+   int ret = hub_->assignXYStageDevice(this);
+   if (ret != DEVICE_OK)
+      return ret;
    char hubLabel[MM::MaxStrLength];
    hub_->GetLabel(hubLabel);
 
@@ -161,4 +162,11 @@ int SquidXYStage::SetRelativePositionSteps(long xSteps, long ySteps)
    return hub_->SendMoveCommand(CMD_MOVE_Y, ySteps);
 }
 
+
+int SquidXYStage::Callback(long xSteps, long ySteps)
+{
+   this->GetCoreCallback()->OnXYStagePositionChanged(this, 
+      xSteps * stepSizeX_um_, ySteps * stepSizeY_um_);
+   return DEVICE_OK;
+}
 

@@ -100,14 +100,14 @@ void SquidMonitoringThread::InterpretMessage(unsigned char* message)
       {
          uy = SWAP_INT32(uy);
       }
-      hub_.SetPositionXSteps(uy);
+      hub_.SetPositionYSteps(uy);
       std::uint32_t uz;
       memcpy(&uz, &message[6], 4);
       if (!isBigEndian_)
       {
          uz = SWAP_INT32(uz);
       }
-      hub_.SetPositionXSteps(uz);
+      hub_.SetPositionZSteps(uz);
    }
 
 }

@@ -49,6 +49,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 SquidHub::SquidHub() :
    initialized_(false),
    monitoringThread_(0),
+   xyStageDevice_(0),
    port_("Undefined"),
    cmdNr_(1)
 {
@@ -59,19 +60,20 @@ SquidHub::SquidHub() :
    x_ = 0l;
    y_ = 0l;
    z_ = 0l;
-
-
 }
+
 
 SquidHub::~SquidHub()   
 {
    LogMessage("Destructor called");
 }
 
+
 void SquidHub::GetName(char* name) const
 {
    CDeviceUtils::CopyLimitedString(name, g_HubDeviceName);
 }
+
 
 int SquidHub::Initialize() {
    Sleep(200);
@@ -159,6 +161,7 @@ int SquidHub::Initialize() {
    */
 }
 
+
 int SquidHub::Shutdown() {
    if (initialized_)
    {
@@ -243,6 +246,14 @@ uint8_t SquidHub::crc8ccitt(const void* data, size_t size) {
 }
 */
 
+
+int SquidHub::assignXYStageDevice(SquidXYStage* xyStageDevice)
+{
+   xyStageDevice_ = xyStageDevice;
+   return DEVICE_OK;
+
+}
+
 bool SquidHub::IsCommandPending(uint8_t cmdNr)
 {
    std::lock_guard<std::recursive_mutex> locker(lock_);
@@ -325,18 +336,34 @@ int SquidHub::GetPositionSteps(long& x, long& y)
 
 int SquidHub::SetPositionXSteps(long x)
 {
-   x_.store(x);
+   if (x_.load() != x)
+   {
+      x_.store(x);
+      if (xyStageDevice_ != 0)
+         xyStageDevice_->Callback(x, y_.load());
+   }
    return DEVICE_OK;
 }
+
 
 int SquidHub::SetPositionYSteps(long y)
 {
-   y_.store(y);
+   if (y_.load() != y)
+   {
+      y_.store(y);
+      if (xyStageDevice_ != 0)
+         xyStageDevice_->Callback(x_.load(), y);
+   }
    return DEVICE_OK;
 }
 
+
 int SquidHub::SetPositionZSteps(long z)
 {
-   z_.store(z);
+   if (z_.load() != z)
+   {
+      z_.store(z);
+   //   this->GetCoreCallback()->OnStagePositionChanged(zStageDevice_, z);
+   }
    return DEVICE_OK;
 }
