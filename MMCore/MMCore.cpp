@@ -7663,27 +7663,61 @@ std::string CMMCore::loadDataset(const char* path, const char* name)
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
+std::vector<long> CMMCore::getShape(const char* handle)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      std::vector<long> shape;
+      int ret = storage->GetShape(handle, shape);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+      return shape;
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+MM::StorageDataType CMMCore::getPixelType(const char* handle)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      MM::StorageDataType pixType;
+      int ret = storage->GetPixelType(handle, pixType);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+      return pixType;
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
 /**
  * Adds a new image to the dataset. Width, hight and depth define the expected pixel array size.
  * Fails if coordinates do not fit into the dataset shape, or if the image dimenions are not supported.
  * It can also fail if the underlying implementation does not support the order of image coordinates.
  * 
  * \param handle - handle to the open dataset
+ * \param sizeInBytes - size of the pixel array
  * \param pixels - pixel array
- * \param width - width of the image
- * \param height - height of the image
- * \param depth - pixel size in bytes
  * \param coordinates - coordinates of the image in the dimension space
  * \param imageMeta - serialized JSON with image specific metadata
  */
-void CMMCore::addImage(const char* handle, int width, int height, int depth, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta)
+void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
       std::vector<int> coords(coordinates.begin(), coordinates.end());
-      int ret = storage->AddImage(handle, pixels, width, height, depth, coords, imageMeta);
+      int ret = storage->AddImage(handle, sizeInBytes, pixels, coords, imageMeta);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());

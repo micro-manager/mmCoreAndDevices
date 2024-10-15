@@ -219,6 +219,22 @@ namespace MM {
       MMTime interval_; // interval in milliseconds
    };
 
+   inline int GetPixelDataSizeInBytes(StorageDataType dataType)
+   {
+      switch (dataType)
+      {
+         case StorageDataType_GRAY8:
+            return 1;
+
+         case StorageDataType_GRAY16:
+            return 2;
+
+         case StorageDataType_RGB32:
+            return 4;
+      }
+
+      return 0;
+   }
 
    /**
     * Generic device interface.
@@ -1410,7 +1426,7 @@ namespace MM {
       /**
        * Inserts an image into the dataset
        */
-      virtual int AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
+      virtual int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
 
       /**
        * Returns summary metadata
@@ -1431,6 +1447,10 @@ namespace MM {
        * Returns dimensions of the dataset
        */
       virtual int GetNumberOfDimensions(const char* handle, int& numDimensions) = 0;
+
+      virtual int GetShape(const char* handle, int shape[]) = 0;
+
+      virtual int GetDataType(const char* handle, MM::StorageDataType& pixelDataType) = 0;
 
       virtual int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) = 0;
 

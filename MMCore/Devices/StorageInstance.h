@@ -41,9 +41,11 @@ public:
    int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
    int Close(const char* handle);
    int Load(const char* path, const char* name, std::string& handle);
+   int GetShape(const char* handle, std::vector<long>& shape);
+   int GetPixelType(const char* handle, MM::StorageDataType& dataType);
    int Delete(char* handle);
    int List(const char* path, std::vector<std::string>& datasets);
-   int AddImage(const char* handle, unsigned char* pixels, int width, int height, int depth, std::vector<int>& coordinates, const char* imageMeta);
+   int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, std::vector<int>& coordinates, const char* imageMeta);
    int GetSummaryMeta(const char* handle, std::string& meta);
    int GetImageMeta(const char* handle, const std::vector<int>& coordinates, std::string& meta);
    const unsigned char* GetImage(const char* handle, const std::vector<int>& coordinates);
