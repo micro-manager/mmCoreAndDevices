@@ -8084,7 +8084,7 @@ std::string CMMCore::getStorageDevice() throw(CMMError)
  * \param meta - serialized JSON metadata
  * \return - handle for the new dataset
  */
-std::string CMMCore::createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta)
+std::string CMMCore::createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta) throw (CMMError)
 {
    // NOTE: vector<long> is used instead of vector<int> in the signature because of Swig idiosyncracies
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
@@ -8110,7 +8110,7 @@ std::string CMMCore::createDataset(const char* path, const char* name, const std
  * 
  * \param handle - handle to the open dataset
  */
-void CMMCore::closeDataset(const char* handle)
+void CMMCore::closeDataset(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8123,7 +8123,8 @@ void CMMCore::closeDataset(const char* handle)
          throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
       }
    }
-   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+   else
+      throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
 /**
@@ -8133,7 +8134,7 @@ void CMMCore::closeDataset(const char* handle)
  * \param name - name for the dataset
  * \return - handle for the opened dataset
  */
-std::string CMMCore::loadDataset(const char* path, const char* name)
+std::string CMMCore::loadDataset(const char* path, const char* name) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8151,7 +8152,7 @@ std::string CMMCore::loadDataset(const char* path, const char* name)
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-std::vector<long> CMMCore::getShape(const char* handle)
+std::vector<long> CMMCore::getShape(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8169,7 +8170,7 @@ std::vector<long> CMMCore::getShape(const char* handle)
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-MM::StorageDataType CMMCore::getPixelType(const char* handle)
+MM::StorageDataType CMMCore::getPixelType(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8198,7 +8199,7 @@ MM::StorageDataType CMMCore::getPixelType(const char* handle)
  * \param coordinates - coordinates of the image in the dimension space
  * \param imageMeta - serialized JSON with image specific metadata
  */
-void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta)
+void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8212,7 +8213,8 @@ void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pix
          throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
       }
    }
-   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+   else
+      throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
 /**
@@ -8223,7 +8225,7 @@ void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pix
  * \param name - name of the dimension
  * \param meaning - Z,T,C, etc. (physical meaning)
  */
-void CMMCore::configureDimension(const char* handle, int dimension, const char* name, const char* meaning)
+void CMMCore::configureDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8236,7 +8238,8 @@ void CMMCore::configureDimension(const char* handle, int dimension, const char* 
          throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
       }
    }
-   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+   else
+      throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
 /**
@@ -8247,7 +8250,7 @@ void CMMCore::configureDimension(const char* handle, int dimension, const char* 
  * \param coordinate - coordinate index
  * \param name - coordinate name
  */
-void CMMCore::configureCoordinate(const char* handle, int dimension, int coordinate, const char* name)
+void CMMCore::configureCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8260,11 +8263,12 @@ void CMMCore::configureCoordinate(const char* handle, int dimension, int coordin
          throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
       }
    }
-   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+   else
+      throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
 
-std::string CMMCore::getSummaryMeta(const char* handle)
+std::string CMMCore::getSummaryMeta(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8282,7 +8286,7 @@ std::string CMMCore::getSummaryMeta(const char* handle)
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-std::string CMMCore::getImageMeta(const char* handle, const std::vector<int>& coordinates)
+std::string CMMCore::getImageMeta(const char* handle, const std::vector<int>& coordinates) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8300,7 +8304,7 @@ std::string CMMCore::getImageMeta(const char* handle, const std::vector<int>& co
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-void* CMMCore::getImage(const char* handle, const std::vector<int>& coordinates)
+void* CMMCore::getImage(const char* handle, const std::vector<int>& coordinates) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
