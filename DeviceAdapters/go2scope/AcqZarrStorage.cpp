@@ -295,6 +295,8 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
 
    dataType = pixType;
    streamHandle = generate_guid();
+   streamDimensions.clear();
+   for (int i = 0; i < numberOfDimensions; i++) streamDimensions.push_back(shape[i]);
    // TODO: allow many streams
 
    currentImageNumber = 0;
