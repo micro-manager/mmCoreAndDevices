@@ -65,8 +65,8 @@ const char* g_normalLogicString = "Normal";
 const char* g_invertedLogicString = "Inverted";
 const char* g_InvertLogic = "Invert Logic";
 const char* g_TTLVoltage = "TTL Voltage";
-const char* g_3_3 = "3.30";
-const char* g_5_0 = "5.00";
+const char* g_3_3 = "3.3";
+const char* g_5_0 = "5.0";
 
 
 

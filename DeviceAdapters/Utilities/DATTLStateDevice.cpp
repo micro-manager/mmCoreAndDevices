@@ -391,8 +391,9 @@ int DATTLStateDevice::OnTTLLevel(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-
-      pProp->Set(CDeviceUtils::ConvertToString(ttlVoltage_));
+      char buffer[8];
+      snprintf(buffer, sizeof(buffer), "%.1f", ttlVoltage_);
+      pProp->Set(buffer);
    }
    else if (eAct == MM::AfterSet)
    {
