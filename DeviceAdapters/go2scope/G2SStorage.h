@@ -45,6 +45,7 @@
 #define ERR_ZARR_STREAM_APPEND       140106
 #define ERR_ZARR_STREAM_ACCESS       140107
 #define ERR_TIFF                     140500
+#define ERR_TIFF_STREAM_UNAVAILABLE  140501
 
 //////////////////////////////////////////////////////////////////////////////
 // Cache configuration
@@ -103,7 +104,7 @@ struct G2SStorageEntry
 	 * @param shape Axis sizes
 	 * @param vmeta Dataset metadata
 	 */
-	G2SStorageEntry(const char* vpath, const char* vname, int ndim, const int* shape = nullptr, const char* vmeta = nullptr) noexcept : Path(vpath), Name(vname), Dimensions(ndim)
+	G2SStorageEntry(const std::string& vpath, const std::string& vname, int ndim, const int* shape = nullptr, const char* vmeta = nullptr) noexcept : Path(vpath), Name(vname), Dimensions(ndim)
 	{
 		if(shape != nullptr)
 		{
@@ -118,7 +119,7 @@ struct G2SStorageEntry
 	/**
 	 * Close the descriptor
 	 */
-	void close() noexcept { FileHandle = nullptr; Metadata.clear(); ImageMetadata.clear(); ImageIndex.clear(); }
+	void close() noexcept { FileHandle = nullptr; Metadata.clear(); ImageMetadata.clear(); }
 	/**
 	 * Check if file handle is open
 	 * @return Is file handle open
@@ -134,7 +135,6 @@ struct G2SStorageEntry
 	std::string													Name;												///< Dataset name
 	std::string													Metadata;										///< Dataset metadata
 	std::vector<G2SDimensionInfo>							Dimensions;										///< Dataset dimensions vector
-	std::vector<std::string>								ImageMetadata;									///< Per-image metadata
-	std::map<std::string, std::size_t>					ImageIndex;										///< Image index
+	std::map<std::string, std::string>					ImageMetadata;									///< Per-image metadata
 	void*															FileHandle;										///< File handle
 };

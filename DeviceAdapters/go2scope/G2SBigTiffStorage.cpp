@@ -45,6 +45,7 @@ G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
    // set device specific error messages
    SetErrorText(ERR_INTERNAL, "Internal driver error, see log file for details");
    SetErrorText(ERR_TIFF, "Generic TIFF error. See log for more info.");
+	SetErrorText(ERR_TIFF_STREAM_UNAVAILABLE, "BigTIFF storage error. File stream is not available.");
 
    // create pre-initialization properties                                   
    // ------------------------------------
@@ -120,7 +121,7 @@ int G2SBigTiffStorage::Shutdown()
  */
 int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle)
 {
-   if(path == nullptr || numberOfDimensions <= 0)
+   if(path == nullptr || numberOfDimensions <= 0 || pixType == MM::StorageDataType::StorageDataType_UNKNOWN)
       return DEVICE_INVALID_INPUT_PARAM;
 
    // Check cache size limits
@@ -132,21 +133,39 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
    }
 
    // Check if the file already exists
-   // TODO: it is OK if path exists, it should not be an error
-   // path + name should not be overwritten so it is necessary to add suffix if the full path exists
-   // see zarr driver
-   if(std::filesystem::exists(std::filesystem::u8path(path)))
-      return DEVICE_DUPLICATE_PROPERTY; // incorrect error code, maybe a custom error code should be defined, see header
+	// File extension will be added automatically
+	int counter = 1;
+	std::string ext(".tif");
+	std::string savePrefix(name);
+	if(savePrefix.find(".tiff") == savePrefix.size() - 5)
+		savePrefix = savePrefix.substr(0, savePrefix.size() - 5);
+	else if(savePrefix.find(".tif") == savePrefix.size() - 4 || savePrefix.find(".tf8") == savePrefix.size() - 4)
+		savePrefix = savePrefix.substr(0, savePrefix.size() - 4);
+	std::filesystem::path saveRoot = std::filesystem::u8path(path);
+	std::filesystem::path dsName = saveRoot / (savePrefix + ext);
+	while(std::filesystem::exists(dsName))
+	{
+		// If the file path (path + name) exists, it should not be an error
+		// nor the file should be overwritten, first available suffix (index) will be appended to the file name
+		auto savePrefixTmp = savePrefix + "_" + std::to_string(counter++) + ext;
+		dsName = saveRoot / savePrefixTmp;
+	}	
 	
 	// Create dataset storage descriptor
 	std::string guid = boost::lexical_cast<std::string>(boost::uuids::random_generator()());           // Entry UUID
 	if(guid.size() > MM::MaxStrLength)
-		return DEVICE_INVALID_PROPERTY_LIMTS; // this should be assert in debug, and truncated handle in release
+	{
+#ifdef _NDEBUG
+		guid = guid.substr(0, MM::MaxStrLength);
+#else
+		assert("Dataset handle size is too long");
+#endif
+	}
    
    // Create a file on disk and store the file handle
-   auto fhandle = new G2STiffFile(path);
+   auto fhandle = new G2STiffFile(dsName.u8string());
    if(fhandle == nullptr)
-      return DEVICE_OUT_OF_MEMORY; // incorrect error code, define a new code in g2sstorage.h
+      return ERR_TIFF_STREAM_UNAVAILABLE;
 	
 	try
 	{
@@ -160,7 +179,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 		return DEVICE_OUT_OF_MEMORY;
 	}
    
-   G2SStorageEntry sdesc(path, name, numberOfDimensions, shape, meta);
+   G2SStorageEntry sdesc(dsName.u8string(), savePrefix, numberOfDimensions, shape, meta);
    sdesc.FileHandle = fhandle;
 
 	// Set dataset UUID / shape / metadata
@@ -169,6 +188,14 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 	fhandle->setUID(guid);
 	fhandle->setShape(vshape);
 	fhandle->setMetadata(meta);
+
+	// Set pixel format
+	if(pixType == MM::StorageDataType::StorageDataType_GRAY8)
+		fhandle->setPixelFormat(8, 1);
+	else if(pixType == MM::StorageDataType::StorageDataType_GRAY16)
+		fhandle->setPixelFormat(16, 1);
+	else if(pixType == MM::StorageDataType::StorageDataType_RGB32)
+		fhandle->setPixelFormat(8, 4);
 
    // Append dataset storage descriptor to cache
    auto it = cache.insert(std::make_pair(guid, sdesc));
@@ -179,7 +206,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 	}
 
    // Copy UUID string to the GUID buffer
-   guid.copy(handle, guid.size());
+	strncpy(handle, guid.c_str(), MM::MaxStrLength);
    return DEVICE_OK;
 }
 
@@ -240,23 +267,73 @@ int G2SBigTiffStorage::Load(const char* path, const char* name, char* handle)
 	}
 
    // Copy UUID string to the GUID buffer
-   guid.copy(handle, guid.size());
+	strncpy(handle, guid.c_str(), MM::MaxStrLength);
    return DEVICE_OK;
 }
 
+/**
+ * Get dataset shape
+ * Shape contains image width and height as first two dimensions
+ * @param handle Entry GUID
+ * @param shape Dataset shape [out]
+ * @return Status code
+ */
 int G2SBigTiffStorage::GetShape(const char* handle, int shape[])
 {
-   // TODO:
-   // shape must have the size that includes x and y
-   return DEVICE_NOT_YET_IMPLEMENTED;
+	if(handle == nullptr || shape == nullptr)
+		return DEVICE_INVALID_INPUT_PARAM;
+
+	// Obtain dataset descriptor from cache
+	auto it = cache.find(handle);
+	if(it == cache.end())
+		return DEVICE_INVALID_INPUT_PARAM;
+
+	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+	for(std::size_t i = 0; i < fs->getDimension(); i++)
+		shape[i] = fs->getShape()[i];
+   return DEVICE_OK;
 }
 
+/**
+ * Get dataset pixel format
+ * @param handle Entry GUID
+ * @param pixelDataType Pixel format [out]
+ * @return Status code
+ */
 int G2SBigTiffStorage::GetDataType(const char* handle, MM::StorageDataType& pixelDataType)
 {
-   // TODO:
-   // in the case where the data type in file is not supported, return MM::StorageDataType_UNKNOWN
+	if(handle == nullptr)
+		return DEVICE_INVALID_INPUT_PARAM;
 
-   return DEVICE_NOT_YET_IMPLEMENTED;
+	// Obtain dataset descriptor from cache
+	auto it = cache.find(handle);
+	if(it == cache.end())
+		return DEVICE_INVALID_INPUT_PARAM;
+
+	// Get pixel format
+	if(it->second.isOpen())
+		pixelDataType = MM::StorageDataType_UNKNOWN;
+	else
+	{
+		auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+		switch(fs->getBpp())
+		{
+			case 1:
+				pixelDataType = MM::StorageDataType_GRAY8;
+				break;
+			case 2:
+				pixelDataType = MM::StorageDataType_GRAY16;
+				break;
+			case 3:
+			case 4:
+				pixelDataType = MM::StorageDataType_RGB32;
+				break;
+			default:
+				pixelDataType = MM::StorageDataType_UNKNOWN;
+				break;
+		}
+	}
+   return DEVICE_OK;
 }
 
 /**
@@ -356,7 +433,7 @@ int G2SBigTiffStorage::List(const char* path, char** listOfDatasets, int maxItem
  */
 int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta)
 {
-	if(handle == nullptr || pixels == nullptr || sizeInBytes <= 0 || numCoordinates <= 0 || sizeof(coordinates) != numCoordinates * sizeof(int))
+	if(handle == nullptr || pixels == nullptr || sizeInBytes <= 0 || numCoordinates <= 0)
 		return DEVICE_INVALID_INPUT_PARAM;
 
 	// Obtain dataset descriptor from cache
@@ -366,19 +443,21 @@ int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned ch
 
 	// Validate image dimensions
 	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
-	if((std::size_t)numCoordinates != fs->getDimension())
+	if((std::size_t)numCoordinates != fs->getDimension() && (std::size_t)numCoordinates != fs->getDimension() - 2)
 		return DEVICE_INVALID_INPUT_PARAM;
-	if(fs->getImageCount() == 0)
-		fs->setPixelFormat((std::uint8_t) fs->getBpp());
-
+	int off = (std::size_t)numCoordinates == fs->getDimension() ? 0 : 2;
    for(int i = 0; i < numCoordinates; i++)
 	{
-		if(coordinates[i] < 0 || coordinates[i] >= (int)fs->getShape()[i + 2])
+		if(coordinates[i] < 0 || coordinates[i] >= (int)fs->getShape()[i + off])
 			return DEVICE_INVALID_INPUT_PARAM;
 	}
 
 	// Add image
 	fs->addImage(pixels, sizeInBytes, imageMeta);
+
+	// Add image metadata to the dataset cache
+	auto ikey = getImageKey(coordinates, numCoordinates);
+	it->second.ImageMetadata.insert(std::make_pair(ikey, std::string(imageMeta)));
    return DEVICE_OK;
 }
 
@@ -402,7 +481,7 @@ int G2SBigTiffStorage::GetSummaryMeta(const char* handle, char* meta, int bufSiz
       return DEVICE_INVALID_INPUT_PARAM;
 
 	// Copy metadata string
-   it->second.Metadata.copy(meta, bufSize);
+	strncpy(meta, it->second.Metadata.c_str(), bufSize);
    return it->second.Metadata.size() > (std::size_t)bufSize ? DEVICE_SEQUENCE_TOO_LARGE : DEVICE_OK;
 }
 
@@ -419,22 +498,32 @@ int G2SBigTiffStorage::GetSummaryMeta(const char* handle, char* meta, int bufSiz
  */
 int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta, int bufSize)
 {
-   if(handle == nullptr || coordinates == nullptr || numCoordinates == 0 || meta == nullptr || bufSize <= 0 || sizeof(coordinates) != numCoordinates * sizeof(int))
+   if(handle == nullptr || coordinates == nullptr || numCoordinates == 0 || meta == nullptr || bufSize <= 0)
       return DEVICE_INVALID_INPUT_PARAM;
 
 	// Obtain dataset descriptor from cache
    auto it = cache.find(handle);
    if(it == cache.end())
       return DEVICE_INVALID_INPUT_PARAM;
-   auto ikey = getImageKey(coordinates, numCoordinates);
-   auto iit = it->second.ImageIndex.find(ikey);
-   if(iit == it->second.ImageIndex.end())
-      return DEVICE_INVALID_INPUT_PARAM;
-   auto iind = iit->second;
-   if(iind >= it->second.ImageMetadata.size())
-      return DEVICE_INVALID_INPUT_PARAM;
-   if(it->second.ImageMetadata[iind].size() > 0)
-      it->second.ImageMetadata[iind].copy(meta, bufSize);
+   
+	// Check the dataset cache first
+	auto ikey = getImageKey(coordinates, numCoordinates);
+   auto iit = it->second.ImageMetadata.find(ikey);
+   if(iit == it->second.ImageMetadata.end())
+	{
+      // Obtain metadata from the file stream
+		if(!it->second.isOpen())
+			return ERR_TIFF_STREAM_UNAVAILABLE;
+		auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+		
+		// TODO: Implement random image access for G2STiff file
+	}
+	else
+	{
+		// Copy metadata from cache
+		if(iit->second.size() > 0)
+			strncpy(meta, iit->second.c_str(), bufSize);
+	}
    return DEVICE_OK;
 }
 
@@ -449,15 +538,18 @@ int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int n
  */
 const unsigned char* G2SBigTiffStorage::GetImage(const char* handle, int coordinates[], int numCoordinates)
 {
-	if(handle == nullptr || numCoordinates <= 0 || sizeof(coordinates) != numCoordinates * sizeof(int))
+	if(handle == nullptr || numCoordinates <= 0)
 		return nullptr;
 
 	// Obtain dataset descriptor from cache
 	auto it = cache.find(handle);
 	if(it == cache.end())
 		return nullptr;
+	
+	if(!it->second.isOpen())
+		return nullptr;
 
-	// TODO:
+	// TODO: Implement random image access for G2STiff file
    return nullptr;
 }
 
@@ -541,8 +633,8 @@ int G2SBigTiffStorage::GetDimension(const char* handle, int dimension, char* nam
       return DEVICE_INVALID_PROPERTY_LIMTS;
    if(it->second.Dimensions[dimension].Metadata.size() > (std::size_t)meaningLength)
       return DEVICE_INVALID_PROPERTY_LIMTS;
-   it->second.Dimensions[dimension].Name.copy(name, it->second.Dimensions[dimension].Name.size());
-   it->second.Dimensions[dimension].Metadata.copy(meaning, it->second.Dimensions[dimension].Metadata.size());
+	strncpy(name, it->second.Dimensions[dimension].Name.c_str(), nameLength);
+	strncpy(meaning, it->second.Dimensions[dimension].Metadata.c_str(), meaningLength);
    return DEVICE_OK;
 }
 
@@ -564,7 +656,7 @@ int G2SBigTiffStorage::GetCoordinate(const char* handle, int dimension, int coor
       return DEVICE_INVALID_INPUT_PARAM;
    if(it->second.Dimensions[dimension].Coordinates[coordinate].size() > (std::size_t)nameLength)
       return DEVICE_INVALID_PROPERTY_LIMTS;
-   it->second.Dimensions[dimension].Coordinates[coordinate].copy(name, it->second.Dimensions[dimension].Coordinates[coordinate].size());
+	strncpy(name, it->second.Dimensions[dimension].Coordinates[coordinate].c_str(), nameLength);
    return DEVICE_OK;
 }
 
@@ -631,7 +723,7 @@ bool G2SBigTiffStorage::scanDir(const std::string& path, char** listOfDatasets, 
             return false;
 
          // Add to results list
-         abspath.copy(listOfDatasets[cpos], maxItemLength);
+			strncpy(listOfDatasets[cpos], abspath.c_str(), maxItemLength);
          cpos++;
       }
       return true;
@@ -652,6 +744,6 @@ std::string G2SBigTiffStorage::getImageKey(int coordinates[], int numCoordinates
 {
    std::stringstream ss;
    for(int i = 0; i < numCoordinates; i++)
-      ss << (i == 0 ? "" : "_") << coordinates[i];
+      ss << (i == 0 ? "" : ".") << coordinates[i];
    return ss.str();
 }
