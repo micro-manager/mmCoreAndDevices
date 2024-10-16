@@ -65,7 +65,7 @@ G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
  */
 void G2SBigTiffStorage::GetName(char* Name) const
 {
-   CDeviceUtils::CopyLimitedString(Name, g_MMV1Storage);
+   CDeviceUtils::CopyLimitedString(Name, g_BigTiffStorage);
 }
 
 /**
@@ -132,18 +132,21 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
    }
 
    // Check if the file already exists
+   // TODO: it is OK if path exists, it should not be an error
+   // path + name should not be overwritten so it is necessary to add suffix if the full path exists
+   // see zarr driver
    if(std::filesystem::exists(std::filesystem::u8path(path)))
-      return DEVICE_DUPLICATE_PROPERTY;
+      return DEVICE_DUPLICATE_PROPERTY; // incorrect error code, maybe a custom error code should be defined, see header
 	
 	// Create dataset storage descriptor
 	std::string guid = boost::lexical_cast<std::string>(boost::uuids::random_generator()());           // Entry UUID
 	if(guid.size() > MM::MaxStrLength)
-		return DEVICE_INVALID_PROPERTY_LIMTS;
+		return DEVICE_INVALID_PROPERTY_LIMTS; // this should be assert in debug, and truncated handle in release
    
    // Create a file on disk and store the file handle
    auto fhandle = new G2STiffFile(path);
    if(fhandle == nullptr)
-      return DEVICE_OUT_OF_MEMORY;
+      return DEVICE_OUT_OF_MEMORY; // incorrect error code, define a new code in g2sstorage.h
 	
 	try
 	{
