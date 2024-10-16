@@ -35,6 +35,7 @@
 //////////////////////////////////////////////////////////////////////////////
 #define ERR_PARAMETER_ERROR          144001
 #define ERR_INTERNAL						 144002
+#define ERR_FAILED_CREATING_FILE		 144003
 #define ERR_ZARR                     140100
 #define ERR_ZARR_SETTINGS            140101
 #define ERR_ZARR_NUMDIMS             140102

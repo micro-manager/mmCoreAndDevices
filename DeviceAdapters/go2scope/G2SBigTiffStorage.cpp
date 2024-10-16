@@ -44,6 +44,7 @@ G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
 
    // set device specific error messages
    SetErrorText(ERR_INTERNAL, "Internal driver error, see log file for details");
+   SetErrorText(ERR_TIFF, "Generic TIFF error. See log for more info.");
 
    // create pre-initialization properties                                   
    // ------------------------------------

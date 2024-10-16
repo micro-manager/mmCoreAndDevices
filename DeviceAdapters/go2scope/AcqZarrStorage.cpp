@@ -31,6 +31,8 @@
 #include <random>
 #include <sstream>
 #include <iomanip>
+#include <boost/filesystem.hpp>
+
 
 using namespace std;
 
@@ -76,7 +78,16 @@ AcqZarrStorage::AcqZarrStorage() :
    InitializeDefaultErrorMessages();
 
 	// set device specific error messages
+   SetErrorText(ERR_ZARR, "Generic Zarr writer error. Check log for more information.");
    SetErrorText(ERR_INTERNAL, "Internal driver error, see log file for details");
+   SetErrorText(ERR_ZARR_SETTINGS, "Error in creating Zarr settings.");
+   SetErrorText(ERR_ZARR_NUMDIMS, "Number of Zarr dimensions is not valid.");
+   SetErrorText(ERR_ZARR_STREAM_CREATE, "Error creating Zarr stream. See log for more info.");
+   SetErrorText(ERR_ZARR_STREAM_CLOSE, "Error closing Zarr stream. See log for more info.");
+   SetErrorText(ERR_ZARR_STREAM_LOAD, "Error opening an existing Zarr stream.");
+   SetErrorText(ERR_ZARR_STREAM_APPEND, "Error appending image to Zarr stream.");
+   SetErrorText(ERR_ZARR_STREAM_ACCESS, "Error accessing Zarr stream. See log for more info.");
+   SetErrorText(ERR_ZARR_STREAM_LOAD, "Error opening an existing Zarr stream.");
 
    auto ver = Zarr_get_api_version();
                                                                              
@@ -154,14 +165,26 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       return ERR_ZARR_SETTINGS;
    }
 
-   // set store
-   ostringstream osZarrStreamPath;
-   osZarrStreamPath << path << "/" << name;
-   char* streamPathName = new char[osZarrStreamPath.str().size() + 1];
-   strcpy(streamPathName, osZarrStreamPath.str().c_str());
+   // set path
+   string savePrefix(name);
+   string savePrefixTmp(name);
+   string saveRoot(path);
+   string dsName = string(path) + "/" + savePrefixTmp;
+   int counter(1);
+   while (boost::filesystem::exists(dsName))
+   {
+      savePrefixTmp = savePrefix + "_" + to_string(counter++);
+      dsName = saveRoot + "/" + savePrefixTmp;
+   }
+   boost::system::error_code errCode;
+   if (!boost::filesystem::create_directory(dsName, errCode))
+      return ERR_FAILED_CREATING_FILE;
+
+   char* streamPathName = new char[dsName.size() + 1];
+   strcpy(streamPathName, dsName.c_str());
    ZarrStatus status = ZarrStreamSettings_set_store(settings,
                                                     streamPathName,
-                                                    osZarrStreamPath.str().size() + 1,
+                                                    dsName.size() + 1,
                                                     nullptr);
    if (status != ZarrStatus_Success)
    {
@@ -211,7 +234,6 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       ZarrStreamSettings_destroy(settings);
       return ERR_ZARR_SETTINGS;
    }
-
 
    ZarrDimensionProperties dimPropsY;
    string nameY("y");
@@ -266,7 +288,7 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    zarrStream = ZarrStream_create(settings, ZarrVersion_2);
    if (zarrStream == nullptr)
    {
-      LogMessage("Failed creating Zarr stream: " + osZarrStreamPath.str());
+      LogMessage("Failed creating Zarr stream: " + dsName);
       ZarrStreamSettings_destroy(settings);
       return ERR_ZARR_STREAM_CREATE;
    }
@@ -275,8 +297,6 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    streamHandle = generate_guid();
    // TODO: allow many streams
 
-   streamDimensions = std::vector<int>(shape, shape + numberOfDimensions);
-   currentCoordinate = std::vector<int>(numberOfDimensions, 0);
    currentImageNumber = 0;
    strncpy(handle, streamHandle.c_str(), MM::MaxStrLength);
 
@@ -360,7 +380,7 @@ int AcqZarrStorage::AddImage(const char* handle, int sizeInBytes, unsigned char*
       return ERR_ZARR_STREAM_ACCESS;
    }
 
-   if (streamDimensions[0] * streamDimensions[1] != sizeInBytes)
+   if (streamDimensions[0] * streamDimensions[1] * MM::GetPixelDataSizeInBytes(dataType) != sizeInBytes)
    {
       LogMessage("Stream dimensions do not match image size");
       return ERR_ZARR_STREAM_APPEND;
@@ -383,29 +403,6 @@ int AcqZarrStorage::AddImage(const char* handle, int sizeInBytes, unsigned char*
       return ERR_ZARR_STREAM_APPEND;
    }
    currentImageNumber++;
-   int coordPtr = 2;
-   while (coordPtr < streamDimensions.size())
-   {
-      if (currentCoordinate[coordPtr] < streamDimensions[coordPtr] - 1)
-      {
-         currentCoordinate[coordPtr]++;
-         break;
-      }
-      else
-      {
-         coordPtr++;
-      }
-      ostringstream osc;
-      osc << "Current coordinate: ";
-      for (auto c : currentCoordinate)
-         osc << c << " ";
-      LogMessage(osc.str());
-   }
-   
-   if (coordPtr == streamDimensions.size())
-   {
-      LogMessage("End of sequence.");
-   }
 
    return DEVICE_OK;
 }
