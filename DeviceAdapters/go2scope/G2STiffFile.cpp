@@ -30,7 +30,6 @@
 #include <cstring>
 #include "G2STiffFile.h"
 #ifdef _WIN32
-#define NOMINMAX
 #include <Windows.h>
 #else
 #include <fcntl.h>
@@ -531,8 +530,8 @@ void G2STiffFile::setUID(const std::string& val)
 		{
 			if(i == 4 || i == 6 || i == 8 || i == 10)
 				cind++;
-			char cv1 = datasetuid[cind + 0];
-			char cv2 = datasetuid[cind + 1];
+			char cv1 = datasetuid[cind++];
+			char cv2 = datasetuid[cind++];
 			std::uint8_t vx1 = cv1 >= 48 && cv1 <= 57 ? cv1 - 48 : (cv1 >= 65 && cv1 <= 70 ? cv1 - 55 : cv1 - 87);
 			std::uint8_t vx2 = cv2 >= 48 && cv2 <= 57 ? cv2 - 48 : (cv2 >= 65 && cv2 <= 70 ? cv2 - 55 : cv2 - 87);
 			auto xval = (std::uint8_t)(((vx1 & 0x0f) << 4) | (vx2 & 0x0f));
@@ -1090,7 +1089,7 @@ void G2STiffFile::appendIFD(std::size_t imagelen, const std::string& meta)
 	else
 	{
 		ind += setIFDTag(&lastifd[ind], 0x011a, 5, currpos + lastifdsize);
-		ind += setIFDTag(&lastifd[ind], 0x011a, 5, currpos + lastifdsize + 8);
+		ind += setIFDTag(&lastifd[ind], 0x011b, 5, currpos + lastifdsize + 8);
 	}
 	ind += setIFDTag(&lastifd[ind], 0x0128, 3, 1);
 	if(!meta.empty())

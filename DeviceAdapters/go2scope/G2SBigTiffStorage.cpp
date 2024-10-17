@@ -24,13 +24,14 @@
 //                Chan Zuckerberg Initiative (CZI)
 // 
 ///////////////////////////////////////////////////////////////////////////////
-#include "G2STiffFile.h"
 #include <filesystem>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
 #include "G2SBigTiffStorage.h"
+
+#define MAX_FILE_SEARCH_INDEX			128
 
 /**
  * Default class constructor
@@ -179,7 +180,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 		return DEVICE_OUT_OF_MEMORY;
 	}
    
-   G2SStorageEntry sdesc(dsName.u8string(), savePrefix, numberOfDimensions, shape, meta);
+   G2SStorageEntry sdesc(dsName.u8string(), numberOfDimensions, shape, meta);
    sdesc.FileHandle = fhandle;
 
 	// Set dataset UUID / shape / metadata
@@ -225,12 +226,35 @@ int G2SBigTiffStorage::Load(const char* path, char* handle)
    if(path == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
 
+	// Check if the file path has a valid extension
+	std::string fpath(path);
+	if(fpath.find(".tiff") != fpath.size() - 5 && fpath.find(".tif") != fpath.size() - 4 && fpath.find(".tf8") != fpath.size() - 4)
+		fpath += ".tif";
+
    // Check if the file exists
-   if(!std::filesystem::exists(std::filesystem::u8path(path)))
-      return DEVICE_INVALID_INPUT_PARAM;
+	std::filesystem::path actpath = std::filesystem::u8path(fpath);
+   if(!std::filesystem::exists(actpath))
+	{
+		// Try finding the file by adding the file suffix (index)
+		bool fnd = false;
+		auto dir = actpath.parent_path();
+		auto fname = actpath.stem().u8string();
+		auto ext = actpath.extension().u8string();
+		for(int i = 0; i < MAX_FILE_SEARCH_INDEX; i++)
+		{
+			actpath = dir / (fname + "_" + std::to_string(i) + ext);
+			if(std::filesystem::exists(actpath))
+			{
+				fnd = true;
+				break;
+			}
+		}
+		if(!fnd)
+			return DEVICE_INVALID_INPUT_PARAM;
+	}
 
    // Open a file on disk and store the file handle
-	auto fhandle = new G2STiffFile(path);
+	auto fhandle = new G2STiffFile(std::filesystem::absolute(actpath).u8string());
 	if(fhandle == nullptr)
 		return DEVICE_OUT_OF_MEMORY;
 
@@ -255,8 +279,7 @@ int G2SBigTiffStorage::Load(const char* path, char* handle)
 	}
 
 	// Create dataset storage descriptor
-   std::string name = "dummy"; //TODO: get rid of redundant name variable. Name is always the file name (without extension)
-   G2SStorageEntry sdesc(path, name, (int)fhandle->getDimension(), reinterpret_cast<int*>(&fhandle->getShape()[0]), fhandle->getMetadata().empty() ? nullptr : fhandle->getMetadata().c_str());
+   G2SStorageEntry sdesc(std::filesystem::absolute(actpath).u8string(), (int)fhandle->getDimension(), reinterpret_cast<int*>(&fhandle->getShape()[0]), fhandle->getMetadata().empty() ? nullptr : fhandle->getMetadata().c_str());
    sdesc.FileHandle = fhandle;
 
    // Append dataset storage descriptor to cache
@@ -312,7 +335,7 @@ int G2SBigTiffStorage::GetDataType(const char* handle, MM::StorageDataType& pixe
 		return DEVICE_INVALID_INPUT_PARAM;
 
 	// Get pixel format
-	if(it->second.isOpen())
+	if(!it->second.isOpen())
 		pixelDataType = MM::StorageDataType_UNKNOWN;
 	else
 	{
@@ -444,14 +467,8 @@ int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned ch
 
 	// Validate image dimensions
 	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
-	if((std::size_t)numCoordinates != fs->getDimension() && (std::size_t)numCoordinates != fs->getDimension() - 2)
+	if(!validateCoordinates(fs, coordinates, numCoordinates))
 		return DEVICE_INVALID_INPUT_PARAM;
-	int off = (std::size_t)numCoordinates == fs->getDimension() ? 0 : 2;
-   for(int i = 0; i < numCoordinates; i++)
-	{
-		if(coordinates[i] < 0 || coordinates[i] >= (int)fs->getShape()[i + off])
-			return DEVICE_INVALID_INPUT_PARAM;
-	}
 
 	// Add image
 	fs->addImage(pixels, sizeInBytes, imageMeta);
@@ -506,6 +523,10 @@ int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int n
    auto it = cache.find(handle);
    if(it == cache.end())
       return DEVICE_INVALID_INPUT_PARAM;
+
+	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+	if(!validateCoordinates(fs, coordinates, numCoordinates))
+		return DEVICE_INVALID_INPUT_PARAM;
    
 	// Check the dataset cache first
 	auto ikey = getImageKey(coordinates, numCoordinates);
@@ -515,14 +536,15 @@ int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int n
       // Obtain metadata from the file stream
 		if(!it->second.isOpen())
 			return ERR_TIFF_STREAM_UNAVAILABLE;
-		auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
-		
+		auto fmeta = fs->getImageMetadata();
 		// TODO: Implement random image access for G2STiff file
+		if(!fmeta.empty())
+			strncpy(meta, fmeta.c_str(), bufSize);
 	}
 	else
 	{
 		// Copy metadata from cache
-		if(iit->second.size() > 0)
+		if(!iit->second.empty())
 			strncpy(meta, iit->second.c_str(), bufSize);
 	}
    return DEVICE_OK;
@@ -547,11 +569,16 @@ const unsigned char* G2SBigTiffStorage::GetImage(const char* handle, int coordin
 	if(it == cache.end())
 		return nullptr;
 	
+	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+	if(!validateCoordinates(fs, coordinates, numCoordinates))
+		return nullptr;
+	
 	if(!it->second.isOpen())
 		return nullptr;
 
 	// TODO: Implement random image access for G2STiff file
-   return nullptr;
+	it->second.ImageData = fs->getImage();
+   return &it->second.ImageData[0];
 }
 
 /**
@@ -733,6 +760,26 @@ bool G2SBigTiffStorage::scanDir(const std::string& path, char** listOfDatasets, 
    {
       return false;
    }
+}
+
+/**
+ * Validate image coordinates
+ * @param fs Dataset handle
+ * @param coordinates Image coordinates
+ * @param numCoordinates Coordinate count
+ * @return Are coordinates valid
+ */ 
+bool G2SBigTiffStorage::validateCoordinates(const G2STiffFile* fs, int coordinates[], int numCoordinates) noexcept
+{
+	if((std::size_t)numCoordinates != fs->getDimension() && (std::size_t)numCoordinates != fs->getDimension() - 2)
+		return false;
+	int off = (std::size_t)numCoordinates == fs->getDimension() ? 0 : 2;
+	for(int i = 0; i < numCoordinates; i++)
+	{
+		if(coordinates[i] < 0 || coordinates[i] >= (int)fs->getShape()[i + off])
+			return false;
+	}
+	return true;
 }
 
 /**

@@ -25,9 +25,6 @@
 // 
 ///////////////////////////////////////////////////////////////////////////////
 #pragma once
-#ifdef _WIN32
-#define NOMINMAX
-#endif
 #include <string>
 #include <map>
 #include <vector>
