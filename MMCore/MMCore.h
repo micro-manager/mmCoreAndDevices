@@ -87,6 +87,7 @@
 #endif
 
 typedef unsigned char* STORAGEIMG;
+typedef unsigned char* STORAGEIMGOUT;
 typedef unsigned char* STORAGEMETA;
 
 class CPluginManager;
@@ -653,8 +654,8 @@ public:
    void configureDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError);
    void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError);
    std::string getSummaryMeta(const char* handle) throw (CMMError);
-   std::string getImageMeta(const char* handle, const std::vector<int>& coordinates) throw (CMMError);
-   void* getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   std::string getImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+	STORAGEIMGOUT getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
 
    ///@}
 

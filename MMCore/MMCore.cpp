@@ -8286,14 +8286,15 @@ std::string CMMCore::getSummaryMeta(const char* handle) throw (CMMError)
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-std::string CMMCore::getImageMeta(const char* handle, const std::vector<int>& coordinates) throw (CMMError)
+std::string CMMCore::getImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
       std::string meta;
-      int ret = storage->GetImageMeta(handle, coordinates, meta);
+		std::vector<int> coords(coordinates.begin(), coordinates.end());
+      int ret = storage->GetImageMeta(handle, coords, meta);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8304,7 +8305,7 @@ std::string CMMCore::getImageMeta(const char* handle, const std::vector<int>& co
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-void* CMMCore::getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError)
+STORAGEIMGOUT CMMCore::getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)

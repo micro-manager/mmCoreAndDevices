@@ -528,6 +528,96 @@
 }
 
 // Java typemap
+// change default SWIG mapping of STORAGEIMG return values
+// to return CObject containing array of pixel values
+//
+// Assumes that class has the following methods defined:
+// std::vector<long> getDatasetShape(handle)
+// MM::StorageDataType getDatasetPixelType(handle)
+
+%typemap(jni) STORAGEIMGOUT		  "jobject"
+%typemap(jtype) STORAGEIMGOUT      "Object"
+%typemap(jstype) STORAGEIMGOUT     "Object"
+%typemap(javaout) STORAGEIMGOUT {
+   return $jnicall;
+}
+%typemap(out) STORAGEIMGOUT
+{
+	std::vector<long> shape = (arg1)->getDatasetShape(arg2);
+	MM::StorageDataType pixformat = (arg1)->getDatasetPixelType(arg2);
+	if(shape.size() < 2)
+	{
+      jclass excep = jenv->FindClass("java/lang/Exception");
+		if(excep)
+			jenv->ThrowNew(excep, "Invalid dataset shape");
+	}
+   long lSize = shape[0] * shape[1];
+   
+   if(pixformat == MM::StorageDataType::StorageDataType_GRAY8)
+   {
+      // create a new byte[] object in Java
+      jbyteArray data = JCALL1(NewByteArray, jenv, lSize);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+
+         $result = 0;
+         return $result;
+      }
+   
+      // copy pixels from the image buffer
+      JCALL4(SetByteArrayRegion, jenv, data, 0, lSize, (jbyte*)result);
+
+      $result = data;
+   }
+   else if(pixformat == MM::StorageDataType::StorageDataType_GRAY16)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, lSize);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, lSize, (jshort*)result);
+
+      $result = data;
+   }
+   else if(pixformat == MM::StorageDataType::StorageDataType_RGB32)
+   {
+      // create a new byte[] object in Java
+      jbyteArray data = JCALL1(NewByteArray, jenv, lSize * 4);
+      if(data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+
+         $result = 0;
+         return $result;
+      }
+
+      // copy pixels from the image buffer
+      JCALL4(SetByteArrayRegion, jenv, data, 0, lSize * 4, (jbyte*)result);
+
+      $result = data;
+   }
+   else
+	{	
+      jclass excep = jenv->FindClass("java/lang/Exception");
+		if(excep)
+			jenv->ThrowNew(excep, "Invalid dataset pixel format");
+	}
+}
+
+// Java typemap
 // change default SWIG mapping of void* return values
 // to return CObject containing array of pixel values
 //
