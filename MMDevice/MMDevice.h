@@ -1491,9 +1491,9 @@ namespace MM {
        * Loaded datasets are immutable; any attempt to add images will fail.
        * "Loading" the dataset does not mean it resides in program memory,
        * it just means we can access its images and metadata. "Lazy" loading
-       * is a preffered way of implementation.
+       * is a preferred way of implementation.
        */
-      virtual int Load(const char* path, const char* name, char* handle) = 0;
+      virtual int Load(const char* path, char* handle) = 0;
 
       /**
        * Deletes a dataset with a given handle

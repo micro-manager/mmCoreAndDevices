@@ -337,7 +337,7 @@ int AcqZarrStorage::Close(const char* handle)
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::Load(const char* path, const char* name, char* handle)
+int AcqZarrStorage::Load(const char* path, char* handle)
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
 }

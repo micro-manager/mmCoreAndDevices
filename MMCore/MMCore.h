@@ -646,7 +646,7 @@ public:
    ///@{
    std::string createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta) throw (CMMError);
    void closeDataset(const char* handle) throw (CMMError);
-   std::string loadDataset(const char* path, const char* name) throw (CMMError);
+   std::string loadDataset(const char* path) throw (CMMError);
    std::vector<long> getDatasetShape(const char* handle) throw (CMMError);
    MM::StorageDataType getDatasetPixelType(const char* handle) throw (CMMError);
    void addImage(const char* handle, int sizeinBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);

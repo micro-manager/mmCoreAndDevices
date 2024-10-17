@@ -220,7 +220,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
  * @param handle Entry GUID [out]
  * @return Status code
  */
-int G2SBigTiffStorage::Load(const char* path, const char* name, char* handle)
+int G2SBigTiffStorage::Load(const char* path, char* handle)
 {
    if(path == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
@@ -255,6 +255,7 @@ int G2SBigTiffStorage::Load(const char* path, const char* name, char* handle)
 	}
 
 	// Create dataset storage descriptor
+   std::string name = "dummy"; //TODO: get rid of redundant name variable. Name is always the file name (without extension)
    G2SStorageEntry sdesc(path, name, (int)fhandle->getDimension(), reinterpret_cast<int*>(&fhandle->getShape()[0]), fhandle->getMetadata().empty() ? nullptr : fhandle->getMetadata().c_str());
    sdesc.FileHandle = fhandle;
 

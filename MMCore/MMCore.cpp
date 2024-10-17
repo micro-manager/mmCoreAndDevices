@@ -8134,14 +8134,14 @@ void CMMCore::closeDataset(const char* handle) throw (CMMError)
  * \param name - name for the dataset
  * \return - handle for the opened dataset
  */
-std::string CMMCore::loadDataset(const char* path, const char* name) throw (CMMError)
+std::string CMMCore::loadDataset(const char* path) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
       std::string handle;
-      int ret = storage->Load(path, name, handle);
+      int ret = storage->Load(path, handle);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
