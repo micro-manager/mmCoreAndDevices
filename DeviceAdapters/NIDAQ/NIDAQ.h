@@ -35,6 +35,7 @@
 extern const char* g_DeviceNameNIDAQHub;
 extern const char* g_DeviceNameNIDAQAOPortPrefix;
 extern const char* g_DeviceNameNIDAQDOPortPrefix;
+extern const char* g_DeviceNameNIDAQAIPortPrefix;
 extern const char* g_On;
 extern const char* g_Off;
 extern const char* g_Low;
@@ -382,4 +383,76 @@ private:
     std::vector<uInt32> sequence32_;
 
     TaskHandle task_;
+};
+
+class NIAnalogInputPort : public CSignalIOBase<NIAnalogInputPort>,
+    ErrorTranslator<NIAnalogInputPort>,
+    boost::noncopyable
+{
+public:
+    NIAnalogInputPort(const std::string& port);
+    virtual ~NIAnalogInputPort();
+
+    virtual int Initialize();
+    virtual int Shutdown();
+
+    virtual void GetName(char* name) const;
+    virtual bool Busy() { return false; }
+
+    virtual int SetRunning(bool running);
+    virtual int GetRunning(bool& running);
+    virtual int SetSignal(double volts) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int GetSignal(double& /* volts */) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int GetLimits(double& minVolts, double& maxVolts);
+
+    virtual int IsDASequenceable(bool& isSequenceable) { return false; }
+    virtual int GetDASequenceMaxLength(long& maxLength) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int StartDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int StopDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int ClearDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int AddToDASequence(double) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int SendDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
+
+private:
+    // Pre-init property action handlers
+
+    // Post-init property action handlers
+    int OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+    NIDAQHub* GetHub() const
+    {
+        return static_cast<NIDAQHub*>(GetParentHub());
+    }
+    int TranslateHubError(int err);
+    int StartTask(double voltage);
+    int StopTask();
+
+private:
+    const std::string niPort_;
+
+    bool initialized_;
+
+    bool running_;
+
+    TaskHandle task_;
+
+    InputMonitorThread mThread_;
+};
+
+class InputMonitorThread : public MMDeviceThreadBase
+{
+public:
+    InputMonitorThread(NIAnalogInputPort& aInput);
+    ~InputMonitorThread();
+    int svc();
+
+    void Start();
+    void Stop() { stop_ = true; }
+
+
+private:
+    float state_;
+    NIAnalogInputPort& aInput_;
+    bool stop_;
 };
