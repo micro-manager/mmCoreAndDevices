@@ -226,6 +226,7 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    dimPropsX.array_size_px = shape[0];
    dimPropsX.chunk_size_px = dimPropsX.array_size_px;
    dimPropsX.shard_size_chunks = 1;
+   dimPropsX.kind = ZarrDimensionType_Space;
 
    status = ZarrStreamSettings_set_dimension(settings, 0, &dimPropsX);
    if (status != ZarrStatus_Success)
@@ -243,6 +244,7 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    dimPropsY.array_size_px = shape[1];
    dimPropsY.chunk_size_px = dimPropsY.array_size_px;
    dimPropsY.shard_size_chunks = 1;
+   dimPropsY.kind = ZarrDimensionType_Space;
 
    status = ZarrStreamSettings_set_dimension(settings, 1, &dimPropsY);
    if (status != ZarrStatus_Success)
