@@ -8152,7 +8152,7 @@ std::string CMMCore::loadDataset(const char* path, const char* name) throw (CMME
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-std::vector<long> CMMCore::getShape(const char* handle) throw (CMMError)
+std::vector<long> CMMCore::getDatasetShape(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8170,7 +8170,7 @@ std::vector<long> CMMCore::getShape(const char* handle) throw (CMMError)
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-MM::StorageDataType CMMCore::getPixelType(const char* handle) throw (CMMError)
+MM::StorageDataType CMMCore::getDatasetPixelType(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8304,13 +8304,14 @@ std::string CMMCore::getImageMeta(const char* handle, const std::vector<int>& co
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
-void* CMMCore::getImage(const char* handle, const std::vector<int>& coordinates) throw (CMMError)
+void* CMMCore::getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
-      const unsigned char* img = storage->GetImage(handle, coordinates);
+      std::vector<int> coords(coordinates.begin(), coordinates.end());
+      const unsigned char* img = storage->GetImage(handle, coords);
       return const_cast<unsigned char*>(img);
    }
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);

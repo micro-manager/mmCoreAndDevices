@@ -38,7 +38,7 @@
 G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
 {
    supportedFormats = { "tif", "tiff", "tf8" };
-	directIo = true;
+	directIo = false;
 
    InitializeDefaultErrorMessages();
 
