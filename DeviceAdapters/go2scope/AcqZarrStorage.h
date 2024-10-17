@@ -51,7 +51,7 @@ public:
    int ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
    int Close(const char* handle);
-   int Load(const char* path, const char* name, char* handle);
+   int Load(const char* path, char* handle);
    int GetShape(const char* handle, int shape[]);
    int GetDataType(const char* handle, MM::StorageDataType& pixelDataType) { return dataType; }
 

@@ -55,12 +55,12 @@ int StorageInstance::Close(const char* handle)
    return GetImpl()->Close(handle);
 }
 
-int StorageInstance::Load(const char* path, const char* name, std::string& handle)
+int StorageInstance::Load(const char* path, std::string& handle)
 {
    RequireInitialized(__func__);
 
    char cHandle[MM::MaxStrLength];
-   int ret = GetImpl()->Load(path, name, cHandle);
+   int ret = GetImpl()->Load(path, cHandle);
    if (ret != DEVICE_OK)
       return ret;
    
