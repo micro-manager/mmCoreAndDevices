@@ -80,10 +80,10 @@ public:
 	std::string													getMetadata();
 	void															setUID(const std::string& val);
 	std::string													getUID() const noexcept { return datasetuid; }
-	std::string													getImageMetadata();
+	std::string													getImageMetadata(const std::vector<std::uint32_t>& coord = {});
 	void															addImage(const std::vector<unsigned char>& buff, const std::string& meta = "") { addImage(&buff[0], buff.size(), meta); }
 	void															addImage(const unsigned char* buff, std::size_t len, const std::string& meta = "");
-	std::vector<unsigned char>								getImage();
+	std::vector<unsigned char>								getImage(const std::vector<std::uint32_t>& coord = {});
 	std::uint32_t												getDatasetImageCount() const noexcept { std::uint32_t ret = 1; for(std::size_t i = 2; i < shape.size(); i++) ret *= shape[i]; return ret; }
 	std::uint32_t												getImageCount() const noexcept { return imgcounter; }
 	std::uint64_t												getFileSize() const noexcept;
@@ -108,7 +108,8 @@ private:
 	std::uint64_t												offset(std::int64_t off);
 	void															formHeader() noexcept;
 	void															appendIFD(std::size_t imagelen, const std::string& meta);
-	void															loadNextIFD();
+	void															loadNextIFD() { loadIFD(currentifdpos); }
+	void															loadIFD(std::uint64_t off);
 	std::uint64_t												parseIFD(std::vector<unsigned char>& ifd, std::uint32_t& ifdsz);
 	std::size_t													setIFDTag(unsigned char* ifd, std::uint16_t tag, std::uint16_t dtype, std::uint64_t val, std::uint64_t cnt = 1) const noexcept;
 	std::uint32_t												getTagCount(const std::string& meta) const noexcept { return meta.empty() ? G2STIFF_TAG_COUNT_NOMETA : G2STIFF_TAG_COUNT; }
@@ -118,6 +119,7 @@ private:
 	std::uint64_t												readInt(const unsigned char* buff, std::uint8_t len) const noexcept;
 	void															moveReadCursor(std::uint64_t pos) noexcept;
 	void															moveWriteCursor(std::uint64_t pos) noexcept;
+	std::uint32_t												calcImageIndex(const std::vector<std::uint32_t>& coord) const;
 
 private:
 	//============================================================================================================================
@@ -126,6 +128,7 @@ private:
 	std::string													fpath;											///< File path
 	std::string													datasetuid;										///< Dataset UID
 	std::vector<std::uint32_t>								shape;											///< Dataset shape (dimension / axis sizes)
+	std::vector<std::uint64_t>								ifdcache;										///< IFD offset cache
 	std::uint32_t												ssize;											///< Sector size (for direct I/O)
 	std::uint32_t												imgcounter;										///< Image counter
 	std::uint32_t												currentimage;									///< Current image index (used for reading only)
