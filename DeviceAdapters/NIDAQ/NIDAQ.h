@@ -151,6 +151,27 @@ private:
 };
 
 
+class InputMonitoringThread : public MMDeviceThreadBase
+{
+public:
+    InputMonitoringThread(NIDAQHub& hub);
+    ~InputMonitoringThread();
+    int svc();
+
+    void Start();
+    void Stop() { stop_ = true; }
+
+
+private:
+    NIDAQHub& hub_;
+
+    TaskHandle aiTask_;
+
+    bool stop_;
+};
+
+
+
 /**
  * A hub - peripheral device set for driving multiple analog output ports,
  * possibly with hardware-triggered sequencing using a shared trigger input.
@@ -201,9 +222,13 @@ private:
    int AddAOPortToSequencing(const std::string& port, const std::vector<double> sequence);
    void RemoveAOPortFromSequencing(const std::string& port);
 
+   int AddAIPortToMonitoring(const std::string& port);
+   void RemoveAIPortFromMonitoring(const std::string& port);
+
    int GetVoltageRangeForDevice(const std::string& device, double& minVolts, double& maxVolts);
    std::vector<std::string> GetAOTriggerTerminalsForDevice(const std::string& device);
-   std::vector<std::string> GetAnalogPortsForDevice(const std::string& device);
+   std::vector<std::string> GetAnalogOutputPortsForDevice(const std::string& device);
+   std::vector<std::string> GetAnalogInputPortsForDevice(const std::string& device);
    std::vector<std::string> GetDigitalPortsForDevice(const std::string& device);
    std::string GetPhysicalChannelListForSequencing(std::vector<std::string> channels) const;
    template<typename T> int GetLCMSamplesPerChannel(size_t& seqLen, std::vector<std::vector<T>>) const;
@@ -238,6 +263,7 @@ private:
 
    TaskHandle aoTask_;
    TaskHandle doTask_;
+   // For memory safety reasons the the Input thread manages aiTask_
 
    NIDAQDOHub<uInt8> * doHub8_;
    NIDAQDOHub<uInt16>* doHub16_;
@@ -248,6 +274,8 @@ private:
    std::vector<std::string> physicalAOChannels_; // Invariant: all unique
    std::vector<std::vector<double>> aoChannelSequences_;
 
+   std::vector<std::string> physicalAIChannels_;
+   InputMonitoringThread* mThread_;
 };
 
 
@@ -399,13 +427,13 @@ public:
     virtual void GetName(char* name) const;
     virtual bool Busy() { return false; }
 
-    virtual int SetRunning(bool running);
-    virtual int GetRunning(bool& running);
+    virtual int SetGateOpen(bool open = true) { return SetRunning(open); }
+    virtual int GetGateOpen(bool& open) { return GetRunning(open); }
     virtual int SetSignal(double volts) { return DEVICE_UNSUPPORTED_COMMAND; }
-    virtual int GetSignal(double& /* volts */) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int GetSignal(double& volts);
     virtual int GetLimits(double& minVolts, double& maxVolts);
 
-    virtual int IsDASequenceable(bool& isSequenceable) { return false; }
+    virtual int IsDASequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
     virtual int GetDASequenceMaxLength(long& maxLength) { return DEVICE_UNSUPPORTED_COMMAND; }
     virtual int StartDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
     virtual int StopDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
@@ -413,11 +441,15 @@ public:
     virtual int AddToDASequence(double) { return DEVICE_UNSUPPORTED_COMMAND; }
     virtual int SendDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
 
+    virtual int SetRunning(bool running);
+    virtual int GetRunning(bool& running);
+
 private:
     // Pre-init property action handlers
 
     // Post-init property action handlers
     int OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnMeasuring(MM::PropertyBase * pProp, MM::ActionType eAct);
 
 private:
     NIDAQHub* GetHub() const
@@ -425,8 +457,6 @@ private:
         return static_cast<NIDAQHub*>(GetParentHub());
     }
     int TranslateHubError(int err);
-    int StartTask(double voltage);
-    int StopTask();
 
 private:
     const std::string niPort_;
@@ -434,25 +464,5 @@ private:
     bool initialized_;
 
     bool running_;
-
-    TaskHandle task_;
-
-    InputMonitorThread mThread_;
-};
-
-class InputMonitorThread : public MMDeviceThreadBase
-{
-public:
-    InputMonitorThread(NIAnalogInputPort& aInput);
-    ~InputMonitorThread();
-    int svc();
-
-    void Start();
-    void Stop() { stop_ = true; }
-
-
-private:
     float state_;
-    NIAnalogInputPort& aInput_;
-    bool stop_;
 };

@@ -32,6 +32,7 @@
 const char* g_DeviceNameNIDAQHub = "NIDAQHub";
 const char* g_DeviceNameNIDAQAOPortPrefix = "NIDAQAO-";
 const char* g_DeviceNameNIDAQDOPortPrefix = "NIDAQDO-";
+const char* g_DeviceNameNIDAQAIPortPrefix = "NIDAQAI-";
 
 const char* g_On = "On";
 const char* g_Off = "Off";
@@ -80,6 +81,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new DigitalOutputPort(std::string(deviceName).
          substr(strlen(g_DeviceNameNIDAQDOPortPrefix)));
+   }
+   else if (std::string(deviceName).substr(0, strlen(g_DeviceNameNIDAQAIPortPrefix)) ==
+       g_DeviceNameNIDAQAIPortPrefix)
+   {
+       return new NIAnalogInputPort(std::string(deviceName).
+           substr(strlen(g_DeviceNameNIDAQDOPortPrefix)));
    }
 
    return 0;
@@ -225,6 +232,9 @@ int NIDAQHub::Shutdown()
    if (!initialized_)
       return DEVICE_OK;
 
+   if (mThread_ != 0)
+      mThread_->Stop();
+
    int err = StopTask(aoTask_);
 
    physicalAOChannels_.clear();
@@ -236,6 +246,12 @@ int NIDAQHub::Shutdown()
       delete doHub16_;
    else if (doHub32_ != 0)
       delete  doHub32_;
+
+   if (mThread_ != 0)
+   {
+       mThread_->wait();
+       delete mThread_;
+   }
 
    initialized_ = false;
    return err;
@@ -251,7 +267,7 @@ void NIDAQHub::GetName(char* name) const
 int NIDAQHub::DetectInstalledDevices()
 {
    std::vector<std::string> aoPorts =
-      GetAnalogPortsForDevice(niDeviceName_);
+      GetAnalogOutputPortsForDevice(niDeviceName_);
 
    for (std::vector<std::string>::const_iterator it = aoPorts.begin(), end = aoPorts.end();
       it != end; ++it)
@@ -271,6 +287,20 @@ int NIDAQHub::DetectInstalledDevices()
    {
        MM::Device* pDevice =
            ::CreateDevice((g_DeviceNameNIDAQDOPortPrefix + *it).c_str());
+       if (pDevice)
+       {
+           AddInstalledDevice(pDevice);
+       }
+   }
+
+   std::vector<std::string> aiPorts =
+       GetAnalogInputPortsForDevice(niDeviceName_);
+
+   for (std::vector<std::string>::const_iterator it = aiPorts.begin(), end = aiPorts.end();
+       it != end; ++it)
+   {
+       MM::Device* pDevice =
+           ::CreateDevice((g_DeviceNameNIDAQAIPortPrefix + *it).c_str());
        if (pDevice)
        {
            AddInstalledDevice(pDevice);
@@ -469,7 +499,7 @@ NIDAQHub::GetAOTriggerTerminalsForDevice(const std::string& device)
 
 
 std::vector<std::string>
-NIDAQHub::GetAnalogPortsForDevice(const std::string& device)
+NIDAQHub::GetAnalogOutputPortsForDevice(const std::string& device)
 {
    std::vector<std::string> result;
 
@@ -487,6 +517,28 @@ NIDAQHub::GetAnalogPortsForDevice(const std::string& device)
    }
 
    return result;
+}
+
+
+std::vector<std::string>
+NIDAQHub::GetAnalogInputPortsForDevice(const std::string& device)
+{
+    std::vector<std::string> result;
+
+    char ports[4096];
+    int32 nierr = DAQmxGetDevAIPhysicalChans(device.c_str(), ports, sizeof(ports));
+    if (nierr == 0)
+    {
+        boost::split(result, ports, boost::is_any_of(", "),
+            boost::token_compress_on);
+    }
+    else
+    {
+        LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+        LogMessage("Cannot get list of analog ports");
+    }
+
+    return result;
 }
 
 std::vector<std::string>
