@@ -349,6 +349,8 @@ int Standa8SMC4Z::SetPositionUm(double pos)
       return DEVICE_UNKNOWN_POSITION;
    }
 
+   command_wait_for_stop(device_, 1);
+
    // Set future position
    OnStagePositionChanged(pos);
 
@@ -403,6 +405,8 @@ int Standa8SMC4Z::SetPositionSteps(long steps)
    {
       return DEVICE_UNKNOWN_POSITION;
    }
+
+   command_wait_for_stop(device_, 1);
 
    // Set future position
    OnStagePositionChanged(steps * unitMultiplier_);
@@ -1015,6 +1019,9 @@ int Standa8SMC4XY::SetPositionUm(double x, double y)
       return DEVICE_UNKNOWN_POSITION;
    }
 
+   command_wait_for_stop(deviceX_, 1);
+   command_wait_for_stop(deviceY_, 1);
+
    // Set future position
    OnXYStagePositionChanged(x, y);
 
@@ -1079,6 +1086,9 @@ int Standa8SMC4XY::SetRelativePositionUm(double dx, double dy)
    {
       return DEVICE_UNKNOWN_POSITION;
    }
+
+   command_wait_for_stop(deviceX_, 1);
+   command_wait_for_stop(deviceY_, 1);
 
    // Set future position
    UpdatePositions(dx, dy);
