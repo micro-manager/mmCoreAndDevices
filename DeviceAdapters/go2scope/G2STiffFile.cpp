@@ -160,6 +160,7 @@ void G2STiffFile::open(bool trunc, bool dio)
 	currentimage = 0;
 	readbuffoff = 0;
 	header.clear();
+	ifdcache.clear();
 
 	if(freshfile)
 	{
@@ -264,6 +265,7 @@ void G2STiffFile::open(bool trunc, bool dio)
 			if(currentifdpos > 0)
 			{
 				seek(currentifdpos);
+				ifdcache.push_back(currentifdpos);
 
 				int i = 0;
 				std::vector<unsigned char> lbuff;
@@ -296,6 +298,7 @@ void G2STiffFile::open(bool trunc, bool dio)
 						break;
 					lastifdpos = nextoffset;
 					lastifdsize = ifdsz;
+					ifdcache.push_back(lastifdpos);
 					seek(lastifdpos);
 					i++;
 				}
@@ -413,6 +416,7 @@ void G2STiffFile::close() noexcept
 	header.clear();
 	metadata.clear();
 	shape.clear();
+	ifdcache.clear();
 }
 
 /**
@@ -557,24 +561,34 @@ std::string G2STiffFile::getMetadata()
 
 /**
  * Get image metadata
- * Images are read sequentially, metadata for the current image will be returned
- * This method won't change the current image
+ * If the coordinates are not specified images are read sequentially, metadata for the current image 
+ * will be returned, in which case the current image won't be changed
  * If no metadata is defined this method will return an empty string
  * If no images are defined this method will return an empty string
- * Image IFD will be loaded if this method is called before getImage() (only for the first image)
+ * In the sequential mode the image IFD will be loaded if this method is called before getImage() (only for the first image)
  * For other images getImage() should always be called prior to calling getImageMetadata()
+ * @param coord Image coordinates
  * @return Image metadata
  */
-std::string G2STiffFile::getImageMetadata()
+std::string G2STiffFile::getImageMetadata(const std::vector<std::uint32_t>& coord)
 {
 	if(!isOpen())
 		throw std::runtime_error("Invalid operation. No open file stream available");
 	if(imgcounter == 0)
 		throw std::runtime_error("Invalid operation. No images available");
 	
-	// Load IFD
-	if(currentifd.empty())
-		loadNextIFD();
+	// Select current image (IFD)
+	if(!coord.empty())
+	{
+		auto ind = calcImageIndex(coord);
+		if(ind >= ifdcache.size())
+			throw std::runtime_error("Invalid operation. Invalid image coordinates");
+		currentimage = ind;
+		loadIFD(ifdcache[ind]);
+	}
+	else if(currentifd.empty())
+		// Load IFD
+		loadIFD(currentifdpos);
 
 	// Check IFD tag count
 	auto tagcount = readInt(&currentifd[0], bigTiff ? 8 : 2);
@@ -672,38 +686,52 @@ void G2STiffFile::addImage(const unsigned char* buff, std::size_t len, const std
 		std::vector<unsigned char> pbuff(padsize);
 		commit(&pbuff[0], pbuff.size());
 	}
+	ifdcache.push_back(lastifdpos);
 	imgcounter++;
 }
 
 /**
  * Get image data (pixel buffer)
- * Images are read sequentially
+ * If the coordinates are not specified images are read sequentially
  * This method will change (advance) the current image
- * If this method is called after the last available image an exception will be thrown
+ * If this method is called after the last available image (in sequential mode), or with invalid coordinates an exception will be thrown
+ * @param coord Image coordinates
  * @return Image data
  */
-std::vector<unsigned char> G2STiffFile::getImage()
+std::vector<unsigned char> G2STiffFile::getImage(const std::vector<std::uint32_t>& coord)
 {
 	if(!isOpen())
 		throw std::runtime_error("Invalid operation. No open file stream available");
 	if(imgcounter == 0 || (currentimage + 1 > imgcounter) || nextifdpos == 0)
 		throw std::runtime_error("Invalid operation. No images available");
 
-	// Clear current IFD before advancing
-	// In a case where getImageMetadata() is called before any getImage() call
-	// we should skip clearing of current IFD, this works only for the first image
-	if(currentimage > 0)
+	// Select current image (IFD)
+	if(!coord.empty())
 	{
-		currentifd.clear();
-		currentifdpos = nextifdpos;
+		auto ind = calcImageIndex(coord);
+		if(ind >= ifdcache.size())
+			throw std::runtime_error("Invalid operation. Invalid image coordinates");
+		currentimage = ind;
+		loadIFD(ifdcache[ind]);
 	}
+	else
+	{
+		// Clear current IFD before advancing
+		// In a case where getImageMetadata() is called before any getImage() call
+		// we should skip clearing of current IFD, this works only for the first image
+		if(currentimage > 0)
+		{
+			currentifd.clear();
+			currentifdpos = nextifdpos;
+		}
 
-	// Advance current image
-	currentimage++;
+		// Advance current image
+		currentimage++;
 
-	// Load IFD (skip if already loaded by the getImageMetadata())
-	if(currentifd.empty())
-		loadNextIFD();
+		// Load IFD (skip if already loaded by the getImageMetadata())
+		if(currentifd.empty())
+			loadNextIFD();
+	}
 
 	// Obtain pixel data strip locations
 	auto offind = (bigTiff ? 8 : 2) + 5 * (bigTiff ? 20 : 12);
@@ -1115,26 +1143,38 @@ void G2STiffFile::appendIFD(std::size_t imagelen, const std::string& meta)
 }
 
 /**
-* Load next IFD for reading
-* Next IFD will become the current IFD
-* Next IFD offset will be updated
-* If the last (written) IFD offset is the same as the current 
-* IFD offset no file operation will be performed (IFD will be copied from cache)
-* @throws std::runtime_error
-*/
-void G2STiffFile::loadNextIFD()
+ * Load IFD for reading
+ * Selected IFD will become the current IFD
+ * Next IFD offset will be updated
+ * If the last (written) IFD offset is the same as the selected IFD offset
+ * no file operation will be performed (IFD will be copied from cache)
+ * @throws std::runtime_error
+ */
+void G2STiffFile::loadIFD(std::uint64_t off)
 {
-	if(!lastifd.empty() && lastifdpos == currentifdpos)
+	if(!currentifd.empty() && off == currentifdpos)
+		return;
+	if(off == 0)
+	{
+		// Reset current IFD
+		currentifd.clear();
+		currentifdpos = 0;
+		currentifdsize = 0;
+		nextifdpos = 0;
+	}
+	else if(!lastifd.empty() && lastifdpos == off)
 	{
 		// Copy IFD from cache
 		currentifd = lastifd;
+		currentifdpos = off;
 		currentifdsize = lastifdsize;
 		nextifdpos = readInt(&currentifd[currentifdsize - (bigTiff ? 8 : 4)], bigTiff ? 8 : 4);
 	}
 	else
 	{
 		// Load IFD from the file stream
-		moveReadCursor(seek(currentifdpos));
+		moveReadCursor(seek(off));
+		currentifdpos = off;
 		nextifdpos = parseIFD(currentifd, currentifdsize);
 	}
 }
@@ -1320,4 +1360,35 @@ void G2STiffFile::moveWriteCursor(std::uint64_t pos) noexcept
 	writepos = pos;
 	if(directIo)
 		writebuff.clear();
+}
+
+/**
+ * Calculate image index from image coordinates
+ * Image coordiantes should not contain indices for first two dimensions (width & height)
+ * By convention image acquisitions loops through the coordinates in the ascending order (lower coordinates are looped first)
+ * E.g. CTZ order means that all channels are acquired before moving changing the time point, and all specified time points 
+ * are acquired before moving the Z-stage, in which case dataset with the shape 3-4-2 for coordinates 1-2-1 will return 19 (=1*12 + 2*3 + 1)
+ * Last image coordinate can go beyond the specified shape size
+ * @param coord Image coordinates
+ * @return Image index
+ * @throws std::runtime_error
+ */
+std::uint32_t G2STiffFile::calcImageIndex(const std::vector<std::uint32_t>& coord) const
+{
+	if(coord.size() > shape.size() - 2)
+		throw std::runtime_error("Invalid number of coordinates");
+	for(std::size_t i = 0; i < coord.size() - 1; i++)
+	{
+		if(coord[i] >= shape[i + 2])
+			throw std::runtime_error("Invalid coordinate for dimension " + std::to_string(i + 2));
+	}
+	std::uint32_t ind = 0;
+	for(int i = (int)coord.size() - 1; i >= 0; i--)
+	{
+		std::uint32_t sum = 1;
+		for(int j = i - 1; j >= 0; j--)
+			sum *= shape[j + 2];
+		ind += sum * coord[i];
+	}
+	return ind;
 }

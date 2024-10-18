@@ -536,8 +536,14 @@ int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int n
       // Obtain metadata from the file stream
 		if(!it->second.isOpen())
 			return ERR_TIFF_STREAM_UNAVAILABLE;
-		auto fmeta = fs->getImageMetadata();
-		// TODO: Implement random image access for G2STiff file
+
+		// Copy coordinates without including the width and height
+		std::vector<std::uint32_t> coords(fs->getDimension() - 2);
+		int base = fs->getDimension() == numCoordinates ? 2 : 0;
+		for(int i = 0; i < numCoordinates - base; i++)
+			coords[i] = coordinates[base + i];
+
+		auto fmeta = fs->getImageMetadata(coords);
 		if(!fmeta.empty())
 			strncpy(meta, fmeta.c_str(), bufSize);
 	}
@@ -576,8 +582,13 @@ const unsigned char* G2SBigTiffStorage::GetImage(const char* handle, int coordin
 	if(!it->second.isOpen())
 		return nullptr;
 
-	// TODO: Implement random image access for G2STiff file
-	it->second.ImageData = fs->getImage();
+	// Copy coordinates without including the width and height
+	std::vector<std::uint32_t> coords(fs->getDimension() - 2);
+	int base = fs->getDimension() == numCoordinates ? 2 : 0;
+	for(int i = 0; i < numCoordinates - base; i++)
+		coords[i] = coordinates[base + i];
+	
+	it->second.ImageData = fs->getImage(coords);
    return &it->second.ImageData[0];
 }
 
