@@ -49,9 +49,9 @@ SquidMonitoringThread::SquidMonitoringThread(MM::Core& core, SquidHub& hub, bool
    debug_(debug),
    stop_(true),
    intervalUs_(10000), // check every 10 ms for new messages, 
-   ourThread_(0)
+   ourThread_(0),
+   counter_(0)
 {
-   //deviceInfo = deviceInfo_;
    isBigEndian_ = IsBigEndian();
 }
 
@@ -76,39 +76,39 @@ SquidMonitoringThread::~SquidMonitoringThread()
 
 void SquidMonitoringThread::InterpretMessage(unsigned char* message)
 {
-   if (message[0] != 0x0) {
-      hub_.ReceivedCommand((uint8_t) message[0]);
-      if (debug_) {
-         std::ostringstream os;
-         os << "Monitoring Thread incoming message: ";
-         for (int i = 0; i < SquidMessageParser::messageMaxLength_; i++) {
-            os << std::hex << (unsigned int)message[i] << " ";
-         }
-         core_.LogMessage(&hub_, os.str().c_str(), false);
+   if (debug_ && (counter_ % 100 == 0)) {
+      std::ostringstream os;
+      os << "Monitoring Thread incoming message: ";
+      for (int i = 0; i < SquidMessageParser::messageMaxLength_; i++) {
+         os << std::hex << (unsigned int)message[i] << " ";
       }
-
-      std::uint32_t ux;
-      memcpy(&ux, &message[2], 4);
-      if (!isBigEndian_)
-      {
-         ux = SWAP_INT32(ux);
-      }
-      hub_.SetPositionXSteps(ux);
-      std::uint32_t uy;
-      memcpy(&uy, &message[6], 4);
-      if (!isBigEndian_)
-      {
-         uy = SWAP_INT32(uy);
-      }
-      hub_.SetPositionYSteps(uy);
-      std::uint32_t uz;
-      memcpy(&uz, &message[6], 4);
-      if (!isBigEndian_)
-      {
-         uz = SWAP_INT32(uz);
-      }
-      hub_.SetPositionZSteps(uz);
+      core_.LogMessage(&hub_, os.str().c_str(), true);
    }
+   counter_++;
+
+   hub_.SetCmdNrReceived(message[0], message[1]);
+
+   std::uint32_t ux;
+   memcpy(&ux, &message[2], 4);
+   if (!isBigEndian_)
+   {
+      ux = SWAP_INT32(ux);
+   }
+   hub_.SetPositionXSteps(ux);
+   std::uint32_t uy;
+   memcpy(&uy, &message[6], 4);
+   if (!isBigEndian_)
+   {
+      uy = SWAP_INT32(uy);
+   }
+   hub_.SetPositionYSteps(uy);
+   std::uint32_t uz;
+   memcpy(&uz, &message[10], 4);
+   if (!isBigEndian_)
+   {
+      uz = SWAP_INT32(uz);
+   }
+   hub_.SetPositionZSteps(uz);
 
 }
 

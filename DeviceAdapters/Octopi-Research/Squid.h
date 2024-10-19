@@ -67,9 +67,18 @@ const int STAGE_MOVEMENT_SIGN_X = -1;
 const int STAGE_MOVEMENT_SIGN_Y = -1;
 const int STAGE_MOVEMENT_SIGN_Z = -1;
 
+const unsigned char COMPLETED_WITHOUT_ERRORS = 0;
+const unsigned char IN_PROGRESS = 1;
+const unsigned char CMD_CHECKSUM_ERROR = 2;
+const unsigned char CMD_INVALID = 3;
+const unsigned char CMD_EXECUTION_ERROR = 4;
+const unsigned char ERROR_CODE_EMPTYING_THE_FLUDIIC_LINE_FAILED = 10;
+
 extern const char* g_AutoHome;
 extern const char* g_Yes;
 extern const char* g_No;
+extern const char* g_Acceleration;
+extern const char* g_Max_Velocity;
 
 class SquidMonitoringThread;
 class SquidXYStage;
@@ -93,16 +102,15 @@ public:
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    bool IsPortAvailable() { return (port_ != ""); };
-   int SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr);
+   int SendCommand(unsigned char* cmd, unsigned cmdSize);
    int SendMoveCommand(const int cmd, long steps);
    int SetMaxVelocityAndAcceleration(unsigned char axis, double maxVelocity, double acceleration);
-   bool IsCommandPending(uint8_t cmdNr);
-   void ReceivedCommand(uint8_t cmdNr);
-   int GetPositionXYSteps(long& x, long& y);
-   int GetPositionZSteps(long& z);
-   int SetPositionXSteps(long x);
-   int SetPositionYSteps(long y);
-   int SetPositionZSteps(long z);
+   void GetPositionXYSteps(long& x, long& y);
+   void GetPositionZSteps(long& z);
+   void SetPositionXSteps(long x);
+   void SetPositionYSteps(long y);
+   void SetPositionZSteps(long z);
+   void SetCmdNrReceived(uint8_t cmdNr, uint8_t status);
 
    std::string port_;
 
@@ -113,21 +121,20 @@ public:
    bool ZStageBusy();
 
 private:
-   void SetCommandPending(uint8_t cmdNr);
    bool initialized_;
    SquidMonitoringThread* monitoringThread_;
    SquidXYStage* xyStageDevice_;
    SquidZStage* zStageDevice_;
-   uint8_t cmdNr_;
-   uint8_t pendingCmd_;
-   std::recursive_mutex lock_;
-   std::recursive_mutex positionLock_;
    std::atomic_long x_;
    std::atomic_long y_;
    std::atomic_long z_;
+   std::atomic<unsigned char> cmdNrSend_;
+   std::atomic<unsigned char> cmdNrReceived_;
+   std::atomic<unsigned char> status_;
    std::atomic_bool xStageBusy_;
    std::atomic_bool yStageBusy_;
    std::atomic_bool zStageBusy_;
+   std::atomic_bool busy_;
 };
 
 
@@ -190,7 +197,8 @@ public:
    int SetPositionSteps(long x, long y);
    int GetPositionSteps(long& x, long& y)
    {
-      return hub_->GetPositionXYSteps(x, y);
+      hub_->GetPositionXYSteps(x, y);
+      return DEVICE_OK;
    }
    int SetRelativePositionSteps(long x, long y);
    int Home();
@@ -205,7 +213,7 @@ public:
     * sets the coordinate system used by the adapter
     * to values different from the system used by the stage controller
     */
-   int SetOrigin() { return DEVICE_OK; }
+   int SetOrigin() { return DEVICE_UNSUPPORTED_COMMAND; }
 
    int GetLimitsUm(double& /*xMin*/, double& /* xMax */, double& /* yMin */, double& /* yMax */)
    {
@@ -221,7 +229,7 @@ public:
 
    double GetStepSizeXUm() { return stepSizeX_um_; }
    double GetStepSizeYUm() { return stepSizeY_um_; }
-   int Move(double /*vx*/, double /*vy*/) { return DEVICE_OK; }
+   int Move(double /*vx*/, double /*vy*/) { return DEVICE_UNSUPPORTED_COMMAND; }
 
    int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
 
@@ -295,6 +303,10 @@ public:
    }
    bool IsContinuousFocusDrive() const { return false; };
 
+   int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnMaxVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct);
+
    int Callback(long zSteps);
 
 private:
@@ -303,7 +315,11 @@ private:
    double screwPitchZmm_;
    double microSteppingDefaultZ_; 
    double fullStepsPerRevZ_;
+   double maxVelocity_;
+   double acceleration_;
+   bool autoHome_;
    bool initialized_;
+   uint8_t cmdNr_;
 };
 
 
@@ -341,6 +357,7 @@ private:
    long intervalUs_;
    std::thread* ourThread_;
    bool isBigEndian_;
+   unsigned int counter_;
    SquidMonitoringThread& operator=(SquidMonitoringThread& /*rhs*/) { assert(false); return *this; }
 };
 

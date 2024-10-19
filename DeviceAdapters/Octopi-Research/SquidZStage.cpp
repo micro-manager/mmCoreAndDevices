@@ -11,8 +11,17 @@ SquidZStage::SquidZStage() :
    screwPitchZmm_(0.3),
    microSteppingDefaultZ_(256),
    fullStepsPerRevZ_(200),
-   initialized_(false)
-{}
+   maxVelocity_(5.0),
+   acceleration_(100.0),
+   autoHome_(false),
+   initialized_(false),
+   cmdNr_(0)
+{
+   CPropertyAction* pAct = new CPropertyAction(this, &SquidZStage::OnAutoHome);
+   CreateProperty(g_AutoHome, g_No, MM::String, false, pAct, true);
+   AddAllowedValue(g_AutoHome, g_Yes);
+   AddAllowedValue(g_AutoHome, g_No);
+}
 
 
 SquidZStage::~SquidZStage()
@@ -46,11 +55,27 @@ int SquidZStage::Initialize()
    char hubLabel[MM::MaxStrLength];
    hub_->GetLabel(hubLabel);
 
+   CPropertyAction* pAct = new CPropertyAction(this, &SquidZStage::OnAcceleration);
+   CreateFloatProperty(g_Acceleration, acceleration_, false, pAct);
+   SetPropertyLimits(g_Acceleration, 1.0, 6553.5);
+
+   pAct = new CPropertyAction(this, &SquidZStage::OnMaxVelocity);
+   CreateFloatProperty(g_Max_Velocity, maxVelocity_, false, pAct);
+   SetPropertyLimits(g_Max_Velocity, 1.0, 655.35);
+
+   if (autoHome_)
+   {
+      int ret = Home();
+      if (ret != DEVICE_OK)
+         return ret;
+   }
+
+   initialized_ = true;
+
    return DEVICE_OK;
 }
 
 
-// TODO: implement
 bool SquidZStage::Busy()
 {
    return hub_->ZStageBusy();
@@ -88,7 +113,8 @@ int SquidZStage::SetPositionSteps(long zSteps)
 
 int SquidZStage::GetPositionSteps(long& z)
 {
-   return hub_->GetPositionZSteps(z);
+   hub_->GetPositionZSteps(z);
+   return DEVICE_OK;
 }
 
 
@@ -100,7 +126,19 @@ int SquidZStage::SetRelativePositionSteps(long zSteps)
 
 int SquidZStage::Home()
 {
-   return DEVICE_UNSUPPORTED_COMMAND;
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_HOME_OR_ZERO;
+   cmd[2] = AXIS_Z;
+   cmd[3] = int((STAGE_MOVEMENT_SIGN_Z + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   int ret = hub_->SendCommand(cmd, cmdSize);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   return DEVICE_OK;
 }
 
 
@@ -116,3 +154,49 @@ int SquidZStage::Callback(long zSteps)
    return DEVICE_OK;
 }
 
+
+int SquidZStage::OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   std::string response;
+   if (eAct == MM::BeforeGet)
+   {
+      response = autoHome_ ? g_Yes : g_No;
+      pProp->Set(response.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(response);
+      autoHome_ = response == g_Yes;
+   }
+   return DEVICE_OK;
+}
+
+
+int SquidZStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(acceleration_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(acceleration_);
+      return hub_->SetMaxVelocityAndAcceleration(AXIS_Z, maxVelocity_, acceleration_);
+   }
+   return DEVICE_OK;
+}
+
+
+int SquidZStage::OnMaxVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(maxVelocity_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(maxVelocity_);
+      return hub_->SetMaxVelocityAndAcceleration(AXIS_Y, maxVelocity_, acceleration_);
+   }
+   return DEVICE_OK;
+}

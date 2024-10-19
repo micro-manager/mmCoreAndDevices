@@ -239,7 +239,7 @@ int SquidLEDShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
 
       isOpen_ = pos == 1;
 
-      ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
+      ret = hub_->SendCommand(cmd, cmdSize);
       if (ret != DEVICE_OK)
          return ret;
       changedTime_ = GetCurrentMMTime();
@@ -358,7 +358,7 @@ int SquidLEDShutter::sendIllumination(uint8_t pattern, uint8_t intensity, uint8_
    cmd[4] = (uint8_t) ((double) intensity / 255 * red);
    cmd[5] = (uint8_t) ((double) intensity / 255 * blue);
 
-   int ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
+   int ret = hub_->SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK)
       return ret;
    changedTime_ = GetCurrentMMTime();

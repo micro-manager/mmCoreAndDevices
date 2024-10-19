@@ -69,11 +69,6 @@ sleep_time_s = 0.005
 
 
 const char* g_XYStageName = "XYStage";
-const char* g_AutoHome = "Home on startup";
-const char* g_Yes = "Yes";
-const char* g_No = "No";
-const char* g_Acceleration = "Acceleration(mm/s^2)";
-const char* g_Max_Velocity = "Max Velocity(mm/s)";
 
 SquidXYStage::SquidXYStage() :
    hub_(0),
@@ -150,14 +145,14 @@ int SquidXYStage::Initialize()
    CreateFloatProperty(g_Max_Velocity, maxVelocity_, false, pAct);
    SetPropertyLimits(g_Max_Velocity, 1.0, 655.35);
 
-if (autoHome_)
-{
-   ret = Home();
-   if (ret != DEVICE_OK)
-      return ret;
-}
+   if (autoHome_)
+   {
+      ret = Home();
+      if (ret != DEVICE_OK)
+         return ret;
+   }
 
-initialized_ = true;
+   initialized_ = true;
 
 return DEVICE_OK;
 }
@@ -180,7 +175,7 @@ int SquidXYStage::Home()
    cmd[2] = AXIS_XY;
    cmd[3] = int((STAGE_MOVEMENT_SIGN_X + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
    cmd[4] = int((STAGE_MOVEMENT_SIGN_Y + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
-   int ret = hub_->SendCommand(cmd, cmdSize, &cmdNr_);
+   int ret = hub_->SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK)
       return ret;
 

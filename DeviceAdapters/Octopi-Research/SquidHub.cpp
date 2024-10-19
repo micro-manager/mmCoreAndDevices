@@ -10,6 +10,12 @@
 
 const char* g_HubDeviceName = "SquidHub";
 
+const char* g_AutoHome = "Home on startup";
+const char* g_Yes = "Yes";
+const char* g_No = "No";
+const char* g_Acceleration = "Acceleration(mm/s^2)";
+const char* g_Max_Velocity = "Max Velocity(mm/s)";
+
 
 MODULE_API void InitializeModuleData() 
 {
@@ -57,7 +63,8 @@ SquidHub::SquidHub() :
    xyStageDevice_(0),
    zStageDevice_(0),
    port_("Undefined"),
-   cmdNr_(1)
+   cmdNrSend_(0),
+   cmdNrReceived_(0)
 {
    InitializeDefaultErrorMessages();
 
@@ -69,6 +76,7 @@ SquidHub::SquidHub() :
    xStageBusy_ = false;
    yStageBusy_ = false;
    zStageBusy_ = false;
+   busy_ = false;
 }
 
 
@@ -97,14 +105,14 @@ int SquidHub::Initialize() {
    for (unsigned i = 2; i < cmdSize; i++) {
       cmd[i] = 0;
    }
-   int ret = SendCommand(cmd, cmdSize, &pendingCmd_);
+   int ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
 
    cmd[0] = 1; 
    cmd[1] = 254; // CMD_INITIALIZE_DRIVERS
-   ret = SendCommand(cmd, cmdSize, &pendingCmd_);
+   ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
    }
@@ -127,7 +135,8 @@ int SquidHub::Shutdown() {
 
 bool SquidHub::Busy()
 {
-    return false;
+   return busy_;
+   //return false;
 }
 
 
@@ -153,6 +162,7 @@ int SquidHub::DetectInstalledDevices()
       peripherals.clear();
       peripherals.push_back(g_LEDShutterName);
       peripherals.push_back(g_XYStageName);
+      peripherals.push_back(g_ZStageName);
       for (size_t i = 0; i < peripherals.size(); i++)
       {
          MM::Device* pDev = ::CreateDevice(peripherals[i].c_str());
@@ -201,37 +211,9 @@ int SquidHub::assignZStageDevice(SquidZStage* zStageDevice)
 }
 
 
-bool SquidHub::IsCommandPending(uint8_t cmdNr)
+int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize)
 {
-   std::lock_guard<std::recursive_mutex> locker(lock_);
-   return pendingCmd_ != cmdNr;
-}
-
-
-void SquidHub::ReceivedCommand(uint8_t cmdNr)
-{
-   std::lock_guard<std::recursive_mutex> locker(lock_);
-   if (pendingCmd_ == cmdNr)
-   {
-      pendingCmd_ = 0;
-   }
-}
-
-
-void SquidHub::SetCommandPending(uint8_t cmdNr)
-{
-   std::lock_guard<std::recursive_mutex> locker(lock_);
-   pendingCmd_ = cmdNr;
-}
-
-
-int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr)
-{
-   cmd[0] = cmdNr_;
-   if (cmdNr_ < 255) 
-      cmdNr_++;
-   else 
-      cmdNr_ = 1;
+   cmd[0] = ++cmdNrSend_;
    cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize - 1);
    if (true) {
       std::ostringstream os;
@@ -241,10 +223,25 @@ int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize, uint8_t* cmdNr)
       }
       LogMessage(os.str().c_str(), false);
    }
-   *cmdNr = cmdNr_;
-   SetCommandPending(cmdNr_);
+   busy_ = true;
+   status_ = IN_PROGRESS;
    return WriteToComPort(port_.c_str(), cmd, cmdSize);
 }
+
+
+void SquidHub::SetCmdNrReceived(uint8_t cmdNrReceived, uint8_t status) 
+{
+   if (cmdNrReceived != cmdNrReceived_ || status_ != status)
+   {
+      cmdNrReceived_ = cmdNrReceived;
+      if (cmdNrReceived_ == cmdNrSend_)
+      {
+         status_ = status;
+         busy_ = false;
+      }
+   }
+}
+
 
 
 /**
@@ -278,7 +275,7 @@ int SquidHub::SendMoveCommand(const int command, long steps)
    else if (command == CMD_MOVETO_Z || command == CMD_MOVE_Z)
       zStageBusy_ = true;
 
-   return SendCommand(cmd, cmdSize, &cmdNr_);
+   return SendCommand(cmd, cmdSize);
 }
 
 
@@ -300,26 +297,24 @@ int SquidHub::SetMaxVelocityAndAcceleration(unsigned char axis, double maxVeloci
    cmd[5] = uint16_t (acceleration * 10) >> 8;
    cmd[6] = uint16_t (acceleration * 10) & 0xff;
 
-   return SendCommand(cmd, cmdSize, &cmdNr_);
+   return SendCommand(cmd, cmdSize);
 }
 
 
-int SquidHub::GetPositionXYSteps(long& x, long& y)
+void SquidHub::GetPositionXYSteps(long& x, long& y)
 {
    x = x_.load();
    y = y_.load();
-   return DEVICE_OK;
 }
 
 
-int SquidHub::GetPositionZSteps(long& z)
+void SquidHub::GetPositionZSteps(long& z)
 {
    z = z_.load();
-   return DEVICE_OK;
 }
 
 
-int SquidHub::SetPositionXSteps(long x)
+void SquidHub::SetPositionXSteps(long x)
 {
    if (x_.load() != x)
    {
@@ -331,11 +326,10 @@ int SquidHub::SetPositionXSteps(long x)
    else {
       xStageBusy_ = false;
    }
-   return DEVICE_OK;
 }
 
 
-int SquidHub::SetPositionYSteps(long y)
+void SquidHub::SetPositionYSteps(long y)
 {
    if (y_.load() != y)
    {
@@ -347,11 +341,10 @@ int SquidHub::SetPositionYSteps(long y)
    else {
       yStageBusy_ = false;
    }
-   return DEVICE_OK;
 }
 
 
-int SquidHub::SetPositionZSteps(long z)
+void SquidHub::SetPositionZSteps(long z)
 {
    if (z_.load() != z)
    {
@@ -363,17 +356,16 @@ int SquidHub::SetPositionZSteps(long z)
    else {
       zStageBusy_ = false;
    }
-   return DEVICE_OK;
 }
 
 
 bool SquidHub::XYStageBusy()
 {
-   return xStageBusy_ || yStageBusy_;
+   return busy_ || (status_ != COMPLETED_WITHOUT_ERRORS) || xStageBusy_ || yStageBusy_;
 }
 
 
 bool SquidHub::ZStageBusy()
 {
-   return zStageBusy_;
+   return busy_ || (status_ != COMPLETED_WITHOUT_ERRORS) || zStageBusy_;
 }
