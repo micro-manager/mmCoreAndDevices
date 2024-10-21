@@ -100,11 +100,13 @@ public:
    int DetectInstalledDevices();
 
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    bool IsPortAvailable() { return (port_ != ""); };
    int SendCommand(unsigned char* cmd, unsigned cmdSize);
    int SendMoveCommand(const int cmd, long steps);
    int SetMaxVelocityAndAcceleration(unsigned char axis, double maxVelocity, double acceleration);
+   int Home();
    void GetPositionXYSteps(long& x, long& y);
    void GetPositionZSteps(long& z);
    void SetPositionXSteps(long x);
@@ -122,6 +124,7 @@ public:
 
 private:
    bool initialized_;
+   bool autoHome_;
    SquidMonitoringThread* monitoringThread_;
    SquidXYStage* xyStageDevice_;
    SquidZStage* zStageDevice_;
@@ -238,7 +241,6 @@ public:
    // ----------------
    int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    int Callback(long xSteps, long ySteps);
 
@@ -257,7 +259,6 @@ private:
    bool busy_;
    double maxVelocity_;
    double acceleration_;
-   bool autoHome_;
    bool initialized_;
    uint8_t cmdNr_;
 
@@ -305,7 +306,6 @@ public:
 
    int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    int Callback(long zSteps);
 
@@ -317,7 +317,6 @@ private:
    double fullStepsPerRevZ_;
    double maxVelocity_;
    double acceleration_;
-   bool autoHome_;
    bool initialized_;
    uint8_t cmdNr_;
 };

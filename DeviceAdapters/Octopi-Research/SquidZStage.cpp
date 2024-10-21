@@ -13,14 +13,9 @@ SquidZStage::SquidZStage() :
    fullStepsPerRevZ_(200),
    maxVelocity_(5.0),
    acceleration_(100.0),
-   autoHome_(false),
    initialized_(false),
    cmdNr_(0)
 {
-   CPropertyAction* pAct = new CPropertyAction(this, &SquidZStage::OnAutoHome);
-   CreateProperty(g_AutoHome, g_No, MM::String, false, pAct, true);
-   AddAllowedValue(g_AutoHome, g_Yes);
-   AddAllowedValue(g_AutoHome, g_No);
 }
 
 
@@ -54,6 +49,9 @@ int SquidZStage::Initialize()
    }
    char hubLabel[MM::MaxStrLength];
    hub_->GetLabel(hubLabel);
+   int ret = hub_->assignZStageDevice(this);
+   if (ret != DEVICE_OK)
+      return ret;
 
    CPropertyAction* pAct = new CPropertyAction(this, &SquidZStage::OnAcceleration);
    CreateFloatProperty(g_Acceleration, acceleration_, false, pAct);
@@ -62,13 +60,6 @@ int SquidZStage::Initialize()
    pAct = new CPropertyAction(this, &SquidZStage::OnMaxVelocity);
    CreateFloatProperty(g_Max_Velocity, maxVelocity_, false, pAct);
    SetPropertyLimits(g_Max_Velocity, 1.0, 655.35);
-
-   if (autoHome_)
-   {
-      int ret = Home();
-      if (ret != DEVICE_OK)
-         return ret;
-   }
 
    initialized_ = true;
 
@@ -151,23 +142,6 @@ int SquidZStage::Stop()
 int SquidZStage::Callback(long zSteps)
 {
    this->GetCoreCallback()->OnStagePositionChanged(this, zSteps * stepSize_um_);
-   return DEVICE_OK;
-}
-
-
-int SquidZStage::OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   std::string response;
-   if (eAct == MM::BeforeGet)
-   {
-      response = autoHome_ ? g_Yes : g_No;
-      pProp->Set(response.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      pProp->Get(response);
-      autoHome_ = response == g_Yes;
-   }
    return DEVICE_OK;
 }
 

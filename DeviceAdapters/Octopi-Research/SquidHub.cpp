@@ -59,6 +59,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 SquidHub::SquidHub() :
    initialized_(false),
+   autoHome_(false),
    monitoringThread_(0),
    xyStageDevice_(0),
    zStageDevice_(0),
@@ -77,6 +78,11 @@ SquidHub::SquidHub() :
    yStageBusy_ = false;
    zStageBusy_ = false;
    busy_ = false;
+
+   pAct = new CPropertyAction(this, &SquidHub::OnAutoHome);
+   CreateProperty(g_AutoHome, g_No, MM::String, false, pAct, true);
+   AddAllowedValue(g_AutoHome, g_Yes);
+   AddAllowedValue(g_AutoHome, g_No);
 }
 
 
@@ -115,6 +121,14 @@ int SquidHub::Initialize() {
    ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
       return ret;
+   }
+
+   if (autoHome_)
+   {
+      ret = Home();
+      if (ret != DEVICE_OK) {
+         return ret;
+      }
    }
 
    initialized_ = true;
@@ -368,4 +382,43 @@ bool SquidHub::XYStageBusy()
 bool SquidHub::ZStageBusy()
 {
    return busy_ || (status_ != COMPLETED_WITHOUT_ERRORS) || zStageBusy_;
+}
+
+
+int SquidHub::OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   std::string response;
+   if (eAct == MM::BeforeGet)
+   {
+      response = autoHome_ ? g_Yes : g_No;
+      pProp->Set(response.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(response);
+      autoHome_ = response == g_Yes;
+   }
+   return DEVICE_OK;
+}
+
+
+int SquidHub::Home()
+{
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_HOME_OR_ZERO;
+   cmd[2] = AXIS_Z;
+   cmd[3] = int((STAGE_MOVEMENT_SIGN_Z + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   int ret = SendCommand(cmd, cmdSize);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   cmd[1] = CMD_HOME_OR_ZERO;
+   cmd[2] = AXIS_XY;
+   cmd[3] = int((STAGE_MOVEMENT_SIGN_X + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   cmd[4] = int((STAGE_MOVEMENT_SIGN_Y + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   return SendCommand(cmd, cmdSize);
 }

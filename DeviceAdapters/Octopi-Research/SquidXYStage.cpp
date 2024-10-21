@@ -85,16 +85,10 @@ SquidXYStage::SquidXYStage() :
    busy_(false),
    maxVelocity_(25.0),
    acceleration_(500.0),
-   autoHome_(false),
    initialized_(false),
    cmdNr_(0)
 {
    InitializeDefaultErrorMessages();
-
-   CPropertyAction* pAct = new CPropertyAction(this, &SquidXYStage::OnAutoHome);
-   CreateProperty(g_AutoHome, g_No, MM::String, false, pAct, true);
-   AddAllowedValue(g_AutoHome, g_Yes);
-   AddAllowedValue(g_AutoHome, g_No);
 }
 
 SquidXYStage::~SquidXYStage()
@@ -145,16 +139,9 @@ int SquidXYStage::Initialize()
    CreateFloatProperty(g_Max_Velocity, maxVelocity_, false, pAct);
    SetPropertyLimits(g_Max_Velocity, 1.0, 655.35);
 
-   if (autoHome_)
-   {
-      ret = Home();
-      if (ret != DEVICE_OK)
-         return ret;
-   }
-
    initialized_ = true;
 
-return DEVICE_OK;
+   return DEVICE_OK;
 }
 
 
@@ -213,23 +200,6 @@ int SquidXYStage::Callback(long xSteps, long ySteps)
 {
    this->GetCoreCallback()->OnXYStagePositionChanged(this,
       xSteps * stepSizeX_um_, ySteps * stepSizeY_um_);
-   return DEVICE_OK;
-}
-
-
-int SquidXYStage::OnAutoHome(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   std::string response;
-   if (eAct == MM::BeforeGet)
-   {
-      response = autoHome_ ? g_Yes : g_No;
-      pProp->Set(response.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      pProp->Get(response);
-      autoHome_ = response == g_Yes;
-   }
    return DEVICE_OK;
 }
 
