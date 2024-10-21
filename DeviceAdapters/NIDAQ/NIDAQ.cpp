@@ -50,7 +50,8 @@ const int ERR_VOLTAGE_OUT_OF_RANGE = 2004;
 const int ERR_NONUNIFORM_CHANNEL_VOLTAGE_RANGES = 2005;
 const int ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS = 2006;
 const int ERR_UNKNOWN_PINS_PER_PORT = 2007;
-const int ERR_INVALID_REQUEST = 2008;
+const int ERR_UNEXPECTED_AMOUNT_OF_MEASUREMENTS = 2008;
+const int ERR_INVALID_REQUEST = 2009;
 
 
 
@@ -86,7 +87,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
        g_DeviceNameNIDAQAIPortPrefix)
    {
        return new NIAnalogInputPort(std::string(deviceName).
-           substr(strlen(g_DeviceNameNIDAQDOPortPrefix)));
+           substr(strlen(g_DeviceNameNIDAQAIPortPrefix)));
    }
 
    return 0;
@@ -106,14 +107,17 @@ NIDAQHub::NIDAQHub () :
    maxSequenceLength_(1024),
    sequencingEnabled_(false),
    sequenceRunning_(false),
-   minVolts_(0.0),
-   maxVolts_(5.0),
+   minVoltsOut_(0.0),
+   maxVoltsOut_(5.0),
    sampleRateHz_(10000.0),
    aoTask_(0),
    doTask_(0),
    doHub8_(0),
    doHub16_(0),
-   doHub32_(0)
+   doHub32_(0),
+   mThread_(0),
+   expectedMaxVoltsIn_(5.0),
+   expectedMinVoltsIn_(-5.0)
 {
    // discover devices available on this computer and list them here
    std::string defaultDeviceName = "";
@@ -174,7 +178,7 @@ int NIDAQHub::Initialize()
    niSampleClock_ = "/" + niDeviceName_ + "/do/SampleClock";
 
    // Determine the possible voltage range
-   int err = GetVoltageRangeForDevice(niDeviceName_, minVolts_, maxVolts_);
+   int err = GetVoltageRangeForDevice(niDeviceName_, minVoltsOut_, maxVoltsOut_);
    if (err != DEVICE_OK)
       return err;
 
@@ -222,6 +226,9 @@ int NIDAQHub::Initialize()
       // do not return an error to allow the user to switch the triggerport to something that works
    }
 
+
+   mThread_ = new InputMonitoringThread(this);
+
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -232,8 +239,9 @@ int NIDAQHub::Shutdown()
    if (!initialized_)
       return DEVICE_OK;
 
-   if (mThread_ != 0)
-      mThread_->Stop();
+   mThread_->Stop();
+   mThread_->wait();
+   delete mThread_;
 
    int err = StopTask(aoTask_);
 
@@ -313,8 +321,8 @@ int NIDAQHub::DetectInstalledDevices()
 
 int NIDAQHub::GetVoltageLimits(double& minVolts, double& maxVolts)
 {
-   minVolts = minVolts_;
-   maxVolts = maxVolts_;
+   minVolts = minVoltsOut_;
+   maxVolts = maxVoltsOut_;
    return DEVICE_OK;
 }
 
@@ -670,7 +678,7 @@ int NIDAQHub::StartAOSequencingTask()
 
    const std::string chanList = GetPhysicalChannelListForSequencing(physicalAOChannels_);
    nierr = DAQmxCreateAOVoltageChan(aoTask_, chanList.c_str(),
-      "AOSeqChan", minVolts_, maxVolts_, DAQmx_Val_Volts,
+      "AOSeqChan", minVoltsOut_, maxVoltsOut_, DAQmx_Val_Volts,
       NULL);
    if (nierr != 0)
    {
@@ -859,7 +867,84 @@ error:
 }
 
 
- int NIDAQHub::StopTask(TaskHandle &task)
+int NIDAQHub::StartAIMeasuringForPort(NIAnalogInputPort* port)
+{
+    //check if port has not already been added
+    size_t n = physicalAIChannels_.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (physicalAIChannels_[i] == port)
+            return DEVICE_OK;
+    }
+
+    mThread_->Stop();
+    physicalAIChannels_.push_back(port);
+    mThread_->wait();
+    delete mThread_;
+    
+    mThread_ = new InputMonitoringThread(this);
+    int err = mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+    if (err != DEVICE_OK)
+        return err;
+
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::StopAIMeasuringForPort(NIAnalogInputPort* port)
+{
+    size_t n = physicalAIChannels_.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (physicalAIChannels_[i] == port)
+        {
+            mThread_->Stop();
+            physicalAIChannels_.erase(physicalAIChannels_.begin() + i);
+            mThread_->wait();
+            delete mThread_;
+
+            mThread_ = new InputMonitoringThread(this);
+
+            if (n > 1)   
+                mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+
+            return DEVICE_OK;
+        }
+    }
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::UpdateAIValues(float64* values, int32 amount)
+{
+    if (amount != 1)
+        return ERR_UNEXPECTED_AMOUNT_OF_MEASUREMENTS;
+
+    size_t n = physicalAIChannels_.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        physicalAIChannels_[i]->UpdateState(values[i]);
+    }
+
+    return DEVICE_OK;
+}
+
+
+std::string NIDAQHub::GetPhysicalChannelListForMeasuring(std::vector<NIAnalogInputPort*> channels)
+{
+    std::string result;
+    size_t n = channels.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        result += channels[i]->niPort_;
+        if (i < n - 1)
+            result += ", ";
+    }
+    return result;
+}
+
+
+int NIDAQHub::StopTask(TaskHandle &task)
 {
    if (!task)
       return DEVICE_OK;
@@ -1316,3 +1401,50 @@ int NIDAQDOHub<uInt32>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerCha
 template class NIDAQDOHub<uInt8>;
 template class NIDAQDOHub<uInt16>;
 template class NIDAQDOHub<uInt32>;
+
+InputMonitoringThread::InputMonitoringThread(NIDAQHub* hub) :
+    stop_(false)
+{
+    hub_ = hub;
+}
+
+InputMonitoringThread::~InputMonitoringThread()
+{
+    Stop();
+    wait();
+}
+
+int InputMonitoringThread::Start(std::string AIChannelList, float minVal, float maxVal)
+{
+    stop_ = false;
+    int err = DAQmxCreateTask("AnalogInputReadTask", &aiTask_);
+    if (err != DEVICE_OK)
+        return err;
+    
+    err = DAQmxCreateAIVoltageChan(aiTask_, AIChannelList.c_str(), "", DAQmx_Val_RSE, minVal, maxVal, DAQmx_Val_Volts, NULL);
+    if (err != DEVICE_OK)
+        return err;
+
+    activate();
+    return DEVICE_OK;
+}
+
+int InputMonitoringThread::svc()
+{
+    while (!stop_)
+    {
+        float64 values[128] = { 0 };
+        int32 amount;
+        int err = DAQmxReadAnalogF64(aiTask_, 1, 2.0, DAQmx_Val_GroupByChannel, values, 128, &amount, NULL);
+        if (err != DEVICE_OK)
+            return err;
+
+        hub_->UpdateAIValues(values, amount);
+        CDeviceUtils::SleepMs(100);
+    }
+    int err = DAQmxClearTask(aiTask_);
+    if (err != DEVICE_OK)
+        return err;
+
+    return DEVICE_OK;
+}

@@ -111,11 +111,11 @@ int NIAnalogInputPort::SetRunning(bool open)
 {
     if (open && !running_)
     {
-        //TODO: implement actual measuring
+        GetHub()->StartAIMeasuringForPort(this);
     }
     else if (!open && running_)
     {
-        //TODO: implement actual measuring
+        GetHub()->StopAIMeasuringForPort(this);
     }
 
     running_ = open;
@@ -153,6 +153,13 @@ int NIAnalogInputPort::OnMeasuring(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (err != DEVICE_OK)
             return err;
     }
+    return DEVICE_OK;
+}
+
+int NIAnalogInputPort::UpdateState(float value)
+{
+    state_ = value;
+    OnPropertiesChanged();
     return DEVICE_OK;
 }
 
