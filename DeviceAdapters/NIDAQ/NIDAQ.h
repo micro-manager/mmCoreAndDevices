@@ -52,6 +52,7 @@ extern const int ERR_VOLTAGE_OUT_OF_RANGE;
 extern const int ERR_NONUNIFORM_CHANNEL_VOLTAGE_RANGES;
 extern const int ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS;
 extern const int ERR_UNKNOWN_PINS_PER_PORT;
+extern const int ERR_UNEXPECTED_AMOUNT_OF_MEASUREMENTS;
 
 
 inline std::string GetNIError(int32 nierr)
@@ -154,23 +155,24 @@ private:
 class InputMonitoringThread : public MMDeviceThreadBase
 {
 public:
-    InputMonitoringThread(NIDAQHub& hub);
+    InputMonitoringThread(NIDAQHub* hub);
     ~InputMonitoringThread();
     int svc();
 
-    void Start();
+    int Start(std::string AIChannelList, float minVal, float maxVal);
     void Stop() { stop_ = true; }
 
 
 private:
-    NIDAQHub& hub_;
+    NIDAQHub* hub_;
 
     TaskHandle aiTask_;
 
     bool stop_;
 };
 
-
+// Forward declaration needed for NIDAQ hub
+class NIAnalogInputPort;
 
 /**
  * A hub - peripheral device set for driving multiple analog output ports,
@@ -184,6 +186,7 @@ class NIDAQHub : public HubBase<NIDAQHub>,
    friend NIDAQDOHub<uInt32>;
    friend NIDAQDOHub<uInt16>;
    friend NIDAQDOHub<uInt8>;
+   friend InputMonitoringThread;
 public:
    NIDAQHub();
    virtual ~NIDAQHub();
@@ -218,12 +221,13 @@ public:
 
    int StopTask(TaskHandle& task);
 
+   int StartAIMeasuringForPort(NIAnalogInputPort* port);
+   int StopAIMeasuringForPort(NIAnalogInputPort* port);
+
+
 private:
    int AddAOPortToSequencing(const std::string& port, const std::vector<double> sequence);
    void RemoveAOPortFromSequencing(const std::string& port);
-
-   int AddAIPortToMonitoring(const std::string& port);
-   void RemoveAIPortFromMonitoring(const std::string& port);
 
    int GetVoltageRangeForDevice(const std::string& device, double& minVolts, double& maxVolts);
    std::vector<std::string> GetAOTriggerTerminalsForDevice(const std::string& device);
@@ -237,6 +241,9 @@ private:
    int SwitchTriggerPortToReadMode();
 
    int StartAOSequencingTask();
+
+   int UpdateAIValues(float64* values, int32 amount);
+   std::string GetPhysicalChannelListForMeasuring(std::vector<NIAnalogInputPort*> channels);
 
    // Action handlers
    int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -257,8 +264,8 @@ private:
    std::string niChangeDetection_;
    std::string niSampleClock_;
 
-   double minVolts_; // Min possible for device
-   double maxVolts_; // Max possible for device
+   double minVoltsOut_; // Min possible for device
+   double maxVoltsOut_; // Max possible for device
    double sampleRateHz_;
 
    TaskHandle aoTask_;
@@ -274,7 +281,10 @@ private:
    std::vector<std::string> physicalAOChannels_; // Invariant: all unique
    std::vector<std::vector<double>> aoChannelSequences_;
 
-   std::vector<std::string> physicalAIChannels_;
+   float expectedMaxVoltsIn_;
+   float expectedMinVoltsIn_;
+
+   std::vector<NIAnalogInputPort*> physicalAIChannels_;
    InputMonitoringThread* mThread_;
 };
 
@@ -417,6 +427,7 @@ class NIAnalogInputPort : public CSignalIOBase<NIAnalogInputPort>,
     ErrorTranslator<NIAnalogInputPort>,
     boost::noncopyable
 {
+    friend NIDAQHub;
 public:
     NIAnalogInputPort(const std::string& port);
     virtual ~NIAnalogInputPort();
@@ -445,20 +456,20 @@ public:
     virtual int GetRunning(bool& running);
 
 private:
+
+    virtual int UpdateState(float value);
     // Pre-init property action handlers
 
     // Post-init property action handlers
     int OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnMeasuring(MM::PropertyBase * pProp, MM::ActionType eAct);
 
-private:
     NIDAQHub* GetHub() const
     {
         return static_cast<NIDAQHub*>(GetParentHub());
     }
     int TranslateHubError(int err);
 
-private:
     const std::string niPort_;
 
     bool initialized_;
