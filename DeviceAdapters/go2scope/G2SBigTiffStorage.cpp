@@ -32,6 +32,7 @@
 #include "G2SBigTiffStorage.h"
 
 #define MAX_FILE_SEARCH_INDEX			128
+#define PROP_DIRECTIO					"DirectIO"
 
 /**
  * Default class constructor
@@ -39,7 +40,6 @@
 G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
 {
    supportedFormats = { "tif", "tiff", "tf8" };
-	directIo = false;
 
    InitializeDefaultErrorMessages();
 
@@ -77,6 +77,12 @@ int G2SBigTiffStorage::Initialize()
 {
    if(initialized)
       return DEVICE_OK;
+	
+	// Add DirectIO property
+	int nRet = CreateIntegerProperty(PROP_DIRECTIO, 0, false);
+	assert(nRet == DEVICE_OK);
+	AddAllowedValue(PROP_DIRECTIO,"0");
+	AddAllowedValue(PROP_DIRECTIO,"1");
 
    UpdateStatus();
 
@@ -170,7 +176,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 	
 	try
 	{
-		fhandle->open(true, directIo);
+		fhandle->open(true, getDirectIO());
 		if(!fhandle->isOpen())
 			return DEVICE_OUT_OF_MEMORY;
 	}
@@ -260,7 +266,7 @@ int G2SBigTiffStorage::Load(const char* path, char* handle)
 
 	try
 	{
-		fhandle->open(false, directIo);
+		fhandle->open(false, getDirectIO());
 		if(!fhandle->isOpen())
 			return DEVICE_OUT_OF_MEMORY;
 	}
@@ -805,4 +811,21 @@ std::string G2SBigTiffStorage::getImageKey(int coordinates[], int numCoordinates
    for(int i = 0; i < numCoordinates; i++)
       ss << (i == 0 ? "" : ".") << coordinates[i];
    return ss.str();
+}
+
+/**
+ * Get direct I/O property
+ * @return Is direct I/O enabled
+ */
+bool G2SBigTiffStorage::getDirectIO() const noexcept
+{
+	char buf[MM::MaxStrLength];
+	int ret = GetProperty(PROP_DIRECTIO, buf);
+	if(ret != DEVICE_OK)
+		return false;
+	try
+	{
+		return std::atoi(buf) != 0;
+	}
+	catch(...) { return false; }
 }
