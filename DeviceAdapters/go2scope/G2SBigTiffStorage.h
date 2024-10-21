@@ -85,6 +85,7 @@ protected:
    bool                                            scanDir(const std::string& path, char** listOfDatasets, int maxItems, int maxItemLength, int cpos) noexcept;
 	bool															validateCoordinates(const G2STiffFile* fs, int coordinates[], int numCoordinates) noexcept;
    std::string                                     getImageKey(int coordinates[], int numCoordinates) noexcept;
+	bool															getDirectIO() const noexcept;
 
 private:
    //=========================================================================================================================
@@ -93,5 +94,4 @@ private:
    std::map<std::string, G2SStorageEntry>          cache;                                 ///< Storage entries cache
    std::vector<std::string>                        supportedFormats;                      ///< Supported file formats
    bool                                            initialized;                           ///< Is driver initialized
-	bool															directIo;										///< Use direct I/O
 };
