@@ -836,10 +836,9 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
     }
     return DEVICE_OK;
 }
+
 int ClassGalaxy::StopSequenceAcquisition()
 {
-    
-    
     if (m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue())
     {
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
@@ -850,6 +849,11 @@ int ClassGalaxy::StopSequenceAcquisition()
     }
     AddToLog("StopSequenceAcquisition");
     return DEVICE_OK;
+}
+
+bool ClassGalaxy::IsCapturing()
+{
+   return m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue() ? true : false;
 }
 
 int ClassGalaxy::PrepareSequenceAcqusition()
