@@ -104,7 +104,7 @@ public:
 	//* Flag to indicate whether Sequence Acquisition is currently running.
 	//* Return true when Sequence acquisition is active, false otherwise
 	//*/
-	//bool IsCapturing();
+	bool IsCapturing();
 
 	////Genicam Callback
 	////void ResultingFramerateCallback(GenApi::INode* pNode);
