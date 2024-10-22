@@ -253,6 +253,8 @@ private:
    int OnTriggerInputPort(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   int OnExpectedMaxVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnExpectedMinVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    bool initialized_;
    size_t maxSequenceLength_;
