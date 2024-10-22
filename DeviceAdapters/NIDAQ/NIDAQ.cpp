@@ -226,6 +226,15 @@ int NIDAQHub::Initialize()
       // do not return an error to allow the user to switch the triggerport to something that works
    }
 
+   pAct = new CPropertyAction(this, &NIDAQHub::OnExpectedMaxVoltsIn);
+   err = CreateFloatProperty("Maximum expected measured Voltage", 5.0, false, pAct);
+   if (err != DEVICE_OK)
+       return err;
+
+   pAct = new CPropertyAction(this, &NIDAQHub::OnExpectedMinVoltsIn);
+   err = CreateFloatProperty("Minimum expected measured Voltage", -5.0, false, pAct);
+   if (err != DEVICE_OK)
+       return err;
 
    mThread_ = new InputMonitoringThread(this);
 
@@ -1053,6 +1062,51 @@ int NIDAQHub::OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct)
       sampleRateHz_ = rateHz;
    }
    return DEVICE_OK;
+}
+
+
+int NIDAQHub::OnExpectedMaxVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(expectedMaxVoltsIn_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double temp_max = 5.0;
+        pProp->Get(temp_max);
+        expectedMaxVoltsIn_ = temp_max;
+        
+        mThread_->Stop();
+        mThread_->wait();
+        delete mThread_;
+        mThread_ = new InputMonitoringThread(this);
+        mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+
+    }
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::OnExpectedMinVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(expectedMinVoltsIn_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double temp_min = -5.0;
+        pProp->Get(temp_min);
+        expectedMinVoltsIn_ = temp_min;
+
+        mThread_->Stop();
+        mThread_->wait();
+        delete mThread_;
+        mThread_ = new InputMonitoringThread(this);
+        mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+    }
+    return DEVICE_OK;
 }
 
 
