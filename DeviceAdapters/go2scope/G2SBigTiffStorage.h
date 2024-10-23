@@ -86,6 +86,7 @@ protected:
 	bool															validateCoordinates(const G2STiffFile* fs, int coordinates[], int numCoordinates) noexcept;
    std::string                                     getImageKey(int coordinates[], int numCoordinates) noexcept;
 	bool															getDirectIO() const noexcept;
+	int															getFlushCycle() const noexcept;
 
 private:
    //=========================================================================================================================

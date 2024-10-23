@@ -65,6 +65,7 @@ public:
 	//============================================================================================================================
 	void															open(bool trunc = false, bool dio = DEFAULT_DIRECT_IO);
 	void															close() noexcept;
+	void															setFlushCycles(std::uint32_t val) noexcept { flushcnt = val; }
 	void															setShape(const std::vector<std::uint32_t>& dims);
 	void															setShape(std::initializer_list<std::uint32_t> dims);
 	std::vector<std::uint32_t>								getShape() const noexcept { return shape; }
@@ -106,6 +107,7 @@ private:
 	std::size_t													read(unsigned char* buff, std::size_t len);
 	std::uint64_t												seek(std::int64_t pos, bool beg = true);
 	std::uint64_t												offset(std::int64_t off);
+	void															flush() const;
 	void															formHeader() noexcept;
 	void															appendIFD(std::size_t imagelen, const std::string& meta);
 	void															loadNextIFD() { loadIFD(currentifdpos); }
@@ -131,6 +133,7 @@ private:
 	std::vector<std::uint64_t>								ifdcache;										///< IFD offset cache
 	std::uint32_t												ssize;											///< Sector size (for direct I/O)
 	std::uint32_t												imgcounter;										///< Image counter
+	std::uint32_t												flushcnt;										///< Image flush cycles
 	std::uint32_t												currentimage;									///< Current image index (used for reading only)
 	std::uint8_t												bitdepth;										///< Bit depth
 	std::uint8_t												samples;											///< Samples per pixel

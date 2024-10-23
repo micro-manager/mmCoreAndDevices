@@ -33,6 +33,7 @@
 
 #define MAX_FILE_SEARCH_INDEX			128
 #define PROP_DIRECTIO					"DirectIO"
+#define PROP_FLUSHCYCLE					"FlushCycle"
 
 /**
  * Default class constructor
@@ -83,6 +84,10 @@ int G2SBigTiffStorage::Initialize()
 	assert(nRet == DEVICE_OK);
 	AddAllowedValue(PROP_DIRECTIO,"0");
 	AddAllowedValue(PROP_DIRECTIO,"1");
+
+	// Add flush counter property
+	nRet = CreateIntegerProperty(PROP_FLUSHCYCLE, 0, false);
+	assert(nRet == DEVICE_OK);
 
    UpdateStatus();
 
@@ -179,6 +184,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 		fhandle->open(true, getDirectIO());
 		if(!fhandle->isOpen())
 			return DEVICE_OUT_OF_MEMORY;
+		fhandle->setFlushCycles((std::uint32_t)getFlushCycle());
 	}
 	catch(std::exception&)
 	{
@@ -269,6 +275,7 @@ int G2SBigTiffStorage::Load(const char* path, char* handle)
 		fhandle->open(false, getDirectIO());
 		if(!fhandle->isOpen())
 			return DEVICE_OUT_OF_MEMORY;
+		fhandle->setFlushCycles((std::uint32_t)getFlushCycle());
 	}
 	catch(std::exception&)
 	{
@@ -828,4 +835,21 @@ bool G2SBigTiffStorage::getDirectIO() const noexcept
 		return std::atoi(buf) != 0;
 	}
 	catch(...) { return false; }
+}
+
+/**
+ * Get flush cycle property
+ * @return Flush cycle count
+ */
+int G2SBigTiffStorage::getFlushCycle() const noexcept
+{
+	char buf[MM::MaxStrLength];
+	int ret = GetProperty(PROP_FLUSHCYCLE, buf);
+	if(ret != DEVICE_OK)
+		return 0;
+	try
+	{
+		return std::atoi(buf);
+	}
+	catch(...) { return 0; }
 }

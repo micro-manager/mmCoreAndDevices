@@ -52,6 +52,7 @@ G2STiffFile::G2STiffFile(const std::string& path, bool fbig) noexcept
 	bitdepth = 8;
 	samples = 1;
 	imgcounter = 0;
+	flushcnt = 0;
 	currentimage = 0;
 #ifdef _WIN32
 	fhandle = nullptr;
@@ -686,8 +687,12 @@ void G2STiffFile::addImage(const unsigned char* buff, std::size_t len, const std
 		std::vector<unsigned char> pbuff(padsize);
 		commit(&pbuff[0], pbuff.size());
 	}
+
+	// Flush pending data
 	ifdcache.push_back(lastifdpos);
 	imgcounter++;
+	if(flushcnt > 0 && imgcounter % flushcnt == 0)
+		flush();
 }
 
 /**
@@ -1038,6 +1043,22 @@ std::uint64_t G2STiffFile::offset(std::int64_t off)
 	currpos = (std::uint64_t)ret;
 #endif
 	return currpos;
+}
+
+/**
+ * Flush I/O write opertions to disk
+ */
+void G2STiffFile::flush() const
+{
+#ifdef _WIN32
+	auto sc = FlushFileBuffers((HANDLE)fhandle);
+	if(sc == FALSE)
+		throw std::runtime_error("File write flush failed. Error code: " + std::to_string(GetLastError()));
+#else
+	auto sc = ::fsync(fhandle);
+	if(sc != 0)
+		throw std::runtime_error("File write flush failed. Error code: " + std::to_string(GetLastError()));
+#endif
 }
 
 /**
