@@ -53,6 +53,7 @@ extern const int ERR_NONUNIFORM_CHANNEL_VOLTAGE_RANGES;
 extern const int ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS;
 extern const int ERR_UNKNOWN_PINS_PER_PORT;
 extern const int ERR_UNEXPECTED_AMOUNT_OF_MEASUREMENTS;
+extern const int ERR_FAILED_TO_OPEN_TRACE;
 
 
 inline std::string GetNIError(int32 nierr)
@@ -171,6 +172,31 @@ private:
     bool stop_;
 };
 
+
+class TraceMonitoringThread : public MMDeviceThreadBase
+{
+public:
+    TraceMonitoringThread(NIDAQHub* hub);
+    ~TraceMonitoringThread();
+    int svc();
+
+    int Start(std::string AIChannelList, float minVal, float maxVal, float frequency, int numberOfSamples, int numberOfChannels);
+    void Stop() { stop_ = true; }
+
+
+private:
+    NIDAQHub* hub_;
+
+    TaskHandle aiTask_;
+    std::string path_;
+
+    int totalAmount_;
+    int numberOfChannels_;
+    std::string CSVheader_;
+    float timestep_;
+    bool stop_;
+};
+
 // Forward declaration needed for NIDAQ hub
 class NIAnalogInputPort;
 
@@ -187,6 +213,7 @@ class NIDAQHub : public HubBase<NIDAQHub>,
    friend NIDAQDOHub<uInt16>;
    friend NIDAQDOHub<uInt8>;
    friend InputMonitoringThread;
+   friend TraceMonitoringThread;
 public:
    NIDAQHub();
    virtual ~NIDAQHub();
@@ -245,6 +272,10 @@ private:
    int UpdateAIValues(float64* values, int32 amount);
    std::string GetPhysicalChannelListForMeasuring(std::vector<NIAnalogInputPort*> channels);
 
+   int StartTrace();
+   int StopTrace();
+   int FinishTrace();
+
    // Action handlers
    int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxSequenceLength(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -255,6 +286,11 @@ private:
 
    int OnExpectedMaxVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnExpectedMinVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   int OnTraceFrequency(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTraceAmount(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTracePath(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTraceRunning(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    bool initialized_;
    size_t maxSequenceLength_;
@@ -285,9 +321,16 @@ private:
 
    float expectedMaxVoltsIn_;
    float expectedMinVoltsIn_;
+   bool measuringTrace_;
 
    std::vector<NIAnalogInputPort*> physicalAIChannels_;
+
+   double traceFrequency_;
+   long traceAmount_;
+   std::string tracePath_;
+
    InputMonitoringThread* mThread_;
+   TraceMonitoringThread* tThread_;
 };
 
 
