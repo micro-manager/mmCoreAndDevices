@@ -68,6 +68,7 @@ ClassGalaxy::ClassGalaxy() :
         sensorReadoutMode_("Undefined"),
         shutterMode_("None"),
         imgBufferSize_(0),
+        sequenceRunning_(false),
         initialized_(false)
 {
         // call the base class method to set-up default error codes/messages
@@ -751,23 +752,25 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
     }
 }
 
-int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interval_ms */, bool /* stopOnOverflow */) {
+int ClassGalaxy::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) {
     try
     {
-        AddToLog("ReadyMuiltySequenceAcquisition");
-        ImageHandler_ = new CircularBufferInserter(this);
+        AddToLog("ReadyMultySequenceAcquisition");
+        ImageHandler_ = new CircularBufferInserter(this, numImages, stopOnOverflow);
         //camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
         m_objStreamPtr->RegisterCaptureCallback(ImageHandler_, this);
 
-        //camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-        m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-        //开启流层采集
-        m_objStreamPtr->StartGrab();
 
         int ret = GetCoreCallback()->PrepareForAcq(this);
         if (ret != DEVICE_OK) {
             return ret;
         }
+        sequenceRunning_ = true;
+
+        //camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+        m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
+        //开启流层采集
+        m_objStreamPtr->StartGrab();
 
         AddToLog("StartSequenceAcquisition");
     }
@@ -778,6 +781,7 @@ int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interv
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
         //关闭流层采集
         m_objStreamPtr->StopGrab();
+        sequenceRunning_ = false;
         return DEVICE_ERR;
     }
     catch (const std::exception& e)
@@ -786,10 +790,13 @@ int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interv
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
         //关闭流层采集
         m_objStreamPtr->StopGrab();
+        sequenceRunning_ = false;
         return DEVICE_ERR;
     }
     return DEVICE_OK;
 }
+
+
 int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
     try
     {
@@ -811,6 +818,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         if (ret != DEVICE_OK) {
             return ret;
         }
+        sequenceRunning_ = true;
         //camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
         //开启流层采集
@@ -824,6 +832,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
         //关闭流层采集
         m_objStreamPtr->StopGrab();
+        sequenceRunning_ = false;
         return DEVICE_ERR;
     }
     catch (const std::exception& e)
@@ -832,10 +841,12 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
         //关闭流层采集
         m_objStreamPtr->StopGrab();
+        sequenceRunning_ = false;
         return DEVICE_ERR;
     }
     return DEVICE_OK;
 }
+
 
 int ClassGalaxy::StopSequenceAcquisition()
 {
@@ -847,13 +858,15 @@ int ClassGalaxy::StopSequenceAcquisition()
         //camera_->DeregisterImageEventHandler(ImageHandler_);
         m_objStreamPtr->UnregisterCaptureCallback();
     }
+    sequenceRunning_ = false;
     AddToLog("StopSequenceAcquisition");
     return DEVICE_OK;
 }
 
+
 bool ClassGalaxy::IsCapturing()
 {
-   return m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue() ? true : false;
+   return sequenceRunning_;
 }
 
 int ClassGalaxy::PrepareSequenceAcqusition()
@@ -1847,8 +1860,19 @@ GX_VALID_BIT_LIST ClassGalaxy::GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelForm
 }
 
 CircularBufferInserter::CircularBufferInserter(ClassGalaxy* dev) :
-    dev_(dev)
+    dev_(dev),
+    numImages_(-1),
+    imgCounter_(0),
+    stopOnOverflow_(false)
 {}
+
+CircularBufferInserter::CircularBufferInserter(ClassGalaxy* dev, long numImages, bool stopOnOverflow) :
+    dev_(dev),
+    numImages_(numImages),
+    imgCounter_(0),
+    stopOnOverflow_(stopOnOverflow)
+{}
+
     //---------------------------------------------------------------------------------
     /**
     \brief   采集回调函数
@@ -1884,7 +1908,15 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
                 (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
             if (ret == DEVICE_BUFFER_OVERFLOW) {
                 //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
-                dev_->GetCoreCallback()->ClearImageBuffer(dev_);
+               if (stopOnOverflow_)
+               {
+                  dev_->StopSequenceAcquisition();
+                  dev_->LogMessage("Error inserting image into sequence buffer", false);
+               }
+               else
+               {
+                  dev_->GetCoreCallback()->ClearImageBuffer(dev_);
+               }
             }
         }
         else if (dev_->colorCamera_)
@@ -1906,21 +1938,24 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
                 dev_->GetCoreCallback()->ClearImageBuffer(dev_);
             }
         }
+        imgCounter_++;
+        if (imgCounter_ == numImages_)
+        {
+           dev_->StopSequenceAcquisition();
+        }
     }
     else
     {
         dev_->AddToLog("残帧");
     }
-
-
-
-
-
 }
+
+
 int64_t ClassGalaxy::__GetStride(int64_t nWidth, bool bIsColor)
 {
     return bIsColor ? nWidth * 3 : nWidth;
 }
+
 
 bool ClassGalaxy::__IsCompatible(BITMAPINFO* pBmpInfo, uint64_t nWidth, uint64_t nHeight)
 {
