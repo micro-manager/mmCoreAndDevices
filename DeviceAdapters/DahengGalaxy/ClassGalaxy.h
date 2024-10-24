@@ -225,9 +225,13 @@ private:
 class CircularBufferInserter : public ICaptureEventHandler {
 private:
 	ClassGalaxy* dev_;
+	long numImages_;
+	long imgCounter_;
+	bool stopOnOverflow_;
 
 public:
 	CircularBufferInserter(ClassGalaxy* dev);
+	CircularBufferInserter(ClassGalaxy* dev, long numImages, bool stoponOverflow);
 
 	virtual void DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam);
 };

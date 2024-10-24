@@ -752,11 +752,11 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
     }
 }
 
-int ClassGalaxy::StartSequenceAcquisition(long /* numImages */, double /* interval_ms */, bool /* stopOnOverflow */) {
+int ClassGalaxy::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) {
     try
     {
         AddToLog("ReadyMultySequenceAcquisition");
-        ImageHandler_ = new CircularBufferInserter(this);
+        ImageHandler_ = new CircularBufferInserter(this, numImages, stopOnOverflow);
         //camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
         m_objStreamPtr->RegisterCaptureCallback(ImageHandler_, this);
 
@@ -1860,8 +1860,19 @@ GX_VALID_BIT_LIST ClassGalaxy::GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelForm
 }
 
 CircularBufferInserter::CircularBufferInserter(ClassGalaxy* dev) :
-    dev_(dev)
+    dev_(dev),
+    numImages_(-1),
+    imgCounter_(0),
+    stopOnOverflow_(false)
 {}
+
+CircularBufferInserter::CircularBufferInserter(ClassGalaxy* dev, long numImages, bool stopOnOverflow) :
+    dev_(dev),
+    numImages_(numImages),
+    imgCounter_(0),
+    stopOnOverflow_(stopOnOverflow)
+{}
+
     //---------------------------------------------------------------------------------
     /**
     \brief   采集回调函数
@@ -1897,7 +1908,15 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
                 (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
             if (ret == DEVICE_BUFFER_OVERFLOW) {
                 //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
-                dev_->GetCoreCallback()->ClearImageBuffer(dev_);
+               if (stopOnOverflow_)
+               {
+                  dev_->StopSequenceAcquisition();
+                  dev_->LogMessage("Error inserting image into sequence buffer", false);
+               }
+               else
+               {
+                  dev_->GetCoreCallback()->ClearImageBuffer(dev_);
+               }
             }
         }
         else if (dev_->colorCamera_)
@@ -1919,21 +1938,24 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
                 dev_->GetCoreCallback()->ClearImageBuffer(dev_);
             }
         }
+        imgCounter_++;
+        if (imgCounter_ == numImages_)
+        {
+           dev_->StopSequenceAcquisition();
+        }
     }
     else
     {
         dev_->AddToLog("残帧");
     }
-
-
-
-
-
 }
+
+
 int64_t ClassGalaxy::__GetStride(int64_t nWidth, bool bIsColor)
 {
     return bIsColor ? nWidth * 3 : nWidth;
 }
+
 
 bool ClassGalaxy::__IsCompatible(BITMAPINFO* pBmpInfo, uint64_t nWidth, uint64_t nHeight)
 {
