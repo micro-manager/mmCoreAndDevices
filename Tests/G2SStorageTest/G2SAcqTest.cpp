@@ -46,7 +46,7 @@ extern std::string generateImageMeta(CMMCore& core, int imgind);
  */
 void testAcquisition(CMMCore& core, const std::string& path, const std::string& name, int c, int t, int p)
 {
-	std::cout << "Starting G2SStorage driver acquisition test" << std::endl;
+	std::cout << std::endl << "Starting G2SStorage driver acquisition test" << std::endl;
 
 	// Take one image to "warm up" the camera and get actual image dimensions
 	core.snapImage();
@@ -60,15 +60,16 @@ void testAcquisition(CMMCore& core, const std::string& path, const std::string& 
 	std::vector<long> shape = { w, h, c, t, p };
 	auto handle = core.createDataset(path.c_str(), name.c_str(), shape, MM::StorageDataType_GRAY16, "");
 
-	std::cout << "Dataset UID:" << handle << std::endl;
-	std::cout << "Dataset shape (W-H-C-T-P): " << w << " x " << h << " x " << c << " x " << t << " x " << p << " x 16-bit" << std::endl;
+	std::cout << "Dataset UID: " << handle << std::endl;
+	std::cout << "Dataset shape (W-H-C-T-P): " << w << " x " << h << " x " << c << " x " << t << " x " << p << " x 16-bit" << std::endl << std::endl;
 	std::cout << "START OF ACQUISITION" << std::endl;
 	
 	// Start acquisition
+	auto start = std::chrono::high_resolution_clock::now();
 	core.startSequenceAcquisition(c * t * p, 0.0, true);
 
 	int imgind = 0;
-	auto start = std::chrono::high_resolution_clock::now();
+	auto startAcq = start;
 	for(int i = 0; i < p; i++) 
 	{
 		for(int j = 0; j < t; j++) 
@@ -80,6 +81,10 @@ void testAcquisition(CMMCore& core, const std::string& path, const std::string& 
 
 				while(core.getRemainingImageCount() == 0)
 					std::this_thread::sleep_for(std::chrono::milliseconds(1)); // wait for images to become available
+				
+				// Reset acquisition timer when the first image becomes available)
+				if(start == startAcq)
+					startAcq = std::chrono::high_resolution_clock::now();
 				
 				// fetch the image
 				unsigned char* img = reinterpret_cast<unsigned char*>(core.popNextImage());
@@ -110,9 +115,15 @@ void testAcquisition(CMMCore& core, const std::string& path, const std::string& 
 
 	// Calculate storage driver bandwidth
 	double totalTimeS = (end - start).count() / 1000000000.0;
-	double totalSizemb = imgSize * p * t * c / (1024.0 * 1024.0);
-	double bw = totalSizemb / totalTimeS;
-	std::cout << std::fixed << std::setprecision(3) << "Acquisition completed in " << totalTimeS << " sec" << std::endl;
+	double prepTimeS = (startAcq - start).count() / 1000000000.0;
+	double acqTimeS = (end - startAcq).count() / 1000000000.0;
+	double totalSizemb = (double)imgSize * p * t * c / (1024.0 * 1024.0);
+	double totbw = totalSizemb / totalTimeS;
+	double acqbw = totalSizemb / acqTimeS;
 	std::cout << std::fixed << std::setprecision(1) << "Dataset size " << totalSizemb << " MB" << std::endl;
-	std::cout << std::fixed << std::setprecision(1) << "Storage driver bandwidth " << bw << " MB/s" << std::endl;
+	std::cout << std::fixed << std::setprecision(3) << "Camera prep time: " << prepTimeS << " sec" << std::endl;
+	std::cout << std::fixed << std::setprecision(3) << "Active acquisition time: " << acqTimeS << " sec" << std::endl;
+	std::cout << std::fixed << std::setprecision(1) << "Storage driver bandwidth " << acqbw << " MB/s" << std::endl << std::endl;
+	std::cout << std::fixed << std::setprecision(3) << "Acquisition completed in " << totalTimeS << " sec" << std::endl;
+	std::cout << std::fixed << std::setprecision(1) << "Acquisition bandwidth " << totbw << " MB/s" << std::endl;
 }

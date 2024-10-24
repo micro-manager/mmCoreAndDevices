@@ -85,7 +85,7 @@ std::vector<long> calcCoordsRandom(long ind, const std::vector<long>& shape)
  */
 void testReader(CMMCore& core, const std::string& path, const std::string& name, bool optimized, bool printmeta)
 {
-	std::cout << "Starting G2SStorage driver reader test" << std::endl;
+	std::cout << std::endl << "Starting G2SStorage driver reader test" << std::endl;
 	std::filesystem::path ds = std::filesystem::u8path(path) / name;
 
 	// Load the dataset
@@ -100,8 +100,9 @@ void testReader(CMMCore& core, const std::string& path, const std::string& name,
 	auto imgcnt = shape[2] * shape[3] * shape[4];
 	auto imgSize = shape[0] * shape[1] * (ptype == MM::StorageDataType_GRAY16 ? 2 : 1);
 	double imgSizeMb = (double)imgSize / (1024.0 * 1024.0);
-	double totalSizeMb = imgSize * imgcnt / (1024.0 * 1024.0);
+	double totalSizeMb = (double)imgSize * imgcnt / (1024.0 * 1024.0);
 	std::cout << std::fixed << std::setprecision(3) << "Dataset loaded in " << loadTimeS << " sec, contains " << imgcnt << " images" << std::endl;
+	std::cout << "Dataset UID: " << handle << std::endl;
 	std::cout << "Dataset shape (W-H-C-T-P): " << shape[0] << " x " << shape[1] << " x " << shape[2] << " x " << shape[3] << " x " << shape[4] << " x " << (ptype == MM::StorageDataType_GRAY16 ? 16 : 8) << "-bit" << std::endl << std::endl;
 
 	// Read images

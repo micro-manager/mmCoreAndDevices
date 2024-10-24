@@ -50,6 +50,7 @@ extern void testAcquisition(CMMCore& core, const std::string& path, const std::s
  */
 int main(int argc, char** argv)
 {
+	std::cout << "Starting G2SStorage driver test suite..." << std::endl;
 	int selectedTest = TEST_ACQ;
 	int storageEngine = ENGINE_BIGTIFF;
 	int selectedcamera = CAMERA_HAMAMATSU;
@@ -187,6 +188,17 @@ int main(int argc, char** argv)
 	if(argc > 9 && selectedTest != TEST_READ)
 		try { flushcycle = (int)std::stoul(argv[9]) != 0; } catch(std::exception& e) { std::cout << "Invalid argument value. " << e.what() << std::endl; return 1; }
 
+	// Print configuration
+	std::cout << "Data location " << savelocation << std::endl;
+	std::cout << "Dataset name " << datasetname << std::endl << std::endl;
+	if(selectedTest != TEST_READ)
+	{
+		std::cout << "Circular buffer size: " << cbuffsize << " MB" << std::endl;
+		std::cout << "Camera " << (selectedcamera == CAMERA_DEMO ? "DEMO" : "HAMAMATSU") << std::endl;
+	}
+	std::cout << "Direct I/O " << (directio ? "YES" : "NO") << std::endl;
+	std::cout << "Flush Cycle " << flushcycle << std::endl;
+	std::cout << "Optimized access " << (optimalaccess ? "YES" : "NO") << std::endl << std::endl;
 	try
 	{
 		// Initialize core
@@ -201,6 +213,7 @@ int main(int argc, char** argv)
 
 
 		// Load storage driver
+		std::cout << "Loading storage driver..." << std::endl;
 		if(storageEngine == ENGINE_ZARR)
 			core.loadDevice("Store", "go2scope", "AcquireZarrStorage");
 		else
@@ -210,9 +223,11 @@ int main(int argc, char** argv)
 		if(selectedTest != TEST_READ)
 		{
 			// Set circular buffer size
+			std::cout << "Setting buffer size..." << std::endl;
 			core.setCircularBufferMemoryFootprint(cbuffsize);
 			core.clearCircularBuffer();
 
+			std::cout << "Loading camera driver..." << std::endl;
 			if(selectedcamera == CAMERA_DEMO)
 				core.loadDevice("Camera", "DemoCamera", "DCam");
 			else
@@ -220,11 +235,13 @@ int main(int argc, char** argv)
 		}
 
 		// initialize the system, this will in turn initialize each device
+		std::cout << "Initializing device drivers..." << std::endl;
 		core.initializeAllDevices();
 
 		// Configure camera
 		if(selectedTest != TEST_READ)
 		{
+			std::cout << "Setting camera configuration..." << std::endl;
 			if(selectedcamera == CAMERA_DEMO)
 			{
 				// Configure demo camera
@@ -244,21 +261,11 @@ int main(int argc, char** argv)
 
 		// Set storage engine properties
 		if(storageEngine == ENGINE_BIGTIFF) {
+			std::cout << "Setting BigTIFF storage configuration..." << std::endl;
 			core.setProperty("Store", "DirectIO", directio ? 1L : 0L);
 			core.setProperty("Store", "FlushCycle", (long)flushcycle);
 		}
-
-		std::cout << "Data location " << savelocation << std::endl;
-		std::cout << "Dataset name " << datasetname << std::endl << std::endl;
-		if(selectedTest != TEST_READ)
-		{
-			std::cout << "Circular buffer size: " << cbuffsize << " MB" << std::endl;
-			std::cout << "Camera " << (selectedcamera == CAMERA_DEMO ? "DEMO" : "HAMAMATSU") << std::endl;
-		}
-		std::cout << "Direct I/O " << (directio ? "YES" : "NO") << std::endl;
-		std::cout << "Flush Cycle " << flushcycle << std::endl;
-		std::cout << "Optimized access " << (optimalaccess ? "YES" : "NO") << std::endl;
-		
+				
 		// Run test
 		if(selectedTest == TEST_WRITE)
 			testWritter(core, savelocation, datasetname, channels, timepoints, positions);
