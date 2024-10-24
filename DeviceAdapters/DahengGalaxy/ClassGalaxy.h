@@ -198,6 +198,7 @@ private:
 
 	long imgBufferSize_;
 	ImgBuffer img_;
+	bool sequenceRunning_;
 	bool initialized_;
 
 	//图像转换
