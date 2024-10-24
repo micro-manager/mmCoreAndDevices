@@ -7,7 +7,8 @@
       "MMCoreJ_wrap\\MMCoreJ_wrap.vcxproj",
       "MMCore\\MMCore.vcxproj",
       "MMDevice\\MMDevice-SharedRuntime.vcxproj",
-      "MMDevice\\MMDevice-StaticRuntime.vcxproj"
+      "MMDevice\\MMDevice-StaticRuntime.vcxproj",
+      "Tests\\G2SStorageTest\\G2SStorageTest.vcxproj"
     ]
   }
 }

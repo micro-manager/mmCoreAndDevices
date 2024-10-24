@@ -45,7 +45,7 @@ extern std::string generateImageMeta(CMMCore& core, int imgind);
  */
 void testWritter(CMMCore& core, const std::string& path, const std::string& name, int c, int t, int p)
 {
-	std::cout << "Starting G2SStorage driver writer test" << std::endl;
+	std::cout << std::endl << "Starting G2SStorage driver writer test" << std::endl;
 
 	// Take one image to "warm up" the camera and get actual image dimensions
 	core.snapImage();
@@ -59,8 +59,8 @@ void testWritter(CMMCore& core, const std::string& path, const std::string& name
 	std::vector<long> shape = { w, h, c, t, p };
 	auto handle = core.createDataset(path.c_str(), name.c_str(), shape, MM::StorageDataType_GRAY16, "");
 
-	std::cout << "Dataset UID:" << handle << std::endl;
-	std::cout << "Dataset shape (W-H-C-T-P): " << w << " x " << h << " x " << c << " x " << t << " x " << p << " x 16-bit" << std::endl;
+	std::cout << "Dataset UID: " << handle << std::endl;
+	std::cout << "Dataset shape (W-H-C-T-P): " << w << " x " << h << " x " << c << " x " << t << " x " << p << " x 16-bit" << std::endl << std::endl;
 	std::cout << "START OF ACQUISITION" << std::endl;
 	int imgind = 0;
 	auto start = std::chrono::high_resolution_clock::now();
@@ -101,7 +101,7 @@ void testWritter(CMMCore& core, const std::string& path, const std::string& name
 
 	// Calculate storage driver bandwidth
 	double totalTimeS = (end - start).count() / 1000000000.0;
-	double totalSizemb = imgSize * p * t * c / (1024.0 * 1024.0);
+	double totalSizemb = (double)imgSize * p * t * c / (1024.0 * 1024.0);
 	double bw = totalSizemb / totalTimeS;
 	std::cout << std::fixed << std::setprecision(3) << "Acquisition completed in " << totalTimeS << " sec" << std::endl;
 	std::cout << std::fixed << std::setprecision(1) << "Dataset size " << totalSizemb << " MB" << std::endl;
