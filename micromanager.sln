@@ -508,6 +508,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Elveflow", "DeviceAdapters\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Go2Scope", "DeviceAdapters\go2scope\go2scope.vcxproj", "{2916E620-1157-4154-8223-887D383E9DE6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "G2SStorageTest", "Tests\G2SStorageTest\G2SStorageTest.vcxproj", "{C87F7284-62EF-4331-9444-9951DB12A57A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2916E620-1157-4154-8223-887D383E9DE6} = {2916E620-1157-4154-8223-887D383E9DE6}
+		{36571628-728C-4ACD-A47F-503BA91C5D43} = {36571628-728C-4ACD-A47F-503BA91C5D43}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1526,6 +1532,10 @@ Global
 		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.Build.0 = Debug|x64
 		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.ActiveCfg = Release|x64
 		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.Build.0 = Release|x64
+		{C87F7284-62EF-4331-9444-9951DB12A57A}.Debug|x64.ActiveCfg = Debug|x64
+		{C87F7284-62EF-4331-9444-9951DB12A57A}.Debug|x64.Build.0 = Debug|x64
+		{C87F7284-62EF-4331-9444-9951DB12A57A}.Release|x64.ActiveCfg = Release|x64
+		{C87F7284-62EF-4331-9444-9951DB12A57A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
