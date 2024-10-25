@@ -20,6 +20,7 @@
 #include "DeviceBase.h"
 #include <string>
 #include <map>
+#include <mutex>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -68,7 +69,7 @@ public:
    {
       return ReadFromComPort(port_.c_str(), answer, maxLen, bytesRead);
    }
-   static MMThreadLock& GetLock() {return lock_;}
+   std::mutex& GetLock() {return mutex_;}
    void SetShutterState(unsigned state) {shutterState_ = state;}
    void SetSwitchState(unsigned state) {switchState_ = state;}
    unsigned GetShutterState() {return shutterState_;}
@@ -82,7 +83,7 @@ private:
    bool invertedLogic_;
    bool timedOutputActive_;
    int version_;
-   static MMThreadLock lock_;
+   std::mutex mutex_;
    unsigned switchState_;
    unsigned shutterState_;
 };
@@ -144,8 +145,8 @@ public:
    int OnGetPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPatternsUsed(MM::PropertyBase* pProp, MM::ActionType eAct);
    */
-   int OnSkipTriggers(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnStartTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
+   //int OnSkipTriggers(MM::PropertyBase* pProp, MM::ActionType eAct);
+   //int OnStartTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnStartTimedOutput(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -156,9 +157,9 @@ private:
    static const unsigned int NUMPATTERNS = 12;
 
    CArduinoHub* hub_;
-   int OpenPort(const char* pszName, long lnValue);
+   //int OpenPort(const char* pszName, long lnValue);
    int WriteToPort(long lnValue);
-   int ClosePort();
+   //int ClosePort();
    int LoadSequence(unsigned size, unsigned char* seq);
 
    unsigned pattern_[NUMPATTERNS];
@@ -238,7 +239,7 @@ private:
    int ReadNBytes(CArduinoHub* h, unsigned int n, unsigned char* answer);
    int SetPullUp(int pin, int state);
 
-   MMThreadLock lock_;
+   CArduinoHub* hub_;
    ArduinoInputMonitorThread* mThread_;
    char pins_[MM::MaxStrLength];
    char pullUp_[MM::MaxStrLength];
@@ -267,6 +268,7 @@ class ArduinoInputMonitorThread : public MMDeviceThreadBase
    private:
       long state_;
       CArduinoInput& aInput_;
+      std::mutex mutex_;
       bool stop_;
 };
 
