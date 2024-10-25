@@ -575,14 +575,15 @@ int CArduinoSwitch::LoadSequence(unsigned size, unsigned char* seq)
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 3;
       unsigned long bytesRead = 0;
-      unsigned char answer[3] = { 0, 0, 0};
-      while ((bytesRead < 3) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      unsigned char answer[nrBytes] = { 0, 0, 0};
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub_->ReadFromComPortH(answer + bytesRead, 3, br);
-      if (ret != DEVICE_OK)
-         return ret;
-      bytesRead += br;
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
+         if (ret != DEVICE_OK)
+            return ret;
+         bytesRead += br;
       }
       if (answer[0] != 5)
          return ERR_COMMUNICATION;
@@ -595,10 +596,11 @@ int CArduinoSwitch::LoadSequence(unsigned size, unsigned char* seq)
 
    MM::MMTime startTime = GetCurrentMMTime();
    unsigned long bytesRead = 0;
-   unsigned char answer[2] = { 0, 0 };;
-   while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+   const unsigned int nrBytes = 2;
+   unsigned char answer[nrBytes] = { 0, 0 };;
+   while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
       unsigned long br;
-      ret = hub_->ReadFromComPortH(answer + bytesRead, 2, br);
+      ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
       if (ret != DEVICE_OK)
          return ret;
       bytesRead += br;
@@ -666,11 +668,12 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 1;
       unsigned long bytesRead = 0;
       unsigned char answer[1] = { 0 };
-      while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub_->ReadFromComPortH(answer + bytesRead, 1, br);
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
@@ -689,11 +692,12 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 2;
       unsigned long bytesRead = 0;
-      unsigned char answer[2] = { 0, 0 };
-      while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      unsigned char answer[nrBytes] = { 0, 0 };
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub_->ReadFromComPortH(answer + bytesRead, 2, br);
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
@@ -759,7 +763,7 @@ int CArduinoSwitch::OnStartTimedOutput(MM::PropertyBase* pProp, MM::ActionType e
          unsigned char answer[1] = { 0 };
          while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
             unsigned long br;
-            ret = hub_->ReadFromComPortH(answer + bytesRead, 1, br);
+            ret = hub_->ReadFromComPortH(answer, 1, br);
             if (ret != DEVICE_OK)
                return ret;
             bytesRead += br;
@@ -775,11 +779,12 @@ int CArduinoSwitch::OnStartTimedOutput(MM::PropertyBase* pProp, MM::ActionType e
             return ret;
 
          MM::MMTime startTime = GetCurrentMMTime();
+         const unsigned int nrBytes = 2;
          unsigned long bytesRead = 0;
-         unsigned char answer[2] = { 0, 0 };
-         while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+         unsigned char answer[nrBytes] = { 0, 0 };
+         while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
             unsigned long br;
-            ret = hub_->ReadFromComPortH(answer + bytesRead, 2, br);
+            ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
             if (ret != DEVICE_OK)
                return ret;
             bytesRead += br;
@@ -821,7 +826,7 @@ int CArduinoSwitch::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
          unsigned char answer[1] = { 0 };
          while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
             unsigned long br;
-            ret = hub_->ReadFromComPortH(answer + bytesRead, 1, br);
+            ret = hub_->ReadFromComPortH(answer, 1, br);
             if (ret != DEVICE_OK)
                return ret;
             bytesRead += br;
@@ -840,11 +845,12 @@ int CArduinoSwitch::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ret;
 
          MM::MMTime startTime = GetCurrentMMTime();
+         const unsigned int nrBytes = 2;
          unsigned long bytesRead = 0;
-         unsigned char answer[2] = { 0, 0 };
-         while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+         unsigned char answer[nrBytes] = { 0, 0 };
+         while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
             unsigned long br;
-            ret = hub_->ReadFromComPortH(answer + bytesRead, 2, br);
+            ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
             if (ret != DEVICE_OK)
                return ret;
             bytesRead += br;
@@ -889,7 +895,7 @@ int CArduinoSwitch::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::Acti
       unsigned char answer[1] = { 0 };
       while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub_->ReadFromComPortH(answer + bytesRead, 1, br);
+         ret = hub_->ReadFromComPortH(answer, 1, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
@@ -940,11 +946,12 @@ int CArduinoSwitch::OnRepeatTimedPattern(MM::PropertyBase* pProp, MM::ActionType
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 2;
       unsigned long bytesRead = 0;
-      unsigned char answer[2] = { 0, 0 };
-      while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      unsigned char answer[nrBytes] = { 0, 0 };
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub_->ReadFromComPortH(answer + bytesRead, 2, br);
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
@@ -1075,11 +1082,12 @@ int CArduinoDA::WriteToPort(unsigned long value)
       return ret;
 
    MM::MMTime startTime = GetCurrentMMTime();
+   const unsigned int nrBytes = 4;
    unsigned long bytesRead = 0;
-   unsigned char answer[4] = {0, 0, 0, 0};
-   while ((bytesRead < 4) && ( (GetCurrentMMTime() - startTime).getMsec() < 2500)) {
+   unsigned char answer[nrBytes] = {0, 0, 0, 0};
+   while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 2500)) {
       unsigned long bR;
-      ret = hub->ReadFromComPortH(answer + bytesRead, 4 - bytesRead, bR);
+      ret = hub->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, bR);
       if (ret != DEVICE_OK)
          return ret;
       bytesRead += bR;
