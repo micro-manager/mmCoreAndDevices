@@ -36,6 +36,7 @@
 #define ERR_VERSION_MISMATCH 109
 
 class ArduinoInputMonitorThread;
+class CArduinoMagnifier;
 
 class CArduinoHub : public HubBase<CArduinoHub>  
 {
@@ -69,11 +70,13 @@ public:
    {
       return ReadFromComPort(port_.c_str(), answer, maxLen, bytesRead);
    }
+   int ReportNewInputState(long newState);
+   int RegisterMagnifier(CArduinoMagnifier* magnifier);
    std::mutex& GetLock() {return mutex_;}
    void SetShutterState(unsigned state) {shutterState_ = state;}
    void SetSwitchState(unsigned state) {switchState_ = state;}
-   unsigned GetShutterState() {return shutterState_;}
-   unsigned GetSwitchState() {return switchState_;}
+   const unsigned GetShutterState() {return shutterState_;}
+   const unsigned GetSwitchState() {return switchState_;}
 
 private:
    int GetControllerVersion(int&);
@@ -83,6 +86,7 @@ private:
    bool invertedLogic_;
    bool timedOutputActive_;
    int version_;
+   CArduinoMagnifier* magnifier_;
    std::mutex mutex_;
    unsigned switchState_;
    unsigned shutterState_;
@@ -246,6 +250,30 @@ private:
    int pin_;
    bool initialized_;
    std::string name_;
+};
+
+class CArduinoMagnifier : public CMagnifierBase<CArduinoMagnifier>
+{
+public:
+   CArduinoMagnifier();
+   ~CArduinoMagnifier();
+
+   int Initialize();
+   int Shutdown();
+   void GetName(char* pszName) const;
+   bool Busy() { return false; };
+
+   double GetMagnification();
+
+   int UpdateState(long state);
+   int OnNumberOfMagnifications(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSetMagnification(MM::PropertyBase* pProp, MM::ActionType eAct, long state);
+
+private:
+   CArduinoHub* hub_;
+   std::map<long, double> magnifications_;
+   long state_;
+   bool initialized_;
 };
 
 class ArduinoInputMonitorThread : public MMDeviceThreadBase
