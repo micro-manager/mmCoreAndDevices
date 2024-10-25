@@ -40,8 +40,6 @@ const char* g_invertedLogicString = "Inverted";
 const char* g_On = "On";
 const char* g_Off = "Off";
 
-// static lock
-MMThreadLock CArduinoHub::lock_;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -221,7 +219,7 @@ MM::DeviceDetectionStatus CArduinoHub::DetectDevice(void)
          pS->Initialize();
          // The first second or so after opening the serial port, the Arduino is waiting for firmwareupgrades.  Simply sleep 2 seconds.
          CDeviceUtils::SleepMs(2000);
-         MMThreadGuard myLock(lock_);
+         const std::lock_guard<std::mutex> lock(mutex_);
          PurgeComPort(port_.c_str());
          int v = 0;
          int ret = GetControllerVersion(v);
@@ -260,7 +258,7 @@ int CArduinoHub::Initialize()
    // The first second or so after opening the serial port, the Arduino is waiting for firmwareupgrades.  Simply sleep 1 second.
    CDeviceUtils::SleepMs(2000);
 
-   MMThreadGuard myLock(lock_);
+   const std::lock_guard<std::mutex> lock(mutex_);
 
    // Check that we have a controller:
    PurgeComPort(port_.c_str());
@@ -366,6 +364,7 @@ int CArduinoHub::OnLogic(MM::PropertyBase* pProp, MM::ActionType pAct)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 CArduinoSwitch::CArduinoSwitch() : 
+   hub_(0),
    nrPatternsUsed_(0),
    currentDelay_(0),
    sequenceOn_(false),
@@ -413,12 +412,12 @@ void CArduinoSwitch::GetName(char* name) const
 
 int CArduinoSwitch::Initialize()
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable()) {
+   hub_ = static_cast<CArduinoHub*>(GetParentHub());
+   if (!hub_ || !hub_->IsPortAvailable()) {
       return ERR_NO_PORT_SET;
    }
    char hubLabel[MM::MaxStrLength];
-   hub->GetLabel(hubLabel);
+   hub_->GetLabel(hubLabel);
    SetParentID(hubLabel); // for backward comp.
 
    // set property list
@@ -518,95 +517,90 @@ int CArduinoSwitch::Shutdown()
 
 int CArduinoSwitch::WriteToPort(long value)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable()) {
+   if (!hub_ || !hub_->IsPortAvailable()) {
       return ERR_NO_PORT_SET;
    }
 
-   MMThreadGuard myLock(hub->GetLock());
+   const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
    value = 63 & value;
-   if (hub->IsLogicInverted())
+   if (hub_->IsLogicInverted())
       value = ~value;
 
-   hub->PurgeComPortH();
+   hub_->PurgeComPortH();
 
-   unsigned char command[2];
+   unsigned char command[2] = { 0, 0 };
    command[0] = 1;
    command[1] = (unsigned char) value;
-   int ret = hub->WriteToComPortH((const unsigned char*) command, 2);
+   int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
    if (ret != DEVICE_OK)
       return ret;
 
    MM::MMTime startTime = GetCurrentMMTime();
    unsigned long bytesRead = 0;
-   unsigned char answer[1];
+   unsigned char answer[1] = { 0 };
    while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
-      ret = hub->ReadFromComPortH(answer, 1, bytesRead);
+      ret = hub_->ReadFromComPortH(answer, 1, bytesRead);
       if (ret != DEVICE_OK)
          return ret;
    }
    if (answer[0] != 1)
       return ERR_COMMUNICATION;
 
-   hub->SetTimedOutput(false);
+   hub_->SetTimedOutput(false);
 
    return DEVICE_OK;
 }
 
 int CArduinoSwitch::LoadSequence(unsigned size, unsigned char* seq)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
+   if (!hub_ || !hub_->IsPortAvailable())
       return ERR_NO_PORT_SET;
 
-   hub->PurgeComPortH();
+   const std::lock_guard<std::mutex> lock(hub_->GetLock());
+
+   hub_->PurgeComPortH();
 
    for (unsigned i=0; i < size; i++)
    {
       unsigned char value = seq[i];
 
       value = 63 & value;
-      if (hub->IsLogicInverted())
+      if (hub_->IsLogicInverted())
          value = ~value;
 
-      unsigned char command[3];
-      command[0] = 5;
-      command[1] = (unsigned char) i;
-      command[2] = value;
-      int ret = hub->WriteToComPortH((const unsigned char*) command, 3);
+      unsigned char command[3] = { 5, (unsigned char)i, value };
+      int ret = hub_->WriteToComPortH((const unsigned char*) command, 3);
       if (ret != DEVICE_OK)
          return ret;
-
 
       MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 3;
       unsigned long bytesRead = 0;
-      unsigned char answer[3];
-      while ((bytesRead < 3) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      unsigned char answer[nrBytes] = { 0, 0, 0};
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub->ReadFromComPortH(answer + bytesRead, 3, br);
-      if (ret != DEVICE_OK)
-         return ret;
-      bytesRead += br;
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
+         if (ret != DEVICE_OK)
+            return ret;
+         bytesRead += br;
       }
       if (answer[0] != 5)
          return ERR_COMMUNICATION;
-
    }
 
-   unsigned char command[2];
-   command[0] = 6;
-   command[1] = (unsigned char) size;
-   int ret = hub->WriteToComPortH((const unsigned char*) command, 2);
+   unsigned char command[2] = { 6, (unsigned char) size };
+   int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
    if (ret != DEVICE_OK)
       return ret;
 
    MM::MMTime startTime = GetCurrentMMTime();
    unsigned long bytesRead = 0;
-   unsigned char answer[2];
-   while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+   const unsigned int nrBytes = 2;
+   unsigned char answer[nrBytes] = { 0, 0 };;
+   while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
       unsigned long br;
-      ret = hub->ReadFromComPortH(answer + bytesRead, 2, br);
+      ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
       if (ret != DEVICE_OK)
          return ret;
       bytesRead += br;
@@ -623,10 +617,6 @@ int CArduinoSwitch::LoadSequence(unsigned size, unsigned char* seq)
 
 int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
-      return ERR_NO_PORT_SET;
-
    if (eAct == MM::BeforeGet)
    {
       // nothing to do, let the caller use cached property
@@ -635,8 +625,8 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       long pos;
       pProp->Get(pos);
-      hub->SetSwitchState(pos);
-      if (hub->GetShutterState() > 0)
+      hub_->SetSwitchState(pos);
+      if (hub_->GetShutterState() > 0)
          return WriteToPort(pos);
    }
    else if (eAct == MM::IsSequenceable)                                      
@@ -649,17 +639,17 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterLoadSequence)                                   
    {                                                                         
       std::vector<std::string> sequence = pProp->GetSequence();              
-      std::ostringstream os;
       if (sequence.size() > NUMPATTERNS)                                
          return DEVICE_SEQUENCE_TOO_LARGE;                                   
       unsigned char* seq = new unsigned char[sequence.size()];               
       for (unsigned int i=0; i < sequence.size(); i++)                       
       {
-         std::istringstream os (sequence[i]);
-         int val;
-         os >> val;
-         seq[i] = (unsigned char) val;
+         std::istringstream is (sequence[i]);
+         unsigned char val;
+         is >> val;
+         seq[i] = val;
       }                                                                      
+      // Note: LoadSequence calls hub_->GetLock()
       int ret = LoadSequence((unsigned) sequence.size(), seq);
       if (ret != DEVICE_OK)                                                  
          return ret;                                                         
@@ -668,21 +658,22 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }                                                                         
    else if (eAct == MM::StartSequence)
    { 
-      MMThreadGuard myLock(hub->GetLock());
+      const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
-      hub->PurgeComPortH();
+      hub_->PurgeComPortH();
       unsigned char command[1];
       command[0] = 8;
-      int ret = hub->WriteToComPortH((const unsigned char*) command, 1);
+      int ret = hub_->WriteToComPortH((const unsigned char*) command, 1);
       if (ret != DEVICE_OK)
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 1;
       unsigned long bytesRead = 0;
-      unsigned char answer[1];
-      while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      unsigned char answer[1] = { 0 };
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub->ReadFromComPortH(answer + bytesRead, 1, br);
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
@@ -692,20 +683,21 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::StopSequence)                                        
    {
-      MMThreadGuard myLock(hub->GetLock());
+      const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
       unsigned char command[1];
       command[0] = 9;
-      int ret = hub->WriteToComPortH((const unsigned char*) command, 1);
+      int ret = hub_->WriteToComPortH((const unsigned char*) command, 1);
       if (ret != DEVICE_OK)
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 2;
       unsigned long bytesRead = 0;
-      unsigned char answer[2];
-      while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      unsigned char answer[nrBytes] = { 0, 0 };
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub->ReadFromComPortH(answer + bytesRead, 2, br);
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
@@ -745,64 +737,61 @@ int CArduinoSwitch::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CArduinoSwitch::OnStartTimedOutput(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
-      return ERR_NO_PORT_SET;
-
    if (eAct == MM::BeforeGet) {
-      if (hub->IsTimedOutputActive())
+      if (hub_->IsTimedOutputActive())
          pProp->Set("Running");
       else
          pProp->Set("Idle");
    }
    else if (eAct == MM::AfterSet)
    {
-      MMThreadGuard myLock(hub->GetLock());
+      const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
       std::string prop;
       pProp->Get(prop);
 
       if (prop =="Start") {
-         hub->PurgeComPortH();
+         hub_->PurgeComPortH();
          unsigned char command[1];
          command[0] = 12;
-         int ret = hub->WriteToComPortH((const unsigned char*) command, 1);
+         int ret = hub_->WriteToComPortH((const unsigned char*) command, 1);
          if (ret != DEVICE_OK)
             return ret;
 
          MM::MMTime startTime = GetCurrentMMTime();
          unsigned long bytesRead = 0;
-         unsigned char answer[1];
+         unsigned char answer[1] = { 0 };
          while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
             unsigned long br;
-            ret = hub->ReadFromComPortH(answer + bytesRead, 1, br);
+            ret = hub_->ReadFromComPortH(answer, 1, br);
             if (ret != DEVICE_OK)
                return ret;
             bytesRead += br;
          }
          if (answer[0] != 12)
             return ERR_COMMUNICATION;
-         hub->SetTimedOutput(true);
+         hub_->SetTimedOutput(true);
       } else {
          unsigned char command[1];
          command[0] = 9;
-         int ret = hub->WriteToComPortH((const unsigned char*) command, 1);
+         int ret = hub_->WriteToComPortH((const unsigned char*) command, 1);
          if (ret != DEVICE_OK)
             return ret;
 
          MM::MMTime startTime = GetCurrentMMTime();
+         const unsigned int nrBytes = 2;
          unsigned long bytesRead = 0;
-         unsigned char answer[2];
-         while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+         unsigned char answer[nrBytes] = { 0, 0 };
+         while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
             unsigned long br;
-            ret = hub->ReadFromComPortH(answer + bytesRead, 2, br);
+            ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
             if (ret != DEVICE_OK)
                return ret;
             bytesRead += br;
          }
          if (answer[0] != 9)
             return ERR_COMMUNICATION;
-         hub->SetTimedOutput(false);
+         hub_->SetTimedOutput(false);
       }
    }
 
@@ -811,10 +800,6 @@ int CArduinoSwitch::OnStartTimedOutput(MM::PropertyBase* pProp, MM::ActionType e
 
 int CArduinoSwitch::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
-      return ERR_NO_PORT_SET;
-
    if (eAct == MM::BeforeGet) {
       if (blanking_)
          pProp->Set(g_On);
@@ -823,25 +808,25 @@ int CArduinoSwitch::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      MMThreadGuard myLock(hub->GetLock());
+      const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
       std::string prop;
       pProp->Get(prop);
 
       if (prop == g_On && !blanking_) {
-         hub->PurgeComPortH();
+         hub_->PurgeComPortH();
          unsigned char command[1];
          command[0] = 20;
-         int ret = hub->WriteToComPortH((const unsigned char*) command, 1);
+         int ret = hub_->WriteToComPortH((const unsigned char*) command, 1);
          if (ret != DEVICE_OK)
             return ret;
 
          MM::MMTime startTime = GetCurrentMMTime();
          unsigned long bytesRead = 0;
-         unsigned char answer[1];
+         unsigned char answer[1] = { 0 };
          while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
             unsigned long br;
-            ret = hub->ReadFromComPortH(answer + bytesRead, 1, br);
+            ret = hub_->ReadFromComPortH(answer, 1, br);
             if (ret != DEVICE_OK)
                return ret;
             bytesRead += br;
@@ -849,22 +834,23 @@ int CArduinoSwitch::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
          if (answer[0] != 20)
             return ERR_COMMUNICATION;
          blanking_ = true;
-         hub->SetTimedOutput(false);
+         hub_->SetTimedOutput(false);
          LogMessage("Switched blanking on", true);
 
       } else if (prop == g_Off && blanking_){
          unsigned char command[1];
          command[0] = 21;
-         int ret = hub->WriteToComPortH((const unsigned char*) command, 1);
+         int ret = hub_->WriteToComPortH((const unsigned char*) command, 1);
          if (ret != DEVICE_OK)
             return ret;
 
          MM::MMTime startTime = GetCurrentMMTime();
+         const unsigned int nrBytes = 2;
          unsigned long bytesRead = 0;
-         unsigned char answer[2];
-         while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+         unsigned char answer[nrBytes] = { 0, 0 };
+         while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
             unsigned long br;
-            ret = hub->ReadFromComPortH(answer + bytesRead, 2, br);
+            ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
             if (ret != DEVICE_OK)
                return ret;
             bytesRead += br;
@@ -872,7 +858,7 @@ int CArduinoSwitch::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
          if (answer[0] != 21)
             return ERR_COMMUNICATION;
          blanking_ = false;
-         hub->SetTimedOutput(false);
+         hub_->SetTimedOutput(false);
          LogMessage("Switched blanking off", true);
       }
    }
@@ -882,21 +868,17 @@ int CArduinoSwitch::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CArduinoSwitch::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
-      return ERR_NO_PORT_SET;
-
    if (eAct == MM::BeforeGet) {
       // nothing to do, let the caller use cached property
    }
    else if (eAct == MM::AfterSet)
    {
-      MMThreadGuard myLock(hub->GetLock());
+      const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
       std::string direction;
       pProp->Get(direction);
 
-      hub->PurgeComPortH();
+      hub_->PurgeComPortH();
       unsigned char command[2];
       command[0] = 22;
       if (direction == "Low") 
@@ -904,16 +886,16 @@ int CArduinoSwitch::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::Acti
       else
          command[1] = 0;
 
-      int ret = hub->WriteToComPortH((const unsigned char*) command, 2);
+      int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
       if (ret != DEVICE_OK)
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
       unsigned long bytesRead = 0;
-      unsigned char answer[1];
+      unsigned char answer[1] = { 0 };
       while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub->ReadFromComPortH(answer + bytesRead, 1, br);
+         ret = hub_->ReadFromComPortH(answer, 1, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
@@ -925,6 +907,7 @@ int CArduinoSwitch::OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::Acti
 
    return DEVICE_OK;
 }
+
 
 int CArduinoSwitch::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -941,36 +924,34 @@ int CArduinoSwitch::OnDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+
 int CArduinoSwitch::OnRepeatTimedPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
-      return ERR_NO_PORT_SET;
-
    if (eAct == MM::BeforeGet) {
    }
    else if (eAct == MM::AfterSet)
    {
-      MMThreadGuard myLock(hub->GetLock());
+      const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
       long prop;
       pProp->Get(prop);
 
-      hub->PurgeComPortH();
+      hub_->PurgeComPortH();
       unsigned char command[2];
       command[0] = 11;
       command[1] = (unsigned char) prop;
 
-      int ret = hub->WriteToComPortH((const unsigned char*) command, 2);
+      int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
       if (ret != DEVICE_OK)
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 2;
       unsigned long bytesRead = 0;
-      unsigned char answer[2];
-      while ((bytesRead < 2) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      unsigned char answer[nrBytes] = { 0, 0 };
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
-         ret = hub->ReadFromComPortH(answer + bytesRead, 2, br);
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
@@ -978,7 +959,7 @@ int CArduinoSwitch::OnRepeatTimedPattern(MM::PropertyBase* pProp, MM::ActionType
       if (answer[0] != 11)
          return ERR_COMMUNICATION;
 
-      hub->SetTimedOutput(false);
+      hub_->SetTimedOutput(false);
    }
 
    return DEVICE_OK;
@@ -1087,7 +1068,7 @@ int CArduinoDA::WriteToPort(unsigned long value)
    if (!hub || !hub->IsPortAvailable())
       return ERR_NO_PORT_SET;
 
-   MMThreadGuard myLock(hub->GetLock());
+   const std::lock_guard<std::mutex> lock(hub->GetLock());
 
    hub->PurgeComPortH();
 
@@ -1101,11 +1082,12 @@ int CArduinoDA::WriteToPort(unsigned long value)
       return ret;
 
    MM::MMTime startTime = GetCurrentMMTime();
+   const unsigned int nrBytes = 4;
    unsigned long bytesRead = 0;
-   unsigned char answer[4];
-   while ((bytesRead < 4) && ( (GetCurrentMMTime() - startTime).getMsec() < 2500)) {
+   unsigned char answer[nrBytes] = {0, 0, 0, 0};
+   while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 2500)) {
       unsigned long bR;
-      ret = hub->ReadFromComPortH(answer + bytesRead, 4 - bytesRead, bR);
+      ret = hub->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, bR);
       if (ret != DEVICE_OK)
          return ret;
       bytesRead += bR;
@@ -1213,7 +1195,10 @@ int CArduinoDA::OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
 // CArduinoShutter implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CArduinoShutter::CArduinoShutter() : initialized_(false), name_(g_DeviceNameArduinoShutter)
+CArduinoShutter::CArduinoShutter() : 
+   hub_(0),
+   initialized_(false), 
+   name_(g_DeviceNameArduinoShutter)
 {
    InitializeDefaultErrorMessages();
    EnableDelay();
@@ -1251,12 +1236,12 @@ bool CArduinoShutter::Busy()
 
 int CArduinoShutter::Initialize()
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable()) {
+   hub_ = static_cast<CArduinoHub*>(GetParentHub());
+   if (!hub_ || !hub_->IsPortAvailable()) {
       return ERR_NO_PORT_SET;
    }
    char hubLabel[MM::MaxStrLength];
-   hub->GetLabel(hubLabel);
+   hub_->GetLabel(hubLabel);
    SetParentID(hubLabel); // for backward comp.
 
    // set property list
@@ -1329,37 +1314,33 @@ int CArduinoShutter::Fire(double /*deltaT*/)
 
 int CArduinoShutter::WriteToPort(long value)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
-      return ERR_NO_PORT_SET;
-
-   MMThreadGuard myLock(hub->GetLock());
+   const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
    value = 63 & value;
-   if (hub->IsLogicInverted())
+   if (hub_->IsLogicInverted())
       value = ~value;
 
-   hub->PurgeComPortH();
+   hub_->PurgeComPortH();
 
    unsigned char command[2];
    command[0] = 1;
    command[1] = (unsigned char) value;
-   int ret = hub->WriteToComPortH((const unsigned char*) command, 2);
+   int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
    if (ret != DEVICE_OK)
       return ret;
 
    MM::MMTime startTime = GetCurrentMMTime();
    unsigned long bytesRead = 0;
-   unsigned char answer[1];
+   unsigned char answer[1] = { 0 };
    while ((bytesRead < 1) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
-      ret = hub->ReadFromComPortH(answer, 1, bytesRead);
+      ret = hub_->ReadFromComPortH(answer, 1, bytesRead);
       if (ret != DEVICE_OK)
          return ret;
    }
    if (answer[0] != 1)
       return ERR_COMMUNICATION;
 
-   hub->SetTimedOutput(false);
+   hub_->SetTimedOutput(false);
 
    return DEVICE_OK;
 }
@@ -1370,11 +1351,10 @@ int CArduinoShutter::WriteToPort(long value)
 
 int CArduinoShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
    if (eAct == MM::BeforeGet)
    {
       // use cached state
-      pProp->Set((long)hub->GetShutterState());
+      pProp->Set((long)hub_->GetShutterState());
    }
    else if (eAct == MM::AfterSet)
    {
@@ -1384,10 +1364,10 @@ int CArduinoShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (pos == 0)
          ret = WriteToPort(0); // turn everything off
       else
-         ret = WriteToPort(hub->GetSwitchState()); // restore old setting
+         ret = WriteToPort(hub_->GetSwitchState()); // restore old setting
       if (ret != DEVICE_OK)
          return ret;
-      hub->SetShutterState(pos);
+      hub_->SetShutterState(pos);
       changedTime_ = GetCurrentMMTime();
    }
 
@@ -1401,6 +1381,7 @@ int CArduinoShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
  */
 
 CArduinoInput::CArduinoInput() :
+   hub_(0),
    mThread_(0),
    pin_(0),
    name_(g_DeviceNameArduinoInput)
@@ -1448,16 +1429,16 @@ int CArduinoInput::Shutdown()
 
 int CArduinoInput::Initialize()
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable()) {
+   hub_ = static_cast<CArduinoHub*>(GetParentHub());
+   if (!hub_ || !hub_->IsPortAvailable()) {
       return ERR_NO_PORT_SET;
    }
    char hubLabel[MM::MaxStrLength];
-   hub->GetLabel(hubLabel);
+   hub_->GetLabel(hubLabel);
    SetParentID(hubLabel); // for backward comp.
 
    char ver[MM::MaxStrLength] = "0";
-   hub->GetProperty(g_versionProp, ver);
+   hub_->GetProperty(g_versionProp, ver);
    int version = atoi(ver);
    if (version < 2)
       return ERR_VERSION_MISMATCH;
@@ -1522,21 +1503,17 @@ bool CArduinoInput::Busy()
 
 int CArduinoInput::GetDigitalInput(long* state)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
-      return ERR_NO_PORT_SET;
-
-   MMThreadGuard myLock(hub->GetLock());
+   const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
    unsigned char command[1];
    command[0] = 40;
 
-   int ret = hub->WriteToComPortH((const unsigned char*) command, 1);
+   int ret = hub_->WriteToComPortH((const unsigned char*) command, 1);
    if (ret != DEVICE_OK)
       return ret;
 
    unsigned char answer[2];
-   ret = ReadNBytes(hub, 2, answer);
+   ret = ReadNBytes(hub_, 2, answer);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -1582,24 +1559,24 @@ int CArduinoInput::OnDigitalInput(MM::PropertyBase*  pProp, MM::ActionType eAct)
 
 int CArduinoInput::OnAnalogInput(MM::PropertyBase* pProp, MM::ActionType eAct, long  channel )
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
+   hub_ = static_cast<CArduinoHub*>(GetParentHub());
+   if (!hub_ || !hub_->IsPortAvailable())
       return ERR_NO_PORT_SET;
 
    if (eAct == MM::BeforeGet)
    {
-      MMThreadGuard myLock(hub->GetLock());
+      const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
       unsigned char command[2];
       command[0] = 41;
       command[1] = (unsigned char) channel;
 
-      int ret = hub->WriteToComPortH((const unsigned char*) command, 2);
+      int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
       if (ret != DEVICE_OK)
          return ret;
 
       unsigned char answer[4];
-      ret = ReadNBytes(hub, 4, answer);
+      ret = ReadNBytes(hub_, 4, answer);
       if (ret != DEVICE_OK)
          return ret;
 
@@ -1619,11 +1596,7 @@ int CArduinoInput::OnAnalogInput(MM::PropertyBase* pProp, MM::ActionType eAct, l
 
 int CArduinoInput::SetPullUp(int pin, int state)
 {
-   CArduinoHub* hub = static_cast<CArduinoHub*>(GetParentHub());
-   if (!hub || !hub->IsPortAvailable())
-      return ERR_NO_PORT_SET;
-
-   MMThreadGuard myLock(hub->GetLock());
+   const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
    const int nrChrs = 3;
    unsigned char command[nrChrs];
@@ -1631,12 +1604,12 @@ int CArduinoInput::SetPullUp(int pin, int state)
    command[1] = (unsigned char) pin;
    command[2] = (unsigned char) state;
 
-   int ret = hub->WriteToComPortH((const unsigned char*) command, nrChrs);
+   int ret = hub_->WriteToComPortH((const unsigned char*) command, nrChrs);
    if (ret != DEVICE_OK)
       return ret;
 
    unsigned char answer[3];
-   ret = ReadNBytes(hub, 3, answer);
+   ret = ReadNBytes(hub_, 3, answer);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -1665,6 +1638,7 @@ int CArduinoInput::ReadNBytes(CArduinoHub* hub, unsigned int n, unsigned char* a
 }
 
 ArduinoInputMonitorThread::ArduinoInputMonitorThread(CArduinoInput& aInput) :
+   stop_(false),
    state_(0),
    aInput_(aInput)
 {
