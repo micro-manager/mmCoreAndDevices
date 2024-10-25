@@ -331,6 +331,41 @@
    $1 = (unsigned char *) JCALL2(GetByteArrayElements, jenv, $input, 0);
 }
 
+// Map input argument: java short[] -> C++ STORAGEIMG16
+%typemap(jni) unsigned short*        "jshortArray"
+%typemap(jtype) unsigned short*      "short[]"
+%typemap(jstype) unsigned short*     "short[]"
+%typemap(in) STORAGEIMG16
+{
+   long expectedLength = arg3;
+   long receivedLength = JCALL1(GetArrayLength, jenv, $input);
+   
+   if (receivedLength != expectedLength)
+   {
+      jclass excep = jenv->FindClass("java/lang/Exception");
+      if (excep)
+         jenv->ThrowNew(excep, "Short array dimensions do not match declared size.");
+      return;
+   }
+   
+   $1 = (unsigned short *) JCALL2(GetShortArrayElements, jenv, $input, 0);
+}
+%typemap(in) unsigned short*
+{
+   long expectedLength = arg3;
+   long receivedLength = JCALL1(GetArrayLength, jenv, $input);
+   
+   if (receivedLength != expectedLength)
+   {
+      jclass excep = jenv->FindClass("java/lang/Exception");
+      if (excep)
+         jenv->ThrowNew(excep, "Short array dimensions do not match declared size.");
+      return;
+   }
+   
+   $1 = (unsigned short *) JCALL2(GetShortArrayElements, jenv, $input, 0);
+}
+
 // Map input argument: java byte[] -> C++ unsigned char *
 %typemap(in) unsigned char*
 {
@@ -354,13 +389,21 @@
    // Allow the Java byte array to be garbage collected.
    JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, JNI_ABORT); // JNI_ABORT = Don't alter the original array.
 }
+%typemap(freearg) unsigned short* {
+   // Allow the Java byte array to be garbage collected.
+   JCALL3(ReleaseShortArrayElements, jenv, $input, (jshort *) $1, JNI_ABORT); // JNI_ABORT = Don't alter the original array.
+}
 
 // change Java wrapper output mapping for unsigned char*
 %typemap(javaout) unsigned char* {
     return $jnicall;
  }
+ %typemap(javaout) unsigned short* {
+    return $jnicall;
+ }
 
 %typemap(javain) unsigned char* "$javainput" 
+%typemap(javain) unsigned short* "$javainput" 
 
 
 // Map input argument: java List<byte[]> -> C++ std::vector<unsigned char*>

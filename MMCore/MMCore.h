@@ -87,6 +87,7 @@
 #endif
 
 typedef unsigned char* STORAGEIMG;
+typedef unsigned short* STORAGEIMG16;
 typedef unsigned char* STORAGEIMGOUT;
 typedef unsigned char* STORAGEMETA;
 
@@ -651,6 +652,7 @@ public:
    std::vector<long> getDatasetShape(const char* handle) throw (CMMError);
    MM::StorageDataType getDatasetPixelType(const char* handle) throw (CMMError);
    void addImage(const char* handle, int sizeinBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+	void addImage(const char* handle, int sizeinShorts, const STORAGEIMG16 pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
    void configureDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError);
    void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError);
    std::string getSummaryMeta(const char* handle) throw (CMMError);
