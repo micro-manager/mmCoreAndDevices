@@ -7730,6 +7730,35 @@ void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pix
 }
 
 /**
+ * Adds a new image to the dataset. Width, hight and depth define the expected pixel array size.
+ * Fails if coordinates do not fit into the dataset shape, or if the image dimenions are not supported.
+ * It can also fail if the underlying implementation does not support the order of image coordinates.
+ * 
+ * \param handle - handle to the open dataset
+ * \param sizeInShorts - size of the pixel array
+ * \param pixels - pixel array
+ * \param coordinates - coordinates of the image in the dimension space
+ * \param imageMeta - serialized JSON with image specific metadata
+ */
+void CMMCore::addImage(const char* handle, int sizeInShorts, const STORAGEIMG16 pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      std::vector<int> coords(coordinates.begin(), coordinates.end());
+      int ret = storage->AddImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), coords, imageMeta);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+   }
+   else
+      throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
  * Configure metadata for a given dimension.
  * 
  * \param handle - handle for the dataset
