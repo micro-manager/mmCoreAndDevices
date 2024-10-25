@@ -28,6 +28,7 @@ const char* g_DeviceNameArduinoShutter = "Arduino-Shutter";
 const char* g_DeviceNameArduinoDA1 = "Arduino-DAC1";
 const char* g_DeviceNameArduinoDA2 = "Arduino-DAC2";
 const char* g_DeviceNameArduinoInput = "Arduino-Input";
+const char* g_DeviceNameArduinoMagnifier = "Arduino-Magnifier";
 
 
 // Global info about the state of the Arduino.  This should be folded into a class
@@ -52,6 +53,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DeviceNameArduinoDA1, MM::SignalIODevice, "DAC channel 1");
    RegisterDevice(g_DeviceNameArduinoDA2, MM::SignalIODevice, "DAC channel 2");
    RegisterDevice(g_DeviceNameArduinoInput, MM::GenericDevice, "ADC");
+   RegisterDevice(g_DeviceNameArduinoMagnifier, MM::MagnifierDevice, "Magnifier(needs ADC)");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -83,6 +85,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new CArduinoInput;
    }
+   else if (strcmp(deviceName, g_DeviceNameArduinoMagnifier) == 0)
+   {
+      return new CArduinoMagnifier;
+   }
 
    return 0;
 }
@@ -98,6 +104,8 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 //
 CArduinoHub::CArduinoHub() :
    initialized_ (false),
+   version_(0),
+   magnifier_(0),
    switchState_ (0),
    shutterState_ (0)
 {
@@ -125,20 +133,24 @@ CArduinoHub::CArduinoHub() :
    AddAllowedValue("Logic", g_normalLogicString);
 }
 
+
 CArduinoHub::~CArduinoHub()
 {
    Shutdown();
 }
+
 
 void CArduinoHub::GetName(char* name) const
 {
    CDeviceUtils::CopyLimitedString(name, g_DeviceNameArduinoHub);
 }
 
+
 bool CArduinoHub::Busy()
 {
    return false;
 }
+
 
 // private and expects caller to:
 // 1. guard the port
@@ -180,10 +192,12 @@ int CArduinoHub::GetControllerVersion(int& version)
 
 }
 
+
 bool CArduinoHub::SupportsDeviceDetection(void)
 {
    return true;
 }
+
 
 MM::DeviceDetectionStatus CArduinoHub::DetectDevice(void)
 {
@@ -285,6 +299,7 @@ int CArduinoHub::Initialize()
    return DEVICE_OK;
 }
 
+
 int CArduinoHub::DetectInstalledDevices()
 {
    if (MM::CanCommunicate == DetectDevice()) 
@@ -294,6 +309,7 @@ int CArduinoHub::DetectInstalledDevices()
       peripherals.push_back(g_DeviceNameArduinoSwitch);
       peripherals.push_back(g_DeviceNameArduinoShutter);
       peripherals.push_back(g_DeviceNameArduinoInput);
+      peripherals.push_back(g_DeviceNameArduinoMagnifier);
       peripherals.push_back(g_DeviceNameArduinoDA1);
       peripherals.push_back(g_DeviceNameArduinoDA2);
       for (size_t i=0; i < peripherals.size(); i++) 
@@ -317,6 +333,7 @@ int CArduinoHub::Shutdown()
    return DEVICE_OK;
 }
 
+
 int CArduinoHub::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
    if (pAct == MM::BeforeGet)
@@ -331,6 +348,7 @@ int CArduinoHub::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
    return DEVICE_OK;
 }
 
+
 int CArduinoHub::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
    if (pAct == MM::BeforeGet)
@@ -339,6 +357,7 @@ int CArduinoHub::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
    }
    return DEVICE_OK;
 }
+
 
 int CArduinoHub::OnLogic(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
@@ -358,6 +377,24 @@ int CArduinoHub::OnLogic(MM::PropertyBase* pProp, MM::ActionType pAct)
    }
    return DEVICE_OK;
 }
+
+
+int CArduinoHub::ReportNewInputState(long newState)
+{
+   if (magnifier_ != 0)
+   {
+      magnifier_->UpdateState(newState);
+   }
+   return DEVICE_OK;
+}
+
+
+int CArduinoHub::RegisterMagnifier(CArduinoMagnifier* magnifier)
+{
+   magnifier_ = magnifier;
+   return DEVICE_OK; 
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // CArduinoSwitch implementation
@@ -509,11 +546,13 @@ int CArduinoSwitch::Initialize()
    return DEVICE_OK;
 }
 
+
 int CArduinoSwitch::Shutdown()
 {
    initialized_ = false;
    return DEVICE_OK;
 }
+
 
 int CArduinoSwitch::WriteToPort(long value)
 {
@@ -714,6 +753,7 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+
 int CArduinoSwitch::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -734,6 +774,7 @@ int CArduinoSwitch::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
+
 
 int CArduinoSwitch::OnStartTimedOutput(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -797,6 +838,7 @@ int CArduinoSwitch::OnStartTimedOutput(MM::PropertyBase* pProp, MM::ActionType e
 
    return DEVICE_OK;
 }
+
 
 int CArduinoSwitch::OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1380,6 +1422,11 @@ int CArduinoShutter::OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct)
  * or for an individual pin only
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// CArduinoInput implementation
+// Arduino input.  Can either be for all pins (0-6)
+// or for an individual pin only
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~
 CArduinoInput::CArduinoInput() :
    hub_(0),
    mThread_(0),
@@ -1532,6 +1579,7 @@ int CArduinoInput::GetDigitalInput(long* state)
 
 int CArduinoInput::ReportStateChange(long newState)
 {
+   hub_->ReportNewInputState(newState);
    std::ostringstream os;
    os << newState;
    return OnPropertyChanged("DigitalInput", os.str().c_str());
@@ -1637,6 +1685,138 @@ int CArduinoInput::ReadNBytes(CArduinoHub* hub, unsigned int n, unsigned char* a
    return DEVICE_OK;
 }
 
+
+
+///////////////////////////////////////////////////////////////////////////////
+// CArduinoMagnifier implementation
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~
+CArduinoMagnifier::CArduinoMagnifier() :
+   state_(0),
+   initialized_(false)
+{
+   CPropertyAction* pAct = new CPropertyAction(this, &CArduinoMagnifier::OnNumberOfMagnifications);
+   std::string nrMags = "Number of Magnifications";
+   CreateIntegerProperty(nrMags.c_str(), 2, false, pAct, true);
+   SetPropertyLimits(nrMags.c_str(), 1, 16);
+}
+
+
+CArduinoMagnifier::~CArduinoMagnifier()
+{
+   if (initialized_)
+      Shutdown();
+}
+
+
+int CArduinoMagnifier::Shutdown()
+{
+   if (hub_ != 0)
+      hub_->RegisterMagnifier(0);
+   initialized_ = false;
+   return DEVICE_OK;
+}
+
+
+int CArduinoMagnifier::Initialize()
+{
+   hub_ = static_cast<CArduinoHub*>(GetParentHub());
+   if (!hub_ || !hub_->IsPortAvailable()) {
+      return ERR_NO_PORT_SET;
+   }
+
+   std::string userString = "Magnification At State: ";
+   for (long state = 0; state < magnifications_.size(); state++)
+   {
+      CPropertyActionEx* pActEx = new CPropertyActionEx(this, &CArduinoMagnifier::OnSetMagnification, state);
+      std::ostringstream propName;
+      propName << userString << state;
+      CreateFloatProperty(propName.str().c_str(), 1.0, false, pActEx);
+   }
+
+   hub_->RegisterMagnifier(this);
+
+   return DEVICE_OK;
+}
+
+
+void CArduinoMagnifier::GetName(char* name) const
+{
+   CDeviceUtils::CopyLimitedString(name, g_DeviceNameArduinoMagnifier);
+}
+
+
+double CArduinoMagnifier::GetMagnification()
+{
+   double mag = 1.0;
+   auto it = magnifications_.find(state_);
+   if (it != magnifications_.end()) {
+      mag = it->second;
+   }
+   return mag;
+}
+ 
+
+int CArduinoMagnifier::UpdateState(long state)
+{
+   state_ = state;
+   GetCoreCallback()->OnMagnifierChanged(this);
+
+   return DEVICE_OK;
+}
+
+
+int CArduinoMagnifier::OnNumberOfMagnifications(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set( (long) magnifications_.size());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long nrMagnifications;
+      pProp->Get(nrMagnifications);
+      if (nrMagnifications > 0) {
+         magnifications_.clear();
+         for (long i = 0; i < nrMagnifications; i++) {
+            magnifications_.insert(std::pair<long, double>(i, 1.0));
+         }
+      }
+   }
+   return DEVICE_OK;
+}
+
+
+int CArduinoMagnifier::OnSetMagnification(MM::PropertyBase* pProp, MM::ActionType eAct, long state)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      double mag = 1.0;
+      auto it = magnifications_.find(state);
+      if (it != magnifications_.end()) {
+         mag = it->second;
+      }
+      pProp->Set(mag);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double mag;
+      pProp->Get(mag);
+      auto it = magnifications_.find(state);
+      if (it != magnifications_.end()) {
+         it->second = mag;
+      }
+      else {
+         return DEVICE_UNKNOWN_POSITION;
+      }
+   }
+   return DEVICE_OK;
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// ArduinoInputMonitorThread implementation
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~
 ArduinoInputMonitorThread::ArduinoInputMonitorThread(CArduinoInput& aInput) :
    stop_(false),
    state_(0),
