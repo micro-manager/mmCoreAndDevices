@@ -111,6 +111,7 @@ public:
    int OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+   CArduinoHub* hub_;
    int WriteToPort(long lnValue);
    MM::MMTime changedTime_;
    bool initialized_;
@@ -154,6 +155,7 @@ public:
 private:
    static const unsigned int NUMPATTERNS = 12;
 
+   CArduinoHub* hub_;
    int OpenPort(const char* pszName, long lnValue);
    int WriteToPort(long lnValue);
    int ClosePort();
