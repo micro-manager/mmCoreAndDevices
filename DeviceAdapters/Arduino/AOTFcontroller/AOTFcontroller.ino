@@ -123,7 +123,7 @@
    // pin connected to CS of TLV5618
    int latchPin = 5;
 
-   const unsigned int SEQUENCELENGTH = 24;  // Can be increased, but pay attention that there is significant memory left for local variables
+   const uint16_t SEQUENCELENGTH = 256;  // Can be increased, but pay attention that there is significant memory left for local variables
    byte triggerPattern_[SEQUENCELENGTH]; 
    unsigned int triggerDelay_[SEQUENCELENGTH]; 
    int patternLength_ = 0;
@@ -352,6 +352,7 @@
          Serial.write( byte(32));
          Serial.write(highByte(SEQUENCELENGTH));
          Serial.write(lowByte(SEQUENCELENGTH));
+         break;
 
        case 40:
          Serial.write( byte(40));
