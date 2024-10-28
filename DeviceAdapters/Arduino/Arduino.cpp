@@ -1581,6 +1581,7 @@ bool CArduinoInput::Busy()
    return false;
 }
 
+
 int CArduinoInput::GetDigitalInput(long* state)
 {
    const std::lock_guard<std::mutex> lock(hub_->GetLock());
@@ -1648,9 +1649,7 @@ int CArduinoInput::OnAnalogInput(MM::PropertyBase* pProp, MM::ActionType eAct, l
    {
       const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
-      unsigned char command[2];
-      command[0] = 41;
-      command[1] = (unsigned char) channel;
+      unsigned char command[2] = { 41, (unsigned char) channel };
 
       int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
       if (ret != DEVICE_OK)
@@ -1689,7 +1688,7 @@ int CArduinoInput::SetPullUp(int pin, int state)
    if (ret != DEVICE_OK)
       return ret;
 
-   unsigned char answer[3];
+   unsigned char answer[3] = { 0, 0, 0 };
    ret = ReadNBytes(hub_, 3, answer);
    if (ret != DEVICE_OK)
       return ret;
