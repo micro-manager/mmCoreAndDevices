@@ -59,7 +59,9 @@
 #include <cassert>
 #include <chrono>
 #include <cstring>
+#include <deque>
 #include <fstream>
+#include <map>
 #include <set>
 #include <sstream>
 #include <vector>
@@ -850,7 +852,10 @@ void CMMCore::initializeAllDevices() throw (CMMError)
    std::vector<std::string> devices = deviceManager_->GetDeviceList();
    LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
 
-   for (size_t i=0; i<devices.size(); i++)
+   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::shared_ptr<DeviceInstance>>> moduleMap;
+
+   // first round, collect all DeviceAdapters
+   for (size_t i = 0; i < devices.size(); i++)
    {
       std::shared_ptr<DeviceInstance> pDevice;
       try {
@@ -860,12 +865,39 @@ void CMMCore::initializeAllDevices() throw (CMMError)
          logError(devices[i].c_str(), err.getMsg().c_str());
          throw;
       }
-      mm::DeviceModuleLockGuard guard(pDevice);
-      LOG_INFO(coreLogger_) << "Will initialize device " << devices[i];
-      pDevice->Initialize();
-      LOG_INFO(coreLogger_) << "Did initialize device " << devices[i];
+      std::shared_ptr<LoadedDeviceAdapter> pAdapter;
+      pAdapter = pDevice->GetAdapterModule();
 
-      assignDefaultRole(pDevice);
+
+      if (moduleMap.find(pAdapter) == moduleMap.end())
+      {
+         std::deque<std::shared_ptr<DeviceInstance>> pDevices;
+         pDevices.push_back(pDevice);
+         moduleMap.insert({ pAdapter, pDevices });
+      }
+      else
+      {
+         moduleMap.find(pAdapter)->second.push_back(pDevice);
+      }
+   }
+
+   // second round, spin up threads to initialize devices, one thread per module
+
+   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::shared_ptr<DeviceInstance>>>::iterator it;
+   for (it = moduleMap.begin(); it != moduleMap.end(); it++)
+   {
+      // spin up thread here
+      std::deque<std::shared_ptr<DeviceInstance>> pDevices = it->second;
+      for (int i = 0; i < pDevices.size(); i++) {
+         std::shared_ptr<DeviceInstance> pDevice = pDevices[i];
+
+         mm::DeviceModuleLockGuard guard(pDevice);
+         LOG_INFO(coreLogger_) << "Will initialize device " << devices[i];
+         pDevice->Initialize();
+         LOG_INFO(coreLogger_) << "Did initialize device " << devices[i];
+
+         assignDefaultRole(pDevice);
+      }
    }
 
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
