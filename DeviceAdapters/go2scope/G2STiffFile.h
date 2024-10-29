@@ -71,8 +71,8 @@ public:
 	std::vector<std::uint32_t>								getShape() const noexcept { return shape; }
 	std::size_t													getDimension() const noexcept { return shape.size(); }
 	std::uint32_t												getAxisSize(std::size_t ind) const noexcept { return ind < shape.size() ? shape[ind] : 0; }
-	std::uint32_t												getWidth() const noexcept { return shape.size() < 1 ? 0 : shape[0]; }
-	std::uint32_t												getHeight() const noexcept { return shape.size() < 2 ? 0 : shape[1]; }
+	std::uint32_t												getWidth() const noexcept { return shape.size() < 2 ? 0 : shape[shape.size() - 1]; }
+	std::uint32_t												getHeight() const noexcept { return shape.size() < 2 ? 0 : shape[shape.size() - 2]; }
 	void															setPixelFormat(std::uint8_t depth, std::uint8_t vsamples = 1);
 	int															getBitDepth() const noexcept { return (int)bitdepth; }
 	int															getBpp() const noexcept { return (int)std::ceil(bitdepth / 8.0); }
@@ -85,7 +85,7 @@ public:
 	void															addImage(const std::vector<unsigned char>& buff, const std::string& meta = "") { addImage(&buff[0], buff.size(), meta); }
 	void															addImage(const unsigned char* buff, std::size_t len, const std::string& meta = "");
 	std::vector<unsigned char>								getImage(const std::vector<std::uint32_t>& coord = {});
-	std::uint32_t												getDatasetImageCount() const noexcept { std::uint32_t ret = 1; for(std::size_t i = 2; i < shape.size(); i++) ret *= shape[i]; return ret; }
+	std::uint32_t												getDatasetImageCount() const noexcept { std::uint32_t ret = 1; for(std::size_t i = 0; i < shape.size() - 2; i++) ret *= shape[i]; return ret; }
 	std::uint32_t												getImageCount() const noexcept { return imgcounter; }
 	std::uint64_t												getFileSize() const noexcept;
 	std::uint64_t												getMaxFileSize() const noexcept { return bigTiff ? std::numeric_limits<std::uint64_t>::max() : std::numeric_limits<std::uint32_t>::max(); }

@@ -55,9 +55,8 @@ void testAcquisition(CMMCore& core, const std::string& path, const std::string& 
 	int imgSize = 2 * w * h;
 	double imgSizeMb = (double)imgSize / (1024.0 * 1024.0);
 
-	// Shape convention: T, C, Z, Y, X
-	// Current convention: X, Y, C, T, P
-	std::vector<long> shape = { w, h, c, t, p };
+	// Shape convention: Z, T, C, Y, X
+	std::vector<long> shape = { p, t, c, h, w };
 	auto handle = core.createDataset(path.c_str(), name.c_str(), shape, MM::StorageDataType_GRAY16, "");
 
 	std::cout << "Dataset UID: " << handle << std::endl;
@@ -94,7 +93,7 @@ void testAcquisition(CMMCore& core, const std::string& path, const std::string& 
 				
 				// Add image to the stream
 				auto startSave = std::chrono::high_resolution_clock::now();
-				core.addImage(handle.c_str(), imgSize, img, { 0, 0, k, j, i }, meta.c_str());
+				core.addImage(handle.c_str(), imgSize, img, { i, j, k }, meta.c_str());
 				auto endSave = std::chrono::high_resolution_clock::now();
 
 				// Calculate statistics

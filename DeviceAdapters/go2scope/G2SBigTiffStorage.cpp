@@ -552,9 +552,12 @@ int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int n
 
 		// Copy coordinates without including the width and height
 		std::vector<std::uint32_t> coords(fs->getDimension() - 2);
-		int base = fs->getDimension() == numCoordinates ? 2 : 0;
-		for(int i = 0; i < numCoordinates - base; i++)
-			coords[i] = coordinates[base + i];
+		for(int i = 0; i < coords.size(); i++)
+		{
+			if(i >= numCoordinates)
+				break;
+			coords[i] = coordinates[i];
+		}
 
 		auto fmeta = fs->getImageMetadata(coords);
 		if(!fmeta.empty())
@@ -597,9 +600,12 @@ const unsigned char* G2SBigTiffStorage::GetImage(const char* handle, int coordin
 
 	// Copy coordinates without including the width and height
 	std::vector<std::uint32_t> coords(fs->getDimension() - 2);
-	int base = fs->getDimension() == numCoordinates ? 2 : 0;
-	for(int i = 0; i < numCoordinates - base; i++)
-		coords[i] = coordinates[base + i];
+	for(int i = 0; i < coords.size(); i++)
+	{
+		if(i >= numCoordinates)
+			break;
+		coords[i] = coordinates[i];
+	}
 	
 	it->second.ImageData = fs->getImage(coords);
    return &it->second.ImageData[0];
@@ -797,10 +803,9 @@ bool G2SBigTiffStorage::validateCoordinates(const G2STiffFile* fs, int coordinat
 {
 	if((std::size_t)numCoordinates != fs->getDimension() && (std::size_t)numCoordinates != fs->getDimension() - 2)
 		return false;
-	int off = (std::size_t)numCoordinates == fs->getDimension() ? 0 : 2;
-	for(int i = 0; i < numCoordinates; i++)
+	for(int i = 0; i < (int)fs->getDimension() - 2; i++)
 	{
-		if(coordinates[i] < 0 || coordinates[i] >= (int)fs->getShape()[i + off])
+		if(coordinates[i] < 0 || coordinates[i] >= (int)fs->getShape()[i])
 			return false;
 	}
 	return true;
