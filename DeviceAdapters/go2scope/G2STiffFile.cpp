@@ -434,7 +434,9 @@ void G2STiffFile::setShape(const std::vector<std::uint32_t>& dims)
 		throw std::runtime_error("Unable to set dataset shape. Invalid shape info");
 	if(configset && imgcounter > 0 && shape.size() >= 2)
 	{
-		if(dims[0] != shape[0] || dims[1] != shape[1])
+		if(dims.size() != shape.size())
+			throw std::runtime_error("Unable to set dataset shape. Invalid axis count");
+		if(dims[dims.size() - 2] != shape[shape.size() - 2] || dims[dims.size() - 1] != shape[shape.size() - 1])
 			throw std::runtime_error("Unable to set dataset shape. Image dimensions don't match the existing image dimensions");
 	}
 	shape = dims;
@@ -457,7 +459,9 @@ void G2STiffFile::setShape(std::initializer_list<std::uint32_t> dims)
 		throw std::runtime_error("Unable to set dataset shape. Invalid shape info");
 	if(configset && imgcounter > 0 && shape.size() >= 2)
 	{
-		if(*dims.begin() != shape[0] || *(dims.begin() + 1) != shape[1])
+		if(dims.size() != shape.size())
+			throw std::runtime_error("Unable to set dataset shape. Invalid axis count");
+		if(*(dims.end() - 2) != shape[shape.size() - 2] || *(dims.end() - 1) != shape[shape.size() - 1])
 			throw std::runtime_error("Unable to set dataset shape. Image dimensions don't match the existing image dimensions");
 	}
 	shape = dims;
@@ -1385,30 +1389,37 @@ void G2STiffFile::moveWriteCursor(std::uint64_t pos) noexcept
 
 /**
  * Calculate image index from image coordinates
- * Image coordiantes should not contain indices for first two dimensions (width & height)
- * By convention image acquisitions loops through the coordinates in the ascending order (lower coordinates are looped first)
- * E.g. CTZ order means that all channels are acquired before moving changing the time point, and all specified time points 
- * are acquired before moving the Z-stage, in which case dataset with the shape 3-4-2 for coordinates 1-2-1 will return 19 (=1*12 + 2*3 + 1)
- * Last image coordinate can go beyond the specified shape size
+ * Image coordiantes should not contain indices for the last two dimensions (width & height)
+ * By convention image acquisitions loops through the coordinates in the descending order (higher coordinates are looped first)
+ * E.g. ZTC order means that all channels are acquired before changing the time point, and all specified time points 
+ * are acquired before moving the Z-stage, in which case dataset with the shape 2-4-3 for coordinates 1-2-1 will return 19 (=1*12 + 2*3 + 1*1)
+ * First image coordinate can go beyond the specified shape size
  * @param coord Image coordinates
  * @return Image index
  * @throws std::runtime_error
  */
 std::uint32_t G2STiffFile::calcImageIndex(const std::vector<std::uint32_t>& coord) const
 {
+	// Validate coordinates count
 	if(coord.size() > shape.size() - 2)
 		throw std::runtime_error("Invalid number of coordinates");
-	for(std::size_t i = 0; i < coord.size() - 1; i++)
+
+	// Validate ranges for all axis (except the first)
+	for(std::size_t i = 1; i < coord.size(); i++)
 	{
-		if(coord[i] >= shape[i + 2])
+		if(coord[i] >= shape[i])
 			throw std::runtime_error("Invalid coordinate for dimension " + std::to_string(i + 2));
 	}
+
+	// Calculate image index by 
 	std::uint32_t ind = 0;
-	for(int i = (int)coord.size() - 1; i >= 0; i--)
+	for(int i = 0; i < coord.size(); i++)
 	{
+		if(coord[i] == 0)
+			continue;
 		std::uint32_t sum = 1;
-		for(int j = i - 1; j >= 0; j--)
-			sum *= shape[j + 2];
+		for(int j = i + 1; j < shape.size() - 2; j++)
+			sum *= shape[j];
 		ind += sum * coord[i];
 	}
 	return ind;

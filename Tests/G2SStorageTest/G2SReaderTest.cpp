@@ -42,9 +42,9 @@ std::vector<long> calcCoordsOptimized(long ind, const std::vector<long>& shape)
 {
 	std::vector<long> ret(shape.size());
 	int fx = 0;
-	for(int j = (int)shape.size() - 1; j >= 2; j--) {
+	for(int j = 0; j < (int)shape.size() - 2; j++) {
 		int sum = 1;
-		for(int k = 2; k < j; k++)
+		for(int k = j + 1; k < (int)shape.size() - 2; k++)
 			sum *= shape[k];
 		int ix = (ind - fx) / sum;
 		ret[j] = ix;
@@ -63,9 +63,9 @@ std::vector<long> calcCoordsRandom(long ind, const std::vector<long>& shape)
 {
 	std::vector<long> ret(shape.size());
 	int fx = 0;
-	for(int j = 2; j < (int)shape.size(); j++) {
+	for(int j = (int)shape.size() - 3; j >= 0; j--) {
 		int sum = 1;
-		for(int k = j + 1; k < (int)shape.size(); k++)
+		for(int k = 0; k < j; k++)
 			sum *= shape[k];
 		int ix = (ind - fx) / sum;
 		ret[j] = ix;
@@ -97,13 +97,13 @@ void testReader(CMMCore& core, const std::string& path, const std::string& name,
 	// Obtain dataset shape
 	auto shape = core.getDatasetShape(handle.c_str());
 	auto ptype = core.getDatasetPixelType(handle.c_str());
-	auto imgcnt = shape[2] * shape[3] * shape[4];
-	auto imgSize = shape[0] * shape[1] * (ptype == MM::StorageDataType_GRAY16 ? 2 : 1);
+	auto imgcnt = shape[0] * shape[1] * shape[2];
+	auto imgSize = shape[3] * shape[4] * (ptype == MM::StorageDataType_GRAY16 ? 2 : 1);
 	double imgSizeMb = (double)imgSize / (1024.0 * 1024.0);
 	double totalSizeMb = (double)imgSize * imgcnt / (1024.0 * 1024.0);
 	std::cout << std::fixed << std::setprecision(3) << "Dataset loaded in " << loadTimeS << " sec, contains " << imgcnt << " images" << std::endl;
 	std::cout << "Dataset UID: " << handle << std::endl;
-	std::cout << "Dataset shape (W-H-C-T-P): " << shape[0] << " x " << shape[1] << " x " << shape[2] << " x " << shape[3] << " x " << shape[4] << " x " << (ptype == MM::StorageDataType_GRAY16 ? 16 : 8) << "-bit" << std::endl << std::endl;
+	std::cout << "Dataset shape (W-H-C-T-P): " << shape[4] << " x " << shape[3] << " x " << shape[2] << " x " << shape[1] << " x " << shape[0] << " x " << (ptype == MM::StorageDataType_GRAY16 ? 16 : 8) << "-bit" << std::endl << std::endl;
 
 	// Read images
 	for(long i = 0; i < imgcnt; i++)
