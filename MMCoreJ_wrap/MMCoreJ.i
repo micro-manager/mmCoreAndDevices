@@ -594,7 +594,7 @@
 		if(excep)
 			jenv->ThrowNew(excep, "Invalid dataset shape");
 	}
-   long lSize = shape[0] * shape[1];
+   long lSize = shape[shape.size() - 1] * shape[shape.size() - 2];
    
    if(pixformat == MM::StorageDataType::StorageDataType_GRAY8)
    {
