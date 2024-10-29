@@ -490,6 +490,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PlayerOne", "DeviceAdapters
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DahengGalaxy", "DeviceAdapters\DahengGalaxy\DahengGalaxy.vcxproj", "{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Octopi-Research", "DeviceAdapters\Octopi-Research\Octopi-research.vcxproj", "{FE305987-2B15-4EDA-9FC8-32D81AAE1543}"
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PyDevice", "DeviceAdapters\PyDevice\PyDevice.vcxproj", "{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Hikrobot", "DeviceAdapters\HikRobot\HikRobot.vcxproj", "{38DCD378-83FE-4C42-8916-1C477A35F65F}"
@@ -497,6 +498,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenFlexure", "DeviceAdapters\OpenFlexure\OpenFlexure.vcxproj", "{149B6A9D-40FB-4FDF-BC0C-6B68E3BC4938}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScientificaMotion8", "DeviceAdapters\ScientificaMotion8\ScientificaMotion8.vcxproj", "{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}"
+>>>>>>> main
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1969,6 +1971,10 @@ Global
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Debug|x86.ActiveCfg = Debug|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x64.ActiveCfg = Release|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x64.Build.0 = Release|x64
+		{FE305987-2B15-4EDA-9FC8-32D81AAE1543}.Debug|x64.ActiveCfg = Debug|x64
+		{FE305987-2B15-4EDA-9FC8-32D81AAE1543}.Debug|x64.Build.0 = Debug|x64
+		{FE305987-2B15-4EDA-9FC8-32D81AAE1543}.Release|x64.ActiveCfg = Release|x64
+		{FE305987-2B15-4EDA-9FC8-32D81AAE1543}.Release|x64.Build.0 = Release|x64
 		{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}.Release|x86.ActiveCfg = Release|x64
 		{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}.Debug|x64.ActiveCfg = Debug|x64
 		{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}.Debug|x64.Build.0 = Debug|x64
@@ -1996,6 +2002,7 @@ Global
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x64.ActiveCfg = Release|x64
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x64.Build.0 = Release|x64
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x86.ActiveCfg = Release|x64
+>>>>>>> main
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
