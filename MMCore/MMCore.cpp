@@ -846,7 +846,8 @@ void CMMCore::reset() throw (CMMError)
 
 /**
  * Calls Initialize() method for each loaded device.
- * This method also initialized allowed values for core properties, based
+ * This implementation initializes devices on separate threads, one per device module (adapter).
+ * This method also initializes allowed values for core properties, based
  * on the collection of loaded devices.
  */
 void CMMCore::initializeAllDevices() throw (CMMError)
@@ -883,19 +884,28 @@ void CMMCore::initializeAllDevices() throw (CMMError)
    }
 
    // second round, spin up threads to initialize devices, one thread per module
-
    std::vector<std::future<int>> futures;
    std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>>>::iterator it;
    for (it = moduleMap.begin(); it != moduleMap.end(); it++)
    {
       auto f = std::async(std::launch::async, &CMMCore::initializeDequeOfDevices, this, it->second);
-      // std::future<int> f = std::async(&CMMCore::initializeDequeOfDevices, *this, it->second, devices);
       futures.push_back(std::move(f));
    }
    for (auto& f : futures) {
+      // Note: we can do a 'f.wait_for(std::chrono::seconds(20)' to wait up to 20 seconds before giving up
+      // which would avoid hanging with devices that hang in their initialize function
       f.get();
    }
 
+   // assign default roles syncronously
+   for (it = moduleMap.begin(); it != moduleMap.end(); it++)
+   {
+      std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices = it->second;
+      for (int i = 0; i < pDevices.size(); i++)
+      {
+         assignDefaultRole(pDevices[i].first);
+      }
+   }
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
 
    updateCoreProperties();
@@ -903,7 +913,7 @@ void CMMCore::initializeAllDevices() throw (CMMError)
 
 
 /**
- * This function is executed by a single thread, allowing initializeAllDevices to operate multi-threaded.
+ * This helper function is executed by a single thread, allowing initializeAllDevices to operate multi-threaded.
  * All devices are supposed to originate from the same device adapter
  */
 int CMMCore::initializeDequeOfDevices(std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices) {
@@ -914,9 +924,6 @@ int CMMCore::initializeDequeOfDevices(std::deque<std::pair<std::shared_ptr<Devic
       LOG_INFO(coreLogger_) << "Will initialize device " << pDevices[i].second;
       pDevice->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << pDevices[i].second;
-
-      // TODO: this may be better done synchronously
-      assignDefaultRole(pDevice);
    }
    return DEVICE_OK;
 }
