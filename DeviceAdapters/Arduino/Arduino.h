@@ -57,6 +57,9 @@ public:
    int OnPort(MM::PropertyBase* pPropt, MM::ActionType eAct);
    int OnLogic(MM::PropertyBase* pPropt, MM::ActionType eAct);
    int OnVersion(MM::PropertyBase* pPropt, MM::ActionType eAct);
+   unsigned int GetMaxNumPatterns() {
+      return maxNumPatterns_;
+   };
 
    // custom interface for child devices
    bool IsPortAvailable() {return portAvailable_;}
@@ -86,6 +89,7 @@ private:
    bool invertedLogic_;
    bool timedOutputActive_;
    int version_;
+   unsigned int maxNumPatterns_;
    CArduinoMagnifier* magnifier_;
    std::mutex mutex_;
    unsigned switchState_;
@@ -158,7 +162,7 @@ public:
    int OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   static const unsigned int NUMPATTERNS = 12;
+   unsigned int numPatterns_;
 
    CArduinoHub* hub_;
    //int OpenPort(const char* pszName, long lnValue);
@@ -166,8 +170,6 @@ private:
    //int ClosePort();
    int LoadSequence(unsigned size, unsigned char* seq);
 
-   unsigned pattern_[NUMPATTERNS];
-   unsigned delay_[NUMPATTERNS];
    int nrPatternsUsed_;
    unsigned currentDelay_;
    bool sequenceOn_;

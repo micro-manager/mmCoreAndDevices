@@ -33,7 +33,7 @@ const char* g_DeviceNameArduinoMagnifier = "Arduino-Magnifier";
 
 // Global info about the state of the Arduino.  This should be folded into a class
 const int g_Min_MMVersion = 1;
-const int g_Max_MMVersion = 2;
+const int g_Max_MMVersion = 3;
 const char* g_versionProp = "Version";
 const char* g_normalLogicString = "Normal";
 const char* g_invertedLogicString = "Inverted";
@@ -104,6 +104,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 //
 CArduinoHub::CArduinoHub() :
    initialized_ (false),
+   maxNumPatterns_(12),
    version_(0),
    magnifier_(0),
    switchState_ (0),
@@ -288,6 +289,36 @@ int CArduinoHub::Initialize()
    sversion << version_;
    CreateProperty(g_versionProp, sversion.str().c_str(), MM::Integer, true, pAct);
 
+   if (version_ >= 3)
+   {
+      unsigned char command[1];
+      command[0] = 32;
+
+      ret = WriteToComPortH((const unsigned char*) command, 1);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 3;
+      unsigned long bytesRead = 0;
+      unsigned char answer[nrBytes] = { 0, 0, 0};
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+         unsigned long br;
+         ret = ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
+         if (ret != DEVICE_OK)
+            return ret;
+         bytesRead += br;
+      }
+
+      if (answer[0] != 32)
+         return ERR_COMMUNICATION;
+
+      unsigned int tmp = answer[1];
+      tmp = tmp << 8;
+      tmp = tmp | answer[2];
+      maxNumPatterns_ = tmp;
+   }
+
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
@@ -401,6 +432,7 @@ int CArduinoHub::RegisterMagnifier(CArduinoMagnifier* magnifier)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 CArduinoSwitch::CArduinoSwitch() : 
+   numPatterns_(12),
    hub_(0),
    nrPatternsUsed_(0),
    currentDelay_(0),
@@ -420,8 +452,6 @@ CArduinoSwitch::CArduinoSwitch() :
    SetErrorText(ERR_COMMUNICATION, "Error in communication with Arduino board");
    SetErrorText(ERR_NO_PORT_SET, "Hub Device not found.  The Arduino Hub device is needed to create this device");
 
-   for (unsigned int i=0; i < NUMPATTERNS; i++)
-      pattern_[i] = 0;
 
    // Description
    int ret = CreateProperty(MM::g_Keyword_Description, "Arduino digital output driver", MM::String, true);
@@ -536,6 +566,9 @@ int CArduinoSwitch::Initialize()
       return nRet;
    SetPropertyLimits("Repeat Timed Pattern", 0, 255);
    */
+
+   // ask the hub for numPatterns_
+   numPatterns_ = hub_->GetMaxNumPatterns();
 
    nRet = UpdateStatus();
    if (nRet != DEVICE_OK)
@@ -671,14 +704,14 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::IsSequenceable)                                      
    {                                                                         
       if (sequenceOn_)                                                       
-         pProp->SetSequenceable(NUMPATTERNS);                           
+         pProp->SetSequenceable(numPatterns_);                           
       else                                                                   
          pProp->SetSequenceable(0);                                          
    } 
    else if (eAct == MM::AfterLoadSequence)                                   
    {                                                                         
       std::vector<std::string> sequence = pProp->GetSequence();              
-      if (sequence.size() > NUMPATTERNS)                                
+      if (sequence.size() > numPatterns_)                                
          return DEVICE_SEQUENCE_TOO_LARGE;                                   
       unsigned char* seq = new unsigned char[sequence.size()];               
       for (unsigned int i=0; i < sequence.size(); i++)                       
@@ -1548,6 +1581,7 @@ bool CArduinoInput::Busy()
    return false;
 }
 
+
 int CArduinoInput::GetDigitalInput(long* state)
 {
    const std::lock_guard<std::mutex> lock(hub_->GetLock());
@@ -1615,9 +1649,7 @@ int CArduinoInput::OnAnalogInput(MM::PropertyBase* pProp, MM::ActionType eAct, l
    {
       const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
-      unsigned char command[2];
-      command[0] = 41;
-      command[1] = (unsigned char) channel;
+      unsigned char command[2] = { 41, (unsigned char) channel };
 
       int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
       if (ret != DEVICE_OK)
@@ -1656,7 +1688,7 @@ int CArduinoInput::SetPullUp(int pin, int state)
    if (ret != DEVICE_OK)
       return ret;
 
-   unsigned char answer[3];
+   unsigned char answer[3] = { 0, 0, 0 };
    ret = ReadNBytes(hub_, 3, answer);
    if (ret != DEVICE_OK)
       return ret;
