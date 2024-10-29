@@ -61,9 +61,11 @@
 #include <cstring>
 #include <deque>
 #include <fstream>
+#include <future>
 #include <map>
 #include <set>
 #include <sstream>
+#include <thread>
 #include <vector>
 
 #ifdef _MSC_VER
@@ -851,8 +853,8 @@ void CMMCore::initializeAllDevices() throw (CMMError)
 {
    std::vector<std::string> devices = deviceManager_->GetDeviceList();
    LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
-
-   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::shared_ptr<DeviceInstance>>> moduleMap;
+   
+   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>>> moduleMap;
 
    // first round, collect all DeviceAdapters
    for (size_t i = 0; i < devices.size(); i++)
@@ -868,41 +870,55 @@ void CMMCore::initializeAllDevices() throw (CMMError)
       std::shared_ptr<LoadedDeviceAdapter> pAdapter;
       pAdapter = pDevice->GetAdapterModule();
 
-
       if (moduleMap.find(pAdapter) == moduleMap.end())
       {
-         std::deque<std::shared_ptr<DeviceInstance>> pDevices;
-         pDevices.push_back(pDevice);
+         std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices;
+         pDevices.push_back(make_pair(pDevice, devices[i]));
          moduleMap.insert({ pAdapter, pDevices });
       }
       else
       {
-         moduleMap.find(pAdapter)->second.push_back(pDevice);
+         moduleMap.find(pAdapter)->second.push_back(make_pair(pDevice, devices[i]));
       }
    }
 
    // second round, spin up threads to initialize devices, one thread per module
 
-   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::shared_ptr<DeviceInstance>>>::iterator it;
+   std::vector<std::future<int>> futures;
+   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>>>::iterator it;
    for (it = moduleMap.begin(); it != moduleMap.end(); it++)
    {
-      // spin up thread here
-      std::deque<std::shared_ptr<DeviceInstance>> pDevices = it->second;
-      for (int i = 0; i < pDevices.size(); i++) {
-         std::shared_ptr<DeviceInstance> pDevice = pDevices[i];
-
-         mm::DeviceModuleLockGuard guard(pDevice);
-         LOG_INFO(coreLogger_) << "Will initialize device " << devices[i];
-         pDevice->Initialize();
-         LOG_INFO(coreLogger_) << "Did initialize device " << devices[i];
-
-         assignDefaultRole(pDevice);
-      }
+      auto f = std::async(std::launch::async, &CMMCore::initializeDequeOfDevices, this, it->second);
+      // std::future<int> f = std::async(&CMMCore::initializeDequeOfDevices, *this, it->second, devices);
+      futures.push_back(std::move(f));
+   }
+   for (auto& f : futures) {
+      f.get();
    }
 
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
 
    updateCoreProperties();
+}
+
+
+/**
+ * This function is executed by a single thread, allowing initializeAllDevices to operate multi-threaded.
+ * All devices are supposed to originate from the same device adapter
+ */
+int CMMCore::initializeDequeOfDevices(std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices) {
+   for (int i = 0; i < pDevices.size(); i++) {
+      std::shared_ptr<DeviceInstance> pDevice = pDevices[i].first;
+
+      mm::DeviceModuleLockGuard guard(pDevice);
+      LOG_INFO(coreLogger_) << "Will initialize device " << pDevices[i].second;
+      pDevice->Initialize();
+      LOG_INFO(coreLogger_) << "Did initialize device " << pDevices[i].second;
+
+      // TODO: this may be better done synchronously
+      assignDefaultRole(pDevice);
+   }
+   return DEVICE_OK;
 }
 
 /**
