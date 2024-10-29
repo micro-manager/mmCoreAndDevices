@@ -223,7 +223,7 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
             core_->deviceManager_->GetDevice(caller));
 
    std::string label = camera->GetLabel();
-   newMD.put("Camera", label);
+   newMD.put(MM::g_Keyword_Metadata_CameraLabel, label);
 
    std::string serializedMD;
    try

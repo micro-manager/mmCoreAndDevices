@@ -75,7 +75,7 @@ private:
 
 	void CreateDivisionPropXY();
 	void CreateFullStepPropXY();
-	void AddAllowedDivisionPropXY(const char* div);    // Added 5ŒŽ12“ú2022   t.abed
+	void AddAllowedDivisionPropXY(const char* div);    // Added 5æœˆ12æ—¥2022   t.abed
 	int SetDeviceModel();   // change from [ SetDeviceModel(XYStageModel& model)] no needed 
 	int SetDivision(int channel, int division);
 	int SetSpeedXY(int vxy);

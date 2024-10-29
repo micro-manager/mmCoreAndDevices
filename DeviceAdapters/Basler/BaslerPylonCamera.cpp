@@ -2127,7 +2127,7 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 
 	// Important:  meta data about the image are generated here:
 	Metadata md;
-	md.put("Camera", "");
+	md.put(MM::g_Keyword_Metadata_CameraLabel, "");
 	md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetWidth()));
 	md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetHeight()));
 	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetImageNumber()));

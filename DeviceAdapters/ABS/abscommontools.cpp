@@ -260,7 +260,7 @@ bool ABSTools::GetOsVersion(OSVERSIONINFOEX &sOSVerEx)
 
     if ( false == bOsVersionInfoEx )
     {
-      // OSVersionEx - Struct wird nicht unterstützt!
+      // OSVersionEx - Struct wird nicht unterstÃ¼tzt!
       // lese die default Struct...
       sOSVerEx.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
       if (!GetVersionEx ( (OSVERSIONINFO *) &sOSVerEx) ) 

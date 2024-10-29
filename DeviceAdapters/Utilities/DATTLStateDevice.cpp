@@ -37,6 +37,10 @@
 extern const char* g_DeviceNameDATTLStateDevice;
 extern const char* g_normalLogicString;
 extern const char* g_invertedLogicString;
+extern const char* g_InvertLogic;
+extern const char* g_TTLVoltage;
+extern const char* g_3_3;
+extern const char* g_5_0;
 
 
 DATTLStateDevice::DATTLStateDevice() :
@@ -124,18 +128,18 @@ int DATTLStateDevice::Initialize()
    SetPropertyLimits(MM::g_Keyword_State, 0, numPos - 1);
 
    pAct = new CPropertyAction(this, &DATTLStateDevice::OnInvert);
-   ret = CreateStringProperty("Invert Logic", g_normalLogicString, false, pAct);
+   ret = CreateStringProperty(g_InvertLogic, g_normalLogicString, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
-   AddAllowedValue("Invert Logic", g_normalLogicString);
-   AddAllowedValue("Invert Logic", g_invertedLogicString);
+   AddAllowedValue(g_InvertLogic, g_normalLogicString);
+   AddAllowedValue(g_InvertLogic, g_invertedLogicString);
 
    pAct = new CPropertyAction(this, &DATTLStateDevice::OnTTLLevel);
-   ret = CreateStringProperty("TTL Voltage", "3.3", false, pAct);
+   ret = CreateStringProperty(g_TTLVoltage, g_3_3, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
-   AddAllowedValue("TTL Voltage", "3.3");
-   AddAllowedValue("TTL Voltage", "5.0");
+   AddAllowedValue(g_TTLVoltage, g_3_3);
+   AddAllowedValue(g_TTLVoltage, g_5_0);
 
    pAct = new CPropertyAction(this, &DATTLStateDevice::OnLabel);
    ret = CreateStringProperty(MM::g_Keyword_Label, "0", false, pAct);
@@ -387,8 +391,9 @@ int DATTLStateDevice::OnTTLLevel(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-
-      pProp->Set(CDeviceUtils::ConvertToString(ttlVoltage_));
+      char buffer[8];
+      snprintf(buffer, sizeof(buffer), "%.1f", ttlVoltage_);
+      pProp->Set(buffer);
    }
    else if (eAct == MM::AfterSet)
    {

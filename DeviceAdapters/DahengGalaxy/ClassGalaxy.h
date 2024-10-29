@@ -10,7 +10,7 @@
 //#include	"DxImageProc.h"
 	//---------------------------------------------------------------------------------
 /**
-\brief   ÓÃ»§¼Ì³Ğ²É¼¯ÊÂ¼ş´¦ÀíÀà£¬»Øµ÷º¯Êı£¬ÖØµã¹Ø×¢ ÀàÖĞÓĞ»Øµ÷Àà£¬¹©²É¼¯Í¼Ïñ
+\brief   ç”¨æˆ·ç»§æ‰¿é‡‡é›†äº‹ä»¶å¤„ç†ç±»ï¼Œå›è°ƒå‡½æ•°ï¼Œé‡ç‚¹å…³æ³¨ ç±»ä¸­æœ‰å›è°ƒç±»ï¼Œä¾›é‡‡é›†å›¾åƒ
 */
 //----------------------------------------------------------------------------------
 #include <sstream>
@@ -37,7 +37,7 @@ class MODULE_API ClassGalaxy : public CCameraBase<ClassGalaxy>
 public:
 
 	ClassGalaxy();
-	//º¯ÊıµÄÒâÒå-Îö¹¹º¯Êı deleteÊ±£¬ÆôÓÃ;
+	//å‡½æ•°çš„æ„ä¹‰-ææ„å‡½æ•° deleteæ—¶ï¼Œå¯ç”¨;
 	~ClassGalaxy(void);
 
 	// MMDevice API
@@ -93,7 +93,7 @@ public:
 	//void UpdateTemperature();
 
 	/**
-	* Starts continuous acquisition. liveÄ£Ê½£¬µ«ÊÇÒÔÏÂº¯ÊıÃ»ÓĞĞ´Ò²»á¿ªÆôliveÄ£Ê½£¬¿ªÆô¸Ãº¯ÊıÖ®ºó£¬Èí¼ş»á¿¨ËÀ£¬ÄÚ²¿ÓĞº¯Êı
+	* Starts continuous acquisition. liveæ¨¡å¼ï¼Œä½†æ˜¯ä»¥ä¸‹å‡½æ•°æ²¡æœ‰å†™ä¹Ÿä¼šå¼€å¯liveæ¨¡å¼ï¼Œå¼€å¯è¯¥å‡½æ•°ä¹‹åï¼Œè½¯ä»¶ä¼šå¡æ­»ï¼Œå†…éƒ¨æœ‰å‡½æ•°
 	*/
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) final ;
 	int StartSequenceAcquisition(double interval_ms) final;
@@ -104,7 +104,7 @@ public:
 	//* Flag to indicate whether Sequence Acquisition is currently running.
 	//* Return true when Sequence acquisition is active, false otherwise
 	//*/
-	//bool IsCapturing();
+	bool IsCapturing();
 
 	////Genicam Callback
 	////void ResultingFramerateCallback(GenApi::INode* pNode);
@@ -143,10 +143,10 @@ public:
 	int OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	int OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//ÎªÁËÊµÏÖÔÚ²É¼¯ÀàÖĞÊ¹ÓÃ
+	//ä¸ºäº†å®ç°åœ¨é‡‡é›†ç±»ä¸­ä½¿ç”¨
 	bool  colorCamera_;
-	CGXFeatureControlPointer          m_objFeatureControlPtr;     ///< ÊôĞÔ¿ØÖÆÆ÷
-		 //¸ñÊ½×ª»»º¯Êı
+	CGXFeatureControlPointer          m_objFeatureControlPtr;     ///< å±æ€§æ§åˆ¶å™¨
+		 //æ ¼å¼è½¬æ¢å‡½æ•°
 	void RG8ToRGB24Packed(void* destbuffer, CImageDataPointer& objImageDataPointer);
 	void CoverRGB16ToRGBA16(unsigned short int* Desbuffer, unsigned short int* Srcbuffer);
 	void RG10ToRGB24Packed(void* destbuffer, CImageDataPointer& objImageDataPointer);
@@ -190,17 +190,18 @@ private:
 	std::string TriggerDelay_;
 	std::string TriggerFilterRaisingEdge_;
 
-	BITMAPINFO* m_pBmpInfo;	                     ///<BITMAPINFO ½á¹¹Ö¸Õë£¬ÏÔÊ¾Í¼ÏñÊ±Ê¹ÓÃ
-	char               m_chBmpBuf[2048];	     ///<BIMTAPINFO ´æ´¢»º³åÇø£¬m_pBmpInfo¼´Ö¸Ïò´Ë»º³åÇø
+	BITMAPINFO* m_pBmpInfo;	                     ///<BITMAPINFO ç»“æ„æŒ‡é’ˆï¼Œæ˜¾ç¤ºå›¾åƒæ—¶ä½¿ç”¨
+	char               m_chBmpBuf[2048];	     ///<BIMTAPINFO å­˜å‚¨ç¼“å†²åŒºï¼Œm_pBmpInfoå³æŒ‡å‘æ­¤ç¼“å†²åŒº
 	void __ColorPrepareForShowImg();
 	void __UpdateBitmap(CImageDataPointer& objCImageDataPointer);
 	bool __IsCompatible(BITMAPINFO* pBmpInfo, uint64_t nWidth, uint64_t nHeight);
 
 	long imgBufferSize_;
 	ImgBuffer img_;
+	bool sequenceRunning_;
 	bool initialized_;
 
-	//Í¼Ïñ×ª»»
+	//å›¾åƒè½¬æ¢
 	CGXImageFormatConvertPointer TestFormatConvertPtr;
 
 	int64_t __GetStride(int64_t nWidth, bool bIsColor);
@@ -210,9 +211,9 @@ private:
 	unsigned char* imgBuffer_2;
 	unsigned char* m_pImageBuffer;
 
-	CGXDevicePointer                  m_objDevicePtr;             ///< Éè±¸¾ä±ú
-	CGXStreamPointer                  m_objStreamPtr;             ///< Éè±¸Á÷
-	CGXFeatureControlPointer          m_objStreamFeatureControlPtr; ///< Á÷²ã¿ØÖÆÆ÷¶ÔÏó
+	CGXDevicePointer                  m_objDevicePtr;             ///< è®¾å¤‡å¥æŸ„
+	CGXStreamPointer                  m_objStreamPtr;             ///< è®¾å¤‡æµ
+	CGXFeatureControlPointer          m_objStreamFeatureControlPtr; ///< æµå±‚æ§åˆ¶å™¨å¯¹è±¡
 
 	bool m_bIsOpen = false;
 
@@ -224,9 +225,13 @@ private:
 class CircularBufferInserter : public ICaptureEventHandler {
 private:
 	ClassGalaxy* dev_;
+	long numImages_;
+	long imgCounter_;
+	bool stopOnOverflow_;
 
 public:
 	CircularBufferInserter(ClassGalaxy* dev);
+	CircularBufferInserter(ClassGalaxy* dev, long numImages, bool stoponOverflow);
 
 	virtual void DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam);
 };

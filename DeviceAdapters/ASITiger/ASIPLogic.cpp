@@ -36,23 +36,19 @@
 #include <string>
 #include <vector>
 
-#define PLOGIC_NUM_ADDRESSES     128
-#define PLOGIC_INVERT_ADDRESS    64
-#define PLOGIC_FRONTPANEL_START_ADDRESS  33
-#define PLOGIC_FRONTPANEL_END_ADDRESS    40
-#define PLOGIC_FRONTPANEL_NUM            (PLOGIC_FRONTPANEL_END_ADDRESS - PLOGIC_FRONTPANEL_START_ADDRESS + 1)
-#define PLOGIC_BACKPLANE_START_ADDRESS   41
-#define PLOGIC_BACKPLANE_END_ADDRESS     48
-#define PLOGIC_BACKPLANE_NUM             (PLOGIC_BACKPLANE_END_ADDRESS - PLOGIC_BACKPLANE_START_ADDRESS + 1)
-#define PLOGIC_PHYSICAL_IO_START_ADDRESS   PLOGIC_FRONTPANEL_START_ADDRESS
-#define PLOGIC_PHYSICAL_IO_END_ADDRESS     PLOGIC_BACKPLANE_END_ADDRESS
-#define PLOGIC_PHYSICAL_IO_NUM            (PLOGIC_PHYSICAL_IO_END_ADDRESS - PLOGIC_PHYSICAL_IO_START_ADDRESS + 1)
+constexpr unsigned int PLOGIC_NUM_ADDRESSES = 128;
+constexpr unsigned int PLOGIC_INVERT_ADDRESS = 64;
+constexpr unsigned int PLOGIC_FRONTPANEL_START_ADDRESS = 33;
+constexpr unsigned int PLOGIC_FRONTPANEL_END_ADDRESS = 40;
+constexpr unsigned int PLOGIC_FRONTPANEL_NUM = PLOGIC_FRONTPANEL_END_ADDRESS - PLOGIC_FRONTPANEL_START_ADDRESS + 1;
+constexpr unsigned int PLOGIC_BACKPLANE_START_ADDRESS = 41;
+constexpr unsigned int PLOGIC_BACKPLANE_END_ADDRESS = 48;
+constexpr unsigned int PLOGIC_BACKPLANE_NUM = PLOGIC_BACKPLANE_END_ADDRESS - PLOGIC_BACKPLANE_START_ADDRESS + 1;
+constexpr unsigned int PLOGIC_PHYSICAL_IO_START_ADDRESS = PLOGIC_FRONTPANEL_START_ADDRESS;
+constexpr unsigned int PLOGIC_PHYSICAL_IO_END_ADDRESS = PLOGIC_BACKPLANE_END_ADDRESS;
+constexpr unsigned int PLOGIC_PHYSICAL_IO_NUM = PLOGIC_PHYSICAL_IO_END_ADDRESS - PLOGIC_PHYSICAL_IO_START_ADDRESS + 1;
 
-using namespace std;
-
-///////////////////////////////////////////////////////////////////////////////
-// CPLogic
-//
+// ASI Tiger Programmable Logic Card
 CPLogic::CPLogic(const char* name) :
    ASIPeripheralBase< ::CShutterBase, CPLogic >(name),
    axisLetter_(g_EmptyAxisLetterStr),    // value determined by extended name
@@ -74,14 +70,16 @@ CPLogic::CPLogic(const char* name) :
    CPropertyAction* pAct;
 
    // pre-init property to say how PLogic card is used
-   // original option is have shutter functionality for diSPIM (laser controls on BNCs 5-8)
-   // second option to have similar function with laser controls on BNCs 5-8 but not use diSPIM beam enable
+   // diSPIM shutter has shutter functionality for diSPIM (laser controls on BNCs 5-8)
+   // 7-channel shutter has laser controls on BNCs 1-7
+   // 7-channel TTL shutter has laser controls on BNCs 1-7 and single camera control on BNC 8
    pAct = new CPropertyAction (this, &CPLogic::OnPLogicMode);
    CreateProperty(g_PLogicModePropertyName, g_PLogicModeNone, MM::String, false, pAct, true);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicModeNone);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicModediSPIMShutter);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicMode4ChShutter);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicMode7ChShutter);
+   AddAllowedValue(g_PLogicModePropertyName, g_PLogicMode7ChTTLShutter);
 }
 
 int CPLogic::Initialize()
@@ -90,7 +88,7 @@ int CPLogic::Initialize()
    RETURN_ON_MM_ERROR( PeripheralInitialize() );
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-   ostringstream command;
+   std::ostringstream command;
    command.str("");
    command << g_PLogicDeviceDescription << " HexAddr=" << addressString_;
    CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
@@ -101,7 +99,7 @@ int CPLogic::Initialize()
    char buildName[MM::MaxStrLength];
    unsigned int tmp;
    GetProperty(g_FirmwareBuildPropertyName, buildName);
-   string s = buildName;
+   std::string s = buildName;
    hub_->SetLastSerialAnswer(s);
    int ret = hub_->ParseAnswerAfterUnderscore(tmp);
    if (!ret) {
@@ -157,7 +155,7 @@ int CPLogic::Initialize()
    AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode2, 2);
    AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode3, 3);
    AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode4, 4);
-   if (useAs4ChShutter_)  // includes useAsdiSPIMShutter_
+   if (useAs4ChShutter_)
    {
       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode5, 5);
       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode6, 6);
@@ -268,7 +266,8 @@ int CPLogic::Initialize()
    AddAllowedValue(g_SaveSettingsPropertyName, g_SaveSettingsOrig);
    AddAllowedValue(g_SaveSettingsPropertyName, g_SaveSettingsDone);
 
-   // edits cell wherever current pointer position is
+   // edits cell type wherever current pointer position is
+   // Note: also add new cell types to OnAdvancedProperties
    pAct = new CPropertyAction (this, &CPLogic::OnEditCellType);
    CreateProperty(g_EditCellTypePropertyName, g_CellTypeCode0, MM::String, false, pAct);
    AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode0, 0);
@@ -287,6 +286,10 @@ int CPLogic::Initialize()
    AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode13, 13);
    AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode14, 14);
    AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode15, 15);
+   if (FirmwareVersionAtLeast(3.50)) {
+      AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode16, 16);
+      AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode17, 17);
+   }
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode0, 100);
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode1, 101);
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode2, 102);
@@ -351,61 +354,71 @@ int CPLogic::Initialize()
       // special masked preset selector for shutter channel
       pAct = new CPropertyAction (this, &CPLogic::OnSetShutterChannel);
       CreateProperty(g_SetChannelPropertyName, g_7ChannelNone, MM::String, false, pAct);
-      // use (CCA X) card presets here, just under a different name
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly1, 37);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly2, 38);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly3, 39);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly4, 40);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly5, 41);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly6, 42);
-      AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly7, 43);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel2And4, 44);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel3And5, 45);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel4And6, 46);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel5And7, 47);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel1And3And5, 48);
-      AddAllowedValue(g_SetChannelPropertyName, g_Channel2And4And6, 49);
-      AddAllowedValue(g_SetChannelPropertyName, g_7ChannelNone, 50);
-      if (FirmwareVersionAtLeast(3.35)) {
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel1And6, 53);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel1And4And6, 54);
-      }
-      if (FirmwareVersionAtLeast(3.37)) {
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel1And4, 55);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel2And5, 56);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel3And6, 57);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel1And5, 58);
-         AddAllowedValue(g_SetChannelPropertyName, g_Channel2And6, 59);
+      if (FirmwareVersionAtLeast(3.29)) {
+          // use (CCA X) card presets here, just under a different name
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly1, 37);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly2, 38);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly3, 39);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly4, 40);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly5, 41);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly6, 42);
+          AddAllowedValue(g_SetChannelPropertyName, g_ChannelOnly7, 43);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel2And4, 44);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel3And5, 45);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel4And6, 46);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel5And7, 47);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel1And3And5, 48);
+          AddAllowedValue(g_SetChannelPropertyName, g_Channel2And4And6, 49);
+          AddAllowedValue(g_SetChannelPropertyName, g_7ChannelNone, 50);
+          if (FirmwareVersionAtLeast(3.35)) {
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel1And6, 53);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel1And4And6, 54);
+          }
+          if (FirmwareVersionAtLeast(3.37)) {
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel1And4, 55);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel2And5, 56);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel3And6, 57);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel1And5, 58);
+              AddAllowedValue(g_SetChannelPropertyName, g_Channel2And6, 59);
+          }
       }
       UpdateProperty(g_SetChannelPropertyName);               // doesn't do anything right now
       SetProperty(g_SetChannelPropertyName, g_7ChannelNone);  // makes sure card actually gets initialized
       SetOpen(false);                                         // always start shutter in closed state
    }
 
-   if (useAsdiSPIMShutter_) {
-      // set up card up for diSPIM shutter
-      // this sets up all 8 BNC outputs including 4 lasers
-      SetProperty(g_SetCardPresetPropertyName, g_PresetCode14);
-
-      // set to be triggered by micro-mirror card for diSPIM case
+   if (useAsdiSPIMShutter_) { // true if it is triggered by backplane TTL1 like in diSPIM
+      // set PLC clock/trigger source to be micro-mirror card
       SetProperty(g_TriggerSourcePropertyName, g_TriggerSourceCode1);
-   }
 
-   // things for shutter when not a diSPIM
-   if ((useAs4ChShutter_ || useAs7ChShutter_) && !useAsdiSPIMShutter_) {
-      // sets up 4 lasers triggered by cell 10
-      SetProperty(g_SetCardPresetPropertyName, g_PresetCode12);
-
-      // make it ignore the TTL backplane signal usually from the micro-mirror card
-      if (FirmwareVersionAtLeast(3.27)) {
-         SetProperty(g_SetCardPresetPropertyName, g_PresetCode36);
-      } else {
-         // have to replicate preset behavior ourselves: cell 10 will reflect cell 8
-         SetProperty(g_PointerPositionPropertyName, "10");
-         SetProperty(g_EditCellTypePropertyName, g_CellTypeCode5);
-         SetProperty(g_EditCellInput1PropertyName, "64");
-         SetProperty(g_EditCellInput2PropertyName, "8");
+      if (useAs4ChShutter_) { // original diSPIM use case
+          // set up card up for diSPIM shutter
+          // this sets up all 8 BNC outputs including 4 lasers, sets cell 10 as the "hardware shutter open" indicator, etc.
+          // NB this sets up camera and laser triggers too
+          SetProperty(g_SetCardPresetPropertyName, g_PresetCode14);
       }
+
+      if (useAs7ChShutter_) {
+          // sets cell 10 as "hardware shutter open" indicator combining the TTL1 line and cell 8 which is "software shutter open"
+          SetProperty(g_SetCardPresetPropertyName, g_PresetCode12);
+
+          // set output #8 to be Camera0 trigger which is on the internal TTL0 line
+          SetProperty(g_PointerPositionPropertyName, "40");
+          SetProperty(g_EditCellTypePropertyName, g_IOTypeCode2);
+          SetProperty(g_EditCellConfigPropertyName, "41");
+      }
+
+   } else if (useAs4ChShutter_ || useAs7ChShutter_) { // things for shutter when a shutter but not TTL1-triggered
+       // make it ignore the TTL backplane signal usually from the micro-mirror card
+       if (FirmwareVersionAtLeast(3.27)) {
+           SetProperty(g_SetCardPresetPropertyName, g_PresetCode36);
+       } else {
+           // have to replicate preset behavior ourselves: cell 10 will reflect cell 8
+           SetProperty(g_PointerPositionPropertyName, "10");
+           SetProperty(g_EditCellTypePropertyName, g_CellTypeCode5);
+           SetProperty(g_EditCellInput1PropertyName, "64");
+           SetProperty(g_EditCellInput2PropertyName, "8");
+       }
    }
 
 
@@ -417,8 +430,9 @@ int CPLogic::SetOpen(bool open)
 {
    if (useAs4ChShutter_ || useAs7ChShutter_)
    {
-      ostringstream command; command.str("");
+      std::ostringstream command; command.str("");
       shutterOpen_ = open;
+      // sets cell 8 which is "software shutter open" indicator via preset 11 (sets high) or preset 10 (sets low)
       if (open) {
          SetProperty(g_SetCardPresetPropertyName, g_PresetCode11);
       } else {
@@ -437,37 +451,44 @@ int CPLogic::GetOpen(bool& open)
 ////////////////
 // action handlers
 
+// Modify the "PLogic Mode Table" in the header if you change this function.
 int CPLogic::OnPLogicMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet) {
       // do nothing for now
    } else if (eAct == MM::AfterSet) {
-      string tmpstr;
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_PLogicModediSPIMShutter) == 0)
-      {
-         useAsdiSPIMShutter_ = true;
-         useAs4ChShutter_ = true;
-         useAs7ChShutter_ = false;
-      }
-      else if (tmpstr.compare(g_PLogicMode4ChShutter) == 0)
-      {
-         useAsdiSPIMShutter_ = false;
-         useAs4ChShutter_ = true;
-         useAs7ChShutter_ = false;
-      }
-      else if (tmpstr.compare(g_PLogicMode7ChShutter) == 0)
-      {
-         useAsdiSPIMShutter_ = false;
-         useAs4ChShutter_ = false;
-         useAs7ChShutter_ = true;
-      }
-      else
-      {
-         useAsdiSPIMShutter_ = false;
-         useAs4ChShutter_ = false;
-         useAs7ChShutter_ = false;
-      }
+       std::string tmpstr;
+       pProp->Get(tmpstr);
+       if (tmpstr.compare(g_PLogicModediSPIMShutter) == 0)
+       {
+           useAsdiSPIMShutter_ = true;
+           useAs4ChShutter_ = true;
+           useAs7ChShutter_ = false;
+       }
+       else if (tmpstr.compare(g_PLogicMode4ChShutter) == 0)
+       {
+           useAsdiSPIMShutter_ = false;
+           useAs4ChShutter_ = true;
+           useAs7ChShutter_ = false;
+       }
+       else if (tmpstr.compare(g_PLogicMode7ChShutter) == 0)
+       {
+           useAsdiSPIMShutter_ = false;
+           useAs4ChShutter_ = false;
+           useAs7ChShutter_ = true;
+       }
+       else if (tmpstr.compare(g_PLogicMode7ChTTLShutter) == 0)
+       {
+           useAsdiSPIMShutter_ = true;
+           useAs4ChShutter_ = false;
+           useAs7ChShutter_ = true;
+       }
+       else
+       {
+           useAsdiSPIMShutter_ = false;
+           useAs4ChShutter_ = false;
+           useAs7ChShutter_ = false;
+       }
    }
    return DEVICE_OK;
 }
@@ -485,9 +506,9 @@ int CPLogic::OnSetShutterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
          }
       }
    } else if (eAct == MM::AfterSet) {
-      ostringstream command; command.str("");
+      std::ostringstream command; command.str("");
       long tmp;
-      string tmpstr;
+      std::string tmpstr;
       RETURN_ON_MM_ERROR ( GetCurrentPropertyData(pProp->GetName().c_str(), tmp) );
       if (tmp < 0) return DEVICE_OK;  // no preset and other "signaling" preset codes are negative
       command << addressChar_ << "CCA X=" << tmp;
@@ -502,11 +523,11 @@ int CPLogic::OnSetShutterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPLogicOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
-      command << addressChar_ << "RDADC Z?";
+      command << addressChar_ << "RA Z?";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(val) );
       if (!pProp->Set((long)val))
@@ -518,11 +539,11 @@ int CPLogic::OnPLogicOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPLogicOutputStateUpper(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
-      command << addressChar_ << "RDADC F?";
+      command << addressChar_ << "RA F?";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(val) );
       if (!pProp->Set((long)val))
@@ -534,11 +555,11 @@ int CPLogic::OnPLogicOutputStateUpper(MM::PropertyBase* pProp, MM::ActionType eA
 int CPLogic::OnFrontpanelOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
-      command << addressChar_ << "RDADC X?";
+      command << addressChar_ << "RA X?";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(val) );
       if (!pProp->Set((long)val))
@@ -550,11 +571,11 @@ int CPLogic::OnFrontpanelOutputState(MM::PropertyBase* pProp, MM::ActionType eAc
 int CPLogic::OnBackplaneOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
-      command << addressChar_ << "RDADC Y?";
+      command << addressChar_ << "RA Y?";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(val) );
       if (!pProp->Set((long)val))
@@ -565,23 +586,23 @@ int CPLogic::OnBackplaneOutputState(MM::PropertyBase* pProp, MM::ActionType eAct
 
 int CPLogic::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
-   string tmpstr;
+   std::string tmpstr;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
       command << "PM " << axisLetter_ << "?";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), axisLetter_) );
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
-      bool success = 0;
+      bool success = false;
       switch (tmp) {
          case 0: success = pProp->Set(g_TriggerSourceCode0); break;
          case 1: success = pProp->Set(g_TriggerSourceCode1); break;
          case 2: success = pProp->Set(g_TriggerSourceCode2); break;
          case 3: success = pProp->Set(g_TriggerSourceCode3); break;
          case 4: success = pProp->Set(g_TriggerSourceCode4); break;
-         default: success=0;
+         default: break;
       }
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -596,7 +617,7 @@ int CPLogic::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPointerPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    static bool justSet = false;
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_ && !justSet)
@@ -621,8 +642,8 @@ int CPLogic::OnPointerPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   ostringstream command; command.str("");
+   std::string tmpstr;
+   std::ostringstream command; command.str("");
    if (eAct == MM::AfterSet) {
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
@@ -644,7 +665,7 @@ int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
+   std::string tmpstr;
    if (eAct == MM::AfterSet) {
       pProp->Get(tmpstr);
       if (tmpstr.compare(g_YesState) == 0)
@@ -691,7 +712,7 @@ int CPLogic::RefreshEditCellPropertyValues()
 int CPLogic::OnEditCellType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    // NB: works for I/O addresses but will have incorrect strings
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    if(currentPosition_ <= numCells_                                 // normal cells
          || (currentPosition_ >= PLOGIC_FRONTPANEL_START_ADDRESS && currentPosition_ <= PLOGIC_BACKPLANE_END_ADDRESS)) {   // or I/O addresses
       if (eAct == MM::BeforeGet) {
@@ -759,7 +780,7 @@ int CPLogic::OnEditCellInput4(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnEditCellUpdates(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
+   std::string tmpstr;
    if (eAct == MM::AfterSet) {
       pProp->Get(tmpstr);
       if (tmpstr.compare(g_YesState) == 0)
@@ -770,17 +791,17 @@ int CPLogic::OnEditCellUpdates(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPLogic::GetCellPropertyName(long index, string suffix, char* name)
+int CPLogic::GetCellPropertyName(long index, const std::string& suffix, char* name)
 {
-   ostringstream os;
-   os << "PCell_" << setw(2) << setfill('0') << index << suffix;
+   std::ostringstream os;
+   os << "PCell_" << std::setw(2) << std::setfill('0') << index << suffix;
    CDeviceUtils::CopyLimitedString(name, os.str().c_str());
    return DEVICE_OK;
 }
 
-int CPLogic::GetIOPropertyName(long index, string suffix, char* name)
+int CPLogic::GetIOPropertyName(long index, const std::string& suffix, char* name)
 {
-   ostringstream os;
+   std::ostringstream os;
    if (index < PLOGIC_BACKPLANE_START_ADDRESS) {  // front panel
       os << "IOFrontpanel_" << index - PLOGIC_FRONTPANEL_START_ADDRESS + 1;
    } else {  // backplane
@@ -798,7 +819,7 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
       return DEVICE_OK; // do nothing
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       if ((tmpstr.compare(g_YesState) == 0) && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
       {
@@ -807,13 +828,15 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
          advancedPropsEnabled_ = true;
 
+         // make sure that the new properties are initialized, set to true at the end of creating them
+         initialized_ = false;
+
          // force-on refresh
          char refreshPropValsStr[MM::MaxStrLength];
          GetProperty(g_RefreshPropValsPropertyName, refreshPropValsStr);
          SetProperty(g_RefreshPropValsPropertyName, g_YesState);
 
-         for (long i=1; i<=(long)numCells_; i++) {
-
+         for (long i = 1; i <= (long)numCells_; i++) {
             // logic cell type
             GetCellPropertyName(i, "_CellType", propName);
             pActEx = new CPropertyActionEx (this, &CPLogic::OnCellType, i);
@@ -834,6 +857,10 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
             AddAllowedValue(propName, g_CellTypeCode13, 13);
             AddAllowedValue(propName, g_CellTypeCode14, 14);
             AddAllowedValue(propName, g_CellTypeCode15, 15);
+            if (FirmwareVersionAtLeast(3.50)) {
+               AddAllowedValue(propName, g_CellTypeCode16, 16);
+               AddAllowedValue(propName, g_CellTypeCode17, 17);
+            }
             UpdateProperty(propName);
 
             // logic cell CCA Z code
@@ -865,10 +892,9 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
             pActEx = new CPropertyActionEx (this, &CPLogic::OnInput4, i);
             CreateProperty(propName, "0", MM::Integer, false, pActEx);
             UpdateProperty(propName);
-
          }
 
-         for (long i=PLOGIC_FRONTPANEL_START_ADDRESS; i<=PLOGIC_BACKPLANE_END_ADDRESS; i++) {
+         for (long i = PLOGIC_FRONTPANEL_START_ADDRESS; i <= (long)PLOGIC_BACKPLANE_END_ADDRESS; i++) {
             GetIOPropertyName(i, "_IOType", propName);
             pActEx = new CPropertyActionEx (this, &CPLogic::OnIOType, i);
             CreateProperty(propName, "0", MM::String, false, pActEx);
@@ -885,8 +911,11 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
          // restore refresh setting
          SetProperty(g_RefreshPropValsPropertyName, refreshPropValsStr);
+
+         initialized_ = true;
       }
    }
+
    return DEVICE_OK;
 }
 
@@ -920,7 +949,7 @@ int CPLogic::RefreshAdvancedCellPropertyValues(long index)
 // don't bother updating things like if the user changes position from the property
 int CPLogic::SetPositionDirectly(unsigned int position)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    if (position == currentPosition_)
       return DEVICE_OK;
    command << "M " << axisLetter_ << "=" << position;
@@ -931,7 +960,7 @@ int CPLogic::SetPositionDirectly(unsigned int position)
 
 int CPLogic::RefreshCurrentPosition()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    unsigned int tmp;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
@@ -942,9 +971,9 @@ int CPLogic::RefreshCurrentPosition()
 
 int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
-   string tmpstr;
+   std::string tmpstr;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
@@ -952,12 +981,13 @@ int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index
       command << addressChar_ << "CCA Y?";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
-      bool success = 0;
+      bool success = false;
       if (currentPosition_ > numCells_) {
          switch (tmp) {
          case 0: success = pProp->Set(g_IOTypeCode0); break;
          case 1: success = pProp->Set(g_IOTypeCode1); break;
          case 2: success = pProp->Set(g_IOTypeCode2); break;
+         default: break;
          }
       } else {
          switch (tmp) {
@@ -977,7 +1007,9 @@ int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index
          case 13:success = pProp->Set(g_CellTypeCode13); break;
          case 14:success = pProp->Set(g_CellTypeCode14); break;
          case 15:success = pProp->Set(g_CellTypeCode15); break;
-         default: success=0;
+         case 16:success = pProp->Set(g_CellTypeCode16); break;
+         case 17:success = pProp->Set(g_CellTypeCode17); break;
+         default: break;
          }
       }
       if (!success)
@@ -996,7 +1028,7 @@ int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index
 
 int CPLogic::OnCellConfig(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1018,7 +1050,7 @@ int CPLogic::OnCellConfig(MM::PropertyBase* pProp, MM::ActionType eAct, long ind
 
 int CPLogic::OnInput1(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1040,7 +1072,7 @@ int CPLogic::OnInput1(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput2(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1062,7 +1094,7 @@ int CPLogic::OnInput2(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput3(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1084,7 +1116,7 @@ int CPLogic::OnInput3(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput4(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1106,7 +1138,7 @@ int CPLogic::OnInput4(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnIOType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1115,12 +1147,12 @@ int CPLogic::OnIOType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
       command << addressChar_ << "CCA Y?";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
-      bool success = 0;
+      bool success = false;
       switch (tmp) {
          case 0: success = pProp->Set(g_IOTypeCode0); break;
          case 1: success = pProp->Set(g_IOTypeCode1); break;
          case 2: success = pProp->Set(g_IOTypeCode2); break;
-         default: success=0;
+         default: break;
       }
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1137,7 +1169,7 @@ int CPLogic::OnIOType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnIOSourceAddress(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1159,12 +1191,12 @@ int CPLogic::OnIOSourceAddress(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 
 int CPLogic::OnClearAllCellStates(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
    else  if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       if (tmpstr.compare(g_DoItState) == 0)
       {
@@ -1178,9 +1210,9 @@ int CPLogic::OnClearAllCellStates(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnSetCardPreset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command; command.str("");
    long tmp;
-   string tmpstr;
+   std::string tmpstr;
    if (eAct == MM::BeforeGet) {
       // can't do anything of real value here
       if (!initialized_)

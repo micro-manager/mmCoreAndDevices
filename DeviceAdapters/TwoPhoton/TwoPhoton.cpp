@@ -1194,8 +1194,8 @@ void BitFlowCamera::GetCosineWarpLUT(vector<int> &new_pixel, int image_width, in
    
    /*
    Again this code can be replaced by simpler code 
-   The correction factor = ø /sin ø where  ø = pixel number (from the correct center pixel) * ?ø 
-   ?ø = 2?/freq*127. The corretion factor is calculated for each pixel and applied to the pixel
+   The correction factor = Ïˆ /sin Ïˆ where  Ïˆ = pixel number (from the correct center pixel) * ?Ïˆ 
+   ?Ïˆ = 2?/freq*127. The corretion factor is calculated for each pixel and applied to the pixel
    */
 
    /*9 Loop to shift pixels to new image LUT*/

@@ -2524,7 +2524,7 @@ int CRaptorEPIX::Initialize()
 		case PIXCI_D32:       osModel << "PIXCI(R) D32 Imaging Board"; break ;
 		case PIXCI_D2X:       osModel << "PIXCI(R) D2X Imaging Board"; break ;
 		case PIXCI_D3X:       osModel << "PIXCI(R) D3X Imaging Board"; break ;
-		case PIXCI_D3XE:      osModel << "PIXCI® D3XE Frame Grabber"; break ;
+		case PIXCI_D3XE:      osModel << "PIXCIÂ® D3XE Frame Grabber"; break ;
 		case PIXCI_E1:        osModel << "PIXCI(R) E1 Imaging Board"; break ;
 		case PIXCI_E1DB:      osModel << "PIXCI(R) E1DB Imaging Board"; break ;
 		case PIXCI_E4:        osModel << "PIXCI(R) E4 Imaging Board"; break ;
@@ -5885,7 +5885,7 @@ int CRaptorEPIX::InsertImage()
       md.PutTag(mst.GetName(), mst.GetDevice(), mst.GetValue());
    }
 */
-   md.put("Camera", label);
+   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
    //md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));

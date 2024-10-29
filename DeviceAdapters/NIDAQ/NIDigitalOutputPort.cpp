@@ -98,6 +98,22 @@ int DigitalOutputPort::Initialize()
       supportsBlankingAndSequencing_ = true;
    GetHub()->StopDOBlankingAndSequence(portWidth_);
 
+   // Some cards lie about their portwidth, if blanking does not work, try 32 bits
+   // Workaround for possible DAQmx bug on USB-6341; see
+   // https://forums.ni.com/t5/Multifunction-DAQ/problem-with-correlated-DIO-on-USB-6341/td-p/3344066
+   if (!supportsBlankingAndSequencing_)
+   {
+      uInt32 oldPortWidth = portWidth_;
+      portWidth_ = 32;
+      if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
+         supportsBlankingAndSequencing_ = true;
+      GetHub()->StopDOBlankingAndSequence(portWidth_);
+      if (!supportsBlankingAndSequencing_)
+      {
+         portWidth_ = oldPortWidth;
+      }
+   }
+
    CPropertyAction* pAct;
    if (supportsBlankingAndSequencing_)
    {

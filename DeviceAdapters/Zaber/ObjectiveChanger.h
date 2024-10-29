@@ -38,25 +38,25 @@ public:
 
 	// Device API
 	// ----------
-	int Initialize();
-	int Shutdown();
-	void GetName(char* name) const;
-	bool Busy();
+	int Initialize() override;
+	int Shutdown() override;
+	void GetName(char* name) const override;
+	bool Busy() override;
 
 	// Stage API
 	// ---------
-	unsigned long GetNumberOfPositions() const
+	unsigned long GetNumberOfPositions() const override
 	{
 		return numPositions_;
 	}
 
 	// Base class overrides
 	// ----------------
-	virtual int GetPositionLabel(long pos, char* label) const;
+	int GetPositionLabel(long pos, char* label) const override;
 
 	// ZaverBase class overrides
 	// ----------------
-	virtual void onNewConnection();
+	void onNewConnection() override;
 
 	// Properties
 	// ----------------
@@ -66,9 +66,9 @@ public:
 	int XLdaAddressGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int PositionGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int FocusOffsetGetSet(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-	int setObjective(long objective, bool applyOffset);
 private:
+	int setObjective(long objective, bool applyOffset);
+
 	long xMorAddress_;
 	long xLdaAddress_;
 	long numPositions_;

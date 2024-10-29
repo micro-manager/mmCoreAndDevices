@@ -4205,7 +4205,7 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
     {
         // Build the metadata
         Metadata md;
-        md.PutImageTag("Camera", deviceLabel_);
+        md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
         md.PutImageTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
 
 #ifdef PVCAM_FRAME_INFO_SUPPORTED

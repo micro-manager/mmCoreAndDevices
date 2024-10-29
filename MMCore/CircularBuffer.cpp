@@ -256,7 +256,7 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
              md = *pMd;
           }
 
-         std::string cameraName = md.GetSingleTag("Camera").GetValue();
+         std::string cameraName = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
          if (imageNumbers_.end() == imageNumbers_.find(cameraName))
          {
             imageNumbers_[cameraName] = 0;

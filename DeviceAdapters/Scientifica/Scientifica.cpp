@@ -141,6 +141,7 @@ int XYStage::Initialize()
     if (baud == 9600)
     {
         stepSizeXUm_ = 0.1;
+        stepSizeYUm_ = 0.1;
         // Step size
         pAct = new CPropertyAction(this, &XYStage::OnStepSizeX);
         CreateProperty("StepSizeX_um", "0.1", MM::Float, true, pAct);
@@ -151,6 +152,7 @@ int XYStage::Initialize()
     else
     {
         stepSizeXUm_ = 0.01;
+        stepSizeYUm_ = 0.01;
         // Step size
         pAct = new CPropertyAction(this, &XYStage::OnStepSizeX);
         CreateProperty("StepSizeX_um", "0.01", MM::Float, true, pAct);

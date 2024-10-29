@@ -490,7 +490,7 @@ int XYStage::SetDivision(int channel, int division)
 	if (ret != DEVICE_OK)
 		return ret;
 
-	// Send command Åc the  division number
+	// Send command ‚Ä¶ the  division number
 	if (model_ == SHRC3)   // hit mode SHRC controller
 	{
 		if (channel == 1) { ret = SendCheckRecievedOK("S:" + to_string(division) + ",,"); }
