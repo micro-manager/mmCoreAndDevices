@@ -200,6 +200,11 @@ CMMCore::~CMMCore()
  *   attempted on a device that is not successfully initialized. When disabled,
  *   no exception is thrown and a warning is logged (and the operation may
  *   potentially cause incorrect behavior or a crash).
+ * - "ParallelDeviceInitialization" (default: enabled) When enabled, serial ports
+ *   are initialized in serial order, and all other devices are in parallel, using 
+ *   multiple threads, one per device module.  Early testing shows this to be 
+ *   reliable, but switch this off when issues are encountered during 
+ *   device initialization.
  *
  * Permanently enabled features:
  * - None so far.
@@ -846,16 +851,68 @@ void CMMCore::reset() throw (CMMError)
 
 /**
  * Calls Initialize() method for each loaded device.
+ * Parallel implemnetation should be faster
+ */
+void CMMCore::initializeAllDevices() throw (CMMError)
+{
+   if (this->isFeatureEnabled("ParallelDeviceInitialization"))
+   {
+      initializeAllDevicesParallel();
+   }
+   else
+   {
+      initializeAllDevicesSerial();
+   }
+}
+
+
+/**
+ * Calls Initialize() method for each loaded device.
+ * This method also initialized allowed values for core properties, based
+ * on the collection of loaded devices.
+ */
+void CMMCore::initializeAllDevicesSerial() throw (CMMError)
+{
+   std::vector<std::string> devices = deviceManager_->GetDeviceList();
+   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
+
+   for (size_t i = 0; i < devices.size(); i++)
+   {
+      std::shared_ptr<DeviceInstance> pDevice;
+      try {
+         pDevice = deviceManager_->GetDevice(devices[i]);
+      }
+      catch (CMMError& err) {
+         logError(devices[i].c_str(), err.getMsg().c_str());
+         throw;
+      }
+      mm::DeviceModuleLockGuard guard(pDevice);
+      LOG_INFO(coreLogger_) << "Will initialize device " << devices[i];
+      pDevice->Initialize();
+      LOG_INFO(coreLogger_) << "Did initialize device " << devices[i];
+
+      assignDefaultRole(pDevice);
+   }
+
+   LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
+
+   updateCoreProperties();
+}
+
+
+/**
+ * Calls Initialize() method for each loaded device.
  * This implementation initializes devices on separate threads, one per device module (adapter).
  * This method also initializes allowed values for core properties, based
  * on the collection of loaded devices.
  */
-void CMMCore::initializeAllDevices() throw (CMMError)
+void CMMCore::initializeAllDevicesParallel() throw (CMMError)
 {
    std::vector<std::string> devices = deviceManager_->GetDeviceList();
    LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
    
    std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>>> moduleMap;
+   std::vector<std::shared_ptr<DeviceInstance>> ports;
 
    // first round, collect all DeviceAdapters
    for (size_t i = 0; i < devices.size(); i++)
@@ -868,22 +925,37 @@ void CMMCore::initializeAllDevices() throw (CMMError)
          logError(devices[i].c_str(), err.getMsg().c_str());
          throw;
       }
-      std::shared_ptr<LoadedDeviceAdapter> pAdapter;
-      pAdapter = pDevice->GetAdapterModule();
-
-      if (moduleMap.find(pAdapter) == moduleMap.end())
+      if (pDevice->GetType() == MM::SerialDevice)
       {
-         std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices;
-         pDevices.push_back(make_pair(pDevice, devices[i]));
-         moduleMap.insert({ pAdapter, pDevices });
+         ports.push_back(pDevice);
       }
-      else
-      {
-         moduleMap.find(pAdapter)->second.push_back(make_pair(pDevice, devices[i]));
+      else {
+         std::shared_ptr<LoadedDeviceAdapter> pAdapter;
+         pAdapter = pDevice->GetAdapterModule();
+
+         if (moduleMap.find(pAdapter) == moduleMap.end())
+         {
+            std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices;
+            pDevices.push_back(make_pair(pDevice, devices[i]));
+            moduleMap.insert({ pAdapter, pDevices });
+         }
+         else
+         {
+            moduleMap.find(pAdapter)->second.push_back(make_pair(pDevice, devices[i]));
+         }
       }
    }
 
-   // second round, spin up threads to initialize devices, one thread per module
+   // Initialize ports first.  This should be gast, so no need to go parallel (also could not hurt really)
+   for (std::shared_ptr<DeviceInstance> pPort : ports)
+   {
+      mm::DeviceModuleLockGuard guard(pPort);
+      LOG_INFO(coreLogger_) << "Will initialize device " << pPort->GetLabel();
+      pPort->Initialize();
+      LOG_INFO(coreLogger_) << "Did initialize device " << pPort->GetLabel();
+   }
+
+   // second round, spin up threads to initialize non-port devices, one thread per module
    std::vector<std::future<int>> futures;
    std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>>>::iterator it;
    for (it = moduleMap.begin(); it != moduleMap.end(); it++)

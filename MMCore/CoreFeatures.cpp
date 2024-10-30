@@ -112,6 +112,12 @@ const auto& featureMap() {
             // enabled perhaps a few years later.
          }
       },
+      {
+         "ParallelDeviceInitialization", {
+            [] { return g_flags.ParallelDeviceInitialization; },
+            [](bool e) { g_flags.ParallelDeviceInitialization = e; }
+         }
+      },
       // How to add a new Core feature: see the comment at the top of this file.
       // Features (the string names) must never be removed once added!
    };

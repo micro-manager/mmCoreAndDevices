@@ -696,6 +696,8 @@ private:
    void assignDefaultRole(std::shared_ptr<DeviceInstance> pDev);
    void updateCoreProperty(const char* propName, MM::DeviceType devType) throw (CMMError);
    void loadSystemConfigurationImpl(const char* fileName) throw (CMMError);
+   void initializeAllDevicesSerial() throw (CMMError);
+   void initializeAllDevicesParallel() throw (CMMError);
    int initializeDequeOfDevices(std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices);
 };
 
