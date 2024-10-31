@@ -411,7 +411,7 @@ typedef struct
 #define NUM_SIGNAL_NAMES 4
 typedef struct
 {
-  WORD  wSize;                         // Sizeof ‘this’ (for future enhancements)
+  WORD  wSize;                         // Sizeof â€˜thisâ€™ (for future enhancements)
   WORD  ZZwAlignDummy1;
   char  strSignalName[NUM_SIGNAL_NAMES][25];// Name of signal 104
                                        // Specifies NUM_SIGNAL_NAMES functionalities (1-4)
@@ -446,7 +446,7 @@ typedef struct
 
 typedef struct
 {
-  WORD              wSize;             // Sizeof ‘this’ (for future enhancements)
+  WORD              wSize;             // Sizeof â€˜thisâ€™ (for future enhancements)
   WORD              wNumOfSignals;     // Parameter to fetch the num. of descr. from the camera
   PCO_Single_Signal_Desc strSingeSignalDesc[NUM_MAX_SIGNALS];// Array of singel signal descriptors // 4004
   DWORD             dwDummy[524];      // reserved for future use.    // 6100
@@ -522,8 +522,8 @@ typedef struct
 typedef struct
 {
   WORD        wSize;                   // Sizeof this struct
-  WORD        wTimeBaseDelay;          // Timebase delay 0:ns, 1:µs, 2:ms
-  WORD        wTimeBaseExposure;       // Timebase expos 0:ns, 1:µs, 2:ms
+  WORD        wTimeBaseDelay;          // Timebase delay 0:ns, 1:Âµs, 2:ms
+  WORD        wTimeBaseExposure;       // Timebase expos 0:ns, 1:Âµs, 2:ms
   WORD        wCMOSParameter;          // Line Time mode: 0: off 1: on    // 8
   DWORD       dwCMOSDelayLines;        // See next line
   DWORD       dwCMOSExposureLines;     // Delay and Exposure lines for lightsheet // 16
@@ -551,7 +551,7 @@ typedef struct
   WORD        wModulationMode;         // Mode for modulation (0 = modulation off, 1 = modulation on) // 1070
   WORD        wCameraSynchMode;        // Camera synchronization mode (0 = off, 1 = master, 2 = slave)
   DWORD       dwPeriodicalTime;        // Periodical time (unit depending on timebase) for modulation // 1076
-  WORD        wTimeBasePeriodical;     // timebase for periodical time for modulation  0 -> ns, 1 -> µs, 2 -> ms
+  WORD        wTimeBasePeriodical;     // timebase for periodical time for modulation  0 -> ns, 1 -> Âµs, 2 -> ms
   WORD        ZZwDummy3;
   DWORD       dwNumberOfExposures;     // Number of exposures during modulation // 1084
   LONG        lMonitorOffset;          // Monitor offset value in ns      // 1088

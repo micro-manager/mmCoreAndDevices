@@ -192,7 +192,7 @@ XYStage::XYStage() :
  
    speedX_(20.0), //[mm/s]
    speedY_(20.0), //[mm/s]
-   accelX_(0.2), //[m/s²]
+   accelX_(0.2), //[m/sÂ²]
    accelY_(0.2),
    originX_(0),
    originY_(0),
@@ -316,12 +316,12 @@ int XYStage::Initialize()
    SetPropertyLimits("SpeedY [mm/s]", 0.01, 20*pitch); // mm/s
 //******************************************************************************************************************************************
 
-   // Accel (Acceleration (in m/s²)
+   // Accel (Acceleration (in m/sÂ²)
    // -----
    pAct = new CPropertyAction (this, &XYStage::OnAccelX);
 
 
-   ret = QueryCommand("?accel x", resp); //Lstep : 0,01 to 20,00 m/s²
+   ret = QueryCommand("?accel x", resp); //Lstep : 0,01 to 20,00 m/sÂ²
    if (ret != DEVICE_OK) return DEVICE_UNSUPPORTED_COMMAND;
 
    ret = CreateProperty("Acceleration X [m/s^2]", resp.c_str(), MM::Float, false, pAct);
@@ -378,12 +378,12 @@ bool XYStage::Busy()
 
 
 /**
- * Returns current position in µm.
+ * Returns current position in Âµm.
  */
 int XYStage::GetPositionUm(double& x, double& y)
 {
 int ret;
-   // switch to µm
+   // switch to Âµm
    ret = SendCommand("!dim 1 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -404,7 +404,7 @@ int ret;
 
 
 /**
- * Sets position in µm
+ * Sets position in Âµm
  */
 int XYStage::SetPositionUm(double x, double y)
 {
@@ -412,7 +412,7 @@ int XYStage::SetPositionUm(double x, double y)
    os << "XYStage::SetPositionUm() " << x << " " << y;
    this->LogMessage(os.str().c_str());
 
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim 1 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -438,7 +438,7 @@ int XYStage::SetPositionUm(double x, double y)
   
 
 /**
- * Sets relative position in µm
+ * Sets relative position in Âµm
  */
 int XYStage::SetRelativePositionUm(double dx, double dy)
 {
@@ -446,7 +446,7 @@ int XYStage::SetRelativePositionUm(double dx, double dy)
    os << "XYStage::SetPositionUm() " << dx << " " << dy;
    this->LogMessage(os.str().c_str());
 
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim 1 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -693,7 +693,7 @@ int XYStage::GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
 {
   if (!range_measured_) return DEVICE_UNKNOWN_POSITION;
 
-  // switch to µm
+  // switch to Âµm
   int ret = SendCommand("!dim 1 1");
   if (ret != DEVICE_OK) return ret;
 
@@ -1094,7 +1094,7 @@ ZStage::ZStage() :
    range_measured_(false),
    stepSizeUm_(0.1),
    speedZ_(20.0), //[mm/s]
-   accelZ_(0.2), //[m/s²]
+   accelZ_(0.2), //[m/sÂ²]
    originZ_(0),
    pitchZ_(1)
 
@@ -1183,7 +1183,7 @@ int ZStage::Initialize()
    SetPropertyLimits("SpeedZ [mm/s]", 0.001, 20*pitchZ_); // mm/s
 
 
-   // Accel (Acceleration (in m/s²)
+   // Accel (Acceleration (in m/sÂ²)
    // -----
    ret = QueryCommand("?accel z", resp);
    if (ret != DEVICE_OK) return DEVICE_UNSUPPORTED_COMMAND;
@@ -1241,7 +1241,7 @@ int ZStage::SetPositionUm(double pos)
    os << "ZStage::SetPositionUm() " << pos;
    this->LogMessage(os.str().c_str());
 
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim z 1");
    if (ret != DEVICE_OK)
       return ret;
@@ -1271,7 +1271,7 @@ int ZStage::SetPositionUm(double pos)
 
 int ZStage::SetRelativePositionUm(double d)
 {
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim z 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -1300,7 +1300,7 @@ int ZStage::SetRelativePositionUm(double d)
 int ZStage::GetPositionUm(double& pos)
 {
 int ret;
-   // switch to µm
+   // switch to Âµm
    ret = SendCommand("!dim z 1");
    if (ret != DEVICE_OK)
       return ret;
@@ -1463,7 +1463,7 @@ int ZStage::GetLimits(double& min, double& max)
 {
   if (!range_measured_) return DEVICE_UNKNOWN_POSITION;
 
-  // switch to µm
+  // switch to Âµm
   int ret = SendCommand("!dim z 1");
   if (ret != DEVICE_OK) return ret;
 

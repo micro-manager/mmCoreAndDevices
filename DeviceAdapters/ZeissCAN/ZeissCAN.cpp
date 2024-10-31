@@ -613,7 +613,7 @@ MM::DeviceDetectionStatus ZeissScope::DetectDevice(void)
       {
          *its = (char)tolower(*its);
       }
-      // ensure we’ve been provided with a valid serial port device name
+      // ensure weâ€™ve been provided with a valid serial port device name
       if( 0< transformed.length() &&  0 != transformed.compare("undefined")  && 0 != transformed.compare("unknown") )
       {
          // the port property seems correct, so give it a try

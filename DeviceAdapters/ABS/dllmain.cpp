@@ -1,4 +1,4 @@
-// dllmain.cpp : Definiert den Einstiegspunkt für die DLL-Anwendung.
+// dllmain.cpp : Definiert den Einstiegspunkt fÃ¼r die DLL-Anwendung.
 
 #include "MMDevice.h"
 #include "ModuleInterface.h"

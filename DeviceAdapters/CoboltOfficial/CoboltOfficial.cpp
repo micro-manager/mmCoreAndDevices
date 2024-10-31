@@ -41,7 +41,7 @@ using namespace cobolt;
 
 const char * g_DeviceName = "Cobolt Laser";
 const char * g_DeviceDescription = "Official device adapter for Cobolt lasers.";
-const char * g_DeviceVendorName = "Cobolt - a HÜBNER Group company";
+const char * g_DeviceVendorName = "Cobolt - a HÃœBNER Group company";
 
 const char* const g_Property_Port_None = "None";
 

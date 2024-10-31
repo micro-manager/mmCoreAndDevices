@@ -26,7 +26,7 @@
  *
  *
  * Set digital patten for triggered mode: 5xd 
- *   Where x is the number of the pattern (currently, 12 patterns can be stored).
+ *   Where x is the number of the pattern (Quesry the max number of patterns with 32, default is 12, but number can be changed in the firmware).
  *   and d is the digital pattern to be stored at that position.  Note that x should
  *   be the real number (i.e., not  ASCI encoded)
  *   Controller will return 5xd 
@@ -90,6 +90,11 @@
  * Get Version: 31
  *   Returns: version number (as ASCI string) \r\n
  *
+ * Get Max number of patterns that can be uploaded: 32
+ *   Returns: Max number of patterns as an unsigned int, 2 bytes, highbyte first
+ *   Available as of version 3
+ *
+ *
  * Read digital state of analogue input pins 0-5: 40
  *   Returns raw value of PINC (two high bits are not used)
  *
@@ -104,7 +109,7 @@
  *   Get Number of digital patterns
  */
  
-   unsigned int version_ = 2;
+   unsigned int version_ = 3;
    
    // pin on which to receive the trigger (2 and 3 can be used with interrupts, although this code does not use interrupts)
    int inPin_ = 2;
@@ -118,9 +123,9 @@
    // pin connected to CS of TLV5618
    int latchPin = 5;
 
-   const int SEQUENCELENGTH = 12;  // this should be good enough for everybody;)
-   byte triggerPattern_[SEQUENCELENGTH] = {0,0,0,0,0,0,0,0,0,0,0,0};
-   unsigned int triggerDelay_[SEQUENCELENGTH] = {0,0,0,0,0,0,0,0,0,0,0,0};
+   const uint16_t SEQUENCELENGTH = 256;  // Can be increased, but pay attention that there is significant memory left for local variables
+   byte triggerPattern_[SEQUENCELENGTH]; 
+   unsigned int triggerDelay_[SEQUENCELENGTH]; 
    int patternLength_ = 0;
    byte repeatPattern_ = 0;
    volatile long triggerNr_; // total # of triggers in this run (0-based)
@@ -154,6 +159,11 @@
    PORTC = PORTC | B00111111;
    
    digitalWrite(latchPin, HIGH);   
+
+   for (unsigned int i = 0; i < SEQUENCELENGTH; i++) {
+      triggerPattern_[i] = 0;
+      triggerDelay_[i] = 0;
+   }
  }
  
  void loop() {
@@ -335,6 +345,13 @@
        // Returns version string
        case 31:
          Serial.println(version_);
+         break;
+
+        // returns Maximum number of patterns for sequencing
+       case 32:
+         Serial.write( byte(32));
+         Serial.write(highByte(SEQUENCELENGTH));
+         Serial.write(lowByte(SEQUENCELENGTH));
          break;
 
        case 40:

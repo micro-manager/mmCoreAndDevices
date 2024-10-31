@@ -217,7 +217,7 @@ XYStage::XYStage() :
    stepSizeYUm_(0.0012),
    speedX_(20.0), //[mm/s]
    speedY_(20.0), //[mm/s]
-   accelX_(0.2), //[m/s²]
+   accelX_(0.2), //[m/sÂ²]
    accelY_(0.2),
    originX_(0),
    originY_(0)
@@ -338,7 +338,7 @@ int XYStage::Initialize()
    SetPropertyLimits("SpeedY [mm/s]", 0.001, 100.0); // mm/s
 
 
-   // Accel (Acceleration (in m/s²)
+   // Accel (Acceleration (in m/sÂ²)
    // -----
    pAct = new CPropertyAction (this, &XYStage::OnAccelX);
 
@@ -359,7 +359,7 @@ int XYStage::Initialize()
    SetPropertyLimits("Acceleration Y [m/s^2]", 0.01, 2.0);
 
 
-   // Backlash (in µm)
+   // Backlash (in Âµm)
    ret = QueryCommand("?backlash x", resp);
    if (ret == DEVICE_OK)
    {
@@ -416,12 +416,12 @@ bool XYStage::Busy()
 
 
 /**
- * Returns current position in µm.
+ * Returns current position in Âµm.
  */
 int XYStage::GetPositionUm(double& x, double& y)
 {
 int ret;
-   // switch to µm
+   // switch to Âµm
    ret = SendCommand("!dim 1 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -442,7 +442,7 @@ int ret;
 
 
 /**
- * Sets position in µm
+ * Sets position in Âµm
  */
 int XYStage::SetPositionUm(double x, double y)
 {
@@ -450,7 +450,7 @@ int XYStage::SetPositionUm(double x, double y)
    os << "XYStage::SetPositionUm() " << x << " " << y;
    this->LogMessage(os.str().c_str());
 
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim 1 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -476,7 +476,7 @@ int XYStage::SetPositionUm(double x, double y)
   
 
 /**
- * Sets relative position in µm
+ * Sets relative position in Âµm
  */
 int XYStage::SetRelativePositionUm(double dx, double dy)
 {
@@ -484,7 +484,7 @@ int XYStage::SetRelativePositionUm(double dx, double dy)
    os << "XYStage::SetPositionUm() " << dx << " " << dy;
    this->LogMessage(os.str().c_str());
 
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim 1 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -729,7 +729,7 @@ int XYStage::GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
 {
   if (!range_measured_) return DEVICE_UNKNOWN_POSITION;
 
-  // switch to µm
+  // switch to Âµm
   int ret = SendCommand("!dim 1 1");
   if (ret != DEVICE_OK) return ret;
 
@@ -1214,7 +1214,7 @@ ZStage::ZStage() :
    range_measured_(false),
    stepSizeUm_(0.1),
    speedZ_(20.0), //[mm/s]
-   accelZ_(0.2), //[m/s²]
+   accelZ_(0.2), //[m/sÂ²]
    originZ_(0),
    sequenceable_(false),
    nrEvents_(1024)
@@ -1310,7 +1310,7 @@ int ZStage::Initialize()
    SetPropertyLimits("SpeedZ [mm/s]", 0.001, 100.0); // mm/s
 
 
-   // Accel (Acceleration (in m/s²)
+   // Accel (Acceleration (in m/sÂ²)
    // -----
    ret = QueryCommand("?accel z", resp);
    if (ret != DEVICE_OK) return DEVICE_UNSUPPORTED_COMMAND;
@@ -1320,7 +1320,7 @@ int ZStage::Initialize()
    if (ret != DEVICE_OK) return ret;
    SetPropertyLimits("Acceleration Z [m/s^2]", 0.01, 2.0);
    
-   // Backlash (in µm)
+   // Backlash (in Âµm)
    // get current Backlash from the controller
    ret = QueryCommand("?backlash z", resp);
    if (ret == DEVICE_OK)
@@ -1391,7 +1391,7 @@ int ZStage::SetPositionUm(double pos)
    os << "ZStage::SetPositionUm() " << pos;
    this->LogMessage(os.str().c_str());
 
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim z 1");
    if (ret != DEVICE_OK)
       return ret;
@@ -1421,7 +1421,7 @@ int ZStage::SetPositionUm(double pos)
 
 int ZStage::SetRelativePositionUm(double d)
 {
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim z 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -1450,7 +1450,7 @@ int ZStage::SetRelativePositionUm(double d)
 int ZStage::GetPositionUm(double& pos)
 {
 int ret;
-   // switch to µm
+   // switch to Âµm
    ret = SendCommand("!dim z 1");
    if (ret != DEVICE_OK)
       return ret;
@@ -1613,7 +1613,7 @@ int ZStage::GetLimits(double& min, double& max)
 {
   if (!range_measured_) return DEVICE_UNKNOWN_POSITION;
 
-  // switch to µm
+  // switch to Âµm
   int ret = SendCommand("!dim z 1");
   if (ret != DEVICE_OK) return ret;
 
@@ -1753,7 +1753,7 @@ int ZStage::SendStageSequence()
    is2 >> err;
    if (err != 0) return DEVICE_SERIAL_INVALID_RESPONSE;
 
-   // switch to µm
+   // switch to Âµm
    ret = SendCommand("!dim z 1");
    if (ret != DEVICE_OK) return ret;
 
@@ -2048,7 +2048,7 @@ AStage::AStage() :
    TangoBase(this),
    range_measured_(false),
    speed_(20.0), //[mm/s]
-   accel_(0.2), //[m/s²]
+   accel_(0.2), //[m/sÂ²]
    origin_(0),
    stepSizeUm_(0.1)
 {
@@ -2132,7 +2132,7 @@ int AStage::Initialize()
    SetPropertyLimits("SpeedA [mm/s]", 0.001, 100.0); // mm/s
 
 
-   // Accel (Acceleration (in m/s²)
+   // Accel (Acceleration (in m/sÂ²)
    // -----
    ret = QueryCommand("?accel a", resp);
    if (ret != DEVICE_OK) return DEVICE_UNSUPPORTED_COMMAND;
@@ -2142,7 +2142,7 @@ int AStage::Initialize()
    if (ret != DEVICE_OK) return ret;
    SetPropertyLimits("Acceleration A [m/s^2]", 0.01, 2.0);
    
-   // Backlash (in µm)
+   // Backlash (in Âµm)
    // get current Backlash from the controller
    ret = QueryCommand("?backlash a", resp);
    if (ret == DEVICE_OK)
@@ -2200,7 +2200,7 @@ int AStage::SetPositionUm(double pos)
    os << "AStage::SetPositionUm() " << pos;
    this->LogMessage(os.str().c_str());
 
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim a 1");
    if (ret != DEVICE_OK)
       return ret;
@@ -2230,7 +2230,7 @@ int AStage::SetPositionUm(double pos)
 
 int AStage::SetRelativePositionUm(double d)
 {
-   // switch to µm
+   // switch to Âµm
    int ret = SendCommand("!dim a 1");
    if (ret != DEVICE_OK)
       return ret;
@@ -2261,7 +2261,7 @@ int AStage::SetRelativePositionUm(double d)
 int AStage::GetPositionUm(double& pos)
 {
 int ret;
-   // switch to µm
+   // switch to Âµm
    ret = SendCommand("!dim a 1");
    if (ret != DEVICE_OK)
       return ret;
@@ -2428,7 +2428,7 @@ int AStage::GetLimits(double& min, double& max)
 {
   if (!range_measured_) return DEVICE_UNKNOWN_POSITION;
 
-  // switch to µm
+  // switch to Âµm
   int ret = SendCommand("!dim a 1");
   if (ret != DEVICE_OK) return ret;
 
@@ -2998,7 +2998,7 @@ int LED100::Initialize()
    // Fire
    // create property Fire if Tango command flash is possible with this version
    ostringstream  cmd;
-   cmd << "!flash -0.01"; //example 10µs pulse
+   cmd << "!flash -0.01"; //example 10Âµs pulse
    ret = SendCommand(cmd.str().c_str());
    if (ret !=DEVICE_OK) return ret;
 
