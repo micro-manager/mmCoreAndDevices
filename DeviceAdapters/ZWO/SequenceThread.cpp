@@ -64,7 +64,7 @@ void SequenceThread::Start(long numImages, double intervalMs)
    imageCounter_=0;
    stop_ = false;
    OutputDbgPrint("bf act\n");
-   activate();//¿ªÊ¼Ïß³Ì
+   activate();//å¼€å§‹çº¿ç¨‹
    OutputDbgPrint("af act\n");
 }
 

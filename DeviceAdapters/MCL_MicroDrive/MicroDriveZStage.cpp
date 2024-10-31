@@ -370,7 +370,7 @@ int MCL_MicroDrive_ZStage::OnPositionMm(MM::PropertyBase* pProp, MM::ActionType 
 		err = GetPositionMm(z);
 		if(err != MCL_SUCCESS)
 			return err;
-		err = BeginMovementThread(STANDARD_MOVE_TYPE, z);		
+		err = BeginMovementThread(STANDARD_MOVE_TYPE, pos);		
 		if (err != DEVICE_OK)
 			return err;
 	}

@@ -99,10 +99,10 @@ private:
 	unsigned long iBufSize;
 
 
-	int iPixBytes;//Ã¿¸öÏñËØ×Ö½ÚÊı	  
+	int iPixBytes;//æ¯ä¸ªåƒç´ å­—èŠ‚æ•°	  
 	int iComponents;
-	int   iROIWidth, iROIHeight, iBin;//sensorµÄ×ø±ê³ß´çĞÅÏ¢
-	int   iSetWid, iSetHei, iSetBin, iSetX, iSetY; //ÒªÉèÖÃµÄ×ø±ê³ß´çĞÅÏ¢
+	int   iROIWidth, iROIHeight, iBin;//sensorçš„åæ ‡å°ºå¯¸ä¿¡æ¯
+	int   iSetWid, iSetHei, iSetBin, iSetX, iSetY; //è¦è®¾ç½®çš„åæ ‡å°ºå¯¸ä¿¡æ¯
 
 	ASI_IMG_TYPE ImgType;
 	friend class SequenceThread;
@@ -111,7 +111,7 @@ private:
 	ASI_CAMERA_INFO ASICameraInfo;
 	int iCtrlNum;
 	ASI_FLIP_STATUS ImgFlip;
-	int ImgStartX, ImgStartY, ImgBin, ImgWid, ImgHei;//ËùÏÔÊ¾Í¼ÏñµÄ×ø±ê³ß´çĞÅÏ¢
+	int ImgStartX, ImgStartY, ImgBin, ImgWid, ImgHei;//æ‰€æ˜¾ç¤ºå›¾åƒçš„åæ ‡å°ºå¯¸ä¿¡æ¯
 
 
 //	int iCamIndex;
@@ -190,4 +190,4 @@ private:
 	bool bPosWait;
 //	long position_;
 };
-//2.0.0.0->20170113:Ôö¼Óanti-dewºÍEFW
+//2.0.0.0->20170113:å¢åŠ anti-dewå’ŒEFW

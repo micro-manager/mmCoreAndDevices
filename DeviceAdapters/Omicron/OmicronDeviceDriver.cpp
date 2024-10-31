@@ -13,7 +13,7 @@ const char* OMIDLLname = "OmicronxXDevices64.dll";
 #else
 const char* OMIDLLname = "OmicronxXDevices.dll";
 #endif
-//[DllImport(ìmsvcrt.dllî, CallingConvention = CallingConvention.Cdecl)]
+//[DllImport(‚Äúmsvcrt.dll‚Äù, CallingConvention = CallingConvention.Cdecl)]
 
 
 TxXGetDLLVersion		ExXGetDLLVersion = NULL;

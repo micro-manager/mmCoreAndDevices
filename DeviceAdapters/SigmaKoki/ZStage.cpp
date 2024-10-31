@@ -717,7 +717,7 @@ void ZStage::CreateDivisionProp()
 {
 	// Clear all allowed value declared before.--------------------------------------------------------------------------------------------
 	ClearAllowedValues(g_ZStageDivision);
-	AddAllowedDivisionPropXY(g_ZStageDivision);  // Added 9ŒŽ12“ú2022   t.abed
+	AddAllowedDivisionPropXY(g_ZStageDivision);  // Added 9æœˆ12æ—¥2022   t.abed
 }
 
 /// <summary>

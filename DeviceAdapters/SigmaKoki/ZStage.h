@@ -66,19 +66,19 @@ private:
 
 	int SetDeviceModel(); // change from [ SetDeviceModel(XYStageModel& model)] no needed 
 	void CreateDivisionProp();
-	void AddAllowedDivisionPropXY(const char* div);   // Added 5Œ12“ú2022   t.abed
+	void AddAllowedDivisionPropXY(const char* div);   // Added 5æœˆ12æ—¥2022   t.abed
 	void CreateChanelProp();
 	int SetDivision(int division);
 	int SetSpeed(int val);
-	int UpdatePositionZ();    // Added 4Œ7“ú2022@@@t.abed
-	int DriveCommadProcessZ(double position);// Added 4Œ7“ú2022   t.abed
+	int UpdatePositionZ();    // Added 4æœˆ7æ—¥2022ã€€ã€€ã€€t.abed
+	int DriveCommadProcessZ(double position);// Added 4æœˆ7æ—¥2022   t.abed
 	long GetSlowSpeedPulse(long pls);
 
 	ZStageModel model_;
 	std::string controlMode_;
 	std::string channel_;
 	int speed_;
-	double stepsZ_; // Z stage current position Added 4Œ7“ú2022   t.abed
+	double stepsZ_; // Z stage current position Added 4æœˆ7æ—¥2022   t.abed
 	double fullstepSizeZum_;
 	double stepSizeZum_;
 	std::string divisionZ_;

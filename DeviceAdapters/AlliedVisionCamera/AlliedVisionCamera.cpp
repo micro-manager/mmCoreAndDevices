@@ -1384,7 +1384,7 @@ void AlliedVisionCamera::insertFrame(VmbFrame_t *frame)
 
         // TODO implement metadata
         Metadata md;
-        md.put("Camera", m_cameraName);
+        md.put(MM::g_Keyword_Metadata_CameraLabel, m_cameraName);
 
         VmbUint8_t *buffer = reinterpret_cast<VmbUint8_t *>(frame->buffer);
         err = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(), GetImageHeight(), m_currentPixelFormat.getBytesPerPixel(),

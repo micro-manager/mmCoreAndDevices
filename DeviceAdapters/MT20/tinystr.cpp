@@ -24,7 +24,7 @@ distribution.
 */
 
 /*
- * THIS FILE WAS ALTERED BY Tyge Løvset, 7. April 2005.
+ * THIS FILE WAS ALTERED BY Tyge LÃ¸vset, 7. April 2005.
  */
 
 

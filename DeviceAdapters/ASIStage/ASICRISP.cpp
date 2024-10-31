@@ -651,7 +651,7 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		long na;
+		double na;
 		pProp->Get(na);
 		std::ostringstream command;
 		command << std::fixed << "LR Y=" << na;

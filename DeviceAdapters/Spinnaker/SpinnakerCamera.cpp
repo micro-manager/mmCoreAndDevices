@@ -403,6 +403,8 @@ int SpinnakerCamera::Initialize()
    CreatePropertyFromFloat("Gamma", m_cam->Gamma, &SpinnakerCamera::OnGamma);
    CreatePropertyFromFloat("Black Level", m_cam->BlackLevel, &SpinnakerCamera::OnBlackLevel);
    CreatePropertyFromEnum("Black Level Auto", m_cam->BlackLevelAuto, &SpinnakerCamera::OnBlackLevelAuto);
+   CreatePropertyFromBool("Reverse X", m_cam->ReverseX, &SpinnakerCamera::OnReverseX);
+   CreatePropertyFromBool("Reverse Y", m_cam->ReverseY, &SpinnakerCamera::OnReverseY);
 
    try
    {
@@ -1606,7 +1608,7 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          this->GetLabel(label);
 
          Metadata md;
-         md.put("Camera", label);
+         md.put(MM::g_Keyword_Metadata_CameraLabel, label);
          md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - m_aqThread->GetStartTime()).getMsec()));
          md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)m_cam->Width.GetValue()));
          md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)m_cam->Height.GetValue()));

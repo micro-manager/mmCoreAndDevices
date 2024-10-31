@@ -6,7 +6,7 @@
 // DESCRIPTION:   XIMEA camera module.
 //
 // AUTHOR:        Marian Zajko, <marian.zajko@ximea.com>
-// COPYRIGHT:     Marian Zajko and XIMEA GmbH, Münster, 2011
+// COPYRIGHT:     Marian Zajko and XIMEA GmbH, MÃ¼nster, 2011
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.

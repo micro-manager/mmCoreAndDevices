@@ -93,7 +93,7 @@ int ObjectiveChanger::Initialize()
 
 	this->LogMessage("ObjectiveChanger::Initialize\n", true);
 
-	auto ret = handleException([=]() {
+	auto ret = handleException([&]() {
 		ensureConnected();
 		if (!this->changer_.getFocusAxis().isHomed()) {
 			this->changer_.change(1);
@@ -232,9 +232,7 @@ int ObjectiveChanger::PortGetSet(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		if (initialized_)
 		{
-			// revert
-			pProp->Set(port_.c_str());
-			return ERR_PORT_CHANGE_FORBIDDEN;
+			resetConnection();
 		}
 
 		pProp->Get(port_);
@@ -350,7 +348,7 @@ int ObjectiveChanger::FocusOffsetGetSet(MM::PropertyBase* pProp, MM::ActionType 
 }
 
 int ObjectiveChanger::setObjective(long objective, bool applyOffset) {
-	return handleException([=]() {
+	return handleException([&]() {
 		ensureConnected();
 		zmlbase::Measurement offset;
 		if (applyOffset) {

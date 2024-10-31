@@ -1,5 +1,5 @@
 
-#define  MAX_PULSE_COUNT     21   // For SX Modules, it¡¯s 3 instead of 128.
+#define  MAX_PULSE_COUNT     21   // For SX Modules, itâ€™s 3 instead of 128.
 #define  MAX_PROFILE_ITEM     128
 
 #define	DISABLE_MODE	0

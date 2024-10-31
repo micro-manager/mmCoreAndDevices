@@ -6,7 +6,7 @@
 // DESCRIPTION:   ITK Hydra Controller Driver
 //                XY Stage
 //
-// AUTHOR:        Steven Fletcher, derived from Corvus adapter written by Johan Henriksson, mahogny@areta.org, derived from Märzhauser adapter
+// AUTHOR:        Steven Fletcher, derived from Corvus adapter written by Johan Henriksson, mahogny@areta.org, derived from MÃ¤rzhauser adapter
 // COPYRIGHT:     Steven Fletcher 2017
 // LICENSE:       This library is free software; you can redistribute it and/or
 //                modify it under the terms of the GNU Lesser General Public

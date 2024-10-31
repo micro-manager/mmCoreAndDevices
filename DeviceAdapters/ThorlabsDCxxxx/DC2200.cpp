@@ -701,7 +701,7 @@ bool DC2200::dynErrlist_add(int err, std::string descr)
 	dynError->descr = descr;
 	m_dynErrlist.push_back(dynError);
 
-	// publish the new error to µManager
+	// publish the new error to ÂµManager
 	SetErrorText((int)(dynError->err), descr.c_str());
 
 	return true;
