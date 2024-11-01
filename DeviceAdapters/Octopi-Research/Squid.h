@@ -138,6 +138,7 @@ private:
    std::atomic_bool yStageBusy_;
    std::atomic_bool zStageBusy_;
    std::atomic_bool busy_;
+   std::mutex mutex_;
 };
 
 
@@ -349,7 +350,6 @@ public:
    // action interface
    // ----------------
    int OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
@@ -358,12 +358,10 @@ private:
 
    bool initialized_;
    bool busy_;
-   double minV_;
    double maxV_;
    double volts_;
    double gatedVolts_;
    long dacNr_;
-   unsigned maxChannel_;
    bool gateOpen_;
    std::string name_;
 };

@@ -230,6 +230,7 @@ int SquidHub::assignZStageDevice(SquidZStage* zStageDevice)
 
 int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize)
 {
+   std::lock_guard<std::mutex> lck(mutex_);
    cmd[0] = ++cmdNrSend_;
    cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize - 1);
    if (true) {

@@ -12,7 +12,7 @@ SquidDA::SquidDA(uint8_t dacNr) :
    gatedVolts_(0.0),
    gateOpen_(true)
 {
-   dacNr_ = dacNr;
+dacNr_ = dacNr;
 }
 
 SquidDA::~SquidDA()
@@ -66,10 +66,10 @@ int SquidDA::SetGateOpen(bool open)
    return DEVICE_OK;
 }
 
-int SquidDA::GetGateOpen(bool& open) 
-{ 
-   open = gateOpen_; 
-   return DEVICE_OK; 
+int SquidDA::GetGateOpen(bool& open)
+{
+   open = gateOpen_;
+   return DEVICE_OK;
 };
 
 
@@ -83,18 +83,18 @@ int SquidDA::SetSignal(double volts)
    return DEVICE_OK;
 }
 
-int SquidDA::GetSignal(double& volts) 
-{ 
-   volts_ = volts; 
-   return DEVICE_OK; 
+int SquidDA::GetSignal(double& volts)
+{
+   volts_ = volts;
+   return DEVICE_OK;
 }
 
 
-int SquidDA::GetLimits(double& minVolts, double& maxVolts) 
-{ 
-   minVolts = 0; 
-   maxVolts = 5; 
-   return DEVICE_OK; 
+int SquidDA::GetLimits(double& minVolts, double& maxVolts)
+{
+   minVolts = 0;
+   maxVolts = 5;
+   return DEVICE_OK;
 }
 
 
@@ -102,8 +102,19 @@ int SquidDA::IsDASequenceable(bool& isSequenceable) const { isSequenceable = fal
 
 // action interface
 // ----------------
-int OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
-int OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct);
+int SquidDA::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(volts_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(volts_);
+      return SetSignal(volts_);
+   }
+   return DEVICE_OK;
+}
 
 
 int SquidDA::OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
