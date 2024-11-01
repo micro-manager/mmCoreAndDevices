@@ -261,7 +261,7 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    dimPropsY.shard_size_chunks = 1;
    dimPropsY.kind = ZarrDimensionType_Space;
 
-   status = ZarrStreamSettings_set_dimension(settings, 1, &dimPropsY);
+   status = ZarrStreamSettings_set_dimension(settings, numberOfDimensions - 2, &dimPropsY);
    if (status != ZarrStatus_Success)
    {
       LogMessage(getErrorMessage(status));
@@ -279,33 +279,12 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    dimPropsX.shard_size_chunks = 1;
    dimPropsX.kind = ZarrDimensionType_Space;
 
-   status = ZarrStreamSettings_set_dimension(settings, 0, &dimPropsX);
+   status = ZarrStreamSettings_set_dimension(settings, numberOfDimensions - 1, &dimPropsX);
    if (status != ZarrStatus_Success)
    {
       LogMessage(getErrorMessage(status));
       ZarrStreamSettings_destroy(settings);
       return ERR_ZARR_SETTINGS;
-   }
-
-   for (size_t i = 2; i < numberOfDimensions; i++)
-   {
-      ZarrDimensionProperties dimProps;
-      ostringstream osd;
-      osd << "dim-" << 1;
-      auto dimName(osd.str());
-      dimProps.name = new char[dimName.size()+1];
-      strcpy(const_cast<char*>(dimProps.name), osd.str().c_str());
-      dimProps.bytes_of_name = dimName.size()+1;
-      dimProps.array_size_px = shape[i];
-      dimProps.chunk_size_px = 1;
-      dimProps.shard_size_chunks = 1;
-      ZarrStatus status = ZarrStreamSettings_set_dimension(settings, i, &dimProps);
-      if (status != ZarrStatus_Success)
-      {
-         LogMessage(getErrorMessage(status));
-         ZarrStreamSettings_destroy(settings);
-         return ERR_ZARR_SETTINGS;
-      }
    }
 
    if (strlen(meta))
