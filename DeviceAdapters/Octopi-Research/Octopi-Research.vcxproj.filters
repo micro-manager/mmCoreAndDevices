@@ -21,13 +21,16 @@
     <ClCompile Include="SquidMonitoringThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SquidLEDShutter.cpp">
+    <ClCompile Include="SquidShutter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SquidXYStage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SquidZStage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SquidDA.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

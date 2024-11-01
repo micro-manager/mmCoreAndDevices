@@ -89,6 +89,19 @@ def send_command(self,command):
         self.last_command_timestamp = time.time()
         self.retry = 0
 
+ def set_piezo_um(self, z_piezo_um):
+        dac = int(65535 * (z_piezo_um / OBJECTIVE_PIEZO_RANGE_UM))
+        dac = 65535 - dac if OBJECTIVE_PIEZO_FLIP_DIR else dac
+        self.microcontroller.analog_write_onboard_DAC(7, dac)
+
+def analog_write_onboard_DAC(self,dac,value):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.ANALOG_WRITE_ONBOARD_DAC
+        cmd[2] = dac
+        cmd[3] = (value >> 8) & 0xff
+        cmd[4] = value & 0xff
+        self.send_command(cmd)
+
 def read_received_packet(self):
         while self.terminate_reading_received_packet_thread == False:
             # wait to receive data
@@ -164,6 +177,27 @@ def read_received_packet(self):
 
 from: https://github.com/hongquanli/octopi-research/blob/master/software/control/_def.py
 
+
+class TriggerMode:
+    SOFTWARE = 'Software Trigger'
+    HARDWARE = 'Hardware Trigger'
+    CONTINUOUS = 'Continuous Acquisition'
+
+class Acquisition:
+    CROP_WIDTH = 3000
+    CROP_HEIGHT = 3000
+    NUMBER_OF_FOVS_PER_AF = 3
+    IMAGE_FORMAT = 'bmp'
+    IMAGE_DISPLAY_SCALING_FACTOR = 0.3
+    DX = 0.9
+    DY = 0.9
+    DZ = 1.5
+    NX = 1
+    NY = 1
+
+class PosUpdate:
+    INTERVAL_MS = 25
+
 class MicrocontrollerDef:
     MSG_LENGTH = 24
     CMD_LENGTH = 8
@@ -173,6 +207,9 @@ class Microcontroller2Def:
     MSG_LENGTH = 4
     CMD_LENGTH = 8
     N_BYTES_POS = 4
+
+USE_SEPARATE_MCU_FOR_DAC = False
+
 class MCU_PINS:
     PWM1 = 5
     PWM2 = 4

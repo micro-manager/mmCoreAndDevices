@@ -12,7 +12,7 @@
 #define ERR_NO_PORT_SET 21002
 
 extern const char* g_HubDeviceName;
-extern const char* g_LEDShutterName;
+extern const char* g_ShutterName;
 extern const char* g_XYStageName;
 extern const char* g_ZStageName;
 
@@ -142,11 +142,11 @@ private:
 
 
 
-class SquidLEDShutter : public CShutterBase<SquidLEDShutter>
+class SquidShutter : public CShutterBase<SquidShutter>
 {
 public:
-   SquidLEDShutter();
-   ~SquidLEDShutter();
+   SquidShutter();
+   ~SquidShutter();
 
    int Initialize();
    int Shutdown();
@@ -167,12 +167,14 @@ public:
    int OnRed(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnGreen(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnHasLasers(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
 private:
    int sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t red, uint8_t green, uint8_t blue);
    SquidHub* hub_;
    bool initialized_;
+   bool hasLasers_;
    std::string name_;
    MM::MMTime changedTime_;
    uint8_t pattern_;
@@ -321,6 +323,50 @@ private:
    uint8_t cmdNr_;
 };
 
+class SquidDA : public CSignalIOBase<SquidDA>
+{
+public:
+   SquidDA(uint8_t dacNr);
+   ~SquidDA();
+
+   // MMDevice API
+   // ------------
+   int Initialize();
+   int Shutdown();
+
+   void GetName(char* pszName) const;
+   bool Busy();
+
+   // DA API
+   int SetGateOpen(bool open);
+   int GetGateOpen(bool& open);
+   int SetSignal(double volts);
+   int GetSignal(double& volts);
+   int GetLimits(double& minVolts, double& maxVolts);
+
+   int IsDASequenceable(bool& isSequenceable) const;
+
+   // action interface
+   // ----------------
+   int OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   int SendVoltage(double volt);
+   SquidHub* hub_;
+
+   bool initialized_;
+   bool busy_;
+   double minV_;
+   double maxV_;
+   double volts_;
+   double gatedVolts_;
+   long dacNr_;
+   unsigned maxChannel_;
+   bool gateOpen_;
+   std::string name_;
+};
 
 class SquidMessageParser {
 public:

@@ -20,7 +20,7 @@ const char* g_Max_Velocity = "Max Velocity(mm/s)";
 MODULE_API void InitializeModuleData() 
 {
    RegisterDevice(g_HubDeviceName, MM::HubDevice, g_HubDeviceName);
-   RegisterDevice(g_LEDShutterName, MM::ShutterDevice, "LEDs");
+   RegisterDevice(g_ShutterName, MM::ShutterDevice, "LEDs");
    RegisterDevice(g_XYStageName, MM::XYStageDevice, "XY-Stage");
    RegisterDevice(g_ZStageName, MM::StageDevice, "Z-Stage");
 }
@@ -33,9 +33,9 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new SquidHub();
    }
-   else if (strcmp(deviceName, g_LEDShutterName) == 0)
+   else if (strcmp(deviceName, g_ShutterName) == 0)
    {
-      return new SquidLEDShutter();
+      return new SquidShutter();
    }
    else if (strcmp(deviceName, g_XYStageName) == 0)
    {
@@ -86,9 +86,13 @@ SquidHub::SquidHub() :
 }
 
 
-SquidHub::~SquidHub()   
+SquidHub::~SquidHub()
 {
-   LogMessage("Destructor called");
+   if (initialized_)
+   {
+      Shutdown();
+   }
+   LogMessage("SquidHub destructor called");
 }
 
 
@@ -150,7 +154,6 @@ int SquidHub::Shutdown() {
 bool SquidHub::Busy()
 {
    return busy_;
-   //return false;
 }
 
 
@@ -174,7 +177,7 @@ int SquidHub::DetectInstalledDevices()
    {
       std::vector<std::string> peripherals;
       peripherals.clear();
-      peripherals.push_back(g_LEDShutterName);
+      peripherals.push_back(g_ShutterName);
       peripherals.push_back(g_XYStageName);
       peripherals.push_back(g_ZStageName);
       for (size_t i = 0; i < peripherals.size(); i++)
