@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.32802.440
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MMCore", "MMCore\MMCore.vcxproj", "{36571628-728C-4ACD-A47F-503BA91C5D43}"
 EndProject
@@ -500,11 +500,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenFlexure", "DeviceAdapte
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScientificaMotion8", "DeviceAdapters\ScientificaMotion8\ScientificaMotion8.vcxproj", "{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "G2SStorageTest", "Tests\G2SStorageTest\G2SStorageTest.vcxproj", "{C87F7284-62EF-4331-9444-9951DB12A57A}"
-	ProjectSection(ProjectDependencies) = postProject
-		{2916E620-1157-4154-8223-887D383E9DE6} = {2916E620-1157-4154-8223-887D383E9DE6}
-		{36571628-728C-4ACD-A47F-503BA91C5D43} = {36571628-728C-4ACD-A47F-503BA91C5D43}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Go2Scope", "DeviceAdapters\go2scope\go2scope.vcxproj", "{2916E620-1157-4154-8223-887D383E9DE6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1480,14 +1476,6 @@ Global
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Debug|x64.Build.0 = Debug|x64
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Release|x64.ActiveCfg = Release|x64
 		{7C8C60FA-92E3-4102-80AB-A4468C4FCD2F}.Release|x64.Build.0 = Release|x64
-		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.ActiveCfg = Debug|x64
-		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.Build.0 = Debug|x64
-		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.ActiveCfg = Release|x64
-		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.Build.0 = Release|x64
-		{C87F7284-62EF-4331-9444-9951DB12A57A}.Debug|x64.ActiveCfg = Debug|x64
-		{C87F7284-62EF-4331-9444-9951DB12A57A}.Debug|x64.Build.0 = Debug|x64
-		{C87F7284-62EF-4331-9444-9951DB12A57A}.Release|x64.ActiveCfg = Release|x64
-		{C87F7284-62EF-4331-9444-9951DB12A57A}.Release|x64.Build.0 = Release|x64
 		{46F4FFAF-79FD-45D9-A2C5-9E16B46787C5}.Debug|x64.ActiveCfg = Debug|x64
 		{46F4FFAF-79FD-45D9-A2C5-9E16B46787C5}.Debug|x64.Build.0 = Debug|x64
 		{46F4FFAF-79FD-45D9-A2C5-9E16B46787C5}.Release|x64.ActiveCfg = Release|x64
@@ -1516,7 +1504,10 @@ Global
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Debug|x64.Build.0 = Debug|x64
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x64.ActiveCfg = Release|x64
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x64.Build.0 = Release|x64
->>>>>>> main
+		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.ActiveCfg = Debug|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.Build.0 = Debug|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.ActiveCfg = Release|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
