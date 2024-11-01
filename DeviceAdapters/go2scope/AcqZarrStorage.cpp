@@ -144,6 +144,18 @@ bool AcqZarrStorage::Busy()
    return false;
 }
 
+/**
+ * Creates Zarr dataset
+ * 
+ * \param path - parent directory of the dataset
+ * \param name - name of the dataset (the actual name will follow the micro-manager convention for not overwriting)
+ * \param numberOfDimensions - how many dimensions
+ * \param shape - array of dimension sizes, from slow to fast. Y and X are always the last two.
+ * \param pixType - pixel type
+ * \param meta - JSON encoded string representing "summary" metadata. Can be empty.
+ * \param handle - handle to the dataset.
+ * \return 
+ */
 int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle)
 {
    if (zarrStream)
@@ -218,30 +230,33 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       return ERR_ZARR_SETTINGS;
    }
 
-   ZarrDimensionProperties dimPropsX;
-   string nameX("x");
-   dimPropsX.name = new char[nameX.size() + 1];
-   strcpy(const_cast<char*>(dimPropsX.name), nameX.c_str());
-   dimPropsX.bytes_of_name = nameX.size() + 1;
-   dimPropsX.array_size_px = shape[0];
-   dimPropsX.chunk_size_px = dimPropsX.array_size_px;
-   dimPropsX.shard_size_chunks = 1;
-   dimPropsX.kind = ZarrDimensionType_Space;
-
-   status = ZarrStreamSettings_set_dimension(settings, 0, &dimPropsX);
-   if (status != ZarrStatus_Success)
+   for (size_t i = 0; i < numberOfDimensions - 2; i++)
    {
-      LogMessage(getErrorMessage(status));
-      ZarrStreamSettings_destroy(settings);
-      return ERR_ZARR_SETTINGS;
+      ZarrDimensionProperties dimProps;
+      ostringstream osd;
+      osd << "dim-" << i;
+      auto dimName(osd.str());
+      dimProps.name = new char[dimName.size() + 1];
+      strcpy(const_cast<char*>(dimProps.name), osd.str().c_str());
+      dimProps.bytes_of_name = dimName.size() + 1;
+      dimProps.array_size_px = shape[i];
+      dimProps.chunk_size_px = 1;
+      dimProps.shard_size_chunks = 1;
+      ZarrStatus status = ZarrStreamSettings_set_dimension(settings, i, &dimProps);
+      if (status != ZarrStatus_Success)
+      {
+         LogMessage(getErrorMessage(status));
+         ZarrStreamSettings_destroy(settings);
+         return ERR_ZARR_SETTINGS;
+      }
    }
 
    ZarrDimensionProperties dimPropsY;
    string nameY("y");
-   dimPropsY.name = new char[nameX.size() + 1];
+   dimPropsY.name = new char[nameY.size() + 1];
    strcpy(const_cast<char*>(dimPropsY.name), nameY.c_str());
    dimPropsY.bytes_of_name = nameY.size() + 1;
-   dimPropsY.array_size_px = shape[1];
+   dimPropsY.array_size_px = shape[numberOfDimensions - 2];
    dimPropsY.chunk_size_px = dimPropsY.array_size_px;
    dimPropsY.shard_size_chunks = 1;
    dimPropsY.kind = ZarrDimensionType_Space;
@@ -254,6 +269,23 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       return ERR_ZARR_SETTINGS;
    }
 
+   ZarrDimensionProperties dimPropsX;
+   string nameX("x");
+   dimPropsX.name = new char[nameX.size() + 1];
+   strcpy(const_cast<char*>(dimPropsX.name), nameX.c_str());
+   dimPropsX.bytes_of_name = nameX.size() + 1;
+   dimPropsX.array_size_px = shape[numberOfDimensions - 1];
+   dimPropsX.chunk_size_px = dimPropsX.array_size_px;
+   dimPropsX.shard_size_chunks = 1;
+   dimPropsX.kind = ZarrDimensionType_Space;
+
+   status = ZarrStreamSettings_set_dimension(settings, 0, &dimPropsX);
+   if (status != ZarrStatus_Success)
+   {
+      LogMessage(getErrorMessage(status));
+      ZarrStreamSettings_destroy(settings);
+      return ERR_ZARR_SETTINGS;
+   }
 
    for (size_t i = 2; i < numberOfDimensions; i++)
    {
@@ -384,7 +416,7 @@ int AcqZarrStorage::AddImage(const char* handle, int sizeInBytes, unsigned char*
       return ERR_ZARR_STREAM_ACCESS;
    }
 
-   if (streamDimensions[0] * streamDimensions[1] * MM::GetPixelDataSizeInBytes(dataType) != sizeInBytes)
+   if (streamDimensions[streamDimensions.size() - 2] * streamDimensions[streamDimensions.size() - 1] * MM::GetPixelDataSizeInBytes(dataType) != sizeInBytes)
    {
       LogMessage("Stream dimensions do not match image size");
       return ERR_ZARR_STREAM_APPEND;
