@@ -15,6 +15,7 @@ extern const char* g_HubDeviceName;
 extern const char* g_ShutterName;
 extern const char* g_XYStageName;
 extern const char* g_ZStageName;
+extern const char* g_DAName;
 
 const unsigned char CMD_MOVE_X = 0;
 const unsigned char CMD_MOVE_Y = 1;
@@ -327,7 +328,7 @@ private:
 class SquidDA : public CSignalIOBase<SquidDA>
 {
 public:
-   SquidDA(uint8_t dacNr);
+   SquidDA();
    ~SquidDA();
 
    // MMDevice API

@@ -3,17 +3,18 @@
 const char* g_DAName = "DA";
 
 
-SquidDA::SquidDA(uint8_t dacNr) :
+SquidDA::SquidDA() :
    hub_(0),
    initialized_(false),
    busy_(false),
    volts_(0.0),
    maxV_(5.0),
    gatedVolts_(0.0),
-   gateOpen_(true)
+   gateOpen_(true),
+   dacNr_(7)
 {
-dacNr_ = dacNr;
 }
+
 
 SquidDA::~SquidDA()
 {

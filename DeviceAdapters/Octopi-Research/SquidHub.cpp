@@ -23,6 +23,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_ShutterName, MM::ShutterDevice, "LEDs");
    RegisterDevice(g_XYStageName, MM::XYStageDevice, "XY-Stage");
    RegisterDevice(g_ZStageName, MM::StageDevice, "Z-Stage");
+   RegisterDevice(g_DAName, MM::StageDevice, "DA");
 }
 
 
@@ -44,6 +45,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if (strcmp(deviceName, g_ZStageName) == 0)
    {
       return new SquidZStage();
+   }
+   else if (strcmp(deviceName, g_DAName) == 0)
+   {
+      return new SquidDA();
    }
 
    // ...supplied name not recognized
@@ -180,6 +185,7 @@ int SquidHub::DetectInstalledDevices()
       peripherals.push_back(g_ShutterName);
       peripherals.push_back(g_XYStageName);
       peripherals.push_back(g_ZStageName);
+      peripherals.push_back(g_DAName);
       for (size_t i = 0; i < peripherals.size(); i++)
       {
          MM::Device* pDev = ::CreateDevice(peripherals[i].c_str());
