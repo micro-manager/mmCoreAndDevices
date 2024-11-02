@@ -49,7 +49,7 @@ int SquidZStage::Initialize()
    }
    char hubLabel[MM::MaxStrLength];
    hub_->GetLabel(hubLabel);
-   int ret = hub_->assignZStageDevice(this);
+   int ret = hub_->AssignZStageDevice(this);
    if (ret != DEVICE_OK)
       return ret;
 

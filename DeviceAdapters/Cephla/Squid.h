@@ -117,11 +117,14 @@ public:
 
    std::string port_;
 
-   int assignXYStageDevice(SquidXYStage* xyStageDevice);
-   int assignZStageDevice(SquidZStage* zStageDevice);
+   int AssignXYStageDevice(SquidXYStage* xyStageDevice);
+   int AssignZStageDevice(SquidZStage* zStageDevice);
 
    bool XYStageBusy();
    bool ZStageBusy();
+
+   int SetDacGain(uint8_t dacNr, bool gain);
+
 
 private:
    bool initialized_;
@@ -139,6 +142,9 @@ private:
    std::atomic_bool yStageBusy_;
    std::atomic_bool zStageBusy_;
    std::atomic_bool busy_;
+   std::atomic<unsigned char> dac_div_; // 0: 1x gain: 1.25V, 1: 1x gain: 2.5V
+   std::atomic<unsigned char> dac_gains_; // bit mask with gains.  0 multiples dac_div with 1, 1 multiplies dac_div with 2
+               // i.e. dac_div_ 1 and dac_gains_ 1 for a given output results in 0-5V range.
    std::mutex mutex_;
 };
 
@@ -352,7 +358,7 @@ public:
    // action interface
    // ----------------
    int OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnVoltRange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    int SendVoltage(double volt);
@@ -367,6 +373,7 @@ private:
    bool gateOpen_;
    std::string name_;
 };
+
 
 class SquidMessageParser {
 public:

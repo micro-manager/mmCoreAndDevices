@@ -79,7 +79,9 @@ SquidHub::SquidHub() :
    zStageDevice_(0),
    port_("Undefined"),
    cmdNrSend_(0),
-   cmdNrReceived_(0)
+   cmdNrReceived_(0),
+   dac_div_(1),
+   dac_gains_(0)
 {
    InitializeDefaultErrorMessages();
 
@@ -234,14 +236,14 @@ int SquidHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int SquidHub::assignXYStageDevice(SquidXYStage* xyStageDevice)
+int SquidHub::AssignXYStageDevice(SquidXYStage* xyStageDevice)
 {
    xyStageDevice_ = xyStageDevice;
    return DEVICE_OK;
 }
 
 
-int SquidHub::assignZStageDevice(SquidZStage* zStageDevice)
+int SquidHub::AssignZStageDevice(SquidZStage* zStageDevice)
 {
    zStageDevice_ = zStageDevice;
    return DEVICE_OK;
@@ -444,5 +446,35 @@ int SquidHub::Home()
    cmd[2] = AXIS_XY;
    cmd[3] = int((STAGE_MOVEMENT_SIGN_X + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
    cmd[4] = int((STAGE_MOVEMENT_SIGN_Y + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   return SendCommand(cmd, cmdSize);
+}
+
+
+/**
+ * Needed to initialize the DAC.
+ * Will be called by each DAC device, hence may be executed multiple times.
+ * dac_div_ == 0 sets range to 0-1.125V, dac_div_ == 1 to 0-2.5V.
+ * dac_gains_ is a bit mask, each dac for which the mask is true (1), the output 
+ * voltage will be multiplied by 2, hence dav_div_==1 and dac_gains_==true for 
+ * a given channel results in 0-5V range.
+ */
+int SquidHub::SetDacGain(uint8_t dacNr, bool gain)
+{
+   if (gain)
+   {
+      dac_gains_ = dac_gains_ | (uint8_t) 1 << dacNr;
+   }
+   else
+   {
+      dac_gains_ = dac_gains_ & ~((uint8_t)1 << dacNr);
+   }
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_SET_DAC80508_REFDIV_GAIN;
+   cmd[2] = dac_div_;
+   cmd[3] = dac_gains_;
    return SendCommand(cmd, cmdSize);
 }

@@ -2,6 +2,9 @@
 
 const char* g_DAName = "DA";
 const char* g_Volts = "Volts";
+const char* g_VoltRange = "Volt-Range";
+const char* g_0_5V = "0-5V";
+const char* g_0_2_5V = "0-2.5V";
 
 
 SquidDA::SquidDA(uint8_t dacNr) :
@@ -14,6 +17,10 @@ SquidDA::SquidDA(uint8_t dacNr) :
    gateOpen_(true),
    dacNr_(dacNr)
 {
+   CPropertyAction* pAct = new CPropertyAction(this, &SquidDA::OnVoltRange);
+   CreateStringProperty(g_VoltRange, g_0_5V, false, pAct, true);
+   AddAllowedValue(g_VoltRange, g_0_2_5V);
+   AddAllowedValue(g_VoltRange, g_0_5V);
 }
 
 
@@ -51,7 +58,7 @@ int SquidDA::Initialize()
    int ret = CreateFloatProperty(g_Volts, 0.0, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
-   SetPropertyLimits(g_Volts, 0.0, 5.0);
+   SetPropertyLimits(g_Volts, 0.0, maxV_);
 
    return DEVICE_OK;
 }
@@ -101,15 +108,34 @@ int SquidDA::GetSignal(double& volts)
 int SquidDA::GetLimits(double& minVolts, double& maxVolts)
 {
    minVolts = 0;
-   maxVolts = 5;
+   maxVolts = maxV_;
    return DEVICE_OK;
 }
 
 
 int SquidDA::IsDASequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
 
+
 // action interface
 // ----------------
+int SquidDA::OnVoltRange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(maxV_ == 2.5 ? g_0_2_5V : g_0_5V);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string response;
+      pProp->Get(response);
+      maxV_ = response == g_0_2_5V ? 2.5 : 5.0;
+      bool setGain = response == g_0_5V;
+      return hub_->SetDacGain((uint8_t) dacNr_, setGain);
+   }
+   return DEVICE_OK;
+}
+
+
 int SquidDA::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -124,19 +150,6 @@ int SquidDA::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-
-int SquidDA::OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Get(dacNr_);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      pProp->Set(dacNr_);
-   }
-   return DEVICE_OK;
-}
 
 int SquidDA::SendVoltage(double volts)
 {
