@@ -325,6 +325,7 @@ private:
    uint8_t cmdNr_;
 };
 
+
 class SquidDA : public CSignalIOBase<SquidDA>
 {
 public:

@@ -20,10 +20,10 @@ const char* g_Max_Velocity = "Max Velocity(mm/s)";
 MODULE_API void InitializeModuleData() 
 {
    RegisterDevice(g_HubDeviceName, MM::HubDevice, g_HubDeviceName);
-   RegisterDevice(g_ShutterName, MM::ShutterDevice, "LEDs");
+   RegisterDevice(g_ShutterName, MM::ShutterDevice, "Light-Control");
    RegisterDevice(g_XYStageName, MM::XYStageDevice, "XY-Stage");
    RegisterDevice(g_ZStageName, MM::StageDevice, "Z-Stage");
-   RegisterDevice(g_DAName, MM::StageDevice, "DA");
+   RegisterDevice(g_DAName, MM::SignalIODevice, "DA");
 }
 
 

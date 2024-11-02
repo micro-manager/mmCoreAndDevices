@@ -1,6 +1,7 @@
 #include "Squid.h"
 
 const char* g_DAName = "DA";
+const char* g_Volts = "Volts";
 
 
 SquidDA::SquidDA() :
@@ -45,6 +46,12 @@ int SquidDA::Initialize()
    }
    char hubLabel[MM::MaxStrLength];
    hub_->GetLabel(hubLabel);
+
+   CPropertyAction* pAct = new CPropertyAction(this, &SquidDA::OnVolts);
+   int ret = CreateFloatProperty(g_Volts, 0.0, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   SetPropertyLimits(g_Volts, 0.0, 5.0);
 
    return DEVICE_OK;
 }

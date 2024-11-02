@@ -9,6 +9,7 @@ const char* g_Intensity = "Intensity";
 const char* g_Red = "Red";
 const char* g_Green = "Green";
 const char* g_Blue = "Blue";
+const char* g_HasLasers = "Has Lasers";
 
 extern const int CMD_TURN_ON_ILLUMINATION;
 extern const int CMD_TURN_OFF_ILLUMINATION;
@@ -23,13 +24,13 @@ extern const int ILLUMINATION_SOURCE_LED_ARRAY_LEFT_DOT;
 extern const int ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_DOT;
 
 const std::string ILLUMINATIONS[7] = {
-   "Full",
-   "Left_Half",
-   "Right_Half",
-   "Left-Blue_Right-Red",
-   "Low_NA",
-   "Left_Dot",
-   "Right_Dot"
+   "LED-Full",
+   "LED-Left_Half",
+   "LED-Right_Half",
+   "LED-Left-Blue_Right-Red",
+   "LED-Low_NA",
+   "LED-Left_Dot",
+   "LED-Right_Dot"
 };
 
 // laser IDs start at 11
@@ -68,17 +69,16 @@ SquidShutter::SquidShutter() :
    assert(DEVICE_OK == ret);
 
    // Description
-   ret = CreateProperty(MM::g_Keyword_Description, "Squid LED-shutter driver", MM::String, true);
+   ret = CreateProperty(MM::g_Keyword_Description, "Squid Light Control", MM::String, true);
    assert(DEVICE_OK == ret);
 
    CPropertyAction* pAct = new CPropertyAction(this, &SquidShutter::OnHasLasers);
-   ret = CreateStringProperty("Has Lasers", "No", false, pAct);
-   AddAllowedValue("Has Lasers", "Yes");
-   AddAllowedValue("Has Lasers", "No");
+   ret = CreateStringProperty(g_HasLasers, g_No, false, pAct, true);
+   AddAllowedValue(g_HasLasers, g_No);
+   AddAllowedValue(g_HasLasers, g_Yes);
 
    // parent ID display
    CreateHubIDProperty();
-
 }
 
 
