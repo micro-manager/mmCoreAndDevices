@@ -329,7 +329,7 @@ private:
 class SquidDA : public CSignalIOBase<SquidDA>
 {
 public:
-   SquidDA();
+   SquidDA(uint8_t dacNr);
    ~SquidDA();
 
    // MMDevice API

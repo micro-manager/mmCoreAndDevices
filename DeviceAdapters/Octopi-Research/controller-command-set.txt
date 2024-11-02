@@ -102,6 +102,13 @@ def analog_write_onboard_DAC(self,dac,value):
         cmd[4] = value & 0xff
         self.send_command(cmd)
 
+def configure_dac80508_refdiv_and_gain(self, div, gains):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.SET_DAC80508_REFDIV_GAIN
+        cmd[2] = div
+        cmd[3] = gains
+        self.send_command(cmd)
+
 def read_received_packet(self):
         while self.terminate_reading_received_packet_thread == False:
             # wait to receive data

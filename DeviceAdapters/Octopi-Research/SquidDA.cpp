@@ -4,7 +4,7 @@ const char* g_DAName = "DA";
 const char* g_Volts = "Volts";
 
 
-SquidDA::SquidDA() :
+SquidDA::SquidDA(uint8_t dacNr) :
    hub_(0),
    initialized_(false),
    busy_(false),
@@ -12,7 +12,7 @@ SquidDA::SquidDA() :
    maxV_(5.0),
    gatedVolts_(0.0),
    gateOpen_(true),
-   dacNr_(7)
+   dacNr_(dacNr)
 {
 }
 

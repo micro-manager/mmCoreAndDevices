@@ -23,7 +23,12 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_ShutterName, MM::ShutterDevice, "Light-Control");
    RegisterDevice(g_XYStageName, MM::XYStageDevice, "XY-Stage");
    RegisterDevice(g_ZStageName, MM::StageDevice, "Z-Stage");
-   RegisterDevice(g_DAName, MM::SignalIODevice, "DA");
+   for (uint8_t i = 1; i < 9; i++)
+   {
+      std::ostringstream os;
+      os << g_DAName << "-" << i;
+      RegisterDevice(os.str().c_str(), MM::SignalIODevice, os.str().c_str());
+   }
 }
 
 
@@ -46,9 +51,13 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new SquidZStage();
    }
-   else if (strcmp(deviceName, g_DAName) == 0)
-   {
-      return new SquidDA();
+   else {
+      std::string deviceNameString = deviceName;
+      if (deviceNameString.rfind(g_DAName) == 0) {
+         char c = deviceNameString.back();
+         uint8_t dacNr = (uint8_t)std::atoi(&c) - 1;
+         return new SquidDA(dacNr);
+      }
    }
 
    // ...supplied name not recognized
@@ -185,7 +194,12 @@ int SquidHub::DetectInstalledDevices()
       peripherals.push_back(g_ShutterName);
       peripherals.push_back(g_XYStageName);
       peripherals.push_back(g_ZStageName);
-      peripherals.push_back(g_DAName);
+      for (uint8_t i = 1; i < 9; i++)
+      {
+         std::ostringstream os;
+         os << g_DAName << "-" << i;
+         peripherals.push_back(os.str().c_str());
+      }
       for (size_t i = 0; i < peripherals.size(); i++)
       {
          MM::Device* pDev = ::CreateDevice(peripherals[i].c_str());
