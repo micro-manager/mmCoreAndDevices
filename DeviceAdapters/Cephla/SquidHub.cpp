@@ -23,10 +23,10 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_ShutterName, MM::ShutterDevice, "Light-Control");
    RegisterDevice(g_XYStageName, MM::XYStageDevice, "XY-Stage");
    RegisterDevice(g_ZStageName, MM::StageDevice, "Z-Stage");
-   for (uint8_t i = 1; i < 9; i++)
+   for (int i = 1; i < 9; i++)
    {
       std::ostringstream os;
-      os << g_DAName << "-" << i;
+      os << g_DAName << "_" << i;
       RegisterDevice(os.str().c_str(), MM::SignalIODevice, os.str().c_str());
    }
 }
@@ -55,8 +55,8 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       std::string deviceNameString = deviceName;
       if (deviceNameString.rfind(g_DAName) == 0) {
          char c = deviceNameString.back();
-         uint8_t dacNr = (uint8_t)std::atoi(&c) - 1;
-         return new SquidDA(dacNr);
+         int dacNr = std::atoi(&c) - 1;
+         return new SquidDA((uint8_t) dacNr);
       }
    }
 
@@ -79,9 +79,7 @@ SquidHub::SquidHub() :
    zStageDevice_(0),
    port_("Undefined"),
    cmdNrSend_(0),
-   cmdNrReceived_(0),
-   dac_div_(1),
-   dac_gains_(0)
+   cmdNrReceived_(0)
 {
    InitializeDefaultErrorMessages();
 
@@ -90,6 +88,8 @@ SquidHub::SquidHub() :
    x_ = 0l;
    y_ = 0l;
    z_ = 0l;
+   dac_div_ =  1;
+   dac_gains_ = 0;
    xStageBusy_ = false;
    yStageBusy_ = false;
    zStageBusy_ = false;
@@ -196,10 +196,10 @@ int SquidHub::DetectInstalledDevices()
       peripherals.push_back(g_ShutterName);
       peripherals.push_back(g_XYStageName);
       peripherals.push_back(g_ZStageName);
-      for (uint8_t i = 1; i < 9; i++)
+      for (int i = 1; i < 9; i++)
       {
          std::ostringstream os;
-         os << g_DAName << "-" << i;
+         os << g_DAName << "_" << i;
          peripherals.push_back(os.str().c_str());
       }
       for (size_t i = 0; i < peripherals.size(); i++)
@@ -462,11 +462,13 @@ int SquidHub::SetDacGain(uint8_t dacNr, bool gain)
 {
    if (gain)
    {
-      dac_gains_ = dac_gains_ | (uint8_t) 1 << dacNr;
+      unsigned char tmp = dac_gains_.load();
+      dac_gains_.store(tmp | 1 << dacNr);
    }
    else
    {
-      dac_gains_ = dac_gains_ & ~((uint8_t)1 << dacNr);
+      unsigned char tmp = dac_gains_.load();
+      dac_gains_.store(tmp & ~((unsigned char)1 << dacNr));
    }
    const unsigned cmdSize = 8;
    unsigned char cmd[cmdSize];

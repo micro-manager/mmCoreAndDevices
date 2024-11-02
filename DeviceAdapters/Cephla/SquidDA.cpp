@@ -41,7 +41,9 @@ int SquidDA::Shutdown() {
 
 void SquidDA::GetName(char* pszName) const
 {
-   CDeviceUtils::CopyLimitedString(pszName, g_DAName);
+   std::ostringstream os;
+   os << g_DAName << "_" << ((int)dacNr_ + 1);
+   CDeviceUtils::CopyLimitedString(pszName, os.str().c_str());
 }
 
 
