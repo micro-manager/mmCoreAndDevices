@@ -56,8 +56,13 @@ int SquidDA::Initialize()
    char hubLabel[MM::MaxStrLength];
    hub_->GetLabel(hubLabel);
 
+   bool setGain = maxV_ == 5.0;;
+   int ret = hub_->SetDacGain((uint8_t) dacNr_, setGain);
+   if (ret != DEVICE_OK)
+       return ret;
+
    CPropertyAction* pAct = new CPropertyAction(this, &SquidDA::OnVolts);
-   int ret = CreateFloatProperty(g_Volts, 0.0, false, pAct);
+   ret = CreateFloatProperty(g_Volts, 0.0, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
    SetPropertyLimits(g_Volts, 0.0, maxV_);
@@ -131,8 +136,6 @@ int SquidDA::OnVoltRange(MM::PropertyBase* pProp, MM::ActionType eAct)
       std::string response;
       pProp->Get(response);
       maxV_ = response == g_0_2_5V ? 2.5 : 5.0;
-      bool setGain = response == g_0_5V;
-      return hub_->SetDacGain((uint8_t) dacNr_, setGain);
    }
    return DEVICE_OK;
 }

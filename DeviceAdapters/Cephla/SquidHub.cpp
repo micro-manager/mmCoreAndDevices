@@ -462,13 +462,11 @@ int SquidHub::SetDacGain(uint8_t dacNr, bool gain)
 {
    if (gain)
    {
-      unsigned char tmp = dac_gains_.load();
-      dac_gains_.store(tmp | 1 << dacNr);
+      dac_gains_ = dac_gains_  | 1 << dacNr;
    }
    else
    {
-      unsigned char tmp = dac_gains_.load();
-      dac_gains_.store(tmp & ~((unsigned char)1 << dacNr));
+      dac_gains_ = dac_gains_ &~((unsigned char)1 << dacNr);
    }
    const unsigned cmdSize = 8;
    unsigned char cmd[cmdSize];
