@@ -946,7 +946,7 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
       }
    }
 
-   // Initialize ports first.  This should be gast, so no need to go parallel (also could not hurt really)
+   // Initialize ports first.  This should be fast, so no need to go parallel (also could not hurt really)
    for (std::shared_ptr<DeviceInstance> pPort : ports)
    {
       mm::DeviceModuleLockGuard guard(pPort);
