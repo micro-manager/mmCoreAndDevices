@@ -963,10 +963,33 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
       auto f = std::async(std::launch::async, &CMMCore::initializeVectorOfDevices, this, it->second);
       futures.push_back(std::move(f));
    }
-   for (auto& f : futures) {
-      // Note: we can do a 'f.wait_for(std::chrono::seconds(20)' to wait up to 20 seconds before giving up
+   for (int i = 0; i < futures.size(); i++) {
+      // Note: we could do a 'f.wait_for(std::chrono::seconds(20)' to wait up to 20 seconds before giving up
       // which would avoid hanging with devices that hang in their initialize function
-      f.get();
+      try
+      {
+         futures[i].get();
+      }
+      catch (...)
+      {
+         std::exception_ptr pex = std::current_exception();
+         // The std::future returned by std::async is special and its destructor blocks until the future completes.
+         // This is okay if there are 0 or 1 errors total(the successful initializations run to completion and the exception is propagated).
+         // When there are 2 or more errors, however, the second exception would be thrown in the destructor of the future, 
+         // and throwing anything in a destructor is very bad(might terminate by default).
+         for (int j = i + 1; j < futures.size(); j++)
+         {
+            try
+            {
+               futures[j].get();
+            }
+            catch (std::exception exj) {
+               // ignore these exceptions;
+            }
+         }
+         // Rethrow the first exception
+         std::rethrow_exception(pex);
+      }
    }
 
    // assign default roles syncronously
