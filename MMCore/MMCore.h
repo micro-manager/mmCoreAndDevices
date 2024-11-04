@@ -698,7 +698,7 @@ private:
    void loadSystemConfigurationImpl(const char* fileName) throw (CMMError);
    void initializeAllDevicesSerial() throw (CMMError);
    void initializeAllDevicesParallel() throw (CMMError);
-   int initializeDequeOfDevices(std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices);
+   int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices);
 };
 
 #if defined(__GNUC__) && !defined(__clang__)

@@ -911,7 +911,7 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
    std::vector<std::string> devices = deviceManager_->GetDeviceList();
    LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
    
-   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>>> moduleMap;
+   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>>> moduleMap;
    std::vector<std::shared_ptr<DeviceInstance>> ports;
 
    // first round, collect all DeviceAdapters
@@ -935,7 +935,7 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
 
          if (moduleMap.find(pAdapter) == moduleMap.end())
          {
-            std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices;
+            std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices;
             pDevices.push_back(make_pair(pDevice, devices[i]));
             moduleMap.insert({ pAdapter, pDevices });
          }
@@ -957,10 +957,10 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
 
    // second round, spin up threads to initialize non-port devices, one thread per module
    std::vector<std::future<int>> futures;
-   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>>>::iterator it;
+   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>>>::iterator it;
    for (it = moduleMap.begin(); it != moduleMap.end(); it++)
    {
-      auto f = std::async(std::launch::async, &CMMCore::initializeDequeOfDevices, this, it->second);
+      auto f = std::async(std::launch::async, &CMMCore::initializeVectorOfDevices, this, it->second);
       futures.push_back(std::move(f));
    }
    for (auto& f : futures) {
@@ -972,7 +972,7 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
    // assign default roles syncronously
    for (it = moduleMap.begin(); it != moduleMap.end(); it++)
    {
-      std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices = it->second;
+      std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices = it->second;
       for (int i = 0; i < pDevices.size(); i++)
       {
          assignDefaultRole(pDevices[i].first);
@@ -981,6 +981,9 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
 
    updateCoreProperties();
+   // not sure if this cleanup is needed, but should not hurt:
+   moduleMap.clear();
+   ports.clear();
 }
 
 
@@ -988,7 +991,7 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
  * This helper function is executed by a single thread, allowing initializeAllDevices to operate multi-threaded.
  * All devices are supposed to originate from the same device adapter
  */
-int CMMCore::initializeDequeOfDevices(std::deque<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices) {
+int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices) {
    for (int i = 0; i < pDevices.size(); i++) {
       std::shared_ptr<DeviceInstance> pDevice = pDevices[i].first;
 
