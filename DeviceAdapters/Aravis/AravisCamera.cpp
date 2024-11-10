@@ -32,7 +32,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-
+#include <cstdint>
 
 std::vector<std::string> supportedPixelFormats = {
   "Mono8",
