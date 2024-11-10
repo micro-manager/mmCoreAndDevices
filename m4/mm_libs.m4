@@ -66,6 +66,21 @@ AC_DEFUN([MM_LIB_HIDAPI], [
 ])
 
 
+# Check for Aravis library
+#
+# MM_LIB_ARAVIS([aravis prefix], [action-if-found], [action-if-not-found])
+#
+# Defines precious variables ARAVIS_CPPFLAGS, ARAVIS_CFLAGS, ARAVIS_LDFLAGS,
+# ARAVIS_LIBS.
+#
+AC_DEFUN([MM_LIB_ARAVIS], [
+   MM_LIB_WITH_PKG_CONFIG([ARAVIS], [Aravis], [aravis-0.10], [],
+      [$1], [-laravis],
+      [arv.h], [arv_update_device_list],
+      [$2], [$3])
+])
+
+
 # MM_LIB_MSGPACK([msgpack-prefix], [action-if-found], [action-if-not-found])
 AC_DEFUN([MM_LIB_MSGPACK], [
    AC_LANG_PUSH([C++])
