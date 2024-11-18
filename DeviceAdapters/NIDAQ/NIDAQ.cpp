@@ -1634,7 +1634,8 @@ template class NIDAQDOHub<uInt32>;
 
 
 InputMonitoringThread::InputMonitoringThread(NIDAQHub* hub) :
-    stop_(false)
+    stop_(false),
+    aiTask_(NULL)
 {
     hub_ = hub;
 }
