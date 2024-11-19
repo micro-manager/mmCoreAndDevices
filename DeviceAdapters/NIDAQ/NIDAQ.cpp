@@ -298,11 +298,9 @@ int NIDAQHub::Shutdown()
    else if (doHub32_ != 0)
       delete  doHub32_;
 
-   if (mThread_ != 0)
-   {
-       mThread_->wait();
-       delete mThread_;
-   }
+   tThread_->Stop();
+   tThread_->wait();
+   delete tThread_;
 
    initialized_ = false;
    return err;
