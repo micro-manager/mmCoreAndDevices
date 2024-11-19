@@ -1727,6 +1727,10 @@ int TraceMonitoringThread::Start(std::string AIChannelList, float minVal, float 
     if (err != DEVICE_OK)
         return err;
 
+    err = DAQmxSetSampTimingType(aiTask_, DAQmx_Val_SampClk);
+    if (err != DEVICE_OK)
+        return err;
+
     path_ += boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".csv";
     numberOfChannels_ = numberOfChannels;
 
