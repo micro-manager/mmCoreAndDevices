@@ -111,11 +111,15 @@ int NIAnalogInputPort::SetRunning(bool open)
 {
     if (open && !running_)
     {
-        GetHub()->StartAIMeasuringForPort(this);
+        int err = GetHub()->StartAIMeasuringForPort(this);
+        if (err != DEVICE_OK)
+            return err;
     }
     else if (!open && running_)
     {
-        GetHub()->StopAIMeasuringForPort(this);
+        int err = GetHub()->StopAIMeasuringForPort(this);
+        if (err != DEVICE_OK)
+            return err;
     }
 
     running_ = open;
