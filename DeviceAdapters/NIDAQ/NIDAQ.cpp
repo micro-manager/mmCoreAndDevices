@@ -1190,7 +1190,8 @@ int NIDAQHub::OnExpectedMaxVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct)
         mThread_->wait();
         delete mThread_;
         mThread_ = new InputMonitoringThread(this);
-        mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+        if (physicalAIChannels_.size() > 1)
+            mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
 
     }
     return DEVICE_OK;
@@ -1213,7 +1214,8 @@ int NIDAQHub::OnExpectedMinVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct)
         mThread_->wait();
         delete mThread_;
         mThread_ = new InputMonitoringThread(this);
-        mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+        if (physicalAIChannels_.size() > 1)
+            mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
     }
     return DEVICE_OK;
 }
