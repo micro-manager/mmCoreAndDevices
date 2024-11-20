@@ -60,12 +60,12 @@ static constexpr const char *g_AcqusitionStatus = "AcqusitionStatus";
 static constexpr const double MS_TO_US = 1000.0;
 
 /**
- * @brief Pixel Format class that contains VMB Pixel Format info and contains
- * helper methods to convert these information to the one that uManager
- * supports.
+ * @brief Pixel Format class that contains VMB Pixel Format info.
  *
- * [IMPORTANT] uManager supports formats:
  * 8bit GRAY    [no. component = 1]
+ * 10bit GRAY    [no. component = 1]
+ * 12bit GRAY    [no. component = 1]
+ * 14bit GRAY    [no. component = 1]
  * 16bit GRAY   [no. component = 1]
  * 32bit RGB    [no. component = 4]
  */
@@ -141,15 +141,21 @@ public:
     }
 
     /**
-     * @brief Getter of destination VmbPixelFormat that fits into the one, that
-     * uManager supports. In general uManager supports three pixelFormats:
+     * @brief Getter of destination VmbPixelFormat.
      * 1. Mono8
-     * 2. Mono16
-     * 3. RGB32
+     * 2. Mono10
+     * 3. Mono12
+     * 4. Mono14
+     * 5. Mono16
+     * 6. RGB32
+     *
      * These types fits into following VmbPixelTypes:
      * 1. VmbPixelFormatMono8
-     * 2. VmbPixelFormatMono16
-     * 3. VmbPixelFormatBgra8
+     * 2. VmbPixelFormatMono10
+     * 3. VmbPixelFormatMono12
+     * 4. VmbPixelFormatMono14
+     * 5. VmbPixelFormatMono16
+     * 6. VmbPixelFormatBgra8
      * @return Destination VmbPixelFormat
      */
     VmbPixelFormatType getVmbFormat() const
@@ -193,14 +199,29 @@ private:
             std::regex_search(m_pixelType, m, re);
             if (m.size() > 0)
             {
-                if (std::atoi(m[1].str().c_str()) == 16)
+                if (std::atoi(m[1].str().c_str()) == 16) // Mono16
                 {
-                    // We do transformation to Mono16 only for Mono16, otherwise
-                    // it will always be Mono8
+                    m_vmbFormat = VmbPixelFormatMono16;
                     m_bitDepth = 16;
                 }
-                else
+                else if (std::atoi(m[1].str().c_str()) == 14) // Mono14
                 {
+                    m_vmbFormat = VmbPixelFormatMono14;
+                    m_bitDepth = 16;
+                }
+                else if (std::atoi(m[1].str().c_str()) == 12) // Mono12
+                {
+                    m_vmbFormat = VmbPixelFormatMono12;
+                    m_bitDepth = 16;
+                }
+                else if (std::atoi(m[1].str().c_str()) == 10) // Mono10
+                {
+                    m_vmbFormat = VmbPixelFormatMono10;
+                    m_bitDepth = 16;
+                }
+                else // Default to Mono8
+                {
+                    m_vmbFormat = VmbPixelFormatMono8;
                     m_bitDepth = 8;
                 }
             }
@@ -211,6 +232,7 @@ private:
         }
         else
         {
+            m_vmbFormat = VmbPixelFormatBgra8;
             m_bitDepth = 32;
         }
     }
@@ -224,27 +246,6 @@ private:
     }
 
     /**
-     * @brief Helper method to update destination VmbPixelFormatType
-     */
-    void updateVmbFormat()
-    {
-        switch (m_bytesPerPixel)
-        {
-        case 1:
-            m_vmbFormat = VmbPixelFormatMono8;
-            break;
-        case 2:
-            m_vmbFormat = VmbPixelFormatMono16;
-            break;
-        case 4:
-            m_vmbFormat = VmbPixelFormatBgra8; // TODO check if this is a valid format
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
      * @brief Helper method to update all required fields
      */
     void updateFields()
@@ -254,7 +255,6 @@ private:
         updateNumberOfComponents();
         updateBitDepth();
         updateBytesPerPixel();
-        updateVmbFormat();
     }
 
     std::string m_pixelType;        //!< Pixel type (in string) - value from VMB
