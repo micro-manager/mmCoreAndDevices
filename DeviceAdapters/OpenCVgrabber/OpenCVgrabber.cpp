@@ -1086,6 +1086,9 @@ int COpenCVgrabber::OnCameraID(MM::PropertyBase* pProp, MM::ActionType eAct)
             return DEVICE_OK;
          }
       }
+      // fallback, to not throw a fit with old config files
+      cameraID_ = 0;
+      return DEVICE_OK;
    }
    else if (eAct == MM::BeforeGet) {
       for (std::pair<int, OpenCVDevice> device : devices) {
