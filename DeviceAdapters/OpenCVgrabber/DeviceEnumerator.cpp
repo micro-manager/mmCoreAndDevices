@@ -40,7 +40,7 @@ std::map<int, OpenCVDevice> DeviceEnumerator::getDevicesMap(const GUID deviceCla
 		while (pEnum->Next(1, &pMoniker, NULL) == S_OK) {
 
 			IPropertyBag *pPropBag;
-			HRESULT hr = pMoniker->BindToStorage(0, 0, IID_PPV_ARGS(&pPropBag));
+			hr = pMoniker->BindToStorage(0, 0, IID_PPV_ARGS(&pPropBag));
 			if (FAILED(hr)) {
 				pMoniker->Release();
 				continue;
