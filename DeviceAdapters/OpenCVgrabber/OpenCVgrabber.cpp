@@ -177,9 +177,8 @@ COpenCVgrabber::COpenCVgrabber() :
          AddAllowedValue(cIDName, devices.at(i).deviceName.c_str());
       }
    }
-   else {
-      AddAllowedValue(cIDName, "Undefined");
-   }
+   // when no devices are found and for backward compatibility, allow the Undefined value
+   AddAllowedValue(cIDName, "Undefined");
 #else
    String cIDNameReally = "Camera Number";
    CPropertyAction* pAct = new CPropertyAction(this, &COpenCVgrabber::OnCameraID);
@@ -1097,8 +1096,8 @@ int COpenCVgrabber::OnCameraID(MM::PropertyBase* pProp, MM::ActionType eAct)
             return DEVICE_OK;
          }
       }
+      pProp->Set("Undefined");
    }
-   return DEVICE_NOT_CONNECTED;
 #else
    if (eAct == MM::AfterSet)
    {
