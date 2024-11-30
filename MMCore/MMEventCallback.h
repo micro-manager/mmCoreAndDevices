@@ -65,23 +65,23 @@ public:
       std::cout << "onPixelSizeAffineChanged() " << v0 << "-" << v1 << "-" << v2 << "-" << v3 << "-" << v4 << "-" << v5 << '\n';
    }
 
-   virtual void onStagePositionChanged(char* name, double pos)
+   virtual void onStagePositionChanged(const char* name, double pos)
    {
       std::cout << "onStagePositionChanged()" << name << " " << pos  << '\n';
    }
 
-   virtual void onXYStagePositionChanged(char* name, double xpos, double ypos)
+   virtual void onXYStagePositionChanged(const char* name, double xpos, double ypos)
    {
       std::cout << "onXYStagePositionChanged()" << name << " " << xpos;
       std::cout << " " <<  ypos << '\n';
    }
 
-   virtual void onExposureChanged(char* name, double newExposure)
+   virtual void onExposureChanged(const char* name, double newExposure)
    {
       std::cout << "onExposureChanged()" << name << " " << newExposure << '\n';
    }
 
-   virtual void onSLMExposureChanged(char* name, double newExposure)
+   virtual void onSLMExposureChanged(const char* name, double newExposure)
    {
       std::cout << "onSLMExposureChanged()" << name << " " << newExposure << '\n';
    }
