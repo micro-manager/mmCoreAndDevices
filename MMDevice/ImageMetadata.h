@@ -55,6 +55,9 @@ public:
       return message_;
    }
 
+   /// Implements std::exception interface.
+   virtual const char* what() const throw() { return message_.c_str(); }
+
 private:
    std::string message_;
 };
