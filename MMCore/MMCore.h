@@ -86,6 +86,9 @@
 #   define MMCORE_DEPRECATED(prototype) prototype
 #endif
 
+extern const int MMCore_versionMajor;
+extern const int MMCore_versionMinor;
+extern const int MMCore_versionPatch;
 
 class CPluginManager;
 class CircularBuffer;
