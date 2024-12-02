@@ -67,6 +67,8 @@ class MetadataKeyError : public MetadataError
 public:
    MetadataKeyError() :
       MetadataError("Undefined metadata key") {}
+   MetadataKeyError(const char* key) :
+      MetadataError(("Undefined metadata key: " + std::string(key)).c_str()) {}
    ~MetadataKeyError() {}
 };
 
@@ -490,7 +492,7 @@ private:
       if (it != tags_.end())
          return it->second;
       else
-         throw MetadataKeyError();
+         throw MetadataKeyError(key);
    }
 
    std::map<std::string, MetadataTag*> tags_;
