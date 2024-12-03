@@ -9,3 +9,6 @@ Changelog IDSPeak:
 
 2024.02.06
 - Multi-camera support is now compatible with the multicam utility
+
+2024.12.03
+- Added support for all IDS PixelTypes and added support for 16bit acquisition
