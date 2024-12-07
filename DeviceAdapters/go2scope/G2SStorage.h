@@ -44,8 +44,15 @@
 #define ERR_ZARR_STREAM_LOAD         140105
 #define ERR_ZARR_STREAM_APPEND       140106
 #define ERR_ZARR_STREAM_ACCESS       140107
+
 #define ERR_TIFF                     140500
 #define ERR_TIFF_STREAM_UNAVAILABLE  140501
+#define ERR_TIFF_INVALID_PATH			 140502
+#define ERR_TIFF_INVALID_DIMENSIONS	 140503
+#define ERR_TIFF_INVALID_PIXEL_TYPE  140504
+#define ERR_TIFF_CACHE_OVERFLOW      140505
+#define ERR_TIFF_OPEN_FAILED			 140506
+#define ERR_TIFF_CACHE_INSERT			 140507
 
 //////////////////////////////////////////////////////////////////////////////
 // Cache configuration
