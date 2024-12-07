@@ -3,11 +3,11 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Go2Scope devices. Includes the experimental StorageDevice
+// DESCRIPTION:   BIGTIFF storage device driver
 //
 // AUTHOR:        Milos Jovanovic <milos@tehnocad.rs>
 //
-// COPYRIGHT:     Nenad Amodaj, Chan Zuckerberg Initiative, 2024
+// COPYRIGHT:     Luminous Point LLC, Lumencor Inc., 2024
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -20,9 +20,6 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// NOTE:          Storage Device development is supported in part by
-//                Chan Zuckerberg Initiative (CZI)
-// 
 ///////////////////////////////////////////////////////////////////////////////
 #include <filesystem>
 #include <boost/uuid/uuid.hpp>
@@ -34,13 +31,14 @@
 #define MAX_FILE_SEARCH_INDEX			128
 #define PROP_DIRECTIO					"DirectIO"
 #define PROP_FLUSHCYCLE					"FlushCycle"
+#define PROP_CHUNKSIZE					"ChunkSize"
 
 /**
  * Default class constructor
  */
 G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
 {
-   supportedFormats = { "tif", "tiff", "tf8" };
+   supportedFormats = { "g2s" };
 
    InitializeDefaultErrorMessages();
 
@@ -48,6 +46,10 @@ G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
    SetErrorText(ERR_INTERNAL, "Internal driver error, see log file for details");
    SetErrorText(ERR_TIFF, "Generic TIFF error. See log for more info.");
 	SetErrorText(ERR_TIFF_STREAM_UNAVAILABLE, "BigTIFF storage error. File stream is not available.");
+	SetErrorText(ERR_TIFF_INVALID_PATH, "Invalid path or name.");
+	SetErrorText(ERR_TIFF_INVALID_DIMENSIONS, "Invalid number of dimensions. Minimum is 3.");
+	SetErrorText(ERR_TIFF_INVALID_PIXEL_TYPE, "Invalid or unsupported pixel type.");
+	SetErrorText(ERR_TIFF_OPEN_FAILED, "Failed opening TIF file.");
 
    // create pre-initialization properties                                   
    // ------------------------------------
@@ -58,7 +60,7 @@ G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
    //
    // Description
    std::ostringstream os;
-   os << "BigTIFF Storage v1.0";
+	os << "BigTIFF Storage " << G2STIFF_VERSION;
    CreateProperty(MM::g_Keyword_Description, os.str().c_str(), MM::String, true);
 }
 
@@ -89,6 +91,10 @@ int G2SBigTiffStorage::Initialize()
 	nRet = CreateIntegerProperty(PROP_FLUSHCYCLE, 0, false);
 	assert(nRet == DEVICE_OK);
 
+	// Add chunk size property
+	nRet = CreateIntegerProperty(PROP_CHUNKSIZE, 0, false);
+	assert(nRet == DEVICE_OK);
+
    UpdateStatus();
 
    initialized = true;
@@ -107,7 +113,7 @@ int G2SBigTiffStorage::Shutdown()
    {
       if(it->second.isOpen())
 		{
-			auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+			auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 			fs->close();
 			it->second.close();
 			delete fs;
@@ -133,35 +139,35 @@ int G2SBigTiffStorage::Shutdown()
  */
 int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle)
 {
-   if(path == nullptr || numberOfDimensions <= 0 || pixType == MM::StorageDataType::StorageDataType_UNKNOWN)
-      return DEVICE_INVALID_INPUT_PARAM;
+   if (path == nullptr)
+      return ERR_TIFF_INVALID_PATH;
+
+	if (numberOfDimensions < 3)
+		return ERR_TIFF_INVALID_DIMENSIONS;
+
+	if (!(pixType == MM::StorageDataType::StorageDataType_GRAY16 || 
+		pixType == MM::StorageDataType::StorageDataType_GRAY8 || 
+		pixType == MM::StorageDataType::StorageDataType_RGB32))
+		return ERR_TIFF_INVALID_PIXEL_TYPE;
 
    // Check cache size limits
    if(cache.size() >= MAX_CACHE_SIZE)
    {
       cacheReduce();
       if(CACHE_HARD_LIMIT && cache.size() >= MAX_CACHE_SIZE)
-         return DEVICE_OUT_OF_MEMORY;
+         return ERR_TIFF_CACHE_OVERFLOW;
    }
 
-   // Check if the file already exists
-	// File extension will be added automatically
-	int counter = 1;
-	std::string ext(".tif");
-	std::string savePrefix(name);
-	if(savePrefix.find(".tiff") == savePrefix.size() - 5)
-		savePrefix = savePrefix.substr(0, savePrefix.size() - 5);
-	else if(savePrefix.find(".tif") == savePrefix.size() - 4 || savePrefix.find(".tf8") == savePrefix.size() - 4)
-		savePrefix = savePrefix.substr(0, savePrefix.size() - 4);
+   // Compose dataset path
+	std::string dsname(name);
+	if(dsname.find(".tiff") == dsname.size() - 5)
+		dsname = dsname.substr(0, dsname.size() - 5);
+	else if(dsname.find(".tif") == dsname.size() - 4 || dsname.find(".tf8") == dsname.size() - 4)
+		dsname = dsname.substr(0, dsname.size() - 4);
+	if(dsname.find(".g2s") != dsname.size() - 4)
+		dsname += ".g2s";
 	std::filesystem::path saveRoot = std::filesystem::u8path(path);
-	std::filesystem::path dsName = saveRoot / (savePrefix + ext);
-	while(std::filesystem::exists(dsName))
-	{
-		// If the file path (path + name) exists, it should not be an error
-		// nor the file should be overwritten, first available suffix (index) will be appended to the file name
-		auto savePrefixTmp = savePrefix + "_" + std::to_string(counter++) + ext;
-		dsName = saveRoot / savePrefixTmp;
-	}	
+	std::filesystem::path dsName = saveRoot / dsname;
 	
 	// Create dataset storage descriptor
 	std::string guid = boost::lexical_cast<std::string>(boost::uuids::random_generator()());           // Entry UUID
@@ -175,24 +181,31 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 	}
    
    // Create a file on disk and store the file handle
-   auto fhandle = new G2STiffFile(dsName.u8string());
-   if(fhandle == nullptr)
-      return ERR_TIFF_STREAM_UNAVAILABLE;
+   auto fhandle = new G2SBigTiffDataset();
+	if(fhandle == nullptr)
+	{
+		LogMessage("Error obtaining file handle for: " + dsName.u8string());
+		return ERR_TIFF_STREAM_UNAVAILABLE;
+	}
 	
 	try
 	{
-		fhandle->open(true, getDirectIO());
+		fhandle->create(dsName.u8string(), getDirectIO(), true, (std::uint32_t)getChunkSize());
 		if(!fhandle->isOpen())
-			return DEVICE_OUT_OF_MEMORY;
+		{
+			LogMessage("Failed to open file: " + dsName.u8string());
+			return ERR_TIFF_OPEN_FAILED;
+		}
 		fhandle->setFlushCycles((std::uint32_t)getFlushCycle());
 	}
-	catch(std::exception&)
+	catch(std::exception& err)
 	{
 		delete fhandle;
-		return DEVICE_OUT_OF_MEMORY;
+		LogMessage(std::string(err.what()) + " for " + dsName.u8string());
+		return ERR_TIFF_OPEN_FAILED;
 	}
    
-   G2SStorageEntry sdesc(dsName.u8string(), numberOfDimensions, shape, meta);
+   G2SStorageEntry sdesc(fhandle->getPath(), numberOfDimensions, shape, meta);
    sdesc.FileHandle = fhandle;
 
 	// Set dataset UUID / shape / metadata
@@ -212,10 +225,16 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 
    // Append dataset storage descriptor to cache
    auto it = cache.insert(std::make_pair(guid, sdesc));
-   if(!it.second)
+	if(it.first == cache.end())
 	{
 		delete fhandle;
-      return DEVICE_OUT_OF_MEMORY;
+		return ERR_TIFF_CACHE_INSERT;
+	}
+   if(!it.second)
+	{
+		// Dataset already exists
+		delete fhandle;
+      return ERR_TIFF_CACHE_INSERT;
 	}
 
    // Copy UUID string to the GUID buffer
@@ -228,7 +247,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
  * Dataset storage descriptor will be read from file
  * Dataset storage descriptor will open a file handle, to close a file handle call Close()
  * Dataset storage descriptor will reside in device driver cache
- * @param path Absolute file path (TIFF file)
+ * @param path Absolute file path (TIFF file) / Absolute dataset folder path
  * @param name Dataset name
  * @param handle Entry GUID [out]
  * @return Status code
@@ -238,16 +257,11 @@ int G2SBigTiffStorage::Load(const char* path, char* handle)
    if(path == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
 
-	// Check if the file path has a valid extension
-	std::string fpath(path);
-	if(fpath.find(".tiff") != fpath.size() - 5 && fpath.find(".tif") != fpath.size() - 4 && fpath.find(".tf8") != fpath.size() - 4)
-		fpath += ".tif";
-
    // Check if the file exists
-	std::filesystem::path actpath = std::filesystem::u8path(fpath);
+	std::filesystem::path actpath = std::filesystem::u8path(path);
    if(!std::filesystem::exists(actpath))
 	{
-		// Try finding the file by adding the file suffix (index)
+		// Try finding the folder by adding the index (number suffix)
 		bool fnd = false;
 		auto dir = actpath.parent_path();
 		auto fname = actpath.stem().u8string();
@@ -264,23 +278,51 @@ int G2SBigTiffStorage::Load(const char* path, char* handle)
 		if(!fnd)
 			return DEVICE_INVALID_INPUT_PARAM;
 	}
+	else if(std::filesystem::is_regular_file(actpath))
+	{
+		// File path of the first data chunk is specified -> use parent folder path
+		actpath = actpath.parent_path();
+	}
 
-   // Open a file on disk and store the file handle
-	auto fhandle = new G2STiffFile(std::filesystem::absolute(actpath).u8string());
+	// Check if file is already in cache
+	auto cit = cache.begin();
+	while(cit != cache.end())
+	{
+		if(std::filesystem::u8path(cit->second.Path) == actpath)
+			break;
+		cit++;
+	}
+
+	G2SBigTiffDataset* fhandle = nullptr;
+	if(cit == cache.end())
+		// Open a file on disk and store the file handle
+		fhandle = new G2SBigTiffDataset();
+	else if(cit->second.FileHandle == nullptr)
+	{
+		// Open a file on disk and update the cache file handle 
+		fhandle = new G2SBigTiffDataset();
+		cit->second.FileHandle = fhandle;
+	}
+	else
+		// Use existing object descriptor
+		fhandle = (G2SBigTiffDataset*)cit->second.FileHandle;
 	if(fhandle == nullptr)
-		return DEVICE_OUT_OF_MEMORY;
+		return ERR_TIFF_OPEN_FAILED;
 
 	try
 	{
-		fhandle->open(false, getDirectIO());
 		if(!fhandle->isOpen())
-			return DEVICE_OUT_OF_MEMORY;
+		{
+			fhandle->load(std::filesystem::absolute(actpath).u8string(), getDirectIO());
+			if(!fhandle->isOpen())
+				return ERR_TIFF_OPEN_FAILED;
+		}
 		fhandle->setFlushCycles((std::uint32_t)getFlushCycle());
 	}
-	catch(std::exception&)
+	catch(std::exception& e)
 	{
 		delete fhandle;
-		return DEVICE_OUT_OF_MEMORY;
+		return ERR_TIFF_OPEN_FAILED;
 	}
 	
 	// Obtain / generate dataset UID
@@ -291,16 +333,19 @@ int G2SBigTiffStorage::Load(const char* path, char* handle)
 		return DEVICE_INVALID_PROPERTY_LIMTS;
 	}
 
-	// Create dataset storage descriptor
-   G2SStorageEntry sdesc(std::filesystem::absolute(actpath).u8string(), (int)fhandle->getDimension(), reinterpret_cast<int*>(&fhandle->getShape()[0]), fhandle->getMetadata().empty() ? nullptr : fhandle->getMetadata().c_str());
-   sdesc.FileHandle = fhandle;
-
    // Append dataset storage descriptor to cache
-   auto it = cache.insert(std::make_pair(guid, sdesc));
-   if(!it.second)
+	if(cit == cache.end())
 	{
-		delete fhandle;
-      return DEVICE_OUT_OF_MEMORY;
+		// Create dataset storage descriptor
+		G2SStorageEntry sdesc(std::filesystem::absolute(actpath).u8string(), (int)fhandle->getDimension(), reinterpret_cast<int*>(&fhandle->getShape()[0]), fhandle->getMetadata().empty() ? nullptr : fhandle->getMetadata().c_str());
+		sdesc.FileHandle = fhandle;
+
+		auto it = cache.insert(std::make_pair(guid, sdesc));
+		if(it.first == cache.end())
+		{
+			delete fhandle;
+			return DEVICE_OUT_OF_MEMORY;
+		}
 	}
 
    // Copy UUID string to the GUID buffer
@@ -325,7 +370,7 @@ int G2SBigTiffStorage::GetShape(const char* handle, int shape[])
 	if(it == cache.end())
 		return DEVICE_INVALID_INPUT_PARAM;
 
-	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+	auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 	for(std::size_t i = 0; i < fs->getDimension(); i++)
 		shape[i] = fs->getShape()[i];
    return DEVICE_OK;
@@ -352,7 +397,7 @@ int G2SBigTiffStorage::GetDataType(const char* handle, MM::StorageDataType& pixe
 		pixelDataType = MM::StorageDataType_UNKNOWN;
 	else
 	{
-		auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+		auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 		switch(fs->getBpp())
 		{
 			case 1:
@@ -388,7 +433,7 @@ int G2SBigTiffStorage::Close(const char* handle)
       return DEVICE_INVALID_INPUT_PARAM;
    if(it->second.isOpen())
    {
-		auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+		auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 		fs->close();
 		it->second.close();
 		delete fs;
@@ -419,7 +464,7 @@ int G2SBigTiffStorage::Delete(char* handle)
    // Close the file handle
    if(it->second.isOpen())
    {
-		auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+		auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 		fs->close();
 		it->second.close();
 		delete fs;
@@ -479,7 +524,7 @@ int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned ch
 		return DEVICE_INVALID_INPUT_PARAM;
 
 	// Validate image dimensions
-	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+	auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 	if(!validateCoordinates(fs, coordinates, numCoordinates))
 		return DEVICE_INVALID_INPUT_PARAM;
 
@@ -537,7 +582,7 @@ int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int n
    if(it == cache.end())
       return DEVICE_INVALID_INPUT_PARAM;
 
-	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+	auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 	if(!validateCoordinates(fs, coordinates, numCoordinates))
 		return DEVICE_INVALID_INPUT_PARAM;
    
@@ -591,7 +636,7 @@ const unsigned char* G2SBigTiffStorage::GetImage(const char* handle, int coordin
 	if(it == cache.end())
 		return nullptr;
 	
-	auto fs = reinterpret_cast<G2STiffFile*>(it->second.FileHandle);
+	auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 	if(!validateCoordinates(fs, coordinates, numCoordinates))
 		return nullptr;
 	
@@ -759,23 +804,23 @@ bool G2SBigTiffStorage::scanDir(const std::string& path, char** listOfDatasets, 
          auto fname = entry.path().filename().u8string();
          if(fname == "." || fname == "..")
             continue;
-         auto abspath = std::filesystem::absolute(entry).u8string();
 
-         // Scan subfolder
-         if(std::filesystem::is_directory(entry))
-            return scanDir(abspath, listOfDatasets, maxItems, maxItemLength, cpos);
+         // Skip regular files
+         if(!std::filesystem::is_directory(entry))
+            continue;
          
-         // Skip unsupported file formats
+         // If the folder extension is invalid -> scan the subtree
+			auto abspath = std::filesystem::absolute(entry).u8string();
          auto fext = entry.path().extension().u8string();
          if(fext.size() == 0)
-            continue;
+            return scanDir(abspath, listOfDatasets, maxItems, maxItemLength, cpos);
          if(fext[0] == '.')
             fext = fext.substr(1);
          std::transform(fext.begin(), fext.end(), fext.begin(), [](char c) { return (char)tolower(c); });
          if(std::find(supportedFormats.begin(), supportedFormats.end(), fext) == supportedFormats.end())
-            continue;
+				return scanDir(abspath, listOfDatasets, maxItems, maxItemLength, cpos);
 
-         // We found a supported file type
+         // We found a supported dataset folder
          // Check result buffer limit
          if(cpos >= maxItems)
             return false;
@@ -799,7 +844,7 @@ bool G2SBigTiffStorage::scanDir(const std::string& path, char** listOfDatasets, 
  * @param numCoordinates Coordinate count
  * @return Are coordinates valid
  */ 
-bool G2SBigTiffStorage::validateCoordinates(const G2STiffFile* fs, int coordinates[], int numCoordinates) noexcept
+bool G2SBigTiffStorage::validateCoordinates(const G2SBigTiffDataset* fs, int coordinates[], int numCoordinates) noexcept
 {
 	if((std::size_t)numCoordinates != fs->getDimension() && (std::size_t)numCoordinates != fs->getDimension() - 2)
 		return false;
@@ -850,6 +895,23 @@ int G2SBigTiffStorage::getFlushCycle() const noexcept
 {
 	char buf[MM::MaxStrLength];
 	int ret = GetProperty(PROP_FLUSHCYCLE, buf);
+	if(ret != DEVICE_OK)
+		return 0;
+	try
+	{
+		return std::atoi(buf);
+	}
+	catch(...) { return 0; }
+}
+
+/**
+ * Get chunk size property
+ * @return Chunk size - number of slowest changing dimension coordinates in a single file
+ */
+int G2SBigTiffStorage::getChunkSize() const noexcept
+{
+	char buf[MM::MaxStrLength];
+	int ret = GetProperty(PROP_CHUNKSIZE, buf);
 	if(ret != DEVICE_OK)
 		return 0;
 	try
