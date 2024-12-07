@@ -26,7 +26,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "G2SStorage.h"
-#include "G2STiffFile.h"
+#include "G2SBigTiffDataset.h"
 
 /**
  * Storage writer driver for Go2Scope BigTIFF format
@@ -83,10 +83,11 @@ protected:
    //=========================================================================================================================
    void                                            cacheReduce() noexcept;
    bool                                            scanDir(const std::string& path, char** listOfDatasets, int maxItems, int maxItemLength, int cpos) noexcept;
-	bool															validateCoordinates(const G2STiffFile* fs, int coordinates[], int numCoordinates) noexcept;
+	bool															validateCoordinates(const G2SBigTiffDataset* fs, int coordinates[], int numCoordinates) noexcept;
    std::string                                     getImageKey(int coordinates[], int numCoordinates) noexcept;
 	bool															getDirectIO() const noexcept;
 	int															getFlushCycle() const noexcept;
+	int															getChunkSize() const noexcept;
 
 private:
    //=========================================================================================================================
