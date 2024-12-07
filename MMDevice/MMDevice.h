@@ -1482,6 +1482,16 @@ namespace MM {
       virtual int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle) = 0;
 
       /**
+       * Returns the actual path of the opened dataset.
+       * 
+       * \param handle - dataset handle
+       * \param path - returned path to the opened dataset
+       * \param maxPathLength - path buffer length
+       * \return - status code
+       */
+      virtual int GetPath(const char* handle, const char* path, int maxPathLength) = 0;
+
+      /**
        * Configure dimension
        * Configures image dimensions.
        */
@@ -1508,6 +1518,14 @@ namespace MM {
        * is a preferred way of implementation.
        */
       virtual int Load(const char* path, char* handle) = 0;
+
+      /**
+       * Checks if the device is compatible with a given dataset path.
+       * This is used to test the format of the dataset, without loading
+       * \param path - dataset path (file or directory)
+       * \return - true if the device recognizes and can open the path.
+       */
+      virtual bool CanLoad(const char* path) = 0;
 
       /**
        * Deletes a dataset with a given handle

@@ -7664,6 +7664,18 @@ std::string CMMCore::loadDataset(const char* path) throw (CMMError)
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
+/**
+ * Returns the device that can open a given dataset.
+ * It will cycle trough all loaded storage devices and find which one can open the dataset.
+ * 
+ * \param path - path of the dataset
+ * \return - device name, or empty string if it can not find any devices
+ */
+std::string CMMCore::getDeviceNameToOpen(const char* path)
+{
+    return std::string();
+}
+
 std::vector<long> CMMCore::getDatasetShape(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
