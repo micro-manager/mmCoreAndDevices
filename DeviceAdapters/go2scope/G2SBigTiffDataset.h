@@ -3,11 +3,11 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Go2Scope devices. Includes the experimental StorageDevice
+// DESCRIPTION:   BIGTIFF storage device driver
 //
 // AUTHOR:        Milos Jovanovic <milos@tehnocad.rs>
 //
-// COPYRIGHT:     Nenad Amodaj, Chan Zuckerberg Initiative, 2024
+// COPYRIGHT:     Luminous Point LLC, Lumencor Inc. 2024
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -19,53 +19,48 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-//
-// NOTE:          Storage Device development is supported in part by
-//                Chan Zuckerberg Initiative (CZI)
-// 
+//// 
 ///////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include <string>
 #include <map>
 #include <vector>
 #include <cmath>
-#include <climits>
-
-#define DEFAULT_BIGTIFF					true
-#define DEFAULT_DIRECT_IO				false
-#define TIFF_MAX_BUFFER_SIZE			2147483648U
-#define G2STIFF_HEADER_SIZE			512
-#define G2STIFF_TAG_COUNT				12
-#define G2STIFF_TAG_COUNT_NOMETA		11
+#include "G2SBigTiffStream.h"
 
 /**
  * Go2Scope BigTiff File Parser
  * Go2Scope BigTiff format is the extension of the BIgTIFF format (v6)
- * Stores entire datasets (image acquisitions) in a single file
+ * Supports both storing the entire datasets (image acquisitions) in a single file
+ *  or
+ * Chunking the dataset in multiple files, 
+ * Chunk contains a subset of images that have a common slowest changing dimension
  * Support for dataset and per-image metadata
  * Support for large files (>2GB)
  * Support for Direct and Cached I/O
- * Support for sequential image access (read / write)
+ * Support for sequential & random image access (read / write)
  * @author Miloš Jovanović <milos@tehnocad.rs>
  * @version 1.0
  */
-class G2STiffFile
+class G2SBigTiffDataset
 {
 public:
 	//============================================================================================================================
 	// Constructors & Destructors
 	//============================================================================================================================
-	G2STiffFile(const std::string& path, bool fbig = DEFAULT_BIGTIFF) noexcept;
-	G2STiffFile(const G2STiffFile& src) noexcept = default;
-	~G2STiffFile() noexcept { close(); }
+	G2SBigTiffDataset() noexcept;
+	G2SBigTiffDataset(const G2SBigTiffDataset& src) noexcept = default;
+	~G2SBigTiffDataset() noexcept { close(); }
 
 public:
 	//============================================================================================================================
 	// Public interface
 	//============================================================================================================================
-	void															open(bool trunc = false, bool dio = DEFAULT_DIRECT_IO);
+	void															create(const std::string& path, bool dio = DEFAULT_DIRECT_IO, bool fbig = DEFAULT_BIGTIFF, std::uint32_t chunksz = 0);
+	void															load(const std::string& path, bool dio = DEFAULT_DIRECT_IO);
 	void															close() noexcept;
 	void															setFlushCycles(std::uint32_t val) noexcept { flushcnt = val; }
+	std::uint32_t												getChunkSize() const noexcept { return chunksize; }
 	void															setShape(const std::vector<std::uint32_t>& dims);
 	void															setShape(std::initializer_list<std::uint32_t> dims);
 	std::vector<std::uint32_t>								getShape() const noexcept { return shape; }
@@ -77,8 +72,8 @@ public:
 	int															getBitDepth() const noexcept { return (int)bitdepth; }
 	int															getBpp() const noexcept { return (int)std::ceil(bitdepth / 8.0); }
 	int															getSamples() const noexcept { return (int)samples; }
-	void															setMetadata(const std::string& meta) noexcept;
-	std::string													getMetadata();
+	void															setMetadata(const std::string& meta);
+	std::string													getMetadata() const noexcept;
 	void															setUID(const std::string& val);
 	std::string													getUID() const noexcept { return datasetuid; }
 	std::string													getImageMetadata(const std::vector<std::uint32_t>& coord = {});
@@ -87,83 +82,44 @@ public:
 	std::vector<unsigned char>								getImage(const std::vector<std::uint32_t>& coord = {});
 	std::uint32_t												getDatasetImageCount() const noexcept { std::uint32_t ret = 1; for(std::size_t i = 0; i < shape.size() - 2; i++) ret *= shape[i]; return ret; }
 	std::uint32_t												getImageCount() const noexcept { return imgcounter; }
-	std::uint64_t												getFileSize() const noexcept;
-	std::uint64_t												getMaxFileSize() const noexcept { return bigTiff ? std::numeric_limits<std::uint64_t>::max() : std::numeric_limits<std::uint32_t>::max(); }
+	std::string													getPath() const noexcept { return dspath; }
+	std::string													getName() const noexcept { return dsname; }
 	bool															isDirectIO() const noexcept { return directIo; }
 	bool															isBigTIFF() const noexcept { return bigTiff; }
-#ifdef _WIN32
-	bool															isOpen() const noexcept { return fhandle != nullptr; }
-#else
-	bool															isOpen() const noexcept { return fhandle > 0; }
-#endif
+	bool															isInWriteMode() const noexcept { return writemode; }
+	bool															isInReadMode() const noexcept { return !writemode; }
+	bool															isOpen() const noexcept { return !datachunks.empty() && activechunk; }
+
 
 private:
 	//============================================================================================================================
 	// Internal methods
 	//============================================================================================================================
-	std::size_t													commit(const unsigned char* buff, std::size_t len);
-	std::size_t													write(const unsigned char* buff, std::size_t len);
-	std::size_t													fetch(unsigned char* buff, std::size_t len);
-	std::size_t													read(unsigned char* buff, std::size_t len);
-	std::uint64_t												seek(std::int64_t pos, bool beg = true);
-	std::uint64_t												offset(std::int64_t off);
-	void															flush() const;
-	void															formHeader() noexcept;
-	void															appendIFD(std::size_t imagelen, const std::string& meta);
-	void															loadNextIFD() { loadIFD(currentifdpos); }
-	void															loadIFD(std::uint64_t off);
-	std::uint64_t												parseIFD(std::vector<unsigned char>& ifd, std::uint32_t& ifdsz);
-	std::size_t													setIFDTag(unsigned char* ifd, std::uint16_t tag, std::uint16_t dtype, std::uint64_t val, std::uint64_t cnt = 1) const noexcept;
-	std::uint32_t												getTagCount(const std::string& meta) const noexcept { return meta.empty() ? G2STIFF_TAG_COUNT_NOMETA : G2STIFF_TAG_COUNT; }
-	void															calcDescSize(std::size_t metalen, std::uint32_t tags, std::uint32_t* ifd, std::uint32_t* desc, std::uint32_t* tot) noexcept;
-	void															writeShapeInfo() noexcept;
-	void															writeInt(unsigned char* buff, std::uint8_t len, std::uint64_t val) const noexcept;
-	std::uint64_t												readInt(const unsigned char* buff, std::uint8_t len) const noexcept;
-	void															moveReadCursor(std::uint64_t pos) noexcept;
-	void															moveWriteCursor(std::uint64_t pos) noexcept;
-	std::uint32_t												calcImageIndex(const std::vector<std::uint32_t>& coord) const;
+	void															switchDataChunk(std::uint32_t chunkind);
+	void															validateDataChunk(std::uint32_t chunkind, bool index);
+	void															selectImage(const std::vector<std::uint32_t>& coord);
+	void															advanceImage();
+	std::uint32_t												getChunkImageCount() const noexcept;
+	void															calcImageIndex(const std::vector<std::uint32_t>& coord, std::uint32_t& chunkind, std::uint32_t& imgind) const;
 
 private:
 	//============================================================================================================================
 	// Data members - Dataset properties
 	//============================================================================================================================
-	std::string													fpath;											///< File path
+	std::string													dspath;											///< Dataset (directory) path
+	std::string													dsname;											///< Dataset name
 	std::string													datasetuid;										///< Dataset UID
 	std::vector<std::uint32_t>								shape;											///< Dataset shape (dimension / axis sizes)
-	std::vector<std::uint64_t>								ifdcache;										///< IFD offset cache
-	std::uint32_t												ssize;											///< Sector size (for direct I/O)
+	std::vector<G2SFileStreamHandle>						datachunks;										///< Data chunks / File stream descriptors
+	G2SFileStreamHandle										activechunk;									///< Active data chunk
+	std::vector<unsigned char>								metadata;										///< Dataset metdata (cache)
 	std::uint32_t												imgcounter;										///< Image counter
 	std::uint32_t												flushcnt;										///< Image flush cycles
-	std::uint32_t												currentimage;									///< Current image index (used for reading only)
+	std::uint32_t												chunksize;										///< Chunk size
 	std::uint8_t												bitdepth;										///< Bit depth
 	std::uint8_t												samples;											///< Samples per pixel
 	bool															directIo;										///< Use direct I/O for file operations
 	bool															bigTiff;											///< Use big TIFF format
-	bool															configset;										///< Is dataset configuration set
-#ifdef _WIN32
-	void*															fhandle;											///< File handle
-#else
-	int															fhandle;											///< File descriptor
-#endif
-
-private:
-	//============================================================================================================================
-	// Data members - Stream state
-	//============================================================================================================================
-	std::vector<unsigned char>								header;											///< Header (cache)
-	std::vector<unsigned char>								metadata;										///< Dataset metdata (cache)
-	std::vector<unsigned char>								lastifd;											///< Last IFD (cache)
-	std::vector<unsigned char>								currentifd;										///< Current IFD (cache)
-	std::vector<unsigned char>								writebuff;										///< Write buffer for direct I/O
-	std::vector<unsigned char>								readbuff;										///< Read buffer for direct I/O
-	std::size_t													readbuffoff;									///< Read buffer offset
-	std::uint64_t												currpos;											///< Current file stream offset
-	std::uint64_t												writepos;										///< Write stream offset
-	std::uint64_t												readpos;											///< Read stream offset
-	std::uint64_t												lastifdpos;										///< Offset of the last image descriptor
-	std::uint32_t												lastifdsize;									///< Last IFD size
-	std::uint64_t												currentifdpos;									///< Offset of the current image descriptor
-	std::uint32_t												currentifdsize;								///< Current IFD size
-	std::uint64_t												nextifdpos;										///< Offset of the next image descriptor
+	bool															writemode;										///< Is dataset opened for writing
 };
 
