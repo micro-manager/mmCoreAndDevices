@@ -53,6 +53,7 @@
 #define ERR_TIFF_CACHE_OVERFLOW      140505
 #define ERR_TIFF_OPEN_FAILED			 140506
 #define ERR_TIFF_CACHE_INSERT			 140507
+#define ERR_TIFF_HANDLE_INVALID		 140508
 
 //////////////////////////////////////////////////////////////////////////////
 // Cache configuration

@@ -1489,7 +1489,7 @@ namespace MM {
        * \param maxPathLength - path buffer length
        * \return - status code
        */
-      virtual int GetPath(const char* handle, const char* path, int maxPathLength) = 0;
+      virtual int GetPath(const char* handle, char* path, int maxPathLength) = 0;
 
       /**
        * Configure dimension
@@ -1510,6 +1510,11 @@ namespace MM {
       virtual int Close(const char* handle) = 0;
 
       /**
+       * Returns true if it can accept new images.
+       */
+      virtual bool IsOpen(const char* handle) = 0;
+
+      /**
        * Load
        * Load an existing dataset.
        * Loaded datasets are immutable; any attempt to add images will fail.
@@ -1526,6 +1531,14 @@ namespace MM {
        * \return - true if the device recognizes and can open the path.
        */
       virtual bool CanLoad(const char* path) = 0;
+
+      /**
+       * Returns progress of the current operation in percent.
+       * TODO: there is an implicit assumption that the adapter can execute only one action at the time
+       * \param handle - dataset handle
+       * \return progress of the current operation 0-100, or -1 if idle or not implemented
+       */
+      virtual int GetProgress(const char* handle) = 0;
 
       /**
        * Deletes a dataset with a given handle

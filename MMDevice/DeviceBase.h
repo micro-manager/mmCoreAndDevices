@@ -2486,6 +2486,9 @@ private:
 template <class U>
 class CStorageBase : public CDeviceBase<MM::Storage, U>
 {
+public:
+   bool CanLoad(const char* path) { return false; }
+   int GetProgress(const char* handle) { return -1; }
 };
 
 
