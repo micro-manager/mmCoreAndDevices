@@ -98,13 +98,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CFileUtil.cpp" />
+    <ClCompile Include="G2SBigTiffDataset.cpp" />
     <ClCompile Include="G2SBigTiffStorage.cpp" />
+    <ClCompile Include="G2SBigTiffStream.cpp" />
     <ClCompile Include="G2SStorage.cpp" />
     <ClCompile Include="AcqZarrStorage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcqZarrStorage.h" />
+    <ClInclude Include="G2SBigTiffDataset.h" />
     <ClInclude Include="G2SBigTiffStorage.h" />
+    <ClInclude Include="G2SBigTiffStream.h" />
+    <ClInclude Include="G2SFileUtil.h" />
     <ClInclude Include="G2SStorage.h" />
   </ItemGroup>
   <ItemGroup>

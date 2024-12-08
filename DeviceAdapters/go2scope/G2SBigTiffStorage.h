@@ -71,6 +71,9 @@ public:
    int                                             GetNumberOfDimensions(const char* handle, int& numDimensions);
    int                                             GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength);
    int                                             GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength);
+   bool                                            IsOpen(const char* handle);
+   int                                             GetPath(const char* handle, char* path, int maxPathLength);
+
 
 public:
    //=========================================================================================================================

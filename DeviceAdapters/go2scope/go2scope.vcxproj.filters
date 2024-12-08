@@ -18,6 +18,15 @@
     <ClCompile Include="G2SBigTiffStorage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="G2SBigTiffDataset.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CFileUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="G2SBigTiffStream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcqZarrStorage.h">
@@ -27,6 +36,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="G2SBigTiffStorage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="G2SBigTiffDataset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="G2SBigTiffStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="G2SFileUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

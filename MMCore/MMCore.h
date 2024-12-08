@@ -651,6 +651,7 @@ public:
    std::string loadDataset(const char* path) throw (CMMError);
    std::string getDeviceNameToOpen(const char* path);
    std::string getDatasetPath(const char* handle) throw (CMMError);
+   bool isDatasetOpen(const char* handle);
    std::vector<long> getDatasetShape(const char* handle) throw (CMMError);
    MM::StorageDataType getDatasetPixelType(const char* handle) throw (CMMError);
    void addImage(const char* handle, int sizeinBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
@@ -660,6 +661,11 @@ public:
    std::string getSummaryMeta(const char* handle) throw (CMMError);
    std::string getImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
 	STORAGEIMGOUT getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   void snapAndSave(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void saveNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void attachStorageToCircularBuffer(const char* handle) throw (CMMError);
+   std::string getAttachedStorage();
+   std::string getLastAttachedStorageError();
 
    ///@}
 

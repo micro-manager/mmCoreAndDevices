@@ -317,6 +317,8 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
 
    ZarrStreamSettings_destroy(settings);
 
+   streamPath = dsName;
+
    return DEVICE_OK;
 }
 
@@ -343,6 +345,7 @@ int AcqZarrStorage::Close(const char* handle)
       return ERR_ZARR_STREAM_CLOSE;
    }
 
+   streamPath.clear();
    destroyStream();
 
    return DEVICE_OK;
@@ -494,6 +497,20 @@ int AcqZarrStorage::GetDimension(const char* handle, int dimension, char* name, 
 int AcqZarrStorage::GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength)
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
+bool AcqZarrStorage::IsOpen(const char* handle)
+{
+   if (streamHandle.compare(handle) != 0)
+   {
+      return false;
+   }
+   return true;
+}
+
+int AcqZarrStorage::GetPath(const char* handle, char* path, int maxPathLength)
+{
+   return 0;
 }
 
 std::string AcqZarrStorage::getErrorMessage(int code)

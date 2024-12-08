@@ -50,6 +50,7 @@ G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
 	SetErrorText(ERR_TIFF_INVALID_DIMENSIONS, "Invalid number of dimensions. Minimum is 3.");
 	SetErrorText(ERR_TIFF_INVALID_PIXEL_TYPE, "Invalid or unsupported pixel type.");
 	SetErrorText(ERR_TIFF_OPEN_FAILED, "Failed opening TIF file.");
+	SetErrorText(ERR_TIFF_HANDLE_INVALID, "Dataset handle is not valid.");
 
    // create pre-initialization properties                                   
    // ------------------------------------
@@ -520,7 +521,7 @@ int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned ch
 
 	// Obtain dataset descriptor from cache
 	auto it = cache.find(handle);
-	if(it == cache.end())
+	if (it == cache.end())
 		return DEVICE_INVALID_INPUT_PARAM;
 
 	// Validate image dimensions
@@ -761,6 +762,28 @@ int G2SBigTiffStorage::GetCoordinate(const char* handle, int dimension, int coor
       return DEVICE_INVALID_PROPERTY_LIMTS;
 	strncpy(name, it->second.Dimensions[dimension].Coordinates[coordinate].c_str(), nameLength);
    return DEVICE_OK;
+}
+
+/**
+ * Returns true if images can be added to the dataset
+ */
+bool G2SBigTiffStorage::IsOpen(const char* handle)
+{
+	// TODO: is this the correct way to check if the dataset is accepting images?
+	auto it = cache.find(handle);
+	if (it == cache.end())
+		return false;
+
+	return true;
+}
+
+int G2SBigTiffStorage::GetPath(const char* handle, char* path, int maxPathLength)
+{
+	auto it = cache.find(handle);
+	if (it == cache.end())
+		return ERR_TIFF_HANDLE_INVALID;
+	strncpy(path, it->second.Path.c_str(), it->second.Path.size());
+	return DEVICE_OK;
 }
 
 /**
