@@ -261,8 +261,6 @@ private:
     long cameraCCDYSize_;
     double ccdT_;
     std::string triggerDevice_;
-    map<int, string> peakTypeToString;
-    map<string, int> stringToPeakType;
 
     peak_auto_feature_mode peakAutoWhiteBalance_;
     map<int, string> peakAutoToString;
@@ -329,6 +327,5 @@ private:
     MMThreadLock stopLock_;
     MMThreadLock suspendLock_;
 };
-
 
 #endif //_IDSPeak_H_

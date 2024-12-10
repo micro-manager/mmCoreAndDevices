@@ -39,6 +39,8 @@
 #include <future>
 #include <unordered_map>
 
+#include <ids_peak_comfort_c/ids_peak_comfort_c.h>
+
 using namespace std;
 const double CIDSPeak::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
@@ -133,6 +135,27 @@ string pixelFormatToString(peak_pixel_format pixelFormat) {
         return "RGB10P32";
     case PEAK_PIXEL_FORMAT_BGR10P32:
         return "BGR10P32";
+    case PEAK_PIXEL_FORMAT_BAYER_GR10G40_IDS:
+        return "BAYER_GR10G40_IDS";
+    case PEAK_PIXEL_FORMAT_BAYER_RG10G40_IDS:
+        return "BAYER_RG10G40_IDS";
+    case PEAK_PIXEL_FORMAT_BAYER_GB10G40_IDS:
+        return "BAYER_GB10G40_IDS";
+    case PEAK_PIXEL_FORMAT_BAYER_BG10G40_IDS:
+        return "BAYER_BG10G40_IDS";
+    case PEAK_PIXEL_FORMAT_BAYER_GR12G24_IDS:
+        return "BAYER_GR12G24_IDS";
+    case PEAK_PIXEL_FORMAT_BAYER_RG12G24_IDS:
+        return "BAYER_RG12G24_IDS";
+    case PEAK_PIXEL_FORMAT_BAYER_GB12G24_IDS:
+        return "BAYER_GB12G24_IDS";
+    case PEAK_PIXEL_FORMAT_BAYER_BG12G24_IDS:
+        return "BAYER_BG12G24_IDS";
+    case PEAK_PIXEL_FORMAT_MONO10G40_IDS:
+        return "MONO10G40_IDS";
+    case PEAK_PIXEL_FORMAT_MONO12G24_IDS:
+        return "MONO12G24_IDS";
+
     default:
         return "";
     }
@@ -176,7 +199,19 @@ unordered_map<string, peak_pixel_format> stringPixelFormat = {
     { "MONO10P", PEAK_PIXEL_FORMAT_MONO10P },
     { "MONO12P", PEAK_PIXEL_FORMAT_MONO12P },
     { "RGB10P32", PEAK_PIXEL_FORMAT_RGB10P32 },
-    { "BGR10P32", PEAK_PIXEL_FORMAT_BGR10P32 }
+    { "BGR10P32", PEAK_PIXEL_FORMAT_BGR10P32 },
+    { "BAYER_GR10G40_IDS", PEAK_PIXEL_FORMAT_BAYER_GR10G40_IDS },
+    { "BAYER_RG10G40_IDS", PEAK_PIXEL_FORMAT_BAYER_RG10G40_IDS },
+    { "BAYER_GB10G40_IDS", PEAK_PIXEL_FORMAT_BAYER_GB10G40_IDS },
+    { "BAYER_BG10G40_IDS", PEAK_PIXEL_FORMAT_BAYER_BG10G40_IDS },
+    { "BAYER_GR12G24_IDS", PEAK_PIXEL_FORMAT_BAYER_GR12G24_IDS },
+    { "BAYER_RG12G24_IDS", PEAK_PIXEL_FORMAT_BAYER_RG12G24_IDS },
+    { "BAYER_GB12G24_IDS", PEAK_PIXEL_FORMAT_BAYER_GB12G24_IDS },
+    { "BAYER_BG12G24_IDS", PEAK_PIXEL_FORMAT_BAYER_BG12G24_IDS },
+    { "MONO10G40_IDS", PEAK_PIXEL_FORMAT_MONO10G40_IDS },
+    { "MONO12G24_IDS", PEAK_PIXEL_FORMAT_MONO12G24_IDS },
+
+
 };
 peak_pixel_format stringToPixelFormat(string PixelFormat) {
     return stringPixelFormat[PixelFormat];
