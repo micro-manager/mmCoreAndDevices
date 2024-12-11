@@ -94,6 +94,7 @@
     <ClCompile Include="Devices\SLMInstance.cpp" />
     <ClCompile Include="Devices\StageInstance.cpp" />
     <ClCompile Include="Devices\StateInstance.cpp" />
+    <ClCompile Include="Devices\StorageInstance.cpp" />
     <ClCompile Include="Devices\XYStageInstance.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
@@ -137,6 +138,7 @@
     <ClInclude Include="Devices\SLMInstance.h" />
     <ClInclude Include="Devices\StageInstance.h" />
     <ClInclude Include="Devices\StateInstance.h" />
+    <ClInclude Include="Devices\StorageInstance.h" />
     <ClInclude Include="Devices\XYStageInstance.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="FrameBuffer.h" />
@@ -171,11 +173,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MMDevice\MMDevice-SharedRuntime.vcxproj">
       <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
-      <Private>true</Private>
-      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
-      <LinkLibraryDependencies>true</LinkLibraryDependencies>
-      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

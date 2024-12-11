@@ -29,6 +29,7 @@
 // If any of the class definitions changes, the interface version
 // must be incremented
 #define DEVICE_INTERFACE_VERSION 71
+// TODO: determine the correct version number
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -218,6 +219,22 @@ namespace MM {
       MMTime interval_; // interval in milliseconds
    };
 
+   inline int GetPixelDataSizeInBytes(StorageDataType dataType)
+   {
+      switch (dataType)
+      {
+         case StorageDataType_GRAY8:
+            return 1;
+
+         case StorageDataType_GRAY16:
+            return 2;
+
+         case StorageDataType_RGB32:
+            return 4;
+      }
+
+      return 0;
+   }
 
    /**
     * Generic device interface.
@@ -1441,5 +1458,141 @@ namespace MM {
       /// \deprecated Better handling of asynchronous errors to be developed.
       MM_DEPRECATED(virtual void ClearPostedErrors(void)) = 0;
    };
+
+   /**
+    * Storage API
+    * Dev Notes:
+    *    - all "meta" variables are ASCII strings, typically JSON encoded, but not necessarily
+    *    - whether the same device can create multiple datasets at the same time is implementation dependent
+    *    - AddImage function allows for inserting images in arbitrary order to any point in the coordinate space.
+    *      This is very difficult to implement for most file formats. The implementation should return a run time error
+    *      if the images are inserted in the order that is not supported.
+    */
+   class Storage : public Device {
+   public:
+      Storage() {}
+      virtual ~Storage() {}
+
+      virtual DeviceType GetType() const { return Type; }
+      static const DeviceType Type;
+
+      // Storage API
+      /**
+       * Create
+       * Create new dataset in the location path/name. Fails if the path already exists, or if the number of dimensions less than 1.
+       * The caller should save the "handle" output parameter to refer to this dataset in subsequent code.
+       */
+      virtual int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle) = 0;
+
+      /**
+       * Returns the actual path of the opened dataset.
+       * 
+       * \param handle - dataset handle
+       * \param path - returned path to the opened dataset
+       * \param maxPathLength - path buffer length
+       * \return - status code
+       */
+      virtual int GetPath(const char* handle, char* path, int maxPathLength) = 0;
+
+      /**
+       * Configure dimension
+       * Configures image dimensions.
+       */
+      virtual int ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning) = 0;
+
+      /**
+       * Configure coordinate
+       * Configures name of the coordinate
+       */
+      virtual int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name) = 0;
+
+      /**
+       * Close
+       * Closes the dataset. After the dataset is closed its handle becomes invalid.
+       */
+      virtual int Close(const char* handle) = 0;
+
+      /**
+       * Returns true if it can accept new images.
+       */
+      virtual bool IsOpen(const char* handle) = 0;
+
+      /**
+       * Load
+       * Load an existing dataset.
+       * Loaded datasets are immutable; any attempt to add images will fail.
+       * "Loading" the dataset does not mean it resides in program memory,
+       * it just means we can access its images and metadata. "Lazy" loading
+       * is a preferred way of implementation.
+       */
+      virtual int Load(const char* path, char* handle) = 0;
+
+      /**
+       * Checks if the device is compatible with a given dataset path.
+       * This is used to test the format of the dataset, without loading
+       * \param path - dataset path (file or directory)
+       * \return - true if the device recognizes and can open the path.
+       */
+      virtual bool CanLoad(const char* path) = 0;
+
+      /**
+       * Returns progress of the current operation in percent.
+       * TODO: there is an implicit assumption that the adapter can execute only one action at the time
+       * \param handle - dataset handle
+       * \return progress of the current operation 0-100, or -1 if idle or not implemented
+       */
+      virtual int GetProgress(const char* handle) = 0;
+
+      /**
+       * Deletes a dataset with a given handle
+       */
+      virtual int Delete(char* handle) = 0;
+      
+      /**
+       * Returns a list of dataset names located in a given path.
+       * TODO: exact behavior of this call should be elaborated, including
+       * the format and memory management of the returned list.
+       */
+      virtual int List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength) = 0;
+
+      /**
+       * Inserts an image into the dataset
+       */
+      virtual int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
+
+      /**
+       * Appends image to the dataset, assuming order specified by the shape
+       */
+      virtual int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta) = 0;
+
+      /**
+       * Returns summary metadata
+       */
+      virtual int GetSummaryMeta(const char* handle, char* meta, int bufSize) = 0;
+
+      /**
+       * Returns summary metadata
+       */
+      virtual int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta, int bufSize) = 0;
+
+      /**
+       * Returns image pixels
+       */
+      virtual const unsigned char* GetImage(const char* handle, int coordinates[], int numCoordinates) = 0;
+
+      /**
+       * Returns dimensions of the dataset
+       */
+      virtual int GetNumberOfDimensions(const char* handle, int& numDimensions) = 0;
+
+      virtual int GetShape(const char* handle, int shape[]) = 0;
+
+      virtual int GetDataType(const char* handle, MM::StorageDataType& pixelDataType) = 0;
+
+      virtual int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) = 0;
+
+      virtual int GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength) = 0;
+   };
+
 
 } // namespace MM

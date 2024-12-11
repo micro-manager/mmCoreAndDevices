@@ -83,6 +83,9 @@ namespace MM {
    // Code filling buffer should assume includes null terminator.
    const int MaxStrLength = 1024;
 
+   // Maximum length of serialized metadata strings
+   const int MaxMetadataLength = 200000;
+
    // system-wide property names
    const char* const g_Keyword_Name             = "Name";
    const char* const g_Keyword_Description      = "Description";
@@ -130,6 +133,7 @@ namespace MM {
    const char* const g_Keyword_CoreImageProcessor = "ImageProcessor";
    const char* const g_Keyword_CoreSLM          = "SLM";
    const char* const g_Keyword_CoreGalvo        = "Galvo";
+   const char* const g_Keyword_CoreStorage      = "Storage";
    const char* const g_Keyword_CoreTimeoutMs    = "TimeoutMs";
    const char* const g_Keyword_Channel          = "Channel";
    const char* const g_Keyword_Version          = "Version";
@@ -217,7 +221,8 @@ namespace MM {
       MagnifierDevice,
       SLMDevice,
       HubDevice,
-      GalvoDevice
+      GalvoDevice,
+      StorageDevice
    };
 
    enum PropertyType {
@@ -249,6 +254,15 @@ namespace MM {
       FocusDirectionTowardSample,
       FocusDirectionAwayFromSample,
    };
+
+   enum StorageDataType
+   {
+      StorageDataType_UNKNOWN = 0,
+      StorageDataType_GRAY8,     // uint8
+      StorageDataType_GRAY16,    // uint16
+      StorageDataType_RGB32      // RGBA, 8bits per color, A ignored defaults to 0
+   };
+
 
    //////////////////////////////////////////////////////////////////////////////
    // Notification constants
