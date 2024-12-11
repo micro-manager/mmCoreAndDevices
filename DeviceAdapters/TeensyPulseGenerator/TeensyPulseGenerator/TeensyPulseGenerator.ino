@@ -204,6 +204,10 @@ public:
         Serial.write((byte *) &pulseNumber, 4);        
     }
 
+    bool running() {
+      return isRunning;
+    }
+
     void run() {
         // Only run if active
         if (!isRunning) return;
@@ -256,10 +260,13 @@ void processSerialCommands() {
 
       if (commandState == 0) {
         currentCommand = incomingByte;
-        commandState = 1;
+        if (currentCommand == 255) // 255 asks about state
+          commandState = 2;
+        else
+          commandState = 1;
         parameterByteCount = 0;
         parameterBuffer = 0;
-      } else { // commandState == 1                
+      } else if (commandState == 1) { // commandState == 1                
         // Receiving 32-bit parameter
         // Construct 32-bit value (little-endian)
         parameterBuffer |= ((uint32_t)incomingByte << (parameterByteCount * 8));
@@ -299,6 +306,44 @@ void processSerialCommands() {
                     
           commandState = 0;
         }
+      } else if (commandState == 2) {
+        uint32_t running = static_cast<uint32_t> (pulsegen->running());
+        uint32_t notRunning = static_cast<uint32_t> (!pulsegen->running());
+        switch (incomingByte) {
+            case 0: 
+              Serial.write(incomingByte);
+              Serial.write((byte *) &version, 4);
+              break;
+
+            case 1:  // are we running?
+              Serial.write(incomingByte);
+              Serial.write((byte *) &running, 4);
+              break;
+                    
+            case 2:  // are we stopped?
+              Serial.write(incomingByte);
+              Serial.write((byte *) &notRunning, 4);
+              break;
+
+            case 3:  // Set Interval
+              pulsegen->setInterval(parameterBuffer);
+              break;
+                        
+            case 4:  // Set Pulse Duration
+              pulsegen->setPulseDuration(parameterBuffer);
+              break;
+                        
+            case 5:  // Set Trigger Mode
+              pulsegen->setTriggerMode(parameterBuffer > 0);
+              break;
+
+            case 6:  // Set number of Pulses
+              pulsegen->setNumberOfPulses(parameterBuffer);
+              break;
+          }
+                    
+          commandState = 0;
+
       }
     }
 }

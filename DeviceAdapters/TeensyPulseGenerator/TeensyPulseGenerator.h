@@ -33,20 +33,25 @@ public:
     int OnPulseDuration(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnRunUntilStopped(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnNrPulses(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     bool initialized_;
     std::string port_;
 
     // Current configuration
-    double interval_;     // Interval in microseconds
-    double pulseDuration_; // Pulse duration in microseconds
+    double interval_;     // Interval in milli-seconds
+    double pulseDuration_; // Pulse duration in milli-seconds
     bool triggerMode_;    // Trigger mode enabled/disabled
     bool running_;        // Pulse generator running state
+    bool runUntilStopped_;
+    uint32_t version_;
+    uint32_t nrPulses_;
 
     // Helper methods for serial communication
     int SendCommand(uint8_t cmd, uint32_t param = 0);
-    bool ReadResponse(std::string& response);
+    int GetResponse(uint8_t cmd, uint32_t& param);
 };
 
 #endif
