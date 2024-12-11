@@ -1,5 +1,37 @@
 #include <Arduino.h>
 
+static const uint32_t version = 1;
+
+/**
+Note: The pulse pin nr and input pin nr are hard coded.
+Change as needed.
+
+
+Command structure:  first byte indicates the command.
+Some commands are followed by a uint_32t number (4 bytes)
+in big endian format.
+The Teensy responds by sending the command nr as a byte,
+followed by a 4 byte number (uint32_t in big endian format).
+
+
+Commands:
+0: Version nr.  Returns command nr followed by version number. 
+1: Starts running a pulse sequence with features set by other 
+    parameters.  Returns command nr.
+2: Stops running a pulse sequence.  Returns command nr followed
+    by the number of pulses send.
+3: Sets the pulse interval in MicroSeconds.  Returns the command nr
+    followed by the pulse interval in us.
+4. Sets the pulse duration in MicroSeconds.
+5. Sets whether or not to wait sending a pulse for the input pin 
+    to go high.  Any number > 0 will result in waiting for the input
+    pin.
+6. Sets the number of pulses to be generated.  WHen set to zero, 
+    pulses will continue until the stop command is received.
+
+*/
+
+
 class PulseGenerator {
 private:
     // Configuration parameters
@@ -76,8 +108,8 @@ public:
         interrupts();
 
         // Simplified configuration confirmation
-        Serial.print("Config: ");
-        Serial.println(useInputTrigger);
+        //Serial.print("Config: ");
+        //Serial.println(useInputTrigger);
     }
 
     void setInterval(uint32_t interval) {
@@ -92,8 +124,8 @@ public:
         interrupts();
 
         // Simplified interval confirmation
-        Serial.print("3 ");
-        Serial.println(interval);
+        Serial.write(3);
+        Serial.write((byte *) &interval, 4);
     }
 
     void setPulseDuration(uint32_t duration) {
@@ -102,8 +134,8 @@ public:
         interrupts();
 
         // Simplified duration confirmation
-        Serial.print("4 ");
-        Serial.println(duration);
+        Serial.write(4);
+        Serial.write((byte *) &duration, 4);
     }
 
     void setTriggerMode(bool useInputTrigger) {
@@ -112,8 +144,9 @@ public:
         interrupts();
 
         // Simplified trigger mode confirmation
-        Serial.print("5 ");
-        Serial.println(useInputTrigger);
+        Serial.write(5);
+        uint32_t tmp = static_cast<uint32_t> (useInputTrigger);
+        Serial.write((byte *) &tmp, 4);
     }
 
     void setNumberOfPulses(uint32_t number) {
@@ -122,8 +155,8 @@ public:
       countPulses = number != 0;
       interrupts();
 
-      Serial.print(6);
-      Serial.println(number);
+      Serial.write(6);
+      Serial.write((byte *) &number, 4);
     }
 
     void start() {
@@ -143,7 +176,10 @@ public:
         intervalTimer.begin(intervalISR, pulseInterval);
 
         // Simplified start confirmation
-        Serial.println("1");
+        Serial.write(1);
+        // Not really needed, but used for consistent messaging.
+        uint32_t tmp = static_cast<uint32_t> (0);
+        Serial.write((byte *) &tmp, 4);
     }
 
     void stopNoSerialMessage() {
@@ -164,8 +200,8 @@ public:
         stopNoSerialMessage();
 
         // Simplified stop confirmation
-        Serial.print("2");
-        Serial.println(numberOfPulses);
+        Serial.write(2);
+        Serial.write((byte *) &pulseNumber, 4);        
     }
 
     void run() {
@@ -216,61 +252,54 @@ void processSerialCommands() {
     static uint8_t parameterByteCount = 0;
 
     while (Serial.available() > 0) {
-        uint8_t incomingByte = Serial.read();
+      uint8_t incomingByte = Serial.read();
 
-        switch (commandState) {
-            case 0:  // Command byte
-                currentCommand = incomingByte;
-                switch (incomingByte) {
-                    case 1:  // Start
-                        pulsegen->start();
-                        break;
-                    
-                    case 2:  // Stop
-                        pulsegen->stop();
-                        break;
-                    
-                    case 3:  // Set Interval
-                    case 4:  // Set Pulse Duration
-                    case 5:  // Set Trigger Mode
-                    case 6:  // Number of Triggers, zero for always on
-                        commandState = 1;
-                        parameterByteCount = 0;
-                        parameterBuffer = 0;
-                        break;
-                    
-                    default:
-                        break;
-                }
-                break;
+      if (commandState == 0) {
+        currentCommand = incomingByte;
+        commandState = 1;
+        parameterByteCount = 0;
+        parameterBuffer = 0;
+      } else { // commandState == 1                
+        // Receiving 32-bit parameter
+        // Construct 32-bit value (little-endian)
+        parameterBuffer |= ((uint32_t)incomingByte << (parameterByteCount * 8));
+        parameterByteCount++;
 
-            case 1:  // Receiving 32-bit parameter
-                // Construct 32-bit value (little-endian)
-                parameterBuffer |= ((uint32_t)incomingByte << (parameterByteCount * 8));
-                parameterByteCount++;
+        if (parameterByteCount == 4) {
+          switch (currentCommand) {
+            case 0: 
+              Serial.write(0);
+              Serial.write((byte *) &version, 4);
+              break;
 
-                if (parameterByteCount == 4) {
-                    switch (currentCommand) {
-                        case 3:  // Set Interval
-                            pulsegen->setInterval(parameterBuffer);
-                            break;
+            case 1:  // Start
+              pulsegen->start();
+              break;
+                    
+            case 2:  // Stop
+              pulsegen->stop();
+              break;
+
+            case 3:  // Set Interval
+              pulsegen->setInterval(parameterBuffer);
+              break;
                         
-                        case 4:  // Set Pulse Duration
-                            pulsegen->setPulseDuration(parameterBuffer);
-                            break;
+            case 4:  // Set Pulse Duration
+              pulsegen->setPulseDuration(parameterBuffer);
+              break;
                         
-                        case 5:  // Set Trigger Mode
-                            pulsegen->setTriggerMode(parameterBuffer > 0);
-                            break;
-                        case 6:  // Set number of Pulses
-                            pulsegen->setNumberOfPulses(parameterBuffer);
-                            break;
-                    }
+            case 5:  // Set Trigger Mode
+              pulsegen->setTriggerMode(parameterBuffer > 0);
+              break;
+
+            case 6:  // Set number of Pulses
+              pulsegen->setNumberOfPulses(parameterBuffer);
+              break;
+          }
                     
-                    commandState = 0;
-                }
-                break;
+          commandState = 0;
         }
+      }
     }
 }
 
