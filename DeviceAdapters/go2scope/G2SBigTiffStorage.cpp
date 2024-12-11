@@ -538,6 +538,12 @@ int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned ch
    return DEVICE_OK;
 }
 
+int G2SBigTiffStorage::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta)
+{
+	// TODO: implement append
+	return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
 /**
  * Get dataset summary metadata
  * If the netadata size is longer than the provided buffer, only the first [bufSize] bytes will be

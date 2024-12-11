@@ -387,6 +387,13 @@ int AcqZarrStorage::List(const char* path, char** listOfDatasets, int maxItems, 
 
 int AcqZarrStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta)
 {
+   // acquire-zarr supports append-only images
+   // TODO: check if the coordinates are coming in the right order and return run-time error if they dont
+   return AppendImage(handle, sizeInBytes, pixels, imageMeta);
+}
+
+int AcqZarrStorage::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta)
+{
    if (zarrStream == nullptr)
    {
       LogMessage("No stream is currently open.");
