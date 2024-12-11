@@ -1462,8 +1462,11 @@ namespace MM {
    /**
     * Storage API
     * Dev Notes:
-    *    - all "meta" variables refer to JSON encoded strings
-    *    - we can create multiple datasets in parallel
+    *    - all "meta" variables are ASCII strings, typically JSON encoded, but not necessarily
+    *    - whether the same device can create multiple datasets at the same time is implementation dependent
+    *    - AddImage function allows for inserting images in arbitrary order to any point in the coordinate space.
+    *      This is very difficult to implement for most file formats. The implementation should return a run time error
+    *      if the images are inserted in the order that is not supported.
     */
    class Storage : public Device {
    public:
@@ -1556,6 +1559,11 @@ namespace MM {
        * Inserts an image into the dataset
        */
       virtual int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta) = 0;
+
+      /**
+       * Appends image to the dataset, assuming order specified by the shape
+       */
+      virtual int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta) = 0;
 
       /**
        * Returns summary metadata
