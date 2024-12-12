@@ -237,7 +237,7 @@ int SCCamera::Initialize()
         break;
     }
 
-    ret = SC_OpenEx(devHandle_, SC_ECameraAccessPermission::accessPermissionMonitor);
+    ret = SC_OpenEx(devHandle_, SC_ECameraAccessPermission::eAccessPermissionMonitor);
     if (ret != SC_OK) {
         LogMessage("create device handle failed");
         return DEVICE_NOT_CONNECTED;
