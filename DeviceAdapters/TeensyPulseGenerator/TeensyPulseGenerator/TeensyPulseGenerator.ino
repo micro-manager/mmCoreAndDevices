@@ -8,10 +8,15 @@ Change as needed.
 
 
 Command structure:  first byte indicates the command.
-Some commands are followed by a uint_32t number (4 bytes)
+Commands are followed by a uint_32t number (4 bytes)
 in big endian format.
 The Teensy responds by sending the command nr as a byte,
 followed by a 4 byte number (uint32_t in big endian format).
+A special command is the number 255, which indicates a request
+for the state.  255 is followed by one more byte: the number of 
+the command for which the state is requested.  The Teensy 
+answers with the command number and the state (as a 4 byte 
+uint32_t).
 
 
 Commands:
@@ -26,7 +31,7 @@ Commands:
 5. Sets whether or not to wait sending a pulse for the input pin 
     to go high.  Any number > 0 will result in waiting for the input
     pin.
-6. Sets the number of pulses to be generated.  WHen set to zero, 
+6. Sets the number of pulses to be generated.  When set to zero, 
     pulses will continue until the stop command is received.
 
 */
@@ -128,6 +133,14 @@ public:
         Serial.write((byte *) &interval, 4);
     }
 
+    void reportInterval() {
+      noInterrupts();
+      uint32_t interval = pulseInterval;  
+      interrupts();
+      Serial.write(3);
+      Serial.write((byte *) &interval, 4);
+    }
+
     void setPulseDuration(uint32_t duration) {
         noInterrupts();
         pulseDuration = duration;
@@ -136,6 +149,14 @@ public:
         // Simplified duration confirmation
         Serial.write(4);
         Serial.write((byte *) &duration, 4);
+    }
+
+    void reportPulseDuration() {
+      noInterrupts();
+      uint32_t duration = pulseDuration;
+      interrupts();
+      Serial.write(4);
+      Serial.write((byte *) &duration, 4);
     }
 
     void setTriggerMode(bool useInputTrigger) {
@@ -149,6 +170,15 @@ public:
         Serial.write((byte *) &tmp, 4);
     }
 
+    void reportTriggerMode() {
+      Serial.write(5);
+      noInterrupts();
+      bool useInputTrigger = waitForTrigger;
+      interrupts();
+      uint32_t tmp = static_cast<uint32_t> (useInputTrigger);
+      Serial.write((byte *) &tmp, 4);
+    }
+
     void setNumberOfPulses(uint32_t number) {
       noInterrupts();
       numberOfPulses = number;
@@ -156,6 +186,14 @@ public:
       interrupts();
 
       Serial.write(6);
+      Serial.write((byte *) &number, 4);
+    }
+
+    void reportNumberOfPulses() {
+      Serial.write(6);
+      noInterrupts();
+      uint32_t number = numberOfPulses;
+      interrupts();
       Serial.write((byte *) &number, 4);
     }
 
@@ -178,8 +216,20 @@ public:
         // Simplified start confirmation
         Serial.write(1);
         // Not really needed, but used for consistent messaging.
-        uint32_t tmp = static_cast<uint32_t> (0);
+        uint32_t tmp = static_cast<uint32_t> (isRunning);
         Serial.write((byte *) &tmp, 4);
+    }
+
+    void reportIsRunning() {
+      Serial.write(1);
+      uint32_t tmp = static_cast<uint32_t> (isRunning);
+      Serial.write((byte *) &tmp, 4);
+    }
+
+    void reportIsStopped() {
+      Serial.write(2);
+      uint32_t tmp = static_cast<uint32_t> (!isRunning);
+      Serial.write((byte *) &tmp, 4);
     }
 
     void stopNoSerialMessage() {
@@ -202,10 +252,6 @@ public:
         // Simplified stop confirmation
         Serial.write(2);
         Serial.write((byte *) &pulseNumber, 4);        
-    }
-
-    bool running() {
-      return isRunning;
     }
 
     void run() {
@@ -307,8 +353,6 @@ void processSerialCommands() {
           commandState = 0;
         }
       } else if (commandState == 2) {
-        uint32_t running = static_cast<uint32_t> (pulsegen->running());
-        uint32_t notRunning = static_cast<uint32_t> (!pulsegen->running());
         switch (incomingByte) {
             case 0: 
               Serial.write(incomingByte);
@@ -316,29 +360,27 @@ void processSerialCommands() {
               break;
 
             case 1:  // are we running?
-              Serial.write(incomingByte);
-              Serial.write((byte *) &running, 4);
+              pulsegen->reportIsRunning();
               break;
                     
             case 2:  // are we stopped?
-              Serial.write(incomingByte);
-              Serial.write((byte *) &notRunning, 4);
+              pulsegen->reportIsStopped();
               break;
 
             case 3:  // Set Interval
-              pulsegen->setInterval(parameterBuffer);
+              pulsegen->reportInterval();
               break;
                         
             case 4:  // Set Pulse Duration
-              pulsegen->setPulseDuration(parameterBuffer);
+              pulsegen->reportPulseDuration();
               break;
                         
             case 5:  // Set Trigger Mode
-              pulsegen->setTriggerMode(parameterBuffer > 0);
+              pulsegen->reportTriggerMode();
               break;
 
             case 6:  // Set number of Pulses
-              pulsegen->setNumberOfPulses(parameterBuffer);
+              pulsegen->reportNumberOfPulses();
               break;
           }
                     
