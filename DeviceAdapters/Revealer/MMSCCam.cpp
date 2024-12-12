@@ -369,6 +369,7 @@ int SCCamera::Initialize()
 */
 int SCCamera::Shutdown()
 {
+    LogMessage("Shutdown");
     StopSequenceAcquisition();
     SC_Close(devHandle_);
     SC_DestroyHandle(devHandle_);
@@ -589,7 +590,7 @@ int SCCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool 
 }
 
 int SCCamera::StopSequenceAcquisition() { 
-    if (!thd_->IsStopped()) {
+    if (thd_ && !thd_->IsStopped()) {
         thd_->Stop();
         thd_->wait();
     }
@@ -1078,9 +1079,9 @@ int SCCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
          pProp->Get(pixelType);
 
          int depth;
-         auto rslt = getDepth(pixelType.c_str(), depth);
-         if (rslt == DEVICE_OK) {
-            rslt = ResizeImageBuffer(image_.Width(), image_.Height(), depth/8, 1);
+         ret = getDepth(pixelType.c_str(), depth);
+         if (ret == DEVICE_OK) {
+            ret = ResizeImageBuffer(image_.Width(), image_.Height(), depth, 1);
          }
          else
          {
