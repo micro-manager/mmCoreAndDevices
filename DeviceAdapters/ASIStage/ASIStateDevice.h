@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASISTATEDEVICE_H_
-#define _ASISTATEDEVICE_H_
+#ifndef ASISTATEDEVICE_H
+#define ASISTATEDEVICE_H
 
 #include "ASIBase.h"
 
@@ -40,4 +40,4 @@ private:
 	int UpdateCurrentPosition();
 };
 
-#endif // _ASISTATEDEVICE_H_
+#endif // ASISTATEDEVICE_H

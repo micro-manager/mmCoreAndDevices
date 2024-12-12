@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASICRIF_H_
-#define _ASICRIF_H_
+#ifndef ASICRIF_H
+#define ASICRIF_H
 
 #include "ASIBase.h"
 
@@ -36,7 +36,6 @@ public:
 	virtual int SetOffset(double offset);
 
 	// action interface
-	// ----------------
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -54,4 +53,4 @@ private:
 	long waitAfterLock_;
 };
 
-#endif // _ASICRIF_H_
+#endif // ASICRIF_H

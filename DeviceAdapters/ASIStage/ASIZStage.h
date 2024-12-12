@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASIZSTAGE_H_
-#define _ASIZSTAGE_H_
+#ifndef ASIZSTAGE_H
+#define ASIZSTAGE_H
 
 #include "ASIBase.h"
 
@@ -17,7 +17,6 @@ public:
 	~ZStage();
 
 	// Device API
-	// ----------
 	int Initialize();
 	int Shutdown();
 
@@ -27,7 +26,6 @@ public:
 	MM::DeviceDetectionStatus DetectDevice(void);
 
 	// Stage API
-	// ---------
 	int SetPositionUm(double pos);
 	int GetPositionUm(double& pos);
 	int SetRelativePositionUm(double d);
@@ -40,7 +38,6 @@ public:
 	bool IsContinuousFocusDrive() const { return false; }
 
 	// action interface
-	// ----------------
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -76,10 +73,7 @@ private:
 	int OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct);
 	bool HasRingBuffer();
 	int GetControllerInfo();
-	//int ExecuteCommand(const std::string& cmd, std::string& response);
-	//int Autofocus(long param);
-	//int GetResolution(double& res);
-	bool hasCommand(std::string commnand);
+	bool HasCommand(std::string command);
 	int OnVector(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	std::vector<double> sequence_;
@@ -100,4 +94,4 @@ private:
 	long linearSequenceTimeoutMs_;
 };
 
-#endif // _ASIZSTAGE_H_
+#endif // ASIZSTAGE_H

@@ -518,7 +518,7 @@ int CRIF::GetPositionUm(double& pos)
 		float zz;
 		char iBuf[256];
 		strcpy(iBuf, answer.c_str());
-		sscanf(iBuf, "%s %f\r\n", head, &zz);
+		(void)sscanf(iBuf, "%s %f\r\n", head, &zz);
 
 		pos = zz * stepSizeUm_;
 

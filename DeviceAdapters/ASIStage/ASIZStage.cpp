@@ -157,7 +157,7 @@ int ZStage::Initialize()
     CreateFloatProperty("LinearSequenceResetTimeout(ms)", linearSequenceTimeoutMs_, false, pAct);
 
     // Speed (sets both x and y)
-    if (hasCommand("S " + axis_ + "?"))
+    if (HasCommand("S " + axis_ + "?"))
     {
         pAct = new CPropertyAction(this, &ZStage::OnSpeed);
         CreateProperty("Speed-S", "1", MM::Float, false, pAct);
@@ -168,35 +168,35 @@ int ZStage::Initialize()
     }
 
     // Backlash (sets both x and y)
-    if (hasCommand("B " + axis_ + "?"))
+    if (HasCommand("B " + axis_ + "?"))
     {
         pAct = new CPropertyAction(this, &ZStage::OnBacklash);
         CreateProperty("Backlash-B", "0", MM::Float, false, pAct);
     }
 
     // Error (sets both x and y)
-    if (hasCommand("E " + axis_ + "?"))
+    if (HasCommand("E " + axis_ + "?"))
     {
         pAct = new CPropertyAction(this, &ZStage::OnError);
         CreateProperty("Error-E(nm)", "0", MM::Float, false, pAct);
     }
 
     // acceleration (sets both x and y)
-    if (hasCommand("AC " + axis_ + "?"))
+    if (HasCommand("AC " + axis_ + "?"))
     {
         pAct = new CPropertyAction(this, &ZStage::OnAcceleration);
         CreateProperty("Acceleration-AC(ms)", "0", MM::Integer, false, pAct);
     }
 
     // Finish Error (sets both x and y)
-    if (hasCommand("PC " + axis_ + "?"))
+    if (HasCommand("PC " + axis_ + "?"))
     {
         pAct = new CPropertyAction(this, &ZStage::OnFinishError);
         CreateProperty("FinishError-PCROS(nm)", "0", MM::Float, false, pAct);
     }
 
     // OverShoot (sets both x and y)
-    if (hasCommand("OS " + axis_ + "?"))
+    if (HasCommand("OS " + axis_ + "?"))
     {
         pAct = new CPropertyAction(this, &ZStage::OnOverShoot);
         CreateProperty("OverShoot(um)", "0", MM::Float, false, pAct);
@@ -209,14 +209,14 @@ int ZStage::Initialize()
     AddAllowedValue("MotorOnOff", "Off");
 
     // Wait cycles
-    if (hasCommand("WT " + axis_ + "?"))
+    if (HasCommand("WT " + axis_ + "?"))
     {
         pAct = new CPropertyAction(this, &ZStage::OnWait);
         CreateProperty("Wait_Cycles", "5", MM::Integer, false, pAct);
         // SetPropertyLimits("Wait_Cycles", 0, 255);  // don't artificially restrict range
     }
 
-    if (hasCommand("VE " + axis_ + "=0"))
+    if (HasCommand("VE " + axis_ + "=0"))
     {
         pAct = new CPropertyAction(this, &ZStage::OnVector);
         CreateProperty("VectorMove-VE(mm/s)", "0", MM::Float, false, pAct);
@@ -800,7 +800,7 @@ int ZStage::GetControllerInfo()
     return DEVICE_OK;
 }
 
-bool ZStage::hasCommand(std::string command) {
+bool ZStage::HasCommand(std::string command) {
     std::string answer;
     // query the device
     int ret = QueryCommand(command.c_str(), answer);

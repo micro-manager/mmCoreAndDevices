@@ -168,8 +168,7 @@ double Magnifier::GetMagnification()
         char head[64];
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %lf\r\n", head, &mag);
-
+        (void)sscanf(iBuf, "%s %lf\r\n", head, &mag);
         return mag;
     }
 

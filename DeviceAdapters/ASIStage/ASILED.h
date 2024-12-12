@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASILED_H_
-#define _ASILED_H_
+#ifndef ASILED_H
+#define ASILED_H
 
 #include "ASIBase.h"
 
@@ -48,4 +48,4 @@ private:
 	bool hasDLED_;
 };
 
-#endif // _ASILED_H_
+#endif // ASILED_H
