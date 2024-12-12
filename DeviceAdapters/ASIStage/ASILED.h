@@ -19,8 +19,8 @@ public:
 	int Initialize();
 	int Shutdown();
 
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	void GetName(char* pszName) const;
 	bool Busy();

@@ -22,8 +22,8 @@ public:
 
 	void GetName(char* name) const;
 	bool Busy();
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	// Stage API
 	int SetPositionUm(double pos);

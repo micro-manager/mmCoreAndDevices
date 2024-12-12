@@ -55,12 +55,12 @@ void XYStage::GetName(char* Name) const
 	CDeviceUtils::CopyLimitedString(Name, g_XYStageDeviceName);
 }
 
-bool XYStage::SupportsDeviceDetection(void)
+bool XYStage::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus XYStage::DetectDevice(void)
+MM::DeviceDetectionStatus XYStage::DetectDevice()
 {
 	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }

@@ -50,12 +50,12 @@ void CRISP::GetName(char* pszName) const
 	CDeviceUtils::CopyLimitedString(pszName, g_CRISPDeviceName);
 }
 
-bool CRISP::SupportsDeviceDetection(void)
+bool CRISP::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus CRISP::DetectDevice(void)
+MM::DeviceDetectionStatus CRISP::DetectDevice()
 {
 	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }

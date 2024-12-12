@@ -23,8 +23,8 @@ public:
 
 	int Initialize();
 	int Shutdown();
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);

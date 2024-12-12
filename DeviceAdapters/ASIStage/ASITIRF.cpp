@@ -51,12 +51,12 @@ void TIRF::GetName(char* Name) const
     CDeviceUtils::CopyLimitedString(Name, g_TIRFDeviceName);
 }
 
-bool TIRF::SupportsDeviceDetection(void)
+bool TIRF::SupportsDeviceDetection()
 {
     return true;
 }
 
-MM::DeviceDetectionStatus TIRF::DetectDevice(void)
+MM::DeviceDetectionStatus TIRF::DetectDevice()
 {
     return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }

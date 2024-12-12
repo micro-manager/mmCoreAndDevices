@@ -22,8 +22,8 @@ public:
 
     void GetName(char* pszName) const;
     bool Busy();
-    bool SupportsDeviceDetection(void);
-    MM::DeviceDetectionStatus DetectDevice(void);
+    bool SupportsDeviceDetection();
+    MM::DeviceDetectionStatus DetectDevice();
 
     // Generic API
     MM::DeviceType GetType();

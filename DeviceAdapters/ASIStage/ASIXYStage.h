@@ -25,8 +25,8 @@ public:
 
 	// so far, only the XYStage attempts to get the controller status on initialization, so
 	// that's where the device detection is going for now
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	// XYStage API
 	int SetPositionSteps(long x, long y);

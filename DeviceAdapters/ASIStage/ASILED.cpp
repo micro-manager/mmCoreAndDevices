@@ -52,12 +52,12 @@ void LED::GetName(char* Name) const
 }
 
 
-bool LED::SupportsDeviceDetection(void)
+bool LED::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus LED::DetectDevice(void)
+MM::DeviceDetectionStatus LED::DetectDevice()
 {
 	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }

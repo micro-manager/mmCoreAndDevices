@@ -58,12 +58,12 @@ void ZStage::GetName(char* name) const
     CDeviceUtils::CopyLimitedString(name, g_ZStageDeviceName);
 }
 
-bool ZStage::SupportsDeviceDetection(void)
+bool ZStage::SupportsDeviceDetection()
 {
     return true;
 }
 
-MM::DeviceDetectionStatus ZStage::DetectDevice(void)
+MM::DeviceDetectionStatus ZStage::DetectDevice()
 {
     return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }

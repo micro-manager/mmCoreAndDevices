@@ -43,12 +43,12 @@ void Magnifier::GetName(char* Name) const
     CDeviceUtils::CopyLimitedString(Name, g_MagnifierDeviceName);
 }
 
-bool Magnifier::SupportsDeviceDetection(void)
+bool Magnifier::SupportsDeviceDetection()
 {
     return true;
 }
 
-MM::DeviceDetectionStatus Magnifier::DetectDevice(void)
+MM::DeviceDetectionStatus Magnifier::DetectDevice()
 {
     return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }

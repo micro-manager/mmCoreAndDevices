@@ -24,8 +24,8 @@ public:
 	int Initialize();
 	int Shutdown();
 
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	// AutoFocus API
 	virtual int SetContinuousFocusing(bool state);

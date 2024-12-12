@@ -23,8 +23,8 @@ public:
     void GetName(char* pszName) const;
     bool Busy();
 
-    bool SupportsDeviceDetection(void);
-    MM::DeviceDetectionStatus DetectDevice(void);
+    bool SupportsDeviceDetection();
+    MM::DeviceDetectionStatus DetectDevice();
 
     // Magnifier API
     MM::DeviceType GetType();

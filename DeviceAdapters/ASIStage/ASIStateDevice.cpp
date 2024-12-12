@@ -51,12 +51,12 @@ void StateDevice::GetName(char* Name) const
 	CDeviceUtils::CopyLimitedString(Name, g_StateDeviceName);
 }
 
-bool StateDevice::SupportsDeviceDetection(void)
+bool StateDevice::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus StateDevice::DetectDevice(void)
+MM::DeviceDetectionStatus StateDevice::DetectDevice()
 {
 	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
