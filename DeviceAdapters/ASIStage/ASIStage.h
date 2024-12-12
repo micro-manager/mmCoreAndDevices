@@ -10,30 +10,31 @@
 // Modified by Nico Stuurman, 12/2007
 // Refactored by Brandon Simpson, 3/2022
 
-#ifndef _ASISTAGE_H_
-#define _ASISTAGE_H_
+#ifndef ASISTAGE_H
+#define ASISTAGE_H
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
 // ASI-specific error codes and messages
-#define ERR_PORT_CHANGE_FORBIDDEN    10004
-#define ERR_SET_POSITION_FAILED      10005
-#define ERR_INVALID_STEP_SIZE        10006
-#define ERR_INVALID_MODE             10008
-#define ERR_UNRECOGNIZED_ANSWER      10009
-#define ERR_UNSPECIFIED_ERROR        10010
-#define ERR_NOT_LOCKED               10011
-#define ERR_NOT_CALIBRATED           10012
+constexpr int ERR_PORT_CHANGE_FORBIDDEN = 10004;
+constexpr int ERR_SET_POSITION_FAILED = 10005;
+constexpr int ERR_INVALID_STEP_SIZE = 10006;
+constexpr int ERR_INVALID_MODE = 10008;
+constexpr int ERR_UNRECOGNIZED_ANSWER = 10009;
+constexpr int ERR_UNSPECIFIED_ERROR = 10010;
+constexpr int ERR_NOT_LOCKED = 10011;
+constexpr int ERR_NOT_CALIBRATED = 10012;
 
-#define ERR_OFFSET 10100 // offset when reporting error number from controller
+constexpr int ERR_OFFSET = 10100; // offset when reporting error number from controller
 
-#define ERR_UNRECOGNIZED_AXIS_PARAMETERS "Unrecognized Axis Parameters"
-#define ERR_MISSING_PARAMETERS "Missing Parameters"
-#define ERR_PARAMETER_OUTOF_RANGE "Parameter Out of Range"
-#define ERR_UNDEFINED ERROR "Undefined Error"
+// unused
+// const char* const ERR_UNRECOGNIZED_AXIS_PARAMETERS = "Unrecognized Axis Parameters";
+// const char* const ERR_MISSING_PARAMETERS = "Missing Parameters";
+// const char* const ERR_PARAMETER_OUTOF_RANGE = "Parameter Out of Range";
+// const char* const ERR_UNDEFINED_ERROR = "Undefined Error";
 
-#define ERR_INFO_COMMAND_NOT_SUPPORTED   10023 // can't receive output from INFO command because > 1023 characters
+constexpr int ERR_INFO_COMMAND_NOT_SUPPORTED = 10023; // can't receive output from INFO command because > 1023 characters
 const char* const g_Msg_ERR_INFO_COMMAND_NOT_SUPPORTED = "Cannot use the INFO command due to Device Adapter limitations";
 
 // external device names used used by the rest of the system to load a device from the .dll library
@@ -100,4 +101,4 @@ const char* const g_CRISPStatePropertyName = "CRISP State Character";
 
 MM::DeviceDetectionStatus ASICheckSerialPort(MM::Device& device, MM::Core& core, std::string portToCheck, double answerTimeoutMs);
 
-#endif // _ASISTAGE_H_
+#endif // ASISTAGE_H
