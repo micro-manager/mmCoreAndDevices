@@ -176,7 +176,7 @@ double TIRF::GetAngle()
         char head[64];
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %lf\r\n", head, &position);
+        (void)sscanf(iBuf, "%s %lf\r\n", head, &position);
 
         return asin(position / (scaleFactor_ * unitFactor_)) * 180 / 3.141592653589793;
     }

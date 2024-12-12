@@ -387,7 +387,7 @@ int XYStage::GetPositionSteps(long& x, long& y)
 		char head[64];
 		char iBuf[256];
 		strcpy(iBuf, answer.c_str());
-		sscanf(iBuf, "%s %f %f\r\n", head, &xx, &yy);
+		(void)sscanf(iBuf, "%s %f %f\r\n", head, &xx, &yy);
 		x = (long)(xx * ASISerialUnit_);
 		y = (long)(yy * ASISerialUnit_);
 

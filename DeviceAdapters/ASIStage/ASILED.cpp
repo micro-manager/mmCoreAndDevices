@@ -181,7 +181,7 @@ int LED::SetOpen(bool open)
 
 	std::ostringstream command;
 
-	if ((!hasDLED_) & (channel_ == 0)) {
+	if (!hasDLED_ && channel_ == 0) {
 		//On Old Regulator LED , we turn the TTL mode itself on and off to reduce flicker
 		if (open)
 		{
@@ -252,7 +252,7 @@ int LED::IsOpen(bool* open)
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 	std::ostringstream command;
-	if ((!hasDLED_) & (channel_ == 0)) {
+	if (!hasDLED_ && channel_ == 0) {
 
 		command << "TTL Y?";
 
