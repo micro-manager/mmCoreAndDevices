@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <mutex>
 
 #define ERR_PORT_OPEN_FAILED 106
 #define ERR_COMMUNICATION 107
@@ -33,6 +34,7 @@ public:
     int OnPulseDuration(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnRunUntilStopped(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNrPulses(MM::PropertyBase* pProp, MM::ActionType eAct);
 
@@ -48,10 +50,13 @@ private:
     bool runUntilStopped_;
     uint32_t version_;
     uint32_t nrPulses_;
+    std::mutex mutex_;
 
     // Helper methods for serial communication
     int SendCommand(uint8_t cmd, uint32_t param = 0);
+    int Enquire(uint8_t cmd);
     int GetResponse(uint8_t cmd, uint32_t& param);
+    void CheckStatus(long wait);
 };
 
 #endif
