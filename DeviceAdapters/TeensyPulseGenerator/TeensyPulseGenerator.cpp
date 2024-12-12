@@ -435,14 +435,24 @@ int TeensyPulseGenerator::OnNrPulses(MM::PropertyBase* pProp, MM::ActionType eAc
    return DEVICE_OK;
 }
 
+/**
+ * Called from a seperate thread.
+ */
 void TeensyPulseGenerator::CheckStatus()
 {
-               long microSecondWait = (long) ((nrPulses_ - 1) * interval_ + pulseDuration_);
-               long wait = (microSecondWait / 1000);
-   // TODO: this could be a long wait.
-   // Break it up and check whether the destructor has been called so that we will not 
+   long microSecondWait = (long) ((nrPulses_ - 1) * interval_ + pulseDuration_);
+   long wait = (microSecondWait / 1000);
+   long waited = 0;
+   long waitDuration = 500;
+   // Break the wait up and check whether the destructor has been called so that we will not 
    // delay destruction of this object.
-   Sleep(wait);
+   while (waited < wait)
+   {
+      if (!initialized_)
+         return;
+      Sleep(waitDuration);
+      waited += waitDuration;
+   }
    while (running_)
    {
       {

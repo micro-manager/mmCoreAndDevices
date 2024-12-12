@@ -40,7 +40,7 @@ public:
     int OnNrPulses(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-    bool initialized_;
+    std::atomic<bool> initialized_;
     std::string port_;
 
     // Current configuration
