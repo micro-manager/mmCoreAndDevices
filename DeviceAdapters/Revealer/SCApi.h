@@ -921,7 +921,8 @@ SC_API int SC_CALL SC_OpenRecordLabView(IN SC_DEV_HANDLE handle, IN const char* 
 // for test tool
 #ifdef PRIVATE_
 SC_API bool SC_CALL printCXPRegInfo(IN SC_DEV_HANDLE handle, IN CXPRegInfo* infos, IN unsigned int num);
-SC_API bool SC_CALL WriteRegister(IN SC_DEV_HANDLE handle, IN uint64_t addr, IN void *data, IN size_t BufLen);
+SC_API int SC_CALL WriteRegister(IN SC_DEV_HANDLE handle, IN uint64_t addr, IN void *data, IN size_t BufLen);
+SC_API int SC_CALL ReadRegister(IN SC_DEV_HANDLE handle, IN uint64_t addr, IN void *data, IN size_t *BufLen);
 SC_API int SC_CALL  setFrameRate(IN SC_DEV_HANDLE handle, IN unsigned int frameRate);
 SC_API int SC_CALL  setLocalXmlPath(IN SC_DEV_HANDLE handle, const char* path);
 SC_API int SC_CALL SC_SetEvent(IN SC_DEV_HANDLE handle, IN const char *name);

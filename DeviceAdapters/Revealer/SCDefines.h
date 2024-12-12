@@ -129,13 +129,11 @@ typedef enum _SC_ECreateHandleMode
 ///Enumeration: access permission
 typedef enum _SC_ECameraAccessPermission
 {
-    accessPermissionUnknown = 0, ///< \~chinese 无法确定                                 \~english Value not known; indeterminate.
-    accessNone = 1,
-    accessPermissionMonitor,               ///< \~chinese 非独占访问权限,以读的模式打开设备        \~english Non-Exclusive Read Permission, open device with read mode
-    accessPermissionControl,               ///< \~chinese 非独占控制权限,其他App允许读取所有寄存器 \~english Non-Exclusive Control Permission, allows other APP reading all registers
-    accessPermissionExclusive,             ///< \~chinese 独占访问权限                             \~english Exclusive Access Permission
-    accessPermissionControlWithSwitchover, ///< \~chinese 切换控制访问权限                         \~english Control access with switchover enabled.
-    accessPermissionUndefined              ///< \~chinese 未定义访问权限                           \~english Undefined Access Permission
+    eAccessPermissionUnknown = 0, ///< \~chinese 无法确定                                 \~english Value not known; indeterminate.
+    eAccessNone = 1,
+    eAccessPermissionMonitor,               ///< \~chinese 非独占访问权限,以读的模式打开设备        \~english Non-Exclusive Read Permission, open device with read mode
+    eAccessPermissionControl,               ///< \~chinese 非独占控制权限,其他App允许读取所有寄存器 \~english Non-Exclusive Control Permission, allows other APP reading all registers
+    eAccessPermissionExclusive,             ///< \~chinese 独占访问权限                             \~english Exclusive Access Permission
 } SC_ECameraAccessPermission;
 
 /// \~chinese
@@ -877,7 +875,7 @@ enum UpgradeFileType
     eARM,
     eBoot,
     eFPGAImageParam,
-    eFPGAXml,
+    eFPGAXml
 };
 
 typedef void (*UpgradeProcessCB)(int progress, const char* msgText, int notify, void *user);
