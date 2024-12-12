@@ -45,6 +45,7 @@ TeensyPulseGenerator::TeensyPulseGenerator() :
 TeensyPulseGenerator::~TeensyPulseGenerator()
 {
     Shutdown();
+    // option: inter
 }
 
 void TeensyPulseGenerator::GetName(char* name) const
@@ -74,7 +75,6 @@ int TeensyPulseGenerator::Initialize()
    std::ostringstream os;
    os << version_;
    CreateProperty("Firmware-version", os.str().c_str(), MM::String, true);
-
 
 
    // Create properties
@@ -435,12 +435,16 @@ int TeensyPulseGenerator::OnNrPulses(MM::PropertyBase* pProp, MM::ActionType eAc
    return DEVICE_OK;
 }
 
-void TeensyPulseGenerator::CheckStatus(long wait)
+void TeensyPulseGenerator::CheckStatus()
 {
+               long microSecondWait = (long) ((nrPulses_ - 1) * interval_ + pulseDuration_);
+               long wait = (microSecondWait / 1000);
+   // TODO: this could be a long wait.
+   // Break it up and check whether the destructor has been called so that we will not 
+   // delay destruction of this object.
    Sleep(wait);
    while (running_)
    {
-      // need lock
       {
          const std::lock_guard<std::mutex> lock(mutex_);
          Enquire(cmd_start);
@@ -483,10 +487,16 @@ int TeensyPulseGenerator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
            {
               // Start a thread that waits for the estimated duraion of the pulse train, then checks 
               // whether the Teensy is done.
-              long microSecondWait = (long) ((nrPulses_ - 1) * interval_ + pulseDuration_);
-              long wait = (microSecondWait / 1000);
-              std::thread t (&TeensyPulseGenerator::CheckStatus, this, wait);
-              t.detach();
+               std::function<void()> func = [&]() {
+                  return this->CheckStatus();
+               };
+               singleThread_.enqueue(func);
+             // std::function<void()> func = (TeensyPulseGenerator::CheckStatus, this);
+
+              //std::thread t (&TeensyPulseGenerator::CheckStatus, this, wait);
+              // Note: we will crash if the destructor of this is called while the thread is running
+              // need to come up with something cleaner..
+              //t.detach();
            }
         }
         else if (stateStr == "Stop" && running_)

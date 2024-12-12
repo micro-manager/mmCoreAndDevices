@@ -18,9 +18,15 @@
     <ClInclude Include="TeensyPulseGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SingleThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TeensyPulseGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SingleThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -2,10 +2,11 @@
 #ifndef _TeensyPulseGenerator_H
 #define _TeensyPulseGenerator_H_
 
-#include "MMDevice.h"
 #include "DeviceBase.h"
 #include "DeviceUtils.h"
 #include "ModuleInterface.h"
+#include "MMDevice.h"
+#include "SingleThread.h"
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -51,12 +52,13 @@ private:
     uint32_t version_;
     uint32_t nrPulses_;
     std::mutex mutex_;
+    SingleThread singleThread_;
 
     // Helper methods for serial communication
     int SendCommand(uint8_t cmd, uint32_t param = 0);
     int Enquire(uint8_t cmd);
     int GetResponse(uint8_t cmd, uint32_t& param);
-    void CheckStatus(long wait);
+    void CheckStatus();
 };
 
 #endif
