@@ -16,6 +16,7 @@
 #include "ASIZStage.h"
 #include "ASITIRF.h"
 
+
 MODULE_API void InitializeModuleData()
 {
     RegisterDevice(g_ZStageDeviceName, MM::StageDevice, "Add-on Z-stage");
@@ -30,44 +31,44 @@ MODULE_API void InitializeModuleData()
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
+    std::string device = deviceName;
     if (deviceName == 0)
     {
         return 0;
     }
-
-    if (strcmp(deviceName, g_ZStageDeviceName) == 0)
+    if (deviceName == g_ZStageDeviceName)
     {
         return new ZStage();
     }
-    else if (strcmp(deviceName, g_XYStageDeviceName) == 0)
+    else if (deviceName == g_XYStageDeviceName)
     {
         return new XYStage();
     }
-    else if (strcmp(deviceName, g_CRIFDeviceName) == 0)
+    else if (deviceName == g_CRIFDeviceName)
     {
         return new CRIF();
     }
-    else if (strcmp(deviceName, g_CRISPDeviceName) == 0)
+    else if (deviceName == g_CRISPDeviceName)
     {
         return new CRISP();
     }
-    else if (strcmp(deviceName, g_AZ100TurretName) == 0)
+    else if (deviceName == g_AZ100TurretName)
     {
         return new AZ100Turret();
     }
-    else if (strcmp(deviceName, g_StateDeviceName) == 0)
+    else if (deviceName == g_StateDeviceName)
     {
         return new StateDevice();
     }
-    else if (strcmp(deviceName, g_LEDDeviceName) == 0)
+    else if (deviceName == g_LEDDeviceName)
     {
         return new LED();
     }
-    else if (strcmp(deviceName, g_MagnifierDeviceName) == 0)
+    else if (deviceName == g_MagnifierDeviceName)
     {
         return new Magnifier();
     }
-    else if (strcmp(deviceName, g_TIRFDeviceName) == 0)
+    else if (deviceName == g_TIRFDeviceName)
     {
         return new TIRF();
     }
@@ -87,7 +88,6 @@ MM::DeviceDetectionStatus ASICheckSerialPort(MM::Device& device, MM::Core& core,
     // all conditions must be satisfied...
     MM::DeviceDetectionStatus result = MM::Misconfigured;
     char answerTO[MM::MaxStrLength];
-
     try
     {
         std::string portLowerCase = portToCheck;
@@ -121,7 +121,6 @@ MM::DeviceDetectionStatus ASICheckSerialPort(MM::Device& device, MM::Core& core,
                 if (DEVICE_OK == ret)
                 {
                     char answer[MM::MaxStrLength];
-
                     ret = core.GetSerialAnswer(&device, portToCheck.c_str(), MM::MaxStrLength, answer, "\r\n");
                     if (DEVICE_OK != ret)
                     {
