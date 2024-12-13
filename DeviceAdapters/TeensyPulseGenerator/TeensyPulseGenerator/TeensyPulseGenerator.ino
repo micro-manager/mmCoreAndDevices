@@ -65,6 +65,7 @@ private:
     static void stopPulseISR() {
         if (instancePtr) {
             digitalWriteFast(instancePtr->outputPin, LOW);
+
             instancePtr->isPulseActive = false;
         }
     }
@@ -73,13 +74,32 @@ private:
     static void intervalISR() {
         if (instancePtr) {
             instancePtr->isReadyToTrigger = true;
+            // If waiting for trigger and trigger not received, do nothing
+            if (instancePtr->waitForTrigger &&  digitalReadFast(instancePtr->triggerPin) == LOW) {
+                return;
+            }
+            // Generate pulse
+            digitalWriteFast(instancePtr->outputPin, HIGH);
+            instancePtr->isPulseActive = true;
+            instancePtr->isReadyToTrigger = false;
+            instancePtr->pulseNumber++;
+            
+            // Set timer to stop pulse after duration
+            instancePtr->pulseTimer.begin(stopPulseISR, instancePtr->pulseDuration);
         }
     }
 
     // Trigger pin interrupt handler
     static void triggerPinISR() {
-        if (instancePtr && instancePtr->waitForTrigger) {
-            instancePtr->isReadyToTrigger = true;
+        if (instancePtr && instancePtr->waitForTrigger && instancePtr->isReadyToTrigger) {
+            // Generate pulse
+            digitalWriteFast(instancePtr->outputPin, HIGH);
+            instancePtr->isPulseActive = true;
+            instancePtr->isReadyToTrigger = false;
+            instancePtr->pulseNumber++;
+            
+            // Set timer to stop pulse after duration
+            instancePtr->pulseTimer.begin(stopPulseISR, instancePtr->pulseDuration);
         }
     }
 
@@ -111,10 +131,6 @@ public:
         numberOfPulses = number;
         countPulses = number != 0;
         interrupts();
-
-        // Simplified configuration confirmation
-        //Serial.print("Config: ");
-        //Serial.println(useInputTrigger);
     }
 
     void setInterval(uint32_t interval) {
@@ -256,36 +272,22 @@ public:
 
     void run() {
         // Only run if active
-        if (!isRunning) return;
+        noInterrupts();
+        bool active = isRunning;
+        interrupts();
+        if (!active) 
+          return;
 
-        if (countPulses && pulseNumber == numberOfPulses) {
+        noInterrupts();
+        bool stop = countPulses && pulseNumber == numberOfPulses;
+        interrupts();
+
+        if (stop) {
           stopNoSerialMessage();
           return;
         }
-
-        // Check if we're ready to trigger a pulse
-        if (isReadyToTrigger) {
-            // If waiting for trigger and trigger not received, do nothing
-            if (waitForTrigger && digitalReadFast(triggerPin) == LOW) {
-                return;
-            }
-
-            // Generate pulse
-            digitalWriteFast(outputPin, HIGH);
-            isPulseActive = true;
-            isReadyToTrigger = false;
-            //if (countPulses) {
-            pulseNumber++;
-            //}
-
-            // Set timer to stop pulse after duration
-            pulseTimer.begin(stopPulseISR, pulseDuration);
-        }
     }
 
-    bool getRunningState() const {
-        return isRunning;
-    }
 };
 
 // Static instance pointer initialization
