@@ -440,13 +440,12 @@ int TeensyPulseGenerator::OnNrPulses(MM::PropertyBase* pProp, MM::ActionType eAc
  */
 void TeensyPulseGenerator::CheckStatus()
 {
-   long microSecondWait = (long) ((nrPulses_ - 1) * interval_ + pulseDuration_);
-   long wait = (microSecondWait / 1000);
+   long milliSecondWait = (long) ((nrPulses_ - 1) * interval_ + pulseDuration_);
    long waited = 0;
-   long waitDuration = 500;
+   long waitDuration = 500; // arbitrary wait
    // Break the wait up and check whether the destructor has been called so that we will not 
    // delay destruction of this object.
-   while (waited < wait)
+   while (waited < milliSecondWait)
    {
       if (!initialized_)
          return;
@@ -462,7 +461,7 @@ void TeensyPulseGenerator::CheckStatus()
          GetResponse(cmd_start, response);
          running_ = (bool)response;
       }
-      Sleep((long) (interval_ / 1000));
+      Sleep((long) (interval_));
    }
    GetCoreCallback()->OnPropertyChanged(this, "Status", "Idle");
 }
@@ -501,12 +500,6 @@ int TeensyPulseGenerator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
                   return this->CheckStatus();
                };
                singleThread_.enqueue(func);
-             // std::function<void()> func = (TeensyPulseGenerator::CheckStatus, this);
-
-              //std::thread t (&TeensyPulseGenerator::CheckStatus, this, wait);
-              // Note: we will crash if the destructor of this is called while the thread is running
-              // need to come up with something cleaner..
-              //t.detach();
            }
         }
         else if (stateStr == "Stop" && running_)
