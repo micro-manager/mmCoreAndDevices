@@ -1,12 +1,11 @@
 #include "ClassGalaxy.h"
-//#include <CString>
 
 using namespace std;
 
 const char* g_CameraDeviceName = "DahengCamera";
 
 static const char* g_PropertyChannel = "PropertyNAme";
-//8bit monoMono8
+
 static const char* g_PixelType_8bit = "8bit mono";
 static const char* g_PixelType_10bit = "10bit mono";
 static const char* g_PixelType_12bit = "12bit mono";
@@ -22,6 +21,7 @@ MODULE_API void InitializeModuleData()
 {
     RegisterDevice(g_CameraDeviceName, MM::CameraDevice, "Daheng Camera");
 }
+
 //Camera Device
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
@@ -41,6 +41,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 {
     delete pDevice;
 }
+
 ClassGalaxy::ClassGalaxy() :
     CCameraBase<ClassGalaxy>(),
         ImageHandler_(0),
@@ -83,26 +84,17 @@ ClassGalaxy::ClassGalaxy() :
         CreateStringProperty("SerialNumber", "Undefined", false, 0, true);
 
         //pre-init properties
-        //PylonInitialize(); // Initialize/Terminate is reference counted by Pylon
-
-                           // Get the available cameras. TODO: This can be very slow and perhaps the
-                           // result should be cached.
-                          //  or setting up TL Filter, currently it enumerates all pylon TL, eg. GigE , USB Camemu, CXP, CL etc..
-        //DeviceInfoList_t devices;
 
         if (vectorDeviceInfo.size() <= 0)
         {
             AddToLog("No camera present.");
-            //PylonTerminate();
-            //throw RUNTIME_EXCEPTION("No camera present.");
         }
+
         vector<string> SnString;
         bool first = false;
         string serialNumberstr;
         if (true)
         {
-            //const CDeviceInfo& device = *it;
-            //String_t s = device.GetSerialNumber();
             for (size_t i = 0; i < vectorDeviceInfo.size(); i++)
             {
                 serialNumberstr = vectorDeviceInfo[i].GetSN().c_str();
@@ -116,12 +108,14 @@ ClassGalaxy::ClassGalaxy() :
                 first = false;
             }
         }
-        //PylonTerminate();
 }
 
 ClassGalaxy::~ClassGalaxy(void)
 {
-
+   if (initialized_)
+   {
+      Shutdown();
+   }
 }
 
 int ClassGalaxy::Initialize()
@@ -142,7 +136,6 @@ int ClassGalaxy::Initialize()
               return DEVICE_NOT_CONNECTED;
            }
         }
-
 
         vectorDeviceInfo.clear();
         //枚举设备
@@ -193,7 +186,7 @@ int ClassGalaxy::Initialize()
 
 
         GX_DEVICE_CLASS_LIST objDeviceClass = m_objDevicePtr->GetDeviceInfo().GetDeviceClass();
-        if (GX_DEVICE_CLASS_GEV == objDeviceClass)
+        if (GX_DEVICE_CLASS_GEV == objDeviceClass)  // GigE devices
         {
             // 判断设备是否支持流通道数据包功能
             if (true == m_objFeatureControlPtr->IsImplemented("GevSCPSPacketSize"))
@@ -213,7 +206,7 @@ int ClassGalaxy::Initialize()
             //第二个参数为用户私有参数，用户可以在回调函数内部将其还原然使用，如果不需要则可传入 NULL 即可
             //hDeviceOffline = m_objDevicePtr->RegisterDeviceOfflineCallback(pDeviceOfflineEventHandler, this);
         }
-        else if (GX_DEVICE_CLASS_U3V == objDeviceClass)
+        else if (GX_DEVICE_CLASS_U3V == objDeviceClass) // USB 3.0 devices
         {
             CIntFeaturePointer DeviceLinkThroughputLimit = m_objFeatureControlPtr->GetIntFeature("DeviceLinkThroughputLimit");
             if (1)
@@ -239,14 +232,12 @@ int ClassGalaxy::Initialize()
 
             }
         }
+
+        // Name
         stringstream msg;
-        //msg << "using camera " << m_objDevicePtr->GetDeviceInfo().GetDisplayName();
-        //AddToLog(msg.str());
         msg << "using camera " << m_objFeatureControlPtr->GetStringFeature("DeviceUserID")->GetValue();
         AddToLog(msg.str());
-        // initialize the pylon image formatter. 判断相机图像输出格式-赵伟甫
-        // 
-        // Name
+
         int ret = CreateProperty(MM::g_Keyword_Name, g_CameraDeviceName, MM::String, true);
         if (DEVICE_OK != ret)
             return ret;
@@ -303,6 +294,15 @@ int ClassGalaxy::Initialize()
         ret = CreateProperty("Exposure(us)", CDeviceUtils::ConvertToString((long)exposure->GetValue()), MM::Float, false, pAct);
         SetPropertyLimits("Exposure(us)", exposureMin_, exposureMax_);
         assert(ret == DEVICE_OK);
+
+        // List all camera features in the logs
+        GxIAPICPP::gxstring_vector vectorFeatureNameList;
+        m_objFeatureControlPtr->GetFeatureNameList(vectorFeatureNameList);//Get the enum items list.
+        for (gxstring featureName : vectorFeatureNameList)
+        {
+           std::string feature = featureName.c_str();
+           LogMessage("Camera Feature: " + feature, false);
+        }
 
         pAct = new CPropertyAction(this, &ClassGalaxy::OnPixelType);
         ret = CreateProperty(MM::g_Keyword_PixelType, "NA", MM::String, false, pAct);
