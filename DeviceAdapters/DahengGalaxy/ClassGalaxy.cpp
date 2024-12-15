@@ -405,6 +405,7 @@ int ClassGalaxy::Initialize()
             SetAllowedValues("AcquisitionFrameRateMode", LSPVals);
         }
 
+        // AcquisitionFrameRate
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("AcquisitionFrameRate"))
         {
             CFloatFeaturePointer AdjFrameRate = m_objFeatureControlPtr->GetFloatFeature("AcquisitionFrameRate");
@@ -414,7 +415,8 @@ int ClassGalaxy::Initialize()
             SetPropertyLimits("AcquisitionFrameRate", (double)AdjFrameRate->GetMin(), (double)AdjFrameRate->GetMax());
             assert(ret == DEVICE_OK);
         }
-        //TriggerActivation
+
+        // TriggerActivation
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("TriggerSelector"))
         {
             m_objFeatureControlPtr->GetEnumFeature("TriggerSelector")->SetValue("FrameStart");
@@ -429,33 +431,28 @@ int ClassGalaxy::Initialize()
             }
             SetAllowedValues("TriggerActivation", LSPVals);
             m_objFeatureControlPtr->GetEnumFeature("TriggerActivation")->SetValue("RisingEdge");
-
-            //string s = m_objFeatureControlPtr->GetEnumFeature("TriggerActivation")->GetValue();
         }
-        //TriggerDelay
+
+        // TriggerDelay
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("TriggerDelay"))
         {
             CFloatFeaturePointer TriggerDelay = m_objFeatureControlPtr->GetFloatFeature("TriggerDelay");
-
             pAct = new CPropertyAction(this, &ClassGalaxy::OnTriggerDelay);
             ret = CreateProperty("TriggerDelay", CDeviceUtils::ConvertToString((double)0), MM::Integer, false, pAct);
-
             SetPropertyLimits("TriggerDelay", (double)TriggerDelay->GetMin(), (double)TriggerDelay->GetMax());
             assert(ret == DEVICE_OK);
         }
-        //TriggerFilterRaisingEdge
+
+        // TriggerFilterRaisingEdge
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("TriggerFilterRaisingEdge"))
         {
             CFloatFeaturePointer TriggerFilterRaisingEdge = m_objFeatureControlPtr->GetFloatFeature("TriggerFilterRaisingEdge");
-
             pAct = new CPropertyAction(this, &ClassGalaxy::OnTriggerFilterRaisingEdge);
             ret = CreateProperty("TriggerFilterRaisingEdge", CDeviceUtils::ConvertToString((double)0), MM::Integer, false, pAct);
-
             SetPropertyLimits("TriggerFilterRaisingEdge", (double)TriggerFilterRaisingEdge->GetMin(), (double)TriggerFilterRaisingEdge->GetMax());
-
             assert(ret == DEVICE_OK);
-
         }
+
         //增益
         m_objFeatureControlPtr->GetEnumFeature("GainSelector")->SetValue("AnalogAll");
         m_objFeatureControlPtr->GetFloatFeature("Gain")->SetValue(0.0000);
@@ -469,15 +466,16 @@ int ClassGalaxy::Initialize()
             SetPropertyLimits("Gain", (double)Gain->GetMin(), (double)Gain->GetMax());
             assert(ret == DEVICE_OK);
         }
+
         //20230220设置图像转换RGBA8
         ret = UpdateStatus();
 
         if (ret != DEVICE_OK)
             return ret;
+
         //preparation for snaps
         ResizeSnapBuffer();
-        //preparation for sequences	
-        //camera_->RegisterImageEventHandler( &ImageHandler_, RegistrationMode_Append, Cleanup_Delete);	
+
         /////////////////////////////////////////////////////////////////////////////////////////
         initialized_ = true;
         return DEVICE_OK;
