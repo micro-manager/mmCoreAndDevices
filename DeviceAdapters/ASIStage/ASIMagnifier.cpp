@@ -9,7 +9,7 @@
 
 Magnifier::Magnifier() :
     ASIBase(this, ""),
-    axis_("M"), // normally the zoom axis is the M axis.
+    axis_("M"), // normally the zoom axis is the M axis
     answerTimeoutMs_(1000)
 {
     InitializeDefaultErrorMessages();
@@ -30,7 +30,7 @@ Magnifier::Magnifier() :
     // Axis
     pAct = new CPropertyAction(this, &Magnifier::OnAxis);
     CreateProperty("Axis", "M", MM::String, false, pAct, true);
-    // AddAllowedValue("Axis", "(LETTER)");
+    AddAllowedValue("Axis", "M");
 }
 
 Magnifier::~Magnifier()

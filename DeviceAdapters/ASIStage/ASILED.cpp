@@ -8,7 +8,7 @@
 #include "ASILED.h"
 
 LED::LED() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	open_(false),
 	intensity_(20),
 	name_("LED"),

@@ -8,7 +8,7 @@
 #include "ASIStateDevice.h"
 
 StateDevice::StateDevice() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	numPos_(4),
 	axis_("F"),
 	position_(0),

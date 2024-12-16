@@ -9,7 +9,7 @@
 
 TIRF::TIRF() :
     ASIBase(this, ""),
-    axis_("F"),//normaly the TIRF axis is the F axis.
+    axis_("F"), // normally the TIRF axis is the F axis
     answerTimeoutMs_(1000),
     scaleFactor_(1),
     unitFactor_(10000)

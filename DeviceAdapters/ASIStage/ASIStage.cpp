@@ -19,63 +19,64 @@
 
 MODULE_API void InitializeModuleData()
 {
-    RegisterDevice(g_ZStageDeviceName, MM::StageDevice, "Add-on Z-stage");
+    RegisterDevice(g_ZStageDeviceName, MM::StageDevice, "Z Stage");
     RegisterDevice(g_XYStageDeviceName, MM::XYStageDevice, "XY Stage");
     RegisterDevice(g_CRIFDeviceName, MM::AutoFocusDevice, "CRIF");
     RegisterDevice(g_CRISPDeviceName, MM::AutoFocusDevice, "CRISP");
     RegisterDevice(g_AZ100TurretName, MM::StateDevice, "AZ100 Turret");
     RegisterDevice(g_StateDeviceName, MM::StateDevice, "State Device");
+    RegisterDevice(g_MagnifierDeviceName, MM::MagnifierDevice, "Magnifier");
     RegisterDevice(g_LEDDeviceName, MM::ShutterDevice, "LED");
     RegisterDevice(g_TIRFDeviceName, MM::GenericDevice, "TIRF");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
-    std::string device = deviceName;
-    if (deviceName == 0)
+    if (deviceName == nullptr)
     {
-        return 0;
+        return nullptr;
     }
-    if (deviceName == g_ZStageDeviceName)
+
+    const std::string name = deviceName;
+
+    if (name == g_ZStageDeviceName)
     {
         return new ZStage();
     }
-    else if (deviceName == g_XYStageDeviceName)
+    else if (name == g_XYStageDeviceName)
     {
         return new XYStage();
     }
-    else if (deviceName == g_CRIFDeviceName)
+    else if (name == g_CRIFDeviceName)
     {
         return new CRIF();
     }
-    else if (deviceName == g_CRISPDeviceName)
+    else if (name == g_CRISPDeviceName)
     {
         return new CRISP();
     }
-    else if (deviceName == g_AZ100TurretName)
+    else if (name == g_AZ100TurretName)
     {
         return new AZ100Turret();
     }
-    else if (deviceName == g_StateDeviceName)
+    else if (name == g_StateDeviceName)
     {
         return new StateDevice();
     }
-    else if (deviceName == g_LEDDeviceName)
-    {
-        return new LED();
-    }
-    else if (deviceName == g_MagnifierDeviceName)
+    else if (name == g_MagnifierDeviceName)
     {
         return new Magnifier();
     }
-    else if (deviceName == g_TIRFDeviceName)
+    else if (name == g_LEDDeviceName)
+    {
+        return new LED();
+    }
+    else if (name == g_TIRFDeviceName)
     {
         return new TIRF();
     }
-    else
-    {
-        return 0;
-    }
+
+    return nullptr;
 }
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)

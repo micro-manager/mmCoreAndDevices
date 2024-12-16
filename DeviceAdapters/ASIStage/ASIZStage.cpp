@@ -8,7 +8,7 @@
 #include "ASIZStage.h"
 
 ZStage::ZStage() :
-    ASIBase(this, "1H"),
+    ASIBase(this, "1H"), // LX-4000 prefix
     axis_("Z"),
     axisNr_(4),
     stepSizeUm_(0.1),

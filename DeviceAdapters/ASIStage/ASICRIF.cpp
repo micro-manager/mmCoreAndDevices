@@ -8,7 +8,7 @@
 #include "ASICRIF.h"
 
 CRIF::CRIF() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	justCalibrated_(false),
 	axis_("Z"),
 	stepSizeUm_(0.1),

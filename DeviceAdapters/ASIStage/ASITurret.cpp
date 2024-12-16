@@ -8,7 +8,7 @@
 #include "ASITurret.h"
 
 AZ100Turret::AZ100Turret() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	numPos_(4),
 	position_(0)
 {

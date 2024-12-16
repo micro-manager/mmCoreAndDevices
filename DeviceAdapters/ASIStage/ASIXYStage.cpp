@@ -8,7 +8,7 @@
 #include "ASIXYStage.h"
 
 XYStage::XYStage() :
-	ASIBase(this, "2H"),
+	ASIBase(this, "2H"), // LX-4000 prefix
 	stepSizeXUm_(0.0),
 	stepSizeYUm_(0.0),
 	maxSpeed_(7.5),
