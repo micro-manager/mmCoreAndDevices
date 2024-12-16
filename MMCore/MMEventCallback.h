@@ -86,4 +86,19 @@ public:
       std::cout << "onSLMExposureChanged()" << name << " " << newExposure << '\n';
    }
 
+   virtual void onImageSnapped(const char* name)
+   {
+      std::cout << "onImageSnapped()" << name << '\n';
+   }
+
+   virtual void onSequenceAcquisitionStarted(const char* name, long numImages, double intervalMs, bool stopOnOverflow)
+   {
+      std::cout << "onSequenceAcquisitionStarted()" << name << " " << numImages << " " << intervalMs << " " << stopOnOverflow << '\n';
+   }
+
+   virtual void onSequenceAcquisitionStopped(const char* name)
+   {
+      std::cout << "onSequenceAcquisitionEnded()" << name << '\n';
+   }
+
 };
