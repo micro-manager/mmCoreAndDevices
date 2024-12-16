@@ -6,7 +6,6 @@
  */
 
 #include "ASIStage.h"
-#include "ASICRIF.h"
 #include "ASICRISP.h"
 #include "ASILED.h"
 #include "ASIMagnifier.h"
@@ -21,7 +20,6 @@ MODULE_API void InitializeModuleData()
 {
     RegisterDevice(g_ZStageDeviceName, MM::StageDevice, "Z Stage");
     RegisterDevice(g_XYStageDeviceName, MM::XYStageDevice, "XY Stage");
-    RegisterDevice(g_CRIFDeviceName, MM::AutoFocusDevice, "CRIF");
     RegisterDevice(g_CRISPDeviceName, MM::AutoFocusDevice, "CRISP");
     RegisterDevice(g_AZ100TurretName, MM::StateDevice, "AZ100 Turret");
     RegisterDevice(g_StateDeviceName, MM::StateDevice, "State Device");
@@ -46,10 +44,6 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     else if (name == g_XYStageDeviceName)
     {
         return new XYStage();
-    }
-    else if (name == g_CRIFDeviceName)
-    {
-        return new CRIF();
     }
     else if (name == g_CRISPDeviceName)
     {

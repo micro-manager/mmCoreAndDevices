@@ -40,7 +40,6 @@ const char* const g_Msg_ERR_INFO_COMMAND_NOT_SUPPORTED = "Cannot use the INFO co
 // external device names used used by the rest of the system to load a device from the .dll library
 const char* const g_XYStageDeviceName = "XYStage";
 const char* const g_ZStageDeviceName = "ZStage";
-const char* const g_CRIFDeviceName = "CRIF";
 const char* const g_CRISPDeviceName = "CRISP";
 const char* const g_AZ100TurretName = "AZ100 Turret";
 const char* const g_StateDeviceName = "State Device";
@@ -51,7 +50,6 @@ const char* const g_TIRFDeviceName = "TIRF";
 // corresponding device descriptions
 const char* const g_XYStageDeviceDescription = "ASI XY stage driver adapter";
 const char* const g_ZStageDeviceDescription = "ASI Z-stage driver adapter";
-const char* const g_CRIFDeviceDescription = "ASI CRIF Autofocus adapter";
 const char* const g_CRISPDeviceDescription = "ASI CRISP Autofocus adapter";
 const char* const g_AZ100TurretDescription = "ASI AZ100 Turret Controller";
 const char* const g_StateDeviceDescription = "ASI State Device";
@@ -62,18 +60,6 @@ const char* const g_TIRFDeviceDescription = "ASI TIRF Actuator";
 // constant values
 const char* const g_Open = "Open";
 const char* const g_Closed = "Closed";
-
-// CRIF states
-const char* const g_CRIFState = "CRIF State";
-const char* const g_CRIF_I = "Unlock (Laser Off)";
-const char* const g_CRIF_L = "Laser On";
-const char* const g_CRIF_Cal = "Calibrate";
-const char* const g_CRIF_G = "Calibration Succeeded";
-const char* const g_CRIF_B = "Calibration Failed";
-const char* const g_CRIF_k = "Locking";
-const char* const g_CRIF_K = "Lock";
-const char* const g_CRIF_E = "Error";
-const char* const g_CRIF_O = "Laser Off";
 
 // CRISP states
 const char* const g_CRISPState = "CRISP State";
