@@ -1,5 +1,6 @@
 #include "TeensyCom.h"
 
+
 TeensyCom::TeensyCom(MM::Core* callback, MM::Device* device, const char* portLabel) :
    callback_(callback),
    device_(device),
@@ -86,9 +87,19 @@ int TeensyCom::GetResponse(uint8_t cmd, uint32_t& param)
    return DEVICE_OK;
 }
 
+int TeensyCom::GetRunningStatus(uint32_t& status)
+{
+   const std::lock_guard<std::mutex> lock(mutex_);
+   int ret = Enquire(cmd_start);
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetResponse(cmd_start, status);
+}
+
 // get firmware version
 int TeensyCom::GetVersion(uint32_t& version)
 {
+   const std::lock_guard<std::mutex> lock(mutex_);
    int ret = SendCommand(cmd_version, 0);
    if (ret != DEVICE_OK)
       return ret;
@@ -98,8 +109,98 @@ int TeensyCom::GetVersion(uint32_t& version)
 // Get interval between pulses
 int TeensyCom::GetInterval(uint32_t& interval)
 {
+   const std::lock_guard<std::mutex> lock(mutex_);
    int ret = Enquire(cmd_interval);
    if (ret != DEVICE_OK)
       return ret;
    return GetResponse(cmd_interval, interval);
 }
+
+int TeensyCom::GetPulseDuration(uint32_t& pulseDuration)
+{
+   const std::lock_guard<std::mutex> lock(mutex_);
+   int ret = Enquire(cmd_pulse_duration);
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetResponse(cmd_pulse_duration, pulseDuration);
+}
+
+int TeensyCom::GetWaitForInput(uint32_t& waitForInput)
+{
+   const std::lock_guard<std::mutex> lock(mutex_);
+   int ret = Enquire(cmd_wait_for_input);
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetResponse(cmd_wait_for_input, waitForInput);
+}
+
+int TeensyCom::GetNumberOfPulses(uint32_t& nrPulses)
+{
+   const std::lock_guard<std::mutex> lock(mutex_);
+   int ret = Enquire(cmd_number_of_pulses);
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetResponse(cmd_number_of_pulses, nrPulses);
+}
+
+int TeensyCom::SetStart(uint32_t& response)
+{
+   const std::lock_guard<std::mutex> lock(mutex_);
+   int ret = SendCommand(cmd_start, 0); // Start command
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetResponse(cmd_start, response);
+}
+
+int TeensyCom::SetStop(uint32_t& response)
+{
+   const std::lock_guard<std::mutex> lock(mutex_);
+   int ret = SendCommand(cmd_stop, 0); // Start command
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetResponse(cmd_stop, response);
+}
+
+int TeensyCom::SetInterval(uint32_t interval, uint32_t& response)
+{
+    const std::lock_guard<std::mutex> lock(mutex_);
+    int ret = SendCommand(cmd_interval, interval);
+    if (ret != DEVICE_OK)
+       return ret;
+    return GetResponse(cmd_interval, response);
+}
+
+
+// Sets the pulse duration in microseconds
+// return error on serial comm problem.  
+// response contains Teensy reposonse (hopefully same as pulseDuration).
+int TeensyCom::SetPulseDuration(uint32_t pulseDuration, uint32_t& response)
+{
+    const std::lock_guard<std::mutex> lock(mutex_);
+    int ret = SendCommand(cmd_pulse_duration, pulseDuration);
+    if (ret != DEVICE_OK)
+       return ret;
+    return GetResponse(cmd_pulse_duration, response);
+}
+
+
+int TeensyCom::SetWaitForInput(uint32_t waitForInput, uint32_t& response)
+{
+   const std::lock_guard<std::mutex> lock(mutex_);
+   int ret = SendCommand(cmd_wait_for_input, waitForInput);
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetResponse(cmd_wait_for_input, response);
+}
+
+
+int TeensyCom::SetNumberOfPulses(uint32_t numberOfPulses, uint32_t& response)
+{
+   const std::lock_guard<std::mutex> lock(mutex_);
+   int ret = SendCommand(cmd_number_of_pulses, numberOfPulses);
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetResponse(cmd_number_of_pulses, response);
+}
+
+

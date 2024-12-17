@@ -9,6 +9,7 @@
 
 const char* g_RunUntilStopped = "Run_Until_Stopped";
 const char* g_NrPulses = "Number_of_Pulses";
+const char* g_NrPulsesCounted = "Number_of_Actual_Pulses";
 
 
 TeensyPulseGenerator::TeensyPulseGenerator() :
@@ -21,8 +22,8 @@ TeensyPulseGenerator::TeensyPulseGenerator() :
    running_(false),        // Not running initially
    runUntilStopped_(true), // Keep on pulsing until stopped
    version_(0),            // version of the firmware
-   nrPulses_(1)            // Number of pulses, only relevant if !runUntilStopped_ 
-
+   nrPulses_(1),            // Number of pulses, only relevant if !runUntilStopped_ 
+   nrPulsesCounted_(0)
 {
    InitializeDefaultErrorMessages();
 
@@ -76,11 +77,8 @@ int TeensyPulseGenerator::Initialize()
    CreateFloatProperty("Interval-ms", interval_, false, pAct);
 
    // Pulse Duration property
-   ret = teensyCom_->Enquire(cmd_pulse_duration);
-   if (ret != DEVICE_OK)
-      return ret;
    uint32_t pulseDuration;
-   ret = teensyCom_->GetResponse(cmd_pulse_duration, pulseDuration);
+   ret = teensyCom_->GetPulseDuration(pulseDuration);
    if (ret != DEVICE_OK)
       return ret;
    pulseDuration_ = pulseDuration / 1000.0;
@@ -88,11 +86,8 @@ int TeensyPulseGenerator::Initialize()
    CreateFloatProperty("PulseDuration-ms", pulseDuration_, false, pAct);
 
    // Trigger Mode property
-   ret = Enquire(cmd_wait_for_input);
-   if (ret != DEVICE_OK)
-      return ret;
    uint32_t waitForInput;
-   ret = GetResponse(cmd_wait_for_input, waitForInput);
+   ret = teensyCom_->GetWaitForInput(waitForInput);
    if (ret != DEVICE_OK)
       return ret;
    triggerMode_ = (bool) waitForInput;
@@ -102,10 +97,7 @@ int TeensyPulseGenerator::Initialize()
    AddAllowedValue("TriggerMode", "On");
 
    // Run until Stopped property
-   ret = Enquire(cmd_number_of_pulses);
-   if (ret != DEVICE_OK)
-      return ret;
-   ret = GetResponse(cmd_number_of_pulses, nrPulses_);
+   ret = teensyCom_->GetNumberOfPulses(nrPulses_);
    if (ret != DEVICE_OK)
       return ret;
    runUntilStopped_ = nrPulses_ == 0;
@@ -118,6 +110,9 @@ int TeensyPulseGenerator::Initialize()
    pAct = new CPropertyAction(this, &TeensyPulseGenerator::OnNrPulses);
    CreateIntegerProperty(g_NrPulses, nrPulses_, false, pAct);
 
+   // Read only property to report number of pulses actually send out
+   pAct = new CPropertyAction(this, &TeensyPulseGenerator::OnNrPulsesCounted);
+   CreateIntegerProperty(g_NrPulsesCounted, nrPulsesCounted_, true, pAct);
 
    // State (Start/Stop) property
    pAct = new CPropertyAction(this, &TeensyPulseGenerator::OnState);
@@ -138,8 +133,12 @@ int TeensyPulseGenerator::Shutdown()
     if (port_ != "")
     {
        // Ensure device is stopped
-       const std::lock_guard<std::mutex> lock(mutex_);
-       SendCommand(cmd_stop, 0);  // Stop command
+       if (teensyCom_ != 0) {
+          uint32_t param;
+          teensyCom_->SetStop(param);
+          delete (teensyCom_);
+          teensyCom_ = 0; // is this automatic after delete?
+       }
     }
     initialized_ = false;
     return DEVICE_OK;
@@ -149,83 +148,6 @@ bool TeensyPulseGenerator::Busy()
 {
     return false;  // This device doesn't have a concept of "busy"
 }
-
-int TeensyPulseGenerator::SendCommand(uint8_t cmd, uint32_t param)
-{
-   // This should not be needed, but just in case:
-   PurgeComPort(port_.c_str());
-
-    // Prepare buffer
-   const unsigned int buflen = 5;
-   unsigned char buffer[buflen];
-   buffer[0] = cmd;
-   // This needs work when we have a Big Endian host, the Teensy is little endian
-   alignas(uint32_t) char alignedByteArray[4];
-   std::memcpy(alignedByteArray, &param, 4);
-
-   // For commands that require a parameter, convert to little-endian
-   buffer[1] = alignedByteArray[0];
-   buffer[2] = alignedByteArray[1];
-   buffer[3] = alignedByteArray[2];
-   buffer[4] = alignedByteArray[3];
-
-   // Send 5-byte command
-   return WriteToComPort(port_.c_str(), buffer, buflen);
-}
-
-int TeensyPulseGenerator::Enquire(uint8_t cmd)
-{
-   const unsigned int buflen = 2;
-   unsigned char buffer[buflen];
-   buffer[0] = 255;
-   buffer[1] = cmd;
-
-   return WriteToComPort(port_.c_str(), buffer, buflen);
-}
-
-int TeensyPulseGenerator::GetResponse(uint8_t cmd, uint32_t& param) 
-{ 
-   unsigned char buf[1] = { 0 };
-   unsigned long read = 0;
-   MM::TimeoutMs timeout = MM::TimeoutMs(GetCurrentMMTime(), 1000);
-   while (read == 0) {
-      if (timeout.expired(GetCurrentMMTime()))
-      {
-         return ERR_COMMUNICATION;
-      }
-      ReadFromComPort(port_.c_str(), buf, 1, read);
-   }
-   if (read == 1 && buf[0] == cmd)
-   {
-      unsigned char buf2[4] = { 0, 0, 0, 0 };
-      read = 0;
-      unsigned long tmpRead = 0;
-      while (read < 4)
-      {
-         if (timeout.expired(GetCurrentMMTime()))
-         {
-            return ERR_COMMUNICATION;
-         }
-         ReadFromComPort(port_.c_str(), &buf2[read], 4 - read, tmpRead);
-         read += tmpRead;
-      }
-      alignas(uint32_t) char alignedByteArray[4];
-      std::memcpy(alignedByteArray, buf2, sizeof(buf2));
-
-      // This needs change on a Big endian host (PC and Teensy are both little endian).
-      param =  *(reinterpret_cast<uint32_t*>(alignedByteArray));
-
-      std::ostringstream os;
-      os << "Read: " << param;
-      GetCoreCallback()->LogMessage(this, os.str().c_str(), true);
-    } 
-    else
-    {
-       return ERR_COMMUNICATION;
-    }
-   return DEVICE_OK;
-}
-
 
 int TeensyPulseGenerator::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -253,14 +175,9 @@ int TeensyPulseGenerator::OnInterval(MM::PropertyBase* pProp, MM::ActionType eAc
        // Send interval command if initialized
        if (initialized_)
        {
-          const std::lock_guard<std::mutex> lock(mutex_);
-          PurgeComPort(port_.c_str());
           uint32_t interval = static_cast<uint32_t> (interval_ * 1000.0);
-          int ret = SendCommand(cmd_interval, interval);
-          if (ret != DEVICE_OK)
-             return ret;
           uint32_t parm;
-          ret = GetResponse(cmd_interval, parm);
+          int ret = teensyCom_->SetInterval(interval, parm);
           if (ret != DEVICE_OK)
              return ret;
           if (parm != interval)
@@ -288,13 +205,8 @@ int TeensyPulseGenerator::OnPulseDuration(MM::PropertyBase* pProp, MM::ActionTyp
        if (initialized_)
        {
           uint32_t pulseDurationUs =  static_cast<uint32_t>(pulseDuration_ * 1000.0);
-
-          const std::lock_guard<std::mutex> lock(mutex_);
-          int ret = SendCommand(cmd_pulse_duration, pulseDurationUs);
-          if (ret != DEVICE_OK)
-             return ret;
           uint32_t param;
-          ret = GetResponse(cmd_pulse_duration, param);
+          int ret = teensyCom_->SetPulseDuration(pulseDurationUs, param);
           if (ret != DEVICE_OK)
              return ret;
           if (param != pulseDurationUs)
@@ -325,12 +237,10 @@ int TeensyPulseGenerator::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType 
       if (initialized_)
       {
          uint32_t sp = triggerMode_ ? 1 : 0;
-         const std::lock_guard<std::mutex> lock(mutex_);
-         int ret = SendCommand(cmd_wait_for_input, sp);
+         uint32_t param;
+         int ret = teensyCom_->SetWaitForInput(sp, param);
          if (ret != DEVICE_OK)
             return ret;
-         uint32_t param;
-         ret = GetResponse(cmd_wait_for_input, param);
          if (param != sp)
          {
             GetCoreCallback()->LogMessage(this, "Triggermode sent not the same as triggermode echoed back", false);
@@ -353,29 +263,23 @@ int TeensyPulseGenerator::OnRunUntilStopped(MM::PropertyBase* pProp, MM::ActionT
       pProp->Get(stateStr);
       if (stateStr == "On" && !runUntilStopped_)
       {
-         const std::lock_guard<std::mutex> lock(mutex_);
-         int ret = SendCommand(cmd_number_of_pulses, static_cast<uint32_t> (0));
+         uint32_t param;
+         int ret = teensyCom_->SetNumberOfPulses(static_cast<uint32_t> (0), param);
          if (ret != DEVICE_OK)
             return ret;
-         uint32_t param;
-         ret = GetResponse(cmd_number_of_pulses, param);
          if (param != 0)
          {
             GetCoreCallback()->LogMessage(this, "NrPulses sent (0) not the same as number of pulses received", false);
             return ERR_COMMUNICATION;
-
          }
          runUntilStopped_ = true;
       }
       else if (stateStr == "Off" && runUntilStopped_)
       {
-         unsigned char cmd = cmd_number_of_pulses;
-         const std::lock_guard<std::mutex> lock(mutex_);
-         int ret = SendCommand(cmd, nrPulses_);
+         uint32_t param;
+         int ret = teensyCom_->SetNumberOfPulses(nrPulses_, param);
          if (ret != DEVICE_OK)
             return ret;
-         uint32_t param;
-         ret = GetResponse(cmd, param);
          if (nrPulses_ != param) {
             GetCoreCallback()->LogMessage(this, "NrPulses sent not the same as number of pulses received", false);
             return ERR_COMMUNICATION;
@@ -399,16 +303,13 @@ int TeensyPulseGenerator::OnNrPulses(MM::PropertyBase* pProp, MM::ActionType eAc
       pProp->Get(nrPulses);
       if ((unsigned) nrPulses != nrPulses_)
       {
-
          nrPulses_ = (unsigned) nrPulses;
          if (!runUntilStopped_)
          {
-            const std::lock_guard<std::mutex> lock(mutex_);
-            int ret = SendCommand(cmd_number_of_pulses, nrPulses_);
+            uint32_t param;
+            int ret = teensyCom_->SetNumberOfPulses(nrPulses_, param);
             if (ret != DEVICE_OK)
                return ret;
-            uint32_t param;
-            ret = GetResponse(cmd_number_of_pulses, param);
             if (nrPulses_ != param) {
                GetCoreCallback()->LogMessage(this, "NrPulses sent not the same as number of pulses received", false);
                return ERR_COMMUNICATION;
@@ -439,15 +340,20 @@ void TeensyPulseGenerator::CheckStatus()
    while (running_)
    {
       {
-         const std::lock_guard<std::mutex> lock(mutex_);
-         Enquire(cmd_start);
          uint32_t response;
-         GetResponse(cmd_start, response);
-         running_ = (bool)response;
+         // ignor errors since we can not easily handle them
+         // Think about reporting errors to logs
+         teensyCom_->GetRunningStatus(response);
+         running_ = (bool) response;
+         if (!running_)
+            teensyCom_->SetStop(nrPulsesCounted_);
       }
       Sleep((long) (interval_));
    }
    GetCoreCallback()->OnPropertyChanged(this, "Status", "Idle");
+   char myString[10] = ""; // 10 chars is maximum for uint32_t
+   sprintf(myString, "%d", (long) nrPulsesCounted_);
+   GetCoreCallback()->OnPropertyChanged(this, g_NrPulsesCounted, myString);
 }
 
 int TeensyPulseGenerator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -464,12 +370,8 @@ int TeensyPulseGenerator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (stateStr == "Start" && !running_)
         {
            {
-              const std::lock_guard<std::mutex> lock(mutex_);
-              int ret = SendCommand(cmd_start, 0); // Start command
-              if (ret != DEVICE_OK)
-                 return ret;
               uint32_t param;
-              ret = GetResponse(cmd_start, param);
+              int ret = teensyCom_->SetStart(param);
               if (ret != DEVICE_OK)
                  return ret;
               if (param != 1)
@@ -488,16 +390,13 @@ int TeensyPulseGenerator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         }
         else if (stateStr == "Stop" && running_)
         {
-           const std::lock_guard<std::mutex> lock(mutex_);
-           int ret = SendCommand(cmd_stop, 0); // Stop command
-           if (ret != DEVICE_OK)
-              return ret;
-           uint32_t param;
-           ret = GetResponse(cmd_stop, param);
+           int ret = teensyCom_->SetStop(nrPulsesCounted_); // Stop command
            if (ret != DEVICE_OK)
               return ret;
            running_ = false;
-           // param holds the number of pulses
+           char myString[10] = ""; // 10 chars is maximum for uint32_t
+           sprintf(myString, "%d", (long) nrPulsesCounted_);
+           GetCoreCallback()->OnPropertyChanged(this, g_NrPulsesCounted, myString);
         }
     }
     return DEVICE_OK;
@@ -512,6 +411,14 @@ int TeensyPulseGenerator::OnStatus(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int TeensyPulseGenerator::OnNrPulsesCounted(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long) nrPulsesCounted_);
+   }
+   return DEVICE_OK;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API

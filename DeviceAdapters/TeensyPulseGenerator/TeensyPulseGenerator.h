@@ -34,6 +34,7 @@ public:
     int OnStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnRunUntilStopped(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNrPulses(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnNrPulsesCounted(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     std::atomic<bool> initialized_;
@@ -47,14 +48,12 @@ private:
     bool running_;        // Pulse generator running state
     bool runUntilStopped_;
     uint32_t version_;
-    uint32_t nrPulses_;
+    uint32_t nrPulses_; // nr Pulses we request
+    uint32_t nrPulsesCounted_; // as returned by the Teensy
     std::mutex mutex_;
     SingleThread singleThread_;
 
     // Helper methods for serial communication
-    int SendCommand(uint8_t cmd, uint32_t param = 0);
-    int Enquire(uint8_t cmd);
-    int GetResponse(uint8_t cmd, uint32_t& param);
     void CheckStatus();
 };
 

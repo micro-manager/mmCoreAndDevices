@@ -2,6 +2,7 @@
 
 #include "DeviceBase.h"
 #include "MMDevice.h"
+#include <mutex>
 
 #define ERR_PORT_OPEN_FAILED 106
 #define ERR_COMMUNICATION 107
@@ -27,13 +28,24 @@ public:
 
    int SendCommand(uint8_t cmd, uint32_t param);
    int Enquire(uint8_t cmd);
+   int GetRunningStatus(uint32_t& status);
    int GetResponse(uint8_t cmd, uint32_t& param);
    int GetVersion(uint32_t& version);
    int GetInterval(uint32_t& interval);
+   int GetPulseDuration(uint32_t& pulseDuration);
+   int GetWaitForInput(uint32_t& waitForInput);
+   int GetNumberOfPulses(uint32_t& numberOfPulses);
+   int SetStart(uint32_t& response);
+   int SetStop(uint32_t& response);
+   int SetInterval(uint32_t interval, uint32_t& response);
+   int SetPulseDuration(uint32_t pulseDuration, uint32_t& response);
+   int SetWaitForInput(uint32_t waitForInput, uint32_t& response);
+   int SetNumberOfPulses(uint32_t numberOfPulses, uint32_t& response);
 
 
 private:
    MM::Core* callback_;
    MM::Device* device_;
    const char* portLabel_;
+   std::mutex mutex_;
 };
