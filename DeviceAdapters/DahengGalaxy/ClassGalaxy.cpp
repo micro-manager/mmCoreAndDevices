@@ -71,7 +71,8 @@ ClassGalaxy::ClassGalaxy() :
         shutterMode_("None"),
         imgBufferSize_(0),
         sequenceRunning_(false),
-        initialized_(false)
+        initialized_(false),
+        exposureTimeoutS_(5)
 {
         // call the base class method to set-up default error codes/messages
         InitializeDefaultErrorMessages();
@@ -484,6 +485,9 @@ int ClassGalaxy::Initialize()
             SetAllowedValues("UserOutputSelector", LSPVals);
         }
 
+        pAct = new CPropertyAction(this, &ClassGalaxy::OnExposureTimeout);
+        ret = CreateIntegerProperty("ExposureTimeoutSeconds", 5, false, pAct);
+
         //20230220设置图像转换RGBA8
         ret = UpdateStatus();
 
@@ -663,8 +667,7 @@ int ClassGalaxy::SnapImage()
 
         //可以使用采单帧来获取
         // Needs to be made usef setable, especially for external trigger applications
-        int timeout_ms = 5000;	
-        CImageDataPointer ptrGrabResult = m_objStreamPtr->GetImage(timeout_ms);
+        CImageDataPointer ptrGrabResult = m_objStreamPtr->GetImage(exposureTimeoutS_ * 1000);
         uint64_t length = ptrGrabResult->GetPayloadSize();
         
         if (ptrGrabResult->GetPayloadSize() != imgBufferSize_)
@@ -1548,6 +1551,7 @@ int ClassGalaxy::OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     return DEVICE_OK;
 }
+
 //OnTriggerFilterRaisingEdge
 int ClassGalaxy::OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1576,6 +1580,18 @@ int ClassGalaxy::OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionT
 }
 
 
+int ClassGalaxy::OnExposureTimeout(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::AfterSet)
+   {
+      pProp->Get(exposureTimeoutS_);
+   }
+   else if (eAct == MM::BeforeGet)
+   { 
+      pProp->Set(exposureTimeoutS_);
+   }
+   return DEVICE_OK;
+}
 
 
 unsigned ClassGalaxy::GetImageBytesPerPixel() const

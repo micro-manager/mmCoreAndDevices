@@ -135,14 +135,15 @@ public:
 	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnUserOutput(MM::PropertyBase* pProp, MM::ActionType eAct);
-
 	int OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
-
 	int OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExposureTimeout(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 	//为了实现在采集类中使用
 	bool  colorCamera_;
 	CGXFeatureControlPointer          m_objFeatureControlPtr;     ///< 属性控制器
-		 //格式转换函数
+
+   //格式转换函数
 	void RG8ToRGB24Packed(void* destbuffer, CImageDataPointer& objImageDataPointer);
 	void CoverRGB16ToRGBA16(unsigned short int* Desbuffer, unsigned short int* Srcbuffer);
 	void RG10ToRGB24Packed(void* destbuffer, CImageDataPointer& objImageDataPointer);
@@ -195,6 +196,7 @@ private:
 	ImgBuffer img_;
 	bool sequenceRunning_;
 	bool initialized_;
+	long exposureTimeoutS_;
 
 	//图像转换
 	CGXImageFormatConvertPointer TestFormatConvertPtr;
