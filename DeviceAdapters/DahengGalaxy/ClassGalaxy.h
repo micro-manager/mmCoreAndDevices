@@ -1,35 +1,32 @@
 #pragma once
 #define _AFXDLL
-//#include <afxdlgs.h>
-//#include "stdafx.h"
 
 #include	"GalaxyException.h"
 #include	"GalaxyIncludes.h"
-//#include	"GXBitmap.h"
-//#include	"FileVersion.h"
-//#include	"DxImageProc.h"
-	//---------------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------------
 /**
 \brief   用户继承采集事件处理类，回调函数，重点关注 类中有回调类，供采集图像
 */
 //----------------------------------------------------------------------------------
-#include <sstream>
+#include <iostream>
+#include <map>
 #include <math.h>
-#include "ModuleInterface.h"
-#include "DeviceUtils.h"
+#include <mutex>
+#include <sstream>
+#include <string>
 #include <vector>
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
-#include <string>
-#include <vector>
-#include <map>
+#include "DeviceUtils.h"
 #include "ImageMetadata.h"
 #include "ImgBuffer.h"
-#include <iostream>
+#include "ModuleInterface.h"
 
 
 
 class CircularBufferInserter;
+class SnapHandler;
 
 class MODULE_API ClassGalaxy : public CCameraBase<ClassGalaxy>
 {
@@ -88,7 +85,6 @@ public:
 	GX_VALID_BIT_LIST GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelFormatEntry);
 	void CopyToImageBuffer(CImageDataPointer& objImageDataPointer);
 	//CImageFormatConverter* converter;
-	CircularBufferInserter* ImageHandler_;
 	//std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
 	//void UpdateTemperature();
 
@@ -139,6 +135,7 @@ public:
 	int OnAcquisitionFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnUserOutput(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	int OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 
@@ -152,6 +149,7 @@ public:
 	void RG10ToRGB24Packed(void* destbuffer, CImageDataPointer& objImageDataPointer);
 	void RGB24PackedToRGBA(void* destbuffer, void* srcbuffer, CImageDataPointer& objImageDataPointer);
 	void ResizeSnapBuffer();
+	void SendSoftwareTrigger();
 	void* imgBuffer_;
 	bool __IsPixelFormat8(GX_PIXEL_FORMAT_ENTRY emPixelFormatEntry);
 
@@ -169,8 +167,6 @@ private:
 
 	unsigned maxWidth_, maxHeight_;
 	int64_t DeviceLinkThroughputLimit_;
-	// double ResultingFrameRatePrevious;
-	// double acqFramerate_, acqFramerateMax_, acqFramerateMin_;
 	double exposure_us_, exposureMax_, exposureMin_;
 	double gain_, gainMax_, gainMin_;
 	double offset_, offsetMin_, offsetMax_;
@@ -217,9 +213,11 @@ private:
 
 	bool m_bIsOpen = false;
 
-	//MM::MMTime startTime_;
-
-
+	CircularBufferInserter* ImageHandler_;
+	SnapHandler* snapHandler_;
+	std::mutex mutex_;
+	std::condition_variable cv_;
+	bool snapReady_;
 };
 
 class CircularBufferInserter : public ICaptureEventHandler {
@@ -232,6 +230,19 @@ private:
 public:
 	CircularBufferInserter(ClassGalaxy* dev);
 	CircularBufferInserter(ClassGalaxy* dev, long numImages, bool stoponOverflow);
+
+	virtual void DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam);
+};
+
+class SnapHandler : public ICaptureEventHandler {
+private:
+	ClassGalaxy* dev_;
+
+public:
+	SnapHandler(ClassGalaxy* dev)
+	{
+		dev_ = dev;
+	};
 
 	virtual void DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam);
 };
