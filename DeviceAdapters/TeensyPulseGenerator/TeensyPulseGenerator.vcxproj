@@ -92,10 +92,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SingleThread.h" />
+    <ClInclude Include="TeensyCom.h" />
     <ClInclude Include="TeensyPulseGenerator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SingleThread.cpp" />
+    <ClCompile Include="TeensyCom.cpp" />
     <ClCompile Include="TeensyPulseGenerator.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

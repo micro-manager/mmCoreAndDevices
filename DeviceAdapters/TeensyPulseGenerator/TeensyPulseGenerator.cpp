@@ -10,25 +10,18 @@
 const char* g_RunUntilStopped = "Run_Until_Stopped";
 const char* g_NrPulses = "Number_of_Pulses";
 
-const unsigned char cmd_version = 0;
-const unsigned char cmd_start = 1;
-const unsigned char cmd_stop = 2;
-const unsigned char cmd_interval = 3; // interval in microseconds
-const unsigned char cmd_pulse_duration = 4; // in microsconds
-const unsigned char cmd_wait_for_input = 5;
-const unsigned char cmd_number_of_pulses = 6;
-
 
 TeensyPulseGenerator::TeensyPulseGenerator() :
-    initialized_(false),
-    port_(""),
-    interval_(100),      // Default 100ms interval
-    pulseDuration_(10),   // Default 10ms pulse
-    triggerMode_(false),    // Default trigger mode on
-    running_(false),        // Not running initially
-    runUntilStopped_(true), // Keep on pulsing until stopped
-    version_(0),            // version of the firmware
-    nrPulses_(1)            // Number of pulses, only relevant if !runUntilStopped_ 
+   initialized_(false),
+   port_(""),
+   teensyCom_(0),
+   interval_(100),      // Default 100ms interval
+   pulseDuration_(10),   // Default 10ms pulse
+   triggerMode_(false),    // Default trigger mode on
+   running_(false),        // Not running initially
+   runUntilStopped_(true), // Keep on pulsing until stopped
+   version_(0),            // version of the firmware
+   nrPulses_(1)            // Number of pulses, only relevant if !runUntilStopped_ 
 
 {
    InitializeDefaultErrorMessages();
@@ -45,7 +38,6 @@ TeensyPulseGenerator::TeensyPulseGenerator() :
 TeensyPulseGenerator::~TeensyPulseGenerator()
 {
     Shutdown();
-    // option: inter
 }
 
 void TeensyPulseGenerator::GetName(char* name) const
@@ -62,29 +54,21 @@ int TeensyPulseGenerator::Initialize()
    if (port_.empty())
        return ERR_NO_PORT_SET;
 
-   PurgeComPort(port_.c_str());
+   teensyCom_ = new TeensyCom(GetCoreCallback(), (MM::Device*) this, port_.c_str());
 
-   // get firmware version
-   int ret = SendCommand(cmd_version, 0); 
-   if (ret != DEVICE_OK)
-      return ret;
-   ret = GetResponse(0, version_);
-   if (ret != DEVICE_OK)
-      return ret;
+   // Create properties
+
    // TODO: check we can work with this firmware
+   int ret = teensyCom_->GetVersion(version_);
+   if (ret != DEVICE_OK)
+      return ret;
    std::ostringstream os;
    os << version_;
    CreateProperty("Firmware-version", os.str().c_str(), MM::String, true);
 
-
-   // Create properties
-
    // Interval property
-   ret = Enquire(cmd_interval);
-   if (ret != DEVICE_OK)
-      return ret;
    uint32_t interval;
-   ret = GetResponse(cmd_interval, interval);
+   ret = teensyCom_->GetInterval(interval);
    if (ret != DEVICE_OK)
       return ret;
    interval_ = interval / 1000.0;
@@ -92,11 +76,11 @@ int TeensyPulseGenerator::Initialize()
    CreateFloatProperty("Interval-ms", interval_, false, pAct);
 
    // Pulse Duration property
-   ret = Enquire(cmd_pulse_duration);
+   ret = teensyCom_->Enquire(cmd_pulse_duration);
    if (ret != DEVICE_OK)
       return ret;
    uint32_t pulseDuration;
-   ret = GetResponse(cmd_pulse_duration, pulseDuration);
+   ret = teensyCom_->GetResponse(cmd_pulse_duration, pulseDuration);
    if (ret != DEVICE_OK)
       return ret;
    pulseDuration_ = pulseDuration / 1000.0;

@@ -7,15 +7,11 @@
 #include "ModuleInterface.h"
 #include "MMDevice.h"
 #include "SingleThread.h"
+#include "TeensyCom.h"
 #include <cstdio>
 #include <string>
 #include <vector>
 #include <mutex>
-
-#define ERR_PORT_OPEN_FAILED 106
-#define ERR_COMMUNICATION 107
-#define ERR_NO_PORT_SET 108
-#define ERR_VERSION_MISMATCH 109
 
 class TeensyPulseGenerator : public CGenericBase<TeensyPulseGenerator>
 {
@@ -42,6 +38,7 @@ public:
 private:
     std::atomic<bool> initialized_;
     std::string port_;
+    TeensyCom* teensyCom_;
 
     // Current configuration
     double interval_;     // Interval in milli-seconds
