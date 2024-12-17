@@ -26,7 +26,6 @@
 
 
 class CircularBufferInserter;
-class SnapHandler;
 
 class MODULE_API ClassGalaxy : public CCameraBase<ClassGalaxy>
 {
@@ -214,10 +213,8 @@ private:
 	bool m_bIsOpen = false;
 
 	CircularBufferInserter* ImageHandler_;
-	SnapHandler* snapHandler_;
 	std::mutex mutex_;
 	std::condition_variable cv_;
-	bool snapReady_;
 };
 
 class CircularBufferInserter : public ICaptureEventHandler {
@@ -234,15 +231,3 @@ public:
 	virtual void DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam);
 };
 
-class SnapHandler : public ICaptureEventHandler {
-private:
-	ClassGalaxy* dev_;
-
-public:
-	SnapHandler(ClassGalaxy* dev)
-	{
-		dev_ = dev;
-	};
-
-	virtual void DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam);
-};

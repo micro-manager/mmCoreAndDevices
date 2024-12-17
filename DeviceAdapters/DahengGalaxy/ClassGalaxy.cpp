@@ -71,8 +71,7 @@ ClassGalaxy::ClassGalaxy() :
         shutterMode_("None"),
         imgBufferSize_(0),
         sequenceRunning_(false),
-        initialized_(false),
-        snapHandler_(0)
+        initialized_(false)
 {
         // call the base class method to set-up default error codes/messages
         InitializeDefaultErrorMessages();
@@ -651,15 +650,7 @@ int ClassGalaxy::SnapImage()
             ImageHandler_ = NULL;
         }
 
-        if (snapHandler_ == 0)
-        {
-           snapHandler_ = new SnapHandler(this);
-           m_objStreamPtr->RegisterCaptureCallback(snapHandler_, this);
-        }
-
-        int timeout_ms = 5000;	
         //开启流层采集
-        snapReady_ = false;
         m_objStreamPtr->StartGrab();
         //发送开采命令
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
@@ -668,20 +659,23 @@ int ClassGalaxy::SnapImage()
 
         SendSoftwareTrigger(); // will only be send if TriggerMode is ON and TriggerSource is software
 
+        // Block for the full time the camera is exposing.  This is at least the exposure time
+
         //可以使用采单帧来获取
-        //CImageDataPointer ptrGrabResult = m_objStreamPtr->GetImage(timeout_ms);
-        //uint64_t length = ptrGrabResult->GetPayloadSize();
+        // Needs to be made usef setable, especially for external trigger applications
+        int timeout_ms = 5000;	
+        CImageDataPointer ptrGrabResult = m_objStreamPtr->GetImage(timeout_ms);
+        uint64_t length = ptrGrabResult->GetPayloadSize();
         
-        //if (ptrGrabResult->GetPayloadSize() != imgBufferSize_)
-        //{	// due to parameter change on  binning
-        //    ResizeSnapBuffer();
-        //}
-        //CopyToImageBuffer(ptrGrabResult);
+        if (ptrGrabResult->GetPayloadSize() != imgBufferSize_)
+        {	// due to parameter change on  binning
+            ResizeSnapBuffer();
+        }
+        CopyToImageBuffer(ptrGrabResult);
 
     }
     catch (const CGalaxyException& e)
     {		
-
         string a = e.what();
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
@@ -715,7 +709,6 @@ void ClassGalaxy::SendSoftwareTrigger()
 
 void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
 {
-    
     if (1)
     {
         GetImageSize();
@@ -780,11 +773,6 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
                     << e.what() << endl;
             }
         }
-        {
-           std::lock_guard<std::mutex> lk(mutex_);
-           snapReady_ = true;
-        }
-        cv_.notify_one();
     }
 }
 
@@ -792,12 +780,6 @@ int ClassGalaxy::StartSequenceAcquisition(long numImages, double interval_ms, bo
    try
    {
       AddToLog("ReadyMultySequenceAcquisition");
-      if (snapHandler_ != 0)
-      {
-         m_objStreamPtr->UnregisterCaptureCallback();
-         delete(snapHandler_);
-         snapHandler_ = 0;
-      }
       if (ImageHandler_ != NULL) {
          m_objStreamPtr->UnregisterCaptureCallback();
          delete(ImageHandler_);
@@ -856,12 +838,6 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         }
         //end modify
 
-        if (snapHandler_ != 0)
-        {
-           m_objStreamPtr->UnregisterCaptureCallback();
-           delete(snapHandler_);
-           snapHandler_ = 0;
-        }
         if (ImageHandler_ != NULL) {
            m_objStreamPtr->UnregisterCaptureCallback();
            delete(ImageHandler_);
@@ -995,18 +971,6 @@ unsigned char* ClassGalaxy::GetImageBufferFromCallBack(CImageDataPointer& objIma
 
 const unsigned char* ClassGalaxy::GetImageBuffer()
 {
-    //按照黑白显示
-   // wait for signal that the most recent image was received.
-    // wait until SnapHandler sends data
-   if (!snapReady_)
-   {
-      std::unique_lock<std::mutex> lk(mutex_);
-      // TODO: get Core Timeout instead of hardcoding to 5 s
-      if (!cv_.wait_for(lk, std::chrono::milliseconds(5000), [] { return true; })) {
-         GetCoreCallback()->LogMessage(this, "Timeout waiting for image data", false);
-         return 0;
-      }
-   }
    return (unsigned char*)imgBuffer_;
 }
 
@@ -2035,26 +1999,6 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
         dev_->AddToLog("GetStatus failed in Sequence acquisition");
     }
 }
-
-void SnapHandler::DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam)
-{
-   // Image grabbed successfully ?
-   if (objImageDataPointer->GetStatus() == GX_FRAME_STATUS_SUCCESS)
-   {
-        uint64_t length = objImageDataPointer->GetPayloadSize();
-        
-        if (length != dev_->GetImageBufferSize())
-        {	// due to parameter change on  binning
-            dev_->ResizeSnapBuffer();
-        }
-        dev_->CopyToImageBuffer(objImageDataPointer);
-   }
-    else
-    {
-       dev_->AddToLog("GetStatus failed in Snap handler");
-    }
-}
-
 
 
 int64_t ClassGalaxy::__GetStride(int64_t nWidth, bool bIsColor)
