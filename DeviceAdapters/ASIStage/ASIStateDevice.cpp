@@ -8,7 +8,7 @@
 #include "ASIStateDevice.h"
 
 StateDevice::StateDevice() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	numPos_(4),
 	axis_("F"),
 	position_(0),
@@ -51,12 +51,12 @@ void StateDevice::GetName(char* Name) const
 	CDeviceUtils::CopyLimitedString(Name, g_StateDeviceName);
 }
 
-bool StateDevice::SupportsDeviceDetection(void)
+bool StateDevice::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus StateDevice::DetectDevice(void)
+MM::DeviceDetectionStatus StateDevice::DetectDevice()
 {
 	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }

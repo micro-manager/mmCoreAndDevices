@@ -24,7 +24,7 @@ ASIBase::~ASIBase()
 }
 
 // Communication "clear buffer" utility function:
-int ASIBase::ClearPort(void)
+int ASIBase::ClearPort()
 {
 	// Clear contents of serial port
 	const int bufSize = 255;
@@ -108,7 +108,7 @@ int ASIBase::QueryCommandACK(const char* command)
 }
 
 // Communication "test device type" utility function:
-int ASIBase::CheckDeviceStatus(void)
+int ASIBase::CheckDeviceStatus()
 {
 	const char* command = "/"; // check STATUS
 	std::string answer;

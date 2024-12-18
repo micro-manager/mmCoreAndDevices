@@ -6,7 +6,6 @@
  */
 
 #include "ASIStage.h"
-#include "ASICRIF.h"
 #include "ASICRISP.h"
 #include "ASILED.h"
 #include "ASIMagnifier.h"
@@ -16,65 +15,62 @@
 #include "ASIZStage.h"
 #include "ASITIRF.h"
 
+
 MODULE_API void InitializeModuleData()
 {
-    RegisterDevice(g_ZStageDeviceName, MM::StageDevice, "Add-on Z-stage");
+    RegisterDevice(g_ZStageDeviceName, MM::StageDevice, "Z Stage");
     RegisterDevice(g_XYStageDeviceName, MM::XYStageDevice, "XY Stage");
-    RegisterDevice(g_CRIFDeviceName, MM::AutoFocusDevice, "CRIF");
     RegisterDevice(g_CRISPDeviceName, MM::AutoFocusDevice, "CRISP");
     RegisterDevice(g_AZ100TurretName, MM::StateDevice, "AZ100 Turret");
     RegisterDevice(g_StateDeviceName, MM::StateDevice, "State Device");
+    RegisterDevice(g_MagnifierDeviceName, MM::MagnifierDevice, "Magnifier");
     RegisterDevice(g_LEDDeviceName, MM::ShutterDevice, "LED");
     RegisterDevice(g_TIRFDeviceName, MM::GenericDevice, "TIRF");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
-    if (deviceName == 0)
+    if (deviceName == nullptr)
     {
-        return 0;
+        return nullptr;
     }
 
-    if (strcmp(deviceName, g_ZStageDeviceName) == 0)
+    const std::string name = deviceName;
+
+    if (name == g_ZStageDeviceName)
     {
         return new ZStage();
     }
-    else if (strcmp(deviceName, g_XYStageDeviceName) == 0)
+    else if (name == g_XYStageDeviceName)
     {
         return new XYStage();
     }
-    else if (strcmp(deviceName, g_CRIFDeviceName) == 0)
-    {
-        return new CRIF();
-    }
-    else if (strcmp(deviceName, g_CRISPDeviceName) == 0)
+    else if (name == g_CRISPDeviceName)
     {
         return new CRISP();
     }
-    else if (strcmp(deviceName, g_AZ100TurretName) == 0)
+    else if (name == g_AZ100TurretName)
     {
         return new AZ100Turret();
     }
-    else if (strcmp(deviceName, g_StateDeviceName) == 0)
+    else if (name == g_StateDeviceName)
     {
         return new StateDevice();
     }
-    else if (strcmp(deviceName, g_LEDDeviceName) == 0)
-    {
-        return new LED();
-    }
-    else if (strcmp(deviceName, g_MagnifierDeviceName) == 0)
+    else if (name == g_MagnifierDeviceName)
     {
         return new Magnifier();
     }
-    else if (strcmp(deviceName, g_TIRFDeviceName) == 0)
+    else if (name == g_LEDDeviceName)
+    {
+        return new LED();
+    }
+    else if (name == g_TIRFDeviceName)
     {
         return new TIRF();
     }
-    else
-    {
-        return 0;
-    }
+
+    return nullptr;
 }
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)
@@ -87,7 +83,6 @@ MM::DeviceDetectionStatus ASICheckSerialPort(MM::Device& device, MM::Core& core,
     // all conditions must be satisfied...
     MM::DeviceDetectionStatus result = MM::Misconfigured;
     char answerTO[MM::MaxStrLength];
-
     try
     {
         std::string portLowerCase = portToCheck;
@@ -121,7 +116,6 @@ MM::DeviceDetectionStatus ASICheckSerialPort(MM::Device& device, MM::Core& core,
                 if (DEVICE_OK == ret)
                 {
                     char answer[MM::MaxStrLength];
-
                     ret = core.GetSerialAnswer(&device, portToCheck.c_str(), MM::MaxStrLength, answer, "\r\n");
                     if (DEVICE_OK != ret)
                     {
