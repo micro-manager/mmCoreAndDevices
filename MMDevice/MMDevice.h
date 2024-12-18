@@ -1513,9 +1513,14 @@ namespace MM {
       virtual int Close(const char* handle) = 0;
 
       /**
-       * Returns true if it can accept new images.
+       * Returns true if file(s) are loaded
        */
       virtual bool IsOpen(const char* handle) = 0;
+
+		/**
+		* Returns false if it can accept new images.
+		*/
+		virtual bool IsReadOnly(const char* handle) = 0;
 
       /**
        * Load
@@ -1592,6 +1597,8 @@ namespace MM {
       virtual int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) = 0;
 
       virtual int GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength) = 0;
+
+		virtual int GetImageCount(const char* handle, int& imgcount) = 0;
    };
 
 
