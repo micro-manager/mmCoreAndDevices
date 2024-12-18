@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Driver for IDS peak series of USB cameras
 //
-//                Based on IDS peak SDK and Micromanager DemoCamera example
+//                Based on IDS peak SDK and Micro-manager DemoCamera example
 //                tested with SDK version 2.5
 //                Requires Micro-manager Device API 71 or higher!
 //                
@@ -13,7 +13,7 @@
 //
 // YEAR:          2023
 //                
-// VERSION:       1.1
+// VERSION:       1.1.1
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -23,10 +23,10 @@
 //                of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-//                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
+//                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    09.10.2023 LK
+//LAST UPDATE:    03.12.2024 LK
 
 #ifndef _IDSPeak_H_
 #define _IDSPeak_H_
@@ -195,6 +195,7 @@ public:
     int OnGainRed(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnGainGreen(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnGainBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnPeakPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     long GetCCDXSize() { return cameraCCDXSize_; }
     long GetCCDYSize() { return cameraCCDYSize_; }
@@ -260,8 +261,6 @@ private:
     long cameraCCDYSize_;
     double ccdT_;
     std::string triggerDevice_;
-    map<int, string> peakTypeToString;
-    map<string, int> stringToPeakType;
 
     peak_auto_feature_mode peakAutoWhiteBalance_;
     map<int, string> peakAutoToString;
@@ -273,6 +272,9 @@ private:
     double gainMin_;
     double gainMax_;
     double gainInc_;
+
+    std::vector<std::string> availablePixelFormats;
+    peak_pixel_format currPixelFormat;
 
 
     bool stopOnOverflow_;
@@ -325,6 +327,5 @@ private:
     MMThreadLock stopLock_;
     MMThreadLock suspendLock_;
 };
-
 
 #endif //_IDSPeak_H_
