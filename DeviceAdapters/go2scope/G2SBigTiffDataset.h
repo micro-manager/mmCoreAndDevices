@@ -54,6 +54,40 @@ public:
 
 public:
 	//============================================================================================================================
+	// Internal data types
+	//============================================================================================================================
+	/**
+	* Dataset dimension descriptor
+	* @author Miloš Jovanović <milos@tehnocad.rs>
+	* @version 1.0
+	*/
+	struct G2SDimensionInfo
+	{
+		/**
+		* Default initializer
+		* @param vname Axis name
+		* @param ndim Axis size
+		*/
+		G2SDimensionInfo(int ndim = 0) noexcept : Name(""), Description(""), Coordinates(ndim) { }
+
+		/**
+		* Set dimensions size
+		* @param sz Number of axis coordinates
+		*/
+		void setSize(std::size_t sz) noexcept { Coordinates.resize(sz); }
+		/**
+		* Get dimension size
+		* @return Number of axis coordinates
+		*/
+		std::size_t getSize() const noexcept { return Coordinates.size(); }
+
+		std::string												Name;												///< Axis name
+		std::string												Description;									///< Axis description
+		std::vector<std::string>							Coordinates;									///< Axis coordinates
+	};
+
+public:
+	//============================================================================================================================
 	// Public interface
 	//============================================================================================================================
 	void															create(const std::string& path, bool dio = DEFAULT_DIRECT_IO, bool fbig = DEFAULT_BIGTIFF, std::uint32_t chunksz = 0);
@@ -76,6 +110,9 @@ public:
 	std::string													getMetadata() const noexcept;
 	void															setUID(const std::string& val);
 	std::string													getUID() const noexcept { return datasetuid; }
+	void															configureAxis(int dim, const std::string& name, const std::string& desc) noexcept;
+	void															configureCoordinate(int dim, int coord, const std::string& desc) noexcept;
+	const G2SDimensionInfo&									getAxisInfo(std::uint32_t dim) const { if(dim >= axisinfo.size()) throw std::runtime_error("Unable to obtain axis info. Invalid axis index"); return axisinfo[dim]; }
 	std::string													getImageMetadata(const std::vector<std::uint32_t>& coord = {});
 	void															addImage(const std::vector<unsigned char>& buff, const std::string& meta = "") { addImage(&buff[0], buff.size(), meta); }
 	void															addImage(const unsigned char* buff, std::size_t len, const std::string& meta = "");
@@ -88,8 +125,8 @@ public:
 	bool															isBigTIFF() const noexcept { return bigTiff; }
 	bool															isInWriteMode() const noexcept { return writemode; }
 	bool															isInReadMode() const noexcept { return !writemode; }
+	bool															isCoordinateSet(int coordinates[], int numCoordinates) const noexcept;
 	bool															isOpen() const noexcept { return !datachunks.empty() && activechunk; }
-
 
 private:
 	//============================================================================================================================
@@ -101,6 +138,9 @@ private:
 	void															advanceImage();
 	std::uint32_t												getChunkImageCount() const noexcept;
 	void															calcImageIndex(const std::vector<std::uint32_t>& coord, std::uint32_t& chunkind, std::uint32_t& imgind) const;
+	void															resetAxisInfo() noexcept;
+	void															parseAxisInfo();
+	void															writeAxisInfo() const noexcept;
 
 private:
 	//============================================================================================================================
@@ -113,6 +153,7 @@ private:
 	std::vector<G2SFileStreamHandle>						datachunks;										///< Data chunks / File stream descriptors
 	G2SFileStreamHandle										activechunk;									///< Active data chunk
 	std::vector<unsigned char>								metadata;										///< Dataset metdata (cache)
+	std::vector<G2SDimensionInfo>							axisinfo;										///< Dataset axis descriptors
 	std::uint32_t												imgcounter;										///< Image counter
 	std::uint32_t												flushcnt;										///< Image flush cycles
 	std::uint32_t												chunksize;										///< Chunk size

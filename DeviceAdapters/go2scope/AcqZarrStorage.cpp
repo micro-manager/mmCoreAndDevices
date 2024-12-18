@@ -506,6 +506,11 @@ int AcqZarrStorage::GetCoordinate(const char* handle, int dimension, int coordin
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
 
+int AcqZarrStorage::GetImageCount(const char* handle, int& imgcount)
+{
+	return DEVICE_NOT_YET_IMPLEMENTED;
+}
+
 bool AcqZarrStorage::IsOpen(const char* handle)
 {
    if (streamHandle.compare(handle) != 0)
@@ -513,6 +518,11 @@ bool AcqZarrStorage::IsOpen(const char* handle)
       return false;
    }
    return true;
+}
+
+bool AcqZarrStorage::IsReadOnly(const char* handle)
+{
+	return false;
 }
 
 int AcqZarrStorage::GetPath(const char* handle, char* path, int maxPathLength)
