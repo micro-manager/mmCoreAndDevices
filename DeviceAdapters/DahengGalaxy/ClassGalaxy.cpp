@@ -1,12 +1,12 @@
 #include "ClassGalaxy.h"
-//#include <CString>
+#include <condition_variable>
 
 using namespace std;
 
 const char* g_CameraDeviceName = "DahengCamera";
 
 static const char* g_PropertyChannel = "PropertyNAme";
-//8bit monoMono8
+
 static const char* g_PixelType_8bit = "8bit mono";
 static const char* g_PixelType_10bit = "10bit mono";
 static const char* g_PixelType_12bit = "12bit mono";
@@ -22,6 +22,7 @@ MODULE_API void InitializeModuleData()
 {
     RegisterDevice(g_CameraDeviceName, MM::CameraDevice, "Daheng Camera");
 }
+
 //Camera Device
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
@@ -41,6 +42,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 {
     delete pDevice;
 }
+
 ClassGalaxy::ClassGalaxy() :
     CCameraBase<ClassGalaxy>(),
         ImageHandler_(0),
@@ -69,7 +71,8 @@ ClassGalaxy::ClassGalaxy() :
         shutterMode_("None"),
         imgBufferSize_(0),
         sequenceRunning_(false),
-        initialized_(false)
+        initialized_(false),
+        exposureTimeoutS_(5)
 {
         // call the base class method to set-up default error codes/messages
         InitializeDefaultErrorMessages();
@@ -83,26 +86,17 @@ ClassGalaxy::ClassGalaxy() :
         CreateStringProperty("SerialNumber", "Undefined", false, 0, true);
 
         //pre-init properties
-        //PylonInitialize(); // Initialize/Terminate is reference counted by Pylon
-
-                           // Get the available cameras. TODO: This can be very slow and perhaps the
-                           // result should be cached.
-                          //  or setting up TL Filter, currently it enumerates all pylon TL, eg. GigE , USB Camemu, CXP, CL etc..
-        //DeviceInfoList_t devices;
 
         if (vectorDeviceInfo.size() <= 0)
         {
             AddToLog("No camera present.");
-            //PylonTerminate();
-            //throw RUNTIME_EXCEPTION("No camera present.");
         }
+
         vector<string> SnString;
         bool first = false;
         string serialNumberstr;
         if (true)
         {
-            //const CDeviceInfo& device = *it;
-            //String_t s = device.GetSerialNumber();
             for (size_t i = 0; i < vectorDeviceInfo.size(); i++)
             {
                 serialNumberstr = vectorDeviceInfo[i].GetSN().c_str();
@@ -116,12 +110,14 @@ ClassGalaxy::ClassGalaxy() :
                 first = false;
             }
         }
-        //PylonTerminate();
 }
 
 ClassGalaxy::~ClassGalaxy(void)
 {
-
+   if (initialized_)
+   {
+      Shutdown();
+   }
 }
 
 int ClassGalaxy::Initialize()
@@ -142,7 +138,6 @@ int ClassGalaxy::Initialize()
               return DEVICE_NOT_CONNECTED;
            }
         }
-
 
         vectorDeviceInfo.clear();
         //枚举设备
@@ -193,7 +188,7 @@ int ClassGalaxy::Initialize()
 
 
         GX_DEVICE_CLASS_LIST objDeviceClass = m_objDevicePtr->GetDeviceInfo().GetDeviceClass();
-        if (GX_DEVICE_CLASS_GEV == objDeviceClass)
+        if (GX_DEVICE_CLASS_GEV == objDeviceClass)  // GigE devices
         {
             // 判断设备是否支持流通道数据包功能
             if (true == m_objFeatureControlPtr->IsImplemented("GevSCPSPacketSize"))
@@ -213,7 +208,7 @@ int ClassGalaxy::Initialize()
             //第二个参数为用户私有参数，用户可以在回调函数内部将其还原然使用，如果不需要则可传入 NULL 即可
             //hDeviceOffline = m_objDevicePtr->RegisterDeviceOfflineCallback(pDeviceOfflineEventHandler, this);
         }
-        else if (GX_DEVICE_CLASS_U3V == objDeviceClass)
+        else if (GX_DEVICE_CLASS_U3V == objDeviceClass) // USB 3.0 devices
         {
             CIntFeaturePointer DeviceLinkThroughputLimit = m_objFeatureControlPtr->GetIntFeature("DeviceLinkThroughputLimit");
             if (1)
@@ -239,14 +234,12 @@ int ClassGalaxy::Initialize()
 
             }
         }
+
+        // Name
         stringstream msg;
-        //msg << "using camera " << m_objDevicePtr->GetDeviceInfo().GetDisplayName();
-        //AddToLog(msg.str());
         msg << "using camera " << m_objFeatureControlPtr->GetStringFeature("DeviceUserID")->GetValue();
         AddToLog(msg.str());
-        // initialize the pylon image formatter. 判断相机图像输出格式-赵伟甫
-        // 
-        // Name
+
         int ret = CreateProperty(MM::g_Keyword_Name, g_CameraDeviceName, MM::String, true);
         if (DEVICE_OK != ret)
             return ret;
@@ -304,6 +297,15 @@ int ClassGalaxy::Initialize()
         SetPropertyLimits("Exposure(us)", exposureMin_, exposureMax_);
         assert(ret == DEVICE_OK);
 
+        // List all camera features in the logs
+        GxIAPICPP::gxstring_vector vectorFeatureNameList;
+        m_objFeatureControlPtr->GetFeatureNameList(vectorFeatureNameList);//Get the enum items list.
+        for (gxstring featureName : vectorFeatureNameList)
+        {
+           std::string feature = featureName.c_str();
+           LogMessage("Camera Feature: " + feature, false);
+        }
+
         pAct = new CPropertyAction(this, &ClassGalaxy::OnPixelType);
         ret = CreateProperty(MM::g_Keyword_PixelType, "NA", MM::String, false, pAct);
         assert(ret == DEVICE_OK);
@@ -352,11 +354,15 @@ int ClassGalaxy::Initialize()
                 SetPropertyLimits(MM::g_Keyword_Binning, (double)BinningHorizontal->GetMin(), (double)BinningHorizontal->GetMax());
                 binningFactor_.assign(CDeviceUtils::ConvertToString((long)BinningHorizontal->GetValue()));
                 CheckForBinningMode(pAct);
-            
         }
-        /////Trigger Mode//////
-        //CEnumerationPtr TriggerMode(nodeMap_->GetNode("TriggerMode"));
+        else 
+        { // Hardware does not support binning, Micro-Manager still like this as a property
+           pAct = new CPropertyAction(this, &ClassGalaxy::OnBinning);
+           ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, true, pAct);
+           AddAllowedValue(MM::g_Keyword_Binning, "1");
+        }
 
+        ///// Trigger Mode //////
         CEnumFeaturePointer TriggerMode = m_objFeatureControlPtr->GetEnumFeature("TriggerMode");
         if (!TriggerMode.IsNull())
         {
@@ -367,28 +373,23 @@ int ClassGalaxy::Initialize()
             LSPVals.push_back("On");
             SetAllowedValues("TriggerMode", LSPVals);
         }
-        /////Trigger Source//////
+
+        ///// Trigger Source //////
         CEnumFeaturePointer triggersource = m_objFeatureControlPtr->GetEnumFeature("TriggerSource");
-        //CEnumerationPtr triggersource(nodeMap_->GetNode("TriggerSource"));
         if (!triggersource.IsNull())
         {
             pAct = new CPropertyAction(this, &ClassGalaxy::OnTriggerSource);
             ret = CreateProperty("TriggerSource", "NA", MM::String, false, pAct);
             vector<string> LSPVals;
-            //NodeList_t entries;
-            //triggersource->GetEntries(entries);
             gxstring_vector entries = triggersource->GetEnumEntryList();
             for (size_t i = 0; i < entries.size(); i++)
             {
                 string strValue(entries[i]);
-                /*if (strValue.find("Software") == std::string::npos)
-                {*/
-                //Software Execute button not implement yet.
                 LSPVals.push_back(strValue);
-                //}
             }
             SetAllowedValues("TriggerSource", LSPVals);
         }
+
         //20230217设置期望帧率使能
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("AcquisitionFrameRateMode"))
         {
@@ -405,6 +406,7 @@ int ClassGalaxy::Initialize()
             SetAllowedValues("AcquisitionFrameRateMode", LSPVals);
         }
 
+        // AcquisitionFrameRate
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("AcquisitionFrameRate"))
         {
             CFloatFeaturePointer AdjFrameRate = m_objFeatureControlPtr->GetFloatFeature("AcquisitionFrameRate");
@@ -414,7 +416,8 @@ int ClassGalaxy::Initialize()
             SetPropertyLimits("AcquisitionFrameRate", (double)AdjFrameRate->GetMin(), (double)AdjFrameRate->GetMax());
             assert(ret == DEVICE_OK);
         }
-        //TriggerActivation
+
+        // TriggerActivation
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("TriggerSelector"))
         {
             m_objFeatureControlPtr->GetEnumFeature("TriggerSelector")->SetValue("FrameStart");
@@ -429,33 +432,28 @@ int ClassGalaxy::Initialize()
             }
             SetAllowedValues("TriggerActivation", LSPVals);
             m_objFeatureControlPtr->GetEnumFeature("TriggerActivation")->SetValue("RisingEdge");
-
-            //string s = m_objFeatureControlPtr->GetEnumFeature("TriggerActivation")->GetValue();
         }
-        //TriggerDelay
+
+        // TriggerDelay
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("TriggerDelay"))
         {
             CFloatFeaturePointer TriggerDelay = m_objFeatureControlPtr->GetFloatFeature("TriggerDelay");
-
             pAct = new CPropertyAction(this, &ClassGalaxy::OnTriggerDelay);
             ret = CreateProperty("TriggerDelay", CDeviceUtils::ConvertToString((double)0), MM::Integer, false, pAct);
-
             SetPropertyLimits("TriggerDelay", (double)TriggerDelay->GetMin(), (double)TriggerDelay->GetMax());
             assert(ret == DEVICE_OK);
         }
-        //TriggerFilterRaisingEdge
+
+        // TriggerFilterRaisingEdge
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("TriggerFilterRaisingEdge"))
         {
             CFloatFeaturePointer TriggerFilterRaisingEdge = m_objFeatureControlPtr->GetFloatFeature("TriggerFilterRaisingEdge");
-
             pAct = new CPropertyAction(this, &ClassGalaxy::OnTriggerFilterRaisingEdge);
             ret = CreateProperty("TriggerFilterRaisingEdge", CDeviceUtils::ConvertToString((double)0), MM::Integer, false, pAct);
-
             SetPropertyLimits("TriggerFilterRaisingEdge", (double)TriggerFilterRaisingEdge->GetMin(), (double)TriggerFilterRaisingEdge->GetMax());
-
             assert(ret == DEVICE_OK);
-
         }
+
         //增益
         m_objFeatureControlPtr->GetEnumFeature("GainSelector")->SetValue("AnalogAll");
         m_objFeatureControlPtr->GetFloatFeature("Gain")->SetValue(0.0000);
@@ -469,15 +467,36 @@ int ClassGalaxy::Initialize()
             SetPropertyLimits("Gain", (double)Gain->GetMin(), (double)Gain->GetMax());
             assert(ret == DEVICE_OK);
         }
+
+        // UserOutputSelector
+        if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("UserOutputSelector"))
+        {
+           CEnumFeaturePointer useroutput = m_objFeatureControlPtr->GetEnumFeature("UserOutputSelector");
+            m_objFeatureControlPtr->GetEnumFeature("UserOutputSelector")->SetValue("UserOutput0");
+            pAct = new CPropertyAction(this, &ClassGalaxy::OnUserOutput);
+            ret = CreateProperty("UserOutputSelector", "UserOutput0", MM::String, false, pAct);
+            vector<string> LSPVals;
+            gxstring_vector entries = useroutput->GetEnumEntryList();
+            for (size_t i = 0; i < entries.size(); i++)
+            {
+                string strValue(entries[i]);
+                LSPVals.push_back(strValue);
+            }
+            SetAllowedValues("UserOutputSelector", LSPVals);
+        }
+
+        pAct = new CPropertyAction(this, &ClassGalaxy::OnExposureTimeout);
+        ret = CreateIntegerProperty("ExposureTimeoutSeconds", 5, false, pAct);
+
         //20230220设置图像转换RGBA8
         ret = UpdateStatus();
 
         if (ret != DEVICE_OK)
             return ret;
+
         //preparation for snaps
         ResizeSnapBuffer();
-        //preparation for sequences	
-        //camera_->RegisterImageEventHandler( &ImageHandler_, RegistrationMode_Append, Cleanup_Delete);	
+
         /////////////////////////////////////////////////////////////////////////////////////////
         initialized_ = true;
         return DEVICE_OK;
@@ -508,22 +527,14 @@ void ClassGalaxy::CoverToRGB(GX_PIXEL_FORMAT_ENTRY emDstFormat,void* DstBuffer, 
         // Error handling.
         AddToLog(e.what());
     }
-
-
-
 }
+
 int ClassGalaxy::CheckForBinningMode(CPropertyAction* pAct)
 {
     // Binning Mode
     //INodeMap& nodeMap(camera_->GetNodeMap());
     CEnumFeaturePointer BinningHorizontalMode = m_objFeatureControlPtr->GetEnumFeature("BinningHorizontalMode");
-    
-    CEnumFeaturePointer BinningVerticalMode = m_objFeatureControlPtr->GetEnumFeature("BinningVerticalMode");
-
-    pAct = new CPropertyAction(this, &ClassGalaxy::OnBinningMode);
-
     vector<string> LSPVals;
-
     gxstring_vector LiseBinningHorizontalMode = BinningHorizontalMode->GetEnumEntryList();
     //为了赋值用
     for (size_t i = 0; i < LiseBinningHorizontalMode.size(); i++)
@@ -532,47 +543,57 @@ int ClassGalaxy::CheckForBinningMode(CPropertyAction* pAct)
         LSPVals.push_back(strValue);
     }
     SetAllowedValues("BinningHorizontalMode", LSPVals);
+
+    CEnumFeaturePointer BinningVerticalMode = m_objFeatureControlPtr->GetEnumFeature("BinningVerticalMode");
+    gxstring_vector LiseBinningVerticalMode = BinningVerticalMode->GetEnumEntryList();
+    for (size_t i = 0; i < LiseBinningVerticalMode.size(); i++)
+    {
+       string strValue(LiseBinningVerticalMode[i]);
+       LSPVals.push_back(strValue);
+    }
     SetAllowedValues("BinningVerticalMode", LSPVals);
+
     return DEVICE_OK;
 }
+
 int ClassGalaxy::OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     CEnumFeaturePointer BinningHorizontalMode = m_objFeatureControlPtr->GetEnumFeature("BinningHorizontalMode");
-
     CEnumFeaturePointer BinningVerticalMode = m_objFeatureControlPtr->GetEnumFeature("BinningVerticalMode");
 
     if (eAct == MM::AfterSet)
     {
-            try
-            {
-                string binningMode;
-                pProp->Get(binningMode);
-                BinningHorizontalMode->SetValue(binningMode.c_str());
-                BinningVerticalMode->SetValue(binningMode.c_str());
-            }
-            catch (CGalaxyException& e)
-            {
-                // Error handling.
-                AddToLog(e.what());
-                cerr << "An exception occurred." << endl
-                    << e.what() << endl;
-            }
+       try
+       {
+           string binningMode;
+           pProp->Get(binningMode);
+           BinningHorizontalMode->SetValue(binningMode.c_str());
+           BinningVerticalMode->SetValue(binningMode.c_str());
+       }
+       catch (CGalaxyException& e)
+       {
+           // Error handling.
+           AddToLog(e.what());
+           std::cerr << "An exception occurred." << endl
+               << e.what() << endl;
+       }
     }
     else if (eAct == MM::BeforeGet)
     {
         try {
-                pProp->Set(((BinningVerticalMode->GetValue()).c_str()));
+           pProp->Set(((BinningVerticalMode->GetValue()).c_str()));
         }
         catch (CGalaxyException& e)
         {
-            // Error handling.
-            AddToLog(e.what());
-            cerr << "An exception occurred." << endl
-                << e.what() << endl;
-        }
+           // Error handling.
+           AddToLog(e.what());
+           std::cerr << "An exception occurred." << endl
+               << e.what() << endl;
+       }
     }
     return DEVICE_OK;
 }
+
 int ClassGalaxy::Shutdown()
 {
     //关闭相机
@@ -621,46 +642,43 @@ int ClassGalaxy::SnapImage()
 {
     try
     {
-        AddToLog("ReadySnapImage");
-        //camera_->StartGrabbing(1, GrabStrategy_OneByOne, GrabLoop_ProvidedByUser);
+        AddToLog("ReadyToSnapImage");
         // modify by LXM in 20240305
-        //if (m_bIsOpen)
+        //AddToLog("---------------判断是否开采");
+        m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
+        m_objStreamPtr->StopGrab();
+        if (ImageHandler_ != NULL)
         {
-            //AddToLog("---------------判断是否开采");
-            m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-            m_objStreamPtr->StopGrab();
-            //camera_->DeregisterImageEventHandler(ImageHandler_);
-            if (ImageHandler_ != NULL)
-            {
-                m_objStreamPtr->UnregisterCaptureCallback();
-                delete ImageHandler_;
-                ImageHandler_ = NULL;
-
-            }
+            m_objStreamPtr->UnregisterCaptureCallback();
+            delete ImageHandler_;
+            ImageHandler_ = NULL;
         }
-        //end modify
 
-            int timeout_ms = 5000;	
-            //开启流层采集
-            m_objStreamPtr->StartGrab();
-            //发送开采命令
-            m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-            m_bIsOpen = true;//modify by LXM
-            m_objStreamPtr->FlushQueue();
-            //可以使用采单帧来获取
-            CImageDataPointer ptrGrabResult = m_objStreamPtr->GetImage(timeout_ms);
-            uint64_t length = ptrGrabResult->GetPayloadSize();
-            
-            if (ptrGrabResult->GetPayloadSize() != imgBufferSize_)
-            {	// due to parameter change on  binning
-                ResizeSnapBuffer();
-            }
-            CopyToImageBuffer(ptrGrabResult);
+        //开启流层采集
+        m_objStreamPtr->StartGrab();
+        //发送开采命令
+        m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
+        m_bIsOpen = true;//modify by LXM
+        m_objStreamPtr->FlushQueue();
+
+        SendSoftwareTrigger(); // will only be send if TriggerMode is ON and TriggerSource is software
+
+        // Block for the full time the camera is exposing.  This is at least the exposure time
+
+        //可以使用采单帧来获取
+        // Needs to be made usef setable, especially for external trigger applications
+        CImageDataPointer ptrGrabResult = m_objStreamPtr->GetImage(exposureTimeoutS_ * 1000);
+        uint64_t length = ptrGrabResult->GetPayloadSize();
+        
+        if (ptrGrabResult->GetPayloadSize() != imgBufferSize_)
+        {	// due to parameter change on  binning
+            ResizeSnapBuffer();
+        }
+        CopyToImageBuffer(ptrGrabResult);
 
     }
     catch (const CGalaxyException& e)
     {		
-
         string a = e.what();
         AddToLog(e.what());
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
@@ -678,16 +696,26 @@ int ClassGalaxy::SnapImage()
     }
     AddToLog("SnapImage");
     return DEVICE_OK;
-
 }
+
+void ClassGalaxy::SendSoftwareTrigger()
+{
+   if (TriggerMode_ == "On")
+   {
+      CEnumFeaturePointer TriggerSource = m_objFeatureControlPtr->GetEnumFeature("TriggerSource");
+      if (TriggerSource->GetValue() == "Software")
+      {
+         m_objFeatureControlPtr->GetCommandFeature("TriggerSoftware")->Execute();
+      }
+   }
+}
+
 void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
 {
-    
     if (1)
     {
         GetImageSize();
         const char* subject("Bayer");
-        //gxstring pixelFormat_gx = m_objFeatureControlPtr->GetEnumFeature("PixelFormat")->GetValue();
 
         std::size_t found = pixelType_.find(subject);
         //pixelType_.assign(pixelFormat_gx);
@@ -729,7 +757,7 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
             {
                 // Error handling.
                 AddToLog(e.what());
-                cerr << "An exception occurred." << endl
+                std::cerr << "An exception occurred." << endl
                     << e.what() << endl;
             }
         }
@@ -744,42 +772,45 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
             {
                 // Error handling.
                 AddToLog(e.what());
-                cerr << "An exception occurred." << endl
+                std::cerr << "An exception occurred." << endl
                     << e.what() << endl;
             }
-
         }
     }
 }
 
 int ClassGalaxy::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) {
-    try
-    {
-        AddToLog("ReadyMultySequenceAcquisition");
-        ImageHandler_ = new CircularBufferInserter(this, numImages, stopOnOverflow);
-        //camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
-        m_objStreamPtr->RegisterCaptureCallback(ImageHandler_, this);
+   try
+   {
+      AddToLog("ReadyMultySequenceAcquisition");
+      if (ImageHandler_ != NULL) {
+         m_objStreamPtr->UnregisterCaptureCallback();
+         delete(ImageHandler_);
+      }
+      ImageHandler_ = new CircularBufferInserter(this, numImages, stopOnOverflow);
+      m_objStreamPtr->RegisterCaptureCallback(ImageHandler_, this);
 
 
-        int ret = GetCoreCallback()->PrepareForAcq(this);
-        if (ret != DEVICE_OK) {
-            return ret;
-        }
-        sequenceRunning_ = true;
+      int ret = GetCoreCallback()->PrepareForAcq(this);
+      if (ret != DEVICE_OK) {
+          return ret;
+      }
+      sequenceRunning_ = true;
 
-        //camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-        m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-        //开启流层采集
-        m_objStreamPtr->StartGrab();
+      m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
+      //开启流层采集
+      m_objStreamPtr->StartGrab();
 
-        AddToLog("StartSequenceAcquisition");
-    }
-    catch (const CGalaxyException& e)
-    {
-        string a = e.what();
-        AddToLog(e.what());
-        m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-        //关闭流层采集
+      SendSoftwareTrigger();
+
+      AddToLog("StartSequenceAcquisition");
+   }
+   catch (const CGalaxyException& e)
+   {
+       string a = e.what();
+       AddToLog(e.what());
+       m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
+       //关闭流层采集
         m_objStreamPtr->StopGrab();
         sequenceRunning_ = false;
         return DEVICE_ERR;
@@ -810,8 +841,12 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         }
         //end modify
 
+        if (ImageHandler_ != NULL) {
+           m_objStreamPtr->UnregisterCaptureCallback();
+           delete(ImageHandler_);
+           ImageHandler_ = NULL;
+        }
         ImageHandler_ = new CircularBufferInserter(this);
-        //camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
         m_objStreamPtr->RegisterCaptureCallback(ImageHandler_, this);
                 
         int ret = GetCoreCallback()->PrepareForAcq(this);
@@ -824,6 +859,8 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
         //开启流层采集
         m_objStreamPtr->StartGrab();
         AddToLog("StartSequenceAcquisition");
+
+        SendSoftwareTrigger();
     }
     catch (const CGalaxyException& e)
     {
@@ -855,7 +892,6 @@ int ClassGalaxy::StopSequenceAcquisition()
         m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
         m_objStreamPtr->StopGrab();
         GetCoreCallback()->AcqFinished(this, 0);
-        //camera_->DeregisterImageEventHandler(ImageHandler_);
         m_objStreamPtr->UnregisterCaptureCallback();
     }
     sequenceRunning_ = false;
@@ -938,9 +974,7 @@ unsigned char* ClassGalaxy::GetImageBufferFromCallBack(CImageDataPointer& objIma
 
 const unsigned char* ClassGalaxy::GetImageBuffer()
 {
-    //按照黑白显示
-    return (unsigned char*)imgBuffer_;
-
+   return (unsigned char*)imgBuffer_;
 }
 
 void ClassGalaxy::GetImageSize()
@@ -982,58 +1016,62 @@ long ClassGalaxy::GetImageSizeLarge()const
 
 int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    CIntFeaturePointer BinningHorizontal = m_objFeatureControlPtr->GetIntFeature("BinningHorizontal");
-
-    CIntFeaturePointer BinningVertical = m_objFeatureControlPtr->GetIntFeature("BinningVertical");
-    //CIntegerPtr BinningHorizontal(nodeMap_->GetNode("BinningHorizontal"));
-    //CIntegerPtr BinningVertical(nodeMap_->GetNode("BinningVertical"));
 
     if (eAct == MM::AfterSet)
     {
-        bool Isgrabbing = m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue();
+       CIntFeaturePointer BinningHorizontal = m_objFeatureControlPtr->GetIntFeature("BinningHorizontal");
+       CIntFeaturePointer BinningVertical = m_objFeatureControlPtr->GetIntFeature("BinningVertical");
+       bool Isgrabbing = m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue();
+       try
+       {
+           if (Isgrabbing)
+           {
+               m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
+               //关闭流层采集
+               m_objStreamPtr->StopGrab();
+           }
+           pProp->Get(binningFactor_);
+           int64_t val = std::atoi(binningFactor_.c_str());
+           BinningHorizontal->SetValue(val);
+           BinningVertical->SetValue(val);
+           if (Isgrabbing)
+           {
+               //重开
+               m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
+               m_objStreamPtr->StartGrab();
 
-            try
-            {
-                if (Isgrabbing)
-                {
-                    m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-                    //关闭流层采集
-                    m_objStreamPtr->StopGrab();
-                }
-                pProp->Get(binningFactor_);
-                int64_t val = std::atoi(binningFactor_.c_str());
-                BinningHorizontal->SetValue(val);
-                BinningVertical->SetValue(val);
-                if (Isgrabbing)
-                {
-                    //重开
-                    m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-                    m_objStreamPtr->StartGrab();
-
-                }
-                pProp->Set(binningFactor_.c_str());
-            }
-            catch (CGalaxyException& e)
-            {
-                // Error handling.
-                AddToLog(e.what());
-                cerr << "An exception occurred." << endl
-                    << e.what() << endl;
-            }
-    }
-    else if (eAct == MM::BeforeGet) {
-
-        try {
-                binningFactor_ = CDeviceUtils::ConvertToString((long)BinningHorizontal->GetValue());
-                pProp->Set((long)BinningHorizontal->GetValue());		
-        }
-        catch (CGalaxyException& e)
-        {
-            // Error handling.
-            AddToLog(e.what());
-            cerr << "An exception occurred." << endl
+           }
+           pProp->Set(binningFactor_.c_str());
+       }
+       catch (CGalaxyException& e)
+       {
+           // Error handling.
+           AddToLog(e.what());
+           std::cerr << "An exception occurred." << endl
                 << e.what() << endl;
-        }
+       }
+    }
+    else if (eAct == MM::BeforeGet) 
+    {
+       try {
+          if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("BinningHorizontal"))
+          {
+             CIntFeaturePointer BinningHorizontal = m_objFeatureControlPtr->GetIntFeature("BinningHorizontal");
+             binningFactor_ = CDeviceUtils::ConvertToString((long)BinningHorizontal->GetValue());
+             pProp->Set((long)BinningHorizontal->GetValue());
+          }
+          else
+          {
+             pProp->Set(1l);
+          }
+       }
+       catch (CGalaxyException& e)
+       {
+          // Error handling.
+          AddToLog(e.what());
+          std::cerr << "An exception occurred." << endl
+              << e.what() << endl;
+       }
     }
     return DEVICE_OK;
 }
@@ -1118,7 +1156,7 @@ int ClassGalaxy::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         // Error handling.
         AddToLog(e.what());
-        cerr << "An exception occurred." << endl
+        std::cerr << "An exception occurred." << endl
             << e.what() << endl;
         return DEVICE_ERR;
     }
@@ -1161,7 +1199,7 @@ int ClassGalaxy::OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct)
             {
                 // Error handling.
                 AddToLog(e.what());
-                cerr << "An exception occurred." << endl
+                std::cerr << "An exception occurred." << endl
                     << e.what() << endl;
             }
         }
@@ -1178,7 +1216,7 @@ int ClassGalaxy::OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             // Error handling.
             AddToLog(e.what());
-            cerr << "An exception occurred." << endl
+            std::cerr << "An exception occurred." << endl
                 << e.what() << endl;
         }
     }
@@ -1306,29 +1344,27 @@ int ClassGalaxy::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int ClassGalaxy::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-        try
+    try
+    {
+        CEnumFeaturePointer TriggerMode = m_objFeatureControlPtr->GetEnumFeature("TriggerMode");
+
+        if (!TriggerMode.IsNull())
         {
-            CEnumFeaturePointer TriggerMode = m_objFeatureControlPtr->GetEnumFeature("TriggerMode");
-
-            if (!TriggerMode.IsNull())
-            {
-                if (eAct == MM::AfterSet) {
-                    pProp->Get(TriggerMode_);
-
-                    pProp->Set(TriggerMode_.c_str());
-                    TriggerMode->SetValue(TriggerMode_.c_str());
-                }
-                else if (eAct == MM::BeforeGet) {
-                    pProp->Set(TriggerMode->GetValue().c_str());
-
-                }
+            if (eAct == MM::AfterSet) {
+               pProp->Get(TriggerMode_);
+               pProp->Set(TriggerMode_.c_str());
+               TriggerMode->SetValue(TriggerMode_.c_str());
+            }
+            else if (eAct == MM::BeforeGet) {
+               pProp->Set(TriggerMode->GetValue().c_str());
             }
         }
+     }
     catch (CGalaxyException& e)
     {
         // Error handling.
         AddToLog(e.what());
-        cerr << "An exception occurred." << endl
+        std::cerr << "An exception occurred." << endl
             << e.what() << endl;
     }
     return DEVICE_OK;
@@ -1357,8 +1393,23 @@ int ClassGalaxy::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAc
     {
         // Error handling.
         AddToLog(e.what());
-        cerr << "An exception occurred." << endl
+        std::cerr << "An exception occurred." << endl
             << e.what() << endl;
+    }
+    return DEVICE_OK;
+}
+
+int ClassGalaxy::OnUserOutput(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    CEnumFeaturePointer userOutputFP = m_objFeatureControlPtr->GetEnumFeature("UserOutputSelector");
+
+    string userOutputSelector;
+    if (eAct == MM::AfterSet) {
+        pProp->Get(userOutputSelector);
+        userOutputFP->SetValue(userOutputSelector.c_str());
+    }
+    else if (eAct == MM::BeforeGet) {
+        pProp->Set(userOutputFP->GetValue().c_str());
     }
     return DEVICE_OK;
 }
@@ -1385,7 +1436,7 @@ int ClassGalaxy::OnAdjFrameRateMode(MM::PropertyBase* pProp, MM::ActionType eAct
     {
         // Error handling.
         AddToLog(e.what());
-        cerr << "An exception occurred." << endl
+        std::cerr << "An exception occurred." << endl
             << e.what() << endl;
     }
     return DEVICE_OK;
@@ -1410,7 +1461,7 @@ int ClassGalaxy::OnAcquisitionFrameRate(MM::PropertyBase* pProp, MM::ActionType 
     {
         // Error handling.
         AddToLog(e.what());
-        cerr << "An exception occurred." << endl
+        std::cerr << "An exception occurred." << endl
             << e.what() << endl;
     }
     return DEVICE_OK;
@@ -1450,7 +1501,7 @@ int ClassGalaxy::OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
             {
                 // Error handling.
                 AddToLog(e.what());
-                cerr << "An exception occurred." << endl
+                std::cerr << "An exception occurred." << endl
                     << e.what() << endl;
             }
         }
@@ -1467,7 +1518,7 @@ int ClassGalaxy::OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             // Error handling.
             AddToLog(e.what());
-            cerr << "An exception occurred." << endl
+            std::cerr << "An exception occurred." << endl
                 << e.what() << endl;
         }
     }
@@ -1494,12 +1545,13 @@ int ClassGalaxy::OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             // Error handling.
             AddToLog(e.what());
-            cerr << "An exception occurred." << endl
+            std::cerr << "An exception occurred." << endl
                 << e.what() << endl;
         }
     }
     return DEVICE_OK;
 }
+
 //OnTriggerFilterRaisingEdge
 int ClassGalaxy::OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1520,7 +1572,7 @@ int ClassGalaxy::OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionT
         {
             // Error handling.
             AddToLog(e.what());
-            cerr << "An exception occurred." << endl
+            std::cerr << "An exception occurred." << endl
                 << e.what() << endl;
         }
     }
@@ -1528,6 +1580,18 @@ int ClassGalaxy::OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionT
 }
 
 
+int ClassGalaxy::OnExposureTimeout(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::AfterSet)
+   {
+      pProp->Get(exposureTimeoutS_);
+   }
+   else if (eAct == MM::BeforeGet)
+   { 
+      pProp->Set(exposureTimeoutS_);
+   }
+   return DEVICE_OK;
+}
 
 
 unsigned ClassGalaxy::GetImageBytesPerPixel() const
@@ -1883,6 +1947,7 @@ CircularBufferInserter::CircularBufferInserter(ClassGalaxy* dev, long numImages,
     //----------------------------------------------------------------------------------
 void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPointer, void* pUserParam)
 {
+    dev_->SendSoftwareTrigger();
     // char label[MM::MaxStrLength];
     //dev_->AddToLog("OnImageGrabbed");
     // Important:  meta data about the image are generated here:
@@ -1942,11 +2007,12 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
         if (imgCounter_ == numImages_)
         {
            dev_->StopSequenceAcquisition();
+           return;
         }
     }
     else
     {
-        dev_->AddToLog("残帧");
+        dev_->AddToLog("GetStatus failed in Sequence acquisition");
     }
 }
 
