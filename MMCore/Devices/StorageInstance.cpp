@@ -26,6 +26,7 @@ int StorageInstance::Create(const char* path, const char* name, const std::vecto
    RequireInitialized(__func__);
 
    char cHandle[MM::MaxStrLength];
+	memset(cHandle, 0, MM::MaxStrLength);
    int ret = GetImpl()->Create(path, name, (int)shape.size(), &shape[0], pixType, meta, cHandle);
    if (ret != DEVICE_OK)
       return ret;
@@ -60,6 +61,7 @@ int StorageInstance::Load(const char* path, std::string& handle)
    RequireInitialized(__func__);
 
    char cHandle[MM::MaxStrLength];
+	memset(cHandle, 0, MM::MaxStrLength);
    int ret = GetImpl()->Load(path, cHandle);
    if (ret != DEVICE_OK)
       return ret;
@@ -139,19 +141,21 @@ int StorageInstance::AddImage(const char* handle, int sizeInBytes, unsigned char
 
 int StorageInstance::GetSummaryMeta(const char* handle, std::string& meta)
 {
+	char cMeta[MM::MaxMetadataLength];
+	memset(cMeta, 0, MM::MaxMetadataLength);
    RequireInitialized(__func__);
-   std::vector<char> metaCharArray(MM::MaxMetadataLength);
-   int ret = GetImpl()->GetSummaryMeta(handle, &metaCharArray[0], MM::MaxMetadataLength);
-   meta = std::string(metaCharArray.begin(), metaCharArray.end());
+   int ret = GetImpl()->GetSummaryMeta(handle, cMeta, MM::MaxMetadataLength);
+   meta = cMeta;
    return ret;
 }
 
 int StorageInstance::GetImageMeta(const char* handle, const std::vector<int>& coordinates, std::string& meta)
 {
+	char cMeta[MM::MaxMetadataLength];
+	memset(cMeta, 0, MM::MaxMetadataLength);
    RequireInitialized(__func__);
-   std::vector<char> metaCharArray(MM::MaxMetadataLength);
-   int ret = GetImpl()->GetImageMeta(handle, const_cast<int*>(&coordinates[0]), coordinates.size(), &metaCharArray[0], MM::MaxMetadataLength);
-   meta = std::string(metaCharArray.begin(), metaCharArray.end());
+   int ret = GetImpl()->GetImageMeta(handle, const_cast<int*>(&coordinates[0]), coordinates.size(), cMeta, MM::MaxMetadataLength);
+   meta = cMeta;
    return ret;
 }
 
@@ -169,17 +173,48 @@ int StorageInstance::GetNumberOfDimensions(const char* handle, int& numDim)
 
 int StorageInstance::GetDimension(const char* handle, int dimension, std::string& name, std::string& meaning)
 {
-   std::vector<char> nameStr(MM::MaxStrLength), meaningStr(MM::MaxMetadataLength);
-   int ret = GetImpl()->GetDimension(handle, dimension, &nameStr[0], nameStr.size(), &meaningStr[0], meaningStr.size());
-   name = std::string(nameStr.begin(), nameStr.end());
-   meaning = std::string(meaningStr.begin(), meaningStr.end());
+	char nameStr[MM::MaxStrLength];
+	char meaningStr[MM::MaxStrLength];
+	memset(nameStr, 0, MM::MaxStrLength);
+	memset(meaningStr, 0, MM::MaxStrLength);
+   int ret = GetImpl()->GetDimension(handle, dimension, nameStr, MM::MaxStrLength, meaningStr, MM::MaxStrLength);
+   name = nameStr;
+   meaning = meaningStr;
    return ret;
 }
 
 int StorageInstance::GetCoordinate(const char* handle, int dimension, int coordinate, std::string& name)
 {
-   std::vector<char> nameStr(MM::MaxStrLength);
-   int ret = GetImpl()->GetCoordinate(handle, dimension, coordinate, &nameStr[0], nameStr.size());
-   name = std::string(nameStr.begin(), nameStr.end());
+	char cName[MM::MaxStrLength];
+	memset(cName, 0, MM::MaxStrLength);
+   int ret = GetImpl()->GetCoordinate(handle, dimension, coordinate, cName, MM::MaxStrLength);
+   name = cName;
    return ret;
+}
+
+int StorageInstance::GetImageCount(const char* handle, int& imgcount)
+{
+	RequireInitialized(__func__);
+	return GetImpl()->GetImageCount(handle, imgcount);
+}
+
+int StorageInstance::GetPath(const char* handle, std::string& path)
+{
+	char cPath[MM::MaxStrLength];
+	memset(cPath, 0, MM::MaxStrLength);
+	int ret = GetImpl()->GetPath(handle, cPath, MM::MaxStrLength);
+	path = cPath;
+	return ret;
+}
+
+bool StorageInstance::IsOpen(const char* handle)
+{
+	RequireInitialized(__func__);
+	return GetImpl()->IsOpen(handle);
+}
+
+bool StorageInstance::IsReadOnly(const char* handle)
+{
+	RequireInitialized(__func__);
+	return GetImpl()->IsReadOnly(handle);
 }

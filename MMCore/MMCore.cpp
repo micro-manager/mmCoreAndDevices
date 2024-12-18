@@ -7589,6 +7589,7 @@ void CMMCore::InitializeErrorMessages()
    errorText_[MMERR_CreatePeripheralFailed] = "Hub failed to create specified peripheral device.";
    errorText_[MMERR_BadAffineTransform] = "Bad affine transform.  Affine transforms need to have 6 numbers; 2 rows of 3 column.";
    errorText_[MMERR_StorageNotAvailable] = "Storage not loaded or initialized.";
+   errorText_[MMERR_StorageImageNotAvailable] = "Image not available at specified coordinates.";
 }
 
 void CMMCore::CreateCoreProperties()
@@ -8164,14 +8165,64 @@ std::string CMMCore::getDeviceNameToOpen(const char* path)
     return std::string();
 }
 
+/**
+ * Get dataset path
+ * 
+ * \param handle - handle to the open dataset
+ * \return - Full dataset path
+ */
 std::string CMMCore::getDatasetPath(const char* handle) throw(CMMError)
 {
-   return std::string();
+	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+	if(storage)
+	{
+		mm::DeviceModuleLockGuard guard(storage);
+		std::string path = "";
+		int ret = storage->GetPath(handle, path);
+		if(ret != DEVICE_OK)
+		{
+			logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+			throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+		}
+		return path;
+	}
+	throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
+/**
+ * Check if dataset is open
+ * 
+ * \param handle - handle to the open dataset
+ * \return - Dataset is open
+ */
 bool CMMCore::isDatasetOpen(const char* handle)
 {
-   return false;
+	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+	if(storage)
+	{
+		mm::DeviceModuleLockGuard guard(storage);
+		std::vector<long> shape;
+		return storage->IsOpen(handle);
+	}
+	throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Check if dataset is read-only (or in WRITE mode)
+ * 
+ * \param handle - handle to the open dataset
+ * \return - Dataset is read-only
+ */
+bool CMMCore::isDatasetReadOnly(const char* handle)
+{
+	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+	if(storage)
+	{
+		mm::DeviceModuleLockGuard guard(storage);
+		std::vector<long> shape;
+		return storage->IsReadOnly(handle);
+	}
+	throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
 std::vector<long> CMMCore::getDatasetShape(const char* handle) throw (CMMError)
@@ -8320,6 +8371,102 @@ void CMMCore::configureCoordinate(const char* handle, int dimension, int coordin
 }
 
 /**
+ * Obtain a dataset dimension name
+ * 
+ * \param handle - dataset handle
+ * \param dimension - dimension index
+ */
+std::string CMMCore::getDimensionName(const char* handle, int dimension) throw (CMMError)
+{
+	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+	if(storage)
+	{
+		mm::DeviceModuleLockGuard guard(storage);
+		std::string name = "", meaning = "";
+		int ret = storage->GetDimension(handle, dimension, name, meaning);
+		if(ret != DEVICE_OK)
+		{
+			logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+			throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+		}
+		return name;
+	}
+	throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Obtain a dataset dimension physical meaning (Z,T,C, etc)
+ * 
+ * \param handle - dataset handle
+ * \param dimension - dimension index
+ */
+std::string CMMCore::getDimensionMeaning(const char* handle, int dimension) throw (CMMError)
+{
+	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+	if(storage)
+	{
+		mm::DeviceModuleLockGuard guard(storage);
+		std::string name = "", meaning = "";
+		int ret = storage->GetDimension(handle, dimension, name, meaning);
+		if(ret != DEVICE_OK)
+		{
+			logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+			throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+		}
+		return meaning;
+	}
+	throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Obtain dataset coordinate name
+ * 
+ * \param handle - dataset handle
+ * \param dimension - dimension index
+ * \param coordinate - coordinate index
+ */
+std::string CMMCore::getCoordinateName(const char* handle, int dimension, int coordinate) throw (CMMError)
+{
+	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+	if(storage)
+	{
+		mm::DeviceModuleLockGuard guard(storage);
+		std::string name = "";
+		int ret = storage->GetCoordinate(handle, dimension, coordinate, name);
+		if(ret != DEVICE_OK)
+		{
+			logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+			throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+		}
+		return name;
+	}
+	throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Get dataset actual image count
+ * 
+ * \param handle - dataset handle
+ */
+int CMMCore::getImageCount(const char* handle) throw (CMMError)
+{
+	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+	if(storage)
+	{
+		mm::DeviceModuleLockGuard guard(storage);
+		int imgcount = 0;
+		int ret = storage->GetImageCount(handle, imgcount);
+		if(ret != DEVICE_OK)
+		{
+			logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+			throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+		}
+		return imgcount;
+	}
+	throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
  * Returns summary metadata serialized as a string
  * 
  * \param handle - handle of the currently loaded or open dataset
@@ -8368,6 +8515,7 @@ std::string CMMCore::getImageMeta(const char* handle, const std::vector<long>& c
    }
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
+
 /**
  * Returns image pixels at specified coordinates
  * \param handle - dataset handle
@@ -8382,6 +8530,11 @@ STORAGEIMGOUT CMMCore::getImage(const char* handle, const std::vector<long>& coo
       mm::DeviceModuleLockGuard guard(storage);
       std::vector<int> coords(coordinates.begin(), coordinates.end());
       const unsigned char* img = storage->GetImage(handle, coords);
+      if (!img)
+      {
+         logError("CMMCore::getImage()", getCoreErrorText(MMERR_StorageImageNotAvailable).c_str());
+         throw CMMError(getCoreErrorText(MMERR_StorageImageNotAvailable).c_str(), MMERR_StorageImageNotAvailable);
+      }
       return const_cast<unsigned char*>(img);
    }
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);

@@ -39,6 +39,7 @@ public:
    int Create(const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, std::string& handle);
    int ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
+	int GetPath(const char* handle, std::string& path);
    int Close(const char* handle);
    int Load(const char* path, std::string& handle);
    int GetShape(const char* handle, std::vector<long>& shape);
@@ -52,5 +53,7 @@ public:
    int GetNumberOfDimensions(const char* handle, int& numDimensions);
    int GetDimension(const char* handle, int dimension, std::string& name, std::string& meaning);
    int GetCoordinate(const char* handle, int dimension, int coordinate, std::string& name);
-
+	int GetImageCount(const char* handle, int& imgcnt);
+	bool IsOpen(const char* handle);
+	bool IsReadOnly(const char* handle);
 };
