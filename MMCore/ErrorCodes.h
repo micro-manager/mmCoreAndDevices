@@ -79,4 +79,5 @@
 #define MMERR_PropertyNotInCache       51
 #define MMERR_BadAffineTransform       52
 #define MMERR_StorageNotAvailable      53
+#define MMERR_StorageImageNotAvailable 54
 #endif //_ERRORCODES_H_

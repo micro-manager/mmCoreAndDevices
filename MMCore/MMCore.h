@@ -640,12 +640,17 @@ public:
    std::string getDeviceNameToOpen(const char* path);
    std::string getDatasetPath(const char* handle) throw (CMMError);
    bool isDatasetOpen(const char* handle);
+	bool isDatasetReadOnly(const char* handle);
    std::vector<long> getDatasetShape(const char* handle) throw (CMMError);
    MM::StorageDataType getDatasetPixelType(const char* handle) throw (CMMError);
    void addImage(const char* handle, int sizeinBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
 	void addImage(const char* handle, int sizeinShorts, const STORAGEIMG16 pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
    void configureDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError);
    void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError);
+	std::string getDimensionName(const char* handle, int dimension) throw (CMMError);
+	std::string getDimensionMeaning(const char* handle, int dimension) throw (CMMError);
+	std::string getCoordinateName(const char* handle, int dimension, int coordinate) throw (CMMError);
+	int getImageCount(const char* handle) throw (CMMError);
    std::string getSummaryMeta(const char* handle) throw (CMMError);
    std::string getImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
 	STORAGEIMGOUT getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
