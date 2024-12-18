@@ -28,6 +28,7 @@
 #include <sstream>
 #include <filesystem>
 #include <cstring>
+#include <fstream>
 #include "G2SBigTiffDataset.h"
 #ifdef _WIN32
 #include <Windows.h>
@@ -40,6 +41,7 @@
 
 #define G2SFOLDER_EXT					".g2s"
 #define G2SFILE_EXT						".g2s.tif"
+#define G2SAXISINFO_FILE				"axisinfo.txt"
 
 /**
  * Class constructor
@@ -83,6 +85,7 @@ void G2SBigTiffDataset::create(const std::string& path, bool dio, bool fbig, std
 	directIo = dio;
 	writemode = true;
 	chunksize = chunksz;
+	bigTiff = fbig;
 
 	// Extract dataset name
 	std::filesystem::path basepath = std::filesystem::u8path(path);
@@ -109,7 +112,7 @@ void G2SBigTiffDataset::create(const std::string& path, bool dio, bool fbig, std
 	std::filesystem::create_directories(fp.parent_path(), ec);
 	if(ec.value() != 0)
 		throw std::runtime_error("Unable to create a file stream. Directory tree creation failed");
-	activechunk = std::make_shared<G2SBigTiffStream>(fp.u8string(), directIo);
+	activechunk = std::make_shared<G2SBigTiffStream>(fp.u8string(), directIo, bigTiff);
 	if(!activechunk)
 		throw std::runtime_error("Unable to create a file stream. Data chunk allocation failed");
 	activechunk->open(true);
@@ -199,6 +202,8 @@ void G2SBigTiffDataset::load(const std::string& path, bool dio)
 	activechunk->open(false);
 	activechunk->parse(datasetuid, shape, chunksize, metadata, bitdepth);
 	imgcounter += activechunk->getImageCount();
+	resetAxisInfo();
+	parseAxisInfo();
 
 	// Validate dataset parameters
 	if(activechunk->getChunkIndex() != 0)
@@ -241,6 +246,7 @@ void G2SBigTiffDataset::close() noexcept
 {
 	if(writemode && datachunks.size() == 1 && datachunks[0]->isOpen())
 		datachunks[0]->appendMetadata(metadata);
+	writeAxisInfo();
 	for(const auto& fx : datachunks)
 		fx->close();
 	imgcounter = 0;
@@ -250,6 +256,7 @@ void G2SBigTiffDataset::close() noexcept
 	shape.clear();
 	datachunks.clear();
 	activechunk.reset();
+	axisinfo.clear();
 }
 
 /**
@@ -277,6 +284,11 @@ void G2SBigTiffDataset::setShape(const std::vector<std::uint32_t>& dims)
 		return;
 	}
 	shape = dims;
+
+	// Resize axis descriptors vector
+	resetAxisInfo();
+
+	// Write shape info
 	if(activechunk)
 		activechunk->writeShapeInfo(shape, chunksize);
 }
@@ -306,6 +318,11 @@ void G2SBigTiffDataset::setShape(std::initializer_list<std::uint32_t> dims)
 		return;
 	}
 	shape = dims;
+
+	// Resize axis descriptors vector
+	resetAxisInfo();
+
+	// Write shape info
 	if(activechunk)
 		activechunk->writeShapeInfo(shape, chunksize);
 }
@@ -387,6 +404,41 @@ void G2SBigTiffDataset::setUID(const std::string& val)
 	// Update file header
 	if(activechunk)
 		activechunk->writeDatasetUid(datasetuid);
+}
+
+/**
+ * Configure axis info
+ * If axis index is invalid this method will have no effect
+ * @param dim Axis index
+ * @param name Axis name
+ * @param desc Axis description
+ */
+void G2SBigTiffDataset::configureAxis(int dim, const std::string& name, const std::string& desc) noexcept
+{
+	if(!writemode)
+		return;
+	if(dim < 0 || (std::size_t)dim >= axisinfo.size())
+		return;
+	axisinfo[dim].Name = name;
+	axisinfo[dim].Description = desc;
+}
+
+/**
+ * Configure axis coordinate info
+ * If axis / coordinate index is invalid this method will have no effect
+ * @param dim Axis index
+ * @param coord Axis coordinate index
+ * @param desc Coordinate description
+ */
+void G2SBigTiffDataset::configureCoordinate(int dim, int coord, const std::string& desc) noexcept
+{
+	if(!writemode)
+		return;
+	if(dim < 0 || (std::size_t)dim >= axisinfo.size() - 2)
+		return;
+	if(coord < 0 || (std::size_t)coord >= axisinfo[dim].Coordinates.size())
+		return;
+	axisinfo[dim].Coordinates[coord] = desc;
 }
 
 /**
@@ -510,6 +562,27 @@ std::vector<unsigned char> G2SBigTiffDataset::getImage(const std::vector<std::ui
 	else
 		advanceImage();
 	return activechunk->getImage();	
+}
+
+/**
+ * Check if image for the specified coordinates is already set
+ * @param coordinates Coordinates list
+ * @param numCoordinates Coordinates count
+ * @return Does image at the specified coordinates exists
+ */
+bool G2SBigTiffDataset::isCoordinateSet(int coordinates[], int numCoordinates) const noexcept
+{
+	std::uint32_t imgind = 0;
+	for(int i = 0; i < numCoordinates; i++)
+	{
+		if(i >= shape.size() - 2)
+			break;
+		std::uint32_t sum = 1;
+		for(int j = i + 1; j < shape.size() - 2; j++)
+			sum *= shape[j];
+		imgind += sum * coordinates[i];
+	}
+	return imgind < imgcounter;
 }
 
 /**
@@ -708,4 +781,114 @@ void G2SBigTiffDataset::calcImageIndex(const std::vector<std::uint32_t>& coord, 
 		ind += sum * lcoord[i];
 	}
 	imgind = ind;
+}
+
+/**
+ * Reset axis info structure
+ */
+void G2SBigTiffDataset::resetAxisInfo() noexcept
+{
+	axisinfo.clear();
+	axisinfo.resize(shape.size());
+	for(std::size_t i = 0; i < shape.size() - 2; i++)
+		axisinfo[i].setSize((std::size_t)shape[i]);
+}
+
+/**
+ * Parse axis info
+ * Axis info is expected to be stored in a file: 'axisinfo.txt'
+ * @throws std::runtime_error
+ */
+void G2SBigTiffDataset::parseAxisInfo()
+{
+	auto fpath = std::filesystem::u8path(dspath) / G2SAXISINFO_FILE;
+	if(!std::filesystem::exists(fpath) || axisinfo.empty())
+		return;
+
+	// Load file content
+	std::fstream fs(fpath.u8string(), std::ios::in);
+	if(!fs.is_open())
+		throw std::runtime_error("Unable to load axis info. Opening axis info file failed");
+
+	int ind = 0;
+	std::string line = "";
+	while(std::getline(fs, line))
+	{
+		if(line.empty())
+			continue;
+		if((std::size_t)ind >= axisinfo.size())
+			throw std::runtime_error("Unable to load axis info. Invalid axis info data");
+		std::vector<std::string> tokens = splitLineCSV(line);
+		if(tokens.size() < 3)
+			throw std::runtime_error("Unable to load axis info. Corrupted axis info, axis: " + std::to_string(ind));
+		std::uint32_t axisdim = 0;
+		try
+		{
+			axisdim = std::stoul(tokens[2]);
+		}
+		catch(std::exception& e)
+		{
+			throw std::runtime_error("Unable to load axis info. " + std::string(e.what()) + ", axis: " + std::to_string(ind));
+		}
+		if(axisinfo[ind].Coordinates.size() != axisdim || tokens.size() != (std::size_t)(3 + axisdim))
+			throw std::runtime_error("Unable to load axis info. Axis size missmatch, axis: " + std::to_string(ind));
+		axisinfo[ind].Name = tokens[0];
+		axisinfo[ind].Description = tokens[1];
+		for(std::uint32_t i = 0; i < axisdim; i++)
+			axisinfo[ind].Coordinates[i] = tokens[3 + i];
+		ind++;
+	}
+}
+
+/**
+ * Write axis info
+ * Axis info will be stored in a separate file: 'axisinfo.txt'
+ * If no axis info is defined file won't be created
+ * Axis info will be stored in plain text, CSV-like format
+ */
+void G2SBigTiffDataset::writeAxisInfo() const noexcept
+{
+	// Check if axis info is set, and that we are in WRITE mode
+	if(axisinfo.empty() || !writemode)
+		return;
+
+	bool hasinfo = false;
+	for(const auto& dinf : axisinfo)
+	{
+		if(!dinf.Name.empty() || !dinf.Description.empty())
+		{
+			hasinfo = true;
+			break;
+		}
+		for(const auto& cinf : dinf.Coordinates)
+		{
+			if(!cinf.empty())
+			{
+				hasinfo = true;
+				break;
+			}
+		}
+		if(hasinfo)
+			break;
+	}
+
+	// If axis info is empty, but the file exists -> delete it before exiting
+	auto fpath = std::filesystem::u8path(dspath) / G2SAXISINFO_FILE;
+	if(!hasinfo)
+	{
+		return;
+	}
+
+	// Write data to a file
+	std::fstream fs(fpath.u8string(), std::ios::out | std::ios::trunc);
+	if(!fs.is_open())
+		return;
+	for(const auto& dinf : axisinfo)
+	{
+		fs << "\"" << dinf.Name << "\",\"" << dinf.Description << "\"," << dinf.Coordinates.size();
+		for(const auto& cinf : dinf.Coordinates)
+			fs << ",\"" << cinf << "\"";
+		fs << std::endl;
+	}
+	fs.close();
 }

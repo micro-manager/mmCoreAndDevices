@@ -63,3 +63,51 @@ std::uint64_t readInt(const unsigned char* buff, std::uint8_t len) noexcept
 	}
 	return ret;
 }
+
+/**
+ * Split CSV line into tokens
+ * @param line CSV line
+ * @return Tokens list
+ */
+std::vector<std::string> splitLineCSV(const std::string& line) noexcept
+{
+	std::vector<std::string> ret;
+	if(line.empty())
+		return ret;
+
+	std::string curr = "";
+	bool qopen = false;
+	int qcnt = 0;
+	for(char c : line)
+	{
+		bool endswithQ = curr.size() >= 1 && curr[curr.size() - 1] == '\"';
+		bool endswithS = curr.size() >= 1 && curr[curr.size() - 1] == ' ';
+		bool endswithEQ = curr.size() >= 2 && curr[curr.size() - 1] == '\"' && curr[curr.size() - 1] == '\\';
+		if(c == ',' && (!qopen || (qcnt % 2 == 0 && (endswithQ || endswithS) && !endswithEQ)))
+		{
+			if(curr.size() >= 2 && curr[0] == '\"' && curr[curr.size() - 1] == '\"')
+				curr = curr.substr(1, curr.size() - 2);
+			ret.push_back(curr);
+			curr = "";
+			qcnt = 0;
+			qopen = false;
+		}
+		else if(c == '"')
+		{
+			if(qcnt == 0)
+				qopen = true;
+			qcnt++;
+			//if(qcnt > 1 && qcnt % 2 == 1)
+			curr += "\"";
+		}
+		else
+			curr += c;
+	}
+	if(!curr.empty())
+	{
+		if(curr.size() >= 2 && curr[0] == '\"' && curr[curr.size() - 1] == '\"')
+			curr = curr.substr(1, curr.size() - 2);
+		ret.push_back(curr);
+	}
+	return ret;
+}

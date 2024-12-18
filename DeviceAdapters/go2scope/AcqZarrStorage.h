@@ -65,8 +65,10 @@ public:
    int GetNumberOfDimensions(const char* handle, int& numDimensions);
    int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength);
    int GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength);
+	int GetImageCount(const char* handle, int& imgcnt);
    bool IsOpen(const char* handle);
-   int  GetPath(const char* handle, char* path, int maxPathLength);
+	bool IsReadOnly(const char* handle);
+   int GetPath(const char* handle, char* path, int maxPathLength);
 
 
    // action interface
