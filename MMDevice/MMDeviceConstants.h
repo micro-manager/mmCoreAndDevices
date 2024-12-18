@@ -154,8 +154,16 @@ namespace MM {
    const char* const g_Keyword_Closed_Position = "ClosedPosition";
    const char* const g_Keyword_HubID = "HubID";
 
+   const char* const g_Keyword_PixelType_GRAY8   = "GRAY8";
+   const char* const g_Keyword_PixelType_GRAY16  = "GRAY16";
+   const char* const g_Keyword_PixelType_GRAY32  = "GRAY32";
+   const char* const g_Keyword_PixelType_RGB32   = "RGB32";
+   const char* const g_Keyword_PixelType_RGB64   = "RGB64";
+   const char* const g_Keyword_PixelType_Unknown = "Unknown";
 
    // image annotations
+   const char* const g_Keyword_Metadata_Width       = "Width";
+   const char* const g_Keyword_Metadata_Height      = "Height";
    const char* const g_Keyword_Metadata_CameraLabel = "Camera";
    const char* const g_Keyword_Metadata_Exposure    = "Exposure-ms";
    MM_DEPRECATED(const char* const g_Keyword_Meatdata_Exposure) = "Exposure-ms"; // Typo
