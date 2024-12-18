@@ -52,20 +52,6 @@
 #include <string>
 #include <vector>
 
-
-#ifdef MMDEVICE_CLIENT_BUILD
-// Hide deprecation warnings when building MMCore
-#   define MM_DEPRECATED(prototype) prototype
-#else
-#   ifdef _MSC_VER
-#      define MM_DEPRECATED(prototype) __declspec(deprecated) prototype
-#   elif defined(__GNUC__)
-#      define MM_DEPRECATED(prototype) prototype __attribute__((deprecated))
-#   else
-#      define MM_DEPRECATED(prototype) prototype
-#   endif
-#endif
-
 // To be removed once the deprecated Get/SetModuleHandle() is removed:
 #ifdef _WIN32
    #define WIN32_LEAN_AND_MEAN

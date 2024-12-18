@@ -21,6 +21,19 @@
 
 #pragma once
 
+#ifdef MMDEVICE_CLIENT_BUILD
+// Hide deprecation warnings when building MMCore
+#   define MM_DEPRECATED(prototype) prototype
+#else
+#   ifdef _MSC_VER
+#      define MM_DEPRECATED(prototype) __declspec(deprecated) prototype
+#   elif defined(__GNUC__)
+#      define MM_DEPRECATED(prototype) prototype __attribute__((deprecated))
+#   else
+#      define MM_DEPRECATED(prototype) prototype
+#   endif
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 // Global error codes
 //
@@ -145,7 +158,7 @@ namespace MM {
    // image annotations
    const char* const g_Keyword_Metadata_CameraLabel = "Camera";
    const char* const g_Keyword_Metadata_Exposure    = "Exposure-ms";
-   const char* const g_Keyword_Meatdata_Exposure    = "Exposure-ms"; // Deprecated, use g_Keyword_Metadata_Exposure.
+   MM_DEPRECATED(const char* const g_Keyword_Meatdata_Exposure) = "Exposure-ms"; // Typo
    const char* const g_Keyword_Metadata_Score       = "Score";
    const char* const g_Keyword_Metadata_ImageNumber = "ImageNumber";
    // Removed: g_Keyword_Metadata_StartTime         = "StartTime-ms";
