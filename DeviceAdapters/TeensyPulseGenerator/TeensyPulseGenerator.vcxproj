@@ -91,11 +91,14 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CameraPulser.h" />
     <ClInclude Include="SingleThread.h" />
     <ClInclude Include="TeensyCom.h" />
     <ClInclude Include="TeensyPulseGenerator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CameraPulser.cpp" />
+    <ClCompile Include="Module.cpp" />
     <ClCompile Include="SingleThread.cpp" />
     <ClCompile Include="TeensyCom.cpp" />
     <ClCompile Include="TeensyPulseGenerator.cpp" />

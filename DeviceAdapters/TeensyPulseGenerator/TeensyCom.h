@@ -18,6 +18,31 @@ const unsigned char cmd_wait_for_input = 5;
 const unsigned char cmd_number_of_pulses = 6;
 
 
+/**
+ * CameraSnapThread: helper thread
+ */
+class CameraSnapThread : public MMDeviceThreadBase
+{
+public:
+   CameraSnapThread() :
+      camera_(0),
+      started_(false)
+   {}
+
+   ~CameraSnapThread() { if (started_) wait(); }
+
+   void SetCamera(MM::Camera* camera) { camera_ = camera; }
+
+   int svc() { camera_->SnapImage(); return 0; }
+
+   void Start() { activate(); started_ = true; }
+
+private:
+   MM::Camera* camera_;
+   bool started_;
+};
+
+
 class TeensyCom
 {
 public:

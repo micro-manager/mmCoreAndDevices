@@ -1,4 +1,5 @@
 #include "TeensyPulseGenerator.h"
+#include "CameraPulser.h"
 #include <thread>
 
 #ifdef WIN32
@@ -11,6 +12,7 @@ const char* g_RunUntilStopped = "Run_Until_Stopped";
 const char* g_NrPulses = "Number_of_Pulses";
 const char* g_NrPulsesCounted = "Number_of_Actual_Pulses";
 
+const char* g_TeensyPulseGenerator = "TeensyPulseGenerator";
 
 TeensyPulseGenerator::TeensyPulseGenerator() :
    initialized_(false),
@@ -43,7 +45,7 @@ TeensyPulseGenerator::~TeensyPulseGenerator()
 
 void TeensyPulseGenerator::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(name, "TeensyPulseGenerator");
+    CDeviceUtils::CopyLimitedString(name, g_TeensyPulseGenerator);
 }
 
 int TeensyPulseGenerator::Initialize()
@@ -418,31 +420,4 @@ int TeensyPulseGenerator::OnNrPulsesCounted(MM::PropertyBase* pProp, MM::ActionT
       pProp->Set((long) nrPulsesCounted_);
    }
    return DEVICE_OK;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Exported MMDevice API
-///////////////////////////////////////////////////////////////////////////////
-
-MODULE_API void InitializeModuleData()
-{
-    RegisterDevice("TeensyPulseGenerator", MM::GenericDevice, "Teensy Pulse Generator");
-}
-
-MODULE_API MM::Device* CreateDevice(const char* deviceName)
-{
-    if (deviceName == 0)
-        return 0;
-
-    if (strcmp(deviceName, "TeensyPulseGenerator") == 0)
-    {
-        return new TeensyPulseGenerator();
-    }
-
-    return 0;
-}
-
-MODULE_API void DeleteDevice(MM::Device* pDevice)
-{
-    delete pDevice;
 }
