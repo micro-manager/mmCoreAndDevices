@@ -485,12 +485,12 @@ public:
 
     virtual int SetGateOpen(bool open = true) { return SetRunning(open); }
     virtual int GetGateOpen(bool& open) { return GetRunning(open); }
-    virtual int SetSignal(double volts) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int SetSignal(double) { return DEVICE_UNSUPPORTED_COMMAND; }
     virtual int GetSignal(double& volts);
     virtual int GetLimits(double& minVolts, double& maxVolts);
 
     virtual int IsDASequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
-    virtual int GetDASequenceMaxLength(long& maxLength) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int GetDASequenceMaxLength(long&) { return DEVICE_UNSUPPORTED_COMMAND; }
     virtual int StartDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
     virtual int StopDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
     virtual int ClearDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }

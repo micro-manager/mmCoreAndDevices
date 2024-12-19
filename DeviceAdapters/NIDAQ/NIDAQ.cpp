@@ -927,7 +927,7 @@ int NIDAQHub::StartAIMeasuringForPort(NIAnalogInputPort* port)
 
         tThread_ = new TraceMonitoringThread(this);
         err = tThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_,
-            expectedMaxVoltsIn_, traceFrequency_, traceAmount_, physicalAIChannels_.size());
+            expectedMaxVoltsIn_, (float) traceFrequency_, traceAmount_, (int) physicalAIChannels_.size());
     }
     else
     {
@@ -963,7 +963,7 @@ int NIDAQHub::StopAIMeasuringForPort(NIAnalogInputPort* port)
                 int err = DEVICE_OK;
                 if (n > 1)
                     err = tThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_,
-                        expectedMaxVoltsIn_, traceFrequency_, traceAmount_, physicalAIChannels_.size());
+                        expectedMaxVoltsIn_, (float) traceFrequency_, traceAmount_, (int) physicalAIChannels_.size());
 
                 return err;
             }
@@ -995,7 +995,7 @@ int NIDAQHub::UpdateAIValues(float64* values, int32 amount)
     size_t n = physicalAIChannels_.size();
     for (size_t i = 0; i < n; ++i)
     {
-        physicalAIChannels_[i]->UpdateState(values[i]);
+        physicalAIChannels_[i]->UpdateState((float) values[i]);
     }
 
     return DEVICE_OK;
@@ -1026,7 +1026,7 @@ int NIDAQHub::StartTrace()
     delete tThread_;
     tThread_ = new TraceMonitoringThread(this);
     int err  = tThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_,
-        expectedMaxVoltsIn_, traceFrequency_, traceAmount_, physicalAIChannels_.size());
+        expectedMaxVoltsIn_, (float) traceFrequency_, traceAmount_, (int) physicalAIChannels_.size());
 
     return err;
 }
@@ -1184,7 +1184,7 @@ int NIDAQHub::OnExpectedMaxVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         double temp_max = 5.0;
         pProp->Get(temp_max);
-        expectedMaxVoltsIn_ = temp_max;
+        expectedMaxVoltsIn_ = (float) temp_max;
         
         mThread_->Stop();
         mThread_->wait();
@@ -1208,7 +1208,7 @@ int NIDAQHub::OnExpectedMinVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         double temp_min = -5.0;
         pProp->Get(temp_min);
-        expectedMinVoltsIn_ = temp_min;
+        expectedMinVoltsIn_ = (float) temp_min;
 
         mThread_->Stop();
         mThread_->wait();
