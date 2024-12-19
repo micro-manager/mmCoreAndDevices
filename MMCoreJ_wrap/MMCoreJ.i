@@ -314,6 +314,58 @@
    $result = data;
 }
 
+// Map input argument: java byte[] -> C++ STORAGEIMG
+%typemap(in) STORAGEIMG
+{
+   long expectedLength = arg3;
+   long receivedLength = JCALL1(GetArrayLength, jenv, $input);
+   
+   if (receivedLength != expectedLength)
+   {
+      jclass excep = jenv->FindClass("java/lang/Exception");
+      if (excep)
+         jenv->ThrowNew(excep, "Byte array dimensions do not match declared size.");
+      return;
+   }
+   
+   $1 = (unsigned char *) JCALL2(GetByteArrayElements, jenv, $input, 0);
+}
+
+// Map input argument: java short[] -> C++ STORAGEIMG16
+%typemap(jni) unsigned short*        "jshortArray"
+%typemap(jtype) unsigned short*      "short[]"
+%typemap(jstype) unsigned short*     "short[]"
+%typemap(in) STORAGEIMG16
+{
+   long expectedLength = arg3;
+   long receivedLength = JCALL1(GetArrayLength, jenv, $input);
+   
+   if (receivedLength != expectedLength)
+   {
+      jclass excep = jenv->FindClass("java/lang/Exception");
+      if (excep)
+         jenv->ThrowNew(excep, "Short array dimensions do not match declared size.");
+      return;
+   }
+   
+   $1 = (unsigned short *) JCALL2(GetShortArrayElements, jenv, $input, 0);
+}
+%typemap(in) unsigned short*
+{
+   long expectedLength = arg3;
+   long receivedLength = JCALL1(GetArrayLength, jenv, $input);
+   
+   if (receivedLength != expectedLength)
+   {
+      jclass excep = jenv->FindClass("java/lang/Exception");
+      if (excep)
+         jenv->ThrowNew(excep, "Short array dimensions do not match declared size.");
+      return;
+   }
+   
+   $1 = (unsigned short *) JCALL2(GetShortArrayElements, jenv, $input, 0);
+}
+
 // Map input argument: java byte[] -> C++ unsigned char *
 %typemap(in) unsigned char*
 {
@@ -337,13 +389,21 @@
    // Allow the Java byte array to be garbage collected.
    JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, JNI_ABORT); // JNI_ABORT = Don't alter the original array.
 }
+%typemap(freearg) unsigned short* {
+   // Allow the Java byte array to be garbage collected.
+   JCALL3(ReleaseShortArrayElements, jenv, $input, (jshort *) $1, JNI_ABORT); // JNI_ABORT = Don't alter the original array.
+}
 
 // change Java wrapper output mapping for unsigned char*
 %typemap(javaout) unsigned char* {
     return $jnicall;
  }
+ %typemap(javaout) unsigned short* {
+    return $jnicall;
+ }
 
 %typemap(javain) unsigned char* "$javainput" 
+%typemap(javain) unsigned short* "$javainput" 
 
 
 // Map input argument: java List<byte[]> -> C++ std::vector<unsigned char*>
@@ -508,6 +568,96 @@
       // TODO: throw exception?
       $result = 0;
    }
+}
+
+// Java typemap
+// change default SWIG mapping of STORAGEIMG return values
+// to return CObject containing array of pixel values
+//
+// Assumes that class has the following methods defined:
+// std::vector<long> getDatasetShape(handle)
+// MM::StorageDataType getDatasetPixelType(handle)
+
+%typemap(jni) STORAGEIMGOUT		  "jobject"
+%typemap(jtype) STORAGEIMGOUT      "Object"
+%typemap(jstype) STORAGEIMGOUT     "Object"
+%typemap(javaout) STORAGEIMGOUT {
+   return $jnicall;
+}
+%typemap(out) STORAGEIMGOUT
+{
+	std::vector<long> shape = (arg1)->getDatasetShape(arg2);
+	MM::StorageDataType pixformat = (arg1)->getDatasetPixelType(arg2);
+	if(shape.size() < 2)
+	{
+      jclass excep = jenv->FindClass("java/lang/Exception");
+		if(excep)
+			jenv->ThrowNew(excep, "Invalid dataset shape");
+	}
+   long lSize = shape[shape.size() - 1] * shape[shape.size() - 2];
+   
+   if(pixformat == MM::StorageDataType::StorageDataType_GRAY8)
+   {
+      // create a new byte[] object in Java
+      jbyteArray data = JCALL1(NewByteArray, jenv, lSize);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+
+         $result = 0;
+         return $result;
+      }
+   
+      // copy pixels from the image buffer
+      JCALL4(SetByteArrayRegion, jenv, data, 0, lSize, (jbyte*)result);
+
+      $result = data;
+   }
+   else if(pixformat == MM::StorageDataType::StorageDataType_GRAY16)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, lSize);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, lSize, (jshort*)result);
+
+      $result = data;
+   }
+   else if(pixformat == MM::StorageDataType::StorageDataType_RGB32)
+   {
+      // create a new byte[] object in Java
+      jbyteArray data = JCALL1(NewByteArray, jenv, lSize * 4);
+      if(data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+
+         $result = 0;
+         return $result;
+      }
+
+      // copy pixels from the image buffer
+      JCALL4(SetByteArrayRegion, jenv, data, 0, lSize * 4, (jbyte*)result);
+
+      $result = data;
+   }
+   else
+	{	
+      jclass excep = jenv->FindClass("java/lang/Exception");
+		if(excep)
+			jenv->ThrowNew(excep, "Invalid dataset pixel format");
+	}
 }
 
 // Java typemap
@@ -1220,6 +1370,7 @@ namespace std {
 
 
     %template(CharVector)   vector<char>;
+    %template(ByteVector)   vector<unsigned char>;
     %template(LongVector)   vector<long>;
     %template(DoubleVector) vector<double>;
     %template(StrVector)    vector<string>;
