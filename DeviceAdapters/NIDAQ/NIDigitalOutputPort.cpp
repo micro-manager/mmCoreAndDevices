@@ -30,6 +30,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    sequenceRunning_(false),
    blanking_(false),
    blankOnLow_(true),
+   open_(true),
    pos_(0),
    numPos_(0),
    portWidth_(0),
@@ -148,7 +149,7 @@ int DigitalOutputPort::Initialize()
    CreateProperty(MM::g_Keyword_Closed_Position, "0", MM::Integer, false);
    GetGateOpen(open_);
 
-   if (supportsBlankingAndSequencing_ && nrOfStateSliders_ >= portWidth_) {
+   if (supportsBlankingAndSequencing_ && (uint32_t) nrOfStateSliders_ >= portWidth_) {
       nrOfStateSliders_ = portWidth_ - 1;
    }
 
