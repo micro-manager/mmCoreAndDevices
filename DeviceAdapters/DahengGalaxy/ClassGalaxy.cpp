@@ -78,11 +78,9 @@ ClassGalaxy::ClassGalaxy() :
 {
         // call the base class method to set-up default error codes/messages
         InitializeDefaultErrorMessages();
-        //SetErrorText(ERR_SERIAL_NUMBER_REQUIRED, "Serial number is required");
-        //SetErrorText(ERR_SERIAL_NUMBER_NOT_FOUND, "No camera with the given serial number was found");
-        //SetErrorText(ERR_CANNOT_CONNECT, "Cannot connect to camera; it may be in use");
-        IGXFactory::GetInstance().Init();
+        SetErrorText(ERR_CAMERA_SDK, "Error while interacting with the Daheng Galaxy SDK");
 
+        IGXFactory::GetInstance().Init();
         IGXFactory::GetInstance().UpdateDeviceList(1000, vectorDeviceInfo);
         
         CreateStringProperty("SerialNumber", "Undefined", false, 0, true);
@@ -420,19 +418,34 @@ int ClassGalaxy::Initialize()
                     }
                  }
               }
-/*
-              emStatus = GXSetEnumValueByString(m_hDevice, "LineSelector", "Line0");
-              VERIFY_STATUS_RET(emStatus);
+              CEnumFeaturePointer linesources = m_objFeatureControlPtr->GetEnumFeature("LineSource");
+              if (!linesources.IsNull())
+              {
+                 gxstring_vector sourceentries = linesources->GetEnumEntryList();
+                 if (sourceentries.size() > 0) {
+                    CPropertyActionEx* pActEx = new CPropertyActionEx(this, &ClassGalaxy::OnLineSource, lineNr);
+                    std::string propName = entry + "-Source";
+                    CEnumFeaturePointer linemodes = m_objFeatureControlPtr->GetEnumFeature("LineMode");
+                    if (linemodes.IsNull())
+                    {
+                       return ERR_CAMERA_SDK;
+                    }
+                    gxstring_vector modeentries = linemodes->GetEnumEntryList();
+                    bool readOnly = false;
+                    if (modeentries.size() == 1 && modeentries[0] == "Input")
+                       readOnly = true;
+                    ret = CreateProperty(propName.c_str(),  sourceentries[0].c_str(), MM::String, readOnly, pActEx);
+                    if (ret != DEVICE_OK)
+                       return ret;
+                    for (size_t j = 0; j < sourceentries.size(); j++)
+                    {
+                       AddAllowedValue(propName.c_str(), sourceentries[j].c_str());
+                    }
+                 }
 
-              emStatus = GXSetEnumValueByString(m_hDevice, "LineMode", "Input");
-              VERIFY_STATUS_RET(emStatus);
-
-              GX_ENUM_VALUE stEnumValue;
-              emStatus = GXGetEnumValue(m_hDevice, "LineMode", &stEnumValue);
-              */
-
-
+              }
            }
+
            // set line selector back 
            lineselector->SetValue(lineVal);
         }
@@ -1484,6 +1497,51 @@ int ClassGalaxy::OnLineMode(MM::PropertyBase* pProp, MM::ActionType eAct, long i
       std::string linemode;
       pProp->Get(linemode);
       linemodes->SetValue(linemode.c_str());
+   }
+
+   // return lineselector to its orginal value
+   lineselector->SetValue(lineVal);
+
+   return DEVICE_OK;
+}
+
+int ClassGalaxy::OnLineSource(MM::PropertyBase* pProp, MM::ActionType eAct, long i)
+{
+   CEnumFeaturePointer lineselector = m_objFeatureControlPtr->GetEnumFeature("LineSelector");
+   if (lineselector.IsNull())
+   {
+      return ERR_CAMERA_SDK;
+   }
+   gxstring lineVal = lineselector->GetValue();
+   gxstring_vector entries = lineselector->GetEnumEntryList();
+   if (entries.size() == 0) 
+   {
+      return ERR_CAMERA_SDK;
+   }
+   std::string entry(entries[0]);
+   std::string line = entry.substr(0, entry.size() - 1) + (std::to_string(i)).c_str();
+   lineselector->SetValue(line.c_str());
+   CEnumFeaturePointer linesources = m_objFeatureControlPtr->GetEnumFeature("LineSource");
+   if (linesources.IsNull()) 
+   {
+      return ERR_CAMERA_SDK;
+   }
+   gxstring_vector sourceentries = linesources->GetEnumEntryList();
+   if (sourceentries.size() == 0) 
+   {
+      return ERR_CAMERA_SDK;
+   }
+
+   if (eAct == MM::BeforeGet)
+   {
+      gxstring lineSource = linesources->GetValue();
+      pProp->Set(lineSource.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string linesource;
+      pProp->Get(linesource);
+      linesources->SetValue(linesource.c_str());
    }
 
    // return lineselector to its orginal value

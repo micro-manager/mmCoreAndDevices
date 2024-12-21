@@ -1,4 +1,6 @@
 #pragma once
+// disables warnings about dll interface incompatibility
+#pragma warning( disable : 4251 )
 #define _AFXDLL
 
 #include	"GalaxyException.h"
@@ -141,6 +143,7 @@ public:
 	int OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnExposureTimeout(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLineMode(MM::PropertyBase* pProp, MM::ActionType eAct, long i);
+	int OnLineSource(MM::PropertyBase* pProp, MM::ActionType eAct, long i);
 
 	//为了实现在采集类中使用
 	bool  colorCamera_;
