@@ -24,6 +24,8 @@
 #include "ModuleInterface.h"
 
 
+#define ERR_CAMERA_SDK            10001
+
 
 class CircularBufferInserter;
 
@@ -138,6 +140,7 @@ public:
 	int OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerFilterRaisingEdge(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnExposureTimeout(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineMode(MM::PropertyBase* pProp, MM::ActionType eAct, long i);
 
 	//为了实现在采集类中使用
 	bool  colorCamera_;

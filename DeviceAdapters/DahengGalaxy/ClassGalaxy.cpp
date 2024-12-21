@@ -18,6 +18,8 @@ static const char* g_PixelType_8bitRGBA = "8bitBGRA";
 static const char* g_PixelType_8bitRGB =  "8bitRGB";
 static const char* g_PixelType_8bitBGR =  "8bitBGR";
 
+
+
 MODULE_API void InitializeModuleData()
 {
     RegisterDevice(g_CameraDeviceName, MM::CameraDevice, "Daheng Camera");
@@ -299,7 +301,7 @@ int ClassGalaxy::Initialize()
 
         // List all camera features in the logs
         GxIAPICPP::gxstring_vector vectorFeatureNameList;
-        m_objFeatureControlPtr->GetFeatureNameList(vectorFeatureNameList);//Get the enum items list.
+        m_objFeatureControlPtr->GetFeatureNameList(vectorFeatureNameList); 
         for (gxstring featureName : vectorFeatureNameList)
         {
            std::string feature = featureName.c_str();
@@ -356,7 +358,7 @@ int ClassGalaxy::Initialize()
                 CheckForBinningMode(pAct);
         }
         else 
-        { // Hardware does not support binning, Micro-Manager still like this as a property
+        { // Hardware does not support binning, Micro-Manager still likes this as a property
            pAct = new CPropertyAction(this, &ClassGalaxy::OnBinning);
            ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, true, pAct);
            AddAllowedValue(MM::g_Keyword_Binning, "1");
@@ -388,6 +390,51 @@ int ClassGalaxy::Initialize()
                 LSPVals.push_back(strValue);
             }
             SetAllowedValues("TriggerSource", LSPVals);
+        }
+
+        CEnumFeaturePointer lineselector = m_objFeatureControlPtr->GetEnumFeature("LineSelector");
+        if (!lineselector.IsNull())
+        {
+           gxstring lineVal = lineselector->GetValue();
+           gxstring_vector entries = lineselector->GetEnumEntryList();
+           for (size_t i = 0; i < entries.size(); i++)
+           {
+              string entry(entries[i]);
+              GetCoreCallback()->LogMessage(this, entry.c_str(), false);
+              // Let's hope there are never more than 10 lines
+              std::string lastPart = entry.substr(entry.length() - 1);
+              long lineNr = std::stoi(lastPart);
+              lineselector->SetValue(entries[i]);
+              CEnumFeaturePointer linemodes = m_objFeatureControlPtr->GetEnumFeature("LineMode");
+              if (!linemodes.IsNull()) {
+                 gxstring_vector modeentries = linemodes->GetEnumEntryList();
+                 if (modeentries.size() > 0) {
+                    CPropertyActionEx* pActEx = new CPropertyActionEx(this, &ClassGalaxy::OnLineMode, lineNr);
+                    std::string propName = entry + "-Mode";
+                    ret = CreateProperty(propName.c_str(),  modeentries[0].c_str(), MM::String, false, pActEx);
+                    if (ret != DEVICE_OK)
+                       return ret;
+                    for (size_t j = 0; j < modeentries.size(); j++)
+                    {
+                       AddAllowedValue(propName.c_str(), modeentries[j].c_str());
+                    }
+                 }
+              }
+/*
+              emStatus = GXSetEnumValueByString(m_hDevice, "LineSelector", "Line0");
+              VERIFY_STATUS_RET(emStatus);
+
+              emStatus = GXSetEnumValueByString(m_hDevice, "LineMode", "Input");
+              VERIFY_STATUS_RET(emStatus);
+
+              GX_ENUM_VALUE stEnumValue;
+              emStatus = GXGetEnumValue(m_hDevice, "LineMode", &stEnumValue);
+              */
+
+
+           }
+           // set line selector back 
+           lineselector->SetValue(lineVal);
         }
 
         //20230217设置期望帧率使能
@@ -1397,6 +1444,52 @@ int ClassGalaxy::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAc
             << e.what() << endl;
     }
     return DEVICE_OK;
+}
+
+
+int ClassGalaxy::OnLineMode(MM::PropertyBase* pProp, MM::ActionType eAct, long i)
+{
+   CEnumFeaturePointer lineselector = m_objFeatureControlPtr->GetEnumFeature("LineSelector");
+   if (lineselector.IsNull())
+   {
+      return ERR_CAMERA_SDK;
+   }
+   gxstring lineVal = lineselector->GetValue();
+   gxstring_vector entries = lineselector->GetEnumEntryList();
+   if (entries.size() == 0) 
+   {
+      return ERR_CAMERA_SDK;
+   }
+   std::string entry(entries[0]);
+   std::string line = entry.substr(0, entry.size() - 1) + (std::to_string(i)).c_str();
+   lineselector->SetValue(line.c_str());
+   CEnumFeaturePointer linemodes = m_objFeatureControlPtr->GetEnumFeature("LineMode");
+   if (linemodes.IsNull()) 
+   {
+      return ERR_CAMERA_SDK;
+   }
+   gxstring_vector modeentries = linemodes->GetEnumEntryList();
+   if (modeentries.size() == 0) 
+   {
+      return ERR_CAMERA_SDK;
+   }
+
+   if (eAct == MM::BeforeGet)
+   {
+      gxstring lineMode = linemodes->GetValue();
+      pProp->Set(lineMode.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string linemode;
+      pProp->Get(linemode);
+      linemodes->SetValue(linemode.c_str());
+   }
+
+   // return lineselector to its orginal value
+   lineselector->SetValue(lineVal);
+
+   return DEVICE_OK;
 }
 
 int ClassGalaxy::OnUserOutput(MM::PropertyBase* pProp, MM::ActionType eAct)
