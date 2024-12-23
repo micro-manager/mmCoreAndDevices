@@ -65,10 +65,21 @@ private:
     static void stopPulseISR() {
         if (instancePtr) {
             digitalWriteFast(instancePtr->outputPin, LOW);
-
             instancePtr->isPulseActive = false;
+            instancePtr->pulseTimer.end();
         }
     }
+
+    static inline void pulse() {
+      // Generate pulse
+      digitalWriteFast(instancePtr->outputPin, HIGH);
+      instancePtr->isPulseActive = true;
+      instancePtr->isReadyToTrigger = false;
+      instancePtr->pulseNumber++;
+            
+      // Set timer to stop pulse after duration
+      instancePtr->pulseTimer.begin(stopPulseISR, instancePtr->pulseDuration);
+    }  
 
     // Trigger next pulse cycle
     static void intervalISR() {
@@ -78,28 +89,14 @@ private:
             if (instancePtr->waitForTrigger &&  digitalReadFast(instancePtr->triggerPin) == LOW) {
                 return;
             }
-            // Generate pulse
-            digitalWriteFast(instancePtr->outputPin, HIGH);
-            instancePtr->isPulseActive = true;
-            instancePtr->isReadyToTrigger = false;
-            instancePtr->pulseNumber++;
-            
-            // Set timer to stop pulse after duration
-            instancePtr->pulseTimer.begin(stopPulseISR, instancePtr->pulseDuration);
+            pulse();
         }
     }
 
     // Trigger pin interrupt handler
     static void triggerPinISR() {
         if (instancePtr && instancePtr->waitForTrigger && instancePtr->isReadyToTrigger) {
-            // Generate pulse
-            digitalWriteFast(instancePtr->outputPin, HIGH);
-            instancePtr->isPulseActive = true;
-            instancePtr->isReadyToTrigger = false;
-            instancePtr->pulseNumber++;
-            
-            // Set timer to stop pulse after duration
-            instancePtr->pulseTimer.begin(stopPulseISR, instancePtr->pulseDuration);
+            pulse();
         }
     }
 
@@ -222,11 +219,15 @@ public:
         // Stop any existing timers
         pulseTimer.end();
         intervalTimer.end();
+        // just in case we were within a pulse
+        stopPulseISR();
 
         // no timers running, so we can set volatile variables without interupting interrupts
         pulseNumber = 0;
 
         // Start interval timer to manage pulse cycles
+        // start first pulse here, otherwise we would wait pulseInterval for the first pulse
+        pulse();
         intervalTimer.begin(intervalISR, pulseInterval);
 
         // Simplified start confirmation
@@ -249,12 +250,14 @@ public:
     }
 
     void stopNoSerialMessage() {
-        // Stop timers
-        pulseTimer.end();
+        // Stop interval timer
         intervalTimer.end();
+        // Do not stop pulseTimer.  If stopped by counter, there surely is 
+        // a pulse going, and we do not want to stop that prematurely
+        //pulseTimer.end();
         
-        // Ensure output is low
-        digitalWriteFast(outputPin, LOW);
+        // Do not ensure output is low, rely on intervalTimer...
+        // digitalWriteFast(outputPin, LOW);
         
         // Reset state
         isRunning = false;
