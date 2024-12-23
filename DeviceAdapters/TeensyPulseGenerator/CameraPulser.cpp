@@ -22,8 +22,11 @@ const char* g_Invert = "Invert";
 const char* g_DeviceNameCameraPulser = "TeensySendsPulsesToCamera";
 
 CameraPulser::CameraPulser() :
+   pulseDuration_(1.0),
    initialized_(false),
-   version_(0)
+   version_(0),
+   nrCamerasInUse_(0),
+   teensyCom_(0)
 {
    InitializeDefaultErrorMessages();
 
@@ -38,6 +41,9 @@ CameraPulser::CameraPulser() :
    // Description                                                            
    CreateProperty(MM::g_Keyword_Description, "Use Camera in external trigger mode and provide triggers with Teensy", MM::String, true);
 
+   for (int i = 0; i < MAX_NUMBER_PHYSICAL_CAMERAS; i++) {
+      usedCameras_.push_back(g_Undefined);
+   }
 
    CPropertyAction* pAct = new CPropertyAction(this, &CameraPulser::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
@@ -51,7 +57,6 @@ CameraPulser::~CameraPulser()
 
 int CameraPulser::Shutdown()
 {
-   delete imageBuffer_;
    // Rely on the cameras to shut themselves down
    return DEVICE_OK;
 }
@@ -114,6 +119,23 @@ int CameraPulser::Initialize()
    pAct = new CPropertyAction(this, &CameraPulser::OnVersion);
    CreateIntegerProperty(g_versionProp, version_, true, pAct);
 
+   // Pulse Duration property
+   uint32_t pulseDuration;
+   ret = teensyCom_->GetPulseDuration(pulseDuration);
+   if (ret != DEVICE_OK)
+      return ret;
+   pulseDuration_ = pulseDuration / 1000.0;
+   pAct = new CPropertyAction(this, &CameraPulser::OnPulseDuration);
+   CreateFloatProperty("PulseDuration-ms", pulseDuration_, false, pAct);
+
+   // Interval property
+   uint32_t interval;
+   ret = teensyCom_->GetInterval(interval);
+   if (ret != DEVICE_OK)
+      return ret;
+   interval_ = interval / 1000.0;
+   pAct = new CPropertyAction(this, &CameraPulser::OnInterval);
+   CreateFloatProperty("Interval-ms", interval_, false, pAct);
 
    initialized_ = true;
 
@@ -143,6 +165,17 @@ int CameraPulser::SnapImage()
          t[i].Start();
       }
    }
+   // send one pulse, even when the cameras are not in external trigger mode, this should not hurt
+   uint32_t response;
+   int ret = teensyCom_->SetNumberOfPulses(1, response);
+   if (ret != DEVICE_OK)
+      return ret;
+   if (response != 1)
+      return ERR_COMMUNICATION;
+   ret = teensyCom_->SetStart(response);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // I think that the CameraSnapThread destructor waits until the SnapImage function is done
    // So, we are likely to be waiting here until all cameras are done snapping
 
@@ -457,6 +490,11 @@ int CameraPulser::StartSequenceAcquisition(double interval)
    if (!ImageSizesAreEqual())
       return ERR_NO_EQUAL_SIZE;
 
+   uint32_t response;
+   int ret = teensyCom_->SetNumberOfPulses(0, response);
+   if (ret != DEVICE_OK)
+      return ret;
+
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
@@ -469,11 +507,16 @@ int CameraPulser::StartSequenceAcquisition(double interval)
          camera->AddTag(MM::g_Keyword_CameraChannelIndex, usedCameras_[i].c_str(),
             os.str().c_str());
 
-         int ret = camera->StartSequenceAcquisition(interval);
+         ret = camera->StartSequenceAcquisition(interval);
          if (ret != DEVICE_OK)
             return ret;
       }
    }
+   // start pulses, should even when cameras are not in external trigger mode
+   ret = teensyCom_->SetStart(response);
+   if (ret != DEVICE_OK)
+      return ret;
+
    return DEVICE_OK;
 }
 
@@ -531,7 +574,7 @@ int CameraPulser::StopSequenceAcquisition()
       }
    }
    std::ostringstream os;
-   os << "Stopp Sequence after sending " << response << " pulses.";
+   os << "Stopped Sequence after sending " << response << " pulses.";
    GetCoreCallback()->LogMessage(this, os.str().c_str(), false);
 
    return DEVICE_OK;
@@ -539,6 +582,10 @@ int CameraPulser::StopSequenceAcquisition()
 
 int CameraPulser::GetBinning() const
 {
+   if (usedCameras_.empty())
+   {
+      return 1;
+   }
    MM::Camera* camera0 = (MM::Camera*)GetDevice(usedCameras_[0].c_str());
    int binning = 0;
    if (camera0 != 0)
@@ -614,6 +661,7 @@ int CameraPulser::Logical2Physical(int logical)
 
 int CameraPulser::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct, long i)
 {
+
    if (eAct == MM::BeforeGet)
    {
       pProp->Set(usedCameras_[i].c_str());
@@ -713,4 +761,59 @@ int CameraPulser::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
    return DEVICE_OK;
 }
 
+int CameraPulser::OnPulseDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(pulseDuration_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+       pProp->Get(pulseDuration_);
+        
+       // Send pulse duration command if initialized
+       if (initialized_)
+       {
+          uint32_t pulseDurationUs =  static_cast<uint32_t>(pulseDuration_ * 1000.0);
+          uint32_t param;
+          int ret = teensyCom_->SetPulseDuration(pulseDurationUs, param);
+          if (ret != DEVICE_OK)
+             return ret;
+          if (param != pulseDurationUs)
+          {
+            GetCoreCallback()->LogMessage(this, "PulseDuration sent not the same as pulseDuration echoed back", false);
+            return ERR_COMMUNICATION;
 
+          }
+       }
+   }
+   return DEVICE_OK;
+}
+
+int CameraPulser::OnInterval(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(interval_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+       pProp->Get(interval_);
+        
+       // Send interval command if initialized
+       if (initialized_)
+       {
+          uint32_t interval = static_cast<uint32_t> (interval_ * 1000.0);
+          uint32_t parm;
+          int ret = teensyCom_->SetInterval(interval, parm);
+          if (ret != DEVICE_OK)
+             return ret;
+          if (parm != interval)
+          {
+            GetCoreCallback()->LogMessage(this, "Interval sent not the same as interval echoed back", false);
+            return ERR_COMMUNICATION;
+          }
+       }
+    }
+    return DEVICE_OK;
+}

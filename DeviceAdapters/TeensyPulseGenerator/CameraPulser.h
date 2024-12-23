@@ -63,16 +63,18 @@ public:
    int OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct, long i);
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct);
+   int OnPulseDuration(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnInterval(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    bool ImageSizesAreEqual();
    int Logical2Physical(int logical);
 
-   unsigned char* imageBuffer_;
-
    std::vector<std::string> availableCameras_;
    std::vector<std::string> usedCameras_;
    std::string usedCamera_;
+   double interval_; // Interval in ms
+   double pulseDuration_; // Pulse duration in milli-seconds
    bool initialized_;
    unsigned int nrCamerasInUse_;
    ImgBuffer img_;
@@ -81,4 +83,6 @@ private:
    TeensyCom* teensyCom_;
 
    uint32_t version_;
+   uint32_t nrPulses_; // nr Pulses we request
+   uint32_t nrPulsesCounted_; // as returned by the Teensy
 };
