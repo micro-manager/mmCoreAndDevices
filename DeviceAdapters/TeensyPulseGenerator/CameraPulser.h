@@ -64,7 +64,7 @@ public:
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct);
    int OnPulseDuration(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnInterval(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnIntervalBeyondExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    bool ImageSizesAreEqual();
@@ -73,7 +73,7 @@ private:
    std::vector<std::string> availableCameras_;
    std::vector<std::string> usedCameras_;
    std::string usedCamera_;
-   double interval_; // Interval in ms
+   double intervalBeyondExposure_; // Interval beyond exposure time in ms
    double pulseDuration_; // Pulse duration in milli-seconds
    bool initialized_;
    unsigned int nrCamerasInUse_;

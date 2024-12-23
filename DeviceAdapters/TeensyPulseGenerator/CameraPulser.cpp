@@ -14,15 +14,14 @@ const uint32_t g_Min_MMVersion = 1;
 const uint32_t g_Max_MMVersion = 1;
 const char* g_versionProp = "Version";
 const char* g_Undefined = "Undefined";
-const char* g_Logic = "Output Logic";
-const char* g_Direct = "Direct";
-const char* g_Invert = "Invert";
+const char* g_IntervalBeyondExposure = "Interval-ms_on_top_of_exposure";
 
 
 const char* g_DeviceNameCameraPulser = "TeensySendsPulsesToCamera";
 
 CameraPulser::CameraPulser() :
    pulseDuration_(1.0),
+   intervalBeyondExposure_(5.0),
    initialized_(false),
    version_(0),
    nrCamerasInUse_(0),
@@ -72,6 +71,7 @@ int CameraPulser::Initialize()
    {
       GetLoadedDeviceOfType(MM::CameraDevice, deviceName, deviceIterator++);
       if (0 < strlen(deviceName))
+
       {
          availableCameras.push_back(std::string(deviceName));
       }
@@ -129,13 +129,10 @@ int CameraPulser::Initialize()
    CreateFloatProperty("PulseDuration-ms", pulseDuration_, false, pAct);
 
    // Interval property
-   uint32_t interval;
-   ret = teensyCom_->GetInterval(interval);
-   if (ret != DEVICE_OK)
-      return ret;
-   interval_ = interval / 1000.0;
-   pAct = new CPropertyAction(this, &CameraPulser::OnInterval);
-   CreateFloatProperty("Interval-ms", interval_, false, pAct);
+   // At this point, GetExposure does not give us a good value, adjust interval
+   // for exposure after camera was set 
+   pAct = new CPropertyAction(this, &CameraPulser::OnIntervalBeyondExposure);
+   CreateFloatProperty(g_IntervalBeyondExposure, intervalBeyondExposure_, false, pAct);
 
    initialized_ = true;
 
@@ -335,6 +332,7 @@ unsigned CameraPulser::GetImageBytesPerPixel() const
       {
          MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
          if (camera != 0)
+
             if (bytes != camera->GetImageBytesPerPixel())
                return 0;
       }
@@ -495,6 +493,11 @@ int CameraPulser::StartSequenceAcquisition(double interval)
    if (ret != DEVICE_OK)
       return ret;
 
+   uint32_t tInterval = static_cast<uint32_t> ((GetExposure() + intervalBeyondExposure_) * 1000.0);
+   ret = teensyCom_->SetInterval(tInterval, response);
+   if (response != tInterval)
+      return ERR_COMMUNICATION;
+
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
@@ -528,6 +531,11 @@ int CameraPulser::StartSequenceAcquisition(long numImages, double interval_ms, b
    uint32_t response;
    int ret = teensyCom_->SetNumberOfPulses(numImages, response);
    if (response != (uint32_t) numImages)
+      return ERR_COMMUNICATION;
+
+   uint32_t interval = static_cast<uint32_t> ((GetExposure() + intervalBeyondExposure_) * 1000.0);
+   ret = teensyCom_->SetInterval(interval, response);
+   if (response != interval)
       return ERR_COMMUNICATION;
 
    // First start camera sequences, then start trigger
@@ -790,20 +798,20 @@ int CameraPulser::OnPulseDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CameraPulser::OnInterval(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CameraPulser::OnIntervalBeyondExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set(interval_);
+        pProp->Set(intervalBeyondExposure_);
     }
     else if (eAct == MM::AfterSet)
     {
-       pProp->Get(interval_);
+       pProp->Get(intervalBeyondExposure_);
         
        // Send interval command if initialized
        if (initialized_)
        {
-          uint32_t interval = static_cast<uint32_t> (interval_ * 1000.0);
+          uint32_t interval = static_cast<uint32_t> ((GetExposure() + intervalBeyondExposure_) * 1000.0);
           uint32_t parm;
           int ret = teensyCom_->SetInterval(interval, parm);
           if (ret != DEVICE_OK)

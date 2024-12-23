@@ -42,7 +42,7 @@ private:
     // Configuration parameters
     uint8_t outputPin = LED_BUILTIN;
     uint8_t triggerPin = 2;
-    uint32_t pulseDuration = 5000;     // Pulse duration in microseconds
+    uint32_t pulseDuration = 1000;     // Pulse duration in microseconds
     uint32_t pulseInterval = 100000;   // Interval between pulses in microseconds
     uint32_t numberOfPulses;  // When set to zero go on until stop
     bool waitForTrigger;        // Flag to wait for input trigger
