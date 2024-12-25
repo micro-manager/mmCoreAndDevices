@@ -2,6 +2,9 @@
 
 static const uint32_t version = 1;
 
+uint8_t outputPin = 8;  // LED_BUILTIN;
+uint8_t inputPin = 2;
+
 /**
 Note: The pulse pin nr and input pin nr are hard coded.
 Change as needed.
@@ -37,10 +40,12 @@ Commands:
 */
 
 
+
 class PulseGenerator {
 private:
-    // Configuration parameters
-    uint8_t outputPin = LED_BUILTIN;
+    // Configuration parameters, note that outputPin and triggerPin 
+    // will be overwritten in the constructor 
+    uint8_t outputPin = LED_BUILTIN;    
     uint8_t triggerPin = 2;
     uint32_t pulseDuration = 1000;     // Pulse duration in microseconds
     uint32_t pulseInterval = 100000;   // Interval between pulses in microseconds
@@ -403,7 +408,7 @@ void setup() {
     delay(1000);
 
     // Create pulse generator on pin 13 with optional trigger on pin 12
-    pulsegen = new PulseGenerator(13, 12);
+    pulsegen = new PulseGenerator(outputPin, inputPin);
 
     // Configure initial defaults
     pulsegen->configure(50000, 500000, 0, false);
