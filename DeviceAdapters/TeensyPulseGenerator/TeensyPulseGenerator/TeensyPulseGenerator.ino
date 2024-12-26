@@ -2,7 +2,7 @@
 
 static const uint32_t version = 1;
 
-uint8_t outputPin = 8;  // LED_BUILTIN;
+uint8_t outputPin = LED_BUILTIN;  // LED_BUILTIN;
 uint8_t inputPin = 2;
 
 /**
@@ -232,8 +232,8 @@ public:
 
         // Start interval timer to manage pulse cycles
         // start first pulse here, otherwise we would wait pulseInterval for the first pulse
-        pulse();
         intervalTimer.begin(intervalISR, pulseInterval);
+        pulse();
 
         // Simplified start confirmation
         Serial.write(1);
