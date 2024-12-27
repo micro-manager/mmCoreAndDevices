@@ -150,7 +150,7 @@ int ClassGalaxy::Initialize()
         }
         //获取可执行程序的当前路径,默认开启第一个
         initialized_ = false;
-        // This checks, among other things, that the camera is not already in use.
+        // This checks, among other things, that if the camera is already in use.
         // Without that check, the following CreateDevice() may crash on duplicate
         // serial number. Unfortunately, this call is slow. 默认打开第一个设备
         int index = 0;
@@ -477,14 +477,20 @@ int ClassGalaxy::Initialize()
             assert(ret == DEVICE_OK);
         }
 
-        // TriggerActivation
+        // TriggerSelector.  Should this be exposed as a property?
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("TriggerSelector"))
         {
-            m_objFeatureControlPtr->GetEnumFeature("TriggerSelector")->SetValue("FrameStart");
+           m_objFeatureControlPtr->GetEnumFeature("TriggerSelector")->SetValue("FrameStart");
+        }
+
+        // TriggerActivation
+        if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("TriggerActivation"))
+        {
+            CEnumFeaturePointer adjTriggerSelector = m_objFeatureControlPtr->GetEnumFeature("TriggerActivation");
             pAct = new CPropertyAction(this, &ClassGalaxy::OnTriggerActivation);
             ret = CreateProperty("TriggerActivation", "NA", MM::String, false, pAct);
             vector<string> LSPVals;
-            gxstring_vector entries = triggersource->GetEnumEntryList();
+            gxstring_vector entries = adjTriggerSelector->GetEnumEntryList();
             for (size_t i = 0; i < entries.size(); i++)
             {
                 string strValue(entries[i]);
