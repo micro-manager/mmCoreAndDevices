@@ -65,6 +65,7 @@ public:
    int OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct);
    int OnPulseDuration(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnIntervalBeyondExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnWaitForInput(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    bool ImageSizesAreEqual();
@@ -75,6 +76,7 @@ private:
    std::string usedCamera_;
    double intervalBeyondExposure_; // Interval beyond exposure time in ms
    double pulseDuration_; // Pulse duration in milli-seconds
+   bool waitForInput_; // Whether to wait sending the pulse for the input to go high
    bool initialized_;
    unsigned int nrCamerasInUse_;
    ImgBuffer img_;

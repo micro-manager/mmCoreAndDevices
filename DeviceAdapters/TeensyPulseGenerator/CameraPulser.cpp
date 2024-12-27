@@ -15,6 +15,7 @@ const uint32_t g_Max_MMVersion = 1;
 const char* g_versionProp = "Version";
 const char* g_Undefined = "Undefined";
 const char* g_IntervalBeyondExposure = "Interval-ms_on_top_of_exposure";
+const char* g_WaitForInputMode = "Wait_for_Input";
 
 
 const char* g_DeviceNameCameraPulser = "TeensySendsPulsesToCamera";
@@ -22,6 +23,7 @@ const char* g_DeviceNameCameraPulser = "TeensySendsPulsesToCamera";
 CameraPulser::CameraPulser() :
    pulseDuration_(1.0),
    intervalBeyondExposure_(5.0),
+   waitForInput_(false),
    initialized_(false),
    version_(0),
    nrCamerasInUse_(0),
@@ -133,6 +135,17 @@ int CameraPulser::Initialize()
    // for exposure after camera was set 
    pAct = new CPropertyAction(this, &CameraPulser::OnIntervalBeyondExposure);
    CreateFloatProperty(g_IntervalBeyondExposure, intervalBeyondExposure_, false, pAct);
+
+   // Trigger Mode property
+   uint32_t waitForInput;
+   ret = teensyCom_->GetWaitForInput(waitForInput);
+   if (ret != DEVICE_OK)
+      return ret;
+   waitForInput_ = (bool) waitForInput;
+   pAct = new CPropertyAction(this, &CameraPulser::OnWaitForInput);
+   CreateProperty(g_WaitForInputMode, waitForInput_ ? "On" : "Off", MM::String, false, pAct);
+   AddAllowedValue(g_WaitForInputMode, "Off");
+   AddAllowedValue(g_WaitForInputMode, "On");
 
    initialized_ = true;
 
@@ -824,4 +837,35 @@ int CameraPulser::OnIntervalBeyondExposure(MM::PropertyBase* pProp, MM::ActionTy
        }
     }
     return DEVICE_OK;
+}
+
+int CameraPulser::OnWaitForInput(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(waitForInput_ ? "On" : "Off");
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string waitForInput;
+      pProp->Get(waitForInput);
+      waitForInput_ = (waitForInput == "On");
+        
+      // Send wait for input command if initialized
+      if (initialized_)
+      {
+         uint32_t sp = waitForInput_ ? 1 : 0;
+         uint32_t param;
+         int ret = teensyCom_->SetWaitForInput(sp, param);
+         if (ret != DEVICE_OK)
+            return ret;
+         if (param != sp)
+         {
+            GetCoreCallback()->LogMessage(this, "WaitforInput sent not the same as echoed back", false);
+            return ERR_COMMUNICATION;
+         }
+      }
+   }
+   return DEVICE_OK;
 }

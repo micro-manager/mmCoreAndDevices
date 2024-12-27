@@ -2,8 +2,15 @@
 
 static const uint32_t version = 1;
 
-uint8_t outputPin = LED_BUILTIN;  // LED_BUILTIN;
-uint8_t inputPin = 2;
+const uint8_t outputPin = LED_BUILTIN;  // Modify as desired.  Teensy LED: LED_BUILTIN;
+const bool activateOn = HIGH;             // set to LOW if required by device
+const uint8_t inputPin = 2;             // MOdify as desired
+const bool inputStateDeviceIsBusy = HIGH;  // set to LOW if required
+
+
+//  Do not modify below this line
+const int activate = activateOn;
+const int inActivate = !activateOn;
 
 /**
 Note: The pulse pin nr and input pin nr are hard coded.
@@ -58,27 +65,27 @@ private:
     IntervalTimer intervalTimer;
 
     // State tracking
-    volatile bool isPulseActive = false;
     volatile bool isReadyToTrigger = true;
     volatile bool countPulses = false;
+    volatile bool startOnTrigger = false;
     volatile uint32_t pulseNumber = 0;
 
     // Static callback methods for timer interrupts
     static PulseGenerator* volatile instancePtr;
 
+    const int inputEdge =  inputStateDeviceIsBusy == LOW ? RISING : FALLING;
+
     // Turn pulse off
     static void stopPulseISR() {
         if (instancePtr) {
-            digitalWriteFast(instancePtr->outputPin, LOW);
-            instancePtr->isPulseActive = false;
+            digitalWriteFast(instancePtr->outputPin, inActivate);
             instancePtr->pulseTimer.end();
         }
     }
 
-    static inline void pulse() {
+    static inline void pulseISR() {
       // Generate pulse
-      digitalWriteFast(instancePtr->outputPin, HIGH);
-      instancePtr->isPulseActive = true;
+      digitalWriteFast(instancePtr->outputPin, activate);
       instancePtr->isReadyToTrigger = false;
       instancePtr->pulseNumber++;
             
@@ -91,18 +98,22 @@ private:
         if (instancePtr) {
             instancePtr->isReadyToTrigger = true;
             // If waiting for trigger and trigger not received, do nothing
-            if (instancePtr->waitForTrigger &&  digitalReadFast(instancePtr->triggerPin) == LOW) {
+            if (instancePtr->waitForTrigger &&  digitalReadFast(instancePtr->triggerPin) == inputStateDeviceIsBusy) {
                 return;
             }
-            pulse();
+            pulseISR();
         }
     }
 
     // Trigger pin interrupt handler
     static void triggerPinISR() {
-        if (instancePtr && instancePtr->waitForTrigger && instancePtr->isReadyToTrigger) {
-            pulse();
-        }
+      if (instancePtr && instancePtr->startOnTrigger) {
+        instancePtr->intervalTimer.begin(instancePtr->intervalISR, instancePtr->pulseInterval);
+        instancePtr->startOnTrigger = false;
+      }
+      if (instancePtr && instancePtr->waitForTrigger && instancePtr->isReadyToTrigger) {
+          pulseISR();
+      }
     }
 
 public:
@@ -117,11 +128,11 @@ public:
           pulseNumber(0) {
         instancePtr = this;
         pinMode(outputPin, OUTPUT);
-        digitalWriteFast(outputPin, LOW);
+        digitalWriteFast(outputPin, inActivate);
 
         if (triggerPin != 255) {
             pinMode(triggerPin, INPUT_PULLDOWN);
-            attachInterrupt(digitalPinToInterrupt(triggerPin), triggerPinISR, RISING);
+            attachInterrupt(digitalPinToInterrupt(triggerPin), triggerPinISR, inputEdge);
         }
     }
 
@@ -208,17 +219,16 @@ public:
     }
 
     void reportNumberOfPulses() {
-      Serial.write(6);
       noInterrupts();
       uint32_t number = numberOfPulses;
       interrupts();
+      Serial.write(6);
       Serial.write((byte *) &number, 4);
     }
 
     void start() {
         // Reset state
         isReadyToTrigger = true;
-        isPulseActive = false;
         isRunning = true;
 
         // Stop any existing timers
@@ -228,12 +238,19 @@ public:
         stopPulseISR();
 
         // no timers running, so we can set volatile variables without interupting interrupts
+        noInterrupts();  // Note that triggerPinISR is always running
         pulseNumber = 0;
+        interrupts();
 
         // Start interval timer to manage pulse cycles
         // start first pulse here, otherwise we would wait pulseInterval for the first pulse
-        intervalTimer.begin(intervalISR, pulseInterval);
-        pulse();
+        
+        if (waitForTrigger && digitalReadFast(triggerPin) == inputStateDeviceIsBusy) {
+          startOnTrigger = true;
+        } else {
+          intervalTimer.begin(intervalISR, pulseInterval);
+          pulseISR();
+        }
 
         // Simplified start confirmation
         Serial.write(1);
@@ -266,8 +283,7 @@ public:
         
         // Reset state
         isRunning = false;
-        isPulseActive = false;
-        isReadyToTrigger = true;
+        isReadyToTrigger = false;
     }
 
     void stop() {
@@ -282,13 +298,10 @@ public:
         // Only run if active
         noInterrupts();
         bool active = isRunning;
+        bool stop = countPulses && pulseNumber == numberOfPulses;
         interrupts();
         if (!active) 
           return;
-
-        noInterrupts();
-        bool stop = countPulses && pulseNumber == numberOfPulses;
-        interrupts();
 
         if (stop) {
           stopNoSerialMessage();
@@ -407,11 +420,14 @@ void setup() {
     // Give some time for serial to initialize
     delay(1000);
 
+    pinMode(inputPin, INPUT_PULLUP);
+    pinMode(outputPin, OUTPUT);
+
     // Create pulse generator on pin 13 with optional trigger on pin 12
     pulsegen = new PulseGenerator(outputPin, inputPin);
 
     // Configure initial defaults
-    pulsegen->configure(50000, 500000, 0, false);
+    pulsegen->configure(1000, 100000, 0, false);
 }
 
 void loop() {
