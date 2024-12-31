@@ -47,36 +47,38 @@ public:
 	// Public interface - Device API
 	//=========================================================================================================================
    int                                             Initialize();
-   int                                             Shutdown();
+   int                                             Shutdown() noexcept;
    void                                            GetName(char* pszName) const;
-   bool                                            Busy() { return false; }
+   bool                                            Busy() noexcept { return false; }
 
 public:
    //=========================================================================================================================
    // Public interface - Storage API
    //=========================================================================================================================
-   int                                             Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle);
-   int                                             ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning);
-   int                                             ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
-   int                                             Close(const char* handle);
-   int                                             Load(const char* path, char* handle);
-   int                                             GetShape(const char* handle, int shape[]);
-   int                                             GetDataType(const char* handle, MM::StorageDataType& pixelDataType);
-   int                                             Delete(char* handle);
-   int                                             List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength);
-   int                                             AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta);
-   int                                             AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta);
-   int                                             GetSummaryMeta(const char* handle, char* meta, int bufSize);
-   int                                             GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta, int bufSize);
-   const unsigned char*                            GetImage(const char* handle, int coordinates[], int numCoordinates);
-   int                                             GetNumberOfDimensions(const char* handle, int& numDimensions);
-   int                                             GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength);
-   int                                             GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength);
-	int															GetImageCount(const char* handle, int& imgcnt);
-   bool                                            IsOpen(const char* handle);
-	bool                                            IsReadOnly(const char* handle);
-   int                                             GetPath(const char* handle, char* path, int maxPathLength);
-	bool															CanLoad(const char* path);
+   int                                             Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle) noexcept;
+   int                                             ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning) noexcept;
+   int                                             ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name) noexcept;
+   int                                             Close(const char* handle) noexcept;
+   int                                             Load(const char* path, char* handle) noexcept;
+   int                                             GetShape(const char* handle, int shape[]) noexcept;
+   int                                             GetDataType(const char* handle, MM::StorageDataType& pixelDataType) noexcept;
+   int                                             Delete(char* handle) noexcept;
+   int                                             List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength) noexcept;
+   int                                             AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta) noexcept;
+   int                                             AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta) noexcept;
+   int                                             GetSummaryMeta(const char* handle, char* meta) noexcept;
+   int                                             GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta) noexcept;
+   const unsigned char*                            GetImage(const char* handle, int coordinates[], int numCoordinates) noexcept;
+   int                                             GetNumberOfDimensions(const char* handle, int& numDimensions) noexcept;
+   int                                             GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) noexcept;
+   int                                             GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength) noexcept;
+	int															GetImageCount(const char* handle, int& imgcnt) noexcept;
+	int															SetCustomMetadata(const char* handle, const char* key, const char* content) noexcept;
+	int															GetCustomMetadata(const char* handle, const char* key, char* content) noexcept;
+   bool                                            IsOpen(const char* handle) noexcept;
+	bool                                            IsReadOnly(const char* handle) noexcept;
+   int                                             GetPath(const char* handle, char* path, int maxPathLength) noexcept;
+	bool															CanLoad(const char* path) noexcept;
 
 protected:
    //=========================================================================================================================
@@ -84,7 +86,7 @@ protected:
    //=========================================================================================================================
    void                                            cacheReduce() noexcept;
    bool                                            scanDir(const std::string& path, char** listOfDatasets, int maxItems, int maxItemLength, int cpos) noexcept;
-	bool															validateCoordinates(const G2SBigTiffDataset* fs, int coordinates[], int numCoordinates) noexcept;
+	bool															validateCoordinates(const G2SBigTiffDataset* fs, int coordinates[], int numCoordinates, bool flexaxis0 = false) noexcept;
 	bool															getDirectIO() const noexcept;
 	int															getFlushCycle() const noexcept;
 	int															getChunkSize() const noexcept;

@@ -432,7 +432,7 @@ int AcqZarrStorage::AppendImage(const char* handle, int sizeInBytes, unsigned ch
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::GetSummaryMeta(const char* handle, char* meta, int bufSize)
+int AcqZarrStorage::GetSummaryMeta(const char* handle, char* meta)
 {
    if (zarrStream == nullptr)
    {
@@ -445,13 +445,14 @@ int AcqZarrStorage::GetSummaryMeta(const char* handle, char* meta, int bufSize)
       return ERR_ZARR_STREAM_ACCESS;
    }
 
-   if (bufSize > 0)
-      meta[0] = 0;
+   // TODO:
+   meta = new char[1];
+   meta[0] = 0;
 
-   return 0;
+   return DEVICE_OK;
 }
 
-int AcqZarrStorage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta, int bufSize)
+int AcqZarrStorage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta)
 {
    if (zarrStream == nullptr)
    {
@@ -464,10 +465,11 @@ int AcqZarrStorage::GetImageMeta(const char* handle, int coordinates[], int numC
       return ERR_ZARR_STREAM_ACCESS;
    }
 
-   if (bufSize > 0)
-      meta[0] = 0;
+   // TODO:
+   meta = new char[1];
+   meta[0] = 0;
 
-   return 0;
+   return DEVICE_OK;
 }
 
 const unsigned char* AcqZarrStorage::GetImage(const char* handle, int coordinates[], int numCoordinates)

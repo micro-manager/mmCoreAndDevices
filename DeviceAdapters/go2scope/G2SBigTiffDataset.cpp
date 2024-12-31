@@ -42,6 +42,7 @@
 #define G2SFOLDER_EXT					".g2s"
 #define G2SFILE_EXT						".g2s.tif"
 #define G2SAXISINFO_FILE				"axisinfo.txt"
+#define G2SCUSTOMMETA_FILE				"custommeta.txt"
 
 /**
  * Class constructor
@@ -198,12 +199,14 @@ void G2SBigTiffDataset::load(const std::string& path, bool dio)
 	samples = 1;
 	imgcounter = 0;
 	metadata.clear();
+	custommeta.clear();
 	activechunk = datachunks.front();
 	activechunk->open(false);
 	activechunk->parse(datasetuid, shape, chunksize, metadata, bitdepth);
 	imgcounter += activechunk->getImageCount();
 	resetAxisInfo();
 	parseAxisInfo();
+	parseCustomMetadata();
 
 	// Validate dataset parameters
 	if(activechunk->getChunkIndex() != 0)
@@ -230,7 +233,7 @@ void G2SBigTiffDataset::load(const std::string& path, bool dio)
 	// Parse headers for other data chunks
 	for(std::size_t i = 1; i < datachunks.size(); i++)
 	{
-		validateDataChunk(i, false);
+		validateDataChunk((std::uint32_t)i, false);
 		imgcounter += datachunks[i]->getImageCount();
 		datachunks[i]->close();
 	}
@@ -247,6 +250,7 @@ void G2SBigTiffDataset::close() noexcept
 	if(writemode && datachunks.size() == 1 && datachunks[0]->isOpen())
 		datachunks[0]->appendMetadata(metadata);
 	writeAxisInfo();
+	writeCustomMetadata();
 	for(const auto& fx : datachunks)
 		fx->close();
 	imgcounter = 0;
@@ -257,6 +261,7 @@ void G2SBigTiffDataset::close() noexcept
 	datachunks.clear();
 	activechunk.reset();
 	axisinfo.clear();
+	custommeta.clear();
 }
 
 /**
@@ -295,7 +300,7 @@ void G2SBigTiffDataset::setShape(const std::vector<std::uint32_t>& dims)
 
 /**
  * Set dataset shape / dimension & axis sizes
- * First two axis are always width and height
+ * Last two axis are always width and height
  * If the shape info is invalid this method will take no effect
  * Shape can only be set in the write mode, before adding any images
  * @param dims Axis sizes list
@@ -325,6 +330,32 @@ void G2SBigTiffDataset::setShape(std::initializer_list<std::uint32_t> dims)
 	// Write shape info
 	if(activechunk)
 		activechunk->writeShapeInfo(shape, chunksize);
+}
+
+/**
+ * Get actual dataset shape / dimension & axis sizes (based on the actual image count)
+ * Last two axis are always width and height
+ * @return Dataset shape
+ */
+std::vector<std::uint32_t> G2SBigTiffDataset::getActualShape() const noexcept
+{
+	std::vector<std::uint32_t> ret = shape;
+	ret[0] = (int)std::ceil((double)imgcounter / getFixBlockImageCount());
+	return ret;
+}
+
+/**
+ * Get actual axis size (based on the actual image count)
+ * @param ind Axis index
+ * @return Axis size
+ */
+std::uint32_t G2SBigTiffDataset::getAxisSize(std::size_t ind) const noexcept 
+{ 
+	if(ind >= shape.size())
+		return 0;
+	if(ind == 0)
+		return (int)std::ceil((double)imgcounter / getFixBlockImageCount());
+	return shape[ind]; 
 }
 
 /**
@@ -434,10 +465,15 @@ void G2SBigTiffDataset::configureCoordinate(int dim, int coord, const std::strin
 {
 	if(!writemode)
 		return;
-	if(dim < 0 || (std::size_t)dim >= axisinfo.size() - 2)
+	if(dim < 0 || coord < 0 || (std::size_t)dim >= axisinfo.size() - 2)
 		return;
-	if(coord < 0 || (std::size_t)coord >= axisinfo[dim].Coordinates.size())
-		return;
+	if((std::size_t)coord >= axisinfo[dim].Coordinates.size())
+	{
+		if(dim == 0)
+			axisinfo[dim].Coordinates.resize((std::size_t)coord + 1);
+		else 
+			return;
+	}
 	axisinfo[dim].Coordinates[coord] = desc;
 }
 
@@ -562,6 +598,45 @@ std::vector<unsigned char> G2SBigTiffDataset::getImage(const std::vector<std::ui
 	else
 		advanceImage();
 	return activechunk->getImage();	
+}
+
+/**
+ * Set custom metadata entry
+ * This method will have no effect in READ mode
+ * @param key Metadata entry key
+ * @param value Metadata entry value
+ */
+void G2SBigTiffDataset::setCustomMetadata(const std::string& key, const std::string& value) noexcept
+{
+	if(!writemode || key.empty())
+		return;
+	custommeta.insert(std::make_pair(key, value));
+}
+
+/**
+ * Get custom metadata entry
+ * If entry is not defined an exception will be thrown
+ * @param key Metadata entry key
+ * @return Metadata entry value
+ * @throws std::runtime_error
+ */
+std::string G2SBigTiffDataset::getCustomMetadata(const std::string& key) const
+{
+	auto it = custommeta.find(key);
+	if(it == custommeta.end())
+		throw std::runtime_error("Invalid custom metadata key: " + key);
+	return it->second;
+}
+
+/**
+ * Check if custom metadata entry is defined
+ * @param key Metadata entry key
+ * @return Metadata entry is defined
+ */
+bool G2SBigTiffDataset::hasCustomMetadata(const std::string& key) const noexcept
+{
+	auto it = custommeta.find(key);
+	return it != custommeta.end();
 }
 
 /**
@@ -726,6 +801,18 @@ std::uint32_t G2SBigTiffDataset::getChunkImageCount() const noexcept
 }
 
 /**
+ * Get number of images in a fix block (dataset subset without the slowest changing axis)
+ * @return Image count
+ */
+std::uint32_t G2SBigTiffDataset::getFixBlockImageCount() const noexcept
+{
+	std::uint32_t ret = 1;
+	for(std::size_t i = 1; i < shape.size() - 2; i++)
+		ret *= shape[i];
+	return ret;
+}
+
+/**
  * Calculate image index from image coordinates
  * Image coordiantes should not contain indices for the last two dimensions (width & height)
  * By convention image acquisitions loops through the coordinates in the descending order (higher coordinates are looped first)
@@ -830,8 +917,14 @@ void G2SBigTiffDataset::parseAxisInfo()
 		{
 			throw std::runtime_error("Unable to load axis info. " + std::string(e.what()) + ", axis: " + std::to_string(ind));
 		}
-		if(axisinfo[ind].Coordinates.size() != axisdim || tokens.size() != (std::size_t)(3 + axisdim))
-			throw std::runtime_error("Unable to load axis info. Axis size missmatch, axis: " + std::to_string(ind));
+		if(tokens.size() != (std::size_t)(3 + axisdim))
+			throw std::runtime_error("Unable to load axis info. Axis info corrupted, axis: " + std::to_string(ind));
+		if(axisinfo[ind].Coordinates.size() != axisdim)
+		{
+			if(ind > 0)
+				throw std::runtime_error("Unable to load axis info. Axis size missmatch, axis: " + std::to_string(ind));
+			axisinfo[ind].Coordinates.resize(axisdim);
+		}
 		axisinfo[ind].Name = tokens[0];
 		axisinfo[ind].Description = tokens[1];
 		for(std::uint32_t i = 0; i < axisdim; i++)
@@ -876,6 +969,10 @@ void G2SBigTiffDataset::writeAxisInfo() const noexcept
 	auto fpath = std::filesystem::u8path(dspath) / G2SAXISINFO_FILE;
 	if(!hasinfo)
 	{
+		std::error_code ec;
+		auto ex = std::filesystem::exists(fpath, ec);
+		if(!ec && ex)
+			std::filesystem::remove(fpath, ec);
 		return;
 	}
 
@@ -890,5 +987,67 @@ void G2SBigTiffDataset::writeAxisInfo() const noexcept
 			fs << ",\"" << cinf << "\"";
 		fs << std::endl;
 	}
+	fs.close();
+}
+
+/**
+ * Parse custom metadata
+ * Axis info is expected to be stored in a file: 'custommeta.txt'
+ * @throws std::runtime_error
+ */
+void G2SBigTiffDataset::parseCustomMetadata()
+{
+	auto fpath = std::filesystem::u8path(dspath) / G2SCUSTOMMETA_FILE;
+	if(!std::filesystem::exists(fpath))
+		return;
+
+	// Load file content
+	std::fstream fs(fpath.u8string(), std::ios::in);
+	if(!fs.is_open())
+		throw std::runtime_error("Unable to load custom metadata. Opening metadata file failed");
+
+	int ind = 0;
+	std::string line = "";
+	while(std::getline(fs, line))
+	{
+		if(line.empty())
+			continue;
+		std::vector<std::string> tokens = splitLineCSV(line);
+		if(tokens.size() != 2)
+			throw std::runtime_error("Unable to load custom metadata. Corrupted metadata entry: " + std::to_string(ind));
+		custommeta.insert(std::make_pair(tokens[0], tokens[1]));
+		ind++;
+	}
+}
+
+/**
+ * Write custom metadata
+ * Custom metadata will be stored in a separate file: 'custommeta.txt'
+ * If no metadata is defined file won't be created
+ * Axis info will be stored in plain text, CSV-like format
+ */
+void G2SBigTiffDataset::writeCustomMetadata() const noexcept
+{
+	// Check if custom metadata is set, and that we are in WRITE mode
+	if(!writemode)
+		return;
+
+	auto fpath = std::filesystem::u8path(dspath) / G2SCUSTOMMETA_FILE;
+	if(custommeta.empty())
+	{
+		// If custom metadata is empty, but the file exists -> delete it before exiting
+		std::error_code ec;
+		auto ex = std::filesystem::exists(fpath, ec);
+		if(!ec && ex)
+			std::filesystem::remove(fpath, ec);
+		return;
+	}
+
+	// Write data to a file
+	std::fstream fs(fpath.u8string(), std::ios::out | std::ios::trunc);
+	if(!fs.is_open())
+		return;
+	for(const auto& keyval : custommeta)
+		fs << "\"" << keyval.first << "\",\"" << keyval.second << "\"" << std::endl;
 	fs.close();
 }
