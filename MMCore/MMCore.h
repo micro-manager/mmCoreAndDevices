@@ -653,6 +653,8 @@ public:
 	int getImageCount(const char* handle) throw (CMMError);
    std::string getSummaryMeta(const char* handle) throw (CMMError);
    std::string getImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   void setCustomMeta(const char* handle, const char* key, const char* meta);
+   std::string getCustomMeta(const char* handle, const char* key);
 	STORAGEIMGOUT getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
    void snapAndSave(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
    void saveNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);

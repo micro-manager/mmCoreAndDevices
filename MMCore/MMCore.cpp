@@ -7102,6 +7102,7 @@ void CMMCore::InitializeErrorMessages()
    errorText_[MMERR_BadAffineTransform] = "Bad affine transform.  Affine transforms need to have 6 numbers; 2 rows of 3 column.";
    errorText_[MMERR_StorageNotAvailable] = "Storage not loaded or initialized.";
    errorText_[MMERR_StorageImageNotAvailable] = "Image not available at specified coordinates.";
+   errorText_[MMERR_StorageMetadataNotAvailable] = "Metadata not available.";
 }
 
 void CMMCore::CreateCoreProperties()
@@ -7737,6 +7738,13 @@ bool CMMCore::isDatasetReadOnly(const char* handle)
 	throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
 
+/**
+ * Retrieves the shape (dimensions) of a dataset
+ * Gets the size of each dimension for the specified dataset handle.
+ *
+ * \param handle The handle of the dataset to query
+ * \return Vector of dimension sizes, where each element represents the size of one dimension
+ */
 std::vector<long> CMMCore::getDatasetShape(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
@@ -7754,6 +7762,14 @@ std::vector<long> CMMCore::getDatasetShape(const char* handle) throw (CMMError)
    }
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
 }
+
+/**
+ * Returns the pixel type for the dataset.
+ * The pixel type enum is specific to storage device.
+ *
+ * \param handle The handle of the dataset to query
+ * \return storage type
+ */
 
 MM::StorageDataType CMMCore::getDatasetPixelType(const char* handle) throw (CMMError)
 {
@@ -7789,9 +7805,19 @@ void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pix
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
+      int ret(0);
       mm::DeviceModuleLockGuard guard(storage);
-      std::vector<int> coords(coordinates.begin(), coordinates.end());
-      int ret = storage->AddImage(handle, sizeInBytes, pixels, coords, imageMeta);
+      if (coordinates.empty())
+      {
+         // append
+         ret = storage->AppendImage(handle, sizeInBytes, pixels, imageMeta);
+      }
+      else
+      {
+         // insert
+         std::vector<int> coords(coordinates.begin(), coordinates.end());
+         ret = storage->AddImage(handle, sizeInBytes, pixels, coords, imageMeta);
+      }
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -7819,8 +7845,16 @@ void CMMCore::addImage(const char* handle, int sizeInShorts, const STORAGEIMG16 
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
-      std::vector<int> coords(coordinates.begin(), coordinates.end());
-      int ret = storage->AddImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), coords, imageMeta);
+      int ret(0);
+      if (coordinates.empty())
+      {
+         ret = storage->AppendImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), imageMeta);
+      }
+      else
+      {
+         std::vector<int> coords(coordinates.begin(), coordinates.end());
+         ret = storage->AddImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), coords, imageMeta);
+      }
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -7994,7 +8028,7 @@ std::string CMMCore::getSummaryMeta(const char* handle) throw (CMMError)
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
-         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_StorageMetadataNotAvailable);
       }
       return meta;
    }
@@ -8021,7 +8055,62 @@ std::string CMMCore::getImageMeta(const char* handle, const std::vector<long>& c
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
-         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_StorageMetadataNotAvailable);
+      }
+      return meta;
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Sets custom metadata for a given dataset.
+ * Custom metadata is re-writable, i.e. it can be called at any time,
+ * during acquisition or after.
+ *
+ * @param handle   Dataset handle to set metadata for
+ * @param key      Metadata key/name identifier
+ * @param meta     Metadata string to be stored
+ *
+ * @throws MMCoreException If the specified device handle is invalid or key not found
+ */
+void CMMCore::setCustomMeta(const char* handle, const char* key, const char* meta)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      std::string meta;
+      int ret = storage->SetCustomMeta(handle, key, meta);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError("Error writing custom metadata", MMERR_DEVICE_GENERIC);
+      }
+   }
+   throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Retrieves custom metadata for a given dataset.
+ *
+ * @param handle    Dataset handle to get metadata from
+ * @param key      Metadata key/name identifier
+ *
+ * @return         Stored metadata string for the specified key
+ * @throws MMCoreException If the specified device handle is invalid or key not found
+ */
+std::string CMMCore::getCustomMeta(const char* handle, const char* key)
+{
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      mm::DeviceModuleLockGuard guard(storage);
+      std::string meta;
+      int ret = storage->GetCustomMeta(handle, key, meta);
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_StorageMetadataNotAvailable);
       }
       return meta;
    }
@@ -8091,10 +8180,19 @@ void CMMCore::snapAndSave(const char* handle, const std::vector<long>& coordinat
       std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
       if (storage)
       {
-         mm::DeviceModuleLockGuard guard(storage);
-         std::vector<int> coords(coordinates.begin(), coordinates.end());
+         mm::DeviceModuleLockGuard storageGuard(storage);
+         int ret(0);
          int imageSize = camera->GetImageWidth() * camera->GetImageHeight() * camera->GetImageBytesPerPixel();
-         int ret = storage->AddImage(handle, imageSize, pBuf, coords, imageMeta);
+
+         if (coordinates.empty())
+         {
+            ret = storage->AppendImage(handle, imageSize, pBuf, imageMeta);
+         }
+         else
+         {
+            std::vector<int> coords(coordinates.begin(), coordinates.end());
+            ret = storage->AddImage(handle, imageSize, pBuf, coords, imageMeta);
+         }
          if (ret != DEVICE_OK)
          {
             logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8132,10 +8230,18 @@ void CMMCore::saveNextImage(const char* handle, const std::vector<long>& coordin
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
-      mm::DeviceModuleLockGuard guard(storage);
-      std::vector<int> coords(coordinates.begin(), coordinates.end());
+      int ret(0);
       int imageSize = img->Width() * img->Height() * img->Depth();
-      int ret = storage->AddImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), coords, imageMeta);
+      mm::DeviceModuleLockGuard guard(storage);
+      if (coordinates.empty())
+      {
+         ret = storage->AppendImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), imageMeta);
+      }
+      else
+      {
+         std::vector<int> coords(coordinates.begin(), coordinates.end());
+         ret = storage->AddImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), coords, imageMeta);
+      }
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8149,7 +8255,7 @@ void CMMCore::saveNextImage(const char* handle, const std::vector<long>& coordin
 /**
  * Connects currently open dataset to circular buffer and streams images to disk.
  * All images currently in the buffer and entering the buffer in the future will be sent to the storage.
- * This remains in effect until the connection is canceled by calling the same function with the null handle.
+ * This remains in effect until the connection is canceled by calling the same function with the null or empty handle.
  * 
  * Metadata and coordinates are automatically generated, therefore images should be acquired in the order
  * specified in the shape.
@@ -8160,6 +8266,7 @@ void CMMCore::saveNextImage(const char* handle, const std::vector<long>& coordin
 void CMMCore::attachStorageToCircularBuffer(const char* handle)  throw (CMMError)
 {
    // TODO
+   throw CMMError("Feature not supported", MMERR_GENERIC);
 }
 
 /**
@@ -8171,6 +8278,9 @@ std::string CMMCore::getAttachedStorage()
    return std::string();
 }
 
+/**
+ * Returns the last error that occured during background streaming.
+ */
 std::string CMMCore::getLastAttachedStorageError()
 {
    // TODO:
