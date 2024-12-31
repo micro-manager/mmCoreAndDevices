@@ -2480,6 +2480,17 @@ private:
    std::map<std::string, long> labels_;
 };
 
+/**
+* Base class for creating Storage Device adapters.
+*/
+template <class U>
+class CStorageBase : public CDeviceBase<MM::Storage, U>
+{
+public:
+   bool CanLoad(const char* path) { return false; }
+   int GetProgress(const char* handle) { return -1; }
+};
+
 
 // _t, a macro for timing single lines.
 // This macros logs the text of the line, x, measures

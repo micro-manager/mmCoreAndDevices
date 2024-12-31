@@ -86,6 +86,10 @@
 #   define MMCORE_DEPRECATED(prototype) prototype
 #endif
 
+typedef unsigned char* STORAGEIMG;
+typedef unsigned short* STORAGEIMG16;
+typedef unsigned char* STORAGEIMGOUT;
+typedef unsigned char* STORAGEMETA;
 
 class CPluginManager;
 class CircularBuffer;
@@ -105,6 +109,7 @@ class SLMInstance;
 class ShutterInstance;
 class StageInstance;
 class XYStageInstance;
+class StorageInstance;
 
 class CMMCore;
 
@@ -120,7 +125,6 @@ enum DeviceInitializationState {
    InitializedSuccessfully,
    InitializationFailed,
 };
-
 
 /// The Micro-Manager Core.
 /**
@@ -278,6 +282,7 @@ public:
    std::string getSLMDevice();
    std::string getGalvoDevice();
    std::string getChannelGroup();
+   std::string getStorageDevice();
    void setCameraDevice(const char* cameraLabel) throw (CMMError);
    void setShutterDevice(const char* shutterLabel) throw (CMMError);
    void setFocusDevice(const char* focusLabel) throw (CMMError);
@@ -287,6 +292,8 @@ public:
    void setSLMDevice(const char* slmLabel) throw (CMMError);
    void setGalvoDevice(const char* galvoLabel) throw (CMMError);
    void setChannelGroup(const char* channelGroup) throw (CMMError);
+   void setStorageDevice(const char* storageLabel) throw (CMMError);
+
    ///@}
 
    /** \name System state cache.
@@ -625,6 +632,38 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
 
+   /** \name Storage API */
+   ///@{
+   std::string createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta) throw (CMMError);
+   void closeDataset(const char* handle) throw (CMMError);
+   std::string loadDataset(const char* path) throw (CMMError);
+   std::string getDeviceNameToOpen(const char* path);
+   std::string getDatasetPath(const char* handle) throw (CMMError);
+   bool isDatasetOpen(const char* handle);
+	bool isDatasetReadOnly(const char* handle);
+   std::vector<long> getDatasetShape(const char* handle) throw (CMMError);
+   MM::StorageDataType getDatasetPixelType(const char* handle) throw (CMMError);
+   void addImage(const char* handle, int sizeinBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+	void addImage(const char* handle, int sizeinShorts, const STORAGEIMG16 pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void configureDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError);
+   void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError);
+	std::string getDimensionName(const char* handle, int dimension) throw (CMMError);
+	std::string getDimensionMeaning(const char* handle, int dimension) throw (CMMError);
+	std::string getCoordinateName(const char* handle, int dimension, int coordinate) throw (CMMError);
+	int getImageCount(const char* handle) throw (CMMError);
+   std::string getSummaryMeta(const char* handle) throw (CMMError);
+   std::string getImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   void setCustomMeta(const char* handle, const char* key, const char* meta);
+   std::string getCustomMeta(const char* handle, const char* key);
+	STORAGEIMGOUT getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   void snapAndSave(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void saveNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void attachStorageToCircularBuffer(const char* handle) throw (CMMError);
+   std::string getAttachedStorage();
+   std::string getLastAttachedStorageError();
+
+   ///@}
+
 private:
    // make object non-copyable
    CMMCore(const CMMCore&);
@@ -647,6 +686,7 @@ private:
    std::weak_ptr<SLMInstance> currentSLMDevice_;
    std::weak_ptr<GalvoInstance> currentGalvoDevice_;
    std::weak_ptr<ImageProcessorInstance> currentImageProcessor_;
+   std::weak_ptr<StorageInstance> currentStorage_;
 
    std::string channelGroup_;
    long pollingIntervalMs_;

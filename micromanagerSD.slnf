@@ -1,0 +1,14 @@
+{
+  "solution": {
+    "path": "micromanager.sln",
+    "projects": [
+      "DeviceAdapters\\DemoCamera\\DemoCamera.vcxproj",
+      "DeviceAdapters\\go2scope\\go2scope.vcxproj",
+      "MMCoreJ_wrap\\MMCoreJ_wrap.vcxproj",
+      "MMCore\\MMCore.vcxproj",
+      "MMDevice\\MMDevice-SharedRuntime.vcxproj",
+      "MMDevice\\MMDevice-StaticRuntime.vcxproj",
+      "Tests\\G2SStorageTest\\G2SStorageTest.vcxproj"
+    ]
+  }
+}
