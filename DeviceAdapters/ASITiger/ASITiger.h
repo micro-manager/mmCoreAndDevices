@@ -24,8 +24,8 @@
 // BASED ON:      ASIStage.h, ASIFW1000.h, Arduino.h, and DemoCamera.h
 //
 
-#ifndef _ASITiger_H_
-#define _ASITiger_H_
+#ifndef ASITIGER_H
+#define ASITIGER_H
 
 #include <string>
 #include <vector>
@@ -155,10 +155,10 @@ const char* const g_SerialTerminatorFW = "\n\r";
 const char* const g_SerialTerminatorLine = "\r";
 const char* const g_SerialTerminatorOverall = "\n";
 const char* const g_SerialTerminatorMultiLine = "\r";
-const string g_EmptyAxisLetterStr = " ";     // single char but like convenience of strings
-const string g_EmptyCardAddressCode = " ";   // ascii 0x31 for '1' through ascii 0x39 for '9', then 0x81 upward (extended ascii)
-const string g_EmptyCardAddressStr = "00";   // hex representation of the address, eg 31..39, 81 upward
-const string g_EmptyCardAddressChar = "";    // Tiger address character (stored as string)
+const std::string g_EmptyAxisLetterStr = " ";     // single char but like convenience of strings
+const std::string g_EmptyCardAddressCode = " ";   // ascii 0x31 for '1' through ascii 0x39 for '9', then 0x81 upward (extended ascii)
+const std::string g_EmptyCardAddressStr = "00";   // hex representation of the address, eg 31..39, 81 upward
+const std::string g_EmptyCardAddressChar = "";    // Tiger address character (stored as string)
 const char g_NameInfoDelimiter = ':';
 
 // general device property names
@@ -778,18 +778,17 @@ const char* const g_DACMicronsPerMvYPropertyName = "MicronsPerMillivoltY"; // pr
 
 struct build_info_type
 {
-   string buildname;
+   std::string buildname;
    unsigned char numAxes;
-   vector<char> vAxesLetter;
-   vector<char> vAxesType;
-   vector<string> vAxesAddr;  // string to handle unprintable characters
-   vector<string> vAxesAddrHex;  // string for simplicity, logically it should be int though
-   vector<int> vAxesProps;
-   vector<string> defines;
+   std::vector<char> vAxesLetter;
+   std::vector<char> vAxesType;
+   std::vector<std::string> vAxesAddr;  // string to handle unprintable characters
+   std::vector<std::string> vAxesAddrHex;  // string for simplicity, logically it should be int though
+   std::vector<int> vAxesProps;
+   std::vector<std::string> defines;
 };
 
 // define names
 const char* const g_Define_SINGLEAXIS_FUNCTION = "SINGLEAXIS_FUNCTION";
 
-
-#endif //_ASITiger_H_
+#endif // ASITIGER_H

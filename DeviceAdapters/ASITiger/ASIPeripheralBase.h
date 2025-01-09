@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h
 //
 
-#ifndef _ASIPeripheralBase_H_
-#define _ASIPeripheralBase_H_
+#ifndef ASIPERIPHERALBASE_H
+#define ASIPERIPHERALBASE_H
 
 #include "ASITiger.h"
 #include "ASIBase.h"
@@ -63,7 +63,7 @@ public:
       // NB: can be called even if the device was never fully initialized
       char deviceLabel[MM::MaxStrLength];
       this->GetLabel(deviceLabel);
-      string str(deviceLabel);
+      std::string str(deviceLabel);
       if (hub_) {
          hub_->UnRegisterPeripheral(str);
       }
@@ -74,7 +74,7 @@ public:
    // Note that initialize_ is set by the concrete child class.
    int PeripheralInitialize(bool skipFirmware = false)
    {
-      ostringstream command; command.str("");
+      std::ostringstream command; command.str("");
 
       // get the hub information
       MM::Hub* genericHub = this->GetParentHub();
@@ -116,7 +116,7 @@ public:
       // register peripheral with the hub, get label in c-string and convert to c++ string
       char deviceLabel[MM::MaxStrLength];
       this->GetLabel(deviceLabel);
-      string str(deviceLabel);
+      std::string str(deviceLabel);
       hub_->RegisterPeripheral(str, addressChar_);
 
       // I can't seem to define action handlers here that will apply to derived classes
@@ -137,23 +137,23 @@ public:
 
 protected:
    ASIHub *hub_;           // pointer to hub object used for serial communication
-   string addressString_;  // address within hub, in hex format, should be two characters (e.g. '31')
-   string addressChar_;    // address within hub, in single character (allowed to be extended ASCII so use string to store)
+   std::string addressString_;  // address within hub, in hex format, should be two characters (e.g. '31')
+   std::string addressChar_;    // address within hub, in single character (allowed to be extended ASCII so use string to store)
    bool refreshProps_;     // true when property values should be read anew from controller each time
    bool refreshOverride_;  // true when device wants to manually force refreshes temporarily
 
    // related to creating "extended" names containing address and axis letters
    static bool IsExtendedName(const char* name)
    {
-      vector<string> vName;
+      std::vector<std::string> vName;
       CDeviceUtils::Tokenize(name, vName, ":");
       return (vName.size() > 2);
    }
 
    // returns single-character string
-   static string GetAxisLetterFromExtName(const char* name, int position = 0)
+   static std::string GetAxisLetterFromExtName(const char* name, int position = 0)
    {
-      vector<string> vName;
+      std::vector<std::string> vName;
       CDeviceUtils::Tokenize(name, vName, ":");
       if (vName.size() > 1)
          return (vName[1].substr(position,1));
@@ -161,9 +161,9 @@ protected:
          return g_EmptyAxisLetterStr;
    }
 
-   static string GetHexAddrFromExtName(const char* name)
+   static std::string GetHexAddrFromExtName(const char* name)
    {
-      vector<string> vName;
+      std::vector<std::string> vName;
       CDeviceUtils::Tokenize(name, vName, ":");
       if (vName.size() > 2)
          return (vName[2]);
@@ -173,7 +173,7 @@ protected:
 
    static int GetChannelFromExtName(const char* name)
    {
-      vector<string> vName;
+      std::vector<std::string> vName;
       CDeviceUtils::Tokenize(name, vName, ":");
       if (vName.size() > 3)
          return atoi(vName[3].c_str());
@@ -201,13 +201,13 @@ private:
    // does the dirty work of converting a two-character hex (e.g. F5) into the single character
    // only works for valid TG-1000 addresses
    // see ConvertToTigerRawAddress comments for more details
-   static string ConvertTwoCharStringToHexChar(const string &s)
+   static std::string ConvertTwoCharStringToHexChar(const string &s)
    {
       if (s.size() != 2)
          return g_EmptyCardAddressCode;
 
       unsigned int code;
-      stringstream ss;
+      std::stringstream ss;
       ss << hex << s;
       ss >> code;
       if ((code >= 0x31 && code <= 0x39) || (code >= 0x81 && code <= 0xF5))
@@ -215,7 +215,7 @@ private:
          ss.str("");
          ss.clear(); // clears hex flag
          ss << (char) code;
-         string s2;
+         std::string s2;
          ss >> s2;
          return s2;
       }
@@ -223,7 +223,7 @@ private:
          return g_EmptyCardAddressCode;
    }
 
-   static string ConvertToTigerRawAddress(const string &s)
+   static std::string ConvertToTigerRawAddress(const std::string &s)
    {
       // Tiger addresses are 0x31 to 0x39 and then 0x81 to 0xF5 (i.e. '1' to '9' and then extended ASCII)
       // these addresses are prepended (in extended ASCII char) to serial commands that are addressed
@@ -236,7 +236,7 @@ private:
       if ((s.size() == 0) || (s.size() % 2))
          return g_EmptyCardAddressCode;
 
-      string s2 = "";
+      std::string s2 = "";
       for(std::string::size_type iii = 0; iii < s.size()/2; ++iii)
       {
          // operate on chunks of two characters
@@ -248,4 +248,4 @@ private:
 };
 
 
-#endif // _ASIPeripheralBase_H_
+#endif // ASIPERIPHERALBASE_H

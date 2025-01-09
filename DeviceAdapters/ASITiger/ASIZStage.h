@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASIZStage_H_
-#define _ASIZStage_H_
+#ifndef ASIZSTAGE_H
+#define ASIZSTAGE_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -36,12 +36,10 @@ public:
    ~CZStage() { }
   
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // ZStage API
-   // -----------
    int Stop();
    int Home();
 
@@ -69,7 +67,6 @@ public:
    int SendStageSequence();
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnWaitTime             (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -127,7 +124,7 @@ public:
 private:
    double unitMult_;
    double stepSizeUm_;
-   string axisLetter_;
+   std::string axisLetter_;
    bool advancedPropsEnabled_;
    bool speedTruth_;
    double lastSpeed_;
@@ -143,4 +140,4 @@ private:
    int OnSaveJoystickSettings();
 };
 
-#endif //_ASIZStage_H_
+#endif // ASIZSTAGE_H
