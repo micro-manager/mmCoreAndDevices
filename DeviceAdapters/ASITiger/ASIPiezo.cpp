@@ -1059,7 +1059,6 @@ int CPiezo::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing

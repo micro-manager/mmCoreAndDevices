@@ -1751,8 +1751,6 @@ int CXYStage::OnNrExtraMoveReps(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CXYStage::OnAxisPolarityX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing
@@ -1771,8 +1769,6 @@ int CXYStage::OnAxisPolarityX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CXYStage::OnAxisPolarityY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing

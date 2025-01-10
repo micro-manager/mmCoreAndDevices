@@ -2748,8 +2748,6 @@ int CScanner::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnAxisPolarityX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing
@@ -2768,8 +2766,6 @@ int CScanner::OnAxisPolarityX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnAxisPolarityY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing

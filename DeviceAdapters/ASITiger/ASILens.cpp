@@ -970,7 +970,6 @@ int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing
