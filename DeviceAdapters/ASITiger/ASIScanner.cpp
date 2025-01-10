@@ -98,19 +98,19 @@ int CScanner::Initialize()
    // read the unit multiplier for X and Y axes
    // ASI's unit multiplier is how many units per degree rotation for the micromirror card
    ostringstream command;
-   command.str(""); command << "UM " << axisLetterX_ << "? ";
+   command.str(""); command << "UM " << axisLetterX_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(unitMultX_) );
-   command.str(""); command << "UM " << axisLetterY_ << "? ";
+   command.str(""); command << "UM " << axisLetterY_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(unitMultY_) );
 
    // read the home position (used for beam shuttering)
-   command.str(""); command << "HM " << axisLetterX_ << "? ";
+   command.str(""); command << "HM " << axisLetterX_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(shutterX_) );  // already in units of degrees
 
-   command.str(""); command << "HM " << axisLetterY_ << "? ";
+   command.str(""); command << "HM " << axisLetterY_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(shutterY_) ); // already in units of degrees
 

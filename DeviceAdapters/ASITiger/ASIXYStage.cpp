@@ -81,12 +81,12 @@ int CXYStage::Initialize()
    ostringstream command;
    command.str("");
    double tmp;
-   command << "UM " << axisLetterX_ << "? ";
+   command << "UM " << axisLetterX_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    unitMultX_ = tmp/1000;
    command.str("");
-   command << "UM " << axisLetterY_ << "? ";
+   command << "UM " << axisLetterY_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    unitMultY_ = tmp/1000;
@@ -563,23 +563,23 @@ int CXYStage::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax)
 {
    // limits are always represented in terms of mm, independent of unit multiplier
    ostringstream command; command.str("");
-   command << "SL " << axisLetterX_ << "? ";
+   command << "SL " << axisLetterX_ << "?";
    double tmp;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    xMin = (long) (tmp*1000/stepSizeXUm_);
    command.str("");
-   command << "SU " << axisLetterX_ << "? ";
+   command << "SU " << axisLetterX_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
    xMax = (long) (tmp*1000/stepSizeXUm_);
    command.str("");
-   command << "SL " << axisLetterY_ << "? ";
+   command << "SL " << axisLetterY_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    yMin = (long) (tmp*1000/stepSizeYUm_);
    command.str("");
-   command << "SU " << axisLetterY_ << "? ";
+   command << "SU " << axisLetterY_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
    yMax = (long) (tmp*1000/stepSizeYUm_);
