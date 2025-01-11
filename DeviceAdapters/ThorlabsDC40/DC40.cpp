@@ -1,23 +1,42 @@
 #include "DC40.h"
 
+const char* g_serialNumber = "Serial Number";
 const char* g_operatingMode = "Operating Mode";
 const char* g_operatingModeCW = "CW";
 const char* g_operatingModeTTL = "TTL";
 const char* g_operatingModeMOD = "MOD";
 
 
-DC40::DC40(const char* serialNr) :
+DC40::DC40(const char* deviceName) :
     initialized_(false),
     current_(0.0),
     currentLimit_(4000.0),
     state_(false),
     operatingMode_("CW"),
     instrumentHandle_(0),
-    serialNr_(serialNr),
-    name_("DC40LED")
+    serialNr_("NA"),
+    deviceName_(deviceName)
 {
     // Create properties
-    CreateProperty(MM::g_Keyword_Name, name_.c_str(), MM::String, true); 
+    CreateProperty(MM::g_Keyword_Name, deviceName_.c_str(), MM::String, true); 
+
+    CPropertyAction* pAct = new CPropertyAction(this, &DC40::OnSerialNumber);
+    int nRet = CreateProperty(g_serialNumber, serialNr_.c_str(), MM::String, false, pAct, true);
+    if (nRet != DEVICE_OK)
+       return;
+
+    ViUInt32 numDevices;
+    int error = TLDC_findRsrc(VI_NULL, &numDevices);
+    if (error) return;
+
+    for (ViUInt32 i = 0; i < numDevices; i++) {
+        ViChar resourceName[TLDC_BUFFER_SIZE];
+        ViChar serNr[TLDC_BUFFER_SIZE];
+        ViPBoolean available = false;
+        error = TLDC_getRsrcInfo(0, i, resourceName, serNr, VI_NULL, available);
+        if (error) return;
+        AddAllowedValue(g_serialNumber, serNr);
+    }
 }
 
 DC40::~DC40()
@@ -30,34 +49,39 @@ int DC40::Initialize()
 {
     if (initialized_)
         return DEVICE_OK;
-    /*
-    // Find and connect to the first available device
+    
+
+    // Find the correct device based on serial number
     ViUInt32 numDevices;
+    ViChar rsrcDescr[TLDC_BUFFER_SIZE];
+    for (uint32_t i = 0; i < TLDC_BUFFER_SIZE; i++)
+      rsrcDescr[i] = '\0';
+    bool found = false;
     int error = TLDC_findRsrc(VI_NULL, &numDevices);
+    if (error) return DEVICE_NOT_CONNECTED;
+
+    for (ViUInt32 i = 0; i < numDevices; i++) {
+        ViChar resourceName[TLDC_BUFFER_SIZE];
+        ViChar serNr[TLDC_BUFFER_SIZE];
+        ViPBoolean available = false;
+        error = TLDC_getRsrcInfo(0, i, resourceName, serNr, VI_NULL, available);
+        if (error) return DEVICE_NOT_CONNECTED;  // TODO: LOG!!!
+        if (serialNr_ == serNr) {
+            error = TLDC_getRsrcName(0, i, rsrcDescr);
+            if (error) return DEVICE_NOT_CONNECTED;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found)
+        return DEVICE_NOT_CONNECTED;
+
+
+    error = TLDC_init(rsrcDescr, VI_OFF, VI_OFF, &instrumentHandle_);
     if (error) return HandleError(error);
 
-    if (numDevices < 1)
-        return  DEVICE_NOT_CONNECTED;
-
-    ViChar resourceName[TLDC_BUFFER_SIZE];
-    error = TLDC_getRsrcName(VI_NULL, 0, resourceName);
-    if (error) return HandleError(error);
-    */
-
-    // Initialize the device
-    char* name = new char[deviceName_.length() + 1];
-    strcpy(name, deviceName_.c_str());
-    int error = TLDC_init(name, VI_OFF, VI_OFF, &instrumentHandle_);
-    if (error) return HandleError(error);
-
-    error = TLDC_close(instrumentHandle_);
-    if (error) return HandleError(error);
-
-    // Initialize the device
-    error = TLDC_init(name, VI_OFF, VI_OFF, &instrumentHandle_);
-    if (error) return HandleError(error);
-    delete[] name;
-
+    
     ViStatus err = VI_SUCCESS;
     ViChar ledName[30] = { "nothing read" };
     ViChar ledSerialNumber[30] = { "nothing read" };
@@ -95,12 +119,12 @@ int DC40::Initialize()
     // LED current setpoint
     pAct = new CPropertyAction(this, &DC40::OnCurrent);
     CreateProperty("Current", "0.0", MM::Float, false, pAct);
-    SetPropertyLimits("Current", 0.0, 4000.0);
+    SetPropertyLimits("Current", 0.0, 1.225); // TODO: get this from the LED
 
-    // LED current limit
-    pAct = new CPropertyAction(this, &DC40::OnCurrentLimit);
-    CreateProperty("CurrentLimit", "4000.0", MM::Float, false, pAct);
-    SetPropertyLimits("CurrentLimit", 100.0, 4000.0);
+    // TODO: LED current limit
+    // pAct = new CPropertyAction(this, &DC40::OnCurrentLimit);
+    // CreateProperty("CurrentLimit", "1.225", MM::Float, false, pAct);
+    // SetPropertyLimits("CurrentLimit", 0.5, 4.0);
 
     // LED state (On/Off)
     pAct = new CPropertyAction(this, &DC40::OnState);
@@ -129,12 +153,25 @@ int DC40::Shutdown()
 
 void DC40::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(name, name_.c_str());
+    CDeviceUtils::CopyLimitedString(name, deviceName_.c_str());
 }
 
 bool DC40::Busy()
 {
     return false;
+}
+
+int DC40::OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(serialNr_.c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        pProp->Get(serialNr_);
+    }
+    return DEVICE_OK;
 }
 
 int DC40::OnOperatingMode(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -148,17 +185,27 @@ int DC40::OnOperatingMode(MM::PropertyBase* pProp, MM::ActionType eAct)
         std::string mode;
         pProp->Get(mode);
 
-        ViUInt32 modeNr = TLDC_LED_MODE_CW;
-        if (mode == g_operatingModeMOD)
-            modeNr = TLDC_LED_MODE_MOD;
-        else if (mode == g_operatingModeTTL)
-            modeNr = TLDC_LED_MODE_TTL;
+        if (mode != operatingMode_)
+        {
+            bool open = false;
+            GetOpen(open);
+            if (open)
+               SetOpen(false);
 
-        int error = TLDC_setLedMode(instrumentHandle_, modeNr);
-        if (error) 
-            return HandleError(error);
+            ViUInt32 modeNr = TLDC_LED_MODE_CW;
+            if (mode == g_operatingModeMOD)
+               modeNr = TLDC_LED_MODE_MOD;
+            else if (mode == g_operatingModeTTL)
+               modeNr = TLDC_LED_MODE_TTL;
 
-        operatingMode_ = mode;
+            int error = TLDC_setLedMode(instrumentHandle_, modeNr);
+            if (error)
+               return HandleError(error);
+
+            if (open)
+               SetOpen(true);
+            operatingMode_ = mode;
+        }
     }
     return DEVICE_OK;
 }
@@ -201,11 +248,31 @@ int DC40::OnCurrentLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
+int DC40::SetOpen(bool state)
+{
+    const char* parm = state ? "1" : "0";
+    return SetProperty(MM::g_Keyword_State, parm);
+}
+
+int DC40::GetOpen(bool& state) {
+    long result;
+    int ret = GetProperty(MM::g_Keyword_State, result);
+    state = result == 1;
+    return ret;
+}
+
 int DC40::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set(state_ ? 1L : 0L);
+       ViBoolean ledOutputState;
+       int error = TLDC_getLedOutputState(instrumentHandle_, &ledOutputState);
+       if (error)
+          return DEVICE_ERR;
+
+       state_ = ledOutputState;
+
+       pProp->Set(state_ ? 1L : 0L);
     }
     else if (eAct == MM::AfterSet)
     {
