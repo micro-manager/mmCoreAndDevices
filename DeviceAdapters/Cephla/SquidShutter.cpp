@@ -191,14 +191,20 @@ int SquidShutter::Initialize()
 
    if (hasLasers_)
    {
-      for (int i = 0; i < NR_LASERS; i++)
+      // Create Laser intensity properties for the known laser lines
+      for (uint8_t i = 0; i < NR_LASERS; i++)
       {
          CPropertyActionEx* pActEx = new CPropertyActionEx(this, &SquidShutter::OnLaserIntensity, i);
          ret = CreateProperty(LASERS[i].c_str(), "0", MM::Integer, false, pActEx);
          if (ret != DEVICE_OK)
             return ret;
          SetPropertyLimits(LASERS[i].c_str(), 0, 65535);
+         // Set the DACs to 0-2.5V range
+         ret = hub_->SetDacGain(i, false);
+         if (ret != DEVICE_OK)
+            return ret;
       }
+
    }
 
 
