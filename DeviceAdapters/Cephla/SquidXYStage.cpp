@@ -125,7 +125,7 @@ int SquidXYStage::Initialize()
    if (!hub_ || !hub_->IsPortAvailable()) {
       return ERR_NO_PORT_SET;
    }
-   int ret = hub_->assignXYStageDevice(this);
+   int ret = hub_->AssignXYStageDevice(this);
    if (ret != DEVICE_OK)
       return ret;
    char hubLabel[MM::MaxStrLength];
