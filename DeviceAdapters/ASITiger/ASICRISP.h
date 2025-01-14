@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASICRISP_H_
-#define _ASICRISP_H_
+#ifndef ASICRISP_H
+#define ASICRISP_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -85,4 +85,4 @@ private:
    int ForceSetFocusState(string focusState);
 };
 
-#endif // end _ASICRISP_H_
+#endif // ASICRISP_H

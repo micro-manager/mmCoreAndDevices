@@ -79,7 +79,7 @@ int CDAC::Initialize()
 	// ASI's unit multiplier is how many units per volt, so divide by 1 here to get units per volt, divide by 1000 to get units in millivolts
 	// except for GetSignal() and SetSignal() which deals in Volts, we will make all properties units millivolt
 	command.str("");
-	command << "UM " << axisLetter_ << "? ";
+	command << "UM " << axisLetter_ << "?";
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":"));
 	RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
 	unitMult_ = tmp / 1000;
@@ -350,7 +350,7 @@ int CDAC::GetGateOpen(bool &open) {
 	ostringstream command;
 	long tmp;
 	command.str("");
-	command << "MC " << axisLetter_ << "? ";
+	command << "MC " << axisLetter_ << "?";
 
 	open = false;//incase of error we return that gate is closed
 	// "MC <Axis>?" replies look like ":A 1"
@@ -367,7 +367,7 @@ int CDAC::GetMaxVolts(double &volts)
 	ostringstream command;
 
 	command.str("");
-	command << "SU " << axisLetter_ << "? ";
+	command << "SU " << axisLetter_ << "?";
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(volts));
 	return DEVICE_OK;
@@ -378,7 +378,7 @@ int CDAC::GetMinVolts(double &volts)
 	ostringstream command;
 
 	command.str("");
-	command << "SL " << axisLetter_ << "? ";
+	command << "SL " << axisLetter_ << "?";
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(volts));
 	return DEVICE_OK;

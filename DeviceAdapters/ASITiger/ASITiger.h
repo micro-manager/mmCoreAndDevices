@@ -24,8 +24,8 @@
 // BASED ON:      ASIStage.h, ASIFW1000.h, Arduino.h, and DemoCamera.h
 //
 
-#ifndef _ASITiger_H_
-#define _ASITiger_H_
+#ifndef ASITIGER_H
+#define ASITIGER_H
 
 #include <string>
 #include <vector>
@@ -155,10 +155,10 @@ const char* const g_SerialTerminatorFW = "\n\r";
 const char* const g_SerialTerminatorLine = "\r";
 const char* const g_SerialTerminatorOverall = "\n";
 const char* const g_SerialTerminatorMultiLine = "\r";
-const string g_EmptyAxisLetterStr = " ";     // single char but like convenience of strings
-const string g_EmptyCardAddressCode = " ";   // ascii 0x31 for '1' through ascii 0x39 for '9', then 0x81 upward (extended ascii)
-const string g_EmptyCardAddressStr = "00";   // hex representation of the address, eg 31..39, 81 upward
-const string g_EmptyCardAddressChar = "";    // Tiger address character (stored as string)
+const std::string g_EmptyAxisLetterStr = " ";     // single char but like convenience of strings
+const std::string g_EmptyCardAddressCode = " ";   // ascii 0x31 for '1' through ascii 0x39 for '9', then 0x81 upward (extended ascii)
+const std::string g_EmptyCardAddressStr = "00";   // hex representation of the address, eg 31..39, 81 upward
+const std::string g_EmptyCardAddressChar = "";    // Tiger address character (stored as string)
 const char g_NameInfoDelimiter = ':';
 
 // general device property names
@@ -480,6 +480,7 @@ const char* const g_CellTypeCode14 = "14 - one shot (NRT)";
 const char* const g_CellTypeCode15 = "15 - delay (NRT)";
 const char* const g_CellTypeCode16 = "16 - one shot OR2 (NRT)";
 const char* const g_CellTypeCode17 = "17 - delay OR2 (NRT)";
+const char* const g_CellTypeCode18 = "18 - D flop (sync/async)";
 const char* const g_IOTypeCode0 = "0 - input";
 const char* const g_IOTypeCode1 = "1 - output (open-drain)";
 const char* const g_IOTypeCode2 = "2 - output (push-pull)";
@@ -550,6 +551,7 @@ const char* const g_PresetCode56 = "56 - BNC2/5 enabled of 7";
 const char* const g_PresetCode57 = "57 - BNC3/6 enabled of 7";
 const char* const g_PresetCode58 = "58 - BNC1/5 enabled of 7";
 const char* const g_PresetCode59 = "59 - BNC2/6 enabled of 7";
+const char* const g_PresetCode60 = "60 - mod3 counter";
 const char* const g_PLogicModeNone = "None";
 const char* const g_PLogicModediSPIMShutter = "diSPIM Shutter";
 const char* const g_PLogicMode4ChShutter = "Four-channel shutter";
@@ -778,18 +780,17 @@ const char* const g_DACMicronsPerMvYPropertyName = "MicronsPerMillivoltY"; // pr
 
 struct build_info_type
 {
-   string buildname;
+   std::string buildname;
    unsigned char numAxes;
-   vector<char> vAxesLetter;
-   vector<char> vAxesType;
-   vector<string> vAxesAddr;  // string to handle unprintable characters
-   vector<string> vAxesAddrHex;  // string for simplicity, logically it should be int though
-   vector<int> vAxesProps;
-   vector<string> defines;
+   std::vector<char> vAxesLetter;
+   std::vector<char> vAxesType;
+   std::vector<std::string> vAxesAddr;  // string to handle unprintable characters
+   std::vector<std::string> vAxesAddrHex;  // string for simplicity, logically it should be int though
+   std::vector<int> vAxesProps;
+   std::vector<std::string> defines;
 };
 
 // define names
 const char* const g_Define_SINGLEAXIS_FUNCTION = "SINGLEAXIS_FUNCTION";
 
-
-#endif //_ASITiger_H_
+#endif // ASITIGER_H
