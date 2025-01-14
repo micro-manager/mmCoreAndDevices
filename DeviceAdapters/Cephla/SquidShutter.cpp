@@ -1,8 +1,8 @@
-#include "squid.h"
+#include "Squid.h"
 #include <cstdint>
 
 
-const char* g_ShutterName = "LEDs";
+const char* g_ShutterName = "CephlaShutter";
 const char* g_OnOff = "OnOff";
 const char* g_Pattern = "Pattern";
 const char* g_Intensity = "Intensity";
@@ -10,6 +10,7 @@ const char* g_Red = "Red";
 const char* g_Green = "Green";
 const char* g_Blue = "Blue";
 const char* g_HasLasers = "Has Lasers";
+const char* g_488 = "488nm";
 
 extern const int CMD_TURN_ON_ILLUMINATION;
 extern const int CMD_TURN_OFF_ILLUMINATION;
@@ -34,7 +35,8 @@ const std::string ILLUMINATIONS[7] = {
 };
 
 // laser IDs start at 11
-const std::string LASERS[5] = {
+const uint8_t NR_LASERS = 5;
+const std::string LASERS[NR_LASERS] = {
       "405nm",
       "488nm",
       "638nm",
@@ -56,9 +58,13 @@ SquidShutter::SquidShutter() :
    red_(255),
    green_(255),
    blue_(255),
+   iLaser_(),
    isOpen_(false),
    cmdNr_(0)
 {
+   for (int i = 0; i < NR_LASERS; i++)
+      iLaser_[i] = 0;
+
    InitializeDefaultErrorMessages();
    EnableDelay();
 
@@ -148,7 +154,6 @@ int SquidShutter::Initialize()
       {
          AddAllowedValue(g_Pattern, LASERS[i].c_str());
       }
-
    }
 
    // Intensity
@@ -182,6 +187,20 @@ int SquidShutter::Initialize()
    if (ret != DEVICE_OK)
       return ret;
    SetPropertyLimits(g_Blue, 0, 255);
+
+
+   if (hasLasers_)
+   {
+      for (int i = 0; i < NR_LASERS; i++)
+      {
+         CPropertyActionEx* pActEx = new CPropertyActionEx(this, &SquidShutter::OnLaserIntensity, i);
+         ret = CreateProperty(LASERS[i].c_str(), "0", MM::Integer, false, pActEx);
+         if (ret != DEVICE_OK)
+            return ret;
+         SetPropertyLimits(LASERS[i].c_str(), 0, 65535);
+      }
+   }
+
 
    SetOpen(isOpen_);  // we can not read the state from the device, at least get it in sync with us
 
@@ -290,19 +309,30 @@ int SquidShutter::OnPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       std::string illumination;
       pProp->Get(illumination);
+      bool isOpen = isOpen_;
       for (uint8_t i = 0; i < 7; i++)
       {
          if (ILLUMINATIONS[i] == illumination) {
             pattern_ = i;
-            return sendIllumination(pattern_, intensity_, red_, green_, blue_);
+            if (isOpen)
+               SetOpen(false);
+            int ret  = sendIllumination(pattern_, intensity_, red_, green_, blue_);
+            if (isOpen)
+               SetOpen(true);
+            return ret;
          }
       }
-      for (uint8_t i = 0; i < 5; i++)
+      for (uint8_t i = 0; i < NR_LASERS; i++)
       {
          if (LASERS[i] == illumination)
          {
             pattern_ = i + 11;
-            return sendIllumination(pattern_, intensity_, red_, green_, blue_);
+            if (isOpen)
+               SetOpen(false);
+            int ret = sendLaserIllumination(pattern_, iLaser_[i]);
+            if (isOpen)
+               SetOpen(true);
+            return ret;
          }
       }
    }
@@ -386,6 +416,24 @@ int SquidShutter::OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int SquidShutter::OnLaserIntensity(MM::PropertyBase* pProp, MM::ActionType eAct, long i)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long(iLaser_[i])));
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long pos;
+      pProp->Get(pos);
+      iLaser_[i] = (uint16_t)pos;
+      if (pattern_ == i + 11)
+      {
+         return sendLaserIllumination(pattern_, iLaser_[i]);
+      }
+   }
+   return DEVICE_OK;
+}
 
 int SquidShutter::OnHasLasers(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -423,3 +471,25 @@ int SquidShutter::sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t r
 
    return DEVICE_OK;
 }
+
+int SquidShutter::sendLaserIllumination(uint8_t pattern, uint16_t intensity)
+{
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_SET_ILLUMINATION;
+   cmd[2] = pattern;
+   cmd[3] = (intensity >> 8) & 0xff;
+   cmd[4] = intensity & 0xff;
+
+   int ret = hub_->SendCommand(cmd, cmdSize);
+   if (ret != DEVICE_OK)
+      return ret;
+   changedTime_ = GetCurrentMMTime();
+
+   return DEVICE_OK;
+}
+
+

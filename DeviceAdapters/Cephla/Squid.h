@@ -142,7 +142,7 @@ private:
    std::atomic_bool yStageBusy_;
    std::atomic_bool zStageBusy_;
    std::atomic_bool busy_;
-   std::atomic<unsigned char> dac_div_; // 0: 1x gain: 1.25V, 1: 1x gain: 2.5V
+   std::atomic<unsigned char> dac_div_; // 0: 1x gain: 2.5V, 1: 1x gain: 1.25V
    std::atomic<unsigned char> dac_gains_; // bit mask with gains.  0 multiples dac_div with 1, 1 multiplies dac_div with 2
                // i.e. dac_div_ 1 and dac_gains_ 1 for a given output results in 0-5V range.
    std::mutex mutex_;
@@ -176,10 +176,12 @@ public:
    int OnGreen(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnHasLasers(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnLaserIntensity(MM::PropertyBase* pProp, MM::ActionType eAct, long laserLine);
 
 
 private:
    int sendIllumination(uint8_t pattern, uint8_t intensity, uint8_t red, uint8_t green, uint8_t blue);
+   int sendLaserIllumination(uint8_t pattern, uint16_t intensity);
    SquidHub* hub_;
    bool initialized_;
    bool hasLasers_;
@@ -190,6 +192,7 @@ private:
    uint8_t red_;
    uint8_t green_;
    uint8_t blue_;
+   uint16_t iLaser_[5];
    bool isOpen_;
    uint8_t cmdNr_;
 };

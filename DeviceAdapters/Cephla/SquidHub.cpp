@@ -88,7 +88,7 @@ SquidHub::SquidHub() :
    x_ = 0l;
    y_ = 0l;
    z_ = 0l;
-   dac_div_ =  1;
+   dac_div_ =  0;
    dac_gains_ = 0;
    xStageBusy_ = false;
    yStageBusy_ = false;
@@ -140,6 +140,8 @@ int SquidHub::Initialize() {
    cmd[1] = 254; // CMD_INITIALIZE_DRIVERS
    ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
+      delete (monitoringThread_);
+      monitoringThread_ = 0;
       return ret;
    }
 
@@ -160,7 +162,10 @@ int SquidHub::Initialize() {
 int SquidHub::Shutdown() {
    if (initialized_)
    {
-      delete(monitoringThread_);
+      if (monitoringThread_ != 0)
+      {
+         delete(monitoringThread_);
+      }
       initialized_ = false;
    }
    return DEVICE_OK;
