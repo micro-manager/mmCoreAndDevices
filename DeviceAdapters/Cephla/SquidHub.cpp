@@ -446,6 +446,7 @@ int SquidHub::Home()
    int ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK)
       return ret;
+   CDeviceUtils::SleepMs(1000); // Give the objective time to go down
 
    cmd[1] = CMD_HOME_OR_ZERO;
    cmd[2] = AXIS_XY;
