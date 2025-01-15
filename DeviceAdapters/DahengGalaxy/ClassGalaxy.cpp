@@ -358,18 +358,20 @@ int ClassGalaxy::Initialize()
               m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
               m_objStreamPtr->StartGrab();
            }
-           for (long i = BinningHorizontal->GetMin(); i <= BinningHorizontal->GetMax(); i++)
+           int64_t binVal = BinningHorizontal->GetValue();
+           for (int64_t i = BinningHorizontal->GetMin(); i <= BinningHorizontal->GetMax(); i++)
            {
               try
               {
                  BinningHorizontal->SetValue(i);
                  AddAllowedValue(MM::g_Keyword_Binning, std::to_string(i).c_str());
               }
-              catch (CGalaxyException& e)
+              catch (CGalaxyException&)
               {
                    // ignore, simply means we can not use this value to set binning
               }
            }
+           BinningHorizontal->SetValue(binVal);
            if (Isgrabbing)
            {
               m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
