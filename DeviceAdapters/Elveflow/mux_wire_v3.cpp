@@ -341,7 +341,7 @@ int MuxWireV3::StartTimer() {
    stopTimerThread = false;
    timerThread = CreateThread(NULL, 0, TimerThreadFunction, this, 0, NULL);
    if (timerThread == NULL) {
-      LogMessage("Error on timer's thread making", true);
+      LogMessage("Error creating timer thread", true);
       return DEVICE_ERR;
    }
    return DEVICE_OK;
@@ -365,7 +365,7 @@ DWORD WINAPI MuxWireV3::TimerThreadFunction(LPVOID lpParam) {
 int MuxWireV3::ReadTimer(int msInterval) {
    HANDLE timerHandle = CreateWaitableTimer(NULL, FALSE, NULL);
    if (timerHandle == NULL) {
-      LogMessage("Erreur lors de la création du timer", true);
+      LogMessage("Error creating timer", true);
       return DEVICE_ERR;
    }
    LARGE_INTEGER due_time;

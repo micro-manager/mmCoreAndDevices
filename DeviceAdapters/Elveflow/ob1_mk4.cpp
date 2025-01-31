@@ -410,7 +410,7 @@ DWORD WINAPI Ob1Mk4::TimerThreadFunction(LPVOID lpParam) {
 int Ob1Mk4::ReadTimer(int msInterval) {
    HANDLE timerHandler = CreateWaitableTimer(NULL, FALSE, NULL);
    if (timerHandler == NULL) {
-      LogMessage("Erreur lors de la création du timer", true);
+      LogMessage("Error creating timer", true);
       return DEVICE_ERR;
    }
 

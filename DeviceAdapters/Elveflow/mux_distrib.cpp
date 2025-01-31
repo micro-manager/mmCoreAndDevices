@@ -333,7 +333,7 @@ DWORD WINAPI MuxDistrib::TimerThreadFunction(LPVOID lpParam) {
 int MuxDistrib::ReadTimer(int msInterval) {
    HANDLE timerHandler = CreateWaitableTimer(NULL, FALSE, NULL);
    if (timerHandler == NULL) {
-      LogMessage("Erreur lors de la création du timer", true);
+      LogMessage("Error creating timer", true);
       return DEVICE_ERR;
    }
 
