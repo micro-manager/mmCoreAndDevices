@@ -490,7 +490,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PlayerOne", "DeviceAdapters
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DahengGalaxy", "DeviceAdapters\DahengGalaxy\DahengGalaxy.vcxproj", "{DD3A2820-F54C-42F3-AA0E-DC95D57481B7}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Octopi-research", "DeviceAdapters\Octopi-Research\Octopi-research.vcxproj", "{FE305987-2B15-4EDA-9FC8-32D81AAE1543}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cephla", "DeviceAdapters\Cephla\Cephla.vcxproj", "{FE305987-2B15-4EDA-9FC8-32D81AAE1543}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PyDevice", "DeviceAdapters\PyDevice\PyDevice.vcxproj", "{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}"
 EndProject
@@ -501,6 +501,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScientificaMotion8", "DeviceAdapters\ScientificaMotion8\ScientificaMotion8.vcxproj", "{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsDC40", "DeviceAdapters\ThorlabsDC40\ThorlabsDC40.vcxproj", "{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeensyPulseGenerator", "DeviceAdapters\TeensyPulseGenerator\TeensyPulseGenerator.vcxproj", "{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1508,6 +1510,10 @@ Global
 		{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}.Debug|x64.Build.0 = Debug|x64
 		{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}.Release|x64.ActiveCfg = Release|x64
 		{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}.Release|x64.Build.0 = Release|x64
+		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Debug|x64.ActiveCfg = Debug|x64
+		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Debug|x64.Build.0 = Debug|x64
+		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Release|x64.ActiveCfg = Release|x64
+		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

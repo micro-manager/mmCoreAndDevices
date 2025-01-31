@@ -344,16 +344,40 @@ int ClassGalaxy::Initialize()
         if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("BinningHorizontal")
             && m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("BinningVertical"))
         {
-                pAct = new CPropertyAction(this, &ClassGalaxy::OnBinning);
-                ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);
+           CIntFeaturePointer BinningHorizontal = m_objFeatureControlPtr->GetIntFeature("BinningHorizontal");
+           // Vertical ignored here, assume it acts the same as horizontal
+           // CIntFeaturePointer BinningVertical = m_objFeatureControlPtr->GetIntFeature("BinningVertical");
 
-                assert(ret == DEVICE_OK);
-                CIntFeaturePointer BinningHorizontal = m_objFeatureControlPtr->GetIntFeature("BinningHorizontal");
-                CIntFeaturePointer BinningVertical = m_objFeatureControlPtr->GetIntFeature("BinningVertical");
-                //assumed that BinningHorizontal and BinningVertical allow same steps
-                SetPropertyLimits(MM::g_Keyword_Binning, (double)BinningHorizontal->GetMin(), (double)BinningHorizontal->GetMax());
-                binningFactor_.assign(CDeviceUtils::ConvertToString((long)BinningHorizontal->GetValue()));
-                CheckForBinningMode(pAct);
+           pAct = new CPropertyAction(this, &ClassGalaxy::OnBinning);
+           binningFactor_.assign(CDeviceUtils::ConvertToString((long)BinningHorizontal->GetValue()));
+           ret = CreateProperty(MM::g_Keyword_Binning, binningFactor_.c_str(), MM::String, false, pAct);
+           //assumed that BinningHorizontal and BinningVertical allow same steps
+           bool Isgrabbing = m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue();
+           if (Isgrabbing)
+           {
+              m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
+              m_objStreamPtr->StartGrab();
+           }
+           int64_t binVal = BinningHorizontal->GetValue();
+           for (int64_t i = BinningHorizontal->GetMin(); i <= BinningHorizontal->GetMax(); i++)
+           {
+              try
+              {
+                 BinningHorizontal->SetValue(i);
+                 AddAllowedValue(MM::g_Keyword_Binning, std::to_string(i).c_str());
+              }
+              catch (CGalaxyException&)
+              {
+                   // ignore, simply means we can not use this value to set binning
+              }
+           }
+           BinningHorizontal->SetValue(binVal);
+           if (Isgrabbing)
+           {
+              m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
+              m_objStreamPtr->StartGrab();
+           }
+           CheckForBinningMode(pAct);
         }
         else 
         { // Hardware does not support binning, Micro-Manager still likes this as a property
@@ -1886,18 +1910,16 @@ void ClassGalaxy::ReduceImageSize(int64_t Width, int64_t Height)
 
 int ClassGalaxy::GetBinning() const
 {
-    return  std::atoi(binningFactor_.c_str());
+   char val [MM::MaxStrLength];
+   GetProperty(MM::g_Keyword_Binning, val);
+   return atoi(val);
 }
 
 int ClassGalaxy::SetBinning(int binSize)
 {
-    cout << "SetBinning called\n";
-    if (binSize > 1 && binSize < 4) {
-        return DEVICE_OK;
-    }
-    return DEVICE_UNSUPPORTED_COMMAND;
-
+   return SetProperty(MM::g_Keyword_Binning, std::to_string(binSize).c_str());
 }
+
 void ClassGalaxy::RGB24PackedToRGBA(void* destbuffer, void* srcbuffer, CImageDataPointer& objImageDataPointer)
 {
     unsigned int srcOffset = 0;

@@ -1,16 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
-// FILE:          ArduinoCounter.cpp
-// PROJECT:       Micro-Manager
-// SUBSYSTEM:     DeviceAdapters
-//-----------------------------------------------------------------------------
-// DESCRIPTION:   Arduino adapter.  Needs accompanying firmware
-// COPYRIGHT:     Altos Labs, 2023, based on code copyright UCSF 2008
-// LICENSE:       LGPL
-// 
-// AUTHOR:        Nico Stuurman, nstuurman@altoslabs.com, 7/13/2023, 10/10/2023
-//
-
-#include "ArduinoCounter.h"
+#include "CameraPulser.h"
 #include "ModuleInterface.h"
 #include <sstream>
 #include <cstdio>
@@ -20,91 +8,61 @@
    #include <windows.h>
 #endif
 
-const char* g_DeviceNameArduinoCounterCamera = "ArduinoCounterCamera";
-
-
 
 // Global info about the state of the Arduino.  
-const double g_Min_MMVersion = 2.0;
-const double g_Max_MMVersion = 2.0;
+const uint32_t g_Min_MMVersion = 1;
+const uint32_t g_Max_MMVersion = 1;
 const char* g_versionProp = "Version";
 const char* g_Undefined = "Undefined";
-const char* g_Logic = "Output Logic";
-const char* g_Direct = "Direct";
-const char* g_Invert = "Invert";
+const char* g_IntervalBeyondExposure = "Interval-ms_on_top_of_exposure";
+const char* g_WaitForInputMode = "Wait_for_Input";
 
 
+const char* g_DeviceNameCameraPulser = "TeensySendsPulsesToCamera";
 
-
-///////////////////////////////////////////////////////////////////////////////
-// Exported MMDevice API
-///////////////////////////////////////////////////////////////////////////////
-MODULE_API void InitializeModuleData()
-{
-   RegisterDevice(g_DeviceNameArduinoCounterCamera, MM::CameraDevice, "ArduinoCounterCamera");
-}
-
-MODULE_API MM::Device* CreateDevice(const char* deviceName)
-{
-   if (deviceName == 0)
-      return 0;
-
-   if (strcmp(deviceName, g_DeviceNameArduinoCounterCamera) == 0)
-   {
-      return new ArduinoCounterCamera;
-   }
-
-   return 0;
-}
-
-MODULE_API void DeleteDevice(MM::Device* pDevice)
-{
-   delete pDevice;
-}
-
-
-
-ArduinoCounterCamera::ArduinoCounterCamera() :
-   nrCamerasInUse_(0),
+CameraPulser::CameraPulser() :
+   pulseDuration_(1.0),
+   intervalBeyondExposure_(5.0),
+   waitForInput_(false),
    initialized_(false),
-   invert_(false)
+   version_(0),
+   nrCamerasInUse_(0),
+   teensyCom_(0)
 {
    InitializeDefaultErrorMessages();
 
    SetErrorText(ERR_INVALID_DEVICE_NAME, "Please select a valid camera");
    SetErrorText(ERR_NO_PHYSICAL_CAMERA, "No physical camera assigned");
-   SetErrorText(ERR_NO_EQUAL_SIZE, "Cameras differ in image size");
    SetErrorText(ERR_FIRMWARE_VERSION_TOO_NEW, "Firmware version is newer than expected");
    SetErrorText(ERR_FIRMWARE_VERSION_TOO_OLD, "Firmware version is older than expected");
-   SetErrorText(ERR_BOARD_NOT_FOUND, "Board did not identify as ArduinoCounter");
 
    // Name                                                                   
-   CreateProperty(MM::g_Keyword_Name, g_DeviceNameArduinoCounterCamera, MM::String, true);
+   CreateProperty(MM::g_Keyword_Name, g_DeviceNameCameraPulser, MM::String, true);
 
    // Description                                                            
-   CreateProperty(MM::g_Keyword_Description, "Combines Arduino Pulse Counter with a Camera", MM::String, true);
+   CreateProperty(MM::g_Keyword_Description, "Use Camera in external trigger mode and provide triggers with Teensy", MM::String, true);
 
    for (int i = 0; i < MAX_NUMBER_PHYSICAL_CAMERAS; i++) {
       usedCameras_.push_back(g_Undefined);
    }
 
-   CPropertyAction* pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnPort);
+   CPropertyAction* pAct = new CPropertyAction(this, &CameraPulser::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
 }
 
-ArduinoCounterCamera::~ArduinoCounterCamera()
+CameraPulser::~CameraPulser()
 {
    if (initialized_)
       Shutdown();
 }
 
-int ArduinoCounterCamera::Shutdown()
+int CameraPulser::Shutdown()
 {
    // Rely on the cameras to shut themselves down
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::Initialize()
+int CameraPulser::Initialize()
 {
    // get list with available Cameras.   
    std::vector<std::string> availableCameras;
@@ -115,6 +73,7 @@ int ArduinoCounterCamera::Initialize()
    {
       GetLoadedDeviceOfType(MM::CameraDevice, deviceName, deviceIterator++);
       if (0 < strlen(deviceName))
+
       {
          availableCameras.push_back(std::string(deviceName));
       }
@@ -136,27 +95,22 @@ int ArduinoCounterCamera::Initialize()
          availableCameras_.push_back(*iter);
    }
 
-   for (long i = 0; i < MAX_NUMBER_PHYSICAL_CAMERAS; i++)
+   for (unsigned i = 0; i < MAX_NUMBER_PHYSICAL_CAMERAS; i++)
    {
-      CPropertyActionEx* pAct = new CPropertyActionEx(this, &ArduinoCounterCamera::OnPhysicalCamera, i);
+      CPropertyActionEx* pAct = new CPropertyActionEx(this, &CameraPulser::OnPhysicalCamera, i);
       std::ostringstream os;
-      os << "Physical Camera " << i + 1;
+      os << "Triggered Camera-" << i;
       CreateProperty(os.str().c_str(), availableCameras_[0].c_str(), MM::String, false, pAct, false);
       SetAllowedValues(os.str().c_str(), availableCameras_);
    }
 
-   CPropertyAction* pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnBinning);
+   CPropertyAction* pAct = new CPropertyAction(this, &CameraPulser::OnBinning);
    CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct, false);
 
-   // start Arduino
-   // The first second or so after opening the serial port, the Arduino is waiting for firmwareupgrades.  Sleep 2 seconds
-   CDeviceUtils::SleepMs(2000);
-
-
-   // Check that we have a controller:
-   PurgeComPort(port_.c_str());
-   int ret = startCommunication();
-   if (DEVICE_OK != ret)
+   // start Teensy
+   teensyCom_ = new TeensyCom(GetCoreCallback(), this, port_.c_str());
+   int ret = teensyCom_->GetVersion(version_);
+   if (ret != DEVICE_OK)
       return ret;
 
    if (version_ < g_Min_MMVersion)
@@ -164,28 +118,46 @@ int ArduinoCounterCamera::Initialize()
    if (version_ > g_Max_MMVersion)
        return ERR_FIRMWARE_VERSION_TOO_NEW;
 
-   pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnVersion);
-   std::ostringstream sversion;
-   sversion << version_;
-   CreateProperty(g_versionProp, sversion.str().c_str(), MM::Float, true, pAct);
+   pAct = new CPropertyAction(this, &CameraPulser::OnVersion);
+   CreateIntegerProperty(g_versionProp, version_, true, pAct);
 
-   pAct = new CPropertyAction(this, &ArduinoCounterCamera::OnLogic);
-   CreateProperty(g_Logic, g_Direct, MM::String, false, pAct);
-   AddAllowedValue(g_Logic, g_Direct);
-   AddAllowedValue(g_Logic, g_Invert);
+   // Pulse Duration property
+   uint32_t pulseDuration;
+   ret = teensyCom_->GetPulseDuration(pulseDuration);
+   if (ret != DEVICE_OK)
+      return ret;
+   pulseDuration_ = pulseDuration / 1000.0;
+   pAct = new CPropertyAction(this, &CameraPulser::OnPulseDuration);
+   CreateFloatProperty("PulseDuration-ms", pulseDuration_, false, pAct);
 
+   // Interval property
+   // At this point, GetExposure does not give us a good value, adjust interval
+   // for exposure after camera was set 
+   pAct = new CPropertyAction(this, &CameraPulser::OnIntervalBeyondExposure);
+   CreateFloatProperty(g_IntervalBeyondExposure, intervalBeyondExposure_, false, pAct);
+
+   // Trigger Mode property
+   uint32_t waitForInput;
+   ret = teensyCom_->GetWaitForInput(waitForInput);
+   if (ret != DEVICE_OK)
+      return ret;
+   waitForInput_ = (bool) waitForInput;
+   pAct = new CPropertyAction(this, &CameraPulser::OnWaitForInput);
+   CreateProperty(g_WaitForInputMode, waitForInput_ ? "On" : "Off", MM::String, false, pAct);
+   AddAllowedValue(g_WaitForInputMode, "Off");
+   AddAllowedValue(g_WaitForInputMode, "On");
 
    initialized_ = true;
 
    return DEVICE_OK;
 }
 
-void ArduinoCounterCamera::GetName(char* name) const
+void CameraPulser::GetName(char* name) const
 {
-   CDeviceUtils::CopyLimitedString(name, g_DeviceNameArduinoCounterCamera);
+   CDeviceUtils::CopyLimitedString(name, g_DeviceNameCameraPulser);
 }
 
-int ArduinoCounterCamera::SnapImage()
+int CameraPulser::SnapImage()
 {
    if (nrCamerasInUse_ < 1)
       return ERR_NO_PHYSICAL_CAMERA;
@@ -203,6 +175,17 @@ int ArduinoCounterCamera::SnapImage()
          t[i].Start();
       }
    }
+   // send one pulse, even when the cameras are not in external trigger mode, this should not hurt
+   uint32_t response;
+   int ret = teensyCom_->SetNumberOfPulses(1, response);
+   if (ret != DEVICE_OK)
+      return ret;
+   if (response != 1)
+      return ERR_COMMUNICATION;
+   ret = teensyCom_->SetStart(response);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // I think that the CameraSnapThread destructor waits until the SnapImage function is done
    // So, we are likely to be waiting here until all cameras are done snapping
 
@@ -212,7 +195,7 @@ int ArduinoCounterCamera::SnapImage()
 /**
  * return the ImageBuffer of the first physical camera
  */
-const unsigned char* ArduinoCounterCamera::GetImageBuffer()
+const unsigned char* CameraPulser::GetImageBuffer()
 {
    if (nrCamerasInUse_ < 1)
       return 0;
@@ -220,7 +203,7 @@ const unsigned char* ArduinoCounterCamera::GetImageBuffer()
    return GetImageBuffer(0);
 }
 
-const unsigned char* ArduinoCounterCamera::GetImageBuffer(unsigned channelNr)
+const unsigned char* CameraPulser::GetImageBuffer(unsigned channelNr)
 {
    // We have a vector of physicalCameras, and a vector of Strings listing the cameras
    // we actually use.  
@@ -263,7 +246,7 @@ const unsigned char* ArduinoCounterCamera::GetImageBuffer(unsigned channelNr)
    return 0;
 }
 
-bool ArduinoCounterCamera::IsCapturing()
+bool CameraPulser::IsCapturing()
 {
    std::vector<std::string>::iterator iter;
    for (iter = usedCameras_.begin(); iter != usedCameras_.end(); iter++) {
@@ -278,7 +261,7 @@ bool ArduinoCounterCamera::IsCapturing()
 /**
  * Returns the largest width of cameras used
  */
-unsigned ArduinoCounterCamera::GetImageWidth() const
+unsigned CameraPulser::GetImageWidth() const
 {
    // TODO: should we use cached width?
    // If so, when do we cache?
@@ -302,7 +285,7 @@ unsigned ArduinoCounterCamera::GetImageWidth() const
 /**
  * Returns the largest height of cameras used
  */
-unsigned ArduinoCounterCamera::GetImageHeight() const
+unsigned CameraPulser::GetImageHeight() const
 {
    unsigned height = 0;
    unsigned int j = 0;
@@ -327,7 +310,7 @@ unsigned ArduinoCounterCamera::GetImageHeight() const
  * false otherwise
  * edge case: if we have no or one camera, their sizes are equal
  */
-bool ArduinoCounterCamera::ImageSizesAreEqual() {
+bool CameraPulser::ImageSizesAreEqual() {
    unsigned height = 0;
    unsigned width = 0;
    for (unsigned int i = 0; i < usedCameras_.size(); i++) {
@@ -352,7 +335,7 @@ bool ArduinoCounterCamera::ImageSizesAreEqual() {
    return true;
 }
 
-unsigned ArduinoCounterCamera::GetImageBytesPerPixel() const
+unsigned CameraPulser::GetImageBytesPerPixel() const
 {
    MM::Camera* camera0 = (MM::Camera*)GetDevice(usedCameras_[0].c_str());
    if (camera0 != 0)
@@ -362,6 +345,7 @@ unsigned ArduinoCounterCamera::GetImageBytesPerPixel() const
       {
          MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
          if (camera != 0)
+
             if (bytes != camera->GetImageBytesPerPixel())
                return 0;
       }
@@ -370,7 +354,7 @@ unsigned ArduinoCounterCamera::GetImageBytesPerPixel() const
    return 0;
 }
 
-unsigned ArduinoCounterCamera::GetBitDepth() const
+unsigned CameraPulser::GetBitDepth() const
 {
    // Return the maximum bit depth found in all channels.
    MM::Camera* camera0 = (MM::Camera*)GetDevice(usedCameras_[0].c_str());
@@ -394,7 +378,7 @@ unsigned ArduinoCounterCamera::GetBitDepth() const
    return 0;
 }
 
-long ArduinoCounterCamera::GetImageBufferSize() const
+long CameraPulser::GetImageBufferSize() const
 {
    long maxSize = 0;
    int unsigned counter = 0;
@@ -413,7 +397,7 @@ long ArduinoCounterCamera::GetImageBufferSize() const
    return counter * maxSize;
 }
 
-double ArduinoCounterCamera::GetExposure() const
+double CameraPulser::GetExposure() const
 {
    MM::Camera* camera0 = (MM::Camera*)GetDevice(usedCameras_[0].c_str());
    if (camera0 != 0)
@@ -431,7 +415,7 @@ double ArduinoCounterCamera::GetExposure() const
    return 0.0;
 }
 
-void ArduinoCounterCamera::SetExposure(double exp)
+void CameraPulser::SetExposure(double exp)
 {
    if (exp > 0.0)
    {
@@ -444,7 +428,7 @@ void ArduinoCounterCamera::SetExposure(double exp)
    }
 }
 
-int ArduinoCounterCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
+int CameraPulser::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
@@ -460,7 +444,7 @@ int ArduinoCounterCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigne
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
+int CameraPulser::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
    MM::Camera* camera0 = (MM::Camera*)GetDevice(usedCameras_[0].c_str());
    // TODO: check if ROI is same on all cameras
@@ -474,7 +458,7 @@ int ArduinoCounterCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsi
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::ClearROI()
+int CameraPulser::ClearROI()
 {
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
@@ -490,7 +474,7 @@ int ArduinoCounterCamera::ClearROI()
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::PrepareSequenceAcqusition()
+int CameraPulser::PrepareSequenceAcqusition()
 {
    if (nrCamerasInUse_ < 1)
       return ERR_NO_PHYSICAL_CAMERA;
@@ -509,13 +493,23 @@ int ArduinoCounterCamera::PrepareSequenceAcqusition()
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::StartSequenceAcquisition(double interval)
+int CameraPulser::StartSequenceAcquisition(double interval)
 {
    if (nrCamerasInUse_ < 1)
       return ERR_NO_PHYSICAL_CAMERA;
 
    if (!ImageSizesAreEqual())
       return ERR_NO_EQUAL_SIZE;
+
+   uint32_t response;
+   int ret = teensyCom_->SetNumberOfPulses(0, response);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   uint32_t tInterval = static_cast<uint32_t> ((GetExposure() + intervalBeyondExposure_) * 1000.0);
+   ret = teensyCom_->SetInterval(tInterval, response);
+   if (response != tInterval)
+      return ERR_COMMUNICATION;
 
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
@@ -529,23 +523,35 @@ int ArduinoCounterCamera::StartSequenceAcquisition(double interval)
          camera->AddTag(MM::g_Keyword_CameraChannelIndex, usedCameras_[i].c_str(),
             os.str().c_str());
 
-         int ret = camera->StartSequenceAcquisition(interval);
+         ret = camera->StartSequenceAcquisition(interval);
          if (ret != DEVICE_OK)
             return ret;
       }
    }
+   // start pulses, should even when cameras are not in external trigger mode
+   ret = teensyCom_->SetStart(response);
+   if (ret != DEVICE_OK)
+      return ret;
+
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+int CameraPulser::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
    if (nrCamerasInUse_ < 1)
       return ERR_NO_PHYSICAL_CAMERA;
 
-   int ret = startCounting(numImages);
-   if (ret != DEVICE_OK)
-      return ret;
+   uint32_t response;
+   int ret = teensyCom_->SetNumberOfPulses(numImages, response);
+   if (response != (uint32_t) numImages)
+      return ERR_COMMUNICATION;
 
+   uint32_t interval = static_cast<uint32_t> ((GetExposure() + intervalBeyondExposure_) * 1000.0);
+   ret = teensyCom_->SetInterval(interval, response);
+   if (response != interval)
+      return ERR_COMMUNICATION;
+
+   // First start camera sequences, then start trigger
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
@@ -556,23 +562,29 @@ int ArduinoCounterCamera::StartSequenceAcquisition(long numImages, double interv
             return ret;
       }
    }
+
+   ret = teensyCom_->SetStart(response);
+   if (ret != DEVICE_OK) // TODO: Check response
+      return ret;
+
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::StopSequenceAcquisition()
+int CameraPulser::StopSequenceAcquisition()
 {
+   uint32_t response;
+   int ret = teensyCom_->SetStop(response);
+   if (ret != DEVICE_OK)
+      return ret;
+
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
       if (camera != 0)
       {
-         int ret = camera->StopSequenceAcquisition();
-         int ret2 = stopCounting();
-
+         ret = camera->StopSequenceAcquisition();
          if (ret != DEVICE_OK)
             return ret;
-         if (ret2 != DEVICE_OK)
-            return ret2;
 
          std::ostringstream os;
          os << i;
@@ -582,11 +594,19 @@ int ArduinoCounterCamera::StopSequenceAcquisition()
             os.str().c_str());
       }
    }
+   std::ostringstream os;
+   os << "Stopped Sequence after sending " << response << " pulses.";
+   GetCoreCallback()->LogMessage(this, os.str().c_str(), false);
+
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::GetBinning() const
+int CameraPulser::GetBinning() const
 {
+   if (usedCameras_.empty())
+   {
+      return 1;
+   }
    MM::Camera* camera0 = (MM::Camera*)GetDevice(usedCameras_[0].c_str());
    int binning = 0;
    if (camera0 != 0)
@@ -603,7 +623,7 @@ int ArduinoCounterCamera::GetBinning() const
    return binning;
 }
 
-int ArduinoCounterCamera::SetBinning(int bS)
+int CameraPulser::SetBinning(int bS)
 {
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
    {
@@ -618,24 +638,24 @@ int ArduinoCounterCamera::SetBinning(int bS)
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::IsExposureSequenceable(bool& isSequenceable) const
+int CameraPulser::IsExposureSequenceable(bool& isSequenceable) const
 {
    isSequenceable = false;
 
    return DEVICE_OK;
 }
 
-unsigned ArduinoCounterCamera::GetNumberOfComponents() const
+unsigned CameraPulser::GetNumberOfComponents() const
 {
    return 1;
 }
 
-unsigned ArduinoCounterCamera::GetNumberOfChannels() const
+unsigned CameraPulser::GetNumberOfChannels() const
 {
    return nrCamerasInUse_;
 }
 
-int ArduinoCounterCamera::GetChannelName(unsigned channel, char* name)
+int CameraPulser::GetChannelName(unsigned channel, char* name)
 {
    CDeviceUtils::CopyLimitedString(name, "");
    int ch = Logical2Physical(channel);
@@ -646,7 +666,7 @@ int ArduinoCounterCamera::GetChannelName(unsigned channel, char* name)
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::Logical2Physical(int logical)
+int CameraPulser::Logical2Physical(int logical)
 {
    int j = -1;
    for (unsigned int i = 0; i < usedCameras_.size(); i++)
@@ -660,8 +680,9 @@ int ArduinoCounterCamera::Logical2Physical(int logical)
 }
 
 
-int ArduinoCounterCamera::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct, long i)
+int CameraPulser::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct, long i)
 {
+
    if (eAct == MM::BeforeGet)
    {
       pProp->Set(usedCameras_[i].c_str());
@@ -721,7 +742,7 @@ int ArduinoCounterCamera::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionTy
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CameraPulser::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -738,7 +759,7 @@ int ArduinoCounterCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
+int CameraPulser::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
    if (pAct == MM::BeforeGet)
    {
@@ -747,66 +768,12 @@ int ArduinoCounterCamera::OnPort(MM::PropertyBase* pProp, MM::ActionType pAct)
    else if (pAct == MM::AfterSet)
    {
       pProp->Get(port_);
-      portAvailable_ = true;
    }
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::OnLogic(MM::PropertyBase* pProp, MM::ActionType pAct)
-{
-   int ret = DEVICE_OK;
-   unsigned char command[2];
-   command[0] = 'p';
-   std::string answer;
-   if (pAct == MM::BeforeGet)
-   {
-      command[1] = '?';
-      ret = WriteToComPort(port_.c_str(), (const unsigned char*)command, 2);
-      if (ret != DEVICE_OK)
-         return ret;
-      ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-      if (ret != DEVICE_OK)
-         return ret;
-      if (answer == g_Invert)
-         invert_ = true;
-      else if (answer == g_Direct)
-         invert_ = false;
-      else
-         return DEVICE_SERIAL_INVALID_RESPONSE;
-   }
-   else if (pAct == MM::AfterSet)
-   {
-      std::string cmd;
-      pProp->Get(cmd);
-      if (cmd == g_Invert) {
-         command[1] = 'i';
-         ret = WriteToComPort(port_.c_str(), (const unsigned char*)command, 2);
-         if (ret != DEVICE_OK)
-            return ret;
-         ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-         if (ret != DEVICE_OK)
-            return ret;
-         if (answer != g_Invert)
-            return DEVICE_SERIAL_INVALID_RESPONSE;
-         invert_ = true;
-      }
-      else if (cmd == g_Direct) {
-         command[1] = 'd';
-         ret = WriteToComPort(port_.c_str(), (const unsigned char*)command, 2);
-         if (ret != DEVICE_OK)
-            return ret;
-         ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-         if (ret != DEVICE_OK)
-            return ret;
-         if (answer != g_Direct)
-            return DEVICE_SERIAL_INVALID_RESPONSE;
-         invert_ = false;
-      }
-   }
-   return DEVICE_OK;
-}
 
-int ArduinoCounterCamera::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
+int CameraPulser::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
 {
    if (pAct == MM::BeforeGet)
    {
@@ -815,60 +782,90 @@ int ArduinoCounterCamera::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct
    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::startCommunication() 
+int CameraPulser::OnPulseDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   int ret = DEVICE_OK;
-   unsigned char command[1];
-   command[0] = 'i';
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(pulseDuration_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+       pProp->Get(pulseDuration_);
+        
+       // Send pulse duration command if initialized
+       if (initialized_)
+       {
+          uint32_t pulseDurationUs =  static_cast<uint32_t>(pulseDuration_ * 1000.0);
+          uint32_t param;
+          int ret = teensyCom_->SetPulseDuration(pulseDurationUs, param);
+          if (ret != DEVICE_OK)
+             return ret;
+          if (param != pulseDurationUs)
+          {
+            GetCoreCallback()->LogMessage(this, "PulseDuration sent not the same as pulseDuration echoed back", false);
+            return ERR_COMMUNICATION;
 
-   ret = WriteToComPort(port_.c_str(), (const unsigned char*) command, 1);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   std::string answer;
-   ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   std::string boardName = answer.substr(0, 14);
-
-   if (boardName != "ArduinoCounter")
-      return ERR_BOARD_NOT_FOUND;
-
-   std::string versionString = answer.substr(23, 3);
-   std::istringstream is(versionString);
-   is >> version_;
-
-   return ret;
+          }
+       }
+   }
+   return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::startCounting(int number) 
+int CameraPulser::OnIntervalBeyondExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   int ret = DEVICE_OK;
-   std::ostringstream os;
-   os << 'g' << number  << '\n';
-   std::string command = os.str();
-
-   ret = WriteToComPort(port_.c_str(), (const unsigned char*) command.c_str(), (unsigned int) command.length());
-   if (ret != DEVICE_OK)
-      return ret;
-
-   std::string answer;
-   ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-   // for now, ignore answer
-   return ret;
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(intervalBeyondExposure_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+       pProp->Get(intervalBeyondExposure_);
+        
+       // Send interval command if initialized
+       if (initialized_)
+       {
+          uint32_t interval = static_cast<uint32_t> ((GetExposure() + intervalBeyondExposure_) * 1000.0);
+          uint32_t parm;
+          int ret = teensyCom_->SetInterval(interval, parm);
+          if (ret != DEVICE_OK)
+             return ret;
+          if (parm != interval)
+          {
+            GetCoreCallback()->LogMessage(this, "Interval sent not the same as interval echoed back", false);
+            return ERR_COMMUNICATION;
+          }
+       }
+    }
+    return DEVICE_OK;
 }
 
-int ArduinoCounterCamera::stopCounting() 
+int CameraPulser::OnWaitForInput(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   unsigned char command[1];
-   command[0] = 's';
-   int ret = WriteToComPort(port_.c_str(), (const unsigned char*) command, 1);
-   if (ret != DEVICE_OK)
-      return ret;
 
-   std::string answer;
-   ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-   // for now, ignore answer
-   return ret;
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(waitForInput_ ? "On" : "Off");
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string waitForInput;
+      pProp->Get(waitForInput);
+      waitForInput_ = (waitForInput == "On");
+        
+      // Send wait for input command if initialized
+      if (initialized_)
+      {
+         uint32_t sp = waitForInput_ ? 1 : 0;
+         uint32_t param;
+         int ret = teensyCom_->SetWaitForInput(sp, param);
+         if (ret != DEVICE_OK)
+            return ret;
+         if (param != sp)
+         {
+            GetCoreCallback()->LogMessage(this, "WaitforInput sent not the same as echoed back", false);
+            return ERR_COMMUNICATION;
+         }
+      }
+   }
+   return DEVICE_OK;
 }

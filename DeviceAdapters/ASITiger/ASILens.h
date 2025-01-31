@@ -24,8 +24,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASILens_H_
-#define _ASILens_H_
+#ifndef ASILENS_H
+#define ASILENS_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -38,12 +38,10 @@ public:
    ~CLens() { }
   
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // Lens API
-   // -----------
    int Stop();
    int Home();
 
@@ -71,7 +69,6 @@ public:
    int SendStageSequence();
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLowerLim             (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -104,7 +101,7 @@ public:
    int OnRBTrigger            (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRBRunning            (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnUseSequence          (MM::PropertyBase* pProp, MM::ActionType eAct);
-   //Others
+   // others
    int OnVector				  (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTTLin				  (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTTLout			      (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -112,7 +109,7 @@ public:
 private:
    double unitMult_;
    double stepSizeUm_;
-   string axisLetter_;
+   std::string axisLetter_;
    bool ring_buffer_supported_;
    long ring_buffer_capacity_;
    bool ttl_trigger_supported_;
@@ -123,4 +120,4 @@ private:
    int OnSaveJoystickSettings();
 };
 
-#endif //_ASIPiezo_H_
+#endif // ASILENS_H
