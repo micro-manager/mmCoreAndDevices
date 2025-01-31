@@ -494,7 +494,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cephla", "DeviceAdapters\Ce
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PyDevice", "DeviceAdapters\PyDevice\PyDevice.vcxproj", "{36CF524A-8214-404C-8E6B-B5DEC1FDADF9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Hikrobot", "DeviceAdapters\HikRobot\HikRobot.vcxproj", "{38DCD378-83FE-4C42-8916-1C477A35F65F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Hikrobot", "DeviceAdapters\Hikrobot\HikRobot.vcxproj", "{38DCD378-83FE-4C42-8916-1C477A35F65F}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenFlexure", "DeviceAdapters\OpenFlexure\OpenFlexure.vcxproj", "{149B6A9D-40FB-4FDF-BC0C-6B68E3BC4938}"
 EndProject
@@ -503,6 +503,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsDC40", "DeviceAdapters\ThorlabsDC40\ThorlabsDC40.vcxproj", "{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeensyPulseGenerator", "DeviceAdapters\TeensyPulseGenerator\TeensyPulseGenerator.vcxproj", "{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Elveflow", "DeviceAdapters\Elveflow\Elveflow.vcxproj", "{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1514,6 +1516,10 @@ Global
 		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Debug|x64.Build.0 = Debug|x64
 		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Release|x64.ActiveCfg = Release|x64
 		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Release|x64.Build.0 = Release|x64
+		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Debug|x64.ActiveCfg = Debug|x64
+		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Debug|x64.Build.0 = Debug|x64
+		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Release|x64.ActiveCfg = Release|x64
+		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
