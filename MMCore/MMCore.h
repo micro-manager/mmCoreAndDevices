@@ -65,6 +65,7 @@
 #include "Error.h"
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"
+#include "BufferAdapter.h"
 
 #include <cstring>
 #include <deque>
@@ -658,7 +659,8 @@ private:
    CorePropertyCollection* properties_;
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
-   CircularBuffer* cbuf_;
+   // New adapter to wrap either the circular buffer or the DataBuffer (v2)
+   BufferAdapter* bufferAdapter_;
 
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;
