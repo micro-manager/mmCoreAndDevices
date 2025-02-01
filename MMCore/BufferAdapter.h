@@ -18,20 +18,6 @@ public:
    ~BufferAdapter();
 
    /**
-    * Insert an image into the buffer.
-    * @param caller The device inserting the image.
-    * @param buf The image data.
-    * @param width Image width.
-    * @param height Image height.
-    * @param byteDepth Bytes per pixel.
-    * @param nComponents Number of components in the image.
-    * @param pMd Metadata associated with the image.
-    * @return true on success, false on error.
-    */
-   bool InsertImage(const MM::Device *caller, const unsigned char* buf, 
-         unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, Metadata* pMd);
-
-   /**
     * Get a pointer to the top (most recent) image.
     * @return Pointer to image data, or nullptr if unavailable.
     */
@@ -83,6 +69,83 @@ public:
     * Clear the entire image buffer.
     */
    void Clear();
+
+   /**
+    * Insert an image into the buffer.
+    * @param buf The image data.
+    * @param width Image width.
+    * @param height Image height.
+    * @param byteDepth Bytes per pixel.
+    * @param pMd Metadata associated with the image.
+    * @return true on success, false on error.
+    */
+   bool InsertImage(const unsigned char *buf, unsigned width, unsigned height, 
+                    unsigned byteDepth, Metadata *pMd);
+
+   /**
+    * Insert an image into the buffer with specified number of components.
+    * @param buf The image data.
+    * @param width Image width.
+    * @param height Image height.
+    * @param byteDepth Bytes per pixel.
+    * @param nComponents Number of components in the image.
+    * @param pMd Metadata associated with the image.
+    * @return true on success, false on error.
+    */
+   bool InsertImage(const unsigned char *buf, unsigned width, unsigned height, 
+                    unsigned byteDepth, unsigned nComponents, Metadata *pMd);
+
+   /**
+    * Insert a multi-channel image into the buffer.
+    * @param buf The image data.
+    * @param numChannels Number of channels in the image.
+    * @param width Image width.
+    * @param height Image height.
+    * @param byteDepth Bytes per pixel.
+    * @param pMd Metadata associated with the image.
+    * @return true on success, false on error.
+    */
+   bool InsertMultiChannel(const unsigned char *buf, unsigned numChannels, unsigned width, 
+                           unsigned height, unsigned byteDepth, Metadata *pMd);
+
+   /**
+    * Insert a multi-channel image into the buffer with specified number of components.
+    * @param buf The image data.
+    * @param numChannels Number of channels in the image.
+    * @param width Image width.
+    * @param height Image height.
+    * @param byteDepth Bytes per pixel.
+    * @param nComponents Number of components in the image.
+    * @param pMd Metadata associated with the image.
+    * @return true on success, false on error.
+    */
+   bool InsertMultiChannel(const unsigned char *buf, unsigned numChannels, unsigned width, 
+                           unsigned height, unsigned byteDepth, unsigned nComponents, Metadata *pMd);
+
+   /**
+    * Get the total capacity of the buffer.
+    * @return Total capacity of the buffer.
+    */
+   long GetSize() const;
+
+   /**
+    * Get the free capacity of the buffer.
+    * @return Free capacity of the buffer.
+    */
+   long GetFreeSize() const;
+
+   /**
+    * Check if the buffer is overflowed.
+    * @return True if overflowed, false otherwise.
+    */
+   bool Overflow() const;
+
+   /**
+    * Get a pointer to the top image buffer for a specific channel.
+    * @param channel The channel number.
+    * @return Pointer to image data, or nullptr if unavailable.
+    */
+   const mm::ImgBuffer* GetTopImageBuffer(unsigned channel) const;
 
 private:
    bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.

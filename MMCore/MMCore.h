@@ -89,7 +89,6 @@
 
 
 class CPluginManager;
-class CircularBuffer;
 class ConfigGroupCollection;
 class CoreCallback;
 class CorePropertyCollection;
@@ -673,6 +672,7 @@ private:
 
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
+   bool useV2Buffer_; // Whether to use the V2 buffer implementation
 
 private:
    void InitializeErrorMessages();

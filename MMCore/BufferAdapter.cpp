@@ -35,17 +35,23 @@ BufferAdapter::~BufferAdapter()
    }
 }
 
-bool BufferAdapter::InsertImage(const MM::Device *caller, const unsigned char* buf, 
-      unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata)
-{
+bool BufferAdapter::InsertImage(const unsigned char* buf, 
+      unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd) {
    if (useV2_) {
-      // For demonstration, assume that for a simple image the number of bytes is width * height * byteDepth * nComponents.
-      size_t dataSize = width * height * byteDepth * nComponents;
-      int res = v2Buffer_->InsertData(caller, buf, dataSize, serializedMetadata);
-      return (res == 0);
+      // Implement logic for v2Buffer if available
+      return false; // Placeholder
    } else {
-      // For now, pass a null metadata pointer.
-      return circBuffer_->InsertImage(buf, width, height, byteDepth, nComponents, nullptr);
+      return circBuffer_->InsertImage(buf, width, height, byteDepth, pMd);
+   }
+}
+
+bool BufferAdapter::InsertImage(const unsigned char *buf, unsigned width, unsigned height, 
+                               unsigned byteDepth, unsigned nComponents, Metadata *pMd) {
+   if (useV2_) {
+      // Implement logic for v2Buffer if available
+      return false; // Placeholder
+   } else {
+      return circBuffer_->InsertImage(buf, width, height, byteDepth, nComponents, pMd);
    }
 }
 
@@ -124,5 +130,65 @@ void BufferAdapter::Clear()
       v2Buffer_->ReleaseBuffer("DEFAULT");
    } else {
       circBuffer_->Clear();
+   }
+}
+
+bool BufferAdapter::InsertMultiChannel(const unsigned char *buf, unsigned numChannels, unsigned width, 
+                                       unsigned height, unsigned byteDepth, Metadata *pMd) {
+   if (useV2_) {
+      // Implement logic for v2Buffer if available
+      return false; // Placeholder
+   } else {
+      return circBuffer_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, pMd);
+   }
+}
+
+bool BufferAdapter::InsertMultiChannel(const unsigned char *buf, unsigned numChannels, unsigned width, 
+                                       unsigned height, unsigned byteDepth, unsigned nComponents, Metadata *pMd) {
+   if (useV2_) {
+      // Implement logic for v2Buffer if available
+      return false; // Placeholder
+   } else {
+      return circBuffer_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, nComponents, pMd);
+   }
+}
+
+long BufferAdapter::GetSize() const
+{
+   if (useV2_) {
+      // Implement logic for v2Buffer if available
+      return 0; // Placeholder
+   } else {
+      return circBuffer_->GetSize();
+   }
+}
+
+long BufferAdapter::GetFreeSize() const
+{
+   if (useV2_) {
+      // Implement logic for v2Buffer if available
+      return 0; // Placeholder
+   } else {
+      return circBuffer_->GetFreeSize();
+   }
+}
+
+bool BufferAdapter::Overflow() const
+{
+   if (useV2_) {
+      // Implement logic for v2Buffer if available
+      return false; // Placeholder
+   } else {
+      return circBuffer_->Overflow();
+   }
+}
+
+const mm::ImgBuffer* BufferAdapter::GetTopImageBuffer(unsigned channel) const
+{
+   if (useV2_) {
+      // Implement logic for v2Buffer if available
+      return nullptr; // Placeholder
+   } else {
+      return circBuffer_->GetTopImageBuffer(channel);
    }
 } 

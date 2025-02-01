@@ -140,7 +140,8 @@ CMMCore::CMMCore() :
    bufferAdapter_(nullptr),
    pluginManager_(new CPluginManager()),
    deviceManager_(new mm::DeviceManager()),
-   pPostedErrorsLock_(NULL)
+   pPostedErrorsLock_(NULL),
+   useV2Buffer_(false)
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
@@ -151,7 +152,7 @@ CMMCore::CMMCore() :
    callback_ = new CoreCallback(this);
 
    const unsigned seqBufMegabytes = (sizeof(void*) > 4) ? 250 : 25;
-   bufferAdapter_ = new BufferAdapter(false, seqBufMegabytes);
+   bufferAdapter_ = new BufferAdapter(useV2Buffer_, seqBufMegabytes);
 
    nullAffine_ = new std::vector<double>(6);
    for (int i = 0; i < 6; i++) {
@@ -3218,7 +3219,7 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
 	try
 	{
       // TODO: need to store a flag about which buffer to use
-		bufferAdapter_ = new BufferAdapter(false, sizeMB); 
+		bufferAdapter_ = new BufferAdapter(useV2Buffer_, sizeMB); 
 	}
 	catch (std::bad_alloc& ex)
 	{

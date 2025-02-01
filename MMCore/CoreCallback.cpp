@@ -263,7 +263,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
          }
       }
-      if (core_->cbuf_->InsertImage(buf, width, height, byteDepth, &md))
+      if (core_->bufferAdapter_->InsertImage(buf, width, height, byteDepth, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
@@ -295,7 +295,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
          }
       }
-      if (core_->cbuf_->InsertImage(buf, width, height, byteDepth, nComponents, &md))
+      if (core_->bufferAdapter_->InsertImage(buf, width, height, byteDepth, nComponents, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
@@ -322,7 +322,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf
 
 void CoreCallback::ClearImageBuffer(const MM::Device* /*caller*/)
 {
-   core_->cbuf_->Clear();
+   core_->bufferAdapter_->Clear();
 }
 
 bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
@@ -332,7 +332,7 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
    if (slices != 1)
       return false;
 
-   return core_->cbuf_->Initialize(channels, w, h, pixDepth);
+   return core_->bufferAdapter_->Initialize(channels, w, h, pixDepth);
 }
 
 int CoreCallback::InsertMultiChannel(const MM::Device* caller,
@@ -352,7 +352,7 @@ int CoreCallback::InsertMultiChannel(const MM::Device* caller,
       {
          ip->Process( const_cast<unsigned char*>(buf), width, height, byteDepth);
       }
-      if (core_->cbuf_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, &md))
+      if (core_->bufferAdapter_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;

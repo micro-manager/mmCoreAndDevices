@@ -20,12 +20,12 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// AUTHOR:        Henry Pinkard, henry.pinkard@gmail.com, 01/31/2025
-// 
+// AUTHOR:        Henry Pinkard,  01/31/2025
+
 
 #pragma once
 
-#include "Metadata.h"
+#include "../MMDevice/ImageMetadata.h"
 #include "../MMDevice/MMDevice.h"
 #include <mutex>
 #include <string>
@@ -171,17 +171,12 @@ class DataBuffer {
 
     private:
         // Basic buffer management
-        void* buffer_;
+        char* buffer_;
         size_t bufferSize_;
         std::string bufferName_;
-
-        // Read/write positions
-        size_t writePos_;
-        size_t readPos_;
 
         // Configuration
         bool overwriteWhenFull_;
 
-        // Mutex for thread safety
-        std::mutex mutex_;
+
 };
