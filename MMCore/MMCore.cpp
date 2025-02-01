@@ -5765,7 +5765,7 @@ double CMMCore::getMagnificationFactor() const
  * Returns the dxdz angle 
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  */
-double CMMCore::getPixelSizedxdz()
+double CMMCore::getPixelSizedxdz() throw (CMMError)
 {
 	 return getPixelSizedxdz(false);
 }
@@ -5815,7 +5815,7 @@ double CMMCore::getPixelSizedxdz(const char* resolutionID) throw (CMMError)
  * Returns the dydz angle 
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  */
-double CMMCore::getPixelSizedydz()
+double CMMCore::getPixelSizedydz() throw (CMMError)
 {
 	 return getPixelSizedydz(false);
 }
@@ -5867,7 +5867,7 @@ double CMMCore::getPixelSizedydz(const char* resolutionID) throw (CMMError)
  * communicate to the end user what the optimal Z step size is for this 
  * pixel size configuration
  */
-double CMMCore::getPixelSizeOptimalZ()
+double CMMCore::getPixelSizeOptimalZ() throw (CMMError)
 {
 	 return getPixelSizeOptimalZ(false);
 }
