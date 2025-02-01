@@ -55,6 +55,9 @@ public:
       return message_;
    }
 
+   /// Implements std::exception interface.
+   virtual const char* what() const throw() { return message_.c_str(); }
+
 private:
    std::string message_;
 };
@@ -64,6 +67,8 @@ class MetadataKeyError : public MetadataError
 public:
    MetadataKeyError() :
       MetadataError("Undefined metadata key") {}
+   MetadataKeyError(const char* key) :
+      MetadataError(("Undefined metadata key: " + std::string(key)).c_str()) {}
    ~MetadataKeyError() {}
 };
 
@@ -487,7 +492,7 @@ private:
       if (it != tags_.end())
          return it->second;
       else
-         throw MetadataKeyError();
+         throw MetadataKeyError(key);
    }
 
    std::map<std::string, MetadataTag*> tags_;
