@@ -388,7 +388,10 @@ private:
 class PixelSizeConfiguration : public Configuration
 {
 public:
-   PixelSizeConfiguration() : pixelSizeUm_(0.0)  
+   PixelSizeConfiguration() : pixelSizeUm_(0.0),
+      dxdz_(0.0),
+      dydz_(0.0),
+      optimalZ_(0.0)
    {
       affineMatrix_.push_back(1.0);
       affineMatrix_.push_back(0.0);
@@ -412,12 +415,21 @@ public:
          affineMatrix_.at(i) = affineMatrix.at(i);
       }
    }
-
    std::vector<double> getPixelConfigAffineMatrix() {return affineMatrix_;}
+   void setdxdz(double dxdz) { dxdz_ = dxdz; }
+   double getdxdz() const { return dxdz_; }
+   void setdydz(double dydz) { dydz_ = dydz; }
+   double getdydz() const { return dydz_; }
+   void setOptimalZ(double optimalZ) { optimalZ_ = optimalZ; }
+   double getOptimalZ() const { return optimalZ_; }
+
 
 private:
    double pixelSizeUm_;
    std::vector<double> affineMatrix_;
+   double dxdz_;
+   double dydz_;
+   double optimalZ_;
 };
 
 /**

@@ -5112,7 +5112,65 @@ void CMMCore::setPixelSizeAffine(const char* resolutionID, std::vector<double> a
       std::fixed << std::setprecision(5) << affine[5];
 }
 
+/**
+ * Sets the dx/dZ part of the angle between the scan axis and camera axies.
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ */
+void CMMCore::setPixelSizedxdz(const char* resolutionID, double dxdz)  throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
 
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   psc->setdxdz(dxdz);
+
+   LOG_DEBUG(coreLogger_) << "Pixel size config: "
+      "preset " << resolutionID << ": set dxdz to " <<
+      std::fixed << std::setprecision(5) << dxdz;
+}
+
+/**
+ * Sets the dy/dZ part of the angle between the scan axis and camera axies.
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ */
+void CMMCore::setPixelSizedydz(const char* resolutionID, double dydz)  throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   psc->setdxdz(dydz);
+
+   LOG_DEBUG(coreLogger_) << "Pixel size config: "
+      "preset " << resolutionID << ": set dydz to " <<
+      std::fixed << std::setprecision(5) << dydz;
+}
+
+/**
+ * Sets the opimal Z stepSize (in microns).
+ * There is no magic here, this number is provided by the person configuring the
+ * microscope, to be used by the person using the microscope.
+ */
+void CMMCore::setPixelSizeOptimalZ(const char* resolutionID, double optimalZ)  throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   psc->setOptimalZ(optimalZ);
+
+   LOG_DEBUG(coreLogger_) << "Pixel size config: "
+      "preset " << resolutionID << ": set optimalZ to " <<
+      std::fixed << std::setprecision(5) << optimalZ << " um.";
+}
+
+/**
 /**
  * Applies a Pixel Size Configuration. The command will fail if the
  * configuration was not previously defined.
@@ -5701,6 +5759,161 @@ double CMMCore::getMagnificationFactor() const
       }
    }
    return magnification;
+}
+
+/**
+ * Returns the dxdz angle 
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ */
+double CMMCore::getPixelSizedxdz()
+{
+	 return getPixelSizedxdz(false);
+}
+
+/**
+ * Returns the dxdz angle of the current pixel size
+ * optionally using cached pixel configuration
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ */
+double CMMCore::getPixelSizedxdz(bool cached) throw (CMMError)
+{
+   std::string resolutionID;
+   resolutionID = getCurrentPixelSizeConfig(cached);
+
+   if (resolutionID.length() > 0)
+   {
+      // check which one matches the current state
+      PixelSizeConfiguration* pCfg = pixelSizeGroup_->Find(resolutionID.c_str());
+      if (!pCfg)
+         return 0.0;
+
+      return pCfg->getdxdz();
+   }
+   else
+   {
+      throw CMMError("No pixel size configuration found", MMERR_DEVICE_GENERIC);
+   }
+}
+
+/**
+ * Returns the dxdz angle 
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ */
+double CMMCore::getPixelSizedxdz(const char* resolutionID) throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   return psc->getdxdz();
+}
+
+/**
+ * Returns the dydz angle 
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ */
+double CMMCore::getPixelSizedydz()
+{
+	 return getPixelSizedydz(false);
+}
+
+/**
+ * Returns the dydz angle of the current pixel size
+ * optionally using cached pixel configuration
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ */
+double CMMCore::getPixelSizedydz(bool cached) throw (CMMError)
+{
+   std::string resolutionID;
+   resolutionID = getCurrentPixelSizeConfig(cached);
+
+   if (resolutionID.length() > 0)
+   {
+      // check which one matches the current state
+      PixelSizeConfiguration* pCfg = pixelSizeGroup_->Find(resolutionID.c_str());
+      if (!pCfg)
+         return 0.0;
+
+      return pCfg->getdydz();
+   }
+   else
+   {
+      throw CMMError("No pixel size configuration found", MMERR_DEVICE_GENERIC);
+   }
+}
+
+/**
+ * Returns the dydz angle 
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ */
+double CMMCore::getPixelSizedydz(const char* resolutionID) throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   return psc->getdydz();
+}
+
+/**
+ * Returns the optimal z step size in um
+ * There is no magic to this number, but lets the system configuration
+ * communicate to the end user what the optimal Z step size is for this 
+ * pixel size configuration
+ */
+double CMMCore::getPixelSizeOptimalZ()
+{
+	 return getPixelSizeOptimalZ(false);
+}
+
+/**
+ * Returns the optimal z step size in um, optionally using cached pixel configuration
+ * There is no magic to this number, but lets the system configuration
+ * communicate to the end user what the optimal Z step size is for this 
+ * pixel size configuration
+ *
+ */
+double CMMCore::getPixelSizeOptimalZ(bool cached) throw (CMMError)
+{
+   std::string resolutionID;
+   resolutionID = getCurrentPixelSizeConfig(cached);
+
+   if (resolutionID.length() > 0)
+   {
+      // check which one matches the current state
+      PixelSizeConfiguration* pCfg = pixelSizeGroup_->Find(resolutionID.c_str());
+      if (!pCfg)
+         return 0.0;
+
+      return pCfg->getOptimalZ();
+   }
+   else
+   {
+      throw CMMError("No pixel size configuration found", MMERR_DEVICE_GENERIC);
+   }
+}
+
+/**
+ * Returns the optimal z step size in um, optionally using cached pixel configuration
+ * There is no magic to this number, but lets the system configuration
+ * communicate to the end user what the optimal Z step size is for this 
+ * pixel size configuration
+ */
+double CMMCore::getPixelSizeOptimalZ(const char* resolutionID) throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   return psc->getOptimalZ();
 }
 
 /**
