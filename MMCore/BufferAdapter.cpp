@@ -8,17 +8,16 @@
    #define DEVICE_ERR -1
 #endif
 
+const char* const BufferAdapter::DEFAULT_V2_BUFFER_NAME = "DEFAULT_BUFFER";
+
 BufferAdapter::BufferAdapter(bool useV2Buffer, unsigned int memorySizeMB)
    : useV2_(useV2Buffer), circBuffer_(nullptr), v2Buffer_(nullptr)
 {
    if (useV2_) {
-      // Create a new v2 buffer with a total size of memorySizeMB megabytes.
-      // Multiply by (1 << 20) to convert megabytes to bytes.
-      size_t bytes = memorySizeMB * (1 << 20);
-      v2Buffer_ = new DataBuffer(bytes, "DEFAULT");
+      // Create a new v2 buffer directly with MB
+      v2Buffer_ = new DataBuffer(memorySizeMB, DEFAULT_V2_BUFFER_NAME);
    } else {
       circBuffer_ = new CircularBuffer(memorySizeMB);
-      // Optionally, perform any necessary initialization for the circular buffer.
    }
 }
 
@@ -108,7 +107,7 @@ bool BufferAdapter::Initialize(unsigned numChannels, unsigned width, unsigned he
 unsigned BufferAdapter::GetMemorySizeMB() const
 {
    if (useV2_) {
-      return 0; // TODO: need to implement this
+      return v2Buffer_->GetMemorySizeMB();
    } else {
       return circBuffer_->GetMemorySizeMB();
    }
@@ -126,8 +125,7 @@ long BufferAdapter::GetRemainingImageCount() const
 void BufferAdapter::Clear()
 {
    if (useV2_) {
-      // In this basic implementation, we call ReleaseBuffer with the known buffer name.
-      v2Buffer_->ReleaseBuffer("DEFAULT");
+      v2Buffer_->ReleaseBuffer(DEFAULT_V2_BUFFER_NAME);
    } else {
       circBuffer_->Clear();
    }

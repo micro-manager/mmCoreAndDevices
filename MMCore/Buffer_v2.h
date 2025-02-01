@@ -6,7 +6,13 @@
 // DESCRIPTION:   Generic implementation of a buffer for storing image data and
 //                metadata. Provides thread-safe access for reading and writing
 //                with configurable overflow behavior.
-//              
+//
+// The buffer is organized into slots (BufferSlot objects), each of which
+// supports exclusive write access and shared read access. Read access is
+// delivered using const pointers and is counted via an atomic counter, while
+// write access requires acquiring an exclusive lock. This ensures that once a
+// read pointer is given out it cannot be misused for writing.
+//
 // COPYRIGHT:     Henry Pinkard, 2025
 //
 // LICENSE:       This file is distributed under the "Lesser GPL" (LGPL) license.
@@ -21,7 +27,7 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // AUTHOR:        Henry Pinkard,  01/31/2025
-
+///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
 
@@ -29,23 +35,108 @@
 #include "../MMDevice/MMDevice.h"
 #include <mutex>
 #include <string>
+#include <map>
+#include <cstddef>
+#include <vector>
+#include <atomic>
+#include <condition_variable>
 
+/**
+ * BufferSlot represents a contiguous slot in the DataBuffer that holds image
+ * data and metadata. It manages exclusive (write) and shared (read) access
+ * using atomics, a mutex, and a condition variable.
+ */
+class BufferSlot {
+public:
+    // Constructor: Initializes the slot with the given start offset and length.
+    BufferSlot(std::size_t start, std::size_t length);
+    // Destructor.
+    ~BufferSlot();
+
+    // Returns the start offset (in bytes) of the slot.
+    std::size_t GetStart() const;
+    // Returns the length (in bytes) of the slot.
+    std::size_t GetLength() const;
+
+    // Stores a detail (e.g., width, height) associated with the slot.
+    void SetDetail(const std::string &key, std::size_t value);
+    // Retrieves a stored detail; returns 0 if the key is not found.
+    std::size_t GetDetail(const std::string &key) const;
+    // Clears all stored details.
+    void ClearDetails();
+
+    // --- Methods for synchronizing access ---
+
+    /**
+     * Try to acquire exclusive write access.
+     * Returns true on success, false if the slot is already locked for writing
+     * or if active readers exist.
+     */
+    bool AcquireWriteAccess();
+    /**
+     * Release exclusive write access.
+     * Clears the write flag and notifies waiting readers.
+     */
+    void ReleaseWriteAccess();
+    /**
+     * Acquire shared read access by blocking until no writer is active.
+     * Once the waiting condition is met, the reader count is incremented.
+     * Returns true when read access has been acquired.
+     */
+    bool AcquireReadAccess();
+    /**
+     * Release shared read access.
+     * Decrements the reader count using release semantics.
+     */
+    void ReleaseReadAccess();
+
+    /**
+     * Return true if the slot is available for acquiring write access (i.e.,
+     * no active writer or reader).
+     */
+    bool IsAvailableForWriting() const;
+    /**
+     * Return true if the slot is available for acquiring read access 
+     * (no active writer).
+     */
+    bool IsAvailableForReading() const;
+
+private:
+    // Basic slot information.
+    std::size_t start_;               // Byte offset within the buffer.
+    std::size_t length_;              // Length of the slot in bytes.
+    std::map<std::string, std::size_t> details_;  // Additional details (e.g., image dimensions).
+
+    // Synchronization primitives.
+    std::atomic<int> readAccessCountAtomicInt_;  // Count of active readers.
+    std::atomic<bool> writeAtomicBool_;            // True if the slot is locked for writing.
+    mutable std::mutex writeCompleteConditionMutex_;  // Mutex for condition variable.
+    mutable std::condition_variable writeCompleteCondition_;  // Condition variable for blocking readers.
+};
+
+
+/**
+ * DataBuffer manages a large contiguous memory area, divided into BufferSlot
+ * objects for storing image data and metadata. It supports two data access
+ * patterns: copy-based access and direct pointer access via retrieval of slots.
+ */
 class DataBuffer {
-    public:
-        DataBuffer(size_t numBytes, const char* name);
-        ~DataBuffer();
-			
+public:
+    DataBuffer(unsigned int memorySizeMB, const std::string& name);
+    ~DataBuffer();
 
-	/////// Buffer Allocation and Destruction
-
-	// C version
-	int AllocateBuffer(size_t numBytes, const char* name);
-	//// Is there a need for a name?
-	//// Maybe makes sense for Core to assing a unique integer
-	int ReleaseBuffer(const char* name);
+    // Buffer Allocation and Destruction
+    int AllocateBuffer(unsigned int memorySizeMB, const std::string& name);
+    int ReleaseBuffer(const std::string& name);
 
 	// TODO: Other versions for allocating buffers Java, Python
 
+	
+    /**
+     * Get the total memory size of the buffer in megabytes
+     * @return Size of the buffer in MB
+     */
+    unsigned int GetMemorySizeMB() const;
 
 	/////// Monitoring the Buffer ///////
 	int GetAvailableBytes(void* buffer, size_t* availableBytes);
@@ -120,7 +211,7 @@ class DataBuffer {
 	////// Writing Data into buffer //////
 
 	/**
-	 * @brief Copy data into the next available slot in the buffer.
+	 * Copy data into the next available slot in the buffer.
 	 * 
 	 * Returns the size of the copied data through dataSize.
 	 * Implementing code should check the device type of the caller, and ensure that 
@@ -133,10 +224,11 @@ class DataBuffer {
 	 * @param serializedMetadata The serialized metadata associated with the data.
 	 * @return Error code (0 on success).
 	 */
-	int InsertData(const MM::Device *caller, const void* data, size_t dataSize, const char* serializedMetadata);
+	int InsertData(const MM::Device *caller, const void* data, size_t dataSize, 
+                   const std::string& serializedMetadata);
 
 	/**
-	 * @brief Get a pointer to the next available data slot in the buffer for writing.
+	 * Get a pointer to the next available data slot in the buffer for writing.
 	 * 
 	 * The caller must release the slot using ReleaseDataSlot after writing is complete.
 	 * Internally this will use a std::unique_ptr<Slot>.
@@ -147,16 +239,16 @@ class DataBuffer {
 	 * @param serializedMetadata The serialized metadata associated with the data.
 	 * @return Error code (0 on success).
 	 */
-	int GetWritingSlot(const MM::Device *caller, void** slot, size_t slotSize, const char* serializedMetadata);
+	int GetWritingSlot(const MM::Device *caller, void** slot, size_t slotSize, 
+                       const std::string& serializedMetadata);
 
-	/**
-	 * @brief Release a data slot after writing is complete.
-	 * 
-	 * @param caller The device calling this function.
-	 * @param buffer The buffer to be released.
-	 * @return Error code (0 on success).
-	 */
-	int ReleaseWritingSlot(const MM::Device *caller, void* buffer);
+    /**
+     * Release a data slot after writing is complete.
+     * @param caller The device calling this function.
+     * @param buffer The slot to be released.
+     * @return Error code (0 on success).
+     */
+    int ReleaseWritingSlot(const MM::Device *caller, void* buffer);
 
 
 
@@ -164,19 +256,20 @@ class DataBuffer {
  	////// Camera API //////
 
     // Set the buffer for a camera to write into
-    int SetCameraBuffer(const char* camera, void* buffer);
+    int SetCameraBuffer(const std::string& camera, void* buffer);
 
     // Get a pointer to a heap allocated Metadata object with the required fields filled in
     int CreateCameraRequiredMetadata(Metadata**, int width, int height, int bitDepth);
 
-    private:
-        // Basic buffer management
-        char* buffer_;
-        size_t bufferSize_;
-        std::string bufferName_;
+private:
+    // Basic buffer management.
+    char* buffer_;
+    size_t bufferSize_;
+    std::string bufferName_;
 
-        // Configuration
-        bool overwriteWhenFull_;
+    // Configuration.
+    bool overwriteWhenFull_;
 
-
+    // List of active buffer slots. Each slot manages its own read/write access.
+    std::vector<BufferSlot> activeSlots_;
 };

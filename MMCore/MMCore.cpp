@@ -141,7 +141,7 @@ CMMCore::CMMCore() :
    pluginManager_(new CPluginManager()),
    deviceManager_(new mm::DeviceManager()),
    pPostedErrorsLock_(NULL),
-   useV2Buffer_(false)
+   useV2Buffer_(true)
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();

@@ -9,6 +9,8 @@
 // used by MMCore. It currently supports only a minimal set of functions.
 class BufferAdapter {
 public:
+   static const char* const DEFAULT_V2_BUFFER_NAME;
+
    /**
     * Constructor.
     * @param useV2Buffer Set to true to use the new DataBuffer (v2); false to use CircularBuffer.
@@ -151,6 +153,8 @@ private:
    bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.
    CircularBuffer* circBuffer_;
    DataBuffer* v2Buffer_;
+
+   
 };
 
 #endif // BUFFERADAPTER_H 
