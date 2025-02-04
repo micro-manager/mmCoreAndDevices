@@ -1199,6 +1199,7 @@ int Aperture::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 Frap::Frap () :
    initialized_ (false),
    name_ (g_CSUW1Frap),
+   pos_(0),
    numPos_ (3)
 {
    InitializeDefaultErrorMessages();
@@ -1227,9 +1228,14 @@ int Frap::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   // Get current state.  This is the only time the position is read from the device.
+   ret = g_hub.GetFrapPosition(*this, *GetCoreCallback(), pos_);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &Frap::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct); 
+   ret = CreateProperty(MM::g_Keyword_State, std::to_string(pos_).c_str(), MM::Integer, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -1241,10 +1247,6 @@ int Frap::Initialize()
    SetPositionLabel(0, "Position-1");
    SetPositionLabel(1, "Position-2");
    SetPositionLabel(2, "Position-3");
-
-   ret = UpdateStatus();
-   if (ret != DEVICE_OK)
-      return ret; 
 
    initialized_ = true;
 
@@ -1274,19 +1276,17 @@ int Frap::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = g_hub.GetFrapPosition(*this, *GetCoreCallback(), pos);
-      if (ret != DEVICE_OK)
-         return ret;
-	  pProp->Set((long)pos);
+	   pProp->Set((long) pos_);
    }
    else if (eAct == MM::AfterSet)
    {
       long pos;
       pProp->Get(pos);
-	  return g_hub.SetFrapPosition(*this, *GetCoreCallback(), pos);
+	   int ret = g_hub.SetFrapPosition(*this, *GetCoreCallback(), pos);
+      if (ret != DEVICE_OK)
+         return ret;
+      pos_ = pos;
    }
-
    return DEVICE_OK;
 }
 

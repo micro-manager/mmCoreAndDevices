@@ -314,6 +314,7 @@ public:
 private:
    bool initialized_;
    std::string name_;
+   int pos_;
    unsigned numPos_;
 };
 
