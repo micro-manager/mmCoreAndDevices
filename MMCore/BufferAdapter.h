@@ -4,6 +4,9 @@
 #include "CircularBuffer.h"
 #include "Buffer_v2.h"
 #include "../MMDevice/MMDevice.h"
+#include <chrono>
+#include <map>
+#include <mutex>
 
 // BufferAdapter provides a common interface for buffer operations
 // used by MMCore. It currently supports only a minimal set of functions.
@@ -23,13 +26,13 @@ public:
     * Get a pointer to the top (most recent) image.
     * @return Pointer to image data, or nullptr if unavailable.
     */
-   const unsigned char* GetTopImage() const;
+   const unsigned char* GetLastImage() const;
 
    /**
     * Get a pointer to the next image from the buffer.
     * @return Pointer to image data, or nullptr if unavailable.
     */
-   const unsigned char* GetNextImage();
+   const unsigned char* PopNextImage();
 
    /**
     * Get a pointer to the nth image from the top of the buffer.
@@ -128,13 +131,14 @@ public:
     * Get the total capacity of the buffer.
     * @return Total capacity of the buffer.
     */
-   long GetSize() const;
+   long GetSize(long imageSize) const;
 
    /**
     * Get the free capacity of the buffer.
-    * @return Free capacity of the buffer.
+    * @param imageSize Size of a single image in bytes.
+    * @return Number of images that can be added without overflowing.
     */
-   long GetFreeSize() const;
+   long GetFreeSize(long imageSize) const;
 
    /**
     * Check if the buffer is overflowed.
@@ -149,12 +153,21 @@ public:
     */
    const mm::ImgBuffer* GetTopImageBuffer(unsigned channel) const;
 
+   void* GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError);
+   void* GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError);
+   void* PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError);
+
 private:
    bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.
    CircularBuffer* circBuffer_;
    DataBuffer* v2Buffer_;
-
    
+   std::chrono::steady_clock::time_point startTime_;
+   std::map<std::string, long> imageNumbers_;  // Track image numbers per camera
+   std::mutex imageNumbersMutex_;  // Mutex to protect access to imageNumbers_
+
+   void ProcessMetadata(Metadata& md, unsigned width, unsigned height, 
+       unsigned byteDepth, unsigned nComponents);
 };
 
 #endif // BUFFERADAPTER_H 

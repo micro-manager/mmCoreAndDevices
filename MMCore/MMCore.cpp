@@ -3079,7 +3079,7 @@ void* CMMCore::getLastImage() throw (CMMError)
       }
    }
 
-   unsigned char* pBuf = const_cast<unsigned char*>(bufferAdapter_->GetTopImage());
+   unsigned char* pBuf = const_cast<unsigned char*>(bufferAdapter_->GetLastImage());
    if (pBuf != 0)
       return pBuf;
    else
@@ -3095,14 +3095,7 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   const mm::ImgBuffer* pBuf = bufferAdapter_->GetTopImageBuffer(channel);
-   if (pBuf != 0)
-   {
-      md = pBuf->GetMetadata();
-      return const_cast<unsigned char*>(pBuf->GetPixels());
-   }
-   else
-      throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
+   return bufferAdapter_->GetLastImageMD(channel, md);
 }
 
 /**
@@ -3136,14 +3129,7 @@ void* CMMCore::getLastImageMD(Metadata& md) const throw (CMMError)
  */
 void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const throw (CMMError)
 {
-   const mm::ImgBuffer* pBuf = bufferAdapter_->GetNthFromTopImageBuffer(n);
-   if (pBuf != 0)
-   {
-      md = pBuf->GetMetadata();
-      return const_cast<unsigned char*>(pBuf->GetPixels());
-   }
-   else
-      throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
+   return bufferAdapter_->GetNthImageMD(n, md);
 }
 
 /**
@@ -3160,7 +3146,7 @@ void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const throw 
  */
 void* CMMCore::popNextImage() throw (CMMError)
 {
-   unsigned char* pBuf = const_cast<unsigned char*>(bufferAdapter_->GetNextImage());
+   unsigned char* pBuf = const_cast<unsigned char*>(bufferAdapter_->PopNextImage());
    if (pBuf != 0)
       return pBuf;
    else
@@ -3178,14 +3164,7 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) th
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   const mm::ImgBuffer* pBuf = bufferAdapter_->GetNextImageBuffer(channel);
-   if (pBuf != 0)
-   {
-      md = pBuf->GetMetadata();
-      return const_cast<unsigned char*>(pBuf->GetPixels());
-   }
-   else
-      throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
+   return bufferAdapter_->PopNextImageMD(channel, md);
 }
 
 /**
@@ -3287,7 +3266,10 @@ long CMMCore::getBufferTotalCapacity()
 {
    if (bufferAdapter_)
    {
-      return bufferAdapter_->GetSize();
+      // Compute image size from the current camera parameters.
+      long imageSize = getImageWidth() * getImageHeight() * getBytesPerPixel();
+      // Pass the computed image size as an argument to the adapter.
+      return bufferAdapter_->GetSize(imageSize);
    }
    return 0;
 }
@@ -3301,7 +3283,9 @@ long CMMCore::getBufferFreeCapacity()
 {
    if (bufferAdapter_)
    {
-      return bufferAdapter_->GetFreeSize();
+      // Compute image size from the current camera parameters.
+      long imageSize = getImageWidth() * getImageHeight() * getBytesPerPixel();
+      return bufferAdapter_->GetFreeSize(imageSize);
    }
    return 0;
 }
