@@ -420,8 +420,8 @@ public:
    double getdxdz() const { return dxdz_; }
    void setdydz(double dydz) { dydz_ = dydz; }
    double getdydz() const { return dydz_; }
-   void setOptimalZ(double optimalZ) { optimalZ_ = optimalZ; }
-   double getOptimalZ() const { return optimalZ_; }
+   void setOptimalZUm(double optimalZ) { optimalZ_ = optimalZ; }
+   double getOptimalZUm() const { return optimalZ_; }
 
 
 private:

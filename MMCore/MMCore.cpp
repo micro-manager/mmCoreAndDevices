@@ -5113,8 +5113,16 @@ void CMMCore::setPixelSizeAffine(const char* resolutionID, std::vector<double> a
 }
 
 /**
- * Sets the dx/dZ part of the angle between the scan axis and camera axies.
+ * Sets the angle between the camera's x axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in x caused by a translation in z, i.e. dx / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @param resolutionID   The pixel size configuration group name
+ * @param dxdz       Angle of the Z-stage axis with the camera axis (dimensionless)
  */
 void CMMCore::setPixelSizedxdz(const char* resolutionID, double dxdz)  throw (CMMError)
 {
@@ -5132,8 +5140,16 @@ void CMMCore::setPixelSizedxdz(const char* resolutionID, double dxdz)  throw (CM
 }
 
 /**
- * Sets the dy/dZ part of the angle between the scan axis and camera axies.
+ * Sets the angle between the camera's y axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in y caused by a translation in z, i.e. dy / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @param resolutionID   The pixel size configuration group name
+ * @param dydz       Angle of the Z-stage axis with the camera axis (dimensionless)
  */
 void CMMCore::setPixelSizedydz(const char* resolutionID, double dydz)  throw (CMMError)
 {
@@ -5154,8 +5170,11 @@ void CMMCore::setPixelSizedydz(const char* resolutionID, double dydz)  throw (CM
  * Sets the opimal Z stepSize (in microns).
  * There is no magic here, this number is provided by the person configuring the
  * microscope, to be used by the person using the microscope.
+ *
+ * @param resolutionID   The pixel size configuration group name
+ * @param optimalZ       Optimal z step in microns
  */
-void CMMCore::setPixelSizeOptimalZ(const char* resolutionID, double optimalZ)  throw (CMMError)
+void CMMCore::setPixelSizeOptimalZUm(const char* resolutionID, double optimalZ)  throw (CMMError)
 {
    CheckConfigPresetName(resolutionID);
 
@@ -5163,7 +5182,7 @@ void CMMCore::setPixelSizeOptimalZ(const char* resolutionID, double optimalZ)  t
    if (psc == 0)
       throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
             MMERR_NoConfigGroup);
-   psc->setOptimalZ(optimalZ);
+   psc->setOptimalZUm(optimalZ);
 
    LOG_DEBUG(coreLogger_) << "Pixel size config: "
       "preset " << resolutionID << ": set optimalZ to " <<
@@ -5171,12 +5190,10 @@ void CMMCore::setPixelSizeOptimalZ(const char* resolutionID, double optimalZ)  t
 }
 
 /**
-/**
  * Applies a Pixel Size Configuration. The command will fail if the
  * configuration was not previously defined.
  *
- * @param groupName   the configuration group name
- * @param configName  the configuration preset name
+ * @param resolutionID   the pixel size configuration group name
  */
 void CMMCore::setPixelSizeConfig(const char* resolutionID) throw (CMMError)
 {
@@ -5762,8 +5779,15 @@ double CMMCore::getMagnificationFactor() const
 }
 
 /**
- * Returns the dxdz angle 
+ * Returns the angle between the camera's x axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in x caused by a translation in z, i.e. dx / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @return        angle (dx/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedxdz() throw (CMMError)
 {
@@ -5771,10 +5795,17 @@ double CMMCore::getPixelSizedxdz() throw (CMMError)
 }
 
 /**
- * Returns the dxdz angle of the current pixel size
- * optionally using cached pixel configuration
+ * Returns the angle between the camera's x axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in x caused by a translation in z, i.e. dx / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  *
+ * @cached        use the System state cache when true, otherwise checks
+ *                the hardware.
+ * @return        angle (dx/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedxdz(bool cached) throw (CMMError)
 {
@@ -5797,8 +5828,17 @@ double CMMCore::getPixelSizedxdz(bool cached) throw (CMMError)
 }
 
 /**
- * Returns the dxdz angle 
+ * Returns the angle between the camera's x axis and the axis (direction) 
+ * of the z drive for the given pixel size configuration.  
+ * This angle is dimensionless (i.e. the ratio of the 
+ * translation in x caused by a translation in z, i.e. dx / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @param resolutionID   The pixel size configuration group name
+ * @return        Angle (dx/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedxdz(const char* resolutionID) throw (CMMError)
 {
@@ -5812,8 +5852,15 @@ double CMMCore::getPixelSizedxdz(const char* resolutionID) throw (CMMError)
 }
 
 /**
- * Returns the dydz angle 
+ * Returns the angle between the camera's y axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in y caused by a translation in z, i.e. dy / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @return   angle (dy/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedydz() throw (CMMError)
 {
@@ -5821,10 +5868,17 @@ double CMMCore::getPixelSizedydz() throw (CMMError)
 }
 
 /**
- * Returns the dydz angle of the current pixel size
- * optionally using cached pixel configuration
+ * Returns the angle between the camera's y axis and the axis (direction) 
+ * of the z drive optionally using the System cache.  This angle is 
+ * dimensionless (i.e. the ratio of the translation in y caused by 
+ * a translation in z, i.e. dy / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  *
+ * @cached   Uses System state cache to find active pixel size config when true
+ * @return   angle (dy/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedydz(bool cached) throw (CMMError)
 {
@@ -5847,8 +5901,17 @@ double CMMCore::getPixelSizedydz(bool cached) throw (CMMError)
 }
 
 /**
- * Returns the dydz angle 
+ * Returns the angle between the camera's y axis and the axis (direction) 
+ * of the z drive for the given pixel size configuration.  
+ * This angle is dimensionless (i.e. the ratio of the 
+ * translation in y caused by a translation in z, i.e. dy / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @resolutionID   Name of Pixel Size configuration for this dy /dz angle
+ * @return   angle (dy/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedydz(const char* resolutionID) throw (CMMError)
 {
@@ -5867,9 +5930,9 @@ double CMMCore::getPixelSizedydz(const char* resolutionID) throw (CMMError)
  * communicate to the end user what the optimal Z step size is for this 
  * pixel size configuration
  */
-double CMMCore::getPixelSizeOptimalZ() throw (CMMError)
+double CMMCore::getPixelSizeOptimalZUm() throw (CMMError)
 {
-	 return getPixelSizeOptimalZ(false);
+	 return getPixelSizeOptimalZUm(false);
 }
 
 /**
@@ -5878,8 +5941,9 @@ double CMMCore::getPixelSizeOptimalZ() throw (CMMError)
  * communicate to the end user what the optimal Z step size is for this 
  * pixel size configuration
  *
+ * @cached   Uses System state cache to find active pixel size config when true
  */
-double CMMCore::getPixelSizeOptimalZ(bool cached) throw (CMMError)
+double CMMCore::getPixelSizeOptimalZUm(bool cached) throw (CMMError)
 {
    std::string resolutionID;
    resolutionID = getCurrentPixelSizeConfig(cached);
@@ -5891,7 +5955,7 @@ double CMMCore::getPixelSizeOptimalZ(bool cached) throw (CMMError)
       if (!pCfg)
          return 0.0;
 
-      return pCfg->getOptimalZ();
+      return pCfg->getOptimalZUm();
    }
    else
    {
@@ -5905,7 +5969,7 @@ double CMMCore::getPixelSizeOptimalZ(bool cached) throw (CMMError)
  * communicate to the end user what the optimal Z step size is for this 
  * pixel size configuration
  */
-double CMMCore::getPixelSizeOptimalZ(const char* resolutionID) throw (CMMError)
+double CMMCore::getPixelSizeOptimalZUm(const char* resolutionID) throw (CMMError)
 {
    CheckConfigPresetName(resolutionID);
 
@@ -5913,7 +5977,7 @@ double CMMCore::getPixelSizeOptimalZ(const char* resolutionID) throw (CMMError)
    if (psc == 0)
       throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
             MMERR_NoConfigGroup);
-   return psc->getOptimalZ();
+   return psc->getOptimalZUm();
 }
 
 /**
