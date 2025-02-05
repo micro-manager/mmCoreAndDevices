@@ -77,7 +77,7 @@ const unsigned char* BufferAdapter::PopNextImage()
 {
    if (useV2_) {
       Metadata dummyMetadata;
-      return v2Buffer_->PopNextDataReadPointer(nullptr, dummyMetadata, false);
+      return v2Buffer_->PopNextDataReadPointer(dummyMetadata, nullptr, false);
       // TODO: ensure calling code releases the slot after use
    } else {
       return circBuffer_->PopNextImage();
@@ -252,7 +252,7 @@ void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw 
       // In v2, we use PeekNextDataReadPointer (which does not advance the internal pointer)
       // Note: the v2 buffer is not channel aware, so the 'channel' parameter is ignored.
       // TODO implement the channel aware version
-      void* slotPtr = nullptr;
+      unsigned char* slotPtr = nullptr;
       size_t dataSize = 0;
       int ret = v2Buffer_->PeekNextDataReadPointer(&slotPtr, &dataSize, md);
       if (ret != DEVICE_OK || slotPtr == nullptr)
@@ -299,7 +299,7 @@ void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMEr
       // The caller is expected to call ReleaseDataReadPointer on the returned pointer once done.
       // TODO: make channel aware
       size_t dataSize = 0;
-      const unsigned char* slotPtr = v2Buffer_->PopNextDataReadPointer(&dataSize, md, false);
+      const unsigned char* slotPtr = v2Buffer_->PopNextDataReadPointer(md, &dataSize, false);
       if (slotPtr == nullptr)
          throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
       return const_cast<unsigned char*>(slotPtr);
