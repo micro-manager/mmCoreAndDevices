@@ -5159,7 +5159,7 @@ void CMMCore::setPixelSizedydz(const char* resolutionID, double dydz)  throw (CM
    if (psc == 0)
       throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
             MMERR_NoConfigGroup);
-   psc->setdxdz(dydz);
+   psc->setdydz(dydz);
 
    LOG_DEBUG(coreLogger_) << "Pixel size config: "
       "preset " << resolutionID << ": set dydz to " <<
@@ -6881,6 +6881,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
          }
       }
    }
+   os << '\n';
 
    // save configuration groups
    os << "# Group configurations\n";
@@ -6904,7 +6905,40 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
          }
       }
    }
+   os << '\n';
 
+   // save Pixel Size configurations
+   os << "# Pixel Size configurations\n";
+   std::vector<std::string> pixelSizeGroups = getAvailablePixelSizeConfigs();
+   for (size_t i = 0; i < pixelSizeGroups.size(); i++)
+   {
+      Configuration psc = getPixelSizeConfigData(pixelSizeGroups[i].c_str());
+         for (size_t k=0; k< psc.size(); k++)
+         {
+            PropertySetting s = psc.getSetting(k);
+            os << MM::g_CFGCommand_ConfigPixelSize << ',' << pixelSizeGroups[i] << ','
+               << s.getDeviceLabel() << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << '\n';
+         }
+         os << MM::g_CFGCommand_PixelSize_um << ',' << pixelSizeGroups[i].c_str() << ',' << getPixelSizeUmByID(pixelSizeGroups[i].c_str()) << '\n';
+         std::vector<double> affines = getPixelSizeAffineByID(pixelSizeGroups[i].c_str());
+         if (affines.size() == 6)
+         {
+            os << MM::g_CFGCommand_PixelSizeAffine << ',' << pixelSizeGroups[i].c_str() << ',';
+            for (int l = 0; l < 5; l++)
+            {
+               os << affines[l] << ',';
+            }
+            os << affines[5] << '\n';
+         }
+         os << MM::g_CFGCommand_PixelSizedxdz << ',' << pixelSizeGroups[i].c_str() << ',' 
+            << getPixelSizedxdz(pixelSizeGroups[i].c_str()) << '\n';
+         os << MM::g_CFGCommand_PixelSizedydz << ',' << pixelSizeGroups[i].c_str() << ',' 
+            << getPixelSizedydz(pixelSizeGroups[i].c_str()) << '\n';
+         os << MM::g_CFGCommand_PixelSizeOptimalZUm << ',' << pixelSizeGroups[i].c_str() << ',' 
+            << getPixelSizeOptimalZUm(pixelSizeGroups[i].c_str()) << '\n';
+   }
+   os << '\n';
+    
    // save device roles
    os << "# Roles\n";
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
@@ -7146,6 +7180,33 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
                   setPixelSizeAffine(tokens[1].c_str(), *affineT);
                   delete affineT;
                }
+               else
+                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                        ToQuotedString(line) + ")",
+                        MMERR_InvalidCFGEntry);
+            }
+            else if (tokens[0].compare(MM::g_CFGCommand_PixelSizedxdz) == 0)
+            {
+               if (tokens.size() == 3)
+                  setPixelSizedxdz(tokens[1].c_str(), atof(tokens[2].c_str()));
+               else
+                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                        ToQuotedString(line) + ")",
+                        MMERR_InvalidCFGEntry);
+            }
+            else if (tokens[0].compare(MM::g_CFGCommand_PixelSizedydz) == 0)
+            {
+               if (tokens.size() == 3)
+                  setPixelSizedydz(tokens[1].c_str(), atof(tokens[2].c_str()));
+               else
+                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                        ToQuotedString(line) + ")",
+                        MMERR_InvalidCFGEntry);
+            }
+            else if (tokens[0].compare(MM::g_CFGCommand_PixelSizeOptimalZUm) == 0)
+            {
+               if (tokens.size() == 3)
+                  setPixelSizeOptimalZUm(tokens[1].c_str(), atof(tokens[2].c_str()));
                else
                   throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
                         ToQuotedString(line) + ")",
