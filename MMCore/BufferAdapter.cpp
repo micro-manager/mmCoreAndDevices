@@ -94,7 +94,7 @@ bool BufferAdapter::Initialize(unsigned numChannels, unsigned width, unsigned he
          int ret = v2Buffer_->ReinitializeBuffer(v2Buffer_->GetMemorySizeMB());
          if (ret != DEVICE_OK)
             return false;
-      } catch (const std::exception& ex) {
+      } catch (const std::exception&) {
          // Optionally log the exception
          return false;
       }
@@ -146,7 +146,7 @@ long BufferAdapter::GetSize(long imageSize) const
 long BufferAdapter::GetFreeSize(long imageSize) const
 {
    if (useV2_) {
-      return v2Buffer_->GetFreeMemory() / imageSize;
+      return static_cast<long>(v2Buffer_->GetFreeMemory()) / imageSize;
    } else {
       return circBuffer_->GetFreeSize();
    }
@@ -239,11 +239,13 @@ bool BufferAdapter::InsertMultiChannel(const unsigned char* buf, unsigned numCha
     if (useV2_) {
       // All the data needed to interpret the image is in the metadata
       // This function will copy data and metadata into the buffer
-      v2Buffer_->InsertData(buf, width * height * byteDepth *numChannels, &md);
+      int ret = v2Buffer_->InsertData(buf, width * height * byteDepth *numChannels, &md);
+      return ret == DEVICE_OK;
     } else {
         return circBuffer_->InsertMultiChannel(buf, numChannels, width, height, 
             byteDepth, &md);
     }
+
 }
 
 void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError)
@@ -252,12 +254,12 @@ void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw 
       // In v2, we use PeekNextDataReadPointer (which does not advance the internal pointer)
       // Note: the v2 buffer is not channel aware, so the 'channel' parameter is ignored.
       // TODO implement the channel aware version
-      unsigned char* slotPtr = nullptr;
-      size_t dataSize = 0;
-      int ret = v2Buffer_->PeekNextDataReadPointer(&slotPtr, &dataSize, md);
-      if (ret != DEVICE_OK || slotPtr == nullptr)
+      const unsigned char* ptr = nullptr;
+      size_t imageDataSize = 0;
+      int ret = v2Buffer_->PeekNextDataReadPointer(&ptr, &imageDataSize, md);
+      if (ret != DEVICE_OK || ptr == nullptr)
          throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
-      return slotPtr;
+      return const_cast<unsigned char*>(ptr);
       // TODO: make sure calling code releases the slot after use
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetTopImageBuffer(channel);
@@ -274,11 +276,11 @@ void* BufferAdapter::GetNthImageMD(unsigned long n, Metadata& md) const throw (C
 {
    if (useV2_) {
       size_t dataSize = 0;
-      const unsigned char* slotPtr = v2Buffer_->PeekDataReadPointerAtIndex(n, &dataSize, md);
-      if (slotPtr == nullptr)
+      const unsigned char* ptr = v2Buffer_->PeekDataReadPointerAtIndex(n, &dataSize, md);
+      if (ptr == nullptr)
          throw CMMError("V2 buffer does not contain enough data.", MMERR_CircularBufferEmpty);
       // Return a non-const pointer (caller must be careful with the const_cast)
-      return const_cast<unsigned char*>(slotPtr);
+      return const_cast<unsigned char*>(ptr);
       // TODO: make sure calling code releases the slot after use
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetNthFromTopImageBuffer(n);
@@ -299,10 +301,10 @@ void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMEr
       // The caller is expected to call ReleaseDataReadPointer on the returned pointer once done.
       // TODO: make channel aware
       size_t dataSize = 0;
-      const unsigned char* slotPtr = v2Buffer_->PopNextDataReadPointer(md, &dataSize, false);
-      if (slotPtr == nullptr)
+      const unsigned char* ptr = v2Buffer_->PopNextDataReadPointer(md, &dataSize, false);
+      if (ptr == nullptr)
          throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
-      return const_cast<unsigned char*>(slotPtr);
+      return const_cast<unsigned char*>(ptr);
       // TODO: ensure that calling code releases the read pointer after use.
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetNextImageBuffer(channel);

@@ -260,9 +260,7 @@ public:
      * @param metadataPointer On success, receives a pointer to the metadata region.
      * @return DEVICE_OK on success.
      */
-    int GetDataWriteSlot(size_t imageSize, size_t metadataSize,
-                          const unsigned char** imageDataPointer,
-                          const unsigned char** metadataPointer);
+    int GetDataWriteSlot(size_t imageSize, size_t metadataSize, unsigned char** imageDataPointer, unsigned char** metadataPointer);
 
     /**
      * Releases a write slot after data has been written.
@@ -296,7 +294,7 @@ public:
      * @param waitForData If true, block until data becomes available.
      * @return Pointer to the start of the image data region, or nullptr if none available.
      */
-    const unsigned char* PopNextDataReadPointer(Metadata &md, size_t *imageDataSize, bool waitForData);
+    const unsigned char* PopNextDataReadPointer(Metadata &md, size_t* imageDataSize, bool waitForData);
 
     /**
      * Peeks at the next unread data entry without consuming it.

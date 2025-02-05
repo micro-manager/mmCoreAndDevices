@@ -355,7 +355,7 @@ int DataBuffer::SetOverwriteData(bool overwrite) {
  * 
  * The caller must release the slot using ReleaseDataSlot after writing is complete.
  */
-int DataBuffer::GetDataWriteSlot(size_t imageSize, size_t metadataSize, const unsigned char** imageDataPointer, const unsigned char** metadataPointer) {
+int DataBuffer::GetDataWriteSlot(size_t imageSize, size_t metadataSize, unsigned char** imageDataPointer, unsigned char** metadataPointer) {
        // AllocateNextSlot allocates a slot for writing new data of variable size.
     //
     // First, it checks if there is a recently released slot start (from releasedSlots_).
@@ -607,15 +607,13 @@ const unsigned char* DataBuffer::PopNextDataReadPointer(Metadata &md, size_t *im
     // Populate the metadata.
     if (header->metadataSize > 0) {
         const char* metaDataStart = reinterpret_cast<const char*>(imageDataPointer + header->imageSize);
-        // Assuming Metadata::Restore takes a null-terminated string or similar.
         md.Restore(metaDataStart);
     } else {
         // If no metadata is available, clear the metadata object.
         md.Clear();
     }
     
-    // Mark that this slot has been consumed.
-    // For this example, we simply move to the next slot.
+    // Consume this slot by advancing the index.
     currentSlotIndex_ = (currentSlotIndex_ + 1) % activeSlotsVector_.size();
     
     // Unlock and return the pointer to the image data region.
@@ -788,4 +786,8 @@ int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
    AllocateBuffer(memorySizeMB);
 
    return DEVICE_OK;
+}
+
+long DataBuffer::GetRemainingImageCount() const {
+    return static_cast<long>(activeSlotsVector_.size());
 }
