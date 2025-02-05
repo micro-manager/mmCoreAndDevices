@@ -5,12 +5,14 @@ on:
     paths:
       - MMDevice/**
       - MMCore/**
+      - .github/workflows/ci-mmdevice-mmcore.yml
   push:
     branches:
       - main
     paths:
       - MMDevice/**
       - MMCore/**
+      - .github/workflows/ci-mmdevice-mmcore.yml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
