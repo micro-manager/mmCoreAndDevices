@@ -37,7 +37,7 @@ Slots:
 - Memory management through reference counting:
   - Writers get exclusive ownership during writes
   - Readers can get shared read-only access
-  - Slots are recycled when all references are released
+  - Slots are recycled when all references are released (In non-overwriting mode)
 
 Data Access:
 - Two access patterns supported:

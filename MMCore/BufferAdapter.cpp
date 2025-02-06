@@ -1,13 +1,30 @@
+///////////////////////////////////////////////////////////////////////////////
+// FILE:          BufferAdapter.cpp
+// PROJECT:       Micro-Manager
+// SUBSYSTEM:     MMCore
+//-----------------------------------------------------------------------------
+// DESCRIPTION:   Generic implementation of a buffer for storing image data and
+//                metadata. Provides thread-safe access for reading and writing
+//                with configurable overflow behavior.
+////
+// COPYRIGHT:     Henry Pinkard, 2025
+//
+// LICENSE:       This file is distributed under the "Lesser GPL" (LGPL) license.
+//                License text is included with the source distribution.
+//
+//                This file is distributed in the hope that it will be useful,
+//                but WITHOUT ANY WARRANTY; without even the implied warranty
+//                of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+//                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+//                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
+//
+// AUTHOR:        Henry Pinkard,  01/31/2025
+
+
 #include "BufferAdapter.h"
 #include <mutex>
-
-// For demonstration, we assume DEVICE_OK and DEVICE_ERR macros are defined in MMCore.h or an included error header.
-#ifndef DEVICE_OK
-   #define DEVICE_OK 0
-#endif
-#ifndef DEVICE_ERR
-   #define DEVICE_ERR -1
-#endif
 
 
 static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_clock> tp) {
