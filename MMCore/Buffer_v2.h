@@ -294,7 +294,7 @@ public:
      * @param waitForData If true, block until data becomes available.
      * @return Pointer to the start of the image data region, or nullptr if none available.
      */
-    const unsigned char* PopNextDataReadPointer(Metadata &md, size_t* imageDataSize, bool waitForData);
+    const unsigned char* PopNextDataReadPointer(Metadata &md, size_t *imageDataSize, bool waitForData);
 
     /**
      * Peeks at the next unread data entry without consuming it.
