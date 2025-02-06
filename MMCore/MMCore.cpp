@@ -3197,7 +3197,6 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
       sizeMB << " MB";
 	try
 	{
-      // TODO: need to store a flag about which buffer to use
 		bufferAdapter_ = new BufferAdapter(useV2Buffer_, sizeMB); 
 	}
 	catch (std::bad_alloc& ex)
