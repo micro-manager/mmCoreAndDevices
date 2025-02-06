@@ -50,6 +50,7 @@ public:
 
 private:
 	int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetAcceleration(double& acceleration);
 	int OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnError(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -95,6 +96,7 @@ private:
 	bool stopSignal_;
 	bool serialOnlySendChanged_; // if true the serial command is only sent when it has changed
 	std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
+	double acceleration_;
 	bool advancedPropsEnabled_;
 	std::string axisletterX_;
 	std::string axisletterY_;

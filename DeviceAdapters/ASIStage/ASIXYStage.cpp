@@ -161,10 +161,13 @@ int XYStage::Initialize()
 	}
 	
 	// acceleration (sets both x and y)
+	ret = GetAcceleration(acceleration_);
+	if (ret != DEVICE_OK)
+		return ret;
 	if (hasCommand("AC " + axisletterX_ + "?"))
 	{
 		pAct = new CPropertyAction(this, &XYStage::OnAcceleration);
-		CreateProperty("Acceleration-AC(ms)", "0", MM::Integer, false, pAct);
+		CreateProperty("Acceleration-AC(ms)", std::to_string(acceleration_).c_str(), MM::Integer, false, pAct);
 	}
 	
 	// Finish Error (sets both x and y)
@@ -906,36 +909,38 @@ int XYStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int XYStage::GetAcceleration(double& acceleration)
+{
+   // To simplify our life we only read out acceleration for the X axis, but set for both
+   std::ostringstream command;
+   command << "AC " << axisletterX_ << "?";
+   std::string answer;
+
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+   {
+      return ret;
+   }
+
+   if (answer.substr(0, 2).compare(":X") == 0)
+   {
+      return ParseResponseAfterPosition(answer, 3, 8, acceleration);
+   }
+   // deal with error later
+   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out acceleration for the X axis, but set for both
-		std::ostringstream command;
-		command << "AC " << axisletterX_ << "?";
-		std::string answer;
-
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			double speed = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 3, 8, speed);
-			pProp->Set(speed);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		return pProp->Set(acceleration_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -955,7 +960,9 @@ int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
+		acceleration_ = accel; 
 		return ResponseStartsWithColonA(answer);
+
 	}
 	return DEVICE_OK;
 }
