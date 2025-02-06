@@ -72,11 +72,14 @@ int XYStage::Initialize()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
+   int ret = GetVersion(version_);
+   if (ret != DEVICE_OK)
+       return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
 	// check status first (test for communication protocol)
-	int ret = CheckDeviceStatus();
+	ret = CheckDeviceStatus();
 	if (ret != DEVICE_OK)
 	{
 		return ret;
