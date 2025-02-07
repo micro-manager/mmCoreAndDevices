@@ -403,9 +403,12 @@
 }
 %typemap(out) void*
 {
-   long lSize = (arg1)->getImageWidth() * (arg1)->getImageHeight();
+   long lSize = (arg1)->getImageWidth((const char*)result) * 
+                (arg1)->getImageHeight((const char*)result);
    
-   if ((arg1)->getBytesPerPixel() == 1)
+   unsigned bytesPerPixel = (arg1)->getBytesPerPixel((const char*)result);
+   
+   if (bytesPerPixel == 1)
    {
       // create a new byte[] object in Java
       jbyteArray data = JCALL1(NewByteArray, jenv, lSize);
@@ -422,9 +425,13 @@
       // copy pixels from the image buffer
       JCALL4(SetByteArrayRegion, jenv, data, 0, lSize, (jbyte*)result);
 
+      // Release the read access (required for V2 buffer, Core will figure out if it's V2 or not)
+      (arg1)->ReleaseReadAccess((const char*)result);
+
+
       $result = data;
    }
-   else if ((arg1)->getBytesPerPixel() == 2)
+   else if (bytesPerPixel == 2)
    {
       // create a new short[] object in Java
       jshortArray data = JCALL1(NewShortArray, jenv, lSize);
@@ -440,13 +447,18 @@
       // copy pixels from the image buffer
       JCALL4(SetShortArrayRegion, jenv, data, 0, lSize, (jshort*)result);
 
+      // Release the read access
+      (arg1)->ReleaseReadAccess((const char*)result);
+
+
       $result = data;
    }
-   else if ((arg1)->getBytesPerPixel() == 4)
+   else if (bytesPerPixel == 4)
    {
-      if ((arg1)->getNumberOfComponents() == 1)
+      if ((arg1)->getNumberOfComponents((const char*)result) == 1)
       {
          // create a new float[] object in Java
+
          jfloatArray data = JCALL1(NewFloatArray, jenv, lSize);
          if (data == 0)
          {
@@ -460,6 +472,10 @@
 
          // copy pixels from the image buffer
          JCALL4(SetFloatArrayRegion, jenv, data, 0, lSize, (jfloat*)result);
+
+         // Release the read access
+         (arg1)->ReleaseReadAccess((const char*)result);
+
 
          $result = data;
       }
@@ -480,10 +496,14 @@
          // copy pixels from the image buffer
          JCALL4(SetByteArrayRegion, jenv, data, 0, lSize * 4, (jbyte*)result);
 
+         // Release the read access
+         (arg1)->ReleaseReadAccess((const char*)result);
+
+
          $result = data;
       }
    }
-   else if ((arg1)->getBytesPerPixel() == 8)
+   else if (bytesPerPixel == 8)
    {
       // create a new short[] object in Java
       jshortArray data = JCALL1(NewShortArray, jenv, lSize * 4);
@@ -498,6 +518,9 @@
   
       // copy pixels from the image buffer
       JCALL4(SetShortArrayRegion, jenv, data, 0, lSize * 4, (jshort*)result);
+
+      // Release the read access
+      (arg1)->ReleaseReadAccess((const char*)result);
 
       $result = data;
    }

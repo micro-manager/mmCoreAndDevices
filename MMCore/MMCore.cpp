@@ -141,7 +141,7 @@ CMMCore::CMMCore() :
    pluginManager_(new CPluginManager()),
    deviceManager_(new mm::DeviceManager()),
    pPostedErrorsLock_(NULL),
-   useV2Buffer_(false)
+   useV2Buffer_(true)
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
@@ -2829,27 +2829,29 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
             ,MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-		try
-		{
-			if (!bufferAdapter_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-			{
-				logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-			}
-			bufferAdapter_->Clear();
+      try
+      {
+         if (!bufferAdapter_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+         {
+            logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+            throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+         }
+         bufferAdapter_->Clear();
+         // Disable overwriting for finite sequence acquisition
+         bufferAdapter_->SetOverwriteData(false);
          mm::DeviceModuleLockGuard guard(camera);
 
          LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
-			int nRet = camera->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
-			if (nRet != DEVICE_OK)
-				throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
-		}
-		catch (std::bad_alloc& ex)
-		{
-			std::ostringstream messs;
-			messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
-			throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
-		}
+         int nRet = camera->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
+         if (nRet != DEVICE_OK)
+            throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
+      }
+      catch (std::bad_alloc& ex)
+      {
+         std::ostringstream messs;
+         messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
+         throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
+      }
    }
    else
    {
@@ -2881,7 +2883,9 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
    }
    bufferAdapter_->Clear();
-	
+   // Disable overwriting for finite sequence acquisition
+   bufferAdapter_->SetOverwriteData(false);
+   
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
    int nRet = pCam->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
@@ -2984,6 +2988,9 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) throw (CMMEr
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
       }
       bufferAdapter_->Clear();
+      // Enable overwriting for continuous sequence acquisition. This only applies to the v2 buffer.
+      // and has no effect on the circular buffer.
+      bufferAdapter_->SetOverwriteData(true);
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
       int nRet = camera->StartSequenceAcquisition(intervalMs);
       if (nRet != DEVICE_OK)
@@ -3184,6 +3191,15 @@ void* CMMCore::popNextImageMD(Metadata& md) throw (CMMError)
 void CMMCore::clearCircularBuffer() throw (CMMError)
 {
    bufferAdapter_->Clear();
+}
+
+/**
+ * Enables or disables the v2 buffer.
+ */
+void CMMCore::enableV2Buffer(bool enable) throw (CMMError)
+{
+   useV2Buffer_ = enable;
+   bufferAdapter_->EnableV2Buffer(enable);
 }
 
 /**
@@ -4231,6 +4247,34 @@ unsigned CMMCore::getNumberOfComponents()
       }
    }
    return 0;
+}
+
+unsigned CMMCore::getImageWidth(const char* ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetImageWidth(reinterpret_cast<const unsigned char*>(ptr)) : getImageWidth();
+}
+
+unsigned CMMCore::getImageHeight(const char* ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetImageHeight(reinterpret_cast<const unsigned char*>(ptr)) : getImageHeight();
+}
+
+unsigned CMMCore::getBytesPerPixel(const char* ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetBytesPerPixel(reinterpret_cast<const unsigned char*>(ptr)) : getBytesPerPixel();
+}
+
+unsigned CMMCore::getImageBitDepth(const char* ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetImageBitDepth(reinterpret_cast<const unsigned char*>(ptr)) : getImageBitDepth();
+}
+
+unsigned CMMCore::getNumberOfComponents(const char* ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetNumberOfComponents(reinterpret_cast<const unsigned char*>(ptr)) : getNumberOfComponents();
+}
+
+long CMMCore::getImageBufferSize(const char* ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetImageBufferSize(reinterpret_cast<const unsigned char*>(ptr)) : getImageBufferSize();
+}
+
+void CMMCore::ReleaseReadAccess(const char* ptr) {
+   if (useV2Buffer_) bufferAdapter_->ReleaseReadAccess(reinterpret_cast<const unsigned char*>(ptr));
 }
 
 /**
@@ -5559,9 +5603,6 @@ double CMMCore::getPixelSizeUm(bool cached)
    }
 }
 
-/**
- * Returns the pixel size in um for the requested pixel size group
- */
 double CMMCore::getPixelSizeUmByID(const char* resolutionID) throw (CMMError)
 {
    CheckConfigPresetName(resolutionID);

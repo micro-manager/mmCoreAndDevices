@@ -142,7 +142,7 @@ long BufferAdapter::GetRemainingImageCount() const
 void BufferAdapter::Clear()
 {
    if (useV2_) {
-      v2Buffer_->ReleaseBuffer();
+      // v2Buffer_->ReleaseBuffer();
    } else {
       circBuffer_->Clear();
    }
@@ -332,4 +332,89 @@ void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMEr
          throw CMMError("Circular buffer is empty.", MMERR_CircularBufferEmpty);
       }
    }
+}
+
+bool BufferAdapter::EnableV2Buffer(bool enable) {
+    // Don't do anything if we're already in the requested state
+    if (enable == useV2_) {
+        return true;
+    }
+
+    // Create new buffer of requested type with same memory size
+    unsigned int memorySizeMB = GetMemorySizeMB();
+    
+    try {
+        if (enable) {
+            // Switch to V2 buffer
+            DataBuffer* newBuffer = new DataBuffer(memorySizeMB);
+            delete circBuffer_;
+            circBuffer_ = nullptr;
+            v2Buffer_ = newBuffer;
+            v2Buffer_->ReinitializeBuffer(memorySizeMB);
+        } else {
+            // Switch to circular buffer
+            CircularBuffer* newBuffer = new CircularBuffer(memorySizeMB);
+            delete v2Buffer_;
+            v2Buffer_ = nullptr;
+            circBuffer_ = newBuffer;
+            // Require it to be initialized manually, which doesn't actually matter
+            // because it gets initialized before sequence acquisition starts anyway.
+        }
+
+        useV2_ = enable;
+        Clear(); // Reset the new buffer
+        return true;
+    } catch (const std::exception&) {
+        // If allocation fails, keep the existing buffer
+        return false;
+    }
+}
+
+bool BufferAdapter::IsUsingV2Buffer() const {
+   return useV2_;
+}
+
+void BufferAdapter::ReleaseReadAccess(const unsigned char* ptr) {
+   if (useV2_ && ptr) {
+      v2Buffer_->ReleaseDataReadPointer(&ptr);
+   }
+}
+
+unsigned BufferAdapter::GetImageWidth(const unsigned char* ptr) const {
+   if (!useV2_) throw CMMError("GetImageWidth(ptr) only supported with V2 buffer");
+   return v2Buffer_->GetImageWidth(ptr);
+}
+
+unsigned BufferAdapter::GetImageHeight(const unsigned char* ptr) const {
+   if (!useV2_) throw CMMError("GetImageHeight(ptr) only supported with V2 buffer");
+   return v2Buffer_->GetImageHeight(ptr);
+}
+
+unsigned BufferAdapter::GetBytesPerPixel(const unsigned char* ptr) const {
+   if (!useV2_) throw CMMError("GetBytesPerPixel(ptr) only supported with V2 buffer");
+   return v2Buffer_->GetBytesPerPixel(ptr);
+}
+
+unsigned BufferAdapter::GetImageBitDepth(const unsigned char* ptr) const {
+   if (!useV2_) throw CMMError("GetImageBitDepth(ptr) only supported with V2 buffer");
+   return v2Buffer_->GetImageBitDepth(ptr);
+}
+
+unsigned BufferAdapter::GetNumberOfComponents(const unsigned char* ptr) const {
+   if (!useV2_) throw CMMError("GetNumberOfComponents(ptr) only supported with V2 buffer");
+   return v2Buffer_->GetNumberOfComponents(ptr);
+}
+
+long BufferAdapter::GetImageBufferSize(const unsigned char* ptr) const {
+   if (!useV2_) throw CMMError("GetImageBufferSize(ptr) only supported with V2 buffer");
+   return v2Buffer_->GetImageBufferSize(ptr);
+}
+
+bool BufferAdapter::SetOverwriteData(bool overwrite) {
+    if (useV2_) {
+        return v2Buffer_->SetOverwriteData(overwrite) == DEVICE_OK;
+    } else {
+        // CircularBuffer doesn't have this functionality
+        return false;
+    }
 }

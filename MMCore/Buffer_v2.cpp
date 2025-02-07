@@ -107,30 +107,6 @@ std::size_t BufferSlot::GetLength() const {
 }
 
 /**
- * Sets a detail for this slot using the provided key and value.
- * Typically used to store metadata information (e.g. width, height).
- */
-void BufferSlot::SetDetail(const std::string &key, std::size_t value) {
-    details_[key] = value;
-}
-
-/**
- * Retrieves a previously set detail.
- * Returns 0 if the key is not found.
- */
-std::size_t BufferSlot::GetDetail(const std::string &key) const {
-    auto it = details_.find(key);
-    return (it != details_.end()) ? it->second : 0;
-}
-
-/**
- * Clears all additional details associated with this slot.
- */
-void BufferSlot::ClearDetails() {
-    details_.clear();
-}
-
-/**
  * Attempts to acquire exclusive write access.
  * This method first attempts to set the write flag atomically.
  * If it fails, that indicates another writer holds the lock.
@@ -147,7 +123,7 @@ bool BufferSlot::AcquireWriteAccess() {
     // Ensure no readers are active by checking the read counter.
     int expectedReaders = 0;
     if (!readAccessCountAtomicInt_.compare_exchange_strong(expectedReaders, 0, std::memory_order_acquire)) {
-        // Active readers are present; revert the write lock.
+        // Active readers are present; revert the write flag.
         writeAtomicBool_.store(false, std::memory_order_release);
         return false;
     }
@@ -259,7 +235,6 @@ int DataBuffer::ReleaseBuffer() {
     if (buffer_ != nullptr) {
         delete[] buffer_;
         buffer_ = nullptr;
-        bufferSize_ = 0;
         return DEVICE_OK;
     }
     // TODO: Handle errors if other parts of the system still hold pointers.
@@ -279,11 +254,12 @@ int DataBuffer::InsertData(const unsigned char* data, size_t dataSize, const Met
     // Total size is header + image data + metadata
     size_t totalSize = sizeof(BufferSlotRecord) + dataSize + metaSize;
     unsigned char* imageDataPointer = nullptr;
-    // TOFO: handle metadata pointer
-    int result = GetDataWriteSlot(totalSize, metaSize, &imageDataPointer, nullptr);
+    unsigned char* metadataPointer = nullptr;
+    int result = GetDataWriteSlot(totalSize, metaSize, &imageDataPointer, &metadataPointer);
     if (result != DEVICE_OK)
         return result;
 
+    
     // The externally returned imageDataPointer points to the image data.
     // Write out the header by subtracting the header size.
     BufferSlotRecord* headerPointer = reinterpret_cast<BufferSlotRecord*>(imageDataPointer - sizeof(BufferSlotRecord));
@@ -368,6 +344,10 @@ int DataBuffer::GetDataWriteSlot(size_t imageSize, size_t metadataSize, unsigned
     // collision checks. In overwrite mode, wrap-around is supported.
     // Lock to ensure exclusive allocation.
     std::lock_guard<std::mutex> lock(slotManagementMutex_);
+
+    if (buffer_ == nullptr) {
+        return DEVICE_ERR;
+    }
 
     // Total slot size is the header plus the image and metadata lengths.
     size_t totalSlotSize = sizeof(BufferSlotRecord) + imageSize + metadataSize;
@@ -658,7 +638,7 @@ int DataBuffer::PeekNextDataReadPointer(const unsigned char** imageDataPointer, 
 const unsigned char* DataBuffer::PeekDataReadPointerAtIndex(size_t n, size_t* imageDataSize, Metadata &md) {
     std::unique_lock<std::mutex> lock(slotManagementMutex_);
     if (activeSlotsVector_.empty() || (currentSlotIndex_ + n) >= activeSlotsVector_.size()) {
-        throw std::runtime_error("Not enough unread data available.");
+        return nullptr;
     }
     
     // Access the nth slot (without advancing the read index)
@@ -779,7 +759,6 @@ int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
    if (buffer_ != nullptr) {
       delete[] buffer_;
       buffer_ = nullptr;
-      bufferSize_ = 0;
    }
 
    // Allocate a new buffer using the provided memory size.
@@ -790,4 +769,88 @@ int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
 
 long DataBuffer::GetRemainingImageCount() const {
     return static_cast<long>(activeSlotsVector_.size());
+}
+
+unsigned DataBuffer::GetImageWidth(const unsigned char* imageDataPtr) const {
+    const BufferSlotRecord* header = reinterpret_cast<const BufferSlotRecord*>(imageDataPtr - sizeof(BufferSlotRecord));
+    if (header->metadataSize > 0) {
+        Metadata md;
+        md.Restore(reinterpret_cast<const char*>(imageDataPtr + header->imageSize));
+        return static_cast<unsigned>(atoi(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue().c_str()));
+    }
+    throw std::runtime_error("No metadata available for image width");
+}
+
+unsigned DataBuffer::GetImageHeight(const unsigned char* imageDataPtr) const {
+    const BufferSlotRecord* header = reinterpret_cast<const BufferSlotRecord*>(imageDataPtr - sizeof(BufferSlotRecord));
+    if (header->metadataSize > 0) {
+        Metadata md;
+        md.Restore(reinterpret_cast<const char*>(imageDataPtr + header->imageSize));
+        return static_cast<unsigned>(atoi(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue().c_str()));
+    }
+    throw std::runtime_error("No metadata available for image height");
+}
+
+unsigned DataBuffer::GetBytesPerPixel(const unsigned char* imageDataPtr) const {
+    const BufferSlotRecord* header = reinterpret_cast<const BufferSlotRecord*>(imageDataPtr - sizeof(BufferSlotRecord));
+    if (header->metadataSize > 0) {
+        Metadata md;
+        md.Restore(reinterpret_cast<const char*>(imageDataPtr + header->imageSize));
+        std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
+        if (pixelType == MM::g_Keyword_PixelType_GRAY8)
+            return 1;
+        else if (pixelType == MM::g_Keyword_PixelType_GRAY16)
+            return 2;
+        else if (pixelType == MM::g_Keyword_PixelType_GRAY32)
+            return 4;
+        else if (pixelType == MM::g_Keyword_PixelType_RGB32)
+            return 4;
+        else if (pixelType == MM::g_Keyword_PixelType_RGB64)
+            return 8;
+    }
+    throw std::runtime_error("No metadata available for bytes per pixel");
+}
+
+
+unsigned DataBuffer::GetImageBitDepth(const unsigned char* imageDataPtr) const {
+    const BufferSlotRecord* header = reinterpret_cast<const BufferSlotRecord*>(imageDataPtr - sizeof(BufferSlotRecord));
+    if (header->metadataSize > 0) {
+        Metadata md;
+        md.Restore(reinterpret_cast<const char*>(imageDataPtr + header->imageSize));
+        std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
+        if (pixelType == MM::g_Keyword_PixelType_GRAY8)
+            return 8;
+        else if (pixelType == MM::g_Keyword_PixelType_GRAY16)
+            return 16;
+        else if (pixelType == MM::g_Keyword_PixelType_GRAY32)
+            return 32;
+        else if (pixelType == MM::g_Keyword_PixelType_RGB32)
+            return 32;
+        else if (pixelType == MM::g_Keyword_PixelType_RGB64)
+            return 64;
+    }
+    throw std::runtime_error("No metadata available for bit depth");
+}
+
+
+unsigned DataBuffer::GetNumberOfComponents(const unsigned char* imageDataPtr) const {
+    const BufferSlotRecord* header = reinterpret_cast<const BufferSlotRecord*>(imageDataPtr - sizeof(BufferSlotRecord));
+    if (header->metadataSize > 0) {
+        Metadata md;
+        md.Restore(reinterpret_cast<const char*>(imageDataPtr + header->imageSize));
+        std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
+        if (pixelType == MM::g_Keyword_PixelType_GRAY8 ||
+            pixelType == MM::g_Keyword_PixelType_GRAY16 ||
+            pixelType == MM::g_Keyword_PixelType_GRAY32)
+            return 1;
+        else if (pixelType == MM::g_Keyword_PixelType_RGB32 ||
+                 pixelType == MM::g_Keyword_PixelType_RGB64)
+            return 4;
+    }
+    throw std::runtime_error("No metadata available for number of components");
+}
+
+long DataBuffer::GetImageBufferSize(const unsigned char* imageDataPtr) const {
+    const BufferSlotRecord* header = reinterpret_cast<const BufferSlotRecord*>(imageDataPtr - sizeof(BufferSlotRecord));
+    return header->imageSize;
 }

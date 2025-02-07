@@ -48,6 +48,13 @@ public:
    ~BufferAdapter();
 
    /**
+    * Enable or disable v2 buffer usage.
+    * @param enable Set to true to use v2 buffer, false to use circular buffer.
+    * @return true if the switch was successful, false otherwise.
+    */
+   bool EnableV2Buffer(bool enable);
+
+   /**
     * Get a pointer to the top (most recent) image.
     * @return Pointer to image data, or nullptr if unavailable.
     */
@@ -181,6 +188,34 @@ public:
    void* GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError);
    void* GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError);
    void* PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError);
+
+   /**
+    * Check if this adapter is using the V2 buffer implementation.
+    * @return true if using V2 buffer, false if using circular buffer.
+    */
+   bool IsUsingV2Buffer() const;
+
+   /**
+    * Release a pointer obtained from the buffer.
+    * This is required when using the V2 buffer implementation.
+    * @param ptr The pointer to release.
+    */
+   void ReleaseReadAccess(const unsigned char* ptr);
+
+   // Methods for the v2 buffer where width and heigh must be gotton on a per-image basis
+   unsigned GetImageWidth(const unsigned char* ptr) const;
+   unsigned GetImageHeight(const unsigned char* ptr) const;
+   unsigned GetBytesPerPixel(const unsigned char* ptr) const;
+   unsigned GetImageBitDepth(const unsigned char* ptr) const;
+   unsigned GetNumberOfComponents(const unsigned char* ptr) const;
+   long GetImageBufferSize(const unsigned char* ptr) const;
+
+   /**
+    * Configure whether to overwrite old data when buffer is full.
+    * @param overwrite If true, overwrite old data when buffer is full.
+    * @return true on success, false on error.
+    */
+   bool SetOverwriteData(bool overwrite);
 
 private:
    bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.

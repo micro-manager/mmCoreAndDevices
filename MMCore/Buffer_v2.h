@@ -80,28 +80,6 @@ public:
     std::size_t GetLength() const;
 
     /**
-     * Stores a detail (for example, image width or height) associated with the slot.
-     *
-     * @param key The name of the detail.
-     * @param value The value of the detail.
-     */
-    void SetDetail(const std::string &key, std::size_t value);
-
-    /**
-     * Retrieves a previously stored detail.
-     * Returns 0 if the key is not found.
-     *
-     * @param key The detail key.
-     * @return The stored value or 0 if not found.
-     */
-    std::size_t GetDetail(const std::string &key) const;
-
-    /**
-     * Clears all stored details from the slot.
-     */
-    void ClearDetails();
-
-    /**
      * Attempts to acquire exclusive write access.
      * It first tries to atomically set the write flag.
      * If another writer is active or if there are active readers, 
@@ -153,7 +131,6 @@ public:
 private:
     std::size_t start_;
     std::size_t length_;
-    std::map<std::string, std::size_t> details_;
     std::atomic<int> readAccessCountAtomicInt_;
     std::atomic<bool> writeAtomicBool_;
     mutable std::mutex writeCompleteConditionMutex_;
@@ -379,6 +356,54 @@ public:
      * @throws std::runtime_error if any slot is still actively in use.
      */
     int ReinitializeBuffer(unsigned int memorySizeMB);
+
+    /**
+     * Returns the image width from the metadata stored with the image data.
+     *
+     * @param imageDataPtr Pointer to the image data.
+     * @return Image width.
+     */
+    unsigned GetImageWidth(const unsigned char* imageDataPtr) const;
+
+    /**
+     * Returns the image height from the metadata stored with the image data.
+     *
+     * @param imageDataPtr Pointer to the image data.
+     * @return Image height.
+     */
+    unsigned GetImageHeight(const unsigned char* imageDataPtr) const;
+
+    /**
+     * Returns the bytes per pixel from the metadata stored with the image data.
+     *
+     * @param imageDataPtr Pointer to the image data.
+     * @return Bytes per pixel.
+     */
+    unsigned GetBytesPerPixel(const unsigned char* imageDataPtr) const;
+
+    /**
+     * Returns the image bit depth from the metadata stored with the image data.
+     *
+     * @param imageDataPtr Pointer to the image data.
+     * @return Image bit depth.
+     */
+    unsigned GetImageBitDepth(const unsigned char* imageDataPtr) const;
+
+    /**
+     * Returns the number of components in the image data from the metadata stored with the image data.
+     *
+     * @param imageDataPtr Pointer to the image data.
+     * @return Number of components.
+     */
+    unsigned GetNumberOfComponents(const unsigned char* imageDataPtr) const;
+
+    /**
+     * Returns the image buffer size from the metadata stored with the image data.
+     *
+     * @param imageDataPtr Pointer to the image data.
+     * @return Image buffer size.
+     */
+    long GetImageBufferSize(const unsigned char* imageDataPtr) const;
 
 private:
     // Pointer to the allocated block.

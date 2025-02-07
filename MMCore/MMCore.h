@@ -427,6 +427,22 @@ public:
    void initializeCircularBuffer() throw (CMMError);
    void clearCircularBuffer() throw (CMMError);
 
+   ///@}
+
+   /** \name v2 buffer control. */
+   ///@{
+   void enableV2Buffer(bool enable) throw (CMMError);
+   bool usesV2Buffer() const { return useV2Buffer_; }
+
+   unsigned getImageWidth(const char* ptr) throw (CMMError);
+   unsigned getImageHeight(const char* ptr) throw (CMMError);
+   unsigned getBytesPerPixel(const char* ptr) throw (CMMError);
+   unsigned getImageBitDepth(const char* ptr) throw (CMMError);
+   unsigned getNumberOfComponents(const char* ptr) throw (CMMError);
+   long getImageBufferSize(const char* ptr) throw (CMMError);
+
+   void ReleaseReadAccess(const char* ptr) throw (CMMError);
+
    bool isExposureSequenceable(const char* cameraLabel) throw (CMMError);
    void startExposureSequence(const char* cameraLabel) throw (CMMError);
    void stopExposureSequence(const char* cameraLabel) throw (CMMError);
@@ -624,6 +640,7 @@ public:
          const char* peripheralLabel) throw (CMMError);
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
+
 
 private:
    // make object non-copyable
