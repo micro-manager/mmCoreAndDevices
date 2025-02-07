@@ -130,16 +130,22 @@ int XYStage::Initialize()
 	// Wait cycles
 	if (hasCommand("WT X?"))
 	{
+		ret = GetWaitCycles(waitCycles_);
+		if (ret != DEVICE_OK)
+			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnWait);
-		CreateProperty("Wait_Cycles", "5", MM::Integer, false, pAct);
+		CreateProperty("Wait_Cycles", std::to_string(waitCycles_).c_str(), MM::Integer, false, pAct);
 		// SetPropertyLimits("Wait_Cycles", 0, 255);  // don't artificially restrict range
 	}
 
 	// Speed (sets both x and y)
 	if (hasCommand("S " + axisletterX_ + "?"))
 	{
+		ret = GetSpeed(speed_);
+		if (ret != DEVICE_OK)
+			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnSpeed);
-		CreateProperty("Speed-S", "1", MM::Float, false, pAct);
+		CreateProperty("Speed-S", std::to_string(speed_).c_str(), MM::Float, false, pAct);
 		// Maximum Speed that can be set in Speed-S property
 		char max_speed[MM::MaxStrLength];
 		GetMaxSpeed(max_speed);
@@ -149,23 +155,29 @@ int XYStage::Initialize()
 	// Backlash (sets both x and y)
 	if (hasCommand("B " + axisletterX_ + "?"))
 	{
+		ret = GetBacklash(backlash_);
+		if (ret != DEVICE_OK)
+			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnBacklash);
-		CreateProperty("Backlash-B", "0", MM::Float, false, pAct);
+		CreateProperty("Backlash-B", std::to_string(backlash_).c_str(), MM::Float, false, pAct);
 	}
 	
 	// Error (sets both x and y)
 	if (hasCommand("E " + axisletterX_ + "?"))
 	{
+		ret = GetError(error_);
+		if (ret != DEVICE_OK)
+			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnError);
-		CreateProperty("Error-E(nm)", "0", MM::Float, false, pAct);
+		CreateProperty("Error-E(nm)", std::to_string(error_).c_str(), MM::Float, false, pAct);
 	}
 	
 	// acceleration (sets both x and y)
-	ret = GetAcceleration(acceleration_);
-	if (ret != DEVICE_OK)
-		return ret;
 	if (hasCommand("AC " + axisletterX_ + "?"))
 	{
+      ret = GetAcceleration(acceleration_);
+      if (ret != DEVICE_OK)
+         return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnAcceleration);
 		CreateProperty("Acceleration-AC(ms)", std::to_string(acceleration_).c_str(), MM::Integer, false, pAct);
 	}
@@ -173,6 +185,9 @@ int XYStage::Initialize()
 	// Finish Error (sets both x and y)
 	if (hasCommand("PC " + axisletterX_ + "?"))
 	{
+		ret = GetFinishError(finishError_);
+      if (ret != DEVICE_OK)
+         return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnFinishError);
 		CreateProperty("FinishError-PCROS(nm)", "0", MM::Float, false, pAct);
 	}
@@ -180,6 +195,9 @@ int XYStage::Initialize()
 	// OverShoot (sets both x and y)
 	if (hasCommand("OS " + axisletterX_ + "?"))
 	{
+		ret = GetOverShoot(overShoot_);
+      if (ret != DEVICE_OK)
+         return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnOverShoot);
 		CreateProperty("OverShoot(um)", "0", MM::Float, false, pAct);
 	}
@@ -723,36 +741,35 @@ int XYStage::OnNrMoveRepetitions(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-// This sets the number of waitcycles
+int XYStage::GetWaitCycles(long& waitCycles)
+{
+   // To simplify our life we only read out waitcycles for the X axis, but set for both
+   std::ostringstream command;
+   command << "WT " + axisletterX_ + "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.substr(0, 2).compare(":X") == 0)
+   {
+      return ParseResponseAfterPosition(answer, 3, waitCycles);
+   }
+   // deal with error later
+   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "WT " + axisletterX_ + "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			long waitCycles = 0;
-			const int code = ParseResponseAfterPosition(answer, 3, waitCycles);
-			pProp->Set(waitCycles);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(waitCycles_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -786,43 +803,47 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// query command
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		waitCycles_ = waitCycles;
 	}
 	return DEVICE_OK;
 }
+
+int XYStage::GetBacklash(double& backlash)
+{
+   // To simplify our life we only read out waitcycles for the X axis, but set for both
+   std::ostringstream command;
+   command << "B " << axisletterX_ << "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+   {
+      return ret;
+   }
+
+   if (answer.substr(0, 2).compare(":X") == 0)
+   {
+      return ParseResponseAfterPosition(answer, 3, 8, backlash);
+   }
+   // deal with error later
+   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 
 int XYStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "B " << axisletterX_ << "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			double speed = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 3, 8, speed);
-			pProp->Set(speed);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(backlash_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -839,61 +860,65 @@ int XYStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// query command
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		backlash_ = backlash;
 	}
 	return DEVICE_OK;
+}
+
+int XYStage::GetFinishError(double& finishError)
+{
+   // To simplify our life we only read out waitcycles for the X axis, but set for both
+   std::ostringstream command;
+   command << "PC " << axisletterX_ << "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.substr(0, 2).compare(":X") == 0)
+   {
+      double tmp = 0.0;
+      const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
+      finishError = 1000000 * tmp;
+      return code;
+   }
+   if (answer.substr(0, 2).compare(":A") == 0)
+   {
+      // Answer is of the form :A X=0.00003
+      double tmp = 0.0;
+      const int code = ParseResponseAfterPosition(answer, 5, 8, tmp);
+      finishError = 1000000 * tmp;
+      return code;
+   }
+   // deal with error later
+   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
 }
 
 int XYStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "PC " << axisletterX_ << "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			double finishError = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 3, 8, finishError);
-			pProp->Set(1000000 * finishError);
-			return code;
-		}
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			// Answer is of the form :A X=0.00003
-			double finishError = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 5, 8, finishError);
-			pProp->Set(1000000 * finishError);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(finishError_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		double error;
-		pProp->Get(error);
-		if (error < 0.0)
+		double finishError;
+		pProp->Get(finishError);
+		if (finishError < 0.0)
 		{
-			error = 0.0;
+			finishError = 0.0;
 		}
-		error = error / 1000000;
+		double error = finishError / 1000000;
 		std::ostringstream command;
 		command << "PC " << axisletterX_ << "=" << error << " " << axisletterY_ << "=" << error;
 		std::string answer;
@@ -901,15 +926,16 @@ int XYStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// query command
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		finishError_ = finishError;
 	}
 	return DEVICE_OK;
 }
 
-int XYStage::GetAcceleration(double& acceleration)
+int XYStage::GetAcceleration(long& acceleration)
 {
    // To simplify our life we only read out acceleration for the X axis, but set for both
    std::ostringstream command;
@@ -925,7 +951,11 @@ int XYStage::GetAcceleration(double& acceleration)
 
    if (answer.substr(0, 2).compare(":X") == 0)
    {
-      return ParseResponseAfterPosition(answer, 3, 8, acceleration);
+		double tmp = 0.0;
+      ret = ParseResponseAfterPosition(answer, 3, 8, tmp);
+		if (ret != DEVICE_OK)
+			return ret;
+		acceleration = (long)tmp;
    }
    // deal with error later
    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -944,11 +974,11 @@ int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		double accel;
+		long accel;
 		pProp->Get(accel);
-		if (accel < 0.0)
+		if (accel < 0)
 		{
-			accel = 0.0;
+			accel = 0;
 		}
 		std::ostringstream command;
 		command << "AC " << axisletterX_ << "=" << accel << " " << axisletterY_ << "=" << accel;
@@ -967,36 +997,38 @@ int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int XYStage::GetOverShoot(double& overshoot)
+{
+   // To simplify our life we only read out overshootfor the X axis, but set for both
+   std::ostringstream command;
+   command << "OS " << axisletterX_ << "?";
+   std::string answer;
+
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.substr(0, 2).compare(":A") == 0)
+   {
+      double tmp = 0.0;
+      const int code = ParseResponseAfterPosition(answer, 5, 8, tmp);
+      overshoot = tmp * 1000.0;
+      return code;
+   }
+   // deal with error later
+   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 int XYStage::OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "OS " << axisletterX_ << "?";
-		std::string answer;
-
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			double overshoot = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 5, 8, overshoot);
-			pProp->Set(overshoot * 1000.0);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -1006,51 +1038,55 @@ int XYStage::OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			overShoot = 0.0;
 		}
-		overShoot = overShoot / 1000.0;
+		double tmp = overShoot / 1000.0;
 		std::ostringstream command;
-		command << std::fixed << "OS " << axisletterX_ << "=" << overShoot << " " << axisletterY_ << "=" << overShoot;
+		command << std::fixed << "OS " << axisletterX_ << "=" << tmp << " " << axisletterY_ << "=" << tmp;
 		std::string answer;
 
 		// query the device
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		overShoot_ = overShoot;
 	}
 	return DEVICE_OK;
+}
+
+int XYStage::GetError(double& error)
+{
+   // To simplify our life we only read out error for the X axis, but set for both
+   std::ostringstream command;
+   command << "E " << axisletterX_ << "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.substr(0, 2).compare(":X") == 0)
+   {
+      double tmp = 0.0;
+      const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
+      error  = tmp * 1000000.0;
+      return code;
+   }
+   // deal with error
+   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
 }
 
 int XYStage::OnError(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "E " << axisletterX_ << "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			double error = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 3, 8, error);
-			pProp->Set(error * 1000000.0);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(error_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -1060,18 +1096,20 @@ int XYStage::OnError(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			error = 0.0;
 		}
-		error = error / 1000000.0;
+		double tmp = error / 1000000.0;
 		std::ostringstream command;
-		command << std::fixed << "E " << axisletterX_ << "=" << error << " " << axisletterY_ << "=" << error;
+		command << std::fixed << "E " << axisletterX_ << "=" << tmp << " " << axisletterY_ << "=" << tmp;
 		std::string answer;
 
 		// query the device
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+      // cache the value we read
+		error_ = error;
 	}
 	return DEVICE_OK;
 }
@@ -1105,35 +1143,35 @@ int XYStage::GetMaxSpeed(char* maxSpeedStr)
 	return DEVICE_OK;
 }
 
+int XYStage::GetSpeed(double& speed)
+{
+   // To simplify our life we only read out speed for the X axis, but set for both
+   std::ostringstream command;
+   command << "S " << axisletterX_ << "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.substr(0, 2).compare(":A") == 0)
+   {
+      return ParseResponseAfterPosition(answer, 5, speed);
+   }
+   // deal with error later
+   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 int XYStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "S " << axisletterX_ << "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			double speed = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 5, speed);
-			pProp->Set(speed);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(speed_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -1154,10 +1192,12 @@ int XYStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// query the device
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		speed_ = speed;
+
 	}
 	return DEVICE_OK;
 }
