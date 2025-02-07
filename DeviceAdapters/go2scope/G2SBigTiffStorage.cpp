@@ -591,6 +591,8 @@ int G2SBigTiffStorage::List(const char* path, char** listOfDatasets, int maxItem
 		if(!exs || !isdir)
 			return ERR_TIFF_INVALID_PATH;
 		auto allfnd = scanDir(path, listOfDatasets, maxItems, maxItemLength, 0);
+
+		// TODO: review memory allocation and whether the limit can be removed
 		return allfnd ? DEVICE_OK : ERR_TIFF_STRING_TOO_LONG;
 	}
 	catch(std::exception& e)
@@ -690,7 +692,7 @@ int G2SBigTiffStorage::AppendImage(const char* handle, int sizeInBytes, unsigned
  * @param meta Metadata buffer [out]
  * @return Status code
  */
-int G2SBigTiffStorage::GetSummaryMeta(const char* handle, char* meta) noexcept
+int G2SBigTiffStorage::GetSummaryMeta(const char* handle, char** meta) noexcept
 {
    if(handle == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
@@ -707,13 +709,13 @@ int G2SBigTiffStorage::GetSummaryMeta(const char* handle, char* meta) noexcept
 	{
 		// Copy metadata string
 		auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
-		meta = new char[fs->getMetadata().size() + 1];
-		strncpy(meta, fs->getMetadata().c_str(), fs->getMetadata().size() + 1);
+		*meta = new char[fs->getMetadata().size() + 1];
+		strncpy(*meta, fs->getMetadata().c_str(), fs->getMetadata().size() + 1);
 		return DEVICE_OK;
 	}
 	catch(std::exception& e)
 	{
-		LogMessage("GetSummaryMeta error: " +std::string(e.what()));
+		LogMessage("GetSummaryMeta error: " + std::string(e.what()));
 		return ERR_TIFF_CORRUPTED_METADATA;
 	}
 }
@@ -729,7 +731,7 @@ int G2SBigTiffStorage::GetSummaryMeta(const char* handle, char* meta) noexcept
  * @param bufSize Buffer size
  * @return Status code
  */
-int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta) noexcept
+int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta) noexcept
 {
    if(handle == nullptr || coordinates == nullptr || numCoordinates == 0)
       return DEVICE_INVALID_INPUT_PARAM;
@@ -759,13 +761,13 @@ int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int n
 	try
 	{
 		auto fmeta = fs->getImageMetadata(coords);
-		meta = new char[fmeta.size() + 1];
-		strncpy(meta, fs->getMetadata().c_str(), fmeta.size() + 1);
+		*meta = new char[fmeta.size() + 1];
+		strncpy(*meta, fmeta.c_str(), fmeta.size() + 1);
 		return DEVICE_OK;
 	}
 	catch(std::exception& e)
 	{
-		LogMessage("GetImageMeta error: " +std::string(e.what()));
+		LogMessage("GetImageMeta error: " + std::string(e.what()));
 		return ERR_TIFF_CORRUPTED_METADATA;
 	}
 }
@@ -1029,7 +1031,7 @@ int G2SBigTiffStorage::SetCustomMetadata(const char* handle, const char* key, co
  * @param content Metadata entry value / content [out]
  * @return Status code
  */
-int G2SBigTiffStorage::GetCustomMetadata(const char* handle, const char* key, char* content) noexcept
+int G2SBigTiffStorage::GetCustomMetadata(const char* handle, const char* key, char** content) noexcept
 {
 	if(handle == nullptr || key == nullptr)
 		return DEVICE_INVALID_INPUT_PARAM;
@@ -1045,8 +1047,8 @@ int G2SBigTiffStorage::GetCustomMetadata(const char* handle, const char* key, ch
 	try
 	{
 		auto mval = fs->getCustomMetadata(key);
-		content = new char[mval.size() + 1];
-		strncpy(content, mval.c_str(), mval.size() + 1);
+		*content = new char[mval.size() + 1];
+		strncpy(*content, mval.c_str(), mval.size() + 1);
 		return DEVICE_OK;
 	}
 	catch(std::exception& e) 

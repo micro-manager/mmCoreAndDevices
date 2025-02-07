@@ -59,8 +59,8 @@ public:
    int List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength);
    int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta);
    int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta);
-   int GetSummaryMeta(const char* handle, char* meta);
-   int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char* meta);
+   int GetSummaryMeta(const char* handle, char** meta);
+   int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta);
    const unsigned char* GetImage(const char* handle, int coordinates[], int numCoordinates);
    int GetNumberOfDimensions(const char* handle, int& numDimensions);
    int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength);
@@ -70,7 +70,7 @@ public:
 	bool IsReadOnly(const char* handle);
    int GetPath(const char* handle, char* path, int maxPathLength);
 	int SetCustomMetadata(const char* handle, const char* key, const char* content) { return DEVICE_UNSUPPORTED_COMMAND; }
-	int GetCustomMetadata(const char* handle, const char* key, char* content) { return DEVICE_UNSUPPORTED_COMMAND; }
+	int GetCustomMetadata(const char* handle, const char* key, char** content) { return DEVICE_UNSUPPORTED_COMMAND; }
 
 
    // action interface

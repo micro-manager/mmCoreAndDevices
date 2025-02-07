@@ -8163,7 +8163,8 @@ std::string CMMCore::loadDataset(const char* path) throw (CMMError)
  */
 std::string CMMCore::getDeviceNameToOpen(const char* path)
 {
-    return std::string();
+   // TODO:
+   throw CMMError("Feature not supported", MMERR_GENERIC);
 }
 
 /**
@@ -8567,8 +8568,8 @@ void CMMCore::setCustomMeta(const char* handle, const char* key, const char* met
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
-      std::string meta;
-      int ret = storage->SetCustomMeta(handle, key, meta);
+      std::string metastr(meta);
+      int ret = storage->SetCustomMeta(handle, key, metastr);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8702,7 +8703,7 @@ void CMMCore::snapAndSave(const char* handle, const std::vector<long>& coordinat
 
 /**
  * Pops the next image from the circular buffer and saves it to the dataset.
- * This is the counterpart to getNextImage(). Instead of fetching image pixels it
+ * This is the counterpart to popNextImage(). Instead of fetching image pixels it
  * it sends image directly to the storage.
  * 
  * \param handle - currently open dataset handle
@@ -8738,6 +8739,49 @@ void CMMCore::saveNextImage(const char* handle, const std::vector<long>& coordin
    }
    else
       throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Pops the next image from the circular buffer and saves it to the dataset.
+ * This function merges popNextImage() and saveNextImage(). In addition to returning the image it also
+ * sends it to storage. The use case is when we want to save and display the image at the same time.
+ *
+ * \param handle - currently open dataset handle
+ * \param imageMeta - image metadata
+ * \return - image pixels
+ */
+STORAGEIMGOUT CMMCore::saveAndGetNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw(CMMError)
+{
+   const mm::ImgBuffer* img = cbuf_->GetNextImageBuffer(0);
+   if (!img)
+      throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
+
+   // store the image
+   std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
+   if (storage)
+   {
+      int ret(0);
+      int imageSize = img->Width() * img->Height() * img->Depth();
+      mm::DeviceModuleLockGuard guard(storage);
+      if (coordinates.empty())
+      {
+         ret = storage->AppendImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), imageMeta);
+      }
+      else
+      {
+         std::vector<int> coords(coordinates.begin(), coordinates.end());
+         ret = storage->AddImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), coords, imageMeta);
+      }
+      if (ret != DEVICE_OK)
+      {
+         logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
+         throw CMMError(getDeviceErrorText(ret, storage).c_str(), MMERR_DEVICE_GENERIC);
+      }
+      return const_cast<unsigned char*>(img->GetPixels()); // returns the image buffer
+   }
+   else
+      throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+
 }
 
 /**
