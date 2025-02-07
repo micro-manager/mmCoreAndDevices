@@ -658,6 +658,7 @@ public:
 	STORAGEIMGOUT getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
    void snapAndSave(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
    void saveNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   STORAGEIMGOUT saveAndGetNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
    void attachStorageToCircularBuffer(const char* handle) throw (CMMError);
    std::string getAttachedStorage();
    std::string getLastAttachedStorageError();
