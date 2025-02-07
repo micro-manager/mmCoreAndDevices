@@ -97,7 +97,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ASIBase.h" />
-    <ClInclude Include="ASICRIF.h" />
     <ClInclude Include="ASICRISP.h" />
     <ClInclude Include="ASILED.h" />
     <ClInclude Include="ASIMagnifier.h" />
@@ -110,7 +109,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ASIBase.cpp" />
-    <ClCompile Include="ASICRIF.cpp" />
     <ClCompile Include="ASICRISP.cpp" />
     <ClCompile Include="ASILED.cpp" />
     <ClCompile Include="ASIMagnifier.cpp" />

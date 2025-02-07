@@ -8,7 +8,7 @@
 #include "ASIXYStage.h"
 
 XYStage::XYStage() :
-	ASIBase(this, "2H"),
+	ASIBase(this, "2H"), // LX-4000 prefix
 	stepSizeXUm_(0.0),
 	stepSizeYUm_(0.0),
 	maxSpeed_(7.5),
@@ -55,12 +55,12 @@ void XYStage::GetName(char* Name) const
 	CDeviceUtils::CopyLimitedString(Name, g_XYStageDeviceName);
 }
 
-bool XYStage::SupportsDeviceDetection(void)
+bool XYStage::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus XYStage::DetectDevice(void)
+MM::DeviceDetectionStatus XYStage::DetectDevice()
 {
 	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
@@ -387,7 +387,7 @@ int XYStage::GetPositionSteps(long& x, long& y)
 		char head[64];
 		char iBuf[256];
 		strcpy(iBuf, answer.c_str());
-		sscanf(iBuf, "%s %f %f\r\n", head, &xx, &yy);
+		(void)sscanf(iBuf, "%s %f %f\r\n", head, &xx, &yy);
 		x = (long)(xx * ASISerialUnit_);
 		y = (long)(yy * ASISerialUnit_);
 

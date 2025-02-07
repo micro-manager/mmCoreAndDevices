@@ -6,7 +6,7 @@
 // DESCRIPTION:   pco camera module
 //                
 // AUTHOR:        Franz Reitner, Franz.Reitner@pco.de, 11/01/2010
-// COPYRIGHT:     PCO AG, Kelheim, 2010-up to now ;-)
+// COPYRIGHT:     Excelitas - PCO, Kelheim, 2010-up to now ;-)
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
 //

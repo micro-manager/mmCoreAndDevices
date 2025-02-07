@@ -20,9 +20,15 @@ const char* g_Max_Velocity = "Max Velocity(mm/s)";
 MODULE_API void InitializeModuleData() 
 {
    RegisterDevice(g_HubDeviceName, MM::HubDevice, g_HubDeviceName);
-   RegisterDevice(g_LEDShutterName, MM::ShutterDevice, "LEDs");
+   RegisterDevice(g_ShutterName, MM::ShutterDevice, "Light-Control");
    RegisterDevice(g_XYStageName, MM::XYStageDevice, "XY-Stage");
    RegisterDevice(g_ZStageName, MM::StageDevice, "Z-Stage");
+   for (int i = 1; i < 9; i++)
+   {
+      std::ostringstream os;
+      os << g_DAName << "_" << i;
+      RegisterDevice(os.str().c_str(), MM::SignalIODevice, os.str().c_str());
+   }
 }
 
 
@@ -33,9 +39,9 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new SquidHub();
    }
-   else if (strcmp(deviceName, g_LEDShutterName) == 0)
+   else if (strcmp(deviceName, g_ShutterName) == 0)
    {
-      return new SquidLEDShutter();
+      return new SquidShutter();
    }
    else if (strcmp(deviceName, g_XYStageName) == 0)
    {
@@ -44,6 +50,14 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if (strcmp(deviceName, g_ZStageName) == 0)
    {
       return new SquidZStage();
+   }
+   else {
+      std::string deviceNameString = deviceName;
+      if (deviceNameString.rfind(g_DAName) == 0) {
+         char c = deviceNameString.back();
+         int dacNr = std::atoi(&c) - 1;
+         return new SquidDA((uint8_t) dacNr);
+      }
    }
 
    // ...supplied name not recognized
@@ -74,6 +88,8 @@ SquidHub::SquidHub() :
    x_ = 0l;
    y_ = 0l;
    z_ = 0l;
+   dac_div_ =  0;
+   dac_gains_ = 0;
    xStageBusy_ = false;
    yStageBusy_ = false;
    zStageBusy_ = false;
@@ -86,9 +102,13 @@ SquidHub::SquidHub() :
 }
 
 
-SquidHub::~SquidHub()   
+SquidHub::~SquidHub()
 {
-   LogMessage("Destructor called");
+   if (initialized_)
+   {
+      Shutdown();
+   }
+   LogMessage("SquidHub destructor called");
 }
 
 
@@ -120,6 +140,8 @@ int SquidHub::Initialize() {
    cmd[1] = 254; // CMD_INITIALIZE_DRIVERS
    ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK) {
+      delete (monitoringThread_);
+      monitoringThread_ = 0;
       return ret;
    }
 
@@ -140,7 +162,10 @@ int SquidHub::Initialize() {
 int SquidHub::Shutdown() {
    if (initialized_)
    {
-      delete(monitoringThread_);
+      if (monitoringThread_ != 0)
+      {
+         delete(monitoringThread_);
+      }
       initialized_ = false;
    }
    return DEVICE_OK;
@@ -150,7 +175,6 @@ int SquidHub::Shutdown() {
 bool SquidHub::Busy()
 {
    return busy_;
-   //return false;
 }
 
 
@@ -174,9 +198,15 @@ int SquidHub::DetectInstalledDevices()
    {
       std::vector<std::string> peripherals;
       peripherals.clear();
-      peripherals.push_back(g_LEDShutterName);
+      peripherals.push_back(g_ShutterName);
       peripherals.push_back(g_XYStageName);
       peripherals.push_back(g_ZStageName);
+      for (int i = 1; i < 9; i++)
+      {
+         std::ostringstream os;
+         os << g_DAName << "_" << i;
+         peripherals.push_back(os.str().c_str());
+      }
       for (size_t i = 0; i < peripherals.size(); i++)
       {
          MM::Device* pDev = ::CreateDevice(peripherals[i].c_str());
@@ -211,14 +241,14 @@ int SquidHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int SquidHub::assignXYStageDevice(SquidXYStage* xyStageDevice)
+int SquidHub::AssignXYStageDevice(SquidXYStage* xyStageDevice)
 {
    xyStageDevice_ = xyStageDevice;
    return DEVICE_OK;
 }
 
 
-int SquidHub::assignZStageDevice(SquidZStage* zStageDevice)
+int SquidHub::AssignZStageDevice(SquidZStage* zStageDevice)
 {
    zStageDevice_ = zStageDevice;
    return DEVICE_OK;
@@ -227,6 +257,7 @@ int SquidHub::assignZStageDevice(SquidZStage* zStageDevice)
 
 int SquidHub::SendCommand(unsigned char* cmd, unsigned cmdSize)
 {
+   std::lock_guard<std::mutex> lck(mutex_);
    cmd[0] = ++cmdNrSend_;
    cmd[cmdSize - 1] = crc8ccitt(cmd, cmdSize - 1);
    if (true) {
@@ -415,10 +446,41 @@ int SquidHub::Home()
    int ret = SendCommand(cmd, cmdSize);
    if (ret != DEVICE_OK)
       return ret;
+   CDeviceUtils::SleepMs(1000); // Give the objective time to go down
 
    cmd[1] = CMD_HOME_OR_ZERO;
    cmd[2] = AXIS_XY;
    cmd[3] = int((STAGE_MOVEMENT_SIGN_X + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
    cmd[4] = int((STAGE_MOVEMENT_SIGN_Y + 1) / 2); // "move backward" if SIGN is 1, "move forward" if SIGN is - 1
+   return SendCommand(cmd, cmdSize);
+}
+
+
+/**
+ * Needed to initialize the DAC.
+ * Will be called by each DAC device, hence may be executed multiple times.
+ * dac_div_ == 0 sets range to 0-1.125V, dac_div_ == 1 to 0-2.5V.
+ * dac_gains_ is a bit mask, each dac for which the mask is true (1), the output 
+ * voltage will be multiplied by 2, hence dav_div_==1 and dac_gains_==true for 
+ * a given channel results in 0-5V range.
+ */
+int SquidHub::SetDacGain(uint8_t dacNr, bool gain)
+{
+   if (gain)
+   {
+      dac_gains_ = dac_gains_  | 1 << dacNr;
+   }
+   else
+   {
+      dac_gains_ = dac_gains_ &~((unsigned char)1 << dacNr);
+   }
+   const unsigned cmdSize = 8;
+   unsigned char cmd[cmdSize];
+   for (unsigned i = 0; i < cmdSize; i++) {
+      cmd[i] = 0;
+   }
+   cmd[1] = CMD_SET_DAC80508_REFDIV_GAIN;
+   cmd[2] = dac_div_;
+   cmd[3] = dac_gains_;
    return SendCommand(cmd, cmdSize);
 }

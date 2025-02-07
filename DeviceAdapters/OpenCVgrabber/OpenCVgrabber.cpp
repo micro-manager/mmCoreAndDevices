@@ -162,17 +162,23 @@ COpenCVgrabber::COpenCVgrabber() :
    SetErrorText(CAMERA_NOT_INITIALIZED, "Camera was not initialized");
 
 #ifdef WIN32
-   CPropertyAction* pAct = new CPropertyAction(this, &COpenCVgrabber::OnCameraID);
-   CreateProperty(cIDName, "Undefined", MM::String, false, pAct, true);
-
    DeviceEnumerator de;
-   // Video Devices
    map<int, OpenCVDevice> devices = de.getVideoDevicesMap();
-
-   for (int i = 0; i++; devices.size())
-   {
-       AddAllowedValue(cIDName, devices.at(i).deviceName.c_str(), long(i));
+   CPropertyAction* pAct = new CPropertyAction(this, &COpenCVgrabber::OnCameraID);
+   size_t nrDevices = devices.size();
+   std::string firstChoise = nrDevices > 0 ? devices.at(0).deviceName : "Undefined";
+   CreateProperty(cIDName, firstChoise.c_str(), MM::String, false, pAct, true);
+   std::ostringstream os;
+   os << "Devices map size " << devices.size();
+   LogMessage(os.str().c_str(), false);
+   if (nrDevices > 0) {
+      for (int i = 0; i < nrDevices; i++)
+      {
+         AddAllowedValue(cIDName, devices.at(i).deviceName.c_str());
+      }
    }
+   // when no devices are found and for backward compatibility, allow the Undefined value
+   AddAllowedValue(cIDName, "Undefined");
 #else
    String cIDNameReally = "Camera Number";
    CPropertyAction* pAct = new CPropertyAction(this, &COpenCVgrabber::OnCameraID);
@@ -1067,11 +1073,30 @@ int COpenCVgrabber::OnFlipY(MM::PropertyBase* pProp, MM::ActionType eAct)
 int COpenCVgrabber::OnCameraID(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 #ifdef WIN32
+   DeviceEnumerator de;
+   map<int, OpenCVDevice> devices = de.getVideoDevicesMap();
    if (eAct == MM::AfterSet)
    {
       string srcName;
       pProp->Get(srcName);
-      GetPropertyData(cIDName, srcName.c_str(), cameraID_);
+      for (std::pair<int, OpenCVDevice> device : devices) {
+         if (device.second.deviceName == srcName) {
+            cameraID_ = device.second.id;
+            return DEVICE_OK;
+         }
+      }
+      // fallback, to not throw a fit with old config files
+      cameraID_ = 0;
+      return DEVICE_OK;
+   }
+   else if (eAct == MM::BeforeGet) {
+      for (std::pair<int, OpenCVDevice> device : devices) {
+         if (device.second.id == cameraID_) {
+            pProp->Set(device.second.deviceName.c_str());
+            return DEVICE_OK;
+         }
+      }
+      pProp->Set("Undefined");
    }
 #else
    if (eAct == MM::AfterSet)

@@ -22,14 +22,12 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASIClocked_H_
-#define _ASIClocked_H_
+#ifndef ASICLOCKED_H
+#define ASICLOCKED_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
-
-using namespace std;
 
 class CClocked : public ASIPeripheralBase<CStateDeviceBase, CClocked>
 {
@@ -93,4 +91,4 @@ public:
    int Initialize();
 };
 
-#endif //_ASIClocked_H_
+#endif // ASICLOCKED_H

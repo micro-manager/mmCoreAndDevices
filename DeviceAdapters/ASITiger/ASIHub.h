@@ -22,16 +22,14 @@
 // BASED ON:      ASIStage.h
 //
 
-#ifndef _ASIHub_H_
-#define _ASIHub_H_
+#ifndef ASIHUB_H
+#define ASIHUB_H
 
 #include "ASIBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include <string>
-
-using namespace std;
 
 ////////////////////////////////////////////////////////////////
 // *********** generic ASI comm class *************************
@@ -56,44 +54,44 @@ public:
    int QueryCommandUnterminatedResponse(const char *command, const long timeoutMs, unsigned long reply_length);
    int QueryCommandUnterminatedResponse(const char *command, const long timeoutMs) 
    {	   return  QueryCommandUnterminatedResponse(command, timeoutMs,1);   }
-   int QueryCommandUnterminatedResponse(const string command, const long timeoutMs)
+   int QueryCommandUnterminatedResponse(const std::string command, const long timeoutMs)
       { return QueryCommandUnterminatedResponse(command.c_str(), timeoutMs,1); }
-   int QueryCommandUnterminatedResponse(const string command, const long timeoutMs, unsigned long reply_length)
+   int QueryCommandUnterminatedResponse(const std::string command, const long timeoutMs, unsigned long reply_length)
    {   return QueryCommandUnterminatedResponse(command.c_str(), timeoutMs, reply_length);   }
 
    int QueryCommandLongReply(const char *command, const char *replyTerminator);  // all variants call this
    int QueryCommandLongReply(const char *command) { return QueryCommandLongReply(command, g_SerialTerminatorMultiLine); }
-   int QueryCommandLongReply(const string &command) { return QueryCommandLongReply(command.c_str(), g_SerialTerminatorMultiLine); }
+   int QueryCommandLongReply(const std::string &command) { return QueryCommandLongReply(command.c_str(), g_SerialTerminatorMultiLine); }
 
    // QueryCommand gets the response (optional 2nd parameter is the response's termination string) (optional 3rd parameter is delay between sending and reading response)
    int QueryCommand(const char *command, const char *replyTerminator, const long delayMs); // all variants call this
    int QueryCommand(const char *command) { return QueryCommand(command, g_SerialTerminatorDefault, (long)0); }
-   int QueryCommand(const string &command) { return QueryCommand(command.c_str(), g_SerialTerminatorDefault, (long)0); }
-   int QueryCommand(const string &command, const string &replyTerminator) { return QueryCommand(command.c_str(), replyTerminator.c_str(), (long)0); }
+   int QueryCommand(const std::string &command) { return QueryCommand(command.c_str(), g_SerialTerminatorDefault, (long)0); }
+   int QueryCommand(const std::string &command, const std::string &replyTerminator) { return QueryCommand(command.c_str(), replyTerminator.c_str(), (long)0); }
    int QueryCommand(const char *command, const long delayMs) { return QueryCommand(command, g_SerialTerminatorDefault, delayMs); }
-   int QueryCommand(const string &command, const long delayMs) { return QueryCommand(command.c_str(), g_SerialTerminatorDefault, delayMs); }
-   int QueryCommand(const string &command, const string &replyTerminator, const long delayMs) { return QueryCommand(command.c_str(), replyTerminator.c_str(), delayMs); }
+   int QueryCommand(const std::string &command, const long delayMs) { return QueryCommand(command.c_str(), g_SerialTerminatorDefault, delayMs); }
+   int QueryCommand(const std::string &command, const std::string &replyTerminator, const long delayMs) { return QueryCommand(command.c_str(), replyTerminator.c_str(), delayMs); }
 
    // QueryCommandVerify gets the response and makes sure the first characters match expectedReplyPrefix
    int QueryCommandVerify(const char *command, const char *expectedReplyPrefix, const char *replyTerminator, const long delayMs); // all variants call this
    int QueryCommandVerify(const char *command, const char *expectedReplyPrefix)
       { return QueryCommandVerify(command, expectedReplyPrefix, g_SerialTerminatorDefault, (long)0); }
-   int QueryCommandVerify(const string &command, const string &expectedReplyPrefix)
+   int QueryCommandVerify(const std::string &command, const std::string &expectedReplyPrefix)
       { return QueryCommandVerify(command.c_str(), expectedReplyPrefix.c_str(), g_SerialTerminatorDefault, (long)0); }
-   int QueryCommandVerify(const string &command, const string &expectedReplyPrefix, const string &replyTerminator)
+   int QueryCommandVerify(const std::string &command, const std::string &expectedReplyPrefix, const std::string &replyTerminator)
       { return QueryCommandVerify(command.c_str(), expectedReplyPrefix.c_str(), replyTerminator.c_str(), (long)0); }
    int QueryCommandVerify(const char *command, const char *expectedReplyPrefix, const long delayMs)
       { return QueryCommandVerify(command, expectedReplyPrefix, g_SerialTerminatorDefault, delayMs); }
-   int QueryCommandVerify(const string &command, const string &expectedReplyPrefix, const long delayMs)
+   int QueryCommandVerify(const std::string &command, const std::string &expectedReplyPrefix, const long delayMs)
       { return QueryCommandVerify(command.c_str(), expectedReplyPrefix.c_str(), g_SerialTerminatorDefault, delayMs); }
-   int QueryCommandVerify(const string &command, const string &expectedReplyPrefix, const string &replyTerminator, const long delayMs)
+   int QueryCommandVerify(const std::string &command, const std::string &expectedReplyPrefix, const std::string &replyTerminator, const long delayMs)
       { return QueryCommandVerify(command.c_str(), expectedReplyPrefix.c_str(), replyTerminator.c_str(), delayMs); }
 
    // accessing serial commands and answers
    string LastSerialAnswer() const { return serialAnswer_; } // use with caution!; crashes to access something that doesn't exist!
    string LastSerialCommand() const { return serialCommand_; }
    char LastSerialAnswerChar() const { return serialAnswer_.back(); }
-   void SetLastSerialAnswer(string s) { serialAnswer_ = s; }  // used to parse subsets of full answer for commands like PZINFO using "Split" functions
+   void SetLastSerialAnswer(std::string s) { serialAnswer_ = s; }  // used to parse subsets of full answer for commands like PZINFO using "Split" functions
 
    // Interpreting serial response
    int ParseAnswerAfterEquals(double &val);  // finds next number after equals sign and returns as float
@@ -114,30 +112,30 @@ public:
    int GetAnswerCharAtPosition(unsigned int pos, char &val);  // returns the character at specified position, a safer version of LastSerialAnswer().at(pos)
    int GetAnswerCharAtPosition3(char &val);                   // returns the character at position 3, a safer version of LastSerialAnswer().at(3)
 
-   vector<string> SplitAnswerOnDelim(string delim) const;  // splits answer on arbitrary delimeter list (any of included characters will split)
-	vector<string> SplitAnswerOnCR() const { return SplitAnswerOnDelim("\r"); }
-   vector<string> SplitAnswerOnSpace() const { return SplitAnswerOnDelim(" "); }
+   std::vector<std::string> SplitAnswerOnDelim(std::string delim) const;  // splits answer on arbitrary delimeter list (any of included characters will split)
+   std::vector<std::string> SplitAnswerOnCR() const { return SplitAnswerOnDelim("\r"); }
+   std::vector<std::string> SplitAnswerOnSpace() const { return SplitAnswerOnDelim(" "); }
 
    // function to grab all the build info from BU X command
-   int GetBuildInfo(const string addressLetter, build_info_type &build);
+   int GetBuildInfo(const std::string addressLetter, build_info_type &build);
 
    // look to see if particular define is present
-   bool IsDefinePresent(const build_info_type build, const string defineToLookFor);
+   bool IsDefinePresent(const build_info_type build, const std::string defineToLookFor);
 
    // get define string from substring (e.g. the RING BUFFER define has the # of positions)
-   string GetDefineString(const build_info_type build, const string substringToLookFor);
+   std::string GetDefineString(const build_info_type build, const std::string substringToLookFor);
 
-   void RegisterPeripheral(const string deviceLabel, const string addressChar) {
+   void RegisterPeripheral(const std::string deviceLabel, const std::string addressChar) {
       deviceMap_[deviceLabel] = addressChar;  // add device to lookup table
    }
 
-   void UnRegisterPeripheral(const string deviceLabel) {
+   void UnRegisterPeripheral(const std::string deviceLabel) {
       deviceMap_.erase(deviceLabel);  // remove device from lookup table
    }
 
    bool UpdatingSharedProperties() { return updatingSharedProperties_; }
 
-   int UpdateSharedProperties(string addressChar, string propName, string value);
+   int UpdateSharedProperties(std::string addressChar, std::string propName, std::string value);
 
    // action/property handlers
    int OnPort                       (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -149,29 +147,28 @@ public:
    int OnSerialCommandOnlySendChanged(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 protected:
-   string port_;         // port to use for communication
+   std::string port_;         // port to use for communication
 
 private:
 	int ParseErrorReply() const;
-	static string EscapeControlCharacters(const string v);
-	static string UnescapeControlCharacters(const string v0 );
-	static vector<char> ConvertStringVector2CharVector(const vector<string> v);
-	static vector<int> ConvertStringVector2IntVector(const vector<string> v);
+	static std::string EscapeControlCharacters(const std::string v);
+	static std::string UnescapeControlCharacters(const std::string v0);
+	static std::vector<char> ConvertStringVector2CharVector(const std::vector<std::string> v);
+	static std::vector<int> ConvertStringVector2IntVector(const std::vector<std::string> v);
 
-   string serialAnswer_;      // the last answer received from any communication with the controller
-   string manualSerialAnswer_; // last answer received when the SerialCommand property was used
-   string serialCommand_;     // the last command sent, or can be set for calling commands without args
-   string serialTerminator_;  // only used when parsing command sent via OnSerialCommand action handler
+   std::string serialAnswer_;      // the last answer received from any communication with the controller
+   std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
+   std::string serialCommand_;     // the last command sent, or can be set for calling commands without args
+   std::string serialTerminator_;  // only used when parsing command sent via OnSerialCommand action handler
    long serialRepeatDuration_; // for how long total time the command is repeatedly sent
    long serialRepeatPeriod_;  // how often in ms the command is sent
    bool serialOnlySendChanged_;        // if true the serial command is only sent when it has changed
    MMThreadLock threadLock_;  // used to lock thread during serial transaction
    bool updatingSharedProperties_;
-   map<string, string> deviceMap_;  // to implement properties shared between devices
-        // key is the device name, value is the Tiger address (normally a single character, see note about addressChar_ in ASIPeripheralBase)
-
+   std::map<std::string, std::string> deviceMap_;  // to implement properties shared between devices
+        // key is the device name, value is the Tiger address (normally a single character, see note about addressChar_ in ASIPeripheralBase
 };
 
 
 
-#endif //_ASIHub_H_
+#endif // ASIHUB_H
