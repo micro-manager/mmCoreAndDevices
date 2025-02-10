@@ -50,12 +50,19 @@ public:
 
 private:
 	int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetAcceleration(long& acceleration);
 	int OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetBacklash(double& backlash);
 	int OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetFinishError(double& finishError);
 	int OnError(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetError(double& error);
 	int OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetOverShoot(double& overShoot);
 	int OnWait(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetWaitCycles(long& waitCycles);
 	int OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetSpeed(double& speed_);
 	int GetMaxSpeed(char* maxSpeedStr);
 	int OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNrMoveRepetitions(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -95,6 +102,13 @@ private:
 	bool stopSignal_;
 	bool serialOnlySendChanged_; // if true the serial command is only sent when it has changed
 	std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
+	long acceleration_;
+	long waitCycles_;
+	double speed_;
+	double backlash_;
+	double error_;
+	double finishError_;
+	double overShoot_;
 	bool advancedPropsEnabled_;
 	std::string axisletterX_;
 	std::string axisletterY_;

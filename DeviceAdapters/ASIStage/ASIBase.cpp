@@ -14,6 +14,7 @@ ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	initialized_(false),
 	device_(device),
 	oldstagePrefix_(prefix),
+	version_("undefined"),
 	port_("Undefined")
 {
 	versionData_ = VersionData();
@@ -212,34 +213,32 @@ VersionData ASIBase::ExtractVersionData(const std::string &version) const
 	return VersionData(major, minor, revision);
 }
 
+int ASIBase::GetVersion(std::string& version)
+{
+   std::ostringstream command;
+   command << "V";
+   std::string answer;
+   // query the device
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+   {
+      return ret;
+   }
+   if (answer.substr(0, 2).compare(":A") == 0)
+   {
+		version = answer.substr(3);
+		return DEVICE_OK;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 // Get the version of this controller
 int ASIBase::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		std::ostringstream command;
-		command << "V";
-		std::string answer;
-		// query the device
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			pProp->Set(answer.substr(3).c_str());
-			return DEVICE_OK;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+      pProp->Set(version_.c_str());
 	}
-
 	return DEVICE_OK;
 }
 
