@@ -261,7 +261,7 @@ public:
    void setDeviceDelayMs(const char* label, double delayMs) throw (CMMError);
    bool usesDeviceDelay(const char* label) throw (CMMError);
 
-   void setTimeoutMs(long timeoutMs) {if (timeoutMs > 0) timeoutMs_ = timeoutMs;}
+   void setTimeoutMs(long timeoutMs);
    long getTimeoutMs() { return timeoutMs_;}
 
    void sleep(double intervalMs) const;
