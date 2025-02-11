@@ -65,6 +65,7 @@
 #include "Error.h"
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"
+#include "BufferAdapter.h"
 
 #include <cstring>
 #include <deque>
@@ -88,7 +89,6 @@
 
 
 class CPluginManager;
-class CircularBuffer;
 class ConfigGroupCollection;
 class CoreCallback;
 class CorePropertyCollection;
@@ -670,7 +670,8 @@ private:
    CorePropertyCollection* properties_;
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
-   CircularBuffer* cbuf_;
+   // New adapter to wrap either the circular buffer or the DataBuffer (v2)
+   BufferAdapter* bufferAdapter_;
 
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;
@@ -683,6 +684,7 @@ private:
 
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
+   bool useV2Buffer_; // Whether to use the V2 buffer implementation
 
 private:
    void InitializeErrorMessages();
