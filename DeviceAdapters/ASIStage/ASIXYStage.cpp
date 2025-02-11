@@ -956,6 +956,7 @@ int XYStage::GetAcceleration(long& acceleration)
 		if (ret != DEVICE_OK)
 			return ret;
 		acceleration = (long)tmp;
+		return DEVICE_OK;
    }
    // deal with error later
    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
@@ -970,7 +971,7 @@ int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		return pProp->Set(acceleration_);
+		pProp->Set(acceleration_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
