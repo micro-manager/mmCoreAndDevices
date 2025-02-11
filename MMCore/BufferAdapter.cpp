@@ -133,7 +133,7 @@ unsigned BufferAdapter::GetMemorySizeMB() const
 long BufferAdapter::GetRemainingImageCount() const
 {
    if (useV2_) {
-      return v2Buffer_->GetRemainingImageCount();
+      return v2Buffer_->GetActiveSlotCount();
    } else {
       return circBuffer_->GetRemainingImageCount();
    }
@@ -153,7 +153,9 @@ void BufferAdapter::Clear()
 long BufferAdapter::GetSize(long imageSize) const
 {
    if (useV2_) {
-      return v2Buffer_->GetMemorySizeMB() * 1024 * 1024 / imageSize;
+      unsigned int mb = v2Buffer_->GetMemorySizeMB();
+      unsigned int num_images = mb * 1024 * 1024 / imageSize;
+      return static_cast<long>(num_images);
    } else {
       return circBuffer_->GetSize();
    }
@@ -163,7 +165,8 @@ long BufferAdapter::GetSize(long imageSize) const
 long BufferAdapter::GetFreeSize(long imageSize) const
 {
    if (useV2_) {
-      return static_cast<long>(v2Buffer_->GetFreeMemory()) / imageSize;
+      unsigned int mb = v2Buffer_->GetFreeMemory();
+      return static_cast<long>(mb) / imageSize;
    } else {
       return circBuffer_->GetFreeSize();
    }
@@ -376,7 +379,7 @@ bool BufferAdapter::IsUsingV2Buffer() const {
 
 void BufferAdapter::ReleaseReadAccess(const unsigned char* ptr) {
    if (useV2_ && ptr) {
-      v2Buffer_->ReleaseDataReadPointer(&ptr);
+      v2Buffer_->ReleaseDataReadPointer(ptr);
    }
 }
 

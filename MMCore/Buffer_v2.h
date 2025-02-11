@@ -99,18 +99,14 @@ public:
      * Acquires shared read access.
      * This is a blocking operation — if a writer is active, the caller waits
      * until the writer releases its lock. Once available, the reader count is incremented.
-     *
-     * @return True when read access has been successfully acquired.
      */
-    bool AcquireReadAccess();
+    void AcquireReadAccess();
 
     /**
      * Releases shared read access.
      * Decrements the reader count.
-     *
-     * @return True if this call released the last active reader; false otherwise.
      */
-    bool ReleaseReadAccess();
+    void ReleaseReadAccess();
 
     /**
      * Checks if the slot is currently available for writing.
@@ -250,7 +246,7 @@ public:
      *         Defaults to -1, which means no update is performed.
      * @return DEVICE_OK on success.
      */
-    int ReleaseDataWriteSlot(unsigned char** imageDataPointer, int actualMetadataBytes = -1);
+    int ReleaseDataWriteSlot(unsigned char* imageDataPointer, int actualMetadataBytes = -1);
 
     /**
      * Releases read access for the image data region after its content has been read.
@@ -258,7 +254,7 @@ public:
      * @param imageDataPointer Pointer previously obtained from reading routines.
      * @return DEVICE_OK on success.
      */
-    int ReleaseDataReadPointer(const unsigned char** imageDataPointer);
+    int ReleaseDataReadPointer(const unsigned char* imageDataPointer);
 
     /**
      * Retrieves and removes (consumes) the next available data entry for reading,
@@ -289,11 +285,13 @@ public:
      * Peeks at the nth unread data entry without consuming it.
      * (n = 0 is equivalent to PeekNextDataReadPointer.)
      *
-     * @param n The index of the data entry to peek at (0 is next available).
+     * @param n The index of the data entry to peek at (0 is next available),
+     *  > 0 is looking back in the buffer.
      * @param imageDataSize On success, returns the image data size (in bytes).
      * @param md Metadata object populated from the stored metadata blob.
      * @return Pointer to the start of the image data region.
      */
+
     const unsigned char* PeekDataReadPointerAtIndex(size_t n, size_t* imageDataSize, Metadata &md);
 
     /**
@@ -345,7 +343,7 @@ public:
      *
      * @return Unread slot count.
      */
-    long GetRemainingImageCount() const;
+    long GetActiveSlotCount() const;
 
     /**
      * Reinitializes the DataBuffer by clearing its structures, releasing the current
@@ -406,6 +404,51 @@ public:
     long GetImageBufferSize(const unsigned char* imageDataPtr) const;
 
 private:
+    /**
+     * Removes a slot from active tracking and adds it to the free region list.
+     * Caller must hold slotManagementMutex_.
+     *
+     * @param offset The buffer offset of the slot to remove.
+     * @param it Iterator to the slot in activeSlotsByStart_.
+     */
+    void RemoveSlotFromActiveTracking(size_t offset, std::map<size_t, BufferSlot*>::iterator it);
+
+    /**
+     * Creates a new BufferSlot at an allocated region, registers it in the internal
+     * tracking structures, initializes its header, and sets the output pointers for image
+     * data and metadata.
+     *
+     * Allocation is performed differently based on the overwrite mode:
+     *
+     *  - Overwrite mode:
+     *       Uses nextAllocOffset_ with wrap-around.
+     *
+     *  - Non-overwrite mode:
+     *       First, we try to reuse recycled slots in order of their release. If none are 
+     *       available or usable, we then check if there is a free region large enough to hold
+     *       the slot. If there is, we use that region. If there is no suitable region, an exception is 
+     *       thrown.
+     *
+     * @param candidateStart The starting offset candidate for the slot.
+     * @param totalSlotSize The total size (in bytes) of the slot, including header, image data, and metadata.
+     * @param imageDataSize The size (in bytes) to reserve for the image data.
+     * @param imageDataPointer Output pointer for the caller to access the image data region.
+     * @param metadataPointer Output pointer for the caller to access the metadata region.
+     * @param fromFreeRegion If true, indicates that the candidate was selected from a free region.
+     * @return DEVICE_OK on success, or an error code if allocation fails.
+     */
+    int CreateAndRegisterNewSlot(size_t candidateStart, size_t totalSlotSize, size_t imageDataSize,
+                                  unsigned char** imageDataPointer, unsigned char** metadataPointer,
+                                  bool fromFreeRegion);
+
+    /**
+     * Inserts a free region into the freeRegions_ list, merging with adjacent regions if necessary.
+     *
+     * @param offset The starting offset of the freed region.
+     * @param size The size (in bytes) of the freed region.
+     */
+    void InsertFreeRegion(size_t offset, size_t size);
+
     // Pointer to the allocated block.
     unsigned char* buffer_;
     // Total allocated size in bytes.
@@ -420,9 +463,16 @@ private:
     // Data structures used to track active slots.
     std::vector<std::unique_ptr<BufferSlot>> activeSlotsVector_;
     std::map<size_t, BufferSlot*> activeSlotsByStart_;
+
+    // Free region list for non-overwrite mode.
+    // Map from starting offset -> region size (in bytes).
+    std::map<size_t, size_t> freeRegions_;
+
+    // (Optional) Legacy structure—can be deprecated as freeRegions_ is used instead.
     std::vector<size_t> releasedSlots_;
 
     // Next free offset within the buffer.
+    // In overwrite mode, new allocations will come from this pointer.
     size_t nextAllocOffset_;
 
     // Index tracking the next slot for read.
