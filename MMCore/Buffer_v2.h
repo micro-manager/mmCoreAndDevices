@@ -66,7 +66,7 @@ public:
     /**
      * Destructor.
      */
-    ~BufferSlot();
+    ~BufferSlot() {};
 
     /**
      * Returns the starting offset (in bytes) of the slot.
@@ -143,6 +143,14 @@ public:
             return true;
         }
         return false;
+    }
+
+    // Add reset method to reuse the slot
+    void Reset(std::size_t start, std::size_t totalLength, size_t imageSize, size_t metadataSize) {
+        start_ = start;
+        length_ = totalLength;
+        imageSize_ = imageSize;
+        metadataSize_ = metadataSize;
     }
 
 private:
@@ -351,6 +359,8 @@ private:
     // Map from starting offset -> region size (in bytes).
     std::map<size_t, size_t> freeRegions_;
     std::vector<size_t> releasedSlots_;
+    
+    std::deque<std::unique_ptr<BufferSlot>> unusedSlots_;
 
     // Next free offset within the buffer.
     // In overwrite mode, new allocations will come from this pointer.
@@ -370,11 +380,25 @@ private:
     /**
      * Internal helper to register a new slot.
      */
-    int CreateAndRegisterNewSlot(size_t candidateStart, size_t totalSlotSize, size_t imageDataSize,
+    int CreateSlot(size_t candidateStart, size_t totalSlotSize, size_t imageDataSize,
                                  size_t metadataSize,
                                  unsigned char** imageDataPointer, unsigned char** metadataPointer,
                                  bool fromFreeRegion);
 
-    void RemoveSlotFromActiveTracking(size_t offset, std::map<size_t, BufferSlot*>::iterator it);
-    void InsertFreeRegion(size_t offset, size_t size);
+    void DeleteSlot(size_t offset, std::map<size_t, BufferSlot*>::iterator it);
+
+    void AddToReleasedSlots(size_t offset);
+    void MergeFreeRegions(size_t newRegionStart, size_t newRegionEnd, size_t freedRegionSize);
+    void RemoveFromActiveTracking(size_t offset, std::map<size_t, BufferSlot*>::iterator it);
+
+    BufferSlot* InitializeNewSlot(size_t candidateStart, size_t totalSlotSize, 
+                                 size_t imageDataSize, size_t metadataSize);
+    void SetupSlotPointers(BufferSlot* newSlot, unsigned char** imageDataPointer, 
+                          unsigned char** metadataPointer);
+    void UpdateFreeRegions(size_t candidateStart, size_t totalSlotSize);
+
+    void ReturnSlotToPool(BufferSlot* slot);
+
+    BufferSlot* GetSlotFromPool(size_t start, size_t totalLength, 
+                               size_t imageSize, size_t metadataSize);
 };
