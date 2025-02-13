@@ -83,7 +83,7 @@ struct BufferSlotRecord {
 BufferSlot::BufferSlot(std::size_t start, std::size_t length)
     : start_(start), length_(length)
 {
-    // Using RAII-based locking with std::shared_timed_mutex.
+    // The std::shared_timed_mutex (rwMutex_) is default-constructed.
 }
 
 /**
@@ -277,7 +277,7 @@ int DataBuffer::InsertData(const unsigned char* data, size_t dataSize, const Met
     size_t totalSize = sizeof(BufferSlotRecord) + dataSize + metaSize;
     unsigned char* imageDataPointer = nullptr;
     unsigned char* metadataPointer = nullptr;
-    int result = GetDataWriteSlot(totalSize, metaSize, &imageDataPointer, &metadataPointer);
+    int result = AcquireWriteSlot(totalSize, metaSize, &imageDataPointer, &metadataPointer);
     if (result != DEVICE_OK)
         return result;
 
@@ -298,7 +298,7 @@ int DataBuffer::InsertData(const unsigned char* data, size_t dataSize, const Met
     }
 
     // Release the write slot
-    return ReleaseDataWriteSlot(imageDataPointer, metaSize > 0 ? static_cast<int>(metaSize) : -1);
+    return FinalizeWriteSlot(imageDataPointer, metaSize > 0 ? static_cast<int>(metaSize) : -1);
 }
 
 /**
@@ -326,7 +326,7 @@ int DataBuffer::SetOverwriteData(bool overwrite) {
  * 
  * The caller must release the slot using ReleaseDataSlot after writing is complete.
  */
-int DataBuffer::GetDataWriteSlot(size_t imageSize, size_t metadataSize,
+int DataBuffer::AcquireWriteSlot(size_t imageSize, size_t metadataSize,
                                  unsigned char** imageDataPointer, unsigned char** metadataPointer)
 {
     std::lock_guard<std::mutex> lock(slotManagementMutex_);
@@ -405,7 +405,7 @@ int DataBuffer::GetDataWriteSlot(size_t imageSize, size_t metadataSize,
  * @param buffer The buffer to be released.
  * @return Error code (0 on success).
  */
-int DataBuffer::ReleaseDataWriteSlot(unsigned char* imageDataPointer, int actualMetadataBytes) {
+int DataBuffer::FinalizeWriteSlot(unsigned char* imageDataPointer, int actualMetadataBytes) {
     if (imageDataPointer == nullptr)
         return DEVICE_ERR;
 

@@ -9,8 +9,8 @@
 //
 // The buffer is organized into slots (BufferSlot objects), each of which
 // supports exclusive write access and shared read access. Read access is
-// delivered using const pointers and is counted via an atomic counter, while
-// write access requires acquiring an exclusive lock. This ensures that once a
+// delivered using const pointers and is tracked via RAII-based synchronization.
+// Write access is protected via an exclusive lock. This ensures that once a
 // read pointer is given out it cannot be misused for writing.
 //
 // COPYRIGHT:     Henry Pinkard, 2025
@@ -39,7 +39,6 @@
 #include <map>
 #include <cstddef>
 #include <vector>
-#include <atomic>
 #include <condition_variable>
 #include <deque>
 #include <memory>
@@ -54,9 +53,6 @@ class BufferSlot {
 public:
     /**
      * Constructor.
-     * Initializes the slot with the specified starting byte offset and length.
-     * Also initializes atomic variables that track reader and writer access.
-     *
      * @param start The starting offset (in bytes) within the buffer.
      * @param length The length (in bytes) of the slot.
      */
@@ -68,8 +64,7 @@ public:
     ~BufferSlot();
 
     /**
-     * Returns the starting offset (in bytes) of the slot in the buffer.
-     *
+     * Returns the starting offset (in bytes) of the slot.
      * @return The slot's start offset.
      */
     std::size_t GetStart() const;
@@ -83,11 +78,7 @@ public:
 
     /**
      * Attempts to acquire exclusive write access without blocking.
-     * It first tries to atomically set the write flag.
-     * If another writer is active or if there are active readers, 
-     * the write lock is not acquired.
-     *
-     * @return True if the slot is locked for writing; false otherwise.
+     * @return True if the write lock was acquired; false otherwise.
      */
     bool TryAcquireWriteAccess();
 
@@ -99,35 +90,28 @@ public:
 
     /**
      * Releases exclusive write access.
-     * Clears the write flag and notifies waiting readers.
      */
     void ReleaseWriteAccess();
 
     /**
      * Acquires shared read access (blocking).
-     * This is a blocking operation — if a writer is active, the caller waits
-     * until the writer releases its lock. Once available, the reader count is incremented.
      */
     void AcquireReadAccess();
 
     /**
      * Releases shared read access.
-     * Decrements the reader count.
      */
     void ReleaseReadAccess();
 
     /**
      * Checks if the slot is currently available for writing.
-     * A slot is available if there are no active readers and no active writer.
-     *
-     * @return True if available for writing, false otherwise.
+     * A slot is available if no thread holds either a write lock or any read lock.
+     * @return True if available for writing.
      */
     bool IsAvailableForWriting() const;
 
     /**
      * Checks if the slot is available for acquiring read access.
-     * A slot is available for reading if no writer presently holds the lock.
-     *
      * @return True if available for reading.
      */
     bool IsAvailableForReading() const;
@@ -135,40 +119,14 @@ public:
 private:
     std::size_t start_;
     std::size_t length_;
-    std::atomic<int> readAccessCountAtomicInt_;
-    std::atomic<bool> writeAtomicBool_;
+    // RAII-based locking using std::shared_timed_mutex.
     mutable std::shared_timed_mutex rwMutex_;
 };
 
-/**
- * WriteSlotGuard is an RAII helper that acquires exclusive write access on a BufferSlot.
- * When this guard goes out of scope, the write lock is automatically released.
- */
-class WriteSlotGuard {
-public:
-    WriteSlotGuard(BufferSlot* slot);
-    ~WriteSlotGuard();
-
-private:
-    BufferSlot* slot_;
-};
-
-/**
- * ReadSlotGuard is an RAII helper that acquires shared read access on a BufferSlot.
- * When this guard goes out of scope, the read lock is automatically released.
- */
-class ReadSlotGuard {
-public:
-    ReadSlotGuard(BufferSlot* slot);
-    ~ReadSlotGuard();
-
-private:
-    BufferSlot* slot_;
-};
 
 /**
  * DataBuffer manages a contiguous block of memory divided into BufferSlot objects
- * for storing image data and metadata. It provides thread-safe access for both
+ * for storing image data and metadata. It ensures thread-safe access for both
  * reading and writing operations and supports configurable overflow behavior.
  *
  * Two data access patterns are provided:
@@ -185,15 +143,10 @@ private:
  */
 class DataBuffer {
 public:
-    /**
-     * Maximum number of released slots to track.
-     */
     static const size_t MAX_RELEASED_SLOTS = 50;
 
     /**
      * Constructor.
-     * Initializes the DataBuffer with a specified memory size in MB.
-     *
      * @param memorySizeMB The size (in megabytes) of the buffer.
      */
     DataBuffer(unsigned int memorySizeMB);
@@ -204,118 +157,95 @@ public:
     ~DataBuffer();
 
     /**
-     * Allocates a contiguous block of memory for the buffer.
-     *
-     * @param memorySizeMB The amount of memory (in MB) to allocate.
+     * Allocates the memory buffer.
+     * @param memorySizeMB Size in megabytes.
      * @return DEVICE_OK on success.
      */
     int AllocateBuffer(unsigned int memorySizeMB);
 
     /**
-     * Releases the allocated buffer.
-     *
-     * @return DEVICE_OK on success, or an error if the buffer is already released.
+     * Releases the memory buffer.
+     * @return DEVICE_OK on success.
      */
     int ReleaseBuffer();
 
     /**
-     * Inserts data into the next available slot.
-     * The data is stored together with its metadata and is arranged as:
-     *   [BufferSlotRecord header][image data][serialized metadata]
-     *
+     * Inserts image data along with metadata into the buffer.
      * @param data Pointer to the raw image data.
-     * @param dataSize The image data byte count.
-     * @param pMd Pointer to the metadata. If null, no metadata is stored.
+     * @param dataSize The image data size in bytes.
+     * @param pMd Pointer to the metadata (can be null if not applicable).
      * @return DEVICE_OK on success.
      */
     int InsertData(const unsigned char* data, size_t dataSize, const Metadata* pMd);
 
     /**
-     * Sets whether the buffer should overwrite older data when full.
-     *
-     * @param overwrite True to enable overwriting, false otherwise.
+     * Sets whether the buffer should overwrite old data when full.
+     * @param overwrite True to enable overwriting.
      * @return DEVICE_OK on success.
      */
     int SetOverwriteData(bool overwrite);
 
     /**
      * Acquires a write slot large enough to hold the image data and metadata.
-     * On success, provides two pointers: one to the image data region and one to the metadata region.
-     * 
-     * The metadataSize parameter specifies the maximum size to reserve for metadata if the exact
-     * size is not known at call time. When the slot is released, the metadata will be automatically
-     * null-terminated at its actual length, which must not exceed the reserved size.
-     *
-     * @param imageSize The number of bytes allocated for image data.
-     * @param metadataSize The maximum number of bytes to reserve for metadata.
+     * On success, returns pointers for the image data and metadata regions.
+     *     *
+     * @param imageSize The number of bytes reserved for image data.
+     * @param metadataSize The maximum number of bytes reserved for metadata.
      * @param imageDataPointer On success, receives a pointer to the image data region.
      * @param metadataPointer On success, receives a pointer to the metadata region.
      * @return DEVICE_OK on success.
      */
-    int GetDataWriteSlot(size_t imageSize, size_t metadataSize, unsigned char** imageDataPointer, unsigned char** metadataPointer);
+    int AcquireWriteSlot(size_t imageSize, size_t metadataSize,
+                         unsigned char** imageDataPointer, unsigned char** metadataPointer);
 
     /**
-     * Releases a write slot after data has been written.
-     *
-     * @param imageDataPointer Pointer previously obtained from GetDataWriteSlot.
-     *                         This pointer references the start of the image data region.
+     * Finalizes (releases) a write slot after data has been written.
+     *     *
+     * @param imageDataPointer Pointer previously obtained from AcquireWriteSlot.
      * @param actualMetadataBytes Optionally, the actual number of metadata bytes written.
-     *         If provided and less than the maximum metadata size reserved, this value
-     *         is used to update the header's metadataSize field.
-     *         Defaults to -1, which means no update is performed.
+     *                            Defaults to -1 (no update).
      * @return DEVICE_OK on success.
      */
-    int ReleaseDataWriteSlot(unsigned char* imageDataPointer, int actualMetadataBytes = -1);
+    int FinalizeWriteSlot(unsigned char* imageDataPointer, int actualMetadataBytes = -1);
 
     /**
-     * Releases read access for the image data region after its content has been read.
-     *
+     * Releases read access for the image data after reading.
      * @param imageDataPointer Pointer previously obtained from reading routines.
      * @return DEVICE_OK on success.
      */
     int ReleaseDataReadPointer(const unsigned char* imageDataPointer);
 
     /**
-     * Retrieves and removes (consumes) the next available data entry for reading,
-     * and populates the provided Metadata object with the associated metadata.
-     * The returned pointer points to the beginning of the image data region,
-     * immediately after the header.
-     *
-     * @param md Metadata object to be populated from the stored blob.
-     * @param imageDataSize On success, returns the image data size (in bytes).
-     * @param waitForData If true, block until data becomes available.
-     * @return Pointer to the start of the image data region, or nullptr if none available.
+     * Retrieves and consumes the next available data entry for reading,
+     * populating the provided Metadata object.
+     * @param md Metadata object to populate.
+     * @param imageDataSize On success, returns the image data size in bytes.
+     * @param waitForData If true, blocks until data is available.
+     * @return Pointer to the image data region, or nullptr if none available.
      */
     const unsigned char* PopNextDataReadPointer(Metadata &md, size_t *imageDataSize, bool waitForData);
 
     /**
      * Peeks at the next unread data entry without consuming it.
-     * The header is examined so that the actual image data size (excluding header)
-     * is returned.
-     *
      * @param imageDataPointer On success, receives a pointer to the image data region.
-     * @param imageDataSize On success, returns the image data size (in bytes).
-     * @param md Metadata object populated from the stored metadata blob.
-     * @return DEVICE_OK on success, error code otherwise.
+     * @param imageDataSize On success, returns the image data size in bytes.
+     * @param md Metadata object populated from the stored metadata.
+     * @return DEVICE_OK on success.
      */
     int PeekNextDataReadPointer(const unsigned char** imageDataPointer, size_t* imageDataSize, Metadata &md);
 
     /**
      * Peeks at the nth unread data entry without consuming it.
-     * (n = 0 is equivalent to PeekNextDataReadPointer.)
-     *
-     * @param n The index of the data entry to peek at (0 is next available),
-     *  > 0 is looking back in the buffer.
-     * @param imageDataSize On success, returns the image data size (in bytes).
-     * @param md Metadata object populated from the stored metadata blob.
+     * (n = 0 is equivalent to PeekNextDataReadPointer).
+     * @param n Index of the data entry to peek at (0 for next available).
+     * @param imageDataSize On success, returns the image data size in bytes.
+     * @param md Metadata object populated from the stored metadata.
      * @return Pointer to the start of the image data region.
      */
-
     const unsigned char* PeekDataReadPointerAtIndex(size_t n, size_t* imageDataSize, Metadata &md);
 
     /**
      * Releases read access that was acquired by a peek.
-     *
      * @param imageDataPointer Pointer previously obtained from a peek.
      * @return DEVICE_OK on success.
      */
@@ -323,54 +253,45 @@ public:
 
     /**
      * Returns the total buffer memory size (in MB).
-     *
      * @return Buffer size in MB.
      */
     unsigned int GetMemorySizeMB() const;
 
     /**
-     * Returns the number of occupied slots in the buffer.
-     *
+     * Returns the number of occupied buffer slots.
      * @return Occupied slot count.
      */
     size_t GetOccupiedSlotCount() const;
 
     /**
-     * Returns the total occupied memory (in bytes).
-     *
+     * Returns the total occupied memory in bytes.
      * @return Sum of active slot lengths.
      */
     size_t GetOccupiedMemory() const;
 
     /**
-     * Returns the amount of free memory (in bytes) remaining.
-     *
+     * Returns the amount of free memory remaining in bytes.
      * @return Free byte count.
      */
     size_t GetFreeMemory() const;
 
     /**
-     * Indicates whether a buffer overflow occurred (i.e. an insert failed because
-     * no appropriate slot was available).
-     *
-     * @return True if overflow has happened, false otherwise.
+     * Indicates whether a buffer overflow has occurred.
+     * @return True if an insert failed (buffer full), false otherwise.
      */
     bool Overflow() const;
 
     /**
      * Returns the number of unread slots in the buffer.
-     *
      * @return Unread slot count.
      */
     long GetActiveSlotCount() const;
 
     /**
-     * Reinitializes the DataBuffer by clearing its structures, releasing the current
-     * buffer, and allocating a new one.
-     *
+     * Reinitializes the DataBuffer, clearing its structures and allocating a new buffer.
      * @param memorySizeMB New buffer size (in MB).
      * @return DEVICE_OK on success.
-     * @throws std::runtime_error if any slot is still actively in use.
+     * @throws std::runtime_error if any slot is still in use.
      */
     int ReinitializeBuffer(unsigned int memorySizeMB);
 
@@ -468,9 +389,8 @@ private:
      */
     void InsertFreeRegion(size_t offset, size_t size);
 
-    // Pointer to the allocated block.
+    // Memory managed by the DataBuffer.
     unsigned char* buffer_;
-    // Total allocated size in bytes.
     size_t bufferSize_;
 
     // Whether to overwrite old data when full.
@@ -479,15 +399,13 @@ private:
     // Overflow flag (set if insert fails due to full buffer).
     bool overflow_;
 
-    // Data structures used to track active slots.
+    // Tracking of active slots and free memory regions.
     std::vector<std::unique_ptr<BufferSlot>> activeSlotsVector_;
     std::map<size_t, BufferSlot*> activeSlotsByStart_;
 
     // Free region list for non-overwrite mode.
     // Map from starting offset -> region size (in bytes).
     std::map<size_t, size_t> freeRegions_;
-
-    // (Optional) Legacy structure—can be deprecated as freeRegions_ is used instead.
     std::vector<size_t> releasedSlots_;
 
     // Next free offset within the buffer.
@@ -497,11 +415,11 @@ private:
     // Index tracking the next slot for read.
     size_t currentSlotIndex_;
 
-    // Synchronization primitives for slot management.
+    // Synchronization for slot management.
     std::condition_variable dataCV_;
     mutable std::mutex slotManagementMutex_;
 
-    // Add these new members for multithreaded copying
+    // Members for multithreaded copying.
     std::shared_ptr<ThreadPool> threadPool_;
     std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };
