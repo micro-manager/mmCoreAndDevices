@@ -79,22 +79,22 @@ struct BufferSlotRecord {
 /**
  * Constructor.
  * Initializes the slot with the specified starting byte offset and length.
- * Also initializes atomic variables that track reader and writer access.
  */
 BufferSlot::BufferSlot(std::size_t start, std::size_t length)
-    : start_(start), length_(length),
-      readAccessCountAtomicInt_(0),
-      writeAtomicBool_(false)   // The slot is created with no exclusive write access.
+    : start_(start), length_(length)
 {
-    // No readers are active and the slot must be explicitly acquired for writing.
-}
-
-BufferSlot::~BufferSlot() {
-    // No explicit cleanup required here.
+    // Using RAII-based locking with std::shared_timed_mutex.
 }
 
 /**
- * Returns the start offset (in bytes) of the slot from the start of the buffer.
+ * Destructor.
+ */
+BufferSlot::~BufferSlot() {
+    // No explicit cleanup required.
+}
+
+/**
+ * Returns the starting offset (in bytes) of the slot.
  */
 std::size_t BufferSlot::GetStart() const {
     return start_;
@@ -108,90 +108,71 @@ std::size_t BufferSlot::GetLength() const {
 }
 
 /**
- * Attempts to acquire exclusive write access.
- * This method first attempts to set the write flag atomically.
- * If it fails, that indicates another writer holds the lock.
- * Next, it attempts to confirm that no readers are active.
- * If there are active readers, it reverts the write flag and returns false.
+ * Attempts to acquire exclusive write access without blocking.
+ *
+ * @return True if the exclusive lock was acquired, false otherwise.
  */
-bool BufferSlot::AcquireWriteAccess() {
-    bool expected = false;
-    // Attempt to atomically set the write flag.
-    if (!writeAtomicBool_.compare_exchange_strong(expected, true, std::memory_order_acquire)) {
-        // A writer is already active.
-        return false;
-    }
-    // Ensure no readers are active by checking the read counter.
-    int expectedReaders = 0;
-    if (!readAccessCountAtomicInt_.compare_exchange_strong(expectedReaders, 0, std::memory_order_acquire)) {
-        // Active readers are present; revert the write flag.
-        writeAtomicBool_.store(false, std::memory_order_release);
-        return false;
-    }
-    // Exclusive write access has been acquired.
-    return true;
+bool BufferSlot::TryAcquireWriteAccess() {
+    return rwMutex_.try_lock();
+}
+
+/**
+ * Acquires exclusive write access (blocking call).
+ * This method will block until exclusive access is granted.
+ */
+void BufferSlot::AcquireWriteAccess() {
+    rwMutex_.lock();
 }
 
 /**
  * Releases exclusive write access.
- * The writer flag is cleared, and waiting readers are notified so that
- * they may acquire shared read access once the write is complete.
  */
 void BufferSlot::ReleaseWriteAccess() {
-    // Publish all writes by releasing the writer flag.
-    writeAtomicBool_.store(false, std::memory_order_release);
-    // Notify waiting readers (using the condition variable)
-    // that the slot is now available for read access.
-    std::lock_guard<std::mutex> lock(writeCompleteConditionMutex_);
-    writeCompleteCondition_.notify_all();
+    rwMutex_.unlock();
 }
 
 /**
- * Acquires shared read access.
- * This is a blocking operation – if a writer is active,
- * the calling thread will wait until the writer releases its lock.
- * Once unlocked, the method increments the reader count.
+ * Acquires shared read access (blocking).
  */
 void BufferSlot::AcquireReadAccess() {
-    // Acquire the mutex associated with the condition variable.
-    std::unique_lock<std::mutex> lock(writeCompleteConditionMutex_);
-    // Block until no writer is active.
-    writeCompleteCondition_.wait(lock, [this]() {
-         return !writeAtomicBool_.load(std::memory_order_acquire);
-    });
-    // Now that there is no writer, increment the reader counter.
-    readAccessCountAtomicInt_.fetch_add(1, std::memory_order_acquire);
+    rwMutex_.lock_shared();
 }
 
 /**
  * Releases shared read access.
- * The reader count is decremented using release semantics to ensure that all
- * prior read operations complete before the decrement is visible to other threads.
  */
 void BufferSlot::ReleaseReadAccess() {
-    // fetch_sub returns the previous value
-    int previousCount = readAccessCountAtomicInt_.fetch_sub(1, std::memory_order_release);
-    if (previousCount <= 0) {
-        // This indicates a bug - we're releasing more times than we've acquired
-        throw std::runtime_error("Invalid read access release - counter would go negative");
-    }
+    rwMutex_.unlock_shared();
 }
 
 /**
- * Checks if the slot is available for acquiring write access.
- * A slot is available for writing if there are no active readers and no writer.
+ * Checks if the slot is available for writing.
+ * The slot is considered available if no thread holds either an exclusive or a shared lock.
+ *
+ * @return True if available for writing.
  */
 bool BufferSlot::IsAvailableForWriting() const {
-    return (readAccessCountAtomicInt_.load(std::memory_order_acquire) == 0) &&
-           (!writeAtomicBool_.load(std::memory_order_acquire));
+    // If we can acquire the lock exclusively, then no readers or writer are active.
+    if (rwMutex_.try_lock()) {
+        rwMutex_.unlock();
+        return true;
+    }
+    return false;
 }
 
 /**
- * Checks if the slot is available for acquiring read access.
- * A slot is available for reading if no writer currently holds the lock.
+ * Checks if the slot is available for reading.
+ * A slot is available for reading if no exclusive lock is held (readers might already be active).
+ *
+ * @return True if available for reading.
  */
 bool BufferSlot::IsAvailableForReading() const {
-    return !writeAtomicBool_.load(std::memory_order_acquire);
+    // If we can acquire a shared lock, then no writer is active.
+    if (rwMutex_.try_lock_shared()) {
+        rwMutex_.unlock_shared();
+        return true;
+    }
+    return false;
 }
 
 

@@ -34,6 +34,7 @@
 #include "../MMDevice/ImageMetadata.h"
 #include "../MMDevice/MMDevice.h"
 #include <mutex>
+#include <shared_mutex>   
 #include <string>
 #include <map>
 #include <cstddef>
@@ -46,8 +47,8 @@
 
 /**
  * BufferSlot represents a contiguous slot in the DataBuffer that holds image
- * data and metadata. It supports exclusive write access with shared read access,
- * using atomics, a mutex, and a condition variable.
+ * data and metadata. It uses RAII-based locking with std::shared_timed_mutex to
+ * support exclusive write access and concurrent shared read access.
  */
 class BufferSlot {
 public:
@@ -81,14 +82,20 @@ public:
     std::size_t GetLength() const;
 
     /**
-     * Attempts to acquire exclusive write access.
+     * Attempts to acquire exclusive write access without blocking.
      * It first tries to atomically set the write flag.
      * If another writer is active or if there are active readers, 
      * the write lock is not acquired.
      *
      * @return True if the slot is locked for writing; false otherwise.
      */
-    bool AcquireWriteAccess();
+    bool TryAcquireWriteAccess();
+
+    /**
+     * Acquires exclusive write access (blocking call).
+     * This method will block until exclusive access is granted.
+     */
+    void AcquireWriteAccess();
 
     /**
      * Releases exclusive write access.
@@ -97,7 +104,7 @@ public:
     void ReleaseWriteAccess();
 
     /**
-     * Acquires shared read access.
+     * Acquires shared read access (blocking).
      * This is a blocking operation — if a writer is active, the caller waits
      * until the writer releases its lock. Once available, the reader count is incremented.
      */
@@ -130,10 +137,34 @@ private:
     std::size_t length_;
     std::atomic<int> readAccessCountAtomicInt_;
     std::atomic<bool> writeAtomicBool_;
-    mutable std::mutex writeCompleteConditionMutex_;
-    mutable std::condition_variable writeCompleteCondition_;
+    mutable std::shared_timed_mutex rwMutex_;
 };
 
+/**
+ * WriteSlotGuard is an RAII helper that acquires exclusive write access on a BufferSlot.
+ * When this guard goes out of scope, the write lock is automatically released.
+ */
+class WriteSlotGuard {
+public:
+    WriteSlotGuard(BufferSlot* slot);
+    ~WriteSlotGuard();
+
+private:
+    BufferSlot* slot_;
+};
+
+/**
+ * ReadSlotGuard is an RAII helper that acquires shared read access on a BufferSlot.
+ * When this guard goes out of scope, the read lock is automatically released.
+ */
+class ReadSlotGuard {
+public:
+    ReadSlotGuard(BufferSlot* slot);
+    ~ReadSlotGuard();
+
+private:
+    BufferSlot* slot_;
+};
 
 /**
  * DataBuffer manages a contiguous block of memory divided into BufferSlot objects
