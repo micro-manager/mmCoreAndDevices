@@ -250,10 +250,10 @@ bool BufferAdapter::InsertMultiChannel(const unsigned char *buf, unsigned numCha
 bool BufferAdapter::InsertMultiChannel(const unsigned char* buf, unsigned numChannels, 
     unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, Metadata* pMd) {
     
-    // Initialize metadata with either provided metadata or create empty
+   //  Initialize metadata with either provided metadata or create empty
     Metadata md = (pMd != nullptr) ? *pMd : Metadata();
-
-    // Process common metadata
+    
+   //  Process common metadata
     ProcessMetadata(md, width, height, byteDepth, nComponents);
 
     if (useV2_) {
@@ -265,7 +265,6 @@ bool BufferAdapter::InsertMultiChannel(const unsigned char* buf, unsigned numCha
         return circBuffer_->InsertMultiChannel(buf, numChannels, width, height, 
             byteDepth, &md);
     }
-
 }
 
 void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError)

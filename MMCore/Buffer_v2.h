@@ -42,6 +42,7 @@
 #include <condition_variable>
 #include <deque>
 #include <memory>
+#include "TaskSet_CopyMemory.h"
 
 /**
  * BufferSlot represents a contiguous slot in the DataBuffer that holds image
@@ -197,19 +198,6 @@ public:
      * @return DEVICE_OK on success.
      */
     int InsertData(const unsigned char* data, size_t dataSize, const Metadata* pMd);
-
-    /**
-     * Copies data and metadata from the next available slot in the buffer.
-     * The routine examines the header to determine the image byte count
-     * and the length of the stored metadata.
-     *
-     * @param dataDestination Destination buffer where image data is copied.
-     * @param imageDataSize On success, returns the image data size (in bytes).
-     * @param md Metadata object to be populated (via deserialization of the stored blob).
-     * @param waitForData If true, block until data becomes available.
-     * @return DEVICE_OK on success.
-     */
-    int CopyNextDataAndMetadata(unsigned char* dataDestination, size_t* imageDataSize, Metadata &md, bool waitForData);
 
     /**
      * Sets whether the buffer should overwrite older data when full.
@@ -481,4 +469,8 @@ private:
     // Synchronization primitives for slot management.
     std::condition_variable dataCV_;
     mutable std::mutex slotManagementMutex_;
+
+    // Add these new members for multithreaded copying
+    std::shared_ptr<ThreadPool> threadPool_;
+    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };

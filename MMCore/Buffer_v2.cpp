@@ -64,6 +64,7 @@ Metadata Handling:
 #include <map>
 #include <vector>
 #include <memory>
+#include "TaskSet_CopyMemory.h"
 
 // New internal header that precedes every slot's data.
 struct BufferSlotRecord {
@@ -211,13 +212,22 @@ DataBuffer::DataBuffer(unsigned int memorySizeMB)
       overwriteWhenFull_(false),
       nextAllocOffset_(0),
       currentSlotIndex_(0),
-      overflow_(false)
+      overflow_(false),
+      threadPool_(std::make_shared<ThreadPool>()),
+      tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
     AllocateBuffer(memorySizeMB);
 }
 
 DataBuffer::~DataBuffer() {
-    delete[] buffer_;
+    if (buffer_) {
+        #ifdef _WIN32
+            VirtualFree(buffer_, 0, MEM_RELEASE);
+        #else
+            munmap(buffer_, bufferSize_);
+        #endif
+        buffer_ = nullptr;
+    }
 }
 
 /**
@@ -228,7 +238,25 @@ DataBuffer::~DataBuffer() {
 int DataBuffer::AllocateBuffer(unsigned int memorySizeMB) {
     // Convert MB to bytes (1 MB = 1048576 bytes)
     size_t numBytes = static_cast<size_t>(memorySizeMB) * (1ULL << 20);
-    buffer_ = new unsigned char[numBytes];
+    
+    #ifdef _WIN32
+        buffer_ = (unsigned char*)VirtualAlloc(nullptr, numBytes,
+                                             MEM_RESERVE | MEM_COMMIT,
+                                             PAGE_READWRITE);
+        if (!buffer_) {
+            return DEVICE_ERR;
+        }
+    #else
+        buffer_ = (unsigned char*)mmap(nullptr, numBytes,
+                                     PROT_READ | PROT_WRITE,
+                                     MAP_PRIVATE | MAP_ANONYMOUS,
+                                     -1, 0);
+        if (buffer_ == MAP_FAILED) {
+            buffer_ = nullptr;
+            return DEVICE_ERR;
+        }
+    #endif
+    
     bufferSize_ = numBytes;
     overflow_ = false;
     freeRegions_.clear();
@@ -242,7 +270,11 @@ int DataBuffer::AllocateBuffer(unsigned int memorySizeMB) {
  */
 int DataBuffer::ReleaseBuffer() {
     if (buffer_ != nullptr) {
-        delete[] buffer_;
+        #ifdef _WIN32
+            VirtualFree(buffer_, 0, MEM_RELEASE);
+        #else
+            munmap(buffer_, bufferSize_);
+        #endif
         buffer_ = nullptr;
         return DEVICE_OK;
     }
@@ -276,7 +308,7 @@ int DataBuffer::InsertData(const unsigned char* data, size_t dataSize, const Met
     headerPointer->metadataSize = metaSize;
 
     // Copy the image data into the allocated slot (imageDataPointer is already at the image data).
-    std::memcpy(imageDataPointer, data, dataSize);
+    tasksMemCopy_->MemCopy((void*)imageDataPointer, data, dataSize);
 
     // If metadata is available, copy it right after the image data.
     if (metaSize > 0) {
@@ -286,33 +318,6 @@ int DataBuffer::InsertData(const unsigned char* data, size_t dataSize, const Met
 
     // Release the write slot
     return ReleaseDataWriteSlot(imageDataPointer, metaSize > 0 ? static_cast<int>(metaSize) : -1);
-}
-
-/**
- * Reads the header from the slot, then copies the image data into the destination and
- * uses the metadata blob (if any) to populate 'md'.
- */
-int DataBuffer::CopyNextDataAndMetadata(unsigned char* dataDestination, size_t* imageDataSize, Metadata &md, bool waitForData) {
-    const unsigned char* imageDataPointer = PopNextDataReadPointer(md, imageDataSize, waitForData);
-    if (imageDataPointer == nullptr)
-        return DEVICE_ERR;
-
-    const BufferSlotRecord* headerPointer = reinterpret_cast<const BufferSlotRecord*>(imageDataPointer - sizeof(BufferSlotRecord));
-    *imageDataSize = headerPointer->imageSize;
-    // imageDataPointer already points to the image data.
-    std::memcpy(dataDestination, imageDataPointer, headerPointer->imageSize);
-
-    // Extract the metadata (if any) following the image data.
-    std::string metaStr;
-    if (headerPointer->metadataSize > 0) {
-        const char* metaDataStart = reinterpret_cast<const char*>(imageDataPointer + headerPointer->imageSize);
-        metaStr.assign(metaDataStart, headerPointer->metadataSize);
-    } 
-    // Restore the metadata
-    // This is analogous to what is done in FrameBuffer.cpp:
-    md.Restore(metaStr.c_str());
-
-    return ReleaseDataReadPointer(imageDataPointer);
 }
 
 /**
@@ -642,14 +647,14 @@ bool DataBuffer::Overflow() const {
  */
 int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
    std::lock_guard<std::mutex> lock(slotManagementMutex_);
-
+   
    // Check that there are no outstanding readers or writers.
    for (const std::unique_ptr<BufferSlot>& slot : activeSlotsVector_) {
       if (!slot->IsAvailableForReading() || !slot->IsAvailableForWriting()) {
          throw std::runtime_error("Cannot reinitialize DataBuffer: outstanding active slot detected.");
       }
    }
-
+   
    // Clear internal data structures.
    activeSlotsVector_.clear();
    activeSlotsByStart_.clear();
@@ -657,13 +662,17 @@ int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
    currentSlotIndex_ = 0;
    nextAllocOffset_ = 0;
    overflow_ = false;
-
+   
    // Release the old buffer.
    if (buffer_ != nullptr) {
-      delete[] buffer_;
+      #ifdef _WIN32
+          VirtualFree(buffer_, 0, MEM_RELEASE);
+      #else
+          munmap(buffer_, bufferSize_);
+      #endif
       buffer_ = nullptr;
    }
-
+   
    // Allocate a new buffer using the provided memory size.
    AllocateBuffer(memorySizeMB);
 
