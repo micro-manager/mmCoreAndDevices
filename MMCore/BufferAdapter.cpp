@@ -383,33 +383,91 @@ void BufferAdapter::ReleaseReadAccess(const unsigned char* ptr) {
 }
 
 unsigned BufferAdapter::GetImageWidth(const unsigned char* ptr) const {
-   if (!useV2_) throw CMMError("GetImageWidth(ptr) only supported with V2 buffer");
-   return v2Buffer_->GetImageWidth(ptr);
+   if (!useV2_) 
+      throw CMMError("GetImageWidth(ptr) only supported with V2 buffer");
+   Metadata md;
+   if (v2Buffer_->ExtractMetadata(ptr, md) != DEVICE_OK)
+      throw CMMError("Failed to extract metadata for image width");
+   std::string sVal = md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue();
+   return static_cast<unsigned>(atoi(sVal.c_str()));
 }
 
 unsigned BufferAdapter::GetImageHeight(const unsigned char* ptr) const {
-   if (!useV2_) throw CMMError("GetImageHeight(ptr) only supported with V2 buffer");
-   return v2Buffer_->GetImageHeight(ptr);
+   if (!useV2_) 
+      throw CMMError("GetImageHeight(ptr) only supported with V2 buffer");
+   Metadata md;
+   if (v2Buffer_->ExtractMetadata(ptr, md) != DEVICE_OK)
+      throw CMMError("Failed to extract metadata for image height");
+   std::string sVal = md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue();
+   return static_cast<unsigned>(atoi(sVal.c_str()));
 }
 
 unsigned BufferAdapter::GetBytesPerPixel(const unsigned char* ptr) const {
-   if (!useV2_) throw CMMError("GetBytesPerPixel(ptr) only supported with V2 buffer");
-   return v2Buffer_->GetBytesPerPixel(ptr);
+   if (!useV2_) 
+      throw CMMError("GetBytesPerPixel(ptr) only supported with V2 buffer");
+   Metadata md;
+   if (v2Buffer_->ExtractMetadata(ptr, md) != DEVICE_OK)
+      throw CMMError("Failed to extract metadata for bytes per pixel");
+   std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
+   if (pixelType == MM::g_Keyword_PixelType_GRAY8)
+      return 1;
+   else if (pixelType == MM::g_Keyword_PixelType_GRAY16)
+      return 2;
+   else if (pixelType == MM::g_Keyword_PixelType_GRAY32 ||
+            pixelType == MM::g_Keyword_PixelType_RGB32)
+      return 4;
+   else if (pixelType == MM::g_Keyword_PixelType_RGB64)
+      return 8;
+   throw CMMError("Unknown pixel type for bytes per pixel");
 }
 
 unsigned BufferAdapter::GetImageBitDepth(const unsigned char* ptr) const {
-   if (!useV2_) throw CMMError("GetImageBitDepth(ptr) only supported with V2 buffer");
-   return v2Buffer_->GetImageBitDepth(ptr);
+   if (!useV2_) 
+      throw CMMError("GetImageBitDepth(ptr) only supported with V2 buffer");
+   Metadata md;
+   if (v2Buffer_->ExtractMetadata(ptr, md) != DEVICE_OK)
+      throw CMMError("Failed to extract metadata for image bit depth");
+   std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
+   if (pixelType == MM::g_Keyword_PixelType_GRAY8)
+      return 8;
+   else if (pixelType == MM::g_Keyword_PixelType_GRAY16)
+      return 16;
+   else if (pixelType == MM::g_Keyword_PixelType_GRAY32 ||
+            pixelType == MM::g_Keyword_PixelType_RGB32)
+      return 32;
+   else if (pixelType == MM::g_Keyword_PixelType_RGB64)
+      return 64;
+   throw CMMError("Unknown pixel type for image bit depth");
 }
 
 unsigned BufferAdapter::GetNumberOfComponents(const unsigned char* ptr) const {
-   if (!useV2_) throw CMMError("GetNumberOfComponents(ptr) only supported with V2 buffer");
-   return v2Buffer_->GetNumberOfComponents(ptr);
+   if (!useV2_) 
+      throw CMMError("GetNumberOfComponents(ptr) only supported with V2 buffer");
+   Metadata md;
+   if (v2Buffer_->ExtractMetadata(ptr, md) != DEVICE_OK)
+      throw CMMError("Failed to extract metadata for number of components");
+   std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
+   if (pixelType == MM::g_Keyword_PixelType_GRAY8 ||
+       pixelType == MM::g_Keyword_PixelType_GRAY16 ||
+       pixelType == MM::g_Keyword_PixelType_GRAY32)
+      return 1;
+   else if (pixelType == MM::g_Keyword_PixelType_RGB32 ||
+            pixelType == MM::g_Keyword_PixelType_RGB64)
+      return 4;
+   throw CMMError("Unknown pixel type for number of components");
 }
 
 long BufferAdapter::GetImageBufferSize(const unsigned char* ptr) const {
-   if (!useV2_) throw CMMError("GetImageBufferSize(ptr) only supported with V2 buffer");
-   return v2Buffer_->GetImageBufferSize(ptr);
+   if (!useV2_) 
+      throw CMMError("GetImageBufferSize(ptr) only supported with V2 buffer");
+   Metadata md;
+   if (v2Buffer_->ExtractMetadata(ptr, md) != DEVICE_OK)
+      throw CMMError("Failed to extract metadata for image buffer size");
+   // Suppose the image size is computed from width, height, and bytes per pixel:
+   unsigned width  = static_cast<unsigned>(atoi(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue().c_str()));
+   unsigned height = static_cast<unsigned>(atoi(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue().c_str()));
+   unsigned bpp = GetBytesPerPixel(ptr);
+   return static_cast<long>(width * height * bpp);
 }
 
 bool BufferAdapter::SetOverwriteData(bool overwrite) {

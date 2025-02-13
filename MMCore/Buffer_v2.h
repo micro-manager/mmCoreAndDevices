@@ -34,7 +34,7 @@
 #include "../MMDevice/ImageMetadata.h"
 #include "../MMDevice/MMDevice.h"
 #include <mutex>
-#include <shared_mutex>   
+#include <shared_mutex>
 #include <string>
 #include <map>
 #include <cstddef>
@@ -52,11 +52,16 @@
 class BufferSlot {
 public:
     /**
-     * Constructor.
+     * Constructs a BufferSlot with all sizes specified up front.
+     *
      * @param start The starting offset (in bytes) within the buffer.
-     * @param length The length (in bytes) of the slot.
+     * @param totalLength The total length (in bytes) reserved for this slot, typically
+     *                    an aligned size (which includes image data and metadata).
+     * @param imageSize The exact number of bytes for the image data.
+     * @param metadataSize The exact number of bytes for the metadata.
      */
-    BufferSlot(std::size_t start, std::size_t length);
+    BufferSlot(std::size_t start, std::size_t totalLength, size_t imageSize, size_t metadataSize)
+        : start_(start), length_(totalLength), imageSize_(imageSize), metadataSize_(metadataSize) {}
 
     /**
      * Destructor.
@@ -67,79 +72,92 @@ public:
      * Returns the starting offset (in bytes) of the slot.
      * @return The slot's start offset.
      */
-    std::size_t GetStart() const;
+    std::size_t GetStart() const { return start_; }
 
     /**
      * Returns the length (in bytes) of the slot.
      *
      * @return The slot's length.
      */
-    std::size_t GetLength() const;
+    std::size_t GetLength() const { return length_; }
+
+    /**
+     * Returns the size (in bytes) of the image data in the slot.
+     * @return The image data size.
+     */
+    size_t GetImageSize() const { return imageSize_; }
+
+    /**
+     * Returns the size (in bytes) of the metadata in the slot.
+     * @return The metadata size.
+     */
+    size_t GetMetadataSize() const { return metadataSize_; }
 
     /**
      * Attempts to acquire exclusive write access without blocking.
      * @return True if the write lock was acquired; false otherwise.
      */
-    bool TryAcquireWriteAccess();
+    bool TryAcquireWriteAccess() { return rwMutex_.try_lock(); }
 
     /**
      * Acquires exclusive write access (blocking call).
      * This method will block until exclusive access is granted.
      */
-    void AcquireWriteAccess();
+    void AcquireWriteAccess() { rwMutex_.lock(); }
 
     /**
      * Releases exclusive write access.
      */
-    void ReleaseWriteAccess();
+    void ReleaseWriteAccess() { rwMutex_.unlock(); }
 
     /**
      * Acquires shared read access (blocking).
      */
-    void AcquireReadAccess();
+    void AcquireReadAccess() { rwMutex_.lock_shared(); }
 
     /**
      * Releases shared read access.
      */
-    void ReleaseReadAccess();
+    void ReleaseReadAccess() { rwMutex_.unlock_shared(); }
 
     /**
      * Checks if the slot is currently available for writing.
      * A slot is available if no thread holds either a write lock or any read lock.
      * @return True if available for writing.
      */
-    bool IsAvailableForWriting() const;
+    bool IsAvailableForWriting() const {
+        if (rwMutex_.try_lock()) {
+            rwMutex_.unlock();
+            return true;
+        }
+        return false;
+    }
 
     /**
      * Checks if the slot is available for acquiring read access.
      * @return True if available for reading.
      */
-    bool IsAvailableForReading() const;
+    bool IsAvailableForReading() const {
+        if (rwMutex_.try_lock_shared()) {
+            rwMutex_.unlock_shared();
+            return true;
+        }
+        return false;
+    }
 
 private:
     std::size_t start_;
     std::size_t length_;
-    // RAII-based locking using std::shared_timed_mutex.
+    size_t imageSize_;
+    size_t metadataSize_;
     mutable std::shared_timed_mutex rwMutex_;
 };
 
-
 /**
  * DataBuffer manages a contiguous block of memory divided into BufferSlot objects
- * for storing image data and metadata. It ensures thread-safe access for both
- * reading and writing operations and supports configurable overflow behavior.
- *
- * Two data access patterns are provided:
- *  1. Copy-based access.
- *  2. Direct pointer access with an explicit release.
- *
- * Each slot begins with a header (BufferSlotRecord) that stores:
- *    - The image data length
- *    - The serialized metadata length (which might be zero)
- *
- * The user-visible routines (e.g. InsertData and CopyNextDataAndMetadata)
- * automatically pack and unpack the header so that the caller need not worry
- * about the extra bytes.
+ * for storing image data and metadata. Each slot in memory holds
+ * only the image data (followed immediately by metadata), while header information
+ * is maintained in the BufferSlot objects.
  */
 class DataBuffer {
 public:
@@ -188,7 +206,7 @@ public:
     /**
      * Acquires a write slot large enough to hold the image data and metadata.
      * On success, returns pointers for the image data and metadata regions.
-     *     *
+     *
      * @param imageSize The number of bytes reserved for image data.
      * @param metadataSize The maximum number of bytes reserved for metadata.
      * @param imageDataPointer On success, receives a pointer to the image data region.
@@ -200,13 +218,13 @@ public:
 
     /**
      * Finalizes (releases) a write slot after data has been written.
-     *     *
+     * Requires the actual number of metadata bytes written.
+     *
      * @param imageDataPointer Pointer previously obtained from AcquireWriteSlot.
-     * @param actualMetadataBytes Optionally, the actual number of metadata bytes written.
-     *                            Defaults to -1 (no update).
+     * @param actualMetadataBytes The actual number of metadata bytes written.
      * @return DEVICE_OK on success.
      */
-    int FinalizeWriteSlot(unsigned char* imageDataPointer, int actualMetadataBytes = -1);
+    int FinalizeWriteSlot(unsigned char* imageDataPointer, size_t actualMetadataBytes);
 
     /**
      * Releases read access for the image data after reading.
@@ -296,98 +314,24 @@ public:
     int ReinitializeBuffer(unsigned int memorySizeMB);
 
     /**
-     * Returns the image width from the metadata stored with the image data.
+     * Extracts and deserializes the metadata associated with the given image data pointer.
+     * Internally, it locates the corresponding slot and reads the metadata stored
+     * immediately after the image data.
      *
      * @param imageDataPtr Pointer to the image data.
-     * @return Image width.
+     * @param md Metadata object to populate.
+     * @return DEVICE_OK on success, or an error code if extraction fails.
      */
-    unsigned GetImageWidth(const unsigned char* imageDataPtr) const;
-
-    /**
-     * Returns the image height from the metadata stored with the image data.
-     *
-     * @param imageDataPtr Pointer to the image data.
-     * @return Image height.
-     */
-    unsigned GetImageHeight(const unsigned char* imageDataPtr) const;
-
-    /**
-     * Returns the bytes per pixel from the metadata stored with the image data.
-     *
-     * @param imageDataPtr Pointer to the image data.
-     * @return Bytes per pixel.
-     */
-    unsigned GetBytesPerPixel(const unsigned char* imageDataPtr) const;
-
-    /**
-     * Returns the image bit depth from the metadata stored with the image data.
-     *
-     * @param imageDataPtr Pointer to the image data.
-     * @return Image bit depth.
-     */
-    unsigned GetImageBitDepth(const unsigned char* imageDataPtr) const;
-
-    /**
-     * Returns the number of components in the image data from the metadata stored with the image data.
-     *
-     * @param imageDataPtr Pointer to the image data.
-     * @return Number of components.
-     */
-    unsigned GetNumberOfComponents(const unsigned char* imageDataPtr) const;
-
-    /**
-     * Returns the image buffer size from the metadata stored with the image data.
-     *
-     * @param imageDataPtr Pointer to the image data.
-     * @return Image buffer size.
-     */
-    long GetImageBufferSize(const unsigned char* imageDataPtr) const;
+    int ExtractMetadata(const unsigned char* imageDataPtr, Metadata &md) const;
 
 private:
     /**
-     * Removes a slot from active tracking and adds it to the free region list.
-     * Caller must hold slotManagementMutex_.
+     * Internal helper function that finds the slot for a given pointer (remains hidden).
      *
-     * @param offset The buffer offset of the slot to remove.
-     * @param it Iterator to the slot in activeSlotsByStart_.
+     * @param imageDataPtr Pointer to the image data.
+     * @return Pointer to the corresponding BufferSlot, or nullptr if not found.
      */
-    void RemoveSlotFromActiveTracking(size_t offset, std::map<size_t, BufferSlot*>::iterator it);
-
-    /**
-     * Creates a new BufferSlot at an allocated region, registers it in the internal
-     * tracking structures, initializes its header, and sets the output pointers for image
-     * data and metadata.
-     *
-     * Allocation is performed differently based on the overwrite mode:
-     *
-     *  - Overwrite mode:
-     *       Uses nextAllocOffset_ with wrap-around.
-     *
-     *  - Non-overwrite mode:
-     *       First, we try to reuse recycled slots in order of their release. If none are 
-     *       available or usable, we then check if there is a free region large enough to hold
-     *       the slot. If there is, we use that region. If there is no suitable region, an exception is 
-     *       thrown.
-     *
-     * @param candidateStart The starting offset candidate for the slot.
-     * @param totalSlotSize The total size (in bytes) of the slot, including header, image data, and metadata.
-     * @param imageDataSize The size (in bytes) to reserve for the image data.
-     * @param imageDataPointer Output pointer for the caller to access the image data region.
-     * @param metadataPointer Output pointer for the caller to access the metadata region.
-     * @param fromFreeRegion If true, indicates that the candidate was selected from a free region.
-     * @return DEVICE_OK on success, or an error code if allocation fails.
-     */
-    int CreateAndRegisterNewSlot(size_t candidateStart, size_t totalSlotSize, size_t imageDataSize,
-                                  unsigned char** imageDataPointer, unsigned char** metadataPointer,
-                                  bool fromFreeRegion);
-
-    /**
-     * Inserts a free region into the freeRegions_ list, merging with adjacent regions if necessary.
-     *
-     * @param offset The starting offset of the freed region.
-     * @param size The size (in bytes) of the freed region.
-     */
-    void InsertFreeRegion(size_t offset, size_t size);
+    const BufferSlot* FindSlotForPointer(const unsigned char* imageDataPtr) const;
 
     // Memory managed by the DataBuffer.
     unsigned char* buffer_;
@@ -422,4 +366,15 @@ private:
     // Members for multithreaded copying.
     std::shared_ptr<ThreadPool> threadPool_;
     std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
+
+    /**
+     * Internal helper to register a new slot.
+     */
+    int CreateAndRegisterNewSlot(size_t candidateStart, size_t totalSlotSize, size_t imageDataSize,
+                                 size_t metadataSize,
+                                 unsigned char** imageDataPointer, unsigned char** metadataPointer,
+                                 bool fromFreeRegion);
+
+    void RemoveSlotFromActiveTracking(size_t offset, std::map<size_t, BufferSlot*>::iterator it);
+    void InsertFreeRegion(size_t offset, size_t size);
 };
