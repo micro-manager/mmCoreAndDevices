@@ -43,6 +43,7 @@
 #include <deque>
 #include <memory>
 #include "TaskSet_CopyMemory.h"
+#include <cassert>
 
 /**
  * BufferSlot represents a contiguous slot in the DataBuffer that holds image
@@ -60,8 +61,7 @@ public:
      * @param imageSize The exact number of bytes for the image data.
      * @param metadataSize The exact number of bytes for the metadata.
      */
-    BufferSlot(std::size_t start, std::size_t totalLength, size_t imageSize, size_t metadataSize)
-        : start_(start), length_(totalLength), imageSize_(imageSize), metadataSize_(metadataSize) {}
+    BufferSlot() : start_(0), length_(0), imageSize_(0), metadataSize_(0), rwMutex_() {}
 
     /**
      * Destructor.
@@ -145,12 +145,18 @@ public:
         return false;
     }
 
-    // Add reset method to reuse the slot
-    void Reset(std::size_t start, std::size_t totalLength, size_t imageSize, size_t metadataSize) {
+    void Reset(size_t start, size_t length, size_t imageSize, size_t metadataSize) {
+        // Assert that the mutex is available before recycling
+        assert(IsAvailableForWriting() && IsAvailableForReading() && 
+               "BufferSlot mutex still locked during Reset - indicates a bug!");
+        
+        // Set the new values
         start_ = start;
-        length_ = totalLength;
+        length_ = length;
         imageSize_ = imageSize;
         metadataSize_ = metadataSize;
+        
+        // The caller should explicitly acquire write access when needed
     }
 
 private:
@@ -322,24 +328,24 @@ public:
     int ReinitializeBuffer(unsigned int memorySizeMB);
 
     /**
-     * Extracts and deserializes the metadata associated with the given image data pointer.
-     * Internally, it locates the corresponding slot and reads the metadata stored
-     * immediately after the image data.
+     * Extracts metadata for a given image data pointer.
+     * Thread-safe method that acquires necessary locks to lookup metadata location.
      *
      * @param imageDataPtr Pointer to the image data.
      * @param md Metadata object to populate.
      * @return DEVICE_OK on success, or an error code if extraction fails.
      */
-    int ExtractMetadata(const unsigned char* imageDataPtr, Metadata &md) const;
+    int ExtractMetadataForImage(const unsigned char* imageDataPtr, Metadata &md);
 
 private:
     /**
-     * Internal helper function that finds the slot for a given pointer (remains hidden).
+     * Internal helper function that finds the slot for a given pointer.
+     * Returns non-const pointer since slots need to be modified for locking.
      *
      * @param imageDataPtr Pointer to the image data.
      * @return Pointer to the corresponding BufferSlot, or nullptr if not found.
      */
-    const BufferSlot* FindSlotForPointer(const unsigned char* imageDataPtr) const;
+    BufferSlot* FindSlotForPointer(const unsigned char* imageDataPtr);
 
     // Memory managed by the DataBuffer.
     unsigned char* buffer_;
@@ -351,16 +357,21 @@ private:
     // Overflow flag (set if insert fails due to full buffer).
     bool overflow_;
 
-    // Tracking of active slots and free memory regions.
-    std::vector<std::unique_ptr<BufferSlot>> activeSlotsVector_;
+    // Active slots and their mapping.
+    std::vector<BufferSlot*> activeSlotsVector_;
     std::map<size_t, BufferSlot*> activeSlotsByStart_;
 
     // Free region list for non-overwrite mode.
     // Map from starting offset -> region size (in bytes).
     std::map<size_t, size_t> freeRegions_;
     std::vector<size_t> releasedSlots_;
-    
-    std::deque<std::unique_ptr<BufferSlot>> unusedSlots_;
+
+    // Instead of ownership via unique_ptr, store raw pointers
+    // Note: unusedSlots_ is now a deque of raw pointers.
+    std::deque<BufferSlot*> unusedSlots_;
+
+    // This container holds the ownership; they live for the lifetime of the buffer.
+    std::vector<BufferSlot*> slotPool_;
 
     // Next free offset within the buffer.
     // In overwrite mode, new allocations will come from this pointer.
@@ -401,4 +412,15 @@ private:
 
     BufferSlot* GetSlotFromPool(size_t start, size_t totalLength, 
                                size_t imageSize, size_t metadataSize);
+
+    /**
+     * Extracts and deserializes the metadata from the given metadata pointer.
+     * Assumes the corresponding slot is already locked for reading.
+     *
+     * @param imageDataPtr Pointer to the image data.
+     * @param md Metadata object to populate.
+     * @return DEVICE_OK on success, or an error code if extraction fails.
+     */
+    int ExtractMetadata(const unsigned char* metadataPtr, size_t metadataSize, Metadata &md);
+
 };

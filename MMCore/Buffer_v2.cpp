@@ -73,8 +73,27 @@ Metadata Handling:
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace {
-    inline size_t AlignTo(size_t value, size_t alignment) {
-        return ((value + alignment - 1) / alignment) * alignment;
+    // Get system page size at runtime
+    inline size_t GetPageSize() {
+        #ifdef _WIN32
+            SYSTEM_INFO si;
+            GetSystemInfo(&si);
+            return si.dwPageSize;
+        #else
+            return sysconf(_SC_PAGESIZE);
+        #endif
+    }
+
+    // Cache the page size.
+    const size_t PAGE_SIZE = GetPageSize();
+
+    // Inline alignment function using bitwise operations.
+    // For a power-of-two alignment, this computes the smallest multiple
+    // of 'alignment' that is at least as large as 'value'.
+    inline size_t Align(size_t value) {
+        // Use PAGE_SIZE if value is large enough; otherwise use the sizeof(max_align_t)
+        size_t alignment = (value >= PAGE_SIZE) ? PAGE_SIZE : alignof(std::max_align_t);
+        return (value + alignment - 1) & ~(alignment - 1);
     }
 }
 
@@ -88,9 +107,11 @@ DataBuffer::DataBuffer(unsigned int memorySizeMB)
       threadPool_(std::make_shared<ThreadPool>()),
       tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
-    // Pre-allocate slots (1 per MB)
+    // Pre-allocate slots (one per MB) and store in both slotPool_ and unusedSlots_
     for (unsigned int i = 0; i < memorySizeMB; i++) {
-        unusedSlots_.push_back(std::make_unique<BufferSlot>(0, 0, 0, 0));
+        BufferSlot* bs = new BufferSlot();
+        slotPool_.push_back(bs);
+        unusedSlots_.push_back(bs);
     }
     
     AllocateBuffer(memorySizeMB);
@@ -105,6 +126,9 @@ DataBuffer::~DataBuffer() {
         #endif
         buffer_ = nullptr;
     }
+    for (BufferSlot* bs : slotPool_) {
+        delete bs;
+    }
 }
 
 /**
@@ -118,11 +142,12 @@ int DataBuffer::AllocateBuffer(unsigned int memorySizeMB) {
     
     #ifdef _WIN32
         buffer_ = (unsigned char*)VirtualAlloc(nullptr, numBytes,
-                                             MEM_RESERVE | MEM_COMMIT,
-                                             PAGE_READWRITE);
+                                                 MEM_RESERVE | MEM_COMMIT,
+                                                 PAGE_READWRITE);
         if (!buffer_) {
             return DEVICE_ERR;
         }
+
     #else
         buffer_ = (unsigned char*)mmap(nullptr, numBytes,
                                      PROT_READ | PROT_WRITE,
@@ -131,6 +156,11 @@ int DataBuffer::AllocateBuffer(unsigned int memorySizeMB) {
         if (buffer_ == MAP_FAILED) {
             buffer_ = nullptr;
             return DEVICE_ERR;
+        }
+        
+        // Advise the kernel that we will need this memory soon.
+        madvise(buffer_, numBytes, MADV_WILLNEED);
+
         }
     #endif
     
@@ -169,19 +199,15 @@ int DataBuffer::InsertData(const unsigned char* data, size_t dataSize, const Met
         metaStr = pMd->Serialize();
         metaSize = metaStr.size();
     }
-    size_t totalSlotSize = dataSize + metaSize;
+    
     unsigned char* imageDataPointer = nullptr;
     unsigned char* metadataPointer = nullptr;
     
-    // Pass the actual image and metadata sizes to AcquireWriteSlot.
     int result = AcquireWriteSlot(dataSize, metaSize, &imageDataPointer, &metadataPointer);
     if (result != DEVICE_OK)
         return result;
 
-    // Copy the image data.
     tasksMemCopy_->MemCopy((void*)imageDataPointer, data, dataSize);
-
-    // Copy the metadata.
     if (metaSize > 0) {
         std::memcpy(metadataPointer, metaStr.data(), metaSize);
     }
@@ -223,18 +249,16 @@ int DataBuffer::AcquireWriteSlot(size_t imageSize, size_t metadataSize,
         return DEVICE_ERR;
     }
 
-
-    size_t alignment = alignof(std::max_align_t);
     // Total size is the image data plus metadata.
     size_t rawTotalSize = imageSize + metadataSize;
-    size_t totalSlotSize = AlignTo(rawTotalSize, alignment);
+    size_t totalSlotSize = Align(rawTotalSize);
     size_t candidateStart = 0;
 
     if (!overwriteWhenFull_) {
         // FIRST: Look for a fit in recycled slots (releasedSlots_)
         for (int i = static_cast<int>(releasedSlots_.size()) - 1; i >= 0; i--) {
             // Align the candidate start position.
-            candidateStart = AlignTo(releasedSlots_[i], alignment);
+            candidateStart = Align(releasedSlots_[i]);
             
             // Find the free region that contains this position.
             auto it = freeRegions_.upper_bound(candidateStart);
@@ -260,7 +284,7 @@ int DataBuffer::AcquireWriteSlot(size_t imageSize, size_t metadataSize,
         // SECOND: Look in the free-region list as fallback.
         for (auto it = freeRegions_.begin(); it != freeRegions_.end(); ++it) {
             // Align the free region start.
-            size_t alignedCandidate = AlignTo(it->first, alignment);
+            size_t alignedCandidate = Align(it->first);
             // Check if the free region has enough space after alignment.
             if (it->first + it->second >= alignedCandidate + totalSlotSize) {
                 candidateStart = alignedCandidate;
@@ -275,7 +299,7 @@ int DataBuffer::AcquireWriteSlot(size_t imageSize, size_t metadataSize,
         return DEVICE_ERR;
     } else {
         // Overwrite mode: use nextAllocOffset_. Ensure it is aligned.
-        candidateStart = AlignTo(nextAllocOffset_, alignment);
+        candidateStart = Align(nextAllocOffset_);
         if (candidateStart + totalSlotSize > bufferSize_) {
             candidateStart = 0;  // Wrap around.
         }
@@ -297,16 +321,22 @@ int DataBuffer::FinalizeWriteSlot(unsigned char* imageDataPointer, size_t actual
     if (imageDataPointer == nullptr)
         return DEVICE_ERR;
 
-    // Use a unique_lock so that we can pass it to FindSlotForPointer
-    std::unique_lock<std::mutex> lock(slotManagementMutex_);
-    BufferSlot* slot = const_cast<BufferSlot*>(FindSlotForPointer(imageDataPointer));
-    if (!slot)
-        return DEVICE_ERR; // Slot not found
+    BufferSlot* slot = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(slotManagementMutex_);
+        slot = FindSlotForPointer(imageDataPointer);
+        if (!slot)
+            return DEVICE_ERR;
+    }
 
     slot->ReleaseWriteAccess();
 
-    // Notify any waiting threads that new data is available.
-    dataCV_.notify_all();
+    // Notify waiting threads under a brief lock
+    {
+        std::lock_guard<std::mutex> lock(slotManagementMutex_);
+        dataCV_.notify_all();
+    }
+    
     return DEVICE_OK;
 }
 
@@ -320,26 +350,25 @@ int DataBuffer::ReleaseDataReadPointer(const unsigned char* imageDataPointer) {
     if (imageDataPointer == nullptr)
         return DEVICE_ERR;
 
-    std::unique_lock<std::mutex> lock(slotManagementMutex_);
+    // First find the slot without the global lock
+    BufferSlot* slot = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(slotManagementMutex_);
+        slot = FindSlotForPointer(imageDataPointer);
+        if (!slot)
+            return DEVICE_ERR;
+    }
+    const size_t offset = imageDataPointer - buffer_;
 
-    // The slot starts directly at imageDataPointer.
-    size_t offset = imageDataPointer - buffer_;
-
-    auto it = activeSlotsByStart_.find(offset);
-    if (it == activeSlotsByStart_.end())
-        return DEVICE_ERR;  // Slot not found
-
-    BufferSlot* slot = it->second;
-    // Release the read access (this does NOT remove the slot from the active list)
+    // Release the read access outside the global lock
     slot->ReleaseReadAccess();
 
     if (!overwriteWhenFull_) {
-        // Now check if the slot is not being accessed.
-        // (i.e. this was the last reader and no writer holds it)
+        std::lock_guard<std::mutex> lock(slotManagementMutex_);
+        // Now check if the slot is not being accessed
         if (slot->IsAvailableForWriting() && slot->IsAvailableForReading()) {
+            auto it = activeSlotsByStart_.find(offset);
             DeleteSlot(offset, it);
-        } else {
-            throw std::runtime_error("TESTING: this should not happen when copying data");
         }
     }
 
@@ -349,6 +378,9 @@ int DataBuffer::ReleaseDataReadPointer(const unsigned char* imageDataPointer) {
 const unsigned char* DataBuffer::PopNextDataReadPointer(Metadata &md, size_t *imageDataSize, bool waitForData)
 {
     BufferSlot* slot = nullptr;
+    size_t slotStart = 0;
+
+    // First, get the slot under the global lock
     {
         std::unique_lock<std::mutex> lock(slotManagementMutex_);
         while (activeSlotsVector_.empty()) {
@@ -356,27 +388,26 @@ const unsigned char* DataBuffer::PopNextDataReadPointer(Metadata &md, size_t *im
                 return nullptr;
             dataCV_.wait(lock);
         }
-        // Atomically take the slot and advance the index.
-        slot = activeSlotsVector_[currentSlotIndex_].get();
+        // Atomically take the slot and advance the index
+        slot = activeSlotsVector_[currentSlotIndex_];
+        slotStart = slot->GetStart();
         currentSlotIndex_ = (currentSlotIndex_ + 1) % activeSlotsVector_.size();
-    } // Release lock
+    } // Release global lock
 
-    // Now get read access outside the slot of the global mutex.
+    // Now acquire read access outside the global lock
     slot->AcquireReadAccess();
-
-    // Process the slot.
-    size_t slotStart = slot->GetStart();
+    
     const unsigned char* imageDataPointer = buffer_ + slotStart;
     *imageDataSize = slot->GetImageSize();
 
-    // Use the dedicated metadata extraction function.
-    this->ExtractMetadata(imageDataPointer, md);
+    const unsigned char* metadataPtr = imageDataPointer + slot->GetImageSize();
+    this->ExtractMetadata(metadataPtr, slot->GetMetadataSize(), md);
 
     return imageDataPointer;
 }
 
 int DataBuffer::PeekNextDataReadPointer(const unsigned char** imageDataPointer, size_t* imageDataSize,
-                                          Metadata &md) {
+                                      Metadata &md) {
     // Immediately check if there is an unread slot without waiting.
     BufferSlot* currentSlot = nullptr;
     {
@@ -385,19 +416,18 @@ int DataBuffer::PeekNextDataReadPointer(const unsigned char** imageDataPointer, 
         if (activeSlotsVector_.empty() || currentSlotIndex_ >= activeSlotsVector_.size()) {
             return DEVICE_ERR; // No unread data available.
         }
-        currentSlot = activeSlotsVector_[currentSlotIndex_].get();
-    } // Release slotManagementMutex_ before acquiring read access!
+        currentSlot = activeSlotsVector_[currentSlotIndex_];
+    }
 
     // Now safely get read access without holding the global lock.
     currentSlot->AcquireReadAccess();
 
     std::unique_lock<std::mutex> lock(slotManagementMutex_);
     *imageDataPointer = buffer_ + currentSlot->GetStart();
-    size_t imgSize = currentSlot->GetImageSize();
-    *imageDataSize = imgSize;
+    *imageDataSize = currentSlot->GetImageSize();
     
-    // Use the dedicated metadata extraction function.
-    this->ExtractMetadata(*imageDataPointer, md);
+    const unsigned char* metadataPtr = *imageDataPointer + currentSlot->GetImageSize();
+    this->ExtractMetadata(metadataPtr, currentSlot->GetMetadataSize(), md);
     
     return DEVICE_OK;
 }
@@ -414,19 +444,17 @@ const unsigned char* DataBuffer::PeekDataReadPointerAtIndex(size_t n, size_t* im
         // Instead of looking ahead from currentSlotIndex_, we look back from the end.
         // For n==0, return the most recent slot; for n==1, the one before it; etc.
         size_t index = activeSlotsVector_.size() - n - 1;
-        currentSlot = activeSlotsVector_[index].get();
+        currentSlot = activeSlotsVector_[index];
     }
     
     currentSlot->AcquireReadAccess();
     
     const unsigned char* imageDataPointer = buffer_ + currentSlot->GetStart();
-    size_t imgSize = currentSlot->GetImageSize();
-    *imageDataSize = imgSize;
+    *imageDataSize = currentSlot->GetImageSize();
     
-
-    this->ExtractMetadata(imageDataPointer, md);
+    const unsigned char* metadataPtr = imageDataPointer + currentSlot->GetImageSize();
+    this->ExtractMetadata(metadataPtr, currentSlot->GetMetadataSize(), md);
     
-    // Return a pointer to the image data only.
     return imageDataPointer;
 }
 
@@ -476,8 +504,8 @@ bool DataBuffer::Overflow() const {
 int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
     std::lock_guard<std::mutex> lock(slotManagementMutex_);
    
-    // Check that there are no outstanding readers or writers
-    for (const std::unique_ptr<BufferSlot>& slot : activeSlotsVector_) {
+    // Ensure no active readers/writers exist.
+    for (BufferSlot* slot : activeSlotsVector_) {
         if (!slot->IsAvailableForReading() || !slot->IsAvailableForWriting()) {
             throw std::runtime_error("Cannot reinitialize DataBuffer: outstanding active slot detected.");
         }
@@ -493,10 +521,8 @@ int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
    
     // Reset the slot pool
     unusedSlots_.clear();
-    
-    // Pre-allocate new slots (1 per MB)
-    for (unsigned int i = 0; i < memorySizeMB; i++) {
-        unusedSlots_.push_back(std::make_unique<BufferSlot>(0, 0, 0, 0));
+    for (BufferSlot* bs : slotPool_) {
+        unusedSlots_.push_back(bs);
     }
    
     // Release and reallocate the buffer
@@ -516,28 +542,26 @@ long DataBuffer::GetActiveSlotCount() const {
     return static_cast<long>(activeSlotsVector_.size());
 }
 
-int DataBuffer::ExtractMetadata(const unsigned char* imageDataPtr, Metadata &md) const {
-    std::unique_lock<std::mutex> lock(slotManagementMutex_);
-    const BufferSlot* slot = FindSlotForPointer(imageDataPtr);
-    if (!slot)
-        return DEVICE_ERR; // Slot not found or invalid pointer
+int DataBuffer::ExtractMetadata(const unsigned char* metadataPtr, size_t metadataSize, Metadata &md) {
+    // No lock is required here because we assume the slot is already locked
+    if (!metadataPtr)
+        return DEVICE_ERR; // Invalid pointer
 
-    // If no metadata is stored in this slot, clear the metadata object.
-    if (slot->GetMetadataSize() == 0) {
+    // If no metadata is stored, clear the metadata object
+    if (metadataSize == 0) {
         md.Clear();
     } else {
-        // Metadata is stored immediately after the image data.
-        const char* metaDataStart = reinterpret_cast<const char*>(imageDataPtr + slot->GetImageSize());
-        // Create a temporary string from the metadata region.
-        std::string metaStr(metaDataStart, slot->GetMetadataSize());
-        // Restore the metadata from the serialized string.
+        // Create a temporary string from the metadata region
+        std::string metaStr(reinterpret_cast<const char*>(metadataPtr), metadataSize);
+        // Restore the metadata from the serialized string
         md.Restore(metaStr.c_str());
     }
     return DEVICE_OK;
 }
 
 // NOTE: Caller must hold slotManagementMutex_ for thread safety.
-const BufferSlot* DataBuffer::FindSlotForPointer(const unsigned char* imageDataPtr) const {
+BufferSlot* DataBuffer::FindSlotForPointer(const unsigned char* imageDataPtr) {
+    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     if (buffer_ == nullptr)
         return nullptr;
     std::size_t offset = imageDataPtr - buffer_;
@@ -546,6 +570,7 @@ const BufferSlot* DataBuffer::FindSlotForPointer(const unsigned char* imageDataP
 }
 
 void DataBuffer::AddToReleasedSlots(size_t offset) {
+    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     if (!overwriteWhenFull_) {
         if (releasedSlots_.size() >= MAX_RELEASED_SLOTS)
             releasedSlots_.erase(releasedSlots_.begin());
@@ -554,6 +579,7 @@ void DataBuffer::AddToReleasedSlots(size_t offset) {
 }
 
 void DataBuffer::MergeFreeRegions(size_t newRegionStart, size_t newRegionEnd, size_t freedRegionSize) {
+    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     // Find the free region that starts at or after newEnd
     auto right = freeRegions_.lower_bound(newRegionEnd);
 
@@ -582,9 +608,10 @@ void DataBuffer::MergeFreeRegions(size_t newRegionStart, size_t newRegionEnd, si
 }
 
 void DataBuffer::RemoveFromActiveTracking(size_t offset, std::map<size_t, BufferSlot*>::iterator it) {
+    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     activeSlotsByStart_.erase(it);
     for (auto vecIt = activeSlotsVector_.begin(); vecIt != activeSlotsVector_.end(); ++vecIt) {
-        if (vecIt->get()->GetStart() == offset) {
+        if ((*vecIt)->GetStart() == offset) {
             // Determine the index being removed.
             size_t indexDeleted = std::distance(activeSlotsVector_.begin(), vecIt);
             activeSlotsVector_.erase(vecIt);
@@ -614,9 +641,9 @@ void DataBuffer::DeleteSlot(size_t offset, std::map<size_t, BufferSlot*>::iterat
 
 BufferSlot* DataBuffer::InitializeNewSlot(size_t candidateStart, size_t totalSlotSize, 
                                         size_t imageDataSize, size_t metadataSize) {
-    BufferSlot* newSlot = new BufferSlot(candidateStart, totalSlotSize, imageDataSize, metadataSize);
-    newSlot->AcquireWriteAccess();
-    activeSlotsVector_.push_back(std::unique_ptr<BufferSlot>(newSlot));
+    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
+    BufferSlot* newSlot = GetSlotFromPool(candidateStart, totalSlotSize, imageDataSize, metadataSize);
+    activeSlotsVector_.push_back(newSlot);
     activeSlotsByStart_[candidateStart] = newSlot;
     return newSlot;
 }
@@ -628,6 +655,7 @@ void DataBuffer::SetupSlotPointers(BufferSlot* newSlot, unsigned char** imageDat
 }
 
 void DataBuffer::UpdateFreeRegions(size_t candidateStart, size_t totalSlotSize) {
+    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     auto it = freeRegions_.upper_bound(candidateStart);
     if (it != freeRegions_.begin()) {
         --it;
@@ -661,11 +689,10 @@ int DataBuffer::CreateSlot(size_t candidateStart, size_t totalSlotSize,
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
 
     BufferSlot* newSlot = GetSlotFromPool(candidateStart, totalSlotSize, imageDataSize, metadataSize);
-    newSlot->AcquireWriteAccess();
-    activeSlotsVector_.push_back(std::unique_ptr<BufferSlot>(newSlot));
-    activeSlotsByStart_[candidateStart] = newSlot;
-
     SetupSlotPointers(newSlot, imageDataPointer, metadataPointer);
+
+    // Explicitly acquire write access here, after the slot is fully set up
+    newSlot->AcquireWriteAccess();
 
     if (fromFreeRegion) {
         UpdateFreeRegions(candidateStart, totalSlotSize);
@@ -676,20 +703,44 @@ int DataBuffer::CreateSlot(size_t candidateStart, size_t totalSlotSize,
 
 BufferSlot* DataBuffer::GetSlotFromPool(size_t start, size_t totalLength, 
                                       size_t imageSize, size_t metadataSize) {
-    std::lock_guard<std::mutex> lock(slotManagementMutex_);
+    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     
+    // Grow the pool if needed.
     if (unusedSlots_.empty()) {
-        // Optionally grow the pool if needed
-        unusedSlots_.push_back(std::make_unique<BufferSlot>(start, totalLength, imageSize, metadataSize));
+        BufferSlot* newSlot = new BufferSlot();
+        slotPool_.push_back(newSlot);
+        unusedSlots_.push_back(newSlot);
     }
     
-    BufferSlot* slot = unusedSlots_.back().release();  // Transfer ownership
-    unusedSlots_.pop_back();
+    // Get a slot from the front of the deque.
+    BufferSlot* slot = unusedSlots_.front();
+    unusedSlots_.pop_front();
     slot->Reset(start, totalLength, imageSize, metadataSize);
+    
+    // Add to active tracking.
+    activeSlotsVector_.push_back(slot);
+    activeSlotsByStart_[start] = slot;
     return slot;
 }
 
 void DataBuffer::ReturnSlotToPool(BufferSlot* slot) {
-    std::lock_guard<std::mutex> lock(slotManagementMutex_);
-    unusedSlots_.push_back(std::unique_ptr<BufferSlot>(slot));
+    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
+    unusedSlots_.push_back(slot);
+}
+
+int DataBuffer::ExtractMetadataForImage(const unsigned char* imageDataPtr, Metadata &md) {
+    BufferSlot* slot = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(slotManagementMutex_);
+        slot = FindSlotForPointer(imageDataPtr);
+        if (!slot) {
+            return DEVICE_ERR;
+        }
+    }
+    // Get metadata pointer and size while under lock
+    const unsigned char* metadataPtr = imageDataPtr + slot->GetImageSize();
+    size_t metadataSize = slot->GetMetadataSize();
+    
+    // Extract metadata (internal method doesn't need lock)
+    return ExtractMetadata(metadataPtr, metadataSize, md);
 }
