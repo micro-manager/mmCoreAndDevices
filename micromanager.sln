@@ -500,11 +500,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenFlexure", "DeviceAdapte
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScientificaMotion8", "DeviceAdapters\ScientificaMotion8\ScientificaMotion8.vcxproj", "{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsDC40", "DeviceAdapters\ThorlabsDC40\ThorlabsDC40.vcxproj", "{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsDC40", "DeviceAdapters\ThorlabsDC40\ThorlabsDC40.vcxproj", "{4456D8F9-B8AF-4A38-9136-2A4222CCFD3D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeensyPulseGenerator", "DeviceAdapters\TeensyPulseGenerator\TeensyPulseGenerator.vcxproj", "{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Elveflow", "DeviceAdapters\Elveflow\Elveflow.vcxproj", "{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Go2Scope", "DeviceAdapters\go2scope\go2scope.vcxproj", "{2916E620-1157-4154-8223-887D383E9DE6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1508,10 +1510,10 @@ Global
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Debug|x64.Build.0 = Debug|x64
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x64.ActiveCfg = Release|x64
 		{E4E9FA4F-E9DD-4483-9140-2FD472C28F1D}.Release|x64.Build.0 = Release|x64
-		{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}.Debug|x64.ActiveCfg = Debug|x64
-		{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}.Debug|x64.Build.0 = Debug|x64
-		{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}.Release|x64.ActiveCfg = Release|x64
-		{4456d8f9-b8af-4a38-9136-2a4222ccfd3d}.Release|x64.Build.0 = Release|x64
+		{4456D8F9-B8AF-4A38-9136-2A4222CCFD3D}.Debug|x64.ActiveCfg = Debug|x64
+		{4456D8F9-B8AF-4A38-9136-2A4222CCFD3D}.Debug|x64.Build.0 = Debug|x64
+		{4456D8F9-B8AF-4A38-9136-2A4222CCFD3D}.Release|x64.ActiveCfg = Release|x64
+		{4456D8F9-B8AF-4A38-9136-2A4222CCFD3D}.Release|x64.Build.0 = Release|x64
 		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Debug|x64.ActiveCfg = Debug|x64
 		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Debug|x64.Build.0 = Debug|x64
 		{4C9DE8BC-FAFE-43C6-A2D8-4169DBA9BDD9}.Release|x64.ActiveCfg = Release|x64
@@ -1520,6 +1522,10 @@ Global
 		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Debug|x64.Build.0 = Debug|x64
 		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Release|x64.ActiveCfg = Release|x64
 		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Release|x64.Build.0 = Release|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.ActiveCfg = Debug|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Debug|x64.Build.0 = Debug|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.ActiveCfg = Release|x64
+		{2916E620-1157-4154-8223-887D383E9DE6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
