@@ -687,15 +687,16 @@ int DataBuffer::CreateSlot(size_t candidateStart, size_t totalSlotSize,
                                          serializedInitialMetadata.size(),  // initialMetadataSize
                                          additionalMetadataSize);    // subsequentMetadataSize
 
-
     newSlot->AcquireWriteAccess();
+
+    // Initialize the data pointer before using it.
+    *dataPointer = buffer_ + newSlot->GetStart();
 
     if (!serializedInitialMetadata.empty()) {
         std::memcpy(*dataPointer + dataSize, serializedInitialMetadata.data(), serializedInitialMetadata.size());
         newSlot->SetInitialMetadataSize(serializedInitialMetadata.size());
     }
 
-    *dataPointer = buffer_ + newSlot->GetStart();
     *additionalMetadataPointer = *dataPointer + newSlot->GetDataSize() + newSlot->GetInitialMetadataSize();
 
     if (fromFreeRegion) {
