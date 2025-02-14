@@ -62,7 +62,7 @@ public:
      * @param imageSize The exact number of bytes for the image data.
      * @param metadataSize The exact number of bytes for the metadata.
      */
-    BufferSlot() : start_(0), length_(0), imageSize_(0), metadataSize_(0), rwMutex_() {}
+    BufferSlot() : start_(0), length_(0), imageSize_(0), initialMetadataSize_(0), additionalMetadataSize_(0), rwMutex_() {}
 
     /**
      * Destructor.
@@ -81,18 +81,6 @@ public:
      * @return The slot's length.
      */
     std::size_t GetLength() const { return length_; }
-
-    /**
-     * Returns the size (in bytes) of the image data in the slot.
-     * @return The image data size.
-     */
-    size_t GetImageSize() const { return imageSize_; }
-
-    /**
-     * Returns the size (in bytes) of the metadata in the slot.
-     * @return The metadata size.
-     */
-    size_t GetMetadataSize() const { return metadataSize_; }
 
     /**
      * Attempts to acquire exclusive write access without blocking.
@@ -146,7 +134,7 @@ public:
         return false;
     }
 
-    void Reset(size_t start, size_t length, size_t imageSize, size_t metadataSize) {
+    void Reset(size_t start, size_t length, size_t imageSize, size_t initialMetadataSize, size_t additionalMetadataSize) {
         // Assert that the mutex is available before recycling
         assert(IsAvailableForWriting() && IsAvailableForReading() && 
                "BufferSlot mutex still locked during Reset - indicates a bug!");
@@ -155,16 +143,47 @@ public:
         start_ = start;
         length_ = length;
         imageSize_ = imageSize;
-        metadataSize_ = metadataSize;
+        initialMetadataSize_ = initialMetadataSize;
+        additionalMetadataSize_ = initialMetadataSize + additionalMetadataSize;
         
         // The caller should explicitly acquire write access when needed
     }
+
+    /**
+     * Updates the metadata size after writing is complete.
+     * @param newSize The actual size of the written metadata.
+     */
+    void UpdateAdditionalMetadataSize(size_t newSize) { additionalMetadataSize_ = newSize; }
+
+    /**
+     * Record the number of bytes of the initial metadata that have been written to this slot.
+     */
+    void SetInitialMetadataSize(size_t initialSize) { initialMetadataSize_ = initialSize; }
+
+    /**
+     * Returns the size of the image data in bytes.
+     * @return The image data size.
+     */
+    std::size_t GetDataSize() const { return imageSize_; }
+
+    /**
+     * Returns the size of the initial metadata in bytes.
+     * @return The initial metadata size.
+     */
+    std::size_t GetInitialMetadataSize() const { return initialMetadataSize_; }
+
+    /**
+     * Returns the size of the additional metadata in bytes.
+     * @return The additional metadata size.
+     */
+    std::size_t GetAdditionalMetadataSize() const { return additionalMetadataSize_; }
 
 private:
     std::size_t start_;
     std::size_t length_;
     size_t imageSize_;
-    size_t metadataSize_;
+    size_t initialMetadataSize_ = 0; 
+    size_t additionalMetadataSize_ = 0;
     mutable std::shared_timed_mutex rwMutex_;
 };
 
@@ -221,14 +240,17 @@ public:
      * Acquires a write slot large enough to hold the image data and metadata.
      * On success, returns pointers for the image data and metadata regions.
      *
-     * @param imageSize The number of bytes reserved for image data.
-     * @param metadataSize The maximum number of bytes reserved for metadata.
-     * @param imageDataPointer On success, receives a pointer to the image data region.
-     * @param metadataPointer On success, receives a pointer to the metadata region.
+     * @param dataSize The number of bytes reserved for data.
+     * @param additionalMetadataSize The maximum number of bytes reserved for additional metadata.
+     * @param dataPointer On success, receives a pointer to the data region.
+     * @param additionalMetadataPointer On success, receives a pointer to the additional metadata region.
+     * @param serializedInitialMetadata Optional string containing initial metadata to write.
      * @return DEVICE_OK on success.
      */
-    int AcquireWriteSlot(size_t imageSize, size_t metadataSize,
-                         unsigned char** imageDataPointer, unsigned char** metadataPointer);
+    int AcquireWriteSlot(size_t dataSize, size_t additionalMetadataSize,
+                         unsigned char** dataPointer, 
+                         unsigned char** additionalMetadataPointer,
+                         const std::string& serializedInitialMetadata);
 
     /**
      * Finalizes (releases) a write slot after data has been written.
@@ -331,11 +353,11 @@ public:
      * Extracts metadata for a given image data pointer.
      * Thread-safe method that acquires necessary locks to lookup metadata location.
      *
-     * @param imageDataPtr Pointer to the image data.
+     * @param dataPtr Pointer to the image data.
      * @param md Metadata object to populate.
      * @return DEVICE_OK on success, or an error code if extraction fails.
      */
-    int ExtractMetadataForImage(const unsigned char* imageDataPtr, Metadata &md);
+    int ExtractCorrespondingMetadata(const unsigned char* dataPtr, Metadata &md);
 
 private:
     /**
@@ -390,38 +412,38 @@ private:
     std::shared_ptr<ThreadPool> threadPool_;
     std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 
-    /**
-     * Internal helper to register a new slot.
-     */
-    int CreateSlot(size_t candidateStart, size_t totalSlotSize, size_t imageDataSize,
-                                 size_t metadataSize,
-                                 unsigned char** imageDataPointer, unsigned char** metadataPointer,
-                                 bool fromFreeRegion);
-
     void DeleteSlot(size_t offset, std::unordered_map<size_t, BufferSlot*>::iterator it);
 
-    void MergeFreeRegions(size_t newRegionStart, size_t newRegionEnd, size_t freedRegionSize);
+    void MergeFreeRegions(size_t newRegionStart, size_t newRegionEnd);
     void RemoveFromActiveTracking(size_t offset, std::unordered_map<size_t, BufferSlot*>::iterator it);
 
-    BufferSlot* InitializeNewSlot(size_t candidateStart, size_t totalSlotSize, 
-                                 size_t imageDataSize, size_t metadataSize);
-    void SetupSlotPointers(BufferSlot* newSlot, unsigned char** imageDataPointer, 
-                          unsigned char** metadataPointer);
-    void UpdateFreeRegions(size_t candidateStart, size_t totalSlotSize);
-
-    void ReturnSlotToPool(BufferSlot* slot);
+       void UpdateFreeRegions(size_t candidateStart, size_t totalSlotSize);
 
     BufferSlot* GetSlotFromPool(size_t start, size_t totalLength, 
-                               size_t imageSize, size_t metadataSize);
+                               size_t dataSize, size_t initialMetadataSize,
+                               size_t additionalMetadataSize);
 
     /**
-     * Extracts and deserializes the metadata from the given metadata pointer.
-     * Assumes the corresponding slot is already locked for reading.
-     *
-     * @param imageDataPtr Pointer to the image data.
-     * @param md Metadata object to populate.
-     * @return DEVICE_OK on success, or an error code if extraction fails.
+     * Creates a new slot with the specified parameters.
+     * Caller must hold slotManagementMutex_.
      */
-    int ExtractMetadata(const unsigned char* metadataPtr, size_t metadataSize, Metadata &md);
+    int CreateSlot(size_t candidateStart, size_t totalSlotSize, 
+                   size_t dataSize, size_t additionalMetadataSize,
+                   unsigned char** dataPointer, 
+                   unsigned char** subsequentMetadataPointer,
+                   bool fromFreeRegion, 
+                   const std::string& serializedInitialMetadata);
+
+    /**
+     * Initializes a new slot with the given parameters.
+     * Caller must hold slotManagementMutex_.
+     */
+    BufferSlot* InitializeNewSlot(size_t candidateStart, size_t totalSlotSize, 
+                                 size_t dataSize, size_t metadataSize);
+    void ReturnSlotToPool(BufferSlot* slot);
+
+    int ExtractMetadata(const unsigned char* dataPointer, 
+                       BufferSlot* slot,
+                       Metadata &md);
 
 };

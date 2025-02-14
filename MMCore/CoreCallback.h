@@ -91,6 +91,16 @@ public:
    /*Deprecated*/ int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const Metadata* pMd = 0, const bool doProcess = true);
 
    /*Deprecated*/ int InsertMultiChannel(const MM::Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd = 0);
+   
+   // Direct writing into V2 buffer instead of using InsertImage (which has to copy the data again)
+   ///////// TODO: uncomment to activate these methods once tested with camera
+//    int AcquireImageWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
+//                         unsigned char** dataPointer, unsigned char** metadataPointer,
+//                         unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents);
+//    int FinalizeWriteSlot(unsigned char* imageDataPointer, 
+//                         size_t actualMetadataBytes);
+
+   
    void ClearImageBuffer(const MM::Device* caller);
    bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
@@ -135,6 +145,7 @@ public:
    MM::Hub* GetParentHub(const MM::Device* caller) const;
    void GetLoadedDeviceOfType(const MM::Device* caller, MM::DeviceType devType,
          char* deviceName, const unsigned int deviceIterator);
+
 
 private:
    CMMCore* core_;

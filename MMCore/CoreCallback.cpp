@@ -31,6 +31,7 @@
 #include "CircularBuffer.h"
 #include "CoreCallback.h"
 #include "DeviceManager.h"
+#include "BufferAdapter.h"
 
 #include <cassert>
 #include <chrono>
@@ -319,6 +320,42 @@ int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf
    return InsertImage(caller, imgBuf.GetPixels(), imgBuf.Width(), 
       imgBuf.Height(), imgBuf.Depth(), &md);
 }
+
+// This method is explicitly for camera devices. It requires width, height, byteDepth, and nComponents
+// to be passed in, so that higher level code retrieving data from the buffer knows how to interpret the data
+// For other data types, analogous methods could be added in the future
+
+/////// TODO: uncomment to activate these methods once tested with camera
+
+// int CoreCallback::AcquireImageWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
+//                                   unsigned char** dataPointer, unsigned char** metadataPointer,
+//                                   unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents)
+// {
+//    if (core_->deviceManager_->GetDevice(caller)->GetType() == MM::CameraDevice)
+//    {
+//       Metadata md = AddCameraMetadata(caller, nullptr);
+
+//       if (!core_->bufferAdapter_->AcquireWriteSlot(dataSize, width, height, 
+//             byteDepth, nComponents, metadataSize,
+//             dataPointer, metadataPointer, &md))
+//       {
+//          return DEVICE_ERR;
+//       }
+//       return DEVICE_OK;
+//    }
+   
+//    return DEVICE_ERR;
+// }
+
+// int CoreCallback::FinalizeWriteSlot(unsigned char* dataPointer, 
+//                                   size_t actualMetadataBytes)
+// {
+//    if (core_->bufferAdapter_->FinalizeWriteSlot(dataPointer, actualMetadataBytes))
+//    {
+//       return DEVICE_OK;
+//    }
+//    return DEVICE_ERR;
+// }
 
 void CoreCallback::ClearImageBuffer(const MM::Device* /*caller*/)
 {

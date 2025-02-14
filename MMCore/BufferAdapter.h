@@ -217,6 +217,32 @@ public:
     */
    bool SetOverwriteData(bool overwrite);
 
+   /**
+    * Acquires a write slot large enough to hold the image data and metadata.
+    * @param dataSize The number of bytes reserved for image or other primary data.
+    * @param width Image width.
+    * @param height Image height.
+    * @param byteDepth Bytes per pixel.
+    * @param nComponents Number of components in the image.
+    * @param additionalMetadataSize The maximum number of bytes reserved for metadata.
+    * @param dataPointer On success, receives a pointer to the image data region.
+    * @param additionalMetadataPointer On success, receives a pointer to the metadata region.
+    * @param pInitialMetadata Optionally, a pointer to a metadata object whose contents should be pre‐written. Defaults to nullptr.
+    * @return true on success, false on error.
+    */
+   bool AcquireWriteSlot(size_t dataSize, unsigned width, unsigned height, 
+       unsigned byteDepth, unsigned nComponents, size_t additionalMetadataSize,
+       unsigned char** dataPointer, unsigned char** additionalMetadataPointer,
+       Metadata* pInitialMetadata = nullptr);
+
+   /**
+    * Finalizes (releases) a write slot after data has been written.
+    * @param imageDataPointer Pointer previously obtained from AcquireWriteSlot.
+    * @param actualMetadataBytes The actual number of metadata bytes written.
+    * @return true on success, false on error.
+    */
+   bool FinalizeWriteSlot(unsigned char* imageDataPointer, size_t actualMetadataBytes);
+
 private:
    bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.
    CircularBuffer* circBuffer_;

@@ -154,7 +154,8 @@ long BufferAdapter::GetSize(long imageSize) const
 {
    if (useV2_) {
       unsigned int mb = v2Buffer_->GetMemorySizeMB();
-      unsigned int num_images = mb * 1024 * 1024 / imageSize;
+      size_t totalBytes = static_cast<size_t>(mb) * 1024 * 1024;
+      size_t num_images = totalBytes / static_cast<size_t>(imageSize);
       return static_cast<long>(num_images);
    } else {
       return circBuffer_->GetSize();
@@ -400,7 +401,7 @@ unsigned BufferAdapter::GetImageWidth(const unsigned char* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageWidth(ptr) only supported with V2 buffer");
    Metadata md;
-   if (v2Buffer_->ExtractMetadataForImage(ptr, md) != DEVICE_OK)
+   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
       throw CMMError("Failed to extract metadata for image width");
    std::string sVal = md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue();
    return static_cast<unsigned>(atoi(sVal.c_str()));
@@ -410,7 +411,7 @@ unsigned BufferAdapter::GetImageHeight(const unsigned char* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageHeight(ptr) only supported with V2 buffer");
    Metadata md;
-   if (v2Buffer_->ExtractMetadataForImage(ptr, md) != DEVICE_OK)
+   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
       throw CMMError("Failed to extract metadata for image height");
    std::string sVal = md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue();
    return static_cast<unsigned>(atoi(sVal.c_str()));
@@ -420,7 +421,7 @@ unsigned BufferAdapter::GetBytesPerPixel(const unsigned char* ptr) const {
    if (!useV2_) 
       throw CMMError("GetBytesPerPixel(ptr) only supported with V2 buffer");
    Metadata md;
-   if (v2Buffer_->ExtractMetadataForImage(ptr, md) != DEVICE_OK)
+   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
       throw CMMError("Failed to extract metadata for bytes per pixel");
    std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
    if (pixelType == MM::g_Keyword_PixelType_GRAY8)
@@ -439,7 +440,7 @@ unsigned BufferAdapter::GetImageBitDepth(const unsigned char* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageBitDepth(ptr) only supported with V2 buffer");
    Metadata md;
-   if (v2Buffer_->ExtractMetadataForImage(ptr, md) != DEVICE_OK)
+   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
       throw CMMError("Failed to extract metadata for image bit depth");
    std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
    if (pixelType == MM::g_Keyword_PixelType_GRAY8)
@@ -458,7 +459,7 @@ unsigned BufferAdapter::GetNumberOfComponents(const unsigned char* ptr) const {
    if (!useV2_) 
       throw CMMError("GetNumberOfComponents(ptr) only supported with V2 buffer");
    Metadata md;
-   if (v2Buffer_->ExtractMetadataForImage(ptr, md) != DEVICE_OK)
+   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
       throw CMMError("Failed to extract metadata for number of components");
    std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
    if (pixelType == MM::g_Keyword_PixelType_GRAY8 ||
@@ -475,7 +476,7 @@ long BufferAdapter::GetImageBufferSize(const unsigned char* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageBufferSize(ptr) only supported with V2 buffer");
    Metadata md;
-   if (v2Buffer_->ExtractMetadataForImage(ptr, md) != DEVICE_OK)
+   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
       throw CMMError("Failed to extract metadata for image buffer size");
    // Suppose the image size is computed from width, height, and bytes per pixel:
    unsigned width  = static_cast<unsigned>(atoi(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue().c_str()));
@@ -491,4 +492,37 @@ bool BufferAdapter::SetOverwriteData(bool overwrite) {
         // CircularBuffer doesn't have this functionality
         return false;
     }
+}
+
+bool BufferAdapter::AcquireWriteSlot(size_t dataSize, unsigned width, unsigned height, 
+    unsigned byteDepth, unsigned nComponents, size_t additionalMetadataSize,
+    unsigned char** dataPointer, unsigned char** additionalMetadataPointer,
+    Metadata* pInitialMetadata) {
+   if (!useV2_) {
+      // Not supported for circular buffer
+      return false;
+   }
+
+   // Initialize metadata with either provided metadata or create empty
+   Metadata md = (pInitialMetadata != nullptr) ? *pInitialMetadata : Metadata();
+   
+   // Add in width, height, byteDepth, and nComponents to the metadata so that when 
+   // images are retrieved from the buffer, the data can be interpreted correctly
+   ProcessMetadata(md, width, height, byteDepth, nComponents);
+   
+   std::string serializedMetadata = md.Serialize();
+   int ret = v2Buffer_->AcquireWriteSlot(dataSize, additionalMetadataSize,
+      dataPointer, additionalMetadataPointer, serializedMetadata);
+   return ret == DEVICE_OK;
+}
+
+bool BufferAdapter::FinalizeWriteSlot(unsigned char* imageDataPointer, size_t actualMetadataBytes)
+{
+    if (!useV2_) {
+        // Not supported for circular buffer
+        return false;
+    }
+    
+    int ret = v2Buffer_->FinalizeWriteSlot(imageDataPointer, actualMetadataBytes);
+    return ret == DEVICE_OK;
 }
