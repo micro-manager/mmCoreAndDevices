@@ -36,7 +36,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <cstddef>
 #include <vector>
 #include <condition_variable>
@@ -44,6 +44,7 @@
 #include <memory>
 #include "TaskSet_CopyMemory.h"
 #include <cassert>
+#include <atomic>
 
 /**
  * BufferSlot represents a contiguous slot in the DataBuffer that holds image
@@ -175,7 +176,6 @@ private:
  */
 class DataBuffer {
 public:
-    static const size_t MAX_RELEASED_SLOTS = 50;
 
     /**
      * Constructor.
@@ -359,12 +359,14 @@ private:
 
     // Active slots and their mapping.
     std::vector<BufferSlot*> activeSlotsVector_;
-    std::map<size_t, BufferSlot*> activeSlotsByStart_;
+    std::unordered_map<size_t, BufferSlot*> activeSlotsByStart_;
 
     // Free region list for non-overwrite mode.
     // Map from starting offset -> region size (in bytes).
     std::map<size_t, size_t> freeRegions_;
-    std::vector<size_t> releasedSlots_;
+
+    // Cached cursor for scanning free regions in non-overwrite mode.
+    size_t freeRegionCursor_;
 
     // Instead of ownership via unique_ptr, store raw pointers
     // Note: unusedSlots_ is now a deque of raw pointers.
@@ -375,7 +377,7 @@ private:
 
     // Next free offset within the buffer.
     // In overwrite mode, new allocations will come from this pointer.
-    size_t nextAllocOffset_;
+    std::atomic<size_t> nextAllocOffset_;
 
     // Index tracking the next slot for read.
     size_t currentSlotIndex_;
@@ -396,11 +398,10 @@ private:
                                  unsigned char** imageDataPointer, unsigned char** metadataPointer,
                                  bool fromFreeRegion);
 
-    void DeleteSlot(size_t offset, std::map<size_t, BufferSlot*>::iterator it);
+    void DeleteSlot(size_t offset, std::unordered_map<size_t, BufferSlot*>::iterator it);
 
-    void AddToReleasedSlots(size_t offset);
     void MergeFreeRegions(size_t newRegionStart, size_t newRegionEnd, size_t freedRegionSize);
-    void RemoveFromActiveTracking(size_t offset, std::map<size_t, BufferSlot*>::iterator it);
+    void RemoveFromActiveTracking(size_t offset, std::unordered_map<size_t, BufferSlot*>::iterator it);
 
     BufferSlot* InitializeNewSlot(size_t candidateStart, size_t totalSlotSize, 
                                  size_t imageDataSize, size_t metadataSize);

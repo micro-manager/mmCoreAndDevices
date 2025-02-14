@@ -3208,6 +3208,9 @@ void CMMCore::enableV2Buffer(bool enable) throw (CMMError)
 void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
                                                ) throw (CMMError)
 {
+   if (isSequenceRunning()) {
+      stopSequenceAcquisition();
+   }
    delete bufferAdapter_; // discard old buffer
    LOG_DEBUG(coreLogger_) << "Will set circular buffer size to " <<
       sizeMB << " MB";

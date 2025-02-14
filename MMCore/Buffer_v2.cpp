@@ -244,7 +244,6 @@ int DataBuffer::SetOverwriteData(bool overwrite) {
 int DataBuffer::AcquireWriteSlot(size_t imageSize, size_t metadataSize,
                                  unsigned char** imageDataPointer, unsigned char** metadataPointer)
 {
-    std::lock_guard<std::mutex> lock(slotManagementMutex_);
     if (buffer_ == nullptr) {
         return DEVICE_ERR;
     }
@@ -255,58 +254,56 @@ int DataBuffer::AcquireWriteSlot(size_t imageSize, size_t metadataSize,
     size_t candidateStart = 0;
 
     if (!overwriteWhenFull_) {
-        // FIRST: Look for a fit in recycled slots (releasedSlots_)
-        for (int i = static_cast<int>(releasedSlots_.size()) - 1; i >= 0; i--) {
-            // Align the candidate start position.
-            candidateStart = Align(releasedSlots_[i]);
-            
-            // Find the free region that contains this position.
-            auto it = freeRegions_.upper_bound(candidateStart);
-            if (it != freeRegions_.begin()) {
-                --it;
-                size_t freeStart = it->first;
-                size_t freeEnd = freeStart + it->second;
-                
-                // Check if the position is actually within this free region.
-                if (candidateStart >= freeStart && candidateStart < freeEnd && 
-                    candidateStart + totalSlotSize <= freeEnd) {
-                    releasedSlots_.erase(releasedSlots_.begin() + i);
-                    return CreateSlot(candidateStart, totalSlotSize, imageSize, metadataSize,
-                                                     imageDataPointer, metadataPointer, true);
+        std::lock_guard<std::mutex> lock(slotManagementMutex_);
+        // Look in the free-region list as fallback using a cached cursor.
+        {
+            bool found = false;
+            size_t newCandidate = 0;
+            // Start search from freeRegionCursor_
+            auto it = freeRegions_.lower_bound(freeRegionCursor_);
+            // Loop over free regions at most once (wrapping around if necessary).
+            for (size_t count = 0, sz = freeRegions_.size(); count < sz; count++) {
+                if (it == freeRegions_.end())
+                    it = freeRegions_.begin();
+                size_t alignedCandidate = Align(it->first);
+                if (it->first + it->second >= alignedCandidate + totalSlotSize) {
+                    newCandidate = alignedCandidate;
+                    found = true;
+                    break;
                 }
+                ++it;
             }
-            
-            // If we get here, this released slot position isn't in a free region,
-            // so remove it as it's no longer valid.
-            releasedSlots_.erase(releasedSlots_.begin() + i);
-        }
-
-        // SECOND: Look in the free-region list as fallback.
-        for (auto it = freeRegions_.begin(); it != freeRegions_.end(); ++it) {
-            // Align the free region start.
-            size_t alignedCandidate = Align(it->first);
-            // Check if the free region has enough space after alignment.
-            if (it->first + it->second >= alignedCandidate + totalSlotSize) {
-                candidateStart = alignedCandidate;
+            if (found) {
+                candidateStart = newCandidate;
+                // Update the cursor so that next search can start here.
+                freeRegionCursor_ = candidateStart + totalSlotSize;
                 return CreateSlot(candidateStart, totalSlotSize, imageSize, metadataSize,
                                                  imageDataPointer, metadataPointer, true);
             }
         }
+
         // No recycled slot or free region can satisfy the allocation.
         overflow_ = true;
         *imageDataPointer = nullptr;
         *metadataPointer = nullptr;
         return DEVICE_ERR;
     } else {
-        // Overwrite mode: use nextAllocOffset_. Ensure it is aligned.
-        candidateStart = Align(nextAllocOffset_);
-        if (candidateStart + totalSlotSize > bufferSize_) {
-            candidateStart = 0;  // Wrap around.
+        // Overwrite mode 
+        size_t prevOffset, newOffset;
+        do {
+            prevOffset = nextAllocOffset_.load(std::memory_order_relaxed);
+            candidateStart = Align(prevOffset);
+            if (candidateStart + totalSlotSize > bufferSize_)
+                candidateStart = 0;  // Wrap around if needed.
+            newOffset = candidateStart + totalSlotSize;
+        } while (!nextAllocOffset_.compare_exchange_weak(prevOffset, newOffset));
+        
+        // Only now grab the lock to register the new slot.
+        {
+            std::lock_guard<std::mutex> lock(slotManagementMutex_);
+            return CreateSlot(candidateStart, totalSlotSize, imageSize, metadataSize,
+                              imageDataPointer, metadataPointer, false);
         }
-        nextAllocOffset_ = candidateStart + totalSlotSize;
-        // Register a new slot using the selected candidateStart.
-        return CreateSlot(candidateStart, totalSlotSize, imageSize, metadataSize,
-                                         imageDataPointer, metadataPointer, false);
     }
 }
 
@@ -514,7 +511,6 @@ int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
     // Clear internal data structures
     activeSlotsVector_.clear();
     activeSlotsByStart_.clear();
-    releasedSlots_.clear();
     currentSlotIndex_ = 0;
     nextAllocOffset_ = 0;
     overflow_ = false;
@@ -569,15 +565,6 @@ BufferSlot* DataBuffer::FindSlotForPointer(const unsigned char* imageDataPtr) {
     return (it != activeSlotsByStart_.end()) ? it->second : nullptr;
 }
 
-void DataBuffer::AddToReleasedSlots(size_t offset) {
-    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
-    if (!overwriteWhenFull_) {
-        if (releasedSlots_.size() >= MAX_RELEASED_SLOTS)
-            releasedSlots_.erase(releasedSlots_.begin());
-        releasedSlots_.push_back(offset);
-    }
-}
-
 void DataBuffer::MergeFreeRegions(size_t newRegionStart, size_t newRegionEnd, size_t freedRegionSize) {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     // Find the free region that starts at or after newEnd
@@ -607,7 +594,7 @@ void DataBuffer::MergeFreeRegions(size_t newRegionStart, size_t newRegionEnd, si
     }
 }
 
-void DataBuffer::RemoveFromActiveTracking(size_t offset, std::map<size_t, BufferSlot*>::iterator it) {
+void DataBuffer::RemoveFromActiveTracking(size_t offset, std::unordered_map<size_t, BufferSlot*>::iterator it) {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     activeSlotsByStart_.erase(it);
     for (auto vecIt = activeSlotsVector_.begin(); vecIt != activeSlotsVector_.end(); ++vecIt) {
@@ -623,10 +610,8 @@ void DataBuffer::RemoveFromActiveTracking(size_t offset, std::map<size_t, Buffer
     }
 }
 
-void DataBuffer::DeleteSlot(size_t offset, std::map<size_t, BufferSlot*>::iterator it) {
+void DataBuffer::DeleteSlot(size_t offset, std::unordered_map<size_t, BufferSlot*>::iterator it) {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
-
-    AddToReleasedSlots(offset);
 
     size_t freedRegionSize = it->second->GetLength();
     size_t newRegionStart = offset;

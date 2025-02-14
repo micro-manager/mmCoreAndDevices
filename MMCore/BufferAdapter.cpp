@@ -83,7 +83,7 @@ const unsigned char* BufferAdapter::GetLastImage() const
    if (useV2_) {
       Metadata dummyMetadata;
       return v2Buffer_->PeekDataReadPointerAtIndex(0, nullptr, dummyMetadata);
-      // TODO: ensure calling code releases the slot after use
+      // NOTE: ensure calling code releases the slot after use
    } else {
       return circBuffer_->GetTopImage();
    }
@@ -95,7 +95,7 @@ const unsigned char* BufferAdapter::PopNextImage()
    if (useV2_) {
       Metadata dummyMetadata;
       return v2Buffer_->PopNextDataReadPointer(dummyMetadata, nullptr, false);
-      // TODO: ensure calling code releases the slot after use
+      // NOTE: ensure calling code releases the slot after use
    } else {
       return circBuffer_->PopNextImage();
    }
@@ -270,16 +270,23 @@ bool BufferAdapter::InsertMultiChannel(const unsigned char* buf, unsigned numCha
 void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError)
 {
    if (useV2_) {
-      // In v2, we use PeekNextDataReadPointer (which does not advance the internal pointer)
-      // Note: the v2 buffer is not channel aware, so the 'channel' parameter is ignored.
-      // TODO implement the channel aware version
-      const unsigned char* ptr = nullptr;
+      // In v2, we now use a channel-aware pointer arithmetic at the adapter level.
+      const unsigned char* basePtr = nullptr;
       size_t imageDataSize = 0;
-      int ret = v2Buffer_->PeekNextDataReadPointer(&ptr, &imageDataSize, md);
-      if (ret != DEVICE_OK || ptr == nullptr)
+      int ret = v2Buffer_->PeekNextDataReadPointer(&basePtr, &imageDataSize, md);
+      if (ret != DEVICE_OK || basePtr == nullptr)
          throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
-      return const_cast<unsigned char*>(ptr);
-      // TODO: make sure calling code releases the slot after use
+
+      // Calculate the size for one channel.
+      int width = GetImageWidth(basePtr);
+      int height = GetImageHeight(basePtr);
+      int pixDepth = GetBytesPerPixel(basePtr);
+      size_t singleChannelSize = width * height * pixDepth;
+
+      // Advance the base pointer by the amount corresponding to the selected channel.
+      const unsigned char* channelPtr = basePtr + (channel * singleChannelSize);
+      return const_cast<unsigned char*>(channelPtr);
+      // NOTE: make sure calling code releases the slot after use.
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetTopImageBuffer(channel);
       if (pBuf != nullptr) {
@@ -300,7 +307,7 @@ void* BufferAdapter::GetNthImageMD(unsigned long n, Metadata& md) const throw (C
          throw CMMError("V2 buffer does not contain enough data.", MMERR_CircularBufferEmpty);
       // Return a non-const pointer (caller must be careful with the const_cast)
       return const_cast<unsigned char*>(ptr);
-      // TODO: make sure calling code releases the slot after use
+      // NOTE: make sure calling code releases the slot after use
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetNthFromTopImageBuffer(n);
       if (pBuf != nullptr) {
@@ -315,16 +322,23 @@ void* BufferAdapter::GetNthImageMD(unsigned long n, Metadata& md) const throw (C
 void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError)
 {
    if (useV2_) {
-      // For v2, consume the data by calling PopNextDataReadPointer,
-      // which returns a const unsigned char* or throws an exception on error.
-      // The caller is expected to call ReleaseDataReadPointer on the returned pointer once done.
-      // TODO: make channel aware
+      // For v2, we now make the buffer channel aware at the adapter level.
       size_t dataSize = 0;
-      const unsigned char* ptr = v2Buffer_->PopNextDataReadPointer(md, &dataSize, false);
-      if (ptr == nullptr)
+      const unsigned char* basePtr = v2Buffer_->PopNextDataReadPointer(md, &dataSize, false);
+      if (basePtr == nullptr)
          throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
-      return const_cast<unsigned char*>(ptr);
-      // TODO: ensure that calling code releases the read pointer after use.
+
+      // Calculate the size of a single channel.
+      int width = GetImageWidth(basePtr);
+      int height = GetImageHeight(basePtr);
+      int pixDepth = GetBytesPerPixel(basePtr);
+      size_t singleChannelSize = width * height * pixDepth;
+
+      // Offset the base pointer to get the requested channel's data.
+      // 'channel' is assumed to be passed as a parameter.
+      const unsigned char* channelPtr = basePtr + (channel * singleChannelSize);
+      return const_cast<unsigned char*>(channelPtr);
+      // NOTE: ensure that calling code releases the read pointer after use.
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetNextImageBuffer(channel);
       if (pBuf != nullptr) {
