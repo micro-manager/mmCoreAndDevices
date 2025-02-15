@@ -367,14 +367,14 @@
    for (int i = 0; i < listSize; ++i) {
      jbyteArray pixels = (jbyteArray) jenv->CallObjectMethod($input, getMethodID, i);
      long receivedLength = jenv->GetArrayLength(pixels);
-   	 if (receivedLength != expectedLength && receivedLength != expectedLength*4)
-	 {
-	    jclass excep = jenv->FindClass("java/lang/Exception");
-	     if (excep)
-	        jenv->ThrowNew(excep, "Image dimensions are wrong for this SLM.");
-	      return;
-	  }
-	  inputVector.push_back((unsigned char *) JCALL2(GetByteArrayElements, jenv, pixels, 0));
+     if (receivedLength != expectedLength && receivedLength != expectedLength*4)
+   {
+      jclass excep = jenv->FindClass("java/lang/Exception");
+       if (excep)
+          jenv->ThrowNew(excep, "Image dimensions are wrong for this SLM.");
+        return;
+    }
+    inputVector.push_back((unsigned char *) JCALL2(GetByteArrayElements, jenv, pixels, 0));
    }
    $1 = inputVector;
 }
@@ -395,18 +395,19 @@
 // unsigned GetImageWidth()
 // unsigned GetImageHeight()
 
-%typemap(jni) void*        "jobject"
-%typemap(jtype) void*      "Object"
-%typemap(jstype) void*     "Object"
+
+%typemap(jni) void* "jobject"
+%typemap(jtype) void* "Object" 
+%typemap(jstype) void* "Object"
 %typemap(javaout) void* {
    return $jnicall;
 }
 %typemap(out) void*
 {
-   long lSize = (arg1)->getImageWidth((const char*)result) * 
-                (arg1)->getImageHeight((const char*)result);
+   long lSize = (arg1)->getImageWidth((void*)result) * 
+                (arg1)->getImageHeight((void*)result);
    
-   unsigned bytesPerPixel = (arg1)->getBytesPerPixel((const char*)result);
+   unsigned bytesPerPixel = (arg1)->getBytesPerPixel((void*)result);
    
    if (bytesPerPixel == 1)
    {
@@ -426,7 +427,7 @@
       JCALL4(SetByteArrayRegion, jenv, data, 0, lSize, (jbyte*)result);
 
       // Release the read access (required for V2 buffer, Core will figure out if it's V2 or not)
-      (arg1)->ReleaseReadAccess((const char*)result);
+      (arg1)->ReleaseReadAccess((void*)result);
 
 
       $result = data;
@@ -448,14 +449,14 @@
       JCALL4(SetShortArrayRegion, jenv, data, 0, lSize, (jshort*)result);
 
       // Release the read access
-      (arg1)->ReleaseReadAccess((const char*)result);
+      (arg1)->ReleaseReadAccess((void*)result);
 
 
       $result = data;
    }
    else if (bytesPerPixel == 4)
    {
-      if ((arg1)->getNumberOfComponents((const char*)result) == 1)
+      if ((arg1)->getNumberOfComponents((void*)result) == 1)
       {
          // create a new float[] object in Java
 
@@ -474,7 +475,7 @@
          JCALL4(SetFloatArrayRegion, jenv, data, 0, lSize, (jfloat*)result);
 
          // Release the read access
-         (arg1)->ReleaseReadAccess((const char*)result);
+         (arg1)->ReleaseReadAccess((void*)result);
 
 
          $result = data;
@@ -497,7 +498,7 @@
          JCALL4(SetByteArrayRegion, jenv, data, 0, lSize * 4, (jbyte*)result);
 
          // Release the read access
-         (arg1)->ReleaseReadAccess((const char*)result);
+         (arg1)->ReleaseReadAccess((void*)result);
 
 
          $result = data;
@@ -520,7 +521,7 @@
       JCALL4(SetShortArrayRegion, jenv, data, 0, lSize * 4, (jshort*)result);
 
       // Release the read access
-      (arg1)->ReleaseReadAccess((const char*)result);
+      (arg1)->ReleaseReadAccess((void*)result);
 
       $result = data;
    }
@@ -532,6 +533,25 @@
       $result = 0;
    }
 }
+
+// Define typemaps for DataPtr
+%typemap(jni) DataPtr "jlong"
+%typemap(jtype) DataPtr "long"
+%typemap(jstype) DataPtr "long"
+%typemap(javain) DataPtr "$javainput"
+%typemap(in) DataPtr {
+    $1 = (DataPtr)$input;
+}
+
+%typemap(jni) const DataPtr "jlong"
+%typemap(jtype) const DataPtr "long"
+%typemap(jstype) const DataPtr "long"
+%typemap(javain) const DataPtr "$javainput"
+%typemap(in) const DataPtr {
+    $1 = (DataPtr)$input;
+}
+
+
 
 // Java typemap
 // change default SWIG mapping of void* return values
@@ -717,21 +737,21 @@
    }
 
    private String getMultiCameraChannel(JSONObject tags, int cameraChannelIndex) {
-	  try {
-	  String camera = tags.getString("Core-Camera");
-	  String physCamKey = camera + "-Physical Camera " + (1 + cameraChannelIndex);
-	  if (tags.has(physCamKey)) {
-		 try {
-			return tags.getString(physCamKey);
-		 } catch (Exception e2) {
-			return null;
-		 }
-	  } else {
-		 return null;
-	  }
-	 } catch (Exception e) {
-	   return null;
-	 }
+    try {
+    String camera = tags.getString("Core-Camera");
+    String physCamKey = camera + "-Physical Camera " + (1 + cameraChannelIndex);
+    if (tags.has(physCamKey)) {
+     try {
+      return tags.getString(physCamKey);
+     } catch (Exception e2) {
+      return null;
+     }
+    } else {
+     return null;
+    }
+   } catch (Exception e) {
+     return null;
+   }
 
    }
 
@@ -950,12 +970,12 @@
 // instantiate STL mappings
 
 namespace std {
-	%typemap(javaimports) vector<char> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
+  %typemap(javaimports) vector<char> %{
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
 
    %typemap(javainterfaces) vector<char> %{ Iterable<Character>%}
 
@@ -1002,11 +1022,11 @@ namespace std {
    */
    
    %typemap(javaimports) vector<long> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
 
    %typemap(javainterfaces) vector<long> %{ Iterable<Integer>%}
 
@@ -1048,11 +1068,11 @@ namespace std {
    %}
    
    %typemap(javaimports) vector<double> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
 
    %typemap(javainterfaces) vector<double> %{ Iterable<Double>%}
 
@@ -1094,111 +1114,111 @@ namespace std {
    %}
 
 
-	%typemap(javaimports) vector<string> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
-	
-	%typemap(javainterfaces) vector<string> %{ Iterable<String>%}
-	
-	%typemap(javacode) vector<string> %{
-	
-		public Iterator<String> iterator() {
-			return new Iterator<String>() {
-			
-				private int i_=0;
-			
-				public boolean hasNext() {
-					return (i_<size());
-				}
-				
-				public String next() throws NoSuchElementException {
-					if (hasNext()) {
-						++i_;
-						return get(i_-1);
-					} else {
-					throw new NoSuchElementException();
-					}
-				}
-					
-				public void remove() throws UnsupportedOperationException {
-					throw new UnsupportedOperationException();
-				}		
-			};
-		}
-		
-		public String[] toArray() {
-			if (0==size())
-				return new String[0];
-			
-			String strs[] = new String[(int) size()];
-			for (int i=0; i<size(); ++i) {
-				strs[i] = get(i);
-			}
-			return strs;
-		}
-		
-	%}
-	
+  %typemap(javaimports) vector<string> %{
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
+  
+  %typemap(javainterfaces) vector<string> %{ Iterable<String>%}
+  
+  %typemap(javacode) vector<string> %{
+  
+    public Iterator<String> iterator() {
+      return new Iterator<String>() {
+      
+        private int i_=0;
+      
+        public boolean hasNext() {
+          return (i_<size());
+        }
+        
+        public String next() throws NoSuchElementException {
+          if (hasNext()) {
+            ++i_;
+            return get(i_-1);
+          } else {
+          throw new NoSuchElementException();
+          }
+        }
+          
+        public void remove() throws UnsupportedOperationException {
+          throw new UnsupportedOperationException();
+        }   
+      };
+    }
+    
+    public String[] toArray() {
+      if (0==size())
+        return new String[0];
+      
+      String strs[] = new String[(int) size()];
+      for (int i=0; i<size(); ++i) {
+        strs[i] = get(i);
+      }
+      return strs;
+    }
+    
+  %}
+  
    
 
-	%typemap(javaimports) vector<bool> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
-	
-	%typemap(javainterfaces) vector<bool> %{ Iterable<Boolean>%}
-	
-	%typemap(javacode) vector<bool> %{
-	
-		public Iterator<Boolean> iterator() {
-			return new Iterator<Boolean>() {
-			
-				private int i_=0;
-			
-				public boolean hasNext() {
-					return (i_<size());
-				}
-				
-				public Boolean next() throws NoSuchElementException {
-					if (hasNext()) {
-						++i_;
-						return get(i_-1);
-					} else {
-					throw new NoSuchElementException();
-					}
-				}
-					
-				public void remove() throws UnsupportedOperationException {
-					throw new UnsupportedOperationException();
-				}		
-			};
-		}
-		
-		public Boolean[] toArray() {
-			if (0==size())
-				return new Boolean[0];
-			
-			Boolean strs[] = new Boolean[(int) size()];
-			for (int i=0; i<size(); ++i) {
-				strs[i] = get(i);
-			}
-			return strs;
-		}
-		
-	%}
-	
+  %typemap(javaimports) vector<bool> %{
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
+  
+  %typemap(javainterfaces) vector<bool> %{ Iterable<Boolean>%}
+  
+  %typemap(javacode) vector<bool> %{
+  
+    public Iterator<Boolean> iterator() {
+      return new Iterator<Boolean>() {
+      
+        private int i_=0;
+      
+        public boolean hasNext() {
+          return (i_<size());
+        }
+        
+        public Boolean next() throws NoSuchElementException {
+          if (hasNext()) {
+            ++i_;
+            return get(i_-1);
+          } else {
+          throw new NoSuchElementException();
+          }
+        }
+          
+        public void remove() throws UnsupportedOperationException {
+          throw new UnsupportedOperationException();
+        }   
+      };
+    }
+    
+    public Boolean[] toArray() {
+      if (0==size())
+        return new Boolean[0];
+      
+      Boolean strs[] = new Boolean[(int) size()];
+      for (int i=0; i<size(); ++i) {
+        strs[i] = get(i);
+      }
+      return strs;
+    }
+    
+  %}
+  
 
-	%typemap(javaimports) vector<unsigned> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
+  %typemap(javaimports) vector<unsigned> %{
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
 
    %typemap(javainterfaces) vector<unsigned> %{ Iterable<Long>%}
 

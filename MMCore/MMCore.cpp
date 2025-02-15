@@ -4230,6 +4230,24 @@ unsigned CMMCore::getImageBitDepth()
    return 0;
 }
 
+unsigned CMMCore::getImageBitDepth(const char* cameraLabel)
+{
+   std::shared_ptr<CameraInstance> camera = deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+   if (camera)
+   {
+      try
+      {
+         mm::DeviceModuleLockGuard guard(camera);
+         return camera->GetBitDepth();
+      }
+      catch (const CMMError&) // Possibly uninitialized camera
+      {
+         // Fall through
+      }
+   }
+   return 0;
+}
+
 /**
  * Returns the number of components the default camera is returning.
  * For example color camera will return 4 components (RGBA) on each snap.
@@ -4252,32 +4270,28 @@ unsigned CMMCore::getNumberOfComponents()
    return 0;
 }
 
-unsigned CMMCore::getImageWidth(const char* ptr) {
-   return useV2Buffer_ ? bufferAdapter_->GetImageWidth(reinterpret_cast<const unsigned char*>(ptr)) : getImageWidth();
+unsigned CMMCore::getImageWidth(DataPtr ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetImageWidth(ptr) : getImageWidth();
 }
 
-unsigned CMMCore::getImageHeight(const char* ptr) {
-   return useV2Buffer_ ? bufferAdapter_->GetImageHeight(reinterpret_cast<const unsigned char*>(ptr)) : getImageHeight();
+unsigned CMMCore::getImageHeight(DataPtr ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetImageHeight(ptr) : getImageHeight();
 }
 
-unsigned CMMCore::getBytesPerPixel(const char* ptr) {
-   return useV2Buffer_ ? bufferAdapter_->GetBytesPerPixel(reinterpret_cast<const unsigned char*>(ptr)) : getBytesPerPixel();
+unsigned CMMCore::getBytesPerPixel(DataPtr ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetBytesPerPixel(ptr) : getBytesPerPixel();
 }
 
-unsigned CMMCore::getImageBitDepth(const char* ptr) {
-   return useV2Buffer_ ? bufferAdapter_->GetImageBitDepth(reinterpret_cast<const unsigned char*>(ptr)) : getImageBitDepth();
+unsigned CMMCore::getNumberOfComponents(DataPtr ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetNumberOfComponents(ptr) : getNumberOfComponents();
 }
 
-unsigned CMMCore::getNumberOfComponents(const char* ptr) {
-   return useV2Buffer_ ? bufferAdapter_->GetNumberOfComponents(reinterpret_cast<const unsigned char*>(ptr)) : getNumberOfComponents();
+long CMMCore::getImageBufferSize(DataPtr ptr) {
+   return useV2Buffer_ ? bufferAdapter_->GetImageBufferSize(ptr) : getImageBufferSize();
 }
 
-long CMMCore::getImageBufferSize(const char* ptr) {
-   return useV2Buffer_ ? bufferAdapter_->GetImageBufferSize(reinterpret_cast<const unsigned char*>(ptr)) : getImageBufferSize();
-}
-
-void CMMCore::ReleaseReadAccess(const char* ptr) {
-   if (useV2Buffer_) bufferAdapter_->ReleaseReadAccess(reinterpret_cast<const unsigned char*>(ptr));
+void CMMCore::ReleaseReadAccess(DataPtr ptr) {
+   if (useV2Buffer_) bufferAdapter_->ReleaseReadAccess(ptr);
 }
 
 /**

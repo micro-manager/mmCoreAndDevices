@@ -114,6 +114,10 @@ namespace mm {
 } // namespace mm
 
 typedef unsigned int* imgRGB32;
+// This is needed for SWIG Java wrapping because 
+// void* is converted to Objects to copy arrays of data but we want to be able to 
+// maps these pointers to longs
+typedef const void* DataPtr; 
 
 enum DeviceInitializationState {
    Uninitialized,
@@ -384,6 +388,7 @@ public:
    unsigned getImageHeight();
    unsigned getBytesPerPixel();
    unsigned getImageBitDepth();
+   unsigned getImageBitDepth(const char* cameraLabel);
    unsigned getNumberOfComponents();
    unsigned getNumberOfCameraChannels();
    std::string getCameraChannelName(unsigned int channelNr);
@@ -434,14 +439,12 @@ public:
    void enableV2Buffer(bool enable) throw (CMMError);
    bool usesV2Buffer() const { return useV2Buffer_; }
 
-   unsigned getImageWidth(const char* ptr) throw (CMMError);
-   unsigned getImageHeight(const char* ptr) throw (CMMError);
-   unsigned getBytesPerPixel(const char* ptr) throw (CMMError);
-   unsigned getImageBitDepth(const char* ptr) throw (CMMError);
-   unsigned getNumberOfComponents(const char* ptr) throw (CMMError);
-   long getImageBufferSize(const char* ptr) throw (CMMError);
-
-   void ReleaseReadAccess(const char* ptr) throw (CMMError);
+   unsigned getImageWidth(DataPtr ptr) throw (CMMError);
+   unsigned getImageHeight(DataPtr ptr) throw (CMMError);
+   unsigned getBytesPerPixel(DataPtr ptr) throw (CMMError);
+   unsigned getNumberOfComponents(DataPtr ptr) throw (CMMError);
+   long getImageBufferSize(DataPtr ptr) throw (CMMError);
+   void ReleaseReadAccess(DataPtr ptr) throw (CMMError);
 
    bool isExposureSequenceable(const char* cameraLabel) throw (CMMError);
    void startExposureSequence(const char* cameraLabel) throw (CMMError);
