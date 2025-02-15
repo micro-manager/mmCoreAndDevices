@@ -58,27 +58,14 @@ public:
     * Get a pointer to the top (most recent) image.
     * @return Pointer to image data, or nullptr if unavailable.
     */
-   const unsigned char* GetLastImage() const;
+   const void* GetLastImage() const;
 
    /**
     * Get a pointer to the next image from the buffer.
     * @return Pointer to image data, or nullptr if unavailable.
     */
-   const unsigned char* PopNextImage();
+   const void* PopNextImage();
 
-   /**
-    * Get a pointer to the nth image from the top of the buffer.
-    * @param n The index from the top.
-    * @return Pointer to image data, or nullptr if unavailable.
-    */
-   const mm::ImgBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
-
-   /**
-    * Get a pointer to the next image buffer for a specific channel.
-    * @param channel The channel number.
-    * @return Pointer to image data, or nullptr if unavailable.
-    */
-   const mm::ImgBuffer* GetNextImageBuffer(unsigned channel);
 
    /**
     * Initialize the buffer with the given parameters.
@@ -178,16 +165,10 @@ public:
     */
    bool Overflow() const;
 
-   /**
-    * Get a pointer to the top image buffer for a specific channel.
-    * @param channel The channel number.
-    * @return Pointer to image data, or nullptr if unavailable.
-    */
-   const mm::ImgBuffer* GetTopImageBuffer(unsigned channel) const;
 
-   void* GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError);
-   void* GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError);
-   void* PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError);
+   const void* GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError);
+   const void* GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError);
+   const void* PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError);
 
    /**
     * Check if this adapter is using the V2 buffer implementation.
@@ -200,15 +181,15 @@ public:
     * This is required when using the V2 buffer implementation.
     * @param ptr The pointer to release.
     */
-   void ReleaseReadAccess(const unsigned char* ptr);
+   void ReleaseReadAccess(const void* ptr);
 
    // Methods for the v2 buffer where width and heigh must be gotton on a per-image basis
-   unsigned GetImageWidth(const unsigned char* ptr) const;
-   unsigned GetImageHeight(const unsigned char* ptr) const;
-   unsigned GetBytesPerPixel(const unsigned char* ptr) const;
-   unsigned GetImageBitDepth(const unsigned char* ptr) const;
-   unsigned GetNumberOfComponents(const unsigned char* ptr) const;
-   long GetImageBufferSize(const unsigned char* ptr) const;
+   unsigned GetImageWidth(const void* ptr) const;
+   unsigned GetImageHeight(const void* ptr) const;
+   unsigned GetBytesPerPixel(const void* ptr) const;
+   unsigned GetImageBitDepth(const void* ptr) const;
+   unsigned GetNumberOfComponents(const void* ptr) const;
+   long GetImageBufferSize(const void* ptr) const;
 
    /**
     * Configure whether to overwrite old data when buffer is full.
@@ -232,7 +213,7 @@ public:
     */
    bool AcquireWriteSlot(size_t dataSize, unsigned width, unsigned height, 
        unsigned byteDepth, unsigned nComponents, size_t additionalMetadataSize,
-       unsigned char** dataPointer, unsigned char** additionalMetadataPointer,
+       void** dataPointer, void** additionalMetadataPointer,
        Metadata* pInitialMetadata = nullptr);
 
    /**
@@ -241,7 +222,7 @@ public:
     * @param actualMetadataBytes The actual number of metadata bytes written.
     * @return true on success, false on error.
     */
-   bool FinalizeWriteSlot(unsigned char* imageDataPointer, size_t actualMetadataBytes);
+   bool FinalizeWriteSlot(void* imageDataPointer, size_t actualMetadataBytes);
 
 private:
    bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.

@@ -3086,9 +3086,9 @@ void* CMMCore::getLastImage() throw (CMMError)
       }
    }
 
-   unsigned char* pBuf = const_cast<unsigned char*>(bufferAdapter_->GetLastImage());
+   const void* pBuf = bufferAdapter_->GetLastImage();
    if (pBuf != 0)
-      return pBuf;
+      return const_cast<void*>(pBuf);
    else
    {
       logError("CMMCore::getLastImage", getCoreErrorText(MMERR_CircularBufferEmpty).c_str());
@@ -3102,7 +3102,7 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   return bufferAdapter_->GetLastImageMD(channel, md);
+   return const_cast<void*>(bufferAdapter_->GetLastImageMD(channel, md));
 }
 
 /**
@@ -3136,7 +3136,7 @@ void* CMMCore::getLastImageMD(Metadata& md) const throw (CMMError)
  */
 void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const throw (CMMError)
 {
-   return bufferAdapter_->GetNthImageMD(n, md);
+   return const_cast<void*>(bufferAdapter_->GetNthImageMD(n, md));
 }
 
 /**
@@ -3153,9 +3153,9 @@ void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const throw 
  */
 void* CMMCore::popNextImage() throw (CMMError)
 {
-   unsigned char* pBuf = const_cast<unsigned char*>(bufferAdapter_->PopNextImage());
+   const void* pBuf = bufferAdapter_->PopNextImage();
    if (pBuf != 0)
-      return pBuf;
+      return const_cast<void*>(pBuf);
    else
       throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
 }
@@ -3171,7 +3171,7 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) th
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   return bufferAdapter_->PopNextImageMD(channel, md);
+   return const_cast<void*>(bufferAdapter_->PopNextImageMD(channel, md));
 }
 
 /**

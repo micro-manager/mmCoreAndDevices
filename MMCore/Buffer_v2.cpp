@@ -192,10 +192,10 @@ int DataBuffer::ReleaseBuffer() {
 /**
  * Pack the data as [BufferSlotRecord][image data][serialized metadata]
  */
-int DataBuffer::InsertData(const unsigned char* data, size_t dataSize, const Metadata* pMd) {
+int DataBuffer::InsertData(const void* data, size_t dataSize, const Metadata* pMd) {
     
-    unsigned char* dataPointer = nullptr;
-    unsigned char* additionalMetadataPointer = nullptr;
+    void* dataPointer = nullptr;
+    void* additionalMetadataPointer = nullptr;
     
     // Convert metadata to serialized string if provided
     std::string serializedMetadata;
@@ -239,8 +239,8 @@ int DataBuffer::SetOverwriteData(bool overwrite) {
  * The caller must release the slot using ReleaseDataSlot after writing is complete.
  */
 int DataBuffer::AcquireWriteSlot(size_t dataSize, size_t additionalMetadataSize,
-                                unsigned char** dataPointer, 
-                                unsigned char** additionalMetadataPointer,
+                                void** dataPointer, 
+                                void** additionalMetadataPointer,
                                 const std::string& serializedInitialMetadata)
 {
     if (buffer_ == nullptr) {
@@ -313,7 +313,7 @@ int DataBuffer::AcquireWriteSlot(size_t dataSize, size_t additionalMetadataSize,
  * @param buffer The buffer to be released.
  * @return Error code (0 on success).
  */
-int DataBuffer::FinalizeWriteSlot(unsigned char* dataPointer, size_t actualMetadataBytes) {
+int DataBuffer::FinalizeWriteSlot(const void* dataPointer, size_t actualMetadataBytes) {
     if (dataPointer == nullptr)
         return DEVICE_ERR;
 
@@ -345,7 +345,7 @@ int DataBuffer::FinalizeWriteSlot(unsigned char* dataPointer, size_t actualMetad
  * This implementation pushes only the start of the released slot onto the FILO
  * (releasedSlots_) and removes the slot from the active slot map and activeSlots_.
  */
-int DataBuffer::ReleaseDataReadPointer(const unsigned char* dataPointer) {
+int DataBuffer::ReleaseDataReadPointer(const void* dataPointer) {
     if (dataPointer == nullptr)
         return DEVICE_ERR;
 
@@ -357,7 +357,7 @@ int DataBuffer::ReleaseDataReadPointer(const unsigned char* dataPointer) {
         if (!slot)
             return DEVICE_ERR;
     }
-    const size_t offset = dataPointer - buffer_;
+    const size_t offset = static_cast<const unsigned char*>(dataPointer) - buffer_;
 
     // Release the read access outside the global lock
     slot->ReleaseReadAccess();
@@ -374,7 +374,7 @@ int DataBuffer::ReleaseDataReadPointer(const unsigned char* dataPointer) {
     return DEVICE_OK;
 }
 
-const unsigned char* DataBuffer::PopNextDataReadPointer(Metadata &md, size_t *dataSize, bool waitForData)
+const void* DataBuffer::PopNextDataReadPointer(Metadata &md, bool waitForData)
 {
     BufferSlot* slot = nullptr;
     size_t slotStart = 0;
@@ -396,8 +396,7 @@ const unsigned char* DataBuffer::PopNextDataReadPointer(Metadata &md, size_t *da
     // Now acquire read access outside the global lock
     slot->AcquireReadAccess();
     
-    const unsigned char* dataPointer = buffer_ + slotStart;
-    *dataSize = slot->GetDataSize();
+    const unsigned char* dataPointer = static_cast<const unsigned char*>(buffer_) + slotStart;
 
     const unsigned char* metadataPtr = dataPointer + slot->GetDataSize();
     this->ExtractMetadata(dataPointer, slot, md);
@@ -405,8 +404,7 @@ const unsigned char* DataBuffer::PopNextDataReadPointer(Metadata &md, size_t *da
     return dataPointer;
 }
 
-int DataBuffer::PeekNextDataReadPointer(const unsigned char** dataPointer, size_t* dataSize,
-                                      Metadata &md) {
+int DataBuffer::PeekNextDataReadPointer(const void** dataPointer, Metadata &md) {
     // Immediately check if there is an unread slot without waiting.
     BufferSlot* currentSlot = nullptr;
     {
@@ -422,16 +420,15 @@ int DataBuffer::PeekNextDataReadPointer(const unsigned char** dataPointer, size_
     currentSlot->AcquireReadAccess();
 
     std::unique_lock<std::mutex> lock(slotManagementMutex_);
-    *dataPointer = buffer_ + currentSlot->GetStart();
-    *dataSize = currentSlot->GetDataSize();
+    *dataPointer = static_cast<const unsigned char*>(buffer_) + currentSlot->GetStart();
     
-    const unsigned char* metadataPtr = *dataPointer + currentSlot->GetDataSize();
+    const unsigned char* metadataPtr = static_cast<const unsigned char*>(*dataPointer) + currentSlot->GetDataSize();
     this->ExtractMetadata(metadataPtr, currentSlot, md);
     
     return DEVICE_OK;
 }
 
-const unsigned char* DataBuffer::PeekDataReadPointerAtIndex(size_t n, size_t* dataSize, Metadata &md) {
+const void* DataBuffer::PeekDataReadPointerAtIndex(size_t n, Metadata &md) {
     BufferSlot* currentSlot = nullptr;
     {
         // Lock the global slot management mutex to safely access the active slots.
@@ -448,8 +445,7 @@ const unsigned char* DataBuffer::PeekDataReadPointerAtIndex(size_t n, size_t* da
     
     currentSlot->AcquireReadAccess();
     
-    const unsigned char* dataPointer = buffer_ + currentSlot->GetStart();
-    *dataSize = currentSlot->GetDataSize();
+    const unsigned char* dataPointer = static_cast<const unsigned char*>(buffer_) + currentSlot->GetStart();
     
     const unsigned char* metadataPtr = dataPointer + currentSlot->GetDataSize();
     this->ExtractMetadata(dataPointer, currentSlot, md);
@@ -540,14 +536,14 @@ long DataBuffer::GetActiveSlotCount() const {
     return static_cast<long>(activeSlotsVector_.size());
 }
 
-int DataBuffer::ExtractMetadata(const unsigned char* dataPointer, BufferSlot* slot, Metadata &md) {
+int DataBuffer::ExtractMetadata(const void* dataPointer, BufferSlot* slot, Metadata &md) {
     // No lock is required here because we assume the slot is already locked
 
     if (!dataPointer || !slot)
         return DEVICE_ERR; // Invalid pointer
 
     // Calculate metadata pointers and sizes from the slot
-    const unsigned char* initialMetadataPtr = dataPointer + slot->GetDataSize();
+    const unsigned char* initialMetadataPtr = static_cast<const unsigned char*>(dataPointer) + slot->GetDataSize();
     size_t initialMetadataSize = slot->GetInitialMetadataSize();
     const unsigned char* additionalMetadataPtr = initialMetadataPtr + initialMetadataSize;
     size_t additionalMetadataSize = slot->GetAdditionalMetadataSize();
@@ -572,11 +568,11 @@ int DataBuffer::ExtractMetadata(const unsigned char* dataPointer, BufferSlot* sl
 }
 
 // NOTE: Caller must hold slotManagementMutex_ for thread safety.
-BufferSlot* DataBuffer::FindSlotForPointer(const unsigned char* dataPointer) {
+BufferSlot* DataBuffer::FindSlotForPointer(const void* dataPointer) {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     if (buffer_ == nullptr)
         return nullptr;
-    std::size_t offset = dataPointer - buffer_;
+    std::size_t offset = static_cast<const unsigned char*>(dataPointer) - buffer_;
     auto it = activeSlotsByStart_.find(offset);
     return (it != activeSlotsByStart_.end()) ? it->second : nullptr;
 }
@@ -678,7 +674,7 @@ void DataBuffer::UpdateFreeRegions(size_t candidateStart, size_t totalSlotSize) 
 
 int DataBuffer::CreateSlot(size_t candidateStart, size_t totalSlotSize, 
                           size_t dataSize, size_t additionalMetadataSize,
-                          unsigned char** dataPointer, unsigned char** additionalMetadataPointer,
+                          void** dataPointer, void** additionalMetadataPointer,
                           bool fromFreeRegion, const std::string& serializedInitialMetadata)
 {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
@@ -690,14 +686,15 @@ int DataBuffer::CreateSlot(size_t candidateStart, size_t totalSlotSize,
     newSlot->AcquireWriteAccess();
 
     // Initialize the data pointer before using it.
-    *dataPointer = buffer_ + newSlot->GetStart();
+    *dataPointer = static_cast<unsigned char*>(buffer_) + newSlot->GetStart();
 
     if (!serializedInitialMetadata.empty()) {
-        std::memcpy(*dataPointer + dataSize, serializedInitialMetadata.data(), serializedInitialMetadata.size());
+        std::memcpy(static_cast<unsigned char*>(*dataPointer) + dataSize, serializedInitialMetadata.data(), 
+            serializedInitialMetadata.size());
         newSlot->SetInitialMetadataSize(serializedInitialMetadata.size());
     }
 
-    *additionalMetadataPointer = *dataPointer + newSlot->GetDataSize() + newSlot->GetInitialMetadataSize();
+    *additionalMetadataPointer = static_cast<unsigned char*>(*dataPointer) + newSlot->GetDataSize() + newSlot->GetInitialMetadataSize();
 
     if (fromFreeRegion) {
         UpdateFreeRegions(candidateStart, totalSlotSize);
@@ -733,7 +730,7 @@ void DataBuffer::ReturnSlotToPool(BufferSlot* slot) {
     unusedSlots_.push_back(slot);
 }
 
-int DataBuffer::ExtractCorrespondingMetadata(const unsigned char* dataPointer, Metadata &md) {
+int DataBuffer::ExtractCorrespondingMetadata(const void* dataPointer, Metadata &md) {
     BufferSlot* slot = nullptr;
     {
         std::lock_guard<std::mutex> lock(slotManagementMutex_);
@@ -743,9 +740,9 @@ int DataBuffer::ExtractCorrespondingMetadata(const unsigned char* dataPointer, M
         }
     }
     // Get metadata pointer and size while under lock
-    const unsigned char* initialMetadataPtr = dataPointer + slot->GetDataSize();
+    const void* initialMetadataPtr = static_cast<const unsigned char*>(dataPointer) + slot->GetDataSize();
     size_t initialMetadataSize = slot->GetInitialMetadataSize();
-    const unsigned char* additionalMetadataPtr = initialMetadataPtr + initialMetadataSize;
+    const void* additionalMetadataPtr = static_cast<const unsigned char*>(initialMetadataPtr) + initialMetadataSize;
     size_t additionalMetadataSize = slot->GetAdditionalMetadataSize();
     
     // Extract metadata (internal method doesn't need lock)

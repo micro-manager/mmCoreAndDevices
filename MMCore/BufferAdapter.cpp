@@ -78,24 +78,23 @@ BufferAdapter::~BufferAdapter()
    }
 }
 
-const unsigned char* BufferAdapter::GetLastImage() const
+const void* BufferAdapter::GetLastImage() const
 {
    if (useV2_) {
       Metadata dummyMetadata;
-      return v2Buffer_->PeekDataReadPointerAtIndex(0, nullptr, dummyMetadata);
       // NOTE: ensure calling code releases the slot after use
+      return v2Buffer_->PeekDataReadPointerAtIndex(0, dummyMetadata);
    } else {
       return circBuffer_->GetTopImage();
    }
-
 }
 
-const unsigned char* BufferAdapter::PopNextImage()
+const void* BufferAdapter::PopNextImage()
 {
    if (useV2_) {
       Metadata dummyMetadata;
-      return v2Buffer_->PopNextDataReadPointer(dummyMetadata, nullptr, false);
       // NOTE: ensure calling code releases the slot after use
+      return v2Buffer_->PopNextDataReadPointer(dummyMetadata, false);
    } else {
       return circBuffer_->PopNextImage();
    }
@@ -268,13 +267,12 @@ bool BufferAdapter::InsertMultiChannel(const unsigned char* buf, unsigned numCha
     }
 }
 
-void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError)
+const void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError)
 {
    if (useV2_) {
       // In v2, we now use a channel-aware pointer arithmetic at the adapter level.
-      const unsigned char* basePtr = nullptr;
-      size_t imageDataSize = 0;
-      int ret = v2Buffer_->PeekNextDataReadPointer(&basePtr, &imageDataSize, md);
+      const void* basePtr = nullptr;
+      int ret = v2Buffer_->PeekNextDataReadPointer(&basePtr, md);
       if (ret != DEVICE_OK || basePtr == nullptr)
          throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
 
@@ -285,47 +283,40 @@ void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw 
       size_t singleChannelSize = width * height * pixDepth;
 
       // Advance the base pointer by the amount corresponding to the selected channel.
-      const unsigned char* channelPtr = basePtr + (channel * singleChannelSize);
-      return const_cast<unsigned char*>(channelPtr);
       // NOTE: make sure calling code releases the slot after use.
+      return static_cast<const unsigned char*>(basePtr) + (channel * singleChannelSize);
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetTopImageBuffer(channel);
       if (pBuf != nullptr) {
          md = pBuf->GetMetadata();
-         return const_cast<unsigned char*>(pBuf->GetPixels());
+         return pBuf->GetPixels();
       } else {
          throw CMMError("Circular buffer is empty.", MMERR_CircularBufferEmpty);
       }
    }
 }
 
-void* BufferAdapter::GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError)
+const void* BufferAdapter::GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError)
 {
    if (useV2_) {
-      size_t dataSize = 0;
-      const unsigned char* ptr = v2Buffer_->PeekDataReadPointerAtIndex(n, &dataSize, md);
-      if (ptr == nullptr)
-         throw CMMError("V2 buffer does not contain enough data.", MMERR_CircularBufferEmpty);
-      // Return a non-const pointer (caller must be careful with the const_cast)
-      return const_cast<unsigned char*>(ptr);
-      // NOTE: make sure calling code releases the slot after use
+      // NOTE: make sure calling code releases the slot after use.
+      return v2Buffer_->PeekDataReadPointerAtIndex(n, md);
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetNthFromTopImageBuffer(n);
       if (pBuf != nullptr) {
          md = pBuf->GetMetadata();
-         return const_cast<unsigned char*>(pBuf->GetPixels());
+         return pBuf->GetPixels();
       } else {
          throw CMMError("Circular buffer is empty.", MMERR_CircularBufferEmpty);
       }
    }
 }
 
-void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError)
+const void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError)
 {
    if (useV2_) {
       // For v2, we now make the buffer channel aware at the adapter level.
-      size_t dataSize = 0;
-      const unsigned char* basePtr = v2Buffer_->PopNextDataReadPointer(md, &dataSize, false);
+      const void* basePtr = v2Buffer_->PopNextDataReadPointer(md, false);
       if (basePtr == nullptr)
          throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
 
@@ -336,15 +327,12 @@ void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMEr
       size_t singleChannelSize = width * height * pixDepth;
 
       // Offset the base pointer to get the requested channel's data.
-      // 'channel' is assumed to be passed as a parameter.
-      const unsigned char* channelPtr = basePtr + (channel * singleChannelSize);
-      return const_cast<unsigned char*>(channelPtr);
-      // NOTE: ensure that calling code releases the read pointer after use.
+      return static_cast<const unsigned char*>(basePtr) + (channel * singleChannelSize);
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetNextImageBuffer(channel);
       if (pBuf != nullptr) {
          md = pBuf->GetMetadata();
-         return const_cast<unsigned char*>(pBuf->GetPixels());
+         return pBuf->GetPixels();
       } else {
          throw CMMError("Circular buffer is empty.", MMERR_CircularBufferEmpty);
       }
@@ -391,13 +379,13 @@ bool BufferAdapter::IsUsingV2Buffer() const {
    return useV2_;
 }
 
-void BufferAdapter::ReleaseReadAccess(const unsigned char* ptr) {
+void BufferAdapter::ReleaseReadAccess(const void* ptr) {
    if (useV2_ && ptr) {
       v2Buffer_->ReleaseDataReadPointer(ptr);
    }
 }
 
-unsigned BufferAdapter::GetImageWidth(const unsigned char* ptr) const {
+unsigned BufferAdapter::GetImageWidth(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageWidth(ptr) only supported with V2 buffer");
    Metadata md;
@@ -407,7 +395,7 @@ unsigned BufferAdapter::GetImageWidth(const unsigned char* ptr) const {
    return static_cast<unsigned>(atoi(sVal.c_str()));
 }
 
-unsigned BufferAdapter::GetImageHeight(const unsigned char* ptr) const {
+unsigned BufferAdapter::GetImageHeight(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageHeight(ptr) only supported with V2 buffer");
    Metadata md;
@@ -417,7 +405,7 @@ unsigned BufferAdapter::GetImageHeight(const unsigned char* ptr) const {
    return static_cast<unsigned>(atoi(sVal.c_str()));
 }
 
-unsigned BufferAdapter::GetBytesPerPixel(const unsigned char* ptr) const {
+unsigned BufferAdapter::GetBytesPerPixel(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetBytesPerPixel(ptr) only supported with V2 buffer");
    Metadata md;
@@ -436,7 +424,7 @@ unsigned BufferAdapter::GetBytesPerPixel(const unsigned char* ptr) const {
    throw CMMError("Unknown pixel type for bytes per pixel");
 }
 
-unsigned BufferAdapter::GetImageBitDepth(const unsigned char* ptr) const {
+unsigned BufferAdapter::GetImageBitDepth(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageBitDepth(ptr) only supported with V2 buffer");
    Metadata md;
@@ -455,7 +443,7 @@ unsigned BufferAdapter::GetImageBitDepth(const unsigned char* ptr) const {
    throw CMMError("Unknown pixel type for image bit depth");
 }
 
-unsigned BufferAdapter::GetNumberOfComponents(const unsigned char* ptr) const {
+unsigned BufferAdapter::GetNumberOfComponents(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetNumberOfComponents(ptr) only supported with V2 buffer");
    Metadata md;
@@ -472,7 +460,7 @@ unsigned BufferAdapter::GetNumberOfComponents(const unsigned char* ptr) const {
    throw CMMError("Unknown pixel type for number of components");
 }
 
-long BufferAdapter::GetImageBufferSize(const unsigned char* ptr) const {
+long BufferAdapter::GetImageBufferSize(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageBufferSize(ptr) only supported with V2 buffer");
    Metadata md;
@@ -496,7 +484,7 @@ bool BufferAdapter::SetOverwriteData(bool overwrite) {
 
 bool BufferAdapter::AcquireWriteSlot(size_t dataSize, unsigned width, unsigned height, 
     unsigned byteDepth, unsigned nComponents, size_t additionalMetadataSize,
-    unsigned char** dataPointer, unsigned char** additionalMetadataPointer,
+    void** dataPointer, void** additionalMetadataPointer,
     Metadata* pInitialMetadata) {
    if (!useV2_) {
       // Not supported for circular buffer
@@ -516,7 +504,7 @@ bool BufferAdapter::AcquireWriteSlot(size_t dataSize, unsigned width, unsigned h
    return ret == DEVICE_OK;
 }
 
-bool BufferAdapter::FinalizeWriteSlot(unsigned char* imageDataPointer, size_t actualMetadataBytes)
+bool BufferAdapter::FinalizeWriteSlot(void* imageDataPointer, size_t actualMetadataBytes)
 {
     if (!useV2_) {
         // Not supported for circular buffer

@@ -227,7 +227,7 @@ public:
      * @param pMd Pointer to the metadata (can be null if not applicable).
      * @return DEVICE_OK on success.
      */
-    int InsertData(const unsigned char* data, size_t dataSize, const Metadata* pMd);
+    int InsertData(const void* data, size_t dataSize, const Metadata* pMd);
 
     /**
      * Sets whether the buffer should overwrite old data when full.
@@ -248,8 +248,8 @@ public:
      * @return DEVICE_OK on success.
      */
     int AcquireWriteSlot(size_t dataSize, size_t additionalMetadataSize,
-                         unsigned char** dataPointer, 
-                         unsigned char** additionalMetadataPointer,
+                         void** dataPointer, 
+                         void** additionalMetadataPointer,
                          const std::string& serializedInitialMetadata);
 
     /**
@@ -260,50 +260,47 @@ public:
      * @param actualMetadataBytes The actual number of metadata bytes written.
      * @return DEVICE_OK on success.
      */
-    int FinalizeWriteSlot(unsigned char* imageDataPointer, size_t actualMetadataBytes);
+    int FinalizeWriteSlot(const void* dataPointer, size_t actualMetadataBytes);
 
     /**
      * Releases read access for the image data after reading.
      * @param imageDataPointer Pointer previously obtained from reading routines.
      * @return DEVICE_OK on success.
      */
-    int ReleaseDataReadPointer(const unsigned char* imageDataPointer);
+    int ReleaseDataReadPointer(const void* dataPointer);
 
     /**
      * Retrieves and consumes the next available data entry for reading,
      * populating the provided Metadata object.
      * @param md Metadata object to populate.
-     * @param imageDataSize On success, returns the image data size in bytes.
      * @param waitForData If true, blocks until data is available.
      * @return Pointer to the image data region, or nullptr if none available.
      */
-    const unsigned char* PopNextDataReadPointer(Metadata &md, size_t *imageDataSize, bool waitForData);
+    const void* PopNextDataReadPointer(Metadata &md, bool waitForData);
 
     /**
      * Peeks at the next unread data entry without consuming it.
-     * @param imageDataPointer On success, receives a pointer to the image data region.
-     * @param imageDataSize On success, returns the image data size in bytes.
+     * @param dataPointer On success, receives a pointer to the (usually image) data region.
      * @param md Metadata object populated from the stored metadata.
      * @return DEVICE_OK on success.
      */
-    int PeekNextDataReadPointer(const unsigned char** imageDataPointer, size_t* imageDataSize, Metadata &md);
+    int PeekNextDataReadPointer(const void** dataPointer, Metadata &md);
 
     /**
      * Peeks at the nth unread data entry without consuming it.
      * (n = 0 is equivalent to PeekNextDataReadPointer).
      * @param n Index of the data entry to peek at (0 for next available).
-     * @param imageDataSize On success, returns the image data size in bytes.
      * @param md Metadata object populated from the stored metadata.
-     * @return Pointer to the start of the image data region.
+     * @return Pointer to the start of the data region.
      */
-    const unsigned char* PeekDataReadPointerAtIndex(size_t n, size_t* imageDataSize, Metadata &md);
+    const void* PeekDataReadPointerAtIndex(size_t n, Metadata &md);
 
     /**
      * Releases read access that was acquired by a peek.
-     * @param imageDataPointer Pointer previously obtained from a peek.
+     * @param dataPointer Pointer previously obtained from a peek.
      * @return DEVICE_OK on success.
      */
-    int ReleasePeekDataReadPointer(const unsigned char** imageDataPointer);
+    int ReleasePeekDataReadPointer(const void** dataPointer);
 
     /**
      * Returns the total buffer memory size (in MB).
@@ -353,24 +350,24 @@ public:
      * Extracts metadata for a given image data pointer.
      * Thread-safe method that acquires necessary locks to lookup metadata location.
      *
-     * @param dataPtr Pointer to the image data.
+     * @param dataPtr Pointer to the (usuallyimage data.
      * @param md Metadata object to populate.
      * @return DEVICE_OK on success, or an error code if extraction fails.
      */
-    int ExtractCorrespondingMetadata(const unsigned char* dataPtr, Metadata &md);
+    int ExtractCorrespondingMetadata(const void* dataPtr, Metadata &md);
 
 private:
     /**
      * Internal helper function that finds the slot for a given pointer.
      * Returns non-const pointer since slots need to be modified for locking.
      *
-     * @param imageDataPtr Pointer to the image data.
+     * @param dataPtr Pointer to the data.
      * @return Pointer to the corresponding BufferSlot, or nullptr if not found.
      */
-    BufferSlot* FindSlotForPointer(const unsigned char* imageDataPtr);
+    BufferSlot* FindSlotForPointer(const void* dataPtr);
 
     // Memory managed by the DataBuffer.
-    unsigned char* buffer_;
+    void* buffer_;
     size_t bufferSize_;
 
     // Whether to overwrite old data when full.
@@ -429,8 +426,8 @@ private:
      */
     int CreateSlot(size_t candidateStart, size_t totalSlotSize, 
                    size_t dataSize, size_t additionalMetadataSize,
-                   unsigned char** dataPointer, 
-                   unsigned char** subsequentMetadataPointer,
+                   void** dataPointer, 
+                   void** subsequentMetadataPointer,
                    bool fromFreeRegion, 
                    const std::string& serializedInitialMetadata);
 
@@ -442,7 +439,7 @@ private:
                                  size_t dataSize, size_t metadataSize);
     void ReturnSlotToPool(BufferSlot* slot);
 
-    int ExtractMetadata(const unsigned char* dataPointer, 
+    int ExtractMetadata(const void* dataPointer, 
                        BufferSlot* slot,
                        Metadata &md);
 
