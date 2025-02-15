@@ -180,8 +180,9 @@ public:
     * Release a pointer obtained from the buffer.
     * This is required when using the V2 buffer implementation.
     * @param ptr The pointer to release.
+    * @return true on success, false on error.
     */
-   void ReleaseReadAccess(const void* ptr);
+   bool ReleaseReadAccess(const void* ptr);
 
    // Methods for the v2 buffer where width and heigh must be gotton on a per-image basis
    unsigned GetImageWidth(const void* ptr) const;

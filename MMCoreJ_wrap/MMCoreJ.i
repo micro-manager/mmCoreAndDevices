@@ -427,7 +427,7 @@
       JCALL4(SetByteArrayRegion, jenv, data, 0, lSize, (jbyte*)result);
 
       // Release the read access (required for V2 buffer, Core will figure out if it's V2 or not)
-      (arg1)->ReleaseReadAccess((void*)result);
+      (arg1)->releaseReadAccess((void*)result);
 
 
       $result = data;
@@ -449,7 +449,7 @@
       JCALL4(SetShortArrayRegion, jenv, data, 0, lSize, (jshort*)result);
 
       // Release the read access
-      (arg1)->ReleaseReadAccess((void*)result);
+      (arg1)->releaseReadAccess((void*)result);
 
 
       $result = data;
@@ -475,7 +475,7 @@
          JCALL4(SetFloatArrayRegion, jenv, data, 0, lSize, (jfloat*)result);
 
          // Release the read access
-         (arg1)->ReleaseReadAccess((void*)result);
+         (arg1)->releaseReadAccess((void*)result);
 
 
          $result = data;
@@ -498,7 +498,7 @@
          JCALL4(SetByteArrayRegion, jenv, data, 0, lSize * 4, (jbyte*)result);
 
          // Release the read access
-         (arg1)->ReleaseReadAccess((void*)result);
+         (arg1)->releaseReadAccess((void*)result);
 
 
          $result = data;
@@ -521,7 +521,7 @@
       JCALL4(SetShortArrayRegion, jenv, data, 0, lSize * 4, (jshort*)result);
 
       // Release the read access
-      (arg1)->ReleaseReadAccess((void*)result);
+      (arg1)->releaseReadAccess((void*)result);
 
       $result = data;
    }
@@ -539,15 +539,9 @@
 %typemap(jtype) DataPtr "long"
 %typemap(jstype) DataPtr "long"
 %typemap(javain) DataPtr "$javainput"
+%typemap(javaout) DataPtr { return $jnicall; }
+%typemap(out) DataPtr { $result = (jlong)$1; }
 %typemap(in) DataPtr {
-    $1 = (DataPtr)$input;
-}
-
-%typemap(jni) const DataPtr "jlong"
-%typemap(jtype) const DataPtr "long"
-%typemap(jstype) const DataPtr "long"
-%typemap(javain) const DataPtr "$javainput"
-%typemap(in) const DataPtr {
     $1 = (DataPtr)$input;
 }
 
@@ -655,19 +649,21 @@
    }
 
    private String getROITag() throws java.lang.Exception {
+      return getROITag(getCameraDevice());
+   }
+
+   private String getROITag(String cameraLabel) throws java.lang.Exception {
       String roi = "";
       int [] x = new int[1];
       int [] y = new int[1];
       int [] xSize = new int[1];
       int [] ySize = new int[1];
-      getROI(x, y, xSize, ySize);
+      getROI(cameraLabel, x, y, xSize, ySize);
       roi += x[0] + "-" + y[0] + "-" + xSize[0] + "-" + ySize[0];
       return roi;
    }
 
-   private String getPixelType() {
-      int depth = (int) getBytesPerPixel();
-      int numComponents = (int) getNumberOfComponents();
+   private String getPixelType(int depth, int numComponents) throws java.lang.Exception {
       switch (depth) {
          case 1:
             return "GRAY8";
@@ -704,8 +700,8 @@
 
    }
 
-   private TaggedImage createTaggedImage(Object pixels, Metadata md, int cameraChannelIndex) throws java.lang.Exception {
-      TaggedImage image = createTaggedImage(pixels, md);
+   private TaggedImage createTaggedImage(Object pixelsOrPtr, Metadata md, int cameraChannelIndex, boolean fromSnapImage) throws java.lang.Exception {
+      TaggedImage image = createTaggedImage(pixelsOrPtr, md, fromSnapImage);
       JSONObject tags = image.tags;
       
       if (!tags.has("CameraChannelIndex")) {
@@ -722,7 +718,7 @@
       return image;
    }
 
-   private TaggedImage createTaggedImage(Object pixels, Metadata md) throws java.lang.Exception {
+   private TaggedImage createTaggedImage(Object pixelsOrPtr, Metadata md, boolean fromSnapImage) throws java.lang.Exception {
       JSONObject tags = metadataToMap(md);
       PropertySetting setting;
       if (includeSystemStateCache_) {
@@ -734,13 +730,35 @@
              tags.put(key, value);
          }
       }
-      tags.put("BitDepth", getImageBitDepth());
+
+      // The Camera tag should have been added in CoreCallback::InsertImage
+      // We need to check it when getting bitDepth and ROI, because the v2 buffer
+      // supports multiple cameras with different settings inserting images at once
+      String cameraLabel = fromSnapImage ? getCameraDevice() : tags.getString("Camera");
+      tags.put("BitDepth", getImageBitDepth(cameraLabel));
+      tags.put("ROI", getROITag(cameraLabel));
+
+      // TODO: unclear if pixelSize and Affine are can be accurate if images coming 
+      // from different cameras when using the v2 buffer
       tags.put("PixelSizeUm", getPixelSizeUm(true));
       tags.put("PixelSizeAffine", getPixelSizeAffineAsString());
-      tags.put("ROI", getROITag());
-      tags.put("Width", getImageWidth());
-      tags.put("Height", getImageHeight());
-      tags.put("PixelType", getPixelType());
+      if (!fromSnapImage && pixelsOrPtr instanceof Long) {
+         long ptr = (Long) pixelsOrPtr;
+         int depth = (int) getBytesPerPixel(ptr);
+         int numComponents = (int) getNumberOfComponents(ptr);
+         tags.put("Width", getImageWidth(ptr));
+         tags.put("Height", getImageHeight(ptr));
+         tags.put("PixelType", getPixelType(depth, numComponents));
+      } else {
+         // using snap or the not the v2 buffer
+         int depth = (int) getBytesPerPixel();
+         int numComponents = (int) getNumberOfComponents();
+         tags.put("Width", getImageWidth());
+         tags.put("Height", getImageHeight());
+         tags.put("PixelType", getPixelType(depth, numComponents));
+      }
+
+      // This seems like it doesn't belong here, but unclear what it would break if removed
       tags.put("Frame", 0);
       tags.put("FrameIndex", 0);
       tags.put("Position", "Default");
@@ -756,26 +774,43 @@
 
 
       try {
-         tags.put("Binning", getProperty(getCameraDevice(), "Binning"));
-      } catch (Exception ex) {}
+         // "Camera" gets added in CoreCallback::InsertImage
+         tags.put("Binning", getProperty(cameraLabel, "Binning"));
+      } catch (java.lang.Exception ex) {}
       
-      return new TaggedImage(pixels, tags);	
+      // Copy the pixels out using the pointer (this will release the pointer)
+      if (pixelsOrPtr instanceof Long) {
+         // This is a pointer to an image in the v2 buffer
+         return new TaggedImagePointer((Long) pixelsOrPtr, tags, this);
+      } else {
+         return new TaggedImage(pixelsOrPtr, tags);  
+      }
    }
 
+   //////// Snap Image versions
+   // This is for getting a snapped image. Snap image does not interact with v2 buffer.
+   // currently, so trying to release its pointer is undefined and not needed
    public TaggedImage getTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getImage(cameraChannelIndex);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      return createTaggedImage(pixels, md, cameraChannelIndex, true);
    }
 
+   // See comment for above function
    public TaggedImage getTaggedImage() throws java.lang.Exception {
       return getTaggedImage(0);
    }
 
+   /////// Data Buffer versions
    public TaggedImage getLastTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
-      Object pixels = getLastImageMD(cameraChannelIndex, 0, md);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      Object pixelsOrPtr;
+      if (!this.usesV2Buffer()) {
+         pixelsOrPtr = getLastImageMD(cameraChannelIndex, 0, md);
+      } else {
+         pixelsOrPtr = getLastImageMDPointer(cameraChannelIndex, 0, md);
+      }
+      return createTaggedImage(pixelsOrPtr, md, cameraChannelIndex, false);
    }
    
    public TaggedImage getLastTaggedImage() throws java.lang.Exception {
@@ -784,14 +819,24 @@
 
    public TaggedImage getNBeforeLastTaggedImage(long n) throws java.lang.Exception {
       Metadata md = new Metadata();
-      Object pixels = getNBeforeLastImageMD(n, md);
-      return createTaggedImage(pixels, md);
+      Object pixelsOrPtr;
+      if (!this.usesV2Buffer()) {
+         pixelsOrPtr = getNBeforeLastImageMD(n, md);
+      } else {
+         pixelsOrPtr = getNBeforeLastImageMDPointer(n, md);
+      }
+      return createTaggedImage(pixelsOrPtr, md, false);
    }
 
    public TaggedImage popNextTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
-      Object pixels = popNextImageMD(cameraChannelIndex, 0, md);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      Object pixelsOrPtr;
+      if (!this.usesV2Buffer()) {
+         pixelsOrPtr = popNextImageMD(cameraChannelIndex, 0, md);
+      } else {
+         pixelsOrPtr = popNextImageMDPointer(cameraChannelIndex, 0, md);
+      }
+      return createTaggedImage(pixelsOrPtr, md, cameraChannelIndex, false);
    }
 
    public TaggedImage popNextTaggedImage() throws java.lang.Exception {

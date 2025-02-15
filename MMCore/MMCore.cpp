@@ -3182,6 +3182,64 @@ void* CMMCore::popNextImageMD(Metadata& md) throw (CMMError)
    return popNextImageMD(0, 0, md);
 }
 
+DataPtr CMMCore::getLastImagePointer() throw (CMMError) { 
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    return getLastImage(); 
+}
+
+DataPtr CMMCore::popNextImagePointer() throw (CMMError) { 
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    return popNextImage(); 
+}
+
+DataPtr CMMCore::getLastImageMDPointer(unsigned channel, unsigned slice, Metadata& md) const throw (CMMError) { 
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    return getLastImageMD(channel, slice, md); 
+}
+
+DataPtr CMMCore::popNextImageMDPointer(unsigned channel, unsigned slice, Metadata& md) throw (CMMError) { 
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    return popNextImageMD(channel, slice, md); 
+}
+
+DataPtr CMMCore::getLastImageMDPointer(Metadata& md) const throw (CMMError) { 
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    return getLastImageMD(md); 
+}
+
+DataPtr CMMCore::getNBeforeLastImageMDPointer(unsigned long n, Metadata& md) const throw (CMMError) { 
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    return getNBeforeLastImageMD(n, md); 
+}
+
+DataPtr CMMCore::popNextImageMDPointer(Metadata& md) throw (CMMError) { 
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    return popNextImageMD(md); 
+}
+
+void* CMMCore::copyDataAtPointer(DataPtr ptr) throw (CMMError) {
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    // This just checks the buffer and returns the pointer. Since the return type is void*,
+    // SWIG will automatically copy the pointer into a Java array.
+    return (void*) ptr;
+}
+
 /**
  * Removes all images from the circular buffer.
  *
@@ -4290,8 +4348,10 @@ long CMMCore::getImageBufferSize(DataPtr ptr) {
    return useV2Buffer_ ? bufferAdapter_->GetImageBufferSize(ptr) : getImageBufferSize();
 }
 
-void CMMCore::ReleaseReadAccess(DataPtr ptr) {
-   if (useV2Buffer_) bufferAdapter_->ReleaseReadAccess(ptr);
+void CMMCore::releaseReadAccess(DataPtr ptr) {
+   if (useV2Buffer_) {
+      bufferAdapter_->ReleaseReadAccess(ptr);
+   }
 }
 
 /**

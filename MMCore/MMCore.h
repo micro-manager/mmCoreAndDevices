@@ -423,6 +423,18 @@ public:
       const throw (CMMError);
    void* popNextImageMD(Metadata& md) throw (CMMError);
 
+   // Same functionality as above but, enables alternative wrappers in SWIG for
+   // pointer-based access to the image data.
+   DataPtr getLastImagePointer() throw (CMMError);
+   DataPtr popNextImagePointer() throw (CMMError);
+   DataPtr getLastImageMDPointer(unsigned channel, unsigned slice, Metadata& md) const throw (CMMError);
+   DataPtr popNextImageMDPointer(unsigned channel, unsigned slice, Metadata& md) throw (CMMError);
+   DataPtr getLastImageMDPointer(Metadata& md) const throw (CMMError);
+   DataPtr getNBeforeLastImageMDPointer(unsigned long n, Metadata& md) const throw (CMMError);
+   DataPtr popNextImageMDPointer(Metadata& md) throw (CMMError);
+
+   void* copyDataAtPointer(DataPtr ptr) throw (CMMError);
+
    long getRemainingImageCount();
    long getBufferTotalCapacity();
    long getBufferFreeCapacity();
@@ -444,7 +456,7 @@ public:
    unsigned getBytesPerPixel(DataPtr ptr) throw (CMMError);
    unsigned getNumberOfComponents(DataPtr ptr) throw (CMMError);
    long getImageBufferSize(DataPtr ptr) throw (CMMError);
-   void ReleaseReadAccess(DataPtr ptr) throw (CMMError);
+   void releaseReadAccess(DataPtr ptr) throw (CMMError);
 
    bool isExposureSequenceable(const char* cameraLabel) throw (CMMError);
    void startExposureSequence(const char* cameraLabel) throw (CMMError);

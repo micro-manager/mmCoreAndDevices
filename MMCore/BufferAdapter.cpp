@@ -379,10 +379,11 @@ bool BufferAdapter::IsUsingV2Buffer() const {
    return useV2_;
 }
 
-void BufferAdapter::ReleaseReadAccess(const void* ptr) {
+bool BufferAdapter::ReleaseReadAccess(const void* ptr) {
    if (useV2_ && ptr) {
-      v2Buffer_->ReleaseDataReadPointer(ptr);
+      return v2Buffer_->ReleaseDataReadPointer(ptr);
    }
+   return true;
 }
 
 unsigned BufferAdapter::GetImageWidth(const void* ptr) const {
