@@ -552,57 +552,6 @@
 }
 
 
-
-// Java typemap
-// change default SWIG mapping of void* return values
-// to return CObject containing array of pixel values
-//
-// Assumes that class has the following methods defined:
-// unsigned GetImageWidth()
-// unsigned GetImageHeight()
-// unsigned GetImageDepth()
-// unsigned GetNumberOfComponents()
-
-
-%typemap(jni) unsigned int* "jobject"
-%typemap(jtype) unsigned int*      "Object"
-%typemap(jstype) unsigned int*     "Object"
-%typemap(javaout) unsigned int* {
-   return $jnicall;
-}
-%typemap(out) unsigned int*
-{
-   long lSize = (arg1)->getImageWidth() * (arg1)->getImageHeight();
-   unsigned numComponents = (arg1)->getNumberOfComponents();
-   
-   if ((arg1)->getBytesPerPixel() == 1 && numComponents == 4)
-   {
-      // assuming RGB32 format
-      // create a new int[] object in Java
-      jintArray data = JCALL1(NewIntArray, jenv, lSize);
-      if (data == 0)
-      {
-         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
-         if (excep)
-            jenv->ThrowNew(excep, "The system ran out of memory!");
-         $result = 0;
-         return $result;
-      }
-  
-      // copy pixels from the image buffer
-      JCALL4(SetIntArrayRegion, jenv, data, 0, lSize, (jint*)result);
-
-      $result = data;
-   }
-   else
-   {
-      // don't know how to map
-      // TODO: thow exception?
-      $result = 0;
-   }
-}
-
-
 %typemap(jni) imgRGB32 "jintArray"
 %typemap(jtype) imgRGB32      "int[]"
 %typemap(jstype) imgRGB32     "int[]"
