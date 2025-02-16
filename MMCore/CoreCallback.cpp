@@ -31,13 +31,14 @@
 #include "CircularBuffer.h"
 #include "CoreCallback.h"
 #include "DeviceManager.h"
-#include "BufferAdapter.h"
+#include "BufferManager.h"
 
 #include <cassert>
 #include <chrono>
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <mutex>
 
 
 CoreCallback::CoreCallback(CMMCore* c) :
@@ -46,6 +47,9 @@ CoreCallback::CoreCallback(CMMCore* c) :
 {
    assert(core_);
    pValueChangeLock_ = new MMThreadLock();
+
+   // Initialize the start time for time-stamp calculations
+   startTime_ = std::chrono::steady_clock::now();
 }
 
 
@@ -219,26 +223,56 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
       newMD = *pMd;
    }
 
-   std::shared_ptr<CameraInstance> camera =
-      std::static_pointer_cast<CameraInstance>(
-            core_->deviceManager_->GetDevice(caller));
+   std::shared_ptr<DeviceInstance> device = core_->deviceManager_->GetDevice(caller);
 
-   std::string label = camera->GetLabel();
-   newMD.put(MM::g_Keyword_Metadata_CameraLabel, label);
-
-   std::string serializedMD;
-   try
+   if (device->GetType() == MM::CameraDevice)
    {
-      serializedMD = camera->GetTags();
-   }
-   catch (const CMMError&)
-   {
-      return newMD;
-   }
+      std::shared_ptr<CameraInstance> camera = 
+         std::static_pointer_cast<CameraInstance>(device);
+      
+      // Ensure the camera label is present
+      if (!newMD.HasTag(MM::g_Keyword_Metadata_CameraLabel)) {
+         newMD.put(MM::g_Keyword_Metadata_CameraLabel, camera->GetLabel());
+      }
+      
+      // Add image number metadata
+      {
+         std::lock_guard<std::mutex> lock(imageNumbersMutex_);
+         std::string cameraName = newMD.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
+         if (imageNumbers_.find(cameraName) == imageNumbers_.end())
+         {
+            imageNumbers_[cameraName] = 0;
+         }
+         newMD.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageNumbers_[cameraName]));
+         ++imageNumbers_[cameraName];
+      }
 
-   Metadata devMD;
-   devMD.Restore(serializedMD.c_str());
-   newMD.Merge(devMD);
+      // Add elapsed time metadata if not already set
+      if (!newMD.HasTag(MM::g_Keyword_Elapsed_Time_ms))
+      {
+         using namespace std::chrono;
+         auto elapsed = steady_clock::now() - startTime_;
+         newMD.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+                           std::to_string(duration_cast<milliseconds>(elapsed).count()));
+      }
+
+      // Add current system time (as formatted local time)
+      auto now = std::chrono::system_clock::now();
+      newMD.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
+
+      // Merge any additional camera-specific tags
+      try
+      {
+         std::string serializedMD = camera->GetTags();
+         Metadata devMD;
+         devMD.Restore(serializedMD.c_str());
+         newMD.Merge(devMD);
+      }
+      catch (const CMMError&)
+      {
+         // Ignore errors getting tags
+      }
+   }
 
    return newMD;
 }
@@ -264,7 +298,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
          }
       }
-      if (core_->bufferAdapter_->InsertImage(buf, width, height, byteDepth, &md))
+      if (core_->bufferManager_->InsertImage(caller, buf, width, height, byteDepth, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
@@ -296,7 +330,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
          }
       }
-      if (core_->bufferAdapter_->InsertImage(buf, width, height, byteDepth, nComponents, &md))
+      if (core_->bufferManager_->InsertImage(caller, buf, width, height, byteDepth, nComponents, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
@@ -333,7 +367,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf
 // {
 //    if (core_->deviceManager_->GetDevice(caller)->GetType() == MM::CameraDevice)
 //    {
-//       Metadata md = AddCameraMetadata(caller, nullptr);
+//       Metadata md = AddCallerMetadata(caller, nullptr);
 
 //       if (!core_->bufferAdapter_->AcquireWriteSlot(dataSize, width, height, 
 //             byteDepth, nComponents, metadataSize,
@@ -359,9 +393,12 @@ int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf
 
 void CoreCallback::ClearImageBuffer(const MM::Device* /*caller*/)
 {
-   core_->bufferAdapter_->Clear();
+   // This has no effect on v2 buffer, because devices do not have authority to clear the buffer
+   // since higher level code may hold pointers to data in the buffer.
+   core_->bufferManager_->Clear();
 }
 
+// Note: this not required and has not effect on v2 buffer
 bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
       unsigned int w, unsigned int h, unsigned int pixDepth)
 {
@@ -369,7 +406,7 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
    if (slices != 1)
       return false;
 
-   return core_->bufferAdapter_->Initialize(channels, w, h, pixDepth);
+   return core_->bufferManager_->Initialize(channels, w, h, pixDepth);
 }
 
 int CoreCallback::InsertMultiChannel(const MM::Device* caller,
@@ -389,7 +426,7 @@ int CoreCallback::InsertMultiChannel(const MM::Device* caller,
       {
          ip->Process( const_cast<unsigned char*>(buf), width, height, byteDepth);
       }
-      if (core_->bufferAdapter_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, &md))
+      if (core_->bufferManager_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;

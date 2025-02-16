@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          BufferAdapter.cpp
+// FILE:          BufferManager.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     MMCore
 //-----------------------------------------------------------------------------
@@ -23,7 +23,7 @@
 // AUTHOR:        Henry Pinkard,  01/31/2025
 
 
-#include "BufferAdapter.h"
+#include "BufferManager.h"
 #include <mutex>
 
 
@@ -55,7 +55,7 @@ static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_c
 }
 
 
-BufferAdapter::BufferAdapter(bool useV2Buffer, unsigned int memorySizeMB)
+BufferManager::BufferManager(bool useV2Buffer, unsigned int memorySizeMB)
    : useV2_(useV2Buffer), circBuffer_(nullptr), v2Buffer_(nullptr)
 {
    if (useV2_) {
@@ -65,7 +65,7 @@ BufferAdapter::BufferAdapter(bool useV2Buffer, unsigned int memorySizeMB)
    }
 }
 
-BufferAdapter::~BufferAdapter()
+BufferManager::~BufferManager()
 {
    if (useV2_) {
       if (v2Buffer_) {
@@ -78,7 +78,7 @@ BufferAdapter::~BufferAdapter()
    }
 }
 
-const void* BufferAdapter::GetLastImage() const
+const void* BufferManager::GetLastImage() const
 {
    if (useV2_) {
       Metadata dummyMetadata;
@@ -89,7 +89,7 @@ const void* BufferAdapter::GetLastImage() const
    }
 }
 
-const void* BufferAdapter::PopNextImage()
+const void* BufferManager::PopNextImage()
 {
    if (useV2_) {
       Metadata dummyMetadata;
@@ -100,27 +100,18 @@ const void* BufferAdapter::PopNextImage()
    }
 }
 
-bool BufferAdapter::Initialize(unsigned numChannels, unsigned width, unsigned height, unsigned bytesPerPixel)
+bool BufferManager::Initialize(unsigned numChannels, unsigned width, unsigned height, unsigned bytesPerPixel)
 {
    startTime_ = std::chrono::steady_clock::now();  // Initialize start time
    imageNumbers_.clear();
    if (useV2_) {
-      try {
-         // Reinitialize the v2Buffer using its current allocated memory size.
-         int ret = v2Buffer_->ReinitializeBuffer(v2Buffer_->GetMemorySizeMB());
-         if (ret != DEVICE_OK)
-            return false;
-      } catch (const std::exception&) {
-         // Optionally log the exception
-         return false;
-      }
-      return true;
+      // This in not required for v2 buffer because it can interleave multiple data types/image sizes
    } else {
       return circBuffer_->Initialize(numChannels, width, height, bytesPerPixel);
    }
 }
 
-unsigned BufferAdapter::GetMemorySizeMB() const
+unsigned BufferManager::GetMemorySizeMB() const
 {
    if (useV2_) {
       return v2Buffer_->GetMemorySizeMB();
@@ -129,7 +120,7 @@ unsigned BufferAdapter::GetMemorySizeMB() const
    }
 }
 
-long BufferAdapter::GetRemainingImageCount() const
+long BufferManager::GetRemainingImageCount() const
 {
    if (useV2_) {
       return v2Buffer_->GetActiveSlotCount();
@@ -138,10 +129,12 @@ long BufferAdapter::GetRemainingImageCount() const
    }
 }
 
-void BufferAdapter::Clear()
+void BufferManager::Clear()
 {
    if (useV2_) {
-      // v2Buffer_->ReleaseBuffer();
+      // This has no effect on v2 buffer, because devices do not have authority to clear the buffer
+      // since higher level code may hold pointers to data in the buffer.
+      // It seems to be mostly used in live mode, where data is overwritten by default anyway.
    } else {
       circBuffer_->Clear();
    }
@@ -149,7 +142,7 @@ void BufferAdapter::Clear()
    imageNumbers_.clear();
 }
 
-long BufferAdapter::GetSize(long imageSize) const
+long BufferManager::GetSize(long imageSize) const
 {
    if (useV2_) {
       unsigned int mb = v2Buffer_->GetMemorySizeMB();
@@ -162,7 +155,7 @@ long BufferAdapter::GetSize(long imageSize) const
 
 }
 
-long BufferAdapter::GetFreeSize(long imageSize) const
+long BufferManager::GetFreeSize(long imageSize) const
 {
    if (useV2_) {
       unsigned int mb = v2Buffer_->GetFreeMemory();
@@ -172,7 +165,7 @@ long BufferAdapter::GetFreeSize(long imageSize) const
    }
 }
 
-bool BufferAdapter::Overflow() const
+bool BufferManager::Overflow() const
 {
    if (useV2_) {
       return v2Buffer_->Overflow();
@@ -181,96 +174,71 @@ bool BufferAdapter::Overflow() const
    }
 }
 
-void BufferAdapter::ProcessMetadata(Metadata& md, unsigned width, unsigned height, 
-    unsigned byteDepth, unsigned nComponents) {
-    // Track image numbers per camera
-    {
-        std::lock_guard<std::mutex> lock(imageNumbersMutex_);
-        std::string cameraName = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
-        if (imageNumbers_.end() == imageNumbers_.find(cameraName))
-        {
-            imageNumbers_[cameraName] = 0;
-        }
-
-        // insert image number
-        md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageNumbers_[cameraName]));
-        ++imageNumbers_[cameraName];
-    }
-
-      if (!md.HasTag(MM::g_Keyword_Elapsed_Time_ms))
-      {
-         // if time tag was not supplied by the camera insert current timestamp
-         using namespace std::chrono;
-         auto elapsed = steady_clock::now() - startTime_;
-         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
-            std::to_string(duration_cast<milliseconds>(elapsed).count()));
-      }
-
-      // Note: It is not ideal to use local time. I think this tag is rarely
-      // used. Consider replacing with UTC (micro)seconds-since-epoch (with
-      // different tag key) after addressing current usage.
-      auto now = std::chrono::system_clock::now();
-      md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
-
-      md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
-      md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
-      if (byteDepth == 1)
+void BufferManager::PopulateMetadata(Metadata& md, const char* deviceLabel, 
+      unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents) {
+    // Add the device label (can be used to route different devices to different buffers)
+    md.put(MM::g_Keyword_Metadata_DataSourceDeviceLabel, deviceLabel);
+    
+    // Add essential image metadata needed for interpreting the image:
+    md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
+    md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
+    
+    if (byteDepth == 1)
          md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
-      else if (byteDepth == 2)
+    else if (byteDepth == 2)
          md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
-      else if (byteDepth == 4)
-      {
+    else if (byteDepth == 4) {
          if (nComponents == 1)
             md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
          else
             md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
-      }
-      else if (byteDepth == 8)
+    }
+    else if (byteDepth == 8)
          md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
-      else
+    else
          md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
 }
 
-bool BufferAdapter::InsertImage(const unsigned char* buf, 
+bool BufferManager::InsertImage(const char* callerLabel, const unsigned char* buf, 
       unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd) {
-   return InsertMultiChannel(buf, 1, width, height, byteDepth, 1, pMd);
+   return InsertMultiChannel(callerLabel, buf, 1, width, height, byteDepth, 1, pMd);
 }
 
-bool BufferAdapter::InsertImage(const unsigned char *buf, unsigned width, unsigned height, 
+bool BufferManager::InsertImage(const char* callerLabel, const unsigned char *buf, unsigned width, unsigned height, 
                                unsigned byteDepth, unsigned nComponents, Metadata *pMd) {
-   return InsertMultiChannel(buf, 1, width, height, byteDepth, nComponents, pMd);
+   return InsertMultiChannel(callerLabel, buf, 1, width, height, byteDepth, nComponents, pMd);
 }
 
 
-bool BufferAdapter::InsertMultiChannel(const unsigned char *buf, unsigned numChannels, unsigned width, 
-                                       unsigned height, unsigned byteDepth, Metadata *pMd) {
-   return InsertMultiChannel(buf, numChannels, width, height, byteDepth, 1, pMd);
+bool BufferManager::InsertMultiChannel(const char* callerLabel, const unsigned char *buf,
+          unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata *pMd) {
+   return InsertMultiChannel(callerLabel, buf, numChannels, width, height, byteDepth, 1, pMd);
 }
 
-bool BufferAdapter::InsertMultiChannel(const unsigned char* buf, unsigned numChannels, 
-    unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, Metadata* pMd) {
+bool BufferManager::InsertMultiChannel(const char* callerLabel, const unsigned char* buf,
+    unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, Metadata* pMd) {
     
-   //  Initialize metadata with either provided metadata or create empty
+    //  Initialize metadata with either provided metadata or create empty
     Metadata md = (pMd != nullptr) ? *pMd : Metadata();
     
-   //  Process common metadata
-    ProcessMetadata(md, width, height, byteDepth, nComponents);
+    //  Add required and useful metadata. 
+    PopulateMetadata(md, callerLabel, width, height, byteDepth, nComponents);
 
     if (useV2_) {
-      // All the data needed to interpret the image is in the metadata
-      // This function will copy data and metadata into the buffer
-      int ret = v2Buffer_->InsertData(buf, width * height * byteDepth *numChannels, &md);
-      return ret == DEVICE_OK;
+        // All the data needed to interpret the image is in the metadata
+        // This function will copy data and metadata into the buffer
+        int ret = v2Buffer_->InsertData(buf, width * height * byteDepth *numChannels, &md);
+        return ret == DEVICE_OK;
     } else {
         return circBuffer_->InsertMultiChannel(buf, numChannels, width, height, 
             byteDepth, &md);
     }
 }
 
-const void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError)
+const void* BufferManager::GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError)
 {
    if (useV2_) {
-      // In v2, we now use a channel-aware pointer arithmetic at the adapter level.
+      // In v2, we now use a channel-aware pointer arithmetic at the manager level.
       const void* basePtr = nullptr;
       int ret = v2Buffer_->PeekNextDataReadPointer(&basePtr, md);
       if (ret != DEVICE_OK || basePtr == nullptr)
@@ -296,7 +264,7 @@ const void* BufferAdapter::GetLastImageMD(unsigned channel, Metadata& md) const 
    }
 }
 
-const void* BufferAdapter::GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError)
+const void* BufferManager::GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError)
 {
    if (useV2_) {
       // NOTE: make sure calling code releases the slot after use.
@@ -312,10 +280,10 @@ const void* BufferAdapter::GetNthImageMD(unsigned long n, Metadata& md) const th
    }
 }
 
-const void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError)
+const void* BufferManager::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError)
 {
    if (useV2_) {
-      // For v2, we now make the buffer channel aware at the adapter level.
+      // For v2, we now make the buffer channel aware at the manager level.
       const void* basePtr = v2Buffer_->PopNextDataReadPointer(md, false);
       if (basePtr == nullptr)
          throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
@@ -339,7 +307,7 @@ const void* BufferAdapter::PopNextImageMD(unsigned channel, Metadata& md) throw 
    }
 }
 
-bool BufferAdapter::EnableV2Buffer(bool enable) {
+bool BufferManager::EnableV2Buffer(bool enable) {
     // Don't do anything if we're already in the requested state
     if (enable == useV2_) {
         return true;
@@ -375,18 +343,18 @@ bool BufferAdapter::EnableV2Buffer(bool enable) {
     }
 }
 
-bool BufferAdapter::IsUsingV2Buffer() const {
+bool BufferManager::IsUsingV2Buffer() const {
    return useV2_;
 }
 
-bool BufferAdapter::ReleaseReadAccess(const void* ptr) {
+bool BufferManager::ReleaseReadAccess(const void* ptr) {
    if (useV2_ && ptr) {
       return v2Buffer_->ReleaseDataReadPointer(ptr);
    }
    return true;
 }
 
-unsigned BufferAdapter::GetImageWidth(const void* ptr) const {
+unsigned BufferManager::GetImageWidth(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageWidth(ptr) only supported with V2 buffer");
    Metadata md;
@@ -396,7 +364,7 @@ unsigned BufferAdapter::GetImageWidth(const void* ptr) const {
    return static_cast<unsigned>(atoi(sVal.c_str()));
 }
 
-unsigned BufferAdapter::GetImageHeight(const void* ptr) const {
+unsigned BufferManager::GetImageHeight(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageHeight(ptr) only supported with V2 buffer");
    Metadata md;
@@ -406,7 +374,7 @@ unsigned BufferAdapter::GetImageHeight(const void* ptr) const {
    return static_cast<unsigned>(atoi(sVal.c_str()));
 }
 
-unsigned BufferAdapter::GetBytesPerPixel(const void* ptr) const {
+unsigned BufferManager::GetBytesPerPixel(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetBytesPerPixel(ptr) only supported with V2 buffer");
    Metadata md;
@@ -425,7 +393,7 @@ unsigned BufferAdapter::GetBytesPerPixel(const void* ptr) const {
    throw CMMError("Unknown pixel type for bytes per pixel");
 }
 
-unsigned BufferAdapter::GetImageBitDepth(const void* ptr) const {
+unsigned BufferManager::GetImageBitDepth(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageBitDepth(ptr) only supported with V2 buffer");
    Metadata md;
@@ -444,7 +412,7 @@ unsigned BufferAdapter::GetImageBitDepth(const void* ptr) const {
    throw CMMError("Unknown pixel type for image bit depth");
 }
 
-unsigned BufferAdapter::GetNumberOfComponents(const void* ptr) const {
+unsigned BufferManager::GetNumberOfComponents(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetNumberOfComponents(ptr) only supported with V2 buffer");
    Metadata md;
@@ -461,7 +429,7 @@ unsigned BufferAdapter::GetNumberOfComponents(const void* ptr) const {
    throw CMMError("Unknown pixel type for number of components");
 }
 
-long BufferAdapter::GetImageBufferSize(const void* ptr) const {
+long BufferManager::GetImageBufferSize(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageBufferSize(ptr) only supported with V2 buffer");
    Metadata md;
@@ -474,7 +442,7 @@ long BufferAdapter::GetImageBufferSize(const void* ptr) const {
    return static_cast<long>(width * height * bpp);
 }
 
-bool BufferAdapter::SetOverwriteData(bool overwrite) {
+bool BufferManager::SetOverwriteData(bool overwrite) {
     if (useV2_) {
         return v2Buffer_->SetOverwriteData(overwrite) == DEVICE_OK;
     } else {
@@ -483,7 +451,7 @@ bool BufferAdapter::SetOverwriteData(bool overwrite) {
     }
 }
 
-bool BufferAdapter::AcquireWriteSlot(size_t dataSize, unsigned width, unsigned height, 
+bool BufferManager::AcquireWriteSlot(const char* deviceLabel, size_t dataSize, unsigned width, unsigned height, 
     unsigned byteDepth, unsigned nComponents, size_t additionalMetadataSize,
     void** dataPointer, void** additionalMetadataPointer,
     Metadata* pInitialMetadata) {
@@ -497,7 +465,7 @@ bool BufferAdapter::AcquireWriteSlot(size_t dataSize, unsigned width, unsigned h
    
    // Add in width, height, byteDepth, and nComponents to the metadata so that when 
    // images are retrieved from the buffer, the data can be interpreted correctly
-   ProcessMetadata(md, width, height, byteDepth, nComponents);
+   PopulateMetadata(md, deviceLabel, width, height, byteDepth, nComponents);
    
    std::string serializedMetadata = md.Serialize();
    int ret = v2Buffer_->AcquireWriteSlot(dataSize, additionalMetadataSize,
@@ -505,7 +473,7 @@ bool BufferAdapter::AcquireWriteSlot(size_t dataSize, unsigned width, unsigned h
    return ret == DEVICE_OK;
 }
 
-bool BufferAdapter::FinalizeWriteSlot(void* imageDataPointer, size_t actualMetadataBytes)
+bool BufferManager::FinalizeWriteSlot(void* imageDataPointer, size_t actualMetadataBytes)
 {
     if (!useV2_) {
         // Not supported for circular buffer
@@ -516,7 +484,7 @@ bool BufferAdapter::FinalizeWriteSlot(void* imageDataPointer, size_t actualMetad
     return ret == DEVICE_OK;
 }
 
-void BufferAdapter::ExtractMetadata(const void* dataPtr, Metadata& md) const {
+void BufferManager::ExtractMetadata(const void* dataPtr, Metadata& md) const {
     if (!useV2_) {
         throw CMMError("ExtractMetadata is only supported with V2 buffer enabled");
     }

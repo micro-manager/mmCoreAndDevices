@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          BufferAdapter.h
+// FILE:          BufferManager.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     MMCore
 //-----------------------------------------------------------------------------
@@ -23,8 +23,8 @@
 // AUTHOR:        Henry Pinkard,  01/31/2025
 
 
-#ifndef BUFFERADAPTER_H
-#define BUFFERADAPTER_H
+#ifndef BUFFERMANAGER_H
+#define BUFFERMANAGER_H
 
 #include "CircularBuffer.h"
 #include "Buffer_v2.h"
@@ -33,9 +33,9 @@
 #include <map>
 #include <mutex>
 
-// BufferAdapter provides a common interface for buffer operations
+// BufferManager provides a common interface for buffer operations
 // used by MMCore. It currently supports only a minimal set of functions.
-class BufferAdapter {
+class BufferManager {
 public:
    static const char* const DEFAULT_V2_BUFFER_NAME;
 
@@ -44,8 +44,8 @@ public:
     * @param useV2Buffer Set to true to use the new DataBuffer (v2); false to use CircularBuffer.
     * @param memorySizeMB Memory size for the buffer (in megabytes).
     */
-   BufferAdapter(bool useV2Buffer, unsigned int memorySizeMB);
-   ~BufferAdapter();
+   BufferManager(bool useV2Buffer, unsigned int memorySizeMB);
+   ~BufferManager();
 
    /**
     * Enable or disable v2 buffer usage.
@@ -96,6 +96,7 @@ public:
 
    /**
     * Insert an image into the buffer.
+    * @param caller The device inserting the image.
     * @param buf The image data.
     * @param width Image width.
     * @param height Image height.
@@ -103,11 +104,12 @@ public:
     * @param pMd Metadata associated with the image.
     * @return true on success, false on error.
     */
-   bool InsertImage(const unsigned char *buf, unsigned width, unsigned height, 
-                    unsigned byteDepth, Metadata *pMd);
+   bool InsertImage(const char* deviceLabel, const unsigned char *buf, 
+                    unsigned width, unsigned height, unsigned byteDepth, Metadata *pMd);
 
    /**
     * Insert an image into the buffer with specified number of components.
+    * @param caller The device inserting the image.
     * @param buf The image data.
     * @param width Image width.
     * @param height Image height.
@@ -116,11 +118,12 @@ public:
     * @param pMd Metadata associated with the image.
     * @return true on success, false on error.
     */
-   bool InsertImage(const unsigned char *buf, unsigned width, unsigned height, 
-                    unsigned byteDepth, unsigned nComponents, Metadata *pMd);
+   bool InsertImage(const char* deviceLabel, const unsigned char *buf, unsigned width, 
+                    unsigned height, unsigned byteDepth, unsigned nComponents, Metadata *pMd);
 
    /**
     * Insert a multi-channel image into the buffer.
+    * @param caller The device inserting the image.
     * @param buf The image data.
     * @param numChannels Number of channels in the image.
     * @param width Image width.
@@ -129,11 +132,13 @@ public:
     * @param pMd Metadata associated with the image.
     * @return true on success, false on error.
     */
-   bool InsertMultiChannel(const unsigned char *buf, unsigned numChannels, unsigned width, 
-                           unsigned height, unsigned byteDepth, Metadata *pMd);
+   bool InsertMultiChannel(const char* deviceLabel, const unsigned char *buf, 
+                           unsigned numChannels, unsigned width, unsigned height, 
+                           unsigned byteDepth, Metadata *pMd);
 
    /**
     * Insert a multi-channel image into the buffer with specified number of components.
+    * @param caller The device inserting the image.
     * @param buf The image data.
     * @param numChannels Number of channels in the image.
     * @param width Image width.
@@ -143,8 +148,9 @@ public:
     * @param pMd Metadata associated with the image.
     * @return true on success, false on error.
     */
-   bool InsertMultiChannel(const unsigned char *buf, unsigned numChannels, unsigned width, 
-                           unsigned height, unsigned byteDepth, unsigned nComponents, Metadata *pMd);
+   bool InsertMultiChannel(const char* deviceLabel, const unsigned char *buf, 
+                           unsigned numChannels, unsigned width, unsigned height,
+                           unsigned byteDepth, unsigned nComponents, Metadata *pMd);
 
    /**
     * Get the total capacity of the buffer.
@@ -171,7 +177,7 @@ public:
    const void* PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError);
 
    /**
-    * Check if this adapter is using the V2 buffer implementation.
+    * Check if this manager is using the V2 buffer implementation.
     * @return true if using V2 buffer, false if using circular buffer.
     */
    bool IsUsingV2Buffer() const;
@@ -201,6 +207,7 @@ public:
 
    /**
     * Acquires a write slot large enough to hold the image data and metadata.
+    * @param deviceLabel The label of the device requesting the write slot
     * @param dataSize The number of bytes reserved for image or other primary data.
     * @param width Image width.
     * @param height Image height.
@@ -212,7 +219,7 @@ public:
     * @param pInitialMetadata Optionally, a pointer to a metadata object whose contents should be pre‐written. Defaults to nullptr.
     * @return true on success, false on error.
     */
-   bool AcquireWriteSlot(size_t dataSize, unsigned width, unsigned height, 
+   bool AcquireWriteSlot(const char* deviceLabel, size_t dataSize, unsigned width, unsigned height, 
        unsigned byteDepth, unsigned nComponents, size_t additionalMetadataSize,
        void** dataPointer, void** additionalMetadataPointer,
        Metadata* pInitialMetadata = nullptr);
@@ -233,17 +240,41 @@ public:
     */
    void ExtractMetadata(const void* dataPtr, Metadata& md) const;
 
+   /**
+    * Add basic metadata tags for the data source device.
+    * @param deviceLabel The label of the device inserting the metadata
+    * @param pMd Optional pointer to existing metadata to merge with
+    * @return Metadata object containing merged metadata
+    */
+   Metadata AddDeviceLabel(const char* deviceLabel, const Metadata* pMd);
+
+
+
 private:
    bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.
    CircularBuffer* circBuffer_;
    DataBuffer* v2Buffer_;
    
-   std::chrono::steady_clock::time_point startTime_;
-   std::map<std::string, long> imageNumbers_;  // Track image numbers per camera
-   std::mutex imageNumbersMutex_;  // Mutex to protect access to imageNumbers_
+    /**
+    * Add essential metadata tags required for interpreting stored data and routing it
+    * if multiple buffers are used. Only minimal parameters (width, height, pixel type)
+    * are added. 
+    * 
+    * Future data-producer devices (ie those that dont produce conventional images) may
+    * need alternative versions of this function.
+    */
+   void PopulateMetadata(Metadata& md, const char* deviceLabel, 
+          unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents);
 
-   void ProcessMetadata(Metadata& md, unsigned width, unsigned height, 
-       unsigned byteDepth, unsigned nComponents);
+
+   /**
+    * Get the metadata tags attached to device caller, and merge them with metadata
+    * in pMd (if not null). Returns a metadata object.
+    * @param caller The device inserting the metadata
+    * @param pMd Optional pointer to existing metadata to merge with
+    * @return Metadata object containing merged metadata
+    */
+   Metadata AddCallerMetadata(const MM::Device* caller, const Metadata* pMd);
 };
 
-#endif // BUFFERADAPTER_H 
+#endif // BUFFERMANAGER_H 

@@ -222,6 +222,7 @@ public:
 
     /**
      * Inserts image data along with metadata into the buffer.
+     * @param caller The calling device that is the source of the data.
      * @param data Pointer to the raw image data.
      * @param dataSize The image data size in bytes.
      * @param pMd Pointer to the metadata (can be null if not applicable).

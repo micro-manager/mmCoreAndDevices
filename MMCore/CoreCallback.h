@@ -100,7 +100,9 @@ public:
 //    int FinalizeWriteSlot(unsigned char* imageDataPointer, 
 //                         size_t actualMetadataBytes);
 
-   
+   // Note: these are not required and have no effect on v2 buffer,
+   // because devices do not have authority to clear the buffer since higher level 
+   //code may hold pointers to data in the buffer.
    void ClearImageBuffer(const MM::Device* caller);
    bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
@@ -147,11 +149,19 @@ public:
          char* deviceName, const unsigned int deviceIterator);
 
 
+
 private:
    CMMCore* core_;
    MMThreadLock* pValueChangeLock_;
 
+      /**
+    * Add camera-specific metadata tags including image numbering and timestamps,
+    * and merge them with any existing metadata. 
+    */
    Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
+   std::map<std::string, long> imageNumbers_;  // Track image numbers per camera
+   std::mutex imageNumbersMutex_;
+   std::chrono::steady_clock::time_point startTime_; // Start time for elapsed time calculations
 
    int OnConfigGroupChanged(const char* groupName, const char* newConfigName);
    int OnPixelSizeChanged(double newPixelSizeUm);
