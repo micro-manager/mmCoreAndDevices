@@ -408,6 +408,7 @@
                 (arg1)->getImageHeight((void*)result);
    
    unsigned bytesPerPixel = (arg1)->getBytesPerPixel((void*)result);
+   unsigned numComponents = (arg1)->getNumberOfComponents((void*)result);
    
    if (bytesPerPixel == 1)
    {
@@ -456,7 +457,7 @@
    }
    else if (bytesPerPixel == 4)
    {
-      if ((arg1)->getNumberOfComponents((void*)result) == 1)
+      if (numComponents == 1)
       {
          // create a new float[] object in Java
 
@@ -533,6 +534,130 @@
       $result = 0;
    }
 }
+
+%typemap(jni) SnapBufferPtr "jobject"
+%typemap(jtype) SnapBufferPtr "Object" 
+%typemap(jstype) SnapBufferPtr "Object"
+%typemap(javaout) SnapBufferPtr {
+   return $jnicall;
+}
+%typemap(out) SnapBufferPtr
+{
+   long lSize = (arg1)->getImageWidth() * 
+                (arg1)->getImageHeight();
+   
+   unsigned bytesPerPixel = (arg1)->getBytesPerPixel();
+   unsigned numComponents = (arg1)->getNumberOfComponents();
+   
+   if (bytesPerPixel == 1)
+   {
+      // create a new byte[] object in Java
+      jbyteArray data = JCALL1(NewByteArray, jenv, lSize);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+
+         $result = 0;
+         return $result;
+      }
+   
+      // copy pixels from the image buffer
+      JCALL4(SetByteArrayRegion, jenv, data, 0, lSize, (jbyte*)result);
+
+
+      $result = data;
+   }
+   else if (bytesPerPixel == 2)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, lSize);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, lSize, (jshort*)result);
+
+
+      $result = data;
+   }
+   else if (bytesPerPixel == 4)
+   {
+      if (numComponents == 1)
+      {
+         // create a new float[] object in Java
+
+         jfloatArray data = JCALL1(NewFloatArray, jenv, lSize);
+         if (data == 0)
+         {
+            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+            if (excep)
+               jenv->ThrowNew(excep, "The system ran out of memory!");
+
+            $result = 0;
+            return $result;
+         }
+
+         // copy pixels from the image buffer
+         JCALL4(SetFloatArrayRegion, jenv, data, 0, lSize, (jfloat*)result);
+
+
+         $result = data;
+      }
+      else
+      {
+         // create a new byte[] object in Java
+         jbyteArray data = JCALL1(NewByteArray, jenv, lSize * 4);
+         if (data == 0)
+         {
+            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+            if (excep)
+               jenv->ThrowNew(excep, "The system ran out of memory!");
+
+            $result = 0;
+            return $result;
+         }
+
+         // copy pixels from the image buffer
+         JCALL4(SetByteArrayRegion, jenv, data, 0, lSize * 4, (jbyte*)result);
+
+         $result = data;
+      }
+   }
+   else if (bytesPerPixel == 8)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, lSize * 4);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, lSize * 4, (jshort*)result);
+
+      $result = data;
+   }
+
+   else
+   {
+      // don't know how to map
+      // TODO: throw exception?
+      $result = 0;
+   }
+}
+
 
 // Define typemaps for DataPtr
 %typemap(jni) DataPtr "jlong"
@@ -781,7 +906,7 @@
       // Copy the pixels out using the pointer (this will release the pointer)
       if (pixelsOrPtr instanceof Long) {
          // This is a pointer to an image in the v2 buffer
-         return new TaggedImagePointer((Long) pixelsOrPtr, tags, this);
+         return new TaggedImagePointer((Long) pixelsOrPtr, this);
       } else {
          return new TaggedImage(pixelsOrPtr, tags);  
       }
@@ -801,11 +926,14 @@
       return getTaggedImage(0);
    }
 
-   /////// Data Buffer versions
-   public TaggedImage getLastTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
+   /////// Data Buffer versions with pointer control
+   public TaggedImage getLastTaggedImage(int cameraChannelIndex, boolean usePointer) throws java.lang.Exception {
+      if (usePointer && !this.usesV2Buffer()) {
+         throw new Exception("Pointer mode is only supported when V2 buffer is enabled");
+      }
       Metadata md = new Metadata();
       Object pixelsOrPtr;
-      if (!this.usesV2Buffer()) {
+      if (!usePointer) {
          pixelsOrPtr = getLastImageMD(cameraChannelIndex, 0, md);
       } else {
          pixelsOrPtr = getLastImageMDPointer(cameraChannelIndex, 0, md);
@@ -813,14 +941,26 @@
       return createTaggedImage(pixelsOrPtr, md, cameraChannelIndex, false);
    }
    
-   public TaggedImage getLastTaggedImage() throws java.lang.Exception {
-      return getLastTaggedImage(0);
+   public TaggedImage getLastTaggedImage(boolean usePointer) throws java.lang.Exception {
+      return getLastTaggedImage(0, usePointer);
    }
 
-   public TaggedImage getNBeforeLastTaggedImage(long n) throws java.lang.Exception {
+   // Existing methods now default to checking v2Buffer
+   public TaggedImage getLastTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
+      return getLastTaggedImage(cameraChannelIndex, false);
+   }
+   
+   public TaggedImage getLastTaggedImage() throws java.lang.Exception {
+      return getLastTaggedImage(0, false);
+   }
+
+   public TaggedImage getNBeforeLastTaggedImage(long n, boolean usePointer) throws java.lang.Exception {
+      if (usePointer && !this.usesV2Buffer()) {
+         throw new Exception("Pointer mode is only supported when V2 buffer is enabled");
+      }
       Metadata md = new Metadata();
       Object pixelsOrPtr;
-      if (!this.usesV2Buffer()) {
+      if (!usePointer) {
          pixelsOrPtr = getNBeforeLastImageMD(n, md);
       } else {
          pixelsOrPtr = getNBeforeLastImageMDPointer(n, md);
@@ -828,10 +968,17 @@
       return createTaggedImage(pixelsOrPtr, md, false);
    }
 
-   public TaggedImage popNextTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
+   public TaggedImage getNBeforeLastTaggedImage(long n) throws java.lang.Exception {
+      return getNBeforeLastTaggedImage(n, false);
+   }
+
+   public TaggedImage popNextTaggedImage(int cameraChannelIndex, boolean usePointer) throws java.lang.Exception {
+      if (usePointer && !this.usesV2Buffer()) {
+         throw new Exception("Pointer mode is only supported when V2 buffer is enabled");
+      }
       Metadata md = new Metadata();
       Object pixelsOrPtr;
-      if (!this.usesV2Buffer()) {
+      if (!usePointer) {
          pixelsOrPtr = popNextImageMD(cameraChannelIndex, 0, md);
       } else {
          pixelsOrPtr = popNextImageMDPointer(cameraChannelIndex, 0, md);
@@ -839,8 +986,17 @@
       return createTaggedImage(pixelsOrPtr, md, cameraChannelIndex, false);
    }
 
+   public TaggedImage popNextTaggedImage(boolean usePointer) throws java.lang.Exception {
+      return popNextTaggedImage(0, usePointer);
+   }
+
+   // Existing methods now default to checking v2Buffer
+   public TaggedImage popNextTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
+      return popNextTaggedImage(cameraChannelIndex, false);
+   }
+
    public TaggedImage popNextTaggedImage() throws java.lang.Exception {
-      return popNextTaggedImage(0);
+      return popNextTaggedImage(0, false);
    }
 
    // convenience functions follow

@@ -515,3 +515,18 @@ bool BufferAdapter::FinalizeWriteSlot(void* imageDataPointer, size_t actualMetad
     int ret = v2Buffer_->FinalizeWriteSlot(imageDataPointer, actualMetadataBytes);
     return ret == DEVICE_OK;
 }
+
+void BufferAdapter::ExtractMetadata(const void* dataPtr, Metadata& md) const {
+    if (!useV2_) {
+        throw CMMError("ExtractMetadata is only supported with V2 buffer enabled");
+    }
+    
+    if (v2Buffer_ == nullptr) {
+        throw CMMError("V2 buffer is null");
+    }
+
+    int result = v2Buffer_->ExtractCorrespondingMetadata(dataPtr, md);
+    if (result != DEVICE_OK) {
+        throw CMMError("Failed to extract metadata");
+    }
+}

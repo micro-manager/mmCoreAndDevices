@@ -225,6 +225,14 @@ public:
     */
    bool FinalizeWriteSlot(void* imageDataPointer, size_t actualMetadataBytes);
 
+   /**
+    * Extracts metadata for a given image data pointer.
+    * @param dataPtr Pointer to the image data.
+    * @param md Metadata object to populate.
+    * @throws CMMError if V2 buffer is not enabled or extraction fails.
+    */
+   void ExtractMetadata(const void* dataPtr, Metadata& md) const;
+
 private:
    bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.
    CircularBuffer* circBuffer_;

@@ -1,6 +1,7 @@
 package mmcorej;
 
 import mmcorej.org.json.JSONObject;
+import mmcorej.org.json.JSONException;
 
 /**
  * TaggedImagePointer is a wrapper around a pointer to an image in the v2 buffer.
@@ -14,12 +15,11 @@ import mmcorej.org.json.JSONObject;
  */
 public class TaggedImagePointer extends TaggedImage {
    
-   public JSONObject tags;
+   public LazyJSONObject tags;
 
    private final long address_;
    private final CMMCore core_;
    private boolean released_ = false;
-   private Object copiedPixels_ = null;
 
    /**
     * Constructs a new TaggedImagePointer.
@@ -28,36 +28,37 @@ public class TaggedImagePointer extends TaggedImage {
     * @param tags JSONObject containing metadata associated with the image
     * @param core Reference to the CMMCore instance managing the native resources
     */
-   public TaggedImagePointer(long address, JSONObject tags, CMMCore core) {
-      super(null, tags);  // Initialize parent with null pix
+   public TaggedImagePointer(long address, CMMCore core) {
+      super(null, null);  // Initialize parent with null pix
       this.address_ = address;
       this.core_ = core;
+      this.tags = new LazyJSONObject(address, core);
    }  
 
    /**
-    * Retrieves the pixel data associated with this image.
+    * Retrieves the pixels and metadata associated with this image.
     * 
     * <p>The first call to this method will copy the data from native memory
     * to Java memory and release the native buffer. Subsequent calls will
     * return the cached copy.</p>
     * 
-    * @return Object containing the pixel data
-    * @throws IllegalStateException if the image has already been released
+    * @throws IllegalStateException if te image has already been released
     */
-   public Object get_pixels() throws IllegalStateException {
+   public synchronized void loadData() throws IllegalStateException {
       if (released_) {
          throw new IllegalStateException("Image has been released");
       }
       
-      if (copiedPixels_ == null) {
+      if (this.pix == null) {
         try {
-            copiedPixels_ = core_.copyDataAtPointer(address_);
+            this.pix = core_.copyDataAtPointer(address_);
+            tags.initializeIfNeeded();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to copy data at pointer", e);
         }
-         release();
+        // Now that we have the data, release the pointer
+        release();
       }
-      return copiedPixels_;
    }
 
    /**
@@ -93,35 +94,38 @@ public class TaggedImagePointer extends TaggedImage {
 }
 
 
-// class LazyJSONObject extends JSONObject {
-//     private final long metadataPtr_;
-//     private final CMMCore core_;
-//     private boolean initialized_ = false;
+class LazyJSONObject extends JSONObject {
+    private final long metadataPtr_;
+    private final CMMCore core_;
+    private boolean initialized_ = false;
 
-//     public LazyJSONObject(long metadataPtr, CMMCore core) {
-//         this.metadataPtr_ = metadataPtr;
-//         this.core_ = core;
-//     }
 
-//     private synchronized void initializeIfNeeded() {
-//         if (!initialized_) {
-//             // Use core's existing metadataToMap helper
-//             JSONObject tags = core_.metadataToMap(metadataPtr_);
-         
-//             // Copy all key/value pairs from the metadata map
-//             for (String key : tags.keySet()) {
-//                 try {
-//                     put(key, tags.get(key));
-//                 } catch (Exception e) {}
-//             }
-         
-//             initialized_ = true;
-//         }
-//     }
+    public LazyJSONObject(long metadataPtr, CMMCore core) {
+        this.metadataPtr_ = metadataPtr;
+        this.core_ = core;
+    }
 
-//     @Override
-//     public Object get(String key) {
-//         initializeIfNeeded();
-//         return super.get(key);
-//     }
-// }
+    synchronized void initializeIfNeeded() throws Exception {
+        if (!initialized_) {
+            Metadata md = new Metadata();
+            this.core_.copyMetadataAtPointer(metadataPtr_, md);
+
+            for (String key:md.GetKeys()) {
+                try {
+                    this.put(key, md.GetSingleTag(key).GetValue());
+                } catch (Exception e) {} 
+            }
+            initialized_ = true;
+        }
+    }
+
+    @Override
+    public Object get(String key) throws JSONException {
+        try {
+            initializeIfNeeded();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize metadata", e);
+        }
+        return super.get(key);
+    }
+}

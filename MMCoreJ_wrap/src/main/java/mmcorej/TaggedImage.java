@@ -7,7 +7,7 @@ import mmcorej.org.json.JSONObject;
  */
 
 public class TaggedImage {
-   public final Object pix;
+   public Object pix;
    public JSONObject tags;
 
    public TaggedImage(Object pix, JSONObject tags) {

@@ -2680,7 +2680,7 @@ bool CMMCore::getShutterOpen() throw (CMMError)
  * @return a pointer to the internal image buffer.
  * @throws CMMError   when the camera returns no data
  */
-void* CMMCore::getImage() throw (CMMError)
+SnapBufferPtr CMMCore::getImage() throw (CMMError)
 {
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (!camera)
@@ -2746,7 +2746,7 @@ void* CMMCore::getImage() throw (CMMError)
  * @param channelNr   Channel number for which the image buffer is requested
  * @return a pointer to the internal image buffer.
  */
-void* CMMCore::getImage(unsigned channelNr) throw (CMMError)
+SnapBufferPtr CMMCore::getImage(unsigned channelNr) throw (CMMError)
 {
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (!camera)
@@ -3240,6 +3240,12 @@ void* CMMCore::copyDataAtPointer(DataPtr ptr) throw (CMMError) {
     return (void*) ptr;
 }
 
+void CMMCore::copyMetadataAtPointer(DataPtr ptr, Metadata& md) throw (CMMError) {
+    if (!useV2Buffer_) {
+        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    }
+    bufferAdapter_->ExtractMetadata(ptr, md);
+}
 /**
  * Removes all images from the circular buffer.
  *
@@ -4329,6 +4335,10 @@ unsigned CMMCore::getNumberOfComponents()
 }
 
 unsigned CMMCore::getImageWidth(DataPtr ptr) {
+   if  (ptr == getImage()) {
+      // This is refering to the snap image 
+      return getImageWidth();
+   }
    return useV2Buffer_ ? bufferAdapter_->GetImageWidth(ptr) : getImageWidth();
 }
 

@@ -118,6 +118,8 @@ typedef unsigned int* imgRGB32;
 // void* is converted to Objects to copy arrays of data but we want to be able to 
 // maps these pointers to longs
 typedef const void* DataPtr; 
+// making this alias simplifies the SWIG wrapping
+typedef const void* SnapBufferPtr; 
 
 enum DeviceInitializationState {
    Uninitialized,
@@ -381,8 +383,8 @@ public:
    double getExposure(const char* label) throw (CMMError);
 
    void snapImage() throw (CMMError);
-   void* getImage() throw (CMMError);
-   void* getImage(unsigned numChannel) throw (CMMError);
+   SnapBufferPtr getImage() throw (CMMError);
+   SnapBufferPtr getImage(unsigned numChannel) throw (CMMError);
 
    unsigned getImageWidth();
    unsigned getImageHeight();
@@ -434,6 +436,7 @@ public:
    DataPtr popNextImageMDPointer(Metadata& md) throw (CMMError);
 
    void* copyDataAtPointer(DataPtr ptr) throw (CMMError);
+   void copyMetadataAtPointer(DataPtr ptr, Metadata& md) throw (CMMError);
 
    long getRemainingImageCount();
    long getBufferTotalCapacity();
