@@ -192,7 +192,7 @@ int DataBuffer::ReleaseBuffer() {
 /**
  * Pack the data as [BufferSlotRecord][image data][serialized metadata]
  */
-int DataBuffer::InsertData(const void* data, size_t dataSize, const Metadata* pMd) {
+int DataBuffer::InsertData(const void* data, size_t dataSize, const Metadata* pMd, const std::string& deviceLabel) {
     
     void* dataPointer = nullptr;
     void* additionalMetadataPointer = nullptr;
@@ -203,7 +203,8 @@ int DataBuffer::InsertData(const void* data, size_t dataSize, const Metadata* pM
         serializedMetadata = pMd->Serialize();
     }
     // Initial metadata is all metadata because the image and metadata are already complete
-    int result = AcquireWriteSlot(dataSize, 0, &dataPointer, &additionalMetadataPointer, serializedMetadata);
+    int result = AcquireWriteSlot(dataSize, 0, &dataPointer, &additionalMetadataPointer, 
+                                serializedMetadata, deviceLabel);
     if (result != DEVICE_OK)
         return result;
 
@@ -241,7 +242,8 @@ int DataBuffer::SetOverwriteData(bool overwrite) {
 int DataBuffer::AcquireWriteSlot(size_t dataSize, size_t additionalMetadataSize,
                                 void** dataPointer, 
                                 void** additionalMetadataPointer,
-                                const std::string& serializedInitialMetadata)
+                                const std::string& serializedInitialMetadata,
+                                const std::string& deviceLabel)
 {
     if (buffer_ == nullptr) {
         return DEVICE_ERR;
@@ -277,7 +279,8 @@ int DataBuffer::AcquireWriteSlot(size_t dataSize, size_t additionalMetadataSize,
                 // Update the cursor so that next search can start here.
                 freeRegionCursor_ = candidateStart + totalSlotSize;
                 return CreateSlot(candidateStart, totalSlotSize, dataSize, additionalMetadataSize,
-                                                 dataPointer, additionalMetadataPointer, true, serializedInitialMetadata);
+                                                 dataPointer, additionalMetadataPointer,
+                                                 true, serializedInitialMetadata, deviceLabel);
             }
         }
 
@@ -301,7 +304,7 @@ int DataBuffer::AcquireWriteSlot(size_t dataSize, size_t additionalMetadataSize,
         {
             std::lock_guard<std::mutex> lock(slotManagementMutex_);
             return CreateSlot(candidateStart, totalSlotSize, dataSize, additionalMetadataSize,
-                              dataPointer, additionalMetadataPointer, false, serializedInitialMetadata);
+                              dataPointer, additionalMetadataPointer, false, serializedInitialMetadata, deviceLabel);
         }
     }
 }
@@ -404,28 +407,28 @@ const void* DataBuffer::PopNextDataReadPointer(Metadata &md, bool waitForData)
     return dataPointer;
 }
 
-int DataBuffer::PeekNextDataReadPointer(const void** dataPointer, Metadata &md) {
-    // Immediately check if there is an unread slot without waiting.
+const void* DataBuffer::PeekLastDataReadPointer(Metadata &md) {
     BufferSlot* currentSlot = nullptr;
     {
-        // Lock the global slot management mutex to safely access the active slots.
         std::unique_lock<std::mutex> lock(slotManagementMutex_);
-        if (activeSlotsVector_.empty() || currentSlotIndex_ >= activeSlotsVector_.size()) {
-            return DEVICE_ERR; // No unread data available.
+        if (activeSlotsVector_.empty()) {
+            return nullptr;
         }
-        currentSlot = activeSlotsVector_[currentSlotIndex_];
+        
+        // Get the most recent slot (last in vector)
+        currentSlot = activeSlotsVector_.back();
     }
 
-    // Now safely get read access without holding the global lock.
     currentSlot->AcquireReadAccess();
-
-    std::unique_lock<std::mutex> lock(slotManagementMutex_);
-    *dataPointer = static_cast<const unsigned char*>(buffer_) + currentSlot->GetStart();
     
-    const unsigned char* metadataPtr = static_cast<const unsigned char*>(*dataPointer) + currentSlot->GetDataSize();
-    this->ExtractMetadata(metadataPtr, currentSlot, md);
+    const void* result = static_cast<const unsigned char*>(buffer_) + currentSlot->GetStart();
     
-    return DEVICE_OK;
+    if (ExtractMetadata(result, currentSlot, md) != DEVICE_OK) {
+        currentSlot->ReleaseReadAccess();
+        return nullptr;
+    }
+    
+    return result;
 }
 
 const void* DataBuffer::PeekDataReadPointerAtIndex(size_t n, Metadata &md) {
@@ -451,6 +454,37 @@ const void* DataBuffer::PeekDataReadPointerAtIndex(size_t n, Metadata &md) {
     this->ExtractMetadata(dataPointer, currentSlot, md);
     
     return dataPointer;
+}
+
+const void* DataBuffer::PeekLastDataReadPointerFromDevice(const std::string& deviceLabel, Metadata& md) {
+    BufferSlot* matchingSlot = nullptr;
+    {
+        std::unique_lock<std::mutex> lock(slotManagementMutex_);
+        
+        // Search backwards through activeSlotsVector_ to find most recent matching slot
+        for (auto it = activeSlotsVector_.rbegin(); it != activeSlotsVector_.rend(); ++it) {
+            if ((*it)->GetDeviceLabel() == deviceLabel) {
+                matchingSlot = *it;
+                break;
+            }
+        }
+        
+        if (!matchingSlot) {
+            return nullptr;
+        }
+    }
+
+    // Acquire read access and get data pointer
+    matchingSlot->AcquireReadAccess();
+    
+    const void* result = static_cast<const unsigned char*>(buffer_) + matchingSlot->GetStart();
+    
+    if (ExtractMetadata(result, matchingSlot, md) != DEVICE_OK) {
+        matchingSlot->ReleaseReadAccess();
+        return nullptr;
+    }
+    
+    return result;
 }
 
 unsigned int DataBuffer::GetMemorySizeMB() const {
@@ -635,15 +669,6 @@ void DataBuffer::DeleteSlot(size_t offset, std::unordered_map<size_t, BufferSlot
     RemoveFromActiveTracking(offset, it);
 }
 
-BufferSlot* DataBuffer::InitializeNewSlot(size_t candidateStart, size_t totalSlotSize, 
-                                        size_t dataSize, size_t metadataSize) {
-    assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
-    BufferSlot* newSlot = GetSlotFromPool(candidateStart, totalSlotSize, dataSize, metadataSize, 0);
-    activeSlotsVector_.push_back(newSlot);
-    activeSlotsByStart_[candidateStart] = newSlot;
-    return newSlot;
-}
-
 void DataBuffer::UpdateFreeRegions(size_t candidateStart, size_t totalSlotSize) {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     auto it = freeRegions_.upper_bound(candidateStart);
@@ -675,13 +700,13 @@ void DataBuffer::UpdateFreeRegions(size_t candidateStart, size_t totalSlotSize) 
 int DataBuffer::CreateSlot(size_t candidateStart, size_t totalSlotSize, 
                           size_t dataSize, size_t additionalMetadataSize,
                           void** dataPointer, void** additionalMetadataPointer,
-                          bool fromFreeRegion, const std::string& serializedInitialMetadata)
+                          bool fromFreeRegion, const std::string& serializedInitialMetadata,
+                          const std::string& deviceLabel)
 {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     BufferSlot* newSlot = GetSlotFromPool(candidateStart, totalSlotSize, 
-                                         dataSize, 
-                                         serializedInitialMetadata.size(),  // initialMetadataSize
-                                         additionalMetadataSize);    // subsequentMetadataSize
+                                         dataSize, serializedInitialMetadata.size(),  
+                                         additionalMetadataSize, deviceLabel);    
 
     newSlot->AcquireWriteAccess();
 
@@ -704,7 +729,9 @@ int DataBuffer::CreateSlot(size_t candidateStart, size_t totalSlotSize,
 }
 
 BufferSlot* DataBuffer::GetSlotFromPool(size_t start, size_t totalLength, 
-                                      size_t dataSize, size_t initialMetadataSize, size_t additionalMetadataSize) {
+                                       size_t dataSize, size_t initialMetadataSize,
+                                       size_t additionalMetadataSize,
+                                       const std::string& deviceLabel) {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     
     // Grow the pool if needed.
@@ -717,7 +744,7 @@ BufferSlot* DataBuffer::GetSlotFromPool(size_t start, size_t totalLength,
     // Get a slot from the front of the deque.
     BufferSlot* slot = unusedSlots_.front();
     unusedSlots_.pop_front();
-    slot->Reset(start, totalLength, dataSize, initialMetadataSize, additionalMetadataSize);
+    slot->Reset(start, totalLength, dataSize, initialMetadataSize, additionalMetadataSize, deviceLabel);
     
     // Add to active tracking.
     activeSlotsVector_.push_back(slot);
@@ -747,4 +774,24 @@ int DataBuffer::ExtractCorrespondingMetadata(const void* dataPointer, Metadata &
     
     // Extract metadata (internal method doesn't need lock)
     return ExtractMetadata(dataPointer, slot, md);
+}
+
+size_t DataBuffer::GetDataSize(const void* dataPointer) {
+    std::lock_guard<std::mutex> lock(slotManagementMutex_);
+    BufferSlot* slot = FindSlotForPointer(dataPointer);
+    if (!slot) {
+        return 0;
+    }
+    return slot->GetDataSize();
+}
+
+bool DataBuffer::IsPointerInBuffer(const void* ptr) {
+    if (buffer_ == nullptr || ptr == nullptr) {
+        return false;
+    }
+    // get the mutex
+    std::lock_guard<std::mutex> lock(slotManagementMutex_);
+    // find the slot
+    BufferSlot* slot = FindSlotForPointer(ptr);
+    return slot != nullptr;
 }

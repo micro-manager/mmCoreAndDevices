@@ -75,7 +75,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BufferAdapter.cpp" />
+    <ClCompile Include="BufferManager.cpp" />
     <ClCompile Include="Buffer_v2.cpp" />
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Configuration.cpp" />
@@ -115,7 +115,8 @@
     <ClCompile Include="ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BufferAdapter.h" />
+    <ClInclude Include="BufferDataPointer.h" />
+    <ClInclude Include="BufferManager.h" />
     <ClInclude Include="Buffer_v2.h" />
     <ClInclude Include="CircularBuffer.h" />
     <ClInclude Include="ConfigGroup.h" />

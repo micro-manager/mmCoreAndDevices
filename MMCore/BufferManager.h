@@ -58,7 +58,7 @@ public:
     * Get a pointer to the top (most recent) image.
     * @return Pointer to image data, or nullptr if unavailable.
     */
-   const void* GetLastImage() const;
+   const void* GetLastImage();
 
    /**
     * Get a pointer to the next image from the buffer.
@@ -172,9 +172,16 @@ public:
    bool Overflow() const;
 
 
-   const void* GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError);
+
    const void* GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError);
+
+   // Channels are not directly supported in v2 buffer, these are for backwards compatibility
+   // with circular buffer
+   const void* GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError);
    const void* PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError);
+
+   const void* GetLastImageMD(Metadata& md) const throw (CMMError);
+   const void* PopNextImageMD(Metadata& md) throw (CMMError);
 
    /**
     * Check if this manager is using the V2 buffer implementation.
@@ -194,7 +201,6 @@ public:
    unsigned GetImageWidth(const void* ptr) const;
    unsigned GetImageHeight(const void* ptr) const;
    unsigned GetBytesPerPixel(const void* ptr) const;
-   unsigned GetImageBitDepth(const void* ptr) const;
    unsigned GetNumberOfComponents(const void* ptr) const;
    long GetImageBufferSize(const void* ptr) const;
 
@@ -248,10 +254,42 @@ public:
     */
    Metadata AddDeviceLabel(const char* deviceLabel, const Metadata* pMd);
 
+   /**
+    * Get the last image inserted by a specific device.
+    * @param deviceLabel The label of the device to get the image from.
+    * @return Pointer to the image data.
+    * @throws CMMError if no image is found or V2 buffer is not enabled.
+    */
+   const void* GetLastImageFromDevice(const std::string& deviceLabel) throw (CMMError);
 
+   /**
+    * Get the last image and metadata inserted by a specific device.
+    * @param deviceLabel The label of the device to get the image from.
+    * @param md Metadata object to populate.
+    * @return Pointer to the image data.
+    * @throws CMMError if no image is found or V2 buffer is not enabled.
+    */
+   const void* GetLastImageMDFromDevice(const std::string& deviceLabel, Metadata& md) throw (CMMError);
+
+   /**
+    * Check if a pointer is currently managed by the buffer.
+    * @param ptr The pointer to check.
+    * @return true if the pointer is in the buffer, false otherwise.
+    * @throws CMMError if V2 buffer is not enabled.
+    */
+   bool IsPointerInBuffer(const void* ptr) const throw (CMMError);
+
+   /**
+    * Get a pointer to the V2 buffer.
+    * @return Pointer to the V2 buffer, or nullptr if V2 buffer is not enabled.
+    */
+   DataBuffer* GetV2Buffer() const;
 
 private:
-   bool useV2_; // if true use DataBuffer, otherwise use CircularBuffer.
+   unsigned GetBytesPerPixelFromType(const std::string& pixelType) const;
+   unsigned GetComponentsFromType(const std::string& pixelType) const;
+   
+   bool useV2_;
    CircularBuffer* circBuffer_;
    DataBuffer* v2Buffer_;
    

@@ -62,7 +62,7 @@ public:
      * @param imageSize The exact number of bytes for the image data.
      * @param metadataSize The exact number of bytes for the metadata.
      */
-    BufferSlot() : start_(0), length_(0), imageSize_(0), initialMetadataSize_(0), additionalMetadataSize_(0), rwMutex_() {}
+    BufferSlot() : start_(0), length_(0), imageSize_(0), initialMetadataSize_(0), additionalMetadataSize_(0), deviceLabel_(), rwMutex_() {}
 
     /**
      * Destructor.
@@ -134,7 +134,8 @@ public:
         return false;
     }
 
-    void Reset(size_t start, size_t length, size_t imageSize, size_t initialMetadataSize, size_t additionalMetadataSize) {
+    void Reset(size_t start, size_t length, size_t imageSize, size_t initialMetadataSize, 
+               size_t additionalMetadataSize, const std::string& deviceLabel) {
         // Assert that the mutex is available before recycling
         assert(IsAvailableForWriting() && IsAvailableForReading() && 
                "BufferSlot mutex still locked during Reset - indicates a bug!");
@@ -145,6 +146,7 @@ public:
         imageSize_ = imageSize;
         initialMetadataSize_ = initialMetadataSize;
         additionalMetadataSize_ = initialMetadataSize + additionalMetadataSize;
+        deviceLabel_ = deviceLabel;  // Reset the device label
         
         // The caller should explicitly acquire write access when needed
     }
@@ -178,12 +180,15 @@ public:
      */
     std::size_t GetAdditionalMetadataSize() const { return additionalMetadataSize_; }
 
+    const std::string& GetDeviceLabel() const { return deviceLabel_; }
+
 private:
     std::size_t start_;
     std::size_t length_;
     size_t imageSize_;
-    size_t initialMetadataSize_ = 0; 
-    size_t additionalMetadataSize_ = 0;
+    size_t initialMetadataSize_;
+    size_t additionalMetadataSize_;
+    std::string deviceLabel_;  // New member
     mutable std::shared_timed_mutex rwMutex_;
 };
 
@@ -222,13 +227,13 @@ public:
 
     /**
      * Inserts image data along with metadata into the buffer.
-     * @param caller The calling device that is the source of the data.
      * @param data Pointer to the raw image data.
      * @param dataSize The image data size in bytes.
      * @param pMd Pointer to the metadata (can be null if not applicable).
+     * @param deviceLabel The label of the device that is the source of the data.
      * @return DEVICE_OK on success.
      */
-    int InsertData(const void* data, size_t dataSize, const Metadata* pMd);
+    int InsertData(const void* data, size_t dataSize, const Metadata* pMd, const std::string& deviceLabel);
 
     /**
      * Sets whether the buffer should overwrite old data when full.
@@ -251,7 +256,8 @@ public:
     int AcquireWriteSlot(size_t dataSize, size_t additionalMetadataSize,
                          void** dataPointer, 
                          void** additionalMetadataPointer,
-                         const std::string& serializedInitialMetadata);
+                         const std::string& serializedInitialMetadata,
+                         const std::string& deviceLabel);
 
     /**
      * Finalizes (releases) a write slot after data has been written.
@@ -280,12 +286,11 @@ public:
     const void* PopNextDataReadPointer(Metadata &md, bool waitForData);
 
     /**
-     * Peeks at the next unread data entry without consuming it.
-     * @param dataPointer On success, receives a pointer to the (usually image) data region.
+     * Peeks at the most recently added data entry.
      * @param md Metadata object populated from the stored metadata.
-     * @return DEVICE_OK on success.
+     * @return Pointer to the start of the data region.
      */
-    int PeekNextDataReadPointer(const void** dataPointer, Metadata &md);
+    const void* PeekLastDataReadPointer(Metadata &md);
 
     /**
      * Peeks at the nth unread data entry without consuming it.
@@ -297,11 +302,12 @@ public:
     const void* PeekDataReadPointerAtIndex(size_t n, Metadata &md);
 
     /**
-     * Releases read access that was acquired by a peek.
-     * @param dataPointer Pointer previously obtained from a peek.
-     * @return DEVICE_OK on success.
+     * Get the last image inserted by a specific device.
+     * @param deviceLabel The label of the device to get the image from.
+     * @param md Metadata object to populate.
+     * @return Pointer to the image data, or nullptr if not found.
      */
-    int ReleasePeekDataReadPointer(const void** dataPointer);
+    const void* PeekLastDataReadPointerFromDevice(const std::string& deviceLabel, Metadata& md);
 
     /**
      * Returns the total buffer memory size (in MB).
@@ -356,6 +362,20 @@ public:
      * @return DEVICE_OK on success, or an error code if extraction fails.
      */
     int ExtractCorrespondingMetadata(const void* dataPtr, Metadata &md);
+
+    /**
+     * Returns the size of the data portion of the slot in bytes.
+     * @param dataPointer Pointer to the data portion of a slot.
+     * @return Size in bytes of the data portion, or 0 if pointer is invalid.
+     */
+    size_t GetDataSize(const void* dataPointer);
+
+    /**
+     * Check if a pointer is within the buffer's memory range.
+     * @param ptr The pointer to check.
+     * @return true if the pointer is within the buffer, false otherwise.
+     */
+    bool IsPointerInBuffer(const void* ptr);
 
 private:
     /**
@@ -419,7 +439,7 @@ private:
 
     BufferSlot* GetSlotFromPool(size_t start, size_t totalLength, 
                                size_t dataSize, size_t initialMetadataSize,
-                               size_t additionalMetadataSize);
+                               size_t additionalMetadataSize, const std::string& deviceLabel);
 
     /**
      * Creates a new slot with the specified parameters.
@@ -430,14 +450,10 @@ private:
                    void** dataPointer, 
                    void** subsequentMetadataPointer,
                    bool fromFreeRegion, 
-                   const std::string& serializedInitialMetadata);
+                   const std::string& serializedInitialMetadata,
+                   const std::string& deviceLabel);
 
-    /**
-     * Initializes a new slot with the given parameters.
-     * Caller must hold slotManagementMutex_.
-     */
-    BufferSlot* InitializeNewSlot(size_t candidateStart, size_t totalSlotSize, 
-                                 size_t dataSize, size_t metadataSize);
+
     void ReturnSlotToPool(BufferSlot* slot);
 
     int ExtractMetadata(const void* dataPointer, 

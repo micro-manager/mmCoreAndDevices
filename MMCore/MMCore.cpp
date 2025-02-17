@@ -54,6 +54,7 @@
 #include "MMCore.h"
 #include "MMEventCallback.h"
 #include "PluginManager.h"
+#include "BufferDataPointer.h"
 
 #include <algorithm>
 #include <cassert>
@@ -2795,7 +2796,7 @@ void* CMMCore::getImage(unsigned channelNr) throw (CMMError)
  * @return a pointer to the internal image buffer.
  * @throws CMMError   when the camera returns no data
  */
-DataPtr CMMCore::getImagePointer() throw (CMMError)
+BufferDataPointer* CMMCore::getImagePointer() throw (CMMError)
 {
    if (!useV2Buffer_ ) 
       throw CMMError("Only valid when V2 buffer in use");
@@ -2827,32 +2828,35 @@ DataPtr CMMCore::getImagePointer() throw (CMMError)
       try {
          mm::DeviceModuleLockGuard guard(camera);
          pBuf = const_cast<unsigned char*> (camera->GetImageBuffer());
-
-   INSERT DATA HERE
-
+         
          std::shared_ptr<ImageProcessorInstance> imageProcessor =
             currentImageProcessor_.lock();
          if (imageProcessor)
 	      {
             imageProcessor->Process((unsigned char*)pBuf, camera->GetImageWidth(),  camera->GetImageHeight(), camera->GetImageBytesPerPixel() );
 	      }
+         
+         // Unlike the other getImage() methods, this one copies the image
+         // into the v2 buffer. This is faster than the copying that would otherwise
+         // occure in the SWIG wrapper (at least in Java) because it can use multi-threaded,
+         // low-level copying. 
+         bufferManager_->InsertImage(camera->GetLabel().c_str(), (unsigned char*)pBuf, 
+         camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel(), 
+            camera->GetNumberOfComponents(), nullptr);
+
+         // TODO: could add a check here that there there is one and only one image to pop
+         // because otherwise the user may be using this incorrectly.
+         const void* ptr = bufferManager_->PopNextImage();  
+         return new BufferDataPointer(bufferManager_->GetV2Buffer(), ptr);
+
 		} catch( CMMError& e){
 			throw e;
 		} catch (...) {
          logError("CMMCore::getImage()", getCoreErrorText(MMERR_UnhandledException).c_str());
          throw CMMError(getCoreErrorText(MMERR_UnhandledException).c_str(), MMERR_UnhandledException);
       }
-
-      if (pBuf != 0)
-         return pBuf;
-      else
-      {
-         logError("CMMCore::getImage()", getCoreErrorText(MMERR_CameraBufferReadFailed).c_str());
-         throw CMMError(getCoreErrorText(MMERR_CameraBufferReadFailed).c_str(), MMERR_CameraBufferReadFailed);
-      }
-   }
 }
-
+}
 
 /**
 * Returns the size of the internal image buffer.
@@ -3255,70 +3259,55 @@ void* CMMCore::popNextImageMD(Metadata& md) throw (CMMError)
    return popNextImageMD(0, 0, md);
 }
 
-DataPtr CMMCore::getLastImagePointer() throw (CMMError) { 
+//// Data pointer access for v2 Buffer
+BufferDataPointer* CMMCore::getLastImagePointer() throw (CMMError) { 
     if (!useV2Buffer_) {
         throw CMMError("V2 buffer must be enabled for pointer-based image access");
     }
-    return getLastImage(); 
+    const void* rawPtr = bufferManager_->GetLastImage();
+    return new BufferDataPointer(bufferManager_->GetV2Buffer(), rawPtr);
 }
 
-DataPtr CMMCore::popNextImagePointer() throw (CMMError) { 
+BufferDataPointer* CMMCore::popNextImagePointer() throw (CMMError) { 
     if (!useV2Buffer_) {
         throw CMMError("V2 buffer must be enabled for pointer-based image access");
     }
-    return popNextImage(); 
+    const void* rawPtr = bufferManager_->PopNextImage();
+    return new BufferDataPointer(bufferManager_->GetV2Buffer(), rawPtr);
 }
 
-DataPtr CMMCore::getLastImageMDPointer(unsigned channel, unsigned slice, Metadata& md) const throw (CMMError) { 
+BufferDataPointer* CMMCore::getLastImageMDPointer(Metadata& md) const throw (CMMError) { 
     if (!useV2Buffer_) {
         throw CMMError("V2 buffer must be enabled for pointer-based image access");
     }
-    return getLastImageMD(channel, slice, md); 
+    const void* rawPtr = bufferManager_->GetLastImageMD(md);
+    return new BufferDataPointer(bufferManager_->GetV2Buffer(), rawPtr);
 }
 
-DataPtr CMMCore::popNextImageMDPointer(unsigned channel, unsigned slice, Metadata& md) throw (CMMError) { 
+BufferDataPointer* CMMCore::popNextImageMDPointer(Metadata& md) throw (CMMError) { 
     if (!useV2Buffer_) {
         throw CMMError("V2 buffer must be enabled for pointer-based image access");
     }
-    return popNextImageMD(channel, slice, md); 
+    const void* rawPtr = bufferManager_->PopNextImageMD(md);
+    return new BufferDataPointer(bufferManager_->GetV2Buffer(), rawPtr);
 }
 
-DataPtr CMMCore::getLastImageMDPointer(Metadata& md) const throw (CMMError) { 
+BufferDataPointer* CMMCore::getLastImageFromDevicePointer(std::string deviceLabel) throw (CMMError) {
     if (!useV2Buffer_) {
         throw CMMError("V2 buffer must be enabled for pointer-based image access");
     }
-    return getLastImageMD(md); 
+    const void* rawPtr = bufferManager_->GetLastImageFromDevice(deviceLabel);
+    return new BufferDataPointer(bufferManager_->GetV2Buffer(), rawPtr);
 }
 
-DataPtr CMMCore::getNBeforeLastImageMDPointer(unsigned long n, Metadata& md) const throw (CMMError) { 
-    if (!useV2Buffer_) {
-        throw CMMError("V2 buffer must be enabled for pointer-based image access");
-    }
-    return getNBeforeLastImageMD(n, md); 
+BufferDataPointer* CMMCore::getLastImageMDFromDevicePointer(std::string deviceLabel, Metadata& md) throw (CMMError) {
+   if (!useV2Buffer_) {
+      throw CMMError("V2 buffer must be enabled for pointer-based image access");
+   }
+   const void* rawPtr = bufferManager_->GetLastImageMDFromDevice(deviceLabel, md);
+   return new BufferDataPointer(bufferManager_->GetV2Buffer(), rawPtr);
 }
 
-DataPtr CMMCore::popNextImageMDPointer(Metadata& md) throw (CMMError) { 
-    if (!useV2Buffer_) {
-        throw CMMError("V2 buffer must be enabled for pointer-based image access");
-    }
-    return popNextImageMD(md); 
-}
-
-void* CMMCore::copyDataAtPointer(DataPtr ptr) throw (CMMError) {
-    if (!useV2Buffer_) {
-        throw CMMError("V2 buffer must be enabled for pointer-based image access");
-    }
-    // This just checks the buffer and returns the pointer. Since the return type is void*,
-    // SWIG will automatically copy the pointer into a Java array.
-    return (void*) ptr;
-}
-
-void CMMCore::copyMetadataAtPointer(DataPtr ptr, Metadata& md) throw (CMMError) {
-    if (!useV2Buffer_) {
-        throw CMMError("V2 buffer must be enabled for pointer-based image access");
-    }
-    bufferManager_->ExtractMetadata(ptr, md);
-}
 /**
  * Removes all images from the circular buffer.
  *
@@ -4407,28 +4396,60 @@ unsigned CMMCore::getNumberOfComponents()
    return 0;
 }
 
+// For the below functions that get properties of the image based on a pointer,
+// Cant assume that this a v2 buffer pointer, because Java SWIG wrapper
+// will call this after copying from a snap buffer. So we'll check if the 
+// buffer knows about this pointer. If not, it's a snap buffer pointer.
+// We don't want want to compare to the snap buffer pointer directly because
+// its unclear what the device adapter might do when this is called.
 unsigned CMMCore::getImageWidth(DataPtr ptr) {
-   if  (ptr == getImage()) {
-      // This is refering to the snap image 
+   if (!useV2Buffer_) {
       return getImageWidth();
    }
-   return useV2Buffer_ ? bufferManager_->GetImageWidth(ptr) : getImageWidth();
+   if (bufferManager_->IsPointerInBuffer(ptr)) {
+      return bufferManager_->GetImageWidth(ptr);
+   }
+   return getImageWidth();
 }
 
 unsigned CMMCore::getImageHeight(DataPtr ptr) {
-   return useV2Buffer_ ? bufferManager_->GetImageHeight(ptr) : getImageHeight();
+      if (!useV2Buffer_) {
+      return getImageWidth();
+   }
+   if (bufferManager_->IsPointerInBuffer(ptr)) {
+      return bufferManager_->GetImageHeight(ptr);
+   }
+   return getImageHeight();
 }
 
 unsigned CMMCore::getBytesPerPixel(DataPtr ptr) {
-   return useV2Buffer_ ? bufferManager_->GetBytesPerPixel(ptr) : getBytesPerPixel();
+   if (!useV2Buffer_) {
+      return getBytesPerPixel();
+   }
+   if (bufferManager_->IsPointerInBuffer(ptr)) {
+      return bufferManager_->GetBytesPerPixel(ptr);
+   }
+   return getBytesPerPixel();
 }
 
 unsigned CMMCore::getNumberOfComponents(DataPtr ptr) {
-   return useV2Buffer_ ? bufferManager_->GetNumberOfComponents(ptr) : getNumberOfComponents();
+   if (!useV2Buffer_) {
+      return getNumberOfComponents();
+   }
+   if (bufferManager_->IsPointerInBuffer(ptr)) {
+      return bufferManager_->GetNumberOfComponents(ptr);
+   }
+   return getNumberOfComponents();
 }
 
 long CMMCore::getImageBufferSize(DataPtr ptr) {
-   return useV2Buffer_ ? bufferManager_->GetImageBufferSize(ptr) : getImageBufferSize();
+   if (!useV2Buffer_) {
+      return getImageWidth() * getImageHeight() * getBytesPerPixel();
+   }
+   if (bufferManager_->IsPointerInBuffer(ptr)) {
+      return bufferManager_->GetImageBufferSize(ptr);
+   }
+   return getImageBufferSize();
 }
 
 void CMMCore::releaseReadAccess(DataPtr ptr) {

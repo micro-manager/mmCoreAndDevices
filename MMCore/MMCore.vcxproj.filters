@@ -141,10 +141,10 @@
     <ClCompile Include="ThreadPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BufferAdapter.cpp">
+    <ClCompile Include="Buffer_v2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Buffer_v2.cpp">
+    <ClCompile Include="BufferManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -314,7 +314,10 @@
     <ClInclude Include="Buffer_v2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BufferAdapter.h">
+    <ClInclude Include="BufferDataPointer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BufferManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

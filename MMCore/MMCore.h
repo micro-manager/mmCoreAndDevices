@@ -95,6 +95,7 @@ class CorePropertyCollection;
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
+class BufferDataPointer;
 
 class AutoFocusInstance;
 class CameraInstance;
@@ -383,7 +384,6 @@ public:
    void snapImage() throw (CMMError);
    void* getImage() throw (CMMError);
    void* getImage(unsigned numChannel) throw (CMMError);
-   DataPtr getImagePointer() throw (CMMError);
 
 
    unsigned getImageWidth();
@@ -425,18 +425,6 @@ public:
       const throw (CMMError);
    void* popNextImageMD(Metadata& md) throw (CMMError);
 
-   // Same functionality as above but, enables alternative wrappers in SWIG for
-   // pointer-based access to the image data.
-   DataPtr getLastImagePointer() throw (CMMError);
-   DataPtr popNextImagePointer() throw (CMMError);
-   DataPtr getLastImageMDPointer(unsigned channel, unsigned slice, Metadata& md) const throw (CMMError);
-   DataPtr popNextImageMDPointer(unsigned channel, unsigned slice, Metadata& md) throw (CMMError);
-   DataPtr getLastImageMDPointer(Metadata& md) const throw (CMMError);
-   DataPtr getNBeforeLastImageMDPointer(unsigned long n, Metadata& md) const throw (CMMError);
-   DataPtr popNextImageMDPointer(Metadata& md) throw (CMMError);
-
-   void* copyDataAtPointer(DataPtr ptr) throw (CMMError);
-   void copyMetadataAtPointer(DataPtr ptr, Metadata& md) throw (CMMError);
 
    long getRemainingImageCount();
    long getBufferTotalCapacity();
@@ -454,13 +442,32 @@ public:
    void enableV2Buffer(bool enable) throw (CMMError);
    bool usesV2Buffer() const { return useV2Buffer_; }
 
+   // These functions are used by the Java SWIG wrapper to get properties of the image
+   // based on a pointer. The DataPtr alias to void* is so they don't get converted to 
+   // Object in the Java SWIG wrapper.
    unsigned getImageWidth(DataPtr ptr) throw (CMMError);
    unsigned getImageHeight(DataPtr ptr) throw (CMMError);
    unsigned getBytesPerPixel(DataPtr ptr) throw (CMMError);
    unsigned getNumberOfComponents(DataPtr ptr) throw (CMMError);
    long getImageBufferSize(DataPtr ptr) throw (CMMError);
+   
    void releaseReadAccess(DataPtr ptr) throw (CMMError);
 
+   // Same functionality as non pointer versions above, but
+   // enables alternative wrappers in SWIG for pointer-based access to the image data.
+   BufferDataPointer* getImagePointer() throw (CMMError);
+
+   BufferDataPointer* getLastImagePointer() throw (CMMError);
+   BufferDataPointer* popNextImagePointer() throw (CMMError);
+   BufferDataPointer* getLastImageMDPointer(Metadata& md) const throw (CMMError);
+   BufferDataPointer* popNextImageMDPointer(Metadata& md) throw (CMMError);
+   BufferDataPointer* getLastImageFromDevicePointer(std::string deviceLabel) throw (CMMError);
+   BufferDataPointer* getLastImageMDFromDevicePointer(std::string deviceLabel, Metadata& md) throw (CMMError);
+
+   ///@}
+
+   /** \name Exposure sequence control. */
+   ///@{
    bool isExposureSequenceable(const char* cameraLabel) throw (CMMError);
    void startExposureSequence(const char* cameraLabel) throw (CMMError);
    void stopExposureSequence(const char* cameraLabel) throw (CMMError);

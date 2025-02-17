@@ -41,6 +41,34 @@
 #include <mutex>
 
 
+static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_clock> tp) {
+   using namespace std::chrono;
+   auto us = duration_cast<microseconds>(tp.time_since_epoch());
+   auto secs = duration_cast<seconds>(us);
+   auto whole = duration_cast<microseconds>(secs);
+   auto frac = static_cast<int>((us - whole).count());
+
+   // As of C++14/17, it is simpler (and probably faster) to use C functions for
+   // date-time formatting
+
+   std::time_t t(secs.count()); // time_t is seconds on platforms we support
+   std::tm *ptm;
+#ifdef _WIN32 // Windows localtime() is documented thread-safe
+   ptm = std::localtime(&t);
+#else // POSIX has localtime_r()
+   std::tm tmstruct;
+   ptm = localtime_r(&t, &tmstruct);
+#endif
+
+   // Format as "yyyy-mm-dd hh:mm:ss.uuuuuu" (26 chars)
+   const char *timeFmt = "%Y-%m-%d %H:%M:%S";
+   char buf[32];
+   std::size_t len = std::strftime(buf, sizeof(buf), timeFmt, ptm);
+   std::snprintf(buf + len, sizeof(buf) - len, ".%06d", frac);
+   return buf;
+}
+
+
 CoreCallback::CoreCallback(CMMCore* c) :
    core_(c),
    pValueChangeLock_(NULL)
@@ -298,7 +326,10 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
          }
       }
-      if (core_->bufferManager_->InsertImage(caller, buf, width, height, byteDepth, &md))
+      char labelBuffer[MM::MaxStrLength];
+      caller->GetLabel(labelBuffer);
+      std::string callerLabel(labelBuffer);
+      if (core_->bufferManager_->InsertImage(callerLabel.c_str(), buf, width, height, byteDepth, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
@@ -330,7 +361,10 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
          }
       }
-      if (core_->bufferManager_->InsertImage(caller, buf, width, height, byteDepth, nComponents, &md))
+      char labelBuffer[MM::MaxStrLength];
+      caller->GetLabel(labelBuffer);
+      std::string callerLabel(labelBuffer);
+      if (core_->bufferManager_->InsertImage(callerLabel.c_str(), buf, width, height, byteDepth, nComponents, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
@@ -351,6 +385,9 @@ int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf
       ip->Process(p, imgBuf.Width(), imgBuf.Height(), imgBuf.Depth());
    }
 
+   char labelBuffer[MM::MaxStrLength];
+   caller->GetLabel(labelBuffer);
+   std::string callerLabel(labelBuffer);
    return InsertImage(caller, imgBuf.GetPixels(), imgBuf.Width(), 
       imgBuf.Height(), imgBuf.Depth(), &md);
 }
@@ -396,6 +433,8 @@ void CoreCallback::ClearImageBuffer(const MM::Device* /*caller*/)
    // This has no effect on v2 buffer, because devices do not have authority to clear the buffer
    // since higher level code may hold pointers to data in the buffer.
    core_->bufferManager_->Clear();
+   // Reset image counters when buffer is cleared
+   imageNumbers_.clear();
 }
 
 // Note: this not required and has not effect on v2 buffer
@@ -405,6 +444,9 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
    // Support for multi-slice images has not been implemented
    if (slices != 1)
       return false;
+
+   startTime_ = std::chrono::steady_clock::now();  // Initialize start time
+   imageNumbers_.clear();
 
    return core_->bufferManager_->Initialize(channels, w, h, pixDepth);
 }
@@ -426,7 +468,10 @@ int CoreCallback::InsertMultiChannel(const MM::Device* caller,
       {
          ip->Process( const_cast<unsigned char*>(buf), width, height, byteDepth);
       }
-      if (core_->bufferManager_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, &md))
+      char labelBuffer[MM::MaxStrLength];
+      caller->GetLabel(labelBuffer);
+      std::string callerLabel(labelBuffer);
+      if (core_->bufferManager_->InsertMultiChannel(callerLabel.c_str(), buf, numChannels, width, height, byteDepth, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
