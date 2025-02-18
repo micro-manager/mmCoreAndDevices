@@ -202,7 +202,7 @@ public:
    unsigned GetImageHeight(const void* ptr) const;
    unsigned GetBytesPerPixel(const void* ptr) const;
    unsigned GetNumberOfComponents(const void* ptr) const;
-   long GetImageBufferSize(const void* ptr) const;
+   unsigned GetDatumSize(const void* ptr) const;
 
    /**
     * Configure whether to overwrite old data when buffer is full.
@@ -279,11 +279,6 @@ public:
     */
    bool IsPointerInBuffer(const void* ptr) const throw (CMMError);
 
-   /**
-    * Get a pointer to the V2 buffer.
-    * @return Pointer to the V2 buffer, or nullptr if V2 buffer is not enabled.
-    */
-   DataBuffer* GetV2Buffer() const;
 
 private:
    unsigned GetBytesPerPixelFromType(const std::string& pixelType) const;

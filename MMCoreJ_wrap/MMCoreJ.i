@@ -404,16 +404,16 @@
 }
 %typemap(out) void*
 {
-   long lSize = (arg1)->getImageWidth((void*)result) * 
-                (arg1)->getImageHeight((void*)result);
-   
-   unsigned bytesPerPixel = (arg1)->getBytesPerPixel((void*)result);
-   unsigned numComponents = (arg1)->getNumberOfComponents((void*)result);
+  
+   unsigned numBytes = (arg1)->getImageBufferSize();
+   unsigned bytesPerPixel = (arg1)->getBytesPerPixel();
+   unsigned numPixels = numBytes / bytesPerPixel;
+   unsigned numComponents = (arg1)->getNumberOfComponents();   
    
    if (bytesPerPixel == 1)
    {
       // create a new byte[] object in Java
-      jbyteArray data = JCALL1(NewByteArray, jenv, lSize);
+      jbyteArray data = JCALL1(NewByteArray, jenv, numPixels);
       if (data == 0)
       {
          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -425,17 +425,15 @@
       }
    
       // copy pixels from the image buffer
-      JCALL4(SetByteArrayRegion, jenv, data, 0, lSize, (jbyte*)result);
-
-      // Release the read access if not v2 buffer, this will be ignored in the core
-      (arg1)->releaseReadAccess((void*)result);
+      JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels, (jbyte*)result);
+      (arg1)->releaseReadAccess(result);
 
       $result = data;
    }
    else if (bytesPerPixel == 2)
    {
       // create a new short[] object in Java
-      jshortArray data = JCALL1(NewShortArray, jenv, lSize);
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels);
       if (data == 0)
       {
          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -446,11 +444,8 @@
       }
   
       // copy pixels from the image buffer
-      JCALL4(SetShortArrayRegion, jenv, data, 0, lSize, (jshort*)result);
-
-      // Release the read access
-      (arg1)->releaseReadAccess((void*)result);
-
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels, (jshort*)result);
+      (arg1)->releaseReadAccess(result);
 
       $result = data;
    }
@@ -459,8 +454,7 @@
       if (numComponents == 1)
       {
          // create a new float[] object in Java
-
-         jfloatArray data = JCALL1(NewFloatArray, jenv, lSize);
+         jfloatArray data = JCALL1(NewFloatArray, jenv, numPixels);
          if (data == 0)
          {
             jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -472,18 +466,15 @@
          }
 
          // copy pixels from the image buffer
-         JCALL4(SetFloatArrayRegion, jenv, data, 0, lSize, (jfloat*)result);
-
-         // Release the read access
-         (arg1)->releaseReadAccess((void*)result);
-
+         JCALL4(SetFloatArrayRegion, jenv, data, 0, numPixels, (jfloat*)result);
+         (arg1)->releaseReadAccess(result);
 
          $result = data;
       }
       else
       {
          // create a new byte[] object in Java
-         jbyteArray data = JCALL1(NewByteArray, jenv, lSize * 4);
+         jbyteArray data = JCALL1(NewByteArray, jenv, numPixels * 4);
          if (data == 0)
          {
             jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -495,11 +486,8 @@
          }
 
          // copy pixels from the image buffer
-         JCALL4(SetByteArrayRegion, jenv, data, 0, lSize * 4, (jbyte*)result);
-
-         // Release the read access
-         (arg1)->releaseReadAccess((void*)result);
-
+         JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels * 4, (jbyte*)result);
+         (arg1)->releaseReadAccess(result);
 
          $result = data;
       }
@@ -507,7 +495,7 @@
    else if (bytesPerPixel == 8)
    {
       // create a new short[] object in Java
-      jshortArray data = JCALL1(NewShortArray, jenv, lSize * 4);
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels * 4);
       if (data == 0)
       {
          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -518,14 +506,251 @@
       }
   
       // copy pixels from the image buffer
-      JCALL4(SetShortArrayRegion, jenv, data, 0, lSize * 4, (jshort*)result);
-
-      // Release the read access
-      (arg1)->releaseReadAccess((void*)result);
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels * 4, (jshort*)result);
+      (arg1)->releaseReadAccess(result);
 
       $result = data;
    }
+   else
+   {
+      // don't know how to map
+      // TODO: throw exception?
+      $result = 0;
+   }
+}
 
+%typemap(jni) BufferDataPointerVoidStar "jobject"
+%typemap(jtype) BufferDataPointerVoidStar "Object" 
+%typemap(jstype) BufferDataPointerVoidStar "Object"
+%typemap(javaout) BufferDataPointerVoidStar {
+   return $jnicall;
+}
+%typemap(out) BufferDataPointerVoidStar
+{
+  
+   unsigned numBytes = (arg1)->getSizeBytes();
+   // Return null if no bytes
+   if (numBytes == 0) {
+      $result = 0;
+      return $result;
+   }
+   unsigned bytesPerPixel = (arg1)->getBytesPerPixel();
+   unsigned numPixels = numBytes / bytesPerPixel;
+   unsigned numComponents = (arg1)->getNumberOfComponents();   
+   
+   if (bytesPerPixel == 1)
+   {
+      // create a new byte[] object in Java
+      jbyteArray data = JCALL1(NewByteArray, jenv, numPixels);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+
+         $result = 0;
+         return $result;
+      }
+   
+      // copy pixels from the image buffer
+      JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels, (jbyte*)result);
+      $result = data;
+   }
+   else if (bytesPerPixel == 2)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels, (jshort*)result);
+      $result = data;
+   }
+   else if (bytesPerPixel == 4)
+   {
+      if (numComponents == 1)
+      {
+         // create a new float[] object in Java
+         jfloatArray data = JCALL1(NewFloatArray, jenv, numPixels);
+         if (data == 0)
+         {
+            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+            if (excep)
+               jenv->ThrowNew(excep, "The system ran out of memory!");
+
+            $result = 0;
+            return $result;
+         }
+
+         // copy pixels from the image buffer
+         JCALL4(SetFloatArrayRegion, jenv, data, 0, numPixels, (jfloat*)result);
+         $result = data;
+      }
+      else
+      {
+         // create a new byte[] object in Java
+         jbyteArray data = JCALL1(NewByteArray, jenv, numPixels * 4);
+         if (data == 0)
+         {
+            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+            if (excep)
+               jenv->ThrowNew(excep, "The system ran out of memory!");
+
+            $result = 0;
+            return $result;
+         }
+
+         // copy pixels from the image buffer
+         JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels * 4, (jbyte*)result);
+         $result = data;
+      }
+   }
+   else if (bytesPerPixel == 8)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels * 4);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels * 4, (jshort*)result);
+      $result = data;
+   }
+   else
+   {
+      // don't know how to map
+      // TODO: throw exception?
+      $result = 0;
+   }
+}
+
+
+// This is conceptually similar to the void* typemap above,
+// but requires slightly different calls because BufferDataPointer
+// is different from the data-returning void* methods of the Core.
+%typemap(jni) BufferDataPointer "jobject"
+%typemap(jtype) BufferDataPointer "Object" 
+%typemap(jstype) BufferDataPointer "Object"
+%typemap(javaout) BufferDataPointer {
+   return $jnicall;
+}
+%typemap(out) BufferDataPointer
+{
+   
+   unsigned numBytes = (arg1)->getSizeBytes();
+   unsigned bytesPerPixel = (arg1)->getBytesPerPixel();
+   unsigned numPixels = numBytes / bytesPerPixel;
+   unsigned numComponents = (arg1)->getNumberOfComponents();
+
+   
+   if (bytesPerPixel == 1)
+   {
+      // create a new byte[] object in Java
+      jbyteArray data = JCALL1(NewByteArray, jenv, numPixels);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+
+         $result = 0;
+         return $result;
+      }
+      // copy pixels from the image buffer
+      JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels, (jbyte*)result);
+
+      $result = data;
+   }
+   else if (bytesPerPixel == 2)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels, (jshort*)result);
+
+      $result = data;
+   }
+   else if (bytesPerPixel == 4)
+   {
+      if (numComponents == 1)
+      {
+         // create a new float[] object in Java
+         jfloatArray data = JCALL1(NewFloatArray, jenv, numPixels);
+         if (data == 0)
+         {
+            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+            if (excep)
+               jenv->ThrowNew(excep, "The system ran out of memory!");
+
+            $result = 0;
+            return $result;
+         }
+
+         // copy pixels from the image buffer
+         JCALL4(SetFloatArrayRegion, jenv, data, 0, numPixels, (jfloat*)result);
+
+         $result = data;
+      }
+      else
+      {
+         // create a new byte[] object in Java
+         jbyteArray data = JCALL1(NewByteArray, jenv, numPixels * 4);
+         if (data == 0)
+         {
+            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+            if (excep)
+               jenv->ThrowNew(excep, "The system ran out of memory!");
+
+            $result = 0;
+            return $result;
+         }
+
+         // copy pixels from the image buffer
+         JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels * 4, (jbyte*)result);
+
+         $result = data;
+      }
+   }
+   else if (bytesPerPixel == 8)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels * 4);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels * 4, (jshort*)result);
+
+      $result = data;
+   }
    else
    {
       // don't know how to map
@@ -737,7 +962,9 @@
       tags.put("ROI", getROITag());
       tags.put("Width", getImageWidth());
       tags.put("Height", getImageHeight());
-      tags.put("PixelType", getPixelType());
+      int bytesPerPixel = (int) getBytesPerPixel();
+      int numComponents = (int) getNumberOfComponents();
+      tags.put("PixelType", getPixelType(bytesPerPixel, numComponents));
       tags.put("Frame", 0);
       tags.put("FrameIndex", 0);
       tags.put("Position", "Default");
@@ -913,6 +1140,7 @@
 #include "../MMDevice/ImageMetadata.h"
 #include "../MMCore/MMEventCallback.h"
 #include "../MMCore/MMCore.h"
+#include "../MMCore/BufferDataPointer.h"
 %}
 
 
@@ -1231,4 +1459,5 @@ namespace std {
 %include "../MMCore/MMCore.h"
 %include "../MMDevice/ImageMetadata.h"
 %include "../MMCore/MMEventCallback.h"
+%include "../MMCore/BufferDataPointer.h"
 

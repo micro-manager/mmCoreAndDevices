@@ -77,6 +77,11 @@ public:
 
    bool Overflow() {MMThreadGuard guard(g_bufferLock); return overflow_;}
 
+   unsigned GetImageSizeBytes() const {
+      MMThreadGuard guard(g_bufferLock);
+      return width_ * height_ * pixDepth_ * numChannels_;
+   }
+
    mutable MMThreadLock g_bufferLock;
    mutable MMThreadLock g_insertLock;
 

@@ -318,9 +318,6 @@ bool BufferManager::ReleaseReadAccess(const void* ptr) {
    return false;
 }
 
-// TODO: these methods each copy and create the metadata object. Since 
-// they are called together, this could be made more efficient by 
-// returning a struct with the metadata and the values.
 unsigned BufferManager::GetImageWidth(const void* ptr) const {
    if (!useV2_) 
       throw CMMError("GetImageWidth(ptr) only supported with V2 buffer");
@@ -385,10 +382,11 @@ unsigned BufferManager::GetNumberOfComponents(const void* ptr) const {
    return GetComponentsFromType(pixelType);
 }
 
-long BufferManager::GetImageBufferSize(const void* ptr) const {
+unsigned BufferManager::GetDatumSize(const void* ptr) const {
    if (!useV2_) 
-      throw CMMError("GetImageBufferSize(ptr) only supported with V2 buffer");
-   return static_cast<long>(v2Buffer_->GetDataSize(ptr));
+      return circBuffer_->GetImageSizeBytes();
+   else
+      return static_cast<long>(v2Buffer_->GetDatumSize(ptr));
 }
 
 bool BufferManager::SetOverwriteData(bool overwrite) {
@@ -480,9 +478,3 @@ bool BufferManager::IsPointerInBuffer(const void* ptr) const throw (CMMError) {
     return v2Buffer_->IsPointerInBuffer(ptr);
 }
 
-DataBuffer* BufferManager::GetV2Buffer() const {
-    if (!useV2_) {
-        return nullptr;
-    }
-    return v2Buffer_;
-}

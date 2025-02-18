@@ -440,7 +440,7 @@ public:
    /** \name v2 buffer control. */
    ///@{
    void enableV2Buffer(bool enable) throw (CMMError);
-   bool usesV2Buffer() const { return useV2Buffer_; }
+   bool usesV2Buffer() const { return bufferManager_->IsUsingV2Buffer(); }
 
    // These functions are used by the Java SWIG wrapper to get properties of the image
    // based on a pointer. The DataPtr alias to void* is so they don't get converted to 
@@ -449,7 +449,7 @@ public:
    unsigned getImageHeight(DataPtr ptr) throw (CMMError);
    unsigned getBytesPerPixel(DataPtr ptr) throw (CMMError);
    unsigned getNumberOfComponents(DataPtr ptr) throw (CMMError);
-   long getImageBufferSize(DataPtr ptr) throw (CMMError);
+   unsigned getSizeBytes(DataPtr ptr) throw (CMMError);
    
    void releaseReadAccess(DataPtr ptr) throw (CMMError);
 
@@ -714,7 +714,6 @@ private:
 
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
-   bool useV2Buffer_; // Whether to use the V2 buffer implementation
 
 private:
    void InitializeErrorMessages();

@@ -776,11 +776,11 @@ int DataBuffer::ExtractCorrespondingMetadata(const void* dataPointer, Metadata &
     return ExtractMetadata(dataPointer, slot, md);
 }
 
-size_t DataBuffer::GetDataSize(const void* dataPointer) {
+size_t DataBuffer::GetDatumSize(const void* dataPointer) {
     std::lock_guard<std::mutex> lock(slotManagementMutex_);
     BufferSlot* slot = FindSlotForPointer(dataPointer);
     if (!slot) {
-        return 0;
+        throw std::runtime_error("DataBuffer::GetDatumSize: pointer not found in buffer");
     }
     return slot->GetDataSize();
 }

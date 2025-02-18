@@ -368,7 +368,7 @@ public:
      * @param dataPointer Pointer to the data portion of a slot.
      * @return Size in bytes of the data portion, or 0 if pointer is invalid.
      */
-    size_t GetDataSize(const void* dataPointer);
+    size_t GetDatumSize(const void* dataPointer);
 
     /**
      * Check if a pointer is within the buffer's memory range.

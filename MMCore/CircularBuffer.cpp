@@ -96,7 +96,7 @@ bool CircularBuffer::Initialize(unsigned channels, unsigned int w, unsigned int 
       // calculate the size of the entire buffer array once all images get allocated
       // the actual size at the time of the creation is going to be less, because
       // images are not allocated until pixels become available
-      unsigned long frameSizeBytes = width_ * height_ * pixDepth_ * numChannels_;
+      unsigned long frameSizeBytes = GetImageSizeBytes();
       unsigned long cbSize = (unsigned long) ((memorySizeMB_ * bytesInMB) / frameSizeBytes);
 
       if (cbSize == 0) 
