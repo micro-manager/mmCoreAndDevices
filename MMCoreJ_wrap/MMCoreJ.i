@@ -288,6 +288,10 @@
 %apply int &OUTPUT { int &xSize };
 %apply int &OUTPUT { int &ySize };
 
+%apply int &OUTPUT { int &width };
+%apply int &OUTPUT { int &height };
+%apply int &OUTPUT { int &byteDepth };
+%apply int &OUTPUT { int &nComponents };
 
 // Java typemap
 // change default SWIG mapping of unsigned char* return values
@@ -519,6 +523,9 @@
    }
 }
 
+// This is conceptually similar to the void* typemap above,
+// but requires slightly different calls because BufferDataPointer
+// is different from the data-returning void* methods of the Core.
 %typemap(jni) BufferDataPointerVoidStar "jobject"
 %typemap(jtype) BufferDataPointerVoidStar "Object" 
 %typemap(jstype) BufferDataPointerVoidStar "Object"
@@ -534,9 +541,9 @@
       $result = 0;
       return $result;
    }
-   unsigned bytesPerPixel = (arg1)->getBytesPerPixel();
-   unsigned numPixels = numBytes / bytesPerPixel;
-   unsigned numComponents = (arg1)->getNumberOfComponents();   
+   int width, height, bytesPerPixel, numComponents;
+   (arg1)->getImageProperties(width, height, bytesPerPixel, numComponents);
+   unsigned numPixels = width * height;
    
    if (bytesPerPixel == 1)
    {
@@ -638,126 +645,124 @@
 }
 
 
-// This is conceptually similar to the void* typemap above,
-// but requires slightly different calls because BufferDataPointer
-// is different from the data-returning void* methods of the Core.
-%typemap(jni) BufferDataPointer "jobject"
-%typemap(jtype) BufferDataPointer "Object" 
-%typemap(jstype) BufferDataPointer "Object"
-%typemap(javaout) BufferDataPointer {
-   return $jnicall;
-}
-%typemap(out) BufferDataPointer
-{
+// What was this suppossed to do?
+// %typemap(jni) BufferDataPointer "jobject"
+// %typemap(jtype) BufferDataPointer "Object" 
+// %typemap(jstype) BufferDataPointer "Object"
+// %typemap(javaout) BufferDataPointer {
+//    return $jnicall;
+// }
+// %typemap(out) BufferDataPointer
+// {
    
-   unsigned numBytes = (arg1)->getSizeBytes();
-   unsigned bytesPerPixel = (arg1)->getBytesPerPixel();
-   unsigned numPixels = numBytes / bytesPerPixel;
-   unsigned numComponents = (arg1)->getNumberOfComponents();
+//    unsigned numBytes = (arg1)->getSizeBytes();
+//    unsigned bytesPerPixel = (arg1)->getBytesPerPixel();
+//    unsigned numPixels = numBytes / bytesPerPixel;
+//    unsigned numComponents = (arg1)->getNumberOfComponents();
 
    
-   if (bytesPerPixel == 1)
-   {
-      // create a new byte[] object in Java
-      jbyteArray data = JCALL1(NewByteArray, jenv, numPixels);
-      if (data == 0)
-      {
-         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
-         if (excep)
-            jenv->ThrowNew(excep, "The system ran out of memory!");
+//    if (bytesPerPixel == 1)
+//    {
+//       // create a new byte[] object in Java
+//       jbyteArray data = JCALL1(NewByteArray, jenv, numPixels);
+//       if (data == 0)
+//       {
+//          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+//          if (excep)
+//             jenv->ThrowNew(excep, "The system ran out of memory!");
 
-         $result = 0;
-         return $result;
-      }
-      // copy pixels from the image buffer
-      JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels, (jbyte*)result);
+//          $result = 0;
+//          return $result;
+//       }
+//       // copy pixels from the image buffer
+//       JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels, (jbyte*)result);
 
-      $result = data;
-   }
-   else if (bytesPerPixel == 2)
-   {
-      // create a new short[] object in Java
-      jshortArray data = JCALL1(NewShortArray, jenv, numPixels);
-      if (data == 0)
-      {
-         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
-         if (excep)
-            jenv->ThrowNew(excep, "The system ran out of memory!");
-         $result = 0;
-         return $result;
-      }
+//       $result = data;
+//    }
+//    else if (bytesPerPixel == 2)
+//    {
+//       // create a new short[] object in Java
+//       jshortArray data = JCALL1(NewShortArray, jenv, numPixels);
+//       if (data == 0)
+//       {
+//          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+//          if (excep)
+//             jenv->ThrowNew(excep, "The system ran out of memory!");
+//          $result = 0;
+//          return $result;
+//       }
   
-      // copy pixels from the image buffer
-      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels, (jshort*)result);
+//       // copy pixels from the image buffer
+//       JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels, (jshort*)result);
 
-      $result = data;
-   }
-   else if (bytesPerPixel == 4)
-   {
-      if (numComponents == 1)
-      {
-         // create a new float[] object in Java
-         jfloatArray data = JCALL1(NewFloatArray, jenv, numPixels);
-         if (data == 0)
-         {
-            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
-            if (excep)
-               jenv->ThrowNew(excep, "The system ran out of memory!");
+//       $result = data;
+//    }
+//    else if (bytesPerPixel == 4)
+//    {
+//       if (numComponents == 1)
+//       {
+//          // create a new float[] object in Java
+//          jfloatArray data = JCALL1(NewFloatArray, jenv, numPixels);
+//          if (data == 0)
+//          {
+//             jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+//             if (excep)
+//                jenv->ThrowNew(excep, "The system ran out of memory!");
 
-            $result = 0;
-            return $result;
-         }
+//             $result = 0;
+//             return $result;
+//          }
 
-         // copy pixels from the image buffer
-         JCALL4(SetFloatArrayRegion, jenv, data, 0, numPixels, (jfloat*)result);
+//          // copy pixels from the image buffer
+//          JCALL4(SetFloatArrayRegion, jenv, data, 0, numPixels, (jfloat*)result);
 
-         $result = data;
-      }
-      else
-      {
-         // create a new byte[] object in Java
-         jbyteArray data = JCALL1(NewByteArray, jenv, numPixels * 4);
-         if (data == 0)
-         {
-            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
-            if (excep)
-               jenv->ThrowNew(excep, "The system ran out of memory!");
+//          $result = data;
+//       }
+//       else
+//       {
+//          // create a new byte[] object in Java
+//          jbyteArray data = JCALL1(NewByteArray, jenv, numPixels * 4);
+//          if (data == 0)
+//          {
+//             jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+//             if (excep)
+//                jenv->ThrowNew(excep, "The system ran out of memory!");
 
-            $result = 0;
-            return $result;
-         }
+//             $result = 0;
+//             return $result;
+//          }
 
-         // copy pixels from the image buffer
-         JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels * 4, (jbyte*)result);
+//          // copy pixels from the image buffer
+//          JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels * 4, (jbyte*)result);
 
-         $result = data;
-      }
-   }
-   else if (bytesPerPixel == 8)
-   {
-      // create a new short[] object in Java
-      jshortArray data = JCALL1(NewShortArray, jenv, numPixels * 4);
-      if (data == 0)
-      {
-         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
-         if (excep)
-            jenv->ThrowNew(excep, "The system ran out of memory!");
-         $result = 0;
-         return $result;
-      }
+//          $result = data;
+//       }
+//    }
+//    else if (bytesPerPixel == 8)
+//    {
+//       // create a new short[] object in Java
+//       jshortArray data = JCALL1(NewShortArray, jenv, numPixels * 4);
+//       if (data == 0)
+//       {
+//          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+//          if (excep)
+//             jenv->ThrowNew(excep, "The system ran out of memory!");
+//          $result = 0;
+//          return $result;
+//       }
   
-      // copy pixels from the image buffer
-      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels * 4, (jshort*)result);
+//       // copy pixels from the image buffer
+//       JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels * 4, (jshort*)result);
 
-      $result = data;
-   }
-   else
-   {
-      // don't know how to map
-      // TODO: throw exception?
-      $result = 0;
-   }
-}
+//       $result = data;
+//    }
+//    else
+//    {
+//       // don't know how to map
+//       // TODO: throw exception?
+//       $result = 0;
+//    }
+// }
 
 
 // Define typemaps for DataPtr
@@ -854,14 +859,6 @@
 %}
 
 %typemap(javacode) CMMCore %{
-   private boolean includeSystemStateCache_ = true;
-
-   // public boolean getIncludeSystemStateCache() { 
-   //    return includeSystemStateCache_;
-   // }
-   // public void setIncludeSystemStateCache(boolean state) {
-   //    includeSystemStateCache_ = state;
-   // }
 
    private JSONObject metadataToMap(Metadata md) {
       JSONObject tags = new JSONObject();
@@ -873,156 +870,61 @@
       return tags;
    }
 
-   // Its probably a good idea to minimize the complexity of this SWIG layer, 
-   // including the amount of metadata added here. However, all the metadata
-   // added for SnapImage is generated here, and the current Core API doesn't
-   // give metadata along with returning the snapimage buffer
 
-   . In the future, routing everything 
-   // through the bufferManager, and a new camera API can solve this so that 
-   // all images go through a common route and can have consistent metadata added.
+   // private TaggedImagePointer createTaggedImagePointer(BufferDataPointer pointer) throws java.lang.Exception {
+   //    // This only ever gets called by the V2 buffer, is called by the Pointer functions that have a different signature
+   //    // Thus, we do not need to maintain backwards compatibility for higher level code that calls the other functions.
+   //    // So we we only add the metadata that actually makes sense for the current abstraction.
 
-
-   // TODO: deal with this
-   private JSONObject createSnapImageTags() throws java.lang.Exception {
-      JSONObject tags = new JSONObject();
-      tags.put("Width", getImageWidth());
-      tags.put("Height", getImageHeight());
-      int bytesPerPixel = (int) getBytesPerPixel();
-      int numComponents = (int) getNumberOfComponents();
-      tags.put("PixelType", getPixelType(bytesPerPixel, numComponents));
-
-      // These get added in corecallback.cpp
-      tags.put("BitDepth", getImageBitDepth());
-      tags.put("ROI", getROITag());
-      try {
-         tags.put("Binning", getProperty(camera, "Binning"));
-      } catch (Exception ex) {}
-
-      return tags;
-   }
-
-
-
-   // TODO add to global
-   private String getPixelType(int depth, int numComponents) throws java.lang.Exception {
-      switch (depth) {
-         case 1:
-            return "GRAY8";
-         case 2:
-            return "GRAY16";
-         case 4: {
-            if (numComponents == 1)
-               return "GRAY32";
-            else
-               return "RGB32";
-            }
-         case 8:
-            return "RGB64";
-     }
-     return "";
-   }
-
-   private String getMultiCameraChannel(JSONObject tags, int cameraChannelIndex) {
-	  try {
-	  String camera = tags.getString("Core-Camera");
-	  String physCamKey = camera + "-Physical Camera " + (1 + cameraChannelIndex);
-	  if (tags.has(physCamKey)) {
-		 try {
-			return tags.getString(physCamKey);
-		 } catch (Exception e2) {
-			return null;
-		 }
-	  } else {
-		 return null;
-	  }
-	 } catch (Exception e) {
-	   return null;
-	 }
-
-   }
-
-   private TaggedImage createTaggedImage(Object pixels, Metadata md, int cameraChannelIndex) throws java.lang.Exception {
-      TaggedImage image = createTaggedImage(pixels, md);
-      JSONObject tags = image.tags;
-      
-      if (!tags.has("CameraChannelIndex")) {
-         tags.put("CameraChannelIndex", cameraChannelIndex);
-         tags.put("ChannelIndex", cameraChannelIndex);
-      }
-      if (!tags.has("Camera")) {
-         String physicalCamera = getMultiCameraChannel(tags, cameraChannelIndex);
-         if (physicalCamera != null) {
-            tags.put("Camera", physicalCamera);
-            tags.put("Channel",physicalCamera);
-         }
-      }
-      return image;
-   }
-
-
-   private TaggedImagePointer createTaggedImagePointer(BufferDataPointer pointer) throws java.lang.Exception {
-      // This only ever gets called by the V2 buffer, is called by the Pointer functions that have a different signature
-      // Thus, we do not need to maintain backwards compatibility for higher level code that calls the other functions.
-      // So we we only add the metadata that actually makes sense for the current abstraction.
-
-      // Some metadata is added here, the rest is added lazily when the image is loaded
-      JSONObject tagsToAdd = new JSONObject();
-
-      addSystemStateCacheTags(tagsToAdd);
+   //    // Some metadata is added here, the rest is added lazily when the image is loaded
+   //    JSONObject tagsToAdd = new JSONObject();
 
       
-      TaggedImagePointer imagePointer = new TaggedImagePointer(pointer);
-   }
-
-   private TaggedImage createTaggedImage(Object pixels, Metadata md, JSONObject moreTags) throws java.lang.Exception {
-      return createTaggedImage(pixels, md, null, tags);
-   }
-      
-   private TaggedImage createTaggedImage(Object pixels, Metadata md, Long pointer, JSONObject moreTags) throws java.lang.Exception {
-      JSONObject tags = metadataToMap(md);
-      tags.putAll(moreTags);
-      
-      return new TaggedImage(pixels, tags);	
-   }
+   //    TaggedImagePointer imagePointer = new TaggedImagePointer(pointer);
+   // }
 
    // Snap image functions   
    public TaggedImage getTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
-      Object pixels = getImage(cameraChannelIndex);
-      JSONObject tags = createSnapImageTags();
-      return createTaggedImage(pixels, md, cameraChannelIndex, tags);
+      Object pixels = getImageMD(cameraChannelIndex, md);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
 
    public TaggedImage getTaggedImage() throws java.lang.Exception {
-      return getTaggedImage(0);
+      Metadata md = new Metadata();
+      Object pixels = getImageMD(md);
+      return new TaggedImage(pixels, metadataToMap(md));	
    }
 
    // sequence acq functions
    public TaggedImage getLastTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getLastImageMD(cameraChannelIndex, 0, md);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
    
    public TaggedImage getLastTaggedImage() throws java.lang.Exception {
-      return getLastTaggedImage(0);
+      Metadata md = new Metadata();
+      Object pixels = getLastImageMD(md);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
 
    public TaggedImage getNBeforeLastTaggedImage(long n) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getNBeforeLastImageMD(n, md);
-      return createTaggedImage(pixels, md);
+      return new TaggedImage(pixels, metadataToMap(md));	
    }
 
    public TaggedImage popNextTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = popNextImageMD(cameraChannelIndex, 0, md);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
 
    public TaggedImage popNextTaggedImage() throws java.lang.Exception {
-      return popNextTaggedImage(0);
+      Metadata md = new Metadata();
+      Object pixels = popNextImageMD(md);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
 
 
@@ -1452,6 +1354,12 @@ namespace std {
 
 }
 
+
+// These are needed by the void* typemaps to copy pixels and then 
+// release them, but they shouldn't be needed by the Java wrap
+// because their functionality is handled by the BufferDataPointer class
+// %ignore CMMCore::getImageProperties(DataPtr, int&, int&, int&, int&);
+// %ignore CMMCore::releaseReadAccess(DataPtr);
 
 %include "../MMDevice/MMDeviceConstants.h"
 %include "../MMCore/Configuration.h"

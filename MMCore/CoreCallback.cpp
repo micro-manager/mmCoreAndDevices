@@ -242,7 +242,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
       {
          // convert device to camera
          std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(device);
-         core_->AddCameraMetadata(camera, newMD, width, height, byteDepth, nComponents, true);
+         core_->addCameraMetadata(camera, newMD, width, height, byteDepth, nComponents, true);
       }
 
       if(doProcess)
@@ -297,7 +297,7 @@ int CoreCallback::AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSiz
       Metadata md;
       std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
       // Add the metadata needed for interpreting camera images
-      core_->AddCameraMetadata(camera, md, width, height, byteDepth, nComponents, true);
+      core_->addCameraMetadata(camera, md, width, height, byteDepth, nComponents, true);
 
       char label[MM::MaxStrLength];
       caller->GetLabel(label);
@@ -368,7 +368,7 @@ int CoreCallback:: InsertMultiChannel(const MM::Device* caller, const unsigned c
       {
          // convert device to camera
          std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(device);
-         core_->AddCameraMetadata(camera, newMD, width, height, byteDepth, 1, true);
+         core_->addCameraMetadata(camera, newMD, width, height, byteDepth, 1, true);
       }
 
       MM::ImageProcessor* ip = GetImageProcessor(caller);

@@ -384,8 +384,8 @@ public:
    void snapImage() throw (CMMError);
    void* getImage() throw (CMMError);
    void* getImage(unsigned numChannel) throw (CMMError);
-   void* getImage(Metadata& md) throw (CMMError);
-   void* getImage(unsigned numChannel, Metadata& md) throw (CMMError);
+   void* getImageMD(Metadata& md) throw (CMMError);
+   void* getImageMD(unsigned numChannel, Metadata& md) throw (CMMError);
 
    unsigned getImageWidth();
    unsigned getImageHeight();
@@ -457,22 +457,20 @@ public:
    ///@{
    void enableV2Buffer(bool enable) throw (CMMError);
    bool usesV2Buffer() const { return bufferManager_->IsUsingV2Buffer(); }
-
+   
    // These functions are used by the Java SWIG wrapper to get properties of the image
    // based on a pointer. The DataPtr alias to void* is so they don't get converted to 
    // Object in the Java SWIG wrapper.
-   unsigned getImageWidth(DataPtr ptr) throw (CMMError);
-   unsigned getImageHeight(DataPtr ptr) throw (CMMError);
-   unsigned getBytesPerPixel(DataPtr ptr) throw (CMMError);
-   unsigned getNumberOfComponents(DataPtr ptr) throw (CMMError);
-   unsigned getSizeBytes(DataPtr ptr) throw (CMMError);
-   
+   void getImageProperties(DataPtr ptr, int& width, int& height, int& byteDepth, int& nComponents) throw (CMMError);
    void releaseReadAccess(DataPtr ptr) throw (CMMError);
+
 
    // Same functionality as non pointer versions above, but
    // enables alternative wrappers in SWIG for pointer-based access to the image data.
 
-   // This one is "Image" not "Data" because it corresponds to SnapImage()/GetImage()
+   // This one is "Image" not "Data" because it corresponds to SnapImage()/GetImage(), 
+   // Which does only goes through the v2 buffer after coming from the camera device buffer,
+   // so it is guarenteed to be an image, not a more generic piece of data.
    BufferDataPointer* getImagePointer() throw (CMMError);
 
    // These are "Data" not "Image" because they can be used generically for any data type
@@ -698,6 +696,8 @@ public:
    }
    ///@}
 
+   static void parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents);
+
 private:
    // make object non-copyable
    CMMCore(const CMMCore&);
@@ -780,9 +780,17 @@ private:
    void initializeAllDevicesParallel() throw (CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
 
-   void AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, bool addLegacyMetadata);
-   void AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
+
+   // Centralized functions for adding and parsing metadata. This includes required metadta
+   // for interpretting the data like width, height, pixel type, as well as option nice-to-have
+   // metadata like elapsed time that may be relied on by higher level code.
+   // If support for other types of data is added in the future, alternative versions of these functions
+   // should be added.
+   void addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
                   unsigned byteDepth, unsigned nComponents, bool addLegacyMetadata);
+   // Additional metadata for the multi-camera device adapter
+   void addMultiCameraMetadata(Metadata& md, int cameraChannelIndex) const;
+
 };
 
 #if defined(__GNUC__) && !defined(__clang__)

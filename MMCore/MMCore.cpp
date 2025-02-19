@@ -2700,8 +2700,8 @@ bool CMMCore::getShutterOpen() throw (CMMError)
  * Get the metadata tags attached to device caller, and merge them with metadata
  * in pMd (if not null). Returns a metadata object.
  */
-void CMMCore::AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
-                  unsigned byteDepth, unsigned nComponents, bool addLegacyMetadata)
+void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
+                  unsigned byteDepth, unsigned nComponents, bool addLegacyMetadata) throw (CMMError)
 {    
     // Essential metadata for interpreting the image: Width, height, and pixel type
     md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
@@ -2821,7 +2821,7 @@ void CMMCore::AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
       md.put("Slice", "0");
       md.put("SliceIndex", "0");
 
-      // Add channel metadata
+      // Add channel metadata if not already set
       try {
          std::string channel = getCurrentConfigFromCache(
             getPropertyFromCache(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreChannelGroup).c_str());
@@ -2836,6 +2836,7 @@ void CMMCore::AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
          md.put("Channel", "Default");
          md.put("ChannelIndex", "0");
       }
+   
    }
 
    // Add system state cache if enabled
@@ -2856,12 +2857,36 @@ void CMMCore::AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
    }
 }
 
-void CMMCore::AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, bool addLegacyMetadata)
+void CMMCore::addMultiCameraMetadata(Metadata& md,  int cameraChannelIndex = 0) const
 {
-   AddCameraMetadata(pCam, md, pCam->GetImageWidth(), pCam->GetImageHeight(),
-                     pCam->GetImageBytesPerPixel(), pCam->GetNumberOfComponents(), addLegacyMetadata);
-}
+   // Multi-camera device adapter metadata. This is considered legacy since the v2 buffer
+   // make the multi-camera adapter unnecessary.
+   
+   if (!md.HasTag("CameraChannelIndex")) {
+      md.put("CameraChannelIndex", ToString(cameraChannelIndex));
+      md.put("ChannelIndex", ToString(cameraChannelIndex));
+   }
 
+      if (!md.HasTag("Camera")) {
+         // Get the core camera name
+         std::string coreCamera;
+         try {
+            coreCamera = md.GetSingleTag("Core-Camera").GetValue();
+            // Construct physical camera key (e.g. "Camera-Physical Camera 1")
+            std::string physCamKey = coreCamera + "-Physical Camera " + ToString(cameraChannelIndex + 1);
+            
+            // Check if physical camera metadata exists
+            if (md.HasTag(physCamKey.c_str())) {
+               std::string physicalCamera = md.GetSingleTag(physCamKey.c_str()).GetValue();
+               md.put("Camera", physicalCamera);
+               md.put("Channel", physicalCamera);
+            }
+         }
+         catch (const CMMError&) {
+            // If core camera metadata not found, ignore
+         }
+      }
+}
 
 /**
  * Exposes the internal image buffer.
@@ -2987,7 +3012,7 @@ void* CMMCore::getImage(unsigned channelNr) throw (CMMError)
 
 // Version of snap that also return metadata, so that metadata generation can be centralized in the Core and migrated
 // out of the SWIG wrapper.
-void* CMMCore::getImage(Metadata& md) throw (CMMError)
+void* CMMCore::getImageMD(Metadata& md) throw (CMMError)
 {
    void* pBuf = getImage();
 
@@ -2997,13 +3022,14 @@ void* CMMCore::getImage(Metadata& md) throw (CMMError)
 
    mm::DeviceModuleLockGuard guard(camera);
    // Need to do this becuase this data was never inserted into the circular buffer or V2 buffer where this
-   // metadata is added for other images
-   AddCameraMetadata(camera, md, true);
+   // metadata is added for other images   
+   addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents(), true);
    
    return pBuf;
 }
 
-void* CMMCore::getImage(unsigned channelNr, Metadata& md) throw (CMMError)
+void* CMMCore::getImageMD(unsigned channelNr, Metadata& md) throw (CMMError)
 {
    void* pBuf = getImage(channelNr);
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
@@ -3013,7 +3039,9 @@ void* CMMCore::getImage(unsigned channelNr, Metadata& md) throw (CMMError)
    mm::DeviceModuleLockGuard guard(camera);
    // Need to do this becuase this data was never inserted into the circular buffer or V2 buffer where this
    // metadata is added for other images
-   AddCameraMetadata(camera, md, true);
+   addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents(), true);
+   addMultiCameraMetadata(md, channelNr);
    return pBuf;
 }
 
@@ -3074,9 +3102,11 @@ BufferDataPointer* CMMCore::getImagePointer() throw (CMMError)
          
          
          Metadata md;
-         AddCameraMetadata(camera, md, false);
-         bufferManager_->InsertData(camera->GetLabel().c_str(), (unsigned char*)pBuf, 
-            camera->GetImageWidth() * camera->GetImageHeight() * camera->GetImageBytesPerPixel(), &md);
+         // Add metadata to know how to interpret the data added to v2 buffer
+         addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents(), true);
+         unsigned imageSize = camera->GetImageWidth() * camera->GetImageHeight() * camera->GetImageBytesPerPixel();
+         bufferManager_->InsertData(camera->GetLabel().c_str(), (unsigned char*)pBuf, imageSize, &md);
 
          if (bufferManager_->GetOverwriteData()) {
             // If in overwrite mode (e.g. live mode), peek the last data
@@ -3439,7 +3469,9 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   return const_cast<void*>(bufferManager_->GetLastDataMD(channel, md));
+   void* pixels = const_cast<void*>(bufferManager_->GetLastDataMD(channel, md));
+   addMultiCameraMetadata(md, channel);
+   return pixels;
 }
 
 /**
@@ -3508,7 +3540,9 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) th
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   return const_cast<void*>(bufferManager_->PopNextDataMD(channel, md));
+   void* pixels = const_cast<void*>(bufferManager_->PopNextDataMD(channel, md));
+   addMultiCameraMetadata(md, channel);
+   return pixels;
 }
 
 /**
@@ -4672,91 +4706,20 @@ unsigned CMMCore::getNumberOfComponents()
    return 0;
 }
 
-// For the below functions that get properties of the image based on a pointer,
-// Cant assume that this a v2 buffer pointer, because Java SWIG wrapper
-// will call this after copying from a snap buffer. So we'll check if the 
-// buffer knows about this pointer. If not, it's a snap buffer pointer.
-// We don't want want to compare to the snap buffer pointer directly because
-// its unclear what the device adapter might do when this is called.
-unsigned CMMCore::getImageWidth(DataPtr ptr) {
-   if (!bufferManager_->IsUsingV2Buffer()) {
-      return getImageWidth();
-   }
-   if (bufferManager_->IsPointerInV2Buffer(ptr)) {
-      Metadata md;
-      bufferManager_->ExtractMetadata(ptr, md);
-      std::string sVal = md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue();
-      return static_cast<unsigned>(atoi(sVal.c_str()));
-   }
-   return getImageWidth();
-}
-
-unsigned CMMCore::getImageHeight(DataPtr ptr) {
-   if (!bufferManager_->IsUsingV2Buffer()) {
-      return getImageHeight();
-   }
-   if (bufferManager_->IsPointerInV2Buffer(ptr)) {
-      Metadata md;
-      bufferManager_->ExtractMetadata(ptr, md);
-      std::string sVal = md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue();
-      return static_cast<unsigned>(atoi(sVal.c_str()));
-   }
-   return getImageHeight();
-}
-
-unsigned CMMCore::getBytesPerPixel(DataPtr ptr) {
-   if (!bufferManager_->IsUsingV2Buffer()) {
-      return getBytesPerPixel();
-   }
-   if (bufferManager_->IsPointerInV2Buffer(ptr)) {
-      Metadata md;
-      bufferManager_->ExtractMetadata(ptr, md);
-      std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
-      if (pixelType == MM::g_Keyword_PixelType_GRAY8)
-         return 1;
-      else if (pixelType == MM::g_Keyword_PixelType_GRAY16)
-         return 2;
-      else if (pixelType == MM::g_Keyword_PixelType_GRAY32 ||
-               pixelType == MM::g_Keyword_PixelType_RGB32)
-         return 4;
-      else if (pixelType == MM::g_Keyword_PixelType_RGB64)
-         return 8;
-   }
-   return getBytesPerPixel();
-}
-
-unsigned CMMCore::getNumberOfComponents(DataPtr ptr) {
-   if (!bufferManager_->IsUsingV2Buffer()) {
-      return getNumberOfComponents();
-   }
-   if (bufferManager_->IsPointerInV2Buffer(ptr)) {
-      Metadata md;
-      bufferManager_->ExtractMetadata(ptr, md);
-      std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
-      if (pixelType == MM::g_Keyword_PixelType_GRAY8 ||
-          pixelType == MM::g_Keyword_PixelType_GRAY16 ||
-          pixelType == MM::g_Keyword_PixelType_GRAY32)
-         return 1;
-      else if (pixelType == MM::g_Keyword_PixelType_RGB32 ||
-               pixelType == MM::g_Keyword_PixelType_RGB64)
-         return 4;
-   }
-   return getNumberOfComponents();
-}
-
-unsigned CMMCore::getSizeBytes(DataPtr ptr) {
-   if (!bufferManager_->IsUsingV2Buffer()) {
-      return getImageWidth() * getImageHeight() * getBytesPerPixel();
-   }
-   if (bufferManager_->IsPointerInV2Buffer(ptr)) {
-      return bufferManager_->GetDataSize(ptr);
-   }
-   return getImageBufferSize();
-}
-
 void CMMCore::releaseReadAccess(DataPtr ptr) {
    if (bufferManager_->IsUsingV2Buffer()) {
       bufferManager_->ReleaseReadAccess(ptr);
+   }
+}
+
+void CMMCore::getImageProperties(DataPtr ptr, int& width, int& height, 
+                                    int& byteDepth, int& nComponents) throw (CMMError) {
+   if (!bufferManager_->IsUsingV2Buffer()) {
+      throw CMMError("Cannot get image properties when not using V2 buffer");
+   } else {
+      Metadata md;
+      bufferManager_->ExtractMetadata(ptr, md);
+      parseImageMetadata(md, width, height, byteDepth, nComponents);
    }
 }
 
@@ -8228,4 +8191,34 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
       description = pHub->GetInstalledPeripheralDescription(deviceLabel);
    }
    return description.empty() ? "N/A" : description;
+}
+
+
+/**
+ * Get the essential metadata for interpretting image data stored in the buffer.
+ */
+void CMMCore::parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents)
+{
+   width = std::stoul(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue());
+   height = std::stoul(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue());
+   nComponents = 1; // Default to 1 component
+   std::string pixType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
+   
+   if (pixType == MM::g_Keyword_PixelType_GRAY8)
+      byteDepth = 1;
+   else if (pixType == MM::g_Keyword_PixelType_GRAY16)
+      byteDepth = 2;
+   else if (pixType == MM::g_Keyword_PixelType_GRAY32)
+      byteDepth = 4;
+   else if (pixType == MM::g_Keyword_PixelType_RGB32) {
+      byteDepth = 4;
+      nComponents = 4; // ARGB format uses 4 components
+   }
+   else if (pixType == MM::g_Keyword_PixelType_RGB64) {
+      byteDepth = 8;
+      nComponents = 4; // ARGB format uses 4 components
+   } else {
+      byteDepth = 1; // Default to 1 byte depth for unknown types
+      nComponents = 1;
+   }
 }

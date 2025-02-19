@@ -58,6 +58,15 @@ public:
       return ptr_;
    }
 
+   void getImageProperties(int& width, int& height, int& byteDepth, int& nComponents) throw (CMMError) {
+      if (!bufferManager_ || !ptr_) {
+         throw CMMError("Invalid buffer manager or pointer");
+      }
+      Metadata md;
+      bufferManager_->ExtractMetadata(ptr_, md);
+      CMMCore::parseImageMetadata(md, width, height, byteDepth, nComponents);
+   }
+
    // Fills the provided Metadata object with metadata extracted from the pointer.
    // It encapsulates calling the core API function that copies metadata from the buffer.
    void getMetadata(Metadata &md) const {
@@ -84,35 +93,6 @@ public:
          }
       }
    }
-
-   // TODO if an when these are needed, make them a call a single functions that reads width and height together
-   // unsigned getImageWidth() const {
-   //    if (bufferManager_ && ptr_) {
-   //       return bufferManager_->GetImageWidth(ptr_);
-   //    }
-   //    return 0;
-   // }
-
-   // unsigned getImageHeight() const {
-   //    if (bufferManager_ && ptr_) {
-   //       return bufferManager_->GetImageHeight(ptr_);
-   //    }
-   //    return 0;
-   // }
-
-   // unsigned getBytesPerPixel() const {
-   //    if (bufferManager_ && ptr_) {
-   //       return bufferManager_->GetBytesPerPixel(ptr_);
-   //    }
-   //    return 0;
-   // }
-   //
-   // unsigned getNumberOfComponents() const {
-   //    if (bufferManager_ && ptr_) {
-   //       return bufferManager_->GetNumberOfComponents(ptr_);
-   //    }
-   //    return 0;
-   // }
 
    unsigned getSizeBytes() const {
       if (bufferManager_ && ptr_) {
