@@ -766,6 +766,12 @@ void CMMCore::assignDefaultRole(std::shared_ptr<DeviceInstance> pDevice)
 void CMMCore::unloadDevice(const char* label///< the name of the device to unload
                            ) throw (CMMError)
 {
+   // "Core" cannot be unloaded.
+   if (label != nullptr && std::string(label) == MM::g_Keyword_CoreDevice)
+   {
+      throw CMMError("Cannot unload " + ToQuotedString("Core"));
+   }
+
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
    try {
