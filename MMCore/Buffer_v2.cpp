@@ -114,7 +114,7 @@ DataBuffer::DataBuffer(unsigned int memorySizeMB)
         unusedSlots_.push_back(bs);
     }
     
-    AllocateBuffer(memorySizeMB);
+    ReinitializeBuffer(memorySizeMB);
 }
 
 DataBuffer::~DataBuffer() {
@@ -233,6 +233,21 @@ int DataBuffer::SetOverwriteData(bool overwrite) {
     return DEVICE_OK;
 }
 
+/**
+ * Get whether the buffer should overwrite old data when full.
+ * @return True if overwriting is enabled, false otherwise.
+ */
+bool DataBuffer::GetOverwriteData() const {
+    return overwriteWhenFull_;
+}
+
+/**
+ * Reset the buffer, discarding all data that is not currently held externally.
+ */
+void DataBuffer::Reset() {
+    // Reuse ReinitializeBuffer with current size
+    ReinitializeBuffer(GetMemorySizeMB());
+}
 
 /**
  * Get a pointer to the next available data slot in the buffer for writing.

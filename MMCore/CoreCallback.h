@@ -92,18 +92,54 @@ public:
 
    /*Deprecated*/ int InsertMultiChannel(const MM::Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd = 0);
    
-   // Direct writing into V2 buffer instead of using InsertImage (which has to copy the data again)
-   ///////// TODO: uncomment to activate these methods once tested with camera
-//    int AcquireImageWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
-//                         unsigned char** dataPointer, unsigned char** metadataPointer,
-//                         unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents);
-//    int FinalizeWriteSlot(unsigned char* imageDataPointer, 
-//                         size_t actualMetadataBytes);
+   /**
+    * Direct writing into V2 buffer instead of using InsertImage (which has to copy the data again).
+    * Version with essential parameters for camera devices.
+    * @param caller Camera device making the call
+    * @param dataSize Size of the image data in bytes
+    * @param metadataSize Size of metadata in bytes
+    * @param dataPointer Pointer that will be set to allocated image buffer. The caller should write 
+    *   data to this buffer.
+    * @param metadataPointer Pointer that will be set to allocated metadata buffer. The caller should write 
+    *   serialized metadata to this buffer.
+    * @param width Width of the image in pixels
+    * @param height Height of the image in pixels
+    * @param byteDepth Number of bytes per pixel
+    * @param nComponents Number of components per pixel
+    * @return DEVICE_OK on success
+    */
+   int AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSize, size_t metadataSize,
+                        unsigned char** dataPointer, unsigned char** metadataPointer,
+                        unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents);
 
-   // Note: these are not required and have no effect on v2 buffer,
-   // because devices do not have authority to clear the buffer since higher level 
-   //code may hold pointers to data in the buffer.
-   void ClearImageBuffer(const MM::Device* caller);
+   /**
+    * Generic version for inserting data into the buffer.
+    * @param caller Device making the call
+    * @param dataSize Size of the data in bytes
+    * @param metadataSize Size of metadata in bytes
+    * @param dataPointer Pointer that will be set to allocated data buffer. The caller should write   
+    *   data to this buffer.
+    * @param metadataPointer Pointer that will be set to allocated metadata buffer. The caller should write 
+    *   serialized metadata to this buffer.
+    * @return DEVICE_OK on success
+    */
+   int AcquireDataWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
+                        unsigned char** dataPointer, unsigned char** metadataPointer);
+
+   /**
+    * Finalizes a write slot after data has been written.
+    * @param dataPointer Pointer to the data buffer that was written to
+    * @param actualMetadataBytes Actual number of metadata bytes written
+    * @return DEVICE_OK on success
+    */
+   int FinalizeWriteSlot(unsigned char* dataPointer, size_t actualMetadataBytes);
+
+   // @deprecated This method was previously used by many camera adapters to enforce an overwrite mode on the circular buffer
+   // -- making it wrap around when running a continuous sequence acquisition. Now we've added an option to do this into the 
+   // circular buffer itself, so this method is no longer required and is not used. higher level code will control when this
+   // option is activated, making it simpler to develop camera adatpers and giving more consistent behavior.
+   void ClearImageBuffer(const MM::Device* /*caller*/) {};
+   // @deprecated This method is not required for the V2 buffer and is called by higher level code for circular buffer
    bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
    int AcqFinished(const MM::Device* caller, int statusCode);
@@ -153,15 +189,6 @@ public:
 private:
    CMMCore* core_;
    MMThreadLock* pValueChangeLock_;
-
-      /**
-    * Add camera-specific metadata tags including image numbering and timestamps,
-    * and merge them with any existing metadata. 
-    */
-   Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
-   std::map<std::string, long> imageNumbers_;  // Track image numbers per camera
-   std::mutex imageNumbersMutex_;
-   std::chrono::steady_clock::time_point startTime_; // Start time for elapsed time calculations
 
    int OnConfigGroupChanged(const char* groupName, const char* newConfigName);
    int OnPixelSizeChanged(double newPixelSizeUm);

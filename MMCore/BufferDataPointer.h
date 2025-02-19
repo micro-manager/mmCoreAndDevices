@@ -51,7 +51,7 @@ public:
    }
 
    // Returns a pointer to the pixel data (read-only)
-   BufferDataPointerVoidStar getPixels() const {
+   BufferDataPointerVoidStar getData() const {
       if (!ptr_) {
          return nullptr;
       }
@@ -100,23 +100,23 @@ public:
    //    return 0;
    // }
 
-   unsigned getBytesPerPixel() const {
-      if (bufferManager_ && ptr_) {
-         return bufferManager_->GetBytesPerPixel(ptr_);
-      }
-      return 0;
-   }
-
-   unsigned getNumberOfComponents() const {
-      if (bufferManager_ && ptr_) {
-         return bufferManager_->GetNumberOfComponents(ptr_);
-      }
-      return 0;
-   }
+   // unsigned getBytesPerPixel() const {
+   //    if (bufferManager_ && ptr_) {
+   //       return bufferManager_->GetBytesPerPixel(ptr_);
+   //    }
+   //    return 0;
+   // }
+   //
+   // unsigned getNumberOfComponents() const {
+   //    if (bufferManager_ && ptr_) {
+   //       return bufferManager_->GetNumberOfComponents(ptr_);
+   //    }
+   //    return 0;
+   // }
 
    unsigned getSizeBytes() const {
       if (bufferManager_ && ptr_) {
-         return bufferManager_->GetDatumSize(ptr_);
+         return bufferManager_->GetDataSize(ptr_);
       }
       return 0;
    }

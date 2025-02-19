@@ -856,13 +856,12 @@
 %typemap(javacode) CMMCore %{
    private boolean includeSystemStateCache_ = true;
 
-   public boolean getIncludeSystemStateCache() { 
-      return includeSystemStateCache_;
-   }
-   public void setIncludeSystemStateCache(boolean state) {
-      includeSystemStateCache_ = state;
-   }
-
+   // public boolean getIncludeSystemStateCache() { 
+   //    return includeSystemStateCache_;
+   // }
+   // public void setIncludeSystemStateCache(boolean state) {
+   //    includeSystemStateCache_ = state;
+   // }
 
    private JSONObject metadataToMap(Metadata md) {
       JSONObject tags = new JSONObject();
@@ -874,21 +873,38 @@
       return tags;
    }
 
-   private String getROITag() throws java.lang.Exception {
-      return getROITag(getCameraDevice());
+   // Its probably a good idea to minimize the complexity of this SWIG layer, 
+   // including the amount of metadata added here. However, all the metadata
+   // added for SnapImage is generated here, and the current Core API doesn't
+   // give metadata along with returning the snapimage buffer
+
+   . In the future, routing everything 
+   // through the bufferManager, and a new camera API can solve this so that 
+   // all images go through a common route and can have consistent metadata added.
+
+
+   // TODO: deal with this
+   private JSONObject createSnapImageTags() throws java.lang.Exception {
+      JSONObject tags = new JSONObject();
+      tags.put("Width", getImageWidth());
+      tags.put("Height", getImageHeight());
+      int bytesPerPixel = (int) getBytesPerPixel();
+      int numComponents = (int) getNumberOfComponents();
+      tags.put("PixelType", getPixelType(bytesPerPixel, numComponents));
+
+      // These get added in corecallback.cpp
+      tags.put("BitDepth", getImageBitDepth());
+      tags.put("ROI", getROITag());
+      try {
+         tags.put("Binning", getProperty(camera, "Binning"));
+      } catch (Exception ex) {}
+
+      return tags;
    }
 
-   private String getROITag(String cameraLabel) throws java.lang.Exception {
-      String roi = "";
-      int [] x = new int[1];
-      int [] y = new int[1];
-      int [] xSize = new int[1];
-      int [] ySize = new int[1];
-      getROI(cameraLabel, x, y, xSize, ySize);
-      roi += x[0] + "-" + y[0] + "-" + xSize[0] + "-" + ySize[0];
-      return roi;
-   }
 
+
+   // TODO add to global
    private String getPixelType(int depth, int numComponents) throws java.lang.Exception {
       switch (depth) {
          case 1:
@@ -944,44 +960,28 @@
       return image;
    }
 
-   private TaggedImage createTaggedImage(Object pixels, Metadata md) throws java.lang.Exception {
+
+   private TaggedImagePointer createTaggedImagePointer(BufferDataPointer pointer) throws java.lang.Exception {
+      // This only ever gets called by the V2 buffer, is called by the Pointer functions that have a different signature
+      // Thus, we do not need to maintain backwards compatibility for higher level code that calls the other functions.
+      // So we we only add the metadata that actually makes sense for the current abstraction.
+
+      // Some metadata is added here, the rest is added lazily when the image is loaded
+      JSONObject tagsToAdd = new JSONObject();
+
+      addSystemStateCacheTags(tagsToAdd);
+
+      
+      TaggedImagePointer imagePointer = new TaggedImagePointer(pointer);
+   }
+
+   private TaggedImage createTaggedImage(Object pixels, Metadata md, JSONObject moreTags) throws java.lang.Exception {
+      return createTaggedImage(pixels, md, null, tags);
+   }
+      
+   private TaggedImage createTaggedImage(Object pixels, Metadata md, Long pointer, JSONObject moreTags) throws java.lang.Exception {
       JSONObject tags = metadataToMap(md);
-      PropertySetting setting;
-      if (includeSystemStateCache_) {
-         Configuration config = getSystemStateCache();
-         for (int i = 0; i < config.size(); ++i) {
-            setting = config.getSetting(i);
-            String key = setting.getDeviceLabel() + "-" + setting.getPropertyName();
-            String value = setting.getPropertyValue();
-             tags.put(key, value);
-         }
-      }
-      tags.put("BitDepth", getImageBitDepth());
-      tags.put("PixelSizeUm", getPixelSizeUm(true));
-      tags.put("PixelSizeAffine", getPixelSizeAffineAsString());
-      tags.put("ROI", getROITag());
-      tags.put("Width", getImageWidth());
-      tags.put("Height", getImageHeight());
-      int bytesPerPixel = (int) getBytesPerPixel();
-      int numComponents = (int) getNumberOfComponents();
-      tags.put("PixelType", getPixelType(bytesPerPixel, numComponents));
-      tags.put("Frame", 0);
-      tags.put("FrameIndex", 0);
-      tags.put("Position", "Default");
-      tags.put("PositionIndex", 0);
-      tags.put("Slice", 0);
-      tags.put("SliceIndex", 0);
-      String channel = getCurrentConfigFromCache(getPropertyFromCache("Core","ChannelGroup"));
-      if ((channel == null) || (channel.length() == 0)) {
-         channel = "Default";
-      }
-      tags.put("Channel", channel);
-      tags.put("ChannelIndex", 0);
-
-
-      try {
-         tags.put("Binning", getProperty(getCameraDevice(), "Binning"));
-      } catch (Exception ex) {}
+      tags.putAll(moreTags);
       
       return new TaggedImage(pixels, tags);	
    }
@@ -990,7 +990,8 @@
    public TaggedImage getTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getImage(cameraChannelIndex);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      JSONObject tags = createSnapImageTags();
+      return createTaggedImage(pixels, md, cameraChannelIndex, tags);
    }
 
    public TaggedImage getTaggedImage() throws java.lang.Exception {
@@ -1085,9 +1086,7 @@
    }
 
    /**
-    * Convenience function.  Retuns affine transform as a String
-    * Used in this class and by the acquisition engine 
-    * (rather than duplicating this code there
+    * Used the acquisition engine, also in AddCameraMetada in core
     */
    public String getPixelSizeAffineAsString() throws java.lang.Exception {
       String pa = "";

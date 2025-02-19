@@ -82,6 +82,8 @@ public:
       return width_ * height_ * pixDepth_ * numChannels_;
    }
 
+   bool GetOverwriteData() const { return overwriteData_; }
+
    mutable MMThreadLock g_bufferLock;
    mutable MMThreadLock g_insertLock;
 
@@ -90,7 +92,6 @@ private:
    unsigned int height_;
    unsigned int pixDepth_;
    long imageCounter_;
-   std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
    // Invariants:
    // 0 <= saveIndex_ <= insertIndex_
@@ -101,10 +102,12 @@ private:
    unsigned long memorySizeMB_;
    unsigned int numChannels_;
    bool overflow_;
+   bool overwriteData_;
    std::vector<mm::FrameBuffer> frameArray_;
 
    std::shared_ptr<ThreadPool> threadPool_;
    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
+
 };
 
 #if defined(__GNUC__) && !defined(__clang__)

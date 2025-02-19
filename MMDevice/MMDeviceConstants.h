@@ -165,7 +165,7 @@ namespace MM {
    const char* const g_Keyword_Metadata_Width       = "Width";
    const char* const g_Keyword_Metadata_Height      = "Height";
    const char* const g_Keyword_Metadata_CameraLabel = "Camera";
-   const char* const g_Keyword_Metadata_DataSourceDeviceLabel = "DataSourceDevice";
+   const char* const g_Keyword_Metadata_BitDepth = "BitDepth";
    const char* const g_Keyword_Metadata_Exposure    = "Exposure-ms";
    MM_DEPRECATED(const char* const g_Keyword_Meatdata_Exposure) = "Exposure-ms"; // Typo
    const char* const g_Keyword_Metadata_Score       = "Score";

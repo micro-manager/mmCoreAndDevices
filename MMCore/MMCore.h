@@ -384,13 +384,13 @@ public:
    void snapImage() throw (CMMError);
    void* getImage() throw (CMMError);
    void* getImage(unsigned numChannel) throw (CMMError);
-
+   void* getImage(Metadata& md) throw (CMMError);
+   void* getImage(unsigned numChannel, Metadata& md) throw (CMMError);
 
    unsigned getImageWidth();
    unsigned getImageHeight();
    unsigned getBytesPerPixel();
    unsigned getImageBitDepth();
-   unsigned getImageBitDepth(const char* cameraLabel);
    unsigned getNumberOfComponents();
    unsigned getNumberOfCameraChannels();
    std::string getCameraChannelName(unsigned int channelNr);
@@ -430,10 +430,26 @@ public:
    long getBufferTotalCapacity();
    long getBufferFreeCapacity();
    bool isBufferOverflowed() const;
+
+   /**
+    * @deprecated Use setBufferMemoryFootprint() instead
+    */
    void setCircularBufferMemoryFootprint(unsigned sizeMB) throw (CMMError);
+   /**
+    * @deprecated Use getBufferMemoryFootprint() instead
+    */
    unsigned getCircularBufferMemoryFootprint();
+
+   // This is only needed for the circular buffer, because it needs to match the camera settings. Should it be deprecated?
    void initializeCircularBuffer() throw (CMMError);
+   /**
+    * @deprecated Use resetBuffer() instead
+    */
    void clearCircularBuffer() throw (CMMError);
+
+   void setBufferMemoryFootprint(unsigned sizeMB) throw (CMMError);
+   unsigned getBufferMemoryFootprint() const;
+   void resetBuffer() throw (CMMError);
 
    ///@}
 
@@ -455,14 +471,20 @@ public:
 
    // Same functionality as non pointer versions above, but
    // enables alternative wrappers in SWIG for pointer-based access to the image data.
+
+   // This one is "Image" not "Data" because it corresponds to SnapImage()/GetImage()
    BufferDataPointer* getImagePointer() throw (CMMError);
 
-   BufferDataPointer* getLastImagePointer() throw (CMMError);
-   BufferDataPointer* popNextImagePointer() throw (CMMError);
-   BufferDataPointer* getLastImageMDPointer(Metadata& md) const throw (CMMError);
-   BufferDataPointer* popNextImageMDPointer(Metadata& md) throw (CMMError);
-   BufferDataPointer* getLastImageFromDevicePointer(std::string deviceLabel) throw (CMMError);
-   BufferDataPointer* getLastImageMDFromDevicePointer(std::string deviceLabel, Metadata& md) throw (CMMError);
+   // These are "Data" not "Image" because they can be used generically for any data type
+   // Higher level wrapping code can read their associated metadata to determine their data type
+   BufferDataPointer* getLastDataPointer() throw (CMMError);
+   BufferDataPointer* popNextDataPointer() throw (CMMError);
+   BufferDataPointer* getLastDataMDPointer(Metadata& md) const throw (CMMError);
+   BufferDataPointer* popNextDataMDPointer(Metadata& md) throw (CMMError);
+   BufferDataPointer* getLastDataFromDevicePointer(std::string deviceLabel) throw (CMMError);
+   BufferDataPointer* getLastDataMDFromDevicePointer(std::string deviceLabel, Metadata& md) throw (CMMError);
+
+   bool IsPointerInV2Buffer(DataPtr ptr);
 
    ///@}
 
@@ -666,6 +688,15 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
 
+   /** \name Image metadata. */
+   ///@{
+   bool getIncludeSystemStateCache() { 
+      return includeSystemStateCache_;
+   }
+   void setIncludeSystemStateCache(bool state) {
+      includeSystemStateCache_ = state;
+   }
+   ///@}
 
 private:
    // make object non-copyable
@@ -715,6 +746,12 @@ private:
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
 
+   // For adding camera metadata
+   std::map<std::string, long> imageNumbers_;  // Track image numbers per camera
+   std::mutex imageNumbersMutex_;
+   std::chrono::steady_clock::time_point startTime_; // Start time for elapsed time calculations in seuqence acquisition
+   bool includeSystemStateCache_;
+
 private:
    void InitializeErrorMessages();
    void CreateCoreProperties();
@@ -742,6 +779,10 @@ private:
    void initializeAllDevicesSerial() throw (CMMError);
    void initializeAllDevicesParallel() throw (CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
+
+   void AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, bool addLegacyMetadata);
+   void AddCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
+                  unsigned byteDepth, unsigned nComponents, bool addLegacyMetadata);
 };
 
 #if defined(__GNUC__) && !defined(__clang__)

@@ -50,7 +50,17 @@ BufferManager::~BufferManager()
    }
 }
 
-const void* BufferManager::GetLastImage()
+void BufferManager::ReallocateBuffer(unsigned int memorySizeMB) {
+   if (useV2_) {
+      delete v2Buffer_;
+      v2Buffer_ = new DataBuffer(memorySizeMB);
+   } else {
+      delete circBuffer_;
+      circBuffer_ = new CircularBuffer(memorySizeMB);
+   }
+}
+
+const void* BufferManager::GetLastData()
 {
    if (useV2_) {
       Metadata dummyMetadata;
@@ -61,7 +71,7 @@ const void* BufferManager::GetLastImage()
    }
 }
 
-const void* BufferManager::PopNextImage()
+const void* BufferManager::PopNextData()
 {
    if (useV2_) {
       Metadata dummyMetadata;
@@ -72,25 +82,7 @@ const void* BufferManager::PopNextImage()
    }
 }
 
-bool BufferManager::Initialize(unsigned numChannels, unsigned width, unsigned height, unsigned bytesPerPixel)
-{
-   if (useV2_) {
-      // This in not required for v2 buffer because it can interleave multiple data types/image sizes
-   } else {
-      return circBuffer_->Initialize(numChannels, width, height, bytesPerPixel);
-   }
-}
-
-unsigned BufferManager::GetMemorySizeMB() const
-{
-   if (useV2_) {
-      return v2Buffer_->GetMemorySizeMB();
-   } else {
-      return circBuffer_->GetMemorySizeMB();
-   }
-}
-
-long BufferManager::GetRemainingImageCount() const
+long BufferManager::GetRemainingDataCount() const
 {
    if (useV2_) {
       return v2Buffer_->GetActiveSlotCount();
@@ -99,37 +91,19 @@ long BufferManager::GetRemainingImageCount() const
    }
 }
 
-void BufferManager::Clear()
-{
+unsigned BufferManager::GetMemorySizeMB() const {
    if (useV2_) {
-      // This has no effect on v2 buffer, because devices do not have authority to clear the buffer
-      // since higher level code may hold pointers to data in the buffer.
-      // It seems to be mostly used in live mode, where data is overwritten by default anyway.
+      return v2Buffer_->GetMemorySizeMB();
    } else {
-      circBuffer_->Clear();
+      return circBuffer_->GetMemorySizeMB();
    }
 }
 
-long BufferManager::GetSize(long imageSize) const
-{
+unsigned BufferManager::GetFreeSizeMB() const {
    if (useV2_) {
-      unsigned int mb = v2Buffer_->GetMemorySizeMB();
-      size_t totalBytes = static_cast<size_t>(mb) * 1024 * 1024;
-      size_t num_images = totalBytes / static_cast<size_t>(imageSize);
-      return static_cast<long>(num_images);
+      return (unsigned) v2Buffer_->GetFreeMemory() / 1024 / 1024;
    } else {
-      return circBuffer_->GetSize();
-   }
-
-}
-
-long BufferManager::GetFreeSize(long imageSize) const
-{
-   if (useV2_) {
-      unsigned int mb = v2Buffer_->GetFreeMemory();
-      return static_cast<long>(mb) / imageSize;
-   } else {
-      return circBuffer_->GetFreeSize();
+      return circBuffer_->GetFreeSize() * circBuffer_->GetImageSizeBytes() / 1024 / 1024;
    }
 }
 
@@ -142,56 +116,23 @@ bool BufferManager::Overflow() const
    }
 }
 
-void BufferManager::PopulateMetadata(Metadata& md, const char* deviceLabel, 
-      unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents) {
-    // Add the device label (can be used to route different devices to different buffers)
-    md.put(MM::g_Keyword_Metadata_DataSourceDeviceLabel, deviceLabel);
-    
-    // Add essential image metadata needed for interpreting the image:
-    md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
-    md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
-    
-    if (byteDepth == 1)
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
-    else if (byteDepth == 2)
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
-    else if (byteDepth == 4) {
-         if (nComponents == 1)
-            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
-         else
-            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
-    }
-    else if (byteDepth == 8)
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
-    else
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
-}
-
-bool BufferManager::InsertImage(const char* callerLabel, const unsigned char* buf, 
-      unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd) {
-   return InsertMultiChannel(callerLabel, buf, 1, width, height, byteDepth, 1, pMd);
-}
-
+/**
+ * @deprecated Use InsertData() instead
+ */
 bool BufferManager::InsertImage(const char* callerLabel, const unsigned char *buf, unsigned width, unsigned height, 
-                               unsigned byteDepth, unsigned nComponents, Metadata *pMd) {
-   return InsertMultiChannel(callerLabel, buf, 1, width, height, byteDepth, nComponents, pMd);
+                               unsigned byteDepth, Metadata *pMd) {
+   return InsertMultiChannel(callerLabel, buf, 1, width, height, byteDepth, pMd);
 }
 
-
-bool BufferManager::InsertMultiChannel(const char* callerLabel, const unsigned char *buf,
-          unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata *pMd) {
-   return InsertMultiChannel(callerLabel, buf, numChannels, width, height, byteDepth, 1, pMd);
-}
-
+/**
+ * @deprecated Use InsertData() instead
+ */
 bool BufferManager::InsertMultiChannel(const char* callerLabel, const unsigned char* buf,
-    unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, Metadata* pMd) {
+    unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd) {
     
     //  Initialize metadata with either provided metadata or create empty
     Metadata md = (pMd != nullptr) ? *pMd : Metadata();
     
-    //  Add required and useful metadata. 
-    PopulateMetadata(md, callerLabel, width, height, byteDepth, nComponents);
-
     if (useV2_) {
         // All the data needed to interpret the image is in the metadata
         // This function will copy data and metadata into the buffer
@@ -203,12 +144,26 @@ bool BufferManager::InsertMultiChannel(const char* callerLabel, const unsigned c
     } 
 }
 
-const void* BufferManager::GetLastImageMD(Metadata& md) const throw (CMMError)
-{
-   return GetLastImageMD(0, md);
+bool BufferManager::InsertData(const char* callerLabel, const unsigned char* buf, size_t dataSize, Metadata* pMd) {
+    
+    //  Initialize metadata with either provided metadata or create empty
+    Metadata md = (pMd != nullptr) ? *pMd : Metadata();
+    
+    if (!useV2_) {
+        throw CMMError("InsertData() not supported with circular buffer. Must use V2 buffer.");
+    }
+    // All the data needed to interpret the image should be in the metadata
+    // This function will copy data and metadata into the buffer
+    return v2Buffer_->InsertData(buf, dataSize, &md, callerLabel);    
 }
 
-const void* BufferManager::GetLastImageMD(unsigned channel, Metadata& md) const throw (CMMError)
+
+const void* BufferManager::GetLastDataMD(Metadata& md) const throw (CMMError)
+{
+   return GetLastDataMD(0, md);
+}
+
+const void* BufferManager::GetLastDataMD(unsigned channel, Metadata& md) const throw (CMMError)
 {
    if (useV2_) {
       if (channel != 0) {
@@ -229,7 +184,7 @@ const void* BufferManager::GetLastImageMD(unsigned channel, Metadata& md) const 
    }
 }
 
-const void* BufferManager::GetNthImageMD(unsigned long n, Metadata& md) const throw (CMMError)
+const void* BufferManager::GetNthDataMD(unsigned long n, Metadata& md) const throw (CMMError)
 {
    if (useV2_) {
       // NOTE: make sure calling code releases the slot after use.
@@ -245,12 +200,12 @@ const void* BufferManager::GetNthImageMD(unsigned long n, Metadata& md) const th
    }
 }
 
-const void* BufferManager::PopNextImageMD(Metadata& md) throw (CMMError)
+const void* BufferManager::PopNextDataMD(Metadata& md) throw (CMMError)
 {
-   return PopNextImageMD(0, md);
+   return PopNextDataMD(0, md);
 }  
 
-const void* BufferManager::PopNextImageMD(unsigned channel, Metadata& md) throw (CMMError)
+const void* BufferManager::PopNextDataMD(unsigned channel, Metadata& md) throw (CMMError)
 {
    if (useV2_) {
       if (channel != 0) {
@@ -278,7 +233,7 @@ bool BufferManager::EnableV2Buffer(bool enable) {
     }
 
     // Create new buffer of requested type with same memory size
-    unsigned int memorySizeMB = GetMemorySizeMB();
+    unsigned memorySizeMB = GetMemorySizeMB();
     
     try {
         if (enable) {
@@ -287,7 +242,6 @@ bool BufferManager::EnableV2Buffer(bool enable) {
             delete circBuffer_;
             circBuffer_ = nullptr;
             v2Buffer_ = newBuffer;
-            v2Buffer_->ReinitializeBuffer(memorySizeMB);
         } else {
             // Switch to circular buffer
             CircularBuffer* newBuffer = new CircularBuffer(memorySizeMB);
@@ -299,7 +253,6 @@ bool BufferManager::EnableV2Buffer(bool enable) {
         }
 
         useV2_ = enable;
-        Clear(); // Reset the new buffer
         return true;
     } catch (const std::exception&) {
         // If allocation fails, keep the existing buffer
@@ -318,71 +271,7 @@ bool BufferManager::ReleaseReadAccess(const void* ptr) {
    return false;
 }
 
-unsigned BufferManager::GetImageWidth(const void* ptr) const {
-   if (!useV2_) 
-      throw CMMError("GetImageWidth(ptr) only supported with V2 buffer");
-   Metadata md;
-   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
-      throw CMMError("Failed to extract metadata for image width");
-   std::string sVal = md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue();
-   return static_cast<unsigned>(atoi(sVal.c_str()));
-}
-
-unsigned BufferManager::GetImageHeight(const void* ptr) const {
-   if (!useV2_) 
-      throw CMMError("GetImageHeight(ptr) only supported with V2 buffer");
-   Metadata md;
-   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
-      throw CMMError("Failed to extract metadata for image height");
-   std::string sVal = md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue();
-   return static_cast<unsigned>(atoi(sVal.c_str()));
-}
-
-unsigned BufferManager::GetBytesPerPixelFromType(const std::string& pixelType) const {
-   if (pixelType == MM::g_Keyword_PixelType_GRAY8)
-      return 1;
-   else if (pixelType == MM::g_Keyword_PixelType_GRAY16)
-      return 2;
-   else if (pixelType == MM::g_Keyword_PixelType_GRAY32 ||
-            pixelType == MM::g_Keyword_PixelType_RGB32)
-      return 4;
-   else if (pixelType == MM::g_Keyword_PixelType_RGB64)
-      return 8;
-   throw CMMError("Unknown pixel type for bytes per pixel");
-}
-
-unsigned BufferManager::GetComponentsFromType(const std::string& pixelType) const {
-   if (pixelType == MM::g_Keyword_PixelType_GRAY8 ||
-       pixelType == MM::g_Keyword_PixelType_GRAY16 ||
-       pixelType == MM::g_Keyword_PixelType_GRAY32)
-      return 1;
-   else if (pixelType == MM::g_Keyword_PixelType_RGB32 ||
-            pixelType == MM::g_Keyword_PixelType_RGB64)
-      return 4;
-   throw CMMError("Unknown pixel type for number of components");
-}
-
-unsigned BufferManager::GetBytesPerPixel(const void* ptr) const {
-   if (!useV2_) 
-      throw CMMError("GetBytesPerPixel(ptr) only supported with V2 buffer");
-   Metadata md;
-   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
-      throw CMMError("Failed to extract metadata for bytes per pixel");
-   std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
-   return GetBytesPerPixelFromType(pixelType);
-}
-
-unsigned BufferManager::GetNumberOfComponents(const void* ptr) const {
-   if (!useV2_) 
-      throw CMMError("GetNumberOfComponents(ptr) only supported with V2 buffer");
-   Metadata md;
-   if (v2Buffer_->ExtractCorrespondingMetadata(ptr, md) != DEVICE_OK)
-      throw CMMError("Failed to extract metadata for number of components");
-   std::string pixelType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
-   return GetComponentsFromType(pixelType);
-}
-
-unsigned BufferManager::GetDatumSize(const void* ptr) const {
+unsigned BufferManager::GetDataSize(const void* ptr) const {
    if (!useV2_) 
       return circBuffer_->GetImageSizeBytes();
    else
@@ -398,10 +287,8 @@ bool BufferManager::SetOverwriteData(bool overwrite) {
     }
 }
 
-bool BufferManager::AcquireWriteSlot(const char* deviceLabel, size_t dataSize, unsigned width, unsigned height, 
-    unsigned byteDepth, unsigned nComponents, size_t additionalMetadataSize,
-    void** dataPointer, void** additionalMetadataPointer,
-    Metadata* pInitialMetadata) {
+bool BufferManager::AcquireWriteSlot(const char* deviceLabel, size_t dataSize, size_t additionalMetadataSize,
+    void** dataPointer, void** additionalMetadataPointer, Metadata* pInitialMetadata) {
    if (!useV2_) {
       // Not supported for circular buffer
       return false;
@@ -409,10 +296,6 @@ bool BufferManager::AcquireWriteSlot(const char* deviceLabel, size_t dataSize, u
 
    // Initialize metadata with either provided metadata or create empty
    Metadata md = (pInitialMetadata != nullptr) ? *pInitialMetadata : Metadata();
-   
-   // Add in width, height, byteDepth, and nComponents to the metadata so that when 
-   // images are retrieved from the buffer, the data can be interpreted correctly
-   PopulateMetadata(md, deviceLabel, width, height, byteDepth, nComponents);
    
    std::string serializedMetadata = md.Serialize();
    int ret = v2Buffer_->AcquireWriteSlot(dataSize, additionalMetadataSize,
@@ -446,35 +329,51 @@ void BufferManager::ExtractMetadata(const void* dataPtr, Metadata& md) const {
     }
 }
 
-const void* BufferManager::GetLastImageFromDevice(const std::string& deviceLabel) throw (CMMError) {
+const void* BufferManager::GetLastDataFromDevice(const std::string& deviceLabel) throw (CMMError) {
     if (!useV2_) {
-        throw CMMError("V2 buffer must be enabled for device-specific image access");
+        throw CMMError("V2 buffer must be enabled for device-specific data access");
     }
     Metadata md;
-    return GetLastImageMDFromDevice(deviceLabel, md);
+    return GetLastDataMDFromDevice(deviceLabel, md);
 }
 
-const void* BufferManager::GetLastImageMDFromDevice(const std::string& deviceLabel, Metadata& md) throw (CMMError) {
+const void* BufferManager::GetLastDataMDFromDevice(const std::string& deviceLabel, Metadata& md) throw (CMMError) {
     if (!useV2_) {
-        throw CMMError("V2 buffer must be enabled for device-specific image access");
+        throw CMMError("V2 buffer must be enabled for device-specific data access");
     }
     
     const void* basePtr = v2Buffer_->PeekLastDataReadPointerFromDevice(deviceLabel, md);
     if (basePtr == nullptr) {
-        throw CMMError("No image found for device: " + deviceLabel, MMERR_InvalidContents);
+        throw CMMError("No data found for device: " + deviceLabel, MMERR_InvalidContents);
     }
     return basePtr;
 }
 
-bool BufferManager::IsPointerInBuffer(const void* ptr) const throw (CMMError) {
+bool BufferManager::IsPointerInV2Buffer(const void* ptr) const throw (CMMError) {
     if (!useV2_) {
-        throw CMMError("IsPointerInBuffer is only supported with V2 buffer enabled");
+        return false;
     }
     
     if (v2Buffer_ == nullptr) {
-        throw CMMError("V2 buffer is null");
+        return false;
     }
 
     return v2Buffer_->IsPointerInBuffer(ptr);
+}
+
+bool BufferManager::GetOverwriteData() const {
+    if (useV2_) {
+        return v2Buffer_->GetOverwriteData();
+    } else {
+        return circBuffer_->GetOverwriteData();
+    }
+}
+
+void BufferManager::Reset() {
+    if (useV2_) {
+        v2Buffer_->Reset();
+    } else {
+        circBuffer_->Clear();
+    }
 }
 

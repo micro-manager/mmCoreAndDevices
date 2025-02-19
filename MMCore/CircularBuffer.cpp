@@ -62,6 +62,7 @@ CircularBuffer::CircularBuffer(unsigned int memorySizeMB) :
    saveIndex_(0), 
    memorySizeMB_(memorySizeMB), 
    overflow_(false),
+   overwriteData_(false),
    threadPool_(std::make_shared<ThreadPool>()),
    tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
@@ -72,7 +73,6 @@ CircularBuffer::~CircularBuffer() {}
 bool CircularBuffer::Initialize(unsigned channels, unsigned int w, unsigned int h, unsigned int pixDepth)
 {
    MMThreadGuard guard(g_bufferLock);
-   startTime_ = std::chrono::steady_clock::now();
 
    bool ret = true;
    try
@@ -137,7 +137,6 @@ void CircularBuffer::Clear()
    insertIndex_=0; 
    saveIndex_=0; 
    overflow_ = false;
-   startTime_ = std::chrono::steady_clock::now();
 }
 
 unsigned long CircularBuffer::GetSize() const
@@ -183,8 +182,12 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
  
        bool overflowed = (insertIndex_ - saveIndex_) >= static_cast<long>(frameArray_.size());
        if (overflowed) {
-          overflow_ = true;
-          return false;
+         if (!overwriteData_) {
+            Clear();
+         } else {
+            overflow_ = true;
+            return false;
+         }
        }
     }
  

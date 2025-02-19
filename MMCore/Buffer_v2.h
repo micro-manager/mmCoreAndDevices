@@ -243,6 +243,12 @@ public:
     int SetOverwriteData(bool overwrite);
 
     /**
+     * Returns whether the buffer should overwrite old data when full.
+     * @return True if overwriting is enabled, false otherwise.
+     */
+    bool GetOverwriteData() const;
+
+    /**
      * Acquires a write slot large enough to hold the image data and metadata.
      * On success, returns pointers for the image data and metadata regions.
      *
@@ -345,13 +351,6 @@ public:
      */
     long GetActiveSlotCount() const;
 
-    /**
-     * Reinitializes the DataBuffer, clearing its structures and allocating a new buffer.
-     * @param memorySizeMB New buffer size (in MB).
-     * @return DEVICE_OK on success.
-     * @throws std::runtime_error if any slot is still in use.
-     */
-    int ReinitializeBuffer(unsigned int memorySizeMB);
 
     /**
      * Extracts metadata for a given image data pointer.
@@ -376,6 +375,11 @@ public:
      * @return true if the pointer is within the buffer, false otherwise.
      */
     bool IsPointerInBuffer(const void* ptr);
+
+    /**
+     * Reset the buffer, discarding all data that is not currently held externally.
+     */
+    void Reset();
 
 private:
     /**
@@ -441,6 +445,15 @@ private:
                                size_t dataSize, size_t initialMetadataSize,
                                size_t additionalMetadataSize, const std::string& deviceLabel);
 
+    /**
+     * Reinitializes the DataBuffer, clearing its structures and allocating a new buffer.
+     * @param memorySizeMB New buffer size (in MB).
+     * @return DEVICE_OK on success.
+     * @throws std::runtime_error if any slot is still in use.
+     */
+    int ReinitializeBuffer(unsigned int memorySizeMB);
+
+    
     /**
      * Creates a new slot with the specified parameters.
      * Caller must hold slotManagementMutex_.

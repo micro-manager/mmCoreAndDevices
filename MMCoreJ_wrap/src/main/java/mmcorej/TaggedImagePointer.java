@@ -2,6 +2,8 @@ package mmcorej;
 
 import mmcorej.org.json.JSONObject;
 import mmcorej.org.json.JSONException;
+import java.util.Iterator;
+import java.util.Collections;
 
 /**
  * TaggedImagePointer is a wrapper around a pointer to an image in the v2 buffer.
@@ -17,22 +19,18 @@ public class TaggedImagePointer extends TaggedImage {
    
    public LazyJSONObject tags;
 
-   private final long address_;
-   private final CMMCore core_;
+   private final BufferDataPointer dataPointer_;
    private boolean released_ = false;
 
    /**
     * Constructs a new TaggedImagePointer.
     * 
-    * @param address Memory address of the image data in native code
-    * @param tags JSONObject containing metadata associated with the image
-    * @param core Reference to the CMMCore instance managing the native resources
+    * @param dataPointer BufferDataPointer to the image data
     */
-   public TaggedImagePointer(long address, CMMCore core) {
+   public TaggedImagePointer(BufferDataPointer dataPointer) {
       super(null, null);  // Initialize parent with null pix
-      this.address_ = address;
-      this.core_ = core;
-      this.tags = new LazyJSONObject(address, core);
+      this.dataPointer_ = dataPointer;
+      this.tags = new LazyJSONObject(dataPointer);
    }  
 
    /**
@@ -51,12 +49,11 @@ public class TaggedImagePointer extends TaggedImage {
       
       if (this.pix == null) {
         try {
-            this.pix = core_.copyDataAtPointer(address_);
+            this.pix = dataPointer_.getData();
             tags.initializeIfNeeded();
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to copy data at pointer", e);
+            throw new IllegalStateException("Failed to get pixel data", e);
         }
-        // Now that we have the data, release the pointer
         release();
       }
    }
@@ -72,11 +69,7 @@ public class TaggedImagePointer extends TaggedImage {
     */
    public synchronized void release() {
       if (!released_) {
-         try {
-            core_.releaseReadAccess(address_);
-         } catch (Exception e) {
-            throw new IllegalStateException("Failed to release read access to image buffer", e);
-         }
+         dataPointer_.release();
          released_ = true;
       }
    }
@@ -93,39 +86,3 @@ public class TaggedImagePointer extends TaggedImage {
    }
 }
 
-
-class LazyJSONObject extends JSONObject {
-    private final long metadataPtr_;
-    private final CMMCore core_;
-    private boolean initialized_ = false;
-
-
-    public LazyJSONObject(long metadataPtr, CMMCore core) {
-        this.metadataPtr_ = metadataPtr;
-        this.core_ = core;
-    }
-
-    synchronized void initializeIfNeeded() throws Exception {
-        if (!initialized_) {
-            Metadata md = new Metadata();
-            this.core_.copyMetadataAtPointer(metadataPtr_, md);
-
-            for (String key:md.GetKeys()) {
-                try {
-                    this.put(key, md.GetSingleTag(key).GetValue());
-                } catch (Exception e) {} 
-            }
-            initialized_ = true;
-        }
-    }
-
-    @Override
-    public Object get(String key) throws JSONException {
-        try {
-            initializeIfNeeded();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to initialize metadata", e);
-        }
-        return super.get(key);
-    }
-}
