@@ -409,7 +409,7 @@ bool CRISP::IsContinuousFocusLocked()
 	{
 		return false;
 	}
-	return (focusState == g_CRISP_K);
+	return focusState == g_CRISP_F;
 }
 
 int CRISP::SetContinuousFocusing(bool state)
