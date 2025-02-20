@@ -135,14 +135,15 @@ unsigned int ASIBase::ConvertDay(int year, int month, int day)
 unsigned int ASIBase::ExtractCompileDay(const char* compile_date)
 {
 	const char* months = "anebarprayunulugepctovec";
-	if (strlen(compile_date) < 11)
+	const size_t compile_date_len = strlen(compile_date);
+	if (compile_date_len < 11)
 	{
 		return 0;
 	}
 	int year = 0;
 	int month = 0;
 	int day = 0;
-	if (strlen(compile_date) >= 11
+	if (compile_date_len >= 11
 		&& compile_date[7] == '2'  // must be 20xx for sanity checking
 		&& compile_date[8] == '0'
 		&& compile_date[9] <= '9'
