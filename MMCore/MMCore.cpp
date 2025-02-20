@@ -112,7 +112,7 @@
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 4, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 4, MMCore_versionPatch = 1;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -688,21 +688,12 @@ void CMMCore::loadDevice(const char* label, const char* moduleName, const char* 
    LOG_DEBUG(coreLogger_) << "Will load device " << deviceName <<
       " from " << moduleName;
 
-   try
-   {
-      std::shared_ptr<LoadedDeviceAdapter> module =
-         pluginManager_->GetDeviceAdapter(moduleName);
-      std::shared_ptr<DeviceInstance> pDevice =
-         deviceManager_->LoadDevice(module, deviceName, label, this,
-               deviceLogger, coreLogger);
-      pDevice->SetCallback(callback_);
-   }
-   catch (const CMMError& e)
-   {
-      throw CMMError("Failed to load device " + ToQuotedString(deviceName) +
-            " from adapter module " + ToQuotedString(moduleName),
-            e);
-   }
+   std::shared_ptr<LoadedDeviceAdapter> module =
+      pluginManager_->GetDeviceAdapter(moduleName);
+   std::shared_ptr<DeviceInstance> pDevice =
+      deviceManager_->LoadDevice(module, deviceName, label, this,
+            deviceLogger, coreLogger);
+   pDevice->SetCallback(callback_);
 
    LOG_INFO(coreLogger_) << "Did load device " << deviceName <<
       " from " << moduleName << "; label = " << label;
@@ -766,6 +757,12 @@ void CMMCore::assignDefaultRole(std::shared_ptr<DeviceInstance> pDevice)
 void CMMCore::unloadDevice(const char* label///< the name of the device to unload
                            ) throw (CMMError)
 {
+   // "Core" cannot be unloaded.
+   if (label != nullptr && std::string(label) == MM::g_Keyword_CoreDevice)
+   {
+      throw CMMError("Cannot unload " + ToQuotedString("Core"));
+   }
+
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
    try {
