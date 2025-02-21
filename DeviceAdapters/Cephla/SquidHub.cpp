@@ -1,4 +1,4 @@
-#include "squid.h"
+#include "Squid.h"
 #include "crc8.h"
 
 #ifdef WIN32
@@ -119,7 +119,7 @@ void SquidHub::GetName(char* name) const
 
 
 int SquidHub::Initialize() {
-   Sleep(200);
+   CDeviceUtils::SleepMs(200);
 
    monitoringThread_ = new SquidMonitoringThread(*this->GetCoreCallback(), *this, true);
    monitoringThread_->Start();

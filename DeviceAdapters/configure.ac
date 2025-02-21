@@ -569,6 +569,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    CNCMicroscope/ArduinoNeoPixelShutter
    CNCMicroscope/RAMPSStage
    CSUW1
+   Cephla
    ChuoSeiki_MD5000
    ChuoSeiki_QT
    Cobolt
