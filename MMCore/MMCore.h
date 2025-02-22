@@ -482,8 +482,6 @@ public:
    BufferDataPointer* popNextDataPointer() throw (CMMError);
    BufferDataPointer* getLastDataFromDevicePointer(std::string deviceLabel) throw (CMMError);
 
-   bool IsPointerInV2Buffer(DataPtr ptr);
-
    ///@}
 
    /** \name Exposure sequence control. */

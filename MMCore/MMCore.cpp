@@ -4754,10 +4754,6 @@ void CMMCore::getImageProperties(DataPtr ptr, int& width, int& height,
    }
 }
 
-bool CMMCore::IsPointerInV2Buffer(DataPtr ptr) {
-   return bufferManager_->IsPointerInV2Buffer(ptr);
-}
-
 /**
  * Returns the number of simultaneous channels the default camera is returning.
  */
