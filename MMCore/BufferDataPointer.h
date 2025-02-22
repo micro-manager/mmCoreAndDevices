@@ -67,6 +67,15 @@ public:
       return ptr_;
    }
 
+   // Same as the above method, but this get wrapped by SWIG differently
+   // to return the actual
+   DataPtr getDataPointer() const {
+      if (!ptr_) {
+         return nullptr;
+      }
+      return ptr_;
+   }
+
    void getImageProperties(int& width, int& height, int& byteDepth, int& nComponents) throw (CMMError) {
       if (!bufferManager_ || !ptr_) {
          throw CMMError("Invalid buffer manager or pointer");
