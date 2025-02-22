@@ -30,6 +30,7 @@
 #include "MMCore.h"
 #include "../MMDevice/ImageMetadata.h"
 #include <mutex>
+#include <random>
 
 // This is needed for SWIG Java wrapping to differentiate its void*
 // from the void* that MMCore uses for returning data
@@ -42,11 +43,19 @@ class BufferDataPointer {
 public:
 
    BufferDataPointer(BufferManager* bufferManager, DataPtr ptr)
-      : bufferManager_(bufferManager), ptr_(ptr)
+      : bufferManager_(bufferManager), ptr_(ptr), mutex_()
    {
+      // check for null pointer
+      if (!ptr_) {
+         throw CMMError("Pointer is null");
+      }
       // check for v2 buffer use
       if (!bufferManager_->IsUsingV2Buffer()) {
          throw CMMError("V2 buffer must be enabled for BufferDataPointer");
+      }
+      // throw an error if the pointer is not in the buffer
+      if (!bufferManager_->IsPointerInV2Buffer(ptr_)) {
+         throw CMMError("Pointer is not in the buffer");
       }
    }
 
@@ -85,12 +94,13 @@ public:
    void release() {
       std::lock_guard<std::mutex> lock(mutex_);
       if (bufferManager_ && ptr_) {
-         try {
-            bufferManager_->ReleaseReadAccess(ptr_);
-            ptr_ = nullptr;  // Mark as released
-         } catch (...) {
-            // Release must not throw
+         
+         int ret = bufferManager_->ReleaseReadAccess(ptr_);
+         if (ret != DEVICE_OK) {
+            throw CMMError("Failed to release read access to buffer");
          }
+         ptr_ = nullptr;  // Mark as released
+         
       }
    }
 
@@ -109,4 +119,4 @@ private:
    BufferManager* bufferManager_; 
    const void* ptr_; 
    mutable std::mutex mutex_;
-}; 
+};

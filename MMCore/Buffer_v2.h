@@ -62,7 +62,16 @@ public:
      * @param imageSize The exact number of bytes for the image data.
      * @param metadataSize The exact number of bytes for the metadata.
      */
-    BufferSlot() : start_(0), length_(0), imageSize_(0), initialMetadataSize_(0), additionalMetadataSize_(0), deviceLabel_(), rwMutex_() {}
+    BufferSlot()
+        : start_(0),
+          length_(0),
+          imageSize_(0),
+          initialMetadataSize_(0),
+          additionalMetadataSize_(0),
+          deviceLabel_(),
+          rwMutex_()
+    {
+    }
 
     /**
      * Destructor.
@@ -83,104 +92,108 @@ public:
     std::size_t GetLength() const { return length_; }
 
     /**
-     * Attempts to acquire exclusive write access without blocking.
-     * @return True if the write lock was acquired; false otherwise.
+     * Acquires exclusive (write) access (blocking).
      */
-    bool TryAcquireWriteAccess() { return rwMutex_.try_lock(); }
-
-    /**
-     * Acquires exclusive write access (blocking call).
-     * This method will block until exclusive access is granted.
-     */
-    void AcquireWriteAccess() { rwMutex_.lock(); }
+    void AcquireWriteAccess() {
+        rwMutex_.lock();
+    }
 
     /**
      * Releases exclusive write access.
      */
-    void ReleaseWriteAccess() { rwMutex_.unlock(); }
+    void ReleaseWriteAccess() {
+        rwMutex_.unlock();
+    }
 
     /**
      * Acquires shared read access (blocking).
      */
-    void AcquireReadAccess() { rwMutex_.lock_shared(); }
+    void AcquireReadAccess() {
+        rwMutex_.lock_shared();
+    }
 
     /**
      * Releases shared read access.
      */
-    void ReleaseReadAccess() { rwMutex_.unlock_shared(); }
-
-    /**
-     * Checks if the slot is currently available for writing.
-     * A slot is available if no thread holds either a write lock or any read lock.
-     * @return True if available for writing.
-     */
-    bool IsAvailableForWriting() const {
-        if (rwMutex_.try_lock()) {
-            rwMutex_.unlock();
-            return true;
-        }
-        return false;
+    void ReleaseReadAccess() {
+        rwMutex_.unlock_shared();
     }
 
     /**
-     * Checks if the slot is available for acquiring read access.
-     * @return True if available for reading.
+     * Checks if the slot is completely free (no readers, no writers).
+     * We do this by attempting to lock it exclusively:
+     * if we succeed, there are no concurrent locks.
      */
-    bool IsAvailableForReading() const {
-        if (rwMutex_.try_lock_shared()) {
-            rwMutex_.unlock_shared();
-            return true;
-        }
-        return false;
+    bool IsFree() const {
+        std::unique_lock<std::shared_timed_mutex> lk(rwMutex_, std::try_to_lock);
+        return lk.owns_lock();
     }
 
-    void Reset(size_t start, size_t length, size_t imageSize, size_t initialMetadataSize, 
-               size_t additionalMetadataSize, const std::string& deviceLabel) {
-        // Assert that the mutex is available before recycling
-        assert(IsAvailableForWriting() && IsAvailableForReading() && 
+    /**
+     * Resets the slot with new parameters.  
+     * The assertion uses IsFree() as a best-effort check before reinitializing.
+     */
+    void Reset(size_t start,
+               size_t length,
+               size_t imageSize,
+               size_t initialMetadataSize,
+               size_t additionalMetadataSize,
+               const std::string& deviceLabel)
+    {
+        // If this fails, there's likely an active read or write lock on the slot.
+        assert(IsFree() &&
                "BufferSlot mutex still locked during Reset - indicates a bug!");
-        
-        // Set the new values
+
         start_ = start;
         length_ = length;
         imageSize_ = imageSize;
         initialMetadataSize_ = initialMetadataSize;
         additionalMetadataSize_ = initialMetadataSize + additionalMetadataSize;
-        deviceLabel_ = deviceLabel;  // Reset the device label
-        
-        // The caller should explicitly acquire write access when needed
+        deviceLabel_ = deviceLabel;
     }
 
     /**
      * Updates the metadata size after writing is complete.
      * @param newSize The actual size of the written metadata.
      */
-    void UpdateAdditionalMetadataSize(size_t newSize) { additionalMetadataSize_ = newSize; }
+    void UpdateAdditionalMetadataSize(size_t newSize) {
+        additionalMetadataSize_ = newSize;
+    }
 
     /**
      * Record the number of bytes of the initial metadata that have been written to this slot.
      */
-    void SetInitialMetadataSize(size_t initialSize) { initialMetadataSize_ = initialSize; }
+    void SetInitialMetadataSize(size_t initialSize) {
+        initialMetadataSize_ = initialSize;
+    }
 
     /**
      * Returns the size of the image data in bytes.
      * @return The image data size.
      */
-    std::size_t GetDataSize() const { return imageSize_; }
+    std::size_t GetDataSize() const {
+        return imageSize_;
+    }
 
     /**
      * Returns the size of the initial metadata in bytes.
      * @return The initial metadata size.
      */
-    std::size_t GetInitialMetadataSize() const { return initialMetadataSize_; }
+    std::size_t GetInitialMetadataSize() const {
+        return initialMetadataSize_;
+    }
 
     /**
      * Returns the size of the additional metadata in bytes.
      * @return The additional metadata size.
      */
-    std::size_t GetAdditionalMetadataSize() const { return additionalMetadataSize_; }
+    std::size_t GetAdditionalMetadataSize() const {
+        return additionalMetadataSize_;
+    }
 
-    const std::string& GetDeviceLabel() const { return deviceLabel_; }
+    const std::string& GetDeviceLabel() const {
+        return deviceLabel_;
+    }
 
 private:
     std::size_t start_;
@@ -188,7 +201,8 @@ private:
     size_t imageSize_;
     size_t initialMetadataSize_;
     size_t additionalMetadataSize_;
-    std::string deviceLabel_;  // New member
+    std::string deviceLabel_;
+
     mutable std::shared_timed_mutex rwMutex_;
 };
 
@@ -380,6 +394,13 @@ public:
      * Reset the buffer, discarding all data that is not currently held externally.
      */
     void Reset();
+
+    /**
+     * Checks if there are any outstanding slots in the buffer. If so, it 
+     * is unsafe to destroy the buffer.
+     * @return true if there are outstanding slots, false otherwise.
+     */
+    int NumOutstandingSlots() const;
 
 private:
     /**

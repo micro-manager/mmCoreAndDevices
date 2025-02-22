@@ -1,15 +1,31 @@
-package mmcorej.org.json;
+package mmcorej;
+
+import java.util.Iterator;
+import java.util.Collections;
+import mmcorej.BufferDataPointer;
+import mmcorej.Metadata;
+import mmcorej.org.json.JSONException;
+import mmcorej.org.json.JSONObject;
+import mmcorej.CMMCore;
 
 /**
  * A JSONObject that lazily initializes its contents from a BufferDataPointer.
  */
 class LazyJSONObject extends JSONObject {
-    private final BufferDataPointer dataPointer_;
+    private BufferDataPointer dataPointer_;
     private boolean initialized_ = false;
 
 
     public LazyJSONObject(BufferDataPointer dataPointer) {
         this.dataPointer_ = dataPointer;
+    }
+
+    /**
+     * Releases the BufferDataPointer associated with this LazyJSONObject.
+
+     */
+    public void releasePointer() {
+        dataPointer_ = null;
     }
 
     synchronized void initializeIfNeeded() throws JSONException {
@@ -18,16 +34,16 @@ class LazyJSONObject extends JSONObject {
                 Metadata md = new Metadata();
                 dataPointer_.getMetadata(md);
 
-                for (String key : md.GetKeys()) {
-                    try {
-                        put(key, md.GetSingleTag(key).GetValue());
-                    } catch (Exception e) {
-                        throw new JSONException("Failed to get value for key: " + key, e);
-                    }
+                // This handles some type conversions
+                JSONObject tags = CMMCore.metadataToMap(md);
+                Iterator<String> keyIter = tags.keys();
+                while (keyIter.hasNext()) {
+                    String key = keyIter.next();
+                    super.put(key, tags.get(key));
                 }
                 initialized_ = true;
             } catch (Exception e) {
-                throw new JSONException("Failed to initialize metadata", e);
+                throw new JSONException("Failed to initialize metadata");
             }
         }
     }

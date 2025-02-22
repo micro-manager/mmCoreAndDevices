@@ -126,6 +126,8 @@ DataBuffer::~DataBuffer() {
         #endif
         buffer_ = nullptr;
     }
+
+    std::lock_guard<std::mutex> lock(slotManagementMutex_);
     for (BufferSlot* bs : slotPool_) {
         delete bs;
     }
@@ -205,8 +207,9 @@ int DataBuffer::InsertData(const void* data, size_t dataSize, const Metadata* pM
     // Initial metadata is all metadata because the image and metadata are already complete
     int result = AcquireWriteSlot(dataSize, 0, &dataPointer, &additionalMetadataPointer, 
                                 serializedMetadata, deviceLabel);
-    if (result != DEVICE_OK)
-        return result;
+    if (result != DEVICE_OK) {
+        return result;       
+    }
 
     tasksMemCopy_->MemCopy((void*)dataPointer, data, dataSize);
     
@@ -375,7 +378,8 @@ int DataBuffer::ReleaseDataReadPointer(const void* dataPointer) {
         if (!slot)
             return DEVICE_ERR;
     }
-    const size_t offset = static_cast<const unsigned char*>(dataPointer) - buffer_;
+    const size_t offset = static_cast<const unsigned char*>(dataPointer) - 
+                                static_cast<const unsigned char*>(buffer_);
 
     // Release the read access outside the global lock
     slot->ReleaseReadAccess();
@@ -383,7 +387,7 @@ int DataBuffer::ReleaseDataReadPointer(const void* dataPointer) {
     if (!overwriteWhenFull_) {
         std::lock_guard<std::mutex> lock(slotManagementMutex_);
         // Now check if the slot is not being accessed
-        if (slot->IsAvailableForWriting() && slot->IsAvailableForReading()) {
+        if (slot->IsFree()) {
             auto it = activeSlotsByStart_.find(offset);
             DeleteSlot(offset, it);
         }
@@ -394,6 +398,10 @@ int DataBuffer::ReleaseDataReadPointer(const void* dataPointer) {
 
 const void* DataBuffer::PopNextDataReadPointer(Metadata &md, bool waitForData)
 {
+    if (overwriteWhenFull_) {
+        throw std::runtime_error("PopNextDataReadPointer is not available in overwrite mode");
+    }
+
     BufferSlot* slot = nullptr;
     size_t slotStart = 0;
 
@@ -415,16 +423,18 @@ const void* DataBuffer::PopNextDataReadPointer(Metadata &md, bool waitForData)
     slot->AcquireReadAccess();
     
     const unsigned char* dataPointer = static_cast<const unsigned char*>(buffer_) + slotStart;
-
-    const unsigned char* metadataPtr = dataPointer + slot->GetDataSize();
     this->ExtractMetadata(dataPointer, slot, md);
 
     return dataPointer;
 }
 
 const void* DataBuffer::PeekLastDataReadPointer(Metadata &md) {
+    if (!overwriteWhenFull_) {
+        throw std::runtime_error("PeekLastDataReadPointer is only available in overwrite mode");
+    }
+
     BufferSlot* currentSlot = nullptr;
-    {
+    {   
         std::unique_lock<std::mutex> lock(slotManagementMutex_);
         if (activeSlotsVector_.empty()) {
             return nullptr;
@@ -447,6 +457,10 @@ const void* DataBuffer::PeekLastDataReadPointer(Metadata &md) {
 }
 
 const void* DataBuffer::PeekDataReadPointerAtIndex(size_t n, Metadata &md) {
+    if (!overwriteWhenFull_) {
+        throw std::runtime_error("PeekDataReadPointerAtIndex is only available in overwrite mode");
+    }
+
     BufferSlot* currentSlot = nullptr;
     {
         // Lock the global slot management mutex to safely access the active slots.
@@ -464,14 +478,16 @@ const void* DataBuffer::PeekDataReadPointerAtIndex(size_t n, Metadata &md) {
     currentSlot->AcquireReadAccess();
     
     const unsigned char* dataPointer = static_cast<const unsigned char*>(buffer_) + currentSlot->GetStart();
-    
-    const unsigned char* metadataPtr = dataPointer + currentSlot->GetDataSize();
     this->ExtractMetadata(dataPointer, currentSlot, md);
     
     return dataPointer;
 }
 
 const void* DataBuffer::PeekLastDataReadPointerFromDevice(const std::string& deviceLabel, Metadata& md) {
+    if (!overwriteWhenFull_) {
+        throw std::runtime_error("PeekLastDataReadPointerFromDevice is only available in overwrite mode");
+    }
+
     BufferSlot* matchingSlot = nullptr;
     {
         std::unique_lock<std::mutex> lock(slotManagementMutex_);
@@ -547,10 +563,10 @@ bool DataBuffer::Overflow() const {
  */
 int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
     std::lock_guard<std::mutex> lock(slotManagementMutex_);
-   
+
     // Ensure no active readers/writers exist.
     for (BufferSlot* slot : activeSlotsVector_) {
-        if (!slot->IsAvailableForReading() || !slot->IsAvailableForWriting()) {
+        if (!slot->IsFree()) {
             throw std::runtime_error("Cannot reinitialize DataBuffer: outstanding active slot detected.");
         }
     }
@@ -621,7 +637,8 @@ BufferSlot* DataBuffer::FindSlotForPointer(const void* dataPointer) {
     assert(!slotManagementMutex_.try_lock() && "Caller must hold slotManagementMutex_");
     if (buffer_ == nullptr)
         return nullptr;
-    std::size_t offset = static_cast<const unsigned char*>(dataPointer) - buffer_;
+    std::size_t offset = static_cast<const unsigned char*>(dataPointer) - 
+                        static_cast<const unsigned char*>(buffer_);
     auto it = activeSlotsByStart_.find(offset);
     return (it != activeSlotsByStart_.end()) ? it->second : nullptr;
 }
@@ -781,11 +798,6 @@ int DataBuffer::ExtractCorrespondingMetadata(const void* dataPointer, Metadata &
             return DEVICE_ERR;
         }
     }
-    // Get metadata pointer and size while under lock
-    const void* initialMetadataPtr = static_cast<const unsigned char*>(dataPointer) + slot->GetDataSize();
-    size_t initialMetadataSize = slot->GetInitialMetadataSize();
-    const void* additionalMetadataPtr = static_cast<const unsigned char*>(initialMetadataPtr) + initialMetadataSize;
-    size_t additionalMetadataSize = slot->GetAdditionalMetadataSize();
     
     // Extract metadata (internal method doesn't need lock)
     return ExtractMetadata(dataPointer, slot, md);
@@ -809,4 +821,15 @@ bool DataBuffer::IsPointerInBuffer(const void* ptr) {
     // find the slot
     BufferSlot* slot = FindSlotForPointer(ptr);
     return slot != nullptr;
+}
+
+int DataBuffer::NumOutstandingSlots() const {
+    std::lock_guard<std::mutex> lock(slotManagementMutex_);
+    int numOutstanding = 0;
+    for (const BufferSlot* slot : activeSlotsVector_) {
+        if (!slot->IsFree()) {
+            numOutstanding++;
+        }
+    }
+    return numOutstanding;
 }

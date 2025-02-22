@@ -6,10 +6,10 @@ import java.util.Iterator;
 import java.util.Collections;
 
 /**
- * TaggedImagePointer is a wrapper around a pointer to an image in the v2 buffer.
- * It provides copy-free access to data in the C++ layer until the data is actually
- * needed. This class implements lazy loading of image data to optimize memory usage
- * and performance.
+ * TaggedImagePointer is a wrapper around a pointer to an image in the v2 buffer 
+ * (a BufferDataPointer object). It provides copy-free access to data in the 
+ * C++ layer until the data is actually needed. This class implements lazy loading of
+ * image data to optimize memory usage and performance.
  * 
  * <p>This class extends TaggedImage and manages the lifecycle of image data stored
  * in native memory. It ensures proper release of resources when the image data is
@@ -19,7 +19,7 @@ public class TaggedImagePointer extends TaggedImage {
    
    public LazyJSONObject tags;
 
-   private final BufferDataPointer dataPointer_;
+   private BufferDataPointer dataPointer_;
    private boolean released_ = false;
 
    /**
@@ -33,6 +33,11 @@ public class TaggedImagePointer extends TaggedImage {
       this.tags = new LazyJSONObject(dataPointer);
    }  
 
+   public Object getPixels() {
+      loadData();
+      return pix;
+   }
+
    /**
     * Retrieves the pixels and metadata associated with this image.
     * 
@@ -42,19 +47,17 @@ public class TaggedImagePointer extends TaggedImage {
     * 
     * @throws IllegalStateException if te image has already been released
     */
-   public synchronized void loadData() throws IllegalStateException {
-      if (released_) {
-         throw new IllegalStateException("Image has been released");
-      }
-      
-      if (this.pix == null) {
-        try {
-            this.pix = dataPointer_.getData();
-            tags.initializeIfNeeded();
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to get pixel data", e);
-        }
-        release();
+   private synchronized void loadData() throws IllegalStateException {
+      if (!released_) {
+         if (this.pix == null) {
+         try {
+               this.pix = dataPointer_.getData();
+               tags.initializeIfNeeded();
+         } catch (Exception e) {
+               throw new IllegalStateException("Failed to get pixel data", e);
+         }
+         release();
+         }
       }
    }
 
@@ -69,20 +72,12 @@ public class TaggedImagePointer extends TaggedImage {
     */
    public synchronized void release() {
       if (!released_) {
-         dataPointer_.release();
+         dataPointer_.dispose(); 
+         tags.releasePointer();
          released_ = true;
+         dataPointer_ = null;
       }
    }
 
-   /**
-    * Ensures proper cleanup of native resources when this object is garbage collected.
-    * 
-    * @throws Throwable if an error occurs during finalization
-    */
-   @Override
-   protected void finalize() throws Throwable {
-      release();
-      super.finalize();
-   }
 }
 

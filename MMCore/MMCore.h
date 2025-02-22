@@ -409,6 +409,7 @@ public:
          double intervalMs, bool stopOnOverflow) throw (CMMError);
    void prepareSequenceAcquisition(const char* cameraLabel) throw (CMMError);
    void startContinuousSequenceAcquisition(double intervalMs) throw (CMMError);
+   void startContinuousSequenceAcquisition(const char* cameraLabel, double intervalMs) throw (CMMError);
    void stopSequenceAcquisition() throw (CMMError);
    void stopSequenceAcquisition(const char* cameraLabel) throw (CMMError);
    bool isSequenceRunning() throw ();
@@ -449,7 +450,7 @@ public:
 
    void setBufferMemoryFootprint(unsigned sizeMB) throw (CMMError);
    unsigned getBufferMemoryFootprint() const;
-   void resetBuffer() throw (CMMError);
+   void clearBuffer() throw (CMMError);
 
    ///@}
 
@@ -474,13 +475,12 @@ public:
    BufferDataPointer* getImagePointer() throw (CMMError);
 
    // These are "Data" not "Image" because they can be used generically for any data type
-   // Higher level wrapping code can read their associated metadata to determine their data type
+   // Higher level wrapping code can read their associated metadata to determine their data typ
+   // These ones don't need the metadata versions (e.g. getLastDataMDPointer) because the metadata
+   // is accessed through the buffer data pointer.
    BufferDataPointer* getLastDataPointer() throw (CMMError);
    BufferDataPointer* popNextDataPointer() throw (CMMError);
-   BufferDataPointer* getLastDataMDPointer(Metadata& md) const throw (CMMError);
-   BufferDataPointer* popNextDataMDPointer(Metadata& md) throw (CMMError);
    BufferDataPointer* getLastDataFromDevicePointer(std::string deviceLabel) throw (CMMError);
-   BufferDataPointer* getLastDataMDFromDevicePointer(std::string deviceLabel, Metadata& md) throw (CMMError);
 
    bool IsPointerInV2Buffer(DataPtr ptr);
 
@@ -694,6 +694,9 @@ public:
    void setIncludeSystemStateCache(bool state) {
       includeSystemStateCache_ = state;
    }
+   void setMetadataProfile(int level) {
+      metadataProfileFlag_ = level;
+   }
    ///@}
 
    static void parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents);
@@ -751,6 +754,7 @@ private:
    std::mutex imageNumbersMutex_;
    std::chrono::steady_clock::time_point startTime_; // Start time for elapsed time calculations in seuqence acquisition
    bool includeSystemStateCache_;
+   int metadataProfileFlag_;
 
 private:
    void InitializeErrorMessages();
@@ -790,6 +794,12 @@ private:
                   unsigned byteDepth, unsigned nComponents, bool addLegacyMetadata);
    // Additional metadata for the multi-camera device adapter
    void addMultiCameraMetadata(Metadata& md, int cameraChannelIndex) const;
+   // Want to be able to pass in binning so camera doesn't have to be locked and this can
+   // be called on a camera thread
+   double getPixelSizeUm(bool cached, int binning);
+   std::vector<double> getPixelSizeAffine(bool cached, int binning) throw (CMMError);
+
+
 
 };
 

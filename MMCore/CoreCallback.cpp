@@ -238,12 +238,17 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
          newMD = *pMd;
       }
       std::shared_ptr<DeviceInstance> device = core_->deviceManager_->GetDevice(caller);
+      
       if (device->GetType() == MM::CameraDevice)
       {
          // convert device to camera
          std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(device);
          core_->addCameraMetadata(camera, newMD, width, height, byteDepth, nComponents, true);
       }
+
+      char labelBuffer[MM::MaxStrLength];
+      caller->GetLabel(labelBuffer);
+      std::string callerLabel(labelBuffer);
 
       if(doProcess)
       {
@@ -253,9 +258,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
          }
       }
-      char labelBuffer[MM::MaxStrLength];
-      caller->GetLabel(labelBuffer);
-      std::string callerLabel(labelBuffer);
+
       int ret = core_->bufferManager_->InsertImage(callerLabel.c_str(), buf, width, height, byteDepth, &newMD);
       if (ret != DEVICE_OK)
          return DEVICE_BUFFER_OVERFLOW;
@@ -301,13 +304,10 @@ int CoreCallback::AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSiz
 
       char label[MM::MaxStrLength];
       caller->GetLabel(label);
-      if (!core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, (void**)dataPointer, (void**)metadataPointer, &md))
-      {
-         return DEVICE_ERR;
-      }
-      return DEVICE_OK;
+      return core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, 
+                                  (void**)dataPointer, (void**)metadataPointer, &md);
    }
-   
+   // This is only for camera devices, other devices should call AcquireDataWriteSlot
    return DEVICE_ERR;
 }
 
@@ -317,11 +317,9 @@ int CoreCallback::AcquireDataWriteSlot(const MM::Device* caller, size_t dataSize
 {
    char label[MM::MaxStrLength];
    caller->GetLabel(label);
-   if (core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, (void**)dataPointer, (void**)metadataPointer))
-   {
-      return DEVICE_OK;
-   }
-   return DEVICE_ERR;
+   Metadata md;
+   return core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, 
+                              (void**)dataPointer, (void**)metadataPointer, &md);
 }
 
 int CoreCallback::FinalizeWriteSlot(unsigned char* dataPointer, 

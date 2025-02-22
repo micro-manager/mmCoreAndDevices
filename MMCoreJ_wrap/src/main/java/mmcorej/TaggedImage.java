@@ -14,4 +14,12 @@ public class TaggedImage {
       this.pix = pix;
       this.tags = tags;
    }
+
+   // This is so that this method can be callled on the 
+   // TaggedImagePointer subclass, so pixels are loaded lazily.
+   // For regular TaggedImage objects, pixels are already loaded.
+   public Object getPixels() {
+      return pix;
+   }
+
 }

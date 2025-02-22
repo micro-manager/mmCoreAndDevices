@@ -55,6 +55,8 @@ public:
    CircularBuffer(unsigned int memorySizeMB);
    ~CircularBuffer();
 
+   int SetOverwriteData(bool overwrite);
+
    unsigned GetMemorySizeMB() const { return memorySizeMB_; }
 
    bool Initialize(unsigned channels, unsigned int xSize, unsigned int ySize, unsigned int pixDepth);

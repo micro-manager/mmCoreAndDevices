@@ -32,6 +32,7 @@
 #include <chrono>
 #include <map>
 #include <mutex>
+#include <atomic>
 
 /**
  * BufferManager provides a generic interface for managing data buffers in MMCore.
@@ -71,7 +72,7 @@ public:
     * @param enable Set to true to use v2 buffer, false to use circular buffer.
     * @return true if the switch was successful, false otherwise.
     */
-   bool EnableV2Buffer(bool enable);
+   int EnableV2Buffer(bool enable);
 
    /**
     * Get a pointer to the top (most recent) image.
@@ -111,12 +112,12 @@ public:
     * @param height Image height.
     * @param byteDepth Bytes per pixel.
     * @param pMd Metadata associated with the image.
-    * @return true on success, false on error.
+    * @return DEVICE_OK on success, DEVICE_ERR on error.
     * @deprecated This method assumes specific image data format. It is provided for backwards 
     * compatibility with with the circular buffer, which assumes images captured on a camera.
     * Use InsertData() instead, which provides format-agnostic data handling with metadata for interpretation.
     */
-   bool InsertImage(const char* deviceLabel, const unsigned char *buf, 
+   int InsertImage(const char* deviceLabel, const unsigned char *buf, 
                    unsigned width, unsigned height, unsigned byteDepth, 
                    Metadata *pMd);
 
@@ -130,12 +131,12 @@ public:
     * @param height Image height.
     * @param byteDepth Bytes per pixel.
     * @param pMd Metadata associated with the image.
-    * @return true on success, false on error.
+    * @return DEVICE_OK on success, DEVICE_ERR on error.
     * @deprecated This method is not preferred for the V2 buffer. Use InsertData() instead.
     *             This method assumes specific image data format. It is provided for backwards 
     *             compatibility with with the circular buffer, which assumes images captured on a camera.
     */
-   bool InsertMultiChannel(const char* deviceLabel, const unsigned char *buf, 
+   int InsertMultiChannel(const char* deviceLabel, const unsigned char *buf, 
                            unsigned numChannels, unsigned width, unsigned height,
                            unsigned byteDepth, Metadata *pMd);
 
@@ -148,9 +149,9 @@ public:
     * @param buf The data to insert.
     * @param dataSize The size of the data to insert.
     * @param pMd Metadata associated with the data.
-    * @return true on success, false on error.
+    * @return DEVICE_OK on success, DEVICE_ERR on error.
     */
-   bool InsertData(const char* callerLabel, const unsigned char* buf, size_t dataSize, Metadata *pMd);
+   int InsertData(const char* callerLabel, const unsigned char* buf, size_t dataSize, Metadata *pMd);
 
 
    /**
@@ -165,8 +166,17 @@ public:
 
    // Channels are not directly supported in v2 buffer, these are for backwards compatibility
    // with circular buffer
-   const void* GetLastDataMD(unsigned channel, Metadata& md) const throw (CMMError);
-   const void* PopNextDataMD(unsigned channel, Metadata& md) throw (CMMError);
+   
+   /**
+    * @deprecated This method is not preferred for the V2 buffer. Use GetLastDataMD() without channel parameter instead.
+    *             The V2 is data type agnostic
+    */
+   const void* GetLastDataMD(unsigned channel, unsigned singleChannelSizeBytes, Metadata& md) const throw (CMMError);
+   /**
+    * @deprecated This method is not preferred for the V2 buffer. Use PopNextDataMD() without channel parameter instead.
+    *             The V2 buffer is data type agnostic
+    */
+   const void* PopNextDataMD(unsigned channel, unsigned singleChannelSizeBytes,Metadata& md) throw (CMMError);
 
    const void* GetLastDataMD(Metadata& md) const throw (CMMError);
    const void* PopNextDataMD(Metadata& md) throw (CMMError);
@@ -181,9 +191,9 @@ public:
     * Release a pointer obtained from the buffer.
     * This is required when using the V2 buffer implementation.
     * @param ptr The pointer to release.
-    * @return true on success, false on error.
+    * @return DEVICE_OK on success, DEVICE_ERR on error.
     */
-   bool ReleaseReadAccess(const void* ptr);
+   int ReleaseReadAccess(const void* ptr);
 
    // Get the size of just the data in this slot
    unsigned GetDataSize(const void* ptr) const;
@@ -191,9 +201,9 @@ public:
    /**
     * Configure whether to overwrite old data when buffer is full.
     * @param overwrite If true, overwrite old data when buffer is full.
-    * @return true on success, false on error.
+    * @return DEVICE_OK on success, DEVICE_ERR on error.
     */
-   bool SetOverwriteData(bool overwrite);
+   int SetOverwriteData(bool overwrite);
 
    /**
     * Acquires a write slot large enough to hold the data and metadata.
@@ -202,19 +212,19 @@ public:
     * @param additionalMetadataSize The maximum number of bytes reserved for metadata.
     * @param dataPointer On success, receives a pointer to the image data region.
     * @param additionalMetadataPointer On success, receives a pointer to the metadata region.
-    * @param pInitialMetadata Optionally, a pointer to a metadata object whose contents should be pre‐written. Defaults to nullptr.
-    * @return true on success, false on error.
+    * @param pInitialMetadata Optionally, a pointer to a metadata object whose contents should be pre‐written
+    * @return DEVICE_OK on success, DEVICE_ERR on error.
     */
-   bool AcquireWriteSlot(const char* deviceLabel, size_t dataSize, size_t additionalMetadataSize,
-       void** dataPointer, void** additionalMetadataPointer, Metadata* pInitialMetadata = nullptr);
+   int AcquireWriteSlot(const char* deviceLabel, size_t dataSize, size_t additionalMetadataSize,
+       void** dataPointer, void** additionalMetadataPointer, Metadata* pInitialMetadata);
 
    /**
     * Finalizes (releases) a write slot after data has been written.
     * @param dataPointer Pointer previously obtained from AcquireWriteSlot.
     * @param actualMetadataBytes The actual number of metadata bytes written.
-    * @return true on success, false on error.
+    * @return DEVICE_OK on success, DEVICE_ERR on error.
     */
-   bool FinalizeWriteSlot(void* dataPointer, size_t actualMetadataBytes);
+   int FinalizeWriteSlot(const void* imageDataPointer, size_t actualMetadataBytes);
 
    /**
     * Extracts metadata for a given data pointer.
@@ -277,7 +287,7 @@ public:
 
 private:
    
-   bool useV2_;
+   std::atomic<bool> useV2_;
    CircularBuffer* circBuffer_;
    DataBuffer* v2Buffer_;
    
