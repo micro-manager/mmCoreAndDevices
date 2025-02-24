@@ -641,6 +641,18 @@ int CRISP::OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int CRISP::GetObjectiveNA(double& objNA)
+{
+	float na;
+	int ret = GetValue("LR Y?", na);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	objNA = na;
+	return DEVICE_OK;
+}
+
 int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
@@ -662,6 +674,18 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetCalGain(double& calGain)
+{
+	float calibGain;
+	int ret = GetValue("LR X?", calibGain);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	calGain = calibGain;
 	return DEVICE_OK;
 }
 
@@ -690,6 +714,18 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int CRISP::GetLockRange(double& lockRange)
+{
+	float lr;
+	int ret = GetValue("LR Z?", lr);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	lockRange = lr;
+	return DEVICE_OK;
+}
+
 int CRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
@@ -711,6 +747,18 @@ int CRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetNumAverages(long& numAverages)
+{
+	float numAvg;
+	int ret = GetValue("RT F?", numAvg);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	numAverages = (long)numAvg;
 	return DEVICE_OK;
 }
 
@@ -738,6 +786,18 @@ int CRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int CRISP::GetGainMultiplier(long& gainMult)
+{
+	float gain;
+	int ret = GetValue("LR T?", gain);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	gainMult = (long)gain;
+	return DEVICE_OK;
+}
+
 int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
@@ -760,6 +820,18 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetLEDIntensity(long& ledIntensity)
+{
+	float ledInt;
+	int ret = GetValue("UL X?", ledInt);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	ledIntensity = (long)ledInt;
 	return DEVICE_OK;
 }
 
@@ -911,6 +983,18 @@ int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int CRISP::GetNumSkips(long& updateRate)
+{
+	float numSkips;
+	int ret = GetValue("UL Y?", numSkips);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	updateRate = (long)numSkips;
+	return DEVICE_OK;
+}
+
 int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
@@ -932,6 +1016,18 @@ int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetInFocusRange(double& inFocusRange)
+{
+	float focusRange;
+	int ret = GetValue("AL Z?", focusRange);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	inFocusRange = focusRange;
 	return DEVICE_OK;
 }
 

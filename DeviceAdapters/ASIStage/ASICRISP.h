@@ -43,19 +43,27 @@ public:
 	int OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNA(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetObjectiveNA(double& objNA);
 	int OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetLockRange(double& lockRange);
 	int OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetLEDIntensity(long& ledIntensity);
 	int OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetNumAverages(long& numAverages);
 	int OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetCalGain(double& calGain);
 	int OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetGainMultiplier(long& gainMult);
 	int OnFocusCurve(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFocusCurveData(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
 	int OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetNumSkips(long& updateRate);
 	int OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetInFocusRange(double& inFocusRange);
 	int OnSum(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -74,6 +82,16 @@ private:
 	std::string focusState_;
 	long waitAfterLock_;
 	int answerTimeoutMs_;
+
+	// cached properties
+	long gainMultiplier_;
+	long ledIntensity_;
+	long numAverages_;
+	long numSkips_; // update rate (milliseconds)
+	double calibrationGain_;
+	double inFocusRange_; // microns
+	double lockRange_; // millimeters
+	double objectiveNA_;
 
 	static const int SIZE_OF_FC_ARRAY = 24;
 	std::string focusCurveData_[SIZE_OF_FC_ARRAY];
