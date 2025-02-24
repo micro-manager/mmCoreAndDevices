@@ -136,26 +136,56 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnWaitAfterLock);
 	CreateProperty("Wait ms after Lock", "1000", MM::Integer, false, pAct);
 
+	ret = GetObjectiveNA(objectiveNA_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnNA);
-	CreateProperty("Objective NA", "0.8", MM::Float, false, pAct);
+	CreateProperty("Objective NA", std::to_string(objectiveNA_).c_str(), MM::Float, false, pAct);
 	SetPropertyLimits("Objective NA", 0, 1.65);
 
+	ret = GetLockRange(lockRange_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnLockRange);
-	CreateProperty("Max Lock Range(mm)", "0.05", MM::Float, false, pAct);
+	CreateProperty("Max Lock Range(mm)", std::to_string(lockRange_).c_str(), MM::Float, false, pAct);
 
+	ret = GetCalGain(calibrationGain_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnCalGain);
-	CreateProperty("Calibration Gain", "0", MM::Integer, false, pAct);
+	CreateProperty("Calibration Gain", std::to_string(calibrationGain_).c_str(), MM::Integer, false, pAct);
 
+	ret = GetLEDIntensity(ledIntensity_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnLEDIntensity);
-	CreateProperty("LED Intensity", "50", MM::Integer, false, pAct);
+	CreateProperty("LED Intensity", std::to_string(ledIntensity_).c_str(), MM::Integer, false, pAct);
 	SetPropertyLimits("LED Intensity", 0, 100);
 
+	ret = GetGainMultiplier(gainMultiplier_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnGainMultiplier);
-	CreateProperty("GainMultiplier", "10", MM::Integer, false, pAct);
+	CreateProperty("GainMultiplier", std::to_string(gainMultiplier_).c_str(), MM::Integer, false, pAct);
 	SetPropertyLimits("GainMultiplier", 1, 100);
 
+	ret = GetNumAverages(numAverages_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnNumAvg);
-	CreateProperty("Number of Averages", "1", MM::Integer, false, pAct);
+	CreateProperty("Number of Averages", std::to_string(numAverages_).c_str(), MM::Integer, false, pAct);
 	SetPropertyLimits("Number of Averages", 0, 8);
 
 	pAct = new CPropertyAction(this, &CRISP::OnOffset);
@@ -169,13 +199,23 @@ int CRISP::Initialize()
 	// not sure exactly when Gary made these firmware changes, but they were there by start of 2015
 	if (compileDay_ >= ConvertDay(2015, 1, 1))
 	{
+		ret = GetNumSkips(numSkips_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &CRISP::OnNumSkips);
-		CreateProperty("Number of Skips", "0", MM::Integer, false, pAct);
+		CreateProperty("Number of Skips", std::to_string(numSkips_).c_str(), MM::Integer, false, pAct);
 		SetPropertyLimits("Number of Skips", 0, 100);
 		UpdateProperty("Number of Skips");
 
+		ret = GetInFocusRange(inFocusRange_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &CRISP::OnInFocusRange);
-		CreateProperty("In Focus Range(um)", "0.1", MM::Float, false, pAct);
+		CreateProperty("In Focus Range(um)", std::to_string(inFocusRange_).c_str(), MM::Float, false, pAct);
 		UpdateProperty("In Focus Range(um)");
 	}
 
@@ -657,21 +697,16 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float na;
-		int ret = GetValue("LR Y?", na);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(na);
+		pProp->Set(objectiveNA_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
+		// TODO: this should update the "In Focus Range (mm)" property too
 		double na;
 		pProp->Get(na);
 		std::ostringstream command;
 		command << std::fixed << "LR Y=" << na;
-
+		objectiveNA_ = na;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -693,13 +728,7 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float calGain;
-		int ret = GetValue("LR X?", calGain);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(calGain);
+		pProp->Set(calibrationGain_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -707,7 +736,7 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(lr);
 		std::ostringstream command;
 		command << std::fixed << "LR X=" << (int)lr;
-
+		calibrationGain_ = lr;
 		return SetCommand(command.str());
 	}
 
@@ -730,13 +759,7 @@ int CRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float lockRange;
-		int ret = GetValue("LR Z?", lockRange);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(lockRange);
+		pProp->Set(lockRange_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -744,7 +767,7 @@ int CRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(lr);
 		std::ostringstream command;
 		command << std::fixed << "LR Z=" << lr;
-
+		lockRange_ = lr;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -766,13 +789,7 @@ int CRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float numAvg;
-		int ret = GetValue("RT F?", numAvg);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(numAvg);
+		pProp->Set(numAverages_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -780,7 +797,7 @@ int CRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(nr);
 		std::ostringstream command;
 		command << std::fixed << "RT F=" << nr;
-
+		numAverages_ = nr;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -802,14 +819,7 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float gainMultiplier;
-		std::string command = "LR T?";
-		int ret = GetValue(command.c_str(), gainMultiplier);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(gainMultiplier);
+		pProp->Set(gainMultiplier_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -817,7 +827,7 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(nr);
 		std::ostringstream command;
 		command << std::fixed << "LR T=" << nr;
-
+		gainMultiplier_ = nr;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -839,13 +849,7 @@ int CRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float ledIntensity;
-		int ret = GetValue("UL X?", ledIntensity);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(ledIntensity);
+		pProp->Set(ledIntensity_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -853,7 +857,7 @@ int CRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(ledIntensity);
 		std::ostringstream command;
 		command << std::fixed << "UL X=" << ledIntensity;
-
+		ledIntensity_ = ledIntensity;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -999,13 +1003,7 @@ int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float numSkips;
-		int ret = GetValue("UL Y?", numSkips);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(numSkips);
+		pProp->Set(numSkips_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -1013,7 +1011,7 @@ int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(nr);
 		std::ostringstream command;
 		command << std::fixed << "UL Y=" << nr;
-
+		numSkips_ = nr;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -1027,7 +1025,7 @@ int CRISP::GetInFocusRange(double& inFocusRange)
 	{
 		return ret;
 	}
-	inFocusRange = focusRange;
+	inFocusRange = focusRange * 1000;
 	return DEVICE_OK;
 }
 
@@ -1035,21 +1033,16 @@ int CRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float focusRange;
-		int ret = GetValue("AL Z?", focusRange);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(focusRange * 1000);
+		pProp->Set(inFocusRange_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
 		double lr;
 		pProp->Get(lr);
+		lr /= 1000;
 		std::ostringstream command;
-		command << std::fixed << "AL Z=" << lr / 1000;
-
+		command << std::fixed << "AL Z=" << lr;
+		inFocusRange_ = lr;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
