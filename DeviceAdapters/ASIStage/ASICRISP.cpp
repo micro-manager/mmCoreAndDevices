@@ -892,15 +892,6 @@ int CRISP::OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		pProp->Set(sum);
 	}
-	else if (eAct == MM::AfterSet)
-	{
-		long nr;
-		pProp->Get(nr);
-		std::ostringstream command;
-		command << std::fixed << "LK Y = " << nr;
-
-		return SetCommand(command.str());
-	}
 	return DEVICE_OK;
 }
 
