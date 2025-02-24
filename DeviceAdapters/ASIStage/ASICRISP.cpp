@@ -10,12 +10,13 @@
 CRISP::CRISP() :
 	ASIBase(this, ""),
 	axis_("Z"),
+	focusState_(""),
 	waitAfterLock_(1000),
 	answerTimeoutMs_(1000)
 {
 	InitializeDefaultErrorMessages();
 
-	SetErrorText(ERR_NOT_CALIBRATED, "CRISP is not calibrated.  Try focusing close to a coverslip and selecting 'Calibrate'");
+	SetErrorText(ERR_NOT_CALIBRATED, "CRISP is not calibrated. Try focusing close to a coverslip and selecting 'Calibrate'");
 	SetErrorText(ERR_UNRECOGNIZED_ANSWER, "The ASI controller said something incomprehensible");
 	SetErrorText(ERR_NOT_LOCKED, "The CRISP failed to lock");
 
@@ -318,7 +319,7 @@ int CRISP::GetFocusState(std::string& focusState)
 	return DEVICE_OK;
 }
 
-int CRISP::SetFocusState(std::string focusState)
+int CRISP::SetFocusState(const std::string& focusState)
 {
 	std::string currentState;
 	int ret = GetFocusState(currentState);
@@ -335,7 +336,7 @@ int CRISP::SetFocusState(std::string focusState)
 	return ForceSetFocusState(focusState);
 }
 
-int CRISP::ForceSetFocusState(std::string focusState)
+int CRISP::ForceSetFocusState(const std::string& focusState)
 {
 	std::string currentState;
 	int ret = GetFocusState(currentState);
@@ -521,7 +522,7 @@ int CRISP::GetCurrentFocusScore(double& score)
 	return GetLastFocusScore(score);
 }
 
-int CRISP::GetValue(std::string cmd, float& val)
+int CRISP::GetValue(const std::string& cmd, float& val)
 {
 	std::string answer;
 	// query command
@@ -557,7 +558,7 @@ int CRISP::GetValue(std::string cmd, float& val)
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
-int CRISP::SetCommand(std::string cmd)
+int CRISP::SetCommand(const std::string& cmd)
 {
 	std::string answer;
 	// query command

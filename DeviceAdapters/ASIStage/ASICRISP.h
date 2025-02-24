@@ -28,18 +28,17 @@ public:
 	MM::DeviceDetectionStatus DetectDevice();
 
 	// AutoFocus API
-	virtual int SetContinuousFocusing(bool state);
-	virtual int GetContinuousFocusing(bool& state);
-	virtual bool IsContinuousFocusLocked();
-	virtual int FullFocus();
-	virtual int IncrementalFocus();
-	virtual int GetLastFocusScore(double& score);
-	virtual int GetCurrentFocusScore(double& score);
-	virtual int GetOffset(double& offset);
-	virtual int SetOffset(double offset);
+	int SetContinuousFocusing(bool state);
+	int GetContinuousFocusing(bool& state);
+	bool IsContinuousFocusLocked();
+	int FullFocus();
+	int IncrementalFocus();
+	int GetLastFocusScore(double& score);
+	int GetCurrentFocusScore(double& score);
+	int GetOffset(double& offset);
+	int SetOffset(double offset);
 
 	// action interface
-	// ----------------
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -66,17 +65,18 @@ public:
 
 private:
 	int GetFocusState(std::string& focusState);
-	int SetFocusState(std::string focusState);
-	int ForceSetFocusState(std::string focusState);
-	int GetValue(std::string cmd, float& val);
-	int SetCommand(std::string cmd);
+	int SetFocusState(const std::string& focusState);
+	int ForceSetFocusState(const std::string& focusState);
+	int GetValue(const std::string& cmd, float& val);
+	int SetCommand(const std::string& cmd);
 
-	static const int SIZE_OF_FC_ARRAY = 24;
-	std::string focusCurveData_[SIZE_OF_FC_ARRAY];
 	std::string axis_;
 	std::string focusState_;
 	long waitAfterLock_;
 	int answerTimeoutMs_;
+
+	static const int SIZE_OF_FC_ARRAY = 24;
+	std::string focusCurveData_[SIZE_OF_FC_ARRAY];
 };
 
 #endif // ASICRISP_H
