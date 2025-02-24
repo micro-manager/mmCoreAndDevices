@@ -144,7 +144,7 @@ int CRISP::Initialize()
 	CreateProperty("Max Lock Range(mm)", "0.05", MM::Float, false, pAct);
 
 	pAct = new CPropertyAction(this, &CRISP::OnCalGain);
-	CreateProperty("Calibration Gain", "0.05", MM::Integer, false, pAct);
+	CreateProperty("Calibration Gain", "0", MM::Integer, false, pAct);
 
 	pAct = new CPropertyAction(this, &CRISP::OnLEDIntensity);
 	CreateProperty("LED Intensity", "50", MM::Integer, false, pAct);
@@ -677,7 +677,7 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::GetCalGain(double& calGain)
+int CRISP::GetCalGain(long& calGain)
 {
 	float calibGain;
 	int ret = GetValue("LR X?", calibGain);
@@ -685,7 +685,7 @@ int CRISP::GetCalGain(double& calGain)
 	{
 		return ret;
 	}
-	calGain = calibGain;
+	calGain = (long)calibGain;
 	return DEVICE_OK;
 }
 

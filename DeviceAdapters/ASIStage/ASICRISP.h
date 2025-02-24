@@ -52,7 +52,7 @@ public:
 	int OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetNumAverages(long& numAverages);
 	int OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int GetCalGain(double& calGain);
+	int GetCalGain(long& calGain);
 	int OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetGainMultiplier(long& gainMult);
 	int OnFocusCurve(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -88,7 +88,7 @@ private:
 	long ledIntensity_;
 	long numAverages_;
 	long numSkips_; // update rate (milliseconds)
-	double calibrationGain_;
+	long calibrationGain_;
 	double inFocusRange_; // microns
 	double lockRange_; // millimeters
 	double objectiveNA_;
