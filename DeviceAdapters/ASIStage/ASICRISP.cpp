@@ -736,7 +736,7 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(lr);
 		std::ostringstream command;
 		command << std::fixed << "LR X=" << (int)lr;
-		calibrationGain_ = lr;
+		calibrationGain_ = (long)lr;
 		return SetCommand(command.str());
 	}
 
