@@ -77,6 +77,7 @@ protected:
 	int OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetVersion(std::string& version);
 	int GetBuildName(std::string& buildName);
+	int GetCompileDate(std::string& compileDate);
 
 	bool oldstage_;
 	bool initialized_;
@@ -85,9 +86,12 @@ protected:
 	std::string port_;
 	std::string version_;
 	std::string buildName_;
+	std::string compileDate_;
 	std::string oldstagePrefix_;
 	VersionData versionData_;
-	unsigned int compileDay_; // "days" since Jan 1 2000 since the firmware was compiled according to (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
+	unsigned int compileDay_;
+	// "days" since Jan 1 2000 since the firmware was compiled according to:
+	// (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
 };
 
 #endif // ASIBASE_H

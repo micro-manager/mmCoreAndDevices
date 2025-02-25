@@ -71,6 +71,11 @@ int StateDevice::Initialize()
 	CPropertyAction* pAct = new CPropertyAction(this, &StateDevice::OnVersion);
 	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+	ret = GetCompileDate(compileDate_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &StateDevice::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
 	UpdateProperty("CompileDate");

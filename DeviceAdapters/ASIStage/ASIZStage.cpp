@@ -109,6 +109,11 @@ int ZStage::Initialize()
     CPropertyAction* pAct = new CPropertyAction(this, &ZStage::OnVersion);
     CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+    ret = GetCompileDate(compileDate_);
+    if (ret != DEVICE_OK)
+    {
+        return ret;
+    }
     pAct = new CPropertyAction(this, &ZStage::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
     UpdateProperty("CompileDate");

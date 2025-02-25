@@ -269,25 +269,27 @@ int ASIBase::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int ASIBase::GetCompileDate(std::string& buildName)
+{
+	std::ostringstream command;
+	command << "CD";
+	std::string answer;
+	// query the device
+	int ret = QueryCommand(command.str().c_str(), answer);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	buildName = answer;
+	return DEVICE_OK;
+}
+
 // Get the compile date of this controller
 int ASIBase::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		if (initialized_)
-		{
-			return DEVICE_OK;
-		}
-		std::ostringstream command;
-		command << "CD";
-		std::string answer;
-		// query the device
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(answer.c_str());
+		pProp->Set(compileDate_.c_str());
 	}
 	return DEVICE_OK;
 }
