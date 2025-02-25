@@ -1854,11 +1854,17 @@ int ReflectorTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2011,11 +2017,17 @@ int SidePortTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2326,11 +2338,17 @@ int ObjectiveTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2483,11 +2501,17 @@ int OptovarTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2640,11 +2664,17 @@ int TubelensTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2856,11 +2886,17 @@ int CondenserTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
