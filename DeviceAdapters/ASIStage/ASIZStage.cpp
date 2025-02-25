@@ -506,30 +506,6 @@ int ZStage::GetPositionSteps(long& steps)
     return ERR_UNRECOGNIZED_ANSWER;
 }
 
-//int ZStage::GetResolution(double& res)
-//{
-//   const char* command="RES,Z";
-//
-//   string answer;
-//   // query command
-//   int ret = QueryCommand(command, answer);
-//   if (ret != DEVICE_OK)
-//      return ret;
-//
-//   if (answer.length() > 2 && answer.substr(0, 1).compare("E") == 0)
-//   {
-//      int errNo = atoi(answer.substr(2).c_str());
-//      return ERR_OFFSET + errNo;
-//   }
-//   else if (answer.length() > 0)
-//   {
-//      res = atof(answer.c_str());
-//      return DEVICE_OK;
-//   }
-//
-//   return ERR_UNRECOGNIZED_ANSWER;
-//}
-
 int ZStage::SetOrigin()
 {
     // empty the Rx serial buffer before sending command
@@ -568,7 +544,7 @@ int ZStage::GetLimits(double& /*min*/, double& /*max*/)
     return DEVICE_UNSUPPORTED_COMMAND;
 }
 
-bool ZStage::HasRingBuffer()
+bool ZStage::HasRingBuffer() const
 {
     return hasRingBuffer_;
 }

@@ -217,11 +217,8 @@ VersionData ASIBase::ExtractVersionData(const std::string &version) const
 
 int ASIBase::GetVersion(std::string& version)
 {
-   std::ostringstream command;
-   command << "V";
    std::string answer;
-   // query the device
-   int ret = QueryCommand(command.str().c_str(), answer);
+   int ret = QueryCommand("V", answer);
    if (ret != DEVICE_OK)
    {
       return ret;
