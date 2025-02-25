@@ -9,6 +9,8 @@
 
 XYStage::XYStage() :
 	ASIBase(this, "2H"), // LX-4000 prefix
+	axisletterX_("X"),
+	axisletterY_("Y"),
 	stepSizeXUm_(0.0),
 	stepSizeYUm_(0.0),
 	maxSpeed_(7.5),
@@ -19,11 +21,18 @@ XYStage::XYStage() :
 	joyStickMirror_(false),
 	nrMoveRepetitions_(0),
 	answerTimeoutMs_(1000),
+	stopSignal_(false),
 	serialOnlySendChanged_(true),
 	manualSerialAnswer_(""),
 	advancedPropsEnabled_(false),
-	axisletterX_("X"),
-	axisletterY_("Y")
+	// init cached properties
+	acceleration_(0),
+	waitCycles_(0),
+	speed_(0),
+	backlash_(0),
+	error_(0),
+	finishError_(0),
+	overShoot_(0)
 {
 	InitializeDefaultErrorMessages();
 
@@ -39,7 +48,6 @@ XYStage::XYStage() :
 	// Port
 	CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnPort);
 	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
-	stopSignal_ = false;
 
 	CreateProperty("AxisLetterX", axisletterX_.c_str(), MM::String, true);
 	CreateProperty("AxisLetterY", axisletterY_.c_str(), MM::String, true);

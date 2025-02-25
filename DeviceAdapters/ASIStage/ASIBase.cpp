@@ -9,15 +9,15 @@
 
 ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	oldstage_(false),
-	core_(0),
-	compileDay_(0),
 	initialized_(false),
+	core_(nullptr),
 	device_(device),
+	port_("Undefined"),
+	version_("Undefined"),
 	oldstagePrefix_(prefix),
-	version_("undefined"),
-	port_("Undefined")
+	versionData_(VersionData()),
+	compileDay_(0)
 {
-	versionData_ = VersionData();
 }
 
 ASIBase::~ASIBase()

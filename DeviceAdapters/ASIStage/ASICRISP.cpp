@@ -12,7 +12,16 @@ CRISP::CRISP() :
 	axis_("Z"),
 	focusState_(""),
 	waitAfterLock_(1000),
-	answerTimeoutMs_(1000)
+	answerTimeoutMs_(1000),
+	// init cached properties
+	gainMultiplier_(0),
+	ledIntensity_(0),
+	numAverages_(0),
+	numSkips_(0),
+	calibrationGain_(0),
+	inFocusRange_(0),
+	lockRange_(0),
+	objectiveNA_(0)
 {
 	InitializeDefaultErrorMessages();
 

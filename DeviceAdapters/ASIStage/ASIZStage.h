@@ -99,6 +99,7 @@ private:
 	double linearSequenceIntervalUm_;
 	long linearSequenceLength_;
 	long linearSequenceTimeoutMs_;
+	// cached properties
 	double speed_;
 	long waitCycles_;
 	double backlash_;

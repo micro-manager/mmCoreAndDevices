@@ -23,7 +23,15 @@ ZStage::ZStage() :
     supportsLinearSequence_(false),
     linearSequenceIntervalUm_(0.0),
     linearSequenceLength_(0),
-    linearSequenceTimeoutMs_(10000)
+    linearSequenceTimeoutMs_(10000),
+    // init cached properties
+    speed_(0),
+    waitCycles_(0),
+    backlash_(0),
+    error_(0),
+    acceleration_(0),
+    finishError_(0),
+    overShoot_(0)
 {
     InitializeDefaultErrorMessages();
 
@@ -374,7 +382,7 @@ int ZStage::GetPositionUm(double& pos)
         float zz;
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %f\r\n", head, &zz);
+        (void)sscanf(iBuf, "%s %f\r\n", head, &zz);
 
         pos = zz * stepSizeUm_;
         curSteps_ = (long)zz;
@@ -478,7 +486,7 @@ int ZStage::GetPositionSteps(long& steps)
         float zz;
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %f\r\n", head, &zz);
+        (void)sscanf(iBuf, "%s %f\r\n", head, &zz);
 
         steps = (long)zz;
         curSteps_ = (long)steps;
