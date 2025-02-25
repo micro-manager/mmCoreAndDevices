@@ -8107,10 +8107,10 @@ std::string CMMCore::createDataset(const char* path, const char* name, const std
  }
 
 /**
- * Close the currently open dataset to prevent further changes.
+ * Close the currently open dataset.
  * After closing the handle becomes invalid.
  * 
- * \param handle - handle to the open dataset
+ * \param handle - handle to existing dataset
  */
 void CMMCore::closeDataset(const char* handle) throw (CMMError)
 {
@@ -8127,6 +8127,19 @@ void CMMCore::closeDataset(const char* handle) throw (CMMError)
    }
    else
       throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
+}
+
+/**
+ * Prevent further changes to the dataset.
+ * The handle is still valid and the data is available for reading.
+ * Once frozen dataset can't be thawed again.
+ *
+ * \param handle - handle to the open dataset
+ */
+void CMMCore::freezeDataset(const char* handle) throw(CMMError)
+{
+   // TODO:
+   throw CMMError("Feature not supported", MMERR_GENERIC);
 }
 
 /**
@@ -8161,7 +8174,7 @@ std::string CMMCore::loadDataset(const char* path) throw (CMMError)
  * \param path - path of the dataset
  * \return - device name, or empty string if it can not find any devices
  */
-std::string CMMCore::getDeviceNameToOpen(const char* path)
+std::string CMMCore::getDeviceNameToOpenDataset(const char* path)
 {
    // TODO:
    throw CMMError("Feature not supported", MMERR_GENERIC);
@@ -8279,34 +8292,24 @@ MM::StorageDataType CMMCore::getDatasetPixelType(const char* handle) throw (CMME
 }
 
 /**
- * Adds a new image to the dataset. Width, height and depth define the expected pixel array size.
- * Fails if coordinates do not fit into the dataset shape, or if the image dimensions are not supported.
- * It can also fail if the underlying implementation does not support the order of image coordinates.
+ * Appends a new image to the dataset. Width, height and depth define the expected pixel array size.
+ * The implied order of images is the one specified by order of dimensions during creation of the dataset.
  * 
  * \param handle - handle to the open dataset
  * \param sizeInBytes - size of the pixel array
  * \param pixels - pixel array
- * \param coordinates - coordinates of the image in the dimension space
  * \param imageMeta - serialized JSON with image specific metadata
  */
-void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError)
+void CMMCore::appendImageToDataset(const char* handle, int sizeInBytes, const STORAGEIMG pixels, const char* imageMeta) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       int ret(0);
       mm::DeviceModuleLockGuard guard(storage);
-      if (coordinates.empty())
-      {
-         // append
-         ret = storage->AppendImage(handle, sizeInBytes, pixels, imageMeta);
-      }
-      else
-      {
-         // insert
-         std::vector<int> coords(coordinates.begin(), coordinates.end());
-         ret = storage->AddImage(handle, sizeInBytes, pixels, coords, imageMeta);
-      }
+      // append
+      ret = storage->AppendImage(handle, sizeInBytes, pixels, imageMeta);
+     
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8328,22 +8331,14 @@ void CMMCore::addImage(const char* handle, int sizeInBytes, const STORAGEIMG pix
  * \param coordinates - coordinates of the image in the dimension space
  * \param imageMeta - serialized JSON with image specific metadata
  */
-void CMMCore::addImage(const char* handle, int sizeInShorts, const STORAGEIMG16 pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError)
+void CMMCore::appendImageToDataset(const char* handle, int sizeInShorts, const STORAGEIMG16 pixels, const char* imageMeta) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
       int ret(0);
-      if (coordinates.empty())
-      {
-         ret = storage->AppendImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), imageMeta);
-      }
-      else
-      {
-         std::vector<int> coords(coordinates.begin(), coordinates.end());
-         ret = storage->AddImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), coords, imageMeta);
-      }
+      ret = storage->AppendImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), imageMeta);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8352,7 +8347,6 @@ void CMMCore::addImage(const char* handle, int sizeInShorts, const STORAGEIMG16 
    }
    else
       throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
-
 }
 
 /**
@@ -8363,7 +8357,7 @@ void CMMCore::addImage(const char* handle, int sizeInShorts, const STORAGEIMG16 
  * \param name - name of the dimension
  * \param meaning - Z,T,C, etc. (physical meaning)
  */
-void CMMCore::configureDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError)
+void CMMCore::configureDatasetDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8388,7 +8382,7 @@ void CMMCore::configureDimension(const char* handle, int dimension, const char* 
  * \param coordinate - coordinate index
  * \param name - coordinate name
  */
-void CMMCore::configureCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError)
+void CMMCore::configureDatasetCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8411,7 +8405,7 @@ void CMMCore::configureCoordinate(const char* handle, int dimension, int coordin
  * \param handle - dataset handle
  * \param dimension - dimension index
  */
-std::string CMMCore::getDimensionName(const char* handle, int dimension) throw (CMMError)
+std::string CMMCore::getDatasetDimensionName(const char* handle, int dimension) throw (CMMError)
 {
 	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
 	if(storage)
@@ -8435,7 +8429,7 @@ std::string CMMCore::getDimensionName(const char* handle, int dimension) throw (
  * \param handle - dataset handle
  * \param dimension - dimension index
  */
-std::string CMMCore::getDimensionMeaning(const char* handle, int dimension) throw (CMMError)
+std::string CMMCore::getDatasetDimensionMeaning(const char* handle, int dimension) throw (CMMError)
 {
 	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
 	if(storage)
@@ -8460,7 +8454,7 @@ std::string CMMCore::getDimensionMeaning(const char* handle, int dimension) thro
  * \param dimension - dimension index
  * \param coordinate - coordinate index
  */
-std::string CMMCore::getCoordinateName(const char* handle, int dimension, int coordinate) throw (CMMError)
+std::string CMMCore::getDatasetCoordinateName(const char* handle, int dimension, int coordinate) throw (CMMError)
 {
 	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
 	if(storage)
@@ -8483,7 +8477,7 @@ std::string CMMCore::getCoordinateName(const char* handle, int dimension, int co
  * 
  * \param handle - dataset handle
  */
-int CMMCore::getImageCount(const char* handle) throw (CMMError)
+int CMMCore::getDatasetImageCount(const char* handle) throw (CMMError)
 {
 	std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
 	if(storage)
@@ -8506,7 +8500,7 @@ int CMMCore::getImageCount(const char* handle) throw (CMMError)
  * 
  * \param handle - handle of the currently loaded or open dataset
  */
-std::string CMMCore::getSummaryMeta(const char* handle) throw (CMMError)
+std::string CMMCore::getDatasetSummaryMeta(const char* handle) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8532,7 +8526,7 @@ std::string CMMCore::getSummaryMeta(const char* handle) throw (CMMError)
  *
  * @return std::string image metadata as JSON encoded string
  */
-std::string CMMCore::getImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError)
+std::string CMMCore::getDatasetImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8562,7 +8556,7 @@ std::string CMMCore::getImageMeta(const char* handle, const std::vector<long>& c
  *
  * @throws MMCoreException If the specified device handle is invalid or key not found
  */
-void CMMCore::setCustomMeta(const char* handle, const char* key, const char* meta)
+void CMMCore::setDatasetCustomMeta(const char* handle, const char* key, const char* meta)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8588,7 +8582,7 @@ void CMMCore::setCustomMeta(const char* handle, const char* key, const char* met
  * @return         Stored metadata string for the specified key
  * @throws MMCoreException If the specified device handle is invalid or key not found
  */
-std::string CMMCore::getCustomMeta(const char* handle, const char* key)
+std::string CMMCore::getDatasetCustomMeta(const char* handle, const char* key)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8612,7 +8606,7 @@ std::string CMMCore::getCustomMeta(const char* handle, const char* key)
  * \param coordinates - array of coordinates, one for each dimension
  * \return - image pixels
  */
-STORAGEIMGOUT CMMCore::getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError)
+STORAGEIMGOUT CMMCore::getImageFromDataset(const char* handle, const std::vector<long>& coordinates) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8640,7 +8634,7 @@ STORAGEIMGOUT CMMCore::getImage(const char* handle, const std::vector<long>& coo
  * \param handle - currently open dataset
  * \param imageMeta - image metadata that we wish to add to the image
  */
-void CMMCore::snapAndSave(const char* handle, const std::vector<long>& coordinates, const char* imageMeta)
+void CMMCore::snapAndAppendToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta)
 {
    snapImage();
 
@@ -8709,7 +8703,7 @@ void CMMCore::snapAndSave(const char* handle, const std::vector<long>& coordinat
  * \param handle - currently open dataset handle
  * \param imageMeta - image metadata
  */
-void CMMCore::saveNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError)
+void CMMCore::appendNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError)
 {
    const mm::ImgBuffer* img = cbuf_->GetNextImageBuffer(0);
    if (!img)
@@ -8750,7 +8744,7 @@ void CMMCore::saveNextImage(const char* handle, const std::vector<long>& coordin
  * \param imageMeta - image metadata
  * \return - image pixels
  */
-STORAGEIMGOUT CMMCore::saveAndGetNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw(CMMError)
+STORAGEIMGOUT CMMCore::appendAndGetNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw(CMMError)
 {
    const mm::ImgBuffer* img = cbuf_->GetNextImageBuffer(0);
    if (!img)
@@ -8795,7 +8789,7 @@ STORAGEIMGOUT CMMCore::saveAndGetNextImage(const char* handle, const std::vector
  * If any error happens during the storage action, streaming to disk will stop, and the connection will be broken.
  * To check the status of the attached storage, use getAttachedStorage() and getLastAttachedStorageError();
  */
-void CMMCore::attachStorageToCircularBuffer(const char* handle)  throw (CMMError)
+void CMMCore::attachDatasetToCircularBuffer(const char* handle)  throw (CMMError)
 {
    // TODO
    throw CMMError("Feature not supported", MMERR_GENERIC);
@@ -8805,7 +8799,7 @@ void CMMCore::attachStorageToCircularBuffer(const char* handle)  throw (CMMError
  * Return the handle for the currently attached dataset.
  * \return - storage handle, or empty string if no storage is attached
  */
-std::string CMMCore::getAttachedStorage()
+std::string CMMCore::getAttachedDataset()
 {
    return std::string();
 }
@@ -8813,7 +8807,7 @@ std::string CMMCore::getAttachedStorage()
 /**
  * Returns the last error that occured during background streaming.
  */
-std::string CMMCore::getLastAttachedStorageError()
+std::string CMMCore::getLastAttachedDatasetError()
 {
    // TODO:
    return std::string();

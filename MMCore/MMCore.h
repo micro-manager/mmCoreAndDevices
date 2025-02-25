@@ -648,32 +648,33 @@ public:
    ///@{
    std::string createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta) throw (CMMError);
    void closeDataset(const char* handle) throw (CMMError);
+   void freezeDataset(const char* handle) throw (CMMError);
    std::string loadDataset(const char* path) throw (CMMError);
-   std::string getDeviceNameToOpen(const char* path);
+   std::string getDeviceNameToOpenDataset(const char* path);
    std::string getDatasetPath(const char* handle) throw (CMMError);
    bool isDatasetOpen(const char* handle);
 	bool isDatasetReadOnly(const char* handle);
    std::vector<long> getDatasetShape(const char* handle) throw (CMMError);
    MM::StorageDataType getDatasetPixelType(const char* handle) throw (CMMError);
-   void addImage(const char* handle, int sizeinBytes, const STORAGEIMG pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
-	void addImage(const char* handle, int sizeinShorts, const STORAGEIMG16 pixels, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
-   void configureDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError);
-   void configureCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError);
-	std::string getDimensionName(const char* handle, int dimension) throw (CMMError);
-	std::string getDimensionMeaning(const char* handle, int dimension) throw (CMMError);
-	std::string getCoordinateName(const char* handle, int dimension, int coordinate) throw (CMMError);
-	int getImageCount(const char* handle) throw (CMMError);
-   std::string getSummaryMeta(const char* handle) throw (CMMError);
-   std::string getImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
-   void setCustomMeta(const char* handle, const char* key, const char* meta);
-   std::string getCustomMeta(const char* handle, const char* key);
-	STORAGEIMGOUT getImage(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
-   void snapAndSave(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
-   void saveNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
-   STORAGEIMGOUT saveAndGetNextImage(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
-   void attachStorageToCircularBuffer(const char* handle) throw (CMMError);
-   std::string getAttachedStorage();
-   std::string getLastAttachedStorageError();
+   void appendImageToDataset(const char* handle, int sizeinBytes, const STORAGEIMG pixels, const char* imageMeta) throw (CMMError);
+	void appendImageToDataset(const char* handle, int sizeinShorts, const STORAGEIMG16 pixels, const char* imageMeta) throw (CMMError);
+   void configureDatasetDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError);
+   void configureDatasetCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError);
+	std::string getDatasetDimensionName(const char* handle, int dimension) throw (CMMError);
+	std::string getDatasetDimensionMeaning(const char* handle, int dimension) throw (CMMError);
+	std::string getDatasetCoordinateName(const char* handle, int dimension, int coordinate) throw (CMMError);
+	int getDatasetImageCount(const char* handle) throw (CMMError);
+   std::string getDatasetSummaryMeta(const char* handle) throw (CMMError);
+   std::string getDatasetImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   void setDatasetCustomMeta(const char* handle, const char* key, const char* meta);
+   std::string getDatasetCustomMeta(const char* handle, const char* key);
+	STORAGEIMGOUT getImageFromDataset(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   void snapAndAppendToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void appendNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   STORAGEIMGOUT appendAndGetNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void attachDatasetToCircularBuffer(const char* handle) throw (CMMError);
+   std::string getAttachedDataset();
+   std::string getLastAttachedDatasetError();
 
    ///@}
 

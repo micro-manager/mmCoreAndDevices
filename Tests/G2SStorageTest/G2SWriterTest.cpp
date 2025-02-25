@@ -80,7 +80,7 @@ void testWritter(CMMCore& core, const std::string& path, const std::string& name
 
 				// Add image to the stream
 				auto startSave = std::chrono::high_resolution_clock::now();
-				core.addImage(handle.c_str(), imgSize, img, { i, j, k }, meta.c_str());
+				core.appendImageToDataset(handle.c_str(), imgSize, img, { i, j, k }, meta.c_str());
 				auto endSave = std::chrono::high_resolution_clock::now();
 				
 				// Calculate statistics

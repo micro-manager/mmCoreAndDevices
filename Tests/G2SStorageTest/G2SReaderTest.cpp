@@ -113,7 +113,7 @@ void testReader(CMMCore& core, const std::string& path, const std::string& name,
 
 		// Read image from the file stream
 		auto startRead = std::chrono::high_resolution_clock::now();
-		auto img = core.getImage(handle.c_str(), coords);
+		auto img = core.getImageFromDataset(handle.c_str(), coords);
 		auto emdRead = std::chrono::high_resolution_clock::now();
 		if(img == nullptr)
 			throw std::runtime_error("Failed to fetch image " + i);
@@ -125,7 +125,7 @@ void testReader(CMMCore& core, const std::string& path, const std::string& name,
 			std::cout << (i == 0 ? "" : ", ") << coords[i];
 		std::cout << "], size: " << std::fixed << std::setprecision(1) << imgSizeMb << " MB in " << readTimeMs << " ms (" << bw << " MB/s)" << std::endl;
 
-		auto meta = core.getImageMeta(handle.c_str(), coords);
+		auto meta = core.getDatasetImageMeta(handle.c_str(), coords);
 		if(printmeta)
 			std::cout << "Image metadata: " << meta << std::endl;
 	}

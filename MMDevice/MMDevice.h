@@ -1537,6 +1537,14 @@ namespace MM {
       virtual int Close(const char* handle) = 0;
 
       /**
+       * \brief   Closes an opened dataset
+       *
+       * \param   handle Dataset handle (becomes invalid after closing)
+       * \return  Status code indicating success or failure
+       */
+      virtual int Freeze(const char* handle) = 0;
+
+      /**
        * \brief Checks if a dataset is currently open
        *
        * \param handle Dataset handle
