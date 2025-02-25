@@ -15,6 +15,7 @@ ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	port_("Undefined"),
 	version_("Undefined"),
 	buildName_("Undefined"),
+	compileDate_("Undefined"),
 	oldstagePrefix_(prefix),
 	versionData_(VersionData()),
 	compileDay_(0)
@@ -48,26 +49,22 @@ int ASIBase::ClearPort()
 int ASIBase::SendCommand(const char* command) const
 {
 	std::string base_command = "";
-	int ret;
-
 	if (oldstage_)
 	{
 		base_command += oldstagePrefix_;
 	}
 	base_command += command;
 	// send command
-	ret = core_->SetSerialCommand(device_, port_.c_str(), base_command.c_str(), "\r");
-	return ret;
+	return core_->SetSerialCommand(device_, port_.c_str(), base_command.c_str(), "\r");
 }
 
 // Communication "send & receive" utility function:
 int ASIBase::QueryCommand(const char* command, std::string& answer) const
 {
 	const char* terminator;
-	int ret;
 
 	// send command
-	ret = SendCommand(command);
+	int ret = SendCommand(command);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -91,7 +88,7 @@ int ASIBase::QueryCommand(const char* command, std::string& answer) const
 }
 
 // Communication "send, receive, and look for acknowledgement" utility function:
-int ASIBase::QueryCommandACK(const char* command)
+int ASIBase::QueryCommandACK(const char* command) const
 {
 	std::string answer;
 	int ret = QueryCommand(command, answer);
@@ -99,26 +96,23 @@ int ASIBase::QueryCommandACK(const char* command)
 	{
 		return ret;
 	}
-
 	// the controller only acknowledges receipt of the command
 	if (answer.substr(0, 2) != ":A")
 	{
 		return ERR_UNRECOGNIZED_ANSWER;
 	}
-
 	return DEVICE_OK;
 }
 
 // Communication "test device type" utility function:
+// Set the value of oldstage_ to true for LX-4000, false for MS-2000.
 int ASIBase::CheckDeviceStatus()
 {
-	const char* command = "/"; // check STATUS
-	std::string answer;
-	int ret;
-
+	const char* command = "/"; // STATUS command
 	// send status command (test for new protocol)
 	oldstage_ = false;
-	ret = QueryCommand(command, answer);
+	std::string answer;
+	int ret = QueryCommand(command, answer);
 	if (ret != DEVICE_OK && !oldstagePrefix_.empty())
 	{
 		// send status command (test for older LX-4000 protocol)
@@ -128,12 +122,12 @@ int ASIBase::CheckDeviceStatus()
 	return ret;
 }
 
-unsigned int ASIBase::ConvertDay(int year, int month, int day)
+unsigned int ASIBase::ConvertDay(int year, int month, int day) const
 {
 	return day + 31 * (month - 1) + 372 * (year - 2000);
 }
 
-unsigned int ASIBase::ExtractCompileDay(const char* compile_date)
+unsigned int ASIBase::ExtractCompileDay(const char* compile_date) const
 {
 	const char* months = "anebarprayunulugepctovec";
 	const size_t compile_date_len = strlen(compile_date);
@@ -175,12 +169,12 @@ unsigned int ASIBase::ExtractCompileDay(const char* compile_date)
 VersionData ASIBase::ExtractVersionData(const std::string &version) const
 {	
 	// Version response example: ":A Version: USB-9.2m \r\n"
-	size_t startIndex = version.find("-");
+	const size_t startIndex = version.find("-");
 	if (startIndex == std::string::npos)
 	{
 		return VersionData(); // error => default data
 	}
-	std::string shortVersion = version.substr(startIndex+1);
+	const std::string shortVersion = version.substr(startIndex+1);
 	// shortVersion => "9.2m \r\n"
 
 	// extract revision letter
@@ -188,7 +182,7 @@ VersionData ASIBase::ExtractVersionData(const std::string &version) const
 	char revision = '-';
 	for (int i = 0; i < shortVersion.size(); i++)
 	{
-		char c = shortVersion[i];
+		const char c = shortVersion[i];
 		if (std::isalpha(c))
 		{
 			revIndex = i; // index
@@ -198,20 +192,20 @@ VersionData ASIBase::ExtractVersionData(const std::string &version) const
 	}
 
 	// find the index of the dot to separate major and minor
-	size_t dotIndex = shortVersion.find(".");
+	const size_t dotIndex = shortVersion.find(".");
 	if (dotIndex == std::string::npos)
 	{
 		return VersionData(); // error => default data
 	}
 	
-	size_t charsToCopy = revIndex - (dotIndex + 1);
+	const size_t charsToCopy = revIndex - (dotIndex + 1);
 	// shortVersion => "9.2m \r\n"
 	//                   ^ ^
 	//            dotIndex revIndex
 	
 	// convert substrings to integers
-	int major = std::stoi(shortVersion.substr(0, dotIndex)); // use index as chars to copy
-	int minor = std::stoi(shortVersion.substr(dotIndex + 1, charsToCopy));
+	const int major = std::stoi(shortVersion.substr(0, dotIndex)); // use index as chars to copy
+	const int minor = std::stoi(shortVersion.substr(dotIndex + 1, charsToCopy));
 	return VersionData(major, minor, revision);
 }
 
