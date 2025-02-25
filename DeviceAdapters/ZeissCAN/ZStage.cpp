@@ -26,6 +26,11 @@ initialized_ (false)
 
    SetErrorText(ERR_SCOPE_NOT_ACTIVE, "Zeiss Scope is not initialized.  It is needed for the Focus drive to work");
    SetErrorText(ERR_NO_FOCUS_DRIVE, "No focus drive found in this microscopes");
+   CPropertyAction* pAct = new CPropertyAction(this, &ZStage::OnStepSizeUm);
+   std::string stepSizeString = "StepSize (um)";
+   CreateProperty(stepSizeString.c_str(), "0.025", MM::Float, false, pAct, true);
+   AddAllowedValue(stepSizeString.c_str(), "0.025");
+   AddAllowedValue(stepSizeString.c_str(), "0.050");
 }
 
 ZStage::~ZStage()
@@ -362,6 +367,20 @@ int ZStage::OnLoadSample(MM::PropertyBase* pProp, MM::ActionType eAct)
      if (ret != DEVICE_OK)
         return ret;
      return DEVICE_OK;
+   }
+
+   return DEVICE_OK;
+}
+
+int ZStage::OnStepSizeUm(MM::PropertyBase* pProp, MM::ActionType eAct) 
+{
+   if (eAct == MM::BeforeGet) 
+   {
+      pProp->Set(stepSize_um_);
+   } 
+   else if (eAct == MM::AfterSet) 
+   {
+      pProp->Get(stepSize_um_);
    }
 
    return DEVICE_OK;

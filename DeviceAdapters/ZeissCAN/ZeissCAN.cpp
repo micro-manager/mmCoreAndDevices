@@ -782,7 +782,7 @@ int ZeissScope::DetectInstalledDevices()
       CreateAndAddDevice(g_ZeissHalogenLamp);
 
       std::string response;
-      int ret = Query("HPCk1,0", response);
+      ret = Query("HPCk1,0", response);
       if (ret == DEVICE_OK && 0 != response.compare("0"))
       {
          CreateAndAddDevice(g_ZeissShutter);
@@ -2818,7 +2818,6 @@ int CondenserTurret::SetAperture(long aperture)
     const char* prefix = "HPCS33,";
     std::stringstream command_stream;
     command_stream << prefix << aperture;
-    command_stream.str().c_str();
     return g_hub.ExecuteCommand(*this, *GetCoreCallback(), command_stream.str().c_str());
 }
 
