@@ -97,6 +97,11 @@ int AZ100Turret::Initialize()
 	// I think it was present before 2010 but this is easy way
 	if (compileDay_ >= ConvertDay(2010, 1, 1))
 	{
+		ret = GetBuildName(buildName_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &AZ100Turret::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
 		UpdateProperty("BuildName");

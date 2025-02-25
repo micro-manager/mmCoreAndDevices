@@ -96,6 +96,11 @@ int LED::Initialize()
 	// I think it was present before 2010 but this is easy way
 	if (compileDay_ >= ConvertDay(2010, 1, 1))
 	{
+		ret = GetBuildName(buildName_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &LED::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
 		UpdateProperty("BuildName");

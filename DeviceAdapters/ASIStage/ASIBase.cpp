@@ -14,6 +14,7 @@ ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	device_(device),
 	port_("Undefined"),
 	version_("Undefined"),
+	buildName_("Undefined"),
 	oldstagePrefix_(prefix),
 	versionData_(VersionData()),
 	compileDay_(0)
@@ -243,25 +244,27 @@ int ASIBase::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int ASIBase::GetBuildName(std::string& buildName)
+{
+	std::ostringstream command;
+	command << "BU";
+	std::string answer;
+	// query the device
+	int ret = QueryCommand(command.str().c_str(), answer);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	buildName = answer;
+	return DEVICE_OK;
+}
+
 // Get the build name of this controller
 int ASIBase::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		if (initialized_)
-		{
-			return DEVICE_OK;
-		}
-		std::ostringstream command;
-		command << "BU";
-		std::string answer;
-		// query the device
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(answer.c_str());
+		pProp->Set(buildName_.c_str());
 	}
 	return DEVICE_OK;
 }

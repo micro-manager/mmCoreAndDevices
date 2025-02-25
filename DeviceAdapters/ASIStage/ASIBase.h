@@ -76,6 +76,7 @@ protected:
 	int OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetVersion(std::string& version);
+	int GetBuildName(std::string& buildName);
 
 	bool oldstage_;
 	bool initialized_;
@@ -83,6 +84,7 @@ protected:
 	MM::Device* device_;
 	std::string port_;
 	std::string version_;
+	std::string buildName_;
 	std::string oldstagePrefix_;
 	VersionData versionData_;
 	unsigned int compileDay_; // "days" since Jan 1 2000 since the firmware was compiled according to (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
