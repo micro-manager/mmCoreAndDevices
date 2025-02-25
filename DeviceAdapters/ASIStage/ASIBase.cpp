@@ -246,11 +246,8 @@ int ASIBase::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int ASIBase::GetBuildName(std::string& buildName)
 {
-	std::ostringstream command;
-	command << "BU";
 	std::string answer;
-	// query the device
-	int ret = QueryCommand(command.str().c_str(), answer);
+	int ret = QueryCommand("BU", answer);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -271,11 +268,8 @@ int ASIBase::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int ASIBase::GetCompileDate(std::string& buildName)
 {
-	std::ostringstream command;
-	command << "CD";
 	std::string answer;
-	// query the device
-	int ret = QueryCommand(command.str().c_str(), answer);
+	int ret = QueryCommand("CD", answer);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
