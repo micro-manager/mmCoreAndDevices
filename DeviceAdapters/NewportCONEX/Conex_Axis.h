@@ -84,8 +84,6 @@ protected:
    std::string port_;
    MM::Device *device_;
    MM::Core *core_;
-   double speed_;
-   double acceleration_;
    double coef_;
 };
 

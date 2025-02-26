@@ -520,11 +520,9 @@ int Axis::Initialize()
    ret = CreateFloatProperty("PositiveLimit", positiveLimit_, false, pAct);
 
    pAct = new CPropertyAction(this, &Axis::OnSpeed);
-   speed_ = GetSpeed();
    ret = CreateFloatProperty("Speed", speed_, false, pAct);
 
    pAct = new CPropertyAction(this, &Axis::OnAcceleration);
-   acceleration_ = GetAcceleration();
    ret = CreateFloatProperty("Acceleration", acceleration_, false, pAct);
    
    initialized_ = true;
@@ -713,7 +711,8 @@ int Axis::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(speed_);
+      double speed = GetSpeed();
+      pProp->Set(speed);
    }
    else if (eAct == MM::AfterSet)
    {
@@ -731,7 +730,8 @@ int Axis::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(acceleration_);
+      double acceleration = GetAcceleration();
+      pProp->Set(acceleration);
    }
    else if (eAct == MM::AfterSet)
    {
