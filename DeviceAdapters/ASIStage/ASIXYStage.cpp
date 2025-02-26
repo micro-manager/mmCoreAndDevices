@@ -302,11 +302,8 @@ bool XYStage::Busy()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "/";
 	std::string answer;
-
-	// query the device
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("/", answer);
 	if (ret != DEVICE_OK)
 	{
 		return false;

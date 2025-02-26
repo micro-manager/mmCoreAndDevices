@@ -130,10 +130,8 @@ bool AZ100Turret::Busy()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "RS F";
 	std::string answer;
-	// query command
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("RS F", answer);
 	if (ret != DEVICE_OK)
 	{
 		return false;
