@@ -108,16 +108,15 @@ int ASIBase::QueryCommandACK(const char* command) const
 // Set the value of oldstage_ to true for LX-4000, false for MS-2000.
 int ASIBase::CheckDeviceStatus()
 {
-	const char* command = "/"; // STATUS command
 	// send status command (test for new protocol)
 	oldstage_ = false;
 	std::string answer;
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("/", answer);
 	if (ret != DEVICE_OK && !oldstagePrefix_.empty())
 	{
 		// send status command (test for older LX-4000 protocol)
 		oldstage_ = true;
-		ret = QueryCommand(command, answer);
+		ret = QueryCommand("/", answer);
 	}
 	return ret;
 }

@@ -960,8 +960,7 @@ int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::BeforeGet)
 	{
 		float snr;
-		std::string command = "EXTRA Y?";
-		int ret = GetValue(command.c_str(), snr);
+		int ret = GetValue("EXTRA Y?", snr);
 		if (ret != DEVICE_OK)
 		{
 			return ret;

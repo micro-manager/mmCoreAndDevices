@@ -224,8 +224,8 @@ int LED::SetOpen(bool open)
 			command << "LED " << channelAxisChar_ << "=0";
 		}
 	}
+
 	std::string answer;
-	// query the device
 	int ret = QueryCommand(command.str().c_str(), answer);
 	if (ret != DEVICE_OK)
 	{
@@ -264,14 +264,11 @@ int LED::IsOpen(bool* open)
 
 	// empty the Rx serial buffer before sending command
 	ClearPort();
-	std::ostringstream command;
-	if (!hasDLED_ && channel_ == 0) {
 
-		command << "TTL Y?";
-
+	if (!hasDLED_ && channel_ == 0)
+	{
 		std::string answer;
-		// query the device
-		int ret = QueryCommand(command.str().c_str(), answer);
+		int ret = QueryCommand("TTL Y?", answer);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
@@ -317,17 +314,14 @@ int LED::IsOpen(bool* open)
 		*/
 
 		// figure out if shutter is open or close from led x? value
-		int ret;
-		long curr_intensity;
-
-		ret = CurrentIntensity(&curr_intensity);
-
+		long currentIntensity;
+		int ret = CurrentIntensity(&currentIntensity);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
 		}
 
-		if (curr_intensity > 0)
+		if (currentIntensity > 0)
 		{
 			*open = true;
 		}
@@ -416,7 +410,6 @@ int LED::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 				int errNo = atoi(tok.substr(4).c_str());
 				return ERR_OFFSET + errNo;
 			}
-
 		}
 		*/
 		if (open_)
@@ -504,7 +497,6 @@ int LED::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		 open = false;
 	  return SetOpen(open);
    }
-
    return DEVICE_OK;
 }
 */
