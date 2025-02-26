@@ -14,36 +14,45 @@
 #include <string>
 
 // The ASIStage device adapter does not implement a hub device, each device could be connected to a different MS2000, 
-// that's why the build name, compile date, and version are queried every time.
+// that's why the build name, compile date, and version are queried for each device.
 
 // This data structure is used to store MS2000 version data.
+// The format for firmware versions changed match the Tiger controller after 9.2p
+// Old version format: ":A Version: USB-9.2p \r\n"
+// New version format: ":A Version: USB-9.50 \r\n"
 class VersionData
 {
 public:
 	VersionData() : major_(0), minor_(0), rev_('-') { }
 	VersionData(int major, int minor, char rev) : major_(major), minor_(minor), rev_(rev) { }
-	void setMajor(int major) { major_ = major;  }
+	void setMajor(int major) { major_ = major; }
 	void setMinor(int minor) { minor_ = minor; }
 	void setRev(char rev) { rev_ = rev; }
 	int getMajor() const { return major_; }
 	int getMinor() const { return minor_; }
 	char getRev() const { return rev_; }
+
+	// Return true if the controller firmware version is at least the specified version.
 	bool isVersionAtLeast(int major, int minor, char rev) const
 	{
-		if (major_ < major)
+		// Note: avoid comparing the old character revision numbers
+		// with the new numeric revision numbers by returning early.
+		// Character revisions only exist prior to firmware version 9.50.
+		if (major_ >= major)
 		{
-			return false;
+			return true;
 		}
-		if (minor_ < minor)
+		if (minor_ >= minor)
 		{
-			return false;
+			return true;
 		}
-		if (rev_ < rev)
+		if (rev_ >= rev)
 		{
-			return false;
+			return true;
 		}
-		return true;
+		return false;
 	}
+
 private:
 	int major_;
 	int minor_;

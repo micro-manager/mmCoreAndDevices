@@ -261,6 +261,7 @@ int CRISP::Initialize()
 	// use faster serial commands with new versions of the firmware
 	if (versionData_.isVersionAtLeast(9, 2, 'o'))
 	{
+		LogMessage("CRISP: firmware >= 9.2o; use LK T? and LK Y? for the \"Sum\" and \"Dither Error\" properties.");
 		// These commands use LK T? and LK Y? => ":A 0 \r\n"
 		pAct = new CPropertyAction(this, &CRISP::OnDitherError);
 		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
@@ -272,6 +273,7 @@ int CRISP::Initialize()
 	}
 	else
 	{
+		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for both the \"Sum\" and \"Dither Error\" properties.");
 		// These commands use EXTRA X? => "I    9    0 \r\n"
 		pAct = new CPropertyAction(this, &CRISP::OnDitherErrorLegacy);
 		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
@@ -330,10 +332,9 @@ int CRISP::GetFocusState(std::string& focusState)
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "LK X?"; // Requests single char lock state description
+	// Requests single char lock state description
 	std::string answer;
-	// query command
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("LK X?", answer);
 	if (ret != DEVICE_OK)
 	{
 		return ERR_UNRECOGNIZED_ANSWER;
@@ -558,10 +559,9 @@ int CRISP::GetLastFocusScore(double& score)
 	ClearPort();
 
 	score = 0;
-	const char* command = "LK Y?"; // Requests present value of the focus error as shown on LCD panel
+	// Requests present value of the focus error as shown on LCD panel
 	std::string answer;
-	// query command
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("LK Y?", answer);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -584,7 +584,6 @@ int CRISP::GetCurrentFocusScore(double& score)
 int CRISP::GetValue(const std::string& cmd, float& val)
 {
 	std::string answer;
-	// query command
 	int ret = QueryCommand(cmd.c_str(), answer);
 	if (ret != DEVICE_OK)
 	{
@@ -620,24 +619,20 @@ int CRISP::GetValue(const std::string& cmd, float& val)
 int CRISP::SetCommand(const std::string& cmd)
 {
 	std::string answer;
-	// query command
 	int ret = QueryCommand(cmd.c_str(), answer);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
-
 	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
 	}
-
 	if (answer.substr(0, 2) == ":A")
 	{
 		return DEVICE_OK;
 	}
-
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 

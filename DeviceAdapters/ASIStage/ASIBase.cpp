@@ -166,46 +166,34 @@ unsigned int ASIBase::ExtractCompileDay(const char* compile_date) const
 	return 0;
 }
 
-VersionData ASIBase::ExtractVersionData(const std::string &version) const
+VersionData ASIBase::ExtractVersionData(const std::string& version) const
 {	
-	// Version response example: ":A Version: USB-9.2m \r\n"
+	// Version command response examples:
+	// Example A) ":A Version: USB-9.2p \r\n"
+	// Example B) ":A Version: USB-9.50 \r\n"
 	const size_t startIndex = version.find("-");
 	if (startIndex == std::string::npos)
 	{
 		return VersionData(); // error => default data
 	}
-	const std::string shortVersion = version.substr(startIndex+1);
+
 	// shortVersion => "9.2m \r\n"
+	const std::string shortVersion = version.substr(startIndex + 1);
 
-	// extract revision letter
-	int revIndex = 0;
-	char revision = '-';
-	for (int i = 0; i < shortVersion.size(); i++)
-	{
-		const char c = shortVersion[i];
-		if (std::isalpha(c))
-		{
-			revIndex = i; // index
-			revision = c; // char
-			break;
-		}
-	}
-
-	// find the index of the dot to separate major and minor
+	// find the index of the dot that separates major and minor version
 	const size_t dotIndex = shortVersion.find(".");
 	if (dotIndex == std::string::npos)
 	{
 		return VersionData(); // error => default data
 	}
 	
-	const size_t charsToCopy = revIndex - (dotIndex + 1);
-	// shortVersion => "9.2m \r\n"
-	//                   ^ ^
-	//            dotIndex revIndex
-	
-	// convert substrings to integers
-	const int major = std::stoi(shortVersion.substr(0, dotIndex)); // use index as chars to copy
-	const int minor = std::stoi(shortVersion.substr(dotIndex + 1, charsToCopy));
+	// use substr for major versions with more than 1 digit, ##.## for example
+	const int major = std::stoi(shortVersion.substr(0, dotIndex));
+
+	// minor version and revision will only ever be 1 character,
+	// at these specific locations after the dot in the response
+	const int minor = std::stoi(shortVersion.substr(dotIndex + 1, 1));
+	const char revision = shortVersion.at(dotIndex + 2);
 	return VersionData(major, minor, revision);
 }
 
