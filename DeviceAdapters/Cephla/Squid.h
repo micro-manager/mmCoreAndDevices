@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <thread>
 #include <mutex>
+#include <atomic>
 
 
 #define ERR_PORT_CHANGE_FORBIDDEN    21001 
@@ -416,4 +417,4 @@ private:
    SquidMonitoringThread& operator=(SquidMonitoringThread& /*rhs*/) { assert(false); return *this; }
 };
 
-#endif _SQUID_H_
+#endif

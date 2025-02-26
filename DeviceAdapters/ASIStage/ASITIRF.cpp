@@ -75,8 +75,11 @@ int TIRF::Initialize()
         return ret;
     }
 
+    ret = GetVersion(version_);
+    if (ret != DEVICE_OK)
+       return ret;
     CPropertyAction* pAct = new CPropertyAction(this, &TIRF::OnVersion);
-    CreateProperty("Version", "", MM::String, true, pAct);
+    CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
     pAct = new CPropertyAction(this, &TIRF::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);

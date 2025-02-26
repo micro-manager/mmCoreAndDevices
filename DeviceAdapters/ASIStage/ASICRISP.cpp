@@ -79,8 +79,11 @@ int CRISP::Initialize()
 	// Read-only "AxisLetter" property, axis_ is set using a pre-init property named "Axis".
 	CreateProperty("AxisLetter", axis_.c_str(), MM::String, true);
 	
+	ret = GetVersion(version_);
+	if (ret != DEVICE_OK)
+		return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &CRISP::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
 	pAct = new CPropertyAction(this, &CRISP::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);

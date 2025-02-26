@@ -187,6 +187,9 @@ namespace MM {
    const char* const g_CFGCommand_ConfigPixelSize = "ConfigPixelSize";
    const char* const g_CFGCommand_PixelSize_um = "PixelSize_um";
    const char* const g_CFGCommand_PixelSizeAffine = "PixelSizeAffine";
+   const char* const g_CFGCommand_PixelSizedxdz = "PixelSizeAngle_dxdz";
+   const char* const g_CFGCommand_PixelSizedydz = "PixelSizeAngle_dydz";
+   const char* const g_CFGCommand_PixelSizeOptimalZUm = "PixelSizeOptimalZ_Um";
    const char* const g_CFGCommand_ParentID = "Parent";
    const char* const g_CFGCommand_FocusDirection = "FocusDirection";
 

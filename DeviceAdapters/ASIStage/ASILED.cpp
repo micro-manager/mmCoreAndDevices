@@ -74,8 +74,11 @@ int LED::Initialize()
 	if (ret != DEVICE_OK)
 		return ret;
 
+	ret = GetVersion(version_);
+	if (ret != DEVICE_OK)
+		return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &LED::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
 	pAct = new CPropertyAction(this, &LED::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
