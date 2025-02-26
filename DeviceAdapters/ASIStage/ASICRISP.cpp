@@ -104,13 +104,6 @@ int CRISP::Initialize()
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
 	UpdateProperty("CompileDate");
 
-	// get the date of the firmware
-	char compile_date[MM::MaxStrLength];
-	if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-	{
-		compileDay_ = ExtractCompileDay(compile_date);
-	}
-
 	// get the firmware version data
 	char version[MM::MaxStrLength];
 	if (GetProperty("Version", version) == DEVICE_OK)

@@ -71,8 +71,6 @@ public:
 	int SendCommand(const char* command) const;
 	int QueryCommandACK(const char* command) const;
 	int QueryCommand(const char* command, std::string& answer) const;
-	unsigned int ConvertDay(int year, int month, int day) const;
-	unsigned int ExtractCompileDay(const char* compile_date) const;
 
 	int ParseResponseAfterPosition(const std::string& answer, unsigned int position, long& value) const;
 	int ParseResponseAfterPosition(const std::string& answer, unsigned int position, double& value) const;
@@ -98,9 +96,6 @@ protected:
 	std::string compileDate_;
 	std::string oldstagePrefix_; // "1H" or "2H" for LX-4000 stages
 	VersionData versionData_;
-	unsigned int compileDay_;
-	// "days" since Jan 1 2000 since the firmware was compiled according to:
-	// (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
 };
 
 #endif // ASIBASE_H

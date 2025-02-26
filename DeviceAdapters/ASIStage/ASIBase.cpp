@@ -17,8 +17,7 @@ ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	buildName_("Undefined"),
 	compileDate_("Undefined"),
 	oldstagePrefix_(prefix),
-	versionData_(VersionData()),
-	compileDay_(0)
+	versionData_(VersionData())
 {
 }
 
@@ -119,50 +118,6 @@ int ASIBase::CheckDeviceStatus()
 		ret = QueryCommand("/", answer);
 	}
 	return ret;
-}
-
-unsigned int ASIBase::ConvertDay(int year, int month, int day) const
-{
-	return day + 31 * (month - 1) + 372 * (year - 2000);
-}
-
-unsigned int ASIBase::ExtractCompileDay(const char* compile_date) const
-{
-	const char* months = "anebarprayunulugepctovec";
-	const size_t compile_date_len = strlen(compile_date);
-	if (compile_date_len < 11)
-	{
-		return 0;
-	}
-	int year = 0;
-	int month = 0;
-	int day = 0;
-	if (compile_date_len >= 11
-		&& compile_date[7] == '2'  // must be 20xx for sanity checking
-		&& compile_date[8] == '0'
-		&& compile_date[9] <= '9'
-		&& compile_date[9] >= '0'
-		&& compile_date[10] <= '9'
-		&& compile_date[10] >= '0')
-	{
-		year = 2000 + 10 * (compile_date[9] - '0') + (compile_date[10] - '0');
-		// look for the year based on the last two characters of the abbreviated month name
-		month = 1;
-		for (int i = 0; i < 12; i++)
-		{
-			if (compile_date[1] == months[2 * i] && compile_date[2] == months[2 * i + 1])
-			{
-				month = i + 1;
-			}
-		}
-		day = 10 * (compile_date[4] - '0') + (compile_date[5] - '0');
-		if (day < 1 || day > 31)
-		{
-			day = 1;
-		}
-		return ConvertDay(year, month, day);
-	}
-	return 0;
 }
 
 VersionData ASIBase::ExtractVersionData(const std::string& version) const
