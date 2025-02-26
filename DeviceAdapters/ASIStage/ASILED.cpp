@@ -99,7 +99,9 @@ int LED::Initialize()
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
-	if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+	// previously compared against compile date (2010, 1, 1)
+	if (versionData_.isVersionAtLeast(8, 8, 'a'))
 	{
 		ret = GetBuildName(buildName_);
 		if (ret != DEVICE_OK)

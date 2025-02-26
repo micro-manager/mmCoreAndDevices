@@ -128,7 +128,9 @@ int ZStage::Initialize()
     // if really old firmware then don't get build name
     // build name is really just for diagnostic purposes anyway
     // I think it was present before 2010 but this is easy way
-    if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+    // previously compared against compile date (2010, 1, 1)
+    if (versionData_.isVersionAtLeast(8, 8, 'a'))
     {
         ret = GetBuildName(buildName_);
         if (ret != DEVICE_OK)
@@ -653,7 +655,8 @@ int ZStage::SendStageSequence()
         {
             std::ostringstream os;
             os.precision(0);
-            if (compileDay_ >= ConvertDay(2015, 10, 23))
+            // previously compared against compile date (2015, 10, 23)
+            if (versionData_.isVersionAtLeast(9, 2, 'i'))
             {
                 os << std::fixed << "LD " << axis_ << "=" << sequence_[i] * 10;  // 10 here is for unit multiplier/1000
                 ret = QueryCommand(os.str().c_str(), answer);
@@ -1034,7 +1037,9 @@ int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
         // would be better to parse firmware (8.4 and earlier used unsigned char)
         // and that transition occurred ~2008 but this is easier than trying to
         // parse version strings
-        if (compileDay_ >= ConvertDay(2009, 1, 1))
+
+        // previously compared against compile date (2009, 1, 1)
+        if (versionData_.isVersionAtLeast(8, 6, 'd'))
         {
             // don't enforce upper limit
         }

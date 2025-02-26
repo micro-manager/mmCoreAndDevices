@@ -110,7 +110,9 @@ int XYStage::Initialize()
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
-	if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+	// previously compared against compile date (2010, 1, 1)
+	if (versionData_.isVersionAtLeast(8, 8, 'a'))
 	{
 		ret = GetBuildName(buildName_);
 		if (ret != DEVICE_OK)
@@ -798,7 +800,9 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// if firmware date is 2009+  then use msec/int definition of WaitCycles
 		// would be better to parse firmware (8.4 and earlier used unsigned char)
 		// and that transition occurred ~2008 but not sure exactly when
-		if (compileDay_ >= ConvertDay(2009, 1, 1))
+
+		// previously compared against compile date (2009, 1, 1)
+		if (versionData_.isVersionAtLeast(8, 6, 'd'))
 		{
 			// don't enforce upper limit
 		}
