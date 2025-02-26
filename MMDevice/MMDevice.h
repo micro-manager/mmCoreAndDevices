@@ -43,6 +43,7 @@
 #include "DeviceUtils.h"
 #include "ImageMetadata.h"
 #include "DeviceThreads.h"
+#include "Property.h"
 
 #include <climits>
 #include <cstdlib>
@@ -203,6 +204,39 @@ namespace MM {
       MMTime startTime_; // start time
       MMTime interval_; // interval in milliseconds
    };
+
+
+   ////////////////////////////
+   ///// Standard properties
+   ////////////////////////////
+
+   // Specific standard properties
+   static const MM::StandardProperty g_BinningStandardProperty(
+      "Binning",                // name
+      String,               // type
+      false,                    // isReadOnly
+      false,                    // isPreInit
+      nullptr,          // allowedValues
+      PropertyLimitUndefined,   // lowerLimit
+      PropertyLimitUndefined    // upperLimit
+   );
+
+   // A struct to encode which which device types have/require which standard properties
+   struct StandardPropAssociation {
+      const MM::StandardProperty& property;
+      MM::DeviceType deviceType;  // which device types can use
+      bool required; 
+   };
+
+   // This data structure associates standard properties with device types.
+   // each entry defines one property-device association and whether the 
+   // standard property is required
+   static const StandardPropAssociation g_StandardPropertyList[] =
+   {
+      // propertyname             deviceTypes      required  
+      {g_BinningStandardProperty, MM::CameraDevice, false}
+   };
+
 
 
    /**

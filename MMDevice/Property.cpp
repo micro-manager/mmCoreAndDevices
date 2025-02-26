@@ -326,7 +326,23 @@ unsigned MM::PropertyCollection::GetSize() const
    return (unsigned) properties_.size();
 }
 
-int MM::PropertyCollection::CreateProperty(const char* pszName, const char* pszValue, MM::PropertyType eType, bool bReadOnly, MM::ActionFunctor* pAct, bool isPreInitProperty)
+int MM::PropertyCollection::CreateStandardProperty(StandardProperty property, const char* value, ActionFunctor* pAct)
+{
+   return DoCreateProperty(property.name, value, property.type, property.isReadOnly, pAct, property.isPreInit);
+}
+
+int MM::PropertyCollection::CreateProperty(const char* name, const char* value, PropertyType eType, bool bReadOnly, ActionFunctor* pAct=0, bool isPreInitProperty=false)
+{
+   // disallow properties that begin with the reserved prefix for standard properties
+   // std prefic + delimiter + property name
+   std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix) + std::string("//");
+   if (std::string(name).find(prefixAndDelim) == 0)
+      return DEVICE_INVALID_PROPERTY;
+
+   return DoCreateProperty(name, value, eType, bReadOnly, pAct, isPreInitProperty);
+}
+
+int MM::PropertyCollection::DoCreateProperty(const char* pszName, const char* pszValue, MM::PropertyType eType, bool bReadOnly, MM::ActionFunctor* pAct, bool isPreInitProperty)
 {
    // check if the name already exists
    if (Find(pszName))

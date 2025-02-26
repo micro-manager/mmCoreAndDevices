@@ -30,6 +30,48 @@
 
 namespace MM {
 
+// Standard Properties
+const char* const g_KeywordStandardPropertyPrefix = "api";
+
+// Define NaN for use in property definitions
+const double PropertyLimitUndefined = std::numeric_limits<double>::quiet_NaN();
+
+// Standard property metadata structure
+class StandardProperty {
+public:
+    StandardProperty(
+        const char* name,
+        PropertyType type,
+        bool isReadOnly,
+        bool isPreInit,
+        const char* const* allowedValues,
+        double lowerLimit,
+        double upperLimit
+    ) : 
+        name(name),
+        type(type),
+        isReadOnly(isReadOnly),
+        isPreInit(isPreInit),
+        allowedValues(allowedValues),
+        lowerLimit(lowerLimit),
+        upperLimit(upperLimit)
+    {}
+    
+    // Helper to check if limits are defined
+    bool hasLimits() const {
+        return !std::isnan(lowerLimit) && !std::isnan(upperLimit);
+    }
+    
+    const char* name;                  // Full property name (without prefix)
+    PropertyType type;                 // Float, String, or Integer
+    bool isReadOnly;                   // Whether property is read-only
+    bool isPreInit;                    // Whether property should be set before initialization
+    const char* const* allowedValues;  // Array of allowed string values (nullptr if not restricted)
+    double lowerLimit;                 // Lower limit for numeric properties (NaN if not limited)
+    double upperLimit;                 // Upper limit for numeric properties (NaN if not limited)
+};
+
+
 /**
  * Base API for all device properties.
  * This interface is used by action functors.
@@ -437,6 +479,7 @@ public:
    PropertyCollection();
    ~PropertyCollection();
 
+   int CreateStandardProperty(StandardProperty property, const char* value, ActionFunctor* pAct=0);
    int CreateProperty(const char* name, const char* value, PropertyType eType, bool bReadOnly, ActionFunctor* pAct=0, bool isPreInitProperty=false);
    int RegisterAction(const char* name, ActionFunctor* fpAct);
    int SetAllowedValues(const char* name, std::vector<std::string>& values);
@@ -457,9 +500,9 @@ public:
    int Apply(const char* Name);
 
 private:
+   int DoCreateProperty(const char* name, const char* value, PropertyType eType, bool bReadOnly, ActionFunctor* pAct=0, bool isPreInitProperty=false);
    typedef std::map<std::string, Property*> CPropArray;
    CPropArray properties_;
 };
-
 
 } // namespace MM

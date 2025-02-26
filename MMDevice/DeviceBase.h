@@ -585,6 +585,62 @@ public:
    }
 
    /**
+    * Creates a standard property -- a property with a predefined name, type, and possibly values.
+    * Standard properties can apply to all devices, or only some types, as specified in the
+    * switch statement below.
+    * Type, read-only and pre-init are fixed for the standard property
+    * 
+    * @param property - the standard property enum
+    * @param value - initial value
+    * @param pAct - function object called on the property actions
+    */
+   int CreateStandardProperty(MM::StandardProperty property, const char* value, MM::ActionFunctor* pAct = 0)
+   {
+      if (!IsValidStandardProperty(property)) {
+         return DEVICE_INVALID_PROPERTY;
+      }
+      
+      // TODO: check if value is valid?
+   
+      // Prepend the prefix marking it as a standard property and the delimiter
+      std::string fullName = g_KeywordStandardPropertyPrefix + "//" + property.name;
+
+      return properties_.CreateStandardProperty(property, value, pAct);
+   }
+   
+   /**
+    * Checks if a standard property is applicable to this device type
+    * @param property - the standard property to check
+    * @return - true if applicable, false otherwise
+    */
+   bool IsValidStandardProperty(MM::StandardProperty property) const
+   {
+      MM::DeviceType deviceType = T::Type;
+      return IsPropertyApplicableToDeviceType(property, deviceType);
+   }
+
+   /**
+    * Helper function to check if a standard property is applicable to a specific device type
+    * @param property - the standard property to check
+    * @param deviceType - the device type to check against
+    * @return - true if the property is applicable to the device type, false otherwise
+    */
+   bool IsPropertyApplicableToDeviceType(MM::StandardProperty property, MM::DeviceType deviceType) const
+   {
+      // Iterate through the standard property list to find if this property
+      // is applicable to this device type
+      for (const MM::StandardPropAssociation& association : MM::g_StandardPropertyList)
+      {
+         if (strcmp(association.property.name, property.name) == 0 && 
+             association.deviceType == deviceType)
+         {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   /**
    * Creates a new property for the device.
    * @param name - property name
    * @param value - initial value
@@ -596,6 +652,7 @@ public:
    */
    int CreatePropertyWithHandler(const char* name, const char* value, MM::PropertyType eType, bool readOnly,
                                  int(U::*memberFunction)(MM::PropertyBase* pProp, MM::ActionType eAct), bool isPreInitProperty=false) {
+      // Check for reserved delimiter (handled in CreateProperty)
       CPropertyAction* pAct = new CPropertyAction((U*) this, memberFunction);
       return CreateProperty(name, value, eType, readOnly, pAct, isPreInitProperty);
    }
