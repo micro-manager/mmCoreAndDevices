@@ -52,6 +52,7 @@ using namespace std;
 ///////////////////////////////////////////////////////////////////////////////
 MODULE_API void InitializeModuleData()
 {
+   // Only one device is needed.  Keep the other two for backward compatibility
    RegisterDevice(g_X_AxisDeviceName, MM::StageDevice, "Conex_Axis X Axis");
    RegisterDevice(g_Y_AxisDeviceName, MM::StageDevice, "Conex_Axis Y Axis");
    RegisterDevice(g_Z_AxisDeviceName, MM::StageDevice, "Conex_Axis Z Axis");
@@ -283,6 +284,7 @@ int Conex_AxisBase:: SetNegativeLimit(double limit)
    setlocale(LC_ALL,"C");
    sprintf(oBufString,"1SL%6.6f",limit/coef_);
    ret=SendCommand(oBufString);
+
    return ret;
 }	
 
@@ -488,7 +490,6 @@ int Axis::Initialize()
       return ret;
    speed_=GetSpeed();
    acceleration_=GetAcceleration();
-   initialized_ = true;
 
    ret = CreateStringProperty(g_SearchForHomeNowProp, "", false,
          new CPropertyAction(this, &Axis::OnSearchHomeNow));
@@ -500,7 +501,24 @@ int Axis::Initialize()
    ret = AddAllowedValue(g_SearchForHomeNowProp, g_SearchForHomeNowValue);
    if (ret != DEVICE_OK)
       return ret;
+
+   CPropertyAction* pAct = new CPropertyAction(this, &Axis::OnPosition);
+   double pos = GetPosition();
+   ret = CreateFloatProperty("Position", pos, false, pAct);
+   // Could add limits here...
+
+   pAct = new CPropertyAction(this, &Axis::OnLowerLimit);
+   negativeLimit_ = GetNegativeLimit();
+   ret = CreateFloatProperty("NegativeLimit", negativeLimit_, false, pAct);
+
+   pAct = new CPropertyAction(this, &Axis::OnUpperLimit);
+   positiveLimit_ = GetPositiveLimit();
+   ret = CreateFloatProperty("PositiveLimit", positiveLimit_, false, pAct);
+
+
    
+   initialized_ = true;
+
 /* these lines can added to test function when the axis is initialized
 test();
    SetPositionUm(2.345);
@@ -625,3 +643,54 @@ int Axis::OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int Axis::OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      double pos = GetPosition();
+      pProp->Set(pos);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double pos;
+      pProp->Get(pos);
+      return MoveAbsolute(pos);
+   }
+   return DEVICE_OK;
+}
+
+int Axis::OnLowerLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(negativeLimit_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double limit;
+      pProp->Get(limit);
+      int ret = SetNegativeLimit(limit);
+      if (ret != DEVICE_OK)
+         return ret;
+      negativeLimit_ = limit;
+   }
+   return DEVICE_OK;
+}
+
+int Axis::OnUpperLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(positiveLimit_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double limit;
+      pProp->Get(limit);
+      int ret = SetPositiveLimit(limit);
+      if (ret != DEVICE_OK)
+         return ret;
+      positiveLimit_ = limit;
+   }
+   return DEVICE_OK;
+}

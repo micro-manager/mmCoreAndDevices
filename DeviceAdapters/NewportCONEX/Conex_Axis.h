@@ -124,8 +124,14 @@ public:
    // ----------------
    int OnPort     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnLowerLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnUpperLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 private:
    std::string axisDeviceName_;
+   double negativeLimit_;
+   double positiveLimit_;
 };
 
 #endif //_Conex_Axis_H_
