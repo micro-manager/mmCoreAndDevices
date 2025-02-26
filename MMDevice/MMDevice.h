@@ -1384,18 +1384,49 @@ namespace MM {
       // sequence acquisition
       virtual int AcqFinished(const Device* caller, int statusCode) = 0;
       virtual int PrepareForAcq(const Device* caller) = 0;
-      /// \deprecated Use the other forms instead.
+
+      /// \deprecated Use the other overloads instead.
       MM_DEPRECATED(virtual int InsertImage(const Device* caller, const ImgBuffer& buf)) = 0;
+
+      /**
+       * Cameras must call this function during sequence acquisition to send
+       * each frame to the Core.
+       *
+       * byteDepth: 1 or 2 for grayscale images; 4 for BGR_
+       *
+       * nComponents: 1 for grayscale; 4 for BGR_ (_: unused component)
+       *
+       * serializedMetadata: must be the result of md.serialize().c_str() (md
+       *                     being an instance of Metadata)
+       *
+       * doProcess: must normally be true, except for the case mentioned below
+       *
+       * If the sequence acquisition was started with stopOnOverflow = true
+       * _and_ the return value of InsertImage() is DEVICE_BUFFER_OVERFLOW,
+       * ClearImageBuffer() should be called and the call to InsertImage()
+       * should then be repeated with doProcess set to false. Otherwise, if the
+       * return value is not DEVICE_OK, or the second call failed (with any
+       * code), acquisition should stop.
+       */
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true) = 0;
-      /// \deprecated Use the other forms instead.
+
+      /// \deprecated Use the other overloads instead.
       MM_DEPRECATED(virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* md = 0, const bool doProcess = true)) = 0;
       // TODO Upon removing the above deprecated overload, add a default
       // argument `= nullptr` to `serializedMetadata` in the following
       // overload. That allows existing device adapters to compile.
+
+      /**
+       * Same as the overload with the added nComponents parameter.
+       *
+       * Assumes nComponents == 1 (grayscale).
+       */
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess = true) = 0;
+
       virtual void ClearImageBuffer(const Device* caller) = 0;
       virtual bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth) = 0;
-      /// \deprecated Use the other forms instead.
+
+      /// \deprecated Use InsertImage() instead.
       MM_DEPRECATED(virtual int InsertMultiChannel(const Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* md = 0)) = 0;
 
       // Formerly intended for use by autofocus
