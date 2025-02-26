@@ -127,11 +127,15 @@ public:
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLowerLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnUpperLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    std::string axisDeviceName_;
    double negativeLimit_;
    double positiveLimit_;
+   double speed_;
+   double acceleration_;
 };
 
 #endif //_Conex_Axis_H_

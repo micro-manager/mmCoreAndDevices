@@ -450,7 +450,11 @@ void Conex_AxisBase::test()
 
 
 Axis::Axis(const char* axis) :
-   Conex_AxisBase(this)
+   Conex_AxisBase(this),
+   negativeLimit_(0.0),
+   positiveLimit_(0.0),
+   speed_(0.0),
+   acceleration_(0.0)
 {
    InitializeDefaultErrorMessages();
    axisDeviceName_ = axis;
@@ -515,7 +519,13 @@ int Axis::Initialize()
    positiveLimit_ = GetPositiveLimit();
    ret = CreateFloatProperty("PositiveLimit", positiveLimit_, false, pAct);
 
+   pAct = new CPropertyAction(this, &Axis::OnSpeed);
+   speed_ = GetSpeed();
+   ret = CreateFloatProperty("Speed", speed_, false, pAct);
 
+   pAct = new CPropertyAction(this, &Axis::OnAcceleration);
+   acceleration_ = GetAcceleration();
+   ret = CreateFloatProperty("Acceleration", acceleration_, false, pAct);
    
    initialized_ = true;
 
@@ -541,7 +551,7 @@ test();
   
 int Axis::Shutdown()
 {
-   initialized_    = false;
+   initialized_ = false;
    return DEVICE_OK;
 }
 
@@ -550,21 +560,25 @@ bool Axis::Busy()
   return Moving();
 }
 
-
-
 int Axis::SetPositionUm(double pos)
 {
-   return MoveAbsolute(pos);
+   int ret = MoveAbsolute(pos);
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetCoreCallback()->OnStagePositionChanged(this, pos);
 }
 
 int Axis::SetRelativePositionUm(double d)
 {
-	return MoveRelative(d);
+   return MoveRelative(d);
 }
 
 int Axis::GetPositionUm(double& pos)
 {
 	pos=GetPosition();
+   std::stringstream s;
+   s << pos;
+   return GetCoreCallback()->OnPropertyChanged(this, "Position", s.str().c_str());
 	return DEVICE_OK;
 }
   
@@ -694,3 +708,45 @@ int Axis::OnUpperLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
+
+int Axis::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(speed_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double speed;
+      pProp->Get(speed);
+      int ret = SetSpeed(speed);
+      if (ret != DEVICE_OK)
+         return ret;
+      speed_ = speed;
+   }
+   return DEVICE_OK;
+}
+
+int Axis::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(acceleration_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double acceleration;
+      pProp->Get(acceleration);
+      int ret = SetAcceleration(acceleration);
+      if (ret != DEVICE_OK)
+         return ret;
+      acceleration_ = acceleration;
+   }
+   return DEVICE_OK;
+}
+
+
+
+
+
+
