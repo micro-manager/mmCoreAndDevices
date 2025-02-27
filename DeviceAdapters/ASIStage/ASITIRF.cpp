@@ -88,7 +88,6 @@ int TIRF::Initialize()
     }
     pAct = new CPropertyAction(this, &TIRF::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
-    UpdateProperty("CompileDate");
 
     // if really old firmware then don't get build name
     // build name is really just for diagnostic purposes anyway
@@ -104,7 +103,6 @@ int TIRF::Initialize()
         }
         pAct = new CPropertyAction(this, &TIRF::OnBuildName);
         CreateProperty("BuildName", "", MM::String, true, pAct);
-        UpdateProperty("BuildName");
     }
 
     pAct = new CPropertyAction(this, &TIRF::OnAngle);

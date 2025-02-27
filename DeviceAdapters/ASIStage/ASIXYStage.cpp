@@ -98,7 +98,6 @@ int XYStage::Initialize()
 	}
 	pAct = new CPropertyAction(this, &XYStage::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
@@ -114,7 +113,6 @@ int XYStage::Initialize()
 		}
 		pAct = new CPropertyAction(this, &XYStage::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	// Most ASIStages have the origin in the top right corner, the following reverses direction of the X-axis:
@@ -271,12 +269,10 @@ int XYStage::Initialize()
 		pAct = new CPropertyAction(this, &XYStage::OnVectorX);
 		CreateProperty("VectorMoveX-VE(mm/s)", "0", MM::Float, false, pAct);
 		SetPropertyLimits("VectorMoveX-VE(mm/s)", mspeed * -1, mspeed);
-		UpdateProperty("VectorMoveX-VE(mm/s)");
 
 		pAct = new CPropertyAction(this, &XYStage::OnVectorY);
 		CreateProperty("VectorMoveY-VE(mm/s)", "0", MM::Float, false, pAct);
 		SetPropertyLimits("VectorMoveY-VE(mm/s)", mspeed * -1, mspeed);
-		UpdateProperty("VectorMoveY-VE(mm/s)");
 	}
 	
 	initialized_ = true;

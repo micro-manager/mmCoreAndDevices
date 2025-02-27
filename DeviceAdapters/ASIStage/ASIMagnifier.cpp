@@ -80,7 +80,6 @@ int Magnifier::Initialize()
     }
     pAct = new CPropertyAction(this, &Magnifier::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
-    UpdateProperty("CompileDate");
 
     // if really old firmware then don't get build name
     // build name is really just for diagnostic purposes anyway
@@ -96,7 +95,6 @@ int Magnifier::Initialize()
         }
         pAct = new CPropertyAction(this, &Magnifier::OnBuildName);
         CreateProperty("BuildName", "", MM::String, true, pAct);
-        UpdateProperty("BuildName");
     }
 
     pAct = new CPropertyAction(this, &Magnifier::OnMagnification);

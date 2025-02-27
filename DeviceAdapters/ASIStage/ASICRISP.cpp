@@ -102,7 +102,6 @@ int CRISP::Initialize()
 	}
 	pAct = new CPropertyAction(this, &CRISP::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
 
 	// get the firmware version data
 	char version[MM::MaxStrLength];
@@ -125,7 +124,6 @@ int CRISP::Initialize()
 		}
 		pAct = new CPropertyAction(this, &CRISP::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	pAct = new CPropertyAction(this, &CRISP::OnFocus);
@@ -204,11 +202,9 @@ int CRISP::Initialize()
 
 	pAct = new CPropertyAction(this, &CRISP::OnOffset);
 	CreateProperty(g_CRISPOffsetPropertyName, "", MM::Integer, true, pAct);
-	UpdateProperty(g_CRISPOffsetPropertyName);
 
 	pAct = new CPropertyAction(this, &CRISP::OnState);
 	CreateProperty(g_CRISPStatePropertyName, "", MM::String, true, pAct);
-	UpdateProperty(g_CRISPStatePropertyName);
 
 	// previously compared against compile date (2015, 1, 1)
 	if (versionData_.isVersionAtLeast(9, 2, 'h'))
@@ -221,7 +217,6 @@ int CRISP::Initialize()
 		pAct = new CPropertyAction(this, &CRISP::OnNumSkips);
 		CreateProperty("Number of Skips", std::to_string(numSkips_).c_str(), MM::Integer, false, pAct);
 		SetPropertyLimits("Number of Skips", 0, 100);
-		UpdateProperty("Number of Skips");
 
 		ret = GetInFocusRange(inFocusRange_);
 		if (ret != DEVICE_OK)
@@ -230,7 +225,6 @@ int CRISP::Initialize()
 		}
 		pAct = new CPropertyAction(this, &CRISP::OnInFocusRange);
 		CreateProperty("In Focus Range(um)", std::to_string(inFocusRange_).c_str(), MM::Float, false, pAct);
-		UpdateProperty("In Focus Range(um)");
 	}
 
 	const char* fc = "Obtain Focus Curve";
@@ -260,11 +254,9 @@ int CRISP::Initialize()
 		// These commands use LK T? and LK Y? => ":A 0 \r\n"
 		pAct = new CPropertyAction(this, &CRISP::OnDitherError);
 		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
-		UpdateProperty(g_CRISPDitherErrorPropertyName);
 
 		pAct = new CPropertyAction(this, &CRISP::OnSum);
 		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-		UpdateProperty(g_CRISPSumPropertyName);
 	}
 	else
 	{
@@ -272,11 +264,9 @@ int CRISP::Initialize()
 		// These commands use EXTRA X? => "I    9    0 \r\n"
 		pAct = new CPropertyAction(this, &CRISP::OnDitherErrorLegacy);
 		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
-		UpdateProperty(g_CRISPDitherErrorPropertyName);
 
 		pAct = new CPropertyAction(this, &CRISP::OnSumLegacy);
 		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-		UpdateProperty(g_CRISPSumPropertyName);
 	}
 
 	return DEVICE_OK;

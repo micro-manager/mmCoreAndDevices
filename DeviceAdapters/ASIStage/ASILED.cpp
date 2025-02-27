@@ -87,7 +87,6 @@ int LED::Initialize()
 	}
 	pAct = new CPropertyAction(this, &LED::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
@@ -103,7 +102,6 @@ int LED::Initialize()
 		}
 		pAct = new CPropertyAction(this, &LED::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	// not needed SetOpen and GetOpen do the same job. 

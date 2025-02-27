@@ -116,7 +116,6 @@ int ZStage::Initialize()
     }
     pAct = new CPropertyAction(this, &ZStage::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
-    UpdateProperty("CompileDate");
 
     // if really old firmware then don't get build name
     // build name is really just for diagnostic purposes anyway
@@ -132,7 +131,6 @@ int ZStage::Initialize()
         }
         pAct = new CPropertyAction(this, &ZStage::OnBuildName);
         CreateProperty("BuildName", "", MM::String, true, pAct);
-        UpdateProperty("BuildName");
     }
 
     if (HasRingBuffer() && nrEvents_ == 0)
@@ -271,7 +269,6 @@ int ZStage::Initialize()
         }
 
         SetPropertyLimits("VectorMove-VE(mm/s)", mspeed * -1, mspeed);
-        UpdateProperty("VectorMove-VE(mm/s)");
     }
 
     initialized_ = true;

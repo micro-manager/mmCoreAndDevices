@@ -88,7 +88,6 @@ int AZ100Turret::Initialize()
 	}
 	pAct = new CPropertyAction(this, &AZ100Turret::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
@@ -104,7 +103,6 @@ int AZ100Turret::Initialize()
 		}
 		pAct = new CPropertyAction(this, &AZ100Turret::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	initialized_ = true;
