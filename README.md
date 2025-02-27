@@ -1,3 +1,31 @@
+# kmdouglass's Fork of mmCoreAndDevices
+Custom device adapters that are not officially part of the Micro-Manager project.
+
+## Contents
+
+This fork provides the following additional device adapters:
+
+- [SkeletonDevice](DeviceAdapters/SkeletonDevice/) : A minimal, general device adapter that works but does nothing. Used as a starting point for new adapters.
+
+## Instructions
+
+- Set up the development environment for Micro-Manager if you haven't already
+- Open the [micromanager.sln](./micromanager.sln) file in Visual Studio 2022
+- Right click `Solution 'Micromanager'` in the Solution Explorer and select `Add` > `Existing Project...`
+- Navigate to the folder containing the code for the Device Adapter that you want to build
+- Select the adapter's `.vcxproj` file and open it
+- Navigate to the solution in the Solution Explorer and right click it. Select `Properties...`
+- Ensure that the `Platform Toolset` is set to `Visual Studio 2019 (v142)`
+- Toggle the Solution Configuration to either `Debug` or `Release` depending on whether you are testing. (`Release` should be used for experiments because it is generally faster.)
+- Right click the solution and select `Build`
+- Navigate to the output directory containing the DLL, for example: `C:\Users\douglass\src\projects\micro-manager\mmCoreAndDevices\build\Release\x64\mmgr_dal_SkeletonDevice.dll`
+- Copy the DLL to your Micro-Manager root directory
+- Start Micro-Manager and open the `Devices` > `Hardware Configuration Wizard...`
+- In Step 2, verify that the device adapter appears in the list of `Available Devices`
+- Add the device and test
+
+# Original README
+
 # mmCoreAndDevices
 The c++ code at the core of the Micro-Manager project.
 
