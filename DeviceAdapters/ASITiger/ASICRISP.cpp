@@ -58,8 +58,6 @@ int CCRISP::Initialize()
    // call generic Initialize first, this gets hub
    RETURN_ON_MM_ERROR( PeripheralInitialize() );
 
-
-
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    ostringstream command;
    command.str("");
@@ -107,7 +105,7 @@ int CCRISP::Initialize()
    UpdateProperty(g_CRISPLockRangePropertyName);
 
    pAct = new CPropertyAction(this, &CCRISP::OnCalGain);
-   CreateProperty(g_CRISPCalibrationGainPropertyName, "0", MM::Float, false, pAct);
+   CreateProperty(g_CRISPCalibrationGainPropertyName, "0", MM::Integer, false, pAct);
    UpdateProperty(g_CRISPCalibrationGainPropertyName);
 
    pAct = new CPropertyAction(this, &CCRISP::OnLEDIntensity);
@@ -157,6 +155,7 @@ int CCRISP::Initialize()
    // new firmware has commands to query the values much faster.
    if (FirmwareVersionAtLeast(3.40))
    {
+       LogMessage("CRISP: firmware >= 3.40; use LK T? and LK Y? for the \"Sum\" and \"Dither Error\" properties.", true);
        pAct = new CPropertyAction(this, &CCRISP::OnSum);
        CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
        UpdateProperty(g_CRISPSumPropertyName);
@@ -167,6 +166,7 @@ int CCRISP::Initialize()
    }
    else
    {
+       LogMessage("CRISP: firmware < 3.40; use EXTRA X? for both the \"Sum\" and \"Dither Error\" properties.", true);
        pAct = new CPropertyAction(this, &CCRISP::OnSumLegacy);
        CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
        UpdateProperty(g_CRISPSumPropertyName);
@@ -574,7 +574,7 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
           return DEVICE_OK;
       }
-      command << "LR T?";
+      command << addressChar_ << "LR T?";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A"));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       if (!pProp->Set(tmp))
@@ -585,7 +585,7 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << "LR T=" << tmp;
+      command << addressChar_ << "LR T=" << tmp;
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A") );
    }
    return DEVICE_OK;
