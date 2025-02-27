@@ -175,7 +175,7 @@ int CRISP::Initialize()
 		return ret;
 	}
 	pAct = new CPropertyAction(this, &CRISP::OnCalRange);
-	CreateProperty("Calibration Range(um)", std::to_string(calibrationRange_).c_str(), MM::Integer, false, pAct);
+	CreateProperty("Calibration Range(um)", std::to_string(calibrationRange_).c_str(), MM::Float, false, pAct);
 
 	ret = GetLEDIntensity(ledIntensity_);
 	if (ret != DEVICE_OK)
@@ -228,7 +228,7 @@ int CRISP::Initialize()
 			return ret;
 		}
 		pAct = new CPropertyAction(this, &CRISP::OnInFocusRange);
-		CreateProperty("In Focus Range(um)", std::to_string(inFocusRange_).c_str(), MM::Integer, false, pAct);
+		CreateProperty("In Focus Range(um)", std::to_string(inFocusRange_).c_str(), MM::Float, false, pAct);
 	}
 
 	const char* fc = "Obtain Focus Curve";
@@ -548,7 +548,7 @@ int CRISP::GetLastFocusScore(double& score)
 	ClearPort();
 
 	score = 0;
-	// Requests present value of the focus error as shown on LCD panel
+	// Get current value of the focus error as shown on LCD panel
 	std::string answer;
 	int ret = QueryCommand("LK Y?", answer);
 	if (ret != DEVICE_OK)
@@ -625,9 +625,7 @@ int CRISP::SetCommand(const std::string& cmd)
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int CRISP::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -715,6 +713,12 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
+		// also update the "Calibration Range(um)" property
+		ret = GetCalRange(calibrationRange_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		// also update "In Focus Range(um)" property
 		return GetInFocusRange(inFocusRange_);
 	}
@@ -751,7 +755,7 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::GetCalRange(long& calRange)
+int CRISP::GetCalRange(double& calRange)
 {
 	float calibRange;
 	int ret = GetValue("LR F?", calibRange);
@@ -759,7 +763,7 @@ int CRISP::GetCalRange(long& calRange)
 	{
 		return ret;
 	}
-	calRange = (long)(calibRange * 1000); // convert to microns
+	calRange = calibRange * 1000.0; // convert to microns
 	return DEVICE_OK;
 }
 
@@ -775,7 +779,7 @@ int CRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(lr);
 		std::ostringstream command;
 		command << std::fixed << "LR F=" << lr / 1000.0; // convert to millimeters
-		calibrationRange_ = (long)lr;
+		calibrationRange_ = lr;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -1054,7 +1058,7 @@ int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::GetInFocusRange(long& inFocusRange)
+int CRISP::GetInFocusRange(double& inFocusRange)
 {
 	float focusRange;
 	int ret = GetValue("AL Z?", focusRange);
@@ -1062,7 +1066,7 @@ int CRISP::GetInFocusRange(long& inFocusRange)
 	{
 		return ret;
 	}
-	inFocusRange = (long)(focusRange * 1000);
+	inFocusRange = focusRange * 1000.0;
 	return DEVICE_OK;
 }
 

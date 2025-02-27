@@ -54,7 +54,7 @@ public:
 	int OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetCalGain(long& calGain);
 	int OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int GetCalRange(long& calRange);
+	int GetCalRange(double& calRange);
 	int OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetGainMultiplier(long& gainMult);
 	int OnFocusCurve(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -64,7 +64,7 @@ public:
 	int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetNumSkips(long& updateRate);
 	int OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int GetInFocusRange(long& inFocusRange);
+	int GetInFocusRange(double& inFocusRange);
 	int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 	// For MS2000 firmware >= 9.2o, use faster serial commands
@@ -92,8 +92,8 @@ private:
 	long numAverages_;
 	long numSkips_; // update rate (milliseconds)
 	long calibrationGain_;
-	long calibrationRange_; // microns
-	long inFocusRange_; // microns
+	double calibrationRange_; // microns
+	double inFocusRange_; // microns
 	double lockRange_; // millimeters
 	double objectiveNA_;
 

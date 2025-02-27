@@ -246,7 +246,6 @@ int ZStage::Initialize()
     // Wait cycles
     if (HasCommand("WT " + axis_ + "?"))
     {
-
        ret = GetWait(waitCycles_);
        if (ret != DEVICE_OK)
           return ret;
@@ -287,7 +286,6 @@ int ZStage::Shutdown()
     return DEVICE_OK;
 }
 
-
 bool ZStage::Busy()
 {
     if (runningFastSequence_)
@@ -322,7 +320,6 @@ bool ZStage::Busy()
     }
     return false;
 }
-
 
 int ZStage::SetPositionUm(double pos)
 {
@@ -790,7 +787,7 @@ int ZStage::GetControllerInfo()
     LogMessage(answer.c_str(), false);
 
     // Determine if our axis is the "active Z-focus axis" (which allows linear sequence)
-    ret = QueryCommand("UNLOCK F?", answer);
+    ret = QueryCommand("UL F?", answer);
     if (ret != DEVICE_OK)
     {
         return ret;
