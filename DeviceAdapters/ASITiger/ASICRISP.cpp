@@ -155,6 +155,7 @@ int CCRISP::Initialize()
    // new firmware has commands to query the values much faster.
    if (FirmwareVersionAtLeast(3.40))
    {
+       LogMessage("CRISP: firmware >= 3.40; use LK T? and LK Y? for the \"Sum\" and \"Dither Error\" properties.", true);
        pAct = new CPropertyAction(this, &CCRISP::OnSum);
        CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
        UpdateProperty(g_CRISPSumPropertyName);
@@ -165,6 +166,7 @@ int CCRISP::Initialize()
    }
    else
    {
+       LogMessage("CRISP: firmware < 3.40; use EXTRA X? for both the \"Sum\" and \"Dither Error\" properties.", true);
        pAct = new CPropertyAction(this, &CCRISP::OnSumLegacy);
        CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
        UpdateProperty(g_CRISPSumPropertyName);
