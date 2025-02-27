@@ -528,6 +528,7 @@ public:
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLoadSample(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnStepSizeUm(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
 private:

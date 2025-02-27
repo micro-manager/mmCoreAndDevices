@@ -20,6 +20,8 @@ extern const char* g_Keyword_LoadSample;
 
 ZStage::ZStage() :
 stepSize_um_ (0.025),  // note: this is 0.050 in the Axioplan 2
+lowerLimit_(0.0),
+upperLimit_(1000.0),
 initialized_ (false)
 {
    InitializeDefaultErrorMessages();
