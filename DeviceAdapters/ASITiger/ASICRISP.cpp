@@ -58,8 +58,6 @@ int CCRISP::Initialize()
    // call generic Initialize first, this gets hub
    RETURN_ON_MM_ERROR( PeripheralInitialize() );
 
-
-
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    ostringstream command;
    command.str("");
@@ -107,7 +105,7 @@ int CCRISP::Initialize()
    UpdateProperty(g_CRISPLockRangePropertyName);
 
    pAct = new CPropertyAction(this, &CCRISP::OnCalGain);
-   CreateProperty(g_CRISPCalibrationGainPropertyName, "0", MM::Float, false, pAct);
+   CreateProperty(g_CRISPCalibrationGainPropertyName, "0", MM::Integer, false, pAct);
    UpdateProperty(g_CRISPCalibrationGainPropertyName);
 
    pAct = new CPropertyAction(this, &CCRISP::OnLEDIntensity);
@@ -574,7 +572,7 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
           return DEVICE_OK;
       }
-      command << "LR T?";
+      command << addressChar_ << "LR T?";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A"));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       if (!pProp->Set(tmp))
@@ -585,7 +583,7 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << "LR T=" << tmp;
+      command << addressChar_ << "LR T=" << tmp;
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A") );
    }
    return DEVICE_OK;
