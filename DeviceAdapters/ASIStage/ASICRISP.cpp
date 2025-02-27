@@ -696,13 +696,19 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		// TODO: this should update the "In Focus Range (mm)" property too
 		double na;
 		pProp->Get(na);
 		std::ostringstream command;
 		command << std::fixed << "LR Y=" << na;
 		objectiveNA_ = na;
-		return SetCommand(command.str());
+		// send "Objective NA" command
+		int ret = SetCommand(command.str());
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
+		// also update "In Focus Range(um)" property
+		return GetInFocusRange(inFocusRange_);
 	}
 	return DEVICE_OK;
 }
