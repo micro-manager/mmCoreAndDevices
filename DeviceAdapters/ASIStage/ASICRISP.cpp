@@ -246,7 +246,7 @@ int CRISP::Initialize()
 	// use faster serial commands with new versions of the firmware
 	if (versionData_.IsVersionAtLeast(9, 2, 'o'))
 	{
-		LogMessage("CRISP: firmware >= 9.2o; use LK T? and LK Y? for the \"Sum\" and \"Dither Error\" properties.");
+		LogMessage("CRISP: firmware >= 9.2o; use LK T? and LK Y? for the \"Sum\" and \"Dither Error\" properties.", true);
 		// These commands use LK T? and LK Y? => ":A 0 \r\n"
 		pAct = new CPropertyAction(this, &CRISP::OnDitherError);
 		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
@@ -256,7 +256,7 @@ int CRISP::Initialize()
 	}
 	else
 	{
-		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for both the \"Sum\" and \"Dither Error\" properties.");
+		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for both the \"Sum\" and \"Dither Error\" properties.", true);
 		// These commands use EXTRA X? => "I    9    0 \r\n"
 		pAct = new CPropertyAction(this, &CRISP::OnDitherErrorLegacy);
 		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
