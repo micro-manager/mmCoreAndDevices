@@ -376,6 +376,14 @@ DeviceInstance::Initialize()
       ThrowError("Device already initialized (or initialization already attempted)");
    initializeCalled_ = true;
    ThrowIfError(pImpl_->Initialize());
+
+   // Check for that all required standard properties implemented
+   char failedProperty[MM::MaxStrLength];
+   if (!pImpl_->ImplementsRequiredStandardProperties(failedProperty)) {
+     ThrowError("Device " + GetLabel() +
+           " does not implement required standard property: " +
+           std::string(failedProperty));
+   }
    initialized_ = true;
 }
 

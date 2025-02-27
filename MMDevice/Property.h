@@ -27,11 +27,12 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cmath>
 
 namespace MM {
 
 // Standard Properties
-const char* const g_KeywordStandardPropertyPrefix = "api";
+const char* const g_KeywordStandardPropertyPrefix = "api//";
 
 // Define NaN for use in property definitions
 const double PropertyLimitUndefined = std::numeric_limits<double>::quiet_NaN();
@@ -39,22 +40,19 @@ const double PropertyLimitUndefined = std::numeric_limits<double>::quiet_NaN();
 // Standard property metadata structure
 class StandardProperty {
 public:
-    StandardProperty(
-        const char* name,
-        PropertyType type,
-        bool isReadOnly,
-        bool isPreInit,
-        const char* const* allowedValues,
-        double lowerLimit,
-        double upperLimit
-    ) : 
+    StandardProperty(const char* name, PropertyType type, bool isReadOnly, 
+                     bool isPreInit, const std::vector<std::string>& allowedValues, 
+                     const std::vector<std::string>& requiredValues,
+                     double lowerLimit, double upperLimit, bool required) : 
         name(name),
         type(type),
         isReadOnly(isReadOnly),
         isPreInit(isPreInit),
         allowedValues(allowedValues),
+        requiredValues(requiredValues),
         lowerLimit(lowerLimit),
-        upperLimit(upperLimit)
+        upperLimit(upperLimit),
+        required(required)
     {}
     
     // Helper to check if limits are defined
@@ -62,13 +60,28 @@ public:
         return !std::isnan(lowerLimit) && !std::isnan(upperLimit);
     }
     
-    const char* name;                  // Full property name (without prefix)
-    PropertyType type;                 // Float, String, or Integer
-    bool isReadOnly;                   // Whether property is read-only
-    bool isPreInit;                    // Whether property should be set before initialization
-    const char* const* allowedValues;  // Array of allowed string values (nullptr if not restricted)
-    double lowerLimit;                 // Lower limit for numeric properties (NaN if not limited)
-    double upperLimit;                 // Upper limit for numeric properties (NaN if not limited)
+    // Equality operator for comparison in containers
+    bool operator==(const StandardProperty& other) const {
+        return name == other.name && 
+               type == other.type && 
+               isReadOnly == other.isReadOnly &&
+               isPreInit == other.isPreInit &&
+               allowedValues == other.allowedValues &&
+               requiredValues == other.requiredValues &&
+               lowerLimit == other.lowerLimit &&
+               upperLimit == other.upperLimit &&
+               required == other.required;
+    }
+    
+    std::string name; // Full property name (without prefix)
+    PropertyType type; // Float, String, or Integer
+    bool isReadOnly; // Whether property is read-only
+    bool isPreInit; // Whether property should be set before initialization
+    std::vector<std::string> allowedValues;  // if empty, no restrictions
+    std::vector<std::string> requiredValues;   // if empty, no restrictions
+    double lowerLimit; // Lower limit for numeric properties (NaN if not limited)
+    double upperLimit;  // Upper limit for numeric properties (NaN if not limited)
+    bool required;  // Whether to throw a runtime error if the property is not found on init
 };
 
 
@@ -479,8 +492,7 @@ public:
    PropertyCollection();
    ~PropertyCollection();
 
-   int CreateStandardProperty(StandardProperty property, const char* value, ActionFunctor* pAct=0);
-   int CreateProperty(const char* name, const char* value, PropertyType eType, bool bReadOnly, ActionFunctor* pAct=0, bool isPreInitProperty=false);
+   int CreateProperty(const char* name, const char* value, PropertyType eType, bool bReadOnly, ActionFunctor* pAct=0, bool isPreInitProperty=false, bool standard=false);
    int RegisterAction(const char* name, ActionFunctor* fpAct);
    int SetAllowedValues(const char* name, std::vector<std::string>& values);
    int ClearAllowedValues(const char* name);
@@ -500,7 +512,6 @@ public:
    int Apply(const char* Name);
 
 private:
-   int DoCreateProperty(const char* name, const char* value, PropertyType eType, bool bReadOnly, ActionFunctor* pAct=0, bool isPreInitProperty=false);
    typedef std::map<std::string, Property*> CPropArray;
    CPropArray properties_;
 };
