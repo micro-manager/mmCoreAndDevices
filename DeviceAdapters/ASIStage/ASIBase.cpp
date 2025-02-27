@@ -120,7 +120,7 @@ int ASIBase::CheckDeviceStatus()
 	return ret;
 }
 
-VersionData ASIBase::ExtractVersionData(const std::string& version) const
+VersionData ASIBase::ParseVersionString(const std::string& version) const
 {	
 	// Version command response examples:
 	// Example A) ":A Version: USB-9.2p \r\n"

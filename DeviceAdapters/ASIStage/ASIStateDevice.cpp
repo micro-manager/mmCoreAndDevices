@@ -71,6 +71,9 @@ int StateDevice::Initialize()
 	CPropertyAction* pAct = new CPropertyAction(this, &StateDevice::OnVersion);
 	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+	// get the firmware version data from cached value
+	versionData_ = ParseVersionString(version_);
+
 	ret = GetCompileDate(compileDate_);
 	if (ret != DEVICE_OK)
 	{
@@ -84,7 +87,7 @@ int StateDevice::Initialize()
 	// I think it was present before 2010 but this is easy way
 
 	// previously compared against compile date (2010, 1, 1)
-	if (versionData_.isVersionAtLeast(8, 8, 'a'))
+	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
 	{
 		ret = GetBuildName(buildName_);
 		if (ret != DEVICE_OK)

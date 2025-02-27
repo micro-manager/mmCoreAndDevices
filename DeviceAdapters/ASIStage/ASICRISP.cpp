@@ -95,6 +95,9 @@ int CRISP::Initialize()
 	CPropertyAction* pAct = new CPropertyAction(this, &CRISP::OnVersion);
 	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+	// get the firmware version data from cached value
+	versionData_ = ParseVersionString(version_);
+
 	ret = GetCompileDate(compileDate_);
 	if (ret != DEVICE_OK)
 	{
@@ -103,19 +106,12 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
 
-	// get the firmware version data
-	char version[MM::MaxStrLength];
-	if (GetProperty("Version", version) == DEVICE_OK)
-	{
-		versionData_ = ExtractVersionData(std::string(version));
-	}
-
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
 
 	// previously compared against compile date (2010, 1, 1)
-	if (versionData_.isVersionAtLeast(8, 8, 'a'))
+	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
 	{
 		ret = GetBuildName(buildName_);
 		if (ret != DEVICE_OK)
@@ -207,7 +203,7 @@ int CRISP::Initialize()
 	CreateProperty(g_CRISPStatePropertyName, "", MM::String, true, pAct);
 
 	// previously compared against compile date (2015, 1, 1)
-	if (versionData_.isVersionAtLeast(9, 2, 'h'))
+	if (versionData_.IsVersionAtLeast(9, 2, 'h'))
 	{
 		ret = GetNumSkips(numSkips_);
 		if (ret != DEVICE_OK)
@@ -248,7 +244,7 @@ int CRISP::Initialize()
 	CreateProperty("LogAmpAGC", "", MM::Integer, true, pAct);
 
 	// use faster serial commands with new versions of the firmware
-	if (versionData_.isVersionAtLeast(9, 2, 'o'))
+	if (versionData_.IsVersionAtLeast(9, 2, 'o'))
 	{
 		LogMessage("CRISP: firmware >= 9.2o; use LK T? and LK Y? for the \"Sum\" and \"Dither Error\" properties.");
 		// These commands use LK T? and LK Y? => ":A 0 \r\n"

@@ -24,16 +24,11 @@ class VersionData
 {
 public:
 	VersionData() : major_(0), minor_(0), rev_('-') { }
-	VersionData(int major, int minor, char rev) : major_(major), minor_(minor), rev_(rev) { }
-	void setMajor(int major) { major_ = major; }
-	void setMinor(int minor) { minor_ = minor; }
-	void setRev(char rev) { rev_ = rev; }
-	int getMajor() const { return major_; }
-	int getMinor() const { return minor_; }
-	char getRev() const { return rev_; }
+	VersionData(int major, int minor, char rev)
+		: major_(major), minor_(minor), rev_(rev) { }
 
 	// Return true if the controller firmware version is at least the specified version.
-	bool isVersionAtLeast(int major, int minor, char rev) const
+	bool IsVersionAtLeast(int major, int minor, char rev) const
 	{
 		// Note: avoid comparing the old character revision numbers
 		// with the new numeric revision numbers by returning early.
@@ -76,7 +71,7 @@ public:
 	int ParseResponseAfterPosition(const std::string& answer, unsigned int position, double& value) const;
 	int ParseResponseAfterPosition(const std::string& answer, unsigned int position, unsigned int count, double& value) const;
 	int ResponseStartsWithColonA(const std::string& answer) const;
-	VersionData ExtractVersionData(const std::string& version) const;
+	VersionData ParseVersionString(const std::string& version) const;
 
 protected:
 	int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);

@@ -109,6 +109,9 @@ int ZStage::Initialize()
     CPropertyAction* pAct = new CPropertyAction(this, &ZStage::OnVersion);
     CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+    // get the firmware version data from cached value
+    versionData_ = ParseVersionString(version_);
+
     ret = GetCompileDate(compileDate_);
     if (ret != DEVICE_OK)
     {
@@ -122,7 +125,7 @@ int ZStage::Initialize()
     // I think it was present before 2010 but this is easy way
 
     // previously compared against compile date (2010, 1, 1)
-    if (versionData_.isVersionAtLeast(8, 8, 'a'))
+    if (versionData_.IsVersionAtLeast(8, 8, 'a'))
     {
         ret = GetBuildName(buildName_);
         if (ret != DEVICE_OK)
@@ -646,7 +649,7 @@ int ZStage::SendStageSequence()
             std::ostringstream os;
             os.precision(0);
             // previously compared against compile date (2015, 10, 23)
-            if (versionData_.isVersionAtLeast(9, 2, 'i'))
+            if (versionData_.IsVersionAtLeast(9, 2, 'i'))
             {
                 os << std::fixed << "LD " << axis_ << "=" << sequence_[i] * 10;  // 10 here is for unit multiplier/1000
                 ret = QueryCommand(os.str().c_str(), answer);
@@ -1029,7 +1032,7 @@ int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
         // parse version strings
 
         // previously compared against compile date (2009, 1, 1)
-        if (versionData_.isVersionAtLeast(8, 6, 'd'))
+        if (versionData_.IsVersionAtLeast(8, 6, 'd'))
         {
             // don't enforce upper limit
         }
