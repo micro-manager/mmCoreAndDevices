@@ -625,6 +625,8 @@ public:
    }
 
    int CreateTestWithValuesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      // just make the values the required ones here. Also option to add 
+      // additional ones in real situations
       return CreateStandardProperty<MM::g_TestWithValuesStandardProperty>(value, pAct,
        MM::g_TestWithValuesStandardProperty.requiredValues);
    }
