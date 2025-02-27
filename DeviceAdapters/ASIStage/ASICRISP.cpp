@@ -169,6 +169,14 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnCalGain);
 	CreateProperty("Calibration Gain", std::to_string(calibrationGain_).c_str(), MM::Integer, false, pAct);
 
+	ret = GetCalRange(calibrationRange_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	pAct = new CPropertyAction(this, &CRISP::OnCalRange);
+	CreateProperty("Calibration Range(um)", std::to_string(calibrationRange_).c_str(), MM::Integer, false, pAct);
+
 	ret = GetLEDIntensity(ledIntensity_);
 	if (ret != DEVICE_OK)
 	{
@@ -220,7 +228,7 @@ int CRISP::Initialize()
 			return ret;
 		}
 		pAct = new CPropertyAction(this, &CRISP::OnInFocusRange);
-		CreateProperty("In Focus Range(um)", std::to_string(inFocusRange_).c_str(), MM::Float, false, pAct);
+		CreateProperty("In Focus Range(um)", std::to_string(inFocusRange_).c_str(), MM::Integer, false, pAct);
 	}
 
 	const char* fc = "Obtain Focus Curve";
@@ -740,7 +748,36 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		calibrationGain_ = (long)lr;
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
 
+int CRISP::GetCalRange(long& calRange)
+{
+	float calibRange;
+	int ret = GetValue("LR F?", calibRange);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	calRange = (long)(calibRange * 1000); // convert to microns
+	return DEVICE_OK;
+}
+
+int CRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(calibrationRange_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		double lr;
+		pProp->Get(lr);
+		std::ostringstream command;
+		command << std::fixed << "LR F=" << lr / 1000.0; // convert to millimeters
+		calibrationRange_ = (long)lr;
+		return SetCommand(command.str());
+	}
 	return DEVICE_OK;
 }
 
@@ -1017,7 +1054,7 @@ int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::GetInFocusRange(double& inFocusRange)
+int CRISP::GetInFocusRange(long& inFocusRange)
 {
 	float focusRange;
 	int ret = GetValue("AL Z?", focusRange);
@@ -1025,7 +1062,7 @@ int CRISP::GetInFocusRange(double& inFocusRange)
 	{
 		return ret;
 	}
-	inFocusRange = focusRange * 1000;
+	inFocusRange = (long)(focusRange * 1000);
 	return DEVICE_OK;
 }
 
@@ -1039,9 +1076,8 @@ int CRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		double lr;
 		pProp->Get(lr);
-		lr /= 1000;
 		std::ostringstream command;
-		command << std::fixed << "AL Z=" << lr;
+		command << std::fixed << "AL Z=" << lr / 1000.0;
 		inFocusRange_ = lr;
 		return SetCommand(command.str());
 	}
