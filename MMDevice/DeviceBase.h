@@ -1305,7 +1305,7 @@ private:
               return ret;
       }
       
-      // Set allowed values if they exist
+      // Ensure only allowed values are set
       if (!PropRef.allowedValues.empty()) {
           // If the property has predefined allowed values, validate that all supplied values are allowed
           if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), value) == PropRef.allowedValues.end()) {
