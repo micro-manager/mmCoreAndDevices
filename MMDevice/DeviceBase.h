@@ -118,6 +118,20 @@ public:
       CDeviceUtils::CopyLimitedString(name, moduleName_.c_str());
    }
 
+   //// Standard properties are created using only these dedicated functions
+   // Such functions should all be defined here, and which device types they apply
+   // to is handled in MMDevice.h using the LINK_STANDARD_PROP_TO_DEVICE_TYPE macro
+   int CreateTestStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TestStandardProperty>(value, pAct);
+   }
+
+   int CreateTestWithValuesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      // just make the values the required ones here. Also option to add 
+      // additional ones in real situations
+      return CreateStandardProperty<MM::g_TestWithValuesStandardProperty>(value, pAct,
+       MM::g_TestWithValuesStandardProperty.requiredValues);
+   }
+
    /**
    * Assigns description string for a device (for use only by the calling code).
    */
@@ -615,20 +629,6 @@ public:
    int CreateProperty(const char* name, const char* value, MM::PropertyType eType, bool readOnly, MM::ActionFunctor* pAct=0, bool isPreInitProperty=false)
    {
       return properties_.CreateProperty(name, value, eType, readOnly, pAct, isPreInitProperty);
-   }
-
-   //// Standard properties are created using only these dedicated functions
-   // Such functions should all be defined here, and which device types they apply
-   // to is handled in MMDevice.h using the LINK_STANDARD_PROP_TO_DEVICE_TYPE macro
-   int CreateTestStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_TestStandardProperty>(value, pAct);
-   }
-
-   int CreateTestWithValuesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      // just make the values the required ones here. Also option to add 
-      // additional ones in real situations
-      return CreateStandardProperty<MM::g_TestWithValuesStandardProperty>(value, pAct,
-       MM::g_TestWithValuesStandardProperty.requiredValues);
    }
 
    /**
