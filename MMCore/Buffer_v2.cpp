@@ -163,7 +163,6 @@ int DataBuffer::AllocateBuffer(unsigned int memorySizeMB) {
         // Advise the kernel that we will need this memory soon.
         madvise(buffer_, numBytes, MADV_WILLNEED);
 
-        }
     #endif
     
     bufferSize_ = numBytes;
