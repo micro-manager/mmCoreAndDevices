@@ -72,14 +72,14 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 */
 SkeletonSerial::SkeletonSerial() :
 	// Parameter values before hardware synchronization
-	initialized_ (false)
+	initialized_ (false),
+	buffer_(""),
+	msg_ ("")
 {
 	// call the base class method to set-up default error codes/messages
 	InitializeDefaultErrorMessages();
 
-	// Setup the port
-	CPropertyAction* pAct = new CPropertyAction(this, &SkeletonSerial::OnPort);
-	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+	GeneratePreInitProperties();
 }
 
 /**
@@ -117,27 +117,16 @@ int SkeletonSerial::Initialize()
 	if (initialized_)
 		return DEVICE_OK;
 
-	// set read-only properties
-	// ------------------------
-	// Name
-	int nRet = CreateStringProperty(MM::g_Keyword_Name, g_DeviceName, true);
-	if (DEVICE_OK != nRet)
-		return nRet;
+	int ret = GenerateReadOnlyProperties();
+	if (DEVICE_OK != ret) return ret;
 
-	// Description
-	nRet = CreateStringProperty(
-		MM::g_Keyword_Description,
-		g_DeviceDescription,
-		true
-	);
-	if (DEVICE_OK != nRet)
-		return nRet;
+	ret = GenerateControlledProperties();
+	if (DEVICE_OK != ret) return ret;
 
     // synchronize all properties
     // --------------------------
-    int ret = UpdateStatus();
-    if (ret != DEVICE_OK)
-       return ret;
+    ret = UpdateStatus();
+    if (ret != DEVICE_OK) return ret;
 
     initialized_ = true;
     return DEVICE_OK;
@@ -158,10 +147,58 @@ int SkeletonSerial::Shutdown()
 /////////////////////////////////////////////
 // Property Generators
 /////////////////////////////////////////////
+int SkeletonSerial::GeneratePreInitProperties() {
+	CPropertyAction* pAct = new CPropertyAction(this, &SkeletonSerial::OnPort);
+	return CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+}
+
+int SkeletonSerial::GenerateReadOnlyProperties() {
+	// Name
+	int ret = CreateStringProperty(MM::g_Keyword_Name, g_DeviceName, true);
+	if (DEVICE_OK != ret) return ret;
+
+	// Description
+	ret = CreateStringProperty(MM::g_Keyword_Description, g_DeviceDescription, true);
+	if (DEVICE_OK != ret) return ret;
+
+	CPropertyAction* pAct = new CPropertyAction(this, &SkeletonSerial::OnResponseChange);
+	ret = CreateStringProperty("Device Response", buffer_.c_str(), true, pAct);
+	if (DEVICE_OK != ret) return ret;
+
+	return DEVICE_OK;
+}
+
+int SkeletonSerial::GenerateControlledProperties() {
+	CPropertyAction* pAct = new CPropertyAction(this, &SkeletonSerial::OnMessageChange);
+	return CreateProperty("Message", msg_.c_str(), MM::String, false, pAct);
+}
 
 /////////////////////////////////////////////
 // Action handlers
 /////////////////////////////////////////////
+int SkeletonSerial::OnMessageChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	// Obtain a pointer to the Property that can be modified.
+	MM::Property* pChildProperty = (MM::Property*)pProp;
+
+	if (eAct == MM::BeforeGet)
+	{
+		// Set the value that appears in MM to match the current device state.
+		pProp->Set(msg_.c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		// Set the device state to match the value that appears in MM.
+		pProp->Get(msg_);
+
+		// Send the message to the device
+		int ret = this->QueryDevice(msg_);
+		if (ret != DEVICE_OK) return ret;
+	}
+
+	return DEVICE_OK;
+}
+
 int SkeletonSerial::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
@@ -183,15 +220,21 @@ int SkeletonSerial::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int SkeletonSerial::OnResponseChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{	MM::Property* pChildProperty = (MM::Property*)pProp;
+
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(buffer_.c_str());
+	}
+
+	return DEVICE_OK;
+}
+
 
 /////////////////////////////////////////////
 // Serial communications
 /////////////////////////////////////////////
-const std::string SkeletonSerial::GetLastMsg()
-{
-	return buffer_;
-}
-
 int SkeletonSerial::PurgeBuffer()
 {
 	int ret = PurgeComPort(port_.c_str());
@@ -204,16 +247,19 @@ int SkeletonSerial::PurgeBuffer()
 /**
  * Sends a command to the device and receives the result.
  */
-std::string SkeletonSerial::QueryDevice(std::string msg)
+int SkeletonSerial::QueryDevice(std::string msg)
 {
-	std::string result;
 
-	PurgeBuffer();
-	SendMsg(msg);
-	ReceiveMsg();
-	result = GetLastMsg();
+	int ret = PurgeBuffer();
+	if (ret != DEVICE_OK) return ret;
+	
+	ret = SendMsg(msg);
+	if (ret != DEVICE_OK) return ret;
 
-	return result;
+	ret = ReceiveMsg();
+	if (ret != DEVICE_OK) return ret;
+
+	return DEVICE_OK;
 }
 
 int SkeletonSerial::ReceiveMsg()

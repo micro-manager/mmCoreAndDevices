@@ -33,8 +33,12 @@ public:
 	void GetName(char* name) const;
 	bool Busy() { return false; };
 
-	// Pre-init properties
+	// Pre-init action handlers
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+	// Action handlers
+	int OnMessageChange(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnResponseChange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	// MM API
@@ -43,14 +47,19 @@ private:
 	// Pre-init device properties
 	std::string port_;
 
+	// MM Properties
+	int GeneratePreInitProperties();
+	int GenerateReadOnlyProperties();
+	int GenerateControlledProperties();
+
 	// Serial communications
 	std::string buffer_;
+	std::string msg_;
 	const std::string CMD_TERM_ = "\n";
 	const std::string ANS_TERM_ = "\r\n";
 
-	const std::string GetLastMsg();
 	int PurgeBuffer();
-	std::string QueryDevice(std::string msg);
+	int QueryDevice(std::string msg);
 	int ReceiveMsg();
 	int SendMsg(std::string msg);
 
