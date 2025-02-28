@@ -1394,6 +1394,17 @@ namespace MM {
       /// \deprecated Use the other forms instead.
       virtual int InsertMultiChannel(const Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* md = 0) = 0;
 
+      // TODO: enable these when we know what to do about backwards compatibility for circular buffer
+//    int AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSize, size_t metadataSize,
+//                         unsigned char** dataPointer, unsigned char** metadataPointer,
+//                         unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents);
+
+//    int AcquireDataWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
+//                         unsigned char** dataPointer, unsigned char** metadataPointer);
+
+//    int FinalizeWriteSlot(unsigned char* dataPointer, size_t actualMetadataBytes);
+
+
       // Formerly intended for use by autofocus
       MM_DEPRECATED(virtual const char* GetImage()) = 0;
       MM_DEPRECATED(virtual int GetImageDimensions(int& width, int& height, int& depth)) = 0;
