@@ -2712,36 +2712,36 @@ bool CMMCore::getShutterOpen() throw (CMMError)
  * @param include Whether to include the metadata.
  */
 void CMMCore::setIncludeImageMetadata(std::string & category, bool include) throw (CMMError) {
-   if (category == MM::g_Keyword_Metadata_BitDepth) {
+   if (category == MM::g_Keyword_Include_Metadata_BitDepth) {
       imageMDIncludeBitDepth_ = include;
    } 
-   else if (category == MM::g_Keyword_Metadata_CameraParams) {
+   else if (category == MM::g_Keyword_Include_Metadata_CameraParams) {
       imageMDIncludeCameraParams_ = include;
    }
-   else if (category == MM::g_Keyword_Metadata_CameraTags) {
+   else if (category == MM::g_Keyword_Include_Metadata_CameraTags) {
       imageMDIncludeCameraTags_ = include;
    }
-   else if (category == MM::g_Keyword_Metadata_Timing) {
+   else if (category == MM::g_Keyword_Include_Metadata_Timing) {
       imageMDIncludeTiming_ = include;
    }
-   else if (category == MM::g_Keyword_Metadata_SystemStateCache) {
+   else if (category == MM::g_Keyword_Include_Metadata_SystemStateCache) {
       imageMDIncludeSystemStateCache_ = include;
    }
-   else if (category == MM::g_Keyword_Metadata_LegacyCalibration) {
+   else if (category == MM::g_Keyword_Include_Metadata_LegacyCalibration) {
       imageMDIncludeLegacyCalibration_ = include;
    }
-   else if (category == MM::g_Keyword_Metadata_Legacy) {
+   else if (category == MM::g_Keyword_Include_Metadata_Legacy) {
       imageMDIncludeAdditionalLegacy_ = include;
    }
    else {
       throw CMMError("Invalid metadata category. Valid options are: " + 
-                     std::string(MM::g_Keyword_Metadata_BitDepth) + ", " + 
-                     std::string(MM::g_Keyword_Metadata_CameraParams) + ", " + 
-                     std::string(MM::g_Keyword_Metadata_CameraTags) + ", " + 
-                     std::string(MM::g_Keyword_Metadata_Timing) + ", " + 
-                     std::string(MM::g_Keyword_Metadata_SystemStateCache) + ", " + 
-                     std::string(MM::g_Keyword_Metadata_LegacyCalibration) + ", " + 
-                     std::string(MM::g_Keyword_Metadata_Legacy));
+                     std::string(MM::g_Keyword_Include_Metadata_BitDepth) + ", " + 
+                     std::string(MM::g_Keyword_Include_Metadata_CameraParams) + ", " + 
+                     std::string(MM::g_Keyword_Include_Metadata_CameraTags) + ", " + 
+                     std::string(MM::g_Keyword_Include_Metadata_Timing) + ", " + 
+                     std::string(MM::g_Keyword_Include_Metadata_SystemStateCache) + ", " + 
+                     std::string(MM::g_Keyword_Include_Metadata_LegacyCalibration) + ", " + 
+                     std::string(MM::g_Keyword_Include_Metadata_Legacy));
     }
 }
 

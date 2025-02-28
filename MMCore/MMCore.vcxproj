@@ -76,7 +76,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BufferManager.cpp" />
-    <ClCompile Include="Buffer_v2.cpp" />
+    <ClCompile Include="NewDataBuffer.cpp" />
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Configuration.cpp" />
     <ClCompile Include="CoreCallback.cpp" />
@@ -115,9 +115,9 @@
     <ClCompile Include="ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BufferDataPointer.h" />
+    <ClInclude Include="NewDataBufferPointer.h" />
     <ClInclude Include="BufferManager.h" />
-    <ClInclude Include="Buffer_v2.h" />
+    <ClInclude Include="NewDataBuffer.h" />
     <ClInclude Include="CircularBuffer.h" />
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />
