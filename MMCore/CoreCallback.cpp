@@ -243,7 +243,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
       {
          // convert device to camera
          std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(device);
-         core_->addCameraMetadata(camera, newMD, width, height, byteDepth, nComponents, true);
+         core_->addCameraMetadata(camera, newMD, width, height, byteDepth, nComponents);
       }
 
       char labelBuffer[MM::MaxStrLength];
@@ -300,7 +300,7 @@ int CoreCallback::AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSiz
       Metadata md;
       std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
       // Add the metadata needed for interpreting camera images
-      core_->addCameraMetadata(camera, md, width, height, byteDepth, nComponents, true);
+      core_->addCameraMetadata(camera, md, width, height, byteDepth, nComponents);
 
       char label[MM::MaxStrLength];
       caller->GetLabel(label);
@@ -344,7 +344,7 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
    // (or is?) handled by higher level code. Something this certainly cannot be applied
    // to the v2 buffer, because devices do not have the authority to clear the buffer, 
    // when application code may hold pointers into the buffer.
-   if (!core_->bufferManager_->IsUsingV2Buffer()) {
+   if (!core_->bufferManager_->IsUsingNewDataBuffer()) {
       return core_->bufferManager_->GetCircularBuffer()->Initialize(channels, w, h, pixDepth);
    } 
    return true;
@@ -366,7 +366,7 @@ int CoreCallback:: InsertMultiChannel(const MM::Device* caller, const unsigned c
       {
          // convert device to camera
          std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(device);
-         core_->addCameraMetadata(camera, newMD, width, height, byteDepth, 1, true);
+         core_->addCameraMetadata(camera, newMD, width, height, byteDepth, 1);
       }
 
       MM::ImageProcessor* ip = GetImageProcessor(caller);

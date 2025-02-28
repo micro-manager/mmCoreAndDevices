@@ -958,7 +958,7 @@
 #include "../MMDevice/ImageMetadata.h"
 #include "../MMCore/MMEventCallback.h"
 #include "../MMCore/MMCore.h"
-#include "../MMCore/BufferDataPointer.h"
+#include "../MMCore/NewBufferDataPointer.h"
 %}
 
 
@@ -1283,5 +1283,5 @@ namespace std {
 %include "../MMCore/MMCore.h"
 %include "../MMDevice/ImageMetadata.h"
 %include "../MMCore/MMEventCallback.h"
-%include "../MMCore/BufferDataPointer.h"
+%include "../MMCore/NewDataBufferPointer.h"
 

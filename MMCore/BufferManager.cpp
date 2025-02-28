@@ -27,11 +27,11 @@
 #include <mutex>
 
 
-BufferManager::BufferManager(bool useV2Buffer, unsigned int memorySizeMB)
-   : useV2_(useV2Buffer), circBuffer_(nullptr), v2Buffer_(nullptr)
+BufferManager::BufferManager(bool useNewDataBuffer, unsigned int memorySizeMB)
+   : useNewDataBuffer_(useNewDataBuffer), circBuffer_(nullptr), newDataBuffer_(nullptr)
 {
-   if (useV2_.load()) {
-      v2Buffer_ = new DataBuffer(memorySizeMB);
+   if (useNewDataBuffer_.load()) {
+      newDataBuffer_ = new DataBuffer(memorySizeMB);
    } else {
       circBuffer_ = new CircularBuffer(memorySizeMB);
    }
@@ -39,9 +39,9 @@ BufferManager::BufferManager(bool useV2Buffer, unsigned int memorySizeMB)
 
 BufferManager::~BufferManager()
 {
-   if (useV2_.load()) {
-      if (v2Buffer_) {
-         delete v2Buffer_;
+   if (useNewDataBuffer_.load()) {
+      if (newDataBuffer_) {
+         delete newDataBuffer_;
       }
    } else {
       if (circBuffer_) {
@@ -51,13 +51,13 @@ BufferManager::~BufferManager()
 }
 
 void BufferManager::ReallocateBuffer(unsigned int memorySizeMB) {
-   if (useV2_.load()) {
-      int numOutstanding = v2Buffer_->NumOutstandingSlots();   
+   if (useNewDataBuffer_.load()) {
+      int numOutstanding = newDataBuffer_->NumOutstandingSlots();   
       if (numOutstanding > 0) {
-         throw CMMError("Cannot reallocate V2 buffer: " + std::to_string(numOutstanding) + " outstanding active slot(s) detected.");
+         throw CMMError("Cannot reallocate NewDataBuffer: " + std::to_string(numOutstanding) + " outstanding active slot(s) detected.");
       }
-      delete v2Buffer_;
-      v2Buffer_ = new DataBuffer(memorySizeMB);
+      delete newDataBuffer_;
+      newDataBuffer_ = new DataBuffer(memorySizeMB);
    } else {
       delete circBuffer_;
       circBuffer_ = new CircularBuffer(memorySizeMB);
@@ -66,10 +66,10 @@ void BufferManager::ReallocateBuffer(unsigned int memorySizeMB) {
 
 const void* BufferManager::GetLastData()
 {
-   if (useV2_.load()) {
+   if (useNewDataBuffer_.load()) {
       Metadata dummyMetadata;
       // NOTE: ensure calling code releases the slot after use
-      return v2Buffer_->PeekDataReadPointerAtIndex(0, dummyMetadata);
+      return newDataBuffer_->PeekDataReadPointerAtIndex(0, dummyMetadata);
    } else {
       return circBuffer_->GetTopImage();
    }
@@ -77,10 +77,10 @@ const void* BufferManager::GetLastData()
 
 const void* BufferManager::PopNextData()
 {
-   if (useV2_.load()) {
+   if (useNewDataBuffer_.load()) {
       Metadata dummyMetadata;
       // NOTE: ensure calling code releases the slot after use
-      return v2Buffer_->PopNextDataReadPointer(dummyMetadata, false);
+      return newDataBuffer_->PopNextDataReadPointer(dummyMetadata, false);
    } else {
       return circBuffer_->PopNextImage();
    }
@@ -88,24 +88,24 @@ const void* BufferManager::PopNextData()
 
 long BufferManager::GetRemainingDataCount() const
 {
-   if (useV2_.load()) {
-      return v2Buffer_->GetActiveSlotCount();
+   if (useNewDataBuffer_.load()) {
+      return newDataBuffer_->GetActiveSlotCount();
    } else {
       return circBuffer_->GetRemainingImageCount();
    }
 }
 
 unsigned BufferManager::GetMemorySizeMB() const {
-   if (useV2_.load()) {
-      return v2Buffer_->GetMemorySizeMB();
+   if (useNewDataBuffer_.load()) {
+      return newDataBuffer_->GetMemorySizeMB();
    } else {
       return circBuffer_->GetMemorySizeMB();
    }
 }
 
 unsigned BufferManager::GetFreeSizeMB() const {
-   if (useV2_.load()) {
-      return (unsigned) v2Buffer_->GetFreeMemory() / 1024 / 1024;
+   if (useNewDataBuffer_.load()) {
+      return (unsigned) newDataBuffer_->GetFreeMemory() / 1024 / 1024;
    } else {
       return circBuffer_->GetFreeSize() * circBuffer_->GetImageSizeBytes() / 1024 / 1024;
    }
@@ -113,8 +113,8 @@ unsigned BufferManager::GetFreeSizeMB() const {
 
 bool BufferManager::Overflow() const
 {
-   if (useV2_.load()) {
-      return v2Buffer_->Overflow();
+   if (useNewDataBuffer_.load()) {
+      return newDataBuffer_->Overflow();
    } else {
       return circBuffer_->Overflow();
    }
@@ -137,10 +137,10 @@ int BufferManager::InsertMultiChannel(const char* callerLabel, const unsigned ch
     //  Initialize metadata with either provided metadata or create empty
     Metadata md = (pMd != nullptr) ? *pMd : Metadata();
     
-    if (useV2_.load()) {
+    if (useNewDataBuffer_.load()) {
         // All the data needed to interpret the image is in the metadata
         // This function will copy data and metadata into the buffer
-      return v2Buffer_->InsertData(buf, width * height * byteDepth * numChannels, &md, callerLabel);
+      return newDataBuffer_->InsertData(buf, width * height * byteDepth * numChannels, &md, callerLabel);
     } else {
         return circBuffer_->InsertMultiChannel(buf, numChannels, width, height, 
             byteDepth, &md) ? DEVICE_OK : DEVICE_BUFFER_OVERFLOW;
@@ -151,12 +151,12 @@ int BufferManager::InsertData(const char* callerLabel, const unsigned char* buf,
     //  Initialize metadata with either provided metadata or create empty
     Metadata md = (pMd != nullptr) ? *pMd : Metadata();
     
-    if (!useV2_.load()) {
-        throw CMMError("InsertData() not supported with circular buffer. Must use V2 buffer.");
+    if (!useNewDataBuffer_.load()) {
+        throw CMMError("InsertData() not supported with circular buffer. Must use NewDataBuffer.");
     }
     // All the data needed to interpret the image should be in the metadata
     // This function will copy data and metadata into the buffer
-    return v2Buffer_->InsertData(buf, dataSize, &md, callerLabel);    
+    return newDataBuffer_->InsertData(buf, dataSize, &md, callerLabel);    
 }
 
 
@@ -167,10 +167,10 @@ const void* BufferManager::GetLastDataMD(Metadata& md) const
 
 const void* BufferManager::GetLastDataMD(unsigned channel, unsigned singleChannelSizeBytes, Metadata& md) const throw (CMMError)
 {
-   if (useV2_.load()) {
-      const void* basePtr = v2Buffer_->PeekLastDataReadPointer(md);
+   if (useNewDataBuffer_.load()) {
+      const void* basePtr = newDataBuffer_->PeekLastDataReadPointer(md);
       if (basePtr == nullptr)
-         throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
+         throw CMMError("NewDataBuffer is empty.", MMERR_CircularBufferEmpty);
       // Add multiples of the number of bytes to get the channel pointer
       basePtr = static_cast<const unsigned char*>(basePtr) + channel * singleChannelSizeBytes;
       return basePtr;
@@ -187,9 +187,9 @@ const void* BufferManager::GetLastDataMD(unsigned channel, unsigned singleChanne
 
 const void* BufferManager::GetNthDataMD(unsigned long n, Metadata& md) const throw (CMMError)
 {
-   if (useV2_.load()) {
+   if (useNewDataBuffer_.load()) {
       // NOTE: make sure calling code releases the slot after use.
-      return v2Buffer_->PeekDataReadPointerAtIndex(n, md);
+      return newDataBuffer_->PeekDataReadPointerAtIndex(n, md);
    } else {
       const mm::ImgBuffer* pBuf = circBuffer_->GetNthFromTopImageBuffer(n);
       if (pBuf != nullptr) {
@@ -208,15 +208,15 @@ const void* BufferManager::PopNextDataMD(Metadata& md) throw (CMMError)
 
 /**
  * @deprecated Use PopNextDataMD() without channel parameter instead.
- *             The V2 buffer is data type agnostic
+ *             The NewDataBuffer is data type agnostic
  */
 const void* BufferManager::PopNextDataMD(unsigned channel, 
          unsigned singleChannelSizeBytes, Metadata& md) throw (CMMError)
 {
-   if (useV2_.load()) {
-      const void* basePtr = v2Buffer_->PopNextDataReadPointer(md, false);
+   if (useNewDataBuffer_.load()) {
+      const void* basePtr = newDataBuffer_->PopNextDataReadPointer(md, false);
       if (basePtr == nullptr)
-         throw CMMError("V2 buffer is empty.", MMERR_CircularBufferEmpty);
+         throw CMMError("NewDataBuffer is empty.", MMERR_CircularBufferEmpty);
 
       // Add multiples of the number of bytes to get the channel pointer
       basePtr = static_cast<const unsigned char*>(basePtr) + channel * singleChannelSizeBytes;
@@ -233,9 +233,9 @@ const void* BufferManager::PopNextDataMD(unsigned channel,
    }
 }
 
-int BufferManager::EnableV2Buffer(bool enable) {
+int BufferManager::EnableNewDataBuffer(bool enable) {
     // Don't do anything if we're already in the requested state
-    if (enable == useV2_.load()) {
+    if (enable == useNewDataBuffer_.load()) {
         return DEVICE_OK;
     }
 
@@ -248,20 +248,21 @@ int BufferManager::EnableV2Buffer(bool enable) {
             DataBuffer* newBuffer = new DataBuffer(memorySizeMB);
             delete circBuffer_;
             circBuffer_ = nullptr;
-            v2Buffer_ = newBuffer;
+            newDataBuffer_ = newBuffer;
         } else {
             // Switch to circular buffer
-            int numOutstanding = v2Buffer_->NumOutstandingSlots();
+            int numOutstanding = newDataBuffer_->NumOutstandingSlots();
             if (numOutstanding > 0) {
                 throw CMMError("Cannot switch to circular buffer: " + std::to_string(numOutstanding) + " outstanding active slot(s) detected.");
             }
             CircularBuffer* newBuffer = new CircularBuffer(memorySizeMB);
-            delete v2Buffer_;
-            v2Buffer_ = nullptr;
+            delete newDataBuffer_;
+            newDataBuffer_ = nullptr;
             circBuffer_ = newBuffer;
         }
 
-        useV2_.store(enable);
+        
+        useNewDataBuffer_.store(enable);
         return DEVICE_OK;
     } catch (const std::exception&) {
         // If allocation fails, keep the existing buffer
@@ -269,27 +270,27 @@ int BufferManager::EnableV2Buffer(bool enable) {
     }
 }
 
-bool BufferManager::IsUsingV2Buffer() const {
-   return useV2_.load();
+bool BufferManager::IsUsingNewDataBuffer() const {
+   return useNewDataBuffer_.load();
 }
 
 int BufferManager::ReleaseReadAccess(const void* ptr) {
-    if (useV2_.load() && ptr) {
-        return v2Buffer_->ReleaseDataReadPointer(ptr);
+    if (useNewDataBuffer_.load() && ptr) {
+        return newDataBuffer_->ReleaseDataReadPointer(ptr);
     }
     return DEVICE_ERR;
 }
 
 unsigned BufferManager::GetDataSize(const void* ptr) const {
-   if (!useV2_.load()) 
+   if (!useNewDataBuffer_.load()) 
       return circBuffer_->GetImageSizeBytes();
    else
-      return static_cast<long>(v2Buffer_->GetDatumSize(ptr));
+      return static_cast<long>(newDataBuffer_->GetDatumSize(ptr));
 }
 
 int BufferManager::SetOverwriteData(bool overwrite) {
-    if (useV2_.load()) {
-        return v2Buffer_->SetOverwriteData(overwrite);
+    if (useNewDataBuffer_.load()) {
+        return newDataBuffer_->SetOverwriteData(overwrite);
     } else {
         return circBuffer_->SetOverwriteData(overwrite);
     }
@@ -297,7 +298,7 @@ int BufferManager::SetOverwriteData(bool overwrite) {
 
 int BufferManager::AcquireWriteSlot(const char* deviceLabel, size_t dataSize, size_t additionalMetadataSize,
     void** dataPointer, void** additionalMetadataPointer, Metadata* pInitialMetadata) {
-   if (!useV2_.load()) {
+   if (!useNewDataBuffer_.load()) {
       // Not supported for circular buffer
       return DEVICE_ERR;
    }
@@ -306,77 +307,77 @@ int BufferManager::AcquireWriteSlot(const char* deviceLabel, size_t dataSize, si
    Metadata md = (pInitialMetadata != nullptr) ? *pInitialMetadata : Metadata();
    
    std::string serializedMetadata = md.Serialize();
-   int ret = v2Buffer_->AcquireWriteSlot(dataSize, additionalMetadataSize,
+   int ret = newDataBuffer_->AcquireWriteSlot(dataSize, additionalMetadataSize,
       dataPointer, additionalMetadataPointer, serializedMetadata, deviceLabel);
    return ret;
 }
 
 int BufferManager::FinalizeWriteSlot(const void* imageDataPointer, size_t actualMetadataBytes) {
-    if (!useV2_.load()) {
+    if (!useNewDataBuffer_.load()) {
         // Not supported for circular buffer
         return DEVICE_ERR;
     }
-    return v2Buffer_->FinalizeWriteSlot(imageDataPointer, actualMetadataBytes);
+    return newDataBuffer_->FinalizeWriteSlot(imageDataPointer, actualMetadataBytes);
 }
 
 void BufferManager::ExtractMetadata(const void* dataPtr, Metadata& md) const {
-    if (!useV2_.load()) {
-        throw CMMError("ExtractMetadata is only supported with V2 buffer enabled");
+    if (!useNewDataBuffer_.load()) {
+        throw CMMError("ExtractMetadata is only supported with NewDataBuffer enabled");
     }
     
-    if (v2Buffer_ == nullptr) {
-        throw CMMError("V2 buffer is null");
+    if (newDataBuffer_ == nullptr) {
+        throw CMMError("NewDataBuffer is null");
     }
 
-    int result = v2Buffer_->ExtractCorrespondingMetadata(dataPtr, md);
+    int result = newDataBuffer_->ExtractCorrespondingMetadata(dataPtr, md);
     if (result != DEVICE_OK) {
         throw CMMError("Failed to extract metadata");
     }
 }
 
 const void* BufferManager::GetLastDataFromDevice(const std::string& deviceLabel) throw (CMMError) {
-    if (!useV2_.load()) {
-        throw CMMError("V2 buffer must be enabled for device-specific data access");
+    if (!useNewDataBuffer_.load()) {
+        throw CMMError("NewDataBuffer must be enabled for device-specific data access");
     }
     Metadata md;
     return GetLastDataMDFromDevice(deviceLabel, md);
 }
 
 const void* BufferManager::GetLastDataMDFromDevice(const std::string& deviceLabel, Metadata& md) throw (CMMError) {
-    if (!useV2_.load()) {
-        throw CMMError("V2 buffer must be enabled for device-specific data access");
+    if (!useNewDataBuffer_.load()) {
+        throw CMMError("NewDataBuffer must be enabled for device-specific data access");
     }
     
-    const void* basePtr = v2Buffer_->PeekLastDataReadPointerFromDevice(deviceLabel, md);
+    const void* basePtr = newDataBuffer_->PeekLastDataReadPointerFromDevice(deviceLabel, md);
     if (basePtr == nullptr) {
         throw CMMError("No data found for device: " + deviceLabel, MMERR_InvalidContents);
     }
     return basePtr;
 }
 
-bool BufferManager::IsPointerInV2Buffer(const void* ptr) {
-    if (!useV2_.load()) {
+bool BufferManager::IsPointerInNewDataBuffer(const void* ptr) const {
+    if (!useNewDataBuffer_.load()) {
         return false;
     }
     
-    if (v2Buffer_ == nullptr) {
+    if (newDataBuffer_ == nullptr) {
         return false;
     }
 
-    return v2Buffer_->IsPointerInBuffer(ptr);
+    return newDataBuffer_->IsPointerInBuffer(ptr);
 }
 
 bool BufferManager::GetOverwriteData() const {
-    if (useV2_.load()) {
-        return v2Buffer_->GetOverwriteData();
+    if (useNewDataBuffer_.load()) {
+        return newDataBuffer_->GetOverwriteData();
     } else {
         return circBuffer_->GetOverwriteData();
     }
 }
 
 void BufferManager::Reset() {
-    if (useV2_.load()) {
-        v2Buffer_->Reset();
+    if (useNewDataBuffer_.load()) {
+        newDataBuffer_->Reset();
     } else {
         circBuffer_->Clear();
     }

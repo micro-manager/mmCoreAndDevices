@@ -454,10 +454,10 @@ public:
 
    ///@}
 
-   /** \name v2 buffer control. */
+   /** \name NewDataBuffer control. */
    ///@{
-   void enableV2Buffer(bool enable) throw (CMMError);
-   bool usesV2Buffer() const { return bufferManager_->IsUsingV2Buffer(); }
+   void enableNewDataBuffer(bool enable) throw (CMMError);
+   bool usesNewDataBuffer() const { return bufferManager_->IsUsingNewDataBuffer(); }
    
    // These functions are used by the Java SWIG wrapper to get properties of the image
    // based on a pointer. The DataPtr alias to void* is so they don't get converted to 
@@ -470,7 +470,7 @@ public:
    // enables alternative wrappers in SWIG for pointer-based access to the image data.
 
    // This one is "Image" not "Data" because it corresponds to SnapImage()/GetImage(), 
-   // Which does only goes through the v2 buffer after coming from the camera device buffer,
+   // Which does only goes through the NewDataBuffer after coming from the camera device buffer,
    // so it is guarenteed to be an image, not a more generic piece of data.
    BufferDataPointer* getImagePointer() throw (CMMError);
 
@@ -739,7 +739,7 @@ private:
    CorePropertyCollection* properties_;
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
-   // New adapter to wrap either the circular buffer or the DataBuffer (v2)
+   // New adapter to wrap either the circular buffer or the NewDataBuffer
    BufferManager* bufferManager_;
 
    std::shared_ptr<CPluginManager> pluginManager_;

@@ -27,7 +27,7 @@
 #define BUFFERMANAGER_H
 
 #include "CircularBuffer.h"
-#include "Buffer_v2.h"
+#include "NewDataBuffer.h"
 #include "../MMDevice/MMDevice.h"
 #include <chrono>
 #include <map>
@@ -42,7 +42,7 @@
  * with associated metadata that describes how to interpret the raw bytes.
  * 
  * The implementation supports two buffer types:
- * - The newer V2 buffer that handles generic data
+ * - The newer NewDataBuffer that handles generic data
  * - The legacy circular buffer (for backwards compatibility) that assumes image data
  * 
  * While the preferred usage is through the generic data methods (InsertData, 
@@ -51,14 +51,14 @@
  */
 class BufferManager {
 public:
-   static const char* const DEFAULT_V2_BUFFER_NAME;
+   static const char* const DEFAULT_NEW_DATA_BUFFER_NAME;
 
    /**
     * Constructor.
-    * @param useV2Buffer Set to true to use the new DataBuffer (v2); false to use CircularBuffer.
+    * @param useNewDataBuffer Set to true to use the new DataBuffer (NewDataBuffer); false to use CircularBuffer.
     * @param memorySizeMB Memory size for the buffer (in megabytes).
     */
-   BufferManager(bool useV2Buffer, unsigned int memorySizeMB);
+   BufferManager(bool useNewDataBuffer, unsigned int memorySizeMB);
    ~BufferManager();
 
    /**
@@ -68,11 +68,11 @@ public:
    void ReallocateBuffer(unsigned int memorySizeMB);
 
    /**
-    * Enable or disable v2 buffer usage.
-    * @param enable Set to true to use v2 buffer, false to use circular buffer.
+    * Enable or disable NewDataBuffer usage.
+    * @param enable Set to true to use NewDataBuffer, false to use CircularBuffer.
     * @return true if the switch was successful, false otherwise.
     */
-   int EnableV2Buffer(bool enable);
+   int EnableNewDataBuffer(bool enable);
 
    /**
     * Get a pointer to the top (most recent) image.
@@ -132,7 +132,7 @@ public:
     * @param byteDepth Bytes per pixel.
     * @param pMd Metadata associated with the image.
     * @return DEVICE_OK on success, DEVICE_ERR on error.
-    * @deprecated This method is not preferred for the V2 buffer. Use InsertData() instead.
+    * @deprecated This method is not preferred for the NewDataBuffer. Use InsertData() instead.
     *             This method assumes specific image data format. It is provided for backwards 
     *             compatibility with with the circular buffer, which assumes images captured on a camera.
     */
@@ -164,17 +164,17 @@ public:
 
    const void* GetNthDataMD(unsigned long n, Metadata& md) const;
 
-   // Channels are not directly supported in v2 buffer, these are for backwards compatibility
+   // Channels are not directly supported in NewDataBuffer, these are for backwards compatibility
    // with circular buffer
    
    /**
-    * @deprecated This method is not preferred for the V2 buffer. Use GetLastDataMD() without channel parameter instead.
-    *             The V2 is data type agnostic
+    * @deprecated This method is not preferred for the NewDataBuffer. Use GetLastDataMD() without channel parameter instead.
+    *             The NewDataBuffer is data type agnostic
     */
    const void* GetLastDataMD(unsigned channel, unsigned singleChannelSizeBytes, Metadata& md) const;
    /**
-    * @deprecated This method is not preferred for the V2 buffer. Use PopNextDataMD() without channel parameter instead.
-    *             The V2 buffer is data type agnostic
+    * @deprecated This method is not preferred for the NewDataBuffer. Use PopNextDataMD() without channel parameter instead.
+    *             The NewDataBuffer is data type agnostic
     */
    const void* PopNextDataMD(unsigned channel, unsigned singleChannelSizeBytes,Metadata& md);
 
@@ -182,14 +182,14 @@ public:
    const void* PopNextDataMD(Metadata& md);
 
    /**
-    * Check if this manager is using the V2 buffer implementation.
-    * @return true if using V2 buffer, false if using circular buffer.
+    * Check if this manager is using the NewDataBuffer implementation.
+    * @return true if using NewDataBuffer, false if using circular buffer.
     */
-   bool IsUsingV2Buffer() const;
+   bool IsUsingNewDataBuffer() const;
 
    /**
     * Release a pointer obtained from the buffer.
-    * This is required when using the V2 buffer implementation.
+    * This is required when using the NewDataBuffer implementation.
     * @param ptr The pointer to release.
     * @return DEVICE_OK on success, DEVICE_ERR on error.
     */
@@ -230,7 +230,7 @@ public:
     * Extracts metadata for a given data pointer.
     * @param dataPtr Pointer to the data.
     * @param md Metadata object to populate.
-    * @throws CMMError if V2 buffer is not enabled or extraction fails.
+    * @throws CMMError if NewDataBuffer is not enabled or extraction fails.
     */
    void ExtractMetadata(const void* dataPtr, Metadata& md) const;
 
@@ -246,7 +246,7 @@ public:
     * Get the last data inserted by a specific device.
     * @param deviceLabel The label of the device to get the data from.
     * @return Pointer to the data.
-    * @throws CMMError if no data is found or V2 buffer is not enabled.
+    * @throws CMMError if no data is found or NewDataBuffer is not enabled.
     */
    const void* GetLastDataFromDevice(const std::string& deviceLabel);
 
@@ -255,7 +255,7 @@ public:
     * @param deviceLabel The label of the device to get the data from.
     * @param md Metadata object to populate.
     * @return Pointer to the data.
-    * @throws CMMError if no data is found or V2 buffer is not enabled.
+    * @throws CMMError if no data is found or NewDataBuffer is not enabled.
     */
    const void* GetLastDataMDFromDevice(const std::string& deviceLabel, Metadata& md);
 
@@ -264,7 +264,7 @@ public:
     * @param ptr The pointer to check.
     * @return true if the pointer is in the buffer, false otherwise.
     */
-   bool IsPointerInV2Buffer(const void* ptr) const;
+   bool IsPointerInNewDataBuffer(const void* ptr) const;
 
    /**
     * Get whether the buffer is in overwrite mode.
@@ -275,7 +275,7 @@ public:
    /**
     * Get the underlying CircularBuffer pointer.
     * This method is provided for backwards compatibility only.
-    * @return Pointer to CircularBuffer if using legacy buffer, nullptr if using V2 buffer
+    * @return Pointer to CircularBuffer if using legacy buffer, nullptr if using NewDataBuffer
     * @deprecated This method exposes implementation details and should be avoided in new code
     */
    CircularBuffer* GetCircularBuffer() { return circBuffer_; }
@@ -287,9 +287,9 @@ public:
 
 private:
    
-   std::atomic<bool> useV2_;
+   std::atomic<bool> useNewDataBuffer_;
    CircularBuffer* circBuffer_;
-   DataBuffer* v2Buffer_;
+   DataBuffer* newDataBuffer_;
    
 
    /**

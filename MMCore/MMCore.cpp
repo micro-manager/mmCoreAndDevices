@@ -54,7 +54,7 @@
 #include "MMCore.h"
 #include "MMEventCallback.h"
 #include "PluginManager.h"
-#include "BufferDataPointer.h"
+#include "NewDataBufferPointer.h"
 
 #include <algorithm>
 #include <cassert>
@@ -2897,7 +2897,7 @@ void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
 
 void CMMCore::addMultiCameraMetadata(Metadata& md,  int cameraChannelIndex = 0) const
 {
-   // Multi-camera device adapter metadata. This is considered legacy since the v2 buffer
+   // Multi-camera device adapter metadata. This is considered legacy since the NewDataBuffer
    // make the multi-camera adapter unnecessary.
    
    if (!md.HasTag("CameraChannelIndex")) {
@@ -2906,7 +2906,7 @@ void CMMCore::addMultiCameraMetadata(Metadata& md,  int cameraChannelIndex = 0) 
    }
 
    // This whole block seems superfluos now since we always add the "Camera" tag
-   // in the block above. Also, the V2 buffer eliminates the need for the multi-camera
+   // in the block above. Also, the NewDataBuffer eliminates the need for the multi-camera
    // adapter. Leaving here and commented out for now, because I'm unsure what the upstream
    // effects are
    // if (!md.HasTag("Camera")) {
@@ -3063,10 +3063,10 @@ void* CMMCore::getImageMD(Metadata& md) throw (CMMError)
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
 
    mm::DeviceModuleLockGuard guard(camera);
-   // Need to do this becuase this data was never inserted into the circular buffer or V2 buffer where this
+   // Need to do this becuase this data was never inserted into the circular buffer or NewDataBuffer where this
    // metadata is added for other images   
    addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
-                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents(), true);
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents());
    
    return pBuf;
 }
@@ -3079,20 +3079,20 @@ void* CMMCore::getImageMD(unsigned channelNr, Metadata& md) throw (CMMError)
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
 
    mm::DeviceModuleLockGuard guard(camera);
-   // Need to do this becuase this data was never inserted into the circular buffer or V2 buffer where this
+   // Need to do this becuase this data was never inserted into the circular buffer or NewDataBuffer where this
    // metadata is added for other images
    addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
-                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents(), true);
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents());
    addMultiCameraMetadata(md, channelNr);
    return pBuf;
 }
 
 
 /**
- * For use with V2 buffer
+ * For use with NewDataBuffer
  *
  * Get a pointer to the image acquired by snapImage. This will copy the image
- * from the camera buffer into the V2 buffer so that it can be persistently   
+ * from the camera buffer into the NewDataBuffer so that it can be persistently   
  * accessed (i.e. subsequent calls snapImage will not overwrite the pointer
  * returned by this function). 
  * 
@@ -3104,8 +3104,8 @@ void* CMMCore::getImageMD(unsigned channelNr, Metadata& md) throw (CMMError)
  */
 BufferDataPointer* CMMCore::getImagePointer() throw (CMMError)
 {
-   if (!bufferManager_->IsUsingV2Buffer() ) 
-      throw CMMError("Only valid when V2 buffer in use");
+   if (!bufferManager_->IsUsingNewDataBuffer() ) 
+      throw CMMError("Only valid when NewDataBuffer in use");
 
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (!camera)
@@ -3144,13 +3144,13 @@ BufferDataPointer* CMMCore::getImagePointer() throw (CMMError)
          
          
          Metadata md;
-         // Add metadata to know how to interpret the data added to v2 buffer
+         // Add metadata to know how to interpret the data added to NewDataBuffer
          addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
-                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents(), true);
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents());
          unsigned imageSize = camera->GetImageWidth() * camera->GetImageHeight() * camera->GetImageBytesPerPixel();
          int ret = bufferManager_->InsertData(camera->GetLabel().c_str(), (unsigned char*)pBuf, imageSize, &md);
          if (ret != DEVICE_OK) {
-            throw CMMError("v2 buffer overflow");
+            throw CMMError("NewDataBuffer overflow");
          }
 
          if (bufferManager_->GetOverwriteData()) {
@@ -3224,15 +3224,15 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
 
       try
       {
-         if (!bufferManager_->IsUsingV2Buffer()) {
+         if (!bufferManager_->IsUsingNewDataBuffer()) {
             if (!bufferManager_->GetCircularBuffer()->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
             {
                logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
                throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
             }
          }
-         if (!bufferManager_->IsUsingV2Buffer()) {
-            // V2 buffer does not support this, because its design is such that data
+         if (!bufferManager_->IsUsingNewDataBuffer()) {
+            // NewDataBuffer does not support this, because its design is such that data
             // could still be read out even when a new sequence is started.
             bufferManager_->GetCircularBuffer()->Clear();
          }
@@ -3278,7 +3278,7 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
                      MMERR_NotAllowedDuringSequenceAcquisition);
 
-   if (!bufferManager_->IsUsingV2Buffer()) {
+   if (!bufferManager_->IsUsingNewDataBuffer()) {
       if (!bufferManager_->GetCircularBuffer()->Initialize(pCam->GetNumberOfChannels(), pCam->GetImageWidth(), pCam->GetImageHeight(), pCam->GetImageBytesPerPixel()))
       {
          logError(getDeviceName(pCam).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
@@ -3331,7 +3331,7 @@ void CMMCore::prepareSequenceAcquisition(const char* label) throw (CMMError)
  */
 void CMMCore::initializeCircularBuffer() throw (CMMError)
 {
-   if (!bufferManager_->IsUsingV2Buffer()) {   
+   if (!bufferManager_->IsUsingNewDataBuffer()) {   
       std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
       if (camera)
       {
@@ -3398,7 +3398,7 @@ void CMMCore::startContinuousSequenceAcquisition(const char* cameraLabel, double
       }
 
       // Legacy calls for circular buffer
-      if (!bufferManager_->IsUsingV2Buffer()) {
+      if (!bufferManager_->IsUsingNewDataBuffer()) {
          if (!bufferManager_->GetCircularBuffer()->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
          {
             logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
@@ -3616,10 +3616,10 @@ void* CMMCore::popNextImageMD(Metadata& md) throw (CMMError)
    return pixels;
 }
 
-//// Data pointer access for v2 Buffer
+//// Data pointer access for NewDataBuffer
 BufferDataPointer* CMMCore::getLastDataPointer() throw (CMMError) { 
-    if (!bufferManager_->IsUsingV2Buffer()) {
-        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    if (!bufferManager_->IsUsingNewDataBuffer()) {
+        throw CMMError("NewDataBuffer must be enabled for pointer-based image access");
     }
     const void* rawPtr = bufferManager_->GetLastData();
     if (rawPtr == nullptr) {
@@ -3629,8 +3629,8 @@ BufferDataPointer* CMMCore::getLastDataPointer() throw (CMMError) {
 }
 
 BufferDataPointer* CMMCore::popNextDataPointer() throw (CMMError) { 
-    if (!bufferManager_->IsUsingV2Buffer()) {
-        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    if (!bufferManager_->IsUsingNewDataBuffer()) {
+        throw CMMError("NewDataBuffer must be enabled for pointer-based image access");
     }
     const void* rawPtr = bufferManager_->PopNextData();
     if (rawPtr == nullptr) {
@@ -3640,8 +3640,8 @@ BufferDataPointer* CMMCore::popNextDataPointer() throw (CMMError) {
 }
 
 BufferDataPointer* CMMCore::getLastDataFromDevicePointer(std::string deviceLabel) throw (CMMError) {
-    if (!bufferManager_->IsUsingV2Buffer()) {
-        throw CMMError("V2 buffer must be enabled for pointer-based image access");
+    if (!bufferManager_->IsUsingNewDataBuffer()) {
+        throw CMMError("NewDataBuffer must be enabled for pointer-based image access");
     }
     const void* rawPtr = bufferManager_->GetLastDataFromDevice(deviceLabel);
     if (rawPtr == nullptr) {
@@ -3658,15 +3658,15 @@ BufferDataPointer* CMMCore::getLastDataFromDevicePointer(std::string deviceLabel
  */
 void CMMCore::clearCircularBuffer() throw (CMMError)
 {
-   if (!bufferManager_->IsUsingV2Buffer()) {
+   if (!bufferManager_->IsUsingNewDataBuffer()) {
       clearBuffer();
    }
-   // No effect on v2 because Reset should be used more carefully
+   // No effect on NewDataBuffer because Reset should be used more carefully
 }
 
 /**
- * This method applies to both the circular buffer and the v2 buffer.
- * A difference between the circular buffer and v2 buffer is that the v2 buffer
+ * This method applies to both the circular buffer and the NewDataBuffer.
+ * A difference between the circular buffer and NewDataBuffer is that the NewDataBuffer
  * does require to be empty of images before a new sequence is started. In other 
  * words, producers can be adding data to it that is asynchronously consumed.
  * 
@@ -3679,11 +3679,11 @@ void CMMCore::clearBuffer() throw (CMMError)
 }
 
 /**
- * Enables or disables the v2 buffer.
+ * Enables or disables the NewDataBuffer.
  */
-void CMMCore::enableV2Buffer(bool enable) throw (CMMError)
+void CMMCore::enableNewDataBuffer(bool enable) throw (CMMError)
 {
-    int ret = bufferManager_->EnableV2Buffer(enable);
+    int ret = bufferManager_->EnableNewDataBuffer(enable);
     if (ret != DEVICE_OK)
         throw CMMError("Failed to enable New Data Buffer", ret);
    
@@ -3733,7 +3733,7 @@ void CMMCore::setBufferMemoryFootprint(unsigned sizeMB) throw (CMMError)
       if (camera)
 		{
          mm::DeviceModuleLockGuard guard(camera);
-         if (!bufferManager_->IsUsingV2Buffer()) {
+         if (!bufferManager_->IsUsingNewDataBuffer()) {
             // Circular buffer requires initialization specific to the camera
             if (!bufferManager_->GetCircularBuffer()->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
                throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
@@ -4769,33 +4769,33 @@ unsigned CMMCore::getNumberOfComponents()
 }
 
 void CMMCore::releaseReadAccess(DataPtr ptr) {
-   if (bufferManager_->IsUsingV2Buffer()) {
+   if (bufferManager_->IsUsingNewDataBuffer()) {
       bufferManager_->ReleaseReadAccess(ptr);
    }
 }
 
 
 // For the below function that gets properties of the image based on a pointer,
-// Cant assume that this a v2 buffer pointer, because Java SWIG wrapper
+// Cant assume that this a NewDataBuffer pointer, because Java SWIG wrapper
 // will call this after copying from a snap buffer. So we'll check if the 
 // buffer knows about this pointer. If not, it's a snap buffer pointer.
 // We don't want want to compare to the snap buffer pointer directly because
 // its unclear what the device adapter might do when this is called.
 void CMMCore::getImageProperties(DataPtr ptr, int& width, int& height, 
                                     int& byteDepth, int& nComponents) throw (CMMError) {
-   if (!bufferManager_->IsUsingV2Buffer()) {
+   if (!bufferManager_->IsUsingNewDataBuffer()) {
       // Could be snap or circular buffer pointer
       width = getImageWidth();
       height = getImageHeight();
       byteDepth = getBytesPerPixel();
       nComponents = getNumberOfComponents();
-   } else  if (bufferManager_->IsPointerInV2Buffer(ptr)) {
-      // V2 buffer pointer
+   } else  if (bufferManager_->IsPointerInNewDataBuffer(ptr)) {
+      // NewDataBuffer pointer
       Metadata md;
       bufferManager_->ExtractMetadata(ptr, md);
       parseImageMetadata(md, width, height, byteDepth, nComponents);
    } else {
-      // Snap buffer pointer with v2 buffer on
+      // Snap buffer pointer with NewDataBuffer on
       width = getImageWidth();
       height = getImageHeight();
       byteDepth = getBytesPerPixel();
@@ -4967,7 +4967,7 @@ void CMMCore::setROI(int x, int y, int xSize, int ySize) throw (CMMError)
       // buffer may have sizes inconsistent with the current image size. 
       // There is no way to "fix" popNextImage() to handle this correctly, 
       // so we need to make sure we discard such images.
-      if (! bufferManager_->IsUsingV2Buffer()) {
+      if (! bufferManager_->IsUsingNewDataBuffer()) {
          bufferManager_->GetCircularBuffer()->Clear();
       }
    }
@@ -5048,7 +5048,7 @@ void CMMCore::setROI(const char* label, int x, int y, int xSize, int ySize) thro
      // inconsistent with the current image size. There is no way to "fix"
      // popNextImage() to handle this correctly, so we need to make sure we
      // discard such images.
-     if (!bufferManager_->IsUsingV2Buffer()) {
+     if (!bufferManager_->IsUsingNewDataBuffer()) {
         bufferManager_->GetCircularBuffer()->Clear();
      }
   }
@@ -5109,7 +5109,7 @@ void CMMCore::clearROI() throw (CMMError)
       // buffer may have sizes inconsistent with the current image size. 
       // There is no way to "fix" popNextImage() to handle this correctly, 
       // so we need to make sure we discard such images.
-      if (!bufferManager_->IsUsingV2Buffer()) {
+      if (!bufferManager_->IsUsingNewDataBuffer()) {
          bufferManager_->GetCircularBuffer()->Clear();
       }
    }
