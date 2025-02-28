@@ -169,8 +169,13 @@ CMMCore::CMMCore() :
    pluginManager_(new CPluginManager()),
    deviceManager_(new mm::DeviceManager()),
    pPostedErrorsLock_(NULL),
-   includeSystemStateCache_(true),
-   metadataProfileFlag_(0)
+   imageMDIncludeSystemStateCache_(true),
+   imageMDIncludeBitDepth_(true),
+   imageMDIncludeCameraParams_(true),
+   imageMDIncludeCameraTags_(true),
+   imageMDIncludeTiming_(true),
+   imageMDIncludeLegacyCalibration_(true),
+   imageMDIncludeAdditionalLegacy_(false)
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
@@ -2692,6 +2697,55 @@ bool CMMCore::getShutterOpen() throw (CMMError)
 }
 
 /**
+ * Set whether to include a specific category of metadata in the image metadata.
+ * 
+ * Valid categories are:
+ * - "BitDepth"
+ * - "CameraParams"
+ * - "CameraTags"
+ * - "Timing"
+ * - "SystemStateCache"
+ * - "LegacyCalibration"
+ * - "Legacy"
+ * 
+ * @param category The category of metadata to include.
+ * @param include Whether to include the metadata.
+ */
+void CMMCore::setIncludeImageMetadata(std::string & category, bool include) throw (CMMError) {
+   if (category == MM::g_Keyword_Metadata_BitDepth) {
+      imageMDIncludeBitDepth_ = include;
+   } 
+   else if (category == MM::g_Keyword_Metadata_CameraParams) {
+      imageMDIncludeCameraParams_ = include;
+   }
+   else if (category == MM::g_Keyword_Metadata_CameraTags) {
+      imageMDIncludeCameraTags_ = include;
+   }
+   else if (category == MM::g_Keyword_Metadata_Timing) {
+      imageMDIncludeTiming_ = include;
+   }
+   else if (category == MM::g_Keyword_Metadata_SystemStateCache) {
+      imageMDIncludeSystemStateCache_ = include;
+   }
+   else if (category == MM::g_Keyword_Metadata_LegacyCalibration) {
+      imageMDIncludeLegacyCalibration_ = include;
+   }
+   else if (category == MM::g_Keyword_Metadata_Legacy) {
+      imageMDIncludeAdditionalLegacy_ = include;
+   }
+   else {
+      throw CMMError("Invalid metadata category. Valid options are: " + 
+                     std::string(MM::g_Keyword_Metadata_BitDepth) + ", " + 
+                     std::string(MM::g_Keyword_Metadata_CameraParams) + ", " + 
+                     std::string(MM::g_Keyword_Metadata_CameraTags) + ", " + 
+                     std::string(MM::g_Keyword_Metadata_Timing) + ", " + 
+                     std::string(MM::g_Keyword_Metadata_SystemStateCache) + ", " + 
+                     std::string(MM::g_Keyword_Metadata_LegacyCalibration) + ", " + 
+                     std::string(MM::g_Keyword_Metadata_Legacy));
+    }
+}
+
+/**
  * A centralized function that adds all the metadata for camera devices.
  * 
  * This was previously spread among the circular buffer, corecallback.h, and 
@@ -2703,8 +2757,9 @@ bool CMMCore::getShutterOpen() throw (CMMError)
  * The caller should have locked the camera device, or be calling from a thread
  * in the camera (e.g. CoreCallback::InsertImage)
  */
+
 void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
-                  unsigned byteDepth, unsigned nComponents, bool addLegacyMetadata) throw (CMMError)
+                  unsigned byteDepth, unsigned nComponents)
 {    
     // Essential metadata for interpreting the image: Width, height, and pixel type
     md.PutImageTag(MM::g_Keyword_Metadata_Width, (unsigned int) width);
@@ -2728,19 +2783,13 @@ void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
    if (!md.HasTag(MM::g_Keyword_Metadata_CameraLabel)) {
      md.put(MM::g_Keyword_Metadata_CameraLabel, pCam->GetLabel());
    }
-   
-   // Return if no additional metadata requested
-   if (metadataProfileFlag_ == 0) {
-      return;
-   }
 
-   // Group 2: Bit depth
-   if (metadataProfileFlag_ >= 2) {
+   // Optional metadata
+   if (imageMDIncludeBitDepth_) {
       md.put(MM::g_Keyword_Metadata_BitDepth, CDeviceUtils::ConvertToString((long) pCam->GetBitDepth()));
    }
    
-   // Group 3: Camera settings (ROI, binning)
-   if (metadataProfileFlag_ >= 3) {
+   if (imageMDIncludeCameraParams_) {
       unsigned x, y, xSize, ySize;
       pCam->GetROI(x, y, xSize, ySize);
       std::string roiTag = std::to_string(x) + "-" + std::to_string(y) + "-" + 
@@ -2754,8 +2803,7 @@ void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
       catch (const CMMError&) { }
    }
    
-   // Group 4: Timing metadata
-   if (metadataProfileFlag_ >= 4) {
+   if (imageMDIncludeTiming_) {
       std::lock_guard<std::mutex> lock(imageNumbersMutex_);
       std::string cameraName = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
       if (imageNumbers_.find(cameraName) == imageNumbers_.end()) {
@@ -2775,8 +2823,7 @@ void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
       md.put(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
    }
    
-   // Group 5: Camera-specific tags
-   if (metadataProfileFlag_ >= 5) {
+   if (imageMDIncludeCameraTags_) {
       try {
          std::string serializedMD = pCam->GetTags();
          Metadata devMD;
@@ -2786,10 +2833,7 @@ void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
       catch (const CMMError&) { }
    }
    
-   // Group 6: Pixel size metadata
-   // I'm unsure about these. They seem like they should be specific to a camera, but 
-   // they seem to only be defined globally. Leave as is for now.
-   if (metadataProfileFlag_ >= 6) {
+   if (imageMDIncludeLegacyCalibration_) {
       try {      
          int binning = pCam->GetBinning();
          md.put("PixelSizeUm", CDeviceUtils::ConvertToString(getPixelSizeUm(true, binning)));
@@ -2809,11 +2853,10 @@ void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
       catch (const CMMError&) { }
    }
    
-      // Metadata that previously was in the Java SWIG layer and I think may be used by the application 
+   // Metadata that previously was in the Java SWIG layer and I think may be used by the application 
    // and/or acquisition engine. However, it doesn't really make sense that this would exist in this 
    // since channel, slice, position, etc. higher level concepts associated with an acquisition engine
-   // Group 7: Legacy metadata
-   if (metadataProfileFlag_ >= 7 && addLegacyMetadata) {
+   if (imageMDIncludeAdditionalLegacy_) {
       md.put("Frame", "0");
       md.put("FrameIndex", "0");
       md.put("Position", "Default");
@@ -2837,8 +2880,7 @@ void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& 
       }
    }
    
-   // Group 8: System state cache
-   if (metadataProfileFlag_ >= 8 && includeSystemStateCache_) {
+   if (imageMDIncludeSystemStateCache_) {
       try {
          // MMThreadGuard scg(stateCacheLock_); // Needed?
          Configuration state = getSystemStateCache();
@@ -3643,7 +3685,14 @@ void CMMCore::enableV2Buffer(bool enable) throw (CMMError)
 {
     int ret = bufferManager_->EnableV2Buffer(enable);
     if (ret != DEVICE_OK)
-        throw CMMError("Failed to enable V2 buffer", ret);
+        throw CMMError("Failed to enable New Data Buffer", ret);
+   
+   // Default include circular buffer, exclude new buffer
+   imageMDIncludeLegacyCalibration_ = !enable;
+   imageMDIncludeSystemStateCache_ = !enable;
+   imageMDIncludeCameraTags_ = !enable;
+
+   
 }
 
 /**

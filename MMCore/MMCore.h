@@ -686,15 +686,22 @@ public:
 
    /** \name Image metadata. */
    ///@{
+
+   /**
+    * Unclear why this is needed, deprecate?
+    */
    bool getIncludeSystemStateCache() { 
-      return includeSystemStateCache_;
+      return imageMDIncludeSystemStateCache_;
    }
+
+   /**
+    * @deprecated Use setIncludeImageMetadata("SystemStateCache", state) instead
+    */
    void setIncludeSystemStateCache(bool state) {
-      includeSystemStateCache_ = state;
+      imageMDIncludeSystemStateCache_ = state;
    }
-   void setMetadataProfile(int level) {
-      metadataProfileFlag_ = level;
-   }
+
+   void setIncludeImageMetadata(std::string & category, bool include) throw (CMMError);
    ///@}
 
    static void parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents);
@@ -751,8 +758,13 @@ private:
    std::map<std::string, long> imageNumbers_;  // Track image numbers per camera
    std::mutex imageNumbersMutex_;
    std::chrono::steady_clock::time_point startTime_; // Start time for elapsed time calculations in seuqence acquisition
-   bool includeSystemStateCache_;
-   int metadataProfileFlag_;
+   bool imageMDIncludeSystemStateCache_;
+   bool imageMDIncludeBitDepth_;
+   bool imageMDIncludeCameraParams_;
+   bool imageMDIncludeCameraTags_;
+   bool imageMDIncludeTiming_;
+   bool imageMDIncludeLegacyCalibration_;
+   bool imageMDIncludeAdditionalLegacy_;
 
 private:
    void InitializeErrorMessages();
@@ -789,7 +801,7 @@ private:
    // If support for other types of data is added in the future, alternative versions of these functions
    // should be added.
    void addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
-                  unsigned byteDepth, unsigned nComponents, bool addLegacyMetadata);
+                  unsigned byteDepth, unsigned nComponents);
    // Additional metadata for the multi-camera device adapter
    void addMultiCameraMetadata(Metadata& md, int cameraChannelIndex) const;
    // Want to be able to pass in binning so camera doesn't have to be locked and this can

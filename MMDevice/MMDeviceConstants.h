@@ -175,6 +175,15 @@ namespace MM {
    const char* const g_Keyword_Metadata_ROI_Y       = "ROI-Y-start";
    const char* const g_Keyword_Metadata_TimeInCore  = "TimeReceivedByCore";
 
+   // Image metadata categories
+   const char* const g_Keyword_Metadata_BitDepth = "BitDepth";
+   const char* const g_Keyword_Metadata_CameraParams = "CameraParams";
+   const char* const g_Keyword_Metadata_CameraTags = "CameraTags";
+   const char* const g_Keyword_Metadata_Timing = "Timing";
+   const char* const g_Keyword_Metadata_SystemStateCache = "SystemStateCache";
+   const char* const g_Keyword_Metadata_LegacyCalibration = "LegacyCalibration";
+   const char* const g_Keyword_Metadata_Legacy = "Legacy";
+   
    // configuration file format constants
    const char* const g_FieldDelimiters = ",";
    const char* const g_CFGCommand_Device = "Device";
