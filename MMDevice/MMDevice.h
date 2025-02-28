@@ -212,6 +212,8 @@ namespace MM {
    ///// Standard properties
    ////////////////////////////
    
+   //// Helper functions/macros for compile time and runtime checking of standard properties
+
    // Map from device types to standard properties
    inline std::unordered_map<MM::DeviceType, std::vector<StandardProperty>>& GetDeviceTypeStandardPropertiesMap() {
       static std::unordered_map<MM::DeviceType, std::vector<StandardProperty>> devicePropertiesMap;
@@ -236,6 +238,42 @@ namespace MM {
       return std::find(validProperties.begin(), validProperties.end(), prop) != validProperties.end();
    }
 
+   // The below code is a way to enable compile time checking of which 
+   // standard properties are are valid for which device types. This enables
+   // methods for setting these standard properties defined once 
+   // in CDeviceBase and then conditionally enabled in child classes based on
+   // the LINK_STANDARD_PROP_TO_DEVICE_TYPE macro below
+   // In addition to making this link, a dedicated method for the standard property
+   // should be created in CDeviceBase.
+   template <MM::DeviceType DeviceType, const MM::StandardProperty& PropRef>
+   struct IsStandardPropertyValid {
+      static const bool value = false; // Default to false
+   };
+
+   // The top struct enables compile time checking of standard property
+   // creation methods (ie that you can call the CreateXXXXStandardProperty
+   // in a device type that doesn't support it)
+   // The bottom part adds the standard property to a runtime registry
+   // which enables higher level code the query the standard properties
+   // associated with a particular device type and check that everything
+   // is correct (ie all required properties are implemented after
+   // device initialization)
+   #define LINK_STANDARD_PROP_TO_DEVICE_TYPE(DeviceType, PropertyRef) \
+   template <> \
+   struct IsStandardPropertyValid<DeviceType, PropertyRef> { \
+      static const bool value = true; \
+   }; \
+   namespace { \
+      static const bool PropertyRef##_registered = (RegisterStandardProperty(PropertyRef, {DeviceType}), true); \
+   }
+
+   /////// Standard property definitions
+   // Each standard property is defined here, and then linked to one or more
+   // device types using the LINK_STANDARD_PROP_TO_DEVICE_TYPE macro.
+   // This allows compile time checking that the property is valid for a
+   // particular device type, and also allows runtime querying of which
+   // properties are supported by a given device.
+
    // Specific standard properties
    static const MM::StandardProperty g_TestStandardProperty(
       "Test",                // name
@@ -248,6 +286,9 @@ namespace MM {
       PropertyLimitUndefined,   // upperLimit
       false                 // required
    );
+
+   LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestStandardProperty)
+
 
    static const std::vector<std::string> testRequiredValues = {"value1", "value2", "value3"};
    static const MM::StandardProperty g_TestWithValuesStandardProperty(
@@ -262,32 +303,8 @@ namespace MM {
       false                 // required
    );
 
-
-   // The below code is a way to enable compile time checking of which 
-   // standard properties are are valid for which device types. This enables
-   // methods for setting these standard properties defined once 
-   // in CDeviceBase and then conditionally enabled in child classes based on
-   // the LINK_STANDARD_PROP_TO_DEVICE_TYPE macro below
-   // In addition to making this link, a dedicated method for the standard property
-   // should be created in CDeviceBase.
-   template <MM::DeviceType DeviceType, const MM::StandardProperty& PropRef>
-   struct IsStandardPropertyValid {
-      static const bool value = false; // Default to false
-   };
-
-
-   #define LINK_STANDARD_PROP_TO_DEVICE_TYPE(DeviceType, PropertyRef) \
-   template <> \
-   struct IsStandardPropertyValid<DeviceType, PropertyRef> { \
-      static const bool value = true; \
-   }; \
-   namespace { \
-      static const bool PropertyRef##_registered = (RegisterStandardProperty(PropertyRef, {DeviceType}), true); \
-   }
-
-   // This determines which standard properties are valid for which device types
-   LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestStandardProperty)
    LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestWithValuesStandardProperty)
+
 
    /**
     * Generic device interface.

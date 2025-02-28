@@ -1268,12 +1268,6 @@ protected:
 
 private:
 
-   // template <typename T>
-   // struct TypePrinter;
-
-   // // This will cause a compilation error that shows the type
-   // TypePrinter<decltype(T::Type)> show_type;
-
    /**
     * Low-level implementation for creating standard properties.
     * 
