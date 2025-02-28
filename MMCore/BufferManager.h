@@ -162,7 +162,7 @@ public:
 
 
 
-   const void* GetNthDataMD(unsigned long n, Metadata& md) const throw (CMMError);
+   const void* GetNthDataMD(unsigned long n, Metadata& md) const;
 
    // Channels are not directly supported in v2 buffer, these are for backwards compatibility
    // with circular buffer
@@ -171,15 +171,15 @@ public:
     * @deprecated This method is not preferred for the V2 buffer. Use GetLastDataMD() without channel parameter instead.
     *             The V2 is data type agnostic
     */
-   const void* GetLastDataMD(unsigned channel, unsigned singleChannelSizeBytes, Metadata& md) const throw (CMMError);
+   const void* GetLastDataMD(unsigned channel, unsigned singleChannelSizeBytes, Metadata& md) const;
    /**
     * @deprecated This method is not preferred for the V2 buffer. Use PopNextDataMD() without channel parameter instead.
     *             The V2 buffer is data type agnostic
     */
-   const void* PopNextDataMD(unsigned channel, unsigned singleChannelSizeBytes,Metadata& md) throw (CMMError);
+   const void* PopNextDataMD(unsigned channel, unsigned singleChannelSizeBytes,Metadata& md);
 
-   const void* GetLastDataMD(Metadata& md) const throw (CMMError);
-   const void* PopNextDataMD(Metadata& md) throw (CMMError);
+   const void* GetLastDataMD(Metadata& md) const;
+   const void* PopNextDataMD(Metadata& md);
 
    /**
     * Check if this manager is using the V2 buffer implementation.
@@ -248,7 +248,7 @@ public:
     * @return Pointer to the data.
     * @throws CMMError if no data is found or V2 buffer is not enabled.
     */
-   const void* GetLastDataFromDevice(const std::string& deviceLabel) throw (CMMError);
+   const void* GetLastDataFromDevice(const std::string& deviceLabel);
 
    /**
     * Get the last data and metadata inserted by a specific device.
@@ -257,7 +257,7 @@ public:
     * @return Pointer to the data.
     * @throws CMMError if no data is found or V2 buffer is not enabled.
     */
-   const void* GetLastDataMDFromDevice(const std::string& deviceLabel, Metadata& md) throw (CMMError);
+   const void* GetLastDataMDFromDevice(const std::string& deviceLabel, Metadata& md);
 
    /**
     * Check if a pointer is currently managed by the buffer.

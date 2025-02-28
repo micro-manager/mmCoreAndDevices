@@ -160,7 +160,7 @@ int BufferManager::InsertData(const char* callerLabel, const unsigned char* buf,
 }
 
 
-const void* BufferManager::GetLastDataMD(Metadata& md) const throw (CMMError)
+const void* BufferManager::GetLastDataMD(Metadata& md) const  
 {
    return GetLastDataMD(0, 0, md); // single channel size doesnt matter here
 }
@@ -354,7 +354,7 @@ const void* BufferManager::GetLastDataMDFromDevice(const std::string& deviceLabe
     return basePtr;
 }
 
-bool BufferManager::IsPointerInV2Buffer(const void* ptr) const throw (CMMError) {
+bool BufferManager::IsPointerInV2Buffer(const void* ptr) {
     if (!useV2_.load()) {
         return false;
     }
