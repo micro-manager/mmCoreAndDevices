@@ -76,13 +76,13 @@ public:
       return ptr_;
    }
 
-   void getImageProperties(int& width, int& height, int& byteDepth, int& nComponents) throw (CMMError) {
+   bool getImageProperties(int& width, int& height, int& byteDepth, int& nComponents) throw (CMMError) {
       if (!bufferManager_ || !ptr_) {
          throw CMMError("Invalid buffer manager or pointer");
       }
       Metadata md;
       bufferManager_->ExtractMetadata(ptr_, md);
-      CMMCore::parseImageMetadata(md, width, height, byteDepth, nComponents);
+      return CMMCore::parseImageMetadata(md, width, height, byteDepth, nComponents);
    }
 
    // Fills the provided Metadata object with metadata extracted from the pointer.

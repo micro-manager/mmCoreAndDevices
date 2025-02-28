@@ -462,7 +462,7 @@ public:
    // These functions are used by the Java SWIG wrapper to get properties of the image
    // based on a pointer. The DataPtr alias to void* is so they don't get converted to 
    // Object in the Java SWIG wrapper.
-   void getImageProperties(DataPtr ptr, int& width, int& height, int& byteDepth, int& nComponents) throw (CMMError);
+   bool getImageProperties(DataPtr ptr, int& width, int& height, int& byteDepth, int& nComponents) throw (CMMError);
    void releaseReadAccess(DataPtr ptr) throw (CMMError);
 
 
@@ -704,7 +704,7 @@ public:
    void setIncludeImageMetadata(std::string & category, bool include) throw (CMMError);
    ///@}
 
-   static void parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents);
+   static bool parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents);
 
 private:
    // make object non-copyable

@@ -550,8 +550,19 @@
       return $result;
    }
    int width, height, bytesPerPixel, numComponents;
-   (arg1)->getImageProperties(width, height, bytesPerPixel, numComponents);
-   unsigned numPixels = width * height;
+   bool propertiesOK = (arg1)->getImageProperties(width, height, bytesPerPixel, numComponents);
+   
+   unsigned numPixels;
+   // If getImageProperties fails, its not image data. Assume 1 byte per pixel
+   // If more data types are supported in the future, could add other
+   // checks here to return other data types.
+   if (!propertiesOK) {
+      bytesPerPixel = 1;
+      numComponents = 1;
+      numPixels = numBytes;
+   } else {
+      numPixels = width * height;
+   }
    
    if (bytesPerPixel == 1)
    {
@@ -958,7 +969,7 @@
 #include "../MMDevice/ImageMetadata.h"
 #include "../MMCore/MMEventCallback.h"
 #include "../MMCore/MMCore.h"
-#include "../MMCore/NewBufferDataPointer.h"
+#include "../MMCore/NewDataBufferPointer.h"
 %}
 
 

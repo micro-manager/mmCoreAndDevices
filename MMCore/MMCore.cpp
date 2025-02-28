@@ -4781,7 +4781,7 @@ void CMMCore::releaseReadAccess(DataPtr ptr) {
 // buffer knows about this pointer. If not, it's a snap buffer pointer.
 // We don't want want to compare to the snap buffer pointer directly because
 // its unclear what the device adapter might do when this is called.
-void CMMCore::getImageProperties(DataPtr ptr, int& width, int& height, 
+bool CMMCore::getImageProperties(DataPtr ptr, int& width, int& height, 
                                     int& byteDepth, int& nComponents) throw (CMMError) {
    if (!bufferManager_->IsUsingNewDataBuffer()) {
       // Could be snap or circular buffer pointer
@@ -4793,7 +4793,8 @@ void CMMCore::getImageProperties(DataPtr ptr, int& width, int& height,
       // NewDataBuffer pointer
       Metadata md;
       bufferManager_->ExtractMetadata(ptr, md);
-      parseImageMetadata(md, width, height, byteDepth, nComponents);
+      // If it can't return this metadata, then its not a valid image
+      return parseImageMetadata(md, width, height, byteDepth, nComponents);
    } else {
       // Snap buffer pointer with NewDataBuffer on
       width = getImageWidth();
@@ -4801,6 +4802,7 @@ void CMMCore::getImageProperties(DataPtr ptr, int& width, int& height,
       byteDepth = getBytesPerPixel();
       nComponents = getNumberOfComponents();
    }
+   return true;
 }
 
 /**
@@ -8283,8 +8285,16 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
 /**
  * Get the essential metadata for interpretting image data stored in the buffer.
  */
-void CMMCore::parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents)
+bool CMMCore::parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents)
 {
+   // Check if required metadata tags exist
+   if (!md.HasTag(MM::g_Keyword_Metadata_Width) || 
+       !md.HasTag(MM::g_Keyword_Metadata_Height) || 
+       !md.HasTag(MM::g_Keyword_PixelType))
+   {
+      return false;
+   }
+
    width = std::stoul(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue());
    height = std::stoul(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue());
    nComponents = 1; // Default to 1 component
@@ -8307,4 +8317,5 @@ void CMMCore::parseImageMetadata(Metadata& md, int& width, int& height, int& byt
       byteDepth = 1; // Default to 1 byte depth for unknown types
       nComponents = 1;
    }
+   return true;
 }
