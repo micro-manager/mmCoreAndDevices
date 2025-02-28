@@ -92,47 +92,49 @@ public:
 
    /*Deprecated*/ int InsertMultiChannel(const MM::Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd = 0);
    
-   /**
-    * Direct writing into V2 buffer instead of using InsertImage (which has to copy the data again).
-    * Version with essential parameters for camera devices.
-    * @param caller Camera device making the call
-    * @param dataSize Size of the image data in bytes
-    * @param metadataSize Size of metadata in bytes
-    * @param dataPointer Pointer that will be set to allocated image buffer. The caller should write 
-    *   data to this buffer.
-    * @param metadataPointer Pointer that will be set to allocated metadata buffer. The caller should write 
-    *   serialized metadata to this buffer.
-    * @param width Width of the image in pixels
-    * @param height Height of the image in pixels
-    * @param byteDepth Number of bytes per pixel
-    * @param nComponents Number of components per pixel
-    * @return DEVICE_OK on success
-    */
-   int AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSize, size_t metadataSize,
-                        unsigned char** dataPointer, unsigned char** metadataPointer,
-                        unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents);
 
-   /**
-    * Generic version for inserting data into the buffer.
-    * @param caller Device making the call
-    * @param dataSize Size of the data in bytes
-    * @param metadataSize Size of metadata in bytes
-    * @param dataPointer Pointer that will be set to allocated data buffer. The caller should write   
-    *   data to this buffer.
-    * @param metadataPointer Pointer that will be set to allocated metadata buffer. The caller should write 
-    *   serialized metadata to this buffer.
-    * @return DEVICE_OK on success
-    */
-   int AcquireDataWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
-                        unsigned char** dataPointer, unsigned char** metadataPointer);
+// TODO: enable these when we know what to do about backwards compatibility for circular buffer
+//    /**
+//     * Direct writing into V2 buffer instead of using InsertImage (which has to copy the data again).
+//     * Version with essential parameters for camera devices.
+//     * @param caller Camera device making the call
+//     * @param dataSize Size of the image data in bytes
+//     * @param metadataSize Size of metadata in bytes
+//     * @param dataPointer Pointer that will be set to allocated image buffer. The caller should write 
+//     *   data to this buffer.
+//     * @param metadataPointer Pointer that will be set to allocated metadata buffer. The caller should write 
+//     *   serialized metadata to this buffer.
+//     * @param width Width of the image in pixels
+//     * @param height Height of the image in pixels
+//     * @param byteDepth Number of bytes per pixel
+//     * @param nComponents Number of components per pixel
+//     * @return DEVICE_OK on success
+//     */
+//    int AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSize, size_t metadataSize,
+//                         unsigned char** dataPointer, unsigned char** metadataPointer,
+//                         unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents);
 
-   /**
-    * Finalizes a write slot after data has been written.
-    * @param dataPointer Pointer to the data buffer that was written to
-    * @param actualMetadataBytes Actual number of metadata bytes written
-    * @return DEVICE_OK on success
-    */
-   int FinalizeWriteSlot(unsigned char* dataPointer, size_t actualMetadataBytes);
+//    /**
+//     * Generic version for inserting data into the buffer.
+//     * @param caller Device making the call
+//     * @param dataSize Size of the data in bytes
+//     * @param metadataSize Size of metadata in bytes
+//     * @param dataPointer Pointer that will be set to allocated data buffer. The caller should write   
+//     *   data to this buffer.
+//     * @param metadataPointer Pointer that will be set to allocated metadata buffer. The caller should write 
+//     *   serialized metadata to this buffer.
+//     * @return DEVICE_OK on success
+//     */
+//    int AcquireDataWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
+//                         unsigned char** dataPointer, unsigned char** metadataPointer);
+
+//    /**
+//     * Finalizes a write slot after data has been written.
+//     * @param dataPointer Pointer to the data buffer that was written to
+//     * @param actualMetadataBytes Actual number of metadata bytes written
+//     * @return DEVICE_OK on success
+//     */
+//    int FinalizeWriteSlot(unsigned char* dataPointer, size_t actualMetadataBytes);
 
    // @deprecated This method was previously used by many camera adapters to enforce an overwrite mode on the circular buffer
    // -- making it wrap around when running a continuous sequence acquisition. Now we've added an option to do this into the 

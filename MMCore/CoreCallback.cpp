@@ -287,50 +287,51 @@ int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf
       imgBuf.Height(), imgBuf.Depth(), &md);
 }
 
-// This method is explicitly for camera devices. It requires width, height, byteDepth, and nComponents
-// to be passed in, so that higher level code retrieving data from the buffer knows how to interpret the data
-// Generic data insertion is handled by AcquireDataWriteSlot
-int CoreCallback::AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSize, size_t metadataSize,
-                                  unsigned char** dataPointer, unsigned char** metadataPointer,
-                                  unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents)
-{
-   if (core_->deviceManager_->GetDevice(caller)->GetType() == MM::CameraDevice)
-   {
+// TODO: enable these once we know what to do about backwards compatibility with circular buffer
+// // This method is explicitly for camera devices. It requires width, height, byteDepth, and nComponents
+// // to be passed in, so that higher level code retrieving data from the buffer knows how to interpret the data
+// // Generic data insertion is handled by AcquireDataWriteSlot
+// int CoreCallback::AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSize, size_t metadataSize,
+//                                   unsigned char** dataPointer, unsigned char** metadataPointer,
+//                                   unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents)
+// {
+//    if (core_->deviceManager_->GetDevice(caller)->GetType() == MM::CameraDevice)
+//    {
 
-      Metadata md;
-      std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
-      // Add the metadata needed for interpreting camera images
-      core_->addCameraMetadata(camera, md, width, height, byteDepth, nComponents);
+//       Metadata md;
+//       std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
+//       // Add the metadata needed for interpreting camera images
+//       core_->addCameraMetadata(camera, md, width, height, byteDepth, nComponents);
 
-      char label[MM::MaxStrLength];
-      caller->GetLabel(label);
-      return core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, 
-                                  (void**)dataPointer, (void**)metadataPointer, &md);
-   }
-   // This is only for camera devices, other devices should call AcquireDataWriteSlot
-   return DEVICE_ERR;
-}
+//       char label[MM::MaxStrLength];
+//       caller->GetLabel(label);
+//       return core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, 
+//                                   (void**)dataPointer, (void**)metadataPointer, &md);
+//    }
+//    // This is only for camera devices, other devices should call AcquireDataWriteSlot
+//    return DEVICE_ERR;
+// }
 
-// This method is for generic data insertion. It will not add any metadata for interpretting the data
-int CoreCallback::AcquireDataWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
-                        unsigned char** dataPointer, unsigned char** metadataPointer)
-{
-   char label[MM::MaxStrLength];
-   caller->GetLabel(label);
-   Metadata md;
-   return core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, 
-                              (void**)dataPointer, (void**)metadataPointer, &md);
-}
+// // This method is for generic data insertion. It will not add any metadata for interpretting the data
+// int CoreCallback::AcquireDataWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
+//                         unsigned char** dataPointer, unsigned char** metadataPointer)
+// {
+//    char label[MM::MaxStrLength];
+//    caller->GetLabel(label);
+//    Metadata md;
+//    return core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, 
+//                               (void**)dataPointer, (void**)metadataPointer, &md);
+// }
 
-int CoreCallback::FinalizeWriteSlot(unsigned char* dataPointer, 
-                                  size_t actualMetadataBytes)
-{
-   if (core_->bufferManager_->FinalizeWriteSlot(dataPointer, actualMetadataBytes))
-   {
-      return DEVICE_OK;
-   }
-   return DEVICE_ERR;
-}
+// int CoreCallback::FinalizeWriteSlot(unsigned char* dataPointer, 
+//                                   size_t actualMetadataBytes)
+// {
+//    if (core_->bufferManager_->FinalizeWriteSlot(dataPointer, actualMetadataBytes))
+//    {
+//       return DEVICE_OK;
+//    }
+//    return DEVICE_ERR;
+// }
 
 bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
       unsigned int w, unsigned int h, unsigned int pixDepth)
