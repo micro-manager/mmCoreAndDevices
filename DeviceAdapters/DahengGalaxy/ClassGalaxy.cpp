@@ -1833,41 +1833,39 @@ int ClassGalaxy::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
    int64_t width = m_objFeatureControlPtr->GetIntFeature("Width")->GetValue();
    int64_t height = m_objFeatureControlPtr->GetIntFeature("Height")->GetValue();
 
-    m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(width);
-    m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(height);
+    m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(height);
+    m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(width);
 
-    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(0);
     m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(0);
-
+    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(0);
 
 
     int64_t offsetX = m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetValue();
-
     int64_t offsetY = m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetValue();
 
 
-    x -= (x % (unsigned int)m_objFeatureControlPtr->GetFloatFeature("OffsetX")->GetInc());
-    y -= (y % (unsigned int)m_objFeatureControlPtr->GetFloatFeature("OffsetY")->GetInc());
-    xSize -= (xSize % (unsigned int)m_objFeatureControlPtr->GetFloatFeature("Width")->GetInc());
-    ySize -= (ySize % (unsigned int)m_objFeatureControlPtr->GetFloatFeature("Height")->GetInc());
+    x -= (x % (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetInc());
+    y -= (y % (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetInc());
+    xSize -= (xSize % (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetInc());
+    ySize -= (ySize % (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetInc());
 
-    if (xSize < (unsigned int)m_objFeatureControlPtr->GetFloatFeature("Width")->GetMin()) {
-        xSize = (unsigned int)m_objFeatureControlPtr->GetFloatFeature("Width")->GetMin();
+    if (xSize < (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetMin()) {
+        xSize = (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetMin();
     }
-    if (ySize < (unsigned int)m_objFeatureControlPtr->GetFloatFeature("Height")->GetMin()) {
-        ySize = (unsigned int)m_objFeatureControlPtr->GetFloatFeature("Height")->GetMin();
+    if (ySize < (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetMin()) {
+        ySize = (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetMin();
     }	
-    if (x < (unsigned int)m_objFeatureControlPtr->GetFloatFeature("offsetX")->GetMin()) {
-        x = (unsigned int)m_objFeatureControlPtr->GetFloatFeature("offsetX")->GetMin();
+    if (x < (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetMin()) {
+        x = (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetMin();
     }
-    if (y < (unsigned int)m_objFeatureControlPtr->GetFloatFeature("offsetY")->GetMin()) {
-        y = (unsigned int)m_objFeatureControlPtr->GetFloatFeature("offsetY")->GetMin();
+    if (y < (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetMin()) {
+        y = (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetMin();
     }
 
-    m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(xSize);
-    m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(ySize);
-    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(x);
-    m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(y);
+    m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(xSize);
+    m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(ySize);
+    m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(x);
+    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(y);
 
     //width->SetValue(xSize);
     //height->SetValue(ySize);
@@ -1893,11 +1891,11 @@ int ClassGalaxy::ClearROI()
     int64_t width = m_objFeatureControlPtr->GetIntFeature("Width")->GetMax();
     int64_t height = m_objFeatureControlPtr->GetIntFeature("Height")->GetMax();
 
+    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(0);
+    m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(0);
     m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(width);
     m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(height);
 
-    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(0);
-    m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(0);
     return 0;
 }
 
