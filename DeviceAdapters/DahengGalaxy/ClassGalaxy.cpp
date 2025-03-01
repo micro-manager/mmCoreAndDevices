@@ -1828,52 +1828,44 @@ void ClassGalaxy::SetExposure(double exp)
 
 int ClassGalaxy::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
+   m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
+   m_objStreamPtr->StopGrab();
+   
    m_objFeatureControlPtr->GetEnumFeature("RegionSelector")->SetValue("Region0");
 
-   int64_t width = m_objFeatureControlPtr->GetIntFeature("Width")->GetValue();
-   int64_t height = m_objFeatureControlPtr->GetIntFeature("Height")->GetValue();
+   x -= (x % (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetInc());
+   y -= (y % (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetInc());
+   xSize -= (xSize % (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetInc());
+   ySize -= (ySize % (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetInc());
 
-    m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(height);
-    m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(width);
+   if (xSize < (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetMin()) {
+      xSize = (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetMin();
+   }
+   if (ySize < (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetMin()) {
+      ySize = (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetMin();
+   }	
+   if (x < (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetMin()) {
+      x = (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetMin();
+   }
+   if (y < (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetMin()) {
+       y = (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetMin();
+   }
 
-    m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(0);
-    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(0);
+   // TODO: check if values are too high?
+
+   try {
+      m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(xSize);
+      m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(ySize);
+      m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(x);
+      m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(y);
+   }
+   catch (exception ex) {
+      // TODO: return meaningful Error
+      return 1;
+   }
 
 
-    int64_t offsetX = m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetValue();
-    int64_t offsetY = m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetValue();
-
-
-    x -= (x % (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetInc());
-    y -= (y % (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetInc());
-    xSize -= (xSize % (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetInc());
-    ySize -= (ySize % (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetInc());
-
-    if (xSize < (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetMin()) {
-        xSize = (unsigned int)m_objFeatureControlPtr->GetIntFeature("Width")->GetMin();
-    }
-    if (ySize < (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetMin()) {
-        ySize = (unsigned int)m_objFeatureControlPtr->GetIntFeature("Height")->GetMin();
-    }	
-    if (x < (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetMin()) {
-        x = (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetMin();
-    }
-    if (y < (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetMin()) {
-        y = (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetMin();
-    }
-
-    m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(xSize);
-    m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(ySize);
-    m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(x);
-    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(y);
-
-    //width->SetValue(xSize);
-    //height->SetValue(ySize);
-    //offsetX->SetValue(x);
-    //offsetY->SetValue(y);
-
-    return DEVICE_OK;
-
+   return DEVICE_OK;
 }
 
 int ClassGalaxy::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
