@@ -1,6 +1,12 @@
 #include "ClassGalaxy.h"
 #include <condition_variable>
 
+#include <iostream>
+
+#include <exception>
+#include <typeinfo>
+#include <stdexcept>
+
 using namespace std;
 
 const char* g_CameraDeviceName = "DahengCamera";
@@ -662,10 +668,9 @@ int ClassGalaxy::OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct)
        }
        catch (CGalaxyException& e)
        {
-           // Error handling.
-           AddToLog(e.what());
-           std::cerr << "An exception occurred." << endl
-               << e.what() << endl;
+          LogMessage(e.what(), false);
+          SetErrorText(e.GetErrorCode(), e.what());
+          return e.GetErrorCode();
        }
     }
     else if (eAct == MM::BeforeGet)
@@ -675,10 +680,9 @@ int ClassGalaxy::OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct)
         }
         catch (CGalaxyException& e)
         {
-           // Error handling.
-           AddToLog(e.what());
-           std::cerr << "An exception occurred." << endl
-               << e.what() << endl;
+          LogMessage(e.what(), false);
+          SetErrorText(e.GetErrorCode(), e.what());
+          return e.GetErrorCode();
        }
     }
     return DEVICE_OK;
@@ -867,6 +871,30 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
             }
         }
     }
+}
+
+bool ClassGalaxy::StopGrabbing()
+{
+  bool isGrabbing = m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue();
+  if (isGrabbing) 
+  {
+     m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
+     m_objStreamPtr->StopGrab();
+  }
+  return isGrabbing;
+}
+
+void ClassGalaxy::StartGrabbing()
+{
+   m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
+   m_objStreamPtr->StartGrab();
+}
+
+int ClassGalaxy::HandleError(CGalaxyException cag)
+{
+   LogMessage(cag.what());
+   SetErrorText(cag.GetErrorCode(), cag.what());
+   return cag.GetErrorCode();
 }
 
 int ClassGalaxy::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) {
@@ -1111,25 +1139,16 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
        CIntFeaturePointer BinningHorizontal = m_objFeatureControlPtr->GetIntFeature("BinningHorizontal");
        CIntFeaturePointer BinningVertical = m_objFeatureControlPtr->GetIntFeature("BinningVertical");
-       bool Isgrabbing = m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue();
+       bool Isgrabbing = StopGrabbing();
        try
        {
-           if (Isgrabbing)
-           {
-               m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-               //关闭流层采集
-               m_objStreamPtr->StopGrab();
-           }
            pProp->Get(binningFactor_);
            int64_t val = std::atoi(binningFactor_.c_str());
            BinningHorizontal->SetValue(val);
            BinningVertical->SetValue(val);
            if (Isgrabbing)
            {
-               //重开
-               m_objFeatureControlPtr->GetCommandFeature("AcquisitionStart")->Execute();
-               m_objStreamPtr->StartGrab();
-
+              StartGrabbing();
            }
            pProp->Set(binningFactor_.c_str());
        }
@@ -1157,10 +1176,7 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
        }
        catch (CGalaxyException& e)
        {
-          // Error handling.
-          AddToLog(e.what());
-          std::cerr << "An exception occurred." << endl
-              << e.what() << endl;
+          return HandleError(e);
        }
     }
     return DEVICE_OK;
@@ -1182,7 +1198,7 @@ int ClassGalaxy::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       catch (CGalaxyException& e)
       {
-         AddToLog(e.what());
+         return HandleError(e);
       }
    }
    else if (eAct == MM::BeforeGet) 
@@ -1194,7 +1210,7 @@ int ClassGalaxy::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       catch (CGalaxyException& e)
       {
-         AddToLog(e.what());
+         return HandleError(e);
       }
    }
    return DEVICE_OK;
@@ -1244,11 +1260,7 @@ int ClassGalaxy::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     catch (const CGalaxyException& e)
     {
-        // Error handling.
-        AddToLog(e.what());
-        std::cerr << "An exception occurred." << endl
-            << e.what() << endl;
-        return DEVICE_ERR;
+       return HandleError(e);
     }
     return DEVICE_OK;
 }
@@ -1287,10 +1299,7 @@ int ClassGalaxy::OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct)
             }
             catch (CGalaxyException& e)
             {
-                // Error handling.
-                AddToLog(e.what());
-                std::cerr << "An exception occurred." << endl
-                    << e.what() << endl;
+               return HandleError(e);
             }
         }
     }
@@ -1304,10 +1313,7 @@ int ClassGalaxy::OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct)
         }
         catch (CGalaxyException& e)
         {
-            // Error handling.
-            AddToLog(e.what());
-            std::cerr << "An exception occurred." << endl
-                << e.what() << endl;
+            return HandleError(e);
         }
     }
     
@@ -1828,9 +1834,7 @@ void ClassGalaxy::SetExposure(double exp)
 
 int ClassGalaxy::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
-   m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-   m_objStreamPtr->StopGrab();
-   
+   bool isGrabbing = StopGrabbing();
    m_objFeatureControlPtr->GetEnumFeature("RegionSelector")->SetValue("Region0");
 
    x -= (x % (unsigned int)m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetInc());
@@ -1859,36 +1863,43 @@ int ClassGalaxy::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
       m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(x);
       m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(y);
    }
-   catch (exception ex) {
-      // TODO: return meaningful Error
-      return 1;
+   catch (CGalaxyException gex) {
+      return HandleError(gex);
    }
-
+   if (isGrabbing)
+      StartGrabbing();
 
    return DEVICE_OK;
 }
 
+
 int ClassGalaxy::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
-     xSize = (unsigned int) m_objFeatureControlPtr->GetIntFeature("Width")->GetValue();
-     ySize = (unsigned int) m_objFeatureControlPtr->GetIntFeature("Height")->GetValue();
+   xSize = (unsigned int) m_objFeatureControlPtr->GetIntFeature("Width")->GetValue();
+   ySize = (unsigned int) m_objFeatureControlPtr->GetIntFeature("Height")->GetValue();
+   x = (unsigned int) m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetValue();
+   y = (unsigned int) m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetValue();
 
-     x = (unsigned int) m_objFeatureControlPtr->GetIntFeature("OffsetX")->GetValue();
-     y = (unsigned int) m_objFeatureControlPtr->GetIntFeature("OffsetY")->GetValue();
-    return DEVICE_OK;
+   return DEVICE_OK;
 }
 
 int ClassGalaxy::ClearROI()
 {
-    int64_t width = m_objFeatureControlPtr->GetIntFeature("Width")->GetMax();
-    int64_t height = m_objFeatureControlPtr->GetIntFeature("Height")->GetMax();
+   bool isGrabbing = StopGrabbing();
+   m_objFeatureControlPtr->GetEnumFeature("RegionSelector")->SetValue("Region0");
 
-    m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(0);
-    m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(0);
-    m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(width);
-    m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(height);
+   int64_t width = m_objFeatureControlPtr->GetIntFeature("Width")->GetMax();
+   int64_t height = m_objFeatureControlPtr->GetIntFeature("Height")->GetMax();
 
-    return 0;
+   m_objFeatureControlPtr->GetIntFeature("OffsetY")->SetValue(0);
+   m_objFeatureControlPtr->GetIntFeature("OffsetX")->SetValue(0);
+   m_objFeatureControlPtr->GetIntFeature("Height")->SetValue(height);
+   m_objFeatureControlPtr->GetIntFeature("Width")->SetValue(width);
+
+   if (isGrabbing)
+      StartGrabbing();
+
+   return DEVICE_OK;;
 }
 
 void ClassGalaxy::ReduceImageSize(int64_t Width, int64_t Height)
