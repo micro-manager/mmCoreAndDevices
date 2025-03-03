@@ -873,6 +873,10 @@ void ClassGalaxy::CopyToImageBuffer(CImageDataPointer& objImageDataPointer)
     }
 }
 
+/**
+* Stops Grabbing, but oonly if the camera actually was grabbing.
+* Returns a flag indicating whether the camera was initially grabbing.
+*/
 bool ClassGalaxy::StopGrabbing()
 {
   bool isGrabbing = m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue();
@@ -950,14 +954,7 @@ int ClassGalaxy::StartSequenceAcquisition(double /* interval_ms */) {
     try
     {
         AddToLog("ReadySequenceAcquisition");
-        //modify by LXM in 20240306
-        //if (m_bIsOpen)
-        {
-            //AddToLog("---------------判断是否开采");
-            m_objFeatureControlPtr->GetCommandFeature("AcquisitionStop")->Execute();
-            m_objStreamPtr->StopGrab();
-        }
-        //end modify
+        StopGrabbing();
 
         if (ImageHandler_ != NULL) {
            m_objStreamPtr->UnregisterCaptureCallback();
@@ -1095,6 +1092,7 @@ const unsigned char* ClassGalaxy::GetImageBuffer()
    return (unsigned char*)imgBuffer_;
 }
 
+// Beware!  This uses cached values so can get stale.
 void ClassGalaxy::GetImageSize()
 {
     Width_= (unsigned int) m_objFeatureControlPtr->GetIntFeature("Width")->GetValue();
@@ -1159,6 +1157,8 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
            std::cerr << "An exception occurred." << endl
                 << e.what() << endl;
        }
+       // Update cached values:
+       GetImageSize();
     }
     else if (eAct == MM::BeforeGet) 
     {
@@ -1715,28 +1715,22 @@ int ClassGalaxy::OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int ClassGalaxy::OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    CFloatFeaturePointer TriggerDelay = m_objFeatureControlPtr->GetFloatFeature("TriggerDelay");
-    try 
-    {
-        if (eAct == MM::AfterSet) {
-            pProp->Get(TriggerDelay_);
-            pProp->Set(TriggerDelay_.c_str());
-            TriggerDelay->SetValue(atoi(TriggerDelay_.c_str()));
-        }
-        else if (eAct == MM::BeforeGet) {
-            pProp->Set(TriggerDelay->GetValue());
-        }
-    }
-    catch (CGalaxyException& e)
-    {
-        {
-            // Error handling.
-            AddToLog(e.what());
-            std::cerr << "An exception occurred." << endl
-                << e.what() << endl;
-        }
-    }
-    return DEVICE_OK;
+   CFloatFeaturePointer TriggerDelay = m_objFeatureControlPtr->GetFloatFeature("TriggerDelay");
+   try 
+   {
+       if (eAct == MM::AfterSet) {
+           pProp->Get(TriggerDelay_);
+           pProp->Set(TriggerDelay_.c_str());
+           TriggerDelay->SetValue(atoi(TriggerDelay_.c_str()));
+       }
+       else if (eAct == MM::BeforeGet) {
+           pProp->Set(TriggerDelay->GetValue());
+       }
+   }
+   catch (CGalaxyException gex) {
+      return HandleError(gex);
+   }
+   return DEVICE_OK;
 }
 
 //OnTriggerFilterRaisingEdge
@@ -1868,6 +1862,8 @@ int ClassGalaxy::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
    }
    if (isGrabbing)
       StartGrabbing();
+    // Update cached values:
+    GetImageSize();
 
    return DEVICE_OK;
 }
@@ -1898,6 +1894,8 @@ int ClassGalaxy::ClearROI()
 
    if (isGrabbing)
       StartGrabbing();
+   // Update cached values:
+   GetImageSize();
 
    return DEVICE_OK;;
 }
