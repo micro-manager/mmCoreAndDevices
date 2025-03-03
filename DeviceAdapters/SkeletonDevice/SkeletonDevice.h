@@ -21,8 +21,6 @@
 
 class SkeletonDevice : public CGenericBase<SkeletonDevice>
 {
-	//	Unofficial device adapter for lasers from MPB Communications Inc.
-
 public:
 	SkeletonDevice();
 	~SkeletonDevice();

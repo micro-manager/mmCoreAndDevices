@@ -5,6 +5,7 @@ Custom device adapters that are not officially part of the Micro-Manager project
 
 This fork provides the following additional device adapters:
 
+- [ArduinoShutter](DeviceAdapters/ArduinoShutter/) : A basic Arduino-based shutter
 - [SkeletonDevice](DeviceAdapters/SkeletonDevice/) : A minimal, general device adapter that works but does nothing. Used as a starting point for new adapters.
 - [SkeletonSerial](DeviceAdapters/SkeletonSerial/) : A minimal device adapter for serial port communications
 

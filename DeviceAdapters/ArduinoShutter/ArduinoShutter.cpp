@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          SkeletonSerial.cpp
+// FILE:          ArduinoShutter.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Skeleton adapter for a serial port device
+// DESCRIPTION:   A basic Arduino-based shutter
 //                
 // AUTHOR:        Kyle M. Douglass, https://kylemdouglass.com
 //
@@ -15,13 +15,16 @@
 //                Laboratory of Experimental Biophysics (LEB), 2025
 //
 
-#include "SkeletonSerial.h"
+#include "ArduinoShutter.h"
 #include "ModuleInterface.h"
 
 using namespace std;
 
-const char* g_DeviceName = "SkeletonSerial";
-const char* g_DeviceDescription = "Skeleton adapter for a serial port device";
+const char* g_DeviceName = "ArduinoShutter";
+const char* g_DeviceDescription = "A basic Arduino-based shutter";
+
+const char* g_OpenCmd = "open";
+const char* g_CloseCmd = "close";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -32,7 +35,8 @@ const char* g_DeviceDescription = "Skeleton adapter for a serial port device";
  */
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_DeviceName, MM::GenericDevice, "Skeleton Serial Device Adapter");
+   // Note the device type is specified here!
+   RegisterDevice(g_DeviceName, MM::ShutterDevice, "Arduino Shutter");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -44,7 +48,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    if (strcmp(deviceName, g_DeviceName) == 0)
    {
       // create the test device
-      return new SkeletonSerial();
+      return new ArduinoShutter();
    }
 
    // ...supplied name not recognized
@@ -57,11 +61,11 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// SkeletonSerial implementation
+// ArduinoShutter implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~
 
 /**
-* SkeletonSerial constructor.
+* ArduinoShutter constructor.
 * Setup default all variables and create device properties required to exist
 * before intialization. In this case, no such properties were required. All
 * properties will be created in the Initialize() method.
@@ -70,26 +74,29 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * the constructor. We should do as little as possible in the constructor and
 * perform most of the initialization in the Initialize() method.
 */
-SkeletonSerial::SkeletonSerial() :
+ArduinoShutter::ArduinoShutter() :
 	// Parameter values before hardware synchronization
 	initialized_ (false),
-	buffer_(""),
-	msg_ ("")
+	open_ (false),
+	msg_(""),
+	response_("")
 {
 	// call the base class method to set-up default error codes/messages
 	InitializeDefaultErrorMessages();
 
 	GeneratePreInitProperties();
+
+	EnableDelay();
 }
 
 /**
-* SkeletonSerial destructor.
+* ArduinoShutter destructor.
 * If this device used as intended within the Micro-Manager system,
 * Shutdown() will be always called before the destructor. But in any case
 * we need to make sure that all resources are properly released even if
 * Shutdown() was not called.
 */
-SkeletonSerial::~SkeletonSerial()
+ArduinoShutter::~ArduinoShutter()
 {
    if (initialized_)
       Shutdown();
@@ -99,7 +106,7 @@ SkeletonSerial::~SkeletonSerial()
 * Obtains device name.
 * Required by the MM::Device API.
 */
-void SkeletonSerial::GetName(char* name) const
+void ArduinoShutter::GetName(char* name) const
 {
    // We just return the name we use for referring to this
    // device adapter.
@@ -112,7 +119,7 @@ void SkeletonSerial::GetName(char* name) const
 * Device properties are typically created here as well.
 * Required by the MM::Device API.
 */
-int SkeletonSerial::Initialize()
+int ArduinoShutter::Initialize()
 {
 	if (initialized_)
 		return DEVICE_OK;
@@ -138,21 +145,53 @@ int SkeletonSerial::Initialize()
 * Shutdown() may be called multiple times in a row.
 * Required by the MM::Device API.
 */
-int SkeletonSerial::Shutdown()
+int ArduinoShutter::Shutdown()
 {
    initialized_ = false;
    return DEVICE_OK;
 }
 
 /////////////////////////////////////////////
+// MM:Shutter API
+// These are called by Micro-Manager and do 
+// not need to be called directly by our
+// code.
+/////////////////////////////////////////////
+int ArduinoShutter::SetOpen(bool open)
+{
+	long pos;
+	if (open)
+		pos = 1;
+	else
+		pos = 0;
+	return SetProperty(MM::g_Keyword_State, CDeviceUtils::ConvertToString(pos));
+}
+
+int ArduinoShutter::GetOpen(bool& open)
+{
+	char buf[MM::MaxStrLength];
+	int ret = GetProperty(MM::g_Keyword_State, buf);
+	if (ret != DEVICE_OK) return ret;
+	
+	long pos = atol(buf);
+	pos == 1 ? open = true : open = false;
+
+	return DEVICE_OK;
+}
+int ArduinoShutter::Fire(double /*deltaT*/)
+{
+	return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+/////////////////////////////////////////////
 // Property Generators
 /////////////////////////////////////////////
-int SkeletonSerial::GeneratePreInitProperties() {
-	CPropertyAction* pAct = new CPropertyAction(this, &SkeletonSerial::OnPort);
+int ArduinoShutter::GeneratePreInitProperties() {
+	CPropertyAction* pAct = new CPropertyAction(this, &ArduinoShutter::OnPort);
 	return CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
 }
 
-int SkeletonSerial::GenerateReadOnlyProperties() {
+int ArduinoShutter::GenerateReadOnlyProperties() {
 	// Name
 	int ret = CreateStringProperty(MM::g_Keyword_Name, g_DeviceName, true);
 	if (DEVICE_OK != ret) return ret;
@@ -161,45 +200,61 @@ int SkeletonSerial::GenerateReadOnlyProperties() {
 	ret = CreateStringProperty(MM::g_Keyword_Description, g_DeviceDescription, true);
 	if (DEVICE_OK != ret) return ret;
 
-	CPropertyAction* pAct = new CPropertyAction(this, &SkeletonSerial::OnResponseChange);
-	ret = CreateStringProperty("Device Response", buffer_.c_str(), true, pAct);
+	CPropertyAction* pAct = new CPropertyAction(this, &ArduinoShutter::OnResponseChange);
+	ret = CreateStringProperty("Response", response_.c_str(), true, pAct);
 	if (DEVICE_OK != ret) return ret;
 
 	return DEVICE_OK;
 }
 
-int SkeletonSerial::GenerateControlledProperties() {
-	CPropertyAction* pAct = new CPropertyAction(this, &SkeletonSerial::OnMessageChange);
-	return CreateProperty("Message", msg_.c_str(), MM::String, false, pAct);
+int ArduinoShutter::GenerateControlledProperties() {
+	CPropertyAction* pAct = new CPropertyAction(this, &ArduinoShutter::OnStateChange);
+	int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+	if (DEVICE_OK != ret) return ret;
+
+	SetPropertyLimits(MM::g_Keyword_State, 0, 1);
+
+	return DEVICE_OK;
+
 }
 
 /////////////////////////////////////////////
 // Action handlers
 /////////////////////////////////////////////
-int SkeletonSerial::OnMessageChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+int ArduinoShutter::OnStateChange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	// Obtain a pointer to the Property that can be modified.
-	MM::Property* pChildProperty = (MM::Property*)pProp;
-
 	if (eAct == MM::BeforeGet)
 	{
-		// Set the value that appears in MM to match the current device state.
-		pProp->Set(msg_.c_str());
+		// Simply return the current state
+		pProp->Set(open_ ? (long)1 : (long)0);
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		// Set the device state to match the value that appears in MM.
-		pProp->Get(msg_);
+		long pos;
+		pProp->Get(pos);
+		bool mmWantsOpen = (pos > 0);
 
-		// Send the message to the device
-		int ret = this->QueryDevice(msg_);
-		if (ret != DEVICE_OK) return ret;
+		// Only send the command if the property changed
+		if (open_ != mmWantsOpen) {
+			int ret;
+			if (mmWantsOpen) {
+				ret = this->QueryDevice(g_OpenCmd);
+				if (ret != DEVICE_OK) return ret;
+			}
+			else {
+				ret = this->QueryDevice(g_CloseCmd);
+				if (ret != DEVICE_OK) return ret;
+			}
+
+			// Update the state only after successful communication
+			open_ = mmWantsOpen;
+		}
 	}
 
 	return DEVICE_OK;
 }
 
-int SkeletonSerial::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
+int ArduinoShutter::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -220,12 +275,11 @@ int SkeletonSerial::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int SkeletonSerial::OnResponseChange(MM::PropertyBase* pProp, MM::ActionType eAct)
-{	MM::Property* pChildProperty = (MM::Property*)pProp;
-
+int ArduinoShutter::OnResponseChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(buffer_.c_str());
+		pProp->Set(response_.c_str());
 	}
 
 	return DEVICE_OK;
@@ -235,7 +289,7 @@ int SkeletonSerial::OnResponseChange(MM::PropertyBase* pProp, MM::ActionType eAc
 /////////////////////////////////////////////
 // Serial communications
 /////////////////////////////////////////////
-int SkeletonSerial::PurgeBuffer()
+int ArduinoShutter::PurgeBuffer()
 {
 	int ret = PurgeComPort(port_.c_str());
 	if (ret != DEVICE_OK)
@@ -247,7 +301,7 @@ int SkeletonSerial::PurgeBuffer()
 /**
  * Sends a command to the device and receives the result.
  */
-int SkeletonSerial::QueryDevice(std::string msg)
+int ArduinoShutter::QueryDevice(std::string msg)
 {
 
 	int ret = PurgeBuffer();
@@ -262,20 +316,20 @@ int SkeletonSerial::QueryDevice(std::string msg)
 	return DEVICE_OK;
 }
 
-int SkeletonSerial::ReceiveMsg()
+int ArduinoShutter::ReceiveMsg()
 {
 	std::string valid = "";
 	int ret;
 
 	// Get the data returned by the device.
-	ret = GetSerialAnswer(port_.c_str(), ANS_TERM_.c_str(), buffer_);
+	ret = GetSerialAnswer(port_.c_str(), ANS_TERM_.c_str(), response_);
 	if (ret != DEVICE_OK)
 		return ret;
 
 	return DEVICE_OK;
 }
 
-int SkeletonSerial::SendMsg(std::string msg)
+int ArduinoShutter::SendMsg(std::string msg)
 {
 	int ret = SendSerialCommand(port_.c_str(), msg.c_str(), CMD_TERM_.c_str());
 	if (ret != DEVICE_OK)
