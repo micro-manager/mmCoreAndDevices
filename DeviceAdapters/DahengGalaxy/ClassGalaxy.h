@@ -70,7 +70,6 @@ public:
 	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
 	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
 	int ClearROI();
-	void ReduceImageSize(int64_t Width, int64_t Height);
 	int GetBinning() const;
 	int SetBinning(int binSize);
 	int IsExposureSequenceable(bool& seq) const { seq = false; return DEVICE_OK; }
@@ -78,7 +77,6 @@ public:
 	void CoverToRGB(GX_PIXEL_FORMAT_ENTRY emDstFormat,void* DstBuffer, CImageDataPointer pObjSrcImageData);
 
 	int CheckForBinningMode(CPropertyAction* pAct);
-	void AddToLog(std::string msg);
 	
 	GX_VALID_BIT_LIST GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelFormatEntry);
 	void CopyToImageBuffer(CImageDataPointer& objImageDataPointer);
@@ -89,7 +87,6 @@ public:
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) final ;
 	int StartSequenceAcquisition(double interval_ms) final;
 	int StopSequenceAcquisition() final;
-	int PrepareSequenceAcqusition() final;
 
 	///**
 	//* Flag to indicate whether Sequence Acquisition is currently running.
