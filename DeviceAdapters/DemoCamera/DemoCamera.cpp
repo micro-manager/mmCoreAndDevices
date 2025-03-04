@@ -308,6 +308,16 @@ int CDemoCamera::Initialize()
    else
       LogMessage(NoHubError);
 
+   // Standard properties
+   CPropertyAction *pActsp = new CPropertyAction (this, &CDemoCamera::OnTestStandardProperty);
+   int nRett = CreateTestStandardProperty("123", pActsp);
+   assert(nRett == DEVICE_OK);
+
+   CPropertyAction *pActsp2 = new CPropertyAction (this, &CDemoCamera::OnTestWithValuesStandardProperty);
+   int nRettt = CreateTestWithValuesStandardProperty("value1", pActsp2);
+   assert(nRettt == DEVICE_OK);
+
+
    // set property list
    // -----------------
 
@@ -1383,6 +1393,39 @@ int CDemoCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return ret; 
 }
+
+int CDemoCamera::OnTestStandardProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set("test");
+      return DEVICE_OK;
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string val;
+      pProp->Get(val);
+      return DEVICE_OK;
+   }
+   return DEVICE_OK;
+}
+
+int CDemoCamera::OnTestWithValuesStandardProperty(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set("value1");
+      return DEVICE_OK;
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string val;
+      pProp->Get(val);
+      return DEVICE_OK;
+   }
+   return DEVICE_OK;
+}
+
 
 /**
 * Handles "PixelType" property.
