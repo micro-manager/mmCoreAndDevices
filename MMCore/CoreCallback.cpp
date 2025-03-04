@@ -390,6 +390,27 @@ int CoreCallback:: InsertMultiChannel(const MM::Device* caller, const unsigned c
 
 }
 
+int CoreCallback::InsertData(const MM::Device* caller, const unsigned char* buf, size_t dataSize, Metadata* pMd)
+{
+   std::shared_ptr<DeviceInstance> device = core_->deviceManager_->GetDevice(caller);
+
+   if (device->GetType() == MM::CameraDevice)
+   {
+      return DEVICE_ERR;
+   }
+
+   Metadata newMD;
+   if (pMd)
+   {
+      newMD = *pMd;
+   }
+
+   // Add a metadata tag for the data-producing device
+   newMD.put(MM::g_Keyword_Metadata_CameraLabel, device->GetLabel());
+
+   return core_->bufferManager_->InsertData(device->GetLabel().c_str(), buf, dataSize, &newMD);
+}
+
 int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
 {
    std::shared_ptr<DeviceInstance> camera;

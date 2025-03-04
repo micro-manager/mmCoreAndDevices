@@ -92,6 +92,8 @@ public:
 
    /*Deprecated*/ int InsertMultiChannel(const MM::Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd = 0);
    
+   // Method for inserting generic non-image data into the buffer
+   int InsertData(const MM::Device* caller, const unsigned char* buf, size_t dataSize, Metadata* pMd = 0);
 
 // TODO: enable these when we know what to do about backwards compatibility for circular buffer
 //    /**
