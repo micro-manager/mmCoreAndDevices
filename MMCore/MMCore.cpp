@@ -2833,7 +2833,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
 			}
 			cbuf_->Clear();
-         cbuf_->SetOverwriteData(false);
+         cbuf_->SetOverwriteData(!stopOnOverflow);
          mm::DeviceModuleLockGuard guard(camera);
 
          LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
