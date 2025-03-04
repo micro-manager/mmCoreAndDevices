@@ -2697,52 +2697,53 @@ bool CMMCore::getShutterOpen() throw (CMMError)
 }
 
 /**
- * Set whether to include a specific category of metadata in the image metadata.
+ * Set which metadata categories to include in the image metadata using a bitmask.
  * 
- * Valid categories are:
- * - "BitDepth"
- * - "CameraParams"
- * - "CameraTags"
- * - "Timing"
- * - "SystemStateCache"
- * - "LegacyCalibration"
- * - "Legacy"
+ * Bitmask values:
+ * - MM::MetadataBitDepth (1): Include bit depth information
+ * - MM::MetadataCameraParams (2): Include camera parameters
+ * - MM::MetadataCameraTags (4): Include camera tags
+ * - MM::MetadataTiming (8): Include timing information
+ * - MM::MetadataSystemStateCache (16): Include system state cache
+ * - MM::MetadataLegacyCalibration (32): Include legacy calibration
+ * - MM::MetadataLegacy (64): Include additional legacy metadata
  * 
- * @param category The category of metadata to include.
- * @param include Whether to include the metadata.
+ * @param categoryBits Bitmask of metadata categories to include
  */
-void CMMCore::setIncludeImageMetadata(std::string & category, bool include) throw (CMMError) {
-   if (category == MM::g_Keyword_Include_Metadata_BitDepth) {
-      imageMDIncludeBitDepth_ = include;
-   } 
-   else if (category == MM::g_Keyword_Include_Metadata_CameraParams) {
-      imageMDIncludeCameraParams_ = include;
-   }
-   else if (category == MM::g_Keyword_Include_Metadata_CameraTags) {
-      imageMDIncludeCameraTags_ = include;
-   }
-   else if (category == MM::g_Keyword_Include_Metadata_Timing) {
-      imageMDIncludeTiming_ = include;
-   }
-   else if (category == MM::g_Keyword_Include_Metadata_SystemStateCache) {
-      imageMDIncludeSystemStateCache_ = include;
-   }
-   else if (category == MM::g_Keyword_Include_Metadata_LegacyCalibration) {
-      imageMDIncludeLegacyCalibration_ = include;
-   }
-   else if (category == MM::g_Keyword_Include_Metadata_Legacy) {
-      imageMDIncludeAdditionalLegacy_ = include;
-   }
-   else {
-      throw CMMError("Invalid metadata category. Valid options are: " + 
-                     std::string(MM::g_Keyword_Include_Metadata_BitDepth) + ", " + 
-                     std::string(MM::g_Keyword_Include_Metadata_CameraParams) + ", " + 
-                     std::string(MM::g_Keyword_Include_Metadata_CameraTags) + ", " + 
-                     std::string(MM::g_Keyword_Include_Metadata_Timing) + ", " + 
-                     std::string(MM::g_Keyword_Include_Metadata_SystemStateCache) + ", " + 
-                     std::string(MM::g_Keyword_Include_Metadata_LegacyCalibration) + ", " + 
-                     std::string(MM::g_Keyword_Include_Metadata_Legacy));
-    }
+void CMMCore::setIncludeImageMetadata(unsigned int categoryBits) throw (CMMError) {
+   imageMDIncludeBitDepth_ = (categoryBits & MM::g_Image_Metadata_Bitmask_BitDepth) != 0;
+   imageMDIncludeCameraParams_ = (categoryBits & MM::g_Image_Metadata_Bitmask_CameraParams) != 0;
+   imageMDIncludeCameraTags_ = (categoryBits & MM::g_Image_Metadata_Bitmask_CameraTags) != 0;
+   imageMDIncludeTiming_ = (categoryBits & MM::g_Image_Metadata_Bitmask_Timing) != 0;
+   imageMDIncludeSystemStateCache_ = (categoryBits & MM::g_Image_Metadata_Bitmask_SystemStateCache) != 0;
+   imageMDIncludeLegacyCalibration_ = (categoryBits & MM::g_Image_Metadata_Bitmask_LegacyCalibration) != 0;
+   imageMDIncludeAdditionalLegacy_ = (categoryBits & MM::g_Image_Metadata_Bitmask_Legacy) != 0;
+}
+
+/**
+ * Get the current metadata inclusion bitmask.
+ * 
+ * @return Bitmask indicating which metadata categories are included
+ */
+unsigned int CMMCore::getIncludeImageMetadata() const throw (CMMError) {
+   unsigned int result = 0;
+   
+   if (imageMDIncludeBitDepth_)
+      result |= MM::g_Image_Metadata_Bitmask_BitDepth;
+   if (imageMDIncludeCameraParams_)
+      result |= MM::g_Image_Metadata_Bitmask_CameraParams;
+   if (imageMDIncludeCameraTags_)
+      result |= MM::g_Image_Metadata_Bitmask_CameraTags;
+   if (imageMDIncludeTiming_)
+      result |= MM::g_Image_Metadata_Bitmask_Timing;
+   if (imageMDIncludeSystemStateCache_)
+      result |= MM::g_Image_Metadata_Bitmask_SystemStateCache;
+   if (imageMDIncludeLegacyCalibration_)
+      result |= MM::g_Image_Metadata_Bitmask_LegacyCalibration;
+   if (imageMDIncludeAdditionalLegacy_)
+      result |= MM::g_Image_Metadata_Bitmask_Legacy;
+      
+   return result;
 }
 
 /**

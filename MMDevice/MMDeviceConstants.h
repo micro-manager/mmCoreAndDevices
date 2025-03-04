@@ -176,13 +176,14 @@ namespace MM {
    const char* const g_Keyword_Metadata_TimeInCore  = "TimeReceivedByCore";
 
    // Image metadata categories
-   const char* const g_Keyword_Include_Metadata_BitDepth = "BitDepth";
-   const char* const g_Keyword_Include_Metadata_CameraParams = "CameraParams";
-   const char* const g_Keyword_Include_Metadata_CameraTags = "CameraTags";
-   const char* const g_Keyword_Include_Metadata_Timing = "Timing";
-   const char* const g_Keyword_Include_Metadata_SystemStateCache = "SystemStateCache";
-   const char* const g_Keyword_Include_Metadata_LegacyCalibration = "LegacyCalibration";
-   const char* const g_Keyword_Include_Metadata_Legacy = "Legacy";
+   // Metadata category bitmasks
+   const unsigned int g_Image_Metadata_Bitmask_BitDepth = 1;
+   const unsigned int g_Image_Metadata_Bitmask_CameraParams = 2;
+   const unsigned int g_Image_Metadata_Bitmask_CameraTags = 4;
+   const unsigned int g_Image_Metadata_Bitmask_Timing = 8;
+   const unsigned int g_Image_Metadata_Bitmask_SystemStateCache = 16;
+   const unsigned int g_Image_Metadata_Bitmask_LegacyCalibration = 32;
+   const unsigned int g_Image_Metadata_Bitmask_Legacy = 64;
    
    // configuration file format constants
    const char* const g_FieldDelimiters = ",";

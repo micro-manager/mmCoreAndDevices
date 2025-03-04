@@ -701,7 +701,17 @@ public:
       imageMDIncludeSystemStateCache_ = state;
    }
 
-   void setIncludeImageMetadata(std::string & category, bool include) throw (CMMError);
+   /**
+    * Sets which metadata categories should be included with images.
+    * @param categoryBits Bitmask of metadata categories to include
+    */
+   void setIncludeImageMetadata(unsigned int categoryBits) throw (CMMError);
+   
+   /**
+    * Gets the current metadata inclusion bitmask.
+    * @return Bitmask indicating which metadata categories are included
+    */
+   unsigned int getIncludeImageMetadata() const throw (CMMError);
    ///@}
 
    static bool parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents);
