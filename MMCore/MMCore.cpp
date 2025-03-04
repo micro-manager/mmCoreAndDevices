@@ -2833,6 +2833,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
 			}
 			cbuf_->Clear();
+         cbuf_->SetOverwriteData(false);
          mm::DeviceModuleLockGuard guard(camera);
 
          LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
@@ -2877,7 +2878,7 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
    }
    cbuf_->Clear();
-	
+   cbuf_->SetOverwriteData(false);
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
    int nRet = pCam->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
@@ -2980,6 +2981,7 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) throw (CMMEr
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
       }
       cbuf_->Clear();
+      cbuf_->SetOverwriteData(true);
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
       int nRet = camera->StartSequenceAcquisition(intervalMs);
       if (nRet != DEVICE_OK)

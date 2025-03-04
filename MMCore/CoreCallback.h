@@ -91,8 +91,9 @@ public:
    /*Deprecated*/ int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const Metadata* pMd = 0, const bool doProcess = true);
 
    /*Deprecated*/ int InsertMultiChannel(const MM::Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd = 0);
-   void ClearImageBuffer(const MM::Device* caller);
-   bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
+  
+   /*Deprecated*/ void ClearImageBuffer(const MM::Device* caller);
+   /*Deprecated*/ bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
    int AcqFinished(const MM::Device* caller, int statusCode);
    int PrepareForAcq(const MM::Device* caller);
