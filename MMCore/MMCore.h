@@ -86,6 +86,10 @@
 #   define MMCORE_DEPRECATED(prototype) prototype
 #endif
 
+typedef unsigned char* STORAGEIMG;
+typedef unsigned short* STORAGEIMG16;
+typedef unsigned char* STORAGEIMGOUT;
+typedef unsigned char* STORAGEMETA;
 
 class CPluginManager;
 class CircularBuffer;
@@ -105,6 +109,7 @@ class SLMInstance;
 class ShutterInstance;
 class StageInstance;
 class XYStageInstance;
+class StorageInstance;
 
 class CMMCore;
 
@@ -120,7 +125,6 @@ enum DeviceInitializationState {
    InitializedSuccessfully,
    InitializationFailed,
 };
-
 
 /// The Micro-Manager Core.
 /**
@@ -278,6 +282,7 @@ public:
    std::string getSLMDevice();
    std::string getGalvoDevice();
    std::string getChannelGroup();
+   std::string getStorageDevice();
    void setCameraDevice(const char* cameraLabel) throw (CMMError);
    void setShutterDevice(const char* shutterLabel) throw (CMMError);
    void setFocusDevice(const char* focusLabel) throw (CMMError);
@@ -287,6 +292,8 @@ public:
    void setSLMDevice(const char* slmLabel) throw (CMMError);
    void setGalvoDevice(const char* galvoLabel) throw (CMMError);
    void setChannelGroup(const char* channelGroup) throw (CMMError);
+   void setStorageDevice(const char* storageLabel) throw (CMMError);
+
    ///@}
 
    /** \name System state cache.
@@ -637,6 +644,40 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
 
+   /** \name Storage API */
+   ///@{
+   std::string createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta) throw (CMMError);
+   void closeDataset(const char* handle) throw (CMMError);
+   void freezeDataset(const char* handle) throw (CMMError);
+   std::string loadDataset(const char* path) throw (CMMError);
+   std::string getDeviceNameToOpenDataset(const char* path);
+   std::string getDatasetPath(const char* handle) throw (CMMError);
+   bool isDatasetOpen(const char* handle);
+	bool isDatasetReadOnly(const char* handle);
+   std::vector<long> getDatasetShape(const char* handle) throw (CMMError);
+   MM::StorageDataType getDatasetPixelType(const char* handle) throw (CMMError);
+   void appendImageToDataset(const char* handle, int sizeinBytes, const STORAGEIMG pixels, const char* imageMeta) throw (CMMError);
+	void appendImageToDataset(const char* handle, int sizeinShorts, const STORAGEIMG16 pixels, const char* imageMeta) throw (CMMError);
+   void configureDatasetDimension(const char* handle, int dimension, const char* name, const char* meaning) throw (CMMError);
+   void configureDatasetCoordinate(const char* handle, int dimension, int coordinate, const char* name) throw (CMMError);
+	std::string getDatasetDimensionName(const char* handle, int dimension) throw (CMMError);
+	std::string getDatasetDimensionMeaning(const char* handle, int dimension) throw (CMMError);
+	std::string getDatasetCoordinateName(const char* handle, int dimension, int coordinate) throw (CMMError);
+	int getDatasetImageCount(const char* handle) throw (CMMError);
+   std::string getDatasetSummaryMeta(const char* handle) throw (CMMError);
+   std::string getDatasetImageMeta(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   void setDatasetCustomMeta(const char* handle, const char* key, const char* meta);
+   std::string getDatasetCustomMeta(const char* handle, const char* key);
+	STORAGEIMGOUT getImageFromDataset(const char* handle, const std::vector<long>& coordinates) throw (CMMError);
+   void snapAndAppendToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void appendNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   STORAGEIMGOUT appendAndGetNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError);
+   void attachDatasetToCircularBuffer(const char* handle) throw (CMMError);
+   std::string getAttachedDataset();
+   std::string getLastAttachedDatasetError();
+
+   ///@}
+
 private:
    // make object non-copyable
    CMMCore(const CMMCore&);
@@ -659,6 +700,7 @@ private:
    std::weak_ptr<SLMInstance> currentSLMDevice_;
    std::weak_ptr<GalvoInstance> currentGalvoDevice_;
    std::weak_ptr<ImageProcessorInstance> currentImageProcessor_;
+   std::weak_ptr<StorageInstance> currentStorage_;
 
    std::string channelGroup_;
    long pollingIntervalMs_;

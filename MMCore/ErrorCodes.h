@@ -78,4 +78,7 @@
 #define MMERR_CreatePeripheralFailed   50
 #define MMERR_PropertyNotInCache       51
 #define MMERR_BadAffineTransform       52
+#define MMERR_StorageNotAvailable      53
+#define MMERR_StorageImageNotAvailable 54
+#define MMERR_StorageMetadataNotAvailable 55
 #endif //_ERRORCODES_H_

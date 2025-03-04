@@ -29,6 +29,7 @@
 // If any of the class definitions changes, the interface version
 // must be incremented
 #define DEVICE_INTERFACE_VERSION 71
+// TODO: determine the correct version number
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -204,6 +205,22 @@ namespace MM {
       MMTime interval_; // interval in milliseconds
    };
 
+   inline int GetPixelDataSizeInBytes(StorageDataType dataType)
+   {
+      switch (dataType)
+      {
+         case StorageDataType_GRAY8:
+            return 1;
+
+         case StorageDataType_GRAY16:
+            return 2;
+
+         case StorageDataType_RGB32:
+            return 4;
+      }
+
+      return 0;
+   }
 
    /**
     * Generic device interface.
@@ -1462,5 +1479,316 @@ namespace MM {
       /// \deprecated Better handling of asynchronous errors to be developed.
       MM_DEPRECATED(virtual void ClearPostedErrors(void)) = 0;
    };
+
+   /**
+    * \brief   Device interface for managing multi-dimensional datasets in storage
+    * \details The Storage class provides an interface for creating, managing, and accessing
+    *          multi-dimensional datasets. It supports operations such as creating new datasets,
+    *          adding images, retrieving metadata, and managing dataset dimensions and coordinates.
+    *
+    * \note Implementation Notes:
+    *       - All metadata variables are ASCII strings, typically JSON encoded, but not required
+    *       - Functions returning metadata allocate buffers on the heap that must be released by the caller.
+    *       - There are no explicit restrictions to image size, number of dimensions, size of dimensions and size of metadata
+    *       - The same device may support opening of multiple datasets simultaneously, or only one dataset at a time.
+    *       - The API allows for random access in image insertions and image retrieval, but the implementation may not support it.
+    *       - Most formats allow only appending images in the order of dimensions.
+    *       - Allowing random access to images (during retrievel) is recommended.
+    *       - Lazy loading of pixel data is recommended for large datasets.
+    *
+    * \inherit Device
+    */
+   class Storage : public Device {
+   public:
+      Storage() {}
+      virtual ~Storage() {}
+
+      virtual DeviceType GetType() const { return Type; }
+      static const DeviceType Type;
+
+      /**
+       * \brief   Creates a new dataset
+       *
+       * \param   path The path where the dataset will be created (parent directory)
+       * \param   name The name of the dataset (may be modified by the implementation to avoid overwriting existing datasets)
+       * \param   numberOfDimensions Number of dimensions in the dataset
+       * \param   shape Array defining the size of each dimension
+       * \param   pixType The data type for pixel storage
+       * \param   meta Dataset metadata string
+       * \param   [out] handle Output parameter for the dataset handle
+       * \return  Status code indicating success or failure
+       *
+       * \note    - Dimensions are ordered from slowest changing to fastest changing.
+       *          - Typically we are storing images and the last two dimensions are always image height (Y) and width (X)
+       *          - Some implementation may allow non-image data to be stored
+       *          - Declared size for the slowest (first) dimension can be exceeded during acquisition
+       */
+      virtual int Create(const char* path, const char* name, int numberOfDimensions, const int shape[],
+                         MM::StorageDataType pixType, const char* meta, char* handle) = 0;
+
+      /**
+       * \brief   Retrieves the filesystem path of an opened dataset
+       *
+       * \param   handle Dataset handle
+       * \param   [out] path Buffer to store the dataset path
+       * \param   maxPathLength Maximum length of the path buffer
+       * \return  Status code indicating success or failure
+       */
+      virtual int GetPath(const char* handle, char* path, int maxPathLength) = 0;
+
+      /**
+       * \brief           Configures a dimension's properties
+       *
+       * \param handle    Dataset handle
+       * \param dimension The dimension index to configure
+       * \param name      Name for the dimension
+       * \param meaning   Semantic meaning of the dimension
+       * \return          Status code indicating success or failure
+       *
+       * \note            Recommended meanings: "T" for time, "Z" for focus, "C" for channel, "P" for position
+       *                  The last two dimensions should be "Y" and "X" if we are dealing with images
+       */
+      virtual int ConfigureDimension(const char* handle, int dimension,
+                                     const char* name, const char* meaning) = 0;
+
+      /**
+       * \brief   Configures a coordinate's properties
+       *
+       * \param   handle Dataset handle
+       * \param   dimension The dimension index
+       * \param   coordinate The coordinate index within the dimension
+       * \param   name Name for the coordinate
+       * \return  Status code indicating success or failure
+       */
+      virtual int ConfigureCoordinate(const char* handle, int dimension,
+         int coordinate, const char* name) = 0;
+
+      /**
+       * \brief   Closes an opened dataset
+       *
+       * \param   handle Dataset handle (becomes invalid after closing)
+       * \return  Status code indicating success or failure
+       */
+      virtual int Close(const char* handle) = 0;
+
+      /**
+       * \brief   Closes an opened dataset
+       *
+       * \param   handle Dataset handle (becomes invalid after closing)
+       * \return  Status code indicating success or failure
+       */
+      virtual int Freeze(const char* handle) = 0;
+
+      /**
+       * \brief Checks if a dataset is currently open
+       *
+       * \param handle Dataset handle
+       * \return true if dataset is open, false otherwise
+       */
+      virtual bool IsOpen(const char* handle) = 0;
+
+      /**
+       * \brief   Checks if a dataset is read-only
+       * \details Loaded datasets are read-only and cannot accept new images.
+       *          Only new datasets accept images, until they are closed.
+       * \param   handle Dataset handle
+       * \return  true if dataset is read-only, false if it can accept new images
+       */
+      virtual bool IsReadOnly(const char* handle) = 0;
+
+      /**
+       * \brief   Loads an existing dataset
+       * \details Loaded datasets are immutable and cannot accept new images.
+       *          Implementation may use lazy loading for efficiency.
+       *
+       * \param   path Path to the dataset
+       * \param   [out] handle Output parameter for the dataset handle
+       * \return  Status code indicating success or failure
+       */
+      virtual int Load(const char* path, char* handle) = 0;
+
+      /**
+       * \brief   Checks if the device can load a dataset at the specified path
+       * \details This will be used by the caller to quickly determine which driver to use
+       *          for a given dataset path. The implementation should ideally be very fast
+       *          and not open any files.
+       * \param   path Path to the dataset
+       * \return  true if the device can load the dataset, false otherwise
+       */
+      virtual bool CanLoad(const char* path) = 0;
+
+      /**
+       * \brief Gets the progress of the current operation
+       *
+       * \param handle Dataset handle
+       * \return Progress value (0-100), or -1 if idle or not implemented
+       * \note Assumes single operation execution at a time
+       */
+      virtual int GetProgress(const char* handle) = 0;
+
+      /**
+       * \brief   Deletes a dataset
+       *
+       * \details The dataset is permanently removed from storage.
+       * \param   handle Handle of the dataset to delete
+       * \return  Status code indicating success or failure
+       */
+      virtual int Delete(char* handle) = 0;
+
+      /**
+       * \brief   Lists datasets in a specified path
+       *
+       * \param   path Directory path to search for known datasets
+       * \param   [out] listOfDatasets Array of dataset names, each with a maximum length of maxItemLength
+       * \param   maxItems Maximum number of items to return
+       * \param   maxItemLength Maximum length of each item name
+       * \return  Status code indicating success or failure
+       */
+      virtual int List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength) = 0;
+
+      /**
+       * \brief   Inserts an image at specific coordinates
+       *
+       * \param   handle Dataset handle
+       * \param   sizeInBytes Size of the image data in bytes
+       * \param   pixels Pointer to the image pixel data
+       * \param   coordinates Array of coordinates for image insertion
+       * \param   numCoordinates Number of coordinate values
+       * \param   imageMeta Image metadata string
+       * \return  Status code indicating success or failure
+       */
+      virtual int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels,
+                           int coordinates[], int numCoordinates, const char* imageMeta) = 0;
+
+      /**
+       * \brief   Appends an image to the dataset
+       * \param   handle Dataset handle
+       * \param   sizeInBytes Size of the image data in bytes
+       * \param   pixels Pointer to the image pixel data
+       * \param   imageMeta Image metadata string
+       * \return  Status code indicating success or failure
+       */
+      virtual int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta) = 0;
+
+      /**
+       * \brief   Retrieves dataset summary metadata
+       *
+       * \param   handle Dataset handle
+       * \param   [out]  meta Buffer for metadata string allocated by the implementation
+       * \return  Status code indicating success or failure
+       *
+       * \note    Caller must release the metadata buffer using ReleaseStringBuffer()
+       */
+      virtual int GetSummaryMeta(const char* handle, char** meta) = 0;
+
+      /**
+       * \brief   Retrieves metadata for a specific image
+       *
+       * \param   handle Dataset handle
+       * \param   coordinates Array of coordinates identifying the image
+       * \param   numCoordinates Number of coordinate values
+       * \param   [out] meta Buffer for metadata string
+       * \return  Status code indicating success or failure
+       *
+       * \note    Caller must release the metadata buffer using ReleaseStringBuffer()
+       */
+      virtual int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta) = 0;
+
+      /**
+       * \brief   Retrieves image pixel data
+       * \param   handle Dataset handle
+       * \param   coordinates Array of coordinates identifying the image
+       * \param   numCoordinates Number of coordinate values
+       * \return  Pointer to the image pixel data
+       */
+      virtual const unsigned char* GetImage(const char* handle, int coordinates[],
+         int numCoordinates) = 0;
+
+      /**
+       * \brief   Gets the number of dimensions in the dataset
+       * \param   handle Dataset handle
+       * \param   [out] numDimensions Number of dimensions
+       * \return  Status code indicating success or failure
+       */
+      virtual int GetNumberOfDimensions(const char* handle, int& numDimensions) = 0;
+
+      /**
+       * \brief   Gets the shape of the dataset
+       * \param   handle Dataset handle
+       * \param   [out] shape Array to store dimension sizes, allocated by the caller
+       * \return  Status code indicating success or failure
+       */
+      virtual int GetShape(const char* handle, int shape[]) = 0;
+
+      /**
+       * \brief   Gets the pixel data type of the dataset
+       * \param   handle Dataset handle
+       * \param   [out] pixelDataType Data type enumeration value
+       * \return  Status code indicating success or failure
+       */
+      virtual int GetDataType(const char* handle, MM::StorageDataType& pixelDataType) = 0;
+
+      /**
+       * \brief   Gets information about a specific dimension
+       * \param   handle Dataset handle
+       * \param   dimension Dimension index
+       * \param   [out] name Buffer for dimension name
+       * \param   nameLength Maximum length of name buffer
+       * \param   [out] meaning Buffer for dimension meaning
+       * \param   meaningLength Maximum length of meaning buffer
+       * \return  Status code indicating success or failure
+       */
+      virtual int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) = 0;
+
+      /**
+       * \brief   Gets information about a specific coordinate
+       *
+       * \param   handle Dataset handle
+       * \param   dimension Dimension index
+       * \param   coordinate Coordinate index
+       * \param   [out] name Buffer for coordinate name
+       * \param   nameLength Maximum length of name buffer
+       * \return  Status code indicating success or failure
+       */
+      virtual int GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength) = 0;
+
+      /**
+       * \brief   Gets the total number of images in the dataset
+       * \note    The number of images actually stored may not be equal to the product of the dimension sizes
+       *
+       * \param   handle Dataset handle
+       * \param   [out] imgcount Number of images
+       * \return  Status code indicating success or failure
+       */
+      virtual int GetImageCount(const char* handle, int& imgcount) = 0;
+
+      /**
+       * \brief   Sets custom metadata for the dataset
+       * \details This metadata is mutable and can be updated at any time
+       * \param   handle Dataset handle
+       * \param   key Metadata key
+       * \param   content Metadata content. Unlimited size.
+       * \return  Status code indicating success or failure
+       */
+      virtual int SetCustomMetadata(const char* handle, const char* key, const char* content) = 0;
+
+      /**
+       * \brief   Retrieves custom metadata from the dataset
+       * \param   handle Dataset handle
+       * \param   key Metadata key
+       * \param   [out] content Buffer for metadata content, allocated by the implementation
+       * \return  Status code indicating success or failure
+       * \note    Caller must release the content buffer using ReleaseStringBuffer()
+       */
+      virtual int GetCustomMetadata(const char* handle, const char* key, char** content) = 0;
+
+      /** \brief  Releases allocated string buffers
+       * \details Must be called to free memory allocated by GetSummaryMeta,
+       *          GetImageMeta, and GetCustomMetadata
+       * \param   buffer Pointer to the allocated buffer
+       */
+      virtual void ReleaseStringBuffer(char* buffer) = 0;
+   };
+
 
 } // namespace MM
