@@ -38,23 +38,7 @@ const char* const g_KeywordStandardPropertyPrefix = "api//";
 const double PropertyLimitUndefined = std::numeric_limits<double>::quiet_NaN();
 
 // Standard property metadata structure
-class StandardProperty {
-public:
-    StandardProperty(const char* name, PropertyType type, bool isReadOnly, 
-                     bool isPreInit, const std::vector<std::string>& allowedValues, 
-                     const std::vector<std::string>& requiredValues,
-                     double lowerLimit, double upperLimit, bool required) : 
-        name(name),
-        type(type),
-        isReadOnly(isReadOnly),
-        isPreInit(isPreInit),
-        allowedValues(allowedValues),
-        requiredValues(requiredValues),
-        lowerLimit(lowerLimit),
-        upperLimit(upperLimit),
-        required(required)
-    {}
-    
+struct StandardProperty {
     // Helper to check if limits are defined
     bool hasLimits() const {
         return !std::isnan(lowerLimit) && !std::isnan(upperLimit);
@@ -79,9 +63,9 @@ public:
     bool isPreInit; // Whether property should be set before initialization
     std::vector<std::string> allowedValues;  // if empty, no restrictions
     std::vector<std::string> requiredValues;   // if empty, no restrictions
-    double lowerLimit; // Lower limit for numeric properties (NaN if not limited)
-    double upperLimit;  // Upper limit for numeric properties (NaN if not limited)
-    bool required;  // Whether to throw a runtime error if the property is not found on init
+    double lowerLimit = PropertyLimitUndefined; // Lower limit for numeric properties (NaN if not limited)
+    double upperLimit = PropertyLimitUndefined;  // Upper limit for numeric properties (NaN if not limited)
+    bool required = false;  // Whether to throw a runtime error if the property is not found on init
 };
 
 

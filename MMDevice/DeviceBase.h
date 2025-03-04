@@ -120,7 +120,7 @@ public:
 
    //// Standard properties are created using only these dedicated functions
    // Such functions should all be defined here, and which device types they apply
-   // to is handled in MMDevice.h using the LINK_STANDARD_PROP_TO_DEVICE_TYPE macro
+   // to is handled in MMDevice.h using the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE macro
    int CreateTestStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_TestStandardProperty>(value, pAct);
    }
@@ -589,8 +589,8 @@ public:
    MM::DeviceType deviceType = this->GetType();
    
    // Look up properties for this device type
-   auto it = MM::GetDeviceTypeStandardPropertiesMap().find(deviceType);
-   if (it != MM::GetDeviceTypeStandardPropertiesMap().end()) {
+   auto it = MM::internal::GetDeviceTypeStandardPropertiesMap().find(deviceType);
+   if (it != MM::internal::GetDeviceTypeStandardPropertiesMap().end()) {
       // Iterate through all properties for this device type
       const auto& properties = it->second;
       for (const auto& prop : properties) {
@@ -1346,7 +1346,7 @@ private:
    CreateStandardProperty(const char* /*value*/, MM::ActionFunctor* /*pAct*/ = 0,
                            const std::vector<std::string>& /*values*/ = std::vector<std::string>()) {
       static_assert(MM::IsStandardPropertyValid<T::Type, PropRef>::value, 
-         "This standard property is not valid for this device type. Check the LINK_STANDARD_PROP_TO_DEVICE_TYPE definitions in MMDevice.h");
+         "This standard property is not valid for this device type. Check the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE definitions in MMDevice.h");
       return DEVICE_UNSUPPORTED_COMMAND; // This line will never execute due to the static_assert
    }
 

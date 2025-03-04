@@ -380,7 +380,9 @@ DeviceInstance::Initialize()
    // Check for that all required standard properties implemented
    char failedProperty[MM::MaxStrLength];
    if (!pImpl_->ImplementsRequiredStandardProperties(failedProperty)) {
-     ThrowError("Device " + GetLabel() +
+      // shutdown the device
+      Shutdown();
+      ThrowError("Device " + GetLabel() +
            " does not implement required standard property: " +
            std::string(failedProperty));
    }
