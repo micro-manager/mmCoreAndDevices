@@ -14,8 +14,11 @@ import java.util.Collections;
  * <p>This class extends TaggedImage and manages the lifecycle of image data stored
  * in native memory. It ensures proper release of resources when the image data is
  * no longer needed.</p>
+ * 
+ * <p>This class implements AutoCloseable, allowing it to be used with try-with-resources
+ * statements for automatic resource management.</p>
  */
-public class TaggedImagePointer extends TaggedImage {
+public class TaggedImagePointer extends TaggedImage implements AutoCloseable {
    
    public LazyJSONObject tags;
 
@@ -77,6 +80,17 @@ public class TaggedImagePointer extends TaggedImage {
          released_ = true;
          dataPointer_ = null;
       }
+   }
+
+   /**
+    * Closes this resource, relinquishing any underlying resources.
+    * This method is invoked automatically when used in a try-with-resources statement.
+    * 
+    * <p>This implementation calls {@link #release()} to free native memory.</p>
+    */
+   @Override
+   public void close() {
+      release();
    }
 
 }
