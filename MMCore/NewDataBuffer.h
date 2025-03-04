@@ -227,19 +227,6 @@ public:
     ~DataBuffer();
 
     /**
-     * Allocates the memory buffer.
-     * @param memorySizeMB Size in megabytes.
-     * @return DEVICE_OK on success.
-     */
-    int AllocateBuffer(unsigned int memorySizeMB);
-
-    /**
-     * Releases the memory buffer.
-     * @return DEVICE_OK on success.
-     */
-    int ReleaseBuffer();
-
-    /**
      * Inserts image data along with metadata into the buffer.
      * @param data Pointer to the raw image data.
      * @param dataSize The image data size in bytes.
@@ -365,7 +352,6 @@ public:
      */
     long GetActiveSlotCount() const;
 
-
     /**
      * Extracts metadata for a given image data pointer.
      * Thread-safe method that acquires necessary locks to lookup metadata location.
@@ -391,18 +377,47 @@ public:
     bool IsPointerInBuffer(const void* ptr);
 
     /**
-     * Reset the buffer, discarding all data that is not currently held externally.
-     */
-    void Reset();
-
-    /**
      * Checks if there are any outstanding slots in the buffer. If so, it 
      * is unsafe to destroy the buffer.
      * @return true if there are outstanding slots, false otherwise.
      */
     int NumOutstandingSlots() const;
 
+    /**
+     * Reinitializes the DataBuffer, clearing its structures and allocating a new buffer.
+     * @param memorySizeMB New buffer size (in MB).
+     * @param forceReset If true, the buffer will be reset even if there are outstanding active slots.
+     * This is a dangerous operation operation becuase there may be pointers into the buffer's memory
+     * that are not valid anymore. It can be used to reset the buffer without having to restart the
+     * application, but it indicates a bug in the application or device adapter that is not properly
+     * releasing the buffer's memory.
+     * @return DEVICE_OK on success.
+     * @throws std::runtime_error if any slot is still in use.
+     */
+    int ReinitializeBuffer(unsigned int memorySizeMB, bool forceReset);
+
+    /**
+     * Clears the buffer, discarding all data that does not have outstanding pointers.
+     */
+    void Clear();
+
+    
+
 private:
+
+    /**
+     * Allocates the memory buffer.
+     * @param memorySizeMB Size in megabytes.
+     * @return DEVICE_OK on success.
+     */
+    int AllocateBuffer(unsigned int memorySizeMB);
+
+    /**
+     * Releases the memory buffer.
+     * @return DEVICE_OK on success.
+     */
+    int ReleaseBuffer();
+
     /**
      * Internal helper function that finds the slot for a given pointer.
      * Returns non-const pointer since slots need to be modified for locking.
@@ -434,7 +449,6 @@ private:
     size_t freeRegionCursor_;
 
     // Instead of ownership via unique_ptr, store raw pointers
-    // Note: unusedSlots_ is now a deque of raw pointers.
     std::deque<BufferSlot*> unusedSlots_;
 
     // This container holds the ownership; they live for the lifetime of the buffer.
@@ -466,15 +480,7 @@ private:
                                size_t dataSize, size_t initialMetadataSize,
                                size_t additionalMetadataSize, const std::string& deviceLabel);
 
-    /**
-     * Reinitializes the DataBuffer, clearing its structures and allocating a new buffer.
-     * @param memorySizeMB New buffer size (in MB).
-     * @return DEVICE_OK on success.
-     * @throws std::runtime_error if any slot is still in use.
-     */
-    int ReinitializeBuffer(unsigned int memorySizeMB);
 
-    
     /**
      * Creates a new slot with the specified parameters.
      * Caller must hold slotManagementMutex_.

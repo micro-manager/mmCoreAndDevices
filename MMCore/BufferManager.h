@@ -160,8 +160,6 @@ public:
     */
    bool Overflow() const;
 
-
-
    const void* GetNthDataMD(unsigned long n, Metadata& md) const;
 
    // Channels are not directly supported in NewDataBuffer, these are for backwards compatibility
@@ -273,17 +271,30 @@ public:
    bool GetOverwriteData() const;
 
    /**
-    * Get the underlying CircularBuffer pointer.
-    * This method is provided for backwards compatibility only.
-    * @return Pointer to CircularBuffer if using legacy buffer, nullptr if using NewDataBuffer
-    * @deprecated This method exposes implementation details and should be avoided in new code
+    * Clear the buffer, discarding all data.
     */
-   CircularBuffer* GetCircularBuffer() { return circBuffer_; }
+   void Clear();
 
    /**
     * Reset the buffer, discarding all data that is not currently held externally.
+    * When using the NewDataBuffer, this is a dangerous operation because there may be pointers 
+    * into the buffer's memory that will not longer be valid. It can be used to reset the buffer 
+    * without having to restart the application, but its use likely indicates a bug in the
+    * application or device adapter that is not properly releasing the buffer's memory.
     */
-   void Reset();
+   void ForceReset();
+
+   /**
+    * Initialize the circular buffer. This has no effect if NewDataBuffer is enabled. This method
+    * is for backwards compatibility with the circular buffer, which requires knowledge of the 
+    * dimensions of the image to be captured.
+    * @param numChannels Number of channels in the image.
+    * @param width Image width.
+    * @param height Image height.
+    * @param depth Bytes per pixel.
+    * @return true if the buffer was initialized, false otherwise.
+    */
+   MM_DEPRECATED(bool InitializeCircularBuffer(unsigned int numChannels, unsigned int width, unsigned int height, unsigned int depth));
 
 private:
    

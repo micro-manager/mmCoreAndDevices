@@ -106,15 +106,8 @@ DataBuffer::DataBuffer(unsigned int memorySizeMB)
       overflow_(false),
       threadPool_(std::make_shared<ThreadPool>()),
       tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
-{
-    // Pre-allocate slots (one per MB) and store in both slotPool_ and unusedSlots_
-    for (unsigned int i = 0; i < memorySizeMB; i++) {
-        BufferSlot* bs = new BufferSlot();
-        slotPool_.push_back(bs);
-        unusedSlots_.push_back(bs);
-    }
-    
-    ReinitializeBuffer(memorySizeMB);
+{    
+    ReinitializeBuffer(memorySizeMB, false);
 }
 
 DataBuffer::~DataBuffer() {
@@ -169,6 +162,7 @@ int DataBuffer::AllocateBuffer(unsigned int memorySizeMB) {
     overflow_ = false;
     freeRegions_.clear();
     freeRegions_[0] = bufferSize_;
+    freeRegionCursor_ = 0;
     return DEVICE_OK;
 }
 
@@ -186,7 +180,6 @@ int DataBuffer::ReleaseBuffer() {
         buffer_ = nullptr;
         return DEVICE_OK;
     }
-    // TODO: Handle errors if other parts of the system still hold pointers.
     return DEVICE_ERR;
 }
 
@@ -231,6 +224,15 @@ int DataBuffer::InsertData(const void* data, size_t dataSize, const Metadata* pM
  * @return Error code (0 on success)
  */
 int DataBuffer::SetOverwriteData(bool overwrite) {
+    if (overwriteWhenFull_ == overwrite) {
+        return DEVICE_OK;
+    }
+
+    // You can't change modes when code holds pointers into the buffer
+    if (GetActiveSlotCount() > 0) {
+        return DEVICE_ERR;
+    }
+    
     overwriteWhenFull_ = overwrite;
     return DEVICE_OK;
 }
@@ -241,14 +243,6 @@ int DataBuffer::SetOverwriteData(bool overwrite) {
  */
 bool DataBuffer::GetOverwriteData() const {
     return overwriteWhenFull_;
-}
-
-/**
- * Reset the buffer, discarding all data that is not currently held externally.
- */
-void DataBuffer::Reset() {
-    // Reuse ReinitializeBuffer with current size
-    ReinitializeBuffer(GetMemorySizeMB());
 }
 
 /**
@@ -557,16 +551,23 @@ bool DataBuffer::Overflow() const {
  * This method uses the existing slotManagementMutex_ to ensure thread-safety.
  *
  * @param memorySizeMB New size (in MB) for the buffer.
+ * @param forceReset If true, the buffer will be reset even if there are outstanding active slots.
+ * This is a dangerous operation operation becuase there may be pointers into the buffer's memory
+ * that are not valid anymore. It can be used to reset the buffer without having to restart the
+ * application, but it indicates a bug in the application or device adapter that is not properly
+ * releasing the buffer's memory.
  * @return DEVICE_OK on success.
  * @throws std::runtime_error if any slot is still actively being read or written.
  */
-int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
+int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB, bool forceReset) {
     std::lock_guard<std::mutex> lock(slotManagementMutex_);
 
     // Ensure no active readers/writers exist.
-    for (BufferSlot* slot : activeSlotsVector_) {
-        if (!slot->IsFree()) {
-            throw std::runtime_error("Cannot reinitialize DataBuffer: outstanding active slot detected.");
+    if (!forceReset) {
+        for (BufferSlot* slot : activeSlotsVector_) {
+            if (!slot->IsFree()) {
+                throw std::runtime_error("Cannot reinitialize DataBuffer: outstanding active slot detected.");
+            }
         }
     }
    
@@ -577,23 +578,42 @@ int DataBuffer::ReinitializeBuffer(unsigned int memorySizeMB) {
     nextAllocOffset_ = 0;
     overflow_ = false;
    
-    // Reset the slot pool
+    // Pre-allocate slots (one per MB) and store in both slotPool_ and unusedSlots_
+    slotPool_.clear();
+    unusedSlots_.clear();
+    for (unsigned int i = 0; i < memorySizeMB; i++) {
+        BufferSlot* bs = new BufferSlot();
+        slotPool_.push_back(bs);
+        unusedSlots_.push_back(bs);
+    }
+    
+   
+    // Release and reallocate the buffer
+    if (buffer_ != nullptr) {
+        ReleaseBuffer(); 
+    }
+   
+    return AllocateBuffer(memorySizeMB);
+}
+
+void DataBuffer::Clear() {
+    if (NumOutstandingSlots() > 0) {
+        throw std::runtime_error("Cannot clear DataBuffer: outstanding active slot detected.");
+    }
+    std::lock_guard<std::mutex> lock(slotManagementMutex_);
+    activeSlotsVector_.clear();
+    activeSlotsByStart_.clear();
+    currentSlotIndex_ = 0;
+    nextAllocOffset_ = 0;
+    // reset the unused slot pool
     unusedSlots_.clear();
     for (BufferSlot* bs : slotPool_) {
         unusedSlots_.push_back(bs);
     }
-   
-    // Release and reallocate the buffer
-    if (buffer_ != nullptr) {
-        #ifdef _WIN32
-            VirtualFree(buffer_, 0, MEM_RELEASE);
-        #else
-            munmap(buffer_, bufferSize_);
-        #endif
-        buffer_ = nullptr;
-    }
-   
-    return AllocateBuffer(memorySizeMB);
+    // Rest freee regions to whole buffer
+    freeRegions_.clear();
+    freeRegions_[0] = bufferSize_;
+    freeRegionCursor_ = 0;
 }
 
 long DataBuffer::GetActiveSlotCount() const {

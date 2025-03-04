@@ -444,13 +444,15 @@ public:
    // This is only needed for the circular buffer, because it needs to match the camera settings. Should it be deprecated?
    void initializeCircularBuffer() throw (CMMError);
    /**
-    * @deprecated Use resetBuffer() instead
+    * @deprecated Use clearBuffer() instead, but see note in ClearBuffer() about how it does not
+    * need to be called as frequently as clearCircularBuffer() was
     */
    void clearCircularBuffer() throw (CMMError);
 
    void setBufferMemoryFootprint(unsigned sizeMB) throw (CMMError);
    unsigned getBufferMemoryFootprint() const;
    void clearBuffer() throw (CMMError);
+   void forceBufferReset() throw (CMMError);
 
    ///@}
 

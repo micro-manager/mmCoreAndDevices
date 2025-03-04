@@ -346,7 +346,7 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
    // to the v2 buffer, because devices do not have the authority to clear the buffer, 
    // when application code may hold pointers into the buffer.
    if (!core_->bufferManager_->IsUsingNewDataBuffer()) {
-      return core_->bufferManager_->GetCircularBuffer()->Initialize(channels, w, h, pixDepth);
+      return core_->bufferManager_->InitializeCircularBuffer(channels, w, h, pixDepth);
    } 
    return true;
 }

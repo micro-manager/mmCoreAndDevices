@@ -67,6 +67,7 @@ public:
    unsigned int Width() const {MMThreadGuard guard(g_bufferLock); return width_;}
    unsigned int Height() const {MMThreadGuard guard(g_bufferLock); return height_;}
    unsigned int Depth() const {MMThreadGuard guard(g_bufferLock); return pixDepth_;}
+   unsigned int NumChannels() const {MMThreadGuard guard(g_bufferLock); return numChannels_;}
 
    bool InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError);
    const unsigned char* GetTopImage() const;

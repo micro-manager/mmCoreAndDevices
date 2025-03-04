@@ -50,6 +50,32 @@ BufferManager::~BufferManager()
    }
 }
 
+void BufferManager::Clear() {
+   if (useNewDataBuffer_.load()) {
+      newDataBuffer_->Clear();
+   } else {
+      circBuffer_->Clear();
+   }
+}
+
+void BufferManager::ForceReset() {
+    if (useNewDataBuffer_.load()) {
+      // This is dangerous with the NewDataBuffer because there may be pointers into the buffer's memory
+      newDataBuffer_->ReinitializeBuffer(GetMemorySizeMB(), true);
+    } else {
+      // This is not dangerous with the circular buffer because it does not give out pointers to its memory
+      circBuffer_->Initialize(circBuffer_->NumChannels(), circBuffer_->Width(), 
+                                circBuffer_->Height(), circBuffer_->Depth());
+    }
+}
+
+bool BufferManager::InitializeCircularBuffer(unsigned int numChannels, unsigned int width, unsigned int height, unsigned int depth) {
+   if (!useNewDataBuffer_.load()) {
+      return circBuffer_->Initialize(numChannels, width, height, depth);
+   }
+   return false;
+}
+
 void BufferManager::ReallocateBuffer(unsigned int memorySizeMB) {
    if (useNewDataBuffer_.load()) {
       int numOutstanding = newDataBuffer_->NumOutstandingSlots();   
@@ -374,12 +400,3 @@ bool BufferManager::GetOverwriteData() const {
         return circBuffer_->GetOverwriteData();
     }
 }
-
-void BufferManager::Reset() {
-    if (useNewDataBuffer_.load()) {
-        newDataBuffer_->Reset();
-    } else {
-        circBuffer_->Clear();
-    }
-}
-

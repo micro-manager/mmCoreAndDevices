@@ -3226,19 +3226,24 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
       try
       {
          if (!bufferManager_->IsUsingNewDataBuffer()) {
-            if (!bufferManager_->GetCircularBuffer()->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-            {
-               logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-               throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-            }
+            // Circular buffer is initialized in case of a change in camera settings
+            try {
+               bufferManager_->InitializeCircularBuffer(camera->GetNumberOfChannels(), camera->GetImageWidth(), 
+                                                         camera->GetImageHeight(), camera->GetImageBytesPerPixel());
+               } catch (...) {
+                  logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+                  throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+               }
          }
-         if (!bufferManager_->IsUsingNewDataBuffer()) {
-            // NewDataBuffer does not support this, because its design is such that data
-            // could still be read out even when a new sequence is started.
-            bufferManager_->GetCircularBuffer()->Clear();
-         }
+         // NewDataBuffer does not need to be initialized or cleared, becuase it does not make
+         // assumptions about image size and it supports asynchronous sequences from different
+         // cameras.
+
          // Disable overwriting for finite sequence acquisition
-         bufferManager_->SetOverwriteData(false);
+         int ret = bufferManager_->SetOverwriteData(false);
+         if (ret != DEVICE_OK) {
+            throw CMMError("Failed to switch to non-overwriting mode in DataBuffer");
+         }
          mm::DeviceModuleLockGuard guard(camera);
 
          startTime_ = std::chrono::steady_clock::now();
@@ -3279,16 +3284,25 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
                      MMERR_NotAllowedDuringSequenceAcquisition);
 
-   if (!bufferManager_->IsUsingNewDataBuffer()) {
-      if (!bufferManager_->GetCircularBuffer()->Initialize(pCam->GetNumberOfChannels(), pCam->GetImageWidth(), pCam->GetImageHeight(), pCam->GetImageBytesPerPixel()))
-      {
-         logError(getDeviceName(pCam).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-         throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+      if (!bufferManager_->IsUsingNewDataBuffer()) {
+         // Circular buffer is initialized in case of a change in camera settings
+         try {
+            bufferManager_->InitializeCircularBuffer(pCam->GetNumberOfChannels(), pCam->GetImageWidth(), 
+                                                      pCam->GetImageHeight(), pCam->GetImageBytesPerPixel());
+            } catch (...) {
+               logError(getDeviceName(pCam).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+               throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+            }
       }
-      bufferManager_->GetCircularBuffer()->Clear();
-   }
+      // NewDataBuffer does not need to be initialized or cleared, becuase it does not make
+      // assumptions about image size and it supports asynchronous sequences from different
+      // cameras.
+
    // Disable overwriting for finite sequence acquisition
-   bufferManager_->SetOverwriteData(false);
+   int ret = bufferManager_->SetOverwriteData(false);
+   if (ret != DEVICE_OK) {
+      throw CMMError("Failed to switch to non-overwriting mode in DataBuffer");
+   }
    
    startTime_ = std::chrono::steady_clock::now();
    imageNumbers_.clear();
@@ -3337,12 +3351,13 @@ void CMMCore::initializeCircularBuffer() throw (CMMError)
       if (camera)
       {
          mm::DeviceModuleLockGuard guard(camera);
-         if (!bufferManager_->GetCircularBuffer()->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-         {
+         try {
+            bufferManager_->InitializeCircularBuffer(camera->GetNumberOfChannels(), camera->GetImageWidth(), 
+                                                      camera->GetImageHeight(), camera->GetImageBytesPerPixel());
+         } catch (...) {
             logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
             throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
          }
-         bufferManager_->GetCircularBuffer()->Clear();
       }
       else
       {
@@ -3398,18 +3413,25 @@ void CMMCore::startContinuousSequenceAcquisition(const char* cameraLabel, double
             ,MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-      // Legacy calls for circular buffer
       if (!bufferManager_->IsUsingNewDataBuffer()) {
-         if (!bufferManager_->GetCircularBuffer()->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-         {
-            logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-            throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-         }
-         bufferManager_->GetCircularBuffer()->Clear();
+         // Circular buffer is initialized in case of a change in camera settings
+         try {
+            bufferManager_->InitializeCircularBuffer(camera->GetNumberOfChannels(), camera->GetImageWidth(), 
+                                                      camera->GetImageHeight(), camera->GetImageBytesPerPixel());
+            } catch (...) {
+               logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+               throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+            }
       }
+      // NewDataBuffer does not need to be initialized or cleared, becuase it does not make
+      // assumptions about image size and it supports asynchronous sequences from different
+      // cameras.
 
       // Enable overwriting for continuous sequence acquisition
-      bufferManager_->SetOverwriteData(true);
+      int ret = bufferManager_->SetOverwriteData(true);
+      if (ret != DEVICE_OK) {
+         throw CMMError("Failed to switch to overwriting mode in DataBuffer");
+      }
       startTime_ = std::chrono::steady_clock::now();
       imageNumbers_.clear();
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
@@ -3662,21 +3684,38 @@ void CMMCore::clearCircularBuffer() throw (CMMError)
    if (!bufferManager_->IsUsingNewDataBuffer()) {
       clearBuffer();
    }
-   // No effect on NewDataBuffer because Reset should be used more carefully
+   // No effect on NewDataBuffer, because it supports asynchronous sequences from different
+   // cameras and should be cleared more carefully using the clearBuffer() method.
 }
 
 /**
  * This method applies to both the circular buffer and the NewDataBuffer.
  * A difference between the circular buffer and NewDataBuffer is that the NewDataBuffer
- * does require to be empty of images before a new sequence is started. In other 
- * words, producers can be adding data to it that is asynchronously consumed.
+ * is not required to be empty of images before a new sequence is started. In other 
+ * words, producers can be adding data to it that is asynchronously consumed. This
+ * means that this method should not be substituted for clearCircularBuffer() in 
+ * acquisition code.
  * 
- * Thus, reset should be used carefully, because it will discard data that a consumer
- * may sill asynchronously be waiting to consume
  */
 void CMMCore::clearBuffer() throw (CMMError)
 {
-   bufferManager_->Reset();  
+   try {
+      bufferManager_->Clear();  
+   } catch (...) {
+      throw CMMError("Failed to clear buffer");
+   }
+}
+
+/**
+ * For the circular buffer, this does a non-dangerous re-initialization
+ * for NewDataBuffer, this is a dangerous operation because there may be pointers into the buffer's memory
+ * that are not valid anymore. It can be used to reset the buffer without having to restart the
+ * application, but the need to use it indicates a bug in the application or device adapter that
+ * is not properly releasing the buffer's memory.
+ */
+void CMMCore::forceBufferReset() throw (CMMError)
+{
+   bufferManager_->ForceReset();
 }
 
 /**
@@ -3691,9 +3730,7 @@ void CMMCore::enableNewDataBuffer(bool enable) throw (CMMError)
    // Default include circular buffer, exclude new buffer
    imageMDIncludeLegacyCalibration_ = !enable;
    imageMDIncludeSystemStateCache_ = !enable;
-   imageMDIncludeCameraTags_ = !enable;
-
-   
+   imageMDIncludeCameraTags_ = !enable;   
 }
 
 /**
@@ -3736,7 +3773,7 @@ void CMMCore::setBufferMemoryFootprint(unsigned sizeMB) throw (CMMError)
          mm::DeviceModuleLockGuard guard(camera);
          if (!bufferManager_->IsUsingNewDataBuffer()) {
             // Circular buffer requires initialization specific to the camera
-            if (!bufferManager_->GetCircularBuffer()->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+            if (!bufferManager_->InitializeCircularBuffer(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
                throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
          } else {
             bufferManager_->ReallocateBuffer(sizeMB);
@@ -4971,7 +5008,7 @@ void CMMCore::setROI(int x, int y, int xSize, int ySize) throw (CMMError)
       // There is no way to "fix" popNextImage() to handle this correctly, 
       // so we need to make sure we discard such images.
       if (! bufferManager_->IsUsingNewDataBuffer()) {
-         bufferManager_->GetCircularBuffer()->Clear();
+         bufferManager_->Clear();
       }
    }
    else
@@ -5052,7 +5089,7 @@ void CMMCore::setROI(const char* label, int x, int y, int xSize, int ySize) thro
      // popNextImage() to handle this correctly, so we need to make sure we
      // discard such images.
      if (!bufferManager_->IsUsingNewDataBuffer()) {
-        bufferManager_->GetCircularBuffer()->Clear();
+        bufferManager_->Clear();
      }
   }
   else
@@ -5113,7 +5150,7 @@ void CMMCore::clearROI() throw (CMMError)
       // There is no way to "fix" popNextImage() to handle this correctly, 
       // so we need to make sure we discard such images.
       if (!bufferManager_->IsUsingNewDataBuffer()) {
-         bufferManager_->GetCircularBuffer()->Clear();
+         bufferManager_->Clear();
       }
    }
 }
