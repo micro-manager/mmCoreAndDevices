@@ -516,7 +516,7 @@ namespace MM {
       virtual int SetRollingShutterLineOffset(double offset_us) = 0;
 
       virtual unsigned GetRollingShutterActiveLines() const = 0;
-      virtual unsigned SetRollingShutterActiveLines(unsigned numLines) = 0;
+      virtual int SetRollingShutterActiveLines(unsigned numLines) = 0;
 
       ///////////////////////////////////////////////////////////////
       ///// End new camera API               ////////////////////////

@@ -1649,7 +1649,7 @@ public:
 
    virtual bool isNewAPIImplemented() {return true;};
 
-   virtual bool hasTrigger(const char* cameraLabel, const char* triggerSelector) = 0;
+   virtual bool hasTrigger(const char* cameraLabel, const char* triggerSelector)  {return false;};
 
 	virtual bool HasTrigger(const char* triggerSelector) { return false; };
    virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
@@ -1692,10 +1692,10 @@ public:
    virtual int SetOutputLineSource(const char* lineSelector, const char* source) { return DEVICE_NOT_YET_IMPLEMENTED; };
    virtual int GetLineStatus(const char* lineSelector, bool& high) { return DEVICE_NOT_YET_IMPLEMENTED; };
 
-   virtual double GetRollingShutterLineOffset() const {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual double GetRollingShutterLineOffset() const {return 0.0;};
    virtual int SetRollingShutterLineOffset(double offset_us) {return DEVICE_NOT_YET_IMPLEMENTED;};
-   virtual unsigned GetRollingShutterActiveLines() const {return DEVICE_NOT_YET_IMPLEMENTED;};
-   virtual unsigned setRollingShutterActiveLines(unsigned numLines) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual unsigned GetRollingShutterActiveLines() const {return 0;};
+   virtual int SetRollingShutterActiveLines(unsigned numLines) {return DEVICE_NOT_YET_IMPLEMENTED;};
 };
 
 

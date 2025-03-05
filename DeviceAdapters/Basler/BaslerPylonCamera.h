@@ -165,10 +165,10 @@ public:
 	int GetLineStatus(const char* lineSelector, bool& high);
 
 
-	double GetRollingShutterLineOffset() const;
-	int SetRollingShutterLineOffset(double offset_us);
-	unsigned GetRollingShutterActiveLines() const;
-	unsigned SetRollingShutterActiveLines(unsigned numLines);
+	// double GetRollingShutterLineOffset() const;
+	// int SetRollingShutterLineOffset(double offset_us);
+	// unsigned GetRollingShutterActiveLines() const;
+	// int SetRollingShutterActiveLines(unsigned numLines);
 
 	// Convenience functions
 	std::string NodeToString(const char* str) const;

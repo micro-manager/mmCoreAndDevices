@@ -1143,26 +1143,30 @@ int BaslerCamera::GetLineStatus(const char* lineSelector, bool& high) {
 }
 
 
-//TODO
-double BaslerCamera::GetRollingShutterLineOffset() const
-{
-	return DEVICE_NOT_SUPPORTED;
-}
+// //TODO
+// double BaslerCamera::GetRollingShutterLineOffset() const
+// {
+//     // Return a default value of 0 since the feature is not supported
+//     return 0.0;
+// }
 
-int BaslerCamera::SetRollingShutterLineOffset(double offset_us)
-{
-	return CCameraBase<BaslerCamera>::SetRollingShutterLineOffset(offset_us);
-}
+// int BaslerCamera::SetRollingShutterLineOffset(double offset_us)
+// {
+//     // Return error code as expected
+//     return DEVICE_NOT_SUPPORTED;
+// }
 
-unsigned BaslerCamera::GetRollingShutterActiveLines() const
-{
-	return CCameraBase<BaslerCamera>::GetRollingShutterActiveLines();
-}
+// unsigned BaslerCamera::GetRollingShutterActiveLines() const
+// {
+//     // Return a default value of 0 since the feature is not supported
+//     return 0;
+// }
 
-unsigned BaslerCamera::SetRollingShutterActiveLines(unsigned numLines)
-{
-	return CCameraBase<BaslerCamera>::setRollingShutterActiveLines(numLines);
-}
+// int BaslerCamera::SetRollingShutterActiveLines(unsigned numLines)
+// {
+//     // Return error code as expected
+//     return DEVICE_NOT_SUPPORTED;
+// }
 
 //////////////////////////////////////////////////////////////
 
