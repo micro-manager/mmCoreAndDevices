@@ -39,6 +39,7 @@
 #include <map>
 #include <sstream>
 #include <type_traits>
+#include <set>
 
 // common error messages
 const char* const g_Msg_ERR = "Unknown error in the device";
@@ -132,45 +133,91 @@ public:
        MM::g_TestWithValuesStandardProperty.requiredValues);
    }
 
-   // Camera trigger API standard properties
+   // Required standard properties can be skipped by adding methods like this.
+   // The TestStandardProperty is not required, this is just an example.
+   // void SkipTestStandardProperty() {
+   //    SkipStandardProperty<MM::g_TestStandardProperty>();
+   // }
+
+   // Camera triggering API standard properties
    int CreateTriggerSelectorStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_TriggerSelectorProperty>(value, pAct);
+   }
+
+   void SkipTriggerSelectorStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerSelectorProperty>();
    }
 
    int CreateTriggerModeStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_TriggerModeProperty>(value, pAct);
    }
 
+   void SkipTriggerModeStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerModeProperty>();
+   }
+
    int CreateTriggerSourceStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_TriggerSourceProperty>(value, pAct);
    }
 
+   void SkipTriggerSourceStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerSourceProperty>();
+   }
+   
    int CreateTriggerActivationStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_TriggerActivationProperty>(value, pAct);
+   }
+   
+   void SkipTriggerActivationStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerActivationProperty>();
    }
 
    int CreateTriggerDelayStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_TriggerDelayProperty>(value, pAct);
    }
 
+   void SkipTriggerDelayStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerDelayProperty>();
+   }
+
    int CreateExposureModeStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_ExposureModeProperty>(value, pAct);
+   }
+
+   void SkipExposureModeStandardProperty() {
+      SkipStandardProperty<MM::g_ExposureModeProperty>();
    }
 
    int CreateBurstFrameCountStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_BurstFrameCountProperty>(value, pAct);
    }
 
+   void SkipBurstFrameCountStandardProperty() {
+      SkipStandardProperty<MM::g_BurstFrameCountProperty>();
+   }
+
    int CreateLineSelectorStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_LineSelectorProperty>(value, pAct);
+   }
+
+   void SkipLineSelectorStandardProperty() {
+      SkipStandardProperty<MM::g_LineSelectorProperty>();
    }
 
    int CreateLineInverterStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_LineInverterProperty>(value, pAct);
    }
 
+   void SkipLineInverterStandardProperty() {
+      SkipStandardProperty<MM::g_LineInverterProperty>();
+   }
+
    int CreateLineSourceStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_LineSourceProperty>(value, pAct);
+   }
+
+   void SkipLineSourceStandardProperty() {
+      SkipStandardProperty<MM::g_LineSourceProperty>();
    }
 
    int CreateLineStatusStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
@@ -179,6 +226,9 @@ public:
        MM::g_LineStatusProperty.requiredValues);
    }
 
+   void SkipLineStatusStandardProperty() {
+      SkipStandardProperty<MM::g_LineStatusProperty>();
+   }
 
    /**
    * Assigns description string for a device (for use only by the calling code).
@@ -648,6 +698,11 @@ public:
             std::string fullName = MM::g_KeywordStandardPropertyPrefix;
             fullName += prop.name;
             
+            // Skip checking if this property is in the skipped list
+            if (skippedStandardProperties_.find(fullName) != skippedStandardProperties_.end()) {
+               continue;
+            }
+            
             // Check if the device has implemented it
             if (!HasProperty(fullName.c_str())) {
                // If not, copy in the name of the property and return false
@@ -658,7 +713,7 @@ public:
       }
    }
    
-   // All required properties are implemented
+   // All required properties are implemented or explicitly skipped
    return true;
    }
 
@@ -1398,6 +1453,17 @@ private:
       return DEVICE_UNSUPPORTED_COMMAND; // This line will never execute due to the static_assert
    }
 
+   // Helper method to mark a required standard property as skipped
+   template <const MM::StandardProperty& PropRef>
+   void SkipStandardProperty() {
+      // Only allow skipping properties that are valid for this device type
+      if (MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value) {
+         std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+         fullName += PropRef.name;
+         skippedStandardProperties_.insert(fullName);
+      }
+   }
+
    bool PropertyDefined(const char* propName) const
    {
       return properties_.Find(propName) != 0;
@@ -1440,6 +1506,10 @@ private:
    // specific information about the errant property, etc.
    mutable std::string morePropertyErrorInfo_;
    std::string parentID_;
+   
+   // Set to track which standard properties are explicitly skipped
+   std::set<std::string> skippedStandardProperties_;
+   
 };
 
 // Forbid instantiation of CDeviceBase<MM::Device, U>
