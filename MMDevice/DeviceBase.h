@@ -132,6 +132,54 @@ public:
        MM::g_TestWithValuesStandardProperty.requiredValues);
    }
 
+   // Camera trigger API standard properties
+   int CreateTriggerSelectorStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerSelectorProperty>(value, pAct);
+   }
+
+   int CreateTriggerModeStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerModeProperty>(value, pAct);
+   }
+
+   int CreateTriggerSourceStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerSourceProperty>(value, pAct);
+   }
+
+   int CreateTriggerActivationStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerActivationProperty>(value, pAct);
+   }
+
+   int CreateTriggerDelayStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerDelayProperty>(value, pAct);
+   }
+
+   int CreateExposureModeStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_ExposureModeProperty>(value, pAct);
+   }
+
+   int CreateBurstFrameCountStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_BurstFrameCountProperty>(value, pAct);
+   }
+
+   int CreateLineSelectorStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineSelectorProperty>(value, pAct);
+   }
+
+   int CreateLineInverterStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineInverterProperty>(value, pAct);
+   }
+
+   int CreateLineSourceStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineSourceProperty>(value, pAct);
+   }
+
+   int CreateLineStatusStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      // LineStatus has required values that are the same as its allowed values
+      return CreateStandardProperty<MM::g_LineStatusProperty>(value, pAct,
+       MM::g_LineStatusProperty.requiredValues);
+   }
+
+
    /**
    * Assigns description string for a device (for use only by the calling code).
    */
@@ -1649,34 +1697,7 @@ public:
 
    virtual bool isNewAPIImplemented() {return true;};
 
-   virtual bool hasTrigger(const char* cameraLabel, const char* triggerSelector)  {return false;};
-
-	virtual bool HasTrigger(const char* triggerSelector) { return false; };
-   virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) { return DEVICE_NOT_YET_IMPLEMENTED; };
-
-   virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) { return DEVICE_NOT_YET_IMPLEMENTED; };
-
-   /**
-    * Every camera must have at least Timed exposure mode, so these implementations default to only that
-    */
-   virtual bool HasExposureMode(const char* exposureMode) { return strcmp(exposureMode, MM::ExposureModeTimed) == 0; };
-   virtual int SetExposureMode(const char* exposureMode) { return (strcmp(exposureMode, MM::ExposureModeTimed) == 0) ?
-      DEVICE_OK : DEVICE_UNSUPPORTED_COMMAND; };
-   virtual int GetExposureMode(char* exposureMode) {
-      strcpy(exposureMode, MM::ExposureModeTimed);
-      return DEVICE_OK;
-   };
-
-   virtual int TriggerSoftware(const char* triggerSelector) {return DEVICE_NOT_YET_IMPLEMENTED;};
-
-   virtual int SetBurstFrameCount(unsigned count) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual unsigned GetBurstFrameCount() const { return 1; };
+   virtual int TriggerSoftware() {return DEVICE_NOT_YET_IMPLEMENTED;};
 
    virtual int AcquisitionArm(int frameCount) {return DEVICE_NOT_YET_IMPLEMENTED;};
    virtual int AcquisitionArm() { return DEVICE_NOT_YET_IMPLEMENTED; };
@@ -1684,13 +1705,6 @@ public:
    virtual int AcquisitionStart() {return DEVICE_NOT_YET_IMPLEMENTED;};
    virtual int AcquisitionStop() {return DEVICE_NOT_YET_IMPLEMENTED;};
    virtual int AcquisitionAbort() {return DEVICE_NOT_YET_IMPLEMENTED;};
-
-   virtual int GetAcquisitionStatus(const char* statusSelector, bool& status) { return DEVICE_NOT_YET_IMPLEMENTED; };
-
-   virtual int SetIOLineInverted(const char* lineSelector, bool invert) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int SetLineAsOutput(const char* lineSelector, bool output) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int SetOutputLineSource(const char* lineSelector, const char* source) { return DEVICE_NOT_YET_IMPLEMENTED; };
-   virtual int GetLineStatus(const char* lineSelector, bool& high) { return DEVICE_NOT_YET_IMPLEMENTED; };
 
    virtual double GetRollingShutterLineOffset() const {return 0.0;};
    virtual int SetRollingShutterLineOffset(double offset_us) {return DEVICE_NOT_YET_IMPLEMENTED;};

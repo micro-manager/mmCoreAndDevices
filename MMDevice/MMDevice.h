@@ -307,6 +307,273 @@ namespace MM {
 
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestWithValuesStandardProperty)
 
+   ////////////////////////////
+   ///// Camera trigger API
+   // These are directly based on the GenICam Standard Feature Naming convention
+   // see https://www.emva.org/wp-content/uploads/GenICam_SFNC_2_2.pdf
+   // Boolean values get mapped to "0" or "1" since MM properties do not support booleans
+
+   // Selects the type of trigger to configure.
+   static const std::vector<std::string> triggerSelectorValues = {
+      g_keyword_TriggerSelectorAcquisitionStart, 
+      g_keyword_TriggerSelectorAcquisitionEnd, 
+      g_keyword_TriggerSelectorAcquisitionActive,
+      g_keyword_TriggerSelectorFrameBurstStart, 
+      g_keyword_TriggerSelectorFrameBurstEnd, 
+      g_keyword_TriggerSelectorFrameBurstActive,
+      g_keyword_TriggerSelectorFrameStart, 
+      g_keyword_TriggerSelectorFrameEnd, 
+      g_keyword_TriggerSelectorFrameActive,
+      g_keyword_TriggerSelectorExposureStart, 
+      g_keyword_TriggerSelectorExposureEnd, 
+      g_keyword_TriggerSelectorExposureActive
+   };
+   static const MM::StandardProperty g_TriggerSelectorProperty{
+      "TriggerSelector",    // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      triggerSelectorValues, // allowedValues
+      {},                   // no required values for now
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerSelectorProperty)
+
+
+   // Controls if the selected trigger is active.
+   static const std::vector<std::string> triggerModeValues = {
+      g_keyword_TriggerModeOff, 
+      g_keyword_TriggerModeOn
+   };
+   static const MM::StandardProperty g_TriggerModeProperty{
+      "TriggerMode",        // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      triggerModeValues,    // allowedValues
+      {},                   // no required values for now
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerModeProperty)
+
+
+   // Specifies the internal signal or physical input Line to use as the trigger source. 
+   // The selected trigger must have its TriggerMode set to On.
+   static const std::vector<std::string> triggerSourceValues = {
+      g_keyword_TriggerSourceSoftware, 
+      g_keyword_TriggerIOLine0, 
+      g_keyword_TriggerIOLine1, 
+      g_keyword_TriggerIOLine2, 
+      g_keyword_TriggerIOLine3
+   };
+   static const MM::StandardProperty g_TriggerSourceProperty{
+      "TriggerSource",      // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      triggerSourceValues,  // allowedValues
+      {},                   // TODO: require software trigger?
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerSourceProperty)
+
+
+   // Specifies the activation mode of the trigger.
+   static const std::vector<std::string> triggerActivationValues = {
+      g_keyword_TriggerActivationAnyEdge, 
+      g_keyword_TriggerActivationRisingEdge, 
+      g_keyword_TriggerActivationFallingEdge, 
+      g_keyword_TriggerActivationLevelLow, 
+      g_keyword_TriggerActivationLevelHigh
+   };
+   static const MM::StandardProperty g_TriggerActivationProperty{
+      "TriggerActivation",  // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      triggerActivationValues, // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerActivationProperty)
+
+
+   // Specifies the delay in microseconds (us) to apply after the trigger reception before activating it.
+   static const MM::StandardProperty g_TriggerDelayProperty{
+      "TriggerDelay",       // name
+      Float,              // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},                   // allowedValues
+      {},                   // requiredValues
+      0,                    // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerDelayProperty)
+
+
+   // Exposure Mode property
+   // Sets the operation mode of the Exposure. 
+   // Possible values are:
+   //    Timed: Timed exposure. 
+   //    TriggerWidth: Uses the width of the current Frame trigger signal pulse to control the exposure duration.
+   //                  Note that if the Frame or Line TriggerActivation is RisingEdge or LevelHigh, the exposure
+   //                  duration will be the time the trigger stays High. If TriggerActivation is FallingEdge or
+   //                  LevelLow, the exposure time will last as long as the trigger stays Low. 
+   //    TriggerControlled: Uses one or more trigger signal(s) to control the exposure duration independently from
+   //                       the current Frame or Line triggers. See ExposureStart, ExposureEnd and ExposureActive
+   //                       of the TriggerSelector feature. Note also that ExposureMode as priority over the Exposure
+   //                       Trigger settings defined using TriggerSelector=Exposure... and defines which trigger 
+   // (if any) is active.
+   static const std::vector<std::string> exposureModeValues = {
+      g_keyword_ExposureModeTimed, 
+      g_keyword_ExposureModeTriggerWidth, 
+      g_keyword_ExposureModeTriggerControlled
+   };
+   static const MM::StandardProperty g_ExposureModeProperty{
+      "ExposureMode",       // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      exposureModeValues,   // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_ExposureModeProperty)
+
+
+
+   // Burst Frame Count property
+   // Number of frames to acquire for each FrameBurstStart trigger. This feature is used only if
+   // the FrameBurstStart trigger is enabled and the FrameBurstEnd trigger is disabled. Note that 
+   // the total number of frames captured is also conditioned by AcquisitionFrameCount if 
+   //AcquisitionMode is MultiFrame and ignored if AcquisitionMode is Single.
+   static const MM::StandardProperty g_BurstFrameCountProperty{
+      "BurstFrameCount",    // name
+      Integer,              // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},                   // allowedValues
+      {},                   // requiredValues
+      1,                    // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_BurstFrameCountProperty)
+
+
+   // Selects the physical line (or pin) of the external device connector to configure.
+   // When a Line is selected, all the other Line features will be applied to its associated 
+   //I/O control block and will condition the resulting input or output signal.
+   static const std::vector<std::string> lineSelectorValues = {
+      g_keyword_TriggerIOLine0, 
+      g_keyword_TriggerIOLine1, 
+      g_keyword_TriggerIOLine2, 
+      g_keyword_TriggerIOLine3
+   };
+   static const MM::StandardProperty g_LineSelectorProperty{
+      "LineSelector",       // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      lineSelectorValues,   // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineSelectorProperty)
+
+
+   // Controls the inversion of the signal of the selected input or output Line.
+   // Possible values are: 
+   //     False (0): The Line signal is not inverted. 
+   //     True (1): The Line signal is inverted.
+   static const MM::StandardProperty g_LineInverterProperty{
+      "LineInverter",       // name
+      String,              // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {"0", "1"},                   // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineInverterProperty)
+
+
+   // Selects which internal acquisition or I/O source signal to output on the selected Line. 
+   // LineMode must be Output.
+   static const std::vector<std::string> lineSourceValues = {
+      g_keyword_OutputLineSourceOff, 
+      g_keyword_OutputLineSourceAcquisitionTriggerWait, 
+      g_keyword_OutputLineSourceAcquisitionActive, 
+      g_keyword_OutputLineSourceFrameTriggerWait,
+      g_keyword_OutputLineSourceFrameActive, 
+      g_keyword_OutputLineSourceExposureTriggerWait,
+      g_keyword_OutputLineSourceExposureActive
+   };
+   static const MM::StandardProperty g_LineSourceProperty{
+      "LineSource",         // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      lineSourceValues,     // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineSourceProperty)
+
+
+   // Returns the current status of the selected input or output Line. The status of the 
+   // signal is taken after the input Line inverter of the I/O control block.
+   //     Low: The Line signal is Low. 
+   //     High: The Line signal is High.
+   static const std::vector<std::string> lineStatusValues = {
+      g_keyword_LineStatusLow, 
+      g_keyword_LineStatusHigh
+   };
+   static const MM::StandardProperty g_LineStatusProperty{
+      "LineStatus",         // name
+      String,              // type
+      true,                 // isReadOnly
+      false,                // isPreInit
+      lineStatusValues,                   // allowedValues
+      lineStatusValues,                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+      true                 // required
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineStatusProperty)
+
+   // TODO: implement this?
+   // // Acquisition status property
+   // static const std::vector<std::string> acquisitionStatusSelectorValues = {
+   //    g_keyword_CameraStatusAcquisitionTriggerWait, 
+   //    g_keyword_CameraStatusFrameBurstTriggerWait,
+   //    g_keyword_CameraStatusFrameTriggerWait, 
+   //    g_keyword_CameraStatusExposureTriggerWait,
+   //    g_keyword_CameraStatusAcquisitionActive, 
+   //    g_keyword_CameraStatusFrameBurstTriggerActive,
+   //    g_keyword_CameraStatusFrameActive, 
+   //    g_keyword_CameraStatusExposureActive,
+   //    g_keyword_CameraStatusAcquisitionTransfer
+   // };
+
 
    /**
     * Generic device interface.
@@ -430,43 +697,12 @@ namespace MM {
        //// New Camera API ////
       virtual bool IsNewAPIImplemented() = 0;
 
-      //////////////////////////////
-      // Triggers
-      //////////////////////////////
 
-      //Check which of the possible trigger types are available
-      virtual bool HasTrigger(const char* triggerSelector) = 0;
-
-      // These should return an error code if the type is not valid
-      // They are not meant to do any work. 
-      virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) = 0;
-      virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) = 0;
-      virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) = 0;
-      virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) = 0;
-
-      virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) = 0;
-      virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) = 0;
-      virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) = 0;
-      virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) = 0;
-
-      virtual bool HasExposureMode(const char* exposureMode) = 0;
-      virtual int SetExposureMode(const char* exposureMode) = 0;
-      virtual int GetExposureMode(char* exposureMode) = 0;
-
-      // TODO probably want to replace these with properties
-      virtual int SetBurstFrameCount(unsigned count) = 0;
-      virtual unsigned GetBurstFrameCount() const = 0;
-
-      // Send of software of the supplied type
-      virtual int TriggerSoftware(const char* triggerSelector) = 0;
+      // Send a software trigger
+      virtual int TriggerSoftware() = 0;
 
       //////////////////////////////
       // Acquisitions
-      //////////////////////////////
-
-
-
-      // Acquisition functions
       //////////////////////////////
 
       // Arms the device before an AcquisitionStart command. This optional command validates all 
@@ -502,16 +738,9 @@ namespace MM {
       // the current Frame or waiting on a trigger. If no Acquisition is in progress, the command is ignored.
       virtual int AcquisitionAbort() = 0;
 
-      virtual int GetAcquisitionStatus(const char* statusSelector, bool& status) = 0;
 
-
-      virtual int SetIOLineInverted(const char* lineSelector, bool invert) = 0;
-      virtual int SetLineAsOutput(const char* lineSelector, bool output) = 0;
-      virtual int SetOutputLineSource(const char* lineSelector, const char* source) = 0;
-      virtual int GetLineStatus(const char* lineSelector, bool& status) = 0;
-
-
-      // Rolling shutter/Lightsheet mode
+      //// Rolling shutter mode for Lightsheet readout
+      // this is not part of GenICam, but is supported by some scientific cameras
       virtual double GetRollingShutterLineOffset() const = 0;
       virtual int SetRollingShutterLineOffset(double offset_us) = 0;
 

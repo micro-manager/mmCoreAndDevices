@@ -123,32 +123,12 @@ public:
 	//Genicam Callback
 	void ResultingFramerateCallback(GenApi::INode* pNode);
 
+
 	/////////////////////////////////////
 	///////// New Camera API ///////////
 	bool IsNewAPIImplemented() { return true; };
 
-	bool HasTrigger(const char* triggerSelector);
-
-	int SetTriggerMode(const char* triggerSelector, bool triggerMode);
-	int SetTriggerSource(const char* triggerSelector, const char* triggerSource);
-	int SetTriggerDelay(const char* triggerSelector, int triggerDelay);
-	int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation);
-
-	int GetTriggerMode(const char* triggerSelector, bool& triggerMode);
-	int GetTriggerSource(const char* triggerSelector, char* triggerSource);
-	int GetTriggerDelay(const char* triggerSelector, int& triggerDelay);
-	int GetTriggerActivation(const char* triggerSelector, char* triggerActivation);
-
-	//NA for current camera
-	// virtual bool HasExposureMode(const char* exposureMode);
-	// virtual int SetExposureMode(const char* exposureMode);
-	// virtual int GetExposureMode(char* exposureMode);
-
-	// TODO probably want to replace these with properties
-	virtual int SetBurstFrameCount(unsigned count);
-	virtual unsigned GetBurstFrameCount() const;
-
-	int TriggerSoftware(const char* triggerSelector);
+	int TriggerSoftware();
 
 	int AcquisitionArm(int frameCount);
 	int AcquisitionArm();
@@ -157,18 +137,15 @@ public:
 	int AcquisitionStop();
 	int AcquisitionAbort();
 
-	int GetAcquisitionStatus(const char* statusSelector, bool& status);
-
-	int SetIOLineInverted(const char* lineSelector, bool invert);
-	int SetLineAsOutput(const char* lineSelector, bool output);
-	int SetOutputLineSource(const char* lineSelector, const char* source);
-	int GetLineStatus(const char* lineSelector, bool& high);
-
 
 	// double GetRollingShutterLineOffset() const;
 	// int SetRollingShutterLineOffset(double offset_us);
 	// unsigned GetRollingShutterActiveLines() const;
 	// int SetRollingShutterActiveLines(unsigned numLines);
+
+	////////////////////////
+	///// End new Camera API
+	////////////////////////
 
 	// Convenience functions
 	std::string NodeToString(const char* str) const;
