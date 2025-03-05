@@ -1290,6 +1290,13 @@ class CCameraBase : public CDeviceBase<MM::Camera, U>
 {
 public:
 
+   using CDeviceBase<MM::Camera, U>::CreateProperty;
+   using CDeviceBase<MM::Camera, U>::SetAllowedValues;
+   using CDeviceBase<MM::Camera, U>::GetBinning;
+   using CDeviceBase<MM::Camera, U>::GetCoreCallback;
+   using CDeviceBase<MM::Camera, U>::SetProperty;
+   using CDeviceBase<MM::Camera, U>::LogMessage;
+
    CCameraBase()
    {
       // create and initialize common transpose properties
