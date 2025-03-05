@@ -697,6 +697,11 @@ void CMMCore::loadDevice(const char* label, const char* moduleName, const char* 
 
    LOG_INFO(coreLogger_) << "Did load device " << deviceName <<
       " from " << moduleName << "; label = " << label;
+
+   if (externalCallback_ != 0) 
+   {
+      externalCallback_->onDeviceLoaded(label);
+   }
 }
 
 void CMMCore::assignDefaultRole(std::shared_ptr<DeviceInstance> pDevice)
@@ -765,6 +770,11 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
 
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
+   if (externalCallback_ != 0) 
+   {
+      externalCallback_->onDeviceWillBeUnloaded(label);
+   }
+
    try {
       mm::DeviceModuleLockGuard guard(pDevice);
       LOG_DEBUG(coreLogger_) << "Will unload device " << label;
@@ -801,6 +811,10 @@ void CMMCore::unloadAllDevices() throw (CMMError)
       }
 
       LOG_DEBUG(coreLogger_) << "Will unload all devices";
+      if (externalCallback_ != 0) 
+      {
+         externalCallback_->onAllDevicesWillBeUnloaded();
+      }
       deviceManager_->UnloadAllDevices();
       LOG_INFO(coreLogger_) << "Did unload all devices";
 
