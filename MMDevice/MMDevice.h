@@ -427,96 +427,96 @@ namespace MM {
       virtual DeviceType GetType() const { return Type; }
       static constexpr DeviceType Type = CameraDevice;
 
-      //  //// New Camera API ////
-      // virtual bool IsNewAPIImplemented() = 0;
+       //// New Camera API ////
+      virtual bool IsNewAPIImplemented() = 0;
 
-      // //////////////////////////////
-      // // Triggers
-      // //////////////////////////////
+      //////////////////////////////
+      // Triggers
+      //////////////////////////////
 
-      // //Check which of the possible trigger types are available
-      // virtual bool HasTrigger(const char* triggerSelector) = 0;
+      //Check which of the possible trigger types are available
+      virtual bool HasTrigger(const char* triggerSelector) = 0;
 
-      // // These should return an error code if the type is not valid
-      // // They are not meant to do any work. 
-      // virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) = 0;
-      // virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) = 0;
-      // virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) = 0;
-      // virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) = 0;
+      // These should return an error code if the type is not valid
+      // They are not meant to do any work. 
+      virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) = 0;
+      virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) = 0;
+      virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) = 0;
+      virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) = 0;
 
-      // virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) = 0;
-      // virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) = 0;
-      // virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) = 0;
-      // virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) = 0;
+      virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) = 0;
+      virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) = 0;
+      virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) = 0;
+      virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) = 0;
 
-      // virtual bool HasExposureMode(const char* exposureMode) = 0;
-      // virtual int SetExposureMode(const char* exposureMode) = 0;
-      // virtual int GetExposureMode(char* exposureMode) = 0;
+      virtual bool HasExposureMode(const char* exposureMode) = 0;
+      virtual int SetExposureMode(const char* exposureMode) = 0;
+      virtual int GetExposureMode(char* exposureMode) = 0;
 
-      // // TODO probably want to replace these with properties
-      // virtual int SetBurstFrameCount(unsigned count) = 0;
-      // virtual unsigned GetBurstFrameCount() const = 0;
+      // TODO probably want to replace these with properties
+      virtual int SetBurstFrameCount(unsigned count) = 0;
+      virtual unsigned GetBurstFrameCount() const = 0;
 
-      // // Send of software of the supplied type
-      // virtual int TriggerSoftware(const char* triggerSelector) = 0;
+      // Send of software of the supplied type
+      virtual int TriggerSoftware(const char* triggerSelector) = 0;
 
-      // //////////////////////////////
-      // // Acquisitions
-      // //////////////////////////////
-
-
-
-      // // Acquisition functions
-      // //////////////////////////////
-
-      // // Arms the device before an AcquisitionStart command. This optional command validates all 
-      // // the current features for consistency and prepares the device for a fast start of the Acquisition.
-      // // If not used explicitly, this command will be automatically executed at the first 
-      // // AcquisitionStart but will not be repeated for the subsequent ones unless a feature is changed in the device.
-
-      // // TODO: the above logic needs to be implemented in core?
-
-      // // Don't acqMode because it can be inferred from frameCount
-      // // if frameCount is:    1 --> acqMode is single
-      // //                    > 1 --> acqMode is MultiFrame
-      // //                     -1 --> acqMode is continuous
-
-      // virtual int AcquisitionArm(int frameCount) = 0;
-      // virtual int AcquisitionArm() = 0;
+      //////////////////////////////
+      // Acquisitions
+      //////////////////////////////
 
 
 
-      // // Starts the Acquisition of the device. The number of frames captured is specified by AcquisitionMode.
-      // // Note that unless the AcquisitionArm was executed since the last feature change, 
-      // // the AcquisitionStart command must validate all the current features for consistency before starting the Acquisition. 
-      // virtual int AcquisitionStart() = 0;
+      // Acquisition functions
+      //////////////////////////////
 
-      // // Stops the Acquisition of the device at the end of the current Frame. It is mainly 
-      // // used when AcquisitionMode is Continuous but can be used in any acquisition mode.
-      // // If the camera is waiting for a trigger, the pending Frame will be cancelled. 
-      // // If no Acquisition is in progress, the command is ignored.
-      // virtual int AcquisitionStop() = 0;
+      // Arms the device before an AcquisitionStart command. This optional command validates all 
+      // the current features for consistency and prepares the device for a fast start of the Acquisition.
+      // If not used explicitly, this command will be automatically executed at the first 
+      // AcquisitionStart but will not be repeated for the subsequent ones unless a feature is changed in the device.
 
+      // TODO: the above logic needs to be implemented in core?
 
-      // //Aborts the Acquisition immediately. This will end the capture without completing
-      // // the current Frame or waiting on a trigger. If no Acquisition is in progress, the command is ignored.
-      // virtual int AcquisitionAbort() = 0;
+      // Don't acqMode because it can be inferred from frameCount
+      // if frameCount is:    1 --> acqMode is single
+      //                    > 1 --> acqMode is MultiFrame
+      //                     -1 --> acqMode is continuous
 
-      // virtual int GetAcquisitionStatus(const char* statusSelector, bool& status) = 0;
-
-
-      // virtual int SetIOLineInverted(const char* lineSelector, bool invert) = 0;
-      // virtual int SetLineAsOutput(const char* lineSelector, bool output) = 0;
-      // virtual int SetOutputLineSource(const char* lineSelector, const char* source) = 0;
-      // virtual int GetLineStatus(const char* lineSelector, bool& status) = 0;
+      virtual int AcquisitionArm(int frameCount) = 0;
+      virtual int AcquisitionArm() = 0;
 
 
-      // // Rolling shutter/Lightsheet mode
-      // virtual double GetRollingShutterLineOffset() const = 0;
-      // virtual int SetRollingShutterLineOffset(double offset_us) = 0;
 
-      // virtual unsigned GetRollingShutterActiveLines() const = 0;
-      // virtual unsigned SetRollingShutterActiveLines(unsigned numLines) = 0;
+      // Starts the Acquisition of the device. The number of frames captured is specified by AcquisitionMode.
+      // Note that unless the AcquisitionArm was executed since the last feature change, 
+      // the AcquisitionStart command must validate all the current features for consistency before starting the Acquisition. 
+      virtual int AcquisitionStart() = 0;
+
+      // Stops the Acquisition of the device at the end of the current Frame. It is mainly 
+      // used when AcquisitionMode is Continuous but can be used in any acquisition mode.
+      // If the camera is waiting for a trigger, the pending Frame will be cancelled. 
+      // If no Acquisition is in progress, the command is ignored.
+      virtual int AcquisitionStop() = 0;
+
+
+      //Aborts the Acquisition immediately. This will end the capture without completing
+      // the current Frame or waiting on a trigger. If no Acquisition is in progress, the command is ignored.
+      virtual int AcquisitionAbort() = 0;
+
+      virtual int GetAcquisitionStatus(const char* statusSelector, bool& status) = 0;
+
+
+      virtual int SetIOLineInverted(const char* lineSelector, bool invert) = 0;
+      virtual int SetLineAsOutput(const char* lineSelector, bool output) = 0;
+      virtual int SetOutputLineSource(const char* lineSelector, const char* source) = 0;
+      virtual int GetLineStatus(const char* lineSelector, bool& status) = 0;
+
+
+      // Rolling shutter/Lightsheet mode
+      virtual double GetRollingShutterLineOffset() const = 0;
+      virtual int SetRollingShutterLineOffset(double offset_us) = 0;
+
+      virtual unsigned GetRollingShutterActiveLines() const = 0;
+      virtual unsigned SetRollingShutterActiveLines(unsigned numLines) = 0;
 
       ///////////////////////////////////////////////////////////////
       ///// End new camera API               ////////////////////////

@@ -1634,69 +1634,69 @@ private:
 };
 
 
-// /**
-// * Base class for creating camera device adapters using the new Camera API.
-// */
-// // TODO: dissallow old sty
-// template <class U>
-// class CNewAPICameraBase : public CCameraBase<U>
-// {
-// public:
+/**
+* Base class for creating camera device adapters using the new Camera API.
+*/
+// TODO: dissallow old sty
+template <class U>
+class CNewAPICameraBase : public CCameraBase<U>
+{
+public:
 
-//    // TODO: need to call superclass constructor pending whether those
-//    // transpose properties are needed
+   // TODO: need to call superclass constructor pending whether those
+   // transpose properties are needed
 
 
-//    virtual bool isNewAPIImplemented() {return true;};
+   virtual bool isNewAPIImplemented() {return true;};
 
-//    virtual bool hasTrigger(const char* cameraLabel, const char* triggerSelector) = 0;
+   virtual bool hasTrigger(const char* cameraLabel, const char* triggerSelector) = 0;
 
-// 	virtual bool HasTrigger(const char* triggerSelector) { return false; };
-//    virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) { return DEVICE_NOT_YET_IMPLEMENTED; };
+	virtual bool HasTrigger(const char* triggerSelector) { return false; };
+   virtual int SetTriggerMode(const char* triggerSelector, bool triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetTriggerSource(const char* triggerSelector, const char* triggerSource) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetTriggerDelay(const char* triggerSelector, int triggerDelay) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) { return DEVICE_NOT_YET_IMPLEMENTED; };
 
-//    virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetTriggerMode(const char* triggerSelector, bool& triggerMode) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetTriggerSource(const char* triggerSelector, char* triggerSource) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetTriggerDelay(const char* triggerSelector, int& triggerDelay) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetTriggerActivation(const char* triggerSelector, char* triggerActivation) { return DEVICE_NOT_YET_IMPLEMENTED; };
 
-//    /**
-//     * Every camera must have at least Timed exposure mode, so these implementations default to only that
-//     */
-//    virtual bool HasExposureMode(const char* exposureMode) { return strcmp(exposureMode, MM::ExposureModeTimed) == 0; };
-//    virtual int SetExposureMode(const char* exposureMode) { return (strcmp(exposureMode, MM::ExposureModeTimed) == 0) ?
-//       DEVICE_OK : DEVICE_UNSUPPORTED_COMMAND; };
-//    virtual int GetExposureMode(char* exposureMode) {
-//       strcpy(exposureMode, MM::ExposureModeTimed);
-//       return DEVICE_OK;
-//    };
+   /**
+    * Every camera must have at least Timed exposure mode, so these implementations default to only that
+    */
+   virtual bool HasExposureMode(const char* exposureMode) { return strcmp(exposureMode, MM::ExposureModeTimed) == 0; };
+   virtual int SetExposureMode(const char* exposureMode) { return (strcmp(exposureMode, MM::ExposureModeTimed) == 0) ?
+      DEVICE_OK : DEVICE_UNSUPPORTED_COMMAND; };
+   virtual int GetExposureMode(char* exposureMode) {
+      strcpy(exposureMode, MM::ExposureModeTimed);
+      return DEVICE_OK;
+   };
 
-//    virtual int TriggerSoftware(const char* triggerSelector) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int TriggerSoftware(const char* triggerSelector) {return DEVICE_NOT_YET_IMPLEMENTED;};
 
-//    virtual int SetBurstFrameCount(unsigned count) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual unsigned GetBurstFrameCount() const { return 1; };
+   virtual int SetBurstFrameCount(unsigned count) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual unsigned GetBurstFrameCount() const { return 1; };
 
-//    virtual int AcquisitionArm(int frameCount) {return DEVICE_NOT_YET_IMPLEMENTED;};
-//    virtual int AcquisitionArm() { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int AcquisitionArm(int frameCount) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionArm() { return DEVICE_NOT_YET_IMPLEMENTED; };
 
-//    virtual int AcquisitionStart() {return DEVICE_NOT_YET_IMPLEMENTED;};
-//    virtual int AcquisitionStop() {return DEVICE_NOT_YET_IMPLEMENTED;};
-//    virtual int AcquisitionAbort() {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionStart() {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionStop() {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionAbort() {return DEVICE_NOT_YET_IMPLEMENTED;};
 
-//    virtual int GetAcquisitionStatus(const char* statusSelector, bool& status) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetAcquisitionStatus(const char* statusSelector, bool& status) { return DEVICE_NOT_YET_IMPLEMENTED; };
 
-//    virtual int SetIOLineInverted(const char* lineSelector, bool invert) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int SetLineAsOutput(const char* lineSelector, bool output) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int SetOutputLineSource(const char* lineSelector, const char* source) { return DEVICE_NOT_YET_IMPLEMENTED; };
-//    virtual int GetLineStatus(const char* lineSelector, bool& high) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetIOLineInverted(const char* lineSelector, bool invert) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetLineAsOutput(const char* lineSelector, bool output) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int SetOutputLineSource(const char* lineSelector, const char* source) { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int GetLineStatus(const char* lineSelector, bool& high) { return DEVICE_NOT_YET_IMPLEMENTED; };
 
-//    virtual double GetRollingShutterLineOffset() const {return DEVICE_NOT_YET_IMPLEMENTED;};
-//    virtual int SetRollingShutterLineOffset(double offset_us) {return DEVICE_NOT_YET_IMPLEMENTED;};
-//    virtual unsigned GetRollingShutterActiveLines() const {return DEVICE_NOT_YET_IMPLEMENTED;};
-//    virtual unsigned setRollingShutterActiveLines(unsigned numLines) {return DEVICE_NOT_YET_IMPLEMENTED;};
-// };
+   virtual double GetRollingShutterLineOffset() const {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int SetRollingShutterLineOffset(double offset_us) {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual unsigned GetRollingShutterActiveLines() const {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual unsigned setRollingShutterActiveLines(unsigned numLines) {return DEVICE_NOT_YET_IMPLEMENTED;};
+};
 
 
 
