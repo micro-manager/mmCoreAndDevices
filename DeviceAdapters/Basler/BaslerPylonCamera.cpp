@@ -147,7 +147,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * Constructor.
 */
 BaslerCamera::BaslerCamera() :
-	CLegacyCameraBase<BaslerCamera>(),
+	CNewAPICameraBase<BaslerCamera>(),
 	maxWidth_(0),
 	maxHeight_(0),
 	exposure_us_(0),
@@ -168,7 +168,8 @@ BaslerCamera::BaslerCamera() :
 	nodeMap_(NULL),
 	initialized_(false),
 	pTempHandler_(NULL),
-	camera_(NULL)
+	camera_(NULL),
+	multiFrameAcqCount_(0)
 {
 	// call the base class method to set-up default error codes/messages
 	InitializeDefaultErrorMessages();
@@ -870,6 +871,300 @@ int BaslerCamera::Initialize()
 	return DEVICE_OK;
 }
 
+//////////////////////////////////////////////////////////////
+///////////////////// New Camera API ////////////////////////
+//////////////////////////////////////////////////////////////
+
+
+std::string BaslerCamera::NodeToString(const char* str) const {
+	CEnumerationPtr ptr(nodeMap_->GetNode(str));
+	gcstring val = ptr->ToString();
+	std::string s = val.c_str();
+	return s;
+}
+
+int BaslerCamera::SelectTrigger(const char* triggerSelector) {
+	CEnumerationPtr TriggerSelectorPtr(nodeMap_->GetNode("TriggerSelector"));
+
+	// On Basler cameras, FrameBurstStart and Acquisition Start are identical and
+	// the name available depends on the camera model. So here, we swap them as needed
+	if ((strcmp(triggerSelector, MM::TriggerSelectorFrameBurstStart) == 0) ||
+		(strcmp(triggerSelector, MM::TriggerSelectorAcquisitionStart) == 0) ) {
+		if (CEnumParameter(nodeMap_, "TriggerSelector").CanSetValue(MM::TriggerSelectorFrameBurstStart) ) {
+			TriggerSelectorPtr->FromString(MM::TriggerSelectorFrameBurstStart);
+		} else if (CEnumParameter(nodeMap_, "TriggerSelector").CanSetValue(MM::TriggerSelectorAcquisitionStart)) {
+			TriggerSelectorPtr->FromString(MM::TriggerSelectorAcquisitionStart);
+		} else {
+			return DEVICE_ERR;
+		}
+
+
+	} else {
+		TriggerSelectorPtr->FromString(triggerSelector);
+	}
+	return DEVICE_OK;
+}
+
+bool BaslerCamera:: HasTrigger(const char * triggerSelector) {
+	return CEnumParameter(nodeMap_, "TriggerSelector").CanSetValue(triggerSelector);
+}
+
+int BaslerCamera::SetTriggerMode(const char* triggerSelector, bool triggerMode) {
+	SelectTrigger(triggerSelector);
+	if (triggerMode) {
+		CEnumParameter(nodeMap_, "TriggerMode").SetValue("On");
+	} else {
+		CEnumParameter(nodeMap_, "TriggerMode").SetValue("Off");
+	}
+	return DEVICE_OK;
+}
+
+int BaslerCamera::SetTriggerSource(const char* triggerSelector, const char* triggerSource) {
+	SelectTrigger(triggerSelector);
+	CEnumerationPtr TriggerSourcePtr(nodeMap_->GetNode("TriggerSource"));
+	if (strcmp(triggerSource, MM::TriggerSourceSoftware) == 0) {
+		// software triggers
+		TriggerSourcePtr->FromString("Software");
+	} else if (strcmp(triggerSource, MM::TriggerIOLine0) == 0) {
+		// external (TTL) triggers
+		// Might be good to also provide a device-specific mapping from Lines to pins
+		TriggerSourcePtr->FromString("Line0");
+	} else if (strcmp(triggerSource, MM::TriggerIOLine1) == 0) {
+		TriggerSourcePtr->FromString("Line1");
+	} else if (strcmp(triggerSource, MM::TriggerIOLine2) == 0) {
+		TriggerSourcePtr->FromString("Line2");
+	} else if (strcmp(triggerSource, MM::TriggerIOLine3) == 0) {
+		TriggerSourcePtr->FromString("Line3");
+	} else {
+		// No other trigger modes supported currently
+		return DEVICE_ERR; 
+	}
+	return DEVICE_OK;
+}
+
+int BaslerCamera::SetTriggerDelay(const char* triggerSelector, int triggerDelay) {
+	SelectTrigger(triggerSelector);
+	CFloatPtr ptr(nodeMap_->GetNode("TriggerDelay"));
+	ptr->SetValue(triggerDelay);
+	return DEVICE_OK;
+}
+
+int BaslerCamera::SetTriggerActivation(const char* triggerSelector, const char* triggerActivation) {
+	SelectTrigger(triggerSelector);
+	// bool writable = CEnumParameter(nodeMap_, "TriggerActivation").IsWritable();
+	CEnumerationPtr TriggerActivationPtr(nodeMap_->GetNode("TriggerActivation"));
+	TriggerActivationPtr->FromString(triggerActivation);
+	return DEVICE_OK;
+}
+
+int BaslerCamera::GetTriggerMode(const char* triggerSelector, bool& triggerMode) {
+	SelectTrigger(triggerSelector);
+	std::string s = NodeToString("TriggerMode");
+	triggerMode = strcmp("On", s.c_str()) == 0;
+	return DEVICE_OK; 
+}
+
+int BaslerCamera::GetTriggerSource(const char* triggerSelector, char* triggerSource) {
+	SelectTrigger(triggerSelector);
+	std::string s = NodeToString("TriggerSource");
+	if (s.rfind("Line0", 0) == 0) {
+		strcpy(triggerSource, MM::TriggerIOLine0);
+	} else if (s.rfind("Line1", 0) == 0) {
+		strcpy(triggerSource, MM::TriggerIOLine1);
+	} else if (s.rfind("Line2", 0) == 0) {
+		strcpy(triggerSource, MM::TriggerIOLine2);
+	} else if (s.rfind("Line3", 0) == 0) {
+		strcpy(triggerSource, MM::TriggerIOLine2);
+	} else {
+		strcpy(triggerSource, MM::TriggerSourceSoftware);
+	}
+	return DEVICE_OK;
+}
+
+int BaslerCamera::GetTriggerDelay(const char* triggerSelector, int& triggerDelay) {
+	SelectTrigger(triggerSelector);
+	triggerDelay = CFloatPtr(nodeMap_->GetNode("TriggerDelay"))->GetValue();
+	return DEVICE_OK;
+}
+
+int BaslerCamera::GetTriggerActivation(const char* triggerSelector, char* triggerActivation) {
+	// Select the trigger to get the values of
+	SelectTrigger(triggerSelector);
+	std::string s = NodeToString("TriggerActivation");
+	strcpy(triggerActivation, s.c_str());
+	return DEVICE_OK;
+}
+
+// NA for current testing camera
+// bool BaslerCamera::HasExposureMode(const char* exposureMode) {
+// 	
+// }
+//
+// int BaslerCamera::SetExposureMode(const char* exposureMode) {
+// 	
+// }
+//
+// int BaslerCamera::GetExposureMode(char* exposureMode) {
+// 	
+// }
+
+int BaslerCamera::SetBurstFrameCount(unsigned count) {
+	CIntegerParameter(nodeMap_, "AcquisitionBurstFrameCount").SetValue(count);
+	return DEVICE_OK;
+}
+
+
+
+unsigned BaslerCamera::GetBurstFrameCount() const {
+	return CIntegerParameter(nodeMap_, "AcquisitionBurstFrameCount").GetValue();
+}
+
+
+int BaslerCamera::TriggerSoftware(const char* triggerSelector){
+	SelectTrigger(triggerSelector);
+	// Send the trigger
+	camera_->ExecuteSoftwareTrigger();
+	return DEVICE_OK;
+}
+
+int BaslerCamera::AcquisitionArm(int frameCount)
+{
+	multiFrameAcqCount_ = frameCount;
+	if (frameCount == 1) {
+		// 1 frame
+		CEnumParameter(nodeMap_, "AcquisitionMode").SetValue("SingleFrame");
+	} else {
+		if (frameCount <= 0) {
+			// Arbitrary number of frames
+			CEnumParameter(nodeMap_, "AcquisitionMode").SetValue("Continuous");
+		} else {
+			// A GenICam "MultiFrame" acquisition mode
+			// Basler does not implement GenICam exactly here, so this is also "Continuous" mode
+			CEnumParameter(nodeMap_, "AcquisitionMode").SetValue("Continuous");
+		}
+	}
+
+	ImageHandler_ = new CircularBufferInserter(this);
+	camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
+
+	return DEVICE_OK;
+}
+
+int BaslerCamera::AcquisitionArm()
+{
+	return AcquisitionArm(0);
+}
+
+int BaslerCamera::AcquisitionStart()
+{
+	//The GenICam AcquisitionStart gets called automatically by StartGrabbing
+	if (multiFrameAcqCount_ == 0) {
+		// acquire until told to stop
+		camera_->StartGrabbing(GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+	} else {
+		// acquire a set number of frames
+		camera_->StartGrabbing(multiFrameAcqCount_, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+	}
+	return DEVICE_OK;
+}
+
+int BaslerCamera::AcquisitionStop()
+{
+	// The GenICam AcquisitionStop gets called automatically by StopGrabbing
+	// CCommandParameter(nodeMap_, "AcquisitionStop").Execute();
+	camera_->StopGrabbing();
+	camera_->DeregisterImageEventHandler(ImageHandler_);
+	return DEVICE_OK;
+}
+
+int BaslerCamera::AcquisitionAbort()
+{
+	return AcquisitionStop();
+}
+
+int BaslerCamera::GetAcquisitionStatus(const char* statusSelector, bool& status) {
+	if (strcmp(statusSelector, MM::CameraStatusAcquisitionActive) == 0) {
+		CEnumParameter(nodeMap_, "AcquisitionStatusSelector").SetValue("AcquisitionActive");
+	} else if (strcmp(statusSelector, MM::CameraStatusExposureActive) == 0) {
+		CEnumParameter(nodeMap_, "AcquisitionStatusSelector").SetValue("ExposureActive");
+	} else if (strcmp(statusSelector, MM::CameraStatusExposureTriggerWait) == 0) {
+		CEnumParameter(nodeMap_, "AcquisitionStatusSelector").SetValue("ExposureTriggerWait");
+	} else if (strcmp(statusSelector, MM::CameraStatusFrameBurstTriggerActive) == 0) {
+		CEnumParameter(nodeMap_, "AcquisitionStatusSelector").SetValue("FrameBurstActive");
+	} else if (strcmp(statusSelector, MM::CameraStatusFrameBurstTriggerWait) == 0) {
+		CEnumParameter(nodeMap_, "AcquisitionStatusSelector").SetValue("FrameBurstTriggerWait");
+	} else if (strcmp(statusSelector, MM::CameraStatusFrameTriggerWait) == 0) {
+		CEnumParameter(nodeMap_, "AcquisitionStatusSelector").SetValue("FrameTriggerWait");
+	} else {
+		return DEVICE_ERR; //TODO more descriptive error
+	}
+
+	status = CBooleanParameter(nodeMap_, "AcquisitionStatus").GetValue();
+	return DEVICE_OK;
+}
+
+int BaslerCamera::SetIOLineInverted(const char* lineSelector, bool invert) {
+	CEnumParameter(nodeMap_, "LineSelector").SetValue(lineSelector);
+	CBooleanParameter(nodeMap_, "LineInverter").SetValue(invert);
+	return DEVICE_OK;
+}
+
+int BaslerCamera::SetLineAsOutput(const char* lineSelector, bool output) {
+	CEnumParameter(nodeMap_, "LineSelector").SetValue(lineSelector);
+	CEnumParameter(nodeMap_, "LineMode").SetValue(output ? "Output" : "Input");
+	return DEVICE_OK;
+}
+
+
+int BaslerCamera::SetOutputLineSource(const char* lineSelector, const char* source) {
+	// TODO check it lineSelector is valid once convered to property
+	CEnumParameter(nodeMap_, "LineSelector").SetValue(lineSelector);
+	if (strcmp(source, MM::OutputLineSourceAcquisitionActive) == 0) {
+		CEnumParameter(nodeMap_, "LineSource").SetValue("AcquisitionActive");
+	} else if (strcmp(source, MM::OutputLineSourceExposureActive) == 0) {
+		CEnumParameter(nodeMap_, "LineSource").SetValue("ExposureActive");
+	} else if (strcmp(source, MM::OutputLineSourceFrameBurstActive) == 0) {
+		CEnumParameter(nodeMap_, "LineSource").SetValue("FrameBurstActive");
+	} else if (strcmp(source, MM::OutputLineSourceFrameBurstTriggerWait) == 0) {
+		CEnumParameter(nodeMap_, "LineSource").SetValue("FrameBurstTriggerWait");
+	} else if (strcmp(source, MM::OutputLineSourceFrameTriggerWait) == 0) {
+		CEnumParameter(nodeMap_, "LineSource").SetValue("FrameTriggerWait");
+	} else {
+		return DEVICE_ERR; //TODO more descriptive error
+	}
+	return DEVICE_OK;
+}
+
+
+int BaslerCamera::GetLineStatus(const char* lineSelector, bool& high) {
+	CEnumParameter(nodeMap_, "LineSelector").SetValue(lineSelector);
+	high = CBooleanParameter(nodeMap_, "LineStatus").GetValue();
+	return DEVICE_OK;
+}
+
+
+//TODO
+double BaslerCamera::GetRollingShutterLineOffset() const
+{
+	return DEVICE_NOT_SUPPORTED;
+}
+
+int BaslerCamera::SetRollingShutterLineOffset(double offset_us)
+{
+	return CCameraBase<BaslerCamera>::SetRollingShutterLineOffset(offset_us);
+}
+
+unsigned BaslerCamera::GetRollingShutterActiveLines() const
+{
+	return CCameraBase<BaslerCamera>::GetRollingShutterActiveLines();
+}
+
+unsigned BaslerCamera::SetRollingShutterActiveLines(unsigned numLines)
+{
+	return CCameraBase<BaslerCamera>::setRollingShutterActiveLines(numLines);
+}
+
+//////////////////////////////////////////////////////////////
 
 
 int BaslerCamera::CheckForBinningMode(CPropertyAction* pAct)
@@ -1232,7 +1527,9 @@ int BaslerCamera::StopSequenceAcquisition()
 	{
 		camera_->StopGrabbing();
 		GetCoreCallback()->AcqFinished(this, 0);
-		camera_->DeregisterImageEventHandler(ImageHandler_);
+		// TODO: this was commented in my previous implementation of new camera API. Why?
+		// Maybe it doesn't matter because this will be deleted
+		// camera_->DeregisterImageEventHandler(ImageHandler_);
 	}
 	return DEVICE_OK;
 }

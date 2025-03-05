@@ -175,6 +175,90 @@ namespace MM {
    const char* const g_Keyword_Metadata_ROI_Y       = "ROI-Y-start";
    const char* const g_Keyword_Metadata_TimeInCore  = "TimeReceivedByCore";
 
+   ////// New Camera API constants
+   // trigger state constants
+   const char* const TriggerSelectorAcquisitionStart = "AcquisitionStart";
+   const char* const TriggerSelectorAcquisitionEnd = "AcquisitionEnd";
+   const char* const TriggerSelectorAcquisitionActive = "AcquisitionActive";
+   const char* const TriggerSelectorFrameBurstStart = "FrameBurstStart";
+   const char* const TriggerSelectorFrameBurstEnd = "FrameBurstEnd";
+   const char* const TriggerSelectorFrameBurstActive = "FrameBurstActive";
+   const char* const TriggerSelectorFrameStart = "FrameStart";
+   const char* const TriggerSelectorFrameEnd = "FrameEnd";
+   const char* const TriggerSelectorFrameActive = "FrameActive";
+   const char* const TriggerSelectorExposureStart = "ExposureStart";
+   const char* const TriggerSelectorExposureEnd = "ExposureEnd";
+   const char* const TriggerSelectorExposureActive = "ExposureActive";
+
+   const char* const TriggerModeOn = "On";
+   const char* const TriggerModeOff = "Off";
+
+   const char* const TriggerIOLine0 = "Line0";
+   const char* const TriggerIOLine1 = "Line1";
+   const char* const TriggerIOLine2 = "Line2";
+   const char* const TriggerIOLine3 = "Line3";
+   const char* const TriggerSourceSoftware = "Software";
+
+   const char* const TriggerActivationAnyEdge = "AnyEdge";
+   const char* const TriggerActivationRisingEdge = "RisingEdge";
+   const char* const TriggerActivationFallingEdge = "FallingEdge";
+   const char* const TriggerActivationLevelLow = "Low";
+   const char* const TriggerActivationLevelHigh = "High";
+
+   const char* const ExposureModeTimed = "Timed";
+   const char* const ExposureModeTriggerWidth = "TriggerWidth";
+   const char* const ExposureModeTriggerControlled = "TriggerControlled";
+
+   const char* const CameraStatusAcquisitionTriggerWait = "AcquisitionTriggerWait";
+   const char* const CameraStatusFrameBurstTriggerWait = "FrameBurstTriggerWait";
+   const char* const CameraStatusFrameTriggerWait = "FrameTriggerWait";
+   const char* const CameraStatusExposureTriggerWait = "ExposureTriggerWait";
+   const char* const CameraStatusAcquisitionActive = "AcquisitionActive";
+   const char* const CameraStatusFrameBurstTriggerActive = "FrameBurstTriggerActive";
+   const char* const CameraStatusFrameActive = "FrameActive";
+   const char* const CameraStatusExposureActive = "ExposureActive";
+   const char* const CameraStatusAcquisitionTransfer = "AcquisitionTransfer";
+
+
+   const char* const OutputLineSourceOff = "Off";
+   const char* const OutputLineSourceAcquisitionTriggerWait = "AcquisitionTriggerWait";
+   const char* const OutputLineSourceAcquisitionTrigger = "AcquisitionTrigger";
+   const char* const OutputLineSourceAcquisitionTriggerMissed = "AcquisitionTriggerMissed";
+   const char* const OutputLineSourceAcquisitionActive = "AcquisitionActive";
+
+   const char* const OutputLineSourceFrameBurstTriggerWait = "FrameBurstTriggerWait";
+   const char* const OutputLineSourceFrameBurstTrigger = "FrameBurstTrigger";
+   const char* const OutputLineSourceFrameBurstTriggerMissed = "FrameBurstTriggerMissed";
+   const char* const OutputLineSourceFrameBurstActive = "FrameBurstTriggerActive";
+
+   const char* const OutputLineSourceFrameTriggerWait = "FrameTriggerWait";
+   const char* const OutputLineSourceFrameTrigger = "FrameTrigger";
+   const char* const OutputLineSourceFrameTriggerMissed = "FrameTriggerMissed";
+   const char* const OutputLineSourceFrameActive = "FrameActive";
+
+   const char* const OutputLineSourceExposureTriggerWait = "ExposureTriggerWait";
+   const char* const OutputLineSourceExposureTrigger = "ExposureTrigger";
+   const char* const OutputLineSourceExposureTriggerMissed = "ExposureTriggerMissed";
+   const char* const OutputLineSourceExposureActive = "ExposureActive";
+
+   // Camera Events
+   const char* const CameraEventAcquisitionTrigger = "CameraEventAcquisitionTrigger";
+   const char* const CameraEventAcquisitionStart = "CameraEventAcquisitionStart";
+   const char* const CameraEventAcquisitionEnd = "CameraEventAcquisitionEnd";
+   const char* const CameraEventAcquisitionTransferStart = "CameraEventAcquisitionTransferStart";
+   const char* const CameraEventAcquisitionTransferEnd = "CameraEventAcquisitionTransferEnd";
+   const char* const CameraEventAcquisitionError = "CameraEventAcquisitionError";
+   const char* const CameraEventFrameTrigger = "CameraEventFrameTrigger";
+   const char* const CameraEventFrameStart = "CameraEventFrameStart";
+   const char* const CameraEventFrameEnd = "CameraEventFrameEnd";
+   const char* const CameraEventFrameBurstStart = "CameraEventFrameBurstStart";
+   const char* const CameraEventFrameBurstEnd = "CameraEventFrameBurstEnd";
+   const char* const CameraEventFrameTransferStart = "CameraEventFrameTransferStart";
+   const char* const CameraEventFrameTransferEnd = "CameraEventFrameTransferEnd";
+   const char* const CameraEventExposureStart = "CameraEventExposureStart";
+   const char* const CameraEventExposureEnd = "CameraEventExposureEnd";
+
+
    // configuration file format constants
    const char* const g_FieldDelimiters = ",";
    const char* const g_CFGCommand_Device = "Device";

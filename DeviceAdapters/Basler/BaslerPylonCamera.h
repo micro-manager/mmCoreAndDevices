@@ -63,7 +63,7 @@ enum
 
 class CTempCameraEventHandler;
 class CircularBufferInserter;
-class BaslerCamera : public CLegacyCameraBase<BaslerCamera>  {
+class BaslerCamera : public CNewAPICameraBase<BaslerCamera>  {
 public:
 	BaslerCamera();
 	~BaslerCamera();
@@ -109,9 +109,6 @@ public:
 	std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
 	void UpdateTemperature();
 
-	/**
-	* Starts continuous acquisition.
-	*/
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StartSequenceAcquisition(double interval_ms);
 	int StopSequenceAcquisition();
@@ -125,6 +122,57 @@ public:
 
 	//Genicam Callback
 	void ResultingFramerateCallback(GenApi::INode* pNode);
+
+	/////////////////////////////////////
+	///////// New Camera API ///////////
+	bool IsNewAPIImplemented() { return true; };
+
+	bool HasTrigger(const char* triggerSelector);
+
+	int SetTriggerMode(const char* triggerSelector, bool triggerMode);
+	int SetTriggerSource(const char* triggerSelector, const char* triggerSource);
+	int SetTriggerDelay(const char* triggerSelector, int triggerDelay);
+	int SetTriggerActivation(const char* triggerSelector, const char* triggerActivation);
+
+	int GetTriggerMode(const char* triggerSelector, bool& triggerMode);
+	int GetTriggerSource(const char* triggerSelector, char* triggerSource);
+	int GetTriggerDelay(const char* triggerSelector, int& triggerDelay);
+	int GetTriggerActivation(const char* triggerSelector, char* triggerActivation);
+
+	//NA for current camera
+	// virtual bool HasExposureMode(const char* exposureMode);
+	// virtual int SetExposureMode(const char* exposureMode);
+	// virtual int GetExposureMode(char* exposureMode);
+
+	// TODO probably want to replace these with properties
+	virtual int SetBurstFrameCount(unsigned count);
+	virtual unsigned GetBurstFrameCount() const;
+
+	int TriggerSoftware(const char* triggerSelector);
+
+	int AcquisitionArm(int frameCount);
+	int AcquisitionArm();
+
+	int AcquisitionStart();
+	int AcquisitionStop();
+	int AcquisitionAbort();
+
+	int GetAcquisitionStatus(const char* statusSelector, bool& status);
+
+	int SetIOLineInverted(const char* lineSelector, bool invert);
+	int SetLineAsOutput(const char* lineSelector, bool output);
+	int SetOutputLineSource(const char* lineSelector, const char* source);
+	int GetLineStatus(const char* lineSelector, bool& high);
+
+
+	double GetRollingShutterLineOffset() const;
+	int SetRollingShutterLineOffset(double offset_us);
+	unsigned GetRollingShutterActiveLines() const;
+	unsigned SetRollingShutterActiveLines(unsigned numLines);
+
+	// Convenience functions
+	std::string NodeToString(const char* str) const;
+	int SelectTrigger(const char* triggerSelector);
 
 
 	// action interface
@@ -164,6 +212,7 @@ private:
 	bool  colorCamera_;
 
 	unsigned maxWidth_, maxHeight_;
+	unsigned multiFrameAcqCount_;
 	int64_t DeviceLinkThroughputLimit_;
 	int64_t InterPacketDelay_;
 	double ResultingFrameRatePrevious;
