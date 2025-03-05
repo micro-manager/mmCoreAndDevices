@@ -118,7 +118,7 @@ int ClearPort(MM::Device& device, MM::Core& core, std::string port)
 Camera::Camera() :
 	// initialization of parameters
 	SigmaBase(this),
-	CCameraBase<Camera>(),
+	CLegacyCameraBase<Camera>(),
 	initialized_(false),
 	isMonochrome_(false),
 	enabledROI_(false),

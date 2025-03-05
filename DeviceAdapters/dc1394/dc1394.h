@@ -114,7 +114,7 @@ private:
 class AcqSequenceThread;
 
 
-class Cdc1394 : public CCameraBase<Cdc1394>
+class Cdc1394 : public CLegacyCameraBase<Cdc1394>
 {
    
 friend class AcqSequenceThread;

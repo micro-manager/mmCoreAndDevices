@@ -63,7 +63,7 @@ enum
 
 //class CTempCameraEventHandler;
 //class CircularBufferInserter;
-class HikrobotCamera : public CCameraBase<HikrobotCamera>  {
+class HikrobotCamera : public CLegacyCameraBase<HikrobotCamera>  {
 public:
 	HikrobotCamera();
 	~HikrobotCamera();

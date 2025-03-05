@@ -210,7 +210,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CDemoCamera::CDemoCamera() :
-   CCameraBase<CDemoCamera> (),
+   CLegacyCameraBase<CDemoCamera> (),
    exposureMaximum_(10000.0),
    dPhase_(0),
    initialized_(false),

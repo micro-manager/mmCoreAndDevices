@@ -34,7 +34,7 @@
 class MMIIDCHub; // Not a Micro-Manager "Hub" device
 
 
-class MMIIDCCamera : public CCameraBase<MMIIDCCamera>
+class MMIIDCCamera : public CLegacyCameraBase<MMIIDCCamera>
 {
    boost::shared_ptr<MMIIDCHub> hub_;
 

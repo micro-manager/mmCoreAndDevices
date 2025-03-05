@@ -84,7 +84,7 @@ private:
 
 class MySequenceThread;
 
-class POACamera : public CCameraBase<POACamera>
+class POACamera : public CLegacyCameraBase<POACamera>
 {
 public:
     POACamera();

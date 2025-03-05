@@ -18,11 +18,11 @@
 #include "QSICameraCLib.h"
 #include "QSIError.h"
 
-class QSICameraAdapter : public CCameraBase<QSICameraAdapter>  
+class QSICameraAdapter : public CLegacyCameraBase<QSICameraAdapter>  
 {
 private:
 
-  typedef CCameraBase<QSICameraAdapter> base;
+  typedef CLegacyCameraBase<QSICameraAdapter> base;
 
 public:
 

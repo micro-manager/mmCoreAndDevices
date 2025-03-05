@@ -366,7 +366,7 @@ bool IDSPeakHub::Busy()
 * perform most of the initialization in the Initialize() method.
 */
 CIDSPeak::CIDSPeak(int idx) :
-    CCameraBase<CIDSPeak>(),
+    CLegacyCameraBase<CIDSPeak>(),
     initialized_(false),
     readoutUs_(0.0),
     bitDepth_(8),

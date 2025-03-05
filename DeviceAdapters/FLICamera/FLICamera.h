@@ -31,7 +31,7 @@
 #include <string>
 #include <map>
 
-class CFLICamera : public CCameraBase<CFLICamera>
+class CFLICamera : public CLegacyCameraBase<CFLICamera>
 {
 	public:
 		CFLICamera();

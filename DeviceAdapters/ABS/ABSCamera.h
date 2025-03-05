@@ -81,7 +81,7 @@ typedef std::map<std::string, u16>            CIOPortNameToIndexMap;    // io-po
 typedef std::vector<std::string>                  CStringVector;            // property names to handle transpose functions
 
 //! abs camera class
-class CABSCamera : public CCameraBase<CABSCamera>  
+class CABSCamera : public CLegacyCameraBase<CABSCamera>  
 {
 friend class  CABSCameraSequenceThread;
 

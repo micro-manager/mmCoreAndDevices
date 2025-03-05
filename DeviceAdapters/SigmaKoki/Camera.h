@@ -56,7 +56,7 @@ extern const char* g_CameraDeviceName;
 
 #pragma endregion Camera_Err_MSG
 
-class Camera : public CCameraBase<Camera>, public SigmaBase
+class Camera : public CLegacyCameraBase<Camera>, public SigmaBase
 {
 #pragma region Constructor_Des 
 public:

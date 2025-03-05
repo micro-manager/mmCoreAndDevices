@@ -155,7 +155,7 @@ As a general guideline Micro-Manager devices do not access hardware in the
 the constructor. We should do as little as possible in the constructor and
 perform most of the initialization in the Initialize() method.
 ==============================================================================*/
-CTIScamera::CTIScamera() : CCameraBase<CTIScamera> (),
+CTIScamera::CTIScamera() : CLegacyCameraBase<CTIScamera> (),
    initialized_(false),
 
    pSelectDevice(NULL),

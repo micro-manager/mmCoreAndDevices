@@ -14,7 +14,7 @@
 #define MAX_NUMBER_PHYSICAL_CAMERAS       1
 
 
-class CameraPulser : public CCameraBase<CameraPulser>
+class CameraPulser : public CLegacyCameraBase<CameraPulser>
 {
 public:
    CameraPulser();

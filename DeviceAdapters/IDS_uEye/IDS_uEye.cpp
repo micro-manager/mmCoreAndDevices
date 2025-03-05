@@ -138,7 +138,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CIDS_uEye::CIDS_uEye() :
-   CCameraBase<CIDS_uEye> (),
+   CLegacyCameraBase<CIDS_uEye> (),
    dPhase_(0),
    initialized_(false),
    readoutUs_(0.0),

@@ -113,7 +113,7 @@ private:
 
 class MySequenceThread;
 
-class CDemoCamera : public CCameraBase<CDemoCamera>  
+class CDemoCamera : public CLegacyCameraBase<CDemoCamera>  
 {
 public:
    CDemoCamera();

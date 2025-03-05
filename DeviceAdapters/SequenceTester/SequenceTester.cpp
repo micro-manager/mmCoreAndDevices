@@ -251,14 +251,14 @@ TesterCamera::TesterCamera(const std::string& name) :
    stopSequence_(true)
 {
    // For pre-init properties only, we use the traditional method to set up.
-   CCameraBase<Self>::CreateStringProperty("ImageMode", "HumanReadable",
+   CLegacyCameraBase<Self>::CreateStringProperty("ImageMode", "HumanReadable",
          false, 0, true);
    AddAllowedValue("ImageMode", "HumanReadable");
    AddAllowedValue("ImageMode", "MachineReadable");
-   CCameraBase<Self>::CreateIntegerProperty("ImageWidth", imageWidth_,
+   CLegacyCameraBase<Self>::CreateIntegerProperty("ImageWidth", imageWidth_,
          false, 0, true);
    SetPropertyLimits("ImageWidth", 32, 4096);
-   CCameraBase<Self>::CreateIntegerProperty("ImageHeight", imageHeight_,
+   CLegacyCameraBase<Self>::CreateIntegerProperty("ImageHeight", imageHeight_,
          false, 0, true);
    SetPropertyLimits("ImageHeight", 32, 4096);
 }

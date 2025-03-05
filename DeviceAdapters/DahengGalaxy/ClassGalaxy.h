@@ -31,7 +31,7 @@
 
 class CircularBufferInserter;
 
-class MODULE_API ClassGalaxy : public CCameraBase<ClassGalaxy>
+class MODULE_API ClassGalaxy : public CLegacyCameraBase<ClassGalaxy>
 {
 
 public:
