@@ -1285,7 +1285,7 @@ private:
     * @return DEVICE_OK if successful, error code otherwise
     */
    template <const MM::StandardProperty& PropRef>
-   typename std::enable_if<MM::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   typename std::enable_if<MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
    CreateStandardProperty(const char* value, MM::ActionFunctor* pAct = 0, const std::vector<std::string>& values = {}) {
       
       // Create the full property name with prefix
@@ -1342,10 +1342,10 @@ private:
    // When an function for setting an invalid standard property is called,
    // this function will be called and will cause a compilation error.
    template <const MM::StandardProperty& PropRef>
-   typename std::enable_if<!MM::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   typename std::enable_if<!MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
    CreateStandardProperty(const char* /*value*/, MM::ActionFunctor* /*pAct*/ = 0,
                            const std::vector<std::string>& /*values*/ = std::vector<std::string>()) {
-      static_assert(MM::IsStandardPropertyValid<T::Type, PropRef>::value, 
+      static_assert(MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value,
          "This standard property is not valid for this device type. Check the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE definitions in MMDevice.h");
       return DEVICE_UNSUPPORTED_COMMAND; // This line will never execute due to the static_assert
    }
