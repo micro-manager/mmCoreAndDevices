@@ -261,11 +261,11 @@ namespace MM {
       // device initialization)
       #define MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(DeviceType, PropertyRef) \
       template <> \
-      struct IsStandardPropertyValid<DeviceType, PropertyRef> { \
+      struct MM::internal::IsStandardPropertyValid<DeviceType, PropertyRef> { \
          static const bool value = true; \
       }; \
       namespace { \
-         static const bool PropertyRef##_registered = (RegisterStandardProperty(PropertyRef, {DeviceType}), true); \
+         static const bool PropertyRef##_registered = (MM::internal::RegisterStandardProperty(PropertyRef, {DeviceType}), true); \
       }
    } // namespace internal
 
@@ -277,7 +277,7 @@ namespace MM {
    // properties are supported by a given device.
 
    // Specific standard properties
-   static const MM::StandardProperty g_TestStandardProperty(
+   static const MM::StandardProperty g_TestStandardProperty{
       "Test",                // name
       String,               // type
       false,                // isReadOnly
@@ -287,13 +287,13 @@ namespace MM {
       PropertyLimitUndefined,   // lowerLimit
       PropertyLimitUndefined,   // upperLimit
       false                 // required
-   );
+   };
 
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestStandardProperty)
 
 
    static const std::vector<std::string> testRequiredValues = {"value1", "value2", "value3"};
-   static const MM::StandardProperty g_TestWithValuesStandardProperty(
+   static const MM::StandardProperty g_TestWithValuesStandardProperty{
       "TestWithValues",     // name
       String,               // type
       false,                // isReadOnly
@@ -303,7 +303,7 @@ namespace MM {
       PropertyLimitUndefined,   // lowerLimit
       PropertyLimitUndefined,   // upperLimit
       false                 // required
-   );
+   };
 
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestWithValuesStandardProperty)
 
