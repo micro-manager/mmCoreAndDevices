@@ -121,20 +121,21 @@ public:
 
    //// Standard properties are created using only these dedicated functions
    // Such functions should all be defined here, and which device types they apply
+   //
    // to is handled in MMDevice.h using the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE macro
-   int CreateTestStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_TestStandardProperty>(value, pAct);
-   }
+   // int CreateTestStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    return CreateStandardProperty<MM::g_TestStandardProperty>(value, pAct);
+   // }
 
-   int CreateTestWithValuesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      // just make the values the required ones here. Also option to add 
-      // additional ones in real situations
-      return CreateStandardProperty<MM::g_TestWithValuesStandardProperty>(value, pAct,
-       MM::g_TestWithValuesStandardProperty.requiredValues);
-   }
+   // int CreateTestWithValuesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    // just make the values the required ones here. Also option to add 
+   //    // additional ones in real situations
+   //    return CreateStandardProperty<MM::g_TestWithValuesStandardProperty>(value, pAct,
+   //     MM::g_TestWithValuesStandardProperty.requiredValues);
+   // }
 
-   // Required standard properties can be skipped by adding methods like this.
-   // The TestStandardProperty is not required, this is just an example.
+   // Every standard property must either be created or explicitly skipped using
+   // a method like this
    // void SkipTestStandardProperty() {
    //    SkipStandardProperty<MM::g_TestStandardProperty>();
    // }
@@ -682,7 +683,7 @@ public:
       return true;
    }
 
-   bool ImplementsRequiredStandardProperties(char* failedProperty) const {
+   bool ImplementsOrSkipsStandardProperties(char* failedProperty) const {
    // Get the device type
    MM::DeviceType deviceType = this->GetType();
    
@@ -692,23 +693,20 @@ public:
       // Iterate through all properties for this device type
       const auto& properties = it->second;
       for (const auto& prop : properties) {
-         // Check if this property is required
-         if (prop.required) {
-            // Construct the full property name with prefix
-            std::string fullName = MM::g_KeywordStandardPropertyPrefix;
-            fullName += prop.name;
-            
-            // Skip checking if this property is in the skipped list
-            if (skippedStandardProperties_.find(fullName) != skippedStandardProperties_.end()) {
-               continue;
-            }
-            
-            // Check if the device has implemented it
-            if (!HasProperty(fullName.c_str())) {
-               // If not, copy in the name of the property and return false
-               CDeviceUtils::CopyLimitedString(failedProperty, fullName.c_str());
-               return false;
-            }
+         // Construct the full property name with prefix
+         std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+         fullName += prop.name;
+         
+         // Skip checking if this property is in the skipped list
+         if (skippedStandardProperties_.find(fullName) != skippedStandardProperties_.end()) {
+            continue;
+         }
+         
+         // Check if the device has implemented it
+         if (!HasProperty(fullName.c_str())) {
+            // If not, copy in the name of the property and return false
+            CDeviceUtils::CopyLimitedString(failedProperty, fullName.c_str());
+            return false;
          }
       }
    }

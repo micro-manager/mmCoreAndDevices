@@ -53,19 +53,17 @@ struct StandardProperty {
                allowedValues == other.allowedValues &&
                requiredValues == other.requiredValues &&
                lowerLimit == other.lowerLimit &&
-               upperLimit == other.upperLimit &&
-               required == other.required;
+               upperLimit == other.upperLimit;
     }
     
     std::string name; // Full property name (without prefix)
     PropertyType type; // Float, String, or Integer
     bool isReadOnly; // Whether property is read-only
     bool isPreInit; // Whether property should be set before initialization
-    std::vector<std::string> allowedValues;  // if empty, no restrictions
-    std::vector<std::string> requiredValues;   // if empty, no restrictions
+    std::vector<std::string> allowedValues;  // (for String properties) if empty, no restrictions
+    std::vector<std::string> requiredValues;   // (for String properties) if empty, no restrictions
     double lowerLimit = PropertyLimitUndefined; // Lower limit for numeric properties (NaN if not limited)
     double upperLimit = PropertyLimitUndefined;  // Upper limit for numeric properties (NaN if not limited)
-    bool required = false;  // Whether to throw a runtime error if the property is not found on init
 };
 
 
