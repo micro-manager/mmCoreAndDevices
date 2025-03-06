@@ -114,6 +114,22 @@ public:
 
 	// action interface
 	// ----------------
+	// Standard properties
+	int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineInverter(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+	// other
+	// int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+	// int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 	int OnAcqFramerate(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAcqFramerateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAutoExpore(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -135,8 +151,6 @@ public:
 	int OnShutterMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTemperatureState(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
