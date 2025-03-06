@@ -141,48 +141,54 @@ public:
    // }
 
    // Camera triggering API standard properties
-   int CreateTriggerSelectorStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_TriggerSelectorProperty>(value, pAct);
+   int CreateTriggerSelectorStandardProperty(const char* value,  const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerSelectorProperty>(value, pAct, values);
    }
 
    void SkipTriggerSelectorStandardProperty() {
       SkipStandardProperty<MM::g_TriggerSelectorProperty>();
    }
 
-   int CreateTriggerModeStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_TriggerModeProperty>(value, pAct);
+   int CreateTriggerModeStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerModeProperty>(value, pAct, values);
    }
 
    void SkipTriggerModeStandardProperty() {
       SkipStandardProperty<MM::g_TriggerModeProperty>();
    }
 
-   int CreateTriggerSourceStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_TriggerSourceProperty>(value, pAct);
+   int CreateTriggerSourceStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerSourceProperty>(value, pAct, values);
    }
 
    void SkipTriggerSourceStandardProperty() {
       SkipStandardProperty<MM::g_TriggerSourceProperty>();
    }
    
-   int CreateTriggerActivationStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_TriggerActivationProperty>(value, pAct);
+   int CreateTriggerActivationStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerActivationProperty>(value, pAct, values);
    }
    
    void SkipTriggerActivationStandardProperty() {
       SkipStandardProperty<MM::g_TriggerActivationProperty>();
    }
 
-   int CreateTriggerDelayStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_TriggerDelayProperty>(value, pAct);
+   int CreateTriggerDelayStandardProperty(const char* value, double minValue, double maxValue, MM::ActionFunctor* pAct = 0) {
+      int ret = CreateStandardProperty<MM::g_TriggerDelayProperty>(value, pAct);
+      if (ret != DEVICE_OK)
+          return ret;
+      
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_TriggerDelayProperty.name;
+      return SetPropertyLimits(fullName.c_str(), minValue, maxValue);
    }
 
    void SkipTriggerDelayStandardProperty() {
       SkipStandardProperty<MM::g_TriggerDelayProperty>();
    }
 
-   int CreateExposureModeStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_ExposureModeProperty>(value, pAct);
+   int CreateExposureModeStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_ExposureModeProperty>(value, pAct, values);
    }
 
    void SkipExposureModeStandardProperty() {
@@ -197,24 +203,24 @@ public:
       SkipStandardProperty<MM::g_BurstFrameCountProperty>();
    }
 
-   int CreateLineSelectorStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_LineSelectorProperty>(value, pAct);
+   int CreateLineSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineSelectorProperty>(value, pAct, values);
    }
 
    void SkipLineSelectorStandardProperty() {
       SkipStandardProperty<MM::g_LineSelectorProperty>();
    }
 
-   int CreateLineInverterStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_LineInverterProperty>(value, pAct);
+   int CreateLineInverterStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineInverterProperty>(value, pAct, values);
    }
 
    void SkipLineInverterStandardProperty() {
       SkipStandardProperty<MM::g_LineInverterProperty>();
    }
 
-   int CreateLineSourceStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_LineSourceProperty>(value, pAct);
+   int CreateLineSourceStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineSourceProperty>(value, pAct, values);
    }
 
    void SkipLineSourceStandardProperty() {
@@ -222,7 +228,8 @@ public:
    }
 
    int CreateLineStatusStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      // LineStatus has required values that are the same as its allowed values
+      // LineStatus has required values that are the same as its allowed values, so no need
+      // to take values from the user
       return CreateStandardProperty<MM::g_LineStatusProperty>(value, pAct,
        MM::g_LineStatusProperty.requiredValues);
    }

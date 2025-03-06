@@ -177,7 +177,12 @@ public:
 	std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
 	void* Buffer4ContinuesShot;
 
+	std::vector<std::string> GetAvailableEnumValues(const GenApi::IEnumeration& node);
+
+
 private:
+
+
 
 	CBaslerUniversalInstantCamera *camera_;
 	CTempCameraEventHandler *pTempHandler_;
