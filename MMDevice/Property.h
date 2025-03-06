@@ -476,10 +476,10 @@ public:
 
    int CreateProperty(const char* name, const char* value, PropertyType eType, bool bReadOnly, ActionFunctor* pAct=0, bool isPreInitProperty=false, bool standard=false);
    int RegisterAction(const char* name, ActionFunctor* fpAct);
-   int SetAllowedValues(const char* name, std::vector<std::string>& values);
-   int ClearAllowedValues(const char* name);
-   int AddAllowedValue(const char* name, const char* value, long data);
-   int AddAllowedValue(const char* name, const char* value);
+   int SetAllowedValues(const char* name, std::vector<std::string>& values, bool standard=false);
+   int ClearAllowedValues(const char* name, bool standard=false);
+   int AddAllowedValue(const char* name, const char* value, long data, bool standard=false);
+   int AddAllowedValue(const char* name, const char* value, bool standard=false);
    int GetPropertyData(const char* name, const char* value, long& data);
    int GetCurrentPropertyData(const char* name, long& data);
    int Set(const char* propName, const char* Value);

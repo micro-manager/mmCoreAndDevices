@@ -372,11 +372,19 @@ int MM::PropertyCollection::CreateProperty(const char* pszName, const char* pszV
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::SetAllowedValues(const char* pszName, std::vector<std::string>& values)
+int MM::PropertyCollection::SetAllowedValues(const char* pszName, std::vector<std::string>& values, bool standard)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    pProp->ClearAllowedValues();
    for (unsigned i=0; i<values.size(); i++)
@@ -385,31 +393,55 @@ int MM::PropertyCollection::SetAllowedValues(const char* pszName, std::vector<st
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::ClearAllowedValues(const char* pszName)
+int MM::PropertyCollection::ClearAllowedValues(const char* pszName, bool standard)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    pProp->ClearAllowedValues();
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::AddAllowedValue(const char* pszName, const char* value, long data)
+int MM::PropertyCollection::AddAllowedValue(const char* pszName, const char* value, long data, bool standard)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    pProp->AddAllowedValue(value, data);
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::AddAllowedValue(const char* pszName, const char* value)
+int MM::PropertyCollection::AddAllowedValue(const char* pszName, const char* value, bool standard)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    pProp->AddAllowedValue(value);
    return DEVICE_OK;

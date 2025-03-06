@@ -1447,7 +1447,7 @@ private:
       // now that all required values are present, and all supplied values are allowed, 
       // add the user-supplied values to the property
       for (const std::string& val : values) {
-          ret = AddAllowedValue(fullName.c_str(), val.c_str());
+          ret = properties_.AddAllowedValue(fullName.c_str(), val.c_str(), true);
           if (ret != DEVICE_OK)
               return ret;
       }
