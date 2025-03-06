@@ -359,20 +359,18 @@ namespace MM {
 
    // Specifies the internal signal or physical input Line to use as the trigger source. 
    // The selected trigger must have its TriggerMode set to On.
-   static const std::vector<std::string> triggerSourceValues = {
-      g_keyword_TriggerSourceSoftware, 
-      g_keyword_TriggerIOLine0, 
-      g_keyword_TriggerIOLine1, 
-      g_keyword_TriggerIOLine2, 
-      g_keyword_TriggerIOLine3
-   };
+   // Standard names are: Software, Line0, Line1, Line2, Line3
+   // and many others including Counter0Start, Timer0Start, etc.
+   // Require the ability to send a software trigger,
+   // but other than than not sure its possible to to standaradize
+   // in part because some cameras may start at line0 and others at line1
    static const MM::StandardProperty g_TriggerSourceProperty{
       "TriggerSource",      // name
       String,               // type
       false,                // isReadOnly
       false,                // isPreInit
-      triggerSourceValues,  // allowedValues
-      {},                   // TODO: require software trigger?
+      {},  // allowedValues
+      {g_keyword_TriggerSourceSoftware},              
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
    };
@@ -467,18 +465,12 @@ namespace MM {
    // Selects the physical line (or pin) of the external device connector to configure.
    // When a Line is selected, all the other Line features will be applied to its associated 
    //I/O control block and will condition the resulting input or output signal.
-   static const std::vector<std::string> lineSelectorValues = {
-      g_keyword_TriggerIOLine0, 
-      g_keyword_TriggerIOLine1, 
-      g_keyword_TriggerIOLine2, 
-      g_keyword_TriggerIOLine3
-   };
    static const MM::StandardProperty g_LineSelectorProperty{
       "LineSelector",       // name
       String,               // type
       false,                // isReadOnly
       false,                // isPreInit
-      lineSelectorValues,   // allowedValues
+      {},   // allowedValues
       {},                   // requiredValues
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit

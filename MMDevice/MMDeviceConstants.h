@@ -193,10 +193,6 @@ namespace MM {
    const char* const g_keyword_TriggerModeOn = "On";
    const char* const g_keyword_TriggerModeOff = "Off";
 
-   const char* const g_keyword_TriggerIOLine0 = "Line0";
-   const char* const g_keyword_TriggerIOLine1 = "Line1";
-   const char* const g_keyword_TriggerIOLine2 = "Line2";
-   const char* const g_keyword_TriggerIOLine3 = "Line3";
    const char* const g_keyword_TriggerSourceSoftware = "Software";
 
    const char* const g_keyword_TriggerActivationAnyEdge = "AnyEdge";
@@ -241,8 +237,8 @@ namespace MM {
    const char* const g_keyword_OutputLineSourceExposureTriggerMissed = "ExposureTriggerMissed";
    const char* const g_keyword_OutputLineSourceExposureActive = "ExposureActive";
 
-   const char* const g_keyword_LineStatusLow = "Low";
-   const char* const g_keyword_LineStatusHigh = "High";
+   const char* const g_keyword_LineStatusLow = "0";
+   const char* const g_keyword_LineStatusHigh = "1";
 
    // Camera Events
    const char* const g_keyword_CameraEventAcquisitionTrigger = "CameraEventAcquisitionTrigger";
