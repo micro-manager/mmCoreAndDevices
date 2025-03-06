@@ -231,6 +231,22 @@ public:
       SkipStandardProperty<MM::g_LineStatusProperty>();
    }
 
+   int CreateRollingShutterLineOffsetStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_RollingShutterLineOffsetProperty>(value, pAct);
+   }
+
+   void SkipRollingShutterLineOffsetStandardProperty() {
+      SkipStandardProperty<MM::g_RollingShutterLineOffsetProperty>();
+   }  
+
+   int CreateRollingShutterActiveLinesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_RollingShutterActiveLinesProperty>(value, pAct);
+   }
+
+   void SkipRollingShutterActiveLinesStandardProperty() {
+      SkipStandardProperty<MM::g_RollingShutterActiveLinesProperty>();
+   }
+
    /**
    * Assigns description string for a device (for use only by the calling code).
    */
@@ -1528,12 +1544,12 @@ class CGenericBase : public CDeviceBase<MM::Generic, U>
 
 
 /**
-* Base class for creating camera device adapters.
-* This class has a functional constructor - must be invoked
-* from the derived class.
+* Base class for both old and new camera APIs.
+* Implements common functionality like tags and default implementations
+* for optional features like multi-ROI and exposure sequence.
 */
 template <class U>
-class CCameraBase : public CDeviceBase<MM::Camera, U>
+class CAllCamerasBase : public CDeviceBase<MM::Camera, U>
 {
 public:
 
@@ -1544,9 +1560,10 @@ public:
    using CDeviceBase<MM::Camera, U>::SetProperty;
    using CDeviceBase<MM::Camera, U>::LogMessage;
 
-   CCameraBase()
+   CAllCamerasBase()
    {
       // create and initialize common transpose properties
+      // TODO: if these are indeed required, should they be converted to standard properties?
       std::vector<std::string> allowedValues;
       allowedValues.push_back("0");
       allowedValues.push_back("1");
@@ -1558,31 +1575,7 @@ public:
       SetAllowedValues(MM::g_Keyword_Transpose_MirrorY, allowedValues);
       CreateProperty(MM::g_Keyword_Transpose_Correction, "0", MM::Integer, false);
       SetAllowedValues(MM::g_Keyword_Transpose_Correction, allowedValues);
-
    }
-
-   virtual ~CCameraBase()
-   {
-      
-   }
-
-   virtual const unsigned char* GetImageBuffer() = 0;
-   virtual unsigned GetImageWidth() const = 0;
-   virtual unsigned GetImageHeight() const = 0;
-   virtual unsigned GetImageBytesPerPixel() const = 0;
-   virtual int SnapImage() = 0;
-   virtual bool Busy() = 0;
-
-   /**
-   * Continuous sequence acquisition.
-   * Default to sequence acquisition with a high number of images
-   */
-   virtual int StartSequenceAcquisition(double interval) = 0;
-
-   /**
-   * Stop and wait for the thread finished
-   */
-   virtual int StopSequenceAcquisition() = 0;
 
    /**
     * Returns binnings factor.  Used to calculate current pixelsize
@@ -1635,6 +1628,8 @@ public:
       return 0;
    }
 
+   virtual const unsigned char* GetImageBuffer() = 0;
+
    virtual const unsigned int* GetImageBufferAsRGB32()
    {
       return 0;
@@ -1649,14 +1644,11 @@ public:
       data.copy(serializedMetadata, data.size(), 0);
    }
 
-   // temporary debug methods
-   virtual int PrepareSequenceAcqusition() = 0;
-
-   /**
-   * Default implementation.
-   */
-   virtual int StartSequenceAcquisition(long numImages, double interval_ms, 
-                              bool stopOnOverflow) = 0;
+   virtual int IsExposureSequenceable(bool& isSequenceable) const
+   {
+      isSequenceable = false;
+      return DEVICE_OK;
+   }
 
    virtual int GetExposureSequenceMaxLength(long& /*nrEvents*/) const
    {
@@ -1687,8 +1679,6 @@ public:
    {
       return DEVICE_UNSUPPORTED_COMMAND;
    }
-
-   virtual bool IsCapturing() = 0;
 
    virtual void AddTag(const char* key, const char* deviceLabel, const char* value)
    {
@@ -1751,33 +1741,137 @@ private:
 
 
 /**
-* Base class for creating camera device adapters using the new Camera API.
+* Base class for creating camera device adapters.
+* This class has a functional constructor - must be invoked
+* from the derived class.
 */
-// TODO: dissallow old sty
 template <class U>
-class CNewAPICameraBase : public CCameraBase<U>
+class COldAPICameraBase : public CAllCamerasBase<U>
 {
 public:
 
-   // TODO: need to call superclass constructor pending whether those
-   // transpose properties are needed
+   // Invokes superclass constructor to get the properties declared there
+   COldAPICameraBase() : CAllCamerasBase<U>()
+   {
+      // Old style cameras explicitly skip these standard properties
+      // to make them not be required. However, they can still implement
+      // them with the CreateXXXXStandardProperty methods. When the
+      // corresponding functionality it present, this is encouraged,
+      // because it allows them to move closer to the new style camera API.
+      SkipTriggerSelectorStandardProperty();
+      SkipTriggerModeStandardProperty();
+      SkipTriggerSourceStandardProperty();
+      SkipTriggerActivationStandardProperty();
+      SkipTriggerDelayStandardProperty();
+      SkipExposureModeStandardProperty();
+      SkipBurstFrameCountStandardProperty();
+      SkipLineSelectorStandardProperty();
+      SkipLineInverterStandardProperty();
+      SkipLineSourceStandardProperty();
+      SkipLineStatusStandardProperty();
+      SkipRollingShutterLineOffsetStandardProperty();
+      SkipRollingShutterActiveLinesStandardProperty();
+   }
+
+   // Shared functionality with no default implementation
+   virtual unsigned GetImageWidth() const = 0;
+   virtual unsigned GetImageHeight() const = 0;
+   virtual unsigned GetImageBytesPerPixel() const = 0;
+   virtual unsigned GetBitDepth() const = 0;
+   virtual int GetBinning() const = 0;
+   virtual int SetBinning(int binSize) = 0;
+   virtual void SetExposure(double exp_ms) = 0;
+   virtual double GetExposure() const = 0;
+   virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
+   virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) = 0;
+   virtual int ClearROI() = 0;
+   virtual bool IsCapturing() = 0;
+
+   // Final so derived classes cannot override
+   virtual bool IsNewAPIImplemented() final {return false;}
+
+   // Old camera API: required
+   virtual const unsigned char* GetImageBuffer() = 0;
+   virtual long GetImageBufferSize() const = 0;
+   virtual int SnapImage() = 0;
+
+   virtual int StartSequenceAcquisition(double interval) = 0;
+   virtual int StopSequenceAcquisition() = 0;
+   virtual int PrepareSequenceAcqusition() = 0;
+   virtual int StartSequenceAcquisition(long numImages, double interval_ms, 
+                              bool stopOnOverflow) = 0;
 
 
-   virtual bool isNewAPIImplemented() {return true;};
+   // New camera API: disabled
+   virtual int TriggerSoftware() final {return DEVICE_NOT_YET_IMPLEMENTED;};
 
-   virtual int TriggerSoftware() {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionArm(int /* frameCount */) final {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionArm() final { return DEVICE_NOT_YET_IMPLEMENTED; };
 
-   virtual int AcquisitionArm(int frameCount) {return DEVICE_NOT_YET_IMPLEMENTED;};
-   virtual int AcquisitionArm() { return DEVICE_NOT_YET_IMPLEMENTED; };
+   virtual int AcquisitionStart() final {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionStop() final {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionAbort() final {return DEVICE_NOT_YET_IMPLEMENTED;};
 
-   virtual int AcquisitionStart() {return DEVICE_NOT_YET_IMPLEMENTED;};
-   virtual int AcquisitionStop() {return DEVICE_NOT_YET_IMPLEMENTED;};
-   virtual int AcquisitionAbort() {return DEVICE_NOT_YET_IMPLEMENTED;};
+};
 
-   virtual double GetRollingShutterLineOffset() const {return 0.0;};
-   virtual int SetRollingShutterLineOffset(double offset_us) {return DEVICE_NOT_YET_IMPLEMENTED;};
-   virtual unsigned GetRollingShutterActiveLines() const {return 0;};
-   virtual int SetRollingShutterActiveLines(unsigned numLines) {return DEVICE_NOT_YET_IMPLEMENTED;};
+
+/**
+* Base class for creating camera device adapters using the new Camera API.
+*/
+// TODO: dissallow old style camera devices from using this class
+template <class U>
+class CNewAPICameraBase : public CAllCamerasBase<U>
+{
+public:
+
+   // Invokes superclass constructor to get the properties declared there
+   CNewAPICameraBase() : CAllCamerasBase<U>()
+   {
+
+   }
+
+   
+   // Shared functionality with no default implementation
+   virtual unsigned GetImageWidth() const = 0;
+   virtual unsigned GetImageHeight() const = 0;
+   virtual unsigned GetImageBytesPerPixel() const = 0;
+   virtual unsigned GetBitDepth() const = 0;
+   virtual int GetBinning() const = 0;
+   virtual int SetBinning(int binSize) = 0;
+   virtual void SetExposure(double exp_ms) = 0;
+   virtual double GetExposure() const = 0;
+   virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
+   virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) = 0;
+   virtual int ClearROI() = 0;
+   virtual bool IsCapturing() = 0;
+
+
+   // Final so derived classes cannot override
+   virtual bool IsNewAPIImplemented() final {return true;}
+
+   // Old camera API: disabled
+   virtual const unsigned char* GetImageBuffer() final {return nullptr;}
+   virtual long GetImageBufferSize() const final {return 0;}
+   virtual int SnapImage() final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual const unsigned int* GetImageBufferAsRGB32() final {return nullptr;}
+
+   virtual int StartSequenceAcquisition(double interval) final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual int StopSequenceAcquisition() final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual int PrepareSequenceAcqusition() final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual int StartSequenceAcquisition(long numImages, double interval_ms, 
+                              bool stopOnOverflow) final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual const unsigned char* GetImageBuffer(unsigned /* channelNr */) final {return nullptr;}   
+
+
+   // New camera API: required
+   virtual int TriggerSoftware() = 0;
+
+   virtual int AcquisitionArm(int frameCount) = 0;
+   virtual int AcquisitionArm() = 0;
+
+   virtual int AcquisitionStart() = 0;
+   virtual int AcquisitionStop() = 0;
+   virtual int AcquisitionAbort() = 0;
 };
 
 
@@ -1791,11 +1885,11 @@ public:
 * from the derived class.
 */
 template <class U>
-class CLegacyCameraBase : public CCameraBase<U>
+class CLegacyCameraBase : public COldAPICameraBase<U>
 {
 public:
 
-   CLegacyCameraBase() : CCameraBase<U>(), busy_(false), stopWhenCBOverflows_(false), thd_(0)
+   CLegacyCameraBase() : COldAPICameraBase<U>(), busy_(false), stopWhenCBOverflows_(false), thd_(0)
    {
       // TODO: does this belong here or in the superclass?
       // create and initialize common transpose properties

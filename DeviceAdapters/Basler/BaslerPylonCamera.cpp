@@ -159,7 +159,6 @@ BaslerCamera::BaslerCamera() :
 	temperatureState_("Undefined"),
 	reverseX_("0"),
 	reverseY_("0"),
-	imgBuffer_(NULL),
 	Buffer4ContinuesShot(NULL),
 	colorCamera_(true),
 	pixelType_("Undefined"),
@@ -214,10 +213,7 @@ BaslerCamera::BaslerCamera() :
 
 BaslerCamera::~BaslerCamera()
 {
-	if (imgBuffer_ != NULL)
-	{
-		free(imgBuffer_);
-	}
+	if (Buffer4ContinuesShot != NULL)
 	if (Buffer4ContinuesShot != NULL)
 	{
 		free(Buffer4ContinuesShot);
@@ -854,10 +850,6 @@ int BaslerCamera::Initialize()
 		if (ret != DEVICE_OK)
 			return ret;
 
-		//preparation for snaps
-		ResizeSnapBuffer();
-		//preparation for sequences	
-		//camera_->RegisterImageEventHandler( &ImageHandler_, RegistrationMode_Append, Cleanup_Delete);	
 		initialized_ = true;
 	}
 	catch (const GenericException & e)
@@ -919,6 +911,14 @@ int BaslerCamera::AcquisitionArm()
 
 int BaslerCamera::AcquisitionStart()
 {
+	// This tells the core to open the current shutter. 
+	// Perhaps not entirely neccessary with the new API since acquisitions should 
+	// be explicitly armed before starting, which means that the application
+	// can open the shutter as needed just before starting the acquisition.
+	int ret = GetCoreCallback()->PrepareForAcq(this);
+      if (ret != DEVICE_OK)
+         return ret;
+
 	//The GenICam AcquisitionStart gets called automatically by StartGrabbing
 	if (multiFrameAcqCount_ == 0) {
 		// acquire until told to stop
@@ -936,11 +936,17 @@ int BaslerCamera::AcquisitionStop()
 	// CCommandParameter(nodeMap_, "AcquisitionStop").Execute();
 	camera_->StopGrabbing();
 	camera_->DeregisterImageEventHandler(ImageHandler_);
+	// This tells the core that the acquisition is finished.
+	// so that it can close the current shutter.
+	int ret = GetCoreCallback()->AcqFinished(this, 0);
+	if (ret != DEVICE_OK)
+		return ret;
 	return DEVICE_OK;
 }
 
 int BaslerCamera::AcquisitionAbort()
 {
+	// TODO: should this be different?
 	return AcquisitionStop();
 }
 
@@ -1024,90 +1030,6 @@ int BaslerCamera::Shutdown()
 	return DEVICE_OK;
 }
 
-int BaslerCamera::SnapImage()
-{
-	try
-	{
-		camera_->StartGrabbing(1, GrabStrategy_OneByOne, GrabLoop_ProvidedByUser);
-		// This smart pointer will receive the grab result data.
-		//When all smart pointers referencing a Grab Result Data object go out of scope, the grab result's image buffer is reused for grabbing
-		CGrabResultPtr ptrGrabResult;
-		int timeout_ms = 5000;
-		if (!camera_->RetrieveResult(timeout_ms, ptrGrabResult, TimeoutHandling_ThrowException)) {
-			return DEVICE_ERR;
-		}
-		if (!ptrGrabResult->GrabSucceeded()) {
-			return DEVICE_ERR;
-		}
-		if (ptrGrabResult->GetPayloadSize() != imgBufferSize_)
-		{// due to parameter change on  binning
-			ResizeSnapBuffer();
-		}
-		CopyToImageBuffer(ptrGrabResult);
-
-	}
-	catch (const GenericException & e)
-	{
-		// Error handling.
-		AddToLog(e.GetDescription());
-		cerr << "An exception occurred." << endl
-			<< e.GetDescription() << endl;
-	}
-	return DEVICE_OK;
-}
-
-void BaslerCamera::CopyToImageBuffer(CGrabResultPtr ptrGrabResult)
-{
-	const char* subject("Bayer");
-	bool IsByerFormat = false;
-	string currentPixelFormat = Pylon::CPixelTypeMapper::GetNameByPixelType(ptrGrabResult->GetPixelType());
-	std::size_t found = currentPixelFormat.find(subject);
-	if (found != std::string::npos)
-	{
-		IsByerFormat = true;
-	}
-	if (ptrGrabResult->GetPixelType() == PixelType_Mono8)
-	{
-		// Workaround : OnPixelType call back will not be fired always.
-		nComponents_ = 1;
-		bitDepth_ = 8;
-
-		//copy image buffer to a snap buffer allocated by device adapter
-		const void* buffer = ptrGrabResult->GetBuffer();
-		memcpy(imgBuffer_, buffer, GetImageBufferSize());
-		SetProperty(MM::g_Keyword_PixelType, g_PixelType_8bit);
-	}
-	else if (ptrGrabResult->GetPixelType() == PixelType_Mono16 || ptrGrabResult->GetPixelType() == PixelType_Mono10 || ptrGrabResult->GetPixelType() == PixelType_Mono12)
-	{
-		//copy image buffer to a snap buffer allocated by device adapter
-		void* buffer = ptrGrabResult->GetBuffer();
-		memcpy(imgBuffer_, buffer, ptrGrabResult->GetPayloadSize());
-		SetProperty(MM::g_Keyword_PixelType, g_PixelType_12bit);
-	}
-	else if (IsByerFormat || ptrGrabResult->GetPixelType() == PixelType_RGB8packed)
-	{
-		nComponents_ = 4;
-		bitDepth_ = 8;
-		converter->Convert(imgBuffer_, GetImageBufferSize(), ptrGrabResult);
-		SetProperty(MM::g_Keyword_PixelType, g_PixelType_8bitRGBA);
-	}
-	else if (ptrGrabResult->GetPixelType() == PixelType_BGR8packed)
-	{
-		nComponents_ = 4;
-		bitDepth_ = 8;
-		SetProperty(MM::g_Keyword_PixelType, g_PixelType_8bitBGR);
-		RGBPackedtoRGB(imgBuffer_, ptrGrabResult);
-	}
-}
-
-/**
-* Returns pixel data.
-*/
-const unsigned char* BaslerCamera::GetImageBuffer()
-{
-	return (unsigned char*)imgBuffer_;
-}
-
 unsigned BaslerCamera::GetImageWidth() const
 {
 	const CIntegerPtr width = nodeMap_->GetNode("Width");
@@ -1166,14 +1088,6 @@ unsigned BaslerCamera::GetBitDepth() const
 	}
 	assert(0); //shoudlnt happen
 	return 0;
-}
-
-/**
-* Returns the size in bytes of the image buffer.
-*/
-long BaslerCamera::GetImageBufferSize() const
-{
-	return GetImageWidth() * GetImageHeight() * GetImageBytesPerPixel();
 }
 
 /**
@@ -1298,63 +1212,10 @@ int BaslerCamera::SetBinning(int binFactor)
 	return DEVICE_UNSUPPORTED_COMMAND;
 }
 
-int BaslerCamera::StartSequenceAcquisition(long numImages, double /* interval_ms */, bool /* stopOnOverflow */) {
-
-	ImageHandler_ = new CircularBufferInserter(this);
-	camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
-	int ret = GetCoreCallback()->PrepareForAcq(this);
-	if (ret != DEVICE_OK) {
-		return ret;
-	}
-	camera_->StartGrabbing(numImages, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-	return DEVICE_OK;
-}
-
-int BaslerCamera::StartSequenceAcquisition(double /* interval_ms */) {
-	ImageHandler_ = new CircularBufferInserter(this);
-	camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
-	int ret = GetCoreCallback()->PrepareForAcq(this);
-	if (ret != DEVICE_OK) {
-		return ret;
-	}
-	camera_->StartGrabbing(GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-	return DEVICE_OK;
-}
-
 bool BaslerCamera::IsCapturing()
 {
 	return camera_->IsGrabbing();
 }
-
-int BaslerCamera::StopSequenceAcquisition()
-{
-	if (camera_->IsGrabbing())
-	{
-		camera_->StopGrabbing();
-		GetCoreCallback()->AcqFinished(this, 0);
-		// TODO: this was commented in my previous implementation of new camera API. Why?
-		// Maybe it doesn't matter because this will be deleted
-		// camera_->DeregisterImageEventHandler(ImageHandler_);
-	}
-	return DEVICE_OK;
-}
-
-int BaslerCamera::PrepareSequenceAcqusition()
-{
-	// nothing to prepare
-	return DEVICE_OK;
-}
-
-void BaslerCamera::ResizeSnapBuffer() {
-
-	free(imgBuffer_);
-	long bytes = GetImageBufferSize();
-	imgBuffer_ = malloc(bytes);
-	imgBufferSize_ = bytes;
-}
-
-
-
 
 //////
 // Action handlers

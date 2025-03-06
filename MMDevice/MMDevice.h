@@ -335,7 +335,6 @@ namespace MM {
       {},                   // no required values for now
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerSelectorProperty)
 
@@ -354,7 +353,6 @@ namespace MM {
       {},                   // no required values for now
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerModeProperty)
 
@@ -377,7 +375,6 @@ namespace MM {
       {},                   // TODO: require software trigger?
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerSourceProperty)
 
@@ -399,7 +396,6 @@ namespace MM {
       {},                   // requiredValues
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerActivationProperty)
 
@@ -414,7 +410,6 @@ namespace MM {
       {},                   // requiredValues
       0,                    // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerDelayProperty)
 
@@ -446,7 +441,6 @@ namespace MM {
       {},                   // requiredValues
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_ExposureModeProperty)
 
@@ -466,7 +460,6 @@ namespace MM {
       {},                   // requiredValues
       1,                    // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_BurstFrameCountProperty)
 
@@ -489,7 +482,6 @@ namespace MM {
       {},                   // requiredValues
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineSelectorProperty)
 
@@ -507,7 +499,6 @@ namespace MM {
       {},                   // requiredValues
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineInverterProperty)
 
@@ -532,7 +523,6 @@ namespace MM {
       {},                   // requiredValues
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineSourceProperty)
 
@@ -554,7 +544,6 @@ namespace MM {
       lineStatusValues,                   // requiredValues
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
-      true                 // required
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineStatusProperty)
 
@@ -572,6 +561,34 @@ namespace MM {
    //    g_keyword_CameraStatusAcquisitionTransfer
    // };
 
+
+
+   //// Standard properties for rolling shutter lightsheet readout cameras
+   //// These are not part of GenICam, but are supported by some scientific cameras
+         
+   static const MM::StandardProperty g_RollingShutterLineOffsetProperty{
+      "RollingShutterLineOffset", // name
+      Float,                      // type
+      false,                      // isReadOnly
+      false,                      // isPreInit
+      {},                         // allowedValues
+      {},                         // requiredValues
+      PropertyLimitUndefined,     // lowerLimit
+      PropertyLimitUndefined,
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_RollingShutterLineOffsetProperty)
+
+   static const MM::StandardProperty g_RollingShutterActiveLinesProperty{
+      "RollingShutterActiveLines", // name
+      Integer,                      // type
+      false,                      // isReadOnly
+      false,                      // isPreInit
+      {},                         // allowedValues
+      {},                         // requiredValues
+      PropertyLimitUndefined,     // lowerLimit
+      PropertyLimitUndefined,     // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_RollingShutterActiveLinesProperty)
 
    /**
     * Generic device interface.
@@ -718,8 +735,6 @@ namespace MM {
       virtual int AcquisitionArm(int frameCount) = 0;
       virtual int AcquisitionArm() = 0;
 
-
-
       // Starts the Acquisition of the device. The number of frames captured is specified by AcquisitionMode.
       // Note that unless the AcquisitionArm was executed since the last feature change, 
       // the AcquisitionStart command must validate all the current features for consistency before starting the Acquisition. 
@@ -736,14 +751,6 @@ namespace MM {
       // the current Frame or waiting on a trigger. If no Acquisition is in progress, the command is ignored.
       virtual int AcquisitionAbort() = 0;
 
-
-      //// Rolling shutter mode for Lightsheet readout
-      // this is not part of GenICam, but is supported by some scientific cameras
-      virtual double GetRollingShutterLineOffset() const = 0;
-      virtual int SetRollingShutterLineOffset(double offset_us) = 0;
-
-      virtual unsigned GetRollingShutterActiveLines() const = 0;
-      virtual int SetRollingShutterActiveLines(unsigned numLines) = 0;
 
       ///////////////////////////////////////////////////////////////
       ///// End new camera API               ////////////////////////

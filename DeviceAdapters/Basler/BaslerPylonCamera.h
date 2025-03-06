@@ -40,7 +40,6 @@
 #include <vector>
 #include <map>
 #include "ImageMetadata.h"
-#include "ImgBuffer.h"
 #include <iostream>
 #include <pylon/PylonIncludes.h>
 
@@ -77,57 +76,28 @@ public:
 	bool Busy() {return false;}
 	
 
-	// MMCamera API
+	// MMCamera API (shared between old and new API)
 	// ------------
-	int SnapImage();
-	const unsigned char* GetImageBuffer();
-	void* Buffer4ContinuesShot;
 	
-	unsigned  GetNumberOfComponents() const;
+	unsigned GetNumberOfComponents() const;
 	unsigned GetImageWidth() const;
 	unsigned GetImageHeight() const;
 	unsigned GetImageBytesPerPixel() const;
 
 	unsigned GetBitDepth() const;
-	long GetImageBufferSize() const;
 	double GetExposure() const;
 	void SetExposure(double exp);
 	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
 	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
 	int ClearROI();
-	void ReduceImageSize(int64_t Width, int64_t Height);
 	int GetBinning() const;
 	int SetBinning(int binSize);
-	int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
-	void RGBPackedtoRGB(void* destbuffer, const CGrabResultPtr& ptrGrabResult);
-	//int SetProperty(const char* name, const char* value);
-	int CheckForBinningMode(CPropertyAction *pAct);
-	void AddToLog(std::string msg);
-	void CopyToImageBuffer(CGrabResultPtr image);
-	CImageFormatConverter *converter;
-    CircularBufferInserter *ImageHandler_;
-	std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
-	void UpdateTemperature();
-
-	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
-	int StartSequenceAcquisition(double interval_ms);
-	int StopSequenceAcquisition();
-	int PrepareSequenceAcqusition();
-
-	/**
-	* Flag to indicate whether Sequence Acquisition is currently running.
-	* Return true when Sequence acquisition is active, false otherwise
-	*/
 	bool IsCapturing();
 
-	//Genicam Callback
-	void ResultingFramerateCallback(GenApi::INode* pNode);
-
+	
 
 	/////////////////////////////////////
 	///////// New Camera API ///////////
-	bool IsNewAPIImplemented() { return true; };
-
 	int TriggerSoftware();
 
 	int AcquisitionArm(int frameCount);
@@ -137,19 +107,9 @@ public:
 	int AcquisitionStop();
 	int AcquisitionAbort();
 
-
-	// double GetRollingShutterLineOffset() const;
-	// int SetRollingShutterLineOffset(double offset_us);
-	// unsigned GetRollingShutterActiveLines() const;
-	// int SetRollingShutterActiveLines(unsigned numLines);
-
 	////////////////////////
 	///// End new Camera API
 	////////////////////////
-
-	// Convenience functions
-	std::string NodeToString(const char* str) const;
-	int SelectTrigger(const char* triggerSelector);
 
 
 	// action interface
@@ -178,6 +138,30 @@ public:
 	int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+
+	// Convenience functions
+	std::string NodeToString(const char* str) const;
+	int SelectTrigger(const char* triggerSelector);
+
+
+	void ResizeSnapBuffer();
+	void ReduceImageSize(int64_t Width, int64_t Height);
+	int CheckForBinningMode(CPropertyAction *pAct);
+	void AddToLog(std::string msg);
+	void CopyToImageBuffer(CGrabResultPtr image);
+	void UpdateTemperature();
+	void RGBPackedtoRGB(void* destbuffer, const CGrabResultPtr& ptrGrabResult);
+
+	
+	//Genicam Callback
+	void ResultingFramerateCallback(GenApi::INode* pNode);
+
+
+	CImageFormatConverter *converter;
+    CircularBufferInserter *ImageHandler_;
+	std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
+	void* Buffer4ContinuesShot;
 
 private:
 
@@ -209,16 +193,17 @@ private:
 	std::string temperatureState_;
 	
 
-	void* imgBuffer_;
-	long imgBufferSize_;
-	ImgBuffer img_;
 	INodeMap* nodeMap_;
 
 	bool initialized_;
 
+
 	//MM::MMTime startTime_;
 
-	void ResizeSnapBuffer();
+
+
+
+
 	
 };
 
