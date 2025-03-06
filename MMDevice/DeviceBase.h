@@ -1452,6 +1452,9 @@ private:
               return ret;
       }
 
+      // Remove from skipped properties if it was previously marked as skipped
+      skippedStandardProperties_.erase(fullName);
+
       return DEVICE_OK;
    }
 
