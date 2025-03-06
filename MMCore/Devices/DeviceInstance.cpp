@@ -379,7 +379,7 @@ DeviceInstance::Initialize()
 
    // Check for that all required standard properties implemented
    char failedProperty[MM::MaxStrLength];
-   if (!pImpl_->ImplementsRequiredStandardProperties(failedProperty)) {
+   if (!pImpl_->ImplementsOrSkipsStandardProperties(failedProperty)) {
       // shutdown the device
       Shutdown();
       ThrowError("Device " + GetLabel() +

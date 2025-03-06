@@ -277,35 +277,33 @@ namespace MM {
    // properties are supported by a given device.
 
    // Specific standard properties
-   static const MM::StandardProperty g_TestStandardProperty{
-      "Test",                // name
-      String,               // type
-      false,                // isReadOnly
-      false,                // isPreInit
-      {},                   // allowedValues (empty vector)
-      {},                   // requiredValues (empty vector)
-      PropertyLimitUndefined,   // lowerLimit
-      PropertyLimitUndefined,   // upperLimit
-      false                 // required
-   };
+   // static const MM::StandardProperty g_TestStandardProperty{
+   //    "Test",                // name
+   //    String,               // type
+   //    false,                // isReadOnly
+   //    false,                // isPreInit
+   //    {},                   // allowedValues (empty vector)
+   //    {},                   // requiredValues (empty vector)
+   //    PropertyLimitUndefined,   // lowerLimit
+   //    PropertyLimitUndefined,   // upperLimit
+   // };
 
-   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestStandardProperty)
+   // MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestStandardProperty)
 
 
-   static const std::vector<std::string> testRequiredValues = {"value1", "value2", "value3"};
-   static const MM::StandardProperty g_TestWithValuesStandardProperty{
-      "TestWithValues",     // name
-      String,               // type
-      false,                // isReadOnly
-      false,                // isPreInit
-      {},                   // allowedValues (empty vector)
-      testRequiredValues,   // requiredValues
-      PropertyLimitUndefined,   // lowerLimit
-      PropertyLimitUndefined,   // upperLimit
-      false                 // required
-   };
+   // static const std::vector<std::string> testRequiredValues = {"value1", "value2", "value3"};
+   // static const MM::StandardProperty g_TestWithValuesStandardProperty{
+   //    "TestWithValues",     // name
+   //    String,               // type
+   //    false,                // isReadOnly
+   //    false,                // isPreInit
+   //    {},                   // allowedValues (empty vector)
+   //    testRequiredValues,   // requiredValues
+   //    PropertyLimitUndefined,   // lowerLimit
+   //    PropertyLimitUndefined,   // upperLimit
+   // };
 
-   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestWithValuesStandardProperty)
+   // MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestWithValuesStandardProperty)
 
 
    /**
@@ -329,7 +327,7 @@ namespace MM {
       virtual int GetPropertyType(const char* name, MM::PropertyType& pt) const = 0;
       virtual unsigned GetNumberOfPropertyValues(const char* propertyName) const = 0;
       virtual bool GetPropertyValueAt(const char* propertyName, unsigned index, char* value) const = 0;
-      virtual bool ImplementsRequiredStandardProperties(char* failedProperty) const = 0;
+      virtual bool ImplementsOrSkipsStandardProperties(char* failedProperty) const = 0;
       /**
        * Sequences can be used for fast acquisitions, synchronized by TTLs rather than
        * computer commands.

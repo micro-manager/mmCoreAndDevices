@@ -308,14 +308,14 @@ int CDemoCamera::Initialize()
    else
       LogMessage(NoHubError);
 
-   // Standard properties
-   CPropertyAction *pActsp = new CPropertyAction (this, &CDemoCamera::OnTestStandardProperty);
-   int nRett = CreateTestStandardProperty("123", pActsp);
-   assert(nRett == DEVICE_OK);
+   // Example of how to create standard properties
+   // CPropertyAction *pActsp = new CPropertyAction (this, &CDemoCamera::OnTestStandardProperty);
+   // int nRett = CreateTestStandardProperty("123", pActsp);
+   // assert(nRett == DEVICE_OK);
 
-   CPropertyAction *pActsp2 = new CPropertyAction (this, &CDemoCamera::OnTestWithValuesStandardProperty);
-   int nRettt = CreateTestWithValuesStandardProperty("value1", pActsp2);
-   assert(nRettt == DEVICE_OK);
+   // CPropertyAction *pActsp2 = new CPropertyAction (this, &CDemoCamera::OnTestWithValuesStandardProperty);
+   // int nRettt = CreateTestWithValuesStandardProperty("value1", pActsp2);
+   // assert(nRettt == DEVICE_OK);
 
 
    // set property list
