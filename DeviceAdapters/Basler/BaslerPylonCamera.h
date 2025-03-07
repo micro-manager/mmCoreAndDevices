@@ -155,17 +155,7 @@ public:
 	int OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
-	// For dyanmic standard property value updates:
-	void ReloadTriggerModeStandardPropertyValues();
-    void ReloadTriggerSourceStandardPropertyValues();
-    void ReloadTriggerActivationStandardPropertyValues();
-    void ReloadExposureModeStandardPropertyValues();
-    void ReloadEventSelectorStandardPropertyValues();
-	void ReloadLineModeStandardPropertyValues();
-	void ReloadLineInverterStandardPropertyValues();
-	void ReloadLineSourceStandardPropertyValues();
-	void ReloadEventNotificationStandardPropertyValues();
-	void ReloadTriggerOverlapStandardPropertyValues();
+
 
 	// Convenience functions
 	std::string NodeToString(const char* str) const;
@@ -249,11 +239,22 @@ private:
 
 	//MM::MMTime startTime_;
 
+    int InitOrSyncTriggerSelectorStandardProperty();
+    int InitOrSyncTriggerModeStandardProperty();
+    int InitOrSyncTriggerSourceStandardProperty();
+    int InitOrSyncTriggerActivationStandardProperty();
+    int InitOrSyncTriggerDelayStandardProperty();
+    int InitOrSyncTriggerOverlapStandardProperty();
+    int InitOrSyncExposureModeStandardProperty();
+    int InitOrSyncExposureTimeStandardProperty();
+    int InitOrSyncLineSelectorStandardProperty();
+    int InitOrSyncLineModeStandardProperty();
+    int InitOrSyncLineInverterStandardProperty();
+    int InitOrSyncLineSourceStandardProperty();
+    int InitOrSyncLineStatusStandardProperty();
+    int InitOrSyncEventSelectorStandardProperty();
+    int InitOrSyncEventNotificationStandardProperty();
 
-
-
-
-	
 };
 
 //Enumeration used for distinguishing different events.

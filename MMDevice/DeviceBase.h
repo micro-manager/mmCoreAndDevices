@@ -145,6 +145,10 @@ public:
       return CreateStandardProperty<MM::g_TriggerSelectorProperty>(value, pAct, values);
    }
 
+   int SetTriggerSelectorStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerSelectorProperty>(values);
+   }
+
    void SkipTriggerSelectorStandardProperty() {
       SkipStandardProperty<MM::g_TriggerSelectorProperty>();
    }
@@ -235,6 +239,10 @@ public:
 
    int CreateLineSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_LineSelectorProperty>(value, pAct, values);
+   }
+
+   int SetLineSelectorStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineSelectorProperty>(values);
    }
 
    void SkipLineSelectorStandardProperty() {

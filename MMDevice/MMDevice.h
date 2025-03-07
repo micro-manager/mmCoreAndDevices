@@ -312,26 +312,12 @@ namespace MM {
    // Boolean values get mapped to "0" or "1" since MM properties do not support booleans
 
    // Selects the type of trigger to configure.
-   static const std::vector<std::string> triggerSelectorValues = {
-      g_keyword_TriggerSelectorAcquisitionStart, 
-      g_keyword_TriggerSelectorAcquisitionEnd, 
-      g_keyword_TriggerSelectorAcquisitionActive,
-      g_keyword_TriggerSelectorFrameBurstStart, 
-      g_keyword_TriggerSelectorFrameBurstEnd, 
-      g_keyword_TriggerSelectorFrameBurstActive,
-      g_keyword_TriggerSelectorFrameStart, 
-      g_keyword_TriggerSelectorFrameEnd, 
-      g_keyword_TriggerSelectorFrameActive,
-      g_keyword_TriggerSelectorExposureStart, 
-      g_keyword_TriggerSelectorExposureEnd, 
-      g_keyword_TriggerSelectorExposureActive
-   };
    static const MM::StandardProperty g_TriggerSelectorProperty{
       "TriggerSelector",    // name
       String,               // type
       false,                // isReadOnly
       false,                // isPreInit
-      triggerSelectorValues, // allowedValues
+      {},                   // allowedValues
       {},                   // no required values for now
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
