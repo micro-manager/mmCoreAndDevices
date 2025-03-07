@@ -153,6 +153,10 @@ public:
       return CreateStandardProperty<MM::g_TriggerModeProperty>(value, pAct, values);
    }
 
+   int SetTriggerModeStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerModeProperty>(values);
+   }
+
    void SkipTriggerModeStandardProperty() {
       SkipStandardProperty<MM::g_TriggerModeProperty>();
    }
@@ -161,12 +165,20 @@ public:
       return CreateStandardProperty<MM::g_TriggerSourceProperty>(value, pAct, values);
    }
 
+   int SetTriggerSourceStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerSourceProperty>(values);
+   }
+
    void SkipTriggerSourceStandardProperty() {
       SkipStandardProperty<MM::g_TriggerSourceProperty>();
    }
    
    int CreateTriggerActivationStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_TriggerActivationProperty>(value, pAct, values);
+   }
+
+   int SetTriggerActivationStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerActivationProperty>(values);
    }
    
    void SkipTriggerActivationStandardProperty() {
@@ -191,6 +203,24 @@ public:
       return CreateStandardProperty<MM::g_ExposureModeProperty>(value, pAct, values);
    }
 
+   int SetExposureModeStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_ExposureModeProperty>(values);
+   }
+
+   int CreateExposureTimeStandardProperty(const char* value, double min, double max, MM::ActionFunctor* pAct = 0) {
+      int ret = CreateStandardProperty<MM::g_ExposureTimeProperty>(value, pAct);
+      if (ret != DEVICE_OK)
+          return ret;
+      
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_ExposureTimeProperty.name;
+      return SetPropertyLimits(fullName.c_str(), min, max);
+   }
+
+   void SkipExposureTimeStandardProperty() {
+      SkipStandardProperty<MM::g_ExposureTimeProperty>();
+   }
+
    void SkipExposureModeStandardProperty() {
       SkipStandardProperty<MM::g_ExposureModeProperty>();
    }
@@ -211,8 +241,24 @@ public:
       SkipStandardProperty<MM::g_LineSelectorProperty>();
    }
 
+   int CreateLineModeStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineModeProperty>(value, pAct, values);
+   }
+
+   int SetLineModeStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineModeProperty>(values);
+   }
+
+   void SkipLineModeStandardProperty() {
+      SkipStandardProperty<MM::g_LineModeProperty>();
+   }
+
    int CreateLineInverterStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_LineInverterProperty>(value, pAct, values);
+   }
+
+   int SetLineInverterStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineInverterProperty>(values);
    }
 
    void SkipLineInverterStandardProperty() {
@@ -221,6 +267,10 @@ public:
 
    int CreateLineSourceStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_LineSourceProperty>(value, pAct, values);
+   }
+
+   int SetLineSourceStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineSourceProperty>(values);
    }
 
    void SkipLineSourceStandardProperty() {
@@ -232,6 +282,10 @@ public:
       // to take values from the user
       return CreateStandardProperty<MM::g_LineStatusProperty>(value, pAct,
        MM::g_LineStatusProperty.requiredValues);
+   }
+
+   int SetLineStatusStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineStatusProperty>(values);
    }
 
    void SkipLineStatusStandardProperty() {
@@ -258,6 +312,10 @@ public:
       return CreateStandardProperty<MM::g_EventSelectorProperty>(value, pAct, values);
    }
 
+   int SetEventSelectorStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_EventSelectorProperty>(values);
+   }
+
    void SkipEventSelectorStandardProperty() {
       SkipStandardProperty<MM::g_EventSelectorProperty>();
    }
@@ -266,9 +324,26 @@ public:
       return CreateStandardProperty<MM::g_EventNotificationProperty>(value, pAct, MM::g_EventNotificationProperty.requiredValues);
    }
 
+   int SetEventNotificationStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_EventNotificationProperty>(values);
+   }
+
    void SkipEventNotificationStandardProperty() {
       SkipStandardProperty<MM::g_EventNotificationProperty>();
    }
+
+   int CreateTriggerOverlapStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerOverlapProperty>(value, pAct, values);
+   }
+
+   int SetTriggerOverlapStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerOverlapProperty>(values);
+   }
+
+   void SkipTriggerOverlapStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerOverlapProperty>();
+   }
+   
 
    /**
    * Assigns description string for a device (for use only by the calling code).
@@ -1842,6 +1917,9 @@ public:
       SkipLineStatusStandardProperty();
       SkipRollingShutterLineOffsetStandardProperty();
       SkipRollingShutterActiveLinesStandardProperty();
+      SkipEventNotificationStandardProperty();
+      SkipTriggerOverlapStandardProperty();
+      SkipExposureTimeStandardProperty();   
    }
 
    // Shared functionality with no default implementation
@@ -1851,8 +1929,6 @@ public:
    virtual unsigned GetBitDepth() const = 0;
    virtual int GetBinning() const = 0;
    virtual int SetBinning(int binSize) = 0;
-   virtual void SetExposure(double exp_ms) = 0;
-   virtual double GetExposure() const = 0;
    virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
    virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) = 0;
    virtual int ClearROI() = 0;
@@ -1862,6 +1938,9 @@ public:
    virtual bool IsNewAPIImplemented() final {return false;}
 
    // Old camera API: required
+   virtual void SetExposure(double exp_ms) = 0;
+   virtual double GetExposure() const = 0;
+
    virtual const unsigned char* GetImageBuffer() = 0;
    virtual long GetImageBufferSize() const = 0;
    virtual int SnapImage() = 0;
@@ -1909,8 +1988,6 @@ public:
    virtual unsigned GetBitDepth() const = 0;
    virtual int GetBinning() const = 0;
    virtual int SetBinning(int binSize) = 0;
-   virtual void SetExposure(double exp_ms) = 0;
-   virtual double GetExposure() const = 0;
    virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
    virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) = 0;
    virtual int ClearROI() = 0;
@@ -1931,7 +2008,11 @@ public:
    virtual int PrepareSequenceAcqusition() final {return DEVICE_NOT_YET_IMPLEMENTED;}
    virtual int StartSequenceAcquisition(long numImages, double interval_ms, 
                               bool stopOnOverflow) final {return DEVICE_NOT_YET_IMPLEMENTED;}
-   virtual const unsigned char* GetImageBuffer(unsigned /* channelNr */) final {return nullptr;}   
+   virtual const unsigned char* GetImageBuffer(unsigned /* channelNr */) final {return nullptr;}  
+   // TODO: do this in terms of the standard property
+   // TODO: these are in ms but the standard property is in us
+   virtual void SetExposure(double exp_ms) final {return;}
+   virtual double GetExposure() const final {return -1;} 
 
 
    // New camera API: required

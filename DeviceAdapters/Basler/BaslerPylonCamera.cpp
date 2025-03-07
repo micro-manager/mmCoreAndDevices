@@ -356,176 +356,29 @@ int BaslerCamera::Initialize()
 
 
 		//// Create standard properties
+		InitTriggerSelectorStandardProperty();
+		InitTriggerModeStandardProperty();
+		InitTriggerSourceStandardProperty();
+		InitTriggerActivationStandardProperty();
+		InitTriggerDelayStandardProperty();
+		InitTriggerOverlapStandardProperty();
+		
+		InitExposureModeStandardProperty();
+		InitExposureTimeStandardProperty();
+		
+		InitLineSelectorStandardProperty();
+		InitLineModeStandardProperty();
+		InitLineInverterStandardProperty();
+		InitLineSourceStandardProperty();
+		InitLineStatusStandardProperty();
 
-		int code;
-		CPropertyAction* action;
+		InitEventSelectorStandardProperty();
+		InitEventNotificationStandardProperty();
 
-		// TriggerSelector
-		CEnumerationPtr triggerSelector(nodeMap_->GetNode("TriggerSelector"));
-		if (IsAvailable(triggerSelector)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnTriggerSelector);
-			std::string currentValue = triggerSelector->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnTriggerSelector);
-			// Get available values from the camera
-			std::vector<std::string> values = GetAvailableEnumValues(*triggerSelector);
-			code = CreateTriggerSelectorStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipTriggerSelectorStandardProperty();
-		}
+		SkipBurstFrameCountStandardProperty(); 
 
-		// TriggerMode
-		CEnumerationPtr triggerMode(nodeMap_->GetNode("TriggerMode"));
-		if (IsAvailable(triggerMode)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnTriggerMode);
-			std::string currentValue = triggerMode->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnTriggerMode);
-			// Get available values from the camera
-			std::vector<std::string> values = GetAvailableEnumValues(*triggerMode);
-			code = CreateTriggerModeStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipTriggerModeStandardProperty();
-		}
-
-		// TriggerSource
-		CEnumerationPtr triggerSource(nodeMap_->GetNode("TriggerSource"));
-		if (IsAvailable(triggerSource)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnTriggerSource);
-			std::string currentValue = triggerSource->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnTriggerSource);
-			// Get available values from the camera
-			std::vector<std::string> values = GetAvailableEnumValues(*triggerSource);
-			code = CreateTriggerSourceStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipTriggerSourceStandardProperty();
-		}
-
-		// TriggerActivation
-		CEnumerationPtr triggerActivation(nodeMap_->GetNode("TriggerActivation"));
-		if (IsAvailable(triggerActivation)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnTriggerActivation);
-			std::string currentValue = triggerActivation->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnTriggerActivation);
-			// Get available values from the camera
-			std::vector<std::string> values = GetAvailableEnumValues(*triggerActivation);
-			code = CreateTriggerActivationStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipTriggerActivationStandardProperty();
-		}
-
-		// TriggerDelay
-		CFloatPtr triggerDelay(nodeMap_->GetNode("TriggerDelay"));
-		if (IsAvailable(triggerDelay)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnTriggerDelay);
-			double currentValue = triggerDelay->GetValue();
-			double minValue = triggerDelay->GetMin();
-			double maxValue = triggerDelay->GetMax();
-			std::string strValue = CDeviceUtils::ConvertToString(currentValue);
-			action = new CPropertyAction(this, &BaslerCamera::OnTriggerDelay);
-			code = CreateTriggerDelayStandardProperty(strValue.c_str(), minValue, maxValue, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipTriggerDelayStandardProperty();
-		}
-
-		// ExposureMode
-		CEnumerationPtr exposureMode(nodeMap_->GetNode("ExposureMode"));
-		if (IsAvailable(exposureMode)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnExposureMode);
-			std::string currentValue = exposureMode->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnExposureMode);
-			// Get available values from the camera
-			std::vector<std::string> values = GetAvailableEnumValues(*exposureMode);
-			code = CreateExposureModeStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipExposureModeStandardProperty();
-		}
-
-		// BurstFrameCount - Skipping as in original code
-		SkipBurstFrameCountStandardProperty();
-
-		// LineSelector
-		CEnumerationPtr lineSelector(nodeMap_->GetNode("LineSelector"));
-		if (IsAvailable(lineSelector)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnLineSelector);
-			std::string currentValue = lineSelector->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnLineSelector);
-			// Get available values from the camera
-			std::vector<std::string> values = GetAvailableEnumValues(*lineSelector);
-			code = CreateLineSelectorStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipLineSelectorStandardProperty();
-		}
-
-		// LineInverter
-		CBooleanPtr lineInverter(nodeMap_->GetNode("LineInverter"));
-		if (IsAvailable(lineInverter)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnLineInverter);
-			std::string currentValue = lineInverter->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnLineInverter);
-			// Get available values for boolean
-			std::vector<std::string> values = {"0", "1"};
-			code = CreateLineInverterStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipLineInverterStandardProperty();
-		}
-
-		// LineSource
-		CEnumerationPtr lineSource(nodeMap_->GetNode("LineSource"));
-		if (IsAvailable(lineSource)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnLineSource);
-			std::string currentValue = lineSource->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnLineSource);
-			// Get available values from the camera
-			std::vector<std::string> values = GetAvailableEnumValues(*lineSource);
-			code = CreateLineSourceStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipLineSourceStandardProperty();
-		}
-
-		// LineStatus
-		CBooleanPtr lineStatus(nodeMap_->GetNode("LineStatus"));
-		if (IsAvailable(lineStatus)) {
-			CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnLineStatus);
-			std::string currentValue = lineStatus->ToString();
-			action = new CPropertyAction(this, &BaslerCamera::OnLineStatus);
-			// LineStatus is read-only
-			code = CreateLineStatusStandardProperty(currentValue.c_str(), action);
-			assert(code == DEVICE_OK);
-		} else {
-			SkipLineStatusStandardProperty();
-		}
-
-		// Unclear if any basler cameras support these properties
 		SkipRollingShutterLineOffsetStandardProperty();
 		SkipRollingShutterActiveLinesStandardProperty();
-
-
-		// Event Standard Properties
-		CEnumerationPtr eventSelector(nodeMap_->GetNode("EventSelector"));
-		if (IsAvailable(eventSelector)) {
-			action = new CPropertyAction(this, &BaslerCamera::OnEventSelector);
-			std::string currentValue = eventSelector->ToString();
-			std::vector<std::string> values = GetAvailableEnumValues(*eventSelector);
-			code = CreateEventSelectorStandardProperty(currentValue.c_str(), values, action);
-			assert(code == DEVICE_OK);
-		}
-
-		CEnumerationPtr eventNotification(nodeMap_->GetNode("EventNotification"));
-		if (IsAvailable(eventNotification)) {
-			action = new CPropertyAction(this, &BaslerCamera::OnEventNotification);
-			std::string currentValue = eventNotification->ToString();
-			// This one has required values of On and Off
-			code = CreateEventNotificationStandardProperty(currentValue.c_str(), action);
-			assert(code == DEVICE_OK);
-		}
 
 
 		if (camera_->EventSelector.IsWritable())
@@ -605,7 +458,6 @@ int BaslerCamera::Initialize()
 
 		//Exposure
 		CFloatPtr exposure(nodeMap_->GetNode("ExposureTime"));
-		CFloatPtr ExposureTimeAbs(nodeMap_->GetNode("ExposureTimeAbs"));
 		if (IsAvailable(exposure))
 		{
 			// USB cameras
@@ -613,12 +465,6 @@ int BaslerCamera::Initialize()
 			exposureMax_ = exposure->GetMax();
 			exposureMin_ = exposure->GetMin();
 
-		}
-		else if (IsAvailable(ExposureTimeAbs))
-		{   // GigE
-			exposure_us_ = ExposureTimeAbs->GetValue();
-			exposureMax_ = ExposureTimeAbs->GetMax();
-			exposureMin_ = ExposureTimeAbs->GetMin();
 		}
 	/*	CPropertyAction* pAct = new CPropertyAction(this, &BaslerCamera::OnExposure);
 		ret = CreateProperty("Exposure", CDeviceUtils::ConvertToString((long)exposure->GetValue()), MM::Float, false, pAct);
@@ -1319,6 +1165,12 @@ int BaslerCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 	return DEVICE_OK;
 }
 
+
+unsigned  BaslerCamera::GetNumberOfComponents() const
+{
+	return nComponents_;
+};
+
 /**
 * Returns the actual dimensions of the current ROI.
 */
@@ -1349,43 +1201,6 @@ int BaslerCamera::ClearROI()
 	width->SetValue(maxWidth_);
 	height->SetValue(maxHeight_);
 	return DEVICE_OK;
-}
-
-/**
-* Returns the current exposure setting in milliseconds.
-* Required by the MM::Camera API.
-*/
-double BaslerCamera::GetExposure() const
-{
-	return exposure_us_ / 1000.0;
-}
-
-/**
-* Sets exposure in milliseconds.
-* Required by the MM::Camera API.
-*/
-void BaslerCamera::SetExposure(double exp)
-{
-	exp *= 1000; //convert to us
-	if (exp > exposureMax_) {
-		exp = exposureMax_;
-	}
-	else if (exp < exposureMin_) {
-		exp = exposureMin_;
-	}
-
-	CFloatPtr ExposureTime(nodeMap_->GetNode("ExposureTime"));
-	CIntegerPtr ExposureTimeRaw(nodeMap_->GetNode("ExposureTimeRaw"));
-	if (camera_->IsGigE() && IsWritable(ExposureTimeRaw))
-	{
-		ExposureTimeRaw->SetValue((int64_t)exp);
-		exposure_us_ = exp;
-	}
-	else if (camera_->IsUsb() && IsWritable(ExposureTime))
-	{
-		ExposureTime->SetValue(exp);
-		exposure_us_ = exp;
-	}
 }
 
 /**
@@ -1445,6 +1260,13 @@ int BaslerCamera::OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct
                 
                 // Update the property with the actual value that was set
                 pProp->Set(TriggerSelector->ToString().c_str());
+
+				// Update other properties that may depend on the trigger selector
+				ReloadTriggerModeStandardPropertyValues();
+				ReloadTriggerSourceStandardPropertyValues();
+				ReloadTriggerActivationStandardPropertyValues();
+				ReloadExposureModeStandardPropertyValues();
+				ReloadEventSelectorStandardPropertyValues();
             }
             else if (eAct == MM::BeforeGet) {
                 pProp->Set(TriggerSelector->ToString().c_str());
@@ -1466,27 +1288,14 @@ int BaslerCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::AfterSet) {
 		pProp->Get(TriggerSource_);
 		CEnumerationPtr TriggerSource(nodeMap_->GetNode("TriggerSource"));
-		try {
-			if (TriggerSource != NULL && IsAvailable(TriggerSource)) {
-				if (TriggerSource->GetEntryByName(TriggerSource_.c_str()) != NULL) {					
-					TriggerSource->FromString(TriggerSource_.c_str());
-				} else {
-					// The requested trigger source is not available
-					return DEVICE_INVALID_PROPERTY_VALUE;
-				}
-			} else {
-				// TriggerSource is not available
-				return DEVICE_INVALID_PROPERTY_VALUE;
-			}
-		} catch (const GenericException& e) {
-			// Log the error and return a meaningful error code
-			AddToLog(e.GetDescription());
-			return DEVICE_ERR;
-		}
-
+		TriggerSource->FromString(TriggerSource_.c_str());
 
 		// update other property values:
-		
+		ReloadTriggerModeStandardPropertyValues();
+		ReloadTriggerActivationStandardPropertyValues();
+		ReloadExposureModeStandardPropertyValues();
+		ReloadEventSelectorStandardPropertyValues();
+
 	}
 	else if (eAct == MM::BeforeGet) {
 		CEnumerationPtr TriggerSource(nodeMap_->GetNode("TriggerSource"));
@@ -1501,48 +1310,22 @@ int BaslerCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int BaslerCamera::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	try
-	{
-		string TriggerMode_;
-		CEnumerationPtr TriggerMode(nodeMap_->GetNode("TriggerMode"));
-		if (TriggerMode != NULL && IsAvailable(TriggerMode))
-		{
-			if (eAct == MM::AfterSet) {
-				pProp->Get(TriggerMode_);
-				TriggerMode->FromString(TriggerMode_.c_str());
-				pProp->Set(TriggerMode->ToString().c_str());
-			}
-			else if (eAct == MM::BeforeGet) {
-				pProp->Set(TriggerMode->ToString().c_str());
-			}
-		}
-	}
-	catch (const GenericException & e)
-	{
-		 // Error handling.
-        AddToLog(e.GetDescription());
-        return DEVICE_ERR;
-	}
-	return DEVICE_OK;
-}
-
-int BaslerCamera::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAct)
+int BaslerCamera::HandleEnumerationProperty(MM::PropertyBase* pProp, MM::ActionType eAct, 
+                                           const char* nodeName)
 {
     try
     {
-        string TriggerActivation_;
-        CEnumerationPtr TriggerActivation(nodeMap_->GetNode("TriggerActivation"));
-        if (TriggerActivation != NULL && IsAvailable(TriggerActivation))
+        string valueStr;
+        CEnumerationPtr enumNode(nodeMap_->GetNode(nodeName));
+        if (enumNode != NULL && IsAvailable(enumNode))
         {
             if (eAct == MM::AfterSet) {
-                pProp->Get(TriggerActivation_);
-                TriggerActivation->FromString(TriggerActivation_.c_str());
-                pProp->Set(TriggerActivation->ToString().c_str());
+                pProp->Get(valueStr);
+                enumNode->FromString(valueStr.c_str());
+                pProp->Set(enumNode->ToString().c_str());
             }
             else if (eAct == MM::BeforeGet) {
-                pProp->Set(TriggerActivation->ToString().c_str());
+                pProp->Set(enumNode->ToString().c_str());
             }
         }
     }
@@ -1553,6 +1336,41 @@ int BaslerCamera::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eA
         return DEVICE_ERR;
     }
     return DEVICE_OK;
+}
+
+int BaslerCamera::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return HandleEnumerationProperty(pProp, eAct, "TriggerMode");
+}
+
+int BaslerCamera::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return HandleEnumerationProperty(pProp, eAct, "TriggerActivation");
+}
+
+int BaslerCamera::OnTriggerOverlap(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return HandleEnumerationProperty(pProp, eAct, "TriggerOverlap");
+}
+
+int BaslerCamera::OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return HandleEnumerationProperty(pProp, eAct, "ExposureMode");
+}
+
+int BaslerCamera::OnLineSource(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return HandleEnumerationProperty(pProp, eAct, "LineSource");
+}
+
+int BaslerCamera::OnEventNotification(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return HandleEnumerationProperty(pProp, eAct, "EventNotification");
+}
+
+int BaslerCamera::OnLineMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    return HandleEnumerationProperty(pProp, eAct, "LineMode");
 }
 
 int BaslerCamera::OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -1581,28 +1399,58 @@ int BaslerCamera::OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-int BaslerCamera::OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+
+int BaslerCamera::OnExposureTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     try
     {
-        string ExposureMode_;
-        CEnumerationPtr ExposureMode(nodeMap_->GetNode("ExposureMode"));
-        if (ExposureMode != NULL && IsAvailable(ExposureMode))
+        if (eAct == MM::AfterSet)
         {
-            if (eAct == MM::AfterSet) {
-                pProp->Get(ExposureMode_);
-                ExposureMode->FromString(ExposureMode_.c_str());
-                pProp->Set(ExposureMode->ToString().c_str());
+            // Get the new exposure value
+            pProp->Get(exposure_us_);
+            
+            // Ensure exposure is within allowed range
+            if (exposure_us_ > exposureMax_) {
+                exposure_us_ = exposureMax_;
             }
-            else if (eAct == MM::BeforeGet) {
-                pProp->Set(ExposureMode->ToString().c_str());
+            else if (exposure_us_ < exposureMin_) {
+                exposure_us_ = exposureMin_;
             }
+            
+            // Try to set the exposure value - use TrySetValue which is safer
+            // as it will return the actual value that was set
+            if (IsWritable(camera_->ExposureTime))
+            {
+                exposure_us_ = camera_->ExposureTime.TrySetValue(exposure_us_);
+            }
+            else if (IsWritable(camera_->ExposureTimeAbs))
+            {
+                exposure_us_ = camera_->ExposureTimeAbs.TrySetValue(exposure_us_);
+            }
+            
+            // Update the property display with the actual value that was set
+            pProp->Set(exposure_us_);
+        }
+        else if (eAct == MM::BeforeGet)
+        {
+            // Get the current exposure value
+            if (IsAvailable(camera_->ExposureTime))
+            {
+                exposure_us_ = camera_->ExposureTime.GetValue();
+            }
+            else if (IsAvailable(camera_->ExposureTimeAbs))
+            {
+                exposure_us_ = camera_->ExposureTimeAbs.GetValue();
+            }
+            pProp->Set(exposure_us_);
         }
     }
     catch (const GenericException & e)
     {
-        // Error handling.
+        // Error handling
         AddToLog(e.GetDescription());
+        cerr << "An exception occurred." << endl
+             << e.GetDescription() << endl;
         return DEVICE_ERR;
     }
     return DEVICE_OK;
@@ -1620,6 +1468,11 @@ int BaslerCamera::OnLineSelector(MM::PropertyBase* pProp, MM::ActionType eAct)
                 pProp->Get(LineSelector_);
                 LineSelector->FromString(LineSelector_.c_str());
                 pProp->Set(LineSelector->ToString().c_str());
+                
+                // Update other properties that may depend on the line selector
+                ReloadLineModeStandardPropertyValues();
+                ReloadLineInverterStandardPropertyValues();
+                ReloadLineSourceStandardPropertyValues();
             }
             else if (eAct == MM::BeforeGet) {
                 pProp->Set(LineSelector->ToString().c_str());
@@ -1661,32 +1514,6 @@ int BaslerCamera::OnLineInverter(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-int BaslerCamera::OnLineSource(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    try
-    {
-        string LineSource_;
-        CEnumerationPtr LineSource(nodeMap_->GetNode("LineSource"));
-        if (LineSource != NULL && IsAvailable(LineSource))
-        {
-            if (eAct == MM::AfterSet) {
-                pProp->Get(LineSource_);
-                LineSource->FromString(LineSource_.c_str());
-                pProp->Set(LineSource->ToString().c_str());
-            }
-            else if (eAct == MM::BeforeGet) {
-                pProp->Set(LineSource->ToString().c_str());
-            }
-        }
-    }
-    catch (const GenericException & e)
-    {
-        // Error handling.
-        AddToLog(e.GetDescription());
-        return DEVICE_ERR;
-    }
-    return DEVICE_OK;
-}
 
 int BaslerCamera::OnLineStatus(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1721,6 +1548,9 @@ int BaslerCamera::OnEventSelector(MM::PropertyBase* pProp, MM::ActionType eAct)
                 pProp->Get(EventSelector_);
                 EventSelector->FromString(EventSelector_.c_str());
                 pProp->Set(EventSelector->ToString().c_str());
+                
+                // Update EventNotification property values which depend on EventSelector
+                ReloadEventNotificationStandardPropertyValues();
             }
             else if (eAct == MM::BeforeGet) {
                 pProp->Set(EventSelector->ToString().c_str());
@@ -1736,35 +1566,168 @@ int BaslerCamera::OnEventSelector(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-int BaslerCamera::OnEventNotification(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    try
-    {
-        string EventNotification_;
-        CEnumerationPtr EventNotification(nodeMap_->GetNode("EventNotification"));
-        if (EventNotification != NULL && IsAvailable(EventNotification))
-        {
-            if (eAct == MM::AfterSet) {
-                pProp->Get(EventNotification_);
-                EventNotification->FromString(EventNotification_.c_str());
-                pProp->Set(EventNotification->ToString().c_str());
-            }
-            else if (eAct == MM::BeforeGet) {
-                pProp->Set(EventNotification->ToString().c_str());
-            }
-        }
+
+
+void BaslerCamera::ReloadTriggerModeStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("TriggerMode"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("TriggerMode");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitTriggerModeStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetTriggerModeStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
     }
-    catch (const GenericException & e)
-    {
-        // Error handling.
-        AddToLog(e.GetDescription());
-        return DEVICE_ERR;
-    }
-    return DEVICE_OK;
 }
 
-///////////////////////////////////
-//// Non-standard property handlers
+void BaslerCamera::ReloadTriggerSourceStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("TriggerSource"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("TriggerSource");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitTriggerSourceStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetTriggerSourceStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
+
+void BaslerCamera::ReloadTriggerActivationStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("TriggerActivation"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("TriggerActivation");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitTriggerActivationStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetTriggerActivationStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
+
+void BaslerCamera::ReloadExposureModeStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("ExposureMode"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("ExposureMode");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitExposureModeStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetExposureModeStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
+
+void BaslerCamera::ReloadEventSelectorStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("EventSelector"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("EventSelector");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitEventSelectorStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetEventSelectorStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
+
+void BaslerCamera::ReloadLineModeStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("LineMode"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("LineMode");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitLineModeStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetLineModeStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
+
+void BaslerCamera::ReloadLineSourceStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("LineSource"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("LineSource");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitLineSourceStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetLineSourceStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
+
+void BaslerCamera::ReloadEventNotificationStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("EventNotification"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("EventNotification");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitEventNotificationStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetEventNotificationStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
+
+void BaslerCamera::ReloadTriggerOverlapStandardPropertyValues() {
+    CEnumerationPtr node(nodeMap_->GetNode("TriggerOverlap"));
+    bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("TriggerOverlap");
+	if (cameraHasIt && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitTriggerOverlapStandardProperty();
+	}
+    if (cameraHasIt) {
+        std::vector<std::string> values = GetAvailableEnumValues(*node);
+        int ret = SetTriggerOverlapStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
+
+ // We map GenICam booleans to "0" and "1"
+void BaslerCamera::ReloadLineInverterStandardPropertyValues() {
+    CBooleanPtr lineInverter(nodeMap_->GetNode("LineInverter"));
+	bool propertyExists = HasStandardProperty("LineInverter");
+	if (IsAvailable(lineInverter) && !propertyExists) {
+	   // It wasn't created during initialization because it only exists dependent on another 
+	   // property value
+	   InitLineInverterStandardProperty();
+	}
+    if (IsAvailable(lineInverter)) {
+        std::string currentValue = lineInverter->ToString();
+        std::vector<std::string> values = {"0", "1"};
+        int ret = SetLineInverterStandardPropertyValues(values);
+        assert(ret == DEVICE_OK);
+    }
+}
 
 int BaslerCamera::OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1917,48 +1880,6 @@ int BaslerCamera::OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int BaslerCamera::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-		if (IsWritable(camera_->ExposureTime) || IsWritable(camera_->ExposureTimeAbs))
-		{
-			try
-			{
-				pProp->Get(exposure_us_);
-				exposure_us_ = camera_->ExposureTime.TrySetValue(exposure_us_);
-				exposure_us_ = camera_->ExposureTimeAbs.TrySetValue(exposure_us_);
-			}
-			catch (const GenericException & e)
-			{
-				// Error handling.
-				AddToLog(e.GetDescription());
-				cerr << "An exception occurred." << endl
-					<< e.GetDescription() << endl;
-			}
-		}
-	}
-	else if (eAct == MM::BeforeGet) {
-
-		try {
-			if (IsAvailable(camera_->ExposureTime) && IsAvailable(camera_->ExposureTimeAbs))
-			{
-				exposure_us_ = camera_->ExposureTime.GetValueOrDefault(exposure_us_);
-				exposure_us_ = camera_->ExposureTimeAbs.GetValueOrDefault(exposure_us_);
-				pProp->Set(exposure_us_);
-			}
-		}
-		catch (const GenericException & e)
-		{
-			// Error handling.
-			AddToLog(e.GetDescription());
-			cerr << "An exception occurred." << endl
-				<< e.GetDescription() << endl;
-		}
-	}
-	return DEVICE_OK;
-}
-
 int BaslerCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	CIntegerPtr BinningHorizontal(nodeMap_->GetNode("BinningHorizontal"));
@@ -2018,11 +1939,6 @@ int BaslerCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	return DEVICE_OK;
 }
-
-unsigned  BaslerCamera::GetNumberOfComponents() const
-{
-	return nComponents_;
-};
 
 int BaslerCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -2125,8 +2041,9 @@ int BaslerCamera::OnSensorReadoutMode(MM::PropertyBase* pProp, MM::ActionType eA
 		cout << "An exception occurred." << endl << e.GetDescription() << endl;
 		cerr << "An exception occurred." << endl
 			<< e.GetDescription() << endl;
+        return DEVICE_ERR;
 	}
-	return DEVICE_OK;
+    return DEVICE_OK;
 }
 
 int BaslerCamera::OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -2649,4 +2566,255 @@ void BufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const CGrabRes
 		ss << "Error: " << ptrGrabResult->GetErrorCode() << " " << ptrGrabResult->GetErrorDescription() << endl;
 		dev_->AddToLog(ss.str());
 	}
+}
+
+int BaslerCamera::InitTriggerSelectorStandardProperty()
+{
+	CEnumerationPtr triggerSelector(nodeMap_->GetNode("TriggerSelector"));
+	if (IsAvailable(triggerSelector)) {
+		std::string currentValue = triggerSelector->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnTriggerSelector);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*triggerSelector);
+		int code = CreateTriggerSelectorStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipTriggerSelectorStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitTriggerModeStandardProperty()
+{
+	CEnumerationPtr triggerMode(nodeMap_->GetNode("TriggerMode"));
+	if (IsAvailable(triggerMode)) {
+		std::string currentValue = triggerMode->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnTriggerMode);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*triggerMode);
+		int code = CreateTriggerModeStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipTriggerModeStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitTriggerSourceStandardProperty()
+{
+	CEnumerationPtr triggerSource(nodeMap_->GetNode("TriggerSource"));
+	if (IsAvailable(triggerSource)) {
+		std::string currentValue = triggerSource->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnTriggerSource);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*triggerSource);
+		int code = CreateTriggerSourceStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipTriggerSourceStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitTriggerActivationStandardProperty()
+{
+	CEnumerationPtr triggerActivation(nodeMap_->GetNode("TriggerActivation"));
+	if (IsAvailable(triggerActivation)) {
+		std::string currentValue = triggerActivation->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnTriggerActivation);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*triggerActivation);
+		int code = CreateTriggerActivationStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipTriggerActivationStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitTriggerDelayStandardProperty()
+{
+	CFloatPtr triggerDelay(nodeMap_->GetNode("TriggerDelay"));
+	if (IsAvailable(triggerDelay)) {
+		double currentValue = triggerDelay->GetValue();
+		double minValue = triggerDelay->GetMin();
+		double maxValue = triggerDelay->GetMax();
+		std::string strValue = CDeviceUtils::ConvertToString(currentValue);
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnTriggerDelay);
+		int code = CreateTriggerDelayStandardProperty(strValue.c_str(), minValue, maxValue, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipTriggerDelayStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitTriggerOverlapStandardProperty()
+{
+	CEnumerationPtr triggerOverlap(nodeMap_->GetNode("TriggerOverlap"));
+	if (IsAvailable(triggerOverlap)) {
+		std::string currentValue = triggerOverlap->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnTriggerOverlap);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*triggerOverlap);
+		int code = CreateTriggerOverlapStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipTriggerOverlapStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitExposureModeStandardProperty()
+{
+	CEnumerationPtr exposureMode(nodeMap_->GetNode("ExposureMode"));
+	if (IsAvailable(exposureMode)) {
+		std::string currentValue = exposureMode->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnExposureMode);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*exposureMode);
+		int code = CreateExposureModeStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipExposureModeStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitExposureTimeStandardProperty()
+{
+	CFloatPtr exposureTime(nodeMap_->GetNode("ExposureTime"));
+	if (IsAvailable(exposureTime)) {
+		double currentValue = exposureTime->GetValue();
+		double minValue = exposureTime->GetMin();
+		double maxValue = exposureTime->GetMax();
+		
+		std::string strValue = CDeviceUtils::ConvertToString(currentValue);
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnExposureTime);
+		int code = CreateExposureTimeStandardProperty(strValue.c_str(), minValue, maxValue, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipExposureTimeStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitLineSelectorStandardProperty()
+{
+	CEnumerationPtr lineSelector(nodeMap_->GetNode("LineSelector"));
+	if (IsAvailable(lineSelector)) {
+		std::string currentValue = lineSelector->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnLineSelector);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*lineSelector);
+		int code = CreateLineSelectorStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipLineSelectorStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitLineModeStandardProperty()
+{
+	CEnumerationPtr lineMode(nodeMap_->GetNode("LineMode"));
+	if (IsAvailable(lineMode)) {
+		std::string currentValue = lineMode->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnLineMode);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*lineMode);
+		int code = CreateLineModeStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipLineModeStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitLineInverterStandardProperty()
+{
+	CBooleanPtr lineInverter(nodeMap_->GetNode("LineInverter"));
+	if (IsAvailable(lineInverter)) {
+		std::string currentValue = lineInverter->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnLineInverter);
+		// Get available values for boolean
+		std::vector<std::string> values = {"0", "1"};
+		int code = CreateLineInverterStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipLineInverterStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitLineSourceStandardProperty()
+{
+	CEnumerationPtr lineSource(nodeMap_->GetNode("LineSource"));
+	if (IsAvailable(lineSource)) {
+		std::string currentValue = lineSource->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnLineSource);
+		// Get available values from the camera
+		std::vector<std::string> values = GetAvailableEnumValues(*lineSource);
+		int code = CreateLineSourceStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipLineSourceStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitLineStatusStandardProperty()
+{
+	CBooleanPtr lineStatus(nodeMap_->GetNode("LineStatus"));
+	if (IsAvailable(lineStatus)) {
+		std::string currentValue = lineStatus->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnLineStatus);
+		// LineStatus is read-only
+		int code = CreateLineStatusStandardProperty(currentValue.c_str(), action);
+		assert(code == DEVICE_OK);
+		return code;
+	} else {
+		SkipLineStatusStandardProperty();
+		return DEVICE_OK;
+	}
+}
+
+int BaslerCamera::InitEventSelectorStandardProperty()
+{
+	CEnumerationPtr eventSelector(nodeMap_->GetNode("EventSelector"));
+	if (IsAvailable(eventSelector)) {
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnEventSelector);
+		std::string currentValue = eventSelector->ToString();
+		std::vector<std::string> values = GetAvailableEnumValues(*eventSelector);
+		int code = CreateEventSelectorStandardProperty(currentValue.c_str(), values, action);
+		assert(code == DEVICE_OK);
+		return code;
+	}
+	return DEVICE_OK;
+}
+
+int BaslerCamera::InitEventNotificationStandardProperty()
+{
+	CEnumerationPtr eventNotification(nodeMap_->GetNode("EventNotification"));
+	if (IsAvailable(eventNotification)) {
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnEventNotification);
+		std::string currentValue = eventNotification->ToString();
+		// This one has required values of On and Off
+		int code = CreateEventNotificationStandardProperty(currentValue.c_str(), action);
+		assert(code == DEVICE_OK);
+		return code;
+	}
+	return DEVICE_OK;
 }

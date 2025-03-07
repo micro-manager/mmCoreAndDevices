@@ -85,8 +85,6 @@ public:
 	unsigned GetImageBytesPerPixel() const;
 
 	unsigned GetBitDepth() const;
-	double GetExposure() const;
-	void SetExposure(double exp);
 	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
 	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
 	int ClearROI();
@@ -122,9 +120,12 @@ public:
 	int OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLineSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLineInverter(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLineSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLineStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerOverlap(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExposureTime(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	int OnEventSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnEventNotification(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -138,7 +139,6 @@ public:
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDeviceLinkThroughputLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnInterPacketDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -155,9 +155,22 @@ public:
 	int OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
+	// For dyanmic standard property value updates:
+	void ReloadTriggerModeStandardPropertyValues();
+    void ReloadTriggerSourceStandardPropertyValues();
+    void ReloadTriggerActivationStandardPropertyValues();
+    void ReloadExposureModeStandardPropertyValues();
+    void ReloadEventSelectorStandardPropertyValues();
+	void ReloadLineModeStandardPropertyValues();
+	void ReloadLineInverterStandardPropertyValues();
+	void ReloadLineSourceStandardPropertyValues();
+	void ReloadEventNotificationStandardPropertyValues();
+	void ReloadTriggerOverlapStandardPropertyValues();
+
 	// Convenience functions
 	std::string NodeToString(const char* str) const;
-	int SelectTrigger(const char* triggerSelector);
+ 
+	int HandleEnumerationProperty(MM::PropertyBase* pProp, MM::ActionType eAct, const char* nodeName);
 
 
 	void ResizeSnapBuffer();
@@ -180,6 +193,22 @@ public:
 
 	std::vector<std::string> GetAvailableEnumValues(const GenApi::IEnumeration& node);
 
+	// Standard property initialization functions
+	int InitTriggerSelectorStandardProperty();
+	int InitTriggerModeStandardProperty();
+	int InitTriggerSourceStandardProperty();
+	int InitTriggerActivationStandardProperty();
+	int InitTriggerDelayStandardProperty();
+	int InitTriggerOverlapStandardProperty();
+	int InitExposureModeStandardProperty();
+	int InitExposureTimeStandardProperty();
+	int InitLineSelectorStandardProperty();
+	int InitLineModeStandardProperty();
+	int InitLineInverterStandardProperty();
+	int InitLineSourceStandardProperty();
+	int InitLineStatusStandardProperty();
+	int InitEventSelectorStandardProperty();
+	int InitEventNotificationStandardProperty();
 
 private:
 

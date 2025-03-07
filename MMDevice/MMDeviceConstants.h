@@ -215,6 +215,8 @@ namespace MM {
    const char* const g_keyword_CameraStatusExposureActive = "ExposureActive";
    const char* const g_keyword_CameraStatusAcquisitionTransfer = "AcquisitionTransfer";
 
+   const char* const g_keyword_LineModeInput = "Input";
+   const char* const g_keyword_LineModeOutput = "Output";
 
    const char* const g_keyword_OutputLineSourceOff = "Off";
    const char* const g_keyword_OutputLineSourceAcquisitionTriggerWait = "AcquisitionTriggerWait";

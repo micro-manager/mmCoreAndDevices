@@ -370,7 +370,7 @@ namespace MM {
       false,                // isReadOnly
       false,                // isPreInit
       {},  // allowedValues
-      {g_keyword_TriggerSourceSoftware},              
+      {},              
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
    };
@@ -442,7 +442,39 @@ namespace MM {
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_ExposureModeProperty)
 
+   // TriggerOverlap property
+   // Specifies the type trigger overlap permitted with the previous frame or line.
+   // static const std::vector<std::string> triggerOverlapValues = {
+   //    "Off",             // No trigger overlap is permitted
+   //    "ReadOut",         // Trigger is accepted immediately after exposure period
+   //    "PreviousFrame",   // Trigger is accepted at any time during capture of previous frame
+   //    "PreviousLine"     // Trigger is accepted at any time during capture of previous line
+   // };
+   static const MM::StandardProperty g_TriggerOverlapProperty{
+      "TriggerOverlap",     // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {}, // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerOverlapProperty)
 
+   // ExposureTime property
+   // Sets the Exposure time when ExposureMode is Timed and ExposureAuto is Off.
+   static const MM::StandardProperty g_ExposureTimeProperty{
+      "ExposureTime",       // name
+      Float,                // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},                   // allowedValues
+      {},                   // requiredValues
+      0.0,                  // lowerLimit
+      PropertyLimitUndefined,            // upperLimit 
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_ExposureTimeProperty)
 
    // Burst Frame Count property
    // Number of frames to acquire for each FrameBurstStart trigger. This feature is used only if
@@ -478,6 +510,28 @@ namespace MM {
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineSelectorProperty)
 
 
+   // Controls if the physical Line is used to Input or Output a signal. When a Line supports 
+   // input and output mode, the default state is Input to avoid possible electrical contention.
+   //  Possible values are: 
+   //       Input: The selected physical line is used to Input an electrical signal.
+   //       Output: The selected physical line is used to Output an electrical signal.
+   static const std::vector<std::string> lineModeValues = {
+      g_keyword_LineModeInput,
+      g_keyword_LineModeOutput
+   };
+   static const MM::StandardProperty g_LineModeProperty{
+      "LineMode",       // name
+      String,              // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      lineModeValues,        // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineModeProperty)
+
+
    // Controls the inversion of the signal of the selected input or output Line.
    // Possible values are: 
    //     False (0): The Line signal is not inverted. 
@@ -497,21 +551,12 @@ namespace MM {
 
    // Selects which internal acquisition or I/O source signal to output on the selected Line. 
    // LineMode must be Output.
-   static const std::vector<std::string> lineSourceValues = {
-      g_keyword_OutputLineSourceOff, 
-      g_keyword_OutputLineSourceAcquisitionTriggerWait, 
-      g_keyword_OutputLineSourceAcquisitionActive, 
-      g_keyword_OutputLineSourceFrameTriggerWait,
-      g_keyword_OutputLineSourceFrameActive, 
-      g_keyword_OutputLineSourceExposureTriggerWait,
-      g_keyword_OutputLineSourceExposureActive
-   };
    static const MM::StandardProperty g_LineSourceProperty{
       "LineSource",         // name
       String,               // type
       false,                // isReadOnly
       false,                // isPreInit
-      lineSourceValues,     // allowedValues
+      {},                   // allowedValues
       {},                   // requiredValues
       PropertyLimitUndefined, // lowerLimit
       PropertyLimitUndefined, // upperLimit
