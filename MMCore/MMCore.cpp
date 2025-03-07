@@ -871,7 +871,7 @@ void CMMCore::initializeAllDevices() throw (CMMError)
 void CMMCore::initializeAllDevicesSerial() throw (CMMError)
 {
    std::vector<std::string> devices = deviceManager_->GetDeviceList();
-   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
+   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices (serially)";
 
    for (size_t i = 0; i < devices.size(); i++)
    {
@@ -906,7 +906,7 @@ void CMMCore::initializeAllDevicesSerial() throw (CMMError)
 void CMMCore::initializeAllDevicesParallel() throw (CMMError)
 {
    std::vector<std::string> devices = deviceManager_->GetDeviceList();
-   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
+   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices (in parallel)";
    
    std::map<std::shared_ptr<LoadedDeviceAdapter>, std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>>> moduleMap;
    std::vector<std::shared_ptr<DeviceInstance>> ports;
@@ -7012,6 +7012,8 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
 {
    if (!fileName)
       throw CMMError("Null filename");
+
+   LOG_INFO(coreLogger_) << "Loading system configuration from:" << ToQuotedString(fileName);
 
    std::ifstream is;
    is.open(fileName, std::ios_base::in);
