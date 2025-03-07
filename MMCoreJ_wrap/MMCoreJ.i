@@ -288,6 +288,10 @@
 %apply int &OUTPUT { int &xSize };
 %apply int &OUTPUT { int &ySize };
 
+%apply int &OUTPUT { int &width };
+%apply int &OUTPUT { int &height };
+%apply int &OUTPUT { int &byteDepth };
+%apply int &OUTPUT { int &nComponents };
 
 // Java typemap
 // change default SWIG mapping of unsigned char* return values
@@ -367,14 +371,14 @@
    for (int i = 0; i < listSize; ++i) {
      jbyteArray pixels = (jbyteArray) jenv->CallObjectMethod($input, getMethodID, i);
      long receivedLength = jenv->GetArrayLength(pixels);
-   	 if (receivedLength != expectedLength && receivedLength != expectedLength*4)
-	 {
-	    jclass excep = jenv->FindClass("java/lang/Exception");
-	     if (excep)
-	        jenv->ThrowNew(excep, "Image dimensions are wrong for this SLM.");
-	      return;
-	  }
-	  inputVector.push_back((unsigned char *) JCALL2(GetByteArrayElements, jenv, pixels, 0));
+     if (receivedLength != expectedLength && receivedLength != expectedLength*4)
+   {
+      jclass excep = jenv->FindClass("java/lang/Exception");
+       if (excep)
+          jenv->ThrowNew(excep, "Image dimensions are wrong for this SLM.");
+        return;
+    }
+    inputVector.push_back((unsigned char *) JCALL2(GetByteArrayElements, jenv, pixels, 0));
    }
    $1 = inputVector;
 }
@@ -395,20 +399,29 @@
 // unsigned GetImageWidth()
 // unsigned GetImageHeight()
 
-%typemap(jni) void*        "jobject"
-%typemap(jtype) void*      "Object"
-%typemap(jstype) void*     "Object"
+
+%typemap(jni) void* "jobject"
+%typemap(jtype) void* "Object" 
+%typemap(jstype) void* "Object"
 %typemap(javaout) void* {
    return $jnicall;
 }
 %typemap(out) void*
 {
-   long lSize = (arg1)->getImageWidth() * (arg1)->getImageHeight();
+   if (result == NULL) {
+      $result = 0;
+      return $result;
+   }
+
+   int width, height, bytesPerPixel, numComponents;
+   (arg1)->getImageProperties(result, width, height, bytesPerPixel, numComponents);
+   unsigned numPixels = width * height;
+     
    
-   if ((arg1)->getBytesPerPixel() == 1)
+   if (bytesPerPixel == 1)
    {
       // create a new byte[] object in Java
-      jbyteArray data = JCALL1(NewByteArray, jenv, lSize);
+      jbyteArray data = JCALL1(NewByteArray, jenv, numPixels);
       if (data == 0)
       {
          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -420,14 +433,15 @@
       }
    
       // copy pixels from the image buffer
-      JCALL4(SetByteArrayRegion, jenv, data, 0, lSize, (jbyte*)result);
+      JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels, (jbyte*)result);
+      (arg1)->releaseReadAccess(result);
 
       $result = data;
    }
-   else if ((arg1)->getBytesPerPixel() == 2)
+   else if (bytesPerPixel == 2)
    {
       // create a new short[] object in Java
-      jshortArray data = JCALL1(NewShortArray, jenv, lSize);
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels);
       if (data == 0)
       {
          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -438,16 +452,17 @@
       }
   
       // copy pixels from the image buffer
-      JCALL4(SetShortArrayRegion, jenv, data, 0, lSize, (jshort*)result);
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels, (jshort*)result);
+      (arg1)->releaseReadAccess(result);
 
       $result = data;
    }
-   else if ((arg1)->getBytesPerPixel() == 4)
+   else if (bytesPerPixel == 4)
    {
-      if ((arg1)->getNumberOfComponents() == 1)
+      if (numComponents == 1)
       {
          // create a new float[] object in Java
-         jfloatArray data = JCALL1(NewFloatArray, jenv, lSize);
+         jfloatArray data = JCALL1(NewFloatArray, jenv, numPixels);
          if (data == 0)
          {
             jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -459,14 +474,15 @@
          }
 
          // copy pixels from the image buffer
-         JCALL4(SetFloatArrayRegion, jenv, data, 0, lSize, (jfloat*)result);
+         JCALL4(SetFloatArrayRegion, jenv, data, 0, numPixels, (jfloat*)result);
+         (arg1)->releaseReadAccess(result);
 
          $result = data;
       }
       else
       {
          // create a new byte[] object in Java
-         jbyteArray data = JCALL1(NewByteArray, jenv, lSize * 4);
+         jbyteArray data = JCALL1(NewByteArray, jenv, numPixels * 4);
          if (data == 0)
          {
             jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -478,15 +494,16 @@
          }
 
          // copy pixels from the image buffer
-         JCALL4(SetByteArrayRegion, jenv, data, 0, lSize * 4, (jbyte*)result);
+         JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels * 4, (jbyte*)result);
+         (arg1)->releaseReadAccess(result);
 
          $result = data;
       }
    }
-   else if ((arg1)->getBytesPerPixel() == 8)
+   else if (bytesPerPixel == 8)
    {
       // create a new short[] object in Java
-      jshortArray data = JCALL1(NewShortArray, jenv, lSize * 4);
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels * 4);
       if (data == 0)
       {
          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -497,11 +514,11 @@
       }
   
       // copy pixels from the image buffer
-      JCALL4(SetShortArrayRegion, jenv, data, 0, lSize * 4, (jshort*)result);
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels * 4, (jshort*)result);
+      (arg1)->releaseReadAccess(result);
 
       $result = data;
    }
-
    else
    {
       // don't know how to map
@@ -510,33 +527,65 @@
    }
 }
 
-// Java typemap
-// change default SWIG mapping of void* return values
-// to return CObject containing array of pixel values
-//
-// Assumes that class has the following methods defined:
-// unsigned GetImageWidth()
-// unsigned GetImageHeight()
-// unsigned GetImageDepth()
-// unsigned GetNumberOfComponents()
-
-
-%typemap(jni) unsigned int* "jobject"
-%typemap(jtype) unsigned int*      "Object"
-%typemap(jstype) unsigned int*     "Object"
-%typemap(javaout) unsigned int* {
+// This is conceptually similar to the void* typemap above,
+// but requires slightly different calls because BufferDataPointer
+// is different from the data-returning void* methods of the Core.
+%typemap(jni) BufferDataPointerVoidStar "jobject"
+%typemap(jtype) BufferDataPointerVoidStar "Object" 
+%typemap(jstype) BufferDataPointerVoidStar "Object"
+%typemap(javaout) BufferDataPointerVoidStar {
    return $jnicall;
 }
-%typemap(out) unsigned int*
+%typemap(out) BufferDataPointerVoidStar
 {
-   long lSize = (arg1)->getImageWidth() * (arg1)->getImageHeight();
-   unsigned numComponents = (arg1)->getNumberOfComponents();
+   if (result == NULL) {
+      $result = 0;
+      return $result;
+   }
    
-   if ((arg1)->getBytesPerPixel() == 1 && numComponents == 4)
+   unsigned numBytes = (arg1)->getSizeBytes();
+   // Return null if no bytes
+   if (numBytes == 0) {
+      $result = 0;
+      return $result;
+   }
+   int width, height, bytesPerPixel, numComponents;
+   bool propertiesOK = (arg1)->getImageProperties(width, height, bytesPerPixel, numComponents);
+   
+   unsigned numPixels;
+   // If getImageProperties fails, its not image data. Assume 1 byte per pixel
+   // If more data types are supported in the future, could add other
+   // checks here to return other data types.
+   if (!propertiesOK) {
+      bytesPerPixel = 1;
+      numComponents = 1;
+      numPixels = numBytes;
+   } else {
+      numPixels = width * height;
+   }
+   
+   if (bytesPerPixel == 1)
    {
-      // assuming RGB32 format
-      // create a new int[] object in Java
-      jintArray data = JCALL1(NewIntArray, jenv, lSize);
+      // create a new byte[] object in Java
+      jbyteArray data = JCALL1(NewByteArray, jenv, numPixels);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+
+         $result = 0;
+         return $result;
+      }
+   
+      // copy pixels from the image buffer
+      JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels, (jbyte*)result);
+      $result = data;
+   }
+   else if (bytesPerPixel == 2)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels);
       if (data == 0)
       {
          jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
@@ -547,16 +596,90 @@
       }
   
       // copy pixels from the image buffer
-      JCALL4(SetIntArrayRegion, jenv, data, 0, lSize, (jint*)result);
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels, (jshort*)result);
+      $result = data;
+   }
+   else if (bytesPerPixel == 4)
+   {
+      if (numComponents == 1)
+      {
+         // create a new float[] object in Java
+         jfloatArray data = JCALL1(NewFloatArray, jenv, numPixels);
+         if (data == 0)
+         {
+            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+            if (excep)
+               jenv->ThrowNew(excep, "The system ran out of memory!");
 
+            $result = 0;
+            return $result;
+         }
+
+         // copy pixels from the image buffer
+         JCALL4(SetFloatArrayRegion, jenv, data, 0, numPixels, (jfloat*)result);
+         $result = data;
+      }
+      else
+      {
+         // create a new byte[] object in Java
+         jbyteArray data = JCALL1(NewByteArray, jenv, numPixels * 4);
+         if (data == 0)
+         {
+            jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+            if (excep)
+               jenv->ThrowNew(excep, "The system ran out of memory!");
+
+            $result = 0;
+            return $result;
+         }
+
+         // copy pixels from the image buffer
+         JCALL4(SetByteArrayRegion, jenv, data, 0, numPixels * 4, (jbyte*)result);
+         $result = data;
+      }
+   }
+   else if (bytesPerPixel == 8)
+   {
+      // create a new short[] object in Java
+      jshortArray data = JCALL1(NewShortArray, jenv, numPixels * 4);
+      if (data == 0)
+      {
+         jclass excep = jenv->FindClass("java/lang/OutOfMemoryError");
+         if (excep)
+            jenv->ThrowNew(excep, "The system ran out of memory!");
+         $result = 0;
+         return $result;
+      }
+  
+      // copy pixels from the image buffer
+      JCALL4(SetShortArrayRegion, jenv, data, 0, numPixels * 4, (jshort*)result);
       $result = data;
    }
    else
    {
       // don't know how to map
-      // TODO: thow exception?
+      // TODO: throw exception?
       $result = 0;
    }
+}
+
+%extend BufferDataPointer {
+    // Trigger immediate release instead of waiting for garbage collection
+    void dispose() {
+        $self->release();  
+    }
+}
+
+// Unlike void* above, this alias to void* is mapped to long so it can be used as a pointer
+// address instead of having the data it points to copied
+%typemap(jni) DataPtr "jlong"
+%typemap(jtype) DataPtr "long"
+%typemap(jstype) DataPtr "long"
+%typemap(javain) DataPtr "$javainput"
+%typemap(javaout) DataPtr { return $jnicall; }
+%typemap(out) DataPtr { $result = (jlong)$1; }
+%typemap(in) DataPtr {
+    $1 = (DataPtr)$input;
 }
 
 
@@ -642,169 +765,96 @@
 %}
 
 %typemap(javacode) CMMCore %{
-   private boolean includeSystemStateCache_ = true;
 
-   public boolean getIncludeSystemStateCache() { 
-      return includeSystemStateCache_;
-   }
-   public void setIncludeSystemStateCache(boolean state) {
-      includeSystemStateCache_ = state;
-   }
-
-
-   private JSONObject metadataToMap(Metadata md) {
+   static JSONObject metadataToMap(Metadata md) {
       JSONObject tags = new JSONObject();
       for (String key:md.GetKeys()) {
          try {
-            tags.put(key, md.GetSingleTag(key).GetValue());
+            String value = md.GetSingleTag(key).GetValue();
+            // Try to convert these to the appropriate type
+            // since the metadata tags coming from the core
+            // are all strings
+            try {
+                // Try parsing as integer first
+                tags.put(key, Integer.parseInt(value));
+            } catch (NumberFormatException e1) {
+                try {
+                    // If not integer, try as double/float
+                    tags.put(key, Double.parseDouble(value));
+                } catch (NumberFormatException e2) {
+                    // If not a number, keep as string
+                    tags.put(key, value);
+                }
+            }
          } catch (Exception e) {} 
       }
       return tags;
    }
 
-   private String getROITag() throws java.lang.Exception {
-      String roi = "";
-      int [] x = new int[1];
-      int [] y = new int[1];
-      int [] xSize = new int[1];
-      int [] ySize = new int[1];
-      getROI(x, y, xSize, ySize);
-      roi += x[0] + "-" + y[0] + "-" + xSize[0] + "-" + ySize[0];
-      return roi;
-   }
 
-   private String getPixelType() {
-      int depth = (int) getBytesPerPixel();
-      int numComponents = (int) getNumberOfComponents();
-      switch (depth) {
-         case 1:
-            return "GRAY8";
-         case 2:
-            return "GRAY16";
-         case 4: {
-            if (numComponents == 1)
-               return "GRAY32";
-            else
-               return "RGB32";
-            }
-         case 8:
-            return "RGB64";
-     }
-     return "";
-   }
-
-   private String getMultiCameraChannel(JSONObject tags, int cameraChannelIndex) {
-	  try {
-	  String camera = tags.getString("Core-Camera");
-	  String physCamKey = camera + "-Physical Camera " + (1 + cameraChannelIndex);
-	  if (tags.has(physCamKey)) {
-		 try {
-			return tags.getString(physCamKey);
-		 } catch (Exception e2) {
-			return null;
-		 }
-	  } else {
-		 return null;
-	  }
-	 } catch (Exception e) {
-	   return null;
-	 }
-
-   }
-
-   private TaggedImage createTaggedImage(Object pixels, Metadata md, int cameraChannelIndex) throws java.lang.Exception {
-      TaggedImage image = createTaggedImage(pixels, md);
-      JSONObject tags = image.tags;
-      
-      if (!tags.has("CameraChannelIndex")) {
-         tags.put("CameraChannelIndex", cameraChannelIndex);
-         tags.put("ChannelIndex", cameraChannelIndex);
-      }
-      if (!tags.has("Camera")) {
-         String physicalCamera = getMultiCameraChannel(tags, cameraChannelIndex);
-         if (physicalCamera != null) {
-            tags.put("Camera", physicalCamera);
-            tags.put("Channel",physicalCamera);
-         }
-      }
-      return image;
-   }
-
-   private TaggedImage createTaggedImage(Object pixels, Metadata md) throws java.lang.Exception {
-      JSONObject tags = metadataToMap(md);
-      PropertySetting setting;
-      if (includeSystemStateCache_) {
-         Configuration config = getSystemStateCache();
-         for (int i = 0; i < config.size(); ++i) {
-            setting = config.getSetting(i);
-            String key = setting.getDeviceLabel() + "-" + setting.getPropertyName();
-            String value = setting.getPropertyValue();
-             tags.put(key, value);
-         }
-      }
-      tags.put("BitDepth", getImageBitDepth());
-      tags.put("PixelSizeUm", getPixelSizeUm(true));
-      tags.put("PixelSizeAffine", getPixelSizeAffineAsString());
-      tags.put("ROI", getROITag());
-      tags.put("Width", getImageWidth());
-      tags.put("Height", getImageHeight());
-      tags.put("PixelType", getPixelType());
-      tags.put("Frame", 0);
-      tags.put("FrameIndex", 0);
-      tags.put("Position", "Default");
-      tags.put("PositionIndex", 0);
-      tags.put("Slice", 0);
-      tags.put("SliceIndex", 0);
-      String channel = getCurrentConfigFromCache(getPropertyFromCache("Core","ChannelGroup"));
-      if ((channel == null) || (channel.length() == 0)) {
-         channel = "Default";
-      }
-      tags.put("Channel", channel);
-      tags.put("ChannelIndex", 0);
-
-
-      try {
-         tags.put("Binning", getProperty(getCameraDevice(), "Binning"));
-      } catch (Exception ex) {}
-      
-      return new TaggedImage(pixels, tags);	
-   }
-
+   // Snap image functions   
    public TaggedImage getTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
-      Object pixels = getImage(cameraChannelIndex);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      Object pixels = getImageMD(cameraChannelIndex, md);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
 
    public TaggedImage getTaggedImage() throws java.lang.Exception {
-      return getTaggedImage(0);
+      Metadata md = new Metadata();
+      Object pixels = getImageMD(md);
+      return new TaggedImage(pixels, metadataToMap(md));	
    }
 
+   // sequence acq functions
    public TaggedImage getLastTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getLastImageMD(cameraChannelIndex, 0, md);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
    
    public TaggedImage getLastTaggedImage() throws java.lang.Exception {
-      return getLastTaggedImage(0);
+      Metadata md = new Metadata();
+      Object pixels = getLastImageMD(md);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
 
    public TaggedImage getNBeforeLastTaggedImage(long n) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getNBeforeLastImageMD(n, md);
-      return createTaggedImage(pixels, md);
+      return new TaggedImage(pixels, metadataToMap(md));	
    }
 
    public TaggedImage popNextTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = popNextImageMD(cameraChannelIndex, 0, md);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
 
    public TaggedImage popNextTaggedImage() throws java.lang.Exception {
-      return popNextTaggedImage(0);
+      Metadata md = new Metadata();
+      Object pixels = popNextImageMD(md);
+      return new TaggedImage(pixels, metadataToMap(md));
    }
+
+   // BufferDataPointer wrappers
+   // snap image
+   public TaggedImagePointer getTaggedImagePointer() throws java.lang.Exception {
+      return new TaggedImagePointer(getImagePointer());
+   }
+
+   // sequence acq
+   public TaggedImagePointer getLastTaggedImagePointer() throws java.lang.Exception {
+      return new TaggedImagePointer(getLastDataPointer());
+   }
+
+   public TaggedImagePointer popNextTaggedImagePointer() throws java.lang.Exception {
+      return new TaggedImagePointer(popNextDataPointer());
+   }
+
+   public TaggedImagePointer getLastTaggedImagePointerFromDevice(String deviceLabel) throws java.lang.Exception {
+      return new TaggedImagePointer(getLastDataFromDevicePointer(deviceLabel));
+   }
+
 
    // convenience functions follow
    
@@ -866,9 +916,7 @@
    }
 
    /**
-    * Convenience function.  Retuns affine transform as a String
-    * Used in this class and by the acquisition engine 
-    * (rather than duplicating this code there
+    * Used the acquisition engine, also in AddCameraMetada in core
     */
    public String getPixelSizeAffineAsString() throws java.lang.Exception {
       String pa = "";
@@ -921,18 +969,19 @@
 #include "../MMDevice/ImageMetadata.h"
 #include "../MMCore/MMEventCallback.h"
 #include "../MMCore/MMCore.h"
+#include "../MMCore/NewDataBufferPointer.h"
 %}
 
 
 // instantiate STL mappings
 
 namespace std {
-	%typemap(javaimports) vector<char> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
+  %typemap(javaimports) vector<char> %{
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
 
    %typemap(javainterfaces) vector<char> %{ Iterable<Character>%}
 
@@ -979,11 +1028,11 @@ namespace std {
    */
    
    %typemap(javaimports) vector<long> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
 
    %typemap(javainterfaces) vector<long> %{ Iterable<Integer>%}
 
@@ -1025,11 +1074,11 @@ namespace std {
    %}
    
    %typemap(javaimports) vector<double> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
 
    %typemap(javainterfaces) vector<double> %{ Iterable<Double>%}
 
@@ -1071,111 +1120,111 @@ namespace std {
    %}
 
 
-	%typemap(javaimports) vector<string> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
-	
-	%typemap(javainterfaces) vector<string> %{ Iterable<String>%}
-	
-	%typemap(javacode) vector<string> %{
-	
-		public Iterator<String> iterator() {
-			return new Iterator<String>() {
-			
-				private int i_=0;
-			
-				public boolean hasNext() {
-					return (i_<size());
-				}
-				
-				public String next() throws NoSuchElementException {
-					if (hasNext()) {
-						++i_;
-						return get(i_-1);
-					} else {
-					throw new NoSuchElementException();
-					}
-				}
-					
-				public void remove() throws UnsupportedOperationException {
-					throw new UnsupportedOperationException();
-				}		
-			};
-		}
-		
-		public String[] toArray() {
-			if (0==size())
-				return new String[0];
-			
-			String strs[] = new String[(int) size()];
-			for (int i=0; i<size(); ++i) {
-				strs[i] = get(i);
-			}
-			return strs;
-		}
-		
-	%}
-	
+  %typemap(javaimports) vector<string> %{
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
+  
+  %typemap(javainterfaces) vector<string> %{ Iterable<String>%}
+  
+  %typemap(javacode) vector<string> %{
+  
+    public Iterator<String> iterator() {
+      return new Iterator<String>() {
+      
+        private int i_=0;
+      
+        public boolean hasNext() {
+          return (i_<size());
+        }
+        
+        public String next() throws NoSuchElementException {
+          if (hasNext()) {
+            ++i_;
+            return get(i_-1);
+          } else {
+          throw new NoSuchElementException();
+          }
+        }
+          
+        public void remove() throws UnsupportedOperationException {
+          throw new UnsupportedOperationException();
+        }   
+      };
+    }
+    
+    public String[] toArray() {
+      if (0==size())
+        return new String[0];
+      
+      String strs[] = new String[(int) size()];
+      for (int i=0; i<size(); ++i) {
+        strs[i] = get(i);
+      }
+      return strs;
+    }
+    
+  %}
+  
    
 
-	%typemap(javaimports) vector<bool> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
-	
-	%typemap(javainterfaces) vector<bool> %{ Iterable<Boolean>%}
-	
-	%typemap(javacode) vector<bool> %{
-	
-		public Iterator<Boolean> iterator() {
-			return new Iterator<Boolean>() {
-			
-				private int i_=0;
-			
-				public boolean hasNext() {
-					return (i_<size());
-				}
-				
-				public Boolean next() throws NoSuchElementException {
-					if (hasNext()) {
-						++i_;
-						return get(i_-1);
-					} else {
-					throw new NoSuchElementException();
-					}
-				}
-					
-				public void remove() throws UnsupportedOperationException {
-					throw new UnsupportedOperationException();
-				}		
-			};
-		}
-		
-		public Boolean[] toArray() {
-			if (0==size())
-				return new Boolean[0];
-			
-			Boolean strs[] = new Boolean[(int) size()];
-			for (int i=0; i<size(); ++i) {
-				strs[i] = get(i);
-			}
-			return strs;
-		}
-		
-	%}
-	
+  %typemap(javaimports) vector<bool> %{
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
+  
+  %typemap(javainterfaces) vector<bool> %{ Iterable<Boolean>%}
+  
+  %typemap(javacode) vector<bool> %{
+  
+    public Iterator<Boolean> iterator() {
+      return new Iterator<Boolean>() {
+      
+        private int i_=0;
+      
+        public boolean hasNext() {
+          return (i_<size());
+        }
+        
+        public Boolean next() throws NoSuchElementException {
+          if (hasNext()) {
+            ++i_;
+            return get(i_-1);
+          } else {
+          throw new NoSuchElementException();
+          }
+        }
+          
+        public void remove() throws UnsupportedOperationException {
+          throw new UnsupportedOperationException();
+        }   
+      };
+    }
+    
+    public Boolean[] toArray() {
+      if (0==size())
+        return new Boolean[0];
+      
+      Boolean strs[] = new Boolean[(int) size()];
+      for (int i=0; i<size(); ++i) {
+        strs[i] = get(i);
+      }
+      return strs;
+    }
+    
+  %}
+  
 
-	%typemap(javaimports) vector<unsigned> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
+  %typemap(javaimports) vector<unsigned> %{
+    import java.lang.Iterable;
+    import java.util.Iterator;
+    import java.util.NoSuchElementException;
+    import java.lang.UnsupportedOperationException;
+  %}
 
    %typemap(javainterfaces) vector<unsigned> %{ Iterable<Long>%}
 
@@ -1234,9 +1283,16 @@ namespace std {
 }
 
 
+// These are needed by the void* typemaps to copy pixels and then 
+// release them, but they shouldn't be needed by the Java wrap
+// because their functionality is handled by the BufferDataPointer class
+%ignore CMMCore::getImageProperties(DataPtr, int&, int&, int&, int&);
+%ignore CMMCore::releaseReadAccess(DataPtr);
+
 %include "../MMDevice/MMDeviceConstants.h"
 %include "../MMCore/Configuration.h"
 %include "../MMCore/MMCore.h"
 %include "../MMDevice/ImageMetadata.h"
 %include "../MMCore/MMEventCallback.h"
+%include "../MMCore/NewDataBufferPointer.h"
 

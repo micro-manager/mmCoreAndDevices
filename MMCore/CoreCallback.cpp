@@ -31,12 +31,14 @@
 #include "CircularBuffer.h"
 #include "CoreCallback.h"
 #include "DeviceManager.h"
+#include "BufferManager.h"
 
 #include <cassert>
 #include <chrono>
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <mutex>
 
 
 CoreCallback::CoreCallback(CMMCore* c) :
@@ -45,6 +47,8 @@ CoreCallback::CoreCallback(CMMCore* c) :
 {
    assert(core_);
    pValueChangeLock_ = new MMThreadLock();
+
+
 }
 
 
@@ -205,43 +209,6 @@ CoreCallback::Sleep(const MM::Device*, double intervalMs)
 }
 
 
-/**
- * Get the metadata tags attached to device caller, and merge them with metadata
- * in pMd (if not null). Returns a metadata object.
- */
-Metadata
-CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
-{
-   Metadata newMD;
-   if (pMd)
-   {
-      newMD = *pMd;
-   }
-
-   std::shared_ptr<CameraInstance> camera =
-      std::static_pointer_cast<CameraInstance>(
-            core_->deviceManager_->GetDevice(caller));
-
-   std::string label = camera->GetLabel();
-   newMD.put(MM::g_Keyword_Metadata_CameraLabel, label);
-
-   std::string serializedMD;
-   try
-   {
-      serializedMD = camera->GetTags();
-   }
-   catch (const CMMError&)
-   {
-      return newMD;
-   }
-
-   Metadata devMD;
-   devMD.Restore(serializedMD.c_str());
-   newMD.Merge(devMD);
-
-   return newMD;
-}
-
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess)
 {
    Metadata md;
@@ -251,27 +218,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* pMd, bool doProcess)
 {
-   try 
-   {
-      Metadata md = AddCameraMetadata(caller, pMd);
-
-      if(doProcess)
-      {
-         MM::ImageProcessor* ip = GetImageProcessor(caller);
-         if( NULL != ip)
-         {
-            ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
-         }
-      }
-      if (core_->cbuf_->InsertImage(buf, width, height, byteDepth, &md))
-         return DEVICE_OK;
-      else
-         return DEVICE_BUFFER_OVERFLOW;
-   }
-   catch (CMMError& /*e*/)
-   {
-      return DEVICE_INCOMPATIBLE_IMAGE;
-   }
+   return InsertImage(caller, buf, width, height, byteDepth, pMd, doProcess);
 }
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess)
@@ -285,7 +232,23 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
 {
    try 
    {
-      Metadata md = AddCameraMetadata(caller, pMd);
+      Metadata newMD;
+      if (pMd)
+      {
+         newMD = *pMd;
+      }
+      std::shared_ptr<DeviceInstance> device = core_->deviceManager_->GetDevice(caller);
+      
+      if (device->GetType() == MM::CameraDevice)
+      {
+         // convert device to camera
+         std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(device);
+         core_->addCameraMetadata(camera, newMD, width, height, byteDepth, nComponents);
+      }
+
+      char labelBuffer[MM::MaxStrLength];
+      caller->GetLabel(labelBuffer);
+      std::string callerLabel(labelBuffer);
 
       if(doProcess)
       {
@@ -295,10 +258,11 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
          }
       }
-      if (core_->cbuf_->InsertImage(buf, width, height, byteDepth, nComponents, &md))
-         return DEVICE_OK;
-      else
+
+      int ret = core_->bufferManager_->InsertImage(callerLabel.c_str(), buf, width, height, byteDepth, &newMD);
+      if (ret != DEVICE_OK)
          return DEVICE_BUFFER_OVERFLOW;
+      return DEVICE_OK;
    }
    catch (CMMError& /*e*/)
    {
@@ -316,14 +280,58 @@ int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf
       ip->Process(p, imgBuf.Width(), imgBuf.Height(), imgBuf.Depth());
    }
 
+   char labelBuffer[MM::MaxStrLength];
+   caller->GetLabel(labelBuffer);
+   std::string callerLabel(labelBuffer);
    return InsertImage(caller, imgBuf.GetPixels(), imgBuf.Width(), 
       imgBuf.Height(), imgBuf.Depth(), &md);
 }
 
-void CoreCallback::ClearImageBuffer(const MM::Device* /*caller*/)
-{
-   core_->cbuf_->Clear();
-}
+// TODO: enable these once we know what to do about backwards compatibility with circular buffer
+// // This method is explicitly for camera devices. It requires width, height, byteDepth, and nComponents
+// // to be passed in, so that higher level code retrieving data from the buffer knows how to interpret the data
+// // Generic data insertion is handled by AcquireDataWriteSlot
+// int CoreCallback::AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSize, size_t metadataSize,
+//                                   unsigned char** dataPointer, unsigned char** metadataPointer,
+//                                   unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents)
+// {
+//    if (core_->deviceManager_->GetDevice(caller)->GetType() == MM::CameraDevice)
+//    {
+
+//       Metadata md;
+//       std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
+//       // Add the metadata needed for interpreting camera images
+//       core_->addCameraMetadata(camera, md, width, height, byteDepth, nComponents);
+
+//       char label[MM::MaxStrLength];
+//       caller->GetLabel(label);
+//       return core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, 
+//                                   (void**)dataPointer, (void**)metadataPointer, &md);
+//    }
+//    // This is only for camera devices, other devices should call AcquireDataWriteSlot
+//    return DEVICE_ERR;
+// }
+
+// // This method is for generic data insertion. It will not add any metadata for interpretting the data
+// int CoreCallback::AcquireDataWriteSlot(const MM::Device* caller, size_t dataSize, size_t metadataSize,
+//                         unsigned char** dataPointer, unsigned char** metadataPointer)
+// {
+//    char label[MM::MaxStrLength];
+//    caller->GetLabel(label);
+//    Metadata md;
+//    return core_->bufferManager_->AcquireWriteSlot(label, dataSize, metadataSize, 
+//                               (void**)dataPointer, (void**)metadataPointer, &md);
+// }
+
+// int CoreCallback::FinalizeWriteSlot(unsigned char* dataPointer, 
+//                                   size_t actualMetadataBytes)
+// {
+//    if (core_->bufferManager_->FinalizeWriteSlot(dataPointer, actualMetadataBytes))
+//    {
+//       return DEVICE_OK;
+//    }
+//    return DEVICE_ERR;
+// }
 
 bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
       unsigned int w, unsigned int h, unsigned int pixDepth)
@@ -332,27 +340,45 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
    if (slices != 1)
       return false;
 
-   return core_->cbuf_->Initialize(channels, w, h, pixDepth);
+
+   // For backwards compatibility with the circular buffer, but really this should be
+   // (or is?) handled by higher level code. Something this certainly cannot be applied
+   // to the v2 buffer, because devices do not have the authority to clear the buffer, 
+   // when application code may hold pointers into the buffer.
+   if (!core_->bufferManager_->IsUsingNewDataBuffer()) {
+      return core_->bufferManager_->InitializeCircularBuffer(channels, w, h, pixDepth);
+   } 
+   return true;
 }
 
-int CoreCallback::InsertMultiChannel(const MM::Device* caller,
-                              const unsigned char* buf,
-                              unsigned numChannels,
-                              unsigned width,
-                              unsigned height,
-                              unsigned byteDepth,
-                              Metadata* pMd)
+int CoreCallback:: InsertMultiChannel(const MM::Device* caller, const unsigned char* buf, 
+                  unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd)
 {
    try
    {
-      Metadata md = AddCameraMetadata(caller, pMd);
+      std::shared_ptr<DeviceInstance> device = core_->deviceManager_->GetDevice(caller);
+
+      Metadata newMD;
+      if (pMd)
+      {
+         newMD = *pMd;
+      }
+      if (device->GetType() == MM::CameraDevice)
+      {
+         // convert device to camera
+         std::shared_ptr<CameraInstance> camera = std::dynamic_pointer_cast<CameraInstance>(device);
+         core_->addCameraMetadata(camera, newMD, width, height, byteDepth, 1);
+      }
 
       MM::ImageProcessor* ip = GetImageProcessor(caller);
       if( NULL != ip)
       {
          ip->Process( const_cast<unsigned char*>(buf), width, height, byteDepth);
       }
-      if (core_->cbuf_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, &md))
+      char labelBuffer[MM::MaxStrLength];
+      caller->GetLabel(labelBuffer);
+      std::string callerLabel(labelBuffer);
+      if (core_->bufferManager_->InsertMultiChannel(callerLabel.c_str(), buf, numChannels, width, height, byteDepth, &newMD))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
@@ -362,6 +388,27 @@ int CoreCallback::InsertMultiChannel(const MM::Device* caller,
       return DEVICE_INCOMPATIBLE_IMAGE;
    }
 
+}
+
+int CoreCallback::InsertData(const MM::Device* caller, const unsigned char* buf, size_t dataSize, Metadata* pMd)
+{
+   std::shared_ptr<DeviceInstance> device = core_->deviceManager_->GetDevice(caller);
+
+   if (device->GetType() == MM::CameraDevice)
+   {
+      return DEVICE_ERR;
+   }
+
+   Metadata newMD;
+   if (pMd)
+   {
+      newMD = *pMd;
+   }
+
+   // Add a metadata tag for the data-producing device
+   newMD.put(MM::g_Keyword_Metadata_CameraLabel, device->GetLabel());
+
+   return core_->bufferManager_->InsertData(device->GetLabel().c_str(), buf, dataSize, &newMD);
 }
 
 int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)

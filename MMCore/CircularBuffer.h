@@ -55,6 +55,8 @@ public:
    CircularBuffer(unsigned int memorySizeMB);
    ~CircularBuffer();
 
+   int SetOverwriteData(bool overwrite);
+
    unsigned GetMemorySizeMB() const { return memorySizeMB_; }
 
    bool Initialize(unsigned channels, unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
@@ -65,13 +67,11 @@ public:
    unsigned int Width() const {MMThreadGuard guard(g_bufferLock); return width_;}
    unsigned int Height() const {MMThreadGuard guard(g_bufferLock); return height_;}
    unsigned int Depth() const {MMThreadGuard guard(g_bufferLock); return pixDepth_;}
+   unsigned int NumChannels() const {MMThreadGuard guard(g_bufferLock); return numChannels_;}
 
-   bool InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError);
    bool InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError);
-   bool InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError);
-   bool InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError);
    const unsigned char* GetTopImage() const;
-   const unsigned char* GetNextImage();
+   const unsigned char* PopNextImage();
    const mm::ImgBuffer* GetTopImageBuffer(unsigned channel) const;
    const mm::ImgBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
    const mm::ImgBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
@@ -79,6 +79,13 @@ public:
    void Clear(); 
 
    bool Overflow() {MMThreadGuard guard(g_bufferLock); return overflow_;}
+
+   unsigned GetImageSizeBytes() const {
+      MMThreadGuard guard(g_bufferLock);
+      return width_ * height_ * pixDepth_ * numChannels_;
+   }
+
+   bool GetOverwriteData() const { return overwriteData_; }
 
    mutable MMThreadLock g_bufferLock;
    mutable MMThreadLock g_insertLock;
@@ -88,8 +95,6 @@ private:
    unsigned int height_;
    unsigned int pixDepth_;
    long imageCounter_;
-   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-   std::map<std::string, long> imageNumbers_;
 
    // Invariants:
    // 0 <= saveIndex_ <= insertIndex_
@@ -100,10 +105,12 @@ private:
    unsigned long memorySizeMB_;
    unsigned int numChannels_;
    bool overflow_;
+   bool overwriteData_;
    std::vector<mm::FrameBuffer> frameArray_;
 
    std::shared_ptr<ThreadPool> threadPool_;
    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
+
 };
 
 #if defined(__GNUC__) && !defined(__clang__)

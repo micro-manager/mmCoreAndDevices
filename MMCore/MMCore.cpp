@@ -54,6 +54,7 @@
 #include "MMCore.h"
 #include "MMEventCallback.h"
 #include "PluginManager.h"
+#include "NewDataBufferPointer.h"
 
 #include <algorithm>
 #include <cassert>
@@ -76,6 +77,33 @@
 // 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
 #pragma GCC diagnostic ignored "-Wdeprecated"
 #endif
+
+static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_clock> tp) {
+   using namespace std::chrono;
+   auto us = duration_cast<microseconds>(tp.time_since_epoch());
+   auto secs = duration_cast<seconds>(us);
+   auto whole = duration_cast<microseconds>(secs);
+   auto frac = static_cast<int>((us - whole).count());
+
+   // As of C++14/17, it is simpler (and probably faster) to use C functions for
+   // date-time formatting
+
+   std::time_t t(secs.count()); // time_t is seconds on platforms we support
+   std::tm *ptm;
+#ifdef _WIN32 // Windows localtime() is documented thread-safe
+   ptm = std::localtime(&t);
+#else // POSIX has localtime_r()
+   std::tm tmstruct;
+   ptm = localtime_r(&t, &tmstruct);
+#endif
+
+   // Format as "yyyy-mm-dd hh:mm:ss.uuuuuu" (26 chars)
+   const char *timeFmt = "%Y-%m-%d %H:%M:%S";
+   char buf[32];
+   std::size_t len = std::strftime(buf, sizeof(buf), timeFmt, ptm);
+   std::snprintf(buf + len, sizeof(buf) - len, ".%06d", frac);
+   return buf;
+}
 
 /*
  * Important! Read this before changing this file:
@@ -137,10 +165,17 @@ CMMCore::CMMCore() :
    properties_(0),
    externalCallback_(0),
    pixelSizeGroup_(0),
-   cbuf_(0),
+   bufferManager_(nullptr),
    pluginManager_(new CPluginManager()),
    deviceManager_(new mm::DeviceManager()),
-   pPostedErrorsLock_(NULL)
+   pPostedErrorsLock_(NULL),
+   imageMDIncludeSystemStateCache_(true),
+   imageMDIncludeBitDepth_(true),
+   imageMDIncludeCameraParams_(true),
+   imageMDIncludeCameraTags_(true),
+   imageMDIncludeTiming_(true),
+   imageMDIncludeLegacyCalibration_(true),
+   imageMDIncludeAdditionalLegacy_(false)
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
@@ -151,7 +186,7 @@ CMMCore::CMMCore() :
    callback_ = new CoreCallback(this);
 
    const unsigned seqBufMegabytes = (sizeof(void*) > 4) ? 250 : 25;
-   cbuf_ = new CircularBuffer(seqBufMegabytes);
+   bufferManager_ = new BufferManager(false, seqBufMegabytes);
 
    nullAffine_ = new std::vector<double>(6);
    for (int i = 0; i < 6; i++) {
@@ -159,6 +194,9 @@ CMMCore::CMMCore() :
    }
 
    CreateCoreProperties();
+
+   // Initialize the start time for time-stamp calculations
+   startTime_ = std::chrono::steady_clock::now();
 }
 
 /**
@@ -181,7 +219,7 @@ CMMCore::~CMMCore()
    delete callback_;
    delete configGroups_;
    delete properties_;
-   delete cbuf_;
+   delete bufferManager_;
    delete pixelSizeGroup_;
    delete pPostedErrorsLock_;
 
@@ -2656,6 +2694,241 @@ bool CMMCore::getShutterOpen() throw (CMMError)
 }
 
 /**
+ * Set which metadata categories to include in the image metadata using a bitmask.
+ * 
+ * Bitmask values:
+ * - MM::MetadataBitDepth (1): Include bit depth information
+ * - MM::MetadataCameraParams (2): Include camera parameters
+ * - MM::MetadataCameraTags (4): Include camera tags
+ * - MM::MetadataTiming (8): Include timing information
+ * - MM::MetadataSystemStateCache (16): Include system state cache
+ * - MM::MetadataLegacyCalibration (32): Include legacy calibration
+ * - MM::MetadataLegacy (64): Include additional legacy metadata
+ * 
+ * @param categoryBits Bitmask of metadata categories to include
+ */
+void CMMCore::setIncludeImageMetadata(unsigned int categoryBits) throw (CMMError) {
+   imageMDIncludeBitDepth_ = (categoryBits & MM::g_Image_Metadata_Bitmask_BitDepth) != 0;
+   imageMDIncludeCameraParams_ = (categoryBits & MM::g_Image_Metadata_Bitmask_CameraParams) != 0;
+   imageMDIncludeCameraTags_ = (categoryBits & MM::g_Image_Metadata_Bitmask_CameraTags) != 0;
+   imageMDIncludeTiming_ = (categoryBits & MM::g_Image_Metadata_Bitmask_Timing) != 0;
+   imageMDIncludeSystemStateCache_ = (categoryBits & MM::g_Image_Metadata_Bitmask_SystemStateCache) != 0;
+   imageMDIncludeLegacyCalibration_ = (categoryBits & MM::g_Image_Metadata_Bitmask_LegacyCalibration) != 0;
+   imageMDIncludeAdditionalLegacy_ = (categoryBits & MM::g_Image_Metadata_Bitmask_Legacy) != 0;
+}
+
+/**
+ * Get the current metadata inclusion bitmask.
+ * 
+ * @return Bitmask indicating which metadata categories are included
+ */
+unsigned int CMMCore::getIncludeImageMetadata() const throw (CMMError) {
+   unsigned int result = 0;
+   
+   if (imageMDIncludeBitDepth_)
+      result |= MM::g_Image_Metadata_Bitmask_BitDepth;
+   if (imageMDIncludeCameraParams_)
+      result |= MM::g_Image_Metadata_Bitmask_CameraParams;
+   if (imageMDIncludeCameraTags_)
+      result |= MM::g_Image_Metadata_Bitmask_CameraTags;
+   if (imageMDIncludeTiming_)
+      result |= MM::g_Image_Metadata_Bitmask_Timing;
+   if (imageMDIncludeSystemStateCache_)
+      result |= MM::g_Image_Metadata_Bitmask_SystemStateCache;
+   if (imageMDIncludeLegacyCalibration_)
+      result |= MM::g_Image_Metadata_Bitmask_LegacyCalibration;
+   if (imageMDIncludeAdditionalLegacy_)
+      result |= MM::g_Image_Metadata_Bitmask_Legacy;
+      
+   return result;
+}
+
+/**
+ * A centralized function that adds all the metadata for camera devices.
+ * 
+ * This was previously spread among the circular buffer, corecallback.h, and 
+ * the SWIG wrapper.
+ * 
+ * Get the metadata tags attached to device caller, and merge them with metadata
+ * in pMd (if not null). Returns a metadata object.
+ * 
+ * The caller should have locked the camera device, or be calling from a thread
+ * in the camera (e.g. CoreCallback::InsertImage)
+ */
+
+void CMMCore::addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
+                  unsigned byteDepth, unsigned nComponents)
+{    
+    // Essential metadata for interpreting the image: Width, height, and pixel type
+    md.PutImageTag(MM::g_Keyword_Metadata_Width, (unsigned int) width);
+    md.PutImageTag(MM::g_Keyword_Metadata_Height, (unsigned int) height);
+    
+    if (byteDepth == 1)
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
+    else if (byteDepth == 2)
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
+    else if (byteDepth == 4) {
+         if (nComponents == 1)
+            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
+         else
+            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
+    } else if (byteDepth == 8)
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
+    else
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
+
+   // Needed for acquisition engine
+   if (!md.HasTag(MM::g_Keyword_Metadata_CameraLabel)) {
+     md.put(MM::g_Keyword_Metadata_CameraLabel, pCam->GetLabel());
+   }
+
+   // Optional metadata
+   if (imageMDIncludeBitDepth_) {
+      md.put(MM::g_Keyword_Metadata_BitDepth, CDeviceUtils::ConvertToString((long) pCam->GetBitDepth()));
+   }
+   
+   if (imageMDIncludeCameraParams_) {
+      unsigned x, y, xSize, ySize;
+      pCam->GetROI(x, y, xSize, ySize);
+      std::string roiTag = std::to_string(x) + "-" + std::to_string(y) + "-" + 
+                           std::to_string(xSize) + "-" + std::to_string(ySize);
+      md.put("ROI", roiTag);
+      
+      try {
+         std::string binning = pCam->GetProperty("Binning");
+         md.put("Binning", binning);
+      }
+      catch (const CMMError&) { }
+   }
+   
+   if (imageMDIncludeTiming_) {
+      std::lock_guard<std::mutex> lock(imageNumbersMutex_);
+      std::string cameraName = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
+      if (imageNumbers_.find(cameraName) == imageNumbers_.end()) {
+         imageNumbers_[cameraName] = 0;
+      }
+      md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageNumbers_[cameraName]));
+      ++imageNumbers_[cameraName];
+      
+      if (!md.HasTag(MM::g_Keyword_Elapsed_Time_ms)) {
+         using namespace std::chrono;
+         auto elapsed = steady_clock::now() - startTime_;
+         md.put(MM::g_Keyword_Elapsed_Time_ms,
+                           std::to_string(duration_cast<milliseconds>(elapsed).count()));
+      }
+      
+      auto now = std::chrono::system_clock::now();
+      md.put(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
+   }
+   
+   if (imageMDIncludeCameraTags_) {
+      try {
+         std::string serializedMD = pCam->GetTags();
+         Metadata devMD;
+         devMD.Restore(serializedMD.c_str());
+         md.Merge(devMD);
+      }
+      catch (const CMMError&) { }
+   }
+   
+   if (imageMDIncludeLegacyCalibration_) {
+      try {      
+         int binning = pCam->GetBinning();
+         md.put("PixelSizeUm", CDeviceUtils::ConvertToString(getPixelSizeUm(true, binning)));
+      
+         std::string pixelSizeAffine = "";
+         std::vector<double> aff = getPixelSizeAffine(true, binning);
+         if (aff.size() == 6) {
+            std::ostringstream oss;
+            for (size_t i = 0; i < 5; i++) {
+               oss << aff[i] << ";";
+            }
+            oss << aff[5];
+            pixelSizeAffine = oss.str();
+         }
+         md.put("PixelSizeAffine", pixelSizeAffine);
+      }
+      catch (const CMMError&) { }
+   }
+   
+   // Metadata that previously was in the Java SWIG layer and I think may be used by the application 
+   // and/or acquisition engine. However, it doesn't really make sense that this would exist in this 
+   // since channel, slice, position, etc. higher level concepts associated with an acquisition engine
+   if (imageMDIncludeAdditionalLegacy_) {
+      md.put("Frame", "0");
+      md.put("FrameIndex", "0");
+      md.put("Position", "Default");
+      md.put("PositionIndex", "0");
+      md.put("Slice", "0");
+      md.put("SliceIndex", "0");
+   
+      // Add channel metadata if not already set
+      try {
+         std::string channel = getCurrentConfigFromCache(
+            getPropertyFromCache(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreChannelGroup).c_str());
+         if (channel.empty()) {
+            channel = "Default";
+         }
+         md.put("Channel", channel);
+         md.put("ChannelIndex", "0");
+      }
+      catch (const CMMError&) {
+         md.put("Channel", "Default");
+         md.put("ChannelIndex", "0");
+      }
+   }
+   
+   if (imageMDIncludeSystemStateCache_) {
+      try {
+         // MMThreadGuard scg(stateCacheLock_); // Needed?
+         Configuration state = getSystemStateCache();
+         for (size_t i = 0; i < state.size(); ++i) {
+            PropertySetting setting = state.getSetting(i);
+            std::string key = setting.getDeviceLabel() + "-" + setting.getPropertyName();
+            std::string value = setting.getPropertyValue();
+            md.put(key, value);
+         }
+      }
+      catch (const CMMError&) { } // ignore
+   }
+}
+
+void CMMCore::addMultiCameraMetadata(Metadata& md,  int cameraChannelIndex = 0) const
+{
+   // Multi-camera device adapter metadata. This is considered legacy since the NewDataBuffer
+   // make the multi-camera adapter unnecessary.
+   
+   if (!md.HasTag("CameraChannelIndex")) {
+      md.put("CameraChannelIndex", ToString(cameraChannelIndex));
+      md.put("ChannelIndex", ToString(cameraChannelIndex));
+   }
+
+   // This whole block seems superfluos now since we always add the "Camera" tag
+   // in the block above. Also, the NewDataBuffer eliminates the need for the multi-camera
+   // adapter. Leaving here and commented out for now, because I'm unsure what the upstream
+   // effects are
+   // if (!md.HasTag("Camera")) {
+   //    // Get the core camera name
+   //    std::string coreCamera;
+   //    try {
+   //       coreCamera = md.GetSingleTag("Core-Camera").GetValue();
+   //       // Construct physical camera key (e.g. "Camera-Physical Camera 1")
+   //       std::string physCamKey = coreCamera + "-Physical Camera " + ToString(cameraChannelIndex + 1);
+         
+   //       // Check if physical camera metadata exists
+   //       if (md.HasTag(physCamKey.c_str())) {
+   //          std::string physicalCamera = md.GetSingleTag(physCamKey.c_str()).GetValue();
+   //          md.put("Camera", physicalCamera);
+   //          md.put("Channel", physicalCamera);
+   //       }
+   //    }
+   //    catch (const CMMError&) {
+   //       // If core camera metadata not found, ignore
+   //    }
+   // }
+}
+
+/**
  * Exposes the internal image buffer.
  *
  * Use to get the image acquired by snapImage
@@ -2777,6 +3050,128 @@ void* CMMCore::getImage(unsigned channelNr) throw (CMMError)
    }
 }
 
+// Version of snap that also return metadata, so that metadata generation can be centralized in the Core and migrated
+// out of the SWIG wrapper.
+void* CMMCore::getImageMD(Metadata& md) throw (CMMError)
+{
+   void* pBuf = getImage();
+
+   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+   if (!camera)
+      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
+
+   mm::DeviceModuleLockGuard guard(camera);
+   // Need to do this becuase this data was never inserted into the circular buffer or NewDataBuffer where this
+   // metadata is added for other images   
+   addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents());
+   
+   return pBuf;
+}
+
+void* CMMCore::getImageMD(unsigned channelNr, Metadata& md) throw (CMMError)
+{
+   void* pBuf = getImage(channelNr);
+   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+   if (!camera)
+      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
+
+   mm::DeviceModuleLockGuard guard(camera);
+   // Need to do this becuase this data was never inserted into the circular buffer or NewDataBuffer where this
+   // metadata is added for other images
+   addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents());
+   addMultiCameraMetadata(md, channelNr);
+   return pBuf;
+}
+
+
+/**
+ * For use with NewDataBuffer
+ *
+ * Get a pointer to the image acquired by snapImage. This will copy the image
+ * from the camera buffer into the NewDataBuffer so that it can be persistently   
+ * accessed (i.e. subsequent calls snapImage will not overwrite the pointer
+ * returned by this function). 
+ * 
+ * This method relies on the current Core-Camera to determine which camera 
+ * buffer to copy.
+ * 
+ * @return a pointer to the internal image buffer.
+ * @throws CMMError   when the camera returns no data
+ */
+BufferDataPointer* CMMCore::getImagePointer() throw (CMMError)
+{
+   if (!bufferManager_->IsUsingNewDataBuffer() ) 
+      throw CMMError("Only valid when NewDataBuffer in use");
+
+   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+   if (!camera)
+      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
+   else
+   {
+		if( ! everSnapped_)
+		{
+         logError("CMMCore::getImage()", getCoreErrorText(MMERR_InvalidImageSequence).c_str());
+         throw CMMError(getCoreErrorText(MMERR_InvalidImageSequence).c_str(), MMERR_InvalidImageSequence);
+      }
+
+      {
+         MMThreadGuard g(*pPostedErrorsLock_);
+         // Copied from above getImage() calls, unclear if needed
+         if(0 < postedErrors_.size())
+         {
+            std::pair< int, std::string>  toThrow(postedErrors_[0]);
+            // todo, process the collection of posted errors.
+            postedErrors_.clear();
+            throw CMMError( toThrow.second.c_str(), toThrow.first);
+         }
+      }
+
+      void* pBuf(0);
+      try {
+         mm::DeviceModuleLockGuard guard(camera);
+         pBuf = const_cast<unsigned char*> (camera->GetImageBuffer());
+         
+         std::shared_ptr<ImageProcessorInstance> imageProcessor =
+            currentImageProcessor_.lock();
+         if (imageProcessor)
+	      {
+            imageProcessor->Process((unsigned char*)pBuf, camera->GetImageWidth(),  camera->GetImageHeight(), camera->GetImageBytesPerPixel() );
+	      }
+         
+         
+         Metadata md;
+         // Add metadata to know how to interpret the data added to NewDataBuffer
+         addCameraMetadata(camera, md, camera->GetImageWidth(), camera->GetImageHeight(),
+                     camera->GetImageBytesPerPixel(), camera->GetNumberOfComponents());
+         unsigned imageSize = camera->GetImageWidth() * camera->GetImageHeight() * camera->GetImageBytesPerPixel();
+         int ret = bufferManager_->InsertData(camera->GetLabel().c_str(), (unsigned char*)pBuf, imageSize, &md);
+         if (ret != DEVICE_OK) {
+            throw CMMError("NewDataBuffer overflow");
+         }
+
+         if (bufferManager_->GetOverwriteData()) {
+            // If in overwrite mode (e.g. live mode), peek the last data
+            const void* ptr = bufferManager_->GetLastData();
+            return new BufferDataPointer(bufferManager_, ptr);
+         } else {
+            // If not in overwrite mode, pop the next data
+            // TODO: could add a check here that there there is one and only one image to pop
+            // because otherwise the user may be using this incorrectly.
+            const void* ptr = bufferManager_->PopNextData();  
+            return new BufferDataPointer(bufferManager_, ptr);
+         }
+
+		} catch( CMMError& e){
+			throw e;
+		} catch (...) {
+         logError("CMMCore::getImage()", getCoreErrorText(MMERR_UnhandledException).c_str());
+         throw CMMError(getCoreErrorText(MMERR_UnhandledException).c_str(), MMERR_UnhandledException);
+      }
+}
+}
+
 /**
 * Returns the size of the internal image buffer.
 *
@@ -2825,27 +3220,42 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
             ,MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-		try
-		{
-			if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-			{
-				logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-			}
-			cbuf_->Clear();
+      try
+      {
+         if (!bufferManager_->IsUsingNewDataBuffer()) {
+            // Circular buffer is initialized in case of a change in camera settings
+            try {
+               bufferManager_->InitializeCircularBuffer(camera->GetNumberOfChannels(), camera->GetImageWidth(), 
+                                                         camera->GetImageHeight(), camera->GetImageBytesPerPixel());
+               } catch (...) {
+                  logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+                  throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+               }
+         }
+         // NewDataBuffer does not need to be initialized or cleared, becuase it does not make
+         // assumptions about image size and it supports asynchronous sequences from different
+         // cameras.
+
+         // Disable overwriting for finite sequence acquisition
+         int ret = bufferManager_->SetOverwriteData(false);
+         if (ret != DEVICE_OK) {
+            throw CMMError("Failed to switch to non-overwriting mode in DataBuffer");
+         }
          mm::DeviceModuleLockGuard guard(camera);
 
+         startTime_ = std::chrono::steady_clock::now();
+         imageNumbers_.clear();
          LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
-			int nRet = camera->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
-			if (nRet != DEVICE_OK)
-				throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
-		}
-		catch (std::bad_alloc& ex)
-		{
-			std::ostringstream messs;
-			messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
-			throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
-		}
+         int nRet = camera->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
+         if (nRet != DEVICE_OK)
+            throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
+      }
+      catch (std::bad_alloc& ex)
+      {
+         std::ostringstream messs;
+         messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
+         throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
+      }
    }
    else
    {
@@ -2871,13 +3281,28 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
                      MMERR_NotAllowedDuringSequenceAcquisition);
 
-   if (!cbuf_->Initialize(pCam->GetNumberOfChannels(), pCam->GetImageWidth(), pCam->GetImageHeight(), pCam->GetImageBytesPerPixel()))
-   {
-      logError(getDeviceName(pCam).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-      throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+      if (!bufferManager_->IsUsingNewDataBuffer()) {
+         // Circular buffer is initialized in case of a change in camera settings
+         try {
+            bufferManager_->InitializeCircularBuffer(pCam->GetNumberOfChannels(), pCam->GetImageWidth(), 
+                                                      pCam->GetImageHeight(), pCam->GetImageBytesPerPixel());
+            } catch (...) {
+               logError(getDeviceName(pCam).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+               throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+            }
+      }
+      // NewDataBuffer does not need to be initialized or cleared, becuase it does not make
+      // assumptions about image size and it supports asynchronous sequences from different
+      // cameras.
+
+   // Disable overwriting for finite sequence acquisition
+   int ret = bufferManager_->SetOverwriteData(false);
+   if (ret != DEVICE_OK) {
+      throw CMMError("Failed to switch to non-overwriting mode in DataBuffer");
    }
-   cbuf_->Clear();
-	
+   
+   startTime_ = std::chrono::steady_clock::now();
+   imageNumbers_.clear();
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
    int nRet = pCam->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
@@ -2918,22 +3343,25 @@ void CMMCore::prepareSequenceAcquisition(const char* label) throw (CMMError)
  */
 void CMMCore::initializeCircularBuffer() throw (CMMError)
 {
-   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
-   if (camera)
-   {
-      mm::DeviceModuleLockGuard guard(camera);
-      if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+   if (!bufferManager_->IsUsingNewDataBuffer()) {   
+      std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+      if (camera)
       {
-         logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-         throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+         mm::DeviceModuleLockGuard guard(camera);
+         try {
+            bufferManager_->InitializeCircularBuffer(camera->GetNumberOfChannels(), camera->GetImageWidth(), 
+                                                      camera->GetImageHeight(), camera->GetImageBytesPerPixel());
+         } catch (...) {
+            logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+            throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+         }
       }
-      cbuf_->Clear();
+      else
+      {
+         throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
+      }
+      LOG_DEBUG(coreLogger_) << "Circular buffer initialized based on current camera";
    }
-   else
-   {
-      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
-   }
-   LOG_DEBUG(coreLogger_) << "Circular buffer initialized based on current camera";
 }
 
 /**
@@ -2964,6 +3392,14 @@ void CMMCore::stopSequenceAcquisition(const char* label) throw (CMMError)
 void CMMCore::startContinuousSequenceAcquisition(double intervalMs) throw (CMMError)
 {
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+   if (camera) {
+      startContinuousSequenceAcquisition(camera->GetLabel().c_str(), intervalMs);
+   }
+}
+
+void CMMCore::startContinuousSequenceAcquisition(const char* cameraLabel, double intervalMs) throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> camera = deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
    if (camera)
    {
       mm::DeviceModuleLockGuard guard(camera);
@@ -2974,12 +3410,27 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) throw (CMMEr
             ,MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-      if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-      {
-         logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-         throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+      if (!bufferManager_->IsUsingNewDataBuffer()) {
+         // Circular buffer is initialized in case of a change in camera settings
+         try {
+            bufferManager_->InitializeCircularBuffer(camera->GetNumberOfChannels(), camera->GetImageWidth(), 
+                                                      camera->GetImageHeight(), camera->GetImageBytesPerPixel());
+            } catch (...) {
+               logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+               throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+            }
       }
-      cbuf_->Clear();
+      // NewDataBuffer does not need to be initialized or cleared, becuase it does not make
+      // assumptions about image size and it supports asynchronous sequences from different
+      // cameras.
+
+      // Enable overwriting for continuous sequence acquisition
+      int ret = bufferManager_->SetOverwriteData(true);
+      if (ret != DEVICE_OK) {
+         throw CMMError("Failed to switch to overwriting mode in DataBuffer");
+      }
+      startTime_ = std::chrono::steady_clock::now();
+      imageNumbers_.clear();
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
       int nRet = camera->StartSequenceAcquisition(intervalMs);
       if (nRet != DEVICE_OK)
@@ -3075,9 +3526,9 @@ void* CMMCore::getLastImage() throw (CMMError)
       }
    }
 
-   unsigned char* pBuf = const_cast<unsigned char*>(cbuf_->GetTopImage());
+   const void* pBuf = bufferManager_->GetLastData();
    if (pBuf != 0)
-      return pBuf;
+      return const_cast<void*>(pBuf);
    else
    {
       logError("CMMCore::getLastImage", getCoreErrorText(MMERR_CircularBufferEmpty).c_str());
@@ -3091,14 +3542,12 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   const mm::ImgBuffer* pBuf = cbuf_->GetTopImageBuffer(channel);
-   if (pBuf != 0)
-   {
-      md = pBuf->GetMetadata();
-      return const_cast<unsigned char*>(pBuf->GetPixels());
-   }
-   else
-      throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
+   unsigned bytesPerSingleChannel = const_cast<CMMCore*>(this)->getImageWidth() * 
+                                    const_cast<CMMCore*>(this)->getImageHeight() * 
+                                    const_cast<CMMCore*>(this)->getBytesPerPixel();
+   void* pixels = const_cast<void*>(bufferManager_->GetLastDataMD(channel, bytesPerSingleChannel, md));
+   addMultiCameraMetadata(md, channel);
+   return pixels;
 }
 
 /**
@@ -3114,8 +3563,8 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
  * (see: https://en.wikipedia.org/wiki/RGBA_color_model).
  */
 void* CMMCore::getLastImageMD(Metadata& md) const throw (CMMError)
-{
-   return getLastImageMD(0, 0, md);
+{   
+   return const_cast<void*>(bufferManager_->GetLastDataMD(md));
 }
 
 /**
@@ -3132,14 +3581,7 @@ void* CMMCore::getLastImageMD(Metadata& md) const throw (CMMError)
  */
 void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const throw (CMMError)
 {
-   const mm::ImgBuffer* pBuf = cbuf_->GetNthFromTopImageBuffer(n);
-   if (pBuf != 0)
-   {
-      md = pBuf->GetMetadata();
-      return const_cast<unsigned char*>(pBuf->GetPixels());
-   }
-   else
-      throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
+   return const_cast<void*>(bufferManager_->GetNthDataMD(n, md));
 }
 
 /**
@@ -3156,9 +3598,9 @@ void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const throw 
  */
 void* CMMCore::popNextImage() throw (CMMError)
 {
-   unsigned char* pBuf = const_cast<unsigned char*>(cbuf_->GetNextImage());
+   const void* pBuf = bufferManager_->PopNextData();
    if (pBuf != 0)
-      return pBuf;
+      return const_cast<void*>(pBuf);
    else
       throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
 }
@@ -3167,6 +3609,8 @@ void* CMMCore::popNextImage() throw (CMMError)
  * Gets and removes the next image (and metadata) from the circular buffer
  * channel indicates which cameraChannel image should be retrieved.
  * slice has not been implement and should always be 0
+ * 
+ * @deprecated Use popNextImageMD() without channel parameter instead.
  */
 void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) throw (CMMError)
 {
@@ -3174,14 +3618,12 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) th
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   const mm::ImgBuffer* pBuf = cbuf_->GetNextImageBuffer(channel);
-   if (pBuf != 0)
-   {
-      md = pBuf->GetMetadata();
-      return const_cast<unsigned char*>(pBuf->GetPixels());
-   }
-   else
-      throw CMMError(getCoreErrorText(MMERR_CircularBufferEmpty).c_str(), MMERR_CircularBufferEmpty);
+   unsigned bytesPerSingleChannel = const_cast<CMMCore*>(this)->getImageWidth() * 
+                                    const_cast<CMMCore*>(this)->getImageHeight() * 
+                                    const_cast<CMMCore*>(this)->getBytesPerPixel();
+   void* pixels = const_cast<void*>(bufferManager_->PopNextDataMD(channel, bytesPerSingleChannel, md));
+   addMultiCameraMetadata(md, channel);
+   return pixels;
 }
 
 /**
@@ -3189,7 +3631,43 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) th
  */
 void* CMMCore::popNextImageMD(Metadata& md) throw (CMMError)
 {
-   return popNextImageMD(0, 0, md);
+   // Unlike version above, don't add multi-camera metadata
+   void* pixels = const_cast<void*>(bufferManager_->PopNextDataMD(md));
+   return pixels;
+}
+
+//// Data pointer access for NewDataBuffer
+BufferDataPointer* CMMCore::getLastDataPointer() throw (CMMError) { 
+    if (!bufferManager_->IsUsingNewDataBuffer()) {
+        throw CMMError("NewDataBuffer must be enabled for pointer-based image access");
+    }
+    const void* rawPtr = bufferManager_->GetLastData();
+    if (rawPtr == nullptr) {
+        throw CMMError("Buffer is empty");
+    }
+    return new BufferDataPointer(bufferManager_, rawPtr);
+}
+
+BufferDataPointer* CMMCore::popNextDataPointer() throw (CMMError) { 
+    if (!bufferManager_->IsUsingNewDataBuffer()) {
+        throw CMMError("NewDataBuffer must be enabled for pointer-based image access");
+    }
+    const void* rawPtr = bufferManager_->PopNextData();
+    if (rawPtr == nullptr) {
+        throw CMMError("Buffer is empty");
+    }
+    return new BufferDataPointer(bufferManager_, rawPtr);
+}
+
+BufferDataPointer* CMMCore::getLastDataFromDevicePointer(std::string deviceLabel) throw (CMMError) {
+    if (!bufferManager_->IsUsingNewDataBuffer()) {
+        throw CMMError("NewDataBuffer must be enabled for pointer-based image access");
+    }
+    const void* rawPtr = bufferManager_->GetLastDataFromDevice(deviceLabel);
+    if (rawPtr == nullptr) {
+        throw CMMError("Buffer is empty");
+    }
+    return new BufferDataPointer(bufferManager_, rawPtr);
 }
 
 /**
@@ -3200,7 +3678,56 @@ void* CMMCore::popNextImageMD(Metadata& md) throw (CMMError)
  */
 void CMMCore::clearCircularBuffer() throw (CMMError)
 {
-   cbuf_->Clear();
+   if (!bufferManager_->IsUsingNewDataBuffer()) {
+      clearBuffer();
+   }
+   // No effect on NewDataBuffer, because it supports asynchronous sequences from different
+   // cameras and should be cleared more carefully using the clearBuffer() method.
+}
+
+/**
+ * This method applies to both the circular buffer and the NewDataBuffer.
+ * A difference between the circular buffer and NewDataBuffer is that the NewDataBuffer
+ * is not required to be empty of images before a new sequence is started. In other 
+ * words, producers can be adding data to it that is asynchronously consumed. This
+ * means that this method should not be substituted for clearCircularBuffer() in 
+ * acquisition code.
+ * 
+ */
+void CMMCore::clearBuffer() throw (CMMError)
+{
+   try {
+      bufferManager_->Clear();  
+   } catch (...) {
+      throw CMMError("Failed to clear buffer");
+   }
+}
+
+/**
+ * For the circular buffer, this does a non-dangerous re-initialization
+ * for NewDataBuffer, this is a dangerous operation because there may be pointers into the buffer's memory
+ * that are not valid anymore. It can be used to reset the buffer without having to restart the
+ * application, but the need to use it indicates a bug in the application or device adapter that
+ * is not properly releasing the buffer's memory.
+ */
+void CMMCore::forceBufferReset() throw (CMMError)
+{
+   bufferManager_->ForceReset();
+}
+
+/**
+ * Enables or disables the NewDataBuffer.
+ */
+void CMMCore::enableNewDataBuffer(bool enable) throw (CMMError)
+{
+    int ret = bufferManager_->EnableNewDataBuffer(enable);
+    if (ret != DEVICE_OK)
+        throw CMMError("Failed to enable New Data Buffer", ret);
+   
+   // Default include circular buffer, exclude new buffer
+   imageMDIncludeLegacyCalibration_ = !enable;
+   imageMDIncludeSystemStateCache_ = !enable;
+   imageMDIncludeCameraTags_ = !enable;   
 }
 
 /**
@@ -3209,12 +3736,19 @@ void CMMCore::clearCircularBuffer() throw (CMMError)
 void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
                                                ) throw (CMMError)
 {
-   delete cbuf_; // discard old buffer
+   setBufferMemoryFootprint(sizeMB);
+}
+
+void CMMCore::setBufferMemoryFootprint(unsigned sizeMB) throw (CMMError)
+{
+   if (isSequenceRunning()) {
+      stopSequenceAcquisition();
+   }
    LOG_DEBUG(coreLogger_) << "Will set circular buffer size to " <<
       sizeMB << " MB";
 	try
 	{
-		cbuf_ = new CircularBuffer(sizeMB);
+      bufferManager_->ReallocateBuffer(sizeMB);
 	}
 	catch (std::bad_alloc& ex)
 	{
@@ -3223,7 +3757,7 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
 		messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
 		throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
 	}
-	if (NULL == cbuf_) throw CMMError(getCoreErrorText(MMERR_OutOfMemory).c_str(), MMERR_OutOfMemory);
+	if (NULL == bufferManager_) throw CMMError(getCoreErrorText(MMERR_OutOfMemory).c_str(), MMERR_OutOfMemory);
 
 
 	try
@@ -3234,8 +3768,13 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
       if (camera)
 		{
          mm::DeviceModuleLockGuard guard(camera);
-         if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+         if (!bufferManager_->IsUsingNewDataBuffer()) {
+            // Circular buffer requires initialization specific to the camera
+            if (!bufferManager_->InitializeCircularBuffer(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+               throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+         } else {
+            bufferManager_->ReallocateBuffer(sizeMB);
+         }
 		}
 
       LOG_DEBUG(coreLogger_) << "Did set circular buffer size to " <<
@@ -3247,7 +3786,7 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
 		messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
 		throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
 	}
-	if (NULL == cbuf_)
+	if (NULL == bufferManager_)
       throw CMMError(getCoreErrorText(MMERR_OutOfMemory).c_str(), MMERR_OutOfMemory);
 }
 
@@ -3256,9 +3795,15 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
  */
 unsigned CMMCore::getCircularBufferMemoryFootprint()
 {
-   if (cbuf_)
+return getBufferMemoryFootprint();
+}
+
+
+unsigned CMMCore::getBufferMemoryFootprint() const
+{
+   if (bufferManager_)
    {
-      return cbuf_->GetMemorySizeMB();
+      return bufferManager_->GetMemorySizeMB();
    }
    return 0;
 }
@@ -3268,9 +3813,9 @@ unsigned CMMCore::getCircularBufferMemoryFootprint()
  */
 long CMMCore::getRemainingImageCount()
 {
-   if (cbuf_)
+   if (bufferManager_)
    {
-      return cbuf_->GetRemainingImageCount();
+      return bufferManager_->GetRemainingDataCount();
    }
    return 0;
 }
@@ -3280,9 +3825,16 @@ long CMMCore::getRemainingImageCount()
  */
 long CMMCore::getBufferTotalCapacity()
 {
-   if (cbuf_)
+   if (bufferManager_)
    {
-      return cbuf_->GetSize();
+      // Compute image size from the current camera parameters.
+      double imageSize = getImageWidth() * getImageHeight() * getBytesPerPixel() / 1024.0 / 1024.0;
+      // Pass the computed image size as an argument to the adapter.
+      unsigned int sizeMB = bufferManager_->GetMemorySizeMB();
+      if (imageSize > 0)
+      {
+         return static_cast<long>(sizeMB / imageSize);
+      }
    }
    return 0;
 }
@@ -3294,9 +3846,15 @@ long CMMCore::getBufferTotalCapacity()
  */
 long CMMCore::getBufferFreeCapacity()
 {
-   if (cbuf_)
+   if (bufferManager_)
    {
-      return cbuf_->GetFreeSize();
+      // Compute image size from the current camera parameters.
+      double imageSize = getImageWidth() * getImageHeight() * getBytesPerPixel() / 1024.0 / 1024.0;
+      unsigned int sizeMB = bufferManager_->GetFreeSizeMB();
+      if (imageSize > 0)
+      {
+         return static_cast<long>(sizeMB / imageSize);
+      }
    }
    return 0;
 }
@@ -3306,7 +3864,7 @@ long CMMCore::getBufferFreeCapacity()
  */
 bool CMMCore::isBufferOverflowed() const
 {
-   return cbuf_->Overflow();
+   return bufferManager_->Overflow();
 }
 
 /**
@@ -4245,6 +4803,43 @@ unsigned CMMCore::getNumberOfComponents()
    return 0;
 }
 
+void CMMCore::releaseReadAccess(DataPtr ptr) {
+   if (bufferManager_->IsUsingNewDataBuffer()) {
+      bufferManager_->ReleaseReadAccess(ptr);
+   }
+}
+
+
+// For the below function that gets properties of the image based on a pointer,
+// Cant assume that this a NewDataBuffer pointer, because Java SWIG wrapper
+// will call this after copying from a snap buffer. So we'll check if the 
+// buffer knows about this pointer. If not, it's a snap buffer pointer.
+// We don't want want to compare to the snap buffer pointer directly because
+// its unclear what the device adapter might do when this is called.
+bool CMMCore::getImageProperties(DataPtr ptr, int& width, int& height, 
+                                    int& byteDepth, int& nComponents) throw (CMMError) {
+   if (!bufferManager_->IsUsingNewDataBuffer()) {
+      // Could be snap or circular buffer pointer
+      width = getImageWidth();
+      height = getImageHeight();
+      byteDepth = getBytesPerPixel();
+      nComponents = getNumberOfComponents();
+   } else  if (bufferManager_->IsPointerInNewDataBuffer(ptr)) {
+      // NewDataBuffer pointer
+      Metadata md;
+      bufferManager_->ExtractMetadata(ptr, md);
+      // If it can't return this metadata, then its not a valid image
+      return parseImageMetadata(md, width, height, byteDepth, nComponents);
+   } else {
+      // Snap buffer pointer with NewDataBuffer on
+      width = getImageWidth();
+      height = getImageHeight();
+      byteDepth = getBytesPerPixel();
+      nComponents = getNumberOfComponents();
+   }
+   return true;
+}
+
 /**
  * Returns the number of simultaneous channels the default camera is returning.
  */
@@ -4405,11 +5000,13 @@ void CMMCore::setROI(int x, int y, int xSize, int ySize) throw (CMMError)
       if (nRet != DEVICE_OK)
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
 
-      // Any images left over in the sequence buffer may have sizes
-      // inconsistent with the current image size. There is no way to "fix"
-      // popNextImage() to handle this correctly, so we need to make sure we
-      // discard such images.
-      cbuf_->Clear();
+      // When using the circularBuffer: Any images left over in the sequence 
+      // buffer may have sizes inconsistent with the current image size. 
+      // There is no way to "fix" popNextImage() to handle this correctly, 
+      // so we need to make sure we discard such images.
+      if (! bufferManager_->IsUsingNewDataBuffer()) {
+         bufferManager_->Clear();
+      }
    }
    else
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
@@ -4488,7 +5085,9 @@ void CMMCore::setROI(const char* label, int x, int y, int xSize, int ySize) thro
      // inconsistent with the current image size. There is no way to "fix"
      // popNextImage() to handle this correctly, so we need to make sure we
      // discard such images.
-     cbuf_->Clear();
+     if (!bufferManager_->IsUsingNewDataBuffer()) {
+        bufferManager_->Clear();
+     }
   }
   else
      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
@@ -4543,11 +5142,13 @@ void CMMCore::clearROI() throw (CMMError)
       if (nRet != DEVICE_OK)
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
 
-      // Any images left over in the sequence buffer may have sizes
-      // inconsistent with the current image size. There is no way to "fix"
-      // popNextImage() to handle this correctly, so we need to make sure we
-      // discard such images.
-      cbuf_->Clear();
+      // When using the circularBuffer: Any images left over in the sequence 
+      // buffer may have sizes inconsistent with the current image size. 
+      // There is no way to "fix" popNextImage() to handle this correctly, 
+      // so we need to make sure we discard such images.
+      if (!bufferManager_->IsUsingNewDataBuffer()) {
+         bufferManager_->Clear();
+      }
    }
 }
 
@@ -5604,6 +6205,25 @@ double CMMCore::getPixelSizeUm()
  */
 double CMMCore::getPixelSizeUm(bool cached)
 {
+   int binning = 1;
+   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+   if (camera)
+   {
+      try
+      {
+         mm::DeviceModuleLockGuard guard(camera);
+         binning = camera->GetBinning();
+      }
+      catch (const CMMError&) // Possibly uninitialized camera
+      {
+         // Assume no binning
+      }
+   }
+   return getPixelSizeUm(cached, binning);
+}
+
+double CMMCore::getPixelSizeUm(bool cached, int binning)
+{
    std::string resolutionID;
    try
    {
@@ -5622,20 +6242,7 @@ double CMMCore::getPixelSizeUm(bool cached)
 
       double pixSize = pCfg->getPixelSizeUm();
 
-      std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
-      if (camera)
-      {
-         try
-         {
-            mm::DeviceModuleLockGuard guard(camera);
-            pixSize *= camera->GetBinning();
-         }
-         catch (const CMMError&) // Possibly uninitialized camera
-         {
-            // Assume no binning
-         }
-      }
-
+      pixSize *= binning;
       pixSize /= getMagnificationFactor();
 
       return pixSize;
@@ -5646,9 +6253,6 @@ double CMMCore::getPixelSizeUm(bool cached)
    }
 }
 
-/**
- * Returns the pixel size in um for the requested pixel size group
- */
 double CMMCore::getPixelSizeUmByID(const char* resolutionID) throw (CMMError)
 {
    CheckConfigPresetName(resolutionID);
@@ -5676,20 +6280,24 @@ std::vector<double> CMMCore::getPixelSizeAffine() throw (CMMError)
  */
 std::vector<double> CMMCore::getPixelSizeAffine(bool cached) throw (CMMError)
 {
+   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+   int binning = 1;
+   if (camera)
+   {
+      mm::DeviceModuleLockGuard guard(camera);
+   binning = camera->GetBinning();
+   }
+   return getPixelSizeAffine(cached, binning);
+}
+
+std::vector<double> CMMCore::getPixelSizeAffine(bool cached, int binning) throw (CMMError)
+{
    std::string resolutionID = getCurrentPixelSizeConfig(cached);
    if (resolutionID.length() > 0)
    {
       // check which one matches the current state
       PixelSizeConfiguration* pCfg = pixelSizeGroup_->Find(resolutionID.c_str());
       std::vector<double> af = pCfg->getPixelConfigAffineMatrix();
-
-      std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
-      int binning = 1;
-      if (camera)
-      {
-         mm::DeviceModuleLockGuard guard(camera);
-         binning = camera->GetBinning();
-      }
 
       double factor = binning / getMagnificationFactor();
 
@@ -8046,4 +8654,43 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
       description = pHub->GetInstalledPeripheralDescription(deviceLabel);
    }
    return description.empty() ? "N/A" : description;
+}
+
+
+/**
+ * Get the essential metadata for interpretting image data stored in the buffer.
+ */
+bool CMMCore::parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents)
+{
+   // Check if required metadata tags exist
+   if (!md.HasTag(MM::g_Keyword_Metadata_Width) || 
+       !md.HasTag(MM::g_Keyword_Metadata_Height) || 
+       !md.HasTag(MM::g_Keyword_PixelType))
+   {
+      return false;
+   }
+
+   width = std::stoul(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue());
+   height = std::stoul(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue());
+   nComponents = 1; // Default to 1 component
+   std::string pixType = md.GetSingleTag(MM::g_Keyword_PixelType).GetValue();
+   
+   if (pixType == MM::g_Keyword_PixelType_GRAY8)
+      byteDepth = 1;
+   else if (pixType == MM::g_Keyword_PixelType_GRAY16)
+      byteDepth = 2;
+   else if (pixType == MM::g_Keyword_PixelType_GRAY32)
+      byteDepth = 4;
+   else if (pixType == MM::g_Keyword_PixelType_RGB32) {
+      byteDepth = 4;
+      nComponents = 4; // ARGB format uses 4 components
+   }
+   else if (pixType == MM::g_Keyword_PixelType_RGB64) {
+      byteDepth = 8;
+      nComponents = 4; // ARGB format uses 4 components
+   } else {
+      byteDepth = 1; // Default to 1 byte depth for unknown types
+      nComponents = 1;
+   }
+   return true;
 }

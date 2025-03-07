@@ -165,6 +165,8 @@ namespace MM {
    const char* const g_Keyword_Metadata_Width       = "Width";
    const char* const g_Keyword_Metadata_Height      = "Height";
    const char* const g_Keyword_Metadata_CameraLabel = "Camera";
+   const char* const g_Keyword_Metadata_DataProducerLabel = "DataProducer";
+   const char* const g_Keyword_Metadata_BitDepth = "BitDepth";
    const char* const g_Keyword_Metadata_Exposure    = "Exposure-ms";
    MM_DEPRECATED(const char* const g_Keyword_Meatdata_Exposure) = "Exposure-ms"; // Typo
    const char* const g_Keyword_Metadata_Score       = "Score";
@@ -174,6 +176,16 @@ namespace MM {
    const char* const g_Keyword_Metadata_ROI_Y       = "ROI-Y-start";
    const char* const g_Keyword_Metadata_TimeInCore  = "TimeReceivedByCore";
 
+   // Image metadata categories
+   // Metadata category bitmasks
+   const unsigned int g_Image_Metadata_Bitmask_BitDepth = 1;
+   const unsigned int g_Image_Metadata_Bitmask_CameraParams = 2;
+   const unsigned int g_Image_Metadata_Bitmask_CameraTags = 4;
+   const unsigned int g_Image_Metadata_Bitmask_Timing = 8;
+   const unsigned int g_Image_Metadata_Bitmask_SystemStateCache = 16;
+   const unsigned int g_Image_Metadata_Bitmask_LegacyCalibration = 32;
+   const unsigned int g_Image_Metadata_Bitmask_Legacy = 64;
+   
    // configuration file format constants
    const char* const g_FieldDelimiters = ",";
    const char* const g_CFGCommand_Device = "Device";

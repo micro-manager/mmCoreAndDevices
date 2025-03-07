@@ -65,6 +65,7 @@
 #include "Error.h"
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"
+#include "BufferManager.h"
 
 #include <cstring>
 #include <deque>
@@ -88,13 +89,13 @@
 
 
 class CPluginManager;
-class CircularBuffer;
 class ConfigGroupCollection;
 class CoreCallback;
 class CorePropertyCollection;
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
+class BufferDataPointer;
 
 class AutoFocusInstance;
 class CameraInstance;
@@ -114,6 +115,10 @@ namespace mm {
 } // namespace mm
 
 typedef unsigned int* imgRGB32;
+// This is needed for SWIG Java wrapping because 
+// void* is converted to Objects to copy arrays of data but we want to be able to 
+// maps these pointers to longs
+typedef const void* DataPtr; 
 
 enum DeviceInitializationState {
    Uninitialized,
@@ -391,6 +396,8 @@ public:
    void snapImage() throw (CMMError);
    void* getImage() throw (CMMError);
    void* getImage(unsigned numChannel) throw (CMMError);
+   void* getImageMD(Metadata& md) throw (CMMError);
+   void* getImageMD(unsigned numChannel, Metadata& md) throw (CMMError);
 
    unsigned getImageWidth();
    unsigned getImageHeight();
@@ -414,6 +421,7 @@ public:
          double intervalMs, bool stopOnOverflow) throw (CMMError);
    void prepareSequenceAcquisition(const char* cameraLabel) throw (CMMError);
    void startContinuousSequenceAcquisition(double intervalMs) throw (CMMError);
+   void startContinuousSequenceAcquisition(const char* cameraLabel, double intervalMs) throw (CMMError);
    void stopSequenceAcquisition() throw (CMMError);
    void stopSequenceAcquisition(const char* cameraLabel) throw (CMMError);
    bool isSequenceRunning() throw ();
@@ -430,15 +438,68 @@ public:
       const throw (CMMError);
    void* popNextImageMD(Metadata& md) throw (CMMError);
 
+
    long getRemainingImageCount();
    long getBufferTotalCapacity();
    long getBufferFreeCapacity();
    bool isBufferOverflowed() const;
+
+   /**
+    * @deprecated Use setBufferMemoryFootprint() instead
+    */
    void setCircularBufferMemoryFootprint(unsigned sizeMB) throw (CMMError);
+   /**
+    * @deprecated Use getBufferMemoryFootprint() instead
+    */
    unsigned getCircularBufferMemoryFootprint();
+
+   // This is only needed for the circular buffer, because it needs to match the camera settings. Should it be deprecated?
    void initializeCircularBuffer() throw (CMMError);
+   /**
+    * @deprecated Use clearBuffer() instead, but see note in ClearBuffer() about how it does not
+    * need to be called as frequently as clearCircularBuffer() was
+    */
    void clearCircularBuffer() throw (CMMError);
 
+   void setBufferMemoryFootprint(unsigned sizeMB) throw (CMMError);
+   unsigned getBufferMemoryFootprint() const;
+   void clearBuffer() throw (CMMError);
+   void forceBufferReset() throw (CMMError);
+
+   ///@}
+
+   /** \name NewDataBuffer control. */
+   ///@{
+   void enableNewDataBuffer(bool enable) throw (CMMError);
+   bool usesNewDataBuffer() const { return bufferManager_->IsUsingNewDataBuffer(); }
+   
+   // These functions are used by the Java SWIG wrapper to get properties of the image
+   // based on a pointer. The DataPtr alias to void* is so they don't get converted to 
+   // Object in the Java SWIG wrapper.
+   bool getImageProperties(DataPtr ptr, int& width, int& height, int& byteDepth, int& nComponents) throw (CMMError);
+   void releaseReadAccess(DataPtr ptr) throw (CMMError);
+
+
+   // Same functionality as non pointer versions above, but
+   // enables alternative wrappers in SWIG for pointer-based access to the image data.
+
+   // This one is "Image" not "Data" because it corresponds to SnapImage()/GetImage(), 
+   // Which does only goes through the NewDataBuffer after coming from the camera device buffer,
+   // so it is guarenteed to be an image, not a more generic piece of data.
+   BufferDataPointer* getImagePointer() throw (CMMError);
+
+   // These are "Data" not "Image" because they can be used generically for any data type
+   // Higher level wrapping code can read their associated metadata to determine their data typ
+   // These ones don't need the metadata versions (e.g. getLastDataMDPointer) because the metadata
+   // is accessed through the buffer data pointer.
+   BufferDataPointer* getLastDataPointer() throw (CMMError);
+   BufferDataPointer* popNextDataPointer() throw (CMMError);
+   BufferDataPointer* getLastDataFromDevicePointer(std::string deviceLabel) throw (CMMError);
+
+   ///@}
+
+   /** \name Exposure sequence control. */
+   ///@{
    bool isExposureSequenceable(const char* cameraLabel) throw (CMMError);
    void startExposureSequence(const char* cameraLabel) throw (CMMError);
    void stopExposureSequence(const char* cameraLabel) throw (CMMError);
@@ -637,6 +698,38 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
 
+   /** \name Image metadata. */
+   ///@{
+
+   /**
+    * Unclear why this is needed, deprecate?
+    */
+   bool getIncludeSystemStateCache() { 
+      return imageMDIncludeSystemStateCache_;
+   }
+
+   /**
+    * @deprecated Use setIncludeImageMetadata("SystemStateCache", state) instead
+    */
+   void setIncludeSystemStateCache(bool state) {
+      imageMDIncludeSystemStateCache_ = state;
+   }
+
+   /**
+    * Sets which metadata categories should be included with images.
+    * @param categoryBits Bitmask of metadata categories to include
+    */
+   void setIncludeImageMetadata(unsigned int categoryBits) throw (CMMError);
+   
+   /**
+    * Gets the current metadata inclusion bitmask.
+    * @return Bitmask indicating which metadata categories are included
+    */
+   unsigned int getIncludeImageMetadata() const throw (CMMError);
+   ///@}
+
+   static bool parseImageMetadata(Metadata& md, int& width, int& height, int& byteDepth, int& nComponents);
+
 private:
    // make object non-copyable
    CMMCore(const CMMCore&);
@@ -670,7 +763,8 @@ private:
    CorePropertyCollection* properties_;
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
-   CircularBuffer* cbuf_;
+   // New adapter to wrap either the circular buffer or the NewDataBuffer
+   BufferManager* bufferManager_;
 
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;
@@ -683,6 +777,18 @@ private:
 
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
+
+   // For adding camera metadata
+   std::map<std::string, long> imageNumbers_;  // Track image numbers per camera
+   std::mutex imageNumbersMutex_;
+   std::chrono::steady_clock::time_point startTime_; // Start time for elapsed time calculations in seuqence acquisition
+   bool imageMDIncludeSystemStateCache_;
+   bool imageMDIncludeBitDepth_;
+   bool imageMDIncludeCameraParams_;
+   bool imageMDIncludeCameraTags_;
+   bool imageMDIncludeTiming_;
+   bool imageMDIncludeLegacyCalibration_;
+   bool imageMDIncludeAdditionalLegacy_;
 
 private:
    void InitializeErrorMessages();
@@ -711,6 +817,24 @@ private:
    void initializeAllDevicesSerial() throw (CMMError);
    void initializeAllDevicesParallel() throw (CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
+
+
+   // Centralized functions for adding and parsing metadata. This includes required metadta
+   // for interpretting the data like width, height, pixel type, as well as option nice-to-have
+   // metadata like elapsed time that may be relied on by higher level code.
+   // If support for other types of data is added in the future, alternative versions of these functions
+   // should be added.
+   void addCameraMetadata(std::shared_ptr<CameraInstance> pCam, Metadata& md, unsigned width, unsigned height,
+                  unsigned byteDepth, unsigned nComponents);
+   // Additional metadata for the multi-camera device adapter
+   void addMultiCameraMetadata(Metadata& md, int cameraChannelIndex) const;
+   // Want to be able to pass in binning so camera doesn't have to be locked and this can
+   // be called on a camera thread
+   double getPixelSizeUm(bool cached, int binning);
+   std::vector<double> getPixelSizeAffine(bool cached, int binning) throw (CMMError);
+
+
+
 };
 
 #if defined(__GNUC__) && !defined(__clang__)
