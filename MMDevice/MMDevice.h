@@ -553,6 +553,56 @@ namespace MM {
    //    g_keyword_CameraStatusAcquisitionTransfer
    // };
 
+   // GenICam style event properties
+   // For now, allow events with any name, because cameras may implement ones other than
+   // these
+   // static const std::vector<std::string> eventSelectorValues = {
+   //       g_keyword_CameraEventAcquisitionTrigger,
+   //       g_keyword_CameraEventAcquisitionStart,
+   //       g_keyword_CameraEventAcquisitionEnd,
+   //       g_keyword_CameraEventAcquisitionTransferStart,
+   //       g_keyword_CameraEventAcquisitionTransferEnd,
+   //       g_keyword_CameraEventAcquisitionError,
+   //       g_keyword_CameraEventFrameTrigger,
+   //       g_keyword_CameraEventFrameStart,
+   //       g_keyword_CameraEventFrameEnd,
+   //       g_keyword_CameraEventFrameBurstStart,
+   //       g_keyword_CameraEventFrameBurstEnd,
+   //       g_keyword_CameraEventFrameTransferStart,
+   //       g_keyword_CameraEventFrameTransferEnd,
+   //       g_keyword_CameraEventExposureStart,
+   //       g_keyword_CameraEventExposureEnd,
+   //       g_keyword_CameraEventError
+   // };
+   static const MM::StandardProperty g_EventSelectorProperty{
+      "EventSelector", // name
+      String,          // type
+      false,           // isReadOnly
+      false,           // isPreInit
+      {}, // allowedValues
+      {}, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_EventSelectorProperty)
+
+   // Event notification: whether the event actually produced
+   static const std::vector<std::string> eventNotificationValues = {
+      g_keyword_CameraEventNotificationOff,
+      g_keyword_CameraEventNotificationOn
+   };
+   static const MM::StandardProperty g_EventNotificationProperty{
+      "EventNotification", // name
+      String,              // type
+      false,               // isReadOnly
+      false,               // isPreInit
+      {}, // allowedValues
+      eventNotificationValues, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_EventNotificationProperty)
+
 
 
    //// Standard properties for rolling shutter lightsheet readout cameras

@@ -61,7 +61,7 @@ enum
 //Callback class for putting frames in circular buffer as they arrive
 
 class CTempCameraEventHandler;
-class CircularBufferInserter;
+class BufferInserter;
 class BaslerCamera : public CNewAPICameraBase<BaslerCamera>  {
 public:
 	BaslerCamera();
@@ -126,10 +126,11 @@ public:
 	int OnLineSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLineStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-	// other
-	// int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-	// int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnEventSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnEventNotification(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+
+	// non-standard properties
 	int OnAcqFramerate(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAcqFramerateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAutoExpore(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -173,7 +174,7 @@ public:
 
 
 	CImageFormatConverter *converter;
-    CircularBufferInserter *ImageHandler_;
+    BufferInserter *ImageHandler_;
 	std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
 	void* Buffer4ContinuesShot;
 
@@ -248,12 +249,12 @@ public:
 };
 
 
-class CircularBufferInserter : public CImageEventHandler {
+class BufferInserter : public CImageEventHandler {
 private:
 	BaslerCamera* dev_;
 
 public:
-	CircularBufferInserter(BaslerCamera* dev);
+	BufferInserter(BaslerCamera* dev);
 
 	virtual void OnImageGrabbed( CInstantCamera& camera, const CGrabResultPtr& ptrGrabResult);
 };

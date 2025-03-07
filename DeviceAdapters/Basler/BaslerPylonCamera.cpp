@@ -355,7 +355,7 @@ int BaslerCamera::Initialize()
 		nodeMap_ = &camera_->GetNodeMap();
 
 
-				//// Create standard properties
+		//// Create standard properties
 
 		int code;
 		CPropertyAction* action;
@@ -507,6 +507,25 @@ int BaslerCamera::Initialize()
 		SkipRollingShutterLineOffsetStandardProperty();
 		SkipRollingShutterActiveLinesStandardProperty();
 
+
+		// Event Standard Properties
+		CEnumerationPtr eventSelector(nodeMap_->GetNode("EventSelector"));
+		if (IsAvailable(eventSelector)) {
+			action = new CPropertyAction(this, &BaslerCamera::OnEventSelector);
+			std::string currentValue = eventSelector->ToString();
+			std::vector<std::string> values = GetAvailableEnumValues(*eventSelector);
+			code = CreateEventSelectorStandardProperty(currentValue.c_str(), values, action);
+			assert(code == DEVICE_OK);
+		}
+
+		CEnumerationPtr eventNotification(nodeMap_->GetNode("EventNotification"));
+		if (IsAvailable(eventNotification)) {
+			action = new CPropertyAction(this, &BaslerCamera::OnEventNotification);
+			std::string currentValue = eventNotification->ToString();
+			// This one has required values of On and Off
+			code = CreateEventNotificationStandardProperty(currentValue.c_str(), action);
+			assert(code == DEVICE_OK);
+		}
 
 
 		if (camera_->EventSelector.IsWritable())
@@ -1072,7 +1091,7 @@ int BaslerCamera::AcquisitionArm(int frameCount)
 		}
 	}
 
-	ImageHandler_ = new CircularBufferInserter(this);
+	ImageHandler_ = new BufferInserter(this);
 	camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
 
 	return DEVICE_OK;
@@ -1447,7 +1466,27 @@ int BaslerCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::AfterSet) {
 		pProp->Get(TriggerSource_);
 		CEnumerationPtr TriggerSource(nodeMap_->GetNode("TriggerSource"));
-		TriggerSource->FromString(TriggerSource_.c_str());
+		try {
+			if (TriggerSource != NULL && IsAvailable(TriggerSource)) {
+				if (TriggerSource->GetEntryByName(TriggerSource_.c_str()) != NULL) {					
+					TriggerSource->FromString(TriggerSource_.c_str());
+				} else {
+					// The requested trigger source is not available
+					return DEVICE_INVALID_PROPERTY_VALUE;
+				}
+			} else {
+				// TriggerSource is not available
+				return DEVICE_INVALID_PROPERTY_VALUE;
+			}
+		} catch (const GenericException& e) {
+			// Log the error and return a meaningful error code
+			AddToLog(e.GetDescription());
+			return DEVICE_ERR;
+		}
+
+
+		// update other property values:
+		
 	}
 	else if (eAct == MM::BeforeGet) {
 		CEnumerationPtr TriggerSource(nodeMap_->GetNode("TriggerSource"));
@@ -1670,7 +1709,61 @@ int BaslerCamera::OnLineStatus(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
+int BaslerCamera::OnEventSelector(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    try
+    {
+        string EventSelector_;
+        CEnumerationPtr EventSelector(nodeMap_->GetNode("EventSelector"));
+        if (EventSelector != NULL && IsAvailable(EventSelector))
+        {
+            if (eAct == MM::AfterSet) {
+                pProp->Get(EventSelector_);
+                EventSelector->FromString(EventSelector_.c_str());
+                pProp->Set(EventSelector->ToString().c_str());
+            }
+            else if (eAct == MM::BeforeGet) {
+                pProp->Set(EventSelector->ToString().c_str());
+            }
+        }
+    }
+    catch (const GenericException & e)
+    {
+        // Error handling.
+        AddToLog(e.GetDescription());
+        return DEVICE_ERR;
+    }
+    return DEVICE_OK;
+}
 
+int BaslerCamera::OnEventNotification(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    try
+    {
+        string EventNotification_;
+        CEnumerationPtr EventNotification(nodeMap_->GetNode("EventNotification"));
+        if (EventNotification != NULL && IsAvailable(EventNotification))
+        {
+            if (eAct == MM::AfterSet) {
+                pProp->Get(EventNotification_);
+                EventNotification->FromString(EventNotification_.c_str());
+                pProp->Set(EventNotification->ToString().c_str());
+            }
+            else if (eAct == MM::BeforeGet) {
+                pProp->Set(EventNotification->ToString().c_str());
+            }
+        }
+    }
+    catch (const GenericException & e)
+    {
+        // Error handling.
+        AddToLog(e.GetDescription());
+        return DEVICE_ERR;
+    }
+    return DEVICE_OK;
+}
+
+///////////////////////////////////
 //// Non-standard property handlers
 
 int BaslerCamera::OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -2481,11 +2574,11 @@ void CTempCameraEventHandler::OnCameraEvent(CBaslerUniversalInstantCamera& camer
 	}
 }
 
-CircularBufferInserter::CircularBufferInserter(BaslerCamera* dev) :
+BufferInserter::BufferInserter(BaslerCamera* dev) :
 	dev_(dev)
 {}
 
-void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const CGrabResultPtr& ptrGrabResult)
+void BufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const CGrabResultPtr& ptrGrabResult)
 {
 
 	// char label[MM::MaxStrLength];

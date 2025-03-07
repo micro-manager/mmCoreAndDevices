@@ -254,6 +254,22 @@ public:
       SkipStandardProperty<MM::g_RollingShutterActiveLinesProperty>();
    }
 
+   int CreateEventSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_EventSelectorProperty>(value, pAct, values);
+   }
+
+   void SkipEventSelectorStandardProperty() {
+      SkipStandardProperty<MM::g_EventSelectorProperty>();
+   }
+
+   int CreateEventNotificationStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_EventNotificationProperty>(value, pAct, MM::g_EventNotificationProperty.requiredValues);
+   }
+
+   void SkipEventNotificationStandardProperty() {
+      SkipStandardProperty<MM::g_EventNotificationProperty>();
+   }
+
    /**
    * Assigns description string for a device (for use only by the calling code).
    */
