@@ -1504,7 +1504,7 @@ private:
       }
       
       // Clear existing values
-      int ret = ClearAllowedValues(fullName.c_str(), true);
+      int ret = properties_.ClearAllowedValues(fullName.c_str(), true);
       if (ret != DEVICE_OK)
          return ret;
       
