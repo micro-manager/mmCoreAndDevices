@@ -2427,7 +2427,10 @@ int BaslerCamera::InitOrSyncTriggerSelectorStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetTriggerSelectorStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipTriggerSelectorStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2453,7 +2456,10 @@ int BaslerCamera::InitOrSyncTriggerModeStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetTriggerModeStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipTriggerModeStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2479,7 +2485,10 @@ int BaslerCamera::InitOrSyncTriggerSourceStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetTriggerSourceStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipTriggerSourceStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2505,7 +2514,10 @@ int BaslerCamera::InitOrSyncTriggerActivationStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetTriggerActivationStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipTriggerActivationStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2528,7 +2540,11 @@ int BaslerCamera::InitOrSyncTriggerDelayStandardProperty()
     else if (!cameraHasIt && propertyExists) {
         // Camera doesn't have the feature but property exists - remove it
         SkipTriggerDelayStandardProperty();
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipTriggerDelayStandardProperty();
+	}
+    
     // For float properties, we don't need to update allowed values, as they're set by min/max
     
     return DEVICE_OK;
@@ -2555,7 +2571,10 @@ int BaslerCamera::InitOrSyncTriggerOverlapStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetTriggerOverlapStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipTriggerOverlapStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2581,7 +2600,10 @@ int BaslerCamera::InitOrSyncExposureModeStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetExposureModeStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipExposureModeStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2604,7 +2626,11 @@ int BaslerCamera::InitOrSyncExposureTimeStandardProperty()
     else if (!cameraHasIt && propertyExists) {
         // Camera doesn't have the feature but property exists - remove it
         SkipExposureTimeStandardProperty();
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipExposureTimeStandardProperty();
+	}
+    
     // For float properties, we don't need to update allowed values, as they're set by min/max
     
     return DEVICE_OK;
@@ -2631,7 +2657,10 @@ int BaslerCamera::InitOrSyncLineSelectorStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetLineSelectorStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipLineSelectorStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2657,7 +2686,10 @@ int BaslerCamera::InitOrSyncLineModeStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetLineModeStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipLineModeStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2683,7 +2715,10 @@ int BaslerCamera::InitOrSyncLineInverterStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = {"0", "1"};
         return SetLineInverterStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipLineInverterStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2709,7 +2744,10 @@ int BaslerCamera::InitOrSyncLineSourceStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetLineSourceStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipLineSourceStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2730,7 +2768,11 @@ int BaslerCamera::InitOrSyncLineStatusStandardProperty()
     else if (!cameraHasIt && propertyExists) {
         // Camera doesn't have the feature but property exists - remove it
         SkipLineStatusStandardProperty();
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipLineStatusStandardProperty();
+	}
+    
     // No need to update values for read-only properties
     
     return DEVICE_OK;
@@ -2757,7 +2799,10 @@ int BaslerCamera::InitOrSyncEventSelectorStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetEventSelectorStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipEventSelectorStandardProperty();
+	}
     
     return DEVICE_OK;
 }
@@ -2783,7 +2828,10 @@ int BaslerCamera::InitOrSyncEventNotificationStandardProperty()
         // Both exist - just update the values
         std::vector<std::string> values = GetAvailableEnumValues(*node);
         return SetEventNotificationStandardPropertyValues(values);
-    }
+    } else {
+		// It doesn't exist, mark to skip
+		SkipEventNotificationStandardProperty();
+	}
     
     return DEVICE_OK;
 }
