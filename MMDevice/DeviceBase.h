@@ -557,6 +557,14 @@ public:
          return false;
    }
 
+   virtual bool HasStandardProperty(const char* name) const
+   {
+      // prepend standard property prefix to name
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += name;
+      return HasProperty(fullName.c_str());
+   }
+
    /**
    * Returns the number of allowed property values.
    * If the set of property values is not defined, not bounded,
