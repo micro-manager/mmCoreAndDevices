@@ -166,7 +166,7 @@ BaslerCamera::BaslerCamera() :
 	shutterMode_("None"),
 	nodeMap_(NULL),
 	initialized_(false),
-	pTempHandler_(NULL),
+	pEventHandler_(NULL),
 	camera_(NULL),
 	multiFrameAcqCount_(0)
 {
@@ -383,15 +383,37 @@ int BaslerCamera::Initialize()
 
 		if (camera_->EventSelector.IsWritable())
 		{
+			pEventHandler_ = new CMMCameraEventHandler(this);
+
 			if (camera_->EventSelector.CanSetValue(EventSelector_CriticalTemperature) &&
-				camera_->EventSelector.CanSetValue(EventSelector_OverTemperature)
-				)
+				camera_->EventSelector.CanSetValue(EventSelector_OverTemperature))
 			{
-				pTempHandler_ = new CTempCameraEventHandler(this);
-				// register camera events
-				camera_->RegisterCameraEventHandler(pTempHandler_, "EventCriticalTemperatureData", TempCritical, RegistrationMode_Append, Cleanup_None);
-				camera_->RegisterCameraEventHandler(pTempHandler_, "EventOverTemperatureData", TempOverTemp, RegistrationMode_Append, Cleanup_None);
+				// Temperature update events
+				camera_->RegisterCameraEventHandler(pEventHandler_, "EventCriticalTemperatureData", static_cast<intptr_t>(0), RegistrationMode_Append, Cleanup_None);
 			}
+
+
+			 // Register the handler for each type of event that might be
+			std::vector<std::string> eventSelectorValues = GetAvailableEnumValues(camera_->EventSelector);
+			for (const auto& eventValue : eventSelectorValues) {
+				// Construct the event data node name
+				std::string eventDataNodeName = "Event" + eventValue + "Data";
+				
+				// Register the event handler
+				try {
+					camera_->RegisterCameraEventHandler(
+						pEventHandler_,
+						eventDataNodeName.c_str(),
+						static_cast<intptr_t>(0),
+						RegistrationMode_Append,
+						Cleanup_None
+					);
+				}
+				catch (const GenericException& e) {
+					return DEVICE_ERR;
+				}
+			}
+
 		}
 
 		//Register Genicam Callback to be informed if on any changes on  resulting frame rate. 
@@ -1370,7 +1392,12 @@ int BaslerCamera::OnEventNotification(MM::PropertyBase* pProp, MM::ActionType eA
 
 int BaslerCamera::OnLineMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    return HandleEnumerationProperty(pProp, eAct, "LineMode");
+    int ret = HandleEnumerationProperty(pProp, eAct, "LineMode");
+	if (ret != DEVICE_OK) {
+		return ret;
+	}
+	// Line source is only valid if line mode is set to Output
+	return InitOrSyncLineSourceStandardProperty();
 }
 
 int BaslerCamera::OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -2308,11 +2335,11 @@ void BaslerCamera::UpdateTemperature()
 	}
 }
 
-CTempCameraEventHandler::CTempCameraEventHandler(BaslerCamera* dev) :
+CMMCameraEventHandler::CMMCameraEventHandler(BaslerCamera* dev) :
 	dev_(dev)
 {}
 
-void CTempCameraEventHandler::OnCameraEvent(CBaslerUniversalInstantCamera& camera, intptr_t userProvidedId, GenApi::INode* pNode)
+void CMMCameraEventHandler::OnCameraEvent(CBaslerUniversalInstantCamera& camera, intptr_t userProvidedId, GenApi::INode* pNode)
 {
 	{
 		(void)camera;

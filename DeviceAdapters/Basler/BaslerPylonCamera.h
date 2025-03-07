@@ -60,7 +60,7 @@ enum
 //////////////////////////////////////////////////////////////////////////////
 //Callback class for putting frames in circular buffer as they arrive
 
-class CTempCameraEventHandler;
+class CMMCameraEventHandler;
 class BufferInserter;
 class BaslerCamera : public CNewAPICameraBase<BaslerCamera>  {
 public:
@@ -205,7 +205,7 @@ private:
 
 
 	CBaslerUniversalInstantCamera *camera_;
-	CTempCameraEventHandler *pTempHandler_;
+	CMMCameraEventHandler *pEventHandler_;
 
     int nComponents_;
 	unsigned bitDepth_;
@@ -269,12 +269,12 @@ static const uint32_t c_countOfImagesToGrab = 5;
 
 
 // Example handler for camera events.
-class CTempCameraEventHandler : public CBaslerUniversalCameraEventHandler
+class CMMCameraEventHandler : public CBaslerUniversalCameraEventHandler
 {
 private:
 	BaslerCamera* dev_;
 public:
-	CTempCameraEventHandler(BaslerCamera* dev);
+	CMMCameraEventHandler(BaslerCamera* dev);
 	virtual void OnCameraEvent(CBaslerUniversalInstantCamera& camera, intptr_t userProvidedId, GenApi::INode* pNode);
 };
 
