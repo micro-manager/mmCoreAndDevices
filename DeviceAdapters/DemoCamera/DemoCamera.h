@@ -175,6 +175,8 @@ public:
    // ----------------
    int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTestProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long);
+   int OnTestStandardProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTestWithValuesStandardProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnAsyncFollower(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnAsyncLeader(MM::PropertyBase* pProp, MM::ActionType eAct);
    void SlowPropUpdate(std::string leaderValue);

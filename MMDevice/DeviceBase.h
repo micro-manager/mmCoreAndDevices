@@ -38,6 +38,8 @@
 #include <iomanip>
 #include <map>
 #include <sstream>
+#include <type_traits>
+#include <set>
 
 // common error messages
 const char* const g_Msg_ERR = "Unknown error in the device";
@@ -116,6 +118,27 @@ public:
    {
       CDeviceUtils::CopyLimitedString(name, moduleName_.c_str());
    }
+
+   //// Standard properties are created using only these dedicated functions
+   // Such functions should all be defined here, and which device types they apply
+   //
+   // to is handled in MMDevice.h using the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE macro
+   // int CreateTestStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    return CreateStandardProperty<MM::g_TestStandardProperty>(value, pAct);
+   // }
+
+   // int CreateTestWithValuesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    // just make the values the required ones here. Also option to add 
+   //    // additional ones in real situations
+   //    return CreateStandardProperty<MM::g_TestWithValuesStandardProperty>(value, pAct,
+   //     MM::g_TestWithValuesStandardProperty.requiredValues);
+   // }
+
+   // Every standard property must either be created or explicitly skipped using
+   // a method like this
+   // void SkipTestStandardProperty() {
+   //    SkipStandardProperty<MM::g_TestStandardProperty>();
+   // }
 
    /**
    * Assigns description string for a device (for use only by the calling code).
@@ -534,6 +557,14 @@ public:
          return false;
    }
 
+   virtual bool HasStandardProperty(const char* name) const
+   {
+      // prepend standard property prefix to name
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += name;
+      return HasProperty(fullName.c_str());
+   }
+
    /**
    * Returns the number of allowed property values.
    * If the set of property values is not defined, not bounded,
@@ -569,6 +600,40 @@ public:
       return true;
    }
 
+   bool ImplementsOrSkipsStandardProperties(char* failedProperty) const {
+   // Get the device type
+   MM::DeviceType deviceType = this->GetType();
+   
+   // Look up properties for this device type
+   auto it = MM::internal::GetDeviceTypeStandardPropertiesMap().find(deviceType);
+   if (it != MM::internal::GetDeviceTypeStandardPropertiesMap().end()) {
+      // Iterate through all properties for this device type
+      const auto& properties = it->second;
+      for (const auto& prop : properties) {
+         // Construct the full property name with prefix
+         std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+         fullName += prop.name;
+         
+         // Skip checking if this property is in the skipped list
+         if (skippedStandardProperties_.find(fullName) != skippedStandardProperties_.end()) {
+            continue;
+         }
+         
+         // Check if the device has implemented it
+         if (!HasProperty(fullName.c_str())) {
+            // If not, copy in the name of the property and return false
+            CDeviceUtils::CopyLimitedString(failedProperty, fullName.c_str());
+            return false;
+         }
+      }
+   }
+   
+   // All required properties are implemented or explicitly skipped
+   return true;
+   }
+
+   
+
    /**
    * Creates a new property for the device.
    * @param name - property name
@@ -596,6 +661,7 @@ public:
    */
    int CreatePropertyWithHandler(const char* name, const char* value, MM::PropertyType eType, bool readOnly,
                                  int(U::*memberFunction)(MM::PropertyBase* pProp, MM::ActionType eAct), bool isPreInitProperty=false) {
+      // Check for reserved delimiter (handled in CreateProperty)
       CPropertyAction* pAct = new CPropertyAction((U*) this, memberFunction);
       return CreateProperty(name, value, eType, readOnly, pAct, isPreInitProperty);
    }
@@ -1219,6 +1285,148 @@ protected:
    }
 
 private:
+
+   /**
+    * Low-level implementation for creating standard properties.
+    * 
+    * This template method uses SFINAE (Substitution Failure Is Not An Error) to ensure
+    * that standard properties can only be created for device types they're valid for.
+    * The IsStandardPropertyValid template specializations determine which properties
+    * are valid for which device types at compile time.
+    * 
+    * Note: This is a private implementation method. Device implementations should use 
+    * the specific convenience methods like CreateStandardBinningProperty() instead.
+    * 
+    * @param PropPtr - Pointer to the standard property definition
+    * @param value - Initial value for the property
+    * @param pAct - Optional action functor to handle property changes
+    * @return DEVICE_OK if successful, error code otherwise
+    */
+   template <const MM::StandardProperty& PropRef>
+   typename std::enable_if<MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   CreateStandardProperty(const char* value, MM::ActionFunctor* pAct = 0, const std::vector<std::string>& values = {}) {
+      
+      // Create the full property name with prefix
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += PropRef.name;
+      
+      // Create the property with all appropriate fields
+      int ret = properties_.CreateProperty(fullName.c_str(), value, PropRef.type, 
+                             PropRef.isReadOnly, pAct, PropRef.isPreInit, true);
+      if (ret != DEVICE_OK)
+          return ret;
+
+      // Set limits if they exist
+      if (PropRef.hasLimits()) {
+          ret = SetPropertyLimits(fullName.c_str(), PropRef.lowerLimit, PropRef.upperLimit);
+          if (ret != DEVICE_OK)
+              return ret;
+      }
+      
+       // Ensure the initial value is allowed if the property has predefined allowed values
+      if (!PropRef.allowedValues.empty()) {
+         if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), value) == PropRef.allowedValues.end()) {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+         }
+      }
+      
+      // Set the allowed values using the existing SetStandardPropertyValues function
+      if (!values.empty() || !PropRef.requiredValues.empty()) {
+         ret = SetStandardPropertyValues<PropRef>(values);
+         if (ret != DEVICE_OK)
+            return ret;
+      }
+
+      // Remove from skipped properties if it was previously marked as skipped
+      skippedStandardProperties_.erase(fullName);
+
+      return DEVICE_OK;
+   }
+
+      /**
+    * Sets allowed values for a standard property, clearing any existing values first.
+    * Performs the same validation as when creating the property.
+    * 
+    * @param PropRef - Reference to the standard property definition
+    * @param values - Vector of values to set as allowed values
+    * @return DEVICE_OK if successful, error code otherwise
+    */
+   template <const MM::StandardProperty& PropRef>
+   typename std::enable_if<MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   SetStandardPropertyValues(const std::vector<std::string>& values) {
+      // Create the full property name with prefix
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += PropRef.name;
+      
+      // Check if the property exists
+      if (!HasProperty(fullName.c_str())) {
+         return DEVICE_INVALID_PROPERTY;
+      }
+      
+      // Ensure all supplied values are allowed if the property has predefined allowed values
+      if (!PropRef.allowedValues.empty()) {
+         for (const std::string& val : values) {
+            if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), val) == PropRef.allowedValues.end()) {
+               return DEVICE_INVALID_PROPERTY_VALUE;
+            }
+         }
+      }
+      
+      // Check if all required values are present
+      if (!PropRef.requiredValues.empty()) {
+         for (const std::string& val : PropRef.requiredValues) {
+            if (std::find(values.begin(), values.end(), val) == values.end()) {
+               return DEVICE_INVALID_PROPERTY_VALUE;
+            }
+         }
+      }
+      
+      // Clear existing values
+      int ret = properties_.ClearAllowedValues(fullName.c_str(), true);
+      if (ret != DEVICE_OK)
+         return ret;
+      
+      // Add the new values
+      for (const std::string& val : values) {
+         ret = properties_.AddAllowedValue(fullName.c_str(), val.c_str(), true);
+         if (ret != DEVICE_OK)
+            return ret;
+      }
+      
+      return DEVICE_OK;
+   }
+
+   // This one is purely for providing better error messages at compile time
+   // When an function for setting an invalid standard property is called,
+   // this function will be called and will cause a compilation error.
+   template <const MM::StandardProperty& PropRef>
+   typename std::enable_if<!MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   CreateStandardProperty(const char* /*value*/, MM::ActionFunctor* /*pAct*/ = 0,
+                           const std::vector<std::string>& /*values*/ = std::vector<std::string>()) {
+      static_assert(MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value,
+         "This standard property is not valid for this device type. Check the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE definitions in MMDevice.h");
+      return DEVICE_UNSUPPORTED_COMMAND; // This line will never execute due to the static_assert
+   }
+
+   // Helper method to mark a required standard property as skipped
+   template <const MM::StandardProperty& PropRef>
+   void SkipStandardProperty() {
+      // Only allow skipping properties that are valid for this device type
+      if (MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value) {
+         std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+         fullName += PropRef.name;
+         skippedStandardProperties_.insert(fullName);
+         // Check if the property already exists. If so, delete it.
+         // This is needed because standard properties may be created dynamically not during 
+         // initialization. For example, if they depend on the value of another property, 
+         // and this is not known other than by setting that value on the device. In this case,
+         // the standard property will be created and destroyed as the values change.
+         if (HasProperty(fullName.c_str())) {
+            properties_.Delete(fullName.c_str());
+         }
+      }
+   }
+
    bool PropertyDefined(const char* propName) const
    {
       return properties_.Find(propName) != 0;
@@ -1261,6 +1469,10 @@ private:
    // specific information about the errant property, etc.
    mutable std::string morePropertyErrorInfo_;
    std::string parentID_;
+   
+   // Set to track which standard properties are explicitly skipped
+   std::set<std::string> skippedStandardProperties_;
+   
 };
 
 // Forbid instantiation of CDeviceBase<MM::Device, U>
