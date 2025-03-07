@@ -1416,6 +1416,14 @@ private:
          std::string fullName = MM::g_KeywordStandardPropertyPrefix;
          fullName += PropRef.name;
          skippedStandardProperties_.insert(fullName);
+         // Check if the property already exists. If so, delete it.
+         // This is needed because standard properties may be created dynamically not during 
+         // initialization. For example, if they depend on the value of another property, 
+         // and this is not known other than by setting that value on the device. In this case,
+         // the standard property will be created and destroyed as the values change.
+         if (HasProperty(fullName.c_str())) {
+            properties_.DeleteProperty(fullName.c_str());
+         }
       }
    }
 

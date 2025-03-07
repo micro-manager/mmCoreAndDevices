@@ -492,6 +492,7 @@ public:
    int ApplyAll();
    int Update(const char* Name);
    int Apply(const char* Name);
+   int Delete(const char* pszName);
 
 private:
    typedef std::map<std::string, Property*> CPropArray;
