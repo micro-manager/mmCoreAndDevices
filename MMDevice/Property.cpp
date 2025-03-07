@@ -546,6 +546,9 @@ int MM::PropertyCollection::Delete(const char* pszName)
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY;
+
+   // remove it from the map
+   properties_.erase(pszName);
    
    delete pProp;
    
