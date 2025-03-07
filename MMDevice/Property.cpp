@@ -540,3 +540,14 @@ int MM::PropertyCollection::Apply(const char* pszName)
 
    return pProp->Apply();
 }
+
+int MM::PropertyCollection::Delete(const char* pszName)
+{
+   MM::Property* pProp = Find(pszName);
+   if (!pProp)
+      return DEVICE_INVALID_PROPERTY;
+   
+   delete pProp;
+   
+   return DEVICE_OK;
+}
