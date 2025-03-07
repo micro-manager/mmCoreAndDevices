@@ -1635,7 +1635,7 @@ private:
          // and this is not known other than by setting that value on the device. In this case,
          // the standard property will be created and destroyed as the values change.
          if (HasProperty(fullName.c_str())) {
-            properties_.DeleteProperty(fullName.c_str());
+            properties_.Delete(fullName.c_str());
          }
       }
    }
