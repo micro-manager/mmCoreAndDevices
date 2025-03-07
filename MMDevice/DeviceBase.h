@@ -1315,39 +1315,76 @@ private:
               return ret;
       }
       
-      // Ensure only allowed values are set
+       // Ensure the initial value is allowed if the property has predefined allowed values
       if (!PropRef.allowedValues.empty()) {
-          // If the property has predefined allowed values, validate that all supplied values are allowed
-          if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), value) == PropRef.allowedValues.end()) {
-              return DEVICE_INVALID_PROPERTY_VALUE;
-          }
-          
-          for (const std::string& val : values) {
-              if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), val) == PropRef.allowedValues.end()) {
-                  return DEVICE_INVALID_PROPERTY_VALUE;
-              }
-          }
+         if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), value) == PropRef.allowedValues.end()) {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+         }
       }
-      // if there are required values, make sure they are all present
-      if (!PropRef.requiredValues.empty()) {
-          //  throw an error if required values are not present
-          for (const std::string& val : PropRef.requiredValues) {
-              if (std::find(values.begin(), values.end(), val) == values.end()) {
-                  return DEVICE_INVALID_PROPERTY_VALUE;
-              }
-          }
-      }
-      // now that all required values are present, and all supplied values are allowed, 
-      // add the user-supplied values to the property
-      for (const std::string& val : values) {
-          ret = properties_.AddAllowedValue(fullName.c_str(), val.c_str(), true);
-          if (ret != DEVICE_OK)
-              return ret;
+      
+      // Set the allowed values using the existing SetStandardPropertyValues function
+      if (!values.empty() || !PropRef.requiredValues.empty()) {
+         ret = SetStandardPropertyValues<PropRef>(values);
+         if (ret != DEVICE_OK)
+            return ret;
       }
 
       // Remove from skipped properties if it was previously marked as skipped
       skippedStandardProperties_.erase(fullName);
 
+      return DEVICE_OK;
+   }
+
+      /**
+    * Sets allowed values for a standard property, clearing any existing values first.
+    * Performs the same validation as when creating the property.
+    * 
+    * @param PropRef - Reference to the standard property definition
+    * @param values - Vector of values to set as allowed values
+    * @return DEVICE_OK if successful, error code otherwise
+    */
+   template <const MM::StandardProperty& PropRef>
+   typename std::enable_if<MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   SetStandardPropertyValues(const std::vector<std::string>& values) {
+      // Create the full property name with prefix
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += PropRef.name;
+      
+      // Check if the property exists
+      if (!HasProperty(fullName.c_str())) {
+         return DEVICE_INVALID_PROPERTY;
+      }
+      
+      // Ensure all supplied values are allowed if the property has predefined allowed values
+      if (!PropRef.allowedValues.empty()) {
+         for (const std::string& val : values) {
+            if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), val) == PropRef.allowedValues.end()) {
+               return DEVICE_INVALID_PROPERTY_VALUE;
+            }
+         }
+      }
+      
+      // Check if all required values are present
+      if (!PropRef.requiredValues.empty()) {
+         for (const std::string& val : PropRef.requiredValues) {
+            if (std::find(values.begin(), values.end(), val) == values.end()) {
+               return DEVICE_INVALID_PROPERTY_VALUE;
+            }
+         }
+      }
+      
+      // Clear existing values
+      int ret = ClearAllowedValues(fullName.c_str(), true);
+      if (ret != DEVICE_OK)
+         return ret;
+      
+      // Add the new values
+      for (const std::string& val : values) {
+         ret = properties_.AddAllowedValue(fullName.c_str(), val.c_str(), true);
+         if (ret != DEVICE_OK)
+            return ret;
+      }
+      
       return DEVICE_OK;
    }
 
