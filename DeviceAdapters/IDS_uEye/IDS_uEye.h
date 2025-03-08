@@ -217,7 +217,7 @@ string triggerModeToString(int triggerMode){
 
 class MySequenceThread;
 
-class CIDS_uEye : public CCameraBase<CIDS_uEye>  
+class CIDS_uEye : public CLegacyCameraBase<CIDS_uEye>  
 {
   
  public:

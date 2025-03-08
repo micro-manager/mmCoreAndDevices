@@ -127,10 +127,10 @@ public:
 };
 
 
-class TesterCamera : public TesterBase<CCameraBase, TesterCamera>
+class TesterCamera : public TesterBase<CLegacyCameraBase, TesterCamera>
 {
    typedef TesterCamera Self;
-   typedef TesterBase< ::CCameraBase, TesterCamera > Super;
+   typedef TesterBase< ::CLegacyCameraBase, TesterCamera > Super;
 
 public:
    TesterCamera(const std::string& name);
