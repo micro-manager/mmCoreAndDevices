@@ -21,8 +21,11 @@
 
 #include "DeviceInstanceBase.h"
 #include <atomic>
+<<<<<<< HEAD
 #include <condition_variable>
 #include <mutex>
+=======
+>>>>>>> snap_insert_image
 #include "../FrameBuffer.h"
 
 
