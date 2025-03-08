@@ -127,10 +127,60 @@ int CameraInstance::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
    return GetImpl()->GetMultiROI(xs, ys, widths, heights, length);
 }
 
-int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); }
-int CameraInstance::StartSequenceAcquisition(double interval_ms) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(interval_ms); }
-int CameraInstance::StopSequenceAcquisition() { RequireInitialized(__func__); return GetImpl()->StopSequenceAcquisition(); }
-int CameraInstance::PrepareSequenceAcqusition() { RequireInitialized(__func__); return GetImpl()->PrepareSequenceAcqusition(); }
+int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) {
+    RequireInitialized(__func__); 
+
+    if (!GetImpl()->IsNewAPIImplemented()) {
+        return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); 
+    } else {
+        int ret = GetImpl()->AcquisitionArm(numImages);
+        if (ret != DEVICE_OK) {
+            return ret;
+        }
+        ret = GetImpl()->AcquisitionStart();
+        if (ret != DEVICE_OK) {
+            return ret;
+        }
+    }
+}
+
+int CameraInstance::StartSequenceAcquisition(double interval_ms) { 
+    RequireInitialized(__func__); 
+
+    if (!GetImpl()->IsNewAPIImplemented()) {
+        return GetImpl()->StartSequenceAcquisition(interval_ms); 
+    } else {
+        int ret = GetImpl()->AcquisitionArm();
+        if (ret != DEVICE_OK) {
+            return ret;
+        }
+        ret = GetImpl()->AcquisitionStart();
+        if (ret != DEVICE_OK) {
+            return ret;
+        }
+    }
+}
+
+int CameraInstance::StopSequenceAcquisition() { 
+   RequireInitialized(__func__); 
+   if (!GetImpl()->IsNewAPIImplemented()) {
+      return GetImpl()->StopSequenceAcquisition();
+   } else {
+      return GetImpl()->AcquisitionStop();
+   }
+}
+
+int CameraInstance::PrepareSequenceAcqusition() { 
+   RequireInitialized(__func__); 
+   if (!GetImpl()->IsNewAPIImplemented()) {
+      return GetImpl()->PrepareSequenceAcqusition();
+   } else {
+      // nothing to do here. The new API has an arm method, but it requires the number of frames to acquire
+      // so it can't be called here.
+      return DEVICE_OK;
+   }   
+}
+
 bool CameraInstance::IsCapturing() { RequireInitialized(__func__); return GetImpl()->IsCapturing(); }
 
 std::string CameraInstance::GetTags()

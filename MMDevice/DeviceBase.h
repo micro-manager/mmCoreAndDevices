@@ -2012,18 +2012,17 @@ public:
 
    // Final so derived classes cannot override
    virtual bool IsNewAPIImplemented() final {return true;}
-
    // Old camera API: disabled
    virtual const unsigned char* GetImageBuffer() final {return nullptr;}
    virtual long GetImageBufferSize() const final {return 0;}
    virtual int SnapImage() final {return DEVICE_NOT_YET_IMPLEMENTED;}
    virtual const unsigned int* GetImageBufferAsRGB32() final {return nullptr;}
 
-   virtual int StartSequenceAcquisition(double interval) final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual int StartSequenceAcquisition(double /* interval */) final {return DEVICE_NOT_YET_IMPLEMENTED;}
    virtual int StopSequenceAcquisition() final {return DEVICE_NOT_YET_IMPLEMENTED;}
    virtual int PrepareSequenceAcqusition() final {return DEVICE_NOT_YET_IMPLEMENTED;}
-   virtual int StartSequenceAcquisition(long numImages, double interval_ms, 
-                              bool stopOnOverflow) final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual int StartSequenceAcquisition(long /* numImages */, double /* interval_ms */, 
+                              bool /* stopOnOverflow */) final {return DEVICE_NOT_YET_IMPLEMENTED;}
    virtual const unsigned char* GetImageBuffer(unsigned /* channelNr */) final {return nullptr;}  
    // TODO: do this in terms of the standard property
    // TODO: these are in ms but the standard property is in us

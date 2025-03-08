@@ -2341,19 +2341,92 @@ CMMCameraEventHandler::CMMCameraEventHandler(BaslerCamera* dev) :
 
 void CMMCameraEventHandler::OnCameraEvent(CBaslerUniversalInstantCamera& camera, intptr_t userProvidedId, GenApi::INode* pNode)
 {
-	{
-		(void)camera;
-		(void)userProvidedId;
-		CParameter value(pNode);
-		if (value.IsValid())
-		{
-			stringstream  msg;
-			msg << "Temperature State of camera has been changed to : " << camera.TemperatureState.ToString();
-			dev_->AddToLog(msg.str());
-			dev_->UpdateTemperature();
-		}
-		std::cout << std::endl;
-	}
+    // Cast parameters to void to avoid unused parameter warnings
+    (void)userProvidedId;
+    
+    // Get the node name
+    CParameter parameter(pNode);
+    if (!parameter.IsValid())
+        return;
+    
+    // Get the node name
+    std::string nodeName = parameter.GetNode()->GetName().c_str();
+	nodeName += " ";
+	
+    // // Build a message with event details
+    // stringstream msg;
+    // msg << "Camera Event: " << nodeName;
+    
+    // // Handle specific event types
+    // if (nodeName.find("Temperature") != std::string::npos) {
+    //     // Temperature event
+    //     msg << " - Temperature State: " << camera.TemperatureState.ToString();
+    //     dev_->UpdateTemperature();
+    // }
+    // else if (nodeName.find("ExposureEnd") != std::string::npos) {
+    //     // Exposure end event
+    //     if (IsAvailable(camera.EventExposureEndFrameID)) {
+    //         msg << " - Frame ID: " << camera.EventExposureEndFrameID.GetValue();
+    //     }
+    //     if (IsAvailable(camera.EventExposureEndTimestamp)) {
+    //         msg << " - Timestamp: " << camera.EventExposureEndTimestamp.GetValue();
+    //     }
+    // }
+    // else if (nodeName.find("FrameStart") != std::string::npos) {
+    //     // Frame start event
+    //     if (IsAvailable(camera.EventFrameStartFrameID)) {
+    //         msg << " - Frame ID: " << camera.EventFrameStartFrameID.GetValue();
+    //     }
+    //     if (IsAvailable(camera.EventFrameStartTimestamp)) {
+    //         msg << " - Timestamp: " << camera.EventFrameStartTimestamp.GetValue();
+    //     }
+    // }
+    // else if (nodeName.find("FrameTrigger") != std::string::npos) {
+    //     // Frame trigger event
+    //     if (IsAvailable(camera.EventFrameTriggerFrameID)) {
+    //         msg << " - Frame ID: " << camera.EventFrameTriggerFrameID.GetValue();
+    //     }
+    //     if (IsAvailable(camera.EventFrameTriggerTimestamp)) {
+    //         msg << " - Timestamp: " << camera.EventFrameTriggerTimestamp.GetValue();
+    //     }
+    // }
+    // else if (nodeName.find("Line") != std::string::npos) {
+    //     // Line event (e.g., LineRisingEdge, LineFallingEdge)
+    //     if (nodeName.find("RisingEdge") != std::string::npos && IsAvailable(camera.EventLineRisingEdgeTimestamp)) {
+    //         msg << " - Timestamp: " << camera.EventLineRisingEdgeTimestamp.GetValue();
+    //     }
+    //     else if (nodeName.find("FallingEdge") != std::string::npos && IsAvailable(camera.EventLineFallingEdgeTimestamp)) {
+    //         msg << " - Timestamp: " << camera.EventLineFallingEdgeTimestamp.GetValue();
+    //     }
+    // }
+    
+    // // Try to get any additional data from the event
+    // try {
+    //     // For integer nodes
+    //     CIntegerPtr intNode = dynamic_cast<CIntegerPtr::element_type*>(pNode);
+    //     if (intNode && IsReadable(intNode)) {
+    //         msg << " - Value: " << intNode->GetValue();
+    //     }
+        
+    //     // For float nodes
+    //     CFloatPtr floatNode = dynamic_cast<CFloatPtr::element_type*>(pNode);
+    //     if (floatNode && IsReadable(floatNode)) {
+    //         msg << " - Value: " << floatNode->GetValue();
+    //     }
+        
+    //     // For enum nodes
+    //     CEnumerationPtr enumNode = dynamic_cast<CEnumerationPtr::element_type*>(pNode);
+    //     if (enumNode && IsReadable(enumNode)) {
+    //         msg << " - Value: " << enumNode->ToString();
+    //     }
+    // }
+    // catch (const GenericException& e) {
+    //     // Silently ignore errors when trying to read values
+    //     msg << " (Error reading value: " << e.GetDescription() << ")";
+    // }
+    
+    // // Log the event
+    // dev_->AddToLog(msg.str());
 }
 
 BufferInserter::BufferInserter(BaslerCamera* dev) :
