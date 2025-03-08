@@ -25,6 +25,7 @@
 int CameraInstance::SnapImage() { 
    RequireInitialized(__func__); 
    isSnapping_.store(true);
+   insertImageCounter_.store(0);
    int ret = GetImpl()->SnapImage();
    isSnapping_.store(false);
    return ret;
@@ -202,10 +203,8 @@ void CameraInstance::StoreSnappedImage(const unsigned char* buf, unsigned width,
         snappedImage_.Resize(width, height, byteDepth);
    }
     
-   // Assume channel 0
-   snappedImage_.SetPixels(0, buf);
+   // For multi-channel cameras, insertImage will be called once for each channel
+   snappedImage_.SetPixels(insertImageCounter_.load(), buf);
+   insertImageCounter_.fetch_add(1);
 
-   // now ready for GetImage to be called
-   isSnapping_.store(false);
-   
 }
