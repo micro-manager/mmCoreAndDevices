@@ -214,7 +214,6 @@ BaslerCamera::BaslerCamera() :
 BaslerCamera::~BaslerCamera()
 {
 	if (Buffer4ContinuesShot != NULL)
-	if (Buffer4ContinuesShot != NULL)
 	{
 		free(Buffer4ContinuesShot);
 	}
@@ -921,6 +920,12 @@ int BaslerCamera::Initialize()
 			<< e.GetDescription() << endl;
 		return DEVICE_ERR;
 	}
+
+
+	ImageHandler_ = new BufferInserter(this);
+	camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
+
+
 	return DEVICE_OK;
 }
 
@@ -959,9 +964,6 @@ int BaslerCamera::AcquisitionArm(int frameCount)
 		}
 	}
 
-	ImageHandler_ = new BufferInserter(this);
-	camera_->RegisterImageEventHandler(ImageHandler_, RegistrationMode_Append, Cleanup_Delete);
-
 	return DEVICE_OK;
 }
 
@@ -977,18 +979,21 @@ int BaslerCamera::AcquisitionStart()
 	// be explicitly armed before starting, which means that the application
 	// can open the shutter as needed just before starting the acquisition.
 	int ret = GetCoreCallback()->PrepareForAcq(this);
-      if (ret != DEVICE_OK)
-         return ret;
+	if (ret != DEVICE_OK)
+		return ret;
 
-	//The GenICam AcquisitionStart gets called automatically by StartGrabbing
-	if (multiFrameAcqCount_ == 0) {
-		// acquire until told to stop
-		camera_->StartGrabbing(GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-	} else {
-		// acquire a set number of frames
-		camera_->StartGrabbing(multiFrameAcqCount_, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-	}
-	return DEVICE_OK;
+    // The GenICam AcquisitionStart gets called automatically by StartGrabbing
+    if (multiFrameAcqCount_ == 1) {
+        // For single frame acquisition, still use background thread but limit to 1 frame
+        camera_->StartGrabbing(1, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+    } else if (multiFrameAcqCount_ <= 0) {
+        // For continuous acquisition (until stopped)
+        camera_->StartGrabbing(GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+    } else {
+        // For multi-frame acquisition with specific count
+        camera_->StartGrabbing(multiFrameAcqCount_, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+    }
+    return DEVICE_OK;
 }
 
 int BaslerCamera::AcquisitionStop()
@@ -996,7 +1001,6 @@ int BaslerCamera::AcquisitionStop()
 	// The GenICam AcquisitionStop gets called automatically by StopGrabbing
 	// CCommandParameter(nodeMap_, "AcquisitionStop").Execute();
 	camera_->StopGrabbing();
-	camera_->DeregisterImageEventHandler(ImageHandler_);
 	// This tells the core that the acquisition is finished.
 	// so that it can close the current shutter.
 	int ret = GetCoreCallback()->AcqFinished(this, 0);
@@ -1081,8 +1085,9 @@ int BaslerCamera::SetProperty(const char* name, const char* value)
 */
 int BaslerCamera::Shutdown()
 {
-	if (!camera_)
+	if (camera_)
 	{
+		camera_->DeregisterImageEventHandler(ImageHandler_);
 		camera_->Close();
 		delete camera_;
 	}
