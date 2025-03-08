@@ -25,23 +25,7 @@
 int CameraInstance::SnapImage() { 
    RequireInitialized(__func__); 
    isSnapping_.store(true);
-   int ret = DEVICE_OK;
-   if (!GetImpl()->IsNewAPIImplemented()) {
-      ret = GetImpl()->SnapImage();
-   } else {
-      ret = GetImpl()->AcquisitionArm(1);
-      if (ret != DEVICE_OK) {
-         isSnapping_.store(false);
-         return ret;
-      }
-      ret = GetImpl()->AcquisitionStart();
-
-      // Use condition variable to wait for image capture
-      std::unique_lock<std::mutex> lock(imageMutex_);
-      imageAvailable_.wait(lock, [this]() { 
-         return !GetImpl()->IsCapturing() || !isSnapping_.load(); 
-      });
-   }
+   int ret = GetImpl()->SnapImage();
    isSnapping_.store(false);
    return ret;
 }
@@ -224,9 +208,4 @@ void CameraInstance::StoreSnappedImage(const unsigned char* buf, unsigned width,
    // now ready for GetImage to be called
    isSnapping_.store(false);
    
-   // Notify any waiting threads that the image is available
-   {
-      std::lock_guard<std::mutex> lock(imageMutex_);
-      imageAvailable_.notify_all();
-   }
 }

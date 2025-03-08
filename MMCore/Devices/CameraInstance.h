@@ -21,8 +21,6 @@
 
 #include "DeviceInstanceBase.h"
 #include <atomic>
-#include <condition_variable>
-#include <mutex>
 #include "../FrameBuffer.h"
 
 
@@ -102,7 +100,4 @@ private:
    
    // Frame buffer to store captured images
    mm::FrameBuffer snappedImage_;
-
-   std::mutex imageMutex_;
-   std::condition_variable imageAvailable_;
 };
