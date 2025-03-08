@@ -22,10 +22,57 @@
 #include "CameraInstance.h"
 
 
-int CameraInstance::SnapImage() { RequireInitialized(__func__); return GetImpl()->SnapImage(); }
-const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(); }
-const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(channelNr); }
-const unsigned int* CameraInstance::GetImageBufferAsRGB32() { RequireInitialized(__func__); return GetImpl()->GetImageBufferAsRGB32(); }
+int CameraInstance::SnapImage() { 
+   RequireInitialized(__func__); 
+   isSnapping_.store(true);
+   int ret = DEVICE_OK;
+   if (!GetImpl()->IsNewAPIImplemented()) {
+      ret = GetImpl()->SnapImage();
+   } else {
+      ret = GetImpl()->AcquisitionArm(1);
+      if (ret != DEVICE_OK) {
+         isSnapping_.store(false);
+         return ret;
+      }
+      ret = GetImpl()->AcquisitionStart();
+
+      // Use condition variable to wait for image capture
+      std::unique_lock<std::mutex> lock(imageMutex_);
+      imageAvailable_.wait(lock, [this]() { 
+         return !GetImpl()->IsCapturing() || !isSnapping_.load(); 
+      });
+   }
+   isSnapping_.store(false);
+   return ret;
+}
+
+const unsigned char* CameraInstance::GetImageBuffer() { 
+   RequireInitialized(__func__);
+   const unsigned char* snappedPixels = snappedImage_.GetPixels(0);
+   if (snappedPixels != nullptr) {
+      return snappedPixels;
+   }
+   return GetImpl()->GetImageBuffer(); 
+}
+
+const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) {
+    RequireInitialized(__func__); 
+    const unsigned char* snappedPixels = snappedImage_.GetPixels(channelNr);
+    if (snappedPixels != nullptr) {
+      return snappedPixels;
+    }
+    return GetImpl()->GetImageBuffer(channelNr); 
+}
+
+const unsigned int* CameraInstance::GetImageBufferAsRGB32() { 
+   RequireInitialized(__func__); 
+   const unsigned int* snappedPixels = reinterpret_cast<const unsigned int*>(snappedImage_.GetPixels(0));
+   if (snappedPixels != nullptr) {
+      return snappedPixels;
+   }
+   return GetImpl()->GetImageBufferAsRGB32(); 
+}
+
 unsigned CameraInstance::GetNumberOfComponents() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfComponents(); }
 
 std::string CameraInstance::GetComponentName(unsigned component)
@@ -154,3 +201,32 @@ int CameraInstance::StopExposureSequence() { RequireInitialized(__func__); retur
 int CameraInstance::ClearExposureSequence() { RequireInitialized(__func__); return GetImpl()->ClearExposureSequence(); }
 int CameraInstance::AddToExposureSequence(double exposureTime_ms) { RequireInitialized(__func__); return GetImpl()->AddToExposureSequence(exposureTime_ms); }
 int CameraInstance::SendExposureSequence() const { RequireInitialized(__func__); return GetImpl()->SendExposureSequence(); }
+
+bool CameraInstance::IsSnapping() const {
+   return isSnapping_.load();
+}
+
+void CameraInstance::StoreSnappedImage(const unsigned char* buf, unsigned width, unsigned height, 
+                                       unsigned byteDepth, unsigned nComponents) {        
+   // Calculate total buffer size needed
+   size_t totalBytes = width * height * byteDepth * nComponents;
+    
+   // If the buffer doesn't exist or has wrong dimensions, create/resize it
+   if (snappedImage_.Width() != width || 
+        snappedImage_.Height() != height || 
+        snappedImage_.Depth() != byteDepth) {
+        snappedImage_.Resize(width, height, byteDepth);
+   }
+    
+   // Assume channel 0
+   snappedImage_.SetPixels(0, buf);
+
+   // now ready for GetImage to be called
+   isSnapping_.store(false);
+   
+   // Notify any waiting threads that the image is available
+   {
+      std::lock_guard<std::mutex> lock(imageMutex_);
+      imageAvailable_.notify_all();
+   }
+}
