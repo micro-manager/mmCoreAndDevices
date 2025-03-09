@@ -91,8 +91,7 @@ public:
     * @return true if the camera is currently snapping an image, false otherwise
     */
    bool IsSnapping() const;
-   void StoreSnappedImage(const unsigned char* buf, unsigned width, unsigned height, 
-                          unsigned byteDepth, unsigned nComponents);
+   void StoreSnappedImage(const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth);
 
 private:
    // Atomic flag to track if the camera is currently snapping an image
