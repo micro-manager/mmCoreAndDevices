@@ -258,7 +258,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
         std::shared_ptr<CameraInstance> camera = std::static_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
         if (camera->IsSnapping()) {
             // Don't do any metadata or image processing, for consistency with the existing SnapImage()/GetImage() methods
-            camera->StoreSnappedImage(buf, width, height, byteDepth, 1);
+            camera->StoreSnappedImage(buf, width, height, byteDepth);
             return DEVICE_OK;
         }
    }
@@ -302,7 +302,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
         std::shared_ptr<CameraInstance> camera = std::static_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
         if (camera->IsSnapping()) {
             // Don't do any metadata or image processing, for consistency with the existing SnapImage()/GetImage() methods
-            camera->StoreSnappedImage(buf, width, height, byteDepth, nComponents);
+            camera->StoreSnappedImage(buf, width, height, byteDepth);
             return DEVICE_OK;
         }
     }

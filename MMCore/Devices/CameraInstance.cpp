@@ -259,7 +259,7 @@ bool CameraInstance::IsSnapping() const {
 }
 
 void CameraInstance::StoreSnappedImage(const unsigned char* buf, unsigned width, unsigned height, 
-                                       unsigned byteDepth, unsigned nComponents) {        
+                                       unsigned byteDepth) {        
    // If the buffer doesn't exist or has wrong dimensions, create/resize it
    if (snappedImage_.Width() != width || 
         snappedImage_.Height() != height || 
