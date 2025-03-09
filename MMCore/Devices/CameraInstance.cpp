@@ -188,6 +188,7 @@ int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms,
         if (ret != DEVICE_OK) {
             return ret;
         }
+      return DEVICE_OK;
     }
 }
 
@@ -205,6 +206,7 @@ int CameraInstance::StartSequenceAcquisition(double interval_ms) {
         if (ret != DEVICE_OK) {
             return ret;
         }
+        return DEVICE_OK;
     }
 }
 
