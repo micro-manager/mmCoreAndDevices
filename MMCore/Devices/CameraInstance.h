@@ -105,5 +105,5 @@ private:
 
    std::mutex imageMutex_;
    std::condition_variable imageAvailable_;
-   std::atomic<int> insertImageCounter_{0};
+   std::atomic<int> multiChannelImageCounter_{0};
 };

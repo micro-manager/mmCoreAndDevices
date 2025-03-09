@@ -25,6 +25,7 @@
 int CameraInstance::SnapImage() { 
    RequireInitialized(__func__); 
    isSnapping_.store(true);
+   multiChannelImageCounter_.store(0);
    int ret = DEVICE_OK;
    if (!GetImpl()->IsNewAPIImplemented()) {
       ret = GetImpl()->SnapImage();
@@ -38,7 +39,7 @@ int CameraInstance::SnapImage() {
       // Use condition variable to wait for image capture
       std::unique_lock<std::mutex> lock(imageMutex_);
       imageAvailable_.wait(lock, [this]() {
-         return (!GetImpl()->IsCapturing() && insertImageCounter_.load() == GetImpl()->GetNumberOfChannels());
+         return (!GetImpl()->IsCapturing() && multiChannelImageCounter_.load() == GetImpl()->GetNumberOfChannels());
       });
    }
    isSnapping_.store(false);
@@ -268,8 +269,8 @@ void CameraInstance::StoreSnappedImage(const unsigned char* buf, unsigned width,
    }
     
    // For multi-channel cameras, insertImage will be called once for each channel
-   snappedImage_.SetPixels(insertImageCounter_.load(), buf);
-   insertImageCounter_.fetch_add(1);
+   snappedImage_.SetPixels(multiChannelImageCounter_.load(), buf);
+   multiChannelImageCounter_.fetch_add(1);
    
    // Notify any waiting threads that the image is available
    {
