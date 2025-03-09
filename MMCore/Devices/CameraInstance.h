@@ -100,5 +100,5 @@ private:
    
    // Frame buffer to store captured images
    mm::FrameBuffer snappedImage_;
-   std::atomic<int> insertImageCounter_{0};
+   std::atomic<int> multiChannelImageCounter_{0};
 };
