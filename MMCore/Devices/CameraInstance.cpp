@@ -35,11 +35,10 @@ int CameraInstance::SnapImage() {
          return ret;
       }
       ret = GetImpl()->AcquisitionStart();
-
       // Use condition variable to wait for image capture
       std::unique_lock<std::mutex> lock(imageMutex_);
-      imageAvailable_.wait(lock, [this]() { 
-         return !GetImpl()->IsCapturing() || !isSnapping_.load(); 
+      imageAvailable_.wait(lock, [this]() {
+         return (!GetImpl()->IsCapturing() && insertImageCounter_.load() == GetImpl()->GetNumberOfChannels());
       });
    }
    isSnapping_.store(false);
@@ -268,11 +267,9 @@ void CameraInstance::StoreSnappedImage(const unsigned char* buf, unsigned width,
         snappedImage_.Resize(width, height, byteDepth);
    }
     
-   // Assume channel 0
-   snappedImage_.SetPixels(0, buf);
-
-   // now ready for GetImage to be called
-   isSnapping_.store(false);
+   // For multi-channel cameras, insertImage will be called once for each channel
+   snappedImage_.SetPixels(insertImageCounter_.load(), buf);
+   insertImageCounter_.fetch_add(1);
    
    // Notify any waiting threads that the image is available
    {

@@ -21,11 +21,8 @@
 
 #include "DeviceInstanceBase.h"
 #include <atomic>
-<<<<<<< HEAD
 #include <condition_variable>
 #include <mutex>
-=======
->>>>>>> snap_insert_image
 #include "../FrameBuffer.h"
 
 
@@ -108,4 +105,5 @@ private:
 
    std::mutex imageMutex_;
    std::condition_variable imageAvailable_;
+   std::atomic<int> insertImageCounter_{0};
 };
