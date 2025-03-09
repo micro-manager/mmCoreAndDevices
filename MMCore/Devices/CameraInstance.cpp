@@ -21,6 +21,54 @@
 
 #include "CameraInstance.h"
 
+//// New Camera API 
+   int CameraInstance::TriggerSoftware() {
+     if (!GetImpl()->IsNewAPIImplemented()) {
+        // Exception
+        throw CMMError("TriggerSoftware is not implemented in the old camera API");
+     } else {
+        return GetImpl()->TriggerSoftware();
+     }
+   }
+
+   int CameraInstance::AcquisitionStart() {
+      if (!GetImpl()->IsNewAPIImplemented()) {
+         if (frameCount_ <= 0) {
+            // Go until stopped
+            return GetImpl()->StartSequenceAcquisition(0);
+         } else {
+            return GetImpl()->StartSequenceAcquisition(frameCount_, 0, true);
+         }
+      } else {
+         return GetImpl()->AcquisitionStart();
+      }
+   }
+
+   int CameraInstance::AcquisitionArm(int frameCount) {
+      if (!GetImpl()->IsNewAPIImplemented()) {
+         frameCount_ = frameCount;
+         return GetImpl()->PrepareSequenceAcqusition();
+      } else {
+         return GetImpl()->AcquisitionArm(frameCount);
+      }
+   }
+   
+   int CameraInstance::AcquisitionStop() {
+      if (!GetImpl()->IsNewAPIImplemented()) {
+         return GetImpl()->StopSequenceAcquisition();
+      } else {
+         return GetImpl()->AcquisitionStop();
+      }
+   }
+   
+   int CameraInstance::AcquisitionAbort() {
+      if (!GetImpl()->IsNewAPIImplemented()) {
+         return GetImpl()->StopSequenceAcquisition();
+      } else {
+         return GetImpl()->AcquisitionAbort();
+      }
+   }
+// End New Camera API
 
 int CameraInstance::SnapImage() { 
    RequireInitialized(__func__); 
@@ -31,16 +79,14 @@ int CameraInstance::SnapImage() {
       ret = GetImpl()->SnapImage();
    } else {
       ret = GetImpl()->AcquisitionArm(1);
-      if (ret != DEVICE_OK) {
-         isSnapping_.store(false);
-         return ret;
+      if (ret == DEVICE_OK) {
+         ret = GetImpl()->AcquisitionStart();
+         // Use condition variable to wait for image capture
+         std::unique_lock<std::mutex> lock(imageMutex_);
+         while (multiChannelImageCounter_.load() != (int) GetImpl()->GetNumberOfChannels()) {
+            imageAvailable_.wait(lock);
+         }
       }
-      ret = GetImpl()->AcquisitionStart();
-      // Use condition variable to wait for image capture
-      std::unique_lock<std::mutex> lock(imageMutex_);
-      imageAvailable_.wait(lock, [this]() {
-         return (!GetImpl()->IsCapturing() && multiChannelImageCounter_.load() == GetImpl()->GetNumberOfChannels());
-      });
    }
    isSnapping_.store(false);
    return ret;
@@ -198,7 +244,7 @@ int CameraInstance::StartSequenceAcquisition(double interval_ms) {
     if (!GetImpl()->IsNewAPIImplemented()) {
         return GetImpl()->StartSequenceAcquisition(interval_ms); 
     } else {
-        int ret = GetImpl()->AcquisitionArm();
+        int ret = GetImpl()->AcquisitionArm(0); // 0 means until stopped (e.g. live mode)
         if (ret != DEVICE_OK) {
             return ret;
         }

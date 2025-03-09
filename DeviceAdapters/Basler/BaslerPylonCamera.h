@@ -99,8 +99,6 @@ public:
 	int TriggerSoftware();
 
 	int AcquisitionArm(int frameCount);
-	int AcquisitionArm();
-
 	int AcquisitionStart();
 	int AcquisitionStop();
 	int AcquisitionAbort();

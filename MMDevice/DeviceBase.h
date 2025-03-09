@@ -1925,17 +1925,22 @@ public:
       SkipTriggerSourceStandardProperty();
       SkipTriggerActivationStandardProperty();
       SkipTriggerDelayStandardProperty();
+      SkipTriggerOverlapStandardProperty();
+
       SkipExposureModeStandardProperty();
+      SkipExposureTimeStandardProperty();   
+
       SkipBurstFrameCountStandardProperty();
       SkipLineSelectorStandardProperty();
       SkipLineInverterStandardProperty();
       SkipLineSourceStandardProperty();
+      SkipLineModeStandardProperty();
       SkipLineStatusStandardProperty();
+      SkipEventSelectorStandardProperty();
+      SkipEventNotificationStandardProperty();
+   
       SkipRollingShutterLineOffsetStandardProperty();
       SkipRollingShutterActiveLinesStandardProperty();
-      SkipEventNotificationStandardProperty();
-      SkipTriggerOverlapStandardProperty();
-      SkipExposureTimeStandardProperty();   
    }
 
    // Shared functionality with no default implementation
@@ -1972,8 +1977,6 @@ public:
    virtual int TriggerSoftware() final {return DEVICE_NOT_YET_IMPLEMENTED;};
 
    virtual int AcquisitionArm(int /* frameCount */) final {return DEVICE_NOT_YET_IMPLEMENTED;};
-   virtual int AcquisitionArm() final { return DEVICE_NOT_YET_IMPLEMENTED; };
-
    virtual int AcquisitionStart() final {return DEVICE_NOT_YET_IMPLEMENTED;};
    virtual int AcquisitionStop() final {return DEVICE_NOT_YET_IMPLEMENTED;};
    virtual int AcquisitionAbort() final {return DEVICE_NOT_YET_IMPLEMENTED;};
@@ -2034,8 +2037,6 @@ public:
    virtual int TriggerSoftware() = 0;
 
    virtual int AcquisitionArm(int frameCount) = 0;
-   virtual int AcquisitionArm() = 0;
-
    virtual int AcquisitionStart() = 0;
    virtual int AcquisitionStop() = 0;
    virtual int AcquisitionAbort() = 0;

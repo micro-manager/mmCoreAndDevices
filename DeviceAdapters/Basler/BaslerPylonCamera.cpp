@@ -967,11 +967,6 @@ int BaslerCamera::AcquisitionArm(int frameCount)
 	return DEVICE_OK;
 }
 
-int BaslerCamera::AcquisitionArm()
-{
-	return AcquisitionArm(0);
-}
-
 int BaslerCamera::AcquisitionStart()
 {
 	// This tells the core to open the current shutter. 

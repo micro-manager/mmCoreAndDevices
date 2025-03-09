@@ -803,10 +803,9 @@ namespace MM {
       // Don't acqMode because it can be inferred from frameCount
       // if frameCount is:    1 --> acqMode is single
       //                    > 1 --> acqMode is MultiFrame
-      //                     -1 --> acqMode is continuous
+      //                     <= 0 --> acqMode is continuous
 
       virtual int AcquisitionArm(int frameCount) = 0;
-      virtual int AcquisitionArm() = 0;
 
       // Starts the Acquisition of the device. The number of frames captured is specified by AcquisitionMode.
       // Note that unless the AcquisitionArm was executed since the last feature change, 

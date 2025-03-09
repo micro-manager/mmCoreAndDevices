@@ -40,6 +40,16 @@ public:
       DeviceInstanceBase<MM::Camera>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 
+
+   // New Camera API
+   int TriggerSoftware();
+   int AcquisitionStart();
+   int AcquisitionArm(int frameCount);
+   int AcquisitionArm();
+   int AcquisitionStop();
+   int AcquisitionAbort();
+   /// End New Camera API
+
    int SnapImage();
    const unsigned char* GetImageBuffer();
    const unsigned char* GetImageBuffer(unsigned channelNr);
@@ -101,8 +111,10 @@ private:
    
    // Frame buffer to store captured images
    mm::FrameBuffer snappedImage_;
-
    std::mutex imageMutex_;
    std::condition_variable imageAvailable_;
    std::atomic<int> multiChannelImageCounter_{0};
+
+   // Used for interconversion between old and new camera API
+   int frameCount_;
 };
