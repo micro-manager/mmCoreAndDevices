@@ -467,8 +467,8 @@ namespace MM {
    // the FrameBurstStart trigger is enabled and the FrameBurstEnd trigger is disabled. Note that 
    // the total number of frames captured is also conditioned by AcquisitionFrameCount if 
    //AcquisitionMode is MultiFrame and ignored if AcquisitionMode is Single.
-   static const MM::StandardProperty g_BurstFrameCountProperty{
-      "BurstFrameCount",    // name
+   static const MM::StandardProperty g_AcquisitionBurstFrameCountProperty{
+      "AcquisitionBurstFrameCount",    // name
       Integer,              // type
       false,                // isReadOnly
       false,                // isPreInit
@@ -477,7 +477,7 @@ namespace MM {
       1,                    // lowerLimit
       PropertyLimitUndefined, // upperLimit
    };
-   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_BurstFrameCountProperty)
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionBurstFrameCountProperty)
 
 
    // Selects the physical line (or pin) of the external device connector to configure.

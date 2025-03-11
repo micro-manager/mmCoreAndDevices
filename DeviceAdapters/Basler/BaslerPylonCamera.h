@@ -131,6 +131,8 @@ public:
 	int OnAcquisitionStatusSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAcquisitionStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+	int OnAcquisitionBurstFrameCount(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 
 	// non-standard properties
 	int OnAcqFramerate(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -189,22 +191,6 @@ public:
 
 	std::vector<std::string> GetAvailableEnumValues(const GenApi::IEnumeration& node);
 
-	// Standard property initialization functions
-	int InitTriggerSelectorStandardProperty();
-	int InitTriggerModeStandardProperty();
-	int InitTriggerSourceStandardProperty();
-	int InitTriggerActivationStandardProperty();
-	int InitTriggerDelayStandardProperty();
-	int InitTriggerOverlapStandardProperty();
-	int InitExposureModeStandardProperty();
-	int InitExposureTimeStandardProperty();
-	int InitLineSelectorStandardProperty();
-	int InitLineModeStandardProperty();
-	int InitLineInverterStandardProperty();
-	int InitLineSourceStandardProperty();
-	int InitLineStatusStandardProperty();
-	int InitEventSelectorStandardProperty();
-	int InitEventNotificationStandardProperty();
 
 private:
 
@@ -263,6 +249,7 @@ private:
 	int InitOrSyncAcquisitionFrameRateEnableStandardProperty();
 	int InitOrSyncAcquisitionStatusSelectorStandardProperty();
 	int InitOrSyncAcquisitionStatusStandardProperty();
+	int InitOrSyncAcquisitionBurstFrameCountStandardProperty();
 
 };
 

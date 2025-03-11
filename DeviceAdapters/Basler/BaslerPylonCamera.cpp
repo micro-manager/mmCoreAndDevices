@@ -380,7 +380,7 @@ int BaslerCamera::Initialize()
 		InitOrSyncAcquisitionStatusSelectorStandardProperty();
 		InitOrSyncAcquisitionStatusStandardProperty();
 
-		SkipBurstFrameCountStandardProperty(); 
+		InitOrSyncAcquisitionBurstFrameCountStandardProperty();
 
 		SkipRollingShutterLineOffsetStandardProperty();
 		SkipRollingShutterActiveLinesStandardProperty();
@@ -1414,6 +1414,32 @@ int BaslerCamera::OnAcquisitionStatus(MM::PropertyBase* pProp, MM::ActionType eA
             }
         }
         // No AfterSet implementation since AcquisitionStatus is typically read-only
+    }
+    catch (const GenericException & e)
+    {
+        // Error handling.
+        AddToLog(e.GetDescription());
+        return DEVICE_ERR;
+    }
+    return DEVICE_OK;
+}
+
+int BaslerCamera::OnAcquisitionBurstFrameCount(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    try
+    {
+        CIntegerPtr AcquisitionBurstFrameCount(nodeMap_->GetNode("AcquisitionBurstFrameCount"));
+        if (AcquisitionBurstFrameCount != NULL && IsAvailable(AcquisitionBurstFrameCount))
+        {
+            if (eAct == MM::AfterSet) {
+                std::string countStr;
+                pProp->Get(countStr);
+                AcquisitionBurstFrameCount->SetValue(std::stoi(countStr));
+            }
+            else if (eAct == MM::BeforeGet) {
+                pProp->Set(std::to_string(AcquisitionBurstFrameCount->GetValue()).c_str());
+            }
+        }
     }
     catch (const GenericException & e)
     {
@@ -3024,6 +3050,30 @@ int BaslerCamera::InitOrSyncAcquisitionStatusStandardProperty()
 		// It doesn't exist, mark to skip
 		SkipAcquisitionStatusStandardProperty();
 	}
+
+	return DEVICE_OK;
+}
+
+int BaslerCamera::InitOrSyncAcquisitionBurstFrameCountStandardProperty()
+{
+	CIntegerPtr node(nodeMap_->GetNode("AcquisitionBurstFrameCount"));
+	bool cameraHasIt = IsAvailable(node);
+	bool propertyExists = HasStandardProperty("AcquisitionBurstFrameCount");
+	
+	if (cameraHasIt && !propertyExists) {
+		// Camera has the feature but property doesn't exist yet - initialize it
+		std::string currentValue = node->ToString();
+		CPropertyAction* action = new CPropertyAction(this, &BaslerCamera::OnAcquisitionBurstFrameCount);
+		return CreateAcquisitionBurstFrameCountStandardProperty(currentValue.c_str(), action);
+	}
+	else if (!cameraHasIt && propertyExists) {
+		// Camera doesn't have the feature but property exists - remove it
+		SkipAcquisitionBurstFrameCountStandardProperty();
+	}
+	else {
+		// It doesn't exist, mark to skip
+		SkipAcquisitionBurstFrameCountStandardProperty();
+	}	
 
 	return DEVICE_OK;
 }

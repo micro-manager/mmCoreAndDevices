@@ -229,12 +229,12 @@ public:
       SkipStandardProperty<MM::g_ExposureModeProperty>();
    }
 
-   int CreateBurstFrameCountStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_BurstFrameCountProperty>(value, pAct);
+   int CreateAcquisitionBurstFrameCountStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_AcquisitionBurstFrameCountProperty>(value, pAct);
    }
 
-   void SkipBurstFrameCountStandardProperty() {
-      SkipStandardProperty<MM::g_BurstFrameCountProperty>();
+   void SkipAcquisitionBurstFrameCountStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionBurstFrameCountProperty>();
    }
 
    int CreateLineSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
@@ -1972,7 +1972,7 @@ public:
       SkipExposureModeStandardProperty();
       SkipExposureTimeStandardProperty();   
 
-      SkipBurstFrameCountStandardProperty();
+      SkipAcquisitionBurstFrameCountStandardProperty();
       SkipLineSelectorStandardProperty();
       SkipLineInverterStandardProperty();
       SkipLineSourceStandardProperty();
