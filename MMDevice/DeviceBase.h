@@ -300,6 +300,48 @@ public:
       SkipStandardProperty<MM::g_LineStatusProperty>();
    }
 
+   int CreateAcquisitionFrameRateStandardProperty(const char* value, double min, double max, MM::ActionFunctor* pAct = 0) {
+      int ret = CreateStandardProperty<MM::g_AcquisitionFrameRateProperty>(value, pAct);
+      if (ret != DEVICE_OK)
+          return ret;
+      
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_AcquisitionFrameRateProperty.name;
+      return SetPropertyLimits(fullName.c_str(), min, max);
+   }
+
+   void SkipAcquisitionFrameRateStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionFrameRateProperty>();
+   }
+
+   int CreateAcquisitionFrameRateEnableStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_AcquisitionFrameRateEnableProperty>(value, pAct, {"0", "1"});
+   }
+
+   void SkipAcquisitionFrameRateEnableStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionFrameRateEnableProperty>();
+   }
+
+   int CreateAcquisitionStatusSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_AcquisitionStatusSelectorProperty>(value, pAct, values);
+   }
+
+   int SetAcquisitionStatusSelectorStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_AcquisitionStatusSelectorProperty>(values);
+   }
+
+   void SkipAcquisitionStatusSelectorStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionStatusSelectorProperty>();
+   }
+
+   int CreateAcquisitionStatusStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_AcquisitionStatusProperty>(value, pAct, MM::g_AcquisitionStatusProperty.requiredValues);
+   }
+
+   void SkipAcquisitionStatusStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionStatusProperty>();
+   }
+
    int CreateRollingShutterLineOffsetStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_RollingShutterLineOffsetProperty>(value, pAct);
    }
@@ -1936,6 +1978,13 @@ public:
       SkipLineSourceStandardProperty();
       SkipLineModeStandardProperty();
       SkipLineStatusStandardProperty();
+
+      SkipAcquisitionFrameRateStandardProperty();
+      SkipAcquisitionFrameRateEnableStandardProperty();
+
+      SkipAcquisitionStatusSelectorStandardProperty();
+      SkipAcquisitionStatusStandardProperty();
+
       SkipEventSelectorStandardProperty();
       SkipEventNotificationStandardProperty();
    
@@ -2027,11 +2076,25 @@ public:
    virtual int StartSequenceAcquisition(long /* numImages */, double /* interval_ms */, 
                               bool /* stopOnOverflow */) final {return DEVICE_NOT_YET_IMPLEMENTED;}
    virtual const unsigned char* GetImageBuffer(unsigned /* channelNr */) final {return nullptr;}  
-   // TODO: do this in terms of the standard property
-   // TODO: these are in ms but the standard property is in us
-   virtual void SetExposure(double exp_ms) final {return;}
-   virtual double GetExposure() const final {return -1;} 
 
+   virtual void SetExposure(double exp_ms) final {
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_ExposureTimeProperty.name;
+      std::string value = CDeviceUtils::ConvertToString(exp_ms * 1000);
+      this->SetProperty(fullName.c_str(), value.c_str());
+      // Get the accepted value
+      char val[MM::MaxStrLength];
+      this->GetProperty(fullName.c_str(), val);
+      this->OnPropertyChanged(fullName.c_str(), val);
+   }
+   
+   virtual double GetExposure() const final {
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_ExposureTimeProperty.name;
+      char val[MM::MaxStrLength];
+      this->GetProperty(fullName.c_str(), val);
+      return atof(val) / 1000.0;
+   }
 
    // New camera API: required
    virtual int TriggerSoftware() = 0;

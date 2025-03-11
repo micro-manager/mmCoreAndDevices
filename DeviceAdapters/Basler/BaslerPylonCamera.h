@@ -128,6 +128,9 @@ public:
 	int OnEventSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnEventNotification(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+	int OnAcquisitionStatusSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnAcquisitionStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 
 	// non-standard properties
 	int OnAcqFramerate(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -178,6 +181,11 @@ public:
     BufferInserter *ImageHandler_;
 	std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
 	void* Buffer4ContinuesShot;
+	std::map<intptr_t, std::string> eventIdToName_;
+	unsigned sequenceFrameCounter_; // Counter for frames in current sequence
+	unsigned multiFrameAcqCount_;
+
+
 
 	std::vector<std::string> GetAvailableEnumValues(const GenApi::IEnumeration& node);
 
@@ -210,7 +218,6 @@ private:
 	bool  colorCamera_;
 
 	unsigned maxWidth_, maxHeight_;
-	unsigned multiFrameAcqCount_;
 	int64_t DeviceLinkThroughputLimit_;
 	int64_t InterPacketDelay_;
 	double ResultingFrameRatePrevious;
@@ -252,6 +259,10 @@ private:
     int InitOrSyncLineStatusStandardProperty();
     int InitOrSyncEventSelectorStandardProperty();
     int InitOrSyncEventNotificationStandardProperty();
+	int InitOrSyncAcquisitionFrameRateStandardProperty();
+	int InitOrSyncAcquisitionFrameRateEnableStandardProperty();
+	int InitOrSyncAcquisitionStatusSelectorStandardProperty();
+	int InitOrSyncAcquisitionStatusStandardProperty();
 
 };
 

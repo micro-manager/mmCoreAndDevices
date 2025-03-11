@@ -683,6 +683,15 @@ int CoreCallback::OnMagnifierChanged(const MM::Device* /* device */)
    return DEVICE_OK;
 }
 
+int CoreCallback::OnCameraEvent(const MM::Device* device, const char* eventName, unsigned long timestamp, unsigned long eventId, const char* data)
+{
+   if (core_->externalCallback_) {
+      char label[MM::MaxStrLength];
+      device->GetLabel(label);
+      core_->externalCallback_->onCameraEvent(label, eventName, timestamp, eventId, data);
+   }
+   return DEVICE_OK;
+}
 
 
 int CoreCallback::SetSerialProperties(const char* portName,

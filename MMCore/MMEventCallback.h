@@ -86,4 +86,9 @@ public:
       std::cout << "onSLMExposureChanged()" << name << " " << newExposure << '\n';
    }
 
+   virtual void onCameraEvent(const char* name, const char* eventName, unsigned long timestamp, unsigned long frameId, const char* data)
+   {
+      std::cout << "onCameraEvent()" << name << " " << eventName << " " << timestamp << " " << frameId << " " << data << '\n';
+   }
+
 };

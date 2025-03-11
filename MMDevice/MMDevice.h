@@ -397,6 +397,26 @@ namespace MM {
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerDelayProperty)
 
+   // TriggerOverlap property
+   // Specifies the type trigger overlap permitted with the previous frame or line.
+   // static const std::vector<std::string> triggerOverlapValues = {
+   //    "Off",             // No trigger overlap is permitted
+   //    "ReadOut",         // Trigger is accepted immediately after exposure period
+   //    "PreviousFrame",   // Trigger is accepted at any time during capture of previous frame
+   //    "PreviousLine"     // Trigger is accepted at any time during capture of previous line
+   // };
+   static const MM::StandardProperty g_TriggerOverlapProperty{
+      "TriggerOverlap",     // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {}, // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerOverlapProperty)
+
 
    // Exposure Mode property
    // Sets the operation mode of the Exposure. 
@@ -427,26 +447,6 @@ namespace MM {
       PropertyLimitUndefined, // upperLimit
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_ExposureModeProperty)
-
-   // TriggerOverlap property
-   // Specifies the type trigger overlap permitted with the previous frame or line.
-   // static const std::vector<std::string> triggerOverlapValues = {
-   //    "Off",             // No trigger overlap is permitted
-   //    "ReadOut",         // Trigger is accepted immediately after exposure period
-   //    "PreviousFrame",   // Trigger is accepted at any time during capture of previous frame
-   //    "PreviousLine"     // Trigger is accepted at any time during capture of previous line
-   // };
-   static const MM::StandardProperty g_TriggerOverlapProperty{
-      "TriggerOverlap",     // name
-      String,               // type
-      false,                // isReadOnly
-      false,                // isPreInit
-      {}, // allowedValues
-      {},                   // requiredValues
-      PropertyLimitUndefined, // lowerLimit
-      PropertyLimitUndefined, // upperLimit
-   };
-   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerOverlapProperty)
 
    // ExposureTime property
    // Sets the Exposure time when ExposureMode is Timed and ExposureAuto is Off.
@@ -570,19 +570,72 @@ namespace MM {
    };
    MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineStatusProperty)
 
-   // TODO: implement this?
-   // // Acquisition status property
-   // static const std::vector<std::string> acquisitionStatusSelectorValues = {
-   //    g_keyword_CameraStatusAcquisitionTriggerWait, 
-   //    g_keyword_CameraStatusFrameBurstTriggerWait,
-   //    g_keyword_CameraStatusFrameTriggerWait, 
-   //    g_keyword_CameraStatusExposureTriggerWait,
-   //    g_keyword_CameraStatusAcquisitionActive, 
-   //    g_keyword_CameraStatusFrameBurstTriggerActive,
-   //    g_keyword_CameraStatusFrameActive, 
-   //    g_keyword_CameraStatusExposureActive,
-   //    g_keyword_CameraStatusAcquisitionTransfer
-   // };
+   // Controls the acquisition rate (in Hertz) at which the frames are captured.
+   static const MM::StandardProperty g_AcquisitionFrameRateProperty{
+      "AcquisitionFrameRate", // name
+      Float,             // type
+      false,             // isReadOnly
+      false,             // isPreInit
+      {},                // allowedValues
+      {},                // requiredValues
+      0, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionFrameRateProperty)
+
+
+   // Controls if the AcquisitionFrameRate feature is writable and used to control the acquisition
+   // rate. Otherwise, the acquisition rate is implicitly controlled by the combination of other 
+   // features like ExposureTime, etc...
+   static const MM::StandardProperty g_AcquisitionFrameRateEnableProperty{
+      "AcquisitionFrameRateEnable", // name
+      String, // type
+      false, // isReadOnly
+      false, // isPreInit
+      {"1", "0"}, // allowedValues
+      {}, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionFrameRateEnableProperty)
+
+
+   // Acquisition status selector property
+   // Selects the internal acquisition signal to read using AcquisitionStatus. 
+   // Possible values are: 
+   //     AcquisitionTriggerWait: Device is currently waiting for a trigger for the capture of one or many frames. 
+   //     AcquisitionActive: Device is currently doing an acquisition of one or many frames. 
+   //     AcquisitionTransfer: Device is currently transferring an acquisition of one or many frames. 
+   //     FrameTriggerWait: Device is currently waiting for a frame start trigger. 
+   //     FrameActive: Device is currently doing the capture of a frame. 
+   //     ExposureActive: Device is doing the exposure of a frame. 
+   static const MM::StandardProperty g_AcquisitionStatusSelectorProperty{
+      "AcquisitionStatusSelector", // name
+      String, // type
+      false, // isReadOnly
+      false, // isPreInit
+      {}, // allowedValues
+      {}, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionStatusSelectorProperty)
+
+
+  // Acquisition status property 
+  // Reads the state of the internal acquisition signal selected using AcquisitionStatusSelector.
+  static const MM::StandardProperty g_AcquisitionStatusProperty{
+      "AcquisitionStatus", // name
+      String, // type
+      true, // isReadOnly
+      false, // isPreInit
+      {"0", "1"}, // allowedValues
+      {"0", "1"}, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionStatusProperty)
+
 
    // GenICam style event properties
    // For now, allow events with any name, because cameras may implement ones other than
@@ -1876,6 +1929,11 @@ namespace MM {
        * Magnifiers can use this to signal changes in magnification
        */
       virtual int OnMagnifierChanged(const Device* caller) = 0;
+      /**
+       * This callback is used to handle various types of camera events
+       */
+      virtual int OnCameraEvent(const Device* caller, const char* eventName, unsigned long timestamp, unsigned long frameId, const char* data) = 0;
+
 
       // Deprecated: Return value overflows in ~72 minutes on Windows.
       // Prefer std::chrono::steady_clock for time delta measurements.
