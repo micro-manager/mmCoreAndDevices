@@ -1389,10 +1389,14 @@ namespace MM {
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* md = 0, const bool doProcess = true) = 0;
       /// \deprecated Use the other forms instead.
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess = true) = 0;
-      virtual void ClearImageBuffer(const Device* caller) = 0;
-      virtual bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth) = 0;
+      
+      MM_DEPRECATED(virtual void ClearImageBuffer(const Device* caller)) = 0;
+      MM_DEPRECATED(virtual bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth)) = 0;
       /// \deprecated Use the other forms instead.
       virtual int InsertMultiChannel(const Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* md = 0) = 0;
+
+      // Method for inserting generic non-image data into the buffer
+      virtual int InsertData(const Device* caller, const unsigned char* buf, size_t dataSize, Metadata* pMd = 0) = 0;
 
       // TODO: enable these when we know what to do about backwards compatibility for circular buffer
 //    int AcquireImageWriteSlot(const MM::Camera* caller, size_t dataSize, size_t metadataSize,

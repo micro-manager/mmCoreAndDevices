@@ -143,7 +143,8 @@ public:
    // circular buffer itself, so this method is no longer required and is not used. higher level code will control when this
    // option is activated, making it simpler to develop camera adatpers and giving more consistent behavior.
    void ClearImageBuffer(const MM::Device* /*caller*/) {};
-   // @deprecated This method is not required for the V2 buffer and is called by higher level code for circular buffer
+   // @deprecated This method is not required for the V2 buffer, and in fact should not be called because 
+   // devices do not have the authority to throw away pointers held by other code.
    bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
    int AcqFinished(const MM::Device* caller, int statusCode);
