@@ -2124,20 +2124,6 @@ public:
 
    CLegacyCameraBase() : COldAPICameraBase<U>(), busy_(false), stopWhenCBOverflows_(false), thd_(0)
    {
-      // TODO: does this belong here or in the superclass?
-      // create and initialize common transpose properties
-      // std::vector<std::string> allowedValues;
-      // allowedValues.push_back("0");
-      // allowedValues.push_back("1");
-      // CreateProperty(MM::g_Keyword_Transpose_SwapXY, "0", MM::Integer, false);
-      // SetAllowedValues(MM::g_Keyword_Transpose_SwapXY, allowedValues);
-      // CreateProperty(MM::g_Keyword_Transpose_MirrorX, "0", MM::Integer, false);
-      // SetAllowedValues(MM::g_Keyword_Transpose_MirrorX, allowedValues);
-      // CreateProperty(MM::g_Keyword_Transpose_MirrorY, "0", MM::Integer, false);
-      // SetAllowedValues(MM::g_Keyword_Transpose_MirrorY, allowedValues);
-      // CreateProperty(MM::g_Keyword_Transpose_Correction, "0", MM::Integer, false);
-      // SetAllowedValues(MM::g_Keyword_Transpose_Correction, allowedValues);
-
       thd_ = new BaseSequenceThread(this);
    }
 
