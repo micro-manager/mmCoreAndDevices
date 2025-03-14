@@ -691,30 +691,31 @@ namespace MM {
 
    //// Standard properties for rolling shutter lightsheet readout cameras
    //// These are not part of GenICam, but are supported by some scientific cameras
-         
-   static const MM::StandardProperty g_RollingShutterLineOffsetProperty{
-      "RollingShutterLineOffset", // name
-      Float,                      // type
-      false,                      // isReadOnly
-      false,                      // isPreInit
-      {},                         // allowedValues
-      {},                         // requiredValues
-      PropertyLimitUndefined,     // lowerLimit
-      PropertyLimitUndefined,
-   };
-   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_RollingShutterLineOffsetProperty)
+   // TODO: implement when someone who uses this feature can test it
 
-   static const MM::StandardProperty g_RollingShutterActiveLinesProperty{
-      "RollingShutterActiveLines", // name
-      Integer,                      // type
-      false,                      // isReadOnly
-      false,                      // isPreInit
-      {},                         // allowedValues
-      {},                         // requiredValues
-      PropertyLimitUndefined,     // lowerLimit
-      PropertyLimitUndefined,     // upperLimit
-   };
-   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_RollingShutterActiveLinesProperty)
+   // static const MM::StandardProperty g_RollingShutterLineOffsetProperty{
+   //    "RollingShutterLineOffset", // name
+   //    Float,                      // type
+   //    false,                      // isReadOnly
+   //    false,                      // isPreInit
+   //    {},                         // allowedValues
+   //    {},                         // requiredValues
+   //    PropertyLimitUndefined,     // lowerLimit
+   //    PropertyLimitUndefined,
+   // };
+   // MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_RollingShutterLineOffsetProperty)
+
+   // static const MM::StandardProperty g_RollingShutterActiveLinesProperty{
+   //    "RollingShutterActiveLines", // name
+   //    Integer,                      // type
+   //    false,                      // isReadOnly
+   //    false,                      // isPreInit
+   //    {},                         // allowedValues
+   //    {},                         // requiredValues
+   //    PropertyLimitUndefined,     // lowerLimit
+   //    PropertyLimitUndefined,     // upperLimit
+   // };
+   // MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_RollingShutterActiveLinesProperty)
 
    /**
     * Generic device interface.

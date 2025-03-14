@@ -382,9 +382,6 @@ int BaslerCamera::Initialize()
 
 		InitOrSyncAcquisitionBurstFrameCountStandardProperty();
 
-		SkipRollingShutterLineOffsetStandardProperty();
-		SkipRollingShutterActiveLinesStandardProperty();
-
 
 		if (camera_->EventSelector.IsWritable())
 		{

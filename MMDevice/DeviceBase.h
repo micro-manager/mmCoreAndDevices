@@ -342,22 +342,6 @@ public:
       SkipStandardProperty<MM::g_AcquisitionStatusProperty>();
    }
 
-   int CreateRollingShutterLineOffsetStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_RollingShutterLineOffsetProperty>(value, pAct);
-   }
-
-   void SkipRollingShutterLineOffsetStandardProperty() {
-      SkipStandardProperty<MM::g_RollingShutterLineOffsetProperty>();
-   }  
-
-   int CreateRollingShutterActiveLinesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
-      return CreateStandardProperty<MM::g_RollingShutterActiveLinesProperty>(value, pAct);
-   }
-
-   void SkipRollingShutterActiveLinesStandardProperty() {
-      SkipStandardProperty<MM::g_RollingShutterActiveLinesProperty>();
-   }
-
    int CreateEventSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
       return CreateStandardProperty<MM::g_EventSelectorProperty>(value, pAct, values);
    }
@@ -393,6 +377,24 @@ public:
    void SkipTriggerOverlapStandardProperty() {
       SkipStandardProperty<MM::g_TriggerOverlapProperty>();
    }
+
+   
+   // TODO: implement when someone who uses this feature can test it
+   // int CreateRollingShutterLineOffsetStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    return CreateStandardProperty<MM::g_RollingShutterLineOffsetProperty>(value, pAct);
+   // }
+
+   // void SkipRollingShutterLineOffsetStandardProperty() {
+   //    SkipStandardProperty<MM::g_RollingShutterLineOffsetProperty>();
+   // }  
+
+   // int CreateRollingShutterActiveLinesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    return CreateStandardProperty<MM::g_RollingShutterActiveLinesProperty>(value, pAct);
+   // }
+
+   // void SkipRollingShutterActiveLinesStandardProperty() {
+   //    SkipStandardProperty<MM::g_RollingShutterActiveLinesProperty>();
+   // }
    
 
    /**
