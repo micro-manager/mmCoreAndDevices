@@ -3594,7 +3594,7 @@ posX_um_(0.0),
 posY_um_(0.0),
 busy_(false),
 timeOutTimer_(0),
-velocity_(10.0), // in micron per second
+velocity_(10.0), // in mm per second
 initialized_(false),
 lowerLimit_(0.0),
 upperLimit_(20000.0)
@@ -3709,7 +3709,7 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
    double difX = targetPosX_um_ - startPosX_um_;
    double difY = targetPosY_um_ - startPosY_um_;
    double distance = sqrt((difX * difX) + (difY * difY));
-   moveDuration_ms_ = (long)((distance / velocity_) * 1000.0);
+   moveDuration_ms_ = (long)(distance / velocity_);
    if (moveDuration_ms_ < 1)
       moveDuration_ms_ = 1;  // enforce a minimum duration
 
