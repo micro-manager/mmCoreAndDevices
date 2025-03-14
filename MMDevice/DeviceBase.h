@@ -1340,7 +1340,6 @@ public:
    /**
     * Returns binnings factor.  Used to calculate current pixelsize
     * Not appropriately named.  Implemented in DeviceBase.h
-    * TODO: This should perhaps be deprecated and removed.
     */
    virtual double GetPixelSizeUm() const {return GetBinning();}
 
@@ -1402,8 +1401,7 @@ public:
       data.copy(serializedMetadata, data.size(), 0);
    }
 
-   // temporary debug methods
-   virtual int PrepareSequenceAcqusition() = 0;
+   virtual int PrepareSequenceAcqusition() {return DEVICE_OK;}
 
    /**
    * Default implementation.
@@ -1520,20 +1518,6 @@ public:
 
    CLegacyCameraBase() : CCameraBase<U>(), busy_(false), stopWhenCBOverflows_(false), thd_(0)
    {
-      // TODO: does this belong here or in the superclass?
-      // create and initialize common transpose properties
-      // std::vector<std::string> allowedValues;
-      // allowedValues.push_back("0");
-      // allowedValues.push_back("1");
-      // CreateProperty(MM::g_Keyword_Transpose_SwapXY, "0", MM::Integer, false);
-      // SetAllowedValues(MM::g_Keyword_Transpose_SwapXY, allowedValues);
-      // CreateProperty(MM::g_Keyword_Transpose_MirrorX, "0", MM::Integer, false);
-      // SetAllowedValues(MM::g_Keyword_Transpose_MirrorX, allowedValues);
-      // CreateProperty(MM::g_Keyword_Transpose_MirrorY, "0", MM::Integer, false);
-      // SetAllowedValues(MM::g_Keyword_Transpose_MirrorY, allowedValues);
-      // CreateProperty(MM::g_Keyword_Transpose_Correction, "0", MM::Integer, false);
-      // SetAllowedValues(MM::g_Keyword_Transpose_Correction, allowedValues);
-
       thd_ = new BaseSequenceThread(this);
    }
 
@@ -1574,10 +1558,7 @@ public:
    // Implementation of a sequence acquisition as a series of snaps
    // This was a temporary method used for debugging, which is why its now
    // implemented in this legacy class. It's preferable that camera devices
-   // inherit directly from CCameraBase and not use these default implementations.
-   virtual int PrepareSequenceAcqusition() {return DEVICE_OK;}
-
-   
+   // inherit directly from CCameraBase and not use these default implementations.   
    virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
    {
       if (IsCapturing())
