@@ -33,3 +33,4 @@
 #include "SLMInstance.h"
 #include "GalvoInstance.h"
 #include "HubInstance.h"
+#include "StorageInstance.h"

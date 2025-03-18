@@ -141,6 +141,9 @@
     <ClCompile Include="ThreadPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Devices\StorageInstance.cpp">
+      <Filter>Source Files\Devices</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CircularBuffer.h">
@@ -304,6 +307,9 @@
     </ClInclude>
     <ClInclude Include="ThreadPool.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Devices\StorageInstance.h">
+      <Filter>Header Files\Devices</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
