@@ -34,8 +34,6 @@
 
 #include "ModuleInterface.h"
 
-#include <boost/lexical_cast.hpp>
-
 #include <algorithm>
 
 
