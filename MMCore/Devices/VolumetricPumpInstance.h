@@ -45,8 +45,8 @@ public:
     int GetVolumeUl(double& volUl);
     int SetMaxVolumeUl(double volUl);
     int GetMaxVolumeUl(double& volUl);
-    int SetFlowrateUlPerSec(double flowrate);
-    int GetFlowrateUlPerSec(double& flowrate);
+    int SetFlowrateUlPerSecond(double flowrate);
+    int GetFlowrateUlPerSecond(double& flowrate);
     int Start();
     int DispenseDurationSeconds(double durSec);
     int DispenseVolumeUl(double volUl);

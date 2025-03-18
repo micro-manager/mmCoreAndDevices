@@ -6901,7 +6901,7 @@ void CMMCore::setPumpFlowrate(const char* deviceLabel, double UlperSec) throw (C
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->SetFlowrateUlPerSec(UlperSec);
+    int ret = pPump->SetFlowrateUlPerSecond(UlperSec);
 
     if (ret != DEVICE_OK)
     {
@@ -6920,7 +6920,7 @@ double CMMCore::getPumpFlowrate(const char* deviceLabel) throw (CMMError)
     mm::DeviceModuleLockGuard guard(pPump);
 
     double UlperSec = 0;
-    int ret = pPump->GetFlowrateUlPerSec(UlperSec);
+    int ret = pPump->GetFlowrateUlPerSecond(UlperSec);
 
     if (ret != DEVICE_OK)
     {
