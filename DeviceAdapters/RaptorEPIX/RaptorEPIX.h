@@ -158,7 +158,7 @@ private:
 #endif                                                                  
 
 
-class CRaptorEPIX : public CCameraBase<CRaptorEPIX>  
+class CRaptorEPIX : public CLegacyCameraBase<CRaptorEPIX>  
 {
 public:
    CRaptorEPIX() {CRaptorEPIX(0);};

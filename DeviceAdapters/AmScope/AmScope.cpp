@@ -105,7 +105,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 AmScope::AmScope() :
-	CCameraBase<AmScope> (),
+	CLegacyCameraBase<AmScope> (),
 	dPhase_(0),
 	binning_(1),
 	autoExposure_(1),

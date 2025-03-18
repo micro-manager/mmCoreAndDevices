@@ -72,7 +72,7 @@ private:
 /*
  * ArduinoCounter: 
  */
-class ArduinoCounterCamera : public CCameraBase<ArduinoCounterCamera>
+class ArduinoCounterCamera : public CLegacyCameraBase<ArduinoCounterCamera>
 {
 public:
    ArduinoCounterCamera();

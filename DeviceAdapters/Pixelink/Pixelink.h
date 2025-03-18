@@ -44,7 +44,7 @@ struct PixelAddressing
 float GetPixelSize(U32 pixelFormat);
 U32 DetermineRawImageSize(HANDLE hCamera);
 
-class Pixelink : public CCameraBase<Pixelink>
+class Pixelink : public CLegacyCameraBase<Pixelink>
 {
 public:
 	Pixelink(const char* deviceName);

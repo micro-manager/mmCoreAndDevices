@@ -137,7 +137,7 @@ MODULE_API void DeleteDevice(MM::Device * pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CAndorSDK3Camera::CAndorSDK3Camera()
-: CCameraBase<CAndorSDK3Camera> (),
+: CLegacyCameraBase<CAndorSDK3Camera> (),
   deviceManager(NULL),
   cameraDevice(NULL),
   bufferControl(NULL),

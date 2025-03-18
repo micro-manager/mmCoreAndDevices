@@ -43,14 +43,17 @@
 #include "DeviceUtils.h"
 #include "ImageMetadata.h"
 #include "DeviceThreads.h"
+#include "Property.h"
 
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
 #include <iomanip>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 // To be removed once the deprecated Get/SetModuleHandle() is removed:
 #ifdef _WIN32
@@ -205,6 +208,515 @@ namespace MM {
    };
 
 
+   ////////////////////////////
+   ///// Standard properties
+   ////////////////////////////
+   
+   namespace internal {
+      //// Helper functions/macros for compile time and runtime checking of standard properties
+
+      // Map from device types to standard properties
+      inline std::unordered_map<MM::DeviceType, std::vector<StandardProperty>>& GetDeviceTypeStandardPropertiesMap() {
+         static std::unordered_map<MM::DeviceType, std::vector<StandardProperty>> devicePropertiesMap;
+         return devicePropertiesMap;
+      }
+
+      // Register a standard property with its valid device types
+      inline void RegisterStandardProperty(const StandardProperty& prop, std::initializer_list<MM::DeviceType> deviceTypes) {
+         for (MM::DeviceType deviceType : deviceTypes) {
+            GetDeviceTypeStandardPropertiesMap()[deviceType].push_back(prop);
+         }
+      }
+
+      // Check if a property is valid for a specific device type
+      inline bool IsPropertyValidForDeviceType(const StandardProperty& prop, MM::DeviceType deviceType) {
+         auto it = GetDeviceTypeStandardPropertiesMap().find(deviceType);
+         if (it == GetDeviceTypeStandardPropertiesMap().end()) {
+            return false;
+         }
+         
+         const auto& validProperties = it->second;
+         return std::find(validProperties.begin(), validProperties.end(), prop) != validProperties.end();
+      }
+
+      // The below code is a way to enable compile time checking of which 
+      // standard properties are are valid for which device types. This enables
+      // methods for setting these standard properties defined once 
+      // in CDeviceBase and then conditionally enabled in child classes based on
+      // the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE macro below
+      // In addition to making this link, a dedicated method for the standard property
+      // should be created in CDeviceBase.
+      template <MM::DeviceType DeviceType, const MM::StandardProperty& PropRef>
+      struct IsStandardPropertyValid {
+         static const bool value = false; // Default to false
+      };
+
+      // The top struct enables compile time checking of standard property
+      // creation methods (ie that you can call the CreateXXXXStandardProperty
+      // in a device type that doesn't support it)
+      // The bottom part adds the standard property to a runtime registry
+      // which enables higher level code the query the standard properties
+      // associated with a particular device type and check that everything
+      // is correct (ie all required properties are implemented after
+      // device initialization)
+      #define MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(DeviceType, PropertyRef) \
+      template <> \
+      struct MM::internal::IsStandardPropertyValid<DeviceType, PropertyRef> { \
+         static const bool value = true; \
+      }; \
+      namespace { \
+         static const bool PropertyRef##_registered = (MM::internal::RegisterStandardProperty(PropertyRef, {DeviceType}), true); \
+      }
+   } // namespace internal
+
+   /////// Standard property definitions
+   // Each standard property is defined here, and then linked to one or more
+   // device types using the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE macro.
+   // This allows compile time checking that the property is valid for a
+   // particular device type, and also allows runtime querying of which
+   // properties are supported by a given device.
+
+   // Specific standard properties
+   // static const MM::StandardProperty g_TestStandardProperty{
+   //    "Test",                // name
+   //    String,               // type
+   //    false,                // isReadOnly
+   //    false,                // isPreInit
+   //    {},                   // allowedValues (empty vector)
+   //    {},                   // requiredValues (empty vector)
+   //    PropertyLimitUndefined,   // lowerLimit
+   //    PropertyLimitUndefined,   // upperLimit
+   // };
+
+   // MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestStandardProperty)
+
+
+   // static const std::vector<std::string> testRequiredValues = {"value1", "value2", "value3"};
+   // static const MM::StandardProperty g_TestWithValuesStandardProperty{
+   //    "TestWithValues",     // name
+   //    String,               // type
+   //    false,                // isReadOnly
+   //    false,                // isPreInit
+   //    {},                   // allowedValues (empty vector)
+   //    testRequiredValues,   // requiredValues
+   //    PropertyLimitUndefined,   // lowerLimit
+   //    PropertyLimitUndefined,   // upperLimit
+   // };
+
+   // MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TestWithValuesStandardProperty)
+
+   ////////////////////////////
+   ///// Camera trigger API
+   // These are directly based on the GenICam Standard Feature Naming convention
+   // see https://www.emva.org/wp-content/uploads/GenICam_SFNC_2_2.pdf
+   // Boolean values get mapped to "0" or "1" since MM properties do not support booleans
+
+   // Selects the type of trigger to configure.
+   static const MM::StandardProperty g_TriggerSelectorProperty{
+      "TriggerSelector",    // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},                   // allowedValues
+      {},                   // no required values for now
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerSelectorProperty)
+
+
+   // Controls if the selected trigger is active.
+   static const std::vector<std::string> triggerModeValues = {
+      g_keyword_TriggerModeOff, 
+      g_keyword_TriggerModeOn
+   };
+   static const MM::StandardProperty g_TriggerModeProperty{
+      "TriggerMode",        // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      triggerModeValues,    // allowedValues
+      {},                   // no required values for now
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerModeProperty)
+
+
+   // Specifies the internal signal or physical input Line to use as the trigger source. 
+   // The selected trigger must have its TriggerMode set to On.
+   // Standard names are: Software, Line0, Line1, Line2, Line3
+   // and many others including Counter0Start, Timer0Start, etc.
+   // Require the ability to send a software trigger,
+   // but other than than not sure its possible to to standaradize
+   // in part because some cameras may start at line0 and others at line1
+   static const MM::StandardProperty g_TriggerSourceProperty{
+      "TriggerSource",      // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},  // allowedValues
+      {},              
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerSourceProperty)
+
+
+   // Specifies the activation mode of the trigger.
+   static const std::vector<std::string> triggerActivationValues = {
+      g_keyword_TriggerActivationAnyEdge, 
+      g_keyword_TriggerActivationRisingEdge, 
+      g_keyword_TriggerActivationFallingEdge, 
+      g_keyword_TriggerActivationLevelLow, 
+      g_keyword_TriggerActivationLevelHigh
+   };
+   static const MM::StandardProperty g_TriggerActivationProperty{
+      "TriggerActivation",  // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      triggerActivationValues, // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerActivationProperty)
+
+
+   // Specifies the delay in microseconds (us) to apply after the trigger reception before activating it.
+   static const MM::StandardProperty g_TriggerDelayProperty{
+      "TriggerDelay",       // name
+      Float,              // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},                   // allowedValues
+      {},                   // requiredValues
+      0,                    // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerDelayProperty)
+
+   // TriggerOverlap property
+   // Specifies the type trigger overlap permitted with the previous frame or line.
+   // static const std::vector<std::string> triggerOverlapValues = {
+   //    "Off",             // No trigger overlap is permitted
+   //    "ReadOut",         // Trigger is accepted immediately after exposure period
+   //    "PreviousFrame",   // Trigger is accepted at any time during capture of previous frame
+   //    "PreviousLine"     // Trigger is accepted at any time during capture of previous line
+   // };
+   static const MM::StandardProperty g_TriggerOverlapProperty{
+      "TriggerOverlap",     // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {}, // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_TriggerOverlapProperty)
+
+
+   // Exposure Mode property
+   // Sets the operation mode of the Exposure. 
+   // Possible values are:
+   //    Timed: Timed exposure. 
+   //    TriggerWidth: Uses the width of the current Frame trigger signal pulse to control the exposure duration.
+   //                  Note that if the Frame or Line TriggerActivation is RisingEdge or LevelHigh, the exposure
+   //                  duration will be the time the trigger stays High. If TriggerActivation is FallingEdge or
+   //                  LevelLow, the exposure time will last as long as the trigger stays Low. 
+   //    TriggerControlled: Uses one or more trigger signal(s) to control the exposure duration independently from
+   //                       the current Frame or Line triggers. See ExposureStart, ExposureEnd and ExposureActive
+   //                       of the TriggerSelector feature. Note also that ExposureMode as priority over the Exposure
+   //                       Trigger settings defined using TriggerSelector=Exposure... and defines which trigger 
+   // (if any) is active.
+   static const std::vector<std::string> exposureModeValues = {
+      g_keyword_ExposureModeTimed, 
+      g_keyword_ExposureModeTriggerWidth, 
+      g_keyword_ExposureModeTriggerControlled
+   };
+   static const MM::StandardProperty g_ExposureModeProperty{
+      "ExposureMode",       // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      exposureModeValues,   // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_ExposureModeProperty)
+
+   // ExposureTime property
+   // Sets the Exposure time when ExposureMode is Timed and ExposureAuto is Off.
+   static const MM::StandardProperty g_ExposureTimeProperty{
+      "ExposureTime",       // name
+      Float,                // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},                   // allowedValues
+      {},                   // requiredValues
+      0.0,                  // lowerLimit
+      PropertyLimitUndefined,            // upperLimit 
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_ExposureTimeProperty)
+
+   // Burst Frame Count property
+   // Number of frames to acquire for each FrameBurstStart trigger. This feature is used only if
+   // the FrameBurstStart trigger is enabled and the FrameBurstEnd trigger is disabled. Note that 
+   // the total number of frames captured is also conditioned by AcquisitionFrameCount if 
+   //AcquisitionMode is MultiFrame and ignored if AcquisitionMode is Single.
+   static const MM::StandardProperty g_AcquisitionBurstFrameCountProperty{
+      "AcquisitionBurstFrameCount",    // name
+      Integer,              // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},                   // allowedValues
+      {},                   // requiredValues
+      1,                    // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionBurstFrameCountProperty)
+
+
+   // Selects the physical line (or pin) of the external device connector to configure.
+   // When a Line is selected, all the other Line features will be applied to its associated 
+   //I/O control block and will condition the resulting input or output signal.
+   static const MM::StandardProperty g_LineSelectorProperty{
+      "LineSelector",       // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},   // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineSelectorProperty)
+
+
+   // Controls if the physical Line is used to Input or Output a signal. When a Line supports 
+   // input and output mode, the default state is Input to avoid possible electrical contention.
+   //  Possible values are: 
+   //       Input: The selected physical line is used to Input an electrical signal.
+   //       Output: The selected physical line is used to Output an electrical signal.
+   static const std::vector<std::string> lineModeValues = {
+      g_keyword_LineModeInput,
+      g_keyword_LineModeOutput
+   };
+   static const MM::StandardProperty g_LineModeProperty{
+      "LineMode",       // name
+      String,              // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      lineModeValues,        // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineModeProperty)
+
+
+   // Controls the inversion of the signal of the selected input or output Line.
+   // Possible values are: 
+   //     False (0): The Line signal is not inverted. 
+   //     True (1): The Line signal is inverted.
+   static const MM::StandardProperty g_LineInverterProperty{
+      "LineInverter",       // name
+      String,              // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {"0", "1"},                   // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineInverterProperty)
+
+
+   // Selects which internal acquisition or I/O source signal to output on the selected Line. 
+   // LineMode must be Output.
+   static const MM::StandardProperty g_LineSourceProperty{
+      "LineSource",         // name
+      String,               // type
+      false,                // isReadOnly
+      false,                // isPreInit
+      {},                   // allowedValues
+      {},                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineSourceProperty)
+
+
+   // Returns the current status of the selected input or output Line. The status of the 
+   // signal is taken after the input Line inverter of the I/O control block.
+   //     Low: The Line signal is Low. 
+   //     High: The Line signal is High.
+   static const std::vector<std::string> lineStatusValues = {
+      g_keyword_LineStatusLow, 
+      g_keyword_LineStatusHigh
+   };
+   static const MM::StandardProperty g_LineStatusProperty{
+      "LineStatus",         // name
+      String,              // type
+      true,                 // isReadOnly
+      false,                // isPreInit
+      lineStatusValues,                   // allowedValues
+      lineStatusValues,                   // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_LineStatusProperty)
+
+   // Controls the acquisition rate (in Hertz) at which the frames are captured.
+   static const MM::StandardProperty g_AcquisitionFrameRateProperty{
+      "AcquisitionFrameRate", // name
+      Float,             // type
+      false,             // isReadOnly
+      false,             // isPreInit
+      {},                // allowedValues
+      {},                // requiredValues
+      0, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionFrameRateProperty)
+
+
+   // Controls if the AcquisitionFrameRate feature is writable and used to control the acquisition
+   // rate. Otherwise, the acquisition rate is implicitly controlled by the combination of other 
+   // features like ExposureTime, etc...
+   static const MM::StandardProperty g_AcquisitionFrameRateEnableProperty{
+      "AcquisitionFrameRateEnable", // name
+      String, // type
+      false, // isReadOnly
+      false, // isPreInit
+      {"1", "0"}, // allowedValues
+      {}, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionFrameRateEnableProperty)
+
+
+   // Acquisition status selector property
+   // Selects the internal acquisition signal to read using AcquisitionStatus. 
+   // Possible values are: 
+   //     AcquisitionTriggerWait: Device is currently waiting for a trigger for the capture of one or many frames. 
+   //     AcquisitionActive: Device is currently doing an acquisition of one or many frames. 
+   //     AcquisitionTransfer: Device is currently transferring an acquisition of one or many frames. 
+   //     FrameTriggerWait: Device is currently waiting for a frame start trigger. 
+   //     FrameActive: Device is currently doing the capture of a frame. 
+   //     ExposureActive: Device is doing the exposure of a frame. 
+   static const MM::StandardProperty g_AcquisitionStatusSelectorProperty{
+      "AcquisitionStatusSelector", // name
+      String, // type
+      false, // isReadOnly
+      false, // isPreInit
+      {}, // allowedValues
+      {}, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionStatusSelectorProperty)
+
+
+  // Acquisition status property 
+  // Reads the state of the internal acquisition signal selected using AcquisitionStatusSelector.
+  static const MM::StandardProperty g_AcquisitionStatusProperty{
+      "AcquisitionStatus", // name
+      String, // type
+      true, // isReadOnly
+      false, // isPreInit
+      {"0", "1"}, // allowedValues
+      {"0", "1"}, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_AcquisitionStatusProperty)
+
+
+   // GenICam style event properties
+   // For now, allow events with any name, because cameras may implement ones other than
+   // these
+   // static const std::vector<std::string> eventSelectorValues = {
+   //       g_keyword_CameraEventAcquisitionTrigger,
+   //       g_keyword_CameraEventAcquisitionStart,
+   //       g_keyword_CameraEventAcquisitionEnd,
+   //       g_keyword_CameraEventAcquisitionTransferStart,
+   //       g_keyword_CameraEventAcquisitionTransferEnd,
+   //       g_keyword_CameraEventAcquisitionError,
+   //       g_keyword_CameraEventFrameTrigger,
+   //       g_keyword_CameraEventFrameStart,
+   //       g_keyword_CameraEventFrameEnd,
+   //       g_keyword_CameraEventFrameBurstStart,
+   //       g_keyword_CameraEventFrameBurstEnd,
+   //       g_keyword_CameraEventFrameTransferStart,
+   //       g_keyword_CameraEventFrameTransferEnd,
+   //       g_keyword_CameraEventExposureStart,
+   //       g_keyword_CameraEventExposureEnd,
+   //       g_keyword_CameraEventError
+   // };
+   static const MM::StandardProperty g_EventSelectorProperty{
+      "EventSelector", // name
+      String,          // type
+      false,           // isReadOnly
+      false,           // isPreInit
+      {}, // allowedValues
+      {}, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_EventSelectorProperty)
+
+   // Event notification: whether the event actually produced
+   static const std::vector<std::string> eventNotificationValues = {
+      g_keyword_CameraEventNotificationOff,
+      g_keyword_CameraEventNotificationOn
+   };
+   static const MM::StandardProperty g_EventNotificationProperty{
+      "EventNotification", // name
+      String,              // type
+      false,               // isReadOnly
+      false,               // isPreInit
+      {}, // allowedValues
+      eventNotificationValues, // requiredValues
+      PropertyLimitUndefined, // lowerLimit
+      PropertyLimitUndefined, // upperLimit
+   };
+   MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_EventNotificationProperty)
+
+
+
+   //// Standard properties for rolling shutter lightsheet readout cameras
+   //// These are not part of GenICam, but are supported by some scientific cameras
+   // TODO: implement when someone who uses this feature can test it
+
+   // static const MM::StandardProperty g_RollingShutterLineOffsetProperty{
+   //    "RollingShutterLineOffset", // name
+   //    Float,                      // type
+   //    false,                      // isReadOnly
+   //    false,                      // isPreInit
+   //    {},                         // allowedValues
+   //    {},                         // requiredValues
+   //    PropertyLimitUndefined,     // lowerLimit
+   //    PropertyLimitUndefined,
+   // };
+   // MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_RollingShutterLineOffsetProperty)
+
+   // static const MM::StandardProperty g_RollingShutterActiveLinesProperty{
+   //    "RollingShutterActiveLines", // name
+   //    Integer,                      // type
+   //    false,                      // isReadOnly
+   //    false,                      // isPreInit
+   //    {},                         // allowedValues
+   //    {},                         // requiredValues
+   //    PropertyLimitUndefined,     // lowerLimit
+   //    PropertyLimitUndefined,     // upperLimit
+   // };
+   // MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE(CameraDevice, g_RollingShutterActiveLinesProperty)
+
    /**
     * Generic device interface.
     */
@@ -226,6 +738,7 @@ namespace MM {
       virtual int GetPropertyType(const char* name, MM::PropertyType& pt) const = 0;
       virtual unsigned GetNumberOfPropertyValues(const char* propertyName) const = 0;
       virtual bool GetPropertyValueAt(const char* propertyName, unsigned index, char* value) const = 0;
+      virtual bool ImplementsOrSkipsStandardProperties(char* failedProperty) const = 0;
       /**
        * Sequences can be used for fast acquisitions, synchronized by TTLs rather than
        * computer commands.
@@ -309,7 +822,7 @@ namespace MM {
    {
    public:
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = GenericDevice;
    };
 
    /**
@@ -321,7 +834,53 @@ namespace MM {
       virtual ~Camera() {}
 
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = CameraDevice;
+
+       //// New Camera API ////
+      virtual bool IsNewAPIImplemented() = 0;
+
+
+      // Send a software trigger
+      virtual int TriggerSoftware() = 0;
+
+      //////////////////////////////
+      // Acquisitions
+      //////////////////////////////
+
+      // Arms the device before an AcquisitionStart command. This optional command validates all 
+      // the current features for consistency and prepares the device for a fast start of the Acquisition.
+      // If not used explicitly, this command will be automatically executed at the first 
+      // AcquisitionStart but will not be repeated for the subsequent ones unless a feature is changed in the device.
+
+      // TODO: the above logic needs to be implemented in core?
+
+      // Don't acqMode because it can be inferred from frameCount
+      // if frameCount is:    1 --> acqMode is single
+      //                    > 1 --> acqMode is MultiFrame
+      //                     <= 0 --> acqMode is continuous
+
+      virtual int AcquisitionArm(int frameCount) = 0;
+
+      // Starts the Acquisition of the device. The number of frames captured is specified by AcquisitionMode.
+      // Note that unless the AcquisitionArm was executed since the last feature change, 
+      // the AcquisitionStart command must validate all the current features for consistency before starting the Acquisition. 
+      virtual int AcquisitionStart() = 0;
+
+      // Stops the Acquisition of the device at the end of the current Frame. It is mainly 
+      // used when AcquisitionMode is Continuous but can be used in any acquisition mode.
+      // If the camera is waiting for a trigger, the pending Frame will be cancelled. 
+      // If no Acquisition is in progress, the command is ignored.
+      virtual int AcquisitionStop() = 0;
+
+
+      //Aborts the Acquisition immediately. This will end the capture without completing
+      // the current Frame or waiting on a trigger. If no Acquisition is in progress, the command is ignored.
+      virtual int AcquisitionAbort() = 0;
+
+
+      ///////////////////////////////////////////////////////////////
+      ///// End new camera API               ////////////////////////
+      //////////////////////////////////////////////////////////////
 
       // Camera API
       /**
@@ -557,7 +1116,7 @@ namespace MM {
 
       // Device API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = ShutterDevice;
 
       // Shutter API
       virtual int SetOpen(bool open = true) = 0;
@@ -580,7 +1139,7 @@ namespace MM {
 
       // Device API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = StageDevice;
 
       // Stage API
       virtual int SetPositionUm(double pos) = 0;
@@ -680,7 +1239,7 @@ namespace MM {
 
       // Device API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = XYStageDevice;
 
       // XYStage API
       // it is recommended that device adapters implement the  "Steps" methods
@@ -766,7 +1325,7 @@ namespace MM {
 
       // MMDevice API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = StateDevice;
 
       // MMStateDevice API
       virtual int SetPosition(long pos) = 0;
@@ -792,7 +1351,7 @@ namespace MM {
 
       // MMDevice API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = SerialDevice;
 
       // Serial API
       virtual PortType GetPortType() const = 0;
@@ -814,7 +1373,7 @@ namespace MM {
 
       // MMDevice API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = AutoFocusDevice;
 
       // AutoFocus API
       virtual int SetContinuousFocusing(bool state) = 0;
@@ -840,7 +1399,7 @@ namespace MM {
 
       // MMDevice API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = ImageProcessorDevice;
 
       // image processor API
       virtual int Process(unsigned char* buffer, unsigned width, unsigned height, unsigned byteDepth) = 0;
@@ -859,7 +1418,7 @@ namespace MM {
 
       // MMDevice API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = SignalIODevice;
 
       // signal io API
       virtual int SetGateOpen(bool open = true) = 0;
@@ -943,7 +1502,7 @@ namespace MM {
 
       // MMDevice API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = MagnifierDevice;
 
       virtual double GetMagnification() = 0;
    };
@@ -963,7 +1522,7 @@ namespace MM {
       virtual ~SLM() {}
 
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = SLMDevice;
 
       // SLM API
       /**
@@ -1122,7 +1681,7 @@ namespace MM {
       virtual ~Galvo() {}
 
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = GalvoDevice;
 
    //Galvo API:
 
@@ -1249,7 +1808,7 @@ namespace MM {
 
       // MMDevice API
       virtual DeviceType GetType() const { return Type; }
-      static const DeviceType Type;
+      static constexpr DeviceType Type = HubDevice;
 
       /**
        * Instantiate all available child peripheral devices.
@@ -1371,6 +1930,11 @@ namespace MM {
        * Magnifiers can use this to signal changes in magnification
        */
       virtual int OnMagnifierChanged(const Device* caller) = 0;
+      /**
+       * This callback is used to handle various types of camera events
+       */
+      virtual int OnCameraEvent(const Device* caller, const char* eventName, unsigned long timestamp, unsigned long frameId, const char* data) = 0;
+
 
       // Deprecated: Return value overflows in ~72 minutes on Windows.
       // Prefer std::chrono::steady_clock for time delta measurements.

@@ -138,7 +138,7 @@ class CameraSnapThread : public MMDeviceThreadBase
 /*
  * MultiCamera: Combines multiple physical cameras into one logical device
  */
-class MultiCamera : public CCameraBase<MultiCamera>
+class MultiCamera : public CLegacyCameraBase<MultiCamera>
 {
 public:
    MultiCamera();

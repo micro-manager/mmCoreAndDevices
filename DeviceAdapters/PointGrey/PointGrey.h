@@ -52,7 +52,7 @@ using namespace FlyCapture2;
 
 class SequenceThread;
 
-class PointGrey : public CCameraBase<PointGrey>  
+class PointGrey : public CLegacyCameraBase<PointGrey>  
 {
 public:
    PointGrey(const char* deviceName);

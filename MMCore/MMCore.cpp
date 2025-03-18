@@ -2799,6 +2799,222 @@ long CMMCore::getImageBufferSize()
    return 0;
 }
 
+
+std::shared_ptr<CameraInstance> CMMCore::GetCurrentCameraDevice() throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+   if (!camera)
+   {
+      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
+   }
+   return camera;
+}
+
+// Helper function to check if camera is capturing
+void CMMCore::CheckCameraCapturing(std::shared_ptr<CameraInstance> camera) throw (CMMError)
+{
+   if (camera->IsCapturing())
+   {
+      throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
+                     MMERR_NotAllowedDuringSequenceAcquisition);
+   }
+}
+
+// Helper function to initialize circular buffer
+void CMMCore::InitializeCircularBufferForCamera(std::shared_ptr<CameraInstance> camera) throw (CMMError)
+{
+   try
+   {
+      if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), 
+                             camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+      {
+         logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+         throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), 
+                        MMERR_CircularBufferFailedToInitialize);
+      }
+      cbuf_->Clear();
+   }
+   catch (std::bad_alloc& ex)
+   {
+      std::ostringstream messs;
+      messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
+      throw CMMError(messs.str().c_str(), MMERR_OutOfMemory);
+   }
+}
+
+//// New camera API
+
+/**
+ * Trigger the camera to capture an image via software.
+ */
+void CMMCore::triggerCamera() throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> camera = GetCurrentCameraDevice();
+   mm::DeviceModuleLockGuard guard(camera);
+   
+   int ret = camera->TriggerSoftware();
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, camera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+/**
+ * Trigger the specified camera to capture an image via software.
+ */
+void CMMCore::triggerCamera(const char* cameraLabel) throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+
+   mm::DeviceModuleLockGuard guard(pCamera);
+   int ret = pCamera->TriggerSoftware();
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, pCamera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+void CMMCore::acquisitionStart() throw (CMMError)
+{
+   {
+      MMThreadGuard g(*pPostedErrorsLock_);
+      postedErrors_.clear();
+   }
+
+   std::shared_ptr<CameraInstance> camera = GetCurrentCameraDevice();
+   mm::DeviceModuleLockGuard guard(camera);
+   
+   CheckCameraCapturing(camera);
+   
+   int ret = camera->AcquisitionStart();
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, camera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+void CMMCore::acquisitionStart(const char* cameraLabel) throw (CMMError)
+{
+   {
+      MMThreadGuard g(*pPostedErrorsLock_);
+      postedErrors_.clear();
+   }
+
+   std::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+
+   mm::DeviceModuleLockGuard guard(pCamera);
+   
+   CheckCameraCapturing(pCamera);
+   
+   int ret = pCamera->AcquisitionStart();
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, pCamera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+void CMMCore::acquisitionArm(int frameCount) throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> camera = GetCurrentCameraDevice();
+   mm::DeviceModuleLockGuard guard(camera);
+   
+
+   CheckCameraCapturing(camera);   
+   InitializeCircularBufferForCamera(camera);
+   
+   int ret = camera->AcquisitionArm(frameCount);
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, camera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+void CMMCore::acquisitionArm(const char* cameraLabel, int frameCount) throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+
+   mm::DeviceModuleLockGuard guard(pCamera);
+   
+   CheckCameraCapturing(pCamera);
+   
+   InitializeCircularBufferForCamera(pCamera);
+   
+   int ret = pCamera->AcquisitionArm(frameCount);
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, pCamera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+void CMMCore::acquisitionStop() throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> camera = GetCurrentCameraDevice();
+   mm::DeviceModuleLockGuard guard(camera);
+   
+   int ret = camera->AcquisitionStop();
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, camera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+void CMMCore::acquisitionStop(const char* cameraLabel) throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+
+   mm::DeviceModuleLockGuard guard(pCamera);
+   int ret = pCamera->AcquisitionStop();
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, pCamera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+void CMMCore::acquisitionAbort() throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> camera = GetCurrentCameraDevice();
+   mm::DeviceModuleLockGuard guard(camera);
+   
+   int ret = camera->AcquisitionAbort();
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, camera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+void CMMCore::acquisitionAbort(const char* cameraLabel) throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
+
+   mm::DeviceModuleLockGuard guard(pCamera);
+   int ret = pCamera->AcquisitionAbort();
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, pCamera).c_str(), MMERR_DEVICE_GENERIC);
+}
+
+bool CMMCore::isAcquisitionRunning() throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
+   if (camera)
+   {
+      try
+      {
+         mm::DeviceModuleLockGuard guard(camera);
+         return camera->IsCapturing();
+      }
+      catch (const CMMError&) // Possibly uninitialized camera
+      {
+         // Fall through
+      }
+   }
+   return false;
+};
+
+/**
+ * Check if the specified camera is acquiring the sequence
+ * Returns false when the sequence is done
+ */
+bool CMMCore::isAcquisitionRunning(const char* label) throw (CMMError)
+{
+   std::shared_ptr<CameraInstance> pCam =
+      deviceManager_->GetDeviceOfType<CameraInstance>(label);
+
+   mm::DeviceModuleLockGuard guard(pCam);
+   return pCam->IsCapturing();
+};
+
+
+// End new camera API
+
+
+
 /**
  * Starts streaming camera sequence acquisition.
  * This command does not block the calling thread for the duration of the acquisition.
@@ -2815,43 +3031,16 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
       postedErrors_.clear();
    }
 
-   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
-   if (camera)
-   {
-      if(camera->IsCapturing())
-      {
-         throw CMMError(getCoreErrorText(
-            MMERR_NotAllowedDuringSequenceAcquisition).c_str()
-            ,MMERR_NotAllowedDuringSequenceAcquisition);
-      }
+   std::shared_ptr<CameraInstance> camera = GetCurrentCameraDevice();
 
-		try
-		{
-			if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-			{
-				logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-			}
-			cbuf_->Clear();
-         mm::DeviceModuleLockGuard guard(camera);
+   CheckCameraCapturing(camera);
+   InitializeCircularBufferForCamera(camera);
 
-         LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
-			int nRet = camera->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
-			if (nRet != DEVICE_OK)
-				throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
-		}
-		catch (std::bad_alloc& ex)
-		{
-			std::ostringstream messs;
-			messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
-			throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
-		}
-   }
-   else
-   {
-      logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CameraNotAvailable).c_str());
-      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
-   }
+   mm::DeviceModuleLockGuard guard(camera);
+   LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
+   int nRet = camera->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
+   if (nRet != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
    LOG_DEBUG(coreLogger_) << "Did start sequence acquisition from default camera";
 }
 
@@ -2863,21 +3052,12 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
  */
 void CMMCore::startSequenceAcquisition(const char* label, long numImages, double intervalMs, bool stopOnOverflow) throw (CMMError)
 {
-   std::shared_ptr<CameraInstance> pCam =
-      deviceManager_->GetDeviceOfType<CameraInstance>(label);
+   std::shared_ptr<CameraInstance> pCam = deviceManager_->GetDeviceOfType<CameraInstance>(label);
 
    mm::DeviceModuleLockGuard guard(pCam);
-   if(pCam->IsCapturing())
-      throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
-                     MMERR_NotAllowedDuringSequenceAcquisition);
+   CheckCameraCapturing(pCam);
+   InitializeCircularBufferForCamera(pCam);
 
-   if (!cbuf_->Initialize(pCam->GetNumberOfChannels(), pCam->GetImageWidth(), pCam->GetImageHeight(), pCam->GetImageBytesPerPixel()))
-   {
-      logError(getDeviceName(pCam).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-      throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-   }
-   cbuf_->Clear();
-	
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
    int nRet = pCam->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
@@ -2898,9 +3078,7 @@ void CMMCore::prepareSequenceAcquisition(const char* label) throw (CMMError)
       deviceManager_->GetDeviceOfType<CameraInstance>(label);
 
    mm::DeviceModuleLockGuard guard(pCam);
-   if(pCam->IsCapturing())
-      throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
-                     MMERR_NotAllowedDuringSequenceAcquisition);
+   CheckCameraCapturing(pCam);
 
    LOG_DEBUG(coreLogger_) << "Will prepare camera " << label <<
       " for sequence acquisition";
@@ -2922,12 +3100,7 @@ void CMMCore::initializeCircularBuffer() throw (CMMError)
    if (camera)
    {
       mm::DeviceModuleLockGuard guard(camera);
-      if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-      {
-         logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-         throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-      }
-      cbuf_->Clear();
+      InitializeCircularBufferForCamera(camera);
    }
    else
    {
@@ -2963,33 +3136,16 @@ void CMMCore::stopSequenceAcquisition(const char* label) throw (CMMError)
  */
 void CMMCore::startContinuousSequenceAcquisition(double intervalMs) throw (CMMError)
 {
-   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
-   if (camera)
-   {
-      mm::DeviceModuleLockGuard guard(camera);
-      if(camera->IsCapturing())
-      {
-         throw CMMError(getCoreErrorText(
-            MMERR_NotAllowedDuringSequenceAcquisition).c_str()
-            ,MMERR_NotAllowedDuringSequenceAcquisition);
-      }
+   std::shared_ptr<CameraInstance> camera = GetCurrentCameraDevice();
+   mm::DeviceModuleLockGuard guard(camera);
+   CheckCameraCapturing(camera);
+   InitializeCircularBufferForCamera(camera);
 
-      if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-      {
-         logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-         throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-      }
-      cbuf_->Clear();
-      LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
-      int nRet = camera->StartSequenceAcquisition(intervalMs);
-      if (nRet != DEVICE_OK)
-         throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
-   }
-   else
-   {
-      logError("no camera available", getCoreErrorText(MMERR_CameraNotAvailable).c_str());
-      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
-   }
+   LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
+   int nRet = camera->StartSequenceAcquisition(intervalMs);
+   if (nRet != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
+
    LOG_DEBUG(coreLogger_) << "Did start continuous sequence acquisition from current camera";
 }
 
@@ -3025,20 +3181,7 @@ void CMMCore::stopSequenceAcquisition() throw (CMMError)
  */
 bool CMMCore::isSequenceRunning() throw ()
 {
-   std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
-   if (camera)
-   {
-      try
-      {
-         mm::DeviceModuleLockGuard guard(camera);
-         return camera->IsCapturing();
-      }
-      catch (const CMMError&) // Possibly uninitialized camera
-      {
-         // Fall through
-      }
-   }
-   return false;
+   return isAcquisitionRunning();
 };
 
 /**
@@ -3047,11 +3190,7 @@ bool CMMCore::isSequenceRunning() throw ()
  */
 bool CMMCore::isSequenceRunning(const char* label) throw (CMMError)
 {
-   std::shared_ptr<CameraInstance> pCam =
-      deviceManager_->GetDeviceOfType<CameraInstance>(label);
-
-   mm::DeviceModuleLockGuard guard(pCam);
-   return pCam->IsCapturing();
+   return isAcquisitionRunning(label);
 };
 
 /**

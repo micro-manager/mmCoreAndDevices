@@ -56,7 +56,7 @@
 // Frame-grabber video mode adapter for BitFlow
 //////////////////////////////////////////////////////////////////////////////
 
-class BitFlowCamera : public CCameraBase<BitFlowCamera>  {
+class BitFlowCamera : public CLegacyCameraBase<BitFlowCamera>  {
 public:
    BitFlowCamera(bool dual);
    ~BitFlowCamera();

@@ -31,7 +31,7 @@ using namespace DirectElectronPlugin;
 // CDECamera class
 // Simulation of the Camera device
 //////////////////////////////////////////////////////////////////////////////
-class CDECamera : public CCameraBase<CDECamera>  
+class CDECamera : public CLegacyCameraBase<CDECamera>  
 {
 public:
    // Packet types

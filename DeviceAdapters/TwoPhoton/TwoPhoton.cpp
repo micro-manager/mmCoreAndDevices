@@ -101,7 +101,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
  * Constructor.
  */
 BitFlowCamera::BitFlowCamera(bool dual) :
-   CCameraBase<BitFlowCamera> (),
+   CLegacyCameraBase<BitFlowCamera> (),
    initialized_(false),
    inputChannel_(0),
    expNumFrames_(1),

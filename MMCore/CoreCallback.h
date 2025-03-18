@@ -120,7 +120,7 @@ public:
    int OnExposureChanged(const MM::Device* device, double newExposure);
    int OnSLMExposureChanged(const MM::Device* device, double newExposure);
    int OnMagnifierChanged(const MM::Device* device);
-
+   int OnCameraEvent(const MM::Device* device, const char* eventName, unsigned long timestamp, unsigned long eventId, const char* data);
 
    void NextPostedError(int& errorCode, char* pMessage, int maxlen, int& messageLength);
    void PostError(const int errorCode, const char* pMessage);

@@ -179,7 +179,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 POACamera::POACamera() :
-    CCameraBase<POACamera>(),
+    CLegacyCameraBase<POACamera>(),
     exposureMaximum_(2000000.0),
     initialized_(false),
     roiX_(0),

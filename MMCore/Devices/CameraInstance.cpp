@@ -21,11 +21,104 @@
 
 #include "CameraInstance.h"
 
+//// New Camera API 
+   int CameraInstance::TriggerSoftware() {
+     if (!GetImpl()->IsNewAPIImplemented()) {
+        // Exception
+        throw CMMError("TriggerSoftware is not implemented in the old camera API");
+     } else {
+        return GetImpl()->TriggerSoftware();
+     }
+   }
 
-int CameraInstance::SnapImage() { RequireInitialized(__func__); return GetImpl()->SnapImage(); }
-const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(); }
-const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(channelNr); }
-const unsigned int* CameraInstance::GetImageBufferAsRGB32() { RequireInitialized(__func__); return GetImpl()->GetImageBufferAsRGB32(); }
+   int CameraInstance::AcquisitionStart() {
+      if (!GetImpl()->IsNewAPIImplemented()) {
+         if (frameCount_ <= 0) {
+            // Go until stopped
+            return GetImpl()->StartSequenceAcquisition(0);
+         } else {
+            return GetImpl()->StartSequenceAcquisition(frameCount_, 0, true);
+         }
+      } else {
+         return GetImpl()->AcquisitionStart();
+      }
+   }
+
+   int CameraInstance::AcquisitionArm(int frameCount) {
+      if (!GetImpl()->IsNewAPIImplemented()) {
+         frameCount_ = frameCount;
+         return GetImpl()->PrepareSequenceAcqusition();
+      } else {
+         return GetImpl()->AcquisitionArm(frameCount);
+      }
+   }
+   
+   int CameraInstance::AcquisitionStop() {
+      if (!GetImpl()->IsNewAPIImplemented()) {
+         return GetImpl()->StopSequenceAcquisition();
+      } else {
+         return GetImpl()->AcquisitionStop();
+      }
+   }
+   
+   int CameraInstance::AcquisitionAbort() {
+      if (!GetImpl()->IsNewAPIImplemented()) {
+         return GetImpl()->StopSequenceAcquisition();
+      } else {
+         return GetImpl()->AcquisitionAbort();
+      }
+   }
+// End New Camera API
+
+int CameraInstance::SnapImage() { 
+   RequireInitialized(__func__); 
+   isSnapping_.store(true);
+   multiChannelImageCounter_.store(0);
+   int ret = DEVICE_OK;
+   if (!GetImpl()->IsNewAPIImplemented()) {
+      ret = GetImpl()->SnapImage();
+   } else {
+      ret = GetImpl()->AcquisitionArm(1);
+      if (ret == DEVICE_OK) {
+         ret = GetImpl()->AcquisitionStart();
+         // Use condition variable to wait for image capture
+         std::unique_lock<std::mutex> lock(imageMutex_);
+         while (multiChannelImageCounter_.load() != (int) GetImpl()->GetNumberOfChannels()) {
+            imageAvailable_.wait(lock);
+         }
+      }
+   }
+   isSnapping_.store(false);
+   return ret;
+}
+
+const unsigned char* CameraInstance::GetImageBuffer() { 
+   RequireInitialized(__func__);
+   const unsigned char* snappedPixels = snappedImage_.GetPixels(0);
+   if (snappedPixels != nullptr) {
+      return snappedPixels;
+   }
+   return GetImpl()->GetImageBuffer(); 
+}
+
+const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) {
+    RequireInitialized(__func__); 
+    const unsigned char* snappedPixels = snappedImage_.GetPixels(channelNr);
+    if (snappedPixels != nullptr) {
+      return snappedPixels;
+    }
+    return GetImpl()->GetImageBuffer(channelNr); 
+}
+
+const unsigned int* CameraInstance::GetImageBufferAsRGB32() { 
+   RequireInitialized(__func__); 
+   const unsigned int* snappedPixels = reinterpret_cast<const unsigned int*>(snappedImage_.GetPixels(0));
+   if (snappedPixels != nullptr) {
+      return snappedPixels;
+   }
+   return GetImpl()->GetImageBufferAsRGB32(); 
+}
+
 unsigned CameraInstance::GetNumberOfComponents() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfComponents(); }
 
 std::string CameraInstance::GetComponentName(unsigned component)
@@ -127,10 +220,62 @@ int CameraInstance::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
    return GetImpl()->GetMultiROI(xs, ys, widths, heights, length);
 }
 
-int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); }
-int CameraInstance::StartSequenceAcquisition(double interval_ms) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(interval_ms); }
-int CameraInstance::StopSequenceAcquisition() { RequireInitialized(__func__); return GetImpl()->StopSequenceAcquisition(); }
-int CameraInstance::PrepareSequenceAcqusition() { RequireInitialized(__func__); return GetImpl()->PrepareSequenceAcqusition(); }
+int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) {
+    RequireInitialized(__func__); 
+
+    if (!GetImpl()->IsNewAPIImplemented()) {
+        return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); 
+    } else {
+        int ret = GetImpl()->AcquisitionArm(numImages);
+        if (ret != DEVICE_OK) {
+            return ret;
+        }
+        ret = GetImpl()->AcquisitionStart();
+        if (ret != DEVICE_OK) {
+            return ret;
+        }
+      return DEVICE_OK;
+    }
+}
+
+int CameraInstance::StartSequenceAcquisition(double interval_ms) { 
+    RequireInitialized(__func__); 
+
+    if (!GetImpl()->IsNewAPIImplemented()) {
+        return GetImpl()->StartSequenceAcquisition(interval_ms); 
+    } else {
+        int ret = GetImpl()->AcquisitionArm(0); // 0 means until stopped (e.g. live mode)
+        if (ret != DEVICE_OK) {
+            return ret;
+        }
+        ret = GetImpl()->AcquisitionStart();
+        if (ret != DEVICE_OK) {
+            return ret;
+        }
+        return DEVICE_OK;
+    }
+}
+
+int CameraInstance::StopSequenceAcquisition() { 
+   RequireInitialized(__func__); 
+   if (!GetImpl()->IsNewAPIImplemented()) {
+      return GetImpl()->StopSequenceAcquisition();
+   } else {
+      return GetImpl()->AcquisitionStop();
+   }
+}
+
+int CameraInstance::PrepareSequenceAcqusition() { 
+   RequireInitialized(__func__); 
+   if (!GetImpl()->IsNewAPIImplemented()) {
+      return GetImpl()->PrepareSequenceAcqusition();
+   } else {
+      // nothing to do here. The new API has an arm method, but it requires the number of frames to acquire
+      // so it can't be called here.
+      return DEVICE_OK;
+   }   
+}
+
 bool CameraInstance::IsCapturing() { RequireInitialized(__func__); return GetImpl()->IsCapturing(); }
 
 std::string CameraInstance::GetTags()
@@ -154,3 +299,27 @@ int CameraInstance::StopExposureSequence() { RequireInitialized(__func__); retur
 int CameraInstance::ClearExposureSequence() { RequireInitialized(__func__); return GetImpl()->ClearExposureSequence(); }
 int CameraInstance::AddToExposureSequence(double exposureTime_ms) { RequireInitialized(__func__); return GetImpl()->AddToExposureSequence(exposureTime_ms); }
 int CameraInstance::SendExposureSequence() const { RequireInitialized(__func__); return GetImpl()->SendExposureSequence(); }
+
+bool CameraInstance::IsSnapping() const {
+   return isSnapping_.load();
+}
+
+void CameraInstance::StoreSnappedImage(const unsigned char* buf, unsigned width, unsigned height, 
+                                       unsigned byteDepth) {        
+   // If the buffer doesn't exist or has wrong dimensions, create/resize it
+   if (snappedImage_.Width() != width || 
+        snappedImage_.Height() != height || 
+        snappedImage_.Depth() != byteDepth) {
+        snappedImage_.Resize(width, height, byteDepth);
+   }
+    
+   // For multi-channel cameras, insertImage will be called once for each channel
+   snappedImage_.SetPixels(multiChannelImageCounter_.load(), buf);
+   multiChannelImageCounter_.fetch_add(1);
+   
+   // Notify any waiting threads that the image is available
+   {
+      std::lock_guard<std::mutex> lock(imageMutex_);
+      imageAvailable_.notify_all();
+   }
+}

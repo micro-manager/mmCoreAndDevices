@@ -37,7 +37,7 @@
 
 class SequenceThread;
 
-class Atik : public CCameraBase<Atik>  
+class Atik : public CLegacyCameraBase<Atik>  
 {
 public:
    Atik();

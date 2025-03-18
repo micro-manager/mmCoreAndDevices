@@ -74,7 +74,7 @@ class SRRFAndorCamera;
 //////////////////////////////////////////////////////////////////////////////
 // Implementation of the MMDevice and MMCamera interfaces
 //
-class AndorCamera : public CCameraBase<AndorCamera>
+class AndorCamera : public CLegacyCameraBase<AndorCamera>
 {
 public:
    friend class AcqSequenceThread;

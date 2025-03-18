@@ -176,7 +176,7 @@ class PvEnumParam;
 /**
 * Implementation of the MMDevice and MMCamera interfaces for all PVCAM cameras
 */
-class Universal : public CCameraBase<Universal>
+class Universal : public CLegacyCameraBase<Universal>
 {
 public: // Constructors, destructor
     Universal(short cameraId, const char* deviceName);

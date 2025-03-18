@@ -147,7 +147,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 TwainCamera::TwainCamera() : 
-CCameraBase<TwainCamera> (),
+CLegacyCameraBase<TwainCamera> (),
 initialized_(false),
 busy_(false),
 readoutUs_(0),
@@ -1280,7 +1280,7 @@ int TwainCamera::PushImage()
 }
 int TwainCamera::StopSequenceAcquisition()
 {
-	int nRet = this->CCameraBase<TwainCamera>::StopSequenceAcquisition();
+	int nRet = this->CLegacyCameraBase<TwainCamera>::StopSequenceAcquisition();
 
 	return nRet;
 }

@@ -22,7 +22,7 @@
 
 class SequenceThread;
 
-class AmScope : public CCameraBase<AmScope>
+class AmScope : public CLegacyCameraBase<AmScope>
 { 
 public:
 	AmScope();

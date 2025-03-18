@@ -388,9 +388,25 @@ public:
    double getExposure() throw (CMMError);
    double getExposure(const char* label) throw (CMMError);
 
+   // TODO: deprecate?
    void snapImage() throw (CMMError);
    void* getImage() throw (CMMError);
    void* getImage(unsigned numChannel) throw (CMMError);
+
+   // New Camera API methods
+   void triggerCamera() throw (CMMError);
+   void triggerCamera(const char* cameraLabel) throw (CMMError);
+   void acquisitionStart() throw (CMMError);
+   void acquisitionStart(const char* cameraLabel) throw (CMMError);
+   void acquisitionArm(int frameCount) throw (CMMError);
+   void acquisitionArm(const char* cameraLabel, int frameCount) throw (CMMError);
+   void acquisitionStop() throw (CMMError);
+   void acquisitionStop(const char* cameraLabel) throw (CMMError);
+   void acquisitionAbort() throw (CMMError);
+   void acquisitionAbort(const char* cameraLabel) throw (CMMError);
+   bool isAcquisitionRunning() throw (CMMError);
+   bool isAcquisitionRunning(const char* cameraLabel) throw (CMMError);
+   // End new camera API
 
    unsigned getImageWidth();
    unsigned getImageHeight();
@@ -685,6 +701,11 @@ private:
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
 
 private:
+   // Helper functions for sequence acquisitions      
+   std::shared_ptr<CameraInstance> GetCurrentCameraDevice() throw (CMMError);
+   void CheckCameraCapturing(std::shared_ptr<CameraInstance> camera) throw (CMMError);
+   void InitializeCircularBufferForCamera(std::shared_ptr<CameraInstance> camera) throw (CMMError);
+
    void InitializeErrorMessages();
    void CreateCoreProperties();
 

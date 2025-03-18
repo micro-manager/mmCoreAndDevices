@@ -1544,7 +1544,7 @@ unsigned int __stdcall mSeqEventHandler(void* pArguments)
  * perform most of the initialization in the Initialize() method.
  */
 CBaumerOptronic::CBaumerOptronic() :
-   CCameraBase<CBaumerOptronic>(),
+   CLegacyCameraBase<CBaumerOptronic>(),
    initialized_(false),
    pWorkerThread_(NULL),
    stopOnOverflow_(false)

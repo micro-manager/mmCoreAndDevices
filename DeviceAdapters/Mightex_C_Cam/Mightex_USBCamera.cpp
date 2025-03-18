@@ -610,7 +610,7 @@ int CMightex_BUF_USBCCDCamera::GetCameraBufferCount(int width, int height)
 * perform most of the initialization in the Initialize() method.
 */
 CMightex_BUF_USBCCDCamera::CMightex_BUF_USBCCDCamera() :
-   CCameraBase<CMightex_BUF_USBCCDCamera> (),
+   CLegacyCameraBase<CMightex_BUF_USBCCDCamera> (),
    dPhase_(0),
    initialized_(false),
    readoutUs_(0.0),

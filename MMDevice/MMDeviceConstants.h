@@ -88,6 +88,7 @@
 #define DEVICE_SEQUENCE_TOO_LARGE      39
 #define DEVICE_OUT_OF_MEMORY           40
 #define DEVICE_NOT_YET_IMPLEMENTED     41
+#define DEVICE_MISSING_REQUIRED_PROPERTY 42
 
 
 namespace MM {
@@ -173,6 +174,111 @@ namespace MM {
    const char* const g_Keyword_Metadata_ROI_X       = "ROI-X-start";
    const char* const g_Keyword_Metadata_ROI_Y       = "ROI-Y-start";
    const char* const g_Keyword_Metadata_TimeInCore  = "TimeReceivedByCore";
+
+   ////// New Camera API constants
+   // trigger state constants
+   const char* const g_keyword_TriggerSelectorAcquisitionStart = "AcquisitionStart";
+   const char* const g_keyword_TriggerSelectorAcquisitionEnd = "AcquisitionEnd";
+   const char* const g_keyword_TriggerSelectorAcquisitionActive = "AcquisitionActive";
+   const char* const g_keyword_TriggerSelectorFrameBurstStart = "FrameBurstStart";
+   const char* const g_keyword_TriggerSelectorFrameBurstEnd = "FrameBurstEnd";
+   const char* const g_keyword_TriggerSelectorFrameBurstActive = "FrameBurstActive";
+   const char* const g_keyword_TriggerSelectorFrameStart = "FrameStart";
+   const char* const g_keyword_TriggerSelectorFrameEnd = "FrameEnd";
+   const char* const g_keyword_TriggerSelectorFrameActive = "FrameActive";
+   const char* const g_keyword_TriggerSelectorExposureStart = "ExposureStart";
+   const char* const g_keyword_TriggerSelectorExposureEnd = "ExposureEnd";
+   const char* const g_keyword_TriggerSelectorExposureActive = "ExposureActive";
+
+   const char* const g_keyword_TriggerModeOn = "On";
+   const char* const g_keyword_TriggerModeOff = "Off";
+
+   const char* const g_keyword_TriggerSourceSoftware = "Software";
+
+   const char* const g_keyword_TriggerActivationAnyEdge = "AnyEdge";
+   const char* const g_keyword_TriggerActivationRisingEdge = "RisingEdge";
+   const char* const g_keyword_TriggerActivationFallingEdge = "FallingEdge";
+   const char* const g_keyword_TriggerActivationLevelLow = "LevelLow";
+   const char* const g_keyword_TriggerActivationLevelHigh = "LevelHigh";
+
+   const char* const g_keyword_ExposureModeTimed = "Timed";
+   const char* const g_keyword_ExposureModeTriggerWidth = "TriggerWidth";
+   const char* const g_keyword_ExposureModeTriggerControlled = "TriggerControlled";
+
+   const char* const g_keyword_CameraStatusAcquisitionTriggerWait = "AcquisitionTriggerWait";
+   const char* const g_keyword_CameraStatusFrameBurstTriggerWait = "FrameBurstTriggerWait";
+   const char* const g_keyword_CameraStatusFrameTriggerWait = "FrameTriggerWait";
+   const char* const g_keyword_CameraStatusExposureTriggerWait = "ExposureTriggerWait";
+   const char* const g_keyword_CameraStatusAcquisitionActive = "AcquisitionActive";
+   const char* const g_keyword_CameraStatusFrameBurstTriggerActive = "FrameBurstTriggerActive";
+   const char* const g_keyword_CameraStatusFrameActive = "FrameActive";
+   const char* const g_keyword_CameraStatusExposureActive = "ExposureActive";
+   const char* const g_keyword_CameraStatusAcquisitionTransfer = "AcquisitionTransfer";
+
+   const char* const g_keyword_LineModeInput = "Input";
+   const char* const g_keyword_LineModeOutput = "Output";
+
+   const char* const g_keyword_OutputLineSourceOff = "Off";
+   const char* const g_keyword_OutputLineSourceAcquisitionTriggerWait = "AcquisitionTriggerWait";
+   const char* const g_keyword_OutputLineSourceAcquisitionTrigger = "AcquisitionTrigger";
+   const char* const g_keyword_OutputLineSourceAcquisitionTriggerMissed = "AcquisitionTriggerMissed";
+   const char* const g_keyword_OutputLineSourceAcquisitionActive = "AcquisitionActive";
+
+   const char* const g_keyword_OutputLineSourceFrameBurstTriggerWait = "FrameBurstTriggerWait";
+   const char* const g_keyword_OutputLineSourceFrameBurstTrigger = "FrameBurstTrigger";
+   const char* const g_keyword_OutputLineSourceFrameBurstTriggerMissed = "FrameBurstTriggerMissed";
+   const char* const g_keyword_OutputLineSourceFrameBurstActive = "FrameBurstTriggerActive";
+
+   const char* const g_keyword_OutputLineSourceFrameTriggerWait = "FrameTriggerWait";
+   const char* const g_keyword_OutputLineSourceFrameTrigger = "FrameTrigger";
+   const char* const g_keyword_OutputLineSourceFrameTriggerMissed = "FrameTriggerMissed";
+   const char* const g_keyword_OutputLineSourceFrameActive = "FrameActive";
+
+   const char* const g_keyword_OutputLineSourceExposureTriggerWait = "ExposureTriggerWait";
+   const char* const g_keyword_OutputLineSourceExposureTrigger = "ExposureTrigger";
+   const char* const g_keyword_OutputLineSourceExposureTriggerMissed = "ExposureTriggerMissed";
+   const char* const g_keyword_OutputLineSourceExposureActive = "ExposureActive";
+
+   const char* const g_keyword_LineStatusLow = "0";
+   const char* const g_keyword_LineStatusHigh = "1";
+
+   // Camera Events
+   // Device just received a trigger for the Acquisition of one or many Frames.
+   const char* const g_keyword_CameraEventAcquisitionTrigger = "CameraEventAcquisitionTrigger";
+   // Device just started the Acquisition of one or many Frames.
+   const char* const g_keyword_CameraEventAcquisitionStart = "CameraEventAcquisitionStart";
+   // Device just completed the Acquisition of one or many Frames.
+   const char* const g_keyword_CameraEventAcquisitionEnd = "CameraEventAcquisitionEnd";
+   // Device just started the transfer of one or many Frames.
+   const char* const g_keyword_CameraEventAcquisitionTransferStart = "CameraEventAcquisitionTransferStart";
+   // Device just completed the transfer of one or many Frames.
+   const char* const g_keyword_CameraEventAcquisitionTransferEnd = "CameraEventAcquisitionTransferEnd";
+   // Device just detected an error during the active Acquisition.
+   const char* const g_keyword_CameraEventAcquisitionError = "CameraEventAcquisitionError";
+   // Device just received a trigger to start the capture of one Frame.
+   const char* const g_keyword_CameraEventFrameTrigger = "CameraEventFrameTrigger";
+   // Device just started the capture of one Frame.
+   const char* const g_keyword_CameraEventFrameStart = "CameraEventFrameStart";
+   // Device just completed the capture of one Frame.
+   const char* const g_keyword_CameraEventFrameEnd = "CameraEventFrameEnd";
+   // Device just started the capture of a burst of Frames.
+   const char* const g_keyword_CameraEventFrameBurstStart = "CameraEventFrameBurstStart";
+   // Device just completed the capture of a burst of Frames.
+   const char* const g_keyword_CameraEventFrameBurstEnd = "CameraEventFrameBurstEnd";
+   // Device just started the transfer of one Frame.
+   const char* const g_keyword_CameraEventFrameTransferStart = "CameraEventFrameTransferStart";
+   // Device just completed the transfer of one Frame.
+   const char* const g_keyword_CameraEventFrameTransferEnd = "CameraEventFrameTransferEnd";
+   // Device just started the exposure of one Frame (or Line).
+   const char* const g_keyword_CameraEventExposureStart = "CameraEventExposureStart";
+   // Device just completed the exposure of one Frame (or Line).
+   const char* const g_keyword_CameraEventExposureEnd = "CameraEventExposureEnd";
+   // Device just detected an error.
+   const char* const g_keyword_CameraEventError = "CameraEventError";
+
+   const char* const g_keyword_CameraEventNotificationOff = "Off";
+   const char* const g_keyword_CameraEventNotificationOn = "On";
+
 
    // configuration file format constants
    const char* const g_FieldDelimiters = ",";

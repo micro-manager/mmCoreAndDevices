@@ -49,7 +49,7 @@ class XimeaParam;
 
 //////////////////////////////////////////////////////////////////////////////
 
-class XimeaCamera : public CCameraBase<XimeaCamera>
+class XimeaCamera : public CLegacyCameraBase<XimeaCamera>
 {
 public:
 	XimeaCamera(const char* name);

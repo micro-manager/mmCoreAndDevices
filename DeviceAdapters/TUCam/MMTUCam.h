@@ -197,7 +197,7 @@ typedef struct _tagTUCAM_RSPARA
 	DOUBLE dbLineInvalTm; // Line interval time
 }TUCAM_RSPARA;
 
-class CMMTUCam : public CCameraBase<CMMTUCam>  
+class CMMTUCam : public CLegacyCameraBase<CMMTUCam>  
 {
 public:
     CMMTUCam();

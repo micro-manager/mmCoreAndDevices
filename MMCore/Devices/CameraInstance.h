@@ -20,6 +20,10 @@
 #pragma once
 
 #include "DeviceInstanceBase.h"
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include "../FrameBuffer.h"
 
 
 class CameraInstance : public DeviceInstanceBase<MM::Camera>
@@ -35,6 +39,16 @@ public:
          mm::logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Camera>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
+
+
+   // New Camera API
+   int TriggerSoftware();
+   int AcquisitionStart();
+   int AcquisitionArm(int frameCount);
+   int AcquisitionArm();
+   int AcquisitionStop();
+   int AcquisitionAbort();
+   /// End New Camera API
 
    int SnapImage();
    const unsigned char* GetImageBuffer();
@@ -82,4 +96,25 @@ public:
    int ClearExposureSequence();
    int AddToExposureSequence(double exposureTime_ms);
    int SendExposureSequence() const;
+
+   /**
+    * Checks if the camera is currently snapping an image.
+    * Thread-safe method that can be called from any thread.
+    * @return true if the camera is currently snapping an image, false otherwise
+    */
+   bool IsSnapping() const;
+   void StoreSnappedImage(const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth);
+
+private:
+   // Atomic flag to track if the camera is currently snapping an image
+   std::atomic<bool> isSnapping_{false};
+   
+   // Frame buffer to store captured images
+   mm::FrameBuffer snappedImage_;
+   std::mutex imageMutex_;
+   std::condition_variable imageAvailable_;
+   std::atomic<int> multiChannelImageCounter_{0};
+
+   // Used for interconversion between old and new camera API
+   int frameCount_;
 };

@@ -209,7 +209,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * Constructor.
 */
 LumeneraCamera::LumeneraCamera() :
-	CCameraBase<LumeneraCamera>(),
+	CLegacyCameraBase<LumeneraCamera>(),
 	components_(1),
 	bitDepth_(Imaging::IMAGE_BIT_DEPTH::EIGHT_BIT),
 	colorCamera_(true),

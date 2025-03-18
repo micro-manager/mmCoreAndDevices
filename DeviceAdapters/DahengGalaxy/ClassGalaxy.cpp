@@ -52,7 +52,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 ClassGalaxy::ClassGalaxy() :
-    CCameraBase<ClassGalaxy>(),
+    CLegacyCameraBase<ClassGalaxy>(),
         ImageHandler_(0),
         Width_(0),
         Height_(0),

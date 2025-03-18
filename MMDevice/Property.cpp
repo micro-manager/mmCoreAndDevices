@@ -326,11 +326,20 @@ unsigned MM::PropertyCollection::GetSize() const
    return (unsigned) properties_.size();
 }
 
-int MM::PropertyCollection::CreateProperty(const char* pszName, const char* pszValue, MM::PropertyType eType, bool bReadOnly, MM::ActionFunctor* pAct, bool isPreInitProperty)
+int MM::PropertyCollection::CreateProperty(const char* pszName, const char* pszValue, MM::PropertyType eType,
+ bool bReadOnly, MM::ActionFunctor* pAct, bool isPreInitProperty, bool standard)
 {
    // check if the name already exists
    if (Find(pszName))
       return DEVICE_DUPLICATE_PROPERTY;
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    MM::Property* pProp=0;
 
@@ -363,11 +372,19 @@ int MM::PropertyCollection::CreateProperty(const char* pszName, const char* pszV
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::SetAllowedValues(const char* pszName, std::vector<std::string>& values)
+int MM::PropertyCollection::SetAllowedValues(const char* pszName, std::vector<std::string>& values, bool standard)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    pProp->ClearAllowedValues();
    for (unsigned i=0; i<values.size(); i++)
@@ -376,31 +393,55 @@ int MM::PropertyCollection::SetAllowedValues(const char* pszName, std::vector<st
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::ClearAllowedValues(const char* pszName)
+int MM::PropertyCollection::ClearAllowedValues(const char* pszName, bool standard)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    pProp->ClearAllowedValues();
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::AddAllowedValue(const char* pszName, const char* value, long data)
+int MM::PropertyCollection::AddAllowedValue(const char* pszName, const char* value, long data, bool standard)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    pProp->AddAllowedValue(value, data);
    return DEVICE_OK;
 }
 
-int MM::PropertyCollection::AddAllowedValue(const char* pszName, const char* value)
+int MM::PropertyCollection::AddAllowedValue(const char* pszName, const char* value, bool standard)
 {
    MM::Property* pProp = Find(pszName);
    if (!pProp)
       return DEVICE_INVALID_PROPERTY; // name not found
+
+   if (!standard)
+   {
+      // make sure it doesn't begin with the reserved prefix for standard properties
+      std::string prefixAndDelim = std::string(g_KeywordStandardPropertyPrefix);
+      if (std::string(pszName).find(prefixAndDelim) == 0)
+         return DEVICE_INVALID_PROPERTY;
+   }
 
    pProp->AddAllowedValue(value);
    return DEVICE_OK;
@@ -498,4 +539,18 @@ int MM::PropertyCollection::Apply(const char* pszName)
       return DEVICE_INVALID_PROPERTY;
 
    return pProp->Apply();
+}
+
+int MM::PropertyCollection::Delete(const char* pszName)
+{
+   MM::Property* pProp = Find(pszName);
+   if (!pProp)
+      return DEVICE_INVALID_PROPERTY;
+
+   // remove it from the map
+   properties_.erase(pszName);
+   
+   delete pProp;
+   
+   return DEVICE_OK;
 }

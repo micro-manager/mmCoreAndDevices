@@ -138,7 +138,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 COpenCVgrabber::COpenCVgrabber() :
-   CCameraBase<COpenCVgrabber> (),
+   CLegacyCameraBase<COpenCVgrabber> (),
    cameraID_(0),
    initialized_(false),
    readoutUs_(0.0),

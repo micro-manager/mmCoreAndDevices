@@ -40,7 +40,6 @@
 #include <vector>
 #include <map>
 #include "ImageMetadata.h"
-#include "ImgBuffer.h"
 #include <iostream>
 #include <pylon/PylonIncludes.h>
 
@@ -61,9 +60,9 @@ enum
 //////////////////////////////////////////////////////////////////////////////
 //Callback class for putting frames in circular buffer as they arrive
 
-class CTempCameraEventHandler;
-class CircularBufferInserter;
-class BaslerCamera : public CCameraBase<BaslerCamera>  {
+class CMMCameraEventHandler;
+class BufferInserter;
+class BaslerCamera : public CNewAPICameraBase<BaslerCamera>  {
 public:
 	BaslerCamera();
 	~BaslerCamera();
@@ -77,58 +76,65 @@ public:
 	bool Busy() {return false;}
 	
 
-	// MMCamera API
+	// MMCamera API (shared between old and new API)
 	// ------------
-	int SnapImage();
-	const unsigned char* GetImageBuffer();
-	void* Buffer4ContinuesShot;
 	
-	unsigned  GetNumberOfComponents() const;
+	unsigned GetNumberOfComponents() const;
 	unsigned GetImageWidth() const;
 	unsigned GetImageHeight() const;
 	unsigned GetImageBytesPerPixel() const;
 
 	unsigned GetBitDepth() const;
-	long GetImageBufferSize() const;
-	double GetExposure() const;
-	void SetExposure(double exp);
 	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
 	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
 	int ClearROI();
-	void ReduceImageSize(int64_t Width, int64_t Height);
 	int GetBinning() const;
 	int SetBinning(int binSize);
-	int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
-	void RGBPackedtoRGB(void* destbuffer, const CGrabResultPtr& ptrGrabResult);
-	//int SetProperty(const char* name, const char* value);
-	int CheckForBinningMode(CPropertyAction *pAct);
-	void AddToLog(std::string msg);
-	void CopyToImageBuffer(CGrabResultPtr image);
-	CImageFormatConverter *converter;
-    CircularBufferInserter *ImageHandler_;
-	std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
-	void UpdateTemperature();
-
-	/**
-	* Starts continuous acquisition.
-	*/
-	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
-	int StartSequenceAcquisition(double interval_ms);
-	int StopSequenceAcquisition();
-	int PrepareSequenceAcqusition();
-
-	/**
-	* Flag to indicate whether Sequence Acquisition is currently running.
-	* Return true when Sequence acquisition is active, false otherwise
-	*/
 	bool IsCapturing();
 
-	//Genicam Callback
-	void ResultingFramerateCallback(GenApi::INode* pNode);
+	
+
+	/////////////////////////////////////
+	///////// New Camera API ///////////
+	int TriggerSoftware();
+
+	int AcquisitionArm(int frameCount);
+	int AcquisitionStart();
+	int AcquisitionStop();
+	int AcquisitionAbort();
+
+	////////////////////////
+	///// End new Camera API
+	////////////////////////
 
 
 	// action interface
 	// ----------------
+	// Standard properties
+	int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExposureMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineInverter(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLineStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerOverlap(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExposureTime(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+	int OnEventSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnEventNotification(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+	int OnAcquisitionStatusSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnAcquisitionStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+	int OnAcquisitionBurstFrameCount(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+
+	// non-standard properties
 	int OnAcqFramerate(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAcqFramerateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAutoExpore(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -136,7 +142,6 @@ public:
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDeviceLinkThroughputLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnInterPacketDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -150,14 +155,49 @@ public:
 	int OnShutterMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTemperatureState(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+
+
+
+	// Convenience functions
+	std::string NodeToString(const char* str) const;
+ 
+	int HandleEnumerationProperty(MM::PropertyBase* pProp, MM::ActionType eAct, const char* nodeName);
+
+
+	void ResizeSnapBuffer();
+	void ReduceImageSize(int64_t Width, int64_t Height);
+	int CheckForBinningMode(CPropertyAction *pAct);
+	void AddToLog(std::string msg);
+	void CopyToImageBuffer(CGrabResultPtr image);
+	void UpdateTemperature();
+	void RGBPackedtoRGB(void* destbuffer, const CGrabResultPtr& ptrGrabResult);
+
+	
+	//Genicam Callback
+	void ResultingFramerateCallback(GenApi::INode* pNode);
+
+
+	CImageFormatConverter *converter;
+    BufferInserter *ImageHandler_;
+	std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
+	void* Buffer4ContinuesShot;
+	std::map<intptr_t, std::string> eventIdToName_;
+	unsigned sequenceFrameCounter_; // Counter for frames in current sequence
+	unsigned multiFrameAcqCount_;
+
+
+
+	std::vector<std::string> GetAvailableEnumValues(const GenApi::IEnumeration& node);
+
 
 private:
 
+
+
 	CBaslerUniversalInstantCamera *camera_;
-	CTempCameraEventHandler *pTempHandler_;
+	CMMCameraEventHandler *pEventHandler_;
 
     int nComponents_;
 	unsigned bitDepth_;
@@ -183,17 +223,34 @@ private:
 	std::string temperatureState_;
 	
 
-	void* imgBuffer_;
-	long imgBufferSize_;
-	ImgBuffer img_;
 	INodeMap* nodeMap_;
 
 	bool initialized_;
 
+
 	//MM::MMTime startTime_;
 
-	void ResizeSnapBuffer();
-	
+    int InitOrSyncTriggerSelectorStandardProperty();
+    int InitOrSyncTriggerModeStandardProperty();
+    int InitOrSyncTriggerSourceStandardProperty();
+    int InitOrSyncTriggerActivationStandardProperty();
+    int InitOrSyncTriggerDelayStandardProperty();
+    int InitOrSyncTriggerOverlapStandardProperty();
+    int InitOrSyncExposureModeStandardProperty();
+    int InitOrSyncExposureTimeStandardProperty();
+    int InitOrSyncLineSelectorStandardProperty();
+    int InitOrSyncLineModeStandardProperty();
+    int InitOrSyncLineInverterStandardProperty();
+    int InitOrSyncLineSourceStandardProperty();
+    int InitOrSyncLineStatusStandardProperty();
+    int InitOrSyncEventSelectorStandardProperty();
+    int InitOrSyncEventNotificationStandardProperty();
+	int InitOrSyncAcquisitionFrameRateStandardProperty();
+	int InitOrSyncAcquisitionFrameRateEnableStandardProperty();
+	int InitOrSyncAcquisitionStatusSelectorStandardProperty();
+	int InitOrSyncAcquisitionStatusStandardProperty();
+	int InitOrSyncAcquisitionBurstFrameCountStandardProperty();
+
 };
 
 //Enumeration used for distinguishing different events.
@@ -208,22 +265,22 @@ static const uint32_t c_countOfImagesToGrab = 5;
 
 
 // Example handler for camera events.
-class CTempCameraEventHandler : public CBaslerUniversalCameraEventHandler
+class CMMCameraEventHandler : public CBaslerUniversalCameraEventHandler
 {
 private:
 	BaslerCamera* dev_;
 public:
-	CTempCameraEventHandler(BaslerCamera* dev);
+	CMMCameraEventHandler(BaslerCamera* dev);
 	virtual void OnCameraEvent(CBaslerUniversalInstantCamera& camera, intptr_t userProvidedId, GenApi::INode* pNode);
 };
 
 
-class CircularBufferInserter : public CImageEventHandler {
+class BufferInserter : public CImageEventHandler {
 private:
 	BaslerCamera* dev_;
 
 public:
-	CircularBufferInserter(BaslerCamera* dev);
+	BufferInserter(BaslerCamera* dev);
 
 	virtual void OnImageGrabbed( CInstantCamera& camera, const CGrabResultPtr& ptrGrabResult);
 };

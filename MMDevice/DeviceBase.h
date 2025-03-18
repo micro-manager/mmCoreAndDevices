@@ -38,6 +38,8 @@
 #include <iomanip>
 #include <map>
 #include <sstream>
+#include <type_traits>
+#include <set>
 
 // common error messages
 const char* const g_Msg_ERR = "Unknown error in the device";
@@ -116,6 +118,284 @@ public:
    {
       CDeviceUtils::CopyLimitedString(name, moduleName_.c_str());
    }
+
+   //// Standard properties are created using only these dedicated functions
+   // Such functions should all be defined here, and which device types they apply
+   //
+   // to is handled in MMDevice.h using the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE macro
+   // int CreateTestStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    return CreateStandardProperty<MM::g_TestStandardProperty>(value, pAct);
+   // }
+
+   // int CreateTestWithValuesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    // just make the values the required ones here. Also option to add 
+   //    // additional ones in real situations
+   //    return CreateStandardProperty<MM::g_TestWithValuesStandardProperty>(value, pAct,
+   //     MM::g_TestWithValuesStandardProperty.requiredValues);
+   // }
+
+   // Every standard property must either be created or explicitly skipped using
+   // a method like this
+   // void SkipTestStandardProperty() {
+   //    SkipStandardProperty<MM::g_TestStandardProperty>();
+   // }
+
+   // Camera triggering API standard properties
+   int CreateTriggerSelectorStandardProperty(const char* value,  const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerSelectorProperty>(value, pAct, values);
+   }
+
+   int SetTriggerSelectorStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerSelectorProperty>(values);
+   }
+
+   void SkipTriggerSelectorStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerSelectorProperty>();
+   }
+
+   int CreateTriggerModeStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerModeProperty>(value, pAct, values);
+   }
+
+   int SetTriggerModeStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerModeProperty>(values);
+   }
+
+   void SkipTriggerModeStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerModeProperty>();
+   }
+
+   int CreateTriggerSourceStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerSourceProperty>(value, pAct, values);
+   }
+
+   int SetTriggerSourceStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerSourceProperty>(values);
+   }
+
+   void SkipTriggerSourceStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerSourceProperty>();
+   }
+   
+   int CreateTriggerActivationStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerActivationProperty>(value, pAct, values);
+   }
+
+   int SetTriggerActivationStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerActivationProperty>(values);
+   }
+   
+   void SkipTriggerActivationStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerActivationProperty>();
+   }
+
+   int CreateTriggerDelayStandardProperty(const char* value, double minValue, double maxValue, MM::ActionFunctor* pAct = 0) {
+      int ret = CreateStandardProperty<MM::g_TriggerDelayProperty>(value, pAct);
+      if (ret != DEVICE_OK)
+          return ret;
+      
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_TriggerDelayProperty.name;
+      return SetPropertyLimits(fullName.c_str(), minValue, maxValue);
+   }
+
+   void SkipTriggerDelayStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerDelayProperty>();
+   }
+
+   int CreateExposureModeStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_ExposureModeProperty>(value, pAct, values);
+   }
+
+   int SetExposureModeStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_ExposureModeProperty>(values);
+   }
+
+   int CreateExposureTimeStandardProperty(const char* value, double min, double max, MM::ActionFunctor* pAct = 0) {
+      int ret = CreateStandardProperty<MM::g_ExposureTimeProperty>(value, pAct);
+      if (ret != DEVICE_OK)
+          return ret;
+      
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_ExposureTimeProperty.name;
+      return SetPropertyLimits(fullName.c_str(), min, max);
+   }
+
+   void SkipExposureTimeStandardProperty() {
+      SkipStandardProperty<MM::g_ExposureTimeProperty>();
+   }
+
+   void SkipExposureModeStandardProperty() {
+      SkipStandardProperty<MM::g_ExposureModeProperty>();
+   }
+
+   int CreateAcquisitionBurstFrameCountStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_AcquisitionBurstFrameCountProperty>(value, pAct);
+   }
+
+   void SkipAcquisitionBurstFrameCountStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionBurstFrameCountProperty>();
+   }
+
+   int CreateLineSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineSelectorProperty>(value, pAct, values);
+   }
+
+   int SetLineSelectorStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineSelectorProperty>(values);
+   }
+
+   void SkipLineSelectorStandardProperty() {
+      SkipStandardProperty<MM::g_LineSelectorProperty>();
+   }
+
+   int CreateLineModeStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineModeProperty>(value, pAct, values);
+   }
+
+   int SetLineModeStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineModeProperty>(values);
+   }
+
+   void SkipLineModeStandardProperty() {
+      SkipStandardProperty<MM::g_LineModeProperty>();
+   }
+
+   int CreateLineInverterStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineInverterProperty>(value, pAct, values);
+   }
+
+   int SetLineInverterStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineInverterProperty>(values);
+   }
+
+   void SkipLineInverterStandardProperty() {
+      SkipStandardProperty<MM::g_LineInverterProperty>();
+   }
+
+   int CreateLineSourceStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_LineSourceProperty>(value, pAct, values);
+   }
+
+   int SetLineSourceStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineSourceProperty>(values);
+   }
+
+   void SkipLineSourceStandardProperty() {
+      SkipStandardProperty<MM::g_LineSourceProperty>();
+   }
+
+   int CreateLineStatusStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      // LineStatus has required values that are the same as its allowed values, so no need
+      // to take values from the user
+      return CreateStandardProperty<MM::g_LineStatusProperty>(value, pAct,
+       MM::g_LineStatusProperty.requiredValues);
+   }
+
+   int SetLineStatusStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_LineStatusProperty>(values);
+   }
+
+   void SkipLineStatusStandardProperty() {
+      SkipStandardProperty<MM::g_LineStatusProperty>();
+   }
+
+   int CreateAcquisitionFrameRateStandardProperty(const char* value, double min, double max, MM::ActionFunctor* pAct = 0) {
+      int ret = CreateStandardProperty<MM::g_AcquisitionFrameRateProperty>(value, pAct);
+      if (ret != DEVICE_OK)
+          return ret;
+      
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_AcquisitionFrameRateProperty.name;
+      return SetPropertyLimits(fullName.c_str(), min, max);
+   }
+
+   void SkipAcquisitionFrameRateStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionFrameRateProperty>();
+   }
+
+   int CreateAcquisitionFrameRateEnableStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_AcquisitionFrameRateEnableProperty>(value, pAct, {"0", "1"});
+   }
+
+   void SkipAcquisitionFrameRateEnableStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionFrameRateEnableProperty>();
+   }
+
+   int CreateAcquisitionStatusSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_AcquisitionStatusSelectorProperty>(value, pAct, values);
+   }
+
+   int SetAcquisitionStatusSelectorStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_AcquisitionStatusSelectorProperty>(values);
+   }
+
+   void SkipAcquisitionStatusSelectorStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionStatusSelectorProperty>();
+   }
+
+   int CreateAcquisitionStatusStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_AcquisitionStatusProperty>(value, pAct, MM::g_AcquisitionStatusProperty.requiredValues);
+   }
+
+   void SkipAcquisitionStatusStandardProperty() {
+      SkipStandardProperty<MM::g_AcquisitionStatusProperty>();
+   }
+
+   int CreateEventSelectorStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_EventSelectorProperty>(value, pAct, values);
+   }
+
+   int SetEventSelectorStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_EventSelectorProperty>(values);
+   }
+
+   void SkipEventSelectorStandardProperty() {
+      SkipStandardProperty<MM::g_EventSelectorProperty>();
+   }
+
+   int CreateEventNotificationStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_EventNotificationProperty>(value, pAct, MM::g_EventNotificationProperty.requiredValues);
+   }
+
+   int SetEventNotificationStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_EventNotificationProperty>(values);
+   }
+
+   void SkipEventNotificationStandardProperty() {
+      SkipStandardProperty<MM::g_EventNotificationProperty>();
+   }
+
+   int CreateTriggerOverlapStandardProperty(const char* value, const std::vector<std::string>& values, MM::ActionFunctor* pAct = 0) {
+      return CreateStandardProperty<MM::g_TriggerOverlapProperty>(value, pAct, values);
+   }
+
+   int SetTriggerOverlapStandardPropertyValues(const std::vector<std::string>& values) {
+      return SetStandardPropertyValues<MM::g_TriggerOverlapProperty>(values);
+   }
+
+   void SkipTriggerOverlapStandardProperty() {
+      SkipStandardProperty<MM::g_TriggerOverlapProperty>();
+   }
+
+   
+   // TODO: implement when someone who uses this feature can test it
+   // int CreateRollingShutterLineOffsetStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    return CreateStandardProperty<MM::g_RollingShutterLineOffsetProperty>(value, pAct);
+   // }
+
+   // void SkipRollingShutterLineOffsetStandardProperty() {
+   //    SkipStandardProperty<MM::g_RollingShutterLineOffsetProperty>();
+   // }  
+
+   // int CreateRollingShutterActiveLinesStandardProperty(const char* value, MM::ActionFunctor* pAct = 0) {
+   //    return CreateStandardProperty<MM::g_RollingShutterActiveLinesProperty>(value, pAct);
+   // }
+
+   // void SkipRollingShutterActiveLinesStandardProperty() {
+   //    SkipStandardProperty<MM::g_RollingShutterActiveLinesProperty>();
+   // }
+   
 
    /**
    * Assigns description string for a device (for use only by the calling code).
@@ -534,6 +814,14 @@ public:
          return false;
    }
 
+   virtual bool HasStandardProperty(const char* name) const
+   {
+      // prepend standard property prefix to name
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += name;
+      return HasProperty(fullName.c_str());
+   }
+
    /**
    * Returns the number of allowed property values.
    * If the set of property values is not defined, not bounded,
@@ -569,6 +857,40 @@ public:
       return true;
    }
 
+   bool ImplementsOrSkipsStandardProperties(char* failedProperty) const {
+   // Get the device type
+   MM::DeviceType deviceType = this->GetType();
+   
+   // Look up properties for this device type
+   auto it = MM::internal::GetDeviceTypeStandardPropertiesMap().find(deviceType);
+   if (it != MM::internal::GetDeviceTypeStandardPropertiesMap().end()) {
+      // Iterate through all properties for this device type
+      const auto& properties = it->second;
+      for (const auto& prop : properties) {
+         // Construct the full property name with prefix
+         std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+         fullName += prop.name;
+         
+         // Skip checking if this property is in the skipped list
+         if (skippedStandardProperties_.find(fullName) != skippedStandardProperties_.end()) {
+            continue;
+         }
+         
+         // Check if the device has implemented it
+         if (!HasProperty(fullName.c_str())) {
+            // If not, copy in the name of the property and return false
+            CDeviceUtils::CopyLimitedString(failedProperty, fullName.c_str());
+            return false;
+         }
+      }
+   }
+   
+   // All required properties are implemented or explicitly skipped
+   return true;
+   }
+
+   
+
    /**
    * Creates a new property for the device.
    * @param name - property name
@@ -596,6 +918,7 @@ public:
    */
    int CreatePropertyWithHandler(const char* name, const char* value, MM::PropertyType eType, bool readOnly,
                                  int(U::*memberFunction)(MM::PropertyBase* pProp, MM::ActionType eAct), bool isPreInitProperty=false) {
+      // Check for reserved delimiter (handled in CreateProperty)
       CPropertyAction* pAct = new CPropertyAction((U*) this, memberFunction);
       return CreateProperty(name, value, eType, readOnly, pAct, isPreInitProperty);
    }
@@ -1219,6 +1542,148 @@ protected:
    }
 
 private:
+
+   /**
+    * Low-level implementation for creating standard properties.
+    * 
+    * This template method uses SFINAE (Substitution Failure Is Not An Error) to ensure
+    * that standard properties can only be created for device types they're valid for.
+    * The IsStandardPropertyValid template specializations determine which properties
+    * are valid for which device types at compile time.
+    * 
+    * Note: This is a private implementation method. Device implementations should use 
+    * the specific convenience methods like CreateStandardBinningProperty() instead.
+    * 
+    * @param PropPtr - Pointer to the standard property definition
+    * @param value - Initial value for the property
+    * @param pAct - Optional action functor to handle property changes
+    * @return DEVICE_OK if successful, error code otherwise
+    */
+   template <const MM::StandardProperty& PropRef>
+   typename std::enable_if<MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   CreateStandardProperty(const char* value, MM::ActionFunctor* pAct = 0, const std::vector<std::string>& values = {}) {
+      
+      // Create the full property name with prefix
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += PropRef.name;
+      
+      // Create the property with all appropriate fields
+      int ret = properties_.CreateProperty(fullName.c_str(), value, PropRef.type, 
+                             PropRef.isReadOnly, pAct, PropRef.isPreInit, true);
+      if (ret != DEVICE_OK)
+          return ret;
+
+      // Set limits if they exist
+      if (PropRef.hasLimits()) {
+          ret = SetPropertyLimits(fullName.c_str(), PropRef.lowerLimit, PropRef.upperLimit);
+          if (ret != DEVICE_OK)
+              return ret;
+      }
+      
+       // Ensure the initial value is allowed if the property has predefined allowed values
+      if (!PropRef.allowedValues.empty()) {
+         if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), value) == PropRef.allowedValues.end()) {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+         }
+      }
+      
+      // Set the allowed values using the existing SetStandardPropertyValues function
+      if (!values.empty() || !PropRef.requiredValues.empty()) {
+         ret = SetStandardPropertyValues<PropRef>(values);
+         if (ret != DEVICE_OK)
+            return ret;
+      }
+
+      // Remove from skipped properties if it was previously marked as skipped
+      skippedStandardProperties_.erase(fullName);
+
+      return DEVICE_OK;
+   }
+
+      /**
+    * Sets allowed values for a standard property, clearing any existing values first.
+    * Performs the same validation as when creating the property.
+    * 
+    * @param PropRef - Reference to the standard property definition
+    * @param values - Vector of values to set as allowed values
+    * @return DEVICE_OK if successful, error code otherwise
+    */
+   template <const MM::StandardProperty& PropRef>
+   typename std::enable_if<MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   SetStandardPropertyValues(const std::vector<std::string>& values) {
+      // Create the full property name with prefix
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += PropRef.name;
+      
+      // Check if the property exists
+      if (!HasProperty(fullName.c_str())) {
+         return DEVICE_INVALID_PROPERTY;
+      }
+      
+      // Ensure all supplied values are allowed if the property has predefined allowed values
+      if (!PropRef.allowedValues.empty()) {
+         for (const std::string& val : values) {
+            if (std::find(PropRef.allowedValues.begin(), PropRef.allowedValues.end(), val) == PropRef.allowedValues.end()) {
+               return DEVICE_INVALID_PROPERTY_VALUE;
+            }
+         }
+      }
+      
+      // Check if all required values are present
+      if (!PropRef.requiredValues.empty()) {
+         for (const std::string& val : PropRef.requiredValues) {
+            if (std::find(values.begin(), values.end(), val) == values.end()) {
+               return DEVICE_INVALID_PROPERTY_VALUE;
+            }
+         }
+      }
+      
+      // Clear existing values
+      int ret = properties_.ClearAllowedValues(fullName.c_str(), true);
+      if (ret != DEVICE_OK)
+         return ret;
+      
+      // Add the new values
+      for (const std::string& val : values) {
+         ret = properties_.AddAllowedValue(fullName.c_str(), val.c_str(), true);
+         if (ret != DEVICE_OK)
+            return ret;
+      }
+      
+      return DEVICE_OK;
+   }
+
+   // This one is purely for providing better error messages at compile time
+   // When an function for setting an invalid standard property is called,
+   // this function will be called and will cause a compilation error.
+   template <const MM::StandardProperty& PropRef>
+   typename std::enable_if<!MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value, int>::type
+   CreateStandardProperty(const char* /*value*/, MM::ActionFunctor* /*pAct*/ = 0,
+                           const std::vector<std::string>& /*values*/ = std::vector<std::string>()) {
+      static_assert(MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value,
+         "This standard property is not valid for this device type. Check the MM_INTERNAL_LINK_STANDARD_PROP_TO_DEVICE_TYPE definitions in MMDevice.h");
+      return DEVICE_UNSUPPORTED_COMMAND; // This line will never execute due to the static_assert
+   }
+
+   // Helper method to mark a required standard property as skipped
+   template <const MM::StandardProperty& PropRef>
+   void SkipStandardProperty() {
+      // Only allow skipping properties that are valid for this device type
+      if (MM::internal::IsStandardPropertyValid<T::Type, PropRef>::value) {
+         std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+         fullName += PropRef.name;
+         skippedStandardProperties_.insert(fullName);
+         // Check if the property already exists. If so, delete it.
+         // This is needed because standard properties may be created dynamically not during 
+         // initialization. For example, if they depend on the value of another property, 
+         // and this is not known other than by setting that value on the device. In this case,
+         // the standard property will be created and destroyed as the values change.
+         if (HasProperty(fullName.c_str())) {
+            properties_.Delete(fullName.c_str());
+         }
+      }
+   }
+
    bool PropertyDefined(const char* propName) const
    {
       return properties_.Find(propName) != 0;
@@ -1261,6 +1726,10 @@ private:
    // specific information about the errant property, etc.
    mutable std::string morePropertyErrorInfo_;
    std::string parentID_;
+   
+   // Set to track which standard properties are explicitly skipped
+   std::set<std::string> skippedStandardProperties_;
+   
 };
 
 // Forbid instantiation of CDeviceBase<MM::Device, U>
@@ -1279,30 +1748,28 @@ class CGenericBase : public CDeviceBase<MM::Generic, U>
 {
 };
 
+
 /**
-* Base class for creating camera device adapters.
-* This class has a functional constructor - must be invoked
-* from the derived class.
+* Base class for both old and new camera APIs.
+* Implements common functionality like tags and default implementations
+* for optional features like multi-ROI and exposure sequence.
 */
 template <class U>
-class CCameraBase : public CDeviceBase<MM::Camera, U>
+class CAllCamerasBase : public CDeviceBase<MM::Camera, U>
 {
 public:
+
    using CDeviceBase<MM::Camera, U>::CreateProperty;
    using CDeviceBase<MM::Camera, U>::SetAllowedValues;
    using CDeviceBase<MM::Camera, U>::GetBinning;
    using CDeviceBase<MM::Camera, U>::GetCoreCallback;
    using CDeviceBase<MM::Camera, U>::SetProperty;
    using CDeviceBase<MM::Camera, U>::LogMessage;
-   virtual const unsigned char* GetImageBuffer() = 0;
-   virtual unsigned GetImageWidth() const = 0;
-   virtual unsigned GetImageHeight() const = 0;
-   virtual unsigned GetImageBytesPerPixel() const = 0;
-   virtual int SnapImage() = 0;
 
-   CCameraBase() : busy_(false), stopWhenCBOverflows_(false), thd_(0)
+   CAllCamerasBase()
    {
       // create and initialize common transpose properties
+      // TODO: if these are indeed required, should they be converted to standard properties?
       std::vector<std::string> allowedValues;
       allowedValues.push_back("0");
       allowedValues.push_back("1");
@@ -1314,51 +1781,18 @@ public:
       SetAllowedValues(MM::g_Keyword_Transpose_MirrorY, allowedValues);
       CreateProperty(MM::g_Keyword_Transpose_Correction, "0", MM::Integer, false);
       SetAllowedValues(MM::g_Keyword_Transpose_Correction, allowedValues);
-
-      thd_ = new BaseSequenceThread(this);
-   }
-
-   virtual ~CCameraBase()
-   {
-      if (!thd_->IsStopped()) {
-         thd_->Stop();
-         thd_->wait();
-      }
-      delete thd_;
-   }
-
-   virtual bool Busy() {return busy_;}
-
-   /**
-   * Continuous sequence acquisition.
-   * Default to sequence acquisition with a high number of images
-   */
-   virtual int StartSequenceAcquisition(double interval)
-   {
-      return StartSequenceAcquisition(LONG_MAX, interval, false);
    }
 
    /**
-   * Stop and wait for the thread finished
-   */
-   virtual int StopSequenceAcquisition()
-   {
-      if (!thd_->IsStopped()) {
-         thd_->Stop();
-         thd_->wait();
-      }
-
-      return DEVICE_OK;
-   }
-
-   /**
-   * Default implementation of the pixel size scaling.
-   */
+    * Returns binnings factor.  Used to calculate current pixelsize
+    * Not appropriately named.  Implemented in DeviceBase.h
+    * TODO: This should perhaps be deprecated and removed.
+    */
    virtual double GetPixelSizeUm() const {return GetBinning();}
 
    virtual unsigned GetNumberOfComponents() const
    {
-      return 1;
+      return 1; // Default to monochrome (ie not RGB)
    }
 
    virtual int GetComponentName(unsigned channel, char* name)
@@ -1400,6 +1834,8 @@ public:
       return 0;
    }
 
+   virtual const unsigned char* GetImageBuffer() = 0;
+
    virtual const unsigned int* GetImageBufferAsRGB32()
    {
       return 0;
@@ -1414,22 +1850,9 @@ public:
       data.copy(serializedMetadata, data.size(), 0);
    }
 
-   // temporary debug methods
-   virtual int PrepareSequenceAcqusition() {return DEVICE_OK;}
-
-   /**
-   * Default implementation.
-   */
-   virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+   virtual int IsExposureSequenceable(bool& isSequenceable) const
    {
-      if (IsCapturing())
-         return DEVICE_CAMERA_BUSY_ACQUIRING;
-
-      int ret = GetCoreCallback()->PrepareForAcq(this);
-      if (ret != DEVICE_OK)
-         return ret;
-      thd_->Start(numImages,interval_ms);
-      stopWhenCBOverflows_ = stopOnOverflow;
+      isSequenceable = false;
       return DEVICE_OK;
    }
 
@@ -1463,13 +1886,10 @@ public:
       return DEVICE_UNSUPPORTED_COMMAND;
    }
 
-   virtual bool IsCapturing(){return !thd_->IsStopped();}
-
    virtual void AddTag(const char* key, const char* deviceLabel, const char* value)
    {
       metadata_.PutTag(key, deviceLabel, value);
    }
-
 
    virtual void RemoveTag(const char* key)
    {
@@ -1518,6 +1938,256 @@ protected:
    {
       return metadata_.GetSingleTag(key).GetValue();
    }
+
+private:
+
+   Metadata metadata_;
+
+};
+
+
+/**
+* Base class for creating camera device adapters.
+* This class has a functional constructor - must be invoked
+* from the derived class.
+*/
+template <class U>
+class COldAPICameraBase : public CAllCamerasBase<U>
+{
+public:
+
+   // Invokes superclass constructor to get the properties declared there
+   COldAPICameraBase() : CAllCamerasBase<U>()
+   {
+      // Old style cameras explicitly skip these standard properties
+      // to make them not be required. However, they can still implement
+      // them with the CreateXXXXStandardProperty methods. When the
+      // corresponding functionality it present, this is encouraged,
+      // because it allows them to move closer to the new style camera API.
+      SkipTriggerSelectorStandardProperty();
+      SkipTriggerModeStandardProperty();
+      SkipTriggerSourceStandardProperty();
+      SkipTriggerActivationStandardProperty();
+      SkipTriggerDelayStandardProperty();
+      SkipTriggerOverlapStandardProperty();
+
+      SkipExposureModeStandardProperty();
+      SkipExposureTimeStandardProperty();   
+
+      SkipAcquisitionBurstFrameCountStandardProperty();
+      SkipLineSelectorStandardProperty();
+      SkipLineInverterStandardProperty();
+      SkipLineSourceStandardProperty();
+      SkipLineModeStandardProperty();
+      SkipLineStatusStandardProperty();
+
+      SkipAcquisitionFrameRateStandardProperty();
+      SkipAcquisitionFrameRateEnableStandardProperty();
+
+      SkipAcquisitionStatusSelectorStandardProperty();
+      SkipAcquisitionStatusStandardProperty();
+
+      SkipEventSelectorStandardProperty();
+      SkipEventNotificationStandardProperty();
+   
+      SkipRollingShutterLineOffsetStandardProperty();
+      SkipRollingShutterActiveLinesStandardProperty();
+   }
+
+   // Shared functionality with no default implementation
+   virtual unsigned GetImageWidth() const = 0;
+   virtual unsigned GetImageHeight() const = 0;
+   virtual unsigned GetImageBytesPerPixel() const = 0;
+   virtual unsigned GetBitDepth() const = 0;
+   virtual int GetBinning() const = 0;
+   virtual int SetBinning(int binSize) = 0;
+   virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
+   virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) = 0;
+   virtual int ClearROI() = 0;
+   virtual bool IsCapturing() = 0;
+
+   // Final so derived classes cannot override
+   virtual bool IsNewAPIImplemented() final {return false;}
+
+   // Old camera API: required
+   virtual void SetExposure(double exp_ms) = 0;
+   virtual double GetExposure() const = 0;
+
+   virtual const unsigned char* GetImageBuffer() = 0;
+   virtual long GetImageBufferSize() const = 0;
+   virtual int SnapImage() = 0;
+
+   virtual int StartSequenceAcquisition(double interval) = 0;
+   virtual int StopSequenceAcquisition() = 0;
+   virtual int PrepareSequenceAcqusition() = 0;
+   virtual int StartSequenceAcquisition(long numImages, double interval_ms, 
+                              bool stopOnOverflow) = 0;
+
+
+   // New camera API: disabled
+   virtual int TriggerSoftware() final {return DEVICE_NOT_YET_IMPLEMENTED;};
+
+   virtual int AcquisitionArm(int /* frameCount */) final {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionStart() final {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionStop() final {return DEVICE_NOT_YET_IMPLEMENTED;};
+   virtual int AcquisitionAbort() final {return DEVICE_NOT_YET_IMPLEMENTED;};
+
+};
+
+
+/**
+* Base class for creating camera device adapters using the new Camera API.
+*/
+// TODO: dissallow old style camera devices from using this class
+template <class U>
+class CNewAPICameraBase : public CAllCamerasBase<U>
+{
+public:
+
+   // Invokes superclass constructor to get the properties declared there
+   CNewAPICameraBase() : CAllCamerasBase<U>()
+   {
+
+   }
+
+   
+   // Shared functionality with no default implementation
+   virtual unsigned GetImageWidth() const = 0;
+   virtual unsigned GetImageHeight() const = 0;
+   virtual unsigned GetImageBytesPerPixel() const = 0;
+   virtual unsigned GetBitDepth() const = 0;
+   virtual int GetBinning() const = 0;
+   virtual int SetBinning(int binSize) = 0;
+   virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
+   virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) = 0;
+   virtual int ClearROI() = 0;
+   virtual bool IsCapturing() = 0;
+
+
+   // Final so derived classes cannot override
+   virtual bool IsNewAPIImplemented() final {return true;}
+   // Old camera API: disabled
+   virtual const unsigned char* GetImageBuffer() final {return nullptr;}
+   virtual long GetImageBufferSize() const final {return 0;}
+   virtual int SnapImage() final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual const unsigned int* GetImageBufferAsRGB32() final {return nullptr;}
+
+   virtual int StartSequenceAcquisition(double /* interval */) final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual int StopSequenceAcquisition() final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual int PrepareSequenceAcqusition() final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual int StartSequenceAcquisition(long /* numImages */, double /* interval_ms */, 
+                              bool /* stopOnOverflow */) final {return DEVICE_NOT_YET_IMPLEMENTED;}
+   virtual const unsigned char* GetImageBuffer(unsigned /* channelNr */) final {return nullptr;}  
+
+   virtual void SetExposure(double exp_ms) final {
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_ExposureTimeProperty.name;
+      std::string value = CDeviceUtils::ConvertToString(exp_ms * 1000);
+      this->SetProperty(fullName.c_str(), value.c_str());
+      // Get the accepted value
+      char val[MM::MaxStrLength];
+      this->GetProperty(fullName.c_str(), val);
+      this->OnPropertyChanged(fullName.c_str(), val);
+   }
+   
+   virtual double GetExposure() const final {
+      std::string fullName = MM::g_KeywordStandardPropertyPrefix;
+      fullName += MM::g_ExposureTimeProperty.name;
+      char val[MM::MaxStrLength];
+      this->GetProperty(fullName.c_str(), val);
+      return atof(val) / 1000.0;
+   }
+
+   // New camera API: required
+   virtual int TriggerSoftware() = 0;
+
+   virtual int AcquisitionArm(int frameCount) = 0;
+   virtual int AcquisitionStart() = 0;
+   virtual int AcquisitionStop() = 0;
+   virtual int AcquisitionAbort() = 0;
+};
+
+
+
+/**
+* Legacy base class for creating camera device adapters.
+* Newer camera device adapters should inherit from CCameraBase.
+* This class contains suboptimal methods for implementing sequence acquisition
+* using a series of snaps.
+* This class has a functional constructor - must be invoked
+* from the derived class.
+*/
+template <class U>
+class CLegacyCameraBase : public COldAPICameraBase<U>
+{
+public:
+
+   CLegacyCameraBase() : COldAPICameraBase<U>(), busy_(false), stopWhenCBOverflows_(false), thd_(0)
+   {
+      thd_ = new BaseSequenceThread(this);
+   }
+
+   virtual ~CLegacyCameraBase()
+   {
+      if (!thd_->IsStopped()) {
+         thd_->Stop();
+         thd_->wait();
+      }
+      delete thd_;
+   }
+
+
+   virtual bool Busy() {return busy_;}
+
+   /**
+   * Continuous sequence acquisition.
+   * Default to sequence acquisition with a high number of images
+   */
+   virtual int StartSequenceAcquisition(double interval)
+   {
+      return StartSequenceAcquisition(LONG_MAX, interval, false);
+   }
+
+   /**
+   * Stop and wait for the thread finished
+   */
+   virtual int StopSequenceAcquisition()
+   {
+      if (!thd_->IsStopped()) {
+         thd_->Stop();
+         thd_->wait();
+      }
+
+      return DEVICE_OK;
+   }
+
+   // Implementation of a sequence acquisition as a series of snaps
+   // This was a temporary method used for debugging, which is why its now
+   // implemented in this legacy class. It's preferable that camera devices
+   // inherit directly from CCameraBase and not use these default implementations.
+   virtual int PrepareSequenceAcqusition() {return DEVICE_OK;}
+
+   
+   virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+   {
+      if (IsCapturing())
+         return DEVICE_CAMERA_BUSY_ACQUIRING;
+
+      int ret = GetCoreCallback()->PrepareForAcq(this);
+      if (ret != DEVICE_OK)
+         return ret;
+      thd_->Start(numImages,interval_ms);
+      stopWhenCBOverflows_ = stopOnOverflow;
+      return DEVICE_OK;
+   }
+
+   virtual bool IsCapturing(){return !thd_->IsStopped();}
+
+
+protected:
+   /////////////////////////////////////////////
+   // utility methods for use by derived classes
+   // //////////////////////////////////////////
 
    // Do actual capturing
    // Called from inside the thread
@@ -1583,10 +2253,10 @@ protected:
    class CaptureRestartHelper
    {
       bool restart_;
-      CCameraBase* pCam_;
+      CLegacyCameraBase* pCam_;
 
    public:
-      CaptureRestartHelper(CCameraBase* pCam)
+      CaptureRestartHelper(CLegacyCameraBase* pCam)
          :pCam_(pCam)
       {
          restart_=pCam_->IsCapturing();
@@ -1602,10 +2272,10 @@ protected:
    ////////////////////////////////////////////////////////////////////////////
    class BaseSequenceThread : public MMDeviceThreadBase
    {
-      friend class CCameraBase;
+      friend class CLegacyCameraBase;
       enum { default_numImages=1, default_intervalMS = 100 };
    public:
-      BaseSequenceThread(CCameraBase* pCam)
+      BaseSequenceThread(CLegacyCameraBase* pCam)
          :intervalMs_(default_intervalMS)
          ,numImages_(default_numImages)
          ,imageCounter_(0)
@@ -1662,7 +2332,7 @@ protected:
       MM::MMTime GetStartTime(){return startTime_;}
       MM::MMTime GetActualDuration(){return actualDuration_;}
 
-      CCameraBase* GetCamera() {return camera_;}
+      CLegacyCameraBase* GetCamera() {return camera_;}
       long GetNumberOfImages() {return numImages_;}
 
       void UpdateActualDuration() {actualDuration_ = camera_->GetCurrentMMTime() - startTime_;}
@@ -1694,7 +2364,7 @@ protected:
       long imageCounter_;
       bool stop_;
       bool suspend_;
-      CCameraBase* camera_;
+      CLegacyCameraBase* camera_;
       MM::MMTime startTime_;
       MM::MMTime actualDuration_;
       MM::MMTime lastFrameTime_;
@@ -1708,7 +2378,6 @@ private:
 
    bool busy_;
    bool stopWhenCBOverflows_;
-   Metadata metadata_;
 
    BaseSequenceThread * thd_;
    friend class BaseSequenceThread;
