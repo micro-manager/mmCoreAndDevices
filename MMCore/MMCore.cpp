@@ -6691,7 +6691,7 @@ bool CMMCore::pressurePumpRequiresCalibration(const char* deviceLabel) throw (CM
         deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    return pPump->requiresCalibration();
+    return pPump->RequiresCalibration();
 }
 
 /**
@@ -6704,7 +6704,7 @@ double CMMCore::getPumpPressureKPa(const char* deviceLabel) throw (CMMError)
     mm::DeviceModuleLockGuard guard(pPump);
 
     double pressurekPa = 0;
-    int ret = pPump->getPressure(pressurekPa);
+    int ret = pPump->GetPressure(pressurekPa);
 
     if (ret != DEVICE_OK)
     {
@@ -6723,7 +6723,7 @@ void CMMCore::setPumpPressureKPa(const char* deviceLabel, double pressurekPa) th
         deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->setPressure(pressurekPa);
+    int ret = pPump->SetPressure(pressurekPa);
 
     if (ret != DEVICE_OK)
     {
@@ -6774,7 +6774,7 @@ bool CMMCore::volumetricPumpRequiresHoming(const char* deviceLabel) throw (CMMEr
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    return pPump->requiresHoming();
+    return pPump->RequiresHoming();
 }
 
 /**
@@ -6786,7 +6786,7 @@ void CMMCore::invertPumpDirection(const char* deviceLabel, bool invert) throw (C
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->invertDirection(invert);
+    int ret = pPump->InvertDirection(invert);
 
     if (ret != DEVICE_OK)
     {
@@ -6805,7 +6805,7 @@ bool CMMCore::isPumpDirectionInverted(const char* deviceLabel) throw (CMMError)
     mm::DeviceModuleLockGuard guard(pPump);
 
     bool invert = false;
-    int ret = pPump->isDirectionInverted(invert);
+    int ret = pPump->IsDirectionInverted(invert);
 
     if (ret != DEVICE_OK)
     {
@@ -6825,7 +6825,7 @@ void CMMCore::setPumpVolume(const char* deviceLabel, double volUl) throw (CMMErr
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->setVolumeUl(volUl);
+    int ret = pPump->SetVolumeUl(volUl);
 
     if (ret != DEVICE_OK)
     {
@@ -6844,7 +6844,7 @@ double CMMCore::getPumpVolume(const char* deviceLabel) throw (CMMError)
     mm::DeviceModuleLockGuard guard(pPump);
 
     double volUl = 0;
-    int ret = pPump->getVolumeUl(volUl);
+    int ret = pPump->GetVolumeUl(volUl);
 
     if (ret != DEVICE_OK)
     {
@@ -6863,7 +6863,7 @@ void CMMCore::setPumpMaxVolume(const char* deviceLabel, double volUl) throw (CMM
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->setMaxVolumeUl(volUl);
+    int ret = pPump->SetMaxVolumeUl(volUl);
 
     if (ret != DEVICE_OK)
     {
@@ -6882,7 +6882,7 @@ double CMMCore::getPumpMaxVolume(const char* deviceLabel) throw (CMMError)
     mm::DeviceModuleLockGuard guard(pPump);
 
     double volUl = 0;
-    int ret = pPump->getMaxVolumeUl(volUl);
+    int ret = pPump->GetMaxVolumeUl(volUl);
 
     if (ret != DEVICE_OK)
     {
@@ -6901,7 +6901,7 @@ void CMMCore::setPumpFlowrate(const char* deviceLabel, double UlperSec) throw (C
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->setFlowrateUlPerSec(UlperSec);
+    int ret = pPump->SetFlowrateUlPerSec(UlperSec);
 
     if (ret != DEVICE_OK)
     {
@@ -6920,7 +6920,7 @@ double CMMCore::getPumpFlowrate(const char* deviceLabel) throw (CMMError)
     mm::DeviceModuleLockGuard guard(pPump);
 
     double UlperSec = 0;
-    int ret = pPump->getFlowrateUlPerSec(UlperSec);
+    int ret = pPump->GetFlowrateUlPerSec(UlperSec);
 
     if (ret != DEVICE_OK)
     {

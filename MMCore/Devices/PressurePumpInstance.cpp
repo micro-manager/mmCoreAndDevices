@@ -25,6 +25,6 @@
 // General pump functions
 int PressurePumpInstance::Stop() { return GetImpl()->Stop(); }
 int PressurePumpInstance::Calibrate() { return GetImpl()->Calibrate(); }
-bool PressurePumpInstance::requiresCalibration() { return GetImpl()->RequiresCalibration(); }
-int PressurePumpInstance::setPressure(double pressure) { return GetImpl()->SetPressure(pressure); }
-int PressurePumpInstance::getPressure(double& pressure) { return GetImpl()->GetPressure(pressure); }
+bool PressurePumpInstance::RequiresCalibration() { return GetImpl()->RequiresCalibration(); }
+int PressurePumpInstance::SetPressure(double pressure) { return GetImpl()->SetPressure(pressure); }
+int PressurePumpInstance::GetPressure(double& pressure) { return GetImpl()->GetPressure(pressure); }

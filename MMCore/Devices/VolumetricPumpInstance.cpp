@@ -25,15 +25,15 @@
 // Volume controlled pump functions
 int VolumetricPumpInstance::Home() { return GetImpl()->Home(); }
 int VolumetricPumpInstance::Stop() { return GetImpl()->Stop(); }
-bool VolumetricPumpInstance::requiresHoming() { return GetImpl()->RequiresHoming(); }
-int VolumetricPumpInstance::invertDirection(bool state) { return GetImpl()->InvertDirection(state); }
-int VolumetricPumpInstance::isDirectionInverted(bool& state) { return GetImpl()->IsDirectionInverted(state); }
-int VolumetricPumpInstance::setVolumeUl(double volume) { return GetImpl()->SetVolumeUl(volume); }
-int VolumetricPumpInstance::getVolumeUl(double& volume) { return GetImpl()->GetVolumeUl(volume); }
-int VolumetricPumpInstance::setMaxVolumeUl(double volume) { return GetImpl()->SetMaxVolumeUl(volume); }
-int VolumetricPumpInstance::getMaxVolumeUl(double& volume) { return GetImpl()->GetMaxVolumeUl(volume); }
-int VolumetricPumpInstance::setFlowrateUlPerSec(double flowrate) { return GetImpl()->SetFlowrateUlPerSecond(flowrate); }
-int VolumetricPumpInstance::getFlowrateUlPerSec(double& flowrate) { return GetImpl()->GetFlowrateUlPerSecond(flowrate); }
+bool VolumetricPumpInstance::RequiresHoming() { return GetImpl()->RequiresHoming(); }
+int VolumetricPumpInstance::InvertDirection(bool state) { return GetImpl()->InvertDirection(state); }
+int VolumetricPumpInstance::IsDirectionInverted(bool& state) { return GetImpl()->IsDirectionInverted(state); }
+int VolumetricPumpInstance::SetVolumeUl(double volume) { return GetImpl()->SetVolumeUl(volume); }
+int VolumetricPumpInstance::GetVolumeUl(double& volume) { return GetImpl()->GetVolumeUl(volume); }
+int VolumetricPumpInstance::SetMaxVolumeUl(double volume) { return GetImpl()->SetMaxVolumeUl(volume); }
+int VolumetricPumpInstance::GetMaxVolumeUl(double& volume) { return GetImpl()->GetMaxVolumeUl(volume); }
+int VolumetricPumpInstance::SetFlowrateUlPerSec(double flowrate) { return GetImpl()->SetFlowrateUlPerSecond(flowrate); }
+int VolumetricPumpInstance::GetFlowrateUlPerSec(double& flowrate) { return GetImpl()->GetFlowrateUlPerSecond(flowrate); }
 int VolumetricPumpInstance::Start() { return GetImpl()->Start(); }
 int VolumetricPumpInstance::DispenseDuration(double durSec) { return GetImpl()->DispenseDuration(durSec); }
 int VolumetricPumpInstance::DispenseVolume(double volUl) { return GetImpl()->DispenseVolume(volUl); }

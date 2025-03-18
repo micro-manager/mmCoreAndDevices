@@ -39,7 +39,7 @@ public:
 
     int Calibrate();
     int Stop();
-    bool requiresCalibration();
-    int setPressure(double pressure);
-    int getPressure(double& pressure);
+    bool RequiresCalibration();
+    int SetPressure(double pressure);
+    int GetPressure(double& pressure);
 };
