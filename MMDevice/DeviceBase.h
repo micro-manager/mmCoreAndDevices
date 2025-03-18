@@ -2536,12 +2536,12 @@ class CVolumetricPumpBase : public CDeviceBase<MM::VolumetricPump, U>
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int DispenseDuration(double /*durSec*/)
+    int DispenseDurationSeconds(double /*durSec*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int DispenseVolume(double /*volUl*/)
+    int DispenseVolumeUl(double /*volUl*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
@@ -2558,12 +2558,12 @@ class CPressurePumpBase : public CDeviceBase<MM::PressurePump, U>
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int SetPressure(double /*pressure*/)
+    int SetPressureKPa(double /*pressureKPa*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int GetPressure(double& /*pressure*/)
+    int GetPressureKPa(double& /*pressureKPa*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }

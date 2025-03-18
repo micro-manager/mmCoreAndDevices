@@ -23,8 +23,8 @@
 #include "../../MMDevice/MMDeviceConstants.h"
 
 // General pump functions
-int PressurePumpInstance::Stop() { return GetImpl()->Stop(); }
-int PressurePumpInstance::Calibrate() { return GetImpl()->Calibrate(); }
-bool PressurePumpInstance::requiresCalibration() { return GetImpl()->RequiresCalibration(); }
-int PressurePumpInstance::setPressure(double pressure) { return GetImpl()->SetPressure(pressure); }
-int PressurePumpInstance::getPressure(double& pressure) { return GetImpl()->GetPressure(pressure); }
+int PressurePumpInstance::Stop() { RequireInitialized(__func__); return GetImpl()->Stop(); }
+int PressurePumpInstance::Calibrate() { RequireInitialized(__func__); return GetImpl()->Calibrate(); }
+bool PressurePumpInstance::RequiresCalibration() { RequireInitialized(__func__); return GetImpl()->RequiresCalibration(); }
+int PressurePumpInstance::SetPressureKPa(double pressure) { RequireInitialized(__func__); return GetImpl()->SetPressureKPa(pressure); }
+int PressurePumpInstance::GetPressureKPa(double& pressure) { RequireInitialized(__func__); return GetImpl()->GetPressureKPa(pressure); }

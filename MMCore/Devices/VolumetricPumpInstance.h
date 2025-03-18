@@ -38,16 +38,16 @@ public:
 
     int Home();
     int Stop();
-    bool requiresHoming();
-    int invertDirection(bool state);
-    int isDirectionInverted(bool& state);
-    int setVolumeUl(double volUl);
-    int getVolumeUl(double& volUl);
-    int setMaxVolumeUl(double volUl);
-    int getMaxVolumeUl(double& volUl);
-    int setFlowrateUlPerSec(double flowrate);
-    int getFlowrateUlPerSec(double& flowrate);
+    bool RequiresHoming();
+    int InvertDirection(bool state);
+    int IsDirectionInverted(bool& state);
+    int SetVolumeUl(double volUl);
+    int GetVolumeUl(double& volUl);
+    int SetMaxVolumeUl(double volUl);
+    int GetMaxVolumeUl(double& volUl);
+    int SetFlowrateUlPerSecond(double flowrate);
+    int GetFlowrateUlPerSecond(double& flowrate);
     int Start();
-    int DispenseDuration(double durSec);
-    int DispenseVolume(double volUl);
+    int DispenseDurationSeconds(double durSec);
+    int DispenseVolumeUl(double volUl);
 };

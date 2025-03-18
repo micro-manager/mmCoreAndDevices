@@ -23,17 +23,17 @@
 #include "../../MMDevice/MMDeviceConstants.h"
 
 // Volume controlled pump functions
-int VolumetricPumpInstance::Home() { return GetImpl()->Home(); }
-int VolumetricPumpInstance::Stop() { return GetImpl()->Stop(); }
-bool VolumetricPumpInstance::requiresHoming() { return GetImpl()->RequiresHoming(); }
-int VolumetricPumpInstance::invertDirection(bool state) { return GetImpl()->InvertDirection(state); }
-int VolumetricPumpInstance::isDirectionInverted(bool& state) { return GetImpl()->IsDirectionInverted(state); }
-int VolumetricPumpInstance::setVolumeUl(double volume) { return GetImpl()->SetVolumeUl(volume); }
-int VolumetricPumpInstance::getVolumeUl(double& volume) { return GetImpl()->GetVolumeUl(volume); }
-int VolumetricPumpInstance::setMaxVolumeUl(double volume) { return GetImpl()->SetMaxVolumeUl(volume); }
-int VolumetricPumpInstance::getMaxVolumeUl(double& volume) { return GetImpl()->GetMaxVolumeUl(volume); }
-int VolumetricPumpInstance::setFlowrateUlPerSec(double flowrate) { return GetImpl()->SetFlowrateUlPerSecond(flowrate); }
-int VolumetricPumpInstance::getFlowrateUlPerSec(double& flowrate) { return GetImpl()->GetFlowrateUlPerSecond(flowrate); }
-int VolumetricPumpInstance::Start() { return GetImpl()->Start(); }
-int VolumetricPumpInstance::DispenseDuration(double durSec) { return GetImpl()->DispenseDuration(durSec); }
-int VolumetricPumpInstance::DispenseVolume(double volUl) { return GetImpl()->DispenseVolume(volUl); }
+int VolumetricPumpInstance::Home() { RequireInitialized(__func__); return GetImpl()->Home(); }
+int VolumetricPumpInstance::Stop() { RequireInitialized(__func__); return GetImpl()->Stop(); }
+bool VolumetricPumpInstance::RequiresHoming() { RequireInitialized(__func__); return GetImpl()->RequiresHoming(); }
+int VolumetricPumpInstance::InvertDirection(bool state) { RequireInitialized(__func__); return GetImpl()->InvertDirection(state); }
+int VolumetricPumpInstance::IsDirectionInverted(bool& state) { RequireInitialized(__func__); return GetImpl()->IsDirectionInverted(state); }
+int VolumetricPumpInstance::SetVolumeUl(double volume) { RequireInitialized(__func__); return GetImpl()->SetVolumeUl(volume); }
+int VolumetricPumpInstance::GetVolumeUl(double& volume) { RequireInitialized(__func__); return GetImpl()->GetVolumeUl(volume); }
+int VolumetricPumpInstance::SetMaxVolumeUl(double volume) { RequireInitialized(__func__); return GetImpl()->SetMaxVolumeUl(volume); }
+int VolumetricPumpInstance::GetMaxVolumeUl(double& volume) { RequireInitialized(__func__); return GetImpl()->GetMaxVolumeUl(volume); }
+int VolumetricPumpInstance::SetFlowrateUlPerSecond(double flowrate) { RequireInitialized(__func__); return GetImpl()->SetFlowrateUlPerSecond(flowrate); }
+int VolumetricPumpInstance::GetFlowrateUlPerSecond(double& flowrate) { RequireInitialized(__func__); return GetImpl()->GetFlowrateUlPerSecond(flowrate); }
+int VolumetricPumpInstance::Start() { RequireInitialized(__func__); return GetImpl()->Start(); }
+int VolumetricPumpInstance::DispenseDurationSeconds(double durSec) { RequireInitialized(__func__); return GetImpl()->DispenseDurationSeconds(durSec); }
+int VolumetricPumpInstance::DispenseVolumeUl(double volUl) { RequireInitialized(__func__); return GetImpl()->DispenseVolumeUl(volUl); }
