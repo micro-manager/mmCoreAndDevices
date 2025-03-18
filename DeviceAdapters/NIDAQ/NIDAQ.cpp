@@ -23,15 +23,20 @@
 
 #include "ModuleInterface.h"
 
+#include <iostream>
+#include <fstream>
+
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/math/common_factor_rt.hpp>
 #include <boost/scoped_array.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 
 const char* g_DeviceNameNIDAQHub = "NIDAQHub";
 const char* g_DeviceNameNIDAQAOPortPrefix = "NIDAQAO-";
 const char* g_DeviceNameNIDAQDOPortPrefix = "NIDAQDO-";
+const char* g_DeviceNameNIDAQAIPortPrefix = "NIDAQAI-";
 
 const char* g_On = "On";
 const char* g_Off = "Off";
@@ -49,7 +54,9 @@ const int ERR_VOLTAGE_OUT_OF_RANGE = 2004;
 const int ERR_NONUNIFORM_CHANNEL_VOLTAGE_RANGES = 2005;
 const int ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS = 2006;
 const int ERR_UNKNOWN_PINS_PER_PORT = 2007;
-const int ERR_INVALID_REQUEST = 2008;
+const int ERR_UNEXPECTED_AMOUNT_OF_MEASUREMENTS = 2008;
+const int ERR_FAILED_TO_OPEN_TRACE = 2009;
+const int ERR_INVALID_REQUEST = 2010;
 
 
 
@@ -81,6 +88,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       return new DigitalOutputPort(std::string(deviceName).
          substr(strlen(g_DeviceNameNIDAQDOPortPrefix)));
    }
+   else if (std::string(deviceName).substr(0, strlen(g_DeviceNameNIDAQAIPortPrefix)) ==
+       g_DeviceNameNIDAQAIPortPrefix)
+   {
+       return new NIAnalogInputPort(std::string(deviceName).
+           substr(strlen(g_DeviceNameNIDAQAIPortPrefix)));
+   }
 
    return 0;
 }
@@ -99,14 +112,22 @@ NIDAQHub::NIDAQHub () :
    maxSequenceLength_(1024),
    sequencingEnabled_(false),
    sequenceRunning_(false),
-   minVolts_(0.0),
-   maxVolts_(5.0),
+   minVoltsOut_(0.0),
+   maxVoltsOut_(5.0),
    sampleRateHz_(10000.0),
    aoTask_(0),
    doTask_(0),
    doHub8_(0),
    doHub16_(0),
-   doHub32_(0)
+   doHub32_(0),
+   mThread_(0),
+   expectedMaxVoltsIn_(5.0),
+   expectedMinVoltsIn_(-5.0),
+   traceFrequency_(100.0),
+   traceAmount_(100),
+   tracePath_("C:/Program Files/Micro-Manager-2.0/CoreLogs"),
+   measuringTrace_(false),
+   tThread_(0)
 {
    // discover devices available on this computer and list them here
    std::string defaultDeviceName = "";
@@ -167,7 +188,7 @@ int NIDAQHub::Initialize()
    niSampleClock_ = "/" + niDeviceName_ + "/do/SampleClock";
 
    // Determine the possible voltage range
-   int err = GetVoltageRangeForDevice(niDeviceName_, minVolts_, maxVolts_);
+   int err = GetVoltageRangeForDevice(niDeviceName_, minVoltsOut_, maxVoltsOut_);
    if (err != DEVICE_OK)
       return err;
 
@@ -215,6 +236,42 @@ int NIDAQHub::Initialize()
       // do not return an error to allow the user to switch the triggerport to something that works
    }
 
+   pAct = new CPropertyAction(this, &NIDAQHub::OnExpectedMaxVoltsIn);
+   err = CreateFloatProperty("Maximum expected measured Voltage", 5.0, false, pAct);
+   if (err != DEVICE_OK)
+       return err;
+
+   pAct = new CPropertyAction(this, &NIDAQHub::OnExpectedMinVoltsIn);
+   err = CreateFloatProperty("Minimum expected measured Voltage", -5.0, false, pAct);
+   if (err != DEVICE_OK)
+       return err;
+
+   mThread_ = new InputMonitoringThread(this);
+
+   pAct = new CPropertyAction(this, &NIDAQHub::OnTraceFrequency);
+   err = CreateFloatProperty("Trace sampling frequency", 10.0, false, pAct);
+   if (err != DEVICE_OK)
+       return err;
+
+   pAct = new CPropertyAction(this, &NIDAQHub::OnTraceAmount);
+   err = CreateIntegerProperty("Total samples taken", 100, false, pAct);
+   if (err != DEVICE_OK)
+       return err;
+
+   pAct = new CPropertyAction(this, &NIDAQHub::OnTracePath);
+   err = CreateStringProperty("Trace folder", "C:/Program Files/Micro-Manager-2.0/CoreLogs", false, pAct);
+   if (err != DEVICE_OK)
+       return err;
+
+   pAct = new CPropertyAction(this, &NIDAQHub::OnTraceRunning);
+   err = CreateStringProperty("Trace Running", "Stopped", false, pAct);
+   if (err != DEVICE_OK)
+       return err;
+   AddAllowedValue("Trace Running", "Stopped");
+   AddAllowedValue("Trace Running", "Running");
+
+   tThread_ = new TraceMonitoringThread(this);
+
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -224,6 +281,10 @@ int NIDAQHub::Shutdown()
 {
    if (!initialized_)
       return DEVICE_OK;
+
+   mThread_->Stop();
+   mThread_->wait();
+   delete mThread_;
 
    int err = StopTask(aoTask_);
 
@@ -236,6 +297,10 @@ int NIDAQHub::Shutdown()
       delete doHub16_;
    else if (doHub32_ != 0)
       delete  doHub32_;
+
+   tThread_->Stop();
+   tThread_->wait();
+   delete tThread_;
 
    initialized_ = false;
    return err;
@@ -251,7 +316,7 @@ void NIDAQHub::GetName(char* name) const
 int NIDAQHub::DetectInstalledDevices()
 {
    std::vector<std::string> aoPorts =
-      GetAnalogPortsForDevice(niDeviceName_);
+      GetAnalogOutputPortsForDevice(niDeviceName_);
 
    for (std::vector<std::string>::const_iterator it = aoPorts.begin(), end = aoPorts.end();
       it != end; ++it)
@@ -277,14 +342,28 @@ int NIDAQHub::DetectInstalledDevices()
        }
    }
 
+   std::vector<std::string> aiPorts =
+       GetAnalogInputPortsForDevice(niDeviceName_);
+
+   for (std::vector<std::string>::const_iterator it = aiPorts.begin(), end = aiPorts.end();
+       it != end; ++it)
+   {
+       MM::Device* pDevice =
+           ::CreateDevice((g_DeviceNameNIDAQAIPortPrefix + *it).c_str());
+       if (pDevice)
+       {
+           AddInstalledDevice(pDevice);
+       }
+   }
+
    return DEVICE_OK;
 }
 
 
 int NIDAQHub::GetVoltageLimits(double& minVolts, double& maxVolts)
 {
-   minVolts = minVolts_;
-   maxVolts = maxVolts_;
+   minVolts = minVoltsOut_;
+   maxVolts = maxVoltsOut_;
    return DEVICE_OK;
 }
 
@@ -469,7 +548,7 @@ NIDAQHub::GetAOTriggerTerminalsForDevice(const std::string& device)
 
 
 std::vector<std::string>
-NIDAQHub::GetAnalogPortsForDevice(const std::string& device)
+NIDAQHub::GetAnalogOutputPortsForDevice(const std::string& device)
 {
    std::vector<std::string> result;
 
@@ -487,6 +566,28 @@ NIDAQHub::GetAnalogPortsForDevice(const std::string& device)
    }
 
    return result;
+}
+
+
+std::vector<std::string>
+NIDAQHub::GetAnalogInputPortsForDevice(const std::string& device)
+{
+    std::vector<std::string> result;
+
+    char ports[4096];
+    int32 nierr = DAQmxGetDevAIPhysicalChans(device.c_str(), ports, sizeof(ports));
+    if (nierr == 0)
+    {
+        boost::split(result, ports, boost::is_any_of(", "),
+            boost::token_compress_on);
+    }
+    else
+    {
+        LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+        LogMessage("Cannot get list of analog ports");
+    }
+
+    return result;
 }
 
 std::vector<std::string>
@@ -618,7 +719,7 @@ int NIDAQHub::StartAOSequencingTask()
 
    const std::string chanList = GetPhysicalChannelListForSequencing(physicalAOChannels_);
    nierr = DAQmxCreateAOVoltageChan(aoTask_, chanList.c_str(),
-      "AOSeqChan", minVolts_, maxVolts_, DAQmx_Val_Volts,
+      "AOSeqChan", minVoltsOut_, maxVoltsOut_, DAQmx_Val_Volts,
       NULL);
    if (nierr != 0)
    {
@@ -807,7 +908,161 @@ error:
 }
 
 
- int NIDAQHub::StopTask(TaskHandle &task)
+int NIDAQHub::StartAIMeasuringForPort(NIAnalogInputPort* port)
+{
+    //check if port has not already been added
+    size_t n = physicalAIChannels_.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (physicalAIChannels_[i] == port)
+            return DEVICE_OK;
+    }
+    physicalAIChannels_.push_back(port);
+    int err;
+    if (measuringTrace_)
+    {
+        tThread_->Stop();
+        tThread_->wait();
+        delete tThread_;
+
+        tThread_ = new TraceMonitoringThread(this);
+        err = tThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_,
+            expectedMaxVoltsIn_, (float) traceFrequency_, traceAmount_, (int) physicalAIChannels_.size());
+    }
+    else
+    {
+        mThread_->Stop();
+        mThread_->wait();
+        delete mThread_;
+
+        mThread_ = new InputMonitoringThread(this);
+        err = mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+    }
+   
+
+    return err;
+}
+
+
+int NIDAQHub::StopAIMeasuringForPort(NIAnalogInputPort* port)
+{
+    size_t n = physicalAIChannels_.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (physicalAIChannels_[i] == port)
+        {
+            physicalAIChannels_.erase(physicalAIChannels_.begin() + i);
+
+            if (measuringTrace_)
+            {
+                tThread_->Stop();
+                tThread_->wait();
+                delete tThread_;
+
+                tThread_ = new TraceMonitoringThread(this);
+                int err = DEVICE_OK;
+                if (n > 1)
+                    err = tThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_,
+                        expectedMaxVoltsIn_, (float) traceFrequency_, traceAmount_, (int) physicalAIChannels_.size());
+
+                return err;
+            }
+            else
+            {
+                mThread_->Stop();
+                mThread_->wait();
+                delete mThread_;
+
+                mThread_ = new InputMonitoringThread(this);
+
+                int err = DEVICE_OK;
+                if (n > 1)
+                    err = mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+
+                return err;
+            }
+        }
+    }
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::UpdateAIValues(float64* values, int32 amount)
+{
+    if (amount != 1)
+        return ERR_UNEXPECTED_AMOUNT_OF_MEASUREMENTS;
+
+    size_t n = physicalAIChannels_.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        physicalAIChannels_[i]->UpdateState((float) values[i]);
+    }
+
+    return DEVICE_OK;
+}
+
+
+std::string NIDAQHub::GetPhysicalChannelListForMeasuring(std::vector<NIAnalogInputPort*> channels)
+{
+    std::string result;
+    size_t n = channels.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        result += channels[i]->niPort_;
+        if (i < n - 1)
+            result += ", ";
+    }
+    return result;
+}
+
+
+int NIDAQHub::StartTrace()
+{
+    measuringTrace_ = true;
+    mThread_->Stop();
+    mThread_->wait();
+
+
+    delete tThread_;
+    tThread_ = new TraceMonitoringThread(this);
+    int err  = tThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_,
+        expectedMaxVoltsIn_, (float) traceFrequency_, traceAmount_, (int) physicalAIChannels_.size());
+
+    return err;
+}
+
+
+int NIDAQHub::StopTrace()
+{
+    tThread_->Stop();
+    tThread_->wait();
+    measuringTrace_ = false;
+
+
+    delete mThread_;
+    mThread_ = new InputMonitoringThread(this);
+    int err = DEVICE_OK;
+    if (physicalAIChannels_.size() > 0)
+        err = mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+
+    return err;
+}
+
+
+int NIDAQHub::FinishTrace()
+{
+    measuringTrace_ = false;
+    OnPropertiesChanged();
+
+    int err = DEVICE_OK;
+    if (physicalAIChannels_.size() > 0)
+        err = mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+
+    return err;
+}
+
+
+int NIDAQHub::StopTask(TaskHandle &task)
 {
    if (!task)
       return DEVICE_OK;
@@ -916,6 +1171,118 @@ int NIDAQHub::OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct)
       sampleRateHz_ = rateHz;
    }
    return DEVICE_OK;
+}
+
+
+int NIDAQHub::OnExpectedMaxVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(expectedMaxVoltsIn_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double temp_max = 5.0;
+        pProp->Get(temp_max);
+        expectedMaxVoltsIn_ = (float) temp_max;
+        
+        mThread_->Stop();
+        mThread_->wait();
+        delete mThread_;
+        mThread_ = new InputMonitoringThread(this);
+        if (physicalAIChannels_.size() > 1)
+            mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+
+    }
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::OnExpectedMinVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(expectedMinVoltsIn_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double temp_min = -5.0;
+        pProp->Get(temp_min);
+        expectedMinVoltsIn_ = (float) temp_min;
+
+        mThread_->Stop();
+        mThread_->wait();
+        delete mThread_;
+        mThread_ = new InputMonitoringThread(this);
+        if (physicalAIChannels_.size() > 1)
+            mThread_->Start(GetPhysicalChannelListForMeasuring(physicalAIChannels_), expectedMinVoltsIn_, expectedMaxVoltsIn_);
+    }
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::OnTraceFrequency(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(traceFrequency_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        pProp->Get(traceFrequency_);
+    }
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::OnTraceAmount(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(traceAmount_);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        pProp->Get(traceAmount_);
+    }
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::OnTracePath(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(tracePath_.c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        pProp->Get(tracePath_);
+    }
+    return DEVICE_OK;
+}
+
+
+int NIDAQHub::OnTraceRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(measuringTrace_? "Running" : "Stopped");
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string input;
+        pProp->Get(input);
+        if (input == "Running")
+        {
+            StartTrace();
+        }
+        else if(input == "Stopped")
+        {
+            StopTrace();
+        }
+    }
+    return DEVICE_OK;
 }
 
 
@@ -1264,3 +1631,162 @@ int NIDAQDOHub<uInt32>::DaqmxWriteDigital(TaskHandle doTask, int32 samplesPerCha
 template class NIDAQDOHub<uInt8>;
 template class NIDAQDOHub<uInt16>;
 template class NIDAQDOHub<uInt32>;
+
+
+InputMonitoringThread::InputMonitoringThread(NIDAQHub* hub) :
+    stop_(false),
+    aiTask_(NULL)
+{
+    hub_ = hub;
+}
+
+
+InputMonitoringThread::~InputMonitoringThread()
+{
+    Stop();
+    wait();
+}
+
+
+int InputMonitoringThread::Start(std::string AIChannelList, float minVal, float maxVal)
+{
+    stop_ = false;
+    int err = DAQmxCreateTask("AnalogInputReadTask", &aiTask_);
+    if (err != DEVICE_OK)
+        return err;
+    
+    err = DAQmxCreateAIVoltageChan(aiTask_, AIChannelList.c_str(), "", DAQmx_Val_RSE, minVal, maxVal, DAQmx_Val_Volts, NULL);
+    if (err != DEVICE_OK)
+        return err;
+
+    activate();
+    return DEVICE_OK;
+}
+
+
+int InputMonitoringThread::svc()
+{
+    while (!stop_)
+    {
+        float64 values[128] = { 0 };
+        int32 amount;
+        int err = DAQmxReadAnalogF64(aiTask_, 1, 2.0, DAQmx_Val_GroupByChannel, values, 128, &amount, NULL);
+        if (err != DEVICE_OK)
+            return err;
+
+        hub_->UpdateAIValues(values, amount);
+        CDeviceUtils::SleepMs(100);
+    }
+    int err = DAQmxClearTask(aiTask_);
+    if (err != DEVICE_OK)
+        return err;
+
+    return DEVICE_OK;
+}
+
+
+TraceMonitoringThread::TraceMonitoringThread(NIDAQHub* hub) :
+    stop_(false),
+    totalAmount_(0),
+    numberOfChannels_(0),
+    CSVheader_("")
+{
+    hub_ = hub;
+    path_ = hub_->tracePath_ + "/trace_";
+}
+
+
+TraceMonitoringThread::~TraceMonitoringThread()
+{
+    Stop();
+    wait();
+}
+
+
+int TraceMonitoringThread::Start(std::string AIChannelList, float minVal, float maxVal, float frequency, int numberOfSamples, int numberOfChannels)
+{
+    stop_ = false;
+    int err = DAQmxCreateTask("AnalogInputReadTask", &aiTask_);
+    if (err != DEVICE_OK)
+        return err;
+
+    CSVheader_ = "Time, " + AIChannelList;
+    err = DAQmxCreateAIVoltageChan(aiTask_, AIChannelList.c_str(), "", DAQmx_Val_RSE, minVal, maxVal, DAQmx_Val_Volts, NULL);
+    if (err != DEVICE_OK)
+        return err;
+
+    timestep_ = 1 / frequency;
+    err = DAQmxSetSampClkRate(aiTask_, frequency);
+    if (err != DEVICE_OK)
+        return err;
+
+    err = DAQmxSetSampQuantSampMode(aiTask_, DAQmx_Val_FiniteSamps);
+    if (err != DEVICE_OK)
+        return err;
+
+    totalAmount_ = numberOfSamples;
+    err = DAQmxSetSampQuantSampPerChan(aiTask_, numberOfSamples);
+    if (err != DEVICE_OK)
+        return err;
+
+    err = DAQmxSetSampTimingType(aiTask_, DAQmx_Val_SampClk);
+    if (err != DEVICE_OK)
+        return err;
+
+    path_ += boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".csv";
+    numberOfChannels_ = numberOfChannels;
+
+    err = DAQmxStartTask(aiTask_);
+    if (err != DEVICE_OK)
+        return err;
+
+    activate();
+    return DEVICE_OK;
+}
+
+
+int TraceMonitoringThread::svc()
+{
+    std::ofstream trace(path_);
+    if (!trace.is_open()) 
+    {
+        hub_->LogMessage("Could not open trace");
+        return ERR_FAILED_TO_OPEN_TRACE;
+    }
+
+    trace << CSVheader_ << std::endl;
+    float time = 0;
+    float64 values[1024] = { 0 };
+
+    while (!stop_ && totalAmount_ > 0)
+    {
+        int32 amount = 0;
+        int err = DAQmxReadAnalogF64(aiTask_, DAQmx_Val_Auto, -1, DAQmx_Val_GroupByScanNumber, values, 1024, &amount, NULL);
+        if (err != DEVICE_OK)
+            return err;
+
+        for (int i = 0; i < amount; i++)
+        {
+            trace << time << ", ";
+            for (int j = 0; j < numberOfChannels_; j++)
+            {
+                trace << values[i * numberOfChannels_ + j];
+                if (j < numberOfChannels_-1)
+                    trace << ", ";
+            }
+            trace << std::endl;
+            time += timestep_;
+        }
+        totalAmount_ -= amount;
+        CDeviceUtils::SleepMs(100);
+    }
+    stop_ = true;
+    trace.close();
+    int err = DAQmxClearTask(aiTask_);
+    if (err != DEVICE_OK)
+        return err;
+
+    err = hub_->FinishTrace();
+
+    return err;
+}

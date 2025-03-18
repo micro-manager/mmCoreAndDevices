@@ -3594,7 +3594,7 @@ posX_um_(0.0),
 posY_um_(0.0),
 busy_(false),
 timeOutTimer_(0),
-velocity_(10.0), // in micron per second
+velocity_(10.0), // in mm per second (= um/ms)
 initialized_(false),
 lowerLimit_(0.0),
 upperLimit_(20000.0)
@@ -3643,6 +3643,11 @@ int CDemoXYStage::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   CPropertyAction* pAct = new CPropertyAction(this, &CDemoXYStage::OnVelocity);
+   ret = CreateFloatProperty("Velocity", 10.0, false, pAct, false);
+   if (ret != DEVICE_OK)
+      return ret;
+
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
@@ -3675,22 +3680,44 @@ bool CDemoXYStage::Busy()
 
 int CDemoXYStage::SetPositionSteps(long x, long y)
 {
-   if (timeOutTimer_ != 0)
+   MM::MMTime currentTime = GetCurrentMMTime();
+   double newTargetX = x * stepSize_um_;
+   double newTargetY = y * stepSize_um_;
+
+   // If a move is in progress, compute the intermediate position and cancel the old move.
+   if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
    {
-      if (!timeOutTimer_->expired(GetCurrentMMTime()))
-         return ERR_STAGE_MOVING;
-      delete (timeOutTimer_);
+      double currentPosX, currentPosY;
+      ComputeIntermediatePosition(currentTime, currentPosX, currentPosY);
+      startPosX_um_ = currentPosX;
+      startPosY_um_ = currentPosY;
+      delete timeOutTimer_;
+      timeOutTimer_ = nullptr;
    }
-   double newPosX = x * stepSize_um_;
-   double newPosY = y * stepSize_um_;
-   double difX = newPosX - posX_um_;
-   double difY = newPosY - posY_um_;
-   double distance = sqrt( (difX * difX) + (difY * difY) );
-   long timeOut = (long) (distance / velocity_);
-   timeOutTimer_ = new MM::TimeoutMs(GetCurrentMMTime(),  timeOut);
-   posX_um_ = x * stepSize_um_;
-   posY_um_ = y * stepSize_um_;
-   int ret = OnXYStagePositionChanged(posX_um_, posY_um_);
+   else
+   {
+      // No move in progress; start from the last settled position.
+      startPosX_um_ = posX_um_;
+      startPosY_um_ = posY_um_;
+   }
+
+   // Set the new target.
+   targetPosX_um_ = newTargetX;
+   targetPosY_um_ = newTargetY;
+
+   // Calculate the distance and determine the move duration (in ms)
+   double difX = targetPosX_um_ - startPosX_um_;
+   double difY = targetPosY_um_ - startPosY_um_;
+   double distance = sqrt((difX * difX) + (difY * difY));
+   moveDuration_ms_ = (long)(distance / velocity_);
+   if (moveDuration_ms_ < 1)
+      moveDuration_ms_ = 1;  // enforce a minimum duration
+
+   moveStartTime_ = currentTime;
+   timeOutTimer_ = new MM::TimeoutMs(currentTime, moveDuration_ms_);
+
+   // Optionally, notify listeners of the starting position (as an acknowledgement)
+   int ret = OnXYStagePositionChanged(startPosX_um_, startPosY_um_);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -3699,8 +3726,27 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
 
 int CDemoXYStage::GetPositionSteps(long& x, long& y)
 {
-   x = (long)(posX_um_ / stepSize_um_);
-   y = (long)(posY_um_ / stepSize_um_);
+   MM::MMTime currentTime = GetCurrentMMTime();
+   if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
+   {
+      double currentPosX, currentPosY;
+      ComputeIntermediatePosition(currentTime, currentPosX, currentPosY);
+      x = (long)(currentPosX / stepSize_um_);
+      y = (long)(currentPosY / stepSize_um_);
+   }
+   else
+   {
+      // Movement complete; ensure final position is set.
+      if (timeOutTimer_ != nullptr)
+      {
+         posX_um_ = targetPosX_um_;
+         posY_um_ = targetPosY_um_;
+         delete timeOutTimer_;
+         timeOutTimer_ = nullptr;
+      }
+      x = (long)(posX_um_ / stepSize_um_);
+      y = (long)(posY_um_ / stepSize_um_);
+   }
    return DEVICE_OK;
 }
 
@@ -3712,12 +3758,39 @@ int CDemoXYStage::SetRelativePositionSteps(long x, long y)
    return this->SetPositionSteps(xSteps+x, ySteps+y);
 }
 
+// currentTime: the current time
+// currentPosX, currentPosY: output parameters for the computed position in microns
+void CDemoXYStage::ComputeIntermediatePosition(
+   const MM::MMTime& currentTime, double& currentPosX, double& currentPosY)
+{
+   double elapsed_ms = (currentTime - moveStartTime_).getMsec();
+   double fraction = elapsed_ms / moveDuration_ms_;
+   if (fraction > 1.0)
+      fraction = 1.0;
+   currentPosX = startPosX_um_ + fraction * (targetPosX_um_ - startPosX_um_);
+   currentPosY = startPosY_um_ + fraction * (targetPosY_um_ - startPosY_um_);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
-// none implemented
 
+int CDemoXYStage::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct){
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(velocity_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double newVelocity;
+      pProp->Get(newVelocity);
+      // Enforce a minimum positive velocity
+      if (newVelocity <= 0.0)
+         newVelocity = 0.1;
+      velocity_ = newVelocity;
+   }
+   return DEVICE_OK;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // CDemoShutter implementation

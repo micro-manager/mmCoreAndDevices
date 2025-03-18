@@ -782,7 +782,7 @@ int ZeissScope::DetectInstalledDevices()
       CreateAndAddDevice(g_ZeissHalogenLamp);
 
       std::string response;
-      int ret = Query("HPCk1,0", response);
+      ret = Query("HPCk1,0", response);
       if (ret == DEVICE_OK && 0 != response.compare("0"))
       {
          CreateAndAddDevice(g_ZeissShutter);
@@ -1854,11 +1854,17 @@ int ReflectorTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2011,11 +2017,17 @@ int SidePortTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2326,11 +2338,17 @@ int ObjectiveTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2483,11 +2501,17 @@ int OptovarTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2640,11 +2664,17 @@ int TubelensTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -2818,7 +2848,6 @@ int CondenserTurret::SetAperture(long aperture)
     const char* prefix = "HPCS33,";
     std::stringstream command_stream;
     command_stream << prefix << aperture;
-    command_stream.str().c_str();
     return g_hub.ExecuteCommand(*this, *GetCoreCallback(), command_stream.str().c_str());
 }
 
@@ -2857,11 +2886,17 @@ int CondenserTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = GetTurretPosition(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = pos -1;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start_);
+      if (elapsed > duration_)
+      {
+         int pos;
+         int ret = GetTurretPosition(pos);
+         if (ret != DEVICE_OK)
+            return ret;
+         pos_ = pos - 1;
+         start_ = end;
+      }
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -3061,12 +3096,20 @@ int LampMirror::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 ///////////////////////////////////////////////////////////////////////////////
 FocusStage::FocusStage() :
 stepSize_um_ (0.025),  // note: this is 0.050 in the Axioplan 2
+lowerLimit_(0.0),
+upperLimit_(1000.0),
 initialized_ (false)
 {
    InitializeDefaultErrorMessages();
 
    SetErrorText(ERR_SCOPE_NOT_ACTIVE, "Zeiss Scope is not initialized.  It is needed for the Focus drive to work");
    SetErrorText(ERR_NO_FOCUS_DRIVE, "No focus drive found in this microscopes");
+
+   CPropertyAction* pAct = new CPropertyAction(this, &FocusStage::OnStepSizeUm);
+   std::string stepSizeString = "StepSize (um)";
+   CreateProperty(stepSizeString.c_str(), "0.025", MM::Float, false, pAct, true);
+   AddAllowedValue(stepSizeString.c_str(), "0.025");
+   AddAllowedValue(stepSizeString.c_str(), "0.050");
 }
 
 FocusStage::~FocusStage()
@@ -3414,6 +3457,19 @@ int FocusStage::OnLoadSample(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int FocusStage::OnStepSizeUm(MM::PropertyBase* pProp, MM::ActionType eAct) 
+{
+   if (eAct == MM::BeforeGet) 
+   {
+      pProp->Set(stepSize_um_);
+   } 
+   else if (eAct == MM::AfterSet) 
+   {
+      pProp->Get(stepSize_um_);
+   }
+
+   return DEVICE_OK;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // FilterWheel

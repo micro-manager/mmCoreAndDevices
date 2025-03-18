@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASICRISP_H_
-#define _ASICRISP_H_
+#ifndef ASICRISP_H
+#define ASICRISP_H
 
 #include "ASIBase.h"
 
@@ -24,8 +24,8 @@ public:
 	int Initialize();
 	int Shutdown();
 
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	// AutoFocus API
 	virtual int SetContinuousFocusing(bool state);
@@ -79,4 +79,4 @@ private:
 	int answerTimeoutMs_;
 };
 
-#endif // end _ASICRISP_H_
+#endif // ASICRISP_H

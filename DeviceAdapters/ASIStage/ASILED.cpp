@@ -8,7 +8,7 @@
 #include "ASILED.h"
 
 LED::LED() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	open_(false),
 	intensity_(20),
 	name_("LED"),
@@ -52,12 +52,12 @@ void LED::GetName(char* Name) const
 }
 
 
-bool LED::SupportsDeviceDetection(void)
+bool LED::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus LED::DetectDevice(void)
+MM::DeviceDetectionStatus LED::DetectDevice()
 {
 	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
@@ -74,8 +74,11 @@ int LED::Initialize()
 	if (ret != DEVICE_OK)
 		return ret;
 
+	ret = GetVersion(version_);
+	if (ret != DEVICE_OK)
+		return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &LED::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
 	pAct = new CPropertyAction(this, &LED::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
@@ -181,7 +184,7 @@ int LED::SetOpen(bool open)
 
 	std::ostringstream command;
 
-	if ((!hasDLED_) & (channel_ == 0)) {
+	if (!hasDLED_ && channel_ == 0) {
 		//On Old Regulator LED , we turn the TTL mode itself on and off to reduce flicker
 		if (open)
 		{
@@ -252,7 +255,7 @@ int LED::IsOpen(bool* open)
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 	std::ostringstream command;
-	if ((!hasDLED_) & (channel_ == 0)) {
+	if (!hasDLED_ && channel_ == 0) {
 
 		command << "TTL Y?";
 

@@ -8,7 +8,7 @@
 #include "ASIStateDevice.h"
 
 StateDevice::StateDevice() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	numPos_(4),
 	axis_("F"),
 	position_(0),
@@ -51,12 +51,12 @@ void StateDevice::GetName(char* Name) const
 	CDeviceUtils::CopyLimitedString(Name, g_StateDeviceName);
 }
 
-bool StateDevice::SupportsDeviceDetection(void)
+bool StateDevice::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus StateDevice::DetectDevice(void)
+MM::DeviceDetectionStatus StateDevice::DetectDevice()
 {
 	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
@@ -65,8 +65,11 @@ int StateDevice::Initialize()
 {
 	core_ = GetCoreCallback();
 
+   int ret = GetVersion(version_);
+	if (ret != DEVICE_OK)
+       return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &StateDevice::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
 	pAct = new CPropertyAction(this, &StateDevice::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
@@ -91,7 +94,7 @@ int StateDevice::Initialize()
 
 	// state
 	pAct = new CPropertyAction(this, &StateDevice::OnState);
-	int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+	ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
 	if (ret != DEVICE_OK)
 	{
 		return ret;

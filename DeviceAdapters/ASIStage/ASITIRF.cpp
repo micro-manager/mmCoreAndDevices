@@ -9,7 +9,7 @@
 
 TIRF::TIRF() :
     ASIBase(this, ""),
-    axis_("F"),//normaly the TIRF axis is the F axis.
+    axis_("F"), // normally the TIRF axis is the F axis
     answerTimeoutMs_(1000),
     scaleFactor_(1),
     unitFactor_(10000)
@@ -51,12 +51,12 @@ void TIRF::GetName(char* Name) const
     CDeviceUtils::CopyLimitedString(Name, g_TIRFDeviceName);
 }
 
-bool TIRF::SupportsDeviceDetection(void)
+bool TIRF::SupportsDeviceDetection()
 {
     return true;
 }
 
-MM::DeviceDetectionStatus TIRF::DetectDevice(void)
+MM::DeviceDetectionStatus TIRF::DetectDevice()
 {
     return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
@@ -75,8 +75,11 @@ int TIRF::Initialize()
         return ret;
     }
 
+    ret = GetVersion(version_);
+    if (ret != DEVICE_OK)
+       return ret;
     CPropertyAction* pAct = new CPropertyAction(this, &TIRF::OnVersion);
-    CreateProperty("Version", "", MM::String, true, pAct);
+    CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
     pAct = new CPropertyAction(this, &TIRF::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
@@ -176,7 +179,7 @@ double TIRF::GetAngle()
         char head[64];
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %lf\r\n", head, &position);
+        (void)sscanf(iBuf, "%s %lf\r\n", head, &position);
 
         return asin(position / (scaleFactor_ * unitFactor_)) * 180 / 3.141592653589793;
     }

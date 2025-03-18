@@ -21,6 +21,19 @@
 
 #pragma once
 
+#ifdef MMDEVICE_CLIENT_BUILD
+// Hide deprecation warnings when building MMCore
+#   define MM_DEPRECATED(prototype) prototype
+#else
+#   ifdef _MSC_VER
+#      define MM_DEPRECATED(prototype) __declspec(deprecated) prototype
+#   elif defined(__GNUC__)
+#      define MM_DEPRECATED(prototype) prototype __attribute__((deprecated))
+#   else
+#      define MM_DEPRECATED(prototype) prototype
+#   endif
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 // Global error codes
 //
@@ -141,8 +154,16 @@ namespace MM {
    const char* const g_Keyword_Transpose_MirrorX = "TransposeMirrorX";
    const char* const g_Keyword_Transpose_MirrorY = "TransposeMirrorY";
    const char* const g_Keyword_Transpose_Correction = "TransposeCorrection";
-   const char* const g_Keyword_Closed_Position  = "ClosedPosition";
-   const char* const g_Keyword_HubID            = "HubID";
+   const char* const g_Keyword_Closed_Position = "ClosedPosition";
+   const char* const g_Keyword_HubID = "HubID";
+
+   const char* const g_Keyword_PixelType_GRAY8   = "GRAY8";
+   const char* const g_Keyword_PixelType_GRAY16  = "GRAY16";
+   const char* const g_Keyword_PixelType_GRAY32  = "GRAY32";
+   const char* const g_Keyword_PixelType_RGB32   = "RGB32";
+   const char* const g_Keyword_PixelType_RGB64   = "RGB64";
+   const char* const g_Keyword_PixelType_Unknown = "Unknown";
+
    const char* const g_Keyword_Current_Volume   = "Volume_uL";
    const char* const g_Keyword_Min_Volume       = "Min_Volume_uL";
    const char* const g_Keyword_Max_Volume       = "Max_Volume_uL";
@@ -151,8 +172,11 @@ namespace MM {
    const char* const g_Keyword_Pressure_Measured = "Pressure Measured";
 
    // image annotations
+   const char* const g_Keyword_Metadata_Width       = "Width";
+   const char* const g_Keyword_Metadata_Height      = "Height";
    const char* const g_Keyword_Metadata_CameraLabel = "Camera";
-   const char* const g_Keyword_Meatdata_Exposure    = "Exposure-ms";
+   const char* const g_Keyword_Metadata_Exposure    = "Exposure-ms";
+   MM_DEPRECATED(const char* const g_Keyword_Meatdata_Exposure) = "Exposure-ms"; // Typo
    const char* const g_Keyword_Metadata_Score       = "Score";
    const char* const g_Keyword_Metadata_ImageNumber = "ImageNumber";
    // Removed: g_Keyword_Metadata_StartTime         = "StartTime-ms";
@@ -173,6 +197,9 @@ namespace MM {
    const char* const g_CFGCommand_ConfigPixelSize = "ConfigPixelSize";
    const char* const g_CFGCommand_PixelSize_um = "PixelSize_um";
    const char* const g_CFGCommand_PixelSizeAffine = "PixelSizeAffine";
+   const char* const g_CFGCommand_PixelSizedxdz = "PixelSizeAngle_dxdz";
+   const char* const g_CFGCommand_PixelSizedydz = "PixelSizeAngle_dydz";
+   const char* const g_CFGCommand_PixelSizeOptimalZUm = "PixelSizeOptimalZ_Um";
    const char* const g_CFGCommand_ParentID = "Parent";
    const char* const g_CFGCommand_FocusDirection = "FocusDirection";
 

@@ -1268,13 +1268,13 @@ int TwainCamera::PushImage()
    GetImageBuffer(); // this effectively copies images to rawBuffer_
 
    // insert all three channels at once
-   int ret = GetCoreCallback()->InsertMultiChannel(this, rawBuffer_, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+   int ret = GetCoreCallback()->InsertImage(this, rawBuffer_, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
    if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
    {
       // do not stop on overflow - just reset the buffer
       GetCoreCallback()->ClearImageBuffer(this);
       // repeat the insert
-      return GetCoreCallback()->InsertMultiChannel(this, rawBuffer_, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+      return GetCoreCallback()->InsertImage(this, rawBuffer_, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
    } else
       return ret;
 }
@@ -1302,13 +1302,13 @@ int TwainCamera::ThreadRun()
 		return DEVICE_ERR;
 
 	// insert all three channels at once
-   ret = GetCoreCallback()->InsertMultiChannel(this, rawBuffer_, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+   ret = GetCoreCallback()->InsertImage(this, rawBuffer_, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
    if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
    {
       // do not stop on overflow - just reset the buffer
       GetCoreCallback()->ClearImageBuffer(this);
       // repeat the insert
-      return GetCoreCallback()->InsertMultiChannel(this, rawBuffer_, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+      return GetCoreCallback()->InsertImage(this, rawBuffer_, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
    } else
       return ret;
 

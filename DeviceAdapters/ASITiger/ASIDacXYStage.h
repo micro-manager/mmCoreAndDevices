@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.cpp and others
 //
 
-#ifndef _ASIDACXYStage_H_
-#define _ASIDACXYStage_H_
+#ifndef ASIDACXYSTAGE_H
+#define ASIDACXYSTAGE_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -172,4 +172,4 @@ private:
 	int GetMinVolts(double& volts, std::string axisLetter);
 };
 
-#endif // _ASIDACXYStage_H_
+#endif // ASIDACXYSTAGE_H

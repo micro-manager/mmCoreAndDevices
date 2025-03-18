@@ -340,9 +340,21 @@ public:
    std::vector<double> getPixelSizeAffine() throw (CMMError);
    std::vector<double> getPixelSizeAffine(bool cached) throw (CMMError);
    std::vector<double> getPixelSizeAffineByID(const char* resolutionID) throw (CMMError);
+   double getPixelSizedxdz() throw (CMMError);
+   double getPixelSizedxdz(bool cached) throw (CMMError);
+   double getPixelSizedxdz(const char* resolutionID) throw (CMMError);
+   double getPixelSizedydz() throw (CMMError);
+   double getPixelSizedydz(bool cached) throw (CMMError);
+   double getPixelSizedydz(const char* resolutionID) throw (CMMError);
+   double getPixelSizeOptimalZUm() throw (CMMError);
+   double getPixelSizeOptimalZUm(bool cached) throw (CMMError);
+   double getPixelSizeOptimalZUm(const char* resolutionID) throw (CMMError);
    double getMagnificationFactor() const;
    void setPixelSizeUm(const char* resolutionID, double pixSize)  throw (CMMError);
    void setPixelSizeAffine(const char* resolutionID, std::vector<double> affine)  throw (CMMError);
+   void setPixelSizedxdz(const char* resolutionID, double dXdZ)  throw (CMMError);
+   void setPixelSizedydz(const char* resolutionID, double dYdZ)  throw (CMMError);
+   void setPixelSizeOptimalZUm(const char* resolutionID, double optimalZ)  throw (CMMError);
    void definePixelSizeConfig(const char* resolutionID,
          const char* deviceLabel, const char* propName,
          const char* value) throw (CMMError);
@@ -731,6 +743,9 @@ private:
    void assignDefaultRole(std::shared_ptr<DeviceInstance> pDev);
    void updateCoreProperty(const char* propName, MM::DeviceType devType) throw (CMMError);
    void loadSystemConfigurationImpl(const char* fileName) throw (CMMError);
+   void initializeAllDevicesSerial() throw (CMMError);
+   void initializeAllDevicesParallel() throw (CMMError);
+   int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
 };
 
 #if defined(__GNUC__) && !defined(__clang__)

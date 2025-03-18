@@ -306,14 +306,6 @@ else
    AC_MSG_RESULT([not found])
 fi
 
-# Aravis (v0.10).
-AC_MSG_CHECKING(for Aravis_Linux)
-AM_CONDITIONAL([BUILD_ARAVIS_LINUX],[test -f "/usr/local/include/aravis-0.10/arv.h"])
-if test -f "/usr/local/include/aravis-0.10/arv.h"; then
-   AC_MSG_RESULT([found])
-else 
-   AC_MSG_RESULT([not found])
-fi
 
 # BaslerPylon
 AC_MSG_CHECKING(for Basler_Linux)
@@ -362,6 +354,23 @@ else
 fi
 
 AC_SUBST(LIBITC18)
+
+
+# Aravis SDK
+MM_ARG_WITH_OPTIONAL_LIB([Aravis], [aravis], [ARAVIS])
+AS_IF([test "x$want_aravis" != xno],
+[
+   MM_LIB_ARAVIS([$ARAVIS_PREFIX],
+                  [use_aravis=yes],
+                  [
+                     use_aravis=no
+                     AS_IF([test "x$want_aravis" = xyes],
+                           [MM_MSG_OPTIONAL_LIB_FAILURE([aravis], [Aravis])])
+                  ])
+],
+[use_aravis=no])
+
+AM_CONDITIONAL([BUILD_ARAVIS_LINUX], [test "x$use_aravis" = xyes])
 
 
 # MessagePack
@@ -429,6 +438,7 @@ AS_IF([test "x$want_vimba_x" != xno],
 [use_vimba_x=no])
 
 AM_CONDITIONAL([BUILD_ALLIED_VISION_CAMERA], [test "x$use_vimba_x" = xyes])
+
 
 # Zaber Motion Library (hack: only support 3rdpartypublic copy currently)
 zml_version="3.4.4"
@@ -559,6 +569,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    CNCMicroscope/ArduinoNeoPixelShutter
    CNCMicroscope/RAMPSStage
    CSUW1
+   Cephla
    ChuoSeiki_MD5000
    ChuoSeiki_QT
    Cobolt

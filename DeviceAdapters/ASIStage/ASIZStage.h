@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASIZSTAGE_H_
-#define _ASIZSTAGE_H_
+#ifndef ASIZSTAGE_H
+#define ASIZSTAGE_H
 
 #include "ASIBase.h"
 
@@ -17,17 +17,15 @@ public:
 	~ZStage();
 
 	// Device API
-	// ----------
 	int Initialize();
 	int Shutdown();
 
 	void GetName(char* name) const;
 	bool Busy();
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	// Stage API
-	// ---------
 	int SetPositionUm(double pos);
 	int GetPositionUm(double& pos);
 	int SetRelativePositionUm(double d);
@@ -40,7 +38,6 @@ public:
 	bool IsContinuousFocusDrive() const { return false; }
 
 	// action interface
-	// ----------------
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -66,20 +63,24 @@ public:
 
 private:
 	int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetAcceleration(long& acceleration);
 	int OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetBacklash(double& backlash);
 	int OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetFinishError(double& finishError);
 	int OnError(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetError(double& error);
 	int OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetOverShoot(double& overShoot);
 	int OnWait(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetWait(long& waitCycles);
 	int OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetSpeed(double& speed);
 	int GetMaxSpeed(char* maxSpeedStr);
 	int OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct);
 	bool HasRingBuffer();
 	int GetControllerInfo();
-	//int ExecuteCommand(const std::string& cmd, std::string& response);
-	//int Autofocus(long param);
-	//int GetResolution(double& res);
-	bool hasCommand(std::string commnand);
+	bool HasCommand(std::string command);
 	int OnVector(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	std::vector<double> sequence_;
@@ -98,6 +99,13 @@ private:
 	double linearSequenceIntervalUm_;
 	long linearSequenceLength_;
 	long linearSequenceTimeoutMs_;
+	double speed_;
+	long waitCycles_;
+	double backlash_;
+	double error_;
+	long acceleration_;
+	double finishError_;
+	double overShoot_;
 };
 
-#endif // _ASIZSTAGE_H_
+#endif // ASIZSTAGE_H

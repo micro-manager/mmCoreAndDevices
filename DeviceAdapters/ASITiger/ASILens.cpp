@@ -71,7 +71,7 @@ int CLens::Initialize()
    ostringstream command;
    command.str("");
    double tmp;
-   command << "UM " << axisLetter_ << "? ";
+   command << "UM " << axisLetter_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    unitMult_ = tmp/1000;
@@ -388,13 +388,13 @@ int CLens::GetLimits(double& min, double& max)
 {
    // ASI limits are always returned in terms of mm, independent of unit multiplier
    ostringstream command; command.str("");
-   command << "SL " << axisLetter_ << "? ";
+   command << "SL " << axisLetter_ << "?";
    double tmp;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    min = tmp*1000;
    command.str("");
-   command << "SU " << axisLetter_ << "? ";
+   command << "SU " << axisLetter_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    max = tmp*1000;
@@ -970,7 +970,6 @@ int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing

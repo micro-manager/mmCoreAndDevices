@@ -6,7 +6,7 @@
 // DESCRIPTION:   pco.camera generic camera module
 //                
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 06/08/2005
-//                Franz Reitner, pco ag, 13.12.2013
+//                Franz Reitner, excelitas pco, 13.12.2013
 // COPYRIGHT:     University of California, San Francisco, 2006
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.

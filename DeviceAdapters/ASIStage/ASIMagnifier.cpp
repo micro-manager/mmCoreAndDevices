@@ -9,7 +9,7 @@
 
 Magnifier::Magnifier() :
     ASIBase(this, ""),
-    axis_("M"), // normally the zoom axis is the M axis.
+    axis_("M"), // normally the zoom axis is the M axis
     answerTimeoutMs_(1000)
 {
     InitializeDefaultErrorMessages();
@@ -30,7 +30,7 @@ Magnifier::Magnifier() :
     // Axis
     pAct = new CPropertyAction(this, &Magnifier::OnAxis);
     CreateProperty("Axis", "M", MM::String, false, pAct, true);
-    // AddAllowedValue("Axis", "(LETTER)");
+    AddAllowedValue("Axis", "M");
 }
 
 Magnifier::~Magnifier()
@@ -43,12 +43,12 @@ void Magnifier::GetName(char* Name) const
     CDeviceUtils::CopyLimitedString(Name, g_MagnifierDeviceName);
 }
 
-bool Magnifier::SupportsDeviceDetection(void)
+bool Magnifier::SupportsDeviceDetection()
 {
     return true;
 }
 
-MM::DeviceDetectionStatus Magnifier::DetectDevice(void)
+MM::DeviceDetectionStatus Magnifier::DetectDevice()
 {
     return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
@@ -67,8 +67,11 @@ int Magnifier::Initialize()
         return ret;
     }
 
+	 ret = GetVersion(version_);
+	 if (ret != DEVICE_OK)
+       return ret;
     CPropertyAction* pAct = new CPropertyAction(this, &Magnifier::OnVersion);
-    CreateProperty("Version", "", MM::String, true, pAct);
+    CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
     pAct = new CPropertyAction(this, &Magnifier::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
@@ -168,8 +171,7 @@ double Magnifier::GetMagnification()
         char head[64];
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %lf\r\n", head, &mag);
-
+        (void)sscanf(iBuf, "%s %lf\r\n", head, &mag);
         return mag;
     }
 

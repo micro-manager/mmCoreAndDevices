@@ -20,6 +20,7 @@
 #include "DeviceBase.h"
 #include <string>
 #include <map>
+#include <mutex>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -35,6 +36,7 @@
 #define ERR_VERSION_MISMATCH 109
 
 class ArduinoInputMonitorThread;
+class CArduinoMagnifier;
 
 class CArduinoHub : public HubBase<CArduinoHub>  
 {
@@ -55,6 +57,9 @@ public:
    int OnPort(MM::PropertyBase* pPropt, MM::ActionType eAct);
    int OnLogic(MM::PropertyBase* pPropt, MM::ActionType eAct);
    int OnVersion(MM::PropertyBase* pPropt, MM::ActionType eAct);
+   unsigned int GetMaxNumPatterns() {
+      return maxNumPatterns_;
+   };
 
    // custom interface for child devices
    bool IsPortAvailable() {return portAvailable_;}
@@ -68,11 +73,13 @@ public:
    {
       return ReadFromComPort(port_.c_str(), answer, maxLen, bytesRead);
    }
-   static MMThreadLock& GetLock() {return lock_;}
+   int ReportNewInputState(long newState);
+   int RegisterMagnifier(CArduinoMagnifier* magnifier);
+   std::mutex& GetLock() {return mutex_;}
    void SetShutterState(unsigned state) {shutterState_ = state;}
    void SetSwitchState(unsigned state) {switchState_ = state;}
-   unsigned GetShutterState() {return shutterState_;}
-   unsigned GetSwitchState() {return switchState_;}
+   const unsigned GetShutterState() {return shutterState_;}
+   const unsigned GetSwitchState() {return switchState_;}
 
 private:
    int GetControllerVersion(int&);
@@ -82,7 +89,9 @@ private:
    bool invertedLogic_;
    bool timedOutputActive_;
    int version_;
-   static MMThreadLock lock_;
+   unsigned int maxNumPatterns_;
+   CArduinoMagnifier* magnifier_;
+   std::mutex mutex_;
    unsigned switchState_;
    unsigned shutterState_;
 };
@@ -111,6 +120,7 @@ public:
    int OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+   CArduinoHub* hub_;
    int WriteToPort(long lnValue);
    MM::MMTime changedTime_;
    bool initialized_;
@@ -143,8 +153,8 @@ public:
    int OnGetPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPatternsUsed(MM::PropertyBase* pProp, MM::ActionType eAct);
    */
-   int OnSkipTriggers(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnStartTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
+   //int OnSkipTriggers(MM::PropertyBase* pProp, MM::ActionType eAct);
+   //int OnStartTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnStartTimedOutput(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -152,15 +162,14 @@ public:
    int OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   static const unsigned int NUMPATTERNS = 12;
+   unsigned int numPatterns_;
 
-   int OpenPort(const char* pszName, long lnValue);
+   CArduinoHub* hub_;
+   //int OpenPort(const char* pszName, long lnValue);
    int WriteToPort(long lnValue);
-   int ClosePort();
+   //int ClosePort();
    int LoadSequence(unsigned size, unsigned char* seq);
 
-   unsigned pattern_[NUMPATTERNS];
-   unsigned delay_[NUMPATTERNS];
    int nrPatternsUsed_;
    unsigned currentDelay_;
    bool sequenceOn_;
@@ -236,13 +245,37 @@ private:
    int ReadNBytes(CArduinoHub* h, unsigned int n, unsigned char* answer);
    int SetPullUp(int pin, int state);
 
-   MMThreadLock lock_;
+   CArduinoHub* hub_;
    ArduinoInputMonitorThread* mThread_;
    char pins_[MM::MaxStrLength];
    char pullUp_[MM::MaxStrLength];
    int pin_;
    bool initialized_;
    std::string name_;
+};
+
+class CArduinoMagnifier : public CMagnifierBase<CArduinoMagnifier>
+{
+public:
+   CArduinoMagnifier();
+   ~CArduinoMagnifier();
+
+   int Initialize();
+   int Shutdown();
+   void GetName(char* pszName) const;
+   bool Busy() { return false; };
+
+   double GetMagnification();
+
+   int UpdateState(long state);
+   int OnNumberOfMagnifications(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSetMagnification(MM::PropertyBase* pProp, MM::ActionType eAct, long state);
+
+private:
+   CArduinoHub* hub_;
+   std::map<long, double> magnifications_;
+   long state_;
+   bool initialized_;
 };
 
 class ArduinoInputMonitorThread : public MMDeviceThreadBase
@@ -265,6 +298,7 @@ class ArduinoInputMonitorThread : public MMDeviceThreadBase
    private:
       long state_;
       CArduinoInput& aInput_;
+      std::mutex mutex_;
       bool stop_;
 };
 

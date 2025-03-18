@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{067D4A8-8C32-40D3-BA9F-6B388ECCD714}</ProjectGuid>
+    <ProjectGuid>{8331c4e1-6c17-481e-9b4f-232db77d95cb}</ProjectGuid>
     <RootNamespace>Arduino</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>

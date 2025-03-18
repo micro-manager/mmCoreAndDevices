@@ -81,7 +81,12 @@ Laser* LaserFactory::Create( LaserDriver* driver )
 
     Laser* laser;
 
-    if ( modelString.find( "-06-91-" ) != std::string::npos ) {
+    if (modelString.find("-06-51-") != std::string::npos ||
+        modelString.find("-06-53-") != std::string::npos ||
+        modelString.find("-06-57-") != std::string::npos ||
+        modelString.find("-06-91-") != std::string::npos ||
+        modelString.find("-06-93-") != std::string::npos ||
+        modelString.find("-06-97-") != std::string::npos) {
 
         laser = new Dpl06Laser( wavelength, driver );
 

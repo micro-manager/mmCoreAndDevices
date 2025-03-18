@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASIBASE_H_
-#define _ASIBASE_H_
+#ifndef ASIBASE_H
+#define ASIBASE_H
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -57,17 +57,17 @@ public:
 	ASIBase(MM::Device* device, const char* prefix);
 	virtual ~ASIBase();
 
-	int ClearPort(void);
-	int CheckDeviceStatus(void);
+	int ClearPort();
+	int CheckDeviceStatus();
 	int SendCommand(const char* command) const;
 	int QueryCommandACK(const char* command);
 	int QueryCommand(const char* command, std::string& answer) const;
 	unsigned int ConvertDay(int year, int month, int day);
 	unsigned int ExtractCompileDay(const char* compile_date);
 
-	int ParseResponseAfterPosition(const std::string& answer, const unsigned int position, long& value) const;
-	int ParseResponseAfterPosition(const std::string& answer, const unsigned int position, double& value) const;
-	int ParseResponseAfterPosition(const std::string& answer, const unsigned int position, const unsigned int count, double& value) const;
+	int ParseResponseAfterPosition(const std::string& answer, unsigned int position, long& value) const;
+	int ParseResponseAfterPosition(const std::string& answer, unsigned int position, double& value) const;
+	int ParseResponseAfterPosition(const std::string& answer, unsigned int position, unsigned int count, double& value) const;
 	int ResponseStartsWithColonA(const std::string& answer) const;
 	VersionData ExtractVersionData(const std::string& version) const;
 
@@ -75,6 +75,7 @@ protected:
 	int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetVersion(std::string& version);
 
 	bool oldstage_;
 	MM::Core* core_;
@@ -82,8 +83,9 @@ protected:
 	MM::Device* device_;
 	std::string oldstagePrefix_;
 	std::string port_;
+	std::string version_;
 	VersionData versionData_;
 	unsigned int compileDay_; // "days" since Jan 1 2000 since the firmware was compiled according to (compile day + 31*(compile month-1) + 12*31*(compile year-2000))
 };
 
-#endif // end _ASIBASE_H_
+#endif // ASIBASE_H

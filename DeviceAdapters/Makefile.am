@@ -120,6 +120,7 @@ SUBDIRS = \
 	CARVII \
 	CNCMicroscope \
 	CSUW1 \
+	Cephla \
 	ChuoSeiki_MD5000 \
 	ChuoSeiki_QT \
 	Cobolt \

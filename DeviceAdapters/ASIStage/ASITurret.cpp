@@ -8,7 +8,7 @@
 #include "ASITurret.h"
 
 AZ100Turret::AZ100Turret() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	numPos_(4),
 	position_(0)
 {
@@ -75,8 +75,11 @@ int AZ100Turret::Initialize()
 		return ret;
 	}
 
+   ret = GetVersion(version_);
+   if (ret != DEVICE_OK)
+       return ret;
 	pAct = new CPropertyAction(this, &AZ100Turret::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
 	pAct = new CPropertyAction(this, &AZ100Turret::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);

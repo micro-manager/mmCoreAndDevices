@@ -32,7 +32,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-
+#include <cstdint>
 
 std::vector<std::string> supportedPixelFormats = {
   "Mono8",
@@ -172,7 +172,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
     md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)img_buffer_width));
     md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)img_buffer_height));
     md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(counter));
-    md.put(MM::g_Keyword_Meatdata_Exposure, exposure_time);
+    md.put(MM::g_Keyword_Metadata_Exposure, exposure_time);
     md.put(MM::g_Keyword_PixelType, pixel_type);
     
     // Pass data to MM.

@@ -121,7 +121,6 @@ public:
 private:
    int Logical2Physical(int logical);
    bool ImageSizesAreEqual();
-   unsigned char* imageBuffer_;
    int startCommunication();
    int startCounting(int number);
    int stopCounting();

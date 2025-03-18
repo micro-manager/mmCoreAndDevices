@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASIXYSTAGE_H_
-#define _ASIXYSTAGE_H_
+#ifndef ASIXYSTAGE_H
+#define ASIXYSTAGE_H
 
 #include "ASIBase.h"
 
@@ -17,7 +17,6 @@ public:
 	~XYStage();
 
 	// Device API
-	// ----------
 	int Initialize();
 	int Shutdown();
 
@@ -26,11 +25,10 @@ public:
 
 	// so far, only the XYStage attempts to get the controller status on initialization, so
 	// that's where the device detection is going for now
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	// XYStage API
-	// -----------
 	int SetPositionSteps(long x, long y);
 	int SetRelativePositionSteps(long x, long y);
 	int GetPositionSteps(long& x, long& y);
@@ -46,19 +44,25 @@ public:
 	int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
 
 	// action interface
-	// ----------------
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnStepSizeX(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnStepSizeY(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetAcceleration(long& acceleration);
 	int OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetBacklash(double& backlash);
 	int OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetFinishError(double& finishError);
 	int OnError(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetError(double& error);
 	int OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetOverShoot(double& overShoot);
 	int OnWait(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetWaitCycles(long& waitCycles);
 	int OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int GetSpeed(double& speed_);
 	int GetMaxSpeed(char* maxSpeedStr);
 	int OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNrMoveRepetitions(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -98,9 +102,16 @@ private:
 	bool stopSignal_;
 	bool serialOnlySendChanged_; // if true the serial command is only sent when it has changed
 	std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
+	long acceleration_;
+	long waitCycles_;
+	double speed_;
+	double backlash_;
+	double error_;
+	double finishError_;
+	double overShoot_;
 	bool advancedPropsEnabled_;
 	std::string axisletterX_;
 	std::string axisletterY_;
 };
 
-#endif // _ASIXYSTAGE_H_
+#endif // ASIXYSTAGE_H

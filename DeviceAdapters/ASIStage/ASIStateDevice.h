@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASISTATEDEVICE_H_
-#define _ASISTATEDEVICE_H_
+#ifndef ASISTATEDEVICE_H
+#define ASISTATEDEVICE_H
 
 #include "ASIBase.h"
 
@@ -23,8 +23,8 @@ public:
 
 	int Initialize();
 	int Shutdown();
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -40,4 +40,4 @@ private:
 	int UpdateCurrentPosition();
 };
 
-#endif // _ASISTATEDEVICE_H_
+#endif // ASISTATEDEVICE_H
