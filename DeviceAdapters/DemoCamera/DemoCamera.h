@@ -599,7 +599,7 @@ private:
    double lowerLimit_;
    double upperLimit_;
 
-   void CDemoXYStage::ComputeIntermediatePosition(const MM::MMTime& currentTime,
+   void ComputeIntermediatePosition(const MM::MMTime& currentTime,
       double& currentPosX,
       double& currentPosY);
 };
