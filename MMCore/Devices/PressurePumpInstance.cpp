@@ -1,7 +1,9 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     MMCore
 //
-// COPYRIGHT:     University of California, San Francisco, 2014,
+// DESCRIPTION:   PressurePump device instance wrapper
+//
+// COPYRIGHT:     Institut Pierre-Gilles de Gennes, Paris, 2024,
 //                All Rights reserved
 //
 // LICENSE:       This file is distributed under the "Lesser GPL" (LGPL) license.
@@ -15,23 +17,14 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// AUTHOR:        Mark Tsuchida
+// AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 
-#pragma once
-
-#include "CameraInstance.h"
-#include "ShutterInstance.h"
-#include "StageInstance.h"
-#include "XYStageInstance.h"
-#include "StateInstance.h"
-#include "SerialInstance.h"
-#include "GenericInstance.h"
-#include "AutoFocusInstance.h"
-#include "ImageProcessorInstance.h"
-#include "SignalIOInstance.h"
-#include "MagnifierInstance.h"
-#include "SLMInstance.h"
-#include "GalvoInstance.h"
-#include "HubInstance.h"
 #include "PressurePumpInstance.h"
-#include "VolumetricPumpInstance.h"
+#include "../../MMDevice/MMDeviceConstants.h"
+
+// General pump functions
+int PressurePumpInstance::Stop() { return GetImpl()->Stop(); }
+int PressurePumpInstance::Calibrate() { return GetImpl()->Calibrate(); }
+bool PressurePumpInstance::requiresCalibration() { return GetImpl()->RequiresCalibration(); }
+int PressurePumpInstance::setPressure(double pressure) { return GetImpl()->SetPressure(pressure); }
+int PressurePumpInstance::getPressure(double& pressure) { return GetImpl()->GetPressure(pressure); }

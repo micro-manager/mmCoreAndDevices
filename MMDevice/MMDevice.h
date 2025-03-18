@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 71
+#define DEVICE_INTERFACE_VERSION 72
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -1291,6 +1291,211 @@ namespace MM {
        */
       virtual Device* GetInstalledDevice(int devIdx) = 0;
    };
+
+   /**
+   * Pressure Pump API
+   */
+   class PressurePump : public Device
+   {
+   public:
+       PressurePump() {}
+       virtual ~PressurePump() {}
+
+       // MMDevice API
+       virtual DeviceType GetType() const { return Type; }
+       static const DeviceType Type;
+
+       /**
+* Stops the pump. The implementation should halt any dispensing/withdrawal,
+* and make the pump available again (make Busy() return false).
+*
+* Required by MMPump API
+*/
+       virtual int Stop() = 0;
+
+       /**
+       * Calibrates the pressure controller. If no internal calibration is
+       * supported, just return DEVICE_OK.
+       *
+       * Optional function of MMPump API (only required for pressure controllers)
+       */
+       virtual int Calibrate() = 0;
+
+       /**
+       * Returns whether the pressure controller is functional before calibration,
+       * or it needs to undergo internal calibration before any commands can be
+       * executed.
+       *
+       * Required by MMPump API.
+       */
+       virtual bool RequiresCalibration() = 0;
+
+       /**
+       * Sets the pressure of the pressure controller. The provided value will
+       * be in kPa. The implementation should convert the unit from kPa to the
+       * desired unit by the device.
+       *
+       * Optional function of MMPump API (only required for pressure controllers)
+       */
+       virtual int SetPressure(double pressure) = 0;
+
+       /**
+       * Gets the pressure of the pressure controller. The returned value
+       * has to be in kPa. The implementation, therefore, should convert the
+       * value provided by the pressure controller to kPa.
+       *
+       * Optional function of MMPump API (only required for pressure controllers)
+       */
+       virtual int GetPressure(double& pressure) = 0;
+   };
+
+   /**
+   * Volumetric Pump API
+   */
+   class VolumetricPump : public Device
+   {
+   public:
+       VolumetricPump() {}
+       virtual ~VolumetricPump() {}
+
+       // MMDevice API
+       virtual DeviceType GetType() const { return Type; }
+       static const DeviceType Type;
+
+       /**
+       * Homes the pump. If no homing is supported, just return DEVICE_OK
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int Home() = 0;
+
+       /**
+       * Stops the pump. The implementation should halt any dispensing/withdrawal,
+       * and make the pump available again (make Busy() return false).
+       *
+       * Required by MMPump API
+       */
+       virtual int Stop() = 0;
+
+       /**
+       * Flag to check whether the pump requires homing before being operational
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual bool RequiresHoming() = 0;
+
+       /**
+       * Sets the direction of the pump. Certain pump
+       * (e.g. peristaltic and DC pumps) don't have an apriori forward-reverse direction,
+       * as it depends on how it is connected. This function allows you to switch
+       * forward and reverse.
+       *
+       * The implementation of this function should allow two values, 1 and -1,
+       * and should ignore all other values, where 1 indicates that the direction
+       * is left as-is, and -1 indicates that the direction should be reversed. If
+       * the pump is uni-directional, this function does not need to be
+       * implemented.
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int InvertDirection(bool inverted) = 0;
+
+       /**
+       * Sets the direction of the pump. Certain pump
+       * (e.g. peristaltic and DC pumps) don't have an apriori forward-reverse direction,
+       * as it depends on how it is connected. This function allows you to switch
+       * forward and reverse.
+       *
+       * The implementation of this function should allow two values, [1] and [-1],
+       * and should ignore all other values, where [1] indicates that the direction
+       * is left as-is, and [-1] indicates that the direction should be reversed.
+       * When the pump is uni-directional, the function should always assign [1] to
+       * [direction]
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int IsDirectionInverted(bool& inverted) = 0;
+
+       /**
+       * Sets the current volume of the pump in microliters (uL).
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int SetVolumeUl(double volUl) = 0;
+
+       /**
+       * Gets the current volume of the pump in microliters (uL).
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int GetVolumeUl(double& volUl) = 0;
+
+       /**
+        * Sets the maximum volume of the pump in microliters (uL).
+        *
+        * Optional function of MMPump API (only required for volumetric pumps)
+        */
+       virtual int SetMaxVolumeUl(double volUl) = 0;
+
+       /**
+       * Gets the maximum volume of the pump in microliters (uL).
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int GetMaxVolumeUl(double& volUl) = 0;
+
+       /**
+       * Sets the flowrate in microliter (uL) per second. The implementation
+       * should convert the provided flowrate to whichever unit the pump desires
+       * (steps/s, mL/h, V).
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int SetFlowrateUlPerSecond(double flowrate) = 0;
+
+       /**
+       * Gets the flowrate in microliter (uL) per second.
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int GetFlowrateUlPerSecond(double& flowrate) = 0;
+
+       /**
+       * Dispenses/withdraws until the minimum or maximum volume has been
+       * reached, or the pumping is manually stopped
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int Start() = 0;
+
+       /**
+       * Dispenses/withdraws for the provided time, with the flowrate provided
+       * by GetFlowrate_uLperMin
+       * Dispensing for an undetermined amount of time can be done with DBL_MAX
+       * During the dispensing/withdrawal, Busy() should return "true".
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int DispenseDuration(double durSec) = 0;
+
+       /**
+       * Dispenses/withdraws the provided volume.
+       *
+       * The implementation should cause positive volumes to be dispensed, whereas
+       * negative volumes should be withdrawn. The implementation should prevent
+       * the volume to go negative (i.e. stop the pump once the syringe is empty),
+       * or to go over the maximum volume (i.e. stop the pump once it is full).
+       * This automatically allows for dispensing/withdrawal for an undetermined
+       * amount of time by providing DBL_MAX for dispense, and DBL_MIN for
+       * withdraw.
+       *
+       * During the dispensing/withdrawal, Busy() should return "true".
+       *
+       * Optional function of MMPump API (only required for volumetric pumps)
+       */
+       virtual int DispenseVolume(double volUl) = 0;
+   };
+
 
    /**
     * Callback API to the core control module.

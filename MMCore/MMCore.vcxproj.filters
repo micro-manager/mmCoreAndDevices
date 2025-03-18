@@ -141,6 +141,12 @@
     <ClCompile Include="ThreadPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Devices\PressurePumpInstance.cpp">
+      <Filter>Source Files\Devices</Filter>
+    </ClCompile>
+    <ClCompile Include="Devices\VolumetricPumpInstance.cpp">
+      <Filter>Source Files\Devices</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CircularBuffer.h">
@@ -304,6 +310,12 @@
     </ClInclude>
     <ClInclude Include="ThreadPool.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Devices\VolumetricPumpInstance.h">
+      <Filter>Header Files\Devices</Filter>
+    </ClInclude>
+    <ClInclude Include="Devices\PressurePumpInstance.h">
+      <Filter>Header Files\Devices</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
