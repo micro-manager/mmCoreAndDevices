@@ -48,6 +48,6 @@ public:
     int SetFlowrateUlPerSec(double flowrate);
     int GetFlowrateUlPerSec(double& flowrate);
     int Start();
-    int DispenseDuration(double durSec);
-    int DispenseVolume(double volUl);
+    int DispenseDurationSeconds(double durSec);
+    int DispenseVolumeUl(double volUl);
 };

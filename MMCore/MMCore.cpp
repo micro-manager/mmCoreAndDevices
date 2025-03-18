@@ -6704,7 +6704,7 @@ double CMMCore::getPumpPressureKPa(const char* deviceLabel) throw (CMMError)
     mm::DeviceModuleLockGuard guard(pPump);
 
     double pressurekPa = 0;
-    int ret = pPump->GetPressure(pressurekPa);
+    int ret = pPump->GetPressureKPa(pressurekPa);
 
     if (ret != DEVICE_OK)
     {
@@ -6723,7 +6723,7 @@ void CMMCore::setPumpPressureKPa(const char* deviceLabel, double pressurekPa) th
         deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->SetPressure(pressurekPa);
+    int ret = pPump->SetPressureKPa(pressurekPa);
 
     if (ret != DEVICE_OK)
     {
@@ -6958,7 +6958,7 @@ void CMMCore::pumpDispenseDurationSeconds(const char* deviceLabel, double second
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->DispenseDuration(seconds);
+    int ret = pPump->DispenseDurationSeconds(seconds);
 
     if (ret != DEVICE_OK)
     {
@@ -6976,7 +6976,7 @@ void CMMCore::pumpDispenseVolumeUl(const char* deviceLabel, double microLiter) t
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->DispenseVolume(microLiter);
+    int ret = pPump->DispenseVolumeUl(microLiter);
 
     if (ret != DEVICE_OK)
     {

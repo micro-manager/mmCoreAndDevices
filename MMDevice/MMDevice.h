@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 72
+#define DEVICE_INTERFACE_VERSION 73
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -1337,7 +1337,7 @@ namespace MM {
         *
         * Optional function of MMPump API (only required for pressure controllers)
         */
-       virtual int SetPressure(double pressure) = 0;
+       virtual int SetPressureKPa(double pressureKPa) = 0;
 
        /**
         * Gets the pressure of the pressure controller. The returned value
@@ -1346,7 +1346,7 @@ namespace MM {
         *
         * Optional function of MMPump API (only required for pressure controllers)
         */
-       virtual int GetPressure(double& pressure) = 0;
+       virtual int GetPressureKPa(double& pressureKPa) = 0;
    };
 
    /**
@@ -1476,7 +1476,7 @@ namespace MM {
         *
         * Optional function of MMPump API (only required for volumetric pumps)
         */
-       virtual int DispenseDuration(double durSec) = 0;
+       virtual int DispenseDurationSeconds(double durSec) = 0;
 
        /**
         * Dispenses/withdraws the provided volume.
@@ -1493,7 +1493,7 @@ namespace MM {
         *
         * Optional function of MMPump API (only required for volumetric pumps)
         */
-       virtual int DispenseVolume(double volUl) = 0;
+       virtual int DispenseVolumeUl(double volUl) = 0;
    };
 
 

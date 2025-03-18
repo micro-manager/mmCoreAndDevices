@@ -26,5 +26,5 @@
 int PressurePumpInstance::Stop() { return GetImpl()->Stop(); }
 int PressurePumpInstance::Calibrate() { return GetImpl()->Calibrate(); }
 bool PressurePumpInstance::RequiresCalibration() { return GetImpl()->RequiresCalibration(); }
-int PressurePumpInstance::SetPressure(double pressure) { return GetImpl()->SetPressure(pressure); }
-int PressurePumpInstance::GetPressure(double& pressure) { return GetImpl()->GetPressure(pressure); }
+int PressurePumpInstance::SetPressureKPa(double pressure) { return GetImpl()->SetPressureKPa(pressure); }
+int PressurePumpInstance::GetPressureKPa(double& pressure) { return GetImpl()->GetPressureKPa(pressure); }

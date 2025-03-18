@@ -35,5 +35,5 @@ int VolumetricPumpInstance::GetMaxVolumeUl(double& volume) { return GetImpl()->G
 int VolumetricPumpInstance::SetFlowrateUlPerSec(double flowrate) { return GetImpl()->SetFlowrateUlPerSecond(flowrate); }
 int VolumetricPumpInstance::GetFlowrateUlPerSec(double& flowrate) { return GetImpl()->GetFlowrateUlPerSecond(flowrate); }
 int VolumetricPumpInstance::Start() { return GetImpl()->Start(); }
-int VolumetricPumpInstance::DispenseDuration(double durSec) { return GetImpl()->DispenseDuration(durSec); }
-int VolumetricPumpInstance::DispenseVolume(double volUl) { return GetImpl()->DispenseVolume(volUl); }
+int VolumetricPumpInstance::DispenseDurationSeconds(double durSec) { return GetImpl()->DispenseDurationSeconds(durSec); }
+int VolumetricPumpInstance::DispenseVolumeUl(double volUl) { return GetImpl()->DispenseVolumeUl(volUl); }
