@@ -46,7 +46,7 @@
 // CCameraAdapter class
 // Simulation of the Camera device
 //////////////////////////////////////////////////////////////////////////////
-class CCameraAdapter : public CCameraBase<CCameraAdapter>  
+class CCameraAdapter : public CLegacyCameraBase<CCameraAdapter>  
 {
 public:
    CCameraAdapter( LPCTSTR pszName );

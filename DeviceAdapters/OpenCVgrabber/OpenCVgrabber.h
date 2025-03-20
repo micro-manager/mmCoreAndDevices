@@ -68,7 +68,7 @@
 
 class MySequenceThread;
 
-class COpenCVgrabber : public CCameraBase<COpenCVgrabber>  
+class COpenCVgrabber : public CLegacyCameraBase<COpenCVgrabber>  
 {
 public:
    COpenCVgrabber();

@@ -395,7 +395,7 @@ private:
 	int CreatePropertyBasedOnDescription(mmpropertydescription);
 };
 
-class UmmhCamera : public UmmhDeviceUtilities, public CCameraBase<UmmhCamera>
+class UmmhCamera : public UmmhDeviceUtilities, public CLegacyCameraBase<UmmhCamera>
 {
 public:
 	UmmhCamera(const char* name);

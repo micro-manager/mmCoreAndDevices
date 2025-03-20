@@ -30,7 +30,7 @@
 
 class FliThreadImp;
 
-class FirstLightImagingCameras : public CCameraBase<FirstLightImagingCameras>
+class FirstLightImagingCameras : public CLegacyCameraBase<FirstLightImagingCameras>
 {
 public:
 

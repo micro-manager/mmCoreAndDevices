@@ -59,7 +59,7 @@ enum WorkerState {
 class BOImplementationThread;
 
 
-class CBaumerOptronic : public CCameraBase<CBaumerOptronic>
+class CBaumerOptronic : public CLegacyCameraBase<CBaumerOptronic>
 {
 public:
 

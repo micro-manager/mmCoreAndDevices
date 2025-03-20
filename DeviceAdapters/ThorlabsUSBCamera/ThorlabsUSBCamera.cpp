@@ -94,7 +94,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 ThorlabsUSBCam::ThorlabsUSBCam() :
-   CCameraBase<ThorlabsUSBCam> (),
+   CLegacyCameraBase<ThorlabsUSBCam> (),
    initialized_(false),
    bitDepth_(8),
    roiX_(0),

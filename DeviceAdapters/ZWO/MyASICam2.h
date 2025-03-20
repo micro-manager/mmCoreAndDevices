@@ -9,7 +9,7 @@
 
 class SequenceThread;
 
-class CMyASICam:public CCameraBase<CMyASICam> 
+class CMyASICam:public CLegacyCameraBase<CMyASICam> 
 {
 public:
 	CMyASICam(void);
