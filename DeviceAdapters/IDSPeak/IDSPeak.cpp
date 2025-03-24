@@ -610,7 +610,7 @@ int CIDSPeak::Initialize()
             &gainAnalogMin_, &gainAnalogMax_, &gainAnalogInc_);
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, &gainAnalogMaster_);
         pAct = new CPropertyAction(this, &CIDSPeak::OnGainAnalogMaster);
-        nRet = CreateFloatProperty("Analog Gain Master", 1.0, false, pAct);
+        nRet = CreateFloatProperty("Analog Gain Master", gainAnalogMaster_, false, pAct);
         assert(nRet == DEVICE_OK);
         nRet = SetPropertyLimits("Analog Gain Master", gainAnalogMin_, gainAnalogMax_);
         if (nRet != DEVICE_OK)
@@ -1740,7 +1740,6 @@ int CIDSPeak::OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CIDSPeak::OnAutoWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     int nRet = DEVICE_OK;
-
     if (eAct == MM::BeforeGet)
     {
         if (peak_AutoWhiteBalance_GetAccessStatus(hCam) == PEAK_ACCESS_READWRITE
@@ -1751,7 +1750,6 @@ int CIDSPeak::OnAutoWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct)
         const char* autoWB = peakAutoToString[peakAutoWhiteBalance_].c_str();
         pProp->Set(autoWB);
     }
-
     else if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
@@ -1772,15 +1770,12 @@ int CIDSPeak::OnAutoWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CIDSPeak::OnGainAnalogMaster(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
     int nRet = DEVICE_OK;
-
     if (eAct == MM::BeforeGet)
     {
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, &gainAnalogMaster_);
         pProp->Set(gainAnalogMaster_);
     }
-
     else if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
@@ -1789,7 +1784,7 @@ int CIDSPeak::OnGainAnalogMaster(MM::PropertyBase* pProp, MM::ActionType eAct)
         double gainMaster;
         pProp->Get(gainMaster);
 
-        status = peak_Gain_Set(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_RED, gainMaster);
+        status = peak_Gain_Set(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, gainMaster);
         if (status != PEAK_STATUS_SUCCESS) { nRet = ERR_NO_WRITE_ACCESS; }
         else { gainAnalogMaster_ = gainMaster; }
     }
@@ -1801,15 +1796,12 @@ int CIDSPeak::OnGainAnalogMaster(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CIDSPeak::OnGainAnalogRed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
     int nRet = DEVICE_OK;
-
     if (eAct == MM::BeforeGet)
     {
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_RED, &gainAnalogRed_);
         pProp->Set(gainAnalogRed_);
     }
-
     else if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
@@ -1831,15 +1823,12 @@ int CIDSPeak::OnGainAnalogRed(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CIDSPeak::OnGainAnalogGreen(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
     int nRet = DEVICE_OK;
-
     if (eAct == MM::BeforeGet)
     {
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_GREEN, &gainAnalogGreen_);
         pProp->Set(gainAnalogGreen_);
     }
-
     else if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
@@ -1861,15 +1850,12 @@ int CIDSPeak::OnGainAnalogGreen(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CIDSPeak::OnGainAnalogBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
     int nRet = DEVICE_OK;
-
     if (eAct == MM::BeforeGet)
     {
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_BLUE, &gainAnalogBlue_);
         pProp->Set(gainAnalogBlue_);
     }
-
     else if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
@@ -1891,15 +1877,12 @@ int CIDSPeak::OnGainAnalogBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CIDSPeak::OnGainDigitalMaster(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
     int nRet = DEVICE_OK;
-
     if (eAct == MM::BeforeGet)
     {
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &gainDigitalMaster_);
         pProp->Set(gainDigitalMaster_);
     }
-
     else if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
@@ -1908,7 +1891,7 @@ int CIDSPeak::OnGainDigitalMaster(MM::PropertyBase* pProp, MM::ActionType eAct)
         double gainMaster;
         pProp->Get(gainMaster);
 
-        status = peak_Gain_Set(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_RED, gainMaster);
+        status = peak_Gain_Set(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, gainMaster);
         if (status != PEAK_STATUS_SUCCESS) { nRet = ERR_NO_WRITE_ACCESS; }
         else { gainDigitalMaster_ = gainMaster; }
     }
@@ -1920,15 +1903,12 @@ int CIDSPeak::OnGainDigitalMaster(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CIDSPeak::OnGainDigitalRed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
     int nRet = DEVICE_OK;
-
     if (eAct == MM::BeforeGet)
     {
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_RED, &gainDigitalRed_);
         pProp->Set(gainDigitalRed_);
     }
-
     else if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
@@ -1950,15 +1930,12 @@ int CIDSPeak::OnGainDigitalRed(MM::PropertyBase* pProp, MM::ActionType eAct)
 */
 int CIDSPeak::OnGainDigitalGreen(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
     int nRet = DEVICE_OK;
-
     if (eAct == MM::BeforeGet)
     {
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_GREEN, &gainDigitalGreen_);
         pProp->Set(gainDigitalGreen_);
     }
-
     else if (eAct == MM::AfterSet)
     {
         if (IsCapturing())
