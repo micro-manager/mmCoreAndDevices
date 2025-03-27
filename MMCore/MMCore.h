@@ -105,6 +105,8 @@ class SLMInstance;
 class ShutterInstance;
 class StageInstance;
 class XYStageInstance;
+class PressurePumpInstance;
+class VolumetricPumpInstance;
 
 class CMMCore;
 
@@ -617,6 +619,39 @@ public:
    void runGalvoPolygons(const char* galvoLabel) throw (CMMError);
    void runGalvoSequence(const char* galvoLabel) throw (CMMError);
    std::string getGalvoChannel(const char* galvoLabel) throw (CMMError);
+   ///@}
+
+   /** \name PressurePump control
+   *
+   * Control of pressure pumps
+   */
+   ///@{
+   void pressurePumpStop(const char* pumpLabel) throw (CMMError);
+   void pressurePumpCalibrate(const char* pumpLabel) throw (CMMError);
+   bool pressurePumpRequiresCalibration(const char* pumpLabel) throw (CMMError);
+   void setPumpPressureKPa(const char* pumplabel, double pressure) throw (CMMError);
+   double getPumpPressureKPa(const char* pumplabel) throw (CMMError);
+   ///@}
+
+   /** \name VolumetricPump control
+   *
+   * Control of volumetric pumps
+   */
+   ///@{
+   void volumetricPumpStop(const char* pumpLabel) throw (CMMError);
+   void volumetricPumpHome(const char* pumpLabel) throw (CMMError);
+   bool volumetricPumpRequiresHoming(const char* pumpLabel) throw (CMMError);
+   void invertPumpDirection(const char* pumpLabel, bool invert) throw (CMMError);
+   bool isPumpDirectionInverted(const char* pumpLabel) throw (CMMError);
+   void setPumpVolume(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpVolume(const char* pumpLabel) throw (CMMError);
+   void setPumpMaxVolume(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpMaxVolume(const char* pumpLabel) throw (CMMError);
+   void setPumpFlowrate(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpFlowrate(const char* pumpLabel) throw (CMMError);
+   void pumpStart(const char* pumpLabel) throw (CMMError);
+   void pumpDispenseDurationSeconds(const char* pumpLabel, double seconds) throw (CMMError);
+   void pumpDispenseVolumeUl(const char* pumpLabel, double microLiter) throw (CMMError);
    ///@}
 
    /** \name Device discovery. */

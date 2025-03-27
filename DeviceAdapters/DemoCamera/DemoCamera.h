@@ -582,17 +582,26 @@ public:
    // action interface
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    double stepSize_um_;
    double posX_um_;
    double posY_um_;
+   double startPosX_um_, startPosY_um_;
+   double targetPosX_um_, targetPosY_um_;
+   MM::MMTime moveStartTime_;     // from GetCurrentMMTime()
+   long moveDuration_ms_;         // duration of current move in milliseconds
    bool busy_;
    MM::TimeoutMs* timeOutTimer_;
    double velocity_;
    bool initialized_;
    double lowerLimit_;
    double upperLimit_;
+
+   void ComputeIntermediatePosition(const MM::MMTime& currentTime,
+      double& currentPosX,
+      double& currentPosY);
 };
 
 //////////////////////////////////////////////////////////////////////////////

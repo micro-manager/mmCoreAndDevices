@@ -77,7 +77,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\PlayerOne\FilterWheelSDK\lib\Win\x64;$(MM_3RDPARTYPRIVATE)\PlayerOne\CameraSDK\lib\Win\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPUBLIC)\PlayerOne\FilterWheelSDK\lib\Win\x64;$(MM_3RDPARTYPUBLIC)\PlayerOne\CameraSDK\lib\Win\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>PlayerOneCamera.lib;PlayerOnePW.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

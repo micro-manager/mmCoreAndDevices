@@ -3,7 +3,6 @@
 #pragma warning( disable : 4251 )
 #define _AFXDLL
 
-#include	"GalaxyException.h"
 #include	"GalaxyIncludes.h"
 
 //---------------------------------------------------------------------------------
@@ -37,7 +36,6 @@ class MODULE_API ClassGalaxy : public CCameraBase<ClassGalaxy>
 public:
 
 	ClassGalaxy();
-	//函数的意义-析构函数 delete时，启用;
 	~ClassGalaxy(void);
 
 	// MMDevice API
@@ -57,8 +55,6 @@ public:
 
 	const unsigned char* GetImageBuffer();
 
-	// void* Buffer4ContinuesShot;
-
 	unsigned GetNumberOfComponents() const;
 	unsigned GetImageWidth() const;
 	unsigned GetImageHeight() const;
@@ -74,22 +70,16 @@ public:
 	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
 	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
 	int ClearROI();
-	void ReduceImageSize(int64_t Width, int64_t Height);
 	int GetBinning() const;
 	int SetBinning(int binSize);
 	int IsExposureSequenceable(bool& seq) const { seq = false; return DEVICE_OK; }
 
 	void CoverToRGB(GX_PIXEL_FORMAT_ENTRY emDstFormat,void* DstBuffer, CImageDataPointer pObjSrcImageData);
 
-	////int SetProperty(const char* name, const char* value);
 	int CheckForBinningMode(CPropertyAction* pAct);
-	void AddToLog(std::string msg);
 	
 	GX_VALID_BIT_LIST GetBestValudBit(GX_PIXEL_FORMAT_ENTRY emPixelFormatEntry);
 	void CopyToImageBuffer(CImageDataPointer& objImageDataPointer);
-	//CImageFormatConverter* converter;
-	//std::string EnumToString(EDeviceAccessiblityInfo DeviceAccessiblityInfo);
-	//void UpdateTemperature();
 
 	/**
 	* Starts continuous acquisition. live模式，但是以下函数没有写也会开启live模式，开启该函数之后，软件会卡死，内部有函数
@@ -97,7 +87,6 @@ public:
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) final ;
 	int StartSequenceAcquisition(double interval_ms) final;
 	int StopSequenceAcquisition() final;
-	int PrepareSequenceAcqusition() final;
 
 	///**
 	//* Flag to indicate whether Sequence Acquisition is currently running.
@@ -111,10 +100,6 @@ public:
 
 	//// action interface
 	//// ----------------
-	//int OnAcqFramerate(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnAcqFramerateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnAutoExpore(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBinningMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDeviceLinkThroughputLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -122,16 +107,7 @@ public:
 	int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnHeight(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnInterPacketDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnLightSourcePreset(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnResultingFramerate(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnReverseX(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnReverseY(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnSensorReadoutMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnShutterMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
-	//int OnTemperatureState(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAdjFrameRateMode(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -160,6 +136,9 @@ public:
 	bool __IsPixelFormat8(GX_PIXEL_FORMAT_ENTRY emPixelFormatEntry);
 
 private:
+	bool StopGrabbing();
+	void StartGrabbing();
+	int HandleError(CGalaxyException cgal);
 	GxIAPICPP::gxdeviceinfo_vector vectorDeviceInfo;
 	int nComponents_;
 	unsigned bitDepth_;
