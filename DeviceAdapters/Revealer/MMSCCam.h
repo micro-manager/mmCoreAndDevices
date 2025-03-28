@@ -8,8 +8,7 @@
 // LICENSE:       This file is distributed under the LGPL license.
 //                License text is included with the source distribution.
 
-#ifndef _MMTUCAM_H_
-#define _MMTUCAM_H_
+#pragma once
 
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
@@ -18,47 +17,6 @@
 #include <string>
 #include <map>
 #include <algorithm>
-
-//////////////////////////////////////////////////////////////////////////////
-// Error codes
-//
-
-
-////////////////////////
-// DemoHub
-//////////////////////
-
-class DemoHub : public HubBase<DemoHub>
-{
-public:
-   DemoHub() :
-      initialized_(false),
-      busy_(false)
-   {}
-   ~DemoHub() {}
-
-   // Device API
-   // ---------
-   int Initialize();
-   int Shutdown() {return DEVICE_OK;};
-   void GetName(char* pName) const; 
-   bool Busy() { return busy_;} ;
-
-   // HUB api
-   int DetectInstalledDevices();
-
-private:
-   void GetPeripheralInventory();
-
-   std::vector<std::string> peripherals_;
-   bool initialized_;
-   bool busy_;
-};
-
-//////////////////////////////////////////////////////////////////////////////
-// CMMTUCam class
-// Simulation of the Camera device
-//////////////////////////////////////////////////////////////////////////////
 
 enum ReadoutMode {
     bit11_HS_Low = 0,
@@ -71,6 +29,7 @@ enum ReadoutMode {
     bit16_From11,
     bit16_From12
 };
+
 class SCCamera : public CCameraBase<SCCamera>  
 {
 public:
@@ -267,5 +226,3 @@ protected:
    MMThreadLock stopLock_;
    MMThreadLock suspendLock_;
 };
-
-#endif //_MMTUCAM_H_

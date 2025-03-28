@@ -183,16 +183,6 @@ void SCCamera::GetName(char* name) const
 int SCCamera::Initialize()
 {
     if (initialized_) return DEVICE_OK;
-    DemoHub* pHub = static_cast<DemoHub*>(GetParentHub());
-    if (pHub)
-    {
-       char hubLabel[MM::MaxStrLength];
-       pHub->GetLabel(hubLabel);
-       SetParentID(hubLabel); // for backward comp.
-    }
-    else
-       LogMessage(NoHubError);
-
 
     LogMessage("init start");
     // init 
