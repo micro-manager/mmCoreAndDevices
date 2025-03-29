@@ -69,7 +69,7 @@ class SRRFAndorSDK3Camera;
 //////////////////////////////////////////////////////////////////////////////
 
 
-class CAndorSDK3Camera : public CCameraBase<CAndorSDK3Camera>  
+class CAndorSDK3Camera : public CLegacyCameraBase<CAndorSDK3Camera>  
 {
 public:
    CAndorSDK3Camera();
