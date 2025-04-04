@@ -1,0 +1,24 @@
+{
+  "solution": {
+    "path": "micromanager.sln",
+    "projects": [
+      "DeviceAdapters\\DemoCamera\\DemoCamera.vcxproj",
+      "DeviceAdapters\\ImageProcessorChain\\ImageProcessorChain.vcxproj",
+      "DeviceAdapters\\NI100X\\NI100X.vcxproj",
+      "DeviceAdapters\\NIDAQ\\NIDAQ.vcxproj",
+      "DeviceAdapters\\NIMultiAnalog\\NIMultiAnalog.vcxproj",
+      "DeviceAdapters\\OpenCVgrabber\\OpenCVgrabber.vcxproj",
+      "DeviceAdapters\\Spinnaker\\SpinnakerCamera.vcxproj",
+      "DeviceAdapters\\Utilities\\Utilities.vcxproj",
+      "DeviceAdapters\\go2scope\\go2scope.vcxproj",
+      "DeviceAdapters\\kdv\\KDV.vcxproj",
+      "DeviceAdapters\\nPoint\\NPointC400.vcxproj",
+      "DeviceAdapters\\pgFocus\\pgFocus.vcxproj",
+      "MMCoreJ_wrap\\MMCoreJ_wrap.vcxproj",
+      "MMCore\\MMCore.vcxproj",
+      "MMDevice\\MMDevice-SharedRuntime.vcxproj",
+      "MMDevice\\MMDevice-StaticRuntime.vcxproj",
+      "Tests\\G2SStorageTest\\G2SStorageTest.vcxproj"
+    ]
+  }
+}

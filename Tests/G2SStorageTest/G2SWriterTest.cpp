@@ -56,7 +56,7 @@ void testWritter(CMMCore& core, const std::string& path, const std::string& name
 
 	// Shape convention: Z, T, C, Y, X
 	std::vector<long> shape = { p, t, c, h, w };
-	auto handle = core.createDataset(path.c_str(), name.c_str(), shape, MM::StorageDataType_GRAY16, "");
+	auto handle = core.createDataset(path.c_str(), name.c_str(), shape, MM::StorageDataType_GRAY16, "", 0);
 
 	std::cout << "Dataset UID: " << handle << std::endl;
 	std::cout << "Dataset shape (W-H-C-T-P): " << w << " x " << h << " x " << c << " x " << t << " x " << p << " x 16-bit" << std::endl << std::endl;
@@ -80,7 +80,7 @@ void testWritter(CMMCore& core, const std::string& path, const std::string& name
 
 				// Add image to the stream
 				auto startSave = std::chrono::high_resolution_clock::now();
-				core.appendImageToDataset(handle.c_str(), imgSize, img, { i, j, k }, meta.c_str());
+				core.appendImageToDataset(handle.c_str(), imgSize, img, meta.c_str(), meta.size());
 				auto endSave = std::chrono::high_resolution_clock::now();
 				
 				// Calculate statistics
