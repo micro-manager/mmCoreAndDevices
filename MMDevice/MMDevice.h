@@ -1480,6 +1480,7 @@ namespace MM {
        * \param   shape Array defining the size of each dimension
        * \param   pixType The data type for pixel storage
        * \param   meta Dataset metadata string
+       * \param   metaLength length of the metadata
        * \param   [out] handle Output parameter for the dataset handle
        * \return  Status code indicating success or failure
        *
@@ -1489,7 +1490,7 @@ namespace MM {
        *          - Declared size for the slowest (first) dimension can be exceeded during acquisition
        */
       virtual int Create(const char* path, const char* name, int numberOfDimensions, const int shape[],
-                         MM::StorageDataType pixType, const char* meta, char* handle) = 0;
+                         MM::StorageDataType pixType, const char* meta, int metaLength, char* handle) = 0;
 
       /**
        * \brief   Retrieves the filesystem path of an opened dataset
@@ -1620,10 +1621,11 @@ namespace MM {
        * \param   coordinates Array of coordinates for image insertion
        * \param   numCoordinates Number of coordinate values
        * \param   imageMeta Image metadata string
+       * \param   imageMetaLength length of the image metadata
        * \return  Status code indicating success or failure
        */
       virtual int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels,
-                           int coordinates[], int numCoordinates, const char* imageMeta) = 0;
+                           int coordinates[], int numCoordinates, const char* imageMeta, int imageMetaLength) = 0;
 
       /**
        * \brief   Appends an image to the dataset
@@ -1631,9 +1633,10 @@ namespace MM {
        * \param   sizeInBytes Size of the image data in bytes
        * \param   pixels Pointer to the image pixel data
        * \param   imageMeta Image metadata string
+       * \param   imageMetaLength length of the image metadata
        * \return  Status code indicating success or failure
        */
-      virtual int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta) = 0;
+      virtual int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int imageMetaLength) = 0;
 
       /**
        * \brief   Retrieves dataset summary metadata
@@ -1733,9 +1736,10 @@ namespace MM {
        * \param   handle Dataset handle
        * \param   key Metadata key
        * \param   content Metadata content. Unlimited size.
+       * \param   contentLength length of the metadata string
        * \return  Status code indicating success or failure
        */
-      virtual int SetCustomMetadata(const char* handle, const char* key, const char* content) = 0;
+      virtual int SetCustomMetadata(const char* handle, const char* key, const char* content, int contentLength) = 0;
 
       /**
        * \brief   Retrieves custom metadata from the dataset

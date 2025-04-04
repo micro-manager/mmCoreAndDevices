@@ -153,10 +153,11 @@ bool AcqZarrStorage::Busy()
  * \param shape - array of dimension sizes, from slow to fast. Y and X are always the last two.
  * \param pixType - pixel type
  * \param meta - JSON encoded string representing "summary" metadata. Can be empty.
+ * \param metaLength - length of the metadata
  * \param handle - handle to the dataset.
  * \return 
  */
-int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle)
+int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, char* handle)
 {
    if (zarrStream)
    {
@@ -287,9 +288,9 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
       return ERR_ZARR_SETTINGS;
    }
 
-   if (strlen(meta))
+   if (metaLength > 0)
    {
-      status = ZarrStreamSettings_set_custom_metadata(settings, meta, strlen(meta) + 1);
+      status = ZarrStreamSettings_set_custom_metadata(settings, meta, metaLength);
       if (status != ZarrStatus_Success)
       {
          LogMessage("Invalid summary metadata.");
@@ -385,14 +386,14 @@ int AcqZarrStorage::List(const char* path, char** listOfDatasets, int maxItems, 
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
 
-int AcqZarrStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta)
+int AcqZarrStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength)
 {
    // acquire-zarr supports append-only images
    // TODO: check if the coordinates are coming in the right order and return run-time error if they dont
-   return AppendImage(handle, sizeInBytes, pixels, imageMeta);
+   return AppendImage(handle, sizeInBytes, pixels, imageMeta, metaLength);
 }
 
-int AcqZarrStorage::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta)
+int AcqZarrStorage::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength)
 {
    if (zarrStream == nullptr)
    {

@@ -36,7 +36,7 @@ public:
       mm::logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Storage>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger) {}
 
-   int Create(const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, std::string& handle);
+   int Create(const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, int metaLength, std::string& handle);
    int ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
 	int GetPath(const char* handle, std::string& path);
@@ -46,12 +46,12 @@ public:
    int GetPixelType(const char* handle, MM::StorageDataType& dataType);
    int Delete(char* handle);
    int List(const char* path, std::vector<std::string>& datasets);
-   int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, std::vector<int>& coordinates, const char* imageMeta);
-   int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta);
+   int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, std::vector<int>& coordinates, const char* imageMeta, int imageMetaLength);
+   int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int imageMetaLength);
    int GetSummaryMeta(const char* handle, std::string& meta);
    int GetImageMeta(const char* handle, const std::vector<int>& coordinates, std::string& meta);
    int GetCustomMeta(const char* handle, const std::string& key, std::string& meta);
-   int SetCustomMeta(const char* handle, const std::string& key, const std::string& meta);
+   int SetCustomMeta(const char* handle, const std::string& key, const char* meta, int metaLength);
    const unsigned char* GetImage(const char* handle, const std::vector<int>& coordinates);
    int GetNumberOfDimensions(const char* handle, int& numDimensions);
    int GetDimension(const char* handle, int dimension, std::string& name, std::string& meaning);

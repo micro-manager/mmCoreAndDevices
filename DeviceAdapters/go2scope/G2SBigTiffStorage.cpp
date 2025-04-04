@@ -145,10 +145,11 @@ int G2SBigTiffStorage::Shutdown() noexcept
  * @param shape Axis sizes
  * @param pixType Pixel format
  * @param meta Metadata
+ * @param metaLength length of the metadata string
  * @param handle Entry GUID [out]
  * @return Status code
  */
-int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle) noexcept
+int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, char* handle) noexcept
 {
    if(path == nullptr)
       return ERR_TIFF_INVALID_PATH;
@@ -226,7 +227,8 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 			vshape.assign(shape, shape + numberOfDimensions);
 			fhandle->setUID(guid);
 			fhandle->setShape(vshape);
-			fhandle->setMetadata(meta);
+			std::string metadataStr(meta, metaLength);
+			fhandle->setMetadata(metadataStr);
 
 			// Set pixel format
 			if(pixType == MM::StorageDataType::StorageDataType_GRAY8)
@@ -611,9 +613,10 @@ int G2SBigTiffStorage::List(const char* path, char** listOfDatasets, int maxItem
  * @param coordinates Image coordinates
  * @param numCoordinates Coordinate count
  * @param imageMeta Image metadata
+ * @param metaLength metadata length
  * @return Status code
  */
-int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta) noexcept
+int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength) noexcept
 {
 	if(handle == nullptr || pixels == nullptr || sizeInBytes <= 0 || numCoordinates <= 0)
 		return DEVICE_INVALID_INPUT_PARAM;
@@ -637,7 +640,8 @@ int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned ch
 	try
 	{
 		// Add image
-		fs->addImage(pixels, sizeInBytes, imageMeta);
+		std::string imageMetaStr(imageMeta, metaLength);
+		fs->addImage(pixels, sizeInBytes, imageMetaStr);
 		return DEVICE_OK;
 	}
 	catch(std::exception& e)
@@ -654,9 +658,10 @@ int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned ch
  * @param pixels Pixel data buffer
  * @param sizeInBytes pixel array size
  * @param imageMeta Image metadata
+ * @param metaLength length of the metadata
  * @return Status code
  */
-int G2SBigTiffStorage::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta) noexcept
+int G2SBigTiffStorage::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength) noexcept
 {
 	if(handle == nullptr || pixels == nullptr || sizeInBytes <= 0)
 		return DEVICE_INVALID_INPUT_PARAM;
@@ -674,7 +679,8 @@ int G2SBigTiffStorage::AppendImage(const char* handle, int sizeInBytes, unsigned
 		auto fs = reinterpret_cast<G2SBigTiffDataset*>(it->second.FileHandle);
 		if(fs->isInReadMode())
 			return ERR_TIFF_DATASET_READONLY;
-		fs->addImage(pixels, sizeInBytes, imageMeta);
+		std::string imageMetaStr(imageMeta, metaLength);
+		fs->addImage(pixels, sizeInBytes, imageMetaStr);
 		return DEVICE_OK;
 	}
 	catch(std::exception& e)
@@ -1007,7 +1013,7 @@ int G2SBigTiffStorage::GetImageCount(const char* handle, int& imgcount) noexcept
  * @param content Metadata entry value / content
  * @return Status code
  */
-int G2SBigTiffStorage::SetCustomMetadata(const char* handle, const char* key, const char* content) noexcept
+int G2SBigTiffStorage::SetCustomMetadata(const char* handle, const char* key, const char* content, int contentLength) noexcept
 {
 	if(handle == nullptr || key == nullptr || content == nullptr)
 		return DEVICE_INVALID_INPUT_PARAM;
@@ -1020,6 +1026,7 @@ int G2SBigTiffStorage::SetCustomMetadata(const char* handle, const char* key, co
 	if(fs->isInReadMode())
 		return ERR_TIFF_DATASET_READONLY;
 	
+	std::string contentStr(content, contentLength);
 	fs->setCustomMetadata(key, content);
 	return DEVICE_OK;
 }

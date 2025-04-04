@@ -21,13 +21,13 @@
 
 #include "StorageInstance.h"
 
-int StorageInstance::Create(const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, std::string& handle)
+int StorageInstance::Create(const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, int metaLength, std::string& handle)
 {
    RequireInitialized(__func__);
 
    char cHandle[MM::MaxStrLength];
 	memset(cHandle, 0, MM::MaxStrLength);
-   int ret = GetImpl()->Create(path, name, (int)shape.size(), &shape[0], pixType, meta, cHandle);
+   int ret = GetImpl()->Create(path, name, (int)shape.size(), &shape[0], pixType, meta, metaLength, cHandle);
    if (ret != DEVICE_OK)
       return ret;
    
@@ -133,16 +133,16 @@ int StorageInstance::List(const char* path, std::vector<std::string>& listOfData
    return ret;
 }
 
-int StorageInstance::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, std::vector<int>& coordinates, const char* imageMeta)
+int StorageInstance::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, std::vector<int>& coordinates, const char* imageMeta, int metaLength)
 {
    RequireInitialized(__func__);
-   return GetImpl()->AddImage(handle, sizeInBytes, pixels, &coordinates[0], (int)coordinates.size(), imageMeta);
+   return GetImpl()->AddImage(handle, sizeInBytes, pixels, &coordinates[0], (int)coordinates.size(), imageMeta, metaLength);
 }
 
-int StorageInstance::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta)
+int StorageInstance::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength)
 {
    RequireInitialized(__func__);
-   return GetImpl()->AppendImage(handle, sizeInBytes, pixels, imageMeta);
+   return GetImpl()->AppendImage(handle, sizeInBytes, pixels, imageMeta, metaLength);
 }
 
 int StorageInstance::GetSummaryMeta(const char* handle, std::string& meta)
@@ -187,10 +187,10 @@ int StorageInstance::GetCustomMeta(const char* handle, const std::string& key, s
    return ret;
 }
 
-int StorageInstance::SetCustomMeta(const char* handle, const std::string& key, const std::string& meta)
+int StorageInstance::SetCustomMeta(const char* handle, const std::string& key, const char* meta, int metaLength)
 {
    RequireInitialized(__func__);
-   return GetImpl()->SetCustomMetadata(handle, key.c_str(), meta.c_str());
+   return GetImpl()->SetCustomMetadata(handle, key.c_str(), meta, metaLength);
 }
 
 const unsigned char* StorageInstance::GetImage(const char* handle, const std::vector<int>& coordinates)

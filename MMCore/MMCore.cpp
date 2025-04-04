@@ -8083,10 +8083,11 @@ std::string CMMCore::getStorageDevice() throw(CMMError)
  * \param path - parent directory for the dataset
  * \param name - name for the dataset
  * \param shape - array of max coordinates for each dimension (not counting image x and y)
- * \param meta - serialized JSON metadata
+ * \param meta - serialized metadata
+ * \param metaLength - length of the metadata string
  * \return - handle for the new dataset
  */
-std::string CMMCore::createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta) throw (CMMError)
+std::string CMMCore::createDataset(const char* path, const char* name, const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta, int metaLength) throw (CMMError)
 {
    // NOTE: vector<long> is used instead of vector<int> in the signature because of Swig idiosyncracies
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
@@ -8095,7 +8096,7 @@ std::string CMMCore::createDataset(const char* path, const char* name, const std
       mm::DeviceModuleLockGuard guard(storage);
       std::string handle;
       std::vector<int> intShape(shape.begin(), shape.end());
-      int ret = storage->Create(path, name, intShape, pixelType, meta, handle);
+      int ret = storage->Create(path, name, intShape, pixelType, meta, metaLength, handle);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8298,9 +8299,10 @@ MM::StorageDataType CMMCore::getDatasetPixelType(const char* handle) throw (CMME
  * \param handle - handle to the open dataset
  * \param sizeInBytes - size of the pixel array
  * \param pixels - pixel array
- * \param imageMeta - serialized JSON with image specific metadata
+ * \param imageMeta - image specific metadata
+ * \param imageMetaLength - size of the metadata string
  */
-void CMMCore::appendImageToDataset(const char* handle, int sizeInBytes, const STORAGEIMG pixels, const char* imageMeta) throw (CMMError)
+void CMMCore::appendImageToDataset(const char* handle, int sizeInBytes, const STORAGEIMG pixels, const char* imageMeta, int imageMetaLength) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
@@ -8308,7 +8310,7 @@ void CMMCore::appendImageToDataset(const char* handle, int sizeInBytes, const ST
       int ret(0);
       mm::DeviceModuleLockGuard guard(storage);
       // append
-      ret = storage->AppendImage(handle, sizeInBytes, pixels, imageMeta);
+      ret = storage->AppendImage(handle, sizeInBytes, pixels, imageMeta, imageMetaLength);
      
       if (ret != DEVICE_OK)
       {
@@ -8329,16 +8331,17 @@ void CMMCore::appendImageToDataset(const char* handle, int sizeInBytes, const ST
  * \param sizeInShorts - size of the pixel array
  * \param pixels - pixel array
  * \param coordinates - coordinates of the image in the dimension space
- * \param imageMeta - serialized JSON with image specific metadata
+ * \param imageMeta - image specific metadata
+ * \param imageMetaLength - size of the metadata string
  */
-void CMMCore::appendImageToDataset(const char* handle, int sizeInShorts, const STORAGEIMG16 pixels, const char* imageMeta) throw (CMMError)
+void CMMCore::appendImageToDataset(const char* handle, int sizeInShorts, const STORAGEIMG16 pixels, const char* imageMeta, int imageMetaLength) throw (CMMError)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
       int ret(0);
-      ret = storage->AppendImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), imageMeta);
+      ret = storage->AppendImage(handle, sizeInShorts * 2, reinterpret_cast<unsigned char*>(pixels), imageMeta, imageMetaLength);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8553,17 +8556,17 @@ std::string CMMCore::getDatasetImageMeta(const char* handle, const std::vector<l
  * @param handle   Dataset handle to set metadata for
  * @param key      Metadata key/name identifier
  * @param meta     Metadata string to be stored
+ * @param metaLength length of the metadata string
  *
  * @throws MMCoreException If the specified device handle is invalid or key not found
  */
-void CMMCore::setDatasetCustomMeta(const char* handle, const char* key, const char* meta)
+void CMMCore::setDatasetCustomMeta(const char* handle, const char* key, const char* meta, int metaLength)
 {
    std::shared_ptr<StorageInstance> storage = currentStorage_.lock();
    if (storage)
    {
       mm::DeviceModuleLockGuard guard(storage);
-      std::string metastr(meta);
-      int ret = storage->SetCustomMeta(handle, key, metastr);
+      int ret = storage->SetCustomMeta(handle, key, meta, metaLength);
       if (ret != DEVICE_OK)
       {
          logError(getDeviceName(storage).c_str(), getDeviceErrorText(ret, storage).c_str());
@@ -8633,8 +8636,9 @@ STORAGEIMGOUT CMMCore::getImageFromDataset(const char* handle, const std::vector
  * 
  * \param handle - currently open dataset
  * \param imageMeta - image metadata that we wish to add to the image
+ * \param imageMetaLenght - length of the image metadata
  */
-void CMMCore::snapAndAppendToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta)
+void CMMCore::snapAndAppendToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta, int imageMetaLength)
 {
    snapImage();
 
@@ -8669,12 +8673,12 @@ void CMMCore::snapAndAppendToDataset(const char* handle, const std::vector<long>
 
          if (coordinates.empty())
          {
-            ret = storage->AppendImage(handle, imageSize, pBuf, imageMeta);
+            ret = storage->AppendImage(handle, imageSize, pBuf, imageMeta, imageMetaLength);
          }
          else
          {
             std::vector<int> coords(coordinates.begin(), coordinates.end());
-            ret = storage->AddImage(handle, imageSize, pBuf, coords, imageMeta);
+            ret = storage->AddImage(handle, imageSize, pBuf, coords, imageMeta, imageMetaLength);
          }
          if (ret != DEVICE_OK)
          {
@@ -8702,8 +8706,9 @@ void CMMCore::snapAndAppendToDataset(const char* handle, const std::vector<long>
  * 
  * \param handle - currently open dataset handle
  * \param imageMeta - image metadata
+ * \param imageMetaLength - image metadata length
  */
-void CMMCore::appendNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw (CMMError)
+void CMMCore::appendNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta, int imageMetaLength) throw (CMMError)
 {
    const mm::ImgBuffer* img = cbuf_->GetNextImageBuffer(0);
    if (!img)
@@ -8718,12 +8723,12 @@ void CMMCore::appendNextToDataset(const char* handle, const std::vector<long>& c
       mm::DeviceModuleLockGuard guard(storage);
       if (coordinates.empty())
       {
-         ret = storage->AppendImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), imageMeta);
+         ret = storage->AppendImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), imageMeta, imageMetaLength);
       }
       else
       {
          std::vector<int> coords(coordinates.begin(), coordinates.end());
-         ret = storage->AddImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), coords, imageMeta);
+         ret = storage->AddImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), coords, imageMeta, imageMetaLength);
       }
       if (ret != DEVICE_OK)
       {
@@ -8742,9 +8747,10 @@ void CMMCore::appendNextToDataset(const char* handle, const std::vector<long>& c
  *
  * \param handle - currently open dataset handle
  * \param imageMeta - image metadata
+ * \param imageMetaLength - length of the image metadata
  * \return - image pixels
  */
-STORAGEIMGOUT CMMCore::appendAndGetNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta) throw(CMMError)
+STORAGEIMGOUT CMMCore::appendAndGetNextToDataset(const char* handle, const std::vector<long>& coordinates, const char* imageMeta, int imageMetaLength) throw(CMMError)
 {
    const mm::ImgBuffer* img = cbuf_->GetNextImageBuffer(0);
    if (!img)
@@ -8759,12 +8765,12 @@ STORAGEIMGOUT CMMCore::appendAndGetNextToDataset(const char* handle, const std::
       mm::DeviceModuleLockGuard guard(storage);
       if (coordinates.empty())
       {
-         ret = storage->AppendImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), imageMeta);
+         ret = storage->AppendImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), imageMeta, imageMetaLength);
       }
       else
       {
          std::vector<int> coords(coordinates.begin(), coordinates.end());
-         ret = storage->AddImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), coords, imageMeta);
+         ret = storage->AddImage(handle, imageSize, const_cast<unsigned char*>(img->GetPixels()), coords, imageMeta, imageMetaLength);
       }
       if (ret != DEVICE_OK)
       {

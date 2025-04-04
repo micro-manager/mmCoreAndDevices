@@ -55,7 +55,8 @@ public:
    //=========================================================================================================================
    // Public interface - Storage API
    //=========================================================================================================================
-   int                                             Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle) noexcept;
+   int                                             Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType,
+                                                          const char* meta, int metaLength, char* handle) noexcept;
    int                                             ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning) noexcept;
    int                                             ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name) noexcept;
    int                                             Close(const char* handle) noexcept;
@@ -64,8 +65,8 @@ public:
    int                                             GetDataType(const char* handle, MM::StorageDataType& pixelDataType) noexcept;
    int                                             Delete(char* handle) noexcept;
    int                                             List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength) noexcept;
-   int                                             AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta) noexcept;
-   int                                             AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta) noexcept;
+   int                                             AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength) noexcept;
+   int                                             AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength) noexcept;
    int                                             GetSummaryMeta(const char* handle, char** meta) noexcept;
    int                                             GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta) noexcept;
    const unsigned char*                            GetImage(const char* handle, int coordinates[], int numCoordinates) noexcept;
@@ -73,7 +74,7 @@ public:
    int                                             GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) noexcept;
    int                                             GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength) noexcept;
 	int															GetImageCount(const char* handle, int& imgcnt) noexcept;
-	int															SetCustomMetadata(const char* handle, const char* key, const char* content) noexcept;
+	int															SetCustomMetadata(const char* handle, const char* key, const char* content, int contentLength) noexcept;
 	int															GetCustomMetadata(const char* handle, const char* key, char** content) noexcept;
    bool                                            IsOpen(const char* handle) noexcept;
 	bool                                            IsReadOnly(const char* handle) noexcept;

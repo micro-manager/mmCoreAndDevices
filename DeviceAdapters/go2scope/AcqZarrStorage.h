@@ -47,7 +47,7 @@ public:
 
    // Storage API
    // -----------
-   int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, char* handle);
+   int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, char* handle);
    int ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning);
    int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
    int Close(const char* handle);
@@ -57,8 +57,8 @@ public:
 
    int Delete(char* handle);
    int List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength);
-   int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta);
-   int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta);
+   int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength);
+   int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength);
    int GetSummaryMeta(const char* handle, char** meta);
    int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta);
    const unsigned char* GetImage(const char* handle, int coordinates[], int numCoordinates);
@@ -69,7 +69,7 @@ public:
    bool IsOpen(const char* handle);
 	bool IsReadOnly(const char* handle);
    int GetPath(const char* handle, char* path, int maxPathLength);
-	int SetCustomMetadata(const char* handle, const char* key, const char* content) { return DEVICE_UNSUPPORTED_COMMAND; }
+	int SetCustomMetadata(const char* handle, const char* key, const char* content, int contentLength) { return DEVICE_UNSUPPORTED_COMMAND; }
 	int GetCustomMetadata(const char* handle, const char* key, char** content) { return DEVICE_UNSUPPORTED_COMMAND; }
 
 
