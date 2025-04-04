@@ -81,25 +81,31 @@ int AZ100Turret::Initialize()
 	pAct = new CPropertyAction(this, &AZ100Turret::OnVersion);
 	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+	// get the firmware version data from cached value
+	versionData_ = ParseVersionString(version_);
+
+	ret = GetCompileDate(compileDate_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &AZ100Turret::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
-
-	// get the date of the firmware
-	char compile_date[MM::MaxStrLength];
-	if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-	{
-		compileDay_ = ExtractCompileDay(compile_date);
-	}
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
-	if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+	// previously compared against compile date (2010, 1, 1)
+	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
 	{
+		ret = GetBuildName(buildName_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &AZ100Turret::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	initialized_ = true;
@@ -120,10 +126,8 @@ bool AZ100Turret::Busy()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "RS F";
 	std::string answer;
-	// query command
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("RS F", answer);
 	if (ret != DEVICE_OK)
 	{
 		return false;

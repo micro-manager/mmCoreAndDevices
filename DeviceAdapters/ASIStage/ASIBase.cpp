@@ -9,15 +9,16 @@
 
 ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	oldstage_(false),
-	core_(0),
-	compileDay_(0),
 	initialized_(false),
+	core_(nullptr),
 	device_(device),
+	port_("Undefined"),
+	version_("Undefined"),
+	buildName_("Undefined"),
+	compileDate_("Undefined"),
 	oldstagePrefix_(prefix),
-	version_("undefined"),
-	port_("Undefined")
+	versionData_(VersionData())
 {
-	versionData_ = VersionData();
 }
 
 ASIBase::~ASIBase()
@@ -47,26 +48,22 @@ int ASIBase::ClearPort()
 int ASIBase::SendCommand(const char* command) const
 {
 	std::string base_command = "";
-	int ret;
-
 	if (oldstage_)
 	{
 		base_command += oldstagePrefix_;
 	}
 	base_command += command;
 	// send command
-	ret = core_->SetSerialCommand(device_, port_.c_str(), base_command.c_str(), "\r");
-	return ret;
+	return core_->SetSerialCommand(device_, port_.c_str(), base_command.c_str(), "\r");
 }
 
 // Communication "send & receive" utility function:
 int ASIBase::QueryCommand(const char* command, std::string& answer) const
 {
 	const char* terminator;
-	int ret;
 
 	// send command
-	ret = SendCommand(command);
+	int ret = SendCommand(command);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -90,7 +87,7 @@ int ASIBase::QueryCommand(const char* command, std::string& answer) const
 }
 
 // Communication "send, receive, and look for acknowledgement" utility function:
-int ASIBase::QueryCommandACK(const char* command)
+int ASIBase::QueryCommandACK(const char* command) const
 {
 	std::string answer;
 	int ret = QueryCommand(command, answer);
@@ -98,128 +95,66 @@ int ASIBase::QueryCommandACK(const char* command)
 	{
 		return ret;
 	}
-
 	// the controller only acknowledges receipt of the command
 	if (answer.substr(0, 2) != ":A")
 	{
 		return ERR_UNRECOGNIZED_ANSWER;
 	}
-
 	return DEVICE_OK;
 }
 
 // Communication "test device type" utility function:
+// Set the value of oldstage_ to true for LX-4000, false for MS-2000.
 int ASIBase::CheckDeviceStatus()
 {
-	const char* command = "/"; // check STATUS
-	std::string answer;
-	int ret;
-
 	// send status command (test for new protocol)
 	oldstage_ = false;
-	ret = QueryCommand(command, answer);
+	std::string answer;
+	int ret = QueryCommand("/", answer);
 	if (ret != DEVICE_OK && !oldstagePrefix_.empty())
 	{
 		// send status command (test for older LX-4000 protocol)
 		oldstage_ = true;
-		ret = QueryCommand(command, answer);
+		ret = QueryCommand("/", answer);
 	}
 	return ret;
 }
 
-unsigned int ASIBase::ConvertDay(int year, int month, int day)
-{
-	return day + 31 * (month - 1) + 372 * (year - 2000);
-}
-
-unsigned int ASIBase::ExtractCompileDay(const char* compile_date)
-{
-	const char* months = "anebarprayunulugepctovec";
-	if (strlen(compile_date) < 11)
-	{
-		return 0;
-	}
-	int year = 0;
-	int month = 0;
-	int day = 0;
-	if (strlen(compile_date) >= 11
-		&& compile_date[7] == '2'  // must be 20xx for sanity checking
-		&& compile_date[8] == '0'
-		&& compile_date[9] <= '9'
-		&& compile_date[9] >= '0'
-		&& compile_date[10] <= '9'
-		&& compile_date[10] >= '0')
-	{
-		year = 2000 + 10 * (compile_date[9] - '0') + (compile_date[10] - '0');
-		// look for the year based on the last two characters of the abbreviated month name
-		month = 1;
-		for (int i = 0; i < 12; i++)
-		{
-			if (compile_date[1] == months[2 * i] && compile_date[2] == months[2 * i + 1])
-			{
-				month = i + 1;
-			}
-		}
-		day = 10 * (compile_date[4] - '0') + (compile_date[5] - '0');
-		if (day < 1 || day > 31)
-		{
-			day = 1;
-		}
-		return ConvertDay(year, month, day);
-	}
-	return 0;
-}
-
-VersionData ASIBase::ExtractVersionData(const std::string &version) const
+VersionData ASIBase::ParseVersionString(const std::string& version) const
 {	
-	// Version response example: ":A Version: USB-9.2m \r\n"
-	size_t startIndex = version.find("-");
+	// Version command response examples:
+	// Example A) ":A Version: USB-9.2p \r\n"
+	// Example B) ":A Version: USB-9.50 \r\n"
+	const size_t startIndex = version.find("-");
 	if (startIndex == std::string::npos)
 	{
 		return VersionData(); // error => default data
 	}
-	std::string shortVersion = version.substr(startIndex+1);
+
 	// shortVersion => "9.2m \r\n"
+	const std::string shortVersion = version.substr(startIndex + 1);
 
-	// extract revision letter
-	int revIndex = 0;
-	char revision = '-';
-	for (int i = 0; i < shortVersion.size(); i++)
-	{
-		char c = shortVersion[i];
-		if (std::isalpha(c))
-		{
-			revIndex = i; // index
-			revision = c; // char
-			break;
-		}
-	}
-
-	// find the index of the dot to separate major and minor
-	size_t dotIndex = shortVersion.find(".");
+	// find the index of the dot that separates major and minor version
+	const size_t dotIndex = shortVersion.find(".");
 	if (dotIndex == std::string::npos)
 	{
 		return VersionData(); // error => default data
 	}
 	
-	size_t charsToCopy = revIndex - (dotIndex + 1);
-	// shortVersion => "9.2m \r\n"
-	//                   ^ ^
-	//            dotIndex revIndex
-	
-	// convert substrings to integers
-	int major = std::stoi(shortVersion.substr(0, dotIndex)); // use index as chars to copy
-	int minor = std::stoi(shortVersion.substr(dotIndex + 1, charsToCopy));
+	// use substr for major versions with more than 1 digit, ##.## for example
+	const int major = std::stoi(shortVersion.substr(0, dotIndex));
+
+	// minor version and revision will only ever be 1 character,
+	// at these specific locations after the dot in the response
+	const int minor = std::stoi(shortVersion.substr(dotIndex + 1, 1));
+	const char revision = shortVersion.at(dotIndex + 2);
 	return VersionData(major, minor, revision);
 }
 
 int ASIBase::GetVersion(std::string& version)
 {
-   std::ostringstream command;
-   command << "V";
    std::string answer;
-   // query the device
-   int ret = QueryCommand(command.str().c_str(), answer);
+   int ret = QueryCommand("V", answer);
    if (ret != DEVICE_OK)
    {
       return ret;
@@ -242,26 +177,37 @@ int ASIBase::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int ASIBase::GetBuildName(std::string& buildName)
+{
+	std::string answer;
+	int ret = QueryCommand("BU", answer);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	buildName = answer;
+	return DEVICE_OK;
+}
+
 // Get the build name of this controller
 int ASIBase::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		if (initialized_)
-		{
-			return DEVICE_OK;
-		}
-		std::ostringstream command;
-		command << "BU";
-		std::string answer;
-		// query the device
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(answer.c_str());
+		pProp->Set(buildName_.c_str());
 	}
+	return DEVICE_OK;
+}
+
+int ASIBase::GetCompileDate(std::string& buildName)
+{
+	std::string answer;
+	int ret = QueryCommand("CD", answer);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	buildName = answer;
 	return DEVICE_OK;
 }
 
@@ -270,20 +216,7 @@ int ASIBase::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		if (initialized_)
-		{
-			return DEVICE_OK;
-		}
-		std::ostringstream command;
-		command << "CD";
-		std::string answer;
-		// query the device
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(answer.c_str());
+		pProp->Set(compileDate_.c_str());
 	}
 	return DEVICE_OK;
 }

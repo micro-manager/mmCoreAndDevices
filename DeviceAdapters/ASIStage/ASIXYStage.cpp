@@ -9,6 +9,8 @@
 
 XYStage::XYStage() :
 	ASIBase(this, "2H"), // LX-4000 prefix
+	axisletterX_("X"),
+	axisletterY_("Y"),
 	stepSizeXUm_(0.0),
 	stepSizeYUm_(0.0),
 	maxSpeed_(7.5),
@@ -19,11 +21,18 @@ XYStage::XYStage() :
 	joyStickMirror_(false),
 	nrMoveRepetitions_(0),
 	answerTimeoutMs_(1000),
+	stopSignal_(false),
 	serialOnlySendChanged_(true),
 	manualSerialAnswer_(""),
 	advancedPropsEnabled_(false),
-	axisletterX_("X"),
-	axisletterY_("Y")
+	// init cached properties
+	acceleration_(0),
+	waitCycles_(0),
+	speed_(0),
+	backlash_(0),
+	error_(0),
+	finishError_(0),
+	overShoot_(0)
 {
 	InitializeDefaultErrorMessages();
 
@@ -39,7 +48,6 @@ XYStage::XYStage() :
 	// Port
 	CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnPort);
 	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
-	stopSignal_ = false;
 
 	CreateProperty("AxisLetterX", axisletterX_.c_str(), MM::String, true);
 	CreateProperty("AxisLetterY", axisletterY_.c_str(), MM::String, true);
@@ -83,25 +91,31 @@ int XYStage::Initialize()
 	CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnVersion);
 	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+	// get the firmware version data from cached value
+	versionData_ = ParseVersionString(version_);
+
+	ret = GetCompileDate(compileDate_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &XYStage::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
-
-	// get the date of the firmware
-	char compile_date[MM::MaxStrLength];
-	if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-	{
-		compileDay_ = ExtractCompileDay(compile_date);
-	}
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
-	if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+	// previously compared against compile date (2010, 1, 1)
+	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
 	{
+		ret = GetBuildName(buildName_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &XYStage::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	// Most ASIStages have the origin in the top right corner, the following reverses direction of the X-axis:
@@ -258,12 +272,10 @@ int XYStage::Initialize()
 		pAct = new CPropertyAction(this, &XYStage::OnVectorX);
 		CreateProperty("VectorMoveX-VE(mm/s)", "0", MM::Float, false, pAct);
 		SetPropertyLimits("VectorMoveX-VE(mm/s)", mspeed * -1, mspeed);
-		UpdateProperty("VectorMoveX-VE(mm/s)");
 
 		pAct = new CPropertyAction(this, &XYStage::OnVectorY);
 		CreateProperty("VectorMoveY-VE(mm/s)", "0", MM::Float, false, pAct);
 		SetPropertyLimits("VectorMoveY-VE(mm/s)", mspeed * -1, mspeed);
-		UpdateProperty("VectorMoveY-VE(mm/s)");
 	}
 	
 	initialized_ = true;
@@ -284,11 +296,8 @@ bool XYStage::Busy()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "/";
 	std::string answer;
-
-	// query the device
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("/", answer);
 	if (ret != DEVICE_OK)
 	{
 		return false;
@@ -783,7 +792,9 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// if firmware date is 2009+  then use msec/int definition of WaitCycles
 		// would be better to parse firmware (8.4 and earlier used unsigned char)
 		// and that transition occurred ~2008 but not sure exactly when
-		if (compileDay_ >= ConvertDay(2009, 1, 1))
+
+		// previously compared against compile date (2009, 1, 1)
+		if (versionData_.IsVersionAtLeast(8, 6, 'd'))
 		{
 			// don't enforce upper limit
 		}

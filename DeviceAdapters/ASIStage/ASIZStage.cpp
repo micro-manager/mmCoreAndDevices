@@ -23,7 +23,15 @@ ZStage::ZStage() :
     supportsLinearSequence_(false),
     linearSequenceIntervalUm_(0.0),
     linearSequenceLength_(0),
-    linearSequenceTimeoutMs_(10000)
+    linearSequenceTimeoutMs_(10000),
+    // init cached properties
+    speed_(0),
+    waitCycles_(0),
+    backlash_(0),
+    error_(0),
+    acceleration_(0),
+    finishError_(0),
+    overShoot_(0)
 {
     InitializeDefaultErrorMessages();
 
@@ -101,25 +109,31 @@ int ZStage::Initialize()
     CPropertyAction* pAct = new CPropertyAction(this, &ZStage::OnVersion);
     CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+    // get the firmware version data from cached value
+    versionData_ = ParseVersionString(version_);
+
+    ret = GetCompileDate(compileDate_);
+    if (ret != DEVICE_OK)
+    {
+        return ret;
+    }
     pAct = new CPropertyAction(this, &ZStage::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
-    UpdateProperty("CompileDate");
-
-    // get the date of the firmware
-    char compile_date[MM::MaxStrLength];
-    if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-    {
-        compileDay_ = ExtractCompileDay(compile_date);
-    }
 
     // if really old firmware then don't get build name
     // build name is really just for diagnostic purposes anyway
     // I think it was present before 2010 but this is easy way
-    if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+    // previously compared against compile date (2010, 1, 1)
+    if (versionData_.IsVersionAtLeast(8, 8, 'a'))
     {
+        ret = GetBuildName(buildName_);
+        if (ret != DEVICE_OK)
+        {
+            return ret;
+        }
         pAct = new CPropertyAction(this, &ZStage::OnBuildName);
         CreateProperty("BuildName", "", MM::String, true, pAct);
-        UpdateProperty("BuildName");
     }
 
     if (HasRingBuffer() && nrEvents_ == 0)
@@ -232,7 +246,6 @@ int ZStage::Initialize()
     // Wait cycles
     if (HasCommand("WT " + axis_ + "?"))
     {
-
        ret = GetWait(waitCycles_);
        if (ret != DEVICE_OK)
           return ret;
@@ -258,7 +271,6 @@ int ZStage::Initialize()
         }
 
         SetPropertyLimits("VectorMove-VE(mm/s)", mspeed * -1, mspeed);
-        UpdateProperty("VectorMove-VE(mm/s)");
     }
 
     initialized_ = true;
@@ -274,7 +286,6 @@ int ZStage::Shutdown()
     return DEVICE_OK;
 }
 
-
 bool ZStage::Busy()
 {
     if (runningFastSequence_)
@@ -285,11 +296,8 @@ bool ZStage::Busy()
     // empty the Rx serial buffer before sending command
     ClearPort();
 
-    const char* command = "/";
     std::string answer;
-
-    // query command
-    int ret = QueryCommand(command, answer);
+    int ret = QueryCommand("/", answer);
     if (ret != DEVICE_OK)
     {
         return false;
@@ -312,7 +320,6 @@ bool ZStage::Busy()
     }
     return false;
 }
-
 
 int ZStage::SetPositionUm(double pos)
 {
@@ -374,7 +381,7 @@ int ZStage::GetPositionUm(double& pos)
         float zz;
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %f\r\n", head, &zz);
+        (void)sscanf(iBuf, "%s %f\r\n", head, &zz);
 
         pos = zz * stepSizeUm_;
         curSteps_ = (long)zz;
@@ -478,7 +485,7 @@ int ZStage::GetPositionSteps(long& steps)
         float zz;
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %f\r\n", head, &zz);
+        (void)sscanf(iBuf, "%s %f\r\n", head, &zz);
 
         steps = (long)zz;
         curSteps_ = (long)steps;
@@ -487,30 +494,6 @@ int ZStage::GetPositionSteps(long& steps)
     }
     return ERR_UNRECOGNIZED_ANSWER;
 }
-
-//int ZStage::GetResolution(double& res)
-//{
-//   const char* command="RES,Z";
-//
-//   string answer;
-//   // query command
-//   int ret = QueryCommand(command, answer);
-//   if (ret != DEVICE_OK)
-//      return ret;
-//
-//   if (answer.length() > 2 && answer.substr(0, 1).compare("E") == 0)
-//   {
-//      int errNo = atoi(answer.substr(2).c_str());
-//      return ERR_OFFSET + errNo;
-//   }
-//   else if (answer.length() > 0)
-//   {
-//      res = atof(answer.c_str());
-//      return DEVICE_OK;
-//   }
-//
-//   return ERR_UNRECOGNIZED_ANSWER;
-//}
 
 int ZStage::SetOrigin()
 {
@@ -550,7 +533,7 @@ int ZStage::GetLimits(double& /*min*/, double& /*max*/)
     return DEVICE_UNSUPPORTED_COMMAND;
 }
 
-bool ZStage::HasRingBuffer()
+bool ZStage::HasRingBuffer() const
 {
     return hasRingBuffer_;
 }
@@ -662,7 +645,8 @@ int ZStage::SendStageSequence()
         {
             std::ostringstream os;
             os.precision(0);
-            if (compileDay_ >= ConvertDay(2015, 10, 23))
+            // previously compared against compile date (2015, 10, 23)
+            if (versionData_.IsVersionAtLeast(9, 2, 'i'))
             {
                 os << std::fixed << "LD " << axis_ << "=" << sequence_[i] * 10;  // 10 here is for unit multiplier/1000
                 ret = QueryCommand(os.str().c_str(), answer);
@@ -803,7 +787,7 @@ int ZStage::GetControllerInfo()
     LogMessage(answer.c_str(), false);
 
     // Determine if our axis is the "active Z-focus axis" (which allows linear sequence)
-    ret = QueryCommand("UNLOCK F?", answer);
+    ret = QueryCommand("UL F?", answer);
     if (ret != DEVICE_OK)
     {
         return ret;
@@ -1043,7 +1027,9 @@ int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
         // would be better to parse firmware (8.4 and earlier used unsigned char)
         // and that transition occurred ~2008 but this is easier than trying to
         // parse version strings
-        if (compileDay_ >= ConvertDay(2009, 1, 1))
+
+        // previously compared against compile date (2009, 1, 1)
+        if (versionData_.IsVersionAtLeast(8, 6, 'd'))
         {
             // don't enforce upper limit
         }
