@@ -18,7 +18,6 @@ CRISP::CRISP() :
 	ledIntensity_(0),
 	numAverages_(0),
 	numSkips_(0),
-	calibrationGain_(0),
 	inFocusRange_(0),
 	lockRange_(0),
 	objectiveNA_(0)
@@ -161,13 +160,8 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnLockRange);
 	CreateProperty("Max Lock Range(mm)", std::to_string(lockRange_).c_str(), MM::Float, false, pAct);
 
-	ret = GetCalGain(calibrationGain_);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
-	}
 	pAct = new CPropertyAction(this, &CRISP::OnCalGain);
-	CreateProperty("Calibration Gain", std::to_string(calibrationGain_).c_str(), MM::Integer, false, pAct);
+	CreateProperty("Calibration Gain", "0", MM::Integer, false, pAct);
 
 	ret = GetCalRange(calibrationRange_);
 	if (ret != DEVICE_OK)
@@ -272,6 +266,16 @@ int CRISP::Initialize()
 		pAct = new CPropertyAction(this, &CRISP::OnSumLegacy);
 		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
 	}
+
+	// LK M requires 9.2n firmware
+	if (versionData_.IsVersionAtLeast(9, 2, 'n'))
+	{
+		pAct = new CPropertyAction(this, &CRISP::OnSetLogAmpAGC);
+		CreateProperty("Set LogAmpAGC (Advanced Users Only)", "0", MM::Integer, false, pAct);
+	}
+
+	pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
+	CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
 
 	return DEVICE_OK;
 }
@@ -725,23 +729,20 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::GetCalGain(long& calGain)
-{
-	float calibGain;
-	int ret = GetValue("LR X?", calibGain);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
-	}
-	calGain = (long)calibGain;
-	return DEVICE_OK;
-}
-
+// Note: this value cannot be cached because it changes during calibration,
+// and if you want to save calibrations this value needs to be current.
+// The "ASITiger" device adapter avoids always updating with "RefreshPropertyValues".
 int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(calibrationGain_);
+		float calGain;
+		int ret = GetValue("LR X?", calGain);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
+		pProp->Set(calGain);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -749,7 +750,6 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(lr);
 		std::ostringstream command;
 		command << std::fixed << "LR X=" << (int)lr;
-		calibrationGain_ = (long)lr;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -1189,6 +1189,46 @@ int CRISP::OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (!pProp->Set(sum.c_str())) {
 			return DEVICE_INVALID_PROPERTY_VALUE;
+		}
+	}
+	return DEVICE_OK;
+}
+
+int CRISP::OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set("0");
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		double logAmpAGC;
+		pProp->Get(logAmpAGC);
+		if (logAmpAGC != 0.0)
+		{
+			std::ostringstream command;
+			command << std::fixed << "LK M=" << logAmpAGC;
+			return SetCommand(command.str());
+		}
+	}
+	return DEVICE_OK;
+}
+
+int CRISP::OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set("0");
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		double offset;
+		pProp->Get(offset);
+		if (offset != 0.0)
+		{
+			std::ostringstream command;
+			command << std::fixed << "LK Z=" << offset;
+			return SetCommand(command.str());
 		}
 	}
 	return DEVICE_OK;

@@ -52,7 +52,6 @@ public:
 	int OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetNumAverages(long& numAverages);
 	int OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int GetCalGain(long& calGain);
 	int OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetCalRange(double& calRange);
 	int OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -67,6 +66,8 @@ public:
 	int GetInFocusRange(double& inFocusRange);
 	int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	// For MS2000 firmware >= 9.2o, use faster serial commands
 	int OnSum(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -91,7 +92,6 @@ private:
 	long ledIntensity_;
 	long numAverages_;
 	long numSkips_; // update rate (milliseconds)
-	long calibrationGain_;
 	double calibrationRange_; // microns
 	double inFocusRange_; // microns
 	double lockRange_; // millimeters
