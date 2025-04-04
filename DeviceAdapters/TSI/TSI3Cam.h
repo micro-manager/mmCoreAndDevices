@@ -101,7 +101,7 @@ static const char* dllLoadErr = "Error loading color processing functions from t
 // Implementation of the MMDevice and MMCamera interfaces
 // for all TSI SDK 3 api compatible cameras
 //
-class Tsi3Cam : public CCameraBase<Tsi3Cam>
+class Tsi3Cam : public CLegacyCameraBase<Tsi3Cam>
 {
 
 public:

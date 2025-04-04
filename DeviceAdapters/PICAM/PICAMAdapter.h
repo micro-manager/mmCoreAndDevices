@@ -202,7 +202,7 @@ class PProc
 /***
  * Implementation of the MMDevice and MMCamera interfaces for all PICAM cameras
  */
-class Universal : public CCameraBase<Universal>
+class Universal : public CLegacyCameraBase<Universal>
 {
 
    public:
