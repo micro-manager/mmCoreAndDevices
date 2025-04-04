@@ -28,11 +28,12 @@
 #ifndef _AMF_RVM_H_
 #define _AMF_RVM_H_
 
+#include "AMF_Commands.h"
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
+
 #include <map>
 #include <string>
-#include "AMF_Commands.h"
 
 #define ERR_UNKNOWN_MODE         102
 #define ERR_UNKNOWN_POSITION     103
@@ -68,21 +69,22 @@ public:
 
 	// Action Handlers
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnChangeAddress(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNumberOfStates(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnRotationDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	// Utility Members
-	int GetValvePosition(int& pos);
-	int SetValvePosition(int pos);
+	int GetValvePosition(long& pos);
+	int SetValvePosition(long pos);
+	int GetNValves(long& pos);
+	int GetAddress(long& address);
 	std::string RotationDirectionToString(RotationDirection rd);
 	RotationDirection RotationDirectionFromString(std::string& s);
 
 private:
 	bool initialized_ = false;
 	bool busy_ = false;
-	unsigned int address_ = 1; // Default address
+	long address_ = 1; // Default address
 	long nPos_ = 0;
 	long position_ = 0;
 	RotationDirection rotationDirection_ = SHORTEST;
@@ -91,7 +93,7 @@ private:
 
 	// Serial utility members
 	std::string port_;
-	int SendRecv(AMFCommand& cmd);
+	int SendRecv(AMF_Command cmd, long& value);
 };
 
 #endif //_AMF_RVM_H_
