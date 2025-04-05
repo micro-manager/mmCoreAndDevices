@@ -53,13 +53,13 @@ int main(int argc, char** argv)
 	std::cout << "Starting G2SStorage driver test suite..." << std::endl;
 	int selectedTest = TEST_ACQ;
 	int storageEngine = ENGINE_BIGTIFF;
-	int selectedcamera = CAMERA_HAMAMATSU;
+	int selectedcamera = CAMERA_DEMO;
 	int flushcycle = 0;
 	int channels = 4;
 	int timepoints = 8;
-	int positions = 1;
+	int positions = 5;
 	int cbuffsize = 16384;
-	bool directio = false;
+	bool directIO = false;
 	bool printmeta = false;
 	bool optimalaccess = false;
 	std::string savelocation = ".";
@@ -83,24 +83,24 @@ int main(int argc, char** argv)
 	{
 		std::cout << "Available test suites: write, read, acq" << std::endl << std::endl;
 		std::cout << "For write test type:" << std::endl;
-		std::cout << "G2SStorageTest write [storage_engine] [save_location] [camara] [channel_count] [time_points_count] [positions_count] [direct_io] [flush_cycle]" << std::endl << std::endl;
+		std::cout << "G2SStorageTest write [storage_engine] [save_location] [camera] [channel_count] [time_points_count] [positions_count] [direct_io] [flush_cycle]" << std::endl << std::endl;
 		
 		std::cout << "For read test type:" << std::endl;
 		std::cout << "G2SStorageTest read [storage_engine] [save_location] [dataset_name] [direct_io] [optimal_access] [print_meta]" << std::endl << std::endl;
 		
 		std::cout << "For acquisition test type:" << std::endl;
-		std::cout << "G2SStorageTest acq [storage_engine] [save_location] [camara] [channel_count] [time_points_count] [positions_count] [direct_io] [flush_cycle]" << std::endl << std::endl;
+		std::cout << "G2SStorageTest acq [storage_engine] [save_location] [camera] [channel_count] [time_points_count] [positions_count] [direct_io] [flush_cycle]" << std::endl << std::endl;
 		
 		std::cout << "Available storage engines: zarr, bigtiff (default)" << std::endl;
-		std::cout << "Available cameras: demo, hamamatsu" << std::endl;
+		std::cout << "Available cameras: demo (default), hamamatsu" << std::endl;
 		std::cout << "The following options are basic ON/OFF (1/0) flags: [direct_io] [optimal_access] [print_meta]" << std::endl;
 		std::cout << "Default save location is the current directory" << std::endl;
-		std::cout << "Default channel count is 4" << std::endl;
-		std::cout << "Default time points count is 8" << std::endl;
-		std::cout << "Default positions count is 1" << std::endl;
-		std::cout << "Default camera is HamamatsuHam" << std::endl;
-		std::cout << "By default storage engine uses cached I/O" << std::endl;
-		std::cout << "Default access type is 'optimal'" << std::endl;
+		std::cout << "Default channel count is " << channels << std::endl;
+		std::cout << "Default time points count is " << timepoints << std::endl;
+		std::cout << "Default positions count is " << positions << std::endl;
+		std::cout << "Default camera is " << selectedcamera << std::endl;
+		std::cout << "Default DirectIO status is " << directIO << std::endl;
+		std::cout << "Default access type is " << optimalaccess << std::endl;
 		std::cout << "By default metadata is not printed on the command line" << std::endl;
 		std::cout << "Default flush cycle is 0 (file stream is flushed during closing)" << std::endl;
 		std::cout << "Default dataset name is test-[storage_engine]" << std::endl;
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
 
 	// Obtain I/O type (READ test)
 	if(argc > 5 && selectedTest == TEST_READ)
-		try { directio = std::stoi(argv[5]) != 0; } catch(std::exception& e) { std::cout << "Invalid argument value. " << e.what() << std::endl; return 1; }
+		try { directIO = std::stoi(argv[5]) != 0; } catch(std::exception& e) { std::cout << "Invalid argument value. " << e.what() << std::endl; return 1; }
 	// Obtain channel count (WRITE, ACQ tests)
 	else if(argc > 5)
 		try { channels = (int)std::stoul(argv[5]); } catch(std::exception& e) { std::cout << "Invalid argument value. " << e.what() << std::endl; return 1; }
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
 
 	// Obtain I/O type (WRITE, ACQ tests)
 	if(argc > 8 && selectedTest != TEST_READ)
-		try { directio = std::stoi(argv[8]) != 0; } catch(std::exception& e) { std::cout << "Invalid argument value. " << e.what() << std::endl; return 1; }
+		try { directIO = std::stoi(argv[8]) != 0; } catch(std::exception& e) { std::cout << "Invalid argument value. " << e.what() << std::endl; return 1; }
 
 	// Obtain flush cycle (WRITE, ACQ tests)
 	if(argc > 9 && selectedTest != TEST_READ)
@@ -196,7 +196,7 @@ int main(int argc, char** argv)
 		std::cout << "Circular buffer size: " << cbuffsize << " MB" << std::endl;
 		std::cout << "Camera " << (selectedcamera == CAMERA_DEMO ? "DEMO" : "HAMAMATSU") << std::endl;
 	}
-	std::cout << "Direct I/O " << (directio ? "YES" : "NO") << std::endl;
+	std::cout << "Direct I/O " << (directIO ? "YES" : "NO") << std::endl;
 	std::cout << "Flush Cycle " << flushcycle << std::endl;
 	std::cout << "Optimized access " << (optimalaccess ? "YES" : "NO") << std::endl << std::endl;
 	try
@@ -262,7 +262,7 @@ int main(int argc, char** argv)
 		// Set storage engine properties
 		if(storageEngine == ENGINE_BIGTIFF) {
 			std::cout << "Setting BigTIFF storage configuration..." << std::endl;
-			core.setProperty("Store", "DirectIO", directio ? 1L : 0L);
+			core.setProperty("Store", "DirectIO", directIO ? 1L : 0L);
 			core.setProperty("Store", "FlushCycle", (long)flushcycle);
 		}
 				

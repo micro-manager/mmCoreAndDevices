@@ -102,8 +102,8 @@ void testReader(CMMCore& core, const std::string& path, const std::string& name,
 	double imgSizeMb = (double)imgSize / (1024.0 * 1024.0);
 	double totalSizeMb = (double)imgSize * imgcnt / (1024.0 * 1024.0);
 	std::cout << std::fixed << std::setprecision(3) << "Dataset loaded in " << loadTimeS << " sec, contains " << imgcnt << " images" << std::endl;
-	std::cout << "Dataset UID: " << handle << std::endl;
-	std::cout << "Dataset shape (W-H-C-T-P): " << shape[4] << " x " << shape[3] << " x " << shape[2] << " x " << shape[1] << " x " << shape[0] << " x " << (ptype == MM::StorageDataType_GRAY16 ? 16 : 8) << "-bit" << std::endl << std::endl;
+	std::cout << "Dataset handle: " << handle << std::endl;
+	std::cout << "Dataset shape (P-T-C-H-W): " << shape[0] << " x " << shape[1] << " x " << shape[2] << " x " << shape[3] << " x " << shape[4] << " x " << (ptype == MM::StorageDataType_GRAY16 ? 16 : 8) << "-bit" << std::endl << std::endl;
 
 	// Read images
 	for(long i = 0; i < imgcnt; i++)

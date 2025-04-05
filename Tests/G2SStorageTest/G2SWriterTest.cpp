@@ -58,8 +58,8 @@ void testWritter(CMMCore& core, const std::string& path, const std::string& name
 	std::vector<long> shape = { p, t, c, h, w };
 	auto handle = core.createDataset(path.c_str(), name.c_str(), shape, MM::StorageDataType_GRAY16, "", 0);
 
-	std::cout << "Dataset UID: " << handle << std::endl;
-	std::cout << "Dataset shape (W-H-C-T-P): " << w << " x " << h << " x " << c << " x " << t << " x " << p << " x 16-bit" << std::endl << std::endl;
+	std::cout << "Dataset handle: " << handle << std::endl;
+	std::cout << "Dataset shape (P-T-C-H-W): " << p << " x " << t << " x " << c << " x " << h << " x " << w << " x 16-bit" << std::endl << std::endl;
 	std::cout << "START OF ACQUISITION" << std::endl;
 	int imgind = 0;
 	auto start = std::chrono::high_resolution_clock::now();
