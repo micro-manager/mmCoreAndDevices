@@ -111,6 +111,8 @@ public:
 	std::string													getMetadata() const noexcept;
 	void															setUID(const std::string& val);
 	std::string													getUID() const noexcept { return datasetuid; }
+	void															setHandle(int val);
+	int															getHandle() const noexcept { return datasetHandle; }
 	void															configureAxis(int dim, const std::string& name, const std::string& desc) noexcept;
 	void															configureCoordinate(int dim, int coord, const std::string& desc) noexcept;
 	const G2SDimensionInfo&									getAxisInfo(std::uint32_t dim) const { if(dim >= axisinfo.size()) throw std::runtime_error("Unable to obtain axis info. Invalid axis index"); return axisinfo[dim]; }
@@ -170,5 +172,6 @@ private:
 	bool															directIo;										///< Use direct I/O for file operations
 	bool															bigTiff;											///< Use big TIFF format
 	bool															writemode;										///< Is dataset opened for writing
+	int															datasetHandle;								///< dataset handle
 };
 

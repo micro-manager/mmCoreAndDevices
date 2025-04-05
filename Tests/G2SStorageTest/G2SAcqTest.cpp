@@ -93,7 +93,7 @@ void testAcquisition(CMMCore& core, const std::string& path, const std::string& 
 				
 				// Add image to the stream
 				auto startSave = std::chrono::high_resolution_clock::now();
-				core.appendImageToDataset(handle.c_str(), imgSize, img, meta.c_str(), (int)meta.size());
+				core.appendImageToDataset(handle, imgSize, img, meta.c_str(), (int)meta.size());
 				auto endSave = std::chrono::high_resolution_clock::now();
 
 				// Calculate statistics
@@ -108,7 +108,7 @@ void testAcquisition(CMMCore& core, const std::string& path, const std::string& 
 
 	// We are done so close the dataset
 	core.stopSequenceAcquisition();
-	core.closeDataset(handle.c_str());
+	core.closeDataset(handle);
 	auto end = std::chrono::high_resolution_clock::now();
 	std::cout << "END OF ACQUISITION" << std::endl << std::endl;
 

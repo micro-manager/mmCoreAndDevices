@@ -47,30 +47,30 @@ public:
 
    // Storage API
    // -----------
-   int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, char* handle);
-   int ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning);
-   int ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name);
-   int Close(const char* handle);
-   int Load(const char* path, char* handle);
-   int GetShape(const char* handle, int shape[]);
-   int GetDataType(const char* handle, MM::StorageDataType& pixelDataType) { return dataType; }
+   int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, int* handle);
+   int ConfigureDimension(int handle, int dimension, const char* name, const char* meaning);
+   int ConfigureCoordinate(int handle, int dimension, int coordinate, const char* name);
+   int Close(int handle);
+   int Load(const char* path, int* handle);
+   int GetShape(int handle, int shape[]);
+   int GetDataType(int handle, MM::StorageDataType& pixelDataType) { return dataType; }
 
-   int Delete(char* handle);
+   int Delete(int handle);
    int List(const char* path, char** listOfDatasets, int maxItems, int maxItemLength);
-   int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength);
-   int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength);
-   int GetSummaryMeta(const char* handle, char** meta);
-   int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta);
-   const unsigned char* GetImage(const char* handle, int coordinates[], int numCoordinates);
-   int GetNumberOfDimensions(const char* handle, int& numDimensions);
-   int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength);
-   int GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength);
-	int GetImageCount(const char* handle, int& imgcnt);
-   bool IsOpen(const char* handle);
-	bool IsReadOnly(const char* handle);
-   int GetPath(const char* handle, char* path, int maxPathLength);
-	int SetCustomMetadata(const char* handle, const char* key, const char* content, int contentLength) { return DEVICE_UNSUPPORTED_COMMAND; }
-	int GetCustomMetadata(const char* handle, const char* key, char** content) { return DEVICE_UNSUPPORTED_COMMAND; }
+   int AddImage(int handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength);
+   int AppendImage(int handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength);
+   int GetSummaryMeta(int handle, char** meta);
+   int GetImageMeta(int handle, int coordinates[], int numCoordinates, char** meta);
+   const unsigned char* GetImage(int handle, int coordinates[], int numCoordinates);
+   int GetNumberOfDimensions(int handle, int& numDimensions);
+   int GetDimension(int handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength);
+   int GetCoordinate(int handle, int dimension, int coordinate, char* name, int nameLength);
+	int GetImageCount(int handle, int& imgcnt);
+   bool IsOpen(int handle);
+	bool IsReadOnly(int handle);
+   int GetPath(int handle, char* path, int maxPathLength);
+	int SetCustomMetadata(int handle, const char* key, const char* content, int contentLength) { return DEVICE_UNSUPPORTED_COMMAND; }
+	int GetCustomMetadata(int handle, const char* key, char** content) { return DEVICE_UNSUPPORTED_COMMAND; }
 
 
    // action interface
@@ -83,7 +83,7 @@ private:
    MM::StorageDataType dataType;
    std::vector<int> currentCoordinate;
    int currentImageNumber;
-   std::string streamHandle;
+   int streamHandle;
    std::string getErrorMessage(int code);
    void destroyStream();
    int ConvertToZarrType(MM::StorageDataType type);

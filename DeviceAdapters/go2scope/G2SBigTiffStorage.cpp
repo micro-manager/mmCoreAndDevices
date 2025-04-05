@@ -36,7 +36,7 @@
 /**
  * Default class constructor
  */
-G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false)
+G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false), handleCounter(-1)
 {
    supportedFormats = { "g2s" };
 
@@ -146,10 +146,10 @@ int G2SBigTiffStorage::Shutdown() noexcept
  * @param pixType Pixel format
  * @param meta Metadata
  * @param metaLength length of the metadata string
- * @param handle Entry GUID [out]
+ * @param handle [out]
  * @return Status code
  */
-int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, char* handle) noexcept
+int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, int* handle) noexcept
 {
    if(path == nullptr)
       return ERR_TIFF_INVALID_PATH;
@@ -182,16 +182,8 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 		std::filesystem::path dsName = saveRoot / dsname;
 	
 		// Create dataset storage descriptor
-		std::string guid = boost::lexical_cast<std::string>(boost::uuids::random_generator()());           // Entry UUID
-		if(guid.size() > MM::MaxStrLength)
-		{
-	#ifdef _NDEBUG
-			guid = guid.substr(0, MM::MaxStrLength);
-	#else
-			assert("Dataset handle size is too long");
-	#endif
-		}
-   
+		*handle = ++handleCounter;
+  
 		// Create a file on disk and store the file handle
 		auto fhandle = new G2SBigTiffDataset();
 		if(fhandle == nullptr)
@@ -217,6 +209,18 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 			return ERR_TIFF_OPEN_FAILED;
 		}
 
+		// Create dataset storage descriptor
+		std::string guid = boost::lexical_cast<std::string>(boost::uuids::random_generator()());           // Entry UUID
+		if (guid.size() > MM::MaxStrLength)
+		{
+#ifdef _NDEBUG
+			guid = guid.substr(0, MM::MaxStrLength);
+#else
+			assert("Dataset handle size is too long");
+#endif
+		}
+
+
 		G2SStorageEntry sdesc(fhandle->getPath());
 		sdesc.FileHandle = fhandle;
 		try
@@ -226,6 +230,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 			std::vector<std::uint32_t> vshape;
 			vshape.assign(shape, shape + numberOfDimensions);
 			fhandle->setUID(guid);
+			fhandle->setHandle(*handle);
 			fhandle->setShape(vshape);
 			std::string metadataStr(meta, metaLength);
 			fhandle->setMetadata(metadataStr);
@@ -246,23 +251,21 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 		}
 
 		// Append dataset storage descriptor to cache
-		auto it = cache.insert(std::make_pair(guid, sdesc));
+		auto it = cache.insert(std::make_pair(*handle, sdesc));
 		if(it.first == cache.end())
 		{
 			delete fhandle;
-			LogMessage("Adding BigTIFF dataset to cache failed. Path: " + dsName.u8string() + ", GUID: " + guid);
+			LogMessage("Adding BigTIFF dataset to cache failed. Path: " + dsName.u8string() + ", handle: " + std::to_string(*handle));
 			return ERR_TIFF_CACHE_INSERT;
 		}
 		if(!it.second)
 		{
 			// Dataset already exists
 			delete fhandle;
-			LogMessage("Adding BigTIFF dataset to cache failed. Path: " + dsName.u8string() + ", GUID: " + guid);
+			LogMessage("Adding BigTIFF dataset to cache failed. Path: " + dsName.u8string() + ", handle: " + std::to_string(*handle));
 			return ERR_TIFF_CACHE_INSERT;
 		}
 
-		// Copy UUID string to the GUID buffer
-		strncpy(handle, guid.c_str(), MM::MaxStrLength);
 		return DEVICE_OK;
 	}
 	catch(std::exception& e)
@@ -282,7 +285,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
  * @param handle Entry GUID [out]
  * @return Status code
  */
-int G2SBigTiffStorage::Load(const char* path, char* handle) noexcept
+int G2SBigTiffStorage::Load(const char* path, int* handle) noexcept
 {
    if(path == nullptr || handle == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
@@ -390,7 +393,7 @@ int G2SBigTiffStorage::Load(const char* path, char* handle) noexcept
 			G2SStorageEntry sdesc(std::filesystem::absolute(actpath).u8string());
 			sdesc.FileHandle = fhandle;
 
-			auto it = cache.insert(std::make_pair(guid, sdesc));
+			auto it = cache.insert(std::make_pair(++handleCounter, sdesc));
 			if(it.first == cache.end())
 			{
 				delete fhandle;
@@ -399,8 +402,7 @@ int G2SBigTiffStorage::Load(const char* path, char* handle) noexcept
 			}
 		}
 
-		// Copy UUID string to the GUID buffer
-		strncpy(handle, guid.c_str(), MM::MaxStrLength);
+		*handle = handleCounter;
 		return DEVICE_OK;
 	}
 	catch(std::exception& e)
@@ -417,9 +419,9 @@ int G2SBigTiffStorage::Load(const char* path, char* handle) noexcept
  * @param shape Dataset shape [out]
  * @return Status code
  */
-int G2SBigTiffStorage::GetShape(const char* handle, int shape[]) noexcept
+int G2SBigTiffStorage::GetShape(int handle, int shape[]) noexcept
 {
-	if(handle == nullptr || shape == nullptr)
+	if(shape == nullptr)
 		return DEVICE_INVALID_INPUT_PARAM;
 
 	// Obtain dataset descriptor from cache
@@ -439,11 +441,8 @@ int G2SBigTiffStorage::GetShape(const char* handle, int shape[]) noexcept
  * @param pixelDataType Pixel format [out]
  * @return Status code
  */
-int G2SBigTiffStorage::GetDataType(const char* handle, MM::StorageDataType& pixelDataType) noexcept
+int G2SBigTiffStorage::GetDataType(int handle, MM::StorageDataType& pixelDataType) noexcept
 {
-	if(handle == nullptr)
-		return DEVICE_INVALID_INPUT_PARAM;
-
 	// Obtain dataset descriptor from cache
 	auto it = cache.find(handle);
 	if(it == cache.end())
@@ -483,7 +482,7 @@ int G2SBigTiffStorage::GetDataType(const char* handle, MM::StorageDataType& pixe
  * @param handle Entry GUID
  * @return Status code
  */
-int G2SBigTiffStorage::Close(const char* handle) noexcept
+int G2SBigTiffStorage::Close(int handle) noexcept
 {
    auto it = cache.find(handle);
    if(it == cache.end())
@@ -505,10 +504,9 @@ int G2SBigTiffStorage::Close(const char* handle) noexcept
  * @param handle Entry GUID
  * @return Status code
  */
-int G2SBigTiffStorage::Delete(char* handle) noexcept
+int G2SBigTiffStorage::Delete(int handle) noexcept
 {
-   if(handle == nullptr)
-      return DEVICE_INVALID_INPUT_PARAM;
+
    auto it = cache.find(handle);
    if(it == cache.end())
       return ERR_TIFF_HANDLE_INVALID;
@@ -616,9 +614,9 @@ int G2SBigTiffStorage::List(const char* path, char** listOfDatasets, int maxItem
  * @param metaLength metadata length
  * @return Status code
  */
-int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength) noexcept
+int G2SBigTiffStorage::AddImage(int handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength) noexcept
 {
-	if(handle == nullptr || pixels == nullptr || sizeInBytes <= 0 || numCoordinates <= 0)
+	if(pixels == nullptr || sizeInBytes <= 0 || numCoordinates <= 0)
 		return DEVICE_INVALID_INPUT_PARAM;
 
 	// Obtain dataset descriptor from cache
@@ -661,9 +659,9 @@ int G2SBigTiffStorage::AddImage(const char* handle, int sizeInBytes, unsigned ch
  * @param metaLength length of the metadata
  * @return Status code
  */
-int G2SBigTiffStorage::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength) noexcept
+int G2SBigTiffStorage::AppendImage(int handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength) noexcept
 {
-	if(handle == nullptr || pixels == nullptr || sizeInBytes <= 0)
+	if(pixels == nullptr || sizeInBytes <= 0)
 		return DEVICE_INVALID_INPUT_PARAM;
 
 	// Obtain dataset descriptor from cache
@@ -698,11 +696,8 @@ int G2SBigTiffStorage::AppendImage(const char* handle, int sizeInBytes, unsigned
  * @param meta Metadata buffer [out]
  * @return Status code
  */
-int G2SBigTiffStorage::GetSummaryMeta(const char* handle, char** meta) noexcept
+int G2SBigTiffStorage::GetSummaryMeta(int handle, char** meta) noexcept
 {
-   if(handle == nullptr)
-      return DEVICE_INVALID_INPUT_PARAM;
-
 	// Obtain dataset descriptor from cache
    auto it = cache.find(handle);
    if(it == cache.end())
@@ -737,9 +732,9 @@ int G2SBigTiffStorage::GetSummaryMeta(const char* handle, char** meta) noexcept
  * @param bufSize Buffer size
  * @return Status code
  */
-int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta) noexcept
+int G2SBigTiffStorage::GetImageMeta(int handle, int coordinates[], int numCoordinates, char** meta) noexcept
 {
-   if(handle == nullptr || coordinates == nullptr || numCoordinates == 0)
+   if(coordinates == nullptr || numCoordinates == 0)
       return DEVICE_INVALID_INPUT_PARAM;
 
 	// Obtain dataset descriptor from cache
@@ -787,9 +782,9 @@ int G2SBigTiffStorage::GetImageMeta(const char* handle, int coordinates[], int n
  * @param numCoordinates Coordinate count
  * @return Pixel buffer pointer
  */
-const unsigned char* G2SBigTiffStorage::GetImage(const char* handle, int coordinates[], int numCoordinates) noexcept
+const unsigned char* G2SBigTiffStorage::GetImage(int handle, int coordinates[], int numCoordinates) noexcept
 {
-	if(handle == nullptr || numCoordinates <= 0)
+	if(numCoordinates <= 0)
 		return nullptr;
 	try 
 	{
@@ -832,9 +827,9 @@ const unsigned char* G2SBigTiffStorage::GetImage(const char* handle, int coordin
  * @param meaning Z,T,C, etc. (physical meaning)
  * @return Status code
  */
-int G2SBigTiffStorage::ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning) noexcept
+int G2SBigTiffStorage::ConfigureDimension(int handle, int dimension, const char* name, const char* meaning) noexcept
 {
-   if(handle == nullptr || dimension < 0 || name == nullptr || meaning == nullptr)
+   if(dimension < 0 || name == nullptr || meaning == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
    auto it = cache.find(handle);
    if(it == cache.end())
@@ -859,9 +854,9 @@ int G2SBigTiffStorage::ConfigureDimension(const char* handle, int dimension, con
  * @param name Coordinate name
  * @return Status code
  */
-int G2SBigTiffStorage::ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name) noexcept
+int G2SBigTiffStorage::ConfigureCoordinate(int handle, int dimension, int coordinate, const char* name) noexcept
 {
-   if(handle == nullptr || dimension < 0 || coordinate < 0 || name == nullptr)
+   if(dimension < 0 || coordinate < 0 || name == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
    auto it = cache.find(handle);
    if(it == cache.end())
@@ -886,10 +881,8 @@ int G2SBigTiffStorage::ConfigureCoordinate(const char* handle, int dimension, in
  * @param numDimensions Number of dimensions [out]
  * @return Status code
  */
-int G2SBigTiffStorage::GetNumberOfDimensions(const char* handle, int& numDimensions) noexcept
+int G2SBigTiffStorage::GetNumberOfDimensions(int handle, int& numDimensions) noexcept
 {
-   if(handle == nullptr)
-      return DEVICE_INVALID_INPUT_PARAM;
    auto it = cache.find(handle);
    if(it == cache.end())
       return ERR_TIFF_HANDLE_INVALID;
@@ -906,9 +899,9 @@ int G2SBigTiffStorage::GetNumberOfDimensions(const char* handle, int& numDimensi
  * @param handle Entry GUID
  * @return Status code
  */
-int G2SBigTiffStorage::GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) noexcept
+int G2SBigTiffStorage::GetDimension(int handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) noexcept
 {
-   if(handle == nullptr || dimension < 0 || meaningLength <= 0 || name == nullptr || meaning == nullptr)
+   if(dimension < 0 || meaningLength <= 0 || name == nullptr || meaning == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
    auto it = cache.find(handle);
    if(it == cache.end())
@@ -943,9 +936,9 @@ int G2SBigTiffStorage::GetDimension(const char* handle, int dimension, char* nam
  * @param handle Entry GUID
  * @return Status code
  */
-int G2SBigTiffStorage::GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength) noexcept
+int G2SBigTiffStorage::GetCoordinate(int handle, int dimension, int coordinate, char* name, int nameLength) noexcept
 {
-   if(handle == nullptr || dimension < 0 || coordinate < 0 || nameLength <= 0 || name == nullptr)
+   if(dimension < 0 || coordinate < 0 || nameLength <= 0 || name == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
    auto it = cache.find(handle);
    if(it == cache.end())
@@ -992,10 +985,8 @@ int G2SBigTiffStorage::GetCoordinate(const char* handle, int dimension, int coor
  * @param imgcount Image count [out]
  * @return Status code
  */
-int G2SBigTiffStorage::GetImageCount(const char* handle, int& imgcount) noexcept
+int G2SBigTiffStorage::GetImageCount(int handle, int& imgcount) noexcept
 {
-	if(handle == nullptr)
-		return DEVICE_INVALID_INPUT_PARAM;
 	auto it = cache.find(handle);
 	if(it == cache.end())
 		return ERR_TIFF_HANDLE_INVALID;
@@ -1013,9 +1004,9 @@ int G2SBigTiffStorage::GetImageCount(const char* handle, int& imgcount) noexcept
  * @param content Metadata entry value / content
  * @return Status code
  */
-int G2SBigTiffStorage::SetCustomMetadata(const char* handle, const char* key, const char* content, int contentLength) noexcept
+int G2SBigTiffStorage::SetCustomMetadata(int handle, const char* key, const char* content, int contentLength) noexcept
 {
-	if(handle == nullptr || key == nullptr || content == nullptr)
+	if (key == nullptr || content == nullptr)
 		return DEVICE_INVALID_INPUT_PARAM;
 	auto it = cache.find(handle);
 	if(it == cache.end())
@@ -1038,9 +1029,9 @@ int G2SBigTiffStorage::SetCustomMetadata(const char* handle, const char* key, co
  * @param content Metadata entry value / content [out]
  * @return Status code
  */
-int G2SBigTiffStorage::GetCustomMetadata(const char* handle, const char* key, char** content) noexcept
+int G2SBigTiffStorage::GetCustomMetadata(int handle, const char* key, char** content) noexcept
 {
-	if(handle == nullptr || key == nullptr)
+	if(key == nullptr)
 		return DEVICE_INVALID_INPUT_PARAM;
 	auto it = cache.find(handle);
 	if(it == cache.end())
@@ -1071,10 +1062,8 @@ int G2SBigTiffStorage::GetCustomMetadata(const char* handle, const char* key, ch
  * @param handle Entry GUID
  * @return true if dataset is open
  */
-bool G2SBigTiffStorage::IsOpen(const char* handle) noexcept
+bool G2SBigTiffStorage::IsOpen(int handle) noexcept
 {
-	if(handle == nullptr)
-		return false;
 	auto it = cache.find(handle);
 	if(it == cache.end())
 		return false;	
@@ -1087,10 +1076,8 @@ bool G2SBigTiffStorage::IsOpen(const char* handle) noexcept
  * @param handle Entry GUID
  * @return true if images can't be added to the dataset
  */
-bool G2SBigTiffStorage::IsReadOnly(const char* handle) noexcept
+bool G2SBigTiffStorage::IsReadOnly(int handle) noexcept
 {
-	if(handle == nullptr)
-		return true;
 	auto it = cache.find(handle);
 	if(it == cache.end())
 		return true;
@@ -1107,9 +1094,9 @@ bool G2SBigTiffStorage::IsReadOnly(const char* handle) noexcept
  * @param maxPathLength Max path length
  * @return Status code
  */
-int G2SBigTiffStorage::GetPath(const char* handle, char* path, int maxPathLength) noexcept
+int G2SBigTiffStorage::GetPath(int handle, char* path, int maxPathLength) noexcept
 {
-	if(handle == nullptr || maxPathLength <= 0 || path == nullptr)
+	if(maxPathLength <= 0 || path == nullptr)
 		return DEVICE_INVALID_INPUT_PARAM;
 	auto it = cache.find(handle);
 	if(it == cache.end())

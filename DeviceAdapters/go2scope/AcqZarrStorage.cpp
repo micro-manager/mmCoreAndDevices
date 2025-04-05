@@ -37,43 +37,12 @@
 using namespace std;
 
 
-std::string generate_guid() {
-   std::random_device rd;
-   std::mt19937 gen(rd());
-   std::uniform_int_distribution<> dis(0, 15);
-   std::uniform_int_distribution<> dis2(8, 11);
-
-   std::stringstream ss;
-   ss << std::hex;
-
-   for (int i = 0; i < 8; i++) {
-      ss << dis(gen);
-   }
-   ss << "-";
-   for (int i = 0; i < 4; i++) {
-      ss << dis(gen);
-   }
-   ss << "-4";
-   for (int i = 0; i < 3; i++) {
-      ss << dis(gen);
-   }
-   ss << "-" << dis2(gen);
-   for (int i = 0; i < 3; i++) {
-      ss << dis(gen);
-   }
-   ss << "-";
-   for (int i = 0; i < 12; i++) {
-      ss << dis(gen);
-   }
-
-   return ss.str();
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Zarr storage
 
 AcqZarrStorage::AcqZarrStorage() :
-   initialized(false), zarrStream(nullptr), currentImageNumber(0), dataType(MM::StorageDataType_UNKNOWN)
+   initialized(false), zarrStream(nullptr), currentImageNumber(0), dataType(MM::StorageDataType_UNKNOWN), streamHandle(-1)
 {
    InitializeDefaultErrorMessages();
 
@@ -157,7 +126,7 @@ bool AcqZarrStorage::Busy()
  * \param handle - handle to the dataset.
  * \return 
  */
-int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, char* handle)
+int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, int* handle)
 {
    if (zarrStream)
    {
@@ -308,13 +277,13 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    }
 
    dataType = pixType;
-   streamHandle = generate_guid();
+   streamHandle++;
    streamDimensions.clear();
    for (int i = 0; i < numberOfDimensions; i++) streamDimensions.push_back(shape[i]);
    // TODO: allow many streams
 
    currentImageNumber = 0;
-   strncpy(handle, streamHandle.c_str(), MM::MaxStrLength);
+   *handle = streamHandle;
 
    ZarrStreamSettings_destroy(settings);
 
@@ -323,24 +292,24 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::ConfigureDimension(const char* handle, int dimension, const char* name, const char* meaning)
+int AcqZarrStorage::ConfigureDimension(int handle, int dimension, const char* name, const char* meaning)
 {
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::ConfigureCoordinate(const char* handle, int dimension, int coordinate, const char* name)
+int AcqZarrStorage::ConfigureCoordinate(int handle, int dimension, int coordinate, const char* name)
 {
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::Close(const char* handle)
+int AcqZarrStorage::Close(int handle)
 {
    if (zarrStream == nullptr)
    {
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_CLOSE;
    }
-   if (streamHandle.compare(handle) != 0)
+   if (handle != streamHandle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_CLOSE;
@@ -352,19 +321,19 @@ int AcqZarrStorage::Close(const char* handle)
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::Load(const char* path, char* handle)
+int AcqZarrStorage::Load(const char* path, int* handle)
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
 
-int AcqZarrStorage::GetShape(const char* handle, int shape[])
+int AcqZarrStorage::GetShape(int handle, int shape[])
 {
    if (zarrStream == nullptr)
    {
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_ACCESS;
    }
-   if (streamHandle.compare(handle) != 0)
+   if (streamHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -376,7 +345,7 @@ int AcqZarrStorage::GetShape(const char* handle, int shape[])
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::Delete(char* handle)
+int AcqZarrStorage::Delete(int handle)
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
@@ -386,21 +355,21 @@ int AcqZarrStorage::List(const char* path, char** listOfDatasets, int maxItems, 
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
 
-int AcqZarrStorage::AddImage(const char* handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength)
+int AcqZarrStorage::AddImage(int handle, int sizeInBytes, unsigned char* pixels, int coordinates[], int numCoordinates, const char* imageMeta, int metaLength)
 {
    // acquire-zarr supports append-only images
    // TODO: check if the coordinates are coming in the right order and return run-time error if they dont
    return AppendImage(handle, sizeInBytes, pixels, imageMeta, metaLength);
 }
 
-int AcqZarrStorage::AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength)
+int AcqZarrStorage::AppendImage(int handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int metaLength)
 {
    if (zarrStream == nullptr)
    {
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_ACCESS;
    }
-   if (streamHandle.compare(handle) != 0)
+   if (streamHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -433,14 +402,14 @@ int AcqZarrStorage::AppendImage(const char* handle, int sizeInBytes, unsigned ch
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::GetSummaryMeta(const char* handle, char** meta)
+int AcqZarrStorage::GetSummaryMeta(int handle, char** meta)
 {
    if (zarrStream == nullptr)
    {
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_ACCESS;
    }
-   if (streamHandle.compare(handle) != 0)
+   if (streamHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -453,14 +422,14 @@ int AcqZarrStorage::GetSummaryMeta(const char* handle, char** meta)
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta)
+int AcqZarrStorage::GetImageMeta(int handle, int coordinates[], int numCoordinates, char** meta)
 {
    if (zarrStream == nullptr)
    {
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_ACCESS;
    }
-   if (streamHandle.compare(handle) != 0)
+   if (streamHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -473,14 +442,14 @@ int AcqZarrStorage::GetImageMeta(const char* handle, int coordinates[], int numC
    return DEVICE_OK;
 }
 
-const unsigned char* AcqZarrStorage::GetImage(const char* handle, int coordinates[], int numCoordinates)
+const unsigned char* AcqZarrStorage::GetImage(int handle, int coordinates[], int numCoordinates)
 {
    if (zarrStream == nullptr)
    {
       LogMessage("No stream is currently open.");
       return nullptr;
    }
-   if (streamHandle.compare(handle) != 0)
+   if (streamHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return nullptr;
@@ -489,9 +458,9 @@ const unsigned char* AcqZarrStorage::GetImage(const char* handle, int coordinate
    return nullptr;
 }
 
-int AcqZarrStorage::GetNumberOfDimensions(const char* handle, int& numDimensions)
+int AcqZarrStorage::GetNumberOfDimensions(int handle, int& numDimensions)
 {
-   if (streamHandle.compare(handle) != 0)
+   if (streamHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -499,36 +468,36 @@ int AcqZarrStorage::GetNumberOfDimensions(const char* handle, int& numDimensions
    return streamDimensions.size();
 }
 
-int AcqZarrStorage::GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength)
+int AcqZarrStorage::GetDimension(int handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength)
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
 
-int AcqZarrStorage::GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength)
+int AcqZarrStorage::GetCoordinate(int handle, int dimension, int coordinate, char* name, int nameLength)
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
 
-int AcqZarrStorage::GetImageCount(const char* handle, int& imgcount)
+int AcqZarrStorage::GetImageCount(int handle, int& imgcount)
 {
 	return DEVICE_NOT_YET_IMPLEMENTED;
 }
 
-bool AcqZarrStorage::IsOpen(const char* handle)
+bool AcqZarrStorage::IsOpen(int handle)
 {
-   if (streamHandle.compare(handle) != 0)
+   if (streamHandle != handle)
    {
       return false;
    }
    return true;
 }
 
-bool AcqZarrStorage::IsReadOnly(const char* handle)
+bool AcqZarrStorage::IsReadOnly(int handle)
 {
 	return false;
 }
 
-int AcqZarrStorage::GetPath(const char* handle, char* path, int maxPathLength)
+int AcqZarrStorage::GetPath(int handle, char* path, int maxPathLength)
 {
    return 0;
 }
@@ -544,7 +513,6 @@ void AcqZarrStorage::destroyStream()
    {
       ZarrStream_destroy(zarrStream);
       zarrStream = nullptr;
-      streamHandle = "";
    }
 }
 

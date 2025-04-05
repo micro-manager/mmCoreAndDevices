@@ -80,7 +80,7 @@ void testWritter(CMMCore& core, const std::string& path, const std::string& name
 
 				// Add image to the stream
 				auto startSave = std::chrono::high_resolution_clock::now();
-				core.appendImageToDataset(handle.c_str(), imgSize, img, meta.c_str(), meta.size());
+				core.appendImageToDataset(handle, imgSize, img, meta.c_str(), meta.size());
 				auto endSave = std::chrono::high_resolution_clock::now();
 				
 				// Calculate statistics
@@ -94,7 +94,7 @@ void testWritter(CMMCore& core, const std::string& path, const std::string& name
 	}
 
 	// We are done so close the dataset
-	core.closeDataset(handle.c_str());
+	core.closeDataset(handle);
 	auto end = std::chrono::high_resolution_clock::now();
 	std::cout << "END OF ACQUISITION" << std::endl << std::endl;
 

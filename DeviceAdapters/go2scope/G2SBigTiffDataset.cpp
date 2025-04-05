@@ -64,6 +64,7 @@ G2SBigTiffDataset::G2SBigTiffDataset() noexcept
 	directIo = false;
 	bigTiff = true;
 	writemode = false;
+	datasetHandle = -1;
 }
 
 /**
@@ -539,6 +540,11 @@ void G2SBigTiffDataset::setUID(const std::string& val)
 	// Update file header
 	if(activechunk)
 		activechunk->writeDatasetUid(datasetuid);
+}
+
+void G2SBigTiffDataset::setHandle(int val)
+{
+	datasetHandle = val;
 }
 
 /**

@@ -1490,7 +1490,7 @@ namespace MM {
        *          - Declared size for the slowest (first) dimension can be exceeded during acquisition
        */
       virtual int Create(const char* path, const char* name, int numberOfDimensions, const int shape[],
-                         MM::StorageDataType pixType, const char* meta, int metaLength, char* handle) = 0;
+                         MM::StorageDataType pixType, const char* meta, int metaLength, int* handle) = 0;
 
       /**
        * \brief   Retrieves the filesystem path of an opened dataset
@@ -1500,7 +1500,7 @@ namespace MM {
        * \param   maxPathLength Maximum length of the path buffer
        * \return  Status code indicating success or failure
        */
-      virtual int GetPath(const char* handle, char* path, int maxPathLength) = 0;
+      virtual int GetPath(int handle, char* path, int maxPathLength) = 0;
 
       /**
        * \brief           Configures a dimension's properties
@@ -1514,7 +1514,7 @@ namespace MM {
        * \note            Recommended meanings: "T" for time, "Z" for focus, "C" for channel, "P" for position
        *                  The last two dimensions should be "Y" and "X" if we are dealing with images
        */
-      virtual int ConfigureDimension(const char* handle, int dimension,
+      virtual int ConfigureDimension(int handle, int dimension,
                                      const char* name, const char* meaning) = 0;
 
       /**
@@ -1526,7 +1526,7 @@ namespace MM {
        * \param   name Name for the coordinate
        * \return  Status code indicating success or failure
        */
-      virtual int ConfigureCoordinate(const char* handle, int dimension,
+      virtual int ConfigureCoordinate(int handle, int dimension,
          int coordinate, const char* name) = 0;
 
       /**
@@ -1535,7 +1535,7 @@ namespace MM {
        * \param   handle Dataset handle (becomes invalid after closing)
        * \return  Status code indicating success or failure
        */
-      virtual int Close(const char* handle) = 0;
+      virtual int Close(int handle) = 0;
 
       /**
        * \brief   Closes an opened dataset
@@ -1543,7 +1543,7 @@ namespace MM {
        * \param   handle Dataset handle (becomes invalid after closing)
        * \return  Status code indicating success or failure
        */
-      virtual int Freeze(const char* handle) = 0;
+      virtual int Freeze(int handle) = 0;
 
       /**
        * \brief Checks if a dataset is currently open
@@ -1551,7 +1551,7 @@ namespace MM {
        * \param handle Dataset handle
        * \return true if dataset is open, false otherwise
        */
-      virtual bool IsOpen(const char* handle) = 0;
+      virtual bool IsOpen(int handle) = 0;
 
       /**
        * \brief   Checks if a dataset is read-only
@@ -1560,7 +1560,7 @@ namespace MM {
        * \param   handle Dataset handle
        * \return  true if dataset is read-only, false if it can accept new images
        */
-      virtual bool IsReadOnly(const char* handle) = 0;
+      virtual bool IsReadOnly(int handle) = 0;
 
       /**
        * \brief   Loads an existing dataset
@@ -1571,7 +1571,7 @@ namespace MM {
        * \param   [out] handle Output parameter for the dataset handle
        * \return  Status code indicating success or failure
        */
-      virtual int Load(const char* path, char* handle) = 0;
+      virtual int Load(const char* path, int* handle) = 0;
 
       /**
        * \brief   Checks if the device can load a dataset at the specified path
@@ -1590,7 +1590,7 @@ namespace MM {
        * \return Progress value (0-100), or -1 if idle or not implemented
        * \note Assumes single operation execution at a time
        */
-      virtual int GetProgress(const char* handle) = 0;
+      virtual int GetProgress(int handle) = 0;
 
       /**
        * \brief   Deletes a dataset
@@ -1599,7 +1599,7 @@ namespace MM {
        * \param   handle Handle of the dataset to delete
        * \return  Status code indicating success or failure
        */
-      virtual int Delete(char* handle) = 0;
+      virtual int Delete(int handle) = 0;
 
       /**
        * \brief   Lists datasets in a specified path
@@ -1624,7 +1624,7 @@ namespace MM {
        * \param   imageMetaLength length of the image metadata
        * \return  Status code indicating success or failure
        */
-      virtual int AddImage(const char* handle, int sizeInBytes, unsigned char* pixels,
+      virtual int AddImage(int handle, int sizeInBytes, unsigned char* pixels,
                            int coordinates[], int numCoordinates, const char* imageMeta, int imageMetaLength) = 0;
 
       /**
@@ -1636,7 +1636,7 @@ namespace MM {
        * \param   imageMetaLength length of the image metadata
        * \return  Status code indicating success or failure
        */
-      virtual int AppendImage(const char* handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int imageMetaLength) = 0;
+      virtual int AppendImage(int handle, int sizeInBytes, unsigned char* pixels, const char* imageMeta, int imageMetaLength) = 0;
 
       /**
        * \brief   Retrieves dataset summary metadata
@@ -1647,7 +1647,7 @@ namespace MM {
        *
        * \note    Caller must release the metadata buffer using ReleaseStringBuffer()
        */
-      virtual int GetSummaryMeta(const char* handle, char** meta) = 0;
+      virtual int GetSummaryMeta(int handle, char** meta) = 0;
 
       /**
        * \brief   Retrieves metadata for a specific image
@@ -1660,7 +1660,7 @@ namespace MM {
        *
        * \note    Caller must release the metadata buffer using ReleaseStringBuffer()
        */
-      virtual int GetImageMeta(const char* handle, int coordinates[], int numCoordinates, char** meta) = 0;
+      virtual int GetImageMeta(int handle, int coordinates[], int numCoordinates, char** meta) = 0;
 
       /**
        * \brief   Retrieves image pixel data
@@ -1669,7 +1669,7 @@ namespace MM {
        * \param   numCoordinates Number of coordinate values
        * \return  Pointer to the image pixel data
        */
-      virtual const unsigned char* GetImage(const char* handle, int coordinates[],
+      virtual const unsigned char* GetImage(int handle, int coordinates[],
          int numCoordinates) = 0;
 
       /**
@@ -1678,7 +1678,7 @@ namespace MM {
        * \param   [out] numDimensions Number of dimensions
        * \return  Status code indicating success or failure
        */
-      virtual int GetNumberOfDimensions(const char* handle, int& numDimensions) = 0;
+      virtual int GetNumberOfDimensions(int handle, int& numDimensions) = 0;
 
       /**
        * \brief   Gets the shape of the dataset
@@ -1686,7 +1686,7 @@ namespace MM {
        * \param   [out] shape Array to store dimension sizes, allocated by the caller
        * \return  Status code indicating success or failure
        */
-      virtual int GetShape(const char* handle, int shape[]) = 0;
+      virtual int GetShape(int handle, int shape[]) = 0;
 
       /**
        * \brief   Gets the pixel data type of the dataset
@@ -1694,7 +1694,7 @@ namespace MM {
        * \param   [out] pixelDataType Data type enumeration value
        * \return  Status code indicating success or failure
        */
-      virtual int GetDataType(const char* handle, MM::StorageDataType& pixelDataType) = 0;
+      virtual int GetDataType(int handle, MM::StorageDataType& pixelDataType) = 0;
 
       /**
        * \brief   Gets information about a specific dimension
@@ -1706,7 +1706,7 @@ namespace MM {
        * \param   meaningLength Maximum length of meaning buffer
        * \return  Status code indicating success or failure
        */
-      virtual int GetDimension(const char* handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) = 0;
+      virtual int GetDimension(int handle, int dimension, char* name, int nameLength, char* meaning, int meaningLength) = 0;
 
       /**
        * \brief   Gets information about a specific coordinate
@@ -1718,7 +1718,7 @@ namespace MM {
        * \param   nameLength Maximum length of name buffer
        * \return  Status code indicating success or failure
        */
-      virtual int GetCoordinate(const char* handle, int dimension, int coordinate, char* name, int nameLength) = 0;
+      virtual int GetCoordinate(int handle, int dimension, int coordinate, char* name, int nameLength) = 0;
 
       /**
        * \brief   Gets the total number of images in the dataset
@@ -1728,7 +1728,7 @@ namespace MM {
        * \param   [out] imgcount Number of images
        * \return  Status code indicating success or failure
        */
-      virtual int GetImageCount(const char* handle, int& imgcount) = 0;
+      virtual int GetImageCount(int handle, int& imgcount) = 0;
 
       /**
        * \brief   Sets custom metadata for the dataset
@@ -1739,7 +1739,7 @@ namespace MM {
        * \param   contentLength length of the metadata string
        * \return  Status code indicating success or failure
        */
-      virtual int SetCustomMetadata(const char* handle, const char* key, const char* content, int contentLength) = 0;
+      virtual int SetCustomMetadata(int handle, const char* key, const char* content, int contentLength) = 0;
 
       /**
        * \brief   Retrieves custom metadata from the dataset
@@ -1749,7 +1749,7 @@ namespace MM {
        * \return  Status code indicating success or failure
        * \note    Caller must release the content buffer using ReleaseStringBuffer()
        */
-      virtual int GetCustomMetadata(const char* handle, const char* key, char** content) = 0;
+      virtual int GetCustomMetadata(int handle, const char* key, char** content) = 0;
 
       /** \brief  Releases allocated string buffers
        * \details Must be called to free memory allocated by GetSummaryMeta,
