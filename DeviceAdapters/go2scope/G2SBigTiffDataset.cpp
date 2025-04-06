@@ -30,6 +30,7 @@
 #include <cstring>
 #include <fstream>
 #include "G2SBigTiffDataset.h"
+#include <assert.h>
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -42,7 +43,7 @@
 #define G2SFOLDER_EXT					".g2s"
 #define G2SFILE_EXT						".g2s.tif"
 #define G2SAXISINFO_FILE				"axisinfo.txt"
-#define G2SCUSTOMMETA_FILE				"custommeta.txt"
+#define G2SCUSTOMMETA_FOLDER			"custommeta"
 
 /**
  * Class constructor
@@ -1107,62 +1108,51 @@ void G2SBigTiffDataset::writeAxisInfo() const noexcept
 
 /**
  * Parse custom metadata
- * Axis info is expected to be stored in a file: 'custommeta.txt'
+ * Custome metadata files are stored in "custommeta" folder
  * @throws std::runtime_error
  */
 void G2SBigTiffDataset::parseCustomMetadata()
 {
-	auto fpath = std::filesystem::u8path(dspath) / G2SCUSTOMMETA_FILE;
-	if(!std::filesystem::exists(fpath))
+	auto fpath = std::filesystem::u8path(dspath) / G2SCUSTOMMETA_FOLDER;
+	if(!std::filesystem::exists(fpath) || !std::filesystem::is_directory(fpath))
 		return;
 
-	// Load file content
-	std::fstream fs(fpath.u8string(), std::ios::in);
-	if(!fs.is_open())
-		throw std::runtime_error("Unable to load custom metadata. Opening metadata file failed");
+	for (const auto& entry : std::filesystem::directory_iterator(fpath)) {
+		// Load file content
+		std::fstream fs(entry.path().u8string(), std::ios::in);
+		if (!fs.is_open())
+			throw std::runtime_error("Unable to load custom metadata from: " + entry.path().string());
 
-	int ind = 0;
-	std::string line = "";
-	while(std::getline(fs, line))
-	{
-		if(line.empty())
-			continue;
-		std::vector<std::string> tokens = splitLineCSV(line);
-		if(tokens.size() != 2)
-			throw std::runtime_error("Unable to load custom metadata. Corrupted metadata entry: " + std::to_string(ind));
-		custommeta.insert(std::make_pair(tokens[0], tokens[1]));
-		ind++;
+		std::string key = entry.path().filename().string();
+		std::stringstream buffer;
+		buffer << fs.rdbuf();
+		std::string content = buffer.str();
+		custommeta.insert(std::make_pair(key, content));
 	}
 }
 
 /**
  * Write custom metadata
- * Custom metadata will be stored in a separate file: 'custommeta.txt'
- * If no metadata is defined file won't be created
- * Axis info will be stored in plain text, CSV-like format
+ * Custom metadata will be stored in a separate folder: 'custommeta'
+ * If no metadata is defined the folder won't be created.
+ * Custome metadata is mutable.
  */
 void G2SBigTiffDataset::writeCustomMetadata() const noexcept
 {
-	// Check if custom metadata is set, and that we are in WRITE mode
-	if(!writemode)
-		return;
+	auto customMetaFolder = std::filesystem::u8path(dspath) / G2SCUSTOMMETA_FOLDER;
+	if (!custommeta.empty() && !std::filesystem::exists(customMetaFolder))
+		std::filesystem::create_directories(customMetaFolder);
 
-	auto fpath = std::filesystem::u8path(dspath) / G2SCUSTOMMETA_FILE;
-	if(custommeta.empty())
+	// Write each metadata key to a separate file
+	for (const auto& keyval : custommeta)
 	{
-		// If custom metadata is empty, but the file exists -> delete it before exiting
-		std::error_code ec;
-		auto ex = std::filesystem::exists(fpath, ec);
-		if(!ec && ex)
-			std::filesystem::remove(fpath, ec);
-		return;
+		auto fpath = customMetaFolder / keyval.first;
+		std::fstream fs(fpath.u8string(), std::ios::out | std::ios::trunc);
+		assert(fs.is_open());
+		//if(!fs.is_open())
+			// TODO: remove noexcept
+//			throw std::runtime_error("Failed writing custom metadata to: " + fpath.string());
+		fs << keyval.second;
+		fs.close();
 	}
-
-	// Write data to a file
-	std::fstream fs(fpath.u8string(), std::ios::out | std::ios::trunc);
-	if(!fs.is_open())
-		return;
-	for(const auto& keyval : custommeta)
-		fs << "\"" << keyval.first << "\",\"" << keyval.second << "\"" << std::endl;
-	fs.close();
 }

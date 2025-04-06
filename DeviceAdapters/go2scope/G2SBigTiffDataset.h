@@ -172,6 +172,6 @@ private:
 	bool															directIo;										///< Use direct I/O for file operations
 	bool															bigTiff;											///< Use big TIFF format
 	bool															writemode;										///< Is dataset opened for writing
-	int															datasetHandle;								///< dataset handle
+	int															datasetHandle;									///< dataset handle
 };
 
