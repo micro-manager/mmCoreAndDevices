@@ -506,6 +506,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeensyPulseGenerator", "Dev
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Elveflow", "DeviceAdapters\Elveflow\Elveflow.vcxproj", "{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WorldPrecisionInstruments", "DeviceAdapters\WPI\WorldPrecisionInstruments.vcxproj", "{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NikonKsAdapter", "DeviceAdapters\NikonKs\NikonKsAdapter.vcxproj", "{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}"
 EndProject
 Global
@@ -1522,11 +1524,14 @@ Global
 		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Debug|x64.Build.0 = Debug|x64
 		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Release|x64.ActiveCfg = Release|x64
 		{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}.Release|x64.Build.0 = Release|x64
-                {2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Debug|x64.ActiveCfg = Debug|x64
-                {2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Debug|x64.Build.0 = Debug|x64
-                {2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Release|x64.ActiveCfg = Release|x64
-                {2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Release|x64.Build.0 = Release|x64
-
+		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Debug|x64.ActiveCfg = Debug|x64
+		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Debug|x64.Build.0 = Debug|x64
+		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Release|x64.ActiveCfg = Release|x64
+		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Release|x64.Build.0 = Release|x64
+		{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Debug|x64.ActiveCfg = Debug|x64
+		{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Debug|x64.Build.0 = Debug|x64
+		{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Release|x64.ActiveCfg = Release|x64
+		{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
