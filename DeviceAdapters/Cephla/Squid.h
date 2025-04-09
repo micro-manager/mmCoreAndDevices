@@ -81,6 +81,8 @@ extern const char* g_Yes;
 extern const char* g_No;
 extern const char* g_Acceleration;
 extern const char* g_Max_Velocity;
+extern const char* g_Positive;
+extern const char* g_Negative;
 
 class SquidMonitoringThread;
 class SquidXYStage;
@@ -329,7 +331,7 @@ private:
    SquidHub* hub_;
    double stepSize_um_;
    double screwPitchZmm_;
-   double microSteppingDefaultZ_; 
+   int microSteppingDefaultZ_; 
    double fullStepsPerRevZ_;
    double maxVelocity_;
    double acceleration_;
