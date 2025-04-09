@@ -268,6 +268,8 @@ private:
    double fullStepsPerRevY_;
    int microSteppingDefaultX_;  // needs to be set as pre-init tied to model
    int microSteppingDefaultY_;  // needs to be set as pre-init tied to model
+   int directionX_; // either 1 or -1
+   int directionY_;
    double posX_um_;
    double posY_um_;
    bool busy_;
