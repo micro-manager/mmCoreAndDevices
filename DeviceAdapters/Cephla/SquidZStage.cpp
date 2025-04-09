@@ -2,7 +2,10 @@
 
 
 const char* g_ZStageName = "ZStage";
-
+const char* g_Full_Steps_Per_Rev_Z = "FullStepsPerRevZ";
+const char* g_Screw_Pitch_Mm_Z = "ScrewPitchZmm";
+const char* g_Micro_Stepping_Default_Z = "MicroSteppingDefaultZ";
+const char* g_Direction_Z = "DirectionZ";
 
 
 SquidZStage::SquidZStage() :
@@ -16,6 +19,12 @@ SquidZStage::SquidZStage() :
    initialized_(false),
    cmdNr_(0)
 {
+   CreateFloatProperty(g_Full_Steps_Per_Rev_Z, fullStepsPerRevZ_, false, 0, true);
+   CreateFloatProperty(g_Screw_Pitch_Mm_Z, screwPitchZmm_, false, 0, true);
+   CreateIntegerProperty(g_Micro_Stepping_Default_Z, microSteppingDefaultZ_, false, 0, true);
+   CreateStringProperty(g_Direction_Z, g_Negative, false, 0, true);
+   AddAllowedValue(g_Direction_Z, g_Positive);
+   AddAllowedValue(g_Direction_Z, g_Negative);
 }
 
 
@@ -41,7 +50,17 @@ void SquidZStage::GetName(char* pszName) const
 
 int SquidZStage::Initialize()
 {
-   stepSize_um_ = -1000.0 * screwPitchZmm_ / (microSteppingDefaultZ_ * fullStepsPerRevZ_); 
+
+   GetProperty(g_Full_Steps_Per_Rev_Z, fullStepsPerRevZ_);
+   GetProperty(g_Screw_Pitch_Mm_Z, screwPitchZmm_);
+   long tmp;
+   GetProperty(g_Micro_Stepping_Default_Z, tmp);
+   microSteppingDefaultZ_ = (int) tmp;
+   char dirZ[MM::MaxStrLength];
+   GetProperty(g_Direction_Z, dirZ);
+   int directionZ = strcmp(dirZ, g_Positive) == 0 ? 1 : -1;
+
+   stepSize_um_ = directionZ * 1000.0 * screwPitchZmm_ / (microSteppingDefaultZ_ * fullStepsPerRevZ_); 
 
    hub_ = static_cast<SquidHub*>(GetParentHub());
    if (!hub_ || !hub_->IsPortAvailable()) {
