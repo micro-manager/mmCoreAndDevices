@@ -49,7 +49,7 @@
 
 class MySequenceThread;
 
-class ThorlabsUSBCam : public CCameraBase<ThorlabsUSBCam>  
+class ThorlabsUSBCam : public CLegacyCameraBase<ThorlabsUSBCam>  
 {
 public:
    ThorlabsUSBCam();

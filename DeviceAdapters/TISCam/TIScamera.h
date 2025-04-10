@@ -59,7 +59,7 @@ class AcqSequenceThread;
 //////////////////////////////////////////////////////////////////////////////
 // Implementation of the MMDevice and MMCamera interfaces
 //
-class CTIScamera : public CCameraBase<CTIScamera>
+class CTIScamera : public CLegacyCameraBase<CTIScamera>
 {
 public:
 

@@ -248,19 +248,19 @@ ERRH_END
 int FakeCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
 	capturing_ = true;
-	return CCameraBase::StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
+	return CLegacyCameraBase::StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
 }
 
 int FakeCamera::StopSequenceAcquisition()
 {
 	capturing_ = false;
-	return CCameraBase::StopSequenceAcquisition();
+	return CLegacyCameraBase::StopSequenceAcquisition();
 }
 
 void FakeCamera::OnThreadExiting() throw()
 {
 	capturing_ = false;
-	CCameraBase::OnThreadExiting();
+	CLegacyCameraBase::OnThreadExiting();
 }
 
 int FakeCamera::OnPath(MM::PropertyBase * pProp, MM::ActionType eAct)

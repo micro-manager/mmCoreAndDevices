@@ -77,7 +77,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CGigECamera::CGigECamera() :
-CCameraBase<CGigECamera> (),
+CLegacyCameraBase<CGigECamera> (),
 readoutUs_(0.0),
 scanMode_(1),
 bitDepth_(8),
