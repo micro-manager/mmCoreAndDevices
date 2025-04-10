@@ -163,13 +163,13 @@ private:
     long flowrate_unit_;
     long run_;
     
-
     // Pump thread related
     PumpThread* thd_;
     double duration_;
     double startVolume_;
 
     MMThreadLock currentVolumeLock_;
+    MMThreadLock currentFlowrateLock_;
     MMThreadLock durationLock_;
 };
 
@@ -184,7 +184,7 @@ public:
     PumpThread(WPIPump* pPump);
     ~PumpThread();
 
-    void Start(double duration);
+    void Start(double duration, double flowrateUlperSecond);
     void Stop();
     bool IsStopped();
 
@@ -193,10 +193,12 @@ private:
     MMThreadLock stopLock_;
     bool stop_ = true;
     double duration_ = 0;
+    double flowrateUlperSecond_ = 0;
     double dt_ = 0;
     MM::MMTime startTime_;
 
     int svc(void) throw();
+    int updateDuration();
 };
 
 #endif //_WPI_PUMP_H_

@@ -532,8 +532,13 @@ int WPIPump::GetFlowrateUlPerSecond(double& flowrate) {
 }
 
 int WPIPump::SetFlowrateUlPerSecond(double flowrate) {
-    if (IsPumping())
-        return DEVICE_PUMP_IS_RUNNING;
+    // Cannot change flowrate while pumping, so temporarily stop pump
+    bool isPumping = IsPumping();
+    if (isPumping) {
+       // Don't use Start/Stop here, as it will reset the dispense timer
+       Send(to_string(id_) + " STP");
+       CDeviceUtils::SleepMs(5);
+    }
 
     if (abs(flowrate) < calculate_flowrate(g_Speed_min, diameter_)) {
         LogMessage("Flowrate: " + to_string(flowrate) + " is too low");
@@ -562,6 +567,13 @@ int WPIPump::SetFlowrateUlPerSecond(double flowrate) {
     int ret = Send(msg.str());
     if (ret == DEVICE_OK)
         flowrateUlperSecond_ = flowrate;
+
+    // Restart pump if it was pumping before
+    // Don't use Start/Stop here, as it will reset the dispense timer
+    if (isPumping) {
+        CDeviceUtils::SleepMs(5);
+        Send(to_string(id_) + " RUN");
+    }
     return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
 }
 
@@ -632,7 +644,7 @@ int WPIPump::DispenseDurationSeconds(double seconds) {
         MMThreadGuard g(this->currentVolumeLock_);
         startVolume_ = volumeUl_;
     }
-    thd_->Start(duration_);
+    thd_->Start(duration_, flowrateUlperSecond_);
     return DEVICE_OK;
 }
 
@@ -731,15 +743,14 @@ int WPIPump::OnDirection(MM::PropertyBase* pProp, MM::ActionType eAct) {
 }
 
 int WPIPump::OnFlowrate(MM::PropertyBase* pProp, MM::ActionType eAct) {
+    MMThreadGuard g(currentFlowrateLock_);
+
     int ret = DEVICE_OK;
     switch (eAct) {
     case MM::BeforeGet:
         pProp->Set(flowrateUlperSecond_);
         break;
     case MM::AfterSet:
-        if (IsPumping()) {
-            return DEVICE_PUMP_IS_RUNNING;
-        }
         string temp;
         pProp->Get(temp);
         ret = SetFlowrateUlPerSecond(stod(temp));
@@ -890,9 +901,10 @@ PumpThread::~PumpThread() {};
 // MMPump API
 ///////////////////////////////////////////////////////////////////////////////
 
-void PumpThread::Start(double duration) {
+void PumpThread::Start(double duration, double flowrateUlperSecond) {
     MMThreadGuard g(this->stopLock_);
     duration_ = duration;
+    flowrateUlperSecond_ = flowrateUlperSecond;
     stop_ = false;
     pump_->LogMessage("Thread is started");
     activate();
@@ -922,6 +934,7 @@ int PumpThread::svc(void) throw() {
             CDeviceUtils::SleepMs(1); // Limit computational stress
             dt_ = (pump_->GetCurrentMMTime() - startTime_).getMsec() / 1000; // Convert ms to seconds
             ret = pump_->RunOnThread(dt_);
+		    updateDuration();
         }
         if (IsStopped())
             pump_->LogMessage("Pump stopped by the user.\n");
@@ -934,4 +947,17 @@ int PumpThread::svc(void) throw() {
     }
     Stop();
     return ret;
+}
+
+int PumpThread::updateDuration() {
+    double pumpFlowrate = 0;
+    {
+        MMThreadGuard g(pump_->currentFlowrateLock_);
+        pumpFlowrate = pump_->flowrateUlperSecond_;
+    }
+    if (pumpFlowrate == flowrateUlperSecond_) { return DEVICE_OK; }
+
+    duration_ = dt_ + (duration_ - dt_) * (flowrateUlperSecond_ / pumpFlowrate);
+    flowrateUlperSecond_ = pumpFlowrate;
+    return DEVICE_OK;
 }
