@@ -72,7 +72,7 @@ enum {
 };
 
 
-// Treat a chain of MVPs on the same serial port as a "hub"
+// Treat a chain of MVPs and PSDs on the same serial port as a "hub"
 class MVPChain : public HubBase<MVPChain>
 {
    std::string port_;
@@ -305,7 +305,7 @@ private:
 MODULE_API void InitializeModuleData()
 {
    RegisterDevice(DEVICE_NAME_HUB, MM::HubDevice,
-         "Hamilton Modular Valve Positioner (possibly chained)");
+         "Hamilton RNO adapter");
 }
 
 
@@ -632,7 +632,7 @@ MVP::GetName(char* name) const
    //This ensures any previous naming still applies
    //For the Microlab, this will translate to -a1 and -a2
    if (index_channel_ > 0)
-       suffix += index_channel_;
+       suffix += std::to_string(index_channel_);
 
    CDeviceUtils::CopyLimitedString(name,
          (DEVICE_NAME_MVP_PREFIX + suffix).c_str());
@@ -994,7 +994,7 @@ PSD::GetName(char* name) const
    //This ensures any previous naming still applies
    //For the Microlab, this will translate to -a1 and -a2
    if (index_channel_ > 0)
-       suffix += index_channel_;
+       suffix += std::to_string(index_channel_);
 
    CDeviceUtils::CopyLimitedString(name,
          (DEVICE_NAME_PSD_PREFIX + suffix).c_str());

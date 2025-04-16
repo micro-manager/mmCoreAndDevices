@@ -414,8 +414,9 @@ protected:
       if (channel_ < 1 || channel_ > 2)
          channel_ = 1;
 
-      char chan = 'A'+channel_; 
-      return std::string("")+chan;
+      //char chan = 'A'+channel_; 
+      //return std::string("")+chan;
+      return std::string(1, static_cast<char>('A' + channel_));
    }
 
 public:
@@ -518,7 +519,7 @@ public:
    bool IsValveNotInitialized() { return TestBit(b1_, 0); }
    bool IsValveInitializationError() { return TestBit(b1_, 1); }
    bool IsValveOverloadError() { return TestBit(b1_, 2); }
-   bool IsValveExists() { return ~TestBit(b1_, 4); } // This on the MicroLab 600
+   bool IsValveExists() { return !TestBit(b1_, 4); } // This on the MicroLab 600
 };
 
 class SyringeErrorRequest : public NormalCommand
@@ -570,7 +571,7 @@ public:
    bool IsStrokeTooLarge() { return TestBit(b1_, 1); } // This on the MicroLab 600
    bool IsSyringeInitializationError() { return TestBit(b1_, 2); }
    bool IsSyringeOverloadError() { return TestBit(b1_, 3); }
-   bool IsSyringeExists() { return ~TestBit(b1_, 4); } // This on the MicroLab 600
+   bool IsSyringeExists() { return !TestBit(b1_, 4); } // This on the MicroLab 600
 };
 
 
