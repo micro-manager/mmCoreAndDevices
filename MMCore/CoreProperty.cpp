@@ -160,6 +160,10 @@ void CorePropertyCollection::Execute(const char* propName, const char* value)
    {
       core_->setChannelGroup(value);
    }
+   else if (strcmp(propName, MM::g_Keyword_CoreStorage) == 0)
+   {
+      core_->setStorageDevice(value);
+   }
    // unknown property
    else
    {
