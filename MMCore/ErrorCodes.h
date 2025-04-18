@@ -81,4 +81,5 @@
 #define MMERR_StorageNotAvailable      53
 #define MMERR_StorageImageNotAvailable 54
 #define MMERR_StorageMetadataNotAvailable 55
+#define MMERR_StorageInvalidHandle     56
 #endif //_ERRORCODES_H_
