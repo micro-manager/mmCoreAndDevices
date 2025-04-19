@@ -676,7 +676,7 @@ public:
    void appendNextToDataset(int handle, const std::vector<long>& coordinates, const char* imageMeta, int imageMetaLength) throw (CMMError);
    STORAGEIMGOUT appendAndGetNextToDataset(int handle, const std::vector<long>& coordinates, const char* imageMeta, int imageMetaLength) throw (CMMError);
    void attachDatasetToCircularBuffer(int handle) throw (CMMError);
-   std::string getAttachedDataset();
+   int getAttachedDataset();
    std::string getLastAttachedDatasetError();
 
    ///@}
@@ -718,6 +718,8 @@ private:
    CircularBuffer* cbuf_;
    std::map<int, DatasetEntry> openDatasets_;
    int datasetHandleCounter_;
+   std::pair<std::shared_ptr<StorageInstance>, int> attachedDataset_;
+   int attachedDatasetHandle_;
 
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;

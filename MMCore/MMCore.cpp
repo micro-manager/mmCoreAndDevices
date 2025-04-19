@@ -141,11 +141,13 @@ CMMCore::CMMCore() :
    pluginManager_(new CPluginManager()),
    deviceManager_(new mm::DeviceManager()),
    pPostedErrorsLock_(NULL),
-   datasetHandleCounter_(0)
+   datasetHandleCounter_(0),
+   attachedDatasetHandle_(-1)
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
    pPostedErrorsLock_ = new MMThreadLock();
+   attachedDataset_ = std::make_pair(nullptr, -1);
 
    InitializeErrorMessages();
 
@@ -8944,17 +8946,32 @@ STORAGEIMGOUT CMMCore::appendAndGetNextToDataset(int handle, const std::vector<l
  */
 void CMMCore::attachDatasetToCircularBuffer(int handle)  throw (CMMError)
 {
-   // TODO
-   throw CMMError("Feature not supported", MMERR_GENERIC);
+   if (handle < 0)
+   {
+      // disconnect dataset
+      attachedDatasetHandle_ = -1;
+      attachedDataset_ = std::make_pair(nullptr, -1);
+      // TODO: shut down saving thread
+      return;
+   }
+
+   auto storageInstance = getStorageInstanceFromHandle(handle);
+   auto pStorage = storageInstance.first;
+   auto deviceHandle = storageInstance.second;
+
+   attachedDataset_ = std::make_pair(pStorage, deviceHandle);
+   attachedDatasetHandle_ = handle;
+
+   // TODO: start save thread for the circular buffer
 }
 
 /**
  * Return the handle for the currently attached dataset.
- * \return - storage handle, or empty string if no storage is attached
+ * \return - storage handle, or negative value if no storage is attached
  */
-std::string CMMCore::getAttachedDataset()
+int CMMCore::getAttachedDataset()
 {
-   return std::string();
+   return attachedDatasetHandle_;
 }
 
 /**
