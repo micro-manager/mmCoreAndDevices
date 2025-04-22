@@ -225,7 +225,7 @@ public:
     * @param[out] P - Measured pressure of that channel in kPa
     * @returns MMDeviceConstants ErrorCode
     */
-    int GetPressure(double& P);
+    int GetPressureKPa(double& P);
 
     /**
     * Set-function for the pressure of a specific channel
@@ -234,7 +234,7 @@ public:
     * @param[in] P - Pressure to be set in kPa
     * @returns MMDeviceConstants ErrorCode
     */
-    int SetPressure(double P);
+    int SetPressureKPa(double P);
 
     /**
     * Get-function for the limits of a specific channel

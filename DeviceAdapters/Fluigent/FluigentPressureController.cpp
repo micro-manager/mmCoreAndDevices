@@ -301,7 +301,7 @@ int FluigentChannel::Initialize()
 }
 
 int FluigentChannel::Stop() {
-    SetPressure(0);
+    SetPressureKPa(0);
     Pimp_ = 0;
     return DEVICE_OK;
 }
@@ -322,8 +322,8 @@ int FluigentChannel::OnImposedPressure(MM::PropertyBase* pProp, MM::ActionType e
         double Ptemp;
         pProp->Get(Ptemp);
         Pimp_ = (float)Ptemp;
-        SetPressure(Pimp_);
-        GetPressure(Pmeas_);
+        SetPressureKPa(Pimp_);
+        GetPressureKPa(Pmeas_);
         ret = DEVICE_OK;
     }break;
     case MM::BeforeGet:
@@ -345,7 +345,7 @@ int FluigentChannel::OnMeasuredPressure(MM::PropertyBase* pProp, MM::ActionType 
     case MM::BeforeGet:
     {
         // Get the measured pressure, and refresh the value
-        ret = GetPressure(Pmeas_);
+        ret = GetPressureKPa(Pmeas_);
         pProp->Set(Pmeas_);
     }break;
     }
@@ -358,14 +358,14 @@ int FluigentChannel::OnMeasuredPressure(MM::PropertyBase* pProp, MM::ActionType 
 // MMPump API
 ///////////////////////////////////////////////////////////////////////////////
 
-int FluigentChannel::GetPressure(double& P) {
+int FluigentChannel::GetPressureKPa(double& P) {
     float temp = 0;
     int ret = fgt_get_pressure(channelInfo_.indexID, &temp);
     P = (double)temp;
     return ret;
 }
 
-int FluigentChannel::SetPressure(double P)
+int FluigentChannel::SetPressureKPa(double P)
 {
     int ret = fgt_set_pressure(channelInfo_.indexID, (float)P);
     return ret;
