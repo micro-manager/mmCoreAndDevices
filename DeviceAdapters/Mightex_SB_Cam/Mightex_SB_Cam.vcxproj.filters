@@ -23,8 +23,5 @@
     <ClInclude Include="Mightex_SB_Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SSBuffer_USBCamera_SDK_Stdcall.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
