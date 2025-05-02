@@ -512,6 +512,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AMF", "DeviceAdapters\AMF\A
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mightex_SB_Cam", "DeviceAdapters\Mightex_SB_Cam\Mightex_SB_Cam.vcxproj", "{D0E08CDB-A197-4451-938F-4AD30D7097CC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Revealer", "DeviceAdapters\Revealer\Revealer.vcxproj", "{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1538,6 +1540,10 @@ Global
 		{D0E08CDB-A197-4451-938F-4AD30D7097CC}.Debug|x64.Build.0 = Debug|x64
 		{D0E08CDB-A197-4451-938F-4AD30D7097CC}.Release|x64.ActiveCfg = Release|x64
 		{D0E08CDB-A197-4451-938F-4AD30D7097CC}.Release|x64.Build.0 = Release|x64
+		{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}.Debug|x64.ActiveCfg = Debug|x64
+		{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}.Debug|x64.Build.0 = Debug|x64
+		{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}.Release|x64.ActiveCfg = Release|x64
+		{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
