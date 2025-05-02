@@ -6,9 +6,9 @@
 // DESCRIPTION:   Device adapter for Prior PureFocus Autofocus System
 //                
 //                
-// AUTHOR:        Your Name
+// AUTHOR:        Nico Stuurman
 //
-// COPYRIGHT:     Your Institution, 2025
+// COPYRIGHT:     Regents of the University of California, 2025
 //
 // LICENSE:       This file is distributed under the BSD license.
 //
