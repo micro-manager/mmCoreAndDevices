@@ -26,18 +26,15 @@
 
 #include "WPI.h"
 
-#include "MMDevice.h"
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include "ModuleInterface.h"
 #include "DeviceUtils.h"
-#include <string>
-#include <map>
-#include <algorithm>
-#include <stdint.h>
-#include <future>
 
-using namespace std;
+#include <iomanip>
+#include <sstream>
+#include <string>
+#include <vector>
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Global constants
@@ -92,9 +89,9 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
         return new WPIPumpHub(); // Create Hub
     }
     // 8 is the length of the g_DemoPumpName name
-    else if (strcmp(((string)deviceName).substr(0, 8).c_str(), g_WPIPumpName) == 0)
+    else if (strcmp(((std::string)deviceName).substr(0, 8).c_str(), g_WPIPumpName) == 0)
     {
-        return new WPIPump(stoi(((string)deviceName).substr(8))); // Create pump
+        return new WPIPump(stoi(((std::string)deviceName).substr(8))); // Create pump
     }
     return 0; // If an unexpected name is provided, return nothing
 }
@@ -204,18 +201,18 @@ int WPIPumpHub::DetectInstalledDevices()
     for (int i = 0; i < nPumps_; i++)
     {
         if (VerifyConnection(i) != DEVICE_OK) {
-            LogMessage("Verification of pump " + to_string(i) + " unsuccessful");
+            LogMessage("Verification of pump " + std::to_string(i) + " unsuccessful");
             nPumps_ = i - 1;
             break;
         }
-        LogMessage("Verification of pump " + to_string(i) + " worked!");
-        string deviceName = (string)g_WPIPumpName + to_string(i);
+        LogMessage("Verification of pump " + std::to_string(i) + " worked!");
+        std::string deviceName = (std::string)g_WPIPumpName + std::to_string(i);
         MM::Device* pDev = CreateDevice(deviceName.c_str());
         AddInstalledDevice(pDev);
 
         char temp[MM::MaxStrLength];
         pDev->GetName(temp);
-        LogMessage("Created pump: " + (string)temp);
+        LogMessage("Created pump: " + (std::string)temp);
     }
     return nPumps_ > 0 ? DEVICE_OK : DEVICE_ERR;
 }
@@ -238,11 +235,11 @@ int WPIPumpHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct) {
 }
 
 int WPIPumpHub::OnNPumps(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    string temp = "";
+    std::string temp = "";
 
     switch (eAct) {
     case MM::BeforeGet:
-        temp = to_string(nPumps_);
+        temp = std::to_string(nPumps_);
         pProp->Set(temp.c_str());
         break;
     case MM::AfterSet:
@@ -263,13 +260,13 @@ int WPIPumpHub::OnNPumps(MM::PropertyBase* pProp, MM::ActionType eAct) {
 * is connected.
 */
 int WPIPumpHub::VerifyConnection(int idx) {
-    string response = "";
-    string cmd = to_string(idx) + " VER";
+    std::string response = "";
+    std::string cmd = std::to_string(idx) + " VER";
     SendSerialCommand(port_.c_str(), cmd.c_str(), CR);
     GetSerialAnswer(port_.c_str(), ETX, response);
     if (response[0] == '?') {
         LogMessage("Hub could not connect to port: " + port_ +
-            " at address: " + to_string(idx));
+            " at address: " + std::to_string(idx));
         return DEVICE_SERIAL_COMMAND_FAILED;
     }
     else if (response[2] == 'A') {
@@ -278,11 +275,11 @@ int WPIPumpHub::VerifyConnection(int idx) {
         return DEVICE_SERIAL_INVALID_RESPONSE;
     }
     LogMessage("Hub connected successfully to port: " + port_ +
-        " at address: " + to_string(idx));
+        " at address: " + std::to_string(idx));
     return DEVICE_OK;
 }
 
-int WPIPumpHub::GetPort(string& port) {
+int WPIPumpHub::GetPort(std::string& port) {
     port = port_;
     return DEVICE_OK;
 }
@@ -305,7 +302,7 @@ WPIPump::WPIPump(int idx) :
 {
     // Set pump id and name
     id_ = idx;
-    name_ = ((string)g_WPIPumpName) + to_string(id_);
+    name_ = ((std::string)g_WPIPumpName) + std::to_string(id_);
     thd_ = new PumpThread(this);
 
     // parent ID display
@@ -368,7 +365,7 @@ int WPIPump::Initialize() {
     SetPropertyLimits("Diameter mm", g_Diameter_min, g_Diameter_max);
 
     // Set direction
-    vector<string> allowedDirections = { "1", "-1" };
+    std::vector<std::string> allowedDirections = { "1", "-1" };
     pAct = new CPropertyAction(this, &WPIPump::OnDirection);
     ret = CreateIntegerProperty("Direction", direction_, false, pAct);
     SetAllowedValues("Direction", allowedDirections);
@@ -380,7 +377,7 @@ int WPIPump::Initialize() {
     SetPropertyLimits("Flow rate uL/sec", -calculate_flowrate(g_Speed_max, diameter_), calculate_flowrate(g_Speed_max, diameter_));
 
     // Start dispense
-    vector<string> allowedRunValues = { "1", "0" };
+    std::vector<std::string> allowedRunValues = { "1", "0" };
     pAct = new CPropertyAction(this, &WPIPump::OnRun);
     ret = CreateIntegerProperty("Start", run_, false, pAct);
     SetAllowedValues("Start", allowedRunValues);
@@ -416,7 +413,7 @@ void WPIPump::GetName(char* name) const {
 // MMPump API
 ///////////////////////////////////////////////////////////////////////////////
 
-int WPIPump::GetPort(string& port) {
+int WPIPump::GetPort(std::string& port) {
     port = port_;
     return DEVICE_OK;
 }
@@ -441,7 +438,7 @@ int WPIPump::Stop() {
 
     thd_->Stop();
 
-    Send(to_string(id_) + " STP");
+    Send(std::to_string(id_) + " STP");
     return DEVICE_OK;
 }
 
@@ -487,8 +484,8 @@ int WPIPump::InvertDirection(bool invert) {
 }
 
 int WPIPump::GetDiameter(double& diam) {
-    string response = "";
-    Send(to_string(id_) + " DIA");
+    std::string response = "";
+    Send(std::to_string(id_) + " DIA");
     ReceiveOneLine(response);
     if (response[2] == 'A') {
         return DEVICE_SERIAL_INVALID_RESPONSE;
@@ -505,8 +502,8 @@ int WPIPump::SetDiameter(double diam) {
         return DEVICE_INVALID_PROPERTY_VALUE;
     }
 
-    stringstream msg;
-    msg << to_string(id_) + " DIA " << setprecision(4) << diam;
+    std::ostringstream msg;
+    msg << std::to_string(id_) + " DIA " << std::setprecision(4) << diam;
     int ret = Send(msg.str());
 
     if (ret == DEVICE_OK)
@@ -519,13 +516,13 @@ int WPIPump::SetDiameter(double diam) {
 
 int WPIPump::GetFlowrateUlPerSecond(double& flowrate) {
     // Inquire direction
-    string temp = "";
-    Send(to_string(id_) + " DIR");
+    std::string temp = "";
+    Send(std::to_string(id_) + " DIR");
     ReceiveOneLine(temp);
     long infWith = (temp.substr(4) == "INF") ? 1 : -1;
 
     // Inquire flowrate
-    Send(to_string(id_) + " RAT");
+    Send(std::to_string(id_) + " RAT");
     ReceiveOneLine(temp);
     flowrate = direction_ * infWith * PumpFlowrateTouL(temp.substr(4));
     return DEVICE_OK;
@@ -536,33 +533,33 @@ int WPIPump::SetFlowrateUlPerSecond(double flowrate) {
     bool isPumping = IsPumping();
     if (isPumping) {
        // Don't use Start/Stop here, as it will reset the dispense timer
-       Send(to_string(id_) + " STP");
+       Send(std::to_string(id_) + " STP");
        CDeviceUtils::SleepMs(5);
     }
 
     if (abs(flowrate) < calculate_flowrate(g_Speed_min, diameter_)) {
-        LogMessage("Flowrate: " + to_string(flowrate) + " is too low");
+        LogMessage("Flowrate: " + std::to_string(flowrate) + " is too low");
         return DEVICE_INVALID_PROPERTY_VALUE;
     }
     if (abs(flowrate) > calculate_flowrate(g_Speed_max, diameter_)) {
-        LogMessage("Flowrate: " + to_string(flowrate) + " is too high. " +
+        LogMessage("Flowrate: " + std::to_string(flowrate) + " is too high. " +
             "The maximum flowrate is: " +
-            to_string(calculate_flowrate(g_Speed_max, diameter_)));
+            std::to_string(calculate_flowrate(g_Speed_max, diameter_)));
         return DEVICE_INVALID_PROPERTY_VALUE;
     }
 
     if (flowrate > 0 && direction_ == 1) {
-        Send(to_string(id_) + " DIR INF");
+        Send(std::to_string(id_) + " DIR INF");
     }
     else {
-        Send(to_string(id_) + " DIR WDR");
+        Send(std::to_string(id_) + " DIR WDR");
     }
         
     AdjustUnits(abs(flowrate));
 
-    stringstream msg;
-    msg << to_string(id_) + " RAT C ";
-    msg << setprecision(4) << uLToPumpFlowrate(abs(flowrate), flowrate_unit_);
+    std::ostringstream msg;
+    msg << std::to_string(id_) + " RAT C ";
+    msg << std::setprecision(4) << uLToPumpFlowrate(abs(flowrate), flowrate_unit_);
     msg << GetUnitString();
     int ret = Send(msg.str());
     if (ret == DEVICE_OK)
@@ -572,7 +569,7 @@ int WPIPump::SetFlowrateUlPerSecond(double flowrate) {
     // Don't use Start/Stop here, as it will reset the dispense timer
     if (isPumping) {
         CDeviceUtils::SleepMs(5);
-        Send(to_string(id_) + " RUN");
+        Send(std::to_string(id_) + " RUN");
     }
     return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
 }
@@ -623,21 +620,21 @@ int WPIPump::DispenseDurationSeconds(double seconds) {
     // Set correct unit
     double volToBeDispensed = abs(seconds * flowrateUlperSecond_);
     if (volToBeDispensed > 1000) {
-        Send(to_string(id_) + " VOL ML");
+        Send(std::to_string(id_) + " VOL ML");
     }
     else {
-        Send(to_string(id_) + " VOL UL");
+        Send(std::to_string(id_) + " VOL UL");
     }
 
     // Set volume to be dispensed/withdrawn
-    stringstream msg;
-    msg << to_string(id_) + " VOL ";
+    std::stringstream msg;
+    msg << std::to_string(id_) + " VOL ";
     if (volToBeDispensed > 1000)
-        msg << setprecision(4) << volToBeDispensed / 1000;
+        msg << std::setprecision(4) << volToBeDispensed / 1000;
     else
-        msg << setprecision(4) << volToBeDispensed;
+        msg << std::setprecision(4) << volToBeDispensed;
     Send(msg.str());
-    Send(to_string(id_) + " RUN");
+    Send(std::to_string(id_) + " RUN");
 
     // Run dispense/withdraw
     {
@@ -676,7 +673,7 @@ int WPIPump::OnMaxVolume(MM::PropertyBase* pProp, MM::ActionType eAct) {
         if (IsPumping()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
-        string temp;
+        std::string temp;
         pProp->Get(temp);
         SetMaxVolumeUl(stod(temp));
         break;
@@ -696,7 +693,7 @@ int WPIPump::OnCurrentVolume(MM::PropertyBase* pProp, MM::ActionType eAct) {
         if (IsPumping()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
-        string temp;
+        std::string temp;
         pProp->Get(temp);
         SetVolumeUl(stod(temp));
         break;
@@ -714,7 +711,7 @@ int WPIPump::OnDiameter(MM::PropertyBase* pProp, MM::ActionType eAct) {
         if (IsPumping()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
-        string temp;
+        std::string temp;
         pProp->Get(temp);
         ret = SetDiameter(stod(temp));
         if (ret == DEVICE_OK) {
@@ -734,7 +731,7 @@ int WPIPump::OnDirection(MM::PropertyBase* pProp, MM::ActionType eAct) {
         if (IsPumping()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
-        string temp;
+        std::string temp;
         pProp->Get(temp);
         InvertDirection(temp == "-1");
         break;
@@ -751,7 +748,7 @@ int WPIPump::OnFlowrate(MM::PropertyBase* pProp, MM::ActionType eAct) {
         pProp->Set(flowrateUlperSecond_);
         break;
     case MM::AfterSet:
-        string temp;
+        std::string temp;
         pProp->Get(temp);
         ret = SetFlowrateUlPerSecond(stod(temp));
         if (ret == DEVICE_OK) {
@@ -768,7 +765,7 @@ int WPIPump::OnRun(MM::PropertyBase* pProp, MM::ActionType eAct) {
         pProp->Set(run_);
         break;
     case MM::AfterSet:
-        string temp;
+        std::string temp;
         pProp->Get(temp);
 
         if (stol(temp) == run_) { return DEVICE_OK; }
@@ -789,7 +786,7 @@ int WPIPump::OnRun(MM::PropertyBase* pProp, MM::ActionType eAct) {
 // Utility methods
 ///////////////////////////////////////////////////////////////////////////////
 
-int WPIPump::Send(string cmd) {
+int WPIPump::Send(std::string cmd) {
     LogMessage("Sent command: " + cmd + " to pump");
     CDeviceUtils::SleepMs(10);
     Purge();
@@ -797,7 +794,7 @@ int WPIPump::Send(string cmd) {
     return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
 }
 
-int WPIPump::ReceiveOneLine(string& ans) {
+int WPIPump::ReceiveOneLine(std::string& ans) {
     ans = "";
     int ret = GetSerialAnswer(port_.c_str(), ETX, ans);
     return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
@@ -848,9 +845,9 @@ double WPIPump::uLToPumpFlowrate(double flowrate, int flowrate_unit) {
     return value_to_pump;
 }
 
-double WPIPump::PumpFlowrateTouL(string flowrate) {
+double WPIPump::PumpFlowrateTouL(std::string flowrate) {
     double flowrate_uL_s = stod(flowrate.substr(0, flowrate.size()-2));
-    string unit = flowrate.substr(flowrate.size() - 2, 2);
+    std::string unit = flowrate.substr(flowrate.size() - 2, 2);
     if (unit == "UM") {
         flowrate_uL_s /= 60;
     }
@@ -866,7 +863,7 @@ double WPIPump::PumpFlowrateTouL(string flowrate) {
     return flowrate_uL_s;
 }
 
-string WPIPump::GetUnitString() {
+std::string WPIPump::GetUnitString() {
     switch (flowrate_unit_) {
     case mL_min:
         return "MM";

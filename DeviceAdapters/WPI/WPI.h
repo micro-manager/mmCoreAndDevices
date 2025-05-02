@@ -3,7 +3,7 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Demo for syringe pump devices
+// DESCRIPTION:   Device adapter for WPI AL-XXX syringe pumps
 //                
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 //
@@ -24,19 +24,12 @@
 //
 //LAST UPDATE:    09.04.2025 LK
 
-#ifndef _WPI_PUMP_H_
-#define _WPI_PUMP_H_
+#pragma once
 
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
-#include "ModuleInterface.h"
-#include <string>
-#include <map>
-#include <algorithm>
-#include <stdint.h>
-#include <future>
 
-using namespace std;
+#include <string>
 
 enum flowrate_units {
     mL_min,
@@ -71,7 +64,7 @@ public:
     int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     // Hub public utitility methods
-    int GetPort(string& port);
+    int GetPort(std::string& port);
 
     // Hub class variables
 
@@ -82,7 +75,7 @@ private:
     // Hub class variables
     bool initialized_;
     bool busy_;
-    string port_ = "";
+    std::string port_ = "";
     int nPumps_;
 };
 
@@ -105,7 +98,7 @@ public:
     void GetName(char* name) const;
 
     // MMPump API
-    int GetPort(string& port);
+    int GetPort(std::string& port);
     int Home();
     bool RequiresHoming() { return false; }
     int Stop();
@@ -135,22 +128,22 @@ public:
     int OnRun(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     // Utility methods
-    int Send(string cmd);
-    int ReceiveOneLine(string& ans);
+    int Send(std::string cmd);
+    int ReceiveOneLine(std::string& ans);
     int Purge();
     int AdjustUnits(double flowrate);
     double uLToPumpFlowrate(double flowrate, int flowrate_unit);
-    double PumpFlowrateTouL(string flowrate);
-    string GetUnitString();
+    double PumpFlowrateTouL(std::string flowrate);
+    std::string GetUnitString();
     bool IsPumping();
 
 private:
     // Communication class variables
     bool initialized_;
     bool busy_;
-    string port_;
+    std::string port_;
     int id_;
-    string name_;
+    std::string name_;
 
     // Pump state class variables
     double minVolumeUl_ = 0;
@@ -200,5 +193,3 @@ private:
     int svc(void) throw();
     int updateDuration();
 };
-
-#endif //_WPI_PUMP_H_
