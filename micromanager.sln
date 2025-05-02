@@ -506,7 +506,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeensyPulseGenerator", "Dev
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Elveflow", "DeviceAdapters\Elveflow\Elveflow.vcxproj", "{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WorldPrecisionInstruments", "DeviceAdapters\WPI\WorldPrecisionInstruments.vcxproj", "{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WPI_Aladdin", "DeviceAdapters\WPI_Aladdin\WPI_Aladdin.vcxproj", "{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NikonKsAdapter", "DeviceAdapters\NikonKs\NikonKsAdapter.vcxproj", "{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}"
 EndProject

@@ -25,7 +25,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{df373fea-9ffa-43dc-9ecb-d1b90a29f238}</ProjectGuid>
-    <RootNamespace>WorldPrecisionInstruments</RootNamespace>
+    <RootNamespace>WPI_Aladdin</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
