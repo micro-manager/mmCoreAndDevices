@@ -60,12 +60,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\..\stage\Release\x64\</OutDir>
     <TargetName>mmgr_dal_$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\..\stage\Release\x64\</OutDir>
     <TargetName>mmgr_dal_$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -74,7 +72,7 @@
       <PreprocessorDefinitions>_DEBUG;FLUIGENT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\Lars\Documents\GitHub\IDS_peak_adapter\micro-manager\mmCoreAndDevices\TestDeviceAdapters\Fluigent;C:\Users\Lars\Documents\GitHub\fgt-SDK\Shared\windows\x64;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp\dlls;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp\dlls\windows\x64;C:\Users\Lars\Documents\GitHub\IDS_peak_adapter\micro-manager\mmCoreAndDevices\DeviceAdapters\DemoCamera;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\Fluigent\fgt-SDK-23.0.0\SDK-23.0.0\Shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>26812;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <CompileAs>Default</CompileAs>
     </ClCompile>
@@ -83,6 +81,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>fgt_SDK.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\Fluigent\fgt-SDK-23.0.0\SDK-23.0.0\Shared\windows\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -93,7 +92,7 @@
       <PreprocessorDefinitions>NDEBUG;FLUIGENT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\Lars\Documents\GitHub\IDS_peak_adapter\micro-manager\mmCoreAndDevices\TestDeviceAdapters\Fluigent;C:\Users\Lars\Documents\GitHub\fgt-SDK\Shared\windows\x64;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp\dlls;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp\dlls\windows\x64;C:\Users\Lars\Documents\GitHub\IDS_peak_adapter\micro-manager\mmCoreAndDevices\DeviceAdapters\DemoCamera;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\Fluigent\fgt-SDK-23.0.0\SDK-23.0.0\Shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>26812;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <CompileAs>Default</CompileAs>
     </ClCompile>
@@ -104,6 +103,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>fgt_SDK.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\Fluigent\fgt-SDK-23.0.0\SDK-23.0.0\Shared\windows\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
