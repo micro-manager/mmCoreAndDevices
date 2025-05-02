@@ -128,12 +128,12 @@ public:
     int OnRun(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     // Utility methods
-    int Send(std::string cmd);
+    int Send(const std::string& cmd);
     int ReceiveOneLine(std::string& ans);
     int Purge();
     int AdjustUnits(double flowrate);
     double uLToPumpFlowrate(double flowrate, int flowrate_unit);
-    double PumpFlowrateTouL(std::string flowrate);
+    double PumpFlowrateTouL(const std::string& flowrate);
     std::string GetUnitString();
     bool IsPumping();
 

@@ -84,14 +84,15 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     {
         return 0; // Trying to create nothing, return nothing
     }
-    else if (strcmp(deviceName, g_WPIHubName) == 0)
+    const std::string name(deviceName);
+    if (name == g_WPIHubName)
     {
         return new WPIPumpHub(); // Create Hub
     }
-    // 8 is the length of the g_DemoPumpName name
-    else if (strcmp(((std::string)deviceName).substr(0, 8).c_str(), g_WPIPumpName) == 0)
+    const std::size_t pumpNamePrefixLen = std::strlen(g_WPIPumpName);
+    if (name.substr(0, pumpNamePrefixLen) == g_WPIPumpName)
     {
-        return new WPIPump(stoi(((std::string)deviceName).substr(8))); // Create pump
+        return new WPIPump(std::stoi(name.substr(pumpNamePrefixLen))); // Create pump
     }
     return 0; // If an unexpected name is provided, return nothing
 }
@@ -206,13 +207,13 @@ int WPIPumpHub::DetectInstalledDevices()
             break;
         }
         LogMessage("Verification of pump " + std::to_string(i) + " worked!");
-        std::string deviceName = (std::string)g_WPIPumpName + std::to_string(i);
+        std::string deviceName = g_WPIPumpName + std::to_string(i);
         MM::Device* pDev = CreateDevice(deviceName.c_str());
         AddInstalledDevice(pDev);
 
         char temp[MM::MaxStrLength];
         pDev->GetName(temp);
-        LogMessage("Created pump: " + (std::string)temp);
+        LogMessage("Created pump: " + std::string(temp));
     }
     return nPumps_ > 0 ? DEVICE_OK : DEVICE_ERR;
 }
@@ -235,7 +236,7 @@ int WPIPumpHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct) {
 }
 
 int WPIPumpHub::OnNPumps(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    std::string temp = "";
+    std::string temp;
 
     switch (eAct) {
     case MM::BeforeGet:
@@ -260,7 +261,7 @@ int WPIPumpHub::OnNPumps(MM::PropertyBase* pProp, MM::ActionType eAct) {
 * is connected.
 */
 int WPIPumpHub::VerifyConnection(int idx) {
-    std::string response = "";
+    std::string response;
     std::string cmd = std::to_string(idx) + " VER";
     SendSerialCommand(port_.c_str(), cmd.c_str(), CR);
     GetSerialAnswer(port_.c_str(), ETX, response);
@@ -302,7 +303,7 @@ WPIPump::WPIPump(int idx) :
 {
     // Set pump id and name
     id_ = idx;
-    name_ = ((std::string)g_WPIPumpName) + std::to_string(id_);
+    name_ = g_WPIPumpName + std::to_string(id_);
     thd_ = new PumpThread(this);
 
     // parent ID display
@@ -484,7 +485,7 @@ int WPIPump::InvertDirection(bool invert) {
 }
 
 int WPIPump::GetDiameter(double& diam) {
-    std::string response = "";
+    std::string response;
     Send(std::to_string(id_) + " DIA");
     ReceiveOneLine(response);
     if (response[2] == 'A') {
@@ -516,7 +517,7 @@ int WPIPump::SetDiameter(double diam) {
 
 int WPIPump::GetFlowrateUlPerSecond(double& flowrate) {
     // Inquire direction
-    std::string temp = "";
+    std::string temp;
     Send(std::to_string(id_) + " DIR");
     ReceiveOneLine(temp);
     long infWith = (temp.substr(4) == "INF") ? 1 : -1;
@@ -786,7 +787,7 @@ int WPIPump::OnRun(MM::PropertyBase* pProp, MM::ActionType eAct) {
 // Utility methods
 ///////////////////////////////////////////////////////////////////////////////
 
-int WPIPump::Send(std::string cmd) {
+int WPIPump::Send(const std::string& cmd) {
     LogMessage("Sent command: " + cmd + " to pump");
     CDeviceUtils::SleepMs(10);
     Purge();
@@ -795,7 +796,7 @@ int WPIPump::Send(std::string cmd) {
 }
 
 int WPIPump::ReceiveOneLine(std::string& ans) {
-    ans = "";
+    ans.clear();
     int ret = GetSerialAnswer(port_.c_str(), ETX, ans);
     return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
 }
@@ -845,7 +846,7 @@ double WPIPump::uLToPumpFlowrate(double flowrate, int flowrate_unit) {
     return value_to_pump;
 }
 
-double WPIPump::PumpFlowrateTouL(std::string flowrate) {
+double WPIPump::PumpFlowrateTouL(const std::string& flowrate) {
     double flowrate_uL_s = stod(flowrate.substr(0, flowrate.size()-2));
     std::string unit = flowrate.substr(flowrate.size() - 2, 2);
     if (unit == "UM") {
