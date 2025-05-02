@@ -81,6 +81,8 @@ extern const char* g_Yes;
 extern const char* g_No;
 extern const char* g_Acceleration;
 extern const char* g_Max_Velocity;
+extern const char* g_Positive;
+extern const char* g_Negative;
 
 class SquidMonitoringThread;
 class SquidXYStage;
@@ -268,6 +270,8 @@ private:
    double fullStepsPerRevY_;
    int microSteppingDefaultX_;  // needs to be set as pre-init tied to model
    int microSteppingDefaultY_;  // needs to be set as pre-init tied to model
+   int directionX_; // either 1 or -1
+   int directionY_;
    double posX_um_;
    double posY_um_;
    bool busy_;
@@ -327,7 +331,7 @@ private:
    SquidHub* hub_;
    double stepSize_um_;
    double screwPitchZmm_;
-   double microSteppingDefaultZ_; 
+   int microSteppingDefaultZ_; 
    double fullStepsPerRevZ_;
    double maxVelocity_;
    double acceleration_;

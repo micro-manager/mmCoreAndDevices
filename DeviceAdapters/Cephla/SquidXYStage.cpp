@@ -69,6 +69,16 @@ sleep_time_s = 0.005
 
 
 const char* g_XYStageName = "XYStage";
+const char* g_Full_Steps_Per_Rev_X = "FullStepsPerRevX";
+const char* g_Full_Steps_Per_Rev_Y = "FullStepsPerRevY";
+const char* g_Screw_Pitch_Mm_X = "ScrewPitchXmm";
+const char* g_Screw_Pitch_Mm_Y = "ScrewPitchYmm";
+const char* g_Micro_Stepping_Default_X = "MicroSteppingDefaultX";
+const char* g_Micro_Stepping_Default_Y = "MicroSteppingDefaultY";
+const char* g_Direction_X = "DirectionX";
+const char* g_Direction_Y = "DirectionY";
+const char* g_Positive = "Positive";
+const char* g_Negative = "Negative";
 
 SquidXYStage::SquidXYStage() :
    hub_(0),
@@ -80,6 +90,8 @@ SquidXYStage::SquidXYStage() :
    screwPitchYmm_(2.54),
    microSteppingDefaultX_(256),
    microSteppingDefaultY_(256),
+   directionX_(-1),
+   directionY_(-1),
    posX_um_(0.0),
    posY_um_(0.0),
    busy_(false),
@@ -89,6 +101,19 @@ SquidXYStage::SquidXYStage() :
    cmdNr_(0)
 {
    InitializeDefaultErrorMessages();
+
+   CreateFloatProperty(g_Full_Steps_Per_Rev_X, fullStepsPerRevX_, false, 0, true);
+   CreateFloatProperty(g_Full_Steps_Per_Rev_Y, fullStepsPerRevY_, false, 0, true);
+   CreateFloatProperty(g_Screw_Pitch_Mm_X, screwPitchXmm_, false, 0, true);
+   CreateFloatProperty(g_Screw_Pitch_Mm_Y, screwPitchYmm_, false, 0, true);
+   CreateIntegerProperty(g_Micro_Stepping_Default_X, microSteppingDefaultX_, false, 0, true);
+   CreateIntegerProperty(g_Micro_Stepping_Default_Y, microSteppingDefaultY_, false, 0, true);
+   CreateStringProperty(g_Direction_X, g_Negative, false, 0, true);
+   AddAllowedValue(g_Direction_X, g_Positive);
+   AddAllowedValue(g_Direction_X, g_Negative);
+   CreateStringProperty(g_Direction_Y, g_Negative, false, 0, true);
+   AddAllowedValue(g_Direction_Y, g_Positive);
+   AddAllowedValue(g_Direction_Y, g_Negative);
 }
 
 SquidXYStage::~SquidXYStage()
@@ -117,9 +142,26 @@ int SquidXYStage::Initialize()
       return DEVICE_ERR;
    }
 
+   GetProperty(g_Full_Steps_Per_Rev_X, fullStepsPerRevX_);
+   GetProperty(g_Full_Steps_Per_Rev_Y, fullStepsPerRevY_);
+   GetProperty(g_Screw_Pitch_Mm_X, screwPitchXmm_);
+   GetProperty(g_Screw_Pitch_Mm_Y, screwPitchYmm_);
+   long tmp;
+   GetProperty(g_Micro_Stepping_Default_X, tmp);
+   microSteppingDefaultX_ = (int) tmp;
+   GetProperty(g_Micro_Stepping_Default_Y, tmp);
+   microSteppingDefaultY_ = (int) tmp;
+   char dirX[MM::MaxStrLength];
+   GetProperty(g_Direction_X, dirX);
+   directionX_ = strcmp(dirX, g_Positive) == 0 ? 1 : -1;
+   char dirY[MM::MaxStrLength];
+   GetProperty(g_Direction_Y, dirY);
+   directionY_ = strcmp(dirY, g_Positive) == 0 ? 1 : -1;
+
+
    // minus sign is there to enforce compatibility with MM sense of direction
-   stepSizeX_um_ = -1000.0 * screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_); 
-   stepSizeY_um_ = -1000.0 * screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_);
+   stepSizeX_um_ = directionX_ * 1000.0 * screwPitchXmm_ / (microSteppingDefaultX_ * fullStepsPerRevX_); 
+   stepSizeY_um_ = directionY_ * 1000.0 * screwPitchYmm_ / (microSteppingDefaultY_ * fullStepsPerRevY_);
     
    hub_ = static_cast<SquidHub*>(GetParentHub());
    if (!hub_ || !hub_->IsPortAvailable()) {
