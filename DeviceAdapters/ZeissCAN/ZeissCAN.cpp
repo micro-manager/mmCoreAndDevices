@@ -3107,9 +3107,9 @@ initialized_ (false)
 
    CPropertyAction* pAct = new CPropertyAction(this, &FocusStage::OnStepSizeUm);
    std::string stepSizeString = "StepSize (um)";
-   CreateProperty(stepSizeString.c_str(), "0.025", MM::Float, false, pAct, true);
-   AddAllowedValue(stepSizeString.c_str(), "0.025");
-   AddAllowedValue(stepSizeString.c_str(), "0.050");
+   CreateProperty(stepSizeString.c_str(), "0.0250", MM::Float, false, pAct, true);
+   AddAllowedValue(stepSizeString.c_str(), "0.0250");
+   AddAllowedValue(stepSizeString.c_str(), "0.0500");
 }
 
 FocusStage::~FocusStage()

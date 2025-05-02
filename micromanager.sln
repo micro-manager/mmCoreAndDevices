@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.33927.289
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35919.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MMCore", "MMCore\MMCore.vcxproj", "{36571628-728C-4ACD-A47F-503BA91C5D43}"
 EndProject
@@ -507,6 +507,12 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Elveflow", "DeviceAdapters\Elveflow\Elveflow.vcxproj", "{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NikonKsAdapter", "DeviceAdapters\NikonKs\NikonKsAdapter.vcxproj", "{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AMF", "DeviceAdapters\AMF\AMF.vcxproj", "{627365EC-1BB3-4A5D-816B-F0EE9C8F0216}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mightex_SB_Cam", "DeviceAdapters\Mightex_SB_Cam\Mightex_SB_Cam.vcxproj", "{D0E08CDB-A197-4451-938F-4AD30D7097CC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Revealer", "DeviceAdapters\Revealer\Revealer.vcxproj", "{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Fluigent", "DeviceAdapters\Fluigent\Fluigent.vcxproj", "{4F22D447-EDC6-4766-A750-A5781276040A}"
 EndProject
@@ -1528,6 +1534,18 @@ Global
 		{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Debug|x64.Build.0 = Debug|x64
 		{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Release|x64.ActiveCfg = Release|x64
 		{2B5F1E65-6F76-45B3-959B-62BB309A3A6E}.Release|x64.Build.0 = Release|x64
+		{627365EC-1BB3-4A5D-816B-F0EE9C8F0216}.Debug|x64.ActiveCfg = Debug|x64
+		{627365EC-1BB3-4A5D-816B-F0EE9C8F0216}.Debug|x64.Build.0 = Debug|x64
+		{627365EC-1BB3-4A5D-816B-F0EE9C8F0216}.Release|x64.ActiveCfg = Release|x64
+		{627365EC-1BB3-4A5D-816B-F0EE9C8F0216}.Release|x64.Build.0 = Release|x64
+		{D0E08CDB-A197-4451-938F-4AD30D7097CC}.Debug|x64.ActiveCfg = Debug|x64
+		{D0E08CDB-A197-4451-938F-4AD30D7097CC}.Debug|x64.Build.0 = Debug|x64
+		{D0E08CDB-A197-4451-938F-4AD30D7097CC}.Release|x64.ActiveCfg = Release|x64
+		{D0E08CDB-A197-4451-938F-4AD30D7097CC}.Release|x64.Build.0 = Release|x64
+		{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}.Debug|x64.ActiveCfg = Debug|x64
+		{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}.Debug|x64.Build.0 = Debug|x64
+		{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}.Release|x64.ActiveCfg = Release|x64
+		{F32DD52C-3406-4B8E-BFFC-5E2FB18D652B}.Release|x64.Build.0 = Release|x64
 		{4F22D447-EDC6-4766-A750-A5781276040A}.Debug|x64.ActiveCfg = Debug|x64
 		{4F22D447-EDC6-4766-A750-A5781276040A}.Debug|x64.Build.0 = Debug|x64
 		{4F22D447-EDC6-4766-A750-A5781276040A}.Release|x64.ActiveCfg = Release|x64
