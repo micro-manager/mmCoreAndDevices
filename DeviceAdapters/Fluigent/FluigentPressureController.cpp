@@ -24,24 +24,22 @@
 //
 //LAST UPDATE:    08.04.2025 LK
 
+#include "FluigentPressureController.h"
+
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include "ModuleInterface.h"
+
 #include <string>
-#include <map>
-#include <stdint.h>
-#include <future>
+#include <vector>
 
 #include "fgt_SDK.h"
-#include "FluigentPressureController.h"
 
 const char* g_FluigentChannelName = "FluigentChannel";
 const char* g_FluigentHubName = "FluigentHub";
 const char* g_Calibrate = "Calibrate";
 const char* g_Imposed = "Imposed Pressure";
 const char* g_Measured = "Measured Pressure";
-
-using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  MMDevice API
@@ -65,7 +63,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     }
     if (strncmp(deviceName, g_FluigentChannelName, strlen(g_FluigentChannelName)) == 0)
     {
-        int idx = stoi(((string)deviceName).substr(strlen(g_FluigentChannelName)));
+        int idx = stoi(((std::string)deviceName).substr(strlen(g_FluigentChannelName)));
         return new FluigentChannel(idx);
     }
     return 0; // If an unexpected name is provided, return nothing
@@ -104,7 +102,7 @@ FluigentHub::~FluigentHub()
 void FluigentHub::GetName(char* name) const
 {
     // Return the name used to refer to this device adapter
-    string deviceName = g_FluigentHubName;
+    std::string deviceName = g_FluigentHubName;
     CDeviceUtils::CopyLimitedString(name, g_FluigentHubName);
 }
 
@@ -140,7 +138,7 @@ int FluigentHub::Initialize()
             SNs_[i] = 0;
         }
     }
-    LogMessage("Number of devices detected: " + to_string(nDevicesDetected));
+    LogMessage("Number of devices detected: " + std::to_string(nDevicesDetected));
 
     // Initialize pressure controllers
     errorCode_ = fgt_initEx(SNs_);
@@ -153,16 +151,16 @@ int FluigentHub::Initialize()
     unsigned char nChannelsTemp;
     errorCode_ = fgt_get_pressureChannelCount(&nChannelsTemp);
     nChannels_ = (int)nChannelsTemp;
-    LogMessage("Number of channels detected: " + to_string(nChannels_));
+    LogMessage("Number of channels detected: " + std::to_string(nChannels_));
 
     // Get channel information
     fgt_get_pressureChannelsInfo(channelInfo_);
 
     // Create calibration property
-    vector<string> allowedNames = { "All", "None" };
+    std::vector<std::string> allowedNames = { "All", "None" };
     for (size_t i = 0; i < nChannels_; i++) {
         if (channelInfo_[i].InstrType != fgt_INSTRUMENT_TYPE::None) {
-            allowedNames.push_back(to_string(i));
+            allowedNames.push_back(std::to_string(i));
         }
     }
     CPropertyAction* pAct = new CPropertyAction(this, &FluigentHub::OnCalibrate);
@@ -251,13 +249,13 @@ FluigentChannel::FluigentChannel(int idx) :
 void FluigentChannel::GetName(char* name) const
 {
     // Return the name used to refer to this device adapter
-    CDeviceUtils::CopyLimitedString(name, (g_FluigentChannelName + to_string(idx_)).c_str());
+    CDeviceUtils::CopyLimitedString(name, (g_FluigentChannelName + std::to_string(idx_)).c_str());
 }
 
 int FluigentChannel::Initialize()
 {
     // Name
-    int ret = CreateStringProperty(MM::g_Keyword_Name, (g_FluigentChannelName + to_string(idx_)).c_str(), true);
+    int ret = CreateStringProperty(MM::g_Keyword_Name, (g_FluigentChannelName + std::to_string(idx_)).c_str(), true);
     if (DEVICE_OK != ret)
         return ret;
 
