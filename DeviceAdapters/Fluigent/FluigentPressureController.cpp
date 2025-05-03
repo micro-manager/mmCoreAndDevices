@@ -57,13 +57,15 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     { 
         return 0; // Trying to create nothing, return nothing
     }
-    if (strcmp(deviceName, g_FluigentHubName) == 0)
+    const std::string name(deviceName);
+    if (name == g_FluigentHubName)
     {
         return new FluigentHub(); // Create Hub
     }
-    if (strncmp(deviceName, g_FluigentChannelName, strlen(g_FluigentChannelName)) == 0)
+    const std::size_t chanPrefixLen = std::strlen(g_FluigentChannelName);
+    if (name.substr(0, chanPrefixLen) == g_FluigentChannelName)
     {
-        int idx = stoi(((std::string)deviceName).substr(strlen(g_FluigentChannelName)));
+        int idx = std::stoi(name.substr(chanPrefixLen));
         return new FluigentChannel(idx);
     }
     return 0; // If an unexpected name is provided, return nothing
