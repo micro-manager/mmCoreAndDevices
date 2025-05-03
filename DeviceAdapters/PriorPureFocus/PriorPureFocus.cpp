@@ -121,21 +121,30 @@ int CPureFocus::Initialize()
       return ret;
 
    // Check if we're talking to the right device
-   ret = GetSerialAnswer(port_.c_str(), "\r", dateString_);
+   std::string signature;
+   ret = GetSerialAnswer(port_.c_str(), "\r", signature);
    if (ret != DEVICE_OK)
       return ret;
 
-   if (dateString_.length() < 6 || dateString_.substr(0, 5) != "Prior") 
+   if (signature.length() < 6 || signature.substr(0, 5) != "Prior")
    {
       return ERR_DEVICE_NOT_FOUND;
    }
 
+   ret = GetSerialAnswer(port_.c_str(), "\r", dateString_);
+   if (ret != DEVICE_OK)
+      return ret;
    // this relies on Prior not changing their date_version string format
-   size_t pos6 = findNthChar(dateString_, ' ', 6);
-   size_t pos7 = findNthChar(dateString_, ' ', 7);
-   size_t pos8 = findNthChar(dateString_, ' ', 8);
-   version_ = dateString_.substr(pos6, pos7 - pos6);
-   date_ = dateString_.substr(pos8);
+   size_t pos1 = findNthChar(dateString_, ' ', 1);
+   size_t pos2 = findNthChar(dateString_, ' ', 2);
+   size_t pos3 = findNthChar(dateString_, ' ', 3);
+   if (pos3 != std::string::npos) {
+      version_ = dateString_.substr(pos1 + 1, pos2 - pos1);
+      date_ = dateString_.substr(pos3 + 1);
+   }
+   else {
+      return ERR_DEVICE_NOT_FOUND;
+   }
 
 
    // Status
@@ -367,6 +376,8 @@ int CPureFocus::IncrementalFocus()
 int CPureFocus::GetOffset(double& offset)
 {
    MMThreadGuard guard(lock_);
+   offset = 3.6;
+   /*
    int ret = SendSerialCommand(port_.c_str(), "OFFSET", "\r");
    if (ret != DEVICE_OK)
       return ret;
@@ -383,6 +394,7 @@ int CPureFocus::GetOffset(double& offset)
    catch (std::exception&) {
       return ERR_UNEXPECTED_RESPONSE;
    }
+   */
 
    return DEVICE_OK;
 }
@@ -390,6 +402,7 @@ int CPureFocus::GetOffset(double& offset)
 int CPureFocus::SetOffset(double offset)
 {
    MMThreadGuard guard(lock_);
+   /*
    ostringstream cmd;
    cmd << "OFFSET," << offset; // Set offset command with parameter
    int ret = SendSerialCommand(port_.c_str(), cmd.str().c_str(), "\r");
@@ -404,6 +417,7 @@ int CPureFocus::SetOffset(double offset)
 
    // Verify the response indicates success (depends on actual device protocol)
    // For some devices, any response indicates success, for others you may need to parse a specific value
+   */
 
    return DEVICE_OK;
 }
@@ -836,7 +850,8 @@ size_t CPureFocus::findNthChar(const std::string& str, char targetChar, int n) {
    size_t pos = 0;
    for (int i = 0; i < n; i++) {
       pos = str.find(targetChar, pos + (i > 0));
-      if (pos == std::string::npos) return pos;
+      if (pos == std::string::npos) 
+         return pos;
    }
    return pos;
 }
