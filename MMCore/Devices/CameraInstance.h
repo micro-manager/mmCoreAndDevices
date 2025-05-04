@@ -20,6 +20,8 @@
 #pragma once
 
 #include "DeviceInstanceBase.h"
+#include <atomic>
+#include "../FrameBuffer.h"
 
 
 class CameraInstance : public DeviceInstanceBase<MM::Camera>
@@ -82,4 +84,20 @@ public:
    int ClearExposureSequence();
    int AddToExposureSequence(double exposureTime_ms);
    int SendExposureSequence() const;
+
+   /**
+    * Checks if the camera is currently snapping an image.
+    * Thread-safe method that can be called from any thread.
+    * @return true if the camera is currently snapping an image, false otherwise
+    */
+   bool IsSnapping() const;
+   void StoreSnappedImage(const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth);
+
+private:
+   // Atomic flag to track if the camera is currently snapping an image
+   std::atomic<bool> isSnapping_{false};
+   
+   // Frame buffer to store captured images
+   mm::FrameBuffer snappedImage_;
+   std::atomic<int> multiChannelImageCounter_{0};
 };
