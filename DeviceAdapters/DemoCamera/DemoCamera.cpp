@@ -3776,20 +3776,15 @@ void CDemoXYStage::CommitCurrentIntermediatePosition_(const MM::MMTime& now)
    {
       // freeze where we *are* now
       ComputeIntermediatePosition(now, posX_um_, posY_um_);
+      (void)OnXYStagePositionChanged(posX_um_, posY_um_);
    }
-   // No active motion → posX/Y already hold the last settled values
-
    // Drop the timer so Busy() instantly goes idle
    delete timeOutTimer_;
    timeOutTimer_ = nullptr;
-
-   // Core listeners expect a position‑changed notification
-   (void)OnXYStagePositionChanged(posX_um_, posY_um_);
 }
 
 int CDemoXYStage::Stop()
 {
-   MMThreadGuard g(this->stopLock_);
    MM::MMTime now = GetCurrentMMTime();
    CommitCurrentIntermediatePosition_(now);
    return DEVICE_OK;

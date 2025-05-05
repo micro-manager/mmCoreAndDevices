@@ -597,7 +597,6 @@ private:
    bool initialized_;
    double lowerLimit_;
    double upperLimit_;
-   MMThreadLock stopLock_;
 
    void CommitCurrentIntermediatePosition_(const MM::MMTime& now);
    void ComputeIntermediatePosition(const MM::MMTime& currentTime,
