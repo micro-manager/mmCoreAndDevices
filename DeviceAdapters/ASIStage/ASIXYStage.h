@@ -89,6 +89,8 @@ private:
 	int OnVectorY(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisletterY_); }
 
 
+	std::string axisletterX_;
+	std::string axisletterY_;
 	double stepSizeXUm_;
 	double stepSizeYUm_;
 	double maxSpeed_;
@@ -102,6 +104,8 @@ private:
 	bool stopSignal_;
 	bool serialOnlySendChanged_; // if true the serial command is only sent when it has changed
 	std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
+	bool advancedPropsEnabled_;
+	// cached properties
 	long acceleration_;
 	long waitCycles_;
 	double speed_;
@@ -109,9 +113,6 @@ private:
 	double error_;
 	double finishError_;
 	double overShoot_;
-	bool advancedPropsEnabled_;
-	std::string axisletterX_;
-	std::string axisletterY_;
 };
 
 #endif // ASIXYSTAGE_H

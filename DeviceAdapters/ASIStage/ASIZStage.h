@@ -78,7 +78,7 @@ private:
 	int GetSpeed(double& speed);
 	int GetMaxSpeed(char* maxSpeedStr);
 	int OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct);
-	bool HasRingBuffer();
+	bool HasRingBuffer() const;
 	int GetControllerInfo();
 	bool HasCommand(std::string command);
 	int OnVector(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -99,6 +99,7 @@ private:
 	double linearSequenceIntervalUm_;
 	long linearSequenceLength_;
 	long linearSequenceTimeoutMs_;
+	// cached properties
 	double speed_;
 	long waitCycles_;
 	double backlash_;
