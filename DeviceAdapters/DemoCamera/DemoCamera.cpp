@@ -3592,7 +3592,6 @@ CXYStageBase<CDemoXYStage>(),
 stepSize_um_(0.015),
 posX_um_(0.0),
 posY_um_(0.0),
-busy_(false),
 timeOutTimer_(0),
 velocity_(10.0), // in mm per second (= um/ms)
 initialized_(false),
@@ -3769,6 +3768,31 @@ void CDemoXYStage::ComputeIntermediatePosition(
       fraction = 1.0;
    currentPosX = startPosX_um_ + fraction * (targetPosX_um_ - startPosX_um_);
    currentPosY = startPosY_um_ + fraction * (targetPosY_um_ - startPosY_um_);
+}
+
+void CDemoXYStage::CommitCurrentIntermediatePosition_(const MM::MMTime& now)
+{
+   if (timeOutTimer_ && !timeOutTimer_->expired(now))
+   {
+      // freeze where we *are* now
+      ComputeIntermediatePosition(now, posX_um_, posY_um_);
+   }
+   // No active motion → posX/Y already hold the last settled values
+
+   // Drop the timer so Busy() instantly goes idle
+   delete timeOutTimer_;
+   timeOutTimer_ = nullptr;
+
+   // Core listeners expect a position‑changed notification
+   (void)OnXYStagePositionChanged(posX_um_, posY_um_);
+}
+
+int CDemoXYStage::Stop()
+{
+   MMThreadGuard g(this->stopLock_);
+   MM::MMTime now = GetCurrentMMTime();
+   CommitCurrentIntermediatePosition_(now);
+   return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

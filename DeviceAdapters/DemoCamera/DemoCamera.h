@@ -592,13 +592,14 @@ private:
    double targetPosX_um_, targetPosY_um_;
    MM::MMTime moveStartTime_;     // from GetCurrentMMTime()
    long moveDuration_ms_;         // duration of current move in milliseconds
-   bool busy_;
    MM::TimeoutMs* timeOutTimer_;
    double velocity_;
    bool initialized_;
    double lowerLimit_;
    double upperLimit_;
+   MMThreadLock stopLock_;
 
+   void CommitCurrentIntermediatePosition_(const MM::MMTime& now);
    void ComputeIntermediatePosition(const MM::MMTime& currentTime,
       double& currentPosX,
       double& currentPosY);
