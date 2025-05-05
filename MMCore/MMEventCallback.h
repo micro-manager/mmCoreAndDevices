@@ -50,9 +50,15 @@ public:
       std::cout << "onConfigGroupChanged() " << groupName << " " << newConfigName << '\n';
    }
 
+   /**
+    * \brief Called when the system configuration has changed.
+    * 
+    * "Changed" includes when a configuration was unloaded, for example because
+    * loading a new config file failed.
+    */
    virtual void onSystemConfigurationLoaded()
    {
-      std::cout << "onSystemConfigurationLoaded() \n";
+      std::cout << "onSystemConfigurationLoaded()\n";
    }
 
    virtual void onPixelSizeChanged(double newPixelSizeUm)

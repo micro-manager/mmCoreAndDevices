@@ -7345,9 +7345,20 @@ void CMMCore::loadSystemConfiguration(const char* fileName) throw (CMMError)
             err.getFullMsg();
       }
 
+      if (externalCallback_)
+      {
+         // The config has "changed" even in this case.
+         externalCallback_->onSystemConfigurationLoaded();
+      }
+
       LOG_INFO(coreLogger_) <<
          "Now rethrowing original error from system configuration loading";
       throw;
+   }
+
+   if (externalCallback_)
+   {
+      externalCallback_->onSystemConfigurationLoaded();
    }
 }
 
@@ -7584,8 +7595,6 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
          }
          catch (CMMError& err)
          {
-            if (externalCallback_)
-               externalCallback_->onSystemConfigurationLoaded();
             std::ostringstream errorText;
             errorText << "Line " << lineCount << ": " << line << '\n';
             errorText << err.getFullMsg() << "\n\n";
@@ -7609,11 +7618,6 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
 
    waitForSystem();
    updateSystemStateCache();
-
-   if (externalCallback_)
-   {
-      externalCallback_->onSystemConfigurationLoaded();
-   }
 }
 
 
