@@ -780,6 +780,8 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
 
 /**
  * Unloads all devices from the core and resets all configuration data.
+ *
+ * This function is not thread safe.
  */
 void CMMCore::unloadAllDevices() throw (CMMError)
 {
@@ -805,9 +807,23 @@ void CMMCore::unloadAllDevices() throw (CMMError)
       LOG_INFO(coreLogger_) << "Did unload all devices";
 
 	   properties_->Refresh();
+
+      // The system config has "changed" (to "(none)").
+      // But don't notify if we will proceed to load a new config.
+      if (externalCallback_ && !isLoadingSystemConfiguration_)
+      {
+         externalCallback_->onSystemConfigurationLoaded();
+      }
    }
    catch (CMMError& err) {
       logError("MMCore::unloadAllDevices", err.getMsg().c_str());
+
+      // The config has "changed" even in this case.
+      if (externalCallback_ && !isLoadingSystemConfiguration_)
+      {
+         externalCallback_->onSystemConfigurationLoaded();
+      }
+
       throw;
    }
 }
@@ -7318,15 +7334,20 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
  * The remaining fields in the line will be used for corresponding command parameters.
  * The number of parameters depends on the actual command used.
  *
+ * This function is not thread-safe.
  */
 void CMMCore::loadSystemConfiguration(const char* fileName) throw (CMMError)
 {
    try
    {
+      isLoadingSystemConfiguration_ = true;
       loadSystemConfigurationImpl(fileName);
+      isLoadingSystemConfiguration_ = false;
    }
    catch (const CMMError&)
    {
+      isLoadingSystemConfiguration_ = false;
+
       // Unload all devices so as not to leave loaded but uninitialized devices
       // (which are prone to cause a crash when accessed) hanging around.
       LOG_INFO(coreLogger_) <<
@@ -7334,8 +7355,7 @@ void CMMCore::loadSystemConfiguration(const char* fileName) throw (CMMError)
 
       try
       {
-         // XXX Ideally, we would try to unload all devices, skipping over any
-         // errors from Shutdown().
+         // Also emits onSystemConfigurationLoaded to indicate config changed:
          unloadAllDevices();
       }
       catch (const CMMError& err)
@@ -7343,12 +7363,6 @@ void CMMCore::loadSystemConfiguration(const char* fileName) throw (CMMError)
          LOG_ERROR(coreLogger_) <<
             "Error occurred while unloading all devices: " <<
             err.getFullMsg();
-      }
-
-      if (externalCallback_)
-      {
-         // The config has "changed" even in this case.
-         externalCallback_->onSystemConfigurationLoaded();
       }
 
       LOG_INFO(coreLogger_) <<

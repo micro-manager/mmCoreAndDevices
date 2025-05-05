@@ -719,6 +719,10 @@ private:
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
 
+   // True while interpreting the config file (but not while rolling back on
+   // failure):
+   bool isLoadingSystemConfiguration_ = false;
+
 private:
    void InitializeErrorMessages();
    void CreateCoreProperties();
