@@ -223,14 +223,14 @@ LoadedDeviceAdapter::CheckInterfaceVersion() const
    }
 
    if (moduleInterfaceVersion != MODULE_INTERFACE_VERSION)
-      throw CMMError("Incompatible module interface version (required = " +
+      throw CMMError("Incompatible module interface version (MMCore requires " +
             ToString(MODULE_INTERFACE_VERSION) +
-            "; found = " + ToString(moduleInterfaceVersion) + ")");
+            "; device adapter has " + ToString(moduleInterfaceVersion) + ")");
 
    if (deviceInterfaceVersion != DEVICE_INTERFACE_VERSION)
-      throw CMMError("Incompatible device interface version (required = " +
+      throw CMMError("Incompatible device interface version (MMCore requires " +
             ToString(DEVICE_INTERFACE_VERSION) +
-            "; found = " + ToString(deviceInterfaceVersion) + ")");
+            "; device adapter has " + ToString(deviceInterfaceVersion) + ")");
 }
 
 
