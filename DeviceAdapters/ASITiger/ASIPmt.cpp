@@ -46,7 +46,9 @@ CPMT::CPMT(const char* name) :
    ASIPeripheralBase< ::CSignalIOBase, CPMT >(name),
    channel_(1),
    channelAxisChar_('X'), 
-   axisLetter_(g_EmptyAxisLetterStr)
+   axisLetter_(g_EmptyAxisLetterStr),
+   gain_(0),
+   avg_length_(0)
 {
    //Figure out what channel we are on
    if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
@@ -263,18 +265,15 @@ int CPMT::OnOverloadReset(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-
 int CPMT::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 //Get and Set PMT Gain

@@ -367,9 +367,9 @@ vector<string> ASIHub::SplitAnswerOnDelim(string delim) const
    return elems;
 }
 
-int ASIHub::GetBuildInfo(const string addressLetter, build_info_type &build)
 // original use is in DetectInstalledDevices addressed to comm card
 // refactored as separate function for use to query other cards, including defines
+int ASIHub::GetBuildInfo(const std::string &addressLetter, FirmwareBuild &build)
 {
    ostringstream command; command.str("");
    command << addressLetter << "BU X";
@@ -386,8 +386,8 @@ int ASIHub::GetBuildInfo(const string addressLetter, build_info_type &build)
    // parse the reply into vectors containing axis types, letters, and card addresses (binary and hex)
    vector<string> vReply = SplitAnswerOnCR();
 
-   // get buildname
-   build.buildname = vReply[0];
+   // get buildName
+   build.buildName = vReply[0];
 
    // get axis letters "Motor Axes:"
    SetLastSerialAnswer(vReply[1]);
@@ -460,14 +460,14 @@ int ASIHub::GetBuildInfo(const string addressLetter, build_info_type &build)
    return DEVICE_OK;
 }
 
-bool ASIHub::IsDefinePresent(const build_info_type build, const string defineToLookFor)
+bool ASIHub::IsDefinePresent(const FirmwareBuild &build, const std::string &defineToLookFor)
 {
    vector<string>::const_iterator it;
    it = find(build.defines.begin(), build.defines.end(), defineToLookFor);
    return (it != build.defines.end());
 }
 
-string ASIHub::GetDefineString(const build_info_type build, const string substringToLookFor)
+std::string ASIHub::GetDefineString(const FirmwareBuild &build, const std::string &substringToLookFor)
 {
    vector<string>::const_iterator it;
    for (it = build.defines.begin(); it != build.defines.end(); ++it)

@@ -258,7 +258,6 @@ int CPLogic::Initialize()
    CreateProperty(g_RefreshPropValsPropertyName, g_NoState, MM::String, false, pAct);
    AddAllowedValue(g_RefreshPropValsPropertyName, g_NoState);
    AddAllowedValue(g_RefreshPropValsPropertyName, g_YesState);
-//   AddAllowedValue(g_RefreshPropValsPropertyName, g_OneTimeState);
 
    // save settings to controller if requested
    pAct = new CPropertyAction (this, &CPLogic::OnSaveCardSettings);
@@ -671,20 +670,13 @@ int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-//      else if (tmpstr.compare(g_OneTimeState))
-//      {
-//         SetProperty(g_RefreshPropValsPropertyName, g_YesState);
-//         SetProperty(g_RefreshPropValsPropertyName, g_NoState);
-//      }
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 int CPLogic::RefreshEditCellPropertyValues()
@@ -827,7 +819,7 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       std::string tmpstr;
       pProp->Get(tmpstr);
-      if ((tmpstr.compare(g_YesState) == 0) && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
+      if (tmpstr == g_YesState && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
       {
          CPropertyActionEx* pActEx;
          char propName[MM::MaxStrLength];

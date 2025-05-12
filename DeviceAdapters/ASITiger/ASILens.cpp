@@ -143,7 +143,6 @@ int CLens::Initialize()
    AddAllowedValue(g_LensModePropertyName, g_TLCMode_0);
    AddAllowedValue(g_LensModePropertyName, g_TLCMode_1);
 
-
    // Motor enable/disable (MC)
    pAct = new CPropertyAction (this, &CLens::OnMotorControl);
    CreateProperty(g_MotorControlPropertyName, g_OnState, MM::String, false, pAct);
@@ -208,7 +207,6 @@ int CLens::Initialize()
    AddAllowedValue(g_AxisPolarity, g_FocusPolarityASIDefault);
    AddAllowedValue(g_AxisPolarity, g_FocusPolarityMicroManagerDefault);
 
-
    // end now if we are pre-2.8 firmware
    if (!FirmwareVersionAtLeast(2.8))
    {
@@ -220,7 +218,7 @@ int CLens::Initialize()
    // single-axis and SPIM function only supported in Micromanager with firmware 2.8 and above for simplicity
 
    // get build info so we can add optional properties
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR( hub_->GetBuildInfo(addressChar_, build) );
 
    // add single-axis properties if supported
@@ -331,7 +329,6 @@ int CLens::Initialize()
 
    }
 
-
       //VectorMove
    pAct = new CPropertyAction (this, &CLens::OnVector);
    CreateProperty(g_VectorPropertyName, "0", MM::Float, false, pAct);
@@ -437,8 +434,8 @@ int CLens::SetOrigin()
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
-int CLens::StopStageSequence()
 // disables TTL triggering; doesn't actually stop anything already happening on controller
+int CLens::StopStageSequence()
 {
    ostringstream command; command.str("");
    if (!ttl_trigger_supported_)
@@ -450,8 +447,8 @@ int CLens::StopStageSequence()
    return DEVICE_OK;
 }
 
-int CLens::StartStageSequence()
 // enables TTL triggering; doesn't actually start anything going on controller
+int CLens::StartStageSequence()
 {
    ostringstream command; command.str("");
    if (!ttl_trigger_supported_)
@@ -511,12 +508,10 @@ int CLens::AddToStageSequence(double position)
    return DEVICE_OK;
 }
 
-
-////////////////
 // action handlers
 
-int CLens::OnSaveJoystickSettings()
 // redoes the joystick settings so they can be saved using SS Z
+int CLens::OnSaveJoystickSettings()
 {
    long tmp;
    string tmpstr;
@@ -568,15 +563,13 @@ int CLens::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 int CLens::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -988,10 +981,8 @@ int CLens::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-
-
-int CLens::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
+int CLens::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1214,8 +1205,8 @@ int CLens::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// always read
 int CLens::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
-// get every single time
 {
    ostringstream command; command.str("");
    ostringstream response; response.str("");

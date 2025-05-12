@@ -153,7 +153,7 @@ int CDAC::Initialize()
 
 
    // get build info so we can add optional properties
-	build_info_type build;
+	FirmwareBuild build;
 	RETURN_ON_MM_ERROR(hub_->GetBuildInfo(addressChar_, build));
 
 	// add single-axis properties if supported
@@ -639,23 +639,19 @@ int CDAC::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	string tmpstr;
-	if (eAct == MM::AfterSet) {
+	if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_YesState) == 0)
-			refreshProps_ = true;
-		else
-			refreshProps_ = false;
+		refreshProps_ = (tmpstr == g_YesState) ? true : false;
 	}
 	return DEVICE_OK;
 }
 
-
-
 ///////////////////////////////////// Single Axis Functions/////////////////////////////
 
-int CDAC::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
+int CDAC::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -878,8 +874,8 @@ int CDAC::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+// always read
 int CDAC::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
-// get every single time
 {
 	ostringstream command; command.str("");
 	ostringstream response; response.str("");

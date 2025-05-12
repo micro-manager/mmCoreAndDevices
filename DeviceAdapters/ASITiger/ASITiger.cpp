@@ -40,13 +40,8 @@
 #include "ASILens.h"
 #include "ASIDac.h"
 #include "ASIDacXYStage.h"
-#include <cstdio>
-#include <string>
 #include "MMDevice.h"
 #include "DeviceBase.h"
-#include <iostream>
-#include <sstream>
-#include <vector>
 
 
 // TODO add in support for other devices, each time modifying these places
@@ -64,86 +59,81 @@ MODULE_API void InitializeModuleData()
     RegisterDevice(g_TigerCommHubName, MM::HubDevice, g_TigerCommHubDescription);
 }
 
-
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
-    std::string deviceStr = deviceName;
-    if (deviceName == 0)
+    if (deviceName == nullptr)
     {
-        return 0;
+        return nullptr;
     }
-    else if (strcmp(deviceName, g_TigerCommHubName) == 0)
+
+    const std::string name = deviceName;
+
+    if (name == g_TigerCommHubName)
     {
-        return new CTigerCommHub;
+        return new CTigerCommHub();
     }
-    else if (deviceStr.compare(0, strlen(g_XYStageDeviceName), (std::string)g_XYStageDeviceName) == 0)
+    else if (name == g_XYStageDeviceName)
     {
         return new CXYStage(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_ZStageDeviceName), (std::string)g_ZStageDeviceName) == 0)
+    else if (name == g_ZStageDeviceName)
     {
         return new CZStage(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_FSliderDeviceName), (std::string)g_FSliderDeviceName) == 0)
+    else if (name == g_FSliderDeviceName)
     {
         return new CFSlider(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_TurretDeviceName), (std::string)g_TurretDeviceName) == 0)
+    else if (name == g_TurretDeviceName)
     {
         return new CTurret(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_PortSwitchDeviceName), (std::string)g_PortSwitchDeviceName) == 0)
+    else if (name == g_PortSwitchDeviceName)
     {
         return new CPortSwitch(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_FWheelDeviceName), (std::string)g_FWheelDeviceName) == 0)
+    else if (name == g_FWheelDeviceName)
     {
         return new CFWheel(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_ScannerDeviceName), (std::string)g_ScannerDeviceName) == 0)
+    else if (name == g_ScannerDeviceName)
     {
         return new CScanner(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_MMirrorDeviceName), (std::string)g_MMirrorDeviceName) == 0)
-    {
-        return new CScanner(deviceName);  // this for compatibility with old config files
-    }
-    else if (deviceStr.compare(0, strlen(g_PiezoDeviceName), (std::string)g_PiezoDeviceName) == 0)
+    else if (name == g_PiezoDeviceName)
     {
         return new CPiezo(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_CRISPDeviceName), (std::string)g_CRISPDeviceName) == 0)
+    else if (name == g_CRISPDeviceName)
     {
         return new CCRISP(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_LEDDeviceName), (std::string)g_LEDDeviceName) == 0)
+    else if (name == g_LEDDeviceName)
     {
         return new CLED(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_PLogicDeviceName), (std::string)g_PLogicDeviceName) == 0)
+    else if (name == g_PLogicDeviceName)
     {
         return new CPLogic(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_PMTDeviceName), (std::string)g_PMTDeviceName) == 0)
+    else if (name == g_PMTDeviceName)
     {
         return new CPMT(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_LensDeviceName), (std::string)g_LensDeviceName) == 0)
+    else if (name == g_LensDeviceName)
     {
         return new CLens(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_DacXYStageDeviceName), (std::string)g_DacXYStageDeviceName) == 0)
+    else if (name == g_DacXYStageDeviceName)
     {
         return new CDACXYStage(deviceName);
     }
-    else if (deviceStr.compare(0, strlen(g_DacDeviceName), (std::string)g_DacDeviceName) == 0)
+    else if (name == g_DacDeviceName)
     {
         return new CDAC(deviceName);
     }
-    else
-    {
-        return 0;
-    }
+
+    return nullptr;
 }
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)

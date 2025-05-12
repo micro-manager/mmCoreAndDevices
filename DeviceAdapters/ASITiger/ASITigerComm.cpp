@@ -91,7 +91,7 @@ int CTigerCommHub::Initialize()
    RETURN_ON_MM_ERROR ( CreateProperty(g_SerialComPortPropertyName, port_.c_str(), MM::String, true) );
 
    // get build info for axis letters
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR ( GetBuildInfo("", build) );
    command.str("");
    for (unsigned int i=0; i<build.numAxes; ++i)
@@ -182,11 +182,13 @@ int CTigerCommHub::DetectInstalledDevices()
    ClearInstalledDevices();
    InitializeModuleData();
 
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR ( GetBuildInfo("", build) );
 
-   if (build.buildname.compare("TIGER_COMM") != 0)
-      return ERR_UNRECOGNIZED_ANSWER;
+   if (build.buildName != "TIGER_COMM")
+   {
+       return ERR_UNRECOGNIZED_ANSWER;
+   }
 
    // go through the Axis Type reply one at a time to assign the correct MM device type
    // these calls to AddAvailableDeviceName seem to be different than those in InitializeModuleData

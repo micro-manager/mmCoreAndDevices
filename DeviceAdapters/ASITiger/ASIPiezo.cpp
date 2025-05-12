@@ -271,7 +271,7 @@ int CPiezo::Initialize()
    UpdateProperty(g_RunPiezoCalibrationPropertyName);
 
    // get build info so we can add optional properties
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR( hub_->GetBuildInfo(addressChar_, build) );
 
    // add SPIM properties if supported
@@ -673,15 +673,13 @@ int CPiezo::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 int CPiezo::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)

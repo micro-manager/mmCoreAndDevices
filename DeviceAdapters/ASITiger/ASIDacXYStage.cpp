@@ -199,7 +199,7 @@ int CDACXYStage::Initialize()
 	UpdateProperty(g_JoystickEnabledPropertyName);
 
 	// get build info so we can add optional properties
-	build_info_type build;
+	FirmwareBuild build;
 	RETURN_ON_MM_ERROR(hub_->GetBuildInfo(addressChar_, build));
 
 	// add single-axis properties if supported
@@ -576,18 +576,11 @@ int CDACXYStage::OnSaveJoystickSettings()
 
 int CDACXYStage::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	std::string tmpstr;
 	if (eAct == MM::AfterSet)
 	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_YesState) == 0)
-		{
-			refreshProps_ = true;
-		}
-		else
-		{
-			refreshProps_ = false;
-		}
+		refreshProps_ = (tmpstr == g_YesState) ? true : false;
 	}
 	return DEVICE_OK;
 }

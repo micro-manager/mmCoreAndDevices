@@ -88,8 +88,8 @@ public:
       { return QueryCommandVerify(command.c_str(), expectedReplyPrefix.c_str(), replyTerminator.c_str(), delayMs); }
 
    // accessing serial commands and answers
-   string LastSerialAnswer() const { return serialAnswer_; } // use with caution!; crashes to access something that doesn't exist!
-   string LastSerialCommand() const { return serialCommand_; }
+   std::string LastSerialAnswer() const { return serialAnswer_; } // use with caution!; crashes to access something that doesn't exist!
+   std::string LastSerialCommand() const { return serialCommand_; }
    char LastSerialAnswerChar() const { return serialAnswer_.back(); }
    void SetLastSerialAnswer(std::string s) { serialAnswer_ = s; }  // used to parse subsets of full answer for commands like PZINFO using "Split" functions
 
@@ -117,19 +117,19 @@ public:
    std::vector<std::string> SplitAnswerOnSpace() const { return SplitAnswerOnDelim(" "); }
 
    // function to grab all the build info from BU X command
-   int GetBuildInfo(const std::string addressLetter, build_info_type &build);
+   int GetBuildInfo(const std::string &addressLetter, FirmwareBuild &build);
 
    // look to see if particular define is present
-   bool IsDefinePresent(const build_info_type build, const std::string defineToLookFor);
+   bool IsDefinePresent(const FirmwareBuild &build, const std::string &defineToLookFor);
 
    // get define string from substring (e.g. the RING BUFFER define has the # of positions)
-   std::string GetDefineString(const build_info_type build, const std::string substringToLookFor);
+   std::string GetDefineString(const FirmwareBuild &build, const std::string &substringToLookFor);
 
-   void RegisterPeripheral(const std::string deviceLabel, const std::string addressChar) {
+   void RegisterPeripheral(const std::string &deviceLabel, const std::string &addressChar) {
       deviceMap_[deviceLabel] = addressChar;  // add device to lookup table
    }
 
-   void UnRegisterPeripheral(const std::string deviceLabel) {
+   void UnRegisterPeripheral(const std::string &deviceLabel) {
       deviceMap_.erase(deviceLabel);  // remove device from lookup table
    }
 

@@ -118,7 +118,6 @@ const char* const g_PortSwitchDeviceName =  "PortSwitch";
 const char* const g_TurretDeviceName =  "Turret";
 const char* const g_FWheelDeviceName =  "FilterWheel";
 const char* const g_ScannerDeviceName =  "Scanner";
-const char* const g_MMirrorDeviceName = "MicroMirror";  // deprecated
 const char* const g_PiezoDeviceName = "PiezoStage";
 const char* const g_CRISPDeviceName = "CRISPAFocus";
 const char* const g_LEDDeviceName = "LED";
@@ -674,7 +673,6 @@ const char* const g_OnState = "On";
 // yes/no control settings
 const char* const g_YesState = "Yes";
 const char* const g_NoState = "No";
-const char* const g_OneTimeState = "One time";
 const char* const g_ArmedState = "Armed";
 // shutter states
 const char* const g_OpenState = "Open";
@@ -782,9 +780,9 @@ const char* const g_DACMicronsPerMvXPropertyName = "MicronsPerMillivoltX"; // pr
 const char* const g_DACMicronsPerMvYPropertyName = "MicronsPerMillivoltY"; // pre-init property
 
 // The firmware build information parsed from the "BU X" command
-struct build_info_type
+struct FirmwareBuild
 {
-   std::string buildname;
+   std::string buildName;
    unsigned int numAxes = 0;
    std::vector<char> vAxesLetter;
    std::vector<char> vAxesType;

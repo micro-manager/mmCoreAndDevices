@@ -273,7 +273,7 @@ int CZStage::Initialize()
    UpdateProperty(g_AxisPolarity);
 
    // get build info so we can add optional properties
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR( hub_->GetBuildInfo(addressChar_, build) );
 
    // populate speedTruth_, which is whether the controller will tell us the actual speed
@@ -626,17 +626,15 @@ int CZStage::AddToStageSequence(double position)
 
 int CZStage::Move(double velocity)
 {
-ostringstream command; command.str("");
-command << "VE " << axisLetter_ << "=" << velocity;
-return hub_->QueryCommandVerify(command.str(), ":A") ;
-
+    std::ostringstream command;
+    command << "VE " << axisLetter_ << "=" << velocity;
+    return hub_->QueryCommandVerify(command.str(), ":A");
 }
 
-////////////////
 // action handlers
 
-int CZStage::OnSaveJoystickSettings()
 // redoes the joystick settings so they can be saved using SS Z
+int CZStage::OnSaveJoystickSettings()
 {
    long tmp;
    string tmpstr;
@@ -688,29 +686,28 @@ int CZStage::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
-int CZStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
 // these parameters exposed with some hurdle to user: B, OS, AA, AZ, KP, KI, KD, AZ
+int CZStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
       return DEVICE_OK; // do nothing
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if ((tmpstr.compare(g_YesState) == 0) && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
+      if (tmpstr == g_YesState && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
       {
          CPropertyAction* pAct;
          advancedPropsEnabled_ = true;
