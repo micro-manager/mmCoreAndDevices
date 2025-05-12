@@ -225,17 +225,17 @@ int CClocked::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_OK;
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'Y';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
-      else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
+      else if (tmpstr == g_SaveSettingsZJoystick)
       {
          command << 'Z';
          // do save joystick settings first
@@ -278,17 +278,17 @@ int CClocked::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_JSCode_0) == 0)
+      if (tmpstr == g_JSCode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_JSCode_1) == 0)
+      else if (tmpstr == g_JSCode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_JSCode_2) == 0)
+      else if (tmpstr == g_JSCode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_JSCode_3) == 0)
+      else if (tmpstr == g_JSCode_3)
          tmp = 3;
-      else if (tmpstr.compare(g_JSCode_22) == 0)
+      else if (tmpstr == g_JSCode_22)
          tmp = 22;
-      else if (tmpstr.compare(g_JSCode_23) == 0)
+      else if (tmpstr == g_JSCode_23)
          tmp = 23;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;

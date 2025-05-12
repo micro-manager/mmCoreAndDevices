@@ -464,25 +464,25 @@ int CPLogic::OnPLogicMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    } else if (eAct == MM::AfterSet) {
        std::string tmpstr;
        pProp->Get(tmpstr);
-       if (tmpstr.compare(g_PLogicModediSPIMShutter) == 0)
+       if (tmpstr == g_PLogicModediSPIMShutter)
        {
            useAsdiSPIMShutter_ = true;
            useAs4ChShutter_ = true;
            useAs7ChShutter_ = false;
        }
-       else if (tmpstr.compare(g_PLogicMode4ChShutter) == 0)
+       else if (tmpstr == g_PLogicMode4ChShutter)
        {
            useAsdiSPIMShutter_ = false;
            useAs4ChShutter_ = true;
            useAs7ChShutter_ = false;
        }
-       else if (tmpstr.compare(g_PLogicMode7ChShutter) == 0)
+       else if (tmpstr == g_PLogicMode7ChShutter)
        {
            useAsdiSPIMShutter_ = false;
            useAs4ChShutter_ = false;
            useAs7ChShutter_ = true;
        }
-       else if (tmpstr.compare(g_PLogicMode7ChTTLShutter) == 0)
+       else if (tmpstr == g_PLogicMode7ChTTLShutter)
        {
            useAsdiSPIMShutter_ = true;
            useAs4ChShutter_ = false;
@@ -652,15 +652,15 @@ int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::AfterSet) {
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
       RETURN_ON_MM_ERROR (hub_->QueryCommandVerify(command.str(), ":A", (long)200));  // note 200ms delay added
       pProp->Set(g_SaveSettingsDone);
@@ -781,7 +781,7 @@ int CPLogic::OnEditCellUpdates(MM::PropertyBase* pProp, MM::ActionType eAct)
    std::string tmpstr;
    if (eAct == MM::AfterSet) {
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          editCellUpdates_ = true;
       else
          editCellUpdates_ = false;
@@ -1197,7 +1197,7 @@ int CPLogic::OnClearAllCellStates(MM::PropertyBase* pProp, MM::ActionType eAct)
    else  if (eAct == MM::AfterSet) {
       std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          command << "! " << axisLetter_;
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );

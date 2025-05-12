@@ -188,22 +188,22 @@ int CLED::UpdateOpenIntensity()
 
 int CLED::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
+   std::string tmpstr;
    ostringstream command; command.str("");
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'Y';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A", (long)200) );  // note 200ms delay added
       pProp->Set(g_SaveSettingsDone);
@@ -262,7 +262,7 @@ int CLED::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       string tmpstr;
       pProp->Get(tmpstr);
-      RETURN_ON_MM_ERROR( SetOpen(tmpstr.compare(g_OpenState) == 0) );
+      RETURN_ON_MM_ERROR(SetOpen(tmpstr == g_OpenState));
    }
    return DEVICE_OK;
 }

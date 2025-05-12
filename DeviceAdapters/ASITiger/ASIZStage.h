@@ -45,7 +45,7 @@ public:
 
    // the step size is the programming unit for dimensions and is integer
    // see http://micro-manager.3463995.n2.nabble.com/what-are-quot-steps-quot-for-stages-td7580724.html
-   double GetStepSize() {return stepSizeUm_;}
+   double GetStepSize() const { return stepSizeUm_; }
    int GetPositionSteps(long& steps);
    int SetPositionSteps(long steps);
    int SetPositionUm(double pos);

@@ -519,31 +519,32 @@ int ASIHub::OnSerialTerminator(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::BeforeGet)
    {
       bool success = 0;
-      if (serialTerminator_.compare(g_SerialTerminator_0_Value) == 0)
+      if (serialTerminator_ == g_SerialTerminator_0_Value)
          success = pProp->Set(g_SerialTerminator_0);
-      else if (serialTerminator_.compare(g_SerialTerminator_1_Value) == 0)
+      else if (serialTerminator_ == g_SerialTerminator_1_Value)
          success = pProp->Set(g_SerialTerminator_1);
-      else if (serialTerminator_.compare(g_SerialTerminator_2_Value) == 0)
+      else if (serialTerminator_ == g_SerialTerminator_2_Value)
          success = pProp->Set(g_SerialTerminator_2);
-      else if (serialTerminator_.compare(g_SerialTerminator_3_Value) == 0)
+      else if (serialTerminator_ == g_SerialTerminator_3_Value)
          success = pProp->Set(g_SerialTerminator_3);
-      else if (serialTerminator_.compare(g_SerialTerminator_4_Value) == 0)
+      else if (serialTerminator_ == g_SerialTerminator_4_Value)
          success = pProp->Set(g_SerialTerminator_4);
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SerialTerminator_0) == 0)
+      if (tmpstr == g_SerialTerminator_0)
          serialTerminator_ = g_SerialTerminator_0_Value;
-      else if (tmpstr.compare(g_SerialTerminator_1) == 0)
+      else if (tmpstr == g_SerialTerminator_1)
          serialTerminator_ = g_SerialTerminator_1_Value;
-      else if (tmpstr.compare(g_SerialTerminator_2) == 0)
+      else if (tmpstr == g_SerialTerminator_2)
          serialTerminator_ = g_SerialTerminator_2_Value;
-      else if (tmpstr.compare(g_SerialTerminator_3) == 0)
+      else if (tmpstr == g_SerialTerminator_3)
          serialTerminator_ = g_SerialTerminator_3_Value;
-      else if (tmpstr.compare(g_SerialTerminator_4) == 0)
+      else if (tmpstr == g_SerialTerminator_4)
          serialTerminator_ = g_SerialTerminator_4_Value;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -656,19 +657,16 @@ int ASIHub::OnSerialCommandRepeatPeriod(MM::PropertyBase* pProp, MM::ActionType 
 
 int ASIHub::OnSerialCommandOnlySendChanged(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
    if (eAct == MM::AfterSet) {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         serialOnlySendChanged_ = true;
-      else
-         serialOnlySendChanged_ = false;
+      serialOnlySendChanged_ = (tmpstr == g_YesState) ? true : false;
    }
    return DEVICE_OK;
 }
 
-string ASIHub::EscapeControlCharacters(const string v)
 // based on similar function in FreeSerialPort.cpp
+std::string ASIHub::EscapeControlCharacters(const std::string v)
 {
    ostringstream mess;  mess.str("");
    for( string::const_iterator ii = v.begin(); ii != v.end(); ++ii)
@@ -687,8 +685,8 @@ string ASIHub::EscapeControlCharacters(const string v)
    return mess.str();
 }
 
-string ASIHub::UnescapeControlCharacters(const string v0)
 // based on similar function in FreeSerialPort.cpp
+std::string ASIHub::UnescapeControlCharacters(const std::string v0)
 {
    // the string input from the GUI can contain escaped control characters, currently these are always preceded with \ (0x5C)
    // and always assumed to be decimal or C style, not hex

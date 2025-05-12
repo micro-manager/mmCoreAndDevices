@@ -304,15 +304,15 @@ int CFWheel::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_OK;
       RETURN_ON_MM_ERROR ( SelectWheel() );
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << "RD";
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << "RR";
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << "RW";
       // these commands elicit an echo response but not one with termination
       RETURN_ON_MM_ERROR ( hub_->QueryCommandUnterminatedResponse(command.str(), 400) );
@@ -322,7 +322,7 @@ int CFWheel::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       pProp->Set(g_SaveSettingsDone);
       // refresh properties if we just restored them
-      if (tmpstr.compare(g_SaveSettingsX) || tmpstr.compare(g_SaveSettingsY)) {
+      if (tmpstr == g_SaveSettingsX || tmpstr == g_SaveSettingsY) {
          ForcePropertyRefresh();
       }
       command.str(""); command << g_SaveSettingsDone;
@@ -372,7 +372,7 @@ int CFWheel::OnSpin(MM::PropertyBase* pProp, MM::ActionType eAct)
       string str;
       pProp->Get(str);
       RETURN_ON_MM_ERROR ( SelectWheel() );
-      if (str.compare(g_OnState) == 0)
+      if (str == g_OnState)
       {
          command << "SF1";
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), "SF1", g_SerialTerminatorFW) );
@@ -490,7 +490,7 @@ int CFWheel::OnLockMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       string str;
       pProp->Get(str);
-      if (str.compare(g_OnState) == 0)
+      if (str == g_OnState)
          command << "LM1";
       else
          command << "LM0";

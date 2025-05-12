@@ -133,7 +133,7 @@ public:
       deviceMap_.erase(deviceLabel);  // remove device from lookup table
    }
 
-   bool UpdatingSharedProperties() { return updatingSharedProperties_; }
+   bool UpdatingSharedProperties() const { return updatingSharedProperties_; }
 
    int UpdateSharedProperties(std::string addressChar, std::string propName, std::string value);
 
