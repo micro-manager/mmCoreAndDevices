@@ -58,7 +58,7 @@ bool StateDevice::SupportsDeviceDetection()
 
 MM::DeviceDetectionStatus StateDevice::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int StateDevice::Initialize()

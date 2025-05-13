@@ -59,7 +59,7 @@ bool LED::SupportsDeviceDetection()
 
 MM::DeviceDetectionStatus LED::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int LED::Initialize()

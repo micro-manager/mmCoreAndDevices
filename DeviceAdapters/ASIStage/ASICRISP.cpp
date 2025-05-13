@@ -18,6 +18,7 @@ CRISP::CRISP() :
 	ledIntensity_(0),
 	numAverages_(0),
 	numSkips_(0),
+	calibrationRange_(0),
 	inFocusRange_(0),
 	lockRange_(0),
 	objectiveNA_(0)
@@ -66,7 +67,7 @@ bool CRISP::SupportsDeviceDetection()
 
 MM::DeviceDetectionStatus CRISP::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int CRISP::Initialize()
