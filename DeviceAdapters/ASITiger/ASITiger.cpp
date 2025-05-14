@@ -66,7 +66,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
         return nullptr;
     }
 
-    const std::string name = deviceName;
+    // Example deviceName: "ZStage:Z:32"
+    const std::string device = deviceName;
+    // Extract substring before the first ':'
+    const std::string name = device.substr(0, device.find(':'));
 
     if (name == g_TigerCommHubName)
     {
