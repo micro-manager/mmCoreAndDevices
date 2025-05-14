@@ -268,15 +268,16 @@ int CRISP::Initialize()
 		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
 	}
 
-	// LK M requires 9.2n firmware
+	// LK M requires firmware version 9.2n or higher.
+	// Enable these properties as a group to modify calibration settings.
 	if (versionData_.IsVersionAtLeast(9, 2, 'n'))
 	{
 		pAct = new CPropertyAction(this, &CRISP::OnSetLogAmpAGC);
 		CreateProperty("Set LogAmpAGC (Advanced Users Only)", "0", MM::Integer, false, pAct);
-	}
 
-	pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
-	CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
+		pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
+		CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
+	}
 
 	return DEVICE_OK;
 }
