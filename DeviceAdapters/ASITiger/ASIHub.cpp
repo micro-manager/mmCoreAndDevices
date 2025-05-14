@@ -360,9 +360,9 @@ int ASIHub::GetAnswerCharAtPosition3(char &val)
    return DEVICE_OK;
 }
 
-vector<string> ASIHub::SplitAnswerOnDelim(string delim) const
+std::vector<std::string> ASIHub::SplitAnswerOnDelim(const std::string& delim) const
 {
-   vector<string> elems;
+   std::vector<std::string> elems;
    CDeviceUtils::Tokenize(serialAnswer_, elems, delim);
    return elems;
 }
@@ -480,7 +480,7 @@ std::string ASIHub::GetDefineString(const FirmwareBuild &build, const std::strin
    return "";
 }
 
-int ASIHub::UpdateSharedProperties(string addressChar, string propName, string value) {
+int ASIHub::UpdateSharedProperties(const std::string &addressChar, const std::string &propName, const std::string &value) {
    int ret = DEVICE_OK;
    updatingSharedProperties_ = true;
    for (map<string,string>::iterator it=deviceMap_.begin(); it!=deviceMap_.end(); ++it) {
@@ -666,7 +666,7 @@ int ASIHub::OnSerialCommandOnlySendChanged(MM::PropertyBase* pProp, MM::ActionTy
 }
 
 // based on similar function in FreeSerialPort.cpp
-std::string ASIHub::EscapeControlCharacters(const std::string v)
+std::string ASIHub::EscapeControlCharacters(const std::string &v)
 {
    ostringstream mess;  mess.str("");
    for( string::const_iterator ii = v.begin(); ii != v.end(); ++ii)
@@ -686,7 +686,7 @@ std::string ASIHub::EscapeControlCharacters(const std::string v)
 }
 
 // based on similar function in FreeSerialPort.cpp
-std::string ASIHub::UnescapeControlCharacters(const std::string v0)
+std::string ASIHub::UnescapeControlCharacters(const std::string &v0)
 {
    // the string input from the GUI can contain escaped control characters, currently these are always preceded with \ (0x5C)
    // and always assumed to be decimal or C style, not hex
@@ -764,9 +764,9 @@ std::string ASIHub::UnescapeControlCharacters(const std::string v0)
    return detokenized;
 }
 
-vector<char> ASIHub::ConvertStringVector2CharVector(const vector<string> v)
+std::vector<char> ASIHub::ConvertStringVector2CharVector(const std::vector<std::string> &v)
 {
-   vector<char> result;
+   std::vector<char> result;
    result.reserve(v.size());
    for(unsigned int i=0; i<v.size(); i++) {
       result.push_back(v[i].at(0));
@@ -774,9 +774,9 @@ vector<char> ASIHub::ConvertStringVector2CharVector(const vector<string> v)
    return result;
 }
 
-vector<int> ASIHub::ConvertStringVector2IntVector(const vector<string> v)
+std::vector<int> ASIHub::ConvertStringVector2IntVector(const std::vector<std::string> &v)
 {
-   vector<int> result;
+   std::vector<int> result;
    result.reserve(v.size());
    for(unsigned int i=0; i<v.size(); i++) {
       result.push_back(atoi(v[i].c_str()));

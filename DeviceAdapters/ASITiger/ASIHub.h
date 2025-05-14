@@ -54,9 +54,9 @@ public:
    int QueryCommandUnterminatedResponse(const char *command, const long timeoutMs, unsigned long reply_length);
    int QueryCommandUnterminatedResponse(const char *command, const long timeoutMs) 
    {	   return  QueryCommandUnterminatedResponse(command, timeoutMs,1);   }
-   int QueryCommandUnterminatedResponse(const std::string command, const long timeoutMs)
+   int QueryCommandUnterminatedResponse(const std::string &command, const long timeoutMs)
       { return QueryCommandUnterminatedResponse(command.c_str(), timeoutMs,1); }
-   int QueryCommandUnterminatedResponse(const std::string command, const long timeoutMs, unsigned long reply_length)
+   int QueryCommandUnterminatedResponse(const std::string &command, const long timeoutMs, unsigned long reply_length)
    {   return QueryCommandUnterminatedResponse(command.c_str(), timeoutMs, reply_length);   }
 
    int QueryCommandLongReply(const char *command, const char *replyTerminator);  // all variants call this
@@ -91,7 +91,7 @@ public:
    std::string LastSerialAnswer() const { return serialAnswer_; } // use with caution!; crashes to access something that doesn't exist!
    std::string LastSerialCommand() const { return serialCommand_; }
    char LastSerialAnswerChar() const { return serialAnswer_.back(); }
-   void SetLastSerialAnswer(std::string s) { serialAnswer_ = s; }  // used to parse subsets of full answer for commands like PZINFO using "Split" functions
+   void SetLastSerialAnswer(const std::string &s) { serialAnswer_ = s; }  // used to parse subsets of full answer for commands like PZINFO using "Split" functions
 
    // Interpreting serial response
    int ParseAnswerAfterEquals(double &val);  // finds next number after equals sign and returns as float
@@ -112,7 +112,7 @@ public:
    int GetAnswerCharAtPosition(unsigned int pos, char &val);  // returns the character at specified position, a safer version of LastSerialAnswer().at(pos)
    int GetAnswerCharAtPosition3(char &val);                   // returns the character at position 3, a safer version of LastSerialAnswer().at(3)
 
-   std::vector<std::string> SplitAnswerOnDelim(std::string delim) const;  // splits answer on arbitrary delimeter list (any of included characters will split)
+   std::vector<std::string> SplitAnswerOnDelim(const std::string &delim) const;  // splits answer on arbitrary delimeter list (any of included characters will split)
    std::vector<std::string> SplitAnswerOnCR() const { return SplitAnswerOnDelim("\r"); }
    std::vector<std::string> SplitAnswerOnSpace() const { return SplitAnswerOnDelim(" "); }
 
@@ -135,7 +135,7 @@ public:
 
    bool UpdatingSharedProperties() const { return updatingSharedProperties_; }
 
-   int UpdateSharedProperties(std::string addressChar, std::string propName, std::string value);
+   int UpdateSharedProperties(const std::string &addressChar, const std::string &propName, const std::string &value);
 
    // action/property handlers
    int OnPort                       (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -151,10 +151,10 @@ protected:
 
 private:
 	int ParseErrorReply() const;
-	static std::string EscapeControlCharacters(const std::string v);
-	static std::string UnescapeControlCharacters(const std::string v0);
-	static std::vector<char> ConvertStringVector2CharVector(const std::vector<std::string> v);
-	static std::vector<int> ConvertStringVector2IntVector(const std::vector<std::string> v);
+	static std::string EscapeControlCharacters(const std::string &v);
+	static std::string UnescapeControlCharacters(const std::string &v0);
+	static std::vector<char> ConvertStringVector2CharVector(const std::vector<std::string> &v);
+	static std::vector<int> ConvertStringVector2IntVector(const std::vector<std::string> &v);
 
    std::string serialAnswer_;      // the last answer received from any communication with the controller
    std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
