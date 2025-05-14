@@ -301,7 +301,7 @@ int LED::IsOpen(bool* open)
 			if (answer.substr(2, 1) == "0")
 				*open = false;
 		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.compare(0, 2, ":N") == 0 && answer.length() > 2)
 		{
 			int errNo = atoi(answer.substr(4).c_str());
 			return ERR_OFFSET + errNo;
@@ -357,7 +357,7 @@ int LED::CurrentIntensity(long* intensity)
 	{
 		*intensity = atoi(tok.substr(2).c_str());
 	}
-	else if (tok.substr(0, 2).compare(":N") == 0 && tok.length() > 2)
+	else if (tok.length() > 2 && tok.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(tok.substr(4).c_str());
 		return ERR_OFFSET + errNo;
@@ -370,9 +370,7 @@ int LED::Fire(double)
 	return DEVICE_OK;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int LED::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {

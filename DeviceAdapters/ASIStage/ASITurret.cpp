@@ -42,8 +42,6 @@ int AZ100Turret::Initialize()
 {
 	core_ = GetCoreCallback();
 
-	// 
-
 	CPropertyAction* pAct = new CPropertyAction(this, &AZ100Turret::OnState);
 	int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
 	if (ret != DEVICE_OK)
@@ -145,9 +143,7 @@ bool AZ100Turret::Busy()
 	return false;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int AZ100Turret::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {

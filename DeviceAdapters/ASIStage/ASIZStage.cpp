@@ -794,7 +794,7 @@ int ZStage::GetControllerInfo()
     return DEVICE_OK;
 }
 
-bool ZStage::HasCommand(std::string command) {
+bool ZStage::HasCommand(const std::string& command) {
     std::string answer;
     // query the device
     int ret = QueryCommand(command.c_str(), answer);
@@ -817,9 +817,7 @@ bool ZStage::HasCommand(std::string command) {
     return true;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int ZStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1472,8 +1470,8 @@ int ZStage::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ret;
         }
 
-        // if (answer.substr(0,2).compare(":" + axis_) == 0)
-        if (answer.substr(0, 5).compare(":A " + axis_ + "=") == 0)
+        // if (answer.compare(0, 2, ":" + axis_) == 0)
+        if (answer.compare(0, 5, ":A " + axis_ + "=") == 0)
         {
             double speed = 0.0;
             const int code = ParseResponseAfterPosition(answer, 6, 13, speed);
