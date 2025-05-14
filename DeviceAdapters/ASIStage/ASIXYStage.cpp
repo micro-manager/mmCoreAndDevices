@@ -1293,10 +1293,6 @@ int XYStage::OnJSMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return DEVICE_OK;
 		}
-		else if (answer.substr(answer.length(), 1) == "A")
-		{
-			return DEVICE_OK;
-		}
 		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
@@ -1347,10 +1343,6 @@ int XYStage::OnJSFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return DEVICE_OK;
 		}
-		else if (answer.substr(answer.length(), 1) == "A")
-		{
-			return DEVICE_OK;
-		}
 		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
@@ -1396,10 +1388,6 @@ int XYStage::OnJSSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 
 		if (answer.compare(0, 2, ":A") == 0)
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(answer.length(), 1) == "A")
 		{
 			return DEVICE_OK;
 		}
