@@ -136,7 +136,7 @@ int Magnifier::SetMagnification(double mag)
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         return DEVICE_OK;
     }

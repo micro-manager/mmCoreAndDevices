@@ -323,7 +323,7 @@ int XYStage::SetPositionSteps(long x, long y)
 		return ret;
 	}
 
-	if ((answer.substr(0, 2).compare(":A") == 0) || (answer.substr(1, 2).compare(":A") == 0))
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
@@ -363,7 +363,7 @@ int XYStage::SetRelativePositionSteps(long x, long y)
 		return ret;
 	}
 
-	if ((answer.substr(0, 2).compare(":A") == 0) || (answer.substr(1, 2).compare(":A") == 0))
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
@@ -425,7 +425,7 @@ int XYStage::SetOrigin()
 		return ret;
 	}
 
-	if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
@@ -444,20 +444,19 @@ void XYStage::Wait()
 
 	// if (stopSignal_) return DEVICE_OK;
 	bool busy = true;
-	const char* command = "/";
-	std::string answer = "";
+	std::string answer;
 
 	// query the device
-	QueryCommand(command, answer);
+	QueryCommand("/", answer);
 	// if (ret != DEVICE_OK)
 	//     return ret;
 
 	// block/wait for acknowledge, or until we time out;
-	if (answer.substr(0, 1) == "B")
+	if (answer.compare(0, 1, "B") == 0)
 	{
 		busy = true;
 	}
-	else if (answer.substr(0, 1) == "N")
+	else if (answer.compare(0, 1, "N") == 0)
 	{
 		busy = false;
 	}
@@ -477,15 +476,15 @@ void XYStage::Wait()
 		totaltime += intervalMs;
 
 		// query the device
-		QueryCommand(command, answer);
+		QueryCommand("/", answer);
 		// if (ret != DEVICE_OK)
 		//     return ret;
 
-		if (answer.substr(0, 1) == "B")
+		if (answer.compare(0, 1, "B") == 0)
 		{
 			busy = true;
 		}
-		else if (answer.substr(0, 1) == "N")
+		else if (answer.compare(0, 1, "N") == 0)
 		{
 			busy = false;
 		}
@@ -517,7 +516,7 @@ int XYStage::Home()
 		return ret;
 	}
 
-	if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		// do nothing
 	}
@@ -561,7 +560,7 @@ int XYStage::Calibrate() {
 	if (ret != DEVICE_OK)
 		return ret;
 
-	if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		// do nothing
 	}
@@ -594,7 +593,7 @@ int XYStage::Stop()
 		return ret;
 	}
 
-	if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
@@ -1913,8 +1912,8 @@ int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const
 			return ret;
 		}
 
-		// if (answer.substr(0,2).compare(":" + axisLetter) == 0)
-		if (answer.substr(0, 5).compare(":A " + axisLetter + "=") == 0)
+		// if (answer.compare(0, 2, ":" + axisLetter) == 0)
+		if (answer.compare(0, 5, ":A " + axisLetter + "=") == 0)
 		{
 			double speed = 0.0;
 			const int code = ParseResponseAfterPosition(answer, 6, 13, speed);

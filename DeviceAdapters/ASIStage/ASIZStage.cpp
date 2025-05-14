@@ -327,7 +327,7 @@ int ZStage::SetPositionUm(double pos)
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         this->OnStagePositionChanged(pos);
         return DEVICE_OK;
@@ -397,7 +397,7 @@ int ZStage::SetRelativePositionUm(double d)
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         // we don't know the updated position to call this
         //this->OnStagePositionChanged(pos);
@@ -430,7 +430,7 @@ int ZStage::SetPositionSteps(long pos)
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         return DEVICE_OK;
     }
@@ -474,7 +474,6 @@ int ZStage::GetPositionSteps(long& steps)
 
         steps = (long)zz;
         curSteps_ = (long)steps;
-
         return DEVICE_OK;
     }
     return ERR_UNRECOGNIZED_ANSWER;
@@ -496,7 +495,7 @@ int ZStage::SetOrigin()
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         return DEVICE_OK;
     }
@@ -544,7 +543,7 @@ int ZStage::StartStageSequence()
         {
             return ret;
         }
-        if (answer.substr(0, 2) != ":A" && answer.substr(1, 2) != ":A")
+        if (answer.compare(0, 2, ":A") != 0 || answer.compare(1, 2, ":A") != 0)
         {
             return ERR_UNRECOGNIZED_ANSWER;
         }
@@ -554,7 +553,7 @@ int ZStage::StartStageSequence()
         {
             return ret;
         }
-        if (answer.substr(0, 2) != ":A" && answer.substr(1, 2) != ":A")
+        if (answer.compare(0, 2, ":A") != 0 || answer.compare(1, 2, ":A") != 0)
         {
             return ERR_UNRECOGNIZED_ANSWER;
         }
@@ -572,7 +571,7 @@ int ZStage::StartStageSequence()
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         ret = QueryCommand("TTL X=1", answer); // switches on TTL triggering
         if (ret != DEVICE_OK)
@@ -580,7 +579,7 @@ int ZStage::StartStageSequence()
             return ret;
         }
 
-        if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+        if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
         {
             return DEVICE_OK;
         }
@@ -602,7 +601,7 @@ int ZStage::StopStageSequence()
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         return DEVICE_OK;
     }
@@ -624,7 +623,7 @@ int ZStage::SendStageSequence()
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         for (unsigned i = 0; i < sequence_.size(); i++)
         {
@@ -654,7 +653,7 @@ int ZStage::SendStageSequence()
                 }
 
                 // the answer will also have a :N-1 in it, ignore.
-                if (!(answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0))
+                if (!(answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0))
                 {
                     return ERR_UNRECOGNIZED_ANSWER;
                 }
@@ -681,7 +680,7 @@ int ZStage::ClearStageSequence()
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         return DEVICE_OK;
     }
@@ -778,14 +777,14 @@ int ZStage::GetControllerInfo()
         return ret;
     }
 
-    if (answer.length() > 5 && answer.substr(0, 5) == ":A F=")
+    if (answer.length() > 5 && answer.compare(0, 5, ":A F=") == 0)
     {
         int focusIndex = atoi(answer.substr(5).c_str());
 
         std::ostringstream cmd;
         cmd << "Z2B " << axis_ << "?";
         ret = QueryCommand(cmd.str().c_str(), answer);
-        if (answer.length() > 5 && answer.substr(0, 3) == ":A ")
+        if (answer.length() > 5 && answer.compare(0, 3, ":A ") == 0)
         {
             int axisIndex = atoi(answer.substr(5).c_str());
             supportsLinearSequence_ = (focusIndex == axisIndex);
@@ -794,7 +793,8 @@ int ZStage::GetControllerInfo()
     return DEVICE_OK;
 }
 
-bool ZStage::HasCommand(const std::string& command) {
+bool ZStage::HasCommand(const std::string& command)
+{
     std::string answer;
     // query the device
     int ret = QueryCommand(command.c_str(), answer);
@@ -975,7 +975,7 @@ int ZStage::GetWait(long& waitCycles)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":" + axis_) == 0)
+   if (answer.compare(0, 2, ":" + axis_) == 0)
    {
       return ParseResponseAfterPosition(answer, 3, waitCycles);
    }
@@ -1050,7 +1050,7 @@ int ZStage::GetBacklash(double& backlash)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":" + axis_) == 0)
+   if (answer.compare(0, 2, ":" + axis_) == 0)
    {
       return ParseResponseAfterPosition(answer, 3, 8, backlash);
    }
@@ -1103,7 +1103,7 @@ int ZStage::GetFinishError(double& finishError)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":" + axis_) == 0)
+   if (answer.compare(0, 2, ":" + axis_) == 0)
    {
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
@@ -1170,7 +1170,7 @@ int ZStage::GetAcceleration(long& acceleration)
       return ret;
   }
 
-  if (answer.substr(0, 2).compare(":" + axis_) == 0)
+  if (answer.compare(0, 2, ":" + axis_) == 0)
   {
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
@@ -1280,7 +1280,7 @@ int ZStage::GetError(double& error)
    if (ret != DEVICE_OK)
        return ret;
 
-   if (answer.substr(0, 2).compare(":" + axis_) == 0)
+   if (answer.compare(0, 2, ":" + axis_) == 0)
    {
        double tmp = 0.0;
        const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);

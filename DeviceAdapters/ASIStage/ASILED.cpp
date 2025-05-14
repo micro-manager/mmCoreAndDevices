@@ -228,7 +228,7 @@ int LED::SetOpen(bool open)
 		return ret;
 	}
 
-	if ((answer.substr(0, 2).compare(":A") == 0) || (answer.substr(1, 2).compare(":A") == 0))
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		open_ = open;
 		return DEVICE_OK;
@@ -270,9 +270,9 @@ int LED::IsOpen(bool* open)
 			return ret;
 		}
 
-		if ((answer.substr(0, 2).compare(":A") == 0) || (answer.substr(1, 2).compare(":A") == 0))
+		if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 		{
-			if (answer.substr(2, 1) == "0")
+			if (answer.compare(2, 1, "0") == 0)
 			{
 				*open = false;
 			}
@@ -297,8 +297,8 @@ int LED::IsOpen(bool* open)
 			return ret;
 
 		// Command "LED X?" return "X=0 :A"
-		if (answer.substr(0, 1)[0]==channelAxisChar_) {
-			if (answer.substr(2, 1) == "0")
+		if (answer[0]==channelAxisChar_) {
+			if (answer.compare(2, 1, "0") == 0)
 				*open = false;
 		}
 		else if (answer.compare(0, 2, ":N") == 0 && answer.length() > 2)
@@ -353,7 +353,7 @@ int LED::CurrentIntensity(long* intensity)
 	std::string tok2;
 	is >> tok;
 	is >> tok2;
-	if ((tok2.substr(0, 2).compare(":A") == 0) || (tok2.substr(1, 2).compare(":A") == 0))
+	if (tok2.compare(0, 2, ":A") == 0 || tok2.compare(1, 2, ":A") == 0)
 	{
 		*intensity = atoi(tok.substr(2).c_str());
 	}
