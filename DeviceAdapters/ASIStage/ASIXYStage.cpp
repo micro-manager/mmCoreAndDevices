@@ -296,6 +296,7 @@ bool XYStage::Busy()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
+	// semd status command
 	std::string answer;
 	int ret = QueryCommand("/", answer);
 	if (ret != DEVICE_OK)
@@ -303,22 +304,7 @@ bool XYStage::Busy()
 		return false;
 	}
 
-	if (answer.length() >= 1)
-	{
-		if (answer.substr(0, 1) == "B")
-		{
-			return true;
-		}
-		else if (answer.substr(0, 1) == "N")
-		{
-			return false;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	return false;
+	return !answer.empty() && answer.front() == 'B';
 }
 
 int XYStage::SetPositionSteps(long x, long y)
@@ -327,7 +313,7 @@ int XYStage::SetPositionSteps(long x, long y)
 	ClearPort();
 
 	std::ostringstream command;
-	command << std::fixed << "M " << axisletterX_ << "=" << x / ASISerialUnit_ << " " << axisletterY_ << "=" << y / ASISerialUnit_; // steps are 10th of micros
+	command << std::fixed << "M " << axisletterX_ << "=" << x / ASISerialUnit_ << " " << axisletterY_ << "=" << y / ASISerialUnit_; // steps are 10th of microns
 	std::string answer;
 
 	// query the device
@@ -342,7 +328,7 @@ int XYStage::SetPositionSteps(long x, long y)
 		return DEVICE_OK;
 	}
 	// deal with error later
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(4).c_str());
 		return ERR_OFFSET + errNo;
@@ -382,7 +368,7 @@ int XYStage::SetRelativePositionSteps(long x, long y)
 		return DEVICE_OK;
 	}
 	// deal with error later
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(4).c_str());
 		return ERR_OFFSET + errNo;
@@ -406,7 +392,7 @@ int XYStage::GetPositionSteps(long& x, long& y)
 		return ret;
 	}
 
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
@@ -443,7 +429,7 @@ int XYStage::SetOrigin()
 	{
 		return DEVICE_OK;
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
@@ -535,7 +521,7 @@ int XYStage::Home()
 	{
 		// do nothing
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
@@ -579,7 +565,7 @@ int XYStage::Calibrate() {
 	{
 		// do nothing
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
@@ -612,7 +598,7 @@ int XYStage::Stop()
 	{
 		return DEVICE_OK;
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		if (errNo == -21)
@@ -649,11 +635,11 @@ bool XYStage::hasCommand(std::string command)
 		return false;
 	}
 
-	if (answer.substr(0, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0)
 	{
 		return true;
 	}
-	if (answer.substr(0, 4).compare(":N-1") == 0)
+	if (answer.compare(0, 4, ":N-1") == 0)
 	{
 		return false;
 	}
@@ -662,10 +648,7 @@ bool XYStage::hasCommand(std::string command)
 	return true;
 }
 
-
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int XYStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -735,9 +718,9 @@ int XYStage::OnNrMoveRepetitions(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (ret != DEVICE_OK)
 		   return ret;
 
-		if (answer.substr(0,2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		   return DEVICE_OK;
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.compare(0, 2, ":N") == 0 && answer.length() > 2)
 		{
 		   int errNo = atoi(answer.substr(3).c_str());
 		   return ERR_OFFSET + errNo;
@@ -759,12 +742,12 @@ int XYStage::GetWaitCycles(long& waitCycles)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":X") == 0)
+   if (answer.compare(0, 2, ":X") == 0)
    {
       return ParseResponseAfterPosition(answer, 3, waitCycles);
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -834,12 +817,12 @@ int XYStage::GetBacklash(double& backlash)
       return ret;
    }
 
-   if (answer.substr(0, 2).compare(":X") == 0)
+   if (answer.compare(0, 2, ":X") == 0)
    {
       return ParseResponseAfterPosition(answer, 3, 8, backlash);
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -889,14 +872,14 @@ int XYStage::GetFinishError(double& finishError)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":X") == 0)
+   if (answer.compare(0, 2, ":X") == 0)
    {
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
       finishError = 1000000 * tmp;
       return code;
    }
-   if (answer.substr(0, 2).compare(":A") == 0)
+   if (answer.compare(0, 2, ":A") == 0)
    {
       // Answer is of the form :A X=0.00003
       double tmp = 0.0;
@@ -905,7 +888,7 @@ int XYStage::GetFinishError(double& finishError)
       return code;
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -958,7 +941,7 @@ int XYStage::GetAcceleration(long& acceleration)
       return ret;
    }
 
-   if (answer.substr(0, 2).compare(":X") == 0)
+   if (answer.compare(0, 2, ":X") == 0)
    {
 		double tmp = 0.0;
       ret = ParseResponseAfterPosition(answer, 3, 8, tmp);
@@ -968,7 +951,7 @@ int XYStage::GetAcceleration(long& acceleration)
 		return DEVICE_OK;
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1019,7 +1002,7 @@ int XYStage::GetOverShoot(double& overshoot)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":A") == 0)
+   if (answer.compare(0, 2, ":A") == 0)
    {
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 5, 8, tmp);
@@ -1027,7 +1010,7 @@ int XYStage::GetOverShoot(double& overshoot)
       return code;
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1076,7 +1059,7 @@ int XYStage::GetError(double& error)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":X") == 0)
+   if (answer.compare(0, 2, ":X") == 0)
    {
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
@@ -1084,7 +1067,7 @@ int XYStage::GetError(double& error)
       return code;
    }
    // deal with error
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1162,14 +1145,16 @@ int XYStage::GetSpeed(double& speed)
    // query command
    int ret = QueryCommand(command.str().c_str(), answer);
    if (ret != DEVICE_OK)
-      return ret;
+   {
+	   return ret;
+   }
 
-   if (answer.substr(0, 2).compare(":A") == 0)
+   if (answer.compare(0, 2, ":A") == 0)
    {
       return ParseResponseAfterPosition(answer, 5, speed);
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1305,7 +1290,7 @@ int XYStage::OnJSMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			return DEVICE_OK;
 		}
@@ -1313,7 +1298,7 @@ int XYStage::OnJSMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return DEVICE_OK;
 		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1359,7 +1344,7 @@ int XYStage::OnJSFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			return DEVICE_OK;
 		}
@@ -1367,7 +1352,7 @@ int XYStage::OnJSFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return DEVICE_OK;
 		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1411,7 +1396,7 @@ int XYStage::OnJSSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			return DEVICE_OK;
 		}
@@ -1419,7 +1404,7 @@ int XYStage::OnJSSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return DEVICE_OK;
 		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1582,7 +1567,7 @@ int XYStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
@@ -1595,7 +1580,7 @@ int XYStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1634,7 +1619,7 @@ int XYStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
@@ -1647,7 +1632,7 @@ int XYStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1686,7 +1671,7 @@ int XYStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
@@ -1699,7 +1684,7 @@ int XYStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1738,7 +1723,7 @@ int XYStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
@@ -1751,7 +1736,7 @@ int XYStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1937,7 +1922,7 @@ int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::
 			return code;
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;

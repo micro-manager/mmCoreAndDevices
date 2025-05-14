@@ -303,22 +303,7 @@ bool ZStage::Busy()
         return false;
     }
 
-    if (answer.length() >= 1)
-    {
-        if (answer.substr(0, 1) == "B")
-        {
-            return true;
-        }
-        else if (answer.substr(0, 1) == "N")
-        {
-            return false;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    return false;
+    return !answer.empty() && answer.front() == 'B';
 }
 
 int ZStage::SetPositionUm(double pos)
@@ -348,7 +333,7 @@ int ZStage::SetPositionUm(double pos)
         return DEVICE_OK;
     }
     // deal with error later
-    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+    else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(4).c_str());
         return ERR_OFFSET + errNo;
@@ -370,7 +355,7 @@ int ZStage::GetPositionUm(double& pos)
     if (ret != DEVICE_OK)
         return ret;
 
-    if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+    if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(2).c_str());
         return ERR_OFFSET + errNo;
@@ -419,7 +404,7 @@ int ZStage::SetRelativePositionUm(double d)
         return DEVICE_OK;
     }
     // deal with error later
-    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+    else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(4).c_str());
         return ERR_OFFSET + errNo;
@@ -450,7 +435,7 @@ int ZStage::SetPositionSteps(long pos)
         return DEVICE_OK;
     }
     // deal with error later
-    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+    else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(4).c_str());
         return ERR_OFFSET + errNo;
@@ -474,7 +459,7 @@ int ZStage::GetPositionSteps(long& steps)
         return ret;
     }
 
-    if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+    if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(2).c_str());
         return ERR_OFFSET + errNo;
@@ -515,7 +500,7 @@ int ZStage::SetOrigin()
     {
         return DEVICE_OK;
     }
-    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+    else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(2, 4).c_str());
         return ERR_OFFSET + errNo;
@@ -818,12 +803,12 @@ bool ZStage::HasCommand(std::string command) {
         return false;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0)
     {
         return true;
     }
 
-    if (answer.substr(0, 4).compare(":N-1") == 0)
+    if (answer.compare(0, 4, ":N-1") == 0)
     {
         return false;
     }
@@ -997,7 +982,7 @@ int ZStage::GetWait(long& waitCycles)
       return ParseResponseAfterPosition(answer, 3, waitCycles);
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1072,7 +1057,7 @@ int ZStage::GetBacklash(double& backlash)
       return ParseResponseAfterPosition(answer, 3, 8, backlash);
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1127,7 +1112,7 @@ int ZStage::GetFinishError(double& finishError)
       finishError = 1000000 * tmp;
       return code;
   }
-  if (answer.substr(0, 2).compare(":A") == 0)
+  if (answer.compare(0, 2, ":A") == 0)
   {
       // Answer is of the form :A X=0.00003
       double tmp = 0.0;
@@ -1136,7 +1121,7 @@ int ZStage::GetFinishError(double& finishError)
       return code;
   }
   // deal with error later
-  else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+  else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
   {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1195,7 +1180,7 @@ int ZStage::GetAcceleration(long& acceleration)
       return code;
   }
   // deal with error later
-  else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+  else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
   {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1243,12 +1228,12 @@ int ZStage::GetOverShoot(double& overShoot)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":A") == 0)
+   if (answer.compare(0, 2, ":A") == 0)
    {
       return ParseResponseAfterPosition(answer, 5, 8, overShoot);
    }
    // deal with error herer
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
        int errNo = atoi(answer.substr(3).c_str());
        return ERR_OFFSET + errNo;
@@ -1305,7 +1290,7 @@ int ZStage::GetError(double& error)
        return code;
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1379,12 +1364,12 @@ int ZStage::GetSpeed(double& speed)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.substr(0, 2).compare(":A") == 0)
+   if (answer.compare(0, 2, ":A") == 0)
    {
       return ParseResponseAfterPosition(answer, 5, speed);
    }
    // deal with error later
-   else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
    {
       int errNo = atoi(answer.substr(3).c_str());
       return ERR_OFFSET + errNo;
@@ -1496,7 +1481,7 @@ int ZStage::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
             return code;
         }
         // deal with error later
-        else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+        else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
         {
             int errNo = atoi(answer.substr(3).c_str());
             return ERR_OFFSET + errNo;

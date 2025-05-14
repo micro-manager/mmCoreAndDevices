@@ -584,7 +584,7 @@ int CRISP::GetValue(const std::string& cmd, float& val)
 		return ret;
 	}
 
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
@@ -618,14 +618,14 @@ int CRISP::SetCommand(const std::string& cmd)
 	{
 		return ret;
 	}
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+	if (answer.compare(0, 2, ":A") == 0)
+	{
+		return DEVICE_OK;
+	}
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
-	}
-	if (answer.substr(0, 2) == ":A")
-	{
-		return DEVICE_OK;
 	}
 	return ERR_UNRECOGNIZED_ANSWER;
 }

@@ -125,37 +125,20 @@ int TIRF::Shutdown()
     return DEVICE_OK;
 }
 
-
 bool TIRF::Busy()
 {
     // empty the Rx serial buffer before sending command
     ClearPort();
 
-    const char* command = "/";
+    // send status command
     std::string answer;
-    // query command
-    int ret = QueryCommand(command, answer);
+    int ret = QueryCommand("/", answer);
     if (ret != DEVICE_OK)
     {
         return false;
     }
 
-    if (answer.length() >= 1)
-    {
-        if (answer.substr(0, 1) == "B")
-        {
-            return true;
-        }
-        else if (answer.substr(0, 1) == "N")
-        {
-            return false;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    return false;
+    return !answer.empty() && answer.front() == 'B';
 }
 
 double TIRF::GetAngle()
@@ -174,7 +157,7 @@ double TIRF::GetAngle()
         return ret;
     }
 
-    if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+    if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(2).c_str());
         return ERR_OFFSET + errNo;
@@ -213,7 +196,7 @@ int TIRF::SetAngle(double angle)
         return DEVICE_OK;
     }
     // deal with error later
-    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+    else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(4).c_str());
         return ERR_OFFSET + errNo;

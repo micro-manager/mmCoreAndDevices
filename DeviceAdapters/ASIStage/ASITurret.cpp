@@ -190,13 +190,13 @@ int AZ100Turret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(2, 4).c_str());
 			return ERR_OFFSET + errNo;
 		}
 
-		if (answer.substr(0, 2) == ":A")
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			position_ = position;
 		}

@@ -234,7 +234,7 @@ int LED::SetOpen(bool open)
 		return DEVICE_OK;
 	}
 	// deal with error later
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(4).c_str());
 		return ERR_OFFSET + errNo;
@@ -277,7 +277,7 @@ int LED::IsOpen(bool* open)
 				*open = false;
 			}
 		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(4).c_str());
 			return ERR_OFFSET + errNo;
@@ -401,7 +401,7 @@ int LED::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 			std::istringstream is(answer);
 			std::string tok;
 			is >> tok;
-			if (tok.substr(0, 2).compare(":N") == 0 && tok.length() > 2)
+			if (tok.compare(0, 2, ":N") == 0 && tok.length() > 2)
 			{
 				int errNo = atoi(tok.substr(4).c_str());
 				return ERR_OFFSET + errNo;
