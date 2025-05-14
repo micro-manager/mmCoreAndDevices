@@ -787,9 +787,7 @@ void CMMCore::unloadAllDevices() throw (CMMError)
 {
    try {
       configGroups_->Clear();
-
-      //selected channel group is no longer valid
-      //channelGroup_ = "":
+      updateAllowedChannelGroups();
 
       // clear pixel size configurations
       if (!pixelSizeGroup_->IsEmpty())
@@ -4944,9 +4942,6 @@ void CMMCore::deleteConfigGroup(const char* groupName) throw (CMMError)
       throw CMMError(ToQuotedString(groupName) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
             MMERR_NoConfigGroup);
 
-   if (0 == channelGroup_.compare(groupName))
-      setChannelGroup("");
-
    updateAllowedChannelGroups();
 
    LOG_DEBUG(coreLogger_) << "Deleted config group " << groupName;
@@ -4985,7 +4980,14 @@ void CMMCore::defineConfig(const char* groupName, const char* configName) throw 
    CheckConfigGroupName(groupName);
    CheckConfigPresetName(configName);
 
+   bool groupExisted = configGroups_->isDefined(groupName);
+
    configGroups_->Define(groupName, configName);
+
+   if (!groupExisted)
+   {
+      updateAllowedChannelGroups();
+   }
 
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": added preset " << configName;
@@ -5012,7 +5014,14 @@ void CMMCore::defineConfig(const char* groupName, const char* configName, const 
    CheckPropertyName(propName);
    CheckPropertyValue(value);
 
+   bool groupExisted = configGroups_->isDefined(groupName);
+
    configGroups_->Define(groupName, configName, deviceLabel, propName, value);
+
+   if (!groupExisted)
+   {
+      updateAllowedChannelGroups();
+   }
 
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": preset " << configName << ": added setting " <<
@@ -7106,7 +7115,6 @@ void CMMCore::loadSystemState(const char* fileName) throw (CMMError)
          }
       }
    }
-   updateAllowedChannelGroups();
 }
 
 
@@ -7616,8 +7624,6 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
          }
       }
    }
-
-   updateAllowedChannelGroups();
 
    // file parsing finished, try to set startup configuration
    if (isConfigDefined(MM::g_CFGGroup_System, MM::g_CFGGroup_System_Startup))
