@@ -140,7 +140,7 @@ int XYStage::Initialize()
 	CreateProperty("StepSizeY_um", "0.0", MM::Float, true, pAct);
 
 	// Wait cycles
-	if (hasCommand("WT X?"))
+	if (HasCommand("WT X?"))
 	{
 		ret = GetWaitCycles(waitCycles_);
 		if (ret != DEVICE_OK)
@@ -151,7 +151,7 @@ int XYStage::Initialize()
 	}
 
 	// Speed (sets both x and y)
-	if (hasCommand("S " + axisletterX_ + "?"))
+	if (HasCommand("S " + axisletterX_ + "?"))
 	{
 		ret = GetSpeed(speed_);
 		if (ret != DEVICE_OK)
@@ -165,7 +165,7 @@ int XYStage::Initialize()
 	}
 
 	// Backlash (sets both x and y)
-	if (hasCommand("B " + axisletterX_ + "?"))
+	if (HasCommand("B " + axisletterX_ + "?"))
 	{
 		ret = GetBacklash(backlash_);
 		if (ret != DEVICE_OK)
@@ -175,7 +175,7 @@ int XYStage::Initialize()
 	}
 	
 	// Error (sets both x and y)
-	if (hasCommand("E " + axisletterX_ + "?"))
+	if (HasCommand("E " + axisletterX_ + "?"))
 	{
 		ret = GetError(error_);
 		if (ret != DEVICE_OK)
@@ -185,7 +185,7 @@ int XYStage::Initialize()
 	}
 	
 	// acceleration (sets both x and y)
-	if (hasCommand("AC " + axisletterX_ + "?"))
+	if (HasCommand("AC " + axisletterX_ + "?"))
 	{
       ret = GetAcceleration(acceleration_);
       if (ret != DEVICE_OK)
@@ -195,7 +195,7 @@ int XYStage::Initialize()
 	}
 	
 	// Finish Error (sets both x and y)
-	if (hasCommand("PC " + axisletterX_ + "?"))
+	if (HasCommand("PC " + axisletterX_ + "?"))
 	{
 		ret = GetFinishError(finishError_);
       if (ret != DEVICE_OK)
@@ -205,7 +205,7 @@ int XYStage::Initialize()
 	}
 	
 	// OverShoot (sets both x and y)
-	if (hasCommand("OS " + axisletterX_ + "?"))
+	if (HasCommand("OS " + axisletterX_ + "?"))
 	{
 		ret = GetOverShoot(overShoot_);
       if (ret != DEVICE_OK)
@@ -256,7 +256,7 @@ int XYStage::Initialize()
 	AddAllowedValue("EnableAdvancedProperties", "No");
 	AddAllowedValue("EnableAdvancedProperties", "Yes");
 	
-	if (hasCommand("VE " + axisletterX_ + "=0")) {
+	if (HasCommand("VE " + axisletterX_ + "=0")) {
 		char orig_speed[MM::MaxStrLength];
 		ret = GetProperty("Speed-S", orig_speed);
 		double mspeed;
@@ -624,7 +624,7 @@ int XYStage::GetStepLimits(long& /*xMin*/, long& /*xMax*/, long& /*yMin*/, long&
 	return DEVICE_UNSUPPORTED_COMMAND;
 }
 
-bool XYStage::hasCommand(std::string command)
+bool XYStage::HasCommand(const std::string& command)
 {
 	std::string answer;
 
@@ -1516,28 +1516,28 @@ int XYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 			// overshoot (OS)  // in Nico's original
 
 			// servo integral term (KI)
-			if (hasCommand("KI " + axisletterX_ + "?"))
+			if (HasCommand("KI " + axisletterX_ + "?"))
 			{
 				pAct = new CPropertyAction(this, &XYStage::OnKIntegral);
 				CreateProperty("ServoIntegral-KI", "0", MM::Integer, false, pAct);
 			}
 
 			// servo proportional term (KP)
-			if (hasCommand("KP " + axisletterX_ + "?"))
+			if (HasCommand("KP " + axisletterX_ + "?"))
 			{
 				pAct = new CPropertyAction(this, &XYStage::OnKProportional);
 				CreateProperty("ServoProportional-KP", "0", MM::Integer, false, pAct);
 			}
 
 			// servo derivative term (KD)
-			if (hasCommand("KD " + axisletterX_ + "?"))
+			if (HasCommand("KD " + axisletterX_ + "?"))
 			{
 				pAct = new CPropertyAction(this, &XYStage::OnKDerivative);
 				CreateProperty("ServoIntegral-KD", "0", MM::Integer, false, pAct);
 			}
 
 			// Align calibration/setting for pot in drive electronics (AA)
-			if (hasCommand("AA " + axisletterX_ + "?"))
+			if (HasCommand("AA " + axisletterX_ + "?"))
 			{
 				pAct = new CPropertyAction(this, &XYStage::OnAAlign);
 				CreateProperty("MotorAlign-AA", "0", MM::Integer, false, pAct);
@@ -1785,7 +1785,7 @@ int XYStage::SetAxisDirection()
 }
 
 // based on similar function in FreeSerialPort.cpp
-std::string XYStage::EscapeControlCharacters(const std::string v)
+std::string XYStage::EscapeControlCharacters(const std::string& v)
 {
 	std::ostringstream mess;
 	mess.str("");
@@ -1816,7 +1816,7 @@ std::string XYStage::EscapeControlCharacters(const std::string v)
 }
 
 // based on similar function in FreeSerialPort.cpp
-std::string XYStage::UnescapeControlCharacters(const std::string v0)
+std::string XYStage::UnescapeControlCharacters(const std::string& v0)
 {
 	// the string input from the GUI can contain escaped control characters, currently these are always preceded with \ (0x5C)
 	// and always assumed to be decimal or C style, not hex
@@ -1900,7 +1900,7 @@ std::string XYStage::UnescapeControlCharacters(const std::string v0)
 	return detokenized;
 }
 
-int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter) {
+int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter) {
 	if (eAct == MM::BeforeGet)
 	{
 		std::ostringstream command;
