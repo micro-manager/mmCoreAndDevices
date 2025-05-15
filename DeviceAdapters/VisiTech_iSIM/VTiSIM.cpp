@@ -2246,7 +2246,7 @@ int VTiSIMFRAP::PointAndFire(double x, double y, double pulseTime_us)
 
 
 	long_pulseTime_us = (long) pulseTime_us;
-	snprintf(s, MM::MaxStrLength, "FRAP_Pointandfire, pulseTime_µs: %ld",long_pulseTime_us);
+	snprintf(s, MM::MaxStrLength, "FRAP_Pointandfire, pulseTime_us: %ld",long_pulseTime_us);
 	LogMessage(s);
 
 	// Ver 2.2.1.0 - Start - close shutter when switching between FRAP and Imaging mode
@@ -2978,8 +2978,6 @@ VTiSIMPifoc::VTiSIMPifoc()
     , invertTravelRange_(false)
 	, minTravelRangeUm_(0)
 	, maxTravelRangeUm_(10000)
-    //, stageType_("PIFOC SGS 100µm")
-    //, controllerName_("")
 {
 	SetErrorText(VTI_ERR_TIMEOUT_OCCURRED, "Timeout occurred");
 	SetErrorText(VTI_ERR_DEVICE_NOT_FOUND, "Device not found");
@@ -3223,7 +3221,7 @@ int VTiSIMPifoc::SetPositionUm(double pos)
 	// Ver 2.4.0.0 - End
 
 
-	Temp = pos*1000;	// Convert µm into nm.
+	Temp = pos*1000;	// Convert um into nm.
 	PositionNM = (int) (Temp + 0.5);
 
 	snprintf(s, MM::MaxStrLength, "SetPositionUm, Temp: %f",Temp);

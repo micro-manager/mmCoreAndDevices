@@ -21,7 +21,7 @@
 //
 // Author: Mark Tsuchida <mark@open-imaging.com>
 
-// Version 2.2.0.0	-	1. Implemented PIFOC SGS 100µm controls	-	17/08/2020
+// Version 2.2.0.0	-	1. Implemented PIFOC SGS 100um controls	-	17/08/2020
 // Version 2.2.1.0	-	1. FRAP function revisit				-	18/08/2020
 // Version 2.2.2.0	-	1. FRAP function 2nd visit 				-	10/09/2020
 // Version 2.3.0.0	-	1. FRAP - add FRAP range controls		-	23/09/2020
