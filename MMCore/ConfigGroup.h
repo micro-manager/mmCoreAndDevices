@@ -217,11 +217,7 @@ public:
     */
    bool isDefined(const char* groupName)
    {
-      std::map<std::string, ConfigGroup>::iterator it = groups_.find(groupName);
-      if (it == groups_.end())
-         return false;
-      else
-         return true;
+      return groups_.find(groupName) != groups_.end();
    }
 
    /**
@@ -238,16 +234,7 @@ public:
          std::map<std::string, ConfigGroup>::iterator it = groups_.find(groupName);
          if (it == groups_.end())
             return false; // group not found
-         if (it->second.Rename(oldConfigName, newConfigName))
-         {
-            // NOTE: changed to not remove empty groups, N.A. 1.31.2006
-            // check if the config group is empty, and if so remove it
-            //if (it->second.IsEmpty())
-            //groups_.erase(it->first);
-            return true;
-         }
-         else
-            return false; // config not found within a group
+         return it->second.Rename(oldConfigName, newConfigName);
       } else {
          return true;
       }
@@ -265,12 +252,7 @@ public:
       std::map<std::string, ConfigGroup>::iterator it = groups_.find(groupName);
       if (it == groups_.end())
          return false; // group not found
-      if (it->second.Delete(configName, deviceLabel, propName))
-      {
-         return true;
-      }
-      else
-         return false; // config not found within a group
+      return it->second.Delete(configName, deviceLabel, propName);
    }
 
 
@@ -286,16 +268,7 @@ public:
       std::map<std::string, ConfigGroup>::iterator it = groups_.find(groupName);
       if (it == groups_.end())
          return false; // group not found
-      if (it->second.Delete(configName))
-      {
-         // NOTE: changed to not remove empty groups, N.A. 1.31.2006
-         // check if the config group is empty, and if so remove it
-         //if (it->second.IsEmpty())
-            //groups_.erase(it->first);
-         return true;
-      }
-      else
-         return false; // config not found within a group
+      return it->second.Delete(configName);
    }
 
    /**
