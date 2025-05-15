@@ -78,8 +78,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
     delete pDevice;
 }
 
-// Note: Micro-Manager does not support 28800 baud rate (1 of 4 options for the MS-2000)
-static const std::vector<std::string> baudRates = { "115200", "19200", "9600" };
+static const std::vector<std::string> baudRates = { "115200", "28800", "19200", "9600"};
 
 // Detect devices in the Hardware Configuration Wizard when you click "Scan Ports".
 MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, const std::string& port, double answerTimeoutMs)
