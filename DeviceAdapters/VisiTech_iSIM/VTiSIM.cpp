@@ -191,7 +191,7 @@ int VTiSIMHub::Initialize()
 		char s[MM::MaxStrLength + 1];
 		snprintf(s, MM::MaxStrLength, "%d.%d.%d.%d",
 			(int)major, (int)minor, (int)rev, (int)build);
-		int err = CreateStringProperty("VisiSDK Version", s, true);
+		err = CreateStringProperty("VisiSDK Version", s, true);
 		if (err != DEVICE_OK)
 			return err;
 		// Ver 2.4.0.0 - 3. Start
@@ -400,7 +400,6 @@ curChan_(0),
 	Bitmask(0)
 {
 	char s[MM::MaxStrLength + 1];
-	char ss[MM::MaxStrLength + 1];
 
 	memset(intensities_, 0, sizeof(intensities_));
 
@@ -423,7 +422,7 @@ curChan_(0),
 	for (long i = 0; i < nChannels; ++i)
 	{
 		snprintf(s, MM::MaxStrLength, "State Name-%ld", i+1);
-		int err = CreateStringProperty(s, strLaserName[i].c_str(), false,
+		CreateStringProperty(s, strLaserName[i].c_str(), false,
 			new CPropertyActionEx(this, &VTiSIMLasers::OnLaserNameState,i), true);
 	}
 
@@ -464,7 +463,7 @@ int VTiSIMLasers::Initialize()
 	{
 		// To change the name of laser Intensity according to the Laser Name
 		//snprintf(s, MM::MaxStrLength, "Intensity-%ld", LaserName[i]);
-		snprintf(s, MM::MaxStrLength, "Intensity-%d-%s",i+1, strLaserName[i]);
+		snprintf(s, MM::MaxStrLength, "Intensity-%d-%s",i+1, (strLaserName[i]).c_str());
 
 		int err = CreateIntegerProperty(s, intensities_[i], false,
 			new CPropertyActionEx(this, &VTiSIMLasers::OnIntensity, i));
@@ -479,7 +478,7 @@ int VTiSIMLasers::Initialize()
 			return err;
 
 		// Set individual Laser Enable 
-		snprintf(s2, MM::MaxStrLength, "Enable-%d-%s",i+1, strLaserName[i]);
+		snprintf(s2, MM::MaxStrLength, "Enable-%d-%s",i+1, (strLaserName[i]).c_str());
 		LogMessage("Initialize");
 		LogMessage(s2);
 		err = CreateStringProperty(s2, g_PropVal_Off, false,
@@ -490,9 +489,9 @@ int VTiSIMLasers::Initialize()
 		err = AddAllowedValue(s2, g_PropVal_On);
 		if (err != DEVICE_OK)
 			return err;
-		for (long i = 0; i < nChannels; ++i)
+		for (long j = 0; j < nChannels; ++j)
 		{
-			err = DoUploadTTLBitmask(i,0);
+			err = DoUploadTTLBitmask(j,0);
 			if (err != DEVICE_OK)
 				return err;
 		}
@@ -586,27 +585,15 @@ int VTiSIMLasers::OnLaserState(MM::PropertyBase* pProp, MM::ActionType eAct,long
 
 int VTiSIMLasers::OnLaserNameState(MM::PropertyBase* pProp, MM::ActionType eAct,long chan)
 {
-
-	//std::string ss;
-	char s[MM::MaxStrLength + 1];
-
 	if (eAct == MM::BeforeGet)
 	{
-
-		/* pProp->Set(static_cast<long>(LaserName[chan]));
-		snprintf(s, MM::MaxStrLength, "Laser-%ld", LaserName[chan]);
-		LogMessage("OnLaserNameState");
-		LogMessage(s);*/
 		pProp->Set(strLaserName[chan].c_str());
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		/* long v;
-		pProp->Get(v);
-		LaserName[chan]=v;*/
-		std::string s;
-		pProp->Get(s);
-		strLaserName[chan]=s;
+		std::string str;
+		pProp->Get(str);
+		strLaserName[chan]=str;
 	}
 	return DEVICE_OK;
 }
@@ -2227,11 +2214,11 @@ int VTiSIMFRAP::PointAndFire(double x, double y, double pulseTime_us)
 	// Ver 2.3.0.0 - End
 
 	SetIlluminationState(FALSE);
-	long_x = x;
+	long_x = (long) x;
 	snprintf(s, MM::MaxStrLength, "FRAP_Pointandfire, x: %ld",long_x);
 	LogMessage(s);
 
-	long_y = y;
+	long_y = (long) y;
 	snprintf(s, MM::MaxStrLength, "FRAP_Pointandfire, y: %ld",long_y);
 	LogMessage(s);
 
@@ -2245,20 +2232,20 @@ int VTiSIMFRAP::PointAndFire(double x, double y, double pulseTime_us)
 	x = x + FRAPXOffset_;
 	if (x >4094)
 		{ x = 4094;}
-	long_x = x;
+	long_x = (long) x;
 	snprintf(s, MM::MaxStrLength, "FRAP_Pointandfire, x (with offset): %ld",long_x);
 	LogMessage(s);
 
 	y = y + FRAPYOffset_;
 	if (y >4094)
 		{ y = 4094;}
-	long_y = y;
+	long_y = (long) y;
 	snprintf(s, MM::MaxStrLength, "FRAP_Pointandfire, y (with offset): %ld",long_y);
 	LogMessage(s);
 	// Ver 2.3.2.0 - End
 
 
-	long_pulseTime_us = pulseTime_us;
+	long_pulseTime_us = (long) pulseTime_us;
 	snprintf(s, MM::MaxStrLength, "FRAP_Pointandfire, pulseTime_µs: %ld",long_pulseTime_us);
 	LogMessage(s);
 
@@ -2351,7 +2338,7 @@ int VTiSIMFRAP::PointAndFire(double x, double y, double pulseTime_us)
 int VTiSIMFRAP::SetSpotInterval(double pulseTime_us)
 {
 	char s[MM::MaxStrLength + 1];
-	long_pulseTime_us = pulseTime_us;
+	long_pulseTime_us = (long) pulseTime_us;
 	snprintf(s, MM::MaxStrLength, "FRAP_SetSpotInterval, pulseTime_us: %ld",long_pulseTime_us);
 	LogMessage(s);
 	return DEVICE_OK;
@@ -2447,7 +2434,6 @@ int VTiSIMFRAP::GetPosition(double& x, double& y)
 int VTiSIMFRAP::SetIlluminationState(bool on)
 {
 	DWORD err;
-	VTI_EX_PARAM Param;
 	char s[MM::MaxStrLength + 1];
 
 	if ( on==true)
@@ -2655,8 +2641,8 @@ int VTiSIMFRAP::AddPolygonVertex(int polygonIndex, double x, double y)
    return DEVICE_OK;*/
 	
 	char s[MM::MaxStrLength + 1];
-	long_x = x;
-	long_y = y;
+	long_x = (long) x;
+	long_y = (long) y;
 	snprintf(s, MM::MaxStrLength, "FRAP_polygonIndex, x: %ld",long_x);
 	LogMessage(s);	
 	snprintf(s, MM::MaxStrLength, "FRAP_polygonIndex, y: %ld",long_y);	
@@ -2712,13 +2698,10 @@ int VTiSIMFRAP::RunPolygons()
 		snprintf(s, MM::MaxStrLength, "FRAP_RunPolygons, polygonRepetitions_: %ld",j);
 		LogMessage(s);
 		 for (int i=0; i< (int) polygons_.size(); ++i)			//polygons_.size() is number of ROI
-		//for (int i=0; i< 50; ++i)
 		{
 			snprintf(s, MM::MaxStrLength, "FRAP_RunPolygons, size: %ld",i);
 			LogMessage(s);
-			//int n;
 			FirstVertex = true;	
-			//n = sizeof(polygons_[i]);
 			for (size_t n = sizeof(polygons_[i]); n--;)
 			{
 				double Vertex_x = polygons_[i][n].first;
@@ -2728,7 +2711,7 @@ int VTiSIMFRAP::RunPolygons()
 
 				if ( Vertex_x >GALVO_X_MIN && Vertex_x<GALVO_X_MAX && Vertex_y>GALVO_Y_MIN && Vertex_y<GALVO_Y_MAX)
 				{
-					snprintf(s, MM::MaxStrLength, "FRAP_RunPolygons, n: %ld",n);
+					snprintf(s, MM::MaxStrLength, "FRAP_RunPolygons, n: %ld", (long) n);
 					LogMessage(s);
 
 					snprintf(s, MM::MaxStrLength, "FRAP_RunPolygons, x: %f",Vertex_x);
@@ -2743,32 +2726,32 @@ int VTiSIMFRAP::RunPolygons()
 					// Determine the coordinates of the active region
 					if(FirstVertex)
 					{
-						BleachingRegionLeft = polygons_[i][n].first;
-						BleachingRegionRight = polygons_[i][n].first;
-						BleachingRegionTop = polygons_[i][n].second;
-						BleachingRegionBottom = polygons_[i][n].second;
+						BleachingRegionLeft = (long) polygons_[i][n].first;
+						BleachingRegionRight = (long) polygons_[i][n].first;
+						BleachingRegionTop = (long) polygons_[i][n].second;
+						BleachingRegionBottom = (long) polygons_[i][n].second;
 						FirstVertex = false;
 					}
 					else
 					{
 						if(Vertex_x<BleachingRegionLeft)
 						{
-							BleachingRegionLeft = Vertex_x;
+							BleachingRegionLeft = (long) Vertex_x;
 						}
 
-						if(BleachingRegionRight<Vertex_x)
+						if(BleachingRegionRight < (long) Vertex_x)
 						{
-							BleachingRegionRight = Vertex_x;
+							BleachingRegionRight = (long) Vertex_x;
 						}
 
-						if(BleachingRegionTop<Vertex_y)
+						if(BleachingRegionTop < (long) Vertex_y)
 						{
-							BleachingRegionTop = Vertex_y;
+							BleachingRegionTop = (long) Vertex_y;
 						}
 
-						if(Vertex_y<BleachingRegionBottom)
+						if(Vertex_y < BleachingRegionBottom)
 						{
-							BleachingRegionBottom = Vertex_y;
+							BleachingRegionBottom = (long) Vertex_y;
 						}
 
 					}
@@ -2943,7 +2926,7 @@ int VTiSIMFRAP::StopSequence()
 int VTiSIMFRAP::GetChannel(char* channelName)
 {
 	char s[MM::MaxStrLength + 1];
-	snprintf(s, MM::MaxStrLength, "FRAP_GetChannel, GetChannel: %c",channelName);
+	snprintf(s, MM::MaxStrLength, "FRAP_GetChannel, GetChannel: %s", channelName);
 	LogMessage(s);
 	CDeviceUtils::CopyLimitedString(channelName,"Default");
 	return DEVICE_OK;
@@ -3006,7 +2989,7 @@ VTiSIMPifoc::VTiSIMPifoc()
 	// Ver 2.4.0.0 - Start
 	PiezoTravelRangeUm = 100.0; 
 
-	int err = CreateIntegerProperty(g_PropVal_PiezoTravelRangeUm, PiezoTravelRangeUm, false,
+	CreateIntegerProperty(g_PropVal_PiezoTravelRangeUm, (long) PiezoTravelRangeUm, false,
 		new CPropertyAction(this, &VTiSIMPifoc::OnPiezoTravelRangeUm), true);
 	
 	SetPropertyLimits(g_PropVal_PiezoTravelRangeUm, minTravelRangeUm_, maxTravelRangeUm_);
@@ -3108,17 +3091,17 @@ int VTiSIMPifoc::Initialize()
 	snprintf(s, MM::MaxStrLength, "g_PropVal_PiezoTravelRangeUm: %f",PiezoTravelRangeUm);
 	LogMessage(s);
 	
-	CentrePositionNm = PiezoTravelRangeUm*1000;
+	CentrePositionNm = (long) PiezoTravelRangeUm * 1000l;
 	CentrePositionNm = CentrePositionNm/2;
 
 	snprintf(s, MM::MaxStrLength, "CentrePositionNm: %ld",CentrePositionNm);
 	LogMessage(s);
 	
-	DWORD err = vti_MovePifoc(VTiHub()->GetAOTFHandle(), CentrePositionNm,PiezoTravelRangeUm);
+	DWORD err = vti_MovePifoc(VTiHub()->GetAOTFHandle(), CentrePositionNm, (vt_int32) PiezoTravelRangeUm);
 	if (err != VTI_SUCCESS)
 		return err;
 
-	err = vti_ConvertNmToInternalPosition(VTiHub()->GetScanAndMotorHandle(), CentrePositionNm, PiezoTravelRangeUm, &PositionSteps);
+	err = vti_ConvertNmToInternalPosition(VTiHub()->GetScanAndMotorHandle(), CentrePositionNm, (vt_int32) PiezoTravelRangeUm, &PositionSteps);
 	if (err != VTI_SUCCESS)
 		return err;
 
@@ -3241,7 +3224,7 @@ int VTiSIMPifoc::SetPositionUm(double pos)
 
 
 	Temp = pos*1000;	// Convert µm into nm.
-	PositionNM = Temp + 0.5;
+	PositionNM = (int) (Temp + 0.5);
 
 	snprintf(s, MM::MaxStrLength, "SetPositionUm, Temp: %f",Temp);
 	LogMessage(s);
@@ -3253,12 +3236,12 @@ int VTiSIMPifoc::SetPositionUm(double pos)
 	//DWORD err = vti_MovePifoc(VTiHub()->GetAOTFHandle(), PositionNM);
 	//if (err != VTI_SUCCESS)
 	//	return err;
-	DWORD err = vti_MovePifoc(VTiHub()->GetAOTFHandle(), PositionNM,PiezoTravelRangeUm);
+	DWORD err = vti_MovePifoc(VTiHub()->GetAOTFHandle(), PositionNM, (vt_int32) PiezoTravelRangeUm);
 	if (err != VTI_SUCCESS)
 		return err;
 
 	// Ver 2.4.0.0 - End
-	 err = vti_ConvertNmToInternalPosition(VTiHub()->GetScanAndMotorHandle(), PositionNM, PiezoTravelRangeUm, &PositionSteps);
+	 err = vti_ConvertNmToInternalPosition(VTiHub()->GetScanAndMotorHandle(), PositionNM, (vt_int32) PiezoTravelRangeUm, &PositionSteps);
 	if (err != VTI_SUCCESS)
 		return err;
 	
@@ -3280,7 +3263,6 @@ int VTiSIMPifoc::GetPositionUm(double& pos)
 {
 
 	vt_int32 ConvertedNmPosition;
-	double Temp_pos;
 	char s[MM::MaxStrLength + 1];
 	
 	// Ver 2.4.0.0 - 2. Start
@@ -3298,7 +3280,7 @@ int VTiSIMPifoc::GetPositionUm(double& pos)
 	//int err_ = GetPositionSteps(steps);
 	snprintf(s, MM::MaxStrLength, "GetPositionUm, Steps_: %ld",Steps_);
 	LogMessage(s);
-	PositionSteps = Steps_;
+	PositionSteps = (unsigned short) Steps_;
 	// Ver 2.4.0.0 - 2. End
 	
 
@@ -3310,7 +3292,7 @@ int VTiSIMPifoc::GetPositionUm(double& pos)
 
 	// Ver 2.4.0.0 - End
 
-	DWORD err = vti_ConvertInternalPositionToNm(VTiHub()->GetScanAndMotorHandle(), &ConvertedNmPosition, PositionSteps,PiezoTravelRangeUm);
+	DWORD err = vti_ConvertInternalPositionToNm(VTiHub()->GetScanAndMotorHandle(), &ConvertedNmPosition, PositionSteps, (vt_int32) PiezoTravelRangeUm);
 	if (err != VTI_SUCCESS)
 		return err;
 
@@ -3334,7 +3316,7 @@ int VTiSIMPifoc::GetPositionUm(double& pos)
         //pos = axisLimitUm_ - pos;// Ver 2.4.0.0
 		pos = PiezoTravelRangeUm - pos;// Ver 2.4.0.0
     }
-	snprintf(s, MM::MaxStrLength, "GetPositionUm, pos - invertTravelRange_: %f",invertTravelRange_);
+	snprintf(s, MM::MaxStrLength, "GetPositionUm, pos - invertTravelRange_: %s", invertTravelRange_ ? "true" : "false");
 	LogMessage(s);
 	snprintf(s, MM::MaxStrLength, "GetPositionUm, pos - pos: %f",pos);
 	LogMessage(s);
@@ -3516,7 +3498,7 @@ int VTiSIMPifoc::OnHoming(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-int VTiSIMPifoc::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
+int VTiSIMPifoc::OnVelocity(MM::PropertyBase* /* pProp */, MM::ActionType /* eAct */)
 {
     ////if (NULL == ctrl_)
     ////{
