@@ -78,81 +78,95 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
     delete pDevice;
 }
 
-MM::DeviceDetectionStatus ASICheckSerialPort(MM::Device& device, MM::Core& core, std::string portToCheck, double answerTimeoutMs)
+// Note: Micro-Manager does not support 28800 baud rate (1 of 4 options for the MS-2000)
+static const std::vector<std::string> baudRates = { "115200", "19200", "9600" };
+
+// Detect devices in the Hardware Configuration Wizard when you click "Scan Ports".
+MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, const std::string& port, double answerTimeoutMs)
 {
-    // all conditions must be satisfied...
     MM::DeviceDetectionStatus result = MM::Misconfigured;
-    char answerTO[MM::MaxStrLength];
+    char savedTimeout[MM::MaxStrLength];
+
     try
     {
-        std::string portLowerCase = portToCheck;
-        for (std::string::iterator its = portLowerCase.begin(); its != portLowerCase.end(); ++its)
+        // lowercase copy of port name
+        std::string portLower = port;
+        for (char& c : portLower)
         {
-            *its = (char)tolower(*its);
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
         }
-        if (0 < portLowerCase.length() && 0 != portLowerCase.compare("undefined") && 0 != portLowerCase.compare("unknown"))
+
+        // skip invalid ports
+        if (portLower.empty() || portLower == "undefined" || portLower == "unknown")
         {
-            result = MM::CanNotCommunicate;
-            core.GetDeviceProperty(portToCheck.c_str(), "AnswerTimeout", answerTO);
-            // device specific default communication parameters for ASI Stage
-            core.SetDeviceProperty(portToCheck.c_str(), MM::g_Keyword_Handshaking, "Off");
-            core.SetDeviceProperty(portToCheck.c_str(), MM::g_Keyword_StopBits, "1");
-            std::ostringstream too;
-            too << answerTimeoutMs;
-            core.SetDeviceProperty(portToCheck.c_str(), "AnswerTimeout", too.str().c_str());
-            core.SetDeviceProperty(portToCheck.c_str(), "DelayBetweenCharsMs", "0");
-            MM::Device* pS = core.GetDevice(&device, portToCheck.c_str());
-            std::vector< std::string> possibleBauds;
-            possibleBauds.push_back("9600");
-            possibleBauds.push_back("115200");
-            for (std::vector< std::string>::iterator bit = possibleBauds.begin(); bit != possibleBauds.end(); ++bit)
+            return result;
+        }
+
+        result = MM::CanNotCommunicate;
+
+        // store the original timeout
+        core.GetDeviceProperty(port.c_str(), "AnswerTimeout", savedTimeout);
+
+        // device specific default communication parameters for ASIStage
+        core.SetDeviceProperty(port.c_str(), MM::g_Keyword_Handshaking, "Off");
+        core.SetDeviceProperty(port.c_str(), MM::g_Keyword_StopBits, "1");
+        core.SetDeviceProperty(port.c_str(), "AnswerTimeout", std::to_string(answerTimeoutMs).c_str());
+        core.SetDeviceProperty(port.c_str(), "DelayBetweenCharsMs", "0");
+
+        MM::Device* pDevice = core.GetDevice(&device, port.c_str());
+
+        // check all possible baud rates for the device
+        for (const std::string& baudRate : baudRates)
+        {
+            core.SetDeviceProperty(port.c_str(), MM::g_Keyword_BaudRate, baudRate.c_str());
+            pDevice->Initialize();
+            core.PurgeSerial(&device, port.c_str());
+
+            // check status using "/" command
+            int ret = core.SetSerialCommand(&device, port.c_str(), "/", "\r");
+            if (ret == DEVICE_OK)
             {
-                core.SetDeviceProperty(portToCheck.c_str(), MM::g_Keyword_BaudRate, (*bit).c_str());
-                pS->Initialize();
-                core.PurgeSerial(&device, portToCheck.c_str());
-                // check status
-                const char* command = "/";
-                int ret = core.SetSerialCommand(&device, portToCheck.c_str(), command, "\r");
-                if (DEVICE_OK == ret)
+                char answer[MM::MaxStrLength];
+                ret = core.GetSerialAnswer(&device, port.c_str(), MM::MaxStrLength, answer, "\r\n");
+                if (ret != DEVICE_OK)
                 {
-                    char answer[MM::MaxStrLength];
-                    ret = core.GetSerialAnswer(&device, portToCheck.c_str(), MM::MaxStrLength, answer, "\r\n");
-                    if (DEVICE_OK != ret)
-                    {
-                        char text[MM::MaxStrLength];
-                        device.GetErrorText(ret, text);
-                        core.LogMessage(&device, text, true);
-                    }
-                    else
-                    {
-                        // to succeed must reach here....
-                        result = MM::CanCommunicate;
-                    }
+                    LogDeviceError(device, core, ret);
                 }
                 else
                 {
-                    char text[MM::MaxStrLength];
-                    device.GetErrorText(ret, text);
-                    core.LogMessage(&device, text, true);
-                }
-                pS->Shutdown();
-                if (MM::CanCommunicate == result)
-                {
-                    break;
-                }
-                else
-                {
-                    // try to yield to GUI
-                    CDeviceUtils::SleepMs(10);
+                    // success: device responded to the status command
+                    result = MM::CanCommunicate;
                 }
             }
-            // always restore the AnswerTimeout to the default
-            core.SetDeviceProperty(portToCheck.c_str(), "AnswerTimeout", answerTO);
+            else
+            {
+                LogDeviceError(device, core, ret);
+            }
+
+            pDevice->Shutdown();
+
+            if (result == MM::CanCommunicate)
+            {
+                break; // exit loop => we found the device
+            }
+
+            CDeviceUtils::SleepMs(10); // let GUI update
         }
+
+        // restore timeout
+        core.SetDeviceProperty(port.c_str(), "AnswerTimeout", savedTimeout);
     }
     catch (...)
     {
-        core.LogMessage(&device, "Exception in DetectDevice!", false);
+        core.LogMessage(&device, "Exception in ASIDetectDevice!", false);
     }
+
     return result;
+}
+
+// Helper function to log errors
+void LogDeviceError(MM::Device& device, MM::Core& core, int errorCode) {
+    char text[MM::MaxStrLength];
+    device.GetErrorText(errorCode, text);
+    core.LogMessage(&device, text, true);
 }

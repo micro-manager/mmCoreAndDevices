@@ -59,7 +59,7 @@ bool LED::SupportsDeviceDetection()
 
 MM::DeviceDetectionStatus LED::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int LED::Initialize()
@@ -228,13 +228,13 @@ int LED::SetOpen(bool open)
 		return ret;
 	}
 
-	if ((answer.substr(0, 2).compare(":A") == 0) || (answer.substr(1, 2).compare(":A") == 0))
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		open_ = open;
 		return DEVICE_OK;
 	}
 	// deal with error later
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(4).c_str());
 		return ERR_OFFSET + errNo;
@@ -270,14 +270,14 @@ int LED::IsOpen(bool* open)
 			return ret;
 		}
 
-		if ((answer.substr(0, 2).compare(":A") == 0) || (answer.substr(1, 2).compare(":A") == 0))
+		if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 		{
-			if (answer.substr(2, 1) == "0")
+			if (answer.compare(2, 1, "0") == 0)
 			{
 				*open = false;
 			}
 		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(4).c_str());
 			return ERR_OFFSET + errNo;
@@ -297,11 +297,11 @@ int LED::IsOpen(bool* open)
 			return ret;
 
 		// Command "LED X?" return "X=0 :A"
-		if (answer.substr(0, 1)[0]==channelAxisChar_) {
-			if (answer.substr(2, 1) == "0")
+		if (answer[0]==channelAxisChar_) {
+			if (answer.compare(2, 1, "0") == 0)
 				*open = false;
 		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.compare(0, 2, ":N") == 0 && answer.length() > 2)
 		{
 			int errNo = atoi(answer.substr(4).c_str());
 			return ERR_OFFSET + errNo;
@@ -353,11 +353,11 @@ int LED::CurrentIntensity(long* intensity)
 	std::string tok2;
 	is >> tok;
 	is >> tok2;
-	if ((tok2.substr(0, 2).compare(":A") == 0) || (tok2.substr(1, 2).compare(":A") == 0))
+	if (tok2.compare(0, 2, ":A") == 0 || tok2.compare(1, 2, ":A") == 0)
 	{
 		*intensity = atoi(tok.substr(2).c_str());
 	}
-	else if (tok.substr(0, 2).compare(":N") == 0 && tok.length() > 2)
+	else if (tok.length() > 2 && tok.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(tok.substr(4).c_str());
 		return ERR_OFFSET + errNo;
@@ -370,9 +370,7 @@ int LED::Fire(double)
 	return DEVICE_OK;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int LED::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -401,7 +399,7 @@ int LED::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 			std::istringstream is(answer);
 			std::string tok;
 			is >> tok;
-			if (tok.substr(0, 2).compare(":N") == 0 && tok.length() > 2)
+			if (tok.compare(0, 2, ":N") == 0 && tok.length() > 2)
 			{
 				int errNo = atoi(tok.substr(4).c_str());
 				return ERR_OFFSET + errNo;
