@@ -813,9 +813,8 @@ int CCRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         command << addressChar_ << "LK X?";
         RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
         RETURN_ON_MM_ERROR(hub_->GetAnswerCharAtPosition3(tmp));
-        // create a C string from tmp
-        const char cstr[2] = { tmp, '\0' };
-        if (!pProp->Set(cstr))
+        std::string str(1, tmp);
+        if (!pProp->Set(str.c_str()))
         {
             return DEVICE_INVALID_PROPERTY_VALUE;
         }

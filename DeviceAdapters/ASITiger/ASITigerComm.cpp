@@ -110,59 +110,72 @@ bool CTigerCommHub::SupportsDeviceDetection(void)
    return true;
 }
 
-MM::DeviceDetectionStatus CTigerCommHub::DetectDevice()   // looks for hub, not child devices
+// Detect the hub device in the Hardware Configuration Wizard when you click "Scan Ports".
+// Note: this only looks for the hub device, not the child devices.
+MM::DeviceDetectionStatus CTigerCommHub::DetectDevice()
 {
-   if (initialized_)
-      return MM::CanCommunicate;
+    if (initialized_)
+    {
+        return MM::CanCommunicate;
+    }
 
-   // all conditions must be satisfied...
-   MM::DeviceDetectionStatus result = MM::Misconfigured;
-   char answerTO[MM::MaxStrLength];
+    MM::DeviceDetectionStatus result = MM::Misconfigured;
+    char savedTimeout[MM::MaxStrLength];
 
-   try
-   {
-      std::string portLowerCase = port_;
-      for ( std::string::iterator its = portLowerCase.begin(); its != portLowerCase.end(); ++its)
-      {
-         *its = (char)tolower(*its);
-      }
-      if ( 0< portLowerCase.length() &&  0 != portLowerCase.compare("undefined")  && 0 != portLowerCase.compare("unknown") )
-      {
-         result = MM::CanNotCommunicate;
+    try
+    {
+        // lowercase copy of port name
+        std::string portLower = port_;
+        for (char& c : portLower)
+        {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
 
-         // record the default answer time out
-         GetCoreCallback()->GetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
+        // skip invalid ports
+        if (portLower.empty() || portLower == "undefined" || portLower == "unknown")
+        {
+            return result;
+        }
 
-         // device specific default communication parameters for ASI Tiger controller
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_Handshaking, "Off");
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_BaudRate, "115200" );
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_StopBits, "1");
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", "500.0");
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "DelayBetweenCharsMs", "0");
-         MM::Device* pS = GetCoreCallback()->GetDevice(this, port_.c_str());
-         pS->Initialize();
-         PurgeComPort(port_.c_str());
-         int ret = TalkToTiger();  // this line unique to this hub, most of rest is copied from existing code
-         if ( DEVICE_OK != ret )
-         {
-            LogMessageCode(ret,true);
-         }
-         else
-         {
-            // to succeed must reach here....
+        result = MM::CanNotCommunicate;
+
+        // store the original timeout
+        GetCoreCallback()->GetDeviceProperty(port_.c_str(), "AnswerTimeout", savedTimeout);
+
+        // device specific default communication parameters for ASI Tiger controller
+        GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_Handshaking, "Off");
+        GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_BaudRate, "115200");
+        GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_StopBits, "1");
+        GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", "500.0");
+        GetCoreCallback()->SetDeviceProperty(port_.c_str(), "DelayBetweenCharsMs", "0");
+
+        MM::Device* pDevice = GetCoreCallback()->GetDevice(this, port_.c_str());
+        pDevice->Initialize();
+        PurgeComPort(port_.c_str());
+
+        // send the build command verify that it is Tiger Comm
+        int ret = TalkToTiger();
+        if (ret != DEVICE_OK)
+        {
+            LogMessageCode(ret, true);
+        }
+        else
+        {
+            // success: device responded to the build command
             result = MM::CanCommunicate;
-         }
-         pS->Shutdown();
-         // restore the AnswerTimeout to the default
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
-      }
-   }
-   catch(...)
-   {
-      LogMessage("Exception in DetectDevice!");
-   }
+        }
 
-   return result;
+        pDevice->Shutdown();
+
+        // restore timeout
+        GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", savedTimeout);
+    }
+    catch(...)
+    {
+        LogMessage("Exception in DetectDevice!");
+    }
+
+    return result;
 }
 
 int CTigerCommHub::DetectInstalledDevices()
@@ -176,7 +189,9 @@ int CTigerCommHub::DetectInstalledDevices()
 
    // make sure we can communicate with an initialized hub
    if (DetectDevice() != MM::CanCommunicate)
+   {
       return DEVICE_COMM_HUB_MISSING;
+   }
 
    // resets the list of possible devices
    ClearInstalledDevices();
@@ -395,7 +410,9 @@ int CTigerCommHub::TalkToTiger()
    // make sure we are on Tiger
    int ret = QueryCommandVerify("BU", "TIGER_COMM");
    if (ret == ERR_UNRECOGNIZED_ANSWER)
+   {
       ret = DEVICE_NOT_SUPPORTED;
+   }
    return ret;
 }
 
