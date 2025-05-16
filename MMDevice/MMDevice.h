@@ -1399,9 +1399,16 @@ namespace MM {
        * serializedMetadata: must be the result of md.serialize().c_str() (md
        *                     being an instance of Metadata)
        *
-       * doProcess: must normally be true, except for the case mentioned below
+       * doProcess: must be true, except for the case mentioned below
        *
-       * If the sequence acquisition was started with stopOnOverflow = true
+       * Legacy note: previously, cameras were required to perform the
+       * following special handling when InsertImage() returns
+       * DEVICE_BUFFER_OVERFLOW. However, InsertImage() no longer ever
+       * returns that particular error when stopOnOverflow = false. So
+       * cameras should always just stop the acquisition if InsertImage()
+       * returns any error.
+       *
+       * If the sequence acquisition was started with stopOnOverflow = false
        * _and_ the return value of InsertImage() is DEVICE_BUFFER_OVERFLOW,
        * ClearImageBuffer() should be called and the call to InsertImage()
        * should then be repeated with doProcess set to false. Otherwise, if the
