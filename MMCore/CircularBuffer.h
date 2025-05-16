@@ -56,7 +56,6 @@ public:
    ~CircularBuffer();
 
    int SetOverwriteData(bool overwrite);
-   bool GetOverwriteData() const { return overwriteData_; }
 
    unsigned GetMemorySizeMB() const { return memorySizeMB_; }
 
