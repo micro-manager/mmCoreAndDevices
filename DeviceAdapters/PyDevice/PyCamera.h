@@ -2,7 +2,7 @@
 #include "PyDevice.h"
 #include "buffer.h"
 
-using PyCameraClass = CPyDeviceTemplate<CCameraBase<std::monostate>>;
+using PyCameraClass = CPyDeviceTemplate<CLegacyCameraBase<std::monostate>>;
 class CPyCamera : public PyCameraClass {
     Py_buffer lastFrame_;
     PyObj read_; // the read() method of the camera object
