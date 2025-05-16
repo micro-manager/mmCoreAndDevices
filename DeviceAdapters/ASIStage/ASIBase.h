@@ -77,9 +77,9 @@ protected:
 	int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int GetVersion(std::string& version);
-	int GetBuildName(std::string& buildName);
-	int GetCompileDate(std::string& compileDate);
+	int GetVersion(std::string& version) const;
+	int GetBuildName(std::string& buildName) const;
+	int GetCompileDate(std::string& compileDate) const;
 
 	bool oldstage_;
 	bool initialized_;

@@ -163,7 +163,13 @@ CMMCore::CMMCore() :
 
 /**
  * Destructor.
- * Cleans-up and unloads all devices.
+ *
+ * Cleans up and unloads all devices. However, it is strongly recommended
+ * to explicitly call reset() before destroying the CMMCore object, because
+ * errors cannot be handled in the destructor.
+ *
+ * It is also strongly recommended to unregister any event callback
+ * (registerCallback(nullptr)) before destroying the CMMCore object.
  */
 CMMCore::~CMMCore()
 {
@@ -787,9 +793,7 @@ void CMMCore::unloadAllDevices() throw (CMMError)
 {
    try {
       configGroups_->Clear();
-
-      //selected channel group is no longer valid
-      //channelGroup_ = "":
+      updateAllowedChannelGroups();
 
       // clear pixel size configurations
       if (!pixelSizeGroup_->IsEmpty())
@@ -4944,9 +4948,6 @@ void CMMCore::deleteConfigGroup(const char* groupName) throw (CMMError)
       throw CMMError(ToQuotedString(groupName) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
             MMERR_NoConfigGroup);
 
-   if (0 == channelGroup_.compare(groupName))
-      setChannelGroup("");
-
    updateAllowedChannelGroups();
 
    LOG_DEBUG(coreLogger_) << "Deleted config group " << groupName;
@@ -4985,7 +4986,14 @@ void CMMCore::defineConfig(const char* groupName, const char* configName) throw 
    CheckConfigGroupName(groupName);
    CheckConfigPresetName(configName);
 
+   bool groupExisted = configGroups_->isDefined(groupName);
+
    configGroups_->Define(groupName, configName);
+
+   if (!groupExisted)
+   {
+      updateAllowedChannelGroups();
+   }
 
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": added preset " << configName;
@@ -5012,7 +5020,14 @@ void CMMCore::defineConfig(const char* groupName, const char* configName, const 
    CheckPropertyName(propName);
    CheckPropertyValue(value);
 
+   bool groupExisted = configGroups_->isDefined(groupName);
+
    configGroups_->Define(groupName, configName, deviceLabel, propName, value);
+
+   if (!groupExisted)
+   {
+      updateAllowedChannelGroups();
+   }
 
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": preset " << configName << ": added setting " <<
@@ -7106,7 +7121,6 @@ void CMMCore::loadSystemState(const char* fileName) throw (CMMError)
          }
       }
    }
-   updateAllowedChannelGroups();
 }
 
 
@@ -7617,8 +7631,6 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
       }
    }
 
-   updateAllowedChannelGroups();
-
    // file parsing finished, try to set startup configuration
    if (isConfigDefined(MM::g_CFGGroup_System, MM::g_CFGGroup_System_Startup))
    {
@@ -7637,7 +7649,15 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
 
 /**
  * Register a callback (listener class).
- * MMCore will send notifications on internal events using this interface
+ *
+ * MMCore will send notifications on internal events using this interface.
+ *
+ * Pass nullptr to unregister.
+ *
+ * The caller is responsible for ensuring that the object pointed to by \p cb
+ * remains valid until it is unregistered.
+ *
+ * This function is not thread safe.
  */
 void CMMCore::registerCallback(MMEventCallback* cb)
 {

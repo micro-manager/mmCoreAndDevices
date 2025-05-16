@@ -85,6 +85,7 @@ const char* const g_CRISPSumPropertyName = "Sum";
 const char* const g_CRISPDitherErrorPropertyName = "Dither Error";
 const char* const g_CRISPStatePropertyName = "CRISP State Character";
 
-MM::DeviceDetectionStatus ASICheckSerialPort(MM::Device& device, MM::Core& core, std::string portToCheck, double answerTimeoutMs);
+MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, const std::string& portToCheck, double answerTimeoutMs);
+void LogDeviceError(MM::Device& device, MM::Core& core, int errorCode);
 
 #endif // ASISTAGE_H

@@ -18,6 +18,7 @@ CRISP::CRISP() :
 	ledIntensity_(0),
 	numAverages_(0),
 	numSkips_(0),
+	calibrationRange_(0),
 	inFocusRange_(0),
 	lockRange_(0),
 	objectiveNA_(0)
@@ -66,7 +67,7 @@ bool CRISP::SupportsDeviceDetection()
 
 MM::DeviceDetectionStatus CRISP::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int CRISP::Initialize()
@@ -267,15 +268,16 @@ int CRISP::Initialize()
 		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
 	}
 
-	// LK M requires 9.2n firmware
+	// LK M requires firmware version 9.2n or higher.
+	// Enable these properties as a group to modify calibration settings.
 	if (versionData_.IsVersionAtLeast(9, 2, 'n'))
 	{
 		pAct = new CPropertyAction(this, &CRISP::OnSetLogAmpAGC);
 		CreateProperty("Set LogAmpAGC (Advanced Users Only)", "0", MM::Integer, false, pAct);
-	}
 
-	pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
-	CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
+		pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
+		CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
+	}
 
 	return DEVICE_OK;
 }
@@ -583,7 +585,7 @@ int CRISP::GetValue(const std::string& cmd, float& val)
 		return ret;
 	}
 
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
@@ -617,14 +619,14 @@ int CRISP::SetCommand(const std::string& cmd)
 	{
 		return ret;
 	}
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+	if (answer.compare(0, 2, ":A") == 0)
+	{
+		return DEVICE_OK;
+	}
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
-	}
-	if (answer.substr(0, 2) == ":A")
-	{
-		return DEVICE_OK;
 	}
 	return ERR_UNRECOGNIZED_ANSWER;
 }

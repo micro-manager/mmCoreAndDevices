@@ -80,11 +80,11 @@ private:
 	int OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetPositionStepsSingle(char axis, long& steps);
 	int SetAxisDirection();
-	bool hasCommand(std::string command);
+	bool HasCommand(const std::string& command);
 	void Wait();
-	static std::string EscapeControlCharacters(const std::string v);
-	static std::string UnescapeControlCharacters(const std::string v0);
-	int OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter);
+	static std::string EscapeControlCharacters(const std::string& v);
+	static std::string UnescapeControlCharacters(const std::string& v0);
+	int OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter);
 	int OnVectorX(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisletterX_); }
 	int OnVectorY(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisletterY_); }
 

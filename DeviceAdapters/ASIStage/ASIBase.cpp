@@ -96,7 +96,7 @@ int ASIBase::QueryCommandACK(const char* command) const
 		return ret;
 	}
 	// the controller only acknowledges receipt of the command
-	if (answer.substr(0, 2) != ":A")
+	if (answer.compare(0, 2, ":A") != 0)
 	{
 		return ERR_UNRECOGNIZED_ANSWER;
 	}
@@ -151,7 +151,7 @@ VersionData ASIBase::ParseVersionString(const std::string& version) const
 	return VersionData(major, minor, revision);
 }
 
-int ASIBase::GetVersion(std::string& version)
+int ASIBase::GetVersion(std::string& version) const
 {
    std::string answer;
    int ret = QueryCommand("V", answer);
@@ -159,7 +159,7 @@ int ASIBase::GetVersion(std::string& version)
    {
       return ret;
    }
-   if (answer.substr(0, 2).compare(":A") == 0)
+   if (answer.compare(0, 2, ":A") == 0)
    {
 		version = answer.substr(3);
 		return DEVICE_OK;
@@ -177,7 +177,7 @@ int ASIBase::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int ASIBase::GetBuildName(std::string& buildName)
+int ASIBase::GetBuildName(std::string& buildName) const
 {
 	std::string answer;
 	int ret = QueryCommand("BU", answer);
@@ -199,7 +199,7 @@ int ASIBase::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int ASIBase::GetCompileDate(std::string& buildName)
+int ASIBase::GetCompileDate(std::string& buildName) const
 {
 	std::string answer;
 	int ret = QueryCommand("CD", answer);
@@ -264,11 +264,11 @@ int ASIBase::ResponseStartsWithColonA(const std::string& answer) const
 	{
 		return ERR_UNRECOGNIZED_ANSWER;
 	}
-	if (answer.substr(0, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		const int errorNumber = atoi(answer.substr(3).c_str());
 		return ERR_OFFSET + errorNumber;
