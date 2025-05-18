@@ -78,13 +78,13 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
     delete pDevice;
 }
 
-static const std::vector<std::string> baudRates = { "115200", "28800", "19200", "9600"};
+static constexpr long baudRates[] = { 115200, 28800, 19200, 9600 };
 
 // Detect devices in the Hardware Configuration Wizard when you click "Scan Ports".
 MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, const std::string& port, double answerTimeoutMs)
 {
-    MM::DeviceDetectionStatus result = MM::Misconfigured;
     char savedTimeout[MM::MaxStrLength];
+    MM::DeviceDetectionStatus result = MM::Misconfigured;
 
     try
     {
@@ -115,9 +115,9 @@ MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, co
         MM::Device* pDevice = core.GetDevice(&device, port.c_str());
 
         // check all possible baud rates for the device
-        for (const std::string& baudRate : baudRates)
+        for (const long baudRate : baudRates)
         {
-            core.SetDeviceProperty(port.c_str(), MM::g_Keyword_BaudRate, baudRate.c_str());
+            core.SetDeviceProperty(port.c_str(), MM::g_Keyword_BaudRate, std::to_string(baudRate).c_str());
             pDevice->Initialize();
             core.PurgeSerial(&device, port.c_str());
 
