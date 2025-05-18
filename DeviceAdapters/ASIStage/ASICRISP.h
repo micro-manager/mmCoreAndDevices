@@ -69,15 +69,16 @@ public:
 	int OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-	void CreateSumProperty();
-	void CreateDitherErrorProperty();
-
 private:
 	int GetFocusState(std::string& focusState);
 	int SetFocusState(const std::string& focusState);
 	int ForceSetFocusState(const std::string& focusState);
 	int GetValue(const std::string& cmd, float& val);
 	int SetCommand(const std::string& cmd);
+
+	// Properties
+	void CreateSumProperty();
+	void CreateDitherErrorProperty();
 
 	std::string axis_;
 	std::string focusState_;
