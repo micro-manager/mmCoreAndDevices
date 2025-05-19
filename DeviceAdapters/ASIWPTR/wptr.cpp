@@ -80,7 +80,7 @@ WPTRobot::WPTRobot() :
 
     InitializeDefaultErrorMessages();
 
-    // Create Pre-Init Properties
+    // Create Preinitialization Properties
 
     // Name
     CreateProperty(MM::g_Keyword_Name, g_WPTRobotName, MM::String, true);
@@ -176,7 +176,7 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
     if (eAct == MM::BeforeGet) {
         pProp->Set(command_.c_str());
     } else if (eAct == MM::AfterSet) {
-        // Read what keyword the user issued, and send the corresponding cmd
+        // Read what keyword the user issued, and send the corresponding command
         pProp->Get(command_);
 
         std::ostringstream os;
@@ -248,7 +248,7 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
         } else if (command_.compare(0, 3, "AES") == 0) {
             // used issued STOP command
 
-            // AES is cmd for emergency stop, stops the robot cold, issue DRT cmd to enable again
+            // AES is command for emergency stop, stops the robot cold, issue DRT command to enable again
             os << "AES";
 
             ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
@@ -270,7 +270,7 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
         } else if (command_.compare(0, 3, "DRT") == 0) {
             // user issued DRT command
 
-            // user to over ride errors
+            // override errors
             os << "DRT";
 
             ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
