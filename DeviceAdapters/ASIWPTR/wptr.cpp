@@ -31,8 +31,6 @@
 #include "DeviceUtils.h"
 #include "ModuleInterface.h"
 
-using namespace std;
-
 const char* g_WPTRobotName = "WPTRobot";
 
 // Exported MMDevice API
@@ -41,15 +39,15 @@ MODULE_API void InitializeModuleData() {
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName) {
-    if (deviceName == 0) {
-        return 0;
+    if (deviceName == nullptr) {
+        return nullptr;
     }
 
-    if (strcmp(deviceName, g_WPTRobotName) == 0) {
+    if (std::string(deviceName) == g_WPTRobotName) {
         return new WPTRobot();
     }
 
-    return 0;
+    return nullptr;
 }
 
 MODULE_API void DeleteDevice(MM::Device* pDevice) {
@@ -57,15 +55,15 @@ MODULE_API void DeleteDevice(MM::Device* pDevice) {
 }
 
 // Clear contents of serial port
-int ClearPort(MM::Device& device, MM::Core& core, std::string port) {
-    const int bufSize = 255;
-    unsigned char clear[bufSize];
-    unsigned long read = bufSize;
-    int ret;
-    while ((int)read == bufSize) {
-        ret = core.ReadFromSerial(&device, port.c_str(), clear, bufSize, read);
-        if (ret != DEVICE_OK) {
-            return ret;
+int ClearPort(MM::Device& device, MM::Core& core, const std::string& port) {
+    constexpr size_t bufferSize = 255;
+    unsigned char clear[bufferSize];
+    unsigned long read = bufferSize;
+    int result;
+    while (read == bufferSize) {
+        result = core.ReadFromSerial(&device, port.c_str(), clear, bufferSize, read);
+        if (result != DEVICE_OK) {
+            return result;
         }
     }
     return DEVICE_OK;
@@ -74,7 +72,9 @@ int ClearPort(MM::Device& device, MM::Core& core, std::string port) {
 WPTRobot::WPTRobot() :
     CGenericBase<WPTRobot>(),
     initialized_(false),
-    // port_("Undefined"),
+    numPos_(0),
+    port_(""),
+    command_(""),
     stage_(1),
     slot_(1) {
 
@@ -179,11 +179,11 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
         // Read what keyword the user issued, and send the corresponding cmd
         pProp->Get(command_);
 
-        ostringstream os;
-        string answer;
+        std::ostringstream os;
+        std::string answer;
         int ret;
 
-        if (command_.substr(0, 3) == "ORG") {
+        if (command_.compare(0, 3, "ORG") == 0) {
             // user issued ORG command
             os << "ORG";
 
@@ -202,10 +202,10 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (answer.length() != 3) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
-            if (answer.substr(0, 3).compare("ORG") != 0) {
+            if (answer.compare(0, 3, "ORG") != 0) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
-        } else if (command_.substr(0, 3) == "GET") {
+        } else if (command_.compare(0, 3, "GET") == 0) {
             // user issued GET command
             os << "GET " << stage_ << "," << slot_;
 
@@ -222,7 +222,7 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (answer.length() != 3) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
-            if (answer.substr(0, 3).compare("GET") != 0) {
+            if (answer.compare(0, 3, "GET") != 0) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
         } else if (command_.substr(0, 3) == "PUT") {
@@ -242,10 +242,10 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (answer.length() != 3) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
-            if (answer.substr(0, 3).compare("PUT") != 0) {
+            if (answer.compare(0, 3, "PUT") != 0) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
-        } else if (command_.substr(0, 3) == "AES") {
+        } else if (command_.compare(0, 3, "AES") == 0) {
             // used issued STOP command
 
             // AES is cmd for emergency stop, stops the robot cold, issue DRT cmd to enable again
@@ -264,10 +264,10 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (answer.length() != 3) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
-            if (answer.substr(0, 3).compare("AES") != 0) {
+            if (answer.compare(0, 3, "AES") != 0) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
-        } else if (command_.substr(0, 3) == "DRT") {
+        } else if (command_.compare(0, 3, "DRT") == 0) {
             // user issued DRT command
 
             // user to over ride errors
@@ -286,7 +286,7 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (answer.length() != 3) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
-            if (answer.substr(0, 3).compare("DRT") != 0) {
+            if (answer.compare(0, 3, "DRT") != 0) {
                 return ERR_UNRECOGNIZED_ANSWER;
             }
         }

@@ -32,16 +32,16 @@
 #include "MMDevice.h"
 
 // Error codes
-//#define ERR_UNKNOWN_POSITION         10002
-#define ERR_PORT_CHANGE_FORBIDDEN    10004
-#define ERR_INVALID_STEP_SIZE        10006
-#define ERR_INVALID_MODE             10008
-#define ERR_UNRECOGNIZED_ANSWER      10009
-#define ERR_UNSPECIFIED_ERROR        10010
+// constexpr int ERR_UNKNOWN_POSITION = 10002;
+constexpr int ERR_PORT_CHANGE_FORBIDDEN = 10004;
+constexpr int ERR_INVALID_STEP_SIZE = 10006;
+constexpr int ERR_INVALID_MODE = 10008;
+constexpr int ERR_UNRECOGNIZED_ANSWER = 10009;
+constexpr int ERR_UNSPECIFIED_ERROR = 10010;
 
-#define ERR_OFFSET 10100
+constexpr int ERR_OFFSET = 10100;
 
-int ClearPort(MM::Device& device, MM::Core& core, std::string port);
+int ClearPort(MM::Device& device, MM::Core& core, const std::string& port);
 
 class WPTRobot : public CGenericBase<WPTRobot> {
 public:
