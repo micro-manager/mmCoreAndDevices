@@ -19,7 +19,7 @@ public:
 
 	// MMDevice API
 	bool Busy();
-	void GetName(char* pszName) const;
+	void GetName(char* name) const;
 
 	int Initialize();
 	int Shutdown();
@@ -68,12 +68,6 @@ public:
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
-	// For MS2000 firmware >= 9.2o, use faster serial commands
-	int OnSum(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct);
-	// For backwards compatibility with MS2000 firmware < 9.2o
-	int OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	int GetFocusState(std::string& focusState);
@@ -81,6 +75,10 @@ private:
 	int ForceSetFocusState(const std::string& focusState);
 	int GetValue(const std::string& cmd, float& val);
 	int SetCommand(const std::string& cmd);
+
+	// Properties
+	void CreateSumProperty();
+	void CreateDitherErrorProperty();
 
 	std::string axis_;
 	std::string focusState_;
@@ -97,7 +95,7 @@ private:
 	double lockRange_; // millimeters
 	double objectiveNA_;
 
-	static const int SIZE_OF_FC_ARRAY = 24;
+	static constexpr int SIZE_OF_FC_ARRAY = 24;
 	std::string focusCurveData_[SIZE_OF_FC_ARRAY];
 };
 

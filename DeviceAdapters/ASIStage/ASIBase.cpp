@@ -25,17 +25,16 @@ ASIBase::~ASIBase()
 {
 }
 
-// Communication "clear buffer" utility function:
+// Clear contents of serial port
 int ASIBase::ClearPort()
 {
-	// Clear contents of serial port
-	const int bufSize = 255;
-	unsigned char clear[bufSize];
-	unsigned long read = bufSize;
+	constexpr size_t bufferSize = 255;
+	unsigned char clear[bufferSize];
+	unsigned long read = bufferSize;
 	int ret;
-	while ((int)read == bufSize)
+	while (read == bufferSize)
 	{
-		ret = core_->ReadFromSerial(device_, port_.c_str(), clear, bufSize, read);
+		ret = core_->ReadFromSerial(device_, port_.c_str(), clear, bufferSize, read);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
