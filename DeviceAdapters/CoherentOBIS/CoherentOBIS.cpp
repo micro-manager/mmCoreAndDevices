@@ -88,18 +88,18 @@ CoherentObis::CoherentObis(const char* name) :
    error_(0),
    changedTime_(0.0),
    queryToken_("?"),
-   powerSetpointToken_("SOUR1:POW:LEV:IMM:AMPL"),
-   powerReadbackToken_("SOUR1:POW:LEV:IMM:AMPL"),
+   powerSetpointToken_("SOUR:POW:LEV:IMM:AMPL"),
+   powerReadbackToken_("SOUR:POW:LEV:IMM:AMPL"),
    CDRHToken_("CDRH"),  // if this is on, laser delays 5 SEC before turning on
    CWToken_("CW"),
-   laserOnToken_("SOUR1:AM:STATE"),
+   laserOnToken_("SOUR:AM:STATE"),
    TECServoToken_("T"),
    headSerialNoToken_("SYST:INF:SNUM"),
-   headUsageHoursToken_("SYST1:DIOD:HOUR"),
-   wavelengthToken_("SYST1:INF:WAV"),
-   externalPowerControlToken_("SOUR1:POW:LEV:IMM:AMPL"),
-   maxPowerToken_("SOUR1:POW:LIM:HIGH"),
-   minPowerToken_("SOUR1:POW:LIM:LOW")
+   headUsageHoursToken_("SYST:DIOD:HOUR"),
+   wavelengthToken_("SYST:INF:WAV"),
+   externalPowerControlToken_("SOUR:POW:LEV:IMM:AMPL"),
+   maxPowerToken_("SOUR:POW:LIM:HIGH"),
+   minPowerToken_("SOUR:POW:LIM:LOW")
 {
    assert(strlen(name) < (unsigned int) MM::MaxStrLength);
 
@@ -155,9 +155,9 @@ int CoherentObis::Initialize()
 
 
    //Initialize laser??
-   setLaser("SYST1:COMM:HAND","On");
-   setLaser("SYST1:COMM:PROM","Off");
-   msg << "SYST1:ERR:CLE" ;
+   setLaser("SYST:COMM:HAND","On");
+   setLaser("SYST:COMM:PROM","Off");
+   msg << "SYST:ERR:CLE" ;
    Send(msg.str());
 
    // query laser for power limits
