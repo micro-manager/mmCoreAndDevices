@@ -29,6 +29,7 @@
     <ClInclude Include="MMDeviceConstants.h" />
     <ClInclude Include="ModuleInterface.h" />
     <ClInclude Include="Property.h" />
+    <ClInclude Include="RegisteredDeviceCollection.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AF3143A4-5529-4C78-A01A-9F2A8977ED64}</ProjectGuid>

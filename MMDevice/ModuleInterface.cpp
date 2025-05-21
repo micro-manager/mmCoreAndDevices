@@ -22,6 +22,7 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
 #include "ModuleInterface.h"
+#include "RegisteredDeviceCollection.h"
 
 #ifndef MMDEVICE_CLIENT_BUILD
 
@@ -31,92 +32,10 @@
 
 namespace {
 
-class RegisteredDeviceCollection
-{
-   struct DeviceInfo
-   {
-      std::string name;
-      MM::DeviceType type = MM::DeviceType::UnknownType;
-      std::string description;
-   };
-
-   std::vector<DeviceInfo> devices_;
-
-public:
-   void RegisterDevice(const char* deviceName, MM::DeviceType deviceType, const char* deviceDescription)
-   {
-      if (!deviceName)
-         return;
-
-      if (!deviceDescription)
-         // This is a bug; let the programmer know by displaying an ugly string
-         deviceDescription = "(Null description)";
-
-      auto it = std::find_if(devices_.begin(), devices_.end(),
-         [&](const DeviceInfo& dev) { return dev.name == deviceName; });
-      if (it != devices_.end())
-      {
-         // Device with this name already registered
-         // TODO This should be an error
-         return;
-      }
-
-      devices_.push_back(DeviceInfo{deviceName, deviceType, deviceDescription});
-
-   }
-
-   unsigned GetNumberOfDevices() const
-   {
-      return static_cast<unsigned>(devices_.size());
-   }
-
-   bool GetDeviceName(unsigned deviceIndex, char* name, unsigned bufLen) const
-   {
-      if (deviceIndex >= devices_.size())
-         return false;
-
-      const std::string& deviceName = devices_[deviceIndex].name;
-
-      if (deviceName.size() >= bufLen)
-         return false; // buffer too small, can't truncate the name
-
-      std::snprintf(name, bufLen, "%s", deviceName.c_str());
-      return true;
-   }
-
-   bool GetDeviceType(const char* deviceName, int* type)
-   {
-      auto it = std::find_if(devices_.begin(), devices_.end(),
-         [&](const DeviceInfo& dev) { return dev.name == deviceName; });
-      if (it == devices_.end())
-      {
-         *type = MM::UnknownType;
-         return false;
-      }
-
-      // Prefer int over enum across DLL boundary so that the module ABI does not
-      // change (somewhat pedantic, but let's be safe).
-      *type = static_cast<int>(it->type);
-
-      return true;
-   }
-
-   bool GetDeviceDescription(const char* deviceName, char* description, unsigned bufLen)
-   {
-      auto it = std::find_if(devices_.begin(), devices_.end(),
-         [&](const DeviceInfo& dev) { return dev.name == deviceName; });
-      if (it == devices_.end())
-         return false;
-
-      std::snprintf(description, bufLen, "%s", it->description.c_str());
-      return true;
-   }
-};
-
 // Registered devices in this module (device adapter library)
-RegisteredDeviceCollection& TheRegisteredDeviceCollection()
+MM::internal::RegisteredDeviceCollection& TheRegisteredDeviceCollection()
 {
-   static RegisteredDeviceCollection devices;
+   static MM::internal::RegisteredDeviceCollection devices;
    return devices;
 }
 
