@@ -101,6 +101,7 @@
     <ClCompile Include="FrameBuffer.cpp" />
     <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp" />
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplRegular.cpp" />
     <ClCompile Include="LoadableModules\LoadedModule.cpp" />
     <ClCompile Include="LoadableModules\LoadedModuleImpl.cpp" />
     <ClCompile Include="LoadableModules\LoadedModuleImplWindows.cpp" />
@@ -146,6 +147,8 @@
     <ClInclude Include="FrameBuffer.h" />
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h" />
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImpl.h" />
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplRegular.h" />
     <ClInclude Include="LoadableModules\LoadedModule.h" />
     <ClInclude Include="LoadableModules\LoadedModuleImpl.h" />
     <ClInclude Include="LoadableModules\LoadedModuleImplWindows.h" />

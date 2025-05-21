@@ -36,6 +36,7 @@
 #include "Error.h"
 #include "LibraryInfo/LibraryPaths.h"
 #include "LoadableModules/LoadedDeviceAdapter.h"
+#include "LoadableModules/LoadedDeviceAdapterImplRegular.h"
 #include "PluginManager.h"
 
 #include <algorithm>
@@ -138,8 +139,17 @@ CPluginManager::GetDeviceAdapter(const std::string& moduleName)
    filename += LIB_NAME_SUFFIX;
    filename = FindInSearchPath(filename);
 
-   std::shared_ptr<LoadedDeviceAdapter> module =
-      std::make_shared<LoadedDeviceAdapter>(moduleName, filename);
+   auto module = [&] {
+      try {
+         auto impl = std::make_unique<LoadedDeviceAdapterImplRegular>(filename);
+         return std::make_shared<LoadedDeviceAdapter>(moduleName, std::move(impl));
+      }
+      catch (const CMMError& e) {
+         throw CMMError("Failed to load device adapter " + ToQuotedString(moduleName) +
+            " from " + ToQuotedString(filename), e);
+      }
+   }();
+
    moduleMap_[moduleName] = module;
    return module;
 }

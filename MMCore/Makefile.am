@@ -68,6 +68,9 @@ libMMCore_la_SOURCES = \
 	LibraryInfo/LibraryPathsUnix.cpp \
 	LoadableModules/LoadedDeviceAdapter.cpp \
 	LoadableModules/LoadedDeviceAdapter.h \
+	LoadableModules/LoadedDeviceAdapterImpl.h \
+	LoadableModules/LoadedDeviceAdapterImplRegular.cpp \
+	LoadableModules/LoadedDeviceAdapterImplRegular.h \
 	LoadableModules/LoadedModule.cpp \
 	LoadableModules/LoadedModule.h \
 	LoadableModules/LoadedModuleImpl.cpp \

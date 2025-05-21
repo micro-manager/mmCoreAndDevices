@@ -65,6 +65,7 @@ mmcore_sources = files(
     'LibraryInfo/LibraryPathsUnix.cpp',
     'LibraryInfo/LibraryPathsWindows.cpp',
     'LoadableModules/LoadedDeviceAdapter.cpp',
+    'LoadableModules/LoadedDeviceAdapterImplRegular.cpp',
     'LoadableModules/LoadedModule.cpp',
     'LoadableModules/LoadedModuleImpl.cpp',
     'LoadableModules/LoadedModuleImplUnix.cpp',
