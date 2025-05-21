@@ -112,7 +112,7 @@
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 5, MMCore_versionPatch = 1;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 5, MMCore_versionPatch = 2;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -173,6 +173,11 @@ CMMCore::CMMCore() :
  */
 CMMCore::~CMMCore()
 {
+   // Applications should not expect the callback notifications to be available
+   // when they are already allowing the Core object to be destroyed. Disable
+   // for safety.
+   registerCallback(nullptr);
+
    try
    {
       // TODO We should attempt to continue cleanup beyond the first device
