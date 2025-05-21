@@ -44,20 +44,10 @@ struct DeviceInfo
    {}
 };
 
-// Predicate for searching by name
-class DeviceNameMatches
-{
-   std::string name_;
-public:
-   explicit DeviceNameMatches(const std::string& deviceName) : name_(deviceName) {}
-   bool operator()(const DeviceInfo& info) { return info.name_ == name_; }
-};
+// Registered devices in this module (device adapter library)
+std::vector<DeviceInfo> g_registeredDevices;
 
 } // anonymous namespace
-
-
-// Registered devices in this module (device adapter library)
-static std::vector<DeviceInfo> g_registeredDevices;
 
 
 MODULE_API long GetModuleVersion()
@@ -91,9 +81,8 @@ MODULE_API bool GetDeviceName(unsigned deviceIndex, char* name, unsigned bufLen)
 
 MODULE_API bool GetDeviceType(const char* deviceName, int* type)
 {
-   std::vector<DeviceInfo>::const_iterator it =
-      std::find_if(g_registeredDevices.begin(), g_registeredDevices.end(),
-            DeviceNameMatches(deviceName));
+   auto it = std::find_if(g_registeredDevices.begin(), g_registeredDevices.end(),
+      [&](const DeviceInfo& dev) { return dev.name_ == deviceName; });
    if (it == g_registeredDevices.end())
    {
       *type = MM::UnknownType;
@@ -109,9 +98,8 @@ MODULE_API bool GetDeviceType(const char* deviceName, int* type)
 
 MODULE_API bool GetDeviceDescription(const char* deviceName, char* description, unsigned bufLen)
 {
-   std::vector<DeviceInfo>::const_iterator it =
-      std::find_if(g_registeredDevices.begin(), g_registeredDevices.end(),
-            DeviceNameMatches(deviceName));
+   auto it = std::find_if(g_registeredDevices.begin(), g_registeredDevices.end(),
+      [&](const DeviceInfo& dev) { return dev.name_ == deviceName; });
    if (it == g_registeredDevices.end())
       return false;
 
@@ -128,10 +116,14 @@ void RegisterDevice(const char* deviceName, MM::DeviceType deviceType, const cha
       // This is a bug; let the programmer know by displaying an ugly string
       deviceDescription = "(Null description)";
 
-   if (std::find_if(g_registeredDevices.begin(), g_registeredDevices.end(),
-            DeviceNameMatches(deviceName)) != g_registeredDevices.end())
+   auto it = std::find_if(g_registeredDevices.begin(), g_registeredDevices.end(),
+      [&](const DeviceInfo& dev) { return dev.name_ == deviceName; });
+   if (it != g_registeredDevices.end())
+   {
       // Device with this name already registered
+      // TODO This should be an error
       return;
+   }
 
    g_registeredDevices.push_back(DeviceInfo(deviceName, deviceType, deviceDescription));
 }
