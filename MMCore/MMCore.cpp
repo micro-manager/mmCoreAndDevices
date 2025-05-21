@@ -173,6 +173,11 @@ CMMCore::CMMCore() :
  */
 CMMCore::~CMMCore()
 {
+   // Applications should not expect the callback notifications to be available
+   // when they are already allowing the Core object to be destroyed. Disable
+   // for safety.
+   registerCallback(nullptr);
+
    try
    {
       // TODO We should attempt to continue cleanup beyond the first device
