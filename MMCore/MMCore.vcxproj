@@ -101,6 +101,7 @@
     <ClCompile Include="FrameBuffer.cpp" />
     <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp" />
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplMock.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplRegular.cpp" />
     <ClCompile Include="LoadableModules\LoadedModule.cpp" />
     <ClCompile Include="LoadableModules\LoadedModuleImpl.cpp" />
@@ -148,6 +149,7 @@
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImpl.h" />
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplMock.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplRegular.h" />
     <ClInclude Include="LoadableModules\LoadedModule.h" />
     <ClInclude Include="LoadableModules\LoadedModuleImpl.h" />
@@ -168,6 +170,7 @@
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="MMCore.h" />
     <ClInclude Include="MMEventCallback.h" />
+    <ClInclude Include="MockDeviceAdapter.h" />
     <ClInclude Include="PluginManager.h" />
     <ClInclude Include="Semaphore.h" />
     <ClInclude Include="Task.h" />

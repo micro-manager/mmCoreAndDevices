@@ -65,6 +65,7 @@ mmcore_sources = files(
     'LibraryInfo/LibraryPathsUnix.cpp',
     'LibraryInfo/LibraryPathsWindows.cpp',
     'LoadableModules/LoadedDeviceAdapter.cpp',
+    'LoadableModules/LoadedDeviceAdapterImplMock.cpp',
     'LoadableModules/LoadedDeviceAdapterImplRegular.cpp',
     'LoadableModules/LoadedModule.cpp',
     'LoadableModules/LoadedModuleImpl.cpp',
@@ -93,6 +94,7 @@ mmcore_public_headers = files(
     'Logging/GenericMetadata.h',
     'MMCore.h',
     'MMEventCallback.h',
+    'MockDeviceAdapter.h',
 )
 # Note that the MMDevice headers are also needed; which of those are part of
 # MMCore's public interface is poorly defined at the moment.

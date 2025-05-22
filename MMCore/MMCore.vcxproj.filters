@@ -150,6 +150,9 @@
     <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplRegular.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplMock.cpp">
+      <Filter>Source Files\LoadableModules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CircularBuffer.h">
@@ -324,6 +327,12 @@
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplRegular.h">
+      <Filter>Header Files\LoadableModules</Filter>
+    </ClInclude>
+    <ClInclude Include="MockDeviceAdapter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplMock.h">
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
   </ItemGroup>

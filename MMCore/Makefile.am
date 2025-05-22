@@ -69,6 +69,8 @@ libMMCore_la_SOURCES = \
 	LoadableModules/LoadedDeviceAdapter.cpp \
 	LoadableModules/LoadedDeviceAdapter.h \
 	LoadableModules/LoadedDeviceAdapterImpl.h \
+	LoadableModules/LoadedDeviceAdapterImplMock.cpp \
+	LoadableModules/LoadedDeviceAdapterImplMock.h \
 	LoadableModules/LoadedDeviceAdapterImplRegular.cpp \
 	LoadableModules/LoadedDeviceAdapterImplRegular.h \
 	LoadableModules/LoadedModule.cpp \
@@ -95,6 +97,7 @@ libMMCore_la_SOURCES = \
 	Logging/MetadataFormatter.h \
 	MMCore.cpp \
 	MMCore.h \
+	MockDeviceAdapter.h \
 	PluginManager.cpp \
 	PluginManager.h \
 	Semaphore.cpp \
