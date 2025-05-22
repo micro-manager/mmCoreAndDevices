@@ -112,7 +112,7 @@ CoherentObis::CoherentObis(const char* name) :
 
    EnableDelay(); // signals that the delay setting will be used
 
-   // Default device index is 1 (uses SYST/SOUR)
+   // Default device index is 1 (uses SYST1/SOUR1)
    deviceIndex_ = 1;
 
    CPropertyAction* pActDeviceIndex = new CPropertyAction(this, &CoherentObis::OnDeviceIndex);
