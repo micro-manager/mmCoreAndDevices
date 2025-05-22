@@ -165,8 +165,9 @@ SUBDIRS = \
 	Nikon \
 	NikonTE2000 \
 	NotificationTester \
-	OVP_ECS2 \
 	Omicron \
+	OpenUC2 \
+	OVP_ECS2 \
 	Oxxius \
 	OxxiusCombiner \
 	PI \

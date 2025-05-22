@@ -518,6 +518,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Fluigent", "DeviceAdapters\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WPI_Aladdin", "DeviceAdapters\WPI_Aladdin\WPI_Aladdin.vcxproj", "{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openUC2", "DeviceAdapters\OpenUC2\openUC2.vcxproj", "{377D16E3-4C99-4068-BE24-EC765BE5A71F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1556,6 +1558,10 @@ Global
 		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Debug|x64.Build.0 = Debug|x64
 		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Release|x64.ActiveCfg = Release|x64
 		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Release|x64.Build.0 = Release|x64
+		{377D16E3-4C99-4068-BE24-EC765BE5A71F}.Debug|x64.ActiveCfg = Debug|x64
+		{377D16E3-4C99-4068-BE24-EC765BE5A71F}.Debug|x64.Build.0 = Debug|x64
+		{377D16E3-4C99-4068-BE24-EC765BE5A71F}.Release|x64.ActiveCfg = Release|x64
+		{377D16E3-4C99-4068-BE24-EC765BE5A71F}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

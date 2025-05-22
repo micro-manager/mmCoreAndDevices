@@ -624,6 +624,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    OVP_ECS2
    Omicron
    OpenCVgrabber
+   OpenUC2
    Oxxius
    OxxiusCombiner
    PI
