@@ -69,17 +69,17 @@ public:
       return static_cast<unsigned>(devices_.size());
    }
 
-   bool GetDeviceName(unsigned deviceIndex, char* name, unsigned bufLen) const
+   bool GetDeviceName(unsigned deviceIndex, char* name, unsigned bufSize) const
    {
       if (deviceIndex >= devices_.size())
          return false;
 
       const std::string& deviceName = devices_[deviceIndex].name;
 
-      if (deviceName.size() >= bufLen)
+      if (deviceName.size() >= bufSize)
          return false; // buffer too small, can't truncate the name
 
-      std::snprintf(name, bufLen, "%s", deviceName.c_str());
+      std::snprintf(name, bufSize, "%s", deviceName.c_str());
       return true;
    }
 
@@ -100,14 +100,14 @@ public:
       return true;
    }
 
-   bool GetDeviceDescription(const char* deviceName, char* description, unsigned bufLen) const
+   bool GetDeviceDescription(const char* deviceName, char* description, unsigned bufSize) const
    {
       auto it = std::find_if(devices_.begin(), devices_.end(),
          [&](const DeviceInfo& dev) { return dev.name == deviceName; });
       if (it == devices_.end())
          return false;
 
-      std::snprintf(description, bufLen, "%s", it->description.c_str());
+      std::snprintf(description, bufSize, "%s", it->description.c_str());
       return true;
    }
 };
