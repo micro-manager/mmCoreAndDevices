@@ -65,6 +65,7 @@
 #include "Error.h"
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"
+#include "MockDeviceAdapter.h"
 
 #include <cstring>
 #include <deque>
@@ -671,6 +672,14 @@ public:
          const char* peripheralLabel) throw (CMMError);
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
+
+#if !defined(SWIGJAVA) && !defined(SWIGPYTHON)
+   /** \name Testing */
+   ///@{
+   void loadMockDeviceAdapter(const char* name,
+         MockDeviceAdapter* implementation) throw (CMMError);
+   ///@}
+#endif
 
 private:
    // make object non-copyable

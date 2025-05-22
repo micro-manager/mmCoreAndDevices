@@ -8433,3 +8433,24 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
    }
    return description.empty() ? "N/A" : description;
 }
+
+/**
+ * \brief Testing only: load a mock device adapter.
+ * 
+ * This function is designed for unit testing of MMCore itself, and its
+ * interface is subject to change. It is also not designed for language
+ * bindings (Java, Python) in mind (at least for now).
+ * 
+ * Do not use this in production code.
+ * 
+ * The caller is responsible for keeping \p implementation valid until this
+ * Core is destroyed (or until unloadLibrary(name) is called, but that is
+ * not recommended.)
+ */
+void CMMCore::loadMockDeviceAdapter(const char* name,
+      MockDeviceAdapter* implementation) throw (CMMError)
+{
+   if (!name)
+      throw CMMError("Null device adapter name");
+   pluginManager_->LoadMockAdapter(name, implementation);
+}

@@ -29,40 +29,13 @@
 #include <memory>
 
 
-LoadedDeviceAdapter::LoadedDeviceAdapter(const std::string& name, const std::string& filename) :
+LoadedDeviceAdapter::LoadedDeviceAdapter(const std::string& name,
+   std::unique_ptr<LoadedDeviceAdapterImpl>&& impl) :
    name_(name),
-   InitializeModuleData_(0),
-   CreateDevice_(0),
-   DeleteDevice_(0),
-   GetModuleVersion_(0),
-   GetDeviceInterfaceVersion_(0),
-   GetNumberOfDevices_(0),
-   GetDeviceName_(0),
-   GetDeviceType_(0),
-   GetDeviceDescription_(0)
+   impl_(std::move(impl))
 {
-   try
-   {
-      module_ = std::make_shared<LoadedModule>(filename);
-   }
-   catch (const CMMError& e)
-   {
-      module_.reset();
-      throw CMMError("Failed to load device adapter " + ToQuotedString(name_), e);
-   }
-
-   try
-   {
-      CheckInterfaceVersion();
-   }
-   catch (const CMMError& e)
-   {
-      module_.reset();
-      throw CMMError("Failed to load device adapter " + ToQuotedString(name_) +
-            " from " + ToQuotedString(filename), e);
-   }
-
-   InitializeModuleData();
+   CheckInterfaceVersion();
+   impl_->InitializeModuleData();
 }
 
 
@@ -76,13 +49,13 @@ LoadedDeviceAdapter::GetLock()
 std::vector<std::string>
 LoadedDeviceAdapter::GetAvailableDeviceNames() const
 {
-   unsigned deviceCount = GetNumberOfDevices();
+   unsigned deviceCount = impl_->GetNumberOfDevices();
    std::vector<std::string> deviceNames;
    deviceNames.reserve(deviceCount);
    for (unsigned i = 0; i < deviceCount; ++i)
    {
       ModuleStringBuffer nameBuf(this, "GetDeviceName");
-      bool ok = GetDeviceName(i, nameBuf.GetBuffer(), (unsigned int) nameBuf.GetMaxStrLen());
+      bool ok = impl_->GetDeviceName(i, nameBuf.GetBuffer(), (unsigned int) nameBuf.GetMaxStrLen());
       if (!ok)
       {
          throw CMMError("Cannot get device name at index " + ToString(i) +
@@ -98,7 +71,7 @@ std::string
 LoadedDeviceAdapter::GetDeviceDescription(const std::string& deviceName) const
 {
    ModuleStringBuffer descBuf(this, "GetDeviceDescription");
-   bool ok = GetDeviceDescription(deviceName.c_str(), descBuf.GetBuffer(),
+   bool ok = impl_->GetDeviceDescription(deviceName.c_str(), descBuf.GetBuffer(),
         (unsigned int) descBuf.GetMaxStrLen());
    if (!ok)
    {
@@ -114,7 +87,7 @@ MM::DeviceType
 LoadedDeviceAdapter::GetAdvertisedDeviceType(const std::string& deviceName) const
 {
    int typeInt = MM::UnknownType;
-   bool ok = GetDeviceType(deviceName.c_str(), &typeInt);
+   bool ok = impl_->GetDeviceType(deviceName.c_str(), &typeInt);
    if (!ok || typeInt == MM::UnknownType)
    {
       throw CMMError("Cannot get type of device " +
@@ -131,7 +104,7 @@ LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
       mm::logging::Logger deviceLogger,
       mm::logging::Logger coreLogger)
 {
-   MM::Device* pDevice = CreateDevice(name.c_str());
+   MM::Device* pDevice = impl_->CreateDevice(name.c_str());
    if (!pDevice)
       throw CMMError("Device adapter " + ToQuotedString(GetName()) +
             " failed to instantiate device " + ToQuotedString(name));
@@ -153,7 +126,7 @@ LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
       expectedType = actualType;
 
    std::shared_ptr<LoadedDeviceAdapter> shared_this(shared_from_this());
-   DeleteDeviceFunction deleter = std::bind(&LoadedDeviceAdapter::DeleteDevice, this, std::placeholders::_1);
+   DeleteDeviceFunction deleter = [this](MM::Device* dev) { impl_->DeleteDevice(dev); };
 
    switch (expectedType)
    {
@@ -214,8 +187,8 @@ LoadedDeviceAdapter::CheckInterfaceVersion() const
    long moduleInterfaceVersion, deviceInterfaceVersion;
    try
    {
-      moduleInterfaceVersion = GetModuleVersion();
-      deviceInterfaceVersion = GetDeviceInterfaceVersion();
+      moduleInterfaceVersion = impl_->GetModuleVersion();
+      deviceInterfaceVersion = impl_->GetDeviceInterfaceVersion();
    }
    catch (const CMMError& e)
    {
@@ -231,94 +204,4 @@ LoadedDeviceAdapter::CheckInterfaceVersion() const
       throw CMMError("Incompatible device interface version (MMCore requires " +
             ToString(DEVICE_INTERFACE_VERSION) +
             "; device adapter has " + ToString(deviceInterfaceVersion) + ")");
-}
-
-
-void
-LoadedDeviceAdapter::InitializeModuleData()
-{
-   if (!InitializeModuleData_)
-      InitializeModuleData_ = reinterpret_cast<fnInitializeModuleData>
-         (module_->GetFunction("InitializeModuleData"));
-   InitializeModuleData_();
-}
-
-
-MM::Device*
-LoadedDeviceAdapter::CreateDevice(const char* deviceName)
-{
-   if (!CreateDevice_)
-      CreateDevice_ = reinterpret_cast<fnCreateDevice>
-         (module_->GetFunction("CreateDevice"));
-   return CreateDevice_(deviceName);
-}
-
-
-void
-LoadedDeviceAdapter::DeleteDevice(MM::Device* device)
-{
-   if (!DeleteDevice_)
-      DeleteDevice_ = reinterpret_cast<fnDeleteDevice>
-         (module_->GetFunction("DeleteDevice"));
-   DeleteDevice_(device);
-}
-
-
-long
-LoadedDeviceAdapter::GetModuleVersion() const
-{
-   if (!GetModuleVersion_)
-      GetModuleVersion_ = reinterpret_cast<fnGetModuleVersion>
-         (module_->GetFunction("GetModuleVersion"));
-   return GetModuleVersion_();
-}
-
-
-long
-LoadedDeviceAdapter::GetDeviceInterfaceVersion() const
-{
-   if (!GetDeviceInterfaceVersion_)
-      GetDeviceInterfaceVersion_ = reinterpret_cast<fnGetDeviceInterfaceVersion>
-         (module_->GetFunction("GetDeviceInterfaceVersion"));
-   return GetDeviceInterfaceVersion_();
-}
-
-
-unsigned
-LoadedDeviceAdapter::GetNumberOfDevices() const
-{
-   if (!GetNumberOfDevices_)
-      GetNumberOfDevices_ = reinterpret_cast<fnGetNumberOfDevices>
-         (module_->GetFunction("GetNumberOfDevices"));
-   return GetNumberOfDevices_();
-}
-
-
-bool
-LoadedDeviceAdapter::GetDeviceName(unsigned index, char* buf, unsigned bufLen) const
-{
-   if (!GetDeviceName_)
-      GetDeviceName_ = reinterpret_cast<fnGetDeviceName>
-         (module_->GetFunction("GetDeviceName"));
-   return GetDeviceName_(index, buf, bufLen);
-}
-
-
-bool
-LoadedDeviceAdapter::GetDeviceType(const char* deviceName, int* type) const
-{
-   if (!GetDeviceType_)
-      GetDeviceType_ = reinterpret_cast<fnGetDeviceType>
-         (module_->GetFunction("GetDeviceType"));
-   return GetDeviceType_(deviceName, type);
-}
-
-
-bool
-LoadedDeviceAdapter::GetDeviceDescription(const char* deviceName, char* buf, unsigned bufLen) const
-{
-   if (!GetDeviceDescription_)
-      GetDeviceDescription_ = reinterpret_cast<fnGetDeviceDescription>
-         (module_->GetFunction("GetDeviceDescription"));
-   return GetDeviceDescription_(deviceName, buf, bufLen);
 }
