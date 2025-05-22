@@ -25,6 +25,7 @@
 #ifdef WIN32
    #include <windows.h>
 #endif
+#include "FixSnprintf.h"
 
 #include "CoherentOBIS.h"
 
@@ -116,8 +117,6 @@ CoherentObis::CoherentObis(const char* name) :
 
    CPropertyAction* pActDeviceIndex = new CPropertyAction(this, &CoherentObis::OnDeviceIndex);
    CreateProperty("DeviceIndex", "1", MM::Integer, false, pActDeviceIndex, true);
-   AddAllowedValue("DeviceIndex", "0");
-   AddAllowedValue("DeviceIndex", "1");
    UpdateStatus();
 }
 
@@ -233,12 +232,16 @@ int CoherentObis::Shutdown()
 
 std::string CoherentObis::getPrefix() const
 {
-   return deviceIndex_ == 0 ? "SYST" : "SYST1";
+    std::ostringstream oss;
+    oss << "SYST" << deviceIndex_;
+    return oss.str();
 }
 
 std::string CoherentObis::getPowerPrefix() const 
 {
-    return deviceIndex_ == 0 ? "SOUR" : "SOUR1";
+    std::ostringstream oss;
+    oss << "SOUR" << deviceIndex_;
+    return oss.str();
 }
 
 std::string CoherentObis::getPowerSetpointToken() const
