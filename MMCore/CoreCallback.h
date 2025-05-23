@@ -84,34 +84,17 @@ public:
    void Sleep(const MM::Device* caller, double intervalMs);
 
    // continuous acquisition support
-   /*Deprecated*/ int InsertImage(const MM::Device* caller, const ImgBuffer& imgBuf); // Note: _not_ mm::ImgBuffer
    int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess = true);
    int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true);
-
-   /*Deprecated*/ int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* pMd = 0, const bool doProcess = true);
-   /*Deprecated*/ int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const Metadata* pMd = 0, const bool doProcess = true);
-
-   /*Deprecated*/ int InsertMultiChannel(const MM::Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd = 0);
    void ClearImageBuffer(const MM::Device* caller);
    bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
    int AcqFinished(const MM::Device* caller, int statusCode);
    int PrepareForAcq(const MM::Device* caller);
 
-   // autofocus support
-   const char* GetImage();
-   int GetImageDimensions(int& width, int& height, int& depth);
+   // Deprecated
    int GetFocusPosition(double& pos);
-   int SetFocusPosition(double pos);
-   int MoveFocus(double v);
-   int SetXYPosition(double x, double y);
    int GetXYPosition(double& x, double& y);
-   int MoveXYStage(double vX, double vY);
-   int SetExposure(double expMs);
-   int GetExposure(double& expMs);
-   int SetConfig(const char* group, const char* name);
-   int GetCurrentConfig(const char* group, int bufLen, char* name);
-   int GetChannelConfig(char* channelConfigName, const unsigned int channelConfigIterator);
 
    // notification handlers
    int OnPropertiesChanged(const MM::Device* caller);
@@ -122,17 +105,10 @@ public:
    int OnSLMExposureChanged(const MM::Device* device, double newExposure);
    int OnMagnifierChanged(const MM::Device* device);
 
-
-   void NextPostedError(int& errorCode, char* pMessage, int maxlen, int& messageLength);
-   void PostError(const int errorCode, const char* pMessage);
-   void ClearPostedErrors();
-
-
-   MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);
-   MM::State* GetStateDevice(const MM::Device* caller, const char* label);
+   // Deprecated
    MM::SignalIO* GetSignalIODevice(const MM::Device* caller,
          const char* label);
-   MM::AutoFocus* GetAutoFocus(const MM::Device* caller);
+
    MM::Hub* GetParentHub(const MM::Device* caller) const;
    void GetLoadedDeviceOfType(const MM::Device* caller, MM::DeviceType devType,
          char* deviceName, const unsigned int deviceIterator);
@@ -142,6 +118,7 @@ private:
    MMThreadLock* pValueChangeLock_;
 
    Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
+   MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);
 
    int OnConfigGroupChanged(const char* groupName, const char* newConfigName);
    int OnPixelSizeChanged(double newPixelSizeUm);

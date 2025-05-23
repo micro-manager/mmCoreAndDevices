@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 73
+#define DEVICE_INTERFACE_VERSION 74
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -52,17 +52,6 @@
 #include <string>
 #include <vector>
 
-// To be removed once the deprecated Get/SetModuleHandle() is removed:
-#ifdef _WIN32
-   #define WIN32_LEAN_AND_MEAN
-   #include <windows.h>
-
-   typedef HMODULE HDEVMODULE;
-#else
-   typedef void* HDEVMODULE;
-#endif
-
-class ImgBuffer;
 
 namespace MM {
 
@@ -265,9 +254,6 @@ namespace MM {
       virtual double GetDelayMs() const = 0;
       virtual void SetDelayMs(double delay) = 0;
       virtual bool UsesDelay() = 0;
-
-      MM_DEPRECATED(virtual HDEVMODULE GetModuleHandle() const) = 0;
-      MM_DEPRECATED(virtual void SetModuleHandle(HDEVMODULE hLibraryHandle)) = 0;
 
       virtual void SetLabel(const char* label) = 0;
       virtual void GetLabel(char* name) const = 0;
@@ -1585,9 +1571,6 @@ namespace MM {
       virtual int AcqFinished(const Device* caller, int statusCode) = 0;
       virtual int PrepareForAcq(const Device* caller) = 0;
 
-      /// \deprecated Use the other overloads instead.
-      MM_DEPRECATED(virtual int InsertImage(const Device* caller, const ImgBuffer& buf)) = 0;
-
       /**
        * Cameras must call this function during sequence acquisition to send
        * each frame to the Core.
@@ -1610,57 +1593,23 @@ namespace MM {
        */
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true) = 0;
 
-      /// \deprecated Use the other overloads instead.
-      MM_DEPRECATED(virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* md = 0, const bool doProcess = true)) = 0;
-      // TODO Upon removing the above deprecated overload, add a default
-      // argument `= nullptr` to `serializedMetadata` in the following
-      // overload. That allows existing device adapters to compile.
-
       /**
        * Same as the overload with the added nComponents parameter.
        *
        * Assumes nComponents == 1 (grayscale).
        */
-      virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess = true) = 0;
+      virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata = nullptr, const bool doProcess = true) = 0;
 
       virtual void ClearImageBuffer(const Device* caller) = 0;
       virtual bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth) = 0;
 
-      /// \deprecated Use InsertImage() instead.
-      MM_DEPRECATED(virtual int InsertMultiChannel(const Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* md = 0)) = 0;
-
-      // Formerly intended for use by autofocus
-      MM_DEPRECATED(virtual const char* GetImage()) = 0;
-      MM_DEPRECATED(virtual int GetImageDimensions(int& width, int& height, int& depth)) = 0;
+      // These functions violate the separation between device adapters and
+      // will be removed as soon as we remove all uses. Never use in new code.
       MM_DEPRECATED(virtual int GetFocusPosition(double& pos)) = 0;
-      MM_DEPRECATED(virtual int SetFocusPosition(double pos)) = 0;
-      MM_DEPRECATED(virtual int MoveFocus(double velocity)) = 0;
-      MM_DEPRECATED(virtual int SetXYPosition(double x, double y)) = 0;
       MM_DEPRECATED(virtual int GetXYPosition(double& x, double& y)) = 0;
-      MM_DEPRECATED(virtual int MoveXYStage(double vX, double vY)) = 0;
-      MM_DEPRECATED(virtual int SetExposure(double expMs)) = 0;
-      MM_DEPRECATED(virtual int GetExposure(double& expMs)) = 0;
-      MM_DEPRECATED(virtual int SetConfig(const char* group, const char* name)) = 0;
-      MM_DEPRECATED(virtual int GetCurrentConfig(const char* group, int bufLen, char* name)) = 0;
-      MM_DEPRECATED(virtual int GetChannelConfig(char* channelConfigName, const unsigned int channelConfigIterator)) = 0;
-
-      // Direct (and dangerous) access to specific device types
-      MM_DEPRECATED(virtual MM::ImageProcessor* GetImageProcessor(const MM::Device* caller)) = 0;
-      MM_DEPRECATED(virtual MM::AutoFocus* GetAutoFocus(const MM::Device* caller)) = 0;
-
-      virtual MM::Hub* GetParentHub(const MM::Device* caller) const = 0;
-
-      // More direct (and dangerous) access to specific device types
-      MM_DEPRECATED(virtual MM::State* GetStateDevice(const MM::Device* caller, const char* deviceName)) = 0;
       MM_DEPRECATED(virtual MM::SignalIO* GetSignalIODevice(const MM::Device* caller, const char* deviceName)) = 0;
 
-      // Asynchronous error handling (never implemented)
-      /// \deprecated Not sure what this was meant to do.
-      MM_DEPRECATED(virtual void NextPostedError(int& /*errorCode*/, char* /*pMessage*/, int /*maxlen*/, int& /*messageLength*/)) = 0;
-      /// \deprecated Better handling of asynchronous errors to be developed.
-      MM_DEPRECATED(virtual void PostError(const int, const char*)) = 0;
-      /// \deprecated Better handling of asynchronous errors to be developed.
-      MM_DEPRECATED(virtual void ClearPostedErrors(void)) = 0;
+      virtual MM::Hub* GetParentHub(const MM::Device* caller) const = 0;
    };
 
 } // namespace MM

@@ -124,21 +124,6 @@ CoreCallback::GetImageProcessor(const MM::Device*)
 }
 
 
-MM::State*
-CoreCallback::GetStateDevice(const MM::Device*, const char* label)
-{
-   try
-   {
-      return core_->deviceManager_->GetDeviceOfType<StateInstance>(label)->
-         GetRawPtr();
-   }
-   catch (const CMMError&)
-   {
-      return 0;
-   }
-}
-
-
 MM::SignalIO*
 CoreCallback::GetSignalIODevice(const MM::Device*, const char* label)
 {
@@ -150,19 +135,6 @@ CoreCallback::GetSignalIODevice(const MM::Device*, const char* label)
    {
       return 0;
    }
-}
-
-
-MM::AutoFocus*
-CoreCallback::GetAutoFocus(const MM::Device*)
-{
-   std::shared_ptr<AutoFocusInstance> autofocus =
-      core_->currentAutofocusDevice_.lock();
-   if (autofocus)
-   {
-      return autofocus->GetRawPtr();
-   }
-   return 0;
 }
 
 
@@ -245,16 +217,12 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess)
 {
-   Metadata md;
-   md.Restore(serializedMetadata);
-   return InsertImage(caller, buf, width, height, byteDepth, &md, doProcess);
-}
+   Metadata origMd;
+   origMd.Restore(serializedMetadata);
 
-int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* pMd, bool doProcess)
-{
    try 
    {
-      Metadata md = AddCameraMetadata(caller, pMd);
+      Metadata md = AddCameraMetadata(caller, &origMd);
 
       if(doProcess)
       {
@@ -277,16 +245,12 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess)
 {
-   Metadata md;
-   md.Restore(serializedMetadata);
-   return InsertImage(caller, buf, width, height, byteDepth, nComponents, &md, doProcess);
-}
+   Metadata origMd;
+   origMd.Restore(serializedMetadata);
 
-int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const Metadata* pMd, bool doProcess)
-{
    try 
    {
-      Metadata md = AddCameraMetadata(caller, pMd);
+      Metadata md = AddCameraMetadata(caller, &origMd);
 
       if(doProcess)
       {
@@ -307,20 +271,6 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    }
 }
 
-int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf)
-{
-   Metadata md = imgBuf.GetMetadata();
-   unsigned char* p = const_cast<unsigned char*>(imgBuf.GetPixels());
-   MM::ImageProcessor* ip = GetImageProcessor(caller);
-   if( NULL != ip)
-   {
-      ip->Process(p, imgBuf.Width(), imgBuf.Height(), imgBuf.Depth());
-   }
-
-   return InsertImage(caller, imgBuf.GetPixels(), imgBuf.Width(), 
-      imgBuf.Height(), imgBuf.Depth(), &md);
-}
-
 void CoreCallback::ClearImageBuffer(const MM::Device* /*caller*/)
 {
    core_->cbuf_->Clear();
@@ -334,35 +284,6 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
       return false;
 
    return core_->cbuf_->Initialize(channels, w, h, pixDepth);
-}
-
-int CoreCallback::InsertMultiChannel(const MM::Device* caller,
-                              const unsigned char* buf,
-                              unsigned numChannels,
-                              unsigned width,
-                              unsigned height,
-                              unsigned byteDepth,
-                              Metadata* pMd)
-{
-   try
-   {
-      Metadata md = AddCameraMetadata(caller, pMd);
-
-      MM::ImageProcessor* ip = GetImageProcessor(caller);
-      if( NULL != ip)
-      {
-         ip->Process( const_cast<unsigned char*>(buf), width, height, byteDepth);
-      }
-      if (core_->cbuf_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, &md))
-         return DEVICE_OK;
-      else
-         return DEVICE_BUFFER_OVERFLOW;
-   }
-   catch (CMMError& /*e*/)
-   {
-      return DEVICE_INCOMPATIBLE_IMAGE;
-   }
-
 }
 
 int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
@@ -814,27 +735,6 @@ int CoreCallback::GetSerialAnswer(const MM::Device*, const char* portName, unsig
    return DEVICE_OK;
 }
 
-const char* CoreCallback::GetImage()
-{
-   try
-   {
-      core_->snapImage();
-      return (const char*) core_->getImage();
-   }
-   catch (...)
-   {
-      return 0;
-   }
-}
-
-int CoreCallback::GetImageDimensions(int& width, int& height, int& depth)
-{
-   width = core_->getImageWidth();
-   height = core_->getImageHeight();
-   depth = core_->getBytesPerPixel();
-   return DEVICE_OK;
-}
-
 int CoreCallback::GetFocusPosition(double& pos)
 {
    std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
@@ -845,36 +745,6 @@ int CoreCallback::GetFocusPosition(double& pos)
    pos = 0.0;
    return DEVICE_CORE_FOCUS_STAGE_UNDEF;
 }
-
-int CoreCallback::SetFocusPosition(double pos)
-{
-   std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
-   if (focus)
-   {
-      int ret = focus->SetPositionUm(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      core_->waitForDevice(focus);
-      return DEVICE_OK;
-   }
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-
-int CoreCallback::MoveFocus(double velocity)
-{
-   std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
-   if (focus)
-   {
-      mm::DeviceModuleLockGuard g(focus);
-      int ret = focus->Move(velocity);
-      if (ret != DEVICE_OK)
-         return ret;
-      return DEVICE_OK;
-   }
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
 
 int CoreCallback::GetXYPosition(double& x, double& y)
 {
@@ -887,120 +757,6 @@ int CoreCallback::GetXYPosition(double& x, double& y)
    x = 0.0;
    y = 0.0;
    return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-int CoreCallback::SetXYPosition(double x, double y)
-{
-   std::shared_ptr<XYStageInstance> xyStage =
-      core_->currentXYStageDevice_.lock();
-   if (xyStage)
-   {
-      int ret = xyStage->SetPositionUm(x, y);
-      if (ret != DEVICE_OK)
-         return ret;
-      core_->waitForDevice(xyStage);
-      return DEVICE_OK;
-   }
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-int CoreCallback::MoveXYStage(double vx, double vy)
-{
-   std::shared_ptr<XYStageInstance> xyStage =
-      core_->currentXYStageDevice_.lock();
-   if (xyStage)
-   {
-      mm::DeviceModuleLockGuard g(xyStage);
-      int ret = xyStage->Move(vx, vy);
-      if (ret != DEVICE_OK)
-         return ret;
-      return DEVICE_OK;
-   }
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-int CoreCallback::SetExposure(double expMs)
-{
-   try 
-   {
-      core_->setExposure(expMs);
-   }
-   catch (...)
-   {
-      // TODO: log
-      return DEVICE_CORE_EXPOSURE_FAILED;
-   }
-
-   return DEVICE_OK;
-}
-
-int CoreCallback::GetExposure(double& expMs) 
-{
-   try 
-   {
-      expMs = core_->getExposure();
-   }
-   catch (...)
-   {
-      // TODO: log
-      return DEVICE_CORE_EXPOSURE_FAILED;
-   }
-
-   return DEVICE_OK;
-}
-
-int CoreCallback::SetConfig(const char* group, const char* name)
-{
-   try 
-   {
-      core_->setConfig(group, name);
-      core_->waitForConfig(group, name);
-   }
-   catch (...)
-   {
-      // TODO: log
-      return DEVICE_CORE_CONFIG_FAILED;
-   }
-
-   return DEVICE_OK;
-}
-
-int CoreCallback::GetCurrentConfig(const char* group, int bufLen, char* name)
-{
-   try 
-   {
-      std::string cfgName = core_->getCurrentConfig(group);
-      strncpy(name, cfgName.c_str(), bufLen);
-   }
-   catch (...)
-   {
-      // TODO: log
-      return DEVICE_CORE_CONFIG_FAILED;
-   }
-
-   return DEVICE_OK;
-}
-
-int CoreCallback::GetChannelConfig(char* channelConfigName, const unsigned int channelConfigIterator)
-{
-   if (0 == channelConfigName)
-      return DEVICE_CORE_CHANNEL_PRESETS_FAILED;
-   try 
-   {
-      channelConfigName[0] = 0;
-
-      std::vector<std::string> cfgs = core_->getAvailableConfigs(core_->getChannelGroup().c_str());
-      if( channelConfigIterator < cfgs.size())
-      {
-         strncpy( channelConfigName, cfgs.at(channelConfigIterator).c_str(), MM::MaxStrLength);
-      }
-   }
-   catch (...)
-   {
-      return DEVICE_CORE_CHANNEL_PRESETS_FAILED;
-   }
-
-   return DEVICE_OK;
 }
 
 int CoreCallback::GetDeviceProperty(const char* deviceName, const char* propName, char* value)
@@ -1032,42 +788,6 @@ int CoreCallback::SetDeviceProperty(const char* deviceName, const char* propName
 
    return DEVICE_OK;
 }
-
-void CoreCallback::NextPostedError(int& errorCode, char* pMessage, int maxlen, int& messageLength)
-{
-   MMThreadGuard g(*(core_->pPostedErrorsLock_));
-   errorCode = 0;
-   messageLength = 0;
-   if( 0 < core_->postedErrors_.size())
-   {
-      std::pair< int, std::string> nextError = core_->postedErrors_.front();
-      core_->postedErrors_.pop_front();
-      errorCode = nextError.first;
-      if( 0 != pMessage)
-      {
-         if( 0 < maxlen )
-         {
-            *pMessage = 0;
-            messageLength = std::min( maxlen, (int) nextError.second.length());
-            strncpy(pMessage, nextError.second.c_str(), messageLength);
-         }
-      }
-   }
-	return ;
-}
-
-void CoreCallback::PostError(const int errorCode, const char* pMessage)
-{
-   MMThreadGuard g(*(core_->pPostedErrorsLock_));
-   core_->postedErrors_.push_back(std::make_pair(errorCode, std::string(pMessage)));
-}
-
-void CoreCallback::ClearPostedErrors()
-{
-   MMThreadGuard g(*(core_->pPostedErrorsLock_));
-	core_->postedErrors_.clear();
-}
-
 
 static long long SteadyMicroseconds()
 {

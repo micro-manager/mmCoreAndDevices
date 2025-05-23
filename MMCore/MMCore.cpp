@@ -131,12 +131,10 @@ CMMCore::CMMCore() :
    pixelSizeGroup_(0),
    cbuf_(0),
    pluginManager_(new CPluginManager()),
-   deviceManager_(new mm::DeviceManager()),
-   pPostedErrorsLock_(NULL)
+   deviceManager_(new mm::DeviceManager())
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
-   pPostedErrorsLock_ = new MMThreadLock();
 
    InitializeErrorMessages();
 
@@ -186,7 +184,6 @@ CMMCore::~CMMCore()
    delete properties_;
    delete cbuf_;
    delete pixelSizeGroup_;
-   delete pPostedErrorsLock_;
 
    LOG_INFO(coreLogger_) << "Core session ended";
 }
@@ -2746,19 +2743,6 @@ void* CMMCore::getImage() MMCORE_LEGACY_THROW(CMMError)
          throw CMMError(getCoreErrorText(MMERR_InvalidImageSequence).c_str(), MMERR_InvalidImageSequence);
       }
 
-      // scope for the thread guard
-      {
-         MMThreadGuard g(*pPostedErrorsLock_);
-
-         if(0 < postedErrors_.size())
-         {
-            std::pair< int, std::string>  toThrow(postedErrors_[0]);
-            // todo, process the collection of posted errors.
-            postedErrors_.clear();
-            throw CMMError( toThrow.second.c_str(), toThrow.first);
-         }
-      }
-
       void* pBuf(0);
       try {
          mm::DeviceModuleLockGuard guard(camera);
@@ -2866,12 +2850,6 @@ long CMMCore::getImageBufferSize()
  */
 void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError)
 {
-   // scope for the thread guard
-   {
-      MMThreadGuard g(*pPostedErrorsLock_);
-      postedErrors_.clear();
-   }
-
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
@@ -3122,21 +3100,6 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
  */
 void* CMMCore::getLastImage() MMCORE_LEGACY_THROW(CMMError)
 {
-
-   // scope for the thread guard
-   {
-      MMThreadGuard g(*pPostedErrorsLock_);
-
-      if(0 < postedErrors_.size())
-      {
-         std::pair< int, std::string>  toThrow(postedErrors_[0]);
-         // todo, process the collection of posted errors.
-         postedErrors_.clear();
-         throw CMMError( toThrow.second.c_str(), toThrow.first);
-
-      }
-   }
-
    unsigned char* pBuf = const_cast<unsigned char*>(cbuf_->GetTopImage());
    if (pBuf != 0)
       return pBuf;
