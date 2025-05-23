@@ -189,7 +189,7 @@ BaslerCamera::BaslerCamera() :
 	{
 		AddToLog("No camera present.");
 		PylonTerminate();
-		throw RUNTIME_EXCEPTION("No camera present.");
+		return;
 	}
 
 	bool first = true;
