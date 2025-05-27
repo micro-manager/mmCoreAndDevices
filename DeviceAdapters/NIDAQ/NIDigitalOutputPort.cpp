@@ -285,9 +285,15 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          sequence8_.clear();
          for (unsigned int i = 0; i < sequence.size(); i++)
          {
-            std::istringstream os(sequence[i]);
-            uInt8 val;
-            os >> val;
+            size_t pos;
+            unsigned long num = std::stoul(sequence[i], &pos, 0);
+
+            // Check if the entire string was used for conversion and if the number fits within uint8_t range
+            if (pos != sequence[i].size() || num > 255) {
+                // "Value out of range for uint8_t"
+                return ERR_SEQUENCE_ZERO_LENGTH;
+            }
+            uint8_t val = static_cast<uint8_t>(num);
             sequence8_.push_back(val);
          }
          GetHub()->getDOHub8()->RemoveDOPortFromSequencing(niPort_);
