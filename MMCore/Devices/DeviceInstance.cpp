@@ -84,8 +84,9 @@ DeviceInstance::MakeException() const
 CMMError
 DeviceInstance::MakeExceptionForCode(int code) const
 {
-   return CMMError("Error in device " + ToQuotedString(GetLabel()) + ": " +
-         GetErrorText(code) + " (" + ToString(code) + ")");
+    // 2025.05.20.bp: Propose passing exception code as 2nd parameter to constructor, overriding default.
+    return CMMError("Error in device " + ToQuotedString(GetLabel()) + ": " +
+         GetErrorText(code) + " (" + ToString(code) + ")", (CMMError::Code)code);
 }
 
 void
