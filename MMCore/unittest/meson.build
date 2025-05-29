@@ -14,6 +14,7 @@ mmcore_test_sources = files(
     'CoreCreateDestroy-Tests.cpp',
     'Logger-Tests.cpp',
     'LoggingSplitEntryIntoLines-Tests.cpp',
+    'MockDeviceAdapter-Tests.cpp',
 )
 
 mmcore_test_exe = executable(
