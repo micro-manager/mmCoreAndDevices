@@ -844,7 +844,7 @@ int Atik::PrepareSequenceAcqusition()
 int Atik::StartSequenceAcquisition(double interval) {
 
 	//log("");
-	return CCameraBase<Atik>::StartSequenceAcquisition(interval);
+	return CLegacyCameraBase<Atik>::StartSequenceAcquisition(interval);
 }
 
 /**
@@ -853,7 +853,7 @@ int Atik::StartSequenceAcquisition(double interval) {
 int Atik::StopSequenceAcquisition()
 {
 	//log("");
-	return CCameraBase<Atik>::StopSequenceAcquisition();
+	return CLegacyCameraBase<Atik>::StopSequenceAcquisition();
 }
 
 /**
@@ -864,7 +864,7 @@ int Atik::StopSequenceAcquisition()
 int Atik::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
 	//log("");
-	return CCameraBase<Atik>::StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
+	return CLegacyCameraBase<Atik>::StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
 }
 
 /*
@@ -905,7 +905,7 @@ int Atik::InsertImage()
 
 bool Atik::IsCapturing() {
 	log("");
-	return CCameraBase<Atik>::IsCapturing();
+	return CLegacyCameraBase<Atik>::IsCapturing();
 }
 
 

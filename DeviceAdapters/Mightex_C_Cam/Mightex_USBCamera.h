@@ -57,7 +57,7 @@ struct FrmSize{ int width; int height;};
 
 class MySequenceThread;
 
-class CMightex_BUF_USBCCDCamera : public CCameraBase<CMightex_BUF_USBCCDCamera>  
+class CMightex_BUF_USBCCDCamera : public CLegacyCameraBase<CMightex_BUF_USBCCDCamera>  
 {
 public:
    CMightex_BUF_USBCCDCamera();

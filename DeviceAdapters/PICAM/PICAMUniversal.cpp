@@ -205,7 +205,7 @@ const int g_UniversalParamsCount = sizeof(g_UniversalParams)/sizeof(ParamNameIdP
 // The name parameter is only used to return the device name. The physical
 // camera to use is determined by the cameraId parameter.
 Universal::Universal(short cameraId, const char* name) :
-   CCameraBase<Universal> (),
+   CLegacyCameraBase<Universal> (),
    initialized_(false),
    curImageCnt_(0),
    hPICAM_(0),
@@ -1835,7 +1835,7 @@ int Universal::ClearROI()
 
 bool Universal::GetErrorText(int errorCode, char* text) const
 {
-   if (CCameraBase<Universal>::GetErrorText(errorCode, text))
+   if (CLegacyCameraBase<Universal>::GetErrorText(errorCode, text))
       return true; // base message
 
    return false;
@@ -2504,7 +2504,7 @@ void Universal::OnThreadExiting() throw ()
       isAcquiring_       = false;
 
       // The AcqFinished is called inside the parent OnThreadExiting()
-      CCameraBase<Universal>::OnThreadExiting();
+      CLegacyCameraBase<Universal>::OnThreadExiting();
    }
    catch (...)
    {
@@ -2590,7 +2590,7 @@ int Universal::LogMMError(int errCode, int lineNr, std::string message, bool deb
    try
    {
       char strText[MM::MaxStrLength];
-      if (!CCameraBase<Universal>::GetErrorText(errCode, strText))
+      if (!CLegacyCameraBase<Universal>::GetErrorText(errCode, strText))
       {
          CDeviceUtils::CopyLimitedString(strText, "Unknown");
       }
