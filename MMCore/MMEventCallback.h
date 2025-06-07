@@ -92,4 +92,20 @@ public:
       std::cout << "onSLMExposureChanged()" << name << " " << newExposure << '\n';
    }
 
+   virtual void onImageSnapped(const char* cameraLabel)
+   {
+      std::cout << "onImageSnapped() " << cameraLabel << '\n';
+   }
+
+   // numImages will be -1 if the sequence is infinite (i.e. startContinuousSequenceAcquisition)
+   virtual void onSequenceAcquisitionStarted(const char* cameraLabel, long numImages, double intervalMs)
+   {
+      std::cout << "onSequenceAcquisitionStarted() " << cameraLabel << " numImages: " << numImages << " intervalMs: " << intervalMs << '\n';
+   }
+
+   virtual void onSequenceAcquisitionStopped(const char* cameraLabel)
+   {
+      std::cout << "onSequenceAcquisitionStopped() " << cameraLabel << '\n';
+   }
+
 };
