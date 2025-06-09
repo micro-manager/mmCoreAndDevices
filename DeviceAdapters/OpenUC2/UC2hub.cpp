@@ -1,5 +1,5 @@
 
-#include "openUC2.h"
+#include "openuc2.h"
 #include "UC2Hub.h"
 #include "ModuleInterface.h"
 

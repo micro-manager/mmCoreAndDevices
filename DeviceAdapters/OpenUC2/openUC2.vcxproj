@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Headers -->
-    <ClInclude Include="openUC2.h" />
+    <ClInclude Include="openuc2.h" />
     <ClInclude Include="UC2Hub.h" />
     <ClInclude Include="XYStage.h" />
     <ClInclude Include="ZStage.h" />
