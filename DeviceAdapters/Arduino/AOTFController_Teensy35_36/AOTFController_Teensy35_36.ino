@@ -503,7 +503,7 @@ void loop() {
 
   // In trigger mode, we will blank even if blanking is not on..
   if (triggerMode_) {
-    pindAlt = digitalRead(inPin_);
+    pindAlt = digitalReadFast(inPin_);
     boolean tmp = pindAlt;
     if (tmp != triggerState_) {
       if (blankOnHigh_ && tmp) {
@@ -527,7 +527,7 @@ void loop() {
     }
   } else if (blanking_) {
     if (blankOnHigh_) {
-      if (!digitalRead(inPin_)) {
+      if (!digitalReadFast(inPin_)) {
         realCurrentPattern_ = currentPattern_;
         writeDigitalPattern(currentPattern_);
       } else {
@@ -535,7 +535,7 @@ void loop() {
         writeDigitalPattern(0);
       }
     } else {
-      if (!digitalRead(inPin_)) {
+      if (!digitalReadFast(inPin_)) {
         realCurrentPattern_ = 0;
         writeDigitalPattern(0);
       } else {
