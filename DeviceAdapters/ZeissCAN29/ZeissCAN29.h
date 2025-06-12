@@ -627,10 +627,6 @@ class ZeissScope : public HubBase<ZeissScope>
       // -------------
       int DetectInstalledDevices();
 
-      // Hub helper function
-      MM::DeviceDetectionStatus DetectDevice();
-
-      
       // action interface                                                       
       // ----------------                                                       
       int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct); 
@@ -640,6 +636,7 @@ class ZeissScope : public HubBase<ZeissScope>
    private:
       bool initialized_;
       std::string port_;
+      std::map<ZeissUByte, MM::Device*> deviceMap_;
 };
 
 
