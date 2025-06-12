@@ -610,7 +610,7 @@ class ZeissAxis : public ZeissDevice
       const static ZeissUByte commandGroup_ = 0xA3;
 };
 
-class ZeissScope : public CGenericBase<ZeissScope>
+class ZeissScope : public HubBase<ZeissScope>
 {
    public:
       ZeissScope();
@@ -622,6 +622,14 @@ class ZeissScope : public CGenericBase<ZeissScope>
       int Shutdown();
       void GetName(char* pszName) const;
       bool Busy();
+
+      // HUB interface
+      // -------------
+      int DetectInstalledDevices();
+
+      // Hub helper function
+      MM::DeviceDetectionStatus DetectDevice();
+
       
       // action interface                                                       
       // ----------------                                                       
