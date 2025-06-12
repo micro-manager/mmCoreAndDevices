@@ -3,7 +3,7 @@
 
 
 #include "DeviceBase.h"
-#include "openUC2.h"
+#include "openuc2.h"
 #include <string>
 
 class UC2Hub;
