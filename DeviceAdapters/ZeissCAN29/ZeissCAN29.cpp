@@ -179,79 +179,214 @@ using namespace std;
 // Exported MMDevice API
 ///////////////////////////////////////////////////////////////////////////////
 
-MODULE_API MM::Device* CreateDevice(const char* deviceName)                  
-{                                                                            
-   if (deviceName == 0)                                                      
-       return 0;
+MODULE_API MM::Device* CreateDevice(const char* deviceName)
+{
+   if (deviceName == 0)
+      return 0;
 
    if (strcmp(deviceName, g_ZeissDeviceName) == 0)
-        return new ZeissScope();
-   else if (strcmp(deviceName, g_ZeissReflector) == 0)
-        return new ReflectorTurret(g_ReflectorChanger, g_ZeissReflector, "Reflector Turret");
-   else if (strcmp(deviceName, g_ZeissNosePiece) == 0)
-        return new ObjectiveTurret(g_NosePieceChanger, g_ZeissNosePiece, "Objective Turret");
+      return new ZeissScope();
+   else if (strcmp(deviceName, g_ZeissReflector) == 0) 
+   {
+      ReflectorTurret* rt = new ReflectorTurret(g_ReflectorChanger, g_ZeissReflector, "Reflector Turret");
+      g_hub.addDevice(g_ReflectorChanger, rt);
+      return rt;
+   }
+   else if (strcmp(deviceName, g_ZeissNosePiece) == 0) 
+   {
+      ObjectiveTurret* ot = new ObjectiveTurret(g_NosePieceChanger, g_ZeissNosePiece, "Objective Turret");
+      g_hub.addDevice(g_NosePieceChanger, ot);
+      return ot;
+   }
    else if (strcmp(deviceName, g_ZeissNeutralDensityWheel1RL) == 0)
-        return new Turret(g_NeutralDensityWheel1RL, g_ZeissNeutralDensityWheel1RL, "ND Filter 1 Refl. Light");
+   {
+      Turret* t = new Turret(g_NeutralDensityWheel1RL, g_ZeissNeutralDensityWheel1RL, "ND Filter 1 Refl. Light");
+      g_hub.addDevice(g_NeutralDensityWheel1RL, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissNeutralDensityWheel2RL) == 0)
-        return new Turret(g_NeutralDensityWheel2RL, g_ZeissNeutralDensityWheel2RL, "ND Filter 2 Refl. Light");
+   {
+      Turret* t = new Turret(g_NeutralDensityWheel2RL, g_ZeissNeutralDensityWheel2RL, "ND Filter 2 Refl. Light");
+      g_hub.addDevice(g_NeutralDensityWheel2RL, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissFieldDiaphragm) == 0)
-        return new Servo(g_FieldDiaphragmServo, g_ZeissFieldDiaphragm, "Field Diaphragm");
+   {
+      Servo* s = new Servo(g_FieldDiaphragmServo, g_ZeissFieldDiaphragm, "Field Diaphragm");
+      g_hub.addDevice(g_FieldDiaphragmServo, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissApertureDiaphragm) == 0)
-        return new Servo(g_ApertureDiaphragmServo, g_ZeissApertureDiaphragm, "Aperture Diaphragm");
+   {
+      Servo* s = new Servo(g_ApertureDiaphragmServo, g_ZeissApertureDiaphragm, "Aperture Diaphragm");
+      g_hub.addDevice(g_ApertureDiaphragmServo, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissNeutralDensityWheel1TL) == 0)
-        return new Turret(g_NeutralDensityWheel1TL, g_ZeissNeutralDensityWheel1TL, "ND Filter 1 Trans. Light");
+   {
+      Turret* t = new Turret(g_NeutralDensityWheel1TL, g_ZeissNeutralDensityWheel1TL, "ND Filter 1 Trans. Light");
+      g_hub.addDevice(g_NeutralDensityWheel1TL, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissNeutralDensityWheel2TL) == 0)
-        return new Turret(g_NeutralDensityWheel2TL, g_ZeissNeutralDensityWheel2TL, "ND Filter 2 Trans. Light");
+   {
+      Turret* t = new Turret(g_NeutralDensityWheel2TL, g_ZeissNeutralDensityWheel2TL, "ND Filter 2 Trans. Light");
+      g_hub.addDevice(g_NeutralDensityWheel2TL, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissFocusAxis) == 0)
-        return new Axis(g_FocusAxis, g_ZeissFocusAxis, "Z-drive");
+   {
+      Axis* a = new Axis(g_FocusAxis, g_ZeissFocusAxis, "Z-drive");
+      g_hub.addDevice(g_FocusAxis, a);
+      return a;
+   }
    else if (strcmp(deviceName, g_ZeissXYStage) == 0)
-	   return new XYStage();
+   {
+      XYStage* xy = new XYStage();
+      g_hub.addDevice(g_StageXAxis, xy);
+      g_hub.addDevice(g_StageYAxis, xy);
+      return xy;
+   }
    else if (strcmp(deviceName, g_ZeissTubeLens) == 0)
-        return new TubeLensTurret(g_TubeLensChanger, g_ZeissTubeLens, "Tube Lens (optoavar)");
+   {
+      TubeLensTurret* tlt = new TubeLensTurret(g_TubeLensChanger, g_ZeissTubeLens, "Tube Lens (optoavar)");
+      g_hub.addDevice(g_TubeLensChanger, tlt);
+      return tlt;
+   }
    else if (strcmp(deviceName, g_ZeissTubeLensShutter) == 0)
-        return new Shutter(g_TubeShutter, g_ZeissTubeLensShutter, "Tube Lens Shutter");
+   {
+      Shutter* s = new Shutter(g_TubeShutter, g_ZeissTubeLensShutter, "Tube Lens Shutter");
+      g_hub.addDevice(g_TubeShutter, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissSidePort) == 0)
-        return new SidePortTurret(g_SidePortChanger, g_ZeissSidePort, "Side Port");
+   {
+      SidePortTurret* spt = new SidePortTurret(g_SidePortChanger, g_ZeissSidePort, "Side Port");
+      g_hub.addDevice(g_SidePortChanger, spt);
+      return spt;
+   }
    else if (strcmp(deviceName, g_ZeissExcitationSwitcher) == 0)
-        return new Turret(g_ExcitationChanger, g_ZeissExcitationSwitcher, "Excitation Switcher");
+   {
+      Turret* t = new Turret(g_ExcitationChanger, g_ZeissExcitationSwitcher, "Excitation Switcher");
+      g_hub.addDevice(g_ExcitationChanger, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissReflectedLightShutter) == 0)
-        return new  Shutter(g_ReflectedLightShutter, g_ZeissReflectedLightShutter, "Zeiss Reflected Light Shutter");
+   {
+      Shutter* s = new Shutter(g_ReflectedLightShutter, g_ZeissReflectedLightShutter, "Zeiss Reflected Light Shutter");
+      g_hub.addDevice(g_ReflectedLightShutter, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissTransmittedLightShutter) == 0)
-        return new  Shutter(g_TransmittedLightShutter, g_ZeissTransmittedLightShutter, "Zeiss Transmitted Light Shutter");
+   {
+      Shutter* s = new Shutter(g_TransmittedLightShutter, g_ZeissTransmittedLightShutter, "Zeiss Transmitted Light Shutter");
+      g_hub.addDevice(g_TransmittedLightShutter, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissRLFLAttenuator) == 0)
-        return new Turret(g_RLFLAttenuatorChanger, g_ZeissRLFLAttenuator, "Attenuator (reflected light)");
+   {
+      Turret* t = new Turret(g_RLFLAttenuatorChanger, g_ZeissRLFLAttenuator, "Attenuator (reflected light)");
+      g_hub.addDevice(g_RLFLAttenuatorChanger, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissCondenserContrast) == 0)
-        return new CondenserTurret(g_CondenserContrastChanger, g_ZeissCondenserContrast, "Condenser Contrast");
+   {
+      CondenserTurret* ct = new CondenserTurret(g_CondenserContrastChanger, g_ZeissCondenserContrast, "Condenser Contrast");
+      g_hub.addDevice(g_CondenserContrastChanger, ct);
+      return ct;
+   }
    else if (strcmp(deviceName, g_ZeissCondenserAperture) == 0)
-        return new Servo(g_CondenserApertureServo, g_ZeissCondenserAperture, "Condenser Aperture");
+   {
+      Servo* s = new Servo(g_CondenserApertureServo, g_ZeissCondenserAperture, "Condenser Aperture");
+      g_hub.addDevice(g_CondenserApertureServo, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissHBOLamp) == 0)
-        return new Servo(g_HBOLampServo, g_ZeissHBOLamp, "HBO Lamp intensity");
+   {
+      Servo* s = new Servo(g_HBOLampServo, g_ZeissHBOLamp, "HBO Lamp intensity");
+      g_hub.addDevice(g_HBOLampServo, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissHalogenLamp) == 0)
-        return new Servo(g_HalogenLampServo, g_ZeissHalogenLamp, "Halogen Lamp intensity");
+   {
+      Servo* s = new Servo(g_HalogenLampServo, g_ZeissHalogenLamp, "Halogen Lamp intensity");
+      g_hub.addDevice(g_HalogenLampServo, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissLSMPort) == 0)
-        return new Turret(g_LSMPortChanger, g_ZeissLSMPort, "LSM Port (rear port)");
+   {
+      Turret* t = new Turret(g_LSMPortChanger, g_ZeissLSMPort, "LSM Port (rear port)");
+      g_hub.addDevice(g_LSMPortChanger, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissBasePort) == 0)
-        return new Turret(g_BasePortChanger, g_ZeissBasePort, "Base Port");
+   {
+      Turret* t = new Turret(g_BasePortChanger, g_ZeissBasePort, "Base Port");
+      g_hub.addDevice(g_BasePortChanger, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissExternalLampMirror) == 0)
-        return new Turret(g_ExternalLampMirror, g_ZeissExternalLampMirror, "External Lamp Mirror");
+   {
+      Turret* t = new Turret(g_ExternalLampMirror, g_ZeissExternalLampMirror, "External Lamp Mirror");
+      g_hub.addDevice(g_ExternalLampMirror, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissUniblitz) == 0)
-        return new Shutter(g_UniblitzShutter, g_ZeissUniblitz, "Uniblitz Shutter");
+   {
+      Shutter* s = new Shutter(g_UniblitzShutter, g_ZeissUniblitz, "Uniblitz Shutter");
+      g_hub.addDevice(g_UniblitzShutter, s);
+      return s;
+   }
    else if (strcmp(deviceName, g_ZeissFilterWheel) == 0)
-        return new Turret(g_FilterWheelChanger, g_ZeissFilterWheel, "Filter Wheel");
+   {
+      Turret* t = new Turret(g_FilterWheelChanger, g_ZeissFilterWheel, "Filter Wheel");
+      g_hub.addDevice(g_FilterWheelChanger, t);
+      return t;
+   }
+   /*
    else if (strcmp(deviceName, g_ZeissDefiniteFocus) == 0)
-        return new DefiniteFocus();
+   {
+      DefiniteFocus* df = new DefiniteFocus();
+      g_hub.addDevice(g_ZeissDefiniteFocus, df);
+      return df;
+   }
    else if (strcmp(deviceName, g_ZeissDFOffset) == 0)
-        return new DFOffsetStage();
+   {
+      DFOffsetStage* dfo = new DFOffsetStage();
+      g_hub.addDevice(g_ZeissDFOffset, dfo);
+      return dfo;
+   }
    else if (strcmp(deviceName, g_ZeissColibri) == 0)
-        return new Colibri();
+   {
+      Colibri* c = new Colibri();
+      g_hub.addDevice(g_ZeissColibri, c);
+      return c;
+   }
+   */
    else if (strcmp(deviceName, g_Zeiss2TVTubePrism) == 0)
-        return new Turret(g_2TVTubePrism, g_Zeiss2TVTubePrism, "2-TV Tube Prism");
+   {
+      Turret* t = new Turret(g_2TVTubePrism, g_Zeiss2TVTubePrism, "2-TV Tube Prism");
+      g_hub.addDevice(g_2TVTubePrism, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_Zeiss2TVTubeSlider) == 0)
-        return new Turret(g_2TVTubeSlider, g_Zeiss2TVTubeSlider, "2-TV Tube Slider");
+   {
+      Turret* t = new Turret(g_2TVTubeSlider, g_Zeiss2TVTubeSlider, "2-TV Tube Slider");
+      g_hub.addDevice(g_2TVTubeSlider, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_Zeiss2TVTubeShutter) == 0)
-        return new Turret(g_2TVTubeShutter, g_Zeiss2TVTubeShutter, "2-TV Tube Shutter");
+   {
+      Turret* t = new Turret(g_2TVTubeShutter, g_Zeiss2TVTubeShutter, "2-TV Tube Shutter");
+      g_hub.addDevice(g_2TVTubeShutter, t);
+      return t;
+   }
    else if (strcmp(deviceName, g_ZeissHXPShutter) == 0)
-        return new Shutter(g_HXPShutter, g_ZeissHXPShutter, "HXP Shutter");
+   {
+      Shutter* s = new Shutter(g_HXPShutter, g_ZeissHXPShutter, "HXP Shutter");
+      g_hub.addDevice(g_HXPShutter, s);
+      return s;
+   }
 
    return 0;
 }
@@ -464,7 +599,8 @@ int ZeissDevice::GetPresent(MM::Device& device, MM::Core& core, ZeissUByte devId
 /////////////////////////////////////////////////////////////
 // Utility class to make it easier for 'turret-based' devices
 // 
-ZeissChanger::ZeissChanger() 
+ZeissChanger::ZeissChanger()  :
+   devId_(0)
 {
 }
 
@@ -480,7 +616,7 @@ int ZeissChanger::SetPosition(MM::Device& device, MM::Core& core, ZeissUByte dev
 /////////////////////////////////////////////////////////////
 // Utility class to make it easier for 'Servo-based' devices
 // 
-ZeissServo::ZeissServo() 
+ZeissServo::ZeissServo() : devId_(0)
 {
 }
 
@@ -709,6 +845,7 @@ int ZeissAxis::GetTrajectoryAcceleration(MM::Device& device, MM::Core& core, Zei
    return g_hub.GetModelTrajectoryAcceleration(device, core, devId, velocity);
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 // ZeissScope
@@ -848,6 +985,7 @@ bool ZeissScope::Busy()
 ///////////////////////////////////////////////////////////////////////////////
 Shutter::Shutter (ZeissUByte devId, std::string name, std::string description): 
    initialized_ (false),
+   shutterNr_(0),
    state_(0)
 {
    devId_ = devId;
@@ -984,6 +1122,12 @@ int Shutter::Fire(double)
 {
    return DEVICE_UNSUPPORTED_COMMAND;  
 }
+
+void Shutter::ReportNewPosition(ZeissUByte /* devId */, ZeissLong& position) {
+   std::string s = std::to_string(position - 1);
+   char const* pchar = s.c_str();
+   GetCoreCallback()->OnPropertyChanged(this, MM::g_Keyword_State, pchar);
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers                                                           
@@ -1167,6 +1311,12 @@ int Turret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
+
+void Turret::ReportNewPosition(ZeissUByte /*devId */, ZeissLong& position) {
+   std::string s = std::to_string(position - 1);
+   char const* pchar = s.c_str();
+   GetCoreCallback()->OnPropertyChanged(this, MM::g_Keyword_State, pchar);
+};
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1702,6 +1852,10 @@ int Axis::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;                                          
 }
 
+void Axis::ReportNewPosition(ZeissUByte /* devId */, ZeissLong& position) {
+   GetCoreCallback()->OnStagePositionChanged(this, position * stepSize_um_);
+}
+
 /************************************************************
  * ZeissXYStage: Micro-Manager implementation of X and Y Stage
  */
@@ -2028,6 +2182,15 @@ int XYStage::OnTrajectoryAcceleration(MM::PropertyBase* pProp, MM::ActionType eA
          return ret;
    }
    return DEVICE_OK;
+}
+
+void XYStage::ReportNewPosition(ZeissUByte /* devId */, ZeissLong& /* position */) {
+   long x = 0;
+   long y = 0;
+   int ret = GetPositionSteps(x, y);
+   if (ret == DEVICE_OK) {
+      GetCoreCallback()->OnXYStagePositionChanged(this, x * stepSize_um_, y * stepSize_um_);
+   }
 }
 
 /***********************************

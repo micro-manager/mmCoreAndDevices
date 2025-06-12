@@ -54,6 +54,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <map>
 #include <algorithm>
 
@@ -363,6 +364,7 @@ class ZeissHub
 {
    friend class ZeissScope;
    friend class ZeissMonitoringThread;
+   friend class ZeissPositionReporter;
 
    public:
       ZeissHub();
@@ -400,6 +402,7 @@ class ZeissHub
       int ColibriBrightness(MM::Device& device, MM::Core& core, int ledNr, ZeissShort brightness);
 
       ZeissUByte GetCommandGroup(ZeissUByte devId) {return commandGroup_[devId];};
+      void addDevice(ZeissUByte devId, ZeissPositionReporter* device) { usedDevices_.emplace(devId, device); }
 
       static std::string reflectorList_[];
       static std::string objectiveList_[];
@@ -416,7 +419,7 @@ class ZeissHub
       static ColibriModel colibriModel_;
 
    private:
-      static ZeissUByte commandGroup_[MAXNUMBERDEVICES];
+      static ZeissUByte commandGroup_[MAXNUMBERDEVICES + 1];
       void ClearRcvBuf();
       int ClearPort(MM::Device& device, MM::Core& core);
       //void SetPort(const char* port) {port_ = port; portInitialized_ = true;}
@@ -476,6 +479,7 @@ class ZeissHub
       MMThreadLock mutex_;
       MMThreadLock executeLock_;
       std::vector<ZeissUByte > availableDevices_;
+      std::unordered_map<ZeissUByte, ZeissPositionReporter*> usedDevices_;
       std::string version_;
 
       unsigned char targetDevice_;
@@ -532,7 +536,14 @@ class ZeissMonitoringThread : public MMDeviceThreadBase
 /**
  * Base class for all Zeiss Devices
  */
-class ZeissDevice
+
+class ZeissPositionReporter
+{
+   public: 
+      virtual void ReportNewPosition(ZeissUByte /* devId */, ZeissLong& /* position */) {};
+};
+
+class ZeissDevice : public ZeissPositionReporter
 {
    protected:
       ZeissDevice();
@@ -650,6 +661,8 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnShutterNr(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
+
 private:
    bool initialized_;
    unsigned shutterNr_;
@@ -676,6 +689,7 @@ public:
    // action interface
    // ---------------
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
 
 protected:
    unsigned int numPos_;
@@ -803,6 +817,9 @@ public:
    int OnMoveMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   // callback
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
+
 private:
    ZeissUByte devId_;
    //int GetUpperLimit();
@@ -854,6 +871,8 @@ public:
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTrajectoryVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTrajectoryAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
 
 private:
    double stepSize_um_;

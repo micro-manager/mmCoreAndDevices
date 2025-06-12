@@ -53,10 +53,10 @@ std::string ZeissHub::tubeLensList_[5];
 std::string ZeissHub::sidePortList_[3];
 std::string ZeissHub::condenserList_[8];
 
-ZeissDeviceInfo ZeissHub::deviceInfo_[MAXNUMBERDEVICES];
+ZeissDeviceInfo ZeissHub::deviceInfo_[MAXNUMBERDEVICES + 1];
 DefiniteFocusModel ZeissHub::definiteFocusModel_;
 ColibriModel ZeissHub::colibriModel_;
-ZeissUByte ZeissHub::commandGroup_[MAXNUMBERDEVICES];
+ZeissUByte ZeissHub::commandGroup_[MAXNUMBERDEVICES + 1];
 
 
 ZeissHub::ZeissHub() :
@@ -1796,6 +1796,9 @@ bool ZeissHub::signatureFound(unsigned char* answer, unsigned char* signature, u
 int ZeissHub::SetModelPosition(ZeissUByte devId, ZeissLong position) {
    MMThreadGuard guard(mutex_);
    deviceInfo_[devId].currentPos = position;
+   if (usedDevices_.find(devId) != usedDevices_.end()) {
+      usedDevices_.at(devId)->ReportNewPosition(devId, position);
+   }
    return DEVICE_OK;
 }
 
