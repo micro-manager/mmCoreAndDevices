@@ -12,7 +12,8 @@
 // LICENSE:       Please note: This code could only be developed thanks to information 
 //                provided by Zeiss under a non-disclosure agreement.  Subsequently, 
 //                this code has been reviewed by Zeiss and we were permitted to release 
-//                this under the LGPL on 1/16/2008 (permission re-granted on 7/3/2008, 7/1/2009//                after changes to the code).
+//                this under the LGPL on 1/16/2008 (permission re-granted on 7/3/2008, 7/1/2009//
+//                after changes to the code).
 //                If you modify this code using information you obtained 
 //                under a NDA with Zeiss, you will need to ask Zeiss whether you can release 
 //                your modifications. 
@@ -33,7 +34,6 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.  
-
 
 
 
@@ -137,40 +137,7 @@ const char* g_focusApplyPosition = "Apply";
 
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_ZeissDeviceName, MM::GenericDevice, "Zeiss AxioObserver controlled through serial interface");
-   RegisterDevice(g_ZeissReflector, MM::StateDevice, "Reflector Turret (dichroics)");
-   RegisterDevice(g_ZeissNosePiece, MM::StateDevice, "Objective Turret");
-   RegisterDevice(g_ZeissNeutralDensityWheel1RL, MM::StateDevice, "ND Filter Wheel 1 Fluorescence Light Path");
-   RegisterDevice(g_ZeissNeutralDensityWheel2RL, MM::StateDevice, "ND Filter Wheel 2 Fluorescence Light Path");
-   RegisterDevice(g_ZeissFieldDiaphragm, MM::GenericDevice, "Field Diaphragm (fluorescence)");
-   RegisterDevice(g_ZeissApertureDiaphragm, MM::GenericDevice, "Aperture Diaphragm (fluorescence)");
-   RegisterDevice(g_ZeissNeutralDensityWheel1TL, MM::StateDevice, "ND Filter Wheel 1 Transmitted Light Path");
-   RegisterDevice(g_ZeissNeutralDensityWheel2TL, MM::StateDevice, "ND Filter Wheel 2 Transmitted Light Path");
-   RegisterDevice(g_ZeissFocusAxis, MM::StageDevice, "Z-drive");
-   RegisterDevice(g_ZeissXYStage, MM::XYStageDevice, "XYStage");
-   RegisterDevice(g_ZeissTubeLens, MM::StateDevice, "Tube Lens (optovar)");
-   RegisterDevice(g_ZeissTubeLensShutter, MM::ShutterDevice, "Tube Lens Shutter");
-   RegisterDevice(g_ZeissSidePort, MM::StateDevice, "Side Port");
-   RegisterDevice(g_ZeissExcitationSwitcher, MM::StateDevice, "Excitation Switcher");
-   RegisterDevice(g_ZeissReflectedLightShutter, MM::ShutterDevice, "Reflected Light Shutter");
-   RegisterDevice(g_ZeissTransmittedLightShutter, MM::ShutterDevice, "Transmitted Light Shutter");
-   RegisterDevice(g_ZeissRLFLAttenuator, MM::StateDevice, "Reflected (fluorescence) light attenuator");
-   RegisterDevice(g_ZeissCondenserContrast, MM::StateDevice, "Condenser Contrast");
-   RegisterDevice(g_ZeissCondenserAperture, MM::GenericDevice, "Condenser Aperture");
-   RegisterDevice(g_ZeissHBOLamp, MM::GenericDevice, "HBO Lamp");
-   RegisterDevice(g_ZeissHalogenLamp, MM::GenericDevice, "Halogen Lamp");
-   RegisterDevice(g_ZeissLSMPort, MM::StateDevice, "LSM Port (rearPort)");
-   RegisterDevice(g_ZeissBasePort, MM::StateDevice, "Base Port switcher");
-   RegisterDevice(g_ZeissExternalLampMirror, MM::StateDevice, "External Lamp Mirror");
-   RegisterDevice(g_ZeissUniblitz, MM::ShutterDevice, "Uniblitz Shutter");
-   RegisterDevice(g_ZeissFilterWheel, MM::StateDevice, "Filter Wheel");
-   RegisterDevice(g_ZeissDefiniteFocus, MM::AutoFocusDevice, "Definite Focus");
-   RegisterDevice(g_ZeissDFOffset, MM::StageDevice, "Definite Focus Offset-drive");
-   RegisterDevice(g_ZeissColibri, MM::ShutterDevice, "Colibri");
-   RegisterDevice(g_Zeiss2TVTubePrism, MM::StateDevice, "g_Zeiss2TVTubePrism");
-   RegisterDevice(g_Zeiss2TVTubeSlider, MM::StateDevice, "g_Zeiss2TVTubeSlider");
-   RegisterDevice(g_Zeiss2TVTubeShutter, MM::StateDevice, "g_Zeiss2TVTubeShutter");
-   RegisterDevice(g_ZeissHXPShutter, MM::ShutterDevice, "g_ZeissHXPShutter");
+   RegisterDevice(g_ZeissDeviceName, MM::HubDevice, "Zeiss AxioObserver controlled through serial interface");
 }
 
 using namespace std;
@@ -189,158 +156,158 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if (strcmp(deviceName, g_ZeissReflector) == 0) 
    {
       ReflectorTurret* rt = new ReflectorTurret(g_ReflectorChanger, g_ZeissReflector, "Reflector Turret");
-      g_hub.addDevice(g_ReflectorChanger, rt);
+      g_hub.AddDevice(g_ReflectorChanger, rt);
       return rt;
    }
    else if (strcmp(deviceName, g_ZeissNosePiece) == 0) 
    {
       ObjectiveTurret* ot = new ObjectiveTurret(g_NosePieceChanger, g_ZeissNosePiece, "Objective Turret");
-      g_hub.addDevice(g_NosePieceChanger, ot);
+      g_hub.AddDevice(g_NosePieceChanger, ot);
       return ot;
    }
    else if (strcmp(deviceName, g_ZeissNeutralDensityWheel1RL) == 0)
    {
       Turret* t = new Turret(g_NeutralDensityWheel1RL, g_ZeissNeutralDensityWheel1RL, "ND Filter 1 Refl. Light");
-      g_hub.addDevice(g_NeutralDensityWheel1RL, t);
+      g_hub.AddDevice(g_NeutralDensityWheel1RL, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissNeutralDensityWheel2RL) == 0)
    {
       Turret* t = new Turret(g_NeutralDensityWheel2RL, g_ZeissNeutralDensityWheel2RL, "ND Filter 2 Refl. Light");
-      g_hub.addDevice(g_NeutralDensityWheel2RL, t);
+      g_hub.AddDevice(g_NeutralDensityWheel2RL, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissFieldDiaphragm) == 0)
    {
       Servo* s = new Servo(g_FieldDiaphragmServo, g_ZeissFieldDiaphragm, "Field Diaphragm");
-      g_hub.addDevice(g_FieldDiaphragmServo, s);
+      g_hub.AddDevice(g_FieldDiaphragmServo, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissApertureDiaphragm) == 0)
    {
       Servo* s = new Servo(g_ApertureDiaphragmServo, g_ZeissApertureDiaphragm, "Aperture Diaphragm");
-      g_hub.addDevice(g_ApertureDiaphragmServo, s);
+      g_hub.AddDevice(g_ApertureDiaphragmServo, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissNeutralDensityWheel1TL) == 0)
    {
       Turret* t = new Turret(g_NeutralDensityWheel1TL, g_ZeissNeutralDensityWheel1TL, "ND Filter 1 Trans. Light");
-      g_hub.addDevice(g_NeutralDensityWheel1TL, t);
+      g_hub.AddDevice(g_NeutralDensityWheel1TL, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissNeutralDensityWheel2TL) == 0)
    {
       Turret* t = new Turret(g_NeutralDensityWheel2TL, g_ZeissNeutralDensityWheel2TL, "ND Filter 2 Trans. Light");
-      g_hub.addDevice(g_NeutralDensityWheel2TL, t);
+      g_hub.AddDevice(g_NeutralDensityWheel2TL, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissFocusAxis) == 0)
    {
       Axis* a = new Axis(g_FocusAxis, g_ZeissFocusAxis, "Z-drive");
-      g_hub.addDevice(g_FocusAxis, a);
+      g_hub.AddDevice(g_FocusAxis, a);
       return a;
    }
    else if (strcmp(deviceName, g_ZeissXYStage) == 0)
    {
       XYStage* xy = new XYStage();
-      g_hub.addDevice(g_StageXAxis, xy);
-      g_hub.addDevice(g_StageYAxis, xy);
+      g_hub.AddDevice(g_StageXAxis, xy);
+      g_hub.AddDevice(g_StageYAxis, xy);
       return xy;
    }
    else if (strcmp(deviceName, g_ZeissTubeLens) == 0)
    {
       TubeLensTurret* tlt = new TubeLensTurret(g_TubeLensChanger, g_ZeissTubeLens, "Tube Lens (optoavar)");
-      g_hub.addDevice(g_TubeLensChanger, tlt);
+      g_hub.AddDevice(g_TubeLensChanger, tlt);
       return tlt;
    }
    else if (strcmp(deviceName, g_ZeissTubeLensShutter) == 0)
    {
       Shutter* s = new Shutter(g_TubeShutter, g_ZeissTubeLensShutter, "Tube Lens Shutter");
-      g_hub.addDevice(g_TubeShutter, s);
+      g_hub.AddDevice(g_TubeShutter, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissSidePort) == 0)
    {
       SidePortTurret* spt = new SidePortTurret(g_SidePortChanger, g_ZeissSidePort, "Side Port");
-      g_hub.addDevice(g_SidePortChanger, spt);
+      g_hub.AddDevice(g_SidePortChanger, spt);
       return spt;
    }
    else if (strcmp(deviceName, g_ZeissExcitationSwitcher) == 0)
    {
       Turret* t = new Turret(g_ExcitationChanger, g_ZeissExcitationSwitcher, "Excitation Switcher");
-      g_hub.addDevice(g_ExcitationChanger, t);
+      g_hub.AddDevice(g_ExcitationChanger, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissReflectedLightShutter) == 0)
    {
       Shutter* s = new Shutter(g_ReflectedLightShutter, g_ZeissReflectedLightShutter, "Zeiss Reflected Light Shutter");
-      g_hub.addDevice(g_ReflectedLightShutter, s);
+      g_hub.AddDevice(g_ReflectedLightShutter, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissTransmittedLightShutter) == 0)
    {
       Shutter* s = new Shutter(g_TransmittedLightShutter, g_ZeissTransmittedLightShutter, "Zeiss Transmitted Light Shutter");
-      g_hub.addDevice(g_TransmittedLightShutter, s);
+      g_hub.AddDevice(g_TransmittedLightShutter, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissRLFLAttenuator) == 0)
    {
       Turret* t = new Turret(g_RLFLAttenuatorChanger, g_ZeissRLFLAttenuator, "Attenuator (reflected light)");
-      g_hub.addDevice(g_RLFLAttenuatorChanger, t);
+      g_hub.AddDevice(g_RLFLAttenuatorChanger, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissCondenserContrast) == 0)
    {
       CondenserTurret* ct = new CondenserTurret(g_CondenserContrastChanger, g_ZeissCondenserContrast, "Condenser Contrast");
-      g_hub.addDevice(g_CondenserContrastChanger, ct);
+      g_hub.AddDevice(g_CondenserContrastChanger, ct);
       return ct;
    }
    else if (strcmp(deviceName, g_ZeissCondenserAperture) == 0)
    {
       Servo* s = new Servo(g_CondenserApertureServo, g_ZeissCondenserAperture, "Condenser Aperture");
-      g_hub.addDevice(g_CondenserApertureServo, s);
+      g_hub.AddDevice(g_CondenserApertureServo, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissHBOLamp) == 0)
    {
       Servo* s = new Servo(g_HBOLampServo, g_ZeissHBOLamp, "HBO Lamp intensity");
-      g_hub.addDevice(g_HBOLampServo, s);
+      g_hub.AddDevice(g_HBOLampServo, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissHalogenLamp) == 0)
    {
       Servo* s = new Servo(g_HalogenLampServo, g_ZeissHalogenLamp, "Halogen Lamp intensity");
-      g_hub.addDevice(g_HalogenLampServo, s);
+      g_hub.AddDevice(g_HalogenLampServo, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissLSMPort) == 0)
    {
       Turret* t = new Turret(g_LSMPortChanger, g_ZeissLSMPort, "LSM Port (rear port)");
-      g_hub.addDevice(g_LSMPortChanger, t);
+      g_hub.AddDevice(g_LSMPortChanger, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissBasePort) == 0)
    {
       Turret* t = new Turret(g_BasePortChanger, g_ZeissBasePort, "Base Port");
-      g_hub.addDevice(g_BasePortChanger, t);
+      g_hub.AddDevice(g_BasePortChanger, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissExternalLampMirror) == 0)
    {
       Turret* t = new Turret(g_ExternalLampMirror, g_ZeissExternalLampMirror, "External Lamp Mirror");
-      g_hub.addDevice(g_ExternalLampMirror, t);
+      g_hub.AddDevice(g_ExternalLampMirror, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissUniblitz) == 0)
    {
       Shutter* s = new Shutter(g_UniblitzShutter, g_ZeissUniblitz, "Uniblitz Shutter");
-      g_hub.addDevice(g_UniblitzShutter, s);
+      g_hub.AddDevice(g_UniblitzShutter, s);
       return s;
    }
    else if (strcmp(deviceName, g_ZeissFilterWheel) == 0)
    {
       Turret* t = new Turret(g_FilterWheelChanger, g_ZeissFilterWheel, "Filter Wheel");
-      g_hub.addDevice(g_FilterWheelChanger, t);
+      g_hub.AddDevice(g_FilterWheelChanger, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissDefiniteFocus) == 0)
@@ -364,25 +331,25 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if (strcmp(deviceName, g_Zeiss2TVTubePrism) == 0)
    {
       Turret* t = new Turret(g_2TVTubePrism, g_Zeiss2TVTubePrism, "2-TV Tube Prism");
-      g_hub.addDevice(g_2TVTubePrism, t);
+      g_hub.AddDevice(g_2TVTubePrism, t);
       return t;
    }
    else if (strcmp(deviceName, g_Zeiss2TVTubeSlider) == 0)
    {
       Turret* t = new Turret(g_2TVTubeSlider, g_Zeiss2TVTubeSlider, "2-TV Tube Slider");
-      g_hub.addDevice(g_2TVTubeSlider, t);
+      g_hub.AddDevice(g_2TVTubeSlider, t);
       return t;
    }
    else if (strcmp(deviceName, g_Zeiss2TVTubeShutter) == 0)
    {
       Turret* t = new Turret(g_2TVTubeShutter, g_Zeiss2TVTubeShutter, "2-TV Tube Shutter");
-      g_hub.addDevice(g_2TVTubeShutter, t);
+      g_hub.AddDevice(g_2TVTubeShutter, t);
       return t;
    }
    else if (strcmp(deviceName, g_ZeissHXPShutter) == 0)
    {
       Shutter* s = new Shutter(g_HXPShutter, g_ZeissHXPShutter, "HXP Shutter");
-      g_hub.addDevice(g_HXPShutter, s);
+      g_hub.AddDevice(g_HXPShutter, s);
       return s;
    }
 
@@ -883,220 +850,49 @@ ZeissScope::ZeissScope() :
    deviceMap_.emplace(g_NosePieceChanger,  new ObjectiveTurret(g_NosePieceChanger, g_ZeissNosePiece, "Objective Turret"));
    deviceMap_.emplace(g_NeutralDensityWheel1RL,  new Turret(g_NeutralDensityWheel1RL, g_ZeissNeutralDensityWheel1RL, "ND Filter 1 Refl. Light"));
    deviceMap_.emplace(g_NeutralDensityWheel2RL,  new Turret(g_NeutralDensityWheel2RL, g_ZeissNeutralDensityWheel2RL, "ND Filter 2 Refl. Light"));
-   /*
-   {
-      Servo* s = new Servo(g_FieldDiaphragmServo, g_ZeissFieldDiaphragm, "Field Diaphragm");
-      g_hub.addDevice(g_FieldDiaphragmServo, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissApertureDiaphragm) == 0)
-   {
-      Servo* s = new Servo(g_ApertureDiaphragmServo, g_ZeissApertureDiaphragm, "Aperture Diaphragm");
-      g_hub.addDevice(g_ApertureDiaphragmServo, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissNeutralDensityWheel1TL) == 0)
-   {
-      Turret* t = new Turret(g_NeutralDensityWheel1TL, g_ZeissNeutralDensityWheel1TL, "ND Filter 1 Trans. Light");
-      g_hub.addDevice(g_NeutralDensityWheel1TL, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissNeutralDensityWheel2TL) == 0)
-   {
-      Turret* t = new Turret(g_NeutralDensityWheel2TL, g_ZeissNeutralDensityWheel2TL, "ND Filter 2 Trans. Light");
-      g_hub.addDevice(g_NeutralDensityWheel2TL, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissFocusAxis) == 0)
-   {
-      Axis* a = new Axis(g_FocusAxis, g_ZeissFocusAxis, "Z-drive");
-      g_hub.addDevice(g_FocusAxis, a);
-      return a;
-   }
-   else if (strcmp(deviceName, g_ZeissXYStage) == 0)
-   {
-      XYStage* xy = new XYStage();
-      g_hub.addDevice(g_StageXAxis, xy);
-      g_hub.addDevice(g_StageYAxis, xy);
-      return xy;
-   }
-   else if (strcmp(deviceName, g_ZeissTubeLens) == 0)
-   {
-      TubeLensTurret* tlt = new TubeLensTurret(g_TubeLensChanger, g_ZeissTubeLens, "Tube Lens (optoavar)");
-      g_hub.addDevice(g_TubeLensChanger, tlt);
-      return tlt;
-   }
-   else if (strcmp(deviceName, g_ZeissTubeLensShutter) == 0)
-   {
-      Shutter* s = new Shutter(g_TubeShutter, g_ZeissTubeLensShutter, "Tube Lens Shutter");
-      g_hub.addDevice(g_TubeShutter, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissSidePort) == 0)
-   {
-      SidePortTurret* spt = new SidePortTurret(g_SidePortChanger, g_ZeissSidePort, "Side Port");
-      g_hub.addDevice(g_SidePortChanger, spt);
-      return spt;
-   }
-   else if (strcmp(deviceName, g_ZeissExcitationSwitcher) == 0)
-   {
-      Turret* t = new Turret(g_ExcitationChanger, g_ZeissExcitationSwitcher, "Excitation Switcher");
-      g_hub.addDevice(g_ExcitationChanger, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissReflectedLightShutter) == 0)
-   {
-      Shutter* s = new Shutter(g_ReflectedLightShutter, g_ZeissReflectedLightShutter, "Zeiss Reflected Light Shutter");
-      g_hub.addDevice(g_ReflectedLightShutter, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissTransmittedLightShutter) == 0)
-   {
-      Shutter* s = new Shutter(g_TransmittedLightShutter, g_ZeissTransmittedLightShutter, "Zeiss Transmitted Light Shutter");
-      g_hub.addDevice(g_TransmittedLightShutter, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissRLFLAttenuator) == 0)
-   {
-      Turret* t = new Turret(g_RLFLAttenuatorChanger, g_ZeissRLFLAttenuator, "Attenuator (reflected light)");
-      g_hub.addDevice(g_RLFLAttenuatorChanger, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissCondenserContrast) == 0)
-   {
-      CondenserTurret* ct = new CondenserTurret(g_CondenserContrastChanger, g_ZeissCondenserContrast, "Condenser Contrast");
-      g_hub.addDevice(g_CondenserContrastChanger, ct);
-      return ct;
-   }
-   else if (strcmp(deviceName, g_ZeissCondenserAperture) == 0)
-   {
-      Servo* s = new Servo(g_CondenserApertureServo, g_ZeissCondenserAperture, "Condenser Aperture");
-      g_hub.addDevice(g_CondenserApertureServo, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissHBOLamp) == 0)
-   {
-      Servo* s = new Servo(g_HBOLampServo, g_ZeissHBOLamp, "HBO Lamp intensity");
-      g_hub.addDevice(g_HBOLampServo, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissHalogenLamp) == 0)
-   {
-      Servo* s = new Servo(g_HalogenLampServo, g_ZeissHalogenLamp, "Halogen Lamp intensity");
-      g_hub.addDevice(g_HalogenLampServo, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissLSMPort) == 0)
-   {
-      Turret* t = new Turret(g_LSMPortChanger, g_ZeissLSMPort, "LSM Port (rear port)");
-      g_hub.addDevice(g_LSMPortChanger, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissBasePort) == 0)
-   {
-      Turret* t = new Turret(g_BasePortChanger, g_ZeissBasePort, "Base Port");
-      g_hub.addDevice(g_BasePortChanger, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissExternalLampMirror) == 0)
-   {
-      Turret* t = new Turret(g_ExternalLampMirror, g_ZeissExternalLampMirror, "External Lamp Mirror");
-      g_hub.addDevice(g_ExternalLampMirror, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissUniblitz) == 0)
-   {
-      Shutter* s = new Shutter(g_UniblitzShutter, g_ZeissUniblitz, "Uniblitz Shutter");
-      g_hub.addDevice(g_UniblitzShutter, s);
-      return s;
-   }
-   else if (strcmp(deviceName, g_ZeissFilterWheel) == 0)
-   {
-      Turret* t = new Turret(g_FilterWheelChanger, g_ZeissFilterWheel, "Filter Wheel");
-      g_hub.addDevice(g_FilterWheelChanger, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissDefiniteFocus) == 0)
-   {
-      DefiniteFocus* df = new DefiniteFocus();
-      // g_hub.addDevice(g_ZeissDefiniteFocus, df);
-      return df;
-   }
-   else if (strcmp(deviceName, g_ZeissDFOffset) == 0)
-   {
-      DFOffsetStage* dfo = new DFOffsetStage();
-      // g_hub.addDevice(g_ZeissDFOffset, dfo);
-      return dfo;
-   }
-   else if (strcmp(deviceName, g_ZeissColibri) == 0)
-   {
-      Colibri* c = new Colibri();
-      // g_hub.addDevice(g_ZeissColibri, c);
-      return c;
-   }
-   else if (strcmp(deviceName, g_Zeiss2TVTubePrism) == 0)
-   {
-      Turret* t = new Turret(g_2TVTubePrism, g_Zeiss2TVTubePrism, "2-TV Tube Prism");
-      g_hub.addDevice(g_2TVTubePrism, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_Zeiss2TVTubeSlider) == 0)
-   {
-      Turret* t = new Turret(g_2TVTubeSlider, g_Zeiss2TVTubeSlider, "2-TV Tube Slider");
-      g_hub.addDevice(g_2TVTubeSlider, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_Zeiss2TVTubeShutter) == 0)
-   {
-      Turret* t = new Turret(g_2TVTubeShutter, g_Zeiss2TVTubeShutter, "2-TV Tube Shutter");
-      g_hub.addDevice(g_2TVTubeShutter, t);
-      return t;
-   }
-   else if (strcmp(deviceName, g_ZeissHXPShutter) == 0)
-   {
-      Shutter* s = new Shutter(g_HXPShutter, g_ZeissHXPShutter, "HXP Shutter");
-      g_hub.addDevice(g_HXPShutter, s);
-      return s;
-
-ZeissUByte g_NeutralDensityWheel1RL = 0x05; // Called Filter wheel 1 in docs
-ZeissUByte g_NeutralDensityWheel2RL = 0x06; // Called Filter wheel 2 in docs
-ZeissUByte g_FieldDiaphragmServo = 0x08; // Reflected Light
-ZeissUByte g_ApertureDiaphragmServo = 0x09; // Reflected Light
-ZeissUByte g_NeutralDensityWheel1TL = 0x0B; // Called Filter wheel 1 in docs
-ZeissUByte g_NeutralDensityWheel2TL = 0x0C; // Called Filter wheel 2 in docs
-ZeissUByte g_FocusAxis = 0x0F;
-ZeissUByte g_TubeLensChanger = 0x12;
-ZeissUByte g_TubeShutter = 0x13;
-ZeissUByte g_SidePortChanger = 0x14;
-ZeissUByte g_ReflectedLightShutter = 0x1D;
-ZeissUByte g_TransmittedLightShutter = 0x1E; // this is not the halogen lamp!
-ZeissUByte g_HalogenLampSwitch = 0x1F; // Read only
-ZeissUByte g_RLFLAttenuatorChanger = 0x21; // reflected light
-ZeissUByte g_CondenserContrastChanger = 0x22;
-ZeissUByte g_CondenserApertureServo = 0x23;
-ZeissUByte g_StageXAxis = 0x26;
-ZeissUByte g_StageYAxis = 0x27;
-ZeissUByte g_HBOLampServo = 0x28;
-ZeissUByte g_HalogenLampServo = 0x29; 
-ZeissUByte g_ExcitationChanger = 0x2B;
-ZeissUByte g_LSMPortChanger = 0x2B;  // RearPort, reflected light
-ZeissUByte g_2TVTubePrism = 0x2E;  
-ZeissUByte g_2TVTubeSlider = 0x2F;  
-ZeissUByte g_2TVTubeShutter = 0x30;  
-ZeissUByte g_ExternalLampMirror = 0x32;  
-ZeissUByte g_HXPShutter = 0x36;
-ZeissUByte g_BasePortChanger = 0x40;
-ZeissUByte g_UniblitzShutter = 0x41;
-*/
+   deviceMap_.emplace(g_FieldDiaphragmServo, new Servo(g_FieldDiaphragmServo, g_ZeissFieldDiaphragm, "Field Diaphragm"));
+   deviceMap_.emplace(g_ApertureDiaphragmServo, new Servo(g_ApertureDiaphragmServo, g_ZeissApertureDiaphragm, "Aperture Diaphragm"));
+   deviceMap_.emplace(g_NeutralDensityWheel1TL,  new Turret(g_NeutralDensityWheel1TL, g_ZeissNeutralDensityWheel1TL, "ND Filter 1 Trans. Light"));
+   deviceMap_.emplace(g_NeutralDensityWheel2TL,  new Turret(g_NeutralDensityWheel2TL, g_ZeissNeutralDensityWheel2TL, "ND Filter 2 Trans. Light"));
+   deviceMap_.emplace(g_FocusAxis, new Axis(g_FocusAxis, g_ZeissFocusAxis, "Z-drive"));
+   deviceMap_.emplace(g_StageXAxis,  new XYStage());
+   deviceMap_.emplace(g_TubeLensChanger,  new TubeLensTurret(g_TubeLensChanger, g_ZeissTubeLens, "Tube Lens (optoavar)"));
+   deviceMap_.emplace(g_TubeShutter, new Shutter(g_TubeShutter, g_ZeissTubeLensShutter, "Tube Lens Shutter"));
+   deviceMap_.emplace(g_SidePortChanger, new SidePortTurret(g_SidePortChanger, g_ZeissSidePort, "Side Port"));
+   deviceMap_.emplace(g_ExcitationChanger, new Turret(g_ExcitationChanger, g_ZeissExcitationSwitcher, "Excitation Switcher"));
+   deviceMap_.emplace(g_ReflectedLightShutter, new Shutter(g_ReflectedLightShutter, g_ZeissReflectedLightShutter, "Zeiss Reflected Light Shutter"));
+   deviceMap_.emplace(g_TransmittedLightShutter, new Shutter(g_TransmittedLightShutter, g_ZeissTransmittedLightShutter, "Zeiss Transmitted Light Shutter"));
+   deviceMap_.emplace(g_RLFLAttenuatorChanger,  new Turret(g_RLFLAttenuatorChanger, g_ZeissRLFLAttenuator, "Attenuator (reflected light)"));
+   deviceMap_.emplace(g_CondenserContrastChanger, new CondenserTurret(g_CondenserContrastChanger, g_ZeissCondenserContrast, "Condenser Contrast"));
+   deviceMap_.emplace(g_CondenserApertureServo, new Servo(g_CondenserApertureServo, g_ZeissCondenserAperture, "Condenser Aperture"));
+   deviceMap_.emplace(g_HBOLampServo, new Servo(g_HBOLampServo, g_ZeissHBOLamp, "HBO Lamp intensity"));
+   deviceMap_.emplace(g_HalogenLampServo, new Servo(g_HalogenLampServo, g_ZeissHalogenLamp, "Halogen Lamp intensity"));
+   deviceMap_.emplace(g_LSMPortChanger, new Turret(g_LSMPortChanger, g_ZeissLSMPort, "LSM Port (rear port)"));
+   deviceMap_.emplace(g_BasePortChanger, new Turret(g_BasePortChanger, g_ZeissBasePort, "Base Port"));
+   deviceMap_.emplace(g_ExternalLampMirror, new Turret(g_ExternalLampMirror, g_ZeissExternalLampMirror, "External Lamp Mirror"));
+   deviceMap_.emplace(g_UniblitzShutter, new Shutter(g_UniblitzShutter, g_ZeissUniblitz, "Uniblitz Shutter"));
+   deviceMap_.emplace(g_FilterWheelChanger, new Turret(g_FilterWheelChanger, g_ZeissFilterWheel, "Filter Wheel"));
+   deviceMap_.emplace(g_2TVTubePrism, new Turret(g_2TVTubePrism, g_Zeiss2TVTubePrism, "2-TV Tube Prism"));
+   deviceMap_.emplace(g_2TVTubeSlider, new Turret(g_2TVTubeSlider, g_Zeiss2TVTubeSlider, "2-TV Tube Slider"));
+   deviceMap_.emplace(g_2TVTubeShutter, new Turret(g_2TVTubeShutter, g_Zeiss2TVTubeShutter, "2-TV Tube Shutter"));
+   deviceMap_.emplace(g_HXPShutter, new Shutter(g_HXPShutter, g_ZeissHXPShutter, "HXP Shutter"));
 }
 
 ZeissScope::~ZeissScope() 
 {
+   ClearInstalledDevices();
+   for (const auto& pair : deviceMap_)
+   {
+      if (pair.second != 0)
+         delete (pair.second);
+   }
+   deviceMap_.clear();
    Shutdown();
 }
 
 
 int ZeissScope::DetectInstalledDevices() {
+   ClearInstalledDevices();
    bool present = false;
    for (const auto& pair : deviceMap_)
    {
@@ -1105,6 +901,15 @@ int ZeissScope::DetectInstalledDevices() {
          if (present)
             AddInstalledDevice(pair.second);
       }
+   }
+   if (g_hub.HasDefiniteFocus())
+   {
+      AddInstalledDevice(new DefiniteFocus());
+      AddInstalledDevice(new DFOffsetStage());
+   }
+   if (g_hub.HasColibri()) 
+   {
+      AddInstalledDevice(new Colibri());
    }
    return DEVICE_OK;
 }
@@ -1536,9 +1341,7 @@ int Turret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 void Turret::ReportNewPosition(ZeissUByte /*devId */, ZeissLong& position) {
-   std::string s = std::to_string(position - 1);
-   char const* pchar = s.c_str();
-   GetCoreCallback()->OnPropertyChanged(this, MM::g_Keyword_State, pchar);
+   OnStateChanged(position);
 };
 
 

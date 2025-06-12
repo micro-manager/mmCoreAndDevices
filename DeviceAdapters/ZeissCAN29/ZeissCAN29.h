@@ -402,7 +402,10 @@ class ZeissHub
       int ColibriBrightness(MM::Device& device, MM::Core& core, int ledNr, ZeissShort brightness);
 
       ZeissUByte GetCommandGroup(ZeissUByte devId) {return commandGroup_[devId];};
-      void addDevice(ZeissUByte devId, ZeissPositionReporter* device) { usedDevices_.emplace(devId, device); }
+      // adds device to map used to direct callbacks
+      void AddDevice(ZeissUByte devId, ZeissPositionReporter* device) { usedDevices_.emplace(devId, device); }
+      bool HasDefiniteFocus() { return hasDefiniteFocus_; }
+      bool HasColibri() { return hasColibri_; }
 
       static std::string reflectorList_[];
       static std::string objectiveList_[];
@@ -486,6 +489,8 @@ class ZeissHub
       ZeissMonitoringThread* monitoringThread_;
       MM::MMTime timeOutTime_;
       bool scopeInitialized_;
+      bool hasDefiniteFocus_;
+      bool hasColibri_;
 };
 
 
