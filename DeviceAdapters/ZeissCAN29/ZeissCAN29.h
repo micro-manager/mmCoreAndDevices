@@ -403,7 +403,16 @@ class ZeissHub
 
       ZeissUByte GetCommandGroup(ZeissUByte devId) {return commandGroup_[devId];};
       // adds device to map used to direct callbacks
-      void AddDevice(ZeissUByte devId, ZeissPositionReporter* device) { usedDevices_.emplace(devId, device); }
+      void AddCallback(ZeissUByte devId, ZeissPositionReporter* device) 
+      { 
+         usedDevices_.emplace(devId, device); 
+      }
+      void RemoveCallback(ZeissUByte devId) 
+      { 
+         auto found = usedDevices_.find(devId); 
+         if (found != usedDevices_.end()) 
+            usedDevices_.erase(usedDevices_.find(devId)); 
+      }
       bool HasDefiniteFocus() { return hasDefiniteFocus_; }
       bool HasColibri() { return hasColibri_; }
 
@@ -779,6 +788,9 @@ public:
    // ---------------
    unsigned long GetNumberOfPositions()const {return numPos_;};
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   // Handle callbacks
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
 
 
 private:
