@@ -15,6 +15,7 @@ mmcore_test_sources = files(
     'Logger-Tests.cpp',
     'LoggingSplitEntryIntoLines-Tests.cpp',
     'MockDeviceAdapter-Tests.cpp',
+    'PixelSize-Tests.cpp',
 )
 
 mmcore_test_exe = executable(
