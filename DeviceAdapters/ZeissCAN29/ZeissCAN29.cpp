@@ -813,12 +813,25 @@ ZeissScope::ZeissScope() :
 
 ZeissScope::~ZeissScope() 
 {
-   ClearInstalledDevices();
    for (const auto& pair : deviceMap_)
    {
       if (pair.second != 0)
-         delete (pair.second);
+      {
+         boolean found = false;
+         for (uint16_t i = 0; i < GetNumberOfInstalledDevices() && !found; i++)
+         {
+            if (GetInstalledDevice(i) == pair.second)
+            {
+               found = true;
+            }
+         }
+         if (!found)
+         {
+            delete (pair.second);
+         }
+      }
    }
+   ClearInstalledDevices();
    deviceMap_.clear();
    Shutdown();
 }
@@ -1283,7 +1296,7 @@ int Turret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 void Turret::ReportNewPosition(ZeissUByte /*devId */, ZeissLong& position) {
-   OnStateChanged(position);
+   OnStateChanged(position - 1);
 };
 
 
