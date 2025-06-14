@@ -817,7 +817,7 @@ ZeissScope::~ZeissScope()
    {
       if (pair.second != 0)
       {
-         boolean found = false;
+         bool found = false;
          for (uint16_t i = 0; i < GetNumberOfInstalledDevices() && !found; i++)
          {
             if (GetInstalledDevice(i) == pair.second)
