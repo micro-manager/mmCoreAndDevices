@@ -2546,10 +2546,6 @@ void CMMCore::snapImage() throw (CMMError)
          if (ret == DEVICE_OK)
          {
             LOG_DEBUG(coreLogger_) << "Did snap image from current camera";
-            if (externalCallback_)
-            {
-               externalCallback_->onImageSnapped(camera->GetLabel().c_str());
-            }
          }
          else
          {
@@ -2568,6 +2564,10 @@ void CMMCore::snapImage() throw (CMMError)
                throw CMMError(getDeviceErrorText(sret, shutter).c_str(), MMERR_DEVICE_GENERIC);
             }
             waitForDevice(shutter);
+         }
+         if (externalCallback_)
+         {
+            externalCallback_->onImageSnapped(camera->GetLabel().c_str());
          }
 		}catch( CMMError& e){
 			throw e;
