@@ -360,6 +360,9 @@ class ColibriModel
 };
 
 
+class ZeissPositionReporter;
+
+
 class ZeissHub
 {
    friend class ZeissScope;
