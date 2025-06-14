@@ -381,12 +381,6 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
    std::shared_ptr<DeviceInstance> currentCamera =
       core_->currentCameraDevice_.lock();
 
-   // Notify that sequence acquisition has stopped
-   if (core_->externalCallback_)
-   {
-      core_->externalCallback_->onSequenceAcquisitionStopped(camera->GetLabel().c_str());
-   }
-
    if (core_->autoShutter_)
    {
       std::shared_ptr<ShutterInstance> shutter =
@@ -430,6 +424,13 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
          }
       }
    }
+
+   // Notify that sequence acquisition has stopped
+   if (core_->externalCallback_)
+   {
+      core_->externalCallback_->onSequenceAcquisitionStopped(camera->GetLabel().c_str());
+   }
+
    return DEVICE_OK;
 }
 
