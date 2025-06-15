@@ -112,7 +112,7 @@
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 5, MMCore_versionPatch = 2;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 5, MMCore_versionPatch = 3;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3585,6 +3585,9 @@ std::string CMMCore::getChannelGroup()
 
 /**
  * Sets the current shutter device.
+ * When the previous current shutter device was open, close it, 
+ * open the new one and wait for them to become non-Busy.  
+ * If the previous current device was closed, do not change their states.  
  * @param shutter    the shutter device label
  */
 void CMMCore::setShutterDevice(const char* shutterLabel) throw (CMMError)
@@ -3615,8 +3618,11 @@ void CMMCore::setShutterDevice(const char* shutterLabel) throw (CMMError)
          deviceManager_->GetDeviceOfType<ShutterInstance>(shutterLabel);
 
       if (shutterWasOpen)
+      {
          setShutterOpen(true);
-
+         waitForDevice(oldShutter);
+         waitForDevice((std::shared_ptr<ShutterInstance>) currentShutterDevice_);
+      }
       LOG_INFO(coreLogger_) << "Default shutter set to " << shutterLabel;
    }
    else
@@ -3624,7 +3630,8 @@ void CMMCore::setShutterDevice(const char* shutterLabel) throw (CMMError)
       currentShutterDevice_.reset();
       LOG_INFO(coreLogger_) << "Default shutter unset";
    }
-   properties_->Refresh(); // TODO: more efficient
+
+   properties_->Set(MM::g_Keyword_CoreShutter, shutterLabel);
    std::string newShutterLabel = getShutterDevice();
    {
       MMThreadGuard scg(stateCacheLock_);
