@@ -3586,7 +3586,7 @@ std::string CMMCore::getChannelGroup()
 /**
  * Sets the current shutter device.
  * When the previous current shutter device was open, close it, 
- * open the new one and wait for them to become non-busy.  
+ * open the new one and wait for both shutters to become non-busy.  
  * If the previous current device was closed, do not change their states.  
  * @param shutter    the shutter device label
  */
