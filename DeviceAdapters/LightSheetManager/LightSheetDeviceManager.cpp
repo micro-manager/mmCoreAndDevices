@@ -27,15 +27,15 @@ LightSheetDeviceManager::LightSheetDeviceManager() :
 
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumSimultaneousCameras);
     CreateProperty(gSimultaneousCameras, "1", MM::Integer, false, pAct, true);
-    SetPropertyLimits(gSimultaneousCameras, 1, INT_MAX);
+    SetPropertyLimits(gSimultaneousCameras, 1, 8);
 
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumImagingPaths);
     CreateProperty(gImagingPaths, "1", MM::Integer, false, pAct, true);
-    SetPropertyLimits(gImagingPaths, 1, INT_MAX);
+    SetPropertyLimits(gImagingPaths, 1, 8);
 
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumIlluminationPaths);
     CreateProperty(gIlluminationPaths, "1", MM::Integer, false, pAct, true);
-    SetPropertyLimits(gIlluminationPaths, 1, INT_MAX);
+    SetPropertyLimits(gIlluminationPaths, 1, 8);
 
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnLightSheetType);
     CreateProperty(gLightSheetType, gLightSheetTypeScanned, MM::String, false, pAct, true);
