@@ -5,8 +5,8 @@
  * Copyright (c) 2022, Applied Scientific Instrumentation
  */
 
-#ifndef _MICROSCOPE_GEOMETRY_H_
-#define _MICROSCOPE_GEOMETRY_H_
+#ifndef MICROSCOPE_GEOMETRY_H
+#define MICROSCOPE_GEOMETRY_H
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -51,4 +51,4 @@ private:
 	std::vector<std::string> geometryTypes_;
 };
 
-#endif _MICROSCOPE_GEOMETRY_H_
+#endif // MICROSCOPE_GEOMETRY_H
