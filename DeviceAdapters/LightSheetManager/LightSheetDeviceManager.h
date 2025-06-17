@@ -5,8 +5,8 @@
  * Copyright (c) 2022, Applied Scientific Instrumentation
  */
 
-#ifndef _LIGHTSHEET_DEVICE_MANAGER_H_
-#define _LIGHTSHEET_DEVICE_MANAGER_H_
+#ifndef LIGHTSHEET_DEVICE_MANAGER_H
+#define LIGHTSHEET_DEVICE_MANAGER_H
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -64,4 +64,4 @@ private:
 
 };
 
-#endif // _LIGHTSHEET_DEVICE_MANAGER_H_
+#endif // LIGHTSHEET_DEVICE_MANAGER_H
