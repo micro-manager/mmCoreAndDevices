@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="openUC2.h">
+    <ClInclude Include="openuc2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="UC2Hub.h">

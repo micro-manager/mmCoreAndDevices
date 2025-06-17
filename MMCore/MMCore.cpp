@@ -5729,31 +5729,11 @@ std::vector<double> CMMCore::getPixelSizeAffine(bool cached) throw (CMMError)
 
       double factor = binning / getMagnificationFactor();
 
-      if (factor != 1.0)
-      {
-         // create a scaling matrix
-         double scaleM[3][3]= { {factor, 0.0, 0.0}, {0.0, factor, 0.0}, {0.0, 0.0, 1.0} };
-         // and multiply scaling matrix with the affine transform
-         double input[3][3] = { {af.at(0), af.at(1), af.at(2)}, {af.at(3), af.at(4), af.at(5)}, {0.0, 0.0, 1.0} };
-         double output[3][3];
-         for (int r = 0; r < 3; r++)
-         {
-            for (int c = 0; c < 3; c++)
-            {
-               output[r][c] = 0.0;
-               for (int i = 0; i < 3; i++)
-               {
-                  output[r][c] = output[r][c] + scaleM[r][i] * input[i][c];
-               }
-            }
+      if (factor != 1.0) {
+         for (double& v : af) {
+            v *= factor;
          }
-         // copy result back into affine transform
-         for (int i = 0; i < 3; i++)
-            af.at(i) = output[0][i];
-         for (int i = 0; i < 3; i++)
-            af.at(i + 3) = output[1][i];
       }
-
       return af;
    }
    else

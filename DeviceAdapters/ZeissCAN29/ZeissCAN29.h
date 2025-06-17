@@ -54,6 +54,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <map>
 #include <algorithm>
 
@@ -359,10 +360,14 @@ class ColibriModel
 };
 
 
+class ZeissPositionReporter;
+
+
 class ZeissHub
 {
    friend class ZeissScope;
    friend class ZeissMonitoringThread;
+   friend class ZeissPositionReporter;
 
    public:
       ZeissHub();
@@ -400,6 +405,19 @@ class ZeissHub
       int ColibriBrightness(MM::Device& device, MM::Core& core, int ledNr, ZeissShort brightness);
 
       ZeissUByte GetCommandGroup(ZeissUByte devId) {return commandGroup_[devId];};
+      // adds device to map used to direct callbacks
+      void AddCallback(ZeissUByte devId, ZeissPositionReporter* device) 
+      { 
+         usedDevices_.emplace(devId, device); 
+      }
+      void RemoveCallback(ZeissUByte devId) 
+      { 
+         auto found = usedDevices_.find(devId); 
+         if (found != usedDevices_.end()) 
+            usedDevices_.erase(usedDevices_.find(devId)); 
+      }
+      bool HasDefiniteFocus() { return hasDefiniteFocus_; }
+      bool HasColibri() { return hasColibri_; }
 
       static std::string reflectorList_[];
       static std::string objectiveList_[];
@@ -416,7 +434,7 @@ class ZeissHub
       static ColibriModel colibriModel_;
 
    private:
-      static ZeissUByte commandGroup_[MAXNUMBERDEVICES];
+      static ZeissUByte commandGroup_[MAXNUMBERDEVICES + 1];
       void ClearRcvBuf();
       int ClearPort(MM::Device& device, MM::Core& core);
       //void SetPort(const char* port) {port_ = port; portInitialized_ = true;}
@@ -476,12 +494,15 @@ class ZeissHub
       MMThreadLock mutex_;
       MMThreadLock executeLock_;
       std::vector<ZeissUByte > availableDevices_;
+      std::unordered_map<ZeissUByte, ZeissPositionReporter*> usedDevices_;
       std::string version_;
 
       unsigned char targetDevice_;
       ZeissMonitoringThread* monitoringThread_;
       MM::MMTime timeOutTime_;
       bool scopeInitialized_;
+      bool hasDefiniteFocus_;
+      bool hasColibri_;
 };
 
 
@@ -532,7 +553,14 @@ class ZeissMonitoringThread : public MMDeviceThreadBase
 /**
  * Base class for all Zeiss Devices
  */
-class ZeissDevice
+
+class ZeissPositionReporter
+{
+   public: 
+      virtual void ReportNewPosition(ZeissUByte /* devId */, ZeissLong& /* position */) {};
+};
+
+class ZeissDevice : public ZeissPositionReporter
 {
    protected:
       ZeissDevice();
@@ -599,7 +627,7 @@ class ZeissAxis : public ZeissDevice
       const static ZeissUByte commandGroup_ = 0xA3;
 };
 
-class ZeissScope : public CGenericBase<ZeissScope>
+class ZeissScope : public HubBase<ZeissScope>
 {
    public:
       ZeissScope();
@@ -611,7 +639,11 @@ class ZeissScope : public CGenericBase<ZeissScope>
       int Shutdown();
       void GetName(char* pszName) const;
       bool Busy();
-      
+
+      // HUB interface
+      // -------------
+      int DetectInstalledDevices();
+
       // action interface                                                       
       // ----------------                                                       
       int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct); 
@@ -621,6 +653,7 @@ class ZeissScope : public CGenericBase<ZeissScope>
    private:
       bool initialized_;
       std::string port_;
+      std::map<ZeissUByte, MM::Device*> deviceMap_;
 };
 
 
@@ -650,6 +683,8 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnShutterNr(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
+
 private:
    bool initialized_;
    unsigned shutterNr_;
@@ -676,6 +711,7 @@ public:
    // action interface
    // ---------------
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
 
 protected:
    unsigned int numPos_;
@@ -756,6 +792,9 @@ public:
    unsigned long GetNumberOfPositions()const {return numPos_;};
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   // Handle callbacks
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
+
 
 private:
    double minPosScaled_, maxPosScaled_;
@@ -802,6 +841,9 @@ public:
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMoveMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   // callback
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
 
 private:
    ZeissUByte devId_;
@@ -854,6 +896,8 @@ public:
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTrajectoryVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTrajectoryAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
 
 private:
    double stepSize_um_;

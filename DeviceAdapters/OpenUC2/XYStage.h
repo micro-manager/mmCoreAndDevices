@@ -2,7 +2,7 @@
 #define _OPENUC2_XYSTAGE_H_
 
 #include "DeviceBase.h"
-#include "openUC2.h"
+#include "openuc2.h"
 #include <string>
 
 class UC2Hub;
