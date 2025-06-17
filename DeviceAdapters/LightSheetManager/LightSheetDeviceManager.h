@@ -36,7 +36,7 @@ public:
 
 private:
     // Create properties for all properties in the device map.
-    void CreateDeviceProperties(std::map<std::string, MM::DeviceType> deviceMap);
+    void CreateDeviceProperties(const std::map<std::string, MM::DeviceType>& deviceMap);
 
     // Create properties for the imaging camera based on the number of imaging paths and simultaneous cameras on each imaging path.
     void CreateCameraProperties();
@@ -61,7 +61,6 @@ private:
     long numImagingPaths_;
     long numIlluminationPaths_;
     long numSimultaneousCameras_;
-
 };
 
 #endif // LIGHTSHEET_DEVICE_MANAGER_H

@@ -33,7 +33,7 @@ std::vector<std::string>& MicroscopeGeometry::GetGeometryTypes()
     return geometryTypes_;
 }
 
-std::map<std::string, MM::DeviceType> MicroscopeGeometry::GetDeviceMap(const std::string geometryType)
+std::map<std::string, MM::DeviceType> MicroscopeGeometry::GetDeviceMap(const std::string& geometryType)
 {
     return deviceMap_.at(geometryType);
 }

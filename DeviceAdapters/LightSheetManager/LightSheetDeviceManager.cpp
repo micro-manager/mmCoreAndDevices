@@ -9,7 +9,7 @@
 
 LightSheetDeviceManager::LightSheetDeviceManager() :
     initialized_(false),
-    geometryType_("diSPIM"), // TODO: why do the defaults not work? is it the property action?
+    geometryType_("diSPIM"),
     lightSheetType_("Scanned"),
     numImagingPaths_(1),
     numIlluminationPaths_(1),
@@ -97,7 +97,7 @@ int LightSheetDeviceManager::Initialize()
     return DEVICE_OK;
 }
 
-void LightSheetDeviceManager::CreateDeviceProperties(std::map<std::string, MM::DeviceType> deviceMap)
+void LightSheetDeviceManager::CreateDeviceProperties(const std::map<std::string, MM::DeviceType>& deviceMap)
 {
     // create properties from the device map
     for (const auto& device : deviceMap)

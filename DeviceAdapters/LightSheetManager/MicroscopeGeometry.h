@@ -38,7 +38,7 @@ public:
 	std::vector<std::string>& GetGeometryTypes();
 
 	// Returns a map of property names mapped to Micro-Manager device types.
-	std::map<std::string, MM::DeviceType> GetDeviceMap(const std::string geometryType);
+	std::map<std::string, MM::DeviceType> GetDeviceMap(const std::string& geometryType);
 
 	// This is the function where you can define new microscope geometry types.
 	void CreateDeviceMap();
