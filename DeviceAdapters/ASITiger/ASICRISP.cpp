@@ -709,7 +709,7 @@ int CCRISP::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
     //long tmp = 0;
     if (eAct == MM::BeforeGet)
     {
-        if (!refreshProps_ && initialized_)
+        if (!refreshProps_ && initialized_ && !refreshOverride_)
         {
             return DEVICE_OK;
         }
@@ -896,9 +896,17 @@ int CCRISP::OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get(offset);
         if (offset != 0.0)
         {
+            refreshOverride_ = true;
             std::ostringstream command;
             command << addressChar_ << "LK Z=" << offset;
-            RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
+            const int result = hub_->QueryCommandVerify(command.str(), ":A");
+            if (result != DEVICE_OK)
+            {
+                refreshOverride_ = false;
+                return result;
+            }
+            UpdateProperty(g_CRISPOffsetPropertyName);
+            refreshOverride_ = false;
         }
     }
     return DEVICE_OK;
