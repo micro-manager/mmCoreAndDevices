@@ -102,17 +102,6 @@ void MicroscopeGeometry::CreateDeviceMap() {
             }
         },
         {
-            "OpenSPIM-L",
-            {
-                {"SampleXY", MM::XYStageDevice},
-                {"SampleZ", MM::XYStageDevice},
-                {"SampleRotation", MM::StageDevice},
-                {"TriggerCamera", MM::ShutterDevice},
-                {"TriggerLaser", MM::ShutterDevice},
-                {"ImagingCamera", MM::CameraDevice}
-            }
-        },
-        {
             "SCAPE",
             {
                 {"SampleXY", MM::XYStageDevice},
