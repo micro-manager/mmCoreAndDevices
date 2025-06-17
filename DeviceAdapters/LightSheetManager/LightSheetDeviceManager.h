@@ -15,8 +15,7 @@
 #include <vector>
 #include <string>
 
-class LightSheetDeviceManager : public CGenericBase<LightSheetDeviceManager>
-{
+class LightSheetDeviceManager : public CGenericBase<LightSheetDeviceManager> {
 public:
     LightSheetDeviceManager();
     ~LightSheetDeviceManager();

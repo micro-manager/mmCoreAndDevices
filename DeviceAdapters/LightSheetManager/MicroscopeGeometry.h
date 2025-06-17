@@ -24,31 +24,30 @@
 // This class contains the data needed to map logical devices to 
 // physical devices for each microscope geometry type. This mapping 
 // is used by the LightSheetManager plugin.
-class MicroscopeGeometry
-{
+class MicroscopeGeometry {
 public:
-	// The constructor populates both deviceMap_ and geometryTypes_.
-	MicroscopeGeometry();
-	
-	// Clears both deviceMap_ and geometryTypes_ and is called after 
-	// device adapter initialization is successful.
-	void ClearDeviceMap();
+    // The constructor populates both deviceMap_ and geometryTypes_.
+    MicroscopeGeometry();
 
-	// Returns the list of microscope geometry types as strings.
-	std::vector<std::string>& GetGeometryTypes();
+    // Clears both deviceMap_ and geometryTypes_ and is called after
+    // device adapter initialization is successful.
+    void ClearDeviceMap();
 
-	// Returns a map of property names mapped to Micro-Manager device types.
-	std::map<std::string, MM::DeviceType> GetDeviceMap(const std::string& geometryType);
+    // Returns the list of microscope geometry types as strings.
+    std::vector<std::string>& GetGeometryTypes();
 
-	// This is the function where you can define new microscope geometry types.
-	void CreateDeviceMap();
+    // Returns a map of property names mapped to Micro-Manager device types.
+    std::map<std::string, MM::DeviceType> GetDeviceMap(const std::string& geometryType);
+
+    // This is the function where you can define new microscope geometry types.
+    void CreateDeviceMap();
 private:
 
-	// Creates the list of microscope geometry types based on the device map.
-	void CreateGeometryTypes();
+    // Creates the list of microscope geometry types based on the device map.
+    void CreateGeometryTypes();
 
-	std::map<std::string, std::map<std::string, MM::DeviceType>> deviceMap_;
-	std::vector<std::string> geometryTypes_;
+    std::map<std::string, std::map<std::string, MM::DeviceType>> deviceMap_;
+    std::vector<std::string> geometryTypes_;
 };
 
 #endif // MICROSCOPE_GEOMETRY_H
