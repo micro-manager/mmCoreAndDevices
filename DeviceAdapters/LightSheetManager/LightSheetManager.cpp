@@ -11,8 +11,7 @@ MODULE_API void InitializeModuleData() {
     RegisterDevice(gDeviceName, MM::GenericDevice, gDeviceDescription);
 }
 
-MODULE_API MM::Device* CreateDevice(const char* deviceName)
-{
+MODULE_API MM::Device* CreateDevice(const char* deviceName) {
     if (deviceName == nullptr) {
         return nullptr;
     }
