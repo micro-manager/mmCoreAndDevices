@@ -56,7 +56,7 @@ using namespace std;
 
 class SequenceThread;
 
-class CMoticCamera : public CCameraBase<CMoticCamera>  
+class CMoticCamera : public CLegacyCameraBase<CMoticCamera>  
 {
 public:
   CMoticCamera();

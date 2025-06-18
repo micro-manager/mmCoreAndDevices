@@ -866,7 +866,7 @@ int CMoticCamera::InsertImage()
 
 bool CMoticCamera::IsCapturing() 
 {
-  if(CCameraBase::IsCapturing())
+  if(CLegacyCameraBase::IsCapturing())
   {
 #ifdef _LOG_OUT_
     OutputDebugString("IsCapturing true");

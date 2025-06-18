@@ -15,7 +15,7 @@
 class SpinnakerAcquisitionThread;
 
 
-class SpinnakerCamera : public CCameraBase<SpinnakerCamera>
+class SpinnakerCamera : public CLegacyCameraBase<SpinnakerCamera>
 {
 public:
    SpinnakerCamera(GENICAM::gcstring serialNumber);

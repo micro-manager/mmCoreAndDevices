@@ -268,7 +268,7 @@ private:
 /**
  * @brief Main Allied Vision Camera class
  */
-class AlliedVisionCamera : public AlliedVisionDeviceBase<CCameraBase<AlliedVisionCamera>, AlliedVisionCamera>
+class AlliedVisionCamera : public AlliedVisionDeviceBase<CLegacyCameraBase<AlliedVisionCamera>, AlliedVisionCamera>
 {
     ///////////////////////////////////////////////////////////////////////////////
     // PUBLIC
