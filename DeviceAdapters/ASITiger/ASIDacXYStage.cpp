@@ -199,7 +199,7 @@ int CDACXYStage::Initialize()
 	UpdateProperty(g_JoystickEnabledPropertyName);
 
 	// get build info so we can add optional properties
-	build_info_type build;
+	FirmwareBuild build;
 	RETURN_ON_MM_ERROR(hub_->GetBuildInfo(addressChar_, build));
 
 	// add single-axis properties if supported
@@ -576,18 +576,11 @@ int CDACXYStage::OnSaveJoystickSettings()
 
 int CDACXYStage::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	std::string tmpstr;
 	if (eAct == MM::AfterSet)
 	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_YesState) == 0)
-		{
-			refreshProps_ = true;
-		}
-		else
-		{
-			refreshProps_ = false;
-		}
+		refreshProps_ = (tmpstr == g_YesState) ? true : false;
 	}
 	return DEVICE_OK;
 }
@@ -602,27 +595,27 @@ int CDACXYStage::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct
 		command.str("");
 		command << addressChar_ << "SS ";
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+		if (tmpstr == g_SaveSettingsOrig)
 		{
 			return DEVICE_OK;
 		}
-		if (tmpstr.compare(g_SaveSettingsDone) == 0)
+		if (tmpstr == g_SaveSettingsDone)
 		{
 			return DEVICE_OK;
 		}
-		if (tmpstr.compare(g_SaveSettingsX) == 0)
+		if (tmpstr == g_SaveSettingsX)
 		{
 			command << 'X';
 		}
-		else if (tmpstr.compare(g_SaveSettingsY) == 0)
+		else if (tmpstr == g_SaveSettingsY)
 		{
 			command << 'X';
 		}
-		else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+		else if (tmpstr == g_SaveSettingsZ)
 		{
 			command << 'Z';
 		}
-		else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
+		else if (tmpstr == g_SaveSettingsZJoystick)
 		{
 			command << 'Z';
 			// do save joystick settings first
@@ -677,33 +670,33 @@ int CDACXYStage::OnDACModeGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, 
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		string tmpstr;
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_DACOutputMode_0) == 0)
+		if (tmpstr == g_DACOutputMode_0)
 		{
 			tmp = 0;
 		}
-		else if (tmpstr.compare(g_DACOutputMode_1) == 0)
+		else if (tmpstr == g_DACOutputMode_1)
 		{
 			tmp = 1;
 		}
-		else if (tmpstr.compare(g_DACOutputMode_2) == 0)
+		else if (tmpstr == g_DACOutputMode_2)
 		{
 			tmp = 2;
 		}
-		else if (tmpstr.compare(g_DACOutputMode_4) == 0)
+		else if (tmpstr == g_DACOutputMode_4)
 		{
 			tmp = 4;
 		}
-		else if (tmpstr.compare(g_DACOutputMode_5) == 0)
+		else if (tmpstr == g_DACOutputMode_5)
 		{
 			tmp = 5;
 		}
-		else if (tmpstr.compare(g_DACOutputMode_6) == 0)
+		else if (tmpstr == g_DACOutputMode_6)
 		{
 			tmp = 6;
 		}
-		else if (tmpstr.compare(g_DACOutputMode_7) == 0)
+		else if (tmpstr == g_DACOutputMode_7)
 		{
 			tmp = 7;
 		}
@@ -740,9 +733,9 @@ int CDACXYStage::OnDACGateGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, 
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		string tmpstr;
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_OpenState) == 0)
+		if (tmpstr == g_OpenState)
 		{
 			tmp = true;
 		}
@@ -830,15 +823,15 @@ int CDACXYStage::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_RB_OnePoint_1) == 0)
+		if (tmpstr == g_RB_OnePoint_1)
 		{
 			tmp = 1;
 		}
-		else if (tmpstr.compare(g_RB_PlayOnce_2) == 0)
+		else if (tmpstr == g_RB_PlayOnce_2)
 		{
 			tmp = 2;
 		}
-		else if (tmpstr.compare(g_RB_PlayRepeat_3) == 0)
+		else if (tmpstr == g_RB_PlayRepeat_3)
 		{
 			tmp = 3;
 		}
@@ -869,7 +862,7 @@ int CDACXYStage::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_DoItState) == 0)
+		if (tmpstr == g_DoItState)
 		{
 			command << addressChar_ << "RM";
 			RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
@@ -1078,7 +1071,7 @@ int CDACXYStage::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 		double joystickSlow = 0.0;
 		RETURN_ON_MM_ERROR(GetProperty(g_JoystickSlowSpeedPropertyName, joystickSlow));
 		command.str("");
-		if (tmpstr.compare(g_YesState) == 0)
+		if (tmpstr == g_YesState)
 		{
 			command << addressChar_ << "JS X=-" << joystickFast << " Y=-" << joystickSlow;
 		}
@@ -1132,7 +1125,7 @@ int CDACXYStage::OnJoystickRotate(MM::PropertyBase* pProp, MM::ActionType eAct)
 		RETURN_ON_MM_ERROR(GetProperty(g_JoystickEnabledPropertyName, joystickEnabled));
 		if (strcmp(joystickEnabled, g_YesState) == 0)
 		{
-			if (tmpstr.compare(g_YesState) == 0)
+			if (tmpstr == g_YesState)
 			{
 				command << "J " << axisLetterX_ << "=3" << " " << axisLetterY_ << "=2";  // rotated
 			}
@@ -1185,7 +1178,7 @@ int CDACXYStage::OnJoystickEnableDisable(MM::PropertyBase* pProp, MM::ActionType
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_YesState) == 0)
+		if (tmpstr == g_YesState)
 		{
 			char joystickRotate[MM::MaxStrLength];
 			RETURN_ON_MM_ERROR(GetProperty(g_JoystickRotatePropertyName, joystickRotate));
@@ -1339,19 +1332,19 @@ int CDACXYStage::OnSAModeGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, s
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SAMode_0) == 0)
+		if (tmpstr == g_SAMode_0)
 		{
 			tmp = 0;
 		}
-		else if (tmpstr.compare(g_SAMode_1) == 0)
+		else if (tmpstr == g_SAMode_1)
 		{
 			tmp = 1;
 		}
-		else if (tmpstr.compare(g_SAMode_2) == 0)
+		else if (tmpstr == g_SAMode_2)
 		{
 			tmp = 2;
 		}
-		else if (tmpstr.compare(g_SAMode_3) == 0)
+		else if (tmpstr == g_SAMode_3)
 		{
 			tmp = 3;
 		}
@@ -1404,19 +1397,19 @@ int CDACXYStage::OnSAPatternGeneric(MM::PropertyBase* pProp, MM::ActionType eAct
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SAPattern_0) == 0)
+		if (tmpstr == g_SAPattern_0)
 		{
 			tmp = 0;
 		}
-		else if (tmpstr.compare(g_SAPattern_1) == 0)
+		else if (tmpstr == g_SAPattern_1)
 		{
 			tmp = 1;
 		}
-		else if (tmpstr.compare(g_SAPattern_2) == 0)
+		else if (tmpstr == g_SAPattern_2)
 		{
 			tmp = 2;
 		}
-		else if (tmpstr.compare(g_SAPattern_3) == 0)
+		else if (tmpstr == g_SAPattern_3)
 		{
 			tmp = 3;
 		}
@@ -1473,11 +1466,11 @@ int CDACXYStage::OnSAClkSrcGeneric(MM::PropertyBase* pProp, MM::ActionType eAct,
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SAClkSrc_0) == 0)
+		if (tmpstr == g_SAClkSrc_0)
 		{
 			tmp = 0;
 		}
-		else if (tmpstr.compare(g_SAClkSrc_1) == 0)
+		else if (tmpstr == g_SAClkSrc_1)
 		{
 			tmp = BIT7;
 		}
@@ -1534,11 +1527,11 @@ int CDACXYStage::OnSAClkPolGeneric(MM::PropertyBase* pProp, MM::ActionType eAct,
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SAClkPol_0) == 0)
+		if (tmpstr == g_SAClkPol_0)
 		{
 			tmp = 0;
 		}
-		else if (tmpstr.compare(g_SAClkPol_1) == 0)
+		else if (tmpstr == g_SAClkPol_1)
 		{
 			tmp = BIT6;
 		}
@@ -1623,11 +1616,11 @@ int CDACXYStage::OnSATTLOutGeneric(MM::PropertyBase* pProp, MM::ActionType eAct,
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SATTLOut_0) == 0)
+		if (tmpstr == g_SATTLOut_0)
 		{
 			tmp = 0;
 		}
-		else if (tmpstr.compare(g_SATTLOut_1) == 0)
+		else if (tmpstr == g_SATTLOut_1)
 		{
 			tmp = BIT5;
 		}
@@ -1682,13 +1675,13 @@ int CDACXYStage::OnSATTLPolGeneric(MM::PropertyBase* pProp, MM::ActionType eAct,
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		string tmpstr;
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SATTLPol_0) == 0)
+		if (tmpstr == g_SATTLPol_0)
 		{
 			tmp = 0;
 		}
-		else if (tmpstr.compare(g_SATTLPol_1) == 0)
+		else if (tmpstr == g_SATTLPol_1)
 		{
 			tmp = BIT4;
 		}
@@ -1722,7 +1715,7 @@ int CDACXYStage::OnSAAdvancedX(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_YesState) == 0)
+		if (tmpstr == g_YesState)
 		{
 			CPropertyAction* pAct;
 
@@ -1770,7 +1763,7 @@ int CDACXYStage::OnSAAdvancedY(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_YesState) == 0)
+		if (tmpstr == g_YesState)
 		{
 			CPropertyAction* pAct;
 
@@ -1828,7 +1821,7 @@ int CDACXYStage::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		ttl_trigger_enabled_ = (ttl_trigger_supported_ && (tmpstr.compare(g_YesState) == 0));
+		ttl_trigger_enabled_ = ttl_trigger_supported_ && (tmpstr == g_YesState);
 		return OnUseSequence(pProp, MM::BeforeGet);  // refresh value
 	}
 	return DEVICE_OK;

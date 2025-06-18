@@ -143,7 +143,6 @@ int CLens::Initialize()
    AddAllowedValue(g_LensModePropertyName, g_TLCMode_0);
    AddAllowedValue(g_LensModePropertyName, g_TLCMode_1);
 
-
    // Motor enable/disable (MC)
    pAct = new CPropertyAction (this, &CLens::OnMotorControl);
    CreateProperty(g_MotorControlPropertyName, g_OnState, MM::String, false, pAct);
@@ -208,7 +207,6 @@ int CLens::Initialize()
    AddAllowedValue(g_AxisPolarity, g_FocusPolarityASIDefault);
    AddAllowedValue(g_AxisPolarity, g_FocusPolarityMicroManagerDefault);
 
-
    // end now if we are pre-2.8 firmware
    if (!FirmwareVersionAtLeast(2.8))
    {
@@ -220,7 +218,7 @@ int CLens::Initialize()
    // single-axis and SPIM function only supported in Micromanager with firmware 2.8 and above for simplicity
 
    // get build info so we can add optional properties
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR( hub_->GetBuildInfo(addressChar_, build) );
 
    // add single-axis properties if supported
@@ -331,7 +329,6 @@ int CLens::Initialize()
 
    }
 
-
       //VectorMove
    pAct = new CPropertyAction (this, &CLens::OnVector);
    CreateProperty(g_VectorPropertyName, "0", MM::Float, false, pAct);
@@ -437,8 +434,8 @@ int CLens::SetOrigin()
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
-int CLens::StopStageSequence()
 // disables TTL triggering; doesn't actually stop anything already happening on controller
+int CLens::StopStageSequence()
 {
    ostringstream command; command.str("");
    if (!ttl_trigger_supported_)
@@ -450,8 +447,8 @@ int CLens::StopStageSequence()
    return DEVICE_OK;
 }
 
-int CLens::StartStageSequence()
 // enables TTL triggering; doesn't actually start anything going on controller
+int CLens::StartStageSequence()
 {
    ostringstream command; command.str("");
    if (!ttl_trigger_supported_)
@@ -511,12 +508,10 @@ int CLens::AddToStageSequence(double position)
    return DEVICE_OK;
 }
 
-
-////////////////
 // action handlers
 
-int CLens::OnSaveJoystickSettings()
 // redoes the joystick settings so they can be saved using SS Z
+int CLens::OnSaveJoystickSettings()
 {
    long tmp;
    string tmpstr;
@@ -535,24 +530,24 @@ int CLens::OnSaveJoystickSettings()
 
 int CLens::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
+   std::string tmpstr;
    ostringstream command; command.str("");
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'Y';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
-      else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
+      else if (tmpstr == g_SaveSettingsZJoystick)
       {
          command << 'Z';
          // do save joystick settings first
@@ -568,15 +563,13 @@ int CLens::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 int CLens::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -649,12 +642,13 @@ int CLens::OnLensMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_TLCMode_0) == 0)
+      if (tmpstr == g_TLCMode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_TLCMode_1) == 0)
+      else if (tmpstr == g_TLCMode_1)
          tmp = 1;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -686,9 +680,9 @@ int CLens::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_OffState) == 0)
+      if (tmpstr == g_OffState)
          command << "MC " << axisLetter_ << "-";
       else
          command << "MC " << axisLetter_ << "+";
@@ -792,13 +786,13 @@ int CLens::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       double joystickFast = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickFastSpeedPropertyName, joystickFast) );
       double joystickSlow = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickSlowSpeedPropertyName, joystickSlow) );
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          command << addressChar_ << "JS X=-" << joystickFast << " Y=-" << joystickSlow;
       else
          command << addressChar_ << "JS X=" << joystickFast << " Y=" << joystickSlow;
@@ -834,20 +828,21 @@ int CLens::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       // don't complain if value is unsupported, just leave as-is
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_JSCode_0) == 0)
+      if (tmpstr == g_JSCode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_JSCode_1) == 0)
+      else if (tmpstr == g_JSCode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_JSCode_2) == 0)
+      else if (tmpstr == g_JSCode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_JSCode_3) == 0)
+      else if (tmpstr == g_JSCode_3)
          tmp = 3;
-      else if (tmpstr.compare(g_JSCode_22) == 0)
+      else if (tmpstr == g_JSCode_22)
          tmp = 22;
-      else if (tmpstr.compare(g_JSCode_23) == 0)
+      else if (tmpstr == g_JSCode_23)
          tmp = 23;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -958,7 +953,7 @@ int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelFastSpeedPropertyName, wheelFast) );
       double wheelSlow = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelSlowSpeedPropertyName, wheelSlow) );
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          command << addressChar_ << "JS F=-" << wheelFast << " T=-" << wheelSlow;
       else
          command << addressChar_ << "JS F=" << wheelFast << " T=" << wheelSlow;
@@ -974,12 +969,13 @@ int CLens::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       // do nothing
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
       // change the unit mult that converts controller coordinates to micro-manager coordinates
       // micro-manager defines positive towards sample, ASI controllers just opposite
-      if (tmpstr.compare(g_FocusPolarityMicroManagerDefault) == 0) {
+      if (tmpstr == g_FocusPolarityMicroManagerDefault) {
          unitMult_ = -1*abs(unitMult_);
       } else {
          unitMult_ = abs(unitMult_);
@@ -988,19 +984,18 @@ int CLens::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-
-
-int CLens::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
+int CLens::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
       return DEVICE_OK; // do nothing
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
       {
          CPropertyAction* pAct;
 
@@ -1138,16 +1133,17 @@ int CLens::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
       justSet = false;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAMode_0) == 0)
+      if (tmpstr == g_SAMode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAMode_1) == 0)
+      else if (tmpstr == g_SAMode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_SAMode_2) == 0)
+      else if (tmpstr == g_SAMode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_SAMode_3) == 0)
+      else if (tmpstr == g_SAMode_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1186,16 +1182,17 @@ int CLens::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAPattern_0) == 0)
+      if (tmpstr == g_SAPattern_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAPattern_1) == 0)
+      else if (tmpstr == g_SAPattern_1)
          tmp = 1;
-      else if (tmpstr.compare(g_SAPattern_2) == 0)
+      else if (tmpstr == g_SAPattern_2)
          tmp = 2;
-      else if (tmpstr.compare(g_SAPattern_3) == 0)
+      else if (tmpstr == g_SAPattern_3)
          tmp = 3;
 	  else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1214,8 +1211,8 @@ int CLens::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// always read
 int CLens::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
-// get every single time
 {
    ostringstream command; command.str("");
    ostringstream response; response.str("");
@@ -1261,12 +1258,13 @@ int CLens::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAClkSrc_0) == 0)
+      if (tmpstr == g_SAClkSrc_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAClkSrc_1) == 0)
+      else if (tmpstr == g_SAClkSrc_1)
          tmp = BIT7;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1309,12 +1307,13 @@ int CLens::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAClkPol_0) == 0)
+      if (tmpstr == g_SAClkPol_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAClkPol_1) == 0)
+      else if (tmpstr == g_SAClkPol_1)
          tmp = BIT6;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1357,12 +1356,13 @@ int CLens::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SATTLOut_0) == 0)
+      if (tmpstr == g_SATTLOut_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SATTLOut_1) == 0)
+      else if (tmpstr == g_SATTLOut_1)
          tmp = BIT5;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1405,12 +1405,13 @@ int CLens::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SATTLPol_0) == 0)
+      if (tmpstr == g_SATTLPol_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SATTLPol_1) == 0)
+      else if (tmpstr == g_SATTLPol_1)
          tmp = BIT4;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1461,13 +1462,13 @@ int CLens::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_RB_OnePoint_1) == 0)
+      if (tmpstr == g_RB_OnePoint_1)
          tmp = 1;
-      else if (tmpstr.compare(g_RB_PlayOnce_2) == 0)
+      else if (tmpstr == g_RB_PlayOnce_2)
          tmp = 2;
-      else if (tmpstr.compare(g_RB_PlayRepeat_3) == 0)
+      else if (tmpstr == g_RB_PlayRepeat_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1487,9 +1488,9 @@ int CLens::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
    else  if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          command << addressChar_ << "RM";
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
@@ -1574,9 +1575,9 @@ int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
          pProp->Set(g_NoState);
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      ttl_trigger_enabled_ = (ttl_trigger_supported_ && (tmpstr.compare(g_YesState) == 0));
+      ttl_trigger_enabled_ = ttl_trigger_supported_ && (tmpstr == g_YesState);
       return OnUseSequence(pProp, MM::BeforeGet);  // refresh value
    }
    return DEVICE_OK;

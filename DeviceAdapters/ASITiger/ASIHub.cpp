@@ -360,16 +360,16 @@ int ASIHub::GetAnswerCharAtPosition3(char &val)
    return DEVICE_OK;
 }
 
-vector<string> ASIHub::SplitAnswerOnDelim(string delim) const
+std::vector<std::string> ASIHub::SplitAnswerOnDelim(const std::string& delim) const
 {
-   vector<string> elems;
+   std::vector<std::string> elems;
    CDeviceUtils::Tokenize(serialAnswer_, elems, delim);
    return elems;
 }
 
-int ASIHub::GetBuildInfo(const string addressLetter, build_info_type &build)
 // original use is in DetectInstalledDevices addressed to comm card
 // refactored as separate function for use to query other cards, including defines
+int ASIHub::GetBuildInfo(const std::string &addressLetter, FirmwareBuild &build)
 {
    ostringstream command; command.str("");
    command << addressLetter << "BU X";
@@ -386,8 +386,8 @@ int ASIHub::GetBuildInfo(const string addressLetter, build_info_type &build)
    // parse the reply into vectors containing axis types, letters, and card addresses (binary and hex)
    vector<string> vReply = SplitAnswerOnCR();
 
-   // get buildname
-   build.buildname = vReply[0];
+   // get buildName
+   build.buildName = vReply[0];
 
    // get axis letters "Motor Axes:"
    SetLastSerialAnswer(vReply[1]);
@@ -460,14 +460,14 @@ int ASIHub::GetBuildInfo(const string addressLetter, build_info_type &build)
    return DEVICE_OK;
 }
 
-bool ASIHub::IsDefinePresent(const build_info_type build, const string defineToLookFor)
+bool ASIHub::IsDefinePresent(const FirmwareBuild &build, const std::string &defineToLookFor)
 {
    vector<string>::const_iterator it;
    it = find(build.defines.begin(), build.defines.end(), defineToLookFor);
    return (it != build.defines.end());
 }
 
-string ASIHub::GetDefineString(const build_info_type build, const string substringToLookFor)
+std::string ASIHub::GetDefineString(const FirmwareBuild &build, const std::string &substringToLookFor)
 {
    vector<string>::const_iterator it;
    for (it = build.defines.begin(); it != build.defines.end(); ++it)
@@ -480,7 +480,7 @@ string ASIHub::GetDefineString(const build_info_type build, const string substri
    return "";
 }
 
-int ASIHub::UpdateSharedProperties(string addressChar, string propName, string value) {
+int ASIHub::UpdateSharedProperties(const std::string &addressChar, const std::string &propName, const std::string &value) {
    int ret = DEVICE_OK;
    updatingSharedProperties_ = true;
    for (map<string,string>::iterator it=deviceMap_.begin(); it!=deviceMap_.end(); ++it) {
@@ -519,31 +519,32 @@ int ASIHub::OnSerialTerminator(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::BeforeGet)
    {
       bool success = 0;
-      if (serialTerminator_.compare(g_SerialTerminator_0_Value) == 0)
+      if (serialTerminator_ == g_SerialTerminator_0_Value)
          success = pProp->Set(g_SerialTerminator_0);
-      else if (serialTerminator_.compare(g_SerialTerminator_1_Value) == 0)
+      else if (serialTerminator_ == g_SerialTerminator_1_Value)
          success = pProp->Set(g_SerialTerminator_1);
-      else if (serialTerminator_.compare(g_SerialTerminator_2_Value) == 0)
+      else if (serialTerminator_ == g_SerialTerminator_2_Value)
          success = pProp->Set(g_SerialTerminator_2);
-      else if (serialTerminator_.compare(g_SerialTerminator_3_Value) == 0)
+      else if (serialTerminator_ == g_SerialTerminator_3_Value)
          success = pProp->Set(g_SerialTerminator_3);
-      else if (serialTerminator_.compare(g_SerialTerminator_4_Value) == 0)
+      else if (serialTerminator_ == g_SerialTerminator_4_Value)
          success = pProp->Set(g_SerialTerminator_4);
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SerialTerminator_0) == 0)
+      if (tmpstr == g_SerialTerminator_0)
          serialTerminator_ = g_SerialTerminator_0_Value;
-      else if (tmpstr.compare(g_SerialTerminator_1) == 0)
+      else if (tmpstr == g_SerialTerminator_1)
          serialTerminator_ = g_SerialTerminator_1_Value;
-      else if (tmpstr.compare(g_SerialTerminator_2) == 0)
+      else if (tmpstr == g_SerialTerminator_2)
          serialTerminator_ = g_SerialTerminator_2_Value;
-      else if (tmpstr.compare(g_SerialTerminator_3) == 0)
+      else if (tmpstr == g_SerialTerminator_3)
          serialTerminator_ = g_SerialTerminator_3_Value;
-      else if (tmpstr.compare(g_SerialTerminator_4) == 0)
+      else if (tmpstr == g_SerialTerminator_4)
          serialTerminator_ = g_SerialTerminator_4_Value;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -656,19 +657,16 @@ int ASIHub::OnSerialCommandRepeatPeriod(MM::PropertyBase* pProp, MM::ActionType 
 
 int ASIHub::OnSerialCommandOnlySendChanged(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
    if (eAct == MM::AfterSet) {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         serialOnlySendChanged_ = true;
-      else
-         serialOnlySendChanged_ = false;
+      serialOnlySendChanged_ = (tmpstr == g_YesState) ? true : false;
    }
    return DEVICE_OK;
 }
 
-string ASIHub::EscapeControlCharacters(const string v)
 // based on similar function in FreeSerialPort.cpp
+std::string ASIHub::EscapeControlCharacters(const std::string &v)
 {
    ostringstream mess;  mess.str("");
    for( string::const_iterator ii = v.begin(); ii != v.end(); ++ii)
@@ -687,8 +685,8 @@ string ASIHub::EscapeControlCharacters(const string v)
    return mess.str();
 }
 
-string ASIHub::UnescapeControlCharacters(const string v0)
 // based on similar function in FreeSerialPort.cpp
+std::string ASIHub::UnescapeControlCharacters(const std::string &v0)
 {
    // the string input from the GUI can contain escaped control characters, currently these are always preceded with \ (0x5C)
    // and always assumed to be decimal or C style, not hex
@@ -766,9 +764,9 @@ string ASIHub::UnescapeControlCharacters(const string v0)
    return detokenized;
 }
 
-vector<char> ASIHub::ConvertStringVector2CharVector(const vector<string> v)
+std::vector<char> ASIHub::ConvertStringVector2CharVector(const std::vector<std::string> &v)
 {
-   vector<char> result;
+   std::vector<char> result;
    result.reserve(v.size());
    for(unsigned int i=0; i<v.size(); i++) {
       result.push_back(v[i].at(0));
@@ -776,9 +774,9 @@ vector<char> ASIHub::ConvertStringVector2CharVector(const vector<string> v)
    return result;
 }
 
-vector<int> ASIHub::ConvertStringVector2IntVector(const vector<string> v)
+std::vector<int> ASIHub::ConvertStringVector2IntVector(const std::vector<std::string> &v)
 {
-   vector<int> result;
+   std::vector<int> result;
    result.reserve(v.size());
    for(unsigned int i=0; i<v.size(); i++) {
       result.push_back(atoi(v[i].c_str()));

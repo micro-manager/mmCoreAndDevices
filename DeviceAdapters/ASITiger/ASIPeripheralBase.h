@@ -50,7 +50,7 @@ public:
       if (IsExtendedName(name))
       {
          addressString_ = GetHexAddrFromExtName(name);
-         if (addressString_.compare(g_EmptyCardAddressStr) != 0 )
+         if (addressString_ != g_EmptyCardAddressStr)
          {
             this->CreateProperty(g_TigerHexAddrPropertyName, addressString_.c_str(), MM::String, true);
             addressChar_ = ConvertToTigerRawAddress(addressString_);
