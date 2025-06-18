@@ -7,28 +7,20 @@
 
 #include "LightSheetManager.h"
 
-MODULE_API void InitializeModuleData()
-{
+MODULE_API void InitializeModuleData() {
     RegisterDevice(gDeviceName, MM::GenericDevice, gDeviceDescription);
 }
 
-MODULE_API MM::Device* CreateDevice(const char* deviceName)
-{
-    if (deviceName == 0)
-    {
-        return 0;
+MODULE_API MM::Device* CreateDevice(const char* deviceName) {
+    if (deviceName == nullptr) {
+        return nullptr;
     }
-    if (strcmp(deviceName, gDeviceName) == 0)
-    {
+    if (std::string(deviceName) == gDeviceName) {
         return new LightSheetDeviceManager();
     }
-    else
-    {
-        return 0;
-    }
+    return nullptr;
 }
 
-MODULE_API void DeleteDevice(MM::Device* pDevice)
-{
+MODULE_API void DeleteDevice(MM::Device* pDevice) {
     delete pDevice;
 }
