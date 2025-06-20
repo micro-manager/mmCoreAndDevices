@@ -132,6 +132,10 @@ const char* g_focusMethod = "Focus Method";
 const char* g_focusThisPosition = "Measure";
 const char* g_focusLastPosition = "Last Position";
 const char* g_focusApplyPosition = "Apply";
+const char* g_ReverseX = "ReverseXDirection";
+const char* g_ReverseY = "ReverseYDirection";
+const char* g_Yes = "Yes";
+const char* g_No = "No";
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1876,13 +1880,25 @@ XYStage::XYStage ():
    biAlways_ ("Bidirectional Precision Always"),
    default_ ("Default"),
    fast_ ("Fast"),
-   smooth_ ("Smooth")
+   smooth_ ("Smooth"),
+   reverseX_(false),
+   reverseY_(false)
 {
    name_ = g_ZeissXYStage;
    InitializeDefaultErrorMessages();
 
    SetErrorText(ERR_SCOPE_NOT_ACTIVE, "Zeiss Scope is not initialized.  It is needed for the Zeiss XYStage to work");
    SetErrorText(ERR_MODULE_NOT_FOUND, "No XYStage installed on this Zeiss microscope");
+
+   CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnReverseX);
+   CreateProperty(g_ReverseX, g_No, MM::String, false, pAct, true);
+   AddAllowedValue(g_ReverseX, g_No);
+   AddAllowedValue(g_ReverseX, g_Yes);
+
+   pAct = new CPropertyAction(this,&XYStage::OnReverseY);
+   CreateProperty(g_ReverseY, g_No, MM::String, false, pAct, true);
+   AddAllowedValue(g_ReverseY, g_No);
+   AddAllowedValue(g_ReverseY, g_Yes);
 }
 
 XYStage::~XYStage()
@@ -1976,7 +1992,6 @@ int XYStage::Initialize()
 */
 
 
-
    ret = UpdateStatus();
    if (ret!= DEVICE_OK)
       return ret;
@@ -2017,23 +2032,23 @@ int XYStage::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax)
    //xMin = ZeissHub::deviceInfo_[g_StageXAxis].lowerHardwareStop;
    ZeissLong xMi, xMa, yMi, yMa;
    g_hub.GetLowerHardwareStop(g_StageXAxis, xMi);
-   xMin = xMi;
+   xMin = reverseX_ ? -xMi : xMi;
    g_hub.GetLowerHardwareStop(g_StageYAxis, yMi);
-   yMin = yMi;
+   yMin = reverseY_ ? -yMi : yMi;
    g_hub.GetUpperHardwareStop(g_StageXAxis, xMa);
-   xMax = xMa;
+   xMax = reverseX_ ? -xMa : xMa;
    g_hub.GetUpperHardwareStop(g_StageYAxis, yMa);
-   yMax = yMa;
+   yMax = reverseY_ ? -yMa : yMa;
    return DEVICE_OK;
 }
 
 
 int XYStage::SetPositionSteps(long xSteps, long ySteps)
 {
-   int ret = ZeissAxis::SetPosition(*this, *GetCoreCallback(), g_StageXAxis, xSteps, (ZeissByte) (moveMode_ & velocity_));
+   int ret = ZeissAxis::SetPosition(*this, *GetCoreCallback(), g_StageXAxis, reverseX_ ? -xSteps : xSteps, (ZeissByte) (moveMode_ & velocity_));
    if (ret != DEVICE_OK)
       return ret;
-   ret = ZeissAxis::SetPosition(*this, *GetCoreCallback(), g_StageYAxis, ySteps, (ZeissByte) (moveMode_ & velocity_));
+   ret = ZeissAxis::SetPosition(*this, *GetCoreCallback(), g_StageYAxis, reverseY_ ? -ySteps : ySteps, (ZeissByte) (moveMode_ & velocity_));
    if (ret != DEVICE_OK)
       return ret;
 
@@ -2042,10 +2057,10 @@ int XYStage::SetPositionSteps(long xSteps, long ySteps)
 
 int XYStage::SetRelativePositionSteps(long xSteps, long ySteps)
 {
-   int ret = ZeissAxis::SetRelativePosition(*this, *GetCoreCallback(), g_StageXAxis, xSteps, (ZeissByte) (moveMode_ & velocity_));
+   int ret = ZeissAxis::SetRelativePosition(*this, *GetCoreCallback(), g_StageXAxis, reverseX_ ? -xSteps : xSteps, (ZeissByte) (moveMode_ & velocity_));
    if (ret != DEVICE_OK)
       return ret;
-   ret = ZeissAxis::SetRelativePosition(*this, *GetCoreCallback(), g_StageYAxis, ySteps, (ZeissByte) (moveMode_ & velocity_));
+   ret = ZeissAxis::SetRelativePosition(*this, *GetCoreCallback(), g_StageYAxis, reverseY_ ? -ySteps : ySteps, (ZeissByte) (moveMode_ & velocity_));
    if (ret != DEVICE_OK)
       return ret;
 
@@ -2063,8 +2078,8 @@ int XYStage::GetPositionSteps(long& xSteps, long& ySteps)
    if (ret != DEVICE_OK)
       return ret;
 
-   xSteps = xZeiss;
-   ySteps = yZeiss;
+   xSteps = reverseX_ ? -xZeiss : xZeiss;
+   ySteps = reverseY_ ? -yZeiss : yZeiss;
 
    return DEVICE_OK;
 }
@@ -2197,6 +2212,35 @@ int XYStage::OnTrajectoryAcceleration(MM::PropertyBase* pProp, MM::ActionType eA
    return DEVICE_OK;
 }
 
+int XYStage::OnReverseX(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(reverseX_ ? g_Yes : g_No);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string response;
+      pProp->Get(response);
+      reverseX_ = response == g_Yes;
+   }
+   return DEVICE_OK;
+}
+
+int XYStage::OnReverseY(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(reverseY_ ? g_Yes : g_No);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string response;
+      pProp->Get(response);
+      reverseY_ = response == g_Yes;
+   }
+   return DEVICE_OK;
+}
 void XYStage::ReportNewPosition(ZeissUByte /* devId */, ZeissLong& /* position */) {
    long x = 0;
    long y = 0;
