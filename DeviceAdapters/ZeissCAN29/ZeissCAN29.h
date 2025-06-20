@@ -896,6 +896,8 @@ public:
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTrajectoryVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTrajectoryAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnReverseX(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnReverseY(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    void ReportNewPosition(ZeissUByte devId, ZeissLong& position);
 
@@ -907,6 +909,8 @@ private:
    std::string name_;
    std::string description_;
    std::string direct_, uni_, biSup_, biAlways_, default_, fast_, smooth_;
+   bool reverseX_;
+   bool reverseY_;
 };
 
 class DefiniteFocus : public CAutoFocusBase<DefiniteFocus>
