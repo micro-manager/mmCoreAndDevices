@@ -18,7 +18,7 @@ TIntegerProperty::TIntegerProperty(const string & MM_name, IInteger * integer_fe
    if (integer_feature->IsImplemented())
    {
       CPropertyAction * pAct = new CPropertyAction (this, &TIntegerProperty::OnInteger);
-      camera_->CreateProperty(MM_name.c_str(), "", MM::Integer, readOnly, pAct);
+      camera_->CreateProperty(MM_name.c_str(), "", MM::Integer, readOnly || integer_feature->IsReadOnly(), pAct);
 
       try
       {
