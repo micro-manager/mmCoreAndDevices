@@ -4,12 +4,13 @@
 #include "atcore++.h"
 #include "MMDeviceConstants.h"
 #include "Property.h"
+#include "IProperty.h"
 
 class MySequenceThread;
 class CAndorSDK3Camera;
 class SnapShotControl;
 
-class TIntegerProperty : public andor::IObserver
+class TIntegerProperty : public andor::IObserver, public IProperty
 {
 public:
    TIntegerProperty(const std::string & MM_name, andor::IInteger* integer_feature,

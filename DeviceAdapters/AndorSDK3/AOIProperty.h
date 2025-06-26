@@ -6,6 +6,7 @@
 #include "MMDeviceConstants.h"
 #include "Property.h"
 #include "atcore.h"
+#include "IProperty.h"
 
 class ICallBackManager;
 
@@ -15,7 +16,7 @@ namespace andor
    class IInteger;
 }
 
-class TAOIProperty
+class TAOIProperty : public IProperty
 {
 public:
    TAOIProperty(const std::string & MM_name, ICallBackManager* callback, bool readOnly);
