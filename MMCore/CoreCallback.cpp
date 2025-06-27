@@ -424,6 +424,13 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
          }
       }
    }
+
+   // Notify that sequence acquisition has stopped
+   if (core_->externalCallback_)
+   {
+      core_->externalCallback_->onSequenceAcquisitionStopped(camera->GetLabel().c_str());
+   }
+
    return DEVICE_OK;
 }
 
