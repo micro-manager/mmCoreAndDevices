@@ -3419,8 +3419,8 @@ void CMMCore::setAutoFocusDevice(const char* autofocusLabel) throw (CMMError)
       currentAutofocusDevice_.reset();
       LOG_INFO(coreLogger_) << "Default autofocus unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newAutofocusLabel = getAutoFocusDevice();
+   properties_->Set(MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str()));
@@ -3486,8 +3486,8 @@ void CMMCore::setImageProcessorDevice(const char* procLabel) throw (CMMError)
       currentImageProcessor_.reset();
       LOG_INFO(coreLogger_) << "Default image processor unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newProcLabel = getImageProcessorDevice();
+   properties_->Set(MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str()));
@@ -3510,8 +3510,8 @@ void CMMCore::setSLMDevice(const char* slmLabel) throw (CMMError)
       currentSLMDevice_.reset();
       LOG_INFO(coreLogger_) << "Default SLM unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newSLMLabel = getSLMDevice();
+   properties_->Set(MM::g_Keyword_CoreSLM, newSLMLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreSLM, newSLMLabel.c_str()));
@@ -3535,8 +3535,8 @@ void CMMCore::setGalvoDevice(const char* galvoLabel) throw (CMMError)
       currentGalvoDevice_.reset();
       LOG_INFO(coreLogger_) << "Default galvo unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newGalvoLabel = getGalvoDevice();
+   properties_->Set(MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str()));
@@ -3624,8 +3624,8 @@ void CMMCore::setShutterDevice(const char* shutterLabel) throw (CMMError)
       currentShutterDevice_.reset();
       LOG_INFO(coreLogger_) << "Default shutter unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newShutterLabel = getShutterDevice();
+   properties_->Set(MM::g_Keyword_CoreShutter, newShutterLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreShutter, newShutterLabel.c_str()));
@@ -3649,8 +3649,8 @@ void CMMCore::setFocusDevice(const char* focusLabel) throw (CMMError)
       currentFocusDevice_.reset();
       LOG_INFO(coreLogger_) << "Default stage unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newFocusLabel = getFocusDevice();
+   properties_->Set(MM::g_Keyword_CoreFocus, newFocusLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreFocus, newFocusLabel.c_str()));
@@ -3673,8 +3673,8 @@ void CMMCore::setXYStageDevice(const char* xyDeviceLabel) throw (CMMError)
       currentXYStageDevice_.reset();
       LOG_INFO(coreLogger_) << "Default xy stage unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newXYStageLabel = getXYStageDevice();
+   properties_->Set(MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str()));
@@ -3712,8 +3712,8 @@ void CMMCore::setCameraDevice(const char* cameraLabel) throw (CMMError)
       currentCameraDevice_.reset();
       LOG_INFO(coreLogger_) << "Default camera unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newCameraLabel = getCameraDevice();
+   properties_->Set(MM::g_Keyword_CoreCamera, newCameraLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, newCameraLabel.c_str()));
