@@ -99,8 +99,8 @@
  * and the device/module interface version numbers or the MMStudio application
  * version number (each version is incremented independently of each other).
  *
- * This applies to all classes exposed through the SWIG layer (i.e. the whole
- * of the public API of the Core), not just CMMCore.
+ * This applies to all classes exposed through MMCoreJ and pymmcore (i.e. the
+ * whole of the public API of the Core), not just CMMCore.
  *
  * Because currently there is no C++ DLL build of MMCore, what we care about is
  * the backward compatibility of the Java and Python bindings. So a change that
@@ -112,7 +112,7 @@
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 5, MMCore_versionPatch = 2;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 6, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
