@@ -4146,8 +4146,9 @@ void CMMCore::loadPropertySequence(const char* label, const char* propName, std:
 MM::PropertyType CMMCore::getPropertyType(const char* label, const char* propName) throw (CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      // TODO: return the proper core type
-      return MM::Undef;
+   {
+      return properties_->GetPropertyType(propName);
+   }
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -7957,13 +7958,13 @@ void CMMCore::CreateCoreProperties()
    properties_ = new CorePropertyCollection(this);
 
    // Initialize
-   CoreProperty propInit("0", false);
+   CoreProperty propInit("0", false, MM::Integer);
    propInit.AddAllowedValue("0");
    propInit.AddAllowedValue("1");
    properties_->Add(MM::g_Keyword_CoreInitialize, propInit);
 
    // Auto shutter
-   CoreProperty propAutoShutter("1", false);
+   CoreProperty propAutoShutter("1", false, MM::Integer);
    propAutoShutter.AddAllowedValue("0");
    propAutoShutter.AddAllowedValue("1");
    properties_->Add(MM::g_Keyword_CoreAutoShutter, propAutoShutter);
@@ -8005,7 +8006,7 @@ void CMMCore::CreateCoreProperties()
    properties_->AddAllowedValue(MM::g_Keyword_CoreChannelGroup, "");
 
    // Time after which we give up on checking the Busy flag status
-   CoreProperty propBusyTimeoutMs;
+   CoreProperty propBusyTimeoutMs("5000", false, MM::Integer);
    properties_->Add(MM::g_Keyword_CoreTimeoutMs, propBusyTimeoutMs);
 
    properties_->Refresh();
