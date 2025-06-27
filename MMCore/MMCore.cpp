@@ -3673,6 +3673,7 @@ void CMMCore::setXYStageDevice(const char* xyDeviceLabel) throw (CMMError)
       currentXYStageDevice_.reset();
       LOG_INFO(coreLogger_) << "Default xy stage unset";
    }
+   properties_->Refresh(); // TODO: more efficient
    std::string newXYStageLabel = getXYStageDevice();
    {
       MMThreadGuard scg(stateCacheLock_);
