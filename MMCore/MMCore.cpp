@@ -781,6 +781,8 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
       LOG_DEBUG(coreLogger_) << "Will unload device " << label;
       deviceManager_->UnloadDevice(pDevice);
       LOG_DEBUG(coreLogger_) << "Did unload device " << label;
+      
+      updateCoreProperties();
    }
    catch (CMMError& err) {
       logError("MMCore::unloadDevice", err.getMsg().c_str());
