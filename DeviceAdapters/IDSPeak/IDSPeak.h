@@ -112,7 +112,7 @@ private:
 
 class MySequenceThread;
 
-class CIDSPeak : public CCameraBase<CIDSPeak>
+class CIDSPeak : public CLegacyCameraBase<CIDSPeak>
 {
 public:
     CIDSPeak(int deviceIdx);

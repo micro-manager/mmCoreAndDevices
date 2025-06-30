@@ -132,7 +132,7 @@ class PvImage;
 // Implementation of the MMDevice and MMCamera interfaces
 // for all JAI eBus compatible cameras
 //
-class JAICamera : public CCameraBase<JAICamera>
+class JAICamera : public CLegacyCameraBase<JAICamera>
 {
    friend AcqSequenceThread;
 

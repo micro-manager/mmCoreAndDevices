@@ -63,7 +63,7 @@ enum
 
 class CTempCameraEventHandler;
 class CircularBufferInserter;
-class BaslerCamera : public CCameraBase<BaslerCamera>  {
+class BaslerCamera : public CLegacyCameraBase<BaslerCamera>  {
 public:
 	BaslerCamera();
 	~BaslerCamera();
