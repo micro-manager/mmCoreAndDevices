@@ -981,48 +981,34 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
 
    // second round, spin up threads to initialize non-port devices, one thread per module
    std::vector<std::future<int>> futures;
-   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>>>::iterator it;
-   for (it = moduleMap.begin(); it != moduleMap.end(); it++)
-   {
-      auto f = std::async(std::launch::async, &CMMCore::initializeVectorOfDevices, this, it->second);
+   for (auto& moduleDevices : moduleMap) {
+      auto f = std::async(std::launch::async, &CMMCore::initializeVectorOfDevices, this, moduleDevices.second);
       futures.push_back(std::move(f));
    }
-   for (int i = 0; i < futures.size(); i++) {
-      // Note: we could do a 'f.wait_for(std::chrono::seconds(20)' to wait up to 20 seconds before giving up
-      // which would avoid hanging with devices that hang in their initialize function
-      try
-      {
-         futures[i].get();
-      }
-      catch (...)
-      {
-         std::exception_ptr pex = std::current_exception();
-         // The std::future returned by std::async is special and its destructor blocks until the future completes.
-         // This is okay if there are 0 or 1 errors total(the successful initializations run to completion and the exception is propagated).
-         // When there are 2 or more errors, however, the second exception would be thrown in the destructor of the future, 
-         // and throwing anything in a destructor is very bad(might terminate by default).
-         for (int j = i + 1; j < futures.size(); j++)
-         {
-            try
-            {
-               futures[j].get();
-            }
-            catch (std::exception exj) {
-               // ignore these exceptions;
-            }
+
+   // Make sure we wait for all futures even if one or more fails, so that we
+   // handle all exceptions. Otherwise futures return by std::async may try to
+   // throw from their destructor, which will call std::terminate().
+   std::exception_ptr pex;
+   for (auto& fut : futures) {
+      try {
+         fut.get();
+      } catch (const std::exception&) {
+         if (pex) {
+            // Ignore second and subsequent exceptions
+         } else {
+            pex = std::current_exception();
          }
-         // Rethrow the first exception
-         std::rethrow_exception(pex);
       }
+   }
+   if (pex) {
+      std::rethrow_exception(pex);
    }
 
    // assign default roles syncronously
-   for (it = moduleMap.begin(); it != moduleMap.end(); it++)
-   {
-      std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices = it->second;
-      for (int i = 0; i < pDevices.size(); i++)
-      {
-         assignDefaultRole(pDevices[i].first);
+   for (auto& moduleDevices : moduleMap) {
+      for (auto& deviceLabel : moduleDevices.second) {
+         assignDefaultRole(deviceLabel.first);
       }
    }
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
@@ -1038,14 +1024,12 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
  * This helper function is executed by a single thread, allowing initializeAllDevices to operate multi-threaded.
  * All devices are supposed to originate from the same device adapter
  */
-int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices) {
-   for (int i = 0; i < pDevices.size(); i++) {
-      std::shared_ptr<DeviceInstance> pDevice = pDevices[i].first;
-
-      mm::DeviceModuleLockGuard guard(pDevice);
-      LOG_INFO(coreLogger_) << "Will initialize device " << pDevices[i].second;
-      pDevice->Initialize();
-      LOG_INFO(coreLogger_) << "Did initialize device " << pDevices[i].second;
+int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> devicesLabels) {
+   for (auto& deviceLabel : devicesLabels) {
+      mm::DeviceModuleLockGuard guard(deviceLabel.first);
+      LOG_INFO(coreLogger_) << "Will initialize device " << deviceLabel.second;
+      deviceLabel.first->Initialize();
+      LOG_INFO(coreLogger_) << "Did initialize device " << deviceLabel.second;
    }
    return DEVICE_OK;
 }
