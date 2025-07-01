@@ -1,7 +1,9 @@
 #include <catch2/catch_all.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "MMCore.h"
 #include "../../MMDevice/DeviceBase.h"
+#include "MockDeviceUtils.h"
 
 class MyMockDevice : public CGenericBase<MyMockDevice> {
 public:
@@ -40,4 +42,20 @@ TEST_CASE("Register and load a mock device")
    c.waitForDevice("mylabel");
    CHECK(c.getDeviceName("mylabel") == "name-returned-by-device");
    c.unloadDevice("mylabel");
+}
+
+TEST_CASE("Create mock devices using MockAdapterWithDevices convenience class") {
+   MyMockDevice dev1;
+   MyMockDevice dev2;
+   MockAdapterWithDevices adapter{
+      {"dev1", &dev1},
+      {"dev2", &dev2},
+   };
+
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   using Catch::Matchers::ContainsSubstring;
+   CHECK_THAT(c.getDeviceDescription("dev1"), ContainsSubstring("dev1"));
+   CHECK_THAT(c.getDeviceDescription("dev2"), ContainsSubstring("dev2"));
 }

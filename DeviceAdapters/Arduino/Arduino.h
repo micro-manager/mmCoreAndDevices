@@ -57,6 +57,7 @@ public:
    int OnPort(MM::PropertyBase* pPropt, MM::ActionType eAct);
    int OnLogic(MM::PropertyBase* pPropt, MM::ActionType eAct);
    int OnVersion(MM::PropertyBase* pPropt, MM::ActionType eAct);
+   int OnExtendedVersion(MM::PropertyBase* pPropt, MM::ActionType eAct);
    unsigned int GetMaxNumPatterns() {
       return maxNumPatterns_;
    };
@@ -80,6 +81,7 @@ public:
    void SetSwitchState(unsigned state) {switchState_ = state;}
    const unsigned GetShutterState() {return shutterState_;}
    const unsigned GetSwitchState() {return switchState_;}
+   const int GetControllerVersionCached() {return version_;}
 
 private:
    int GetControllerVersion(int&);
@@ -89,6 +91,7 @@ private:
    bool invertedLogic_;
    bool timedOutputActive_;
    int version_;
+   long extendedVersion_;
    unsigned int maxNumPatterns_;
    CArduinoMagnifier* magnifier_;
    std::mutex mutex_;

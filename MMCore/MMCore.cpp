@@ -99,8 +99,8 @@
  * and the device/module interface version numbers or the MMStudio application
  * version number (each version is incremented independently of each other).
  *
- * This applies to all classes exposed through the SWIG layer (i.e. the whole
- * of the public API of the Core), not just CMMCore.
+ * This applies to all classes exposed through MMCoreJ and pymmcore (i.e. the
+ * whole of the public API of the Core), not just CMMCore.
  *
  * Because currently there is no C++ DLL build of MMCore, what we care about is
  * the backward compatibility of the Java and Python bindings. So a change that
@@ -112,7 +112,7 @@
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 5, MMCore_versionPatch = 2;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 6, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -781,6 +781,8 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
       LOG_DEBUG(coreLogger_) << "Will unload device " << label;
       deviceManager_->UnloadDevice(pDevice);
       LOG_DEBUG(coreLogger_) << "Did unload device " << label;
+      
+      updateCoreProperties();
    }
    catch (CMMError& err) {
       logError("MMCore::unloadDevice", err.getMsg().c_str());
@@ -3425,8 +3427,8 @@ void CMMCore::setAutoFocusDevice(const char* autofocusLabel) throw (CMMError)
       currentAutofocusDevice_.reset();
       LOG_INFO(coreLogger_) << "Default autofocus unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newAutofocusLabel = getAutoFocusDevice();
+   properties_->Set(MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str()));
@@ -3492,8 +3494,8 @@ void CMMCore::setImageProcessorDevice(const char* procLabel) throw (CMMError)
       currentImageProcessor_.reset();
       LOG_INFO(coreLogger_) << "Default image processor unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newProcLabel = getImageProcessorDevice();
+   properties_->Set(MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str()));
@@ -3516,8 +3518,8 @@ void CMMCore::setSLMDevice(const char* slmLabel) throw (CMMError)
       currentSLMDevice_.reset();
       LOG_INFO(coreLogger_) << "Default SLM unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newSLMLabel = getSLMDevice();
+   properties_->Set(MM::g_Keyword_CoreSLM, newSLMLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreSLM, newSLMLabel.c_str()));
@@ -3541,8 +3543,8 @@ void CMMCore::setGalvoDevice(const char* galvoLabel) throw (CMMError)
       currentGalvoDevice_.reset();
       LOG_INFO(coreLogger_) << "Default galvo unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newGalvoLabel = getGalvoDevice();
+   properties_->Set(MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str()));
@@ -3630,8 +3632,8 @@ void CMMCore::setShutterDevice(const char* shutterLabel) throw (CMMError)
       currentShutterDevice_.reset();
       LOG_INFO(coreLogger_) << "Default shutter unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newShutterLabel = getShutterDevice();
+   properties_->Set(MM::g_Keyword_CoreShutter, newShutterLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreShutter, newShutterLabel.c_str()));
@@ -3655,8 +3657,8 @@ void CMMCore::setFocusDevice(const char* focusLabel) throw (CMMError)
       currentFocusDevice_.reset();
       LOG_INFO(coreLogger_) << "Default stage unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newFocusLabel = getFocusDevice();
+   properties_->Set(MM::g_Keyword_CoreFocus, newFocusLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreFocus, newFocusLabel.c_str()));
@@ -3680,6 +3682,7 @@ void CMMCore::setXYStageDevice(const char* xyDeviceLabel) throw (CMMError)
       LOG_INFO(coreLogger_) << "Default xy stage unset";
    }
    std::string newXYStageLabel = getXYStageDevice();
+   properties_->Set(MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str()));
@@ -3717,8 +3720,8 @@ void CMMCore::setCameraDevice(const char* cameraLabel) throw (CMMError)
       currentCameraDevice_.reset();
       LOG_INFO(coreLogger_) << "Default camera unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newCameraLabel = getCameraDevice();
+   properties_->Set(MM::g_Keyword_CoreCamera, newCameraLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, newCameraLabel.c_str()));
@@ -4152,8 +4155,9 @@ void CMMCore::loadPropertySequence(const char* label, const char* propName, std:
 MM::PropertyType CMMCore::getPropertyType(const char* label, const char* propName) throw (CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      // TODO: return the proper core type
-      return MM::Undef;
+   {
+      return properties_->GetPropertyType(propName);
+   }
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -5735,31 +5739,11 @@ std::vector<double> CMMCore::getPixelSizeAffine(bool cached) throw (CMMError)
 
       double factor = binning / getMagnificationFactor();
 
-      if (factor != 1.0)
-      {
-         // create a scaling matrix
-         double scaleM[3][3]= { {factor, 0.0, 0.0}, {0.0, factor, 0.0}, {0.0, 0.0, 1.0} };
-         // and multiply scaling matrix with the affine transform
-         double input[3][3] = { {af.at(0), af.at(1), af.at(2)}, {af.at(3), af.at(4), af.at(5)}, {0.0, 0.0, 1.0} };
-         double output[3][3];
-         for (int r = 0; r < 3; r++)
-         {
-            for (int c = 0; c < 3; c++)
-            {
-               output[r][c] = 0.0;
-               for (int i = 0; i < 3; i++)
-               {
-                  output[r][c] = output[r][c] + scaleM[r][i] * input[i][c];
-               }
-            }
+      if (factor != 1.0) {
+         for (double& v : af) {
+            v *= factor;
          }
-         // copy result back into affine transform
-         for (int i = 0; i < 3; i++)
-            af.at(i) = output[0][i];
-         for (int i = 0; i < 3; i++)
-            af.at(i + 3) = output[1][i];
       }
-
       return af;
    }
    else
@@ -7983,13 +7967,13 @@ void CMMCore::CreateCoreProperties()
    properties_ = new CorePropertyCollection(this);
 
    // Initialize
-   CoreProperty propInit("0", false);
+   CoreProperty propInit("0", false, MM::Integer);
    propInit.AddAllowedValue("0");
    propInit.AddAllowedValue("1");
    properties_->Add(MM::g_Keyword_CoreInitialize, propInit);
 
    // Auto shutter
-   CoreProperty propAutoShutter("1", false);
+   CoreProperty propAutoShutter("1", false, MM::Integer);
    propAutoShutter.AddAllowedValue("0");
    propAutoShutter.AddAllowedValue("1");
    properties_->Add(MM::g_Keyword_CoreAutoShutter, propAutoShutter);
@@ -8031,7 +8015,7 @@ void CMMCore::CreateCoreProperties()
    properties_->AddAllowedValue(MM::g_Keyword_CoreChannelGroup, "");
 
    // Time after which we give up on checking the Busy flag status
-   CoreProperty propBusyTimeoutMs;
+   CoreProperty propBusyTimeoutMs("5000", false, MM::Integer);
    properties_->Add(MM::g_Keyword_CoreTimeoutMs, propBusyTimeoutMs);
 
    properties_->Refresh();

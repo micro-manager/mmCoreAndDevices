@@ -317,7 +317,7 @@ int CXYStage::Initialize()
    AddAllowedValue(g_AxisPolarityY, g_AxisPolarityNormal);
 
    // get build info so we can add optional properties
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR( hub_->GetBuildInfo(addressChar_, build) );
 
    // populate speedTruth_, which is whether the controller will tell us the actual speed
@@ -803,17 +803,17 @@ int CXYStage::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
       command.str("");
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
-      else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
+      else if (tmpstr == g_SaveSettingsZJoystick)
       {
          command << 'Z';
          // do save joystick settings first
@@ -829,17 +829,14 @@ int CXYStage::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CXYStage::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
-
 
 int CXYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
@@ -850,9 +847,9 @@ int CXYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
       return DEVICE_OK; // do nothing
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if ((tmpstr.compare(g_YesState) == 0) && !advancedPropsEnabled_) // after creating advanced properties once no need to repeat
+      if (tmpstr == g_YesState && !advancedPropsEnabled_) // after creating advanced properties once no need to repeat
       {
          CPropertyAction* pAct;
          advancedPropsEnabled_ = true;
@@ -973,7 +970,7 @@ int CXYStage::OnSpeedGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, strin
       RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
       if (!pProp->Set(tmp))
          return DEVICE_INVALID_PROPERTY_VALUE;
-      if (axisLetter.compare(axisLetterX_) == 0) {
+      if (axisLetter == axisLetterX_) {
          lastSpeedX_ = tmp;
          RETURN_ON_MM_ERROR( SetProperty(g_MotorSpeedXMicronsPerSecPropertyName, "1") );  // set to a dummy value, will read from lastSpeedX_ variable
       }
@@ -993,7 +990,7 @@ int CXYStage::OnSpeedGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, strin
       }
       else
       {
-         if (axisLetter.compare(axisLetterX_) == 0)
+         if (axisLetter == axisLetterX_)
          {
             lastSpeedX_ = tmp;
             RETURN_ON_MM_ERROR( SetProperty(g_MotorSpeedXMicronsPerSecPropertyName, "1") );  // set to a dummy value, will read from lastSpeedX_ variable
@@ -1182,15 +1179,15 @@ int CXYStage::OnMaintainStateGeneric(MM::PropertyBase* pProp, MM::ActionType eAc
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_StageMaintain_0) == 0)
+      if (tmpstr == g_StageMaintain_0)
          tmp = 0;
-      else if (tmpstr.compare(g_StageMaintain_1) == 0)
+      else if (tmpstr == g_StageMaintain_1)
          tmp = 1;
-      else if (tmpstr.compare(g_StageMaintain_2) == 0)
+      else if (tmpstr == g_StageMaintain_2)
          tmp = 2;
-      else if (tmpstr.compare(g_StageMaintain_3) == 0)
+      else if (tmpstr == g_StageMaintain_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1431,9 +1428,9 @@ int CXYStage::OnMotorControlGeneric(MM::PropertyBase* pProp, MM::ActionType eAct
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_OffState) == 0)
+      if (tmpstr == g_OffState)
          command << "MC " << axisLetter << "-";
       else
          command << "MC " << axisLetter << "+";
@@ -1524,15 +1521,16 @@ int CXYStage::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
       double joystickFast = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickFastSpeedPropertyName, joystickFast) );
       double joystickSlow = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickSlowSpeedPropertyName, joystickSlow) );
       command.str("");
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          command << addressChar_ << "JS X=-" << joystickFast << " Y=-" << joystickSlow;
       else
          command << addressChar_ << "JS X=" << joystickFast << " Y=" << joystickSlow;
@@ -1565,13 +1563,13 @@ int CXYStage::OnJoystickRotate(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet) {
       // ideally would call OnJoystickEnableDisable but don't know how to get the appropriate pProp
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       char joystickEnabled[MM::MaxStrLength];
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickEnabledPropertyName, joystickEnabled) );
       if (strcmp(joystickEnabled, g_YesState) == 0)
       {
-         if (tmpstr.compare(g_YesState) == 0)
+         if (tmpstr == g_YesState)
             command << "J " << axisLetterX_ << "=3" << " " << axisLetterY_ << "=2";  // rotated
          else
             command << "J " << axisLetterX_ << "=2" << " " << axisLetterY_ << "=3";
@@ -1604,10 +1602,11 @@ int CXYStage::OnJoystickEnableDisable(MM::PropertyBase* pProp, MM::ActionType eA
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
       {
          char joystickRotate[MM::MaxStrLength];
          RETURN_ON_MM_ERROR ( GetProperty(g_JoystickRotatePropertyName, joystickRotate) );
@@ -1709,15 +1708,16 @@ int CXYStage::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
       double wheelFast = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelFastSpeedPropertyName, wheelFast) );
       double wheelSlow = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelSlowSpeedPropertyName, wheelSlow) );
       command.str("");
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          command << addressChar_ << "JS F=-" << wheelFast << " T=-" << wheelSlow;
       else
          command << addressChar_ << "JS F=" << wheelFast << " T=" << wheelSlow;
@@ -1755,10 +1755,11 @@ int CXYStage::OnAxisPolarityX(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       // do nothing
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_AxisPolarityReversed) == 0) {
+      if (tmpstr == g_AxisPolarityReversed) {
          unitMultX_ = -1*abs(unitMultX_);
       } else {
          unitMultX_ = abs(unitMultX_);
@@ -1774,9 +1775,9 @@ int CXYStage::OnAxisPolarityY(MM::PropertyBase* pProp, MM::ActionType eAct)
       // do nothing
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_AxisPolarityReversed) == 0) {
+      if (tmpstr == g_AxisPolarityReversed) {
          unitMultY_ = -1*abs(unitMultY_);
       } else {
          unitMultY_ = abs(unitMultY_);
@@ -1806,10 +1807,10 @@ int CXYStage::OnScanState(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       char c;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_ScanStateIdle) == 0)
+      if (tmpstr == g_ScanStateIdle)
       {
          // TODO cleanup code by calling action handler with MM::BeforeGet?
          // check status and stop if it's not idle already
@@ -1825,7 +1826,7 @@ int CXYStage::OnScanState(MM::PropertyBase* pProp, MM::ActionType eAct)
             RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A"));
          }
       }
-      else if (tmpstr.compare(g_ScanStateRunning) == 0)
+      else if (tmpstr == g_ScanStateRunning)
       {
          // check status and start if it's idle
          command << addressChar_ << "SN X?";
@@ -1868,12 +1869,12 @@ int CXYStage::OnScanFastAxis(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       char c = ' ';
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_ScanAxisX) == 0) {
+      if (tmpstr == g_ScanAxisX) {
          c = g_ScanAxisXCode;
-      } else if (tmpstr.compare(g_ScanAxisY) == 0) {
+      } else if (tmpstr == g_ScanAxisY) {
          c = g_ScanAxisYCode;
       }
       if (c == ' ')
@@ -1909,14 +1910,14 @@ int CXYStage::OnScanSlowAxis(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       char c = ' ';
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_ScanAxisX) == 0) {
+      if (tmpstr == g_ScanAxisX) {
          c = g_ScanAxisXCode;
-      } else if (tmpstr.compare(g_ScanAxisY) == 0) {
+      } else if (tmpstr == g_ScanAxisY) {
          c = g_ScanAxisYCode;
-      } else if (tmpstr.compare(g_ScanAxisNull) == 0) {
+      } else if (tmpstr == g_ScanAxisNull) {
          c = g_ScanAxisNullCode;
       }
       if (c == ' ')
@@ -1951,12 +1952,12 @@ int CXYStage::OnScanPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       char c = ' ';
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_ScanPatternRaster) == 0) {
+      if (tmpstr == g_ScanPatternRaster) {
          c = g_ScanPatternRasterCode;
-      } else if (tmpstr.compare(g_ScanPatternSerpentine) == 0) {
+      } else if (tmpstr == g_ScanPatternSerpentine) {
          c = g_ScanPatternSerpentineCode;
       }
       if (c == ' ')
@@ -2179,13 +2180,13 @@ int CXYStage::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_RB_OnePoint_1) == 0)
+      if (tmpstr == g_RB_OnePoint_1)
          tmp = 1;
-      else if (tmpstr.compare(g_RB_PlayOnce_2) == 0)
+      else if (tmpstr == g_RB_PlayOnce_2)
          tmp = 2;
-      else if (tmpstr.compare(g_RB_PlayRepeat_3) == 0)
+      else if (tmpstr == g_RB_PlayRepeat_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -2205,9 +2206,9 @@ int CXYStage::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
    else  if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          command << addressChar_ << "RM";
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
@@ -2296,7 +2297,7 @@ int CXYStage::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       string tmpstr;
       pProp->Get(tmpstr);
-      ttl_trigger_enabled_ = (ttl_trigger_supported_ && (tmpstr.compare(g_YesState) == 0));
+      ttl_trigger_enabled_ = ttl_trigger_supported_ && (tmpstr == g_YesState);
       return OnUseSequence(pProp, MM::BeforeGet);  // refresh value
    }
    return DEVICE_OK;

@@ -33,8 +33,12 @@ const char* g_DeviceNameArduinoMagnifier = "Arduino-Magnifier";
 
 // Global info about the state of the Arduino.  This should be folded into a class
 const int g_Min_MMVersion = 1;
-const int g_Max_MMVersion = 3;
+const int g_Max_MMVersion = 4;
+// version of the firmware code
 const char* g_versionProp = "Version";
+// space to provide more information about the firmware.  
+// 1 = Teensy3.5-3.6
+const char* g_extendedVersionProp = "ExtendedVersion";
 const char* g_normalLogicString = "Normal";
 const char* g_invertedLogicString = "Inverted";
 
@@ -106,6 +110,7 @@ CArduinoHub::CArduinoHub() :
    initialized_ (false),
    maxNumPatterns_(12),
    version_(0),
+   extendedVersion_(0),
    magnifier_(0),
    switchState_ (0),
    shutterState_ (0)
@@ -172,8 +177,13 @@ int CArduinoHub::GetControllerVersion(int& version)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer != "MM-Ard")
+   if (answer.substr(0, 6) != "MM-Ard")
       return ERR_BOARD_NOT_FOUND;
+
+   if (answer.size() > 7) {
+      std::string extended_version_string = answer.substr(7);
+      extendedVersion_ = std::stol(extended_version_string);
+   }
 
    // Check version number of the Arduino
    command[0] = 31;
@@ -319,6 +329,11 @@ int CArduinoHub::Initialize()
       maxNumPatterns_ = tmp;
    }
 
+   pAct = new CPropertyAction(this, &CArduinoHub::OnExtendedVersion);
+   std::ostringstream seversion;
+   seversion << extendedVersion_;
+   CreateProperty(g_extendedVersionProp, seversion.str().c_str(), MM::Integer, true, pAct);
+
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
@@ -385,6 +400,16 @@ int CArduinoHub::OnVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
    if (pAct == MM::BeforeGet)
    {
       pProp->Set((long)version_);
+   }
+   return DEVICE_OK;
+}
+
+
+int CArduinoHub::OnExtendedVersion(MM::PropertyBase* pProp, MM::ActionType pAct)
+{
+   if (pAct == MM::BeforeGet)
+   {
+      pProp->Set(extendedVersion_);
    }
    return DEVICE_OK;
 }
@@ -633,52 +658,96 @@ int CArduinoSwitch::LoadSequence(unsigned size, unsigned char* seq)
 
    hub_->PurgeComPortH();
 
-   for (unsigned i=0; i < size; i++)
+   int version = hub_->GetControllerVersionCached();
+   if (version <= 3) 
    {
-      unsigned char value = seq[i];
+      for (unsigned i = 0; i < size; i++)
+      {
+         unsigned char value = seq[i];
 
-      value = 63 & value;
-      if (hub_->IsLogicInverted())
-         value = ~value;
+         value = 63 & value;
+         if (hub_->IsLogicInverted())
+            value = ~value;
 
-      unsigned char command[3] = { 5, (unsigned char)i, value };
-      int ret = hub_->WriteToComPortH((const unsigned char*) command, 3);
+         unsigned char command[3] = { 5, (unsigned char)i, value };
+         int ret = hub_->WriteToComPortH((const unsigned char*)command, 3);
+         if (ret != DEVICE_OK)
+            return ret;
+
+         MM::MMTime startTime = GetCurrentMMTime();
+         const unsigned int nrBytes = 3;
+         unsigned long bytesRead = 0;
+         unsigned char answer[nrBytes] = { 0, 0, 0 };
+         while ((bytesRead < nrBytes) && ((GetCurrentMMTime() - startTime).getMsec() < 250)) {
+            unsigned long br;
+            ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
+            if (ret != DEVICE_OK)
+               return ret;
+            bytesRead += br;
+         }
+         if (answer[0] != 5)
+            return ERR_COMMUNICATION;
+      }
+
+      unsigned char command[2] = { 6, (unsigned char)size };
+      int ret = hub_->WriteToComPortH((const unsigned char*)command, 2);
       if (ret != DEVICE_OK)
          return ret;
 
       MM::MMTime startTime = GetCurrentMMTime();
-      const unsigned int nrBytes = 3;
       unsigned long bytesRead = 0;
-      unsigned char answer[nrBytes] = { 0, 0, 0};
-      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+      const unsigned int nrBytes = 2;
+      unsigned char answer[nrBytes] = { 0, 0 };
+      while ((bytesRead < nrBytes) && ((GetCurrentMMTime() - startTime).getMsec() < 250)) {
          unsigned long br;
          ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
          if (ret != DEVICE_OK)
             return ret;
          bytesRead += br;
       }
-      if (answer[0] != 5)
+      if (answer[0] != 6)
          return ERR_COMMUNICATION;
    }
-
-   unsigned char command[2] = { 6, (unsigned char) size };
-   int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   MM::MMTime startTime = GetCurrentMMTime();
-   unsigned long bytesRead = 0;
-   const unsigned int nrBytes = 2;
-   unsigned char answer[nrBytes] = { 0, 0 };;
-   while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
-      unsigned long br;
-      ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
+   else if (version >= 4) {
+      // Note: on a big endian host, we would need to byte swap size
+      unsigned char highbyte = (size >> 8) & 0xFF;
+      unsigned char lowbyte = size & 0xFF;
+      unsigned char command[3] = { 33, highbyte, lowbyte };
+      int ret = hub_->WriteToComPortH((const unsigned char*)command, 3);
       if (ret != DEVICE_OK)
          return ret;
-      bytesRead += br;
+
+      if (hub_->IsLogicInverted()) {
+         for (unsigned i = 0; i < size; i++)
+         {
+            seq[i] = ~seq[i];
+         }
+      }
+
+      ret = hub_->WriteToComPortH((const unsigned char*)seq, size);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      MM::MMTime startTime = GetCurrentMMTime();
+      unsigned long bytesRead = 0;
+      const unsigned int nrBytes = 3;
+      unsigned char answer[nrBytes] = { 0, 0 , 0};
+      while ((bytesRead < nrBytes) && ((GetCurrentMMTime() - startTime).getMsec() < 250)) {
+         unsigned long br;
+         ret = hub_->ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
+         if (ret != DEVICE_OK)
+            return ret;
+         bytesRead += br;
+      }
+      if (answer[0] != 33)
+         return ERR_COMMUNICATION;
+
+      // check if answer[1,2] corresponds to size
+      // Note this only works correctly on a small endian system
+      unsigned long readSize = (static_cast<uint16_t>(answer[1]) << 8) | answer[2];
+      if (readSize != size)
+         return ERR_COMMUNICATION;
    }
-   if (answer[0] != 6)
-      return ERR_COMMUNICATION;
 
    return DEVICE_OK;
 }

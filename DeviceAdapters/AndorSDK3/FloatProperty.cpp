@@ -16,7 +16,7 @@ TFloatProperty::TFloatProperty(const string & MM_name, IFloat * float_feature, I
    if (float_feature->IsImplemented())
    {
       CPropertyAction * pAct = new CPropertyAction (this, &TFloatProperty::OnFloat);
-      callback->CPCCreateProperty(MM_name.c_str(), "", MM::Float, readOnly, pAct);
+      callback->CPCCreateProperty(MM_name.c_str(), "", MM::Float, readOnly || float_feature->IsReadOnly(), pAct);
 
       try 
       {

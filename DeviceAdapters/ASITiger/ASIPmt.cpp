@@ -46,7 +46,9 @@ CPMT::CPMT(const char* name) :
    ASIPeripheralBase< ::CSignalIOBase, CPMT >(name),
    channel_(1),
    channelAxisChar_('X'), 
-   axisLetter_(g_EmptyAxisLetterStr)
+   axisLetter_(g_EmptyAxisLetterStr),
+   gain_(0),
+   avg_length_(0)
 {
    //Figure out what channel we are on
    if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
@@ -220,22 +222,22 @@ int CPMT::UpdateAvg()
 
 int CPMT::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
+   std::string tmpstr;
    ostringstream command; command.str("");
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
       pProp->Get(tmpstr);
       command << addressChar_ << "SS ";
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'Y';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A", (long)200) );  // note 200ms delay added
       pProp->Set(g_SaveSettingsDone);
@@ -247,15 +249,15 @@ int CPMT::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPMT::OnOverloadReset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
+   std::string tmpstr;
    ostringstream command; command.str("");
    if (eAct == MM::AfterSet) {
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_OffState) == 0)
+      if (tmpstr == g_OffState)
          return DEVICE_OK;
-      else if (tmpstr.compare(g_PMTOverloadDone) == 0)
+      else if (tmpstr == g_PMTOverloadDone)
          return DEVICE_OK;
-	  else if (tmpstr.compare(g_OnState) == 0)
+	  else if (tmpstr == g_OnState)
          command << addressChar_ << "LK " << channelAxisChar_ ;
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A", (long)200) );  // note 200ms delay added
       pProp->Set(g_PMTOverloadDone);
@@ -263,18 +265,15 @@ int CPMT::OnOverloadReset(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-
 int CPMT::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 //Get and Set PMT Gain

@@ -123,6 +123,7 @@
     <ClInclude Include="ExposureProperty.h" />
     <ClInclude Include="FloatProperty.h" />
     <ClInclude Include="IntegerProperty.h" />
+    <ClInclude Include="IProperty.h" />
     <ClInclude Include="SnapShotControl.h" />
     <ClInclude Include="SRRFAndorSDK3Camera.h" />
     <ClInclude Include="triggerremapper.h" />
