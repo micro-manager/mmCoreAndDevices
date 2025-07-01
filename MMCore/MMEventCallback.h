@@ -97,10 +97,9 @@ public:
       std::cout << "onImageSnapped() " << cameraLabel << '\n';
    }
 
-   // numImages will be -1 if the sequence is infinite (i.e. startContinuousSequenceAcquisition)
-   virtual void onSequenceAcquisitionStarted(const char* cameraLabel, long numImages, double intervalMs)
+   virtual void onSequenceAcquisitionStarted(const char* cameraLabel)
    {
-      std::cout << "onSequenceAcquisitionStarted() " << cameraLabel << " numImages: " << numImages << " intervalMs: " << intervalMs << '\n';
+      std::cout << "onSequenceAcquisitionStarted() " << cameraLabel << '\n';
    }
 
    virtual void onSequenceAcquisitionStopped(const char* cameraLabel)

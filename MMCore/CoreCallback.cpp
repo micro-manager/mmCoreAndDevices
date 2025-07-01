@@ -434,7 +434,7 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
    return DEVICE_OK;
 }
 
-int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
+int CoreCallback::PrepareForAcq(const MM::Device* caller)
 {
    if (core_->autoShutter_)
    {
@@ -449,6 +449,14 @@ int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
          core_->waitForDevice(shutter);
       }
    }
+
+   if (core_->externalCallback_)
+   {
+      char label[MM::MaxStrLength];
+      caller->GetLabel(label);
+      core_->externalCallback_->onSequenceAcquisitionStarted(label);
+   }
+
    return DEVICE_OK;
 }
 

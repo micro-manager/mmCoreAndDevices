@@ -2882,10 +2882,6 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
    LOG_DEBUG(coreLogger_) << "Did start sequence acquisition from default camera";
-   if (externalCallback_)
-   {
-      externalCallback_->onSequenceAcquisitionStarted(camera->GetLabel().c_str(), numImages, intervalMs);
-   }
 }
 
 /**
@@ -2919,10 +2915,6 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
 
    LOG_DEBUG(coreLogger_) <<
       "Did start sequence acquisition from camera " << label;
-   if (externalCallback_)
-   {
-      externalCallback_->onSequenceAcquisitionStarted(label, numImages, intervalMs);
-   }
 }
 
 /**
@@ -3029,10 +3021,6 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) throw (CMMEr
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
    LOG_DEBUG(coreLogger_) << "Did start continuous sequence acquisition from current camera";
-   if (externalCallback_)
-   {
-      externalCallback_->onSequenceAcquisitionStarted(camera->GetLabel().c_str(), -1, intervalMs);
-   }
 }
 
 /**
