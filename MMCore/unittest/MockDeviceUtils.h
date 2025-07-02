@@ -36,7 +36,7 @@ public:
       return nullptr;
    }
 
-   void DeleteDevice(MM::Device *device) override {}
+   void DeleteDevice(MM::Device *device) override { (void)device; }
 
    // Convenience for loading all the devices
    void LoadIntoCore(CMMCore &core) {
