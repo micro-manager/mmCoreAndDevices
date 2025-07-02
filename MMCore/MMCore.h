@@ -725,6 +725,9 @@ private:
    mutable MMThreadLock stateCacheLock_;
    mutable Configuration stateCache_; // Synchronized by stateCacheLock_
 
+   // Storage for initial state labels after device initialization
+   std::map<std::string, std::map<long, std::string>> initialStateLabels_;
+
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
 
