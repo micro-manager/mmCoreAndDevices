@@ -762,6 +762,7 @@ private:
    void initializeAllDevicesSerial() throw (CMMError);
    void initializeAllDevicesParallel() throw (CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
+   void captureInitialStateLabels(std::shared_ptr<DeviceInstance> pDevice, const char* label);
 };
 
 #if defined(__GNUC__) && !defined(__clang__)

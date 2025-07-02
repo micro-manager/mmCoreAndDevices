@@ -927,6 +927,9 @@ void CMMCore::initializeAllDevicesSerial() throw (CMMError)
       pDevice->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << devices[i];
 
+      // Capture initial state labels for State devices
+      captureInitialStateLabels(pDevice, devices[i].c_str());
+
       assignDefaultRole(pDevice);
    }
 
@@ -1058,6 +1061,9 @@ int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<Dev
       LOG_INFO(coreLogger_) << "Will initialize device " << pDevices[i].second;
       pDevice->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << pDevices[i].second;
+
+      // Capture initial state labels for State devices
+      captureInitialStateLabels(pDevice, pDevices[i].second.c_str());
    }
    return DEVICE_OK;
 }
@@ -1110,11 +1116,28 @@ void CMMCore::initializeDevice(const char* label ///< the device to initialize
    pDevice->Initialize();
    LOG_INFO(coreLogger_) << "Did initialize device " << label;
 
+   // Capture initial state labels for State devices
+   captureInitialStateLabels(pDevice, label);
+
+   updateCoreProperties();
+}
+
+
+/**
+ * Helper function to capture initial state labels for State devices after initialization.
+ * This function should be called after any device initialization to ensure state labels are captured.
+ *
+ * @param pDevice   the initialized device instance
+ * @param label     the device label
+ */
+void CMMCore::captureInitialStateLabels(std::shared_ptr<DeviceInstance> pDevice, const char* label)
+{
    // For State devices, capture initial position labels after initialization
    if (pDevice->GetType() == MM::StateDevice)
    {
       try 
       {
+         std::cout << "Capturing initial state labels for device " << label << std::endl;
          std::shared_ptr<StateInstance> pStateDev = 
             deviceManager_->GetDeviceOfType<StateInstance>(label);
          
@@ -1139,7 +1162,10 @@ void CMMCore::initializeDevice(const char* label ///< the device to initialize
          
          // Store the initial labels for this device
          initialStateLabels_[label] = initialLabels;
-         
+        
+         std::cout << "Captured " << initialLabels.size() 
+                               << " initial state labels for device " << label << std::endl;
+
          LOG_DEBUG(coreLogger_) << "Captured " << initialLabels.size() 
                                << " initial state labels for device " << label;
       }
@@ -1150,8 +1176,6 @@ void CMMCore::initializeDevice(const char* label ///< the device to initialize
                                   << label << ": " << e.getMsg();
       }
    }
-
-   updateCoreProperties();
 }
 
 
