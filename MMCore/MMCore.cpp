@@ -1048,7 +1048,7 @@ int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<Dev
       LOG_INFO(coreLogger_) << "Did initialize device " << deviceLabel.second;
 
       // Capture initial state labels for State devices
-      captureInitialStateLabels(pDevice, pDevices[i].second.c_str());
+      captureInitialStateLabels(deviceLabel.first, deviceLabel.second.c_str());
    }
    return DEVICE_OK;
 }
