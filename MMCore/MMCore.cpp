@@ -1137,7 +1137,7 @@ void CMMCore::captureInitialStateLabels(std::shared_ptr<DeviceInstance> pDevice,
    {
       try 
       {
-         std::cout << "Capturing initial state labels for device " << label << std::endl;
+
          std::shared_ptr<StateInstance> pStateDev = 
             deviceManager_->GetDeviceOfType<StateInstance>(label);
          
@@ -1162,9 +1162,6 @@ void CMMCore::captureInitialStateLabels(std::shared_ptr<DeviceInstance> pDevice,
          
          // Store the initial labels for this device
          initialStateLabels_[label] = initialLabels;
-        
-         std::cout << "Captured " << initialLabels.size() 
-                               << " initial state labels for device " << label << std::endl;
 
          LOG_DEBUG(coreLogger_) << "Captured " << initialLabels.size() 
                                << " initial state labels for device " << label;
