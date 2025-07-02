@@ -112,7 +112,7 @@
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 6, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 7, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2551,6 +2551,10 @@ void CMMCore::snapImage() throw (CMMError)
             }
             waitForDevice(shutter);
          }
+         if (externalCallback_)
+         {
+            externalCallback_->onImageSnapped(camera->GetLabel().c_str());
+         }
 		}catch( CMMError& e){
 			throw e;
 		}
@@ -2864,6 +2868,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
    LOG_DEBUG(coreLogger_) << "Did start sequence acquisition from default camera";
+   // onSequenceAcquisitionStarted will be called by CoreCallback::PrepareForAcq
 }
 
 /**
@@ -2897,6 +2902,7 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
 
    LOG_DEBUG(coreLogger_) <<
       "Did start sequence acquisition from camera " << label;
+   // onSequenceAcquisitionStarted will be called by CoreCallback::PrepareForAcq
 }
 
 /**
@@ -2966,6 +2972,7 @@ void CMMCore::stopSequenceAcquisition(const char* label) throw (CMMError)
    }
 
    LOG_DEBUG(coreLogger_) << "Did stop sequence acquisition from camera " << label;
+   // onSequenceAcquisitionStopped will be called by CoreCallback::AcqFinished
 }
 
 /**
@@ -3002,6 +3009,7 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) throw (CMMEr
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
    LOG_DEBUG(coreLogger_) << "Did start continuous sequence acquisition from current camera";
+   // onSequenceAcquisitionStarted will be called by CoreCallback::PrepareForAcq
 }
 
 /**
@@ -3028,6 +3036,7 @@ void CMMCore::stopSequenceAcquisition() throw (CMMError)
    }
 
    LOG_DEBUG(coreLogger_) << "Did stop sequence acquisition from current camera";
+   // onSequenceAcquisitionStopped will be called by CoreCallback::AcqFinished
 }
 
 /**
