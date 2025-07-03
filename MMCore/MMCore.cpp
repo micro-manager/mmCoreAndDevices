@@ -385,6 +385,15 @@ std::string CMMCore::getVersionInfo() const
    return txt.str();
 }
 
+/** Returns the MMCore major version number. */
+int CMMCore::getMMCoreVersionMajor() { return MMCore_versionMajor; }
+
+/** Returns the MMCore minor version number. */
+int CMMCore::getMMCoreVersionMinor() { return MMCore_versionMinor; }
+
+/** Returns the MMCore patch version number. */
+int CMMCore::getMMCoreVersionPatch() { return MMCore_versionPatch; }
+
 /**
  * Get available devices from the specified device library.
  */
@@ -448,6 +457,12 @@ std::string CMMCore::getAPIVersionInfo() const
    txt << "Device API version " << DEVICE_INTERFACE_VERSION << ", " << "Module API version " << MODULE_INTERFACE_VERSION;
    return txt.str();
 }
+
+/** Returns the MMDevice module interface version number. */
+int CMMCore::getMMDeviceModuleInterfaceVersion() { return MODULE_INTERFACE_VERSION; }
+
+/** Returns the MMDevice device interface version number. */
+int CMMCore::getMMDeviceDeviceInterfaceVersion() { return DEVICE_INTERFACE_VERSION; }
 
 /**
  * Returns the entire system state, i.e. the collection of all property values from all devices.
