@@ -45,19 +45,6 @@
  * file (MMCore.cpp).
  */
 
-// We use exception specifications to instruct SWIG to generate the correct
-// exception specifications for Java.
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4290) // 'C++ exception specification ignored'
-#endif
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
-#pragma GCC diagnostic ignored "-Wdeprecated"
-#endif
-
 #include "../MMDevice/DeviceThreads.h"
 #include "../MMDevice/MMDevice.h"
 #include "../MMDevice/MMDeviceConstants.h"
@@ -773,11 +760,3 @@ private:
    void initializeAllDevicesParallel() throw (CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
 };
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
