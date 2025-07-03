@@ -33,8 +33,10 @@
 
 #ifdef SWIG
 #define MMDEVICE_LEGACY_THROW(ex) throw (ex)
+#define MMDEVICE_NOEXCEPT throw ()
 #else
 #define MMDEVICE_LEGACY_THROW(ex)
+#define MMDEVICE_NOEXCEPT noexcept
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -55,7 +57,7 @@ public:
       return message_;
    }
 
-   const char* what() const noexcept override { return message_.c_str(); }
+   virtual const char* what() const MMDEVICE_NOEXCEPT { return message_.c_str(); }
 
 private:
    std::string message_;
