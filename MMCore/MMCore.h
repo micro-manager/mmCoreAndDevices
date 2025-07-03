@@ -174,8 +174,21 @@ public:
 
    std::string getCoreErrorText(int code) const;
 
+   // Note that version functions need to be implemented in the .cpp file so
+   // that they reflect the actual code being run (e.g., in a DLL), not the
+   // header or language bindings layer (where applicable).
+
+   // These two are not 'static' for backward compatibility (would break binary
+   // compatibility of Java bindings).
    std::string getVersionInfo() const;
    std::string getAPIVersionInfo() const;
+
+   static int getMMCoreVersionMajor();
+   static int getMMCoreVersionMinor();
+   static int getMMCoreVersionPatch();
+   static int getMMDeviceModuleInterfaceVersion();
+   static int getMMDeviceDeviceInterfaceVersion();
+
    Configuration getSystemState();
    void setSystemState(const Configuration& conf);
    Configuration getConfigState(const char* group, const char* config) throw (CMMError);
