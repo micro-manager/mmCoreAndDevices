@@ -185,7 +185,7 @@ static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_c
 /**
 * Inserts a single image in the buffer.
 */
-bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError)
+bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
    return InsertMultiChannel(pixArray, 1, width, height, byteDepth, pMd);
 }
@@ -193,7 +193,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 /**
 * Inserts a single image, possibly with multiple channels, but with 1 component, in the buffer.
 */
-bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError)
+bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
    return InsertMultiChannel(pixArray, numChannels, width, height, byteDepth, 1, pMd);
 }
@@ -201,7 +201,7 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
 /**
 * Inserts a single image, possibly with multiple components, in the buffer.
 */
-bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError)
+bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
     return InsertMultiChannel(pixArray, 1, width, height, byteDepth, nComponents, pMd);
 }
@@ -209,7 +209,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 /**
 * Inserts a multi-channel frame in the buffer.
 */
-bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError)
+bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
     MMThreadGuard insertGuard(g_insertLock);
  
