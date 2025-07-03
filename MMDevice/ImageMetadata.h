@@ -42,7 +42,7 @@
 // -------------
 // Micro-Manager metadata error class, used to create exception objects
 // 
-class MetadataError
+class MetadataError : public std::exception
 {
 public:
    MetadataError(const char* msg) :
@@ -55,8 +55,7 @@ public:
       return message_;
    }
 
-   /// Implements std::exception interface.
-   virtual const char* what() const throw() { return message_.c_str(); }
+   const char* what() const noexcept override { return message_.c_str(); }
 
 private:
    std::string message_;
