@@ -24,7 +24,6 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "CARVII.h"
 #include "CARVIIHub.h"

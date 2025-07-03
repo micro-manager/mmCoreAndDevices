@@ -189,7 +189,7 @@ BaslerCamera::BaslerCamera() :
 	{
 		AddToLog("No camera present.");
 		PylonTerminate();
-		throw RUNTIME_EXCEPTION("No camera present.");
+		return;
 	}
 
 	bool first = true;
@@ -263,13 +263,13 @@ int BaslerCamera::Initialize()
 
 	try
 	{
-		// Before using any pylon methods, the pylon runtime must be initialized. 
-		PylonInitialize();
-
 		char serialNumber[MM::MaxStrLength];
 		GetProperty("SerialNumber", serialNumber);
 		if (strlen(serialNumber) == 0 || strcmp(serialNumber, "Undefined") == 0)
 			return ERR_SERIAL_NUMBER_REQUIRED;
+
+		// Before using any pylon methods, the pylon runtime must be initialized. 
+		PylonInitialize();
 
 		CDeviceInfo deviceInfo;
 		deviceInfo.SetSerialNumber(String_t(serialNumber));
@@ -914,7 +914,7 @@ int BaslerCamera::SetProperty(const char* name, const char* value)
 */
 int BaslerCamera::Shutdown()
 {
-	if (!camera_)
+	if (camera_ != nullptr)
 	{
 		camera_->Close();
 		delete camera_;
@@ -2127,11 +2127,11 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 
 	// Important:  meta data about the image are generated here:
 	Metadata md;
-	md.put("Camera", "");
+	md.put(MM::g_Keyword_Metadata_CameraLabel, "");
 	md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetWidth()));
 	md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetHeight()));
 	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetImageNumber()));
-	md.put(MM::g_Keyword_Meatdata_Exposure, dev_->GetExposure());
+	md.put(MM::g_Keyword_Metadata_Exposure, dev_->GetExposure());
 	// Image grabbed successfully?
 	if (ptrGrabResult->GrabSucceeded())
 	{

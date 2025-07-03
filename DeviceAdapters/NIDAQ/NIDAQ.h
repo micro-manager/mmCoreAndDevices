@@ -35,12 +35,14 @@
 extern const char* g_DeviceNameNIDAQHub;
 extern const char* g_DeviceNameNIDAQAOPortPrefix;
 extern const char* g_DeviceNameNIDAQDOPortPrefix;
+extern const char* g_DeviceNameNIDAQAIPortPrefix;
 extern const char* g_On;
 extern const char* g_Off;
 extern const char* g_Low;
 extern const char* g_High;
-
 extern const char* g_Never;
+extern const char* g_Pre;
+extern const char* g_Post;
 extern const char* g_UseHubSetting;
 
 extern const int ERR_SEQUENCE_RUNNING;
@@ -50,6 +52,9 @@ extern const int ERR_VOLTAGE_OUT_OF_RANGE;
 extern const int ERR_NONUNIFORM_CHANNEL_VOLTAGE_RANGES;
 extern const int ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS;
 extern const int ERR_UNKNOWN_PINS_PER_PORT;
+extern const int ERR_UNEXPECTED_AMOUNT_OF_MEASUREMENTS;
+extern const int ERR_FAILED_TO_OPEN_TRACE;
+extern const int ERR_SEQUENCE_INVALID_NUMBER;
 
 
 inline std::string GetNIError(int32 nierr)
@@ -149,6 +154,53 @@ private:
 };
 
 
+class InputMonitoringThread : public MMDeviceThreadBase
+{
+public:
+    InputMonitoringThread(NIDAQHub* hub);
+    ~InputMonitoringThread();
+    int svc();
+
+    int Start(std::string AIChannelList, float minVal, float maxVal);
+    void Stop() { stop_ = true; }
+
+
+private:
+    NIDAQHub* hub_;
+
+    TaskHandle aiTask_;
+
+    bool stop_;
+};
+
+
+class TraceMonitoringThread : public MMDeviceThreadBase
+{
+public:
+    TraceMonitoringThread(NIDAQHub* hub);
+    ~TraceMonitoringThread();
+    int svc();
+
+    int Start(std::string AIChannelList, float minVal, float maxVal, float frequency, int numberOfSamples, int numberOfChannels);
+    void Stop() { stop_ = true; }
+
+
+private:
+    NIDAQHub* hub_;
+
+    TaskHandle aiTask_;
+    std::string path_;
+
+    int totalAmount_;
+    int numberOfChannels_;
+    std::string CSVheader_;
+    float timestep_;
+    bool stop_;
+};
+
+// Forward declaration needed for NIDAQ hub
+class NIAnalogInputPort;
+
 /**
  * A hub - peripheral device set for driving multiple analog output ports,
  * possibly with hardware-triggered sequencing using a shared trigger input.
@@ -161,6 +213,8 @@ class NIDAQHub : public HubBase<NIDAQHub>,
    friend NIDAQDOHub<uInt32>;
    friend NIDAQDOHub<uInt16>;
    friend NIDAQDOHub<uInt8>;
+   friend InputMonitoringThread;
+   friend TraceMonitoringThread;
 public:
    NIDAQHub();
    virtual ~NIDAQHub();
@@ -195,13 +249,18 @@ public:
 
    int StopTask(TaskHandle& task);
 
+   int StartAIMeasuringForPort(NIAnalogInputPort* port);
+   int StopAIMeasuringForPort(NIAnalogInputPort* port);
+
+
 private:
    int AddAOPortToSequencing(const std::string& port, const std::vector<double> sequence);
    void RemoveAOPortFromSequencing(const std::string& port);
 
    int GetVoltageRangeForDevice(const std::string& device, double& minVolts, double& maxVolts);
    std::vector<std::string> GetAOTriggerTerminalsForDevice(const std::string& device);
-   std::vector<std::string> GetAnalogPortsForDevice(const std::string& device);
+   std::vector<std::string> GetAnalogOutputPortsForDevice(const std::string& device);
+   std::vector<std::string> GetAnalogInputPortsForDevice(const std::string& device);
    std::vector<std::string> GetDigitalPortsForDevice(const std::string& device);
    std::string GetPhysicalChannelListForSequencing(std::vector<std::string> channels) const;
    template<typename T> int GetLCMSamplesPerChannel(size_t& seqLen, std::vector<std::vector<T>>) const;
@@ -211,6 +270,13 @@ private:
 
    int StartAOSequencingTask();
 
+   int UpdateAIValues(float64* values, int32 amount);
+   std::string GetPhysicalChannelListForMeasuring(std::vector<NIAnalogInputPort*> channels);
+
+   int StartTrace();
+   int StopTrace();
+   int FinishTrace();
+
    // Action handlers
    int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxSequenceLength(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -219,6 +285,13 @@ private:
    int OnTriggerInputPort(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSampleRate(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   int OnExpectedMaxVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnExpectedMinVoltsIn(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   int OnTraceFrequency(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTraceAmount(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTracePath(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTraceRunning(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    bool initialized_;
    size_t maxSequenceLength_;
@@ -230,12 +303,13 @@ private:
    std::string niChangeDetection_;
    std::string niSampleClock_;
 
-   double minVolts_; // Min possible for device
-   double maxVolts_; // Max possible for device
+   double minVoltsOut_; // Min possible for device
+   double maxVoltsOut_; // Max possible for device
    double sampleRateHz_;
 
    TaskHandle aoTask_;
    TaskHandle doTask_;
+   // For memory safety reasons the the Input thread manages aiTask_
 
    NIDAQDOHub<uInt8> * doHub8_;
    NIDAQDOHub<uInt16>* doHub16_;
@@ -246,6 +320,18 @@ private:
    std::vector<std::string> physicalAOChannels_; // Invariant: all unique
    std::vector<std::vector<double>> aoChannelSequences_;
 
+   float expectedMaxVoltsIn_;
+   float expectedMinVoltsIn_;
+   bool measuringTrace_;
+
+   std::vector<NIAnalogInputPort*> physicalAIChannels_;
+
+   double traceFrequency_;
+   long traceAmount_;
+   std::string tracePath_;
+
+   InputMonitoringThread* mThread_;
+   TraceMonitoringThread* tThread_;
 };
 
 
@@ -286,6 +372,7 @@ private:
    int OnMinVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxVolts(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSequenceTransition(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Post-init property action handlers
    int OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -309,6 +396,8 @@ private:
    double minVolts_; // User-selected for this port
    double maxVolts_; // User-selected for this port
    bool neverSequenceable_;
+   bool transitionPostExposure_; // when to transition in a sequence, not that we always transition on a rising flank
+      // it can be advantaguous to transition post exposure, in which case we have to modify our sequence 
 
    TaskHandle task_;
 
@@ -378,4 +467,59 @@ private:
     std::vector<uInt32> sequence32_;
 
     TaskHandle task_;
+};
+
+class NIAnalogInputPort : public CSignalIOBase<NIAnalogInputPort>,
+    ErrorTranslator<NIAnalogInputPort>,
+    boost::noncopyable
+{
+    friend NIDAQHub;
+public:
+    NIAnalogInputPort(const std::string& port);
+    virtual ~NIAnalogInputPort();
+
+    virtual int Initialize();
+    virtual int Shutdown();
+
+    virtual void GetName(char* name) const;
+    virtual bool Busy() { return false; }
+
+    virtual int SetGateOpen(bool open = true) { return SetRunning(open); }
+    virtual int GetGateOpen(bool& open) { return GetRunning(open); }
+    virtual int SetSignal(double) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int GetSignal(double& volts);
+    virtual int GetLimits(double& minVolts, double& maxVolts);
+
+    virtual int IsDASequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
+    virtual int GetDASequenceMaxLength(long&) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int StartDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int StopDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int ClearDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int AddToDASequence(double) { return DEVICE_UNSUPPORTED_COMMAND; }
+    virtual int SendDASequence() { return DEVICE_UNSUPPORTED_COMMAND; }
+
+    virtual int SetRunning(bool running);
+    virtual int GetRunning(bool& running);
+
+private:
+
+    virtual int UpdateState(float value);
+    // Pre-init property action handlers
+
+    // Post-init property action handlers
+    int OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnMeasuring(MM::PropertyBase * pProp, MM::ActionType eAct);
+
+    NIDAQHub* GetHub() const
+    {
+        return static_cast<NIDAQHub*>(GetParentHub());
+    }
+    int TranslateHubError(int err);
+
+    const std::string niPort_;
+
+    bool initialized_;
+
+    bool running_;
+    float state_;
 };

@@ -17,18 +17,16 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-// CVS:           $Id$
 //
 
-#ifndef _MMPROPERTY_H_
-#define _MMPROPERTY_H_
+#pragma once
 
 #include "MMDeviceConstants.h"
-#include <string>
-#include <cstring>
-#include <cstdlib>
-#include <vector>
+
+#include <functional>
 #include <map>
+#include <string>
+#include <vector>
 
 namespace MM {
 
@@ -118,6 +116,24 @@ public:
    ~ActionEx() {}
 	int Execute(MM::PropertyBase* pProp, MM::ActionType eAct)
       { return (*pObj_.*fpt_)(pProp, eAct, param_);};
+};
+
+/**
+ * Action implementation using std::function to wrap arbitrary callables.
+ *
+ * (It is named "lambda" after its intended use, but can wrap any C++
+ * callable.)
+ */
+class ActionLambda final : public ActionFunctor
+{
+    std::function<int(PropertyBase*, ActionType)> func_;
+
+public:
+    template <typename F> explicit ActionLambda(F func) : func_(func) {}
+
+    int Execute(PropertyBase* pProp, ActionType eAct) final {
+        return func_(pProp, eAct);
+    }
 };
 
 /**
@@ -447,4 +463,3 @@ private:
 
 
 } // namespace MM
-#endif //_MMPROPERTY_H_

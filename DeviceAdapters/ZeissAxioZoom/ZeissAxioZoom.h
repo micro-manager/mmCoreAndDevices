@@ -44,7 +44,6 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.  
 
-
 #ifndef _ZEISSCAN29_H_
 #define _ZEISSCAN29_H_
 
@@ -54,7 +53,6 @@
 #else
 #include <netinet/in.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -401,7 +399,7 @@ class ZeissHub
       DL450Model dl450Model_;
 
    private:
-      static ZeissUByte commandGroup_[MAXNUMBERDEVICES];
+      static ZeissUByte commandGroup_[MAXNUMBERDEVICES + 1];
       void ClearRcvBuf();
       int ClearPort(MM::Device& device, MM::Core& core);
       //void SetPort(const char* port) {port_ = port; portInitialized_ = true;}

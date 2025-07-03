@@ -22,6 +22,8 @@
 
 #include "LoadedModuleImplUnix.h"
 
+#ifndef _WIN32
+
 #include "../Error.h"
 
 #include <dlfcn.h>
@@ -77,3 +79,5 @@ LoadedModuleImplUnix::GetFunction(const char* funcName)
       ThrowDlError();
    return proc;
 }
+
+#endif // !defined(_WIN32)

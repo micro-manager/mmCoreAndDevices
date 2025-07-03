@@ -1,3 +1,4 @@
+#pragma once
 
 #include "stdio.h"
 #include "math.h"
@@ -240,7 +241,3 @@ void GenerateRGBTestImage( const int nx, const int ny, const char color, unsigne
       }
    }
 }
-
-
-
-

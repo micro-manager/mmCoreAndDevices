@@ -18,7 +18,6 @@
 #ifdef WIN32
 #pragma warning(disable: 4355)
 #endif
-#include "FixSnprintf.h"
 
 #include "pgFocus.h"
 #include <cstdio>

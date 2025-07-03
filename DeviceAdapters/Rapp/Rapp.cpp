@@ -29,7 +29,6 @@
 #ifdef WIN32
 #pragma warning(disable: 4355)
 #endif
-#include "FixSnprintf.h"
 
 #include "Rapp.h"
 #include <cstdio>

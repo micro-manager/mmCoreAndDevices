@@ -7,7 +7,7 @@
 //                XY Stage
 //                Z  Stage
 //
-// AUTHOR:        Johan Henriksson, mahogny@areta.org, derived from Märzhauser adapter
+// AUTHOR:        Johan Henriksson, mahogny@areta.org, derived from MÃ¤rzhauser adapter
 // COPYRIGHT:     Johan Henriksson, 2010
 // LICENSE:       This library is free software; you can redistribute it and/or
 //                modify it under the terms of the GNU Lesser General Public
@@ -36,8 +36,6 @@
 // two consecutive moves will block each other, not accumulate
 
 // "st" gives 8bit value. bit 0 tells if ready to execute; busy if "1"
-
-#include "FixSnprintf.h"
 
 #include <stdio.h>
 #include <string>
@@ -347,7 +345,7 @@ int XYStage::Initialize()
       return ret;
    SetPropertyLimits("Speed [mm/s]", 0.001, 100.0); // mm/s
 
-   // Accel (Acceleration (in m/s²)
+   // Accel (Acceleration (in m/sÂ²)
    // -----
    pAct = new CPropertyAction (this, &XYStage::OnAccel);
    // TODO: get current Acceleration from the controller
@@ -408,7 +406,7 @@ bool XYStage::Busy()
 
 
 /**
- * Returns current position in µm.
+ * Returns current position in Âµm.
  */
 int XYStage::GetPositionUm(double& x, double& y)
 {
@@ -441,7 +439,7 @@ int ret;
 
 
 /**
- * Sets position in µm
+ * Sets position in Âµm
  */
 int XYStage::SetPositionUm(double x, double y)
 {

@@ -36,6 +36,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 
 CoreCallback::CoreCallback(CMMCore* c) :
@@ -222,7 +223,7 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
             core_->deviceManager_->GetDevice(caller));
 
    std::string label = camera->GetLabel();
-   newMD.put("Camera", label);
+   newMD.put(MM::g_Keyword_Metadata_CameraLabel, label);
 
    std::string serializedMD;
    try
@@ -423,10 +424,17 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
          }
       }
    }
+
+   // Notify that sequence acquisition has stopped
+   if (core_->externalCallback_)
+   {
+      core_->externalCallback_->onSequenceAcquisitionStopped(camera->GetLabel().c_str());
+   }
+
    return DEVICE_OK;
 }
 
-int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
+int CoreCallback::PrepareForAcq(const MM::Device* caller)
 {
    if (core_->autoShutter_)
    {
@@ -441,6 +449,14 @@ int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
          core_->waitForDevice(shutter);
       }
    }
+
+   if (core_->externalCallback_)
+   {
+      char label[MM::MaxStrLength];
+      caller->GetLabel(label);
+      core_->externalCallback_->onSequenceAcquisitionStarted(label);
+   }
+
    return DEVICE_OK;
 }
 
@@ -1031,11 +1047,7 @@ void CoreCallback::NextPostedError(int& errorCode, char* pMessage, int maxlen, i
          if( 0 < maxlen )
          {
             *pMessage = 0;
-#ifdef _WINDOWS
-            messageLength = min( maxlen, (int) nextError.second.length());
-#else
             messageLength = std::min( maxlen, (int) nextError.second.length());
-#endif
             strncpy(pMessage, nextError.second.c_str(), messageLength);
          }
       }

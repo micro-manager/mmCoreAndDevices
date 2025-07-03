@@ -71,6 +71,8 @@ private:
    DeleteDeviceFunction deleteFunction_;
    mm::logging::Logger deviceLogger_;
    mm::logging::Logger coreLogger_;
+   bool initializeCalled_ = false;
+   bool initialized_ = false;
 
 public:
    DeviceInstance(const DeviceInstance&) = delete;
@@ -87,6 +89,9 @@ public:
 
    // Callback API
    int LogMessage(const char* msg, bool debugOnly);
+
+   bool IsInitialized() const { return initialized_; }
+   bool HasInitializationBeenAttempted() const { return initializeCalled_; }
 
 protected:
    // The DeviceInstance object owns the raw device pointer (pDevice) as soon
@@ -112,6 +117,7 @@ protected:
    void ThrowError(const std::string& message) const;
    void ThrowIfError(int code) const;
    void ThrowIfError(int code, const std::string& message) const;
+   void RequireInitialized(const char *) const;
 
    /// Utility class for getting fixed-length strings from the device interface.
    /**

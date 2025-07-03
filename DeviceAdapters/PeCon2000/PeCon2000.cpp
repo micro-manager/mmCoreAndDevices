@@ -7,7 +7,7 @@
 //				
 // AUTHOR:       Christian Sachs <c.sachs@fz-juelich.de>
 //
-// COPYRIGHT:    Forschungszentrum Jülich
+// COPYRIGHT:    Forschungszentrum JÃ¼lich
 // LICENSE:      BSD (2-clause/FreeBSD license)
 // THANKS:       Dr. Oliver Merk (of PeCon GmbH) for Support and Testing
 
@@ -163,7 +163,7 @@ CPeCon2000Device::CPeCon2000Device(string name) : ready(false), name(name), retr
 
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusOk, "OK. No channel error");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusNoSensor, "NO SENSOR. No valid sensor signal detected");
-   ADD_MAP(ChannelStatusMapper, PdlChannelStatusOvertemp, "OVERTEMP. Actual Temperature > Max Setpoint + 5°C");
+   ADD_MAP(ChannelStatusMapper, PdlChannelStatusOvertemp, "OVERTEMP. Actual Temperature > Max Setpoint + 5Â°C");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusOvercurrent, "OVERCURRENT. Actual Current > 4A");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusSumOvercurrent, "SUM OVERCURRENT. Current CH1 + CH2 > 4.2A");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusIdDetectError, "ID DETECT ERROR. ID number mismatch after 5x ID request over serial interface (3 identical ID's could not be found in the received 5 ID's) Auto-Detect will be repeated after a wait time, until 3 identical ID's are received.");
@@ -173,15 +173,15 @@ CPeCon2000Device::CPeCon2000Device(string name) : ready(false), name(name), retr
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusMBTempTooHi, "MB TEMP TOO HI. Mainboard temperature on connected component is too high");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusChangeFilter, "CHANGE FILTER. Filters on/in connected component needs replacement");
 
-   ADD_MAP(ChannelStatusMapper, PdlChannelStatusHeatingSensor, "HEATING SENSOR. CO2: The sensor temperature is not +/- 5°C of the calibration temperature. If 60 min. after device start/reset the sensor status bit is still active, the channel status changes to \"FALSE SENS TEMP\", because the sensor heater normally heats up the sensor within 20-30 min. (CO2-Sensor 2000: Status Bit 6 is set) O2: The sensor heating voltage is slowly increased and has not reached yet final value.");
+   ADD_MAP(ChannelStatusMapper, PdlChannelStatusHeatingSensor, "HEATING SENSOR. CO2: The sensor temperature is not +/- 5Â°C of the calibration temperature. If 60 min. after device start/reset the sensor status bit is still active, the channel status changes to \"FALSE SENS TEMP\", because the sensor heater normally heats up the sensor within 20-30 min. (CO2-Sensor 2000: Status Bit 6 is set) O2: The sensor heating voltage is slowly increased and has not reached yet final value.");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusWaitForSensor, "WAIT FOR SENSOR. CO2: The sensor is not ready yet to give a value (CO2-Sensor 2000: Status Bit 0 is set)");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusAutoCompensate, "AUTO COMPENSATE. CO2: The lamp intensity of the CO2-Sensor 2000 is automatically adjusted to give a specified CO2-concentration (e.g. 100,00% with pure CO2) (CO2-Sensor 2000: Status Bit 1 is set)");
-   ADD_MAP(ChannelStatusMapper, PdlChannelStatusFalseSensTemp, "FALSE SENS TEMP. CO2: The sensor temperature is not +/- 6°C of the calibration temperature after it was once inside the +/- 5°C tolerance band. Or the sensor status bit was still set 60min. after device start/reset. (CO2-Sensor 2000: Status Bit 6 is set)");
+   ADD_MAP(ChannelStatusMapper, PdlChannelStatusFalseSensTemp, "FALSE SENS TEMP. CO2: The sensor temperature is not +/- 6Â°C of the calibration temperature after it was once inside the +/- 5Â°C tolerance band. Or the sensor status bit was still set 60min. after device start/reset. (CO2-Sensor 2000: Status Bit 6 is set)");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusLampOverLimit, "LAMP OVER LIMIT. CO2: The lamp PWM limit of the connected sensor has been exceeded (<=450 / >=950). (CO2-Sensor 2000: Status Bit 2 is set)");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusNearADLimit, "NEAR AD LIMIT. CO2: One of the internal data points for CO2 measurement is near (or above) the limit of the AD converter. CO2-concentratrion of this time cycle is therefore invalid. (CO2-Sensor 2000: Status Bit 3 is set)");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusFalseCalibVal, "FALSE CALIB VAL. CO2: The calibration values of the connected CO2-sensor 2000 head are invalid  (10%/100% value=0) -> Factory recalibration with 0/10/100% (CO2-Sensor 2000: Status Bit 5 is set)");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusNegativeValue, "NEGATIVE VALUE. CO2: The internal raw value is negative because of inverted detector signal. (CO2-Sensor 2000: Status Bit 4 is set)");
-   ADD_MAP(ChannelStatusMapper, PdlChannelStatusHeatingVErr, "HEATING V ERR. O2: The heating voltage feedback control algorithm has reached the upper/lower DA voltage output limit, while not have reached the set heating voltage read back by AD-measure­ment.");
+   ADD_MAP(ChannelStatusMapper, PdlChannelStatusHeatingVErr, "HEATING V ERR. O2: The heating voltage feedback control algorithm has reached the upper/lower DA voltage output limit, while not have reached the set heating voltage read back by AD-measureÂ­ment.");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusReferenceGas, "REFERENCE GAS. CO2: The sensor chamber is flooded with CO2 reference gas. O2: The sensor chamber is flooded with N2 reference gas.");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusAmbientAir, "AMBIENT AIR. CO2: The sensor chamber is flooded with ambient air. O2: The sensor chamber is flooded with ambient air.");
    ADD_MAP(ChannelStatusMapper, PdlChannelStatusAdjOtherSens, "ADJ OTHER SENS. CO2: The O2 sensor is automatically adjusted. O2: The CO2 sensor is automatically aging compensated (Auto Compensate). This error is set to each sensor, that is within the same volume as the other sensor, whose value is currently corrected/calibrated.");

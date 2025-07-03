@@ -19,15 +19,8 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-// CVS:           $Id: Configuration.h 2 2007-02-27 23:33:17Z nenad $
-//
-#ifndef _IMAGE_METADATA_H_
-#define _IMAGE_METADATA_H_
 
-#ifdef WIN32
-// disable exception scpecification warnings in MSVC
-#pragma warning( disable : 4290 )
-#endif
+#pragma once
 
 #include "MMDeviceConstants.h"
 
@@ -37,6 +30,12 @@
 #include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef SWIG
+#define MMDEVICE_LEGACY_THROW(ex) throw (ex)
+#else
+#define MMDEVICE_LEGACY_THROW(ex)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // MetadataError
@@ -103,7 +102,7 @@ public:
       str.append(name_);
       return str;
    }
-   const bool IsReadOnly() const  {return readOnly_;}
+   bool IsReadOnly() const  {return readOnly_;}
 
    void SetDevice(const char* device) {deviceLabel_ = device;}
    void SetName(const char* name) {name_ = name;}
@@ -321,15 +320,15 @@ public:
       else
          return false;
    }
-   
-   MetadataSingleTag GetSingleTag(const char* key) const throw (MetadataKeyError)
+
+   MetadataSingleTag GetSingleTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataSingleTag* stag = tag->ToSingleTag();
       return *stag;
    }
 
-   MetadataArrayTag GetArrayTag(const char* key) const throw (MetadataKeyError)
+   MetadataArrayTag GetArrayTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataArrayTag* atag = tag->ToArrayTag();
@@ -435,6 +434,10 @@ public:
    bool Restore(const char* stream)
    {
       Clear();
+      if (stream == nullptr)
+      {
+         return true;
+      }
 
       std::istringstream is(stream);
 
@@ -475,7 +478,7 @@ public:
          if (it->second->ToArrayTag())
             id = "a";
          std::string ser = it->second->Serialize();
-         os << id << " : " << ser << std::endl;
+         os << id << " : " << ser << '\n';
       }
 
       return os.str();
@@ -495,5 +498,3 @@ private:
    typedef std::map<std::string, MetadataTag*>::iterator TagIter;
    typedef std::map<std::string, MetadataTag*>::const_iterator TagConstIter;
 };
-
-#endif //_IMAGE_METADATA_H_

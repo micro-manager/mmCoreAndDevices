@@ -36,28 +36,28 @@ public:
 
 	// Device API
 	// ----------
-	int Initialize();
-	int Shutdown();
-	void GetName(char* name) const;
-	bool Busy();
+	int Initialize() override;
+	int Shutdown() override;
+	void GetName(char* name) const override;
+	bool Busy() override;
 
 	// Stage API
 	// ---------
-	int GetPositionUm(double& pos);
-	int GetPositionSteps(long& steps);
-	int SetPositionUm(double pos);
-	int SetRelativePositionUm(double d);
-	int SetPositionSteps(long steps);
-	int SetRelativePositionSteps(long steps);
-	int Move(double velocity);
-	int Stop();
-	int Home();
-	int SetAdapterOriginUm(double d);
-	int SetOrigin();
-	int GetLimits(double& lower, double& upper);
+	int GetPositionUm(double& pos) override;
+	int GetPositionSteps(long& steps) override;
+	int SetPositionUm(double pos) override;
+	int SetRelativePositionUm(double d) override;
+	int SetPositionSteps(long steps) override;
+	int SetRelativePositionSteps(long steps); // not in the base class
+	int Move(double velocity) override;
+	int Stop() override;
+	int Home() override;
+	int SetAdapterOriginUm(double d) override;
+	int SetOrigin() override;
+	int GetLimits(double& lower, double& upper) override;
 
-	int IsStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
-	bool IsContinuousFocusDrive() const {return false;}
+	int IsStageSequenceable(bool& isSequenceable) const override { isSequenceable = false; return DEVICE_OK; }
+	bool IsContinuousFocusDrive() const override { return false; }
 
 	// action interface
 	// ----------------
@@ -74,7 +74,6 @@ private:
 	long deviceAddress_;
 	long axisNumber_;
 	long lockstepGroup_;
-	int homingTimeoutMs_;
 	double stepSizeUm_;
 	double convFactor_; // not very informative name
 	std::string cmdPrefix_;

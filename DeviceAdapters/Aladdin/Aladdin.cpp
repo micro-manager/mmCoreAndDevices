@@ -27,7 +27,6 @@
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 
 #include "MMDevice.h"

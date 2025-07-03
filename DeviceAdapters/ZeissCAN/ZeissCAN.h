@@ -34,6 +34,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <chrono>
+
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -252,12 +254,15 @@ public:
 private:
    int SetTurretPosition(int position);
    int GetTurretPosition(int &position);
-   bool GetPresence(bool& present);
+   // bool GetPresence(bool& present);
    bool initialized_;
    std::string name_;
    long pos_;
    int numPos_;
    int turretId_;
+   std::chrono::time_point<std::chrono::high_resolution_clock> start_ 
+      = std::chrono::high_resolution_clock::now() - std::chrono::seconds(20);
+   std::chrono::high_resolution_clock::duration duration_ = std::chrono::seconds(1);
 };
       
 class SidePortTurret : public CStateDeviceBase<SidePortTurret>
@@ -287,6 +292,9 @@ private:
    long pos_;
    int numPos_;
    int turretId_;
+   std::chrono::time_point<std::chrono::high_resolution_clock> start_ 
+      = std::chrono::high_resolution_clock::now() - std::chrono::seconds(20);
+   std::chrono::high_resolution_clock::duration duration_ = std::chrono::seconds(1);
 };
 
 class BasePortSlider : public CStateDeviceBase<BasePortSlider>
@@ -316,6 +324,9 @@ private:
    long pos_;
    int numPos_;
    int turretId_;
+   std::chrono::time_point<std::chrono::high_resolution_clock> start_ 
+      = std::chrono::high_resolution_clock::now() - std::chrono::seconds(20);
+   std::chrono::high_resolution_clock::duration duration_ = std::chrono::seconds(1);
 };
 
 class ObjectiveTurret : public CStateDeviceBase<ObjectiveTurret>
@@ -340,12 +351,14 @@ public:
 private:
    int SetTurretPosition(int position);
    int GetTurretPosition(int &position);
-   bool GetPresence(bool& present);
    bool initialized_;
    std::string name_;
    long pos_;
    int numPos_;
    int turretId_;
+   std::chrono::time_point<std::chrono::high_resolution_clock> start_ 
+      = std::chrono::high_resolution_clock::now() - std::chrono::seconds(20);
+   std::chrono::high_resolution_clock::duration duration_ = std::chrono::seconds(1);
 };
 
 class CondenserTurret : public CStateDeviceBase<CondenserTurret>
@@ -371,7 +384,6 @@ public:
 private:
    int SetTurretPosition(int position);
    int GetTurretPosition(int &position);
-   bool GetPresence(bool& present);
 
    int SetAperture(long aperture);
    int GetAperture(long &aperture);
@@ -382,6 +394,9 @@ private:
    long pos_;
    int numPos_;
    int turretId_;
+   std::chrono::time_point<std::chrono::high_resolution_clock> start_ 
+      = std::chrono::high_resolution_clock::now() - std::chrono::seconds(20);
+   std::chrono::high_resolution_clock::duration duration_ = std::chrono::seconds(1);
    
    MM::MMTime apertureChangingTimeout_;
 };
@@ -408,12 +423,14 @@ public:
 private:
    int SetTurretPosition(int position);
    int GetTurretPosition(int &position);
-   bool GetPresence(bool& present);
    bool initialized_;
    std::string name_;
    long pos_;
    int numPos_;
    int turretId_;
+   std::chrono::time_point<std::chrono::high_resolution_clock> start_ 
+      = std::chrono::high_resolution_clock::now() - std::chrono::seconds(20);
+   std::chrono::high_resolution_clock::duration duration_ = std::chrono::seconds(1);
 };
 
 class TubelensTurret : public CStateDeviceBase<TubelensTurret>
@@ -438,12 +455,14 @@ public:
 private:
    int SetTurretPosition(int position);
    int GetTurretPosition(int &position);
-   bool GetPresence(bool& present);
    bool initialized_;
    std::string name_;
    long pos_;
    int numPos_;
    int turretId_;
+   std::chrono::time_point<std::chrono::high_resolution_clock> start_ 
+      = std::chrono::high_resolution_clock::now() - std::chrono::seconds(20);
+   std::chrono::high_resolution_clock::duration duration_ = std::chrono::seconds(1);
 };
 
 class LampMirror : public CStateDeviceBase<LampMirror>
@@ -468,7 +487,6 @@ public:
 private:
    int SetTurretPosition(int position);
    int GetTurretPosition(int &position);
-   bool GetPresence(bool& present);
    bool initialized_;
    std::string name_;
    long pos_;
@@ -510,6 +528,7 @@ public:
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLoadSample(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnStepSizeUm(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 
 private:
@@ -552,7 +571,6 @@ public:
 private:
    int SetTurretPosition(int position);
    int GetTurretPosition(int &position);
-   bool GetPresence(bool& present);
    int wheelNr_;
    bool initialized_;
    std::string name_;
@@ -635,6 +653,7 @@ public:
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLoadSample(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnStepSizeUm(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Sequence functions (unimplemented)
    int IsStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}

@@ -36,6 +36,14 @@
 #include <memory>
 #include <string>
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
 
 const long long bytesInMB = 1 << 20;
 const long adjustThreshold = LONG_MAX / 2;
@@ -248,7 +256,7 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
              md = *pMd;
           }
 
-         std::string cameraName = md.GetSingleTag("Camera").GetValue();
+         std::string cameraName = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
          if (imageNumbers_.end() == imageNumbers_.find(cameraName))
          {
             imageNumbers_[cameraName] = 0;
@@ -274,23 +282,23 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
       auto now = std::chrono::system_clock::now();
       md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
 
-      md.PutImageTag("Width",width);
-      md.PutImageTag("Height",height);
+      md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
+      md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
       if (byteDepth == 1)
-         md.PutImageTag("PixelType","GRAY8");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
       else if (byteDepth == 2)
-         md.PutImageTag("PixelType","GRAY16");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
       else if (byteDepth == 4)
       {
          if (nComponents == 1)
-            md.PutImageTag("PixelType","GRAY32");
+            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
          else
-            md.PutImageTag("PixelType","RGB32");
+            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
       }
       else if (byteDepth == 8)
-         md.PutImageTag("PixelType","RGB64");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
       else
-         md.PutImageTag("PixelType","Unknown"); 
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
 
       pImg->SetMetadata(md);
       //pImg->SetPixels(pixArray + i * singleChannelSize);

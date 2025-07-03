@@ -1,17 +1,15 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 
-AM_LDFLAGS = $(MMCORE_APPLEHOST_LDFLAGS)
+AM_CPPFLAGS = -DMMDEVICE_CLIENT_BUILD
 
 noinst_LTLIBRARIES = libMMCore.la
 
 libMMCore_la_LIBADD = ../MMDevice/libMMDevice.la
 
 libMMCore_la_SOURCES = \
-	../MMDevice/FixSnprintf.h \
 	../MMDevice/MMDevice.h \
 	../MMDevice/MMDeviceConstants.h \
 	../MMDevice/ModuleInterface.h \
-	AppleHost.h \
 	CircularBuffer.cpp \
 	CircularBuffer.h \
 	ConfigGroup.h \
@@ -19,6 +17,8 @@ libMMCore_la_SOURCES = \
 	Configuration.h \
 	CoreCallback.cpp \
 	CoreCallback.h \
+	CoreFeatures.cpp \
+	CoreFeatures.h \
 	CoreProperty.cpp \
 	CoreProperty.h \
 	CoreUtils.h \
@@ -41,6 +41,8 @@ libMMCore_la_SOURCES = \
 	Devices/ImageProcessorInstance.h \
 	Devices/MagnifierInstance.cpp \
 	Devices/MagnifierInstance.h \
+	Devices/PressurePumpInstance.cpp \
+	Devices/PressurePumpInstance.h \
 	Devices/SLMInstance.cpp \
 	Devices/SLMInstance.h \
 	Devices/SerialInstance.cpp \
@@ -53,6 +55,8 @@ libMMCore_la_SOURCES = \
 	Devices/StageInstance.h \
 	Devices/StateInstance.cpp \
 	Devices/StateInstance.h \
+	Devices/VolumetricPumpInstance.cpp \
+	Devices/VolumetricPumpInstance.h \
 	Devices/XYStageInstance.cpp \
 	Devices/XYStageInstance.h \
 	Error.cpp \
@@ -60,12 +64,15 @@ libMMCore_la_SOURCES = \
 	ErrorCodes.h \
 	FrameBuffer.cpp \
 	FrameBuffer.h \
-	Host.cpp \
-	Host.h \
 	LibraryInfo/LibraryPaths.h \
 	LibraryInfo/LibraryPathsUnix.cpp \
 	LoadableModules/LoadedDeviceAdapter.cpp \
 	LoadableModules/LoadedDeviceAdapter.h \
+	LoadableModules/LoadedDeviceAdapterImpl.h \
+	LoadableModules/LoadedDeviceAdapterImplMock.cpp \
+	LoadableModules/LoadedDeviceAdapterImplMock.h \
+	LoadableModules/LoadedDeviceAdapterImplRegular.cpp \
+	LoadableModules/LoadedDeviceAdapterImplRegular.h \
 	LoadableModules/LoadedModule.cpp \
 	LoadableModules/LoadedModule.h \
 	LoadableModules/LoadedModuleImpl.cpp \
@@ -90,6 +97,7 @@ libMMCore_la_SOURCES = \
 	Logging/MetadataFormatter.h \
 	MMCore.cpp \
 	MMCore.h \
+	MockDeviceAdapter.h \
 	PluginManager.cpp \
 	PluginManager.h \
 	Semaphore.cpp \
@@ -102,11 +110,5 @@ libMMCore_la_SOURCES = \
 	TaskSet_CopyMemory.h \
 	ThreadPool.cpp \
 	ThreadPool.h
-
-if BUILD_CPP_TESTS
-UNITTESTS = unittest
-endif
-
-SUBDIRS = . $(UNITTESTS)
 
 EXTRA_DIST = license.txt

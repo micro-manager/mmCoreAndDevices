@@ -24,30 +24,26 @@
 #include <stdio.h>
 #include <sstream>
 
-#ifdef WIN32
+#ifdef _WIN32
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #else
    #include <unistd.h>
 #endif
 
-#include "FixSnprintf.h"
-
 char CDeviceUtils::m_pszBuffer[MM::MaxStrLength]={""};
 
 /**
- * Copies strings with predefined size limit.
+ * Copies string up to MM::MaxStrLength - 1 characters, truncating if necessary
+ * and ensuring the result is null-terminated.
+ * 
+ * Behavior is undefined unless dest points to a buffer with size at least
+ * MM::MaxStrLength and src points to a null-terminated string.
  */
-bool CDeviceUtils::CopyLimitedString(char* target, const char* source)
+bool CDeviceUtils::CopyLimitedString(char* dest, const char* src)
 {
-   strncpy(target, source, MM::MaxStrLength - 1);
-   if ((MM::MaxStrLength - 1) < strlen(source))
-   {
-      target[MM::MaxStrLength - 1] = 0;
-      return false; // string truncated
-   }
-   else
-      return true;
+   snprintf(dest, MM::MaxStrLength, "%s", src);
+   return strlen(src) <= MM::MaxStrLength;
 }
 
 /**
@@ -153,7 +149,7 @@ void CDeviceUtils::Tokenize(const std::string& str, std::vector<std::string>& to
  */
 void CDeviceUtils::SleepMs(long periodMs)
 {
-#ifdef WIN32
+#ifdef _WIN32
    Sleep(periodMs);
 #else
    usleep(periodMs * 1000);
@@ -165,69 +161,9 @@ void CDeviceUtils::SleepMs(long periodMs)
  */
 void CDeviceUtils::NapMicros(unsigned long period)
 {
-#ifdef WIN32
+#ifdef _WIN32
    Sleep(period/1000);
 #else
    usleep(period);
 #endif
 }
-
-
-bool CDeviceUtils::CheckEnvironment(std::string env)
-{
-   bool bvalue = false;
-   if( 0 < env.length())
-   {
-      char *pvalue = ::getenv(env.c_str());
-      if( 0 != pvalue)
-      {
-         if( 0 != *pvalue)
-         {
-            char initial =  (char)tolower(*pvalue);
-            bvalue = ('0' != initial) && ('f' != initial) && ( 'n' != initial);
-         }
-      }
-   }
-   return bvalue;
-}
-
-
-
-#if defined(_WIN32) && !defined(MMDEVICE_NO_GETTIMEOFDAY)
- 
-int gettimeofday(struct timeval *tv, struct timezone *tz)
-{
-  FILETIME ft;
-  unsigned __int64 tmpres = 0;
-  static int tzflag;
- 
-  if (NULL != tv)
-  {
-    GetSystemTimeAsFileTime(&ft);
- 
-    tmpres |= ft.dwHighDateTime;
-    tmpres <<= 32;
-    tmpres |= ft.dwLowDateTime;
- 
-    /*converting file time to unix epoch*/
-    tmpres -= DELTA_EPOCH_IN_MICROSECS; 
-    tmpres /= 10;  /*convert into microseconds*/
-    tv->tv_sec = (long)(tmpres / 1000000UL);
-    tv->tv_usec = (long)(tmpres % 1000000UL);
-  }
- 
-  if (NULL != tz)
-  {
-    if (!tzflag)
-    {
-      _tzset();
-      tzflag++;
-    }
-    tz->tz_minuteswest = _timezone / 60;
-    tz->tz_dsttime = _daylight;
-  }
- 
-  return 0;
-}
-
-#endif

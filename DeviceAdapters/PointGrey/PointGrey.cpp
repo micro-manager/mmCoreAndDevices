@@ -59,6 +59,9 @@ const char* g_InternalTrigger          = "Internal";
 const char* g_ExternalTrigger          = "External";
 const char* g_SoftwareTrigger          = "Software";
 const char* g_CameraTime               = "CameraTime";
+const char* g_PolarityLow              = "Low";
+const char* g_PolarityHigh             = "High";
+
 
 /////////////////////////////////////////////////////
 
@@ -190,6 +193,7 @@ PointGrey::PointGrey(const char* deviceName) :
    isCapturing_(false),
    f7InUse_(false),
    triggerMode_(TRIGGER_INTERNAL),
+   triggerPolarity_(TRIGGER_POLARITY_LOW),
    externalTriggerGrabTimeout_(60000),
    bytesPerPixel_(1),
    imgBuf_(0),
@@ -262,8 +266,8 @@ int PointGrey::Initialize()
 
    // BE AWARE: This version number needs to be updated if/when MM is 
    // linked against another PGR version
-   if (pVersion.major != 2 || pVersion.minor != 10 || pVersion.type != 3 || pVersion.build != 266) {
-      SetErrorText(ALLERRORS, "Flycapture2_v100.dll is not version 2.10.3.266.  Micro-Manager works correctly only with that version");
+   if (pVersion.major != 2 || pVersion.minor != 13 || pVersion.type != 3 || pVersion.build != 61) {
+      SetErrorText(ALLERRORS, "Flycapture2_v100.dll is not version 2.13.3.61.  Micro-Manager works correctly only with that version");
       return ALLERRORS;
    }
 
@@ -684,6 +688,14 @@ int PointGrey::Initialize()
       {
          AddAllowedValue("TriggerMode", TriggerModeAsString(*i).c_str());
       }
+   }
+
+   if (triggerModeInfo.polaritySupported == true)
+   {
+       CPropertyAction* pAct = new CPropertyAction(this, &PointGrey::OnTriggerPolarity);
+       CreateProperty("TriggerPolarity", g_PolarityLow, MM::String, false, pAct, false);
+       AddAllowedValue("TriggerPolarity", g_PolarityLow);
+       AddAllowedValue("TriggerPolarity", g_PolarityHigh);
    }
 
    // We most likely want little endian bit order
@@ -1823,6 +1835,65 @@ int PointGrey::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+/***************************************************************
+* Handles Trigger Polarity
+*
+* This property determines whether an external trigger must be
+* in the high or low state to start an exposure..
+*/
+int PointGrey::OnTriggerPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  if (eAct == MM::AfterSet)
+  {
+    Error error = cam_.StopCapture();
+    // if camera is not capturing, StopCapture will return an error.
+    // probably safe to ignore, it is bad to return
+    if (error != PGRERROR_OK && error != PGRERROR_ISOCH_NOT_STARTED)
+    {
+      SetErrorText(ALLERRORS, error.GetDescription());
+      return ALLERRORS;
+    }
+
+    std::string polarity;
+    pProp->Get(polarity);
+
+    int ret = DEVICE_OK;
+    unsigned short newPolarity;
+    if ( polarity == g_PolarityLow ) {
+      newPolarity = 0;
+      ret = SetTriggerPolarity(newPolarity);
+    }
+    else {
+      newPolarity = 1;
+      ret = SetTriggerPolarity(newPolarity);
+    }
+    if ( ret != DEVICE_OK )
+    {
+      return ret;
+    }
+    error = cam_.StartCapture();
+    if ( error != PGRERROR_OK )
+    {
+      SetErrorText(ALLERRORS, error.GetDescription());
+      return ALLERRORS;
+    }
+
+    triggerPolarity_ = newPolarity;
+  }
+  else if ( eAct == MM::BeforeGet )
+  {
+    if (triggerPolarity_ == TRIGGER_POLARITY_LOW)
+    {
+      pProp->Set(g_PolarityLow);
+    }
+    else {
+      pProp->Set(g_PolarityHigh);
+    }
+  }
+    
+  return DEVICE_OK;
+}
+
 /***********************************************************************
 * Sets a register in the camera to indicate the endianness of the 
 * output.  It seems that MM wants little endian, most likely since 
@@ -1928,7 +1999,7 @@ int PointGrey::CameraID(PGRGuid id, std::string* camIdString)
  */
 int PointGrey::CameraGUIDfromOurID(BusManager* busMgr, PGRGuid* guid, std::string ourId)
 {
-   boolean found = false;
+   bool found = false;
    unsigned int numCameras;
    PGRGuid localGuid;
    Error error = busMgr->GetNumOfCameras(&numCameras);
@@ -1984,7 +2055,7 @@ int PointGrey::VideoModeAndFrameRateEnumsFromString(std::string readableString,
    }
 
    // find matching Videomode and Framerate by cycling brute force through our arrays
-   boolean found = false;
+   bool found = false;
    unsigned int counter = 0;
    while (!found && counter < g_NumVideoModes) {
       if (parts[0] == g_VideoModes[counter]) {
@@ -2262,6 +2333,47 @@ int PointGrey::SetTriggerMode(const unsigned short newMode)
    SetGrabTimeout(timeout );
 
    return DEVICE_OK;
+}
+
+int PointGrey::SetTriggerPolarity(const unsigned short newPolarity)
+{
+    if ((newPolarity != 0) && (newPolarity != 1))
+    {
+      return ERR_INVALID_TRIGGER_POLARITY;
+    }
+
+    if (triggerPolarity_ != newPolarity)
+    {
+      // Get current trigger settings
+      TriggerMode triggerMode;
+      Error error = cam_.GetTriggerMode(&triggerMode);
+      if (error != PGRERROR_OK) {
+      }
+      else
+      {
+        triggerMode.polarity = newPolarity;
+        error = cam_.SetTriggerMode(&triggerMode);
+        if (error != PGRERROR_OK)
+        {
+            SetErrorText(ALLERRORS, error.GetDescription());
+            return ALLERRORS;
+        }
+
+        if (triggerMode.source == 7) // 7 for software trigger
+        {
+          // Poll to ensure camera is ready
+          int ret = PollForTriggerReady(2000);
+          if (ret != DEVICE_OK)
+          {
+              return ret;
+          }
+        }
+
+        triggerPolarity_ = newPolarity;
+      }
+    }
+
+    return DEVICE_OK;
 }
 
 int PointGrey::SetGrabTimeout(const unsigned long timeoutMs)

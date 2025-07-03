@@ -10,9 +10,8 @@ AUTOMAKE_OPTIONS = foreign subdir-objects
 # (We used to globally use -O by default, rather than -O2, on Linux, presumably
 # for the above reason (though the intent was never documented). But there is
 # nothing Linux-specific about this.)
-# TODO The flag should come from configure.
 AM_CXXFLAGS = -fno-strict-aliasing
-AM_CPPFLAGS = $(JNI_CPPFLAGS)
+AM_CPPFLAGS = $(JNI_CPPFLAGS) -DMMDEVICE_CLIENT_BUILD
 
 
 # This ugly list of headers is necessary to trigger the rebuild of the
@@ -27,11 +26,9 @@ swig_sources = MMCoreJ.i \
 	../MMCore/CoreUtils.h \
 	../MMCore/Error.h \
 	../MMCore/ErrorCodes.h \
-	../MMCore/Host.h  \
 	../MMCore/MMCore.h  \
 	../MMCore/MMEventCallback.h \
 	../MMCore/PluginManager.h \
-	../MMDevice/FixSnprintf.h \
 	../MMDevice/ImageMetadata.h \
 	../MMDevice/MMDevice.h \
 	../MMDevice/MMDeviceConstants.h
@@ -63,13 +60,9 @@ libMMCoreJ_wrap_la_LIBADD = ../MMCore/libMMCore.la
 
 jar_DATA = MMCoreJ.jar
 
-gensrc/mmcorej/TaggedImage.java: TaggedImage.java
-	$(MKDIR_P) gensrc/mmcorej
-	cp $(srcdir)/TaggedImage.java gensrc/mmcorej
-
 # Use MMCoreJ_wrap.{h,cxx} to ensure SWIG has been run, but use the phony
 # target FORCE to always run Ant so that the Java source mtime is checked
-MMCoreJ.jar: gensrc/mmcorej/TaggedImage.java MMCoreJ_wrap.h MMCoreJ_wrap.cxx FORCE
+MMCoreJ.jar: MMCoreJ_wrap.h MMCoreJ_wrap.cxx FORCE
 	$(ANT) -Dmm.javacflags="$(JAVACFLAGS)" $(ANTFLAGS) -Dsrcdir=gensrc jar
 
 .PHONY: FORCE

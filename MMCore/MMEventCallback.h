@@ -32,61 +32,79 @@ public:
 
    virtual void onPropertiesChanged()
    {
-      std::cout << "onPropertiesChanged()" << std:: endl; 
+      std::cout << "onPropertiesChanged()\n";
    }
 
    virtual void onPropertyChanged(const char* name, const char* propName, const char* propValue)
    {
-      std::cout << "onPropertyChanged() " << name << " " << propName << " " << propValue;
-      std::cout << std:: endl; 
+      std::cout << "onPropertyChanged() " << name << " " << propName << " " << propValue << '\n';
    }
 
    virtual void onChannelGroupChanged(const char* newChannelGroupName)
    {
-      std::cout << "onChannelGroupChanged() " << newChannelGroupName << std::endl;
+      std::cout << "onChannelGroupChanged() " << newChannelGroupName << '\n';
    }
 
    virtual void onConfigGroupChanged(const char* groupName, const char* newConfigName)
    {
-      std::cout << "onConfigGroupChanged() " << groupName << " " << newConfigName;
-      std::cout << std:: endl; 
+      std::cout << "onConfigGroupChanged() " << groupName << " " << newConfigName << '\n';
    }
 
+   /**
+    * \brief Called when the system configuration has changed.
+    * 
+    * "Changed" includes when a configuration was unloaded, for example because
+    * loading a new config file failed.
+    */
    virtual void onSystemConfigurationLoaded()
    {
-      std::cout << "onSystemConfigurationLoaded() ";
-      std::cout << std::endl;
+      std::cout << "onSystemConfigurationLoaded()\n";
    }
 
    virtual void onPixelSizeChanged(double newPixelSizeUm)
    {
-      std::cout << "onPixelSizeChanged() " << newPixelSizeUm << std::endl;
+      std::cout << "onPixelSizeChanged() " << newPixelSizeUm << '\n';
    }
 
    virtual void onPixelSizeAffineChanged(double v0, double v1, double v2, double v3, double v4, double v5)
    {
-      std::cout << "onPixelSizeAffineChanged() " << v0 << "-" << v1 << "-" << v2 << "-" << v3 << "-" << v4 << "-" << v5 << std::endl;
+      std::cout << "onPixelSizeAffineChanged() " << v0 << "-" << v1 << "-" << v2 << "-" << v3 << "-" << v4 << "-" << v5 << '\n';
    }
 
-   virtual void onStagePositionChanged(char* name, double pos)
+   virtual void onStagePositionChanged(const char* name, double pos)
    {
-      std::cout << "onStagePositionChanged()" << name << " " << pos  << "\n"; 
+      std::cout << "onStagePositionChanged()" << name << " " << pos  << '\n';
    }
 
-   virtual void onXYStagePositionChanged(char* name, double xpos, double ypos)
+   virtual void onXYStagePositionChanged(const char* name, double xpos, double ypos)
    {
       std::cout << "onXYStagePositionChanged()" << name << " " << xpos;
-      std::cout << " " <<  ypos << "\n"; 
+      std::cout << " " <<  ypos << '\n';
    }
 
-   virtual void onExposureChanged(char* name, double newExposure)
+   virtual void onExposureChanged(const char* name, double newExposure)
    {
-      std::cout << "onExposureChanged()" << name << " " << newExposure << "\n";
+      std::cout << "onExposureChanged()" << name << " " << newExposure << '\n';
    }
 
-   virtual void onSLMExposureChanged(char* name, double newExposure)
+   virtual void onSLMExposureChanged(const char* name, double newExposure)
    {
-      std::cout << "onSLMExposureChanged()" << name << " " << newExposure << "\n";
+      std::cout << "onSLMExposureChanged()" << name << " " << newExposure << '\n';
+   }
+
+   virtual void onImageSnapped(const char* cameraLabel)
+   {
+      std::cout << "onImageSnapped() " << cameraLabel << '\n';
+   }
+
+   virtual void onSequenceAcquisitionStarted(const char* cameraLabel)
+   {
+      std::cout << "onSequenceAcquisitionStarted() " << cameraLabel << '\n';
+   }
+
+   virtual void onSequenceAcquisitionStopped(const char* cameraLabel)
+   {
+      std::cout << "onSequenceAcquisitionStopped() " << cameraLabel << '\n';
    }
 
 };

@@ -82,21 +82,31 @@ void TAOIProperty::populateWidthMaps(bool fullAoiControl)
 
    if (fullAoiControl)
    {
-      aoiWidthIndexMap_[2560] = 0;
-      aoiWidthHeightMap_[2560] = 2160;
-      aoiWidthIndexMap_[2048] = 1;
-      aoiWidthHeightMap_[2048] = 2048;
-      aoiWidthIndexMap_[1920] = 2;
+      auto height = sensor_height_->Get();
+      auto width = sensor_width_->Get();
+      int index = 0;
+      aoiWidthIndexMap_[width] = index++;
+      aoiWidthHeightMap_[width] = height;
+      
+      if(height > 4096) {
+        aoiWidthIndexMap_[4096] = index++;
+        aoiWidthHeightMap_[4096] = 4096;
+      }
+      if(height > 2048) {
+        aoiWidthIndexMap_[2048] = index++;
+        aoiWidthHeightMap_[2048] = 2048;
+      }
+      aoiWidthIndexMap_[1920] = index++;
       aoiWidthHeightMap_[1920] = 1080;
-      aoiWidthIndexMap_[1400] = 3;
+      aoiWidthIndexMap_[1400] = index++;
       aoiWidthHeightMap_[1400] = 1400;
-      aoiWidthIndexMap_[1392] = 4;
+      aoiWidthIndexMap_[1392] = index++;
       aoiWidthHeightMap_[1392] = 1040;
-	  aoiWidthIndexMap_[1024] = 5;
+	    aoiWidthIndexMap_[1024] = index++;
       aoiWidthHeightMap_[1024] = 1024;
-      aoiWidthIndexMap_[512] = 6;
+      aoiWidthIndexMap_[512] = index++;
       aoiWidthHeightMap_[512] = 512;
-      aoiWidthIndexMap_[128] = 7;
+      aoiWidthIndexMap_[128] = index++;
       aoiWidthHeightMap_[128] = 128;
    }
    else

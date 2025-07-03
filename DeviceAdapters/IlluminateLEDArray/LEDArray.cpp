@@ -31,8 +31,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
-
 
 int LedArray::Initialize()
 {
@@ -910,7 +908,7 @@ int LedArray::ReadResponse() {
 	return DEVICE_ERR;
 }
 
-int LedArray::SetShutter(boolean open)
+int LedArray::SetShutter(bool open)
 {
 	//TODO maybe update property?
 	shutterOpen_ = open;

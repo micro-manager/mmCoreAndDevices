@@ -1,0 +1,10 @@
+<project name="Dragonfly">
+   <import file="../../../buildscripts/deviceadapter.xml"/>
+	<target name="install-x64">
+		<copy todir="${mm.dll.installdir}">
+			<filelist dir="${mm.basedir}/../3rdparty/Andor/ASD/DLL-1.2.2.32">
+				<file name="AB_ASDx64.dll"/>
+			</filelist>
+		</copy>
+	</target>
+</project>

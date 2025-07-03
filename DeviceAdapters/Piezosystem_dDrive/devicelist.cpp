@@ -20,7 +20,7 @@ bool devicelist::isStage(std::string name){
 		name == "NANOX400" || name == "NANOX400SG" || name == "NANOX400CAP" ||
 		name == "NANOSX400" || name == "NANOSX400CAP" || name == "NANOSX400CAPDIG" ||
 		name == "NANOSX800" || name == "NANOSX800CAP" || name == "NANOSX800CAPDIG" ||
-		name == "NANOX240SG45" || name == "NANOX240SG45°"||
+		name == "NANOX240SG45" || name == "NANOX240SG45Â°"||
 		*/
 
 		//X positionierer

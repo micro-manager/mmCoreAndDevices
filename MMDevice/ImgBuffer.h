@@ -18,15 +18,11 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // NOTE:          Imported from ADVI for use in Micro-Manager
-///////////////////////////////////////////////////////////////////////////////
 
-#if !defined(_IMG_BUFFER_)
-#define _IMG_BUFFER_
+#pragma once
 
 #include <string>
-#include <vector>
-#include <map>
-#include "MMDevice.h"
+
 #include "ImageMetadata.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,5 +69,3 @@ private:
    std::string name_;
    Metadata metadata_;
 };
-
-#endif // !defined(_IMG_BUFFER_)

@@ -135,7 +135,7 @@
 #define  ST_FPA640x512      0x0010      //!< InGaAs-Sensor 640x512(ShortWave-IR VGA)
 #define  ST_FPA320x256      0x0011      //!< InGaAs-Sensor 320x256(ShortWave-IR QVGA)
 #define  ST_FPA320x256_K    0x0012      //!< InGaAs-Sensor 320x256TEC       (ShortWave-IR QVGA)
-#define  ST_FPA320x256_K22  0x0013      //!< InGaAs-Sensor 320x256TEC-2,2µm (ShortWave-IR QVGA)
+#define  ST_FPA320x256_K22  0x0013      //!< InGaAs-Sensor 320x256TEC-2,2Âµm (ShortWave-IR QVGA)
 
 #define  ST_VIIMAGIC_9221M  0x0014      //!< viimagic 9221 (Full-HD, Mono)
 #define  ST_VIIMAGIC_9221C  0x4014      //!< viimagic 9221 (Full-HD, Color)

@@ -64,7 +64,7 @@ AC_DEFUN([MM_LIB_IFELSE], [
          ])
       ],
       [
-         mm_lib_ifelse_have_$1=no
+         mm_lib_ifelse_have_$1=yes
       ])
    ])
 

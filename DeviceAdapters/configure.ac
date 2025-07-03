@@ -40,8 +40,21 @@ AC_SUBST(MMDEVAPI_LDFLAGS)
 # Location of third party public files
 thirdpartypublic="${micromanager_path}/../3rdpartypublic"
 
-
 MM_INSTALL_DIRS
+
+
+# Detect the target system
+build_linux=no
+build_osx=no
+
+case $host in
+    *linux*) build_linux=yes ;;
+    *apple-darwin*) build_osx=yes ;;
+    *) AC_MSG_ERROR(["Host $host is not supported"]) ;;
+esac
+
+AM_CONDITIONAL([HOST_LINUX], [test "x$build_linux" = xyes])
+AM_CONDITIONAL([HOST_OSX], [test "x$build_osx" = xyes])
 
 
 # libusb 0.1 or libusb-compat
@@ -293,6 +306,7 @@ else
    AC_MSG_RESULT([not found])
 fi
 
+
 # BaslerPylon
 AC_MSG_CHECKING(for Basler_Linux)
 AM_CONDITIONAL([BUILD_BASLER_LINUX],[test -f "/opt/pylon/include/pylon/PylonIncludes.h"])
@@ -342,6 +356,23 @@ fi
 AC_SUBST(LIBITC18)
 
 
+# Aravis SDK
+MM_ARG_WITH_OPTIONAL_LIB([Aravis], [aravis], [ARAVIS])
+AS_IF([test "x$want_aravis" != xno],
+[
+   MM_LIB_ARAVIS([$ARAVIS_PREFIX],
+                  [use_aravis=yes],
+                  [
+                     use_aravis=no
+                     AS_IF([test "x$want_aravis" = xyes],
+                           [MM_MSG_OPTIONAL_LIB_FAILURE([aravis], [Aravis])])
+                  ])
+],
+[use_aravis=no])
+
+AM_CONDITIONAL([BUILD_ARAVIS_LINUX], [test "x$use_aravis" = xyes])
+
+
 # MessagePack
 MM_ARG_WITH_OPTIONAL_LIB([MessagePack], [msgpack], [MSGPACK])
 AS_IF([test "x$want_msgpack" != xno],
@@ -380,6 +411,66 @@ AS_IF([test "x$want_opencv" != xno],
 
 
 AM_CONDITIONAL([BUILD_OPENCV], [test "x$use_opencv" = xyes])
+
+
+# Spinnaker SDK (FLIR).
+AC_MSG_CHECKING(for Spinnaker)
+AM_CONDITIONAL([BUILD_SPINNAKER],[test -f "/opt/spinnaker/include/Spinnaker.h"])
+if test -f "/opt/spinnaker/include/Spinnaker.h"; then
+   AC_MSG_RESULT([found])
+else
+   AC_MSG_RESULT([not found])
+fi
+
+
+# Vimba X (Allied Vision) SDK
+MM_ARG_WITH_OPTIONAL_LIB([Vimba X], [vimba-x], [VIMBA_X])
+AS_IF([test "x$want_vimba_x" != xno],
+[
+   MM_LIB_VIMBA_X([$VIMBA_X_PREFIX],
+                  [use_vimba_x=yes],
+                  [
+                     use_vimba_x=no
+                     AS_IF([test "x$want_vimba_x" = xyes],
+                           [MM_MSG_OPTIONAL_LIB_FAILURE([Vimba X], [vimba-x])])
+                  ])
+],
+[use_vimba_x=no])
+
+AM_CONDITIONAL([BUILD_ALLIED_VISION_CAMERA], [test "x$use_vimba_x" = xyes])
+
+
+# Zaber Motion Library (hack: only support 3rdpartypublic copy currently)
+zml_version="3.4.4"
+zml_so_version="3.4"
+AC_MSG_CHECKING([for Zaber Motion Library in 3rdpartypublic])
+zml_header_to_check="${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/include/zaber/motion/library.h"
+AM_CONDITIONAL([BUILD_ZABER], [test -f $zml_header_to_check])
+if test -f "$zml_header_to_check"; then
+   AC_MSG_RESULT([found])
+   ZML_CPPFLAGS="-I${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/include"
+   ZML_LIBS="-lzml"
+   case $host in
+      *linux*)
+         # Linux builds by users should install ZML libs
+         zml_linux_libdir="${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/linux-amd64/lib"
+         ZML_LDFLAGS="-L${zml_linux_libdir} -Wl,-rpath,"'\$$ORIGIN'
+         ZML_LIBS_TO_COPY="${zml_linux_libdir}/libzml.so.${zml_so_version} ${zml_linux_libdir}/libzaber-motion-lib-linux-amd64.so.${zml_version}"
+         ;;
+
+      *apple-darwin*)
+         # macOS build for packaging does not ship ZML
+         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/darwin/lib"
+         ZML_LIBS_TO_COPY=""
+         ;;
+   esac
+else
+   AC_MSG_RESULT([not found])
+fi
+AC_SUBST(ZML_CPPFLAGS)
+AC_SUBST(ZML_LIBS)
+AC_SUBST(ZML_LDFLAGS)
+AC_SUBST(ZML_LIBS_TO_COPY)
 
 
 # Only build ... when the code is there
@@ -463,10 +554,12 @@ m4_define([device_adapter_dirs], [m4_strip([
    ASITiger
    ASIWPTR
    Aladdin
+   AlliedVisionCamera
    Andor
    AndorLaserCombiner
    AndorSDK3
    Aquinas
+   Aravis
    Arduino
    Arduino32bitBoards
    Basler
@@ -476,6 +569,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    CNCMicroscope/ArduinoNeoPixelShutter
    CNCMicroscope/RAMPSStage
    CSUW1
+   Cephla
    ChuoSeiki_MD5000
    ChuoSeiki_QT
    Cobolt
@@ -526,9 +620,11 @@ m4_define([device_adapter_dirs], [m4_strip([
    NewportSMC
    Nikon
    NikonTE2000
+   NotificationTester
    OVP_ECS2
    Omicron
    OpenCVgrabber
+   OpenUC2
    Oxxius
    OxxiusCombiner
    PI
@@ -558,6 +654,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    SmarActHCU-3D
    SouthPort
    SpectralLMM5
+   Spinnaker
    Spot
    StarlightXpress
    SutterLambda
@@ -633,4 +730,7 @@ echo "m4_text_wrap([$use_libusb_0_1],
 echo "m4_text_wrap([$use_opencv],
                    [                                            ],
                    [    Build with OpenCV:                      ])"
+echo "m4_text_wrap([$use_vimba_x],
+                   [                                            ],
+                   [    Build with Vimba X:                     ])"
 echo ""

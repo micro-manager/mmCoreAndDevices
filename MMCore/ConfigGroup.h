@@ -19,11 +19,19 @@
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
-//
-// CVS:           $Id: ConfigGroup.h 17248 2020-01-25 19:49:51Z nico $
-//
-#ifndef _CONFIG_GROUP_H_
-#define _CONFIG_GROUP_H_
+
+#pragma once
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
 
 #include "Configuration.h"
 #include "Error.h"
@@ -209,11 +217,7 @@ public:
     */
    bool isDefined(const char* groupName)
    {
-      std::map<std::string, ConfigGroup>::iterator it = groups_.find(groupName);
-      if (it == groups_.end())
-         return false;
-      else
-         return true;
+      return groups_.find(groupName) != groups_.end();
    }
 
    /**
@@ -230,16 +234,7 @@ public:
          std::map<std::string, ConfigGroup>::iterator it = groups_.find(groupName);
          if (it == groups_.end())
             return false; // group not found
-         if (it->second.Rename(oldConfigName, newConfigName))
-         {
-            // NOTE: changed to not remove empty groups, N.A. 1.31.2006
-            // check if the config group is empty, and if so remove it
-            //if (it->second.IsEmpty())
-            //groups_.erase(it->first);
-            return true;
-         }
-         else
-            return false; // config not found within a group
+         return it->second.Rename(oldConfigName, newConfigName);
       } else {
          return true;
       }
@@ -257,12 +252,7 @@ public:
       std::map<std::string, ConfigGroup>::iterator it = groups_.find(groupName);
       if (it == groups_.end())
          return false; // group not found
-      if (it->second.Delete(configName, deviceLabel, propName))
-      {
-         return true;
-      }
-      else
-         return false; // config not found within a group
+      return it->second.Delete(configName, deviceLabel, propName);
    }
 
 
@@ -278,16 +268,7 @@ public:
       std::map<std::string, ConfigGroup>::iterator it = groups_.find(groupName);
       if (it == groups_.end())
          return false; // group not found
-      if (it->second.Delete(configName))
-      {
-         // NOTE: changed to not remove empty groups, N.A. 1.31.2006
-         // check if the config group is empty, and if so remove it
-         //if (it->second.IsEmpty())
-            //groups_.erase(it->first);
-         return true;
-      }
-      else
-         return false; // config not found within a group
+      return it->second.Delete(configName);
    }
 
    /**
@@ -380,7 +361,10 @@ private:
 class PixelSizeConfiguration : public Configuration
 {
 public:
-   PixelSizeConfiguration() : pixelSizeUm_(0.0)  
+   PixelSizeConfiguration() : pixelSizeUm_(0.0),
+      dxdz_(0.0),
+      dydz_(0.0),
+      optimalZ_(0.0)
    {
       affineMatrix_.push_back(1.0);
       affineMatrix_.push_back(0.0);
@@ -397,19 +381,28 @@ public:
    { 
       if (affineMatrix.size() != 6) 
       {
-         throw new CMMError("PixelConfig affineMatrix must have 6 elements");
+         throw CMMError("PixelConfig affineMatrix must have 6 elements");
       }
       for (unsigned int i=0; i < affineMatrix.size(); i++) 
       {
          affineMatrix_.at(i) = affineMatrix.at(i);
       }
    }
-
    std::vector<double> getPixelConfigAffineMatrix() {return affineMatrix_;}
+   void setdxdz(double dxdz) { dxdz_ = dxdz; }
+   double getdxdz() const { return dxdz_; }
+   void setdydz(double dydz) { dydz_ = dydz; }
+   double getdydz() const { return dydz_; }
+   void setOptimalZUm(double optimalZ) { optimalZ_ = optimalZ; }
+   double getOptimalZUm() const { return optimalZ_; }
+
 
 private:
    double pixelSizeUm_;
    std::vector<double> affineMatrix_;
+   double dxdz_;
+   double dydz_;
+   double optimalZ_;
 };
 
 /**
@@ -440,5 +433,10 @@ public:
    }
 };
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
 #endif
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

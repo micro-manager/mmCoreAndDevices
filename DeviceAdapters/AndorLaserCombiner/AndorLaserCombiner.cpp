@@ -30,8 +30,6 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
-
 
 // Declarations for the ALC library.
 #include "ALC_REV.h"

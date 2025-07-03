@@ -36,6 +36,8 @@
 //                because public method names appear as wrapped methods in other
 //                languages, in particular Java.
 
+#pragma once
+
 /*
  * Important! Read this before changing this file.
  *
@@ -43,24 +45,27 @@
  * file (MMCore.cpp).
  */
 
-#ifndef _MMCORE_H_
-#define _MMCORE_H_
-
-#ifdef _MSC_VER
 // We use exception specifications to instruct SWIG to generate the correct
-// exception specifications for Java. Turn off the warnings that VC++ issues by
-// the mere use of exception specifications (which VC++ does not implement).
-#pragma warning(disable : 4290)
+// exception specifications for Java.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4290) // 'C++ exception specification ignored'
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
+#pragma GCC diagnostic ignored "-Wdeprecated"
 #endif
 
 #include "../MMDevice/DeviceThreads.h"
 #include "../MMDevice/MMDevice.h"
 #include "../MMDevice/MMDeviceConstants.h"
 #include "Configuration.h"
-#include "CoreUtils.h"
 #include "Error.h"
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"
+#include "MockDeviceAdapter.h"
 
 #include <cstring>
 #include <deque>
@@ -91,7 +96,6 @@ class CorePropertyCollection;
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
-class PropertyBlock;
 
 class AutoFocusInstance;
 class CameraInstance;
@@ -102,6 +106,8 @@ class SLMInstance;
 class ShutterInstance;
 class StageInstance;
 class XYStageInstance;
+class PressurePumpInstance;
+class VolumetricPumpInstance;
 
 class CMMCore;
 
@@ -111,6 +117,12 @@ namespace mm {
 } // namespace mm
 
 typedef unsigned int* imgRGB32;
+
+enum DeviceInitializationState {
+   Uninitialized,
+   InitializedSuccessfully,
+   InitializationFailed,
+};
 
 
 /// The Micro-Manager Core.
@@ -139,6 +151,12 @@ public:
     */
    static void noop() {}
 
+   /** \name Core feature control. */
+   ///@{
+   static void enableFeature(const char* name, bool enable) throw (CMMError);
+   static bool isFeatureEnabled(const char* name) throw (CMMError);
+   ///@}
+
    /** \name Initialization and setup. */
    ///@{
    void loadDevice(const char* label, const char* moduleName,
@@ -147,6 +165,7 @@ public:
    void unloadAllDevices() throw (CMMError);
    void initializeAllDevices() throw (CMMError);
    void initializeDevice(const char* label) throw (CMMError);
+   DeviceInitializationState getDeviceInitializationState(const char* label) const throw (CMMError);
    void reset() throw (CMMError);
 
    void unloadLibrary(const char* moduleName) throw (CMMError);
@@ -190,10 +209,8 @@ public:
    ///@{
    std::vector<std::string> getDeviceAdapterSearchPaths();
    void setDeviceAdapterSearchPaths(const std::vector<std::string>& paths);
-   MMCORE_DEPRECATED(static void addSearchPath(const char *path));
 
    std::vector<std::string> getDeviceAdapterNames() throw (CMMError);
-   MMCORE_DEPRECATED(static std::vector<std::string> getDeviceLibraries() throw (CMMError));
 
    std::vector<std::string> getAvailableDevices(const char* library) throw (CMMError);
    std::vector<std::string> getAvailableDeviceDescriptions(const char* library) throw (CMMError);
@@ -240,7 +257,6 @@ public:
    void waitForConfig(const char* group, const char* configName) throw (CMMError);
    bool systemBusy() throw (CMMError);
    void waitForSystem() throw (CMMError);
-   MMCORE_DEPRECATED(void waitForImageSynchro() throw (CMMError));
    bool deviceTypeBusy(MM::DeviceType devType) throw (CMMError);
    void waitForDeviceType(MM::DeviceType devType) throw (CMMError);
 
@@ -325,9 +341,21 @@ public:
    std::vector<double> getPixelSizeAffine() throw (CMMError);
    std::vector<double> getPixelSizeAffine(bool cached) throw (CMMError);
    std::vector<double> getPixelSizeAffineByID(const char* resolutionID) throw (CMMError);
+   double getPixelSizedxdz() throw (CMMError);
+   double getPixelSizedxdz(bool cached) throw (CMMError);
+   double getPixelSizedxdz(const char* resolutionID) throw (CMMError);
+   double getPixelSizedydz() throw (CMMError);
+   double getPixelSizedydz(bool cached) throw (CMMError);
+   double getPixelSizedydz(const char* resolutionID) throw (CMMError);
+   double getPixelSizeOptimalZUm() throw (CMMError);
+   double getPixelSizeOptimalZUm(bool cached) throw (CMMError);
+   double getPixelSizeOptimalZUm(const char* resolutionID) throw (CMMError);
    double getMagnificationFactor() const;
    void setPixelSizeUm(const char* resolutionID, double pixSize)  throw (CMMError);
    void setPixelSizeAffine(const char* resolutionID, std::vector<double> affine)  throw (CMMError);
+   void setPixelSizedxdz(const char* resolutionID, double dXdZ)  throw (CMMError);
+   void setPixelSizedydz(const char* resolutionID, double dYdZ)  throw (CMMError);
+   void setPixelSizeOptimalZUm(const char* resolutionID, double optimalZ)  throw (CMMError);
    void definePixelSizeConfig(const char* resolutionID,
          const char* deviceLabel, const char* propName,
          const char* value) throw (CMMError);
@@ -339,14 +367,6 @@ public:
          const char* newConfigName) throw (CMMError);
    void deletePixelSizeConfig(const char* configName) throw (CMMError);
    Configuration getPixelSizeConfigData(const char* configName) throw (CMMError);
-   ///@}
-
-   /** \name Property blocks. */
-   ///@{
-   MMCORE_DEPRECATED(void definePropertyBlock(const char* blockName, const char* propertyName,
-         const char* propertyValue));
-   MMCORE_DEPRECATED(std::vector<std::string> getAvailablePropertyBlocks() const);
-   MMCORE_DEPRECATED(PropertyBlock getPropertyBlockData(const char* blockName));
    ///@}
 
    /** \name Image acquisition. */
@@ -383,10 +403,6 @@ public:
    unsigned getNumberOfCameraChannels();
    std::string getCameraChannelName(unsigned int channelNr);
    long getImageBufferSize();
-
-   MMCORE_DEPRECATED(void assignImageSynchro(const char* deviceLabel) throw (CMMError));
-   MMCORE_DEPRECATED(void removeImageSynchro(const char* deviceLabel) throw (CMMError));
-   MMCORE_DEPRECATED(void removeImageSynchroAll());
 
    void setAutoShutter(bool state);
    bool getAutoShutter();
@@ -462,9 +478,6 @@ public:
       throw (CMMError);
    long getStateFromLabel(const char* stateDeviceLabel,
          const char* stateLabel) throw (CMMError);
-   MMCORE_DEPRECATED(PropertyBlock getStateLabelData(const char* stateDeviceLabel,
-         const char* stateLabel));
-   MMCORE_DEPRECATED(PropertyBlock getData(const char* stateDeviceLabel));
    ///@}
 
    /** \name Focus (Z) stage control. */
@@ -609,10 +622,43 @@ public:
    std::string getGalvoChannel(const char* galvoLabel) throw (CMMError);
    ///@}
 
+   /** \name PressurePump control
+   *
+   * Control of pressure pumps
+   */
+   ///@{
+   void pressurePumpStop(const char* pumpLabel) throw (CMMError);
+   void pressurePumpCalibrate(const char* pumpLabel) throw (CMMError);
+   bool pressurePumpRequiresCalibration(const char* pumpLabel) throw (CMMError);
+   void setPumpPressureKPa(const char* pumplabel, double pressure) throw (CMMError);
+   double getPumpPressureKPa(const char* pumplabel) throw (CMMError);
+   ///@}
+
+   /** \name VolumetricPump control
+   *
+   * Control of volumetric pumps
+   */
+   ///@{
+   void volumetricPumpStop(const char* pumpLabel) throw (CMMError);
+   void volumetricPumpHome(const char* pumpLabel) throw (CMMError);
+   bool volumetricPumpRequiresHoming(const char* pumpLabel) throw (CMMError);
+   void invertPumpDirection(const char* pumpLabel, bool invert) throw (CMMError);
+   bool isPumpDirectionInverted(const char* pumpLabel) throw (CMMError);
+   void setPumpVolume(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpVolume(const char* pumpLabel) throw (CMMError);
+   void setPumpMaxVolume(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpMaxVolume(const char* pumpLabel) throw (CMMError);
+   void setPumpFlowrate(const char* pumpLabel, double volume) throw (CMMError);
+   double getPumpFlowrate(const char* pumpLabel) throw (CMMError);
+   void pumpStart(const char* pumpLabel) throw (CMMError);
+   void pumpDispenseDurationSeconds(const char* pumpLabel, double seconds) throw (CMMError);
+   void pumpDispenseVolumeUl(const char* pumpLabel, double microLiter) throw (CMMError);
+   ///@}
+
    /** \name Device discovery. */
    ///@{
-   bool supportsDeviceDetection(char* deviceLabel);
-   MM::DeviceDetectionStatus detectDevice(char* deviceLabel);
+   bool supportsDeviceDetection(const char* deviceLabel);
+   MM::DeviceDetectionStatus detectDevice(const char* deviceLabel);
    ///@}
 
    /** \name Hub and peripheral devices. */
@@ -627,19 +673,18 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) throw (CMMError);
    ///@}
 
-   /** \name Miscellaneous. */
+#if !defined(SWIGJAVA) && !defined(SWIGPYTHON)
+   /** \name Testing */
    ///@{
-   MMCORE_DEPRECATED(std::string getUserId() const);
-   MMCORE_DEPRECATED(std::string getHostName() const);
-   MMCORE_DEPRECATED(std::vector<std::string> getMACAddresses(void));
+   void loadMockDeviceAdapter(const char* name,
+         MockDeviceAdapter* implementation) throw (CMMError);
    ///@}
+#endif
 
 private:
    // make object non-copyable
    CMMCore(const CMMCore&);
    CMMCore& operator=(const CMMCore&);
-
-   typedef std::map<std::string, PropertyBlock*> CPropBlockMap;
 
 private:
    // LogManager should be the first data member, so that it is available for
@@ -671,11 +716,9 @@ private:
    PixelSizeConfigGroup* pixelSizeGroup_;
    CircularBuffer* cbuf_;
 
-   std::vector< std::weak_ptr<DeviceInstance> > imageSynchroDevices_;
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
-   CPropBlockMap propBlocks_;
 
    // Must be unlocked when calling MMEventCallback or calling device methods
    // or acquiring a module lock
@@ -684,6 +727,10 @@ private:
 
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
+
+   // True while interpreting the config file (but not while rolling back on
+   // failure):
+   bool isLoadingSystemConfiguration_ = false;
 
 private:
    void InitializeErrorMessages();
@@ -696,7 +743,6 @@ private:
    static void CheckStateLabel(const char* stateLabel) throw (CMMError);
    static void CheckConfigGroupName(const char* groupName) throw (CMMError);
    static void CheckConfigPresetName(const char* presetName) throw (CMMError);
-   static void CheckPropertyBlockName(const char* blockName) throw (CMMError);
    bool IsCoreDeviceLabel(const char* label) const throw (CMMError);
 
    void applyConfiguration(const Configuration& config) throw (CMMError);
@@ -710,6 +756,15 @@ private:
    void assignDefaultRole(std::shared_ptr<DeviceInstance> pDev);
    void updateCoreProperty(const char* propName, MM::DeviceType devType) throw (CMMError);
    void loadSystemConfigurationImpl(const char* fileName) throw (CMMError);
+   void initializeAllDevicesSerial() throw (CMMError);
+   void initializeAllDevicesParallel() throw (CMMError);
+   int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
 };
 
-#endif //_MMCORE_H_
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

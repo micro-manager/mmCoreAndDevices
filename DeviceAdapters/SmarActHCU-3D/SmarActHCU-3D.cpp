@@ -14,7 +14,6 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "SmarActHCU-3D.h"
 #include <string>

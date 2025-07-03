@@ -22,8 +22,7 @@
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 09/19/2005
 //                Mark Tsuchida, 12/04/2013 (made chainable)
 
-#ifndef _ERROR_H_
-#define _ERROR_H_
+#pragma once
 
 #include "ErrorCodes.h"
 
@@ -158,5 +157,3 @@ private:
    Code code_;
    std::unique_ptr<CMMError> underlying_;
 };
-
-#endif //_ERROR_H_

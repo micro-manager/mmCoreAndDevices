@@ -33,7 +33,6 @@
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include <stdio.h>
 #include <string>
@@ -234,9 +233,9 @@ XLed::XLed()
     //XLed::m_sXLedStr[XLed::XL_TriggerDelayTimeLabel]    = "L.16 Trigger Delay Time (0-65535)";        // 47: Led device trigger delay time label
     //XLed::m_sXLedStr[XLed::XL_PWMUnitsLabel]            = "L.17 IPG Units (0:uS/1:mS/2:S)";           // 48: Led device PWM units label
     XLed::m_sXLedStr[XLed::XL_LedTempLabel]             = "L.09 Current Temperature (Deg.C)";                 // 49: Led device temperature label
-    XLed::m_sXLedStr[XLed::XL_LedMaxTempLabel]          = "L.10 Max Allowed Temperature (Deg.C)";     // 42: Led device max allowed temperature label [°C]
-    XLed::m_sXLedStr[XLed::XL_LedMinTempLabel]          = "L.11 Min Allowed Temperature (Deg.C)";     // 43: Led device min allowed temperature label [°C]
-    XLed::m_sXLedStr[XLed::XL_LedTempHystLabel]         = "L.12 Temperature Hysteresis (Deg.C)";      // 44: Led device temperature hysteresis label [°C]
+    XLed::m_sXLedStr[XLed::XL_LedMaxTempLabel]          = "L.10 Max Allowed Temperature (Deg.C)";     // 42: Led device max allowed temperature label [Â°C]
+    XLed::m_sXLedStr[XLed::XL_LedMinTempLabel]          = "L.11 Min Allowed Temperature (Deg.C)";     // 43: Led device min allowed temperature label [Â°C]
+    XLed::m_sXLedStr[XLed::XL_LedTempHystLabel]         = "L.12 Temperature Hysteresis (Deg.C)";      // 44: Led device temperature hysteresis label [Â°C]
 	XLed::m_sXLedStr[XLed::XL_LedTriggerSequenceLabel]	= "L.13 Trigger Sequence";					  // 13: TTL Trigger sequence
     XLed::m_sXLedStr[XLed::XL_LedOnOffStateLabel]       = "L.14 On/Off State (1=On 0=Off)";           // 40: Led device ON/OFF state label
     XLed::m_sXLedStr[XLed::XL_LedIntensityLabel]        = "L.15 Intensity (0.0 or ";//5.0 - 100.0)%";     // 41: Led device intensity label

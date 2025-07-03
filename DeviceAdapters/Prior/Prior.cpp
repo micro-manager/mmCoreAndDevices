@@ -25,7 +25,6 @@
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "prior.h"
 #include <cstdio>

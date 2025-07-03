@@ -70,8 +70,6 @@ using namespace std;
 #define START_ONPROPERTY(name,action)
 #endif
 
-#include "FixSnprintf.h"
-
 // Number of references to this class
 int  Universal::refCount_ = 0;
 bool Universal::PICAM_initialized_ = false;
@@ -2527,7 +2525,7 @@ int Universal::BuildMetadata( Metadata& md )
 
    MM::MMTime timestamp = GetCurrentMMTime();
    md.Clear();
-   md.put("Camera", label);
+   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
 
 #ifdef PICAM_FRAME_INFO_SUPPORTED
    md.PutImageTag<int32>("PICAM-FrameNr", pFrameInfo_->FrameNr);
@@ -2558,24 +2556,22 @@ int Universal::PushImage(const unsigned char* pixBuffer, Metadata* pMd )
    int nRet = DEVICE_ERR;
    MM::Core* pCore = GetCoreCallback();
    // This method inserts a new image into the circular buffer (residing in MMCore)
-   nRet = pCore->InsertMultiChannel(this,
+   nRet = pCore->InsertImage(this,
          pixBuffer,
-         1,
          GetImageWidth(),
          GetImageHeight(),
          GetImageBytesPerPixel(),
-         pMd); // Inserting the md causes crash in debug builds
+         pMd->Serialize().c_str());
    if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
    {
       // do not stop on overflow - just reset the buffer
       pCore->ClearImageBuffer(this);
-      nRet = pCore->InsertMultiChannel(this,
+      nRet = pCore->InsertImage(this,
             pixBuffer,
-            1,
             GetImageWidth(),
             GetImageHeight(),
             GetImageBytesPerPixel(),
-            pMd);
+            pMd->Serialize().c_str());
    }
 
    return nRet;

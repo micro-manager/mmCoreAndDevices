@@ -20,7 +20,6 @@
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 const char* g_DeviceNameShutter = "NeoPixel-Shutter";
 

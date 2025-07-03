@@ -26,7 +26,6 @@
 
 #include "ModuleInterface.h"
 
-#include <boost/bind/bind.hpp>
 #include <boost/move/move.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
@@ -439,8 +438,9 @@ TesterCamera::StartSequenceAcquisitionImpl(bool finite, long count,
 
    // Note: boost::packaged_task<void ()> in more recent versions of Boost.
    boost::packaged_task<void> captureTask(
-         boost::bind(&TesterCamera::SendSequence, this,
-            finite, count, stopOnOverflow));
+         [this, finite, count, stopOnOverflow] {
+            SendSequence(finite, count, stopOnOverflow);
+         });
    sequenceFuture_ = captureTask.get_future();
 
    boost::thread captureThread(boost::move(captureTask));
@@ -531,7 +531,7 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
    char label[MM::MaxStrLength];
    GetLabel(label);
    Metadata md;
-   md.put("Camera", label);
+   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
    std::string serializedMD(md.Serialize());
 
    const unsigned char* bytes = 0;
@@ -895,8 +895,7 @@ TesterAutofocus::Initialize()
    incrementalFocus_->SetBusySetting(GetBusySetting());
 
    linkedZStage_ = StringSetting::New(GetLogger(), this, "LinkedZStage");
-   linkedZStage_->GetPostSetSignal().connect(
-         boost::bind(&Self::UpdateZStageLink, this));
+   linkedZStage_->GetPostSetSignal().connect([this]{ UpdateZStageLink(); });
    CreateStringProperty("LinkedZStage", linkedZStage_);
 
    setZDisablesContinuousFocus_ = BoolSetting::New(GetLogger(), this,
@@ -1022,7 +1021,7 @@ TesterAutofocus::UpdateZStageLink()
       return;
 
    zStageConnection_ = zPosUm->GetPostSetSignal().connect(
-         boost::bind(&Self::HandleLinkedZStageSetPosition, this));
+         [this] { HandleLinkedZStageSetPosition(); });
 }
 
 

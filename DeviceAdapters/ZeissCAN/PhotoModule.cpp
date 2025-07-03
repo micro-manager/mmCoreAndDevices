@@ -2,7 +2,6 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include "ZeissCAN.h"
 using namespace std;

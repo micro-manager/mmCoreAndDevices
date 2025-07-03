@@ -1,6 +1,9 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I ../m4
 
+if BUILD_ALLIED_VISION_CAMERA
+   ALLIED_VISION_CAMERA = AlliedVisionCamera
+endif
 if BUILD_ANDOR
    ANDOR = Andor
 endif
@@ -9,6 +12,9 @@ if BUILD_ANDORLASERCOMBINER
 endif
 if BUILD_ANDORSDK3
    ANDORSDK3 = AndorSDK3
+endif
+if BUILD_ARAVIS_LINUX
+   ARAVIS = Aravis
 endif
 if BUILD_BASLER_LINUX
    BASLER = Basler
@@ -56,6 +62,9 @@ endif
 if BUILD_SIMPLECAM
    SIMPLECAM = SimpleCam
 endif
+if BUILD_SPINNAKER
+   SPINNAKER = Spinnaker
+endif
 if BUILD_SPOT
    SPOT = Spot
 endif
@@ -65,12 +74,17 @@ endif
 if BUILD_V4L2
    V4L = Video4Linux
 endif
+if BUILD_ZABER
+   ZABER = Zaber
+endif
 
 # Please keep these ASCII-lexically sorted (pass through sort(1)).
 SUBDIRS = \
+	$(ALLIED_VISION_CAMERA) \
 	$(ANDOR) \
 	$(ANDORLASERCOMBINER) \
 	$(ANDORSDK3) \
+        $(ARAVIS) \
 	$(BASLER) \
 	$(DC1394) \
 	$(FAKECAMERA) \
@@ -87,9 +101,11 @@ SUBDIRS = \
 	$(SENSICAM) \
 	$(SEQUENCE_TESTER) \
 	$(SIMPLECAM) \
+        $(SPINNAKER) \
 	$(SPOT) \
 	$(USBMANAGER) \
 	$(V4L) \
+	$(ZABER) \
 	AAAOTF \
 	AOTF \
 	ASIFW1000 \
@@ -104,6 +120,7 @@ SUBDIRS = \
 	CARVII \
 	CNCMicroscope \
 	CSUW1 \
+	Cephla \
 	ChuoSeiki_MD5000 \
 	ChuoSeiki_QT \
 	Cobolt \
@@ -147,8 +164,10 @@ SUBDIRS = \
 	NewportSMC \
 	Nikon \
 	NikonTE2000 \
-	OVP_ECS2 \
+	NotificationTester \
 	Omicron \
+	OpenUC2 \
+	OVP_ECS2 \
 	Oxxius \
 	OxxiusCombiner \
 	PI \
@@ -203,7 +222,6 @@ SUBDIRS = \
 	Xcite \
 	YodnE600 \
 	Yokogawa \
-	Zaber \
 	ZeissCAN \
 	ZeissCAN29 \
 	kdv \

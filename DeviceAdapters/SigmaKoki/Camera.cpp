@@ -953,7 +953,7 @@ int Camera::InsertImage()
 
 	// Important:  metadata about the image are generated here:
 	Metadata md;
-	md.put("Camera", label);
+	md.put(MM::g_Keyword_Metadata_CameraLabel, label);
 	md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
 	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
 
@@ -1156,7 +1156,7 @@ int Camera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	BOOL ans = TRUE;
 	WORD mode = 0;
-	byte skippH, skippV, hBin, vBin;
+	BYTE skippH, skippV, hBin, vBin;
 
 	cout << "Product is   " << productName_ << endl;
 

@@ -4,9 +4,9 @@
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   XYStage Device Adapter
-//                
+//
 // AUTHOR:        David Goosen & Athabasca Witschi (contact@zaber.com)
-//                
+//
 // COPYRIGHT:     Zaber Technologies Inc., 2017
 //
 // LICENSE:       This file is distributed under the BSD license.
@@ -36,27 +36,26 @@ public:
 
 	// Device API
 	// ----------
-	int Initialize();
-	int Shutdown();
-	void GetName(char* name) const;
-	bool Busy();
+	int Initialize() override;
+	int Shutdown() override;
+	void GetName(char* name) const override;
+	bool Busy() override;
 
 	// XYStage API
 	// -----------
-	int GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax);
-	int Move(double vx, double vy);
-	int SetPositionSteps(long x, long y);
-	int GetPositionSteps(long& x, long& y);
-	int SetRelativePositionSteps(long x, long y);
-	int Home();
-	int Stop();
-	int SetOrigin();
-	int SetAdapterOrigin();
-	int GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax);
-	double GetStepSizeXUm() {return stepSizeXUm_;}
-	double GetStepSizeYUm() {return stepSizeYUm_;}
+	int GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax) override;
+	int Move(double vx, double vy) override;
+	int SetPositionSteps(long x, long y) override;
+	int GetPositionSteps(long& x, long& y) override;
+	int SetRelativePositionSteps(long x, long y) override;
+	int Home() override;
+	int Stop() override;
+	int SetOrigin() override;
+	int GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax) override;
+	double GetStepSizeXUm() override { return stepSizeXUm_; }
+	double GetStepSizeYUm() override { return stepSizeYUm_; }
 
-	int IsXYStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
+	int IsXYStageSequenceable(bool& isSequenceable) const override { isSequenceable = false; return DEVICE_OK; }
 
 	// action interface
 	// ----------------
@@ -77,9 +76,9 @@ public:
 	int OnDeviceAddressY (MM::PropertyBase* pProp, MM::ActionType eAct); // Composite XY (two controllers)
 
 private:
-	int SendXYMoveCommand(std::string type, long x, long y) const;
-	int OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct) const;
-	int OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct) const;
+	int SendXYMoveCommand(std::string type, long x, long y);
+	int OnSpeed(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnAccel(long address, long axis, MM::PropertyBase* pProp, MM::ActionType eAct);
 	void GetOrientation(bool& mirrorX, bool& mirrorY);
 
 	inline bool IsSingleController() const

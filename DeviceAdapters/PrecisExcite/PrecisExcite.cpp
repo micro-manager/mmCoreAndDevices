@@ -22,13 +22,9 @@
 // CVS:           
 //
 
-
-
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
-
 
 #include "MMDevice.h"
 #include "PrecisExcite.h"
@@ -37,6 +33,22 @@
 #include "ModuleInterface.h"
 #include "DeviceUtils.h"
 #include <sstream>
+#include <iostream>
+#include <fstream>
+
+
+int debug(std::string text) {
+    
+   /*
+   * //LogMessage(text); use LogMessage within the class for better results.
+   * 
+    ofstream myfile;
+    myfile.open("albert_precisexcite_debut.txt", std::ios_base::app);
+    myfile << text;
+    myfile.close();
+    */
+    return 0;
+}
 
 // Controller
 const char* g_ControllerName = "PrecisExcite";
@@ -379,15 +391,20 @@ int Controller::OnChannelLabel(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int Controller::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   stringstream txt;
    if (eAct == MM::BeforeGet)
    {
       GetState(state_);
       pProp->Set(state_);
+      txt << "current state in event OnState - beforeget=" << state_;
+      debug(txt.str());
    }
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(state_);
       SetState(state_);
+      txt << "current state in event OnState - afterset=" << state_;
+      debug(txt.str());
    }
    
    return HandleErrors();
@@ -461,8 +478,9 @@ void Controller::Illuminate()
    stringstream msg;
    if (state_==0)
    {
-      if (triggerMode_ == OFF || triggerMode_ == FOLLOW_PULSE)
-         msg << "SQX" << carriage_return << "C" << channelLetters_[currentChannel_] << "F" << carriage_return << "AZ";
+       if (triggerMode_ == OFF || triggerMode_ == FOLLOW_PULSE) {
+           msg << "SQX" << carriage_return << "C" << channelLetters_[currentChannel_] << "F" << carriage_return << "AZ";
+       }
       else
          msg << "SQX" << "AZ";
    }
@@ -471,20 +489,20 @@ void Controller::Illuminate()
       if (triggerMode_ == OFF) {
          msg << "SQZ" << carriage_return;
          for (unsigned int i=0; i<channelLetters_.size(); i++) {
-            msg << "C" << channelLetters_[i];
-            if (i == (unsigned int)currentChannel_)
-               msg << "N";
-            else
-               msg << "F";
-            msg << carriage_return;
+            if (i != (unsigned int)currentChannel_) {
+                msg << "C" << channelLetters_[i] << "F" << carriage_return;
+            }
          }
+         //Albert Gidon: the current channel must be the last channel to set. I don't know why this is
+         // but it works this way. Otherwise, the current channel cannot be set.
+         msg << "C" << channelLetters_[(unsigned int)currentChannel_] << "N" << carriage_return;
       }
       else if (triggerMode_ == FOLLOW_PULSE)
          msg << "SQZ" << carriage_return << "A" << channelLetters_[currentChannel_] << "#";
       else
          msg << triggerMessage_ << "SQ" << TriggerCmd[triggerMode_];
    }
-            
+   debug(msg.str());
    Send(msg.str());
 }
 
@@ -527,18 +545,26 @@ void Controller::SetState(long state)
 
 void Controller::GetState(long &state)
 {
+    stringstream txt;
+    stringstream cq;
    if (triggerMode_ == OFF) {
       Purge();
-      Send("C?");
+      //Send("C?");
+      cq << "C" << channelLetters_[currentChannel_] << "?";
+      Send(cq.str());
       long stateTmp = 0;
 
       for (unsigned int i=0;i<channelLetters_.size();i++)
       {
          ReceiveOneLine();
 
-         if (! buf_string_.empty())
-            if (buf_string_[5]=='N')
-               stateTmp = 1;       
+         if (!buf_string_.empty()) {
+             txt << buf_string_ << "\n";
+             debug(txt.str());
+             if (buf_string_[5] == 'N') {
+                 stateTmp = 1;
+             }
+         }
       }
       state = stateTmp;
    }

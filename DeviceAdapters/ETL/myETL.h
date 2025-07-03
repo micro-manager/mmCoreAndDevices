@@ -33,7 +33,7 @@ public:
    unsigned char* CreateAndSendCurrentCommand(double current);
 
    /*int ClearPort(void);
-   int CheckDeviceStatus(void); // vient de LSTEP, ne correspond pas à ETL
+   int CheckDeviceStatus(void); // vient de LSTEP, ne correspond pas Ã  ETL
    int SendCommand(const char* command) const;
    int QueryCommand(const char* command, std::string& answer) const;*/
 

@@ -6,7 +6,7 @@
 // DESCRIPTION:   pco camera module
 //                
 // AUTHOR:        Franz Reitner, Franz.Reitner@pco.de, 11/01/2010
-// COPYRIGHT:     PCO AG, Kelheim, 2010-up to now ;-)
+// COPYRIGHT:     Excelitas - PCO, Kelheim, 2010-up to now ;-)
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
 //
@@ -45,6 +45,7 @@ const char* g_CameraDeviceName = "pco_camera";
 const char* g_PixelType_8bit = "8bit";
 const char* g_PixelType_16bit = "16bit";
 const char* g_PixelType_RGB32bit = "RGB 32bit";
+const char* g_PixelType_RGB48bit = "RGB 48bit";
 
 const char* g_TimeStamp_No = "No stamp";
 const char* g_TimeStamp_B = "Binary";
@@ -333,7 +334,7 @@ int CPCOCam::OnCCDType(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPCOCam::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-  int tb[3] = {1000000, 1000, 1};
+  double tb[3] = {1000000.0, 1000.0, 1.0};
   if(eAct == MM::BeforeGet)
   {
     if(m_pCamera->m_iCamClass == 3)
@@ -1008,8 +1009,10 @@ int CPCOCam::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
       pixelDepth_ = 2;
     else if(pixType.compare(g_PixelType_8bit) == 0)
       pixelDepth_ = 1;
-    else if(pixType.compare(g_PixelType_RGB32bit) == 0)
+    else if (pixType.compare(g_PixelType_RGB32bit) == 0)
       pixelDepth_ = 4;
+    else if (pixType.compare(g_PixelType_RGB48bit) == 0)
+      pixelDepth_ = 6;
     else
     {
       return DEVICE_INTERNAL_INCONSISTENCY;
@@ -1022,8 +1025,10 @@ int CPCOCam::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Set(g_PixelType_8bit);
     else if(pixelDepth_ == 2)
       pProp->Set(g_PixelType_16bit);
-    else if(pixelDepth_ == 4)
+    else if (pixelDepth_ == 4)
       pProp->Set(g_PixelType_RGB32bit);
+    else if (pixelDepth_ == 6)
+      pProp->Set(g_PixelType_RGB48bit);
     else
     {
       return DEVICE_INTERNAL_INCONSISTENCY;
@@ -1380,8 +1385,12 @@ int CPCOCam::Initialize()
   pixTypes.push_back(g_PixelType_16bit);
   pixTypes.push_back(g_PixelType_8bit);
 
-  if(m_pCamera->GetCCDCol(0))
+  if (m_pCamera->GetCCDCol(0))
+  {
     pixTypes.push_back(g_PixelType_RGB32bit);
+    //pixTypes.push_back(g_PixelType_RGB48bit); // Not possible up to now 07/22
+    // Also GetImage does not convert to 48bit rgb, just 32bit rgb
+  }
 
   nRet = SetAllowedValues(MM::g_Keyword_PixelType, pixTypes);
   if(nRet != DEVICE_OK)
@@ -1663,9 +1672,13 @@ unsigned CPCOCam::GetBitDepth() const
   {
     return m_pCamera->GetBitsPerPixel();
   }
-  else if(img_.Depth() == 4)
+  else if (img_.Depth() == 4)
   {
     return 8;
+  }
+  else if (img_.Depth() == 6)
+  {
+    return 16;
   }
   else
   {
@@ -1746,9 +1759,9 @@ const unsigned char* CPCOCam::GetBuffer(int ibufnum)
       ppic8 += iadd;
     }
   }
-  else if(img_.Depth() == 4)
+  else if (img_.Depth() == 4)
   {
-    if(m_bDoAutoBalance)
+    if (m_bDoAutoBalance)
     {
       m_pCamera->SetLutMinMax(TRUE, TRUE);
       m_pCamera->AutoBalance(0, 0, 0, 0, 0);
@@ -1757,25 +1770,57 @@ const unsigned char* CPCOCam::GetBuffer(int ibufnum)
     m_pCamera->Convert(ibufnum);
     iw = img_.Width();
     ih = img_.Height();
-    unsigned char *pchar;
-    unsigned char *ppic8, *ph;
+    unsigned char* pchar;
+    unsigned char* ppic8, * ph;
     int iadd;
 
     ppic8 = m_pCamera->GetPic8c();
 
     iadd = (iw * 3) % 4;
-    if(iadd != 0)
+    if (iadd != 0)
       iadd = 4 - iadd;
     pchar = const_cast<unsigned char*>(img_.GetPixelsRW());
-    for(int y = 0; y < ih; y++)
+    for (int y = 0; y < ih; y++)
     {
-      ph = &ppic8[y*(iw * 3 + iadd)];
-      for(int x = 0; x < iw; x++)
+      ph = &ppic8[y * (iw * 3 + iadd)];
+      for (int x = 0; x < iw; x++)
       {
-        *pchar++ = (unsigned char) *ph++;
-        *pchar++ = (unsigned char) *ph++;
-        *pchar++ = (unsigned char) *ph++;
+        *pchar++ = (unsigned char)*ph++;
+        *pchar++ = (unsigned char)*ph++;
+        *pchar++ = (unsigned char)*ph++;
         *pchar++ = 0;
+      }
+    }
+  }
+  else if (img_.Depth() == 6)
+  {
+    if (m_bDoAutoBalance)
+    {
+      m_pCamera->SetLutMinMax(TRUE, TRUE);
+      m_pCamera->AutoBalance(0, 0, 0, 0, 0);
+      m_bDoAutoBalance = FALSE;
+    }
+    m_pCamera->Convert(ibufnum);
+    iw = img_.Width();
+    ih = img_.Height();
+    unsigned short* pchar;
+    unsigned char* ppic8, * ph;
+    int iadd;
+
+    ppic8 = m_pCamera->GetPic8c();
+
+    iadd = (iw * 3) % 4;
+    if (iadd != 0)
+      iadd = 4 - iadd;
+    pchar = (unsigned short*)(img_.GetPixelsRW());
+    for (int y = 0; y < ih; y++)
+    {
+      ph = &ppic8[y * (iw * 3 + iadd)];
+      for (int x = 0; x < iw; x++)
+      {
+        *pchar++ = (unsigned char)*ph++;
+        *pchar++ = (unsigned char)*ph++;
+        *pchar++ = (unsigned char)*ph++;
       }
     }
   }
@@ -2136,7 +2181,7 @@ int CPCOCam::ClearROI()
 
 void CPCOCam::SetExposure(double dExp)
 {
-  SetProperty(MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(dExp));
+  SetProperty(MM::g_Keyword_Exposure, std::to_string(dExp).c_str());
 }
 
 int CPCOCam::ResizeImageBuffer()
@@ -2165,7 +2210,7 @@ int CPCOCam::ResizeImageBuffer()
     m_iHeight = nHeight;
   }
 
-  if(!(pixelDepth_ == 1 || pixelDepth_ == 2 || pixelDepth_ == 4))
+  if(!(pixelDepth_ == 1 || pixelDepth_ == 2 || pixelDepth_ == 4 || pixelDepth_ == 6))
     return -1;
   img_.Resize(nWidth, nHeight, pixelDepth_);
   SetSizes(nWidth, nHeight, pixelDepth_);
@@ -2454,7 +2499,6 @@ int CPCOCam::SequenceThread::svc()
       err = 1;
       break;
     }
-    //CDeviceUtils::SleepMs(20);
     count = camera_->m_iNumImagesInserted;
     ReleaseMutex(camera_->mxMutex);
   }

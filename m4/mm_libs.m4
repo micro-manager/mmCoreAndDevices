@@ -66,6 +66,21 @@ AC_DEFUN([MM_LIB_HIDAPI], [
 ])
 
 
+# Check for Aravis library
+#
+# MM_LIB_ARAVIS([aravis prefix], [action-if-found], [action-if-not-found])
+#
+# Defines precious variables ARAVIS_CPPFLAGS, ARAVIS_CFLAGS, ARAVIS_LDFLAGS,
+# ARAVIS_LIBS.
+#
+AC_DEFUN([MM_LIB_ARAVIS], [
+   MM_LIB_WITH_PKG_CONFIG([ARAVIS], [Aravis], [aravis-0.10], [],
+      [$1], [-laravis],
+      [arv.h], [arv_update_device_list],
+      [$2], [$3])
+])
+
+
 # MM_LIB_MSGPACK([msgpack-prefix], [action-if-found], [action-if-not-found])
 AC_DEFUN([MM_LIB_MSGPACK], [
    AC_LANG_PUSH([C++])
@@ -104,4 +119,15 @@ AC_DEFUN([MM_LIB_USB_0_1], [
    MM_LIB_WITH_PKG_CONFIG([LIBUSB_0_1], [libusb 0.1 or libusb-compat], [libusb], [],
       [$1], [-lusb], [usb.h], [usb_init],
       [$2], [$3])
+])
+
+
+# Check for Allied Vision Vimba X SDK
+#
+# MM_LIB_VIMBA_X([Vimba X api prefix], [action-if-found], [action-if-not-found])
+#
+# Defines variable VIMBA_X_CPPFLAGS.
+#
+AC_DEFUN([MM_LIB_VIMBA_X], [
+   MM_LIB_SIMPLE([VIMBA_X], [Vimba X], [$1], [], [VmbC/VmbC.h], [], [$2], [$3])
 ])

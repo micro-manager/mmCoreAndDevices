@@ -33,9 +33,6 @@
 #include <iostream>
 #include <future>
 
-
-
-using namespace std;
 const double CDemoCamera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 
@@ -346,7 +343,7 @@ int CDemoCamera::Initialize()
    nRet = CreateStringProperty(MM::g_Keyword_PixelType, g_PixelType_8bit, false, pAct);
    assert(nRet == DEVICE_OK);
 
-   vector<string> pixelTypeValues;
+   std::vector<std::string> pixelTypeValues;
    pixelTypeValues.push_back(g_PixelType_8bit);
    pixelTypeValues.push_back(g_PixelType_16bit); 
 	pixelTypeValues.push_back(g_PixelType_32bitRGB);
@@ -362,7 +359,7 @@ int CDemoCamera::Initialize()
    nRet = CreateIntegerProperty("BitDepth", 8, false, pAct);
    assert(nRet == DEVICE_OK);
 
-   vector<string> bitDepths;
+   std::vector<std::string> bitDepths;
    bitDepths.push_back("8");
    bitDepths.push_back("10");
    bitDepths.push_back("11");
@@ -613,7 +610,7 @@ int CDemoCamera::SnapImage()
       while (exp > (GetCurrentMMTime() - startTime).getMsec())
       {
          CDeviceUtils::SleepMs(1);
-      }		
+      }
    }
    else
    {
@@ -1021,7 +1018,7 @@ int CDemoCamera::SendExposureSequence() const {
 
 int CDemoCamera::SetAllowedBinning() 
 {
-   vector<string> binValues;
+   std::vector<std::string> binValues;
    binValues.push_back("1");
    binValues.push_back("2");
    if (scanMode_ < 3)
@@ -1095,7 +1092,7 @@ int CDemoCamera::InsertImage()
  
    // Important:  metadata about the image are generated here:
    Metadata md;
-   md.put("Camera", label);
+   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
@@ -1400,7 +1397,7 @@ int CDemoCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
          if(IsCapturing())
             return DEVICE_CAMERA_BUSY_ACQUIRING;
 
-         string pixelType;
+         std::string pixelType;
          pProp->Get(pixelType);
 
          if (pixelType.compare(g_PixelType_8bit) == 0)
@@ -2139,7 +2136,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          for (k=0; k<imgWidth; k++)
          {
             long lIndex = imgWidth*j + k;
-            unsigned char val = (unsigned char) (g_IntensityFactor_ * min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod))));
+            unsigned char val = (unsigned char) (g_IntensityFactor_ * std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod))));
             if (val > maxDrawnVal) {
                 maxDrawnVal = val;
             }
@@ -2172,7 +2169,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          for (k=0; k<imgWidth; k++)
          {
             long lIndex = imgWidth*j + k;
-            unsigned short val = (unsigned short) (g_IntensityFactor_ * min((double)maxValue, pedestal + dAmp16 * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
+            unsigned short val = (unsigned short) (g_IntensityFactor_ * std::min((double)maxValue, pedestal + dAmp16 * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
             if (val > maxDrawnVal) {
                 maxDrawnVal = val;
             }
@@ -2207,7 +2204,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          for (k=0; k<imgWidth; k++)
          {
             long lIndex = imgWidth*j + k;
-            double value =  (g_IntensityFactor_ * min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod))));
+            double value =  (g_IntensityFactor_ * std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod))));
             if (value > maxDrawnVal) {
                 maxDrawnVal = value;
             }
@@ -2276,15 +2273,15 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          {
             long lIndex = imgWidth*j + k;
             double factor = (2.0 * lSinePeriod * k) / lPeriod;
-            unsigned char value0 =   (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + factor)));
+            unsigned char value0 =   (unsigned char) std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase + factor)));
             theBytes[0] = value0;
             if( NULL != pTmpBuffer)
                pTmp2[1] = value0;
-            unsigned char value1 =   (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*2 + factor)));
+            unsigned char value1 =   (unsigned char) std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*2 + factor)));
             theBytes[1] = value1;
             if( NULL != pTmpBuffer)
                pTmp2[2] = value1;
-            unsigned char value2 = (unsigned char) min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*4 + factor)));
+            unsigned char value2 = (unsigned char) std::min(255.0, (pedestal + dAmp * sin(dPhase_ + dLinePhase*4 + factor)));
             theBytes[2] = value2;
 
             if( NULL != pTmpBuffer){
@@ -2328,9 +2325,9 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
          for (k=0; k<imgWidth; k++)
          {
             long lIndex = imgWidth*j + k;
-            unsigned long long value0 = (unsigned short) min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
-            unsigned long long value1 = (unsigned short) min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase*2 + (2.0 * lSinePeriod * k) / lPeriod)));
-            unsigned long long value2 = (unsigned short) min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase*4 + (2.0 * lSinePeriod * k) / lPeriod)));
+            unsigned long long value0 = (unsigned short) std::min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase + (2.0 * lSinePeriod * k) / lPeriod)));
+            unsigned long long value1 = (unsigned short) std::min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase*2 + (2.0 * lSinePeriod * k) / lPeriod)));
+            unsigned long long value2 = (unsigned short) std::min(maxPixelValue, (pedestal + dAmp16 * sin(dPhase_ + dLinePhase*4 + (2.0 * lSinePeriod * k) / lPeriod)));
             unsigned long long tval = value0+(value1<<16)+(value2<<32);
             if (tval > maxDrawnVal) {
                 maxDrawnVal = static_cast<double>(tval);
@@ -2413,17 +2410,17 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
       // this function.
       for (unsigned int i = 0; i < imgWidth; ++i)
       {
-         for (unsigned j = 0; j < img.Height(); ++j)
+         for (unsigned h = 0; h < img.Height(); ++h)
          {
             bool shouldKeep = false;
-            for (unsigned int k = 0; k < multiROIXs_.size(); ++k)
+            for (unsigned int mr = 0; mr < multiROIXs_.size(); ++mr)
             {
-               unsigned xOffset = multiROIXs_[k] - roiX_;
-               unsigned yOffset = multiROIYs_[k] - roiY_;
-               unsigned width = multiROIWidths_[k];
-               unsigned height = multiROIHeights_[k];
+               unsigned xOffset = multiROIXs_[mr] - roiX_;
+               unsigned yOffset = multiROIYs_[mr] - roiY_;
+               unsigned width = multiROIWidths_[mr];
+               unsigned height = multiROIHeights_[mr];
                if (i >= xOffset && i < xOffset + width &&
-                        j >= yOffset && j < yOffset + height)
+                        h >= yOffset && h < yOffset + height)
                {
                   // Pixel is inside an ROI.
                   shouldKeep = true;
@@ -2433,7 +2430,7 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
             if (!shouldKeep)
             {
                // Blank the pixel.
-               long lIndex = imgWidth * j + i;
+               long lIndex = imgWidth * h + i;
                if (pixelType.compare(g_PixelType_8bit) == 0)
                {
                   *((unsigned char*) rawBuf + lIndex) = static_cast<unsigned char>(multiROIFillValue_);
@@ -3473,7 +3470,7 @@ int CDemoStage::SetPositionUm(double pos)
 void CDemoStage::SetIntensityFactor(double pos)
 {
    pos = fabs(pos);
-   g_IntensityFactor_ = max(.1, min(1.0, 1.0 - .2 * log(pos)));
+   g_IntensityFactor_ = std::max(.1, std::min(1.0, 1.0 - .2 * log(pos)));
 }
 
 int CDemoStage::IsStageSequenceable(bool& isSequenceable) const
@@ -3595,9 +3592,8 @@ CXYStageBase<CDemoXYStage>(),
 stepSize_um_(0.015),
 posX_um_(0.0),
 posY_um_(0.0),
-busy_(false),
 timeOutTimer_(0),
-velocity_(10.0), // in micron per second
+velocity_(10.0), // in mm per second (= um/ms)
 initialized_(false),
 lowerLimit_(0.0),
 upperLimit_(20000.0)
@@ -3646,6 +3642,11 @@ int CDemoXYStage::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   CPropertyAction* pAct = new CPropertyAction(this, &CDemoXYStage::OnVelocity);
+   ret = CreateFloatProperty("Velocity", 10.0, false, pAct, false);
+   if (ret != DEVICE_OK)
+      return ret;
+
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
@@ -3678,22 +3679,44 @@ bool CDemoXYStage::Busy()
 
 int CDemoXYStage::SetPositionSteps(long x, long y)
 {
-   if (timeOutTimer_ != 0)
+   MM::MMTime currentTime = GetCurrentMMTime();
+   double newTargetX = x * stepSize_um_;
+   double newTargetY = y * stepSize_um_;
+
+   // If a move is in progress, compute the intermediate position and cancel the old move.
+   if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
    {
-      if (!timeOutTimer_->expired(GetCurrentMMTime()))
-         return ERR_STAGE_MOVING;
-      delete (timeOutTimer_);
+      double currentPosX, currentPosY;
+      ComputeIntermediatePosition(currentTime, currentPosX, currentPosY);
+      startPosX_um_ = currentPosX;
+      startPosY_um_ = currentPosY;
+      delete timeOutTimer_;
+      timeOutTimer_ = nullptr;
    }
-   double newPosX = x * stepSize_um_;
-   double newPosY = y * stepSize_um_;
-   double difX = newPosX - posX_um_;
-   double difY = newPosY - posY_um_;
-   double distance = sqrt( (difX * difX) + (difY * difY) );
-   long timeOut = (long) (distance / velocity_);
-   timeOutTimer_ = new MM::TimeoutMs(GetCurrentMMTime(),  timeOut);
-   posX_um_ = x * stepSize_um_;
-   posY_um_ = y * stepSize_um_;
-   int ret = OnXYStagePositionChanged(posX_um_, posY_um_);
+   else
+   {
+      // No move in progress; start from the last settled position.
+      startPosX_um_ = posX_um_;
+      startPosY_um_ = posY_um_;
+   }
+
+   // Set the new target.
+   targetPosX_um_ = newTargetX;
+   targetPosY_um_ = newTargetY;
+
+   // Calculate the distance and determine the move duration (in ms)
+   double difX = targetPosX_um_ - startPosX_um_;
+   double difY = targetPosY_um_ - startPosY_um_;
+   double distance = sqrt((difX * difX) + (difY * difY));
+   moveDuration_ms_ = (long)(distance / velocity_);
+   if (moveDuration_ms_ < 1)
+      moveDuration_ms_ = 1;  // enforce a minimum duration
+
+   moveStartTime_ = currentTime;
+   timeOutTimer_ = new MM::TimeoutMs(currentTime, moveDuration_ms_);
+
+   // Optionally, notify listeners of the starting position (as an acknowledgement)
+   int ret = OnXYStagePositionChanged(startPosX_um_, startPosY_um_);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -3702,8 +3725,27 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
 
 int CDemoXYStage::GetPositionSteps(long& x, long& y)
 {
-   x = (long)(posX_um_ / stepSize_um_);
-   y = (long)(posY_um_ / stepSize_um_);
+   MM::MMTime currentTime = GetCurrentMMTime();
+   if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
+   {
+      double currentPosX, currentPosY;
+      ComputeIntermediatePosition(currentTime, currentPosX, currentPosY);
+      x = (long)(currentPosX / stepSize_um_);
+      y = (long)(currentPosY / stepSize_um_);
+   }
+   else
+   {
+      // Movement complete; ensure final position is set.
+      if (timeOutTimer_ != nullptr)
+      {
+         posX_um_ = targetPosX_um_;
+         posY_um_ = targetPosY_um_;
+         delete timeOutTimer_;
+         timeOutTimer_ = nullptr;
+      }
+      x = (long)(posX_um_ / stepSize_um_);
+      y = (long)(posY_um_ / stepSize_um_);
+   }
    return DEVICE_OK;
 }
 
@@ -3715,12 +3757,59 @@ int CDemoXYStage::SetRelativePositionSteps(long x, long y)
    return this->SetPositionSteps(xSteps+x, ySteps+y);
 }
 
+// currentTime: the current time
+// currentPosX, currentPosY: output parameters for the computed position in microns
+void CDemoXYStage::ComputeIntermediatePosition(
+   const MM::MMTime& currentTime, double& currentPosX, double& currentPosY)
+{
+   double elapsed_ms = (currentTime - moveStartTime_).getMsec();
+   double fraction = elapsed_ms / moveDuration_ms_;
+   if (fraction > 1.0)
+      fraction = 1.0;
+   currentPosX = startPosX_um_ + fraction * (targetPosX_um_ - startPosX_um_);
+   currentPosY = startPosY_um_ + fraction * (targetPosY_um_ - startPosY_um_);
+}
+
+void CDemoXYStage::CommitCurrentIntermediatePosition_(const MM::MMTime& now)
+{
+   if (timeOutTimer_ && !timeOutTimer_->expired(now))
+   {
+      // freeze where we *are* now
+      ComputeIntermediatePosition(now, posX_um_, posY_um_);
+      (void)OnXYStagePositionChanged(posX_um_, posY_um_);
+   }
+   // Drop the timer so Busy() instantly goes idle
+   delete timeOutTimer_;
+   timeOutTimer_ = nullptr;
+}
+
+int CDemoXYStage::Stop()
+{
+   MM::MMTime now = GetCurrentMMTime();
+   CommitCurrentIntermediatePosition_(now);
+   return DEVICE_OK;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
-// none implemented
 
+int CDemoXYStage::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct){
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(velocity_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double newVelocity;
+      pProp->Get(newVelocity);
+      // Enforce a minimum positive velocity
+      if (newVelocity <= 0.0)
+         newVelocity = 0.1;
+      velocity_ = newVelocity;
+   }
+   return DEVICE_OK;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // CDemoShutter implementation
@@ -3991,8 +4080,8 @@ gatedVolts_(0),
 open_(true),
 sequenceRunning_(false),
 sequenceIndex_(0),
-sentSequence_(vector<double>()),
-nascentSequence_(vector<double>())
+sentSequence_(std::vector<double>()),
+nascentSequence_(std::vector<double>())
 {
    SetErrorText(ERR_SEQUENCE_INACTIVE, "Sequence triggered, but sequence is not running");
 
@@ -4063,7 +4152,7 @@ int DemoDA::SetSignal(double volts)
    volt_ = volts; 
    if (open_)
       gatedVolts_ = volts;
-   stringstream s;
+   std::stringstream s;
    s << "Voltage set to " << volts;
    LogMessage(s.str(), false);
    return DEVICE_OK;
@@ -4224,7 +4313,8 @@ DemoGalvo::DemoGalvo() :
    offsetX_(20),
    vMaxX_(10.0),
    offsetY_(15),
-   vMaxY_(10.0)
+   vMaxY_(10.0),
+   pulseTime_Us_(100000.0)
 {
    // handwritten 5x5 gaussian kernel, no longer used
    /*
@@ -4312,8 +4402,9 @@ int DemoGalvo::PointAndFire(double x, double y, double pulseTime_us)
    return DEVICE_OK;
 }
 
-int DemoGalvo::SetSpotInterval(double /* pulseInterval_us */) 
+int DemoGalvo::SetSpotInterval(double pulseTime_Us) 
 {
+   pulseTime_Us_ = pulseTime_Us;
    return DEVICE_OK;
 }
 
@@ -4371,17 +4462,19 @@ int DemoGalvo::SetPolygonRepetitions(int /* repetitions */)
 
 int DemoGalvo::RunPolygons()
 {
-   /*
    std::ostringstream os;
    os << "# of polygons: " << vertices_.size() << std::endl;
    for (std::map<int, std::vector<PointD> >::iterator it = vertices_.begin();
          it != vertices_.end(); ++it)
    {
       os << "ROI " << it->first << " has " << it->second.size() << " points" << std::endl;
+      // illuminate just the first point
+      this->PointAndFire(it->second.at(0).x, it->second.at(0).y, pulseTime_Us_);
+      CDeviceUtils::SleepMs((long) (pulseTime_Us_ / 1000.0));
    }
    LogMessage(os.str().c_str());
-   */
-   runROIS_ = true;
+
+   //runROIS_ = true;
    return DEVICE_OK;
 }
 

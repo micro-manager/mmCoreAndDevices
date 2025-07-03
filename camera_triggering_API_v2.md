@@ -25,7 +25,7 @@ Based on the [GenICam specification](https://www.emva.org/wp-content/uploads/Gen
 ////////////////////////////////////////////
 
 
-bool isNewAPIImplemented();
+bool isTriggerAPIImplemented();
 
 
 //////////////////////////////

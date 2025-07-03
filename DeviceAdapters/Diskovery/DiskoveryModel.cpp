@@ -21,12 +21,9 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
-
 
 #include "DiskoveryModel.h"
 #include "Diskovery.h"

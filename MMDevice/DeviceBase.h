@@ -20,12 +20,8 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//
 
-#ifndef _DEVICE_BASE_H_
-#define _DEVICE_BASE_H_
-
-
+#pragma once
 
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
@@ -1546,7 +1542,7 @@ protected:
       char label[MM::MaxStrLength];
       this->GetLabel(label);
       Metadata md;
-      md.put("Camera", label);
+      md.put(MM::g_Keyword_Metadata_CameraLabel, label);
       int ret = GetCoreCallback()->InsertImage(this, GetImageBuffer(), GetImageWidth(),
          GetImageHeight(), GetImageBytesPerPixel(),
          md.Serialize().c_str());
@@ -1566,7 +1562,7 @@ protected:
    virtual long GetNumberOfImages() {return thd_->GetNumberOfImages();}
 
    // called from the thread function before exit
-   virtual void OnThreadExiting() throw()
+   virtual void OnThreadExiting()
    {
       try
       {
@@ -1672,7 +1668,7 @@ protected:
       void UpdateActualDuration() {actualDuration_ = camera_->GetCurrentMMTime() - startTime_;}
 
    private:
-      virtual int svc(void) throw()
+      virtual int svc()
       {
          int ret=DEVICE_ERR;
          try
@@ -2346,24 +2342,26 @@ public:
 
       // then test if the given position already has a label
       for (it=labels_.begin(); it!=labels_.end(); it++)
+      {
          if (it->second == pos)
          {
             labels_.erase(it);
             break;
          }
+      }
 
-         // finally we can add the new label-position mapping
-         labels_[label] = pos;
+      // finally we can add the new label-position mapping
+      labels_[label] = pos;
 
-         // attempt to define allowed values for label property (if it exists),
-         // and don't make any fuss if the operation fails
-         std::string strLabel(label);
-         std::vector<std::string> values;
-         for (it=labels_.begin(); it!=labels_.end(); it++)
-            values.push_back(it->first);
-         this->SetAllowedValues(MM::g_Keyword_Label, values);
+      // attempt to define allowed values for label property (if it exists),
+      // and don't make any fuss if the operation fails
+      std::string strLabel(label);
+      std::vector<std::string> values;
+      for (it=labels_.begin(); it!=labels_.end(); it++)
+         values.push_back(it->first);
+      this->SetAllowedValues(MM::g_Keyword_Label, values);
 
-         return DEVICE_OK;
+      return DEVICE_OK;
    }
 
    /**
@@ -2484,6 +2482,35 @@ private:
    std::map<std::string, long> labels_;
 };
 
+/**
+* Base class for creating pump device adapters.
+*/
+template <class U>
+class CVolumetricPumpBase : public CDeviceBase<MM::VolumetricPump, U>
+{
+    int Home()
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+
+    int InvertDirection(bool /*state*/)
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+};
+
+/**
+* Base class for creating pump device adapters.
+*/
+template <class U>
+class CPressurePumpBase : public CDeviceBase<MM::PressurePump, U>
+{
+    int Calibrate()
+    {
+        return DEVICE_UNSUPPORTED_COMMAND;
+    }
+};
+
 
 // _t, a macro for timing single lines.
 // This macros logs the text of the line, x, measures
@@ -2500,6 +2527,3 @@ private:
       _end_time = GetCurrentMMTime(); \
       LogTimeDiff(_start_time,_end_time, true); \
    }
-
-#endif //_DEVICE_BASE_H_
-

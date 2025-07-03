@@ -58,7 +58,7 @@ CTriggerScopeMMTTL::CTriggerScopeMMTTL(uint8_t pinGroup) :
 
 void CTriggerScopeMMTTL::GetName(char* name) const
 {	
-   if(pinGroup_ == 1)
+   if(pinGroup_ == 0)
    {
 	   CDeviceUtils::CopyLimitedString(name, g_TriggerScopeMMTTLDeviceName1);   
    }
@@ -136,12 +136,12 @@ int CTriggerScopeMMTTL::Initialize()
    for (long ttlNr = 1; ttlNr <= 8; ttlNr ++) 
    {
       long pinNr = ttlNr + (pinGroup_ * 8l);
-      std::ostringstream os;
+      std::ostringstream oss;
       if (pinNr == 9) 
-         os << "TTL-" << std::setfill('0') << std::setw(2) << pinNr;
+         oss << "TTL-" << std::setfill('0') << std::setw(2) << pinNr;
       else
-         os << "TTL-" << pinNr;
-      std::string propName = os.str();
+         oss << "TTL-" << pinNr;
+      std::string propName = oss.str();
       CPropertyActionEx* pActEx = new CPropertyActionEx(this, &CTriggerScopeMMTTL::OnTTL, ttlNr - 1);
       nRet = CreateProperty(propName.c_str(), "0", MM::Integer, false, pActEx, false);
       if (nRet != DEVICE_OK)
@@ -309,8 +309,8 @@ int CTriggerScopeMMTTL::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       int val = -1;
       for (unsigned int i=0; i < sequence.size(); i++)                       
       {
-         std::istringstream os (sequence[i]);
-         os >> val;
+         std::istringstream oss (sequence[i]);
+         oss >> val;
          if (val < 0 || val > 255)
             return ERR_INVALID_VALUE;
       }  
@@ -323,30 +323,30 @@ int CTriggerScopeMMTTL::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          return ret;
 
       // then send the sequence
-      std::ostringstream cout;
-      cout << "PDO" << (int) pinGroup_ << "-0";
+      std::ostringstream cmd;
+      cmd << "PDO" << (int) pinGroup_ << "-0";
 
       for(std::vector<std::string>::iterator it = sequence.begin(); it != sequence.end(); ++it) 
       {
-         cout << "-" << *it;
+         cmd << "-" << *it;
       }
 
-      return pHub_->SendAndReceive(cout.str().c_str());
+      return pHub_->SendAndReceive(cmd.str().c_str());
                                                                                                                       
    }                                                                         
    else if (eAct == MM::StartSequence)
    { 
-      std::ostringstream cout;
-      cout << "PDS" << (int) pinGroup_ << "-1-" << (int) sequenceTransitionOnRising_;
+      std::ostringstream cmd;
+      cmd << "PDS" << (int) pinGroup_ << "-1-" << (int) sequenceTransitionOnRising_;
 
-      return pHub_->SendAndReceive(cout.str().c_str());
+      return pHub_->SendAndReceive(cmd.str().c_str());
     }
    else if (eAct == MM::StopSequence)                                        
    {
-      std::ostringstream cout;
-      cout << "PDS" << (int) pinGroup_ << "-0-" << (int) sequenceTransitionOnRising_;
+      std::ostringstream cmd;
+      cmd << "PDS" << (int) pinGroup_ << "-0-" << (int) sequenceTransitionOnRising_;
 
-      return pHub_->SendAndReceive(cout.str().c_str());
+      return pHub_->SendAndReceive(cmd.str().c_str());
    }                                                                         
 
    return DEVICE_OK;

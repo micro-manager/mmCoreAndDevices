@@ -369,7 +369,7 @@ std::string XLightHub::BuilCommand (TCmdType eCmdType,  TDeviceInfo* pDeviceInfo
 // ----------------------------------------------------------------------------------------------
 int XLightHub::ParseAnswer(std::string pCmd, std::string pAnsw, TCmdType eCmdType , TDeviceInfo* pDeviceInfo){
 
-	// creo il comando che è stato inviato
+	// creo il comando che Ã¨ stato inviato
 	std::string StrCmdBase=BuilCommandBase(eCmdType, pDeviceInfo);
 	std::string StrAnsw= pAnsw;  
 	std::string StrCmd= pCmd;  
@@ -379,7 +379,7 @@ int XLightHub::ParseAnswer(std::string pCmd, std::string pAnsw, TCmdType eCmdTyp
 	if (StrAnsw.find(StrCmdBase)!=0){
 		return ERR_COMMAND_EXECUTION_ERROR;
 	}
-	// se arrivo qui il comando è presente nella risposta, quindi estraggo quello che rimane
+	// se arrivo qui il comando Ã¨ presente nella risposta, quindi estraggo quello che rimane
 	StrAnsw=StrAnsw.substr(StrCmdBase.length()); 
 	try
 	{
@@ -568,7 +568,7 @@ int XLightHub::IsOnline(TDevicelType DeviceType){
 	if (ret!=DEVICE_OK)
 		return ret;
 
-	// se è un device con base 1 riduco il tutto 
+	// se Ã¨ un device con base 1 riduco il tutto 
 	if (DeviceType>=EMISSION_FT && DeviceType<=EXCITATION_FT){
 		if (RetValue==0){
 			InitialPositions[DeviceType-1]=1;

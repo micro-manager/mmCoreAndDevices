@@ -27,8 +27,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-#ifndef _DEMOCAMERA_H_
-#define _DEMOCAMERA_H_
+#pragma once
 
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
@@ -554,7 +553,7 @@ public:
    virtual int GetPositionSteps(long& x, long& y);
    virtual int SetRelativePositionSteps(long x, long y);
    virtual int Home() { return DEVICE_OK; }
-   virtual int Stop() { return DEVICE_OK; }
+   virtual int Stop();
 
    /* This sets the 0,0 position of the adapter to the current position.  
     * If possible, the stage controller itself should also be set to 0,0
@@ -583,17 +582,26 @@ public:
    // action interface
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    double stepSize_um_;
    double posX_um_;
    double posY_um_;
-   bool busy_;
+   double startPosX_um_, startPosY_um_;
+   double targetPosX_um_, targetPosY_um_;
+   MM::MMTime moveStartTime_;     // from GetCurrentMMTime()
+   long moveDuration_ms_;         // duration of current move in milliseconds
    MM::TimeoutMs* timeOutTimer_;
    double velocity_;
    bool initialized_;
    double lowerLimit_;
    double upperLimit_;
+
+   void CommitCurrentIntermediatePosition_(const MM::MMTime& now);
+   void ComputeIntermediatePosition(const MM::MMTime& currentTime,
+      double& currentPosX,
+      double& currentPosY);
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1192,8 +1200,5 @@ private:
    double vMaxX_;
    int offsetY_;
    double vMaxY_;
+   double pulseTime_Us_;
 };
-
-
-
-#endif //_DEMOCAMERA_H_

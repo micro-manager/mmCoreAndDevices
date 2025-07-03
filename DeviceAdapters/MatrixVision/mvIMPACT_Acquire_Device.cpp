@@ -967,7 +967,7 @@ int mvIMPACT_Acquire_Device::InsertImage( void )
    Metadata md;
    char label[MM::MaxStrLength];
    GetLabel( label );
-   md.put( "Camera", label );
+   md.put(MM::g_Keyword_Metadata_CameraLabel, label );
    MM::MMTime timeStamp = readoutStartTime_;
    md.put( MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString( ( timeStamp - sequenceStartTime_ ).getMsec() ) );
    md.put( MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( static_cast<long>( pCurrentRequest_->infoFrameID.read() ) ) );

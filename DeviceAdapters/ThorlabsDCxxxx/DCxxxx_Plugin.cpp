@@ -21,11 +21,9 @@
 // AUTHOR:			Olaf Wohlmann, owohlmann@thorlabs.com
 //
 
-
 #ifdef WIN32
 	#include <windows.h>
 #endif
-#include "FixSnprintf.h"
 #include <string>
 #include <math.h>
 #include "DCxxxx_Plugin.h"
@@ -48,7 +46,7 @@ const char* g_DeviceDC2xxxName = "Thorlabs DC2010/DC2100";
 //
 ///////////////////////////////////////////////////////////////////////////////
 /*---------------------------------------------------------------------------
- Initialize module data. It publishes the DCxxxx series names to µManager.
+ Initialize module data. It publishes the DCxxxx series names to ÂµManager.
 ---------------------------------------------------------------------------*/
 MODULE_API void InitializeModuleData()
 {

@@ -31,7 +31,6 @@
 #ifdef WIN32
    #include <windows.h>
 #endif
-#include "FixSnprintf.h"
 
 #include <stdio.h>
 #include <string>
@@ -259,7 +258,7 @@ int XYStage::SetMotionMode(long lMotionMode)
 }
 
 //
-// Returns current X-Y position in µm.
+// Returns current X-Y position in Âµm.
 //
 int XYStage::GetPositionUm(double& dXPosUm, double& dYPosUm)
 {
@@ -318,7 +317,7 @@ int XYStage::GetPositionUm(double& dXPosUm, double& dYPosUm)
 }
 
 //
-// Move x-y stage to a relative distance from current position in µm
+// Move x-y stage to a relative distance from current position in Âµm
 //
 int XYStage::SetRelativePositionUm(double dXPosUm, double dYPosUm)
 {
@@ -369,7 +368,7 @@ int XYStage::SetRelativePositionUm(double dXPosUm, double dYPosUm)
 }
 
 //
-// Move 2 x-y position in µm
+// Move 2 x-y position in Âµm
 //
 int XYStage::SetPositionUm(double dXPosUm, double dYPosUm)
 {

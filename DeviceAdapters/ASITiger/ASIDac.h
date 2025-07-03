@@ -22,13 +22,12 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASIDAC_H_
-#define _ASIDAC_H_
+#ifndef ASIDAC_H
+#define ASIDAC_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
-
 
 class CDAC : public ASIPeripheralBase<CSignalIOBase, CDAC>
 {
@@ -95,7 +94,7 @@ public:
 
 private:
 	double unitMult_;
-	string axisLetter_;
+	std::string axisLetter_;
 	double maxvolts_;
 	double minvolts_;
 	bool ring_buffer_supported_;
@@ -108,11 +107,6 @@ private:
 	int GetMinVolts(double &volts);
 	int SetSignalmv(double millivolts);
 	int GetSignalmv(double& millivolts);
-
-	
-
 };
 
-
-
-#endif//_ASIDAC_H_
+#endif // ASIDAC_H

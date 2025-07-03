@@ -1,6 +1,6 @@
 /*
 File:		MCL_NanoDrive.h
-Copyright:	Mad City Labs Inc., 2019
+Copyright:	Mad City Labs Inc., 2023
 License:	Distributed under the BSD license.
 */
 #pragma once
@@ -47,6 +47,7 @@ static const char* g_Keyword_Calibration = "Calibration";
 static const char* g_Keyword_CalibrationX = "Calibration X";
 static const char* g_Keyword_CalibrationY = "Calibration Y";
 static const char* g_Keyword_SerialNumber = "Serial Number";
+static const char* g_Keyword_ProductID = "Product ID";
 static const char* g_Keyword_DacSteps = "DacBits";
 static const char* g_Keyword_DeviceAxisInUse = "Device axis in use";
 static const char* g_Keyword_LowerLimit = "Lower Limit (um)";

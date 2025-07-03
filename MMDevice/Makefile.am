@@ -5,13 +5,13 @@ noinst_HEADERS = \
 	DeviceBase.h \
 	DeviceThreads.h \
 	DeviceUtils.h \
-	FixSnprintf.h \
 	ImageMetadata.h \
 	ImgBuffer.h \
 	MMDevice.h \
 	MMDeviceConstants.h \
 	ModuleInterface.h \
-	Property.h
+	Property.h \
+	RegisteredDeviceCollection.h
 
 libMMDevice_la_SOURCES = \
 	$(noinst_HEADERS) \
@@ -37,5 +37,3 @@ install: install-am
 uninstall: uninstall-am
 	rm -f $(DESTDIR)${libdir}/libMMDevice.a
 endif
-
-SUBDIRS = . unittest
