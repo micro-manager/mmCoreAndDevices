@@ -100,7 +100,7 @@ public:
    bool isSettingIncluded(const PropertySetting& ps);
    bool isConfigurationIncluded(const Configuration& cfg);
 
-   PropertySetting getSetting(size_t index) const throw (CMMError);
+   PropertySetting getSetting(size_t index) const MMCORE_LEGACY_THROW(CMMError);
    PropertySetting getSetting(const char* device, const char* prop);
    
    /**

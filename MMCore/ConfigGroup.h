@@ -366,7 +366,7 @@ public:
 
    void setPixelSizeUm(double pixSize) {pixelSizeUm_ = pixSize;}
    double getPixelSizeUm() const {return pixelSizeUm_;}
-   void setPixelConfigAffineMatrix(std::vector<double> &affineMatrix) throw (CMMError)
+   void setPixelConfigAffineMatrix(std::vector<double> &affineMatrix) MMCORE_LEGACY_THROW(CMMError)
    { 
       if (affineMatrix.size() != 6) 
       {

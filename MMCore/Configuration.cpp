@@ -74,7 +74,7 @@ std::string Configuration::getVerbose() const
 /**
  * Returns the setting with specified index.
  */
-PropertySetting Configuration::getSetting(size_t index) const throw (CMMError)
+PropertySetting Configuration::getSetting(size_t index) const MMCORE_LEGACY_THROW(CMMError)
 {
    if (index >= settings_.size())
    {
