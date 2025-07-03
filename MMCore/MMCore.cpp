@@ -7327,7 +7327,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
       
       os << MM::g_CFGCommand_PixelSize_um << ',' << configs[j] << ',' << getPixelSizeUmByID(configs[j].c_str()) << endl;
 
-      std::vector<double> affine = getPixelSizeAffine(configs[j].c_str());
+      std::vector<double> affine = getPixelSizeAffineByID(configs[j].c_str());
       os << MM::g_CFGCommand_PixelSizeAffine << ',' << configs[j] << ',';
       for (size_t i = 0; i < affine.size(); ++i) {
          os << affine[i];
