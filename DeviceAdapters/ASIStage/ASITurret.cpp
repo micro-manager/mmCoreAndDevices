@@ -8,7 +8,7 @@
 #include "ASITurret.h"
 
 AZ100Turret::AZ100Turret() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	numPos_(4),
 	position_(0)
 {
@@ -42,8 +42,6 @@ int AZ100Turret::Initialize()
 {
 	core_ = GetCoreCallback();
 
-	// 
-
 	CPropertyAction* pAct = new CPropertyAction(this, &AZ100Turret::OnState);
 	int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
 	if (ret != DEVICE_OK)
@@ -75,28 +73,37 @@ int AZ100Turret::Initialize()
 		return ret;
 	}
 
+   ret = GetVersion(version_);
+   if (ret != DEVICE_OK)
+       return ret;
 	pAct = new CPropertyAction(this, &AZ100Turret::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+	// get the firmware version data from cached value
+	versionData_ = ParseVersionString(version_);
+
+	ret = GetCompileDate(compileDate_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &AZ100Turret::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
-
-	// get the date of the firmware
-	char compile_date[MM::MaxStrLength];
-	if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-	{
-		compileDay_ = ExtractCompileDay(compile_date);
-	}
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
-	if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+	// previously compared against compile date (2010, 1, 1)
+	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
 	{
+		ret = GetBuildName(buildName_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &AZ100Turret::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	initialized_ = true;
@@ -117,10 +124,8 @@ bool AZ100Turret::Busy()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "RS F";
 	std::string answer;
-	// query command
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("RS F", answer);
 	if (ret != DEVICE_OK)
 	{
 		return false;
@@ -138,9 +143,7 @@ bool AZ100Turret::Busy()
 	return false;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int AZ100Turret::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -183,13 +186,13 @@ int AZ100Turret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(2, 4).c_str());
 			return ERR_OFFSET + errNo;
 		}
 
-		if (answer.substr(0, 2) == ":A")
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			position_ = position;
 		}

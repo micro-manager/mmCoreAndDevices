@@ -53,8 +53,8 @@ std::string ZeissHub::tubeLensList_[5];
 std::string ZeissHub::sidePortList_[3];
 std::string ZeissHub::condenserList_[8];
 
-ZeissDeviceInfo ZeissHub::deviceInfo_[MAXNUMBERDEVICES];
-ZeissUByte ZeissHub::commandGroup_[MAXNUMBERDEVICES];
+ZeissDeviceInfo ZeissHub::deviceInfo_[MAXNUMBERDEVICES + 1];
+ZeissUByte ZeissHub::commandGroup_[MAXNUMBERDEVICES + 1];
 
 
 ZeissHub::ZeissHub() :

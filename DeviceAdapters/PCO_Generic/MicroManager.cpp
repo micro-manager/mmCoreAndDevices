@@ -6,7 +6,7 @@
 // DESCRIPTION:   pco camera module
 //                
 // AUTHOR:        Franz Reitner, Franz.Reitner@pco.de, 11/01/2010
-// COPYRIGHT:     PCO AG, Kelheim, 2010-up to now ;-)
+// COPYRIGHT:     Excelitas - PCO, Kelheim, 2010-up to now ;-)
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
 //
@@ -334,7 +334,7 @@ int CPCOCam::OnCCDType(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPCOCam::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-  int tb[3] = {1000000, 1000, 1};
+  double tb[3] = {1000000.0, 1000.0, 1.0};
   if(eAct == MM::BeforeGet)
   {
     if(m_pCamera->m_iCamClass == 3)
@@ -2181,7 +2181,7 @@ int CPCOCam::ClearROI()
 
 void CPCOCam::SetExposure(double dExp)
 {
-  SetProperty(MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(dExp));
+  SetProperty(MM::g_Keyword_Exposure, std::to_string(dExp).c_str());
 }
 
 int CPCOCam::ResizeImageBuffer()
@@ -2499,7 +2499,6 @@ int CPCOCam::SequenceThread::svc()
       err = 1;
       break;
     }
-    //CDeviceUtils::SleepMs(20);
     count = camera_->m_iNumImagesInserted;
     ReleaseMutex(camera_->mxMutex);
   }

@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Driver for IDS peak series of USB cameras
 //
-//                Based on IDS peak SDK and Micromanager DemoCamera example
+//                Based on IDS peak SDK and Micro-manager DemoCamera example
 //                tested with SDK version 2.5
 //                Requires Micro-manager Device API 71 or higher!
 //                
@@ -13,7 +13,7 @@
 //
 // YEAR:          2023
 //                
-// VERSION:       1.1
+// VERSION:       1.1.1
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -23,10 +23,10 @@
 //                of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //
 //                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-//                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
+//                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    09.10.2023 LK
+//LAST UPDATE:    03.12.2024 LK
 
 #ifndef _IDSPeak_H_
 #define _IDSPeak_H_
@@ -126,7 +126,6 @@ public:
     peak_camera_handle hCam = PEAK_INVALID_HANDLE;
     peak_status status = PEAK_STATUS_SUCCESS;
     void GetName(char* name) const;
-    int deviceIdx_;
 
     // MMCamera API
     // ------------
@@ -175,7 +174,13 @@ public:
 
     // action interface
     // ----------------
-    int OnChangeCamera(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+    // Feature enable/disables
+    int OnEnableTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnEnableAnalogGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnEnableDigitalGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnEnableAutoWhitebalance(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     int OnModelName(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -190,11 +195,19 @@ public:
     int OnMultiROIFillValue(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnCCDTemp(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnIsSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+    // Gain and whitebalance
     int OnAutoWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnGainMaster(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnGainRed(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnGainGreen(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnGainBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGainAnalogMaster(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGainAnalogRed(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGainAnalogGreen(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGainAnalogBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGainDigitalMaster(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGainDigitalRed(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGainDigitalGreen(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnGainDigitalBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+    int OnPeakPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     long GetCCDXSize() { return cameraCCDXSize_; }
     long GetCCDYSize() { return cameraCCDYSize_; }
@@ -222,9 +235,15 @@ private:
 
     static const double nominalPixelSizeUm_;
 
+    bool enableTemp_ = false;
+    bool enableAnalogGain_ = false;
+    bool enableDigitalGain_ = false;
+    bool enableAutoWhitebalance_ = false;
+
     string modelName_;
     string serialNum_;
     size_t nCameras_;
+    int deviceIdx_;
     double exposureMin_;
     double exposureMax_;
     double exposureInc_;
@@ -260,19 +279,28 @@ private:
     long cameraCCDYSize_;
     double ccdT_;
     std::string triggerDevice_;
-    map<int, string> peakTypeToString;
-    map<string, int> stringToPeakType;
 
     peak_auto_feature_mode peakAutoWhiteBalance_;
     map<int, string> peakAutoToString;
     map<string, int> stringToPeakAuto;
-    double gainMaster_;
-    double gainRed_;
-    double gainGreen_;
-    double gainBlue_;
-    double gainMin_;
-    double gainMax_;
-    double gainInc_;
+    double gainDigitalMaster_;
+    double gainDigitalRed_;
+    double gainDigitalGreen_;
+    double gainDigitalBlue_;
+    double gainDigitalMin_;
+    double gainDigitalMax_;
+    double gainDigitalInc_;
+
+    double gainAnalogMaster_;
+    double gainAnalogRed_;
+    double gainAnalogGreen_;
+    double gainAnalogBlue_;
+    double gainAnalogMin_;
+    double gainAnalogMax_;
+    double gainAnalogInc_;
+
+    std::vector<std::string> availablePixelFormats;
+    peak_pixel_format currPixelFormat;
 
 
     bool stopOnOverflow_;
@@ -325,6 +353,5 @@ private:
     MMThreadLock stopLock_;
     MMThreadLock suspendLock_;
 };
-
 
 #endif //_IDSPeak_H_

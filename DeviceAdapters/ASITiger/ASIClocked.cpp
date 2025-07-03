@@ -59,7 +59,7 @@ int CClocked::Initialize()
    // call generic Initialize first, this gets hub
    RETURN_ON_MM_ERROR( PeripheralInitialize() );
 
-   ostringstream command;
+   std::ostringstream command;
 
    // serial query to find out how many positions we have
    command.str("");
@@ -123,8 +123,6 @@ int CClocked::Initialize()
    AddAllowedValue(g_JoystickSelectPropertyName, g_JSCode_23);
    UpdateProperty(g_JoystickSelectPropertyName);
 
-
-
    // let calling class decide if initialized_ should be set
    return DEVICE_OK;
 }
@@ -182,18 +180,18 @@ int CClocked::OnLabel(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      string buf;
+      std::string buf;
       pProp->Get(buf);
       RETURN_ON_MM_ERROR ( SetPosition(buf.c_str()) );
    }
    return DEVICE_OK;
 }
 
-int CClocked::OnSaveJoystickSettings()
 // redoes the joystick settings so they can be saved using SS Z
+int CClocked::OnSaveJoystickSettings()
 {
    long tmp;
-   string tmpstr;
+   std::string tmpstr;
    ostringstream command; command.str("");
    ostringstream response; response.str("");
    command << "J " << axisLetter_ << "?";
@@ -209,37 +207,35 @@ int CClocked::OnSaveJoystickSettings()
 
 int CClocked::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 int CClocked::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
+   std::string tmpstr;
    ostringstream command; command.str("");
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'Y';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
-      else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
+      else if (tmpstr == g_SaveSettingsZJoystick)
       {
          command << 'Z';
          // do save joystick settings first
@@ -278,20 +274,21 @@ int CClocked::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       // don't complain if value is unsupported, just leave as-is
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_JSCode_0) == 0)
+      if (tmpstr == g_JSCode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_JSCode_1) == 0)
+      else if (tmpstr == g_JSCode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_JSCode_2) == 0)
+      else if (tmpstr == g_JSCode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_JSCode_3) == 0)
+      else if (tmpstr == g_JSCode_3)
          tmp = 3;
-      else if (tmpstr.compare(g_JSCode_22) == 0)
+      else if (tmpstr == g_JSCode_22)
          tmp = 22;
-      else if (tmpstr.compare(g_JSCode_23) == 0)
+      else if (tmpstr == g_JSCode_23)
          tmp = 23;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -300,7 +297,6 @@ int CClocked::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // CFSlider
@@ -376,9 +372,4 @@ int CTurret::Initialize()
    initialized_ = true;
    return DEVICE_OK;
 }
-
-
-
-
-
 

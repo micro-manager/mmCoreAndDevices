@@ -99,8 +99,8 @@
  * and the device/module interface version numbers or the MMStudio application
  * version number (each version is incremented independently of each other).
  *
- * This applies to all classes exposed through the SWIG layer (i.e. the whole
- * of the public API of the Core), not just CMMCore.
+ * This applies to all classes exposed through MMCoreJ and pymmcore (i.e. the
+ * whole of the public API of the Core), not just CMMCore.
  *
  * Because currently there is no C++ DLL build of MMCore, what we care about is
  * the backward compatibility of the Java and Python bindings. So a change that
@@ -112,7 +112,7 @@
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 2, MMCore_versionPatch = 1;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 7, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -163,10 +163,21 @@ CMMCore::CMMCore() :
 
 /**
  * Destructor.
- * Cleans-up and unloads all devices.
+ *
+ * Cleans up and unloads all devices. However, it is strongly recommended
+ * to explicitly call reset() before destroying the CMMCore object, because
+ * errors cannot be handled in the destructor.
+ *
+ * It is also strongly recommended to unregister any event callback
+ * (registerCallback(nullptr)) before destroying the CMMCore object.
  */
 CMMCore::~CMMCore()
 {
+   // Applications should not expect the callback notifications to be available
+   // when they are already allowing the Core object to be destroyed. Disable
+   // for safety.
+   registerCallback(nullptr);
+
    try
    {
       // TODO We should attempt to continue cleanup beyond the first device
@@ -688,21 +699,12 @@ void CMMCore::loadDevice(const char* label, const char* moduleName, const char* 
    LOG_DEBUG(coreLogger_) << "Will load device " << deviceName <<
       " from " << moduleName;
 
-   try
-   {
-      std::shared_ptr<LoadedDeviceAdapter> module =
-         pluginManager_->GetDeviceAdapter(moduleName);
-      std::shared_ptr<DeviceInstance> pDevice =
-         deviceManager_->LoadDevice(module, deviceName, label, this,
-               deviceLogger, coreLogger);
-      pDevice->SetCallback(callback_);
-   }
-   catch (const CMMError& e)
-   {
-      throw CMMError("Failed to load device " + ToQuotedString(deviceName) +
-            " from adapter module " + ToQuotedString(moduleName),
-            e);
-   }
+   std::shared_ptr<LoadedDeviceAdapter> module =
+      pluginManager_->GetDeviceAdapter(moduleName);
+   std::shared_ptr<DeviceInstance> pDevice =
+      deviceManager_->LoadDevice(module, deviceName, label, this,
+            deviceLogger, coreLogger);
+   pDevice->SetCallback(callback_);
 
    LOG_INFO(coreLogger_) << "Did load device " << deviceName <<
       " from " << moduleName << "; label = " << label;
@@ -766,6 +768,12 @@ void CMMCore::assignDefaultRole(std::shared_ptr<DeviceInstance> pDevice)
 void CMMCore::unloadDevice(const char* label///< the name of the device to unload
                            ) throw (CMMError)
 {
+   // "Core" cannot be unloaded.
+   if (label != nullptr && std::string(label) == MM::g_Keyword_CoreDevice)
+   {
+      throw CMMError("Cannot unload " + ToQuotedString("Core"));
+   }
+
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
    try {
@@ -773,6 +781,8 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
       LOG_DEBUG(coreLogger_) << "Will unload device " << label;
       deviceManager_->UnloadDevice(pDevice);
       LOG_DEBUG(coreLogger_) << "Did unload device " << label;
+      
+      updateCoreProperties();
    }
    catch (CMMError& err) {
       logError("MMCore::unloadDevice", err.getMsg().c_str());
@@ -783,14 +793,14 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
 
 /**
  * Unloads all devices from the core and resets all configuration data.
+ *
+ * This function is not thread safe.
  */
 void CMMCore::unloadAllDevices() throw (CMMError)
 {
    try {
       configGroups_->Clear();
-
-      //selected channel group is no longer valid
-      //channelGroup_ = "":
+      updateAllowedChannelGroups();
 
       // clear pixel size configurations
       if (!pixelSizeGroup_->IsEmpty())
@@ -808,9 +818,23 @@ void CMMCore::unloadAllDevices() throw (CMMError)
       LOG_INFO(coreLogger_) << "Did unload all devices";
 
 	   properties_->Refresh();
+
+      // The system config has "changed" (to "(none)").
+      // But don't notify if we will proceed to load a new config.
+      if (externalCallback_ && !isLoadingSystemConfiguration_)
+      {
+         externalCallback_->onSystemConfigurationLoaded();
+      }
    }
    catch (CMMError& err) {
       logError("MMCore::unloadAllDevices", err.getMsg().c_str());
+
+      // The config has "changed" even in this case.
+      if (externalCallback_ && !isLoadingSystemConfiguration_)
+      {
+         externalCallback_->onSystemConfigurationLoaded();
+      }
+
       throw;
    }
 }
@@ -874,7 +898,7 @@ void CMMCore::initializeAllDevices() throw (CMMError)
 void CMMCore::initializeAllDevicesSerial() throw (CMMError)
 {
    std::vector<std::string> devices = deviceManager_->GetDeviceList();
-   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
+   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices (serially)";
 
    for (size_t i = 0; i < devices.size(); i++)
    {
@@ -909,7 +933,7 @@ void CMMCore::initializeAllDevicesSerial() throw (CMMError)
 void CMMCore::initializeAllDevicesParallel() throw (CMMError)
 {
    std::vector<std::string> devices = deviceManager_->GetDeviceList();
-   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices";
+   LOG_INFO(coreLogger_) << "Will initialize " << devices.size() << " devices (in parallel)";
    
    std::map<std::shared_ptr<LoadedDeviceAdapter>, std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>>> moduleMap;
    std::vector<std::shared_ptr<DeviceInstance>> ports;
@@ -957,48 +981,34 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
 
    // second round, spin up threads to initialize non-port devices, one thread per module
    std::vector<std::future<int>> futures;
-   std::map<std::shared_ptr<LoadedDeviceAdapter>, std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>>>::iterator it;
-   for (it = moduleMap.begin(); it != moduleMap.end(); it++)
-   {
-      auto f = std::async(std::launch::async, &CMMCore::initializeVectorOfDevices, this, it->second);
+   for (auto& moduleDevices : moduleMap) {
+      auto f = std::async(std::launch::async, &CMMCore::initializeVectorOfDevices, this, moduleDevices.second);
       futures.push_back(std::move(f));
    }
-   for (int i = 0; i < futures.size(); i++) {
-      // Note: we could do a 'f.wait_for(std::chrono::seconds(20)' to wait up to 20 seconds before giving up
-      // which would avoid hanging with devices that hang in their initialize function
-      try
-      {
-         futures[i].get();
-      }
-      catch (...)
-      {
-         std::exception_ptr pex = std::current_exception();
-         // The std::future returned by std::async is special and its destructor blocks until the future completes.
-         // This is okay if there are 0 or 1 errors total(the successful initializations run to completion and the exception is propagated).
-         // When there are 2 or more errors, however, the second exception would be thrown in the destructor of the future, 
-         // and throwing anything in a destructor is very bad(might terminate by default).
-         for (int j = i + 1; j < futures.size(); j++)
-         {
-            try
-            {
-               futures[j].get();
-            }
-            catch (std::exception exj) {
-               // ignore these exceptions;
-            }
+
+   // Make sure we wait for all futures even if one or more fails, so that we
+   // handle all exceptions. Otherwise futures return by std::async may try to
+   // throw from their destructor, which will call std::terminate().
+   std::exception_ptr pex;
+   for (auto& fut : futures) {
+      try {
+         fut.get();
+      } catch (const std::exception&) {
+         if (pex) {
+            // Ignore second and subsequent exceptions
+         } else {
+            pex = std::current_exception();
          }
-         // Rethrow the first exception
-         std::rethrow_exception(pex);
       }
+   }
+   if (pex) {
+      std::rethrow_exception(pex);
    }
 
    // assign default roles syncronously
-   for (it = moduleMap.begin(); it != moduleMap.end(); it++)
-   {
-      std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices = it->second;
-      for (int i = 0; i < pDevices.size(); i++)
-      {
-         assignDefaultRole(pDevices[i].first);
+   for (auto& moduleDevices : moduleMap) {
+      for (auto& deviceLabel : moduleDevices.second) {
+         assignDefaultRole(deviceLabel.first);
       }
    }
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
@@ -1014,14 +1024,12 @@ void CMMCore::initializeAllDevicesParallel() throw (CMMError)
  * This helper function is executed by a single thread, allowing initializeAllDevices to operate multi-threaded.
  * All devices are supposed to originate from the same device adapter
  */
-int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> pDevices) {
-   for (int i = 0; i < pDevices.size(); i++) {
-      std::shared_ptr<DeviceInstance> pDevice = pDevices[i].first;
-
-      mm::DeviceModuleLockGuard guard(pDevice);
-      LOG_INFO(coreLogger_) << "Will initialize device " << pDevices[i].second;
-      pDevice->Initialize();
-      LOG_INFO(coreLogger_) << "Did initialize device " << pDevices[i].second;
+int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> devicesLabels) {
+   for (auto& deviceLabel : devicesLabels) {
+      mm::DeviceModuleLockGuard guard(deviceLabel.first);
+      LOG_INFO(coreLogger_) << "Will initialize device " << deviceLabel.second;
+      deviceLabel.first->Initialize();
+      LOG_INFO(coreLogger_) << "Did initialize device " << deviceLabel.second;
    }
    return DEVICE_OK;
 }
@@ -2543,6 +2551,10 @@ void CMMCore::snapImage() throw (CMMError)
             }
             waitForDevice(shutter);
          }
+         if (externalCallback_)
+         {
+            externalCallback_->onImageSnapped(camera->GetLabel().c_str());
+         }
 		}catch( CMMError& e){
 			throw e;
 		}
@@ -2856,6 +2868,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
    LOG_DEBUG(coreLogger_) << "Did start sequence acquisition from default camera";
+   // onSequenceAcquisitionStarted will be called by CoreCallback::PrepareForAcq
 }
 
 /**
@@ -2889,6 +2902,7 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
 
    LOG_DEBUG(coreLogger_) <<
       "Did start sequence acquisition from camera " << label;
+   // onSequenceAcquisitionStarted will be called by CoreCallback::PrepareForAcq
 }
 
 /**
@@ -2958,6 +2972,7 @@ void CMMCore::stopSequenceAcquisition(const char* label) throw (CMMError)
    }
 
    LOG_DEBUG(coreLogger_) << "Did stop sequence acquisition from camera " << label;
+   // onSequenceAcquisitionStopped will be called by CoreCallback::AcqFinished
 }
 
 /**
@@ -2994,6 +3009,7 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) throw (CMMEr
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
    LOG_DEBUG(coreLogger_) << "Did start continuous sequence acquisition from current camera";
+   // onSequenceAcquisitionStarted will be called by CoreCallback::PrepareForAcq
 }
 
 /**
@@ -3020,6 +3036,7 @@ void CMMCore::stopSequenceAcquisition() throw (CMMError)
    }
 
    LOG_DEBUG(coreLogger_) << "Did stop sequence acquisition from current camera";
+   // onSequenceAcquisitionStopped will be called by CoreCallback::AcqFinished
 }
 
 /**
@@ -3397,8 +3414,8 @@ void CMMCore::setAutoFocusDevice(const char* autofocusLabel) throw (CMMError)
       currentAutofocusDevice_.reset();
       LOG_INFO(coreLogger_) << "Default autofocus unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newAutofocusLabel = getAutoFocusDevice();
+   properties_->Set(MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str()));
@@ -3464,8 +3481,8 @@ void CMMCore::setImageProcessorDevice(const char* procLabel) throw (CMMError)
       currentImageProcessor_.reset();
       LOG_INFO(coreLogger_) << "Default image processor unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newProcLabel = getImageProcessorDevice();
+   properties_->Set(MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str()));
@@ -3488,8 +3505,8 @@ void CMMCore::setSLMDevice(const char* slmLabel) throw (CMMError)
       currentSLMDevice_.reset();
       LOG_INFO(coreLogger_) << "Default SLM unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newSLMLabel = getSLMDevice();
+   properties_->Set(MM::g_Keyword_CoreSLM, newSLMLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreSLM, newSLMLabel.c_str()));
@@ -3513,8 +3530,8 @@ void CMMCore::setGalvoDevice(const char* galvoLabel) throw (CMMError)
       currentGalvoDevice_.reset();
       LOG_INFO(coreLogger_) << "Default galvo unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newGalvoLabel = getGalvoDevice();
+   properties_->Set(MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str()));
@@ -3602,8 +3619,8 @@ void CMMCore::setShutterDevice(const char* shutterLabel) throw (CMMError)
       currentShutterDevice_.reset();
       LOG_INFO(coreLogger_) << "Default shutter unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newShutterLabel = getShutterDevice();
+   properties_->Set(MM::g_Keyword_CoreShutter, newShutterLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreShutter, newShutterLabel.c_str()));
@@ -3627,8 +3644,8 @@ void CMMCore::setFocusDevice(const char* focusLabel) throw (CMMError)
       currentFocusDevice_.reset();
       LOG_INFO(coreLogger_) << "Default stage unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newFocusLabel = getFocusDevice();
+   properties_->Set(MM::g_Keyword_CoreFocus, newFocusLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreFocus, newFocusLabel.c_str()));
@@ -3652,6 +3669,7 @@ void CMMCore::setXYStageDevice(const char* xyDeviceLabel) throw (CMMError)
       LOG_INFO(coreLogger_) << "Default xy stage unset";
    }
    std::string newXYStageLabel = getXYStageDevice();
+   properties_->Set(MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str()));
@@ -3689,8 +3707,8 @@ void CMMCore::setCameraDevice(const char* cameraLabel) throw (CMMError)
       currentCameraDevice_.reset();
       LOG_INFO(coreLogger_) << "Default camera unset";
    }
-   properties_->Refresh(); // TODO: more efficient
    std::string newCameraLabel = getCameraDevice();
+   properties_->Set(MM::g_Keyword_CoreCamera, newCameraLabel.c_str());
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, newCameraLabel.c_str()));
@@ -4124,8 +4142,9 @@ void CMMCore::loadPropertySequence(const char* label, const char* propName, std:
 MM::PropertyType CMMCore::getPropertyType(const char* label, const char* propName) throw (CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      // TODO: return the proper core type
-      return MM::Undef;
+   {
+      return properties_->GetPropertyType(propName);
+   }
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -4931,9 +4950,6 @@ void CMMCore::deleteConfigGroup(const char* groupName) throw (CMMError)
       throw CMMError(ToQuotedString(groupName) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
             MMERR_NoConfigGroup);
 
-   if (0 == channelGroup_.compare(groupName))
-      setChannelGroup("");
-
    updateAllowedChannelGroups();
 
    LOG_DEBUG(coreLogger_) << "Deleted config group " << groupName;
@@ -4972,7 +4988,14 @@ void CMMCore::defineConfig(const char* groupName, const char* configName) throw 
    CheckConfigGroupName(groupName);
    CheckConfigPresetName(configName);
 
+   bool groupExisted = configGroups_->isDefined(groupName);
+
    configGroups_->Define(groupName, configName);
+
+   if (!groupExisted)
+   {
+      updateAllowedChannelGroups();
+   }
 
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": added preset " << configName;
@@ -4999,7 +5022,14 @@ void CMMCore::defineConfig(const char* groupName, const char* configName, const 
    CheckPropertyName(propName);
    CheckPropertyValue(value);
 
+   bool groupExisted = configGroups_->isDefined(groupName);
+
    configGroups_->Define(groupName, configName, deviceLabel, propName, value);
+
+   if (!groupExisted)
+   {
+      updateAllowedChannelGroups();
+   }
 
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": preset " << configName << ": added setting " <<
@@ -5112,13 +5142,88 @@ void CMMCore::setPixelSizeAffine(const char* resolutionID, std::vector<double> a
       std::fixed << std::setprecision(5) << affine[5];
 }
 
+/**
+ * Sets the angle between the camera's x axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in x caused by a translation in z, i.e. dx / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @param resolutionID   The pixel size configuration group name
+ * @param dxdz       Angle of the Z-stage axis with the camera axis (dimensionless)
+ */
+void CMMCore::setPixelSizedxdz(const char* resolutionID, double dxdz)  throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   psc->setdxdz(dxdz);
+
+   LOG_DEBUG(coreLogger_) << "Pixel size config: "
+      "preset " << resolutionID << ": set dxdz to " <<
+      std::fixed << std::setprecision(5) << dxdz;
+}
+
+/**
+ * Sets the angle between the camera's y axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in y caused by a translation in z, i.e. dy / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @param resolutionID   The pixel size configuration group name
+ * @param dydz       Angle of the Z-stage axis with the camera axis (dimensionless)
+ */
+void CMMCore::setPixelSizedydz(const char* resolutionID, double dydz)  throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   psc->setdydz(dydz);
+
+   LOG_DEBUG(coreLogger_) << "Pixel size config: "
+      "preset " << resolutionID << ": set dydz to " <<
+      std::fixed << std::setprecision(5) << dydz;
+}
+
+/**
+ * Sets the opimal Z stepSize (in microns).
+ * There is no magic here, this number is provided by the person configuring the
+ * microscope, to be used by the person using the microscope.
+ *
+ * @param resolutionID   The pixel size configuration group name
+ * @param optimalZ       Optimal z step in microns
+ */
+void CMMCore::setPixelSizeOptimalZUm(const char* resolutionID, double optimalZ)  throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   psc->setOptimalZUm(optimalZ);
+
+   LOG_DEBUG(coreLogger_) << "Pixel size config: "
+      "preset " << resolutionID << ": set optimalZ to " <<
+      std::fixed << std::setprecision(5) << optimalZ << " um.";
+}
 
 /**
  * Applies a Pixel Size Configuration. The command will fail if the
  * configuration was not previously defined.
  *
- * @param groupName   the configuration group name
- * @param configName  the configuration preset name
+ * @param resolutionID   the pixel size configuration group name
  */
 void CMMCore::setPixelSizeConfig(const char* resolutionID) throw (CMMError)
 {
@@ -5621,31 +5726,11 @@ std::vector<double> CMMCore::getPixelSizeAffine(bool cached) throw (CMMError)
 
       double factor = binning / getMagnificationFactor();
 
-      if (factor != 1.0)
-      {
-         // create a scaling matrix
-         double scaleM[3][3]= { {factor, 0.0, 0.0}, {0.0, factor, 0.0}, {0.0, 0.0, 1.0} };
-         // and multiply scaling matrix with the affine transform
-         double input[3][3] = { {af.at(0), af.at(1), af.at(2)}, {af.at(3), af.at(4), af.at(5)}, {0.0, 0.0, 1.0} };
-         double output[3][3];
-         for (int r = 0; r < 3; r++)
-         {
-            for (int c = 0; c < 3; c++)
-            {
-               output[r][c] = 0.0;
-               for (int i = 0; i < 3; i++)
-               {
-                  output[r][c] = output[r][c] + scaleM[r][i] * input[i][c];
-               }
-            }
+      if (factor != 1.0) {
+         for (double& v : af) {
+            v *= factor;
          }
-         // copy result back into affine transform
-         for (int i = 0; i < 3; i++)
-            af.at(i) = output[0][i];
-         for (int i = 0; i < 3; i++)
-            af.at(i + 3) = output[1][i];
       }
-
       return af;
    }
    else
@@ -5701,6 +5786,208 @@ double CMMCore::getMagnificationFactor() const
       }
    }
    return magnification;
+}
+
+/**
+ * Returns the angle between the camera's x axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in x caused by a translation in z, i.e. dx / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @return        angle (dx/dz) of the Z-stage axis with the camera axis (dimensionless)
+ */
+double CMMCore::getPixelSizedxdz() throw (CMMError)
+{
+	 return getPixelSizedxdz(false);
+}
+
+/**
+ * Returns the angle between the camera's x axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in x caused by a translation in z, i.e. dx / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @cached        use the System state cache when true, otherwise checks
+ *                the hardware.
+ * @return        angle (dx/dz) of the Z-stage axis with the camera axis (dimensionless)
+ */
+double CMMCore::getPixelSizedxdz(bool cached) throw (CMMError)
+{
+   std::string resolutionID;
+   resolutionID = getCurrentPixelSizeConfig(cached);
+
+   if (resolutionID.length() > 0)
+   {
+      // check which one matches the current state
+      PixelSizeConfiguration* pCfg = pixelSizeGroup_->Find(resolutionID.c_str());
+      if (!pCfg)
+         return 0.0;
+
+      return pCfg->getdxdz();
+   }
+   else
+   {
+      throw CMMError("No pixel size configuration found", MMERR_DEVICE_GENERIC);
+   }
+}
+
+/**
+ * Returns the angle between the camera's x axis and the axis (direction) 
+ * of the z drive for the given pixel size configuration.  
+ * This angle is dimensionless (i.e. the ratio of the 
+ * translation in x caused by a translation in z, i.e. dx / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @param resolutionID   The pixel size configuration group name
+ * @return        Angle (dx/dz) of the Z-stage axis with the camera axis (dimensionless)
+ */
+double CMMCore::getPixelSizedxdz(const char* resolutionID) throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   return psc->getdxdz();
+}
+
+/**
+ * Returns the angle between the camera's y axis and the axis (direction) 
+ * of the z drive.  This angle is dimensionless (i.e. the ratio of the 
+ * translation in y caused by a translation in z, i.e. dy / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @return   angle (dy/dz) of the Z-stage axis with the camera axis (dimensionless)
+ */
+double CMMCore::getPixelSizedydz() throw (CMMError)
+{
+	 return getPixelSizedydz(false);
+}
+
+/**
+ * Returns the angle between the camera's y axis and the axis (direction) 
+ * of the z drive optionally using the System cache.  This angle is 
+ * dimensionless (i.e. the ratio of the translation in y caused by 
+ * a translation in z, i.e. dy / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @cached   Uses System state cache to find active pixel size config when true
+ * @return   angle (dy/dz) of the Z-stage axis with the camera axis (dimensionless)
+ */
+double CMMCore::getPixelSizedydz(bool cached) throw (CMMError)
+{
+   std::string resolutionID;
+   resolutionID = getCurrentPixelSizeConfig(cached);
+
+   if (resolutionID.length() > 0)
+   {
+      // check which one matches the current state
+      PixelSizeConfiguration* pCfg = pixelSizeGroup_->Find(resolutionID.c_str());
+      if (!pCfg)
+         return 0.0;
+
+      return pCfg->getdydz();
+   }
+   else
+   {
+      throw CMMError("No pixel size configuration found", MMERR_DEVICE_GENERIC);
+   }
+}
+
+/**
+ * Returns the angle between the camera's y axis and the axis (direction) 
+ * of the z drive for the given pixel size configuration.  
+ * This angle is dimensionless (i.e. the ratio of the 
+ * translation in y caused by a translation in z, i.e. dy / dz).  
+ * This angle can be different for different z drives (if there 
+ * are multiple Z drives in the system, please add the Core-Focus device
+ * to the pixel size configuration).  
+ * See: https://github.com/micro-manager/micro-manager/issues/1984
+ *
+ * @resolutionID   Name of Pixel Size configuration for this dy /dz angle
+ * @return   angle (dy/dz) of the Z-stage axis with the camera axis (dimensionless)
+ */
+double CMMCore::getPixelSizedydz(const char* resolutionID) throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   return psc->getdydz();
+}
+
+/**
+ * Returns the optimal z step size in um
+ * There is no magic to this number, but lets the system configuration
+ * communicate to the end user what the optimal Z step size is for this 
+ * pixel size configuration
+ */
+double CMMCore::getPixelSizeOptimalZUm() throw (CMMError)
+{
+	 return getPixelSizeOptimalZUm(false);
+}
+
+/**
+ * Returns the optimal z step size in um, optionally using cached pixel configuration
+ * There is no magic to this number, but lets the system configuration
+ * communicate to the end user what the optimal Z step size is for this 
+ * pixel size configuration
+ *
+ * @cached   Uses System state cache to find active pixel size config when true
+ */
+double CMMCore::getPixelSizeOptimalZUm(bool cached) throw (CMMError)
+{
+   std::string resolutionID;
+   resolutionID = getCurrentPixelSizeConfig(cached);
+
+   if (resolutionID.length() > 0)
+   {
+      // check which one matches the current state
+      PixelSizeConfiguration* pCfg = pixelSizeGroup_->Find(resolutionID.c_str());
+      if (!pCfg)
+         return 0.0;
+
+      return pCfg->getOptimalZUm();
+   }
+   else
+   {
+      throw CMMError("No pixel size configuration found", MMERR_DEVICE_GENERIC);
+   }
+}
+
+/**
+ * Returns the optimal z step size in um, optionally using cached pixel configuration
+ * There is no magic to this number, but lets the system configuration
+ * communicate to the end user what the optimal Z step size is for this 
+ * pixel size configuration
+ */
+double CMMCore::getPixelSizeOptimalZUm(const char* resolutionID) throw (CMMError)
+{
+   CheckConfigPresetName(resolutionID);
+
+   PixelSizeConfiguration* psc = pixelSizeGroup_->Find(resolutionID);
+   if (psc == 0)
+      throw CMMError(ToQuotedString(resolutionID) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
+            MMERR_NoConfigGroup);
+   return psc->getOptimalZUm();
 }
 
 /**
@@ -6367,6 +6654,350 @@ std::string CMMCore::getGalvoChannel(const char* deviceLabel) throw (CMMError)
    return pGalvo->GetChannel();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Pressure Pump methods
+///////////////////////////////////////////////////////////////////////////////
+
+
+/**
+* Stops the pressure pump
+*/
+void CMMCore::pressurePumpStop(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->Stop();
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Calibrates the pump
+*/
+void CMMCore::pressurePumpCalibrate(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->Calibrate();
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Returns boolean whether the pump is operational before calibration
+*/
+bool CMMCore::pressurePumpRequiresCalibration(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    return pPump->RequiresCalibration();
+}
+
+/**
+* Gets the pressure of the pump in kPa
+*/
+double CMMCore::getPumpPressureKPa(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    double pressurekPa = 0;
+    int ret = pPump->GetPressureKPa(pressurekPa);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+    return pressurekPa;
+}
+
+/**
+* Sets the pressure of the pump in kPa
+*/
+void CMMCore::setPumpPressureKPa(const char* deviceLabel, double pressurekPa) throw (CMMError)
+{
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->SetPressureKPa(pressurekPa);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Stops the volumetric pump
+*/
+void CMMCore::volumetricPumpStop(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->Stop();
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Homes the pump
+*/
+void CMMCore::volumetricPumpHome(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->Home();
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+bool CMMCore::volumetricPumpRequiresHoming(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    return pPump->RequiresHoming();
+}
+
+/**
+* Sets whether the pump direction needs to be inverted
+*/
+void CMMCore::invertPumpDirection(const char* deviceLabel, bool invert) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->InvertDirection(invert);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Gets whether the pump direction needs to be inverted
+*/
+bool CMMCore::isPumpDirectionInverted(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    bool invert = false;
+    int ret = pPump->IsDirectionInverted(invert);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+    return invert;
+}
+
+/**
+* Sets the volume of fluid in the pump in uL. Note it does not withdraw upto
+* this amount. It is merely to inform MM of the volume in a prefilled pump.
+*/
+void CMMCore::setPumpVolume(const char* deviceLabel, double volUl) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->SetVolumeUl(volUl);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Get the fluid volume in the pump in uL
+*/
+double CMMCore::getPumpVolume(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    double volUl = 0;
+    int ret = pPump->GetVolumeUl(volUl);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+    return volUl;
+}
+
+/**
+* Sets the max volume of the pump in uL
+*/
+void CMMCore::setPumpMaxVolume(const char* deviceLabel, double volUl) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->SetMaxVolumeUl(volUl);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Gets the max volume of the pump in uL
+*/
+double CMMCore::getPumpMaxVolume(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    double volUl = 0;
+    int ret = pPump->GetMaxVolumeUl(volUl);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+    return volUl;
+}
+
+/**
+* Sets the flowrate of the pump in uL per second
+*/
+void CMMCore::setPumpFlowrate(const char* deviceLabel, double UlperSec) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->SetFlowrateUlPerSecond(UlperSec);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Gets the flowrate of the pump in uL per second
+*/
+double CMMCore::getPumpFlowrate(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    double UlperSec = 0;
+    int ret = pPump->GetFlowrateUlPerSecond(UlperSec);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+    return UlperSec;
+}
+
+/**
+* Start dispensing at the set flowrate until syringe is empty, or manually
+* stopped (whichever occurs first).
+*/
+void CMMCore::pumpStart(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->Start();
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Dispenses for the provided duration (in seconds) at the set flowrate
+*/
+void CMMCore::pumpDispenseDurationSeconds(const char* deviceLabel, double seconds) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->DispenseDurationSeconds(seconds);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+/**
+* Dispenses the provided volume (in uL) at the set flowrate
+*/
+void CMMCore::pumpDispenseVolumeUl(const char* deviceLabel, double microLiter) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    int ret = pPump->DispenseVolumeUl(microLiter);
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
 /* SYSTEM STATE */
 
 
@@ -6472,7 +7103,6 @@ void CMMCore::loadSystemState(const char* fileName) throw (CMMError)
          }
       }
    }
-   updateAllowedChannelGroups();
 }
 
 
@@ -6604,6 +7234,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
          }
       }
    }
+   os << '\n';
 
    // save configuration groups
    os << "# Group configurations\n";
@@ -6627,7 +7258,40 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
          }
       }
    }
+   os << '\n';
 
+   // save Pixel Size configurations
+   os << "# Pixel Size configurations\n";
+   std::vector<std::string> pixelSizeGroups = getAvailablePixelSizeConfigs();
+   for (size_t i = 0; i < pixelSizeGroups.size(); i++)
+   {
+      Configuration psc = getPixelSizeConfigData(pixelSizeGroups[i].c_str());
+         for (size_t k=0; k< psc.size(); k++)
+         {
+            PropertySetting s = psc.getSetting(k);
+            os << MM::g_CFGCommand_ConfigPixelSize << ',' << pixelSizeGroups[i] << ','
+               << s.getDeviceLabel() << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << '\n';
+         }
+         os << MM::g_CFGCommand_PixelSize_um << ',' << pixelSizeGroups[i].c_str() << ',' << getPixelSizeUmByID(pixelSizeGroups[i].c_str()) << '\n';
+         std::vector<double> affines = getPixelSizeAffineByID(pixelSizeGroups[i].c_str());
+         if (affines.size() == 6)
+         {
+            os << MM::g_CFGCommand_PixelSizeAffine << ',' << pixelSizeGroups[i].c_str() << ',';
+            for (int l = 0; l < 5; l++)
+            {
+               os << affines[l] << ',';
+            }
+            os << affines[5] << '\n';
+         }
+         os << MM::g_CFGCommand_PixelSizedxdz << ',' << pixelSizeGroups[i].c_str() << ',' 
+            << getPixelSizedxdz(pixelSizeGroups[i].c_str()) << '\n';
+         os << MM::g_CFGCommand_PixelSizedydz << ',' << pixelSizeGroups[i].c_str() << ',' 
+            << getPixelSizedydz(pixelSizeGroups[i].c_str()) << '\n';
+         os << MM::g_CFGCommand_PixelSizeOptimalZUm << ',' << pixelSizeGroups[i].c_str() << ',' 
+            << getPixelSizeOptimalZUm(pixelSizeGroups[i].c_str()) << '\n';
+   }
+   os << '\n';
+    
    // save device roles
    os << "# Roles\n";
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
@@ -6666,15 +7330,20 @@ void CMMCore::saveSystemConfiguration(const char* fileName) throw (CMMError)
  * The remaining fields in the line will be used for corresponding command parameters.
  * The number of parameters depends on the actual command used.
  *
+ * This function is not thread-safe.
  */
 void CMMCore::loadSystemConfiguration(const char* fileName) throw (CMMError)
 {
    try
    {
+      isLoadingSystemConfiguration_ = true;
       loadSystemConfigurationImpl(fileName);
+      isLoadingSystemConfiguration_ = false;
    }
    catch (const CMMError&)
    {
+      isLoadingSystemConfiguration_ = false;
+
       // Unload all devices so as not to leave loaded but uninitialized devices
       // (which are prone to cause a crash when accessed) hanging around.
       LOG_INFO(coreLogger_) <<
@@ -6682,8 +7351,7 @@ void CMMCore::loadSystemConfiguration(const char* fileName) throw (CMMError)
 
       try
       {
-         // XXX Ideally, we would try to unload all devices, skipping over any
-         // errors from Shutdown().
+         // Also emits onSystemConfigurationLoaded to indicate config changed:
          unloadAllDevices();
       }
       catch (const CMMError& err)
@@ -6697,6 +7365,11 @@ void CMMCore::loadSystemConfiguration(const char* fileName) throw (CMMError)
          "Now rethrowing original error from system configuration loading";
       throw;
    }
+
+   if (externalCallback_)
+   {
+      externalCallback_->onSystemConfigurationLoaded();
+   }
 }
 
 
@@ -6704,6 +7377,8 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
 {
    if (!fileName)
       throw CMMError("Null filename");
+
+   LOG_INFO(coreLogger_) << "Loading system configuration from:" << ToQuotedString(fileName);
 
    std::ifstream is;
    is.open(fileName, std::ios_base::in);
@@ -6874,6 +7549,33 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
                         ToQuotedString(line) + ")",
                         MMERR_InvalidCFGEntry);
             }
+            else if (tokens[0].compare(MM::g_CFGCommand_PixelSizedxdz) == 0)
+            {
+               if (tokens.size() == 3)
+                  setPixelSizedxdz(tokens[1].c_str(), atof(tokens[2].c_str()));
+               else
+                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                        ToQuotedString(line) + ")",
+                        MMERR_InvalidCFGEntry);
+            }
+            else if (tokens[0].compare(MM::g_CFGCommand_PixelSizedydz) == 0)
+            {
+               if (tokens.size() == 3)
+                  setPixelSizedydz(tokens[1].c_str(), atof(tokens[2].c_str()));
+               else
+                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                        ToQuotedString(line) + ")",
+                        MMERR_InvalidCFGEntry);
+            }
+            else if (tokens[0].compare(MM::g_CFGCommand_PixelSizeOptimalZUm) == 0)
+            {
+               if (tokens.size() == 3)
+                  setPixelSizeOptimalZUm(tokens[1].c_str(), atof(tokens[2].c_str()));
+               else
+                  throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
+                        ToQuotedString(line) + ")",
+                        MMERR_InvalidCFGEntry);
+            }
             else if(tokens[0].compare(MM::g_CFGCommand_Equipment) == 0)
             {
               // Property blocks have been removed
@@ -6903,8 +7605,6 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
          }
          catch (CMMError& err)
          {
-            if (externalCallback_)
-               externalCallback_->onSystemConfigurationLoaded();
             std::ostringstream errorText;
             errorText << "Line " << lineCount << ": " << line << '\n';
             errorText << err.getFullMsg() << "\n\n";
@@ -6912,8 +7612,6 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
          }
       }
    }
-
-   updateAllowedChannelGroups();
 
    // file parsing finished, try to set startup configuration
    if (isConfigDefined(MM::g_CFGGroup_System, MM::g_CFGGroup_System_Startup))
@@ -6928,17 +7626,20 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) throw (CMMError)
 
    waitForSystem();
    updateSystemStateCache();
-
-   if (externalCallback_)
-   {
-      externalCallback_->onSystemConfigurationLoaded();
-   }
 }
 
 
 /**
  * Register a callback (listener class).
- * MMCore will send notifications on internal events using this interface
+ *
+ * MMCore will send notifications on internal events using this interface.
+ *
+ * Pass nullptr to unregister.
+ *
+ * The caller is responsible for ensuring that the object pointed to by \p cb
+ * remains valid until it is unregistered.
+ *
+ * This function is not thread safe.
  */
 void CMMCore::registerCallback(MMEventCallback* cb)
 {
@@ -7253,13 +7954,13 @@ void CMMCore::CreateCoreProperties()
    properties_ = new CorePropertyCollection(this);
 
    // Initialize
-   CoreProperty propInit("0", false);
+   CoreProperty propInit("0", false, MM::Integer);
    propInit.AddAllowedValue("0");
    propInit.AddAllowedValue("1");
    properties_->Add(MM::g_Keyword_CoreInitialize, propInit);
 
    // Auto shutter
-   CoreProperty propAutoShutter("1", false);
+   CoreProperty propAutoShutter("1", false, MM::Integer);
    propAutoShutter.AddAllowedValue("0");
    propAutoShutter.AddAllowedValue("1");
    properties_->Add(MM::g_Keyword_CoreAutoShutter, propAutoShutter);
@@ -7301,7 +8002,7 @@ void CMMCore::CreateCoreProperties()
    properties_->AddAllowedValue(MM::g_Keyword_CoreChannelGroup, "");
 
    // Time after which we give up on checking the Busy flag status
-   CoreProperty propBusyTimeoutMs;
+   CoreProperty propBusyTimeoutMs("5000", false, MM::Integer);
    properties_->Add(MM::g_Keyword_CoreTimeoutMs, propBusyTimeoutMs);
 
    properties_->Refresh();
@@ -7533,7 +8234,6 @@ void CMMCore::updateAllowedChannelGroups()
       setChannelGroup("");
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Automatic device and serial port discovery methods
 //
@@ -7709,4 +8409,25 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
       description = pHub->GetInstalledPeripheralDescription(deviceLabel);
    }
    return description.empty() ? "N/A" : description;
+}
+
+/**
+ * \brief Testing only: load a mock device adapter.
+ * 
+ * This function is designed for unit testing of MMCore itself, and its
+ * interface is subject to change. It is also not designed for language
+ * bindings (Java, Python) in mind (at least for now).
+ * 
+ * Do not use this in production code.
+ * 
+ * The caller is responsible for keeping \p implementation valid until this
+ * Core is destroyed (or until unloadLibrary(name) is called, but that is
+ * not recommended.)
+ */
+void CMMCore::loadMockDeviceAdapter(const char* name,
+      MockDeviceAdapter* implementation) throw (CMMError)
+{
+   if (!name)
+      throw CMMError("Null device adapter name");
+   pluginManager_->LoadMockAdapter(name, implementation);
 }

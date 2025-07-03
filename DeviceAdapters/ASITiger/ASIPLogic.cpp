@@ -239,6 +239,9 @@ int CPLogic::Initialize()
       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode58, 58);
       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode59, 59);
    }
+   if (FirmwareVersionAtLeast(3.51)) {
+       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode60, 60);
+   }
    UpdateProperty(g_SetCardPresetPropertyName);
 
 
@@ -255,7 +258,6 @@ int CPLogic::Initialize()
    CreateProperty(g_RefreshPropValsPropertyName, g_NoState, MM::String, false, pAct);
    AddAllowedValue(g_RefreshPropValsPropertyName, g_NoState);
    AddAllowedValue(g_RefreshPropValsPropertyName, g_YesState);
-//   AddAllowedValue(g_RefreshPropValsPropertyName, g_OneTimeState);
 
    // save settings to controller if requested
    pAct = new CPropertyAction (this, &CPLogic::OnSaveCardSettings);
@@ -289,6 +291,9 @@ int CPLogic::Initialize()
    if (FirmwareVersionAtLeast(3.50)) {
       AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode16, 16);
       AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode17, 17);
+   }
+   if (FirmwareVersionAtLeast(3.51)) {
+      AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode18, 18);
    }
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode0, 100);
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode1, 101);
@@ -459,25 +464,25 @@ int CPLogic::OnPLogicMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    } else if (eAct == MM::AfterSet) {
        std::string tmpstr;
        pProp->Get(tmpstr);
-       if (tmpstr.compare(g_PLogicModediSPIMShutter) == 0)
+       if (tmpstr == g_PLogicModediSPIMShutter)
        {
            useAsdiSPIMShutter_ = true;
            useAs4ChShutter_ = true;
            useAs7ChShutter_ = false;
        }
-       else if (tmpstr.compare(g_PLogicMode4ChShutter) == 0)
+       else if (tmpstr == g_PLogicMode4ChShutter)
        {
            useAsdiSPIMShutter_ = false;
            useAs4ChShutter_ = true;
            useAs7ChShutter_ = false;
        }
-       else if (tmpstr.compare(g_PLogicMode7ChShutter) == 0)
+       else if (tmpstr == g_PLogicMode7ChShutter)
        {
            useAsdiSPIMShutter_ = false;
            useAs4ChShutter_ = false;
            useAs7ChShutter_ = true;
        }
-       else if (tmpstr.compare(g_PLogicMode7ChTTLShutter) == 0)
+       else if (tmpstr == g_PLogicMode7ChTTLShutter)
        {
            useAsdiSPIMShutter_ = true;
            useAs4ChShutter_ = false;
@@ -647,15 +652,15 @@ int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::AfterSet) {
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
       RETURN_ON_MM_ERROR (hub_->QueryCommandVerify(command.str(), ":A", (long)200));  // note 200ms delay added
       pProp->Set(g_SaveSettingsDone);
@@ -665,20 +670,13 @@ int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-//      else if (tmpstr.compare(g_OneTimeState))
-//      {
-//         SetProperty(g_RefreshPropValsPropertyName, g_YesState);
-//         SetProperty(g_RefreshPropValsPropertyName, g_NoState);
-//      }
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 int CPLogic::RefreshEditCellPropertyValues()
@@ -783,7 +781,7 @@ int CPLogic::OnEditCellUpdates(MM::PropertyBase* pProp, MM::ActionType eAct)
    std::string tmpstr;
    if (eAct == MM::AfterSet) {
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          editCellUpdates_ = true;
       else
          editCellUpdates_ = false;
@@ -821,7 +819,7 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       std::string tmpstr;
       pProp->Get(tmpstr);
-      if ((tmpstr.compare(g_YesState) == 0) && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
+      if (tmpstr == g_YesState && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
       {
          CPropertyActionEx* pActEx;
          char propName[MM::MaxStrLength];
@@ -1009,6 +1007,7 @@ int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index
          case 15:success = pProp->Set(g_CellTypeCode15); break;
          case 16:success = pProp->Set(g_CellTypeCode16); break;
          case 17:success = pProp->Set(g_CellTypeCode17); break;
+         case 18:success = pProp->Set(g_CellTypeCode18); break;
          default: break;
          }
       }
@@ -1198,7 +1197,7 @@ int CPLogic::OnClearAllCellStates(MM::PropertyBase* pProp, MM::ActionType eAct)
    else  if (eAct == MM::AfterSet) {
       std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          command << "! " << axisLetter_;
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );

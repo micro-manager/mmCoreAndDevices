@@ -282,23 +282,23 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
       auto now = std::chrono::system_clock::now();
       md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
 
-      md.PutImageTag("Width",width);
-      md.PutImageTag("Height",height);
+      md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
+      md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
       if (byteDepth == 1)
-         md.PutImageTag("PixelType","GRAY8");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
       else if (byteDepth == 2)
-         md.PutImageTag("PixelType","GRAY16");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
       else if (byteDepth == 4)
       {
          if (nComponents == 1)
-            md.PutImageTag("PixelType","GRAY32");
+            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
          else
-            md.PutImageTag("PixelType","RGB32");
+            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
       }
       else if (byteDepth == 8)
-         md.PutImageTag("PixelType","RGB64");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
       else
-         md.PutImageTag("PixelType","Unknown"); 
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
 
       pImg->SetMetadata(md);
       //pImg->SetPixels(pixArray + i * singleChannelSize);

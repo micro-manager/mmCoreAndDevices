@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h
 //
 
-#ifndef _ASIBase_H_
-#define _ASIBase_H_
+#ifndef ASIBASE_H
+#define ASIBASE_H
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -125,4 +125,4 @@ protected:
    }
 };
 
-#endif // _ASIBase_H_
+#endif // ASIBASE_H

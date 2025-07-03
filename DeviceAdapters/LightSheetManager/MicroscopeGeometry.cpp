@@ -7,41 +7,34 @@
 
 #include "MicroscopeGeometry.h"
 
-MicroscopeGeometry::MicroscopeGeometry()
-{
+MicroscopeGeometry::MicroscopeGeometry() {
     CreateDeviceMap();
     CreateGeometryTypes();
 }
 
-void MicroscopeGeometry::ClearDeviceMap()
-{
+void MicroscopeGeometry::ClearDeviceMap() {
     deviceMap_.clear();
     geometryTypes_.clear();
 }
 
-void MicroscopeGeometry::CreateGeometryTypes()
-{
-    for (const auto& device : deviceMap_)
-    {
+void MicroscopeGeometry::CreateGeometryTypes() {
+    for (const auto& device : deviceMap_) {
         geometryTypes_.push_back(device.first);
     }
 }
 
 // The return value is a reference so that it can be used in SetAllowedValues
-std::vector<std::string>& MicroscopeGeometry::GetGeometryTypes()
-{
+std::vector<std::string>& MicroscopeGeometry::GetGeometryTypes() {
     return geometryTypes_;
 }
 
-std::map<std::string, MM::DeviceType> MicroscopeGeometry::GetDeviceMap(const std::string geometryType)
-{
+std::map<std::string, MM::DeviceType> MicroscopeGeometry::GetDeviceMap(const std::string& geometryType) {
     return deviceMap_.at(geometryType);
 }
 
 // Refer to the header file for detailed instructions on how add 
 // new microscope geometries to the device map.
-void MicroscopeGeometry::CreateDeviceMap()
-{
+void MicroscopeGeometry::CreateDeviceMap() {
     deviceMap_ =
     {
         {
@@ -105,17 +98,6 @@ void MicroscopeGeometry::CreateDeviceMap()
                 {"IllumBeam", MM::GalvoDevice},
                 {"IllumFocus", MM::StageDevice},
                 {"ImagingFocus", MM::StageDevice},
-                {"ImagingCamera", MM::CameraDevice}
-            }
-        },
-        {
-            "OpenSPIM-L",
-            {
-                {"SampleXY", MM::XYStageDevice},
-                {"SampleZ", MM::XYStageDevice},
-                {"SampleRotation", MM::StageDevice},
-                {"TriggerCamera", MM::ShutterDevice},
-                {"TriggerLaser", MM::ShutterDevice},
                 {"ImagingCamera", MM::CameraDevice}
             }
         },

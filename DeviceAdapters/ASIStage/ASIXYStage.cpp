@@ -8,7 +8,9 @@
 #include "ASIXYStage.h"
 
 XYStage::XYStage() :
-	ASIBase(this, "2H"),
+	ASIBase(this, "2H"), // LX-4000 prefix
+	axisletterX_("X"),
+	axisletterY_("Y"),
 	stepSizeXUm_(0.0),
 	stepSizeYUm_(0.0),
 	maxSpeed_(7.5),
@@ -19,11 +21,18 @@ XYStage::XYStage() :
 	joyStickMirror_(false),
 	nrMoveRepetitions_(0),
 	answerTimeoutMs_(1000),
+	stopSignal_(false),
 	serialOnlySendChanged_(true),
 	manualSerialAnswer_(""),
 	advancedPropsEnabled_(false),
-	axisletterX_("X"),
-	axisletterY_("Y")
+	// init cached properties
+	acceleration_(0),
+	waitCycles_(0),
+	speed_(0),
+	backlash_(0),
+	error_(0),
+	finishError_(0),
+	overShoot_(0)
 {
 	InitializeDefaultErrorMessages();
 
@@ -39,7 +48,6 @@ XYStage::XYStage() :
 	// Port
 	CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnPort);
 	CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
-	stopSignal_ = false;
 
 	CreateProperty("AxisLetterX", axisletterX_.c_str(), MM::String, true);
 	CreateProperty("AxisLetterY", axisletterY_.c_str(), MM::String, true);
@@ -55,14 +63,14 @@ void XYStage::GetName(char* Name) const
 	CDeviceUtils::CopyLimitedString(Name, g_XYStageDeviceName);
 }
 
-bool XYStage::SupportsDeviceDetection(void)
+bool XYStage::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus XYStage::DetectDevice(void)
+MM::DeviceDetectionStatus XYStage::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int XYStage::Initialize()
@@ -72,35 +80,42 @@ int XYStage::Initialize()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
-
 	// check status first (test for communication protocol)
 	int ret = CheckDeviceStatus();
+	if (ret != DEVICE_OK)
+		return ret;
+
+   ret = GetVersion(version_);
+   if (ret != DEVICE_OK)
+       return ret;
+	CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnVersion);
+	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
+
+	// get the firmware version data from cached value
+	versionData_ = ParseVersionString(version_);
+
+	ret = GetCompileDate(compileDate_);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
 	}
-
 	pAct = new CPropertyAction(this, &XYStage::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
-
-	// get the date of the firmware
-	char compile_date[MM::MaxStrLength];
-	if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-	{
-		compileDay_ = ExtractCompileDay(compile_date);
-	}
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
-	if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+	// previously compared against compile date (2010, 1, 1)
+	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
 	{
+		ret = GetBuildName(buildName_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &XYStage::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	// Most ASIStages have the origin in the top right corner, the following reverses direction of the X-axis:
@@ -125,18 +140,24 @@ int XYStage::Initialize()
 	CreateProperty("StepSizeY_um", "0.0", MM::Float, true, pAct);
 
 	// Wait cycles
-	if (hasCommand("WT X?"))
+	if (HasCommand("WT X?"))
 	{
+		ret = GetWaitCycles(waitCycles_);
+		if (ret != DEVICE_OK)
+			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnWait);
-		CreateProperty("Wait_Cycles", "5", MM::Integer, false, pAct);
+		CreateProperty("Wait_Cycles", std::to_string(waitCycles_).c_str(), MM::Integer, false, pAct);
 		// SetPropertyLimits("Wait_Cycles", 0, 255);  // don't artificially restrict range
 	}
 
 	// Speed (sets both x and y)
-	if (hasCommand("S " + axisletterX_ + "?"))
+	if (HasCommand("S " + axisletterX_ + "?"))
 	{
+		ret = GetSpeed(speed_);
+		if (ret != DEVICE_OK)
+			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnSpeed);
-		CreateProperty("Speed-S", "1", MM::Float, false, pAct);
+		CreateProperty("Speed-S", std::to_string(speed_).c_str(), MM::Float, false, pAct);
 		// Maximum Speed that can be set in Speed-S property
 		char max_speed[MM::MaxStrLength];
 		GetMaxSpeed(max_speed);
@@ -144,36 +165,51 @@ int XYStage::Initialize()
 	}
 
 	// Backlash (sets both x and y)
-	if (hasCommand("B " + axisletterX_ + "?"))
+	if (HasCommand("B " + axisletterX_ + "?"))
 	{
+		ret = GetBacklash(backlash_);
+		if (ret != DEVICE_OK)
+			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnBacklash);
-		CreateProperty("Backlash-B", "0", MM::Float, false, pAct);
+		CreateProperty("Backlash-B", std::to_string(backlash_).c_str(), MM::Float, false, pAct);
 	}
 	
 	// Error (sets both x and y)
-	if (hasCommand("E " + axisletterX_ + "?"))
+	if (HasCommand("E " + axisletterX_ + "?"))
 	{
+		ret = GetError(error_);
+		if (ret != DEVICE_OK)
+			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnError);
-		CreateProperty("Error-E(nm)", "0", MM::Float, false, pAct);
+		CreateProperty("Error-E(nm)", std::to_string(error_).c_str(), MM::Float, false, pAct);
 	}
 	
 	// acceleration (sets both x and y)
-	if (hasCommand("AC " + axisletterX_ + "?"))
+	if (HasCommand("AC " + axisletterX_ + "?"))
 	{
+      ret = GetAcceleration(acceleration_);
+      if (ret != DEVICE_OK)
+         return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnAcceleration);
-		CreateProperty("Acceleration-AC(ms)", "0", MM::Integer, false, pAct);
+		CreateProperty("Acceleration-AC(ms)", std::to_string(acceleration_).c_str(), MM::Integer, false, pAct);
 	}
 	
 	// Finish Error (sets both x and y)
-	if (hasCommand("PC " + axisletterX_ + "?"))
+	if (HasCommand("PC " + axisletterX_ + "?"))
 	{
+		ret = GetFinishError(finishError_);
+      if (ret != DEVICE_OK)
+         return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnFinishError);
 		CreateProperty("FinishError-PCROS(nm)", "0", MM::Float, false, pAct);
 	}
 	
 	// OverShoot (sets both x and y)
-	if (hasCommand("OS " + axisletterX_ + "?"))
+	if (HasCommand("OS " + axisletterX_ + "?"))
 	{
+		ret = GetOverShoot(overShoot_);
+      if (ret != DEVICE_OK)
+         return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnOverShoot);
 		CreateProperty("OverShoot(um)", "0", MM::Float, false, pAct);
 	}
@@ -220,7 +256,7 @@ int XYStage::Initialize()
 	AddAllowedValue("EnableAdvancedProperties", "No");
 	AddAllowedValue("EnableAdvancedProperties", "Yes");
 	
-	if (hasCommand("VE " + axisletterX_ + "=0")) {
+	if (HasCommand("VE " + axisletterX_ + "=0")) {
 		char orig_speed[MM::MaxStrLength];
 		ret = GetProperty("Speed-S", orig_speed);
 		double mspeed;
@@ -236,12 +272,10 @@ int XYStage::Initialize()
 		pAct = new CPropertyAction(this, &XYStage::OnVectorX);
 		CreateProperty("VectorMoveX-VE(mm/s)", "0", MM::Float, false, pAct);
 		SetPropertyLimits("VectorMoveX-VE(mm/s)", mspeed * -1, mspeed);
-		UpdateProperty("VectorMoveX-VE(mm/s)");
 
 		pAct = new CPropertyAction(this, &XYStage::OnVectorY);
 		CreateProperty("VectorMoveY-VE(mm/s)", "0", MM::Float, false, pAct);
 		SetPropertyLimits("VectorMoveY-VE(mm/s)", mspeed * -1, mspeed);
-		UpdateProperty("VectorMoveY-VE(mm/s)");
 	}
 	
 	initialized_ = true;
@@ -262,32 +296,15 @@ bool XYStage::Busy()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "/";
+	// semd status command
 	std::string answer;
-
-	// query the device
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("/", answer);
 	if (ret != DEVICE_OK)
 	{
 		return false;
 	}
 
-	if (answer.length() >= 1)
-	{
-		if (answer.substr(0, 1) == "B")
-		{
-			return true;
-		}
-		else if (answer.substr(0, 1) == "N")
-		{
-			return false;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	return false;
+	return !answer.empty() && answer.front() == 'B';
 }
 
 int XYStage::SetPositionSteps(long x, long y)
@@ -296,7 +313,7 @@ int XYStage::SetPositionSteps(long x, long y)
 	ClearPort();
 
 	std::ostringstream command;
-	command << std::fixed << "M " << axisletterX_ << "=" << x / ASISerialUnit_ << " " << axisletterY_ << "=" << y / ASISerialUnit_; // steps are 10th of micros
+	command << std::fixed << "M " << axisletterX_ << "=" << x / ASISerialUnit_ << " " << axisletterY_ << "=" << y / ASISerialUnit_; // steps are 10th of microns
 	std::string answer;
 
 	// query the device
@@ -306,12 +323,12 @@ int XYStage::SetPositionSteps(long x, long y)
 		return ret;
 	}
 
-	if ((answer.substr(0, 2).compare(":A") == 0) || (answer.substr(1, 2).compare(":A") == 0))
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
 	// deal with error later
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(4).c_str());
 		return ERR_OFFSET + errNo;
@@ -346,12 +363,12 @@ int XYStage::SetRelativePositionSteps(long x, long y)
 		return ret;
 	}
 
-	if ((answer.substr(0, 2).compare(":A") == 0) || (answer.substr(1, 2).compare(":A") == 0))
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
 	// deal with error later
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(4).c_str());
 		return ERR_OFFSET + errNo;
@@ -375,7 +392,7 @@ int XYStage::GetPositionSteps(long& x, long& y)
 		return ret;
 	}
 
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
@@ -387,7 +404,7 @@ int XYStage::GetPositionSteps(long& x, long& y)
 		char head[64];
 		char iBuf[256];
 		strcpy(iBuf, answer.c_str());
-		sscanf(iBuf, "%s %f %f\r\n", head, &xx, &yy);
+		(void)sscanf(iBuf, "%s %f %f\r\n", head, &xx, &yy);
 		x = (long)(xx * ASISerialUnit_);
 		y = (long)(yy * ASISerialUnit_);
 
@@ -408,11 +425,11 @@ int XYStage::SetOrigin()
 		return ret;
 	}
 
-	if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
@@ -427,20 +444,19 @@ void XYStage::Wait()
 
 	// if (stopSignal_) return DEVICE_OK;
 	bool busy = true;
-	const char* command = "/";
-	std::string answer = "";
+	std::string answer;
 
 	// query the device
-	QueryCommand(command, answer);
+	QueryCommand("/", answer);
 	// if (ret != DEVICE_OK)
 	//     return ret;
 
 	// block/wait for acknowledge, or until we time out;
-	if (answer.substr(0, 1) == "B")
+	if (answer.compare(0, 1, "B") == 0)
 	{
 		busy = true;
 	}
-	else if (answer.substr(0, 1) == "N")
+	else if (answer.compare(0, 1, "N") == 0)
 	{
 		busy = false;
 	}
@@ -460,15 +476,15 @@ void XYStage::Wait()
 		totaltime += intervalMs;
 
 		// query the device
-		QueryCommand(command, answer);
+		QueryCommand("/", answer);
 		// if (ret != DEVICE_OK)
 		//     return ret;
 
-		if (answer.substr(0, 1) == "B")
+		if (answer.compare(0, 1, "B") == 0)
 		{
 			busy = true;
 		}
-		else if (answer.substr(0, 1) == "N")
+		else if (answer.compare(0, 1, "N") == 0)
 		{
 			busy = false;
 		}
@@ -500,11 +516,11 @@ int XYStage::Home()
 		return ret;
 	}
 
-	if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		// do nothing
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
@@ -544,11 +560,11 @@ int XYStage::Calibrate() {
 	if (ret != DEVICE_OK)
 		return ret;
 
-	if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		// do nothing
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
@@ -577,11 +593,11 @@ int XYStage::Stop()
 		return ret;
 	}
 
-	if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
 	{
 		return DEVICE_OK;
 	}
-	else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		if (errNo == -21)
@@ -607,7 +623,7 @@ int XYStage::GetStepLimits(long& /*xMin*/, long& /*xMax*/, long& /*yMin*/, long&
 	return DEVICE_UNSUPPORTED_COMMAND;
 }
 
-bool XYStage::hasCommand(std::string command)
+bool XYStage::HasCommand(const std::string& command)
 {
 	std::string answer;
 
@@ -618,11 +634,11 @@ bool XYStage::hasCommand(std::string command)
 		return false;
 	}
 
-	if (answer.substr(0, 2).compare(":A") == 0)
+	if (answer.compare(0, 2, ":A") == 0)
 	{
 		return true;
 	}
-	if (answer.substr(0, 4).compare(":N-1") == 0)
+	if (answer.compare(0, 4, ":N-1") == 0)
 	{
 		return false;
 	}
@@ -631,10 +647,7 @@ bool XYStage::hasCommand(std::string command)
 	return true;
 }
 
-
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int XYStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -704,9 +717,9 @@ int XYStage::OnNrMoveRepetitions(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (ret != DEVICE_OK)
 		   return ret;
 
-		if (answer.substr(0,2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		   return DEVICE_OK;
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.compare(0, 2, ":N") == 0 && answer.length() > 2)
 		{
 		   int errNo = atoi(answer.substr(3).c_str());
 		   return ERR_OFFSET + errNo;
@@ -717,36 +730,35 @@ int XYStage::OnNrMoveRepetitions(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-// This sets the number of waitcycles
+int XYStage::GetWaitCycles(long& waitCycles)
+{
+   // To simplify our life we only read out waitcycles for the X axis, but set for both
+   std::ostringstream command;
+   command << "WT " + axisletterX_ + "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.compare(0, 2, ":X") == 0)
+   {
+      return ParseResponseAfterPosition(answer, 3, waitCycles);
+   }
+   // deal with error later
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "WT " + axisletterX_ + "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			long waitCycles = 0;
-			const int code = ParseResponseAfterPosition(answer, 3, waitCycles);
-			pProp->Set(waitCycles);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(waitCycles_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -762,7 +774,9 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// if firmware date is 2009+  then use msec/int definition of WaitCycles
 		// would be better to parse firmware (8.4 and earlier used unsigned char)
 		// and that transition occurred ~2008 but not sure exactly when
-		if (compileDay_ >= ConvertDay(2009, 1, 1))
+
+		// previously compared against compile date (2009, 1, 1)
+		if (versionData_.IsVersionAtLeast(8, 6, 'd'))
 		{
 			// don't enforce upper limit
 		}
@@ -780,43 +794,47 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// query command
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		waitCycles_ = waitCycles;
 	}
 	return DEVICE_OK;
 }
+
+int XYStage::GetBacklash(double& backlash)
+{
+   // To simplify our life we only read out waitcycles for the X axis, but set for both
+   std::ostringstream command;
+   command << "B " << axisletterX_ << "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+   {
+      return ret;
+   }
+
+   if (answer.compare(0, 2, ":X") == 0)
+   {
+      return ParseResponseAfterPosition(answer, 3, 8, backlash);
+   }
+   // deal with error later
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 
 int XYStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "B " << axisletterX_ << "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			double speed = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 3, 8, speed);
-			pProp->Set(speed);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(backlash_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -833,61 +851,65 @@ int XYStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// query command
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		backlash_ = backlash;
 	}
 	return DEVICE_OK;
+}
+
+int XYStage::GetFinishError(double& finishError)
+{
+   // To simplify our life we only read out waitcycles for the X axis, but set for both
+   std::ostringstream command;
+   command << "PC " << axisletterX_ << "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.compare(0, 2, ":X") == 0)
+   {
+      double tmp = 0.0;
+      const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
+      finishError = 1000000 * tmp;
+      return code;
+   }
+   if (answer.compare(0, 2, ":A") == 0)
+   {
+      // Answer is of the form :A X=0.00003
+      double tmp = 0.0;
+      const int code = ParseResponseAfterPosition(answer, 5, 8, tmp);
+      finishError = 1000000 * tmp;
+      return code;
+   }
+   // deal with error later
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
 }
 
 int XYStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "PC " << axisletterX_ << "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			double finishError = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 3, 8, finishError);
-			pProp->Set(1000000 * finishError);
-			return code;
-		}
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			// Answer is of the form :A X=0.00003
-			double finishError = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 5, 8, finishError);
-			pProp->Set(1000000 * finishError);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(finishError_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		double error;
-		pProp->Get(error);
-		if (error < 0.0)
+		double finishError;
+		pProp->Get(finishError);
+		if (finishError < 0.0)
 		{
-			error = 0.0;
+			finishError = 0.0;
 		}
-		error = error / 1000000;
+		double error = finishError / 1000000;
 		std::ostringstream command;
 		command << "PC " << axisletterX_ << "=" << error << " " << axisletterY_ << "=" << error;
 		std::string answer;
@@ -895,52 +917,60 @@ int XYStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// query command
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		finishError_ = finishError;
 	}
 	return DEVICE_OK;
+}
+
+int XYStage::GetAcceleration(long& acceleration)
+{
+   // To simplify our life we only read out acceleration for the X axis, but set for both
+   std::ostringstream command;
+   command << "AC " << axisletterX_ << "?";
+   std::string answer;
+
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+   {
+      return ret;
+   }
+
+   if (answer.compare(0, 2, ":X") == 0)
+   {
+		double tmp = 0.0;
+      ret = ParseResponseAfterPosition(answer, 3, 8, tmp);
+		if (ret != DEVICE_OK)
+			return ret;
+		acceleration = (long)tmp;
+		return DEVICE_OK;
+   }
+   // deal with error later
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
 }
 
 int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out acceleration for the X axis, but set for both
-		std::ostringstream command;
-		command << "AC " << axisletterX_ << "?";
-		std::string answer;
-
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			double speed = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 3, 8, speed);
-			pProp->Set(speed);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(acceleration_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		double accel;
+		long accel;
 		pProp->Get(accel);
-		if (accel < 0.0)
+		if (accel < 0)
 		{
-			accel = 0.0;
+			accel = 0;
 		}
 		std::ostringstream command;
 		command << "AC " << axisletterX_ << "=" << accel << " " << axisletterY_ << "=" << accel;
@@ -952,41 +982,45 @@ int XYStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
+		acceleration_ = accel; 
 		return ResponseStartsWithColonA(answer);
+
 	}
 	return DEVICE_OK;
+}
+
+int XYStage::GetOverShoot(double& overshoot)
+{
+   // To simplify our life we only read out overshootfor the X axis, but set for both
+   std::ostringstream command;
+   command << "OS " << axisletterX_ << "?";
+   std::string answer;
+
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.compare(0, 2, ":A") == 0)
+   {
+      double tmp = 0.0;
+      const int code = ParseResponseAfterPosition(answer, 5, 8, tmp);
+      overshoot = tmp * 1000.0;
+      return code;
+   }
+   // deal with error later
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
 }
 
 int XYStage::OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "OS " << axisletterX_ << "?";
-		std::string answer;
-
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			double overshoot = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 5, 8, overshoot);
-			pProp->Set(overshoot * 1000.0);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -996,51 +1030,55 @@ int XYStage::OnOverShoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			overShoot = 0.0;
 		}
-		overShoot = overShoot / 1000.0;
+		double tmp = overShoot / 1000.0;
 		std::ostringstream command;
-		command << std::fixed << "OS " << axisletterX_ << "=" << overShoot << " " << axisletterY_ << "=" << overShoot;
+		command << std::fixed << "OS " << axisletterX_ << "=" << tmp << " " << axisletterY_ << "=" << tmp;
 		std::string answer;
 
 		// query the device
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		overShoot_ = overShoot;
 	}
 	return DEVICE_OK;
+}
+
+int XYStage::GetError(double& error)
+{
+   // To simplify our life we only read out error for the X axis, but set for both
+   std::ostringstream command;
+   command << "E " << axisletterX_ << "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer.compare(0, 2, ":X") == 0)
+   {
+      double tmp = 0.0;
+      const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
+      error  = tmp * 1000000.0;
+      return code;
+   }
+   // deal with error
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
 }
 
 int XYStage::OnError(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "E " << axisletterX_ << "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":X") == 0)
-		{
-			double error = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 3, 8, error);
-			pProp->Set(error * 1000000.0);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(error_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -1050,18 +1088,20 @@ int XYStage::OnError(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			error = 0.0;
 		}
-		error = error / 1000000.0;
+		double tmp = error / 1000000.0;
 		std::ostringstream command;
-		command << std::fixed << "E " << axisletterX_ << "=" << error << " " << axisletterY_ << "=" << error;
+		command << std::fixed << "E " << axisletterX_ << "=" << tmp << " " << axisletterY_ << "=" << tmp;
 		std::string answer;
 
 		// query the device
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+      // cache the value we read
+		error_ = error;
 	}
 	return DEVICE_OK;
 }
@@ -1095,35 +1135,37 @@ int XYStage::GetMaxSpeed(char* maxSpeedStr)
 	return DEVICE_OK;
 }
 
+int XYStage::GetSpeed(double& speed)
+{
+   // To simplify our life we only read out speed for the X axis, but set for both
+   std::ostringstream command;
+   command << "S " << axisletterX_ << "?";
+   std::string answer;
+   // query command
+   int ret = QueryCommand(command.str().c_str(), answer);
+   if (ret != DEVICE_OK)
+   {
+	   return ret;
+   }
+
+   if (answer.compare(0, 2, ":A") == 0)
+   {
+      return ParseResponseAfterPosition(answer, 5, speed);
+   }
+   // deal with error later
+   else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
+   {
+      int errNo = atoi(answer.substr(3).c_str());
+      return ERR_OFFSET + errNo;
+   }
+   return ERR_UNRECOGNIZED_ANSWER;
+}
+
 int XYStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		// To simplify our life we only read out waitcycles for the X axis, but set for both
-		std::ostringstream command;
-		command << "S " << axisletterX_ << "?";
-		std::string answer;
-		// query command
-		int ret = QueryCommand(command.str().c_str(), answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-
-		if (answer.substr(0, 2).compare(":A") == 0)
-		{
-			double speed = 0.0;
-			const int code = ParseResponseAfterPosition(answer, 5, speed);
-			pProp->Set(speed);
-			return code;
-		}
-		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
-		{
-			int errNo = atoi(answer.substr(3).c_str());
-			return ERR_OFFSET + errNo;
-		}
-		return ERR_UNRECOGNIZED_ANSWER;
+		pProp->Set(speed_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -1144,10 +1186,12 @@ int XYStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// query the device
 		int ret = QueryCommand(command.str().c_str(), answer);
 		if (ret != DEVICE_OK)
-		{
 			return ret;
-		}
-		return ResponseStartsWithColonA(answer);
+		ret = ResponseStartsWithColonA(answer);
+		if (ret != DEVICE_OK)
+			return ret;
+		speed_ = speed;
+
 	}
 	return DEVICE_OK;
 }
@@ -1245,15 +1289,11 @@ int XYStage::OnJSMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			return DEVICE_OK;
 		}
-		else if (answer.substr(answer.length(), 1) == "A")
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1299,15 +1339,11 @@ int XYStage::OnJSFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			return DEVICE_OK;
 		}
-		else if (answer.substr(answer.length(), 1) == "A")
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1351,15 +1387,11 @@ int XYStage::OnJSSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			return DEVICE_OK;
 		}
-		else if (answer.substr(answer.length(), 1) == "A")
-		{
-			return DEVICE_OK;
-		}
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1471,28 +1503,28 @@ int XYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 			// overshoot (OS)  // in Nico's original
 
 			// servo integral term (KI)
-			if (hasCommand("KI " + axisletterX_ + "?"))
+			if (HasCommand("KI " + axisletterX_ + "?"))
 			{
 				pAct = new CPropertyAction(this, &XYStage::OnKIntegral);
 				CreateProperty("ServoIntegral-KI", "0", MM::Integer, false, pAct);
 			}
 
 			// servo proportional term (KP)
-			if (hasCommand("KP " + axisletterX_ + "?"))
+			if (HasCommand("KP " + axisletterX_ + "?"))
 			{
 				pAct = new CPropertyAction(this, &XYStage::OnKProportional);
 				CreateProperty("ServoProportional-KP", "0", MM::Integer, false, pAct);
 			}
 
 			// servo derivative term (KD)
-			if (hasCommand("KD " + axisletterX_ + "?"))
+			if (HasCommand("KD " + axisletterX_ + "?"))
 			{
 				pAct = new CPropertyAction(this, &XYStage::OnKDerivative);
 				CreateProperty("ServoIntegral-KD", "0", MM::Integer, false, pAct);
 			}
 
 			// Align calibration/setting for pot in drive electronics (AA)
-			if (hasCommand("AA " + axisletterX_ + "?"))
+			if (HasCommand("AA " + axisletterX_ + "?"))
 			{
 				pAct = new CPropertyAction(this, &XYStage::OnAAlign);
 				CreateProperty("MotorAlign-AA", "0", MM::Integer, false, pAct);
@@ -1522,7 +1554,7 @@ int XYStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
@@ -1535,7 +1567,7 @@ int XYStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1574,7 +1606,7 @@ int XYStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
@@ -1587,7 +1619,7 @@ int XYStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1626,7 +1658,7 @@ int XYStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
@@ -1639,7 +1671,7 @@ int XYStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1678,7 +1710,7 @@ int XYStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			return ret;
 		}
-		if (answer.substr(0, 2).compare(":A") == 0)
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			ParseResponseAfterPosition(answer, 5, tmp);
 			if (!pProp->Set(tmp))
@@ -1691,7 +1723,7 @@ int XYStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 			}
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;
@@ -1740,7 +1772,7 @@ int XYStage::SetAxisDirection()
 }
 
 // based on similar function in FreeSerialPort.cpp
-std::string XYStage::EscapeControlCharacters(const std::string v)
+std::string XYStage::EscapeControlCharacters(const std::string& v)
 {
 	std::ostringstream mess;
 	mess.str("");
@@ -1771,7 +1803,7 @@ std::string XYStage::EscapeControlCharacters(const std::string v)
 }
 
 // based on similar function in FreeSerialPort.cpp
-std::string XYStage::UnescapeControlCharacters(const std::string v0)
+std::string XYStage::UnescapeControlCharacters(const std::string& v0)
 {
 	// the string input from the GUI can contain escaped control characters, currently these are always preceded with \ (0x5C)
 	// and always assumed to be decimal or C style, not hex
@@ -1855,7 +1887,7 @@ std::string XYStage::UnescapeControlCharacters(const std::string v0)
 	return detokenized;
 }
 
-int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter) {
+int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter) {
 	if (eAct == MM::BeforeGet)
 	{
 		std::ostringstream command;
@@ -1868,8 +1900,8 @@ int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::
 			return ret;
 		}
 
-		// if (answer.substr(0,2).compare(":" + axisLetter) == 0)
-		if (answer.substr(0, 5).compare(":A " + axisLetter + "=") == 0)
+		// if (answer.compare(0, 2, ":" + axisLetter) == 0)
+		if (answer.compare(0, 5, ":A " + axisLetter + "=") == 0)
 		{
 			double speed = 0.0;
 			const int code = ParseResponseAfterPosition(answer, 6, 13, speed);
@@ -1877,7 +1909,7 @@ int XYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::
 			return code;
 		}
 		// deal with error later
-		else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(3).c_str());
 			return ERR_OFFSET + errNo;

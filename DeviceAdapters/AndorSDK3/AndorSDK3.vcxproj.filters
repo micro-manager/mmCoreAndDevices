@@ -110,5 +110,8 @@
     <ClInclude Include="SRRFAndorSDK3Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="IProperty.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

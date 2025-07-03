@@ -439,6 +439,10 @@ public:
    bool Restore(const char* stream)
    {
       Clear();
+      if (stream == nullptr)
+      {
+         return true;
+      }
 
       std::istringstream is(stream);
 

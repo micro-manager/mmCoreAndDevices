@@ -2556,24 +2556,22 @@ int Universal::PushImage(const unsigned char* pixBuffer, Metadata* pMd )
    int nRet = DEVICE_ERR;
    MM::Core* pCore = GetCoreCallback();
    // This method inserts a new image into the circular buffer (residing in MMCore)
-   nRet = pCore->InsertMultiChannel(this,
+   nRet = pCore->InsertImage(this,
          pixBuffer,
-         1,
          GetImageWidth(),
          GetImageHeight(),
          GetImageBytesPerPixel(),
-         pMd); // Inserting the md causes crash in debug builds
+         pMd->Serialize().c_str());
    if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
    {
       // do not stop on overflow - just reset the buffer
       pCore->ClearImageBuffer(this);
-      nRet = pCore->InsertMultiChannel(this,
+      nRet = pCore->InsertImage(this,
             pixBuffer,
-            1,
             GetImageWidth(),
             GetImageHeight(),
             GetImageBytesPerPixel(),
-            pMd);
+            pMd->Serialize().c_str());
    }
 
    return nRet;

@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASIPiezo_H_
-#define _ASIPiezo_H_
+#ifndef ASIPIEZO_H
+#define ASIPIEZO_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -119,7 +119,7 @@ public:
 private:
    double unitMult_;
    double stepSizeUm_;
-   string axisLetter_;
+   std::string axisLetter_;
    bool ring_buffer_supported_;
    long ring_buffer_capacity_;
    bool ttl_trigger_supported_;
@@ -131,4 +131,4 @@ private:
    int OnSaveJoystickSettings();
 };
 
-#endif //_ASIPiezo_H_
+#endif // ASIPIEZO_H

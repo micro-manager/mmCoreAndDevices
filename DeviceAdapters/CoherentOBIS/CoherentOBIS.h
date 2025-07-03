@@ -83,9 +83,9 @@ public:
 
    void initLimits()
    {
-      std::string val = queryLaser(maxPowerToken_);
+      std::string val = queryLaser(getMaxPowerToken());
       minlp(atof(val.c_str())*1000);
-      val = queryLaser(maxPowerToken_);
+      val = queryLaser(getMaxPowerToken());
       maxlp(atof(val.c_str())*1000);
    }
 
@@ -109,6 +109,7 @@ public:
    // action interface
    // ----------------
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDeviceIndex(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnPowerReadback(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -128,6 +129,7 @@ public:
 
 private:
    bool initialized_;
+   int deviceIndex_;
    long state_;
    std::string name_;
    int error_;
@@ -135,23 +137,26 @@ private:
 
    // todo move these to DevImpl for better data hiding
    const std::string queryToken_;
-   const std::string powerSetpointToken_;
-   const std::string powerReadbackToken_;
    const std::string CDRHToken_;  // if this is on, laser delays 5 SEC before turning on
    const std::string CWToken_;
-   const std::string laserOnToken_;
    const std::string TECServoToken_;
-   const std::string headSerialNoToken_;
-   const std::string headUsageHoursToken_;
-   const std::string wavelengthToken_;
-   const std::string externalPowerControlToken_;
-   const std::string maxPowerToken_;
-   const std::string minPowerToken_;
 
    std::string port_;
 
    string buf_string_;
 
+   std::string getPrefix() const;
+   std::string getPowerPrefix() const;
+   
+   std::string getPowerSetpointToken() const;
+   std::string getPowerReadbackToken() const;
+   std::string getLaserOnToken() const;
+   std::string getHeadSerialNoToken() const;
+   std::string getHeadUsageHoursToken() const;
+   std::string getWavelengthToken() const;
+   std::string getExternalPowerControlToken() const;
+   std::string getMaxPowerToken() const;
+   std::string getMinPowerToken() const;
 
    void SetPowerSetpoint(double powerSetpoint__, double& achievedSetpoint__);
    void GetPowerSetpoint(double& powerSetpoint__);

@@ -9,7 +9,7 @@
 
 TIRF::TIRF() :
     ASIBase(this, ""),
-    axis_("F"),//normaly the TIRF axis is the F axis.
+    axis_("F"), // normally the TIRF axis is the F axis
     answerTimeoutMs_(1000),
     scaleFactor_(1),
     unitFactor_(10000)
@@ -51,14 +51,14 @@ void TIRF::GetName(char* Name) const
     CDeviceUtils::CopyLimitedString(Name, g_TIRFDeviceName);
 }
 
-bool TIRF::SupportsDeviceDetection(void)
+bool TIRF::SupportsDeviceDetection()
 {
     return true;
 }
 
-MM::DeviceDetectionStatus TIRF::DetectDevice(void)
+MM::DeviceDetectionStatus TIRF::DetectDevice()
 {
-    return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+    return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int TIRF::Initialize()
@@ -75,28 +75,37 @@ int TIRF::Initialize()
         return ret;
     }
 
+    ret = GetVersion(version_);
+    if (ret != DEVICE_OK)
+       return ret;
     CPropertyAction* pAct = new CPropertyAction(this, &TIRF::OnVersion);
-    CreateProperty("Version", "", MM::String, true, pAct);
+    CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
 
+    // get the firmware version data from cached value
+    versionData_ = ParseVersionString(version_);
+
+    ret = GetCompileDate(compileDate_);
+    if (ret != DEVICE_OK)
+    {
+        return ret;
+    }
     pAct = new CPropertyAction(this, &TIRF::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
-    UpdateProperty("CompileDate");
-
-    // get the date of the firmware
-    char compile_date[MM::MaxStrLength];
-    if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-    {
-        compileDay_ = ExtractCompileDay(compile_date);
-    }
 
     // if really old firmware then don't get build name
     // build name is really just for diagnostic purposes anyway
     // I think it was present before 2010 but this is easy way
-    if (compileDay_ >= ConvertDay(2010, 1, 1))
+
+    // previously compared against compile date (2010, 1, 1)
+    if (versionData_.IsVersionAtLeast(8, 8, 'a'))
     {
+        ret = GetBuildName(buildName_);
+        if (ret != DEVICE_OK)
+        {
+            return ret;
+        }
         pAct = new CPropertyAction(this, &TIRF::OnBuildName);
         CreateProperty("BuildName", "", MM::String, true, pAct);
-        UpdateProperty("BuildName");
     }
 
     pAct = new CPropertyAction(this, &TIRF::OnAngle);
@@ -116,37 +125,20 @@ int TIRF::Shutdown()
     return DEVICE_OK;
 }
 
-
 bool TIRF::Busy()
 {
     // empty the Rx serial buffer before sending command
     ClearPort();
 
-    const char* command = "/";
+    // send status command
     std::string answer;
-    // query command
-    int ret = QueryCommand(command, answer);
+    int ret = QueryCommand("/", answer);
     if (ret != DEVICE_OK)
     {
         return false;
     }
 
-    if (answer.length() >= 1)
-    {
-        if (answer.substr(0, 1) == "B")
-        {
-            return true;
-        }
-        else if (answer.substr(0, 1) == "N")
-        {
-            return false;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    return false;
+    return !answer.empty() && answer.front() == 'B';
 }
 
 double TIRF::GetAngle()
@@ -165,7 +157,7 @@ double TIRF::GetAngle()
         return ret;
     }
 
-    if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+    if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(2).c_str());
         return ERR_OFFSET + errNo;
@@ -176,7 +168,7 @@ double TIRF::GetAngle()
         char head[64];
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %lf\r\n", head, &position);
+        (void)sscanf(iBuf, "%s %lf\r\n", head, &position);
 
         return asin(position / (scaleFactor_ * unitFactor_)) * 180 / 3.141592653589793;
     }
@@ -199,12 +191,12 @@ int TIRF::SetAngle(double angle)
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
+    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
     {
         return DEVICE_OK;
     }
     // deal with error later
-    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+    else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(4).c_str());
         return ERR_OFFSET + errNo;

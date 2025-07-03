@@ -10,7 +10,8 @@ noinst_HEADERS = \
 	MMDevice.h \
 	MMDeviceConstants.h \
 	ModuleInterface.h \
-	Property.h
+	Property.h \
+	RegisteredDeviceCollection.h
 
 libMMDevice_la_SOURCES = \
 	$(noinst_HEADERS) \

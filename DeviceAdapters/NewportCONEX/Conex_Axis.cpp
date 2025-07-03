@@ -52,6 +52,7 @@ using namespace std;
 ///////////////////////////////////////////////////////////////////////////////
 MODULE_API void InitializeModuleData()
 {
+   // Only one device is needed.  Keep the other two for backward compatibility
    RegisterDevice(g_X_AxisDeviceName, MM::StageDevice, "Conex_Axis X Axis");
    RegisterDevice(g_Y_AxisDeviceName, MM::StageDevice, "Conex_Axis Y Axis");
    RegisterDevice(g_Z_AxisDeviceName, MM::StageDevice, "Conex_Axis Z Axis");
@@ -60,9 +61,9 @@ MODULE_API void InitializeModuleData()
 MODULE_API MM::Device* CreateDevice(const char* deviceName)                  
 {
    if (deviceName == 0) return 0;
-   if (strcmp(deviceName, g_X_AxisDeviceName)  == 0) return new X_Axis();
-   if (strcmp(deviceName, g_Y_AxisDeviceName)  == 0) return new Y_Axis();
-   if (strcmp(deviceName, g_Z_AxisDeviceName)  == 0) return new Z_Axis();
+   if (strcmp(deviceName, g_X_AxisDeviceName)  == 0) return new Axis(g_X_AxisDeviceName);
+   if (strcmp(deviceName, g_Y_AxisDeviceName)  == 0) return new Axis(g_Y_AxisDeviceName);
+   if (strcmp(deviceName, g_Z_AxisDeviceName)  == 0) return new Axis(g_Z_AxisDeviceName);
    return 0;
 }
 
@@ -283,6 +284,7 @@ int Conex_AxisBase:: SetNegativeLimit(double limit)
    setlocale(LC_ALL,"C");
    sprintf(oBufString,"1SL%6.6f",limit/coef_);
    ret=SendCommand(oBufString);
+
    return ret;
 }	
 
@@ -447,22 +449,27 @@ void Conex_AxisBase::test()
 ///////////////////////////////////////////////////////////////////////////////
 
 
-X_Axis::X_Axis() :
-   Conex_AxisBase(this)
+Axis::Axis(const char* axis) :
+   Conex_AxisBase(this),
+   negativeLimit_(0.0),
+   positiveLimit_(0.0),
+   speed_(0.0),
+   acceleration_(0.0)
 {
    InitializeDefaultErrorMessages();
+   axisDeviceName_ = axis;
    // create pre-initialization properties
    // ------------------------------------
    // Name
    CreateProperty(MM::g_Keyword_Name, g_X_AxisDeviceName, MM::String, true);
    // Description
-   CreateProperty(MM::g_Keyword_Description, "Conex X Axis driver", MM::String, true);
+   CreateProperty(MM::g_Keyword_Description, ("Conex " + axisDeviceName_ + " driver").c_str(), MM::String, true);
    // Port
-   CPropertyAction* pAct = new CPropertyAction (this, &X_Axis::OnPort);
+   CPropertyAction* pAct = new CPropertyAction (this, &Axis::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);  
 }
 
-X_Axis::~X_Axis()
+Axis::~Axis()
 {
 if (initialized_)
    Shutdown();
@@ -472,13 +479,13 @@ if (initialized_)
 // Stage methods required by the API
 ///////////////////////////////////////////////////////////////////////////////
 
-void X_Axis::GetName(char* Name) const
+void Axis::GetName(char* Name) const
 {
    CDeviceUtils::CopyLimitedString(Name, g_X_AxisDeviceName);
 }
 
 
-int X_Axis::Initialize()
+int Axis::Initialize()
 {
    core_ = GetCoreCallback();
 
@@ -487,10 +494,9 @@ int X_Axis::Initialize()
       return ret;
    speed_=GetSpeed();
    acceleration_=GetAcceleration();
-   initialized_ = true;
 
    ret = CreateStringProperty(g_SearchForHomeNowProp, "", false,
-         new CPropertyAction(this, &X_Axis::OnSearchHomeNow));
+         new CPropertyAction(this, &Axis::OnSearchHomeNow));
    if (ret != DEVICE_OK)
       return ret;
    ret = AddAllowedValue(g_SearchForHomeNowProp, "");
@@ -499,7 +505,28 @@ int X_Axis::Initialize()
    ret = AddAllowedValue(g_SearchForHomeNowProp, g_SearchForHomeNowValue);
    if (ret != DEVICE_OK)
       return ret;
+
+   CPropertyAction* pAct = new CPropertyAction(this, &Axis::OnPosition);
+   double pos = GetPosition();
+   ret = CreateFloatProperty("Position", pos, false, pAct);
+   // Could add limits here...
+
+   pAct = new CPropertyAction(this, &Axis::OnLowerLimit);
+   negativeLimit_ = GetNegativeLimit();
+   ret = CreateFloatProperty("NegativeLimit", negativeLimit_, false, pAct);
+
+   pAct = new CPropertyAction(this, &Axis::OnUpperLimit);
+   positiveLimit_ = GetPositiveLimit();
+   ret = CreateFloatProperty("PositiveLimit", positiveLimit_, false, pAct);
+
+   pAct = new CPropertyAction(this, &Axis::OnSpeed);
+   ret = CreateFloatProperty("Speed", speed_, false, pAct);
+
+   pAct = new CPropertyAction(this, &Axis::OnAcceleration);
+   ret = CreateFloatProperty("Acceleration", acceleration_, false, pAct);
    
+   initialized_ = true;
+
 /* these lines can added to test function when the axis is initialized
 test();
    SetPositionUm(2.345);
@@ -520,386 +547,55 @@ test();
 }
 
   
-int X_Axis::Shutdown()
+int Axis::Shutdown()
 {
-   initialized_    = false;
+   initialized_ = false;
    return DEVICE_OK;
 }
 
-bool X_Axis::Busy()
+bool Axis::Busy()
 {
   return Moving();
 }
 
-
-
-int X_Axis::SetPositionUm(double pos)
+int Axis::SetPositionUm(double pos)
 {
-   return MoveAbsolute(pos);
+   int ret = MoveAbsolute(pos);
+   if (ret != DEVICE_OK)
+      return ret;
+   return GetCoreCallback()->OnStagePositionChanged(this, pos);
 }
 
-int X_Axis::SetRelativePositionUm(double d)
+int Axis::SetRelativePositionUm(double d)
 {
-	return MoveRelative(d);
+   return MoveRelative(d);
 }
 
-int X_Axis::GetPositionUm(double& pos)
+int Axis::GetPositionUm(double& pos)
 {
 	pos=GetPosition();
-	 return DEVICE_OK;
-}
-  
-int X_Axis::SetPositionSteps(long)
-{
-   return DEVICE_UNSUPPORTED_COMMAND;
-}
-  
-int X_Axis::GetPositionSteps(long&)
-{
-	  return DEVICE_UNSUPPORTED_COMMAND;
-}
-int X_Axis::SetOrigin()
-{
- return BaseHome();
-}
-
-
-int X_Axis::Move(double)
-{
-    return DEVICE_UNSUPPORTED_COMMAND;
-}
-
-
-/**
- * Returns the stage position limits in um.
- */
-int X_Axis::GetLimits(double& min, double& max)
-{
-	min=GetNegativeLimit();
-	max=GetPositiveLimit();
-    return DEVICE_OK;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Action handlers
-// Handle changes and updates to property values.
-///////////////////////////////////////////////////////////////////////////////
-
-int X_Axis::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-	{
-      pProp->Set(port_.c_str());
-	}
-   else if (eAct == MM::AfterSet)
-   {
-      if (initialized_)
-      {
-         // revert
-         pProp->Set(port_.c_str());
-         return ERR_PORT_CHANGE_FORBIDDEN;
-      }
-      pProp->Get(port_);
-   }
-   return DEVICE_OK;
-}
-
-
-int X_Axis::OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set("");
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string value;
-      pProp->Get(value);
-      if (value == g_SearchForHomeNowValue)
-      {
-         return BaseHome();
-      }
-   }
-   return DEVICE_OK;
-}
-
-
-
-///////////////// //////////////////////////////////////////////////////////////
-// Y - Stage (Single axis stage
-///////////////////////////////////////////////////////////////////////////////
-
-
-Y_Axis::Y_Axis() :
-   Conex_AxisBase(this)
-{
-   InitializeDefaultErrorMessages();
-   // create pre-initialization properties
-   // ------------------------------------
-   // Name
-   CreateProperty(MM::g_Keyword_Name, g_Y_AxisDeviceName, MM::String, true);
-   // Description
-   CreateProperty(MM::g_Keyword_Description, "Conex X Axis driver", MM::String, true);
-   // Port
-   CPropertyAction* pAct = new CPropertyAction (this, &Y_Axis::OnPort);
-   CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);  
-}
-
-Y_Axis::~Y_Axis()
-{
-if (initialized_)
-   Shutdown();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Stage methods required by the API
-///////////////////////////////////////////////////////////////////////////////
-
-void Y_Axis::GetName(char* Name) const
-{
-   CDeviceUtils::CopyLimitedString(Name, g_Y_AxisDeviceName);
-}
-
-
-int Y_Axis::Initialize()
-{
-   core_ = GetCoreCallback();
-
-   int ret = CheckDeviceStatus();
-   if (ret != DEVICE_OK) 
-      return ret;
-   speed_=GetSpeed();
-   acceleration_=GetAcceleration();
-   initialized_ = true;
-
-   ret = CreateStringProperty(g_SearchForHomeNowProp, "", false,
-         new CPropertyAction(this, &Y_Axis::OnSearchHomeNow));
-   if (ret != DEVICE_OK)
-      return ret;
-   ret = AddAllowedValue(g_SearchForHomeNowProp, "");
-   if (ret != DEVICE_OK)
-      return ret;
-   ret = AddAllowedValue(g_SearchForHomeNowProp, g_SearchForHomeNowValue);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   return DEVICE_OK;
-}
-
-  
-int Y_Axis::Shutdown()
-{
-   initialized_    = false;
-   return DEVICE_OK;
-}
-
-bool Y_Axis::Busy()
-{
-  return Moving();
-}
-
-
-
-int Y_Axis::SetPositionUm(double pos)
-{
-   return MoveAbsolute(pos);
-}
-
-int Y_Axis::SetRelativePositionUm(double d)
-{
-	return MoveRelative(d);
-}
-
-int Y_Axis::GetPositionUm(double& pos)
-{
-	pos=GetPosition();
-    return DEVICE_OK;
-}
-  
-int Y_Axis::SetPositionSteps(long)
-{
-   return DEVICE_UNSUPPORTED_COMMAND;
-}
-  
-int Y_Axis::GetPositionSteps(long&)
-{
-	  return DEVICE_UNSUPPORTED_COMMAND;
-}
-int Y_Axis::SetOrigin()
-{
- return BaseHome();
-}
-
-
-int Y_Axis::Move(double)
-{
-    return DEVICE_UNSUPPORTED_COMMAND;
-}
-
-
-/**
- * Returns the stage position limits in um.
- */
-int Y_Axis::GetLimits(double& min, double& max)
-{
-	min=GetNegativeLimit();
-	max=GetPositiveLimit();
-    return DEVICE_OK;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Action handlers
-// Handle changes and updates to property values.
-///////////////////////////////////////////////////////////////////////////////
-
-int Y_Axis::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-	  {
-      pProp->Set(port_.c_str());
-	  }
-   else if (eAct == MM::AfterSet)
-   {
-      if (initialized_)
-      {
-         // revert
-         pProp->Set(port_.c_str());
-         return ERR_PORT_CHANGE_FORBIDDEN;
-      }
-      pProp->Get(port_);
-   }
-   return DEVICE_OK;
-}
-
-
-int Y_Axis::OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set("");
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string value;
-      pProp->Get(value);
-      if (value == g_SearchForHomeNowValue)
-      {
-         return BaseHome();
-      }
-   }
-   return DEVICE_OK;
-}
-
-
-///////////////// //////////////////////////////////////////////////////////////
-// Z - Stage (Single axis stage
-///////////////////////////////////////////////////////////////////////////////
-
-
-Z_Axis::Z_Axis() :
-   Conex_AxisBase(this)
-{
-   InitializeDefaultErrorMessages();
-   // create pre-initialization properties
-   // ------------------------------------
-   // Name
-   CreateProperty(MM::g_Keyword_Name, g_Z_AxisDeviceName, MM::String, true);
-   // Description
-   CreateProperty(MM::g_Keyword_Description, "Conex X Axis driver", MM::String, true);
-   // Port
-   CPropertyAction* pAct = new CPropertyAction (this, &Z_Axis::OnPort);
-   CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);  
-}
-
-Z_Axis::~Z_Axis()
-{
-if (initialized_)
-   Shutdown();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Stage methods required by the API
-///////////////////////////////////////////////////////////////////////////////
-
-void Z_Axis::GetName(char* Name) const
-{
-   CDeviceUtils::CopyLimitedString(Name, g_Z_AxisDeviceName);
-}
-
-
-int Z_Axis::Initialize()
-{
-   core_ = GetCoreCallback();
-
-   int ret = CheckDeviceStatus();
-   if (ret != DEVICE_OK) 
-      return ret;
-   speed_=GetSpeed();
-   acceleration_=GetAcceleration();
-   initialized_ = true;
-
-   ret = CreateStringProperty(g_SearchForHomeNowProp, "", false,
-         new CPropertyAction(this, &Z_Axis::OnSearchHomeNow));
-   if (ret != DEVICE_OK)
-      return ret;
-   ret = AddAllowedValue(g_SearchForHomeNowProp, "");
-   if (ret != DEVICE_OK)
-      return ret;
-   ret = AddAllowedValue(g_SearchForHomeNowProp, g_SearchForHomeNowValue);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   return DEVICE_OK;
-}
-
-  
-int Z_Axis::Shutdown()
-{
-   initialized_    = false;
-   return DEVICE_OK;
-}
-
-bool Z_Axis::Busy()
-{
-  return Moving();
-}
-
-
-
-int Z_Axis::SetPositionUm(double pos)
-{
-    return MoveAbsolute(pos);
-}
-
-int Z_Axis::SetRelativePositionUm(double d)
-{
-	return MoveRelative(d);
-}
-
-int Z_Axis::GetPositionUm(double& pos)
-{
-	pos=GetPosition();
+   std::stringstream s;
+   s << pos;
+   return GetCoreCallback()->OnPropertyChanged(this, "Position", s.str().c_str());
 	return DEVICE_OK;
 }
   
-int Z_Axis::SetPositionSteps(long)
+int Axis::SetPositionSteps(long)
 {
    return DEVICE_UNSUPPORTED_COMMAND;
 }
   
-int Z_Axis::GetPositionSteps(long&)
+int Axis::GetPositionSteps(long&)
 {
-	  return DEVICE_UNSUPPORTED_COMMAND;
+	return DEVICE_UNSUPPORTED_COMMAND;
 }
-int Z_Axis::SetOrigin()
+int Axis::SetOrigin()
 {
- return BaseHome();
+   return BaseHome();
 }
 
 
-int Z_Axis::Move(double)
+int Axis::Move(double)
 {
     return DEVICE_UNSUPPORTED_COMMAND;
 }
@@ -908,11 +604,11 @@ int Z_Axis::Move(double)
 /**
  * Returns the stage position limits in um.
  */
-int Z_Axis::GetLimits(double& min, double& max)
+int Axis::GetLimits(double& min, double& max)
 {
-	min=GetNegativeLimit();
-	max=GetPositiveLimit();
-    return DEVICE_OK;
+	min = GetNegativeLimit();
+	max = GetPositiveLimit();
+   return DEVICE_OK;
 }
 
 
@@ -921,7 +617,7 @@ int Z_Axis::GetLimits(double& min, double& max)
 // Handle changes and updates to property values.
 ///////////////////////////////////////////////////////////////////////////////
 
-int Z_Axis::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
+int Axis::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
 	{
@@ -941,7 +637,7 @@ int Z_Axis::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int Z_Axis::OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct)
+int Axis::OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -958,3 +654,99 @@ int Z_Axis::OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    return DEVICE_OK;
 }
+
+int Axis::OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      double pos = GetPosition();
+      pProp->Set(pos);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double pos;
+      pProp->Get(pos);
+      return MoveAbsolute(pos);
+   }
+   return DEVICE_OK;
+}
+
+int Axis::OnLowerLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(negativeLimit_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double limit;
+      pProp->Get(limit);
+      int ret = SetNegativeLimit(limit);
+      if (ret != DEVICE_OK)
+         return ret;
+      negativeLimit_ = limit;
+   }
+   return DEVICE_OK;
+}
+
+int Axis::OnUpperLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(positiveLimit_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double limit;
+      pProp->Get(limit);
+      int ret = SetPositiveLimit(limit);
+      if (ret != DEVICE_OK)
+         return ret;
+      positiveLimit_ = limit;
+   }
+   return DEVICE_OK;
+}
+
+int Axis::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      double speed = GetSpeed();
+      pProp->Set(speed);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double speed;
+      pProp->Get(speed);
+      int ret = SetSpeed(speed);
+      if (ret != DEVICE_OK)
+         return ret;
+      speed_ = speed;
+   }
+   return DEVICE_OK;
+}
+
+int Axis::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      double acceleration = GetAcceleration();
+      pProp->Set(acceleration);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double acceleration;
+      pProp->Get(acceleration);
+      int ret = SetAcceleration(acceleration);
+      if (ret != DEVICE_OK)
+         return ret;
+      acceleration_ = acceleration;
+   }
+   return DEVICE_OK;
+}
+
+
+
+
+
+
