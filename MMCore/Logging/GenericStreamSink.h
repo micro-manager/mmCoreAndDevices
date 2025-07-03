@@ -33,7 +33,7 @@ namespace logging
 class CannotOpenFileException : public std::exception
 {
 public:
-   virtual const char* what() const throw() { return "Cannot open log file"; }
+   virtual const char* what() const noexcept { return "Cannot open log file"; }
 };
 
 

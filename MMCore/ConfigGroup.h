@@ -22,17 +22,6 @@
 
 #pragma once
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4290) // 'C++ exception specification ignored'
-#endif
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
-#pragma GCC diagnostic ignored "-Wdeprecated"
-#endif
-
 #include "Configuration.h"
 #include "Error.h"
 #include <string>
@@ -377,7 +366,7 @@ public:
 
    void setPixelSizeUm(double pixSize) {pixelSizeUm_ = pixSize;}
    double getPixelSizeUm() const {return pixelSizeUm_;}
-   void setPixelConfigAffineMatrix(std::vector<double> &affineMatrix) throw (CMMError)
+   void setPixelConfigAffineMatrix(std::vector<double> &affineMatrix) MMCORE_LEGACY_THROW(CMMError)
    { 
       if (affineMatrix.size() != 6) 
       {
@@ -432,11 +421,3 @@ public:
       }
    }
 };
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
