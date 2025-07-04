@@ -8120,7 +8120,7 @@ int CMMCore::createDataset(const char* path, const char* name, const std::vector
          logError(getDeviceName(pStorage).c_str(), getDeviceErrorText(ret, pStorage).c_str());
          throw CMMError(getDeviceErrorText(ret, pStorage).c_str(), MMERR_DEVICE_GENERIC);
       }
-      openDatasets_[datasetHandleCounter_] = std::make_pair(getDeviceName(pStorage), handle);
+      openDatasets_[datasetHandleCounter_] = std::make_pair(pStorage->GetLabel(), handle);
       return datasetHandleCounter_++;
    }
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
@@ -8153,7 +8153,7 @@ int CMMCore::createDataset(const char* deviceLabel, const char* path, const char
          logError(getDeviceName(pStorage).c_str(), getDeviceErrorText(ret, pStorage).c_str());
          throw CMMError(getDeviceErrorText(ret, pStorage).c_str(), MMERR_DEVICE_GENERIC);
       }
-      openDatasets_[datasetHandleCounter_] = std::make_pair(getDeviceName(pStorage), handle);
+      openDatasets_[datasetHandleCounter_] = std::make_pair(pStorage->GetLabel(), handle);
       return datasetHandleCounter_++;
    }
    throw CMMError(getCoreErrorText(MMERR_StorageNotAvailable).c_str(), MMERR_StorageNotAvailable);
