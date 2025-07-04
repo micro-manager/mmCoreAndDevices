@@ -90,7 +90,7 @@ typedef unsigned char* STORAGEIMG;
 typedef unsigned short* STORAGEIMG16;
 typedef unsigned char* STORAGEIMGOUT;
 typedef unsigned char* STORAGEMETA;
-using DatasetEntry = std::pair<std::string, int>; // string - device name, int - handle
+typedef std::pair<std::string, int> DatasetEntry; // string - device name, int - handle
 
 class CPluginManager;
 class CircularBuffer;
