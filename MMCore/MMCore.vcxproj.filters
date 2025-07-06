@@ -144,6 +144,9 @@
     <ClCompile Include="Devices\StorageInstance.cpp">
       <Filter>Source Files\Devices</Filter>
     </ClCompile>
+    <ClCompile Include="AttachedStorageThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CircularBuffer.h">
@@ -310,6 +313,9 @@
     </ClInclude>
     <ClInclude Include="Devices\StorageInstance.h">
       <Filter>Header Files\Devices</Filter>
+    </ClInclude>
+    <ClInclude Include="AttachedStorageThread.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

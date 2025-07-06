@@ -75,6 +75,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AttachedStorageThread.cpp" />
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Configuration.cpp" />
     <ClCompile Include="CoreCallback.cpp" />
@@ -114,6 +115,7 @@
     <ClCompile Include="ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AttachedStorageThread.h" />
     <ClInclude Include="CircularBuffer.h" />
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />

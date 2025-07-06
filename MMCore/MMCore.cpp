@@ -54,6 +54,7 @@
 #include "MMCore.h"
 #include "MMEventCallback.h"
 #include "PluginManager.h"
+#include "AttachedStorageThread.h"
 
 #include <algorithm>
 #include <cassert>
@@ -142,7 +143,8 @@ CMMCore::CMMCore() :
    deviceManager_(new mm::DeviceManager()),
    pPostedErrorsLock_(NULL),
    datasetHandleCounter_(0),
-   attachedDatasetHandle_(-1)
+   attachedDatasetHandle_(-1),
+   storageThread_(nullptr)
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
@@ -8951,7 +8953,10 @@ void CMMCore::attachDatasetToCircularBuffer(int handle)  throw (CMMError)
       // disconnect dataset
       attachedDatasetHandle_ = -1;
       attachedDataset_ = std::make_pair(nullptr, -1);
-      // TODO: shut down saving thread
+      if (storageThread_)
+      {
+         delete storageThread_;
+      }
       return;
    }
 
@@ -8962,7 +8967,11 @@ void CMMCore::attachDatasetToCircularBuffer(int handle)  throw (CMMError)
    attachedDataset_ = std::make_pair(pStorage, deviceHandle);
    attachedDatasetHandle_ = handle;
 
-   // TODO: start save thread for the circular buffer
+   if (storageThread_)
+      delete storageThread_;
+
+   storageThread_ = new AttachedStorageThread(this);
+   storageThread_->start();
 }
 
 /**
@@ -8979,8 +8988,10 @@ int CMMCore::getAttachedDataset()
  */
 std::string CMMCore::getLastAttachedDatasetError()
 {
-   // TODO:
-   return std::string();
+   if (!storageThread_ || storageThread_->isRunning())
+      return ""; // no errors
+   
+   return storageThread_->getErrorMessage();
 }
 
 std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const char* deviceLabel) throw (CMMError)

@@ -113,6 +113,7 @@ class XYStageInstance;
 class StorageInstance;
 
 class CMMCore;
+class AttachedStorageThread;
 
 namespace mm {
    class DeviceManager;
@@ -720,6 +721,7 @@ private:
    int datasetHandleCounter_;
    std::pair<std::shared_ptr<StorageInstance>, int> attachedDataset_;
    int attachedDatasetHandle_;
+   AttachedStorageThread* storageThread_;
 
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;
@@ -732,6 +734,7 @@ private:
 
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
+
 
 private:
    void InitializeErrorMessages();
