@@ -14,13 +14,14 @@
 
 # Build MMDevice
 build-mmdevice:
-    meson setup MMDevice/builddir MMDevice --reconfigure --buildtype debug
+    meson setup MMDevice/builddir MMDevice --reconfigure --buildtype debug \
+        --vsenv
     meson compile -C MMDevice/builddir
 
 # Build MMCore (depends on build-mmdevice)
 build-mmcore: build-mmdevice
     cp -R MMDevice MMCore/subprojects
-    meson setup MMCore/builddir MMCore --reconfigure --buildtype debug
+    meson setup MMCore/builddir MMCore --reconfigure --buildtype debug --vsenv
     meson compile -C MMCore/builddir
 
 # Test MMDevice (depends on build-mmdevice)
