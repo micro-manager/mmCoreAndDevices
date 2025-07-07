@@ -31,6 +31,20 @@
 #include <string>
 
 
+// At the moment we rely on C++ dynamic exception specifiers (deprecated in
+// C++11, removed in C++17) to tell SWIG-Java which exceptions may be thrown by
+// API functions. But to avoid warnings and errors from the C++ compiler, we
+// hide them behind a macro.
+// Also hide 'noexcept' from SWIG 3.x, which doesn't support that keyword.
+#ifdef SWIG
+#define MMCORE_LEGACY_THROW(ex) throw (ex)
+#define MMCORE_NOEXCEPT throw ()
+#else
+#define MMCORE_LEGACY_THROW(ex)
+#define MMCORE_NOEXCEPT noexcept
+#endif
+
+
 /// Core error class. Exceptions thrown by the Core public API are of this type.
 /**
  * Exceptions can be "chained" to express underlying causes of errors.
@@ -116,10 +130,10 @@ public:
    /// Copy constructor (perform a deep copy).
    CMMError(const CMMError& other);
 
-   virtual ~CMMError() throw() {}
+   virtual ~CMMError() {}
 
    /// Implements std::exception interface.
-   virtual const char* what() const throw() { return message_.c_str(); }
+   virtual const char* what() const MMCORE_NOEXCEPT { return message_.c_str(); }
 
    /// Get the error message for this error.
    virtual std::string getMsg() const;

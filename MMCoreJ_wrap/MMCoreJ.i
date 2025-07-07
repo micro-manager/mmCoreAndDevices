@@ -917,6 +917,7 @@
 
 %{
 #include "../MMDevice/MMDeviceConstants.h"
+#include "../MMCore/Error.h"
 #include "../MMCore/Configuration.h"
 #include "../MMDevice/ImageMetadata.h"
 #include "../MMCore/MMEventCallback.h"
@@ -1235,8 +1236,9 @@ namespace std {
 
 
 %include "../MMDevice/MMDeviceConstants.h"
+%include "../MMCore/Error.h"
 %include "../MMCore/Configuration.h"
-%include "../MMCore/MMCore.h"
 %include "../MMDevice/ImageMetadata.h"
 %include "../MMCore/MMEventCallback.h"
+%include "../MMCore/MMCore.h"
 
