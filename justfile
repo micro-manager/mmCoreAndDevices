@@ -19,14 +19,21 @@ default:
 
 # Build MMDevice
 build-mmdevice:
-    meson setup MMDevice/builddir MMDevice --reconfigure --buildtype debug \
-        --vsenv
+    meson setup MMDevice/builddir MMDevice \
+        --reconfigure \
+        --vsenv \
+        --buildtype debug \
+        -Dcatch2:tests=false
     meson compile -C MMDevice/builddir
 
 # Build MMCore (depends on build-mmdevice)
 build-mmcore: build-mmdevice
     cp -R MMDevice MMCore/subprojects
-    meson setup MMCore/builddir MMCore --reconfigure --buildtype debug --vsenv
+    meson setup MMCore/builddir MMCore \
+        --reconfigure \
+        --vsenv \
+        --buildtype debug \
+        -Dcatch2:tests=false
     meson compile -C MMCore/builddir
 
 # Test MMDevice (depends on build-mmdevice)
