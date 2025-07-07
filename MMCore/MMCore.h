@@ -754,6 +754,8 @@ private:
    void logError(const char* device, const char* msg);
    void updateAllowedChannelGroups();
    void assignDefaultRole(std::shared_ptr<DeviceInstance> pDev);
+   void removeDeviceRole(std::shared_ptr<DeviceInstance> pDev);
+   void removeAllDeviceRoles();
    void updateCoreProperty(const char* propName, MM::DeviceType devType) MMCORE_LEGACY_THROW(CMMError);
    void loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
    void initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError);
