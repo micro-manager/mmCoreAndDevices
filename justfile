@@ -1,5 +1,6 @@
-# This Justfile defines tasks for building and testing MMDevice and MMCore projects.
-# It is only for the experimental meson-build system, and is not yet used in production.
+# This Justfile defines tasks for building and testing MMDevice and MMCore
+# projects. It is only for the experimental meson-build system, and is not yet
+# used in production.
 #
 # To use it, first install Just: https://github.com/casey/just, for example:
 #   $ uv tool install just
@@ -10,7 +11,11 @@
 #   # or
 #   $ brew install meson ninja
 #
-# Then run any command with `just <command>`.  Or `just --list` to see all available commands.
+# Then run any command with `just <command>`. Or simply `just` to see all
+# available commands.
+
+default:
+    @just --list
 
 # Build MMDevice
 build-mmdevice:
