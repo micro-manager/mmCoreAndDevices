@@ -768,6 +768,37 @@ void CMMCore::assignDefaultRole(std::shared_ptr<DeviceInstance> pDevice)
    }
 }
 
+void CMMCore::removeDeviceRole(std::shared_ptr<DeviceInstance> pDev) {
+   if (pDev == currentCameraDevice_.lock()) {
+      setCameraDevice("");
+   } else if (pDev == currentShutterDevice_.lock()) {
+      setShutterDevice("");
+   } else if (pDev == currentXYStageDevice_.lock()) {
+      setXYStageDevice("");
+   } else if (pDev == currentFocusDevice_.lock()) {
+      setFocusDevice("");
+   } else if (pDev == currentAutofocusDevice_.lock()) {
+      setAutoFocusDevice("");
+   } else if (pDev == currentImageProcessor_.lock()) {
+      setImageProcessorDevice("");
+   } else if (pDev == currentGalvoDevice_.lock()) {
+      setGalvoDevice("");
+   } else if (pDev == currentSLMDevice_.lock()) {
+      setSLMDevice("");
+   }
+}
+
+void CMMCore::removeAllDeviceRoles() {
+   setCameraDevice("");
+   setShutterDevice("");
+   setXYStageDevice("");
+   setFocusDevice("");
+   setAutoFocusDevice("");
+   setImageProcessorDevice("");
+   setGalvoDevice("");
+   setSLMDevice("");
+}
+
 /**
  * Unloads the device from the core and adjusts all configuration data.
  */
@@ -783,6 +814,8 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
    try {
+      removeDeviceRole(pDevice);
+
       mm::DeviceModuleLockGuard guard(pDevice);
       LOG_DEBUG(coreLogger_) << "Will unload device " << label;
       deviceManager_->UnloadDevice(pDevice);
@@ -805,6 +838,8 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
 void CMMCore::unloadAllDevices() MMCORE_LEGACY_THROW(CMMError)
 {
    try {
+      removeAllDeviceRoles();
+
       configGroups_->Clear();
       updateAllowedChannelGroups();
 
