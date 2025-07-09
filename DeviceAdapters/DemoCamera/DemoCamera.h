@@ -1075,7 +1075,8 @@ public:
    DemoAutoFocus() : 
       running_(false), 
       busy_(false), 
-      initialized_(false)  
+      initialized_(false),
+      offset_(0.0)
       {
          CreateHubIDProperty();
       }
@@ -1113,13 +1114,22 @@ public:
       score = 1.0;
       return DEVICE_OK;
    }
-   virtual int GetOffset(double& /*offset*/) { return DEVICE_OK; }
-   virtual int SetOffset(double /*offset*/) { return DEVICE_OK; }
+   virtual int GetOffset(double& offset)
+   {
+      offset = offset_;
+      return DEVICE_OK;
+   }
+   virtual int SetOffset(double offset)
+   {
+      offset_ = offset;
+      return DEVICE_OK;
+   }
 
 private:
    bool running_;
    bool busy_;
    bool initialized_;
+   double offset_;
 };
 
 struct Point
