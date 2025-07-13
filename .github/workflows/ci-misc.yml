@@ -12,3 +12,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: ./tools/check-utf8.sh
+
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Doxygen
+        run: sudo apt-get install -y doxygen
+
+      - name: Run strict Doxygen
+        run: doxygen - <<'EOF'
+          EOF
+          OUTPUT_DIRECTORY       = docs
+          GENERATE_LATEX         = NO
+          GENERATE_HTML          = NO
+          GENERATE_XML           = YES
+          INPUT                  = ./MMCore
+          QUIET                  = YES
+          WARNINGS               = YES
+          WARN_IF_UNDOCUMENTED   = NO
+          CASE_SENSE_NAMES       = YES
+          RECURSIVE              = YES
+          EXTRACT_ALL            = YES
+          EXTRACT_PRIVATE        = YES
+          EXTRACT_STATIC         = YES
+          WARN_AS_ERROR          = YES
+          EOF
