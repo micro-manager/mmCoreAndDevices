@@ -21,7 +21,8 @@ jobs:
         run: sudo apt-get install -y doxygen graphviz
 
       - name: Run strict Doxygen
-        run: doxygen - <<'EOF'
+        run: |
+          doxygen - <<'EOF'
           OUTPUT_DIRECTORY       = docs
           GENERATE_LATEX         = NO
           GENERATE_HTML          = NO
