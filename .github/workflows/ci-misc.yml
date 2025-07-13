@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Doxygen
-        run: sudo apt-get install -y doxygen
+        run: sudo apt-get install -y doxygen graphviz
 
       - name: Run strict Doxygen
         run: doxygen - <<'EOF'
