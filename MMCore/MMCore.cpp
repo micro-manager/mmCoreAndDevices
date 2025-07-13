@@ -1389,7 +1389,7 @@ void CMMCore::waitForDevice(const char* label) MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Waits (blocks the calling thread) until the specified device becomes
- * @param pDev   the device instance
+ * @param label   the device instance
  */
 void CMMCore::waitForDevice(std::shared_ptr<DeviceInstance> pDev) MMCORE_LEGACY_THROW(CMMError)
 {
