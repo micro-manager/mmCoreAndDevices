@@ -22,7 +22,6 @@ jobs:
 
       - name: Run strict Doxygen
         run: doxygen - <<'EOF'
-          EOF
           OUTPUT_DIRECTORY       = docs
           GENERATE_LATEX         = NO
           GENERATE_HTML          = NO
