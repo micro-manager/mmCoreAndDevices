@@ -117,7 +117,7 @@ int CameraInstance::SetMultiROI(const unsigned int* xs, const unsigned int* ys,
  * @param ys (Return value) Y indices of upper-left corner of the ROIs.
  * @param widths (Return value) Widths of the ROIs, in pixels.
  * @param heights (Return value) Heights of the ROIs, in pixels.
- * @param numROIs Length of the input arrays. If there are fewer ROIs than
+ * @param length Length of the input arrays. If there are fewer ROIs than
  *        this, then this value must be updated to reflect the new count.
  */
 int CameraInstance::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
