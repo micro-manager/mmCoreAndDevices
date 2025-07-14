@@ -1571,6 +1571,10 @@ namespace MM {
        * Magnifiers can use this to signal changes in magnification
        */
       virtual int OnMagnifierChanged(const Device* caller) = 0;
+      /**
+       * Signals that the shutter opened or clased
+       */
+      virtual int OnShutterOpenChanged(const Device* caller, bool open) = 0;
 
       // Deprecated: Return value overflows in ~72 minutes on Windows.
       // Prefer std::chrono::steady_clock for time delta measurements.

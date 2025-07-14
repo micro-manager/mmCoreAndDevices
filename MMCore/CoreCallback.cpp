@@ -674,6 +674,19 @@ int CoreCallback::OnMagnifierChanged(const MM::Device* /* device */)
    return DEVICE_OK;
 }
 
+/**
+ * Handler for Shutter State changes.
+ * 
+ */
+int CoreCallback::OnShutterOpenChanged(const MM::Device* device, bool state)
+{
+   if (core_->externalCallback_) {
+      char label[MM::MaxStrLength];
+      device->GetLabel(label);
+      core_->externalCallback_->onShutterOpenChanged(label, state);
+   }
+   return DEVICE_OK;
+}
 
 
 int CoreCallback::SetSerialProperties(const char* portName,
