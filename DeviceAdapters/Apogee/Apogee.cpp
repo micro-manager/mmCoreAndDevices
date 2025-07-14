@@ -37,7 +37,7 @@
 
 #include "Apogee.h"
 #include "ModuleInterface.h"
-#pragma warning(disable : 4996) // disable warning for deperecated CRT functions on Windows
+#pragma warning(disable : 4996) // disable warning for deperecated CRT functions on Windows 
 
 
 #include <sstream>

@@ -28,7 +28,7 @@
 #include "DeviceBase.h"
 #include "nPC400.h"
 #include "nPC400Ctrl.h"
-
+	
 //
 // define channel class that is atached to the C400 controller
 //

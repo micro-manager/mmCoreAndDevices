@@ -3,7 +3,7 @@
 
 #include "Property.h"
 
-class ISRRFCamera
+class ISRRFCamera 
 {
 public:
    virtual ~ISRRFCamera(){};

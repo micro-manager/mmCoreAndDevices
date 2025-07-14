@@ -1,7 +1,7 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-#define ERR_COMMAND_SUCCESS_MISSING 101
+#define ERR_COMMAND_SUCCESS_MISSING 101 
 
 
 class TeensyShutter : public CShutterBase<TeensyShutter>

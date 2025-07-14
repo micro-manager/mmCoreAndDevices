@@ -15,7 +15,7 @@
 #include <math.h>
 #include "ModuleInterface.h"
 #include <sstream>
-#include <algorithm>
+#include <algorithm> 
 
 
 const char* g_ControllerName    = "VarispecLCTF";
