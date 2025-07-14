@@ -1516,7 +1516,7 @@ int CPCOCam::Initialize()
         nRet = CreateProperty("Acquire Sequence Number Images", "1", MM::Integer, false, pAct);
         if (nRet != DEVICE_OK)
           return nRet;
-        nRet = SetPropertyLimits("Acquire Sequence Number Images", 1, 10000);
+        nRet = SetPropertyLimits("Acquire Sequence Number Images", 0, 10000);
         if (nRet != DEVICE_OK)
           return nRet;
       }
