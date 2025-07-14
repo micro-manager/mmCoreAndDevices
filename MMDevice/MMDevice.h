@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 71
+#define DEVICE_INTERFACE_VERSION 73
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -51,20 +51,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-
-#ifdef MMDEVICE_CLIENT_BUILD
-// Hide deprecation warnings when building MMCore
-#   define MM_DEPRECATED(prototype) prototype
-#else
-#   ifdef _MSC_VER
-#      define MM_DEPRECATED(prototype) __declspec(deprecated) prototype
-#   elif defined(__GNUC__)
-#      define MM_DEPRECATED(prototype) prototype __attribute__((deprecated))
-#   else
-#      define MM_DEPRECATED(prototype) prototype
-#   endif
-#endif
 
 // To be removed once the deprecated Get/SetModuleHandle() is removed:
 #ifdef _WIN32
@@ -1307,6 +1293,206 @@ namespace MM {
    };
 
    /**
+    * Pressure Pump API
+    */
+   class PressurePump : public Device
+   {
+   public:
+       PressurePump() {}
+       virtual ~PressurePump() {}
+
+       // MMDevice API
+       virtual DeviceType GetType() const { return Type; }
+       static const DeviceType Type;
+
+       /**
+        * Stops the pump. The implementation should halt any dispensing/withdrawal,
+        * and make the pump available again (make Busy() return false).
+        *
+        * Required function of PressurePump API.
+        */
+       virtual int Stop() = 0;
+
+       /**
+        * Calibrates the pressure controller. If no internal calibration is
+        * supported, just return DEVICE_UNSUPPORTED_COMMAND.
+        *
+        * Optional function of PressurePump API.
+        */
+       virtual int Calibrate() = 0;
+
+       /**
+        * Returns whether the pressure controller is functional before calibration,
+        * or it needs to undergo internal calibration before any commands can be
+        * executed.
+        *
+        * Required function of PressurePump API.
+        */
+       virtual bool RequiresCalibration() = 0;
+
+       /**
+        * Sets the pressure of the pressure controller. The provided value will
+        * be in kPa. The implementation should convert the unit from kPa to the
+        * desired unit by the device.
+        *
+        * Required function of PressurePump API.
+        */
+       virtual int SetPressureKPa(double pressureKPa) = 0;
+
+       /**
+        * Gets the pressure of the pressure controller. The returned value
+        * has to be in kPa. The implementation, therefore, should convert the
+        * value provided by the pressure controller to kPa.
+        *
+        * Required function of PressurePump API.
+        */
+       virtual int GetPressureKPa(double& pressureKPa) = 0;
+   };
+
+   /**
+    * Volumetric Pump API
+    */
+   class VolumetricPump : public Device
+   {
+   public:
+       VolumetricPump() {}
+       virtual ~VolumetricPump() {}
+
+       // MMDevice API
+       virtual DeviceType GetType() const { return Type; }
+       static const DeviceType Type;
+
+       /**
+        * Homes the pump. If no homing is supported, just return
+        * DEVICE_UNSUPPORTED_COMMAND.
+        *
+        * Optional function of VolumetricPump API
+        */
+       virtual int Home() = 0;
+
+       /**
+        * Stops the pump. The implementation should halt any dispensing/withdrawal,
+        * and make the pump available again (make Busy() return false).
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int Stop() = 0;
+
+       /**
+        * Flag to check whether the pump requires homing before being operational
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual bool RequiresHoming() = 0;
+
+       /**
+        * Sets the direction of the pump. Certain pump
+        * (e.g. peristaltic and DC pumps) don't have an apriori forward-reverse direction,
+        * as it depends on how it is connected. This function allows you to switch
+        * forward and reverse.
+        *
+        * If the pump is uni-directional, this function does not need to be
+        * implemented (return DEVICE_UNSUPPORTED_COMMAND).
+        *
+        * Optional function of VolumetricPump API
+        */
+       virtual int InvertDirection(bool inverted) = 0;
+
+       /**
+        * Sets the direction of the pump. Certain pump
+        * (e.g. peristaltic and DC pumps) don't have an apriori forward-reverse direction,
+        * as it depends on how it is connected. This function allows you to switch
+        * forward and reverse.
+        *
+        * When the pump is uni-directional, this function should always assign
+        * false to `inverted`
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int IsDirectionInverted(bool& inverted) = 0;
+
+       /**
+        * Sets the current volume of the pump in microliters (uL).
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int SetVolumeUl(double volUl) = 0;
+
+       /**
+        * Gets the current volume of the pump in microliters (uL).
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int GetVolumeUl(double& volUl) = 0;
+
+       /**
+        * Sets the maximum volume of the pump in microliters (uL).
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int SetMaxVolumeUl(double volUl) = 0;
+
+       /**
+        * Gets the maximum volume of the pump in microliters (uL).
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int GetMaxVolumeUl(double& volUl) = 0;
+
+       /**
+        * Sets the flowrate in microliter (uL) per second. The implementation
+        * should convert the provided flowrate to whichever unit the pump desires
+        * (steps/s, mL/h, V).
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int SetFlowrateUlPerSecond(double flowrate) = 0;
+
+       /**
+        * Gets the flowrate in microliter (uL) per second.
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int GetFlowrateUlPerSecond(double& flowrate) = 0;
+
+       /**
+        * Dispenses/withdraws until the minimum or maximum volume has been
+        * reached, or the pumping is manually stopped
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int Start() = 0;
+
+       /**
+        * Dispenses/withdraws for the provided time, with the flowrate provided
+        * by GetFlowrate_uLperMin
+        * Dispensing for an undetermined amount of time can be done with DBL_MAX
+        * During the dispensing/withdrawal, Busy() should return "true".
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int DispenseDurationSeconds(double durSec) = 0;
+
+       /**
+        * Dispenses/withdraws the provided volume.
+        *
+        * The implementation should cause positive volumes to be dispensed, whereas
+        * negative volumes should be withdrawn. The implementation should prevent
+        * the volume to go negative (i.e. stop the pump once the syringe is empty),
+        * or to go over the maximum volume (i.e. stop the pump once it is full).
+        * This automatically allows for dispensing/withdrawal for an undetermined
+        * amount of time by providing DBL_MAX for dispense, and DBL_MIN for
+        * withdraw.
+        *
+        * During the dispensing/withdrawal, Busy() should return "true".
+        *
+        * Required function of VolumetricPump API
+        */
+       virtual int DispenseVolumeUl(double volUl) = 0;
+   };
+
+
+   /**
     * Callback API to the core control module.
     * Devices use this abstract interface to use Core services
     */
@@ -1398,15 +1584,50 @@ namespace MM {
       // sequence acquisition
       virtual int AcqFinished(const Device* caller, int statusCode) = 0;
       virtual int PrepareForAcq(const Device* caller) = 0;
-      virtual int InsertImage(const Device* caller, const ImgBuffer& buf) = 0;
+
+      /// \deprecated Use the other overloads instead.
+      MM_DEPRECATED(virtual int InsertImage(const Device* caller, const ImgBuffer& buf)) = 0;
+
+      /**
+       * Cameras must call this function during sequence acquisition to send
+       * each frame to the Core.
+       *
+       * byteDepth: 1 or 2 for grayscale images; 4 for BGR_
+       *
+       * nComponents: 1 for grayscale; 4 for BGR_ (_: unused component)
+       *
+       * serializedMetadata: must be the result of md.serialize().c_str() (md
+       *                     being an instance of Metadata)
+       *
+       * doProcess: must normally be true, except for the case mentioned below
+       *
+       * If the sequence acquisition was started with stopOnOverflow = true
+       * _and_ the return value of InsertImage() is DEVICE_BUFFER_OVERFLOW,
+       * ClearImageBuffer() should be called and the call to InsertImage()
+       * should then be repeated with doProcess set to false. Otherwise, if the
+       * return value is not DEVICE_OK, or the second call failed (with any
+       * code), acquisition should stop.
+       */
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true) = 0;
-      virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* md = 0, const bool doProcess = true) = 0;
-      /// \deprecated Use the other forms instead.
+
+      /// \deprecated Use the other overloads instead.
+      MM_DEPRECATED(virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* md = 0, const bool doProcess = true)) = 0;
+      // TODO Upon removing the above deprecated overload, add a default
+      // argument `= nullptr` to `serializedMetadata` in the following
+      // overload. That allows existing device adapters to compile.
+
+      /**
+       * Same as the overload with the added nComponents parameter.
+       *
+       * Assumes nComponents == 1 (grayscale).
+       */
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess = true) = 0;
+
       virtual void ClearImageBuffer(const Device* caller) = 0;
       virtual bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth) = 0;
-      /// \deprecated Use the other forms instead.
-      virtual int InsertMultiChannel(const Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* md = 0) = 0;
+
+      /// \deprecated Use InsertImage() instead.
+      MM_DEPRECATED(virtual int InsertMultiChannel(const Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* md = 0)) = 0;
 
       // Formerly intended for use by autofocus
       MM_DEPRECATED(virtual const char* GetImage()) = 0;

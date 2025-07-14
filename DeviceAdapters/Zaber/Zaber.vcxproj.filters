@@ -39,6 +39,9 @@
     <ClCompile Include="ObjectiveChanger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="WdiAutofocus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Zaber.h">
@@ -63,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ObjectiveChanger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WdiAutofocus.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

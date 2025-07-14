@@ -22,14 +22,12 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASIFWheel_H_
-#define _ASIFWheel_H_
+#ifndef ASIFWHEEL_H
+#define ASIFWHEEL_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
-
-using namespace std;
 
 class CFWheel : public ASIPeripheralBase<CStateDeviceBase, CFWheel>
 {
@@ -62,12 +60,12 @@ private:
    unsigned int numPositions_;
    unsigned int curPosition_;
    bool spinning_;
-   string wheelNumber_;
-   static string selectedWheel_; // which wheel is currently selected, shared among all instances of this class
+   std::string wheelNumber_;
+   static std::string selectedWheel_; // which wheel is currently selected, shared among all instances of this class
 
    int SelectWheelOverride();
    int SelectWheel();
    void ForcePropertyRefresh();
 };
 
-#endif //_ASIFWheel_H_
+#endif // ASIFWHEEL_H

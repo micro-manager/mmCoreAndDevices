@@ -5,12 +5,14 @@ on:
     paths:
       - MMDevice/**
       - MMCore/**
+      - .github/workflows/ci-mmdevice-mmcore.yml
   push:
     branches:
       - main
     paths:
       - MMDevice/**
       - MMCore/**
+      - .github/workflows/ci-mmdevice-mmcore.yml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,17 +27,20 @@ jobs:
           - windows
           - macos
           - ubuntu
+        cppstd:  # Test the oldest and newest standards we support
+          - c++14
+          - c++17
         include:
           - os: windows
-            runner: windows-2019
+            runner: windows-2025
             cxx: cl
           - os: macos
-            runner: macos-11
+            runner: macos-13
             cxx: clang++
           - os: ubuntu
             runner: ubuntu-22.04
             cxx: g++
-    name: ${{ matrix.runner }}-${{ matrix.cxx }}
+    name: ${{ matrix.runner }}-${{ matrix.cxx }}-${{ matrix.cppstd }}
     runs-on: ${{ matrix.runner }}
     env:
       CXX: ${{ matrix.cxx }}
@@ -49,11 +54,11 @@ jobs:
           python -m pip install --upgrade pip meson ninja
       - uses: ilammy/msvc-dev-cmd@v1
         with:
-          vsversion: '2019'
+          vsversion: '2022'
       - name: Build and test MMDevice
         run: |
           cd MMDevice
-          meson setup builddir --buildtype debug
+          meson setup builddir --buildtype debug -Dcpp_std=${{ matrix.cppstd }}
           meson test -C builddir --print-errorlogs
       - name: Prepare MMCore source
         shell: bash
@@ -63,5 +68,5 @@ jobs:
       - name: Build and test MMCore
         run: |
           cd MMCore
-          meson setup builddir --buildtype debug
+          meson setup builddir --buildtype debug -Dcpp_std=${{ matrix.cppstd }}
           meson test -C builddir --print-errorlogs

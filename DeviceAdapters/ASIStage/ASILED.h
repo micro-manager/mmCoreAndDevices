@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASILED_H_
-#define _ASILED_H_
+#ifndef ASILED_H
+#define ASILED_H
 
 #include "ASIBase.h"
 
@@ -19,8 +19,8 @@ public:
 	int Initialize();
 	int Shutdown();
 
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	void GetName(char* pszName) const;
 	bool Busy();
@@ -48,4 +48,4 @@ private:
 	bool hasDLED_;
 };
 
-#endif // _ASILED_H_
+#endif // ASILED_H

@@ -9,3 +9,14 @@ Changelog IDSPeak:
 
 2024.02.06
 - Multi-camera support is now compatible with the multicam utility
+
+2024.12.03
+- Added support for all IDS PixelTypes and added support for 16bit acquisition
+
+2025.03.24
+- Improved support for IDS PixelTypes
+- Made analog gain, digital gain, auto whitebalance, and temperature monitoring
+  optional, such that the device adapters supports devices that don't support
+  those features.
+- Included Analog Gain
+- Fixes small memory leak during conversion from IDS PixelType to MM pixeltypes

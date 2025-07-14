@@ -20,7 +20,7 @@ TEnumProperty::TEnumProperty(const string & MM_name, IEnum * enum_feature, CAndo
    if (enum_feature->IsImplemented())
    {
       CPropertyAction * pAct = new CPropertyAction (this, &TEnumProperty::OnEnum);
-      camera_->CreateProperty(MM_name_.c_str(), "", MM::String, readOnly, pAct);
+      camera_->CreateProperty(MM_name_.c_str(), "", MM::String, readOnly || enum_feature->IsReadOnly(), pAct);
 
       try
       {

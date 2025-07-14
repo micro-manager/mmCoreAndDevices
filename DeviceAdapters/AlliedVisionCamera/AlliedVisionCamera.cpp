@@ -557,6 +557,8 @@ int AlliedVisionCamera::ClearROI()
 
 int AlliedVisionCamera::IsExposureSequenceable(bool &isSequenceable) const
 {
+    isSequenceable = false;
+  
     // TODO implement
     return VmbErrorSuccess;
 }

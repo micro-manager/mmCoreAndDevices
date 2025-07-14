@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASILED_H_
-#define _ASILED_H_
+#ifndef ASILED_H
+#define ASILED_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -36,18 +36,15 @@ public:
    ~CLED() { }
   
    // Device API
-   // ----------
    int Initialize();
    bool Busy() { return false; }
 
    // Shutter API
-   // -----------
    int SetOpen(bool open = true);
    int GetOpen(bool& open);
    int Fire(double /*deltaT*/) { return DEVICE_UNSUPPORTED_COMMAND;  }
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnIntensity            (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -63,4 +60,4 @@ private:
    int UpdateOpenIntensity();
 };
 
-#endif //_ASILED_H_
+#endif // ASILED_H

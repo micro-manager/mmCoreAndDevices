@@ -32,6 +32,7 @@
 #include "FilterCubeTurret.h"
 #include "Illuminator.h"
 #include "ObjectiveChanger.h"
+#include "WdiAutofocus.h"
 
 #include <algorithm>
 
@@ -48,6 +49,7 @@ const char* g_Msg_LAMP_OVERHEATED = "Some of the illuminator lamps are overheate
 const char* g_Msg_PERIPHERAL_DISCONNECTED = "A peripheral has been disconnected; please reconnect it or set its peripheral ID to zero and then restart the driver.";
 const char* g_Msg_PERIPHERAL_UNSUPPORTED = "Controller firmware does not support one of the connected peripherals; please update the firmware.";
 const char* g_Msg_FIRMWARE_UNSUPPORTED = "Firmware is not suported; please update the firmware.";
+const char* g_Msg_ERR_INVALID_OPERATION = "Operation cannot be performed at this time.";
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -61,6 +63,7 @@ MODULE_API void InitializeModuleData()
 	RegisterDevice(g_FilterTurretName, MM::StateDevice, g_FilterTurretDescription);
 	RegisterDevice(g_IlluminatorName, MM::ShutterDevice, g_IlluminatorDescription);
 	RegisterDevice(g_ObjectiveChangerName, MM::StateDevice, g_ObjectiveChangerDescription);
+	RegisterDevice(g_WdiAutofocusName, MM::AutoFocusDevice, g_WdiAutofocusDescription);
 }
 
 
@@ -89,6 +92,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 	else if (strcmp(deviceName, g_ObjectiveChangerName) == 0)
 	{
 		return new ObjectiveChanger();
+	}
+	else if (strcmp(deviceName, g_WdiAutofocusName) == 0)
+	{
+		return new WdiAutofocus();
 	}
 	else
 	{
@@ -153,7 +160,7 @@ void ZaberBase::resetConnection() {
 		// the connection destructor can throw in the rarest occasions
 		connection_ = nullptr;
 	}
-	catch (const zmlbase::MotionLibException e) 
+	catch (const zmlbase::MotionLibException e)
 	{
 	}
 }
@@ -228,13 +235,13 @@ int ZaberBase::SetSetting(long device, long axis, string setting, double data, i
 }
 
 
-bool ZaberBase::IsBusy(long device)
+bool ZaberBase::IsBusy(long device, long axis)
 {
 	core_->LogMessage(device_, "ZaberBase::IsBusy\n", true);
 
 	zml::Response resp;
 
-	int ret = Command(device, 0, "", resp);
+	int ret = Command(device, axis, "", resp);
 	if (ret != DEVICE_OK)
 	{
 		ostringstream os;
@@ -453,6 +460,10 @@ int ZaberBase::handleException(std::function<void()> wrapped) {
 		core_->LogMessage(device_, e.what(), true);
 		return ERR_MOVEMENT_FAILED;
 	}
+	catch (const zmlbase::InvalidOperationException e) {
+		core_->LogMessage(device_, e.what(), true);
+		return ERR_INVALID_OPERATION;
+	}
 	catch (const zmlbase::MotionLibException e) {
 		core_->LogMessage(device_, e.what(), true);
 		return DEVICE_ERR;
@@ -472,4 +483,5 @@ void ZaberBase::setErrorMessages(std::function<void(int, const char*)> setter) {
 	setter(ERR_LAMP_DISCONNECTED, g_Msg_LAMP_DISCONNECTED);
 	setter(ERR_LAMP_OVERHEATED, g_Msg_LAMP_OVERHEATED);
 	setter(ERR_FIRMWARE_UNSUPPORTED, g_Msg_FIRMWARE_UNSUPPORTED);
+	setter(ERR_INVALID_OPERATION, g_Msg_ERR_INVALID_OPERATION);
 }

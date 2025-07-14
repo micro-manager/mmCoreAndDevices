@@ -36,15 +36,6 @@
 #include <memory>
 #include <string>
 
-#ifdef _MSC_VER
-#pragma warning(disable: 4290) // 'C++ exception specification ignored'
-#endif
-
-#if defined(__GNUC__) && !defined(__clang__)
-// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
-#pragma GCC diagnostic ignored "-Wdeprecated"
-#endif
-
 const long long bytesInMB = 1 << 20;
 const long adjustThreshold = LONG_MAX / 2;
 
@@ -194,7 +185,7 @@ static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_c
 /**
 * Inserts a single image in the buffer.
 */
-bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError)
+bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
    return InsertMultiChannel(pixArray, 1, width, height, byteDepth, pMd);
 }
@@ -202,7 +193,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 /**
 * Inserts a single image, possibly with multiple channels, but with 1 component, in the buffer.
 */
-bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError)
+bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
    return InsertMultiChannel(pixArray, numChannels, width, height, byteDepth, 1, pMd);
 }
@@ -210,7 +201,7 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
 /**
 * Inserts a single image, possibly with multiple components, in the buffer.
 */
-bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError)
+bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
     return InsertMultiChannel(pixArray, 1, width, height, byteDepth, nComponents, pMd);
 }
@@ -218,7 +209,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 /**
 * Inserts a multi-channel frame in the buffer.
 */
-bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError)
+bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
     MMThreadGuard insertGuard(g_insertLock);
  
@@ -282,23 +273,23 @@ bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned 
       auto now = std::chrono::system_clock::now();
       md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
 
-      md.PutImageTag("Width",width);
-      md.PutImageTag("Height",height);
+      md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
+      md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
       if (byteDepth == 1)
-         md.PutImageTag("PixelType","GRAY8");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
       else if (byteDepth == 2)
-         md.PutImageTag("PixelType","GRAY16");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
       else if (byteDepth == 4)
       {
          if (nComponents == 1)
-            md.PutImageTag("PixelType","GRAY32");
+            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
          else
-            md.PutImageTag("PixelType","RGB32");
+            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
       }
       else if (byteDepth == 8)
-         md.PutImageTag("PixelType","RGB64");
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
       else
-         md.PutImageTag("PixelType","Unknown"); 
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
 
       pImg->SetMetadata(md);
       //pImg->SetPixels(pixArray + i * singleChannelSize);

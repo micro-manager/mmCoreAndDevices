@@ -83,7 +83,7 @@ public:
    void Sleep(const MM::Device* caller, double intervalMs);
 
    // continuous acquisition support
-   int InsertImage(const MM::Device* caller, const ImgBuffer& imgBuf); // Note: _not_ mm::ImgBuffer
+   /*Deprecated*/ int InsertImage(const MM::Device* caller, const ImgBuffer& imgBuf); // Note: _not_ mm::ImgBuffer
    int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess = true);
    int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true);
 

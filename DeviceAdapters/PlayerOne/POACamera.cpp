@@ -815,6 +815,11 @@ int POACamera::SnapImage()
     }
 
     m_bIsToStopExposure = false;
+
+    if (exp > 20.0)
+    {
+       CDeviceUtils::SleepMs((long) (exp - 10.0));
+    }
     
     do
     {

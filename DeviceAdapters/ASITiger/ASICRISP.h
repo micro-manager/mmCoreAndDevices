@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASICRISP_H_
-#define _ASICRISP_H_
+#ifndef ASICRISP_H
+#define ASICRISP_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -59,6 +59,7 @@ public:
    int OnWaitAfterLock     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnNA                (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnCalGain           (MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLockRange         (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLEDIntensity      (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -71,18 +72,20 @@ public:
    int OnSum		       (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnOffset			   (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnState	           (MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
    // For backwards compatibility with Tiger firmware < 3.40
    int OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   string axisLetter_;
-   string focusState_;
+   std::string axisLetter_;
+   std::string focusState_;
    long waitAfterLock_;
 
    int UpdateFocusState();
-   int SetFocusState(string focusState);
-   int ForceSetFocusState(string focusState);
+   int SetFocusState(const std::string& focusState);
+   int ForceSetFocusState(const std::string& focusState);
 };
 
-#endif // end _ASICRISP_H_
+#endif // ASICRISP_H

@@ -33,7 +33,6 @@
 
 #include "Utilities.h"
 
-#include <boost/lexical_cast.hpp>
 #include <algorithm>
 
 extern const char* g_DeviceNameMultiShutter;

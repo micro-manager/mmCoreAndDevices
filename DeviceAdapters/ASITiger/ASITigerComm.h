@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h, ASIFW1000.h, Arduino.h, and DemoCamera.h
 //
 
-#ifndef _ASITigerComm_H_
-#define _ASITigerComm_H_
+#ifndef ASITIGERCOMM_H
+#define ASITIGERCOMM_H
 
 #include "ASIHub.h"
 #include "MMDevice.h"
@@ -63,6 +63,4 @@ private:
    int TalkToTiger();
 };
 
-
-
-#endif //_ASITigerComm_H_
+#endif // ASITIGERCOMM_H

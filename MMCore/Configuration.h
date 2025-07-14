@@ -20,17 +20,6 @@
 
 #pragma once
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4290) // 'C++ exception specification ignored'
-#endif
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
-#pragma GCC diagnostic ignored "-Wdeprecated"
-#endif
-
 #include <string>
 #include <vector>
 #include <map>
@@ -111,7 +100,7 @@ public:
    bool isSettingIncluded(const PropertySetting& ps);
    bool isConfigurationIncluded(const Configuration& cfg);
 
-   PropertySetting getSetting(size_t index) const throw (CMMError);
+   PropertySetting getSetting(size_t index) const MMCORE_LEGACY_THROW(CMMError);
    PropertySetting getSetting(const char* device, const char* prop);
    
    /**
@@ -124,11 +113,3 @@ private:
    std::vector<PropertySetting> settings_;
    std::map<std::string, int> index_;
 };
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif

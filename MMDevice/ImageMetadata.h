@@ -22,17 +22,6 @@
 
 #pragma once
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4290) // 'C++ exception specification ignored'
-#endif
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
-#pragma GCC diagnostic ignored "-Wdeprecated"
-#endif
-
 #include "MMDeviceConstants.h"
 
 #include <string>
@@ -42,12 +31,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef SWIG
+#define MMDEVICE_LEGACY_THROW(ex) throw (ex)
+#define MMDEVICE_NOEXCEPT throw ()
+#else
+#define MMDEVICE_LEGACY_THROW(ex)
+#define MMDEVICE_NOEXCEPT noexcept
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 // MetadataError
 // -------------
 // Micro-Manager metadata error class, used to create exception objects
 // 
-class MetadataError
+class MetadataError : public std::exception
 {
 public:
    MetadataError(const char* msg) :
@@ -60,6 +57,8 @@ public:
       return message_;
    }
 
+   virtual const char* what() const MMDEVICE_NOEXCEPT { return message_.c_str(); }
+
 private:
    std::string message_;
 };
@@ -69,6 +68,8 @@ class MetadataKeyError : public MetadataError
 public:
    MetadataKeyError() :
       MetadataError("Undefined metadata key") {}
+   MetadataKeyError(const char* key) :
+      MetadataError(("Undefined metadata key: " + std::string(key)).c_str()) {}
    ~MetadataKeyError() {}
 };
 
@@ -326,14 +327,14 @@ public:
          return false;
    }
 
-   MetadataSingleTag GetSingleTag(const char* key) const throw (MetadataKeyError)
+   MetadataSingleTag GetSingleTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataSingleTag* stag = tag->ToSingleTag();
       return *stag;
    }
 
-   MetadataArrayTag GetArrayTag(const char* key) const throw (MetadataKeyError)
+   MetadataArrayTag GetArrayTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataArrayTag* atag = tag->ToArrayTag();
@@ -439,6 +440,10 @@ public:
    bool Restore(const char* stream)
    {
       Clear();
+      if (stream == nullptr)
+      {
+         return true;
+      }
 
       std::istringstream is(stream);
 
@@ -492,18 +497,10 @@ private:
       if (it != tags_.end())
          return it->second;
       else
-         throw MetadataKeyError();
+         throw MetadataKeyError(key);
    }
 
    std::map<std::string, MetadataTag*> tags_;
    typedef std::map<std::string, MetadataTag*>::iterator TagIter;
    typedef std::map<std::string, MetadataTag*>::const_iterator TagConstIter;
 };
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif

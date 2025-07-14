@@ -29,6 +29,7 @@
 #include <vector>
 #include <map>
 #include "MMEventCallback.h"
+#include "../MMDevice/MMDeviceConstants.h"
 
 class CMMCore;
 class MMEventCallback;
@@ -36,11 +37,13 @@ class MMEventCallback;
 class CoreProperty
 {
 public:
-   CoreProperty() : value_("Undefined"), readOnly_(false) {}
-   CoreProperty(const char* v, bool ro) : value_(v), readOnly_(ro) {} 
+   CoreProperty() : value_("Undefined"), readOnly_(false), type_(MM::String) {}
+   CoreProperty(const char* v, bool ro) : value_(v), readOnly_(ro), type_(MM::String) {} 
+   CoreProperty(const char* v, bool ro, MM::PropertyType type) : value_(v), readOnly_(ro), type_(type) {} 
    ~CoreProperty(){}
 
    bool IsReadOnly()const {return readOnly_;}
+   MM::PropertyType GetType() const {return type_;}
 
    bool Set(const char* value);
    std::string Get() const;
@@ -55,6 +58,7 @@ public:
 protected:
    std::string value_;
    bool readOnly_;
+   MM::PropertyType type_;
    std::set<std::string> values_; // allowed values
 };
 
@@ -70,6 +74,7 @@ public:
    void ClearAllowedValues(const char* propName);
    void AddAllowedValue(const char* propName, const char* value);
    bool IsReadOnly(const char* propName) const;
+   MM::PropertyType GetPropertyType(const char* propName) const;
    std::vector<std::string> GetNames() const;
    void Add(const char* name, CoreProperty& p) {properties_[name] = p;}
    void Refresh();

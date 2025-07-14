@@ -120,6 +120,7 @@ SUBDIRS = \
 	CARVII \
 	CNCMicroscope \
 	CSUW1 \
+	Cephla \
 	ChuoSeiki_MD5000 \
 	ChuoSeiki_QT \
 	Cobolt \
@@ -164,8 +165,9 @@ SUBDIRS = \
 	Nikon \
 	NikonTE2000 \
 	NotificationTester \
-	OVP_ECS2 \
 	Omicron \
+	OpenUC2 \
+	OVP_ECS2 \
 	Oxxius \
 	OxxiusCombiner \
 	PI \

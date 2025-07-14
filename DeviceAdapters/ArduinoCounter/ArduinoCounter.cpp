@@ -65,7 +65,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 
 ArduinoCounterCamera::ArduinoCounterCamera() :
-   imageBuffer_(0),
    nrCamerasInUse_(0),
    initialized_(false),
    invert_(false)
@@ -101,7 +100,6 @@ ArduinoCounterCamera::~ArduinoCounterCamera()
 
 int ArduinoCounterCamera::Shutdown()
 {
-   delete imageBuffer_;
    // Rely on the cameras to shut themselves down
    return DEVICE_OK;
 }

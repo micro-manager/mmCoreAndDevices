@@ -41,6 +41,7 @@ mmdevice_public_headers = files(
     'MMDeviceConstants.h',
     'ModuleInterface.h',
     'Property.h',
+    'RegisteredDeviceCollection.h',
 )
 # TODO Support installing public headers
 

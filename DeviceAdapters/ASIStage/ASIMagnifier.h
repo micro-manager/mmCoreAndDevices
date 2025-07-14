@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASIMAGNIFIER_H_
-#define _ASIMAGNIFIER_H_
+#ifndef ASIMAGNIFIER_H
+#define ASIMAGNIFIER_H
 
 #include "ASIBase.h"
 
@@ -17,23 +17,20 @@ public:
     ~Magnifier();
 
     // Device API
-    // ----------
     int Initialize();
     int Shutdown();
 
     void GetName(char* pszName) const;
     bool Busy();
 
-    bool SupportsDeviceDetection(void);
-    MM::DeviceDetectionStatus DetectDevice(void);
+    bool SupportsDeviceDetection();
+    MM::DeviceDetectionStatus DetectDevice();
 
     // Magnifier API
-    //------------
     MM::DeviceType GetType();
     double GetMagnification();
 
     // action interface
-    // ----------------
     int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnMagnification(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -45,4 +42,4 @@ private:
     int answerTimeoutMs_;
 };
 
-#endif // _ASIMAGNIFIER_H_
+#endif // ASIMAGNIFIER_H

@@ -4,10 +4,11 @@
 #include "atcore++.h"
 #include "MMDeviceConstants.h"
 #include "Property.h"
+#include "IProperty.h"
 
 class ICallBackManager;
 
-class TExposureProperty : public andor::IObserver
+class TExposureProperty : public andor::IObserver, public IProperty
 {
 public:
    TExposureProperty(const std::string & MM_name,
