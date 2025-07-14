@@ -30,9 +30,9 @@
 
 #include "LeicaDMIScopeInterface.h"
 #include "LeicaDMIModel.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceThreads.h"
 #include <string>
 #include <vector>
 #include <map>

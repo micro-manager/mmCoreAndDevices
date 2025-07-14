@@ -13,9 +13,9 @@
 #include <cctype>
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
-#include <algorithm> 
+#include <algorithm>
 
 
 const char* g_ControllerName    = "VarispecLCTF";

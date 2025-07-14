@@ -34,7 +34,7 @@
 #include "FixSnprintf.h"
 
 #include "LeicaDMIModel.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 
 LeicaDeviceModel::LeicaDeviceModel() :

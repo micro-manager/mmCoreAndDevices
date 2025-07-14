@@ -18,7 +18,7 @@
 #include "SC10.h"
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 #include <iostream>
 

@@ -33,7 +33,7 @@
 #ifndef _LeicaDMRHUB_H_
 #define _LeicaDMRHUB_H_
 
-#include "../../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 
 
 class LeicaDMRHub

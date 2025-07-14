@@ -1,7 +1,7 @@
 #ifndef _MODULEAPI_H_
 #define _MODULEAPI_H_
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "AndorShamrock.h"
 #include "SharedConstants.h"
 

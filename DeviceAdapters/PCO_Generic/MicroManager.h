@@ -24,10 +24,10 @@
 #ifndef _PCO_GENERIC_H_
 #define _PCO_GENERIC_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
+#include "DeviceUtils.h"
 #include "Camera.h"
 #include <string>
 #include <map>

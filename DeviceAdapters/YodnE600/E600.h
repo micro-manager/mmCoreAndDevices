@@ -22,10 +22,10 @@
 #ifndef E600_H
 #define E600_H
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
+#include "DeviceThreads.h"
 
 #include <string>
 #include <vector>

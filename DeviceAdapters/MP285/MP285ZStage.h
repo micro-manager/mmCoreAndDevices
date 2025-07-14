@@ -25,8 +25,8 @@
 #ifndef _MP285ZSTAGE_H_
 #define _MP285ZSTAGE_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include "MP285.h"
 
 //

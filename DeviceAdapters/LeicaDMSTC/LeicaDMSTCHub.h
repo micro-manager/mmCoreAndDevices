@@ -25,7 +25,7 @@
 #ifndef _LeicaDMSTCHUB_H_
 #define _LeicaDMSTCHUB_H_
 
-#include "../../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 
 
 class LeicaDMSTCHub

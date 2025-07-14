@@ -22,7 +22,7 @@
 #include <string>
 #include <deque>
 #include <map>
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 
 // PFS status constants
 const int PFS_WAIT = 1;

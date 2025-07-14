@@ -61,8 +61,8 @@ there is too much uncommented magic in this code.
 
 #include "BaumerOptronic.h"
 
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/MMDeviceConstants.h"
+#include "ModuleInterface.h"
+#include "MMDeviceConstants.h"
 
 #include <algorithm>
 #include <cmath>

@@ -38,7 +38,7 @@
 #include "PIGCSControllerCom.h"
 #include "PIZStage_DLL.h"
 #include "PIXYStage_DLL.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <algorithm>
 #include <locale.h>
 

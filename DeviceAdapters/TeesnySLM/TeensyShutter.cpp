@@ -1,7 +1,7 @@
 #include <sstream>
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceUtils.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include "TeensyShutter.h"
 
 using namespace std;

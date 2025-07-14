@@ -232,7 +232,7 @@ class Universal : public CCameraBase<Universal>
       int IsExposureSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
       unsigned GetNumberOfComponents() const {return rgbaColor_ ? 4 : 1;}
 
-#ifndef __linux__
+#ifndef linux
       // micromanager calls the "live" acquisition a "sequence"
       //  don't get this confused with a PICAM sequence acquisition, it's actually circular buffer mode
       int PrepareSequenceAcqusition();
@@ -278,7 +278,7 @@ class Universal : public CCameraBase<Universal>
 
    protected:
 
-#ifndef __linux__
+#ifndef linux
       int ThreadRun(void);
       void OnThreadExiting() throw();
 #endif

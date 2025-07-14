@@ -37,7 +37,7 @@
 #include <string>
 #include <deque>
 #include <map>
-#include "../../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 
 /////////////////////////////////////////////////////////////////////////
 // Error codes

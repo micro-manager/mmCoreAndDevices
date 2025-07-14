@@ -1,7 +1,7 @@
 #ifndef _PVCAM_ACTION_H_
 #define _PVCAM_ACTION_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 
 template <class T>
 class PVCAMAction : public MM::ActionFunctor

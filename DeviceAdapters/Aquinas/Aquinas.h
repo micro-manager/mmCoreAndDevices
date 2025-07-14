@@ -12,9 +12,9 @@
 #ifndef _AQUINAS_H_
 #define _AQUINAS_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "ModuleInterface.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes                                                

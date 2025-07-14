@@ -42,7 +42,7 @@
 #include <windows.h>
 #endif
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "PVCAMAdapter.h"
 #include "PVCAMParam.h"
 
@@ -5932,6 +5932,11 @@ int Universal::applyAcqConfig(bool forceSetup)
 void Universal::PvcamCallbackEofEx3(PFRAME_INFO /*pFrameInfo*/, void* pContext)
 {
     // We don't need the FRAME_INFO because we will get it in FrameAcquired via get_latest_frame
+    Universal* pCam = (Universal*)pContext;
+    pCam->FrameAcquired();
+    // Do not call anything else here, handle it in the Universal class.
+}
+#endif // PVCAM_CALLBACKS_SUPPORTED
     Universal* pCam = (Universal*)pContext;
     pCam->FrameAcquired();
     // Do not call anything else here, handle it in the Universal class.

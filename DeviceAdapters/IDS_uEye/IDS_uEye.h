@@ -35,9 +35,9 @@
 #ifndef _IDS_uEYE_H_
 #define _IDS_uEYE_H_
 
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ImgBuffer.h"
-#include "../../MMDevice/DeviceThreads.h"
+#include "DeviceBase.h"
+#include "ImgBuffer.h"
+#include "DeviceThreads.h"
 #include <string>
 #include <map>
 #include <algorithm>
@@ -50,7 +50,7 @@
 #pragma warning(disable: 4610)
 #endif // _MSC_VER
 
-#ifdef linux
+#ifdef __linux__
 #include <ueye.h>
 #else
 #include <uEye.h>

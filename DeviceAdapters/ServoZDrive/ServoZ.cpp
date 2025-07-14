@@ -13,7 +13,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "ServoZ.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 #include <cstdio>
 #include <cstring>

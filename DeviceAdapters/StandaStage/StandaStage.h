@@ -23,7 +23,7 @@
 
 
 #include "USMCDLL.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include <string>
 #include <map>
 #include <algorithm>

@@ -12,9 +12,9 @@
 #ifndef _OXXIUS_COMBINER_H_
 #define _OXXIUS_COMBINER_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+#include "ModuleInterface.h"
 #include <cstdlib>
 #include <string>
 #include <map>

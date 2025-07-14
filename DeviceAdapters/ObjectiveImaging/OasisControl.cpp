@@ -38,9 +38,9 @@
 #include "oasis4i.h"
 
 #include "OasisControl.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
 
 #include <cstdio>
 #include <math.h>

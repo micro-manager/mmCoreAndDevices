@@ -35,7 +35,7 @@
 #include "FixSnprintf.h"
 
 #include "ParallelPort.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 
 
 const char* g_DeviceName = "LPT1";

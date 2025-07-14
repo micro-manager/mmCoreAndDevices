@@ -40,8 +40,8 @@
 #include <sstream>
 #include <math.h>
 #include <time.h>
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
 #include "nPC400.h"
 #include "nPC400Ctrl.h"
 #include "nPC400Channel.h"

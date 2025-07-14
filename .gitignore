@@ -1,0 +1,7 @@
+*.opensdf
+*.sdf
+*.user
+build/
+bin
+ipch/
+SecretDeviceAdapters/

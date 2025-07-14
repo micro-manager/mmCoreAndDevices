@@ -32,7 +32,7 @@
 #pragma warning(disable : 4996) // disable warning for deperecated CRT functions on Windows 
 #endif
 
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "PVCAMInt.h"
 #include "PVCAMUtils.h"
 #include "PVCAMProperty.h"
@@ -1901,7 +1901,7 @@ int Universal::ResizeImageBufferSingle()
 // Continuous acquisition
 //
 
-#ifndef __linux__
+#ifndef linux
 /*
 * Overrides a virtual function from the CCameraBase class
 * Do actual capture

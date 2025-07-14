@@ -23,7 +23,7 @@
 #include <cassert>
 #include <limits>
 #include "mvIMPACT_Acquire_Device.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 
 #undef min // otherwise we can't work with the 'numeric_limits' template here as Windows defines a macro 'min'

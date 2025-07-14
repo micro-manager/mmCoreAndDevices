@@ -20,7 +20,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// CVS:           $Id$
+// CVS:           $Id: CoreUtils.h 16845 2018-11-30 02:19:11Z nico $
 //
 
 #pragma once

@@ -15,8 +15,8 @@
 #ifndef _NeoPixel_H_
 #define _NeoPixel_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 // Error codes
 #define ERR_INITIALIZE_FAILED 102

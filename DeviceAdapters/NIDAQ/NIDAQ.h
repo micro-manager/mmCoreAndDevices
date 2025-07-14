@@ -14,8 +14,8 @@
 #ifndef _NIDAQ_H_
 #define _NIDAQ_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 #include "../../../3rdParty/trunk/NationalInstruments/NI-DAQmxBase/includes/NIDAQmxBase.h"
 
 ////////////////////////////////////////////////

@@ -26,8 +26,8 @@
 #ifndef _PI_ZSTAGE_DLL_H_
 #define _PI_ZSTAGE_DLL_H_
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
 class PIController;
 

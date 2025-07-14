@@ -36,7 +36,7 @@
 #include <cstdio>
 #include <string>
 #include <math.h>
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <sstream>
 
 const char* g_LegacyXYStageDeviceName = "XYStage"; // LIN 01/01/2012 CHANGED FROM XYStage

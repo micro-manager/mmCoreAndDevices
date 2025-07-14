@@ -37,7 +37,7 @@
 #include "LeicaDMIModel.h"
 #include "LeicaDMIScopeInterface.h"
 #include "LeicaDMICodes.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include <string>
 #include <string.h>
 #include <math.h>

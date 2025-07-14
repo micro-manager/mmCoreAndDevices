@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/DeviceBase.h"
-//#include "../../MMDevice/ModuleInterface.h"
+#include "MMDevice.h"
+#include "DeviceBase.h"
+//#include "ModuleInterface.h"
 //#include "XLed.h"
 //#include "XLedCtrl.h"
-	
+
 //
 // define LED device class that is atached to the XLED1 controller
 //

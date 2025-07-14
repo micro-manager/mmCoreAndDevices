@@ -170,7 +170,7 @@ void SerialPortLister::ListPorts(std::vector<std::string> &availablePorts)
          }
       }
    }
-#endif // __linux__
+#endif // linux
 
 #ifdef __APPLE__
    // port discovery code for Darwin/Mac OS X

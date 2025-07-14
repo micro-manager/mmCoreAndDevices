@@ -497,3 +497,21 @@ private:
 };
 
 #endif //_IMAGE_METADATA_H_
+      return os.str();
+   }
+
+private:
+   MetadataTag* FindTag(const char* key) const
+   {
+      TagIterator it = tags_.find(key);
+      if (it != tags_.end())
+         return it->second;
+      else
+         throw MetadataKeyError();
+   }
+
+   std::map<std::string, MetadataTag*> tags_;
+   typedef std::map<std::string, MetadataTag*>::const_iterator TagIterator;
+};
+
+#endif //_IMAGE_METADATA_H_

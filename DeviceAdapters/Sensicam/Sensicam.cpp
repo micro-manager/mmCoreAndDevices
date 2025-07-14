@@ -28,12 +28,12 @@
    #define WIN32_LEAN_AND_MEAN
    #include <windows.h>
 #endif
-#include "../../MMDevice/ModuleInterface.h"
+#include "ModuleInterface.h"
 #include "Sensicam.h"
-#include "../../../3rdparty/PCO/Windows/SDK_515/sencam.h"
-#include "../../../3rdparty/PCO/Windows/SDK_515/errcodes.h"
-#include "../../../3rdparty/PCO/Windows/SDK_515/ccd_types.h"
-#include "../../../3rdparty/PCO/Windows/SDK_515/cam_types.h"
+#include "PCO/Windows/SDK_515/sencam.h"
+#include "PCO/Windows/SDK_515/errcodes.h"
+#include "PCO/Windows/SDK_515/ccd_types.h"
+#include "PCO/Windows/SDK_515/cam_types.h"
 #pragma warning(disable : 4996) // disable warning for deperecated CRT functions on Windows 
 
 #include <string>

@@ -79,29 +79,26 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>"..\..\..\3rdparty\FLIR\Spinnaker\2.3.0.77\lib\vs2010";$(LibraryPath)</LibraryPath>
-    <IncludePath>..\..\..\3rdparty\FLIR\Spinnaker\2.3.0.77\include;$(IncludePath)</IncludePath>
+    <LibraryPath>"$(MM_3RDPARTYPRIVATE)\Point Grey Research\Spinnaker\1.20.0.15\lib\vs2010";$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>"..\..\..\3rdparty\FLIR\Spinnaker\2.3.0.77\lib64\vs2010";$(LibraryPath)</LibraryPath>
-    <IncludePath>..\..\..\3rdparty\FLIR\Spinnaker\2.3.0.77\include;$(IncludePath)</IncludePath>
+    <LibraryPath>"$(MM_3RDPARTYPRIVATE)\Point Grey Research\Spinnaker\1.20.0.15\lib64\vs2010";$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>"..\..\..\3rdparty\FLIR\Spinnaker\2.3.0.77\lib\vs2010";$(LibraryPath)</LibraryPath>
-    <IncludePath>..\..\..\3rdparty\FLIR\Spinnaker\2.3.0.77\include;$(IncludePath)</IncludePath>
+    <LibraryPath>"$(MM_3RDPARTYPRIVATE)\Point Grey Research\Spinnaker\1.20.0.15\lib\vs2010";$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>"..\..\..\3rdparty\FLIR\Spinnaker\2.3.0.77\lib64\vs2010";$(LibraryPath)</LibraryPath>
-    <IncludePath>..\..\..\3rdparty\FLIR\Spinnaker\2.3.0.77\include;$(IncludePath)</IncludePath>
+    <LibraryPath>"$(MM_3RDPARTYPRIVATE)\Point Grey Research\Spinnaker\1.20.0.15\lib64\vs2010";$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;SPINNAKERCAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -114,11 +111,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;SPINNAKERCAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Spinnaker_v100.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Spinnakerd_v100.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -127,6 +125,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;SPINNAKERCAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -143,6 +142,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;SPINNAKERCAMERA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

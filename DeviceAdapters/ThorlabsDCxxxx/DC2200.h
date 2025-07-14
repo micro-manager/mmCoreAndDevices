@@ -3,7 +3,7 @@
 #ifndef _DC2200_H_
 #define _DC2200_H_
 
-#include "../../MMDevice/DeviceBase.h"
+#include "DeviceBase.h"
 #include "DynError.h"
 
 /****************************************************************************
