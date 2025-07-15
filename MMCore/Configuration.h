@@ -34,9 +34,10 @@ struct PropertySetting
 {
    /**
     * Constructor for the struct specifying the entire contents.
-    * @param deviceLabel
-    * @param prop
-    * @param value 
+    * @param deviceLabel the device label
+    * @param prop the property name
+    * @param value the property value
+    * @param readOnly whether the property is read-only
     */
     PropertySetting(const char* deviceLabel, const char* prop, const char* value, bool readOnly = false) :
       deviceLabel_(deviceLabel), propertyName_(prop), value_(value), readOnly_(readOnly)

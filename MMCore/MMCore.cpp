@@ -250,6 +250,7 @@ bool CMMCore::isFeatureEnabled(const char* name) MMCORE_LEGACY_THROW(CMMError)
  *
  * @param filename The log filename. If empty or null, the primary log file is
  * disabled.
+ * @param truncate Whether to truncate the log file if it already exists.
  */
 void CMMCore::setPrimaryLogFile(const char* filename, bool truncate) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1388,7 +1389,7 @@ void CMMCore::waitForDevice(const char* label) MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Waits (blocks the calling thread) until the specified device becomes
- * @param device   the device label
+ * @param pDev   the device instance
  */
 void CMMCore::waitForDevice(std::shared_ptr<DeviceInstance> pDev) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1486,7 +1487,7 @@ void CMMCore::waitForDeviceType(MM::DeviceType devType) MMCORE_LEGACY_THROW(CMME
 /**
  * Blocks until all devices included in the configuration become ready.
  * @param group      the configuration group
- * @param config     the configuration preset
+ * @param configName the configuration preset
  */
 void CMMCore::waitForConfig(const char* group, const char* configName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1725,7 +1726,6 @@ double CMMCore::getXPosition(const char* label) MMCORE_LEGACY_THROW(CMMError)
  * Obtains the current position of the X axis of the XY stage in microns. Uses
  * the current XY stage device.
  * @return    the x position
- * @param  label   the stage device label
  */
 double CMMCore::getXPosition() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1758,7 +1758,6 @@ double CMMCore::getYPosition(const char* label) MMCORE_LEGACY_THROW(CMMError)
  * Obtains the current position of the Y axis of the XY stage in microns. Uses
  * the current XY stage device.
  * @return    the y position
- * @param  label   the stage device label
  */
 double CMMCore::getYPosition() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -2642,7 +2641,8 @@ bool CMMCore::getAutoShutter()
 
 /**
 * Opens or closes the specified shutter.
-* @param  state     the desired state of the shutter (true for open)
+* @param shutterLabel  the shutter device label
+* @param state         the desired state of the shutter (true for open)
 */
 void CMMCore::setShutterOpen(const char* shutterLabel, bool state) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3621,7 +3621,7 @@ std::string CMMCore::getChannelGroup()
 
 /**
  * Sets the current shutter device.
- * @param shutter    the shutter device label
+ * @param shutterLabel    the shutter device label
  */
 void CMMCore::setShutterDevice(const char* shutterLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3670,7 +3670,7 @@ void CMMCore::setShutterDevice(const char* shutterLabel) MMCORE_LEGACY_THROW(CMM
 
 /**
  * Sets the current focus device.
- * @param focus    the focus stage device label
+ * @param focusLabel    the focus stage device label
  */
 void CMMCore::setFocusDevice(const char* focusLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3719,7 +3719,7 @@ void CMMCore::setXYStageDevice(const char* xyDeviceLabel) MMCORE_LEGACY_THROW(CM
 
 /**
  * Sets the current camera device.
- * @param camera   the camera device label
+ * @param cameraLabel   the camera device label
  */
 void CMMCore::setCameraDevice(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5854,7 +5854,7 @@ double CMMCore::getPixelSizedxdz() MMCORE_LEGACY_THROW(CMMError)
  * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  *
- * @cached        use the System state cache when true, otherwise checks
+ * @param cached  use the System state cache when true, otherwise checks
  *                the hardware.
  * @return        angle (dx/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
@@ -5928,7 +5928,7 @@ double CMMCore::getPixelSizedydz() MMCORE_LEGACY_THROW(CMMError)
  * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  *
- * @cached   Uses System state cache to find active pixel size config when true
+ * @param cached   Uses System state cache to find active pixel size config when true
  * @return   angle (dy/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedydz(bool cached) MMCORE_LEGACY_THROW(CMMError)
@@ -5961,7 +5961,7 @@ double CMMCore::getPixelSizedydz(bool cached) MMCORE_LEGACY_THROW(CMMError)
  * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  *
- * @resolutionID   Name of Pixel Size configuration for this dy /dz angle
+ * @param resolutionID   Name of Pixel Size configuration for this dy /dz angle
  * @return   angle (dy/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedydz(const char* resolutionID) MMCORE_LEGACY_THROW(CMMError)
@@ -5992,7 +5992,7 @@ double CMMCore::getPixelSizeOptimalZUm() MMCORE_LEGACY_THROW(CMMError)
  * communicate to the end user what the optimal Z step size is for this 
  * pixel size configuration
  *
- * @cached   Uses System state cache to find active pixel size config when true
+ * @param cached   Uses System state cache to find active pixel size config when true
  */
 double CMMCore::getPixelSizeOptimalZUm(bool cached) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6395,7 +6395,7 @@ void CMMCore::stopSLMSequence(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMEr
  * Load a sequence of images into the SLM
  *
  * @param deviceLabel name of the SLM
- * @param imagesequence pointers to the images to be used in the sequence
+ * @param imageSequence pointers to the images to be used in the sequence
  */
 void CMMCore::loadSLMSequence(const char* deviceLabel, std::vector<unsigned char *> imageSequence) MMCORE_LEGACY_THROW(CMMError)
 {
