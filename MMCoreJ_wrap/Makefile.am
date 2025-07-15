@@ -11,7 +11,7 @@ AUTOMAKE_OPTIONS = foreign subdir-objects
 # for the above reason (though the intent was never documented). But there is
 # nothing Linux-specific about this.)
 AM_CXXFLAGS = -fno-strict-aliasing
-AM_CPPFLAGS = $(JNI_CPPFLAGS) -DMMDEVICE_CLIENT_BUILD
+AM_CPPFLAGS = $(JNI_CPPFLAGS) -DMMDEVICE_CLIENT_BUILD -I../MMDevice
 
 
 # This ugly list of headers is necessary to trigger the rebuild of the

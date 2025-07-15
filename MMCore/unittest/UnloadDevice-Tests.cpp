@@ -1,8 +1,9 @@
 #include <catch2/catch_all.hpp>
 
 #include "MMCore.h"
-#include "../../MMDevice/DeviceBase.h"
 #include "MockDeviceUtils.h"
+
+#include "DeviceBase.h"
 
 namespace {
 

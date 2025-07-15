@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "../MMDevice/ImageMetadata.h"
+#include "ImageMetadata.h"
 
 #include <string>
 #include <vector>

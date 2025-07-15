@@ -28,7 +28,7 @@
 
 #include "TaskSet_CopyMemory.h"
 
-#include "../MMDevice/DeviceUtils.h"
+#include "DeviceUtils.h"
 
 #include <chrono>
 #include <cstdio>

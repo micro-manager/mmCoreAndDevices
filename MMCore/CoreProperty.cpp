@@ -28,7 +28,8 @@
 #include "CoreUtils.h"
 #include "MMCore.h"
 #include "Error.h"
-#include "../MMDevice/DeviceUtils.h"
+
+#include "DeviceUtils.h"
 
 #include <cassert>
 #include <cstdlib>

@@ -24,12 +24,14 @@
 
 #pragma once
 
-#include <string>
-#include <set>
-#include <vector>
-#include <map>
 #include "MMEventCallback.h"
-#include "../MMDevice/MMDeviceConstants.h"
+
+#include "MMDeviceConstants.h"
+
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 
 class CMMCore;
 class MMEventCallback;

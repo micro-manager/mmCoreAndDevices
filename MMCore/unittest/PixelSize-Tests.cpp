@@ -3,8 +3,9 @@
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
 #include "MMCore.h"
-#include "../../MMDevice/DeviceBase.h"
 #include "MockDeviceUtils.h"
+
+#include "DeviceBase.h"
 
 namespace {
 

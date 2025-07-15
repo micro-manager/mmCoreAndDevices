@@ -19,8 +19,9 @@
 // CVS:           $Id: Configuration.cpp 13763 2014-07-01 00:43:11Z mark $
 //
 #include "Configuration.h"
-#include "../MMDevice/MMDevice.h"
 #include "Error.h"
+
+#include "MMDevice.h"
 
 #include <cstring>
 #include <fstream>

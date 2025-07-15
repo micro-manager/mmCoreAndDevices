@@ -21,8 +21,9 @@
 
 #include "LoadedDeviceAdapterImpl.h"
 
-#include "../../MMDevice/ModuleInterface.h"
 #include "LoadedModule.h"
+
+#include "ModuleInterface.h"
 
 #include <memory>
 #include <string>
