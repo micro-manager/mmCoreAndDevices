@@ -406,7 +406,10 @@ int CPCOCam::OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if(m_iAcquireMode == 0)
         pProp->Set("Internal");
       else
+      if (m_iAcquireMode == 1)
         pProp->Set("External");
+      else
+        pProp->Set("Sequence Trigger");
     }
   }
   else if(eAct == MM::AfterSet)
@@ -421,8 +424,12 @@ int CPCOCam::OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct)
     if(ihelp != m_iAcquireMode)
     {
       m_iAcquireMode = ihelp;
-      if(m_pCamera->m_iCamClass == 3)
-        m_pCamera->m_strCamera.strRecording.wAcquMode = (WORD) m_iAcquireMode;
+      if (m_pCamera->m_iCamClass == 3)
+      {
+        if(m_iAcquireMode == 2)
+          m_iAcquireMode = 4;
+        m_pCamera->m_strCamera.strRecording.wAcquMode = (WORD)m_iAcquireMode;
+      }
 
       nErr = SetupCamera(true, false);
     }
@@ -433,6 +440,32 @@ int CPCOCam::OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct)
   return DEVICE_OK;
 }
 
+int CPCOCam::OnAcquireModeNumImages(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  long lhelp;
+  if (eAct == MM::BeforeGet)
+  {
+    lhelp = m_pCamera->m_strCamera.strRecording.dwAcquModeExNumberImages;
+    pProp->Set(lhelp);
+  }
+  else if (eAct == MM::AfterSet)
+  {
+    int nErr = 0;
+
+    ((MM::IntegerProperty*)pProp)->Get(lhelp);
+    if (lhelp != (long) m_pCamera->m_strCamera.strRecording.dwAcquModeExNumberImages)
+    {
+      if(lhelp > 10000)
+       lhelp = 10000;
+      m_pCamera->m_strCamera.strRecording.dwAcquModeExNumberImages = lhelp;
+      nErr = SetupCamera(true, false);
+    }
+
+    if (nErr != 0)
+      return nErr;
+  }
+  return DEVICE_OK;
+}
 
 int CPCOCam::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1474,6 +1507,20 @@ int CPCOCam::Initialize()
       nRet = AddAllowedValue("Acquiremode", "External", 1);
       if(nRet != DEVICE_OK)
         return nRet;
+      if ((m_pCamera->m_strCamera.strSensor.strDescription.dwGeneralCapsDESC1 & GENERALCAPS1_EXT_ACQUIRE) == GENERALCAPS1_EXT_ACQUIRE)
+      {
+        nRet = AddAllowedValue("Acquiremode", "Sequence Trigger", 2);
+        if (nRet != DEVICE_OK)
+          return nRet;
+        pAct = new CPropertyAction(this, &CPCOCam::OnAcquireModeNumImages);
+        nRet = CreateProperty("Acquire Sequence Number Images", "1", MM::Integer, false, pAct);
+        if (nRet != DEVICE_OK)
+          return nRet;
+        nRet = SetPropertyLimits("Acquire Sequence Number Images", 0, 10000);
+        if (nRet != DEVICE_OK)
+          return nRet;
+      }
+
     }
 
     if((m_nCameraType == CAMERATYPE_PCO_EDGE) ||// fps setting for pco.edge
