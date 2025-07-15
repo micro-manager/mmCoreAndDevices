@@ -28,8 +28,8 @@
 #include "ErrorCodes.h"
 #include "FrameBuffer.h"
 
-#include "../MMDevice/DeviceThreads.h"
-#include "../MMDevice/MMDevice.h"
+#include "DeviceThreads.h"
+#include "MMDevice.h"
 
 #include <chrono>
 #include <memory>

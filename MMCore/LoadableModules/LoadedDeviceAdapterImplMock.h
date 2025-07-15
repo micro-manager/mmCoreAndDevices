@@ -22,7 +22,8 @@
 #include "LoadedDeviceAdapterImpl.h"
 
 #include "../MockDeviceAdapter.h"
-#include "../../MMDevice/RegisteredDeviceCollection.h"
+
+#include "RegisteredDeviceCollection.h"
 
 
 class LoadedDeviceAdapterImplMock : public LoadedDeviceAdapterImpl

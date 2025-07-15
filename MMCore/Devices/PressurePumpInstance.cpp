@@ -20,7 +20,6 @@
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 
 #include "PressurePumpInstance.h"
-#include "../../MMDevice/MMDeviceConstants.h"
 
 // General pump functions
 int PressurePumpInstance::Stop() { RequireInitialized(__func__); return GetImpl()->Stop(); }

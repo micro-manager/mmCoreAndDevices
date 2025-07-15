@@ -20,7 +20,6 @@
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 
 #include "VolumetricPumpInstance.h"
-#include "../../MMDevice/MMDeviceConstants.h"
 
 // Volume controlled pump functions
 int VolumetricPumpInstance::Home() { RequireInitialized(__func__); return GetImpl()->Home(); }

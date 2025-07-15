@@ -45,14 +45,15 @@
  * file (MMCore.cpp).
  */
 
-#include "../MMDevice/DeviceThreads.h"
-#include "../MMDevice/MMDevice.h"
-#include "../MMDevice/MMDeviceConstants.h"
 #include "Configuration.h"
 #include "Error.h"
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"
 #include "MockDeviceAdapter.h"
+
+#include "DeviceThreads.h"
+#include "MMDevice.h"
+#include "MMDeviceConstants.h"
 
 #include <cstring>
 #include <deque>

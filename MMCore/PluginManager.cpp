@@ -20,16 +20,6 @@
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 08/10/2005
 
-#ifdef _WIN32
-   #define WIN32_LEAN_AND_MEAN
-   #include <Windows.h>
-   #include <io.h>
-#else
-   #include <sys/types.h>
-   #include <dirent.h>
-#endif // _WIN32
-
-#include "../MMDevice/ModuleInterface.h"
 #include "CoreUtils.h"
 #include "Devices/DeviceInstance.h"
 #include "Devices/HubInstance.h"
@@ -40,6 +30,8 @@
 #include "LoadableModules/LoadedDeviceAdapterImplRegular.h"
 #include "PluginManager.h"
 
+#include "ModuleInterface.h"
+
 #include <algorithm>
 #include <cstring>
 #include <fstream>
@@ -47,6 +39,15 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#ifdef _WIN32
+   #define WIN32_LEAN_AND_MEAN
+   #include <Windows.h>
+   #include <io.h>
+#else
+   #include <sys/types.h>
+   #include <dirent.h>
+#endif // _WIN32
 
 
 #ifdef _WIN32

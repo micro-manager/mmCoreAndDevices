@@ -20,7 +20,8 @@
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 
 #include "DeviceInstanceBase.h"
-#include "../../MMDevice/MMDeviceConstants.h"
+
+#include "MMDeviceConstants.h"
 
 class PressurePumpInstance : public DeviceInstanceBase<MM::PressurePump>
 {

@@ -37,10 +37,6 @@
 //                because all public methods will most likely appear in other
 //                programming environments (Java or Python).
 
-#include "../MMDevice/DeviceThreads.h"
-#include "../MMDevice/DeviceUtils.h"
-#include "../MMDevice/ImageMetadata.h"
-#include "../MMDevice/ModuleInterface.h"
 #include "CircularBuffer.h"
 #include "ConfigGroup.h"
 #include "Configuration.h"
@@ -54,6 +50,11 @@
 #include "MMCore.h"
 #include "MMEventCallback.h"
 #include "PluginManager.h"
+
+#include "DeviceThreads.h"
+#include "DeviceUtils.h"
+#include "ImageMetadata.h"
+#include "ModuleInterface.h"
 
 #include <algorithm>
 #include <cassert>
