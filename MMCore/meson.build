@@ -17,8 +17,6 @@ if cxx.get_id() in ['msvc', 'clang-cl']
     add_project_arguments('-DNOMINMAX', language: 'cpp')
 endif
 
-# MMDevice must be copied into subprojects/ for this experimental build to work
-# (unless MMCore is itself being used as a subproject).
 if get_option('tests').enabled()
     tests_option = 'enabled'
 elif get_option('tests').disabled()
@@ -26,8 +24,11 @@ elif get_option('tests').disabled()
 else
     tests_option = 'auto'
 endif
+
+# mmdevice is provided via a .wrap, but it should be manually copied into
+# subprojects in order to control the version that gets fetched.
 mmdevice_proj = subproject(
-    'MMDevice',
+    'mmdevice',
     default_options: {
         'client_interface': true,
         # Propagate value of 'tests' option ('yield: true' in MMDeivce's

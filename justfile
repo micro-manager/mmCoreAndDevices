@@ -28,7 +28,10 @@ build-mmdevice:
 
 # Build MMCore (depends on build-mmdevice)
 build-mmcore: build-mmdevice
-    cp -R MMDevice MMCore/subprojects
+    # Supply MMDevice from this repo instead of relying on wrap which may fetch
+    # another version
+    rm -rf MMCore/subprojects/mmdevice
+    cp -R MMDevice MMCore/subprojects/mmdevice
     meson setup MMCore/builddir MMCore \
         --reconfigure \
         --vsenv \
@@ -53,4 +56,4 @@ test: test-mmdevice test-mmcore
 clean:
     rm -rf MMDevice/builddir
     rm -rf MMCore/builddir
-    rm -rf MMCore/subprojects/MMDevice
+    rm -rf MMCore/subprojects/mmdevice
