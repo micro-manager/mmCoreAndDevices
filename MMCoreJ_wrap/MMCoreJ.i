@@ -916,12 +916,12 @@
 
 
 %{
-#include "../MMDevice/MMDeviceConstants.h"
-#include "../MMCore/Error.h"
-#include "../MMCore/Configuration.h"
-#include "../MMDevice/ImageMetadata.h"
-#include "../MMCore/MMEventCallback.h"
-#include "../MMCore/MMCore.h"
+#include "MMDeviceConstants.h"
+#include "Error.h"
+#include "Configuration.h"
+#include "ImageMetadata.h"
+#include "MMEventCallback.h"
+#include "MMCore.h"
 %}
 
 
@@ -1235,10 +1235,10 @@ namespace std {
 }
 
 
-%include "../MMDevice/MMDeviceConstants.h"
-%include "../MMCore/Error.h"
-%include "../MMCore/Configuration.h"
-%include "../MMDevice/ImageMetadata.h"
-%include "../MMCore/MMEventCallback.h"
-%include "../MMCore/MMCore.h"
+%include "MMDeviceConstants.h"
+%include "Error.h"
+%include "Configuration.h"
+%include "ImageMetadata.h"
+%include "MMEventCallback.h"
+%include "MMCore.h"
 

@@ -52,7 +52,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\MMDevice;$(JAVA_HOME)\include\win32;$(JAVA_HOME)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\MMCore;..\MMDevice;$(JAVA_HOME)\include\win32;$(JAVA_HOME)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
@@ -71,7 +71,7 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\MMDevice;$(JAVA_HOME)\include\win32;$(JAVA_HOME)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\MMCore;..\MMDevice;$(JAVA_HOME)\include\win32;$(JAVA_HOME)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
@@ -99,7 +99,7 @@ del /s/q %swig_out_dir% &gt; NUL
 echo Creating output directory (%swig_out_dir%)...
 mkdir %swig_out_dir% &gt; NUL
 echo Running SWIG on %(FullPath)...
-$(MM_SWIG) -c++ -java -package mmcorej -module MMCoreJ -outdir %swig_out_dir% %(FullPath)
+$(MM_SWIG) -c++ -java -package mmcorej -module MMCoreJ -outdir %swig_out_dir% -I$(ProjectDir)\..\MMCore -I$(ProjectDir)\..\MMDevice %(FullPath)
 rem
 echo Removing old copy of Java sources (%java_src_dir%)...
 del /s/q %java_src_dir% &gt; NUL
@@ -119,7 +119,7 @@ del /s/q %swig_out_dir% &gt; NUL
 echo Creating output directory (%swig_out_dir%)...
 mkdir %swig_out_dir% &gt; NUL
 echo Running SWIG on %(FullPath)...
-$(MM_SWIG) -c++ -java -package mmcorej -module MMCoreJ -outdir %swig_out_dir% %(FullPath)
+$(MM_SWIG) -c++ -java -package mmcorej -module MMCoreJ -outdir %swig_out_dir% -I$(ProjectDir)\..\MMCore -I$(ProjectDir)\..\MMDevice %(FullPath)
 rem
 echo Removing old copy of Java sources (%java_src_dir%)...
 del /s/q %java_src_dir% &gt; NUL
