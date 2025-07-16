@@ -64,7 +64,9 @@ jobs:
         shell: bash
         run: |
           git clean -dxf
-          cp -R MMDevice MMCore/subprojects
+          # Manually populate the mmdevice subproject to avoid fetching via
+          # wrap from the mmdevice mirror repository.
+          cp -R MMDevice MMCore/subprojects/mmdevice
       - name: Build and test MMCore
         run: |
           cd MMCore
