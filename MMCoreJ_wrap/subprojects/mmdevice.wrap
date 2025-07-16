@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/micro-manager/mmdevice.git
+revision = 19efe5076245d19ccb486ee337f2330f172ce180
+depth = 1
+
+[provide]
+dependency_names = mmdevice
