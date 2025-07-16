@@ -37,8 +37,6 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // CLens
@@ -68,16 +66,14 @@ int CLens::Initialize()
    // read the unit multiplier
    // ASI's unit multiplier is how many units per mm, so divide by 1000 here to get units per micron
    // we store the micron-based unit multiplier for MM use, not the mm-based one ASI uses
-   ostringstream command;
-   command.str("");
+   std::ostringstream command;
    double tmp;
    command << "UM " << axisLetter_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    unitMult_ = tmp/1000;
-   command.str("");
 
-   // Not needed for Tunable Lens , smalled unit is "1"
+   // Not needed for Tunable Lens , smallest unit is "1"
 //   // set controller card to return positions with 2 decimal places (3 is max allowed currently, 2 gives 1nm resolution)
 //   command.str("");
 //   command << addressChar_ << "VB Z=2";
@@ -265,7 +261,7 @@ int CLens::Initialize()
    if (FirmwareVersionAtLeast(2.81) && (build.vAxesProps[0] & BIT1))
    {
       // get the number of ring buffer positions from the BU X output
-      string rb_define = hub_->GetDefineString(build, "RING BUFFER");
+      std::string rb_define = hub_->GetDefineString(build, "RING BUFFER");
 
       ring_buffer_capacity_ = 0;
       if (rb_define.size() > 12)
@@ -326,7 +322,6 @@ int CLens::Initialize()
       CreateProperty(g_TTLoutName, "0", MM::Integer, false, pAct);
       SetPropertyLimits(g_TTLoutName,0,30);
 	  UpdateProperty(g_TTLoutName);
-
    }
 
       //VectorMove
@@ -341,7 +336,7 @@ int CLens::Initialize()
 
 int CLens::GetPositionUm(double& pos)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(pos) );
@@ -351,14 +346,14 @@ int CLens::GetPositionUm(double& pos)
 
 int CLens::SetPositionUm(double pos)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "M " << axisLetter_ << "=" << pos*unitMult_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
 int CLens::GetPositionSteps(long& steps)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    double tmp;
@@ -369,14 +364,14 @@ int CLens::GetPositionSteps(long& steps)
 
 int CLens::SetPositionSteps(long steps)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "M " << axisLetter_ << "=" << steps*unitMult_*stepSizeUm_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
 int CLens::SetRelativePositionUm(double d)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "R " << axisLetter_ << "=" << d*unitMult_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
@@ -384,7 +379,7 @@ int CLens::SetRelativePositionUm(double d)
 int CLens::GetLimits(double& min, double& max)
 {
    // ASI limits are always returned in terms of mm, independent of unit multiplier
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "SL " << axisLetter_ << "?";
    double tmp;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
@@ -401,7 +396,7 @@ int CLens::GetLimits(double& min, double& max)
 int CLens::Stop()
 {
    // note this stops the card, \ stops all stages
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << addressChar_ << "halt";
    return hub_->QueryCommand(command.str());
 }
@@ -416,7 +411,7 @@ int CLens::Home()
    {
       SetProperty(g_SAModePropertyName, g_SAMode_0);
    }
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "! " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    return DEVICE_OK;
@@ -429,7 +424,7 @@ bool CLens::Busy()
 
 int CLens::SetOrigin()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "H " << axisLetter_ << "=" << 0;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
@@ -437,7 +432,7 @@ int CLens::SetOrigin()
 // disables TTL triggering; doesn't actually stop anything already happening on controller
 int CLens::StopStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (!ttl_trigger_supported_)
    {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -450,7 +445,7 @@ int CLens::StopStageSequence()
 // enables TTL triggering; doesn't actually start anything going on controller
 int CLens::StartStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (!ttl_trigger_supported_)
    {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -468,7 +463,7 @@ int CLens::StartStageSequence()
 
 int CLens::SendStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (!ttl_trigger_supported_)
    {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -487,7 +482,7 @@ int CLens::SendStageSequence()
 
 int CLens::ClearStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (!ttl_trigger_supported_)
    {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -514,9 +509,9 @@ int CLens::AddToStageSequence(double position)
 int CLens::OnSaveJoystickSettings()
 {
    long tmp;
-   string tmpstr;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::string tmpstr;
+   std::ostringstream command;
+   std::ostringstream response;
    command << "J " << axisLetter_ << "?";
    response << ":A " << axisLetter_ << "=";
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
@@ -531,7 +526,7 @@ int CLens::OnSaveJoystickSettings()
 int CLens::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string tmpstr;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
@@ -574,8 +569,8 @@ int CLens::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -598,8 +593,8 @@ int CLens::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnUpperLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -622,14 +617,15 @@ int CLens::OnUpperLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnLensMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
       command << "PM " << axisLetter_ << "?";
-      ostringstream response; response.str(""); response << axisLetter_ << "=";
+      std::ostringstream response;
+      response << axisLetter_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       bool success = 0;
@@ -660,8 +656,8 @@ int CLens::OnLensMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -691,12 +687,12 @@ int CLens::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -726,12 +722,12 @@ int CLens::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -761,12 +757,12 @@ int CLens::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -804,8 +800,8 @@ int CLens::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -852,12 +848,12 @@ int CLens::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -887,12 +883,12 @@ int CLens::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -922,12 +918,12 @@ int CLens::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -947,7 +943,7 @@ int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       double wheelFast = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelFastSpeedPropertyName, wheelFast) );
@@ -1034,8 +1030,8 @@ int CLens::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1059,8 +1055,8 @@ int CLens::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1084,8 +1080,8 @@ int CLens::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1109,8 +1105,8 @@ int CLens::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CLens::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    static bool justSet = false;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1158,8 +1154,8 @@ int CLens::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1214,8 +1210,8 @@ int CLens::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 // always read
 int CLens::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1236,8 +1232,8 @@ int CLens::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1285,8 +1281,8 @@ int CLens::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1334,8 +1330,8 @@ int CLens::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1383,8 +1379,8 @@ int CLens::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1432,9 +1428,9 @@ int CLens::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp;
    if (eAct == MM::BeforeGet)
    {
@@ -1481,7 +1477,7 @@ int CLens::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
@@ -1502,9 +1498,9 @@ int CLens::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp = 0;
    static bool justSet;
    if (eAct == MM::BeforeGet)
@@ -1540,7 +1536,7 @@ int CLens::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1566,7 +1562,7 @@ int CLens::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       if (ttl_trigger_enabled_)
@@ -1583,10 +1579,10 @@ int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-   int CLens::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CLens::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1607,10 +1603,10 @@ int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-   int CLens::OnTTLin(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CLens::OnTTLin(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1635,10 +1631,10 @@ int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-   int CLens::OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CLens::OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {

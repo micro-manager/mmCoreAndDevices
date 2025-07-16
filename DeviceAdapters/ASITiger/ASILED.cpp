@@ -86,8 +86,7 @@ int CLED::Initialize()
    RETURN_ON_MM_ERROR( PeripheralInitialize() );
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-   ostringstream command;
-   command.str("");
+   std::ostringstream command;
    command << g_LEDDeviceDescription << " HexAddr=" << addressString_;
    if (channel_ > 0)
    {
@@ -100,7 +99,7 @@ int CLED::Initialize()
    // detect Stabilight or not based on build name
    char buildName[MM::MaxStrLength];
    GetProperty(g_FirmwareBuildPropertyName, buildName);
-   string s = buildName;
+   std::string s = buildName;
    stablight_ = (s.length() > 5) && 
        ((s.substr(0, 6).compare("TGLED_S") == 0) || (s.substr(0, 6).compare("TGLEDS") == 0));
 
@@ -149,7 +148,7 @@ int CLED::Initialize()
 
 int CLED::SetOpen(bool open)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (open)
       command << addressChar_ << "LED " << channelAxisChar_ << "="<< intensity_;
    else
@@ -171,8 +170,8 @@ int CLED::GetOpen(bool& open)
 //   we don't update intensity_ if controller reports 0, only set open_ to false
 int CLED::UpdateOpenIntensity()
 {
-   ostringstream command; command.str("");
-   ostringstream replyprefix; replyprefix.str("");
+   std::ostringstream command;
+   std::ostringstream replyprefix;
    long tmp = 0;
    command << addressChar_ << "LED " << channelAxisChar_ << "?";
    replyprefix << channelAxisChar_ << "=";
@@ -189,7 +188,7 @@ int CLED::UpdateOpenIntensity()
 int CLED::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string tmpstr;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
@@ -226,7 +225,7 @@ int CLED::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLED::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
 
    long tmp = 0;
    if (eAct == MM::BeforeGet)
@@ -260,7 +259,7 @@ int CLED::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       RETURN_ON_MM_ERROR(SetOpen(tmpstr == g_OpenState));
    }
@@ -270,7 +269,7 @@ int CLED::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CLED::OnCurrentLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    //sets the LED current limit, which can be used to control brightness but is a card-wide setting
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {

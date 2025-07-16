@@ -178,7 +178,7 @@ private:
 
    // private helper functions
    int OnSaveJoystickSettings();
-   int getMinMaxSpeed(string axisLetter, double& minSpeed, double& maxSpeed);
+   int getMinMaxSpeed(std::string axisLetter, double& minSpeed, double& maxSpeed);
 };
 
 #endif // ASIXYSTAGE_H

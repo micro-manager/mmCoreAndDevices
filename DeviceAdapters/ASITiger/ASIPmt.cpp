@@ -22,7 +22,6 @@
 // BASED ON:      ASILED.c and others
 //
 
-
 #include "ASIPmt.h"
 #include "ASITiger.h"
 #include "ASIHub.h"
@@ -35,8 +34,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-using namespace std;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -90,8 +87,7 @@ int CPMT::Initialize()
    RETURN_ON_MM_ERROR( PeripheralInitialize() );
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-   ostringstream command;
-   command.str("");
+   std::ostringstream command;
    command << g_PMTDeviceDescription << " HexAddr=" << addressString_<<" Axis Char="<<axisLetter_<<" Channel="<<channel_<<":"<<channelAxisChar_;
    CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
    
@@ -150,7 +146,7 @@ int CPMT::Initialize()
 // This is the overload reset 
 int CPMT::SetGateOpen(bool open)
 {
-	ostringstream command; command.str("");
+   std::ostringstream command;
    if (open)
       command << addressChar_ << "LK " << channelAxisChar_ ;
    else
@@ -165,7 +161,7 @@ int CPMT::SetGateOpen(bool open)
 int CPMT::GetGateOpen(bool& open)
 {
    unsigned int val;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << addressChar_ << "LK " << channelAxisChar_ << "?" ;
    // reply is 0 or 1 , 0 is overloaded , 1 is enabled
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
@@ -178,7 +174,7 @@ int CPMT::GetGateOpen(bool& open)
 int CPMT::GetSignal(double& volts)
 {
    unsigned int val;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << addressChar_ << "RA " << channelAxisChar_ << "?" ;
    // reply is 0 or 1 , 0 is overloaded , 1 is enabled
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
@@ -187,11 +183,11 @@ int CPMT::GetSignal(double& volts)
    return DEVICE_OK;
 }
 
-int CPMT::UpdateGain()
 // updates PMT gain device property via the controller
+int CPMT::UpdateGain()
 {
-   ostringstream command; command.str("");
-   ostringstream replyprefix; replyprefix.str("");
+   std::ostringstream command;
+   std::ostringstream replyprefix;
    long tmp = 0;
    command << addressChar_ << "WRDAC " << channelAxisChar_ << "?";
    replyprefix << channelAxisChar_ << "=";
@@ -202,11 +198,11 @@ int CPMT::UpdateGain()
    return DEVICE_OK;
 }
 
-int CPMT::UpdateAvg()
 // updates PMT average length property via the controller
+int CPMT::UpdateAvg()
 {
-   ostringstream command; command.str("");
-   ostringstream replyprefix; replyprefix.str("");
+   std::ostringstream command;
+   std::ostringstream replyprefix;
    long tmp = 0;
    command << "E " << axisLetter_ << "?";
    replyprefix << ":" << axisLetter_ << "=";
@@ -217,13 +213,12 @@ int CPMT::UpdateAvg()
    return DEVICE_OK;
 }
 
-////////////////
 // action handlers
 
 int CPMT::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string tmpstr;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
@@ -250,7 +245,7 @@ int CPMT::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPMT::OnOverloadReset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string tmpstr;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       pProp->Get(tmpstr);
       if (tmpstr == g_OffState)
@@ -279,7 +274,7 @@ int CPMT::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 //Get and Set PMT Gain
 int CPMT::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    { //Query the controller for gain
@@ -301,7 +296,7 @@ int CPMT::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 //Get and Set PMT Average length
 int CPMT::OnAverage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    { //Query the controller for gain
@@ -323,7 +318,7 @@ int CPMT::OnAverage(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPMT::OnPMTSignal(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -339,7 +334,7 @@ int CPMT::OnPMTSignal(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPMT::OnPMTOverload(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
