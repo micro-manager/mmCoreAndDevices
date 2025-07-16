@@ -53,10 +53,9 @@ private:
    unsigned int numPositions_;
    unsigned int curPosition_;
 
-   // private helper functions
    int OnSaveJoystickSettings();
 
-protected: // needs to be inherited
+protected:
    std::string axisLetter_;
 };
 

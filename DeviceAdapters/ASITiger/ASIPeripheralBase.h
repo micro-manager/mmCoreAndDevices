@@ -74,7 +74,7 @@ public:
    // Note that initialize_ is set by the concrete child class.
    int PeripheralInitialize(bool skipFirmware = false)
    {
-      std::ostringstream command; command.str("");
+      std::ostringstream command;
 
       // get the hub information
       MM::Hub* genericHub = this->GetParentHub();

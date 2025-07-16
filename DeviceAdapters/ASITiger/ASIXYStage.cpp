@@ -465,7 +465,7 @@ int CXYStage::Initialize()
    return DEVICE_OK;
 }
 
-int CXYStage::getMinMaxSpeed(std::string axisLetter, double& minSpeed, double& maxSpeed)
+int CXYStage::getMinMaxSpeed(const std::string& axisLetter, double& minSpeed, double& maxSpeed)
 {
    std::ostringstream command;
    command << "S " << axisLetter << "?";
@@ -947,7 +947,7 @@ int CXYStage::OnSpeedYMicronsPerSec(MM::PropertyBase* pProp, MM::ActionType eAct
    return DEVICE_OK;
 }
 
-int CXYStage::OnSpeedGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnSpeedGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;
@@ -999,7 +999,7 @@ int CXYStage::OnSpeedGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::
 }
 
 // Note: ASI units are in millimeters but MM units are in micrometers
-int CXYStage::OnBacklashGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnBacklashGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;
@@ -1025,7 +1025,7 @@ int CXYStage::OnBacklashGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, st
 }
 
 // Note: ASI units are in millimeters but MM units are in micrometers
-int CXYStage::OnDriftErrorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnDriftErrorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;
@@ -1051,7 +1051,7 @@ int CXYStage::OnDriftErrorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, 
 }
 
 // Note: ASI units are in millimeters but MM units are in micrometers
-int CXYStage::OnFinishErrorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnFinishErrorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;
@@ -1076,7 +1076,7 @@ int CXYStage::OnFinishErrorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct,
    return DEVICE_OK;
 }
 
-int CXYStage::OnLowerLimGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnLowerLimGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;
@@ -1100,7 +1100,7 @@ int CXYStage::OnLowerLimGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, st
    return DEVICE_OK;
 }
 
-int CXYStage::OnUpperLimGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnUpperLimGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;
@@ -1124,7 +1124,7 @@ int CXYStage::OnUpperLimGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, st
    return DEVICE_OK;
 }
 
-int CXYStage::OnAccelerationGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnAccelerationGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    long tmp = 0;
@@ -1148,7 +1148,7 @@ int CXYStage::OnAccelerationGeneric(MM::PropertyBase* pProp, MM::ActionType eAct
    return DEVICE_OK;
 }
 
-int CXYStage::OnMaintainStateGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnMaintainStateGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    long tmp = 0;
@@ -1401,7 +1401,7 @@ int CXYStage::OnAZeroY(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CXYStage::OnMotorControlGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnMotorControlGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;
@@ -2299,7 +2299,7 @@ int CXYStage::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int CXYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CXYStage::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;

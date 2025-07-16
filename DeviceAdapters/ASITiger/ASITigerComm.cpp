@@ -102,7 +102,7 @@ int CTigerCommHub::Initialize()
    return DEVICE_OK;
 }
 
-bool CTigerCommHub::SupportsDeviceDetection(void)
+bool CTigerCommHub::SupportsDeviceDetection()
 {
    return true;
 }

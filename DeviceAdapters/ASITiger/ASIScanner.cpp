@@ -3987,7 +3987,7 @@ int CScanner::OnFastCirclesState(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter)
+int CScanner::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
    std::ostringstream command;
    std::ostringstream response;
