@@ -66,6 +66,8 @@ public:
    int OnObjective(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBuildDate(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnFocusControl(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPiezoPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    bool initialized_;
@@ -82,6 +84,7 @@ private:
    std::string dateString_;
    std::string version_;
    std::string date_;
+   int piezoRange_;
    MMThreadLock lock_; // Thread lock for serial communication
 
    // Communication methods
