@@ -123,7 +123,7 @@ int DAShutter::SetOpen(bool open)
       ret = da->SetGateOpen(open);
    if (ret == DEVICE_OK)
       GetCoreCallback()->OnShutterOpenChanged(this, open);
-   return ret;;
+   return ret;
 }
 
 int DAShutter::GetOpen(bool& open)
