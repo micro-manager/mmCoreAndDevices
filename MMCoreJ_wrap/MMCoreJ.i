@@ -51,6 +51,9 @@
 %}
 
 // Pull in the compile-time hard-coded paths (determined by Unix configure script)
+#ifndef MMCOREJ_LIBRARY_PATH
+%define MMCOREJ_LIBRARY_PATH "" %enddef
+#endif
 %javaconst(1) LIBRARY_PATH;
 %constant char *LIBRARY_PATH = MMCOREJ_LIBRARY_PATH;
 
@@ -840,8 +843,11 @@
       getMultiROI(xs, ys, widths, heights);
       ArrayList<Rectangle> result = new ArrayList<Rectangle>();
       for (int i = 0; i < xs.size(); ++i) {
-         Rectangle r = new Rectangle((int) xs.get(i), (int) ys.get(i),
-               (int) widths.get(i), (int) heights.get(i));
+         long x = xs.get(i);
+         long y = ys.get(i);
+         long w = widths.get(i);
+         long h = heights.get(i);
+         Rectangle r = new Rectangle((int) x, (int) y, (int) w, (int) h);
          result.add(r);
       }
       return result;
@@ -857,10 +863,14 @@
       UnsignedVector widths = new UnsignedVector();
       UnsignedVector heights = new UnsignedVector();
       for (Rectangle r : rects) {
-         xs.add(r.x);
-         ys.add(r.y);
-         widths.add(r.width);
-         heights.add(r.height);
+         long x = r.x;
+         long y  = r.y;
+         long w = r.width;
+         long h = r.height;
+         xs.add(x);
+         ys.add(y);
+         widths.add(w);
+         heights.add(h);
       }
       setMultiROI(xs, ys, widths, heights);
    }
