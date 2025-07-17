@@ -31,6 +31,11 @@ const char* g_PureFocusDevice = "Prior PureFocus";
 const char* g_PureFocusDeviceName = "PureFocus";
 const char* g_PureFocusDeviceDescription = "Prior Scientific PureFocus Autofocus System";
 
+const char* g_Stepper = "Stepper Drive";
+const char* g_Piezo = "Piezo Drive";
+const char* g_Measure = "Measure";
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
 ///////////////////////////////////////////////////////////////////////////////
@@ -69,6 +74,8 @@ CPureFocus::CPureFocus() :
    locked_(false),
    busy_(false),
    answerTimeoutMs_(1000),
+   objective_(0),
+   piezoRange_(0),
    statusMode_(0),
    pinholeColumns_(1),
    pinholeWidth_(1),
@@ -115,7 +122,7 @@ int CPureFocus::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
-   // Check if we talk to the Prio and get the build date and version info
+   // Check if we talk to the Prior and get the build date and version info
    ret = SendSerialCommand(port_.c_str(), "DATE", "\r"); // Query device
    if (ret != DEVICE_OK)
       return ret;
@@ -146,7 +153,6 @@ int CPureFocus::Initialize()
       return ERR_DEVICE_NOT_FOUND;
    }
 
-
    // Status
    CPropertyAction* pAct = new CPropertyAction(this, &CPureFocus::OnStatus);
    ret = CreateProperty("Status", "Unknown", MM::String, true, pAct);
@@ -164,6 +170,39 @@ int CPureFocus::Initialize()
    ret = CreateProperty("BuildDate", date_.c_str(), MM::String, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
+
+   // Piezo or Stepper (or Measure???)
+   pAct = new CPropertyAction(this, &CPureFocus::OnFocusControl);
+   ret = CreateProperty("FocusControl", g_Piezo, MM::String, true, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   AddAllowedValue("FocusControl", g_Stepper);
+   AddAllowedValue("FocusControl", g_Piezo);
+   AddAllowedValue("FocusControl", g_Measure);
+  
+   char driveType[MM::MaxStrLength];
+   GetProperty("FocusControl", driveType);
+   if (strcmp(driveType, g_Piezo) == 0) {
+      // First get the Piezo range
+      ret = SendSerialCommand(port_.c_str(), "UPR", "\r"); // Query device
+      if (ret != DEVICE_OK)
+         return ret;
+
+      // Check if we're talking to the right device
+      std::string answer;
+      ret = GetSerialAnswer(port_.c_str(), "\r", answer);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      piezoRange_ = std::stoi(answer);
+
+      pAct = new CPropertyAction(this, &CPureFocus::OnPiezoPosition);
+      ret = CreateProperty("PiezoPosition", "0.0", MM::Float, false, pAct);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      SetPropertyLimits("PiezoPosition", 0.0, piezoRange_);
+   }
 
    // Lock
    pAct = new CPropertyAction(this, &CPureFocus::OnLock);
@@ -376,9 +415,7 @@ int CPureFocus::IncrementalFocus()
 int CPureFocus::GetOffset(double& offset)
 {
    MMThreadGuard guard(lock_);
-   offset = 3.6;
-   /*
-   int ret = SendSerialCommand(port_.c_str(), "OFFSET", "\r");
+   int ret = SendSerialCommand(port_.c_str(), "LENSP", "\r");
    if (ret != DEVICE_OK)
       return ret;
 
@@ -394,7 +431,6 @@ int CPureFocus::GetOffset(double& offset)
    catch (std::exception&) {
       return ERR_UNEXPECTED_RESPONSE;
    }
-   */
 
    return DEVICE_OK;
 }
@@ -402,9 +438,9 @@ int CPureFocus::GetOffset(double& offset)
 int CPureFocus::SetOffset(double offset)
 {
    MMThreadGuard guard(lock_);
-   /*
+
    ostringstream cmd;
-   cmd << "OFFSET," << offset; // Set offset command with parameter
+   cmd << "LENSG," << (long) offset; // Set offset command with parameter
    int ret = SendSerialCommand(port_.c_str(), cmd.str().c_str(), "\r");
    if (ret != DEVICE_OK)
       return ret;
@@ -415,12 +451,12 @@ int CPureFocus::SetOffset(double offset)
    if (ret != DEVICE_OK)
       return ret;
 
-   // Verify the response indicates success (depends on actual device protocol)
-   // For some devices, any response indicates success, for others you may need to parse a specific value
-   */
+   if (resp != "0")
+      return ERR_UNEXPECTED_RESPONSE;
 
    return DEVICE_OK;
 }
+
 
 int CPureFocus::GetCurrentFocusScore(double& score)
 {
@@ -561,6 +597,53 @@ int CPureFocus::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
          return ret;
    }
 
+   return DEVICE_OK;
+}
+
+int CPureFocus::OnPiezoPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      MMThreadGuard guard(lock_);
+      int ret = SendSerialCommand(port_.c_str(), "PIEZO", "\r");
+      if (ret != DEVICE_OK)
+         return ret;
+
+      string resp;
+      ret = GetResponse(resp);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      int raw = std::stoi(resp);
+      if (raw >= 0 && raw <= 4095)
+         pProp->Set((float)((float)raw / 4095.0 * piezoRange_));
+      else
+         return ERR_COMMUNICATION;
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double val;
+      pProp->Get(val);
+      if (val >= 0.0 && val <= piezoRange_)
+      {
+         int step = (int) (val / piezoRange_ * 4095);
+         std::ostringstream os;
+         os << "PIEZO," << step;
+         int ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r");
+         if (ret != DEVICE_OK)
+            return ret;
+
+         string resp;
+         ret = GetResponse(resp);
+         if (ret != DEVICE_OK)
+            return ret;
+
+         if (resp != "0")
+            return ERR_COMMUNICATION;
+
+      }
+
+   }
    return DEVICE_OK;
 }
 
@@ -759,6 +842,47 @@ int CPureFocus::OnBuildDate(MM::PropertyBase* pProp, MM::ActionType eAct)
    if (eAct == MM::BeforeGet)
    {
       pProp->Set(date_.c_str());
+   }
+   return DEVICE_OK;
+}
+
+int CPureFocus::OnFocusControl(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      // Query current pinhole settings
+      int ret = SendSerialCommand(port_.c_str(), "CONFIG", "\r");
+      if (ret != DEVICE_OK)
+         return ret;
+
+      string resp;
+      ret = GetResponse(resp);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      // Parse the response which should be in format "m,s" where m == 'S', 'P', or 'H', and s == 'S' or 'L'
+      size_t commaPos = resp.find(",");
+      if (commaPos == string::npos)
+         return ERR_UNEXPECTED_RESPONSE;
+
+      std::string result;
+      char m = resp.substr(0, commaPos).c_str()[0];
+      switch (m) {
+         case 'S':
+            result = g_Stepper;
+            break;
+         case 'P':
+            result = g_Piezo;
+            break;
+         case 'H':
+            result = g_Measure;
+            break;
+         default:
+            GetCoreCallback()->LogMessage(this, "Received invalid response to command CONFIG", false);
+            return ERR_COMMUNICATION;
+         break;
+      }
+      pProp->Set(result.c_str());
    }
    return DEVICE_OK;
 }
