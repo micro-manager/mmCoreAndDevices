@@ -631,6 +631,7 @@ public:
    {
       state_ = open;
       changedTime_ = GetCurrentMMTime();
+      GetCoreCallback()->OnShutterOpenChanged(this, open);
       return DEVICE_OK;
    }
    int GetOpen(bool& open)

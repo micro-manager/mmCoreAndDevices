@@ -3914,7 +3914,7 @@ int DemoShutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
       // apply the value
       state_ = pos == 0 ? false : true;
-      //GetCoreCallback()->OnShutterOpenChanged(this, pos == 0);
+      GetCoreCallback()->OnShutterOpenChanged(this, pos == 0);
    }
 
    return DEVICE_OK;
