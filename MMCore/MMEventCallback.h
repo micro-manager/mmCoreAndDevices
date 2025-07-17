@@ -89,7 +89,7 @@ public:
 
    virtual void onShutterOpenChanged(const char* name, bool open)
    {
-      std::cout << "onShutterOpenChanges()" << name << " " << open << '\n';
+      std::cout << "onShutterOpenChanged()" << name << " " << open << '\n';
    }
 
    virtual void onSLMExposureChanged(const char* name, double newExposure)
