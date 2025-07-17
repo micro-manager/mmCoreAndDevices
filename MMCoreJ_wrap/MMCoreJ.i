@@ -24,8 +24,9 @@
 // CVS:           $Id: MMCoreJ.i 16466 2017-08-23 21:46:52Z nico $
 //
 
-#if SWIG_VERSION < 0x020000 || SWIG_VERSION >= 0x040000
-#error SWIG 2.x or 3.x is currently required to build MMCoreJ
+// Different SWIG major versions can produce incompatible Java APIs.
+#if SWIG_VERSION < 0x040000 || SWIG_VERSION >= 0x050000
+#error "SWIG 4.x is required to build MMCoreJ"
 #endif
 
 %module (directors="1") MMCoreJ
@@ -936,6 +937,19 @@
 
 
 // instantiate STL mappings
+
+// SWIG 4 changed the std::vector wrappers and (among other things) removed
+// the constructor overload taking (Java) long, which creates a vector of the
+// requested number of empty/default elements. Since all of the element types
+// that we wrap vector for are default-constructible, we can add back this
+// overload.
+// See the 2019-02-28 entry in https://www.swig.org/Release/CHANGES.
+%extend std::vector {
+   vector(size_type count) { return new std::vector<T>(count); }
+}
+%extend std::vector<bool> {
+   vector(size_type count) { return new std::vector<bool>(count); }
+}
 
 namespace std {
 	%typemap(javaimports) vector<char> %{
