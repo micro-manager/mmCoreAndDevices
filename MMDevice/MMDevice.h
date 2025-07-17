@@ -1572,7 +1572,7 @@ namespace MM {
        */
       virtual int OnMagnifierChanged(const Device* caller) = 0;
       /**
-       * Signals that the shutter opened or clased
+       * Signals that the shutter opened or closed
        */
       virtual int OnShutterOpenChanged(const Device* caller, bool open) = 0;
 
