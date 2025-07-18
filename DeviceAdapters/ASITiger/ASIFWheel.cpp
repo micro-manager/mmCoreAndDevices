@@ -22,7 +22,6 @@
 // BASED ON:      ASIStage.cpp and others
 //
 
-
 #include "ASITiger.h"
 #include "ASIFWheel.h"
 #include "ASIHub.h"
@@ -33,7 +32,6 @@
 #include <vector>
 #include <string>
 
-using namespace std;
 
 // shared properties not implemented for filter wheel except for save settings because no shared properties
 
@@ -42,7 +40,7 @@ using namespace std;
 //
 
 // initialize static member
-string CFWheel::selectedWheel_ = g_EmptyAxisLetterStr;
+std::string CFWheel::selectedWheel_ = g_EmptyAxisLetterStr;
 
 CFWheel::CFWheel(const char* name) :
    ASIPeripheralBase< ::CStateDeviceBase, CFWheel >(name),
@@ -63,7 +61,7 @@ int CFWheel::Initialize()
    // call generic Initialize first, this gets hub
    RETURN_ON_MM_ERROR( PeripheralInitialize(true) );
 
-   ostringstream command;
+   std::ostringstream command;
 
    // turn off prompt characters; this has the effect of always setting to a known verbose mode
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify("VB 6", "VB 6", g_SerialTerminatorFW) );
@@ -218,7 +216,7 @@ bool CFWheel::Busy()
 
 int CFWheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       pProp->Set((long)curPosition_);
@@ -249,7 +247,7 @@ int CFWheel::OnLabel(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       if (spinning_)
          return ERR_FILTER_WHEEL_SPINNING;
-      string buf;
+      std::string buf;
       pProp->Get(buf);
       RETURN_ON_MM_ERROR ( SetPosition(buf.c_str()) );
    }
@@ -258,7 +256,7 @@ int CFWheel::OnLabel(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CFWheel::SelectWheelOverride()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "FW" << wheelNumber_;
    // if we sent an invalid address then Tiger responds with a <NAK>-terminated reply
    //   which leads to a timeout.  note this is different in Tiger than in stand-alone filterwheel
@@ -292,13 +290,12 @@ void CFWheel::ForcePropertyRefresh()
    }
 }
 
-////////////////
 // action handlers
 
 int CFWheel::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   ostringstream command; command.str("");
+   std::string tmpstr;
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
@@ -344,7 +341,7 @@ int CFWheel::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CFWheel::OnSpin(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -369,7 +366,7 @@ int CFWheel::OnSpin(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      string str;
+      std::string str;
       pProp->Get(str);
       RETURN_ON_MM_ERROR ( SelectWheel() );
       if (str == g_OnState)
@@ -400,7 +397,7 @@ int CFWheel::OnSpin(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CFWheel::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -421,7 +418,7 @@ int CFWheel::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       pProp->Get(tmp);
       command << "VR " << tmp;
-      ostringstream response; response.str("");
+      std::ostringstream response;
       response << tmp << "VR";  // echoed in reverse order
       RETURN_ON_MM_ERROR ( SelectWheel() );
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), response.str(), g_SerialTerminatorFW) );
@@ -431,7 +428,7 @@ int CFWheel::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CFWheel::OnSpeedSetting(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -452,7 +449,7 @@ int CFWheel::OnSpeedSetting(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       pProp->Get(tmp);
       command << "SV " << tmp;
-      ostringstream response; response.str("");
+      std::ostringstream response;
       response << tmp << "SV";  // echoed in reverse order
       RETURN_ON_MM_ERROR ( SelectWheel() );
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), response.str(), g_SerialTerminatorFW) );
@@ -464,7 +461,7 @@ int CFWheel::OnSpeedSetting(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CFWheel::OnLockMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -488,7 +485,7 @@ int CFWheel::OnLockMode(MM::PropertyBase* pProp, MM::ActionType eAct)
          RETURN_ON_MM_ERROR ( OnLockMode(pProp, MM::BeforeGet) );
          return ERR_FILTER_WHEEL_SPINNING;
       }
-      string str;
+      std::string str;
       pProp->Get(str);
       if (str == g_OnState)
          command << "LM1";
@@ -503,8 +500,7 @@ int CFWheel::OnLockMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CFWheel::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    ostringstream command;
-    command.str("");
+    std::ostringstream command;
     
     long tmp = 0;
     if (eAct == MM::BeforeGet)
@@ -521,7 +517,7 @@ int CFWheel::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         pProp->Get(tmp);
         command << "OF " << tmp;
-        ostringstream response; response.str("");
+        std::ostringstream response;
         response << tmp << "OF " << tmp << " " << tmp;
         RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), response.str(), g_SerialTerminatorFW));
         // issue the home command

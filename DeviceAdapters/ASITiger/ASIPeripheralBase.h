@@ -39,7 +39,7 @@ class ASIPeripheralBase : public ASIBase<TDeviceBase, UConcreteDevice>
 public:
    ASIPeripheralBase(const char* name) :
       ASIBase<TDeviceBase, UConcreteDevice>(name),
-      hub_(NULL),
+      hub_(nullptr),
       addressString_(g_EmptyCardAddressStr),
       addressChar_(g_EmptyCardAddressChar),
       refreshProps_(false),
@@ -74,7 +74,7 @@ public:
    // Note that initialize_ is set by the concrete child class.
    int PeripheralInitialize(bool skipFirmware = false)
    {
-      std::ostringstream command; command.str("");
+      std::ostringstream command;
 
       // get the hub information
       MM::Hub* genericHub = this->GetParentHub();
@@ -201,14 +201,14 @@ private:
    // does the dirty work of converting a two-character hex (e.g. F5) into the single character
    // only works for valid TG-1000 addresses
    // see ConvertToTigerRawAddress comments for more details
-   static std::string ConvertTwoCharStringToHexChar(const string &s)
+   static std::string ConvertTwoCharStringToHexChar(const std::string &s)
    {
       if (s.size() != 2)
          return g_EmptyCardAddressCode;
 
       unsigned int code;
       std::stringstream ss;
-      ss << hex << s;
+      ss << std::hex << s;
       ss >> code;
       if ((code >= 0x31 && code <= 0x39) || (code >= 0x81 && code <= 0xF5))
       {
