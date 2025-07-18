@@ -1864,15 +1864,10 @@ public:
    }
 
 
-   virtual int SetPositionUm(double x, double y)
+   virtual int CalculatePositionSteps(long& xSteps, long& ySteps, double x, double y)
    {
       bool mirrorX, mirrorY;
       GetOrientation(mirrorX, mirrorY);
-      double xPos = x;
-      double yPos = y;
-
-      long xSteps = 0;
-      long ySteps = 0;
 
       if (mirrorX)
          xSteps = originXSteps_ - nint (x / this->GetStepSizeXUm());
@@ -1883,7 +1878,22 @@ public:
       else
          ySteps = originYSteps_ + nint (y / this->GetStepSizeYUm());
 
-      int ret = this->SetPositionSteps(xSteps, ySteps);
+      return DEVICE_OK;
+   }
+
+
+   virtual int SetPositionUm(double x, double y)
+   {
+      double xPos = x;
+      double yPos = y;
+      long xSteps = 0;
+      long ySteps = 0;
+
+      int ret = CalculatePositionSteps(xSteps, ySteps, x, y);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      ret = this->SetPositionSteps(xSteps, ySteps);
       if (ret == DEVICE_OK) {
          xPos_ = xPos;
          yPos_ = yPos;
