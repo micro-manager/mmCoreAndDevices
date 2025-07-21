@@ -1,0 +1,19 @@
+(partially copied from ThorlabsPM100x build instructions)
+
+To build this code, create a directory called "3rdparty" at the same 
+level as the "micro-manager" source code directory.  In there, create
+'Thorlabs/TSP01/VISA/Win64'.  Install the legacy SDK provided by Thorlabs
+for the TSP01 rev B (https://www.thorlabs.com/software_pages/viewsoftwarepage.cfm?code=TSP).
+From '/c/Program Files (x86)/IVI Foundation/VISA/WinNT', copy the Bin, Include, and Lib_x64 directories to '3rdparty/Thorlabs/TSP01/VISA/Win64'. 
+
+To build you might also have to copy the following files to the project's folder mmCoreAndDevices/DeviceAdapters/ThorlabsTSP01:
+
+TLTSP_Defines.h
+TLTSPB.h
+VISA_Error.h
+visatype.h
+vpptype.h
+visa.h
+
+In the project properties Linker requires TLTSPB_64.lib and visa64.lib (Linker -> Input -> Additional Dependencies)
+To link these, add "C:\Program Files\IVI Foundation\Win64\Lib_x64\msc" folder (or similar based on your installation) to the Linker -> General -> Additional Library Directories
