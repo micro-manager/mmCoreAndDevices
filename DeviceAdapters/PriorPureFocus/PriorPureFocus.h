@@ -47,6 +47,7 @@ public:
    int SetContinuousFocusing(bool state);
    int GetContinuousFocusing(bool& state);
    bool IsContinuousFocusLocked();
+   bool IsSampleDetected();
    int FullFocus();
    int IncrementalFocus();
    int GetLastFocusScore(double& score);
@@ -56,14 +57,16 @@ public:
 
    // Property Action Handlers
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnLock(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnServo(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSampleDetected(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFocusScore(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPinholeColumns(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPinholeWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnObjective(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnList(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBuildDate(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFocusControl(MM::PropertyBase* pProp, MM::ActionType eAct);

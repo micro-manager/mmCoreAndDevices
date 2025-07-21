@@ -153,14 +153,8 @@ int CPureFocus::Initialize()
       return ERR_DEVICE_NOT_FOUND;
    }
 
-   // Status
-   CPropertyAction* pAct = new CPropertyAction(this, &CPureFocus::OnStatus);
-   ret = CreateProperty("Status", "Unknown", MM::String, true, pAct);
-   if (ret != DEVICE_OK)
-      return ret;
-
    // version 
-   pAct = new CPropertyAction(this, &CPureFocus::OnVersion);
+   CPropertyAction* pAct = new CPropertyAction(this, &CPureFocus::OnVersion);
    ret = CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
@@ -204,18 +198,28 @@ int CPureFocus::Initialize()
       SetPropertyLimits("PiezoPosition", 0.0, piezoRange_);
    }
 
-   // Lock
-   pAct = new CPropertyAction(this, &CPureFocus::OnLock);
-   ret = CreateProperty("Lock", "Unlocked", MM::String, false, pAct);
+   // Servo on/off
+   pAct = new CPropertyAction(this, &CPureFocus::OnServo);
+   ret = CreateProperty("Servo", "Off", MM::String, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
 
-   AddAllowedValue("Lock", "Locked");
-   AddAllowedValue("Lock", "Unlocked");
+   AddAllowedValue("Servo", "On");
+   AddAllowedValue("Servo", "Off");
 
    // Focus score
    pAct = new CPropertyAction(this, &CPureFocus::OnFocusScore);
    ret = CreateProperty("Focus Score", "0", MM::Integer, true, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   pAct = new CPropertyAction(this, &CPureFocus::OnFocus);
+   ret = CreateProperty("In Focus", "0", MM::Integer, true, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   pAct = new CPropertyAction(this, &CPureFocus::OnSampleDetected);
+   ret = CreateProperty("Sample Detected", "0", MM::Integer, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -246,12 +250,30 @@ int CPureFocus::Initialize()
    // Set allowable ranges
    SetPropertyLimits("Laser Power", 0, 4095);
 
+   // Objective
+   pAct = new CPropertyAction(this, &CPureFocus::OnObjective);
+   ret = CreateProperty("Objective", "1", MM::Integer, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   SetPropertyLimits("Objective", 1, 6);
+
+   // List properties of selected objective
+   // Would only need to update when objective changes
+   pAct = new CPropertyAction(this, &CPureFocus::OnList);
+   ret = CreateProperty("List", "", MM::String, true, pAct);
+   if (ret != DEVICE_OK)
+       return ret;
+
    // Query device for actual values
    ret = UpdatePinholeProperties();
    if (ret != DEVICE_OK)
       return ret;
 
    ret = UpdateLaserPower();
+   if (ret != DEVICE_OK)
+      return ret;
+
+   ret = UpdateObjective();
    if (ret != DEVICE_OK)
       return ret;
 
@@ -342,6 +364,27 @@ bool CPureFocus::IsContinuousFocusLocked()
       return false; // not in focus
    else if (resp == "1")
       return true; // in focus
+
+   return false; // error
+}
+
+bool CPureFocus::IsSampleDetected()
+{
+   MMThreadGuard guard(lock_);
+   int ret = SendSerialCommand(port_.c_str(), "SAMPLE", "\r");
+   if (ret != DEVICE_OK)
+      return false;
+
+   string resp;
+   ret = GetResponse(resp);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   // Parse response (should be "0" or "1")
+   if (resp == "0")
+      return false; // not detected
+   else if (resp == "1")
+      return true; // sample detected
 
    return false; // error
 }
@@ -512,27 +555,7 @@ int CPureFocus::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPureFocus::OnStatus(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      MMThreadGuard guard(lock_);
-      int ret = SendSerialCommand(port_.c_str(), "STATUS", "\r");
-      if (ret != DEVICE_OK)
-         return ret;
-
-      string resp;
-      ret = GetResponse(resp);
-      if (ret != DEVICE_OK)
-         return ret;
-
-      pProp->Set(resp.c_str());
-   }
-
-   return DEVICE_OK;
-}
-
-int CPureFocus::OnLock(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CPureFocus::OnServo(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -543,16 +566,16 @@ int CPureFocus::OnLock(MM::PropertyBase* pProp, MM::ActionType eAct)
          return ret;
 
       if (state)
-         pProp->Set("Locked");
+         pProp->Set("On");
       else
-         pProp->Set("Unlocked");
+         pProp->Set("Off");
    }
    else if (eAct == MM::AfterSet)
    {
       string state;
       pProp->Get(state);
 
-      bool lockState = (state == "Locked");
+      bool lockState = (state == "On");
       int ret = SetContinuousFocusing(lockState);
       if (ret != DEVICE_OK)
          return ret;
@@ -574,6 +597,27 @@ int CPureFocus::OnFocusScore(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
 
    return DEVICE_OK;
+}
+
+int CPureFocus::OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        std::string focus = IsContinuousFocusLocked() ? "1" : "0";
+        pProp->Set(focus.c_str());
+    }
+    return DEVICE_OK;
+}
+
+
+int CPureFocus::OnSampleDetected(MM::PropertyBase* pProp, MM::ActionType eAct) 
+{
+    if (eAct == MM::BeforeGet)
+    {
+        std::string sampleDetected = IsSampleDetected() ? "1" : "0";
+        pProp->Set(sampleDetected.c_str());
+    }
+    return DEVICE_OK;
 }
 
 int CPureFocus::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -791,7 +835,7 @@ int CPureFocus::OnObjective(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int ret = UpdateLaserPower();
+      int ret = UpdateObjective();
       if (ret != DEVICE_OK)
          return ret;
 
@@ -826,6 +870,28 @@ int CPureFocus::OnObjective(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
 
    return DEVICE_OK;
+}
+
+int CPureFocus::OnList(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+      MMThreadGuard guard(lock_);
+      int ret = SendSerialCommand(port_.c_str(), "LIST", "\r");
+      if (ret != DEVICE_OK)
+          return ret;
+      std::string answer = "";
+      std::ostringstream result;
+      while (answer != "END")
+      {
+          ret = GetSerialAnswer(port_.c_str(), "\r", answer);
+          if (ret != DEVICE_OK)
+              return ret;
+          result << answer << "\r\n";
+      }
+      pProp->Set(result.str().c_str());
+    }
+    return DEVICE_OK;
 }
 
 int CPureFocus::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
