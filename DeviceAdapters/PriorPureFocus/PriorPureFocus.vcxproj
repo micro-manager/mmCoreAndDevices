@@ -90,10 +90,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="PriorPureFocus.h" />
+    <ClInclude Include="PureFocus.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="PriorPureFocus.cpp" />
+    <ClCompile Include="PureFocusAutoFocus.cpp" />
+    <ClCompile Include="PureFocusHub.cpp" />
+    <ClCompile Include="PureFocusModule.cpp" />
+    <ClCompile Include="PureFocusOffset.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
