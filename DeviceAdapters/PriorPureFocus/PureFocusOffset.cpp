@@ -22,7 +22,7 @@ PureFocusOffset::~PureFocusOffset()
 bool PureFocusOffset::Busy()
 {
    if (pHub_ == 0)
-      return ERR_DEVICE_NOT_FOUND;
+      return false;
 
    return pHub_->IsOffsetLensBusy();
 }

@@ -34,7 +34,6 @@
 #define ERR_NOT_IN_RANGE          107
 
 
-extern const char* g_PureFocusDevice;
 extern const char* g_PureFocusDeviceName;
 extern const char* g_PureFocusOffsetDeviceName;
 extern const char* g_PureFocusAutoFocusDeviceName;
@@ -184,6 +183,7 @@ public:
    int OnLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnObjective(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnList(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnCenterPiezo(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    bool initialized_;

@@ -13,6 +13,14 @@ PureFocusAutoFocus::PureFocusAutoFocus() :
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_NOT_IN_RANGE, "Sample is not in range");
+
+   CPropertyAction* pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnCenterPiezo);
+   const char* propName = "Center Piezo On Startup";
+   CreateProperty(propName, "Yes", MM::String, false, pAct, true);
+   AddAllowedValue(propName, "Yes");
+   AddAllowedValue(propName, "No");
+
+
 }
 
 
@@ -67,13 +75,13 @@ int PureFocusAutoFocus::Initialize()
 
    // Pinhole Columns
    pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnPinholeCenter);
-   ret = CreateProperty("Pinhole Columns", "1", MM::Integer, false, pAct);
+   ret = CreateProperty("Pinhole Columns", "1", MM::Integer, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
 
    // Pinhole Width
    pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnPinholeWidth);
-   ret = CreateProperty("Pinhole Width", "1", MM::Integer, false, pAct);
+   ret = CreateProperty("Pinhole Width", "1", MM::Integer, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -416,4 +424,24 @@ int PureFocusAutoFocus::OnList(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Set(list.c_str());
    }
    return DEVICE_OK;
+}
+
+int PureFocusAutoFocus::OnCenterPiezo(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::AfterSet)
+    {
+        std::string response;
+        pProp->Get(response);
+        if (response == "Yes")
+        {
+		   char driveType[MM::MaxStrLength];
+		   GetProperty("FocusControl", driveType);
+           if (strcmp(driveType, g_Piezo) == 0) {
+           }
+					
+        }
+
+	}
+
+    return DEVICE_OK;
 }
