@@ -20,7 +20,7 @@ const char* g_Measure = "Measure";
 
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_PureFocusDevice, MM::HubDevice, g_PureFocusDeviceDescription);
+   RegisterDevice(g_PureFocusDeviceName, MM::HubDevice, g_PureFocusDeviceDescription);
    RegisterDevice(g_PureFocusAutoFocusDeviceName, MM::AutoFocusDevice, g_PureFocusAutoFocusDescription);
    RegisterDevice(g_PureFocusOffsetDeviceName, MM::StageDevice, g_PureFocusOffsetDescription);
 }
@@ -30,9 +30,17 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    if (deviceName == 0)
       return 0;
 
-   if (strcmp(deviceName, g_PureFocusDevice) == 0)
+   if (strcmp(deviceName, g_PureFocusDeviceName) == 0)
    {
       return new PureFocusHub();
+   }
+   else if (strcmp(deviceName, g_PureFocusAutoFocusDeviceName) == 0)
+   {
+       return new PureFocusAutoFocus();
+   }
+   else if (strcmp(deviceName, g_PureFocusOffsetDeviceName) == 0)
+   {
+       return new PureFocusOffset();
    }
 
    return 0;

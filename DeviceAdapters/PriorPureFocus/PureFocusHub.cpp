@@ -360,6 +360,29 @@ int PureFocusHub::GetFocusScore(double& score)
 }
 
 
+bool PureFocusHub::IsOffsetLensBusy()
+{
+   MMThreadGuard guard(lock_);
+   int ret = SendSerialCommand(port_.c_str(), "LENS$", "\r");
+   if (ret != DEVICE_OK)
+      return ret;
+
+   string resp;
+   ret = GetResponse(resp);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   // Try to parse the response as a number
+   int result = 0;
+   try {
+      result = std::stoi(resp);
+   }
+   catch (std::exception&) {
+      return ERR_UNEXPECTED_RESPONSE;
+   }
+   return result == 1; // 1 == moving, 0 == idle
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers

@@ -7,7 +7,7 @@ const char* g_PureFocusOffsetDescription = "PureFocusOffset Drive";
 PureFocusOffset::PureFocusOffset() :
    initialized_(false),
    pHub_(0),
-   stepSize_(1000.0)
+   stepSize_(0.001)
 {
 }
 
@@ -21,7 +21,10 @@ PureFocusOffset::~PureFocusOffset()
 
 bool PureFocusOffset::Busy()
 {
-   return false;
+   if (pHub_ == 0)
+      return ERR_DEVICE_NOT_FOUND;
+
+   return pHub_->IsOffsetLensBusy();
 }
 
 void PureFocusOffset::GetName(char* pszName) const
@@ -51,7 +54,7 @@ int PureFocusOffset::Shutdown()
 
 int PureFocusOffset::SetPositionUm(double pos)
 {
-  return SetPositionSteps((long) (pos * stepSize_));
+  return SetPositionSteps((long) (pos / stepSize_));
 }
 
 int PureFocusOffset::SetPositionSteps(long steps)
@@ -69,7 +72,7 @@ int PureFocusOffset::GetPositionUm(double& pos)
    if (ret != DEVICE_OK)
       return ret;
 
-   pos = (long) (posSteps * stepSize_);
+   pos = (double) (posSteps * stepSize_);
    return DEVICE_OK;
 }
 
