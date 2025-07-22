@@ -277,7 +277,9 @@ bool PureFocusHub::IsInFocus()
    if (inFocus_ != inFocus)
    {
       inFocus_ = inFocus;
-      autofocusDevice_->CallbackInFocus(inFocus);
+      MMThreadGuard guard(deviceLock_);
+      if (autofocusDevice_ != 0)
+         autofocusDevice_->CallbackInFocus(inFocus);
    }
 
    return inFocus_;
@@ -302,7 +304,9 @@ bool PureFocusHub::IsSampleDetected()
    if (inRange_ != isSampleDetected)
    {
       inRange_ = isSampleDetected;
-      autofocusDevice_->CallbackSampleDetected(isSampleDetected);
+      MMThreadGuard guard(deviceLock_);
+      if (autofocusDevice_ != 0)
+         autofocusDevice_->CallbackSampleDetected(isSampleDetected);
    }
 
    return isSampleDetected;
@@ -330,10 +334,12 @@ int PureFocusHub::GetOffset(long& offset)
    catch (std::exception&) {
       return ERR_UNEXPECTED_RESPONSE;
    }
-   if (offset_ != offset && offsetDevice_ != 0) 
+   if (offset_ != offset) 
    {
-      offsetDevice_->CallbackPositionSteps(offset);
       offset_ = offset;
+      MMThreadGuard guard(deviceLock_);
+      if (offsetDevice_ != 0)
+         offsetDevice_->CallbackPositionSteps(offset);
    }
 
    return DEVICE_OK;

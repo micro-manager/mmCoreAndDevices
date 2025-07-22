@@ -91,8 +91,16 @@ public:
 
    // function reading from the controller and updating states
    void Updater();
-   void SetOffsetDevice(PureFocusOffset* device) { offsetDevice_ = device; };
-   void SetAutofocusDevice(PureFocusAutoFocus* device) { autofocusDevice_ = device; };
+   void SetOffsetDevice(PureFocusOffset* device) 
+   { 
+      MMThreadGuard guard(deviceLock_);
+      offsetDevice_ = device; 
+   };
+   void SetAutofocusDevice(PureFocusAutoFocus* device) 
+   { 
+      MMThreadGuard guard(deviceLock_);
+      autofocusDevice_ = device; 
+   };
 
 private:
    bool initialized_;
@@ -110,6 +118,7 @@ private:
    bool inRange_;
    bool inFocus_;
    MMThreadLock lock_; // Thread lock for serial communication
+   MMThreadLock deviceLock_; // Thread lock for device access
    std::thread readerThread_;
    std::atomic<bool> stopThread_;
    PureFocusOffset* offsetDevice_;
