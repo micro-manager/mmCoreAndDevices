@@ -62,7 +62,7 @@ public:
 // TwainCamera class
 //streaming Camera device
 //////////////////////////////////////////////////////////////////////////////
-class TwainCamera : public CCameraBase<TwainCamera>  
+class TwainCamera : public CLegacyCameraBase<TwainCamera>  
 {
 public:
    TwainCamera();
@@ -108,7 +108,7 @@ public:
 	// expose  CDeviceBase accessors, so that PImpl can use them
 	MM::MMTime GetCurrentMMTime()
 	{
-		return CCameraBase<TwainCamera>::GetCurrentMMTime();
+		return CLegacyCameraBase<TwainCamera>::GetCurrentMMTime();
 	};
 
 

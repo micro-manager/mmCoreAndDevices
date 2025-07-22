@@ -59,7 +59,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // Implementation of the MMDevice and MMCamera interfaces
 //
-class CPCOCam : public CCameraBase<CPCOCam>
+class CPCOCam : public CLegacyCameraBase<CPCOCam>
 {
 public:
   CPCOCam();
