@@ -21,6 +21,7 @@
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include <string>
+#include <thread>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -88,6 +89,11 @@ public:
    int SetObjective(int objective);
    int GetList(std::string& list);
 
+   // function reading from the controller and updating states
+   void Updater();
+   void SetOffsetDevice(PureFocusOffset* device) { offsetDevice_ = device; };
+   void SetAutofocusDevice(PureFocusAutoFocus* device) { autofocusDevice_ = device; };
+
 private:
    bool initialized_;
    std::string name_;
@@ -100,7 +106,14 @@ private:
    std::string version_;
    std::string date_;
    int piezoRange_;
+   long offset_;
+   bool inRange_;
+   bool inFocus_;
    MMThreadLock lock_; // Thread lock for serial communication
+   std::thread readerThread_;
+   std::atomic<bool> stopThread_;
+   PureFocusOffset* offsetDevice_;
+   PureFocusAutoFocus* autofocusDevice_;
 
    // Communication methods
    int GetResponse(std::string& resp);
@@ -108,6 +121,7 @@ private:
 
    size_t findNthChar(const std::string& str, char targetChar, int n);
 };
+
 
 class PureFocusOffset : public CStageBase<PureFocusOffset> {
 public:
@@ -142,6 +156,7 @@ public:
    bool IsContinuousFocusDrive() const {
       return false;
    };
+   void CallbackPositionSteps(long steps);
 
 
 private:
@@ -185,6 +200,8 @@ public:
    int OnList(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnCenterPiezo(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+   void CallbackSampleDetected(bool detected);
+   void CallbackInFocus(bool inFocus);
 private:
    bool initialized_;
    PureFocusHub* pHub_;

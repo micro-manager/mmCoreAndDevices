@@ -2,6 +2,8 @@
 
 const char* g_PureFocusAutoFocusDeviceName = "PureFocusAutoFocus";
 const char* g_PureFocusAutoFocusDescription = "PureFocusAutoFocus Device";
+const char* g_SampleDetected = "Sample Detected";
+const char* g_InFocus = "In Focus";
 
 PureFocusAutoFocus::PureFocusAutoFocus() :
    initialized_(false),
@@ -19,8 +21,6 @@ PureFocusAutoFocus::PureFocusAutoFocus() :
    CreateProperty(propName, "Yes", MM::String, false, pAct, true);
    AddAllowedValue(propName, "Yes");
    AddAllowedValue(propName, "No");
-
-
 }
 
 
@@ -64,12 +64,12 @@ int PureFocusAutoFocus::Initialize()
       return ret;
 
    pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnFocus);
-   ret = CreateProperty("In Focus", "0", MM::Integer, true, pAct);
+   ret = CreateProperty(g_InFocus, "0", MM::Integer, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
 
    pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnSampleDetected);
-   ret = CreateProperty("Sample Detected", "0", MM::Integer, true, pAct);
+   ret = CreateProperty(g_SampleDetected, "0", MM::Integer, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -116,6 +116,8 @@ int PureFocusAutoFocus::Initialize()
 
    AddAllowedValue("Servo", "On");
    AddAllowedValue("Servo", "Off");
+
+   pHub_->SetAutofocusDevice(this);
 
    initialized_ = true;
 
@@ -444,4 +446,14 @@ int PureFocusAutoFocus::OnCenterPiezo(MM::PropertyBase* pProp, MM::ActionType eA
 	}
 
     return DEVICE_OK;
+}
+
+void PureFocusAutoFocus::CallbackSampleDetected(bool detected)
+{
+   GetCoreCallback()->OnPropertyChanged(this, g_SampleDetected, detected ? "1" : "0");
+}
+
+void PureFocusAutoFocus::CallbackInFocus(bool inFocus)
+{
+   GetCoreCallback()->OnPropertyChanged(this, g_InFocus, inFocus ? "1" : "0");
 }

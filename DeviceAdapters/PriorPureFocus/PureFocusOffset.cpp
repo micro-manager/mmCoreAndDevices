@@ -41,6 +41,8 @@ int PureFocusOffset::Initialize()
    if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
+   pHub_->SetOffsetDevice(this);
+
    return DEVICE_OK;
 }
 
@@ -84,3 +86,8 @@ int PureFocusOffset::GetPositionSteps(long& steps)
    return pHub_->GetOffset(steps);
 }
 
+
+void PureFocusOffset::CallbackPositionSteps(long steps)
+{
+   GetCoreCallback()->OnStagePositionChanged(this, steps * stepSize_);
+}
