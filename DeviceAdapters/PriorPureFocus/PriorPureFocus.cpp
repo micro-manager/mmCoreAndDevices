@@ -37,33 +37,6 @@ const char* g_Measure = "Measure";
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Exported MMDevice API
-///////////////////////////////////////////////////////////////////////////////
-
-MODULE_API void InitializeModuleData()
-{
-   RegisterDevice(g_PureFocusDevice, MM::AutoFocusDevice, g_PureFocusDeviceDescription);
-}
-
-MODULE_API MM::Device* CreateDevice(const char* deviceName)
-{
-   if (deviceName == 0)
-      return 0;
-
-   if (strcmp(deviceName, g_PureFocusDevice) == 0)
-   {
-      return new CPureFocus();
-   }
-
-   return 0;
-}
-
-MODULE_API void DeleteDevice(MM::Device* pDevice)
-{
-   delete pDevice;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // CPureFocus implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -73,6 +73,7 @@ public:
 
    int GetOffset(long& offset);
    int SetOffset(long offset);
+   bool IsOffsetLensBusy();
    int SetServo(bool state);
    int GetServo(bool& state);
    bool IsInFocus();
