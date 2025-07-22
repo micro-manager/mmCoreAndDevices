@@ -15,12 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PriorPureFocus.h">
+    <ClInclude Include="PureFocus.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="PriorPureFocus.cpp">
+    <ClCompile Include="PureFocusHub.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PureFocusModule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PureFocusAutoFocus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PureFocusOffset.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
