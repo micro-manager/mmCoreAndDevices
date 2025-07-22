@@ -2,6 +2,7 @@
 
 
 const char* g_PureFocusOffsetDeviceName = "PureFocusOffset";
+const char* g_PureFocusOffsetDescription = "PureFocusOffset Drive";
 
 PureFocusOffset::PureFocusOffset() :
    initialized_(false),

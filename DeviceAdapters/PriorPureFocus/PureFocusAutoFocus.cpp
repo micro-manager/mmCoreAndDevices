@@ -1,6 +1,7 @@
 #include "PureFocus.h"
 
 const char* g_PureFocusAutoFocusDeviceName = "PureFocusAutoFocus";
+const char* g_PureFocusAutoFocusDescription = "PureFocusAutoFocus Device";
 
 PureFocusAutoFocus::PureFocusAutoFocus() :
    initialized_(false),

@@ -20,7 +20,9 @@ const char* g_Measure = "Measure";
 
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_PureFocusDevice, MM::AutoFocusDevice, g_PureFocusDeviceDescription);
+   RegisterDevice(g_PureFocusDevice, MM::HubDevice, g_PureFocusDeviceDescription);
+   RegisterDevice(g_PureFocusAutoFocusDeviceName, MM::AutoFocusDevice, g_PureFocusAutoFocusDescription);
+   RegisterDevice(g_PureFocusOffsetDeviceName, MM::StageDevice, g_PureFocusOffsetDescription);
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
