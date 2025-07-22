@@ -39,6 +39,8 @@ extern const char* g_PureFocusDeviceName;
 extern const char* g_PureFocusOffsetDeviceName;
 extern const char* g_PureFocusAutoFocusDeviceName;
 extern const char* g_PureFocusDeviceDescription;
+extern const char* g_PureFocusAutoFocusDescription;
+extern const char* g_PureFocusOffsetDescription;
 extern const char* g_Stepper;
 extern const char* g_Piezo;
 extern const char* g_Measure;

@@ -57,8 +57,22 @@ PureFocusHub::~PureFocusHub()
 
 int PureFocusHub::DetectInstalledDevices()
 {
-   AddInstalledDevice(new PureFocusOffset());
-   AddInstalledDevice(new PureFocusAutoFocus());
+   ClearInstalledDevices();
+   // make sure this method is called before we look for available devices
+   InitializeModuleData();
+
+   char hubName[MM::MaxStrLength];
+   GetName(hubName); // this device name
+   for (unsigned i=0; i<GetNumberOfDevices(); i++)
+   { 
+      char deviceName[MM::MaxStrLength];
+      bool success = GetDeviceName(i, deviceName, MM::MaxStrLength);
+      if (success && (strcmp(hubName, deviceName) != 0))
+      {
+         MM::Device* pDev = CreateDevice(deviceName);
+         AddInstalledDevice(pDev);
+      }
+   }
 
    return DEVICE_OK;
 }
