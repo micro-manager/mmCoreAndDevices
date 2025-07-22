@@ -38,7 +38,12 @@ PureFocusHub::PureFocusHub() :
    statusMode_(0),
    dateString_(""),
    date_(""),
-   version_("")
+   version_(""),
+   offset_(10000),
+   inRange_(false),
+   inFocus_(false),
+   offsetDevice_(0),
+   autofocusDevice_(0)
 {
    InitializeDefaultErrorMessages();
 
@@ -176,6 +181,9 @@ int PureFocusHub::Initialize()
       SetPropertyLimits("PiezoPosition", 0.0, piezoRange_);
    }
 
+   stopThread_ = false;
+   readerThread_ = std::thread(&PureFocusHub::Updater, this);
+
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -185,6 +193,8 @@ int PureFocusHub::Shutdown()
 {
    if (initialized_)
    {
+      stopThread_ = true;
+      readerThread_.join();
       initialized_ = false;
    }
    return DEVICE_OK;
@@ -249,58 +259,69 @@ int PureFocusHub::GetServo(bool& state)
 
 bool PureFocusHub::IsInFocus()
 {
-   MMThreadGuard guard(lock_);
-   int ret = SendSerialCommand(port_.c_str(), "FOCUS", "\r");
-   if (ret != DEVICE_OK)
-      return false;
+   bool inFocus;
+   {
+      MMThreadGuard guard(lock_);
+      int ret = SendSerialCommand(port_.c_str(), "FOCUS", "\r");
+      if (ret != DEVICE_OK)
+         return false;
 
-   string resp;
-   ret = GetResponse(resp);
-   if (ret != DEVICE_OK)
-      return ret;
+      string resp;
+      ret = GetResponse(resp);
+      if (ret != DEVICE_OK)
+         return ret;
 
-   // Parse response (should be "0" or "1")
-   if (resp == "0")
-      return false; // not in focus
-   else if (resp == "1")
-      return true; // in focus
+      // Parse response (should be "0" or "1")
+      inFocus = resp == "1";
+   }
+   if (inFocus_ != inFocus)
+   {
+      inFocus_ = inFocus;
+      autofocusDevice_->CallbackInFocus(inFocus);
+   }
 
-   return false; // error
+   return inFocus_;
 }
 
 bool PureFocusHub::IsSampleDetected()
 {
-   MMThreadGuard guard(lock_);
-   int ret = SendSerialCommand(port_.c_str(), "SAMPLE", "\r");
-   if (ret != DEVICE_OK)
-      return false;
-
    string resp;
-   ret = GetResponse(resp);
-   if (ret != DEVICE_OK)
-      return ret;
+   {
+      MMThreadGuard guard(lock_);
+      int ret = SendSerialCommand(port_.c_str(), "SAMPLE", "\r");
+      if (ret != DEVICE_OK)
+         return false;
+
+      ret = GetResponse(resp);
+      if (ret != DEVICE_OK)
+         return ret;
+   }
 
    // Parse response (should be "0" or "1")
-   if (resp == "0")
-      return false; // not detected
-   else if (resp == "1")
-      return true; // sample detected
+   bool isSampleDetected = resp == "1";
+   if (inRange_ != isSampleDetected)
+   {
+      inRange_ = isSampleDetected;
+      autofocusDevice_->CallbackSampleDetected(isSampleDetected);
+   }
 
-   return false; // error
+   return isSampleDetected;
 }
 
 
 int PureFocusHub::GetOffset(long& offset)
 {
-   MMThreadGuard guard(lock_);
-   int ret = SendSerialCommand(port_.c_str(), "LENSP", "\r");
-   if (ret != DEVICE_OK)
-      return ret;
-
    string resp;
-   ret = GetResponse(resp);
-   if (ret != DEVICE_OK)
-      return ret;
+   {
+      MMThreadGuard guard(lock_);
+      int ret = SendSerialCommand(port_.c_str(), "LENSP", "\r");
+      if (ret != DEVICE_OK)
+         return ret;
+
+      ret = GetResponse(resp);
+      if (ret != DEVICE_OK)
+         return ret;
+   }
 
    // Try to parse the response as a number
    try {
@@ -308,6 +329,11 @@ int PureFocusHub::GetOffset(long& offset)
    }
    catch (std::exception&) {
       return ERR_UNEXPECTED_RESPONSE;
+   }
+   if (offset_ != offset && offsetDevice_ != 0) 
+   {
+      offsetDevice_->CallbackPositionSteps(offset);
+      offset_ = offset;
    }
 
    return DEVICE_OK;
@@ -718,4 +744,21 @@ size_t PureFocusHub::findNthChar(const std::string& str, char targetChar, int n)
          return pos;
    }
    return pos;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////
+// Reader Thread
+///////////////////////////////////////////////////////////////////////////////////
+void PureFocusHub::Updater() 
+{
+   long offset;
+   while (!stopThread_)
+   {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      GetOffset(offset);
+      if (IsSampleDetected())
+         IsInFocus();
+   }
+
 }
