@@ -53,6 +53,10 @@ PureFocusHub::PureFocusHub() :
    // Port
    CPropertyAction* pAct = new CPropertyAction(this, &PureFocusHub::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+
+   CreateProperty("Center Piezo", "Yes", MM::String, false, 0, true);
+   AddAllowedValue("Center Piezo", "Yes");
+   AddAllowedValue("Center Piezo", "No");
 }
 
 PureFocusHub::~PureFocusHub()
@@ -179,6 +183,14 @@ int PureFocusHub::Initialize()
          return ret;
 
       SetPropertyLimits("PiezoPosition", 0.0, piezoRange_);
+
+      char value[MM::MaxStrLength];
+      GetProperty("Center Piezo", value);
+      if (strcmp(value, "Yes") == 0)
+      {
+         SetOffset(piezoRange_ / 2);
+      }
+
    }
 
    stopThread_ = false;
