@@ -43,12 +43,20 @@ int PureFocusOffset::Initialize()
 
    pHub_->SetOffsetDevice(this);
 
+   initialized_ = true;
+
    return DEVICE_OK;
 }
 
 int PureFocusOffset::Shutdown()
 {
-   initialized_ = false;
+   if (initialized_)
+   {
+      if (pHub_ != 0)
+         pHub_->SetOffsetDevice(0);
+
+      initialized_ = false;
+   }
    return DEVICE_OK;
 }
 

@@ -34,6 +34,9 @@ int PureFocusAutoFocus::Shutdown()
 {
    if (initialized_)
    {
+      if (pHub_ != 0)
+         pHub_->SetAutofocusDevice(0);
+
       initialized_ = false;
       pHub_ = 0;
    }
