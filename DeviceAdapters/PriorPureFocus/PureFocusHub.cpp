@@ -378,7 +378,7 @@ bool PureFocusHub::IsOffsetLensBusy()
       result = std::stoi(resp);
    }
    catch (std::exception&) {
-      return ERR_UNEXPECTED_RESPONSE;
+      return false;
    }
    return result == 1; // 1 == moving, 0 == idle
 

@@ -1,11 +1,6 @@
 #include "PureFocus.h"
 #include "ModuleInterface.h"
 
-// External names used by the rest of the system
-// to load particular device from the "PriorPureFocus.dll" library
-const char* g_PureFocusDevice = "Prior PureFocus";
-
-// Device name variables
 const char* g_PureFocusDeviceName = "PureFocus";
 const char* g_PureFocusDeviceDescription = "Prior Scientific PureFocus Autofocus System";
 
