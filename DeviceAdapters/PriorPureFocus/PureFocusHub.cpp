@@ -111,6 +111,7 @@ int PureFocusHub::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   MMThreadGuard guard(lock_);
    // Check if we talk to the Prior and get the build date and version info
    ret = SendSerialCommand(port_.c_str(), "DATE", "\r"); // Query device
    if (ret != DEVICE_OK)
@@ -209,6 +210,17 @@ int PureFocusHub::Shutdown()
    {
       stopThread_ = true;
       readerThread_.join();
+      MMThreadGuard guard(deviceLock_);
+      if (autofocusDevice_ != 0)
+      {
+         autofocusDevice_->RemoveHub();
+         autofocusDevice_ = 0;
+      }
+      if (offsetDevice_ != 0)
+      {
+         offsetDevice_->RemoveHub();
+         offsetDevice_ = 0;
+      }
       initialized_ = false;
    }
    return DEVICE_OK;
@@ -218,7 +230,7 @@ bool PureFocusHub::Busy()
 {
    // For more complex implementations, you might want to query the device status
    // to determine if it's busy, rather than relying on a flag
-   MMThreadGuard guard(lock_);
+   // MMThreadGuard guard(lock_);
    return busy_;
 }
 
@@ -527,6 +539,7 @@ int PureFocusHub::OnFocusControl(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
+      MMThreadGuard guard(lock_);
       // Query current pinhole settings
       int ret = SendSerialCommand(port_.c_str(), "CONFIG", "\r");
       if (ret != DEVICE_OK)
@@ -745,12 +758,16 @@ int PureFocusHub::SetPiezoPosition(double um)
    int step = (int)(um / piezoRange_ * 4095);
    std::ostringstream os;
    os << "PIEZO," << step;
-   int ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r");
-   if (ret != DEVICE_OK)
-      return ret;
-
    string resp;
-   ret = GetResponse(resp);
+   int ret;
+   {
+      MMThreadGuard guard(lock_);
+      ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r");
+      if (ret != DEVICE_OK)
+         return ret;
+
+      ret = GetResponse(resp);
+   }
    if (ret != DEVICE_OK)
       return ret;
 

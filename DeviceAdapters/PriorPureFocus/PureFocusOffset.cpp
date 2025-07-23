@@ -22,6 +22,8 @@ PureFocusOffset::~PureFocusOffset()
 bool PureFocusOffset::Busy()
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return false;
 
    return pHub_->IsOffsetLensBusy();
@@ -56,6 +58,7 @@ int PureFocusOffset::Shutdown()
          pHub_->SetOffsetDevice(0);
 
       initialized_ = false;
+      pHub_ = 0;
    }
    return DEVICE_OK;
 }
@@ -69,6 +72,8 @@ int PureFocusOffset::SetPositionUm(double pos)
 
 int PureFocusOffset::SetPositionSteps(long steps)
 {
+   if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
    if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
@@ -88,6 +93,8 @@ int PureFocusOffset::GetPositionUm(double& pos)
 
 int PureFocusOffset::GetPositionSteps(long& steps)
 {
+   if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
    if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
