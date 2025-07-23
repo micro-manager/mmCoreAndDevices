@@ -42,6 +42,7 @@ PureFocusHub::PureFocusHub() :
    offset_(10000),
    inRange_(false),
    inFocus_(false),
+   rawPiezo_(0),
    offsetDevice_(0),
    autofocusDevice_(0)
 {
@@ -61,7 +62,8 @@ PureFocusHub::PureFocusHub() :
 
 PureFocusHub::~PureFocusHub()
 {
-   Shutdown();
+   if (initialized_)
+      Shutdown();
 }
 
 int PureFocusHub::DetectInstalledDevices()
@@ -188,7 +190,7 @@ int PureFocusHub::Initialize()
       GetProperty("Center Piezo", value);
       if (strcmp(value, "Yes") == 0)
       {
-         SetOffset(piezoRange_ / 2);
+         SetProperty("PiezoPosition", std::to_string(piezoRange_ / 2).c_str());
       }
 
    }
@@ -459,21 +461,11 @@ int PureFocusHub::OnPiezoPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      MMThreadGuard guard(lock_);
-      int ret = SendSerialCommand(port_.c_str(), "PIEZO", "\r");
+      double position;
+      int ret = GetPiezoPosition(position);
       if (ret != DEVICE_OK)
          return ret;
-
-      string resp;
-      ret = GetResponse(resp);
-      if (ret != DEVICE_OK)
-         return ret;
-
-      int raw = std::stoi(resp);
-      if (raw >= 0 && raw <= 4095)
-         pProp->Set((float)((float)raw / 4095.0 * piezoRange_));
-      else
-         return ERR_COMMUNICATION;
+      pProp->Set(position);
    }
    else if (eAct == MM::AfterSet)
    {
@@ -481,21 +473,7 @@ int PureFocusHub::OnPiezoPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Get(val);
       if (val >= 0.0 && val <= piezoRange_)
       {
-         int step = (int) (val / piezoRange_ * 4095);
-         std::ostringstream os;
-         os << "PIEZO," << step;
-         int ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r");
-         if (ret != DEVICE_OK)
-            return ret;
-
-         string resp;
-         ret = GetResponse(resp);
-         if (ret != DEVICE_OK)
-            return ret;
-
-         if (resp != "0")
-            return ERR_COMMUNICATION;
-
+         return SetPiezoPosition(val);
       }
 
    }
@@ -734,6 +712,53 @@ int PureFocusHub::SetObjective(int objective)
    return DEVICE_OK;
 }
 
+int PureFocusHub::GetPiezoPosition(double& um)
+{
+   int raw;
+   {
+      MMThreadGuard guard(lock_);
+      int ret = SendSerialCommand(port_.c_str(), "PIEZO", "\r");
+      if (ret != DEVICE_OK)
+         return ret;
+
+      string resp;
+      ret = GetResponse(resp);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      raw = std::stoi(resp);
+      if (raw >= 0 && raw <= 4095)
+         um = (float)((float)raw / 4095.0 * piezoRange_);
+      else
+         return ERR_COMMUNICATION;
+   }
+   if (raw != rawPiezo_)
+   {
+      rawPiezo_ = raw;
+      GetCoreCallback()->OnPropertyChanged(this, "PiezoPosition", std::to_string(um).c_str());
+   }
+   return DEVICE_OK;
+}
+
+int PureFocusHub::SetPiezoPosition(double um)
+{
+   int step = (int)(um / piezoRange_ * 4095);
+   std::ostringstream os;
+   os << "PIEZO," << step;
+   int ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r");
+   if (ret != DEVICE_OK)
+      return ret;
+
+   string resp;
+   ret = GetResponse(resp);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (resp != "0")
+      return ERR_COMMUNICATION;
+
+   return DEVICE_OK;
+}
 
 int PureFocusHub::GetList(std::string& list)
 {
@@ -771,12 +796,14 @@ size_t PureFocusHub::findNthChar(const std::string& str, char targetChar, int n)
 void PureFocusHub::Updater() 
 {
    long offset;
+   double pos;
    while (!stopThread_)
    {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       GetOffset(offset);
       if (IsSampleDetected())
          IsInFocus();
+      GetPiezoPosition(pos);
    }
 
 }
