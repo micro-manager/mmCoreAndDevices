@@ -44,6 +44,8 @@ extern const char* g_PureFocusOffsetDescription;
 extern const char* g_Stepper;
 extern const char* g_Piezo;
 extern const char* g_Measure;
+extern const char* g_Yes;
+extern const char* g_No;
 
 class PureFocusOffset;
 class PureFocusAutoFocus;
@@ -169,6 +171,7 @@ public:
       return false;
    };
    void CallbackPositionSteps(long steps);
+   void RemoveHub() { pHub_ = 0; };
 
 
 private:
@@ -213,6 +216,8 @@ public:
 
    void CallbackSampleDetected(bool detected);
    void CallbackInFocus(bool inFocus);
+   void RemoveHub() { pHub_ = 0; };
+
 private:
    bool initialized_;
    PureFocusHub* pHub_;

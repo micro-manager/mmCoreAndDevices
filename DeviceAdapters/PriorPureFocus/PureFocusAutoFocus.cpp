@@ -4,6 +4,8 @@ const char* g_PureFocusAutoFocusDeviceName = "PureFocusAutoFocus";
 const char* g_PureFocusAutoFocusDescription = "PureFocusAutoFocus Device";
 const char* g_SampleDetected = "Sample Detected";
 const char* g_InFocus = "In Focus";
+const char* g_Yes = "Yes";
+const char* g_No = "No";
 
 PureFocusAutoFocus::PureFocusAutoFocus() :
    initialized_(false),
@@ -61,14 +63,19 @@ int PureFocusAutoFocus::Initialize()
       return ret;
 
    pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnFocus);
-   ret = CreateProperty(g_InFocus, "0", MM::Integer, true, pAct);
+   ret = CreateProperty(g_InFocus, g_No, MM::String, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
+   AddAllowedValue(g_InFocus, g_Yes);
+   AddAllowedValue(g_InFocus, g_No);
 
    pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnSampleDetected);
-   ret = CreateProperty(g_SampleDetected, "0", MM::Integer, true, pAct);
+   ret = CreateProperty(g_SampleDetected, g_No, MM::String, true, pAct);
    if (ret != DEVICE_OK)
       return ret;
+   AddAllowedValue(g_SampleDetected, g_Yes);
+   AddAllowedValue(g_SampleDetected, g_No);
+
 
    // Pinhole Columns
    pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnPinholeCenter);
@@ -132,6 +139,8 @@ bool PureFocusAutoFocus::Busy()
 int PureFocusAutoFocus::SetContinuousFocusing(bool state)
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
    if (state)
@@ -146,6 +155,8 @@ int PureFocusAutoFocus::SetContinuousFocusing(bool state)
 
 int PureFocusAutoFocus::GetContinuousFocusing(bool& state)
 {
+   if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
    if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
@@ -182,6 +193,8 @@ int PureFocusAutoFocus::IncrementalFocus()
 int PureFocusAutoFocus::GetCurrentFocusScore(double& score)
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return false;
 
    return pHub_->GetFocusScore(score);
@@ -194,6 +207,8 @@ int PureFocusAutoFocus::GetLastFocusScore(double& score)
 
 int PureFocusAutoFocus::GetOffset(double& offset)
 {
+   if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
    if (pHub_ == 0)
       return false;
 
@@ -210,6 +225,8 @@ int PureFocusAutoFocus::GetOffset(double& offset)
 int PureFocusAutoFocus::SetOffset(double offset)
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return false;
 
    return pHub_->SetOffset((long) offset);
@@ -217,6 +234,8 @@ int PureFocusAutoFocus::SetOffset(double offset)
 
 int PureFocusAutoFocus::OnServo(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
    if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
@@ -250,6 +269,8 @@ int PureFocusAutoFocus::OnServo(MM::PropertyBase* pProp, MM::ActionType eAct)
 int PureFocusAutoFocus::OnFocusScore(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
    if (eAct == MM::BeforeGet)
@@ -268,11 +289,13 @@ int PureFocusAutoFocus::OnFocusScore(MM::PropertyBase* pProp, MM::ActionType eAc
 int PureFocusAutoFocus::OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
     if (eAct == MM::BeforeGet)
     {
-        std::string focus = pHub_->IsInFocus() ? "1" : "0";
+        std::string focus = pHub_->IsInFocus() ? g_Yes : g_No;
         pProp->Set(focus.c_str());
     }
     return DEVICE_OK;
@@ -282,11 +305,13 @@ int PureFocusAutoFocus::OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct)
 int PureFocusAutoFocus::OnSampleDetected(MM::PropertyBase* pProp, MM::ActionType eAct) 
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
     if (eAct == MM::BeforeGet)
     {
-        std::string sampleDetected = pHub_->IsSampleDetected() ? "1" : "0";
+        std::string sampleDetected = pHub_->IsSampleDetected() ? g_Yes : g_No;
         pProp->Set(sampleDetected.c_str());
     }
     return DEVICE_OK;
@@ -294,6 +319,8 @@ int PureFocusAutoFocus::OnSampleDetected(MM::PropertyBase* pProp, MM::ActionType
 
 int PureFocusAutoFocus::OnPinholeCenter(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
    if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
@@ -323,6 +350,8 @@ int PureFocusAutoFocus::OnPinholeCenter(MM::PropertyBase* pProp, MM::ActionType 
 int PureFocusAutoFocus::OnPinholeWidth(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
    if (eAct == MM::BeforeGet)
@@ -351,6 +380,8 @@ int PureFocusAutoFocus::OnPinholeWidth(MM::PropertyBase* pProp, MM::ActionType e
 int PureFocusAutoFocus::OnLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
    if (eAct == MM::BeforeGet)
@@ -378,6 +409,8 @@ int PureFocusAutoFocus::OnLaserPower(MM::PropertyBase* pProp, MM::ActionType eAc
 
 int PureFocusAutoFocus::OnObjective(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
    if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
@@ -411,6 +444,8 @@ int PureFocusAutoFocus::OnObjective(MM::PropertyBase* pProp, MM::ActionType eAct
 int PureFocusAutoFocus::OnList(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (pHub_ == 0)
+      pHub_ = static_cast<PureFocusHub*>(GetParentHub());
+   if (pHub_ == 0)
       return ERR_DEVICE_NOT_FOUND;
 
    if (eAct == MM::BeforeGet)
@@ -427,10 +462,10 @@ int PureFocusAutoFocus::OnList(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 void PureFocusAutoFocus::CallbackSampleDetected(bool detected)
 {
-   GetCoreCallback()->OnPropertyChanged(this, g_SampleDetected, detected ? "1" : "0");
+   GetCoreCallback()->OnPropertyChanged(this, g_SampleDetected, detected ? g_Yes : g_No);
 }
 
 void PureFocusAutoFocus::CallbackInFocus(bool inFocus)
 {
-   GetCoreCallback()->OnPropertyChanged(this, g_InFocus, inFocus ? "1" : "0");
+   GetCoreCallback()->OnPropertyChanged(this, g_InFocus, inFocus ? g_Yes : g_No);
 }
