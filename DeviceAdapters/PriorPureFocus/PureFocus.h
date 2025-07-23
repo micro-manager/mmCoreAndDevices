@@ -87,6 +87,8 @@ public:
    int SetLaserPower(int laserPower);
    int GetObjective(int& objective);
    int SetObjective(int objective);
+   int GetPiezoPosition(double& um);
+   int SetPiezoPosition(double um);
    int GetList(std::string& list);
 
    // function reading from the controller and updating states
@@ -117,6 +119,7 @@ private:
    long offset_;
    bool inRange_;
    bool inFocus_;
+   int rawPiezo_;
    MMThreadLock lock_; // Thread lock for serial communication
    MMThreadLock deviceLock_; // Thread lock for device access
    std::thread readerThread_;
@@ -207,7 +210,6 @@ public:
    int OnLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnObjective(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnList(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnCenterPiezo(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    void CallbackSampleDetected(bool detected);
    void CallbackInFocus(bool inFocus);

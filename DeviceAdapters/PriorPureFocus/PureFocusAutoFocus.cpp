@@ -15,12 +15,6 @@ PureFocusAutoFocus::PureFocusAutoFocus() :
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_NOT_IN_RANGE, "Sample is not in range");
-
-   CPropertyAction* pAct = new CPropertyAction(this, &PureFocusAutoFocus::OnCenterPiezo);
-   const char* propName = "Center Piezo On Startup";
-   CreateProperty(propName, "Yes", MM::String, false, pAct, true);
-   AddAllowedValue(propName, "Yes");
-   AddAllowedValue(propName, "No");
 }
 
 
@@ -429,26 +423,6 @@ int PureFocusAutoFocus::OnList(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Set(list.c_str());
    }
    return DEVICE_OK;
-}
-
-int PureFocusAutoFocus::OnCenterPiezo(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::AfterSet)
-    {
-        std::string response;
-        pProp->Get(response);
-        if (response == "Yes")
-        {
-		   char driveType[MM::MaxStrLength];
-		   GetProperty("FocusControl", driveType);
-           if (strcmp(driveType, g_Piezo) == 0) {
-           }
-					
-        }
-
-	}
-
-    return DEVICE_OK;
 }
 
 void PureFocusAutoFocus::CallbackSampleDetected(bool detected)
