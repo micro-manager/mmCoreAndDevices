@@ -423,12 +423,12 @@ bool PureFocusHub::IsOffsetLensBusy()
    MMThreadGuard guard(lock_);
    int ret = SendSerialCommand(port_.c_str(), "LENS$", "\r");
    if (ret != DEVICE_OK)
-      return ret;
+      return false;
 
    string resp;
    ret = GetResponse(resp);
    if (ret != DEVICE_OK)
-      return ret;
+      return false;
 
    // Try to parse the response as a number
    int result = 0;
