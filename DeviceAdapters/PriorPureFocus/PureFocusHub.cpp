@@ -295,7 +295,7 @@ bool PureFocusHub::IsInFocus()
       string resp;
       ret = GetResponse(resp);
       if (ret != DEVICE_OK)
-         return ret;
+         return false;
 
       // Parse response (should be "0" or "1")
       inFocus = resp == "1";
