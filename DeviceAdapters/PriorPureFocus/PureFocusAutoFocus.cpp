@@ -174,7 +174,7 @@ bool PureFocusAutoFocus::IsContinuousFocusLocked()
 int PureFocusAutoFocus::FullFocus()
 {
    if (pHub_ == 0)
-      return false;
+      return ERR_DEVICE_NOT_FOUND;
 
    int ret = SetContinuousFocusing(true);
    if (ret != DEVICE_OK)
