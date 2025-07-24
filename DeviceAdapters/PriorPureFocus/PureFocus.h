@@ -227,4 +227,4 @@ private:
    int objective_;
 };
 
-#endif // _PUREFOCUS_H_#pragma once
+#endif // _PUREFOCUS_H_
