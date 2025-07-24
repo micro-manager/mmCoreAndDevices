@@ -322,7 +322,7 @@ bool PureFocusHub::IsSampleDetected()
 
       ret = GetResponse(resp);
       if (ret != DEVICE_OK)
-         return ret;
+         return false;
    }
 
    // Parse response (should be "0" or "1")
