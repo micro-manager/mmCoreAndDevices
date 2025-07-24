@@ -210,7 +210,7 @@ int PureFocusAutoFocus::GetOffset(double& offset)
    if (pHub_ == 0)
       pHub_ = static_cast<PureFocusHub*>(GetParentHub());
    if (pHub_ == 0)
-      return false;
+      return ERR_DEVICE_NOT_FOUND;
 
    long lOffset;
    int ret = pHub_->GetOffset(lOffset);
