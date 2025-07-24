@@ -401,7 +401,11 @@ int PureFocusAutoFocus::OnLaserPower(MM::PropertyBase* pProp, MM::ActionType eAc
       if (power < 0 || power > 4095)
          return DEVICE_INVALID_PROPERTY_VALUE;
 
-      return pHub_->SetLaserPower(laserPower_);
+      int ret = pHub_->SetLaserPower(power);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      laserPower_ = (int)power;
    }
 
    return DEVICE_OK;
