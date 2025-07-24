@@ -25,12 +25,13 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-#include "../MMDevice/DeviceThreads.h"
-#include "../MMDevice/DeviceUtils.h"
-#include "../MMDevice/ImgBuffer.h"
 #include "CircularBuffer.h"
 #include "CoreCallback.h"
 #include "DeviceManager.h"
+
+#include "DeviceThreads.h"
+#include "DeviceUtils.h"
+#include "ImgBuffer.h"
 
 #include <cassert>
 #include <chrono>
@@ -424,10 +425,17 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
          }
       }
    }
+
+   // Notify that sequence acquisition has stopped
+   if (core_->externalCallback_)
+   {
+      core_->externalCallback_->onSequenceAcquisitionStopped(camera->GetLabel().c_str());
+   }
+
    return DEVICE_OK;
 }
 
-int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
+int CoreCallback::PrepareForAcq(const MM::Device* caller)
 {
    if (core_->autoShutter_)
    {
@@ -442,6 +450,14 @@ int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
          core_->waitForDevice(shutter);
       }
    }
+
+   if (core_->externalCallback_)
+   {
+      char label[MM::MaxStrLength];
+      caller->GetLabel(label);
+      core_->externalCallback_->onSequenceAcquisitionStarted(label);
+   }
+
    return DEVICE_OK;
 }
 

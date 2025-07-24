@@ -189,7 +189,7 @@ BaslerCamera::BaslerCamera() :
 	{
 		AddToLog("No camera present.");
 		PylonTerminate();
-		throw RUNTIME_EXCEPTION("No camera present.");
+		return;
 	}
 
 	bool first = true;
@@ -263,13 +263,13 @@ int BaslerCamera::Initialize()
 
 	try
 	{
-		// Before using any pylon methods, the pylon runtime must be initialized. 
-		PylonInitialize();
-
 		char serialNumber[MM::MaxStrLength];
 		GetProperty("SerialNumber", serialNumber);
 		if (strlen(serialNumber) == 0 || strcmp(serialNumber, "Undefined") == 0)
 			return ERR_SERIAL_NUMBER_REQUIRED;
+
+		// Before using any pylon methods, the pylon runtime must be initialized. 
+		PylonInitialize();
 
 		CDeviceInfo deviceInfo;
 		deviceInfo.SetSerialNumber(String_t(serialNumber));
@@ -914,7 +914,7 @@ int BaslerCamera::SetProperty(const char* name, const char* value)
 */
 int BaslerCamera::Shutdown()
 {
-	if (!camera_)
+	if (camera_ != nullptr)
 	{
 		camera_->Close();
 		delete camera_;

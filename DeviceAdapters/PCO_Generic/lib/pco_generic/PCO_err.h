@@ -1,90 +1,20 @@
-//-----------------------------------------------------------------//
-// Name        | PCO_err.h                   | Type: ( ) source    //
-//-------------------------------------------|       (*) header    //
-// Project     | PCO                         |       ( ) others    //
-//-----------------------------------------------------------------//
-// Platform    | - Embedded platforms like M16C, AVR32, PIC32 etc. //
-//             | - PC with several Windows versions, Linux etc.    //
-//-----------------------------------------------------------------//
-// Environment | - Platform dependent                              //
-//-----------------------------------------------------------------//
-// Purpose     | PCO - Error defines                               //
-//-----------------------------------------------------------------//
-// Author      | FRE, MBL, LWA, PCO AG, Kelheim, Germany           //
-//-----------------------------------------------------------------//
-// Revision    | versioned using SVN                               //
-//-----------------------------------------------------------------//
-// Notes       | This error defines should be used in every future //
-//             | design. It is designed to hold a huge range of    //
-//             | errors and warnings                               //
-//-----------------------------------------------------------------//
-// (c) 2003-2014 PCO AG * Donaupark 11 * D-93309 Kelheim / Germany //
-// *  Phone: +49 (0)9441 / 2005-0  *                               //
-// *  Fax:   +49 (0)9441 / 2005-20 *  Email: info@pco.de           //
-//-----------------------------------------------------------------//
-
-
-//-----------------------------------------------------------------//
-// Revision History:                                               //
-//-----------------------------------------------------------------//
-// Rev.:     | Date:      | Changed:                               //
-// --------- | ---------- | ---------------------------------------//
-//  00.01    | 25.06.2003 |  new file, FRE                         //
-//-----------------------------------------------------------------//
-//  00.02    | 05.09.2003 |  - LWa 05.09.2003: error code added:   //
-//           |            |      PCO_ERROR_SEGMENT_TO_SMALL        //
-//           |            |    (just addition, no new version!)    //
-//-----------------------------------------------------------------//
-//  00.03    | 14.10.2003 |  - FRE: Error text file changed        //
-//           |            |    (new version)                       // 
-//           | 23.10.2003 |  - LWA:added:                          //
-//           |            |  SC2_ERROR_CONNY                       //
-//           |            |  PCO_ERROR_FIRMWARE_DEVICE_OPEN_FAILED // 
-//           |            |  (just addition, no new version!)      //
-//-----------------------------------------------------------------//
-//  00.04    | 23.10.2003 |  - LWA: reorganized error codes for    //
-//           |            |    firmware update commands.           //
-//-----------------------------------------------------------------//
-//  00.05    | 12.12.2003 |  - FRE: changed PCO_errt.h             //
-//           |            |                                        //
-//           | 17.03.2004 |  - LWA added:                          //
-//           |            |  PCO_ERROR_FIRMWARE_UNKNOWN_COMMAND    // 
-//           |            |  (just addition, no new version!)      //
-//           | 23.03.2004 |  - LWA added (by FRE):                 //
-//           |            |  PCO_WARNING_FIRMWARE_HIGH_TEMPERATURE //
-//           |            |  PCO_ERROR_FIRMWARE_HIGH_TEMPERATURE   //
-//           |            |  Device codes:                         //
-//           |            |  PCO_ERROR_PCOCAM_CCD                  // 
-//           |            |  PCO_ERROR_PCOCAM_POWER                // 
-//           |            |  MBL added:                            // 
-//           |            |  PCO_WARNING_FIRMWARE_CCDCAL_NOT_LOCKED// 
-//           | 24.03.2004 |  - FRE added:                          //
-//           |            |  PCO_ERROR_SDKDLL_WRONGBUFFERNR        //
-//           |            |  Commented SC2_xxx devices!            //
-//           | 26.07.2004 |  - FRE added:                          //
-//           |            |  PCO_ERROR_SDKDLL_DLLNOTFOUND          //
-//           | 10.11.2004 |  - FRE added:                          //
-//           |            |  PCO_ERROR_SDKDLL_BUFALREADYASSIGNED   //
-//           |            |  PCO_ERROR_SDKDLL_EVENTALREADYASSIGNED //
-//           | 08.03.2005 |  - FRE: Added                          //
-//           |            |        PCO_ERROR_APPLICATION_WRONGRES  //
-//           | 03.11.2005 | - LWA: Added new line at end of file   //
-//           |            |   to suppress warnings (Gnu Compiler)  //
-//           | 19.12.2005 | - FRE: Added                           //
-//           |            |   PCO_ERROR_APPLICATION_DISKFULL       //
-//           | 22.08.2006 | - FRE: Added                           //
-//           |            |   PCO_ERROR_NOTINIT                    //
-//           | 11.04.2007 | - FRE: Added                           //
-//           |            |   PCO_ERROR_FILEDLL                    //
-//           |            |   Added Disk Full to common            //
-//           | 25.06.2008 | - FRE: Added                           //
-//           |            |   PCO_ERROR_APPLICATION_SET_VALUES     //
-//           | 08.12.2008 | - FRE: Added                           //
-//           |            |   PCO_ERROR_SDKDLL_RECORDINGMUSTBEON   //
-//           | 12.01.2009 | - FRE: Reviewed error/txt assembly     //
-//           |            |   Enhanced error decoding due to       //
-//           |            |   device and layer numbering           //
-//-----------------------------------------------------------------//
+//-----------------------------------------------------------------------------//
+// Name        | PCO_err.h                   | Type: ( ) source                //
+//-------------------------------------------|       (*) header                //
+// Project     | PCO                         |       ( ) others                //
+//-----------------------------------------------------------------------------//
+// Purpose     | PCO - Error defines                                           //
+//-----------------------------------------------------------------------------//
+// Author      | FRE, MBL, LWA, Excelitas PCO GmbH, Kelheim, Germany           //
+//-----------------------------------------------------------------------------//
+// Notes       | This error defines should be used in every future             //
+//             | design. It is designed to hold a huge range of                //
+//             | errors and warnings                                           //
+//-----------------------------------------------------------------------------//
+// (c) 2003-2021 Excelitas PCO GmbH * Donaupark 11 * D-93309 Kelheim / Germany //
+// *  Phone: +49 (0)9441 / 2005-0  *                                           //
+// *  Fax:   +49 (0)9441 / 2005-20 *  Email: pco@excelitas.com                 //
+//-----------------------------------------------------------------------------//
 
 
 // Do not change any values after release! Only additions are allowed!
@@ -187,6 +117,7 @@ DWORD GetErrorSource(DWORD dwerr);
 #define PCO_ERROR_DRIVER                   0x00002000    // error inside the driver
 #define PCO_ERROR_SDKDLL                   0x00003000    // error inside the SDK-dll
 #define PCO_ERROR_APPLICATION              0x00004000    // error inside the application
+#define PCO_ERROR_COMDEVICE                0x00005000    // error inside a com device
 
 // Common device codes (should start with PCO_)
 // Device codes in each layer group should be numbered in ascending order.
@@ -231,7 +162,8 @@ DWORD GetErrorSource(DWORD dwerr);
 #define PCO_ERROR_DRIVER_GIGE              0x00320000    // error inside the GigE driver
 #define PCO_ERROR_DRIVER_CAMERALINK        0x00330000    // error inside the CameraLink driver
 #define PCO_ERROR_DRIVER_USB3              0x00340000    // error inside the usb 3.0 driver
-#define PCO_ERROR_DRIVER_WLAN              0x00350000    // error inside the usb 3.0 driver
+#define PCO_ERROR_DRIVER_WLAN              0x00350000    // error inside the wlan driver
+#define PCO_ERROR_DRIVER_GENICAM           0x00360000    // error inside the genicam driver
 
 // obsolete (will be removed in a future release):
 // SC2_ERROR_DRIVER renamed to PCO_ERROR_DRIVER_xyz
@@ -247,6 +179,8 @@ DWORD GetErrorSource(DWORD dwerr);
 
 #define PCO_ERROR_PROGLIB                  0x00140000    // error inside the programmer library
 
+#define PCO_ERROR_RECORDERDLL              0x00150000    // error inside the recorder library
+#define PCO_ERROR_HIGHLEVELSDK             0x00160000    // error inside the high level sdk, pco camera class
 
 // ====================================================================================================== //
 // -- 3.4 Application devices --------------------------------------------------------------------------- //
@@ -256,6 +190,13 @@ DWORD GetErrorSource(DWORD dwerr);
 #define PCO_ERROR_PROGRAMMER               0x00110000    // error in Programmer
 
 #define PCO_ERROR_SDKAPPLICATION           0x00120000    // error in SDK Applikation
+
+// ====================================================================================================== //
+// -- 3.5 COM devices ----------------------------------------------------------------------------------- //
+// ====================================================================================================== //
+#define PCO_ERROR_COM_ATF                  0x00500000    // error inside the ATF library 
+#define PCO_ERROR_COM_XCITE                0x00510000    // error inside the xcite lamp library
+#define PCO_ERROR_COM_OPTEM                0x00520000    // error inside the OPTEM library
 
 // ====================================================================================================== //
 // -- 4. Error Messages: -------------------------------------------------------------------------------- //
@@ -270,12 +211,12 @@ DWORD GetErrorSource(DWORD dwerr);
   // The resulting error code is built by adding the layer and source device to the error code.
   //
   // e.g. CamWare - file I/O error: error = PCO_ERROR_CAMWARE 
-  //                                      + PCO_ERROR_APPLICATION 
-  //                                      + PCO_NOERROR_NOFILE
+  //                                      | PCO_ERROR_APPLICATION 
+  //                                      | PCO_NOERROR_NOFILE
   //
   //      SC2 Driver - No memory:   error = SC2_ERROR_DRIVER 
-  //                                      + PCO_ERROR_DRIVER 
-  //                                      + PCO_ERROR_NOMEMORY
+  //                                      | PCO_ERROR_DRIVER 
+  //                                      | PCO_ERROR_NOMEMORY
   //
   // 2. Specific error codes
   //
@@ -283,10 +224,10 @@ DWORD GetErrorSource(DWORD dwerr);
   // The resulting error code is built by adding the source device to the error code.
   //
   // e.g. CamWare - pic. timeout error: err = PCO_ERROR_CAMWARE 
-  //                                        + PCO_ERROR_APPLICATION_PICTURETIMEOUT
+  //                                        | PCO_ERROR_APPLICATION_PICTURETIMEOUT
   //
   //      SC2 Driver - Init failed:     err = SC2_ERROR_DRIVER 
-  //                                        + PCO_ERROR_DRIVER_NOTINIT
+  //                                        | PCO_ERROR_DRIVER_NOTINIT
 
 
 // ------------------------------------------------------------------------------------------------------ //
@@ -309,7 +250,18 @@ DWORD GetErrorSource(DWORD dwerr);
 #define PCO_ERROR_LIBRARYVERSION                    0xA0000011 // wrong library version 
 #define PCO_ERROR_CAMERAVERSION                     0xA0000012 // wrong camera version
 #define PCO_ERROR_NOTAVAILABLE                      0xA0000013 // Option is not available
+#define PCO_ERROR_CAMERAHEALTH                      0xA0000014 // PCO_GetCameraHealthStatus delivered a health error
  
+#define PCO_ERROR_FILE_OPEN                         0xA0000018 // a file could not be opened
+#define PCO_ERROR_FILE_READ                         0xA0000019 // read file failed
+#define PCO_ERROR_FILE_WRITE                        0xA000001A // write file failed
+#define PCO_ERROR_FILE_UNKNOWN_FORMAT               0xA000001B // file format unknown
+#define PCO_ERROR_FILE_CHECKSUM                     0xA000001C // test checksum of file failed
+#define PCO_ERROR_FILE_WRONG_VALUE                  0xA000001D // test of values in file failed
+#define PCO_ERROR_FILE_WRONG_VERSION                0xA000001E // test version of file failed
+
+
+
 // ------------------------------------------------------------------------------------------------------ //
 // -- 4.2. Error codes generated by the driver: --------------------------------------------------------- //
 // ------------------------------------------------------------------------------------------------------ //
@@ -405,11 +357,18 @@ DWORD GetErrorSource(DWORD dwerr);
 #define PCO_ERROR_SDKDLL_BUFFERALREADYQUEUED        0x80003012 // buffer is already queued
 #define PCO_ERROR_SDKDLL_BUFFERNOTQUEUED            0x80003013 // buffer is not queued 
 
+#define PCO_ERROR_SDKDLL_SIGNATURE_FAILED           0x80003014 // signature error inside the convert dll
+
+#define PCO_ERROR_SDKDLL_DOTPHOTON_FAILED           0x80003015 // A call to dotphoton dll failed (see log)
+
 #define PCO_WARNING_SDKDLL_BUFFER_STILL_ALLOKATED   0xC0003001 // Buffers are still allocated
 
 #define PCO_WARNING_SDKDLL_NO_IMAGE_BOARD           0xC0003002 // No Images are in the board buffer
 #define PCO_WARNING_SDKDLL_COC_VALCHANGE            0xC0003003 // value change when testing COC
 #define PCO_WARNING_SDKDLL_COC_STR_SHORT            0xC0003004 // string buffer to short for replacement
+#define PCO_WARNING_SDKDLL_TIMING_SIGNAL_NOTSELECTED 0xC0003005 // timing signal is not selected
+#define PCO_WARNING_SDKDLL_LINE_TIMING_CHANGE       0xC0003006 // When pixelrate changes app must call PCO_GetCmosLineTiming
+                                                               // to get new dwCMOSLineTimeMinStep
 
 
   // The following error messages have been shifted to the common error code range:
@@ -426,6 +385,8 @@ DWORD GetErrorSource(DWORD dwerr);
 #define PCO_ERROR_SDKDLL_RECORDER_SETTINGS_CHANGED          0x80003023 // Some camera settings have been changed outside of the recorder
 #define PCO_ERROR_SDKDLL_RECORDER_NO_IMAGES_AVAILABLE       0x80003024 // No images are avaialable for readout
 
+#define PCO_WARNING_SDKDLL_RECORDER_FILES_EXIST             0xC0003011 // Files already exist
+
 
 // ------------------------------------------------------------------------------------------------------ //
 // -- 4.4. Error codes generated by the Application Software: ------------------------------------------- //
@@ -434,18 +395,42 @@ DWORD GetErrorSource(DWORD dwerr);
   // Includes the error indication bit PCO_ERROR_IS_ERROR as well as the layer PCO_ERROR_APPLICATION!
   // Device code has to be added!!!
 
-#define PCO_ERROR_APPLICATION_PICTURETIMEOUT        0x80004001 // Error while waiting for a picture
-#define PCO_ERROR_APPLICATION_SAVEFILE              0x80004002 // Error while saving file
-#define PCO_ERROR_APPLICATION_FUNCTIONNOTFOUND      0x80004003 // A function inside a DLL could not be found
-#define PCO_ERROR_APPLICATION_DLLNOTFOUND           0x80004004 // A DLL could not be found
-#define PCO_ERROR_APPLICATION_WRONGBOARDNR          0x80004005 // The board number is out of range.
-#define PCO_ERROR_APPLICATION_FUNCTIONNOTSUPPORTED  0x80004006 // The decive does not support this function.
-#define PCO_ERROR_APPLICATION_WRONGRES              0x80004007 // Started Math with different resolution than reference.
-#define PCO_ERROR_APPLICATION_DISKFULL              0x80004008 // Disk full.
-#define PCO_ERROR_APPLICATION_SET_VALUES            0x80004009 // Error setting values to camera
+#define PCO_ERROR_APPLICATION_PICTURETIMEOUT          0x80004001 // Error while waiting for a picture
+#define PCO_ERROR_APPLICATION_SAVEFILE                0x80004002 // Error while saving file
+#define PCO_ERROR_APPLICATION_FUNCTIONNOTFOUND        0x80004003 // A function inside a DLL could not be found
+#define PCO_ERROR_APPLICATION_DLLNOTFOUND             0x80004004 // A DLL could not be found
+#define PCO_ERROR_APPLICATION_WRONGBOARDNR            0x80004005 // The board number is out of range.
+#define PCO_ERROR_APPLICATION_FUNCTIONNOTSUPPORTED    0x80004006 // The decive does not support this function.
+#define PCO_ERROR_APPLICATION_WRONGRES                0x80004007 // Started Math with different resolution than reference.
+#define PCO_ERROR_APPLICATION_DISKFULL                0x80004008 // Disk full.
+#define PCO_ERROR_APPLICATION_SET_VALUES              0x80004009 // Error setting values to camera
 
-#define PCO_WARNING_APPLICATION_RECORDERFULL        0xC0004001 // Memory recorder buffer is full
-#define PCO_WARNING_APPLICATION_SETTINGSADAPTED     0xC0004002 // Settings have been adapted to valid values
+#define PCO_WARNING_APPLICATION_RECORDERFULL          0xC0004001 // Memory recorder buffer is full
+#define PCO_WARNING_APPLICATION_SETTINGSADAPTED       0xC0004002 // Settings have been adapted to valid values
+#define PCO_WARNING_APPLICATION_RECORDERWRAPPED       0xC0004003 // Memory recorder buffer is wrapped
+
+//Programmer
+#define PCO_ERROR_APPLICATION_CAMERATYPE              0x80004010 // Wrong camera typ connected
+#define PCO_ERROR_APPLICATION_FIRMWARE_CONSTRAINT     0x80004011 // Firmware of packet cannot be loaded to camera (see logfile)
+#define PCO_ERROR_APPLICATION_VARIANT_CONSTRAINT      0x80004012 // Firmware of packet cannot be loaded to camera (see logfile)
+#define PCO_ERROR_APPLICATION_SERIALNUM               0x80004013 // Serial number of packet not equal to connected camera
+#define PCO_ERROR_APPLICATION_DEVICECOUNT             0x80004014 // Not enough devices found in camera
+#define PCO_ERROR_APPLICATION_DEVCODE                 0x80004015 // No matching devcode found in camera
+
+#define PCO_ERROR_APPLICATION_IMAGE_TOO_BRIGHT        0x80004016 // Image is too bright
+#define PCO_ERROR_APPLICATION_IMAGE_TOO_DARK          0x80004017 // Image is too dark
+
+
+// ------------------------------------------------------------------------------------------------------ //
+// -- 4.4.1 Error codes generated by the COM device software: ------------------------------------------- //
+// ------------------------------------------------------------------------------------------------------ //
+
+  // Includes the error indication bit PCO_ERROR_IS_ERROR as well as the layer PCO_ERROR_COMDEVICE!
+  // Device code has to be added!!!
+#define PCO_ERROR_COMDEVICE_NODRIVER                  0x80005001 // Open COM device failed
+#define PCO_ERROR_COMDEVICE_DEVICEBUSY                0x80005002 // device is busy
+#define PCO_ERROR_COMDEVICE_DATAERROR                 0x80005003 // Error returned by device
+
 
 // ------------------------------------------------------------------------------------------------------ //
 // -- 4.5. Error codes generated by Camera (Camera firmware): ------------------------------------------- //
@@ -526,9 +511,13 @@ DWORD GetErrorSource(DWORD dwerr);
 #define PCO_ERROR_FIRMWARE_ROI_STEPPING             0x8000103D // ROI steps do not match
 #define PCO_ERROR_FIRMWARE_ROI_SETTING              0x8000103E // ROI setting is wrong
 
+#define PCO_ERROR_FIRMWARE_DESCRIPTOR_MUST_BE_RELOADED   0x8000103F // app must reload camera descriptor
+                                                                    //   because it has been changed!
 
 #define PCO_ERROR_FIRMWARE_COC_PERIOD_INVALID       0x80001040 // 
 #define PCO_ERROR_FIRMWARE_COC_MONITOR_INVALID      0x80001041 // 
+
+#define PCO_ERROR_FIRMWARE_POWER_UP_SEQUENCE        0x80001042 // ERROR during Power up
 
 
 
@@ -568,9 +557,9 @@ DWORD GetErrorSource(DWORD dwerr);
 #define PCO_ERROR_FIRMWARE_GIGE_INTERFACE_BLOCKED            0x080001087 // interface blocked
 #define PCO_ERROR_FIRMWARE_GIGE_INVALID_SESSION              0x080001088 // invalid session
 #define PCO_ERROR_FIRMWARE_GIGE_BAD_OFFSET                   0x080001089 // bad offset
-#define PCO_ERROR_FIRMWARE_GIGE_NV_WRITE_IN_PROGRESS         0x08000108a // NV write in progress
-#define PCO_ERROR_FIRMWARE_GIGE_DOWNLOAD_BLOCK_LOST          0x08000108b // download block lost
-#define PCO_ERROR_FIRMWARE_GIGE_DOWNLOAD_INVALID_LDR         0x08000108c // flash loader block invalid
+#define PCO_ERROR_FIRMWARE_GIGE_NV_WRITE_IN_PROGRESS         0x08000108A // NV write in progress
+#define PCO_ERROR_FIRMWARE_GIGE_DOWNLOAD_BLOCK_LOST          0x08000108B // download block lost
+#define PCO_ERROR_FIRMWARE_GIGE_DOWNLOAD_INVALID_LDR         0x08000108C // flash loader block invalid
 
 #define PCO_ERROR_FIRMWARE_GIGE_DRIVER_IMG_PKT_LOST			 0x080001090 // Image packet lost
 #define PCO_ERROR_FIRMWARE_GIGE_BANDWIDTH_CONFLICT			 0x080001091 // GiGE Data bandwidth conflict
@@ -602,7 +591,10 @@ DWORD GetErrorSource(DWORD dwerr);
 
 #define PCO_WARNING_FIRMWARE_OFFSET_NOT_LOCKED      0xC0001004 // offset regulation is not locked
 
+#define PCO_WARNING_FIRMWARE_DESCRIPTOR_MUST_BE_RELOADED   0xC0001005 // app must reload camera descriptor
+                                                                      //   because it has been changed!
 
 #endif
+
 // please leave last cr lf intact!!
 // =========================================== end of file ============================================== //

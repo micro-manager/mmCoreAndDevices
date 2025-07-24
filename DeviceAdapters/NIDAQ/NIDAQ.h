@@ -54,6 +54,7 @@ extern const int ERR_VOLTAGE_RANGE_EXCEEDS_DEVICE_LIMITS;
 extern const int ERR_UNKNOWN_PINS_PER_PORT;
 extern const int ERR_UNEXPECTED_AMOUNT_OF_MEASUREMENTS;
 extern const int ERR_FAILED_TO_OPEN_TRACE;
+extern const int ERR_SEQUENCE_INVALID_NUMBER;
 
 
 inline std::string GetNIError(int32 nierr)

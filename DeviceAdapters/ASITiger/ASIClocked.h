@@ -36,16 +36,13 @@ public:
    ~CClocked() { }
 
    // Generic device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // State device API
-   // -----------
    unsigned long GetNumberOfPositions() const { return numPositions_; }
 
    // action interface
-   // ----------------
    int OnState                (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLabel                (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -56,11 +53,10 @@ private:
    unsigned int numPositions_;
    unsigned int curPosition_;
 
-   // private helper functions
    int OnSaveJoystickSettings();
 
-protected: // needs to be inherited
-   string axisLetter_;
+protected:
+   std::string axisLetter_;
 };
 
 class CFSlider : public CClocked
@@ -69,10 +65,6 @@ public:
    CFSlider(const char* name);
 
    int Initialize();
-
-   // action interface
-   // ---------------
-
 };
 
 class CTurret : public CClocked

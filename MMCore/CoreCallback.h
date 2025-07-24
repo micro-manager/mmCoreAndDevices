@@ -28,7 +28,8 @@
 #include "CoreUtils.h"
 #include "MMCore.h"
 #include "MMEventCallback.h"
-#include "../MMDevice/DeviceUtils.h"
+
+#include "DeviceUtils.h"
 
 namespace mm
 {

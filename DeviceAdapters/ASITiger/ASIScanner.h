@@ -148,9 +148,9 @@ public:
    int OnFastCirclesAsymmetry(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFastCirclesState    (MM::PropertyBase* pProp, MM::ActionType eAct);
    // vector properties
-   int OnVectorGeneric		  (MM::PropertyBase* pProp, MM::ActionType eAct, std::string axisLetter);
-   int OnVectorX			  (MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterX_); }
-   int OnVectorY              (MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterY_); }
+   int OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter);
+   int OnVectorX(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterX_); }
+   int OnVectorY(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterY_); }
 
 private:
    std::string axisLetterX_;

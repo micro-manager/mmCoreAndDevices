@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 
 #include <string>
 

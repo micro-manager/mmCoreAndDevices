@@ -42,8 +42,6 @@ int AZ100Turret::Initialize()
 {
 	core_ = GetCoreCallback();
 
-	// 
-
 	CPropertyAction* pAct = new CPropertyAction(this, &AZ100Turret::OnState);
 	int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
 	if (ret != DEVICE_OK)
@@ -145,9 +143,7 @@ bool AZ100Turret::Busy()
 	return false;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int AZ100Turret::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -190,13 +186,13 @@ int AZ100Turret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(2, 4).c_str());
 			return ERR_OFFSET + errNo;
 		}
 
-		if (answer.substr(0, 2) == ":A")
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			position_ = position;
 		}

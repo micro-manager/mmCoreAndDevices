@@ -1,9 +1,9 @@
 #include "DENetwork.h"
 #include "DEExceptions.h"
 
-#include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
+#include <boost/bind/bind.hpp>
 
 template <typename T>
 boost::asio::io_service& GetIoService(T* s) {
@@ -93,6 +93,7 @@ void DENetwork::setResult(optional<boost::system::error_code>* a, const boost::s
 bool DENetwork::send(void* data, std::size_t size, unsigned long timeout)
 {
 	using namespace boost; 
+	using namespace boost::placeholders;
 
 	optional<boost::system::error_code> timeout_result;
 	optional<boost::system::error_code> write_result;
@@ -143,6 +144,7 @@ bool DENetwork::send(void* data, std::size_t size, unsigned long timeout)
 bool DENetwork::receive(void* data, std::size_t size, unsigned long timeout)
 {
 	using namespace boost; 
+	using namespace boost::placeholders;
 
 	optional<boost::system::error_code> timeout_result;
 	optional<boost::system::error_code> read_result;

@@ -399,7 +399,7 @@ class ZeissHub
       DL450Model dl450Model_;
 
    private:
-      static ZeissUByte commandGroup_[MAXNUMBERDEVICES];
+      static ZeissUByte commandGroup_[MAXNUMBERDEVICES + 1];
       void ClearRcvBuf();
       int ClearPort(MM::Device& device, MM::Core& core);
       //void SetPort(const char* port) {port_ = port; portInitialized_ = true;}

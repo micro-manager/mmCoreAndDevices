@@ -55,7 +55,7 @@ public:
    bool Busy();
 
    // Hub API
-   bool SupportsDeviceDetection(void);
+   bool SupportsDeviceDetection();
    MM::DeviceDetectionStatus DetectDevice();
    int DetectInstalledDevices();
 

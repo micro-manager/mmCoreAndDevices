@@ -113,6 +113,7 @@ public:
   int OnCCDType(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnAcquireModeNumImages(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFpsMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnNoiseFilterMode(MM::PropertyBase* pProp, MM::ActionType eAct);

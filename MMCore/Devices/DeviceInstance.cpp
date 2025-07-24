@@ -21,13 +21,14 @@
 
 #include "DeviceInstance.h"
 
-#include "../../MMDevice/MMDevice.h"
 #include "../CoreFeatures.h"
 #include "../CoreUtils.h"
 #include "../Error.h"
 #include "../LoadableModules/LoadedDeviceAdapter.h"
 #include "../Logging/Logger.h"
 #include "../MMCore.h"
+
+#include "MMDevice.h"
 
 
 int

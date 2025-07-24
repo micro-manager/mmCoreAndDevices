@@ -95,8 +95,8 @@ public:
 protected:
    bool initialized_;      // used to signal that device properties have been read from controller
    double firmwareVersion_; // firmware version
-   string firmwareDate_;    // firmware compile date
-   string firmwareBuild_;   // firmware build name
+   std::string firmwareDate_;    // firmware compile date
+   std::string firmwareBuild_;   // firmware build name
 
    bool FirmwareVersionAtLeast(double minimumFirmwareVersion)
    {

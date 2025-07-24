@@ -24,20 +24,13 @@
 //
 //LAST UPDATE:    08.04.2025 LK
 
-#ifndef _FLUIGENT_PRESSURE_CONTROLLER_H_
-#define _FLUIGENT_PRESSURE_CONTROLLER_H_
+#pragma once
 
 #include "DeviceBase.h"
-#include "DeviceThreads.h"
-#include "ModuleInterface.h"
+
 #include <string>
-#include <map>
-#include <stdint.h>
-#include <future>
 
 #include "fgt_SDK.h"
-
-using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 // FluigentHub class
@@ -135,7 +128,7 @@ public:
     // Hub public values
     int nDevices_; // Number of different devices
     int nChannels_; // Number of pressure channels
-    string calibrate_; // Current calibration mode (basically always "None")
+    std::string calibrate_; // Current calibration mode (basically always "None")
 
 private:
     // Class member parameters
@@ -145,7 +138,7 @@ private:
     unsigned short SNs_[256] = { 0 }; // array of device serial numbers
     int instrumentTypes_[256] = { 0 }; // array of device types
     fgt_CHANNEL_INFO channelInfo_[256]; // array of deviceInfo structs
-    string unit_; // unit of pressure (basically always kPa)
+    std::string unit_; // unit of pressure (basically always kPa)
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -299,4 +292,3 @@ private:
     unsigned char errorCode_; // Fluigent error code
     fgt_CHANNEL_INFO channelInfo_; // Channel info of this channel
 };
-#endif //_FLUIGENT_PRESSURE_CONTROLLER_H_

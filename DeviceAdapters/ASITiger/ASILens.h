@@ -116,7 +116,6 @@ private:
    bool ttl_trigger_enabled_;
    std::vector<double> sequence_;
 
-   // private helper functions
    int OnSaveJoystickSettings();
 };
 

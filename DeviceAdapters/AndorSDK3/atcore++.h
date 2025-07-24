@@ -421,6 +421,7 @@ public:
    virtual void Release(IFeature * Feature) = 0;
    virtual void ReleaseBufferControl(IBufferControl * BufferControl) = 0;
    virtual AT_H GetHandle() = 0;
+   virtual bool IsImplemented(std::wstring Name) = 0;
 };
 
 class IDeviceManager
@@ -1077,6 +1078,11 @@ public:
    AT_H GetHandle()
    {
       return m_handle;
+   }
+
+   bool IsImplemented(std::wstring Name) {
+     TestState testState(GetHandle(), Name);
+     return testState.IsImplemented();
    }
 
 private:

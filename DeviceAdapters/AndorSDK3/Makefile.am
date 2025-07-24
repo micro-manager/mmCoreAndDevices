@@ -27,6 +27,7 @@ libmmgr_dal_AndorSDK3_la_SOURCES = \
 	FloatProperty.h \
 	IntegerProperty.cpp \
 	IntegerProperty.h \
+	IProperty.h \
 	SnapShotControl.cpp \
 	SnapShotControl.h \
 	SRRFAndorSDK3Camera.cpp \

@@ -36,6 +36,8 @@
 #include "ImgBuffer.h"
 #include "DeviceThreads.h"
 #include "atcore.h"
+#include "IProperty.h"
+#include <deque>
 
 class MySequenceThread;
 namespace andor {
@@ -121,12 +123,9 @@ public:
    void ResizeSRRFImage(long radiality);
    
 private:
-   enum CameraId { CIDNeo = 0, CIDZyla = 1, CIDiStar=2, CIDCham = 3 };
    std::wstring currentSoftwareVersion_;
    std::wstring PerformReleaseVersionCheck();
-   double CalculateDefaultExposure(std::wstring & interfaceType);
-   CameraId DetermineCameraId(std::wstring & cameraSerialCheck);
-   std::string GenerateCameraName(unsigned cameraID, std::wstring & cameraModelCheck);
+
    void InitialiseSDK3Defaults();
    void UnpackDataWithPadding(unsigned char* _pucSrcBuffer);
    bool InitialiseDeviceCircularBuffer(const unsigned numBuffers);
@@ -141,7 +140,12 @@ private:
    int AcquireSRRFImage(bool insertImage, long imageCounter);
    bool IsSRRFEnabled() const;
    int InsertMMImage(const ImgBuffer& image, const Metadata& md);
-
+   std::wstring GetPreferredFeature(std::wstring Name, std::wstring FallbackName) const;
+   void AddSimpleEnumProperty(std::wstring Name, std::string DisplayName="");
+   void AddSimpleBoolProperty(std::wstring Name, std::string DisplayName="");
+   void AddSimpleIntProperty(std::wstring Name, std::string DisplayName="");
+   void AddSimpleFloatProperty(std::wstring Name, std::string DisplayName="");
+   std::string ToNarrowString(std::wstring wstr) const;
 
    static const double nominalPixelSizeUm_;
    static const int CID_FPGA_TICKS = 1;
@@ -169,9 +173,6 @@ private:
    bool GetCameraPresent() { return b_cameraPresent_; };
    void SetNumberOfDevicesPresent(int deviceCount) { number_of_devices_ = deviceCount; };
 
-   double defaultExposureTime_;
-   void SetDefaultExpsoure(double d) { defaultExposureTime_ = d; };
-   double GetDefaultExpsoure() { return defaultExposureTime_; };
    AT_64 GetTimeStamp(unsigned char* pBuf);
 
    MMThreadLock* pDemoResourceLock_;
@@ -188,65 +189,17 @@ private:
    ImgBuffer *SRRFImage_;
 
    // Properties for the property browser
+   std::deque<IProperty*> simpleProperties;
+
+   // Specialised properties
    TEnumProperty* binning_property;
-   TAOIProperty* aoi_property_;
-   TEnumProperty* preAmpGain_property;
-   TEnumProperty* electronicShutteringMode_property;
-   TEnumProperty* temperatureControl_property;
-   TEnumProperty* pixelReadoutRate_property;
    TEnumProperty* pixelEncoding_property;
-   TIntegerProperty* accumulationLength_property;
-   TIntegerProperty* MCPGain_property;
-   TIntegerProperty* MCPVoltage_property;
-   TFloatProperty* readTemperature_property;
-   TEnumProperty* temperatureStatus_property;
-   TBooleanProperty* sensorCooling_property;
-   TBooleanPropertyWithPoiseControl* overlap_property;
-   TBooleanProperty* pretrigger_property;
-   TBooleanProperty* piv_property;
-   TBooleanProperty* MCPIntelligate_property;
+   TAOIProperty* aoi_property;
    TEnumProperty* triggerMode_property;
-   TEnumProperty* fanSpeed_property;
-   TEnumProperty* gateMode_property;
-   TBooleanProperty* spuriousNoiseFilter_property;
-   TBooleanProperty* staticBlemishCorrection_property;
-   TBooleanProperty* rollingShutterGlobalClear_property;
    TExposureProperty* exposureTime_property;
    TFloatProperty* frameRate_property;
    TFloatStringProperty* frameRateLimits_property;
-   TEnumProperty* auxOutSignal_property;
-   TEnumProperty* auxOutTwoSignal_property;
-   TEnumProperty* shutterOutputMode_property;
-   TFloatProperty* shutterTransferTime_property;
-   TEnumProperty* InsertionDelay_property;
-   TBooleanProperty* DDGIOCEnable_property;
-   TIntegerProperty* DDGIOCNumberOfPulses_property;
-   TIntegerProperty* DDGIOCPeriod_property;
-   TIntegerProperty* DDGIOCOutputDelay_property;
-   TBooleanProperty* DDGOutputEnable_property;
-   TBooleanProperty* DDGOutputStepEnable_property;
-   TBooleanProperty* DDGStepEnabled_property;
-   TBooleanProperty* DDGOpticalWidthEnable_property;
-   TEnumProperty* DDGOutputPolarity_property;
-   TEnumProperty* DDGOutputSelector_property;
-   TIntegerProperty* DDGOutputWidth_property;
-   TIntegerProperty* DDGStepCount_property;
-   TFloatProperty* DDGStepDelayCoefficientA_property;
-   TFloatProperty* DDGStepDelayCoefficientB_property;
-   TEnumProperty* DDGStepDelayMode_property;
-   TFloatProperty* DDGStepWidthCoefficientA_property;
-   TFloatProperty* DDGStepWidthCoefficientB_property;
-   TEnumProperty* DDGStepWidthMode_property;
    
-   // LightScanPlus properties
-   TEnumProperty* LSPSensorReadoutMode_property;
-   TBooleanProperty* LSPSequentialPortReadoutMode_property;
-   TIntegerProperty* LSPExposedPixelHeight_property;
-   TBooleanProperty* LSPScanSpeedControlEnable_property;
-   TFloatProperty* LSPLineScanSpeed_property;
-   TFloatProperty* LSPRowReadTime_property;
-   TFloatProperty* LSPExternalTriggerDelay_Property;
-
 
    // atcore++ objects
    andor::IDeviceManager* deviceManager;

@@ -58,7 +58,7 @@ bool StateDevice::SupportsDeviceDetection()
 
 MM::DeviceDetectionStatus StateDevice::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int StateDevice::Initialize()
@@ -166,22 +166,7 @@ bool StateDevice::Busy()
 		return false;
 	}
 
-	if (answer.length() >= 1)
-	{
-		if (answer.substr(0, 1) == "B")
-		{
-			return true;
-		}
-		else if (answer.substr(0, 1) == "N")
-		{
-			return false;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	return false;
+	return !answer.empty() && answer.front() == 'B';
 }
 
 int StateDevice::UpdateCurrentPosition()
@@ -198,13 +183,13 @@ int StateDevice::UpdateCurrentPosition()
 		return ret;
 	}
 
-	if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
 	}
 
-	if (answer.substr(0, 2) == ":A")
+	if (answer.compare(0, 2, ":A") == 0)
 	{
 		position_ = (long)atoi(answer.substr(3, 2).c_str()) - 1;
 	}
@@ -216,9 +201,7 @@ int StateDevice::UpdateCurrentPosition()
 	return DEVICE_OK;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int StateDevice::OnNumPositions(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -287,13 +270,13 @@ int StateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(2, 4).c_str());
 			return ERR_OFFSET + errNo;
 		}
 
-		if (answer.substr(0, 2) == ":A")
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			position_ = position;
 		}

@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 
-AM_CPPFLAGS = -DMMDEVICE_CLIENT_BUILD
+AM_CPPFLAGS = -DMMDEVICE_CLIENT_BUILD -I../MMDevice
 
 noinst_LTLIBRARIES = libMMCore.la
 
@@ -68,6 +68,11 @@ libMMCore_la_SOURCES = \
 	LibraryInfo/LibraryPathsUnix.cpp \
 	LoadableModules/LoadedDeviceAdapter.cpp \
 	LoadableModules/LoadedDeviceAdapter.h \
+	LoadableModules/LoadedDeviceAdapterImpl.h \
+	LoadableModules/LoadedDeviceAdapterImplMock.cpp \
+	LoadableModules/LoadedDeviceAdapterImplMock.h \
+	LoadableModules/LoadedDeviceAdapterImplRegular.cpp \
+	LoadableModules/LoadedDeviceAdapterImplRegular.h \
 	LoadableModules/LoadedModule.cpp \
 	LoadableModules/LoadedModule.h \
 	LoadableModules/LoadedModuleImpl.cpp \
@@ -92,6 +97,7 @@ libMMCore_la_SOURCES = \
 	Logging/MetadataFormatter.h \
 	MMCore.cpp \
 	MMCore.h \
+	MockDeviceAdapter.h \
 	PluginManager.cpp \
 	PluginManager.h \
 	Semaphore.cpp \

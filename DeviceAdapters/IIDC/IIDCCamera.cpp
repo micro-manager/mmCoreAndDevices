@@ -25,7 +25,7 @@
 #include "IIDCVendorAVT.h"
 #include "IIDCVideoMode.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <boost/version.hpp>
@@ -714,6 +714,7 @@ Camera::StartContinuousCapture(uint32_t nrDMABuffers, size_t nrFrames,
       FrameCallbackFunction frameCallback,
       FinishCallbackFunction finishCallback)
 {
+   using namespace boost::placeholders;
    EnsureReadyForCapture();
 
    captureFrameCallback_ = frameCallback;
@@ -732,6 +733,7 @@ Camera::StartMultiShotCapture(uint32_t nrDMABuffers, uint16_t nrFrames,
       FrameCallbackFunction frameCallback,
       FinishCallbackFunction finishCallback)
 {
+   using namespace boost::placeholders;
    EnsureReadyForCapture();
 
    if (!IsMultiShotCapable())
@@ -752,6 +754,7 @@ Camera::StartOneShotCapture(uint32_t nrDMABuffers, unsigned timeoutMs,
       FrameCallbackFunction frameCallback,
       FinishCallbackFunction finishCallback)
 {
+   using namespace boost::placeholders;
    EnsureReadyForCapture();
 
    if (!IsOneShotCapable())

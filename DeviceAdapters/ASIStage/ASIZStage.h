@@ -80,7 +80,7 @@ private:
 	int OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct);
 	bool HasRingBuffer() const;
 	int GetControllerInfo();
-	bool HasCommand(std::string command);
+	bool HasCommand(const std::string& command);
 	int OnVector(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	std::vector<double> sequence_;

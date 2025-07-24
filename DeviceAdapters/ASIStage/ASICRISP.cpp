@@ -18,6 +18,7 @@ CRISP::CRISP() :
 	ledIntensity_(0),
 	numAverages_(0),
 	numSkips_(0),
+	calibrationRange_(0),
 	inFocusRange_(0),
 	lockRange_(0),
 	objectiveNA_(0)
@@ -54,9 +55,9 @@ CRISP::~CRISP()
 	initialized_ = false;
 }
 
-void CRISP::GetName(char* pszName) const
+void CRISP::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(pszName, g_CRISPDeviceName);
+	CDeviceUtils::CopyLimitedString(name, g_CRISPDeviceName);
 }
 
 bool CRISP::SupportsDeviceDetection()
@@ -66,7 +67,7 @@ bool CRISP::SupportsDeviceDetection()
 
 MM::DeviceDetectionStatus CRISP::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int CRISP::Initialize()
@@ -245,37 +246,22 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnLogAmpAGC);
 	CreateProperty("LogAmpAGC", "", MM::Integer, true, pAct);
 
-	// use faster serial commands with new versions of the firmware
-	if (versionData_.IsVersionAtLeast(9, 2, 'o'))
-	{
-		LogMessage("CRISP: firmware >= 9.2o; use LK T? and LK Y? for the \"Sum\" and \"Dither Error\" properties.", true);
-		// These commands use LK T? and LK Y? => ":A 0 \r\n"
-		pAct = new CPropertyAction(this, &CRISP::OnDitherError);
-		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
+	// Read-only Properties
 
-		pAct = new CPropertyAction(this, &CRISP::OnSum);
-		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-	}
-	else
-	{
-		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for both the \"Sum\" and \"Dither Error\" properties.", true);
-		// These commands use EXTRA X? => "I    9    0 \r\n"
-		pAct = new CPropertyAction(this, &CRISP::OnDitherErrorLegacy);
-		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
+	// Always read, not cached
+	CreateSumProperty();
+	CreateDitherErrorProperty();
 
-		pAct = new CPropertyAction(this, &CRISP::OnSumLegacy);
-		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-	}
-
-	// LK M requires 9.2n firmware
+	// LK M requires firmware version 9.2n or higher.
+	// Enable these properties as a group to modify calibration settings.
 	if (versionData_.IsVersionAtLeast(9, 2, 'n'))
 	{
 		pAct = new CPropertyAction(this, &CRISP::OnSetLogAmpAGC);
 		CreateProperty("Set LogAmpAGC (Advanced Users Only)", "0", MM::Integer, false, pAct);
-	}
 
-	pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
-	CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
+		pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
+		CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
+	}
 
 	return DEVICE_OK;
 }
@@ -583,7 +569,7 @@ int CRISP::GetValue(const std::string& cmd, float& val)
 		return ret;
 	}
 
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
@@ -617,14 +603,14 @@ int CRISP::SetCommand(const std::string& cmd)
 	{
 		return ret;
 	}
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+	if (answer.compare(0, 2, ":A") == 0)
+	{
+		return DEVICE_OK;
+	}
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
-	}
-	if (answer.substr(0, 2) == ":A")
-	{
-		return DEVICE_OK;
 	}
 	return ERR_UNRECOGNIZED_ANSWER;
 }
@@ -998,21 +984,6 @@ int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		float sum;
-		int ret = GetValue("LK Y?", sum);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(sum);
-	}
-	return DEVICE_OK;
-}
-
 int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
@@ -1088,21 +1059,6 @@ int CRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::OnSum(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		float sum;
-		int ret = GetValue("LK T?", sum);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(sum);
-	}
-	return DEVICE_OK;
-}
-
 int CRISP::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
@@ -1142,57 +1098,117 @@ int CRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-// Provide support for MS2000 firmware < 9.2o
-int CRISP::OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		std::string answer;
-		int ret = QueryCommand("EXTRA X?", answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
+// Read-only Properties
 
-		std::istringstream is(answer);
-		std::string ditherError;
-		for (int i = 0; i < 3; i++)
-		{
-			is >> ditherError; // 3rd "is" is error
-		}
+// Always read, not cached
+void CRISP::CreateSumProperty() {
+	const std::string propertyName = "Sum";
 
-		if (!pProp->Set(ditherError.c_str())) {
-			return DEVICE_INVALID_PROPERTY_VALUE;
-		}
+	// Check if we can use the faster serial command
+	if (versionData_.IsVersionAtLeast(9, 2, 'o')) {
+		// The LOCK command can query the value directly
+		// The command responds with => ":A 0 \r\n"
+		this->LogMessage("CRISP: firmware >= 9.2o; use LK T? for the "
+			+ propertyName + " property.", true);
+
+		this->CreateIntegerProperty(
+			propertyName.c_str(), 0, true,
+			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					float sum{};
+					int result = this->GetValue("LK T?", sum);
+					if (result != DEVICE_OK) {
+						return result;
+					}
+					pProp->Set(sum);
+				}
+				return DEVICE_OK;
+			}));
+	} else {
+		// The old version uses the EXTRA command and requires extra parsing
+		// The command responds with => "I    0    0 \r\n"
+		this->LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
+			+ propertyName + " property.", true);
+
+		this->CreateIntegerProperty(
+			propertyName.c_str(), 0, true,
+			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					std::string answer;
+					int result = this->QueryCommand("EXTRA X?", answer);
+					if (result != DEVICE_OK) {
+						return result;
+					}
+					// Parse and discard first token, second is the sum
+					std::istringstream is(answer);
+					std::string token;
+					for (int i = 0; i < 2; ++i) {
+						is >> token;
+					}
+					if (!pProp->Set(token.c_str())) {
+						return DEVICE_INVALID_PROPERTY_VALUE;
+					}
+				}
+				return DEVICE_OK;
+			}));
 	}
-	return DEVICE_OK;
 }
 
-// Provide support for MS2000 firmware < 9.2o
-int CRISP::OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		std::string answer;
-		int ret = QueryCommand("EXTRA X?", answer);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
+// Always read, not cached
+void CRISP::CreateDitherErrorProperty() {
+	const std::string propertyName = "Dither Error";
 
-		std::istringstream is(answer);
-		std::string sum;
-		for (int i = 0; i < 2; i++)
-		{
-			is >> sum; // 2nd "is" is sum
-		}
+	// Check if we can use the faster serial command
+	if (versionData_.IsVersionAtLeast(9, 2, 'o')) {
+		// The LOCK command can query the value directly
+		// The command responds with => ":A 0 \r\n"
+		this->LogMessage("CRISP: firmware >= 9.2o; use LK Y? for the "
+			+ propertyName + " property.", true);
 
-		if (!pProp->Set(sum.c_str())) {
-			return DEVICE_INVALID_PROPERTY_VALUE;
-		}
+		this->CreateIntegerProperty(
+			propertyName.c_str(), 0, true,
+			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					float sum{};
+					int result = this->GetValue("LK Y?", sum);
+					if (result != DEVICE_OK) {
+						return result;
+					}
+					pProp->Set(sum);
+				}
+				return DEVICE_OK;
+			}));
+	} else {
+		// The old version uses the EXTRA command and requires extra parsing
+		// The command responds with => "I    0    0 \r\n"
+		this->LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
+			+ propertyName + " property.", true);
+
+		this->CreateIntegerProperty(
+			propertyName.c_str(), 0, true,
+			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					std::string answer;
+					int result = this->QueryCommand("EXTRA X?", answer);
+					if (result != DEVICE_OK) {
+						return result;
+					}
+					// Parse and discard first two tokens, third is the dither error
+					std::istringstream is(answer);
+					std::string token;
+					for (int i = 0; i < 3; ++i) {
+						is >> token;
+					}
+					if (!pProp->Set(token.c_str())) {
+						return DEVICE_INVALID_PROPERTY_VALUE;
+					}
+				}
+				return DEVICE_OK;
+			}));
 	}
-	return DEVICE_OK;
 }
+
+// Advanced Properties
 
 int CRISP::OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
