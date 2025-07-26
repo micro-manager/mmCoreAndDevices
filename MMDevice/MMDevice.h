@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 73
+#define DEVICE_INTERFACE_VERSION 74
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -1571,6 +1571,10 @@ namespace MM {
        * Magnifiers can use this to signal changes in magnification
        */
       virtual int OnMagnifierChanged(const Device* caller) = 0;
+      /**
+       * Signals that the shutter opened or closed
+       */
+      virtual int OnShutterOpenChanged(const Device* caller, bool open) = 0;
 
       // Deprecated: Return value overflows in ~72 minutes on Windows.
       // Prefer std::chrono::steady_clock for time delta measurements.
