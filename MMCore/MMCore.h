@@ -726,6 +726,9 @@ private:
    mutable MMThreadLock stateCacheLock_;
    mutable Configuration stateCache_; // Synchronized by stateCacheLock_
 
+   // Storage for initial state labels after device initialization
+   std::map<std::string, std::map<long, std::string>> initialStateLabels_;
+
    MMThreadLock* pPostedErrorsLock_;
    mutable std::deque<std::pair< int, std::string> > postedErrors_;
 
@@ -762,4 +765,5 @@ private:
    void initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError);
    void initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
+   void captureInitialStateLabels(std::shared_ptr<DeviceInstance> pDevice, const char* label);
 };
