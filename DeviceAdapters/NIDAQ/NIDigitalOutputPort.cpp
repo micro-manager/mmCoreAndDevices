@@ -71,7 +71,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnInputLine);
    inputLine_ = portWidth_ - 1;
    CreateIntegerProperty("Input Line", inputLine_, false, pAct, true);
-   SetPropertyLimits("Input Line", 0, inputLine_);
+   SetPropertyLimits("Input Line", -1, inputLine_);
 }
 
 
@@ -94,11 +94,15 @@ int DigitalOutputPort::Initialize()
       return TranslateNIError(nierr);
    }
 
+   // -1 is magic number: do not us input
    std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(inputLine_);
    std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(inputLine_ - 1);
-   if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
-      supportsBlankingAndSequencing_ = true;
-   GetHub()->StopDOBlankingAndSequence(portWidth_);
+   if (inputLine_ > -1)
+   {
+      if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
+         supportsBlankingAndSequencing_ = true;
+      GetHub()->StopDOBlankingAndSequence(portWidth_);
+   }
 
    // Some cards lie about their portwidth, if blanking does not work, try 32 bits
    // Workaround for possible DAQmx bug on USB-6341; see
@@ -156,11 +160,14 @@ int DigitalOutputPort::Initialize()
 
    // Sanity check of input.  It would be nicer to give feedback in HCW, but these values are interrelated,
    // and HCW does not change ranges upon input of a value.
-   if (firstStateSlider_ >= inputLine_) {
-       firstStateSlider_ = inputLine_ - nrOfStateSliders_;
-   }
-   if (nrOfStateSliders_ + firstStateSlider_ > inputLine_) {
-       nrOfStateSliders_ = inputLine_ - firstStateSlider_;
+   if (inputLine_ > -1)
+   {
+      if (firstStateSlider_ >= inputLine_) {
+         firstStateSlider_ = inputLine_ - nrOfStateSliders_;
+      }
+      if (nrOfStateSliders_ + firstStateSlider_ > inputLine_) {
+         nrOfStateSliders_ = inputLine_ - firstStateSlider_;
+      }
    }
    for (long line = firstStateSlider_; line < nrOfStateSliders_ + firstStateSlider_; line++)
    {     
