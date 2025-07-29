@@ -94,7 +94,7 @@ int DigitalOutputPort::Initialize()
       return TranslateNIError(nierr);
    }
 
-   // -1 is magic number: do not us input
+   // -1 is magic number: do not use input
    std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(inputLine_);
    std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(inputLine_ - 1);
    if (inputLine_ > -1)
