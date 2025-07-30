@@ -162,7 +162,7 @@ int DigitalOutputPort::Initialize()
 
    // Sanity check of input.  It would be nicer to give feedback in HCW, but these values are interrelated,
    // and HCW does not change ranges upon input of a value.
-   if (inputLine_ > -1)
+   if (inputLine_ > NO_INPUT_LINE)
    {
       if (firstStateSlider_ >= inputLine_) {
          firstStateSlider_ = inputLine_ - nrOfStateSliders_;
