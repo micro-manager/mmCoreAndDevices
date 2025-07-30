@@ -87,6 +87,11 @@ public:
       std::cout << "onExposureChanged()" << name << " " << newExposure << '\n';
    }
 
+   virtual void onShutterOpenChanged(const char* name, bool open)
+   {
+      std::cout << "onShutterOpenChanged()" << name << " " << open << '\n';
+   }
+
    virtual void onSLMExposureChanged(const char* name, double newExposure)
    {
       std::cout << "onSLMExposureChanged()" << name << " " << newExposure << '\n';
