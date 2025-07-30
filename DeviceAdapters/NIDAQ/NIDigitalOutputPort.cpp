@@ -22,6 +22,8 @@
 
 #include "ModuleInterface.h"
 
+const int NO_INPUT_LINE = -1;
+
 
 DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    ErrorTranslator(21000, 21999, &DigitalOutputPort::SetErrorText),
@@ -71,7 +73,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnInputLine);
    inputLine_ = portWidth_ - 1;
    CreateIntegerProperty("Input Line", inputLine_, false, pAct, true);
-   SetPropertyLimits("Input Line", -1, inputLine_);
+   SetPropertyLimits("Input Line", NO_INPUT_LINE, inputLine_);
 }
 
 
@@ -94,31 +96,31 @@ int DigitalOutputPort::Initialize()
       return TranslateNIError(nierr);
    }
 
-   // -1 is magic number: do not use input
-   std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(inputLine_);
-   std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(inputLine_ - 1);
-   if (inputLine_ > -1)
+   // NO_INPUT_LINE -1 is a magic number: do not use input
+   if (inputLine_ > NO_INPUT_LINE)
    {
+      std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(inputLine_);
+      std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(inputLine_ - 1);
       if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
          supportsBlankingAndSequencing_ = true;
       GetHub()->StopDOBlankingAndSequence(portWidth_);
-   }
-
-   // Some cards lie about their portwidth, if blanking does not work, try 32 bits
-   // Workaround for possible DAQmx bug on USB-6341; see
-   // https://forums.ni.com/t5/Multifunction-DAQ/problem-with-correlated-DIO-on-USB-6341/td-p/3344066
-   if (!supportsBlankingAndSequencing_ && inputLine_ > -1)
-   {
-      uInt32 oldPortWidth = portWidth_;
-      portWidth_ = 32;
-      if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
-         supportsBlankingAndSequencing_ = true;
-      GetHub()->StopDOBlankingAndSequence(portWidth_);
+      // Some cards lie about their portwidth, if blanking does not work, try 32 bits
+      // Workaround for possible DAQmx bug on USB-6341; see
+      // https://forums.ni.com/t5/Multifunction-DAQ/problem-with-correlated-DIO-on-USB-6341/td-p/3344066
       if (!supportsBlankingAndSequencing_)
       {
-         portWidth_ = oldPortWidth;
+         uInt32 oldPortWidth = portWidth_;
+         portWidth_ = 32;
+         if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
+            supportsBlankingAndSequencing_ = true;
+         GetHub()->StopDOBlankingAndSequence(portWidth_);
+         if (!supportsBlankingAndSequencing_)
+         {
+            portWidth_ = oldPortWidth;
+         }
       }
    }
+
 
    CPropertyAction* pAct;
    if (supportsBlankingAndSequencing_)
