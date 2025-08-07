@@ -1108,34 +1108,37 @@ void CRISP::CreateSumProperty() {
 	if (versionData_.IsVersionAtLeast(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
-		this->LogMessage("CRISP: firmware >= 9.2o; use LK T? for the "
+		LogMessage("CRISP: firmware >= 9.2o; use LK T? for the "
 			+ propertyName + " property.", true);
 
-		this->CreateIntegerProperty(
+		CreateIntegerProperty(
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					float sum{};
-					int result = this->GetValue("LK T?", sum);
+					int result = GetValue("LK T?", sum);
 					if (result != DEVICE_OK) {
 						return result;
 					}
 					pProp->Set(sum);
 				}
 				return DEVICE_OK;
-			}));
-	} else {
+			}
+		));
+
+	} else { // Firmware < 9.2o
+
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
-		this->LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
+		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
 			+ propertyName + " property.", true);
 
-		this->CreateIntegerProperty(
+		CreateIntegerProperty(
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					std::string answer;
-					int result = this->QueryCommand("EXTRA X?", answer);
+					int result = QueryCommand("EXTRA X?", answer);
 					if (result != DEVICE_OK) {
 						return result;
 					}
@@ -1150,7 +1153,8 @@ void CRISP::CreateSumProperty() {
 					}
 				}
 				return DEVICE_OK;
-			}));
+			}
+		));
 	}
 }
 
@@ -1177,8 +1181,11 @@ void CRISP::CreateDitherErrorProperty() {
 					pProp->Set(sum);
 				}
 				return DEVICE_OK;
-			}));
-	} else {
+			}
+		));
+
+	} else { // Firmware < 9.2o
+
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
 		this->LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
@@ -1204,7 +1211,8 @@ void CRISP::CreateDitherErrorProperty() {
 					}
 				}
 				return DEVICE_OK;
-			}));
+			}
+		));
 	}
 }
 
