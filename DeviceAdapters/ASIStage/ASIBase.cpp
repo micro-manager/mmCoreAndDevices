@@ -18,6 +18,7 @@ ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	buildName_("Undefined"),
 	compileDate_("Undefined"),
 	oldstagePrefix_(prefix),
+	commandPrefix_(""),
 	serialTerm_("\r\n")
 {
 }
@@ -45,25 +46,16 @@ int ASIBase::ClearPort()
 }
 
 // Communication "send" utility function:
-int ASIBase::SendCommand(const char* command) const
-{
-	std::string base_command = "";
-	if (oldstage_)
-	{
-		base_command += oldstagePrefix_;
-	}
-	base_command += command;
-	// send command
-	return core_->SetSerialCommand(device_, port_.c_str(), base_command.c_str(), "\r");
+int ASIBase::SendCommand(const char* command) const {
+	const std::string cmd = commandPrefix_ + command;
+	return core_->SetSerialCommand(device_, port_.c_str(), cmd.c_str(), "\r");
 }
 
 // Communication "send & receive" utility function:
-int ASIBase::QueryCommand(const char* command, std::string& answer) const
-{
+int ASIBase::QueryCommand(const char* command, std::string& answer) const {
 	// send command
 	int ret = SendCommand(command);
-	if (ret != DEVICE_OK)
-	{
+	if (ret != DEVICE_OK) {
 		return ret;
 	}
 	// block/wait for acknowledge (or until we time out)
@@ -91,19 +83,23 @@ int ASIBase::QueryCommandACK(const char* command) const
 }
 
 // Communication "test device type" utility function:
-// Set the value of oldstage_ to true for LX-4000, false for MS-2000.
-int ASIBase::CheckDeviceStatus()
-{
+// Set the value of oldstage_ to true for LX-4000 and false for MS-2000.
+// This determines commandPrefix_ and serialTerm_ as well.
+int ASIBase::CheckDeviceStatus() {
 	// send status command (test for new protocol)
-	oldstage_ = false;
 	std::string answer;
 	int ret = QueryCommand("/", answer);
-	if (ret != DEVICE_OK && !oldstagePrefix_.empty())
-	{
+	if (!oldstagePrefix_.empty() && ret != DEVICE_OK) {
 		// send status command (test for older LX-4000 protocol)
 		oldstage_ = true;
 		serialTerm_ = "\r\n\3";
+		commandPrefix_ = oldstagePrefix_;
 		ret = QueryCommand("/", answer);
+	} else {
+		// standard configuration for the MS-2000
+		oldstage_ = false;
+		serialTerm_ = "\r\n";
+		commandPrefix_.clear();
 	}
 	return ret;
 }
