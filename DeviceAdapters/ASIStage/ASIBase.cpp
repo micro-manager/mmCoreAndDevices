@@ -8,16 +8,17 @@
 #include "ASIBase.h"
 
 ASIBase::ASIBase(MM::Device* device, const char* prefix) :
-	oldstage_(false),
-	initialized_(false),
 	core_(nullptr),
 	device_(device),
 	port_("Undefined"),
+	initialized_(false),
+	oldstage_(false),
+	versionData_(VersionData()),
 	version_("Undefined"),
 	buildName_("Undefined"),
 	compileDate_("Undefined"),
 	oldstagePrefix_(prefix),
-	versionData_(VersionData())
+	serialTerm_("\r\n")
 {
 }
 
@@ -59,8 +60,6 @@ int ASIBase::SendCommand(const char* command) const
 // Communication "send & receive" utility function:
 int ASIBase::QueryCommand(const char* command, std::string& answer) const
 {
-	const char* terminator;
-
 	// send command
 	int ret = SendCommand(command);
 	if (ret != DEVICE_OK)
@@ -68,20 +67,9 @@ int ASIBase::QueryCommand(const char* command, std::string& answer) const
 		return ret;
 	}
 	// block/wait for acknowledge (or until we time out)
-	if (oldstage_)
-	{
-		terminator = "\r\n\3";
-	}
-	else
-	{
-		terminator = "\r\n";
-	}
-
-	const size_t BUFSIZE = 2048;
-	char buf[BUFSIZE] = { '\0' };
-	ret = core_->GetSerialAnswer(device_, port_.c_str(), BUFSIZE, buf, terminator);
+	char buf[SERIAL_RXBUFFER_SIZE] = { '\0' };
+	ret = core_->GetSerialAnswer(device_, port_.c_str(), SERIAL_RXBUFFER_SIZE, buf, serialTerm_.c_str());
 	answer = buf;
-
 	return ret;
 }
 
@@ -114,6 +102,7 @@ int ASIBase::CheckDeviceStatus()
 	{
 		// send status command (test for older LX-4000 protocol)
 		oldstage_ = true;
+		serialTerm_ = "\r\n\3";
 		ret = QueryCommand("/", answer);
 	}
 	return ret;

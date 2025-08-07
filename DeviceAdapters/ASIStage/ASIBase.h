@@ -87,16 +87,23 @@ protected:
 	int GetBuildName(std::string& buildName) const;
 	int GetCompileDate(std::string& compileDate) const;
 
-	bool oldstage_;
-	bool initialized_;
+	static const size_t SERIAL_RXBUFFER_SIZE = 2048;
+
 	MM::Core* core_;
 	MM::Device* device_;
 	std::string port_;
+
+	bool initialized_;
+	bool oldstage_;
+
+	VersionData versionData_;
 	std::string version_;
 	std::string buildName_;
 	std::string compileDate_;
+
+	// Stage-specific configuration
 	std::string oldstagePrefix_; // "1H" or "2H" for LX-4000 stages
-	VersionData versionData_;
+	std::string serialTerm_; // changes if oldstage_ is true
 };
 
 #endif // ASIBASE_H
