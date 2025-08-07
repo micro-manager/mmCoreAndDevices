@@ -183,7 +183,7 @@ int ASIBase::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int ASIBase::GetCompileDate(std::string& buildName) const
+int ASIBase::GetCompileDate(std::string& compileDate) const
 {
 	std::string answer;
 	int ret = QueryCommand("CD", answer);
@@ -191,7 +191,7 @@ int ASIBase::GetCompileDate(std::string& buildName) const
 	{
 		return ret;
 	}
-	buildName = answer;
+	compileDate = answer;
 	return DEVICE_OK;
 }
 
