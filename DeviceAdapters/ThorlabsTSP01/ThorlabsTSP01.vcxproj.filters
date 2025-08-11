@@ -18,24 +18,6 @@
     <ClInclude Include="ThorlabsTSP01.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="visa.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="VISA_Error.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="visatype.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="vpptype.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TLTSP_Defines.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TLTSPB.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ThorlabsTSP01.cpp">
