@@ -13,10 +13,10 @@ ASIBase::ASIBase(MM::Device* device, const char* prefix) :
 	port_("Undefined"),
 	initialized_(false),
 	oldstage_(false),
-	versionData_(VersionData()),
-	version_("Undefined"),
-	buildName_("Undefined"),
-	compileDate_("Undefined"),
+	version_(Version()),
+	firmwareVersion_("Undefined"),
+	firmwareBuild_("Undefined"),
+	firmwareDate_("Undefined"),
 	oldstagePrefix_(prefix),
 	commandPrefix_(""),
 	serialTerm_("\r\n")
@@ -104,37 +104,6 @@ int ASIBase::CheckDeviceStatus() {
 	return ret;
 }
 
-VersionData ASIBase::ParseVersionString(const std::string& version) const
-{	
-	// Version command response examples:
-	// Example A) ":A Version: USB-9.2p \r\n"
-	// Example B) ":A Version: USB-9.50 \r\n"
-	const size_t startIndex = version.find("-");
-	if (startIndex == std::string::npos)
-	{
-		return VersionData(); // error => default data
-	}
-
-	// shortVersion => "9.2m \r\n"
-	const std::string shortVersion = version.substr(startIndex + 1);
-
-	// find the index of the dot that separates major and minor version
-	const size_t dotIndex = shortVersion.find(".");
-	if (dotIndex == std::string::npos)
-	{
-		return VersionData(); // error => default data
-	}
-	
-	// use substr for major versions with more than 1 digit, ##.## for example
-	const int major = std::stoi(shortVersion.substr(0, dotIndex));
-
-	// minor version and revision will only ever be 1 character,
-	// at these specific locations after the dot in the response
-	const int minor = std::stoi(shortVersion.substr(dotIndex + 1, 1));
-	const char revision = shortVersion.at(dotIndex + 2);
-	return VersionData(major, minor, revision);
-}
-
 int ASIBase::GetVersion(std::string& version) const
 {
    std::string answer;
@@ -156,7 +125,7 @@ int ASIBase::OnVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-      pProp->Set(version_.c_str());
+      pProp->Set(firmwareVersion_.c_str());
 	}
 	return DEVICE_OK;
 }
@@ -178,7 +147,7 @@ int ASIBase::OnBuildName(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(buildName_.c_str());
+		pProp->Set(firmwareBuild_.c_str());
 	}
 	return DEVICE_OK;
 }
@@ -200,7 +169,7 @@ int ASIBase::OnCompileDate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(compileDate_.c_str());
+		pProp->Set(firmwareDate_.c_str());
 	}
 	return DEVICE_OK;
 }
