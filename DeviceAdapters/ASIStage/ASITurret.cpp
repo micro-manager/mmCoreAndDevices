@@ -95,8 +95,7 @@ int AZ100Turret::Initialize()
 	// I think it was present before 2010 but this is easy way
 
 	// previously compared against compile date (2010, 1, 1)
-	if (version_.IsVersionAtLeast(8, 8, 'a'))
-	{
+	if (version_ >= Version(8, 8, 'a')) {
 		ret = GetBuildName(firmwareBuild_);
 		if (ret != DEVICE_OK)
 		{

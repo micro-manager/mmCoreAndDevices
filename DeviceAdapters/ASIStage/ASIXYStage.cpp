@@ -107,8 +107,7 @@ int XYStage::Initialize()
 	// I think it was present before 2010 but this is easy way
 
 	// previously compared against compile date (2010, 1, 1)
-	if (version_.IsVersionAtLeast(8, 8, 'a'))
-	{
+	if (version_ >= Version(8, 8, 'a')) {
 		ret = GetBuildName(firmwareBuild_);
 		if (ret != DEVICE_OK)
 		{
@@ -776,12 +775,11 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 		// and that transition occurred ~2008 but not sure exactly when
 
 		// previously compared against compile date (2009, 1, 1)
-		if (version_.IsVersionAtLeast(8, 6, 'd'))
-		{
+		if (version_ >= Version(8, 6, 'd')) {
 			// don't enforce upper limit
-		}
-		else  // enforce limit for 2008 and earlier firmware or
-		{     // if getting compile date wasn't successful
+		} else {
+			// enforce limit for 2008 and earlier firmware or
+			// if getting compile date wasn't successful
 			if (waitCycles > 255)
 			{
 				waitCycles = 255;

@@ -111,8 +111,7 @@ int CRISP::Initialize()
 	// I think it was present before 2010 but this is easy way
 
 	// previously compared against compile date (2010, 1, 1)
-	if (version_.IsVersionAtLeast(8, 8, 'a'))
-	{
+	if (version_ >= Version(8, 8, 'a')) {
 		ret = GetBuildName(firmwareBuild_);
 		if (ret != DEVICE_OK)
 		{
@@ -206,8 +205,7 @@ int CRISP::Initialize()
 	CreateProperty(g_CRISPStatePropertyName, "", MM::String, true, pAct);
 
 	// previously compared against compile date (2015, 1, 1)
-	if (version_.IsVersionAtLeast(9, 2, 'h'))
-	{
+	if (version_ >= Version(9, 2, 'h')) {
 		ret = GetNumSkips(numSkips_);
 		if (ret != DEVICE_OK)
 		{
@@ -254,8 +252,7 @@ int CRISP::Initialize()
 
 	// LK M requires firmware version 9.2n or higher.
 	// Enable these properties as a group to modify calibration settings.
-	if (version_.IsVersionAtLeast(9, 2, 'n'))
-	{
+	if (version_ >= Version(9, 2, 'n')) {
 		pAct = new CPropertyAction(this, &CRISP::OnSetLogAmpAGC);
 		CreateProperty("Set LogAmpAGC (Advanced Users Only)", "0", MM::Integer, false, pAct);
 
@@ -1105,7 +1102,7 @@ void CRISP::CreateSumProperty() {
 	const std::string propertyName = "Sum";
 
 	// Check if we can use the faster serial command
-	if (version_.IsVersionAtLeast(9, 2, 'o')) {
+	if (version_ >= Version(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
 		LogMessage("CRISP: firmware >= 9.2o; use LK T? for the "
@@ -1163,7 +1160,7 @@ void CRISP::CreateDitherErrorProperty() {
 	const std::string propertyName = "Dither Error";
 
 	// Check if we can use the faster serial command
-	if (version_.IsVersionAtLeast(9, 2, 'o')) {
+	if (version_ >= Version(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
 		LogMessage("CRISP: firmware >= 9.2o; use LK Y? for the "
