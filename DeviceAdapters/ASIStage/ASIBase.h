@@ -8,10 +8,9 @@
 #ifndef ASIBASE_H
 #define ASIBASE_H
 
+#include "ASIStage.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
-#include "ASIStage.h"
-#include <regex>
 #include <string>
 
 
@@ -51,9 +50,9 @@ public:
 
 	// Return the version data parsed from a std::string.
 	static Version ParseString(const std::string& version) {
-		// Version response examples:
-		// Example A: ":A Version: USB-9.2p \r\n"
-		// Example B: ":A Version: USB-9.50 \r\n"
+		// Example response: ":A Version: USB-9.2m \r\n"
+
+		// find the index of the dash
 		const size_t dashIndex = version.find("-");
 		if (dashIndex == std::string::npos) {
 			return Version(); // error => default data
@@ -62,19 +61,23 @@ public:
 		// short version => "9.2m \r\n"
 		const std::string ver = version.substr(dashIndex + 1);
 
-		// find the index of the dot that separates major and minor version
+		// find the index of the dot
 		const size_t dotIndex = ver.find(".");
 		if (dotIndex == std::string::npos) {
 			return Version(); // error => default data
 		}
 
-		// use substr for major versions with more than 1 digit, ##.## for example
+		// major version can have more than 1 digit (##.## for example)
 		// minor version and revision will only ever be 1 character,
 		// at these specific locations after the dot in the response
-		const unsigned int major = std::stoi(ver.substr(0, dotIndex));
-		const unsigned int minor = std::stoi(ver.substr(dotIndex + 1, 1));
-		const unsigned int revision = static_cast<unsigned int>(ver.at(dotIndex + 2));
-		return Version(major, minor, revision);
+		try {
+			const unsigned int major = std::stoul(ver.substr(0, dotIndex));
+			const unsigned int minor = std::stoul(ver.substr(dotIndex + 1, 1));
+			const unsigned int revision = static_cast<unsigned int>(ver.at(dotIndex + 2));
+			return Version(major, minor, revision);
+		} catch (...) {
+			return Version(); // parsing error => default data
+		}
 	}
 
 	bool operator>=(const Version& other) const {

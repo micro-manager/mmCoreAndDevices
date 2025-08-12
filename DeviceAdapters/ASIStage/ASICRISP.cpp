@@ -1116,7 +1116,7 @@ void CRISP::CreateSumProperty() {
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					float sum{};
-					int result = GetValue("LK T?", sum);
+					const int result = GetValue("LK T?", sum);
 					if (result != DEVICE_OK) {
 						return result;
 					}
@@ -1138,7 +1138,7 @@ void CRISP::CreateSumProperty() {
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					std::string answer;
-					int result = QueryCommand("EXTRA X?", answer);
+					const int result = QueryCommand("EXTRA X?", answer);
 					if (result != DEVICE_OK) {
 						return result;
 					}
@@ -1166,15 +1166,15 @@ void CRISP::CreateDitherErrorProperty() {
 	if (version_.IsVersionAtLeast(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
-		this->LogMessage("CRISP: firmware >= 9.2o; use LK Y? for the "
+		LogMessage("CRISP: firmware >= 9.2o; use LK Y? for the "
 			+ propertyName + " property.", true);
 
-		this->CreateIntegerProperty(
+		CreateIntegerProperty(
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					float sum{};
-					int result = this->GetValue("LK Y?", sum);
+					const int result = GetValue("LK Y?", sum);
 					if (result != DEVICE_OK) {
 						return result;
 					}
@@ -1188,15 +1188,15 @@ void CRISP::CreateDitherErrorProperty() {
 
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
-		this->LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
+		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
 			+ propertyName + " property.", true);
 
-		this->CreateIntegerProperty(
+		CreateIntegerProperty(
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					std::string answer;
-					int result = this->QueryCommand("EXTRA X?", answer);
+					const int result = QueryCommand("EXTRA X?", answer);
 					if (result != DEVICE_OK) {
 						return result;
 					}
