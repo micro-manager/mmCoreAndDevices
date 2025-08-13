@@ -1410,14 +1410,7 @@ int ZStage::OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (eAct == MM::BeforeGet)
     {
         // The controller can not report whether or not the motors are on.  Cache the value
-        if (motorOn_)
-        {
-            pProp->Set("On");
-        }
-        else
-        {
-            pProp->Set("Off");
-        }
+        pProp->Set(motorOn_ ? "On" : "Off");
         return DEVICE_OK;
     }
     else if (eAct == MM::AfterSet)

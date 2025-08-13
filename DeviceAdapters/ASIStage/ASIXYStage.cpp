@@ -1199,14 +1199,7 @@ int XYStage::OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::BeforeGet)
 	{
 		// The controller can not report whether or not the motors are on.  Cache the value
-		if (motorOn_)
-		{
-			pProp->Set("On");
-		}
-		else
-		{
-			pProp->Set("Off");
-		}
+		pProp->Set(motorOn_ ? "On" : "Off");
 		return DEVICE_OK;
 	}
 	else if (eAct == MM::AfterSet)
@@ -1244,14 +1237,7 @@ int XYStage::OnJSMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::BeforeGet)
 	{
 		// TODO: read from device, at least on initialization
-		if (joyStickMirror_)
-		{
-			pProp->Set("On");
-		}
-		else
-		{
-			pProp->Set("Off");
-		}
+		pProp->Set(joyStickMirror_ ? "On" : "Off");
 		return DEVICE_OK;
 	}
 	else if (eAct == MM::AfterSet) {
@@ -1466,17 +1452,10 @@ int XYStage::OnSerialResponse(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int XYStage::OnSerialCommandOnlySendChanged(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	std::string tmpstr;
 	if (eAct == MM::AfterSet) {
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare("Yes") == 0)
-		{
-			serialOnlySendChanged_ = true;
-		}
-		else
-		{
-			serialOnlySendChanged_ = false;
-		}
+		serialOnlySendChanged_ = (tmpstr == "Yes") ? true : false;
 	}
 	return DEVICE_OK;
 }
