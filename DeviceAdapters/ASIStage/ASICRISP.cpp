@@ -389,50 +389,41 @@ int CRISP::ForceSetFocusState(const std::string& focusState)
 	if (focusState == g_CRISP_I)
 	{
 		// Idle (switch off LED)
-		const char* command = "LK F=79";
-		return SetCommand(command);
+		return SetCommand("LK F=79");
 	}
 	else if (focusState == g_CRISP_R)
 	{
 		// Unlock
-		const char* command = "LK F=85";
-		return SetCommand(command);
+		return SetCommand("LK F=85");
 	}
 	else if (focusState == g_CRISP_K)
 	{
 		// Lock
-		const char* command = "LK F=83";
-		return SetCommand(command);
+		return SetCommand("LK F=83");
 	}
 	else if (focusState == g_CRISP_G)
 	{
-		// Log-Amp Calibration
-		const char* command = "LK F=72";
-		return SetCommand(command);
+		// Log-Amp Calibration;
+		return SetCommand("LK F=72");
 	}
 	else if (focusState == g_CRISP_SG)
 	{
 		// gain_Cal Calibration
-		const char* command = "LK F=67";
-		return SetCommand(command);
+		return SetCommand("LK F=67");
 	}
 	else if (focusState == g_CRISP_f)
 	{
 		// Dither
-		const char* command = "LK F=102";
-		return SetCommand(command);
+		return SetCommand("LK F=102");
 	}
 	else if (focusState == g_CRISP_RFO)
 	{
 		// Reset focus offset
-		const char* command = "LK F=111";
-		return SetCommand(command);
+		return SetCommand("LK F=111");
 	}
 	else if (focusState == g_CRISP_SSZ)
 	{
-		// Reset focus offset
-		const char* command = "SS Z";
-		return SetCommand(command);
+		return SetCommand("SS Z");
 	}
 
 	return DEVICE_OK;
