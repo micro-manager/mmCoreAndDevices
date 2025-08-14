@@ -280,7 +280,7 @@ bool CRISP::Busy()
  */
 int CRISP::GetOffset(double& offset)
 {
-	float val;
+	double val{};
 	int ret = GetValue("LK Z?", val);
 	if (ret != DEVICE_OK)
 	{
@@ -557,55 +557,43 @@ int CRISP::GetCurrentFocusScore(double& score)
 	return GetLastFocusScore(score);
 }
 
-int CRISP::GetValue(const std::string& cmd, float& val)
-{
+int CRISP::GetValue(const std::string& command, double& value) {
 	std::string answer;
-	int ret = QueryCommand(cmd.c_str(), answer);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
+	const int result = QueryCommand(command.c_str(), answer);
+	if (result != DEVICE_OK) {
+		return result;
 	}
 
-	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
-	{
-		int errNo = atoi(answer.substr(2).c_str());
-		return ERR_OFFSET + errNo;
-	}
-	else if (answer.length() > 0)
-	{
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0) {
+		const int errorNum = atoi(answer.substr(2).c_str());
+		return ERR_OFFSET + errorNum;
+	} else if (answer.length() > 0) {
 		size_t index = 0;
-		while (!isdigit(answer[index]) && (index < answer.length()))
-		{
+		while (!isdigit(answer[index]) && index < answer.length()) {
 			index++;
 		}
 
-		if (index >= answer.length())
-		{
+		if (index >= answer.length()) {
 			return ERR_UNRECOGNIZED_ANSWER;
 		}
 
-		val = (float)atof((answer.substr(index)).c_str());
-
+		value = atof((answer.substr(index)).c_str());
 		return DEVICE_OK;
 	}
 
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
-int CRISP::SetCommand(const std::string& cmd)
-{
+int CRISP::SetCommand(const std::string& command) {
 	std::string answer;
-	int ret = QueryCommand(cmd.c_str(), answer);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
+	const int result = QueryCommand(command.c_str(), answer);
+	if (result != DEVICE_OK) {
+		return result;
 	}
-	if (answer.compare(0, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
-	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
-	{
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0) {
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
 	}
@@ -671,7 +659,7 @@ int CRISP::OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetObjectiveNA(double& objNA)
 {
-	float na;
+	double na{};
 	int ret = GetValue("LR Y?", na);
 	if (ret != DEVICE_OK)
 	{
@@ -719,7 +707,7 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float calGain;
+		double calGain{};
 		int ret = GetValue("LR X?", calGain);
 		if (ret != DEVICE_OK)
 		{
@@ -740,7 +728,7 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetCalRange(double& calRange)
 {
-	float calibRange;
+	double calibRange{};
 	int ret = GetValue("LR F?", calibRange);
 	if (ret != DEVICE_OK)
 	{
@@ -770,7 +758,7 @@ int CRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetLockRange(double& lockRange)
 {
-	float lr;
+	double lr{};
 	int ret = GetValue("LR Z?", lr);
 	if (ret != DEVICE_OK)
 	{
@@ -800,7 +788,7 @@ int CRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetNumAverages(long& numAverages)
 {
-	float numAvg;
+	double numAvg{};
 	int ret = GetValue("RT F?", numAvg);
 	if (ret != DEVICE_OK)
 	{
@@ -830,7 +818,7 @@ int CRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetGainMultiplier(long& gainMult)
 {
-	float gain;
+	double gain{};
 	int ret = GetValue("LR T?", gain);
 	if (ret != DEVICE_OK)
 	{
@@ -860,7 +848,7 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetLEDIntensity(long& ledIntensity)
 {
-	float ledInt;
+	double ledInt{};
 	int ret = GetValue("UL X?", ledInt);
 	if (ret != DEVICE_OK)
 	{
@@ -970,7 +958,7 @@ int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float snr;
+		double snr{};
 		int ret = GetValue("EXTRA Y?", snr);
 		if (ret != DEVICE_OK)
 		{
@@ -985,7 +973,7 @@ int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float val;
+		double val{};
 		int ret = GetValue("AL X?", val);
 		if (ret != DEVICE_OK)
 		{
@@ -998,7 +986,7 @@ int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetNumSkips(long& updateRate)
 {
-	float numSkips;
+	double numSkips{};
 	int ret = GetValue("UL Y?", numSkips);
 	if (ret != DEVICE_OK)
 	{
@@ -1028,7 +1016,7 @@ int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetInFocusRange(double& inFocusRange)
 {
-	float focusRange;
+	double focusRange{};
 	int ret = GetValue("AL Z?", focusRange);
 	if (ret != DEVICE_OK)
 	{
@@ -1112,7 +1100,7 @@ void CRISP::CreateSumProperty() {
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
-					float sum{};
+					double sum{};
 					const int result = GetValue("LK T?", sum);
 					if (result != DEVICE_OK) {
 						return result;
@@ -1170,12 +1158,12 @@ void CRISP::CreateDitherErrorProperty() {
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
-					float sum{};
-					const int result = GetValue("LK Y?", sum);
+					double ditherError{};
+					const int result = GetValue("LK Y?", ditherError);
 					if (result != DEVICE_OK) {
 						return result;
 					}
-					pProp->Set(sum);
+					pProp->Set(ditherError);
 				}
 				return DEVICE_OK;
 			}
