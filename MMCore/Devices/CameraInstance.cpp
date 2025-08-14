@@ -22,10 +22,42 @@
 #include "CameraInstance.h"
 
 
-int CameraInstance::SnapImage() { RequireInitialized(__func__); return GetImpl()->SnapImage(); }
-const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(); }
-const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(channelNr); }
-const unsigned int* CameraInstance::GetImageBufferAsRGB32() { RequireInitialized(__func__); return GetImpl()->GetImageBufferAsRGB32(); }
+int CameraInstance::SnapImage() { 
+   RequireInitialized(__func__); 
+   isSnapping_.store(true);
+   multiChannelImageCounter_.store(0);
+   int ret = GetImpl()->SnapImage();
+   isSnapping_.store(false);
+   return ret;
+}
+
+const unsigned char* CameraInstance::GetImageBuffer() { 
+   RequireInitialized(__func__);
+   const unsigned char* snappedPixels = snappedImage_.GetPixels(0);
+   if (snappedPixels != nullptr) {
+      return snappedPixels;
+   }
+   return GetImpl()->GetImageBuffer(); 
+}
+
+const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) {
+    RequireInitialized(__func__); 
+    const unsigned char* snappedPixels = snappedImage_.GetPixels(channelNr);
+    if (snappedPixels != nullptr) {
+      return snappedPixels;
+    }
+    return GetImpl()->GetImageBuffer(channelNr); 
+}
+
+const unsigned int* CameraInstance::GetImageBufferAsRGB32() { 
+   RequireInitialized(__func__); 
+   const unsigned int* snappedPixels = reinterpret_cast<const unsigned int*>(snappedImage_.GetPixels(0));
+   if (snappedPixels != nullptr) {
+      return snappedPixels;
+   }
+   return GetImpl()->GetImageBufferAsRGB32(); 
+}
+
 unsigned CameraInstance::GetNumberOfComponents() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfComponents(); }
 
 std::string CameraInstance::GetComponentName(unsigned component)
@@ -154,3 +186,22 @@ int CameraInstance::StopExposureSequence() { RequireInitialized(__func__); retur
 int CameraInstance::ClearExposureSequence() { RequireInitialized(__func__); return GetImpl()->ClearExposureSequence(); }
 int CameraInstance::AddToExposureSequence(double exposureTime_ms) { RequireInitialized(__func__); return GetImpl()->AddToExposureSequence(exposureTime_ms); }
 int CameraInstance::SendExposureSequence() const { RequireInitialized(__func__); return GetImpl()->SendExposureSequence(); }
+
+bool CameraInstance::IsSnapping() const {
+   return isSnapping_.load();
+}
+
+void CameraInstance::StoreSnappedImage(const unsigned char* buf, unsigned width, unsigned height, 
+                                       unsigned byteDepth) {        
+   // If the buffer doesn't exist or has wrong dimensions, create/resize it
+   if (snappedImage_.Width() != width || 
+        snappedImage_.Height() != height || 
+        snappedImage_.Depth() != byteDepth) {
+        snappedImage_.Resize(width, height, byteDepth);
+   }
+    
+   // For multi-channel cameras, insertImage will be called once for each channel
+   snappedImage_.SetPixels(multiChannelImageCounter_.load(), buf);
+   multiChannelImageCounter_.fetch_add(1);
+
+}

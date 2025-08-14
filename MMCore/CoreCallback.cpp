@@ -252,6 +252,18 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* pMd, bool doProcess)
 {
+   // Check if the camera is currently snapping an image, if its calling InsertImage,
+   // then its circumventing having its own buffer. This allows camera device adapters to
+   // not have to implement their own buffers, and can instead just copy data in directly.
+    {
+        std::shared_ptr<CameraInstance> camera = std::static_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
+        if (camera->IsSnapping()) {
+            // Don't do any metadata or image processing, for consistency with the existing SnapImage()/GetImage() methods
+            camera->StoreSnappedImage(buf, width, height, byteDepth);
+            return DEVICE_OK;
+        }
+   }
+
    try 
    {
       Metadata md = AddCameraMetadata(caller, pMd);
@@ -284,6 +296,18 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const Metadata* pMd, bool doProcess)
 {
+   // Check if the camera is currently snapping an image, if its calling InsertImage,
+   // then its circumventing having its own buffer. This allows camera device adapters to
+   // not have to implement their own buffers, and can instead just copy data in directly.
+    {
+        std::shared_ptr<CameraInstance> camera = std::static_pointer_cast<CameraInstance>(core_->deviceManager_->GetDevice(caller));
+        if (camera->IsSnapping()) {
+            // Don't do any metadata or image processing, for consistency with the existing SnapImage()/GetImage() methods
+            camera->StoreSnappedImage(buf, width, height, byteDepth);
+            return DEVICE_OK;
+        }
+    }
+   
    try 
    {
       Metadata md = AddCameraMetadata(caller, pMd);
