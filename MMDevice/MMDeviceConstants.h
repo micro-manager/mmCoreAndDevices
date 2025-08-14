@@ -282,9 +282,9 @@ namespace MM {
    };
 
    enum FocusDirection {
-      FocusDirectionUnknown,
-      FocusDirectionTowardSample,
-      FocusDirectionAwayFromSample,
+      FocusDirectionUnknown = 0,
+      FocusDirectionTowardSample = +1,
+      FocusDirectionAwayFromSample = -1,
    };
 
    //////////////////////////////////////////////////////////////////////////////

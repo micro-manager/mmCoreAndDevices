@@ -2115,11 +2115,7 @@ int CMMCore::getFocusDirection(const char* stageLabel) MMCORE_LEGACY_THROW(CMMEr
       deviceManager_->GetDeviceOfType<StageInstance>(stageLabel);
 
    mm::DeviceModuleLockGuard guard(stage);
-   switch (stage->GetFocusDirection()) {
-      case MM::FocusDirectionTowardSample: return +1;
-      case MM::FocusDirectionAwayFromSample: return -1;
-      default: return 0;
-   }
+   return static_cast<int>(stage->GetFocusDirection());
 }
 
 
