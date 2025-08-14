@@ -89,16 +89,16 @@ int CRISP::Initialize()
 	// Read-only "AxisLetter" property, axis_ is set using a pre-init property named "Axis".
 	CreateProperty("AxisLetter", axis_.c_str(), MM::String, true);
 	
-	ret = GetVersion(version_);
+	ret = GetVersion(firmwareVersion_);
 	if (ret != DEVICE_OK)
 		return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &CRISP::OnVersion);
-	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
+	CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
 	// get the firmware version data from cached value
-	versionData_ = ParseVersionString(version_);
+	version_ = Version::ParseString(firmwareVersion_);
 
-	ret = GetCompileDate(compileDate_);
+	ret = GetCompileDate(firmwareDate_);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -111,9 +111,8 @@ int CRISP::Initialize()
 	// I think it was present before 2010 but this is easy way
 
 	// previously compared against compile date (2010, 1, 1)
-	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
-	{
-		ret = GetBuildName(buildName_);
+	if (version_ >= Version(8, 8, 'a')) {
+		ret = GetBuildName(firmwareBuild_);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
@@ -206,8 +205,7 @@ int CRISP::Initialize()
 	CreateProperty(g_CRISPStatePropertyName, "", MM::String, true, pAct);
 
 	// previously compared against compile date (2015, 1, 1)
-	if (versionData_.IsVersionAtLeast(9, 2, 'h'))
-	{
+	if (version_ >= Version(9, 2, 'h')) {
 		ret = GetNumSkips(numSkips_);
 		if (ret != DEVICE_OK)
 		{
@@ -254,8 +252,7 @@ int CRISP::Initialize()
 
 	// LK M requires firmware version 9.2n or higher.
 	// Enable these properties as a group to modify calibration settings.
-	if (versionData_.IsVersionAtLeast(9, 2, 'n'))
-	{
+	if (version_ >= Version(9, 2, 'n')) {
 		pAct = new CPropertyAction(this, &CRISP::OnSetLogAmpAGC);
 		CreateProperty("Set LogAmpAGC (Advanced Users Only)", "0", MM::Integer, false, pAct);
 
@@ -283,7 +280,7 @@ bool CRISP::Busy()
  */
 int CRISP::GetOffset(double& offset)
 {
-	float val;
+	double val{};
 	int ret = GetValue("LK Z?", val);
 	if (ret != DEVICE_OK)
 	{
@@ -392,50 +389,41 @@ int CRISP::ForceSetFocusState(const std::string& focusState)
 	if (focusState == g_CRISP_I)
 	{
 		// Idle (switch off LED)
-		const char* command = "LK F=79";
-		return SetCommand(command);
+		return SetCommand("LK F=79");
 	}
 	else if (focusState == g_CRISP_R)
 	{
 		// Unlock
-		const char* command = "LK F=85";
-		return SetCommand(command);
+		return SetCommand("LK F=85");
 	}
 	else if (focusState == g_CRISP_K)
 	{
 		// Lock
-		const char* command = "LK F=83";
-		return SetCommand(command);
+		return SetCommand("LK F=83");
 	}
 	else if (focusState == g_CRISP_G)
 	{
-		// Log-Amp Calibration
-		const char* command = "LK F=72";
-		return SetCommand(command);
+		// Log-Amp Calibration;
+		return SetCommand("LK F=72");
 	}
 	else if (focusState == g_CRISP_SG)
 	{
 		// gain_Cal Calibration
-		const char* command = "LK F=67";
-		return SetCommand(command);
+		return SetCommand("LK F=67");
 	}
 	else if (focusState == g_CRISP_f)
 	{
 		// Dither
-		const char* command = "LK F=102";
-		return SetCommand(command);
+		return SetCommand("LK F=102");
 	}
 	else if (focusState == g_CRISP_RFO)
 	{
 		// Reset focus offset
-		const char* command = "LK F=111";
-		return SetCommand(command);
+		return SetCommand("LK F=111");
 	}
 	else if (focusState == g_CRISP_SSZ)
 	{
-		// Reset focus offset
-		const char* command = "SS Z";
-		return SetCommand(command);
+		return SetCommand("SS Z");
 	}
 
 	return DEVICE_OK;
@@ -560,55 +548,43 @@ int CRISP::GetCurrentFocusScore(double& score)
 	return GetLastFocusScore(score);
 }
 
-int CRISP::GetValue(const std::string& cmd, float& val)
-{
+int CRISP::GetValue(const std::string& command, double& value) {
 	std::string answer;
-	int ret = QueryCommand(cmd.c_str(), answer);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
+	const int result = QueryCommand(command.c_str(), answer);
+	if (result != DEVICE_OK) {
+		return result;
 	}
 
-	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
-	{
-		int errNo = atoi(answer.substr(2).c_str());
-		return ERR_OFFSET + errNo;
-	}
-	else if (answer.length() > 0)
-	{
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0) {
+		const int errorNum = atoi(answer.substr(2).c_str());
+		return ERR_OFFSET + errorNum;
+	} else if (answer.length() > 0) {
 		size_t index = 0;
-		while (!isdigit(answer[index]) && (index < answer.length()))
-		{
+		while (!isdigit(answer[index]) && index < answer.length()) {
 			index++;
 		}
 
-		if (index >= answer.length())
-		{
+		if (index >= answer.length()) {
 			return ERR_UNRECOGNIZED_ANSWER;
 		}
 
-		val = (float)atof((answer.substr(index)).c_str());
-
+		value = atof((answer.substr(index)).c_str());
 		return DEVICE_OK;
 	}
 
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
-int CRISP::SetCommand(const std::string& cmd)
-{
+int CRISP::SetCommand(const std::string& command) {
 	std::string answer;
-	int ret = QueryCommand(cmd.c_str(), answer);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
+	const int result = QueryCommand(command.c_str(), answer);
+	if (result != DEVICE_OK) {
+		return result;
 	}
-	if (answer.compare(0, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
-	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
-	{
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0) {
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
 	}
@@ -674,7 +650,7 @@ int CRISP::OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetObjectiveNA(double& objNA)
 {
-	float na;
+	double na{};
 	int ret = GetValue("LR Y?", na);
 	if (ret != DEVICE_OK)
 	{
@@ -722,7 +698,7 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float calGain;
+		double calGain{};
 		int ret = GetValue("LR X?", calGain);
 		if (ret != DEVICE_OK)
 		{
@@ -743,7 +719,7 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetCalRange(double& calRange)
 {
-	float calibRange;
+	double calibRange{};
 	int ret = GetValue("LR F?", calibRange);
 	if (ret != DEVICE_OK)
 	{
@@ -773,7 +749,7 @@ int CRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetLockRange(double& lockRange)
 {
-	float lr;
+	double lr{};
 	int ret = GetValue("LR Z?", lr);
 	if (ret != DEVICE_OK)
 	{
@@ -803,7 +779,7 @@ int CRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetNumAverages(long& numAverages)
 {
-	float numAvg;
+	double numAvg{};
 	int ret = GetValue("RT F?", numAvg);
 	if (ret != DEVICE_OK)
 	{
@@ -833,7 +809,7 @@ int CRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetGainMultiplier(long& gainMult)
 {
-	float gain;
+	double gain{};
 	int ret = GetValue("LR T?", gain);
 	if (ret != DEVICE_OK)
 	{
@@ -863,7 +839,7 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetLEDIntensity(long& ledIntensity)
 {
-	float ledInt;
+	double ledInt{};
 	int ret = GetValue("UL X?", ledInt);
 	if (ret != DEVICE_OK)
 	{
@@ -973,7 +949,7 @@ int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float snr;
+		double snr{};
 		int ret = GetValue("EXTRA Y?", snr);
 		if (ret != DEVICE_OK)
 		{
@@ -988,7 +964,7 @@ int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float val;
+		double val{};
 		int ret = GetValue("AL X?", val);
 		if (ret != DEVICE_OK)
 		{
@@ -1001,7 +977,7 @@ int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetNumSkips(long& updateRate)
 {
-	float numSkips;
+	double numSkips{};
 	int ret = GetValue("UL Y?", numSkips);
 	if (ret != DEVICE_OK)
 	{
@@ -1031,7 +1007,7 @@ int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::GetInFocusRange(double& inFocusRange)
 {
-	float focusRange;
+	double focusRange{};
 	int ret = GetValue("AL Z?", focusRange);
 	if (ret != DEVICE_OK)
 	{
@@ -1105,37 +1081,40 @@ void CRISP::CreateSumProperty() {
 	const std::string propertyName = "Sum";
 
 	// Check if we can use the faster serial command
-	if (versionData_.IsVersionAtLeast(9, 2, 'o')) {
+	if (version_ >= Version(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
-		this->LogMessage("CRISP: firmware >= 9.2o; use LK T? for the "
+		LogMessage("CRISP: firmware >= 9.2o; use LK T? for the "
 			+ propertyName + " property.", true);
 
-		this->CreateIntegerProperty(
+		CreateIntegerProperty(
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
-					float sum{};
-					int result = this->GetValue("LK T?", sum);
+					double sum{};
+					const int result = GetValue("LK T?", sum);
 					if (result != DEVICE_OK) {
 						return result;
 					}
 					pProp->Set(sum);
 				}
 				return DEVICE_OK;
-			}));
-	} else {
+			}
+		));
+
+	} else { // Firmware < 9.2o
+
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
-		this->LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
+		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
 			+ propertyName + " property.", true);
 
-		this->CreateIntegerProperty(
+		CreateIntegerProperty(
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					std::string answer;
-					int result = this->QueryCommand("EXTRA X?", answer);
+					const int result = QueryCommand("EXTRA X?", answer);
 					if (result != DEVICE_OK) {
 						return result;
 					}
@@ -1150,7 +1129,8 @@ void CRISP::CreateSumProperty() {
 					}
 				}
 				return DEVICE_OK;
-			}));
+			}
+		));
 	}
 }
 
@@ -1159,37 +1139,40 @@ void CRISP::CreateDitherErrorProperty() {
 	const std::string propertyName = "Dither Error";
 
 	// Check if we can use the faster serial command
-	if (versionData_.IsVersionAtLeast(9, 2, 'o')) {
+	if (version_ >= Version(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
-		this->LogMessage("CRISP: firmware >= 9.2o; use LK Y? for the "
+		LogMessage("CRISP: firmware >= 9.2o; use LK Y? for the "
 			+ propertyName + " property.", true);
 
-		this->CreateIntegerProperty(
+		CreateIntegerProperty(
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
-					float sum{};
-					int result = this->GetValue("LK Y?", sum);
+					double ditherError{};
+					const int result = GetValue("LK Y?", ditherError);
 					if (result != DEVICE_OK) {
 						return result;
 					}
-					pProp->Set(sum);
+					pProp->Set(ditherError);
 				}
 				return DEVICE_OK;
-			}));
-	} else {
+			}
+		));
+
+	} else { // Firmware < 9.2o
+
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
-		this->LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
+		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
 			+ propertyName + " property.", true);
 
-		this->CreateIntegerProperty(
+		CreateIntegerProperty(
 			propertyName.c_str(), 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					std::string answer;
-					int result = this->QueryCommand("EXTRA X?", answer);
+					const int result = QueryCommand("EXTRA X?", answer);
 					if (result != DEVICE_OK) {
 						return result;
 					}
@@ -1204,7 +1187,8 @@ void CRISP::CreateDitherErrorProperty() {
 					}
 				}
 				return DEVICE_OK;
-			}));
+			}
+		));
 	}
 }
 

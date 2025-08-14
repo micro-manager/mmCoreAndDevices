@@ -103,16 +103,16 @@ int ZStage::Initialize()
         ret = GetPositionSteps(curSteps_);
     }
 
-    ret = GetVersion(version_);
+    ret = GetVersion(firmwareVersion_);
     if (ret != DEVICE_OK)
        return ret;
     CPropertyAction* pAct = new CPropertyAction(this, &ZStage::OnVersion);
-    CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
+    CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
     // get the firmware version data from cached value
-    versionData_ = ParseVersionString(version_);
+    version_ = Version::ParseString(firmwareVersion_);
 
-    ret = GetCompileDate(compileDate_);
+    ret = GetCompileDate(firmwareDate_);
     if (ret != DEVICE_OK)
     {
         return ret;
@@ -125,9 +125,8 @@ int ZStage::Initialize()
     // I think it was present before 2010 but this is easy way
 
     // previously compared against compile date (2010, 1, 1)
-    if (versionData_.IsVersionAtLeast(8, 8, 'a'))
-    {
-        ret = GetBuildName(buildName_);
+    if (version_ >= Version(8, 8, 'a')) {
+        ret = GetBuildName(firmwareBuild_);
         if (ret != DEVICE_OK)
         {
             return ret;
@@ -630,8 +629,7 @@ int ZStage::SendStageSequence()
             std::ostringstream os;
             os.precision(0);
             // previously compared against compile date (2015, 10, 23)
-            if (versionData_.IsVersionAtLeast(9, 2, 'i'))
-            {
+            if (version_ >= Version(9, 2, 'i')) {
                 os << std::fixed << "LD " << axis_ << "=" << sequence_[i] * 10;  // 10 here is for unit multiplier/1000
                 ret = QueryCommand(os.str().c_str(), answer);
                 if (ret != DEVICE_OK)
@@ -1012,14 +1010,12 @@ int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
         // parse version strings
 
         // previously compared against compile date (2009, 1, 1)
-        if (versionData_.IsVersionAtLeast(8, 6, 'd'))
-        {
+        if (version_ >= Version(8, 6, 'd')) {
             // don't enforce upper limit
-        }
-        else  // enforce limit for 2008 and earlier firmware or
-        {     // if getting compile date wasn't successful
-            if (waitCycles > 255)
-            {
+        } else {
+            // enforce limit for 2008 and earlier firmware or
+            // if getting compile date wasn't successful
+            if (waitCycles > 255) {
                 waitCycles = 255;
             }
         }
@@ -1414,14 +1410,7 @@ int ZStage::OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (eAct == MM::BeforeGet)
     {
         // The controller can not report whether or not the motors are on.  Cache the value
-        if (motorOn_)
-        {
-            pProp->Set("On");
-        }
-        else
-        {
-            pProp->Set("Off");
-        }
+        pProp->Set(motorOn_ ? "On" : "Off");
         return DEVICE_OK;
     }
     else if (eAct == MM::AfterSet)

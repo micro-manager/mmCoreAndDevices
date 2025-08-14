@@ -73,8 +73,8 @@ private:
 	int GetFocusState(std::string& focusState);
 	int SetFocusState(const std::string& focusState);
 	int ForceSetFocusState(const std::string& focusState);
-	int GetValue(const std::string& cmd, float& val);
-	int SetCommand(const std::string& cmd);
+	int GetValue(const std::string& command, double& value);
+	int SetCommand(const std::string& command);
 
 	// Properties
 	void CreateSumProperty();
