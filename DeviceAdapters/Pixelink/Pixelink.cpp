@@ -834,7 +834,7 @@ int Pixelink::InsertImage()
 	b = GetImageBytesPerPixel();
 
 
-	unsigned char* pPixel;
+	unsigned char* pPixel = nullptr;
 	//////////////////////
 
 	if (!isColour)
