@@ -44,6 +44,8 @@ public:
    CircularBuffer(unsigned int memorySizeMB);
    ~CircularBuffer();
 
+   int SetOverwriteData(bool overwrite);
+
    unsigned GetMemorySizeMB() const { return memorySizeMB_; }
 
    bool Initialize(unsigned channels, unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
@@ -89,6 +91,7 @@ private:
    unsigned long memorySizeMB_;
    unsigned int numChannels_;
    bool overflow_;
+   bool overwriteData_;
    std::vector<mm::FrameBuffer> frameArray_;
 
    std::shared_ptr<ThreadPool> threadPool_;

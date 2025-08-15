@@ -55,7 +55,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;ZWO_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\ZWO\ASI_Windows_SDK_V1.28\ASI SDK\include;$(MM_3RDPARTYPRIVATE)\ZWO\EFW_Windows_SDK_V1.7\EFW SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -72,7 +72,7 @@
     <ClCompile>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;ZWO_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\ZWO\ASI_Windows_SDK_V1.28\ASI SDK\include;$(MM_3RDPARTYPRIVATE)\ZWO\EFW_Windows_SDK_V1.7\EFW SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
