@@ -841,32 +841,12 @@ int Tsi3Cam::InsertImage()
 	this->GetLabel(label);
 	Metadata md;
 
-   int retCode = GetCoreCallback()->InsertImage(this,
+   return GetCoreCallback()->InsertImage(this,
          img.GetPixels(),
          img.Width(),
          img.Height(),
          img.Depth(),
 	   md.Serialize().c_str());
-
-   if (!stopOnOverflow)
-   {
-      if (retCode == DEVICE_BUFFER_OVERFLOW)
-      {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         retCode = GetCoreCallback()->InsertImage(this,
-            img.GetPixels(),
-            img.Width(),
-            img.Height(),
-            img.Depth(),
-			 md.Serialize().c_str());
-         return DEVICE_OK;
-      }
-      else
-         return retCode;
-   }
-
-   return retCode;
 }
 
 bool Tsi3Cam::StopCamera()

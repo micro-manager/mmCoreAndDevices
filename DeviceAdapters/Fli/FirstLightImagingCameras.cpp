@@ -224,12 +224,6 @@ void FirstLightImagingCameras::imageReceived(const uint8_t* image)
 	MM::Core* core = GetCoreCallback();
 
 	int ret = core->InsertImage(this, image, w, h, b, 1, md.Serialize().c_str(), false);
-	if (ret == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		core->ClearImageBuffer(this);
-		core->InsertImage(this, image, w, h, b, 1, md.Serialize().c_str(), false);
-	}
 }
 
 //---------------------------------------------------------------

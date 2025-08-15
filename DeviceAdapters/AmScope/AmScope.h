@@ -134,7 +134,6 @@ private:
    bool isSequenceable_;
    long sequenceMaxLength_;
    bool sequenceRunning_;
-   bool stopOnOverflow_;
    long imageCounter_;
    MMThreadLock imgPixelsLock_;
    std::string triggerDevice_;

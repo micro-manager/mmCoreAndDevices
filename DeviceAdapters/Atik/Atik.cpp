@@ -889,17 +889,7 @@ int Atik::InsertImage()
 	auto h = GetImageHeight();
 	auto bpp = GetImageBytesPerPixel();
 
-	int ret = GetCoreCallback()->InsertImage(this, imgBuf, w, h, bpp, serialised.c_str());
-
-	if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW)
-	{
-		GetCoreCallback()->ClearImageBuffer(this);
-		return GetCoreCallback()->InsertImage(this, imgBuf, w, h, bpp, serialised.c_str(), false);
-	}
-	else
-	{
-		return ret;
-	}
+	return GetCoreCallback()->InsertImage(this, imgBuf, w, h, bpp, serialised.c_str());
 }
 
 

@@ -93,7 +93,6 @@ void CCallBackManager::CPCRestartLiveAcquisition()
 void CCallBackManager::CPCStopLiveAcquisition()
 {
    parentClass_->StopSequenceAcquisition();
-   parentClass_->GetCoreCallback()->ClearImageBuffer(parentClass_);
 }
 
 void CCallBackManager::CPCStartLiveAcquisition()

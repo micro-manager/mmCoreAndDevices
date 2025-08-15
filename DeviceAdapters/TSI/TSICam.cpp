@@ -854,17 +854,6 @@ int TsiCam::PushImage(unsigned char* imgBuf)
          colorImg.Width(),
          colorImg.Height(),
          colorImg.Depth());
-
-      if (!stopOnOverflow && retCode == DEVICE_BUFFER_OVERFLOW)
-      {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         retCode = GetCoreCallback()->InsertImage(this,
-            imgBuf,
-            colorImg.Width(),
-            colorImg.Height(),
-            colorImg.Depth());
-      }
    }
    else
    {
@@ -873,17 +862,6 @@ int TsiCam::PushImage(unsigned char* imgBuf)
          img.Width(),
          img.Height(),
          img.Depth());
-
-      if (!stopOnOverflow && retCode == DEVICE_BUFFER_OVERFLOW)
-      {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         retCode = GetCoreCallback()->InsertImage(this,
-            imgBuf,
-            img.Width(),
-            img.Height(),
-            img.Depth());
-      }
    }
 
    return DEVICE_OK;
@@ -891,30 +869,11 @@ int TsiCam::PushImage(unsigned char* imgBuf)
 
 int TsiCam::InsertImage()
 {
-   int retCode = GetCoreCallback()->InsertImage(this,
+   return GetCoreCallback()->InsertImage(this,
          img.GetPixels(),
          img.Width(),
          img.Height(),
          img.Depth());
-
-   if (!stopOnOverflow)
-   {
-      if (retCode == DEVICE_BUFFER_OVERFLOW)
-      {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         retCode = GetCoreCallback()->InsertImage(this,
-            img.GetPixels(),
-            img.Width(),
-            img.Height(),
-            img.Depth());
-         return DEVICE_OK;
-      }
-      else
-         return retCode;
-   }
-
-   return retCode;
 }
 
 bool TsiCam::GetAttrValue(TSI_PARAM_ID ParamID, TSI_ATTR_ID AttrID, void *Data, uint32_t DataLength) 

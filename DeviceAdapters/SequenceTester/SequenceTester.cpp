@@ -558,17 +558,8 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
 
       try
       {
-         int err;
-         err = core->InsertImage(this, bytes, width, height,
+         int err = core->InsertImage(this, bytes, width, height,
                bytesPerPixel, serializedMD.c_str());
-
-         if (!stopOnOverflow && err == DEVICE_BUFFER_OVERFLOW)
-         {
-            core->ClearImageBuffer(this);
-            err = core->InsertImage(this, bytes, width, height,
-                  bytesPerPixel, serializedMD.c_str(), false);
-         }
-
          if (err != DEVICE_OK)
          {
             bool stopped;

@@ -2286,18 +2286,7 @@ int CBaumerOptronic::SendImageToCore()
    unsigned h = GetImageHeight();
    unsigned b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
-
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      return GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
-   }
-   else
-   {
-      return ret;
-   }
+   return GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
 }
 
 

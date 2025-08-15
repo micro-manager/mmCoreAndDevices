@@ -1157,16 +1157,7 @@ int CMyASICam::InsertImage()
 
 	const unsigned char* pI;
 	pI = GetImageBuffer();
-	int ret = 0;
-	ret  = GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize().c_str());
-	if (ret == DEVICE_BUFFER_OVERFLOW)//缓冲区满了要清空, 否则不能继续插入图像而卡住
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		// don't process this same image again...
-		return GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize().c_str(), false);
-	} else
-		return ret;
+	return GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize().c_str());
 }
 
 

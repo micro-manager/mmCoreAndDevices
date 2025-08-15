@@ -184,10 +184,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 					     1,
 					     md.Serialize().c_str(),
 					     FALSE);
-    if (ret == DEVICE_BUFFER_OVERFLOW) {
-      GetCoreCallback()->ClearImageBuffer(this);
-    }
-    
+
     arv_stream_push_buffer(arv_stream, cb_arv_buffer);
     counter += 1;
     break;

@@ -1277,14 +1277,6 @@ int CABSCamera::InsertImage()
 
   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str() );
 
-  if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-  {  
-    // do not stop on overflow - just reset the buffer
-    GetCoreCallback()->ClearImageBuffer(this);
-    // don't process this same image again...
-    ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-  }
-
   if (ret == DEVICE_OK)
     imageCounter_++;
 

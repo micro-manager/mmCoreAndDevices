@@ -2123,25 +2123,7 @@ void CCameraAdapter::Capture()
          );
       if (ret != DEVICE_OK)
       {
-         // Micro-Manager can't keep up
-         if (!m_bStopOnOverflow && ret == DEVICE_BUFFER_OVERFLOW)
-         {
-            // do not stop on overflow - just reset the buffer
-            GetCoreCallback()->ClearImageBuffer(this);
-            piulLogMessage( m_sMyName.c_str(), s_unLogMethodCallTrace, "MM can't keep up, clearing its buffer" );
-            ret = GetCoreCallback()->InsertImage
-                  (
-                     this,
-                     punBuffer,
-                     m_nStreamWidth,
-                     m_nStreamHeight,
-                     m_nStreamPixelBytes
-                  );
-            if (ret != DEVICE_OK)
-            {
-               m_bStream = FALSE;
-            }
-         }
+         m_bStream = FALSE;
       }
       //oCS.Unlock();
 
