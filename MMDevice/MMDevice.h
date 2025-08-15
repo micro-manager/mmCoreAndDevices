@@ -1582,9 +1582,16 @@ namespace MM {
        * serializedMetadata: must be the result of md.serialize().c_str() (md
        *                     being an instance of Metadata)
        *
-       * doProcess: must normally be true, except for the case mentioned below
+       * doProcess: must be true, except for the case mentioned below
        *
-       * If the sequence acquisition was started with stopOnOverflow = true
+       * Legacy note: previously, cameras were required to perform the
+       * following special handling when InsertImage() returns
+       * DEVICE_BUFFER_OVERFLOW. However, InsertImage() no longer ever
+       * returns that particular error when stopOnOverflow = false. So
+       * cameras should always just stop the acquisition if InsertImage()
+       * returns any error.
+       *
+       * If the sequence acquisition was started with stopOnOverflow = false
        * _and_ the return value of InsertImage() is DEVICE_BUFFER_OVERFLOW,
        * ClearImageBuffer() should be called and the call to InsertImage()
        * should then be repeated with doProcess set to false. Otherwise, if the
@@ -1600,7 +1607,7 @@ namespace MM {
        */
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata = nullptr, const bool doProcess = true) = 0;
 
-      virtual void ClearImageBuffer(const Device* caller) = 0;
+      MM_DEPRECATED(virtual void ClearImageBuffer(const Device* caller)) = 0;
       virtual bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth) = 0;
 
       // These functions violate the separation between device adapters and
