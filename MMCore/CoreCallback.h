@@ -104,6 +104,7 @@ public:
    int OnExposureChanged(const MM::Device* device, double newExposure);
    int OnSLMExposureChanged(const MM::Device* device, double newExposure);
    int OnMagnifierChanged(const MM::Device* device);
+   int OnShutterOpenChanged(const MM::Device* device, bool open);
 
    // Deprecated
    MM::SignalIO* GetSignalIODevice(const MM::Device* caller,
