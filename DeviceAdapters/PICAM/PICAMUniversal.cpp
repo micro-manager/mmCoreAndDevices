@@ -1940,7 +1940,7 @@ int Universal::buildSpdTable()
 
 
    for (int portIndex = 0; portIndex < nPortMax; portIndex++){
-      const pichar* adc_string;
+      const pichar* adc_string = nullptr;
 
 
       if (port_capable){
