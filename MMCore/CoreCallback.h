@@ -94,7 +94,6 @@ public:
 
    // Deprecated
    int GetFocusPosition(double& pos);
-   int GetXYPosition(double& x, double& y);
 
    // notification handlers
    int OnPropertiesChanged(const MM::Device* caller);
