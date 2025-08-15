@@ -271,11 +271,6 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    }
 }
 
-void CoreCallback::ClearImageBuffer(const MM::Device* /*caller*/)
-{
-   core_->cbuf_->Clear();
-}
-
 bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
       unsigned int w, unsigned int h, unsigned int pixDepth)
 {

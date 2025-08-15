@@ -1532,18 +1532,9 @@ protected:
       this->GetLabel(label);
       Metadata md;
       md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-      int ret = GetCoreCallback()->InsertImage(this, GetImageBuffer(), GetImageWidth(),
+      return GetCoreCallback()->InsertImage(this, GetImageBuffer(), GetImageWidth(),
          GetImageHeight(), GetImageBytesPerPixel(),
          md.Serialize().c_str());
-      if (!stopWhenCBOverflows_ && ret == DEVICE_BUFFER_OVERFLOW)
-      {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         return GetCoreCallback()->InsertImage(this, GetImageBuffer(), GetImageWidth(),
-            GetImageHeight(), GetImageBytesPerPixel(),
-            md.Serialize().c_str());
-      } else
-         return ret;
    }
 
    virtual double GetIntervalMs() {return thd_->GetIntervalMs();}
