@@ -908,26 +908,7 @@ int Pixelink::InsertImage()
 	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
 	md.put("FrameCounter", frameCounter);
 
-
-
-
-	//GetCoreCallback()->ClearImageBuffer(this);
-	ret = GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize().c_str(), false);
-
-	if (ret == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize().c_str(), false);
-		return DEVICE_OK;
-	}
-
-
-	
-	//frameBuffer.clear();
-
-
-	return ret;
+	return GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize().c_str(), false);
 }
 
 

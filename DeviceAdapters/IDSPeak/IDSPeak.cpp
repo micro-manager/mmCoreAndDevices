@@ -1403,23 +1403,11 @@ int CIDSPeak::InsertImage()
     imageCounter_++;
 
     MMThreadGuard g(imgPixelsLock_);
-    int nRet = GetCoreCallback()->InsertImage(this, img_.GetPixels(),
+    return GetCoreCallback()->InsertImage(this, img_.GetPixels(),
         img_.Width(),
         img_.Height(),
         img_.Depth(),
         md.Serialize().c_str());
-
-    if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
-    {
-        // do not stop on overflow - just reset the buffer
-        GetCoreCallback()->ClearImageBuffer(this);
-        return GetCoreCallback()->InsertImage(this, img_.GetPixels(),
-            img_.Width(),
-            img_.Height(),
-            img_.Depth(),
-            md.Serialize().c_str());
-    }
-    else { return nRet; }
 }
 
 /*

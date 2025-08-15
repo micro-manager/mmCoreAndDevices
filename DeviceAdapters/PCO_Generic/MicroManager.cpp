@@ -2489,12 +2489,6 @@ int CPCOCam::InsertImage()
 
       m_iNumImagesInserted++;
       ret = pcore->InsertImage(this, img, m_iWidth, m_iHeight, m_iBytesPerPixel);
-      if(!m_bStopOnOverflow && ret == DEVICE_BUFFER_OVERFLOW)
-      {
-        // do not stop on overflow - just reset the buffer
-        pcore->ClearImageBuffer(this);
-        return pcore->InsertImage(this, img, m_iWidth, m_iHeight, m_iBytesPerPixel);
-      }
     }
   }
   else                                 // Else path for Unit-Tester

@@ -54,14 +54,6 @@ void CGigECamera::SnapImageCallback( J_tIMAGE_INFO* imageInfo )
 
 		nRet = GetCoreCallback()->InsertImage(this, buffer_,
 				GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel(), md.Serialize().c_str());
-
-		if( !stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW )
-		{
-			// do not stop on overflow - just reset the buffer
-			GetCoreCallback()->ClearImageBuffer( this );
-			nRet = GetCoreCallback()->InsertImage(this, buffer_,
-				GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel(), md.Serialize().c_str());
-		}
 	} // end if doContinuousAcquisition
 	else if( this->snapOneImageOnly )
 	{

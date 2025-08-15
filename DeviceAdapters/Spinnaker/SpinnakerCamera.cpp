@@ -1654,20 +1654,10 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          unsigned int b = GetImageBytesPerPixel();
 
          int ret = GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize().c_str());
-         if (!m_stopOnOverflow && ret == DEVICE_BUFFER_OVERFLOW)
-         {
-            // do not stop on overflow - just reset the buffer
-            GetCoreCallback()->ClearImageBuffer(this);
-            // don't process this same image again...
-            return GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize().c_str(), false);
-         }
-         else
-         {
-            if (ip != nullptr)
-               ip->Release();
+         if (ip != nullptr)
+            ip->Release();
 
-            return ret;
-         }
+         return ret;
       }
       else
       {

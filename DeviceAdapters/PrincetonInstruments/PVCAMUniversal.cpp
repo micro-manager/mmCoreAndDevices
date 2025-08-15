@@ -2140,19 +2140,6 @@ int Universal::PushImage()
       GetImageBytesPerPixel(),
       &md);
 
-   if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      nRet = GetCoreCallback()->InsertMultiChannel(this,
-         (unsigned char*) pixBuffer,
-         1,
-         GetImageWidth(),
-         GetImageHeight(),
-         GetImageBytesPerPixel(),
-         &md);
-   }
-
    ostringstream txtEnd;
    txtEnd << name_ << " exited PushImage()";
    LogMessage(txtEnd.str(), true);

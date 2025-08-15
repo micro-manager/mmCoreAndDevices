@@ -237,16 +237,7 @@ int CPyCamera::InsertImage()
     if (!buffer)
         return DEVICE_ERR;
 
-    int ret = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
+    return GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
                                              GetImageHeight(), GetImageBytesPerPixel(),
                                              md.Serialize().c_str());
-    if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW)
-    {
-        // do not stop on overflow - just reset the buffer
-        GetCoreCallback()->ClearImageBuffer(this);
-        return GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
-                                              GetImageHeight(), GetImageBytesPerPixel(),
-                                              md.Serialize().c_str());
-    }
-    return ret;
 }

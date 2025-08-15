@@ -2061,18 +2061,6 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
             int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)objImageDataPointer->GetBuffer(),
                 (unsigned)objImageDataPointer->GetWidth(), (unsigned)objImageDataPointer->GetHeight(),
                 (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
-            if (ret == DEVICE_BUFFER_OVERFLOW) {
-                //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
-               if (stopOnOverflow_)
-               {
-                  dev_->StopSequenceAcquisition();
-                  dev_->LogMessage("Error inserting image into sequence buffer", false);
-               }
-               else
-               {
-                  dev_->GetCoreCallback()->ClearImageBuffer(dev_);
-               }
-            }
         }
         else if (dev_->colorCamera_)
         {
@@ -2088,10 +2076,6 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
             int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)dev_->imgBuffer_,
                 (unsigned)dev_->GetImageWidth(), (unsigned)dev_->GetImageHeight(),
                 (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
-            if (ret == DEVICE_BUFFER_OVERFLOW) {
-                //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
-                dev_->GetCoreCallback()->ClearImageBuffer(dev_);
-            }
         }
         imgCounter_++;
         if (imgCounter_ == numImages_)

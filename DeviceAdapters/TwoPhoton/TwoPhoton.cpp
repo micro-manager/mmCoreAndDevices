@@ -1050,15 +1050,7 @@ int BitFlowCamera::LiveThread::svc()
 			  cam_->GetImageHeight(),
 			  cam_->GetImageBytesPerPixel(),
 			  md.Serialize().c_str());
-		  if (ret == DEVICE_BUFFER_OVERFLOW) {
-			  cam_->GetCoreCallback()->ClearImageBuffer(cam_);
-			  cam_->GetCoreCallback()->InsertImage(cam_, cam_->GetImageBuffer(i),
-				  cam_->GetImageWidth(),
-				  cam_->GetImageHeight(),
-				  cam_->GetImageBytesPerPixel(),
-				  md.Serialize().c_str());
-		  }
-		  else if (ret != DEVICE_OK) {
+		  if (ret != DEVICE_OK) {
 			  cam_->GetCoreCallback()->LogMessage(cam_, "BitFlow thread: error inserting image", false);
 			  break;
 		  }

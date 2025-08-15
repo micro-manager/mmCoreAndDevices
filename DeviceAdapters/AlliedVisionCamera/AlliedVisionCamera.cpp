@@ -1392,13 +1392,6 @@ void AlliedVisionCamera::insertFrame(VmbFrame_t *frame)
         err = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(), GetImageHeight(), m_currentPixelFormat.getBytesPerPixel(),
                                              m_currentPixelFormat.getNumberOfComponents(), md.Serialize().c_str());
 
-        if (err == DEVICE_BUFFER_OVERFLOW)
-        {
-            GetCoreCallback()->ClearImageBuffer(this);
-            err = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(), GetImageHeight(), m_currentPixelFormat.getBytesPerPixel(),
-                                                 m_currentPixelFormat.getNumberOfComponents(), md.Serialize().c_str(), false);
-        }
-
         if (IsCapturing())
         {
             m_sdk->VmbCaptureFrameQueue_t(m_handle, frame,

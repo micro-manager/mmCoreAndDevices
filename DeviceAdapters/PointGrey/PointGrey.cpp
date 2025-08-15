@@ -1349,16 +1349,7 @@ int PointGrey::InsertImage(Image* pImg)
    {
       pData = RGBToBGRA(pImg->GetData());
    }
-   ret = GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str(), false);
-	if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str(), false);
-      return DEVICE_OK;
-	} 
-
-   return ret;
+   return GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str(), false);
 }
 
 

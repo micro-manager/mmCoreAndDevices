@@ -4156,21 +4156,10 @@ int Universal::PushImageToMmCore(const unsigned char* pPixBuffer, Metadata* pMd 
 {
     START_METHOD("Universal::PushImageToMmCore");
 
-    int nRet = DEVICE_ERR;
     MM::Core* pCore = GetCoreCallback();
     // This method inserts a new image into the circular buffer (residing in MMCore)
-    nRet = pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
+    return pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
         GetImageBytesPerPixel(), pMd->Serialize().c_str());
-
-    if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
-    {
-        // do not stop on overflow - just reset the buffer
-        pCore->ClearImageBuffer(this);
-        nRet = pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
-            GetImageBytesPerPixel(), pMd->Serialize().c_str(), false);
-    }
-
-    return nRet;
 }
 
 int Universal::ProcessNotification( const NotificationEntry& entry )

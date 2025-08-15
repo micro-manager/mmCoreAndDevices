@@ -4507,25 +4507,10 @@ int QICamera::InsertImage(int iFrameBuff)
 
       ret = GetCoreCallback()->InsertImage(this, (unsigned char*) m_colorBuffer.GetPixelsRW(), 
          m_colorBuffer.Width(), m_colorBuffer.Height(), m_colorBuffer.Depth());
-
-      if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW) {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         ret = GetCoreCallback()->InsertImage(this, (unsigned char*) m_colorBuffer.GetPixelsRW(), 
-            m_colorBuffer.Width(), m_colorBuffer.Height(), m_colorBuffer.Depth());
-      }
-
    } else {
       int bytes = (pFrame->bits > 8) ? 2 : 1;
       ret = GetCoreCallback()->InsertImage(this, (unsigned char*) pFrame->pBuffer, 
          pFrame->width, pFrame->height, bytes);
-
-      if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW) {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         ret = GetCoreCallback()->InsertImage(this, (unsigned char*) pFrame->pBuffer, 
-            pFrame->width, pFrame->height, bytes);
-      }
    }
    return ret;
 }

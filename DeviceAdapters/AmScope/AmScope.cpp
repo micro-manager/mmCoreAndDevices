@@ -752,7 +752,6 @@ int AmScope::StartSequenceAcquisition(long numImages, double interval_ms, bool s
    sequenceStartTime_ = GetCurrentMMTime();
    imageCounter_ = 0;
    thd_->Start(numImages,interval_ms);
-   stopOnOverflow_ = stopOnOverflow;
 
    return DEVICE_OK;
 }
@@ -781,14 +780,6 @@ int AmScope::InsertImage()
   unsigned int b = GetImageBytesPerPixel();  
 
   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str() );
-
-  if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-  {  
-    // do not stop on overflow - just reset the buffer
-    GetCoreCallback()->ClearImageBuffer(this);
-    // don't process this same image again...
-    ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-  }
   
   if (ret == DEVICE_OK)
   {
