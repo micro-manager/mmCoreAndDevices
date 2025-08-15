@@ -759,19 +759,6 @@ int CoreCallback::GetFocusPosition(double& pos)
    return DEVICE_CORE_FOCUS_STAGE_UNDEF;
 }
 
-int CoreCallback::GetXYPosition(double& x, double& y)
-{
-   std::shared_ptr<XYStageInstance> xyStage =
-      core_->currentXYStageDevice_.lock();
-   if (xyStage)
-   {
-      return xyStage->GetPositionUm(x, y);
-   }
-   x = 0.0;
-   y = 0.0;
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
 int CoreCallback::GetDeviceProperty(const char* deviceName, const char* propName, char* value)
 {
    try
