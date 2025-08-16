@@ -218,7 +218,10 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess)
 {
    Metadata origMd;
-   origMd.Restore(serializedMetadata);
+   if (serializedMetadata)
+   {
+      origMd.Restore(serializedMetadata);
+   }
 
    try 
    {
@@ -246,7 +249,10 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess)
 {
    Metadata origMd;
-   origMd.Restore(serializedMetadata);
+   if (serializedMetadata)
+   {
+      origMd.Restore(serializedMetadata);
+   }
 
    try 
    {
