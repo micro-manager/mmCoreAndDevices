@@ -123,7 +123,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 SpinnakerCamera::SpinnakerCamera(GENICAM::gcstring name)
-   : CCameraBase<SpinnakerCamera>(),
+   : CLegacyCameraBase<SpinnakerCamera>(),
    m_system(nullptr),
    m_cam(nullptr),
    m_imageBuff(nullptr),

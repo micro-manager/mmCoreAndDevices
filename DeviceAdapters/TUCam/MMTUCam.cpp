@@ -251,7 +251,7 @@ int CMMTUCam::s_nCntCam  = 0;
 * perform most of the initialization in the Initialize() method.
 */
 CMMTUCam::CMMTUCam() :
-    CCameraBase<CMMTUCam> (),
+    CLegacyCameraBase<CMMTUCam> (),
     exposureMaximum_(10000.0),     
     exposureMinimum_(0.0),
     dPhase_(0),
