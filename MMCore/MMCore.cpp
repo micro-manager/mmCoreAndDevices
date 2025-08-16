@@ -130,6 +130,7 @@ CMMCore::CMMCore() :
    externalCallback_(0),
    pixelSizeGroup_(0),
    cbuf_(0),
+   sequenceImageCount_(0),
    pluginManager_(new CPluginManager()),
    deviceManager_(new mm::DeviceManager())
 {
@@ -2864,6 +2865,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
 			}
 			cbuf_->Clear();
+         sequenceImageCount_ = numImages;
          cbuf_->SetOverwriteData(!stopOnOverflow);
          mm::DeviceModuleLockGuard guard(camera);
 
@@ -2910,6 +2912,7 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
    }
    cbuf_->Clear();
+   sequenceImageCount_ = numImages;
    cbuf_->SetOverwriteData(!stopOnOverflow);
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
@@ -2982,6 +2985,7 @@ void CMMCore::stopSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(CMM
    mm::DeviceModuleLockGuard guard(pCam);
    LOG_DEBUG(coreLogger_) << "Will stop sequence acquisition from camera " << label;
    int nRet = pCam->StopSequenceAcquisition();
+   sequenceImageCount_ = 0; // Reset sequence count when stopping
    if (nRet != DEVICE_OK)
    {
       logError(label, getDeviceErrorText(nRet, pCam).c_str());
@@ -3015,6 +3019,7 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGAC
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
       }
       cbuf_->Clear();
+      sequenceImageCount_ = -1; // -1 indicates continuous/unlimited acquisition
       cbuf_->SetOverwriteData(true);
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
       int nRet = camera->StartSequenceAcquisition(intervalMs);
@@ -3041,6 +3046,7 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
       mm::DeviceModuleLockGuard guard(camera);
       LOG_DEBUG(coreLogger_) << "Will stop sequence acquisition from current camera";
       int nRet = camera->StopSequenceAcquisition();
+      sequenceImageCount_ = 0; // Reset sequence count when stopping
       if (nRet != DEVICE_OK)
       {
          logError(getDeviceName(camera).c_str(), getDeviceErrorText(nRet, camera).c_str());
@@ -3296,6 +3302,14 @@ long CMMCore::getRemainingImageCount()
       return cbuf_->GetRemainingImageCount();
    }
    return 0;
+}
+
+/**
+ * Returns the total number of images requested for the current sequence acquisition
+ */
+long CMMCore::getSequenceImageCount()
+{
+   return sequenceImageCount_;
 }
 
 /**
