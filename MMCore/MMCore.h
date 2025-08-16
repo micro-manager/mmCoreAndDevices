@@ -435,6 +435,7 @@ public:
    void* popNextImageMD(Metadata& md) MMCORE_LEGACY_THROW(CMMError);
 
    long getRemainingImageCount();
+   long getSequenceImageCount();
    long getBufferTotalCapacity();
    long getBufferFreeCapacity();
    bool isBufferOverflowed() const;
@@ -716,6 +717,7 @@ private:
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
    CircularBuffer* cbuf_;
+   long sequenceImageCount_;
 
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;
