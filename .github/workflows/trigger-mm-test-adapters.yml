@@ -25,12 +25,10 @@ jobs:
     steps:
       - name: Get app token
         id: app
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.MM_PR_BOT_APP_ID }}
           private-key: ${{ secrets.MM_APP_PRIVATE_KEY }}
-          owner: micro-manager
-          repositories: mm-test-adapters
 
       - name: Send repository_dispatch to mm-test-adapters
         uses: actions/github-script@v7
