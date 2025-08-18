@@ -50,8 +50,8 @@ git submodule update --init --recursive
 
 ### Using the justfile
 
-This repo contains a justfile that runs common tasks using
-[just](https://github.com/casey/just).
+This repo contains a justfile that runs common tasks (currently for developers)
+using [just](https://github.com/casey/just).
 
 To use it, you will need `just`, `meson`, and `ninja` installed.  You can
 install these however you like, including with homebrew, winget, or, using uv:
