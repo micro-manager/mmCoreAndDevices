@@ -50,6 +50,8 @@
 
 const char* NoHubError = "Parent Hub not defined.";
 
+enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST };
+
 // Defines which segments in a seven-segment display are lit up for each of
 // the numbers 0-9. Segments are:
 //
@@ -223,45 +225,44 @@ private:
    bool GenerateColorTestPattern(ImgBuffer& img);
    int ResizeImageBuffer();
 
-   static const double nominalPixelSizeUm_;
+   static constexpr double nominalPixelSizeUm_ = 1.0;
 
-   double exposureMaximum_;
-   double dPhase_;
+   double exposureMaximum_ = 10000.0;
+   double dPhase_ = 0.0;
    ImgBuffer img_;
-   bool busy_;
-   bool stopOnOverFlow_;
-   bool initialized_;
-   double readoutUs_;
+   bool stopOnOverFlow_{};
+   bool initialized_ = false;
+   double readoutUs_ = 0.0;
    MM::MMTime readoutStartTime_;
-   long scanMode_;
-   int bitDepth_;
-   unsigned roiX_;
-   unsigned roiY_;
+   long scanMode_ = 1;
+   int bitDepth_ = 8;
+   unsigned roiX_ = 0;
+   unsigned roiY_ = 0;
    MM::MMTime sequenceStartTime_;
-   bool isSequenceable_;
-   long sequenceMaxLength_;
-   bool sequenceRunning_;
-   unsigned long sequenceIndex_;
+   bool isSequenceable_ = false;
+   long sequenceMaxLength_ = 100;
+   bool sequenceRunning_ = false;
+   unsigned long sequenceIndex_ = 0;
    double GetSequenceExposure();
    std::vector<double> exposureSequence_;
-   long imageCounter_;
-	long binSize_;
-	long cameraCCDXSize_;
-	long cameraCCDYSize_;
-   double ccdT_;
+   long imageCounter_ = 0;
+   long binSize_ = 1;
+   long cameraCCDXSize_ = 512;
+	long cameraCCDYSize_ = 512;
+   double ccdT_ = 0.0;
 	std::string triggerDevice_;
 
-   bool stopOnOverflow_;
+   bool stopOnOverflow_ = false;
 
-	bool dropPixels_;
-   bool fastImage_;
-	bool saturatePixels_;
-	double fractionOfPixelsToDropOrSaturate_;
-   bool shouldRotateImages_;
-   bool shouldDisplayImageNumber_;
-   double stripeWidth_;
-   bool supportsMultiROI_;
-   int multiROIFillValue_;
+	bool dropPixels_ = false;
+   bool fastImage_ = false;
+	bool saturatePixels_ = false;
+	double fractionOfPixelsToDropOrSaturate_ = 0.002;
+   bool shouldRotateImages_ = false;
+   bool shouldDisplayImageNumber_ = false;
+   double stripeWidth_ = 1.0;
+   bool supportsMultiROI_ = false;
+   int multiROIFillValue_ = 0;
    std::vector<unsigned> multiROIXs_;
    std::vector<unsigned> multiROIYs_;
    std::vector<unsigned> multiROIWidths_;
@@ -273,20 +274,19 @@ private:
    MMThreadLock imgPixelsLock_;
    MMThreadLock asyncFollowerLock_;
    friend class MySequenceThread;
-   int nComponents_;
+   int nComponents_ = 1;
    MySequenceThread * thd_;
    std::future<void> fut_;
-   int mode_;
-   ImgManipulator* imgManpl_;
-   double pcf_;
-   double photonFlux_;
-   double readNoise_;
+   int mode_ = MODE_ARTIFICIAL_WAVES;
+   ImgManipulator* imgManpl_ = nullptr;
+   double pcf_ = 1.0;
+   double photonFlux_ = 50.0;
+   double readNoise_ = 2.5;
 };
 
 class MySequenceThread : public MMDeviceThreadBase
 {
    friend class CDemoCamera;
-   enum { default_numImages=1, default_intervalMS = 100 };
    public:
       MySequenceThread(CDemoCamera* pCam);
       ~MySequenceThread();
@@ -302,20 +302,20 @@ class MySequenceThread : public MMDeviceThreadBase
       long GetImageCounter(){return imageCounter_;}                             
       MM::MMTime GetStartTime(){return startTime_;}                             
       MM::MMTime GetActualDuration(){return actualDuration_;}
-   private:                                                                     
+   private:
       int svc(void) throw();
-      double intervalMs_;                                                       
-      long numImages_;                                                          
-      long imageCounter_;                                                       
-      bool stop_;                                                               
-      bool suspend_;                                                            
-      CDemoCamera* camera_;                                                     
-      MM::MMTime startTime_;                                                    
-      MM::MMTime actualDuration_;                                               
-      MM::MMTime lastFrameTime_;                                                
-      MMThreadLock stopLock_;                                                   
-      MMThreadLock suspendLock_;                                                
-}; 
+      double intervalMs_ = 100;
+      long numImages_ = 1;
+      long imageCounter_ = 0;
+      bool stop_ = true;
+      bool suspend_ = false;
+      CDemoCamera *camera_{};
+      MM::MMTime startTime_;
+      MM::MMTime actualDuration_;
+      MM::MMTime lastFrameTime_;
+      MMThreadLock stopLock_;
+      MMThreadLock suspendLock_;
+};
 
 //////////////////////////////////////////////////////////////////////////////
 // CDemoFilterWheel class
@@ -342,10 +342,10 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   long numPos_;
-   bool initialized_;
+   long numPos_ = 10;
+   bool initialized_ = false;
    MM::MMTime changedTime_;
-   long position_;
+   long position_ = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -372,10 +372,10 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   long numPos_;
-   bool busy_;
-   bool initialized_;
-   long position_;
+   long numPos_ = 3;
+   bool busy_ = false;
+   bool initialized_ = false;
+   long position_ = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -404,14 +404,14 @@ public:
    int OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   long numPos_;
-   bool busy_;
-   bool initialized_;
-   bool sequenceRunning_;
-   unsigned long sequenceMaxSize_;
-   unsigned long sequenceIndex_;
+   long numPos_ = 6;
+   bool busy_ = false;
+   bool initialized_ = false;
+   bool sequenceRunning_ = false;
+   unsigned long sequenceMaxSize_ = 10;
+   unsigned long sequenceIndex_ = 0;
    std::vector<std::string> sequence_;
-   long position_;
+   long position_ = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -445,15 +445,14 @@ public:
    int GetGateOpen(bool& open);
 
 private:
-   uint16_t numPatterns_;
-   long numPos_;
-   bool initialized_;
+   uint16_t numPatterns_ = 50;
+   long numPos_ = 10;
+   bool initialized_ = false;
    MM::MMTime changedTime_;
-   bool busy_;
-   bool sequenceOn_;
-   bool gateOpen_;
-   bool isClosed_;
-   long position_;
+   bool sequenceOn_ = false;
+   bool gateOpen_ = true;
+   bool isClosed_ = true;
+   long position_ = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -514,13 +513,13 @@ public:
 
 private:
    void SetIntensityFactor(double pos);
-   double stepSize_um_;
-   double pos_um_;
-   bool busy_;
-   bool initialized_;
-   double lowerLimit_;
-   double upperLimit_;
-   bool sequenceable_;
+   double stepSize_um_ = 0.025;
+   double pos_um_ = 0.0;
+   bool busy_ = false;
+   bool initialized_ = false;
+   double lowerLimit_ = -300.0;
+   double upperLimit_ = 300.0;
+   bool sequenceable_ = false;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -585,18 +584,18 @@ public:
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   double stepSize_um_;
-   double posX_um_;
-   double posY_um_;
-   double startPosX_um_, startPosY_um_;
-   double targetPosX_um_, targetPosY_um_;
+   double stepSize_um_ = 0.015;
+   double posX_um_ = 0.0;
+   double posY_um_ = 0.0;
+   double startPosX_um_ = 0.0, startPosY_um_ = 0.0;
+   double targetPosX_um_ = 0.0, targetPosY_um_ = 0.0;
    MM::MMTime moveStartTime_;     // from GetCurrentMMTime()
-   long moveDuration_ms_;         // duration of current move in milliseconds
-   MM::TimeoutMs* timeOutTimer_;
-   double velocity_;
-   bool initialized_;
-   double lowerLimit_;
-   double upperLimit_;
+   long moveDuration_ms_ = 100;   // duration of current move in milliseconds
+   MM::TimeoutMs* timeOutTimer_ = nullptr;
+   double velocity_ = 10.0;  // in mm/s ( = um/ms)
+   bool initialized_ = false;
+   double lowerLimit_ = 0.0;
+   double upperLimit_ = 20000.0;
 
    void CommitCurrentIntermediatePosition_(const MM::MMTime& now);
    void ComputeIntermediatePosition(const MM::MMTime& currentTime,
@@ -611,7 +610,7 @@ private:
 class DemoShutter : public CShutterBase<DemoShutter>
 {
 public:
-   DemoShutter() : state_(false), initialized_(false), changedTime_(0.0)
+   DemoShutter()
    {
       EnableDelay(); // signals that the dealy setting will be used
       
@@ -646,8 +645,8 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool state_;
-   bool initialized_;
+   bool state_ = false;
+   bool initialized_ = false;
    MM::MMTime changedTime_;
 };
 
@@ -705,12 +704,12 @@ public:
    int OnRealVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   uint8_t n_;
-   double volt_;
-   double gatedVolts_;
-   bool open_;
-   bool sequenceRunning_;
-   unsigned long sequenceIndex_;
+   uint8_t n_{};
+   double volt_ = 0;
+   double gatedVolts_ = 0;
+   bool open_ = true;
+   bool sequenceRunning_ = false;
+   unsigned long sequenceIndex_ = 0;
    std::vector<double> sentSequence_;
    std::vector<double> nascentSequence_;
 
@@ -751,10 +750,10 @@ public:
 private:
    std::string highMagString();
 
-   int position_;
-   double zoomPosition_;
-   double highMag_;
-   bool variable_;
+   int position_ = 0;
+   double zoomPosition_ = 1.0;
+   double highMag_ = 1.6;
+   bool variable_ = false;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -765,7 +764,7 @@ private:
 class TransposeProcessor : public CImageProcessorBase<TransposeProcessor>
 {
 public:
-   TransposeProcessor () : inPlace_ (false), pTemp_(NULL), tempSize_(0), busy_(false)
+   TransposeProcessor ()
    {
       // parent ID display
       CreateHubIDProperty();
@@ -840,10 +839,10 @@ public:
    int OnInPlaceAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool inPlace_;
-   void* pTemp_;
-   unsigned long tempSize_;
-   bool busy_;
+   bool inPlace_ = false;
+   void* pTemp_ = nullptr;
+   unsigned long tempSize_ = 0;
+   bool busy_ = false;
 };
 
 
@@ -856,9 +855,6 @@ private:
 class ImageFlipX : public CImageProcessorBase<ImageFlipX>
 {
 public:
-   ImageFlipX () :  busy_(false) {}
-   ~ImageFlipX () {  }
-
    int Shutdown() {return DEVICE_OK;}
    void GetName(char* name) const {strcpy(name,"ImageFlipX");}
 
@@ -887,7 +883,7 @@ public:
    int OnPerformanceTiming(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool busy_;
+   bool busy_ = false;
    MM::MMTime performanceTiming_;
 };
 
@@ -900,9 +896,6 @@ private:
 class ImageFlipY : public CImageProcessorBase<ImageFlipY>
 {
 public:
-   ImageFlipY () : busy_(false), performanceTiming_(0.) {}
-   ~ImageFlipY () {  }
-
    int Shutdown() {return DEVICE_OK;}
    void GetName(char* name) const {strcpy(name,"ImageFlipY");}
 
@@ -934,9 +927,8 @@ public:
    int OnPerformanceTiming(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool busy_;
+   bool busy_ = false;
    MM::MMTime performanceTiming_;
-
 };
 
 
@@ -949,7 +941,7 @@ private:
 class MedianFilter : public CImageProcessorBase<MedianFilter>
 {
 public:
-   MedianFilter () : busy_(false), performanceTiming_(0.),pSmoothedIm_(0), sizeOfSmoothedIm_(0)
+   MedianFilter ()
    {
       // parent ID display
       CreateHubIDProperty();
@@ -1054,13 +1046,10 @@ public:
    int OnPerformanceTiming(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool busy_;
+   bool busy_ = false;
    MM::MMTime performanceTiming_;
-   void*  pSmoothedIm_;
-   unsigned long sizeOfSmoothedIm_;
-   
-
-
+   void*  pSmoothedIm_ = nullptr;
+   unsigned long sizeOfSmoothedIm_ = 0;
 };
 
 
@@ -1073,17 +1062,11 @@ private:
 class DemoAutoFocus : public CAutoFocusBase<DemoAutoFocus>
 {
 public:
-   DemoAutoFocus() : 
-      running_(false), 
-      busy_(false), 
-      initialized_(false),
-      offset_(0.0)
-      {
-         CreateHubIDProperty();
-      }
+   DemoAutoFocus()
+   {
+      CreateHubIDProperty();
+   }
 
-   ~DemoAutoFocus() {}
-      
    // MMDevice API
    bool Busy() {return busy_;}
    void GetName(char* pszName) const;
@@ -1127,10 +1110,10 @@ public:
    }
 
 private:
-   bool running_;
-   bool busy_;
-   bool initialized_;
-   double offset_;
+   bool running_ = false;
+   bool busy_ = false;
+   bool initialized_ = false;
+   double offset_ = 0.0;
 };
 
 struct Point
@@ -1188,8 +1171,8 @@ public:
 
 private:
 
-   CDemoCamera* demoCamera_;
-   unsigned short gaussianMask_[10][10];
+   CDemoCamera* demoCamera_ = nullptr;
+   unsigned short gaussianMask_[10][10]{};
 
    double GaussValue(double amplitude, double sigmaX, double sigmaY, int muX, int muY, int x, int y);
    Point GalvoToCameraPoint(PointD GalvoPoint, ImgBuffer& img);
@@ -1198,18 +1181,18 @@ private:
 
    std::map<int, std::vector<PointD> > vertices_;
    MM::MMTime pfExpirationTime_;
-   bool initialized_;
-   bool busy_;
-   bool illuminationState_;
-   bool pointAndFire_;
-   bool runROIS_;
-   double xRange_;
-   double yRange_;
-   double currentX_;
-   double currentY_;
-   int offsetX_;
-   double vMaxX_;
-   int offsetY_;
-   double vMaxY_;
-   double pulseTime_Us_;
+   bool initialized_ = false;
+   bool busy_ = false;
+   bool illuminationState_ = false;
+   bool pointAndFire_ = false;
+   bool runROIS_ = false;
+   double xRange_ = 10.0;
+   double yRange_ = 10.0;
+   double currentX_ = 0.0;
+   double currentY_ = 0.0;
+   int offsetX_ = 20;
+   double vMaxX_ = 10.0;
+   int offsetY_ = 15;
+   double vMaxY_ = 10.0;
+   double pulseTime_Us_ = 100000.0;
 };
