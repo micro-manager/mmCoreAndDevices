@@ -39,6 +39,7 @@ shared_module(
     dependencies: [
         mmdevice_dep,
     ],
+    gnu_symbol_visibility: 'inlineshidden',
     name_prefix: '',
     name_suffix: 'mmdev',
 )
