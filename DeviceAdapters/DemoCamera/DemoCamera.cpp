@@ -1916,7 +1916,9 @@ int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
       else if (choice == "Divide by Zero")
       {
          volatile int i = 1, j = 0;
-         [[maybe_unused]] volatile int k = i / j;
+         volatile int k = i / j;
+         // to suppress compiler warning
+         (void) k;
       }
    }
    return DEVICE_OK;
