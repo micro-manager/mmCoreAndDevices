@@ -34,6 +34,7 @@ shared_module(
         boost_dep,
         msgpack_dep,
     ],
+    gnu_symbol_visibility: 'inlineshidden',
     name_prefix: '',
     name_suffix: 'mmdev',
 )
