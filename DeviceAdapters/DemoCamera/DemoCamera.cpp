@@ -33,6 +33,10 @@
 #include <iostream>
 #include <future>
 
+#ifdef _WIN32
+   #include <timeapi.h>
+#endif
+
 double g_IntensityFactor_ = 1.0;
 
 // External names used used by the rest of the system
@@ -1052,7 +1056,8 @@ int CDemoCamera::InsertImage()
    // Important:  metadata about the image are generated here:
    Metadata md;
    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   std::string elapsed = CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec());
+   md.put(MM::g_Keyword_Elapsed_Time_ms, elapsed);
    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
@@ -1096,12 +1101,17 @@ int CDemoCamera::RunSequenceOnThread()
    if (!fastImage_)
    {
       GenerateSyntheticImage(img_, exposure);
-   }
 
-   // Simulate exposure duration
-   while ((GetCurrentMMTime() - startTime).getMsec() < exposure)
-   {
-      CDeviceUtils::SleepMs(1);
+      // Simulate exposure duration
+      while ((GetCurrentMMTime() - startTime).getMsec() < exposure)
+      {
+         CDeviceUtils::SleepMs(1);
+      }
+   }
+   else {
+      unsigned long wait = (double) exposure;
+      wait = wait < 1 ? 1ul : wait;
+      CDeviceUtils::SleepMs(wait);
    }
 
    return InsertImage();
@@ -1175,6 +1185,9 @@ void MySequenceThread::Resume() {
 int MySequenceThread::svc(void) throw()
 {
    int ret=DEVICE_ERR;
+   #ifdef _WIN32
+      timeBeginPeriod(1);
+   #endif
    try 
    {
       do
@@ -1188,6 +1201,9 @@ int MySequenceThread::svc(void) throw()
    }
    stop_=true;
    actualDuration_ = camera_->GetCurrentMMTime() - startTime_;
+   #ifdef _WIN32
+      timeEndPeriod(1);
+   #endif
    camera_->OnThreadExiting();
    return ret;
 }
