@@ -36,7 +36,7 @@ mmdevice_proj = subproject(
         'tests': tests_option,
     },
 )
-mmdevice_dep = mmdevice_proj.get_variable('mmdevice')
+mmdevice_dep = mmdevice_proj.get_variable('mmdevice_dep')
 
 mmcore_sources = files(
     'CircularBuffer.cpp',
@@ -117,11 +117,12 @@ mmcore_lib = static_library(
 
 subdir('unittest')
 
-mmcore = declare_dependency(
+mmcore_dep = declare_dependency(
     include_directories: mmcore_include_dir,
     link_with: mmcore_lib,
     dependencies: mmdevice_dep,
 )
+meson.override_dependency('mmcore', mmcore_dep)
 
 # For providing include dir to SWIG when using this project as a subproject
 swig_include_dirs = mmdevice_proj.get_variable('swig_include_dirs') + [
