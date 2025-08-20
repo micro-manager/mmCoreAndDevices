@@ -11,7 +11,15 @@ project(
     ],
 )
 
+cxx = meson.get_compiler('cpp')
+
+if cxx.get_id() in ['msvc', 'clang-cl']
+    add_project_arguments('-DNOMINMAX', language: 'cpp')
+endif
+
 mmdevice_dep = dependency('mmdevice')
+
+winmm_lib = cxx.find_library('Winmm', required: false)
 
 sources = [
     'DemoCamera.cpp',
@@ -22,6 +30,7 @@ shared_module(
     sources,
     dependencies: [
         mmdevice_dep,
+        winmm_lib,
     ],
     gnu_symbol_visibility: 'inlineshidden',
     name_prefix: '',
