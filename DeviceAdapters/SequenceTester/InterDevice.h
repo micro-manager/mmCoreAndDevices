@@ -25,10 +25,9 @@
 
 #include "LoggedSetting.h"
 
-#include <boost/unordered_map.hpp>
-
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 class SettingLogger;
 class TesterHub;
@@ -62,5 +61,5 @@ protected:
 private:
    const std::string name_;
    std::shared_ptr<TesterHub> hub_;
-   boost::unordered_map<std::string, EdgeTriggerSignal*> edgeTriggersSources_;
+   std::unordered_map<std::string, EdgeTriggerSignal*> edgeTriggersSources_;
 };

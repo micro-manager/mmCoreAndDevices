@@ -26,7 +26,6 @@
 
 #include "ModuleInterface.h"
 
-#include <boost/unordered_map.hpp>
 
 #include <exception>
 #include <future>
@@ -34,6 +33,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 
 
@@ -72,7 +72,7 @@ namespace
    class DeviceRetainer
    {
       static std::mutex mutex_;
-      static boost::unordered_map<
+      static std::unordered_map<
          MM::Device*,
          std::shared_ptr<InterDevice>
       > devices_;
@@ -100,7 +100,7 @@ namespace
    };
 
    std::mutex DeviceRetainer::mutex_;
-   boost::unordered_map<
+   std::unordered_map<
       MM::Device*,
       std::shared_ptr<InterDevice>
    > DeviceRetainer::devices_;
@@ -232,7 +232,7 @@ TesterHub::UnregisterDevice(const std::string& name)
 InterDevice::Ptr
 TesterHub::FindPeerDevice(const std::string& name)
 {
-   boost::unordered_map< std::string, std::weak_ptr<InterDevice> >::iterator
+   std::unordered_map< std::string, std::weak_ptr<InterDevice> >::iterator
       found = devices_.find(name);
    if (found == devices_.end())
       return InterDevice::Ptr();

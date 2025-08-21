@@ -32,13 +32,13 @@
 #include "DeviceBase.h"
 
 #include <boost/signals2.hpp>
-#include <boost/unordered_map.hpp>
 
 #include <future>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 
@@ -103,7 +103,7 @@ class TesterHub : public TesterBase<HubBase, TesterHub>
 
    SettingLogger logger_;
 
-   boost::unordered_map< std::string, std::weak_ptr<InterDevice> > devices_;
+   std::unordered_map< std::string, std::weak_ptr<InterDevice> > devices_;
 
 public:
    typedef TesterHub Self;
