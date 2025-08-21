@@ -81,7 +81,7 @@ LoggedSetting::ConnectToEdgeTriggerSource(EdgeTriggerSignal& source)
 {
    edgeTriggerConnection_ = source.connect(
          EdgeTriggerSignal::slot_type(&Self::ReceiveEdgeTrigger, this).
-         track(shared_from_this()));
+         track_foreign(shared_from_this()));
 }
 
 

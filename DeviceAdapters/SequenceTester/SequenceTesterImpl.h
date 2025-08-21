@@ -89,7 +89,7 @@ TesterBase<TDeviceBase, UConcreteDevice>::Shutdown()
    TesterHub::Guard g(GetHub()->LockGlobalMutex());
 
    CommonHubPeripheralShutdown();
-   InterDevice::SetHub(boost::shared_ptr<TesterHub>());
+   InterDevice::SetHub(std::shared_ptr<TesterHub>());
    return DEVICE_OK;
 }
 

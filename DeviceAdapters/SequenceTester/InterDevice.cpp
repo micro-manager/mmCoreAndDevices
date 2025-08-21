@@ -35,7 +35,7 @@ InterDevice::GetLogger()
 EdgeTriggerSignal*
 InterDevice::GetEdgeTriggerSource(const std::string& port)
 {
-   boost::unordered_map<std::string, EdgeTriggerSignal*>::const_iterator
+   std::unordered_map<std::string, EdgeTriggerSignal*>::const_iterator
       found = edgeTriggersSources_.find(port);
    if (found == edgeTriggersSources_.end())
       return 0;
