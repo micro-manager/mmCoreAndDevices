@@ -26,11 +26,11 @@
 
 #include "ModuleInterface.h"
 
-#include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
 
 #include <exception>
 #include <future>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -74,7 +74,7 @@ namespace
       static std::mutex mutex_;
       static boost::unordered_map<
          MM::Device*,
-         boost::shared_ptr<InterDevice>
+         std::shared_ptr<InterDevice>
       > devices_;
 
    public:
@@ -83,8 +83,8 @@ namespace
       {
          std::lock_guard<std::mutex> g(mutex_);
 
-         boost::shared_ptr<InterDevice> interdev =
-            boost::make_shared<TDevice>(name);
+         std::shared_ptr<InterDevice> interdev =
+            std::make_shared<TDevice>(name);
 
          MM::Device* pDevice = static_cast<TDevice*>(interdev.get());
          devices_.insert(std::make_pair(pDevice, interdev));
@@ -102,7 +102,7 @@ namespace
    std::mutex DeviceRetainer::mutex_;
    boost::unordered_map<
       MM::Device*,
-      boost::shared_ptr<InterDevice>
+      std::shared_ptr<InterDevice>
    > DeviceRetainer::devices_;
 }
 
@@ -178,7 +178,7 @@ TesterHub::Shutdown()
 
    // For hub only, do _not_ call Super::Shutdown(). Release the self-reference
    // created in Initialize().
-   InterDevice::SetHub(boost::shared_ptr<TesterHub>());
+   InterDevice::SetHub(std::shared_ptr<TesterHub>());
    return DEVICE_OK;
 }
 
@@ -210,7 +210,7 @@ TesterHub::DetectInstalledDevices()
 int
 TesterHub::RegisterDevice(const std::string& name, InterDevice::Ptr device)
 {
-   boost::weak_ptr<InterDevice>& ptr = devices_[name];
+   std::weak_ptr<InterDevice>& ptr = devices_[name];
    if (!ptr.lock())
    {
       ptr = device;
@@ -232,7 +232,7 @@ TesterHub::UnregisterDevice(const std::string& name)
 InterDevice::Ptr
 TesterHub::FindPeerDevice(const std::string& name)
 {
-   boost::unordered_map< std::string, boost::weak_ptr<InterDevice> >::iterator
+   boost::unordered_map< std::string, std::weak_ptr<InterDevice> >::iterator
       found = devices_.find(name);
    if (found == devices_.end())
       return InterDevice::Ptr();
@@ -1002,8 +1002,8 @@ TesterAutofocus::UpdateZStageLink()
       return;
 
    InterDevice::Ptr device = GetHub()->FindPeerDevice(zStageName);
-   boost::shared_ptr<TesterZStage> zStage =
-      boost::dynamic_pointer_cast<TesterZStage>(device);
+   std::shared_ptr<TesterZStage> zStage =
+      std::dynamic_pointer_cast<TesterZStage>(device);
    if (!zStage)
       return;
 

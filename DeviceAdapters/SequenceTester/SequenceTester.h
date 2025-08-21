@@ -31,12 +31,11 @@
 
 #include "DeviceBase.h"
 
-#include <boost/shared_ptr.hpp>
 #include <boost/signals2.hpp>
 #include <boost/unordered_map.hpp>
-#include <boost/weak_ptr.hpp>
 
 #include <future>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -104,7 +103,7 @@ class TesterHub : public TesterBase<HubBase, TesterHub>
 
    SettingLogger logger_;
 
-   boost::unordered_map< std::string, boost::weak_ptr<InterDevice> > devices_;
+   boost::unordered_map< std::string, std::weak_ptr<InterDevice> > devices_;
 
 public:
    typedef TesterHub Self;
@@ -120,8 +119,8 @@ public:
    typedef std::unique_lock<std::recursive_mutex> Guard;
    Guard LockGlobalMutex() const { return Guard(hubGlobalMutex_); }
 
-   boost::shared_ptr<TesterHub> GetSharedPtr()
-   { return boost::static_pointer_cast<TesterHub>(shared_from_this()); }
+   std::shared_ptr<TesterHub> GetSharedPtr()
+   { return std::static_pointer_cast<TesterHub>(shared_from_this()); }
    virtual SettingLogger* GetLogger() { return &logger_; }
 
    int RegisterDevice(const std::string& name, InterDevice::Ptr device);
