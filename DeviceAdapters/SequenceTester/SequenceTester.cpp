@@ -26,12 +26,14 @@
 
 #include "ModuleInterface.h"
 
-#include <boost/move/move.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
 #include <boost/unordered_map.hpp>
+
 #include <exception>
+#include <future>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
 
 
@@ -69,7 +71,7 @@ namespace
    // their lifetime.
    class DeviceRetainer
    {
-      static boost::mutex mutex_;
+      static std::mutex mutex_;
       static boost::unordered_map<
          MM::Device*,
          boost::shared_ptr<InterDevice>
@@ -79,7 +81,7 @@ namespace
       template <class TDevice>
       static MM::Device* CreateDevice(const std::string& name)
       {
-         boost::lock_guard<boost::mutex> g(mutex_);
+         std::lock_guard<std::mutex> g(mutex_);
 
          boost::shared_ptr<InterDevice> interdev =
             boost::make_shared<TDevice>(name);
@@ -92,12 +94,12 @@ namespace
 
       static void DeleteDevice(MM::Device* pDevice)
       {
-         boost::lock_guard<boost::mutex> g(mutex_);
+         std::lock_guard<std::mutex> g(mutex_);
          devices_.erase(pDevice);
       }
    };
 
-   boost::mutex DeviceRetainer::mutex_;
+   std::mutex DeviceRetainer::mutex_;
    boost::unordered_map<
       MM::Device*,
       boost::shared_ptr<InterDevice>
@@ -428,7 +430,7 @@ TesterCamera::StartSequenceAcquisitionImpl(bool finite, long count,
    // by it is accessed in this function.
 
    {
-      boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+      std::lock_guard<std::mutex> lock(sequenceMutex_);
       if (!stopSequence_)
          return DEVICE_ERR;
       stopSequence_ = false;
@@ -436,14 +438,13 @@ TesterCamera::StartSequenceAcquisitionImpl(bool finite, long count,
 
    GetCoreCallback()->PrepareForAcq(this);
 
-   // Note: boost::packaged_task<void ()> in more recent versions of Boost.
-   boost::packaged_task<void> captureTask(
+   std::packaged_task<void()> captureTask(
          [this, finite, count, stopOnOverflow] {
             SendSequence(finite, count, stopOnOverflow);
          });
    sequenceFuture_ = captureTask.get_future();
 
-   boost::thread captureThread(boost::move(captureTask));
+   std::thread captureThread(std::move(captureTask));
    captureThread.detach();
 
    return DEVICE_OK;
@@ -457,14 +458,13 @@ TesterCamera::StopSequenceAcquisition()
    // deadlock with the wait on sequenceFuture_.
 
    {
-      boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+      std::lock_guard<std::mutex> lock(sequenceMutex_);
       if (stopSequence_)
          return DEVICE_OK;
       stopSequence_ = true;
    }
 
-   // In newer Boost versions: if (sequenceFuture_.valid())
-   if (sequenceFuture_.get_state() != boost::future_state::uninitialized)
+   if (sequenceFuture_.valid())
    {
       try
       {
@@ -472,10 +472,10 @@ TesterCamera::StopSequenceAcquisition()
       }
       catch (const DeviceError& e)
       {
-         sequenceFuture_ = boost::unique_future<void>();
+         sequenceFuture_ = std::future<void>();
          return e.GetCode();
       }
-      sequenceFuture_ = boost::unique_future<void>();
+      sequenceFuture_ = std::future<void>();
    }
 
    return GetCoreCallback()->AcqFinished(this, 0);
@@ -488,7 +488,7 @@ TesterCamera::IsCapturing()
    // Skip locking of hub global mutex, since we only access stopSequence_
    // which is protected by its own mutex.
 
-   boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+   std::lock_guard<std::mutex> lock(sequenceMutex_);
    return !stopSequence_;
 }
 
@@ -544,7 +544,7 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
    for (long frame = 0; !finite || frame < count; ++frame)
    {
       {
-         boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+         std::lock_guard<std::mutex> lock(sequenceMutex_);
          if (stopSequence_)
             break;
       }
@@ -564,7 +564,7 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
          {
             bool stopped;
             {
-               boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+               std::lock_guard<std::mutex> lock(sequenceMutex_);
                stopped = stopSequence_;
             }
             // If we're stopped already, that could be the reason for the
