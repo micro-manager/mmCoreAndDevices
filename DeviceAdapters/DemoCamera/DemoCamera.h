@@ -49,6 +49,8 @@
 #define HUB_NOT_AVAILABLE        107
 
 const char* NoHubError = "Parent Hub not defined.";
+extern const char* g_PressurePumpDeviceName;
+extern const char* g_PropImposedPressure;
 
 enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST };
 
@@ -1195,4 +1197,64 @@ private:
    int offsetY_ = 15;
    double vMaxY_ = 10.0;
    double pulseTime_Us_ = 100000.0;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// DemoPressurePump class
+// Simulation of PressurePump
+//////////////////////////////////////////////////////////////////////////////
+class DemoPressurePump : public CPressurePumpBase<DemoPressurePump>
+{
+public:
+   DemoPressurePump() : 
+      initialized_ (false),
+      currentPressure_ (0.),
+      busy_(false) 
+   {};
+
+   ~DemoPressurePump() {
+      if (initialized_)
+         Shutdown();
+   };
+
+   void GetName(char* name) const {strcpy(name, g_PressurePumpDeviceName);}
+
+   bool Busy() {return busy_;}
+
+   int Initialize();
+
+   int Shutdown() 
+   {
+      initialized_ = false; 
+      return DEVICE_OK;
+   }
+
+   int Stop() {
+      currentPressure_ = 0.0; 
+      OnPropertyChanged(g_PropImposedPressure, "0.0");
+      return DEVICE_OK;
+   };
+
+   int OnImposedPressure(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   bool RequiresCalibration() {
+      return false;
+   };
+
+   int SetPressureKPa(double pressureKPa) {
+      // TODO: more realistic, build it up slowly;)
+      currentPressure_ = pressureKPa;
+      OnPropertyChanged(g_PropImposedPressure, CDeviceUtils::ConvertToString(currentPressure_));
+      return DEVICE_OK;
+   };
+
+   int GetPressureKPa(double& pressureKPa) {
+      pressureKPa = currentPressure_;
+      return DEVICE_OK;
+   };
+
+private:
+   bool busy_;
+   bool initialized_;
+   double currentPressure_;
 };

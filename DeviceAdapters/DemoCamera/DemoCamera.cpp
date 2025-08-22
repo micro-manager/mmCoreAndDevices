@@ -54,6 +54,7 @@ const char* g_DADeviceName = "D-DA";
 const char* g_DA2DeviceName = "D-DA2";
 const char* g_GalvoDeviceName = "DGalvo";
 const char* g_MagnifierDeviceName = "DOptovar";
+const char* g_PressurePumpDeviceName = "DPressurePump";
 const char* g_HubDeviceName = "DHub";
 
 // constants for naming pixel types (allowed values of the "PixelType" property)
@@ -67,6 +68,8 @@ const char* g_PixelType_32bit = "32bit";  // floating point greyscale
 const char* g_Sine_Wave = "Artificial Waves";
 const char* g_Norm_Noise = "Noise";
 const char* g_Color_Test = "Color Test Pattern";
+
+const char* g_PropImposedPressure = "Imposed Pressure";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -87,6 +90,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DA2DeviceName, MM::SignalIODevice, "Demo DA-2");
    RegisterDevice(g_MagnifierDeviceName, MM::MagnifierDevice, "Demo Optovar");
    RegisterDevice(g_GalvoDeviceName, MM::GalvoDevice, "Demo Galvo");
+   RegisterDevice(g_PressurePumpDeviceName, MM::PressurePumpDevice, "Demo Pressure Pump");
    RegisterDevice("TransposeProcessor", MM::ImageProcessorDevice, "TransposeProcessor");
    RegisterDevice("ImageFlipX", MM::ImageProcessorDevice, "ImageFlipX");
    RegisterDevice("ImageFlipY", MM::ImageProcessorDevice, "ImageFlipY");
@@ -165,7 +169,6 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       // create Galvo 
       return new DemoGalvo();
    }
-
    else if(strcmp(deviceName, "TransposeProcessor") == 0)
    {
       return new TransposeProcessor();
@@ -181,6 +184,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if(strcmp(deviceName, "MedianFilter") == 0)
    {
       return new MedianFilter();
+   }
+   else if (strcmp(deviceName, g_PressurePumpDeviceName) == 0)
+   {
+      return new DemoPressurePump();
    }
    else if (strcmp(deviceName, g_HubDeviceName) == 0)
    {
@@ -4986,3 +4993,32 @@ void DemoHub::GetName(char* pName) const
 {
    CDeviceUtils::CopyLimitedString(pName, g_HubDeviceName);
 }
+
+int DemoPressurePump::Initialize()
+{
+   CPropertyAction* pAct = new CPropertyAction(this, &DemoPressurePump::OnImposedPressure);
+   int ret  = CreateFloatProperty(g_PropImposedPressure, 0.0, false, pAct);
+   if (ret!= DEVICE_OK)
+      return ret;
+   SetPropertyLimits(g_PropImposedPressure, 0.0, 100.0);
+
+   initialized_ = true;
+   return DEVICE_OK;
+}
+
+int DemoPressurePump::OnImposedPressure(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(currentPressure_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(currentPressure_);
+
+      OnPropertyChanged(g_PropImposedPressure, CDeviceUtils::ConvertToString(currentPressure_));
+   }
+   return DEVICE_OK;
+}
+
+
