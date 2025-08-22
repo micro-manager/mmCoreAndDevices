@@ -55,6 +55,7 @@ const char* g_DA2DeviceName = "D-DA2";
 const char* g_GalvoDeviceName = "DGalvo";
 const char* g_MagnifierDeviceName = "DOptovar";
 const char* g_PressurePumpDeviceName = "DPressurePump";
+const char* g_VolumetricPumpDeviceName = "DVolumetricPump";
 const char* g_HubDeviceName = "DHub";
 
 // constants for naming pixel types (allowed values of the "PixelType" property)
@@ -91,6 +92,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_MagnifierDeviceName, MM::MagnifierDevice, "Demo Optovar");
    RegisterDevice(g_GalvoDeviceName, MM::GalvoDevice, "Demo Galvo");
    RegisterDevice(g_PressurePumpDeviceName, MM::PressurePumpDevice, "Demo Pressure Pump");
+   RegisterDevice(g_VolumetricPumpDeviceName, MM::VolumetricPumpDevice, "Demo Volumetric Pump");
    RegisterDevice("TransposeProcessor", MM::ImageProcessorDevice, "TransposeProcessor");
    RegisterDevice("ImageFlipX", MM::ImageProcessorDevice, "ImageFlipX");
    RegisterDevice("ImageFlipY", MM::ImageProcessorDevice, "ImageFlipY");
@@ -188,6 +190,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if (strcmp(deviceName, g_PressurePumpDeviceName) == 0)
    {
       return new DemoPressurePump();
+   }
+   else if (strcmp(deviceName, g_VolumetricPumpDeviceName) == 0)
+   {
+      return new DemoVolumetricPump();
    }
    else if (strcmp(deviceName, g_HubDeviceName) == 0)
    {
@@ -1116,7 +1122,7 @@ int CDemoCamera::RunSequenceOnThread()
       }
    }
    else {
-      unsigned long wait = (double) exposure;
+      unsigned long wait = (unsigned long) exposure;
       wait = wait < 1 ? 1ul : wait;
       CDeviceUtils::SleepMs(wait);
    }
