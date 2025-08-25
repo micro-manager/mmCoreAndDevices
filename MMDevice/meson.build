@@ -56,6 +56,7 @@ mmdevice_lib = static_library(
     dependencies: [
         dependency('threads'),
     ],
+    gnu_symbol_visibility: 'inlineshidden',
 )
 
 subdir('unittest')
