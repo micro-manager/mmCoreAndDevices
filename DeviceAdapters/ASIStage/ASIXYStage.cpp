@@ -58,9 +58,9 @@ XYStage::~XYStage()
 	Shutdown();
 }
 
-void XYStage::GetName(char* Name) const
+void XYStage::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(Name, g_XYStageDeviceName);
+	CDeviceUtils::CopyLimitedString(name, g_XYStageDeviceName);
 }
 
 bool XYStage::SupportsDeviceDetection()

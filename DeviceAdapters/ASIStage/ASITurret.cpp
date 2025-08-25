@@ -33,9 +33,9 @@ AZ100Turret::~AZ100Turret()
 	Shutdown();
 }
 
-void AZ100Turret::GetName(char* Name) const
+void AZ100Turret::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(Name, g_AZ100TurretName);
+	CDeviceUtils::CopyLimitedString(name, g_AZ100TurretName);
 }
 
 int AZ100Turret::Initialize()

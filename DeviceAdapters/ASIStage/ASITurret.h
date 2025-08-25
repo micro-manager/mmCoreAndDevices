@@ -18,7 +18,7 @@ public:
 
 	// MMDevice API
 	bool Busy();
-	void GetName(char* pszName) const;
+	void GetName(char* name) const;
 	unsigned long GetNumberOfPositions() const { return numPos_; }
 
 	int Initialize();

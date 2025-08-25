@@ -38,9 +38,9 @@ Magnifier::~Magnifier()
     Shutdown();
 }
 
-void Magnifier::GetName(char* Name) const
+void Magnifier::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(Name, g_MagnifierDeviceName);
+    CDeviceUtils::CopyLimitedString(name, g_MagnifierDeviceName);
 }
 
 bool Magnifier::SupportsDeviceDetection()

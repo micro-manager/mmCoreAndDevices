@@ -46,9 +46,9 @@ LED::~LED()
 	Shutdown();
 }
 
-void LED::GetName(char* Name) const
+void LED::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(Name, g_LEDDeviceName);
+	CDeviceUtils::CopyLimitedString(name, g_LEDDeviceName);
 }
 
 

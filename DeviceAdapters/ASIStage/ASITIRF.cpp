@@ -46,9 +46,9 @@ TIRF::~TIRF()
     Shutdown();
 }
 
-void TIRF::GetName(char* Name) const
+void TIRF::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(Name, g_TIRFDeviceName);
+    CDeviceUtils::CopyLimitedString(name, g_TIRFDeviceName);
 }
 
 bool TIRF::SupportsDeviceDetection()
