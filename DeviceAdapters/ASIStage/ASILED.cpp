@@ -227,8 +227,7 @@ int LED::SetOpen(bool open)
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		open_ = open;
 		return DEVICE_OK;
 	}
@@ -269,8 +268,7 @@ int LED::IsOpen(bool* open)
 			return ret;
 		}
 
-		if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-		{
+		if (answer.compare(0, 2, ":A") == 0) {
 			if (answer.compare(2, 1, "0") == 0)
 			{
 				*open = false;

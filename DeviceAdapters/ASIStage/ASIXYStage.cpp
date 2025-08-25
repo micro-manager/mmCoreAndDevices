@@ -322,8 +322,7 @@ int XYStage::SetPositionSteps(long x, long y)
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
 	// deal with error later
@@ -362,8 +361,7 @@ int XYStage::SetRelativePositionSteps(long x, long y)
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
 	// deal with error later
@@ -424,8 +422,7 @@ int XYStage::SetOrigin()
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
 	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
@@ -515,8 +512,7 @@ int XYStage::Home()
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		// do nothing
 	}
 	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
@@ -559,8 +555,7 @@ int XYStage::Calibrate() {
 	if (ret != DEVICE_OK)
 		return ret;
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		// do nothing
 	}
 	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
@@ -592,8 +587,7 @@ int XYStage::Stop()
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
 	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
