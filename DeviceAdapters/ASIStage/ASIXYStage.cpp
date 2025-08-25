@@ -530,7 +530,8 @@ int XYStage::Calibrate() {
 		return DEVICE_OK;
 	}
 
-	double x1, y1;
+	double x1;
+	double y1;
 	int ret = GetPositionUm(x1, y1);
 	if (ret != DEVICE_OK)
 	{

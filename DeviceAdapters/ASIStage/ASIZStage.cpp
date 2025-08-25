@@ -839,14 +839,7 @@ int ZStage::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        if (sequenceable_)
-        {
-            pProp->Set("Yes");
-        }
-        else
-        {
-            pProp->Set("No");
-        }
+        pProp->Set(sequenceable_ ? "Yes" : "No");
     }
     else if (eAct == MM::AfterSet)
     {
@@ -864,17 +857,9 @@ int ZStage::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 int ZStage::OnFastSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     int ret;
-
     if (eAct == MM::BeforeGet)
     {
-        if (runningFastSequence_)
-        {
-            pProp->Set("Armed");
-        }
-        else
-        {
-            pProp->Set("No");
-        }
+        pProp->Set(runningFastSequence_ ? "Armed" : "No");
     }
     else if (eAct == MM::AfterSet)
     {
