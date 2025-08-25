@@ -866,19 +866,12 @@ int XYStage::GetFinishError(double& finishError)
    std::string answer;
    // query command
    int ret = QueryCommand(command.str().c_str(), answer);
-   if (ret != DEVICE_OK)
+   if (ret != DEVICE_OK) {
       return ret;
-
-   if (answer.compare(0, 2, ":X") == 0)
-   {
-      double tmp = 0.0;
-      const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
-      finishError = 1000000 * tmp;
-      return code;
    }
+
    if (answer.compare(0, 2, ":A") == 0)
    {
-      // Answer is of the form :A X=0.00003
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 5, 8, tmp);
       finishError = 1000000 * tmp;
