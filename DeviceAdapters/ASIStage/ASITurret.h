@@ -28,8 +28,8 @@ public:
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-	long numPos_;
 	MM::MMTime changedTime_;
+	long numPos_;
 	long position_;
 };
 

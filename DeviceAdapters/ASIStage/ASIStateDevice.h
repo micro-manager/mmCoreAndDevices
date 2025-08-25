@@ -32,12 +32,12 @@ public:
 	int OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+	int UpdateCurrentPosition();
+
 	long numPos_;
 	std::string axis_;
 	long position_;
 	double answerTimeoutMs_;
-
-	int UpdateCurrentPosition();
 };
 
 #endif // ASISTATEDEVICE_H
