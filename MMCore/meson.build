@@ -110,6 +110,7 @@ mmcore_lib = static_library(
         mmdevice_dep,
         dependency('threads'),
     ],
+    gnu_symbol_visibility: 'inlineshidden',
     cpp_args: [
         '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
     ],
