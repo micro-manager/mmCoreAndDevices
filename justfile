@@ -55,5 +55,7 @@ test: test-mmdevice test-mmcore
 # Clean build artifacts
 clean:
     rm -rf MMDevice/builddir
+    rm -rf MMDevice/subprojects/Catch2-*
     rm -rf MMCore/builddir
     rm -rf MMCore/subprojects/mmdevice
+    rm -rf MMCore/subprojects/Catch2-*
