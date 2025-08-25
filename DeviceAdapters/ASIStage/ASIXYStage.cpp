@@ -740,7 +740,7 @@ int XYStage::GetWaitCycles(long& waitCycles)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.compare(0, 2, ":X") == 0)
+   if (answer.compare(0, 3, ":X=") == 0)
    {
       return ParseResponseAfterPosition(answer, 3, waitCycles);
    }
@@ -814,7 +814,7 @@ int XYStage::GetBacklash(double& backlash)
       return ret;
    }
 
-   if (answer.compare(0, 2, ":X") == 0)
+   if (answer.compare(0, 3, ":X=") == 0)
    {
       return ParseResponseAfterPosition(answer, 3, 8, backlash);
    }
@@ -931,7 +931,7 @@ int XYStage::GetAcceleration(long& acceleration)
       return ret;
    }
 
-   if (answer.compare(0, 2, ":X") == 0)
+   if (answer.compare(0, 3, ":X=") == 0)
    {
 		double tmp = 0.0;
       ret = ParseResponseAfterPosition(answer, 3, 8, tmp);
@@ -1049,7 +1049,7 @@ int XYStage::GetError(double& error)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.compare(0, 2, ":X") == 0)
+   if (answer.compare(0, 3, ":X=") == 0)
    {
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
