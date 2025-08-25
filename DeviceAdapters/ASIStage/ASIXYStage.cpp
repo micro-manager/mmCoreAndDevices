@@ -1511,8 +1511,7 @@ int XYStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::ostringstream command;
 	std::ostringstream response;
-	command.str("");
-	response.str("");
+
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -1563,8 +1562,6 @@ int XYStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::ostringstream command;
 	std::ostringstream response;
-	command.str("");
-	response.str("");
 
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
@@ -1615,8 +1612,6 @@ int XYStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::ostringstream command;
 	std::ostringstream response;
-	command.str("");
-	response.str("");
 
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
@@ -1667,8 +1662,6 @@ int XYStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::ostringstream command;
 	std::ostringstream response;
-	command.str("");
-	response.str("");
 
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
@@ -1745,7 +1738,6 @@ int XYStage::SetAxisDirection()
 std::string XYStage::EscapeControlCharacters(const std::string& v)
 {
 	std::ostringstream mess;
-	mess.str("");
 	for (std::string::const_iterator ii = v.begin(); ii != v.end(); ++ii)
 	{
 		if (*ii > 31)

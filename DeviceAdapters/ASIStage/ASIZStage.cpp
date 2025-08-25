@@ -147,10 +147,8 @@ int ZStage::Initialize()
     }
     else
     {
-        std::ostringstream tmp;
-        tmp.str("");
-        tmp << nrEvents_;  // initialized in GetControllerInfo() if we got here
-        CreateProperty("RingBufferSize", tmp.str().c_str(), MM::String, true);
+        // nrEvents_ initialized in GetControllerInfo() if we got here
+        CreateProperty("RingBufferSize", std::to_string(nrEvents_).c_str(), MM::String, true);
     }
 
     if (HasRingBuffer())
