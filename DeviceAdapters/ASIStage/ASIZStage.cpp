@@ -248,7 +248,6 @@ int ZStage::Initialize()
           return ret;
        pAct = new CPropertyAction(this, &ZStage::OnWait);
        CreateProperty("Wait_Cycles", std::to_string(waitCycles_).c_str(), MM::Integer, false, pAct);
-        // SetPropertyLimits("Wait_Cycles", 0, 255);  // don't artificially restrict range
     }
 
     if (HasCommand("VE " + axis_ + "=0"))
