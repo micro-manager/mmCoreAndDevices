@@ -51,9 +51,9 @@ const char* const g_TIRFDeviceName = "TIRF";
 const char* const g_XYStageDeviceDescription = "ASI XY Stage";
 const char* const g_ZStageDeviceDescription = "ASI Z Stage";
 const char* const g_CRISPDeviceDescription = "ASI CRISP Autofocus";
-const char* const g_AZ100TurretDescription = "ASI AZ100 Turret Controller";
+const char* const g_AZ100TurretDescription = "ASI AZ100 Turret";
 const char* const g_StateDeviceDescription = "ASI State Device";
-const char* const g_LEDDeviceDescription = "ASI LED Controller";
+const char* const g_LEDDeviceDescription = "ASI LED Illuminator";
 const char* const g_MagnifierDeviceDescription = "ASI Magnifier";
 const char* const g_TIRFDeviceDescription = "ASI TIRF Actuator";
 
