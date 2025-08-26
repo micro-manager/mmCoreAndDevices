@@ -96,6 +96,7 @@
     <ClCompile Include="MultiStage.cpp" />
     <ClCompile Include="MultiCamera.cpp" />
     <ClCompile Include="MultiShutter.cpp" />
+    <ClCompile Include="PropertyShutter.cpp" />
     <ClCompile Include="StateDeviceShutter.cpp" />
     <ClCompile Include="Utilities.cpp" />
   </ItemGroup>
