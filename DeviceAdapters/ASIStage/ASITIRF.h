@@ -20,7 +20,7 @@ public:
     int Initialize();
     int Shutdown();
 
-    void GetName(char* pszName) const;
+    void GetName(char* name) const;
     bool Busy();
     bool SupportsDeviceDetection();
     MM::DeviceDetectionStatus DetectDevice();

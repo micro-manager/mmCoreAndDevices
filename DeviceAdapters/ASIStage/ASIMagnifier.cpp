@@ -38,9 +38,9 @@ Magnifier::~Magnifier()
     Shutdown();
 }
 
-void Magnifier::GetName(char* Name) const
+void Magnifier::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(Name, g_MagnifierDeviceName);
+    CDeviceUtils::CopyLimitedString(name, g_MagnifierDeviceName);
 }
 
 bool Magnifier::SupportsDeviceDetection()
@@ -135,8 +135,7 @@ int Magnifier::SetMagnification(double mag)
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         return DEVICE_OK;
     }
     // deal with error later

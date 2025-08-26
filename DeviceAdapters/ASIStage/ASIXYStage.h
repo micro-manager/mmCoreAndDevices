@@ -20,7 +20,7 @@ public:
 	int Initialize();
 	int Shutdown();
 
-	void GetName(char* pszName) const;
+	void GetName(char* name) const;
 	bool Busy();
 
 	// so far, only the XYStage attempts to get the controller status on initialization, so

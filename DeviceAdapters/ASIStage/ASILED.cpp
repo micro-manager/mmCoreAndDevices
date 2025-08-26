@@ -46,9 +46,9 @@ LED::~LED()
 	Shutdown();
 }
 
-void LED::GetName(char* Name) const
+void LED::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(Name, g_LEDDeviceName);
+	CDeviceUtils::CopyLimitedString(name, g_LEDDeviceName);
 }
 
 
@@ -227,8 +227,7 @@ int LED::SetOpen(bool open)
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		open_ = open;
 		return DEVICE_OK;
 	}
@@ -269,8 +268,7 @@ int LED::IsOpen(bool* open)
 			return ret;
 		}
 
-		if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-		{
+		if (answer.compare(0, 2, ":A") == 0) {
 			if (answer.compare(2, 1, "0") == 0)
 			{
 				*open = false;

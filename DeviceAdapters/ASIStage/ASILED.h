@@ -22,7 +22,7 @@ public:
 	bool SupportsDeviceDetection();
 	MM::DeviceDetectionStatus DetectDevice();
 
-	void GetName(char* pszName) const;
+	void GetName(char* name) const;
 	bool Busy();
 
 	// Shutter API
@@ -39,6 +39,7 @@ public:
 private:
 	int IsOpen(bool* open); // queries the device rather than using a cached value
 	int CurrentIntensity(long* intensity); // queries the device rather than using a cached value
+
 	bool open_;
 	long intensity_;
 	std::string name_;
