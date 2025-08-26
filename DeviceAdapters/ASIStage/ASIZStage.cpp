@@ -968,29 +968,6 @@ int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         long waitCycles;
         pProp->Get(waitCycles);
-
-        // enforce positive
-        if (waitCycles < 0)
-        {
-            waitCycles = 0;
-        }
-
-        // if firmware date is 2009+  then use msec/int definition of WaitCycles
-        // would be better to parse firmware (8.4 and earlier used unsigned char)
-        // and that transition occurred ~2008 but this is easier than trying to
-        // parse version strings
-
-        // previously compared against compile date (2009, 1, 1)
-        if (version_ >= Version(8, 6, 'd')) {
-            // don't enforce upper limit
-        } else {
-            // enforce limit for 2008 and earlier firmware or
-            // if getting compile date wasn't successful
-            if (waitCycles > 255) {
-                waitCycles = 255;
-            }
-        }
-
         std::ostringstream command;
         command << "WT " << axis_ << "=" << waitCycles;
         std::string answer;

@@ -758,29 +758,6 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		long waitCycles;
 		pProp->Get(waitCycles);
-
-		// enforce positive
-		if (waitCycles < 0)
-		{
-			waitCycles = 0;
-		}
-
-		// if firmware date is 2009+  then use msec/int definition of WaitCycles
-		// would be better to parse firmware (8.4 and earlier used unsigned char)
-		// and that transition occurred ~2008 but not sure exactly when
-
-		// previously compared against compile date (2009, 1, 1)
-		if (version_ >= Version(8, 6, 'd')) {
-			// don't enforce upper limit
-		} else {
-			// enforce limit for 2008 and earlier firmware or
-			// if getting compile date wasn't successful
-			if (waitCycles > 255)
-			{
-				waitCycles = 255;
-			}
-		}
-
 		std::ostringstream command;
 		command << "WT " << axisletterX_ << "=" << waitCycles << " " << axisletterY_ << "=" << waitCycles;
 		std::string answer;
@@ -1406,8 +1383,7 @@ int XYStage::OnSerialCommand(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(tmpstr);
 		tmpstr = UnescapeControlCharacters(tmpstr);
 		// only send the command if it has been updated, or if the feature has been set to "no"/false then always send
-		if (!serialOnlySendChanged_ || (tmpstr.compare(last_command_via_property) != 0))
-		{
+		if (!serialOnlySendChanged_ || (tmpstr != last_command_via_property)) {
 			// prevent executing the INFO command
 			if (isINFOCommand(tmpstr))
 			{
@@ -1460,8 +1436,8 @@ int XYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if ((tmpstr.compare("Yes") == 0) && !advancedPropsEnabled_) // after creating advanced properties once no need to repeat
-		{
+		// after creating advanced properties once no need to repeat
+		if (!advancedPropsEnabled_ && tmpstr == "Yes") {
 			CPropertyAction* pAct;
 			advancedPropsEnabled_ = true;
 
