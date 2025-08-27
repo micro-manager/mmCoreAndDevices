@@ -248,6 +248,13 @@ int ZStage::Initialize()
           return ret;
        pAct = new CPropertyAction(this, &ZStage::OnWait);
        CreateProperty("Wait_Cycles", std::to_string(waitCycles_).c_str(), MM::Integer, false, pAct);
+
+       // previously compared against compile date (2009, 1, 1)
+       if (version_ >= Version(8, 6, 'd')) {
+           // do not enforce limits
+       } else {
+           SetPropertyLimits("Wait_Cycles", 0, 255);
+       }
     }
 
     if (HasCommand("VE " + axis_ + "=0"))
