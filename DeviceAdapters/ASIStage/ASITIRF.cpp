@@ -46,9 +46,9 @@ TIRF::~TIRF()
     Shutdown();
 }
 
-void TIRF::GetName(char* Name) const
+void TIRF::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(Name, g_TIRFDeviceName);
+    CDeviceUtils::CopyLimitedString(name, g_TIRFDeviceName);
 }
 
 bool TIRF::SupportsDeviceDetection()
@@ -190,8 +190,7 @@ int TIRF::SetAngle(double angle)
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         return DEVICE_OK;
     }
     // deal with error later

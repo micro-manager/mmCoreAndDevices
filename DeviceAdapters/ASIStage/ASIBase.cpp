@@ -30,13 +30,12 @@ ASIBase::~ASIBase()
 // Clear contents of serial port
 int ASIBase::ClearPort()
 {
-	constexpr size_t bufferSize = 255;
-	unsigned char clear[bufferSize];
-	unsigned long read = bufferSize;
+	unsigned char clear[CLEAR_BUFFER_SIZE];
+	unsigned long read = CLEAR_BUFFER_SIZE;
 	int ret;
-	while (read == bufferSize)
+	while (read == CLEAR_BUFFER_SIZE)
 	{
-		ret = core_->ReadFromSerial(device_, port_.c_str(), clear, bufferSize, read);
+		ret = core_->ReadFromSerial(device_, port_.c_str(), clear, CLEAR_BUFFER_SIZE, read);
 		if (ret != DEVICE_OK)
 		{
 			return ret;

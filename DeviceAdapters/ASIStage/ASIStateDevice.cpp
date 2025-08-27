@@ -46,9 +46,9 @@ StateDevice::~StateDevice()
 	Shutdown();
 }
 
-void StateDevice::GetName(char* Name) const
+void StateDevice::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(Name, g_StateDeviceName);
+	CDeviceUtils::CopyLimitedString(name, g_StateDeviceName);
 }
 
 bool StateDevice::SupportsDeviceDetection()

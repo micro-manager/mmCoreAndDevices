@@ -116,6 +116,7 @@ protected:
 	int GetCompileDate(std::string& compileDate) const;
 
 	static constexpr size_t SERIAL_RXBUFFER_SIZE = 2048;
+	static constexpr size_t CLEAR_BUFFER_SIZE = 255;
 
 	MM::Core* core_;
 	MM::Device* device_;
