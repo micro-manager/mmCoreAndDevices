@@ -1414,7 +1414,7 @@ public:
      * Required function of VolumetricPump API
      */
     int Start() {
-       // TODO run a thread, time things, and set variables accordingly.  Will need loacking/atomics on our variables
+       // TODO run a thread, time things, and set variables accordingly.  Will need a mutex on our variables
        return DEVICE_OK;
     };
 
@@ -1427,7 +1427,7 @@ public:
      * Required function of VolumetricPump API
      */
     int DispenseDurationSeconds(double /*durSec */) {
-       // TODO run a thread, time things, and set variables accordingly.  Will need loacking/atomics on our variables
+       // TODO run a thread, time things, and set variables accordingly.  Will need a mutex on our variables
        return DEVICE_OK;
     };
 
@@ -1447,7 +1447,7 @@ public:
      * Required function of VolumetricPump API
      */
     int DispenseVolumeUl(double /* volUl */) {
-       // TODO run a thread, time things, and set variables accordingly.  Will need loacking/atomics on our variables
+       // TODO run a thread, time things, and set variables accordingly.  Will need a mutex on our variables
        return DEVICE_OK;
     };
 
