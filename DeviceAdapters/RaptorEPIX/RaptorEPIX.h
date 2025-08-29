@@ -27,7 +27,6 @@
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "DeviceThreads.h"
-//#include "Debayer.h"
 
 //#define PLEORA
 

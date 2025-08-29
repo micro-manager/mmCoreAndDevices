@@ -16,7 +16,6 @@
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "DeviceThreads.h"
-#include "Debayer.h"
 
 #include <string>
 #include <map>
