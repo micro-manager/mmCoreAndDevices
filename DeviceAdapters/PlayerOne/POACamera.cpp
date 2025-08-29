@@ -235,7 +235,10 @@ POACamera::POACamera() :
             continue;
         }
 
-        connectCamerasName_.push_back(std::string(camProp.cameraModelName));
+        std::string itemName = camProp.cameraModelName;
+        itemName += ' ';
+        itemName += camProp.SN;
+        connectCamerasName_.push_back(itemName);
     }
     
     CPropertyAction* pAct = new CPropertyAction(this, &POACamera::OnSelectCamIndex);
