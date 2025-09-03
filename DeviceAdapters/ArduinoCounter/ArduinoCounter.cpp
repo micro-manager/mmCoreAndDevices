@@ -26,7 +26,7 @@ const char* g_DeviceNameArduinoCounterCamera = "ArduinoCounterCamera";
 
 // Global info about the state of the Arduino.  
 const double g_Min_MMVersion = 2.0;
-const double g_Max_MMVersion = 2.0;
+const double g_Max_MMVersion = 3.0;
 const char* g_versionProp = "Version";
 const char* g_Undefined = "Undefined";
 const char* g_Logic = "Output Logic";
