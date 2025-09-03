@@ -105,13 +105,13 @@ void loop() {
       if (invert) {
         if (inputWas && !(PIND & B00000100)) {
           inputWas = LOW;
-          PORTB = 1;
+          if (counter <= limit) {
+            PORTB = 1;
+          }
         } else if (!inputWas && (PIND & B00000100)) {
           counter++;
           inputWas = HIGH;
-          if (counter <= limit) {
             PORTB = 0;
-          }
         }
       } else {  // do not invert output
         if (inputWas && !(PIND & B00000100)) {
