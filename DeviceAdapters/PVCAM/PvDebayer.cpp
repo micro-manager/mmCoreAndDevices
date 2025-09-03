@@ -151,7 +151,7 @@ unsigned short PvDebayer::GetPixel(const unsigned char* v, int x, int y, int wid
 template <typename T>
 void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int height, int bitDepth, int rowOrder)
 {
-    unsigned numPixels(width*height);
+    const unsigned numPixels(width*height);
     if (r.size() != numPixels)
     {
         r.resize(numPixels);
@@ -159,29 +159,33 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
         b.resize(numPixels);
     }
 
-    int bitShift = bitDepth - 8;
+    const int bitShift = bitDepth - 8;
 
-    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) {
+    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) { // Green slash
+
+        // Red channel for RGGB, blue for BGGR
         for (int y=0; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 unsigned short one = GetPixel(input, x, y, width, height);
                 SetPixel(b, one, x, y, width, height);
                 SetPixel(b, one, x+1, y, width, height);
-                SetPixel(b, one, x, y+1, width, height); 
+                SetPixel(b, one, x, y+1, width, height);
                 SetPixel(b, one, x+1, y+1, width, height);
             }
         }
 
+        // Blue channel for RGGB, red for BGGR
         for (int y=1; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 unsigned short one = GetPixel(input, x, y, width, height);
                 SetPixel(r, one, x, y, width, height);
                 SetPixel(r, one, x+1, y, width, height);
-                SetPixel(r, one, x, y+1, width, height); 
+                SetPixel(r, one, x, y+1, width, height);
                 SetPixel(r, one, x+1, y+1, width, height);
             }
         }
 
+        // Top-right greens
         for (int y=0; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 unsigned short one = GetPixel(input, x, y, width, height);
@@ -189,7 +193,7 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
                 SetPixel(g, one, x+1, y, width, height);
             }
         }
-
+        // Bottom-left greens
         for (int y=1; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 unsigned short one = GetPixel(input, x, y, width, height);
@@ -204,16 +208,14 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
+                // Swap red & blue channels
                 unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
             }
         }
         else if (rowOrder == CFA_BGGR) {
@@ -226,37 +228,37 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
             }
         }
     }
-    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) {
+    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) { // Green backslash
+
+        // Blue channel for GRBG, red for GBRG
         for (int y=1; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 unsigned short one = GetPixel(input, x, y, width, height);
                 SetPixel(b, one, x, y, width, height);
                 SetPixel(b, one, x+1, y, width, height);
-                SetPixel(b, one, x, y+1, width, height); 
+                SetPixel(b, one, x, y+1, width, height);
                 SetPixel(b, one, x+1, y+1, width, height);
             }
         }
 
+        // Red channel for GRBG, blue for GBRG
         for (int y=0; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 unsigned short one = GetPixel(input, x, y, width, height);
                 SetPixel(r, one, x, y, width, height);
                 SetPixel(r, one, x+1, y, width, height);
-                SetPixel(r, one, x, y+1, width, height); 
+                SetPixel(r, one, x, y+1, width, height);
                 SetPixel(r, one, x+1, y+1, width, height);
             }
         }
 
+        // Top-left greens
         for (int y=0; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 unsigned short one = GetPixel(input, x, y, width, height);
@@ -264,7 +266,7 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
                 SetPixel(g, one, x+1, y, width, height);
             }
         }
-
+        // Bottom-right greens
         for (int y=1; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 unsigned short one = GetPixel(input, x, y, width, height);
@@ -272,26 +274,22 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
                 SetPixel(g, one, x+1, y, width, height);
             }
         }
+
         if (rowOrder == CFA_GRBG) {
             for (int i=0; i<height*width; i++)
             {
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
+                // Swap red & blue channels
                 unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
             }
-
-
         }
         else if (rowOrder == CFA_GBRG) {
             for (int i=0; i<height*width; i++)
@@ -303,24 +301,19 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
             }
         }
     }
 }
 
-
 // Bilinear algorithm
 template <typename T>
 void PvDebayer::BilinearDecode(const T* input, int* output, int width, int height, int bitDepth, int rowOrder)
 {
-    unsigned numPixels(width*height);
+    const unsigned numPixels(width*height);
     if (r.size() != numPixels)
     {
         r.resize(numPixels);
@@ -331,9 +324,11 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
     int one, two, three, four;
     one = two = three = four = 0;
 
-    int bitShift = bitDepth - 8;
+    const int bitShift = bitDepth - 8;
 
-    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) {
+    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) { // Green slash
+
+        // Red channel for RGGB, blue for BGGR
         for (int y=0; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 one = GetPixel(input, x, y, width, height);
@@ -348,6 +343,7 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
             }
         }
 
+        // Blue channel for RGGB, red for BGGR
         for (int y=1; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 one = GetPixel(input, x, y, width, height);
@@ -362,6 +358,7 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
             }
         }
 
+        // Top-right greens
         for (int y=0; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 one = GetPixel(input, x, y, width, height);
@@ -373,7 +370,7 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
                 SetPixel(g, (unsigned short)((one+two+three+four)/4.0), x+1, y, width, height);
             }
         }
-
+        // Bottom-left greens
         for (int y=1; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 one = GetPixel(input, x, y, width, height);
@@ -392,17 +389,14 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
+                // Swap red & blue channels
                 unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
             }
         }
         else if (rowOrder == CFA_BGGR) {
@@ -415,7 +409,7 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
 
@@ -425,7 +419,9 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
             }
         }
     }
-    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) {
+    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) { // Green backslash
+
+        // Blue channel for GRBG, red for GBRG
         for (int y=1; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 one = GetPixel(input, x, y, width, height);
@@ -440,6 +436,7 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
             }
         }
 
+        // Red channel for GRBG, blue for GBRG
         for (int y=0; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 one = GetPixel(input, x, y, width, height);
@@ -454,6 +451,7 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
             }
         }
 
+        // Top-left greens
         for (int y=0; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 one = GetPixel(input, x, y, width, height);
@@ -465,7 +463,7 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
                 SetPixel(g, (unsigned short)((one+two+three+four)/4.0), x+1, y, width, height);
             }
         }
-
+        // Bottom-right greens
         for (int y=1; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 one = GetPixel(input, x, y, width, height);
@@ -484,17 +482,14 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
+                // Swap red & blue channels
                 unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
             }
         }
         else if (rowOrder == CFA_GBRG) {
@@ -507,27 +502,13 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
             }
         }
     }
-
-
-
-
-
 }
-
-
-
-
-
 
 // Smooth Hue algorithm
 template <typename T>
@@ -551,7 +532,7 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
     double R3 = 0;
     double R4 = 0;
 
-    unsigned numPixels(width*height);
+    const unsigned numPixels(width*height);
     if (r.size() != numPixels)
     {
         r.resize(numPixels);
@@ -559,10 +540,13 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
         b.resize(numPixels);
     }
 
-    int bitShift = bitDepth - 8;
+    const int bitShift = bitDepth - 8;
 
-    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) {
-        //Solve for green pixels first
+    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) { // Green slash
+
+        // Solve for green pixels first, it's needed for red and blue channels
+
+        // Top-right greens
         for (int y=0; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 G1 = GetPixel(input, x, y, width, height);
@@ -580,9 +564,9 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                     SetPixel(g, (unsigned short)((G1 + G4 + GetPixel(input, x-1, y+1, width, height))/3.0), x-1, y, width, height);
             }
         }
-
-        for (int x=0; x<width; x+=2) {
-            for (int y=1; y<height; y+=2) {
+        // Top-right greens
+        for (int y=1; y<height; y+=2) {
+            for (int x=0; x<width; x+=2) {
 
                 G1 = GetPixel(input, x, y, width, height);
                 G2 = GetPixel(input, x+2, y, width, height);
@@ -596,66 +580,59 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                     SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
             }
         }
-
         SetPixel(g, (unsigned short)((GetPixel(input, 0, 1, width, height) + GetPixel(input, 1, 0, width, height))/2.0), 0, 0, width, height);
 
+        // Red channel for RGGB, blue for BGGR
         for (int y=0; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 B1 = GetPixel(input, x, y, width, height);
                 B2 = GetPixel(input, x+2, y, width, height);
                 B3 = GetPixel(input, x, y+2, width, height);
                 B4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);;
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
+                G1 = GetPixel(g.data(), x, y, width, height);
+                G2 = GetPixel(g.data(), x+2, y, width, height);
+                G3 = GetPixel(g.data(), x, y+2, width, height);
+                G4 = GetPixel(g.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g.data(), x+1, y, width, height);
+                G6 = GetPixel(g.data(), x, y+1, width, height);
+                G9 = GetPixel(g.data(), x+1, y+1, width, height);
                 if (G1==0) G1=1;
                 if (G2==0) G2=1;
                 if (G3==0) G3=1;
                 if (G4==0) G4=1;
 
                 SetPixel(b, (unsigned short)B1, x, y, width, height);
-                //b.putPixel(x+1,y,(int)((G5/2 * ((B1/G1) + (B2/G2)) )) );
-                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)) )), x+1, y, width, height);
-                //b.putPixel(x,y+1,(int)(( G6/2 * ((B1/G1) + (B3/G3)) )) );
-                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)) )), x, y+1, width, height);
-                //b.putPixel(x+1,y+1, (int)((G9/4 *  ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )) );
-                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )), x+1, y+1, width, height);
+                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)))), x+1, y, width, height);
+                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)))), x, y+1, width, height);
+                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)))), x+1, y+1, width, height);
             }
         }
 
+        // Blue channel for RGGB, red for BGGR
         for (int y=1; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 R1 = GetPixel(input, x, y, width, height);
                 R2 = GetPixel(input, x+2, y, width, height);
                 R3 = GetPixel(input, x, y+2, width, height);
                 R4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
+                G1 = GetPixel(g.data(), x, y, width, height);
+                G2 = GetPixel(g.data(), x+2, y, width, height);
+                G3 = GetPixel(g.data(), x, y+2, width, height);
+                G4 = GetPixel(g.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g.data(), x+1, y, width, height);
+                G6 = GetPixel(g.data(), x, y+1, width, height);
+                G9 = GetPixel(g.data(), x+1, y+1, width, height);
                 if(G1==0) G1=1;
                 if(G2==0) G2=1;
                 if(G3==0) G3=1;
                 if(G4==0) G4=1;
 
-                //r.putPixel(x,y,(int)(R1));
                 SetPixel(r, (unsigned short)R1, x, y, width, height);
-                //r.putPixel(x+1,y,(int)((G5/2 * ((R1/G1) + (R2/G2) )) ));
-                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2) )) ), x+1, y, width, height);
-                //r.putPixel(x,y+1,(int)(( G6/2 * ((R1/G1) + (R3/G3) )) ));
-                SetPixel(r, (unsigned short)(( G6/2 * ((R1/G1) + (R3/G3) )) ), x, y+1, width, height);
-                //r.putPixel(x+1,y+1, (int)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ));
-                SetPixel(r, (unsigned short)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ), x+1, y+1, width, height);
+                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2)))), x+1, y, width, height);
+                SetPixel(r, (unsigned short)((G6/2 * ((R1/G1) + (R3/G3)))), x, y+1, width, height);
+                SetPixel(r, (unsigned short)((G9/4 * ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)))), x+1, y+1, width, height);
             }
         }
-
 
         if (rowOrder == CFA_RGGB) {
             for (int i=0; i<height*width; i++)
@@ -663,17 +640,14 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
+                // Swap red & blue channels
                 unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
             }
         }
         else if (rowOrder == CFA_BGGR) {
@@ -686,19 +660,18 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
             }
         }
     }
 
-    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) {
+    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) { // Green backslash
 
+        // Solve for green pixels first, it's needed for red and blue channels
+
+        // Top-left greens
         for (int y=0; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 G1 = GetPixel(input, x, y, width, height);
@@ -716,7 +689,7 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                     SetPixel(g, (unsigned short)((G1+G4+GetPixel(input, x-1, y+1, width, height))/3.0), x-1, y, width, height);
             }
         }
-
+        // Bottom-right greens
         for (int y=1; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 G1 = GetPixel(input, x, y, width, height);
@@ -731,64 +704,59 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                     SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
             }
         }
-
         SetPixel(g, (unsigned short)((GetPixel(input, 0, 1, width, height) + GetPixel(input, 1, 0, width, height))/2.0), 0, 0, width, height);
 
+        // Blue channel for GRBG, red for GBRG
         for (int y=1; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 B1 = GetPixel(input, x, y, width, height);
                 B2 = GetPixel(input, x+2, y, width, height);
                 B3 = GetPixel(input, x, y+2, width, height);
                 B4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((const unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((const unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((const unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((const unsigned short *)g.data(), x+2, y+2, width, height);;
-                G5 = GetPixel((const unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((const unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((const unsigned short *)g.data(), x+1, y+1, width, height);
+                G1 = GetPixel(g.data(), x, y, width, height);
+                G2 = GetPixel(g.data(), x+2, y, width, height);
+                G3 = GetPixel(g.data(), x, y+2, width, height);
+                G4 = GetPixel(g.data(), x+2, y+2, width, height);;
+                G5 = GetPixel(g.data(), x+1, y, width, height);
+                G6 = GetPixel(g.data(), x, y+1, width, height);
+                G9 = GetPixel(g.data(), x+1, y+1, width, height);
                 if (G1==0) G1=1;
                 if (G2==0) G2=1;
                 if (G3==0) G3=1;
                 if (G4==0) G4=1;
 
                 SetPixel(b, (unsigned short)B1, x, y, width, height);
-                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)) )), x+1, y, width, height);
-                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)) )), x, y+1, width, height);
-                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )), x+1, y+1, width, height);
+                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)))), x+1, y, width, height);
+                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)))), x, y+1, width, height);
+                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)))), x+1, y+1, width, height);
             }
         }
 
+        // Red channel for GRBG, blue for GBRG
         for (int y=0; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 R1 = GetPixel(input, x, y, width, height);
                 R2 = GetPixel(input, x+2, y, width, height);
                 R3 = GetPixel(input, x, y+2, width, height);
                 R4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((const unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((const unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((const unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((const unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((const unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((const unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((const unsigned short *)g.data(), x+1, y+1, width, height);
+                G1 = GetPixel(g.data(), x, y, width, height);
+                G2 = GetPixel(g.data(), x+2, y, width, height);
+                G3 = GetPixel(g.data(), x, y+2, width, height);
+                G4 = GetPixel(g.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g.data(), x+1, y, width, height);
+                G6 = GetPixel(g.data(), x, y+1, width, height);
+                G9 = GetPixel(g.data(), x+1, y+1, width, height);
                 if(G1==0) G1=1;
                 if(G2==0) G2=1;
                 if(G3==0) G3=1;
                 if(G4==0) G4=1;
 
-                //r.putPixel(x,y,(int)(R1));
                 SetPixel(r, (unsigned short)R1, x, y, width, height);
-                //r.putPixel(x+1,y,(int)((G5/2 * ((R1/G1) + (R2/G2) )) ));
-                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2) )) ), x+1, y, width, height);
-                //r.putPixel(x,y+1,(int)(( G6/2 * ((R1/G1) + (R3/G3) )) ));
-                SetPixel(r, (unsigned short)(( G6/2 * ((R1/G1) + (R3/G3) )) ), x, y+1, width, height);
-                //r.putPixel(x+1,y+1, (int)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ));
-                SetPixel(r, (unsigned short)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ), x+1, y+1, width, height);
+                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2)))), x+1, y, width, height);
+                SetPixel(r, (unsigned short)((G6/2 * ((R1/G1) + (R3/G3)))), x, y+1, width, height);
+                SetPixel(r, (unsigned short)((G9/4 * ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)))), x+1, y+1, width, height);
             }
         }
-
-
 
         if (rowOrder == CFA_GRBG) {
             for (int i=0; i<height*width; i++)
@@ -796,17 +764,14 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
+                // Swap red & blue channels
                 unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
             }
         }
         else if (rowOrder == CFA_GBRG) {
@@ -819,18 +784,13 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
             }
         }
     }
 }
-
 
 // Adaptive Smooth Hue algorithm (edge detecting)
 template <typename T>
@@ -860,7 +820,7 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
     double E = 0;
     double W = 0;
 
-    unsigned numPixels(width*height);
+    const unsigned numPixels(width*height);
     if (r.size() != numPixels)
     {
         r.resize(numPixels);
@@ -868,10 +828,13 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
         b.resize(numPixels);
     }
 
-    int bitShift = bitDepth - 8;
+    const int bitShift = bitDepth - 8;
 
-    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) {
-        //Solve for green pixels first
+    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) { // Green slash
+
+        // Solve for green pixels first, it's needed for red and blue channels
+
+        // Top-right greens
         for (int y=0; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 G1 = GetPixel(input, x, y, width, height);
@@ -919,15 +882,14 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
 
                 if (x==1)
                 {
-                    SetPixel(g, (unsigned short)((G1+G4+GetPixel(input, x-1,y+1, width, height))/3.0), x-1, y, width, height);
+                    SetPixel(g, (unsigned short)((G1+G4+GetPixel(input, x-1, y+1, width, height))/3.0), x-1, y, width, height);
                 }
-
-
             }
         }
 
-        for (int x=0; x<width; x+=2) {
-            for (int y=1; y<height; y+=2) {
+        // Top-right greens
+        for (int y=1; y<height; y+=2) {
+            for (int x=0; x<width; x+=2) {
 
                 G1 = GetPixel(input, x, y, width, height);
                 G2 = GetPixel(input, x+2, y, width, height);
@@ -975,57 +937,57 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
         }
         SetPixel(g, (unsigned short)((GetPixel(input, 0, 1, width, height) + GetPixel(input, 1, 0, width, height))/2.0), 0, 0, width, height);
 
-
+        // Red channel for RGGB, blue for BGGR
         for (int y=0; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 B1 = GetPixel(input, x, y, width, height);
                 B2 = GetPixel(input, x+2, y, width, height);
                 B3 = GetPixel(input, x, y+2, width, height);
                 B4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);;
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
+                G1 = GetPixel(g.data(), x, y, width, height);
+                G2 = GetPixel(g.data(), x+2, y, width, height);
+                G3 = GetPixel(g.data(), x, y+2, width, height);
+                G4 = GetPixel(g.data(), x+2, y+2, width, height);;
+                G5 = GetPixel(g.data(), x+1, y, width, height);
+                G6 = GetPixel(g.data(), x, y+1, width, height);
+                G9 = GetPixel(g.data(), x+1, y+1, width, height);
                 if (G1==0) G1=1;
                 if (G2==0) G2=1;
                 if (G3==0) G3=1;
                 if (G4==0) G4=1;
 
                 SetPixel(b, (unsigned short)B1, x, y, width, height);
-                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)) )), x+1, y, width, height);
-                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)) )), x, y+1, width, height);
-                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )), x+1, y+1, width, height);
+                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)))), x+1, y, width, height);
+                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)))), x, y+1, width, height);
+                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)))), x+1, y+1, width, height);
             }
         }
 
+        // Blue channel for RGGB, red for BGGR
         for (int y=1; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 R1 = GetPixel(input, x, y, width, height);
                 R2 = GetPixel(input, x+2, y, width, height);
                 R3 = GetPixel(input, x, y+2, width, height);
                 R4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
+                G1 = GetPixel(g.data(), x, y, width, height);
+                G2 = GetPixel(g.data(), x+2, y, width, height);
+                G3 = GetPixel(g.data(), x, y+2, width, height);
+                G4 = GetPixel(g.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g.data(), x+1, y, width, height);
+                G6 = GetPixel(g.data(), x, y+1, width, height);
+                G9 = GetPixel(g.data(), x+1, y+1, width, height);
                 if(G1==0) G1=1;
                 if(G2==0) G2=1;
                 if(G3==0) G3=1;
                 if(G4==0) G4=1;
 
                 SetPixel(r, (unsigned short)R1, x, y, width, height);
-                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2) )) ), x+1, y, width, height);
-                SetPixel(r, (unsigned short)((G6/2 * ((R1/G1) + (R3/G3) )) ), x, y+1, width, height);
-                SetPixel(r, (unsigned short)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ), x+1, y+1, width, height);
+                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2)))), x+1, y, width, height);
+                SetPixel(r, (unsigned short)((G6/2 * ((R1/G1) + (R3/G3)))), x, y+1, width, height);
+                SetPixel(r, (unsigned short)((G9/4 * ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)))), x+1, y+1, width, height);
             }
         }
-
 
         if (rowOrder == CFA_RGGB) {
             for (int i=0; i<height*width; i++)
@@ -1033,17 +995,14 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
+                // Swap red & blue channels
                 unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
             }
         }
         else if (rowOrder == CFA_BGGR) {
@@ -1056,17 +1015,18 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
             }
         }
     }
-    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) {
+
+    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) { // Green backslash
+
+        // Solve for green pixels first, it's needed for red and blue channels
+
+        // Top-left greens
         for (int y=0; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 G1 = GetPixel(input, x, y, width, height);
@@ -1114,16 +1074,13 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
 
                 if (x==1)
                 {
-                    SetPixel(g, (unsigned short)((G1+G4+GetPixel(input, x-1,y+1, width, height))/3.0), x-1, y, width, height);
+                    SetPixel(g, (unsigned short)((G1+G4+GetPixel(input, x-1, y+1, width, height))/3.0), x-1, y, width, height);
                 }
-
-
             }
         }
-
+        // Bottom-right greens
         for (int y=1; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
-
                 G1 = GetPixel(input, x, y, width, height);
                 G2 = GetPixel(input, x+2, y, width, height);
                 G3 = GetPixel(input, x+1, y+1, width, height);
@@ -1170,57 +1127,57 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
         }
         SetPixel(g, (unsigned short)((GetPixel(input, 0, 1, width, height) + GetPixel(input, 1, 0, width, height))/2.0), 0, 0, width, height);
 
-
+        // Blue channel for GRBG, red for GBRG
         for (int y=1; y<height; y+=2) {
             for (int x=0; x<width; x+=2) {
                 B1 = GetPixel(input, x, y, width, height);
                 B2 = GetPixel(input, x+2, y, width, height);
                 B3 = GetPixel(input, x, y+2, width, height);
                 B4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
+                G1 = GetPixel(g.data(), x, y, width, height);
+                G2 = GetPixel(g.data(), x+2, y, width, height);
+                G3 = GetPixel(g.data(), x, y+2, width, height);
+                G4 = GetPixel(g.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g.data(), x+1, y, width, height);
+                G6 = GetPixel(g.data(), x, y+1, width, height);
+                G9 = GetPixel(g.data(), x+1, y+1, width, height);
                 if (G1==0) G1=1;
                 if (G2==0) G2=1;
                 if (G3==0) G3=1;
                 if (G4==0) G4=1;
 
                 SetPixel(b, (unsigned short)B1, x, y, width, height);
-                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)) )), x+1, y, width, height);
-                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)) )), x, y+1, width, height);
-                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )), x+1, y+1, width, height);
+                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)))), x+1, y, width, height);
+                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)))), x, y+1, width, height);
+                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)))), x+1, y+1, width, height);
             }
         }
 
+        // Red channel for GRBG, blue for GBRG
         for (int y=0; y<height; y+=2) {
             for (int x=1; x<width; x+=2) {
                 R1 = GetPixel(input, x, y, width, height);
                 R2 = GetPixel(input, x+2, y, width, height);
                 R3 = GetPixel(input, x, y+2, width, height);
                 R4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
+                G1 = GetPixel(g.data(), x, y, width, height);
+                G2 = GetPixel(g.data(), x+2, y, width, height);
+                G3 = GetPixel(g.data(), x, y+2, width, height);
+                G4 = GetPixel(g.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g.data(), x+1, y, width, height);
+                G6 = GetPixel(g.data(), x, y+1, width, height);
+                G9 = GetPixel(g.data(), x+1, y+1, width, height);
                 if(G1==0) G1=1;
                 if(G2==0) G2=1;
                 if(G3==0) G3=1;
                 if(G4==0) G4=1;
 
                 SetPixel(r, (unsigned short)R1, x, y, width, height);
-                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2) )) ), x+1, y, width, height);
-                SetPixel(r, (unsigned short)((G6/2 * ((R1/G1) + (R3/G3) )) ), x, y+1, width, height);
-                SetPixel(r, (unsigned short)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ), x+1, y+1, width, height);
+                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2)))), x+1, y, width, height);
+                SetPixel(r, (unsigned short)((G6/2 * ((R1/G1) + (R3/G3)))), x, y+1, width, height);
+                SetPixel(r, (unsigned short)((G9/4 * ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)))), x+1, y+1, width, height);
             }
         }
-
 
         if (rowOrder == CFA_GRBG) {
             for (int i=0; i<height*width; i++)
@@ -1228,17 +1185,14 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
+                // Swap red & blue channels
                 unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
             }
         }
         else if (rowOrder == CFA_GBRG) {
@@ -1251,13 +1205,9 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
                 unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
+                *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
                 *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
             }
         }
     }
