@@ -284,10 +284,9 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
-                // Swap red & blue channels
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
+                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
+                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
                 *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
@@ -300,9 +299,10 @@ void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int heig
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
+                // Swap red & blue channels
+                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
+                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
                 *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
@@ -485,10 +485,9 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
-                // Swap red & blue channels
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
+                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
+                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
                 *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
@@ -501,9 +500,10 @@ void PvDebayer::BilinearDecode(const T* input, int* output, int width, int heigh
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
+                // Swap red & blue channels
+                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
+                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
                 *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
@@ -767,10 +767,9 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
-                // Swap red & blue channels
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
+                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
+                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
                 *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
@@ -783,9 +782,10 @@ void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height,
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
+                // Swap red & blue channels
+                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
+                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
                 *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
@@ -1188,10 +1188,9 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
-                // Swap red & blue channels
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
+                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
+                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
 
                 *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
@@ -1204,9 +1203,10 @@ void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int
                 output[i] = 0;
                 unsigned char* bytePix = (unsigned char*)(output+i);
 
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
+                // Swap red & blue channels
+                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
                 unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
+                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
 
                 *(bytePix+0) = ((bValue > 255) ? 255 : (unsigned char)bValue);
                 *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
