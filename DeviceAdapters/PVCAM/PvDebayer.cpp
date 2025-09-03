@@ -47,6 +47,9 @@ PvDebayer::PvDebayer()
     // default settings
     orderIndex = CFA_RGGB; 
     algoIndex = ALG_REPLICATION;
+    rgbScales.r_scale = 1.0;
+    rgbScales.g_scale = 1.0;
+    rgbScales.b_scale = 1.0;
 }
 
 PvDebayer::~PvDebayer()
