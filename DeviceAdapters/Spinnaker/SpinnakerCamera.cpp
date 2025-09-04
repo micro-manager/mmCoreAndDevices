@@ -891,7 +891,8 @@ const unsigned char* SpinnakerCamera::GetImageBuffer()
 
          if (m_imageBuff)
          {
-            if (m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8) {
+            if (m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8 
+                     || m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed) {
                size_t theirSizeD3 = m_imagePtr->GetBufferSize() / 3;
                size_t ourSizeD4 = this->GetImageBufferSize() / 4;
                size_t minSize = theirSizeD3 > ourSizeD4 ? ourSizeD4 : theirSizeD3;
@@ -961,6 +962,8 @@ unsigned SpinnakerCamera::GetImageBytesPerPixel() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8)
       return 4;
+   if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
+      return 4;
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
       return 4;
 
@@ -996,6 +999,8 @@ unsigned SpinnakerCamera::GetNumberOfComponents() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8)
       return 4;
+   if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
+      return 4;
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
       return 4;
 
@@ -1005,7 +1010,8 @@ unsigned SpinnakerCamera::GetNumberOfComponents() const
 unsigned SpinnakerCamera::GetBitDepth() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8 ||
-      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
+      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8 ||
+      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
    {
       return 8;
    }
@@ -1623,7 +1629,8 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
 
          if (ip->GetPixelFormat() == SPKR::PixelFormat_Mono12p ||
             ip->GetPixelFormat() == SPKR::PixelFormat_Mono12Packed ||
-            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8)
+            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8 ||
+            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed)
          {
             if (m_imageBuff == NULL)
             {
@@ -1631,7 +1638,7 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
                if (ret != DEVICE_OK) return ret;
             }
 
-            if (ip->GetPixelFormat() == SPKR::PixelFormat_RGB8) 
+            if (ip->GetPixelFormat() == SPKR::PixelFormat_RGB8 || ip->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed) 
             {
                size_t theirSizeD3 = ip->GetBufferSize() / 3;
                size_t ourSizeD4 = this->GetImageBufferSize() / 4;
