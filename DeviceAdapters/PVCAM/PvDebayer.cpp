@@ -89,6 +89,9 @@ int PvDebayer::ProcessT(ImgBuffer& out, const T* input, int width, int height, i
         return DEVICE_INVALID_INPUT_PARAM;
     }
 
+    if (width < 2 || height < 2)
+        return DEVICE_NOT_SUPPORTED;
+
     assert(sizeof(int) == 4);
     out.Resize(width, height, 4);
 
