@@ -154,126 +154,236 @@ int PvDebayer::DecodeT(const T* input, int width, int height, int rowOrder, int 
 template <typename T>
 void PvDebayer::DecodeT_Replicate(const T* input, int width, int height, int rowOrder)
 {
-    unsigned short G1, G2, B, R;
+    int x, y, i00, i01, i02, i10, i11, i12, i20, i21, i22;
+
+    #define _SET_RGB_(i, ir, ig, ib) do { \
+        r_[i] = input[ir]; \
+        g_[i] = input[ig]; \
+        b_[i] = input[ib]; \
+    } while (0)
 
     if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) // Green slash
     {
-        // BGGR y\x:   0   1   2
-        //        0:   B   G1  B
-        //        1:   G2  R   G
-        //        2:   B   G   B
+        // Code is for BGGR, RGGB needs to swap R & B channels, done in WhiteBalance()
+        // BGGR y\x:    0      1      2
+        //        0:  i00-B  i10-G  i20-B
+        //        1:  i01-G  i11-R  i21-G
+        //        2:  i02-B  i12-G  i22-B
 
-        // Top-right greens
-        for (int y = 0; y < height; y += 2)
+        // All internal pixels without left & top edges,
+        // and without right / bottom edges when width /height is even.
+        for (y = 1; y+1 < height; y += 2)
         {
-            for (int x = 1; x < width; x += 2)
+            for (x = 1; x+1 < width; x += 2)
             {
-                // TODO: Green is missing on first column even rows
-                G1 = GetPixel(input, x, y, width, height);
-
-                SetPixel(g_, G1, x  , y, width, height);
-                SetPixel(g_, G1, x+1, y, width, height);
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i12 = i11 + width;
+                i01 = i11 - 1;
+                i21 = i11 + 1;
+                i00 = i10 - 1;
+                i20 = i10 + 1;
+                i02 = i12 - 1;
+                i22 = i12 + 1;
+                _SET_RGB_(i11, i11, i01, i00);
+                _SET_RGB_(i21, i11, i21, i20);
+                _SET_RGB_(i12, i11, i12, i02);
+                _SET_RGB_(i22, i11, i12, i22);
             }
         }
-        // Bottom-left greens
-        for (int y = 1; y < height; y += 2)
+        // Left edge
+        for (y = 1, x = 0; y+1 < height; y += 2)
         {
-            for (int x = 0; x < width; x += 2)
-            {
-                G2 = GetPixel(input, x, y, width, height);
-
-                SetPixel(g_, G2, x  , y, width, height);
-                SetPixel(g_, G2, x+1, y, width, height);
-            }
+            i01 = x + y * width;
+            i00 = i01 - width;
+            i02 = i01 + width;
+            i11 = i01 + 1;
+            i12 = i02 + 1;
+            _SET_RGB_(i01, i11, i01, i00);
+            _SET_RGB_(i02, i11, i12, i02);
         }
-
-        // Blue channel for BGGR, red for RGGB (needs swap)
-        for (int y = 0; y < height; y += 2)
+        // Top edge
+        for (y = 0, x = 1; x+1 < width; x += 2)
         {
-            for (int x = 0; x < width; x += 2)
-            {
-                B = GetPixel(input, x, y, width, height);
-
-                SetPixel(b_, B, x  , y  , width, height);
-                SetPixel(b_, B, x+1, y  , width, height);
-                SetPixel(b_, B, x  , y+1, width, height);
-                SetPixel(b_, B, x+1, y+1, width, height);
-            }
+            i10 = x + y * width;
+            i11 = i10 + width;
+            i00 = i10 - 1;
+            i20 = i10 + 1;
+            _SET_RGB_(i10, i11, i10, i00);
+            _SET_RGB_(i20, i11, i10, i20);
         }
-
-        // Red channel for BGGR, blue for RGGB (needs swap)
-        for (int y = 1; y < height; y += 2)
+        // Right edge with top-right corner
+        if ((width % 2) == 0)
         {
-            for (int x = 1; x < width; x += 2)
+            x = width-1; // width is even thus x is odd
+            for (y = 1; y+1 < height; y += 2)
             {
-                // TODO: Red is missing on first row and first column
-                R = GetPixel(input, x, y, width, height);
-
-                SetPixel(r_, R, x  , y  , width, height);
-                SetPixel(r_, R, x+1, y  , width, height);
-                SetPixel(r_, R, x  , y+1, width, height);
-                SetPixel(r_, R, x+1, y+1, width, height);
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i12 = i11 + width;
+                i01 = i11 - 1;
+                i00 = i10 - 1;
+                i02 = i12 - 1;
+                _SET_RGB_(i11, i11, i01, i00);
+                _SET_RGB_(i12, i11, i12, i02);
             }
+            // Top-right corner
+            y = 0;
+            i10 = x + y * width;
+            i11 = i10 + width;
+            i00 = i10 - 1;
+            _SET_RGB_(i10, i11, i10, i00);
         }
+        // Bottom edge with bottom-left corner
+        if ((height % 2) == 0)
+        {
+            y = height-1; // height is even thus y is odd
+            for (x = 1; x+1 < width; x += 2)
+            {
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i01 = i11 - 1;
+                i21 = i11 + 1;
+                i00 = i10 - 1;
+                i20 = i10 + 1;
+                _SET_RGB_(i11, i11, i01, i00);
+                _SET_RGB_(i21, i11, i21, i20);
+            }
+            // Bottom-left corner
+            x = 0;
+            i01 = x + y * width;
+            i00 = i01 - width;
+            i11 = i01 + 1;
+            _SET_RGB_(i01, i11, i01, i00);
+        }
+        // Bottom-right corner
+        if ((width % 2) == 0 && (height % 2) == 0)
+        {
+            x = width-1; // width is even thus x is odd
+            y = height-1; // height is even thus y is odd
+            i11 = x + y * width;
+            i10 = i11 - width;
+            i01 = i11 - 1;
+            i00 = i10 - 1;
+            _SET_RGB_(i11, i11, i01, i00);
+        }
+        // Top-left corner
+        _SET_RGB_(0, 1+width, 1, 0);
     }
     else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) // Green backslash
     {
-        // GRBG y\x:   0   1   2
-        //        0:   G1  R   G
-        //        1:   B   G2  B
-        //        2:   G   R   G
+        // Code is for GRBG, GBRG needs to swap R & B channels, done in WhiteBalance()
+        // GRBG y\x:    0      1      2
+        //        0:  i00-G  i10-R  i20-G
+        //        1:  i01-B  i11-G  i21-B
+        //        2:  i02-G  i12-R  i22-G
 
-        // Top-left greens
-        for (int y = 0; y < height; y += 2)
+        // All internal pixels without left & top edges,
+        // and without right / bottom edges when width /height is even.
+        for (y = 1; y+1 < height; y += 2)
         {
-            for (int x = 0; x < width; x += 2)
+            for (x = 1; x+1 < width; x += 2)
             {
-                G1 = GetPixel(input, x, y, width, height);
-
-                SetPixel(g_, G1, x  , y, width, height);
-                SetPixel(g_, G1, x+1, y, width, height);
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i12 = i11 + width;
+                i01 = i11 - 1;
+                i21 = i11 + 1;
+                i00 = i10 - 1;
+                //i20 = i10 + 1;
+                i02 = i12 - 1;
+                i22 = i12 + 1;
+                _SET_RGB_(i11, i10, i11, i01);
+                _SET_RGB_(i21, i10, i11, i21);
+                _SET_RGB_(i12, i12, i02, i01);
+                _SET_RGB_(i22, i12, i22, i21);
             }
         }
-        // Bottom-right greens
-        for (int y = 1; y < height; y += 2)
+        // Left edge
+        for (y = 1, x = 0; y+1 < height; y += 2)
         {
-            for (int x = 1; x < width; x += 2)
-            {
-                G2 = GetPixel(input, x, y, width, height);
-
-                SetPixel(g_, G2, x  , y, width, height);
-                SetPixel(g_, G2, x+1, y, width, height);
-            }
+            i01 = x + y * width;
+            i00 = i01 - width;
+            i02 = i01 + width;
+            i10 = i00 + 1;
+            i11 = i01 + 1;
+            i12 = i02 + 1;
+            _SET_RGB_(i01, i10, i11, i01);
+            _SET_RGB_(i02, i12, i02, i01);
         }
-
-        // Blue channel for GRBG, red for GBRG (needs swap)
-        for (int y = 1; y < height; y += 2)
+        // Top edge
+        for (y = 0, x = 1; x+1 < width; x += 2)
         {
-            for (int x = 0; x < width; x += 2)
-            {
-                B = GetPixel(input, x, y, width, height);
-
-                SetPixel(b_, B, x  , y  , width, height);
-                SetPixel(b_, B, x+1, y  , width, height);
-                SetPixel(b_, B, x  , y+1, width, height);
-                SetPixel(b_, B, x+1, y+1, width, height);
-            }
+            i10 = x + y * width;
+            i11 = i10 + width;
+            i00 = i10 - 1;
+            i20 = i10 + 1;
+            i01 = i11 - 1;
+            i21 = i11 + 1;
+            _SET_RGB_(i10, i10, i00, i01);
+            _SET_RGB_(i20, i10, i20, i21);
         }
-
-        // Red channel for GRBG, blue for GBRG (needs swap)
-        for (int y = 0; y < height; y += 2)
+        // Right edge with top-right corner
+        if ((width % 2) == 0)
         {
-            for (int x = 1; x < width; x += 2)
+            x = width-1; // width is even thus x is odd
+            for (y = 1; y+1 < height; y += 2)
             {
-                R = GetPixel(input, x, y, width, height);
-
-                SetPixel(r_, R, x  , y  , width, height);
-                SetPixel(r_, R, x+1, y  , width, height);
-                SetPixel(r_, R, x  , y+1, width, height);
-                SetPixel(r_, R, x+1, y+1, width, height);
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i12 = i11 + width;
+                i01 = i11 - 1;
+                i00 = i10 - 1;
+                i02 = i12 - 1;
+                _SET_RGB_(i11, i10, i11, i01);
+                _SET_RGB_(i12, i12, i02, i01);
             }
+            // Top-right corner
+            y = 0;
+            i10 = x + y * width;
+            i11 = i10 + width;
+            i01 = i11 - 1;
+            i00 = i10 - 1;
+            _SET_RGB_(i10, i10, i00, i01);
         }
+        // Bottom edge with bottom-left corner
+        if ((height % 2) == 0)
+        {
+            y = height-1; // height is even thus y is odd
+            for (x = 1; x+1 < width; x += 2)
+            {
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i01 = i11 - 1;
+                i21 = i11 + 1;
+                i00 = i10 - 1;
+                i20 = i10 + 1;
+                _SET_RGB_(i11, i10, i11, i01);
+                _SET_RGB_(i21, i10, i11, i21);
+            }
+            // Bottom-left corner
+            x = 0;
+            i01 = x + y * width;
+            i00 = i01 - width;
+            i10 = i00 + 1;
+            i11 = i01 + 1;
+            _SET_RGB_(i01, i10, i11, i01);
+        }
+        // Bottom-right corner
+        if ((width % 2) == 0 && (height % 2) == 0)
+        {
+            x = width-1; // width is even thus x is odd
+            y = height-1; // height is even thus y is odd
+            i11 = x + y * width;
+            i10 = i11 - width;
+            i01 = i11 - 1;
+            _SET_RGB_(i11, i10, i11, i01);
+        }
+        // Top-left corner
+        _SET_RGB_(0, 1, 0, width);
     }
+
+    #undef _SET_RGB_
 }
 
 // Bilinear algorithm
