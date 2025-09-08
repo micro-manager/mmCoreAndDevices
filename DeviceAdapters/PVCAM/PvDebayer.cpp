@@ -399,6 +399,7 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
 
     if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) // Green slash
     {
+        // Code is for BGGR, RGGB needs to swap R & B channels, done in WhiteBalance()
         // BGGR y\x:   0   1   2   3
         //       -1:   G   R   G   R
         //        0:   B   G   B   G
@@ -409,7 +410,7 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
         // Top-right greens
         for (int y = 0; y < height; y += 2)
         {
-            for (int x = 1; x < width; x += 2)
+            for (int x = -1; x < width; x += 2) // Starts at -1, not from +1!
             {
                 // BGGR y\x:   0   1   2   3
                 //       -1:   G   R   G4  R
@@ -418,11 +419,12 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
                 //        2:   B  *G  #B  *G
                 //        3:   G   R   G   R
                 //             ^
-                //             \--- TODO: Green is missing on first column even rows
+                //             \--- Green is missing on first column even rows if x starts at +1
                 G1 = GetPixel(input, x  , y  , width, height);
-                G2 = GetPixel(input, x+2, y  , width, height);
-                G3 = GetPixel(input, x+1, y+1, width, height);
-                G4 = GetPixel(input, x+1, y-1, width, height);
+                G2 = GetPixel(input, x+2, y  , width, height, (T)G1);
+                if (G1 == 0) G1 = G2; // Fix on left edge
+                G3 = GetPixel(input, x+1, y+1, width, height, (T)G1);
+                G4 = GetPixel(input, x+1, y-1, width, height, (T)G3);
 
                 SetPixel(g_, (unsigned short)( G1                      ), x  , y, width, height); // *
                 SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
@@ -440,9 +442,9 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
                 //        2:   B   G3  B   G
                 //        3:  *G  #R  *G  #R
                 G1 = GetPixel(input, x  , y  , width, height);
-                G2 = GetPixel(input, x+2, y  , width, height);
-                G3 = GetPixel(input, x+1, y+1, width, height);
-                G4 = GetPixel(input, x+1, y-1, width, height);
+                G2 = GetPixel(input, x+2, y  , width, height, (T)G1);
+                G3 = GetPixel(input, x+1, y+1, width, height, (T)G1);
+                G4 = GetPixel(input, x+1, y-1, width, height, (T)G3);
 
                 SetPixel(g_, (unsigned short)( G1                      ), x  , y, width, height); // *
                 SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
@@ -461,9 +463,9 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
                 //        2:  *B3 #G  *B4 #G
                 //        3:  +G  ^R  +G  ^R
                 B1 = GetPixel(input, x  , y  , width, height);
-                B2 = GetPixel(input, x+2, y  , width, height);
-                B3 = GetPixel(input, x  , y+2, width, height);
-                B4 = GetPixel(input, x+2, y+2, width, height);
+                B2 = GetPixel(input, x+2, y  , width, height, (T)B1);
+                B3 = GetPixel(input, x  , y+2, width, height, (T)B1);
+                B4 = GetPixel(input, x+2, y+2, width, height, (T)B3);
 
                 SetPixel(b_, (unsigned short)( B1                      ), x  , y  , width, height); // *
                 SetPixel(b_, (unsigned short)((B1 + B2          ) / 2.0), x+1, y  , width, height); // #
@@ -473,22 +475,25 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
         }
 
         // Red channel for BGGR, blue for RGGB (needs swap)
-        for (int y = 1; y < height; y += 2)
+        for (int y = -1; y < height; y += 2) // Starts at -1, not from +1!
         {
-            for (int x = 1; x < width; x += 2)
+            for (int x = -1; x < width; x += 2) // Starts at -1, not from +1!
             {
                 // BGGR y\x:   0   1   2   3
                 //       -1:   G   R   G   R
-                //        0:   B   G   B   G   <--- TODO: Red is missing on first row
+                //        0:   B   G   B   G   <--- Red is missing on first row if y starts at +1
                 //        1:   G  *R1 #G  *R2
                 //        2:   B  +G  ^B  +G
                 //        3:   G  *R3 #G  *R4
                 //             ^
-                //             \--- TODO: Red is missing on first column
+                //             \--- Red is missing on first column if x starts at +1
                 R1 = GetPixel(input, x  , y  , width, height);
-                R2 = GetPixel(input, x+2, y  , width, height);
-                R3 = GetPixel(input, x  , y+2, width, height);
-                R4 = GetPixel(input, x+2, y+2, width, height);
+                R2 = GetPixel(input, x+2, y  , width, height, (T)R1);
+                if (R1 == 0) R1 = R2; // Fix on left edge
+                R3 = GetPixel(input, x  , y+2, width, height, (T)R1);
+                if (R1 == 0) R1 = R2 = R3; // Fix on top edge
+                R4 = GetPixel(input, x+2, y+2, width, height, (T)R3);
+                if (R3 == 0) R1 = R2 = R3 = R4; // Fix on top-left corner
 
                 SetPixel(r_, (unsigned short)( R1                      ), x  , y  , width, height); // *
                 SetPixel(r_, (unsigned short)((R1 + R2          ) / 2.0), x+1, y  , width, height); // #
@@ -499,6 +504,7 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
     }
     else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) // Green backslash
     {
+        // Code is for GRBG, GBRG needs to swap R & B channels, done in WhiteBalance()
         // GRBG y\x:   0   1   2   3
         //       -1:   B   G   B   G
         //        0:   G   R   G   R
@@ -518,9 +524,9 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
                 //        2:  *G  #R  *G  #R
                 //        3:   B   G   B   G
                 G1 = GetPixel(input, x  , y  , width, height);
-                G2 = GetPixel(input, x+2, y  , width, height);
-                G3 = GetPixel(input, x+1, y+1, width, height);
-                G4 = GetPixel(input, x+1, y-1, width, height);
+                G2 = GetPixel(input, x+2, y  , width, height, (T)G1);
+                G3 = GetPixel(input, x+1, y+1, width, height, (T)G1);
+                G4 = GetPixel(input, x+1, y-1, width, height, (T)G3);
 
                 SetPixel(g_, (unsigned short)( G1                      ), x  , y, width, height); // *
                 SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
@@ -529,7 +535,7 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
         // Bottom-right greens
         for (int y = 1; y < height; y += 2)
         {
-            for (int x = 1; x < width; x += 2)
+            for (int x = -1; x < width; x += 2) // Starts at -1, not from +1!
             {
                 // GRBG y\x:   0   1   2   3
                 //       -1:   B   G   B   G
@@ -538,11 +544,12 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
                 //        2:   G   R   G3  R
                 //        3:   B  *G  #B  *G
                 //             ^
-                //             \--- TODO: Green is missing on first column odd rows
+                //             \--- Green is missing on first column odd rows if x starts at +1
                 G1 = GetPixel(input, x  , y  , width, height);
-                G2 = GetPixel(input, x+2, y  , width, height);
-                G3 = GetPixel(input, x+1, y+1, width, height);
-                G4 = GetPixel(input, x+1, y-1, width, height);
+                G2 = GetPixel(input, x+2, y  , width, height, (T)G1);
+                if (G1 == 0) G1 = G2; // Fix on left edge
+                G3 = GetPixel(input, x+1, y+1, width, height, (T)G1);
+                G4 = GetPixel(input, x+1, y-1, width, height, (T)G3);
 
                 SetPixel(g_, (unsigned short)( G1                      ), x  , y, width, height); // *
                 SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
@@ -550,20 +557,21 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
         }
 
         // Blue channel for GRBG, red for GBRG (needs swap)
-        for (int y = 1; y < height; y += 2)
+        for (int y = -1; y < height; y += 2) // Starts at -1, not from +1!
         {
             for (int x = 0; x < width; x += 2)
             {
                 // GRBG y\x:   0   1   2   3
                 //       -1:   B   G   B   G
-                //        0:   G   R   G   R   <--- TODO: Blue is missing on first row
+                //        0:   G   R   G   R   <--- Blue is missing on first row if y starts at +1
                 //        1:  *B1 #G  *B2 #G
                 //        2:  +G  ^R  +G  ^R
                 //        3:  *B3 #G  *B4 #G
                 B1 = GetPixel(input, x  , y  , width, height);
-                B2 = GetPixel(input, x+2, y  , width, height);
-                B3 = GetPixel(input, x  , y+2, width, height);
-                B4 = GetPixel(input, x+2, y+2, width, height);
+                B2 = GetPixel(input, x+2, y  , width, height, (T)B1);
+                B3 = GetPixel(input, x  , y+2, width, height, (T)B1);
+                B4 = GetPixel(input, x+2, y+2, width, height, (T)B3);
+                if (B2 == 0) B1 = B2 = B3; // Fix on top edge
 
                 SetPixel(b_, (unsigned short)( B1                      ), x  , y  , width, height); // *
                 SetPixel(b_, (unsigned short)((B1 + B2          ) / 2.0), x+1, y  , width, height); // #
@@ -575,7 +583,7 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
         // Red channel for GRBG, blue for GBRG (needs swap)
         for (int y = 0; y < height; y += 2)
         {
-            for (int x = 1; x < width; x += 2)
+            for (int x = -1; x < width; x += 2) // Starts at -1, not from +1!
             {
                 // GRBG y\x:   0   1   2   3
                 //       -1:   B   G   B   G
@@ -584,11 +592,12 @@ void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowO
                 //        2:   G  *R3 #G  *R4
                 //        3:   B  +G  ^B  +G
                 //             ^
-                //             \--- TODO: Red is missing on first column
+                //             \--- Red is missing on first column if x starts at +1
                 R1 = GetPixel(input, x  , y  , width, height);
-                R2 = GetPixel(input, x+2, y  , width, height);
-                R3 = GetPixel(input, x  , y+2, width, height);
-                R4 = GetPixel(input, x+2, y+2, width, height);
+                R2 = GetPixel(input, x+2, y  , width, height, (T)R1);
+                if (R1 == 0) R1 = R2; // Fix on left edge
+                R3 = GetPixel(input, x  , y+2, width, height, (T)R1);
+                R4 = GetPixel(input, x+2, y+2, width, height, (T)R3);
 
                 SetPixel(r_, (unsigned short)( R1                      ), x  , y  , width, height); // *
                 SetPixel(r_, (unsigned short)((R1 + R2          ) / 2.0), x+1, y  , width, height); // #
@@ -609,6 +618,7 @@ void PvDebayer::DecodeT_Smooth(const T* input, int width, int height, int rowOrd
 
     if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) // Green slash
     {
+        // Code is for BGGR, RGGB needs to swap R & B channels, done in WhiteBalance()
         // BGGR y\x:  -1   0   1   2   3
         //       -1:   R   G   R   G   R
         //        0:   G   B   G   B   G
@@ -641,6 +651,7 @@ void PvDebayer::DecodeT_Smooth(const T* input, int width, int height, int rowOrd
                 else
                     SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
 
+                // TODO: No reason for this case, maybe only if (x == width-1)
                 if (x == 1)
                 {
                     // TODO: Should take G6 instead of G4.
@@ -760,6 +771,7 @@ void PvDebayer::DecodeT_Smooth(const T* input, int width, int height, int rowOrd
     }
     else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) // Green backslash
     {
+        // Code is for GRBG, GBRG needs to swap R & B channels, done in WhiteBalance()
         // GRBG y\x:  -1   0   1   2   3
         //       -1:   G   B   G   B   G
         //        0:   R   G   R   G   R
@@ -775,9 +787,9 @@ void PvDebayer::DecodeT_Smooth(const T* input, int width, int height, int rowOrd
             for (int x = 0; x < width; x += 2)
             {
                 // GRBG y\x:  -1   0   1   2   3
-                //       -1:   G   B   G4  B   G
+                //       -1:   G6  B   G4  B   G
                 //        0:   R  *G1 +R  *G2 +R
-                //        1:   G   B   G3  B   G
+                //        1:   G5  B   G3  B   G
                 //        2:   R  *G  #R  *G  #R
                 //        3:   G   B   G   B   G
                 G1 = GetPixel(input, x  , y  , width, height);
@@ -795,6 +807,8 @@ void PvDebayer::DecodeT_Smooth(const T* input, int width, int height, int rowOrd
                 // TODO: x cannot be 1 because it's always even
                 if (x == 1)
                 {
+                    // TODO: Should take G6 instead of G4.
+                    //       We should exclude G4 and/or G5 from calculation if zero.
                     G5 = GetPixel(input, x-1, y+1, width, height);
                     SetPixel(g_, (unsigned short)((G1 + G4 + G5) / 3.0), x-1, y, width, height); // ^
                 }
@@ -923,6 +937,7 @@ void PvDebayer::DecodeT_AdaptiveSmooth(const T* input, int width, int height, in
 
     if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) // Green slash
     {
+        // Code is for BGGR, RGGB needs to swap R & B channels, done in WhiteBalance()
         // BGGR y\x:  -1   0   1   2   3   4
         //       -2:   G   B   G   B   G   B
         //       -1:   R   G   R   G   R   G
@@ -1118,6 +1133,7 @@ void PvDebayer::DecodeT_AdaptiveSmooth(const T* input, int width, int height, in
     }
     else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) // Green backslash
     {
+        // Code is for GRBG, GBRG needs to swap R & B channels, done in WhiteBalance()
         // GRBG y\x:  -1   0   1   2   3   4
         //       -2:   R   G   R   G   R   G
         //       -1:   G   B   G   B   G   B
@@ -1353,15 +1369,15 @@ int PvDebayer::WhiteBalance(int* output, int width, int height, int bitDepth, in
 }
 
 template <typename T>
-unsigned short PvDebayer::GetPixel(const T* v, int x, int y, int width, int height)
+unsigned short PvDebayer::GetPixel(const T* v, int x, int y, int width, int height, T def)
 {
-    if (x >= width || x < 0 || y >= height || y < 0)
-        return 0;
-    else
+    if (x < width && x >= 0 && y < height && y >= 0)
         return v[y * width + x];
+    return def;
 }
 
-void PvDebayer::SetPixel(std::vector<unsigned short>& v, unsigned short val, int x, int y, int width, int height)
+template <typename T>
+void PvDebayer::SetPixel(std::vector<T>& v, T val, int x, int y, int width, int height)
 {
     if (x < width && x >= 0 && y < height && y >= 0)
         v[y * width + x] = val;

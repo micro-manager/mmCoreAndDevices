@@ -92,9 +92,10 @@ private:
     int WhiteBalance(int* output, int width, int height, int bitDepth, int rowOrder);
 
     template <typename T>
-    unsigned short GetPixel(const T* v, int x, int y, int width, int height);
+    unsigned short GetPixel(const T* v, int x, int y, int width, int height, T def = (T)0);
 
-    void SetPixel(std::vector<unsigned short>& v, unsigned short val, int x, int y, int width, int height);
+    template <typename T>
+    void SetPixel(std::vector<T>& v, T val, int x, int y, int width, int height);
 
 private:
     std::vector<unsigned short> r_; // red scratch buffer
