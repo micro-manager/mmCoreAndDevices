@@ -173,15 +173,17 @@ int Tsi3Cam::Initialize()
 	// Get desired ID.  For backwards compatability, zero indicates take the first camera
 	char camera_id[maxSdkStringLength];
 	this->GetProperty(MM::g_Keyword_CameraID, camera_id);
+   char camera_ids[maxSdkStringLength];
 
-	if (std::strcmp(camera_id, "0") != 0) 
+	// Even though it does not seem to be needed if we already know the camera ID,
+   // not discovering available cameras leads to failure to open the camera sometimes.
+   if (tl_camera_discover_available_cameras(camera_ids, maxSdkStringLength))
+   {
+      return ERR_TSI_CAMERA_NOT_FOUND;
+   }
+
+	if (std::strcmp(camera_id, "0") == 0) 
 	{
-		char camera_ids[maxSdkStringLength];
-
-		if (tl_camera_discover_available_cameras(camera_ids, maxSdkStringLength))
-		{
-			return ERR_TSI_CAMERA_NOT_FOUND;
-		}
 
 		// pull out the first camera in the list
 		string s_camera_ids(camera_ids);
