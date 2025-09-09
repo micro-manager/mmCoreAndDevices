@@ -6140,7 +6140,7 @@ int Universal::selectDebayerAlgMask(int xRoiPos, int yRoiPos, int32 pvcamColorMo
     // G B G
     // R G R
     // Based on ROI shift it will simply help us to pick the correct mask
-    static const int maskMatrix[3][3] = {
+    static const int maskMatrix[3/*Y*/][3/*X*/] = {
         {CFA_RGGB, CFA_GRBG, CFA_RGGB},
         {CFA_GBRG, CFA_BGGR, CFA_GBRG},
         {CFA_RGGB, CFA_GRBG, CFA_RGGB}};
@@ -6148,13 +6148,13 @@ int Universal::selectDebayerAlgMask(int xRoiPos, int yRoiPos, int32 pvcamColorMo
         switch (pvcamColorMode)
         {
         case COLOR_RGGB:
-            return maskMatrix[xShift + 0][yShift + 0];
+            return maskMatrix[yShift + 0][xShift + 0];
         case COLOR_GRBG:
-            return maskMatrix[xShift + 1][yShift + 0];
+            return maskMatrix[yShift + 0][xShift + 1];
         case COLOR_GBRG:
-            return maskMatrix[xShift + 0][yShift + 1];
+            return maskMatrix[yShift + 1][xShift + 0];
         case COLOR_BGGR:
-            return maskMatrix[xShift + 1][yShift + 1];
+            return maskMatrix[yShift + 1][xShift + 1];
         default:
             return CFA_RGGB;
         }

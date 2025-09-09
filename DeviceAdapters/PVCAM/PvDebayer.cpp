@@ -24,1241 +24,1361 @@
 
 #include "PvDebayer.h"
 
-#include <math.h>
-#include <assert.h>
-
-///////////////////////////////////////////////////////////////////////////////
-// Debayer class implementation
-///////////////////////////////////////////////////////////////////////////////
-
+// System
+#include <algorithm>
+#include <cassert>
+#include <cmath>
 
 PvDebayer::PvDebayer()
 {
-    orders.push_back("R-G-R-G");
-    orders.push_back("B-G-B-G");
-    orders.push_back("G-R-G-R");
-    orders.push_back("G-B-G-B");
+    orders_.push_back("R-G-R-G");
+    orders_.push_back("B-G-B-G");
+    orders_.push_back("G-R-G-R");
+    orders_.push_back("G-B-G-B");
 
-    algorithms.push_back("Replication");
-    algorithms.push_back("Bilinear");
-    algorithms.push_back("Smooth-Hue");
-    algorithms.push_back("Adaptive-Smooth-Hue");
+    algorithms_.push_back("Replication");
+    algorithms_.push_back("Bilinear");
+    algorithms_.push_back("Smooth-Hue");
+    algorithms_.push_back("Adaptive-Smooth-Hue");
 
-    // default settings
-    orderIndex = CFA_RGGB; 
-    algoIndex = ALG_REPLICATION;
+    // Default settings
+    orderIndex_ = CFA_RGGB;
+    algoIndex_ = ALG_REPLICATION;
+    rgbScales_.r = 1.0;
+    rgbScales_.g = 1.0;
+    rgbScales_.b = 1.0;
 }
 
 PvDebayer::~PvDebayer()
 {
 }
 
-int PvDebayer::Process(ImgBuffer& out, const ImgBuffer& input, int bitDepth)
+int PvDebayer::Process(ImgBuffer& out, const ImgBuffer& in, int bitDepth)
 {
-    assert(sizeof(int) == 4);
+    switch (in.Depth())
+    {
+    case 1: {
+        const unsigned char* input = in.GetPixels();
+        return ProcessT(out, input, in.Width(), in.Height(), bitDepth);
+    }
+    case 2: {
+        const unsigned short* input = reinterpret_cast<const unsigned short*>(in.GetPixels());
+        return ProcessT(out, input, in.Width(), in.Height(), bitDepth);
+    }
+    default:
+        return DEVICE_UNSUPPORTED_DATA_FORMAT;
+    }
+}
 
-    int byteDepth = input.Depth();
-    if (bitDepth > byteDepth * 8)
+int PvDebayer::Process(ImgBuffer& out, const unsigned char* in, int width, int height, int bitDepth)
+{
+    return ProcessT(out, in, width, height, bitDepth);
+}
+
+int PvDebayer::Process(ImgBuffer& out, const unsigned short* in, int width, int height, int bitDepth)
+{
+    return ProcessT(out, in, width, height, bitDepth);
+}
+
+template <typename T>
+int PvDebayer::ProcessT(ImgBuffer& out, const T* input, int width, int height, int bitDepth)
+{
+    if ((size_t)bitDepth > sizeof(T) * 8)
     {
         assert(false);
         return DEVICE_INVALID_INPUT_PARAM;
     }
 
-    out.Resize(input.Width(), input.Height(), 4);
-    if (input.Depth() == 1)
-    {
-        const unsigned char* inBuf = input.GetPixels();
-        return ProcessT(out, inBuf, input.Width(), input.Height(), bitDepth);
-    }
-    else if (input.Depth() == 2)
-    {
-        const unsigned short* inBuf = reinterpret_cast<const unsigned short*>(input.GetPixels());
-        return ProcessT(out, inBuf, input.Width(), input.Height(), bitDepth);
-    }
-    else
-        return DEVICE_UNSUPPORTED_DATA_FORMAT;
+    if (width < 2 || height < 2)
+        return DEVICE_NOT_SUPPORTED;
 
-}
-
-int PvDebayer::Process(ImgBuffer& out, const unsigned char* in, int width, int height, int bitDepth)
-{ return ProcessT(out, in, width, height, bitDepth); }
-
-int PvDebayer::Process(ImgBuffer& out, const unsigned short* in, int width, int height, int bitDepth)
-{ return ProcessT(out, in, width, height, bitDepth); }
-
-template <typename T>
-int PvDebayer::ProcessT(ImgBuffer& out, const T* in, int width, int height, int bitDepth)
-{
     assert(sizeof(int) == 4);
     out.Resize(width, height, 4);
-    int* outBuf = reinterpret_cast<int*>(out.GetPixelsRW());
 
-    // TODO: There seems to be bug somewhere in the conversion routine. When Binning is switched from 1x1 to 2x2 or other
-    // the image cannot be debayered (obviously), however when switching back to 1x1 the blue channel seems to contain
-    // some incorrect values from the 2x2 binned image. After adding the clear() calls below the issue disappeared.
-    // This suggests that the debayering algorithm preserves some data from previous frames and tampers the current frame.
-    // TODO: The algorithm itself is very inefficient, we should consider using OpenCV or at least revisit the algorithms,
-    // at least the SetPixel(), GetPixel() and all the loops using vectors needs to be improved.
-    // (remove conditions from Get,SetPixel, avoid using std::vector)
-    r.clear();
-    g.clear();
-    b.clear();
+    int* output = reinterpret_cast<int*>(out.GetPixelsRW());
 
-    return Convert(in, outBuf, width, height, bitDepth, orderIndex, algoIndex);
+    const size_t numPixels = (size_t)width * height;
+    // Resize scratch buffers, don't shrink, like ImgBuffer::Resize()
+    if (r_.size() < numPixels)
+    {
+        r_.resize(numPixels);
+        g_.resize(numPixels);
+        b_.resize(numPixels);
+    }
+
+    // TODO: There is a bug in the conversion routines that not all R, G and B
+    //       pixels are set, especially on the image border (see TODOs).
+    //       When Binning is switched from 1x1 to 2x2 or other the image cannot
+    //       be debayered (obviously, but it is incorrectly), however when
+    //       switching back to 1x1 some color channels contain some incorrect
+    //       values from the 2x2 binned image.
+    //       The same happens after increasing ROI size.
+    //       Initializing the scratch buffers to zeroes solves the issue until
+    //       the conversion routines are fixes.
+    std::fill(r_.begin(), r_.begin() + numPixels, (unsigned short)0);
+    std::fill(g_.begin(), g_.begin() + numPixels, (unsigned short)0);
+    std::fill(b_.begin(), b_.begin() + numPixels, (unsigned short)0);
+
+    // TODO: The algorithm itself is very inefficient, we should consider using
+    //       OpenCV or at least revisit the algorithms, at least the SetPixel(),
+    //       GetPixel() and all the loops using vectors needs to be improved.
+    //       (remove conditions from Get,SetPixel, avoid using std::vector)
+
+    int err = DecodeT(input, width, height, orderIndex_, algoIndex_);
+    if (err != DEVICE_OK)
+        return err;
+
+    return WhiteBalance(output, width, height, bitDepth, orderIndex_);
 }
 
 template<typename T>
-int PvDebayer::Convert(const T* input, int* output, int width, int height, int bitDepth, int rowOrder, int algorithm)
+int PvDebayer::DecodeT(const T* input, int width, int height, int rowOrder, int algorithm)
 {
-    if (algorithm == ALG_REPLICATION)
-        ReplicateDecode(input, output, width, height, bitDepth, rowOrder);
-    else if (algorithm == ALG_BILINEAR)
-        BilinearDecode(input, output, width, height, bitDepth, rowOrder);
-    else if (algorithm == ALG_SMOOTH_HUE)
-        SmoothDecode(input, output, width, height, bitDepth, rowOrder);
-    else if (algorithm == ALG_ADAPTIVE_SMOOTH_HUE)
-        AdaptiveSmoothDecode(input, output, width, height, bitDepth, rowOrder);
-    else
+    switch (algorithm)
+    {
+    case ALG_REPLICATION:
+        DecodeT_Replicate(input, width, height, rowOrder);
+        return DEVICE_OK;
+    case ALG_BILINEAR:
+        DecodeT_Bilinear(input, width, height, rowOrder);
+        return DEVICE_OK;
+    case ALG_SMOOTH_HUE:
+        DecodeT_Smooth(input, width, height, rowOrder);
+        return DEVICE_OK;
+    case ALG_ADAPTIVE_SMOOTH_HUE:
+        DecodeT_AdaptiveSmooth(input, width, height, rowOrder);
+        return DEVICE_OK;
+    default:
         return DEVICE_NOT_SUPPORTED;
-
-
-    return DEVICE_OK;
-}
-
-unsigned short PvDebayer::GetPixel(const unsigned short* v, int x, int y, int width, int height)
-{
-    if (x >= width || x < 0 || y >= height || y < 0)
-        return 0;
-    else
-        return v[y*width + x];
-}
-
-void PvDebayer::SetPixel(std::vector<unsigned short>& v, unsigned short val, int x, int y, int width, int height)
-{
-    if (x < width && x >= 0 && y < height && y >= 0)
-        v[y*width + x] = val;
-}
-
-unsigned short PvDebayer::GetPixel(const unsigned char* v, int x, int y, int width, int height)
-{
-    if (x >= width || x < 0 || y >= height || y < 0)
-        return 0;
-    else
-        return v[y*width + x];
+    }
 }
 
 // Replication algorithm
 template <typename T>
-void PvDebayer::ReplicateDecode(const T* input, int* output, int width, int height, int bitDepth, int rowOrder)
+void PvDebayer::DecodeT_Replicate(const T* input, int width, int height, int rowOrder)
 {
-    unsigned numPixels(width*height);
-    if (r.size() != numPixels)
+    int x, y, i00, i01, i02, i10, i11, i12, i20, i21, i22;
+
+    #define _SET_RGB_(i, ir, ig, ib) do { \
+        r_[i] = input[ir]; \
+        g_[i] = input[ig]; \
+        b_[i] = input[ib]; \
+    } while (0)
+
+    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) // Green slash
     {
-        r.resize(numPixels);
-        g.resize(numPixels);
-        b.resize(numPixels);
+        // Code is for BGGR, RGGB needs to swap R & B channels, done in WhiteBalance()
+        // BGGR y\x:    0      1      2
+        //        0:  i00-B  i10-G  i20-B
+        //        1:  i01-G  i11-R  i21-G
+        //        2:  i02-B  i12-G  i22-B
+
+        // All internal pixels without left & top edges,
+        // and without right / bottom edges when width /height is even.
+        for (y = 1; y+1 < height; y += 2)
+        {
+            for (x = 1; x+1 < width; x += 2)
+            {
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i12 = i11 + width;
+                i01 = i11 - 1;
+                i21 = i11 + 1;
+                i00 = i10 - 1;
+                i20 = i10 + 1;
+                i02 = i12 - 1;
+                i22 = i12 + 1;
+                _SET_RGB_(i11, i11, i01, i00);
+                _SET_RGB_(i21, i11, i21, i20);
+                _SET_RGB_(i12, i11, i12, i02);
+                _SET_RGB_(i22, i11, i12, i22);
+            }
+        }
+        // Left edge
+        for (y = 1, x = 0; y+1 < height; y += 2)
+        {
+            i01 = x + y * width;
+            i00 = i01 - width;
+            i02 = i01 + width;
+            i11 = i01 + 1;
+            i12 = i02 + 1;
+            _SET_RGB_(i01, i11, i01, i00);
+            _SET_RGB_(i02, i11, i12, i02);
+        }
+        // Top edge
+        for (y = 0, x = 1; x+1 < width; x += 2)
+        {
+            i10 = x + y * width;
+            i11 = i10 + width;
+            i00 = i10 - 1;
+            i20 = i10 + 1;
+            _SET_RGB_(i10, i11, i10, i00);
+            _SET_RGB_(i20, i11, i10, i20);
+        }
+        // Right edge with top-right corner
+        if ((width % 2) == 0)
+        {
+            x = width-1; // width is even thus x is odd
+            for (y = 1; y+1 < height; y += 2)
+            {
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i12 = i11 + width;
+                i01 = i11 - 1;
+                i00 = i10 - 1;
+                i02 = i12 - 1;
+                _SET_RGB_(i11, i11, i01, i00);
+                _SET_RGB_(i12, i11, i12, i02);
+            }
+            // Top-right corner
+            y = 0;
+            i10 = x + y * width;
+            i11 = i10 + width;
+            i00 = i10 - 1;
+            _SET_RGB_(i10, i11, i10, i00);
+        }
+        // Bottom edge with bottom-left corner
+        if ((height % 2) == 0)
+        {
+            y = height-1; // height is even thus y is odd
+            for (x = 1; x+1 < width; x += 2)
+            {
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i01 = i11 - 1;
+                i21 = i11 + 1;
+                i00 = i10 - 1;
+                i20 = i10 + 1;
+                _SET_RGB_(i11, i11, i01, i00);
+                _SET_RGB_(i21, i11, i21, i20);
+            }
+            // Bottom-left corner
+            x = 0;
+            i01 = x + y * width;
+            i00 = i01 - width;
+            i11 = i01 + 1;
+            _SET_RGB_(i01, i11, i01, i00);
+        }
+        // Bottom-right corner
+        if ((width % 2) == 0 && (height % 2) == 0)
+        {
+            x = width-1; // width is even thus x is odd
+            y = height-1; // height is even thus y is odd
+            i11 = x + y * width;
+            i10 = i11 - width;
+            i01 = i11 - 1;
+            i00 = i10 - 1;
+            _SET_RGB_(i11, i11, i01, i00);
+        }
+        // Top-left corner
+        _SET_RGB_(0, 1+width, 1, 0);
+    }
+    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) // Green backslash
+    {
+        // Code is for GRBG, GBRG needs to swap R & B channels, done in WhiteBalance()
+        // GRBG y\x:    0      1      2
+        //        0:  i00-G  i10-R  i20-G
+        //        1:  i01-B  i11-G  i21-B
+        //        2:  i02-G  i12-R  i22-G
+
+        // All internal pixels without left & top edges,
+        // and without right / bottom edges when width /height is even.
+        for (y = 1; y+1 < height; y += 2)
+        {
+            for (x = 1; x+1 < width; x += 2)
+            {
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i12 = i11 + width;
+                i01 = i11 - 1;
+                i21 = i11 + 1;
+                i00 = i10 - 1;
+                //i20 = i10 + 1;
+                i02 = i12 - 1;
+                i22 = i12 + 1;
+                _SET_RGB_(i11, i10, i11, i01);
+                _SET_RGB_(i21, i10, i11, i21);
+                _SET_RGB_(i12, i12, i02, i01);
+                _SET_RGB_(i22, i12, i22, i21);
+            }
+        }
+        // Left edge
+        for (y = 1, x = 0; y+1 < height; y += 2)
+        {
+            i01 = x + y * width;
+            i00 = i01 - width;
+            i02 = i01 + width;
+            i10 = i00 + 1;
+            i11 = i01 + 1;
+            i12 = i02 + 1;
+            _SET_RGB_(i01, i10, i11, i01);
+            _SET_RGB_(i02, i12, i02, i01);
+        }
+        // Top edge
+        for (y = 0, x = 1; x+1 < width; x += 2)
+        {
+            i10 = x + y * width;
+            i11 = i10 + width;
+            i00 = i10 - 1;
+            i20 = i10 + 1;
+            i01 = i11 - 1;
+            i21 = i11 + 1;
+            _SET_RGB_(i10, i10, i00, i01);
+            _SET_RGB_(i20, i10, i20, i21);
+        }
+        // Right edge with top-right corner
+        if ((width % 2) == 0)
+        {
+            x = width-1; // width is even thus x is odd
+            for (y = 1; y+1 < height; y += 2)
+            {
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i12 = i11 + width;
+                i01 = i11 - 1;
+                i00 = i10 - 1;
+                i02 = i12 - 1;
+                _SET_RGB_(i11, i10, i11, i01);
+                _SET_RGB_(i12, i12, i02, i01);
+            }
+            // Top-right corner
+            y = 0;
+            i10 = x + y * width;
+            i11 = i10 + width;
+            i01 = i11 - 1;
+            i00 = i10 - 1;
+            _SET_RGB_(i10, i10, i00, i01);
+        }
+        // Bottom edge with bottom-left corner
+        if ((height % 2) == 0)
+        {
+            y = height-1; // height is even thus y is odd
+            for (x = 1; x+1 < width; x += 2)
+            {
+                i11 = x + y * width;
+                i10 = i11 - width;
+                i01 = i11 - 1;
+                i21 = i11 + 1;
+                i00 = i10 - 1;
+                i20 = i10 + 1;
+                _SET_RGB_(i11, i10, i11, i01);
+                _SET_RGB_(i21, i10, i11, i21);
+            }
+            // Bottom-left corner
+            x = 0;
+            i01 = x + y * width;
+            i00 = i01 - width;
+            i10 = i00 + 1;
+            i11 = i01 + 1;
+            _SET_RGB_(i01, i10, i11, i01);
+        }
+        // Bottom-right corner
+        if ((width % 2) == 0 && (height % 2) == 0)
+        {
+            x = width-1; // width is even thus x is odd
+            y = height-1; // height is even thus y is odd
+            i11 = x + y * width;
+            i10 = i11 - width;
+            i01 = i11 - 1;
+            _SET_RGB_(i11, i10, i11, i01);
+        }
+        // Top-left corner
+        _SET_RGB_(0, 1, 0, width);
     }
 
-    int bitShift = bitDepth - 8;
-
-    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) {
-        for (int y=0; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                unsigned short one = GetPixel(input, x, y, width, height);
-                SetPixel(b, one, x, y, width, height);
-                SetPixel(b, one, x+1, y, width, height);
-                SetPixel(b, one, x, y+1, width, height); 
-                SetPixel(b, one, x+1, y+1, width, height);
-            }
-        }
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                unsigned short one = GetPixel(input, x, y, width, height);
-                SetPixel(r, one, x, y, width, height);
-                SetPixel(r, one, x+1, y, width, height);
-                SetPixel(r, one, x, y+1, width, height); 
-                SetPixel(r, one, x+1, y+1, width, height);
-            }
-        }
-
-        for (int y=0; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                unsigned short one = GetPixel(input, x, y, width, height);
-                SetPixel(g, one, x, y, width, height);
-                SetPixel(g, one, x+1, y, width, height);
-            }
-        }
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                unsigned short one = GetPixel(input, x, y, width, height);
-                SetPixel(g, one, x, y, width, height);
-                SetPixel(g, one, x+1, y, width, height);
-            }
-        }
-
-        if (rowOrder == CFA_RGGB) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
-            }
-        }
-        else if (rowOrder == CFA_BGGR) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
-            }
-        }
-    }
-    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) {
-        for (int y=1; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                unsigned short one = GetPixel(input, x, y, width, height);
-                SetPixel(b, one, x, y, width, height);
-                SetPixel(b, one, x+1, y, width, height);
-                SetPixel(b, one, x, y+1, width, height); 
-                SetPixel(b, one, x+1, y+1, width, height);
-            }
-        }
-
-        for (int y=0; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                unsigned short one = GetPixel(input, x, y, width, height);
-                SetPixel(r, one, x, y, width, height);
-                SetPixel(r, one, x+1, y, width, height);
-                SetPixel(r, one, x, y+1, width, height); 
-                SetPixel(r, one, x+1, y+1, width, height);
-            }
-        }
-
-        for (int y=0; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                unsigned short one = GetPixel(input, x, y, width, height);
-                SetPixel(g, one, x, y, width, height);
-                SetPixel(g, one, x+1, y, width, height);
-            }
-        }
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                unsigned short one = GetPixel(input, x, y, width, height);
-                SetPixel(g, one, x, y, width, height);
-                SetPixel(g, one, x+1, y, width, height);
-            }
-        }
-        if (rowOrder == CFA_GRBG) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
-            }
-
-
-        }
-        else if (rowOrder == CFA_GBRG) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
-            }
-        }
-    }
+    #undef _SET_RGB_
 }
-
 
 // Bilinear algorithm
 template <typename T>
-void PvDebayer::BilinearDecode(const T* input, int* output, int width, int height, int bitDepth, int rowOrder)
+void PvDebayer::DecodeT_Bilinear(const T* input, int width, int height, int rowOrder)
 {
-    unsigned numPixels(width*height);
-    if (r.size() != numPixels)
+    unsigned int R1, R2, R3, R4;
+    unsigned int G1, G2, G3, G4;
+    unsigned int B1, B2, B3, B4;
+
+    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) // Green slash
     {
-        r.resize(numPixels);
-        g.resize(numPixels);
-        b.resize(numPixels);
-    }
+        // Code is for BGGR, RGGB needs to swap R & B channels, done in WhiteBalance()
+        // BGGR y\x:   0   1   2   3
+        //       -1:   G   R   G   R
+        //        0:   B   G   B   G
+        //        1:   G   R   G   R
+        //        2:   B   G   B   G
+        //        3:   G   R   G   R
 
-    int one, two, three, four;
-    one = two = three = four = 0;
-
-    int bitShift = bitDepth - 8;
-
-    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) {
-        for (int y=0; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                one = GetPixel(input, x, y, width, height);
-                two = GetPixel(input, x+2, y, width, height);
-                three = GetPixel(input, x, y+2, width, height);
-                four = GetPixel(input, x+2, y+2, width, height);
-
-                SetPixel(b, (unsigned short)one, x, y, width, height);
-                SetPixel(b, (unsigned short)((one+two)/2.0), x+1, y, width, height);
-                SetPixel(b, (unsigned short)((one+three)/2.0), x, y+1, width, height); 
-                SetPixel(b, (unsigned short)((one+two+three+four)/4.0), x+1, y+1, width, height);
-            }
-        }
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                one = GetPixel(input, x, y, width, height);
-                two = GetPixel(input, x+2, y, width, height);
-                three = GetPixel(input, x, y+2, width, height);
-                four = GetPixel(input, x+2, y+2, width, height);
-
-                SetPixel(r, (unsigned short)one, x, y, width, height);
-                SetPixel(r, (unsigned short)((one+two)/2.0), x+1, y, width, height);
-                SetPixel(r, (unsigned short)((one+three)/2.0), x, y+1, width, height); 
-                SetPixel(r, (unsigned short)((one+two+three+four)/4.0), x+1, y+1, width, height);
-            }
-        }
-
-        for (int y=0; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                one = GetPixel(input, x, y, width, height);
-                two = GetPixel(input, x+2, y, width, height);
-                three = GetPixel(input, x+1, y+1, width, height);
-                four = GetPixel(input, x+1, y-1, width, height);
-
-                SetPixel(g, (unsigned short)one, x, y, width, height);
-                SetPixel(g, (unsigned short)((one+two+three+four)/4.0), x+1, y, width, height);
-            }
-        }
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                one = GetPixel(input, x, y, width, height);
-                two = GetPixel(input, x+2, y, width, height);
-                three = GetPixel(input, x+1, y+1, width, height);
-                four = GetPixel(input, x+1, y-1, width, height);
-
-                SetPixel(g, (unsigned short)one, x, y, width, height);
-                SetPixel(g, (unsigned short)((one+two+three+four)/4.0), x+1, y, width, height);
-            }
-        }
-
-        if (rowOrder == CFA_RGGB) {
-            for (int i=0; i<height*width; i++)
+        // Top-right greens
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = -1; x < width; x += 2) // Starts at -1, not from +1!
             {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
+                // BGGR y\x:   0   1   2   3
+                //       -1:   G   R   G4  R
+                //        0:   B  *G1 #B  *G2
+                //        1:   G   R   G3  R
+                //        2:   B  *G  #B  *G
+                //        3:   G   R   G   R
+                //             ^
+                //             \--- Green is missing on first column even rows if x starts at +1
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height, (T)G1);
+                if (G1 == 0) G1 = G2; // Fix on left edge
+                G3 = GetPixel(input, x+1, y+1, width, height, (T)G1);
+                G4 = GetPixel(input, x+1, y-1, width, height, (T)G3);
 
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
+                SetPixel(g_, (unsigned short)( G1                      ), x  , y, width, height); // *
+                SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
             }
         }
-        else if (rowOrder == CFA_BGGR) {
-            for (int i=0; i<height*width; i++)
+        // Bottom-left greens
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
             {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
+                // BGGR y\x:   0   1   2   3
+                //       -1:   G   R   G   R
+                //        0:   B   G4  B   G
+                //        1:  *G1 #R  *G2 #R
+                //        2:   B   G3  B   G
+                //        3:  *G  #R  *G  #R
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height, (T)G1);
+                G3 = GetPixel(input, x+1, y+1, width, height, (T)G1);
+                G4 = GetPixel(input, x+1, y-1, width, height, (T)G3);
 
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
-            }
-        }
-    }
-    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) {
-        for (int y=1; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                one = GetPixel(input, x, y, width, height);
-                two = GetPixel(input, x+2, y, width, height);
-                three = GetPixel(input, x, y+2, width, height);
-                four = GetPixel(input, x+2, y+2, width, height);
-
-                SetPixel(b, (unsigned short)one, x, y, width, height);
-                SetPixel(b, (unsigned short)((one+two)/2.0), x+1, y, width, height);
-                SetPixel(b, (unsigned short)((one+three)/2.0), x, y+1, width, height); 
-                SetPixel(b, (unsigned short)((one+two+three+four)/4.0), x+1, y+1, width, height);
+                SetPixel(g_, (unsigned short)( G1                      ), x  , y, width, height); // *
+                SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
             }
         }
 
-        for (int y=0; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                one = GetPixel(input, x, y, width, height);
-                two = GetPixel(input, x+2, y, width, height);
-                three = GetPixel(input, x, y+2, width, height);
-                four = GetPixel(input, x+2, y+2, width, height);
-
-                SetPixel(r, (unsigned short)one, x, y, width, height);
-                SetPixel(r, (unsigned short)((one+two)/2.0), x+1, y, width, height);
-                SetPixel(r, (unsigned short)((one+three)/2.0), x, y+1, width, height); 
-                SetPixel(r, (unsigned short)((one+two+three+four)/4.0), x+1, y+1, width, height);
-            }
-        }
-
-        for (int y=0; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                one = GetPixel(input, x, y, width, height);
-                two = GetPixel(input, x+2, y, width, height);
-                three = GetPixel(input, x+1, y+1, width, height);
-                four = GetPixel(input, x+1, y-1, width, height);
-
-                SetPixel(g, (unsigned short)one, x, y, width, height);
-                SetPixel(g, (unsigned short)((one+two+three+four)/4.0), x+1, y, width, height);
-            }
-        }
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                one = GetPixel(input, x, y, width, height);
-                two = GetPixel(input, x+2, y, width, height);
-                three = GetPixel(input, x+1, y+1, width, height);
-                four = GetPixel(input, x+1, y-1, width, height);
-
-                SetPixel(g, (unsigned short)one, x, y, width, height);
-                SetPixel(g, (unsigned short)((one+two+three+four)/4.0), x+1, y, width, height);
-            }
-        }
-
-        if (rowOrder == CFA_GRBG) {
-            for (int i=0; i<height*width; i++)
+        // Blue channel for BGGR, red for RGGB (needs swap)
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
             {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
+                // BGGR y\x:   0   1   2   3
+                //       -1:   G   R   G   R
+                //        0:  *B1 #G  *B2 #G
+                //        1:  +G  ^R  +G  ^R
+                //        2:  *B3 #G  *B4 #G
+                //        3:  +G  ^R  +G  ^R
+                B1 = GetPixel(input, x  , y  , width, height);
+                B2 = GetPixel(input, x+2, y  , width, height, (T)B1);
+                B3 = GetPixel(input, x  , y+2, width, height, (T)B1);
+                B4 = GetPixel(input, x+2, y+2, width, height, (T)B3);
 
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
+                SetPixel(b_, (unsigned short)( B1                      ), x  , y  , width, height); // *
+                SetPixel(b_, (unsigned short)((B1 + B2          ) / 2.0), x+1, y  , width, height); // #
+                SetPixel(b_, (unsigned short)((B1 + B3          ) / 2.0), x  , y+1, width, height); // +
+                SetPixel(b_, (unsigned short)((B1 + B2 + B3 + B4) / 4.0), x+1, y+1, width, height); // ^
             }
         }
-        else if (rowOrder == CFA_GBRG) {
-            for (int i=0; i<height*width; i++)
+
+        // Red channel for BGGR, blue for RGGB (needs swap)
+        for (int y = -1; y < height; y += 2) // Starts at -1, not from +1!
+        {
+            for (int x = -1; x < width; x += 2) // Starts at -1, not from +1!
             {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
+                // BGGR y\x:   0   1   2   3
+                //       -1:   G   R   G   R
+                //        0:   B   G   B   G   <--- Red is missing on first row if y starts at +1
+                //        1:   G  *R1 #G  *R2
+                //        2:   B  +G  ^B  +G
+                //        3:   G  *R3 #G  *R4
+                //             ^
+                //             \--- Red is missing on first column if x starts at +1
+                R1 = GetPixel(input, x  , y  , width, height);
+                R2 = GetPixel(input, x+2, y  , width, height, (T)R1);
+                if (R1 == 0) R1 = R2; // Fix on left edge
+                R3 = GetPixel(input, x  , y+2, width, height, (T)R1);
+                if (R1 == 0) R1 = R2 = R3; // Fix on top edge
+                R4 = GetPixel(input, x+2, y+2, width, height, (T)R3);
+                if (R3 == 0) R1 = R2 = R3 = R4; // Fix on top-left corner
 
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
+                SetPixel(r_, (unsigned short)( R1                      ), x  , y  , width, height); // *
+                SetPixel(r_, (unsigned short)((R1 + R2          ) / 2.0), x+1, y  , width, height); // #
+                SetPixel(r_, (unsigned short)((R1 + R3          ) / 2.0), x  , y+1, width, height); // +
+                SetPixel(r_, (unsigned short)((R1 + R2 + R3 + R4) / 4.0), x+1, y+1, width, height); // ^
             }
         }
     }
+    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) // Green backslash
+    {
+        // Code is for GRBG, GBRG needs to swap R & B channels, done in WhiteBalance()
+        // GRBG y\x:   0   1   2   3
+        //       -1:   B   G   B   G
+        //        0:   G   R   G   R
+        //        1:   B   G   B   G
+        //        2:   G   R   G   R
+        //        3:   B   G   B   G
 
+        // Top-left greens
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // GRBG y\x:   0   1   2   3
+                //       -1:   B   G4  B   G
+                //        0:  *G1 #R  *G2 #R
+                //        1:   B   G3  B   G
+                //        2:  *G  #R  *G  #R
+                //        3:   B   G   B   G
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height, (T)G1);
+                G3 = GetPixel(input, x+1, y+1, width, height, (T)G1);
+                G4 = GetPixel(input, x+1, y-1, width, height, (T)G3);
 
+                SetPixel(g_, (unsigned short)( G1                      ), x  , y, width, height); // *
+                SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
+            }
+        }
+        // Bottom-right greens
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = -1; x < width; x += 2) // Starts at -1, not from +1!
+            {
+                // GRBG y\x:   0   1   2   3
+                //       -1:   B   G   B   G
+                //        0:   G   R   G4  R
+                //        1:   B  *G1 #B  *G2
+                //        2:   G   R   G3  R
+                //        3:   B  *G  #B  *G
+                //             ^
+                //             \--- Green is missing on first column odd rows if x starts at +1
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height, (T)G1);
+                if (G1 == 0) G1 = G2; // Fix on left edge
+                G3 = GetPixel(input, x+1, y+1, width, height, (T)G1);
+                G4 = GetPixel(input, x+1, y-1, width, height, (T)G3);
 
+                SetPixel(g_, (unsigned short)( G1                      ), x  , y, width, height); // *
+                SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
+            }
+        }
 
+        // Blue channel for GRBG, red for GBRG (needs swap)
+        for (int y = -1; y < height; y += 2) // Starts at -1, not from +1!
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // GRBG y\x:   0   1   2   3
+                //       -1:   B   G   B   G
+                //        0:   G   R   G   R   <--- Blue is missing on first row if y starts at +1
+                //        1:  *B1 #G  *B2 #G
+                //        2:  +G  ^R  +G  ^R
+                //        3:  *B3 #G  *B4 #G
+                B1 = GetPixel(input, x  , y  , width, height);
+                B2 = GetPixel(input, x+2, y  , width, height, (T)B1);
+                B3 = GetPixel(input, x  , y+2, width, height, (T)B1);
+                B4 = GetPixel(input, x+2, y+2, width, height, (T)B3);
+                if (B2 == 0) B1 = B2 = B3; // Fix on top edge
 
+                SetPixel(b_, (unsigned short)( B1                      ), x  , y  , width, height); // *
+                SetPixel(b_, (unsigned short)((B1 + B2          ) / 2.0), x+1, y  , width, height); // #
+                SetPixel(b_, (unsigned short)((B1 +      B3     ) / 2.0), x  , y+1, width, height); // +
+                SetPixel(b_, (unsigned short)((B1 + B2 + B3 + B4) / 4.0), x+1, y+1, width, height); // ^
+            }
+        }
+
+        // Red channel for GRBG, blue for GBRG (needs swap)
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = -1; x < width; x += 2) // Starts at -1, not from +1!
+            {
+                // GRBG y\x:   0   1   2   3
+                //       -1:   B   G   B   G
+                //        0:   G  *R1 #G  *R2
+                //        1:   B  +G  ^B  +G
+                //        2:   G  *R3 #G  *R4
+                //        3:   B  +G  ^B  +G
+                //             ^
+                //             \--- Red is missing on first column if x starts at +1
+                R1 = GetPixel(input, x  , y  , width, height);
+                R2 = GetPixel(input, x+2, y  , width, height, (T)R1);
+                if (R1 == 0) R1 = R2; // Fix on left edge
+                R3 = GetPixel(input, x  , y+2, width, height, (T)R1);
+                R4 = GetPixel(input, x+2, y+2, width, height, (T)R3);
+
+                SetPixel(r_, (unsigned short)( R1                      ), x  , y  , width, height); // *
+                SetPixel(r_, (unsigned short)((R1 + R2          ) / 2.0), x+1, y  , width, height); // #
+                SetPixel(r_, (unsigned short)((R1 +      R3     ) / 2.0), x  , y+1, width, height); // +
+                SetPixel(r_, (unsigned short)((R1 + R2 + R3 + R4) / 4.0), x+1, y+1, width, height); // ^
+            }
+        }
+    }
 }
-
-
-
-
-
 
 // Smooth Hue algorithm
 template <typename T>
-void PvDebayer::SmoothDecode(const T* input, int* output, int width, int height, int bitDepth, int rowOrder)
+void PvDebayer::DecodeT_Smooth(const T* input, int width, int height, int rowOrder)
 {
-    double G1 = 0;
-    double G2 = 0;
-    double G3 = 0;
-    double G4 = 0;
-    double G5 = 0;
-    double G6 = 0;
-    //double G7 = 0;
-    //double G8 = 0;
-    double G9 = 0;
-    double B1 = 0;
-    double B2 = 0;
-    double B3 = 0;
-    double B4 = 0;
-    double R1 = 0;
-    double R2 = 0;
-    double R3 = 0;
-    double R4 = 0;
+    double G1, G2, G3, G4, G5, G6, G9;
+    double B1, B2, B3, B4;
+    double R1, R2, R3, R4;
 
-    unsigned numPixels(width*height);
-    if (r.size() != numPixels)
+    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) // Green slash
     {
-        r.resize(numPixels);
-        g.resize(numPixels);
-        b.resize(numPixels);
-    }
+        // Code is for BGGR, RGGB needs to swap R & B channels, done in WhiteBalance()
+        // BGGR y\x:  -1   0   1   2   3
+        //       -1:   R   G   R   G   R
+        //        0:   G   B   G   B   G
+        //        1:   R   G   R   G   R
+        //        2:   G   B   G   B   G
+        //        3:   R   G   R   G   R
 
-    int bitShift = bitDepth - 8;
+        // Solve for green pixels first, it's needed for red and blue channels
 
-    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) {
-        //Solve for green pixels first
-        for (int y=0; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                G1 = GetPixel(input, x, y, width, height);
-                G2 = GetPixel(input, x+2, y, width, height);
+        // Top-right greens
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 1; x < width; x += 2)
+            {
+                // BGGR y\x:  -1   0   1   2   3
+                //       -1:   R   G6  R   G4  R
+                //        0:   G  ^B  *G1 +B  *G2
+                //        1:   R   G5  R   G3  R
+                //        2:   G  ^B  *G  #B  *G
+                //        3:   R   G   R   G   R
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height);
                 G3 = GetPixel(input, x+1, y+1, width, height);
                 G4 = GetPixel(input, x+1, y-1, width, height);
 
-                SetPixel(g, (unsigned short)G1, x, y, width, height);
-                if (y==0)
-                    SetPixel(g, (unsigned short)((G1+G2+G3)/3.0), x+1, y, width, height);
-                else
-                    SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
+                SetPixel(g_, (unsigned short)G1, x, y, width, height); // *
 
-                if (x==1)
-                    SetPixel(g, (unsigned short)((G1 + G4 + GetPixel(input, x-1, y+1, width, height))/3.0), x-1, y, width, height);
+                if (y == 0)
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3     ) / 3.0), x+1, y, width, height); // +
+                else
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
+
+                // TODO: No reason for this case, maybe only if (x == width-1)
+                if (x == 1)
+                {
+                    // TODO: Should take G6 instead of G4.
+                    //       We should exclude G4 and/or G5 from calculation if zero.
+                    G5 = GetPixel(input, x-1, y+1, width, height);
+                    SetPixel(g_, (unsigned short)((G1 + G4 + G5) / 3.0), x-1, y, width, height); // ^
+                }
             }
         }
-
-        for (int x=0; x<width; x+=2) {
-            for (int y=1; y<height; y+=2) {
-
-                G1 = GetPixel(input, x, y, width, height);
-                G2 = GetPixel(input, x+2, y, width, height);
+        // Bottom-left greens
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // BGGR y\x:  -1   0   1   2   3
+                //       -1:   R   G   R   G   R
+                //        0:   G   B   G4  B   G
+                //        1:   R  *G1 +R  *G2 #R
+                //        2:   G   B   G3  B   G
+                //        3:   R  *G  +R  *G  #R
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height);
                 G3 = GetPixel(input, x+1, y+1, width, height);
                 G4 = GetPixel(input, x+1, y-1, width, height);
 
-                SetPixel(g, (unsigned short)G1, x, y, width, height);
-                if (x==0)
-                    SetPixel(g, (unsigned short)((G1+G2+G3)/3.0), x+1, y, width, height);
+                SetPixel(g_, (unsigned short)G1, x, y, width, height); // *
+
+                // TODO: G1 and G4 are always valid.
+                //       We should exclude G2 and/or G3 from calculation if zero.
+                if (x == 0)
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3     ) / 3.0), x+1, y, width, height); // +
                 else
-                    SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
             }
         }
+        // BGGR y\x:  -1   0   1   2   3
+        //       -1:   R   G   R   G   R
+        //        0:   G  *B   G2  B   G
+        //        1:   R   G1  R   G   R
+        //        2:   G   B   G   B   G
+        //        3:   R   G   R   G   R
+        G1 = GetPixel(input, 0, 1, width, height);
+        G2 = GetPixel(input, 1, 0, width, height);
+        SetPixel(g_, (unsigned short)((G1 + G2) / 2.0), 0, 0, width, height); // *
 
-        SetPixel(g, (unsigned short)((GetPixel(input, 0, 1, width, height) + GetPixel(input, 1, 0, width, height))/2.0), 0, 0, width, height);
-
-        for (int y=0; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                B1 = GetPixel(input, x, y, width, height);
-                B2 = GetPixel(input, x+2, y, width, height);
-                B3 = GetPixel(input, x, y+2, width, height);
+        // Blue channel for BGGR, red for RGGB (needs swap)
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // BGGR y\x:  -1   0   1   2   3
+                //       -1:   R   G   R   G   R
+                //        0:   G  *B1 #G5 *B2 #G
+                //        1:   R  +G6 ^R9 +G  ^R
+                //        2:   G  *B3 #G  *B4 #G
+                //        3:   R  +G  ^R  +G  ^R
+                B1 = GetPixel(input, x  , y  , width, height);
+                B2 = GetPixel(input, x+2, y  , width, height);
+                B3 = GetPixel(input, x  , y+2, width, height);
                 B4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);;
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
-                if (G1==0) G1=1;
-                if (G2==0) G2=1;
-                if (G3==0) G3=1;
-                if (G4==0) G4=1;
+                G1 = GetPixel(g_.data(), x  , y  , width, height);
+                G2 = GetPixel(g_.data(), x+2, y  , width, height);
+                G3 = GetPixel(g_.data(), x  , y+2, width, height);
+                G4 = GetPixel(g_.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g_.data(), x+1, y  , width, height);
+                G6 = GetPixel(g_.data(), x  , y+1, width, height);
+                G9 = GetPixel(g_.data(), x+1, y+1, width, height);
+                // TODO: Set to B1-B4 instead of 1
+                if (G1 == 0) G1 = 1;
+                if (G2 == 0) G2 = 1;
+                if (G3 == 0) G3 = 1;
+                if (G4 == 0) G4 = 1;
 
-                SetPixel(b, (unsigned short)B1, x, y, width, height);
-                //b.putPixel(x+1,y,(int)((G5/2 * ((B1/G1) + (B2/G2)) )) );
-                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)) )), x+1, y, width, height);
-                //b.putPixel(x,y+1,(int)(( G6/2 * ((B1/G1) + (B3/G3)) )) );
-                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)) )), x, y+1, width, height);
-                //b.putPixel(x+1,y+1, (int)((G9/4 *  ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )) );
-                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )), x+1, y+1, width, height);
+                SetPixel(b_, (unsigned short)(B1                                    ), x  , y  , width, height); // *
+                SetPixel(b_, (unsigned short)(G5/2 * (B1/G1 + B2/G2                )), x+1, y  , width, height); // #
+                SetPixel(b_, (unsigned short)(G6/2 * (B1/G1 +         B3/G3        )), x  , y+1, width, height); // +
+                SetPixel(b_, (unsigned short)(G9/4 * (B1/G1 + B2/G2 + B3/G3 + B4/G4)), x+1, y+1, width, height); // ^
             }
         }
 
-        for (int y=1; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                R1 = GetPixel(input, x, y, width, height);
-                R2 = GetPixel(input, x+2, y, width, height);
-                R3 = GetPixel(input, x, y+2, width, height);
+        // Red channel for BGGR, blue for RGGB (needs swap)
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 1; x < width; x += 2)
+            {
+                // BGGR y\x:  -1   0   1   2   3
+                //       -1:   R   G   R   G   R
+                //        0:   G   B   G   B   G   <--- TODO: Red is missing on first row
+                //        1:   R   G  *R1 #G5 *R2
+                //        2:   G   B  +G6 ^B9 +G
+                //        3:   R   G  *R3 #G  *R4
+                //                 ^
+                //                 \--- TODO: Red is missing on first column
+                R1 = GetPixel(input, x  , y  , width, height);
+                R2 = GetPixel(input, x+2, y  , width, height);
+                R3 = GetPixel(input, x  , y+2, width, height);
                 R4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
-                if(G1==0) G1=1;
-                if(G2==0) G2=1;
-                if(G3==0) G3=1;
-                if(G4==0) G4=1;
+                G1 = GetPixel(g_.data(), x  , y  , width, height);
+                G2 = GetPixel(g_.data(), x+2, y  , width, height);
+                G3 = GetPixel(g_.data(), x  , y+2, width, height);
+                G4 = GetPixel(g_.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g_.data(), x+1, y  , width, height);
+                G6 = GetPixel(g_.data(), x  , y+1, width, height);
+                G9 = GetPixel(g_.data(), x+1, y+1, width, height);
+                // TODO: Set to R1-R4 instead of 1
+                if (G1 == 0) G1 = 1;
+                if (G2 == 0) G2 = 1;
+                if (G3 == 0) G3 = 1;
+                if (G4 == 0) G4 = 1;
 
-                //r.putPixel(x,y,(int)(R1));
-                SetPixel(r, (unsigned short)R1, x, y, width, height);
-                //r.putPixel(x+1,y,(int)((G5/2 * ((R1/G1) + (R2/G2) )) ));
-                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2) )) ), x+1, y, width, height);
-                //r.putPixel(x,y+1,(int)(( G6/2 * ((R1/G1) + (R3/G3) )) ));
-                SetPixel(r, (unsigned short)(( G6/2 * ((R1/G1) + (R3/G3) )) ), x, y+1, width, height);
-                //r.putPixel(x+1,y+1, (int)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ));
-                SetPixel(r, (unsigned short)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ), x+1, y+1, width, height);
-            }
-        }
-
-
-        if (rowOrder == CFA_RGGB) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
-            }
-        }
-        else if (rowOrder == CFA_BGGR) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
+                SetPixel(r_, (unsigned short)(R1                                    ), x  , y  , width, height); // *
+                SetPixel(r_, (unsigned short)(G5/2 * (R1/G1 + R2/G2                )), x+1, y  , width, height); // #
+                SetPixel(r_, (unsigned short)(G6/2 * (R1/G1 +         R3/G3        )), x  , y+1, width, height); // +
+                SetPixel(r_, (unsigned short)(G9/4 * (R1/G1 + R2/G2 + R3/G3 + R4/G4)), x+1, y+1, width, height); // ^
             }
         }
     }
+    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) // Green backslash
+    {
+        // Code is for GRBG, GBRG needs to swap R & B channels, done in WhiteBalance()
+        // GRBG y\x:  -1   0   1   2   3
+        //       -1:   G   B   G   B   G
+        //        0:   R   G   R   G   R
+        //        1:   G   B   G   B   G
+        //        2:   R   G   R   G   R
+        //        3:   G   B   G   B   G
 
-    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) {
+        // Solve for green pixels first, it's needed for red and blue channels
 
-        for (int y=0; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                G1 = GetPixel(input, x, y, width, height);
-                G2 = GetPixel(input, x+2, y, width, height);
+        // Top-left greens
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // GRBG y\x:  -1   0   1   2   3
+                //       -1:   G6  B   G4  B   G
+                //        0:   R  *G1 +R  *G2 +R
+                //        1:   G5  B   G3  B   G
+                //        2:   R  *G  #R  *G  #R
+                //        3:   G   B   G   B   G
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height);
                 G3 = GetPixel(input, x+1, y+1, width, height);
                 G4 = GetPixel(input, x+1, y-1, width, height);
 
-                SetPixel(g, (unsigned short)G1, x, y, width, height);
-                if (y==0)
-                    SetPixel(g, (unsigned short)((G1+G2+G3)/3.0), x+1, y, width, height);
-                else
-                    SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
+                SetPixel(g_, (unsigned short)G1, x, y, width, height); // *
 
-                if (x==1)
-                    SetPixel(g, (unsigned short)((G1+G4+GetPixel(input, x-1, y+1, width, height))/3.0), x-1, y, width, height);
+                if (y == 0)
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3     ) / 3.0), x+1, y, width, height); // +
+                else
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
+
+                // TODO: x cannot be 1 because it's always even
+                if (x == 1)
+                {
+                    // TODO: Should take G6 instead of G4.
+                    //       We should exclude G4 and/or G5 from calculation if zero.
+                    G5 = GetPixel(input, x-1, y+1, width, height);
+                    SetPixel(g_, (unsigned short)((G1 + G4 + G5) / 3.0), x-1, y, width, height); // ^
+                }
             }
         }
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                G1 = GetPixel(input, x, y, width, height);
-                G2 = GetPixel(input, x+2, y, width, height);
+        // Bottom-right greens
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 1; x < width; x += 2)
+            {
+                // GRBG y\x:  -1   0   1   2   3
+                //       -1:   G   B   G   B   G
+                //        0:   R   G   R   G4  R
+                //        1:   G   B  *G1 #B  *G2
+                //        2:   R   G   R   G3  R
+                //        3:   G   B  *G  #B  *G
+                //                 ^
+                //                 \--- TODO: Green is missing on first column odd rows
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height);
                 G3 = GetPixel(input, x+1, y+1, width, height);
                 G4 = GetPixel(input, x+1, y-1, width, height);
 
-                SetPixel(g, (unsigned short)G1, x, y, width, height);
-                if (x==0)
-                    SetPixel(g, (unsigned short)((G1+G2+G3)/3.0), x+1, y, width, height);
+                SetPixel(g_, (unsigned short)G1, x, y, width, height); // *
+
+                // TODO: x cannot be 0 because it's always odd
+                if (x == 0)
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3     ) / 3.0), x+1, y, width, height); // +
                 else
-                    SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
             }
         }
+        // GRBG y\x:  -1   0   1   2   3
+        //       -1:   G   B   G   B   G
+        //        0:   R  *G  !R2  G   R
+        //        1:   G  !B1  G   B   G
+        //        2:   R   G   R   G   R
+        //        3:   G   B   G   B   G
+        G1 = GetPixel(input, 0, 1, width, height); // TODO: This is not green but blue pixel!
+        G2 = GetPixel(input, 1, 0, width, height); // TODO: This is not green but red pixel!
+        // TODO: This pixel is already set!
+        SetPixel(g_, (unsigned short)((G1 + G2) / 2.0), 0, 0, width, height); // *
 
-        SetPixel(g, (unsigned short)((GetPixel(input, 0, 1, width, height) + GetPixel(input, 1, 0, width, height))/2.0), 0, 0, width, height);
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                B1 = GetPixel(input, x, y, width, height);
-                B2 = GetPixel(input, x+2, y, width, height);
-                B3 = GetPixel(input, x, y+2, width, height);
+        // Blue channel for GRBG, red for GBRG (needs swap)
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // GRBG y\x:  -1   0   1   2   3
+                //       -1:   G   B   G   B   G
+                //        0:   R   G   R   G   R   <--- TODO: Blue is missing on first row
+                //        1:   G  *B1 #G5 *B2 #G
+                //        2:   R  +G6 ^R9 +G  ^R
+                //        3:   G  *B3 #G  *B4 #G
+                B1 = GetPixel(input, x  , y  , width, height);
+                B2 = GetPixel(input, x+2, y  , width, height);
+                B3 = GetPixel(input, x  , y+2, width, height);
                 B4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((const unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((const unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((const unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((const unsigned short *)g.data(), x+2, y+2, width, height);;
-                G5 = GetPixel((const unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((const unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((const unsigned short *)g.data(), x+1, y+1, width, height);
-                if (G1==0) G1=1;
-                if (G2==0) G2=1;
-                if (G3==0) G3=1;
-                if (G4==0) G4=1;
+                G1 = GetPixel(g_.data(), x  , y  , width, height);
+                G2 = GetPixel(g_.data(), x+2, y  , width, height);
+                G3 = GetPixel(g_.data(), x  , y+2, width, height);
+                G4 = GetPixel(g_.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g_.data(), x+1, y  , width, height);
+                G6 = GetPixel(g_.data(), x  , y+1, width, height);
+                G9 = GetPixel(g_.data(), x+1, y+1, width, height);
+                // TODO: Set to B1-B4 instead of 1
+                if (G1 == 0) G1 = 1;
+                if (G2 == 0) G2 = 1;
+                if (G3 == 0) G3 = 1;
+                if (G4 == 0) G4 = 1;
 
-                SetPixel(b, (unsigned short)B1, x, y, width, height);
-                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)) )), x+1, y, width, height);
-                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)) )), x, y+1, width, height);
-                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )), x+1, y+1, width, height);
+                SetPixel(b_, (unsigned short)(B1                                    ), x  , y  , width, height); // *
+                SetPixel(b_, (unsigned short)(G5/2 * (B1/G1 + B2/G2                )), x+1, y  , width, height); // #
+                SetPixel(b_, (unsigned short)(G6/2 * (B1/G1 +         B3/G3        )), x  , y+1, width, height); // +
+                SetPixel(b_, (unsigned short)(G9/4 * (B1/G1 + B2/G2 + B3/G3 + B4/G4)), x+1, y+1, width, height); // ^
             }
         }
 
-        for (int y=0; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                R1 = GetPixel(input, x, y, width, height);
-                R2 = GetPixel(input, x+2, y, width, height);
-                R3 = GetPixel(input, x, y+2, width, height);
+        // Red channel for GRBG, blue for GBRG (needs swap)
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 1; x < width; x += 2)
+            {
+                // GRBG y\x:  -1   0   1   2   3
+                //       -1:   G   B   G   B   G
+                //        0:   R   G  *R1 #G5 *R2
+                //        1:   G   B  +G6 ^B9 +G
+                //        2:   R   G  *R3 #G  *R4
+                //        3:   G   B  +G  ^B  +G
+                //                 ^
+                //                 \--- TODO: Red is missing on first column
+                R1 = GetPixel(input, x  , y  , width, height);
+                R2 = GetPixel(input, x+2, y  , width, height);
+                R3 = GetPixel(input, x  , y+2, width, height);
                 R4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((const unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((const unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((const unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((const unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((const unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((const unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((const unsigned short *)g.data(), x+1, y+1, width, height);
-                if(G1==0) G1=1;
-                if(G2==0) G2=1;
-                if(G3==0) G3=1;
-                if(G4==0) G4=1;
+                G1 = GetPixel(g_.data(), x  , y  , width, height);
+                G2 = GetPixel(g_.data(), x+2, y  , width, height);
+                G3 = GetPixel(g_.data(), x  , y+2, width, height);
+                G4 = GetPixel(g_.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g_.data(), x+1, y  , width, height);
+                G6 = GetPixel(g_.data(), x  , y+1, width, height);
+                G9 = GetPixel(g_.data(), x+1, y+1, width, height);
+                // TODO: Set to R1-R4 instead of 1
+                if (G1 == 0) G1 = 1;
+                if (G2 == 0) G2 = 1;
+                if (G3 == 0) G3 = 1;
+                if (G4 == 0) G4 = 1;
 
-                //r.putPixel(x,y,(int)(R1));
-                SetPixel(r, (unsigned short)R1, x, y, width, height);
-                //r.putPixel(x+1,y,(int)((G5/2 * ((R1/G1) + (R2/G2) )) ));
-                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2) )) ), x+1, y, width, height);
-                //r.putPixel(x,y+1,(int)(( G6/2 * ((R1/G1) + (R3/G3) )) ));
-                SetPixel(r, (unsigned short)(( G6/2 * ((R1/G1) + (R3/G3) )) ), x, y+1, width, height);
-                //r.putPixel(x+1,y+1, (int)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ));
-                SetPixel(r, (unsigned short)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ), x+1, y+1, width, height);
-            }
-        }
-
-
-
-        if (rowOrder == CFA_GRBG) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
-            }
-        }
-        else if (rowOrder == CFA_GBRG) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
+                SetPixel(r_, (unsigned short)(R1                                    ), x  , y  , width, height); // *
+                SetPixel(r_, (unsigned short)(G5/2 * (R1/G1 + R2/G2                )), x+1, y  , width, height); // #
+                SetPixel(r_, (unsigned short)(G6/2 * (R1/G1 +         R3/G3        )), x  , y+1, width, height); // +
+                SetPixel(r_, (unsigned short)(G9/4 * (R1/G1 + R2/G2 + R3/G3 + R4/G4)), x+1, y+1, width, height); // ^
             }
         }
     }
 }
 
-
 // Adaptive Smooth Hue algorithm (edge detecting)
 template <typename T>
-void PvDebayer::AdaptiveSmoothDecode(const T* input, int* output, int width, int height, int bitDepth, int rowOrder)
+void PvDebayer::DecodeT_AdaptiveSmooth(const T* input, int width, int height, int rowOrder)
 {
-    double G1 = 0;
-    double G2 = 0;
-    double G3 = 0;
-    double G4 = 0;
-    double G5 = 0;
-    double G6 = 0;
-    //double G7 = 0;
-    //double G8 = 0;
-    double G9 = 0;
-    double B1 = 0;
-    double B2 = 0;
-    double B3 = 0;
-    double B4 = 0;
-    //double B5 = 0;
-    double R1 = 0;
-    double R2 = 0;
-    double R3 = 0;
-    double R4 = 0;
-    double R5 = 0;
-    double N = 0;
-    double S = 0;
-    double E = 0;
-    double W = 0;
+    double G1, G2, G3, G4, G5, G6, G9;
+    double B1, B2, B3, B4, B5;
+    double R1, R2, R3, R4, R5;
+    double N, S, E, W;
 
-    unsigned numPixels(width*height);
-    if (r.size() != numPixels)
+    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) // Green slash
     {
-        r.resize(numPixels);
-        g.resize(numPixels);
-        b.resize(numPixels);
-    }
+        // Code is for BGGR, RGGB needs to swap R & B channels, done in WhiteBalance()
+        // BGGR y\x:  -1   0   1   2   3   4
+        //       -2:   G   B   G   B   G   B
+        //       -1:   R   G   R   G   R   G
+        //        0:   G   B   G   B   G   B
+        //        1:   R   G   R   G   R   G
+        //        2:   G   B   G   B   G   B
+        //        3:   R   G   R   G   R   G
 
-    int bitShift = bitDepth - 8;
+        // Solve for green pixels first, it's needed for red and blue channels
 
-    if (rowOrder == CFA_RGGB || rowOrder == CFA_BGGR) {
-        //Solve for green pixels first
-        for (int y=0; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                G1 = GetPixel(input, x, y, width, height);
-                G2 = GetPixel(input, x+2, y, width, height);
+        // Top-right greens
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 1; x < width; x += 2)
+            {
+                // BGGR y\x:  -1   0   1   2   3   4
+                //       -2:   G   B   G   B4   G   B
+                //       -1:   R   G6  R   G4  R   G
+                //        0:   G  ^B1 *G1 +B  *G2 +B2
+                //        1:   R   G5  R   G3  R   G
+                //        2:   G  ^B  *G  #B3 *G  #B
+                //        3:   R   G   R   G   R   G
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height);
                 G3 = GetPixel(input, x+1, y+1, width, height);
                 G4 = GetPixel(input, x+1, y-1, width, height);
-                R1 = GetPixel(input, x-1, y, width, height);
-                R2 = GetPixel(input, x+3, y, width, height);
-                R3 = GetPixel(input, x+1, y+2, width, height);
-                R4 = GetPixel(input, x+1, y-2, width, height);
-                R5 = GetPixel(input, x+1, y+1, width, height);
+                B1 = GetPixel(input, x-1, y  , width, height);
+                B2 = GetPixel(input, x+3, y  , width, height);
+                B3 = GetPixel(input, x+1, y+2, width, height);
+                B4 = GetPixel(input, x+1, y-2, width, height);
+                B5 = GetPixel(input, x+1, y+1, width, height); // TODO: Same as G3!
 
-                N = fabs(R4-R5)*2 + fabs(G4-G3);
-                S = fabs(R5-R3)*2 + fabs(G4-G3);
-                E = fabs(R5-R2)*2 + fabs(G1-G2);
-                W = fabs(R1-R5)*2 + fabs(G1-G2);
+                N = fabs(B4 - B5) * 2 + fabs(G4 - G3);
+                S = fabs(B5 - B3) * 2 + fabs(G4 - G3);
+                E = fabs(B5 - B2) * 2 + fabs(G1 - G2);
+                W = fabs(B1 - B5) * 2 + fabs(G1 - G2);
 
-                if(N<S && N<E && N<W) 
-                {
-                    SetPixel(g, (unsigned short)((G4*3 + R5 + G3 - R4)/4.0), x+1, y, width, height);
-                }
-                else if(S<N && S<E && S<W) 
-                {
-                    SetPixel(g, (unsigned short)((G3*3 + R5 + G4 - R3)/4.0), x+1, y, width, height);
-                }
-                else if(W<N && W<E && W<S) 
-                {
-                    SetPixel(g, (unsigned short)((G1*3 + R5 + G2 - R1)/4.0), x+1, y, width, height);
-                }
-                else if(E<N && E<S && E<W) 
-                {
-                    SetPixel(g, (unsigned short)((G2*3 + R5 + G1 - R2)/4.0), x+1, y, width, height);
-                }
+                SetPixel(g_, (unsigned short)G1, x, y, width, height); // *
 
-                SetPixel(g, (unsigned short)G1, x, y, width, height);
-
-                if (y==0)
-                {
-                    SetPixel(g, (unsigned short)((G1+G2+G3)/3.0), x+1, y, width, height);
-                }
+                if      (N < S && N < E && N < W)
+                    SetPixel(g_, (unsigned short)((G4*3 + B5 + G3 - B4) / 4.0), x+1, y, width, height);
+                else if (S < N && S < E && S < W)
+                    SetPixel(g_, (unsigned short)((G3*3 + B5 + G4 - B3) / 4.0), x+1, y, width, height);
+                else if (W < N && W < E && W < S)
+                    SetPixel(g_, (unsigned short)((G1*3 + B5 + G2 - B1) / 4.0), x+1, y, width, height);
+                else if (E < N && E < S && E < W)
+                    SetPixel(g_, (unsigned short)((G2*3 + B5 + G1 - B2) / 4.0), x+1, y, width, height);
+                // TODO: This overwrites edge-detected values we've just set!
+                //       So it is basically degraded to Smooth Hue algorithm.
+                if (y == 0)
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3     ) / 3.0), x+1, y, width, height); // +
                 else
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
+
+                if (x == 1)
                 {
-                    SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
+                    // TODO: Should take G6 instead of G4
+                    G5 = GetPixel(input, x-1, y+1, width, height);
+                    SetPixel(g_, (unsigned short)((G1 + G4 + G5) / 3.0), x-1, y, width, height); // ^
                 }
-
-                if (x==1)
-                {
-                    SetPixel(g, (unsigned short)((G1+G4+GetPixel(input, x-1,y+1, width, height))/3.0), x-1, y, width, height);
-                }
-
-
             }
         }
 
-        for (int x=0; x<width; x+=2) {
-            for (int y=1; y<height; y+=2) {
-
-                G1 = GetPixel(input, x, y, width, height);
-                G2 = GetPixel(input, x+2, y, width, height);
+        // Bottom-left greens
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // BGGR y\x:  -1   0   1   2   3   4
+                //       -2:   G   B   G   B   G   B
+                //       -1:   R   G   R4  G   R   G
+                //        0:   G   B   G4  B   G   B
+                //        1:   R1 *G1 +R  *G2 #R2 *G
+                //        2:   G   B   G3  B   G   B
+                //        3:   R  *G  +R3 *G  #R  *G
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height);
                 G3 = GetPixel(input, x+1, y+1, width, height);
                 G4 = GetPixel(input, x+1, y-1, width, height);
-                R1 = GetPixel(input, x-1, y, width, height);
-                R2 = GetPixel(input, x+3, y, width, height);
+                R1 = GetPixel(input, x-1, y  , width, height);
+                R2 = GetPixel(input, x+3, y  , width, height);
                 R3 = GetPixel(input, x+1, y+2, width, height);
                 R4 = GetPixel(input, x+1, y-2, width, height);
-                R5 = GetPixel(input, x+1, y+1, width, height);
+                R5 = GetPixel(input, x+1, y+1, width, height); // TODO: Same as G3!
 
-                N = fabs(R4-R5)*2 + fabs(G4-G3);
-                S = fabs(R5-R3)*2 + fabs(G4-G3);
-                E = fabs(R5-R2)*2 + fabs(G1-G2);
-                W = fabs(R1-R5)*2 + fabs(G1-G2);
+                N = fabs(R4 - R5) * 2 + fabs(G4 - G3);
+                S = fabs(R5 - R3) * 2 + fabs(G4 - G3);
+                E = fabs(R5 - R2) * 2 + fabs(G1 - G2);
+                W = fabs(R1 - R5) * 2 + fabs(G1 - G2);
 
-                if(N<S && N<E && N<W) 
-                {
-                    SetPixel(g, (unsigned short)((G4*3 + R5 + G3 - R4)/4.0), x+1, y, width, height);
-                }
-                else if(S<N && S<E && S<W) 
-                {
-                    SetPixel(g, (unsigned short)((G3*3 + R5 + G4 - R3)/4.0), x+1, y, width, height);
-                }
-                else if(W<N && W<E && W<S) 
-                {
-                    SetPixel(g, (unsigned short)((G1*3 + R5 + G2 - R1)/4.0), x+1, y, width, height);
-                }
-                else if(E<N && E<S && E<W) 
-                {
-                    SetPixel(g, (unsigned short)((G2*3 + R5 + G1 - R2)/4.0), x+1, y, width, height);
-                }
+                SetPixel(g_, (unsigned short)G1, x, y, width, height); // *
 
-                SetPixel(g, (unsigned short)G1, x, y, width, height);
-
-                if (x==0)
-                {
-                    SetPixel(g, (unsigned short)((G1+G2+G3)/3.0), x+1, y, width, height);
-                }
+                if      (N < S && N < E && N < W)
+                    SetPixel(g_, (unsigned short)((G4*3 + R5 + G3 - R4) / 4.0), x+1, y, width, height);
+                else if (S < N && S < E && S < W)
+                    SetPixel(g_, (unsigned short)((G3*3 + R5 + G4 - R3) / 4.0), x+1, y, width, height);
+                else if (W < N && W < E && W < S)
+                    SetPixel(g_, (unsigned short)((G1*3 + R5 + G2 - R1) / 4.0), x+1, y, width, height);
+                else if (E < N && E < S && E < W)
+                    SetPixel(g_, (unsigned short)((G2*3 + R5 + G1 - R2) / 4.0), x+1, y, width, height);
+                // TODO: This overwrites edge-detected values we've just set!
+                //       So it is basically degraded to Smooth Hue algorithm.
+                if (x == 0)
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3     ) / 3.0), x+1, y, width, height); // +
                 else
-                {
-                    SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
-                }
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
             }
         }
-        SetPixel(g, (unsigned short)((GetPixel(input, 0, 1, width, height) + GetPixel(input, 1, 0, width, height))/2.0), 0, 0, width, height);
+        // BGGR y\x:  -1   0   1   2   3   4
+        //       -2:   G   B   G   B   G   B
+        //       -1:   R   G   R   G   R   G
+        //        0:   G  *B   G2  B   G   B
+        //        1:   R   G1  R   G   R   G
+        //        2:   G   B   G   B   G   B
+        //        3:   R   G   R   G   R   G
+        G1 = GetPixel(input, 0, 1, width, height);
+        G2 = GetPixel(input, 1, 0, width, height);
+        SetPixel(g_, (unsigned short)((G1 + G2) / 2.0), 0, 0, width, height);
 
-
-        for (int y=0; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                B1 = GetPixel(input, x, y, width, height);
-                B2 = GetPixel(input, x+2, y, width, height);
-                B3 = GetPixel(input, x, y+2, width, height);
+        // Blue channel for BGGR, red for RGGB (needs swap)
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // BGGR y\x:  -1   0   1   2   3   4
+                //       -2:   G   B   G   B   G   B
+                //       -1:   R   G   R   G   R   G
+                //        0:   G  *B1 #G5 *B2 #G  *B
+                //        1:   R  +G6 ^R9 +G  ^R  +G
+                //        2:   G  *B3 #G  *B4 #G  *B
+                //        3:   R  +G  ^R  +G  ^R  +G
+                B1 = GetPixel(input, x  , y  , width, height);
+                B2 = GetPixel(input, x+2, y  , width, height);
+                B3 = GetPixel(input, x  , y+2, width, height);
                 B4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);;
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
-                if (G1==0) G1=1;
-                if (G2==0) G2=1;
-                if (G3==0) G3=1;
-                if (G4==0) G4=1;
+                G1 = GetPixel(g_.data(), x  , y  , width, height);
+                G2 = GetPixel(g_.data(), x+2, y  , width, height);
+                G3 = GetPixel(g_.data(), x  , y+2, width, height);
+                G4 = GetPixel(g_.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g_.data(), x+1, y  , width, height);
+                G6 = GetPixel(g_.data(), x  , y+1, width, height);
+                G9 = GetPixel(g_.data(), x+1, y+1, width, height);
+                // TODO: Set to B1-B4 instead of 1
+                if (G1 == 0) G1 = 1;
+                if (G2 == 0) G2 = 1;
+                if (G3 == 0) G3 = 1;
+                if (G4 == 0) G4 = 1;
 
-                SetPixel(b, (unsigned short)B1, x, y, width, height);
-                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)) )), x+1, y, width, height);
-                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)) )), x, y+1, width, height);
-                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )), x+1, y+1, width, height);
+                SetPixel(b_, (unsigned short)(B1                                    ), x  , y  , width, height); // *
+                SetPixel(b_, (unsigned short)(G5/2 * (B1/G1 + B2/G2                )), x+1, y  , width, height); // #
+                SetPixel(b_, (unsigned short)(G6/2 * (B1/G1 +         B3/G3        )), x  , y+1, width, height); // +
+                SetPixel(b_, (unsigned short)(G9/4 * (B1/G1 + B2/G2 + B3/G3 + B4/G4)), x+1, y+1, width, height); // ^
             }
         }
 
-        for (int y=1; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                R1 = GetPixel(input, x, y, width, height);
-                R2 = GetPixel(input, x+2, y, width, height);
-                R3 = GetPixel(input, x, y+2, width, height);
+        // Red channel for BGGR, blue for RGGB (needs swap)
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 1; x < width; x += 2)
+            {
+                // BGGR y\x:  -1   0   1   2   3   4
+                //       -2:   G   B   G   B   G   B
+                //       -1:   R   G   R   G   R   G
+                //        0:   G   B   G   B   G   B   <--- TODO: Red is missing on first row
+                //        1:   R   G  *R1 #G5 *R2 #G
+                //        2:   G   B  +G6 ^B9 +G  ^B
+                //        3:   R   G  *R3 #G  *R4 #G
+                //                 ^
+                //                 \--- TODO: Red is missing on first column
+                R1 = GetPixel(input, x  , y  , width, height);
+                R2 = GetPixel(input, x+2, y  , width, height);
+                R3 = GetPixel(input, x  , y+2, width, height);
                 R4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
-                if(G1==0) G1=1;
-                if(G2==0) G2=1;
-                if(G3==0) G3=1;
-                if(G4==0) G4=1;
+                G1 = GetPixel(g_.data(), x  , y  , width, height);
+                G2 = GetPixel(g_.data(), x+2, y  , width, height);
+                G3 = GetPixel(g_.data(), x  , y+2, width, height);
+                G4 = GetPixel(g_.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g_.data(), x+1, y  , width, height);
+                G6 = GetPixel(g_.data(), x  , y+1, width, height);
+                G9 = GetPixel(g_.data(), x+1, y+1, width, height);
+                // TODO: Set to B1-B4 instead of 1
+                if (G1 == 0) G1 = 1;
+                if (G2 == 0) G2 = 1;
+                if (G3 == 0) G3 = 1;
+                if (G4 == 0) G4 = 1;
 
-                SetPixel(r, (unsigned short)R1, x, y, width, height);
-                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2) )) ), x+1, y, width, height);
-                SetPixel(r, (unsigned short)((G6/2 * ((R1/G1) + (R3/G3) )) ), x, y+1, width, height);
-                SetPixel(r, (unsigned short)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ), x+1, y+1, width, height);
-            }
-        }
-
-
-        if (rowOrder == CFA_RGGB) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
-            }
-        }
-        else if (rowOrder == CFA_BGGR) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
+                SetPixel(r_, (unsigned short)(R1                                    ), x  , y  , width, height); // *
+                SetPixel(r_, (unsigned short)(G5/2 * (R1/G1 + R2/G2                )), x+1, y  , width, height); // #
+                SetPixel(r_, (unsigned short)(G6/2 * (R1/G1 +         R3/G3        )), x  , y+1, width, height); // +
+                SetPixel(r_, (unsigned short)(G9/4 * (R1/G1 + R2/G2 + R3/G3 + R4/G4)), x+1, y+1, width, height); // ^
             }
         }
     }
-    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) {
-        for (int y=0; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                G1 = GetPixel(input, x, y, width, height);
-                G2 = GetPixel(input, x+2, y, width, height);
+    else if (rowOrder == CFA_GRBG || rowOrder == CFA_GBRG) // Green backslash
+    {
+        // Code is for GRBG, GBRG needs to swap R & B channels, done in WhiteBalance()
+        // GRBG y\x:  -1   0   1   2   3   4
+        //       -2:   R   G   R   G   R   G
+        //       -1:   G   B   G   B   G   B
+        //        0:   R   G   R   G   R   G
+        //        1:   G   B   G   B   G   B
+        //        2:   R   G   R   G   R   G
+        //        3:   G   B   G   B   G   B
+
+        // Solve for green pixels first, it's needed for red and blue channels
+
+        // Top-left greens
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // GRBG y\x:  -1   0   1   2   3   4
+                //       -2:   R   G   R4  G   R   G
+                //       -1:   G   B   G4  B   G   B
+                //        0:   R1 *G1 +R  *G2 +R2 *G
+                //        1:   G   B   G3  B   G   B
+                //        2:   R  *G  #R3 *G  #R  *G
+                //        3:   G   B   G   B   G   B
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height);
                 G3 = GetPixel(input, x+1, y+1, width, height);
                 G4 = GetPixel(input, x+1, y-1, width, height);
-                R1 = GetPixel(input, x-1, y, width, height);
-                R2 = GetPixel(input, x+3, y, width, height);
+                R1 = GetPixel(input, x-1, y  , width, height);
+                R2 = GetPixel(input, x+3, y  , width, height);
                 R3 = GetPixel(input, x+1, y+2, width, height);
                 R4 = GetPixel(input, x+1, y-2, width, height);
-                R5 = GetPixel(input, x+1, y+1, width, height);
+                R5 = GetPixel(input, x+1, y+1, width, height); // TODO: Same as G3!
 
-                N = fabs(R4-R5)*2 + fabs(G4-G3);
-                S = fabs(R5-R3)*2 + fabs(G4-G3);
-                E = fabs(R5-R2)*2 + fabs(G1-G2);
-                W = fabs(R1-R5)*2 + fabs(G1-G2);
+                N = fabs(R4 - R5) * 2 + fabs(G4 - G3);
+                S = fabs(R5 - R3) * 2 + fabs(G4 - G3);
+                E = fabs(R5 - R2) * 2 + fabs(G1 - G2);
+                W = fabs(R1 - R5) * 2 + fabs(G1 - G2);
 
-                if(N<S && N<E && N<W) 
-                {
-                    SetPixel(g, (unsigned short)((G4*3 + R5 + G3 - R4)/4.0), x+1, y, width, height);
-                }
-                else if(S<N && S<E && S<W) 
-                {
-                    SetPixel(g, (unsigned short)((G3*3 + R5 + G4 - R3)/4.0), x+1, y, width, height);
-                }
-                else if(W<N && W<E && W<S) 
-                {
-                    SetPixel(g, (unsigned short)((G1*3 + R5 + G2 - R1)/4.0), x+1, y, width, height);
-                }
-                else if(E<N && E<S && E<W) 
-                {
-                    SetPixel(g, (unsigned short)((G2*3 + R5 + G1 - R2)/4.0), x+1, y, width, height);
-                }
+                SetPixel(g_, (unsigned short)G1, x, y, width, height); // *
 
-                SetPixel(g, (unsigned short)G1, x, y, width, height);
-
-                if (y==0)
-                {
-                    SetPixel(g, (unsigned short)((G1+G2+G3)/3.0), x+1, y, width, height);
-                }
+                if      (N < S && N < E && N < W)
+                    SetPixel(g_, (unsigned short)((G4*3 + R5 + G3 - R4) / 4.0), x+1, y, width, height);
+                else if (S < N && S < E && S < W)
+                    SetPixel(g_, (unsigned short)((G3*3 + R5 + G4 - R3) / 4.0), x+1, y, width, height);
+                else if (W < N && W < E && W < S)
+                    SetPixel(g_, (unsigned short)((G1*3 + R5 + G2 - R1) / 4.0), x+1, y, width, height);
+                else if (E < N && E < S && E < W)
+                    SetPixel(g_, (unsigned short)((G2*3 + R5 + G1 - R2) / 4.0), x+1, y, width, height);
+                // TODO: This overwrites edge-detected values we've just set!
+                //       So it is basically degraded to Smooth Hue algorithm.
+                if (y == 0)
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3     ) / 3.0), x+1, y, width, height); // +
                 else
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
+
+                // TODO: x cannot be 1 because it's always even
+                if (x == 1)
                 {
-                    SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
-                }
-
-                if (x==1)
-                {
-                    SetPixel(g, (unsigned short)((G1+G4+GetPixel(input, x-1,y+1, width, height))/3.0), x-1, y, width, height);
-                }
-
-
-            }
-        }
-
-        for (int y=1; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-
-                G1 = GetPixel(input, x, y, width, height);
-                G2 = GetPixel(input, x+2, y, width, height);
-                G3 = GetPixel(input, x+1, y+1, width, height);
-                G4 = GetPixel(input, x+1, y-1, width, height);
-                R1 = GetPixel(input, x-1, y, width, height);
-                R2 = GetPixel(input, x+3, y, width, height);
-                R3 = GetPixel(input, x+1, y+2, width, height);
-                R4 = GetPixel(input, x+1, y-2, width, height);
-                R5 = GetPixel(input, x+1, y+1, width, height);
-
-                N = fabs(R4-R5)*2 + fabs(G4-G3);
-                S = fabs(R5-R3)*2 + fabs(G4-G3);
-                E = fabs(R5-R2)*2 + fabs(G1-G2);
-                W = fabs(R1-R5)*2 + fabs(G1-G2);
-
-                if(N<S && N<E && N<W) 
-                {
-                    SetPixel(g, (unsigned short)((G4*3 + R5 + G3 - R4)/4.0), x+1, y, width, height);
-                }
-                else if(S<N && S<E && S<W) 
-                {
-                    SetPixel(g, (unsigned short)((G3*3 + R5 + G4 - R3)/4.0), x+1, y, width, height);
-                }
-                else if(W<N && W<E && W<S) 
-                {
-                    SetPixel(g, (unsigned short)((G1*3 + R5 + G2 - R1)/4.0), x+1, y, width, height);
-                }
-                else if(E<N && E<S && E<W) 
-                {
-                    SetPixel(g, (unsigned short)((G2*3 + R5 + G1 - R2)/4.0), x+1, y, width, height);
-                }
-
-                SetPixel(g, (unsigned short)G1, x, y, width, height);
-
-                if (x==0)
-                {
-                    SetPixel(g, (unsigned short)((G1+G2+G3)/3.0), x+1, y, width, height);
-                }
-                else
-                {
-                    SetPixel(g, (unsigned short)((G1+G2+G3+G4)/4.0), x+1, y, width, height);
+                    G5 = GetPixel(input, x-1, y+1, width, height);
+                    SetPixel(g_, (unsigned short)((G1 + G4 + G5) / 3.0), x-1, y, width, height); // ^
                 }
             }
         }
-        SetPixel(g, (unsigned short)((GetPixel(input, 0, 1, width, height) + GetPixel(input, 1, 0, width, height))/2.0), 0, 0, width, height);
+        // Bottom-right greens
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 1; x < width; x += 2)
+            {
+                // GRBG y\x:  -1   0   1   2   3   4
+                //       -2:   R   G   R   G   R   G
+                //       -1:   G   B   G   B4  G   B
+                //        0:   R   G   R   G4  R   G
+                //        1:   G   B1 *G1 #B  *G2 #B2
+                //        2:   R   G   R   G3  R   G
+                //        3:   G   B  *G  #B3 *G  #B
+                //                 ^
+                //                 \--- TODO: Green is missing on first column odd rows
+                G1 = GetPixel(input, x  , y  , width, height);
+                G2 = GetPixel(input, x+2, y  , width, height);
+                G3 = GetPixel(input, x+1, y+1, width, height);
+                G4 = GetPixel(input, x+1, y-1, width, height);
+                B1 = GetPixel(input, x-1, y  , width, height);
+                B2 = GetPixel(input, x+3, y  , width, height);
+                B3 = GetPixel(input, x+1, y+2, width, height);
+                B4 = GetPixel(input, x+1, y-2, width, height);
+                B5 = GetPixel(input, x+1, y+1, width, height); // TODO: Same as G3!
 
+                N = fabs(B4 - B5) * 2 + fabs(G4 - G3);
+                S = fabs(B5 - B3) * 2 + fabs(G4 - G3);
+                E = fabs(B5 - B2) * 2 + fabs(G1 - G2);
+                W = fabs(B1 - B5) * 2 + fabs(G1 - G2);
 
-        for (int y=1; y<height; y+=2) {
-            for (int x=0; x<width; x+=2) {
-                B1 = GetPixel(input, x, y, width, height);
-                B2 = GetPixel(input, x+2, y, width, height);
-                B3 = GetPixel(input, x, y+2, width, height);
+                SetPixel(g_, (unsigned short)G1, x, y, width, height);
+
+                if      (N < S && N < E && N < W)
+                    SetPixel(g_, (unsigned short)((G4*3 + B5 + G3 - B4) / 4.0), x+1, y, width, height);
+                else if (S < N && S < E && S < W)
+                    SetPixel(g_, (unsigned short)((G3*3 + B5 + G4 - B3) / 4.0), x+1, y, width, height);
+                else if (W < N && W < E && W < S)
+                    SetPixel(g_, (unsigned short)((G1*3 + B5 + G2 - B1) / 4.0), x+1, y, width, height);
+                else if (E < N && E < S && E < W)
+                    SetPixel(g_, (unsigned short)((G2*3 + B5 + G1 - B2) / 4.0), x+1, y, width, height);
+                // TODO: This overwrites edge-detected values we've just set!
+                //       So it is basically degraded to Smooth Hue algorithm.
+                // TODO: x cannot be 0 because it's always odd
+                if (x == 0)
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3     ) / 3.0), x+1, y, width, height); // +
+                else
+                    SetPixel(g_, (unsigned short)((G1 + G2 + G3 + G4) / 4.0), x+1, y, width, height); // #
+            }
+        }
+        // GRBG y\x:  -1   0   1   2   3   4
+        //       -2:   R   G   R   G   R   G
+        //       -1:   G   B   G   B   G   B
+        //        0:   R  *G  !R2  G   R   G
+        //        1:   G  !B1  G   B   G   B
+        //        2:   R   G   R   G   R   G
+        //        3:   G   B   G   B   G   B
+        G1 = GetPixel(input, 0, 1, width, height); // TODO: This is not green but blue pixel!
+        G2 = GetPixel(input, 1, 0, width, height); // TODO: This is not green but red pixel!
+        SetPixel(g_, (unsigned short)((G1 + G2) / 2.0), 0, 0, width, height); // *
+
+        // Blue channel for GRBG, red for GBRG (needs swap)
+        for (int y = 1; y < height; y += 2)
+        {
+            for (int x = 0; x < width; x += 2)
+            {
+                // GRBG y\x:  -1   0   1   2   3   4
+                //       -2:   R   G   R   G   R   G
+                //       -1:   G   B   G   B   G   B
+                //        0:   R   G   R   G   R   G   <--- TODO: Blue is missing on first row
+                //        1:   G  *B1 #G5 *B2 #G  *B
+                //        2:   R  +G6 ^R9 +G  ^R  +G
+                //        3:   G  *B3 #G  *B4 #G  *B
+                B1 = GetPixel(input, x  , y  , width, height);
+                B2 = GetPixel(input, x+2, y  , width, height);
+                B3 = GetPixel(input, x  , y+2, width, height);
                 B4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
-                if (G1==0) G1=1;
-                if (G2==0) G2=1;
-                if (G3==0) G3=1;
-                if (G4==0) G4=1;
+                G1 = GetPixel(g_.data(), x  , y  , width, height);
+                G2 = GetPixel(g_.data(), x+2, y  , width, height);
+                G3 = GetPixel(g_.data(), x  , y+2, width, height);
+                G4 = GetPixel(g_.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g_.data(), x+1, y  , width, height);
+                G6 = GetPixel(g_.data(), x  , y+1, width, height);
+                G9 = GetPixel(g_.data(), x+1, y+1, width, height);
+                // TODO: Set to B1-B4 instead of 1
+                if (G1 == 0) G1 = 1;
+                if (G2 == 0) G2 = 1;
+                if (G3 == 0) G3 = 1;
+                if (G4 == 0) G4 = 1;
 
-                SetPixel(b, (unsigned short)B1, x, y, width, height);
-                SetPixel(b, (unsigned short)((G5/2 * ((B1/G1) + (B2/G2)) )), x+1, y, width, height);
-                SetPixel(b, (unsigned short)((G6/2 * ((B1/G1) + (B3/G3)) )), x, y+1, width, height);
-                SetPixel(b, (unsigned short)((G9/4 * ((B1/G1) + (B3/G3) + (B2/G2) + (B4/G4)) )), x+1, y+1, width, height);
+                SetPixel(b_, (unsigned short)(B1                                    ), x  , y  , width, height); // *
+                SetPixel(b_, (unsigned short)(G5/2 * (B1/G1 + B2/G2                )), x+1, y  , width, height); // #
+                SetPixel(b_, (unsigned short)(G6/2 * (B1/G1 +         B3/G3        )), x  , y+1, width, height); // +
+                SetPixel(b_, (unsigned short)(G9/4 * (B1/G1 + B2/G2 + B3/G3 + B4/G4)), x+1, y+1, width, height); // ^
             }
         }
 
-        for (int y=0; y<height; y+=2) {
-            for (int x=1; x<width; x+=2) {
-                R1 = GetPixel(input, x, y, width, height);
-                R2 = GetPixel(input, x+2, y, width, height);
-                R3 = GetPixel(input, x, y+2, width, height);
+        // Red channel for GRBG, blue for GBRG (needs swap)
+        for (int y = 0; y < height; y += 2)
+        {
+            for (int x = 1; x < width; x += 2)
+            {
+                // GRBG y\x:  -1   0   1   2   3   4
+                //       -2:   R   G   R   G   R   G
+                //       -1:   G   B   G   B   G   B
+                //        0:   R   G  *R1 #G5 *R2 #G
+                //        1:   G   B  +G6 ^B9 +G  ^B
+                //        2:   R   G  *R3 #G  *R4 #G
+                //        3:   G   B  +G  ^B  +G  ^B
+                //                 ^
+                //                 \--- TODO: Red is missing on first column
+                R1 = GetPixel(input, x  , y  , width, height);
+                R2 = GetPixel(input, x+2, y  , width, height);
+                R3 = GetPixel(input, x  , y+2, width, height);
                 R4 = GetPixel(input, x+2, y+2, width, height);
-                G1 = GetPixel((unsigned short *)g.data(), x, y, width, height);
-                G2 = GetPixel((unsigned short *)g.data(), x+2, y, width, height);
-                G3 = GetPixel((unsigned short *)g.data(), x, y+2, width, height);
-                G4 = GetPixel((unsigned short *)g.data(), x+2, y+2, width, height);
-                G5 = GetPixel((unsigned short *)g.data(), x+1, y, width, height);
-                G6 = GetPixel((unsigned short *)g.data(), x, y+1, width, height);
-                G9 = GetPixel((unsigned short *)g.data(), x+1, y+1, width, height);
-                if(G1==0) G1=1;
-                if(G2==0) G2=1;
-                if(G3==0) G3=1;
-                if(G4==0) G4=1;
+                G1 = GetPixel(g_.data(), x  , y  , width, height);
+                G2 = GetPixel(g_.data(), x+2, y  , width, height);
+                G3 = GetPixel(g_.data(), x  , y+2, width, height);
+                G4 = GetPixel(g_.data(), x+2, y+2, width, height);
+                G5 = GetPixel(g_.data(), x+1, y  , width, height);
+                G6 = GetPixel(g_.data(), x  , y+1, width, height);
+                G9 = GetPixel(g_.data(), x+1, y+1, width, height);
+                // TODO: Set to R1-R4 instead of 1
+                if (G1 == 0) G1 = 1;
+                if (G2 == 0) G2 = 1;
+                if (G3 == 0) G3 = 1;
+                if (G4 == 0) G4 = 1;
 
-                SetPixel(r, (unsigned short)R1, x, y, width, height);
-                SetPixel(r, (unsigned short)((G5/2 * ((R1/G1) + (R2/G2) )) ), x+1, y, width, height);
-                SetPixel(r, (unsigned short)((G6/2 * ((R1/G1) + (R3/G3) )) ), x, y+1, width, height);
-                SetPixel(r, (unsigned short)((G9/4 *  ((R1/G1) + (R3/G3) + (R2/G2) + (R4/G4)) ) ), x+1, y+1, width, height);
-            }
-        }
-
-
-        if (rowOrder == CFA_GRBG) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(r[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(b[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",b);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",r);
-            }
-        }
-        else if (rowOrder == CFA_GBRG) {
-            for (int i=0; i<height*width; i++)
-            {
-                output[i] = 0;
-                unsigned char* bytePix = (unsigned char*)(output+i);
-
-                unsigned short bValue = (unsigned short)(rgbScales.b_scale*((unsigned char)(b[i] >> bitShift)));
-                unsigned short gValue = (unsigned short)(rgbScales.g_scale*((unsigned char)(g[i] >> bitShift)));
-                unsigned short rValue = (unsigned short)(rgbScales.r_scale*((unsigned char)(r[i] >> bitShift)));
-
-                *bytePix = ((bValue > 255) ? 255 : (unsigned char)bValue);
-                *(bytePix+1) = ((gValue > 255) ? 255 : (unsigned char)gValue);
-                *(bytePix+2) = ((rValue > 255) ? 255 : (unsigned char)rValue);
-
-                //rgb.addSlice("red",r);
-                //rgb.addSlice("green",g);
-                //rgb.addSlice("blue",b);
+                SetPixel(r_, (unsigned short)(R1                                    ), x  , y  , width, height); // *
+                SetPixel(r_, (unsigned short)(G5/2 * (R1/G1 + R2/G2                )), x+1, y  , width, height); // #
+                SetPixel(r_, (unsigned short)(G6/2 * (R1/G1 +         R3/G3        )), x  , y+1, width, height); // +
+                SetPixel(r_, (unsigned short)(G9/4 * (R1/G1 + R2/G2 + R3/G3 + R4/G4)), x+1, y+1, width, height); // ^
             }
         }
     }
+}
+
+int PvDebayer::WhiteBalance(int* output, int width, int height, int bitDepth, int rowOrder)
+{
+    const bool swapRB = (rowOrder == CFA_RGGB || rowOrder == CFA_GBRG);
+
+    const std::vector<unsigned short>& b = (swapRB) ? r_ : b_;
+    const std::vector<unsigned short>& g =                 g_;
+    const std::vector<unsigned short>& r = (swapRB) ? b_ : r_;
+
+    const int bitShift = bitDepth - 8;
+    const size_t numPixels = (size_t)width * height;
+
+    unsigned short bVal;
+    unsigned short gVal;
+    unsigned short rVal;
+    unsigned char* bytePix;
+
+    for (size_t i = 0; i < numPixels; i++)
+    {
+        // TODO: The 'unsigned char' cast after bit-shift shouldn't be needed.
+        //       Unfortunately, the Smooth Hue algorithms here generate values
+        //       greater than fit given bit depth on the edges due to
+        //       "fixing" division by zero by division by 1.
+        bVal = (unsigned short)(rgbScales_.b * ((unsigned char)(b[i] >> bitShift)));
+        gVal = (unsigned short)(rgbScales_.g * ((unsigned char)(g[i] >> bitShift)));
+        rVal = (unsigned short)(rgbScales_.r * ((unsigned char)(r[i] >> bitShift)));
+
+        bytePix = (unsigned char*)(&output[i]);
+
+        bytePix[0] = (unsigned char)((bVal > 255) ? 255 : bVal);
+        bytePix[1] = (unsigned char)((gVal > 255) ? 255 : gVal);
+        bytePix[2] = (unsigned char)((rVal > 255) ? 255 : rVal);
+        bytePix[3] = (unsigned char)0;
+    }
+
+    return DEVICE_OK;
+}
+
+template <typename T>
+unsigned short PvDebayer::GetPixel(const T* v, int x, int y, int width, int height, T def)
+{
+    if (x < width && x >= 0 && y < height && y >= 0)
+        return v[y * width + x];
+    return def;
+}
+
+template <typename T>
+void PvDebayer::SetPixel(std::vector<T>& v, T val, int x, int y, int width, int height)
+{
+    if (x < width && x >= 0 && y < height && y >= 0)
+        v[y * width + x] = val;
 }
