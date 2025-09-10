@@ -196,8 +196,8 @@ private:
    bool prepared;
 	static bool globalColorInitialized;
 	static bool globalPolarizationInitialized;
-   static uint16_t Tsi3Cam::dllCount;
-   static uint16_t Tsi3Cam::sdkCount;
+   static uint16_t dllCount;
+   static uint16_t sdkCount;
    static std::mutex mtx;
    bool stopOnOverflow;
    void* camHandle;

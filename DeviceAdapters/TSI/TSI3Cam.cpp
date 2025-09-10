@@ -154,7 +154,6 @@ int Tsi3Cam::Initialize()
 	LogMessage("Initializing TSI3 camera...");
 	//LogMessage("TSI SDK path: " + sdkPath);
 	
-	const int maxSdkStringLength = 1024;
 	//string kernelPath(sdkPath);
 	//kernelPath += "thorlabs_unified_sdk_kernel.dll";
 
@@ -166,6 +165,7 @@ int Tsi3Cam::Initialize()
 
    // To handle multiple cameras
 	// Get desired ID.  For backwards compatability, zero indicates take the first camera
+	const int maxSdkStringLength = 1024;
 	char camera_id[maxSdkStringLength];
 	this->GetProperty(MM::g_Keyword_CameraID, camera_id);
    char camera_ids[maxSdkStringLength];
