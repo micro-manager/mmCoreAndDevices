@@ -84,6 +84,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
  */
 bool isTsiSDK3Available()
 {
+   static bool available = false;
+   if (available)
+      return true;
+
 	//std::string sdkPath = getSDKPath();
 	//std::string kernelPath(sdkPath);
 	//kernelPath += "thorlabs_unified_sdk_kernel.dll";
@@ -101,6 +105,7 @@ bool isTsiSDK3Available()
    tl_camera_close_sdk();
 	tl_camera_sdk_dll_terminate();
 
+   available = true;
    return true;
 }
 
