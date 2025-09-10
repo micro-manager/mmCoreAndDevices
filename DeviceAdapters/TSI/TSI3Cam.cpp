@@ -45,6 +45,9 @@
 using namespace std;
 bool Tsi3Cam::globalColorInitialized = false;
 bool Tsi3Cam::globalPolarizationInitialized = false;
+uint16_t Tsi3Cam::dllCount = 0;
+uint16_t Tsi3Cam::sdkCount = 0;
+std::mutex Tsi3Cam::mtx;
 
 
 void camera_connect_callback(char* /* cameraSerialNumber */, enum TL_CAMERA_USB_PORT_TYPE /* usb_bus_speed */, void* /* context */)
@@ -97,39 +100,35 @@ Tsi3Cam::Tsi3Cam() :
 	AddAllowedValue(MM::g_Keyword_CameraID, "0");
 	const int maxSdkStringLength = 1024;
    char camera_ids[maxSdkStringLength];
-	if (!tl_camera_sdk_dll_initialize())
+   if (OpenDLLAndSDK() == DEVICE_OK)
 	{
-		if (!tl_camera_open_sdk())
+      if (!tl_camera_discover_available_cameras(camera_ids, maxSdkStringLength))
       {
-			if (!tl_camera_discover_available_cameras(camera_ids, maxSdkStringLength))
-			{
-				string s_camera_ids(camera_ids);
-				std::stringstream ss(s_camera_ids);
-				std::string segment;
+         string s_camera_ids(camera_ids);
+         std::stringstream ss(s_camera_ids);
+         std::string segment;
 
-				while (std::getline(ss, segment, ' ')) {
-					if (!segment.empty()) {
-						try {
-							std::ignore = std::stoi(segment);
-							AddAllowedValue(MM::g_Keyword_CameraID, segment.c_str());
-						}
-						catch (const std::invalid_argument&) {
-							this->GetCoreCallback()->LogMessage(this, "Error parsing CameraIDs", false);
-						}
-						catch (const std::out_of_range&) {
-							this->GetCoreCallback()->LogMessage(this, "Error parsing CameraIDs", false);
-						}
-					}
-				}
+         while (std::getline(ss, segment, ' ')) {
+            if (!segment.empty()) {
+               try {
+                  std::ignore = std::stoi(segment);
+                  AddAllowedValue(MM::g_Keyword_CameraID, segment.c_str());
+               }
+               catch (const std::invalid_argument&) {
+                  this->GetCoreCallback()->LogMessage(this, "Error parsing CameraIDs", false);
+               }
+               catch (const std::out_of_range&) {
+                  this->GetCoreCallback()->LogMessage(this, "Error parsing CameraIDs", false);
+               }
+            }
+         }
 
-				string s_camera_id = s_camera_ids.substr(0, s_camera_ids.find(' '));
+         string s_camera_id = s_camera_ids.substr(0, s_camera_ids.find(' '));
 
-				char camera_id[maxSdkStringLength];
-				strcpy_s(camera_id, s_camera_id.c_str());
-			}
-         tl_camera_close_sdk();
-		}
-      tl_camera_sdk_dll_terminate();
+         char camera_id[maxSdkStringLength];
+         strcpy_s(camera_id, s_camera_id.c_str());
+      }
+			CloseDLLAndSDK();
 	}
 
 	// obtain path for loading DLLs
@@ -159,15 +158,11 @@ int Tsi3Cam::Initialize()
 	//string kernelPath(sdkPath);
 	//kernelPath += "thorlabs_unified_sdk_kernel.dll";
 
-   if (tl_camera_sdk_dll_initialize())
-   {
-      return ERR_TSI_DLL_LOAD_FAILED;
-   }
-
-   if (tl_camera_open_sdk())
-   {
-      return ERR_TSI_OPEN_FAILED;
-   }
+	int ret = OpenDLLAndSDK();
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 
    // To handle multiple cameras
 	// Get desired ID.  For backwards compatability, zero indicates take the first camera
@@ -216,7 +211,7 @@ int Tsi3Cam::Initialize()
 	   return ERR_INTERNAL_ERROR;
 
    // set camera name
-   int ret = CreateProperty(MM::g_Keyword_CameraName, camera_id, MM::String, true);
+   ret = CreateProperty(MM::g_Keyword_CameraName, camera_id, MM::String, true);
    assert(ret == DEVICE_OK);
 
    // set firmware version
@@ -540,11 +535,8 @@ int Tsi3Cam::Shutdown()
    if (tl_camera_close_camera(camHandle))
       LogMessage("TSI Camera SDK3 close failed!");
 
-   if (tl_camera_close_sdk())
-      LogMessage("TSI SDK3 close failed!");
-
-	if (tl_camera_sdk_dll_terminate())
-		LogMessage("TSI SDK3 dll terminate failed");
+	// Failures in this function are logged in the function
+	CloseDLLAndSDK();
 
    initialized = false;
    return DEVICE_OK;
@@ -1111,6 +1103,62 @@ void Tsi3Cam::ResetImageBuffer()
       LogMessage("Error setting roi");
    }
 
-   ResizeImageBuffer();
+   ResizeImageBuffer(); 
 
+}
+
+/**
+ * Use reference counting of static variables so that multiple instances
+ * can use the dll and sdk
+ */
+int Tsi3Cam::OpenDLLAndSDK()
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	if (dllCount == 0)
+	{
+		if (tl_camera_sdk_dll_initialize())
+		{
+			return ERR_TSI_DLL_LOAD_FAILED;
+		}
+   }
+   dllCount++;
+	if (sdkCount == 0)
+	if (tl_camera_open_sdk())
+	{
+		return ERR_TSI_OPEN_FAILED;
+	}
+	sdkCount++;
+	return DEVICE_OK;
+}
+
+/**
+ * Use reference counting of static variables so that multiple instances
+ * can use the dll and sdk
+ */
+int Tsi3Cam::CloseDLLAndSDK()
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	if (sdkCount > 0)
+	{
+		sdkCount--;
+		if (sdkCount == 0)
+		{
+			if (tl_camera_close_sdk())
+			{
+				LogMessage("TSI SDK3 close failed!");
+			}
+		}
+	}
+	if (dllCount > 0)
+	{
+		dllCount--;
+		if (dllCount == 0)
+		{
+			if (tl_camera_sdk_dll_terminate())
+			{
+				LogMessage("TSI SDK3 dll terminate failed");
+			}
+		}
+	}
+	return DEVICE_OK;
 }

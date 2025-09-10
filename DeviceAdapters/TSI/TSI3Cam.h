@@ -43,6 +43,7 @@
 
 #include <string>
 #include <map>
+#include <mutex>
 
 struct Tsi3RoiBin
 {
@@ -183,6 +184,8 @@ private:
 	int ApplyWhiteBalance(double redScaler, double greenScaler, double blueScaler);
 	void EnableColorOutputLUTs();
 	int GetCameraROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
+   int OpenDLLAndSDK();
+   int CloseDLLAndSDK();
 
    static void frame_available_callback(void* sender, unsigned short* image_buffer, int frame_count, unsigned char* metadata, int metadata_size_in_bytes, void* context);
 
@@ -193,6 +196,9 @@ private:
    bool prepared;
 	static bool globalColorInitialized;
 	static bool globalPolarizationInitialized;
+   static uint16_t Tsi3Cam::dllCount;
+   static uint16_t Tsi3Cam::sdkCount;
+   static std::mutex mtx;
    bool stopOnOverflow;
    void* camHandle;
    void* colorProcessor;
