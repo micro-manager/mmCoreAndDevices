@@ -73,8 +73,6 @@ public:
    mutable MMThreadLock g_insertLock;
 
 private:
-   bool InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError);
-
    unsigned int width_;
    unsigned int height_;
    unsigned int pixDepth_;

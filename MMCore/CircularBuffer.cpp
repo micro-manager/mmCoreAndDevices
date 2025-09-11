@@ -194,7 +194,7 @@ static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_c
 */
 bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
-   return InsertMultiChannel(pixArray, 1, width, height, byteDepth, 1, pMd);
+   return InsertImage(pixArray, width, height, byteDepth, 1, pMd);
 }
 
 /**
@@ -202,14 +202,8 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 */
 bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
-    return InsertMultiChannel(pixArray, 1, width, height, byteDepth, nComponents, pMd);
-}
- 
-/**
-* Inserts a multi-channel frame in the buffer.
-*/
-bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
-{
+    unsigned numChannels = 1;
+
     MMThreadGuard insertGuard(g_insertLock);
  
     mm::ImgBuffer* pImg;
