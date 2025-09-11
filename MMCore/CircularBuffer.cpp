@@ -202,8 +202,6 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 */
 bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
-    unsigned numChannels = 1;
-
     MMThreadGuard insertGuard(g_insertLock);
  
     mm::ImgBuffer* pImg;
@@ -227,76 +225,72 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
        }
     }
  
-    for (unsigned i=0; i<numChannels; i++)
-    {
-       Metadata md;
-       {
-          MMThreadGuard guard(g_bufferLock);
-          // we assume that all buffers are pre-allocated
-          pImg = frameArray_[insertIndex_ % frameArray_.size()].FindImage(i);
-          if (!pImg)
-             return false;
+   Metadata md;
+   {
+      MMThreadGuard guard(g_bufferLock);
+      // we assume that all buffers are pre-allocated
+      pImg = frameArray_[insertIndex_ % frameArray_.size()].FindImage(0);
+      if (!pImg)
+         return false;
  
-          if (pMd)
-          {
-             // TODO: the same metadata is inserted for each channel ???
-             // Perhaps we need to add specific tags to each channel
-             md = *pMd;
-          }
-
-         std::string cameraName = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
-         if (imageNumbers_.end() == imageNumbers_.find(cameraName))
-         {
-            imageNumbers_[cameraName] = 0;
-         }
-
-         // insert image number. 
-         md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageNumbers_[cameraName]));
-         ++imageNumbers_[cameraName];
-      }
-
-      if (!md.HasTag(MM::g_Keyword_Elapsed_Time_ms))
+      if (pMd)
       {
-         // if time tag was not supplied by the camera insert current timestamp
-         using namespace std::chrono;
-         auto elapsed = steady_clock::now() - startTime_;
-         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
-            std::to_string(duration_cast<milliseconds>(elapsed).count()));
+         // TODO: the same metadata is inserted for each channel ???
+         // Perhaps we need to add specific tags to each channel
+         md = *pMd;
       }
 
-      // Note: It is not ideal to use local time. I think this tag is rarely
-      // used. Consider replacing with UTC (micro)seconds-since-epoch (with
-      // different tag key) after addressing current usage.
-      auto now = std::chrono::system_clock::now();
-      md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
-
-      md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
-      md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
-      if (byteDepth == 1)
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
-      else if (byteDepth == 2)
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
-      else if (byteDepth == 4)
+      std::string cameraName = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
+      if (imageNumbers_.end() == imageNumbers_.find(cameraName))
       {
-         if (nComponents == 1)
-            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
-         else
-            md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
+         imageNumbers_[cameraName] = 0;
       }
-      else if (byteDepth == 8)
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
-      else
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
 
-      pImg->SetMetadata(md);
-      //pImg->SetPixels(pixArray + i * singleChannelSize);
-      // TODO: In MMCore the ImgBuffer::GetPixels() returns const pointer.
-      //       It would be better to have something like ImgBuffer::GetPixelsRW() in MMDevice.
-      //       Or even better - pass tasksMemCopy_ to ImgBuffer constructor
-      //       and utilize parallel copy also in single snap acquisitions.
-      tasksMemCopy_->MemCopy((void*)pImg->GetPixels(),
-            pixArray + i * singleChannelSize, singleChannelSize);
+      // insert image number. 
+      md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageNumbers_[cameraName]));
+      ++imageNumbers_[cameraName];
    }
+
+   if (!md.HasTag(MM::g_Keyword_Elapsed_Time_ms))
+   {
+      // if time tag was not supplied by the camera insert current timestamp
+      using namespace std::chrono;
+      auto elapsed = steady_clock::now() - startTime_;
+      md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+         std::to_string(duration_cast<milliseconds>(elapsed).count()));
+   }
+
+   // Note: It is not ideal to use local time. I think this tag is rarely
+   // used. Consider replacing with UTC (micro)seconds-since-epoch (with
+   // different tag key) after addressing current usage.
+   auto now = std::chrono::system_clock::now();
+   md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
+
+   md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
+   md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
+   if (byteDepth == 1)
+      md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
+   else if (byteDepth == 2)
+      md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
+   else if (byteDepth == 4)
+   {
+      if (nComponents == 1)
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
+      else
+         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
+   }
+   else if (byteDepth == 8)
+      md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
+   else
+      md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
+
+   pImg->SetMetadata(md);
+   // TODO: In MMCore the ImgBuffer::GetPixels() returns const pointer.
+   //       It would be better to have something like ImgBuffer::GetPixelsRW() in MMDevice.
+   //       Or even better - pass tasksMemCopy_ to ImgBuffer constructor
+   //       and utilize parallel copy also in single snap acquisitions.
+   tasksMemCopy_->MemCopy((void*)pImg->GetPixels(),
+         pixArray, singleChannelSize);
 
    {
       MMThreadGuard guard(g_bufferLock);
