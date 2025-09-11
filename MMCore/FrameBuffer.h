@@ -73,7 +73,7 @@ public:
 
    void Resize(unsigned xSize, unsigned ySize, unsigned pixDepth);
    void Clear();
-   void Preallocate(unsigned channels);
+   void Preallocate();
 
    ImgBuffer* FindImage(unsigned channel) const;
    unsigned Width() const {return width_;}
@@ -88,7 +88,7 @@ private:
    // FrameBuffer& operator=(const FrameBuffer&);
 
 private:
-   ImgBuffer* InsertNewImage(unsigned channel);
+   ImgBuffer* InsertNewImage();
 };
 
 } // namespace mm

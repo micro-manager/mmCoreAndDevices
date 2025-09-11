@@ -117,7 +117,7 @@ bool CircularBuffer::Initialize(unsigned int w, unsigned int h, unsigned int pix
       for (unsigned long i=0; i<frameArray_.size(); i++)
       {
          frameArray_[i].Resize(w, h, pixDepth);
-         frameArray_[i].Preallocate(1);
+         frameArray_[i].Preallocate();
       }
    }
 

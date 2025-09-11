@@ -117,14 +117,11 @@ void FrameBuffer::Clear()
    channels_.clear();
 }
 
-void FrameBuffer::Preallocate(unsigned channels)
+void FrameBuffer::Preallocate()
 {
-   for (unsigned i=0; i<channels; i++)
-   {
-      ImgBuffer* img = FindImage(i);
-      if (!img)
-         InsertNewImage(i);
-   }
+   ImgBuffer* img = FindImage(0);
+   if (!img)
+      InsertNewImage();
 }
 
 void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned byteDepth)
@@ -142,12 +139,12 @@ ImgBuffer* FrameBuffer::FindImage(unsigned channel) const
    return channels_[channel];
 }
 
-ImgBuffer* FrameBuffer::InsertNewImage(unsigned channel)
+ImgBuffer* FrameBuffer::InsertNewImage()
 {
-   if (channel >= channels_.size())
-      channels_.resize(channel + 1, 0);
+   if (0 >= channels_.size())
+      channels_.resize(1, 0);
    ImgBuffer* img = new ImgBuffer(width_, height_, depth_);
-   channels_[channel] = img;
+   channels_[0] = img;
    return img;
 }
 
