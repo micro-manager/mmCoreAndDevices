@@ -20,9 +20,7 @@
 
 #include "ImageMetadata.h"
 
-#include <string>
-#include <vector>
-#include <map>
+#include <memory>
 
 namespace mm {
 
@@ -59,9 +57,7 @@ private:
 // support multi-channel frames.
 class FrameBuffer
 {
-   // Holds null for any unallocated channels, and is as long as need to
-   // contain the allocated channels.
-   std::vector<ImgBuffer*> channels_; // Size never greater than 1
+   std::unique_ptr<ImgBuffer> buffer_; // May be empty
    unsigned int width_;
    unsigned int height_;
    unsigned int depth_;
@@ -69,7 +65,6 @@ class FrameBuffer
 public:
    FrameBuffer(unsigned xSize, unsigned ySize, unsigned byteDepth);
    FrameBuffer();
-   ~FrameBuffer();
 
    void Resize(unsigned xSize, unsigned ySize, unsigned pixDepth);
    void Clear();
@@ -79,16 +74,6 @@ public:
    unsigned Width() const {return width_;}
    unsigned Height() const {return height_;}
    unsigned Depth() const {return depth_;}
-
-private:
-   // The following line should be uncommented once we upgrade to
-   // VC++ >= 2013. (Or operator= should be declared deleted, C++11-style.)
-   // For the description of the standard library bug necessitating this
-   // workaround, see http://stackoverflow.com/a/25423089
-   // FrameBuffer& operator=(const FrameBuffer&);
-
-private:
-   ImgBuffer* InsertNewImage();
 };
 
 } // namespace mm

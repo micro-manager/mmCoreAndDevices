@@ -102,26 +102,16 @@ FrameBuffer::FrameBuffer()
    depth_ = 0;
 }
 
-FrameBuffer::~FrameBuffer()
-{
-   Clear();
-}
-
 void FrameBuffer::Clear()
 {
-   for (std::vector<ImgBuffer*>::iterator it = channels_.begin(), end = channels_.end();
-         it != end; ++it)
-   {
-      delete *it;
-   }
-   channels_.clear();
+   buffer_.reset();
 }
 
 void FrameBuffer::Preallocate()
 {
-   ImgBuffer* img = FindImage(0);
-   if (!img)
-      InsertNewImage();
+   if (!buffer_) {
+      buffer_ = std::make_unique<ImgBuffer>(width_, height_, depth_);
+   }
 }
 
 void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned byteDepth)
@@ -134,18 +124,9 @@ void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned byteDepth)
 
 ImgBuffer* FrameBuffer::FindImage(unsigned channel) const
 {
-   if (channel >= channels_.size())
-      return 0;
-   return channels_[channel];
-}
-
-ImgBuffer* FrameBuffer::InsertNewImage()
-{
-   if (0 >= channels_.size())
-      channels_.resize(1, 0);
-   ImgBuffer* img = new ImgBuffer(width_, height_, depth_);
-   channels_[0] = img;
-   return img;
+   if (channel > 0)
+      return nullptr;
+   return buffer_.get();
 }
 
 } // namespace mm
