@@ -76,8 +76,6 @@ public:
    void Preallocate(unsigned channels);
 
    ImgBuffer* FindImage(unsigned channel) const;
-   const unsigned char* GetPixels(unsigned channel) const;
-   bool SetPixels(unsigned channel, const unsigned char* pixels);
    unsigned Width() const {return width_;}
    unsigned Height() const {return height_;}
    unsigned Depth() const {return depth_;}
