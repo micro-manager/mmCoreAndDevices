@@ -54,11 +54,14 @@ private:
    ImgBuffer& operator=(const ImgBuffer&);
 };
 
+// The FrameBuffer class wraps ImgBuffer (which is part of the MMCore API) for
+// internal use. It was also previously part of a never-completed scheme to
+// support multi-channel frames.
 class FrameBuffer
 {
    // Holds null for any unallocated channels, and is as long as need to
    // contain the allocated channels.
-   std::vector<ImgBuffer*> channels_;
+   std::vector<ImgBuffer*> channels_; // Size never greater than 1
    unsigned int width_;
    unsigned int height_;
    unsigned int depth_;

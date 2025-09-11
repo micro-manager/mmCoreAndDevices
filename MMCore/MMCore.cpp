@@ -2858,7 +2858,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
 
 		try
 		{
-			if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+			if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
 			{
 				logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
@@ -2904,7 +2904,7 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
                      MMERR_NotAllowedDuringSequenceAcquisition);
 
-   if (!cbuf_->Initialize(pCam->GetNumberOfChannels(), pCam->GetImageWidth(), pCam->GetImageHeight(), pCam->GetImageBytesPerPixel()))
+   if (!cbuf_->Initialize(pCam->GetImageWidth(), pCam->GetImageHeight(), pCam->GetImageBytesPerPixel()))
    {
       logError(getDeviceName(pCam).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
       throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
@@ -2956,7 +2956,7 @@ void CMMCore::initializeCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
    if (camera)
    {
       mm::DeviceModuleLockGuard guard(camera);
-      if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+      if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
       {
          logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
@@ -3009,7 +3009,7 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGAC
             ,MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-      if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+      if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
       {
          logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
@@ -3257,7 +3257,7 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
       if (camera)
 		{
          mm::DeviceModuleLockGuard guard(camera);
-         if (!cbuf_->Initialize(camera->GetNumberOfChannels(), camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+         if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
 		}
 

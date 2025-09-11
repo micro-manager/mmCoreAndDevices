@@ -48,7 +48,7 @@ public:
 
    unsigned GetMemorySizeMB() const { return memorySizeMB_; }
 
-   bool Initialize(unsigned channels, unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
+   bool Initialize(unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
    unsigned long GetSize() const;
    unsigned long GetFreeSize() const;
    unsigned long GetRemainingImageCount() const;
@@ -87,7 +87,6 @@ private:
    long saveIndex_;
 
    unsigned long memorySizeMB_;
-   unsigned int numChannels_;
    bool overflow_;
    bool overwriteData_;
    std::vector<mm::FrameBuffer> frameArray_;

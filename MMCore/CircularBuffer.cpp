@@ -67,7 +67,7 @@ int CircularBuffer::SetOverwriteData(bool overwrite) {
    return DEVICE_OK;
 }
 
-bool CircularBuffer::Initialize(unsigned channels, unsigned int w, unsigned int h, unsigned int pixDepth)
+bool CircularBuffer::Initialize(unsigned int w, unsigned int h, unsigned int pixDepth)
 {
    MMThreadGuard guard(g_bufferLock);
    imageNumbers_.clear();
@@ -76,17 +76,16 @@ bool CircularBuffer::Initialize(unsigned channels, unsigned int w, unsigned int 
    bool ret = true;
    try
    {
-      if (w == 0 || h==0 || pixDepth == 0 || channels == 0)
+      if (w == 0 || h==0 || pixDepth == 0)
          return false; // does not make sense
 
-      if (w == width_ && height_ == h && pixDepth_ == pixDepth && channels == numChannels_)
+      if (w == width_ && height_ == h && pixDepth_ == pixDepth)
          if (frameArray_.size() > 0)
             return true; // nothing to change
 
       width_ = w;
       height_ = h;
       pixDepth_ = pixDepth;
-      numChannels_ = channels;
 
       insertIndex_ = 0;
       saveIndex_ = 0;
@@ -95,7 +94,7 @@ bool CircularBuffer::Initialize(unsigned channels, unsigned int w, unsigned int 
       // calculate the size of the entire buffer array once all images get allocated
       // the actual size at the time of the creation is going to be less, because
       // images are not allocated until pixels become available
-      unsigned long frameSizeBytes = width_ * height_ * pixDepth_ * numChannels_;
+      unsigned long frameSizeBytes = width_ * height_ * pixDepth_;
       unsigned long cbSize = (unsigned long) ((memorySizeMB_ * bytesInMB) / frameSizeBytes);
 
       if (cbSize == 0) 
@@ -118,7 +117,7 @@ bool CircularBuffer::Initialize(unsigned channels, unsigned int w, unsigned int 
       for (unsigned long i=0; i<frameArray_.size(); i++)
       {
          frameArray_[i].Resize(w, h, pixDepth);
-         frameArray_[i].Preallocate(numChannels_);
+         frameArray_[i].Preallocate(1);
       }
    }
 
@@ -235,8 +234,6 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
  
       if (pMd)
       {
-         // TODO: the same metadata is inserted for each channel ???
-         // Perhaps we need to add specific tags to each channel
          md = *pMd;
       }
 
