@@ -3110,7 +3110,9 @@ void* CMMCore::getLastImage() MMCORE_LEGACY_THROW(CMMError)
 
 void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
 {
-   // Slices have never been implemented on the device interface side
+   if (channel != 0)
+      throw CMMError("Channel must be 0");
+
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
@@ -3188,12 +3190,15 @@ void* CMMCore::popNextImage() MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Gets and removes the next image (and metadata) from the circular buffer
- * channel indicates which cameraChannel image should be retrieved.
- * slice has not been implement and should always be 0
+ *
+ * channel has not been implemented and shoudl always be 0.
+ * slice has not been implement and should always be 0.
  */
 void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) MMCORE_LEGACY_THROW(CMMError)
 {
-   // Slices have never been implemented on the device interface side
+   if (channel != 0)
+      throw CMMError("Channel must be 0");
+
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
