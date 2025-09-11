@@ -194,15 +194,7 @@ static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_c
 */
 bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
-   return InsertMultiChannel(pixArray, 1, width, height, byteDepth, pMd);
-}
-
-/**
-* Inserts a single image, possibly with multiple channels, but with 1 component, in the buffer.
-*/
-bool CircularBuffer::InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
-{
-   return InsertMultiChannel(pixArray, numChannels, width, height, byteDepth, 1, pMd);
+   return InsertMultiChannel(pixArray, 1, width, height, byteDepth, 1, pMd);
 }
 
 /**
