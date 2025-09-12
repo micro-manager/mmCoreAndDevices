@@ -18,19 +18,25 @@
     <ClInclude Include="AMF_Commands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AMF_Hub.h">
+    <ClInclude Include="AMF_RVM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AMF_RVM.h">
+    <ClInclude Include="AMF_LSP_Hub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AMF_Hub.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AMF_RVM.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AMF_LSP_Hub.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AMF_LSP_Pump.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AMF_LSP_Pump.h">
+      <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
