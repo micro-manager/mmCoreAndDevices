@@ -1604,6 +1604,12 @@ namespace MM {
        */
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata = nullptr, const bool doProcess = true) = 0;
 
+      /**
+       * Prepare the sequence buffer for the given image size and pixel format.
+       *
+       * Cameras normally do not need to call this explicitly.
+       * 'channels' is ignored (should be 1) and 'slices' must be 1.
+       */
       virtual bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth) = 0;
 
       // These functions violate the separation between device adapters and

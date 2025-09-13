@@ -102,28 +102,15 @@ FrameBuffer::FrameBuffer()
    depth_ = 0;
 }
 
-FrameBuffer::~FrameBuffer()
-{
-   Clear();
-}
-
 void FrameBuffer::Clear()
 {
-   for (std::vector<ImgBuffer*>::iterator it = channels_.begin(), end = channels_.end();
-         it != end; ++it)
-   {
-      delete *it;
-   }
-   channels_.clear();
+   buffer_.reset();
 }
 
-void FrameBuffer::Preallocate(unsigned channels)
+void FrameBuffer::Preallocate()
 {
-   for (unsigned i=0; i<channels; i++)
-   {
-      ImgBuffer* img = FindImage(i);
-      if (!img)
-         InsertNewImage(i);
+   if (!buffer_) {
+      buffer_ = std::make_unique<ImgBuffer>(width_, height_, depth_);
    }
 }
 
@@ -135,48 +122,11 @@ void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned byteDepth)
    depth_ = byteDepth;
 }
 
-bool FrameBuffer::SetPixels(unsigned channel, const unsigned char* pixels)
-{
-   ImgBuffer* img = FindImage(channel);
-
-   if (img)
-   {
-      // image already exists
-      img->SetPixels(pixels);
-   }
-   else
-   {
-      // create a new buffer
-      ImgBuffer* img2 = InsertNewImage(channel);
-      img2->SetPixels(pixels);
-   }
-
-   return true;
-}
-
-const unsigned char* FrameBuffer::GetPixels(unsigned channel) const
-{
-   ImgBuffer* img = FindImage(channel);
-   if (img)
-      return img->GetPixels();
-   else
-      return 0;
-}
-
 ImgBuffer* FrameBuffer::FindImage(unsigned channel) const
 {
-   if (channel >= channels_.size())
-      return 0;
-   return channels_[channel];
-}
-
-ImgBuffer* FrameBuffer::InsertNewImage(unsigned channel)
-{
-   if (channel >= channels_.size())
-      channels_.resize(channel + 1, 0);
-   ImgBuffer* img = new ImgBuffer(width_, height_, depth_);
-   channels_[channel] = img;
-   return img;
+   if (channel > 0)
+      return nullptr;
+   return buffer_.get();
 }
 
 } // namespace mm
