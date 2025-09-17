@@ -280,11 +280,15 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
 bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
       unsigned int w, unsigned int h, unsigned int pixDepth)
 {
+   // Multi-channel images were never implemented so 'channels' should be 1,
+   // but some cameras confuse it with color components and pass 4.
+   (void)channels;
+
    // Support for multi-slice images has not been implemented
    if (slices != 1)
       return false;
 
-   return core_->cbuf_->Initialize(channels, w, h, pixDepth);
+   return core_->cbuf_->Initialize(w, h, pixDepth);
 }
 
 int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)

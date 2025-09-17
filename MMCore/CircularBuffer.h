@@ -48,7 +48,7 @@ public:
 
    unsigned GetMemorySizeMB() const { return memorySizeMB_; }
 
-   bool Initialize(unsigned channels, unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
+   bool Initialize(unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
    unsigned long GetSize() const;
    unsigned long GetFreeSize() const;
    unsigned long GetRemainingImageCount() const;
@@ -58,9 +58,7 @@ public:
    unsigned int Depth() const {MMThreadGuard guard(g_bufferLock); return pixDepth_;}
 
    bool InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError);
-   bool InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError);
    bool InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError);
-   bool InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError);
    const unsigned char* GetTopImage() const;
    const unsigned char* GetNextImage();
    const mm::ImgBuffer* GetTopImageBuffer(unsigned channel) const;
@@ -89,7 +87,6 @@ private:
    long saveIndex_;
 
    unsigned long memorySizeMB_;
-   unsigned int numChannels_;
    bool overflow_;
    bool overwriteData_;
    std::vector<mm::FrameBuffer> frameArray_;
