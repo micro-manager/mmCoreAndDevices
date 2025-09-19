@@ -1502,8 +1502,7 @@ template <class U>
 class CLegacyCameraBase : public CCameraBase<U>
 {
 public:
-
-   CLegacyCameraBase() : CCameraBase<U>(), busy_(false), stopWhenCBOverflows_(false), thd_(0)
+   CLegacyCameraBase() : busy_(false), stopWhenCBOverflows_(false), thd_(0)
    {
       thd_ = new BaseSequenceThread(this);
    }
@@ -1551,7 +1550,7 @@ public:
       if (IsCapturing())
          return DEVICE_CAMERA_BUSY_ACQUIRING;
 
-      int ret = GetCoreCallback()->PrepareForAcq(this);
+      int ret = this->GetCoreCallback()->PrepareForAcq(this);
       if (ret != DEVICE_OK)
          return ret;
       thd_->Start(numImages,interval_ms);
@@ -1571,7 +1570,7 @@ protected:
    virtual int ThreadRun (void)
    {
       int ret=DEVICE_ERR;
-      ret = SnapImage();
+      ret = this->SnapImage();
       if (ret != DEVICE_OK)
       {
          return ret;
@@ -1590,8 +1589,8 @@ protected:
       this->GetLabel(label);
       Metadata md;
       md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-      return GetCoreCallback()->InsertImage(this, GetImageBuffer(), GetImageWidth(),
-         GetImageHeight(), GetImageBytesPerPixel(),
+      return this->GetCoreCallback()->InsertImage(this, this->GetImageBuffer(), this->GetImageWidth(),
+         this->GetImageHeight(), this->GetImageBytesPerPixel(),
          md.Serialize().c_str());
    }
 
@@ -1604,12 +1603,14 @@ protected:
    {
       try
       {
-         LogMessage(g_Msg_SEQUENCE_ACQUISITION_THREAD_EXITING);
-         GetCoreCallback()?GetCoreCallback()->AcqFinished(this,0):DEVICE_OK;
+         this->LogMessage(g_Msg_SEQUENCE_ACQUISITION_THREAD_EXITING);
+         if (this->GetCoreCallback() != nullptr) {
+            this->GetCoreCallback()->AcqFinished(this, 0);
+         }
       }
       catch(...)
       {
-         LogMessage(g_Msg_EXCEPTION_IN_ON_THREAD_EXITING, false);
+         this->LogMessage(g_Msg_EXCEPTION_IN_ON_THREAD_EXITING, false);
       }
    }
 
