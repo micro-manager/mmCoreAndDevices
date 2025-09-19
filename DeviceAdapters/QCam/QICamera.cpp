@@ -568,8 +568,7 @@ QIDriver::Access::~Access()
 * perform most of the initialization in the Initialize() method.
 */
 QICamera::QICamera()
-:CCameraBase<QICamera> ()
-,m_isInitialized(false)
+:m_isInitialized(false)
 ,m_softwareTrigger(false)
 ,m_rgbColor(false)
 ,m_dExposure(0)

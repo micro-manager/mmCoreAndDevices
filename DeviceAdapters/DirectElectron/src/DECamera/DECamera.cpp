@@ -114,7 +114,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CDECamera::CDECamera() :
-	CCameraBase<CDECamera> (),
 	initialized_(false),
 	initializedProperties_(false),
 	readoutUs_(0.0),
@@ -350,7 +349,7 @@ int CDECamera::StartSequenceAcquisition(long numImages, double interval_ms, bool
 	if (IsCapturing())
 		return DEVICE_CAMERA_BUSY_ACQUIRING;
 
-	int ret = GetCoreCallback()->PrepareForAcq((CCameraBase<CDECamera>*)this);
+	int ret = GetCoreCallback()->PrepareForAcq(this);
 	if (ret != DEVICE_OK)
 		return ret;
 

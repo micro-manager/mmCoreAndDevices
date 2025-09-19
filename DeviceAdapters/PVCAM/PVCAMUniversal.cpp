@@ -226,7 +226,7 @@ const int g_UniversalParamsCount = sizeof(g_UniversalParams)/sizeof(ParamNameIdP
 //=================================================================== Universal
 
 Universal::Universal(short cameraId, const char* deviceName)
-    : CCameraBase<Universal>(),
+    :
     cameraId_(cameraId),
     deviceName_(deviceName),
     initialized_(false),
