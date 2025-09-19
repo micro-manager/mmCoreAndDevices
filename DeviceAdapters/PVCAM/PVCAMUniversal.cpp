@@ -1635,7 +1635,7 @@ bool Universal::Busy()
 
 bool Universal::GetErrorText(int errorCode, char* text) const
 {
-    if (CCameraBase<Universal>::GetErrorText(errorCode, text))
+    if (CLegacyCameraBase<Universal>::GetErrorText(errorCode, text))
         return true; // base message
 
     char buf[ERROR_MSG_LEN];
@@ -3922,7 +3922,7 @@ int Universal::LogAdapterError(int mmErrCode, int lineNr, const std::string& mes
     try
     {
         char mmErrMsg[MM::MaxStrLength];
-        if (!CCameraBase<Universal>::GetErrorText(mmErrCode, mmErrMsg))
+        if (!CLegacyCameraBase<Universal>::GetErrorText(mmErrCode, mmErrMsg))
         {
             CDeviceUtils::CopyLimitedString(mmErrMsg, "Unknown");
         }

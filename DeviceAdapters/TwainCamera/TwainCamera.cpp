@@ -1271,7 +1271,7 @@ int TwainCamera::PushImage()
 }
 int TwainCamera::StopSequenceAcquisition()
 {
-	int nRet = this->CCameraBase<TwainCamera>::StopSequenceAcquisition();
+	int nRet = this->CLegacyCameraBase<TwainCamera>::StopSequenceAcquisition();
 
 	return nRet;
 }

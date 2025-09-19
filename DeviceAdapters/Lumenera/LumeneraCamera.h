@@ -81,7 +81,7 @@ enum
 //class CircularBufferInserter;
 class VideoSequenceThread;
 
-class LumeneraCamera : public CCameraBase<LumeneraCamera> {
+class LumeneraCamera : public CLegacyCameraBase<LumeneraCamera> {
 
 	friend class VideoSequenceThread;
 

@@ -1834,7 +1834,7 @@ int Universal::ClearROI()
 
 bool Universal::GetErrorText(int errorCode, char* text) const
 {
-   if (CCameraBase<Universal>::GetErrorText(errorCode, text))
+   if (CLegacyCameraBase<Universal>::GetErrorText(errorCode, text))
       return true; // base message
 
    return false;
@@ -2249,7 +2249,7 @@ int Universal::ResizeImageBufferSingle()
 
 #ifndef linux
 /*
- * Overrides a virtual function from the CCameraBase class
+ * Overrides a virtual function from the CLegacyCameraBase class
  * Do actual capture
  * Called from the acquisition thread function
  */
@@ -2503,7 +2503,7 @@ void Universal::OnThreadExiting() throw ()
       isAcquiring_       = false;
 
       // The AcqFinished is called inside the parent OnThreadExiting()
-      CCameraBase<Universal>::OnThreadExiting();
+      CLegacyCameraBase<Universal>::OnThreadExiting();
    }
    catch (...)
    {
@@ -2575,7 +2575,7 @@ int Universal::LogMMError(int errCode, int lineNr, std::string message, bool deb
    try
    {
       char strText[MM::MaxStrLength];
-      if (!CCameraBase<Universal>::GetErrorText(errCode, strText))
+      if (!CLegacyCameraBase<Universal>::GetErrorText(errCode, strText))
       {
          CDeviceUtils::CopyLimitedString(strText, "Unknown");
       }

@@ -195,7 +195,7 @@ class PixelTypeYUYV : public PixelType {
 string PixelTypeYUYV::PROPERTY_VALUE = "YUYV";
 PixelTypeYUYV PIXELTYPE_YUYV;
 
-class V4L2 : public CCameraBase<V4L2>
+class V4L2 : public CLegacyCameraBase<V4L2>
 {
 public:
 
