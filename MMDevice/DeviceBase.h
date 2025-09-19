@@ -1328,7 +1328,7 @@ public:
 
    /**
     * Returns binnings factor.  Used to calculate current pixelsize
-    * Not appropriately named.  Implemented in DeviceBase.h
+    * Not appropriately named.
     */
    virtual double GetPixelSizeUm() const {return GetBinning();}
 
@@ -1493,13 +1493,11 @@ private:
 
 
 /**
-* Legacy base class for creating camera device adapters.
-* Newer camera device adapters should inherit from CCameraBase.
-* This class contains suboptimal methods for implementing sequence acquisition
-* using a series of snaps.
-* This class has a functional constructor - must be invoked
-* from the derived class.
-*/
+ * Legacy base class for creating camera device adapters.
+ * Newer camera device adapters should inherit from CCameraBase.
+ * This class contains suboptimal methods for implementing sequence acquisition
+ * using a series of snaps.
+ */
 template <class U>
 class CLegacyCameraBase : public CCameraBase<U>
 {
@@ -1565,9 +1563,8 @@ public:
 
 
 protected:
-   /////////////////////////////////////////////
-   // utility methods for use by derived classes
-   // //////////////////////////////////////////
+   // Member functions that can be overridden by derived classes (these
+   // customize the legacy snap-based sequence acquisition).
 
    // Do actual capturing
    // Called from inside the thread
