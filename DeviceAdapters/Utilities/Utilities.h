@@ -149,6 +149,8 @@ public:
 
    void GetName(char* name) const;
 
+   bool Busy() { return false; } // TODO Should call physical cameras?
+
    int SnapImage();
    const unsigned char* GetImageBuffer();
    const unsigned char* GetImageBuffer(unsigned channelNr);

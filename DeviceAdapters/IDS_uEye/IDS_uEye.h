@@ -240,6 +240,7 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   
   void GetName(char* name) const;      
 
+  bool Busy() { return false; }
    
   // MMCamera API
   // ------------
