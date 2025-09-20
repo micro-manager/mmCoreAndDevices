@@ -4313,7 +4313,7 @@ int QICamera::StartSequenceAcquisition(long numImages, double interval_ms, bool 
 
    // start the acquisition thread
    m_sthd->SetLength(numImages);
-   setStopOnOverflow(stopOnOverflow);
+   m_stopWhenCBOverflows = stopOnOverflow;
    m_sthd->Start();
 
    return DEVICE_OK;
@@ -4324,7 +4324,7 @@ int QICamera::StartSequenceAcquisition(long numImages, double interval_ms, bool 
 */
 int QICamera::RestartSequenceAcquisition()
 {
-   return StartSequenceAcquisition(m_sthd->GetRemaining(), m_interval, isStopOnOverflow());
+   return StartSequenceAcquisition(m_sthd->GetRemaining(), m_interval, m_stopWhenCBOverflows);
 }
 
 

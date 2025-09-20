@@ -1635,7 +1635,7 @@ bool Universal::Busy()
 
 bool Universal::GetErrorText(int errorCode, char* text) const
 {
-    if (CLegacyCameraBase<Universal>::GetErrorText(errorCode, text))
+    if (CCameraBase<Universal>::GetErrorText(errorCode, text))
         return true; // base message
 
     char buf[ERROR_MSG_LEN];
@@ -3922,7 +3922,7 @@ int Universal::LogAdapterError(int mmErrCode, int lineNr, const std::string& mes
     try
     {
         char mmErrMsg[MM::MaxStrLength];
-        if (!CLegacyCameraBase<Universal>::GetErrorText(mmErrCode, mmErrMsg))
+        if (!CCameraBase<Universal>::GetErrorText(mmErrCode, mmErrMsg))
         {
             CDeviceUtils::CopyLimitedString(mmErrMsg, "Unknown");
         }
@@ -4436,7 +4436,10 @@ int Universal::PollingThreadRun(void)
     catch(...)
     {
         LogAdapterMessage(g_Msg_EXCEPTION_IN_THREAD, false);
-        OnThreadExiting();
+        auto *core = GetCoreCallback();
+        if (core != nullptr) {
+           core->AcqFinished(this, 0);
+        }
         pollingThd_->setStop(true);
         return ret;
     }

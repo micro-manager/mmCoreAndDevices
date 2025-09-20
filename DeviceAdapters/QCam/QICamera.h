@@ -161,7 +161,7 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 // QICamera class
 //////////////////////////////////////////////////////////////////////////////
-class QICamera : public CLegacyCameraBase<QICamera>
+class QICamera : public CCameraBase<QICamera>
 {
 public:
     QICamera();
@@ -306,6 +306,7 @@ private:
     bool                m_rgbColor;         // is the camera in the color (debayer) mode
     double              m_dExposure;        // Current exposure setting
     double              m_interval;         // Current sequence capture interval
+    bool                m_stopWhenCBOverflows;  // Current 'stopOnOverflow' flag
     unsigned int        m_imageWidth;       // Current capture width
     unsigned int        m_imageHeight;      // Current capture height
     unsigned int        m_bitDepth;         // Current image depth in bits (8bit, 10bit, 12bit, etc..)

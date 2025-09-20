@@ -15,7 +15,7 @@
 class SpinnakerAcquisitionThread;
 
 
-class SpinnakerCamera : public CLegacyCameraBase<SpinnakerCamera>
+class SpinnakerCamera : public CCameraBase<SpinnakerCamera>
 {
 public:
    SpinnakerCamera(GENICAM::gcstring serialNumber);
@@ -24,6 +24,7 @@ public:
    int Initialize();
    int Shutdown();
    void GetName(char* name) const;
+   bool Busy() { return false; }
 
    int SnapImage();
    const unsigned char* GetImageBuffer();

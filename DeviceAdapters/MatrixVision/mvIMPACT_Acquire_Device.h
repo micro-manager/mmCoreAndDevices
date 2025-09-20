@@ -49,7 +49,7 @@ typedef std::set<std::string> StringSet;
 class MySequenceThread;
 
 //-----------------------------------------------------------------------------
-class mvIMPACT_Acquire_Device : public CLegacyCameraBase<mvIMPACT_Acquire_Device>
+class mvIMPACT_Acquire_Device : public CCameraBase<mvIMPACT_Acquire_Device>
 //-----------------------------------------------------------------------------
 {
 public:
@@ -68,6 +68,7 @@ public:
    {
       CDeviceUtils::CopyLimitedString( pszName, pDev_->serial.read().c_str() );
    }
+   virtual bool Busy() { return false; }
    virtual unsigned GetNumberOfComponents( void ) const;
    virtual int Initialize( void );
    virtual int Shutdown( void );

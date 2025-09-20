@@ -65,7 +65,7 @@ extern const char* g_CameraDeviceName;
 //////////////////////////////////////////////////////////////////////////////
 // CGigECamera class
 //////////////////////////////////////////////////////////////////////////////
-class CGigECamera : public CLegacyCameraBase<CGigECamera>
+class CGigECamera : public CCameraBase<CGigECamera>
 {
 public:
 	CGigECamera();
@@ -82,6 +82,8 @@ public:
 	* Required by the MM::Device API.
 	*/
 	void GetName( char* name ) const {  CDeviceUtils::CopyLimitedString( name, g_CameraDeviceName );  }
+
+	bool Busy() { return false; }
 
 	/////////////////
 	// MMCamera API
@@ -183,6 +185,7 @@ public:
 	// sequence-acquisition-related functions
 	int PrepareSequenceAcqusition() { return DEVICE_OK; }
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+	int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
 	int StopSequenceAcquisition();
 	bool IsCapturing();
 

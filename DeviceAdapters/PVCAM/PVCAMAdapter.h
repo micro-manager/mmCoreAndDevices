@@ -176,7 +176,7 @@ class PvEnumParam;
 /**
 * Implementation of the MMDevice and MMCamera interfaces for all PVCAM cameras
 */
-class Universal : public CLegacyCameraBase<Universal>
+class Universal : public CCameraBase<Universal>
 {
 public: // Constructors, destructor
     Universal(short cameraId, const char* deviceName);
@@ -225,6 +225,7 @@ public: // MMCamera API
     */
     int PrepareSequenceAcqusition();
     int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+    int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
     int StopSequenceAcquisition();
 
 public: // Action handlers

@@ -1789,7 +1789,10 @@ int SpinnakerAcquisitionThread::svc(void) throw()
    m_actualDuration = m_spkrCam->GetCurrentMMTime() - m_startTime;
    m_spkrCam->m_cam->EndAcquisition();
    m_spkrCam->m_cam->AcquisitionMode.SetValue(SPKR::AcquisitionMode_SingleFrame);
-   m_spkrCam->OnThreadExiting();
+   auto* core = m_spkrCam->GetCoreCallback();
+   if (core != nullptr) {
+      core->AcqFinished(m_spkrCam, 0);
+   }
    return DEVICE_OK;
 }
 
