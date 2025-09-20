@@ -43,6 +43,8 @@ public:
 
     void GetName(char* name) const;      
 
+    bool Busy() { return false; }
+
     // MMCamera API
     // ------------
     int SnapImage();

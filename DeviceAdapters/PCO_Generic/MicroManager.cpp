@@ -94,7 +94,6 @@ MODULE_API MM::Device* CreateDevice(const char* pszDeviceName)
 // CPCOCam constructor/destructor
 
 CPCOCam::CPCOCam() :
-CCameraBase<CPCOCam>(),
 m_bSequenceRunning(false),
 m_bInitialized(false),
 m_bBusy(false),

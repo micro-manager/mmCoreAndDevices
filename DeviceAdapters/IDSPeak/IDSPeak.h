@@ -127,6 +127,8 @@ public:
     peak_status status = PEAK_STATUS_SUCCESS;
     void GetName(char* name) const;
 
+    bool Busy() { return false; }
+
     // MMCamera API
     // ------------
     int SnapImage();

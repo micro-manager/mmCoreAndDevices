@@ -68,6 +68,7 @@ public:
    {
       CDeviceUtils::CopyLimitedString( pszName, pDev_->serial.read().c_str() );
    }
+   virtual bool Busy() { return false; }
    virtual unsigned GetNumberOfComponents( void ) const;
    virtual int Initialize( void );
    virtual int Shutdown( void );

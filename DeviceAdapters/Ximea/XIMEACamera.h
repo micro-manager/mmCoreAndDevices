@@ -60,6 +60,7 @@ public:
 	void GetName(char* name) const;
 	int  Initialize();
 	int  Shutdown();
+	bool Busy() { return false; }
 	//////////////////////////////////////////////////////////////
 	int                  SnapImage();
 	const unsigned char* GetImageBuffer();

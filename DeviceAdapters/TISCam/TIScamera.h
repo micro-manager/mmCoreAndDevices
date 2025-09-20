@@ -78,7 +78,8 @@ int Initialize();
 int Shutdown();
 
 void GetName(char* name) const;      
-//bool Busy();
+
+bool Busy() { return false; }
 
 // MMCamera API
 int SnapImage();

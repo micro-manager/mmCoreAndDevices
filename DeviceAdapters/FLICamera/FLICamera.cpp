@@ -111,7 +111,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 CFLICamera::CFLICamera() :
-	CCameraBase<CFLICamera> (),
 	initialized_(false),
 	pDemoResourceLock_(0),
 	dev_(FLI_INVALID_DEVICE),

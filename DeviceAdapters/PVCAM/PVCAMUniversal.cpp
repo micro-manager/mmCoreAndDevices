@@ -226,7 +226,7 @@ const int g_UniversalParamsCount = sizeof(g_UniversalParams)/sizeof(ParamNameIdP
 //=================================================================== Universal
 
 Universal::Universal(short cameraId, const char* deviceName)
-    : CCameraBase<Universal>(),
+    :
     cameraId_(cameraId),
     deviceName_(deviceName),
     initialized_(false),
@@ -4436,7 +4436,10 @@ int Universal::PollingThreadRun(void)
     catch(...)
     {
         LogAdapterMessage(g_Msg_EXCEPTION_IN_THREAD, false);
-        OnThreadExiting();
+        auto *core = GetCoreCallback();
+        if (core != nullptr) {
+           core->AcqFinished(this, 0);
+        }
         pollingThd_->setStop(true);
         return ret;
     }

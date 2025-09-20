@@ -175,7 +175,6 @@ const char* g_IOPort_None = " none";
 * perform most of the initialization in the Initialize() method.
 */
 CABSCamera::CABSCamera() :
-CCameraBase<CABSCamera> (),
 dPhase_(0),
 initialized_(false),
 readoutUs_(1.0),

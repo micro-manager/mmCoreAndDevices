@@ -80,6 +80,8 @@ public:
    int Shutdown();
   
    void GetName(char* name) const;      
+
+   bool Busy() { return false; }
    
    // MMCamera API
    // ------------
