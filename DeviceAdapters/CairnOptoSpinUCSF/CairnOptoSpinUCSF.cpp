@@ -117,6 +117,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 
 
 
+
 MODULE_API void DeleteDevice(MM::Device* pDevice)
 {
    delete pDevice;
@@ -178,10 +179,46 @@ int CairnOptospin::Initialize()
 
    initialized_ = true;
 
+   ftStatus = FT_SetTimeouts(ftHandle_, 50, 50);
+
+   // Test: Get the version of the CairnOptoSpin
+
+   DWORD bytesWritten;
+   char txBuffer[2]; // Contains data to write to device
+   txBuffer[0] = 0;
+   txBuffer[1] = 40;
+   ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
+   if (ftStatus == FT_OK) 
+   {
+      if (bytesWritten == sizeof(txBuffer)) 
+      {
+         char answer[4];
+         DWORD bytesRead;
+         ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
+         if (ftStatus == FT_OK)
+         {
+            this->LogMessage(answer, false);
+            if (static_cast<unsigned char>(answer[0]) == 0xFF)
+            {
+               if (answer[1] == 2) {
+                  // answer is big endian, we are little enian, may use stohl instead
+                  int16_t softwareVersion = (static_cast<int16_t>(answer[3]) << 8) | answer[2];
+                  this->LogMessage("Software version of Optospin is: " + softwareVersion, false);
+               }
+            }
+         }
+      }
+   }
+   if (ftStatus != FT_OK) 
+   {
+      return ERR_UNKNOWN_COMMAND;
+   }
+
    // set property list
    // -----------------
    
    // Get and Set State (allowed values 1-4, start at 0 for Hardware Configuration Wizard))
+
    CPropertyAction *pAct = new CPropertyAction (this, &CairnOptospin::OnState);
    int nRet=CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
    if (nRet != DEVICE_OK)
@@ -232,30 +269,8 @@ int CairnOptospin::Shutdown()
  */
 bool CairnOptospin::Busy()
 {
-   // the commands are blocking, so we cannot be busy
-   return false;
-   /*
-   const unsigned long answerLength = 40;
-   // If there was no command pending we are not busy
-   if (!pendingCommand_)
-      return false;
-
-   // Read a line from the port, if first char is 'A' we are OK
-   // if first char is 'N' read the error code
-   unsigned char answer[answerLength];
-   unsigned long charsRead;
-   ReadFromComPort(port_.c_str(), answer, answerLength, charsRead);
-   if (answer[0] == "A") {
-      // this command was finished and is not pending anymore
-      pendingCommand_ = false;
-      return true;
-   }
-   else
-      return false;
-   
-   // we should never be here, better not to block
-   return false;
-   */
+   int position;
+   return GetDevicePosition(position) == ERR_OPTOSPIN_BUSY;
 }
 
 
@@ -267,18 +282,82 @@ bool CairnOptospin::Busy()
 
 int CairnOptospin::GetDevicePosition(int& position) 
 {
+   DWORD bytesWritten;
+   uint8_t txBuffer[2]; // Contains data to write to device
+   txBuffer[0] = 0;
+   txBuffer[1] = 0x9c;
+   FT_STATUS ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
+   if (ftStatus == FT_OK) 
+   {
+      if (bytesWritten == sizeof(txBuffer)) 
+      {
+         char answer[6];
+         DWORD bytesRead;
+         ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
+         if (ftStatus == FT_OK)
+         {
+            if (static_cast<unsigned char>(answer[0]) == 0xFF)
+            {
+               if (answer[1] == 4)
+               {
+                  position = answer[2];
+                  // other filter wheels will be in 3-5
+               }
+               return DEVICE_OK;
+            }
+            else if (answer[0] == 4)
+            {
+               return ERR_OPTOSPIN_BUSY;
+            }
+         }
+      }
+   }
+   if (ftStatus != FT_OK) 
+   {
+      return ERR_UNKNOWN_COMMAND;
+   }
 
-   position = 1;
-   return DEVICE_OK;
+
+   return ERR_UNKNOWN_COMMAND;
 }
 
 
 
 int CairnOptospin::SetDevicePosition(int position)
 {
+   DWORD bytesWritten;
+   uint8_t txBuffer[6]; // Contains data to write to device
+   txBuffer[0] = 0;
+   txBuffer[1] = 0x8c;
+   txBuffer[2] = (uint8_t) position;
+   txBuffer[3] = 0;
+   txBuffer[3] = 0;
+   txBuffer[3] = 0;
+   FT_STATUS ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
+   if (ftStatus == FT_OK) 
+   {
+      if (bytesWritten == sizeof(txBuffer)) 
+      {
+         char answer[2];
+         DWORD bytesRead;
+         ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
+         if (ftStatus == FT_OK)
+         {
+            this->LogMessage(answer, false);
+            if (static_cast<unsigned char>(answer[0]) == 0xFF)
+            {
+               return DEVICE_OK;
+            }
+         }
+      }
+   }
+   if (ftStatus != FT_OK) 
+   {
+      return ERR_UNKNOWN_COMMAND;
+   }
+
    return DEVICE_OK;
 }
-
 
 
 // Needs to be worked on (a lot)
