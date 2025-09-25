@@ -27,7 +27,6 @@
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "DeviceThreads.h"
-//#include "Debayer.h"
 
 //#define PLEORA
 
@@ -171,6 +170,8 @@ public:
    int Shutdown();
   
    void GetName(char* name) const;      
+
+   bool Busy() { return false; }
    
    // MMCamera API
    // ------------

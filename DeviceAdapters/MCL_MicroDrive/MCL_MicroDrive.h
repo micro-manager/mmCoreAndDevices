@@ -11,6 +11,8 @@ License:	Distributed under the BSD license.
 #define M4AXIS 4
 #define M5AXIS 5
 #define M6AXIS 6
+#define M7AXIS 7
+#define M8AXIS 8
 
 #define BITMASK_M1 0x01
 #define BITMASK_M2 0x02
@@ -18,6 +20,8 @@ License:	Distributed under the BSD license.
 #define BITMASK_M4 0x08
 #define BITMASK_M5 0x10
 #define BITMASK_M6 0x20
+#define BITMASK_M7 0x40
+#define BITMASK_M8 0x80
 
 #define MICRODRIVE                  0x2500
 #define MICRODRIVE1					0x2501
@@ -26,6 +30,9 @@ License:	Distributed under the BSD license.
 #define MICRODRIVE6					0x2506
 #define NC_MICRODRIVE				0x3500
 #define MADTWEEZER					0x2522
+#define MICRODRIVE4P				0x2580
+#define MICRODRIVE8P				0x2588
+
 
 #define STANDARD_MOVE_TYPE			1
 #define CALIBRATE_TYPE				2
@@ -64,7 +71,6 @@ static const char* g_Keyword_IsTirfModuleAxis2 = "TIRF module axis2";
 static const char* g_Keyword_DistanceToEpi = "Distance to epi";
 static const char* g_Keyword_FindEpi = "Find Epi";
 
-
 // Mad Tweezer
 static const char* g_DeviceMadTweezerName = "Mad-Tweezer";
 static const char* ZMadTweezerName = "Mad-Tweezer Z Stage";
@@ -83,6 +89,36 @@ static const char* g_Keyword_WaitTime =  "Wait Time";
 static const char* g_Keyword_Rotations = "Rotations";
 static const char* g_Keyword_Steps =	 "Steps";
 static const char* g_Keyword_Milliradians = "Milliradians";
+
+// Motorized Micro-Mirror TIRF
+static const char* g_DeviceMMMTIRFName = "Motorized Micro-Mirror TIRF";
+static const char* g_Keyword_EntranceAxis = "Entrance Axis";
+static const char* g_Keyword_ExitAxis = "Exit Axis";
+static const char* g_Keyword_FocusAxis = "Focus Axis";
+static const char* g_Keyword_EntranceStepSize = "Entrance Step Size (nm)";
+static const char* g_Keyword_ExitStepSize = "Exit Step Size (nm)";
+static const char* g_Keyword_FocusStepSize = "Focus Step Size (nm)";
+static const char* g_Keyword_FoundEntranceLimit = "Found Entrance Limit";
+static const char* g_Keyword_FoundExitLimit = "Found Exit Limit";
+static const char* g_Keyword_FoundFocusLimit = "Found Focus Limit";
+static const char* g_Keyword_FoundEpi = "Found Epi";
+static const char* g_Keyword_FoundFocus = "Found Focus";
+static const char* g_Keyword_FoundTIRFAir = "Found TIRF Air";
+static const char* g_Keyword_EntranceLimitStepCount = "Entrance Limit Step Count";
+static const char* g_Keyword_ExitLimitStepCount = "Exit Limit Step Count";
+static const char* g_Keyword_FocusLimitStepCount = "Focus Limit Step Count";
+static const char* g_Keyword_EpiStepCount = "Epi Step Count";
+static const char* g_Keyword_FocusStepCount = "Focus Step Count";
+static const char* g_Keyword_TirfStepCount = "TIRF Air Step Count";
+static const char* g_Keyword_EpiToTIRFStepCount = "Epi to TIRF Air Step Count";
+static const char* g_Keyword_MoveDistanceEntrance =  "Entrance Mirror Move Distance";
+static const char* g_Keyword_MoveDistanceFocus = "Focus Mirror Move Distance";
+static const char* g_Keyword_MoveDistanceTirf = "Exit Mirror Move Distance";
+static const char* g_Keyword_AxesToMove = "Axes To Move";
+static const char* g_Keyword_LimitBitMap = "Limit Bitmap";
+static const char* g_Keyword_EntranceMicroSteps = "Entrance Microsteps";
+static const char* g_Keyword_ExitMicroSteps = "Exit Microsteps";
+static const char* g_Keyword_FocusMicroSteps = "Focus Microsteps";
 
 // Common
 static const char* g_Keyword_Handle = "Handle";

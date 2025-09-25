@@ -136,38 +136,39 @@ int ClassGalaxy::Initialize()
         // Before calling any Galaxy SDK methods, the runtime must be initialized. 
         IGXFactory::GetInstance().Init();
 
-        if (1)
-        {
-           char serialNumber[MM::MaxStrLength];
-           int ret = GetProperty("SerialNumber", serialNumber);
-           if (ret != DEVICE_OK) {
-              return DEVICE_NOT_CONNECTED;
-           }
-        }
+        char serialNumber[MM::MaxStrLength];
+        int ret = GetProperty("SerialNumber", serialNumber);
+        if (ret != DEVICE_OK) 
+           return DEVICE_NOT_CONNECTED;
+
+        if (strlen(serialNumber) == 0 || strcmp(serialNumber, "Undefined") == 0)
+            return DEVICE_NOT_CONNECTED;
 
         vectorDeviceInfo.clear();
-        //枚举设备
         IGXFactory::GetInstance().UpdateDeviceList(1000, vectorDeviceInfo);
 
-        //判断枚举到的设备是否大于零，如果不是则弹框提示
         if (vectorDeviceInfo.size() <= 0)
         {
-            return DEVICE_NOT_CONNECTED;
+           // no cameras connected
+           return DEVICE_NOT_CONNECTED;
         }
-        //获取可执行程序的当前路径,默认开启第一个
-        initialized_ = false;
         // This checks, among other things, that if the camera is already in use.
         // Without that check, the following CreateDevice() may crash on duplicate
         // serial number. Unfortunately, this call is slow. 默认打开第一个设备
         int index = 0;
+        bool found = false;
+        while (index < vectorDeviceInfo.size() && !found)
+        {
+           string serialNumberstr = vectorDeviceInfo[index].GetSN().c_str();
+           if (strcmp(serialNumber, serialNumberstr.c_str()) == 0)
+              found = true;
+           else
+              index++;
+        }
+        if (!found)
+           return DEVICE_NOT_CONNECTED;
 
-        string serialNumberstr = vectorDeviceInfo[index].GetSN().c_str();
-
-        const char* serialNumber = serialNumberstr.c_str();
-
-        if (strlen(serialNumber) == 0 || strcmp(serialNumber, "Undefined") == 0)
-            return 0;
-        SetProperty("SerialNumber", serialNumber);
+        // SetProperty("SerialNumber", serialNumber);
         //打开设备
         m_objDevicePtr = IGXFactory::GetInstance().OpenDeviceBySN(vectorDeviceInfo[index].GetSN(), GX_ACCESS_MODE::GX_ACCESS_EXCLUSIVE);
 
@@ -246,7 +247,7 @@ int ClassGalaxy::Initialize()
         msg << "using camera " << m_objFeatureControlPtr->GetStringFeature("DeviceUserID")->GetValue();
         LogMessage(msg.str());
 
-        int ret = CreateProperty(MM::g_Keyword_Name, g_CameraDeviceName, MM::String, true);
+        ret = CreateProperty(MM::g_Keyword_Name, g_CameraDeviceName, MM::String, true);
         if (DEVICE_OK != ret)
             return ret;
 
@@ -2060,18 +2061,6 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
             int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)objImageDataPointer->GetBuffer(),
                 (unsigned)objImageDataPointer->GetWidth(), (unsigned)objImageDataPointer->GetHeight(),
                 (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
-            if (ret == DEVICE_BUFFER_OVERFLOW) {
-                //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
-               if (stopOnOverflow_)
-               {
-                  dev_->StopSequenceAcquisition();
-                  dev_->LogMessage("Error inserting image into sequence buffer", false);
-               }
-               else
-               {
-                  dev_->GetCoreCallback()->ClearImageBuffer(dev_);
-               }
-            }
         }
         else if (dev_->colorCamera_)
         {
@@ -2087,10 +2076,6 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
             int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)dev_->imgBuffer_,
                 (unsigned)dev_->GetImageWidth(), (unsigned)dev_->GetImageHeight(),
                 (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
-            if (ret == DEVICE_BUFFER_OVERFLOW) {
-                //if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
-                dev_->GetCoreCallback()->ClearImageBuffer(dev_);
-            }
         }
         imgCounter_++;
         if (imgCounter_ == numImages_)

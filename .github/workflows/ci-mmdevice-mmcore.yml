@@ -27,6 +27,9 @@ jobs:
           - windows
           - macos
           - ubuntu
+        cppstd:  # Test the oldest and newest standards we support
+          - c++14
+          - c++17
         include:
           - os: windows
             runner: windows-2025
@@ -37,7 +40,7 @@ jobs:
           - os: ubuntu
             runner: ubuntu-22.04
             cxx: g++
-    name: ${{ matrix.runner }}-${{ matrix.cxx }}
+    name: ${{ matrix.runner }}-${{ matrix.cxx }}-${{ matrix.cppstd }}
     runs-on: ${{ matrix.runner }}
     env:
       CXX: ${{ matrix.cxx }}
@@ -55,15 +58,17 @@ jobs:
       - name: Build and test MMDevice
         run: |
           cd MMDevice
-          meson setup builddir --buildtype debug
+          meson setup builddir --buildtype debug -Dcpp_std=${{ matrix.cppstd }}
           meson test -C builddir --print-errorlogs
       - name: Prepare MMCore source
         shell: bash
         run: |
           git clean -dxf
-          cp -R MMDevice MMCore/subprojects
+          # Manually populate the mmdevice subproject to avoid fetching via
+          # wrap from the mmdevice mirror repository.
+          cp -R MMDevice MMCore/subprojects/mmdevice
       - name: Build and test MMCore
         run: |
           cd MMCore
-          meson setup builddir --buildtype debug
+          meson setup builddir --buildtype debug -Dcpp_std=${{ matrix.cppstd }}
           meson test -C builddir --print-errorlogs

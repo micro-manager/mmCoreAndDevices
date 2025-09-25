@@ -155,6 +155,7 @@ int MultiShutter::SetOpen(bool open)
       }
    }
    open_ = open;
+   GetCoreCallback()->OnShutterOpenChanged(this, open);
    return DEVICE_OK;
 }
 

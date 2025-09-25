@@ -31,12 +31,14 @@
 
 #include "DeviceBase.h"
 
-#include <boost/shared_ptr.hpp>
 #include <boost/signals2.hpp>
-#include <boost/thread.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/weak_ptr.hpp>
+
+#include <future>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <unordered_map>
 #include <vector>
 
 
@@ -97,11 +99,11 @@ class TesterHub : public TesterBase<HubBase, TesterHub>
    // finer-grained locking because the Core already synchronizes access to the
    // device adapter. However, we do need this lock to be per-hub so that
    // access from different Core instances can run concurrently.)
-   mutable boost::recursive_mutex hubGlobalMutex_;
+   mutable std::recursive_mutex hubGlobalMutex_;
 
    SettingLogger logger_;
 
-   boost::unordered_map< std::string, boost::weak_ptr<InterDevice> > devices_;
+   std::unordered_map< std::string, std::weak_ptr<InterDevice> > devices_;
 
 public:
    typedef TesterHub Self;
@@ -114,11 +116,11 @@ public:
 
    virtual int DetectInstalledDevices();
 
-   typedef boost::unique_lock<boost::recursive_mutex> Guard;
+   typedef std::unique_lock<std::recursive_mutex> Guard;
    Guard LockGlobalMutex() const { return Guard(hubGlobalMutex_); }
 
-   boost::shared_ptr<TesterHub> GetSharedPtr()
-   { return boost::static_pointer_cast<TesterHub>(shared_from_this()); }
+   std::shared_ptr<TesterHub> GetSharedPtr()
+   { return std::static_pointer_cast<TesterHub>(shared_from_this()); }
    virtual SettingLogger* GetLogger() { return &logger_; }
 
    int RegisterDevice(const std::string& name, InterDevice::Ptr device);
@@ -188,13 +190,12 @@ private:
 
    // Guards stopSequence_. Always acquire after acquiring the hub global mutex
    // (if acquiring both).
-   boost::mutex sequenceMutex_;
+   std::mutex sequenceMutex_;
 
    bool stopSequence_; // Guarded by sequenceMutex_
 
-   // Note: boost::future in more recent versions
-   boost::unique_future<void> sequenceFuture_;
-   boost::thread sequenceThread_;
+   std::future<void> sequenceFuture_;
+   std::thread sequenceThread_;
 
    FloatSetting::Ptr exposureSetting_;
    IntegerSetting::Ptr binningSetting_;

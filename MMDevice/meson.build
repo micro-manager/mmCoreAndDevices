@@ -56,15 +56,17 @@ mmdevice_lib = static_library(
     dependencies: [
         dependency('threads'),
     ],
+    gnu_symbol_visibility: 'inlineshidden',
 )
 
 subdir('unittest')
 
-mmdevice = declare_dependency(
+mmdevice_dep = declare_dependency(
     compile_args: build_mode_args,
     include_directories: mmdevice_include_dir,
     link_with: mmdevice_lib,
 )
+meson.override_dependency('mmdevice', mmdevice_dep)
 
 # For providing include dir to SWIG when using this project as a subproject
 swig_include_dirs = [meson.current_source_dir()]

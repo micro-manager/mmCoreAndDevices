@@ -22,7 +22,6 @@
 // BASED ON:      MicroPoint.cpp and others
 //
 
-
 #include "ASIScanner.h"
 #include "ASITiger.h"
 #include "ASIHub.h"
@@ -34,8 +33,6 @@
 #include <cmath>
 #include <sstream>
 #include <string>
-
-using namespace std;
 
 // as of mid-2017 assume that have only single (two-axis) mmTarget device per Tiger card
 
@@ -97,8 +94,8 @@ int CScanner::Initialize()
 
    // read the unit multiplier for X and Y axes
    // ASI's unit multiplier is how many units per degree rotation for the micromirror card
-   ostringstream command;
-   command.str(""); command << "UM " << axisLetterX_ << "?";
+   std::ostringstream command;
+   command << "UM " << axisLetterX_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(unitMultX_) );
    command.str(""); command << "UM " << axisLetterY_ << "?";
@@ -683,12 +680,12 @@ bool CScanner::Busy()
    return false;
 }
 
-int CScanner::SetPosition(double x, double y)
 // will not change the position of an axis unless single-axis functions are inactive
 // also will not change the position if the beam is turned off, but it will change the
 // cached positions that are used when the beam is turned back on
+int CScanner::SetPosition(double x, double y)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (illuminationState_) {  // beam is turned on
       char SAMode[MM::MaxStrLength];
       RETURN_ON_MM_ERROR ( GetProperty(g_SAModeXPropertyName, SAMode) );
@@ -729,7 +726,7 @@ int CScanner::GetPosition(double& x, double& y)
 {
 //   // read from card instead of using cached values directly, could be slight mismatch
    // TODO implement as single serial command for speed (know that X axis always before Y on card)
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetterX_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(x) );
@@ -743,7 +740,7 @@ int CScanner::GetPosition(double& x, double& y)
 
 void CScanner::UpdateIlluminationState()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (mmTarget_ && !laserTriggerPLogic_) {
       // should consider having a dedicated property for TTL output state; for now just do this
@@ -796,7 +793,7 @@ int CScanner::SetIlluminationStateHelper(bool on)
    {
       return DEVICE_OK;
    }
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (!FirmwareVersionAtLeast(2.88)) // doesn't work before 2.88
       return DEVICE_OK;
@@ -859,7 +856,7 @@ int CScanner::SetIlluminationState(bool on)
    if (mmTarget_ && !laserTriggerPLogic_)
    {  // for phototargeting firmware
       // should consider having a dedicated property for TTL output state; for now just do this
-      ostringstream command; command.str("");
+      std::ostringstream command;
       if (on && !illuminationState_)  // was off, turning on
       {
          illuminationState_ = true;
@@ -911,7 +908,7 @@ int CScanner::SetIlluminationState(bool on)
 
          // move beam to corner (home position)
          illuminationState_ = false;
-         ostringstream command; command.str("");
+         std::ostringstream command;
          command << "! " << axisLetterX_ << " " << axisLetterY_;
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
       }
@@ -940,7 +937,7 @@ int CScanner::LoadPolygons()
 {
    if (ring_buffer_supported_)
    {
-      ostringstream command; command.str("");
+      std::ostringstream command;
       command << addressChar_ << "RM X=0";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
       for (int i=0; i< (int) polygons_.size(); ++i)
@@ -1023,7 +1020,7 @@ int CScanner::RunPolygons()
 
 int CScanner::GetChannel(char* channelName)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "Axes_ " << axisLetterX_ << axisLetterY_;
    CDeviceUtils::CopyLimitedString(channelName, command.str().c_str());
    return DEVICE_OK;
@@ -1051,7 +1048,7 @@ int CScanner::SetSpotInterval(double pulseInterval_us)
    // illuminating two consecutive spots, but in practice it is used to set the time a single spot is illuminated
    // When using the ring buffer the time to move between two spots is set by the separate property RingBufferDelayBetweenPoints(ms)
    long targetExposure = long (pulseInterval_us/1000 + 0.5);  // our instance variable gets updated in the property handler
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << targetExposure;
    RETURN_ON_MM_ERROR ( SetProperty(g_TargetExposureTimePropertyName, command.str().c_str()) );
    return DEVICE_OK;
@@ -1062,7 +1059,7 @@ int CScanner::PointAndFire(double x, double y, double time_us)
    long exposure_ms = (long)(time_us/1000 + 0.5);
    long orig_exposure = 0;
    bool changeExposure = false;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (mmTarget_)
    {  // we have phototargeting-specific firmware
       // change exposure if needed; will restore afterwards
@@ -1101,16 +1098,15 @@ int CScanner::PointAndFire(double x, double y, double time_us)
    return DEVICE_OK;
 }
 
-////////////////
 // action handlers
 
-int CScanner::OnSaveJoystickSettings()
 // redo the joystick settings so they can be saved using SS Z
+int CScanner::OnSaveJoystickSettings()
 {
    long tmp;
-   string tmpstr;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::string tmpstr;
+   std::ostringstream command;
+   std::ostringstream response;
    command << "J " << axisLetterX_ << "?";
    response << ":A " << axisLetterX_ << "=";
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
@@ -1130,8 +1126,8 @@ int CScanner::OnSaveJoystickSettings()
 
 int CScanner::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   ostringstream command; command.str("");
+   std::string tmpstr;
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
@@ -1174,8 +1170,8 @@ int CScanner::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnLowerLimX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1202,8 +1198,8 @@ int CScanner::OnLowerLimX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnLowerLimY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1230,8 +1226,8 @@ int CScanner::OnLowerLimY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnUpperLimX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1258,8 +1254,8 @@ int CScanner::OnUpperLimX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnUpperLimY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1284,18 +1280,18 @@ int CScanner::OnUpperLimY(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnOutputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 // assume X axis's mode is for both, and then set mode for both axes together just like XYStage properties
 // this property should only be present when dac4ch_ is present.
 // signalDAC_ tells us whether we should use the PM or PR command
+int CScanner::OnOutputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
-      ostringstream response; response.str("");
+      std::ostringstream response;
       if (signalDAC_)
       {
           command << "PR " << axisLetterX_ << "?";
@@ -1354,16 +1350,16 @@ int CScanner::OnOutputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnInputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 // assume X axis's mode is for both, and then set mode for both axes together just like XYStage properties
+int CScanner::OnInputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
-      ostringstream response; response.str("");
+      std::ostringstream response;
       if (FirmwareVersionAtLeast(2.7))
       {
          command << "PM " << axisLetterX_ << "?";
@@ -1429,8 +1425,8 @@ int CScanner::OnInputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnCutoffFreqX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1453,8 +1449,8 @@ int CScanner::OnCutoffFreqX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnCutoffFreqY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1477,8 +1473,8 @@ int CScanner::OnCutoffFreqY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnAttenuateTravelX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1501,8 +1497,8 @@ int CScanner::OnAttenuateTravelX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnAttenuateTravelY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1595,8 +1591,8 @@ int CScanner::OnSAAdvancedX(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnSAAdvancedY(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
+int CScanner::OnSAAdvancedY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1645,8 +1641,8 @@ int CScanner::OnSAAdvancedY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAAmplitudeX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1670,8 +1666,8 @@ int CScanner::OnSAAmplitudeX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAOffsetX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1695,8 +1691,8 @@ int CScanner::OnSAOffsetX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAPeriodX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1719,8 +1715,8 @@ int CScanner::OnSAPeriodX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAModeX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1769,8 +1765,8 @@ int CScanner::OnSAModeX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAPatternX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1819,8 +1815,8 @@ int CScanner::OnSAPatternX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAAmplitudeY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1844,8 +1840,8 @@ int CScanner::OnSAAmplitudeY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAOffsetY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1869,8 +1865,8 @@ int CScanner::OnSAOffsetY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAPeriodY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1893,8 +1889,8 @@ int CScanner::OnSAPeriodY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAModeY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1943,8 +1939,8 @@ int CScanner::OnSAModeY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAPatternY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1989,11 +1985,11 @@ int CScanner::OnSAPatternY(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnSAPatternByteX(MM::PropertyBase* pProp, MM::ActionType eAct)
 // get every single time
+int CScanner::OnSAPatternByteX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2012,11 +2008,11 @@ int CScanner::OnSAPatternByteX(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnSAPatternByteY(MM::PropertyBase* pProp, MM::ActionType eAct)
 // get every single time
+int CScanner::OnSAPatternByteY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2036,8 +2032,8 @@ int CScanner::OnSAPatternByteY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAClkSrcX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2084,8 +2080,8 @@ int CScanner::OnSAClkSrcX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAClkSrcY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2133,8 +2129,8 @@ int CScanner::OnSAClkSrcY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAClkPolX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2180,8 +2176,8 @@ int CScanner::OnSAClkPolX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSAClkPolY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2227,8 +2223,8 @@ int CScanner::OnSAClkPolY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSATTLOutX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2274,8 +2270,8 @@ int CScanner::OnSATTLOutX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSATTLOutY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2321,8 +2317,8 @@ int CScanner::OnSATTLOutY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSATTLPolX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2368,8 +2364,8 @@ int CScanner::OnSATTLPolX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSATTLPolY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2413,14 +2409,13 @@ int CScanner::OnSATTLPolY(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-
-int CScanner::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CScanner::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2451,13 +2446,13 @@ int CScanner::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CScanner::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2488,13 +2483,13 @@ int CScanner::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CScanner::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2533,8 +2528,8 @@ int CScanner::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnJoystickSelectX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2582,8 +2577,8 @@ int CScanner::OnJoystickSelectX(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnJoystickSelectY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2629,12 +2624,12 @@ int CScanner::OnJoystickSelectY(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CScanner::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2664,12 +2659,12 @@ int CScanner::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CScanner::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2699,12 +2694,12 @@ int CScanner::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CScanner::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CScanner::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2781,7 +2776,7 @@ int CScanner::OnAxisPolarityY(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMScansPerSlice(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2807,7 +2802,7 @@ int CScanner::OnSPIMScansPerSlice(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMNumSlices(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2833,7 +2828,7 @@ int CScanner::OnSPIMNumSlices(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMNumSlicesPerPiezo(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2859,7 +2854,7 @@ int CScanner::OnSPIMNumSlicesPerPiezo(MM::PropertyBase* pProp, MM::ActionType eA
 
 int CScanner::OnSPIMNumSides(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2903,7 +2898,7 @@ int CScanner::OnSPIMNumSides(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMFirstSide(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    bool success;
    if (eAct == MM::BeforeGet)
@@ -2929,7 +2924,7 @@ int CScanner::OnSPIMFirstSide(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
       long NumSides = 1;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       RETURN_ON_MM_ERROR ( GetProperty(g_SPIMNumSidesPropertyName, NumSides) );
       if (tmpstr == g_SPIMSideAFirst)
@@ -2957,7 +2952,7 @@ int CScanner::OnSPIMFirstSide(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnLaserSwitchTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2983,7 +2978,7 @@ int CScanner::OnLaserSwitchTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnLaserOutputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    bool success;
    if (FirmwareVersionAtLeast(2.88))  // corresponding serial command changed to LED Z in v2.88
@@ -3088,7 +3083,7 @@ int CScanner::OnLaserOutputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMScannerHomeDisable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    bool success;
 
@@ -3137,10 +3132,10 @@ int CScanner::OnSPIMScannerHomeDisable(MM::PropertyBase* pProp, MM::ActionType e
    return DEVICE_OK;
 }
 
+// TODO: have mode byte be cached and shared between cards so we don't need to query before setting
 int CScanner::OnSPIMPiezoHomeDisable(MM::PropertyBase* pProp, MM::ActionType eAct)
-// TODO have mode byte be cached and shared between cards so we don't need to query before setting
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    bool success;
 
@@ -3192,7 +3187,7 @@ int CScanner::OnSPIMPiezoHomeDisable(MM::PropertyBase* pProp, MM::ActionType eAc
 
 int CScanner::OnSPIMInterleaveSidesEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    bool success;
 
@@ -3243,7 +3238,7 @@ int CScanner::OnSPIMInterleaveSidesEnable(MM::PropertyBase* pProp, MM::ActionTyp
 
 int CScanner::OnSPIMAlternateDirectionsEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    bool success;
 
@@ -3294,7 +3289,7 @@ int CScanner::OnSPIMAlternateDirectionsEnable(MM::PropertyBase* pProp, MM::Actio
 
 int CScanner::OnSPIMSmoothSliceEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    bool success;
    if (eAct == MM::BeforeGet)
@@ -3344,7 +3339,7 @@ int CScanner::OnSPIMSmoothSliceEnable(MM::PropertyBase* pProp, MM::ActionType eA
 
 int CScanner::OnSPIMModeByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3370,7 +3365,7 @@ int CScanner::OnSPIMModeByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMNumRepeats(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3396,7 +3391,7 @@ int CScanner::OnSPIMNumRepeats(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMDelayBeforeScan(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3422,7 +3417,7 @@ int CScanner::OnSPIMDelayBeforeScan(MM::PropertyBase* pProp, MM::ActionType eAct
 
 int CScanner::OnSPIMDelayBeforeSide(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3448,7 +3443,7 @@ int CScanner::OnSPIMDelayBeforeSide(MM::PropertyBase* pProp, MM::ActionType eAct
 
 int CScanner::OnSPIMDelayBeforeRepeat(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3474,7 +3469,7 @@ int CScanner::OnSPIMDelayBeforeRepeat(MM::PropertyBase* pProp, MM::ActionType eA
 
 int CScanner::OnSPIMDelayBeforeCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3500,7 +3495,7 @@ int CScanner::OnSPIMDelayBeforeCamera(MM::PropertyBase* pProp, MM::ActionType eA
 
 int CScanner::OnSPIMDelayBeforeLaser(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3526,7 +3521,7 @@ int CScanner::OnSPIMDelayBeforeLaser(MM::PropertyBase* pProp, MM::ActionType eAc
 
 int CScanner::OnSPIMScanDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3552,7 +3547,7 @@ int CScanner::OnSPIMScanDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMLaserDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3578,7 +3573,7 @@ int CScanner::OnSPIMLaserDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMCameraDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3604,7 +3599,7 @@ int CScanner::OnSPIMCameraDuration(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnSPIMState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
@@ -3686,9 +3681,9 @@ int CScanner::OnSPIMState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp;
 
    if (eAct == MM::BeforeGet)
@@ -3736,7 +3731,7 @@ int CScanner::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
@@ -3759,9 +3754,9 @@ int CScanner::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3796,7 +3791,7 @@ int CScanner::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3822,7 +3817,7 @@ int CScanner::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAc
 
 int CScanner::OnTargetExposureTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3851,11 +3846,11 @@ int CScanner::OnTargetExposureTime(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// Same as CXYStage::OnWaitTime()
 int CScanner::OnTargetSettlingTime(MM::PropertyBase* pProp, MM::ActionType eAct)
-// same as CXYStage::OnWaitTime()
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3881,7 +3876,7 @@ int CScanner::OnTargetSettlingTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnFastCirclesRadius(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3903,7 +3898,7 @@ int CScanner::OnFastCirclesRadius(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnFastCirclesRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3925,7 +3920,7 @@ int CScanner::OnFastCirclesRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CScanner::OnFastCirclesAsymmetry(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -3947,7 +3942,7 @@ int CScanner::OnFastCirclesAsymmetry(MM::PropertyBase* pProp, MM::ActionType eAc
 
 int CScanner::OnFastCirclesState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    bool restart = false;
    if (eAct == MM::BeforeGet)
@@ -3992,10 +3987,10 @@ int CScanner::OnFastCirclesState(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-   int CScanner::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, string axisLetter)
+int CScanner::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {

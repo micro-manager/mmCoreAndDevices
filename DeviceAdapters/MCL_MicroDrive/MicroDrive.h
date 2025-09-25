@@ -19,6 +19,40 @@ License:	Distributed under the BSD license.
 #define     INVALID_VELOCITY        -10
 #define		INVALID_LOCATION		-11
 
+struct EncoderValues
+{
+	double m1PositionMm;
+	double m2PositionMm;
+	double m3PositionMm;
+	double m4PositionMm;
+	double m5PositionMm;
+	double m6PositionMm;
+	double m7PositionMm;
+	double m8PositionMm;
+};
+
+struct MMTState
+{
+	// Tracked by the Micro-Drive
+	int limitSwitchesFound;
+	int m1LS1Steps;
+	int m1LS2Steps;
+	int m2LS1Steps;
+	int m2LS2Steps;
+	int m3LS1Steps;
+	int m3LS2Steps;
+	int m4LS1Steps;
+	int m4LS2Steps;
+	// Can be saved to the Micro-Drive
+	int epiFound;
+	int focusFound;
+	int tirfAIRFound;
+	int epiSteps;
+	int focusSteps;
+	int tirfAIRSteps;
+	int epiToTirfSteps;
+};
+
 #ifdef __cplusplus
 	extern"C" {
 #else
@@ -73,6 +107,7 @@ License:	Distributed under the BSD license.
 	MICRODRIVE_API int  MCL_MDSingleStep(unsigned int axis, int direction, int handle);
 	MICRODRIVE_API int  MCL_MDResetEncoders(unsigned short* status, int handle);
 	MICRODRIVE_API int  MCL_MDResetEncoder(unsigned int axis, unsigned short* status, int handle);
+	MICRODRIVE_API int  MCL_MDReadAllEncoders(struct EncoderValues *ev, int handle);
 	MICRODRIVE_API int  MCL_MDReadEncoders(double* e1, double* e2, double *e3, double *e4, int handle);
 	MICRODRIVE_API int  MCL_MDCurrentPositionM(unsigned int axis, int *microSteps, int handle);
 	MICRODRIVE_API int  MCL_MDInformation(
@@ -96,6 +131,9 @@ License:	Distributed under the BSD license.
 	MICRODRIVE_API int  MCL_MDEncodersPresent(
 		unsigned char* encoderBitmap,
 		int handle);
+	MICRODRIVE_API int  MCL_MMTGetState(MMTState *mmt, int handle);
+	MICRODRIVE_API int  MCL_MMTSetState(int mmtStateType, int mmtStateValue, int handle);
+
 
 	MICRODRIVE_API int  MCL_MDFindHome(int axis, int handle);
 	MICRODRIVE_API int  MCL_MDSetMode(int axis, int mode, int handle);

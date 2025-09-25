@@ -843,30 +843,14 @@ int CMoticCamera::InsertImage()
      return DEVICE_ERR;
    }
 
-   int ret = GetCoreCallback()->InsertImage(this, img, GetImageWidth(), 
+   return GetCoreCallback()->InsertImage(this, img, GetImageWidth(), 
      GetImageHeight(), GetImageBytesPerPixel());
-
-   if (!stopOnOverflow && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-     // do not stop on overflow - just reset the buffer
-     GetCoreCallback()->ClearImageBuffer(this);
-     return(GetCoreCallback()->InsertImage(this, img, 
-       GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel()));
-   } 
-   else
-   {
-     return ret;
-   }
-#ifdef _LOG_OUT_
-   OutputDebugString("InsertImage OK");
-#endif
-   return DEVICE_OK;
 }
 
 
 bool CMoticCamera::IsCapturing() 
 {
-  if(CCameraBase::IsCapturing())
+  if(CLegacyCameraBase::IsCapturing())
   {
 #ifdef _LOG_OUT_
     OutputDebugString("IsCapturing true");

@@ -1,0 +1,49 @@
+# Triggers the mm-test-adapters CI workflow when relevant adapter sources change in this repo.
+# Requires a secret in this repository named `MM_TEST_ADAPTERS_TOKEN` containing a PAT
+# with permissions to trigger workflows in `micro-manager/mm-test-adapters` (scope: repo, workflow).
+# https://github.com/micro-manager/mm-test-adapters
+
+name: Trigger mm-test-adapters CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # Only run when adapter sources or the device API changes
+    paths:
+      - "DeviceAdapters/DemoCamera/**"
+      - "DeviceAdapters/Utilities/**"
+      - "DeviceAdapters/SequenceTester/**"
+      - "DeviceAdapters/NotificationTester/**"
+      - "MMDevice/**"
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Get app token
+        id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.MM_PR_BOT_APP_ID }}
+          private-key: ${{ secrets.MM_PR_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            mm-test-adapters
+
+      - name: Send repository_dispatch to mm-test-adapters
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app.outputs.token }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'micro-manager',
+              repo: 'mm-test-adapters',
+              event_type: 'mmcore_changes',
+              client_payload: {
+                source_repo: context.repo.repo,
+                source_sha: context.sha
+              }
+            });

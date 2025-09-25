@@ -1339,16 +1339,7 @@ int CAndorSDK3Camera::InsertMMImage(const ImgBuffer& image, const Metadata& md)
    unsigned int h = image.Height();
    unsigned int b = image.Depth();
 
-   int ret = GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-      ret = GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str(), false);
-   }
-
-   return ret;
+   return GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str());
 }
 
 std::wstring CAndorSDK3Camera::GetPreferredFeature(std::wstring Name, std::wstring FallbackName) const

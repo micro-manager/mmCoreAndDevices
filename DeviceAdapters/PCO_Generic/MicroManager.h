@@ -95,6 +95,7 @@ public:
   int ClearROI();
   int PrepareSequenceAcqusition();
   int StartSequenceAcquisition(long numImages, double /*interval_ms*/, bool stopOnOverflow);
+  int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
   int StopSequenceAcquisition();
   int StoppedByThread();
   bool IsCapturing();
@@ -113,6 +114,7 @@ public:
   int OnCCDType(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnAcquireModeNumImages(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFpsMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnNoiseFilterMode(MM::PropertyBase* pProp, MM::ActionType eAct);

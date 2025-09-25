@@ -23,7 +23,8 @@
 #pragma once
 
 #include "MockDeviceAdapter.h"
-#include "../MMDevice/DeviceThreads.h"
+
+#include "DeviceThreads.h"
 
 #include <map>
 #include <memory>

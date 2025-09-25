@@ -46,9 +46,9 @@ TIRF::~TIRF()
     Shutdown();
 }
 
-void TIRF::GetName(char* Name) const
+void TIRF::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(Name, g_TIRFDeviceName);
+    CDeviceUtils::CopyLimitedString(name, g_TIRFDeviceName);
 }
 
 bool TIRF::SupportsDeviceDetection()
@@ -75,16 +75,16 @@ int TIRF::Initialize()
         return ret;
     }
 
-    ret = GetVersion(version_);
+    ret = GetVersion(firmwareVersion_);
     if (ret != DEVICE_OK)
        return ret;
     CPropertyAction* pAct = new CPropertyAction(this, &TIRF::OnVersion);
-    CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
+    CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
     // get the firmware version data from cached value
-    versionData_ = ParseVersionString(version_);
+    version_ = Version::ParseString(firmwareVersion_);
 
-    ret = GetCompileDate(compileDate_);
+    ret = GetCompileDate(firmwareDate_);
     if (ret != DEVICE_OK)
     {
         return ret;
@@ -97,9 +97,8 @@ int TIRF::Initialize()
     // I think it was present before 2010 but this is easy way
 
     // previously compared against compile date (2010, 1, 1)
-    if (versionData_.IsVersionAtLeast(8, 8, 'a'))
-    {
-        ret = GetBuildName(buildName_);
+    if (version_ >= Version(8, 8, 'a')) {
+        ret = GetBuildName(firmwareBuild_);
         if (ret != DEVICE_OK)
         {
             return ret;
@@ -191,8 +190,7 @@ int TIRF::SetAngle(double angle)
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         return DEVICE_OK;
     }
     // deal with error later

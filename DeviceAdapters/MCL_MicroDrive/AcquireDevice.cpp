@@ -22,6 +22,8 @@ static int ChooseAvailableZStageAxis(unsigned short pid, unsigned char axisBitma
 
 static int ChooseAvailableMadTweezerStageAxis(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices);
 
+static int ChooseAvailableMotorizedMicroMirrorTIRFAxis(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices);
+
 static bool FindMatchingDevice(int deviceAdapterType, int &deviceAdapterHandle, int &deviceAdapterAxis);
 
 static bool FindMatchingDeviceInList(int deviceAdapterType, int *handles, int handlesCount, bool useStrictMatcingCriteria, int &deviceAdapterHandle, int &deviceAdapterAxis);
@@ -107,6 +109,8 @@ bool FindMatchingDeviceInList(int deviceAdapterType, int *handles, int handlesCo
 			deviceAdapterAxis = ChooseAvailableZStageAxis(pid, axisBitmap, handles[ii], useStrictMatcingCriteria);
 		else if(deviceAdapterType == MADTWEEZER_TYPE)
 			deviceAdapterAxis = ChooseAvailableMadTweezerStageAxis(pid, axisBitmap, handles[ii], useStrictMatcingCriteria);
+		else if(deviceAdapterType == MOTORIZIED_MICROMIRROR_TIRF_TYPE)
+			deviceAdapterAxis = ChooseAvailableMotorizedMicroMirrorTIRFAxis(pid, axisBitmap, handles[ii], useStrictMatcingCriteria);
 
 		if (deviceAdapterAxis != 0)
 		{
@@ -152,6 +156,7 @@ int ChooseAvailableXYStageAxes(unsigned short pid, unsigned char axisBitmap, int
 	case NC_MICRODRIVE:
 	case MICRODRIVE3:
 	case MICRODRIVE4:
+	case MICRODRIVE4P:
 		order[1] = 0;
 		break;
 		// Use the standard order.
@@ -186,9 +191,9 @@ int ChooseAvailableXYStageAxes(unsigned short pid, unsigned char axisBitmap, int
 
 int ChooseAvailableZStageAxis(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices)
 {
-	int ordersize = 6;
-	int order[] = { M1AXIS, M2AXIS, M3AXIS, M4AXIS, M5AXIS, M6AXIS };
-	int strictOrder[] = { M3AXIS, M4AXIS, M5AXIS, M6AXIS, 0, 0 };
+	int ordersize = 8;
+	int order[] = { M1AXIS, M2AXIS, M3AXIS, M4AXIS, M5AXIS, M6AXIS, M7AXIS, M8AXIS };
+	int strictOrder[] = { M3AXIS, M4AXIS, M5AXIS, M6AXIS, 0, 0, 0, 0 };
 
 	switch (pid)
 	{
@@ -198,33 +203,40 @@ int ChooseAvailableZStageAxis(unsigned short pid, unsigned char axisBitmap, int 
 		return 0;
 	case MICRODRIVE3:
 	{
-		int neworder[] = { M3AXIS, M2AXIS, M1AXIS, 0, 0, 0 };
+		int neworder[] = { M3AXIS, M2AXIS, M1AXIS, 0, 0, 0, 0, 0 };
 		copy(neworder, neworder + ordersize, order);
 		break;
 	}
-	// For 4 and 6 axis systems leave M1/M2 for an XY Stage.
+	// For 4/6/8 axis systems leave M1/M2 for an XY Stage.
 	case MICRODRIVE4:
+	case MICRODRIVE4P:
 	{
-		int neworder[] = { M3AXIS, M4AXIS, 0, 0, 0, 0 };
+		int neworder[] = { M3AXIS, M4AXIS, 0, 0, 0, 0, 0, 0};
 		copy(neworder, neworder + ordersize, order);
 		break;
 	}
 	case MICRODRIVE6:
 	{
-		int neworder[] = { M3AXIS, M6AXIS, M4AXIS, M5AXIS, 0, 0 };
+		int neworder[] = { M3AXIS, M6AXIS, M4AXIS, M5AXIS, 0, 0, 0, 0 };
+		copy(neworder, neworder + ordersize, order);
+		break;
+	}
+	case MICRODRIVE8P:
+	{
+		int neworder[] = { M3AXIS, M6AXIS, M7AXIS, M8AXIS, M4AXIS, M5AXIS, 0, 0 };
 		copy(neworder, neworder + ordersize, order);
 		break;
 	}
 	case MICRODRIVE1:
 	{
-		int neworder[] = { M1AXIS, M2AXIS, M3AXIS, 0, 0, 0 };
+		int neworder[] = { M1AXIS, M2AXIS, M3AXIS, 0, 0, 0, 0, 0 };
 		copy(neworder, neworder + ordersize, order);
 		break;
 	}
 	case MADTWEEZER:
 	{
 		// The strictOrder and order for MadTweezer are identical.
-		int neworder[] = { M1AXIS, 0, 0, 0, 0, 0 };
+		int neworder[] = { M1AXIS, 0, 0, 0, 0, 0, 0, 0 };
 		copy(neworder, neworder + ordersize, order);		
 		copy(neworder, neworder + ordersize, strictOrder);
 		break;
@@ -281,6 +293,39 @@ int ChooseAvailableMadTweezerStageAxis(unsigned short pid, unsigned char axisBit
 
 		// Check if a matching device is already in our list of controlled devices.
 		HandleListType device(handle, MADTWEEZER_TYPE, chosenOrder[ii], 0);
+		if (HandleExistsOnLockedList(device) == false)
+		{
+			// If there is no conflict we can choose 
+			axis = chosenOrder[ii];
+			break;
+		}
+	}
+	return axis;
+}
+
+static int ChooseAvailableMotorizedMicroMirrorTIRFAxis(unsigned short pid, unsigned char axisBitmap, int handle, bool useStrictChoices)
+{
+	int ordersize = 1;
+	int order[] = { M6AXIS };
+	int strictOrder[] = { M6AXIS };
+
+	if (pid != MICRODRIVE8P)
+		return 0;
+
+	int *chosenOrder = useStrictChoices ? strictOrder : order;
+	int axis = 0;
+	for (int ii = 0; ii < ordersize; ii++)
+	{
+		if (chosenOrder[ii] == 0)
+			break;
+
+		// Check that the axis is valid.
+		int bitmap = 0x1 << (chosenOrder[ii] - 1);
+		if ((axisBitmap & bitmap) != bitmap)
+			continue;
+
+		// Check if a matching device is already in our list of controlled devices.
+		HandleListType device(handle, MOTORIZIED_MICROMIRROR_TIRF_TYPE , chosenOrder[ii], 0);
 		if (HandleExistsOnLockedList(device) == false)
 		{
 			// If there is no conflict we can choose 

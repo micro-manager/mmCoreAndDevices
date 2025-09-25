@@ -136,7 +136,6 @@ private:
    std::vector<double> sequence_;
    unsigned int axisIndex_;
 
-   // private helper functions
    int OnSaveJoystickSettings();
 };
 

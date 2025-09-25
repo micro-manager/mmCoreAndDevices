@@ -20,11 +20,12 @@
 
 #pragma once
 
-#include "../../MMDevice/DeviceThreads.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ModuleInterface.h"
 #include "../Logging/Logger.h"
 #include "LoadedDeviceAdapterImpl.h"
+
+#include "DeviceThreads.h"
+#include "MMDevice.h"
+#include "ModuleInterface.h"
 
 #include <cstring>
 #include <memory>

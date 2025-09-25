@@ -36,12 +36,10 @@ public:
    ~CPiezo() { }
   
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // Piezo API
-   // -----------
    int Stop();
    int Home();
 
@@ -69,7 +67,6 @@ public:
    int SendStageSequence();
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLowerLim             (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -127,7 +124,6 @@ private:
    bool runningFastSequence_;
    std::vector<double> sequence_;
 
-   // private helper functions
    int OnSaveJoystickSettings();
 };
 

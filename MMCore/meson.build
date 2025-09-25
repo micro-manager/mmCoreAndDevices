@@ -17,8 +17,6 @@ if cxx.get_id() in ['msvc', 'clang-cl']
     add_project_arguments('-DNOMINMAX', language: 'cpp')
 endif
 
-# MMDevice must be copied into subprojects/ for this experimental build to work
-# (unless MMCore is itself being used as a subproject).
 if get_option('tests').enabled()
     tests_option = 'enabled'
 elif get_option('tests').disabled()
@@ -26,8 +24,11 @@ elif get_option('tests').disabled()
 else
     tests_option = 'auto'
 endif
+
+# mmdevice is provided via a .wrap, but it should be manually copied into
+# subprojects in order to control the version that gets fetched.
 mmdevice_proj = subproject(
-    'MMDevice',
+    'mmdevice',
     default_options: {
         'client_interface': true,
         # Propagate value of 'tests' option ('yield: true' in MMDeivce's
@@ -35,7 +36,7 @@ mmdevice_proj = subproject(
         'tests': tests_option,
     },
 )
-mmdevice_dep = mmdevice_proj.get_variable('mmdevice')
+mmdevice_dep = mmdevice_proj.get_variable('mmdevice_dep')
 
 mmcore_sources = files(
     'CircularBuffer.cpp',
@@ -109,6 +110,7 @@ mmcore_lib = static_library(
         mmdevice_dep,
         dependency('threads'),
     ],
+    gnu_symbol_visibility: 'inlineshidden',
     cpp_args: [
         '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
     ],
@@ -116,11 +118,12 @@ mmcore_lib = static_library(
 
 subdir('unittest')
 
-mmcore = declare_dependency(
+mmcore_dep = declare_dependency(
     include_directories: mmcore_include_dir,
     link_with: mmcore_lib,
     dependencies: mmdevice_dep,
 )
+meson.override_dependency('mmcore', mmcore_dep)
 
 # For providing include dir to SWIG when using this project as a subproject
 swig_include_dirs = mmdevice_proj.get_variable('swig_include_dirs') + [

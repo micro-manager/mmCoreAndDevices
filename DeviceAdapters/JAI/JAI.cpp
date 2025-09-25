@@ -826,18 +826,6 @@ int JAICamera::PushImage(unsigned char* imgBuf)
 		img.Width(),
 		img.Height(),
 		img.Depth());
-
-	if (!stopOnOverflow && retCode == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		retCode = GetCoreCallback()->InsertImage(this,
-			imgBuf,
-			img.Width(),
-			img.Height(),
-			img.Depth());
-	}
-
 	return DEVICE_OK;
 }
 
@@ -978,30 +966,11 @@ void JAICamera::ClearPvBuffers()
 
 int JAICamera::InsertImage()
 {
-   int retCode = GetCoreCallback()->InsertImage(this,
+   return GetCoreCallback()->InsertImage(this,
          img.GetPixels(),
          img.Width(),
          img.Height(),
          img.Depth());
-
-   if (!stopOnOverflow)
-   {
-      if (retCode == DEVICE_BUFFER_OVERFLOW)
-      {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         retCode = GetCoreCallback()->InsertImage(this,
-            img.GetPixels(),
-            img.Width(),
-            img.Height(),
-            img.Depth());
-         return DEVICE_OK;
-      }
-      else
-         return retCode;
-   }
-
-   return retCode;
 }
 
 /**

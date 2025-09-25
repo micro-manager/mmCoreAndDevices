@@ -22,7 +22,7 @@
 
 class SequenceThread;
 
-class AmScope : public CCameraBase<AmScope>
+class AmScope : public CLegacyCameraBase<AmScope>
 { 
 public:
 	AmScope();
@@ -134,7 +134,6 @@ private:
    bool isSequenceable_;
    long sequenceMaxLength_;
    bool sequenceRunning_;
-   bool stopOnOverflow_;
    long imageCounter_;
    MMThreadLock imgPixelsLock_;
    std::string triggerDevice_;

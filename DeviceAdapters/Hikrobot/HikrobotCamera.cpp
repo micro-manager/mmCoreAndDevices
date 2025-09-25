@@ -1546,14 +1546,6 @@ void HikrobotCamera::ImageRecvThreadProc()
 			nRet = GetCoreCallback()->InsertImage(this, (const unsigned char*)stConvertParam.pDstBuffer,
 				stOutFrame.stFrameInfo.nWidth,
 				stOutFrame.stFrameInfo.nHeight, GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
-			if (nRet == DEVICE_BUFFER_OVERFLOW)
-			{
-				//if circular buffer overflows, just clear it and keep putting stuff in so live mode can continue
-				GetCoreCallback()->ClearImageBuffer(this);
-				MvWriteLog(__FILE__, __LINE__, m_chDevID, "InsertImage clear!");
-
-
-			}
 			if (nRet == DEVICE_OK)
 			{
 				MvWriteLog(__FILE__, __LINE__, m_chDevID, "Success InsertImage Width[%d], Height[%d], FrameNum[%d] FrameLen[%d] enPixelType[%lld]",
@@ -1574,11 +1566,6 @@ void HikrobotCamera::ImageRecvThreadProc()
 		}
 
 	}
-
-
-	GetCoreCallback()->ClearImageBuffer(this);
-
-
 
 	MvWriteLog(__FILE__, __LINE__, m_chDevID, "ImageRecvThreadProc End!");
 	return;

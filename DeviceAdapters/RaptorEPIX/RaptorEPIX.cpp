@@ -5955,20 +5955,7 @@ int CRaptorEPIX::InsertImage()
    //int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b) ;//, &md);
    //int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-   	  if(fidSerial[UNITSOPENMAP] && gUseSerialLog[UNITSOPENMAP])
-			fprintf(fidSerial[UNITSOPENMAP],"*** Insert Image Buffer Overflow - Resetting ***\n");
-
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-      return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-   } else
-      return ret;
-
-
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
 }
 
 /*

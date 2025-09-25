@@ -178,7 +178,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CCameraFrontend::CCameraFrontend() :
-   CCameraBase<CCameraFrontend> (),
    cameraSupportsLiveView_(false),
    initialized_(false),
    grayScale_(true),

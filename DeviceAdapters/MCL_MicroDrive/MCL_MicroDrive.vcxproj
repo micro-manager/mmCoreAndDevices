@@ -93,6 +93,7 @@
     <ClCompile Include="mdutils.cpp" />
     <ClCompile Include="MicroDriveXYStage.cpp" />
     <ClCompile Include="MicroDriveZStage.cpp" />
+    <ClCompile Include="MotorizedMicroMirrorTIRF.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcquireDevice.h" />
@@ -104,6 +105,7 @@
     <ClInclude Include="MicroDrive.h" />
     <ClInclude Include="MicroDriveXYStage.h" />
     <ClInclude Include="MicroDriveZStage.h" />
+    <ClInclude Include="MotorizedMicroMirrorTIRF.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-StaticRuntime.vcxproj">

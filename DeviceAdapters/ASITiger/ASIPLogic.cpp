@@ -89,7 +89,6 @@ int CPLogic::Initialize()
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    std::ostringstream command;
-   command.str("");
    command << g_PLogicDeviceDescription << " HexAddr=" << addressString_;
    CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
 
@@ -435,7 +434,7 @@ int CPLogic::SetOpen(bool open)
 {
    if (useAs4ChShutter_ || useAs7ChShutter_)
    {
-      std::ostringstream command; command.str("");
+      std::ostringstream command;
       shutterOpen_ = open;
       // sets cell 8 which is "software shutter open" indicator via preset 11 (sets high) or preset 10 (sets low)
       if (open) {
@@ -453,7 +452,6 @@ int CPLogic::GetOpen(bool& open)
    return DEVICE_OK;
 }
 
-////////////////
 // action handlers
 
 // Modify the "PLogic Mode Table" in the header if you change this function.
@@ -511,7 +509,7 @@ int CPLogic::OnSetShutterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
          }
       }
    } else if (eAct == MM::AfterSet) {
-      std::ostringstream command; command.str("");
+      std::ostringstream command;
       long tmp;
       std::string tmpstr;
       RETURN_ON_MM_ERROR ( GetCurrentPropertyData(pProp->GetName().c_str(), tmp) );
@@ -528,7 +526,7 @@ int CPLogic::OnSetShutterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPLogicOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -544,7 +542,7 @@ int CPLogic::OnPLogicOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPLogicOutputStateUpper(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -560,7 +558,7 @@ int CPLogic::OnPLogicOutputStateUpper(MM::PropertyBase* pProp, MM::ActionType eA
 int CPLogic::OnFrontpanelOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -576,7 +574,7 @@ int CPLogic::OnFrontpanelOutputState(MM::PropertyBase* pProp, MM::ActionType eAc
 int CPLogic::OnBackplaneOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -591,7 +589,7 @@ int CPLogic::OnBackplaneOutputState(MM::PropertyBase* pProp, MM::ActionType eAct
 
 int CPLogic::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    std::string tmpstr;
    if (eAct == MM::BeforeGet) {
@@ -622,7 +620,7 @@ int CPLogic::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPointerPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    static bool justSet = false;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_ && !justSet)
@@ -648,7 +646,7 @@ int CPLogic::OnPointerPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string tmpstr;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
@@ -710,7 +708,7 @@ int CPLogic::RefreshEditCellPropertyValues()
 int CPLogic::OnEditCellType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    // NB: works for I/O addresses but will have incorrect strings
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if(currentPosition_ <= numCells_                                 // normal cells
          || (currentPosition_ >= PLOGIC_FRONTPANEL_START_ADDRESS && currentPosition_ <= PLOGIC_BACKPLANE_END_ADDRESS)) {   // or I/O addresses
       if (eAct == MM::BeforeGet) {
@@ -947,7 +945,7 @@ int CPLogic::RefreshAdvancedCellPropertyValues(long index)
 // don't bother updating things like if the user changes position from the property
 int CPLogic::SetPositionDirectly(unsigned int position)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (position == currentPosition_)
       return DEVICE_OK;
    command << "M " << axisLetter_ << "=" << position;
@@ -958,7 +956,7 @@ int CPLogic::SetPositionDirectly(unsigned int position)
 
 int CPLogic::RefreshCurrentPosition()
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    unsigned int tmp;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
@@ -969,7 +967,7 @@ int CPLogic::RefreshCurrentPosition()
 
 int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    std::string tmpstr;
    if (eAct == MM::BeforeGet) {
@@ -1027,7 +1025,7 @@ int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index
 
 int CPLogic::OnCellConfig(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1049,7 +1047,7 @@ int CPLogic::OnCellConfig(MM::PropertyBase* pProp, MM::ActionType eAct, long ind
 
 int CPLogic::OnInput1(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1071,7 +1069,7 @@ int CPLogic::OnInput1(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput2(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1093,7 +1091,7 @@ int CPLogic::OnInput2(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput3(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1115,7 +1113,7 @@ int CPLogic::OnInput3(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput4(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1137,7 +1135,7 @@ int CPLogic::OnInput4(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnIOType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1168,7 +1166,7 @@ int CPLogic::OnIOType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnIOSourceAddress(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1190,7 +1188,7 @@ int CPLogic::OnIOSourceAddress(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 
 int CPLogic::OnClearAllCellStates(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
@@ -1209,7 +1207,7 @@ int CPLogic::OnClearAllCellStates(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnSetCardPreset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    std::string tmpstr;
    if (eAct == MM::BeforeGet) {

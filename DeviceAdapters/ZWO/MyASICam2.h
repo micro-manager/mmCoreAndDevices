@@ -9,7 +9,7 @@
 
 class SequenceThread;
 
-class CMyASICam:public CCameraBase<CMyASICam> 
+class CMyASICam:public CCameraBase<CMyASICam>
 {
 public:
 	CMyASICam(void);
@@ -20,6 +20,8 @@ public:
 	int Shutdown();
 
 	void GetName(char* name) const;      
+
+	bool Busy() { return false; }
 
 	// MMCamera API
 	// ------------

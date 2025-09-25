@@ -26,12 +26,14 @@
 
 #include "ModuleInterface.h"
 
-#include <boost/move/move.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/unordered_map.hpp>
+
 #include <exception>
+#include <future>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <unordered_map>
 #include <utility>
 
 
@@ -69,20 +71,20 @@ namespace
    // their lifetime.
    class DeviceRetainer
    {
-      static boost::mutex mutex_;
-      static boost::unordered_map<
+      static std::mutex mutex_;
+      static std::unordered_map<
          MM::Device*,
-         boost::shared_ptr<InterDevice>
+         std::shared_ptr<InterDevice>
       > devices_;
 
    public:
       template <class TDevice>
       static MM::Device* CreateDevice(const std::string& name)
       {
-         boost::lock_guard<boost::mutex> g(mutex_);
+         std::lock_guard<std::mutex> g(mutex_);
 
-         boost::shared_ptr<InterDevice> interdev =
-            boost::make_shared<TDevice>(name);
+         std::shared_ptr<InterDevice> interdev =
+            std::make_shared<TDevice>(name);
 
          MM::Device* pDevice = static_cast<TDevice*>(interdev.get());
          devices_.insert(std::make_pair(pDevice, interdev));
@@ -92,15 +94,15 @@ namespace
 
       static void DeleteDevice(MM::Device* pDevice)
       {
-         boost::lock_guard<boost::mutex> g(mutex_);
+         std::lock_guard<std::mutex> g(mutex_);
          devices_.erase(pDevice);
       }
    };
 
-   boost::mutex DeviceRetainer::mutex_;
-   boost::unordered_map<
+   std::mutex DeviceRetainer::mutex_;
+   std::unordered_map<
       MM::Device*,
-      boost::shared_ptr<InterDevice>
+      std::shared_ptr<InterDevice>
    > DeviceRetainer::devices_;
 }
 
@@ -176,7 +178,7 @@ TesterHub::Shutdown()
 
    // For hub only, do _not_ call Super::Shutdown(). Release the self-reference
    // created in Initialize().
-   InterDevice::SetHub(boost::shared_ptr<TesterHub>());
+   InterDevice::SetHub(std::shared_ptr<TesterHub>());
    return DEVICE_OK;
 }
 
@@ -208,7 +210,7 @@ TesterHub::DetectInstalledDevices()
 int
 TesterHub::RegisterDevice(const std::string& name, InterDevice::Ptr device)
 {
-   boost::weak_ptr<InterDevice>& ptr = devices_[name];
+   std::weak_ptr<InterDevice>& ptr = devices_[name];
    if (!ptr.lock())
    {
       ptr = device;
@@ -230,7 +232,7 @@ TesterHub::UnregisterDevice(const std::string& name)
 InterDevice::Ptr
 TesterHub::FindPeerDevice(const std::string& name)
 {
-   boost::unordered_map< std::string, boost::weak_ptr<InterDevice> >::iterator
+   std::unordered_map< std::string, std::weak_ptr<InterDevice> >::iterator
       found = devices_.find(name);
    if (found == devices_.end())
       return InterDevice::Ptr();
@@ -428,7 +430,7 @@ TesterCamera::StartSequenceAcquisitionImpl(bool finite, long count,
    // by it is accessed in this function.
 
    {
-      boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+      std::lock_guard<std::mutex> lock(sequenceMutex_);
       if (!stopSequence_)
          return DEVICE_ERR;
       stopSequence_ = false;
@@ -436,14 +438,13 @@ TesterCamera::StartSequenceAcquisitionImpl(bool finite, long count,
 
    GetCoreCallback()->PrepareForAcq(this);
 
-   // Note: boost::packaged_task<void ()> in more recent versions of Boost.
-   boost::packaged_task<void> captureTask(
+   std::packaged_task<void()> captureTask(
          [this, finite, count, stopOnOverflow] {
             SendSequence(finite, count, stopOnOverflow);
          });
    sequenceFuture_ = captureTask.get_future();
 
-   boost::thread captureThread(boost::move(captureTask));
+   std::thread captureThread(std::move(captureTask));
    captureThread.detach();
 
    return DEVICE_OK;
@@ -457,14 +458,13 @@ TesterCamera::StopSequenceAcquisition()
    // deadlock with the wait on sequenceFuture_.
 
    {
-      boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+      std::lock_guard<std::mutex> lock(sequenceMutex_);
       if (stopSequence_)
          return DEVICE_OK;
       stopSequence_ = true;
    }
 
-   // In newer Boost versions: if (sequenceFuture_.valid())
-   if (sequenceFuture_.get_state() != boost::future_state::uninitialized)
+   if (sequenceFuture_.valid())
    {
       try
       {
@@ -472,10 +472,10 @@ TesterCamera::StopSequenceAcquisition()
       }
       catch (const DeviceError& e)
       {
-         sequenceFuture_ = boost::unique_future<void>();
+         sequenceFuture_ = std::future<void>();
          return e.GetCode();
       }
-      sequenceFuture_ = boost::unique_future<void>();
+      sequenceFuture_ = std::future<void>();
    }
 
    return GetCoreCallback()->AcqFinished(this, 0);
@@ -488,7 +488,7 @@ TesterCamera::IsCapturing()
    // Skip locking of hub global mutex, since we only access stopSequence_
    // which is protected by its own mutex.
 
-   boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+   std::lock_guard<std::mutex> lock(sequenceMutex_);
    return !stopSequence_;
 }
 
@@ -544,7 +544,7 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
    for (long frame = 0; !finite || frame < count; ++frame)
    {
       {
-         boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+         std::lock_guard<std::mutex> lock(sequenceMutex_);
          if (stopSequence_)
             break;
       }
@@ -558,22 +558,13 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
 
       try
       {
-         int err;
-         err = core->InsertImage(this, bytes, width, height,
+         int err = core->InsertImage(this, bytes, width, height,
                bytesPerPixel, serializedMD.c_str());
-
-         if (!stopOnOverflow && err == DEVICE_BUFFER_OVERFLOW)
-         {
-            core->ClearImageBuffer(this);
-            err = core->InsertImage(this, bytes, width, height,
-                  bytesPerPixel, serializedMD.c_str(), false);
-         }
-
          if (err != DEVICE_OK)
          {
             bool stopped;
             {
-               boost::lock_guard<boost::mutex> lock(sequenceMutex_);
+               std::lock_guard<std::mutex> lock(sequenceMutex_);
                stopped = stopSequence_;
             }
             // If we're stopped already, that could be the reason for the
@@ -1011,8 +1002,8 @@ TesterAutofocus::UpdateZStageLink()
       return;
 
    InterDevice::Ptr device = GetHub()->FindPeerDevice(zStageName);
-   boost::shared_ptr<TesterZStage> zStage =
-      boost::dynamic_pointer_cast<TesterZStage>(device);
+   std::shared_ptr<TesterZStage> zStage =
+      std::dynamic_pointer_cast<TesterZStage>(device);
    if (!zStage)
       return;
 

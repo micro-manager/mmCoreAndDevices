@@ -48,13 +48,13 @@ const char* const g_MagnifierDeviceName = "Magnifier";
 const char* const g_TIRFDeviceName = "TIRF";
 
 // corresponding device descriptions
-const char* const g_XYStageDeviceDescription = "ASI XY stage driver adapter";
-const char* const g_ZStageDeviceDescription = "ASI Z-stage driver adapter";
-const char* const g_CRISPDeviceDescription = "ASI CRISP Autofocus adapter";
-const char* const g_AZ100TurretDescription = "ASI AZ100 Turret Controller";
+const char* const g_XYStageDeviceDescription = "ASI XY Stage";
+const char* const g_ZStageDeviceDescription = "ASI Z Stage";
+const char* const g_CRISPDeviceDescription = "ASI CRISP Autofocus";
+const char* const g_AZ100TurretDescription = "ASI AZ100 Turret";
 const char* const g_StateDeviceDescription = "ASI State Device";
-const char* const g_LEDDeviceDescription = "ASI LED controller";
-const char* const g_MagnifierDeviceDescription = "Magnifier";
+const char* const g_LEDDeviceDescription = "ASI LED Illuminator";
+const char* const g_MagnifierDeviceDescription = "ASI Magnifier";
 const char* const g_TIRFDeviceDescription = "ASI TIRF Actuator";
 
 // constant values
@@ -83,7 +83,7 @@ const char* const g_CRISP_Unknown = "Unknown";
 const char* const g_CRISPOffsetPropertyName = "Lock Offset";
 const char* const g_CRISPStatePropertyName = "CRISP State Character";
 
-MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, const std::string& portToCheck, double answerTimeoutMs);
+MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, const std::string& port, double answerTimeoutMs);
 void LogDeviceError(MM::Device& device, MM::Core& core, int errorCode);
 
 #endif // ASISTAGE_H

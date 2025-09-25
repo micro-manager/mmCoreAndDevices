@@ -33,9 +33,9 @@ AZ100Turret::~AZ100Turret()
 	Shutdown();
 }
 
-void AZ100Turret::GetName(char* Name) const
+void AZ100Turret::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(Name, g_AZ100TurretName);
+	CDeviceUtils::CopyLimitedString(name, g_AZ100TurretName);
 }
 
 int AZ100Turret::Initialize()
@@ -73,16 +73,16 @@ int AZ100Turret::Initialize()
 		return ret;
 	}
 
-   ret = GetVersion(version_);
+   ret = GetVersion(firmwareVersion_);
    if (ret != DEVICE_OK)
        return ret;
 	pAct = new CPropertyAction(this, &AZ100Turret::OnVersion);
-	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
+	CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
 	// get the firmware version data from cached value
-	versionData_ = ParseVersionString(version_);
+	version_ = Version::ParseString(firmwareVersion_);
 
-	ret = GetCompileDate(compileDate_);
+	ret = GetCompileDate(firmwareDate_);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -95,9 +95,8 @@ int AZ100Turret::Initialize()
 	// I think it was present before 2010 but this is easy way
 
 	// previously compared against compile date (2010, 1, 1)
-	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
-	{
-		ret = GetBuildName(buildName_);
+	if (version_ >= Version(8, 8, 'a')) {
+		ret = GetBuildName(firmwareBuild_);
 		if (ret != DEVICE_OK)
 		{
 			return ret;

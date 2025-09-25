@@ -474,7 +474,6 @@ int QSICameraAdapter::InsertImage()
   char label[MM::MaxStrLength];
   Metadata metadata;
   const unsigned char * pImageBuffer;
-  int response;
   const char * pSerializedMetadata;
 
   // Assemble metadata
@@ -488,15 +487,7 @@ int QSICameraAdapter::InsertImage()
   pImageBuffer = GetImageBuffer();
 
   // Insert received image into MMCore's circular buffer
-  response = GetCoreCallback()->InsertImage( this, pImageBuffer, m_imageNumX, m_imageNumY, QSI_IMAGE_BYTES_PER_PIXEL, pSerializedMetadata );
-
-  if( !isStopOnOverflow() && response == DEVICE_BUFFER_OVERFLOW )
-  {
-    GetCoreCallback()->ClearImageBuffer( this );
-    return GetCoreCallback()->InsertImage( this, pImageBuffer, m_imageNumX, m_imageNumY, QSI_IMAGE_BYTES_PER_PIXEL, pSerializedMetadata, false );
-  }
-  else
-    return response;
+  return GetCoreCallback()->InsertImage( this, pImageBuffer, m_imageNumX, m_imageNumY, QSI_IMAGE_BYTES_PER_PIXEL, pSerializedMetadata );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

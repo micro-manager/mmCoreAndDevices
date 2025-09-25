@@ -23,7 +23,6 @@
 //
 //
 
-
 #include "ASITiger.h"
 #include "ASITigerComm.h"
 #include <cstdio>
@@ -34,8 +33,6 @@
 #include <iostream>
 #include <assert.h>
 #include <vector>
-
-using namespace std;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,7 +61,7 @@ int CTigerCommHub::Initialize()
       ret = DEVICE_NOT_SUPPORTED;
    RETURN_ON_MM_ERROR (ret);
    RETURN_ON_MM_ERROR ( ParseAnswerAfterPosition(4, firmwareVersion_) );
-   stringstream command; command.str("");
+   std::stringstream command;
    command << firmwareVersion_;
    RETURN_ON_MM_ERROR ( CreateProperty(g_FirmwareVersionPropertyName, command.str().c_str(), MM::Float, true) );
 
@@ -105,7 +102,7 @@ int CTigerCommHub::Initialize()
    return DEVICE_OK;
 }
 
-bool CTigerCommHub::SupportsDeviceDetection(void)
+bool CTigerCommHub::SupportsDeviceDetection()
 {
    return true;
 }
@@ -210,14 +207,14 @@ int CTigerCommHub::DetectInstalledDevices()
    //   because it doesn't matter what description I put here and also because these calls
    //   appear to populate the Peripheral device list of the hub but the InitializeModuleData don't
    MM::Device* pDev;
-   string name;
+   std::string name;
    int ret=0;
    for (unsigned int i=0; i<build.numAxes; ++i)
    {
       bool twoaxis = false;
       unsigned int channels = 1; // used for TGLED, TGPMT, etc. that may have more than one MM device per axis letter
       name = "";
-      ostringstream command;
+      std::ostringstream command;
       command << "Adding axis " << build.vAxesLetter[i] << " with type " << build.vAxesType[i] << " at address " << build.vAxesAddrHex[i];
       LogMessage(command.str());
       switch (build.vAxesType[i])

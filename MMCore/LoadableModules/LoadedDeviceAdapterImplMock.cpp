@@ -19,8 +19,8 @@
 
 #include "LoadedDeviceAdapterImplMock.h"
 
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ModuleInterface.h"
+#include "MMDevice.h"
+#include "ModuleInterface.h"
 
 
 void LoadedDeviceAdapterImplMock::InitializeModuleData()

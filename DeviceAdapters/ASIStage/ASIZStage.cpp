@@ -103,16 +103,16 @@ int ZStage::Initialize()
         ret = GetPositionSteps(curSteps_);
     }
 
-    ret = GetVersion(version_);
+    ret = GetVersion(firmwareVersion_);
     if (ret != DEVICE_OK)
        return ret;
     CPropertyAction* pAct = new CPropertyAction(this, &ZStage::OnVersion);
-    CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
+    CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
     // get the firmware version data from cached value
-    versionData_ = ParseVersionString(version_);
+    version_ = Version::ParseString(firmwareVersion_);
 
-    ret = GetCompileDate(compileDate_);
+    ret = GetCompileDate(firmwareDate_);
     if (ret != DEVICE_OK)
     {
         return ret;
@@ -125,9 +125,8 @@ int ZStage::Initialize()
     // I think it was present before 2010 but this is easy way
 
     // previously compared against compile date (2010, 1, 1)
-    if (versionData_.IsVersionAtLeast(8, 8, 'a'))
-    {
-        ret = GetBuildName(buildName_);
+    if (version_ >= Version(8, 8, 'a')) {
+        ret = GetBuildName(firmwareBuild_);
         if (ret != DEVICE_OK)
         {
             return ret;
@@ -148,10 +147,8 @@ int ZStage::Initialize()
     }
     else
     {
-        std::ostringstream tmp;
-        tmp.str("");
-        tmp << nrEvents_;  // initialized in GetControllerInfo() if we got here
-        CreateProperty("RingBufferSize", tmp.str().c_str(), MM::String, true);
+        // nrEvents_ initialized in GetControllerInfo() if we got here
+        CreateProperty("RingBufferSize", std::to_string(nrEvents_).c_str(), MM::String, true);
     }
 
     if (HasRingBuffer())
@@ -251,7 +248,13 @@ int ZStage::Initialize()
           return ret;
        pAct = new CPropertyAction(this, &ZStage::OnWait);
        CreateProperty("Wait_Cycles", std::to_string(waitCycles_).c_str(), MM::Integer, false, pAct);
-        // SetPropertyLimits("Wait_Cycles", 0, 255);  // don't artificially restrict range
+
+       // previously compared against compile date (2009, 1, 1)
+       if (version_ >= Version(8, 6, 'd')) {
+           // do not enforce limits
+       } else {
+           SetPropertyLimits("Wait_Cycles", 0, 255);
+       }
     }
 
     if (HasCommand("VE " + axis_ + "=0"))
@@ -327,8 +330,7 @@ int ZStage::SetPositionUm(double pos)
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         this->OnStagePositionChanged(pos);
         return DEVICE_OK;
     }
@@ -397,8 +399,7 @@ int ZStage::SetRelativePositionUm(double d)
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         // we don't know the updated position to call this
         //this->OnStagePositionChanged(pos);
         return DEVICE_OK;
@@ -430,8 +431,7 @@ int ZStage::SetPositionSteps(long pos)
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         return DEVICE_OK;
     }
     // deal with error later
@@ -495,8 +495,7 @@ int ZStage::SetOrigin()
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         return DEVICE_OK;
     }
     else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
@@ -543,8 +542,7 @@ int ZStage::StartStageSequence()
         {
             return ret;
         }
-        if (answer.compare(0, 2, ":A") != 0 || answer.compare(1, 2, ":A") != 0)
-        {
+        if (answer.compare(0, 2, ":A") != 0) {
             return ERR_UNRECOGNIZED_ANSWER;
         }
 
@@ -553,8 +551,7 @@ int ZStage::StartStageSequence()
         {
             return ret;
         }
-        if (answer.compare(0, 2, ":A") != 0 || answer.compare(1, 2, ":A") != 0)
-        {
+        if (answer.compare(0, 2, ":A") != 0) {
             return ERR_UNRECOGNIZED_ANSWER;
         }
         return DEVICE_OK;
@@ -571,16 +568,14 @@ int ZStage::StartStageSequence()
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         ret = QueryCommand("TTL X=1", answer); // switches on TTL triggering
         if (ret != DEVICE_OK)
         {
             return ret;
         }
 
-        if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-        {
+        if (answer.compare(0, 2, ":A") == 0) {
             return DEVICE_OK;
         }
     }
@@ -601,8 +596,7 @@ int ZStage::StopStageSequence()
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         return DEVICE_OK;
     }
     return DEVICE_OK;
@@ -623,15 +617,13 @@ int ZStage::SendStageSequence()
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         for (unsigned i = 0; i < sequence_.size(); i++)
         {
             std::ostringstream os;
             os.precision(0);
             // previously compared against compile date (2015, 10, 23)
-            if (versionData_.IsVersionAtLeast(9, 2, 'i'))
-            {
+            if (version_ >= Version(9, 2, 'i')) {
                 os << std::fixed << "LD " << axis_ << "=" << sequence_[i] * 10;  // 10 here is for unit multiplier/1000
                 ret = QueryCommand(os.str().c_str(), answer);
                 if (ret != DEVICE_OK)
@@ -653,8 +645,7 @@ int ZStage::SendStageSequence()
                 }
 
                 // the answer will also have a :N-1 in it, ignore.
-                if (!(answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0))
-                {
+                if (!(answer.compare(0, 2, ":A") == 0)) {
                     return ERR_UNRECOGNIZED_ANSWER;
                 }
             }
@@ -680,8 +671,7 @@ int ZStage::ClearStageSequence()
         return ret;
     }
 
-    if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         return DEVICE_OK;
     }
     return ERR_UNRECOGNIZED_ANSWER;
@@ -855,14 +845,7 @@ int ZStage::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        if (sequenceable_)
-        {
-            pProp->Set("Yes");
-        }
-        else
-        {
-            pProp->Set("No");
-        }
+        pProp->Set(sequenceable_ ? "Yes" : "No");
     }
     else if (eAct == MM::AfterSet)
     {
@@ -880,17 +863,9 @@ int ZStage::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 int ZStage::OnFastSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     int ret;
-
     if (eAct == MM::BeforeGet)
     {
-        if (runningFastSequence_)
-        {
-            pProp->Set("Armed");
-        }
-        else
-        {
-            pProp->Set("No");
-        }
+        pProp->Set(runningFastSequence_ ? "Armed" : "No");
     }
     else if (eAct == MM::AfterSet)
     {
@@ -999,31 +974,6 @@ int ZStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         long waitCycles;
         pProp->Get(waitCycles);
-
-        // enforce positive
-        if (waitCycles < 0)
-        {
-            waitCycles = 0;
-        }
-
-        // if firmware date is 2009+  then use msec/int definition of WaitCycles
-        // would be better to parse firmware (8.4 and earlier used unsigned char)
-        // and that transition occurred ~2008 but this is easier than trying to
-        // parse version strings
-
-        // previously compared against compile date (2009, 1, 1)
-        if (versionData_.IsVersionAtLeast(8, 6, 'd'))
-        {
-            // don't enforce upper limit
-        }
-        else  // enforce limit for 2008 and earlier firmware or
-        {     // if getting compile date wasn't successful
-            if (waitCycles > 255)
-            {
-                waitCycles = 255;
-            }
-        }
-
         std::ostringstream command;
         command << "WT " << axis_ << "=" << waitCycles;
         std::string answer;
@@ -1414,14 +1364,7 @@ int ZStage::OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (eAct == MM::BeforeGet)
     {
         // The controller can not report whether or not the motors are on.  Cache the value
-        if (motorOn_)
-        {
-            pProp->Set("On");
-        }
-        else
-        {
-            pProp->Set("Off");
-        }
+        pProp->Set(motorOn_ ? "On" : "Off");
         return DEVICE_OK;
     }
     else if (eAct == MM::AfterSet)

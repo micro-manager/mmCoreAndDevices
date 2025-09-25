@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "../../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 
 
 class LoadedDeviceAdapterImpl

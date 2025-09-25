@@ -58,9 +58,9 @@ XYStage::~XYStage()
 	Shutdown();
 }
 
-void XYStage::GetName(char* Name) const
+void XYStage::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(Name, g_XYStageDeviceName);
+	CDeviceUtils::CopyLimitedString(name, g_XYStageDeviceName);
 }
 
 bool XYStage::SupportsDeviceDetection()
@@ -85,16 +85,16 @@ int XYStage::Initialize()
 	if (ret != DEVICE_OK)
 		return ret;
 
-   ret = GetVersion(version_);
+   ret = GetVersion(firmwareVersion_);
    if (ret != DEVICE_OK)
        return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &XYStage::OnVersion);
-	CreateProperty("Version", version_.c_str(), MM::String, true, pAct);
+	CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
 	// get the firmware version data from cached value
-	versionData_ = ParseVersionString(version_);
+	version_ = Version::ParseString(firmwareVersion_);
 
-	ret = GetCompileDate(compileDate_);
+	ret = GetCompileDate(firmwareDate_);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -107,9 +107,8 @@ int XYStage::Initialize()
 	// I think it was present before 2010 but this is easy way
 
 	// previously compared against compile date (2010, 1, 1)
-	if (versionData_.IsVersionAtLeast(8, 8, 'a'))
-	{
-		ret = GetBuildName(buildName_);
+	if (version_ >= Version(8, 8, 'a')) {
+		ret = GetBuildName(firmwareBuild_);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
@@ -147,7 +146,13 @@ int XYStage::Initialize()
 			return ret;
 		pAct = new CPropertyAction(this, &XYStage::OnWait);
 		CreateProperty("Wait_Cycles", std::to_string(waitCycles_).c_str(), MM::Integer, false, pAct);
-		// SetPropertyLimits("Wait_Cycles", 0, 255);  // don't artificially restrict range
+
+		// previously compared against compile date (2009, 1, 1)
+		if (version_ >= Version(8, 6, 'd')) {
+			// do not enforce limits
+		} else {
+			SetPropertyLimits("Wait_Cycles", 0, 255);
+		}
 	}
 
 	// Speed (sets both x and y)
@@ -323,8 +328,7 @@ int XYStage::SetPositionSteps(long x, long y)
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
 	// deal with error later
@@ -363,8 +367,7 @@ int XYStage::SetRelativePositionSteps(long x, long y)
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
 	// deal with error later
@@ -425,8 +428,7 @@ int XYStage::SetOrigin()
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
 	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
@@ -516,8 +518,7 @@ int XYStage::Home()
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		// do nothing
 	}
 	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
@@ -535,7 +536,8 @@ int XYStage::Calibrate() {
 		return DEVICE_OK;
 	}
 
-	double x1, y1;
+	double x1;
+	double y1;
 	int ret = GetPositionUm(x1, y1);
 	if (ret != DEVICE_OK)
 	{
@@ -560,8 +562,7 @@ int XYStage::Calibrate() {
 	if (ret != DEVICE_OK)
 		return ret;
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		// do nothing
 	}
 	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
@@ -593,8 +594,7 @@ int XYStage::Stop()
 		return ret;
 	}
 
-	if (answer.compare(0, 2, ":A") == 0 || answer.compare(1, 2, ":A") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
 	}
 	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
@@ -741,7 +741,7 @@ int XYStage::GetWaitCycles(long& waitCycles)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.compare(0, 2, ":X") == 0)
+   if (answer.compare(0, 3, ":X=") == 0)
    {
       return ParseResponseAfterPosition(answer, 3, waitCycles);
    }
@@ -764,30 +764,6 @@ int XYStage::OnWait(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		long waitCycles;
 		pProp->Get(waitCycles);
-
-		// enforce positive
-		if (waitCycles < 0)
-		{
-			waitCycles = 0;
-		}
-
-		// if firmware date is 2009+  then use msec/int definition of WaitCycles
-		// would be better to parse firmware (8.4 and earlier used unsigned char)
-		// and that transition occurred ~2008 but not sure exactly when
-
-		// previously compared against compile date (2009, 1, 1)
-		if (versionData_.IsVersionAtLeast(8, 6, 'd'))
-		{
-			// don't enforce upper limit
-		}
-		else  // enforce limit for 2008 and earlier firmware or
-		{     // if getting compile date wasn't successful
-			if (waitCycles > 255)
-			{
-				waitCycles = 255;
-			}
-		}
-
 		std::ostringstream command;
 		command << "WT " << axisletterX_ << "=" << waitCycles << " " << axisletterY_ << "=" << waitCycles;
 		std::string answer;
@@ -816,7 +792,7 @@ int XYStage::GetBacklash(double& backlash)
       return ret;
    }
 
-   if (answer.compare(0, 2, ":X") == 0)
+   if (answer.compare(0, 3, ":X=") == 0)
    {
       return ParseResponseAfterPosition(answer, 3, 8, backlash);
    }
@@ -868,19 +844,12 @@ int XYStage::GetFinishError(double& finishError)
    std::string answer;
    // query command
    int ret = QueryCommand(command.str().c_str(), answer);
-   if (ret != DEVICE_OK)
+   if (ret != DEVICE_OK) {
       return ret;
-
-   if (answer.compare(0, 2, ":X") == 0)
-   {
-      double tmp = 0.0;
-      const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
-      finishError = 1000000 * tmp;
-      return code;
    }
+
    if (answer.compare(0, 2, ":A") == 0)
    {
-      // Answer is of the form :A X=0.00003
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 5, 8, tmp);
       finishError = 1000000 * tmp;
@@ -940,7 +909,7 @@ int XYStage::GetAcceleration(long& acceleration)
       return ret;
    }
 
-   if (answer.compare(0, 2, ":X") == 0)
+   if (answer.compare(0, 3, ":X=") == 0)
    {
 		double tmp = 0.0;
       ret = ParseResponseAfterPosition(answer, 3, 8, tmp);
@@ -1058,7 +1027,7 @@ int XYStage::GetError(double& error)
    if (ret != DEVICE_OK)
       return ret;
 
-   if (answer.compare(0, 2, ":X") == 0)
+   if (answer.compare(0, 3, ":X=") == 0)
    {
       double tmp = 0.0;
       const int code = ParseResponseAfterPosition(answer, 3, 8, tmp);
@@ -1201,14 +1170,7 @@ int XYStage::OnMotorCtrl(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::BeforeGet)
 	{
 		// The controller can not report whether or not the motors are on.  Cache the value
-		if (motorOn_)
-		{
-			pProp->Set("On");
-		}
-		else
-		{
-			pProp->Set("Off");
-		}
+		pProp->Set(motorOn_ ? "On" : "Off");
 		return DEVICE_OK;
 	}
 	else if (eAct == MM::AfterSet)
@@ -1246,14 +1208,7 @@ int XYStage::OnJSMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 	if (eAct == MM::BeforeGet)
 	{
 		// TODO: read from device, at least on initialization
-		if (joyStickMirror_)
-		{
-			pProp->Set("On");
-		}
-		else
-		{
-			pProp->Set("Off");
-		}
+		pProp->Set(joyStickMirror_ ? "On" : "Off");
 		return DEVICE_OK;
 	}
 	else if (eAct == MM::AfterSet) {
@@ -1434,8 +1389,7 @@ int XYStage::OnSerialCommand(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(tmpstr);
 		tmpstr = UnescapeControlCharacters(tmpstr);
 		// only send the command if it has been updated, or if the feature has been set to "no"/false then always send
-		if (!serialOnlySendChanged_ || (tmpstr.compare(last_command_via_property) != 0))
-		{
+		if (!serialOnlySendChanged_ || (tmpstr != last_command_via_property)) {
 			// prevent executing the INFO command
 			if (isINFOCommand(tmpstr))
 			{
@@ -1468,17 +1422,10 @@ int XYStage::OnSerialResponse(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int XYStage::OnSerialCommandOnlySendChanged(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	std::string tmpstr;
 	if (eAct == MM::AfterSet) {
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare("Yes") == 0)
-		{
-			serialOnlySendChanged_ = true;
-		}
-		else
-		{
-			serialOnlySendChanged_ = false;
-		}
+		serialOnlySendChanged_ = (tmpstr == "Yes") ? true : false;
 	}
 	return DEVICE_OK;
 }
@@ -1495,8 +1442,8 @@ int XYStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if ((tmpstr.compare("Yes") == 0) && !advancedPropsEnabled_) // after creating advanced properties once no need to repeat
-		{
+		// after creating advanced properties once no need to repeat
+		if (!advancedPropsEnabled_ && tmpstr == "Yes") {
 			CPropertyAction* pAct;
 			advancedPropsEnabled_ = true;
 
@@ -1541,8 +1488,7 @@ int XYStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::ostringstream command;
 	std::ostringstream response;
-	command.str("");
-	response.str("");
+
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -1593,8 +1539,6 @@ int XYStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::ostringstream command;
 	std::ostringstream response;
-	command.str("");
-	response.str("");
 
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
@@ -1645,8 +1589,6 @@ int XYStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::ostringstream command;
 	std::ostringstream response;
-	command.str("");
-	response.str("");
 
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
@@ -1697,8 +1639,6 @@ int XYStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::ostringstream command;
 	std::ostringstream response;
-	command.str("");
-	response.str("");
 
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
@@ -1775,7 +1715,6 @@ int XYStage::SetAxisDirection()
 std::string XYStage::EscapeControlCharacters(const std::string& v)
 {
 	std::ostringstream mess;
-	mess.str("");
 	for (std::string::const_iterator ii = v.begin(); ii != v.end(); ++ii)
 	{
 		if (*ii > 31)

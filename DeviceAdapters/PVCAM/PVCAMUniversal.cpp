@@ -226,7 +226,7 @@ const int g_UniversalParamsCount = sizeof(g_UniversalParams)/sizeof(ParamNameIdP
 //=================================================================== Universal
 
 Universal::Universal(short cameraId, const char* deviceName)
-    : CCameraBase<Universal>(),
+    :
     cameraId_(cameraId),
     deviceName_(deviceName),
     initialized_(false),
@@ -4156,21 +4156,10 @@ int Universal::PushImageToMmCore(const unsigned char* pPixBuffer, Metadata* pMd 
 {
     START_METHOD("Universal::PushImageToMmCore");
 
-    int nRet = DEVICE_ERR;
     MM::Core* pCore = GetCoreCallback();
     // This method inserts a new image into the circular buffer (residing in MMCore)
-    nRet = pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
+    return pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
         GetImageBytesPerPixel(), pMd->Serialize().c_str());
-
-    if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
-    {
-        // do not stop on overflow - just reset the buffer
-        pCore->ClearImageBuffer(this);
-        nRet = pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
-            GetImageBytesPerPixel(), pMd->Serialize().c_str(), false);
-    }
-
-    return nRet;
 }
 
 int Universal::ProcessNotification( const NotificationEntry& entry )
@@ -4447,7 +4436,10 @@ int Universal::PollingThreadRun(void)
     catch(...)
     {
         LogAdapterMessage(g_Msg_EXCEPTION_IN_THREAD, false);
-        OnThreadExiting();
+        auto *core = GetCoreCallback();
+        if (core != nullptr) {
+           core->AcqFinished(this, 0);
+        }
         pollingThd_->setStop(true);
         return ret;
     }
@@ -6151,7 +6143,7 @@ int Universal::selectDebayerAlgMask(int xRoiPos, int yRoiPos, int32 pvcamColorMo
     // G B G
     // R G R
     // Based on ROI shift it will simply help us to pick the correct mask
-    static const int maskMatrix[3][3] = {
+    static const int maskMatrix[3/*Y*/][3/*X*/] = {
         {CFA_RGGB, CFA_GRBG, CFA_RGGB},
         {CFA_GBRG, CFA_BGGR, CFA_GBRG},
         {CFA_RGGB, CFA_GRBG, CFA_RGGB}};
@@ -6159,13 +6151,13 @@ int Universal::selectDebayerAlgMask(int xRoiPos, int yRoiPos, int32 pvcamColorMo
         switch (pvcamColorMode)
         {
         case COLOR_RGGB:
-            return maskMatrix[xShift + 0][yShift + 0];
+            return maskMatrix[yShift + 0][xShift + 0];
         case COLOR_GRBG:
-            return maskMatrix[xShift + 1][yShift + 0];
+            return maskMatrix[yShift + 0][xShift + 1];
         case COLOR_GBRG:
-            return maskMatrix[xShift + 0][yShift + 1];
+            return maskMatrix[yShift + 1][xShift + 0];
         case COLOR_BGGR:
-            return maskMatrix[xShift + 1][yShift + 1];
+            return maskMatrix[yShift + 1][xShift + 1];
         default:
             return CFA_RGGB;
         }

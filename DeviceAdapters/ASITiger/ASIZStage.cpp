@@ -22,7 +22,6 @@
 // BASED ON:      ASIStage.cpp and others
 //
 
-
 #include "ASIZStage.h"
 #include "ASITiger.h"
 #include "ASIHub.h"
@@ -34,8 +33,6 @@
 #include <cmath>
 #include <sstream>
 #include <string>
-
-using namespace std;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -71,8 +68,7 @@ int CZStage::Initialize()
    // read the unit multiplier
    // ASI's unit multiplier is how many units per mm, so divide by 1000 here to get units per micron
    // we store the micron-based unit multiplier for MM use, not the mm-based one ASI uses
-   ostringstream command;
-   command.str("");
+   std::ostringstream command;
    double tmp;
    command << "UM " << axisLetter_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
@@ -102,7 +98,7 @@ int CZStage::Initialize()
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A"));
    double origSpeed;
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(origSpeed) );
-   ostringstream command2; command2.str("");
+   std::ostringstream command2;
    command2 << "S " << axisLetter_ << "=10000";
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command2.str(), ":A")); // set too high
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A"));  // read actual max
@@ -330,7 +326,7 @@ int CZStage::Initialize()
    if (FirmwareVersionAtLeast(2.81) && (build.vAxesProps[0] & BIT1))
    {
       // get the number of ring buffer positions from the BU X output
-      string rb_define = hub_->GetDefineString(build, "RING BUFFER");
+      std::string rb_define = hub_->GetDefineString(build, "RING BUFFER");
 
       ring_buffer_capacity_ = 0;
       if (rb_define.size() > 12)
@@ -411,7 +407,7 @@ int CZStage::Initialize()
 
 int CZStage::GetPositionUm(double& pos)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(pos) );
@@ -421,14 +417,14 @@ int CZStage::GetPositionUm(double& pos)
 
 int CZStage::SetPositionUm(double pos)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "M " << axisLetter_ << "=" << pos*unitMult_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
 int CZStage::GetPositionSteps(long& steps)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    double tmp;
@@ -439,14 +435,14 @@ int CZStage::GetPositionSteps(long& steps)
 
 int CZStage::SetPositionSteps(long steps)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "M " << axisLetter_ << "=" << steps*unitMult_*stepSizeUm_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
 int CZStage::SetRelativePositionUm(double d)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "R " << axisLetter_ << "=" << d*unitMult_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
@@ -454,7 +450,7 @@ int CZStage::SetRelativePositionUm(double d)
 int CZStage::GetLimits(double& min, double& max)
 {
    // ASI limits are always reported in terms of mm, independent of unit multiplier
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "SL " << axisLetter_ << "?";
    double tmp;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
@@ -471,7 +467,7 @@ int CZStage::GetLimits(double& min, double& max)
 int CZStage::Stop()
 {
    // note this stops the card (including if there are other stages on same card), \ stops all stages
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << addressChar_ << "halt";
    return hub_->QueryCommand(command.str());
 }
@@ -481,7 +477,7 @@ int CZStage::Home()
    // single-axis possible in recent firmware of motorized Z but rarely
    // used so for now don't support in Micro-Manager; when added to the
    // device adapter then stop move here like in ASIPiezo
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "! " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    return DEVICE_OK;
@@ -489,7 +485,7 @@ int CZStage::Home()
 
 bool CZStage::Busy()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return false;
@@ -518,15 +514,15 @@ bool CZStage::Busy()
 
 int CZStage::SetOrigin()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "H " << axisLetter_ << "=0";
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
+// Disables TTL triggering; doesn't actually stop anything already happening on controller
 int CZStage::StopStageSequence()
-// disables TTL triggering; doesn't actually stop anything already happening on controller
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return DEVICE_OK;
@@ -540,10 +536,10 @@ int CZStage::StopStageSequence()
    return DEVICE_OK;
 }
 
+// Enables TTL triggering; doesn't actually start anything going on controller
 int CZStage::StartStageSequence()
-// enables TTL triggering; doesn't actually start anything going on controller
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return DEVICE_OK;
@@ -566,7 +562,7 @@ int CZStage::StartStageSequence()
 
 int CZStage::SendStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return DEVICE_OK;
@@ -595,7 +591,7 @@ int CZStage::SendStageSequence()
 
 int CZStage::ClearStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return DEVICE_OK;
@@ -637,9 +633,9 @@ int CZStage::Move(double velocity)
 int CZStage::OnSaveJoystickSettings()
 {
    long tmp;
-   string tmpstr;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::string tmpstr;
+   std::ostringstream command;
+   std::ostringstream response;
    command << "J " << axisLetter_ << "?";
    response << ":A " << axisLetter_ << "=";
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
@@ -654,7 +650,7 @@ int CZStage::OnSaveJoystickSettings()
 int CZStage::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string tmpstr;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
@@ -763,8 +759,8 @@ int CZStage::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnWaitTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -796,8 +792,8 @@ int CZStage::OnSpeedMicronsPerSec(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -830,11 +826,11 @@ int CZStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// Note: ASI units are in millimeters but MM units are in micrometers
 int CZStage::OnDriftError(MM::PropertyBase* pProp, MM::ActionType eAct)
-// note ASI units are in millimeters but MM units are in micrometers
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -856,11 +852,11 @@ int CZStage::OnDriftError(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// Note: ASI units are in millimeters but MM units are in micrometers
 int CZStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
-// note ASI units are in millimeters but MM units are in micrometers
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -884,8 +880,8 @@ int CZStage::OnFinishError(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -908,8 +904,8 @@ int CZStage::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnUpperLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -932,14 +928,15 @@ int CZStage::OnUpperLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
       command << "AC " << axisLetter_ << "?";
-      ostringstream response; response.str(""); response << ":" << axisLetter_ << "=";
+      std::ostringstream response;
+      response << ":" << axisLetter_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       if (!pProp->Set(tmp))
@@ -955,14 +952,15 @@ int CZStage::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnMaintainState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
       command << "MA " << axisLetter_ << "?";
-      ostringstream response; response.str(""); response << ":A " << axisLetter_ << "=";
+      std::ostringstream response;
+      response << ":A " << axisLetter_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       bool success = 0;
@@ -997,11 +995,11 @@ int CZStage::OnMaintainState(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// Note: ASI units are in millimeters but MM units are in micrometers
 int CZStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
-// note ASI units are in millimeters but MM units are in micrometers
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1025,8 +1023,8 @@ int CZStage::OnBacklash(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnOvershoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1050,8 +1048,8 @@ int CZStage::OnOvershoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1074,8 +1072,8 @@ int CZStage::OnKIntegral(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1098,8 +1096,8 @@ int CZStage::OnKProportional(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1122,8 +1120,8 @@ int CZStage::OnKDerivative(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnKDrive(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1146,8 +1144,8 @@ int CZStage::OnKDrive(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnKFeedforward(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1170,8 +1168,8 @@ int CZStage::OnKFeedforward(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1192,11 +1190,11 @@ int CZStage::OnAAlign(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// On property change the AZ command is issued, and the reported result becomes the property value
 int CZStage::OnAZero(MM::PropertyBase* pProp, MM::ActionType eAct)
-// on property change the AZ command is issued, and the reported result becomes the property value
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    if (eAct == MM::BeforeGet)
    {
       return DEVICE_OK; // do nothing
@@ -1205,7 +1203,7 @@ int CZStage::OnAZero(MM::PropertyBase* pProp, MM::ActionType eAct)
       command << "AZ " << axisLetter_;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
       // last line has result, echo result to user as property
-      vector<string> vReply = hub_->SplitAnswerOnCR();
+      std::vector<std::string> vReply = hub_->SplitAnswerOnCR();
       if (!pProp->Set(vReply.back().c_str()))
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
@@ -1214,8 +1212,8 @@ int CZStage::OnAZero(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1246,13 +1244,13 @@ int CZStage::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CZStage::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CZStage::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1283,13 +1281,13 @@ int CZStage::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CZStage::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CZStage::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1320,13 +1318,13 @@ int CZStage::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CZStage::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CZStage::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1365,8 +1363,8 @@ int CZStage::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1413,12 +1411,12 @@ int CZStage::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CZStage::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CZStage::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1448,12 +1446,12 @@ int CZStage::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CZStage::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CZStage::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1483,12 +1481,12 @@ int CZStage::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CZStage::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CZStage::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1545,8 +1543,8 @@ int CZStage::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// Special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
 int CZStage::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
-// special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
 {
    if (eAct == MM::BeforeGet)
    {
@@ -1594,8 +1592,8 @@ int CZStage::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1619,8 +1617,8 @@ int CZStage::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1644,8 +1642,8 @@ int CZStage::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1669,8 +1667,8 @@ int CZStage::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CZStage::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    static bool justSet = false;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1718,8 +1716,8 @@ int CZStage::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1771,11 +1769,11 @@ int CZStage::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CZStage::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 // get every single time
+int CZStage::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1796,8 +1794,8 @@ int CZStage::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1845,8 +1843,8 @@ int CZStage::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1894,8 +1892,8 @@ int CZStage::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1943,8 +1941,8 @@ int CZStage::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1992,9 +1990,9 @@ int CZStage::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp;
    if (eAct == MM::BeforeGet)
    {
@@ -2042,7 +2040,7 @@ int CZStage::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
@@ -2065,9 +2063,9 @@ int CZStage::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp = 0;
    static bool justSet;
    if (eAct == MM::BeforeGet)
@@ -2103,7 +2101,7 @@ int CZStage::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2129,7 +2127,7 @@ int CZStage::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct
 
 int CZStage::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       if (ttl_trigger_enabled_)
@@ -2138,7 +2136,7 @@ int CZStage::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
          pProp->Set(g_NoState);
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       ttl_trigger_enabled_ = ttl_trigger_supported_ && (tmpstr == g_YesState);
       return OnUseSequence(pProp, MM::BeforeGet);  // refresh value
@@ -2182,8 +2180,8 @@ int CZStage::OnFastSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -2207,7 +2205,7 @@ int CZStage::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CZStage::OnTTLInputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -2231,7 +2229,7 @@ int CZStage::OnTTLInputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       RETURN_ON_MM_ERROR ( GetCurrentPropertyData(pProp->GetName().c_str(), tmp) );
       command << addressChar_ << "TTL X=" << tmp;
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), tmpstr.c_str()) );
    }

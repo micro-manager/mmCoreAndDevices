@@ -22,7 +22,6 @@
 // BASED ON:      ASIStage.cpp and others
 //
 
-
 #include "ASITiger.h"
 #include "ASIClocked.h"
 #include "ASIHub.h"
@@ -32,8 +31,6 @@
 #include <iostream>
 #include <vector>
 #include <string>
-
-using namespace std;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -129,7 +126,7 @@ int CClocked::Initialize()
 
 bool CClocked::Busy()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (FirmwareVersionAtLeast(2.7)) // can use more accurate RS <axis>?
    {
       command << "RS " << axisLetter_ << "?";
@@ -154,7 +151,7 @@ bool CClocked::Busy()
 
 int CClocked::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       pProp->Set((long)curPosition_);
@@ -192,8 +189,8 @@ int CClocked::OnSaveJoystickSettings()
 {
    long tmp;
    std::string tmpstr;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    command << "J " << axisLetter_ << "?";
    response << ":A " << axisLetter_ << "=";
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
@@ -219,7 +216,7 @@ int CClocked::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CClocked::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string tmpstr;
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
@@ -250,8 +247,8 @@ int CClocked::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CClocked::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -312,7 +309,7 @@ int CFSlider::Initialize()
 {
    RETURN_ON_MM_ERROR( CClocked::Initialize() );
 
-   ostringstream command;
+   std::ostringstream command;
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    command.str("");
@@ -337,7 +334,7 @@ int CPortSwitch::Initialize()
 {
    RETURN_ON_MM_ERROR( CClocked::Initialize() );
 
-   ostringstream command;
+   std::ostringstream command;
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    command.str("");
@@ -362,7 +359,7 @@ int CTurret::Initialize()
 {
    RETURN_ON_MM_ERROR( CClocked::Initialize() );
 
-   ostringstream command;
+   std::ostringstream command;
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    command.str("");
