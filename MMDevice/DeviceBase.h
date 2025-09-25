@@ -1278,12 +1278,13 @@ template <class U>
 class CCameraBase : public CDeviceBase<MM::Camera, U>
 {
 public:
-
-   using CDeviceBase<MM::Camera, U>::CreateProperty;
-   using CDeviceBase<MM::Camera, U>::SetAllowedValues;
-   using CDeviceBase<MM::Camera, U>::GetBinning;
+   // These 2 'using' declarations were originally introduced in order to allow
+   // C[Legacy]CameraBase member functions to call these functions (which would
+   // have also been possible with 'this->'). The 2 functions are protected in
+   // CDeviceBase. However, they are made public here, and some concrete
+   // cameras ended up depending on that. So they need to be kept for now,
+   // until and unless such cameras are fixed.
    using CDeviceBase<MM::Camera, U>::GetCoreCallback;
-   using CDeviceBase<MM::Camera, U>::SetProperty;
    using CDeviceBase<MM::Camera, U>::LogMessage;
 
    CCameraBase()
@@ -1292,14 +1293,14 @@ public:
       std::vector<std::string> allowedValues;
       allowedValues.push_back("0");
       allowedValues.push_back("1");
-      CreateProperty(MM::g_Keyword_Transpose_SwapXY, "0", MM::Integer, false);
-      SetAllowedValues(MM::g_Keyword_Transpose_SwapXY, allowedValues);
-      CreateProperty(MM::g_Keyword_Transpose_MirrorX, "0", MM::Integer, false);
-      SetAllowedValues(MM::g_Keyword_Transpose_MirrorX, allowedValues);
-      CreateProperty(MM::g_Keyword_Transpose_MirrorY, "0", MM::Integer, false);
-      SetAllowedValues(MM::g_Keyword_Transpose_MirrorY, allowedValues);
-      CreateProperty(MM::g_Keyword_Transpose_Correction, "0", MM::Integer, false);
-      SetAllowedValues(MM::g_Keyword_Transpose_Correction, allowedValues);
+      this->CreateProperty(MM::g_Keyword_Transpose_SwapXY, "0", MM::Integer, false);
+      this->SetAllowedValues(MM::g_Keyword_Transpose_SwapXY, allowedValues);
+      this->CreateProperty(MM::g_Keyword_Transpose_MirrorX, "0", MM::Integer, false);
+      this->SetAllowedValues(MM::g_Keyword_Transpose_MirrorX, allowedValues);
+      this->CreateProperty(MM::g_Keyword_Transpose_MirrorY, "0", MM::Integer, false);
+      this->SetAllowedValues(MM::g_Keyword_Transpose_MirrorY, allowedValues);
+      this->CreateProperty(MM::g_Keyword_Transpose_Correction, "0", MM::Integer, false);
+      this->SetAllowedValues(MM::g_Keyword_Transpose_Correction, allowedValues);
 
    }
 
@@ -1325,7 +1326,7 @@ public:
     * Returns binnings factor.  Used to calculate current pixelsize
     * Not appropriately named.
     */
-   virtual double GetPixelSizeUm() const {return GetBinning();}
+   virtual double GetPixelSizeUm() const {return this->GetBinning();}
 
    virtual unsigned GetNumberOfComponents() const
    {
