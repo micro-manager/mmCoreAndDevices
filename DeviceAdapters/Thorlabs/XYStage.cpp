@@ -129,7 +129,6 @@ class XYStage::CommandThread : public MMDeviceThreadBase
 ///////////////////////////////////////////////////////////////////////////////
 
 XYStage::XYStage() :
-   CXYStageBase<XYStage>(),
    initialized_(false),
    home_(false),
    port_("Undefined"), 

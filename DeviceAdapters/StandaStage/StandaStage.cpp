@@ -614,7 +614,6 @@ int CStandaStage::OnStageMaxPos(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 CStandaXYStage::CStandaXYStage() : 
-CXYStageBase<CStandaXYStage>(),
 stepSize_X_um_(0.015),
 stepSize_Y_um_(0.015),
 stepsPerSecond_(2000.0),

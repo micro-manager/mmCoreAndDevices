@@ -1869,7 +1869,6 @@ void Axis::ReportNewPosition(ZeissUByte /* devId */, ZeissLong& position) {
  * ZeissXYStage: Micro-Manager implementation of X and Y Stage
  */
 XYStage::XYStage (): 
-   CXYStageBase<XYStage>(),
    stepSize_um_(0.001),
    initialized_ (false),
    moveMode_ (0),

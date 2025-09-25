@@ -47,7 +47,6 @@
 // ZPiezoWSDevice
 //
 ZPiezoWSDevice::ZPiezoWSDevice (): 
-CStageBase<ZPiezoWSDevice>(),
 	initialized_ (false),
 	stepSize_um_(0.001),
 	ws_(),

@@ -147,7 +147,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * Constructor.
 */
 BaslerCamera::BaslerCamera() :
-	CCameraBase<BaslerCamera>(),
 	maxWidth_(0),
 	maxHeight_(0),
 	exposure_us_(0),

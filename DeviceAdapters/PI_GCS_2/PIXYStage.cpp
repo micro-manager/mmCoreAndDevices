@@ -52,8 +52,7 @@ const char* g_PI_XYStageAlternativeHomingCommandYAxis = "Axis Y: Alternative Hom
 // PIXYStage
 
 PIXYStage::PIXYStage ()
-   : CXYStageBase<PIXYStage> ()
-   , axisXName_ ("1")
+   : axisXName_ ("1")
    , axisXStageType_ ("")
    , axisXHomingMode_ ("REF")
    , axisYName_ ("2")

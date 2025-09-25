@@ -112,7 +112,6 @@ stream_callback (void *user_data, ArvStreamCallbackType type, ArvBuffer *arv_buf
  * Camera class and methods.
  */
 AravisCamera::AravisCamera(const char *name) :
-  CCameraBase<AravisCamera>(),
   capturing(false),
   counter(0),
   exposure_time(0.0),

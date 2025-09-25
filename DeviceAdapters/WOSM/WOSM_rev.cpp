@@ -1933,7 +1933,7 @@ bool CWOSMStage::Busy()
     return false;
 }
 
-CWOSMXYStage::CWOSMXYStage() : CXYStageBase<CWOSMXYStage>(),
+CWOSMXYStage::CWOSMXYStage() :
 stepSize_X_um_(0.1),
 stepSize_Y_um_(0.1),
 posX_um_(0.0),

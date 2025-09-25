@@ -404,7 +404,6 @@ int CMightex_SB_Camera::GetCameraBufferCount(int width, int height)
 * perform most of the initialization in the Initialize() method.
 */
 CMightex_SB_Camera::CMightex_SB_Camera() :
-   CCameraBase<CMightex_SB_Camera> (),
    dPhase_(0),
    initialized_(false),
    readoutUs_(0.0),

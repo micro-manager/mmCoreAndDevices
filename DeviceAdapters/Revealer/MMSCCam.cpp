@@ -127,7 +127,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 SCCamera::SCCamera() :
-    CCameraBase<SCCamera> (),
     insertCount_(0),
     initialized_(false),
     devHandle_(nullptr),
