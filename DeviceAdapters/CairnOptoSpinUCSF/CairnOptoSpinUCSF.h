@@ -1,17 +1,16 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       Conix.h
-// PROJECT:    MicroManage
+// FILE:       CairnOptospin_UCSF.h
+// PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:
-// Conix adapter
+// CairnOptoSpin adapter, UCSF version
 //                
-// AUTHOR: Nico Stuurman, 02/27/2006
-//		   Trevor Osborn (ConixXYStage, ConixZStage), trevor@conixresearch.com, 04/21/2010
+// AUTHOR: Nico Stuurman, 09/25/2025
 //         
 
-#ifndef _CONIX_H_
-#define _CONIX_H_
+#ifndef _CAIRN_OPTOSPIN_UCSF_H
+#define _CAIRN_OPTOSPIN_UCSF_H
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -29,8 +28,23 @@
 #define ERR_PORT_CHANGE_FORBIDDEN   10006
 #define ERR_OFFSET                  11000
 #define ERR_OPTOSPIN_BUSY           11001
+#define ERR_INVALID_WHEEL_NUMBER    11002
+#define ERR_WHEEL_NOT_CONNECTED     11003
+#define ERR_INVALID_POSITION        11004
 
-enum ConixControllerType {UNKNOWN_CONTROLLER = 0, CONIX_XYZ_CONTROLLER, CONIX_RFA_CONTROLLER};
+/*
+0	Rotors initialising
+1	Cannot be executed in spin mode
+2	Command was already executed
+3	Command conflicts with input status of TTL interface
+4	Cannot be executed while one or more filterwheels are actually stepping
+5	No wheels selected, or wheel not present
+6	Attempted write to protected code area
+7	Cannot be executed while one or more wheels are “resting” after stepping
+8	Command followed by too few data bytes(version 3.1 onwards)
+9	Command not recognised or undefined(version 3.1 onwards)
+*/
+
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -38,10 +52,41 @@ enum ConixControllerType {UNKNOWN_CONTROLLER = 0, CONIX_XYZ_CONTROLLER, CONIX_RF
 //
 //////////////////////////////////////////////////////////////////////////////
 
+class CairnHub : public HubBase<CairnHub>
+{
+public:
+   CairnHub();
+   ~CairnHub();
+
+   // Device API
+   // ----------
+   int Initialize();
+   int Shutdown();
+   void GetName(char* pszName) const;
+   bool Busy();
+
+   int DetectInstalledDevices();
+
+   int SetWheelPosition(long wheelNumber, long position);
+   int GetWheelPosition(long wheelNumber, long& position);
+
+   // action interface
+   // ----------------
+   int OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSoftwareVersion(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   bool initialized_;
+	FT_HANDLE ftHandle_;
+   std::string serialNumber_;
+   long softwareVersion_; // Software version of the controller
+   bool filterWheels_[4]; // Which of the 4 possible filter wheels are connected
+};
+
 class CairnOptospin : public CStateDeviceBase<CairnOptospin>
 {
 public:
-   CairnOptospin(DWORD devId);
+   CairnOptospin(long wheelNumber);
    ~CairnOptospin();
   
    // Device API
@@ -58,17 +103,14 @@ public:
    // ----------------
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-private:
-   int GetDevicePosition(int& position);
-   int SetDevicePosition(int position);
+   // pre-init properties
+   int OnWheelNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-   DWORD devId_;
+private:
    bool initialized_;
    long numPos_;
-   // MMCore name of serial port
-   // Command exchange with MMCore
-   std::string command_;
-	FT_HANDLE ftHandle_;
+   long serialNumber_; // Serial number of the controller, obtained through USB API
+   long wheelNumber_; // Wheel number  (1 - 4)
 };
 
-#endif //_CONIX_H_
+#endif //_CairnOptoSPpn_UCSF_H_

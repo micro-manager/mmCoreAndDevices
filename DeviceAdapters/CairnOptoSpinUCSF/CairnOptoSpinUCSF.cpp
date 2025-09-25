@@ -22,6 +22,7 @@
 #include "ftd2xx.h"
 
 const char* g_CairnOptospinName = "CairnOptospin";
+const char* g_CairnOptospinHubName = "CairnOptospinController";
 
 using namespace std;
 
@@ -32,90 +33,58 @@ using namespace std;
 ///////////////////////////////////////////////////////////////////////////////
 MODULE_API void InitializeModuleData()
 {
-	// We look for VID 156B, PID 0003
-	// Description: "Cairn Optospin"
+   // We look for VID 156B, PID 0003
+   // Description: "Cairn Optospin"
 
-	FT_STATUS ftStatus;
-	DWORD numDevs = 0;
-	FT_HANDLE ftHandleTemp;
-	DWORD Flags;
-	DWORD ID;
-	DWORD Type;
-	DWORD LocId;
-	char SerialNumber[16];
-	char Description[64];
+   FT_STATUS ftStatus;
+   DWORD numDevs = 0;
+   FT_HANDLE ftHandleTemp;
+   DWORD Flags;
+   DWORD ID;
+   DWORD Type;
+   DWORD LocId;
+   char SerialNumber[16];
+   char Description[64];
 
-	// create the device information list
-	ftStatus = FT_CreateDeviceInfoList(&numDevs);
-	if (ftStatus == FT_OK) {
-		printf("Number of devices is %d\n", numDevs);
-	}
-	printf("Now enumerating....\n");
-	if (numDevs > 0) {
-		for (DWORD i = 0; i < numDevs; i++)
-		{
-			ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &Type, &ID, &LocId, SerialNumber,
-				Description, &ftHandleTemp);
-			if (ftStatus == FT_OK) {
+   // create the device information list
+   ftStatus = FT_CreateDeviceInfoList(&numDevs);
+   if (ftStatus == FT_OK) {
+      for (DWORD i = 0; i < numDevs; i++)
+      {
+         ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &Type, &ID, &LocId, SerialNumber,
+            Description, &ftHandleTemp);
+         if (ftStatus == FT_OK)
+         {
             /*
-				printf("Dev:%x\n", i);
-				printf(" Flags=0x%x\n", Flags);
-				printf(" Type=0x%x\n", Type);
-				printf(" ID=0x%x\n", ID);
-				printf(" LocId=0x%x\n", LocId);
-				printf(" SerialNumber=%s\n", SerialNumber);
-				printf(" Description=%s\n", Description);
-				printf(" ftHandle=0x%x\n", ftHandleTemp);
+            printf("Dev:%x\n", i);
+            printf(" Flags=0x%x\n", Flags);
+            printf(" Type=0x%x\n", Type);
+            printf(" ID=0x%x\n", ID);
+            printf(" LocId=0x%x\n", LocId);
+            printf(" SerialNumber=%s\n", SerialNumber);
+            printf(" Description=%s\n", Description);
+            printf(" ftHandle=0x%x\n", ftHandleTemp);
             */
 
-				if (ID == 0x156b0003)
-				{
-					printf("Found Cairn OptoSpin\n");
-               std::ostringstream os;
-               os << g_CairnOptospinName << "_" << i;
-               RegisterDevice(os.str().c_str(), MM::StateDevice, "CairnOptospin");
-				}
-			}
-		}
-	}
-
+            if (ID == 0x156b0003)
+            {
+               RegisterDevice(g_CairnOptospinHubName, MM::HubDevice, "CairnOptospinController");
+               return;
+            }
+         }
+      }
+   }
 }
 
 
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
-	if (deviceName == 0) {
-		return 0;
-	}
-   std::string dev = deviceName;
-   std::string prefix = g_CairnOptospinName;
- 
-   if (dev.length() < prefix.length()) {
-      return 0;
-   }
-   if (dev.compare(0, prefix.length(), prefix) == 0)
-   {
-      size_t pos = dev.find_last_of('_');
-      if (pos != std::string::npos) {
-         std::string strId = dev.substr(pos + 1);
-         try {
-            DWORD devID = std::stoi(strId);
-            CairnOptospin* pC = new CairnOptospin(devID);
-            return pC;
-         } catch (const std::invalid_argument&) {
-            printf("Invalid ID");
-         }
-         catch (const std::out_of_range&) {
-            printf("Out of range");
-         }
-      }
-   }
+   if (strcmp(deviceName, g_CairnOptospinHubName) == 0)
+      return new CairnHub();
 
 	return 0;
 }
-
-
 
 
 MODULE_API void DeleteDevice(MM::Device* pDevice)
@@ -124,86 +93,183 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-// CairnOptospin device
-///////////////////////////////////////////////////////////////////////////////
-
-CairnOptospin::CairnOptospin(DWORD devId) :
-   initialized_(false),
-   numPos_(6),
+CairnHub::CairnHub() :
    ftHandle_(0),
-   devId_(devId)
+   initialized_(false)
 {
-   InitializeDefaultErrorMessages();
+   for (int i = 0; i < 4; i++) {
+      filterWheels_[i] = false;
+   }
 
-   // create pre-initialization properties
-   // ------------------------------------
+   // Create serial number pre-initialization property
+   // We need to query for available Controllers based on VID and PID and 
+   // then populate the SerialNumber property
+   CPropertyAction* pAct = new CPropertyAction(this, &CairnHub::OnSerialNumber);
+   CreateProperty("SerialNumber", "0", MM::String, false, pAct, true);
 
-   // Name
-   std::ostringstream os;
-   os << g_CairnOptospinName << "_" << devId_;
-   CreateProperty(MM::g_Keyword_Name, os.str().c_str(), MM::String, true);
+   // We look for VID 156B, PID 0003
+   // Description: "Cairn Optospin"
+   FT_STATUS ftStatus;
+   DWORD numDevs = 0;
+   FT_HANDLE ftHandleTemp;
+   DWORD Flags;
+   DWORD ID;
+   DWORD DType;
+   DWORD LocId;
+   char SerialNumber[16];
+   char Description[64];
 
-   // Description
-   CreateProperty(MM::g_Keyword_Description, "Cairn Optospin - UCSF Device adapter", MM::String, true);
+   // create the device information list
+   ftStatus = FT_CreateDeviceInfoList(&numDevs);
+   if (ftStatus == FT_OK) {
+      for (DWORD i = 0; i < numDevs; i++)
+      {
+         ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &DType, &ID, &LocId, SerialNumber,
+            Description, &ftHandleTemp);
+         if (ftStatus == FT_OK)
+         {
+            /*
+            printf("Dev:%x\n", i);
+            printf(" Flags=0x%x\n", Flags);
+            printf(" Type=0x%x\n", Type);
+            printf(" ID=0x%x\n", ID);
+            printf(" LocId=0x%x\n", LocId);
+            printf(" SerialNumber=%s\n", SerialNumber);
+            printf(" Description=%s\n", Description);
+            printf(" ftHandle=0x%x\n", ftHandleTemp);
+            */
 
-   LogMessage("Loaded Cairn UCSG Device adapter", false);
+            if (ID == 0x156b0003)
+            {
+               AddAllowedValue("SerialNumber", SerialNumber);
+            }
+         }
+      }
+   }
+}
+
+CairnHub::~CairnHub()
+{
+   if (initialized_)
+   {
+      Shutdown();
+   }
+
+}
+
+int CairnHub::Shutdown()
+{
+   if (initialized_)
+   {
+      if (ftHandle_ != 0) {
+         FT_Close(ftHandle_);
+      }
+      initialized_ = false;
+   }
+   return DEVICE_OK;
 }
 
 
-
-CairnOptospin::~CairnOptospin()
+int CairnHub::Initialize()
 {
-   Shutdown();
-}
+   // We look for VID 156B, PID 0003
+   // Description: "Cairn Optospin"
+   int devId = -1;
+   FT_STATUS ftStatus;
+   DWORD numDevs = 0;
+   FT_HANDLE ftHandleTemp;
+   DWORD Flags;
+   DWORD ID;
+   DWORD DType;
+   DWORD LocId;
+   char SerialNumber[16];
+   char Description[64];
 
+   // create the device information list
+   ftStatus = FT_CreateDeviceInfoList(&numDevs);
+   if (ftStatus == FT_OK) {
+      for (DWORD i = 0; i < numDevs; i++)
+      {
+         ftStatus = FT_GetDeviceInfoDetail(i, &Flags, &DType, &ID, &LocId, SerialNumber,
+            Description, &ftHandleTemp);
+         if (ftStatus == FT_OK)
+         {
+            if (ID == 0x156b0003)
+            {
+               if (strcmp(SerialNumber, serialNumber_.c_str()) == 0)
+               {
+                  devId = i;
+               }
+            }
+         }
+      }
+   }
+   if (devId == -1)
+   {
+      return DEVICE_NOT_CONNECTED;
+   }
 
-
-void CairnOptospin::GetName(char* Name) const
-{
-   std::ostringstream os;
-   os << g_CairnOptospinName << "_" << devId_;
-   CDeviceUtils::CopyLimitedString(Name, os.str().c_str());
-}
-
-
-int CairnOptospin::Initialize()
-{
-   FT_STATUS ftStatus = FT_Open(devId_, &ftHandle_);
+   // Open FT device handle
+   ftStatus = FT_Open(devId, &ftHandle_);
    if (ftStatus != FT_OK) {
       return DEVICE_NOT_CONNECTED;
    }
 
    initialized_ = true;
 
-   ftStatus = FT_SetTimeouts(ftHandle_, 50, 50);
+   // Sets read and write timeouts in milliseconds
+   ftStatus = FT_SetTimeouts(ftHandle_, 25, 25);
 
-   // Test: Get the version of the CairnOptoSpin
-
+   // Get the software version of the CairnOptoSpin
    DWORD bytesWritten;
-   char txBuffer[2]; // Contains data to write to device
+   unsigned char txBuffer[2]; // Contains data to write to device
    txBuffer[0] = 0;
-   txBuffer[1] = 40;
+   txBuffer[1] = 0x40;
    ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
    if (ftStatus == FT_OK) 
    {
       if (bytesWritten == sizeof(txBuffer)) 
       {
-         char answer[4];
+         unsigned char answer[4];
          DWORD bytesRead;
          ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
          if (ftStatus == FT_OK)
          {
-            this->LogMessage(answer, false);
-            if (static_cast<unsigned char>(answer[0]) == 0xFF)
+            if (answer[0] == 0xFF)
             {
                if (answer[1] == 2) {
-                  // answer is big endian, we are little enian, may use stohl instead
+                  // answer is big endian, we are little endian, may use stohl instead
                   int16_t softwareVersion = (static_cast<int16_t>(answer[3]) << 8) | answer[2];
                   this->LogMessage("Software version of Optospin is: " + softwareVersion, false);
+               }
+            }
+         }
+      }
+   }
+
+   // Get the number of filter wheels connected to the controller
+   txBuffer[0] = 0;
+   txBuffer[1] = 0x54;
+   ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
+   if (ftStatus == FT_OK)
+   {
+      if (bytesWritten == sizeof(txBuffer))
+      {
+         unsigned char answer[3];
+         DWORD bytesRead;
+         ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
+         if (ftStatus == FT_OK)
+         {
+            if (answer[0] == 0xFF)
+            {
+               if (answer[1] == 1) {
+                  // This returns a single byte, in which the least significant bit (bit 0) is set if filterwheel 1 is present, 
+                  // bit 1 is set if filterwheel 2 is present, bit 2 is set if filterwheel 3 is present and
+                  // bit 3 is set if filterwheel 4 is present.
+                  filterWheels_[0] = answer[2] & 0x1;
+                  filterWheels_[1] = (answer[2] >> 1) & 0x1;
+                  filterWheels_[2] = (answer[2] >> 2) & 0x1;
+                  filterWheels_[3] = (answer[2] >> 3) & 0x1;
                }
             }
          }
@@ -213,12 +279,204 @@ int CairnOptospin::Initialize()
    {
       return ERR_UNKNOWN_COMMAND;
    }
+   return DEVICE_OK;
+}
 
-   // set property list
-   // -----------------
-   
-   // Get and Set State (allowed values 1-4, start at 0 for Hardware Configuration Wizard))
+void CairnHub::GetName(char* pszName) const
+{
+   CDeviceUtils::CopyLimitedString(pszName, g_CairnOptospinHubName);
+}
 
+bool CairnHub::Busy()
+{
+   long position;
+   return GetWheelPosition(1, position) == ERR_OPTOSPIN_BUSY;
+}
+
+int CairnHub::DetectInstalledDevices()
+{
+   bool initialized = initialized_;
+   if (!initialized) {
+      int ret = Initialize();
+      if (ret != DEVICE_OK) {
+         return ret;
+      }
+   }
+   for (int i = 0; i < 4; i++) {
+      if (filterWheels_[i]) {
+         AddInstalledDevice(new CairnOptospin(i + 1));
+      }
+   }
+   if (!initialized) {
+      Shutdown();
+   }
+   return DEVICE_OK;
+}
+
+int CairnHub::GetWheelPosition(long wheelNumber, long& position)
+{
+   if (wheelNumber < 1 || wheelNumber > 4) {
+      return ERR_INVALID_WHEEL_NUMBER;
+   }
+   if (!filterWheels_[wheelNumber - 1]) {
+      return ERR_WHEEL_NOT_CONNECTED;
+   }
+
+   DWORD bytesWritten;
+   uint8_t txBuffer[2]; // Contains data to write to device
+   txBuffer[0] = 0;
+   txBuffer[1] = 0x9c;
+   FT_STATUS ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
+   if (ftStatus == FT_OK) 
+   {
+      if (bytesWritten == sizeof(txBuffer)) 
+      {
+         unsigned char answer[2];
+         DWORD bytesRead;
+         ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
+         if (ftStatus == FT_OK && bytesRead == 2)
+         {
+            if (answer[0] == 0xFF)
+            {
+               if (answer[1] == 4)
+               {
+                  // controller responds with position of all wheels in 4 bytes
+                  unsigned char answer2[4];
+                  ftStatus = FT_Read(ftHandle_, answer2, sizeof(answer2), &bytesRead);
+                  if (ftStatus == FT_OK && bytesRead == 4)
+                  {
+                     position = answer2[wheelNumber - 1];
+                  }
+               }
+               return DEVICE_OK;
+            }
+            else if (answer[0] == 4 || answer[0] == 7)
+            {
+               return ERR_OPTOSPIN_BUSY;
+            }
+         }
+      }
+   }
+   if (ftStatus != FT_OK) 
+   {
+      return ERR_UNKNOWN_COMMAND;
+   }
+   return DEVICE_OK;
+}
+
+int CairnHub::SetWheelPosition(long wheelNumber, long position)
+{
+   if (wheelNumber < 1 || wheelNumber > 4) {
+      return ERR_INVALID_WHEEL_NUMBER;
+   }
+   if (!filterWheels_[wheelNumber - 1]) {
+      return ERR_WHEEL_NOT_CONNECTED;
+   }
+   if (position < 1 || position > 6) {
+      return ERR_INVALID_POSITION;
+   }
+   DWORD bytesWritten;
+   uint8_t txBuffer[6]; // Contains data to write to device
+   txBuffer[0] = 0;
+   txBuffer[1] = 0x8c;
+   txBuffer[1 + wheelNumber] = (uint8_t) position;
+   FT_STATUS ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
+   if (ftStatus == FT_OK) 
+   {
+      if (bytesWritten == sizeof(txBuffer)) 
+      {
+         unsigned char answer[2];
+         DWORD bytesRead;
+         ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
+         if (ftStatus == FT_OK)
+         {
+            if (answer[0] == 0xFF)
+            {
+               return DEVICE_OK;
+            }
+            else if (answer[0] == 4 || answer[0] == 7)
+            {
+               return ERR_OPTOSPIN_BUSY;
+            }
+            return DEVICE_ERR;
+         }
+      }
+   }
+   if (ftStatus != FT_OK) 
+   {
+      return ERR_UNKNOWN_COMMAND;
+   }
+   return DEVICE_OK;
+}
+
+// action interface
+// ----------------
+int CairnHub::OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(serialNumber_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(serialNumber_);
+
+   }
+   return DEVICE_OK;
+}
+
+int CairnHub::OnSoftwareVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet) {
+      pProp->Set(softwareVersion_);
+   }
+   else if (eAct == MM::AfterSet) {
+      pProp->Get(softwareVersion_);
+   }
+   return DEVICE_OK;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// CairnOptospin device
+///////////////////////////////////////////////////////////////////////////////
+
+CairnOptospin::CairnOptospin(long wheelNumber) :
+   initialized_(false),
+   numPos_(6),
+   wheelNumber_(wheelNumber)
+{
+   InitializeDefaultErrorMessages();
+
+   // create pre-initialization properties
+   // ------------------------------------
+
+   // Name
+   std::ostringstream os;
+   os << g_CairnOptospinName << "_" << wheelNumber_;
+   CreateProperty(MM::g_Keyword_Name, os.str().c_str(), MM::String, true);
+
+   // Description
+   CreateProperty(MM::g_Keyword_Description, "Cairn Optospin - UCSF Device adapter", MM::String, true);
+
+   LogMessage("Loaded Cairn OptoSpin UCSF Device adapter", false);
+}
+
+CairnOptospin::~CairnOptospin()
+{
+   Shutdown();
+}
+
+void CairnOptospin::GetName(char* pszName) const
+{
+   std::ostringstream os;
+   os << g_CairnOptospinName << "_" << wheelNumber_;
+   CDeviceUtils::CopyLimitedString(pszName, os.str().c_str());
+}
+
+int CairnOptospin::Initialize()
+{
+   // State
    CPropertyAction *pAct = new CPropertyAction (this, &CairnOptospin::OnState);
    int nRet=CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
    if (nRet != DEVICE_OK)
@@ -243,9 +501,7 @@ int CairnOptospin::Initialize()
       SetPositionLabel(i, os.str().c_str());
    }
 
-   // nRet = UpdateStatus();
-   if (nRet != DEVICE_OK)
-      return nRet;
+   initialized_ = true;
 
    return DEVICE_OK;
 }
@@ -254,23 +510,13 @@ int CairnOptospin::Initialize()
 
 int CairnOptospin::Shutdown()
 {
-   if (initialized_)
-   {
-      if (ftHandle_ != 0) {
-         FT_Close(ftHandle_);
-      }
-      initialized_ = false;
-   }
+   // nothing to clean up
    return DEVICE_OK;
 }
 
-/*
- *
- */
 bool CairnOptospin::Busy()
 {
-   int position;
-   return GetDevicePosition(position) == ERR_OPTOSPIN_BUSY;
+   return this->GetParentHub()->Busy();
 }
 
 
@@ -280,104 +526,33 @@ bool CairnOptospin::Busy()
 ///////////////////////////////////////////////////////////////////////////////
 
 
-int CairnOptospin::GetDevicePosition(int& position) 
-{
-   DWORD bytesWritten;
-   uint8_t txBuffer[2]; // Contains data to write to device
-   txBuffer[0] = 0;
-   txBuffer[1] = 0x9c;
-   FT_STATUS ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
-   if (ftStatus == FT_OK) 
-   {
-      if (bytesWritten == sizeof(txBuffer)) 
-      {
-         char answer[6];
-         DWORD bytesRead;
-         ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
-         if (ftStatus == FT_OK)
-         {
-            if (static_cast<unsigned char>(answer[0]) == 0xFF)
-            {
-               if (answer[1] == 4)
-               {
-                  position = answer[2];
-                  // other filter wheels will be in 3-5
-               }
-               return DEVICE_OK;
-            }
-            else if (answer[0] == 4)
-            {
-               return ERR_OPTOSPIN_BUSY;
-            }
-         }
-      }
-   }
-   if (ftStatus != FT_OK) 
-   {
-      return ERR_UNKNOWN_COMMAND;
-   }
-
-
-   return ERR_UNKNOWN_COMMAND;
-}
-
-
-
-int CairnOptospin::SetDevicePosition(int position)
-{
-   DWORD bytesWritten;
-   uint8_t txBuffer[6]; // Contains data to write to device
-   txBuffer[0] = 0;
-   txBuffer[1] = 0x8c;
-   txBuffer[2] = (uint8_t) position;
-   txBuffer[3] = 0;
-   txBuffer[3] = 0;
-   txBuffer[3] = 0;
-   FT_STATUS ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
-   if (ftStatus == FT_OK) 
-   {
-      if (bytesWritten == sizeof(txBuffer)) 
-      {
-         char answer[2];
-         DWORD bytesRead;
-         ftStatus = FT_Read(ftHandle_, answer, sizeof(answer), &bytesRead);
-         if (ftStatus == FT_OK)
-         {
-            this->LogMessage(answer, false);
-            if (static_cast<unsigned char>(answer[0]) == 0xFF)
-            {
-               return DEVICE_OK;
-            }
-         }
-      }
-   }
-   if (ftStatus != FT_OK) 
-   {
-      return ERR_UNKNOWN_COMMAND;
-   }
-
-   return DEVICE_OK;
-}
-
-
-// Needs to be worked on (a lot)
 int CairnOptospin::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+   CairnHub* hub = (CairnHub*) this->GetParentHub();
+   if (hub == 0)
+      return DEVICE_ERR;
+   long position;
    if (eAct == MM::BeforeGet) {
-      int position, ret;
-      ret = GetDevicePosition(position);
+      int ret = hub->GetWheelPosition(wheelNumber_, position);
       if (ret != DEVICE_OK)
          return ret;
-      pProp->Set((long) position - 1);
+      pProp->Set(position - 1);
    }
    else if (eAct == MM::AfterSet) {
-      long position;
-      int ret;
       pProp->Get(position);
-      ret = SetDevicePosition((int) position + 1);
-      if (ret != DEVICE_OK)
-         return ret;
+      return  hub->SetWheelPosition(wheelNumber_, position);
    }
    return DEVICE_OK;
 }
 
+
+int CairnOptospin::OnWheelNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet) {
+      pProp->Set(wheelNumber_);
+   }
+   else if (eAct == MM::AfterSet) {
+      pProp->Get(wheelNumber_);
+   }
+   return DEVICE_OK;
+}
