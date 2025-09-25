@@ -390,6 +390,11 @@ int CairnHub::GetWheelPosition(long wheelNumber, long& position)
    return DEVICE_OK;
 }
 
+/*
+ * Sets the filter position of th requested wheel
+ * Both wheelNUmber and position are 1-based, so that 
+ * no conversion needs to take place in calling the controller
+*/
 int CairnHub::SetWheelPosition(long wheelNumber, long position)
 {
    if (wheelNumber < 1 || wheelNumber > 4) {
@@ -405,6 +410,9 @@ int CairnHub::SetWheelPosition(long wheelNumber, long position)
    uint8_t txBuffer[6]; // Contains data to write to device
    txBuffer[0] = 0;
    txBuffer[1] = 0x8c;
+   for (int i = 2; i < 6; i++) {
+      txBuffer[i] = 0;
+   }
    txBuffer[1 + wheelNumber] = (uint8_t) position;
    FT_STATUS ftStatus = FT_Write(ftHandle_, txBuffer, sizeof(txBuffer), &bytesWritten);
    if (ftStatus == FT_OK) 
