@@ -1303,11 +1303,6 @@ public:
 
    }
 
-   virtual ~CCameraBase()
-   {
-      
-   }
-
    virtual const unsigned char* GetImageBuffer() = 0;
    virtual unsigned GetImageWidth() const = 0;
    virtual unsigned GetImageHeight() const = 0;
