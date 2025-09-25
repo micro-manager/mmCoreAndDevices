@@ -55,17 +55,6 @@ MODULE_API void InitializeModuleData()
             Description, &ftHandleTemp);
          if (ftStatus == FT_OK)
          {
-            /*
-            printf("Dev:%x\n", i);
-            printf(" Flags=0x%x\n", Flags);
-            printf(" Type=0x%x\n", Type);
-            printf(" ID=0x%x\n", ID);
-            printf(" LocId=0x%x\n", LocId);
-            printf(" SerialNumber=%s\n", SerialNumber);
-            printf(" Description=%s\n", Description);
-            printf(" ftHandle=0x%x\n", ftHandleTemp);
-            */
-
             if (ID == 0x156b0003)
             {
                RegisterDevice(g_CairnOptospinHubName, MM::HubDevice, "CairnOptospinController");
@@ -143,17 +132,6 @@ CairnHub::CairnHub() :
             Description, &ftHandleTemp);
          if (ftStatus == FT_OK)
          {
-            /*
-            printf("Dev:%x\n", i);
-            printf(" Flags=0x%x\n", Flags);
-            printf(" Type=0x%x\n", Type);
-            printf(" ID=0x%x\n", ID);
-            printf(" LocId=0x%x\n", LocId);
-            printf(" SerialNumber=%s\n", SerialNumber);
-            printf(" Description=%s\n", Description);
-            printf(" ftHandle=0x%x\n", ftHandleTemp);
-            */
-
             if (ID == 0x156b0003)
             {
                AddAllowedValue("SerialNumber", SerialNumber);

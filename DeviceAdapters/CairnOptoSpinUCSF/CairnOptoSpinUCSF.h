@@ -4,7 +4,7 @@
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:
-// CairnOptoSpin adapter, UCSF version
+// CairnOptospin adapter, UCSF version
 //                
 // AUTHOR: Nico Stuurman, 09/25/2025
 //         
@@ -31,19 +31,6 @@
 #define ERR_INVALID_WHEEL_NUMBER    11002
 #define ERR_WHEEL_NOT_CONNECTED     11003
 #define ERR_INVALID_POSITION        11004
-
-/*
-0	Rotors initialising
-1	Cannot be executed in spin mode
-2	Command was already executed
-3	Command conflicts with input status of TTL interface
-4	Cannot be executed while one or more filterwheels are actually stepping
-5	No wheels selected, or wheel not present
-6	Attempted write to protected code area
-7	Cannot be executed while one or more wheels are “resting” after stepping
-8	Command followed by too few data bytes(version 3.1 onwards)
-9	Command not recognised or undefined(version 3.1 onwards)
-*/
 
 
 
@@ -113,4 +100,4 @@ private:
    long wheelNumber_; // Wheel number  (1 - 4)
 };
 
-#endif //_CairnOptoSPpn_UCSF_H_
+#endif // _CairnOptospin_UCSF_H_
