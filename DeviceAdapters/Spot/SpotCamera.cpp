@@ -95,7 +95,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
  * the constructor. We should do as little as possible in the constructor and
  * perform most of the initialization in the Initialize() method.
  */
-SpotCamera::SpotCamera(const char* /*szDeviceName*/) : CCameraBase<SpotCamera>(),
+SpotCamera::SpotCamera(const char* /*szDeviceName*/) :
    initialized( false ),   
    numberOfChannels_( 4 ), // EF - changed to 4 for valid number for MMImageWindow, line 125ff, byteDepth = 4
 	pImplementation_(NULL),

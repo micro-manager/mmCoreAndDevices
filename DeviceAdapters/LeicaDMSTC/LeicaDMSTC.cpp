@@ -183,7 +183,6 @@ int Hub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 // LeicaDMSTC XYStage 
 ///////////////////////////////////////////////////////////////////////////////
 XYStage::XYStage () :
-	CXYStageBase<XYStage>(),
 	initialized_ (false),
 	stepSize_um_(10),	
    name_ (g_LeicaDMSTCXYDrive)

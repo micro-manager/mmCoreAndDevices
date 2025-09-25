@@ -1758,7 +1758,7 @@ bool CESP32Stage::Busy()
     return false;
 }
 
-CESP32XYStage::CESP32XYStage() : CXYStageBase<CESP32XYStage>(),
+CESP32XYStage::CESP32XYStage() :
 stepSize_X_um_(0.1),
 stepSize_Y_um_(0.1),
 posX_um_(0.0),

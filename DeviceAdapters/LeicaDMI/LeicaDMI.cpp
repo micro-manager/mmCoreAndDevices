@@ -1568,7 +1568,6 @@ int ZDrive::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
  * LeicaXYStage: Micro-Manager implementation of X and Y Stage
 */
 XYStage::XYStage (): 
-   CXYStageBase<XYStage>(),
    initialized_ (false),
    originXSteps_(0),
    originYSteps_(0)

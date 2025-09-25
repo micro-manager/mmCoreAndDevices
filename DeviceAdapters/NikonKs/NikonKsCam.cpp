@@ -170,7 +170,6 @@ void NikonKsCam::DoEvent(const lx_uint32 eventCameraHandle, CAM_Event* pEvent, v
 * perform most of the initialization in the Initialize() method.
 */
 NikonKsCam::NikonKsCam() :
-    CCameraBase<NikonKsCam>(),
     featureDesc_(NULL),
     isOpened_(false),
     isInitialized_(false),

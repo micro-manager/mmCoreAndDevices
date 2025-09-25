@@ -539,7 +539,6 @@ int HexaFluor::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ConixXYStage::ConixXYStage() : 
-CXYStageBase<ConixXYStage>(),
 port_("Undefined"),
 stepSize_um_(0.015),
 posX_um_(0.0),
@@ -890,7 +889,6 @@ int ConixXYStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ConixZStage::ConixZStage() : 
-CStageBase<ConixZStage>(),
 port_("Undefined"),
 stepSize_um_(0.1),
 posZ_um_(0.0),

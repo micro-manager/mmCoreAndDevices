@@ -128,7 +128,6 @@ const int n_param = sizeof(param_set)/sizeof(SParam);
 ///////////////////////////////////////////////////////////////////////////////
 // &Universal constructor/destructor
 Universal::Universal(short cameraId) :
-CCameraBase<Universal> (),
 restart_(false),
 initialized_(false),
 busy_(false),

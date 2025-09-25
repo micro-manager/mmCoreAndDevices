@@ -80,7 +80,6 @@ MODULE_API MM::Device* CreateDevice(const char* pszDeviceName)
 // CSensicam constructor/destructor
 
 CSensicam::CSensicam() :
-   CCameraBase<CSensicam> (),
    sequenceRunning_(false),
    m_bInitialized(false),
    m_bBusy(false),

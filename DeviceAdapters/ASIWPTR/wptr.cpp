@@ -70,7 +70,6 @@ int ClearPort(MM::Device& device, MM::Core& core, const std::string& port) {
 }
 
 WPTRobot::WPTRobot() :
-    CGenericBase<WPTRobot>(),
     initialized_(false),
     numPos_(0),
     port_(""),

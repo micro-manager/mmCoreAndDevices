@@ -912,7 +912,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CRaptorEPIX::CRaptorEPIX(int nCameraType) :
-   CCameraBase<CRaptorEPIX> (),
    cameraType_(0),
    dPhase_(0),
    exposure_(0),
