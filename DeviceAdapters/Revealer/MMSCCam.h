@@ -71,7 +71,6 @@ public:
     bool IsCapturing();
     void OnThreadExiting() throw(); 
     double GetNominalPixelSizeUm() const;
-    double GetPixelSizeUm() const;
     int GetBinning() const;
     int SetBinning(int bS);
 

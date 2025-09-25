@@ -103,7 +103,6 @@ public:
    virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    virtual int ClearROI();
    virtual double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   virtual double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    virtual int GetBinning() const;
    virtual int SetBinning(int binSize);
    virtual bool IsCapturing();

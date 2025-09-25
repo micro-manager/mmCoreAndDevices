@@ -192,7 +192,6 @@ public:
 	// pixel-size-related functions
 	// the GenICam spec and the JAI sdk have no way to query sensor pixel size.
 	double GetNominalPixelSizeUm() const {return 1.0;}
-	double GetPixelSizeUm() const {return 1.0 * GetBinning();}
 
 	// action interface
 	// ----------------

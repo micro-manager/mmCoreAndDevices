@@ -729,10 +729,6 @@ double SCCamera::GetNominalPixelSizeUm() const{
     return nominalPixelSizeUm_;
 }
 
-double SCCamera::GetPixelSizeUm() const { 
-    return nominalPixelSizeUm_ * GetBinning();
-}
-
 int SCCamera::GetBinning() const {
     uint64_t binning = 0;
     SC_GetEnumFeatureValue(devHandle_, "BinningMode", &binning);

@@ -725,11 +725,6 @@ double CFLICamera::GetNominalPixelSizeUm() const
 	return pixel_x_;
 }
 
-double CFLICamera::GetPixelSizeUm() const
-{
-	return pixel_x_;
-}
-
 int CFLICamera::ResizeImageBuffer()
 {
 	int byteDepth = 2;

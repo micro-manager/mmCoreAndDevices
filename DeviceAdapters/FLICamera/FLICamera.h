@@ -60,7 +60,6 @@ class CFLICamera : public CLegacyCameraBase<CFLICamera>
 		int ClearROI();
 		int PrepareSequenceAcqusition();
 		double GetNominalPixelSizeUm() const;
-		double GetPixelSizeUm() const;
 		int GetBinning() const;
 		int SetBinning(int binSize);
 		int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}

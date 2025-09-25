@@ -119,7 +119,6 @@ public:
   virtual int ThreadRun (void);
 
   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-  double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
   int   GetBinning() const;
   int   SetBinning(int bS);
 

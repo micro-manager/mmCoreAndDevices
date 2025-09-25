@@ -71,7 +71,6 @@ public:
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    int ClearROI();
    virtual double GetNominalPixelSizeUm() const;
-   virtual double GetPixelSizeUm() const;
    int GetBinning() const;
    int SetBinning(int binSize);
 

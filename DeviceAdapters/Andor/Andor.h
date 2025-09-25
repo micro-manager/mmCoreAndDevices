@@ -314,8 +314,6 @@ private:
    ROI roi_, customROI_;
    std::vector<ROI> roiList;
 
-   double GetPixelSizeUm() const;
-
    int binSize_;
    double expMs_; //value used by camera
    std::string driverDir_;

@@ -60,8 +60,6 @@ public:
    int StopSequenceAcquisition();
    bool IsCapturing();
    double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   //double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
-   double GetPixelSizeUm() const {return pixelSizeXUm_;}
    int GetBinning() const;
    int SetBinning(int binSize);
    int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}

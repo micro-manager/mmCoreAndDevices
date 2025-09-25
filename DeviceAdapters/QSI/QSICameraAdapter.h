@@ -51,7 +51,6 @@ public:
   unsigned int GetImageBytesPerPixel() const;
   unsigned int GetImageHeight() const;
   unsigned int GetImageWidth() const;
-  double GetPixelSizeUm() const;
   int GetROI( unsigned int & x, unsigned int & y, unsigned int & xSize, unsigned int & ySize ); 
   int InsertImage();
   int IsExposureSequenceable( bool & seq ) const;

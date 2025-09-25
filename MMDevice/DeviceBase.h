@@ -1322,11 +1322,9 @@ public:
    */
    virtual int StopSequenceAcquisition() = 0;
 
-   /**
-    * Returns binnings factor.  Used to calculate current pixelsize
-    * Not appropriately named.
-    */
-   virtual double GetPixelSizeUm() const {return this->GetBinning();}
+   // It appears that this function was never used by MMCore and is slated for
+   // removal. Concrete cameras should not override.
+   double GetPixelSizeUm() const final { return 0.0; }
 
    virtual unsigned GetNumberOfComponents() const
    {

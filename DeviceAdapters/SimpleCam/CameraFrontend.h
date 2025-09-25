@@ -90,7 +90,6 @@ public:
    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    int ClearROI();
-   double GetPixelSizeUm() const {return GetBinning();}
    int GetBinning() const;
    int SetBinning(int binSize);
 

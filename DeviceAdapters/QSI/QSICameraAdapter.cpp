@@ -585,15 +585,6 @@ unsigned int QSICameraAdapter::GetImageWidth() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-double QSICameraAdapter::GetPixelSizeUm() const
-{
-  if( m_pixelSizeX == m_pixelSizeY )
-    return m_pixelSizeX;
-  else
-    return 0;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns the actual dimensions of the current ROI.
 //
 int QSICameraAdapter::GetROI( unsigned int & x, unsigned int & y, unsigned int & xSize, unsigned int & ySize )
