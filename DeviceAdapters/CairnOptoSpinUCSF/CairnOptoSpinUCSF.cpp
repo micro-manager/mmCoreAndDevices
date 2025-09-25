@@ -21,7 +21,7 @@
 #include <iostream>
 #include "ftd2xx.h"
 
-const char* g_CairnOptospinName = "CairnOptospin";
+const char* g_CairnOptospinName = "OptospinWheel";
 const char* g_CairnOptospinHubName = "CairnOptospinController";
 
 using namespace std;
@@ -81,7 +81,22 @@ MODULE_API void InitializeModuleData()
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
    if (strcmp(deviceName, g_CairnOptospinHubName) == 0)
+   {
       return new CairnHub();
+   } else if (strncmp(deviceName, g_CairnOptospinName, strlen(g_CairnOptospinName)) == 0)
+   {
+      // deviceName is expected to be of the formn "OptospinWheel_#" where # is the wheel number
+      int wheelNumber = 0;
+      const char* underscore = strchr(deviceName, '_');
+      if (underscore != 0)
+      {
+         wheelNumber = atoi(underscore + 1);
+      }
+      if (wheelNumber >= 1 && wheelNumber <= 4)
+      {
+         return new CairnOptospin(wheelNumber);
+      }
+   }
 
 	return 0;
 }
@@ -238,9 +253,13 @@ int CairnHub::Initialize()
             if (answer[0] == 0xFF)
             {
                if (answer[1] == 2) {
-                  // answer is big endian, we are little endian, may use stohl instead
-                  int16_t softwareVersion = (static_cast<int16_t>(answer[3]) << 8) | answer[2];
-                  this->LogMessage("Software version of Optospin is: " + softwareVersion, false);
+                  // answer is big endian, convert to little, will be wrong on big endian host
+                  uint16_t softwareVersion;
+                  memcpy(&softwareVersion, &answer[2], sizeof(uint16_t));
+                  softwareVersion_ = (softwareVersion >> 8) | (softwareVersion << 8);
+                  std::ostringstream oss;
+                  oss << "Software version of Optospin is: " << softwareVersion_;
+                  this->LogMessage(oss.str().c_str(), false);
                }
             }
          }
@@ -279,6 +298,13 @@ int CairnHub::Initialize()
    {
       return ERR_UNKNOWN_COMMAND;
    }
+
+   CPropertyAction* pAct = new CPropertyAction(this, &CairnHub::OnSoftwareVersion);
+   CreateProperty("SoftwareVersion", "0", MM::Integer, true, pAct);
+
+   pAct = new CPropertyAction(this, &CairnHub::OnSerialNumber);
+   CreateProperty("Controller_SerialNumber", "0", MM::String, false, pAct);
+
    return DEVICE_OK;
 }
 
@@ -444,6 +470,7 @@ int CairnHub::OnSoftwareVersion(MM::PropertyBase* pProp, MM::ActionType eAct)
 CairnOptospin::CairnOptospin(long wheelNumber) :
    initialized_(false),
    numPos_(6),
+   serialNumber_(0),
    wheelNumber_(wheelNumber)
 {
    InitializeDefaultErrorMessages();
@@ -540,7 +567,7 @@ int CairnOptospin::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet) {
       pProp->Get(position);
-      return  hub->SetWheelPosition(wheelNumber_, position);
+      return  hub->SetWheelPosition(wheelNumber_, position + 1);
    }
    return DEVICE_OK;
 }
