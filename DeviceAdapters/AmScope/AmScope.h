@@ -59,7 +59,6 @@ public:
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
    bool IsCapturing();
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
    int GetBinning() const;
    int SetBinning(int binSize);
    int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
@@ -103,7 +102,6 @@ private:
    long IMAGE_WIDTH;
    long IMAGE_HEIGHT;
    static const int MAX_BIT_DEPTH = 16;
-   double nominalPixelSizeUm_;
 
    SequenceThread* thd_;
    int binning_;

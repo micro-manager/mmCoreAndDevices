@@ -38,7 +38,6 @@
 
 
 using namespace std;
-const double CMightex_SB_Camera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 int OnExposureCnt = 0;
 

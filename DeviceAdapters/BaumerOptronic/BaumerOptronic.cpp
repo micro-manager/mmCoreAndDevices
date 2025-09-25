@@ -80,9 +80,6 @@ there is too much uncommented magic in this code.
 
 using namespace std;
 
-
-const double CBaumerOptronic::nominalPixelSizeUm_ = 1.0;
-
 // External names used by the rest of the system
 const char* g_CameraDeviceName = "BaumerOptronic";
 

@@ -59,7 +59,6 @@ class CFLICamera : public CLegacyCameraBase<CFLICamera>
 		int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
 		int ClearROI();
 		int PrepareSequenceAcqusition();
-		double GetNominalPixelSizeUm() const;
 		int GetBinning() const;
 		int SetBinning(int binSize);
 		int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
@@ -107,9 +106,6 @@ class CFLICamera : public CLegacyCameraBase<CFLICamera>
 		long exposure_;
 		long shutter_;
 		long downloaded_;
-
-		double pixel_x_;
-		double pixel_y_;
 
 public:
 	void Disconnect(void);

@@ -91,7 +91,6 @@
 #undef DOLIVEPAIR
 
 using namespace std;
-const double CRaptorEPIX::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 bool bEagle4210 = false;
 

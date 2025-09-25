@@ -97,7 +97,6 @@ public:
    int ThreadRun(MM::MMTime startTime);
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
    int GetBinning() const;
    int SetBinning(int bS);
 
@@ -152,8 +151,6 @@ private:
    void TestResourceLocking(const bool);
    void GenerateEmptyImage(ImgBuffer& img);
    int ResizeImageBuffer();
-
-   static const double nominalPixelSizeUm_;
 
    double dPhase_;
    ImgBuffer img_;

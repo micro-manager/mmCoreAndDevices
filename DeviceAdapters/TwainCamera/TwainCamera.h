@@ -95,7 +95,6 @@ public:
    int ClearROI();
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
    int GetBinning() const;
    int SetBinning(int binSize);
    int IsExposureSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
@@ -132,7 +131,6 @@ private:
    int ThreadRun();
    int PushImage();
 
-   static const double nominalPixelSizeUm_;
    static int imageSizeW_;
    static int imageSizeH_;
 

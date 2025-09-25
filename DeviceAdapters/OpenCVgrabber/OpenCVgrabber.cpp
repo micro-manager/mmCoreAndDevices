@@ -42,9 +42,6 @@ using namespace std;
 CvCapture* capture_;
 IplImage* frame_; // do not modify, do not release!
 
-const double COpenCVgrabber::nominalPixelSizeUm_ = 1.0;
-
-
 // External names used used by the rest of the system
 // to load particular device from the "DemoCamera.dll" library
 const char* g_CameraDeviceName = "OpenCVgrabber";

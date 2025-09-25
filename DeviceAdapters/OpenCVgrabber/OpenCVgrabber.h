@@ -110,7 +110,6 @@ public:
    int ThreadRun();
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
    int GetBinning() const;
    int SetBinning(int bS);
    int IsExposureSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
@@ -143,9 +142,6 @@ private:
    void RGB3toRGB4(const char* srcPixels, char* destPixels, int width, int height);
 
    int ResizeImageBuffer();
-
-   static const double nominalPixelSizeUm_;
-
 
    // CvCapture* capture_;
    // IplImage* frame_; // do not modify, do not release!

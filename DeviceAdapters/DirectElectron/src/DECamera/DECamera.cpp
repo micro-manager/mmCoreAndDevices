@@ -965,11 +965,6 @@ int CDECamera::ResizeImageBuffer()
 	return DEVICE_OK;
 }
 
-double CDECamera::GetNominalPixelSizeUm() const
-{
-	return pixelSize_.x;
-}
-
 void CDECamera::SetupProperty(string label, PropertyHelper settings)
 {
 	CPropertyAction* pAct = new CPropertyAction(this, &CDECamera::OnProperty);

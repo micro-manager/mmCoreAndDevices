@@ -163,7 +163,6 @@ public:
    int RunSequenceOnThread();
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
    int GetBinning() const;
    int SetBinning(int bS);
 
@@ -228,8 +227,6 @@ private:
    void GenerateSyntheticImage(ImgBuffer& img, double exp);
    bool GenerateColorTestPattern(ImgBuffer& img);
    int ResizeImageBuffer();
-
-   static constexpr double nominalPixelSizeUm_ = 1.0;
 
    double exposureMaximum_ = 10000.0;
    double dPhase_ = 0.0;

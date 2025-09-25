@@ -192,7 +192,6 @@ POACamera::POACamera() :
     gammaValue_(g_gamma_def),
     p8bitGammaTable(nullptr),
     p16bitGammaTable(nullptr),
-    nominalPixelSizeUm_(1.0),
     pRGB24(nullptr),
     RGB24BufSize_(0),
     readoutUs_(0.0),
@@ -380,8 +379,6 @@ int POACamera::Initialize()
     p8bitGammaTable = new unsigned char[256];
     p16bitGammaTable = new unsigned short[65536];
     ResetGammaTable();
-
-    nominalPixelSizeUm_ = camProp_.pixelSize;
 
     char* pCameraName = camProp_.cameraModelName;
 

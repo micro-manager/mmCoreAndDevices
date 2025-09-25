@@ -189,10 +189,6 @@ public:
 	int StopSequenceAcquisition();
 	bool IsCapturing();
 
-	// pixel-size-related functions
-	// the GenICam spec and the JAI sdk have no way to query sensor pixel size.
-	double GetNominalPixelSizeUm() const {return 1.0;}
-
 	// action interface
 	// ----------------
 	int OnCameraChoice( MM::PropertyBase* pProp, MM::ActionType eAct );

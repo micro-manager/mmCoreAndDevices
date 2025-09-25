@@ -13,8 +13,6 @@
 #include "SCDefines.h"
 
 
-const double SCCamera::nominalPixelSizeUm_ = 1.0;
-
 const char* gCameraDeviceName  = "Revealer";
 const char* g_PixelType_8bit = "8bit";
 const char* g_PixelType_16bit = "16bit";
@@ -723,10 +721,6 @@ bool SCCamera::IsCapturing(){
     msg << "IsCapturing" << ":" << !thd_->IsStopped();
     LogMessage(msg.str().c_str());
     return !thd_->IsStopped(); 
-}
-
-double SCCamera::GetNominalPixelSizeUm() const{
-    return nominalPixelSizeUm_;
 }
 
 int SCCamera::GetBinning() const {

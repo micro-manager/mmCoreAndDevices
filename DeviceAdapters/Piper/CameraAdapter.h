@@ -102,7 +102,6 @@ public:
    virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
    virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    virtual int ClearROI();
-   virtual double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
    virtual int GetBinning() const;
    virtual int SetBinning(int binSize);
    virtual bool IsCapturing();
@@ -158,8 +157,6 @@ public:
    int OnReadoutTime(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   static const double nominalPixelSizeUm_;
-
    string m_sMyName;
    BOOL m_bIsConnected;
    bool m_bIsInitialized;

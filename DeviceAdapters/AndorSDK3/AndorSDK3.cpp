@@ -54,7 +54,6 @@
 using namespace std;
 using namespace andor;
 
-const double CAndorSDK3Camera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 
 // External names used used by the rest of the system

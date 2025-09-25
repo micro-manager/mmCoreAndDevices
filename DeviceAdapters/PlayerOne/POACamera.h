@@ -113,7 +113,6 @@ public:
     int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
     int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
     int ClearROI();
-    double GetNominalPixelSizeUm() const { return nominalPixelSizeUm_; }
     int GetBinning() const;
     int SetBinning(int bS);
 
@@ -216,7 +215,6 @@ private:
     double gammaValue_;
     unsigned char *p8bitGammaTable;
     unsigned short *p16bitGammaTable;
-    double nominalPixelSizeUm_;
     double exposureMaximum_;
     ImgBuffer img_;
     double ccdT_;

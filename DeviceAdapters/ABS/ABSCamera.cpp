@@ -16,7 +16,6 @@ using namespace std;
 
 #include "AutoTimeMeasure.h"
 
-const double CABSCamera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 // External names used used by the rest of the system
 // to load particular device from the "DemoCamera.dll" library

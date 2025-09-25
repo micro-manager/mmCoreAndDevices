@@ -37,7 +37,6 @@
 #pragma comment(lib, "shlwapi.lib")
 
 using namespace std;
-const double CMMTUCam::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 
 // External names used used by the rest of the system

@@ -154,7 +154,6 @@ int CFLICamera::Initialize()
 
 	DOFLIAPIERR(FLIOpen(&dev_, "flipro0", FLIDOMAIN_USB | FLIDEVICE_CAMERA), DEVICE_NOT_CONNECTED);
 	DOFLIAPIERR(FLIControlShutter(dev_, shutter_), DEVICE_NOT_CONNECTED);
-	DOFLIAPIERR(FLIGetPixelSize(dev_, &pixel_x_, &pixel_y_), DEVICE_NOT_CONNECTED);
 	DOFLIAPIERR(FLIGetVisibleArea(dev_, &ul_x, &ul_y, &lr_x, &lr_y), DEVICE_NOT_CONNECTED);
 
 	image_offset_x_ = ul_x;
@@ -718,11 +717,6 @@ int CFLICamera::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CFLICamera::PrepareSequenceAcqusition()
 {
 	return DEVICE_OK;
-}
-
-double CFLICamera::GetNominalPixelSizeUm() const
-{
-	return pixel_x_;
 }
 
 int CFLICamera::ResizeImageBuffer()

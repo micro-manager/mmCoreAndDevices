@@ -159,7 +159,6 @@ public:
     int RunSequenceOnThread();
     bool IsCapturing();
     void OnThreadExiting() throw();
-    double GetNominalPixelSizeUm() const { return nominalPixelSizeUm_; }
     int GetBinning() const;
     int SetBinning(int bS);
 
@@ -233,8 +232,6 @@ private:
     int SetAllowedBinning();
     void GenerateEmptyImage(ImgBuffer& img);
     int ResizeImageBuffer();
-
-    static const double nominalPixelSizeUm_;
 
     bool enableTemp_ = false;
     bool enableAnalogGain_ = false;
