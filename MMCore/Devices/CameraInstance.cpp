@@ -54,7 +54,6 @@ unsigned CameraInstance::GetImageWidth() const { RequireInitialized(__func__); r
 unsigned CameraInstance::GetImageHeight() const { RequireInitialized(__func__); return GetImpl()->GetImageHeight(); }
 unsigned CameraInstance::GetImageBytesPerPixel() const { RequireInitialized(__func__); return GetImpl()->GetImageBytesPerPixel(); }
 unsigned CameraInstance::GetBitDepth() const { RequireInitialized(__func__); return GetImpl()->GetBitDepth(); }
-double CameraInstance::GetPixelSizeUm() const { RequireInitialized(__func__); return GetImpl()->GetPixelSizeUm(); }
 int CameraInstance::GetBinning() const { RequireInitialized(__func__); return GetImpl()->GetBinning(); }
 int CameraInstance::SetBinning(int binSize) { RequireInitialized(__func__); return GetImpl()->SetBinning(binSize); }
 void CameraInstance::SetExposure(double exp_ms) { RequireInitialized(__func__); return GetImpl()->SetExposure(exp_ms); }
