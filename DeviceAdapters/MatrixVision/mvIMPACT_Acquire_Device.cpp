@@ -1265,6 +1265,9 @@ int MySequenceThread::svc( void ) throw()
    }
    stop_ = true;
    actualDuration_ = pmvIMPACT_Acquire_Device_->GetCurrentMMTime() - startTime_;
-   pmvIMPACT_Acquire_Device_->OnThreadExiting();
+   auto *core = pmvIMPACT_Acquire_Device_->GetCoreCallback();
+   if (core != nullptr) {
+      core->AcqFinished(pmvIMPACT_Acquire_Device_, 0);
+   }
    return result;
 }

@@ -83,6 +83,8 @@ public:
 
    void GetName(char* name) const;
 
+   bool Busy() { return false; }
+
    int SnapImage();
    const unsigned char* GetImageBuffer();
    const unsigned char* GetImageBuffer(unsigned channelNr);

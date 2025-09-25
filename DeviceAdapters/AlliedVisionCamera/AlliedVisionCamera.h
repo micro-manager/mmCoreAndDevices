@@ -289,6 +289,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////////
     int Initialize() override;
     int Shutdown() override;
+    bool Busy() override { return false; }
     const unsigned char *GetImageBuffer() override;
     unsigned GetImageWidth() const override;
     unsigned GetImageHeight() const override;

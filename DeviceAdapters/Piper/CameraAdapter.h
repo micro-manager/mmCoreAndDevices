@@ -46,7 +46,7 @@
 // CCameraAdapter class
 // Simulation of the Camera device
 //////////////////////////////////////////////////////////////////////////////
-class CCameraAdapter : public CCameraBase<CCameraAdapter>  
+class CCameraAdapter : public CCameraBase<CCameraAdapter>
 {
 public:
    CCameraAdapter( LPCTSTR pszName );
@@ -90,6 +90,7 @@ public:
    virtual int IsExposureSequenceable(bool& isSequenceable) const { isSequenceable=false; return 0; }
    virtual const unsigned char* GetImageBuffer();
    virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+   virtual int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
    virtual int StopSequenceAcquisition();
    virtual unsigned GetImageWidth() const;
    virtual unsigned GetImageHeight() const;

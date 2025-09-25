@@ -568,8 +568,7 @@ QIDriver::Access::~Access()
 * perform most of the initialization in the Initialize() method.
 */
 QICamera::QICamera()
-:CCameraBase<QICamera> ()
-,m_isInitialized(false)
+:m_isInitialized(false)
 ,m_softwareTrigger(false)
 ,m_rgbColor(false)
 ,m_dExposure(0)
@@ -4314,7 +4313,7 @@ int QICamera::StartSequenceAcquisition(long numImages, double interval_ms, bool 
 
    // start the acquisition thread
    m_sthd->SetLength(numImages);
-   setStopOnOverflow(stopOnOverflow);
+   m_stopWhenCBOverflows = stopOnOverflow;
    m_sthd->Start();
 
    return DEVICE_OK;
@@ -4325,7 +4324,7 @@ int QICamera::StartSequenceAcquisition(long numImages, double interval_ms, bool 
 */
 int QICamera::RestartSequenceAcquisition()
 {
-   return StartSequenceAcquisition(m_sthd->GetRemaining(), m_interval, isStopOnOverflow());
+   return StartSequenceAcquisition(m_sthd->GetRemaining(), m_interval, m_stopWhenCBOverflows);
 }
 
 

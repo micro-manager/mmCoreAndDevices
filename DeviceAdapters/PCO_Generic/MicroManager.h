@@ -95,6 +95,7 @@ public:
   int ClearROI();
   int PrepareSequenceAcqusition();
   int StartSequenceAcquisition(long numImages, double /*interval_ms*/, bool stopOnOverflow);
+  int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
   int StopSequenceAcquisition();
   int StoppedByThread();
   bool IsCapturing();

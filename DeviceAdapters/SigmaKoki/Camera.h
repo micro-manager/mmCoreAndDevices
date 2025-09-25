@@ -68,6 +68,7 @@ public:
 	void GetName(char* pszName) const;
 	int Initialize();
 	int Shutdown();
+	bool Busy() { return false; }
 #pragma endregion Device_Api
 
 #pragma region Camera_Api

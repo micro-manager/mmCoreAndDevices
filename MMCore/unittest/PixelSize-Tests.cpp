@@ -54,6 +54,10 @@ public:
    int GetROI(unsigned&, unsigned&, unsigned&, unsigned&) override { return DEVICE_ERR; }
    int ClearROI() override { return DEVICE_ERR; }
    int IsExposureSequenceable(bool&) const override { return DEVICE_ERR; }
+   int StartSequenceAcquisition(long, double, bool) override { return DEVICE_ERR; }
+   int StartSequenceAcquisition(double) override { return DEVICE_ERR; }
+   int StopSequenceAcquisition() override { return DEVICE_ERR; }
+   bool IsCapturing() override { return false; }
 };
 
 }
