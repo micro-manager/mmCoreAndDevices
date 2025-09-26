@@ -70,8 +70,6 @@ public:
     int RunSequenceOnThread(MM::MMTime startTime);
     bool IsCapturing();
     void OnThreadExiting() throw(); 
-    double GetNominalPixelSizeUm() const;
-    double GetPixelSizeUm() const;
     int GetBinning() const;
     int SetBinning(int bS);
 
@@ -114,7 +112,6 @@ public:
 	};
 
 private:
-    static const double nominalPixelSizeUm_;
     int32_t insertCount_ = 0;
 
     bool initialized_ = false;

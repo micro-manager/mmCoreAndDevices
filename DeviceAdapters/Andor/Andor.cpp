@@ -2199,20 +2199,6 @@ int AndorCamera::GetListOfAvailableCameras()
       return DEVICE_OK;
    }
 
-
-   double AndorCamera::GetPixelSizeUm() const
-   {
-      DriverGuard dg(this);
-      float x, y;
-      unsigned ret = ::GetPixelSize(&x, &y);
-      if (ret == DRV_SUCCESS)
-      {
-         return (double)x;
-      }
-
-      return GetBinning();
-   }
-
    ///////////////////////////////////////////////////////////////////////////////
    // Action handlers
    // ~~~~~~~~~~~~~~~

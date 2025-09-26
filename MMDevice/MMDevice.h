@@ -409,8 +409,7 @@ namespace MM {
        */
       virtual unsigned GetBitDepth() const = 0;
       /**
-       * Returns binnings factor.  Used to calculate current pixelsize
-       * Not appropriately named.  Implemented in DeviceBase.h
+       * Unused and slated for removal. Implemented in DeviceBase.h.
        */
       virtual double GetPixelSizeUm() const = 0;
       /**

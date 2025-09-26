@@ -83,8 +83,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // SpotCamera device adapter
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-//const double SpotCamera::fNominalPixelSizeUm = 1.0;
-
 /**
  * SpotCamera constructor.
  * Setup default all variables and create device properties required to exist

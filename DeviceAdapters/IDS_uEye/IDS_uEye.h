@@ -270,12 +270,6 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   bool IsCapturing();
   void OnThreadExiting() throw(); 
 
-  double GetNominalPixelSizeUm() const 
-  {return nominalPixelSizeUm_;}
-
-  double GetPixelSizeUm() const 
-  {return nominalPixelSizeUm_ * GetBinning();}
-
   int GetBinning() const;
   int SetBinning(int bS);
   int IsExposureSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}

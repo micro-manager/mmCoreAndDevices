@@ -5585,27 +5585,29 @@ std::string CMMCore::getCurrentPixelSizeConfig(bool cached) MMCORE_LEGACY_THROW(
       for (size_t j=0; j < cfgData->size(); j++)
       {
          PropertySetting cs = cfgData->getSetting(j); // config setting
-         if (!curState.isPropertyIncluded(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str()))
+         const auto deviceLabel = cs.getDeviceLabel();
+         const auto propName = cs.getPropertyName();
+         if (!curState.isPropertyIncluded(deviceLabel.c_str(), propName.c_str()))
          {
             try
             {
-				std::string value;
-				if (!cached)
-				{
-                   value = getProperty(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str());
-				}
-				else
-				{
-               MMThreadGuard scg(stateCacheLock_);
-               value = stateCache_.getSetting(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str()).getPropertyValue();
-				}
-               PropertySetting ss(cs.getDeviceLabel().c_str(), cs.getPropertyName().c_str(), value.c_str()); // state setting
+               std::string value;
+               if (!cached)
+               {
+                  value = getProperty(deviceLabel.c_str(), propName.c_str());
+               }
+               else
+               {
+                  MMThreadGuard scg(stateCacheLock_);
+                  value = stateCache_.getSetting(deviceLabel.c_str(), propName.c_str()).getPropertyValue();
+               }
+               PropertySetting ss(deviceLabel.c_str(), propName.c_str(), value.c_str()); // state setting
                curState.addSetting(ss);
             }
             catch (CMMError& err)
             {
                // just log error
-               logError("GetPixelSizeUm", err.getMsg().c_str());
+               logError(deviceLabel.c_str(), err.getMsg().c_str());
             }
          }
       }
@@ -5769,7 +5771,7 @@ std::vector<double> CMMCore::getPixelSizeAffineByID(const char* resolutionID) MM
 
 /**
  * Returns the product of all Magnifiers in the system or 1.0 when none is found
- * This is used internally by GetPixelSizeUm
+ * This is used internally by getPixelSizeUm
  *
  * @return products of all magnifier devices in the system or 1.0 when none is found
  */

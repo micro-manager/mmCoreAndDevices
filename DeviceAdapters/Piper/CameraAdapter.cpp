@@ -183,8 +183,6 @@ void CALLBACK PipeCallback( INT16 /*nPipe*/, INT16 nCmd, LPVOID pvCam, LPVOID ap
    }
 }
 
-const double CCameraAdapter::nominalPixelSizeUm_ = 1.0;
-
 // Local property names
 static LPCTSTR sc_pszPropFrameGrabber = "CameraID-FrameGrabber";
 static LPCTSTR sc_pszPropCameraName = "CameraID-Name";

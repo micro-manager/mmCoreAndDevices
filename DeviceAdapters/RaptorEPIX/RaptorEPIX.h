@@ -200,8 +200,6 @@ public:
    int ThreadRun();
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    int GetBinning() const;
    int SetBinning(int bS);
    int GetBinningX() const;
@@ -425,8 +423,6 @@ private:
            
 
    //int serialWriteReadCmd(int unit, unsigned char* bufin, int insize, unsigned char* bufout, int outsize );
-
-   static const double nominalPixelSizeUm_;
 
    int cameraType_;
    double dPhase_;

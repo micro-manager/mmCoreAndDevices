@@ -113,8 +113,6 @@ public:
    int ThreadRun();
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   //double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    int GetBinning() const;
    int SetBinning(int bS);
    int IsExposureSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
@@ -149,7 +147,6 @@ private:
    void AddSimpleFloatProperty(std::wstring Name, std::string DisplayName="");
    std::string ToNarrowString(std::wstring wstr) const;
 
-   static const double nominalPixelSizeUm_;
    static const int CID_FPGA_TICKS = 1;
 
    ImgBuffer img_;

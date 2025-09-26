@@ -118,8 +118,6 @@ public:
   int   InsertImage();
   virtual int ThreadRun (void);
 
-  double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-  double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
   int   GetBinning() const;
   int   SetBinning(int bS);
 
@@ -283,8 +281,6 @@ private:
   CStringVector             transposePropertyNames_;
 
 private:
-  static const double nominalPixelSizeUm_;
-
   bool  isSupported( unsigned long long qwFunctionID );
   int   SetAllowedBinning();
   void  generateEmptyImage( CAbsImgBuffer& img );

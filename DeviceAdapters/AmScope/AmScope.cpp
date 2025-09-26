@@ -341,8 +341,7 @@ int AmScope::Initialize()
 
    // Physical pixel size (um)
    Toupcam_get_PixelSize(m_Htoupcam, 0, &orgPixelSizeXUm_, &orgPixelSizeYUm_);
-   nominalPixelSizeUm_ = orgPixelSizeXUm_;
-   pixelSizeXUm_ = (float)nominalPixelSizeUm_;
+   pixelSizeXUm_ = orgPixelSizeXUm_;
    pixelSizeYUm_ = orgPixelSizeYUm_;
    pAct = new CPropertyAction (this, &AmScope::OnPixelSizeXUm);
    CreateFloatProperty("PixelSizeX(um)", pixelSizeXUm_, true, pAct);

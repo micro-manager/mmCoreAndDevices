@@ -33,7 +33,6 @@
 using namespace std;
 int TwainCamera::imageSizeW_ = 512;
 int TwainCamera::imageSizeH_ = 512;
-const double TwainCamera::nominalPixelSizeUm_ = 1.0;
 
 const char* g_CameraDeviceName = "TwainCam";
 #define ThisCameraType TwainCamera
