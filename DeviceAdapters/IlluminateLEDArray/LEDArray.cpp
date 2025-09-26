@@ -1015,6 +1015,7 @@ int LedArray::OnSequence(MM::PropertyBase* pProp, MM::ActionType pAct)
 		//SetProperty(g_Keyword_Sequence, g_SequenceModeNotRunning);
 		return response;
 	}
+	return DEVICE_OK;
 }
 
 int LedArray::OnManualLedList(MM::PropertyBase* pProp, MM::ActionType pAct)
